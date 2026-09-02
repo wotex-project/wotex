@@ -1,0 +1,9 @@
+/_build/
+/cover/
+/deps/
+/doc/
+/.elixir_ls/
+/.lexical/
+*.ez
+erl_crash.dump
+wotex_binding_mqtt-*.tar

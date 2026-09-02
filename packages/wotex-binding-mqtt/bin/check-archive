@@ -1,0 +1,62 @@
+#!/bin/sh
+set -eu
+
+set -- wotex_binding_mqtt-*.tar
+
+if [ "$#" -ne 1 ] || [ ! -f "$1" ]
+then
+  echo "expected exactly one wotex_binding_mqtt archive" >&2
+  exit 1
+fi
+
+archive=$1
+temporary=$(mktemp -d)
+trap 'rm -rf "$temporary"' EXIT HUP INT TERM
+
+tar -xf "$archive" -C "$temporary"
+
+for outer in VERSION CHECKSUM metadata.config contents.tar.gz
+do
+  if [ ! -f "$temporary/$outer" ]
+  then
+    echo "archive is missing $outer" >&2
+    exit 1
+  fi
+done
+
+mkdir "$temporary/package"
+tar -xzf "$temporary/contents.tar.gz" -C "$temporary/package"
+
+for packaged in mix.exs LICENSE NOTICE README.md lib docs
+do
+  if [ ! -e "$temporary/package/$packaged" ]
+  then
+    echo "package contents are missing $packaged" >&2
+    exit 1
+  fi
+done
+
+if find "$temporary/package" -type d \( -name .git -o -name deps -o -name _build \) | rg -q .
+then
+  echo "archive contains development state" >&2
+  exit 1
+fi
+
+if ! rg -q '\{:wotex, "~> 0\.1\.0"\}' "$temporary/package/mix.exs" || \
+   ! rg -q '\{:wotex_runtime, "~> 0\.1\.0"\}' "$temporary/package/mix.exs"
+then
+  echo "archive does not preserve normal Hex dependency identity" >&2
+  exit 1
+fi
+
+bin/check-boundary "$temporary/package"
+
+if command -v sha256sum >/dev/null 2>&1
+then
+  digest=$(sha256sum "$archive" | awk '{print $1}')
+else
+  digest=$(shasum -a 256 "$archive" | awk '{print $1}')
+fi
+
+echo "archive contents passed"
+echo "archive sha256: $digest"

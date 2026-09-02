@@ -1,0 +1,81 @@
+#!/bin/sh
+set -eu
+
+root=${1:-.}
+
+boundary_pattern='(Application\.start\(|use Application|GenServer|Supervisor|use Ash|use Phoenix|Ecto\.|Oban\.|Plug\.|Bandit\.|Cowboy\.)'
+
+if rg -n "$boundary_pattern" "$root/lib" "$root/mix.exs" || \
+   { [ -d "$root/test" ] && rg -n "$boundary_pattern" "$root/test"; }
+then
+  echo "process, framework, or database boundary violation" >&2
+  exit 1
+fi
+
+if rg -n \
+  '(Tortoise|EMQX|emqtt|ExMQTT|connection_manager|ConnectionManager)' \
+  "$root/lib" "$root/mix.exs"
+then
+  echo "bundled MQTT client or connection manager found" >&2
+  exit 1
+fi
+
+if rg -n 'apps_path[[:space:]]*:' "$root/mix.exs"
+then
+  echo "umbrella configuration is forbidden" >&2
+  exit 1
+fi
+
+if rg -n --hidden \
+  -g '!.git/**' \
+  -g '!deps/**' \
+  -g '!_build/**' \
+  -g '!doc/**' \
+  -g '!cover/**' \
+  '([/]Users[/]|[/]home[/])' "$root"
+then
+  echo "consumer filesystem path found" >&2
+  exit 1
+fi
+
+find "$root/lib" -type f -name '*.ex' -print | while IFS= read -r source
+do
+    modules=$(rg -c '^defmodule ' "$source" || true)
+
+    if [ "$modules" -ne 1 ]
+    then
+      echo "source file must contain exactly one module: $source" >&2
+      exit 1
+    fi
+done
+
+if [ -d "$root/test" ]
+then
+  find "$root/test" -type f \( -name '*.ex' -o -name '*.exs' \) -print | \
+    while IFS= read -r test_source
+    do
+      if ! rg -q '^defmodule ' "$test_source"
+      then
+        continue
+      fi
+
+    modules=$(rg -c '^defmodule ' "$test_source" || true)
+
+    if [ "$modules" -ne 1 ]
+    then
+      echo "test file must contain exactly one module: $test_source" >&2
+      exit 1
+    fi
+
+    if ! awk '
+      /@moduledoc false/ { found = 1; getline; if ($0 == "") blank = 1 }
+      END { exit !(found && blank) }
+    ' "$test_source"
+    then
+      echo "test module must have @moduledoc false followed by a blank line: $test_source" >&2
+      exit 1
+    fi
+    done
+fi
+
+echo "boundary scan passed"

@@ -1,0 +1,16 @@
+specifications:
+  - name: MQTT values and client port
+    path: mqtt-values-and-client-port.md
+    status: package contract
+    covers:
+      - immutable broker and command values
+      - Topic Name and Topic Filter validation
+      - bounded JSON payloads
+      - consumer-supplied client port
+  - name: Runtime transport
+    path: runtime-transport.md
+    status: package contract
+    covers:
+      - Runtime callback compatibility
+      - retained bounded Property reads
+      - process-free asynchronous delivery
