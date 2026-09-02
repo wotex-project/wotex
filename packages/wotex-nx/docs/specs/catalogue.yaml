@@ -1,0 +1,6 @@
+version: 1
+owner: wotex-project/wotex-nx
+specifications:
+  - id: WNX.01
+    path: docs/specs/WNX.01-observation-numerical-boundary.md
+    status: implemented_development_contract

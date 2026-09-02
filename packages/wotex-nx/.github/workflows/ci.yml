@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wotex-nx
+    env:
+      MIX_ENV: test
+      WOTEX_PATH_DEPS: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: wotex-nx
+      - uses: actions/checkout@v5
+        with:
+          repository: wotex-project/wotex
+          ref: 3676e71ed5b3b15e002bf4a05cc1b856a75dd8d9
+          path: wotex
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "28.5"
+          elixir-version: "1.19.5"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            wotex-nx/deps
+            wotex-nx/_build
+          key: ${{ runner.os }}-otp-28.5-elixir-1.19-${{ hashFiles('wotex-nx/mix.lock') }}
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+      - run: mix deps.get --only test
+      - run: mix check
+      - run: >-
+          mix run --no-start -e
+          'unless Application.spec(:wotex_nx, :mod) in [nil, [], :undefined], do: System.halt(1)'

@@ -1,0 +1,295 @@
+defmodule Wotex.Nx.OutputSchema do
+  @moduledoc "Accepted schema for decoding one numerical output into an inert typed value."
+
+  alias Wotex.DataSchema
+  alias Wotex.Nx.{Error, NumericalSchema}
+
+  @kinds [:observation, :prediction, :anomaly, :action_proposal]
+
+  @opaque t :: %__MODULE__{
+            kind: :observation | :prediction | :anomaly | :action_proposal,
+            thing_id: String.t(),
+            affordance_type: :property | :event | :action,
+            affordance_name: String.t(),
+            data_schema: DataSchema.t(),
+            dtype: Nx.Type.t(),
+            shape: tuple(),
+            max_width: pos_integer(),
+            unit: String.t() | nil,
+            allow_non_finite?: boolean(),
+            threshold: number() | nil,
+            anomaly_rule: :above | :at_or_above | :below | :at_or_below | nil,
+            metadata: map()
+          }
+
+  @enforce_keys [
+    :kind,
+    :thing_id,
+    :affordance_type,
+    :affordance_name,
+    :data_schema,
+    :dtype,
+    :shape,
+    :max_width,
+    :unit,
+    :allow_non_finite?,
+    :threshold,
+    :anomaly_rule,
+    :metadata
+  ]
+  defstruct @enforce_keys
+
+  @doc "Builds an explicit numerical-output contract."
+  @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
+  def new(opts) when is_list(opts) do
+    data_schema = Keyword.get(opts, :data_schema)
+
+    with %DataSchema{} <- data_schema,
+         map <- DataSchema.to_map(data_schema),
+         {:ok, inferred_shape, inferred_dtype} <- NumericalSchema.infer(map),
+         shape <- Keyword.get(opts, :shape, inferred_shape),
+         dtype <- Keyword.get(opts, :dtype, inferred_dtype),
+         max_width <- Keyword.get(opts, :max_width, 65_536),
+         {:ok, normalized_dtype} <- NumericalSchema.normalize_dtype(dtype, shape),
+         :ok <- exact_shape(shape, inferred_shape),
+         :ok <- NumericalSchema.validate_dtype(map, normalized_dtype),
+         :ok <- width(inferred_shape, max_width),
+         {:ok, identity} <- identity(opts),
+         :ok <- kind_schema(identity.kind, map, inferred_shape),
+         {:ok, unit} <- unit(Keyword.get(opts, :unit, Map.get(map, "unit"))),
+         {:ok, threshold} <-
+           threshold(identity.kind, Keyword.get(opts, :threshold), normalized_dtype),
+         {:ok, anomaly_rule} <-
+           anomaly_rule(identity.kind, Keyword.get(opts, :anomaly_rule)),
+         {:ok, metadata} <- metadata(Keyword.get(opts, :metadata, %{})),
+         {:ok, allow_non_finite?} <-
+           boolean_policy(Keyword.get(opts, :allow_non_finite?, false)),
+         :ok <- finite_kind(identity.kind, allow_non_finite?) do
+      {:ok,
+       struct!(
+         __MODULE__,
+         Map.merge(identity, %{
+           data_schema: data_schema,
+           dtype: normalized_dtype,
+           shape: shape,
+           max_width: max_width,
+           unit: unit,
+           allow_non_finite?: allow_non_finite?,
+           threshold: threshold,
+           anomaly_rule: anomaly_rule,
+           metadata: metadata
+         })
+       )}
+    else
+      {:error, %Error{} = error} ->
+        {:error, error}
+
+      _invalid ->
+        {:error,
+         Error.new(
+           :data_schema_required,
+           :construction,
+           "output schema requires a Wotex DataSchema"
+         )}
+    end
+  end
+
+  def new(_opts) do
+    {:error,
+     Error.new(
+       :invalid_output_schema_options,
+       :construction,
+       "output schema options must be a keyword list"
+     )}
+  end
+
+  @doc "Returns the stable output kinds."
+  @spec kinds() :: [atom()]
+  def kinds, do: @kinds
+
+  defp identity(opts) do
+    kind = Keyword.get(opts, :kind)
+    thing_id = Keyword.get(opts, :thing_id)
+    affordance_type = Keyword.get(opts, :affordance_type)
+    affordance_name = Keyword.get(opts, :affordance_name)
+
+    if kind in @kinds and non_empty?(thing_id) and non_empty?(affordance_name) and
+         valid_affordance?(kind, affordance_type) do
+      {:ok,
+       %{
+         kind: kind,
+         thing_id: thing_id,
+         affordance_type: affordance_type,
+         affordance_name: affordance_name
+       }}
+    else
+      {:error,
+       Error.new(
+         :invalid_output_identity,
+         :construction,
+         "output kind and Thing affordance identity are invalid"
+       )}
+    end
+  end
+
+  defp valid_affordance?(:action_proposal, :action), do: true
+
+  defp valid_affordance?(kind, type)
+       when kind in [:observation, :prediction, :anomaly] and type in [:property, :event],
+       do: true
+
+  defp valid_affordance?(_kind, _type), do: false
+
+  defp exact_shape(shape, shape) when is_tuple(shape), do: :ok
+
+  defp exact_shape(_shape, _inferred) do
+    {:error,
+     Error.new(
+       :shape_schema_mismatch,
+       :construction,
+       "output shape must match the fixed DataSchema shape"
+     )}
+  end
+
+  defp kind_schema(:anomaly, %{"type" => type}, {}) when type in ["number", "integer"],
+    do: :ok
+
+  defp kind_schema(:anomaly, _map, _shape) do
+    {:error,
+     Error.new(
+       :invalid_anomaly_schema,
+       :construction,
+       "anomaly output requires a scalar numerical DataSchema"
+     )}
+  end
+
+  defp kind_schema(_kind, _map, _shape), do: :ok
+
+  defp width(shape, max_width) when is_integer(max_width) and max_width > 0 do
+    if NumericalSchema.width(shape) <= max_width do
+      :ok
+    else
+      {:error,
+       Error.new(
+         :width_limit_exceeded,
+         :limit,
+         "output schema exceeds max_width",
+         %{max_width: max_width}
+       )}
+    end
+  end
+
+  defp width(_shape, _max_width) do
+    {:error,
+     Error.new(
+       :invalid_limit,
+       :construction,
+       "output max_width must be positive"
+     )}
+  end
+
+  defp unit(nil), do: {:ok, nil}
+  defp unit(value) when is_binary(value) and byte_size(value) > 0, do: {:ok, value}
+
+  defp unit(_value) do
+    {:error,
+     Error.new(
+       :invalid_unit,
+       :construction,
+       "output unit must be nil or a non-empty string"
+     )}
+  end
+
+  defp threshold(:anomaly, value, dtype) when is_number(value) do
+    converted = value |> Nx.tensor(type: dtype) |> Nx.to_number()
+
+    if is_number(converted) do
+      {:ok, converted}
+    else
+      invalid_threshold()
+    end
+  rescue
+    _error in [ArgumentError, RuntimeError, FunctionClauseError] ->
+      invalid_threshold()
+  end
+
+  defp threshold(:anomaly, _value, _dtype),
+    do:
+      {:error,
+       Error.new(
+         :threshold_required,
+         :construction,
+         "anomaly output requires a numerical threshold"
+       )}
+
+  defp threshold(_kind, nil, _dtype), do: {:ok, nil}
+
+  defp threshold(_kind, _value, _dtype),
+    do:
+      {:error,
+       Error.new(:unexpected_threshold, :construction, "threshold is valid only for anomaly output")}
+
+  defp anomaly_rule(:anomaly, nil), do: {:ok, :at_or_above}
+
+  defp anomaly_rule(:anomaly, value)
+       when value in [:above, :at_or_above, :below, :at_or_below],
+       do: {:ok, value}
+
+  defp anomaly_rule(:anomaly, _value) do
+    {:error,
+     Error.new(
+       :invalid_anomaly_rule,
+       :construction,
+       "anomaly rule is unsupported"
+     )}
+  end
+
+  defp anomaly_rule(_kind, nil), do: {:ok, nil}
+
+  defp anomaly_rule(_kind, _value) do
+    {:error,
+     Error.new(
+       :unexpected_anomaly_rule,
+       :construction,
+       "anomaly rule is valid only for anomaly output"
+     )}
+  end
+
+  defp invalid_threshold do
+    {:error,
+     Error.new(
+       :invalid_threshold,
+       :construction,
+       "anomaly threshold cannot be represented by the output dtype"
+     )}
+  end
+
+  defp metadata(value) when is_map(value), do: {:ok, value}
+
+  defp metadata(_value),
+    do: {:error, Error.new(:invalid_metadata, :construction, "output metadata must be a map")}
+
+  defp boolean_policy(value) when is_boolean(value), do: {:ok, value}
+
+  defp boolean_policy(_value) do
+    {:error,
+     Error.new(
+       :invalid_finite_policy,
+       :construction,
+       "allow_non_finite? must be boolean"
+     )}
+  end
+
+  defp finite_kind(:anomaly, true) do
+    {:error,
+     Error.new(
+       :non_finite_anomaly_unsupported,
+       :construction,
+       "anomaly output must require finite scores"
+     )}
+  end
+
+  defp finite_kind(_kind, _allow_non_finite?), do: :ok
+
+  defp non_empty?(value), do: is_binary(value) and byte_size(value) > 0
+end
