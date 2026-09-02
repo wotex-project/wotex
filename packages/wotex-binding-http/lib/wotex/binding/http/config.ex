@@ -1,0 +1,127 @@
+defmodule Wotex.Binding.HTTP.Config do
+  @moduledoc "Immutable configuration for the HTTP Runtime transport."
+
+  alias Wotex.Binding.HTTP.{Error, Headers}
+
+  @default_max_request_bytes 1_048_576
+  @default_max_response_bytes 4_194_304
+  @default_max_event_bytes 1_048_576
+
+  @derive {Inspect,
+           only: [
+             :client_module,
+             :headers,
+             :max_request_bytes,
+             :max_response_bytes,
+             :max_event_bytes
+           ]}
+  @opaque t :: %__MODULE__{
+            client_module: module(),
+            client_config: term(),
+            headers: Headers.t(),
+            max_request_bytes: pos_integer(),
+            max_response_bytes: pos_integer(),
+            max_event_bytes: pos_integer()
+          }
+
+  @enforce_keys [
+    :client_module,
+    :client_config,
+    :headers,
+    :max_request_bytes,
+    :max_response_bytes,
+    :max_event_bytes
+  ]
+  defstruct @enforce_keys
+
+  @doc "Builds validated transport configuration around a supplied client port."
+  @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
+  def new(opts) when is_list(opts) do
+    if Keyword.keyword?(opts), do: build(opts), else: invalid_options()
+  end
+
+  def new(_opts), do: invalid_options()
+
+  defp build(opts) do
+    client = Keyword.get(opts, :client)
+    headers = Keyword.get(opts, :headers, [])
+    max_request_bytes = Keyword.get(opts, :max_request_bytes, @default_max_request_bytes)
+    max_response_bytes = Keyword.get(opts, :max_response_bytes, @default_max_response_bytes)
+    max_event_bytes = Keyword.get(opts, :max_event_bytes, @default_max_event_bytes)
+
+    with {:ok, client_module, client_config} <- validate_client(client),
+         {:ok, normalized_headers} <- Headers.new(headers, :request),
+         :ok <- positive_limit(max_request_bytes, :max_request_bytes),
+         :ok <- positive_limit(max_response_bytes, :max_response_bytes),
+         :ok <- positive_limit(max_event_bytes, :max_event_bytes) do
+      {:ok,
+       %__MODULE__{
+         client_module: client_module,
+         client_config: client_config,
+         headers: normalized_headers,
+         max_request_bytes: max_request_bytes,
+         max_response_bytes: max_response_bytes,
+         max_event_bytes: max_event_bytes
+       }}
+    end
+  end
+
+  defp invalid_options do
+    {:error,
+     Error.new(:invalid_config_options, :configuration, "configuration must be a keyword list")}
+  end
+
+  @doc "Returns the supplied client module and its non-credential configuration."
+  @spec client(t()) :: {module(), term()}
+  def client(%__MODULE__{client_module: module, client_config: config}), do: {module, config}
+
+  @doc "Returns validated static request fields."
+  @spec headers(t()) :: Headers.t()
+  def headers(%__MODULE__{headers: headers}), do: headers
+
+  @doc "Returns the maximum encoded request-body size."
+  @spec max_request_bytes(t()) :: pos_integer()
+  def max_request_bytes(%__MODULE__{max_request_bytes: limit}), do: limit
+
+  @doc "Returns the maximum complete response-body size."
+  @spec max_response_bytes(t()) :: pos_integer()
+  def max_response_bytes(%__MODULE__{max_response_bytes: limit}), do: limit
+
+  @doc "Returns the maximum data size of one dispatched Server-Sent Event."
+  @spec max_event_bytes(t()) :: pos_integer()
+  def max_event_bytes(%__MODULE__{max_event_bytes: limit}), do: limit
+
+  defp validate_client({module, config}) when is_atom(module) and not is_nil(module) do
+    callbacks = [request: 3, subscribe: 4, close: 2]
+
+    if Code.ensure_loaded?(module) and
+         Enum.all?(callbacks, fn {name, arity} -> function_exported?(module, name, arity) end) do
+      {:ok, module, config}
+    else
+      {:error,
+       Error.new(
+         :invalid_client,
+         :configuration,
+         "client must implement request/3, subscribe/4, and close/2"
+       )}
+    end
+  end
+
+  defp validate_client(_client) do
+    {:error,
+     Error.new(
+       :invalid_client,
+       :configuration,
+       "client must be a module and configuration tuple"
+     )}
+  end
+
+  defp positive_limit(value, _name) when is_integer(value) and value > 0, do: :ok
+
+  defp positive_limit(_value, name) do
+    {:error,
+     Error.new(:invalid_limit, :configuration, "byte limits must be positive integers", %{
+       option: name
+     })}
+  end
+end
