@@ -1,0 +1,398 @@
+defmodule Wotex.Runtime.ConsumedThing do
+  @moduledoc """
+  Immutable plan for consuming a Thing through caller-supplied ports.
+
+  Short interactions execute in the caller. Observation and Event APIs return
+  child specifications and start no process themselves.
+  """
+
+  alias Wotex.ThingDescription
+
+  alias Wotex.Runtime.{
+    BindingProfile,
+    Context,
+    Error,
+    ExecutionContext,
+    FormSelector,
+    Request,
+    Result,
+    Selection,
+    Subscription
+  }
+
+  @opaque t :: %__MODULE__{
+            td: ThingDescription.t(),
+            profiles: [BindingProfile.t()],
+            transports: map(),
+            credentials: {module(), term()}
+          }
+
+  @enforce_keys [:td, :profiles, :transports, :credentials]
+  defstruct [:td, :profiles, :transports, :credentials]
+
+  @doc "Builds a ConsumedThing from a validated TD and explicit runtime ports."
+  @spec new(ThingDescription.t(), keyword()) :: {:ok, t()} | {:error, Error.t() | [Wotex.Error.t()]}
+  def new(%ThingDescription{} = td, opts) when is_list(opts) do
+    profiles = Keyword.get(opts, :profiles)
+    transports = Keyword.get(opts, :transports)
+    credentials = Keyword.get(opts, :credentials)
+
+    with {:ok, validated} <- ThingDescription.validate(td),
+         :ok <- validate_profiles(profiles),
+         :ok <- validate_transports(profiles, transports),
+         :ok <- validate_credentials(credentials) do
+      {:ok,
+       %__MODULE__{
+         td: validated,
+         profiles: profiles,
+         transports: transports,
+         credentials: credentials
+       }}
+    end
+  end
+
+  def new(_td, _opts) do
+    {:error,
+     Error.new(
+       :invalid_consumed_thing,
+       :construction,
+       "a Thing Description and keyword options are required"
+     )}
+  end
+
+  @doc "Executes `readproperty` in the caller process."
+  @spec read_property(t(), String.t(), Context.t()) :: {:ok, Result.t()} | {:error, Error.t()}
+  def read_property(consumed, name, context),
+    do: execute(consumed, :property, name, :readproperty, nil, context)
+
+  @doc "Executes `writeproperty` in the caller process."
+  @spec write_property(t(), String.t(), term(), Context.t()) ::
+          {:ok, Result.t()} | {:error, Error.t()}
+  def write_property(consumed, name, input, context),
+    do: execute(consumed, :property, name, :writeproperty, input, context)
+
+  @doc "Executes `invokeaction` in the caller process."
+  @spec invoke_action(t(), String.t(), term(), Context.t()) ::
+          {:ok, Result.t()} | {:error, Error.t()}
+  def invoke_action(consumed, name, input, context),
+    do: execute(consumed, :action, name, :invokeaction, input, context)
+
+  @doc "Executes `queryaction` in the caller process."
+  @spec query_action(t(), String.t(), term(), Context.t()) ::
+          {:ok, Result.t()} | {:error, Error.t()}
+  def query_action(consumed, name, invocation, context),
+    do: execute(consumed, :action, name, :queryaction, invocation, context)
+
+  @doc "Executes `cancelaction` in the caller process."
+  @spec cancel_action(t(), String.t(), term(), Context.t()) ::
+          {:ok, Result.t()} | {:error, Error.t()}
+  def cancel_action(consumed, name, invocation, context),
+    do: execute(consumed, :action, name, :cancelaction, invocation, context)
+
+  @doc "Returns a caller-supervised Property observation child specification."
+  @spec observation_child_spec(t(), String.t(), Context.t(), keyword()) ::
+          {:ok, Supervisor.child_spec()} | {:error, Error.t()}
+  def observation_child_spec(consumed, name, context, opts),
+    do:
+      subscription_child_spec(
+        consumed,
+        :property,
+        name,
+        :observeproperty,
+        :unobserveproperty,
+        context,
+        opts
+      )
+
+  @doc "Returns a caller-supervised Event subscription child specification."
+  @spec event_subscription_child_spec(t(), String.t(), Context.t(), keyword()) ::
+          {:ok, Supervisor.child_spec()} | {:error, Error.t()}
+  def event_subscription_child_spec(consumed, name, context, opts),
+    do:
+      subscription_child_spec(
+        consumed,
+        :event,
+        name,
+        :subscribeevent,
+        :unsubscribeevent,
+        context,
+        opts
+      )
+
+  @doc "Returns the immutable Thing Description."
+  @spec thing_description(t()) :: ThingDescription.t()
+  def thing_description(%__MODULE__{td: td}), do: td
+
+  defp execute(%__MODULE__{} = consumed, type, name, operation, input, %Context{} = context) do
+    with {:ok, selection} <-
+           FormSelector.select(consumed.td, type, name, operation, consumed.profiles),
+         {:ok, transport} <- transport_for(consumed, selection),
+         request = Request.from_selection(selection, context, input),
+         {:ok, execution_context} <- resolve_credentials(consumed, selection, context),
+         {:ok, result} <- transport_request(transport, request, execution_context) do
+      {:ok, result}
+    end
+  end
+
+  defp execute(%__MODULE__{}, _type, _name, _operation, _input, _context) do
+    {:error, Error.new(:invalid_context, :construction, "a Wotex Runtime Context is required")}
+  end
+
+  defp execute(_consumed, _type, _name, _operation, _input, _context) do
+    {:error, Error.new(:invalid_consumed_thing, :construction, "a ConsumedThing is required")}
+  end
+
+  defp subscription_child_spec(
+         %__MODULE__{} = consumed,
+         type,
+         name,
+         start_operation,
+         stop_operation,
+         %Context{} = context,
+         opts
+       )
+       when is_list(opts) do
+    with {:ok, id} <- required_option(opts, :id),
+         {:ok, receiver} <- required_option(opts, :receiver),
+         {:ok, start_selection} <-
+           FormSelector.select(consumed.td, type, name, start_operation, consumed.profiles),
+         {:ok, transport} <- transport_for(consumed, start_selection),
+         {:ok, stop_selection} <-
+           FormSelector.select(
+             consumed.td,
+             type,
+             name,
+             stop_operation,
+             [start_selection.profile]
+           ) do
+      start_request = Request.from_selection(start_selection, context, Keyword.get(opts, :input))
+      stop_request = Request.from_selection(stop_selection, context, Keyword.get(opts, :stop_input))
+
+      init = %{
+        id: id,
+        receiver: receiver,
+        name: Keyword.get(opts, :name),
+        start_request: start_request,
+        stop_request: stop_request,
+        start_security: start_selection.security,
+        stop_security: stop_selection.security,
+        context: context,
+        credentials: consumed.credentials,
+        transport: transport
+      }
+
+      {:ok,
+       %{
+         id: id,
+         start: {Subscription, :start_link, [init]},
+         restart: Keyword.get(opts, :restart, :permanent),
+         shutdown: Keyword.get(opts, :shutdown, 5_000),
+         type: :worker
+       }}
+    end
+  end
+
+  defp subscription_child_spec(
+         %__MODULE__{},
+         _type,
+         _name,
+         _start_operation,
+         _stop_operation,
+         _context,
+         _opts
+       ) do
+    {:error,
+     Error.new(
+       :invalid_subscription_options,
+       :construction,
+       "context and keyword options are required"
+     )}
+  end
+
+  defp subscription_child_spec(
+         _consumed,
+         _type,
+         _name,
+         _start_operation,
+         _stop_operation,
+         _context,
+         _opts
+       ) do
+    {:error, Error.new(:invalid_consumed_thing, :construction, "a ConsumedThing is required")}
+  end
+
+  defp required_option(opts, key) do
+    case Keyword.fetch(opts, key) do
+      {:ok, nil} ->
+        {:error,
+         Error.new(
+           :missing_subscription_option,
+           :construction,
+           "subscription option is required",
+           %{
+             option: key
+           }
+         )}
+
+      {:ok, value} ->
+        {:ok, value}
+
+      :error ->
+        {:error,
+         Error.new(
+           :missing_subscription_option,
+           :construction,
+           "subscription option is required",
+           %{
+             option: key
+           }
+         )}
+    end
+  end
+
+  defp validate_profiles(profiles) when is_list(profiles) and profiles != [] do
+    if Enum.all?(profiles, &match?(%BindingProfile{}, &1)) do
+      ids = Enum.map(profiles, &BindingProfile.id/1)
+
+      if length(ids) == MapSet.size(MapSet.new(ids)) do
+        :ok
+      else
+        {:error, Error.new(:duplicate_profile_id, :construction, "profile ids must be unique")}
+      end
+    else
+      {:error,
+       Error.new(:invalid_profiles, :construction, "profiles must contain BindingProfile values")}
+    end
+  end
+
+  defp validate_profiles(_profiles) do
+    {:error, Error.new(:invalid_profiles, :construction, "at least one BindingProfile is required")}
+  end
+
+  defp validate_transports(profiles, transports) when is_map(transports) do
+    missing =
+      Enum.reject(profiles, fn profile ->
+        case Map.get(transports, BindingProfile.id(profile)) do
+          {module, _config} when is_atom(module) and not is_nil(module) ->
+            transport_module?(module)
+
+          _missing_or_invalid ->
+            false
+        end
+      end)
+
+    if missing == [] do
+      :ok
+    else
+      {:error,
+       Error.new(:missing_transport, :construction, "every profile must have a transport port", %{
+         profile_ids: Enum.map(missing, &BindingProfile.id/1)
+       })}
+    end
+  end
+
+  defp validate_transports(_profiles, _transports) do
+    {:error, Error.new(:invalid_transports, :construction, "transports must be a profile-id map")}
+  end
+
+  defp validate_credentials({module, _config}) when is_atom(module) and not is_nil(module) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :resolve, 4) do
+      :ok
+    else
+      {:error,
+       Error.new(
+         :invalid_credentials_port,
+         :construction,
+         "credentials module must implement resolve/4"
+       )}
+    end
+  end
+
+  defp validate_credentials(_credentials) do
+    {:error,
+     Error.new(
+       :invalid_credentials_port,
+       :construction,
+       "credentials must be a module and configuration tuple"
+     )}
+  end
+
+  defp transport_for(%__MODULE__{transports: transports}, %Selection{profile: profile}) do
+    case Map.fetch(transports, BindingProfile.id(profile)) do
+      {:ok, {module, config}} when is_atom(module) and not is_nil(module) ->
+        {:ok, {module, config}}
+
+      _missing ->
+        {:error, Error.new(:transport_not_found, :transport, "selected transport was not found")}
+    end
+  end
+
+  defp transport_module?(module) do
+    Code.ensure_loaded?(module) and function_exported?(module, :request, 3) and
+      function_exported?(module, :subscribe, 4) and function_exported?(module, :unsubscribe, 4)
+  end
+
+  defp resolve_credentials(
+         %__MODULE__{credentials: {module, config}},
+         %Selection{} = selection,
+         %Context{} = context
+       ) do
+    case module.resolve(selection.security, selection.form, context, config) do
+      {:ok, credential} ->
+        {:ok, ExecutionContext.new(context, credential)}
+
+      {:error, _external} ->
+        {:error,
+         Error.new(:credential_resolution_failed, :credentials, "credential resolution failed", %{
+           request_id: Context.request_id(context),
+           operation: selection.operation
+         })}
+
+      _invalid ->
+        {:error,
+         Error.new(
+           :invalid_credentials_return,
+           :credentials,
+           "credential port returned an invalid value",
+           %{
+             request_id: Context.request_id(context),
+             operation: selection.operation
+           }
+         )}
+    end
+  end
+
+  defp transport_request({module, config}, request, execution_context) do
+    case module.request(request, execution_context, config) do
+      {:ok, %Result{request_id: request_id, operation: operation} = result}
+      when request_id == request.request_id and operation == request.operation ->
+        {:ok, result}
+
+      {:ok, %Result{}} ->
+        {:error,
+         Error.new(
+           :mismatched_transport_result,
+           :transport,
+           "transport result does not match the request",
+           %{
+             request_id: request.request_id,
+             operation: request.operation
+           }
+         )}
+
+      {:error, _external} ->
+        {:error,
+         Error.new(:transport_request_failed, :transport, "transport request failed", %{
+           request_id: request.request_id,
+           operation: request.operation
+         })}
+
+      _invalid ->
+        {:error,
+         Error.new(:invalid_transport_return, :transport, "transport returned an invalid value", %{
+           request_id: request.request_id,
+           operation: request.operation
+         })}
+    end
+  end
+end

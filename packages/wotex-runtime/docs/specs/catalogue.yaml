@@ -1,0 +1,11 @@
+schema_version: "1.0.0"
+package: "wotex_runtime"
+specifications:
+  - id: "WRT.01"
+    path: "docs/specs/WRT.01-consumed-thing-runtime.md"
+    status: "implemented"
+    requires: ["wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03"]
+  - id: "WRT.02"
+    path: "docs/specs/WRT.02-exposed-thing-runtime.md"
+    status: "implemented"
+    requires: ["WRT.01"]
