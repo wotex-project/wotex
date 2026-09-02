@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+if rg -n '(Application\.start\(|use Application|use Ash|use Phoenix|Ecto\.Repo|Oban\.|Finch|Req\.|Mint\.|Tesla\.|HTTPoison)' lib test mix.exs
+then
+  echo "HTTP binding boundary violation" >&2
+  exit 1
+fi
+
+if rg -n 'apps_path[[:space:]]*:' mix.exs
+then
+  echo "umbrella configuration is forbidden" >&2
+  exit 1
+fi
+
+if rg -n --hidden -g '!.git/**' -g '!deps/**' -g '!_build/**' -g '!doc/**' -g '!cover/**' '([/]Users[/]|[/]home[/]|10\.[0-9]+\.[0-9]+\.[0-9]+|192\.168\.[0-9]+\.[0-9]+|172\.(1[6-9]|2[0-9]|3[01])\.[0-9]+\.[0-9]+)' .
+then
+  echo "private path or private network address found" >&2
+  exit 1
+fi

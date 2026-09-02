@@ -1,0 +1,9 @@
+/_build/
+/cover/
+/deps/
+/doc/
+/.elixir_ls/
+/.fetch
+erl_crash.dump
+*.ez
+/wotex_binding_http-*.tar
