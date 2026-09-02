@@ -90,18 +90,14 @@ It does not own:
 
 ```sh
 mix deps.get
-mix format --check-formatted
-mix compile --warnings-as-errors
-mix test --cover
-mix docs --warnings-as-errors
-env -u WOTEX_CORE_PATH mix hex.build
+mix check
 ./scripts/check_public_boundary.sh
 ```
 
 See `specs/` for the normative contracts and `test/vectors/` for executable
 examples.
 
-During coordinated local development, set `WOTEX_CORE_PATH` to an explicit
-checkout of the Wotex core before fetching dependencies. Production dependency
-selection uses a published version; it never switches because a directory
-happens to exist.
+During coordinated local development, set `WOTEX_PATH_DEPS=1` before dependency
+fetch and verification. That explicit switch resolves the sibling Wotex core
+checkout at `../wotex`. Without the switch, dependency selection uses the
+published package version; it never changes merely because a directory exists.

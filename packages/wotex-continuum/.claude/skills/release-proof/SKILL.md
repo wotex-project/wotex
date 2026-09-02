@@ -6,7 +6,9 @@ description: Apply when preparing or validating a package archive, release, comp
 # Release proof workflow
 
 1. Confirm the working tree and dependency lock are intentional.
-2. Run every verification command in `README.md` from a clean build.
+2. Run every verification command in `README.md` from a clean build. Use
+   `WOTEX_PATH_DEPS=1` only for the local sibling checkout; the package-build
+   step MUST unset it.
 3. Inspect the package file list and unpacked archive.
 4. Scan source, Git history, documentation, generated docs, and archive names
    for consumer-specific material and local paths.

@@ -11,6 +11,7 @@ defmodule WotexContinuum.MixProject do
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      aliases: aliases(),
       description:
         "Host-neutral continuum exchange values for Elixir and W3C Web of Things systems",
       package: package(),
@@ -22,7 +23,7 @@ defmodule WotexContinuum.MixProject do
   end
 
   def cli do
-    [preferred_envs: [quality: :test]]
+    [preferred_envs: [check: :test]]
   end
 
   def application do
@@ -33,17 +34,27 @@ defmodule WotexContinuum.MixProject do
     [
       wotex_dependency(),
       {:jason, "~> 1.4"},
-      {:ex_doc, "~> 0.38", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.38", only: [:dev, :test], runtime: false}
     ]
   end
 
   defp wotex_dependency do
-    requirement = ">= 0.1.0-dev and < 0.2.0"
-
-    case System.get_env("WOTEX_CORE_PATH") do
-      nil -> {:wotex, requirement}
-      path -> {:wotex, requirement, path: path}
+    case System.get_env("WOTEX_PATH_DEPS") do
+      "1" -> {:wotex, path: "../wotex"}
+      _value -> {:wotex, "~> 0.1.0"}
     end
+  end
+
+  defp aliases do
+    [
+      check: [
+        "format --check-formatted",
+        "compile --warnings-as-errors",
+        "test --cover --warnings-as-errors",
+        "docs --warnings-as-errors",
+        "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
+      ]
+    ]
   end
 
   defp package do
