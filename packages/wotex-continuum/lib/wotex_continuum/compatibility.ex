@@ -65,7 +65,7 @@ defmodule WotexContinuum.Compatibility do
     declared = Map.new(capabilities, &{&1.id, &1.version})
 
     schema_mismatches =
-      if Version.match?(schema_version, requirements.schema_requirement) do
+      if matches_requirement?(schema_version, requirements.schema_requirement) do
         []
       else
         [
@@ -90,7 +90,7 @@ defmodule WotexContinuum.Compatibility do
             ]
 
           {:ok, actual} ->
-            if Version.match?(actual, requirement.version_requirement) do
+            if matches_requirement?(actual, requirement.version_requirement) do
               []
             else
               [
@@ -125,5 +125,12 @@ defmodule WotexContinuum.Compatibility do
   defp unique_requirements(requirements) do
     ids = Enum.map(requirements, & &1.id)
     Validation.uniqueness(ids, ["required_capabilities"])
+  end
+
+  defp matches_requirement?(version, requirement) do
+    case Version.parse(version) do
+      {:ok, parsed} -> Version.match?(parsed, requirement)
+      :error -> false
+    end
   end
 end

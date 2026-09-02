@@ -100,7 +100,7 @@ it neither probes health nor selects fallback behavior.
 | `completed_at` | RFC 3339 timestamp | REQUIRED for terminal status |
 | `artifacts` | array of evidence references | OPTIONAL |
 | `residuals` | array of strings | OPTIONAL; MUST be non-empty for `partial` |
-| `error` | typed error object | REQUIRED for `failed` |
+| `error` | typed error object | REQUIRED for `failed`; absent otherwise |
 | `extensions` | object | OPTIONAL |
 
 Terminal statuses are `completed`, `failed`, and `partial`. For `remove`, a

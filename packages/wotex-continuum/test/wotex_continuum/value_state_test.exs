@@ -221,6 +221,9 @@ defmodule WotexContinuum.ValueStateTest do
       ])
 
     assert {:error, %Error{code: :duplicate_value}} = Compatibility.new(duplicate_requirements)
+
+    assert {:error, [%{type: :schema, actual: "invalid"}]} =
+             Compatibility.evaluate(compatibility, "invalid", [])
   end
 
   test "evidence references remain inert digest-bound values" do

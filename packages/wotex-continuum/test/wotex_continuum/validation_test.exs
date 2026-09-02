@@ -70,6 +70,7 @@ defmodule WotexContinuum.ValidationTest do
     assert {:ok, ^value} = Validation.json_value(value, [])
 
     assert {:error, %Error{code: :invalid_key}} = Validation.json_value(%{atom: 1}, [])
+    assert {:error, %Error{code: :invalid_utf8}} = Validation.json_value(<<255>>, [])
     assert {:error, %Error{code: :invalid_json_value}} = Validation.json_value(self(), [])
     assert {:error, %Error{code: :invalid_json_value}} = Validation.json_value(%URI{}, [])
 

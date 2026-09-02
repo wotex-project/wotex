@@ -163,8 +163,14 @@ defmodule WotexContinuum.Validation do
   def json_value(value, path), do: json_value(value, path, 0)
 
   defp json_value(value, _path, _depth)
-       when is_nil(value) or is_boolean(value) or is_binary(value) or is_integer(value),
+       when is_nil(value) or is_boolean(value) or is_integer(value),
        do: {:ok, value}
+
+  defp json_value(value, path, _depth) when is_binary(value) do
+    if String.valid?(value),
+      do: {:ok, value},
+      else: Error.error(:invalid_utf8, path, "expected valid UTF-8")
+  end
 
   defp json_value(value, path, _depth) when is_float(value) do
     if finite_float?(value),
