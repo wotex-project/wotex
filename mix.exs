@@ -43,7 +43,8 @@ defmodule Wotex.MixProject do
         "format --check-formatted",
         "compile --warnings-as-errors",
         "test --cover --warnings-as-errors",
-        "docs",
+        "docs --warnings-as-errors",
+        "cmd bin/check-boundary",
         "cmd env MIX_ENV=dev mix hex.build"
       ]
     ]
