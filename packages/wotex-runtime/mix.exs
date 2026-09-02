@@ -47,6 +47,7 @@ defmodule WotexRuntime.MixProject do
         "compile --warnings-as-errors",
         "test --cover --warnings-as-errors",
         "docs",
+        "cmd bin/check-boundary",
         "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
       ]
     ]
