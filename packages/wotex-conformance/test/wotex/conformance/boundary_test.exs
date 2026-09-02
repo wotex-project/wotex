@@ -1,4 +1,6 @@
 defmodule Wotex.Conformance.BoundaryTest do
+  @moduledoc false
+
   use ExUnit.Case, async: false
 
   test "the library has no application callback" do

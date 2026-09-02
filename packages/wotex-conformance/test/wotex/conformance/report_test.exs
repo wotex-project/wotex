@@ -1,4 +1,6 @@
 defmodule Wotex.Conformance.ReportTest do
+  @moduledoc false
+
   use ExUnit.Case, async: true
 
   alias Wotex.Conformance.{Corpus, Report, Runner, TestFixtures, Vector}

@@ -1,4 +1,6 @@
 defmodule Wotex.Conformance.SchemaTest do
+  @moduledoc false
+
   use ExUnit.Case, async: true
 
   test "all portable schemas are valid JSON Schema 2020-12 documents" do

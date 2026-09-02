@@ -1,4 +1,6 @@
 defmodule Wotex.Conformance.ContractsTest do
+  @moduledoc false
+
   use ExUnit.Case, async: true
 
   alias Wotex.Conformance.{Claim, Subject, Vector}

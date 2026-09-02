@@ -1,4 +1,6 @@
 defmodule Wotex.Conformance.RunnerTest do
+  @moduledoc false
+
   use ExUnit.Case, async: false
 
   alias Wotex.Conformance.{FailingTarget, Runner, TestFixtures}

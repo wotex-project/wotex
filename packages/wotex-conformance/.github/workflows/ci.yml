@@ -2,47 +2,51 @@ name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-env:
-  MIX_ENV: test
-
 jobs:
-  locked:
+  verify:
     runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "28.5"
-          elixir-version: "1.19.4"
+          elixir-version: "1.19.5"
       - uses: actions/cache@v4
         with:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-otp-28.5-elixir-1.19.4-${{ hashFiles('mix.lock') }}
+          key: ${{ runner.os }}-otp-28.5-elixir-1.19-${{ hashFiles('mix.lock') }}
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
       - run: mix deps.get --only test
-      - run: mix deps.unlock --check-unused
-      - run: mix format --check-formatted
-      - run: mix compile --warnings-as-errors
-      - run: mix test
-      - run: MIX_ENV=dev mix deps.get --only dev
-      - run: MIX_ENV=dev mix docs --warnings-as-errors
-      - run: MIX_ENV=dev mix hex.build
+      - run: mix check
+      - run: >-
+          mix run --no-start -e
+          'unless Application.spec(:wotex_conformance, :mod) in [nil, [], :undefined], do: System.halt(1)'
 
   allowed-newer:
     runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "28.5"
-          elixir-version: "1.19.4"
+          elixir-version: "1.19.5"
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
       - run: mix deps.get --only test
       - run: mix deps.update --all
       - run: mix compile --warnings-as-errors
-      - run: mix test
+      - run: mix test --cover --warnings-as-errors

@@ -1,4 +1,6 @@
 defmodule Wotex.Conformance.ArtifactTest do
+  @moduledoc false
+
   use ExUnit.Case, async: true
 
   alias Wotex.Conformance.Artifact
