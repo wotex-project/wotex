@@ -2,30 +2,56 @@ name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  check:
+  verify:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wotex-binding-mqtt
+    env:
+      MIX_ENV: test
+      WOTEX_PATH_DEPS: "1"
 
     steps:
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@v5
+        with:
+          path: wotex-binding-mqtt
+      - uses: actions/checkout@v5
+        with:
+          repository: wotex-project/wotex
+          ref: 3676e71ed5b3b15e002bf4a05cc1b856a75dd8d9
+          path: wotex
+      - uses: actions/checkout@v5
+        with:
+          repository: wotex-project/wotex-runtime
+          ref: 5bbbd62731c8aeec66dbf03b002d65a0537ba60d
+          path: wotex-runtime
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: "28"
-          elixir-version: "1.19"
-
+          otp-version: "28.5"
+          elixir-version: "1.19.5"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            wotex-binding-mqtt/deps
+            wotex-binding-mqtt/_build
+          key: ${{ runner.os }}-otp-28.5-elixir-1.19-${{ hashFiles('wotex-binding-mqtt/mix.lock') }}
       - run: mix local.hex --force
       - run: mix local.rebar --force
-      - run: mix deps.get
+      - run: mix deps.get --only test
       - run: mix check
-
+      - run: >-
+          mix run --no-start -e
+          'unless Application.spec(:wotex_binding_mqtt, :mod) in [nil, [], :undefined], do: System.halt(1)'
       - uses: actions/upload-artifact@v4
         with:
           name: wotex-binding-mqtt-hex
-          path: wotex_binding_mqtt-*.tar
+          path: wotex-binding-mqtt/wotex_binding_mqtt-*.tar
           if-no-files-found: error
