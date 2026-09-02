@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wotex-directory
+    env:
+      MIX_ENV: test
+      WOTEX_PATH_DEPS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: wotex-directory
+      - uses: actions/checkout@v4
+        with:
+          repository: wotex-project/wotex
+          ref: 3676e71ed5b3b15e002bf4a05cc1b856a75dd8d9
+          path: wotex
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19.5"
+          otp-version: "28.5"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            wotex-directory/deps
+            wotex-directory/_build
+          key: ${{ runner.os }}-otp-28.5-elixir-1.19-${{ hashFiles('wotex-directory/mix.lock') }}
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+      - run: mix deps.get --only test
+      - run: mix format --check-formatted
+      - run: mix compile --warnings-as-errors
+      - run: mix test --cover --warnings-as-errors
+      - run: MIX_ENV=docs mix deps.get --only docs
+      - run: MIX_ENV=docs mix docs --warnings-as-errors
+      - run: mix package
+      - run: >-
+          mix run --no-start -e
+          'unless Application.spec(:wotex_directory, :mod) in [nil, [], :undefined], do: System.halt(1)'
