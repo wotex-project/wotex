@@ -1,0 +1,25 @@
+schema_version: "1.0.0"
+package: "wotex_binding_http"
+standards_baseline: "docs/standards-baseline.md"
+specifications:
+  - id: "WBH.01"
+    path: "docs/specs/WBH.01-http-transport.md"
+    status: "implemented"
+    requires: ["wotex_runtime:WRT.01"]
+    evidence:
+      - "test/wotex/binding/http/form_test.exs"
+      - "test/wotex/binding/http/transport_test.exs"
+  - id: "WBH.02"
+    path: "docs/specs/WBH.02-client-port-and-values.md"
+    status: "implemented"
+    requires: ["WBH.01"]
+    evidence:
+      - "test/wotex/binding/http/value_test.exs"
+      - "test/wotex/binding/http/library_contract_test.exs"
+  - id: "WBH.03"
+    path: "docs/specs/WBH.03-sse-subscriptions.md"
+    status: "implemented"
+    requires: ["WBH.01", "WBH.02"]
+    evidence:
+      - "test/wotex/binding/http/transport_test.exs"
+      - "test/wotex/binding/http/integration_test.exs"
