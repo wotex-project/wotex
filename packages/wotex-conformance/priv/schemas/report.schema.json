@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wotex.io/schemas/conformance/report-1.0.json",
+  "title": "Wotex Conformance Report 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "subject", "corpus_digest", "generated_at", "environment", "results", "summary", "digest"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "run_id": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "subject": {"$ref": "https://wotex.io/schemas/conformance/subject-1.0.json"},
+    "corpus_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "environment": {"type": "object"},
+    "results": {"type": "array", "items": {"$ref": "https://wotex.io/schemas/conformance/result-1.0.json"}},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pass", "fail", "unsupported", "not_run", "infrastructure_error"],
+      "properties": {
+        "pass": {"type": "integer", "minimum": 0},
+        "fail": {"type": "integer", "minimum": 0},
+        "unsupported": {"type": "integer", "minimum": 0},
+        "not_run": {"type": "integer", "minimum": 0},
+        "infrastructure_error": {"type": "integer", "minimum": 0}
+      }
+    },
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

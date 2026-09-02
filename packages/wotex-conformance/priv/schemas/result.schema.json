@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wotex.io/schemas/conformance/result-1.0.json",
+  "title": "Wotex Conformance Result 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["claim_id", "claim_revision", "standards_revision", "vector_id", "vector_revision", "vector_digest", "status", "expected_digest", "actual_digest", "code", "duration_us", "evidence_digest"],
+  "properties": {
+    "claim_id": {"type": "string"},
+    "claim_revision": {"type": "string"},
+    "standards_revision": {"type": "string"},
+    "vector_id": {"type": "string"},
+    "vector_revision": {"type": "string"},
+    "vector_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "status": {"enum": ["pass", "fail", "unsupported", "not_run", "infrastructure_error"]},
+    "expected_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "actual_digest": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "code": {"type": "string", "minLength": 1, "maxLength": 128},
+    "duration_us": {"type": "integer", "minimum": 0},
+    "evidence_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

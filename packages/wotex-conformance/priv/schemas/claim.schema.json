@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wotex.io/schemas/conformance/claim-1.0.json",
+  "title": "Wotex Conformance Claim 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "revision", "operation", "evidence_profile", "standard", "assertions", "tags"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1, "maxLength": 255, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"},
+    "revision": {"type": "string", "minLength": 1, "maxLength": 64},
+    "operation": {"type": "string", "minLength": 1, "maxLength": 255},
+    "evidence_profile": {
+      "enum": ["value", "codec", "runtime", "binding", "directory", "simulator", "live_transport", "hardware", "certification", "production"]
+    },
+    "standard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identifier", "revision", "source", "section"],
+      "properties": {
+        "identifier": {"type": "string", "minLength": 1, "maxLength": 255},
+        "revision": {"type": "string", "minLength": 1, "maxLength": 255},
+        "source": {"type": "string", "format": "uri", "pattern": "^https://"},
+        "section": {"type": ["string", "null"], "maxLength": 255}
+      }
+    },
+    "assertions": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 128}
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 128}
+    }
+  }
+}

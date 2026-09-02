@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wotex.io/schemas/conformance/vector-1.0.json",
+  "title": "Wotex Conformance Vector 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "revision", "claim", "input", "expectation", "provenance", "tags", "digest"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1, "maxLength": 255},
+    "revision": {"type": "string", "minLength": 1, "maxLength": 64},
+    "claim": {"$ref": "https://wotex.io/schemas/conformance/claim-1.0.json"},
+    "input": true,
+    "expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operator", "value"],
+      "properties": {
+        "operator": {"const": "exact"},
+        "value": true
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["source", "observed"],
+      "properties": {
+        "source": {"type": "string", "format": "uri", "pattern": "^https://"},
+        "observed": {"type": "string", "format": "date"}
+      }
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 64}
+    },
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wotex.io/schemas/conformance/target-response-1.0.json",
+  "title": "Wotex Conformance Target Response 1.0",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "protocol_version", "vector_id", "outcome", "actual"],
+      "properties": {
+        "protocol": {"const": "wotex.conformance.target"},
+        "protocol_version": {"const": "1.0"},
+        "vector_id": {"type": "string"},
+        "outcome": {"const": "observed"},
+        "actual": true,
+        "codes": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 128}
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "protocol_version", "vector_id", "outcome"],
+      "properties": {
+        "protocol": {"const": "wotex.conformance.target"},
+        "protocol_version": {"const": "1.0"},
+        "vector_id": {"type": "string"},
+        "outcome": {"const": "unsupported"},
+        "codes": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 128}
+        }
+      }
+    }
+  ]
+}

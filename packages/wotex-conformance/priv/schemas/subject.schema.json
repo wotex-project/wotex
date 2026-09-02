@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wotex.io/schemas/conformance/subject-1.0.json",
+  "title": "Wotex Conformance Subject 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "artifact_digest", "interface"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1, "maxLength": 255},
+    "version": {"type": "string", "minLength": 1, "maxLength": 128},
+    "artifact_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "interface": {
+      "type": "object",
+      "required": ["kind", "revision"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1, "maxLength": 128},
+        "revision": {"type": "string", "minLength": 1, "maxLength": 128}
+      }
+    }
+  }
+}

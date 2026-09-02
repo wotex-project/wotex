@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wotex.io/schemas/conformance/target-request-1.0.json",
+  "title": "Wotex Conformance Target Request 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "protocol_version", "subject", "claim", "vector", "context"],
+  "properties": {
+    "protocol": {"const": "wotex.conformance.target"},
+    "protocol_version": {"const": "1.0"},
+    "subject": {"$ref": "https://wotex.io/schemas/conformance/subject-1.0.json"},
+    "claim": {"$ref": "https://wotex.io/schemas/conformance/claim-1.0.json"},
+    "vector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision", "input"],
+      "properties": {
+        "id": {"type": "string"},
+        "revision": {"type": "string"},
+        "input": true
+      }
+    },
+    "context": {
+      "type": "object",
+      "required": ["corpus", "generated_at", "environment"]
+    }
+  }
+}

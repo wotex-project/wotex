@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "id": "w3c.wot.thing-description.1.1.baseline",
+  "revision": "1.0.0",
+  "vectors": [
+    {
+      "id": "td11.parse.affordance-categories",
+      "file": "affordance-categories.json",
+      "digest": "sha256:4ff47589a04d07507738a0ab2935794d564fa1786c3c746ffdb854f20d51985a"
+    },
+    {
+      "id": "td11.parse.extension-preservation",
+      "file": "extension-preservation.json",
+      "digest": "sha256:0bc0671a02b172cc2c4747a022f9d3f1fd7542fbf6596d57d38b175d39d22bbb"
+    },
+    {
+      "id": "td11.parse.minimal",
+      "file": "minimal-thing-description.json",
+      "digest": "sha256:d10214474ebeeca0ab204570a54c0d523a60ac2dc68724062dde988a33a3dcaa"
+    },
+    {
+      "id": "td11.validate.missing-title",
+      "file": "missing-title.json",
+      "digest": "sha256:dec2b4e9e55b3ce6cf58c30e5251fa40539cd4054f5f8aaed4a3690ff94705ac"
+    }
+  ],
+  "digest": "sha256:4fd0acd7c045aae26ba9138634c8d10c78950c30cc83735d9b219f9603a82d2d"
+}

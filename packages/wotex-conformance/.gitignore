@@ -1,0 +1,9 @@
+/_build/
+/_site/
+/cover/
+/deps/
+/doc/
+/*.ez
+/*.tar
+erl_crash.dump
+mix.lock.bak
