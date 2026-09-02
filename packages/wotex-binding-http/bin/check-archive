@@ -20,10 +20,10 @@ ln -s ../../wotex "$work/wotex"
 ln -s ../../wotex-runtime "$work/wotex-runtime"
 
 cd "$work/source"
-WOTEX_PATH_DEPS=1 MIX_ENV=prod mix deps.get
-WOTEX_PATH_DEPS=1 MIX_ENV=prod mix compile --warnings-as-errors
+WOTEX_PATH_DEPS=1 MIX_ENV=test mix deps.get
+WOTEX_PATH_DEPS=1 MIX_ENV=test mix compile --warnings-as-errors
 
-WOTEX_PATH_DEPS=1 MIX_ENV=prod mix run --no-start -e '
+WOTEX_PATH_DEPS=1 MIX_ENV=test mix run --no-start -e '
 Application.load(:wotex_binding_http)
 callback = Application.spec(:wotex_binding_http, :mod)
 

@@ -31,21 +31,41 @@ defmodule WotexBindingHTTP.MixProject do
       wotex_dep(),
       wotex_runtime_dep(),
       {:jason, "~> 1.4"},
-      {:ex_doc, "~> 0.38", only: [:dev, :test], runtime: false}
+      {:ex_doc, "~> 0.38", only: [:dev, :test, :docs], runtime: false}
     ]
   end
 
   defp wotex_dep do
     case System.get_env("WOTEX_PATH_DEPS") do
-      "1" -> {:wotex, path: "../wotex", override: true}
-      _ -> {:wotex, "~> 0.1.0"}
+      nil ->
+        {:wotex, "~> 0.1.0"}
+
+      "1" ->
+        if Mix.env() in [:dev, :test, :docs] do
+          {:wotex, path: Path.expand("../wotex", __DIR__), override: true}
+        else
+          raise "WOTEX_PATH_DEPS is allowed only in non-production development environments"
+        end
+
+      _value ->
+        raise "WOTEX_PATH_DEPS must be unset or equal to 1"
     end
   end
 
   defp wotex_runtime_dep do
     case System.get_env("WOTEX_PATH_DEPS") do
-      "1" -> {:wotex_runtime, path: "../wotex-runtime"}
-      _ -> {:wotex_runtime, "~> 0.1.0"}
+      nil ->
+        {:wotex_runtime, "~> 0.1.0"}
+
+      "1" ->
+        if Mix.env() in [:dev, :test, :docs] do
+          {:wotex_runtime, path: Path.expand("../wotex-runtime", __DIR__), override: true}
+        else
+          raise "WOTEX_PATH_DEPS is allowed only in non-production development environments"
+        end
+
+      _value ->
+        raise "WOTEX_PATH_DEPS must be unset or equal to 1"
     end
   end
 
@@ -55,8 +75,10 @@ defmodule WotexBindingHTTP.MixProject do
         "format --check-formatted",
         "compile --warnings-as-errors",
         "test --cover --warnings-as-errors",
-        "docs",
-        "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
+        "docs --warnings-as-errors",
+        "cmd bin/check-boundary",
+        "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build",
+        "cmd bin/check-archive"
       ]
     ]
   end
@@ -71,7 +93,7 @@ defmodule WotexBindingHTTP.MixProject do
       },
       maintainers: ["Wotex contributors"],
       files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs lib mix.exs)
+        ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs lib mix.exs)
     ]
   end
 
