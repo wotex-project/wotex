@@ -20,6 +20,6 @@ defmodule Wotex.Binding.MQTT.LibraryContractTest do
 
   test "package defines no OTP application module" do
     refute Code.ensure_loaded?(Wotex.Binding.MQTT.Application)
-    assert :undefined = :application.get_key(:wotex_binding_mqtt, :mod)
+    assert {:ok, []} = :application.get_key(:wotex_binding_mqtt, :mod)
   end
 end
