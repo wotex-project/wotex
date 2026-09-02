@@ -1,0 +1,12 @@
+Wotex
+Copyright 2026 Wotex contributors
+
+This product includes a modified copy of the W3C Web of Things Thing
+Description 1.1 JSON validation schema from the W3C WoT Thing Description
+repository, tag REC1.1, commit 7c0b968f403ecdb9594bd882cafbacf544c41fc0.
+
+The upstream schema is licensed under the W3C Software and Document License:
+https://www.w3.org/copyright/software-license-2023/
+
+The bundled file carries a modification notice and its exact origin and digest
+are recorded in docs/provenance/w3c-td-schema-1.1.md.

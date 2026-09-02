@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+
+if rg -n \
+  '(Application\.start\(|use Ash|use Phoenix|[A-Z][A-Za-z0-9_.]*\.Repo|Ecto\.Repo|Oban\.)' \
+  lib test mix.exs
+then
+  echo "consumer-neutral library boundary violation" >&2
+  exit 1
+fi
+
+if rg -n --hidden \
+  -g '!.git/**' \
+  -g '!deps/**' \
+  -g '!_build/**' \
+  -g '!doc/**' \
+  -g '!cover/**' \
+  '([/]Users[/]|[/]home[/])' .
+then
+  echo "consumer filesystem path found" >&2
+  exit 1
+fi
+
+if rg -n 'apps_path[[:space:]]*:' mix.exs
+then
+  echo "umbrella configuration is forbidden" >&2
+  exit 1
+fi

@@ -1,0 +1,197 @@
+defmodule Wotex.ThingDescriptionTest do
+  @moduledoc false
+
+  use ExUnit.Case, async: true
+
+  alias Wotex.{Error, ThingDescription}
+
+  test "parses TD 1.1 JSON and preserves original source bytes" do
+    json = Jason.encode!(valid_td_map())
+
+    assert {:ok, td} = ThingDescription.parse(json)
+    assert ThingDescription.id(td) == "urn:example:sensor:1"
+    assert ThingDescription.to_map(td)["x-example:calibration"] == %{"offset" => 0.25}
+    assert {:ok, ^json} = ThingDescription.encode(td, :source)
+  end
+
+  test "canonical encoding is independent of map insertion order" do
+    first = valid_td_map()
+
+    second =
+      first
+      |> Enum.reverse()
+      |> Map.new()
+      |> Map.update!("properties", fn properties ->
+        properties |> Enum.reverse() |> Map.new()
+      end)
+
+    assert {:ok, first_td} = ThingDescription.from_map(first)
+    assert {:ok, second_td} = ThingDescription.from_map(second)
+    assert {:ok, first_json} = ThingDescription.encode(first_td, :canonical)
+    assert {:ok, second_json} = ThingDescription.encode(second_td, :canonical)
+    assert first_json == second_json
+    assert Jason.decode!(first_json) == first
+  end
+
+  test "mutation validates the result and invalidates source-byte encoding" do
+    json = Jason.encode!(valid_td_map())
+    assert {:ok, td} = ThingDescription.parse(json)
+    assert {:ok, changed} = ThingDescription.put_id(td, "urn:example:sensor:2")
+    assert ThingDescription.id(changed) == "urn:example:sensor:2"
+
+    assert {:error, %Error{code: :source_unavailable, phase: :encode}} =
+             ThingDescription.encode(changed, :source)
+  end
+
+  test "rejects a legacy context as a production TD 1.1 claim" do
+    map = Map.put(valid_td_map(), "@context", "https://www.w3.org/2019/wot/td/v1")
+
+    assert {:error, errors} = ThingDescription.from_map(map)
+    assert Enum.any?(errors, &(&1.code == :unsupported_context and &1.path == "/@context"))
+  end
+
+  test "returns a typed malformed JSON error" do
+    assert {:error, %Error{code: :invalid_json, phase: :parse}} =
+             ThingDescription.parse(~s({"title":))
+  end
+
+  test "parse rejects non-binary input and raising variants reuse structured errors" do
+    assert {:error, %Error{code: :invalid_input}} = ThingDescription.parse(%{})
+
+    json = Jason.encode!(valid_td_map())
+    assert %ThingDescription{} = ThingDescription.parse!(json)
+
+    assert_raise Error, fn -> ThingDescription.parse!(~s({"title":)) end
+
+    legacy =
+      valid_td_map()
+      |> Map.put("@context", "https://www.w3.org/2019/wot/td/v1")
+      |> Jason.encode!()
+
+    assert_raise Error, fn -> ThingDescription.parse!(legacy) end
+  end
+
+  test "requires a JSON object root" do
+    assert {:error, %Error{code: :object_required, path: "/"}} =
+             ThingDescription.parse(~s(["not", "a", "td"]))
+  end
+
+  test "enforces byte limits before decoding" do
+    json = Jason.encode!(valid_td_map())
+
+    assert {:error, %Error{code: :byte_limit_exceeded, details: %{max_bytes: 8}}} =
+             ThingDescription.parse(json, max_bytes: 8)
+  end
+
+  test "enforces depth and node limits for map input" do
+    deep =
+      put_in(valid_td_map(), ["x-example:deep"], %{"a" => %{"b" => %{"c" => true}}})
+
+    assert {:error, %Error{code: :depth_limit_exceeded}} =
+             ThingDescription.from_map(deep, max_depth: 2)
+
+    assert {:error, %Error{code: :node_limit_exceeded}} =
+             ThingDescription.from_map(valid_td_map(), max_nodes: 3)
+  end
+
+  test "rejects non-string JSON object keys" do
+    map = Map.put(valid_td_map(), :private_key, true)
+
+    assert {:error, %Error{code: :non_string_key}} = ThingDescription.from_map(map)
+  end
+
+  test "reports pinned schema provenance" do
+    assert %{
+             standard: "W3C WoT Thing Description 1.1",
+             recommendation_date: "2023-12-05",
+             upstream_tag: "REC1.1",
+             upstream_commit: "7c0b968f403ecdb9594bd882cafbacf544c41fc0",
+             sha256: "87481cfafa3847d0c593c047750e090d4365dcc0f1b5daab3a725d63c991a4da",
+             informative: true
+           } = ThingDescription.schema_info()
+  end
+
+  test "supports explicit validation and source-free compact and pretty encodings" do
+    assert {:ok, td} = ThingDescription.from_map(valid_td_map(), validate: false)
+    assert {:ok, ^td} = ThingDescription.validate(td)
+    assert {:ok, compact} = ThingDescription.encode(td, :compact)
+    assert {:ok, pretty} = ThingDescription.encode(td, :pretty)
+    assert Jason.decode!(compact) == valid_td_map()
+    assert Jason.decode!(pretty) == valid_td_map()
+    assert String.contains?(pretty, "\n")
+
+    assert {:error, %Error{code: :source_unavailable}} = ThingDescription.encode(td, :source)
+    assert {:error, %Error{code: :unsupported_encoding}} = ThingDescription.encode(td, :xml)
+  end
+
+  test "rejects invalid identifiers and propagates validation after mutation" do
+    assert {:ok, td} = ThingDescription.from_map(valid_td_map())
+    assert {:error, %Error{code: :invalid_id, path: "/id"}} = ThingDescription.put_id(td, "")
+
+    assert {:ok, invalid} = ThingDescription.from_map(%{"title" => "incomplete"}, validate: false)
+    assert {:error, errors} = ThingDescription.put_id(invalid, "urn:example:incomplete")
+    assert errors != []
+  end
+
+  test "accepts the TD 1.1 context in an extension context array" do
+    map =
+      Map.put(valid_td_map(), "@context", [
+        Wotex.td_context_1_1(),
+        %{"x-example" => "https://example.test/vocabulary#"}
+      ])
+
+    assert {:ok, _td} = ThingDescription.from_map(map)
+  end
+
+  test "rejects a context array without the TD 1.1 context and an empty title" do
+    map =
+      valid_td_map()
+      |> Map.put("@context", ["https://example.test/context"])
+      |> Map.put("title", "   ")
+
+    assert {:error, errors} = ThingDescription.from_map(map)
+    assert Enum.any?(errors, &(&1.code == :unsupported_context))
+    assert Enum.any?(errors, &(&1.code == :empty_title))
+  end
+
+  test "schema failures carry a schema phase and normalized path" do
+    invalid = %{
+      "@context" => Wotex.td_context_1_1(),
+      "title" => "Invalid",
+      "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+      "security" => ["nosec_sc"],
+      "properties" => %{"temperature" => %{"forms" => [%{"op" => "readproperty"}]}}
+    }
+
+    assert {:error, errors} = ThingDescription.from_map(invalid)
+    assert Enum.any?(errors, &(&1.phase == :schema and String.starts_with?(&1.path, "/")))
+  end
+
+  test "invalid limit options fall back to safe defaults" do
+    json = Jason.encode!(valid_td_map())
+    assert {:ok, _td} = ThingDescription.parse(json, max_bytes: 0, max_depth: 0, max_nodes: 0)
+  end
+
+  defp valid_td_map do
+    %{
+      "@context" => Wotex.td_context_1_1(),
+      "id" => "urn:example:sensor:1",
+      "title" => "Temperature Sensor",
+      "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+      "security" => ["nosec_sc"],
+      "properties" => %{
+        "temperature" => %{
+          "type" => "number",
+          "readOnly" => true,
+          "forms" => [
+            %{
+              "href" => "https://example.test/sensors/1/properties/temperature",
+              "op" => "readproperty"
+            }
+          ]
+        }
+      },
+      "x-example:calibration" => %{"offset" => 0.25}
+    }
+  end
+end

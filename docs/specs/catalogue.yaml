@@ -1,0 +1,16 @@
+schema_version: "1.0.0"
+package: "wotex"
+specifications:
+  - id: "WTX.01"
+    path: "docs/specs/WTX.01-thing-description.md"
+    status: "implemented"
+    standard: "W3C WoT Thing Description 1.1"
+    standard_revision: "Recommendation 5 December 2023"
+  - id: "WTX.02"
+    path: "docs/specs/WTX.02-affordance-values.md"
+    status: "implemented"
+    requires: ["WTX.01"]
+  - id: "WTX.03"
+    path: "docs/specs/WTX.03-errors-extensions-and-compatibility.md"
+    status: "implemented"
+    requires: ["WTX.01", "WTX.02"]
