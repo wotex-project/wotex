@@ -84,8 +84,8 @@ They are never treated as an empty result.
 | Deletion | Discovery deletes by identifier | `delete/4` is conditional on the observed or supplied version |
 | Validation | Discovery recommends at least TD minimal validation | Every write must pass the core Thing Description 1.1 validator |
 | Listing order | Discovery requires ascending Unicode code point order by identifier when paginated | Every page is checked for that order |
-| Pagination | Discovery defines optional `limit`, zero-based `offset`, `next`, and canonical collection revision information | Listing uses bounded offset pages and an immutable collection-revision token |
-| Expiry | Discovery defines `ttl` and `expires`, and recommends purging expired registrations | Reads reject expired entries; consumer-invoked bounded expiry defaults to purge and may explicitly retain an expired record |
+| Pagination | Discovery defines optional `limit`, zero-based `offset`, `next`, and canonical collection revision information | Listing uses bounded offset pages and an immutable collection-revision token that detects both mutations and wall-clock expiry changes |
+| Expiry | Discovery defines `ttl` and `expires`, and recommends purging expired registrations | Reads reject expired entries; consumer-invoked bounded expiry defaults to purge and may explicitly transition an active entry once into retained expired state |
 | Introduction | Discovery allows `/.well-known/wot` and requires the directory's own Thing Description there when used | `introduction/1` returns that value without entry repository access |
 | Search | JSONPath and XPath are informative; SPARQL is optional | No search profile is implemented |
 
@@ -190,7 +190,12 @@ same limit, format, and collection revision forward.
 
 If a repository cannot honor the supplied collection revision because the
 collection changed, it returns `collection_changed`; it must not silently return
-a page from a different ordering snapshot.
+a page from a different ordering snapshot. The active collection can change
+without a repository mutation when an entry reaches its absolute expiry. A
+revision therefore binds both the repository mutation generation and the active
+membership observed for the first page. An adapter must return
+`collection_changed` if the supplied revision no longer identifies the same
+active membership at the new `active_at` value.
 
 ### 5.7 Introduction
 
@@ -225,9 +230,15 @@ Repository requirements:
   `conflict` on mismatch.
 - `list` excludes expired entries at `active_at`, orders by identifier in
   ascending Unicode code point order, honors the requested collection revision,
-  and returns no more than `limit` entries.
-- `expire_due` is a bounded transaction. `purge` removes due entries; `retain`
-  atomically changes them to `expired` and advances their version.
+  returns no more than `limit` entries, and reports `collection_changed` when
+  wall-clock expiry changed active membership since the revision was issued.
+- `expire_due` is a bounded transaction. `retain` selects only due active
+  entries, atomically changes each selected entry to `expired`, and advances
+  each selected entry's version once. `purge` removes due active entries and due
+  entries previously retained as expired.
+- An expiry batch that changes no entry does not advance the collection
+  revision. A batch that changes one or more entries advances it exactly once,
+  independently of the number of selected entries.
 - Adapter errors never cause the library to retry implicitly.
 
 ### 6.2 Authorization
@@ -333,14 +344,21 @@ authorize the collection, read the clock, and invoke one repository list call.
 
 The library validates page size, offset, result count, entry state, identifier
 order, next offset, and collection revision. Returned entries receive one shared
-`retrieved` timestamp without altering persisted values.
+`retrieved` timestamp without altering persisted values. Each repository-defined
+revision is opaque to the library and remains unchanged across its page chain.
+If active membership changes because an entry reaches expiry between calls, the
+repository returns `collection_changed` rather than an offset into the changed
+collection.
 
 ### 7.7 Expire
 
 `expire(service, context, options \\ [])` authorizes `expire`, obtains the clock
 time, validates the bounded batch limit and selected strategy, and invokes one
 `expire_due` repository operation. It starts no timer, process, or job. The
-consumer schedules and supervises calls.
+consumer schedules and supervises calls. Retention transitions a due active
+entry once; a later retention batch does not select it again. Purge may remove a
+previously retained expired entry. A no-op batch leaves collection revision
+unchanged.
 
 ### 7.8 Introduction
 
@@ -364,7 +382,7 @@ set is:
 | `expired` | Entry is not active at the injected clock time |
 | `forbidden` | Authorization denied without existence disclosure |
 | `conflict` | Insert collision or optimistic version conflict |
-| `collection_changed` | A later page cannot honor the requested collection revision |
+| `collection_changed` | A later page cannot honor the requested mutation generation or active-membership snapshot |
 | `unsupported_query_profile` | Query asks for an unimplemented profile |
 | `invalid_page` | Repository returned an invalid page contract |
 | `authorization_failure` | Authorization adapter failed rather than denied |
@@ -386,6 +404,8 @@ codes to Problem Details without changing library behavior.
 - Patch work is bounded by depth and node count before persistence.
 - List and expiry work is bounded by consumer-configured maxima.
 - Optimistic versions prevent silent lost updates across independent callers.
+- Retained expiry is a one-way active-to-expired transition and cannot create
+  unbounded version or revision churn on repeated sweeps.
 - The library stores security-scheme declarations as part of the Thing
   Description value but never accepts or resolves credentials.
 - Loading the package performs no I/O and starts no process.
@@ -414,9 +434,9 @@ minor version change. Once 1.0 is released:
 | Retrieval and `retrieved` metadata | retrieval tests |
 | RFC 7396 plus validation-before-write | merge patch and patch tests |
 | Stable deletion semantics | deletion tests |
-| Bounded, ordered, revision-aware listing | query and page tests |
+| Bounded, ordered, revision-aware listing | query, page, mutation-change, and wall-clock-expiry tests |
 | Explicit unsupported search | query-profile test |
-| Relative and absolute expiry | registration and expiry tests |
+| Relative, absolute, retained, purged, and no-op expiry | registration and expiry tests |
 | Introduction isolation | Introduction test |
 | Deterministic redacted errors | error tests |
 | Public archive contents | `mix hex.build` and archive inspection |

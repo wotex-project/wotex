@@ -320,7 +320,8 @@ defmodule Wotex.DirectoryTest do
              ]
 
       assert Enum.all?(first.entries, &(&1.registration.retrieved == @now))
-      assert first.collection_revision == "7"
+      assert is_binary(first.collection_revision)
+      refute first.collection_revision == ""
       assert first.next_offset == 2
 
       first_query = %Query{profile: :listing, offset: 0, limit: 2, format: :array}
@@ -329,6 +330,7 @@ defmodule Wotex.DirectoryTest do
       assert {:ok, second} = Directory.query(setup.service, next_query, setup.context)
       assert Enum.map(second.entries, & &1.identifier) == ["urn:example:thing:c"]
       assert second.next_offset == nil
+      assert second.collection_revision == first.collection_revision
     end
 
     test "detects a collection change between pages" do
@@ -348,6 +350,26 @@ defmodule Wotex.DirectoryTest do
 
       assert {:error, %Error{code: :collection_changed}} =
                Directory.query(setup.service, next_query, setup.context)
+    end
+
+    test "detects wall-clock expiry that changes active membership between pages" do
+      crossing = entry("urn:example:a", expires: DateTime.add(@now, 1, :second))
+      stable = entry("urn:example:b", expires: DateTime.add(@now, 60, :second))
+      setup = TestService.build(entries: [crossing, stable], revision: 2)
+
+      assert {:ok, first} = Directory.list(setup.service, setup.context, limit: 1)
+      query = %Query{profile: :listing, offset: 0, limit: 1, format: :array}
+      next_query = Page.next_query(first, query)
+
+      later_service = %{
+        setup.service
+        | clock: {Wotex.Directory.TestClock, DateTime.add(@now, 2, :second)}
+      }
+
+      assert {:error, %Error{code: :collection_changed}} =
+               Directory.query(later_service, next_query, setup.context)
+
+      assert MemoryRepository.snapshot(setup.repository).revision == 2
     end
 
     test "rejects unsupported profiles and excessive limits explicitly" do
@@ -396,6 +418,46 @@ defmodule Wotex.DirectoryTest do
       assert {:ok, expiry} = Directory.expire(setup.service, setup.context)
       assert [%Entry{state: :expired, version: 2}] = expiry.entries
       assert MemoryRepository.entries(setup.repository)[due.identifier].state == :expired
+    end
+
+    test "retain processes a due active entry only once" do
+      due = entry("urn:example:expired", expires: @now)
+      setup = TestService.build(entries: [due], expiry_strategy: :retain, revision: 4)
+
+      assert {:ok, first} = Directory.expire(setup.service, setup.context)
+      assert [%Entry{state: :expired, version: 2}] = first.entries
+      assert MemoryRepository.snapshot(setup.repository).revision == 5
+
+      assert {:ok, second} = Directory.expire(setup.service, setup.context)
+      assert second.entries == []
+      assert MemoryRepository.snapshot(setup.repository).revision == 5
+      assert MemoryRepository.entries(setup.repository)[due.identifier].version == 2
+    end
+
+    test "purge removes due active and retained expired entries in one bounded batch" do
+      active = entry("urn:example:expired:b", expires: @now)
+      retained = entry("urn:example:expired:a", expires: @now, state: :expired, version: 2)
+      future = entry("urn:example:future", expires: DateTime.add(@now, 60, :second))
+      setup = TestService.build(entries: [active, retained, future], revision: 8)
+
+      assert {:ok, expiry} = Directory.expire(setup.service, setup.context, limit: 2)
+
+      assert Enum.map(expiry.entries, &{&1.identifier, &1.state}) == [
+               {"urn:example:expired:a", :expired},
+               {"urn:example:expired:b", :active}
+             ]
+
+      assert Map.keys(MemoryRepository.entries(setup.repository)) == ["urn:example:future"]
+      assert MemoryRepository.snapshot(setup.repository).revision == 9
+    end
+
+    test "an expiry batch with no due entries does not advance collection revision" do
+      future = entry("urn:example:future", expires: DateTime.add(@now, 60, :second))
+      setup = TestService.build(entries: [future], revision: 11)
+
+      assert {:ok, expiry} = Directory.expire(setup.service, setup.context)
+      assert expiry.entries == []
+      assert MemoryRepository.snapshot(setup.repository).revision == 11
     end
 
     test "Introduction bypasses all consumer ports and contains no entry" do
