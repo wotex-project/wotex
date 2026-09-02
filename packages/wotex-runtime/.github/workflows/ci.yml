@@ -11,13 +11,32 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wotex-runtime
+    env:
+      MIX_ENV: test
+      WOTEX_PATH_DEPS: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: wotex-runtime
+      - uses: actions/checkout@v4
+        with:
+          repository: wotex-project/wotex
+          ref: 3676e71ed5b3b15e002bf4a05cc1b856a75dd8d9
+          path: wotex
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "28.5"
           elixir-version: "1.19.5"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            wotex-runtime/deps
+            wotex-runtime/_build
+          key: ${{ runner.os }}-otp-28.5-elixir-1.19.5-${{ hashFiles('wotex-runtime/mix.lock') }}
       - run: mix local.hex --force
       - run: mix local.rebar --force
-      - run: mix deps.get
+      - run: mix deps.get --only test
       - run: mix check
