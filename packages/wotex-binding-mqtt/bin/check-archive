@@ -51,6 +51,33 @@ fi
 
 bin/check-boundary "$temporary/package"
 
+dependency_root=_build/test/lib
+
+for dependency in wotex wotex_runtime jason
+do
+  if [ ! -d "$dependency_root/$dependency/ebin" ]
+  then
+    echo "compiled dependency is missing; run the test compile before the archive check" >&2
+    exit 1
+  fi
+done
+
+mkdir "$temporary/ebin"
+
+find "$temporary/package/lib" -type f -name '*.ex' -print | sort | \
+  xargs elixirc \
+    --warnings-as-errors \
+    -pa "$dependency_root/wotex/ebin" \
+    -pa "$dependency_root/wotex_runtime/ebin" \
+    -pa "$dependency_root/jason/ebin" \
+    -o "$temporary/ebin"
+
+if [ ! -f "$temporary/ebin/Elixir.Wotex.Binding.MQTT.Transport.beam" ]
+then
+  echo "out-of-tree archive compilation did not produce the transport" >&2
+  exit 1
+fi
+
 if command -v sha256sum >/dev/null 2>&1
 then
   digest=$(sha256sum "$archive" | awk '{print $1}')
@@ -59,4 +86,5 @@ else
 fi
 
 echo "archive contents passed"
+echo "out-of-tree archive compilation passed"
 echo "archive sha256: $digest"
