@@ -37,10 +37,12 @@ defmodule WotexDirectory.MixProject do
     [extra_applications: []]
   end
 
+  def cli, do: [preferred_envs: [check: :test]]
+
   defp deps do
     [
       wotex_dependency(),
-      {:ex_doc, "~> 0.38", only: :docs, runtime: false}
+      {:ex_doc, "~> 0.38", only: [:dev, :test, :docs], runtime: false}
     ]
   end
 
@@ -48,7 +50,17 @@ defmodule WotexDirectory.MixProject do
   defp elixirc_paths(_environment), do: ["lib"]
 
   defp aliases do
-    [package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"]
+    [
+      check: [
+        "format --check-formatted",
+        "compile --warnings-as-errors",
+        "test --cover --warnings-as-errors",
+        "docs --warnings-as-errors",
+        "cmd bin/check-boundary",
+        "package"
+      ],
+      package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
+    ]
   end
 
   defp wotex_dependency do

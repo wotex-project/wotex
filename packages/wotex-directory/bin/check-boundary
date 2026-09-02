@@ -1,0 +1,31 @@
+#!/bin/sh
+set -eu
+
+if rg -n '(Application\.start\(|use (Application|GenServer|Supervisor|Agent)|DynamicSupervisor\.|Task\.Supervisor|Registry\.|use Ash|use Phoenix|Ecto\.|Oban\.|Plug\.)' lib test mix.exs
+then
+  echo "directory process, framework, or persistence boundary violation" >&2
+  exit 1
+fi
+
+if rg -n 'apps_path[[:space:]]*:' mix.exs
+then
+  echo "umbrella configuration is forbidden" >&2
+  exit 1
+fi
+
+if rg -n --hidden -g '!.git/**' -g '!deps/**' -g '!_build/**' -g '!doc/**' -g '!cover/**' '([/]Users[/]|[/]home[/])' .
+then
+  echo "consumer filesystem path found" >&2
+  exit 1
+fi
+
+find lib -type f -name '*.ex' -print | while IFS= read -r source
+do
+  modules=$(rg -c '^defmodule ' "$source" || true)
+
+  if [ "$modules" -ne 1 ]
+  then
+    echo "source file must contain exactly one module: $source" >&2
+    exit 1
+  fi
+done

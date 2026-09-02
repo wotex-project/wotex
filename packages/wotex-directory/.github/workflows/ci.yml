@@ -40,12 +40,7 @@ jobs:
       - run: mix local.hex --force
       - run: mix local.rebar --force
       - run: mix deps.get --only test
-      - run: mix format --check-formatted
-      - run: mix compile --warnings-as-errors
-      - run: mix test --cover --warnings-as-errors
-      - run: MIX_ENV=docs mix deps.get --only docs
-      - run: MIX_ENV=docs mix docs --warnings-as-errors
-      - run: mix package
+      - run: mix check
       - run: >-
           mix run --no-start -e
           'unless Application.spec(:wotex_directory, :mod) in [nil, [], :undefined], do: System.halt(1)'
