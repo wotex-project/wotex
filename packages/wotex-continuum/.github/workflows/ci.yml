@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      WOTEX_CORE_PATH: ${{ github.workspace }}/_wotex_core
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: "1.19.5"
+            otp: "28.5"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: wotex-project/wotex
+          ref: 3676e71ed5b3b15e002bf4a05cc1b856a75dd8d9
+          path: _wotex_core
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-otp-${{ matrix.otp }}-elixir-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}
+      - run: mix deps.get
+      - run: mix format --check-formatted
+      - run: mix compile --warnings-as-errors
+      - run: mix test --cover
+      - run: mix docs --warnings-as-errors
+      - run: env -u WOTEX_CORE_PATH mix hex.build
+      - run: ./scripts/check_public_boundary.sh

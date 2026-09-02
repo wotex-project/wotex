@@ -1,0 +1,10 @@
+{
+  "kind": "lifecycle",
+  "schema_version": "1.0.0",
+  "subject_id": "worker-example-1",
+  "state": "active",
+  "generation": 4,
+  "changed_at": "2026-09-02T10:00:00Z",
+  "reason": "consumer-host activation completed",
+  "extensions": {}
+}

@@ -1,0 +1,10 @@
+{
+  "kind": "evidence_reference",
+  "schema_version": "1.0.0",
+  "evidence_id": "evidence-example-1",
+  "uri": "urn:example:evidence:1",
+  "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "media_type": "application/json",
+  "captured_at": "2026-09-02T10:00:00Z",
+  "extensions": {}
+}

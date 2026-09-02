@@ -1,0 +1,17 @@
+{
+  "description": "reduced state names an affected capability and reason",
+  "expected": {"code": "invalid_degradation_state", "path": ["level"]},
+  "input": {
+    "kind": "degradation",
+    "schema_version": "1.0.0",
+    "degradation_id": "degradation-example-bad",
+    "subject_id": "worker-example-bad",
+    "level": "reduced",
+    "capabilities": [],
+    "reason_codes": [],
+    "since": "2026-09-02T10:00:00Z",
+    "recoverable": true,
+    "evidence": [],
+    "extensions": {}
+  }
+}

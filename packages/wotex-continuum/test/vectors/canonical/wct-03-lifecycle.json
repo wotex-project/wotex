@@ -1,0 +1,13 @@
+{
+  "description": "lifecycle canonical bytes are stable",
+  "input": {
+    "kind": "lifecycle",
+    "schema_version": "1.0.0",
+    "subject_id": "worker-example-1",
+    "state": "staged",
+    "generation": 0,
+    "changed_at": "2026-09-02T10:00:00Z",
+    "extensions": {}
+  },
+  "canonical": "{\"changed_at\":\"2026-09-02T10:00:00Z\",\"extensions\":{},\"generation\":0,\"kind\":\"lifecycle\",\"schema_version\":\"1.0.0\",\"state\":\"staged\",\"subject_id\":\"worker-example-1\"}"
+}

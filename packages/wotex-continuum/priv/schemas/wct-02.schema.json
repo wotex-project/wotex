@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wotex.io/schemas/continuum/wct-02/1.0.0",
+  "title": "WCT.02 continuum exchange values",
+  "oneOf": [
+    {"$ref": "#/$defs/observationProposal"},
+    {"$ref": "#/$defs/actionIntent"},
+    {"$ref": "#/$defs/actionResult"},
+    {"$ref": "#/$defs/evidenceReference"},
+    {"$ref": "#/$defs/delivery"}
+  ],
+  "$defs": {
+    "schemaVersion": {"const": "1.0.0"},
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 512},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "extensions": {
+      "type": "object",
+      "propertyNames": {"format": "uri"},
+      "additionalProperties": true
+    },
+    "failure": {
+      "type": "object",
+      "required": ["code", "message", "details"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1, "maxLength": 256},
+        "message": {"type": "string", "minLength": 1, "maxLength": 4096},
+        "details": true
+      },
+      "additionalProperties": false
+    },
+    "evidenceReference": {
+      "type": "object",
+      "required": ["kind", "schema_version", "evidence_id", "uri", "digest", "media_type", "captured_at", "extensions"],
+      "properties": {
+        "kind": {"const": "evidence_reference"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "evidence_id": {"$ref": "#/$defs/identifier"},
+        "uri": {"type": "string", "format": "uri"},
+        "digest": {"$ref": "#/$defs/digest"},
+        "media_type": {"type": "string", "minLength": 1, "maxLength": 512},
+        "captured_at": {"type": "string", "format": "date-time"},
+        "extensions": {"$ref": "#/$defs/extensions"}
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/evidenceReference"}
+    },
+    "observationProposal": {
+      "type": "object",
+      "required": ["kind", "schema_version", "proposal_id", "thing_id", "affordance_type", "affordance_name", "value", "observed_at", "quality", "evidence", "context", "extensions"],
+      "properties": {
+        "kind": {"const": "observation_proposal"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "proposal_id": {"$ref": "#/$defs/identifier"},
+        "thing_id": {"type": "string", "format": "uri"},
+        "affordance_type": {"enum": ["property", "event"]},
+        "affordance_name": {"$ref": "#/$defs/identifier"},
+        "value": true,
+        "observed_at": {"type": "string", "format": "date-time"},
+        "sequence": {"type": "integer", "minimum": 0},
+        "quality": {"type": "object"},
+        "evidence": {"$ref": "#/$defs/evidence"},
+        "context": {"$ref": "wct-01.schema.json#/$defs/executionContext"},
+        "extensions": {"$ref": "#/$defs/extensions"}
+      },
+      "additionalProperties": false
+    },
+    "actionIntent": {
+      "type": "object",
+      "required": ["kind", "schema_version", "intent_id", "thing_id", "action_name", "input", "requested_at", "idempotency_key", "evidence", "context", "extensions"],
+      "properties": {
+        "kind": {"const": "action_intent"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "intent_id": {"$ref": "#/$defs/identifier"},
+        "thing_id": {"type": "string", "format": "uri"},
+        "action_name": {"$ref": "#/$defs/identifier"},
+        "input": true,
+        "requested_at": {"type": "string", "format": "date-time"},
+        "idempotency_key": {"$ref": "#/$defs/identifier"},
+        "requested_by": {"$ref": "#/$defs/identifier"},
+        "evidence": {"$ref": "#/$defs/evidence"},
+        "context": {"$ref": "wct-01.schema.json#/$defs/executionContext"},
+        "extensions": {"$ref": "#/$defs/extensions"}
+      },
+      "additionalProperties": false
+    },
+    "actionResult": {
+      "type": "object",
+      "required": ["kind", "schema_version", "result_id", "intent_id", "status", "evidence", "context", "extensions"],
+      "properties": {
+        "kind": {"const": "action_result"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "result_id": {"$ref": "#/$defs/identifier"},
+        "intent_id": {"$ref": "#/$defs/identifier"},
+        "status": {"enum": ["accepted", "running", "succeeded", "failed", "cancelled", "unknown"]},
+        "output": true,
+        "error": {"$ref": "#/$defs/failure"},
+        "started_at": {"type": "string", "format": "date-time"},
+        "completed_at": {"type": "string", "format": "date-time"},
+        "evidence": {"$ref": "#/$defs/evidence"},
+        "context": {"$ref": "wct-01.schema.json#/$defs/executionContext"},
+        "extensions": {"$ref": "#/$defs/extensions"}
+      },
+      "additionalProperties": false
+    },
+    "delivery": {
+      "type": "object",
+      "required": ["kind", "schema_version", "delivery_id", "item_kind", "item_id", "source", "destination", "status", "attempt", "emitted_at", "extensions"],
+      "properties": {
+        "kind": {"const": "delivery"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "delivery_id": {"$ref": "#/$defs/identifier"},
+        "item_kind": {"type": "string", "minLength": 1},
+        "item_id": {"$ref": "#/$defs/identifier"},
+        "source": {"$ref": "#/$defs/identifier"},
+        "destination": {"$ref": "#/$defs/identifier"},
+        "status": {"enum": ["pending", "in_flight", "delivered", "acknowledged", "failed", "unknown"]},
+        "attempt": {"type": "integer", "minimum": 1},
+        "sequence": {"type": "integer", "minimum": 0},
+        "emitted_at": {"type": "string", "format": "date-time"},
+        "acknowledged_at": {"type": "string", "format": "date-time"},
+        "error": {"$ref": "#/$defs/failure"},
+        "extensions": {"$ref": "#/$defs/extensions"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

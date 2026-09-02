@@ -1,0 +1,7 @@
+{
+  "kind": "mode",
+  "schema_version": "1.0.0",
+  "deployment": "air_gapped",
+  "connectivity": "disconnected",
+  "extensions": {}
+}

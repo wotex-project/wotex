@@ -1,0 +1,28 @@
+{
+  "kind": "action_intent",
+  "schema_version": "1.0.0",
+  "intent_id": "intent-example-1",
+  "thing_id": "urn:example:thing:pump-7",
+  "action_name": "setLevel",
+  "input": {"level": 42},
+  "requested_at": "2026-09-02T10:00:02Z",
+  "idempotency_key": "set-level-example-1",
+  "requested_by": "principal-example-1",
+  "evidence": [],
+  "context": {
+    "kind": "execution_context",
+    "schema_version": "1.0.0",
+    "execution_id": "exec-example-1",
+    "node_id": "edge-example-a",
+    "mode": {
+      "kind": "mode",
+      "schema_version": "1.0.0",
+      "deployment": "air_gapped",
+      "connectivity": "disconnected",
+      "extensions": {}
+    },
+    "observed_at": "2026-09-02T10:00:02Z",
+    "extensions": {}
+  },
+  "extensions": {}
+}

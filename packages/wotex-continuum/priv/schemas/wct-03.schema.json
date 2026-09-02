@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wotex.io/schemas/continuum/wct-03/1.0.0",
+  "title": "WCT.03 continuum mode and lifecycle values",
+  "oneOf": [
+    {"$ref": "#/$defs/mode"},
+    {"$ref": "#/$defs/lifecycle"},
+    {"$ref": "#/$defs/degradation"},
+    {"$ref": "#/$defs/exitReceipt"}
+  ],
+  "$defs": {
+    "schemaVersion": {"const": "1.0.0"},
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 512},
+    "extensions": {
+      "type": "object",
+      "propertyNames": {"format": "uri"},
+      "additionalProperties": true
+    },
+    "mode": {
+      "type": "object",
+      "required": ["kind", "schema_version", "deployment", "connectivity", "extensions"],
+      "properties": {
+        "kind": {"const": "mode"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "deployment": {"enum": ["saas", "hybrid", "connected_onprem", "air_gapped"]},
+        "connectivity": {"enum": ["connected", "intermittent", "disconnected"]},
+        "extensions": {"$ref": "#/$defs/extensions"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"deployment": {"const": "air_gapped"}}},
+          "then": {"properties": {"connectivity": {"const": "disconnected"}}}
+        }
+      ],
+      "additionalProperties": false
+    },
+    "lifecycle": {
+      "type": "object",
+      "required": ["kind", "schema_version", "subject_id", "state", "generation", "changed_at", "extensions"],
+      "properties": {
+        "kind": {"const": "lifecycle"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "subject_id": {"$ref": "#/$defs/identifier"},
+        "state": {"enum": ["staged", "ready", "active", "degraded", "draining", "stopped", "removed"]},
+        "generation": {"type": "integer", "minimum": 0},
+        "changed_at": {"type": "string", "format": "date-time"},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 2048},
+        "extensions": {"$ref": "#/$defs/extensions"}
+      },
+      "additionalProperties": false
+    },
+    "degradation": {
+      "type": "object",
+      "required": ["kind", "schema_version", "degradation_id", "subject_id", "level", "capabilities", "reason_codes", "since", "recoverable", "evidence", "extensions"],
+      "properties": {
+        "kind": {"const": "degradation"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "degradation_id": {"$ref": "#/$defs/identifier"},
+        "subject_id": {"$ref": "#/$defs/identifier"},
+        "level": {"enum": ["none", "reduced", "unavailable"]},
+        "capabilities": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
+        "reason_codes": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
+        "since": {"type": "string", "format": "date-time"},
+        "recoverable": {"type": "boolean"},
+        "evidence": {"type": "array", "items": {"$ref": "wct-02.schema.json#/$defs/evidenceReference"}},
+        "extensions": {"$ref": "#/$defs/extensions"}
+      },
+      "additionalProperties": false
+    },
+    "exitReceipt": {
+      "type": "object",
+      "required": ["kind", "schema_version", "receipt_id", "subject_id", "operation", "status", "requested_at", "artifacts", "residuals", "extensions"],
+      "properties": {
+        "kind": {"const": "exit_receipt"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "receipt_id": {"$ref": "#/$defs/identifier"},
+        "subject_id": {"$ref": "#/$defs/identifier"},
+        "operation": {"enum": ["export", "remove"]},
+        "status": {"enum": ["requested", "running", "completed", "failed", "partial"]},
+        "requested_at": {"type": "string", "format": "date-time"},
+        "completed_at": {"type": "string", "format": "date-time"},
+        "artifacts": {"type": "array", "items": {"$ref": "wct-02.schema.json#/$defs/evidenceReference"}},
+        "residuals": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
+        "error": {"$ref": "wct-02.schema.json#/$defs/failure"},
+        "extensions": {"$ref": "#/$defs/extensions"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

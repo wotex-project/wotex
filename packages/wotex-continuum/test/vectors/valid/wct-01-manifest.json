@@ -1,0 +1,34 @@
+{
+  "kind": "continuum_manifest",
+  "schema_version": "1.0.0",
+  "manifest_id": "manifest-example-1",
+  "artifact": {
+    "name": "example-edge-worker",
+    "version": "1.2.3",
+    "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "compatibility": {
+    "kind": "compatibility",
+    "schema_version": "1.0.0",
+    "schema_requirement": "~> 1.0",
+    "required_capabilities": [
+      {"id": "observation-forwarding", "version_requirement": ">= 2.0.0 and < 3.0.0"}
+    ],
+    "extensions": {}
+  },
+  "supported_modes": ["hybrid", "connected_onprem", "air_gapped"],
+  "capabilities": [
+    {
+      "kind": "capability",
+      "schema_version": "1.0.0",
+      "id": "local-buffering",
+      "version": "1.0.0",
+      "operations": ["enqueue", "drain"],
+      "modes": ["hybrid", "connected_onprem", "air_gapped"],
+      "network": "local",
+      "degradation": "queue",
+      "extensions": {}
+    }
+  ],
+  "extensions": {"https://example.org/continuum/priority": "normal"}
+}

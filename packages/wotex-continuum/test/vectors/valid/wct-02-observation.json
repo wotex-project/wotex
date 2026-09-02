@@ -1,0 +1,29 @@
+{
+  "kind": "observation_proposal",
+  "schema_version": "1.0.0",
+  "proposal_id": "proposal-example-1",
+  "thing_id": "urn:example:thing:pump-7",
+  "affordance_type": "property",
+  "affordance_name": "level",
+  "value": 42.5,
+  "observed_at": "2026-09-02T10:00:01Z",
+  "sequence": 8,
+  "quality": {"status": "measured"},
+  "evidence": [],
+  "context": {
+    "kind": "execution_context",
+    "schema_version": "1.0.0",
+    "execution_id": "exec-example-1",
+    "node_id": "edge-example-a",
+    "mode": {
+      "kind": "mode",
+      "schema_version": "1.0.0",
+      "deployment": "connected_onprem",
+      "connectivity": "connected",
+      "extensions": {}
+    },
+    "observed_at": "2026-09-02T10:00:01Z",
+    "extensions": {}
+  },
+  "extensions": {}
+}

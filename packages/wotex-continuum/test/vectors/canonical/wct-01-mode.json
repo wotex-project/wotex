@@ -1,0 +1,11 @@
+{
+  "description": "mode object keys are ordered by UTF-8 bytes",
+  "input": {
+    "kind": "mode",
+    "schema_version": "1.0.0",
+    "deployment": "air_gapped",
+    "connectivity": "disconnected",
+    "extensions": {}
+  },
+  "canonical": "{\"connectivity\":\"disconnected\",\"deployment\":\"air_gapped\",\"extensions\":{},\"kind\":\"mode\",\"schema_version\":\"1.0.0\"}"
+}

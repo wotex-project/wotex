@@ -1,0 +1,16 @@
+{
+  "description": "unknown members are rejected",
+  "expected": {"code": "unknown_field", "path": ["ambient_policy"]},
+  "input": {
+    "kind": "capability",
+    "schema_version": "1.0.0",
+    "id": "example-capability",
+    "version": "1.0.0",
+    "operations": [],
+    "modes": ["saas"],
+    "network": "none",
+    "degradation": "fail_closed",
+    "extensions": {},
+    "ambient_policy": true
+  }
+}

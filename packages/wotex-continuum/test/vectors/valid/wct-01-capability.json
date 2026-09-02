@@ -1,0 +1,11 @@
+{
+  "kind": "capability",
+  "schema_version": "1.0.0",
+  "id": "observation-forwarding",
+  "version": "2.1.0",
+  "operations": ["forward"],
+  "modes": ["saas", "hybrid", "connected_onprem"],
+  "network": "external",
+  "degradation": "queue",
+  "extensions": {}
+}

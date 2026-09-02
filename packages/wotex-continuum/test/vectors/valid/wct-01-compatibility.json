@@ -1,0 +1,7 @@
+{
+  "kind": "compatibility",
+  "schema_version": "1.0.0",
+  "schema_requirement": ">= 1.0.0 and < 2.0.0",
+  "required_capabilities": [],
+  "extensions": {}
+}
