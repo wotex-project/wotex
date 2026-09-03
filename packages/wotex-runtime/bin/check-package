@@ -3,6 +3,7 @@ set -eu
 
 package_root="$(mktemp -d "${TMPDIR:-/tmp}/wotex-runtime-package.XXXXXX")"
 trap 'rm -rf "${package_root}"' EXIT HUP INT TERM
+project_root="$(pwd)"
 
 env -u WOTEX_PATH_DEPS MIX_ENV=prod mix hex.build \
   --unpack --output "${package_root}/unpacked"
@@ -14,4 +15,19 @@ test -f "${package_root}/unpacked/NOTICE"
 test ! -e "${package_root}/unpacked/CLAUDE.md"
 test ! -e "${package_root}/unpacked/.claude"
 
-WOTEX_PATH_DEPS=1 MIX_ENV=prod mix compile --warnings-as-errors
+(cd "${package_root}/unpacked" && "${project_root}/bin/check-boundary")
+
+dependency_root="${project_root}/_build/test/lib"
+test -d "${dependency_root}/wotex/ebin"
+
+mkdir "${package_root}/ebin"
+find "${package_root}/unpacked/lib" -type f -name '*.ex' -print | sort | \
+  xargs elixirc \
+    --warnings-as-errors \
+    -pa "${dependency_root}/wotex/ebin" \
+    -o "${package_root}/ebin"
+
+test -f "${package_root}/ebin/Elixir.Wotex.Runtime.ConsumedThing.beam"
+test -f "${package_root}/ebin/Elixir.Wotex.Runtime.ExposedThing.beam"
+
+echo "unpacked archive compiled out of tree"

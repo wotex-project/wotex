@@ -1,7 +1,14 @@
 #!/bin/sh
 set -eu
 
-if rg -n '(Application\.start\(|use Ash|use Phoenix|[A-Z][A-Za-z0-9_.]*\.Repo|Ecto\.Repo|Oban\.)' lib test mix.exs
+set -- lib mix.exs
+
+if [ -d test ]
+then
+  set -- "$@" test
+fi
+
+if rg -n '(Application\.start\(|use Ash|use Phoenix|[A-Z][A-Za-z0-9_.]*\.Repo|Ecto\.Repo|Oban\.)' "$@"
 then
   echo "consumer-neutral runtime boundary violation" >&2
   exit 1
