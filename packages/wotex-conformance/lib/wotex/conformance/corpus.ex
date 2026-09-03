@@ -26,6 +26,13 @@ defmodule Wotex.Conformance.Corpus do
           digest: String.t()
         }
 
+  @doc """
+  Loads and verifies a corpus directory from its `manifest.json`.
+
+  Every declared vector is checked before the corpus is returned. Undeclared
+  files, symbolic links, traversal, duplicate IDs, and digest mismatches fail
+  closed.
+  """
   @spec load(Path.t()) :: {:ok, t()} | {:error, Error.t()}
   def load(directory) when is_binary(directory) and directory != "" do
     manifest_path = Path.join(directory, @manifest)
@@ -48,6 +55,7 @@ defmodule Wotex.Conformance.Corpus do
   def load(_directory),
     do: {:error, Error.new(:invalid_corpus_path, "corpus path must be a non-empty string")}
 
+  @doc "Constructs a content-addressed corpus from already decoded data."
   @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
   def new(input) when is_map(input) do
     with :ok <- Input.only_keys(input, ~w(schema_version id revision vectors digest)),
@@ -63,6 +71,7 @@ defmodule Wotex.Conformance.Corpus do
 
   def new(_input), do: {:error, Error.new(:invalid_type, "corpus must be an object")}
 
+  @doc "Serializes a corpus, optionally omitting its digest with `include_digest: false`."
   @spec to_map(t(), keyword()) :: map()
   def to_map(%__MODULE__{} = corpus, options \\ []) do
     map = %{

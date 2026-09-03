@@ -18,6 +18,7 @@ defmodule Wotex.Conformance.Target.Response do
           codes: [String.t()]
         }
 
+  @doc "Validates a target response against the vector ID from its request."
   @spec new(map(), String.t()) :: {:ok, t()} | {:error, Error.t()}
   def new(input, expected_vector_id) when is_map(input) do
     with :ok <-

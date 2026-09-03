@@ -13,6 +13,7 @@ defmodule Wotex.Conformance.Expectation do
 
   @type t :: %__MODULE__{operator: :exact, value: Value.json_value(), digest: String.t()}
 
+  @doc "Constructs an exact-match expectation from decoded vector data."
   @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
   def new(input) when is_map(input) do
     with :ok <- Input.only_keys(input, ~w(operator value)),
@@ -27,6 +28,7 @@ defmodule Wotex.Conformance.Expectation do
 
   def new(_input), do: {:error, Error.new(:invalid_type, "expectation must be an object")}
 
+  @doc "Serializes the expectation without exposing its derived digest."
   @spec to_map(t()) :: map()
   def to_map(%__MODULE__{} = expectation) do
     %{

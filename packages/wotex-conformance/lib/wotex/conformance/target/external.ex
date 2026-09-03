@@ -41,6 +41,12 @@ defmodule Wotex.Conformance.Target.External do
           max_output_bytes: pos_integer()
         }
 
+  @doc """
+  Configures an isolated executable target from decoded data.
+
+  The executable and archive paths must be absolute. Arguments may use
+  `{subject_archive}` exactly once where the archive path should be inserted.
+  """
   @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
   def new(input) when is_map(input) do
     with :ok <-
@@ -79,10 +85,10 @@ defmodule Wotex.Conformance.Target.External do
 
   def new(_input), do: {:error, Error.new(:invalid_type, "external target must be an object")}
 
-  @impl true
+  @impl Wotex.Conformance.Target
   def artifact_path(%__MODULE__{artifact_path: artifact_path}), do: {:ok, artifact_path}
 
-  @impl true
+  @impl Wotex.Conformance.Target
   def invoke(%__MODULE__{} = target, request) do
     started = System.monotonic_time()
 
@@ -263,12 +269,8 @@ defmodule Wotex.Conformance.Target.External do
   end
 
   defp send_request(port, encoded) do
-    if Port.command(port, [encoded, "\n"]) do
-      :ok
-    else
-      safe_close(port)
-      {:error, Error.new(:target_write_failed, "target request could not be written")}
-    end
+    true = Port.command(port, [encoded, "\n"])
+    :ok
   rescue
     ArgumentError ->
       {:error, Error.new(:target_write_failed, "target request could not be written")}

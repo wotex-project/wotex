@@ -18,6 +18,7 @@ defmodule Wotex.Conformance.Subject do
           interface: %{String.t() => Value.json_value()}
         }
 
+  @doc "Constructs an immutable subject identity from decoded input."
   @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
   def new(input) when is_map(input) do
     with :ok <- Input.only_keys(input, ~w(id version artifact_digest interface)),
@@ -40,6 +41,7 @@ defmodule Wotex.Conformance.Subject do
 
   def new(_input), do: {:error, Error.new(:invalid_type, "subject must be an object")}
 
+  @doc "Serializes a subject identity to its string-keyed report form."
   @spec to_map(t()) :: map()
   def to_map(%__MODULE__{} = subject) do
     %{

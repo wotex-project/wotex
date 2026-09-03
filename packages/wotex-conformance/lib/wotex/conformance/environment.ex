@@ -1,10 +1,16 @@
 defmodule Wotex.Conformance.Environment do
-  @moduledoc false
+  @moduledoc """
+  Validation for bounded, non-sensitive conformance environment metadata.
+
+  Environment metadata is evidence included in a report. It is not the
+  operating-system environment passed to an external target.
+  """
 
   alias Wotex.Conformance.{Error, Value}
 
   @sensitive_key ~r/(^|[_-])(password|passwd|secret|token|credential|api[_-]?key|private[_-]?key)($|[_-])/iu
 
+  @doc "Validates report environment metadata and rejects keys that imply secrets."
   @spec validate(term()) :: {:ok, map()} | {:error, Error.t()}
   def validate(environment) do
     with {:ok, environment} <- Value.string_key_map(environment, "environment"),

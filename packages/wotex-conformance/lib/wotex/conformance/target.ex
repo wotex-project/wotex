@@ -13,11 +13,15 @@ defmodule Wotex.Conformance.Target do
   @type state :: term()
   @type target :: {module(), state()}
 
+  @doc "Returns the immutable subject archive path owned by the target state."
   @callback artifact_path(state()) :: {:ok, Path.t()} | {:error, Error.t()}
+
+  @doc "Invokes one vector request and reports the measured duration in microseconds."
   @callback invoke(state(), map()) ::
               {:ok, Response.t(), non_neg_integer()}
               | {:error, Error.t(), non_neg_integer()}
 
+  @doc "Normalizes a target struct or `{module, state}` callback tuple."
   @spec normalize(term()) :: {:ok, target()} | {:error, Error.t()}
   def normalize(%{__struct__: module} = target) when is_atom(module) do
     normalize({module, target})
@@ -36,6 +40,7 @@ defmodule Wotex.Conformance.Target do
   def normalize(_target),
     do: {:error, Error.new(:invalid_target, "target must be an external target or callback tuple")}
 
+  @doc "Calls the target's archive-path callback and validates its result."
   @spec artifact_path(target()) :: {:ok, Path.t()} | {:error, Error.t()}
   def artifact_path({module, state}) do
     case safely(fn -> module.artifact_path(state) end, :target_artifact_callback_failed) do
@@ -51,6 +56,7 @@ defmodule Wotex.Conformance.Target do
     end
   end
 
+  @doc "Calls the target for one request and validates its response and duration."
   @spec invoke(target(), map()) ::
           {:ok, Response.t(), non_neg_integer()}
           | {:error, Error.t(), non_neg_integer()}

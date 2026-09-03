@@ -10,6 +10,7 @@ defmodule Wotex.Conformance.Canonical do
 
   @digest_prefix "sha256:"
 
+  @doc "Encodes a bounded JSON value using the deterministic project canonical form."
   @spec encode(Value.json_value()) :: {:ok, binary()} | {:error, Error.t()}
   def encode(value) do
     with {:ok, validated} <- Value.validate(value) do
@@ -20,6 +21,7 @@ defmodule Wotex.Conformance.Canonical do
       {:error, Error.new(:encoding_failed, "value could not be encoded as canonical JSON")}
   end
 
+  @doc "Returns the canonical SHA-256 digest for a JSON-compatible value."
   @spec digest(Value.json_value()) :: {:ok, String.t()} | {:error, Error.t()}
   def digest(value) do
     with {:ok, encoded} <- encode(value) do
@@ -27,11 +29,13 @@ defmodule Wotex.Conformance.Canonical do
     end
   end
 
+  @doc "Hashes encoded bytes and returns a lowercase `sha256:` digest."
   @spec digest_bytes(iodata()) :: String.t()
   def digest_bytes(bytes) do
     @digest_prefix <> (:crypto.hash(:sha256, bytes) |> Base.encode16(case: :lower))
   end
 
+  @doc "Reports whether a value is a lowercase, prefixed SHA-256 digest."
   @spec valid_digest?(term()) :: boolean()
   def valid_digest?(digest) when is_binary(digest) do
     String.match?(digest, ~r/^sha256:[0-9a-f]{64}$/)

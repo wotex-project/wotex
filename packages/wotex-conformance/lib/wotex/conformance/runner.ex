@@ -23,6 +23,13 @@ defmodule Wotex.Conformance.Runner do
 
   alias Wotex.Conformance.Target.Response
 
+  @doc """
+  Runs selected corpus vectors against a target and returns evidence.
+
+  `:generated_at` is required so callers, rather than wall-clock access, own
+  reproducibility. Optional `:select` accepts `:all` or `{:ids, ids}`;
+  `:environment` supplies bounded, non-sensitive report metadata.
+  """
   @spec run(Corpus.t(), Subject.t(), term(), keyword()) ::
           {:ok, Report.t()} | {:error, Error.t()}
   def run(%Corpus{} = corpus, %Subject{} = subject, target_input, options) when is_list(options) do

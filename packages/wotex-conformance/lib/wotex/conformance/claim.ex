@@ -23,6 +23,7 @@ defmodule Wotex.Conformance.Claim do
           tags: [String.t()]
         }
 
+  @doc "Validates external claim data and constructs a versioned claim."
   @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
   def new(input) when is_map(input) do
     with :ok <-
@@ -58,6 +59,7 @@ defmodule Wotex.Conformance.Claim do
 
   def new(_input), do: {:error, Error.new(:invalid_type, "claim must be an object")}
 
+  @doc "Serializes a validated claim to its string-keyed interchange form."
   @spec to_map(t()) :: map()
   def to_map(%__MODULE__{} = claim) do
     %{

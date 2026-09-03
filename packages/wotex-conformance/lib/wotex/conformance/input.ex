@@ -1,8 +1,9 @@
 defmodule Wotex.Conformance.Input do
-  @moduledoc false
+  @moduledoc "Helpers for reading atom- or string-keyed constructor input safely."
 
   alias Wotex.Conformance.Error
 
+  @doc "Fetches a required field while rejecting its absence with a structured error."
   @spec required(map(), atom()) :: {:ok, term()} | {:error, Error.t()}
   def required(input, key) when is_map(input) and is_atom(key) do
     string_key = Atom.to_string(key)
@@ -14,11 +15,13 @@ defmodule Wotex.Conformance.Input do
     end
   end
 
+  @doc "Returns an optional field from atom or string form, or `default`."
   @spec optional(map(), atom(), term()) :: term()
   def optional(input, key, default) when is_map(input) and is_atom(key) do
     Map.get(input, key, Map.get(input, Atom.to_string(key), default))
   end
 
+  @doc "Rejects unknown, invalid, or duplicated atom/string field representations."
   @spec only_keys(map(), [String.t()]) :: :ok | {:error, Error.t()}
   def only_keys(input, allowed) when is_map(input) and is_list(allowed) do
     normalized = Enum.map(Map.keys(input), &normalize_key/1)

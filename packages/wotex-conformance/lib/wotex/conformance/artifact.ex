@@ -13,6 +13,12 @@ defmodule Wotex.Conformance.Artifact do
 
   @type verification :: %{digest: String.t(), size_bytes: non_neg_integer()}
 
+  @doc """
+  Verifies that `path` is a bounded regular file with `expected_digest`.
+
+  The digest must use the `sha256:` prefix and lowercase hexadecimal form.
+  Use `:max_bytes` to replace the one-gibibyte default size limit.
+  """
   @spec verify(Path.t(), String.t(), keyword()) ::
           {:ok, verification()} | {:error, Error.t()}
   def verify(path, expected_digest, options \\ []) do
@@ -29,6 +35,7 @@ defmodule Wotex.Conformance.Artifact do
     end
   end
 
+  @doc "Returns the lowercase SHA-256 digest of a regular file without loading it into memory."
   @spec digest_file(Path.t()) :: {:ok, String.t()} | {:error, Error.t()}
   def digest_file(path) do
     with :ok <- validate_path(path),

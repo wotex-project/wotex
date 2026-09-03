@@ -1,6 +1,7 @@
 defmodule ExternalTargetFixture do
   @moduledoc false
 
+  @spec run() :: :ok | no_return()
   def run do
     archive = archive_path(System.argv())
 

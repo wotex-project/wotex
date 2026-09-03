@@ -2,11 +2,12 @@ defmodule WotexConformance.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/wotex-project/wotex-conformance"
-  @version "0.1.0-dev"
+  @version "0.1.0"
 
   def project do
     [
       app: :wotex_conformance,
+      name: "Wotex Conformance",
       version: @version,
       elixir: "~> 1.19",
       start_permanent: false,
@@ -14,19 +15,13 @@ defmodule WotexConformance.MixProject do
       test_ignore_filters: [~r|test/fixtures/|],
       deps: deps(),
       aliases: aliases(),
-      description: "Subject-independent conformance claims, vectors, runners, and reports",
+      description: description(),
       package: package(),
       docs: docs(),
       source_url: @source_url,
       homepage_url: "https://wotex.io",
-      test_coverage: [
-        summary: [threshold: 90],
-        ignore_modules: [
-          Wotex.Conformance.FailingTarget,
-          Wotex.Conformance.StaticTarget,
-          Wotex.Conformance.TestFixtures
-        ]
-      ]
+      test_coverage: [tool: ExCoveralls],
+      dialyzer: dialyzer()
     ]
   end
 
@@ -34,7 +29,17 @@ defmodule WotexConformance.MixProject do
     [extra_applications: [:crypto]]
   end
 
-  def cli, do: [preferred_envs: [check: :test]]
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.lcov": :test,
+        "test.cover": :test
+      ]
+    ]
+  end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_environment), do: ["lib"]
@@ -42,30 +47,36 @@ defmodule WotexConformance.MixProject do
   defp deps do
     [
       {:jason, "~> 1.4"},
-      {:ex_doc, "~> 0.38", only: [:dev, :test, :docs], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
+      {:ex_check, "~> 0.16", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.38", only: [:dev, :test, :docs], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
     ]
   end
 
   defp aliases do
     [
-      check: [
-        "deps.unlock --check-unused",
-        "format --check-formatted",
-        "compile --warnings-as-errors",
-        "test --cover --warnings-as-errors",
-        "docs --warnings-as-errors",
-        "cmd bin/check-boundary",
-        "package"
-      ],
+      setup: ["deps.get", "deps.compile"],
+      lint: ["format --check-formatted", "credo --strict", "dialyzer"],
+      "test.cover": ["coveralls"],
       package: "cmd env MIX_ENV=dev mix hex.build"
     ]
+  end
+
+  defp description do
+    "Subject-independent W3C Web of Things claims, vectors, execution, and evidence reports"
   end
 
   defp package do
     [
       licenses: ["Apache-2.0"],
-      maintainers: ["Wotex Project Maintainers"],
+      maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       links: %{
+        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "Documentation" => "https://hexdocs.pm/wotex_conformance",
         "Project" => "https://wotex.io",
         "Source" => @source_url,
         "Specifications" => "#{@source_url}/tree/main/docs/specs"
@@ -73,7 +84,8 @@ defmodule WotexConformance.MixProject do
       files: [
         ".claude",
         "lib",
-        "priv",
+        "priv/schemas",
+        "priv/vectors",
         "docs",
         ".formatter.exs",
         "AGENTS.md",
@@ -95,17 +107,23 @@ defmodule WotexConformance.MixProject do
     [
       main: "readme",
       extras: [
-        "README.md",
-        "CONTRIBUTING.md",
-        "SECURITY.md",
-        "GOVERNANCE.md",
-        "docs/specs/WCF.01-conformance-runner.md",
-        "docs/decisions/0001-external-target-isolation.md",
-        "docs/decisions/0002-evidence-digests.md"
+        "README.md": [title: "Overview"],
+        "CONTRIBUTING.md": [title: "Contributing"],
+        "SECURITY.md": [title: "Security"],
+        "GOVERNANCE.md": [title: "Governance"],
+        "docs/specs/WCF.01-conformance-runner.md": [title: "Conformance runner"],
+        "docs/decisions/0001-external-target-isolation.md": [title: "External target isolation"],
+        "docs/decisions/0002-evidence-digests.md": [title: "Evidence digests"],
+        "docs/provenance/source.md": [title: "Source provenance"],
+        "docs/provenance/standards.md": [title: "Standards provenance"],
+        "CHANGELOG.md": [title: "Changelog"],
+        LICENSE: [title: "License"]
       ],
       groups_for_extras: [
         Specifications: ~r|docs/specs/|,
-        Decisions: ~r|docs/decisions/|
+        Decisions: ~r|docs/decisions/|,
+        Provenance: ~r|docs/provenance/|,
+        Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|GOVERNANCE|LICENSE/
       ],
       groups_for_modules: [
         Contracts: [
@@ -129,7 +147,18 @@ defmodule WotexConformance.MixProject do
           Wotex.Conformance.Canonical,
           Wotex.Conformance.Error
         ]
-      ]
+      ],
+      source_ref: "v#{@version}",
+      source_url: @source_url,
+      formatters: ["html", "markdown", "epub"]
+    ]
+  end
+
+  defp dialyzer do
+    [
+      plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
+      plt_add_apps: [:mix, :ex_unit],
+      flags: [:error_handling, :missing_return, :underspecs, :extra_return]
     ]
   end
 end

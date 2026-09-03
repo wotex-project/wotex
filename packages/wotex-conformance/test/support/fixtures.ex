@@ -4,12 +4,14 @@ defmodule Wotex.Conformance.TestFixtures do
   alias Wotex.Conformance.{Artifact, Corpus, Subject}
   alias Wotex.Conformance.Target.External
 
+  @spec corpus!() :: Corpus.t()
   def corpus! do
     path = Path.expand("../../priv/vectors/thing-description-1.1", __DIR__)
     {:ok, corpus} = Corpus.load(path)
     corpus
   end
 
+  @spec subject_archive!() :: {Path.t(), Path.t(), String.t()}
   def subject_archive! do
     root =
       Path.join(
@@ -32,6 +34,7 @@ defmodule Wotex.Conformance.TestFixtures do
     {root, archive, digest}
   end
 
+  @spec subject!(String.t()) :: Subject.t()
   def subject!(digest) do
     {:ok, subject} =
       Subject.new(%{
@@ -44,6 +47,7 @@ defmodule Wotex.Conformance.TestFixtures do
     subject
   end
 
+  @spec external_target!(Path.t(), String.t(), keyword()) :: External.t()
   def external_target!(archive, mode, options \\ []) do
     executable = System.find_executable("elixir")
     adapter = Path.expand("../fixtures/external_target.exs", __DIR__)

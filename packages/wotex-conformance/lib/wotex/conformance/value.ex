@@ -22,6 +22,11 @@ defmodule Wotex.Conformance.Value do
           | [json_value()]
           | %{String.t() => json_value()}
 
+  @doc """
+  Validates a JSON-compatible value against depth, entry, and string limits.
+
+  Options are `:max_depth`, `:max_entries`, and `:max_string_bytes`.
+  """
   @spec validate(term(), keyword()) :: {:ok, json_value()} | {:error, Error.t()}
   def validate(value, options \\ []) do
     limits = %{
@@ -36,6 +41,7 @@ defmodule Wotex.Conformance.Value do
     end
   end
 
+  @doc "Validates a bounded identifier, with optional `:max_bytes` and `:pattern` limits."
   @spec validate_identifier(term(), String.t(), keyword()) ::
           {:ok, String.t()} | {:error, Error.t()}
   def validate_identifier(value, field, options \\ []) do
@@ -68,6 +74,7 @@ defmodule Wotex.Conformance.Value do
     end
   end
 
+  @doc "Accepts a map only when every key is a string."
   @spec string_key_map(term(), String.t()) :: {:ok, map()} | {:error, Error.t()}
   def string_key_map(value, field) when is_map(value) do
     case Enum.find(Map.keys(value), &(not is_binary(&1))) do

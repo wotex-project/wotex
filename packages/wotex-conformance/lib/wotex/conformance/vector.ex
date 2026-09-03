@@ -21,6 +21,7 @@ defmodule Wotex.Conformance.Vector do
           tags: [String.t()]
         }
 
+  @doc "Validates decoded vector data and derives its canonical digest."
   @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
   def new(input) when is_map(input) do
     with :ok <-
@@ -58,6 +59,7 @@ defmodule Wotex.Conformance.Vector do
 
   def new(_input), do: {:error, Error.new(:invalid_type, "vector must be an object")}
 
+  @doc "Serializes a vector, optionally omitting its digest with `include_digest: false`."
   @spec to_map(t(), keyword()) :: map()
   def to_map(%__MODULE__{} = vector, options \\ []) do
     map = %{
@@ -77,6 +79,11 @@ defmodule Wotex.Conformance.Vector do
     end
   end
 
+  @doc """
+  Builds the bounded request given to a target adapter.
+
+  The request deliberately excludes runner-owned expectations and provenance.
+  """
   @spec target_request(t(), Subject.t(), map()) :: map()
   def target_request(%__MODULE__{} = vector, %Subject{} = subject, context) when is_map(context) do
     %{

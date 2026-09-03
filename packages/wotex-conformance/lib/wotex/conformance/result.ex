@@ -54,6 +54,12 @@ defmodule Wotex.Conformance.Result do
           evidence_digest: String.t()
         }
 
+  @doc """
+  Classifies one vector result and derives its evidence digest.
+
+  Options accept `:actual`, `:code`, and `:duration_us`. Raw observations are
+  reduced to a digest before the result becomes reportable.
+  """
   @spec new(Vector.t(), status(), keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(vector, status, options \\ [])
 
@@ -88,6 +94,7 @@ defmodule Wotex.Conformance.Result do
     {:error, Error.new(:invalid_result_status, "result status is not supported")}
   end
 
+  @doc "Serializes a result, optionally omitting its evidence digest."
   @spec to_map(t(), keyword()) :: map()
   def to_map(%__MODULE__{} = result, options \\ []) do
     map = %{

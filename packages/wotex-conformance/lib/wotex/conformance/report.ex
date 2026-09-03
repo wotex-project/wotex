@@ -46,6 +46,7 @@ defmodule Wotex.Conformance.Report do
           digest: String.t()
         }
 
+  @doc "Builds a deterministic report from one subject, corpus digest, and result set."
   @spec new(Subject.t(), String.t(), DateTime.t(), map(), [Result.t()]) ::
           {:ok, t()} | {:error, Error.t()}
   def new(%Subject{} = subject, corpus_digest, %DateTime{} = generated_at, environment, results)
@@ -76,6 +77,7 @@ defmodule Wotex.Conformance.Report do
     {:error, Error.new(:invalid_report_input, "report inputs are invalid")}
   end
 
+  @doc "Serializes a report, optionally omitting its digest with `include_digest: false`."
   @spec to_map(t(), keyword()) :: map()
   def to_map(%__MODULE__{} = report, options \\ []) do
     map = %{
@@ -96,6 +98,7 @@ defmodule Wotex.Conformance.Report do
     end
   end
 
+  @doc "Encodes a report using the project canonical JSON form."
   @spec encode(t()) :: {:ok, binary()} | {:error, Error.t()}
   def encode(%__MODULE__{} = report), do: report |> to_map() |> Canonical.encode()
 
