@@ -9,7 +9,7 @@ defmodule WotexConformance.MixProject do
       app: :wotex_conformance,
       name: "Wotex Conformance",
       version: @version,
-      elixir: "~> 1.19",
+      elixir: "~> 1.18",
       start_permanent: false,
       elixirc_paths: elixirc_paths(Mix.env()),
       test_ignore_filters: [~r|test/fixtures/|],
