@@ -21,7 +21,11 @@ defmodule WotexContinuum.VectorTest do
 
   test "every invalid vector returns its exact code and path" do
     for path <- Path.wildcard(Path.join([@vectors, "invalid", "*.json"])) do
-      vector = path |> File.read!() |> Jason.decode!()
+      vector =
+        path
+        |> File.read!()
+        |> Jason.decode!()
+
       source = Jason.encode!(vector["input"])
 
       assert {:error, %Error{} = error} = Codec.decode(source), path
@@ -32,10 +36,14 @@ defmodule WotexContinuum.VectorTest do
 
   test "canonical vectors match exact bytes" do
     for path <- Path.wildcard(Path.join([@vectors, "canonical", "*.json"])) do
-      vector = path |> File.read!() |> Jason.decode!()
+      vector =
+        path
+        |> File.read!()
+        |> Jason.decode!()
+
       assert {:ok, value} = WotexContinuum.from_map(vector["input"]), path
 
-      for _iteration <- 1..20 do
+      for _ <- 1..20 do
         assert {:ok, canonical} = Codec.encode(value, canonical: true), path
         assert canonical == vector["canonical"], path
       end
@@ -44,7 +52,11 @@ defmodule WotexContinuum.VectorTest do
 
   test "compatibility vectors report all declared outcomes" do
     for path <- Path.wildcard(Path.join([@vectors, "compatibility", "*.json"])) do
-      vector = path |> File.read!() |> Jason.decode!()
+      vector =
+        path
+        |> File.read!()
+        |> Jason.decode!()
+
       assert {:ok, requirements} = Compatibility.new(vector["requirements"]), path
 
       capabilities =

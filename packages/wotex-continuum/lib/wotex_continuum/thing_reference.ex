@@ -29,16 +29,16 @@ defmodule WotexContinuum.ThingReference do
           "Thing reference does not match the Thing Description ID"
         )
 
-      {:error, _error} = error ->
+      {:error, _} = error ->
         error
     end
   end
 
-  def validate(_value, %Wotex.ThingDescription{}) do
+  def validate(_, %Wotex.ThingDescription{}) do
     Error.error(:thing_id_required, ["thing_id"], "value has no Thing reference")
   end
 
-  def validate(_value, _thing_description) do
+  def validate(_, _) do
     Error.error(:invalid_type, [], "expected a Wotex Thing Description")
   end
 

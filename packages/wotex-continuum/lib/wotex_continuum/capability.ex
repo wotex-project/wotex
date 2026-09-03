@@ -1,8 +1,13 @@
 defmodule WotexContinuum.Capability do
   @moduledoc """
-  Mechanical capability declaration.
+  A mechanical declaration of operations available in deployment modes.
 
-  Declaration does not grant permission to use an operation.
+  A capability names its versioned operation set, supported modes, network
+  requirement, and degradation behavior. Manifests use these declarations for
+  deterministic compatibility checks before composition.
+
+  Declaration is descriptive, not authoritative: it grants no permission and
+  invokes no operation.
   """
 
   @behaviour WotexContinuum.Value
@@ -28,10 +33,10 @@ defmodule WotexContinuum.Capability do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -65,7 +70,7 @@ defmodule WotexContinuum.Capability do
     end
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("id", value.id)

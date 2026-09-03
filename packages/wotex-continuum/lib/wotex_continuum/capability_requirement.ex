@@ -1,6 +1,10 @@
 defmodule WotexContinuum.CapabilityRequirement do
   @moduledoc """
-  Required capability identity and semantic-version range.
+  A capability identity paired with an Elixir semantic-version requirement.
+
+  Compatibility values use this nested contract to state what a consumer must
+  provide. Parsing proves requirement syntax only; it does not locate, load, or
+  authorize an implementation.
   """
 
   alias WotexContinuum.{Error, Validation}

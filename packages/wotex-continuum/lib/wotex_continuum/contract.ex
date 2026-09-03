@@ -26,12 +26,12 @@ defmodule WotexContinuum.Contract do
     |> put_default(:schema_version, "schema_version", WotexContinuum.schema_version())
   end
 
-  def envelope(data, _kind), do: data
+  def envelope(data, _), do: data
 
   @spec exact(term(), term(), [Error.segment()], atom()) :: :ok | {:error, Error.t()}
-  def exact(value, value, _path, _code), do: :ok
+  def exact(value, value, _, _), do: :ok
 
-  def exact(_value, _expected, path, code),
+  def exact(_, _, path, code),
     do: Error.error(code, path, "value does not match the contract")
 
   defp supported_schema(version) do

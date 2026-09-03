@@ -50,14 +50,12 @@ Source, tests, documentation, commit messages, package contents, and generated
 documentation must contain no consumer brand, organization-internal path,
 credential, or non-public fixture. Synthetic examples use `example` names and
 reserved URNs only.
-+
 
 ## Git authority
 
-Automated agents must never configure, add, change, or remove a Git remote and
-must never run `git push` or any equivalent publication command. Only the human
-owner publishes repository history.
+Automated agents must never configure, add, change, or remove a Git remote;
+push; create a tag; publish a package; or create equivalent remote state. Only
+the human maintainer performs publication.
 
-Every local commit must use the repository-configured human owner identity from
-`git config user.name` and `git config user.email`. Never substitute an agent,
-tool, bot, or shared contributor identity.
+Every local commit uses `Tobias Bohwalli <hi@futhr.io>` as both author and
+committer. Never substitute an agent, tool, bot, or shared contributor identity.

@@ -1,9 +1,11 @@
 defmodule WotexContinuum.Lifecycle do
   @moduledoc """
-  Pure continuum lifecycle value and transition validator.
+  Pure lifecycle state and transition validation for a continuum subject.
 
-  A transition returns a new value. It never performs the represented runtime
-  operation.
+  The explicit transition graph prevents impossible state changes, while
+  generation and normalized change time make updates deterministic and
+  replayable. A transition returns a new value only; it never starts, drains,
+  stops, or removes the represented runtime.
   """
 
   @behaviour WotexContinuum.Value
@@ -35,14 +37,14 @@ defmodule WotexContinuum.Lifecycle do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
   @doc "Returns lifecycle states in contract order."
-  @spec states() :: [state()]
+  @spec states() :: nonempty_list(state())
   def states, do: @states
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -92,7 +94,7 @@ defmodule WotexContinuum.Lifecycle do
     end
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("subject_id", value.subject_id)
@@ -121,6 +123,6 @@ defmodule WotexContinuum.Lifecycle do
         Error.error(:invalid_time_order, ["changed_at"], "transition time precedes current state")
   end
 
-  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end

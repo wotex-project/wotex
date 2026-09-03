@@ -1,8 +1,14 @@
 defmodule WotexContinuum.ObservationProposal do
   @moduledoc """
-  Proposed Property observation or Event data.
+  Proposed Property observation or Event data from continuum execution.
 
-  A proposal is not canonical Thing state.
+  The proposal binds a Thing affordance value to caller-owned observation time,
+  execution context, sequence, quality, evidence, and extensions. It is
+  designed for transfer and later admission when a consumer must reconcile
+  disconnected observations.
+
+  A proposal is not canonical Thing state and does not emit a W3C Event.
+  Consumers validate authority, ordering, and policy before admission.
   """
 
   @behaviour WotexContinuum.Value
@@ -50,10 +56,10 @@ defmodule WotexContinuum.ObservationProposal do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -110,7 +116,7 @@ defmodule WotexContinuum.ObservationProposal do
     end
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("proposal_id", value.proposal_id)
@@ -130,8 +136,8 @@ defmodule WotexContinuum.ObservationProposal do
   defp optional_sequence(value), do: Validation.non_negative_integer(value, ["sequence"])
 
   defp quality_object(value) when is_map(value), do: :ok
-  defp quality_object(_value), do: Error.error(:invalid_type, ["quality"], "expected an object")
+  defp quality_object(_), do: Error.error(:invalid_type, ["quality"], "expected an object")
 
-  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end

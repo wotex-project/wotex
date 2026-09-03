@@ -1,29 +1,46 @@
 # Wotex Continuum
 
-`wotex_continuum` provides immutable, host-neutral exchange values for carrying
+**Portable continuum values without persistence, dispatch, or hidden runtime authority.**
+
+[![Hex.pm](https://img.shields.io/hexpm/v/wotex_continuum.svg)](https://hex.pm/packages/wotex_continuum)
+[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_continuum)
+[![CI](https://github.com/wotex-project/wotex-continuum/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-continuum/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/wotex-project/wotex-continuum/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-continuum)
+[![License](https://img.shields.io/github/license/wotex-project/wotex-continuum.svg)](https://github.com/wotex-project/wotex-continuum/blob/main/LICENSE)
+
+[Installation](#installation) ·
+[Quick Start](#quick-start) ·
+[Scope](#scope) ·
+[Wire Contract](#wire-contract) ·
+[Errors](#errors) ·
+[Development](#development)
+
+---
+
+Wotex Continuum provides immutable, host-neutral exchange values for carrying
 Thing observations, Action intent and results, evidence, delivery state, and
 deployment-mode lifecycle across an edge/cloud continuum.
 
-The library is deliberately inert. Loading it starts no process, performs no
-I/O, selects no provider, evaluates no policy, and owns no database. A consumer
-host validates values, decides authority, supplies transport and persistence,
-and supervises every runtime component.
-
-## Status
-
-The package is pre-1.0. Its initial public contract is defined by WCT.01,
-WCT.02, and WCT.03. Wire values carry an independent `schema_version`; package
-version and wire-schema version are not interchangeable.
+Loading the library starts no process, performs no I/O, selects no provider,
+evaluates no policy, and owns no database. A consumer host validates values,
+decides authority, supplies transport and persistence, and supervises every
+runtime component. The values make continuum boundaries explicit and replayable
+without forcing a database, transport, scheduler, framework, or provider on the
+consumer.
 
 ## Installation
 
-Add the package to a Mix project after its first Hex release:
+Wotex Continuum 0.1 requires Elixir 1.18 or later.
 
 ```elixir
-{:wotex_continuum, "~> 0.1.0"}
+def deps do
+  [
+    {:wotex_continuum, "~> 0.1"}
+  ]
+end
 ```
 
-## Example
+## Quick Start
 
 ```elixir
 alias WotexContinuum.{ActionIntent, Codec, ExecutionContext, Mode}
@@ -56,48 +73,62 @@ alias WotexContinuum.{ActionIntent, Codec, ExecutionContext, Mode}
 the Action. Dispatch, authorization, deduplication, retries, and effect
 recording belong to the consumer host.
 
-## W3C Web of Things relationship
-
-The library uses the W3C Web of Things terms Thing, Property, Action, Event,
-Thing Description, Consumer, and Exposer with their standard meanings from
-[Thing Description 1.1](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/)
-and the
-[WoT Architecture 1.1](https://www.w3.org/TR/2023/REC-wot-architecture11-20231205/).
-
-Continuum envelopes are project-defined exchange values. They are not fields
-from a W3C Recommendation and do not imply certification or conformance.
-
 ## Scope
 
-This package owns:
+| Owned here | Owned by the consumer |
+|------------|-----------------------|
+| Manifest, compatibility, execution-context, and capability values | Canonical Thing, observation, Action-effect, identity, and policy state |
+| Observation proposal, Action intent/result, evidence, and delivery values | Activation, entitlement, provider selection, credentials, and dispatch |
+| Deployment mode, connectivity, lifecycle, degradation, and exit values | Persistence, migrations, jobs, network clients, UI, and telemetry exporters |
+| Bounded decoding, canonical encoding, schemas, and executable vectors | Supervision, retries, reconciliation, and final authority |
 
-- manifest, compatibility, execution-context, and capability values;
-- observation proposal, Action intent/result, evidence, and delivery values;
-- four deployment modes plus explicit connectivity state;
-- lifecycle transitions, typed degradation, and exit receipts;
-- bounded JSON decoding and deterministic project-canonical JSON encoding; and
-- valid, invalid, and compatibility vectors.
+Thing Description parsing and validation belongs to Wotex core.
 
-It does not own:
+## Wire Contract
 
-- canonical Thing, observation, Action-effect, identity, or policy state;
-- activation, entitlement, provider selection, credentials, or dispatch;
-- persistence, migrations, jobs, network clients, UI, or telemetry exporters;
-- a supervisor tree or application callback; or
-- Thing Description parsing or validation, which belongs to the Wotex core.
+WCT.01, WCT.02, and WCT.03 define the initial public contract. Every encoded
+value carries its independent `schema_version`; package version and wire-schema
+version are deliberately not interchangeable. `WotexContinuum.Codec` performs
+bounded decoding and deterministic canonical encoding, while
+`WotexContinuum.Compatibility` reports every capability mismatch instead of
+hiding partial compatibility behind a boolean.
 
-## Verification
+The library uses Thing, Property, Action, Event, Thing Description, Consumer,
+and Exposer with their meanings from
+[Thing Description 1.1](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/)
+and
+[WoT Architecture 1.1](https://www.w3.org/TR/2023/REC-wot-architecture11-20231205/).
+Continuum envelopes are Wotex extension contracts, not fields from a W3C
+Recommendation, and do not imply certification.
+
+## Errors
+
+Untrusted maps and JSON return `{:error, %WotexContinuum.Error{}}`. Errors carry
+a stable code, wire path, message, and structured details. Expected input
+failures do not raise. Constructors validate identity, time, limits, modes,
+capabilities, lifecycle relationships, and nested values before returning an
+accepted struct.
+
+## Development
 
 ```sh
-mix deps.get
-mix check
-./scripts/check_public_boundary.sh
+WOTEX_PATH_DEPS=1 mix deps.get
+WOTEX_PATH_DEPS=1 mix check
 ```
+
+The completion gate covers formatting, warnings-as-errors compilation, strict
+Credo, dependency audits, Dialyzer, complete public documentation, at least 95%
+line coverage, the public-boundary scan, and compilation from the unpacked Hex
+archive.
+
+The explicit path switch resolves the sibling Wotex core checkout only in
+development, test, or documentation environments. Without it, dependency
+selection uses the published package requirement; a sibling directory never
+changes dependency selection implicitly.
 
 See `specs/` for the normative contracts and `test/vectors/` for executable
 examples.
 
-During coordinated local development, set `WOTEX_PATH_DEPS=1` before dependency
-fetch and verification. That explicit switch resolves the sibling Wotex core
-checkout at `../wotex`. Without the switch, dependency selection uses the
-published package version; it never changes merely because a directory exists.
+## License
+
+Wotex Continuum is released under the [Apache License 2.0](https://github.com/wotex-project/wotex-continuum/blob/main/LICENSE).

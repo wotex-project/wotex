@@ -1,6 +1,11 @@
 defmodule WotexContinuum.Artifact do
   @moduledoc """
-  Immutable artifact identity carried by a continuum manifest.
+  Immutable identity for an artifact named by a continuum manifest.
+
+  Name and semantic version identify the artifact contract while the lowercase
+  SHA-256 digest binds the exact bytes. The value contains no fetch location or
+  installation callback, so acquisition and trust policy stay with the
+  consumer.
   """
 
   alias WotexContinuum.{Error, Validation}

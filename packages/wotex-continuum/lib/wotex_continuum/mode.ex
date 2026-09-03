@@ -1,6 +1,14 @@
 defmodule WotexContinuum.Mode do
   @moduledoc """
-  Deployment placement and current upstream-connectivity value.
+  Deployment placement paired with observed upstream connectivity.
+
+  Placement and connectivity are separate because connected on-premises or
+  hybrid systems can become intermittent, while air-gapped placement must
+  remain disconnected. The explicit value lets other contracts describe
+  degradation and lifecycle without consulting global configuration.
+
+  Mode reports where execution occurs; it does not select a provider or
+  establish a network connection.
   """
 
   @behaviour WotexContinuum.Value
@@ -18,18 +26,18 @@ defmodule WotexContinuum.Mode do
   @type connectivity :: :connected | :intermittent | :disconnected
   @type t :: %__MODULE__{deployment: deployment(), connectivity: connectivity(), extensions: map()}
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
   @doc "Returns the supported deployment values."
-  @spec deployments() :: [deployment()]
+  @spec deployments() :: nonempty_list(deployment())
   def deployments, do: @deployments
 
   @doc "Returns the supported connectivity values."
-  @spec connectivity_states() :: [connectivity()]
+  @spec connectivity_states() :: nonempty_list(connectivity())
   def connectivity_states, do: @connectivity_states
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -47,7 +55,7 @@ defmodule WotexContinuum.Mode do
     end
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("deployment", Atom.to_string(value.deployment))
@@ -63,5 +71,5 @@ defmodule WotexContinuum.Mode do
     )
   end
 
-  defp validate_air_gap(_deployment, _connectivity), do: :ok
+  defp validate_air_gap(_, _), do: :ok
 end

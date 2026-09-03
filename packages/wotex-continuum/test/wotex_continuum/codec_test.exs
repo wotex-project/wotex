@@ -68,7 +68,7 @@ defmodule WotexContinuum.CodecTest do
     assert {:ok, mode} = Mode.new(%{deployment: :hybrid, connectivity: :intermittent})
     assert {:ok, regular} = Codec.encode(mode)
     assert Jason.decode!(regular)["kind"] == "mode"
-    assert {:ok, _canonical} = Codec.canonicalize(mode)
+    assert {:ok, _} = Codec.canonicalize(mode)
     assert {:error, %Error{code: :unsupported_value}} = Codec.encode(%URI{})
     assert {:ok, ^mode} = Mode.new(mode)
     assert Mode.deployments() == [:saas, :hybrid, :connected_onprem, :air_gapped]

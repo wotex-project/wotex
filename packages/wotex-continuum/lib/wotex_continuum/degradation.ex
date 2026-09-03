@@ -1,6 +1,13 @@
 defmodule WotexContinuum.Degradation do
   @moduledoc """
-  Typed report of reduced or unavailable capability.
+  A typed report that a subject is reduced or unavailable.
+
+  The report names affected capabilities, reason codes, onset time,
+  recoverability, optional evidence, and the declared degradation level. It can
+  cross disconnected boundaries without requiring a shared process or log.
+
+  The value reports consumer-supplied state; it does not monitor health or
+  change runtime behavior itself.
   """
 
   @behaviour WotexContinuum.Value
@@ -44,10 +51,10 @@ defmodule WotexContinuum.Degradation do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -97,7 +104,7 @@ defmodule WotexContinuum.Degradation do
     end
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("degradation_id", value.degradation_id)
@@ -117,7 +124,7 @@ defmodule WotexContinuum.Degradation do
        when level in [:reduced, :unavailable] and capabilities != [] and reason_codes != [],
        do: :ok
 
-  defp validate_level(_level, _capabilities, _reason_codes) do
+  defp validate_level(_, _, _) do
     Error.error(
       :invalid_degradation_state,
       ["level"],

@@ -1,6 +1,13 @@
 defmodule WotexContinuum.ExitReceipt do
   @moduledoc """
-  Data-only evidence that an export or removal operation was attempted.
+  Evidence that an export or removal operation was attempted.
+
+  The receipt records operation, status, request and completion times, exported
+  artifacts, residual descriptions, failures, and evidence. Its cross-field
+  rules distinguish completed, partial, failed, and in-progress outcomes
+  without claiming more than the consumer observed.
+
+  Constructing a receipt performs no export or removal.
   """
 
   @behaviour WotexContinuum.Value
@@ -40,10 +47,10 @@ defmodule WotexContinuum.ExitReceipt do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -95,7 +102,7 @@ defmodule WotexContinuum.ExitReceipt do
     end
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("receipt_id", value.receipt_id)
@@ -124,30 +131,30 @@ defmodule WotexContinuum.ExitReceipt do
     end
   end
 
-  defp validate_status(_operation, status, nil, [], nil) when status in [:requested, :running],
+  defp validate_status(_, status, nil, [], nil) when status in [:requested, :running],
     do: :ok
 
   defp validate_status(:remove, :completed, completed_at, [], nil) when is_binary(completed_at),
     do: :ok
 
-  defp validate_status(:export, :completed, completed_at, _residuals, nil)
+  defp validate_status(:export, :completed, completed_at, _, nil)
        when is_binary(completed_at), do: :ok
 
-  defp validate_status(_operation, :partial, completed_at, residuals, nil)
+  defp validate_status(_, :partial, completed_at, residuals, nil)
        when is_binary(completed_at) and residuals != [],
        do: :ok
 
-  defp validate_status(_operation, :failed, completed_at, _residuals, %Failure{})
+  defp validate_status(_, :failed, completed_at, _, %Failure{})
        when is_binary(completed_at),
        do: :ok
 
-  defp validate_status(_operation, status, _completed_at, _residuals, _failure) do
+  defp validate_status(_, status, _, _, _) do
     Error.error(:invalid_exit_state, ["status"], "exit fields do not match the status", %{
       status: status
     })
   end
 
-  defp validate_time_order(_requested_at, nil), do: :ok
+  defp validate_time_order(_, nil), do: :ok
 
   defp validate_time_order(requested_at, completed_at) do
     if Validation.compare_timestamps(requested_at, completed_at) in [:lt, :eq],
@@ -155,6 +162,6 @@ defmodule WotexContinuum.ExitReceipt do
       else: Error.error(:invalid_time_order, ["completed_at"], "completion precedes request")
   end
 
-  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end

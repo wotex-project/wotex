@@ -10,4 +10,4 @@ paths:
   non-public source references.
 - Do not add framework, persistence, job, provider, or UI dependencies.
 - Run `scripts/check_public_boundary.sh` before every commit.
-- Never configure or push a remote from an automated session.
+- Automated agents never configure or change a remote, push, tag, or publish.

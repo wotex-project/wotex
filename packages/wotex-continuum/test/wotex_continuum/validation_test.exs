@@ -74,7 +74,7 @@ defmodule WotexContinuum.ValidationTest do
     assert {:error, %Error{code: :invalid_json_value}} = Validation.json_value(self(), [])
     assert {:error, %Error{code: :invalid_json_value}} = Validation.json_value(%URI{}, [])
 
-    deep = Enum.reduce(1..66, nil, fn _index, acc -> [acc] end)
+    deep = Enum.reduce(1..66, nil, fn _, acc -> [acc] end)
     assert {:error, %Error{code: :limit_exceeded}} = Validation.json_value(deep, [])
 
     extensions = %{"https://example.org/flag" => true}
@@ -104,7 +104,7 @@ defmodule WotexContinuum.ValidationTest do
              Validation.structs([%{message: "missing code"}], ["failures"], Failure)
 
     assert {:ok, [2, 4]} =
-             Validation.map_list([1, 2], [], fn value, _path -> {:ok, value * 2} end)
+             Validation.map_list([1, 2], [], fn value, _ -> {:ok, value * 2} end)
   end
 
   test "converts nested values to wire terms and compares timestamps" do

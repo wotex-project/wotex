@@ -1,6 +1,15 @@
 defmodule WotexContinuum.ActionResult do
   @moduledoc """
-  Data-only report about a previously requested Thing Action.
+  A portable report about a previously requested Thing Action.
+
+  Status determines which output, failure, and timestamp combinations are
+  valid. Successful, failed, and cancelled results must be terminal and
+  internally consistent, while accepted or running results remain incomplete.
+  The execution context and evidence references preserve where the report came
+  from without making it canonical state.
+
+  This value reports an outcome; it never performs the Action or changes Thing
+  state.
   """
 
   @behaviour WotexContinuum.Value
@@ -46,10 +55,10 @@ defmodule WotexContinuum.ActionResult do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -101,7 +110,7 @@ defmodule WotexContinuum.ActionResult do
     end
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("result_id", value.result_id)
@@ -120,7 +129,7 @@ defmodule WotexContinuum.ActionResult do
     if Map.has_key?(data, key) do
       case Validation.json_value(Map.fetch!(data, key), [Atom.to_string(key)]) do
         {:ok, value} -> {:ok, value, true}
-        {:error, _error} = error -> error
+        {:error, _} = error -> error
       end
     else
       {:ok, nil, false}
@@ -153,14 +162,14 @@ defmodule WotexContinuum.ActionResult do
   defp validate_status(status, false, nil, nil) when status in [:accepted, :running, :unknown],
     do: :ok
 
-  defp validate_status(status, _output_present?, _failure, _completed_at) do
+  defp validate_status(status, _, _, _) do
     Error.error(:invalid_result_state, ["status"], "result fields do not match the status", %{
       status: status
     })
   end
 
-  defp validate_time_order(nil, _completed_at), do: :ok
-  defp validate_time_order(_started_at, nil), do: :ok
+  defp validate_time_order(nil, _), do: :ok
+  defp validate_time_order(_, nil), do: :ok
 
   defp validate_time_order(started_at, completed_at) do
     if Validation.compare_timestamps(started_at, completed_at) in [:lt, :eq],
@@ -171,8 +180,8 @@ defmodule WotexContinuum.ActionResult do
   defp maybe_put_output(map, %__MODULE__{output_present?: true, output: output}),
     do: Map.put(map, "output", output)
 
-  defp maybe_put_output(map, _value), do: map
+  defp maybe_put_output(map, _), do: map
 
-  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end

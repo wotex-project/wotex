@@ -1,6 +1,14 @@
 defmodule WotexContinuum.Manifest do
   @moduledoc """
-  Immutable continuum manifest value.
+  Immutable composition manifest for one continuum artifact.
+
+  A manifest binds an artifact digest to schema requirements, supported
+  deployment modes, declared capabilities, and extension data. Construction
+  checks capability uniqueness and mode consistency; compatibility evaluation
+  compares the embedded requirements with consumer declarations.
+
+  The manifest describes composition. It does not load code, grant capability,
+  choose a provider, or start supervision.
   """
 
   @behaviour WotexContinuum.Value
@@ -28,10 +36,10 @@ defmodule WotexContinuum.Manifest do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -72,7 +80,7 @@ defmodule WotexContinuum.Manifest do
     Compatibility.evaluate(manifest.compatibility, schema_version, capabilities)
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("manifest_id", value.manifest_id)

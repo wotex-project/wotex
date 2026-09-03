@@ -1,6 +1,10 @@
 defmodule WotexContinuum.Failure do
   @moduledoc """
-  Portable failure details embedded in result and receipt values.
+  Portable failure details embedded in results, deliveries, and receipts.
+
+  A stable string code, readable message, and JSON-compatible details carry an
+  observed failure across boundaries without serializing exceptions, stack
+  traces, or consumer-specific modules.
   """
 
   alias WotexContinuum.{Error, Validation}

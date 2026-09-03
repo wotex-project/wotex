@@ -1,5 +1,5 @@
 # Changelog
 
-## Unreleased
+## 0.1.0
 
-- Initial pre-1.0 continuum value, codec, lifecycle, and vector contract.
+- Initial continuum value, codec, lifecycle, and vector contract.

@@ -27,9 +27,8 @@ defmodule WotexContinuum.Codec do
          :ok <- Limits.preflight(source, limits),
          {:ok, ordered} <- decode_json(source),
          {:ok, map} <- Limits.normalize_decoded(ordered, limits),
-         :ok <- top_level_object(map),
-         {:ok, value} <- WotexContinuum.from_map(map) do
-      {:ok, value}
+         :ok <- top_level_object(map) do
+      WotexContinuum.from_map(map)
     end
   end
 
@@ -64,5 +63,5 @@ defmodule WotexContinuum.Codec do
   end
 
   defp top_level_object(value) when is_map(value), do: :ok
-  defp top_level_object(_value), do: Error.error(:invalid_type, [], "expected a top-level object")
+  defp top_level_object(_), do: Error.error(:invalid_type, [], "expected a top-level object")
 end

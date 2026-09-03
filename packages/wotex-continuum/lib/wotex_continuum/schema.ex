@@ -22,7 +22,11 @@ defmodule WotexContinuum.Schema do
 
   @doc "Returns registered schema IDs in lexical order."
   @spec ids() :: [String.t()]
-  def ids, do: @schemas |> Map.keys() |> Enum.sort()
+  def ids do
+    @schemas
+    |> Map.keys()
+    |> Enum.sort()
+  end
 
   @doc "Returns exact embedded JSON Schema bytes."
   @spec fetch(String.t()) :: {:ok, binary()} | {:error, Error.t()}
@@ -33,7 +37,7 @@ defmodule WotexContinuum.Schema do
     end
   end
 
-  def fetch(_id), do: Error.error(:invalid_type, [], "expected a schema ID string")
+  def fetch(_), do: Error.error(:invalid_type, [], "expected a schema ID string")
 
   @doc "Returns schema version, byte count, and lowercase SHA-256 identity."
   @spec info(String.t()) :: {:ok, map()} | {:error, Error.t()}

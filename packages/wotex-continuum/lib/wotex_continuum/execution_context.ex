@@ -1,6 +1,12 @@
 defmodule WotexContinuum.ExecutionContext do
   @moduledoc """
-  Opaque execution identity and observed deployment mode.
+  Identifies one execution location and its observed deployment mode.
+
+  Caller-owned execution and node IDs are paired with explicit mode and
+  normalized observation time. Carrying the context makes disconnected or
+  replayed work explainable without reading ambient application configuration.
+
+  It is context data, not a process handle, identity grant, or scheduler.
   """
 
   @behaviour WotexContinuum.Value
@@ -20,10 +26,10 @@ defmodule WotexContinuum.ExecutionContext do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -50,7 +56,7 @@ defmodule WotexContinuum.ExecutionContext do
     end
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("execution_id", value.execution_id)

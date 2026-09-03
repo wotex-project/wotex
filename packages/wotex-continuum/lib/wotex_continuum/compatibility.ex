@@ -1,6 +1,14 @@
 defmodule WotexContinuum.Compatibility do
   @moduledoc """
-  Pure schema and capability compatibility requirements.
+  Pure schema and capability requirements for continuum composition.
+
+  The evaluator compares one schema version and a set of declared capabilities
+  against the complete requirement set. It returns every mismatch in stable
+  order so consumers can explain why composition failed instead of hiding
+  detail behind a boolean.
+
+  Compatibility proves declared version relationships only. It does not prove
+  conformance, trust, availability, or permission.
   """
 
   @behaviour WotexContinuum.Value
@@ -28,10 +36,10 @@ defmodule WotexContinuum.Compatibility do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -78,32 +86,7 @@ defmodule WotexContinuum.Compatibility do
       end
 
     capability_mismatches =
-      Enum.flat_map(requirements.required_capabilities, fn requirement ->
-        case Map.fetch(declared, requirement.id) do
-          :error ->
-            [
-              %{
-                type: :missing_capability,
-                id: requirement.id,
-                requirement: requirement.version_requirement
-              }
-            ]
-
-          {:ok, actual} ->
-            if matches_requirement?(actual, requirement.version_requirement) do
-              []
-            else
-              [
-                %{
-                  type: :capability_version,
-                  id: requirement.id,
-                  requirement: requirement.version_requirement,
-                  actual: actual
-                }
-              ]
-            end
-        end
-      end)
+      Enum.flat_map(requirements.required_capabilities, &capability_mismatch(&1, declared))
 
     case schema_mismatches ++ capability_mismatches do
       [] -> :ok
@@ -111,7 +94,38 @@ defmodule WotexContinuum.Compatibility do
     end
   end
 
-  @impl true
+  defp capability_mismatch(requirement, declared) do
+    case Map.fetch(declared, requirement.id) do
+      :error ->
+        [
+          %{
+            type: :missing_capability,
+            id: requirement.id,
+            requirement: requirement.version_requirement
+          }
+        ]
+
+      {:ok, actual} ->
+        version_mismatch(requirement, actual)
+    end
+  end
+
+  defp version_mismatch(requirement, actual) do
+    if matches_requirement?(actual, requirement.version_requirement) do
+      []
+    else
+      [
+        %{
+          type: :capability_version,
+          id: requirement.id,
+          requirement: requirement.version_requirement,
+          actual: actual
+        }
+      ]
+    end
+  end
+
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("schema_requirement", value.schema_requirement)

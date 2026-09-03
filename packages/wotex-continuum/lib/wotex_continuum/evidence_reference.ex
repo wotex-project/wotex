@@ -1,6 +1,11 @@
 defmodule WotexContinuum.EvidenceReference do
   @moduledoc """
-  Immutable reference to evidence held outside this library.
+  Immutable identity for evidence stored outside this library.
+
+  An evidence ID, absolute IRI, media type, capture time, and lowercase SHA-256
+  digest refer to exact external bytes without importing a storage system.
+  Consumers decide retrieval, retention, authorization, and verification
+  policy.
   """
 
   @behaviour WotexContinuum.Value
@@ -21,10 +26,10 @@ defmodule WotexContinuum.EvidenceReference do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -54,7 +59,7 @@ defmodule WotexContinuum.EvidenceReference do
     end
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("evidence_id", value.evidence_id)

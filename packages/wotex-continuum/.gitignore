@@ -3,6 +3,11 @@
 /cover/
 /deps/
 /doc/
+/.archive-check.*/
+/priv/plts/
 /erl_crash.dump
 /wotex_continuum-*.tar
 /*.ez
+
+# Local cross-repository coordination; never publish machine-local handoffs.
+/docs/tasks/inbox.md

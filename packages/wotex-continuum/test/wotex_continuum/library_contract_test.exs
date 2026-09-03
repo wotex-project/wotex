@@ -42,8 +42,12 @@ defmodule WotexContinuum.LibraryContractTest do
     assert length(paths) == 3
 
     for path <- paths do
-      assert {:ok, %{"$schema" => _, "$id" => _, "$defs" => _}} =
-               path |> File.read!() |> Jason.decode()
+      decoded =
+        path
+        |> File.read!()
+        |> Jason.decode()
+
+      assert {:ok, %{"$schema" => _, "$id" => _, "$defs" => _}} = decoded
     end
 
     assert Schema.ids() == ["WCT.01", "WCT.02", "WCT.03"]

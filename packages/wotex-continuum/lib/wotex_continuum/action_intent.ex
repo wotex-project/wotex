@@ -1,8 +1,14 @@
 defmodule WotexContinuum.ActionIntent do
   @moduledoc """
-  Data-only request to invoke a Thing Action.
+  A portable, data-only request to invoke a Thing Action.
 
-  This value does not authorize or dispatch the Action.
+  The value binds the Action name and input to a Thing, idempotency key,
+  execution context, request time, optional requester, and evidence references.
+  It is suitable for durable queues and disconnected transfer because all
+  authority-relevant context travels with the request.
+
+  Construction validates the envelope; it does not authorize, schedule, dedupe,
+  or dispatch the Action. Those decisions remain with the consumer.
   """
 
   @behaviour WotexContinuum.Value
@@ -46,10 +52,10 @@ defmodule WotexContinuum.ActionIntent do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -102,7 +108,7 @@ defmodule WotexContinuum.ActionIntent do
     end
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("intent_id", value.intent_id)
@@ -117,6 +123,6 @@ defmodule WotexContinuum.ActionIntent do
     |> Map.put("extensions", value.extensions)
   end
 
-  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end

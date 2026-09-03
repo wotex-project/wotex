@@ -7,5 +7,6 @@ The repository is an independent public library. Do not add consumer brand
 names, organization-internal paths, non-public fixtures, credentials, or
 consumer-specific policy. Use “consumer” and “consumer host” in examples.
 
-Never configure or push a remote from an automated session. Local commits must
-use lowercase conventional subjects and contain no generated attribution.
+Automated agents never configure or change a remote, push, tag, or publish.
+Local commits use `Tobias Bohwalli <hi@futhr.io>` as both author and committer,
+use lowercase conventional subjects, and contain no generated attribution.

@@ -46,7 +46,11 @@ defmodule WotexContinuum do
 
   @doc "Returns every registered top-level kind in lexical order."
   @spec kinds() :: [String.t()]
-  def kinds, do: @modules_by_kind |> Map.keys() |> Enum.sort()
+  def kinds do
+    @modules_by_kind
+    |> Map.keys()
+    |> Enum.sort()
+  end
 
   @doc "Constructs a registered value from a string-keyed or atom-keyed map."
   @spec from_map(map()) :: {:ok, struct()} | {:error, WotexContinuum.Error.t()}
@@ -57,13 +61,13 @@ defmodule WotexContinuum do
     end
   end
 
-  def from_map(_data), do: WotexContinuum.Error.error(:invalid_type, [], "expected an object")
+  def from_map(_), do: WotexContinuum.Error.error(:invalid_type, [], "expected an object")
 
   @doc "Returns the string-keyed wire map for a registered value."
   @spec to_map(struct()) :: {:ok, map()} | {:error, WotexContinuum.Error.t()}
   def to_map(%module{} = value) when module in @modules, do: {:ok, module.to_map(value)}
 
-  def to_map(_value) do
+  def to_map(_) do
     WotexContinuum.Error.error(:unsupported_value, [], "expected a registered continuum value")
   end
 
@@ -76,7 +80,7 @@ defmodule WotexContinuum do
     end
   end
 
-  def module_for_kind(_kind) do
+  def module_for_kind(_) do
     WotexContinuum.Error.error(:invalid_type, ["kind"], "expected a string")
   end
 
@@ -94,14 +98,14 @@ defmodule WotexContinuum do
       {:missing, value} ->
         validate_discriminator(value)
 
-      {_left, _right} ->
+      {_, _} ->
         WotexContinuum.Error.error(:duplicate_field, ["kind"], "field appears more than once")
     end
   end
 
   defp validate_discriminator(value) when is_binary(value), do: {:ok, value}
 
-  defp validate_discriminator(_value) do
+  defp validate_discriminator(_) do
     WotexContinuum.Error.error(:invalid_type, ["kind"], "expected a string")
   end
 end

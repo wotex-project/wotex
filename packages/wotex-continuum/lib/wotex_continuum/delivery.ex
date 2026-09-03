@@ -1,6 +1,12 @@
 defmodule WotexContinuum.Delivery do
   @moduledoc """
-  Data-only delivery-progress value.
+  A data-only snapshot of delivery progress for another continuum value.
+
+  Delivery binds an item to source, destination, attempt, status, timestamps,
+  and optional failure. Cross-field validation prevents impossible
+  combinations such as acknowledgement without an acknowledgement time.
+
+  The value does not enqueue, transmit, retry, or acknowledge anything.
   """
 
   @behaviour WotexContinuum.Value
@@ -51,10 +57,10 @@ defmodule WotexContinuum.Delivery do
           extensions: map()
         }
 
-  @impl true
+  @impl WotexContinuum.Value
   def kind, do: @kind
 
-  @impl true
+  @impl WotexContinuum.Value
   def new(%__MODULE__{} = value), do: {:ok, value}
 
   def new(data) do
@@ -115,7 +121,7 @@ defmodule WotexContinuum.Delivery do
     end
   end
 
-  @impl true
+  @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
     |> Map.put("delivery_id", value.delivery_id)
@@ -156,13 +162,13 @@ defmodule WotexContinuum.Delivery do
        when status in [:pending, :in_flight, :delivered, :unknown],
        do: :ok
 
-  defp validate_status(status, _acknowledged_at, _failure) do
+  defp validate_status(status, _, _) do
     Error.error(:invalid_delivery_state, ["status"], "delivery fields do not match the status", %{
       status: status
     })
   end
 
-  defp validate_time_order(_emitted_at, nil), do: :ok
+  defp validate_time_order(_, nil), do: :ok
 
   defp validate_time_order(emitted_at, acknowledged_at) do
     if Validation.compare_timestamps(emitted_at, acknowledged_at) in [:lt, :eq],
@@ -179,6 +185,6 @@ defmodule WotexContinuum.Delivery do
     if item_kind in WotexContinuum.kinds(), do: :ok, else: invalid_item_kind()
   end
 
-  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end
