@@ -339,9 +339,6 @@ defmodule Wotex.Directory do
         with :ok <- valid_identifier(identifier, operation) do
           {:ok, thing_description, identifier, :named}
         end
-
-      _identifier ->
-        {:error, Error.new(:identifier_failure, operation)}
     end
   end
 

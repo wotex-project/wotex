@@ -1,46 +1,76 @@
-name: ci
+name: Continuous Integration
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   verify:
+    name: Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: "1.19.0"
+            otp: "28.0"
+            artifact: false
+          - elixir: "1.19.5"
+            otp: "28.5"
+            artifact: true
     defaults:
       run:
         working-directory: wotex-directory
     env:
       MIX_ENV: test
       WOTEX_PATH_DEPS: "1"
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           path: wotex-directory
-      - uses: actions/checkout@v4
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex
           ref: 3676e71ed5b3b15e002bf4a05cc1b856a75dd8d9
           path: wotex
-      - uses: erlef/setup-beam@v1
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
-          elixir-version: "1.19.5"
-          otp-version: "28.5"
-      - uses: actions/cache@v4
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             wotex-directory/deps
             wotex-directory/_build
-          key: ${{ runner.os }}-otp-28.5-elixir-1.19-${{ hashFiles('wotex-directory/mix.lock') }}
-      - run: mix local.hex --force
-      - run: mix local.rebar --force
+            wotex-directory/priv/plts
+          key: directory-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('wotex-directory/mix.lock') }}
       - run: mix deps.get --only test
       - run: mix check
-      - run: >-
-          mix run --no-start -e
-          'unless Application.spec(:wotex_directory, :mod) in [nil, [], :undefined], do: System.halt(1)'
+      - if: matrix.artifact
+        run: mix coveralls.lcov
+      - if: matrix.artifact
+        uses: codecov/codecov-action@e53489f4d376d79066609109e7a95a29eb3740b1 # v7.0.0
+        with:
+          disable_search: true
+          fail_ci_if_error: true
+          files: wotex-directory/cover/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - if: matrix.artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wotex-directory-hex
+          path: wotex-directory/wotex_directory-*.tar
+          if-no-files-found: error

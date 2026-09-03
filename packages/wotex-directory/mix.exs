@@ -1,35 +1,26 @@
 defmodule WotexDirectory.MixProject do
   use Mix.Project
 
-  @version "0.1.0-dev"
+  @version "0.1.0"
   @source_url "https://github.com/wotex-project/wotex-directory"
 
   def project do
     [
       app: :wotex_directory,
+      name: "Wotex Directory",
       version: @version,
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
       aliases: aliases(),
-      description: "Storage-neutral W3C Web of Things Discovery directory mechanics",
+      description: description(),
       package: package(),
       docs: docs(),
       source_url: @source_url,
       homepage_url: "https://wotex.io",
-      test_coverage: [
-        summary: [threshold: 90],
-        ignore_modules: [
-          Wotex.Directory.FailureRepository,
-          Wotex.Directory.Fixtures,
-          Wotex.Directory.MemoryRepository,
-          Wotex.Directory.TestAuthorization,
-          Wotex.Directory.TestClock,
-          Wotex.Directory.TestIdentifier,
-          Wotex.Directory.TestService
-        ]
-      ]
+      test_coverage: [tool: ExCoveralls],
+      dialyzer: dialyzer()
     ]
   end
 
@@ -37,12 +28,28 @@ defmodule WotexDirectory.MixProject do
     [extra_applications: []]
   end
 
-  def cli, do: [preferred_envs: [check: :test]]
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.lcov": :test,
+        "test.cover": :test
+      ]
+    ]
+  end
 
   defp deps do
     [
       wotex_dependency(),
-      {:ex_doc, "~> 0.38", only: [:dev, :test, :docs], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
+      {:ex_check, "~> 0.16", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.38", only: [:dev, :test, :docs], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -51,16 +58,15 @@ defmodule WotexDirectory.MixProject do
 
   defp aliases do
     [
-      check: [
-        "format --check-formatted",
-        "compile --warnings-as-errors",
-        "test --cover --warnings-as-errors",
-        "docs --warnings-as-errors",
-        "cmd bin/check-boundary",
-        "package"
-      ],
+      setup: ["deps.get", "deps.compile"],
+      lint: ["format --check-formatted", "credo --strict", "dialyzer"],
+      "test.cover": ["coveralls"],
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
     ]
+  end
+
+  defp description do
+    "Storage-neutral Thing Description Directory mechanics for W3C Web of Things consumers"
   end
 
   defp wotex_dependency do
@@ -93,6 +99,7 @@ defmodule WotexDirectory.MixProject do
         "LICENSE",
         "NOTICE",
         "README.md",
+        "CHANGELOG.md",
         "SECURITY.md",
         "docs",
         "lib",
@@ -100,10 +107,12 @@ defmodule WotexDirectory.MixProject do
       ],
       licenses: ["Apache-2.0"],
       links: %{
+        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "Documentation" => "https://hexdocs.pm/wotex_directory",
         "Homepage" => "https://wotex.io",
         "Source" => @source_url
       },
-      maintainers: ["Wotex Project Maintainers"]
+      maintainers: ["Tobias Bohwalli <hi@futhr.io>"]
     ]
   end
 
@@ -111,18 +120,59 @@ defmodule WotexDirectory.MixProject do
     [
       main: "readme",
       extras: [
-        "README.md",
-        "docs/specs/WTD.01-directory-contract.md",
-        "docs/decisions/0001-consumer-owned-runtime.md",
-        "docs/decisions/0002-listing-and-expiry.md",
-        "docs/provenance/w3c-sources.md"
+        "README.md": [title: "Overview"],
+        "docs/specs/WTD.01-directory-contract.md": [title: "Directory contract"],
+        "docs/decisions/0001-consumer-owned-runtime.md": [title: "Consumer-owned runtime"],
+        "docs/decisions/0002-listing-and-expiry.md": [title: "Listing and expiry"],
+        "docs/provenance/w3c-sources.md": [title: "W3C sources"],
+        "CHANGELOG.md": [title: "Changelog"],
+        "SECURITY.md": [title: "Security"],
+        "CONTRIBUTING.md": [title: "Contributing"],
+        LICENSE: [title: "License"]
       ],
       groups_for_extras: [
         Specifications: ~r|docs/specs/|,
         Decisions: ~r|docs/decisions/|,
-        Provenance: ~r|docs/provenance/|
+        Provenance: ~r|docs/provenance/|,
+        Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|LICENSE/
       ],
-      source_ref: "v#{@version}"
+      groups_for_modules: [
+        "Public API": [Wotex.Directory],
+        "Configuration and ports": [
+          Wotex.Directory.Authorization,
+          Wotex.Directory.Clock,
+          Wotex.Directory.Clock.System,
+          Wotex.Directory.Identifier,
+          Wotex.Directory.Repository,
+          Wotex.Directory.Service
+        ],
+        "Directory values": [
+          Wotex.Directory.Context,
+          Wotex.Directory.Entry,
+          Wotex.Directory.Error,
+          Wotex.Directory.Expiry,
+          Wotex.Directory.Introduction,
+          Wotex.Directory.Mutation,
+          Wotex.Directory.Page,
+          Wotex.Directory.Query,
+          Wotex.Directory.Registration
+        ],
+        Mechanics: [
+          Wotex.Directory.MergePatch,
+          Wotex.Directory.ThingDescriptions
+        ]
+      ],
+      source_ref: "v#{@version}",
+      source_url: @source_url,
+      formatters: ["html", "markdown", "epub"]
+    ]
+  end
+
+  defp dialyzer do
+    [
+      plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
+      plt_add_apps: [:mix, :ex_unit],
+      flags: [:error_handling, :missing_return, :underspecs, :extra_return]
     ]
   end
 end

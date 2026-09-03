@@ -5,6 +5,13 @@ defmodule Wotex.Directory.MergePatch do
   The root patch must be an object because Discovery PATCH accepts a Partial
   Thing Description. Object keys must be strings and all values must be JSON
   compatible.
+
+  ## Merge Patch warning
+
+  RFC 7396 gives `null` deletion semantics and replaces arrays as whole values;
+  it does not merge array elements. The directory revalidates the complete
+  merged Thing Description and separately protects server-owned registration
+  members before persistence.
   """
 
   @type reason :: :invalid_json_value | :maximum_depth_exceeded | :maximum_nodes_exceeded

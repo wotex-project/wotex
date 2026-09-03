@@ -9,6 +9,7 @@ defmodule Wotex.Directory.Authorization do
   @type operation :: :register | :get | :replace | :patch | :delete | :list | :expire
   @type target :: :collection | {:entry, String.t()}
 
+  @doc "Authorizes one directory operation before any repository access occurs."
   @callback authorize(
               state :: term(),
               principal :: term(),

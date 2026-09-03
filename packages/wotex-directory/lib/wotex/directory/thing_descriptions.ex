@@ -1,10 +1,16 @@
 defmodule Wotex.Directory.ThingDescriptions do
-  @moduledoc false
+  @moduledoc """
+  Boundary conversions between core Thing Descriptions and Discovery-enriched documents.
+
+  Consumers normally use `Wotex.Directory`; this module is public so custom
+  service layers can apply the same normalization rules at their boundaries.
+  """
 
   alias Wotex.Directory.{Error, Registration}
 
   @discovery_context "https://www.w3.org/2022/wot/discovery"
 
+  @doc "Validates a Thing Description and separates optional registration metadata."
   @spec normalize_and_extract(term(), keyword(), atom()) ::
           {:ok, Wotex.ThingDescription.t(), Registration.input()} | {:error, Error.t()}
   def normalize_and_extract(thing_description, options, operation) do
@@ -16,10 +22,10 @@ defmodule Wotex.Directory.ThingDescriptions do
       {:ok, base, registration_input(registration)}
     else
       {:error, %Error{} = error} -> {:error, error}
-      _result -> invalid(operation)
     end
   end
 
+  @doc "Reconstructs a Thing Description and registration map from an enriched document."
   @spec from_enriched_map(map(), keyword(), atom()) ::
           {:ok, Wotex.ThingDescription.t(), map()} | {:error, Error.t()}
   def from_enriched_map(map, options, operation) when is_map(map) do
@@ -36,9 +42,11 @@ defmodule Wotex.Directory.ThingDescriptions do
 
   def from_enriched_map(_map, _options, operation), do: invalid(operation)
 
+  @doc "Returns the identifier of a validated Thing Description."
   @spec id(Wotex.ThingDescription.t()) :: String.t() | nil
   def id(thing_description), do: Wotex.ThingDescription.id(thing_description)
 
+  @doc "Returns a Thing Description with its identifier replaced and revalidated."
   @spec put_id(Wotex.ThingDescription.t(), String.t(), keyword(), atom()) ::
           {:ok, Wotex.ThingDescription.t()} | {:error, Error.t()}
   def put_id(thing_description, identifier, options, operation) do
@@ -48,6 +56,7 @@ defmodule Wotex.Directory.ThingDescriptions do
     end
   end
 
+  @doc "Builds the W3C Discovery representation with registration metadata and context."
   @spec enriched_map(Wotex.ThingDescription.t(), Registration.t()) :: map()
   def enriched_map(thing_description, registration) do
     thing_description
@@ -56,6 +65,7 @@ defmodule Wotex.Directory.ThingDescriptions do
     |> Map.put("registration", Registration.to_map(registration))
   end
 
+  @doc "Builds and validates the W3C Discovery representation as a Thing Description."
   @spec enriched(Wotex.ThingDescription.t(), Registration.t(), keyword(), atom()) ::
           {:ok, Wotex.ThingDescription.t()} | {:error, Error.t()}
   def enriched(thing_description, registration, options, operation) do

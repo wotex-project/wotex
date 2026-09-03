@@ -1,43 +1,46 @@
 # Wotex Directory
 
-`wotex_directory` is a storage-neutral Elixir library for the W3C Web of Things
-Discovery Thing Description Directory contract. It provides immutable request
-and result values plus deterministic mechanics for registration, retrieval,
-replacement, JSON Merge Patch, deletion, bounded listing, expiry, and
-well-known Introduction.
+**Storage-neutral W3C WoT Thing Description Directory mechanics for Elixir.**
 
-The consumer supplies repository, authorization, clock, and identifier ports.
-The library starts no process, owns no database or filesystem, serves no HTTP
-endpoint, stores no credential, and reads no application-global configuration.
+[![Hex.pm](https://img.shields.io/hexpm/v/wotex_directory.svg)](https://hex.pm/packages/wotex_directory)
+[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_directory)
+[![CI](https://github.com/wotex-project/wotex-directory/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-directory/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/wotex-project/wotex-directory/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-directory)
+[![License](https://img.shields.io/github/license/wotex-project/wotex-directory.svg)](LICENSE)
 
-## Maturity
+[Installation](#installation) · [Quick Start](#quick-start) ·
+[Consumer Ports](#consumer-ports) · [Discovery Semantics](#discovery-semantics) ·
+[Boundary](#boundary) · [Development](#development)
 
-The package is pre-release. Its target is the W3C WoT Discovery Recommendation
-dated 2023-12-05 and Thing Description 1.1. Implemented behavior is limited to
-the capability matrix in `docs/specs/WTD.01-directory-contract.md`. The package
-does not claim W3C certification and does not implement JSONPath, XPath, or
-SPARQL search profiles.
+---
 
-## Dependency direction
+`wotex_directory` implements the deterministic application mechanics of a W3C
+Web of Things Discovery Thing Description Directory: registration, retrieval,
+replacement, bounded JSON Merge Patch, deletion, stable listing, expiry, and
+the well-known Introduction.
 
-The only production dependency is `wotex`, which owns Thing Description values,
-validation, identifiers, extension preservation, and serialization. This
-package never accesses the core struct internals.
+The library is deliberately storage-neutral. A consumer supplies repository,
+authorization, clock, and identifier ports; the library owns validation,
+operation ordering, optimistic concurrency semantics, and normalized errors.
 
-For a local development checkout, select a path explicitly:
-
-```sh
-WOTEX_PATH_DEPS=1 mix deps.get
-WOTEX_PATH_DEPS=1 mix test
-```
-
-The switch selects the sibling core checkout explicitly. It never checks
-whether a neighboring directory exists. With the switch absent, Mix resolves
-the published `wotex` package.
-
-## Consumer composition
+## Installation
 
 ```elixir
+def deps do
+  [{:wotex_directory, "~> 0.1.0"}]
+end
+```
+
+The only production dependency is `wotex ~> 0.1`, which owns Thing Description
+values and validation. For coordinated source development, set
+`WOTEX_PATH_DEPS=1` before fetching dependencies to select the sibling checkout
+explicitly. Normal builds always resolve the Hex package.
+
+## Quick Start
+
+```elixir
+alias Wotex.Directory
+
 {:ok, directory} =
   Wotex.Directory.Service.new(
     repository: {ConsumerRepository, repository_state},
@@ -49,14 +52,66 @@ the published `wotex` package.
 
 context = Wotex.Directory.Context.new!(principal, repository: request_scope)
 
-{:ok, mutation} = Wotex.Directory.register(directory, thing_description, context)
-{:ok, entry} = Wotex.Directory.get(directory, mutation.entry.identifier, context)
+{:ok, mutation} = Directory.register(directory, thing_description, context)
+{:ok, entry} = Directory.get(directory, mutation.entry.identifier, context)
 ```
 
-The consumer owns supervision, adapter lifetime, persistence transactions,
-scheduling of `expire/3`, HTTP route mapping, authentication, and authorization
-policy.
+`Wotex.Directory.Service` is immutable configuration, not a process. Keep it in
+consumer-owned state or pass it explicitly to request handlers.
 
-## License
+## Consumer Ports
 
-Apache-2.0. See `NOTICE` for source attribution.
+Nine callbacks form the complete effect boundary:
+
+| Port | Callback | Responsibility |
+|------|----------|----------------|
+| `Authorization` | `authorize/5` | Decide access before repository reads or writes. |
+| `Clock` | `now/1` | Supply every registration, retrieval, listing, and expiry instant. |
+| `Identifier` | `generate/1` | Generate an absolute identifier for anonymous registration. |
+| `Repository` | `fetch/3` | Fetch one entry without interpreting consumer scope. |
+| `Repository` | `insert/3` | Atomically reject identifier collisions. |
+| `Repository` | `replace/4` | Atomically enforce the expected entry version. |
+| `Repository` | `delete/4` | Atomically delete the expected entry version. |
+| `Repository` | `list/4` | Return a stable bounded page tied to a collection revision. |
+| `Repository` | `expire_due/5` | Purge or retain a bounded, ordered set of due entries. |
+
+Port state and failure reasons are opaque. Adapter failures become stable
+`Wotex.Directory.Error` values so infrastructure details do not leak across the
+library boundary.
+
+## Discovery Semantics
+
+The 0.1 series targets the W3C WoT Discovery Recommendation dated 2023-12-05
+and Thing Description 1.1. Supported behavior is recorded in
+[`WTD.01`](docs/specs/WTD.01-directory-contract.md). This package does not claim
+W3C certification and does not implement JSONPath, XPath, or SPARQL profiles.
+
+PATCH uses RFC 7396 JSON Merge Patch. `null` removes a member, arrays replace as
+whole values, and the merged document is revalidated as a Thing Description
+before persistence. Server-owned registration members (`created`, `modified`,
+and `retrieved`) cannot be assigned or removed by a patch. Consumers should not
+treat Merge Patch as an element-wise array update language.
+
+## Boundary
+
+The consumer owns the database, transactions behind repository callbacks,
+supervision, adapter lifetimes, HTTP routing, authentication, authorization
+policy, and scheduling of `expire/3`. This package starts no process, defines no
+application callback, reads no global application configuration, and owns no
+database, filesystem, endpoint, credential, or job.
+
+## Development
+
+```console
+WOTEX_PATH_DEPS=1 mix deps.get
+WOTEX_PATH_DEPS=1 mix check
+```
+
+`mix check` is the single local gate: warnings-as-errors compilation, formatting,
+unused dependencies, strict Credo, 95% coverage, dependency audits, Doctor,
+Dialyzer, HexDocs, boundary checks, Hex archive construction, out-of-tree
+archive compilation, and verification that no application callback exists.
+
+See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
+[SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and
+[NOTICE](https://github.com/wotex-project/wotex-directory/blob/main/NOTICE).

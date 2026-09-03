@@ -2,6 +2,8 @@
 /cover/
 /deps/
 /doc/
+/docs/tasks/inbox.md
+/priv/plts/
 /*.ez
 /*.tar
 erl_crash.dump
