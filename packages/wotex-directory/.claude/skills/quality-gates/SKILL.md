@@ -21,7 +21,11 @@ for format, compile, test, and documentation commands. Do not set it for
 production dependency inspection. The `mix package` alias always removes the
 switch before building package metadata.
 
-Also confirm that the OTP application has no callback module, no remote is
-configured by the agent, production dependencies match the accepted graph, and
-the repository contains no consumer names, internal paths, credentials, or
-private data. Report every skipped or failed check.
+Also confirm that the OTP application has no callback module, production
+dependencies match the accepted graph, and the repository contains no consumer
+brand names or namespaces, internal paths, credentials, or private data. Review
+the public boundary semantically; do not encode private consumer names in a
+denylist. Report every skipped or failed check.
+
+Stop after local evidence. Automated agents never configure or remove remotes,
+push, create tags, publish packages, or create releases.

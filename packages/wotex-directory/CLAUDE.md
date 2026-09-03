@@ -46,21 +46,27 @@ Pin every W3C claim to an exact published revision and distinguish Recommendatio
 requirements from package choices. Unsupported search profiles and transport
 features must be reported explicitly. This library provides no certification.
 
+## Public boundary
+
+Source, tests, specifications, documentation, commits, package contents, and
+generated documentation remain consumer-neutral. Do not include consumer brand
+names, consumer namespaces or policy, organization-internal paths, non-public
+fixtures, credentials, customer data, or copied proprietary prose. Examples use
+`consumer`, `consumer host`, reserved URNs, and synthetic values.
+
 ## Delivery
 
 Implement accepted repository specifications with tests first. Before a local
 commit run formatting, warning-free compilation, tests, documentation, the
 package archive build, and a boundary scan. Commits use conventional lowercase
 subjects without specification identifiers or automation attribution. Never
-configure or push a remote from an agent session.
-+
+perform a remote action from an agent session.
 
 ## Git authority
 
-Automated agents must never configure, add, change, or remove a Git remote and
-must never run `git push` or any equivalent publication command. Only the human
-owner publishes repository history.
+Automated agents must never configure, add, change, or remove a Git remote;
+push; create a tag; publish a package or release; or create equivalent remote
+state. Only the human maintainer performs publication.
 
-Every local commit must use the repository-configured human owner identity from
-`git config user.name` and `git config user.email`. Never substitute an agent,
-tool, bot, or shared contributor identity.
+Every local commit uses `Tobias Bohwalli <hi@futhr.io>` as both author and
+committer. Never substitute an agent, tool, bot, or shared contributor identity.
