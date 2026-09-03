@@ -32,6 +32,16 @@ boundary checks and unpacked Hex-package inspection. Consumer-neutrality is a
 review obligation governed by this contract and the release-readiness skill;
 do not create a public denylist of private consumers.
 
+## External automation boundary
+
+This repository exposes source, specifications, dependency contracts, vectors,
+and deterministic verification commands to external engineering automation. It
+does not own worker coordination, claims, leases, attempts, cross-repository
+programme state, accepted outcomes, or remote publication policy. Do not add a
+coordination daemon, graph database, shared-workspace application, or
+tool-specific project metadata. External automation must adapt to this
+consumer-neutral repository contract.
+
 ## Git authority
 
 Automated agents must never configure, add, change, or remove a Git remote;
