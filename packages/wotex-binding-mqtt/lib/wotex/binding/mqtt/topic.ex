@@ -56,13 +56,15 @@ defmodule Wotex.Binding.MQTT.Topic do
   def normalize_filters(filter) when is_binary(filter), do: normalize_filters([filter])
 
   def normalize_filters(filters) when is_list(filters) and filters != [] do
-    Enum.reduce_while(filters, {:ok, []}, fn filter, {:ok, valid} ->
-      case validate_filter(filter) do
-        :ok -> {:cont, {:ok, [filter | valid]}}
-        {:error, %Error{} = error} -> {:halt, {:error, error}}
-      end
-    end)
-    |> case do
+    result =
+      Enum.reduce_while(filters, {:ok, []}, fn filter, {:ok, valid} ->
+        case validate_filter(filter) do
+          :ok -> {:cont, {:ok, [filter | valid]}}
+          {:error, %Error{} = error} -> {:halt, {:error, error}}
+        end
+      end)
+
+    case result do
       {:ok, valid} -> {:ok, Enum.reverse(valid)}
       {:error, %Error{} = error} -> {:error, error}
     end

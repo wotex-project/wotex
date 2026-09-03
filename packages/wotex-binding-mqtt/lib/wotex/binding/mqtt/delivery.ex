@@ -36,6 +36,15 @@ defmodule Wotex.Binding.MQTT.Delivery do
      )}
   end
 
+  @doc "Validates a delivery value received across the consumer client boundary."
+  @spec normalize(term()) :: {:ok, t()} | {:error, Error.t()}
+  def normalize(%__MODULE__{} = delivery), do: {:ok, delivery}
+
+  def normalize(_delivery) do
+    {:error,
+     Error.new(:invalid_delivery, :client, "client delivery must be an MQTT delivery value")}
+  end
+
   @doc "Returns the encoded MQTT Application Message payload."
   @spec payload(t()) :: binary()
   def payload(%__MODULE__{payload: payload}), do: payload

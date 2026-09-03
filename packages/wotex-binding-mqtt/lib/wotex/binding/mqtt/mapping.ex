@@ -1,8 +1,8 @@
 defmodule Wotex.Binding.MQTT.Mapping do
   @moduledoc "Maps W3C WoT MQTT Form terms to immutable MQTT commands."
 
-  alias Wotex.Form
   alias Wotex.Binding.MQTT.{Broker, Command, Error, QoS}
+  alias Wotex.Form
   alias Wotex.Runtime.Request
 
   @packets %{
@@ -153,7 +153,7 @@ defmodule Wotex.Binding.MQTT.Mapping do
   defp validate_unsubscribe_qos(form) do
     case Map.fetch(form, "mqv:qos") do
       :error -> :ok
-      {:ok, qos} -> qos |> QoS.normalize() |> normalize_qos_validation()
+      {:ok, qos} -> normalize_qos_validation(QoS.normalize(qos))
     end
   end
 

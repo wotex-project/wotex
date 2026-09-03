@@ -12,7 +12,7 @@ defmodule Wotex.Binding.MQTT.Transport do
   alias Wotex.Binding.MQTT.{Command, Delivery, Error, JSON, Mapping, Topic, TransportConfig}
   alias Wotex.Runtime.{ExecutionContext, Request, Result}
 
-  @impl true
+  @impl Wotex.Runtime.Transport
   def request(
         %Request{} = request,
         %ExecutionContext{} = execution_context,
@@ -26,7 +26,7 @@ defmodule Wotex.Binding.MQTT.Transport do
   def request(_request, _execution_context, _config),
     do: invalid_transport_input(:request)
 
-  @impl true
+  @impl Wotex.Runtime.Transport
   def subscribe(
         %Request{} = request,
         receiver,
@@ -34,24 +34,25 @@ defmodule Wotex.Binding.MQTT.Transport do
         %TransportConfig{} = config
       )
       when is_pid(receiver) do
-    with {:ok, %Command{packet: :subscribe} = command} <-
-           Mapping.command(request, config.max_payload_bytes) do
-      delivery_callback = delivery_callback(receiver, command, config.max_payload_bytes)
+    case Mapping.command(request, config.max_payload_bytes) do
+      {:ok, command} ->
+        if Command.packet(command) == :subscribe do
+          delivery_callback = delivery_callback(receiver, command, config.max_payload_bytes)
 
-      config.client
-      |> safe_client_call(
-        :subscribe,
-        [command, delivery_callback, execution_context, config.client_config]
-      )
-      |> normalize_subscribe(request.operation)
-    else
-      {:ok, %Command{}} ->
-        {:error,
-         Error.new(
-           :invalid_subscription_packet,
-           :mapping,
-           "Runtime subscription requires an MQTT subscribe command"
-         )}
+          config.client
+          |> safe_client_call(
+            :subscribe,
+            [command, delivery_callback, execution_context, config.client_config]
+          )
+          |> normalize_subscribe(request.operation)
+        else
+          {:error,
+           Error.new(
+             :invalid_subscription_packet,
+             :mapping,
+             "Runtime subscription requires an MQTT subscribe command"
+           )}
+        end
 
       {:error, %Error{} = error} ->
         {:error, error}
@@ -61,29 +62,30 @@ defmodule Wotex.Binding.MQTT.Transport do
   def subscribe(_request, _receiver, _execution_context, _config),
     do: invalid_transport_input(:subscribe)
 
-  @impl true
+  @impl Wotex.Runtime.Transport
   def unsubscribe(
         handle,
         %Request{} = request,
         %ExecutionContext{} = execution_context,
         %TransportConfig{} = config
       ) do
-    with {:ok, %Command{packet: :unsubscribe} = command} <-
-           Mapping.command(request, config.max_payload_bytes) do
-      config.client
-      |> safe_client_call(
-        :unsubscribe,
-        [handle, command, execution_context, config.client_config]
-      )
-      |> normalize_unsubscribe(request.operation)
-    else
-      {:ok, %Command{}} ->
-        {:error,
-         Error.new(
-           :invalid_unsubscription_packet,
-           :mapping,
-           "Runtime unsubscription requires an MQTT unsubscribe command"
-         )}
+    case Mapping.command(request, config.max_payload_bytes) do
+      {:ok, command} ->
+        if Command.packet(command) == :unsubscribe do
+          config.client
+          |> safe_client_call(
+            :unsubscribe,
+            [handle, command, execution_context, config.client_config]
+          )
+          |> normalize_unsubscribe(request.operation)
+        else
+          {:error,
+           Error.new(
+             :invalid_unsubscription_packet,
+             :mapping,
+             "Runtime unsubscription requires an MQTT unsubscribe command"
+           )}
+        end
 
       {:error, %Error{} = error} ->
         {:error, error}
@@ -93,40 +95,31 @@ defmodule Wotex.Binding.MQTT.Transport do
   def unsubscribe(_handle, _request, _execution_context, _config),
     do: invalid_transport_input(:unsubscribe)
 
-  defp execute_request(
-         %Command{packet: :publish} = command,
-         request,
-         execution_context,
-         config
-       ) do
-    config.client
-    |> safe_client_call(:publish, [command, execution_context, config.client_config])
-    |> normalize_publish(command, request)
-  end
+  defp execute_request(command, request, execution_context, config) do
+    case {Command.packet(command), Command.operation(command)} do
+      {:publish, _operation} ->
+        config.client
+        |> safe_client_call(:publish, [command, execution_context, config.client_config])
+        |> normalize_publish(command, request)
 
-  defp execute_request(
-         %Command{packet: :subscribe, operation: :readproperty} = command,
-         request,
-         execution_context,
-         config
-       ) do
-    config.client
-    |> safe_client_call(:read, [
-      command,
-      config.read_timeout,
-      execution_context,
-      config.client_config
-    ])
-    |> normalize_read(command, request, config.max_payload_bytes)
-  end
+      {:subscribe, :readproperty} ->
+        config.client
+        |> safe_client_call(:read, [
+          command,
+          config.read_timeout,
+          execution_context,
+          config.client_config
+        ])
+        |> normalize_read(command, request, config.max_payload_bytes)
 
-  defp execute_request(_command, _request, _execution_context, _config) do
-    {:error,
-     Error.new(
-       :unsupported_request_packet,
-       :mapping,
-       "Runtime request callback cannot execute this MQTT command"
-     )}
+      _unsupported ->
+        {:error,
+         Error.new(
+           :unsupported_request_packet,
+           :mapping,
+           "Runtime request callback cannot execute this MQTT command"
+         )}
+    end
   end
 
   defp normalize_publish(:ok, command, request) do
@@ -142,8 +135,9 @@ defmodule Wotex.Binding.MQTT.Transport do
   defp normalize_publish(_invalid, _command, request),
     do: invalid_client_return(:publish, request.operation)
 
-  defp normalize_read({:ok, %Delivery{} = delivery}, command, request, max_payload_bytes) do
-    with :ok <- validate_read_delivery(command, delivery),
+  defp normalize_read({:ok, delivery_input}, command, request, max_payload_bytes) do
+    with {:ok, delivery} <- Delivery.normalize(delivery_input),
+         :ok <- validate_read_delivery(command, delivery),
          {:ok, payload} <- JSON.decode(Delivery.payload(delivery), max_payload_bytes) do
       Result.new(request.request_id, request.operation, payload,
         status: :received,
@@ -198,28 +192,24 @@ defmodule Wotex.Binding.MQTT.Transport do
   end
 
   defp delivery_callback(receiver, command, max_payload_bytes) do
-    fn
-      %Delivery{} = delivery ->
-        with true <- matching_delivery?(command, delivery),
-             {:ok, payload} <- JSON.decode(Delivery.payload(delivery), max_payload_bytes) do
-          send(receiver, {:wotex_transport, payload})
-          :ok
-        else
-          false ->
-            {:error,
-             Error.new(
-               :delivery_topic_mismatch,
-               :client,
-               "MQTT delivery Topic Name does not match the command Topic Filters"
-             )}
+    fn delivery_input ->
+      with {:ok, delivery} <- Delivery.normalize(delivery_input),
+           true <- matching_delivery?(command, delivery),
+           {:ok, payload} <- JSON.decode(Delivery.payload(delivery), max_payload_bytes) do
+        send(receiver, {:wotex_transport, payload})
+        :ok
+      else
+        false ->
+          {:error,
+           Error.new(
+             :delivery_topic_mismatch,
+             :client,
+             "MQTT delivery Topic Name does not match the command Topic Filters"
+           )}
 
-          {:error, %Error{} = error} ->
-            {:error, error}
-        end
-
-      _invalid ->
-        {:error,
-         Error.new(:invalid_delivery, :client, "client delivery must be an MQTT delivery value")}
+        {:error, %Error{} = error} ->
+          {:error, error}
+      end
     end
   end
 

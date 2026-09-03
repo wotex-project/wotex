@@ -1,37 +1,55 @@
 defmodule WotexBindingMQTT.MixProject do
   use Mix.Project
 
-  @version "0.1.0-dev"
+  @version "0.1.0"
   @source_url "https://github.com/wotex-project/wotex-binding-mqtt"
 
   def project do
     [
       app: :wotex_binding_mqtt,
+      name: "Wotex MQTT Binding",
       version: @version,
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
-      description: "Caller-owned MQTT protocol binding for W3C Web of Things",
+      description: description(),
       package: package(),
       docs: docs(),
       source_url: @source_url,
       homepage_url: "https://wotex.io",
       test_ignore_filters: [~r{^test/support/}],
-      test_coverage: [summary: [threshnew: 90]]
+      test_coverage: [tool: ExCoveralls],
+      dialyzer: dialyzer()
     ]
   end
 
   def application, do: [extra_applications: []]
 
-  def cli, do: [preferred_envs: [check: :test]]
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.lcov": :test,
+        "test.cover": :test
+      ]
+    ]
+  end
 
   defp deps do
     [
       wotex_dep(),
       wotex_runtime_dep(),
       {:jason, "~> 1.4"},
-      {:ex_doc, "~> 0.38", only: [:dev, :test, :docs], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
+      {:ex_check, "~> 0.16", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.38", only: [:dev, :test, :docs], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -71,28 +89,29 @@ defmodule WotexBindingMQTT.MixProject do
 
   defp aliases do
     [
-      check: [
-        "format --check-formatted",
-        "compile --warnings-as-errors",
-        "test --cover --warnings-as-errors",
-        "docs --warnings-as-errors",
-        "cmd bin/check-boundary",
-        "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build",
-        "cmd bin/check-archive"
-      ]
+      setup: ["deps.get", "deps.compile"],
+      lint: ["format --check-formatted", "credo --strict", "dialyzer"],
+      "test.cover": ["coveralls"],
+      package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
     ]
+  end
+
+  defp description do
+    "Immutable MQTT command mapping and caller-owned transport adaptation for W3C Web of Things"
   end
 
   defp package do
     [
       licenses: ["Apache-2.0"],
       links: %{
-        "Source" => @source_url,
+        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "Documentation" => "https://hexdocs.pm/wotex_binding_mqtt",
         "Project" => "https://wotex.io",
+        "Source" => @source_url,
         "W3C WoT MQTT Binding" =>
           "https://w3c.github.io/wot-binding-templates/bindings/protocols/mqtt/"
       },
-      maintainers: ["Wotex contributors"],
+      maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
         ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs lib mix.exs)
     ]
@@ -102,17 +121,51 @@ defmodule WotexBindingMQTT.MixProject do
     [
       main: "readme",
       extras: [
-        "README.md",
-        "docs/specs/mqtt-values-and-client-port.md",
-        "docs/specs/runtime-transport.md",
-        "docs/provenance/mqtt-binding-draft-2026-07-01.md",
-        "docs/provenance/mqtt-primary-sources.md",
-        "docs/provenance/wot-binding-registry-2025-11-04.md"
+        "README.md": [title: "Overview"],
+        "docs/specs/mqtt-values-and-client-port.md": [title: "Values and client port"],
+        "docs/specs/runtime-transport.md": [title: "Runtime transport"],
+        "docs/provenance/mqtt-binding-draft-2026-07-01.md": [title: "MQTT binding draft"],
+        "docs/provenance/mqtt-primary-sources.md": [title: "MQTT primary sources"],
+        "docs/provenance/wot-binding-registry-2025-11-04.md": [title: "Binding Registry status"],
+        "CHANGELOG.md": [title: "Changelog"],
+        "SECURITY.md": [title: "Security"],
+        "CONTRIBUTING.md": [title: "Contributing"],
+        LICENSE: [title: "License"]
       ],
       groups_for_extras: [
         "Library specifications": ~r/docs\/specs/,
-        Provenance: ~r/docs\/provenance/
-      ]
+        Provenance: ~r/docs\/provenance/,
+        Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|LICENSE/
+      ],
+      groups_for_modules: [
+        "Public API": [Wotex.Binding.MQTT],
+        "Binding values": [
+          Wotex.Binding.MQTT.Broker,
+          Wotex.Binding.MQTT.Command,
+          Wotex.Binding.MQTT.Delivery,
+          Wotex.Binding.MQTT.Error,
+          Wotex.Binding.MQTT.QoS,
+          Wotex.Binding.MQTT.Topic,
+          Wotex.Binding.MQTT.TransportConfig
+        ],
+        "Mapping and transport": [
+          Wotex.Binding.MQTT.Client,
+          Wotex.Binding.MQTT.JSON,
+          Wotex.Binding.MQTT.Mapping,
+          Wotex.Binding.MQTT.Transport
+        ]
+      ],
+      source_ref: "v#{@version}",
+      source_url: @source_url,
+      formatters: ["html", "markdown", "epub"]
+    ]
+  end
+
+  defp dialyzer do
+    [
+      plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
+      plt_add_apps: [:mix, :ex_unit],
+      flags: [:error_handling, :missing_return, :underspecs, :extra_return]
     ]
   end
 end

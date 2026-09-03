@@ -3,13 +3,13 @@ defmodule Wotex.Binding.MQTT.Test.FakeClient do
 
   @behaviour Wotex.Binding.MQTT.Client
 
-  @impl true
+  @impl Wotex.Binding.MQTT.Client
   def publish(command, execution_context, config) do
     send(config.test_pid, {:client_publish, command, execution_context, config.client_marker})
     client_return(config, :publish_return, :ok)
   end
 
-  @impl true
+  @impl Wotex.Binding.MQTT.Client
   def read(command, timeout, execution_context, config) do
     send(
       config.test_pid,
@@ -19,7 +19,7 @@ defmodule Wotex.Binding.MQTT.Test.FakeClient do
     client_return(config, :read_return, {:error, :missing_test_delivery})
   end
 
-  @impl true
+  @impl Wotex.Binding.MQTT.Client
   def subscribe(command, callback, execution_context, config) do
     send(
       config.test_pid,
@@ -29,7 +29,7 @@ defmodule Wotex.Binding.MQTT.Test.FakeClient do
     client_return(config, :subscribe_return, {:ok, :client_handle})
   end
 
-  @impl true
+  @impl Wotex.Binding.MQTT.Client
   def unsubscribe(handle, command, execution_context, config) do
     send(
       config.test_pid,

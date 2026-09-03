@@ -1,15 +1,14 @@
 #!/bin/sh
 set -eu
 
-set -- wotex_binding_mqtt-*.tar
+version=$(mix run --no-compile --no-start -e 'IO.write(Mix.Project.config()[:version])')
+archive="wotex_binding_mqtt-${version}.tar"
 
-if [ "$#" -ne 1 ] || [ ! -f "$1" ]
+if [ ! -f "$archive" ]
 then
-  echo "expected exactly one wotex_binding_mqtt archive" >&2
+  echo "expected current wotex_binding_mqtt archive: $archive" >&2
   exit 1
 fi
-
-archive=$1
 temporary=$(mktemp -d)
 trap 'rm -rf "$temporary"' EXIT HUP INT TERM
 

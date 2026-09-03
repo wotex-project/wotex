@@ -2,6 +2,8 @@
 /cover/
 /deps/
 /doc/
+/docs/tasks/inbox.md
+/priv/plts/
 /.elixir_ls/
 /.lexical/
 *.ez

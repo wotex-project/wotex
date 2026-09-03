@@ -28,7 +28,7 @@ defmodule Wotex.Binding.MQTT.Broker do
          :ok <- validate_host(uri.host),
          :ok <- validate_port(uri.port),
          :ok <- validate_credential_free(uri.userinfo),
-         :ok <- validate_authority(uri.authority, uri.host, uri.port),
+         :ok <- validate_authority(href, uri.host, uri.port),
          :ok <- validate_broker_only(uri.path, uri.query, uri.fragment) do
       {:ok,
        %__MODULE__{
@@ -110,7 +110,10 @@ defmodule Wotex.Binding.MQTT.Broker do
      )}
   end
 
-  defp validate_authority(authority, host, port) do
+  defp validate_authority(href, host, port) do
+    [_scheme, authority_and_rest] = String.split(href, "://", parts: 2)
+    authority_parts = String.split(authority_and_rest, ["/", "?", "#"], parts: 2)
+    authority = hd(authority_parts)
     rendered_host = if String.contains?(host, ":"), do: "[#{host}]", else: host
     expected = if is_integer(port), do: "#{rendered_host}:#{port}", else: rendered_host
 

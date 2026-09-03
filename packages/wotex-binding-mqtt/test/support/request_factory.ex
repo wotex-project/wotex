@@ -1,10 +1,11 @@
 defmodule Wotex.Binding.MQTT.Test.RequestFactory do
   @moduledoc false
 
-  alias Wotex.Form
   alias Wotex.Binding.MQTT
+  alias Wotex.Form
   alias Wotex.Runtime.{Context, ExecutionContext, Request}
 
+  @spec request(atom(), keyword()) :: Request.t()
   def request(operation, opts \\ []) do
     form_map =
       Keyword.get(opts, :form, %{
@@ -28,6 +29,7 @@ defmodule Wotex.Binding.MQTT.Test.RequestFactory do
     }
   end
 
+  @spec execution_context(term()) :: ExecutionContext.t()
   def execution_context(credential \\ :ephemeral_credential) do
     context = Context.new!(request_id: "request-1", deadline: 1_000)
     ExecutionContext.new(context, credential)

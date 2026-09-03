@@ -1,35 +1,39 @@
 # Wotex MQTT Binding
 
-`wotex_binding_mqtt` maps W3C Web of Things MQTT Forms to immutable MQTT
-commands and adapts them to `Wotex.Runtime.Transport`. It does not provide an
-MQTT client, connection manager, OTP Application, or supervision tree. The
-consumer host owns those concerns through a small client port.
+**Process-free W3C WoT MQTT Form mapping for Elixir consumers.**
 
-The implementation follows a deliberately bounded subset of the W3C Editor's
-Draft observed on 2026-09-02. That document remains work in progress. Using
-this library is not a declaration that a Thing Description, Consumer, or client
-conforms to a W3C specification.
+[![Hex.pm](https://img.shields.io/hexpm/v/wotex_binding_mqtt.svg)](https://hex.pm/packages/wotex_binding_mqtt)
+[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_binding_mqtt)
+[![CI](https://github.com/wotex-project/wotex-binding-mqtt/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-binding-mqtt/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/wotex-project/wotex-binding-mqtt/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-binding-mqtt)
+[![License](https://img.shields.io/github/license/wotex-project/wotex-binding-mqtt.svg)](LICENSE)
+
+[Installation](#installation) · [Quick Start](#quick-start) ·
+[Form Mapping](#form-mapping) · [Client Port](#client-port) ·
+[Errors and Delivery](#errors-and-delivery) · [Boundary](#boundary) ·
+[Development](#development)
+
+---
+
+`wotex_binding_mqtt` maps W3C Web of Things MQTT Forms to immutable commands
+and implements `Wotex.Runtime.Transport`. It deliberately does not choose an
+MQTT client. A consumer adapts its existing connection owner through
+`Wotex.Binding.MQTT.Client`, preserving supervision, reconnect, session, TLS,
+and credential authority in one place.
 
 ## Installation
 
-Add the package to `mix.exs`:
-
 ```elixir
 def deps do
-  [
-    {:wotex_binding_mqtt, "~> 0.1.0"}
-  ]
+  [{:wotex_binding_mqtt, "~> 0.1.0"}]
 end
 ```
 
-Normal package resolution uses `wotex ~> 0.1.0` and
-`wotex_runtime ~> 0.1.0`. The development-only `WOTEX_PATH_DEPS=1` switch
-selects adjacent source checkouts for both dependencies.
+Published builds resolve `wotex ~> 0.1` and `wotex_runtime ~> 0.1`. For
+coordinated source development, `WOTEX_PATH_DEPS=1 mix deps.get` selects the
+sibling checkouts explicitly; no adjacent path is discovered implicitly.
 
-## Runtime setup
-
-Implement `Wotex.Binding.MQTT.Client` around a client whose connection is
-already owned by the consumer host. Then configure the Runtime transport:
+## Quick Start
 
 ```elixir
 alias Wotex.Binding.MQTT
@@ -45,15 +49,15 @@ profiles = [MQTT.profile()]
 transports = %{mqtt: {Transport, mqtt_config}}
 ```
 
-The client port receives an immutable command and an ephemeral
-`Wotex.Runtime.ExecutionContext` as separate arguments. It must not retain the
-execution context or place credentials in its configuration or handles.
+Loading the dependency starts nothing. The consumer starts and supervises its
+MQTT connection, then gives the transport an opaque reference in
+`client_config`.
 
-## Form mapping
+## Form Mapping
 
-Only `mqtt` and `mqtts` broker href values are accepted. A broker href may have
-an explicit port and a trailing slash, but no user information, topic path,
-query, or fragment. Targets use the dedicated MQTT vocabulary terms:
+Only `mqtt` and `mqtts` broker hrefs are accepted. Broker hrefs may contain a
+port and trailing slash, but never user information, a topic path, query, or
+fragment. Targets use the MQTT vocabulary terms:
 
 ```json
 {
@@ -66,41 +70,70 @@ query, or fragment. Targets use the dedicated MQTT vocabulary terms:
 }
 ```
 
-The supported default mappings are:
+| WoT operation | MQTT Control Packet | Target term |
+|---------------|---------------------|-------------|
+| `readproperty`, `observeproperty`, `subscribeevent` | `subscribe` | `mqv:filter` |
+| `writeproperty`, `invokeaction` | `publish` | `mqv:topic` |
+| `unobserveproperty`, `unsubscribeevent` | `unsubscribe` | `mqv:filter` |
 
-| WoT operation | MQTT Control Packet |
-| --- | --- |
-| `readproperty`, `observeproperty`, `subscribeevent` | `subscribe` |
-| `writeproperty`, `invokeaction` | `publish` |
-| `unobserveproperty`, `unsubscribeevent` | `unsubscribe` |
+An explicit `mqv:controlPacket` must agree with this table. QoS accepts integer
+or string values `0`, `1`, and `2`. Topic Names reject wildcards; Topic Filters
+support valid `+`, `#`, and MQTT 5 shared-subscription syntax.
 
-An explicit `mqv:controlPacket` must match that mapping. `mqv:qos` accepts the
-integers or strings `0`, `1`, and `2`. `mqv:topic` is a Topic Name and rejects
-wildcards; `mqv:filter` accepts MQTT Topic Filter wildcards and may be a string
-or non-empty list.
+## Client Port
 
-A `readproperty` request requires `mqv:retain` to be true. The client port is
-called with a finite timeout and must return a retained delivery. Observations
-and Event subscriptions use a delivery closure that bounds and decodes JSON,
-then sends `{:wotex_transport, payload}` to the Runtime receiver. The closure
-does not capture the execution context.
+Implement four callbacks around the consumer's chosen client:
 
-## Project contracts
+| Callback | Expected result |
+|----------|-----------------|
+| `publish/3` | `:ok` after accepting the immutable publish command. |
+| `read/4` | One retained delivery within the supplied finite timeout. |
+| `subscribe/4` | `{:ok, handle}` and delivery through the supplied closure. |
+| `unsubscribe/4` | `:ok` after releasing the opaque subscription handle. |
 
-- [MQTT values and client port](docs/specs/mqtt-values-and-client-port.md)
-- [Runtime transport](docs/specs/runtime-transport.md)
-- [Dated W3C MQTT draft provenance](docs/provenance/mqtt-binding-draft-2026-07-01.md)
-- [OASIS MQTT sources](docs/provenance/mqtt-primary-sources.md)
-- [WoT Binding Registry status](docs/provenance/wot-binding-registry-2025-11-04.md)
+Commands contain broker, packet, topic/filter, QoS, retain, content type, and a
+bounded payload. The `Wotex.Runtime.ExecutionContext` is a separate ephemeral
+argument: adapters must not retain it, place credentials in configuration, or
+embed credentials in handles.
+
+## Errors and Delivery
+
+`Wotex.Binding.MQTT.Error` identifies the failing stage (`:broker`, `:mapping`,
+`:payload`, `:topic`, `:client`, or `:delivery`) without leaking arbitrary
+client exceptions or return terms. Invalid callback results, raises, throws,
+oversized payloads, malformed JSON, unexpected topic names, and packet/operation
+mismatches all fail as structured transport errors.
+
+`readproperty` requires `mqv:retain: true`. Observation and Event deliveries
+are size-checked and JSON-decoded before the closure sends
+`{:wotex_transport, payload}` to the Runtime receiver. The closure captures the
+receiver, filters, and byte limit only—not the execution context.
+
+## Boundary
+
+The 0.1 series implements the bounded mapping recorded in the
+[MQTT contract](docs/specs/mqtt-values-and-client-port.md) and
+[Runtime contract](docs/specs/runtime-transport.md). Draft provenance is dated
+in the [dated draft provenance](docs/provenance/mqtt-binding-draft-2026-07-01.md).
+This is not a W3C certification claim.
+
+The package defines no application callback, supervision tree, connection
+manager, MQTT client, database, filesystem authority, credential store, or
+global configuration. Connection sharing, reconnect policy, durable sessions,
+back-pressure, TLS material, and broker observability remain consumer concerns.
 
 ## Development
 
 ```console
+WOTEX_PATH_DEPS=1 mix deps.get
 WOTEX_PATH_DEPS=1 mix check
 ```
 
-The check formats, compiles with warnings as errors, runs tests with at least
-90 percent coverage, builds documentation, scans the library boundary, builds a
-Hex archive with the path switch explicitly unset, and validates the archive.
+`mix check` runs warnings-as-errors compilation, formatting, strict Credo, 95%
+coverage, dependency audits, Doctor, Dialyzer, HexDocs, boundary checks, Hex
+archive construction, out-of-tree archive compilation, and the application-free
+assertion.
 
-Licensed under Apache-2.0.
+See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
+[SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and
+[NOTICE](https://github.com/wotex-project/wotex-binding-mqtt/blob/main/NOTICE).
