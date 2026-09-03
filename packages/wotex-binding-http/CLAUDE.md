@@ -21,14 +21,12 @@ mapping and Server-Sent Events adaptation through a consumer-supplied client.
   switch; normal dependency identities are released package versions.
 
 Run `WOTEX_PATH_DEPS=1 mix check` and `bin/check-boundary` before local commits.
-Automated agents never push repository history.
 
 ## Git authority
 
-Automated agents must never configure, add, change, or remove a Git remote and
-must never run `git push` or any equivalent publication command. Only the human
-owner publishes repository history.
+Automated agents must never configure, add, change, or remove a Git remote;
+push; create a tag; publish a package or release; or create equivalent remote
+state. Only the human maintainer performs publication.
 
-Every local commit must use the repository-configured human owner identity from
-`git config user.name` and `git config user.email`. Never substitute an agent,
-tool, bot, or shared contributor identity.
+Every local commit uses `Tobias Bohwalli <hi@futhr.io>` as both author and
+committer. Never substitute an agent, tool, bot, or shared contributor identity.
