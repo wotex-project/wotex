@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+set -eu
+
+package_root="$(mktemp -d "${TMPDIR:-/tmp}/wotex-package.XXXXXX")"
+trap 'rm -rf "${package_root}"' EXIT HUP INT TERM
+
+MIX_ENV=prod mix hex.build --unpack --output "${package_root}/unpacked"
+
+test -f "${package_root}/unpacked/mix.exs"
+test -f "${package_root}/unpacked/README.md"
+test -f "${package_root}/unpacked/LICENSE"
+test -f "${package_root}/unpacked/NOTICE"
+test -f "${package_root}/unpacked/priv/w3c/td-json-schema-validation-1.1.json"
+test ! -e "${package_root}/unpacked/CLAUDE.md"
+test ! -e "${package_root}/unpacked/.claude"
+
+MIX_ENV=prod mix compile --warnings-as-errors

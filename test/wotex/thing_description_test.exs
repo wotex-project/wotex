@@ -22,7 +22,8 @@ defmodule Wotex.ThingDescriptionTest do
       |> Enum.reverse()
       |> Map.new()
       |> Map.update!("properties", fn properties ->
-        properties |> Enum.reverse() |> Map.new()
+        reversed = Enum.reverse(properties)
+        Map.new(reversed)
       end)
 
     assert {:ok, first_td} = ThingDescription.from_map(first)
@@ -165,6 +166,13 @@ defmodule Wotex.ThingDescriptionTest do
 
     assert {:error, errors} = ThingDescription.from_map(invalid)
     assert Enum.any?(errors, &(&1.phase == :schema and String.starts_with?(&1.path, "/")))
+  end
+
+  test "explicit validation retains semantic errors for non-string titles" do
+    map = Map.put(valid_td_map(), "title", 42)
+    assert {:ok, td} = ThingDescription.from_map(map, validate: false)
+    assert {:error, errors} = ThingDescription.validate(td, [])
+    assert Enum.any?(errors, &(&1.phase == :schema))
   end
 
   test "invalid limit options fall back to safe defaults" do

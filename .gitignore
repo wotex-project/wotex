@@ -2,9 +2,13 @@
 /cover/
 /deps/
 /doc/
+/priv/plts/
 /.elixir_ls/
 erl_crash.dump
 *.ez
 *.tar
 *.tar.gz
 mix.lock.bak
+
+# Local cross-repository coordination; never publish machine-local handoffs.
+/docs/tasks/inbox.md

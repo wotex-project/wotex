@@ -1,9 +1,20 @@
 defmodule Wotex.Form do
-  @moduledoc "Immutable, extension-preserving W3C WoT Form value."
+  @moduledoc """
+  An immutable W3C WoT Form value.
+
+  A Form declares where and how an Interaction Affordance may be used. Wotex
+  requires a non-empty `href`, validates the shape of an optional `op`, and
+  preserves all binding-specific and extension members. Relative references
+  remain unresolved here because resolution depends on the enclosing Thing
+  Description and installed binding.
+
+  A valid Form is descriptive metadata. It does not select a transport,
+  resolve credentials, authorize an interaction, or establish its outcome.
+  """
 
   alias Wotex.Value
 
-  @opaque t :: %__MODULE__{value: map()}
+  @type t :: %__MODULE__{value: map()}
   @enforce_keys [:value]
   defstruct [:value]
 

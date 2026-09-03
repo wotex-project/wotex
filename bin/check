@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+set -eu
+
+export MIX_ENV=test
+
+mix deps.get --check-locked
+exec mix check --no-retry "$@"

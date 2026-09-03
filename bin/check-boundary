@@ -9,6 +9,18 @@ then
   exit 1
 fi
 
+if rg -ni --hidden \
+  -g '!.git/**' \
+  -g '!deps/**' \
+  -g '!_build/**' \
+  -g '!doc/**' \
+  -g '!cover/**' \
+  '(consumer_product|consumer_engine|consumer_engine)' .
+then
+  echo "consumer-specific name found" >&2
+  exit 1
+fi
+
 if rg -n --hidden \
   -g '!.git/**' \
   -g '!deps/**' \

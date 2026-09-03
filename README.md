@@ -1,48 +1,201 @@
 # Wotex
 
-Wotex is a storage-neutral Elixir implementation of core W3C Web of Things
-values and Thing Description mechanics. It gives a consumer one precise TD 1.1
-value boundary without taking ownership of persistence, authorization,
-credentials, supervision, transport connections, or physical-device truth.
+**W3C Web of Things values and Thing Description mechanics for Elixir.**
 
-The initial contract supports:
+[![Hex.pm](https://img.shields.io/hexpm/v/wotex.svg)](https://hex.pm/packages/wotex)
+[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex)
+[![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/wotex-project/wotex/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex)
+[![License](https://img.shields.io/hexpm/l/wotex.svg)](LICENSE)
 
-- W3C Thing Description 1.1 JSON parsing and validation;
-- lossless preservation of JSON values and extension terms;
-- deterministic canonical JSON for package-local comparison and digests;
-- typed DataSchema, Form, Property, Action, Event, and security-scheme values;
-- bounded parsing with explicit byte, depth, and node limits; and
-- structured errors with stable codes and JSON paths.
+[Installation](#installation) ·
+[Quick start](#quick-start) ·
+[Value model](#value-model) ·
+[Validation and limits](#validation-and-limits) ·
+[Boundary](#boundary) ·
+[Development](#development)
 
-Only `application/td+json` is claimed. Turtle, RDF/XML, remote JSON-LD context
-retrieval, Thing Description 2.0, protocol execution, and Scripting API
-conformance are outside the initial support surface.
+---
 
-## Use
+Wotex is the storage-neutral value layer for W3C Web of Things applications.
+It parses, validates, preserves, and encodes W3C WoT Thing Description 1.1
+documents without deciding where a Thing lives, who may interact with it, or
+how a Form is executed.
+
+The package is deliberately passive. Loading it starts no process, reads no
+application configuration, and performs no network request. A consumer can use
+the same values in a small embedded node, a disconnected release, or a
+distributed service without changing their meaning.
+
+## Capabilities
+
+| Capability | Contract |
+| --- | --- |
+| Thing Description parsing | Decodes `application/td+json` and returns structured errors for expected input failures. |
+| TD 1.1 validation | Applies the pinned informative W3C schema plus the package's documented semantic checks. |
+| Extension preservation | Retains unknown JSON object members and native JSON values without interpreting consumer extensions. |
+| Deterministic encoding | Produces key-sorted canonical JSON for package-local comparison and digest inputs. |
+| Typed values | Exposes immutable DataSchema, Form, Property, Action, Event, and security-scheme values. |
+| Bounded input | Enforces caller-configurable byte, nesting-depth, and node-count limits. |
+
+## Installation
+
+Wotex 0.1 requires Elixir 1.18 or later.
 
 ```elixir
-{:ok, td} = Wotex.ThingDescription.parse(json)
-{:ok, canonical_json} = Wotex.ThingDescription.encode(td, :canonical)
-map = Wotex.ThingDescription.to_map(td)
+def deps do
+  [
+    {:wotex, "~> 0.1.0"}
+  ]
+end
 ```
 
-The dependency has no application callback. Loading it starts no process. A
-consumer chooses its own lifecycle and composes runtime and binding libraries
-separately.
+## Quick start
+
+Parse a complete Thing Description and preserve its source bytes:
+
+```elixir
+json = ~S({
+  "@context":"https://www.w3.org/2022/wot/td/v1.1",
+  "title":"Weather station",
+  "security":["nosec_sc"],
+  "securityDefinitions":{"nosec_sc":{"scheme":"nosec"}},
+  "properties":{
+    "temperature":{
+      "type":"number",
+      "forms":[{"href":"https://example.test/temperature","op":"readproperty"}]
+    }
+  }
+})
+
+{:ok, td} = Wotex.ThingDescription.parse(json)
+"Weather station" = Wotex.ThingDescription.to_map(td)["title"]
+{:ok, ^json} = Wotex.ThingDescription.encode(td, :source)
+{:ok, canonical} = Wotex.ThingDescription.encode(td, :canonical)
+```
+
+Build from a decoded JSON map when source-byte identity is not needed:
+
+```elixir
+{:ok, td} =
+  Wotex.ThingDescription.from_map(%{
+    "@context" => Wotex.td_context_1_1(),
+    "title" => "Motor",
+    "security" => ["nosec_sc"],
+    "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}}
+  })
+
+{:ok, changed} = Wotex.ThingDescription.put_id(td, "urn:example:motor:1")
+"urn:example:motor:1" = Wotex.ThingDescription.id(changed)
+```
+
+Expected input failures are data. Match the stable `code`, `phase`, and JSON
+Pointer `path`; do not couple logic to the human-readable message:
+
+```elixir
+{:error, %Wotex.Error{code: :object_required, phase: :value, path: "/"}} =
+  Wotex.ThingDescription.from_map([])
+```
+
+## Value model
+
+`Wotex.ThingDescription` is the aggregate boundary. Use `to_map/1`, `id/1`, and
+`encode/2` instead of coupling consumer code to struct fields, so compatible
+releases can evolve the representation without changing the value contract.
+
+The smaller value modules apply the same rule:
+
+```elixir
+{:ok, form} =
+  Wotex.Form.new(%{
+    "href" => "/properties/temperature",
+    "op" => ["readproperty"],
+    "x-vendor-hint" => %{"quality" => "high"}
+  })
+
+"/properties/temperature" = Wotex.Form.href(form)
+["readproperty"] = Wotex.Form.operations(form)
+%{"x-vendor-hint" => %{"quality" => "high"}} =
+  Map.take(Wotex.Form.to_map(form), ["x-vendor-hint"])
+```
+
+Wotex preserves extension values but does not validate their private meaning.
+That keeps the W3C vocabulary stable while allowing consumers and future
+specifications to carry data the package does not yet understand.
+
+## Validation and limits
+
+Parsing validates by default. The defaults accept at most 1 MiB of source, 64
+levels of JSON nesting, and 100,000 JSON nodes. Consumers handling constrained
+or untrusted inputs can set smaller positive limits:
+
+```elixir
+Wotex.ThingDescription.parse(json,
+  max_bytes: 64_000,
+  max_depth: 24,
+  max_nodes: 10_000
+)
+```
+
+`validate: false` skips the TD schema and semantic pass when constructing from
+a map, but it never disables JSON-value and resource-limit checks. Treat that
+option as a staged-ingestion tool, not as a conformance result.
+
+Canonical encoding is deterministic within the Wotex contract: object keys are
+ordered and native JSON value semantics are retained. It is not advertised as
+RFC 8785 JSON Canonicalization Scheme output.
 
 ## Standards baseline
 
-The production baseline is the W3C Thing Description 1.1 Recommendation dated
-5 December 2023. The bundled informative validation schema is pinned to the
-`REC1.1` repository tag and documented in
+The production baseline is the
+[W3C Web of Things Thing Description 1.1 Recommendation](https://www.w3.org/TR/wot-thing-description11/)
+dated 5 December 2023. The bundled informative validation schema is pinned to
+the upstream `REC1.1` tag. Its exact commit, digest, license, and local
+modifications are recorded in
 [`docs/provenance/w3c-td-schema-1.1.md`](docs/provenance/w3c-td-schema-1.1.md).
 
-## Status
+Only `application/td+json` is claimed. Turtle, RDF/XML, remote JSON-LD context
+retrieval, Thing Description 2.0 drafts, protocol execution, authorization, and
+WoT Scripting API conformance are outside this package.
 
-The package version is pre-release. Public API, compatibility, and standards
-claims advance only with the evidence gates in the normative specifications.
+## Boundary
+
+Wotex owns W3C WoT values and TD 1.1 interpretation. A consumer owns:
+
+- persistence, identifiers outside the Thing Description, and migrations;
+- authentication, authorization, tenancy, and policy;
+- credential custody and protocol transports;
+- process supervision, retries, queues, and delivery guarantees; and
+- canonical observations and evidence of physical Action effects.
+
+Use a runtime or protocol-binding package to execute Forms. Keeping those
+concerns outside the value layer makes a parsed Thing Description portable and
+keeps dependency loading free of hidden work.
+
+## Development
+
+```bash
+mix setup
+mix test
+mix test.cover
+mix lint
+mix check
+mix docs
+```
+
+`mix check` is the completion gate. It compiles with warnings as errors, checks
+formatting and strict Credo, requires at least 95% line coverage, audits
+dependencies, runs Doctor and Dialyzer, builds HexDocs, scans the consumer
+boundary, and inspects the unpacked Hex package. CI repeats the locked graph at
+the supported floor and current toolchain and tests the latest allowed
+dependency graph separately.
+
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before
+widening a standards claim or public value contract.
 
 ## License
 
-Wotex source is licensed under Apache-2.0. Bundled W3C material retains its
-W3C Software and Document License notice; see `NOTICE` and `priv/w3c/`.
+Wotex is released under Apache-2.0. Bundled W3C material retains the W3C
+Software and Document License described in [NOTICE](NOTICE) and `priv/w3c/`.

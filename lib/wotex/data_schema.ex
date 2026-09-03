@@ -1,9 +1,19 @@
 defmodule Wotex.DataSchema do
-  @moduledoc "Immutable, extension-preserving W3C WoT DataSchema value."
+  @moduledoc """
+  An immutable W3C WoT DataSchema value.
+
+  DataSchema terms describe the shape and constraints of data exchanged through
+  Interaction Affordances. Wotex retains every JSON-compatible member,
+  including unknown vocabulary extensions, without translating the schema into
+  an Elixir validation library or consumer storage type.
+
+  Use `new/2` at a value boundary and `to_map/1` when serializing or projecting
+  the schema. Consumers should use those functions rather than struct fields.
+  """
 
   alias Wotex.Value
 
-  @opaque t :: %__MODULE__{value: map()}
+  @type t :: %__MODULE__{value: map()}
   @enforce_keys [:value]
   defstruct [:value]
 

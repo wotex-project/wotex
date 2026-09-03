@@ -1,9 +1,24 @@
 defmodule Wotex.ThingDescription do
   @moduledoc """
-  Immutable W3C WoT Thing Description 1.1 value.
+  An immutable W3C WoT Thing Description 1.1 value.
 
-  Use the public functions instead of depending on struct fields. Unknown
-  extension members are preserved at JSON-value semantics.
+  A Thing Description is the standardized metadata document for a Thing, not a
+  database row, transport connection, device process, or digital-twin state
+  holder. Wotex validates its TD 1.1 structure and essential context/title
+  semantics while preserving unknown extension members at native JSON-value
+  semantics.
+
+  Parse `application/td+json` with `parse/2`, or use `from_map/2` after a
+  consumer has decoded JSON elsewhere. Parsing retains the exact source bytes
+  until a value is changed. `encode/2` offers source, compact, pretty, and
+  deterministic canonical modes.
+
+  Byte, depth, and node limits are applied before or during construction. All
+  expected input failures return `Wotex.Error` values (or a list of validation
+  errors); `parse!/2` is the opt-in raising variant.
+
+  Use the public functions instead of depending on struct fields. The
+  representation may evolve in compatible releases.
   """
 
   alias Wotex.{Error, JSON}
@@ -11,16 +26,34 @@ defmodule Wotex.ThingDescription do
 
   @default_max_bytes 1_048_576
 
-  @opaque t :: %__MODULE__{
-            document: JSON.json_value(),
-            source: binary() | nil,
-            changed?: boolean()
-          }
+  @typedoc "Pinned identity and provenance of the bundled informative TD 1.1 schema."
+  @type schema_info :: %{
+          standard: <<_::232>>,
+          recommendation_date: <<_::80>>,
+          schema_version: <<_::160>>,
+          upstream_tag: <<_::48>>,
+          upstream_commit: <<_::320>>,
+          sha256: <<_::512>>,
+          informative: true
+        }
+
+  @type t :: %__MODULE__{
+          document: map(),
+          source: binary() | nil,
+          changed?: boolean()
+        }
 
   @enforce_keys [:document]
   defstruct [:document, :source, changed?: false]
 
-  @doc "Parses and validates `application/td+json` bytes."
+  @doc """
+  Parses and validates `application/td+json` bytes.
+
+  Options include `:max_bytes`, `:max_depth`, and `:max_nodes`. Positive values
+  replace the safe defaults of 1 MiB, 64 nesting levels, and 100,000 nodes.
+  `validate: false` skips the TD schema and semantic pass but never skips
+  JSON-value or resource-limit checks.
+  """
   @spec parse(binary(), keyword()) :: {:ok, t()} | {:error, Error.t() | [Error.t()]}
   def parse(json, opts \\ [])
 
@@ -28,9 +61,8 @@ defmodule Wotex.ThingDescription do
     max_bytes = positive_limit(opts, :max_bytes, @default_max_bytes)
 
     with :ok <- check_byte_limit(json, max_bytes),
-         {:ok, decoded} <- decode(json),
-         {:ok, td} <- from_map(decoded, Keyword.put(opts, :source, json)) do
-      {:ok, td}
+         {:ok, decoded} <- decode(json) do
+      from_map(decoded, Keyword.put(opts, :source, json))
     end
   end
 
@@ -48,7 +80,13 @@ defmodule Wotex.ThingDescription do
     end
   end
 
-  @doc "Builds a Thing Description from a JSON-compatible map."
+  @doc """
+  Builds a Thing Description from a JSON-compatible map.
+
+  The map is retained without lossy atomization or extension filtering. It is
+  validated by default; pass `validate: false` only for staged ingestion where
+  a later call to `validate/2` is guaranteed.
+  """
   @spec from_map(map(), keyword()) :: {:ok, t()} | {:error, Error.t() | [Error.t()]}
   def from_map(document, opts \\ [])
 
@@ -57,9 +95,8 @@ defmodule Wotex.ThingDescription do
     validate? = Keyword.get(opts, :validate, true)
 
     with :ok <- JSON.validate(document, opts),
-         %__MODULE__{} = td <- %__MODULE__{document: document, source: source, changed?: false},
-         {:ok, validated} <- maybe_validate(td, validate?, opts) do
-      {:ok, validated}
+         %__MODULE__{} = td <- %__MODULE__{document: document, source: source, changed?: false} do
+      maybe_validate(td, validate?, opts)
     end
   end
 
@@ -95,7 +132,12 @@ defmodule Wotex.ThingDescription do
   @spec validate(t(), keyword()) :: {:ok, t()} | {:error, [Error.t()]}
   def validate(%__MODULE__{} = td, opts \\ []), do: Validator.validate(td, opts)
 
-  @doc "Encodes a Thing Description as source, compact, pretty, or canonical TD JSON."
+  @doc """
+  Encodes a Thing Description as source, compact, pretty, or canonical TD JSON.
+
+  Canonical output is deterministic within this package but is not an RFC 8785
+  JSON Canonicalization Scheme claim.
+  """
   @spec encode(t(), :source | :compact | :pretty | :canonical) ::
           {:ok, binary()} | {:error, Error.t()}
   def encode(%__MODULE__{source: source, changed?: false}, :source) when is_binary(source),
@@ -128,7 +170,7 @@ defmodule Wotex.ThingDescription do
   end
 
   @doc "Returns the immutable identity of the bundled informative TD 1.1 schema."
-  @spec schema_info() :: map()
+  @spec schema_info() :: schema_info()
   def schema_info, do: Validator.schema_info()
 
   defp check_byte_limit(json, max_bytes) when byte_size(json) <= max_bytes, do: :ok

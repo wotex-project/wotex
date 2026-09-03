@@ -9,17 +9,21 @@ defmodule Wotex.JSON do
   @type json_scalar :: nil | boolean() | number() | String.t()
   @type json_value :: json_scalar() | [json_value()] | %{String.t() => json_value()}
 
+  @doc "Validates native JSON-value semantics and configured resource limits."
   @spec validate(term(), keyword()) :: :ok | {:error, Error.t()}
   def validate(value, opts \\ []) do
     max_depth = positive_limit(opts, :max_depth, @default_max_depth)
     max_nodes = positive_limit(opts, :max_nodes, @default_max_nodes)
 
-    case walk(value, 0, 0, max_depth, max_nodes, "/") do
+    state = %{depth: 0, nodes: 0, max_depth: max_depth, max_nodes: max_nodes, path: "/"}
+
+    case walk(value, state) do
       {:ok, _nodes} -> :ok
       {:error, %Error{} = error} -> {:error, error}
     end
   end
 
+  @doc "Encodes a valid JSON value with recursively sorted object keys."
   @spec encode(json_value(), keyword()) :: {:ok, binary()} | {:error, Error.t()}
   def encode(value, opts \\ []) do
     with :ok <- validate(value, opts),
@@ -28,6 +32,7 @@ defmodule Wotex.JSON do
     end
   end
 
+  @doc "Escapes one RFC 6901 JSON Pointer path segment."
   @spec pointer_segment(String.t()) :: String.t()
   def pointer_segment(segment) do
     segment
@@ -35,7 +40,8 @@ defmodule Wotex.JSON do
     |> String.replace("/", "~1")
   end
 
-  defp walk(_value, _depth, nodes, _max_depth, max_nodes, path) when nodes >= max_nodes do
+  defp walk(_value, %{nodes: nodes, max_nodes: max_nodes, path: path})
+       when nodes >= max_nodes do
     {:error,
      Error.new(
        :node_limit_exceeded,
@@ -46,7 +52,8 @@ defmodule Wotex.JSON do
      )}
   end
 
-  defp walk(_value, depth, _nodes, max_depth, _max_nodes, path) when depth > max_depth do
+  defp walk(_value, %{depth: depth, max_depth: max_depth, path: path})
+       when depth > max_depth do
     {:error,
      Error.new(
        :depth_limit_exceeded,
@@ -57,36 +64,35 @@ defmodule Wotex.JSON do
      )}
   end
 
-  defp walk(value, _depth, nodes, _max_depth, _max_nodes, _path)
+  defp walk(value, %{nodes: nodes})
        when is_nil(value) or is_boolean(value) or is_integer(value) or is_binary(value) do
     {:ok, nodes + 1}
   end
 
-  defp walk(value, _depth, nodes, _max_depth, _max_nodes, path) when is_float(value) do
+  defp walk(value, %{nodes: nodes, path: path}) when is_float(value) do
     case Jason.encode(value) do
-      {:ok, _json} ->
-        {:ok, nodes + 1}
-
-      {:error, _reason} ->
-        {:error, Error.new(:invalid_number, :value, "JSON numbers must be finite", path)}
+      {:ok, _json} -> {:ok, nodes + 1}
+      {:error, _reason} -> {:error, Error.new(:invalid_number, :value, "invalid JSON number", path)}
     end
   end
 
-  defp walk(values, depth, nodes, max_depth, max_nodes, path) when is_list(values) do
+  defp walk(values, state) when is_list(values) do
     values
     |> Enum.with_index()
-    |> Enum.reduce_while({:ok, nodes + 1}, fn {value, index}, {:ok, count} ->
-      case walk(value, depth + 1, count, max_depth, max_nodes, join(path, index)) do
+    |> Enum.reduce_while({:ok, state.nodes + 1}, fn {value, index}, {:ok, count} ->
+      child_state = child_state(state, count, index)
+
+      case walk(value, child_state) do
         {:ok, next_count} -> {:cont, {:ok, next_count}}
         {:error, error} -> {:halt, {:error, error}}
       end
     end)
   end
 
-  defp walk(value, depth, nodes, max_depth, max_nodes, path) when is_map(value) do
-    Enum.reduce_while(value, {:ok, nodes + 1}, fn
+  defp walk(value, state) when is_map(value) do
+    Enum.reduce_while(value, {:ok, state.nodes + 1}, fn
       {key, child}, {:ok, count} when is_binary(key) ->
-        case walk(child, depth + 1, count, max_depth, max_nodes, join(path, key)) do
+        case walk(child, child_state(state, count, key)) do
           {:ok, next_count} -> {:cont, {:ok, next_count}}
           {:error, error} -> {:halt, {:error, error}}
         end
@@ -98,13 +104,13 @@ defmodule Wotex.JSON do
             :non_string_key,
             :value,
             "JSON object keys must be strings",
-            path,
+            state.path,
             %{key: inspect(key, limit: 10, printable_limit: 40)}
           )}}
     end)
   end
 
-  defp walk(_value, _depth, _nodes, _max_depth, _max_nodes, path) do
+  defp walk(_value, %{path: path}) do
     {:error,
      Error.new(
        :invalid_json_value,
@@ -131,7 +137,9 @@ defmodule Wotex.JSON do
   end
 
   defp encode_value(value) when is_list(value) do
-    with {:ok, entries} <- value |> Enum.map(&encode_value/1) |> collect() do
+    encoded_entries = Enum.map(value, &encode_value/1)
+
+    with {:ok, entries} <- collect(encoded_entries) do
       {:ok, [?[, Enum.intersperse(entries, ?,), ?]]}
     end
   end
@@ -150,14 +158,20 @@ defmodule Wotex.JSON do
   end
 
   defp collect(results) do
-    Enum.reduce_while(results, {:ok, []}, fn
-      {:ok, value}, {:ok, values} -> {:cont, {:ok, [value | values]}}
-      {:error, error}, _acc -> {:halt, {:error, error}}
-    end)
-    |> case do
+    result =
+      Enum.reduce_while(results, {:ok, []}, fn
+        {:ok, value}, {:ok, values} -> {:cont, {:ok, [value | values]}}
+        {:error, error}, _acc -> {:halt, {:error, error}}
+      end)
+
+    case result do
       {:ok, values} -> {:ok, Enum.reverse(values)}
       {:error, error} -> {:error, error}
     end
+  end
+
+  defp child_state(state, nodes, segment) do
+    %{state | depth: state.depth + 1, nodes: nodes, path: join(state.path, segment)}
   end
 
   defp positive_limit(opts, key, default) do

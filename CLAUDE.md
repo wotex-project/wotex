@@ -27,9 +27,8 @@ this repository to import their product models or redefine the standard terms.
 
 ## Gates
 
-Run `mix check` and the repository boundary scan before a local commit. Never
-push unless a human explicitly requests it.
-+
+Run `mix check` before a local commit. The single gate includes the boundary
+scan and unpacked Hex-package inspection.
 
 ## Git authority
 

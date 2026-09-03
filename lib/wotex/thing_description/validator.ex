@@ -15,9 +15,10 @@ defmodule Wotex.ThingDescription.Validator do
                    |> Jason.decode!()
                    |> ExJsonSchema.Schema.resolve()
 
+  @doc "Validates a Thing Description with the pinned schema and semantic checks."
   @spec validate(ThingDescription.t(), keyword()) ::
           {:ok, ThingDescription.t()} | {:error, [Error.t()]}
-  def validate(%ThingDescription{} = td, _opts \\ []) do
+  def validate(%ThingDescription{} = td, _opts) do
     document = ThingDescription.to_map(td)
     errors = schema_errors(document) ++ semantic_errors(document)
 
@@ -27,7 +28,8 @@ defmodule Wotex.ThingDescription.Validator do
     end
   end
 
-  @spec schema_info() :: map()
+  @doc "Returns the pinned standard, upstream source, and schema digest."
+  @spec schema_info() :: ThingDescription.schema_info()
   def schema_info do
     %{
       standard: "W3C WoT Thing Description 1.1",
@@ -116,9 +118,9 @@ defmodule Wotex.ThingDescription.Validator do
   defp map_value(_value, _key, default), do: default
 
   defp normalize_path(path) when is_binary(path) do
-    path
-    |> String.trim_leading("#")
-    |> case do
+    trimmed = String.trim_leading(path, "#")
+
+    case trimmed do
       "" -> "/"
       "/" <> _rest = pointer -> pointer
       other -> "/" <> other

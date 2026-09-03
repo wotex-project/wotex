@@ -1,23 +1,25 @@
 defmodule Wotex.MixProject do
   use Mix.Project
 
-  @version "0.1.0-dev"
+  @version "0.1.0"
   @source_url "https://github.com/wotex-project/wotex"
 
   def project do
     [
       app: :wotex,
       version: @version,
-      elixir: "~> 1.19",
+      elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
-      description: "Storage-neutral W3C Web of Things values and Thing Description mechanics",
+      description: description(),
       package: package(),
       docs: docs(),
       source_url: @source_url,
       homepage_url: "https://wotex.io",
-      test_coverage: [summary: [threshold: 90]]
+      test_coverage: [tool: ExCoveralls],
+      dialyzer: dialyzer(),
+      name: "Wotex"
     ]
   end
 
@@ -26,41 +28,58 @@ defmodule Wotex.MixProject do
   end
 
   def cli do
-    [preferred_envs: [check: :test]]
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.lcov": :test
+      ]
+    ]
   end
 
   defp deps do
     [
       {:ex_json_schema, "~> 0.11"},
       {:jason, "~> 1.4"},
-      {:ex_doc, "~> 0.38", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
+      {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.38", only: [:dev, :test], runtime: false},
+      {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
+      {:doctest_formatter, "~> 0.4", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test},
+      {:stream_data, "~> 1.3", only: :test}
     ]
   end
 
   defp aliases do
     [
-      check: [
-        "format --check-formatted",
-        "compile --warnings-as-errors",
-        "test --cover --warnings-as-errors",
-        "docs --warnings-as-errors",
-        "cmd bin/check-boundary",
-        "cmd env MIX_ENV=dev mix hex.build"
-      ]
+      setup: ["deps.get", "deps.compile"],
+      lint: ["format --check-formatted", "credo --strict", "dialyzer"],
+      "test.cover": ["coveralls"]
     ]
+  end
+
+  defp description do
+    "Storage-neutral W3C Web of Things 1.1 values, validation, and " <>
+      "deterministic Thing Description encoding for Elixir"
   end
 
   defp package do
     [
+      name: "wotex",
       licenses: ["Apache-2.0"],
       links: %{
-        "Source" => @source_url,
+        "GitHub" => @source_url,
+        "Documentation" => "https://hexdocs.pm/wotex",
         "Project" => "https://wotex.io",
         "W3C Web of Things" => "https://www.w3.org/WoT/"
       },
-      maintainers: ["Wotex contributors"],
+      maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs lib mix.exs priv)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs lib mix.exs priv/w3c)
     ]
   end
 
@@ -68,16 +87,44 @@ defmodule Wotex.MixProject do
     [
       main: "readme",
       extras: [
-        "README.md",
-        "docs/specs/WTX.01-thing-description.md",
-        "docs/specs/WTX.02-affordance-values.md",
-        "docs/specs/WTX.03-errors-extensions-and-compatibility.md",
-        "docs/provenance/w3c-td-schema-1.1.md"
+        "README.md": [title: "Overview"],
+        "docs/specs/WTX.01-thing-description.md": [title: "Thing Description"],
+        "docs/specs/WTX.02-affordance-values.md": [title: "Affordance Values"],
+        "docs/specs/WTX.03-errors-extensions-and-compatibility.md": [
+          title: "Errors, Extensions, and Compatibility"
+        ],
+        "docs/provenance/w3c-td-schema-1.1.md": [title: "TD 1.1 Schema Provenance"],
+        "CHANGELOG.md": [title: "Changelog"],
+        "SECURITY.md": [title: "Security"],
+        "CONTRIBUTING.md": [title: "Contributing"],
+        NOTICE: [title: "Third-party Notices"],
+        LICENSE: [title: "License"]
       ],
       groups_for_extras: [
         "Normative specifications": ~r/docs\/specs/,
-        Provenance: ~r/docs\/provenance/
-      ]
+        Provenance: ~r/docs\/provenance/,
+        Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|NOTICE|LICENSE/
+      ],
+      groups_for_modules: [
+        "Thing Description": [Wotex, Wotex.ThingDescription, Wotex.Error],
+        "Interaction Affordances": [
+          Wotex.PropertyAffordance,
+          Wotex.ActionAffordance,
+          Wotex.EventAffordance
+        ],
+        "TD Values": [Wotex.DataSchema, Wotex.Form, Wotex.SecurityScheme]
+      ],
+      source_ref: "v#{@version}",
+      source_url: @source_url,
+      formatters: ["html"]
+    ]
+  end
+
+  defp dialyzer do
+    [
+      plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
+      plt_add_apps: [:mix, :ex_unit],
+      flags: [:error_handling, :missing_return, :underspecs, :extra_return]
     ]
   end
 end

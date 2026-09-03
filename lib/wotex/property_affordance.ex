@@ -1,9 +1,19 @@
 defmodule Wotex.PropertyAffordance do
-  @moduledoc "Immutable, extension-preserving W3C WoT Property Affordance value."
+  @moduledoc """
+  An immutable W3C WoT Property Affordance value.
+
+  A Property Affordance combines a DataSchema with readable, writable, and
+  observable interaction metadata. The preserved map is a declaration from a
+  Thing Description; it is not canonical device state and does not prove that a
+  read, write, observation, or physical change occurred.
+
+  Unknown extension members survive `new/2` and `to_map/1` unchanged at native
+  JSON-value semantics.
+  """
 
   alias Wotex.Value
 
-  @opaque t :: %__MODULE__{value: map()}
+  @type t :: %__MODULE__{value: map()}
   @enforce_keys [:value]
   defstruct [:value]
 

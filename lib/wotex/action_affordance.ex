@@ -1,9 +1,19 @@
 defmodule Wotex.ActionAffordance do
-  @moduledoc "Immutable, extension-preserving W3C WoT Action Affordance value."
+  @moduledoc """
+  An immutable W3C WoT Action Affordance value.
+
+  An Action Affordance describes an operation a Thing exposes. This module
+  preserves the complete JSON-compatible map, including input/output schemas,
+  Forms, safe/idempotent hints, and unknown extension members. It does not
+  invoke the Action, authorize it, or claim that a physical effect occurred.
+
+  Build values with `new/2` and recover the preserved representation with
+  `to_map/1`. Consumers should use those functions rather than struct fields.
+  """
 
   alias Wotex.Value
 
-  @opaque t :: %__MODULE__{value: map()}
+  @type t :: %__MODULE__{value: map()}
   @enforce_keys [:value]
   defstruct [:value]
 

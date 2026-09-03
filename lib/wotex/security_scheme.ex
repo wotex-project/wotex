@@ -1,9 +1,19 @@
 defmodule Wotex.SecurityScheme do
-  @moduledoc "Immutable, extension-preserving W3C WoT security-scheme value."
+  @moduledoc """
+  An immutable W3C WoT security-scheme definition.
+
+  The value requires the standard non-empty `scheme` discriminator and
+  preserves every additional JSON-compatible member. It describes the security
+  mechanism referenced by a Thing Description; it never contains resolved
+  credential material and does not perform authentication or authorization.
+
+  Consumers can inspect the discriminator with `scheme/1` or serialize the
+  complete declaration with `to_map/1`.
+  """
 
   alias Wotex.Value
 
-  @opaque t :: %__MODULE__{value: map()}
+  @type t :: %__MODULE__{value: map()}
   @enforce_keys [:value]
   defstruct [:value]
 

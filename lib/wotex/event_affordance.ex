@@ -1,9 +1,19 @@
 defmodule Wotex.EventAffordance do
-  @moduledoc "Immutable, extension-preserving W3C WoT Event Affordance value."
+  @moduledoc """
+  An immutable W3C WoT Event Affordance value.
+
+  An Event Affordance describes asynchronous data a Thing may emit and the
+  Forms used to subscribe or unsubscribe. This value preserves data,
+  subscription, cancellation, and extension terms. It owns no process,
+  subscription lifecycle, transport connection, or delivery guarantee.
+
+  Use `new/2` to validate JSON-value semantics and `to_map/1` to recover the
+  complete declaration.
+  """
 
   alias Wotex.Value
 
-  @opaque t :: %__MODULE__{value: map()}
+  @type t :: %__MODULE__{value: map()}
   @enforce_keys [:value]
   defstruct [:value]
 
