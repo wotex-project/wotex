@@ -45,14 +45,12 @@ Run `mix format --check-formatted`, `mix compile --warnings-as-errors`,
 `mix test`, `mix docs`, and `mix hex.build`. Verify the dependency allowlist,
 the absence of an application callback, deterministic corpus/report digests,
 and archive-target isolation before handoff.
-+
 
 ## Git authority
 
-Automated agents must never configure, add, change, or remove a Git remote and
-must never run `git push` or any equivalent publication command. Only the human
-owner publishes repository history.
+Automated agents must never configure, add, change, or remove a Git remote;
+push; create a tag; publish a package or release; or create equivalent remote
+state. Only the human maintainer performs publication.
 
-Every local commit must use the repository-configured human owner identity from
-`git config user.name` and `git config user.email`. Never substitute an agent,
-tool, bot, or shared contributor identity.
+Every local commit uses `Tobias Bohwalli <hi@futhr.io>` as both author and
+committer. Never substitute an agent, tool, bot, or shared contributor identity.
