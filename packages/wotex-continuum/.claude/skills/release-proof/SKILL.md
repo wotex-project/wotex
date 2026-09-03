@@ -14,4 +14,6 @@ description: Apply when preparing or validating a package archive, release, comp
    for consumer-specific material and local paths.
 5. Record the source revision, archive SHA-256, lockfile SHA-256, WCT schema
    versions, vector digests, Elixir version, and OTP version.
-6. Do not publish when any input or command is incomplete.
+6. Stop after recording local evidence. Automated agents never configure or
+   remove remotes, push, create tags, publish packages, or create releases,
+   regardless of whether the proof succeeds.
