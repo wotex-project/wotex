@@ -9,7 +9,7 @@ defmodule WotexBindingMQTT.MixProject do
       app: :wotex_binding_mqtt,
       name: "Wotex MQTT Binding",
       version: @version,
-      elixir: "~> 1.19",
+      elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
