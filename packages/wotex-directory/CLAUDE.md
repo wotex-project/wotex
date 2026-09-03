@@ -53,3 +53,14 @@ commit run formatting, warning-free compilation, tests, documentation, the
 package archive build, and a boundary scan. Commits use conventional lowercase
 subjects without specification identifiers or automation attribution. Never
 configure or push a remote from an agent session.
++
+
+## Git authority
+
+Automated agents must never configure, add, change, or remove a Git remote and
+must never run `git push` or any equivalent publication command. Only the human
+owner publishes repository history.
+
+Every local commit must use the repository-configured human owner identity from
+`git config user.name` and `git config user.email`. Never substitute an agent,
+tool, bot, or shared contributor identity.
