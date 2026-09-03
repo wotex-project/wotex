@@ -1,7 +1,7 @@
 # Runtime baseline
 
 Development verification for version 0.1 uses Wotex Runtime commit
-`07952bf06d21625d10587eddd3cf6f0af74e5fc2` and its released dependency identity
+`ae21976013e60e542dbe6373c951aa0552100b29` and its released dependency identity
 `wotex_runtime ~> 0.1.0`.
 
 The implemented transport boundary is exactly:

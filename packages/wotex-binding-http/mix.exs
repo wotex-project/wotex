@@ -9,7 +9,7 @@ defmodule WotexBindingHTTP.MixProject do
       app: :wotex_binding_http,
       name: "Wotex HTTP Binding",
       version: @version,
-      elixir: "~> 1.19",
+      elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),

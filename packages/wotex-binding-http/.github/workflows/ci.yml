@@ -21,6 +21,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - elixir: "1.18"
+            otp: "28"
+            check: floor
           - elixir: "1.19"
             otp: "28"
             check: floor
@@ -42,13 +45,13 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex
-          ref: fb7d0c85b598b90c2bab268b1d811353485c1f06
+          ref: 0c8c512f57865f7ce00b6ad6f058d5b44d4fa831
           path: wotex
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-runtime
-          ref: 07952bf06d21625d10587eddd3cf6f0af74e5fc2
+          ref: ae21976013e60e542dbe6373c951aa0552100b29
           path: wotex-runtime
           persist-credentials: false
       - id: setup-beam
