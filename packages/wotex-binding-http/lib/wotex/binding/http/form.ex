@@ -1,10 +1,10 @@
 defmodule Wotex.Binding.HTTP.Form do
   @moduledoc false
 
-  alias Wotex.Form, as: CoreForm
   alias Wotex.Binding.HTTP.{Codec, Config, EmptyBody, Error, Headers}
-  alias Wotex.Runtime.{Request, Result}
   alias Wotex.Binding.HTTP.Request, as: HTTPRequest
+  alias Wotex.Form, as: CoreForm
+  alias Wotex.Runtime.{Request, Result}
 
   @default_methods %{
     readproperty: "GET",
@@ -46,7 +46,7 @@ defmodule Wotex.Binding.HTTP.Form do
     end
   end
 
-  def build(_request, _config) do
+  def build(_, _) do
     {:error,
      Error.new(:invalid_runtime_request, :request, "Runtime request and HTTP config are required")}
   end
@@ -64,7 +64,7 @@ defmodule Wotex.Binding.HTTP.Form do
     end
   end
 
-  defp validate_stream_form(_form, false), do: :ok
+  defp validate_stream_form(_, false), do: :ok
 
   defp media_type(form) do
     input_type = Map.get(form, "contentType", @json)
@@ -72,7 +72,7 @@ defmodule Wotex.Binding.HTTP.Form do
     output_type =
       case Map.get(form, "response") do
         %{"contentType" => type} -> type
-        _response -> input_type
+        _ -> input_type
       end
 
     with {:ok, normalized_input} <- json_media_type(input_type),
@@ -109,7 +109,7 @@ defmodule Wotex.Binding.HTTP.Form do
     end
   end
 
-  defp json_media_type(_type) do
+  defp json_media_type(_) do
     {:error, Error.new(:invalid_media_type, :form, "Form contentType must be a string")}
   end
 
@@ -123,7 +123,7 @@ defmodule Wotex.Binding.HTTP.Form do
     end
   end
 
-  defp explicit_method(method, [_operation]) when is_binary(method) do
+  defp explicit_method(method, [_]) when is_binary(method) do
     if Headers.token?(method) do
       {:ok, method}
     else
@@ -131,7 +131,7 @@ defmodule Wotex.Binding.HTTP.Form do
     end
   end
 
-  defp explicit_method(_method, operations) when length(operations) > 1 do
+  defp explicit_method(_, operations) when length(operations) > 1 do
     {:error,
      Error.new(
        :method_on_multi_operation_form,
@@ -140,7 +140,7 @@ defmodule Wotex.Binding.HTTP.Form do
      )}
   end
 
-  defp explicit_method(_method, _operations) do
+  defp explicit_method(_, _) do
     {:error, Error.new(:invalid_method, :form, "htv:methodName must be an HTTP token")}
   end
 
@@ -156,7 +156,7 @@ defmodule Wotex.Binding.HTTP.Form do
 
   defp form_operations(%{"op" => operation}) when is_binary(operation), do: [operation]
   defp form_operations(%{"op" => operations}) when is_list(operations), do: operations
-  defp form_operations(_form), do: []
+  defp form_operations(_), do: []
 
   defp form_headers(form) do
     case Map.get(form, "htv:headers", []) do
@@ -165,7 +165,7 @@ defmodule Wotex.Binding.HTTP.Form do
         |> Enum.map(&form_header/1)
         |> collect_headers()
 
-      _value ->
+      _ ->
         {:error, Error.new(:invalid_form_headers, :form, "htv:headers must be an array")}
     end
   end
@@ -181,35 +181,37 @@ defmodule Wotex.Binding.HTTP.Form do
     end
   end
 
-  defp form_header(_header) do
+  defp form_header(_) do
     {:error, Error.new(:invalid_form_header, :form, "htv:headers entries require htv:fieldName")}
   end
 
   defp collect_headers(results) do
-    Enum.reduce_while(results, {:ok, []}, fn
-      {:ok, header}, {:ok, headers} -> {:cont, {:ok, [header | headers]}}
-      {:error, %Error{} = error}, _acc -> {:halt, {:error, error}}
-    end)
-    |> case do
-      {:ok, headers} -> headers |> Enum.reverse() |> Headers.new(:request)
+    result =
+      Enum.reduce_while(results, {:ok, []}, fn
+        {:ok, header}, {:ok, headers} -> {:cont, {:ok, [header | headers]}}
+        {:error, %Error{} = error}, _ -> {:halt, {:error, error}}
+      end)
+
+    case result do
+      {:ok, headers} -> Headers.new(Enum.reverse(headers), :request)
       {:error, %Error{} = error} -> {:error, error}
     end
   end
 
-  defp body(:writeproperty, %EmptyBody{}, _max_bytes) do
+  defp body(:writeproperty, %EmptyBody{}, _) do
     {:error, Error.new(:missing_input, :request, "writeproperty requires a JSON input")}
   end
 
-  defp body(operation, %EmptyBody{}, _max_bytes) when operation in @body_operations,
+  defp body(operation, %EmptyBody{}, _) when operation in @body_operations,
     do: {:ok, nil}
 
   defp body(operation, input, max_bytes) when operation in @body_operations,
     do: Codec.encode(input, max_bytes)
 
-  defp body(operation, _input, _max_bytes) when operation in @target_operations,
+  defp body(operation, _, _) when operation in @target_operations,
     do: {:ok, nil}
 
-  defp body(operation, input, _max_bytes)
+  defp body(operation, input, _)
        when operation in [:readproperty, :observeproperty, :subscribeevent] do
     if is_nil(input) or match?(%EmptyBody{}, input) do
       {:ok, nil}
@@ -218,15 +220,15 @@ defmodule Wotex.Binding.HTTP.Form do
     end
   end
 
-  defp body(_operation, _input, _max_bytes) do
+  defp body(_, _, _) do
     {:error, Error.new(:unsupported_operation, :request, "operation is not supported by HTTP")}
   end
 
   defp target_uri(%Request{operation: operation, input: input, resolved_href: base})
        when operation in @target_operations do
-    with {:ok, href} <- action_target(input),
-         {:ok, resolved} <- resolve_reference(base, href) do
-      {:ok, resolved}
+    case action_target(input) do
+      {:ok, href} -> resolve_reference(base, href)
+      {:error, %Error{} = error} -> {:error, error}
     end
   end
 
@@ -245,7 +247,7 @@ defmodule Wotex.Binding.HTTP.Form do
   defp action_target(%{"href" => href}) when is_binary(href) and href != "", do: {:ok, href}
   defp action_target(%{href: href}) when is_binary(href) and href != "", do: {:ok, href}
   defp action_target(href) when is_binary(href) and href != "", do: {:ok, href}
-  defp action_target(_input), do: missing_action_target()
+  defp action_target(_), do: missing_action_target()
 
   defp missing_action_target do
     {:error,
@@ -257,7 +259,12 @@ defmodule Wotex.Binding.HTTP.Form do
   end
 
   defp resolve_reference(base, reference) do
-    resolved = base |> URI.parse() |> URI.merge(reference) |> URI.to_string()
+    resolved =
+      base
+      |> URI.parse()
+      |> URI.merge(reference)
+      |> URI.to_string()
+
     {:ok, resolved}
   rescue
     URI.Error ->
@@ -267,15 +274,15 @@ defmodule Wotex.Binding.HTTP.Form do
   defp representation_headers(headers, body, media_type, stream?) do
     accept = if stream?, do: @event_stream, else: media_type
 
-    with {:ok, with_accept} <- ensure_header(headers, "accept", accept),
-         {:ok, with_content_type} <- maybe_content_type(with_accept, body, media_type) do
-      {:ok, with_content_type}
+    case ensure_header(headers, "accept", accept) do
+      {:ok, with_accept} -> maybe_content_type(with_accept, body, media_type)
+      {:error, %Error{} = error} -> {:error, error}
     end
   end
 
-  defp maybe_content_type(headers, nil, _media_type), do: {:ok, headers}
+  defp maybe_content_type(headers, nil, _), do: {:ok, headers}
 
-  defp maybe_content_type(headers, _body, media_type),
+  defp maybe_content_type(headers, _, media_type),
     do: ensure_header(headers, "content-type", media_type)
 
   defp ensure_header(headers, name, value) do

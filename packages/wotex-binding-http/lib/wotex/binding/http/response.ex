@@ -1,9 +1,14 @@
 defmodule Wotex.Binding.HTTP.Response do
-  @moduledoc "Immutable, credential-free HTTP response returned by the supplied client."
+  @moduledoc """
+  Immutable, credential-free HTTP response returned by the supplied client.
+
+  The client provides a complete binary body and raw HTTP fields. Construction
+  revalidates status and fields before Runtime response decoding begins.
+  """
 
   alias Wotex.Binding.HTTP.{Error, Headers}
 
-  @opaque t :: %__MODULE__{status: 100..599, headers: Headers.t(), body: binary()}
+  @type t :: %__MODULE__{status: 100..599, headers: Headers.t(), body: binary()}
   @enforce_keys [:status, :headers, :body]
   defstruct @enforce_keys
 
@@ -15,7 +20,7 @@ defmodule Wotex.Binding.HTTP.Response do
     end
   end
 
-  def new(_status, _headers, _body) do
+  def new(_, _, _) do
     {:error,
      Error.new(
        :invalid_response,

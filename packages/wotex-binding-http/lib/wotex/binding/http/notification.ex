@@ -1,16 +1,21 @@
 defmodule Wotex.Binding.HTTP.Notification do
-  @moduledoc "Immutable JSON notification decoded from a dispatched Server-Sent Event."
+  @moduledoc """
+  Immutable Runtime notification decoded from one dispatched Server-Sent Event.
+
+  It preserves the SSE event type, identifier, retry hint, and originating WoT
+  interaction identity while exposing the event data as a decoded JSON value.
+  """
 
   alias Wotex.Binding.HTTP.SSE.Event
 
-  @opaque t :: %__MODULE__{
-            data: term(),
-            event: String.t() | nil,
-            id: String.t() | nil,
-            retry: non_neg_integer() | nil,
-            request_id: String.t(),
-            operation: :observeproperty | :subscribeevent
-          }
+  @type t :: %__MODULE__{
+          data: term(),
+          event: String.t() | nil,
+          id: String.t() | nil,
+          retry: non_neg_integer() | nil,
+          request_id: String.t(),
+          operation: :observeproperty | :subscribeevent
+        }
 
   @enforce_keys [:data, :event, :id, :retry, :request_id, :operation]
   defstruct @enforce_keys

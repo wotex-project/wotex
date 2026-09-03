@@ -1,5 +1,11 @@
 defmodule Wotex.Binding.HTTP.Headers do
-  @moduledoc "Validation and deterministic composition for credential-free HTTP fields."
+  @moduledoc """
+  Validates and deterministically composes credential-free HTTP fields.
+
+  Names are normalized to lowercase and duplicates are rejected. Credential,
+  connection, host, and message-framing fields stay under the supplied client's
+  control and cannot enter a request through static configuration or TD Forms.
+  """
 
   alias Wotex.Binding.HTTP.Error
 
@@ -16,30 +22,31 @@ defmodule Wotex.Binding.HTTP.Headers do
   def new(fields, kind \\ :request)
 
   def new(fields, kind) when is_list(fields) and kind in [:request, :response] do
-    fields
-    |> Enum.reduce_while({:ok, [], MapSet.new()}, fn field, {:ok, acc, seen} ->
-      with {:ok, name, value} <- normalize_field(field, kind),
-           false <- MapSet.member?(seen, name) do
-        {:cont, {:ok, [{name, value} | acc], MapSet.put(seen, name)}}
-      else
-        true ->
-          {:halt,
-           {:error,
-            Error.new(:duplicate_header, :request, "HTTP field names must be unique", %{
-              name: normalized_name(field)
-            })}}
+    result =
+      Enum.reduce_while(fields, {:ok, [], MapSet.new()}, fn field, {:ok, acc, seen} ->
+        with {:ok, name, value} <- normalize_field(field, kind),
+             false <- MapSet.member?(seen, name) do
+          {:cont, {:ok, [{name, value} | acc], MapSet.put(seen, name)}}
+        else
+          true ->
+            {:halt,
+             {:error,
+              Error.new(:duplicate_header, :request, "HTTP field names must be unique", %{
+                name: normalized_name(field)
+              })}}
 
-        {:error, %Error{} = error} ->
-          {:halt, {:error, error}}
-      end
-    end)
-    |> case do
-      {:ok, normalized, _seen} -> {:ok, Enum.reverse(normalized)}
+          {:error, %Error{} = error} ->
+            {:halt, {:error, error}}
+        end
+      end)
+
+    case result do
+      {:ok, normalized, _} -> {:ok, Enum.reverse(normalized)}
       {:error, %Error{} = error} -> {:error, error}
     end
   end
 
-  def new(_fields, _kind) do
+  def new(_, _) do
     {:error, Error.new(:invalid_headers, :request, "HTTP fields must be a list")}
   end
 
@@ -54,8 +61,7 @@ defmodule Wotex.Binding.HTTP.Headers do
   def put(fields, name, value) when is_list(fields) and is_binary(name) and is_binary(value) do
     normalized = String.downcase(name)
 
-    Enum.reject(fields, fn {existing, _value} -> existing == normalized end) ++
-      [{normalized, value}]
+    List.keystore(fields, normalized, 0, {normalized, value})
   end
 
   @doc "Returns a field value by case-insensitive name."
@@ -65,7 +71,7 @@ defmodule Wotex.Binding.HTTP.Headers do
 
     Enum.find_value(fields, fn
       {^normalized, value} -> value
-      _field -> nil
+      _ -> nil
     end)
   end
 
@@ -109,11 +115,11 @@ defmodule Wotex.Binding.HTTP.Headers do
     end
   end
 
-  defp normalize_field(_field, _kind) do
+  defp normalize_field(_, _) do
     {:error,
      Error.new(:invalid_header, :request, "each HTTP field must be a binary name/value pair")}
   end
 
-  defp normalized_name({name, _value}) when is_binary(name), do: String.downcase(name)
-  defp normalized_name(_field), do: nil
+  defp normalized_name({name, _}) when is_binary(name), do: String.downcase(name)
+  defp normalized_name(_), do: nil
 end

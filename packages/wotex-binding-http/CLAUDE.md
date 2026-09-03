@@ -21,8 +21,7 @@ mapping and Server-Sent Events adaptation through a consumer-supplied client.
   switch; normal dependency identities are released package versions.
 
 Run `WOTEX_PATH_DEPS=1 mix check` and `bin/check-boundary` before local commits.
-Never push unless a human explicitly requests it.
-+
+Automated agents never push repository history.
 
 ## Git authority
 

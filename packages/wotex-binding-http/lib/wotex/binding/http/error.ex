@@ -1,5 +1,11 @@
 defmodule Wotex.Binding.HTTP.Error do
-  @moduledoc "Structured, credential-free HTTP binding failure."
+  @moduledoc """
+  Structured, credential-free failure returned at the HTTP binding boundary.
+
+  `code` supports stable programmatic handling, `phase` identifies the failed
+  boundary, and `details` contains only safe diagnostic context. Client reasons,
+  exceptions, and credential material are deliberately omitted.
+  """
 
   @type phase ::
           :configuration

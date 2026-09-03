@@ -1,20 +1,27 @@
 defmodule Wotex.Binding.HTTP.Request do
-  @moduledoc "Immutable, credential-free HTTP request passed to the supplied client."
+  @moduledoc """
+  Immutable, credential-free HTTP request passed to the supplied client.
+
+  The value is the complete result of Form mapping: an absolute HTTP target,
+  validated fields, an optional encoded body, deadline, interaction identity,
+  selected media type, and streaming intent. Authentication travels separately
+  through the client callback.
+  """
 
   alias Wotex.Binding.HTTP.{Error, Headers}
   alias Wotex.Runtime.Context
 
-  @opaque t :: %__MODULE__{
-            method: String.t(),
-            uri: String.t(),
-            headers: Headers.t(),
-            body: binary() | nil,
-            request_id: String.t(),
-            deadline: Context.deadline(),
-            operation: atom(),
-            media_type: String.t(),
-            stream?: boolean()
-          }
+  @type t :: %__MODULE__{
+          method: String.t(),
+          uri: String.t(),
+          headers: Headers.t(),
+          body: binary() | nil,
+          request_id: String.t(),
+          deadline: Context.deadline(),
+          operation: atom(),
+          media_type: String.t(),
+          stream?: boolean()
+        }
 
   @enforce_keys [
     :method,
@@ -40,7 +47,7 @@ defmodule Wotex.Binding.HTTP.Request do
     end
   end
 
-  def new(_method, _uri, _headers, _body, _opts), do: invalid_request()
+  def new(_, _, _, _, _), do: invalid_request()
 
   defp build(method, uri, headers, body, opts) do
     request_id = Keyword.get(opts, :request_id)
@@ -126,48 +133,52 @@ defmodule Wotex.Binding.HTTP.Request do
   defp validate_uri(uri) when is_binary(uri) do
     case URI.new(uri) do
       {:ok, parsed} ->
-        cond do
-          not String.valid?(uri) or Regex.match?(~r/[\x00-\x20\x7F]/, uri) ->
-            {:error, Error.new(:invalid_uri, :request, "HTTP target URI contains invalid bytes")}
+        validate_parsed_uri(uri, parsed)
 
-          parsed.scheme not in ["http", "https"] ->
-            {:error, Error.new(:unsupported_scheme, :request, "target URI must use HTTP or HTTPS")}
-
-          not (is_binary(parsed.host) and parsed.host != "") ->
-            {:error, Error.new(:invalid_uri, :request, "HTTP target URI must contain a host")}
-
-          not is_nil(parsed.userinfo) ->
-            {:error,
-             Error.new(
-               :uri_credentials_forbidden,
-               :request,
-               "credentials must not appear in the target URI"
-             )}
-
-          not is_nil(parsed.fragment) ->
-            {:error,
-             Error.new(
-               :uri_fragment_forbidden,
-               :request,
-               "HTTP target URI cannot contain a fragment"
-             )}
-
-          true ->
-            :ok
-        end
-
-      {:error, _part} ->
+      {:error, _} ->
         {:error, Error.new(:invalid_uri, :request, "HTTP target URI is invalid")}
     end
   end
 
-  defp validate_uri(_uri),
+  defp validate_uri(_),
     do: {:error, Error.new(:invalid_uri, :request, "HTTP target URI must be a string")}
+
+  defp validate_parsed_uri(uri, parsed) do
+    cond do
+      not String.valid?(uri) or Regex.match?(~r/[\x00-\x20\x7F]/, uri) ->
+        {:error, Error.new(:invalid_uri, :request, "HTTP target URI contains invalid bytes")}
+
+      parsed.scheme not in ["http", "https"] ->
+        {:error, Error.new(:unsupported_scheme, :request, "target URI must use HTTP or HTTPS")}
+
+      not (is_binary(parsed.host) and parsed.host != "") ->
+        {:error, Error.new(:invalid_uri, :request, "HTTP target URI must contain a host")}
+
+      not is_nil(parsed.userinfo) ->
+        {:error,
+         Error.new(
+           :uri_credentials_forbidden,
+           :request,
+           "credentials must not appear in the target URI"
+         )}
+
+      not is_nil(parsed.fragment) ->
+        {:error,
+         Error.new(
+           :uri_fragment_forbidden,
+           :request,
+           "HTTP target URI cannot contain a fragment"
+         )}
+
+      true ->
+        :ok
+    end
+  end
 
   defp validate_body(nil), do: :ok
   defp validate_body(body) when is_binary(body), do: :ok
 
-  defp validate_body(_body),
+  defp validate_body(_),
     do: {:error, Error.new(:invalid_body, :request, "HTTP request body must be binary or nil")}
 
   defp validate_identity(request_id, operation) when is_binary(request_id) do
@@ -178,7 +189,7 @@ defmodule Wotex.Binding.HTTP.Request do
     end
   end
 
-  defp validate_identity(_request_id, _operation), do: invalid_identity()
+  defp validate_identity(_, _), do: invalid_identity()
 
   defp invalid_identity do
     {:error,
@@ -189,12 +200,12 @@ defmodule Wotex.Binding.HTTP.Request do
   defp validate_deadline(deadline) when is_integer(deadline), do: :ok
   defp validate_deadline(%DateTime{}), do: :ok
 
-  defp validate_deadline(_deadline),
+  defp validate_deadline(_),
     do: {:error, Error.new(:invalid_deadline, :request, "deadline must be absolute or nil")}
 
   defp validate_media_type(media_type) when is_binary(media_type) and byte_size(media_type) > 0,
     do: :ok
 
-  defp validate_media_type(_media_type),
+  defp validate_media_type(_),
     do: {:error, Error.new(:invalid_media_type, :request, "media type must be non-empty")}
 end

@@ -1,13 +1,19 @@
 defmodule Wotex.Binding.HTTP.Subscription do
-  @moduledoc "Opaque, credential-free handle for one explicitly opened SSE connection."
+  @moduledoc """
+  Opaque, credential-free handle for one explicitly opened SSE connection.
+
+  The value binds the supplied client's opaque handle to the originating
+  request and stream operation. Only the matching close operation and client
+  configuration can consume it.
+  """
 
   @derive {Inspect, only: [:client_module, :request_id, :operation]}
-  @opaque t :: %__MODULE__{
-            client_module: module(),
-            client_handle: term(),
-            request_id: String.t(),
-            operation: :observeproperty | :subscribeevent
-          }
+  @type t :: %__MODULE__{
+          client_module: module(),
+          client_handle: term(),
+          request_id: String.t(),
+          operation: :observeproperty | :subscribeevent
+        }
 
   @enforce_keys [:client_module, :client_handle, :request_id, :operation]
   defstruct @enforce_keys

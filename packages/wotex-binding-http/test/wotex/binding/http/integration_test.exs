@@ -42,7 +42,8 @@ defmodule Wotex.Binding.HTTP.IntegrationTest do
     {:ok, event} = Event.new("22", event: "temperature", id: "event-22")
     assert :ok = handler.(event)
 
-    assert_receive {:wotex_runtime, :temperature_observation, {:ok, %Notification{} = notification}}
+    assert_receive {:wotex_runtime, :temperature_observation, notification_result}
+    assert {:ok, %Notification{} = notification} = notification_result
 
     assert Notification.data(notification) == 22
     assert Notification.id(notification) == "event-22"

@@ -1,5 +1,12 @@
 defmodule Wotex.Binding.HTTP.Transport do
-  @moduledoc "Wotex Runtime transport backed by a consumer-supplied HTTP client port."
+  @moduledoc """
+  Wotex Runtime transport backed by a consumer-supplied HTTP client port.
+
+  It maps Runtime requests into HTTP values, normalizes callback failures,
+  decodes finite JSON responses, and converts client-framed SSE events into
+  Runtime notifications. Network processes and connection lifecycles remain
+  owned by the caller.
+  """
 
   @behaviour Wotex.Runtime.Transport
 
@@ -14,9 +21,9 @@ defmodule Wotex.Binding.HTTP.Transport do
     Subscription
   }
 
+  alias Wotex.Binding.HTTP.Request, as: HTTPRequest
   alias Wotex.Binding.HTTP.SSE.Event
   alias Wotex.Runtime.{ExecutionContext, Request, Result}
-  alias Wotex.Binding.HTTP.Request, as: HTTPRequest
 
   @event_stream "text/event-stream"
   @close_operations %{
@@ -24,7 +31,7 @@ defmodule Wotex.Binding.HTTP.Transport do
     subscribeevent: :unsubscribeevent
   }
 
-  @impl true
+  @impl Wotex.Runtime.Transport
   def request(%Request{} = request, %ExecutionContext{} = context, %Config{} = config) do
     with {:ok, http_request} <- Form.build(request, config),
          false <- HTTPRequest.stream?(http_request),
@@ -41,7 +48,7 @@ defmodule Wotex.Binding.HTTP.Transport do
     end
   end
 
-  def request(_request, _context, _config) do
+  def request(_, _, _) do
     {:error,
      Error.new(
        :invalid_transport_arguments,
@@ -50,7 +57,7 @@ defmodule Wotex.Binding.HTTP.Transport do
      )}
   end
 
-  @impl true
+  @impl Wotex.Runtime.Transport
   def subscribe(
         %Request{} = request,
         receiver,
@@ -78,7 +85,7 @@ defmodule Wotex.Binding.HTTP.Transport do
     end
   end
 
-  def subscribe(_request, _receiver, _context, _config) do
+  def subscribe(_, _, _, _) do
     {:error,
      Error.new(
        :invalid_subscription_arguments,
@@ -87,22 +94,23 @@ defmodule Wotex.Binding.HTTP.Transport do
      )}
   end
 
-  @impl true
+  @impl Wotex.Runtime.Transport
   def unsubscribe(
         %Subscription{} = subscription,
         %Request{} = request,
         %ExecutionContext{},
         %Config{} = config
       ) do
-    with {client_module, client_handle, request_id, start_operation} <-
-           Subscription.unwrap(subscription),
-         :ok <- validate_close(request, request_id, start_operation, client_module, config),
-         :ok <- call_close(client_module, client_handle, config) do
-      :ok
+    {client_module, client_handle, request_id, start_operation} =
+      Subscription.unwrap(subscription)
+
+    case validate_close(request, request_id, start_operation, client_module, config) do
+      :ok -> call_close(client_module, client_handle, config)
+      {:error, %Error{} = error} -> {:error, error}
     end
   end
 
-  def unsubscribe(_handle, _request, _context, _config) do
+  def unsubscribe(_, _, _, _) do
     {:error,
      Error.new(
        :invalid_unsubscribe_arguments,
@@ -118,14 +126,14 @@ defmodule Wotex.Binding.HTTP.Transport do
       try do
         module.request(request, credential, client_config)
       rescue
-        _exception -> {:client_exception, nil}
+        _ -> {:client_exception, nil}
       end
 
     case returned do
       {:ok, %Response{} = response} -> revalidate_response(response)
-      {:error, _reason} -> {:error, client_error(:client_request_failed, :client)}
+      {:error, _} -> {:error, client_error(:client_request_failed, :client)}
       {:client_exception, nil} -> {:error, client_error(:client_request_exception, :client)}
-      _invalid -> {:error, client_error(:invalid_client_return, :client)}
+      _ -> {:error, client_error(:invalid_client_return, :client)}
     end
   end
 
@@ -136,7 +144,7 @@ defmodule Wotex.Binding.HTTP.Transport do
       try do
         module.subscribe(request, credential, handler, client_config)
       rescue
-        _exception -> {:client_exception, nil}
+        _ -> {:client_exception, nil}
       end
 
     case returned do
@@ -152,36 +160,36 @@ defmodule Wotex.Binding.HTTP.Transport do
            )}
         else
           {:error, %Error{} = error} ->
-            _ignored = close_after_failed_handshake(module, handle, client_config)
+            _ = close_after_failed_handshake(module, handle, client_config)
             {:error, error}
         end
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error, client_error(:client_subscribe_failed, :subscription)}
 
       {:client_exception, nil} ->
         {:error, client_error(:client_subscribe_exception, :subscription)}
 
-      _invalid ->
+      _ ->
         {:error, client_error(:invalid_client_return, :subscription)}
     end
   end
 
   defp call_close(module, handle, config) do
-    {_configured_module, client_config} = Config.client(config)
+    {_, client_config} = Config.client(config)
 
     returned =
       try do
         module.close(handle, client_config)
       rescue
-        _exception -> {:client_exception, nil}
+        _ -> {:client_exception, nil}
       end
 
     case returned do
       :ok -> :ok
-      {:error, _reason} -> {:error, client_error(:client_close_failed, :subscription)}
+      {:error, _} -> {:error, client_error(:client_close_failed, :subscription)}
       {:client_exception, nil} -> {:error, client_error(:client_close_exception, :subscription)}
-      _invalid -> {:error, client_error(:invalid_client_return, :subscription)}
+      _ -> {:error, client_error(:invalid_client_return, :subscription)}
     end
   end
 
@@ -189,7 +197,7 @@ defmodule Wotex.Binding.HTTP.Transport do
     try do
       module.close(handle, client_config)
     rescue
-      _exception -> :ok
+      _ -> :ok
     end
   end
 
@@ -237,12 +245,12 @@ defmodule Wotex.Binding.HTTP.Transport do
           {:ok, result}
         else
           {:error, %Error{} = error} -> {:error, error}
-          {:error, _runtime_error} -> {:error, client_error(:result_build_failed, :response)}
+          {:error, _} -> {:error, client_error(:result_build_failed, :response)}
         end
     end
   end
 
-  defp validate_response_media_type(_request, %Response{} = response)
+  defp validate_response_media_type(_, %Response{} = response)
        when response.body == "",
        do: :ok
 
@@ -262,7 +270,7 @@ defmodule Wotex.Binding.HTTP.Transport do
     end
   end
 
-  defp decode_body("", _max_bytes), do: {:ok, nil}
+  defp decode_body("", _), do: {:ok, nil}
   defp decode_body(body, max_bytes), do: Codec.decode(body, max_bytes)
 
   defp response_metadata(request, response) do
@@ -283,10 +291,14 @@ defmodule Wotex.Binding.HTTP.Transport do
     end
   end
 
-  defp resolve_location(_base, nil), do: {:ok, nil}
+  defp resolve_location(_, nil), do: {:ok, nil}
 
   defp resolve_location(base, location) when is_binary(location) do
-    resolved = base |> URI.parse() |> URI.merge(location) |> URI.to_string()
+    resolved =
+      base
+      |> URI.parse()
+      |> URI.merge(location)
+      |> URI.to_string()
 
     case HTTPRequest.new("GET", resolved, [], nil,
            request_id: "location-validation",
@@ -294,14 +306,12 @@ defmodule Wotex.Binding.HTTP.Transport do
            media_type: "application/json",
            stream?: false
          ) do
-      {:ok, _request} -> {:ok, resolved}
-      {:error, _error} -> invalid_location()
+      {:ok, _} -> {:ok, resolved}
+      {:error, _} -> invalid_location()
     end
   rescue
     URI.Error -> invalid_location()
   end
-
-  defp resolve_location(_base, _location), do: invalid_location()
 
   defp invalid_location do
     {:error, Error.new(:invalid_location, :response, "HTTP Location field is invalid")}
@@ -369,7 +379,7 @@ defmodule Wotex.Binding.HTTP.Transport do
     end
   end
 
-  defp decode_event(_event, request_id, operation, _max_bytes) do
+  defp decode_event(_, request_id, operation, _) do
     {:error,
      Error.new(:invalid_sse_event, :subscription, "client delivered an invalid SSE event", %{
        request_id: request_id,
@@ -378,7 +388,7 @@ defmodule Wotex.Binding.HTTP.Transport do
   end
 
   defp validate_close(request, request_id, start_operation, client_module, config) do
-    {configured_module, _client_config} = Config.client(config)
+    {configured_module, _} = Config.client(config)
 
     cond do
       request.request_id != request_id ->

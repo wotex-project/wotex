@@ -1,5 +1,23 @@
 defmodule Wotex.Binding.HTTP.Config do
-  @moduledoc "Immutable configuration for the HTTP Runtime transport."
+  @moduledoc """
+  Immutable configuration for the HTTP Runtime transport.
+
+  Configuration binds a client module to non-secret client options, validated
+  static request fields, and independent request, response, and event limits.
+  Credential material is never accepted here.
+
+  Supported options are:
+
+  * `:client` — required `{module, client_config}` tuple whose module implements
+    `Wotex.Binding.HTTP.Client`;
+  * `:headers` — static credential-free request fields, defaulting to `[]`;
+  * `:max_request_bytes` — maximum encoded JSON request size;
+  * `:max_response_bytes` — maximum complete finite response size;
+  * `:max_event_bytes` — maximum data size of one dispatched SSE event.
+
+  Each limit must be a positive integer. Defaults are conservative package
+  values and can be tightened by the consumer host.
+  """
 
   alias Wotex.Binding.HTTP.{Error, Headers}
 
@@ -15,14 +33,14 @@ defmodule Wotex.Binding.HTTP.Config do
              :max_response_bytes,
              :max_event_bytes
            ]}
-  @opaque t :: %__MODULE__{
-            client_module: module(),
-            client_config: term(),
-            headers: Headers.t(),
-            max_request_bytes: pos_integer(),
-            max_response_bytes: pos_integer(),
-            max_event_bytes: pos_integer()
-          }
+  @type t :: %__MODULE__{
+          client_module: module(),
+          client_config: term(),
+          headers: Headers.t(),
+          max_request_bytes: pos_integer(),
+          max_response_bytes: pos_integer(),
+          max_event_bytes: pos_integer()
+        }
 
   @enforce_keys [
     :client_module,
@@ -40,7 +58,7 @@ defmodule Wotex.Binding.HTTP.Config do
     if Keyword.keyword?(opts), do: build(opts), else: invalid_options()
   end
 
-  def new(_opts), do: invalid_options()
+  def new(_), do: invalid_options()
 
   defp build(opts) do
     client = Keyword.get(opts, :client)
@@ -107,7 +125,7 @@ defmodule Wotex.Binding.HTTP.Config do
     end
   end
 
-  defp validate_client(_client) do
+  defp validate_client(_) do
     {:error,
      Error.new(
        :invalid_client,
@@ -116,9 +134,9 @@ defmodule Wotex.Binding.HTTP.Config do
      )}
   end
 
-  defp positive_limit(value, _name) when is_integer(value) and value > 0, do: :ok
+  defp positive_limit(value, _) when is_integer(value) and value > 0, do: :ok
 
-  defp positive_limit(_value, name) do
+  defp positive_limit(_, name) do
     {:error,
      Error.new(:invalid_limit, :configuration, "byte limits must be positive integers", %{
        option: name

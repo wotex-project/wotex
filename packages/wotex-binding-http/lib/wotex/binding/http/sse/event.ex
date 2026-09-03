@@ -1,14 +1,20 @@
 defmodule Wotex.Binding.HTTP.SSE.Event do
-  @moduledoc "Immutable Server-Sent Event after client-owned stream framing."
+  @moduledoc """
+  Immutable Server-Sent Event after client-owned stream framing.
+
+  The client joins repeated `data` lines and validates SSE framing before
+  constructing this value. The binding then validates field values and decodes
+  the complete data payload as JSON.
+  """
 
   alias Wotex.Binding.HTTP.Error
 
-  @opaque t :: %__MODULE__{
-            data: binary(),
-            event: String.t() | nil,
-            id: String.t() | nil,
-            retry: non_neg_integer() | nil
-          }
+  @type t :: %__MODULE__{
+          data: binary(),
+          event: String.t() | nil,
+          id: String.t() | nil,
+          retry: non_neg_integer() | nil
+        }
 
   @enforce_keys [:data]
   defstruct [:data, :event, :id, :retry]
@@ -21,7 +27,7 @@ defmodule Wotex.Binding.HTTP.SSE.Event do
     if Keyword.keyword?(opts), do: build(data, opts), else: invalid_event()
   end
 
-  def new(_data, _opts), do: invalid_event()
+  def new(_, _), do: invalid_event()
 
   defp build(data, opts) do
     event = Keyword.get(opts, :event)
@@ -55,7 +61,7 @@ defmodule Wotex.Binding.HTTP.SSE.Event do
   @spec retry(t()) :: non_neg_integer() | nil
   def retry(%__MODULE__{retry: retry}), do: retry
 
-  defp validate_line_value(nil, _field), do: :ok
+  defp validate_line_value(nil, _), do: :ok
 
   defp validate_line_value(value, field) when is_binary(value) do
     if String.valid?(value) and not Regex.match?(~r/[\x00\x0A\x0D]/, value) do
@@ -68,7 +74,7 @@ defmodule Wotex.Binding.HTTP.SSE.Event do
     end
   end
 
-  defp validate_line_value(_value, field) do
+  defp validate_line_value(_, field) do
     {:error,
      Error.new(:invalid_sse_field, :subscription, "SSE field must be a string or nil", %{
        field: field
@@ -78,6 +84,6 @@ defmodule Wotex.Binding.HTTP.SSE.Event do
   defp validate_retry(nil), do: :ok
   defp validate_retry(value) when is_integer(value) and value >= 0, do: :ok
 
-  defp validate_retry(_value),
+  defp validate_retry(_),
     do: {:error, Error.new(:invalid_sse_retry, :subscription, "SSE retry must be non-negative")}
 end

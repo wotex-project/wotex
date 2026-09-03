@@ -4,6 +4,8 @@ defmodule Wotex.Binding.HTTP.Test.Factory do
   alias Wotex.Binding.HTTP
   alias Wotex.Runtime.{Context, Request, Selection}
 
+  @doc false
+  @spec config(map()) :: HTTP.Config.t()
   def config(overrides \\ %{}) do
     defaults = %{
       owner: self(),
@@ -18,6 +20,8 @@ defmodule Wotex.Binding.HTTP.Test.Factory do
     config
   end
 
+  @doc false
+  @spec request(atom(), term(), map(), String.t()) :: Request.t()
   def request(operation, input \\ nil, form_overrides \\ %{}, request_id \\ "request-1") do
     form_map =
       Map.merge(
@@ -47,11 +51,15 @@ defmodule Wotex.Binding.HTTP.Test.Factory do
     Request.from_selection(selection, context, input)
   end
 
+  @doc false
+  @spec context(term()) :: Wotex.Runtime.ExecutionContext.t()
   def context(credential \\ :credential) do
     {:ok, context} = Context.new(request_id: "request-1", deadline: 50_000)
     Wotex.Runtime.ExecutionContext.new(context, credential)
   end
 
+  @doc false
+  @spec response(integer(), binary(), Wotex.Binding.HTTP.Headers.t()) :: HTTP.Response.t()
   def response(status, body \\ "", headers \\ []) do
     {:ok, response} = Wotex.Binding.HTTP.Response.new(status, headers, body)
     response

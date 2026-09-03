@@ -6,6 +6,18 @@ defmodule Wotex.Binding.HTTP do
   network activity to a consumer-supplied `Wotex.Binding.HTTP.Client`. It ships
   no client, pool, application callback, supervisor, or credential source.
 
+  The public entry points form one small composition surface:
+
+  * `profile/0` describes the supported schemes, operations, and media type to
+    Wotex Runtime.
+  * `config/1` validates the client port, static fields, and encoded-byte limits.
+  * `transport/1` returns the Runtime transport tuple for that configuration.
+  * `empty_body/0` distinguishes an absent Action body from JSON `null`.
+
+  Client callbacks receive credential material separately from immutable HTTP
+  requests. See `Wotex.Binding.HTTP.Client` for the request, subscription, and
+  close contracts and their lifecycle responsibilities.
+
   This API implements a documented standards baseline; it does not claim W3C
   WoT Profile conformance or registration in the pilot Binding Registry.
   """

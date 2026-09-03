@@ -194,7 +194,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
       )
 
     request = Factory.request(:observeproperty, nil, %{"subprotocol" => "sse"})
-    assert {:ok, _subscription} = Transport.subscribe(request, self(), Factory.context(), config)
+    assert {:ok, _} = Transport.subscribe(request, self(), Factory.context(), config)
     assert_receive {:client_subscribe, %Request{}, :credential, handler}
 
     assert handler.(%{}) == :ok

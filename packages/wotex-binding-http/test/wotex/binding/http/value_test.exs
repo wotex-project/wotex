@@ -168,7 +168,7 @@ defmodule Wotex.Binding.HTTP.ValueTest do
              )
 
     assert {:error, %Error{code: :invalid_deadline}} =
-             Request.new("GET", valid_uri(), [], nil, opts ++ [deadline: :later])
+             Request.new("GET", valid_uri(), [], nil, Keyword.put(opts, :deadline, :later))
 
     assert {:error, %Error{code: :invalid_media_type}} =
              Request.new("GET", valid_uri(), [], nil, Keyword.put(opts, :media_type, nil))

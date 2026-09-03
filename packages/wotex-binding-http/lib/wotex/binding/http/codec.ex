@@ -1,5 +1,10 @@
 defmodule Wotex.Binding.HTTP.Codec do
-  @moduledoc "Strict JSON encoding and decoding with explicit byte limits."
+  @moduledoc """
+  Encodes and decodes complete JSON representations under explicit byte limits.
+
+  Size checks happen on encoded bytes. Codec failures are normalized into
+  credential-free binding errors rather than exposing JSON-library values.
+  """
 
   alias Wotex.Binding.HTTP.Error
 
@@ -10,18 +15,18 @@ defmodule Wotex.Binding.HTTP.Codec do
       {:ok, encoded} when byte_size(encoded) <= max_bytes ->
         {:ok, encoded}
 
-      {:ok, _encoded} ->
+      {:ok, _} ->
         {:error,
          Error.new(:request_body_too_large, :codec, "encoded JSON request exceeds byte limit", %{
            max_bytes: max_bytes
          })}
 
-      {:error, _error} ->
+      {:error, _} ->
         {:error, Error.new(:json_encode_failed, :codec, "interaction input is not a JSON value")}
     end
   end
 
-  def encode(_value, _max_bytes) do
+  def encode(_, _) do
     {:error, Error.new(:invalid_encode_limit, :codec, "JSON byte limit must be positive")}
   end
 
@@ -32,7 +37,7 @@ defmodule Wotex.Binding.HTTP.Codec do
              byte_size(body) <= max_bytes do
     case Jason.decode(body) do
       {:ok, value} -> {:ok, value}
-      {:error, _error} -> {:error, Error.new(:json_decode_failed, :codec, "body is not valid JSON")}
+      {:error, _} -> {:error, Error.new(:json_decode_failed, :codec, "body is not valid JSON")}
     end
   end
 
@@ -44,7 +49,7 @@ defmodule Wotex.Binding.HTTP.Codec do
      })}
   end
 
-  def decode(_body, _max_bytes) do
+  def decode(_, _) do
     {:error, Error.new(:invalid_decode_input, :codec, "JSON body or byte limit is invalid")}
   end
 end

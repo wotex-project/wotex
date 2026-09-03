@@ -247,10 +247,10 @@ defmodule Wotex.Binding.HTTP.FormTest do
 
   defp input_for(operation) when operation in [:writeproperty, :invokeaction], do: true
   defp input_for(operation) when operation in [:queryaction, :cancelaction], do: "/actions/value/1"
-  defp input_for(_operation), do: nil
+  defp input_for(_), do: nil
 
   defp stream_overrides(operation) when operation in [:observeproperty, :subscribeevent],
     do: %{"subprotocol" => "sse"}
 
-  defp stream_overrides(_operation), do: %{}
+  defp stream_overrides(_), do: %{}
 end

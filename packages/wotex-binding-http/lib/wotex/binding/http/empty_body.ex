@@ -1,7 +1,12 @@
 defmodule Wotex.Binding.HTTP.EmptyBody do
-  @moduledoc "Explicit marker for an interaction with no HTTP message body."
+  @moduledoc """
+  Marks an interaction that deliberately has no HTTP message body.
 
-  @opaque t :: %__MODULE__{}
+  The marker keeps absence distinct from Elixir `nil`, which is the valid JSON
+  value `null` when used as an Action input.
+  """
+
+  @type t :: %__MODULE__{}
   defstruct []
 
   @doc "Returns the immutable empty-body marker."
