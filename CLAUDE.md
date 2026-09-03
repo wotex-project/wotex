@@ -29,3 +29,14 @@ this repository to import their product models or redefine the standard terms.
 
 Run `mix check` and the repository boundary scan before a local commit. Never
 push unless a human explicitly requests it.
++
+
+## Git authority
+
+Automated agents must never configure, add, change, or remove a Git remote and
+must never run `git push` or any equivalent publication command. Only the human
+owner publishes repository history.
+
+Every local commit must use the repository-configured human owner identity from
+`git config user.name` and `git config user.email`. Never substitute an agent,
+tool, bot, or shared contributor identity.
