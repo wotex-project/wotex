@@ -1,46 +1,100 @@
-name: ci
+name: Continuous Integration
 
 on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  MIX_ENV: test
+  WOTEX_PATH_DEPS: "1"
+
 jobs:
-  verify:
+  compatibility:
+    name: Compatibility (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: wotex-nx
-    env:
-      MIX_ENV: test
-      WOTEX_PATH_DEPS: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: "1.18"
+            otp: "27"
+          - elixir: "1.20"
+            otp: "29"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           path: wotex-nx
-      - uses: actions/checkout@v5
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex
-          ref: 3676e71ed5b3b15e002bf4a05cc1b856a75dd8d9
+          ref: f2572ada87920f6e0949fbb02b7f37081538d543
           path: wotex
-      - uses: erlef/setup-beam@v1
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
-          otp-version: "28.5"
-          elixir-version: "1.19.5"
-      - uses: actions/cache@v4
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             wotex-nx/deps
             wotex-nx/_build
-          key: ${{ runner.os }}-otp-28.5-elixir-1.19-${{ hashFiles('wotex-nx/mix.lock') }}
-      - run: mix local.hex --force
-      - run: mix local.rebar --force
-      - run: mix deps.get --only test
-      - run: mix check
-      - run: >-
-          mix run --no-start -e
-          'unless Application.spec(:wotex_nx, :mod) in [nil, [], :undefined], do: System.halt(1)'
+          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('wotex-nx/mix.lock') }}
+      - name: Install dependencies
+        working-directory: wotex-nx
+        run: mix deps.get
+      - name: Compile without warnings
+        working-directory: wotex-nx
+        run: mix compile --warnings-as-errors
+      - name: Run tests
+        working-directory: wotex-nx
+        run: mix test
+
+  quality:
+    name: Complete quality gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          path: wotex-nx
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex
+          ref: f2572ada87920f6e0949fbb02b7f37081538d543
+          path: wotex
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: "1.20"
+          otp-version: "29"
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            wotex-nx/deps
+            wotex-nx/_build
+            wotex-nx/priv/plts
+          key: quality-${{ runner.os }}-29-1.20-${{ hashFiles('wotex-nx/mix.lock') }}
+      - name: Run complete gate
+        working-directory: wotex-nx
+        run: mix check --no-retry
+      - name: Generate coverage report
+        working-directory: wotex-nx
+        run: mix coveralls.lcov
+      - name: Upload coverage
+        uses: codecov/codecov-action@e53489f4d376d79066609109e7a95a29eb3740b1 # v7.0.0
+        with:
+          disable_search: true
+          fail_ci_if_error: true
+          files: wotex-nx/cover/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}

@@ -1,8 +1,15 @@
 defmodule Wotex.Nx.Row do
-  @moduledoc "Immutable temporal row selected for numerical encoding."
+  @moduledoc """
+  A timestamped row keyed by accepted feature names.
+
+  Each entry contains either the selected `Wotex.Nx.Observation` or `nil` so
+  the encoder can apply the feature's explicit missing-value policy. The row
+  also records source observation identifiers as provenance.
+  """
 
   alias Wotex.Nx.{Error, Observation}
 
+  @typedoc "A timestamp, feature-keyed observations, and their source identifiers."
   @opaque t :: %__MODULE__{
             timestamp: integer(),
             observations: %{String.t() => Observation.t() | nil},
@@ -12,13 +19,18 @@ defmodule Wotex.Nx.Row do
   @enforce_keys [:timestamp, :observations, :provenance]
   defstruct @enforce_keys
 
-  @doc "Builds a row with feature-name keyed observations."
+  @doc """
+  Builds a row from an integer timestamp and feature-name keyed observations.
+
+  Values must be `Wotex.Nx.Observation` structs or `nil`. The constructor
+  derives the provenance map from observation IDs and rejects all other values.
+  """
   @spec new(integer(), map()) :: {:ok, t()} | {:error, Error.t()}
   def new(timestamp, observations) when is_integer(timestamp) and is_map(observations) do
     if Enum.all?(observations, fn
          {name, %Observation{}} when is_binary(name) -> true
          {name, nil} when is_binary(name) -> true
-         _entry -> false
+         _ -> false
        end) do
       provenance =
         Map.new(observations, fn
@@ -37,7 +49,7 @@ defmodule Wotex.Nx.Row do
     end
   end
 
-  def new(_timestamp, _observations),
+  def new(_, _),
     do:
       {:error,
        Error.new(

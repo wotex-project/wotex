@@ -1,6 +1,13 @@
 defmodule Wotex.Nx.Prediction do
-  @moduledoc "Inert numerical prediction for a Property or Event affordance."
+  @moduledoc """
+  An inert prediction associated with a Property or Event affordance.
 
+  `produced_at` and `target_at` are caller-supplied integer time coordinates;
+  the library does not read a clock or interpret their unit. A prediction is
+  advisory data until the consumer validates and admits it.
+  """
+
+  @typedoc "A timestamped numerical prediction that has no canonical-state authority."
   @opaque t :: %__MODULE__{
             id: String.t(),
             thing_id: String.t(),

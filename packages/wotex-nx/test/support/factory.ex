@@ -4,11 +4,13 @@ defmodule Wotex.Nx.TestFactory do
   alias Wotex.DataSchema
   alias Wotex.Nx.{Feature, Observation, Row, Schema}
 
+  @spec data_schema(map()) :: DataSchema.t()
   def data_schema(map \\ %{"type" => "number", "unit" => "Cel"}) do
     {:ok, schema} = DataSchema.new(map)
     schema
   end
 
+  @spec feature(keyword()) :: Feature.t()
   def feature(overrides \\ []) do
     defaults = [
       name: "temperature",
@@ -22,6 +24,7 @@ defmodule Wotex.Nx.TestFactory do
     feature
   end
 
+  @spec observation(keyword()) :: Observation.t()
   def observation(overrides \\ []) do
     defaults = [
       id: "observation-1",
@@ -37,11 +40,13 @@ defmodule Wotex.Nx.TestFactory do
     observation
   end
 
+  @spec schema([Feature.t()], keyword()) :: Schema.t()
   def schema(features \\ [feature()], overrides \\ []) do
     {:ok, schema} = Schema.new(Keyword.merge([features: features], overrides))
     schema
   end
 
+  @spec row(integer(), %{optional(String.t()) => Observation.t() | nil}) :: Row.t()
   def row(timestamp, observations) do
     {:ok, row} = Row.new(timestamp, observations)
     row

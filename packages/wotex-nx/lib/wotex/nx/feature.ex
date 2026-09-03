@@ -1,11 +1,19 @@
 defmodule Wotex.Nx.Feature do
-  @moduledoc "Immutable numerical feature derived from a W3C WoT DataSchema."
+  @moduledoc """
+  Defines one ordered numerical feature derived from a Wotex DataSchema.
+
+  A feature binds a Thing affordance to an exact Nx shape and dtype together
+  with unit, quality, missing-value, normalization, and non-finite policies.
+  Construction rejects ambiguous or unsafe combinations before any observation
+  can reach tensor allocation.
+  """
 
   alias Wotex.DataSchema
   alias Wotex.Nx.{Error, NumericalSchema, Observation}
 
   @normalizations [:none]
 
+  @typedoc "An affordance-bound numerical feature with explicit conversion and quality policy."
   @opaque t :: %__MODULE__{
             name: String.t(),
             thing_id: String.t(),
@@ -37,7 +45,14 @@ defmodule Wotex.Nx.Feature do
   ]
   defstruct @enforce_keys
 
-  @doc "Builds a feature from an exact DataSchema and explicit numerical policy."
+  @doc """
+  Builds a feature from an exact DataSchema and explicit numerical policy.
+
+  Required options identify the feature, Thing, affordance type and name, and
+  DataSchema. Optional shape and dtype must remain compatible with that schema.
+  Unit, accepted quality, missing-value, normalization, and non-finite policies
+  are validated and stored rather than inferred while encoding.
+  """
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
     data_schema = Keyword.get(opts, :data_schema)
@@ -85,7 +100,7 @@ defmodule Wotex.Nx.Feature do
       {:error, %Error{} = error} ->
         {:error, error}
 
-      _invalid ->
+      _ ->
         {:error,
          Error.new(
            :data_schema_required,
@@ -95,18 +110,18 @@ defmodule Wotex.Nx.Feature do
     end
   end
 
-  def new(_opts) do
+  def new(_) do
     {:error,
      Error.new(:invalid_feature_options, :construction, "feature options must be a keyword list")}
   end
 
-  @doc "Returns the flattened number of numerical elements in the feature."
+  @doc "Returns the flattened numerical width used for pre-allocation limits."
   @spec width(t()) :: pos_integer()
   def width(%__MODULE__{shape: shape}), do: NumericalSchema.width(shape)
 
   defp validate_shape(shape, shape) when is_tuple(shape), do: :ok
 
-  defp validate_shape(_shape, _inferred) do
+  defp validate_shape(_, _) do
     {:error,
      Error.new(
        :shape_schema_mismatch,
@@ -151,7 +166,7 @@ defmodule Wotex.Nx.Feature do
   defp missing_policy({:fill, value}) when is_number(value) or is_boolean(value),
     do: {:ok, {:fill, value}}
 
-  defp missing_policy(_missing),
+  defp missing_policy(_),
     do:
       {:error,
        Error.new(
@@ -170,7 +185,7 @@ defmodule Wotex.Nx.Feature do
        when is_number(minimum) and is_number(maximum) and maximum > minimum,
        do: {:ok, {:min_max, minimum, maximum}}
 
-  defp normalization(_value),
+  defp normalization(_),
     do:
       {:error,
        Error.new(:invalid_normalization, :construction, "normalization parameters are invalid")}
@@ -178,14 +193,14 @@ defmodule Wotex.Nx.Feature do
   defp unit(nil), do: {:ok, nil}
   defp unit(value) when is_binary(value) and byte_size(value) > 0, do: {:ok, value}
 
-  defp unit(_value),
+  defp unit(_),
     do:
       {:error,
        Error.new(:invalid_unit, :construction, "feature unit must be nil or a non-empty string")}
 
   defp boolean_policy(value) when is_boolean(value), do: {:ok, value}
 
-  defp boolean_policy(_value) do
+  defp boolean_policy(_) do
     {:error,
      Error.new(
        :invalid_finite_policy,

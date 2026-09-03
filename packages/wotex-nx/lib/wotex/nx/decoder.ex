@@ -1,5 +1,12 @@
 defmodule Wotex.Nx.Decoder do
-  @moduledoc "Validates one numerical output and returns an inert typed value."
+  @moduledoc """
+  Validates one numerical tensor against an explicit output contract.
+
+  Decoding checks vectorization, shape, dtype, DataSchema value constraints,
+  output-specific bounds, and required caller context before returning an
+  observation, prediction, anomaly, or Action proposal. Every result is inert:
+  this module neither admits canonical state nor invokes an Action.
+  """
 
   alias Nx, as: Numerical
   alias Wotex.DataSchema
@@ -14,7 +21,13 @@ defmodule Wotex.Nx.Decoder do
     Prediction
   }
 
-  @doc "Decodes a tensor without admitting state or invoking a Thing Action."
+  @doc """
+  Decodes a tensor without admitting state or invoking a Thing Action.
+
+  All output kinds require caller-supplied `:id`. Their output schema determines
+  the additional required timing and identity options. Invalid tensors or
+  options return `Wotex.Nx.Error`; expected failures do not raise.
+  """
   @spec decode(Nx.Tensor.t(), OutputSchema.t(), keyword()) ::
           {:ok, Observation.t() | Prediction.t() | Anomaly.t() | ActionProposal.t()}
           | {:error, Error.t()}
@@ -25,12 +38,11 @@ defmodule Wotex.Nx.Decoder do
     with :ok <- tensor_contract(tensor, schema),
          {:ok, value} <- tensor_value(tensor, DataSchema.to_map(schema.data_schema)),
          :ok <- validate_value(value, schema),
-         {:ok, common} <- common_options(opts, schema.metadata),
-         {:ok, output} <- build(schema, value, common, opts) do
-      {:ok, output}
+         {:ok, common} <- common_options(opts, schema.metadata) do
+      build(schema, value, common, opts)
     end
   rescue
-    _error in [ArgumentError, RuntimeError, FunctionClauseError] ->
+    _ in [ArgumentError, RuntimeError, FunctionClauseError] ->
       {:error,
        Error.new(
          :tensor_read_failed,
@@ -39,7 +51,7 @@ defmodule Wotex.Nx.Decoder do
        )}
   end
 
-  def decode(_tensor, _schema, _opts) do
+  def decode(_, _, _) do
     {:error,
      Error.new(
        :invalid_decoder_input,
@@ -95,7 +107,7 @@ defmodule Wotex.Nx.Decoder do
   defp restore_schema_value(0, %{"type" => "boolean"}), do: {:ok, false}
   defp restore_schema_value(1, %{"type" => "boolean"}), do: {:ok, true}
 
-  defp restore_schema_value(_value, %{"type" => "boolean"}) do
+  defp restore_schema_value(_, %{"type" => "boolean"}) do
     {:error,
      Error.new(
        :invalid_boolean_encoding,
@@ -106,19 +118,21 @@ defmodule Wotex.Nx.Decoder do
 
   defp restore_schema_value(values, %{"type" => "array", "items" => items})
        when is_list(values) do
-    Enum.reduce_while(values, {:ok, []}, fn value, {:ok, decoded} ->
-      case restore_schema_value(value, items) do
-        {:ok, restored} -> {:cont, {:ok, [restored | decoded]}}
-        {:error, error} -> {:halt, {:error, error}}
-      end
-    end)
-    |> case do
+    result =
+      Enum.reduce_while(values, {:ok, []}, fn value, {:ok, decoded} ->
+        case restore_schema_value(value, items) do
+          {:ok, restored} -> {:cont, {:ok, [restored | decoded]}}
+          {:error, error} -> {:halt, {:error, error}}
+        end
+      end)
+
+    case result do
       {:ok, reversed} -> {:ok, Enum.reverse(reversed)}
       {:error, error} -> {:error, error}
     end
   end
 
-  defp restore_schema_value(value, _data_schema), do: {:ok, value}
+  defp restore_schema_value(value, _), do: {:ok, value}
 
   defp validate_value(value, schema) do
     case DataSchemaValidator.validate(

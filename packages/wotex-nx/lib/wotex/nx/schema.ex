@@ -1,8 +1,15 @@
 defmodule Wotex.Nx.Schema do
-  @moduledoc "Immutable ordered feature schema and allocation limits."
+  @moduledoc """
+  The ordered feature contract and allocation limits for numerical encoding.
+
+  Feature order is authoritative: it determines tuple positions, masks, and
+  quality-vector positions in every encoded row. Limits are validated before
+  tensor allocation so untrusted schemas cannot create unbounded work.
+  """
 
   alias Wotex.Nx.{Error, Feature}
 
+  @typedoc "An ordered feature list with row, feature, and flattened-width limits."
   @opaque t :: %__MODULE__{
             features: [Feature.t()],
             max_rows: pos_integer(),
@@ -14,7 +21,13 @@ defmodule Wotex.Nx.Schema do
   @enforce_keys [:features, :max_rows, :max_features, :max_width, :batch_key]
   defstruct @enforce_keys
 
-  @doc "Builds a bounded ordered feature schema."
+  @doc """
+  Builds a bounded, ordered numerical schema.
+
+  Requires a non-empty unique feature list. `:max_rows`, `:max_features`, and
+  `:max_width` default to conservative positive limits and are checked before
+  encoding. `:batch_key` labels the resulting lazy batch.
+  """
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
     features = Keyword.get(opts, :features)
@@ -37,18 +50,18 @@ defmodule Wotex.Nx.Schema do
     end
   end
 
-  def new(_opts),
+  def new(_),
     do:
       {:error,
        Error.new(:invalid_schema_options, :construction, "schema options must be a keyword list")}
 
-  @doc "Returns features in the authoritative numerical order."
+  @doc "Returns features in the authoritative tuple, mask, and quality-vector order."
   @spec features(t()) :: [Feature.t()]
   def features(%__MODULE__{features: features}), do: features
 
-  defp positive_limit(value, _name) when is_integer(value) and value > 0, do: :ok
+  defp positive_limit(value, _) when is_integer(value) and value > 0, do: :ok
 
-  defp positive_limit(_value, name),
+  defp positive_limit(_, name),
     do:
       {:error,
        Error.new(:invalid_limit, :construction, "schema limit must be positive", %{limit: name})}
@@ -81,7 +94,7 @@ defmodule Wotex.Nx.Schema do
     end
   end
 
-  defp validate_features(_features, _max_features, _max_width),
+  defp validate_features(_, _, _),
     do:
       {:error, Error.new(:invalid_features, :construction, "schema requires at least one Feature")}
 

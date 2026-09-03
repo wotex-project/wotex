@@ -1,5 +1,12 @@
 defmodule Wotex.Nx.Encoder do
-  @moduledoc "Deterministic conversion from rows to tensors, masks, quality, and `Nx.Batch`."
+  @moduledoc """
+  Converts accepted temporal rows into a deterministic lazy `Nx.Batch`.
+
+  Encoding follows schema order and emits a tuple of value tensors, mask
+  tensors, and a quality vector for each row. It validates observation identity,
+  DataSchema values, units, quality, missing policy, shape, dtype, and limits
+  before construction. It does not select a backend or execute a model.
+  """
 
   alias Nx, as: Numerical
   alias Wotex.DataSchema
@@ -14,7 +21,13 @@ defmodule Wotex.Nx.Encoder do
     Schema
   }
 
-  @doc "Encodes rows according to an accepted schema."
+  @doc """
+  Encodes non-empty rows according to an accepted `Wotex.Nx.Schema`.
+
+  Pass `:unit_converter` as `{module, config}` only when source and target units
+  differ. The result includes the lazy batch and enough order, timestamp, and
+  provenance information to interpret it deterministically.
+  """
   @spec encode([Row.t()], Schema.t(), keyword()) :: {:ok, Encoded.t()} | {:error, Error.t()}
   def encode(rows, schema, opts \\ [])
 
@@ -38,7 +51,7 @@ defmodule Wotex.Nx.Encoder do
     end
   end
 
-  def encode(_rows, _schema, _opts),
+  def encode(_, _, _),
     do: {:error, Error.new(:invalid_encoder_input, :encoding, "encoder input is invalid")}
 
   defp encode_rows(rows, schema, opts) do
@@ -57,47 +70,65 @@ defmodule Wotex.Nx.Encoder do
   end
 
   defp map_rows(rows, features, opts) do
-    Enum.reduce_while(rows, {:ok, []}, fn row, {:ok, encoded_rows} ->
-      case encode_row(row, features, opts) do
-        {:ok, container} -> {:cont, {:ok, [container | encoded_rows]}}
-        {:error, error} -> {:halt, {:error, error}}
-      end
-    end)
-    |> case do
+    result =
+      Enum.reduce_while(rows, {:ok, []}, fn row, {:ok, encoded_rows} ->
+        case encode_row(row, features, opts) do
+          {:ok, container} -> {:cont, {:ok, [container | encoded_rows]}}
+          {:error, error} -> {:halt, {:error, error}}
+        end
+      end)
+
+    case result do
       {:ok, reversed} -> {:ok, Enum.reverse(reversed)}
       {:error, error} -> {:error, error}
     end
   end
 
   defp encode_row(row, features, opts) do
-    Enum.reduce_while(features, {:ok, [], [], []}, fn feature, {:ok, values, masks, qualities} ->
-      observation = Map.get(row.observations, feature.name)
+    result =
+      Enum.reduce_while(
+        features,
+        {:ok, [], [], []},
+        &encode_feature_for_row(&1, &2, row, opts)
+      )
 
-      case encode_feature(observation, feature, row.timestamp, opts) do
-        {:ok, value, mask, quality} ->
-          {:cont, {:ok, [value | values], [mask | masks], [quality | qualities]}}
-
-        {:error, error} ->
-          {:halt, {:error, error}}
-      end
-    end)
-    |> case do
+    case result do
       {:ok, values, masks, qualities} ->
         quality_tensor =
           qualities
           |> Enum.reverse()
           |> Numerical.tensor(type: :u8, names: [:feature])
 
-        {:ok,
-         {values |> Enum.reverse() |> List.to_tuple(), masks |> Enum.reverse() |> List.to_tuple(),
-          quality_tensor}}
+        value_tuple =
+          values
+          |> Enum.reverse()
+          |> List.to_tuple()
+
+        mask_tuple =
+          masks
+          |> Enum.reverse()
+          |> List.to_tuple()
+
+        {:ok, {value_tuple, mask_tuple, quality_tensor}}
 
       {:error, error} ->
         {:error, error}
     end
   end
 
-  defp encode_feature(nil, feature, timestamp, _opts),
+  defp encode_feature_for_row(feature, {:ok, values, masks, qualities}, row, opts) do
+    observation = Map.get(row.observations, feature.name)
+
+    case encode_feature(observation, feature, row.timestamp, opts) do
+      {:ok, value, mask, quality} ->
+        {:cont, {:ok, [value | values], [mask | masks], [quality | qualities]}}
+
+      {:error, error} ->
+        {:halt, {:error, error}}
+    end
+  end
+
+  defp encode_feature(nil, feature, timestamp, _),
     do: encode_missing(feature, timestamp, :missing)
 
   defp encode_feature(%Observation{} = observation, feature, timestamp, opts) do
@@ -148,7 +179,7 @@ defmodule Wotex.Nx.Encoder do
      )}
   end
 
-  defp encode_missing(%Feature{missing: {:fill, fill}} = feature, _timestamp, quality) do
+  defp encode_missing(%Feature{missing: {:fill, fill}} = feature, _, quality) do
     value = broadcast_value(fill, feature.shape)
 
     with :ok <-
@@ -163,52 +194,18 @@ defmodule Wotex.Nx.Encoder do
     end
   end
 
-  defp convert_unit(%Observation{unit: unit, value: value}, %Feature{unit: unit}, _opts),
+  defp convert_unit(%Observation{unit: unit, value: value}, %Feature{unit: unit}, _),
     do: {:ok, value}
 
-  defp convert_unit(%Observation{unit: nil, value: value}, %Feature{unit: nil}, _opts),
+  defp convert_unit(%Observation{unit: nil, value: value}, %Feature{unit: nil}, _),
     do: {:ok, value}
 
   defp convert_unit(%Observation{} = observation, %Feature{} = feature, opts) do
     case Keyword.get(opts, :unit_converter) do
       {module, config} when is_atom(module) and not is_nil(module) ->
-        if is_binary(observation.unit) and is_binary(feature.unit) and
-             Code.ensure_loaded?(module) and function_exported?(module, :convert, 5) do
-          case module.convert(
-                 observation.value,
-                 observation.unit,
-                 feature.unit,
-                 feature.data_schema,
-                 config
-               ) do
-            {:ok, converted} ->
-              {:ok, converted}
+        convert_with_port(observation, feature, module, config)
 
-            {:error, _external} ->
-              {:error,
-               Error.new(:unit_conversion_failed, :unit, "unit conversion failed", %{
-                 feature: feature.name
-               })}
-
-            _invalid ->
-              {:error,
-               Error.new(
-                 :invalid_unit_converter_return,
-                 :unit,
-                 "unit converter returned an invalid value",
-                 %{
-                   feature: feature.name
-                 }
-               )}
-          end
-        else
-          {:error,
-           Error.new(:invalid_unit_converter, :unit, "unit converter port is invalid", %{
-             feature: feature.name
-           })}
-        end
-
-      _missing ->
+      _ ->
         {:error,
          Error.new(:unit_conversion_required, :unit, "observation and feature units differ", %{
            feature: feature.name,
@@ -216,6 +213,50 @@ defmodule Wotex.Nx.Encoder do
            feature_unit: feature.unit
          })}
     end
+  end
+
+  defp convert_with_port(observation, feature, module, config) do
+    if valid_unit_converter?(observation, feature, module) do
+      result =
+        module.convert(
+          observation.value,
+          observation.unit,
+          feature.unit,
+          feature.data_schema,
+          config
+        )
+
+      normalize_conversion_result(result, feature)
+    else
+      {:error,
+       Error.new(:invalid_unit_converter, :unit, "unit converter port is invalid", %{
+         feature: feature.name
+       })}
+    end
+  end
+
+  defp valid_unit_converter?(observation, feature, module) do
+    is_binary(observation.unit) and is_binary(feature.unit) and Code.ensure_loaded?(module) and
+      function_exported?(module, :convert, 5)
+  end
+
+  defp normalize_conversion_result({:ok, converted}, _), do: {:ok, converted}
+
+  defp normalize_conversion_result({:error, _}, feature) do
+    {:error,
+     Error.new(:unit_conversion_failed, :unit, "unit conversion failed", %{
+       feature: feature.name
+     })}
+  end
+
+  defp normalize_conversion_result(_, feature) do
+    {:error,
+     Error.new(
+       :invalid_unit_converter_return,
+       :unit,
+       "unit converter returned an invalid value",
+       %{feature: feature.name}
+     )}
   end
 
   defp normalize(value, :none), do: value
@@ -232,7 +273,8 @@ defmodule Wotex.Nx.Encoder do
   defp map_numbers(value, function) when is_number(value), do: function.(value)
 
   defp tensor(value, feature) do
-    numerical = value |> booleans_to_numbers() |> Numerical.tensor(type: feature.dtype)
+    converted = booleans_to_numbers(value)
+    numerical = Numerical.tensor(converted, type: feature.dtype)
 
     if Numerical.shape(numerical) == feature.shape do
       {:ok, numerical}
@@ -245,7 +287,7 @@ defmodule Wotex.Nx.Encoder do
        })}
     end
   rescue
-    _error in [ArgumentError, FunctionClauseError] ->
+    _ in [ArgumentError, FunctionClauseError] ->
       {:error,
        Error.new(:tensor_construction_failed, :encoding, "tensor construction failed", %{
          feature: feature.name
@@ -272,10 +314,11 @@ defmodule Wotex.Nx.Encoder do
   defp quality_code(quality), do: Map.fetch!(Wotex.Nx.quality_codes(), quality)
 
   defp build_batch(containers, batch_key) do
-    batch = containers |> Numerical.Batch.stack() |> Numerical.Batch.key(batch_key)
+    stacked = Numerical.Batch.stack(containers)
+    batch = Numerical.Batch.key(stacked, batch_key)
     {:ok, batch}
   rescue
-    _error in [ArgumentError, FunctionClauseError] ->
+    _ in [ArgumentError, FunctionClauseError] ->
       {:error, Error.new(:batch_construction_failed, :encoding, "Nx.Batch construction failed")}
   end
 end

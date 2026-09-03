@@ -1,8 +1,23 @@
 defmodule Wotex.Nx.UnitConverter do
-  @moduledoc "Port for explicit, consumer-supplied unit conversion."
+  @moduledoc """
+  Consumer-supplied port for explicit unit conversion.
+
+  Wotex Nx never guesses conversion rules or depends on a unit library. When
+  an observation unit differs from the accepted feature unit, the encoder calls
+  this port with the value, source unit, target unit, exact DataSchema, and
+  consumer configuration. The returned value is validated again before tensor
+  construction.
+  """
 
   alias Wotex.DataSchema
 
+  @doc """
+  Converts a value between two explicitly named units.
+
+  Return `{:ok, value}` for a converted DataSchema-compatible value or
+  `{:error, reason}` when the conversion is unavailable. Do not perform Thing
+  Actions or mutate canonical state from this callback.
+  """
   @callback convert(term(), String.t(), String.t(), DataSchema.t(), term()) ::
               {:ok, term()} | {:error, term()}
 end

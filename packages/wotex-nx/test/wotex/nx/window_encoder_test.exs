@@ -3,9 +3,7 @@ defmodule Wotex.Nx.WindowEncoderTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Nx.{Encoded, Encoder, Error, Window}
-  alias Wotex.Nx.TestFactory
-  alias Wotex.Nx.TestUnitConverter
+  alias Wotex.Nx.{Encoded, Encoder, Error, TestFactory, TestUnitConverter, Window}
 
   test "window constructors require caller-supplied bounded temporal policy" do
     assert {:ok, window} =
@@ -209,7 +207,7 @@ defmodule Wotex.Nx.WindowEncoderTest do
     assert {:ok, encoded} =
              Encoder.encode([row], schema, unit_converter: {TestUnitConverter, :valid})
 
-    {{value}, {_mask}, _quality} = Nx.Defn.jit_apply(&Function.identity/1, [encoded.batch])
+    {{value}, {_}, _} = Nx.Defn.jit_apply(&Function.identity/1, [encoded.batch])
     assert_in_delta hd(Nx.to_flat_list(value)), 20.0, 0.0001
 
     assert {:error, %Error{code: :unit_conversion_failed}} =
@@ -358,7 +356,7 @@ defmodule Wotex.Nx.WindowEncoderTest do
     finite_row =
       TestFactory.row(100, %{"temperature" => TestFactory.observation(value: :nan)})
 
-    assert {:ok, _encoded} = Encoder.encode([finite_row], TestFactory.schema([finite_optional]))
+    assert {:ok, _} = Encoder.encode([finite_row], TestFactory.schema([finite_optional]))
   end
 
   defp assert_error(code, observation, schema) do

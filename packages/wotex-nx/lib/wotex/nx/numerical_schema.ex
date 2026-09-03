@@ -21,7 +21,7 @@ defmodule Wotex.Nx.NumericalSchema do
     end
   end
 
-  def infer(_map) do
+  def infer(_) do
     {:error,
      Error.new(
        :unsupported_data_schema,
@@ -35,11 +35,11 @@ defmodule Wotex.Nx.NumericalSchema do
     template = Numerical.template(shape, dtype)
     {:ok, Numerical.type(template)}
   rescue
-    _error in [ArgumentError, FunctionClauseError] ->
+    _ in [ArgumentError, FunctionClauseError] ->
       {:error, Error.new(:invalid_dtype, :construction, "numerical dtype is invalid")}
   end
 
-  def normalize_dtype(_dtype, _shape) do
+  def normalize_dtype(_, _) do
     {:error, Error.new(:invalid_shape, :construction, "numerical shape must be a tuple")}
   end
 
@@ -47,16 +47,16 @@ defmodule Wotex.Nx.NumericalSchema do
   def validate_dtype(%{"type" => "array", "items" => items}, dtype) when is_map(items),
     do: validate_dtype(items, dtype)
 
-  def validate_dtype(%{"type" => "number"}, {class, _bits}) when class in [:f, :bf],
+  def validate_dtype(%{"type" => "number"}, {class, _}) when class in [:f, :bf],
     do: :ok
 
-  def validate_dtype(%{"type" => "integer"}, {class, _bits}) when class in [:s, :u],
+  def validate_dtype(%{"type" => "integer"}, {class, _}) when class in [:s, :u],
     do: :ok
 
-  def validate_dtype(%{"type" => "boolean"}, {class, _bits}) when class in [:s, :u],
+  def validate_dtype(%{"type" => "boolean"}, {class, _}) when class in [:s, :u],
     do: :ok
 
-  def validate_dtype(_schema, _dtype) do
+  def validate_dtype(_, _) do
     {:error,
      Error.new(
        :dtype_schema_mismatch,
@@ -67,12 +67,12 @@ defmodule Wotex.Nx.NumericalSchema do
 
   @spec validate_normalization(:none | tuple(), Nx.Type.t()) ::
           :ok | {:error, Error.t()}
-  def validate_normalization(:none, _dtype), do: :ok
+  def validate_normalization(:none, _), do: :ok
 
-  def validate_normalization(_normalization, {class, _bits}) when class in [:f, :bf],
+  def validate_normalization(_, {class, _}) when class in [:f, :bf],
     do: :ok
 
-  def validate_normalization(_normalization, _dtype) do
+  def validate_normalization(_, _) do
     {:error,
      Error.new(
        :normalization_dtype_mismatch,
@@ -83,5 +83,12 @@ defmodule Wotex.Nx.NumericalSchema do
 
   @spec width(tuple()) :: pos_integer()
   def width({}), do: 1
-  def width(shape), do: shape |> Tuple.to_list() |> Enum.product()
+
+  def width(shape) do
+    shape
+    |> Tuple.to_list()
+    |> Enum.reduce(1, fn dimension, width ->
+      dimension * width
+    end)
+  end
 end

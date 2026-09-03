@@ -3,10 +3,10 @@ defmodule Wotex.Nx.TestUnitConverter do
 
   @behaviour Wotex.Nx.UnitConverter
 
-  @impl true
-  def convert(value, "degF", "Cel", _schema, :valid) when is_number(value),
+  @impl Wotex.Nx.UnitConverter
+  def convert(value, "degF", "Cel", _, :valid) when is_number(value),
     do: {:ok, (value - 32) * 5 / 9}
 
-  def convert(_value, _from, _to, _schema, :error), do: {:error, :unsupported}
-  def convert(_value, _from, _to, _schema, :invalid), do: :invalid
+  def convert(_, _, _, _, :error), do: {:error, :unsupported}
+  def convert(_, _, _, _, :invalid), do: :invalid
 end

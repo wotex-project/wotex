@@ -57,7 +57,7 @@ authority/application-callback checks.
 
 ## Compatibility and stability
 
-The `0.1.0-dev` line may refine public names before its first release. Once
-released, changes to batch layout, quality codes, tie-breaking, ports, or inert
-output fields are compatibility changes and require explicit release notes and
-tests. W3C and Nx claims remain pinned in the provenance document.
+Version `0.1.0` defines the initial public contract. Changes to batch layout,
+quality codes, tie-breaking, ports, or inert output fields are compatibility
+changes and require explicit release notes and tests. W3C and Nx claims remain
+pinned in the provenance document.

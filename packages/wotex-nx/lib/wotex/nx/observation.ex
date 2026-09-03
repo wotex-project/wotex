@@ -1,14 +1,21 @@
 defmodule Wotex.Nx.Observation do
   @moduledoc """
-  Immutable input or inert output observation.
+  An immutable input or inert output observation.
 
-  This extension value does not assert canonical Property state or Event truth.
+  The value binds a caller-defined identity and time coordinate to one Property
+  or Event affordance value, optional unit, quality, source, and metadata. It is
+  suitable for deterministic window selection and tensor encoding, but does not
+  assert canonical Property state or Event truth.
   """
 
   alias Wotex.Nx.Error
 
   @qualities [:good, :uncertain, :bad, :missing]
 
+  @typedoc "Quality carried by an accepted observation."
+  @type quality :: :good | :uncertain | :bad | :missing
+
+  @typedoc "An affordance-scoped value with caller-owned time, quality, and provenance."
   @opaque t :: %__MODULE__{
             id: String.t(),
             thing_id: String.t(),
@@ -17,7 +24,7 @@ defmodule Wotex.Nx.Observation do
             observed_at: integer(),
             value: term(),
             unit: String.t() | nil,
-            quality: atom(),
+            quality: quality(),
             source: String.t() | nil,
             metadata: map()
           }
@@ -36,7 +43,14 @@ defmodule Wotex.Nx.Observation do
   ]
   defstruct @enforce_keys
 
-  @doc "Builds a typed observation from caller-supplied identity and time."
+  @doc """
+  Builds an observation from caller-supplied identity, time, and value.
+
+  IDs and affordance names must be non-empty strings, the affordance type must
+  be `:property` or `:event`, and the time coordinate must be an integer. The
+  constructor validates metadata and quality but does not validate the value
+  against a numerical schema; that occurs during feature encoding.
+  """
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
     observation = %{
@@ -65,7 +79,7 @@ defmodule Wotex.Nx.Observation do
     end
   end
 
-  def new(_opts) do
+  def new(_) do
     {:error,
      Error.new(
        :invalid_observation_options,
@@ -74,13 +88,13 @@ defmodule Wotex.Nx.Observation do
      )}
   end
 
-  @doc "Returns the stable set of supported quality states."
-  @spec qualities() :: [atom()]
+  @doc "Returns the stable quality states accepted by observations and features."
+  @spec qualities() :: nonempty_list(quality())
   def qualities, do: @qualities
 
-  defp non_empty(value, _field) when is_binary(value) and byte_size(value) > 0, do: :ok
+  defp non_empty(value, _) when is_binary(value) and byte_size(value) > 0, do: :ok
 
-  defp non_empty(_value, field) do
+  defp non_empty(_, field) do
     {:error,
      Error.new(
        :invalid_observation_field,
@@ -92,7 +106,7 @@ defmodule Wotex.Nx.Observation do
 
   defp valid_type(type) when type in [:property, :event], do: :ok
 
-  defp valid_type(_type) do
+  defp valid_type(_) do
     {:error,
      Error.new(
        :invalid_affordance_type,
@@ -103,13 +117,13 @@ defmodule Wotex.Nx.Observation do
 
   defp valid_time(time) when is_integer(time), do: :ok
 
-  defp valid_time(_time),
+  defp valid_time(_),
     do: {:error, Error.new(:invalid_observed_at, :construction, "observed_at must be an integer")}
 
-  defp optional_string(nil, _field), do: :ok
-  defp optional_string(value, _field) when is_binary(value) and byte_size(value) > 0, do: :ok
+  defp optional_string(nil, _), do: :ok
+  defp optional_string(value, _) when is_binary(value) and byte_size(value) > 0, do: :ok
 
-  defp optional_string(_value, field) do
+  defp optional_string(_, field) do
     {:error,
      Error.new(
        :invalid_observation_field,
@@ -121,11 +135,11 @@ defmodule Wotex.Nx.Observation do
 
   defp valid_quality(quality) when quality in @qualities, do: :ok
 
-  defp valid_quality(_quality),
+  defp valid_quality(_),
     do: {:error, Error.new(:invalid_quality, :construction, "observation quality is unsupported")}
 
   defp valid_metadata(metadata) when is_map(metadata), do: :ok
 
-  defp valid_metadata(_metadata),
+  defp valid_metadata(_),
     do: {:error, Error.new(:invalid_metadata, :construction, "observation metadata must be a map")}
 end

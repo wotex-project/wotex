@@ -1,13 +1,24 @@
 defmodule Wotex.Nx.OutputSchema do
-  @moduledoc "Accepted schema for decoding one numerical output into an inert typed value."
+  @moduledoc """
+  Defines the only numerical output a decoder is allowed to accept.
+
+  The contract binds an output kind and Thing affordance to an exact DataSchema,
+  shape, dtype, maximum width, unit, finite-value policy, and metadata. Anomaly
+  outputs additionally preserve their threshold and comparison rule. This
+  removes model-specific guesswork from result interpretation.
+  """
 
   alias Wotex.DataSchema
   alias Wotex.Nx.{Error, NumericalSchema}
 
   @kinds [:observation, :prediction, :anomaly, :action_proposal]
 
+  @typedoc "Inert result kind produced by numerical decoding."
+  @type kind :: :observation | :prediction | :anomaly | :action_proposal
+
+  @typedoc "A bounded numerical output contract for one inert result kind."
   @opaque t :: %__MODULE__{
-            kind: :observation | :prediction | :anomaly | :action_proposal,
+            kind: kind(),
             thing_id: String.t(),
             affordance_type: :property | :event | :action,
             affordance_name: String.t(),
@@ -39,7 +50,13 @@ defmodule Wotex.Nx.OutputSchema do
   ]
   defstruct @enforce_keys
 
-  @doc "Builds an explicit numerical-output contract."
+  @doc """
+  Builds and validates an explicit numerical-output contract.
+
+  Required identity and kind options are checked against the DataSchema.
+  Shape and dtype must preserve its value category, maximum width is enforced
+  before allocation, and anomaly policy is accepted only for anomaly outputs.
+  """
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
     data_schema = Keyword.get(opts, :data_schema)
@@ -84,7 +101,7 @@ defmodule Wotex.Nx.OutputSchema do
       {:error, %Error{} = error} ->
         {:error, error}
 
-      _invalid ->
+      _ ->
         {:error,
          Error.new(
            :data_schema_required,
@@ -94,7 +111,7 @@ defmodule Wotex.Nx.OutputSchema do
     end
   end
 
-  def new(_opts) do
+  def new(_) do
     {:error,
      Error.new(
        :invalid_output_schema_options,
@@ -103,8 +120,8 @@ defmodule Wotex.Nx.OutputSchema do
      )}
   end
 
-  @doc "Returns the stable output kinds."
-  @spec kinds() :: [atom()]
+  @doc "Returns the stable inert output kinds accepted by the decoder."
+  @spec kinds() :: nonempty_list(kind())
   def kinds, do: @kinds
 
   defp identity(opts) do
@@ -138,11 +155,11 @@ defmodule Wotex.Nx.OutputSchema do
        when kind in [:observation, :prediction, :anomaly] and type in [:property, :event],
        do: true
 
-  defp valid_affordance?(_kind, _type), do: false
+  defp valid_affordance?(_, _), do: false
 
   defp exact_shape(shape, shape) when is_tuple(shape), do: :ok
 
-  defp exact_shape(_shape, _inferred) do
+  defp exact_shape(_, _) do
     {:error,
      Error.new(
        :shape_schema_mismatch,
@@ -154,7 +171,7 @@ defmodule Wotex.Nx.OutputSchema do
   defp kind_schema(:anomaly, %{"type" => type}, {}) when type in ["number", "integer"],
     do: :ok
 
-  defp kind_schema(:anomaly, _map, _shape) do
+  defp kind_schema(:anomaly, _, _) do
     {:error,
      Error.new(
        :invalid_anomaly_schema,
@@ -163,7 +180,7 @@ defmodule Wotex.Nx.OutputSchema do
      )}
   end
 
-  defp kind_schema(_kind, _map, _shape), do: :ok
+  defp kind_schema(_, _, _), do: :ok
 
   defp width(shape, max_width) when is_integer(max_width) and max_width > 0 do
     if NumericalSchema.width(shape) <= max_width do
@@ -179,7 +196,7 @@ defmodule Wotex.Nx.OutputSchema do
     end
   end
 
-  defp width(_shape, _max_width) do
+  defp width(_, _) do
     {:error,
      Error.new(
        :invalid_limit,
@@ -191,7 +208,7 @@ defmodule Wotex.Nx.OutputSchema do
   defp unit(nil), do: {:ok, nil}
   defp unit(value) when is_binary(value) and byte_size(value) > 0, do: {:ok, value}
 
-  defp unit(_value) do
+  defp unit(_) do
     {:error,
      Error.new(
        :invalid_unit,
@@ -201,7 +218,10 @@ defmodule Wotex.Nx.OutputSchema do
   end
 
   defp threshold(:anomaly, value, dtype) when is_number(value) do
-    converted = value |> Nx.tensor(type: dtype) |> Nx.to_number()
+    converted =
+      value
+      |> Nx.tensor(type: dtype)
+      |> Nx.to_number()
 
     if is_number(converted) do
       {:ok, converted}
@@ -209,11 +229,11 @@ defmodule Wotex.Nx.OutputSchema do
       invalid_threshold()
     end
   rescue
-    _error in [ArgumentError, RuntimeError, FunctionClauseError] ->
+    _ in [ArgumentError, RuntimeError, FunctionClauseError] ->
       invalid_threshold()
   end
 
-  defp threshold(:anomaly, _value, _dtype),
+  defp threshold(:anomaly, _, _),
     do:
       {:error,
        Error.new(
@@ -222,9 +242,9 @@ defmodule Wotex.Nx.OutputSchema do
          "anomaly output requires a numerical threshold"
        )}
 
-  defp threshold(_kind, nil, _dtype), do: {:ok, nil}
+  defp threshold(_, nil, _), do: {:ok, nil}
 
-  defp threshold(_kind, _value, _dtype),
+  defp threshold(_, _, _),
     do:
       {:error,
        Error.new(:unexpected_threshold, :construction, "threshold is valid only for anomaly output")}
@@ -235,7 +255,7 @@ defmodule Wotex.Nx.OutputSchema do
        when value in [:above, :at_or_above, :below, :at_or_below],
        do: {:ok, value}
 
-  defp anomaly_rule(:anomaly, _value) do
+  defp anomaly_rule(:anomaly, _) do
     {:error,
      Error.new(
        :invalid_anomaly_rule,
@@ -244,9 +264,9 @@ defmodule Wotex.Nx.OutputSchema do
      )}
   end
 
-  defp anomaly_rule(_kind, nil), do: {:ok, nil}
+  defp anomaly_rule(_, nil), do: {:ok, nil}
 
-  defp anomaly_rule(_kind, _value) do
+  defp anomaly_rule(_, _) do
     {:error,
      Error.new(
        :unexpected_anomaly_rule,
@@ -266,12 +286,12 @@ defmodule Wotex.Nx.OutputSchema do
 
   defp metadata(value) when is_map(value), do: {:ok, value}
 
-  defp metadata(_value),
+  defp metadata(_),
     do: {:error, Error.new(:invalid_metadata, :construction, "output metadata must be a map")}
 
   defp boolean_policy(value) when is_boolean(value), do: {:ok, value}
 
-  defp boolean_policy(_value) do
+  defp boolean_policy(_) do
     {:error,
      Error.new(
        :invalid_finite_policy,
@@ -289,7 +309,7 @@ defmodule Wotex.Nx.OutputSchema do
      )}
   end
 
-  defp finite_kind(_kind, _allow_non_finite?), do: :ok
+  defp finite_kind(_, _), do: :ok
 
   defp non_empty?(value), do: is_binary(value) and byte_size(value) > 0
 end

@@ -1,6 +1,13 @@
 defmodule Wotex.Nx.ActionProposal do
-  @moduledoc "Inert proposal for a consumer to evaluate before invoking a Thing Action."
+  @moduledoc """
+  An inert proposal derived from numerical output for a Thing Action.
 
+  A proposal deliberately carries no callback, authorization decision, or
+  execution state. The consumer validates it against current Thing state and
+  policy before choosing whether to invoke the named Action.
+  """
+
+  @typedoc "A caller-identified, timestamped Action proposal and its inert input value."
   @opaque t :: %__MODULE__{
             id: String.t(),
             thing_id: String.t(),
