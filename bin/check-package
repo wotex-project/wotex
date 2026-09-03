@@ -14,4 +14,16 @@ test -f "${package_root}/unpacked/priv/w3c/td-json-schema-validation-1.1.json"
 test ! -e "${package_root}/unpacked/CLAUDE.md"
 test ! -e "${package_root}/unpacked/.claude"
 
+cd "${package_root}/unpacked"
+MIX_ENV=prod mix deps.get
 MIX_ENV=prod mix compile --warnings-as-errors
+
+MIX_ENV=prod mix run --no-start -e '
+Application.load(:wotex)
+
+unless Application.spec(:wotex, :mod) in [nil, [], :undefined] do
+  raise "archive defines an application callback"
+end
+
+IO.puts("unpacked archive compiled without an application callback")
+'
