@@ -21,9 +21,11 @@ jobs:
       matrix:
         include:
           - elixir: "1.18"
-            otp: "27"
+            otp: "28"
           - elixir: "1.19"
             otp: "28"
+          - elixir: "1.20"
+            otp: "29"
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -51,21 +53,21 @@ jobs:
           persist-credentials: false
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
-          elixir-version: "1.19"
-          otp-version: "28"
+          elixir-version: "1.20"
+          otp-version: "29"
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             deps
             _build
             priv/plts
-          key: quality-${{ runner.os }}-1.19-28-${{ hashFiles('mix.lock') }}
+          key: quality-${{ runner.os }}-1.20-29-${{ hashFiles('mix.lock') }}
       - run: bin/check
       - run: mix coveralls.lcov
       - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: cover/lcov.info
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
   latest-dependencies:
     name: latest dependency compatibility
@@ -76,8 +78,8 @@ jobs:
           persist-credentials: false
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
-          elixir-version: "1.19"
-          otp-version: "28"
+          elixir-version: "1.20"
+          otp-version: "29"
       - run: mix deps.unlock --all
       - run: mix deps.get
       - run: mix compile --warnings-as-errors
