@@ -2,19 +2,36 @@ defmodule Wotex.Runtime.BindingProfile do
   @moduledoc """
   Immutable declaration of operations and URI schemes a binding can execute.
 
-  List position, not `id`, determines precedence during selection.
+  A profile is the consumer-neutral capability description used during Form
+  selection. It names the URI schemes, exact TD 1.1 operations, and media types
+  that one installed binding can handle. It contains no connection, credential,
+  or provider configuration.
+
+  List position, not `id`, determines precedence during selection. Scheme and
+  media-type matching is case-insensitive; media-type parameters are ignored.
+
+      {:ok, profile} =
+        Wotex.Runtime.BindingProfile.new(
+          id: :https,
+          schemes: ["https"],
+          operations: [:readproperty],
+          media_types: ["application/json"]
+        )
+
+      Wotex.Runtime.BindingProfile.supports_scheme?(profile, "HTTPS")
+      #=> true
   """
 
   alias Wotex.Runtime.Error
 
   @operations Wotex.Runtime.operations()
 
-  @opaque t :: %__MODULE__{
-            id: atom() | String.t(),
-            schemes: MapSet.t(String.t()),
-            operations: MapSet.t(atom()),
-            media_types: MapSet.t(String.t())
-          }
+  @type t :: %__MODULE__{
+          id: atom() | String.t(),
+          schemes: MapSet.t(String.t()),
+          operations: MapSet.t(atom()),
+          media_types: MapSet.t(String.t())
+        }
 
   @enforce_keys [:id, :schemes, :operations, :media_types]
   defstruct [:id, :schemes, :operations, :media_types]
@@ -87,7 +104,8 @@ defmodule Wotex.Runtime.BindingProfile do
 
   defp normalize_schemes(values) when is_list(values) and values != [] do
     if Enum.all?(values, &(is_binary(&1) and byte_size(String.trim(&1)) > 0)) do
-      {:ok, values |> Enum.map(&String.downcase/1) |> MapSet.new()}
+      normalized = Enum.map(values, &String.downcase/1)
+      {:ok, MapSet.new(normalized)}
     else
       {:error,
        Error.new(
@@ -141,7 +159,8 @@ defmodule Wotex.Runtime.BindingProfile do
 
   defp normalize_media_types(values) when is_list(values) do
     if Enum.all?(values, &(is_binary(&1) and byte_size(String.trim(&1)) > 0)) do
-      {:ok, values |> Enum.map(&normalize_media_type/1) |> MapSet.new()}
+      normalized = Enum.map(values, &normalize_media_type/1)
+      {:ok, MapSet.new(normalized)}
     else
       {:error,
        Error.new(

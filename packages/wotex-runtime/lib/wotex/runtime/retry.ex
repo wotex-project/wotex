@@ -1,6 +1,13 @@
 defmodule Wotex.Runtime.Retry do
   @moduledoc """
-  Pure retry classification. It never reads a clock, sleeps, or executes work.
+  Pure retry classification for consumer retry loops.
+
+  The classifier retries only transient failure classes and defaults to
+  idempotent Property reads and Action queries. A consumer must opt an
+  additional operation into retry with `idempotent?: true`, provide attempt
+  counts, perform any delay, and execute the next call itself.
+
+  This module never reads a clock, sleeps, schedules, or executes work.
   """
 
   @retryable_classes [:timeout, :unavailable, :rate_limited]

@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+set -eu
+
+export MIX_ENV=test
+: "${WOTEX_PATH_DEPS:=1}"
+export WOTEX_PATH_DEPS
+
+mix deps.get --check-locked
+exec mix check --no-retry "$@"

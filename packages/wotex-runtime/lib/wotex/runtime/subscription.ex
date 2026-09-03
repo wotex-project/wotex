@@ -3,6 +3,14 @@ defmodule Wotex.Runtime.Subscription do
   Explicit caller-supervised observation or Event subscription.
 
   The process exists only when the caller starts a returned child specification.
+  On initialization it resolves credentials, opens the selected transport
+  subscription, and holds only the transport handle. Values arrive as
+  `{:wotex_transport, payload}` and are forwarded with the consumer-selected
+  subscription id.
+
+  Use the child-spec functions on `Wotex.Runtime.ConsumedThing` to construct
+  subscriptions. The consumer owns the parent supervisor, child identity,
+  restart policy, shutdown budget, receiver, and failure handling.
   """
 
   use GenServer
@@ -10,7 +18,8 @@ defmodule Wotex.Runtime.Subscription do
   alias Wotex.Runtime.{Context, Error, ExecutionContext}
 
   @doc false
-  @spec start_link(map()) :: GenServer.on_start()
+  @spec start_link(%{required(:name) => GenServer.name() | nil, optional(atom()) => term()}) ::
+          GenServer.on_start()
   def start_link(%{name: nil} = init), do: GenServer.start_link(__MODULE__, init)
   def start_link(%{name: name} = init), do: GenServer.start_link(__MODULE__, init, name: name)
 
@@ -18,7 +27,7 @@ defmodule Wotex.Runtime.Subscription do
   @spec stop(GenServer.server(), timeout()) :: :ok | {:error, Error.t()}
   def stop(server, timeout \\ 5_000), do: GenServer.call(server, :stop, timeout)
 
-  @impl true
+  @impl GenServer
   def init(init) do
     case subscribe(init) do
       {:ok, handle} ->
@@ -32,13 +41,13 @@ defmodule Wotex.Runtime.Subscription do
     end
   end
 
-  @impl true
+  @impl GenServer
   def handle_call(:stop, _from, state) do
     result = unsubscribe(state)
     {:stop, :normal, result, %{state | closed?: true}}
   end
 
-  @impl true
+  @impl GenServer
   def handle_info({:wotex_transport, payload}, state) do
     send(state.receiver, {:wotex_runtime, state.id, payload})
     {:noreply, state}
@@ -46,7 +55,7 @@ defmodule Wotex.Runtime.Subscription do
 
   def handle_info(_message, state), do: {:noreply, state}
 
-  @impl true
+  @impl GenServer
   def terminate(_reason, %{closed?: true}), do: :ok
   def terminate(_reason, state), do: unsubscribe(state)
 

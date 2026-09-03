@@ -99,4 +99,41 @@ defmodule Wotex.Runtime.FormSelectorTest do
                [TDFactory.http_profile()]
              )
   end
+
+  test "rejects malformed Forms and unresolved relative references" do
+    malformed_map =
+      TDFactory.thing_description()
+      |> Wotex.ThingDescription.to_map()
+      |> put_in(["properties", "temperature", "forms"], ["not-a-form"])
+
+    {:ok, malformed} = Wotex.ThingDescription.from_map(malformed_map, validate: false)
+
+    assert {:error, %Error{code: :compatible_form_not_found}} =
+             FormSelector.select(
+               malformed,
+               :property,
+               "temperature",
+               :readproperty,
+               [TDFactory.http_profile()]
+             )
+
+    relative_map =
+      TDFactory.thing_description()
+      |> Wotex.ThingDescription.to_map()
+      |> Map.delete("base")
+      |> put_in(["properties", "temperature", "forms"], [
+        %{"href" => "properties/temperature", "op" => "readproperty"}
+      ])
+
+    {:ok, relative} = Wotex.ThingDescription.from_map(relative_map)
+
+    assert {:error, %Error{code: :compatible_form_not_found}} =
+             FormSelector.select(
+               relative,
+               :property,
+               "temperature",
+               :readproperty,
+               [TDFactory.http_profile()]
+             )
+  end
 end

@@ -63,10 +63,12 @@ defmodule Wotex.Runtime.ExposedThingTest do
     td = TDFactory.thing_description()
 
     assert {:error, %Error{code: :invalid_handler}} =
-             ExposedThing.new(td, %{{:invented, "temperature"} => fn _, _ -> :ok end})
+             ExposedThing.new(td, %{
+               {:invented, "temperature"} => fn _input, _context -> :ok end
+             })
 
     assert {:error, %Error{code: :invalid_handler}} =
-             ExposedThing.new(td, %{{:readproperty, "temperature"} => fn _ -> :ok end})
+             ExposedThing.new(td, %{{:readproperty, "temperature"} => fn _input -> :ok end})
 
     assert {:error, %Error{code: :invalid_exposed_thing}} = ExposedThing.new(%{}, %{})
   end
@@ -77,7 +79,7 @@ defmodule Wotex.Runtime.ExposedThingTest do
 
     {:ok, error_exposed} =
       ExposedThing.new(td, %{
-        {:readproperty, "temperature"} => fn _, _ -> {:error, :rejected} end
+        {:readproperty, "temperature"} => fn _input, _context -> {:error, :rejected} end
       })
 
     assert ExposedThing.dispatch(error_exposed, :readproperty, "temperature", nil, context) ==
@@ -85,7 +87,7 @@ defmodule Wotex.Runtime.ExposedThingTest do
 
     {:ok, raising_exposed} =
       ExposedThing.new(td, %{
-        {:readproperty, "temperature"} => fn _, _ -> raise "handler failure" end
+        {:readproperty, "temperature"} => fn _input, _context -> raise "handler failure" end
       })
 
     assert_raise RuntimeError, "handler failure", fn ->

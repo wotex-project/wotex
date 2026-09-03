@@ -17,10 +17,11 @@ defmodule Wotex.Runtime.FormSelector do
   def select(%ThingDescription{} = td, type, name, operation, profiles)
       when type in [:property, :action, :event] and is_binary(name) and is_list(profiles) do
     document = ThingDescription.to_map(td)
+    interaction = %{type: type, name: name, operation: operation}
 
     with :ok <- validate_operation(operation),
          {:ok, affordance} <- fetch_affordance(document, type, name),
-         {:ok, selection} <- choose(document, affordance, type, name, operation, profiles) do
+         {:ok, selection} <- choose(document, affordance, interaction, profiles) do
       {:ok, selection}
     end
   end
@@ -51,13 +52,13 @@ defmodule Wotex.Runtime.FormSelector do
     end
   end
 
-  defp choose(document, affordance, type, name, operation, profiles) do
+  defp choose(document, affordance, interaction, profiles) do
     forms = Map.get(affordance, "forms", [])
 
     candidate =
       Enum.find_value(forms, fn form_map ->
         Enum.find_value(profiles, fn profile ->
-          match_candidate(document, affordance, form_map, operation, profile)
+          match_candidate(document, affordance, form_map, interaction.operation, profile)
         end)
       end)
 
@@ -65,10 +66,10 @@ defmodule Wotex.Runtime.FormSelector do
       {form, resolved_href, profile} ->
         {:ok,
          %Selection{
-           affordance_type: type,
-           affordance_name: name,
+           affordance_type: interaction.type,
+           affordance_name: interaction.name,
            affordance: affordance,
-           operation: operation,
+           operation: interaction.operation,
            form: form,
            resolved_href: resolved_href,
            profile: profile,
@@ -82,9 +83,9 @@ defmodule Wotex.Runtime.FormSelector do
            :selection,
            "no Form and profile declare the requested operation",
            %{
-             affordance_type: type,
-             affordance_name: name,
-             operation: operation
+             affordance_type: interaction.type,
+             affordance_name: interaction.name,
+             operation: interaction.operation
            }
          )}
     end
@@ -128,7 +129,9 @@ defmodule Wotex.Runtime.FormSelector do
   end
 
   defp resolve_relative(base, href) do
-    resolved = base |> URI.parse() |> URI.merge(href) |> URI.to_string()
+    base_uri = URI.parse(base)
+    merged = URI.merge(base_uri, href)
+    resolved = URI.to_string(merged)
     scheme = URI.parse(resolved).scheme
 
     if is_binary(scheme) and scheme != "" do

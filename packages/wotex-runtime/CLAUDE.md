@@ -18,9 +18,8 @@ those types and owns only consumer-neutral interaction mechanics.
 - No mutable source selection. `WOTEX_PATH_DEPS=1` is the sole local workspace
   switch; normal dependency identity is a released core version.
 
-Run `WOTEX_PATH_DEPS=1 mix check` and the boundary scan before local commits.
-Never push unless a human explicitly requests it.
-+
+Run `WOTEX_PATH_DEPS=1 mix check` before local commits. The single gate includes
+the boundary scan and unpacked Hex-package inspection.
 
 ## Git authority
 

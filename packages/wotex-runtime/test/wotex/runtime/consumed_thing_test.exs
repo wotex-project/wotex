@@ -126,7 +126,9 @@ defmodule Wotex.Runtime.ConsumedThingTest do
     context = Context.new!(request_id: "req-invalid")
     credentials = {FakeCredentials, %{test_pid: self(), secret: "x"}}
 
-    for {mode, code} <- [mismatch: :mismatched_transport_result, invalid: :invalid_transport_return] do
+    failures = [mismatch: :mismatched_transport_result, invalid: :invalid_transport_return]
+
+    for {mode, code} <- failures do
       {:ok, consumed} =
         ConsumedThing.new(TDFactory.thing_description(),
           profiles: [profile],
@@ -160,5 +162,20 @@ defmodule Wotex.Runtime.ConsumedThingTest do
 
     assert {:error, %Error{code: :invalid_consumed_thing}} =
              ConsumedThing.read_property(%{}, "temperature", context)
+  end
+
+  test "rejects a nil required option and a missing selected transport", %{consumed: consumed} do
+    context = Context.new!(request_id: "req-boundary")
+
+    assert {:error, %Error{code: :missing_subscription_option}} =
+             ConsumedThing.observation_child_spec(consumed, "temperature", context,
+               id: nil,
+               receiver: self()
+             )
+
+    without_transport = %{consumed | transports: %{}}
+
+    assert {:error, %Error{code: :transport_not_found}} =
+             ConsumedThing.read_property(without_transport, "temperature", context)
   end
 end

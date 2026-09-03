@@ -1,42 +1,111 @@
-name: ci
+name: Continuous Integration
 
 on:
-  pull_request:
   push:
     branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  WOTEX_PATH_DEPS: "1"
+
 jobs:
-  check:
+  compatibility:
+    name: compatibility (elixir ${{ matrix.elixir }} / otp ${{ matrix.otp }})
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: wotex-runtime
-    env:
-      MIX_ENV: test
-      WOTEX_PATH_DEPS: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: "1.18"
+            otp: "27"
+          - elixir: "1.19"
+            otp: "28"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           path: wotex-runtime
-      - uses: actions/checkout@v4
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex
-          ref: 3676e71ed5b3b15e002bf4a05cc1b856a75dd8d9
+          ref: 4301392f3b306c30d31c01977abf4b6d9db838e8
           path: wotex
-      - uses: erlef/setup-beam@v1
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
-          otp-version: "28.5"
-          elixir-version: "1.19.5"
-      - uses: actions/cache@v4
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+      - run: mix deps.get --check-locked
+        working-directory: wotex-runtime
+      - run: mix compile --warnings-as-errors
+        working-directory: wotex-runtime
+      - run: mix test
+        working-directory: wotex-runtime
+
+  quality:
+    name: locked quality gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          path: wotex-runtime
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex
+          ref: 4301392f3b306c30d31c01977abf4b6d9db838e8
+          path: wotex
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: "1.19"
+          otp-version: "28"
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             wotex-runtime/deps
             wotex-runtime/_build
-          key: ${{ runner.os }}-otp-28.5-elixir-1.19.5-${{ hashFiles('wotex-runtime/mix.lock') }}
-      - run: mix local.hex --force
-      - run: mix local.rebar --force
-      - run: mix deps.get --only test
-      - run: mix check
+            wotex-runtime/priv/plts
+          key: runtime-quality-${{ runner.os }}-1.19-28-${{ hashFiles('wotex-runtime/mix.lock') }}
+      - run: bin/check
+        working-directory: wotex-runtime
+      - run: mix coveralls.lcov
+        working-directory: wotex-runtime
+      - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          files: wotex-runtime/cover/lcov.info
+          fail_ci_if_error: false
+
+  latest-dependencies:
+    name: latest dependency compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          path: wotex-runtime
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex
+          ref: 4301392f3b306c30d31c01977abf4b6d9db838e8
+          path: wotex
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: "1.19"
+          otp-version: "28"
+      - run: mix deps.unlock --all
+        working-directory: wotex-runtime
+      - run: mix deps.get
+        working-directory: wotex-runtime
+      - run: mix compile --warnings-as-errors
+        working-directory: wotex-runtime
+      - run: mix test
+        working-directory: wotex-runtime

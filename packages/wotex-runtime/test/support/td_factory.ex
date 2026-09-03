@@ -4,6 +4,7 @@ defmodule Wotex.Runtime.Test.TDFactory do
   alias Wotex.Runtime.BindingProfile
   alias Wotex.ThingDescription
 
+  @spec thing_description(map()) :: ThingDescription.t()
   def thing_description(overrides \\ %{}) do
     map =
       Map.merge(
@@ -69,6 +70,7 @@ defmodule Wotex.Runtime.Test.TDFactory do
     td
   end
 
+  @spec http_profile(keyword()) :: BindingProfile.t()
   def http_profile(opts \\ []) do
     {:ok, profile} =
       BindingProfile.new(
@@ -86,6 +88,7 @@ defmodule Wotex.Runtime.Test.TDFactory do
     profile
   end
 
+  @spec mqtt_profile(keyword()) :: BindingProfile.t()
   def mqtt_profile(opts \\ []) do
     {:ok, profile} =
       BindingProfile.new(

@@ -4,16 +4,21 @@ defmodule Wotex.Runtime.Context do
 
   The runtime neither generates `request_id` nor reads a clock. A deadline is
   an absolute value interpreted by the supplied credential and transport ports.
+
+  Metadata carries non-secret correlation information such as trace ids or
+  actor references. It is passed through interaction planning without policy
+  interpretation. Do not place credentials in metadata; ephemeral credential
+  material has a separate execution-only value.
   """
 
   alias Wotex.Runtime.Error
 
   @type deadline :: DateTime.t() | integer() | nil
-  @opaque t :: %__MODULE__{
-            request_id: String.t(),
-            deadline: deadline(),
-            metadata: map()
-          }
+  @type t :: %__MODULE__{
+          request_id: String.t(),
+          deadline: deadline(),
+          metadata: map()
+        }
 
   @enforce_keys [:request_id]
   defstruct [:request_id, :deadline, metadata: %{}]

@@ -1,20 +1,31 @@
 defmodule Wotex.Runtime.Request do
-  @moduledoc "Immutable credential-free protocol request."
+  @moduledoc """
+  The immutable, credential-free request passed to a transport port.
+
+  A request records the selected W3C WoT operation, Interaction Affordance,
+  Form, resolved href, binding profile, caller identity, deadline, and input.
+  Credential material is deliberately absent; `Wotex.Runtime.ExecutionContext`
+  carries it only during the immediate port call.
+
+  Consumers normally receive this value in a `Wotex.Runtime.Transport`
+  callback rather than constructing it directly. Treat its fields as
+  read-only operation inputs.
+  """
 
   alias Wotex.Form
   alias Wotex.Runtime.{BindingProfile, Context, Selection}
 
-  @opaque t :: %__MODULE__{
-            operation: atom(),
-            affordance_type: :property | :action | :event,
-            affordance_name: String.t(),
-            form: Form.t(),
-            resolved_href: String.t(),
-            profile: BindingProfile.t(),
-            request_id: String.t(),
-            deadline: Context.deadline(),
-            input: term()
-          }
+  @type t :: %__MODULE__{
+          operation: atom(),
+          affordance_type: :property | :action | :event,
+          affordance_name: String.t(),
+          form: Form.t(),
+          resolved_href: String.t(),
+          profile: BindingProfile.t(),
+          request_id: String.t(),
+          deadline: Context.deadline(),
+          input: term()
+        }
 
   @enforce_keys [
     :operation,

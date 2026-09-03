@@ -1,9 +1,21 @@
 defmodule Wotex.Runtime.ConsumedThing do
   @moduledoc """
-  Immutable plan for consuming a Thing through caller-supplied ports.
+  An immutable plan for consuming a Thing through caller-supplied ports.
 
-  Short interactions execute in the caller. Observation and Event APIs return
-  child specifications and start no process themselves.
+  Construction validates the Thing Description, requires at least one unique
+  binding profile, requires a transport implementation for every profile, and
+  checks the credential-provider port. No connection or credential lookup
+  happens during construction.
+
+  Property reads/writes and Action invocation/query/cancellation execute in the
+  caller and return typed protocol results. Observation and Event APIs return
+  child specifications and start no process themselves. The consumer chooses
+  child ids, names, receivers, restart strategies, shutdown budgets, and
+  supervision placement.
+
+  A ConsumedThing is an interaction plan. It does not own the described Thing,
+  authorize requests, persist observations, or assert that transport success
+  represents canonical state or a completed physical effect.
   """
 
   alias Wotex.ThingDescription
@@ -20,12 +32,12 @@ defmodule Wotex.Runtime.ConsumedThing do
     Subscription
   }
 
-  @opaque t :: %__MODULE__{
-            td: ThingDescription.t(),
-            profiles: [BindingProfile.t()],
-            transports: map(),
-            credentials: {module(), term()}
-          }
+  @type t :: %__MODULE__{
+          td: ThingDescription.t(),
+          profiles: [BindingProfile.t()],
+          transports: map(),
+          credentials: {module(), term()}
+        }
 
   @enforce_keys [:td, :profiles, :transports, :credentials]
   defstruct [:td, :profiles, :transports, :credentials]
@@ -63,31 +75,56 @@ defmodule Wotex.Runtime.ConsumedThing do
   @doc "Executes `readproperty` in the caller process."
   @spec read_property(t(), String.t(), Context.t()) :: {:ok, Result.t()} | {:error, Error.t()}
   def read_property(consumed, name, context),
-    do: execute(consumed, :property, name, :readproperty, nil, context)
+    do:
+      execute(
+        consumed,
+        %{type: :property, name: name, operation: :readproperty, input: nil},
+        context
+      )
 
   @doc "Executes `writeproperty` in the caller process."
   @spec write_property(t(), String.t(), term(), Context.t()) ::
           {:ok, Result.t()} | {:error, Error.t()}
   def write_property(consumed, name, input, context),
-    do: execute(consumed, :property, name, :writeproperty, input, context)
+    do:
+      execute(
+        consumed,
+        %{type: :property, name: name, operation: :writeproperty, input: input},
+        context
+      )
 
   @doc "Executes `invokeaction` in the caller process."
   @spec invoke_action(t(), String.t(), term(), Context.t()) ::
           {:ok, Result.t()} | {:error, Error.t()}
   def invoke_action(consumed, name, input, context),
-    do: execute(consumed, :action, name, :invokeaction, input, context)
+    do:
+      execute(
+        consumed,
+        %{type: :action, name: name, operation: :invokeaction, input: input},
+        context
+      )
 
   @doc "Executes `queryaction` in the caller process."
   @spec query_action(t(), String.t(), term(), Context.t()) ::
           {:ok, Result.t()} | {:error, Error.t()}
   def query_action(consumed, name, invocation, context),
-    do: execute(consumed, :action, name, :queryaction, invocation, context)
+    do:
+      execute(
+        consumed,
+        %{type: :action, name: name, operation: :queryaction, input: invocation},
+        context
+      )
 
   @doc "Executes `cancelaction` in the caller process."
   @spec cancel_action(t(), String.t(), term(), Context.t()) ::
           {:ok, Result.t()} | {:error, Error.t()}
   def cancel_action(consumed, name, invocation, context),
-    do: execute(consumed, :action, name, :cancelaction, invocation, context)
+    do:
+      execute(
+        consumed,
+        %{type: :action, name: name, operation: :cancelaction, input: invocation},
+        context
+      )
 
   @doc "Returns a caller-supervised Property observation child specification."
   @spec observation_child_spec(t(), String.t(), Context.t(), keyword()) ::
@@ -96,10 +133,7 @@ defmodule Wotex.Runtime.ConsumedThing do
     do:
       subscription_child_spec(
         consumed,
-        :property,
-        name,
-        :observeproperty,
-        :unobserveproperty,
+        %{type: :property, name: name, start: :observeproperty, stop: :unobserveproperty},
         context,
         opts
       )
@@ -111,10 +145,7 @@ defmodule Wotex.Runtime.ConsumedThing do
     do:
       subscription_child_spec(
         consumed,
-        :event,
-        name,
-        :subscribeevent,
-        :unsubscribeevent,
+        %{type: :event, name: name, start: :subscribeevent, stop: :unsubscribeevent},
         context,
         opts
       )
@@ -123,31 +154,34 @@ defmodule Wotex.Runtime.ConsumedThing do
   @spec thing_description(t()) :: ThingDescription.t()
   def thing_description(%__MODULE__{td: td}), do: td
 
-  defp execute(%__MODULE__{} = consumed, type, name, operation, input, %Context{} = context) do
+  defp execute(%__MODULE__{} = consumed, interaction, %Context{} = context) do
     with {:ok, selection} <-
-           FormSelector.select(consumed.td, type, name, operation, consumed.profiles),
+           FormSelector.select(
+             consumed.td,
+             interaction.type,
+             interaction.name,
+             interaction.operation,
+             consumed.profiles
+           ),
          {:ok, transport} <- transport_for(consumed, selection),
-         request = Request.from_selection(selection, context, input),
+         request = Request.from_selection(selection, context, interaction.input),
          {:ok, execution_context} <- resolve_credentials(consumed, selection, context),
          {:ok, result} <- transport_request(transport, request, execution_context) do
       {:ok, result}
     end
   end
 
-  defp execute(%__MODULE__{}, _type, _name, _operation, _input, _context) do
+  defp execute(%__MODULE__{}, _interaction, _context) do
     {:error, Error.new(:invalid_context, :construction, "a Wotex Runtime Context is required")}
   end
 
-  defp execute(_consumed, _type, _name, _operation, _input, _context) do
+  defp execute(_consumed, _interaction, _context) do
     {:error, Error.new(:invalid_consumed_thing, :construction, "a ConsumedThing is required")}
   end
 
   defp subscription_child_spec(
          %__MODULE__{} = consumed,
-         type,
-         name,
-         start_operation,
-         stop_operation,
+         interaction,
          %Context{} = context,
          opts
        )
@@ -155,14 +189,20 @@ defmodule Wotex.Runtime.ConsumedThing do
     with {:ok, id} <- required_option(opts, :id),
          {:ok, receiver} <- required_option(opts, :receiver),
          {:ok, start_selection} <-
-           FormSelector.select(consumed.td, type, name, start_operation, consumed.profiles),
+           FormSelector.select(
+             consumed.td,
+             interaction.type,
+             interaction.name,
+             interaction.start,
+             consumed.profiles
+           ),
          {:ok, transport} <- transport_for(consumed, start_selection),
          {:ok, stop_selection} <-
            FormSelector.select(
              consumed.td,
-             type,
-             name,
-             stop_operation,
+             interaction.type,
+             interaction.name,
+             interaction.stop,
              [start_selection.profile]
            ) do
       start_request = Request.from_selection(start_selection, context, Keyword.get(opts, :input))
@@ -194,10 +234,7 @@ defmodule Wotex.Runtime.ConsumedThing do
 
   defp subscription_child_spec(
          %__MODULE__{},
-         _type,
-         _name,
-         _start_operation,
-         _stop_operation,
+         _interaction,
          _context,
          _opts
        ) do
@@ -211,10 +248,7 @@ defmodule Wotex.Runtime.ConsumedThing do
 
   defp subscription_child_spec(
          _consumed,
-         _type,
-         _name,
-         _start_operation,
-         _stop_operation,
+         _interaction,
          _context,
          _opts
        ) do

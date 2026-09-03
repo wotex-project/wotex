@@ -2,12 +2,20 @@ defmodule Wotex.Runtime.ExposedThing do
   @moduledoc """
   Binding-neutral callback dispatch for an exposed Thing.
 
-  The value owns no server, authentication, authorization, or canonical Thing
-  state. Handler exceptions intentionally propagate to the caller.
+  Handlers are keyed by `{operation, affordance_name}` and must be arity-two
+  functions receiving input and `Wotex.Runtime.Context`. Dispatch first checks
+  that the operation is supported, the Interaction Affordance exists in the
+  Thing Description, and the exact handler was registered.
+
+  The value owns no server, endpoint, authentication, authorization, or
+  canonical Thing state. A consumer must enforce policy before dispatch and
+  decide how handler results become protocol responses. Handler exceptions
+  intentionally propagate to the caller so its supervision and error boundary
+  remain authoritative.
   """
 
-  alias Wotex.ThingDescription
   alias Wotex.Runtime.{Context, Error}
+  alias Wotex.ThingDescription
 
   @operation_types %{
     readproperty: :property,
@@ -24,7 +32,7 @@ defmodule Wotex.Runtime.ExposedThing do
   @containers %{property: "properties", action: "actions", event: "events"}
 
   @type handler :: (term(), Context.t() -> term())
-  @opaque t :: %__MODULE__{td: ThingDescription.t(), handlers: map()}
+  @type t :: %__MODULE__{td: ThingDescription.t(), handlers: map()}
 
   @enforce_keys [:td, :handlers]
   defstruct [:td, :handlers]

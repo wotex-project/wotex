@@ -49,7 +49,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
              )
 
     pid = start_supervised!(spec)
-    assert Process.whereis(name) == pid
+    assert GenServer.whereis(name) == pid
     assert_receive {:credentials, _, _, "req-one"}
     assert_receive {:subscribe, %{operation: :observeproperty}, ^pid, "credential-material"}
     refute inspect(:sys.get_state(pid)) =~ "credential-material"
@@ -154,6 +154,36 @@ defmodule Wotex.Runtime.SubscriptionTest do
     end
   end
 
+  test "ignores unrelated messages and normalizes stop failures" do
+    profile = TDFactory.http_profile()
+    context = Context.new!(request_id: "req-stop-failure")
+
+    failures = [error: :transport_unsubscribe_failed, invalid: :invalid_transport_return]
+
+    for {mode, code} <- failures do
+      {:ok, consumed} =
+        ConsumedThing.new(TDFactory.thing_description(),
+          profiles: [profile],
+          transports: %{
+            profile.id => {FakeTransport, %{test_pid: self(), unsubscribe_mode: mode}}
+          },
+          credentials: {FakeCredentials, %{test_pid: self()}}
+        )
+
+      {:ok, spec} =
+        ConsumedThing.event_subscription_child_spec(consumed, "alarm", context,
+          id: {:stop_failure, mode},
+          receiver: self(),
+          restart: :temporary
+        )
+
+      pid = start_supervised!(spec)
+      send(pid, :unrelated)
+      assert Process.alive?(pid)
+      assert {:error, %Error{code: ^code}} = Subscription.stop(pid)
+    end
+  end
+
   defp unique_name(suffix),
-    do: String.to_atom("wotex_runtime_test_#{suffix}_#{System.unique_integer([:positive])}")
+    do: {:global, {:wotex_runtime_test, suffix, System.unique_integer([:positive])}}
 end

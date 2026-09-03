@@ -3,7 +3,7 @@ defmodule Wotex.Runtime.Test.FakeCredentials do
 
   @behaviour Wotex.Runtime.Credentials
 
-  @impl true
+  @impl Wotex.Runtime.Credentials
   def resolve(security, form, context, %{test_pid: test_pid} = config) do
     secret = Map.get(config, :secret, "credential-material")
     send(test_pid, {:credentials, security, form, context.request_id})

@@ -9,7 +9,7 @@ defmodule Wotex.Runtime.ExecutionContext do
   alias Wotex.Runtime.Context
 
   @derive {Inspect, only: [:context]}
-  @opaque t :: %__MODULE__{context: Context.t(), credential: term()}
+  @type t :: %__MODULE__{context: Context.t(), credential: term()}
   @enforce_keys [:context, :credential]
   defstruct [:context, :credential]
 

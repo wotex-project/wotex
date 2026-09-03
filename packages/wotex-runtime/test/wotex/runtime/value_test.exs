@@ -55,6 +55,9 @@ defmodule Wotex.Runtime.ValueTest do
     assert {:error, %Error{code: :invalid_profile_operations}} =
              BindingProfile.new(id: :x, schemes: ["https"], operations: [:invented])
 
+    assert {:error, %Error{code: :invalid_profile_operations}} =
+             BindingProfile.new(id: :x, schemes: ["https"], operations: :all)
+
     assert {:error, %Error{code: :invalid_profile_media_types}} =
              BindingProfile.new(
                id: :x,
@@ -95,6 +98,8 @@ defmodule Wotex.Runtime.ValueTest do
   end
 
   test "retry classification is pure and conservative for non-idempotent operations" do
+    assert Retry.decision(:readproperty, :timeout) == :stop
+
     assert Retry.decision(:readproperty, :timeout, attempt: 1, max_attempts: 2, delay: 25) ==
              {:retry, 25}
 

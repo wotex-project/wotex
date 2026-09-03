@@ -5,7 +5,7 @@ defmodule Wotex.Runtime.Test.FakeTransport do
 
   alias Wotex.Runtime.Result
 
-  @impl true
+  @impl Wotex.Runtime.Transport
   def request(request, execution_context, %{test_pid: test_pid} = config) do
     send(
       test_pid,
@@ -30,7 +30,7 @@ defmodule Wotex.Runtime.Test.FakeTransport do
     end
   end
 
-  @impl true
+  @impl Wotex.Runtime.Transport
   def subscribe(request, receiver, execution_context, %{test_pid: test_pid} = config) do
     send(
       test_pid,
@@ -44,7 +44,7 @@ defmodule Wotex.Runtime.Test.FakeTransport do
     end
   end
 
-  @impl true
+  @impl Wotex.Runtime.Transport
   def unsubscribe(handle, request, execution_context, %{test_pid: test_pid} = config) do
     send(
       test_pid,
