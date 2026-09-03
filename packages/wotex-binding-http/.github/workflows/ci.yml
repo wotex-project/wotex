@@ -42,13 +42,13 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex
-          ref: f2572ada87920f6e0949fbb02b7f37081538d543
+          ref: 4301392f3b306c30d31c01977abf4b6d9db838e8
           path: wotex
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-runtime
-          ref: 8443321cf18b20db6bd7db0f751a74e90c1b686d
+          ref: 247b90b57ecfa6d1a7a58eb581d0fe257b5e0f30
           path: wotex-runtime
           persist-credentials: false
       - id: setup-beam
