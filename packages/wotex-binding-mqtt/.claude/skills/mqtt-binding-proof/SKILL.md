@@ -10,4 +10,5 @@ description: Validate the standalone MQTT binding before handoff or release.
 3. Run `bin/check-boundary` independently.
 4. Build the Hex archive with `WOTEX_PATH_DEPS` unset.
 5. Run `bin/check-archive` and record its SHA-256 digest.
-6. Confirm `git remote -v` is empty and do not push.
+6. Stop after recording local evidence. Automated agents never configure or
+   remove remotes, push, create tags, publish packages, or create releases.
