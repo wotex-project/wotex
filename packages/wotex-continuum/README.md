@@ -116,6 +116,11 @@ WOTEX_PATH_DEPS=1 mix deps.get
 WOTEX_PATH_DEPS=1 mix check
 ```
 
+The explicit switch also applies when Mix evaluates this library as a
+dependency under the `prod` dependency environment. Package construction
+unsets it and records the released `wotex` version requirement instead of a
+local path.
+
 The completion gate covers formatting, warnings-as-errors compilation, strict
 Credo, dependency audits, Dialyzer, complete public documentation, at least 95%
 line coverage, the public-boundary scan, and compilation from the unpacked Hex

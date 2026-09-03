@@ -57,11 +57,7 @@ defmodule WotexContinuum.MixProject do
         {:wotex, "~> 0.1"}
 
       "1" ->
-        if Mix.env() in [:dev, :test, :docs] do
-          {:wotex, path: Path.expand("../wotex", __DIR__), override: true}
-        else
-          raise "WOTEX_PATH_DEPS is allowed only in non-production development environments"
-        end
+        {:wotex, path: Path.expand("../wotex", __DIR__), override: true}
 
       _value ->
         raise "WOTEX_PATH_DEPS must be unset or equal to 1"
