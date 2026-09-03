@@ -37,7 +37,7 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex
-          ref: f2572ada87920f6e0949fbb02b7f37081538d543
+          ref: 4301392f3b306c30d31c01977abf4b6d9db838e8
           path: wotex
           persist-credentials: false
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
@@ -71,7 +71,7 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex
-          ref: f2572ada87920f6e0949fbb02b7f37081538d543
+          ref: 4301392f3b306c30d31c01977abf4b6d9db838e8
           path: wotex
           persist-credentials: false
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
