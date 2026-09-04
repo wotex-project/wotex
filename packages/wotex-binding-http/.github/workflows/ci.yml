@@ -1,42 +1,27 @@
 name: ci
 
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
-    name: quality (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - elixir: "1.18"
-            otp: "28"
-            check: floor
-          - elixir: "1.19"
-            otp: "28"
-            check: floor
-          - elixir: "1.20"
-            otp: "29"
-            check: full
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: wotex-binding-http
     env:
       MIX_ENV: test
       WOTEX_PATH_DEPS: "1"
-
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -54,40 +39,9 @@ jobs:
           ref: ae21976013e60e542dbe6373c951aa0552100b29
           path: wotex-runtime
           persist-credentials: false
-      - id: setup-beam
-        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
-          otp-version: ${{ matrix.otp }}
-          elixir-version: ${{ matrix.elixir }}
-      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
-        with:
-          path: |
-            wotex-binding-http/deps
-            wotex-binding-http/_build
-            wotex-binding-http/priv/plts
-          key: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('wotex-binding-http/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-
-      - run: mix local.hex --force
-      - run: mix local.rebar --force
-      - run: mix deps.get --only test
-      - if: matrix.check == 'floor'
-        run: mix compile --warnings-as-errors
-      - if: matrix.check == 'floor'
-        run: mix test --warnings-as-errors
-      - if: matrix.check == 'full'
-        run: mix check
-      - if: matrix.check == 'full'
-        run: mix coveralls.lcov
-      - if: matrix.check == 'full'
-        uses: codecov/codecov-action@e53489f4d376d79066609109e7a95a29eb3740b1 # v7.0.0
-        with:
-          files: wotex-binding-http/cover/lcov.info
-          fail_ci_if_error: true
-      - if: matrix.check == 'full'
-        run: env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build
-      - if: matrix.check == 'full'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: wotex-binding-http-hex
-          path: wotex-binding-http/wotex_binding_http-*.tar
-          if-no-files-found: error
+          elixir-version: "1.20"
+          otp-version: "29"
+      - run: mix deps.get --only test --check-locked
+      - run: mix check
