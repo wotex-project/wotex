@@ -27,11 +27,7 @@ defmodule Wotex.Nx.Row do
   """
   @spec new(integer(), map()) :: {:ok, t()} | {:error, Error.t()}
   def new(timestamp, observations) when is_integer(timestamp) and is_map(observations) do
-    if Enum.all?(observations, fn
-         {name, %Observation{}} when is_binary(name) -> true
-         {name, nil} when is_binary(name) -> true
-         _ -> false
-       end) do
+    if Enum.all?(observations, &valid_observation_entry?/1) do
       provenance =
         Map.new(observations, fn
           {name, %Observation{id: id}} -> {name, id}
@@ -57,4 +53,18 @@ defmodule Wotex.Nx.Row do
          :construction,
          "row requires an integer timestamp and observation map"
        )}
+
+  @doc false
+  @spec valid?(term()) :: boolean()
+  def valid?(%__MODULE__{} = row) do
+    new(row.timestamp, row.observations) == {:ok, row}
+  end
+
+  def valid?(_), do: false
+
+  defp valid_observation_entry?({name, %Observation{} = observation}) when is_binary(name),
+    do: Observation.valid?(observation)
+
+  defp valid_observation_entry?({name, nil}) when is_binary(name), do: true
+  defp valid_observation_entry?(_), do: false
 end

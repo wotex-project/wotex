@@ -139,6 +139,31 @@ defmodule Wotex.Nx.Feature do
   @spec width(t()) :: pos_integer()
   def width(%__MODULE__{shape: shape}), do: NumericalSchema.width(shape)
 
+  @doc false
+  @spec valid?(term()) :: boolean()
+  def valid?(%__MODULE__{} = feature) do
+    options = [
+      name: feature.name,
+      thing_id: feature.thing_id,
+      affordance_type: feature.affordance_type,
+      affordance_name: feature.affordance_name,
+      data_schema: feature.data_schema,
+      dtype: feature.dtype,
+      shape: feature.shape,
+      unit: feature.unit,
+      accepted_quality: MapSet.to_list(feature.accepted_quality),
+      missing: feature.missing,
+      normalization: feature.normalization,
+      allow_non_finite?: feature.allow_non_finite?
+    ]
+
+    new(options) == {:ok, feature}
+  rescue
+    _ in [ArgumentError, FunctionClauseError] -> false
+  end
+
+  def valid?(_), do: false
+
   defp validate_shape(shape, shape) when is_tuple(shape), do: :ok
 
   defp validate_shape(_, _) do

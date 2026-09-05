@@ -36,13 +36,20 @@ defmodule Wotex.Nx.Decoder do
 
   def decode(%Nx.Tensor{} = tensor, %OutputSchema{} = schema, opts)
       when is_list(opts) do
-    with :ok <-
+    with true <- OutputSchema.valid?(schema),
+         :ok <-
            Options.validate(opts, decoder_options(schema.kind), :invalid_output_options, :output),
          :ok <- tensor_contract(tensor, schema),
          {:ok, value} <- tensor_value(tensor, DataSchema.to_map(schema.data_schema)),
          :ok <- validate_value(value, schema),
          {:ok, common} <- common_options(opts, schema.metadata) do
       build(schema, value, common, opts)
+    else
+      false ->
+        {:error, Error.new(:invalid_decoder_input, :output, "output schema is invalid")}
+
+      {:error, %Error{} = error} ->
+        {:error, error}
     end
   rescue
     _ in [ArgumentError, RuntimeError, FunctionClauseError] ->

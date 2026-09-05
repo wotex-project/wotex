@@ -309,6 +309,13 @@ defmodule Wotex.Nx.DecoderTest do
     assert {:error, %Error{code: :invalid_output_options}} =
              Decoder.decode(tensor, output_schema(:prediction), produced_at: 1, target_at: 2)
 
+    schema = output_schema(:prediction)
+    assert OutputSchema.valid?(schema)
+    refute OutputSchema.valid?(%{schema | shape: {1}})
+
+    assert {:error, %Error{code: :invalid_decoder_input}} =
+             Decoder.decode(tensor, %{schema | shape: {1}}, id: "p", produced_at: 1, target_at: 2)
+
     assert {:error, %Error{code: :invalid_output_options}} =
              Decoder.decode(tensor, output_schema(:prediction), [:malformed])
 

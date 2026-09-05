@@ -26,6 +26,8 @@ defmodule Wotex.Nx.ObservationFeatureSchemaTest do
     assert observation.value
     assert observation.quality == :uncertain
     assert Observation.qualities() == [:good, :uncertain, :bad, :missing]
+    assert Observation.valid?(observation)
+    refute Observation.valid?(%{observation | observed_at: :invalid})
   end
 
   test "observation validates every governed field" do
@@ -77,6 +79,8 @@ defmodule Wotex.Nx.ObservationFeatureSchemaTest do
     assert number.shape == {}
     assert number.unit == "Cel"
     assert Feature.width(number) == 1
+    assert Feature.valid?(number)
+    refute Feature.valid?(%{number | shape: {2}})
 
     integer_schema = TestFactory.data_schema(%{"type" => "integer"})
     assert {:ok, integer} = Feature.new(feature_options(integer_schema))
@@ -196,6 +200,8 @@ defmodule Wotex.Nx.ObservationFeatureSchemaTest do
     assert {:ok, row} = Row.new(100, %{"temperature" => observation, "humidity" => nil})
     assert row.timestamp == 100
     assert row.provenance == %{"temperature" => "source-1", "humidity" => nil}
+    assert Row.valid?(row)
+    refute Row.valid?(%{row | provenance: %{}})
 
     assert {:error, %Error{code: :invalid_row_observations}} = Row.new(100, %{1 => observation})
     assert {:error, %Error{code: :invalid_row}} = Row.new("100", %{})
@@ -216,6 +222,8 @@ defmodule Wotex.Nx.ObservationFeatureSchemaTest do
 
     assert Schema.features(schema) == [first, second]
     assert schema.batch_key == {:model, "a"}
+    assert Schema.valid?(schema)
+    refute Schema.valid?(%{schema | max_rows: 0})
   end
 
   test "schema rejects invalid limits, features, duplicates, counts, and width" do

@@ -269,6 +269,12 @@ defmodule Wotex.Nx.WindowEncoderTest do
     assert {:error, %Error{code: :invalid_encoder_input}} =
              Encoder.encode([row], schema, unknown: true)
 
+    assert {:error, %Error{code: :invalid_rows}} =
+             Encoder.encode([%{row | provenance: %{}}], schema)
+
+    assert {:error, %Error{code: :invalid_encoder_input}} =
+             Encoder.encode([row], %{schema | max_rows: 0})
+
     one_row_schema = TestFactory.schema([TestFactory.feature()], max_rows: 1)
 
     assert {:error, %Error{code: :row_limit_exceeded}} =

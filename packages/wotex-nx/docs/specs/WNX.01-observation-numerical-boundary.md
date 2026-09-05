@@ -50,6 +50,9 @@ identity, model selection and execution, policy, evidence, and Action dispatch.
 11. Public keyword options MUST be well-formed, unique, and limited to the
     options owned by that operation. An observation value MUST be explicitly
     supplied; omitted input and the JSON value `null` are not equivalent.
+12. Opaque numerical structs MUST be revalidated at every consuming boundary.
+    Struct shape alone MUST NOT bypass feature, observation, row, schema,
+    window, or output-schema invariants.
 
 ## Evidence
 

@@ -146,6 +146,32 @@ defmodule Wotex.Nx.OutputSchema do
   @spec kinds() :: nonempty_list(kind())
   def kinds, do: @kinds
 
+  @doc false
+  @spec valid?(term()) :: boolean()
+  def valid?(%__MODULE__{} = schema) do
+    options = [
+      kind: schema.kind,
+      thing_id: schema.thing_id,
+      affordance_type: schema.affordance_type,
+      affordance_name: schema.affordance_name,
+      data_schema: schema.data_schema,
+      dtype: schema.dtype,
+      shape: schema.shape,
+      max_width: schema.max_width,
+      unit: schema.unit,
+      threshold: schema.threshold,
+      anomaly_rule: schema.anomaly_rule,
+      metadata: schema.metadata,
+      allow_non_finite?: schema.allow_non_finite?
+    ]
+
+    new(options) == {:ok, schema}
+  rescue
+    _ in [ArgumentError, FunctionClauseError] -> false
+  end
+
+  def valid?(_), do: false
+
   defp identity(opts) do
     kind = Keyword.get(opts, :kind)
     thing_id = Keyword.get(opts, :thing_id)

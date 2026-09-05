@@ -112,6 +112,8 @@ defmodule Wotex.Nx.Window do
   def resample(observations, %Schema{} = schema, %__MODULE__{} = window, opts)
       when is_list(observations) and is_list(opts) do
     with :ok <- Options.validate(opts, @resample_options, :invalid_window_input, :window),
+         true <- Schema.valid?(schema),
+         true <- valid?(window),
          max_observations = Keyword.get(opts, :max_observations, 10_000),
          max_work = Keyword.get(opts, :max_work, 5_000_000),
          feature_count = length(schema.features),
@@ -124,11 +126,28 @@ defmodule Wotex.Nx.Window do
       observations
       |> index()
       |> build_rows(schema.features, window)
+    else
+      false -> {:error, Error.new(:invalid_window_input, :window, "window input is invalid")}
+      {:error, %Error{} = error} -> {:error, error}
     end
   end
 
   def resample(_, _, _, _),
     do: {:error, Error.new(:invalid_window_input, :window, "window input is invalid")}
+
+  @doc false
+  @spec valid?(term()) :: boolean()
+  def valid?(%__MODULE__{} = window) do
+    new(
+      start: window.start,
+      step: window.step,
+      count: window.count,
+      strategy: window.strategy,
+      max_age: window.max_age
+    ) == {:ok, window}
+  end
+
+  def valid?(_), do: false
 
   defp validate_limits(max_observations, max_work)
        when is_integer(max_observations) and max_observations > 0 and is_integer(max_work) and
@@ -172,7 +191,7 @@ defmodule Wotex.Nx.Window do
   end
 
   defp validate_observations(observations) do
-    if Enum.all?(observations, &match?(%Observation{}, &1)) do
+    if Enum.all?(observations, &Observation.valid?/1) do
       :ok
     else
       {:error,

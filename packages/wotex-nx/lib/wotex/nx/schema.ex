@@ -67,6 +67,20 @@ defmodule Wotex.Nx.Schema do
   @spec features(t()) :: [Feature.t()]
   def features(%__MODULE__{features: features}), do: features
 
+  @doc false
+  @spec valid?(term()) :: boolean()
+  def valid?(%__MODULE__{} = schema) do
+    new(
+      features: schema.features,
+      max_rows: schema.max_rows,
+      max_features: schema.max_features,
+      max_width: schema.max_width,
+      batch_key: schema.batch_key
+    ) == {:ok, schema}
+  end
+
+  def valid?(_), do: false
+
   defp positive_limit(value, _) when is_integer(value) and value > 0, do: :ok
 
   defp positive_limit(_, name),
@@ -77,7 +91,7 @@ defmodule Wotex.Nx.Schema do
   defp validate_features(features, max_features, max_width)
        when is_list(features) and features != [] do
     cond do
-      not Enum.all?(features, &match?(%Feature{}, &1)) ->
+      not Enum.all?(features, &Feature.valid?/1) ->
         {:error,
          Error.new(:invalid_features, :construction, "schema features must contain Feature values")}
 

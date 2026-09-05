@@ -111,6 +111,19 @@ defmodule Wotex.Nx.Observation do
   @spec qualities() :: nonempty_list(quality())
   def qualities, do: @qualities
 
+  @doc false
+  @spec valid?(term()) :: boolean()
+  def valid?(%__MODULE__{} = observation) do
+    options =
+      observation
+      |> Map.from_struct()
+      |> Map.to_list()
+
+    new(options) == {:ok, observation}
+  end
+
+  def valid?(_), do: false
+
   defp required_value(opts) do
     if Keyword.has_key?(opts, :value),
       do: :ok,
