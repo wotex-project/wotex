@@ -21,15 +21,22 @@ defmodule Wotex.Binding.HTTP.ValueTest do
   alias Wotex.Binding.HTTP.Test.{AlternateClient, FakeClient}
   alias Wotex.Runtime.BindingProfile
 
-  test "profile declares the complete pinned Runtime operation surface" do
+  test "profile declares only the binding's pinned operation surface" do
     assert {:ok, profile} = HTTP.profile()
     assert BindingProfile.id(profile) == :http
     assert BindingProfile.supports_scheme?(profile, "http")
     assert BindingProfile.supports_scheme?(profile, "HTTPS")
     assert BindingProfile.supports_media_type?(profile, "application/json; charset=utf-8")
 
-    for operation <- Wotex.Runtime.operations() do
+    operations =
+      ~w(readproperty writeproperty observeproperty unobserveproperty invokeaction queryaction cancelaction subscribeevent unsubscribeevent)a
+
+    for operation <- operations do
       assert BindingProfile.supports_operation?(profile, operation)
+    end
+
+    for operation <- Wotex.Runtime.thing_operations() do
+      refute BindingProfile.supports_operation?(profile, operation)
     end
   end
 
