@@ -45,6 +45,7 @@ defmodule Wotex.Conformance.Corpus do
          {:ok, revision_input} <- Input.required(manifest, :revision),
          {:ok, revision} <- Value.validate_identifier(revision_input, "revision", max_bytes: 64),
          {:ok, entries} <- validate_entries(Input.optional(manifest, :vectors, nil)),
+         :ok <- validate_directory_entries(directory, entries),
          {:ok, vectors} <- load_vectors(directory, entries),
          {:ok, corpus} <- build(id, revision, vectors),
          :ok <- validate_manifest_digest(manifest, corpus.digest) do
@@ -209,6 +210,30 @@ defmodule Wotex.Conformance.Corpus do
     if Canonical.valid_digest?(digest),
       do: :ok,
       else: {:error, Error.new(:invalid_digest, "vector digest must be lowercase SHA-256")}
+  end
+
+  defp validate_directory_entries(directory, entries) do
+    expected =
+      entries
+      |> Enum.map(& &1["file"])
+      |> then(&MapSet.new([@manifest | &1]))
+
+    case File.ls(directory) do
+      {:ok, filenames} ->
+        undeclared = filenames |> MapSet.new() |> MapSet.difference(expected)
+
+        if MapSet.size(undeclared) == 0 do
+          :ok
+        else
+          {:error,
+           Error.new(:undeclared_corpus_file, "corpus contains undeclared files",
+             details: %{"count" => MapSet.size(undeclared)}
+           )}
+        end
+
+      {:error, _reason} ->
+        {:error, Error.new(:corpus_unreadable, "corpus directory could not be read")}
+    end
   end
 
   defp load_vectors(directory, entries) do

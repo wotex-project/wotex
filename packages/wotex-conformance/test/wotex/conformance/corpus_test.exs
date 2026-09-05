@@ -45,4 +45,15 @@ defmodule Wotex.Conformance.CorpusTest do
 
     assert {:error, %{code: :invalid_vector_filename}} = Corpus.load(root)
   end
+
+  test "rejects files that are not declared by the corpus manifest" do
+    source = Path.expand("../../../priv/vectors/thing-description-1.1", __DIR__)
+    root = Path.join(System.tmp_dir!(), "wotex-corpus-#{System.unique_integer([:positive])}")
+    File.cp_r!(source, root)
+    on_exit(fn -> File.rm_rf!(root) end)
+
+    File.write!(Path.join(root, "undeclared.json"), Jason.encode!(%{"unexpected" => true}))
+
+    assert {:error, %{code: :undeclared_corpus_file}} = Corpus.load(root)
+  end
 end
