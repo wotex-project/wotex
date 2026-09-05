@@ -59,10 +59,20 @@
       "digest": "sha256:dec2b4e9e55b3ce6cf58c30e5251fa40539cd4054f5f8aaed4a3690ff94705ac"
     },
     {
+      "id": "td11.validate.undefined-combo-security-reference",
+      "file": "undefined-combo-security-reference.json",
+      "digest": "sha256:db4d5de9822a6f87fa15fd7099a5697ea08716770bc8018d8e68456797d242ca"
+    },
+    {
+      "id": "td11.validate.undefined-form-security-reference",
+      "file": "undefined-form-security-reference.json",
+      "digest": "sha256:85781e6145820d5c21bf3548f6450d1ac5f9a9efe083103b9e37160746d29966"
+    },
+    {
       "id": "td11.validate.undefined-security-reference",
       "file": "undefined-security-reference.json",
       "digest": "sha256:3f089cb2d96d4fa706c54f4a2ebf093d160d403e8ca5049469d31f2c3a0a3682"
     }
   ],
-  "digest": "sha256:7299c404c64893fc2f8a583a4aba0e11e02c515193f1cae14ee706b3b4ec192e"
+  "digest": "sha256:b5dc71665ea4d8183d8f52e3908e06ac5126d2ecbed7403114be11968a0c5332"
 }

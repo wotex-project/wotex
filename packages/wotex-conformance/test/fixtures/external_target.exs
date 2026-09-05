@@ -187,6 +187,14 @@ defmodule ExternalTargetFixture do
     %{"accepted" => false, "code" => "missing_required_title"}
   end
 
+  defp expected_observation("td11.validate.undefined-combo-security-reference") do
+    %{"accepted" => false, "code" => "undefined_security_reference"}
+  end
+
+  defp expected_observation("td11.validate.undefined-form-security-reference") do
+    %{"accepted" => false, "code" => "undefined_security_reference"}
+  end
+
   defp expected_observation("td11.validate.undefined-security-reference") do
     %{"accepted" => false, "code" => "undefined_security_reference"}
   end
