@@ -17,7 +17,7 @@ defmodule WotexContinuum.Artifact do
 
   @doc "Constructs a validated artifact identity."
   @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
-  def new(%__MODULE__{} = value), do: {:ok, value}
+  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
 
   def new(data) do
     with {:ok, data} <- Validation.normalize(data, [:name, :version, :digest]),

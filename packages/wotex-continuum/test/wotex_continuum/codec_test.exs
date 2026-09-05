@@ -52,7 +52,8 @@ defmodule WotexContinuum.CodecTest do
     assert {:ok, %Limits{}} = Limits.new(Limits.defaults())
     assert {:error, %Error{code: :invalid_limit}} = Limits.new(max_depth: 0)
     assert {:error, %Error{code: :unknown_field}} = Limits.new(unknown: 1)
-    assert {:error, %Error{code: :invalid_type}} = Limits.new([:not_a_keyword])
+    assert {:error, %Error{code: :invalid_options}} = Limits.new([:not_a_keyword])
+    assert {:error, %Error{code: :invalid_options}} = Limits.new(max_depth: 2, max_depth: 3)
   end
 
   test "canonical encoder handles every JSON scalar and rejects invalid values" do
@@ -70,6 +71,9 @@ defmodule WotexContinuum.CodecTest do
     assert Jason.decode!(regular)["kind"] == "mode"
     assert {:ok, _} = Codec.canonicalize(mode)
     assert {:error, %Error{code: :unsupported_value}} = Codec.encode(%URI{})
+    assert {:error, %Error{code: :invalid_options}} = Codec.encode(mode, [:malformed])
+    assert {:error, %Error{code: :unknown_field}} = Codec.encode(mode, unknown: true)
+    assert {:error, %Error{code: :invalid_type}} = Codec.encode(mode, canonical: :yes)
     assert {:ok, ^mode} = Mode.new(mode)
     assert Mode.deployments() == [:saas, :hybrid, :connected_onprem, :air_gapped]
     assert Mode.connectivity_states() == [:connected, :intermittent, :disconnected]

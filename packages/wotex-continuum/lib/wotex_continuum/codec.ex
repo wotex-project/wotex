@@ -6,14 +6,15 @@ defmodule WotexContinuum.Codec do
   members before constructing a typed value.
   """
 
-  alias WotexContinuum.{CanonicalJSON, Error, Limits}
+  alias WotexContinuum.{CanonicalJSON, Error, Limits, Validation}
 
   @doc "Encodes a registered value as JSON."
   @spec encode(struct(), keyword()) :: {:ok, binary()} | {:error, Error.t()}
   def encode(value, options \\ []) do
-    canonical? = Keyword.get(options, :canonical, false)
-
-    with {:ok, map} <- WotexContinuum.to_map(value) do
+    with :ok <- Validation.options(options, [:canonical]),
+         {:ok, canonical?} <-
+           Validation.boolean(Keyword.get(options, :canonical, false), ["canonical"]),
+         {:ok, map} <- WotexContinuum.to_map(value) do
       if canonical?, do: CanonicalJSON.encode(map), else: encode_json(map)
     end
   end

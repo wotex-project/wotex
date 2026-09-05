@@ -51,7 +51,8 @@ defmodule WotexContinuum.ExitReceipt do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: {:ok, value}
+  def new(%__MODULE__{} = value),
+    do: new(Validation.struct_input(value, [:completed_at, :error]))
 
   def new(data) do
     fields = [

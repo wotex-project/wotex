@@ -59,7 +59,23 @@ defmodule WotexContinuum.ActionResult do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: {:ok, value}
+  def new(%__MODULE__{output_present?: false, output: nil} = value) do
+    value
+    |> Validation.struct_input([:error, :started_at, :completed_at])
+    |> Map.drop([:output, :output_present?])
+    |> new()
+  end
+
+  def new(%__MODULE__{output_present?: true} = value) do
+    value
+    |> Validation.struct_input([:error, :started_at, :completed_at])
+    |> Map.delete(:output_present?)
+    |> new()
+  end
+
+  def new(%__MODULE__{}) do
+    Error.error(:invalid_result_state, ["output"], "Action result fields do not match status")
+  end
 
   def new(data) do
     fields = [

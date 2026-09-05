@@ -38,7 +38,7 @@ defmodule WotexContinuum.Mode do
   def connectivity_states, do: @connectivity_states
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: {:ok, value}
+  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
 
   def new(data) do
     fields = [:deployment, :connectivity, :extensions]

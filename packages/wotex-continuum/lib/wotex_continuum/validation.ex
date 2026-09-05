@@ -6,6 +6,32 @@ defmodule WotexContinuum.Validation do
   @max_identifier_bytes 512
   @digest ~r/^sha256:[0-9a-f]{64}$/
 
+  @spec options(term(), [atom()]) :: :ok | {:error, Error.t()}
+  def options(options, allowed) when is_list(options) and is_list(allowed) do
+    cond do
+      not Keyword.keyword?(options) ->
+        Error.error(:invalid_options, [], "expected a unique keyword list")
+
+      duplicate_options?(options) ->
+        Error.error(:invalid_options, [], "option keys must be unique")
+
+      unknown = Enum.find(Keyword.keys(options), &(&1 not in allowed)) ->
+        Error.error(:unknown_field, [Atom.to_string(unknown)], "option is not defined")
+
+      true ->
+        :ok
+    end
+  end
+
+  def options(_, _), do: Error.error(:invalid_options, [], "expected a unique keyword list")
+
+  @spec struct_input(struct(), [atom()]) :: map()
+  def struct_input(%_{} = value, nil_means_absent \\ []) do
+    Enum.reduce(nil_means_absent, Map.from_struct(value), fn key, input ->
+      if is_nil(Map.get(input, key)), do: Map.delete(input, key), else: input
+    end)
+  end
+
   @spec normalize(map(), [atom()]) :: {:ok, map()} | {:error, Error.t()}
   def normalize(%module{} = _, _) when is_atom(module) do
     Error.error(:invalid_type, [], "expected a plain object")
@@ -342,6 +368,11 @@ defmodule WotexContinuum.Validation do
     if length(values) >= minimum,
       do: :ok,
       else: Error.error(:too_short, path, "array is shorter than the allowed minimum")
+  end
+
+  defp duplicate_options?(options) do
+    keys = Keyword.keys(options)
+    length(keys) != MapSet.size(MapSet.new(keys))
   end
 
   defp normalize_datetime(datetime) do

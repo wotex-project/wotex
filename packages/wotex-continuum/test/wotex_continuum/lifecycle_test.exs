@@ -36,6 +36,15 @@ defmodule WotexContinuum.LifecycleTest do
 
     assert {:error, %Error{code: :invalid_time_order}} =
              Lifecycle.transition(active, :stopped, "2026-09-02T09:59:59Z")
+
+    assert {:error, %Error{code: :invalid_enum}} =
+             Lifecycle.transition(%{active | state: :unknown}, :stopped, "2026-09-02T10:00:01Z")
+
+    assert {:error, %Error{code: :invalid_options}} =
+             Lifecycle.transition(active, :stopped, "2026-09-02T10:00:01Z", [:malformed])
+
+    assert {:error, %Error{code: :unknown_field}} =
+             Lifecycle.transition(active, :stopped, "2026-09-02T10:00:01Z", unknown: true)
   end
 
   test "air-gapped mode makes upstream disconnection explicit" do

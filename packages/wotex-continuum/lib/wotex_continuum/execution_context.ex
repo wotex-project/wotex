@@ -30,7 +30,7 @@ defmodule WotexContinuum.ExecutionContext do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: {:ok, value}
+  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
 
   def new(data) do
     fields = [:execution_id, :node_id, :mode, :observed_at, :extensions]

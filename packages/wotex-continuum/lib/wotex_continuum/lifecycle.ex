@@ -45,7 +45,7 @@ defmodule WotexContinuum.Lifecycle do
   def states, do: @states
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: {:ok, value}
+  def new(%__MODULE__{} = value), do: new(Validation.struct_input(value, [:reason]))
 
   def new(data) do
     fields = [:subject_id, :state, :generation, :changed_at, :reason, :extensions]
@@ -77,7 +77,9 @@ defmodule WotexContinuum.Lifecycle do
   @spec transition(t(), state() | String.t(), DateTime.t() | String.t(), keyword()) ::
           {:ok, t()} | {:error, Error.t()}
   def transition(%__MODULE__{} = lifecycle, next_state, changed_at, options \\ []) do
-    with {:ok, next_state} <- Validation.enum(next_state, ["state"], @states),
+    with :ok <- Validation.options(options, [:reason]),
+         {:ok, %__MODULE__{} = lifecycle} <- new(lifecycle),
+         {:ok, next_state} <- Validation.enum(next_state, ["state"], @states),
          :ok <- allowed_transition(lifecycle.state, next_state),
          {:ok, changed_at} <- Validation.timestamp(changed_at, ["changed_at"]),
          :ok <- chronological(lifecycle.changed_at, changed_at),

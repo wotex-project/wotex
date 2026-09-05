@@ -37,7 +37,7 @@ defmodule WotexContinuum.Capability do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: {:ok, value}
+  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
 
   def new(data) do
     fields = [:id, :version, :operations, :modes, :network, :degradation, :extensions]

@@ -11,7 +11,7 @@ defmodule WotexContinuum.Limits do
   configuration.
   """
 
-  alias WotexContinuum.Error
+  alias WotexContinuum.{Error, Validation}
 
   @enforce_keys [:max_bytes, :max_depth, :max_collection_size, :max_string_bytes]
   defstruct max_bytes: 1_048_576,
@@ -47,19 +47,19 @@ defmodule WotexContinuum.Limits do
   def new(%__MODULE__{} = limits), do: validate(limits)
 
   def new(options) when is_list(options) do
-    if Keyword.keyword?(options) do
+    allowed = Map.keys(Map.from_struct(defaults()))
+
+    with :ok <- Validation.options(options, allowed) do
       options
       |> Map.new()
       |> new()
-    else
-      invalid_options()
     end
   end
 
   def new(options) when is_map(options) do
     allowed = Map.keys(Map.from_struct(defaults()))
 
-    with {:ok, normalized} <- WotexContinuum.Validation.normalize(options, allowed) do
+    with {:ok, normalized} <- Validation.normalize(options, allowed) do
       defaults()
       |> Map.from_struct()
       |> Map.merge(normalized)

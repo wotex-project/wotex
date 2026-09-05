@@ -16,7 +16,7 @@ defmodule WotexContinuum.CapabilityRequirement do
 
   @doc "Constructs a capability requirement."
   @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
-  def new(%__MODULE__{} = value), do: {:ok, value}
+  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
 
   def new(data) do
     with {:ok, data} <- Validation.normalize(data, [:id, :version_requirement]),

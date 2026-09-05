@@ -65,7 +65,11 @@ defmodule WotexContinuum do
 
   @doc "Returns the string-keyed wire map for a registered value."
   @spec to_map(struct()) :: {:ok, map()} | {:error, WotexContinuum.Error.t()}
-  def to_map(%module{} = value) when module in @modules, do: {:ok, module.to_map(value)}
+  def to_map(%module{} = value) when module in @modules do
+    with {:ok, validated} <- module.new(value) do
+      {:ok, module.to_map(validated)}
+    end
+  end
 
   def to_map(_) do
     WotexContinuum.Error.error(:unsupported_value, [], "expected a registered continuum value")

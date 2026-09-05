@@ -19,6 +19,39 @@ defmodule WotexContinuum.VectorTest do
     end
   end
 
+  test "every registered struct is revalidated before construction or encoding" do
+    required_fields = %{
+      "action_intent" => :intent_id,
+      "action_result" => :result_id,
+      "capability" => :id,
+      "compatibility" => :schema_requirement,
+      "continuum_manifest" => :manifest_id,
+      "degradation" => :degradation_id,
+      "delivery" => :delivery_id,
+      "evidence_reference" => :evidence_id,
+      "execution_context" => :execution_id,
+      "exit_receipt" => :receipt_id,
+      "lifecycle" => :subject_id,
+      "mode" => :deployment,
+      "observation_proposal" => :proposal_id
+    }
+
+    for path <- Path.wildcard(Path.join([@vectors, "valid", "*.json"])) do
+      source = File.read!(path)
+      assert {:ok, value} = Codec.decode(source), path
+      module = value.__struct__
+
+      assert {:ok, ^value} = module.new(value), path
+
+      field = Map.fetch!(required_fields, module.kind())
+      tampered = Map.put(value, field, nil)
+
+      assert {:error, %Error{}} = module.new(tampered), path
+      assert {:error, %Error{}} = WotexContinuum.to_map(tampered), path
+      assert {:error, %Error{}} = Codec.encode(tampered), path
+    end
+  end
+
   test "every invalid vector returns its exact code and path" do
     for path <- Path.wildcard(Path.join([@vectors, "invalid", "*.json"])) do
       vector =

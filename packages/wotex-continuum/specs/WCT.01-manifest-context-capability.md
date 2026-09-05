@@ -53,6 +53,11 @@ Implementations MUST accept only finite JSON numbers. Duplicate members, an
 atom/string key collision in native input, invalid UTF-8, or a configured
 resource-limit breach MUST return a typed error.
 
+Typed values are not a validation bypass. Constructors and the public encoder
+MUST revalidate struct fields, including nested values, and MUST reject a
+tampered or manually assembled struct with the same typed error returned for
+equivalent invalid map input. Public keyword options MUST be unique and known.
+
 Canonical encoding sorts object keys by UTF-8 byte order, retains list order,
 emits no insignificant whitespace, and uses the JSON scalar representation of
 the package's supported JSON encoder. This is the WCT project-canonical form;

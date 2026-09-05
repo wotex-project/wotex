@@ -40,7 +40,7 @@ defmodule WotexContinuum.Compatibility do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: {:ok, value}
+  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
 
   def new(data) do
     fields = [:schema_requirement, :required_capabilities, :extensions]
