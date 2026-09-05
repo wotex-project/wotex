@@ -301,6 +301,8 @@ raw observations, local paths, or exception messages.
 - Selection produces `not_run` without invoking the target.
 - Invalid corpus, subject, target configuration, environment, or runner options
   returns a typed construction error and produces no misleading report.
+- Public tagged-return APIs reject malformed, duplicated, and unknown keyword
+  options before reading any option value.
 
 Errors use stable atom codes internally and bounded static messages. Error
 values do not echo raw target output or environment values.

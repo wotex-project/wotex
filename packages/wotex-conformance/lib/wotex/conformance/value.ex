@@ -7,7 +7,7 @@ defmodule Wotex.Conformance.Value do
   canonical encoding or target invocation.
   """
 
-  alias Wotex.Conformance.Error
+  alias Wotex.Conformance.{Error, Input}
 
   @default_max_depth 32
   @default_max_entries 10_000
@@ -29,13 +29,9 @@ defmodule Wotex.Conformance.Value do
   """
   @spec validate(term(), keyword()) :: {:ok, json_value()} | {:error, Error.t()}
   def validate(value, options \\ []) do
-    limits = %{
-      max_depth: Keyword.get(options, :max_depth, @default_max_depth),
-      max_entries: Keyword.get(options, :max_entries, @default_max_entries),
-      max_string_bytes: Keyword.get(options, :max_string_bytes, @default_max_string_bytes)
-    }
-
-    with :ok <- validate_limits(limits),
+    with :ok <- Input.options(options, [:max_depth, :max_entries, :max_string_bytes]),
+         limits = limits(options),
+         :ok <- validate_limits(limits),
          {:ok, _remaining} <- walk(value, [], 0, limits.max_entries, limits) do
       {:ok, value}
     end
@@ -45,10 +41,50 @@ defmodule Wotex.Conformance.Value do
   @spec validate_identifier(term(), String.t(), keyword()) ::
           {:ok, String.t()} | {:error, Error.t()}
   def validate_identifier(value, field, options \\ []) do
-    max_bytes = Keyword.get(options, :max_bytes, 255)
-    pattern = Keyword.get(options, :pattern, ~r/^[A-Za-z0-9][A-Za-z0-9._:\/-]*$/u)
+    with :ok <- Input.options(options, [:max_bytes, :pattern]) do
+      validate_identifier_value(
+        value,
+        field,
+        Keyword.get(options, :max_bytes, 255),
+        Keyword.get(options, :pattern, ~r/^[A-Za-z0-9][A-Za-z0-9._:\/-]*$/u)
+      )
+    end
+  end
 
+  @doc "Accepts a map only when every key is a string."
+  @spec string_key_map(term(), String.t()) :: {:ok, map()} | {:error, Error.t()}
+  def string_key_map(value, field) when is_map(value) do
+    case Enum.find(Map.keys(value), &(not is_binary(&1))) do
+      nil -> {:ok, value}
+      _key -> {:error, Error.new(:invalid_map_key, "#{field} keys must be strings", path: [field])}
+    end
+  end
+
+  def string_key_map(_value, field) do
+    {:error, Error.new(:invalid_type, "#{field} must be an object", path: [field])}
+  end
+
+  defp validate_limits(limits) do
+    if Enum.all?(limits, fn {_key, value} -> is_integer(value) and value > 0 end) do
+      :ok
+    else
+      {:error, Error.new(:invalid_limit, "JSON value limits must be positive integers")}
+    end
+  end
+
+  defp limits(options) do
+    %{
+      max_depth: Keyword.get(options, :max_depth, @default_max_depth),
+      max_entries: Keyword.get(options, :max_entries, @default_max_entries),
+      max_string_bytes: Keyword.get(options, :max_string_bytes, @default_max_string_bytes)
+    }
+  end
+
+  defp validate_identifier_value(value, field, max_bytes, pattern) do
     cond do
+      not is_integer(max_bytes) or max_bytes <= 0 or not is_struct(pattern, Regex) ->
+        {:error, Error.new(:invalid_limit, "identifier limits are invalid", path: [field])}
+
       not is_binary(value) ->
         {:error, Error.new(:invalid_type, "#{field} must be a string", path: [field])}
 
@@ -71,27 +107,6 @@ defmodule Wotex.Conformance.Value do
 
       true ->
         {:ok, value}
-    end
-  end
-
-  @doc "Accepts a map only when every key is a string."
-  @spec string_key_map(term(), String.t()) :: {:ok, map()} | {:error, Error.t()}
-  def string_key_map(value, field) when is_map(value) do
-    case Enum.find(Map.keys(value), &(not is_binary(&1))) do
-      nil -> {:ok, value}
-      _key -> {:error, Error.new(:invalid_map_key, "#{field} keys must be strings", path: [field])}
-    end
-  end
-
-  def string_key_map(_value, field) do
-    {:error, Error.new(:invalid_type, "#{field} must be an object", path: [field])}
-  end
-
-  defp validate_limits(limits) do
-    if Enum.all?(limits, fn {_key, value} -> is_integer(value) and value > 0 end) do
-      :ok
-    else
-      {:error, Error.new(:invalid_limit, "JSON value limits must be positive integers")}
     end
   end
 

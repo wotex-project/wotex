@@ -6,7 +6,7 @@ defmodule Wotex.Conformance.Result do
   observation returned by the target.
   """
 
-  alias Wotex.Conformance.{Canonical, Error, Value, Vector}
+  alias Wotex.Conformance.{Canonical, Error, Input, Value, Vector}
 
   @statuses [:pass, :fail, :unsupported, :not_run, :infrastructure_error]
 
@@ -64,11 +64,11 @@ defmodule Wotex.Conformance.Result do
   def new(vector, status, options \\ [])
 
   def new(%Vector{} = vector, status, options) when status in @statuses do
-    actual = Keyword.get(options, :actual)
-    code = Keyword.get(options, :code, Atom.to_string(status))
-    duration_us = Keyword.get(options, :duration_us, 0)
-
-    with {:ok, code} <- Value.validate_identifier(code, "code", max_bytes: 128),
+    with :ok <- Input.options(options, [:actual, :code, :duration_us]),
+         actual = Keyword.get(options, :actual),
+         code = Keyword.get(options, :code, Atom.to_string(status)),
+         duration_us = Keyword.get(options, :duration_us, 0),
+         {:ok, code} <- Value.validate_identifier(code, "code", max_bytes: 128),
          :ok <- validate_duration(duration_us),
          {:ok, actual_digest} <- digest_actual(actual),
          result = %__MODULE__{

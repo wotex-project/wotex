@@ -6,7 +6,7 @@ defmodule Wotex.Conformance.Artifact do
   extraction and starts no subject code.
   """
 
-  alias Wotex.Conformance.{Canonical, Error}
+  alias Wotex.Conformance.{Canonical, Error, Input}
 
   @default_max_bytes 1_073_741_824
   @chunk_bytes 65_536
@@ -22,9 +22,9 @@ defmodule Wotex.Conformance.Artifact do
   @spec verify(Path.t(), String.t(), keyword()) ::
           {:ok, verification()} | {:error, Error.t()}
   def verify(path, expected_digest, options \\ []) do
-    max_bytes = Keyword.get(options, :max_bytes, @default_max_bytes)
-
-    with :ok <- validate_path(path),
+    with :ok <- Input.options(options, [:max_bytes]),
+         max_bytes = Keyword.get(options, :max_bytes, @default_max_bytes),
+         :ok <- validate_path(path),
          :ok <- validate_digest(expected_digest),
          :ok <- validate_max_bytes(max_bytes),
          {:ok, stat} <- regular_file_stat(path),

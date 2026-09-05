@@ -14,6 +14,7 @@ defmodule Wotex.Conformance.Runner do
     Corpus,
     Environment,
     Error,
+    Input,
     Report,
     Result,
     Subject,
@@ -32,8 +33,9 @@ defmodule Wotex.Conformance.Runner do
   """
   @spec run(Corpus.t(), Subject.t(), term(), keyword()) ::
           {:ok, Report.t()} | {:error, Error.t()}
-  def run(%Corpus{} = corpus, %Subject{} = subject, target_input, options) when is_list(options) do
-    with {:ok, generated_at} <- generated_at(options),
+  def run(%Corpus{} = corpus, %Subject{} = subject, target_input, options) do
+    with :ok <- Input.options(options, [:generated_at, :environment, :select]),
+         {:ok, generated_at} <- generated_at(options),
          {:ok, environment} <- environment(options),
          {:ok, selection} <- selection(options, corpus.vectors),
          {:ok, target} <- Target.normalize(target_input),
@@ -49,10 +51,6 @@ defmodule Wotex.Conformance.Runner do
 
       Report.new(subject, corpus.digest, generated_at, environment, results)
     end
-  end
-
-  def run(%Corpus{}, %Subject{}, _target, _options) do
-    {:error, Error.new(:invalid_options, "runner options must be a keyword list")}
   end
 
   defp generated_at(options) do

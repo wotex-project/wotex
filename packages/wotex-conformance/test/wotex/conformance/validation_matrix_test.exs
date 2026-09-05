@@ -51,6 +51,11 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
 
     assert {:error, %{code: :duplicate_field}} =
              Input.only_keys(%{:id => 1, "id" => 2}, ["id"])
+
+    assert :ok = Input.options([limit: 1], [:limit])
+    assert_error(Input.options([:malformed], [:limit]), :invalid_options)
+    assert_error(Input.options([limit: 1, limit: 2], [:limit]), :invalid_options)
+    assert_error(Input.options([unknown: true], [:limit]), :invalid_options)
   end
 
   test "bounded JSON validation accepts values and rejects every public limit class" do
@@ -65,6 +70,8 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
     assert {:error, %{code: :limit_exceeded}} = Value.validate([1], max_entries: 1)
     assert {:error, %{code: :invalid_map_key}} = Value.validate(%{atom: "value"})
     assert {:error, %{code: :invalid_type}} = Value.validate({:unsupported, "term"})
+    assert_error(Value.validate(%{}, [:malformed]), :invalid_options)
+    assert_error(Value.validate(%{}, unknown: true), :invalid_options)
 
     assert Value.validate_identifier("thing:one", "id") == {:ok, "thing:one"}
     assert {:error, %{code: :invalid_type}} = Value.validate_identifier(1, "id")
@@ -72,6 +79,8 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
     assert {:error, %{code: :limit_exceeded}} = Value.validate_identifier("ab", "id", max_bytes: 1)
     assert {:error, %{code: :invalid_encoding}} = Value.validate_identifier(<<255>>, "id")
     assert {:error, %{code: :invalid_value}} = Value.validate_identifier("bad space", "id")
+    assert_error(Value.validate_identifier("id", "id", :invalid), :invalid_options)
+    assert_error(Value.validate_identifier("id", "id", pattern: :invalid), :invalid_limit)
 
     assert Value.string_key_map(%{"key" => "value"}, "object") ==
              {:ok, %{"key" => "value"}}
@@ -252,6 +261,8 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
     assert_error(Result.new(vector, :pass, code: "bad code"), :invalid_value)
     assert_error(Result.new(vector, :pass, duration_us: -1), :invalid_duration)
     assert_error(Result.new(vector, :pass, actual: self()), :invalid_type)
+    assert_error(Result.new(vector, :pass, [:malformed]), :invalid_options)
+    assert_error(Result.new(vector, :pass, unknown: true), :invalid_options)
 
     subject = TestFixtures.subject!(digest)
 
@@ -299,6 +310,8 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
 
     assert_error(Artifact.verify(context.root, context.digest), :invalid_artifact_type)
     assert_error(Artifact.verify(context.archive, context.digest, max_bytes: 1), :limit_exceeded)
+    assert_error(Artifact.verify(context.archive, context.digest, [:malformed]), :invalid_options)
+    assert_error(Artifact.verify(context.archive, context.digest, unknown: true), :invalid_options)
     assert_error(Artifact.digest_file(nil), :invalid_artifact_path)
     assert_error(Artifact.digest_file(Path.join(context.root, "missing")), :artifact_unreadable)
   end
@@ -505,6 +518,20 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
     )
 
     assert_error(Conformance.run(corpus, subject, target, :invalid), :invalid_options)
+    assert_error(Conformance.run(corpus, subject, target, [:malformed]), :invalid_options)
+
+    assert_error(
+      Conformance.run(corpus, subject, target,
+        generated_at: @generated_at,
+        generated_at: @generated_at
+      ),
+      :invalid_options
+    )
+
+    assert_error(
+      Conformance.run(corpus, subject, target, generated_at: @generated_at, unknown: true),
+      :invalid_options
+    )
 
     assert_error(
       Conformance.run(corpus, subject, target, generated_at: @generated_at, select: {:ids, [1]}),
