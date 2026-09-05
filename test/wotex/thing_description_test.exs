@@ -168,6 +168,57 @@ defmodule Wotex.ThingDescriptionTest do
     assert Enum.any?(errors, &(&1.phase == :schema and String.starts_with?(&1.path, "/")))
   end
 
+  test "rejects undefined Thing and Form security references with stable paths" do
+    invalid =
+      valid_td_map()
+      |> Map.put("security", ["missing_root"])
+      |> put_in(
+        ["properties"],
+        %{
+          "sensor/level~raw" => %{
+            "type" => "number",
+            "forms" => [
+              %{"href" => "https://example.test/level", "security" => ["missing_form"]}
+            ]
+          }
+        }
+      )
+
+    assert {:error, errors} = ThingDescription.from_map(invalid)
+
+    assert Enum.any?(
+             errors,
+             &(&1.code == :undefined_security_reference and &1.phase == :semantic and
+                 &1.path == "/security/0" and &1.details == %{reference: "missing_root"})
+           )
+
+    assert Enum.any?(
+             errors,
+             &(&1.code == :undefined_security_reference and &1.phase == :semantic and
+                 &1.path == "/properties/sensor~1level~0raw/forms/0/security/0" and
+                 &1.details == %{reference: "missing_form"})
+           )
+  end
+
+  test "rejects undefined ComboSecurityScheme references" do
+    invalid =
+      valid_td_map()
+      |> put_in(
+        ["securityDefinitions", "combo_sc"],
+        %{"scheme" => "combo", "oneOf" => ["nosec_sc", "missing_sc"]}
+      )
+      |> Map.put("security", ["combo_sc"])
+
+    assert {:error, errors} = ThingDescription.from_map(invalid)
+
+    assert Enum.any?(
+             errors,
+             &(&1.code == :undefined_security_reference and
+                 &1.path == "/securityDefinitions/combo_sc/oneOf/1" and
+                 &1.details == %{reference: "missing_sc"})
+           )
+  end
+
   test "explicit validation retains semantic errors for non-string titles" do
     map = Map.put(valid_td_map(), "title", 42)
     assert {:ok, td} = ThingDescription.from_map(map, validate: false)

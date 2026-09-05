@@ -37,6 +37,10 @@ registration, or Action-effect truth. A consumer resolves those inputs.
    RDF/XML are absent from the API.
 9. The bundled schema MUST have an immutable upstream revision, digest, license,
    and modification notice.
+10. Every Thing-level, Form-level, and `ComboSecurityScheme` security reference
+    MUST name an entry in the Thing Description's `securityDefinitions` map.
+    Undefined names fail with `undefined_security_reference` at the exact JSON
+    Pointer-like reference path.
 
 ## Public operations
 
@@ -62,6 +66,8 @@ stable code, JSON path, and safe details.
 - valid TD 1.1 parse and source-byte return;
 - equal maps with different insertion order produce equal canonical bytes;
 - extension terms survive parse/map/encode;
+- Thing-level, Form-level, and `ComboSecurityScheme` names cannot reference an
+  undefined security scheme;
 - legacy context, malformed JSON, non-object roots, excessive bytes, depth, and
   nodes fail with typed codes;
 - a mutation invalidates source-byte encoding; and

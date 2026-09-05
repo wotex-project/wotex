@@ -4,9 +4,9 @@ defmodule Wotex.ThingDescription do
 
   A Thing Description is the standardized metadata document for a Thing, not a
   database row, transport connection, device process, or digital-twin state
-  holder. Wotex validates its TD 1.1 structure and essential context/title
-  semantics while preserving unknown extension members at native JSON-value
-  semantics.
+  holder. Wotex validates its TD 1.1 structure, context/title semantics, and
+  security-definition references while preserving unknown extension members at
+  native JSON-value semantics.
 
   Parse `application/td+json` with `parse/2`, or use `from_map/2` after a
   consumer has decoded JSON elsewhere. Parsing retains the exact source bytes

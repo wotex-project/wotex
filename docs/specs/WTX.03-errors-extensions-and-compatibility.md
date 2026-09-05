@@ -19,6 +19,10 @@ those errors. Stable fields are:
 Raising variants use the same exception value. Error messages are not a stable
 matching interface.
 
+`undefined_security_reference` is a semantic error. Its path identifies the
+offending Thing-level, Form-level, or `ComboSecurityScheme` member, and its safe
+details contain only the unresolved definition name.
+
 ## Extension contract
 
 Unknown JSON members MUST be preserved without interpretation. Extension terms
