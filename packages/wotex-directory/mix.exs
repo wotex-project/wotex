@@ -150,6 +150,7 @@ defmodule WotexDirectory.MixProject do
           Wotex.Directory.Context,
           Wotex.Directory.Entry,
           Wotex.Directory.Error,
+          Wotex.Directory.Event,
           Wotex.Directory.Expiry,
           Wotex.Directory.Introduction,
           Wotex.Directory.Mutation,

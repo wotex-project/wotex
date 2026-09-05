@@ -32,6 +32,7 @@ defmodule Wotex.Directory.Error do
           | :replace
           | :patch
           | :delete
+          | :event
           | :list
           | :expire
           | :introduction

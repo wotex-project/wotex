@@ -17,7 +17,8 @@
 `wotex_directory` implements the deterministic application mechanics of a W3C
 Web of Things Discovery Thing Description Directory: registration, retrieval,
 replacement, bounded JSON Merge Patch, deletion, stable listing, expiry, and
-the well-known Introduction.
+the well-known Introduction. Successful mutations can also be projected into
+the three lifecycle event values defined by the optional Discovery Events API.
 
 The library is deliberately storage-neutral. A consumer supplies repository,
 authorization, clock, and identifier ports; the library owns validation,
@@ -85,6 +86,12 @@ The 0.1 series targets the W3C WoT Discovery Recommendation dated 2023-12-05
 and Thing Description 1.1. Supported behavior is recorded in
 [`WTD.01`](docs/specs/WTD.01-directory-contract.md). This package does not claim
 W3C certification and does not implement JSONPath, XPath, or SPARQL profiles.
+
+`Wotex.Directory.Event.from_mutation/2` derives `thing_created`,
+`thing_updated`, or `thing_deleted` data without starting an SSE stream. The
+consumer owns event IDs, durable ordering, replay, filtering, authorization,
+and transport encoding; those concerns must share the consumer transaction or
+outbox boundary when lossless notification is required.
 
 PATCH uses RFC 7396 JSON Merge Patch. `null` removes a member, arrays replace as
 whole values, and the merged document is revalidated as a Thing Description

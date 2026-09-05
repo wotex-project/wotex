@@ -63,7 +63,7 @@ The package does not provide:
 - background expiry scheduling;
 - a credential store or policy engine;
 - JSONPath, XPath, or SPARQL search;
-- directory-change notifications;
+- an event stream, event persistence, replay, or transport encoding;
 - alternate RDF serializations;
 - Thing provisioning or canonical Thing state; or
 - W3C certification.
@@ -87,6 +87,7 @@ They are never treated as an empty result.
 | Pagination | Discovery defines optional `limit`, zero-based `offset`, `next`, and canonical collection revision information | Listing uses bounded offset pages and an immutable collection-revision token that detects both mutations and wall-clock expiry changes |
 | Expiry | Discovery defines `ttl` and `expires`, and recommends purging expired registrations | Reads reject expired entries; consumer-invoked bounded expiry defaults to purge and may explicitly transition an active entry once into retained expired state |
 | Introduction | Discovery allows `/.well-known/wot` and requires the directory's own Thing Description there when used | `introduction/1` returns that value without entry repository access |
+| Events | Discovery optionally defines three lifecycle events over SSE | `Event.from_mutation/2` derives transport-neutral type and data; the consumer owns publication and delivery |
 | Search | JSONPath and XPath are informative; SPARQL is optional | No search profile is implemented |
 
 The implementation does not own HTTP. A transport host maps values to the exact
@@ -174,7 +175,24 @@ and state are package mechanics and are not emitted as W3C terms.
 The value is transport-neutral. In particular, it does not contain an HTTP
 status or route.
 
-### 5.6 Query and page
+### 5.6 Event
+
+`Wotex.Directory.Event.from_mutation/2` projects a successful mutation into
+one of the Discovery lifecycle event types:
+
+- a created registration becomes `thing_created`;
+- named registration replacement, complete replacement, and patch become
+  `thing_updated`; and
+- deletion becomes `thing_deleted`.
+
+The default event data is the enriched Thing Description for create and update
+events. `payload: :identifier` returns the minimum Partial TD containing only
+`id`. Deletion always returns that minimum form. The value deliberately has no
+SSE event ID: durable ordering, IDs, replay, filtering, authorization, and
+transport encoding belong to the consumer that publishes the optional Events
+API.
+
+### 5.7 Query and page
 
 `Wotex.Directory.Query` contains:
 
