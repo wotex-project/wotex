@@ -19,7 +19,7 @@ defmodule Wotex.DataSchema do
 
   @doc "Builds a DataSchema value from a JSON-compatible map."
   @spec new(map(), keyword()) :: {:ok, t()} | {:error, Wotex.Error.t()}
-  def new(map, opts \\ []), do: Value.build(__MODULE__, map, [], opts)
+  def new(map, opts \\ []), do: Value.build(__MODULE__, map, [], :data_schema, opts)
 
   @doc "Returns the complete preserved DataSchema map."
   @spec to_map(t()) :: map()

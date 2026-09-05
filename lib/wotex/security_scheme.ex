@@ -24,6 +24,7 @@ defmodule Wotex.SecurityScheme do
       __MODULE__,
       map,
       [{"scheme", &non_empty_binary?/1, "Security scheme name must be non-empty"}],
+      :security_scheme,
       opts
     )
   end

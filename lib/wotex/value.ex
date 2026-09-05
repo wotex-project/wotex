@@ -1,21 +1,28 @@
 defmodule Wotex.Value do
   @moduledoc false
 
-  alias Wotex.{Error, JSON}
+  alias Wotex.{Error, JSON, ValueSchema}
 
   @doc "Builds an opaque value after JSON and required-member validation."
-  @spec build(module(), term(), [{String.t(), (term() -> boolean()), String.t()}], keyword()) ::
+  @spec build(
+          module(),
+          term(),
+          [{String.t(), (term() -> boolean()), String.t()}],
+          atom(),
+          keyword()
+        ) ::
           {:ok, struct()} | {:error, Error.t()}
-  def build(module, map, requirements, opts)
+  def build(module, map, requirements, schema_kind, opts)
 
-  def build(module, map, requirements, opts) when is_map(map) do
+  def build(module, map, requirements, schema_kind, opts) when is_map(map) do
     with :ok <- JSON.validate(map, opts),
-         :ok <- validate_requirements(map, requirements) do
+         :ok <- validate_requirements(map, requirements),
+         :ok <- ValueSchema.validate(map, schema_kind) do
       {:ok, struct!(module, value: map)}
     end
   end
 
-  def build(_module, _map, _requirements, _opts) do
+  def build(_module, _map, _requirements, _schema_kind, _opts) do
     {:error, Error.new(:object_required, :value, "Value must be a JSON object")}
   end
 

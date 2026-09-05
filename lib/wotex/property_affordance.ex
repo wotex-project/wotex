@@ -19,7 +19,7 @@ defmodule Wotex.PropertyAffordance do
 
   @doc "Builds a Property Affordance value from a JSON-compatible map."
   @spec new(map(), keyword()) :: {:ok, t()} | {:error, Wotex.Error.t()}
-  def new(map, opts \\ []), do: Value.build(__MODULE__, map, [], opts)
+  def new(map, opts \\ []), do: Value.build(__MODULE__, map, [], :property_affordance, opts)
 
   @doc "Returns the complete preserved Property Affordance map."
   @spec to_map(t()) :: map()

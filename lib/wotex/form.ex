@@ -18,18 +18,24 @@ defmodule Wotex.Form do
   @enforce_keys [:value]
   defstruct [:value]
 
-  @doc "Builds a Form value. A non-empty `href` is required."
+  @doc """
+  Builds a Form value. A non-empty `href` is required.
+
+  Pass `for: :property`, `for: :action`, `for: :event`, or `for: :thing` to
+  validate `op` against that TD 1.1 interaction context. The default
+  `for: :generic` validates only the common Form definition.
+  """
   @spec new(map(), keyword()) :: {:ok, t()} | {:error, Wotex.Error.t()}
   def new(map, opts \\ []) do
-    Value.build(
-      __MODULE__,
-      map,
-      [
-        {"href", &non_empty_binary?/1, "Form href must be non-empty"},
-        {"op", &valid_operation?/1, "Form op must be a string or a list of strings when present"}
-      ],
-      opts
-    )
+    requirements = [
+      {"href", &non_empty_binary?/1, "Form href must be non-empty"},
+      {"op", &valid_operation?/1, "Form op must be a string or a list of strings when present"}
+    ]
+
+    with {:ok, form} <- Value.build(__MODULE__, map, requirements, :form, opts),
+         :ok <- Wotex.ValueSchema.validate_form(map, Keyword.get(opts, :for, :generic)) do
+      {:ok, form}
+    end
   end
 
   @doc "Returns the complete preserved Form map."

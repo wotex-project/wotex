@@ -18,13 +18,21 @@ protocol, accept a Property observation, or prove an Action effect.
 
 1. Every constructor MUST accept only a JSON-compatible map with string keys.
 2. Every wrapper MUST preserve unknown extension members.
-3. A Form MUST contain a non-empty `href`. Relative references remain values;
+3. DataSchema, Property Affordance, Action Affordance, Event Affordance, and
+   security-scheme constructors MUST validate the corresponding definition in
+   the pinned TD 1.1 schema.
+4. A Form MUST contain a non-empty `href`. Relative references remain values;
    base-URI resolution belongs to runtime mechanics.
-4. A security scheme MUST contain a non-empty `scheme` term.
-5. A Property, Action, or Event wrapper MUST reject a value constructed for a
-   different affordance category.
-6. `to_map/1` MUST return the complete preserved map.
-7. Wrappers MUST perform no I/O and start no process.
+5. A Form constructed without an interaction context MUST validate the common
+   TD 1.1 Form terms. `for: :property`, `for: :action`, `for: :event`, and
+   `for: :thing` MUST additionally constrain `op` to the exact operation set
+   for that context.
+6. A security scheme MUST contain a non-empty `scheme` term. Standard and
+   extension scheme shapes MUST follow the pinned TD 1.1 definition.
+7. Validation failures MUST use the shared structured error contract and a
+   deterministic JSON Pointer-like path.
+8. `to_map/1` MUST return the complete preserved map.
+9. Wrappers MUST perform no I/O and start no process.
 
 ## Public values
 
@@ -40,5 +48,6 @@ protocol, accept a Property observation, or prove an Action effect.
 ## Evidence
 
 Constructor tests cover required members, invalid JSON keys and values,
-round-trip preservation, and category identity. Thing Description fixtures
-cover their aggregate schema relationship.
+round-trip preservation, exact DataSchema constraints, category-specific Form
+operations, affordance requirements, security-scheme variants, and extension
+schemes. Thing Description fixtures cover their aggregate relationship.

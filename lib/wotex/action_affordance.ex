@@ -19,7 +19,7 @@ defmodule Wotex.ActionAffordance do
 
   @doc "Builds an Action Affordance value from a JSON-compatible map."
   @spec new(map(), keyword()) :: {:ok, t()} | {:error, Wotex.Error.t()}
-  def new(map, opts \\ []), do: Value.build(__MODULE__, map, [], opts)
+  def new(map, opts \\ []), do: Value.build(__MODULE__, map, [], :action_affordance, opts)
 
   @doc "Returns the complete preserved Action Affordance map."
   @spec to_map(t()) :: map()
