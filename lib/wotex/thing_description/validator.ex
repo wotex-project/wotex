@@ -1,7 +1,7 @@
 defmodule Wotex.ThingDescription.Validator do
   @moduledoc false
 
-  alias Wotex.{Error, ThingDescription}
+  alias Wotex.{Error, SecurityReferences, ThingDescription}
 
   @context "https://www.w3.org/2022/wot/td/v1.1"
   @schema_version "1.1-09-November-2023"
@@ -72,96 +72,10 @@ defmodule Wotex.ThingDescription.Validator do
 
   defp require_defined_security_references(
          errors,
-         %{"securityDefinitions" => definitions} = document
+         document
        )
-       when is_map(definitions) do
-    document
-    |> security_references(definitions)
-    |> Enum.reduce(errors, &accumulate_security_reference(&1, &2, definitions))
-  end
-
-  defp require_defined_security_references(errors, _document), do: errors
-
-  defp accumulate_security_reference({_path, reference}, errors, definitions)
-       when is_map_key(definitions, reference),
-       do: errors
-
-  defp accumulate_security_reference({path, reference}, errors, _definitions) do
-    [
-      Error.new(
-        :undefined_security_reference,
-        :semantic,
-        "Security reference must name an entry in securityDefinitions",
-        path,
-        %{reference: reference}
-      )
-      | errors
-    ]
-  end
-
-  defp security_references(document, definitions) do
-    security_values(Map.get(document, "security"), "/security") ++
-      form_security_references(Map.get(document, "forms"), "/forms") ++
-      affordance_security_references(document) ++ combo_security_references(definitions)
-  end
-
-  defp affordance_security_references(document) do
-    Enum.flat_map(~w(properties actions events), fn category ->
-      document
-      |> Map.get(category, %{})
-      |> sorted_map_entries()
-      |> Enum.flat_map(fn {name, affordance} ->
-        path = "/#{category}/#{pointer_segment(name)}/forms"
-        form_security_references(map_value(affordance, "forms", nil), path)
-      end)
-    end)
-  end
-
-  defp form_security_references(forms, path) when is_list(forms) do
-    forms
-    |> Enum.with_index()
-    |> Enum.flat_map(fn {form, index} ->
-      security_values(map_value(form, "security", nil), "#{path}/#{index}/security")
-    end)
-  end
-
-  defp form_security_references(_forms, _path), do: []
-
-  defp combo_security_references(definitions) do
-    definitions
-    |> sorted_map_entries()
-    |> Enum.flat_map(fn {name, definition} -> combo_references(name, definition) end)
-  end
-
-  defp combo_references(name, %{"scheme" => "combo"} = definition) do
-    Enum.flat_map(~w(oneOf allOf), fn member ->
-      path = "/securityDefinitions/#{pointer_segment(name)}/#{member}"
-      security_values(Map.get(definition, member), path)
-    end)
-  end
-
-  defp combo_references(_name, _definition), do: []
-
-  defp security_values(reference, path) when is_binary(reference), do: [{path, reference}]
-
-  defp security_values(references, path) when is_list(references) do
-    references
-    |> Enum.with_index()
-    |> Enum.flat_map(fn
-      {reference, index} when is_binary(reference) -> [{"#{path}/#{index}", reference}]
-      {_reference, _index} -> []
-    end)
-  end
-
-  defp security_values(_references, _path), do: []
-
-  defp sorted_map_entries(value) when is_map(value), do: Enum.sort_by(value, &elem(&1, 0))
-  defp sorted_map_entries(_value), do: []
-
-  defp pointer_segment(segment) do
-    segment
-    |> String.replace("~", "~0")
-    |> String.replace("/", "~1")
+       when is_map(document) do
+    Enum.reverse(SecurityReferences.errors(document), errors)
   end
 
   defp require_context(errors, @context), do: errors

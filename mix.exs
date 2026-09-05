@@ -93,7 +93,9 @@ defmodule Wotex.MixProject do
         "docs/specs/WTX.03-errors-extensions-and-compatibility.md": [
           title: "Errors, Extensions, and Compatibility"
         ],
+        "docs/specs/WTX.04-thing-model.md": [title: "Thing Model"],
         "docs/provenance/w3c-td-schema-1.1.md": [title: "TD 1.1 Schema Provenance"],
+        "docs/provenance/w3c-tm-schema-1.1.md": [title: "Thing Model Schema Provenance"],
         "CHANGELOG.md": [title: "Changelog"],
         "SECURITY.md": [title: "Security"],
         "CONTRIBUTING.md": [title: "Contributing"],
@@ -106,7 +108,12 @@ defmodule Wotex.MixProject do
         Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|NOTICE|LICENSE/
       ],
       groups_for_modules: [
-        "Thing Description": [Wotex, Wotex.ThingDescription, Wotex.Error],
+        "Thing Description and Models": [
+          Wotex,
+          Wotex.ThingDescription,
+          Wotex.ThingModel,
+          Wotex.Error
+        ],
         "Interaction Affordances": [
           Wotex.PropertyAffordance,
           Wotex.ActionAffordance,

@@ -1,10 +1,11 @@
 defmodule Wotex do
   @moduledoc """
-  Consumer-neutral W3C Web of Things values and Thing Description mechanics.
+  Consumer-neutral W3C Web of Things values, Thing Description mechanics, and
+  reusable Thing Models.
 
   The production standards baseline is W3C WoT Thing Description 1.1,
-  Recommendation 5 December 2023. Use `Wotex.ThingDescription` as the public
-  aggregate boundary.
+  Recommendation 5 December 2023. Use `Wotex.ThingDescription` for operational
+  Thing metadata and `Wotex.ThingModel` for reusable model templates.
 
   Wotex gives Elixir code one storage-neutral representation for Thing
   Descriptions, Interaction Affordances, Forms, DataSchemas, and security
@@ -31,6 +32,7 @@ defmodule Wotex do
 
   @td_context_1_1 "https://www.w3.org/2022/wot/td/v1.1"
   @td_media_type "application/td+json"
+  @tm_media_type "application/tm+json"
 
   @doc """
   Returns the exact TD 1.1 context URI supported as the production baseline.
@@ -49,4 +51,13 @@ defmodule Wotex do
   """
   @spec td_media_type() :: String.t()
   def td_media_type, do: @td_media_type
+
+  @doc """
+  Returns the registered media type for a JSON Thing Model.
+
+      Wotex.tm_media_type()
+      #=> "application/tm+json"
+  """
+  @spec tm_media_type() :: String.t()
+  def tm_media_type, do: @tm_media_type
 end

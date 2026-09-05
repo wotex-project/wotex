@@ -18,9 +18,9 @@
 ---
 
 Wotex is the storage-neutral value layer for W3C Web of Things applications.
-It parses, validates, preserves, and encodes W3C WoT Thing Description 1.1
-documents without deciding where a Thing lives, who may interact with it, or
-how a Form is executed.
+It parses, validates, preserves, and encodes W3C WoT Thing Description 1.1 and
+Thing Model 1.1 documents without deciding where a Thing lives, who may
+interact with it, or how a Form is executed.
 
 The package is deliberately passive. Loading it starts no process, reads no
 application configuration, and performs no network request. A consumer can use
@@ -32,6 +32,7 @@ distributed service without changing their meaning.
 | Capability | Contract |
 | --- | --- |
 | Thing Description parsing | Decodes `application/td+json` and returns structured errors for expected input failures. |
+| Thing Model parsing | Decodes `application/tm+json` reusable model templates without treating them as operational Things. |
 | TD 1.1 validation | Applies the pinned informative W3C schema plus the package's documented semantic checks. |
 | Extension preservation | Retains unknown JSON object members and native JSON values without interpreting consumer extensions. |
 | Deterministic encoding | Produces key-sorted canonical JSON for package-local comparison and digest inputs. |
@@ -89,6 +90,21 @@ Build from a decoded JSON map when source-byte identity is not needed:
 "urn:example:motor:1" = Wotex.ThingDescription.id(changed)
 ```
 
+Parse a reusable Thing Model separately from an operational Thing Description:
+
+```elixir
+model_json = ~S({
+  "@context":"https://www.w3.org/2022/wot/td/v1.1",
+  "@type":"tm:ThingModel",
+  "title":"Thermostat model",
+  "properties":{"temperature":{"type":"number","unit":"Cel"}},
+  "tm:optional":["/properties/temperature"]
+})
+
+{:ok, model} = Wotex.ThingModel.parse(model_json)
+"Thermostat model" = Wotex.ThingModel.to_map(model)["title"]
+```
+
 Expected input failures are data. Match the stable `code`, `phase`, and JSON
 Pointer `path`; do not couple logic to the human-readable message:
 
@@ -99,9 +115,10 @@ Pointer `path`; do not couple logic to the human-readable message:
 
 ## Value model
 
-`Wotex.ThingDescription` is the aggregate boundary. Use `to_map/1`, `id/1`, and
-`encode/2` instead of coupling consumer code to struct fields, so compatible
-releases can evolve the representation without changing the value contract.
+`Wotex.ThingDescription` and `Wotex.ThingModel` are separate aggregate
+boundaries. Use their `to_map/1`, `id/1`, and `encode/2` operations instead of
+coupling consumer code to struct fields, so compatible releases can evolve the
+representation without changing the value contract.
 
 The smaller value modules apply the same rule:
 
@@ -147,16 +164,16 @@ RFC 8785 JSON Canonicalization Scheme output.
 
 ## Standards baseline
 
-The production baseline is the
+The Thing Description and Thing Model production baseline is the
 [W3C Web of Things Thing Description 1.1 Recommendation](https://www.w3.org/TR/wot-thing-description11/)
 dated 5 December 2023. The bundled informative validation schema is pinned to
-the upstream `REC1.1` tag. Its exact commit, digest, license, and local
-modifications are recorded in
-[`docs/provenance/w3c-td-schema-1.1.md`](docs/provenance/w3c-td-schema-1.1.md).
+the upstream `REC1.1` tag. Exact commits, digests, licenses, and local
+modifications are recorded in the TD and Thing Model provenance documents.
 
-Only `application/td+json` is claimed. Turtle, RDF/XML, remote JSON-LD context
-retrieval, Thing Description 2.0 drafts, protocol execution, authorization, and
-WoT Scripting API conformance are outside this package.
+Only `application/td+json` and `application/tm+json` are claimed. Turtle,
+RDF/XML, remote JSON-LD context retrieval, Thing Description 2.0 drafts,
+protocol execution, authorization, and WoT Scripting API conformance are
+outside this package.
 
 ## Boundary
 

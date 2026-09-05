@@ -14,3 +14,9 @@ specifications:
     path: "docs/specs/WTX.03-errors-extensions-and-compatibility.md"
     status: "implemented"
     requires: ["WTX.01", "WTX.02"]
+  - id: "WTX.04"
+    path: "docs/specs/WTX.04-thing-model.md"
+    status: "implemented"
+    standard: "W3C WoT Thing Description 1.1 — Thing Model"
+    standard_revision: "Recommendation 5 December 2023"
+    requires: ["WTX.01", "WTX.03"]
