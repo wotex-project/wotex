@@ -9,10 +9,10 @@ defmodule Wotex.Conformance.CorpusTest do
     corpus = TestFixtures.corpus!()
 
     assert corpus.digest ==
-             "sha256:4fd0acd7c045aae26ba9138634c8d10c78950c30cc83735d9b219f9603a82d2d"
+             "sha256:7299c404c64893fc2f8a583a4aba0e11e02c515193f1cae14ee706b3b4ec192e"
 
     assert Enum.map(corpus.vectors, & &1.id) == Enum.sort(Enum.map(corpus.vectors, & &1.id))
-    assert length(corpus.vectors) == 4
+    assert length(corpus.vectors) == 12
   end
 
   test "rejects a modified vector before target execution" do

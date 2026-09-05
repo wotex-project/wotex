@@ -29,7 +29,10 @@ defmodule Wotex.Conformance.RunnerTest do
     target = TestFixtures.external_target!(context.archive, "pass")
 
     assert {:ok, report} = run(context, target)
-    assert report.summary == status_counts(pass: 4)
+
+    assert report.summary ==
+             status_counts(context.corpus, pass: length(context.corpus.vectors))
+
     assert Enum.all?(report.results, &(&1.status == :pass))
     assert Enum.all?(report.results, &is_binary(&1.actual_digest))
     assert {:ok, encoded} = Wotex.Conformance.Report.encode(report)
@@ -42,7 +45,7 @@ defmodule Wotex.Conformance.RunnerTest do
     selected = hd(context.corpus.vectors).id
 
     assert {:ok, report} = run(context, target, select: {:ids, [selected]})
-    assert report.summary == status_counts(fail: 1, not_run: 3)
+    assert report.summary == status_counts(context.corpus, fail: 1)
     assert Enum.find(report.results, &(&1.vector_id == selected)).code == "exact_mismatch"
   end
 
@@ -51,7 +54,7 @@ defmodule Wotex.Conformance.RunnerTest do
     selected = hd(context.corpus.vectors).id
 
     assert {:ok, report} = run(context, target, select: {:ids, [selected]})
-    assert report.summary == status_counts(unsupported: 1, not_run: 3)
+    assert report.summary == status_counts(context.corpus, unsupported: 1)
 
     result = Enum.find(report.results, &(&1.vector_id == selected))
     assert result.code == "operation_not_implemented"
@@ -73,7 +76,7 @@ defmodule Wotex.Conformance.RunnerTest do
     for {mode, target_options, code} <- cases do
       target = TestFixtures.external_target!(context.archive, mode, target_options)
       assert {:ok, report} = run(context, target, select: {:ids, [selected]})
-      assert report.summary == status_counts(infrastructure_error: 1, not_run: 3)
+      assert report.summary == status_counts(context.corpus, infrastructure_error: 1)
       assert Enum.find(report.results, &(&1.vector_id == selected)).code == code
     end
   end
@@ -93,7 +96,11 @@ defmodule Wotex.Conformance.RunnerTest do
                environment: @environment
              )
 
-    assert report.summary == status_counts(infrastructure_error: 4)
+    assert report.summary ==
+             status_counts(context.corpus,
+               infrastructure_error: length(context.corpus.vectors)
+             )
+
     assert Enum.all?(report.results, &(&1.code == "artifact_digest_mismatch"))
     refute File.exists?(marker)
   end
@@ -119,7 +126,7 @@ defmodule Wotex.Conformance.RunnerTest do
        }}
 
     assert {:ok, report} = run(context, target, select: {:ids, [selected]})
-    assert report.summary == status_counts(infrastructure_error: 1, not_run: 3)
+    assert report.summary == status_counts(context.corpus, infrastructure_error: 1)
     assert Enum.find(report.results, &(&1.vector_id == selected)).code == "target_callback_failed"
 
     assert {:error, %{code: :target_artifact_callback_failed}} =
@@ -138,9 +145,21 @@ defmodule Wotex.Conformance.RunnerTest do
     )
   end
 
-  defp status_counts(overrides) do
-    %{pass: 0, fail: 0, unsupported: 0, not_run: 0, infrastructure_error: 0}
-    |> Map.merge(Map.new(overrides))
+  defp status_counts(corpus, overrides) do
+    overrides = Map.new(overrides)
+
+    completed =
+      [:pass, :fail, :unsupported, :infrastructure_error]
+      |> Enum.sum_by(&Map.get(overrides, &1, 0))
+
+    %{
+      pass: 0,
+      fail: 0,
+      unsupported: 0,
+      not_run: length(corpus.vectors) - completed,
+      infrastructure_error: 0
+    }
+    |> Map.merge(overrides)
     |> Map.new(fn {key, value} -> {Atom.to_string(key), value} end)
   end
 end

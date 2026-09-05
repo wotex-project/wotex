@@ -96,6 +96,31 @@ defmodule ExternalTargetFixture do
     %{"actions" => ["reset"], "events" => ["changed"], "properties" => ["level"]}
   end
 
+  defp expected_observation("td11.parse.action-input-output") do
+    %{
+      "forms" => [%{"href" => "https://example.test/actions/setLevel", "op" => ["invokeaction"]}],
+      "idempotent" => true,
+      "input" => %{"maximum" => 100, "minimum" => 0, "type" => "integer"},
+      "name" => "setLevel",
+      "output" => %{"type" => "boolean"},
+      "safe" => false
+    }
+  end
+
+  defp expected_observation("td11.parse.event-data") do
+    %{
+      "data" => %{
+        "properties" => %{
+          "message" => %{"type" => "string"},
+          "severity" => %{"type" => "integer"}
+        },
+        "type" => "object"
+      },
+      "forms" => [%{"href" => "https://example.test/events/alarm", "op" => ["subscribeevent"]}],
+      "name" => "alarm"
+    }
+  end
+
   defp expected_observation("td11.parse.extension-preservation") do
     %{"accepted" => true, "extension" => %{"example:profile" => "synthetic"}}
   end
@@ -109,8 +134,61 @@ defmodule ExternalTargetFixture do
     }
   end
 
+  defp expected_observation("td11.parse.multilingual-metadata") do
+    %{
+      "descriptions" => %{
+        "en" => "Reports local conditions",
+        "sv" => "Rapporterar lokala förhållanden"
+      },
+      "titles" => %{"en" => "Weather Thing", "sv" => "Väderting"}
+    }
+  end
+
+  defp expected_observation("td11.parse.property-form") do
+    %{
+      "forms" => [
+        %{
+          "contentType" => "application/json",
+          "href" => "https://example.test/properties/temperature",
+          "op" => ["readproperty"]
+        }
+      ],
+      "name" => "temperature",
+      "readOnly" => true,
+      "type" => "number",
+      "unit" => "Cel"
+    }
+  end
+
+  defp expected_observation("td11.parse.security-definition") do
+    %{
+      "security" => ["basic_sc"],
+      "securityDefinitions" => %{"basic_sc" => %{"in" => "header", "scheme" => "basic"}}
+    }
+  end
+
+  defp expected_observation("td11.parse.thing-level-form") do
+    %{
+      "forms" => [
+        %{
+          "contentType" => "application/json",
+          "href" => "https://example.test/properties",
+          "op" => ["readallproperties", "writeallproperties"]
+        }
+      ]
+    }
+  end
+
+  defp expected_observation("td11.validate.missing-security-definitions") do
+    %{"accepted" => false, "code" => "missing_required_security_definitions"}
+  end
+
   defp expected_observation("td11.validate.missing-title") do
     %{"accepted" => false, "code" => "missing_required_title"}
+  end
+
+  defp expected_observation("td11.validate.undefined-security-reference") do
+    %{"accepted" => false, "code" => "undefined_security_reference"}
   end
 
   defp expected_observation(_vector_id), do: %{"unknown" => true}

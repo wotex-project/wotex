@@ -25,13 +25,28 @@
       },
       "security": ["no_security"],
       "properties": {
-        "level": {"type": "integer", "readOnly": true}
+        "level": {
+          "type": "integer",
+          "readOnly": true,
+          "forms": [
+            {"href": "https://example.com/things/affordances/properties/level", "op": "readproperty"}
+          ]
+        }
       },
       "actions": {
-        "reset": {}
+        "reset": {
+          "forms": [
+            {"href": "https://example.com/things/affordances/actions/reset", "op": "invokeaction"}
+          ]
+        }
       },
       "events": {
-        "changed": {"data": {"type": "integer"}}
+        "changed": {
+          "data": {"type": "integer"},
+          "forms": [
+            {"href": "https://example.com/things/affordances/events/changed", "op": "subscribeevent"}
+          ]
+        }
       }
     }
   },
@@ -50,5 +65,5 @@
     "standard_section": "5.3.2"
   },
   "tags": ["interaction-affordance", "positive", "thing-description-1.1"],
-  "digest": "sha256:4ff47589a04d07507738a0ab2935794d564fa1786c3c746ffdb854f20d51985a"
+  "digest": "sha256:b0cdd11f56feeed87dfd69b7b063a7bbe07d0d987c2a90a17b76f0a89618a4db"
 }

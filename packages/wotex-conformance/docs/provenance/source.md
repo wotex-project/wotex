@@ -1,6 +1,6 @@
 # Source provenance
 
-The implementation, specifications, JSON schemas, tests, and initial synthetic
+The implementation, specifications, JSON schemas, tests, and synthetic
 vectors in this baseline are authored for this public repository under Apache
 License 2.0.
 

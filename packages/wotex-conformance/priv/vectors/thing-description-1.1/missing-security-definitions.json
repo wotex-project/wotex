@@ -1,0 +1,38 @@
+{
+  "id": "td11.validate.missing-security-definitions",
+  "revision": "1.0.0",
+  "claim": {
+    "id": "w3c.wot.td11.required-security-definitions",
+    "revision": "1.0.0",
+    "operation": "thing_description.validate",
+    "evidence_profile": "value",
+    "standard": {
+      "identifier": "w3c.wot.thing-description",
+      "revision": "2023-12-05",
+      "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+      "section": "5.3.1"
+    },
+    "assertions": ["missing_required_security_definitions_rejected"],
+    "tags": ["thing-description-1.1"]
+  },
+  "input": {
+    "document": {
+      "@context": "https://www.w3.org/2022/wot/td/v1.1",
+      "id": "urn:example:thing:missing-security-definitions",
+      "title": "Missing Security Definitions Thing",
+      "security": ["nosec_sc"]
+    }
+  },
+  "expectation": {
+    "operator": "exact",
+    "value": {"accepted": false, "code": "missing_required_security_definitions"}
+  },
+  "provenance": {
+    "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+    "observed": "2026-09-05",
+    "classification": "project_authored_synthetic_vector",
+    "standard_section": "5.3.1"
+  },
+  "tags": ["negative", "security", "thing-description-1.1"],
+  "digest": "sha256:aaf164cd2a67c8e569542086070a3601dc33a828957f4f63937251327b654cf4"
+}

@@ -4,9 +4,19 @@
   "revision": "1.0.0",
   "vectors": [
     {
+      "id": "td11.parse.action-input-output",
+      "file": "action-input-output.json",
+      "digest": "sha256:6c8dea7d869274701f62428407abb8cfbd8584f61caceb832a19e42b866cb4a9"
+    },
+    {
       "id": "td11.parse.affordance-categories",
       "file": "affordance-categories.json",
-      "digest": "sha256:4ff47589a04d07507738a0ab2935794d564fa1786c3c746ffdb854f20d51985a"
+      "digest": "sha256:b0cdd11f56feeed87dfd69b7b063a7bbe07d0d987c2a90a17b76f0a89618a4db"
+    },
+    {
+      "id": "td11.parse.event-data",
+      "file": "event-data.json",
+      "digest": "sha256:5063dbb694bf794c9457c0be6ae0438a05f55dfc189a97c00a8f277c0de066d8"
     },
     {
       "id": "td11.parse.extension-preservation",
@@ -19,10 +29,40 @@
       "digest": "sha256:d10214474ebeeca0ab204570a54c0d523a60ac2dc68724062dde988a33a3dcaa"
     },
     {
+      "id": "td11.parse.multilingual-metadata",
+      "file": "multilingual-metadata.json",
+      "digest": "sha256:90f77eb0e4718bd0fc9c050390825ce3cbabdfbdfa71996b98928d5478cf314f"
+    },
+    {
+      "id": "td11.parse.property-form",
+      "file": "property-form.json",
+      "digest": "sha256:9468f281b8a7c8d15641bfe2039cc6af10852d8e756cb75c0d04994193faeb53"
+    },
+    {
+      "id": "td11.parse.security-definition",
+      "file": "security-definition.json",
+      "digest": "sha256:734963ea5d9b375e10865d18a28b08607a6d40d424c41d9f7fb365f69e6524b6"
+    },
+    {
+      "id": "td11.parse.thing-level-form",
+      "file": "thing-level-form.json",
+      "digest": "sha256:86261c00502719eb2e2d04c4d6bb09f53034e29c3092232ab4be7df4b70e9cb7"
+    },
+    {
+      "id": "td11.validate.missing-security-definitions",
+      "file": "missing-security-definitions.json",
+      "digest": "sha256:aaf164cd2a67c8e569542086070a3601dc33a828957f4f63937251327b654cf4"
+    },
+    {
       "id": "td11.validate.missing-title",
       "file": "missing-title.json",
       "digest": "sha256:dec2b4e9e55b3ce6cf58c30e5251fa40539cd4054f5f8aaed4a3690ff94705ac"
+    },
+    {
+      "id": "td11.validate.undefined-security-reference",
+      "file": "undefined-security-reference.json",
+      "digest": "sha256:3f089cb2d96d4fa706c54f4a2ebf093d160d403e8ca5049469d31f2c3a0a3682"
     }
   ],
-  "digest": "sha256:4fd0acd7c045aae26ba9138634c8d10c78950c30cc83735d9b219f9603a82d2d"
+  "digest": "sha256:7299c404c64893fc2f8a583a4aba0e11e02c515193f1cae14ee706b3b4ec192e"
 }

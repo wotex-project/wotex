@@ -371,6 +371,9 @@ one commit and package archive:
 - W3C Web of Things Discovery, Recommendation 5 December 2023:
   https://www.w3.org/TR/2023/REC-wot-discovery-20231205/
 
-The initial corpus is project-authored synthetic evidence derived from cited
-semantics. It copies no W3C schema or normative text and carries no W3C
-certification claim.
+The bundled Thing Description 1.1 corpus contains twelve project-authored,
+claim-scoped vectors covering minimal structure, affordance categories,
+extension preservation, multilingual metadata, security definition selection,
+Property, Action, Event and Thing-level Forms, and three negative validation
+cases. It is synthetic evidence derived from cited semantics. It copies no W3C
+schema or normative text and carries no W3C certification claim.

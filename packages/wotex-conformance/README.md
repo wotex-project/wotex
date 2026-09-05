@@ -20,6 +20,10 @@ reports. It never links the subject under test into its production dependency
 graph: the consumer supplies a content-addressed subject archive and an adapter
 executable.
 
+The bundled Thing Description 1.1 baseline contains twelve claim-scoped
+synthetic vectors. Its size is evidence breadth, not a whole-standard
+conformance or interoperability claim.
+
 ## Installation
 
 ```elixir

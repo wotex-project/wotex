@@ -1,0 +1,54 @@
+{
+  "id": "td11.parse.thing-level-form",
+  "revision": "1.0.0",
+  "claim": {
+    "id": "w3c.wot.td11.thing-level-form",
+    "revision": "1.0.0",
+    "operation": "thing_description.parse",
+    "evidence_profile": "value",
+    "standard": {
+      "identifier": "w3c.wot.thing-description",
+      "revision": "2023-12-05",
+      "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+      "section": "5.3.1"
+    },
+    "assertions": ["thing_level_form_preserved"],
+    "tags": ["thing-description-1.1"]
+  },
+  "input": {
+    "document": {
+      "@context": "https://www.w3.org/2022/wot/td/v1.1",
+      "id": "urn:example:thing:aggregate-form",
+      "title": "Aggregate Form Thing",
+      "securityDefinitions": {"nosec_sc": {"scheme": "nosec"}},
+      "security": ["nosec_sc"],
+      "forms": [
+        {
+          "href": "https://example.test/properties",
+          "contentType": "application/json",
+          "op": ["readallproperties", "writeallproperties"]
+        }
+      ]
+    }
+  },
+  "expectation": {
+    "operator": "exact",
+    "value": {
+      "forms": [
+        {
+          "contentType": "application/json",
+          "href": "https://example.test/properties",
+          "op": ["readallproperties", "writeallproperties"]
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+    "observed": "2026-09-05",
+    "classification": "project_authored_synthetic_vector",
+    "standard_section": "5.3.1"
+  },
+  "tags": ["form", "positive", "thing-description-1.1", "thing-level"],
+  "digest": "sha256:86261c00502719eb2e2d04c4d6bb09f53034e29c3092232ab4be7df4b70e9cb7"
+}

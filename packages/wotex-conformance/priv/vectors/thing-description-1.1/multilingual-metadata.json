@@ -1,0 +1,51 @@
+{
+  "id": "td11.parse.multilingual-metadata",
+  "revision": "1.0.0",
+  "claim": {
+    "id": "w3c.wot.td11.multilingual-metadata",
+    "revision": "1.0.0",
+    "operation": "thing_description.parse",
+    "evidence_profile": "value",
+    "standard": {
+      "identifier": "w3c.wot.thing-description",
+      "revision": "2023-12-05",
+      "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+      "section": "5.3.1"
+    },
+    "assertions": ["multilingual_titles_and_descriptions_preserved"],
+    "tags": ["thing-description-1.1"]
+  },
+  "input": {
+    "document": {
+      "@context": "https://www.w3.org/2022/wot/td/v1.1",
+      "id": "urn:example:thing:multilingual",
+      "title": "Weather Thing",
+      "titles": {"en": "Weather Thing", "sv": "Väderting"},
+      "description": "Reports local conditions",
+      "descriptions": {
+        "en": "Reports local conditions",
+        "sv": "Rapporterar lokala förhållanden"
+      },
+      "securityDefinitions": {"nosec_sc": {"scheme": "nosec"}},
+      "security": ["nosec_sc"]
+    }
+  },
+  "expectation": {
+    "operator": "exact",
+    "value": {
+      "descriptions": {
+        "en": "Reports local conditions",
+        "sv": "Rapporterar lokala förhållanden"
+      },
+      "titles": {"en": "Weather Thing", "sv": "Väderting"}
+    }
+  },
+  "provenance": {
+    "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+    "observed": "2026-09-05",
+    "classification": "project_authored_synthetic_vector",
+    "standard_section": "5.3.1"
+  },
+  "tags": ["metadata", "multilingual", "positive", "thing-description-1.1"],
+  "digest": "sha256:90f77eb0e4718bd0fc9c050390825ce3cbabdfbdfa71996b98928d5478cf314f"
+}
