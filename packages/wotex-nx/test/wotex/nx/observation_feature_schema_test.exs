@@ -53,6 +53,22 @@ defmodule Wotex.Nx.ObservationFeatureSchemaTest do
     end
 
     assert {:error, %Error{code: :invalid_observation_options}} = Observation.new(%{})
+    assert {:error, %Error{code: :invalid_observation_options}} = Observation.new([:malformed])
+
+    duplicate_options = [{:id, "duplicate"} | valid]
+    unknown_options = [{:unknown, true} | valid]
+
+    assert {:error, %Error{code: :invalid_observation_options}} =
+             Observation.new(duplicate_options)
+
+    assert {:error, %Error{code: :invalid_observation_options}} =
+             Observation.new(unknown_options)
+
+    missing_value = Keyword.delete(valid, :value)
+    explicit_null = Keyword.put(valid, :value, nil)
+
+    assert {:error, %Error{code: :invalid_observation_field}} = Observation.new(missing_value)
+    assert {:ok, %{value: nil}} = Observation.new(explicit_null)
   end
 
   test "feature infers scalar number, integer, boolean, and nested fixed-array contracts" do
@@ -158,6 +174,12 @@ defmodule Wotex.Nx.ObservationFeatureSchemaTest do
     end
 
     assert {:error, %Error{code: :invalid_feature_options}} = Feature.new(:invalid)
+    assert {:error, %Error{code: :invalid_feature_options}} = Feature.new([:malformed])
+
+    assert {:error, %Error{code: :invalid_feature_options}} =
+             feature_options(TestFactory.data_schema())
+             |> Keyword.put(:unknown, true)
+             |> Feature.new()
 
     integer = TestFactory.data_schema(%{"type" => "integer"})
 
@@ -230,6 +252,10 @@ defmodule Wotex.Nx.ObservationFeatureSchemaTest do
              Schema.new(features: [feature, second], max_features: 1)
 
     assert {:error, %Error{code: :invalid_schema_options}} = Schema.new(%{})
+    assert {:error, %Error{code: :invalid_schema_options}} = Schema.new([:malformed])
+
+    assert {:error, %Error{code: :invalid_schema_options}} =
+             Schema.new(features: [feature], unknown: true)
   end
 
   defp feature_options(data_schema) do

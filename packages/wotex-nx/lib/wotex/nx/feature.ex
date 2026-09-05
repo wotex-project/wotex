@@ -9,9 +9,23 @@ defmodule Wotex.Nx.Feature do
   """
 
   alias Wotex.DataSchema
-  alias Wotex.Nx.{Error, NumericalSchema, Observation}
+  alias Wotex.Nx.{Error, NumericalSchema, Observation, Options}
 
   @normalizations [:none]
+  @options [
+    :name,
+    :thing_id,
+    :affordance_type,
+    :affordance_name,
+    :data_schema,
+    :shape,
+    :dtype,
+    :accepted_quality,
+    :missing,
+    :normalization,
+    :unit,
+    :allow_non_finite?
+  ]
 
   @typedoc "An affordance-bound numerical feature with explicit conversion and quality policy."
   @opaque t :: %__MODULE__{
@@ -55,6 +69,17 @@ defmodule Wotex.Nx.Feature do
   """
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
+    with :ok <- Options.validate(opts, @options, :invalid_feature_options, :construction) do
+      build(opts)
+    end
+  end
+
+  def new(_) do
+    {:error,
+     Error.new(:invalid_feature_options, :construction, "feature options must be a keyword list")}
+  end
+
+  defp build(opts) do
     data_schema = Keyword.get(opts, :data_schema)
 
     with %DataSchema{} <- data_schema,
@@ -108,11 +133,6 @@ defmodule Wotex.Nx.Feature do
            "feature requires a Wotex DataSchema"
          )}
     end
-  end
-
-  def new(_) do
-    {:error,
-     Error.new(:invalid_feature_options, :construction, "feature options must be a keyword list")}
   end
 
   @doc "Returns the flattened numerical width used for pre-allocation limits."

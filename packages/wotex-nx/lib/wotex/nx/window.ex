@@ -8,7 +8,10 @@ defmodule Wotex.Nx.Window do
   byte-for-byte interpretable by downstream numerical code.
   """
 
-  alias Wotex.Nx.{Error, Observation, Row, Schema}
+  alias Wotex.Nx.{Error, Observation, Options, Row, Schema}
+
+  @new_options [:start, :step, :count, :strategy, :max_age]
+  @resample_options [:max_observations, :max_work]
 
   @typedoc "A clock-free temporal grid and its deterministic selection policy."
   @opaque t :: %__MODULE__{
@@ -31,6 +34,17 @@ defmodule Wotex.Nx.Window do
   """
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
+    with :ok <- Options.validate(opts, @new_options, :invalid_window_options, :construction) do
+      build(opts)
+    end
+  end
+
+  def new(_),
+    do:
+      {:error,
+       Error.new(:invalid_window_options, :construction, "window options must be a keyword list")}
+
+  defp build(opts) do
     start = Keyword.get(opts, :start)
     step = Keyword.get(opts, :step)
     count = Keyword.get(opts, :count)
@@ -52,11 +66,6 @@ defmodule Wotex.Nx.Window do
        }}
     end
   end
-
-  def new(_),
-    do:
-      {:error,
-       Error.new(:invalid_window_options, :construction, "window options must be a keyword list")}
 
   defp validate_start(start) when is_integer(start), do: :ok
 
@@ -102,12 +111,12 @@ defmodule Wotex.Nx.Window do
 
   def resample(observations, %Schema{} = schema, %__MODULE__{} = window, opts)
       when is_list(observations) and is_list(opts) do
-    max_observations = Keyword.get(opts, :max_observations, 10_000)
-    max_work = Keyword.get(opts, :max_work, 5_000_000)
-    feature_count = length(schema.features)
-    work = length(observations) * window.count * feature_count
-
-    with :ok <- validate_limits(max_observations, max_work),
+    with :ok <- Options.validate(opts, @resample_options, :invalid_window_input, :window),
+         max_observations = Keyword.get(opts, :max_observations, 10_000),
+         max_work = Keyword.get(opts, :max_work, 5_000_000),
+         feature_count = length(schema.features),
+         work = length(observations) * window.count * feature_count,
+         :ok <- validate_limits(max_observations, max_work),
          :ok <- validate_observation_count(observations, max_observations),
          :ok <- validate_row_count(window, schema),
          :ok <- validate_work(work, max_work),

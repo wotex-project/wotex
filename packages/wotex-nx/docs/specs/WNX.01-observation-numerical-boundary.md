@@ -47,6 +47,9 @@ identity, model selection and execution, policy, evidence, and Action dispatch.
 10. Limits for observations, rows, features, and flattened width MUST be
     explicit and checked before allocation. Decoder input MUST be one
     unvectorized tensor matching the exact accepted output shape and dtype.
+11. Public keyword options MUST be well-formed, unique, and limited to the
+    options owned by that operation. An observation value MUST be explicitly
+    supplied; omitted input and the JSON value `null` are not equivalent.
 
 ## Evidence
 

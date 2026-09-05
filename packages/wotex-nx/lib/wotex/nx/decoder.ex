@@ -17,6 +17,7 @@ defmodule Wotex.Nx.Decoder do
     DataSchemaValidator,
     Error,
     Observation,
+    Options,
     OutputSchema,
     Prediction
   }
@@ -35,7 +36,9 @@ defmodule Wotex.Nx.Decoder do
 
   def decode(%Nx.Tensor{} = tensor, %OutputSchema{} = schema, opts)
       when is_list(opts) do
-    with :ok <- tensor_contract(tensor, schema),
+    with :ok <-
+           Options.validate(opts, decoder_options(schema.kind), :invalid_output_options, :output),
+         :ok <- tensor_contract(tensor, schema),
          {:ok, value} <- tensor_value(tensor, DataSchema.to_map(schema.data_schema)),
          :ok <- validate_value(value, schema),
          {:ok, common} <- common_options(opts, schema.metadata) do
@@ -92,6 +95,14 @@ defmodule Wotex.Nx.Decoder do
         :ok
     end
   end
+
+  defp decoder_options(:observation),
+    do: [:id, :metadata, :observed_at, :quality, :source]
+
+  defp decoder_options(:prediction), do: [:id, :metadata, :produced_at, :target_at]
+  defp decoder_options(:anomaly), do: [:id, :metadata, :produced_at]
+  defp decoder_options(:action_proposal), do: [:id, :metadata, :proposed_at]
+  defp decoder_options(_), do: []
 
   defp tensor_value(tensor, data_schema) do
     raw =

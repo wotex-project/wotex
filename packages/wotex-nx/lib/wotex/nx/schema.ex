@@ -7,7 +7,9 @@ defmodule Wotex.Nx.Schema do
   tensor allocation so untrusted schemas cannot create unbounded work.
   """
 
-  alias Wotex.Nx.{Error, Feature}
+  alias Wotex.Nx.{Error, Feature, Options}
+
+  @options [:features, :max_rows, :max_features, :max_width, :batch_key]
 
   @typedoc "An ordered feature list with row, feature, and flattened-width limits."
   @opaque t :: %__MODULE__{
@@ -30,6 +32,17 @@ defmodule Wotex.Nx.Schema do
   """
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
+    with :ok <- Options.validate(opts, @options, :invalid_schema_options, :construction) do
+      build(opts)
+    end
+  end
+
+  def new(_),
+    do:
+      {:error,
+       Error.new(:invalid_schema_options, :construction, "schema options must be a keyword list")}
+
+  defp build(opts) do
     features = Keyword.get(opts, :features)
     max_rows = Keyword.get(opts, :max_rows, 1_024)
     max_features = Keyword.get(opts, :max_features, 256)
@@ -49,11 +62,6 @@ defmodule Wotex.Nx.Schema do
        }}
     end
   end
-
-  def new(_),
-    do:
-      {:error,
-       Error.new(:invalid_schema_options, :construction, "schema options must be a keyword list")}
 
   @doc "Returns features in the authoritative tuple, mask, and quality-vector order."
   @spec features(t()) :: [Feature.t()]

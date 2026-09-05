@@ -17,6 +17,7 @@ defmodule Wotex.Nx.Encoder do
     Error,
     Feature,
     Observation,
+    Options,
     Row,
     Schema
   }
@@ -32,22 +33,24 @@ defmodule Wotex.Nx.Encoder do
   def encode(rows, schema, opts \\ [])
 
   def encode(rows, %Schema{} = schema, opts) when is_list(rows) and is_list(opts) do
-    cond do
-      rows == [] ->
-        {:error, Error.new(:empty_rows, :encoding, "at least one row is required")}
+    with :ok <- Options.validate(opts, [:unit_converter], :invalid_encoder_input, :encoding) do
+      cond do
+        rows == [] ->
+          {:error, Error.new(:empty_rows, :encoding, "at least one row is required")}
 
-      length(rows) > schema.max_rows ->
-        {:error,
-         Error.new(:row_limit_exceeded, :limit, "row limit exceeded", %{
-           count: length(rows),
-           max_rows: schema.max_rows
-         })}
+        length(rows) > schema.max_rows ->
+          {:error,
+           Error.new(:row_limit_exceeded, :limit, "row limit exceeded", %{
+             count: length(rows),
+             max_rows: schema.max_rows
+           })}
 
-      not Enum.all?(rows, &match?(%Row{}, &1)) ->
-        {:error, Error.new(:invalid_rows, :encoding, "encoder input must contain Row values")}
+        not Enum.all?(rows, &match?(%Row{}, &1)) ->
+          {:error, Error.new(:invalid_rows, :encoding, "encoder input must contain Row values")}
 
-      true ->
-        encode_rows(rows, schema, opts)
+        true ->
+          encode_rows(rows, schema, opts)
+      end
     end
   end
 

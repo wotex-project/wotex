@@ -89,6 +89,14 @@ defmodule Wotex.Nx.DecoderTest do
              )
 
     assert {:error, %Error{code: :invalid_output_schema_options}} = OutputSchema.new(%{})
+
+    assert {:error, %Error{code: :invalid_output_schema_options}} =
+             OutputSchema.new([:malformed])
+
+    unknown_options = [{:unknown, true} | base]
+
+    assert {:error, %Error{code: :invalid_output_schema_options}} =
+             OutputSchema.new(unknown_options)
   end
 
   test "anomaly schema requires a scalar score, threshold, and explicit comparison rule" do
@@ -300,6 +308,17 @@ defmodule Wotex.Nx.DecoderTest do
 
     assert {:error, %Error{code: :invalid_output_options}} =
              Decoder.decode(tensor, output_schema(:prediction), produced_at: 1, target_at: 2)
+
+    assert {:error, %Error{code: :invalid_output_options}} =
+             Decoder.decode(tensor, output_schema(:prediction), [:malformed])
+
+    assert {:error, %Error{code: :invalid_output_options}} =
+             Decoder.decode(tensor, output_schema(:prediction),
+               id: "p",
+               produced_at: 1,
+               target_at: 2,
+               observed_at: 3
+             )
 
     assert {:error, %Error{code: :invalid_output_options}} =
              Decoder.decode(tensor, output_schema(:prediction),

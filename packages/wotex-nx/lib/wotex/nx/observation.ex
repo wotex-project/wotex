@@ -8,9 +8,21 @@ defmodule Wotex.Nx.Observation do
   assert canonical Property state or Event truth.
   """
 
-  alias Wotex.Nx.Error
+  alias Wotex.Nx.{Error, Options}
 
   @qualities [:good, :uncertain, :bad, :missing]
+  @options [
+    :id,
+    :thing_id,
+    :affordance_type,
+    :affordance_name,
+    :observed_at,
+    :value,
+    :unit,
+    :quality,
+    :source,
+    :metadata
+  ]
 
   @typedoc "Quality carried by an accepted observation."
   @type quality :: :good | :uncertain | :bad | :missing
@@ -53,6 +65,21 @@ defmodule Wotex.Nx.Observation do
   """
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
+    with :ok <- Options.validate(opts, @options, :invalid_observation_options, :construction) do
+      build(opts)
+    end
+  end
+
+  def new(_) do
+    {:error,
+     Error.new(
+       :invalid_observation_options,
+       :construction,
+       "observation options must be a keyword list"
+     )}
+  end
+
+  defp build(opts) do
     observation = %{
       id: Keyword.get(opts, :id),
       thing_id: Keyword.get(opts, :thing_id),
@@ -66,7 +93,8 @@ defmodule Wotex.Nx.Observation do
       metadata: Keyword.get(opts, :metadata, %{})
     }
 
-    with :ok <- non_empty(observation.id, :id),
+    with :ok <- required_value(opts),
+         :ok <- non_empty(observation.id, :id),
          :ok <- non_empty(observation.thing_id, :thing_id),
          :ok <- valid_type(observation.affordance_type),
          :ok <- non_empty(observation.affordance_name, :affordance_name),
@@ -79,18 +107,22 @@ defmodule Wotex.Nx.Observation do
     end
   end
 
-  def new(_) do
-    {:error,
-     Error.new(
-       :invalid_observation_options,
-       :construction,
-       "observation options must be a keyword list"
-     )}
-  end
-
   @doc "Returns the stable quality states accepted by observations and features."
   @spec qualities() :: nonempty_list(quality())
   def qualities, do: @qualities
+
+  defp required_value(opts) do
+    if Keyword.has_key?(opts, :value),
+      do: :ok,
+      else:
+        {:error,
+         Error.new(
+           :invalid_observation_field,
+           :construction,
+           "observation value must be explicitly supplied",
+           %{field: :value}
+         )}
+  end
 
   defp non_empty(value, _) when is_binary(value) and byte_size(value) > 0, do: :ok
 

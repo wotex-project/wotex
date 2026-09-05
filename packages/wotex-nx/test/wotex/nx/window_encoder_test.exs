@@ -26,6 +26,10 @@ defmodule Wotex.Nx.WindowEncoderTest do
     end
 
     assert {:error, %Error{code: :invalid_window_options}} = Window.new(%{})
+    assert {:error, %Error{code: :invalid_window_options}} = Window.new([:malformed])
+
+    assert {:error, %Error{code: :invalid_window_options}} =
+             Window.new(start: 0, step: 1, count: 1, unknown: true)
   end
 
   test "exact selection is deterministic by observation id" do
@@ -258,6 +262,12 @@ defmodule Wotex.Nx.WindowEncoderTest do
     assert {:error, %Error{code: :empty_rows}} = Encoder.encode([], schema)
     assert {:error, %Error{code: :invalid_rows}} = Encoder.encode([:invalid], schema)
     assert {:error, %Error{code: :invalid_encoder_input}} = Encoder.encode([row], :invalid)
+
+    assert {:error, %Error{code: :invalid_encoder_input}} =
+             Encoder.encode([row], schema, [:malformed])
+
+    assert {:error, %Error{code: :invalid_encoder_input}} =
+             Encoder.encode([row], schema, unknown: true)
 
     one_row_schema = TestFactory.schema([TestFactory.feature()], max_rows: 1)
 

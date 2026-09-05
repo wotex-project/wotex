@@ -9,9 +9,24 @@ defmodule Wotex.Nx.OutputSchema do
   """
 
   alias Wotex.DataSchema
-  alias Wotex.Nx.{Error, NumericalSchema}
+  alias Wotex.Nx.{Error, NumericalSchema, Options}
 
   @kinds [:observation, :prediction, :anomaly, :action_proposal]
+  @options [
+    :kind,
+    :thing_id,
+    :affordance_type,
+    :affordance_name,
+    :data_schema,
+    :shape,
+    :dtype,
+    :max_width,
+    :unit,
+    :threshold,
+    :anomaly_rule,
+    :metadata,
+    :allow_non_finite?
+  ]
 
   @typedoc "Inert result kind produced by numerical decoding."
   @type kind :: :observation | :prediction | :anomaly | :action_proposal
@@ -59,6 +74,22 @@ defmodule Wotex.Nx.OutputSchema do
   """
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
+    with :ok <-
+           Options.validate(opts, @options, :invalid_output_schema_options, :construction) do
+      build(opts)
+    end
+  end
+
+  def new(_) do
+    {:error,
+     Error.new(
+       :invalid_output_schema_options,
+       :construction,
+       "output schema options must be a keyword list"
+     )}
+  end
+
+  defp build(opts) do
     data_schema = Keyword.get(opts, :data_schema)
 
     with %DataSchema{} <- data_schema,
@@ -109,15 +140,6 @@ defmodule Wotex.Nx.OutputSchema do
            "output schema requires a Wotex DataSchema"
          )}
     end
-  end
-
-  def new(_) do
-    {:error,
-     Error.new(
-       :invalid_output_schema_options,
-       :construction,
-       "output schema options must be a keyword list"
-     )}
   end
 
   @doc "Returns the stable inert output kinds accepted by the decoder."
