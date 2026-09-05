@@ -7,11 +7,11 @@ defmodule Wotex.Runtime.ConsumedThing do
   checks the credential-provider port. No connection or credential lookup
   happens during construction.
 
-  Property reads/writes and Action invocation/query/cancellation execute in the
-  caller and return typed protocol results. Observation and Event APIs return
-  child specifications and start no process themselves. The consumer chooses
-  child ids, names, receivers, restart strategies, shutdown budgets, and
-  supervision placement.
+  Property reads/writes, Action invocation/query/cancellation, and Thing-level
+  aggregate requests execute in the caller and return typed protocol results.
+  Observation and Event APIs return child specifications and start no process
+  themselves. The consumer chooses child ids, names, receivers, restart
+  strategies, shutdown budgets, and supervision placement.
 
   A ConsumedThing is an interaction plan. It does not own the described Thing,
   authorize requests, persist observations, or assert that transport success
@@ -126,6 +126,58 @@ defmodule Wotex.Runtime.ConsumedThing do
         context
       )
 
+  @doc "Executes `readallproperties` in the caller process."
+  @spec read_all_properties(t(), Context.t()) :: {:ok, Result.t()} | {:error, Error.t()}
+  def read_all_properties(consumed, context),
+    do:
+      execute(
+        consumed,
+        %{type: :thing, name: nil, operation: :readallproperties, input: nil},
+        context
+      )
+
+  @doc "Executes `readmultipleproperties` for an ordered list of Property names."
+  @spec read_multiple_properties(t(), [String.t()], Context.t()) ::
+          {:ok, Result.t()} | {:error, Error.t()}
+  def read_multiple_properties(consumed, names, context) do
+    if valid_property_names?(names) do
+      execute(
+        consumed,
+        %{type: :thing, name: nil, operation: :readmultipleproperties, input: names},
+        context
+      )
+    else
+      {:error,
+       Error.new(
+         :invalid_property_names,
+         :construction,
+         "readmultipleproperties requires non-empty Property names"
+       )}
+    end
+  end
+
+  @doc "Executes `writeallproperties` with a Property-name map."
+  @spec write_all_properties(t(), map(), Context.t()) ::
+          {:ok, Result.t()} | {:error, Error.t()}
+  def write_all_properties(consumed, values, context),
+    do: write_properties(consumed, :writeallproperties, values, context)
+
+  @doc "Executes `writemultipleproperties` with a Property-name map."
+  @spec write_multiple_properties(t(), map(), Context.t()) ::
+          {:ok, Result.t()} | {:error, Error.t()}
+  def write_multiple_properties(consumed, values, context),
+    do: write_properties(consumed, :writemultipleproperties, values, context)
+
+  @doc "Executes `queryallactions` in the caller process."
+  @spec query_all_actions(t(), Context.t()) :: {:ok, Result.t()} | {:error, Error.t()}
+  def query_all_actions(consumed, context),
+    do:
+      execute(
+        consumed,
+        %{type: :thing, name: nil, operation: :queryallactions, input: nil},
+        context
+      )
+
   @doc "Returns a caller-supervised Property observation child specification."
   @spec observation_child_spec(t(), String.t(), Context.t(), keyword()) ::
           {:ok, Supervisor.child_spec()} | {:error, Error.t()}
@@ -150,19 +202,36 @@ defmodule Wotex.Runtime.ConsumedThing do
         opts
       )
 
+  @doc "Returns a caller-supervised aggregate Property observation child specification."
+  @spec all_properties_observation_child_spec(t(), Context.t(), keyword()) ::
+          {:ok, Supervisor.child_spec()} | {:error, Error.t()}
+  def all_properties_observation_child_spec(consumed, context, opts),
+    do:
+      subscription_child_spec(
+        consumed,
+        %{type: :thing, name: nil, start: :observeallproperties, stop: :unobserveallproperties},
+        context,
+        opts
+      )
+
+  @doc "Returns a caller-supervised aggregate Event subscription child specification."
+  @spec all_events_subscription_child_spec(t(), Context.t(), keyword()) ::
+          {:ok, Supervisor.child_spec()} | {:error, Error.t()}
+  def all_events_subscription_child_spec(consumed, context, opts),
+    do:
+      subscription_child_spec(
+        consumed,
+        %{type: :thing, name: nil, start: :subscribeallevents, stop: :unsubscribeallevents},
+        context,
+        opts
+      )
+
   @doc "Returns the immutable Thing Description."
   @spec thing_description(t()) :: ThingDescription.t()
   def thing_description(%__MODULE__{td: td}), do: td
 
   defp execute(%__MODULE__{} = consumed, interaction, %Context{} = context) do
-    with {:ok, selection} <-
-           FormSelector.select(
-             consumed.td,
-             interaction.type,
-             interaction.name,
-             interaction.operation,
-             consumed.profiles
-           ),
+    with {:ok, selection} <- select(consumed, interaction, consumed.profiles),
          {:ok, transport} <- transport_for(consumed, selection),
          request = Request.from_selection(selection, context, interaction.input),
          {:ok, execution_context} <- resolve_credentials(consumed, selection, context),
@@ -189,20 +258,12 @@ defmodule Wotex.Runtime.ConsumedThing do
     with {:ok, id} <- required_option(opts, :id),
          {:ok, receiver} <- required_option(opts, :receiver),
          {:ok, start_selection} <-
-           FormSelector.select(
-             consumed.td,
-             interaction.type,
-             interaction.name,
-             interaction.start,
-             consumed.profiles
-           ),
+           select(consumed, Map.put(interaction, :operation, interaction.start), consumed.profiles),
          {:ok, transport} <- transport_for(consumed, start_selection),
          {:ok, stop_selection} <-
-           FormSelector.select(
-             consumed.td,
-             interaction.type,
-             interaction.name,
-             interaction.stop,
+           select(
+             consumed,
+             Map.put(interaction, :operation, interaction.stop),
              [start_selection.profile]
            ) do
       start_request = Request.from_selection(start_selection, context, Keyword.get(opts, :input))
@@ -283,6 +344,42 @@ defmodule Wotex.Runtime.ConsumedThing do
          )}
     end
   end
+
+  defp select(consumed, %{type: :thing, operation: operation}, profiles),
+    do: FormSelector.select_thing(consumed.td, operation, profiles)
+
+  defp select(consumed, interaction, profiles),
+    do:
+      FormSelector.select(
+        consumed.td,
+        interaction.type,
+        interaction.name,
+        interaction.operation,
+        profiles
+      )
+
+  defp write_properties(consumed, operation, values, context) do
+    if valid_property_map?(values) do
+      execute(consumed, %{type: :thing, name: nil, operation: operation, input: values}, context)
+    else
+      {:error,
+       Error.new(
+         :invalid_property_map,
+         :construction,
+         "aggregate Property writes require a non-empty Property-name map"
+       )}
+    end
+  end
+
+  defp valid_property_names?(names) when is_list(names) and names != [],
+    do: Enum.all?(names, &(is_binary(&1) and byte_size(String.trim(&1)) > 0))
+
+  defp valid_property_names?(_names), do: false
+
+  defp valid_property_map?(values) when is_map(values) and map_size(values) > 0,
+    do: Enum.all?(Map.keys(values), &(is_binary(&1) and byte_size(String.trim(&1)) > 0))
+
+  defp valid_property_map?(_values), do: false
 
   defp validate_profiles(profiles) when is_list(profiles) and profiles != [] do
     if Enum.all?(profiles, &match?(%BindingProfile{}, &1)) do

@@ -13,7 +13,7 @@ defmodule Wotex.Runtime.Result do
 
   alias Wotex.Runtime.Error
 
-  @operations ~w(readproperty writeproperty observeproperty unobserveproperty invokeaction queryaction cancelaction subscribeevent unsubscribeevent)a
+  @operations Wotex.Runtime.operations()
 
   @type t :: %__MODULE__{
           request_id: String.t(),

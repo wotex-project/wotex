@@ -1,6 +1,7 @@
 defmodule Wotex.Runtime.FormSelector do
   @moduledoc """
-  Deterministically selects a Form by TD order and then supplied profile order.
+  Deterministically selects an Interaction Affordance or top-level Thing Form
+  by TD order and then supplied profile order.
 
   No implicit operation or transport is guessed. A Form and profile must both
   declare the exact W3C WoT operation.
@@ -19,7 +20,7 @@ defmodule Wotex.Runtime.FormSelector do
     document = ThingDescription.to_map(td)
     interaction = %{type: type, name: name, operation: operation}
 
-    with :ok <- validate_operation(operation),
+    with :ok <- validate_operation(operation, type),
          {:ok, affordance} <- fetch_affordance(document, type, name),
          {:ok, selection} <- choose(document, affordance, interaction, profiles) do
       {:ok, selection}
@@ -30,8 +31,29 @@ defmodule Wotex.Runtime.FormSelector do
     {:error, Error.new(:invalid_selection_input, :selection, "selection input is invalid")}
   end
 
-  defp validate_operation(operation) do
-    if operation in Wotex.Runtime.operations() do
+  @doc "Selects a top-level Thing Form and binding profile."
+  @spec select_thing(ThingDescription.t(), atom(), [BindingProfile.t()]) ::
+          {:ok, Selection.t()} | {:error, Error.t()}
+  def select_thing(%ThingDescription{} = td, operation, profiles) when is_list(profiles) do
+    document = ThingDescription.to_map(td)
+    interaction = %{type: :thing, name: nil, operation: operation}
+
+    with :ok <- validate_operation(operation, :thing),
+         {:ok, selection} <- choose(document, document, interaction, profiles) do
+      {:ok, selection}
+    end
+  end
+
+  def select_thing(_td, _operation, _profiles) do
+    {:error, Error.new(:invalid_selection_input, :selection, "selection input is invalid")}
+  end
+
+  defp validate_operation(operation, type) do
+    supported? =
+      operation in Wotex.Runtime.operations() and
+        Wotex.Runtime.interaction_type(operation) == type
+
+    if supported? do
       :ok
     else
       {:error, Error.new(:unsupported_operation, :selection, "operation is not supported")}
@@ -58,7 +80,13 @@ defmodule Wotex.Runtime.FormSelector do
     candidate =
       Enum.find_value(forms, fn form_map ->
         Enum.find_value(profiles, fn profile ->
-          match_candidate(document, affordance, form_map, interaction.operation, profile)
+          match_candidate(
+            document,
+            affordance,
+            form_map,
+            interaction,
+            profile
+          )
         end)
       end)
 
@@ -91,11 +119,17 @@ defmodule Wotex.Runtime.FormSelector do
     end
   end
 
-  defp match_candidate(document, _affordance, form_map, operation, %BindingProfile{} = profile)
+  defp match_candidate(
+         document,
+         _affordance,
+         form_map,
+         interaction,
+         %BindingProfile{} = profile
+       )
        when is_map(form_map) do
-    with true <- BindingProfile.supports_operation?(profile, operation),
-         {:ok, form} <- Form.new(form_map),
-         true <- operation in Enum.map(Form.operations(form), &operation_atom/1),
+    with true <- BindingProfile.supports_operation?(profile, interaction.operation),
+         {:ok, form} <- Form.new(form_map, for: interaction.type),
+         true <- interaction.operation in Enum.map(Form.operations(form), &operation_atom/1),
          {:ok, resolved_href, scheme} <- resolve_href(document, Form.href(form)),
          true <- BindingProfile.supports_scheme?(profile, scheme),
          true <- BindingProfile.supports_media_type?(profile, Map.get(form_map, "contentType")) do
@@ -105,7 +139,7 @@ defmodule Wotex.Runtime.FormSelector do
     end
   end
 
-  defp match_candidate(_document, _affordance, _form_map, _operation, _profile), do: nil
+  defp match_candidate(_document, _affordance, _form_map, _interaction, _profile), do: nil
 
   defp operation_atom(name) when is_binary(name) do
     Enum.find(Wotex.Runtime.operations(), :invalid, &(Atom.to_string(&1) == name))

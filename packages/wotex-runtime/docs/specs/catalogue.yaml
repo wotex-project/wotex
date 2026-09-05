@@ -9,3 +9,9 @@ specifications:
     path: "docs/specs/WRT.02-exposed-thing-runtime.md"
     status: "implemented"
     requires: ["WRT.01"]
+  - id: "WRT.03"
+    path: "docs/specs/WRT.03-thing-level-interactions.md"
+    status: "implemented"
+    standard: "W3C WoT Thing Description 1.1 — top-level Forms"
+    standard_revision: "Recommendation 5 December 2023"
+    requires: ["WRT.01", "WRT.02", "wotex:WTX.02"]

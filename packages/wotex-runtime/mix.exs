@@ -95,6 +95,9 @@ defmodule WotexRuntime.MixProject do
         "README.md": [title: "Overview"],
         "docs/specs/WRT.01-consumed-thing-runtime.md": [title: "ConsumedThing Runtime"],
         "docs/specs/WRT.02-exposed-thing-runtime.md": [title: "ExposedThing Runtime"],
+        "docs/specs/WRT.03-thing-level-interactions.md": [
+          title: "Thing-level Interactions"
+        ],
         "CHANGELOG.md": [title: "Changelog"],
         "SECURITY.md": [title: "Security"],
         "CONTRIBUTING.md": [title: "Contributing"],

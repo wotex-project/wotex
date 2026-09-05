@@ -16,11 +16,39 @@ defmodule Wotex.Runtime.ExposedThingTest do
       end,
       {:subscribeevent, "alarm"} => fn input, context ->
         {:ok, {:subscribed, input, context.request_id}}
-      end
+      end,
+      readallproperties: fn _input, context -> {:ok, {:all, context.request_id}} end
     }
 
     {:ok, exposed} = ExposedThing.new(TDFactory.thing_description(), handlers)
     %{exposed: exposed}
+  end
+
+  test "dispatches only declared Thing-level operation handlers", %{exposed: exposed} do
+    context = Context.new!(request_id: "req-thing-dispatch")
+
+    assert ExposedThing.dispatch_thing(exposed, :readallproperties, nil, context) ==
+             {:ok, {:all, "req-thing-dispatch"}}
+
+    assert {:error, %Error{code: :unsupported_operation}} =
+             ExposedThing.dispatch_thing(exposed, :readproperty, nil, context)
+
+    assert {:error, %Error{code: :handler_not_found}} =
+             ExposedThing.dispatch_thing(exposed, :queryallactions, nil, context)
+
+    {:ok, td_without_root_forms} =
+      TDFactory.thing_description()
+      |> Wotex.ThingDescription.to_map()
+      |> Map.delete("forms")
+      |> Wotex.ThingDescription.from_map()
+
+    {:ok, undeclared} =
+      ExposedThing.new(td_without_root_forms, %{
+        readallproperties: fn _input, _context -> :ok end
+      })
+
+    assert {:error, %Error{code: :thing_operation_not_found}} =
+             ExposedThing.dispatch_thing(undeclared, :readallproperties, nil, context)
   end
 
   test "dispatches Property, Action, and Event handlers with input and context", %{exposed: exposed} do
@@ -52,6 +80,9 @@ defmodule Wotex.Runtime.ExposedThingTest do
     assert {:error, %Error{code: :unsupported_operation}} =
              ExposedThing.dispatch(exposed, :invented, "temperature", nil, context)
 
+    assert {:error, %Error{code: :unsupported_operation}} =
+             ExposedThing.dispatch(exposed, :readallproperties, "temperature", nil, context)
+
     assert {:error, %Error{code: :invalid_dispatch_input}} =
              ExposedThing.dispatch(exposed, :readproperty, :temperature, nil, context)
 
@@ -69,6 +100,11 @@ defmodule Wotex.Runtime.ExposedThingTest do
 
     assert {:error, %Error{code: :invalid_handler}} =
              ExposedThing.new(td, %{{:readproperty, "temperature"} => fn _input -> :ok end})
+
+    assert {:error, %Error{code: :invalid_handler}} =
+             ExposedThing.new(td, %{
+               {:readallproperties, "temperature"} => fn _input, _context -> :ok end
+             })
 
     assert {:error, %Error{code: :invalid_exposed_thing}} = ExposedThing.new(%{}, %{})
   end

@@ -105,6 +105,36 @@ defmodule Wotex.Runtime.SubscriptionTest do
     assert :ok = Subscription.stop(pid_b)
   end
 
+  test "aggregate Property and Event child specifications use exact stop operations", %{
+    consumed: consumed
+  } do
+    context = Context.new!(request_id: "req-aggregate")
+
+    {:ok, property_spec} =
+      ConsumedThing.all_properties_observation_child_spec(consumed, context,
+        id: :all_properties,
+        receiver: self(),
+        restart: :temporary
+      )
+
+    property_pid = start_supervised!(property_spec)
+    assert_receive {:subscribe, %{operation: :observeallproperties}, ^property_pid, _credential}
+    assert :ok = Subscription.stop(property_pid)
+    assert_receive {:unsubscribe, _handle, %{operation: :unobserveallproperties}, _credential}
+
+    {:ok, event_spec} =
+      ConsumedThing.all_events_subscription_child_spec(consumed, context,
+        id: :all_events,
+        receiver: self(),
+        restart: :temporary
+      )
+
+    event_pid = start_supervised!(event_spec)
+    assert_receive {:subscribe, %{operation: :subscribeallevents}, ^event_pid, _credential}
+    assert :ok = Subscription.stop(event_pid)
+    assert_receive {:unsubscribe, _handle, %{operation: :unsubscribeallevents}, _credential}
+  end
+
   test "subscription construction requires identity, receiver, and matching stop Form", %{
     consumed: consumed
   } do

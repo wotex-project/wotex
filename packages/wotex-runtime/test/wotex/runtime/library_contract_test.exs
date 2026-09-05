@@ -17,7 +17,34 @@ defmodule Wotex.Runtime.LibraryContractTest do
              :queryaction,
              :cancelaction,
              :subscribeevent,
-             :unsubscribeevent
+             :unsubscribeevent,
+             :readallproperties,
+             :writeallproperties,
+             :readmultipleproperties,
+             :writemultipleproperties,
+             :observeallproperties,
+             :unobserveallproperties,
+             :queryallactions,
+             :subscribeallevents,
+             :unsubscribeallevents
            ]
+
+    assert Wotex.Runtime.thing_operations() == [
+             :readallproperties,
+             :writeallproperties,
+             :readmultipleproperties,
+             :writemultipleproperties,
+             :observeallproperties,
+             :unobserveallproperties,
+             :queryallactions,
+             :subscribeallevents,
+             :unsubscribeallevents
+           ]
+
+    assert Wotex.Runtime.interaction_type(:readproperty) == :property
+    assert Wotex.Runtime.interaction_type(:invokeaction) == :action
+    assert Wotex.Runtime.interaction_type(:subscribeevent) == :event
+    assert Wotex.Runtime.interaction_type(:readallproperties) == :thing
+    assert Wotex.Runtime.interaction_type(:invented) == nil
   end
 end

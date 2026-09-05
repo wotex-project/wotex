@@ -72,7 +72,17 @@ defmodule Wotex.Runtime.ConsumedThingTest do
       {:invokeaction, fn -> ConsumedThing.invoke_action(consumed, "calibrate", 0.25, context) end},
       {:queryaction, fn -> ConsumedThing.query_action(consumed, "calibrate", "inv-1", context) end},
       {:cancelaction,
-       fn -> ConsumedThing.cancel_action(consumed, "calibrate", "inv-1", context) end}
+       fn -> ConsumedThing.cancel_action(consumed, "calibrate", "inv-1", context) end},
+      {:readallproperties, fn -> ConsumedThing.read_all_properties(consumed, context) end},
+      {:readmultipleproperties,
+       fn -> ConsumedThing.read_multiple_properties(consumed, ["temperature"], context) end},
+      {:writeallproperties,
+       fn -> ConsumedThing.write_all_properties(consumed, %{"temperature" => 23.0}, context) end},
+      {:writemultipleproperties,
+       fn ->
+         ConsumedThing.write_multiple_properties(consumed, %{"temperature" => 23.0}, context)
+       end},
+      {:queryallactions, fn -> ConsumedThing.query_all_actions(consumed, context) end}
     ]
 
     Enum.each(operations, fn {operation, call} ->
@@ -80,6 +90,22 @@ defmodule Wotex.Runtime.ConsumedThingTest do
       assert_receive {:credentials, _security, _form, "req-sync"}
       assert_receive {:request, %Request{operation: ^operation}, "req-sync", ^secret}
     end)
+  end
+
+  test "rejects malformed aggregate Property inputs", %{consumed: consumed} do
+    context = Context.new!(request_id: "req-aggregate-invalid")
+
+    assert {:error, %Error{code: :invalid_property_names}} =
+             ConsumedThing.read_multiple_properties(consumed, [], context)
+
+    assert {:error, %Error{code: :invalid_property_names}} =
+             ConsumedThing.read_multiple_properties(consumed, ["temperature", ""], context)
+
+    assert {:error, %Error{code: :invalid_property_map}} =
+             ConsumedThing.write_all_properties(consumed, %{}, context)
+
+    assert {:error, %Error{code: :invalid_property_map}} =
+             ConsumedThing.write_multiple_properties(consumed, %{temperature: 23.0}, context)
   end
 
   test "credentials are absent from requests, inspection, and normalized errors", %{

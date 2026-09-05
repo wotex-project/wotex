@@ -2,10 +2,11 @@ defmodule Wotex.Runtime.Request do
   @moduledoc """
   The immutable, credential-free request passed to a transport port.
 
-  A request records the selected W3C WoT operation, Interaction Affordance,
-  Form, resolved href, binding profile, caller identity, deadline, and input.
-  Credential material is deliberately absent; `Wotex.Runtime.ExecutionContext`
-  carries it only during the immediate port call.
+  A request records the selected W3C WoT operation, interaction context, Form,
+  resolved href, binding profile, caller identity, deadline, and input.
+  Thing-level requests use `:thing` with no affordance name. Credential material
+  is deliberately absent; `Wotex.Runtime.ExecutionContext` carries it only
+  during the immediate port call.
 
   Consumers normally receive this value in a `Wotex.Runtime.Transport`
   callback rather than constructing it directly. Treat its fields as
@@ -17,8 +18,8 @@ defmodule Wotex.Runtime.Request do
 
   @type t :: %__MODULE__{
           operation: atom(),
-          affordance_type: :property | :action | :event,
-          affordance_name: String.t(),
+          affordance_type: Wotex.Runtime.interaction_type(),
+          affordance_name: String.t() | nil,
           form: Form.t(),
           resolved_href: String.t(),
           profile: BindingProfile.t(),

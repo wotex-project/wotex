@@ -28,6 +28,11 @@ Property and Action operations run in the caller. Long-lived observations and
 Event subscriptions are returned as child specifications so the consumer
 chooses their supervision, names, restart policy, and multiplicity.
 
+The same mechanics cover TD 1.1 top-level Forms: aggregate Property reads and
+writes, Action status queries, Property observation, and Event subscription.
+They remain ordinary transport requests and caller-supervised children rather
+than a second state or process model.
+
 ## Installation
 
 Wotex Runtime 0.1 requires Elixir 1.18 or later.
@@ -91,6 +96,20 @@ Thing Description + operation
 Supported operation atoms are available from `Wotex.Runtime.operations/0` and
 use the TD 1.1 operation vocabulary. A Form has to declare the requested
 operation explicitly; the selector does not guess defaults.
+
+Thing-level meta-interactions use top-level Forms. For example:
+
+```elixir
+{:ok, result} =
+  Wotex.Runtime.ConsumedThing.read_multiple_properties(
+    consumed,
+    ["temperature", "humidity"],
+    context
+  )
+```
+
+`Wotex.Runtime.thing_operations/0` returns the exact nine TD 1.1 top-level
+operation atoms. A binding advertises only the subset it actually implements.
 
 Form selection proves only that the declarations are compatible. It does not
 authorize the interaction. Likewise, a successful transport result proves the

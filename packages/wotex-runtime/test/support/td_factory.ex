@@ -15,6 +15,13 @@ defmodule Wotex.Runtime.Test.TDFactory do
           "base" => "https://example.test/machines/1/",
           "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
           "security" => ["nosec_sc"],
+          "forms" => [
+            %{
+              "href" => "interactions",
+              "contentType" => "application/json",
+              "op" => Enum.map(Wotex.Runtime.thing_operations(), &Atom.to_string/1)
+            }
+          ],
           "properties" => %{
             "temperature" => %{
               "type" => "number",

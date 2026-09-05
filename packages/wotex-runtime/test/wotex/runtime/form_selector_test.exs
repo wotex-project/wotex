@@ -40,6 +40,21 @@ defmodule Wotex.Runtime.FormSelectorTest do
     assert selection.profile.id == :second
   end
 
+  test "selects only exact Thing-level operations from top-level Forms" do
+    td = TDFactory.thing_description()
+
+    assert {:ok, selection} =
+             FormSelector.select_thing(td, :readallproperties, [TDFactory.http_profile()])
+
+    assert selection.affordance_type == :thing
+    assert selection.affordance_name == nil
+    assert selection.operation == :readallproperties
+    assert selection.resolved_href == "https://example.test/machines/1/interactions"
+
+    assert {:error, %Error{code: :unsupported_operation}} =
+             FormSelector.select_thing(td, :readproperty, [TDFactory.http_profile()])
+  end
+
   test "selects absolute mqtt Form when the operation is not present on the first Form" do
     map =
       TDFactory.thing_description()
