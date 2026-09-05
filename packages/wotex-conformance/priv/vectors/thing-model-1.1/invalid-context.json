@@ -1,0 +1,37 @@
+{
+  "id": "tm11.validate.invalid-context",
+  "revision": "1.0.0",
+  "claim": {
+    "id": "w3c.wot.tm11.declaration",
+    "revision": "1.0.0",
+    "operation": "thing_model.validate",
+    "evidence_profile": "value",
+    "standard": {
+      "identifier": "w3c.wot.thing-description",
+      "revision": "2023-12-05",
+      "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+      "section": "9.2"
+    },
+    "assertions": ["td11_context_required"],
+    "tags": ["thing-model-1.1"]
+  },
+  "input": {
+    "document": {
+      "@context": "https://www.w3.org/2019/wot/td/v1",
+      "@type": "tm:ThingModel",
+      "title": "Legacy-context model"
+    }
+  },
+  "expectation": {
+    "operator": "exact",
+    "value": {"accepted": false, "code": "unsupported_context"}
+  },
+  "provenance": {
+    "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+    "observed": "2026-09-05",
+    "classification": "project_authored_synthetic_vector",
+    "standard_section": "9.2"
+  },
+  "tags": ["negative", "thing-model-1.1"],
+  "digest": "sha256:5b0d4f84b8620687d23614b9288528517754c6399432c8746bbf7e4464e1c4e9"
+}

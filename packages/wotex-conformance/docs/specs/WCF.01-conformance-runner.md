@@ -5,7 +5,7 @@ spec:
   status: accepted
   version: 1.0.0
   owner: wotex-conformance
-  updated: 2026-09-02
+  updated: 2026-09-05
 ---
 
 # WCF.01: Subject-independent conformance runner
@@ -376,5 +376,14 @@ claim-scoped vectors covering minimal structure, affordance categories,
 extension preservation, multilingual metadata, security definition selection,
 Property, Action, Event and Thing-level Forms, and five negative validation
 cases, including Thing-level, Form-level and `ComboSecurityScheme` reference
-integrity. It is synthetic evidence derived from cited semantics. It copies no W3C
-schema or normative text and carries no W3C certification claim.
+integrity.
+
+The independent Thing Model 1.1 corpus contains six project-authored vectors:
+four positive parse observations for declaration, extension, optional and
+placeholder values, and composition references; plus negative declaration
+observations for the model type and TD 1.1 context. Its operations are
+`thing_model.parse` and `thing_model.validate`; passing it makes no claim about
+Thing Model derivation, remote reference resolution, or model registries.
+
+Both corpora are synthetic evidence derived from cited semantics. They copy no
+W3C schema or normative text and carry no W3C certification claim.

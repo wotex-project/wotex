@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "id": "w3c.wot.thing-model.1.1.baseline",
+  "revision": "1.0.0",
+  "vectors": [
+    {
+      "id": "tm11.parse.extension-preservation",
+      "file": "extension-preservation.json",
+      "digest": "sha256:e731326a46b4438f891202d35730add161b3d172d8ec13dc21e73c7797a57aab"
+    },
+    {
+      "id": "tm11.parse.minimal",
+      "file": "minimal-thing-model.json",
+      "digest": "sha256:2563da8ea0b99dbaa7fc869dd28c7566062f502a84da32f65997024bbf6df576"
+    },
+    {
+      "id": "tm11.parse.optional-placeholder",
+      "file": "optional-placeholder.json",
+      "digest": "sha256:09bf7b1ea74e959d2bf5819968e1a1f41e6e02e6a20a983c365b65112045b576"
+    },
+    {
+      "id": "tm11.parse.reference-preservation",
+      "file": "reference-preservation.json",
+      "digest": "sha256:80fdfd6182e46cec56f15ffea9e0703e52d523a9b0b338c8e03e8a21c6e6fdd9"
+    },
+    {
+      "id": "tm11.validate.invalid-context",
+      "file": "invalid-context.json",
+      "digest": "sha256:5b0d4f84b8620687d23614b9288528517754c6399432c8746bbf7e4464e1c4e9"
+    },
+    {
+      "id": "tm11.validate.invalid-type",
+      "file": "invalid-type.json",
+      "digest": "sha256:e3d2961252815f993b7c8a02b71811a230fa5a1230b8071b098367f007be1d80"
+    }
+  ],
+  "digest": "sha256:c964221ee78b775792aabaa9cf1ba668745486a9be9afcde0f4f232228b5577b"
+}

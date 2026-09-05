@@ -1,0 +1,48 @@
+{
+  "id": "tm11.parse.optional-placeholder",
+  "revision": "1.0.0",
+  "claim": {
+    "id": "w3c.wot.tm11.modeling-tools",
+    "revision": "1.0.0",
+    "operation": "thing_model.parse",
+    "evidence_profile": "value",
+    "standard": {
+      "identifier": "w3c.wot.thing-description",
+      "revision": "2023-12-05",
+      "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+      "section": "9.3.4-9.3.5"
+    },
+    "assertions": ["optional_pointer_preserved", "placeholder_preserved"],
+    "tags": ["thing-model-1.1"]
+  },
+  "input": {
+    "document": {
+      "@context": "https://www.w3.org/2022/wot/td/v1.1",
+      "@type": "tm:ThingModel",
+      "title": "Configurable thermostat model",
+      "properties": {
+        "temperature": {
+          "type": "number",
+          "maximum": "{{MAX_TEMPERATURE}}"
+        }
+      },
+      "tm:optional": ["/properties/temperature"]
+    }
+  },
+  "expectation": {
+    "operator": "exact",
+    "value": {
+      "accepted": true,
+      "optional": ["/properties/temperature"],
+      "placeholder": "{{MAX_TEMPERATURE}}"
+    }
+  },
+  "provenance": {
+    "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+    "observed": "2026-09-05",
+    "classification": "project_authored_synthetic_vector",
+    "standard_section": "9.3.4-9.3.5"
+  },
+  "tags": ["modeling-tools", "positive", "thing-model-1.1"],
+  "digest": "sha256:09bf7b1ea74e959d2bf5819968e1a1f41e6e02e6a20a983c365b65112045b576"
+}

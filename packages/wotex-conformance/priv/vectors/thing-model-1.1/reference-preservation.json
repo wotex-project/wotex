@@ -1,0 +1,47 @@
+{
+  "id": "tm11.parse.reference-preservation",
+  "revision": "1.0.0",
+  "claim": {
+    "id": "w3c.wot.tm11.composition-reference",
+    "revision": "1.0.0",
+    "operation": "thing_model.parse",
+    "evidence_profile": "value",
+    "standard": {
+      "identifier": "w3c.wot.thing-description",
+      "revision": "2023-12-05",
+      "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+      "section": "9.3.2-9.3.3"
+    },
+    "assertions": ["model_reference_preserved", "schema_definition_preserved"],
+    "tags": ["thing-model-1.1"]
+  },
+  "input": {
+    "document": {
+      "@context": "https://www.w3.org/2022/wot/td/v1.1",
+      "@type": "tm:ThingModel",
+      "title": "Referenced temperature model",
+      "schemaDefinitions": {
+        "temperature": {"type": "number", "unit": "Cel"}
+      },
+      "properties": {
+        "temperature": {"tm:ref": "#/schemaDefinitions/temperature"}
+      }
+    }
+  },
+  "expectation": {
+    "operator": "exact",
+    "value": {
+      "accepted": true,
+      "reference": "#/schemaDefinitions/temperature",
+      "schema_definition": {"type": "number", "unit": "Cel"}
+    }
+  },
+  "provenance": {
+    "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+    "observed": "2026-09-05",
+    "classification": "project_authored_synthetic_vector",
+    "standard_section": "9.3.2-9.3.3"
+  },
+  "tags": ["composition", "positive", "thing-model-1.1"],
+  "digest": "sha256:80fdfd6182e46cec56f15ffea9e0703e52d523a9b0b338c8e03e8a21c6e6fdd9"
+}

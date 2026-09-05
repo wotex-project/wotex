@@ -15,6 +15,18 @@ defmodule Wotex.Conformance.CorpusTest do
     assert length(corpus.vectors) == 14
   end
 
+  test "loads the independent Thing Model corpus with stable identity" do
+    corpus = TestFixtures.thing_model_corpus!()
+
+    assert corpus.id == "w3c.wot.thing-model.1.1.baseline"
+
+    assert corpus.digest ==
+             "sha256:c964221ee78b775792aabaa9cf1ba668745486a9be9afcde0f4f232228b5577b"
+
+    assert Enum.map(corpus.vectors, & &1.id) == Enum.sort(Enum.map(corpus.vectors, & &1.id))
+    assert length(corpus.vectors) == 6
+  end
+
   test "rejects a modified vector before target execution" do
     source = Path.expand("../../../priv/vectors/thing-description-1.1", __DIR__)
     root = Path.join(System.tmp_dir!(), "wotex-corpus-#{System.unique_integer([:positive])}")

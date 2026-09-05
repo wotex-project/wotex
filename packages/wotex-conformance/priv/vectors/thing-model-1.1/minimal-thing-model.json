@@ -1,0 +1,47 @@
+{
+  "id": "tm11.parse.minimal",
+  "revision": "1.0.0",
+  "claim": {
+    "id": "w3c.wot.tm11.declaration",
+    "revision": "1.0.0",
+    "operation": "thing_model.parse",
+    "evidence_profile": "value",
+    "standard": {
+      "identifier": "w3c.wot.thing-description",
+      "revision": "2023-12-05",
+      "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+      "section": "9.2"
+    },
+    "assertions": ["thing_model_type_recognized", "model_metadata_preserved"],
+    "tags": ["thing-model-1.1"]
+  },
+  "input": {
+    "document": {
+      "@context": "https://www.w3.org/2022/wot/td/v1.1",
+      "@type": "tm:ThingModel",
+      "id": "urn:example:model:thermostat",
+      "title": "Thermostat model",
+      "properties": {
+        "temperature": {"type": "number", "unit": "Cel", "readOnly": true}
+      }
+    }
+  },
+  "expectation": {
+    "operator": "exact",
+    "value": {
+      "accepted": true,
+      "context": "https://www.w3.org/2022/wot/td/v1.1",
+      "id": "urn:example:model:thermostat",
+      "title": "Thermostat model",
+      "type": "tm:ThingModel"
+    }
+  },
+  "provenance": {
+    "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+    "observed": "2026-09-05",
+    "classification": "project_authored_synthetic_vector",
+    "standard_section": "9.2"
+  },
+  "tags": ["positive", "thing-model-1.1"],
+  "digest": "sha256:2563da8ea0b99dbaa7fc869dd28c7566062f502a84da32f65997024bbf6df576"
+}

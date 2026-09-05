@@ -20,9 +20,9 @@ reports. It never links the subject under test into its production dependency
 graph: the consumer supplies a content-addressed subject archive and an adapter
 executable.
 
-The bundled Thing Description 1.1 baseline contains fourteen claim-scoped
-synthetic vectors. Its size is evidence breadth, not a whole-standard
-conformance or interoperability claim.
+The bundled baselines contain fourteen Thing Description 1.1 vectors and six
+Thing Model 1.1 vectors. Each is claim-scoped synthetic evidence; corpus size
+is not a whole-standard conformance or interoperability claim.
 
 ## Installation
 
@@ -79,6 +79,11 @@ alias Wotex.Conformance.Target.External
     environment: %{"runtime" => "otp-28", "mode" => "air_gapped"}
   )
 ```
+
+Use `priv/vectors/thing-model-1.1` when the subject interface implements
+`thing_model.parse` and `thing_model.validate`. The two corpora remain
+independent so a subject can report exactly which document boundary it
+implements.
 
 Use the digest of the actual archive; the zero digest above only demonstrates
 the required wire shape.

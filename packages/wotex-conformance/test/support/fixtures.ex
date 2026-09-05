@@ -11,6 +11,13 @@ defmodule Wotex.Conformance.TestFixtures do
     corpus
   end
 
+  @spec thing_model_corpus!() :: Corpus.t()
+  def thing_model_corpus! do
+    path = Path.expand("../../priv/vectors/thing-model-1.1", __DIR__)
+    {:ok, corpus} = Corpus.load(path)
+    corpus
+  end
+
   @spec subject_archive!() :: {Path.t(), Path.t(), String.t()}
   def subject_archive! do
     root =

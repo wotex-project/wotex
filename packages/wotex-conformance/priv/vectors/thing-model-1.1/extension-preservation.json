@@ -1,0 +1,44 @@
+{
+  "id": "tm11.parse.extension-preservation",
+  "revision": "1.0.0",
+  "claim": {
+    "id": "w3c.wot.tm11.extension-preservation",
+    "revision": "1.0.0",
+    "operation": "thing_model.parse",
+    "evidence_profile": "value",
+    "standard": {
+      "identifier": "w3c.wot.thing-description",
+      "revision": "2023-12-05",
+      "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+      "section": "9.3.2"
+    },
+    "assertions": ["extension_context_preserved", "extension_member_preserved"],
+    "tags": ["thing-model-1.1"]
+  },
+  "input": {
+    "document": {
+      "@context": [
+        "https://www.w3.org/2022/wot/td/v1.1",
+        {"example": "https://example.org/wot#"}
+      ],
+      "@type": "tm:ThingModel",
+      "title": "Extended model",
+      "example:profile": "synthetic"
+    }
+  },
+  "expectation": {
+    "operator": "exact",
+    "value": {
+      "accepted": true,
+      "extension": {"example:profile": "synthetic"}
+    }
+  },
+  "provenance": {
+    "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+    "observed": "2026-09-05",
+    "classification": "project_authored_synthetic_vector",
+    "standard_section": "9.3.2"
+  },
+  "tags": ["extension", "positive", "thing-model-1.1"],
+  "digest": "sha256:e731326a46b4438f891202d35730add161b3d172d8ec13dc21e73c7797a57aab"
+}

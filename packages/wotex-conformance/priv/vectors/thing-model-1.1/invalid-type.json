@@ -1,0 +1,37 @@
+{
+  "id": "tm11.validate.invalid-type",
+  "revision": "1.0.0",
+  "claim": {
+    "id": "w3c.wot.tm11.declaration",
+    "revision": "1.0.0",
+    "operation": "thing_model.validate",
+    "evidence_profile": "value",
+    "standard": {
+      "identifier": "w3c.wot.thing-description",
+      "revision": "2023-12-05",
+      "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+      "section": "9.2"
+    },
+    "assertions": ["invalid_thing_model_type_rejected"],
+    "tags": ["thing-model-1.1"]
+  },
+  "input": {
+    "document": {
+      "@context": "https://www.w3.org/2022/wot/td/v1.1",
+      "@type": "ThingModel",
+      "title": "Invalid model"
+    }
+  },
+  "expectation": {
+    "operator": "exact",
+    "value": {"accepted": false, "code": "invalid_thing_model_type"}
+  },
+  "provenance": {
+    "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+    "observed": "2026-09-05",
+    "classification": "project_authored_synthetic_vector",
+    "standard_section": "9.2"
+  },
+  "tags": ["negative", "thing-model-1.1"],
+  "digest": "sha256:e3d2961252815f993b7c8a02b71811a230fa5a1230b8071b098367f007be1d80"
+}
