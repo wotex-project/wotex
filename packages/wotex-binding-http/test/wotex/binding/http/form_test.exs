@@ -111,7 +111,15 @@ defmodule Wotex.Binding.HTTP.FormTest do
     assert {:error, %Error{code: :unsupported_media_type}} =
              Form.build(unsupported, Factory.config())
 
-    invalid = Factory.request(:readproperty, nil, %{"contentType" => 1})
+    invalid = Factory.request(:readproperty)
+
+    invalid_form =
+      invalid.form
+      |> Wotex.Form.to_map()
+      |> Map.put("contentType", 1)
+      |> then(&%Wotex.Form{value: &1})
+
+    invalid = %{invalid | form: invalid_form}
     assert {:error, %Error{code: :invalid_media_type}} = Form.build(invalid, Factory.config())
 
     different_response =
