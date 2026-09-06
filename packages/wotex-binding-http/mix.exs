@@ -100,7 +100,7 @@ defmodule WotexBindingHTTP.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/runtime-baseline.md docs/standards-baseline.md docs/specs lib mix.exs)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/runtime-baseline.md docs/standards-baseline.md docs/specs lib mix.exs)
     ]
   end
 
@@ -117,11 +117,13 @@ defmodule WotexBindingHTTP.MixProject do
         NOTICE: [title: "Notices"],
         "docs/standards-baseline.md": [title: "Standards baseline"],
         "docs/runtime-baseline.md": [title: "Runtime baseline"],
+        "docs/plans/wotex-binding-http-completion.md": [title: "Completion Contract"],
         "docs/specs/WBH.01-http-transport.md": [title: "HTTP transport"],
         "docs/specs/WBH.02-client-port-and-values.md": [title: "Client port and values"],
         "docs/specs/WBH.03-sse-subscriptions.md": [title: "SSE subscriptions"]
       ],
       groups_for_extras: [
+        "Completion plans": ~r/docs\/plans/,
         "Normative package specifications": ~r/docs\/specs/,
         "Standards baselines": ~r/docs\/(standards|runtime)-baseline/
       ],

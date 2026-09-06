@@ -1,4 +1,7 @@
-# Server-Sent Events subscription specification
+# WBH.03: Server-Sent Events subscriptions
+
+Specification `WBH.03@1.0.0`; package baseline `wotex_binding_http 0.1.0`.
+Requires `WBH.01`, `WBH.02`, `wotex_runtime:WRT.01`.
 
 ## Open
 
@@ -46,3 +49,29 @@ A valid close calls the supplied client's
 The opaque handle stores no credential or client configuration. Stop-time
 credentials are not passed to `close/2` because terminating an SSE connection
 is local connection lifecycle, not a second authenticated request.
+
+## Lifecycle, concurrency and recovery matrix
+
+| Stage | Binding contract | Consumer contract / evidence |
+|---|---|---|
+| Configure | No stream or process; fresh nonsecret instance ref | Reuse exact configuration for open/close |
+| Open | Validate Form then pass callback to client | Client owns socket, TLS, framing and deadline |
+| Handshake invalid after handle returned | Attempt immediate close, return failure | Close failure cannot prove remote cleanup |
+| Active event | Validate byte limit, decode JSON, notify Runtime receiver | Receiver and transport own overload/backpressure |
+| Bad event | Send typed error notification; no invented payload | Consumer chooses whether stream continues |
+| Stop | Check request identity, paired operation, module/config instance; call close once per valid invocation | Runtime owns logical once-only stop and supervision |
+| Duplicate concurrent raw close | No package registry or idempotency state | Consumer client must tolerate duplicate handle close; no global exactly-once claim |
+| Receiver dies / forced kill | No new binding process performs cleanup | Consumer transport/session recovery |
+| Reconnect | No hidden reopen or replay | Client owns retry, Last-Event-ID and duplicate/loss handling |
+
+The SSE client supplies already-framed events. This binding does not implement
+the HTML event-stream parser, browser reconnection algorithm, heartbeat timer,
+cursor persistence, event deduplication or bounded process mailbox. The Living
+Standard is a client framing reference; draft WoT Profile use is not conformance.
+
+`transport_test.exs` and `integration_test.exs` under
+`test/wotex/binding/http/` cover the current open/event/close boundary. WBH-C02
+adds independently repeated close, failed cleanup and receiver/concurrency
+vectors without transferring connection ownership into the package. WBH-C03
+must measure sustained event delivery and prove the supplied-client overload
+contract before claiming bounded streaming memory or recovery guarantees.

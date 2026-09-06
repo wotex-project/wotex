@@ -1,25 +1,43 @@
-schema_version: "1.0.0"
+schema_version: "1.1.0"
 package: "wotex_binding_http"
-standards_baseline: "docs/standards-baseline.md"
+completion_plan: "docs/plans/wotex-binding-http-completion.md"
 specifications:
   - id: "WBH.01"
+    version: "1.0.0"
     path: "docs/specs/WBH.01-http-transport.md"
-    status: "implemented"
-    requires: ["wotex_runtime:WRT.01"]
-    evidence:
+    implementation_status: "implemented"
+    standards:
+      - {name: "W3C WoT Thing Description 1.1", revision: "Recommendation 2023-12-05", claim: "named HTTP Form subset"}
+      - {name: "W3C WoT Profiles", revision: "Working Draft 2025-11-04", claim: "action-status mapping guidance only; no conformance"}
+    requires: ["WBH.02", "wotex_runtime:WRT.01"]
+    implementation_modules: ["Wotex.Binding.HTTP", "Wotex.Binding.HTTP.Form", "Wotex.Binding.HTTP.Transport"]
+    executable_evidence:
       - "test/wotex/binding/http/form_test.exs"
       - "test/wotex/binding/http/transport_test.exs"
+    compatibility_classification: "nine-operation versioned HTTP profile; draft-derived choices remain explicit"
   - id: "WBH.02"
+    version: "1.0.0"
     path: "docs/specs/WBH.02-client-port-and-values.md"
-    status: "implemented"
-    requires: ["WBH.01"]
-    evidence:
+    implementation_status: "implemented"
+    standards:
+      - {name: "HTTP Semantics", revision: "RFC 9110, 2022-06", claim: "field/method/status subset; wire client external"}
+      - {name: "JSON", revision: "RFC 8259, 2017-12", claim: "bounded codec adaptation; not streaming parser"}
+    requires: ["wotex_runtime:WRT.01"]
+    implementation_modules: ["Wotex.Binding.HTTP.Client", "Wotex.Binding.HTTP.Config", "Wotex.Binding.HTTP.Request", "Wotex.Binding.HTTP.Response", "Wotex.Binding.HTTP.Headers", "Wotex.Binding.HTTP.Codec", "Wotex.Binding.HTTP.Error"]
+    executable_evidence:
       - "test/wotex/binding/http/value_test.exs"
       - "test/wotex/binding/http/library_contract_test.exs"
+    compatibility_classification: "immutable credential-free values and explicit client callbacks"
   - id: "WBH.03"
+    version: "1.0.0"
     path: "docs/specs/WBH.03-sse-subscriptions.md"
-    status: "implemented"
-    requires: ["WBH.01", "WBH.02"]
-    evidence:
+    implementation_status: "partial"
+    standards:
+      - {name: "HTML Server-Sent Events", revision: "Living Standard; repository baseline observed 2026-09-02", claim: "framed-event adaptation only; parser/reconnect external"}
+      - {name: "W3C WoT Profiles", revision: "Working Draft 2025-11-04", claim: "SSE mapping guidance only"}
+    requires: ["WBH.01", "WBH.02", "wotex_runtime:WRT.01"]
+    implementation_modules: ["Wotex.Binding.HTTP.SSE.Event", "Wotex.Binding.HTTP.Notification", "Wotex.Binding.HTTP.Subscription", "Wotex.Binding.HTTP.Transport"]
+    executable_evidence:
       - "test/wotex/binding/http/transport_test.exs"
       - "test/wotex/binding/http/integration_test.exs"
+    compatibility_classification: "exact configuration-instance lifecycle; recovery evidence WBH-C02/C03 remains"

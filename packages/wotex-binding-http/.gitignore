@@ -8,4 +8,5 @@ erl_crash.dump
 *.ez
 /wotex_binding_http-*.tar
 /docs/tasks/inbox.md
+/docs/tasks/local/
 /priv/plts/
