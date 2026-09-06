@@ -86,7 +86,10 @@ defmodule WotexConformance.MixProject do
         "lib",
         "priv/schemas",
         "priv/vectors",
-        "docs",
+        "docs/decisions",
+        "docs/plans",
+        "docs/provenance",
+        "docs/specs",
         ".formatter.exs",
         "AGENTS.md",
         "CLAUDE.md",
@@ -108,6 +111,7 @@ defmodule WotexConformance.MixProject do
       main: "readme",
       extras: [
         "README.md": [title: "Overview"],
+        "docs/plans/wotex-conformance-completion.md": [title: "Completion Contract"],
         "CONTRIBUTING.md": [title: "Contributing"],
         "SECURITY.md": [title: "Security"],
         "GOVERNANCE.md": [title: "Governance"],
@@ -120,6 +124,7 @@ defmodule WotexConformance.MixProject do
         LICENSE: [title: "License"]
       ],
       groups_for_extras: [
+        "Completion plans": ~r|docs/plans/|,
         Specifications: ~r|docs/specs/|,
         Decisions: ~r|docs/decisions/|,
         Provenance: ~r|docs/provenance/|,

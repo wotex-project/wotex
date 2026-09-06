@@ -1,0 +1,42 @@
+schema_version: "1.1.0"
+package: wotex_conformance
+completion_plan: docs/plans/wotex-conformance-completion.md
+specifications:
+  - id: WCF.01
+    version: "1.0.0"
+    path: docs/specs/WCF.01-conformance-runner.md
+    implementation_status: implemented
+    standards:
+      - name: W3C Web of Things Thing Description
+        revision: "1.1 Recommendation 2023-12-05"
+        claim: Bounded TD and Thing Model vector subsets with exact assertion provenance, not complete conformance or certification.
+      - name: Wotex conformance target protocol
+        revision: "1.0"
+        claim: Isolated request/response execution and content-addressed evidence under WCF.01.
+    requires: []
+    implementation_modules:
+      - Wotex.Conformance
+      - Wotex.Conformance.Artifact
+      - Wotex.Conformance.Canonical
+      - Wotex.Conformance.Claim
+      - Wotex.Conformance.Corpus
+      - Wotex.Conformance.Subject
+      - Wotex.Conformance.Vector
+      - Wotex.Conformance.Target
+      - Wotex.Conformance.Target.External
+      - Wotex.Conformance.Target.Response
+      - Wotex.Conformance.Runner
+      - Wotex.Conformance.Result
+      - Wotex.Conformance.Report
+    executable_evidence:
+      - test/wotex/conformance/artifact_test.exs
+      - test/wotex/conformance/boundary_test.exs
+      - test/wotex/conformance/canonical_test.exs
+      - test/wotex/conformance/contracts_test.exs
+      - test/wotex/conformance/corpus_test.exs
+      - test/wotex/conformance/external_lifecycle_test.exs
+      - test/wotex/conformance/report_test.exs
+      - test/wotex/conformance/runner_test.exs
+      - test/wotex/conformance/schema_test.exs
+      - test/wotex/conformance/validation_matrix_test.exs
+    compatibility_classification: Package 0.1.0; schema 1.0 and protocol 1.0 compatibility are independently versioned and must not be inferred from the package version.
