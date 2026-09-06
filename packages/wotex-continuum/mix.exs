@@ -91,7 +91,7 @@ defmodule WotexContinuum.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(docs lib priv/schemas provenance specs test/vectors .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md SECURITY.md GOVERNANCE.md CONTRIBUTING.md CODE_OF_CONDUCT.md)
+        ~w(docs/THREAT_MODEL.md docs/plans docs/specs lib priv/schemas provenance specs test/vectors .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md SECURITY.md GOVERNANCE.md CONTRIBUTING.md CODE_OF_CONDUCT.md)
     ]
   end
 
@@ -100,6 +100,7 @@ defmodule WotexContinuum.MixProject do
       main: "readme",
       extras: [
         "README.md",
+        "docs/plans/wotex-continuum-completion.md",
         "specs/WCT.01-manifest-context-capability.md",
         "specs/WCT.02-exchange-values.md",
         "specs/WCT.03-mode-lifecycle-exit.md",
@@ -108,6 +109,7 @@ defmodule WotexContinuum.MixProject do
         "GOVERNANCE.md"
       ],
       groups_for_extras: [
+        "Completion plans": ~r/docs\/plans/,
         Specifications: ~r/specs\//,
         Security: ~r/docs\//,
         Project: ~r/(SECURITY|GOVERNANCE)\.md/

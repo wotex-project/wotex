@@ -111,6 +111,11 @@ accepted struct.
 
 ## Development
 
+The [specification catalogue](docs/specs/catalogue.yaml) and completion contract
+at `docs/plans/wotex-continuum-completion.md` separate package
+verification from independent consumer, release and stable-API evidence.
+Normative WCT documents retain their single owners under `specs/`.
+
 ```sh
 WOTEX_PATH_DEPS=1 mix deps.get
 WOTEX_PATH_DEPS=1 mix check
@@ -126,10 +131,11 @@ Credo, dependency audits, Dialyzer, complete public documentation, at least 95%
 line coverage, the public-boundary scan, and compilation from the unpacked Hex
 archive.
 
-The explicit path switch resolves the sibling Wotex core checkout only in
-development, test, or documentation environments. Without it, dependency
-selection uses the published package requirement; a sibling directory never
-changes dependency selection implicitly.
+The explicit path switch is a development mechanism, including when Mix
+evaluates dependencies in the `prod` environment. Without it, dependency
+selection uses the published package requirement; a nearby directory never
+changes dependency selection implicitly. A successful local-path check does
+not establish independent consumer installation against released dependencies.
 
 See `specs/` for the normative contracts and `test/vectors/` for executable
 examples.
