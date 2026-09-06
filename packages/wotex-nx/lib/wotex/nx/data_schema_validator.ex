@@ -6,7 +6,8 @@ defmodule Wotex.Nx.DataSchemaValidator do
   @spec validate(term(), map(), boolean()) :: :ok | {:error, Error.t()}
   def validate(value, schema, allow_non_finite?) when is_map(schema) do
     with :ok <- type(value, schema, allow_non_finite?),
-         :ok <- enum(value, schema) do
+         :ok <- enum(value, schema),
+         :ok <- constant(value, schema) do
       bounds(value, schema)
     end
   end
@@ -91,7 +92,9 @@ defmodule Wotex.Nx.DataSchemaValidator do
          Error.new(:data_schema_enum_mismatch, :encoding, "value is outside DataSchema enum")}
   end
 
-  defp enum(value, %{"const" => expected}) do
+  defp enum(_, _), do: :ok
+
+  defp constant(value, %{"const" => expected}) do
     if value === expected,
       do: :ok,
       else:
@@ -99,7 +102,7 @@ defmodule Wotex.Nx.DataSchemaValidator do
          Error.new(:data_schema_const_mismatch, :encoding, "value does not match DataSchema const")}
   end
 
-  defp enum(_, _), do: :ok
+  defp constant(_, _), do: :ok
 
   defp bounds(value, schema) when is_number(value) do
     checks = [

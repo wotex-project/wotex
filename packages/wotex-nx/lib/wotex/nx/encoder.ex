@@ -164,7 +164,7 @@ defmodule Wotex.Nx.Encoder do
                  DataSchema.to_map(feature.data_schema),
                  feature.allow_non_finite?
                ),
-             normalized <- normalize(value, feature.normalization),
+             {:ok, normalized} <- normalize(value, feature.normalization),
              {:ok, tensor} <- tensor(normalized, feature) do
           {:ok, tensor, mask(feature.shape, 0), quality_code(observation.quality)}
         end
@@ -194,7 +194,7 @@ defmodule Wotex.Nx.Encoder do
              DataSchema.to_map(feature.data_schema),
              feature.allow_non_finite?
            ),
-         normalized <- normalize(value, feature.normalization),
+         {:ok, normalized} <- normalize(value, feature.normalization),
          {:ok, tensor} <- tensor(normalized, feature) do
       {:ok, tensor, mask(feature.shape, 1), quality_code(quality)}
     end
@@ -265,11 +265,20 @@ defmodule Wotex.Nx.Encoder do
      )}
   end
 
-  defp normalize(value, :none), do: value
-  defp normalize(value, {:z_score, mean, stddev}), do: map_numbers(value, &((&1 - mean) / stddev))
+  defp normalize(value, :none), do: {:ok, value}
 
-  defp normalize(value, {:min_max, minimum, maximum}),
-    do: map_numbers(value, &((&1 - minimum) / (maximum - minimum)))
+  defp normalize(value, normalization) do
+    {:ok, map_numbers(value, normalization_function(normalization))}
+  rescue
+    ArithmeticError ->
+      {:error,
+       Error.new(:normalization_overflow, :encoding, "normalization exceeds numerical range")}
+  end
+
+  defp normalization_function({:z_score, mean, stddev}), do: &((&1 - mean) / stddev)
+
+  defp normalization_function({:min_max, minimum, maximum}),
+    do: &((&1 - minimum) / (maximum - minimum))
 
   defp map_numbers(values, function) when is_list(values),
     do: Enum.map(values, &map_numbers(&1, function))
@@ -277,20 +286,15 @@ defmodule Wotex.Nx.Encoder do
   defp map_numbers(true, function), do: function.(1)
   defp map_numbers(false, function), do: function.(0)
   defp map_numbers(value, function) when is_number(value), do: function.(value)
+  defp map_numbers(value, _) when value in [:nan, :infinity, :neg_infinity], do: value
 
   defp tensor(value, feature) do
     converted = booleans_to_numbers(value)
-    numerical = Numerical.tensor(converted, type: feature.dtype)
 
-    if Numerical.shape(numerical) == feature.shape do
+    with :ok <- validate_integer_range(converted, feature.dtype),
+         numerical <- Numerical.tensor(converted, type: feature.dtype),
+         :ok <- validate_tensor(numerical, feature) do
       {:ok, numerical}
-    else
-      {:error,
-       Error.new(:tensor_shape_mismatch, :encoding, "tensor shape does not match feature shape", %{
-         feature: feature.name,
-         expected_shape: feature.shape,
-         actual_shape: Numerical.shape(numerical)
-       })}
     end
   rescue
     _ in [ArgumentError, FunctionClauseError] ->
@@ -299,6 +303,56 @@ defmodule Wotex.Nx.Encoder do
          feature: feature.name
        })}
   end
+
+  defp validate_integer_range(value, {class, bits}) when class in [:s, :u] do
+    minimum = if class == :s, do: -Bitwise.bsl(1, bits - 1), else: 0
+    maximum = Bitwise.bsl(1, if(class == :s, do: bits - 1, else: bits)) - 1
+
+    if within_integer_range?(value, minimum, maximum) do
+      :ok
+    else
+      {:error,
+       Error.new(:dtype_value_out_of_range, :encoding, "integer does not fit the feature dtype")}
+    end
+  end
+
+  defp validate_integer_range(_, _), do: :ok
+
+  defp within_integer_range?(values, minimum, maximum) when is_list(values),
+    do: Enum.all?(values, &within_integer_range?(&1, minimum, maximum))
+
+  defp within_integer_range?(value, minimum, maximum),
+    do: is_integer(value) and value >= minimum and value <= maximum
+
+  defp validate_tensor(numerical, feature) do
+    cond do
+      Numerical.shape(numerical) != feature.shape ->
+        {:error,
+         Error.new(
+           :tensor_shape_mismatch,
+           :encoding,
+           "tensor shape does not match feature shape",
+           %{
+             feature: feature.name,
+             expected_shape: feature.shape,
+             actual_shape: Numerical.shape(numerical)
+           }
+         )}
+
+      not feature.allow_non_finite? and non_finite_tensor?(numerical) ->
+        {:error,
+         Error.new(:non_finite_value, :encoding, "dtype conversion produced a non-finite value")}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp non_finite_tensor?(%Numerical.Tensor{type: {class, _}}) when class in [:s, :u],
+    do: false
+
+  defp non_finite_tensor?(numerical),
+    do: Enum.any?(Numerical.to_flat_list(numerical), &(&1 in [:nan, :infinity, :neg_infinity]))
 
   defp booleans_to_numbers(values) when is_list(values),
     do: Enum.map(values, &booleans_to_numbers/1)

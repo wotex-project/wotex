@@ -27,6 +27,13 @@ identity, model selection and execution, policy, evidence, and Action dispatch.
    identifier.
 4. Values MUST pass DataSchema type/shape checks before tensor construction.
    Non-finite values MUST be refused unless explicitly allowed by the feature.
+   The finite-value policy also applies after normalization and dtype conversion.
+   Integer values MUST fit the selected signed or unsigned dtype without wrapping
+   or truncation. Floating-point rounding within the selected dtype is permitted;
+   arithmetic overflow during normalization MUST return a structured error.
+   These rules apply to observations, converted units, and missing-value fills.
+   Supported DataSchema constraints compose conjunctively: an `enum` MUST NOT
+   bypass a `const` on the same value, including array items and decoded output.
 5. Unit mismatch MUST use an explicit conversion port or fail. Unit identity
    MUST never be guessed.
 6. Missing or rejected-quality values MUST follow the declared `:error` or fill
