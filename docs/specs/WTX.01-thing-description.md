@@ -1,6 +1,8 @@
 # WTX.01: Thing Description 1.1 value, parsing, and serialization
 
 **Status**: Implemented development contract  
+**Specification version**: 1.0.0
+
 **Owner**: `wotex`  
 **Standard baseline**: W3C WoT Thing Description 1.1, Recommendation
 5 December 2023
@@ -60,6 +62,12 @@ registration, or Action-effect truth. A consumer resolves those inputs.
 Defaults are one mebibyte, 64 nested containers, and 100,000 JSON nodes. A
 consumer may lower or explicitly raise these limits. Errors identify the phase,
 stable code, JSON path, and safe details.
+
+The documented `validate: false` staged-ingestion option bypasses the aggregate
+schema and semantic pass, not JSON-value or resource-limit admission. Such a
+value MUST NOT be presented as successfully validated against TD 1.1 until
+`validate/2` succeeds. API and release acceptance are separate gates in
+the package completion contract, `docs/plans/wotex-completion.md`.
 
 ## Evidence
 

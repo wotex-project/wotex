@@ -1,6 +1,8 @@
 # WTX.04: Thing Model 1.1 value, parsing, and serialization
 
 **Status**: Implemented development contract  
+**Specification version**: 1.0.0
+
 **Owner**: `wotex`  
 **Requires**: WTX.01, WTX.03  
 **Standard baseline**: W3C WoT Thing Description 1.1, Recommendation

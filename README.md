@@ -191,6 +191,11 @@ keeps dependency loading free of hidden work.
 
 ## Development
 
+The [specification catalogue](docs/specs/catalogue.yaml) and completion contract
+at `docs/plans/wotex-completion.md` define independently
+implementable work, acceptance gates and remaining claim obligations. Local
+execution tracking is not part of the published contract.
+
 ```bash
 mix setup
 mix test

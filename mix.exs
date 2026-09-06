@@ -79,7 +79,7 @@ defmodule Wotex.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs lib mix.exs priv/w3c)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib mix.exs priv/w3c)
     ]
   end
 
@@ -88,6 +88,7 @@ defmodule Wotex.MixProject do
       main: "readme",
       extras: [
         "README.md": [title: "Overview"],
+        "docs/plans/wotex-completion.md": [title: "Completion Contract"],
         "docs/specs/WTX.01-thing-description.md": [title: "Thing Description"],
         "docs/specs/WTX.02-affordance-values.md": [title: "Affordance Values"],
         "docs/specs/WTX.03-errors-extensions-and-compatibility.md": [
@@ -103,6 +104,7 @@ defmodule Wotex.MixProject do
         LICENSE: [title: "License"]
       ],
       groups_for_extras: [
+        "Completion plans": ~r/docs\/plans/,
         "Normative specifications": ~r/docs\/specs/,
         Provenance: ~r/docs\/provenance/,
         Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|NOTICE|LICENSE/

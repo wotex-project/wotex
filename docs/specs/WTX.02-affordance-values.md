@@ -1,6 +1,8 @@
 # WTX.02: DataSchema, Form, affordance, and security values
 
 **Status**: Implemented development contract  
+**Specification version**: 1.0.0
+
 **Owner**: `wotex`  
 **Requires**: WTX.01
 

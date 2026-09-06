@@ -12,3 +12,4 @@ mix.lock.bak
 
 # Local cross-repository coordination; never publish machine-local handoffs.
 /docs/tasks/inbox.md
+/docs/tasks/local/

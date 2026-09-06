@@ -1,6 +1,8 @@
 # WTX.03: Errors, extension preservation, and compatibility
 
 **Status**: Implemented development contract  
+**Specification version**: 1.0.0
+
 **Owner**: `wotex`  
 **Requires**: WTX.01, WTX.02
 
@@ -18,6 +20,13 @@ those errors. Stable fields are:
 
 Raising variants use the same exception value. Error messages are not a stable
 matching interface.
+
+Option arguments use the documented keyword-list shape. For existing limit
+options, only positive integers replace defaults; invalid limit values fall
+back to the corresponding defaults. This does not declare malformed option
+containers or arbitrarily forged typed values to be a total input surface.
+The completion contract requires those surfaces to be classified and tested
+before a stronger admission claim is made.
 
 `undefined_security_reference` is a semantic error. Its path identifies the
 offending Thing-level, Form-level, or `ComboSecurityScheme` member, and its safe
