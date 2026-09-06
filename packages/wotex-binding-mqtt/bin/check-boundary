@@ -1,6 +1,12 @@
 #!/bin/sh
 set -eu
 
+if ! command -v rg >/dev/null 2>&1
+then
+  echo "ripgrep (rg) is required for verification" >&2
+  exit 1
+fi
+
 root=${1:-.}
 
 boundary_pattern='(Application\.start\(|use Application|GenServer|Supervisor|use Ash|use Phoenix|Ecto\.|Oban\.|Plug\.|Bandit\.|Cowboy\.)'
