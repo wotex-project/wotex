@@ -61,6 +61,8 @@ defmodule Wotex.Conformance.TestFixtures do
 
     environment =
       %{
+        # The target scrubs the locale; keep VM startup warnings out of its JSON output.
+        "ELIXIR_ERL_OPTIONS" => "+fnu",
         "PATH" =>
           [System.find_executable("erl") |> Path.dirname(), "/usr/bin", "/bin"]
           |> Enum.join(":"),
