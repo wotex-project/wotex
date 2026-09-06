@@ -250,13 +250,18 @@ defmodule Wotex.Binding.HTTP.ValueTest do
   end
 
   test "subscription handle inspection omits the opaque client handle" do
+    {:ok, config} = Config.new(client: {AlternateClient, %{private_option: "not-retained"}})
+
     subscription =
-      Subscription.new(AlternateClient, {:opaque, "hidden"}, "request-1", :subscribeevent)
+      Subscription.new(config, {:opaque, "hidden"}, "request-1", :subscribeevent)
 
     assert Subscription.unwrap(subscription) ==
              {AlternateClient, {:opaque, "hidden"}, "request-1", :subscribeevent}
 
     refute inspect(subscription) =~ "hidden"
+    assert subscription.instance_ref == Config.instance_ref(config)
+    assert is_reference(subscription.instance_ref)
+    refute :erlang.term_to_binary(subscription) =~ "not-retained"
     refute Map.has_key?(Map.from_struct(subscription), :credential)
   end
 

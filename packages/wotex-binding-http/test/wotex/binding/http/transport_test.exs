@@ -282,9 +282,9 @@ defmodule Wotex.Binding.HTTP.TransportTest do
   end
 
   test "unsubscribe closes the exact handle without forwarding stop credentials" do
-    subscription = Subscription.new(FakeClient, :client_handle, "request-1", :observeproperty)
     stop_request = Factory.request(:unobserveproperty)
     config = Factory.config(%{close_return: :ok})
+    subscription = Subscription.new(config, :client_handle, "request-1", :observeproperty)
 
     assert :ok =
              Transport.unsubscribe(
@@ -297,8 +297,46 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     assert_receive {:client_close, :client_handle}
   end
 
+  test "unsubscribe rejects another instance of the same client before calling close" do
+    handshake = Factory.response(200, "", [{"Content-Type", "text/event-stream"}])
+    options = %{subscribe_return: {:ok, :owned_handle, handshake}}
+    opening_config = Factory.config(options)
+    equal_options_config = Factory.config(options)
+    different_options_config = Factory.config(%{client_instance: :other})
+    request = Factory.request(:observeproperty, nil, %{"subprotocol" => "sse"})
+
+    assert {:ok, subscription} =
+             Transport.subscribe(request, self(), Factory.context(), opening_config)
+
+    for other_config <- [equal_options_config, different_options_config] do
+      assert {:error, %Error{code: :subscription_client_mismatch}} =
+               Transport.unsubscribe(
+                 subscription,
+                 Factory.request(:unobserveproperty),
+                 Factory.context(),
+                 other_config
+               )
+
+      refute_receive {:client_close, _}
+    end
+
+    close_task =
+      Task.async(fn ->
+        Transport.unsubscribe(
+          subscription,
+          Factory.request(:unobserveproperty),
+          Factory.context(),
+          opening_config
+        )
+      end)
+
+    assert :ok = Task.await(close_task)
+    assert_receive {:client_close, :owned_handle}
+    refute_receive {:client_close, _}
+  end
+
   test "unsubscribe validates identity, operation, and opening client" do
-    base = Subscription.new(FakeClient, :handle, "request-1", :observeproperty)
+    base = Subscription.new(Factory.config(), :handle, "request-1", :observeproperty)
 
     cases = [
       {base, Factory.request(:unobserveproperty, nil, %{}, "other-request"), Factory.config(),
@@ -325,7 +363,6 @@ defmodule Wotex.Binding.HTTP.TransportTest do
   end
 
   test "unsubscribe normalizes close errors, exceptions, malformed returns, and arguments" do
-    subscription = Subscription.new(FakeClient, :handle, "request-1", :subscribeevent)
     request = Factory.request(:unsubscribeevent)
 
     cases = [
@@ -336,6 +373,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
 
     for {returned, code} <- cases do
       config = Factory.config(%{close_return: returned})
+      subscription = Subscription.new(config, :handle, "request-1", :subscribeevent)
 
       assert {:error, %Error{code: ^code}} =
                Transport.unsubscribe(subscription, request, Factory.context(), config)

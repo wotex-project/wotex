@@ -15,7 +15,7 @@ best-effort close of the newly returned handle.
 ## Events
 
 The supplied client parses wire framing and invokes the handler once per
-dispatched `Wotex.Binding.HTTP.SSE.Event`. The event value hnews data, optional
+dispatched `Wotex.Binding.HTTP.SSE.Event`. The event value holds data, optional
 event type, optional id, and optional non-negative retry delay.
 
 The binding checks the event byte limit, decodes data as one JSON value, and
@@ -33,7 +33,14 @@ data use `{:wotex_transport, {:error, error}}`.
 
 `unobserveproperty` must match an `observeproperty` handle;
 `unsubscribeevent` must match a `subscribeevent` handle. Request identity and
-client module must also match. A valid close calls the supplied client's
+client module and opening configuration instance reference must also match.
+Each validated configuration construction creates a fresh non-secret reference;
+the consumer reuses that immutable configuration throughout the stream lifecycle.
+Another configuration, even with equal client options, fails before calling
+`close/2`. No registry, process owner restriction, or credential hash is involved.
+The reference prevents accidental cross-instance routing among trusted callers;
+it is not an isolation boundary against code forging internal values.
+A valid close calls the supplied client's
 `close/2` exactly once and makes no hidden HTTP exchange.
 
 The opaque handle stores no credential or client configuration. Stop-time

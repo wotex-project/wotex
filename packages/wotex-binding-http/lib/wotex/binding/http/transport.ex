@@ -101,10 +101,10 @@ defmodule Wotex.Binding.HTTP.Transport do
         %ExecutionContext{},
         %Config{} = config
       ) do
-    {client_module, client_handle, request_id, start_operation} =
+    {client_module, client_handle, _, _} =
       Subscription.unwrap(subscription)
 
-    case validate_close(request, request_id, start_operation, client_module, config) do
+    case validate_close(request, subscription, config) do
       :ok -> call_close(client_module, client_handle, config)
       {:error, %Error{} = error} -> {:error, error}
     end
@@ -153,7 +153,7 @@ defmodule Wotex.Binding.HTTP.Transport do
              :ok <- validate_handshake(validated) do
           {:ok,
            Subscription.new(
-             module,
+             config,
              handle,
              HTTPRequest.request_id(request),
              HTTPRequest.operation(request)
@@ -387,11 +387,11 @@ defmodule Wotex.Binding.HTTP.Transport do
      })}
   end
 
-  defp validate_close(request, request_id, start_operation, client_module, config) do
+  defp validate_close(request, subscription, config) do
     {configured_module, _} = Config.client(config)
 
     cond do
-      request.request_id != request_id ->
+      request.request_id != subscription.request_id ->
         {:error,
          Error.new(
            :subscription_request_mismatch,
@@ -399,7 +399,7 @@ defmodule Wotex.Binding.HTTP.Transport do
            "close request does not match subscription identity"
          )}
 
-      Map.get(@close_operations, start_operation) != request.operation ->
+      Map.get(@close_operations, subscription.operation) != request.operation ->
         {:error,
          Error.new(
            :subscription_operation_mismatch,
@@ -407,7 +407,8 @@ defmodule Wotex.Binding.HTTP.Transport do
            "close operation does not match stream operation"
          )}
 
-      configured_module != client_module ->
+      configured_module != subscription.client_module or
+          Config.instance_ref(config) != subscription.instance_ref ->
         {:error,
          Error.new(
            :subscription_client_mismatch,

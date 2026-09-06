@@ -17,6 +17,11 @@ defmodule Wotex.Binding.HTTP.Config do
 
   Each limit must be a positive integer. Defaults are conservative package
   values and can be tightened by the consumer host.
+
+  Each `new/1` call creates a distinct, non-secret instance reference. Reuse the
+  returned configuration for the complete stream lifecycle; reconstructing even
+  equal options creates another instance that cannot close existing streams.
+  This reference correlates trusted consumer calls, not a security sandbox.
   """
 
   alias Wotex.Binding.HTTP.{Error, Headers}
@@ -36,6 +41,7 @@ defmodule Wotex.Binding.HTTP.Config do
   @type t :: %__MODULE__{
           client_module: module(),
           client_config: term(),
+          instance_ref: reference(),
           headers: Headers.t(),
           max_request_bytes: pos_integer(),
           max_response_bytes: pos_integer(),
@@ -45,6 +51,7 @@ defmodule Wotex.Binding.HTTP.Config do
   @enforce_keys [
     :client_module,
     :client_config,
+    :instance_ref,
     :headers,
     :max_request_bytes,
     :max_response_bytes,
@@ -76,6 +83,7 @@ defmodule Wotex.Binding.HTTP.Config do
        %__MODULE__{
          client_module: client_module,
          client_config: client_config,
+         instance_ref: make_ref(),
          headers: normalized_headers,
          max_request_bytes: max_request_bytes,
          max_response_bytes: max_response_bytes,
@@ -92,6 +100,10 @@ defmodule Wotex.Binding.HTTP.Config do
   @doc "Returns the supplied client module and its non-credential configuration."
   @spec client(t()) :: {module(), term()}
   def client(%__MODULE__{client_module: module, client_config: config}), do: {module, config}
+
+  @doc "Returns the non-secret identity of this immutable transport configuration."
+  @spec instance_ref(t()) :: reference()
+  def instance_ref(%__MODULE__{instance_ref: ref}), do: ref
 
   @doc "Returns validated static request fields."
   @spec headers(t()) :: Headers.t()
