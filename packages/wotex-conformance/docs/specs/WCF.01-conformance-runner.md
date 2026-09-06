@@ -182,6 +182,17 @@ process handles one vector. It reads one canonical JSON request followed by a
 newline from standard input, writes one JSON response to standard output, and
 exits. Output and execution time are bounded.
 
+One monotonic deadline MUST cover request encoding, process startup, request
+submission and output collection. A busy target port MUST NOT suspend the
+caller while writing its request; a rejected write is an infrastructure error.
+The collector MUST check deadline exhaustion before consuming another queued
+message, so a continuous output stream cannot reset or starve the deadline.
+Every opened port MUST close on all return paths, including failed writes and
+malformed output. Invalid request identity MUST be rejected before opening it.
+These are cooperative runtime bounds, not hard-real-time scheduling guarantees.
+Closing a port does not prove termination of arbitrary descendant OS processes;
+that containment remains the consumer's responsibility.
+
 The target is not an operating-system sandbox. A consumer MUST place untrusted
 subjects in appropriate process, filesystem, network, and resource isolation.
 

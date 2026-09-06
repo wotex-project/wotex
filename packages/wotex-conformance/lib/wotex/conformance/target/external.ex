@@ -6,6 +6,11 @@ defmodule Wotex.Conformance.Target.External do
   standard input, emits one JSON response on standard output, and exits. No
   shell is involved. The inherited environment is removed before the supplied
   bounded environment is applied.
+
+  The invocation uses one monotonic deadline and non-suspending port writes.
+  Every opened port is closed on return, including write and decoding failures.
+  This is a cooperative execution budget, not a hard-real-time or OS sandbox
+  guarantee; the consumer owns process-tree and resource isolation.
   """
 
   @behaviour Wotex.Conformance.Target
@@ -91,14 +96,13 @@ defmodule Wotex.Conformance.Target.External do
   @impl Wotex.Conformance.Target
   def invoke(%__MODULE__{} = target, request) do
     started = System.monotonic_time()
+    deadline = System.convert_time_unit(started, :native, :millisecond) + target.timeout_ms
 
     result =
       with {:ok, encoded} <- Canonical.encode(request),
-           {:ok, port} <- open(target),
-           :ok <- send_request(port, encoded),
-           {:ok, output} <- collect(port, target.timeout_ms, target.max_output_bytes),
-           {:ok, decoded} <- decode_response(output),
            {:ok, vector_id} <- request_vector_id(request),
+           {:ok, output} <- exchange(target, encoded, deadline),
+           {:ok, decoded} <- decode_response(output),
            {:ok, response} <- Response.new(decoded, vector_id) do
         {:ok, response}
       end
@@ -268,20 +272,37 @@ defmodule Wotex.Conformance.Target.External do
     unset ++ supplied
   end
 
+  defp exchange(target, encoded, deadline) do
+    with :ok <- within_deadline(deadline),
+         {:ok, port} <- open(target) do
+      try do
+        with :ok <- within_deadline(deadline),
+             :ok <- send_request(port, encoded) do
+          collect(port, deadline, target.max_output_bytes, [], 0)
+        end
+      after
+        safe_close(port)
+      end
+    end
+  end
+
   defp send_request(port, encoded) do
-    true = Port.command(port, [encoded, "\n"])
-    :ok
+    case Port.command(port, [encoded, "\n"], [:nosuspend]) do
+      true -> :ok
+      false -> {:error, Error.new(:target_write_failed, "target request could not be written")}
+    end
   rescue
     ArgumentError ->
       {:error, Error.new(:target_write_failed, "target request could not be written")}
   end
 
-  defp collect(port, timeout_ms, max_output_bytes) do
-    deadline = System.monotonic_time(:millisecond) + timeout_ms
-    collect(port, deadline, max_output_bytes, [], 0)
+  defp collect(port, deadline, max_output_bytes, chunks, size) do
+    with :ok <- within_deadline(deadline) do
+      receive_output(port, deadline, max_output_bytes, chunks, size)
+    end
   end
 
-  defp collect(port, deadline, max_output_bytes, chunks, size) do
+  defp receive_output(port, deadline, max_output_bytes, chunks, size) do
     remaining = max(deadline - System.monotonic_time(:millisecond), 0)
 
     receive do
@@ -289,7 +310,6 @@ defmodule Wotex.Conformance.Target.External do
         next_size = size + byte_size(bytes)
 
         if next_size > max_output_bytes do
-          safe_close(port)
           {:error, Error.new(:target_output_limit, "target response exceeds its byte limit")}
         else
           collect(port, deadline, max_output_bytes, [bytes | chunks], next_size)
@@ -302,8 +322,15 @@ defmodule Wotex.Conformance.Target.External do
         {:error, Error.new(:target_exit_nonzero, "external target exited unsuccessfully")}
     after
       remaining ->
-        safe_close(port)
         {:error, Error.new(:target_timeout, "external target exceeded its time limit")}
+    end
+  end
+
+  defp within_deadline(deadline) do
+    if System.monotonic_time(:millisecond) < deadline do
+      :ok
+    else
+      {:error, Error.new(:target_timeout, "external target exceeded its time limit")}
     end
   end
 
