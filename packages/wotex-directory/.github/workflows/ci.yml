@@ -34,6 +34,10 @@ jobs:
           ref: 008688042ee24779cc7407105f4c56d340a6acfd
           path: wotex
           persist-credentials: false
+      - name: Install verification tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ripgrep
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
           elixir-version: "1.20"

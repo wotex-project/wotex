@@ -1,6 +1,12 @@
 #!/bin/sh
 set -eu
 
+if ! command -v rg >/dev/null 2>&1
+then
+  echo "ripgrep (rg) is required for verification" >&2
+  exit 1
+fi
+
 if rg -n '(Application\.start\(|use (Application|GenServer|Supervisor|Agent)|DynamicSupervisor\.|Task\.Supervisor|Registry\.|use Ash|use Phoenix|Ecto\.|Oban\.|Plug\.)' lib test mix.exs
 then
   echo "directory process, framework, or persistence boundary violation" >&2

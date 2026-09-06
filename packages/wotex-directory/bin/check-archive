@@ -1,6 +1,12 @@
 #!/bin/sh
 set -eu
 
+if ! command -v rg >/dev/null 2>&1
+then
+  echo "ripgrep (rg) is required for verification" >&2
+  exit 1
+fi
+
 version=$(mix run --no-compile --no-start -e 'IO.write(Mix.Project.config()[:version])')
 archive="wotex_directory-${version}.tar"
 
