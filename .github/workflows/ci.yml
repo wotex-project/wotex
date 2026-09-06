@@ -12,6 +12,9 @@ concurrency:
 
 jobs:
   verify:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -33,3 +36,12 @@ jobs:
           key: mix-${{ runner.os }}-1.20-29-${{ hashFiles('mix.lock') }}
       - run: mix deps.get --check-locked
       - run: mix check
+      - name: Generate LCOV coverage
+        run: mix coveralls.lcov
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
+        with:
+          use_oidc: true
+          files: ./cover/lcov.info
+          disable_search: true
+          fail_ci_if_error: true
