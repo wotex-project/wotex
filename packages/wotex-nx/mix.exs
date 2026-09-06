@@ -97,7 +97,10 @@ defmodule WotexNx.MixProject do
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files: ~w[
         lib
-        docs
+        docs/decisions
+        docs/plans
+        docs/provenance
+        docs/specs
         .formatter.exs
         mix.exs
         README.md
@@ -115,6 +118,7 @@ defmodule WotexNx.MixProject do
       main: "readme",
       extras: [
         "README.md",
+        "docs/plans/wotex-nx-completion.md",
         "docs/specs/WNX.01-observation-numerical-boundary.md",
         "docs/decisions/0001-caller-owned-execution.md",
         "docs/decisions/0002-batch-and-output-contract.md",
@@ -122,6 +126,7 @@ defmodule WotexNx.MixProject do
         "SECURITY.md"
       ],
       groups_for_extras: [
+        "Completion plans": ~r/docs\/plans/,
         Specifications: ~r/docs\/specs/,
         Decisions: ~r/docs\/decisions/,
         Provenance: ~r/docs\/provenance/,

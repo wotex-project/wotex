@@ -1,6 +1,42 @@
-version: 1
-owner: wotex-project/wotex-nx
+schema_version: "1.1.0"
+package: wotex_nx
+completion_plan: docs/plans/wotex-nx-completion.md
 specifications:
   - id: WNX.01
+    version: "0.1.0"
     path: docs/specs/WNX.01-observation-numerical-boundary.md
-    status: implemented_development_contract
+    implementation_status: implemented
+    standards:
+      - name: W3C Web of Things Thing Description
+        revision: "1.1 Recommendation 2023-12-05"
+        claim: Reuses core DataSchema and affordance meaning; numerical conversion is a project extension, not a W3C profile.
+      - name: Nx
+        revision: "0.13.1"
+        claim: Typed tensor and Nx.Batch representation within WNX.01, not backend or model equivalence.
+    requires:
+      - wotex:WTX.01
+      - wotex:WTX.02
+    implementation_modules:
+      - Wotex.Nx
+      - Wotex.Nx.Observation
+      - Wotex.Nx.Feature
+      - Wotex.Nx.Schema
+      - Wotex.Nx.Window
+      - Wotex.Nx.Row
+      - Wotex.Nx.Encoder
+      - Wotex.Nx.Encoded
+      - Wotex.Nx.UnitConverter
+      - Wotex.Nx.OutputSchema
+      - Wotex.Nx.Decoder
+      - Wotex.Nx.Prediction
+      - Wotex.Nx.Anomaly
+      - Wotex.Nx.ActionProposal
+      - Wotex.Nx.Error
+    executable_evidence:
+      - test/wotex/nx/decoder_test.exs
+      - test/wotex/nx/library_contract_test.exs
+      - test/wotex/nx/numerical_integrity_test.exs
+      - test/wotex/nx/observation_feature_schema_test.exs
+      - test/wotex/nx/shape_property_test.exs
+      - test/wotex/nx/window_encoder_test.exs
+    compatibility_classification: Initial 0.1.0 API; tensor layout, dtype, mask, quality, temporal selection and output changes require explicit compatibility review.
