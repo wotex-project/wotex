@@ -21,6 +21,13 @@ defmodule Wotex.ValueTest do
     assert DataSchema.to_map(schema) == map
   end
 
+  test "DataSchema rejects invalid UTF-8 extension values and keys" do
+    for extension <- [%{"x-example:label" => <<255>>}, %{<<255>> => "label"}] do
+      assert {:error, %Error{code: :invalid_string}} =
+               DataSchema.new(Map.merge(%{"type" => "string"}, extension))
+    end
+  end
+
   test "DataSchema enforces the pinned TD 1.1 definition" do
     assert {:error, %Error{code: :schema_violation, phase: :schema, path: "/type"}} =
              DataSchema.new(%{"type" => "decimal"})

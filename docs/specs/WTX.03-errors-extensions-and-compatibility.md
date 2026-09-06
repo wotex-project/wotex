@@ -30,6 +30,14 @@ do not become supported standard behavior merely because they survive a round
 trip. A consumer may validate its own extension vocabulary after core
 validation, without modifying Wotex or presenting that policy as W3C behavior.
 
+Native-map constructors MUST reject invalid UTF-8 in string values and object
+keys, including extensions, before schema validation or encoding. They return
+`invalid_string` in the `value` phase. An invalid key reports its containing
+object's path so the error itself remains valid Unicode. Valid Unicode is
+preserved byte for byte without normalization. This implements the Unicode
+string boundary of [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259), Sections
+7 and 8.1.
+
 ## Compatibility contract
 
 - Development versions make no stable API promise.

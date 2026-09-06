@@ -32,6 +32,13 @@ defmodule Wotex.ThingModelTest do
     assert {:error, %Error{code: :source_unavailable}} = ThingModel.encode(changed, :source)
   end
 
+  test "rejects invalid UTF-8 in native-map extensions" do
+    assert {:error, %Error{code: :invalid_string, path: "/x-example:label"}} =
+             valid_tm_map()
+             |> Map.put("x-example:label", <<255>>)
+             |> ThingModel.from_map()
+  end
+
   test "enforces Thing Model type, TD 1.1 context, JSON values, and limits" do
     assert {:error, errors} =
              valid_tm_map()

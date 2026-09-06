@@ -34,6 +34,25 @@ defmodule Wotex.ThingDescriptionTest do
     assert Jason.decode!(first_json) == first
   end
 
+  test "rejects invalid UTF-8 in native-map extension keys and values" do
+    for extension <- [%{"x-example:label" => <<255>>}, %{<<255>> => "label"}] do
+      assert {:error, %Error{code: :invalid_string}} =
+               valid_td_map()
+               |> Map.merge(extension)
+               |> ThingDescription.from_map()
+    end
+  end
+
+  test "encoding a forged TD containing invalid UTF-8 returns structured errors" do
+    unsafe = %ThingDescription{document: Map.put(valid_td_map(), "x-example:label", <<255>>)}
+
+    assert {:error, %Error{code: :invalid_string, phase: :value}} =
+             ThingDescription.encode(unsafe, :canonical)
+
+    assert {:error, %Error{code: :encode_failed, phase: :encode}} =
+             ThingDescription.encode(unsafe, :compact)
+  end
+
   test "mutation validates the result and invalidates source-byte encoding" do
     json = Jason.encode!(valid_td_map())
     assert {:ok, td} = ThingDescription.parse(json)

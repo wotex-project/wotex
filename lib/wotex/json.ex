@@ -26,9 +26,8 @@ defmodule Wotex.JSON do
   @doc "Encodes a valid JSON value with recursively sorted object keys."
   @spec encode(json_value(), keyword()) :: {:ok, binary()} | {:error, Error.t()}
   def encode(value, opts \\ []) do
-    with :ok <- validate(value, opts),
-         {:ok, encoded} <- encode_value(value) do
-      {:ok, IO.iodata_to_binary(encoded)}
+    with :ok <- validate(value, opts) do
+      {:ok, IO.iodata_to_binary(encode_value(value))}
     end
   end
 
@@ -65,8 +64,12 @@ defmodule Wotex.JSON do
   end
 
   defp walk(value, %{nodes: nodes})
-       when is_nil(value) or is_boolean(value) or is_integer(value) or is_binary(value) do
+       when is_nil(value) or is_boolean(value) or is_integer(value) do
     {:ok, nodes + 1}
+  end
+
+  defp walk(value, %{nodes: nodes, path: path}) when is_binary(value) do
+    with :ok <- validate_string(value, path), do: {:ok, nodes + 1}
   end
 
   defp walk(value, %{nodes: nodes, path: path}) when is_float(value) do
@@ -92,8 +95,10 @@ defmodule Wotex.JSON do
   defp walk(value, state) when is_map(value) do
     Enum.reduce_while(value, {:ok, state.nodes + 1}, fn
       {key, child}, {:ok, count} when is_binary(key) ->
-        case walk(child, child_state(state, count, key)) do
-          {:ok, next_count} -> {:cont, {:ok, next_count}}
+        with :ok <- validate_string(key, state.path),
+             {:ok, next_count} <- walk(child, child_state(state, count, key)) do
+          {:cont, {:ok, next_count}}
+        else
           {:error, error} -> {:halt, {:error, error}}
         end
 
@@ -125,48 +130,25 @@ defmodule Wotex.JSON do
       value
       |> Enum.sort_by(fn {key, _value} -> key end)
       |> Enum.map(fn {key, child} ->
-        with {:ok, encoded_key} <- Jason.encode_to_iodata(key),
-             {:ok, encoded_child} <- encode_value(child) do
-          {:ok, [encoded_key, ?:, encoded_child]}
-        end
+        [Jason.encode_to_iodata!(key), ?:, encode_value(child)]
       end)
 
-    with {:ok, entries} <- collect(encoded_entries) do
-      {:ok, [?{, Enum.intersperse(entries, ?,), ?}]}
-    end
+    [?{, Enum.intersperse(encoded_entries, ?,), ?}]
   end
 
   defp encode_value(value) when is_list(value) do
     encoded_entries = Enum.map(value, &encode_value/1)
 
-    with {:ok, entries} <- collect(encoded_entries) do
-      {:ok, [?[, Enum.intersperse(entries, ?,), ?]]}
-    end
+    [?[, Enum.intersperse(encoded_entries, ?,), ?]]
   end
 
-  defp encode_value(value) do
-    case Jason.encode_to_iodata(value) do
-      {:ok, encoded} ->
-        {:ok, encoded}
+  defp encode_value(value), do: Jason.encode_to_iodata!(value)
 
-      {:error, reason} ->
-        {:error,
-         Error.new(:encode_failed, :encode, "JSON encoding failed", "/", %{
-           reason: inspect(reason, limit: 20, printable_limit: 80)
-         })}
-    end
-  end
-
-  defp collect(results) do
-    result =
-      Enum.reduce_while(results, {:ok, []}, fn
-        {:ok, value}, {:ok, values} -> {:cont, {:ok, [value | values]}}
-        {:error, error}, _acc -> {:halt, {:error, error}}
-      end)
-
-    case result do
-      {:ok, values} -> {:ok, Enum.reverse(values)}
-      {:error, error} -> {:error, error}
+  defp validate_string(value, path) do
+    if String.valid?(value) do
+      :ok
+    else
+      {:error, Error.new(:invalid_string, :value, "JSON strings must contain valid UTF-8", path)}
     end
   end
 

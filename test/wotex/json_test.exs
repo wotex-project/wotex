@@ -19,12 +19,31 @@ defmodule Wotex.JSONTest do
     end
   end
 
-  test "rejects non-JSON values and reports encoding failures" do
+  test "rejects non-JSON values before encoding" do
     assert {:error, %Error{code: :invalid_json_value, path: "/0"}} =
              JSON.validate([self()])
 
-    assert {:error, %Error{code: :encode_failed, phase: :encode}} =
+    assert {:error, %Error{code: :invalid_string, phase: :value, path: "/value"}} =
              JSON.encode(%{"value" => <<255>>})
+  end
+
+  test "rejects invalid UTF-8 strings and object keys without leaking invalid paths" do
+    for bytes <- [<<255>>, <<0xC0, 0xAF>>, <<0xED, 0xA0, 0x80>>, <<0xF0, 0x90>>] do
+      assert {:error, %Error{code: :invalid_string, path: "/nested/0"}} =
+               JSON.validate(%{"nested" => [bytes]})
+
+      assert {:error, %Error{code: :invalid_string, path: "/nested"} = error} =
+               JSON.validate(%{"nested" => %{bytes => true}})
+
+      assert String.valid?(error.path)
+    end
+  end
+
+  test "preserves valid Unicode strings and keys byte for byte" do
+    value = %{"温度" => ["å", "é", "\u0000", "𝄞"]}
+    assert :ok = JSON.validate(value)
+    assert {:ok, encoded} = JSON.encode(value)
+    assert Jason.decode!(encoded) == value
   end
 
   test "escapes JSON Pointer path segments" do
