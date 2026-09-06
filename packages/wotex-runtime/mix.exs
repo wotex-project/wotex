@@ -84,7 +84,7 @@ defmodule WotexRuntime.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs lib mix.exs)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/specs lib mix.exs)
     ]
   end
 
@@ -93,6 +93,7 @@ defmodule WotexRuntime.MixProject do
       main: "readme",
       extras: [
         "README.md": [title: "Overview"],
+        "docs/plans/wotex-runtime-completion.md": [title: "Completion Contract"],
         "docs/specs/WRT.01-consumed-thing-runtime.md": [title: "ConsumedThing Runtime"],
         "docs/specs/WRT.02-exposed-thing-runtime.md": [title: "ExposedThing Runtime"],
         "docs/specs/WRT.03-thing-level-interactions.md": [
@@ -104,6 +105,7 @@ defmodule WotexRuntime.MixProject do
         LICENSE: [title: "License"]
       ],
       groups_for_extras: [
+        "Completion plans": ~r/docs\/plans/,
         "Normative specifications": ~r/docs\/specs/,
         Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|LICENSE/
       ],

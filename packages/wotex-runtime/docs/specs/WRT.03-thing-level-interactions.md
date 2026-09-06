@@ -1,6 +1,8 @@
 # WRT.03: Thing-level meta-interaction mechanics
 
-**Status**: Implemented development contract
+Specification: `WRT.03@1.0.0`. Package baseline: `wotex_runtime 0.1.0`.
+Operation support is not proof of binding support or release readiness; use
+the repository completion plan at `docs/plans/wotex-runtime-completion.md` for remaining evidence.
 **Requires**: WRT.01, WRT.02, `wotex:WTX.02`
 
 ## Ownership

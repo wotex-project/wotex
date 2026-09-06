@@ -1,17 +1,35 @@
-schema_version: "1.0.0"
+schema_version: "1.1.0"
 package: "wotex_runtime"
+completion_plan: "docs/plans/wotex-runtime-completion.md"
 specifications:
   - id: "WRT.01"
+    version: "1.0.0"
     path: "docs/specs/WRT.01-consumed-thing-runtime.md"
-    status: "implemented"
+    implementation_status: "partial"
+    standards:
+      - {name: "W3C WoT Thing Description 1.1", revision: "Recommendation 2023-12-05", claim: "listed operation and Form mechanics only"}
+      - {name: "W3C WoT Scripting API", revision: "Note 2023-10-03", claim: "conceptual guidance; no API conformance"}
     requires: ["wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03"]
+    implementation_modules: ["Wotex.Runtime.ConsumedThing", "Wotex.Runtime.FormSelector", "Wotex.Runtime.Context", "Wotex.Runtime.BindingProfile", "Wotex.Runtime.Request", "Wotex.Runtime.Result", "Wotex.Runtime.Credentials", "Wotex.Runtime.Transport", "Wotex.Runtime.Subscription", "Wotex.Runtime.Retry"]
+    executable_evidence: ["test/wotex/runtime/consumed_thing_test.exs", "test/wotex/runtime/form_selector_test.exs", "test/wotex/runtime/subscription_test.exs", "test/wotex/runtime/value_test.exs", "test/wotex/runtime/library_contract_test.exs"]
+    compatibility_classification: "versioned Elixir value/callback contract; hardening gaps RT-C02"
   - id: "WRT.02"
+    version: "1.0.0"
     path: "docs/specs/WRT.02-exposed-thing-runtime.md"
-    status: "implemented"
+    implementation_status: "partial"
+    standards:
+      - {name: "W3C WoT Thing Description 1.1", revision: "Recommendation 2023-12-05", claim: "affordance vocabulary and declared Thing operations only"}
     requires: ["WRT.01"]
+    implementation_modules: ["Wotex.Runtime.ExposedThing"]
+    executable_evidence: ["test/wotex/runtime/exposed_thing_test.exs", "test/wotex/runtime/library_contract_test.exs"]
+    compatibility_classification: "caller callback API; inbound protocol authorization remains external"
   - id: "WRT.03"
+    version: "1.0.0"
     path: "docs/specs/WRT.03-thing-level-interactions.md"
-    status: "implemented"
-    standard: "W3C WoT Thing Description 1.1 — top-level Forms"
-    standard_revision: "Recommendation 5 December 2023"
+    implementation_status: "implemented"
+    standards:
+      - {name: "W3C WoT Thing Description 1.1", revision: "Recommendation 2023-12-05", claim: "nine listed top-level Form operations; not binding-wide support"}
     requires: ["WRT.01", "WRT.02", "wotex:WTX.02"]
+    implementation_modules: ["Wotex.Runtime.ConsumedThing", "Wotex.Runtime.ExposedThing", "Wotex.Runtime.FormSelector"]
+    executable_evidence: ["test/wotex/runtime/consumed_thing_test.exs", "test/wotex/runtime/exposed_thing_test.exs", "test/wotex/runtime/form_selector_test.exs"]
+    compatibility_classification: "aggregate operations are explicit opt-in profile capabilities"
