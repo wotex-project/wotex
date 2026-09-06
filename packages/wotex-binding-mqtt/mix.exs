@@ -113,7 +113,7 @@ defmodule WotexBindingMQTT.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs lib mix.exs)
+        ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib mix.exs)
     ]
   end
 
@@ -122,7 +122,9 @@ defmodule WotexBindingMQTT.MixProject do
       main: "readme",
       extras: [
         "README.md": [title: "Overview"],
+        "docs/plans/wotex-binding-mqtt-completion.md": [title: "Completion Contract"],
         "docs/specs/mqtt-values-and-client-port.md": [title: "Values and client port"],
+        "docs/specs/WBM.02-form-mapping.md": [title: "Form mapping"],
         "docs/specs/runtime-transport.md": [title: "Runtime transport"],
         "docs/provenance/mqtt-binding-draft-2026-07-01.md": [title: "MQTT binding draft"],
         "docs/provenance/mqtt-primary-sources.md": [title: "MQTT primary sources"],
@@ -133,6 +135,7 @@ defmodule WotexBindingMQTT.MixProject do
         LICENSE: [title: "License"]
       ],
       groups_for_extras: [
+        "Completion plans": ~r/docs\/plans/,
         "Library specifications": ~r/docs\/specs/,
         Provenance: ~r/docs\/provenance/,
         Reference: ~r/CHANGELOG|SECURITY|CONTRIBUTING|LICENSE/
