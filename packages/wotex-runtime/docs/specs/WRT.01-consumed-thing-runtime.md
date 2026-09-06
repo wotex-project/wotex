@@ -34,6 +34,10 @@ effect, clocks, and supervision.
    retry a potentially non-idempotent operation by itself.
 9. A successful result records protocol exchange only, never physical effect or
    canonical state.
+10. Graceful supervisor shutdown MUST request protocol unsubscription within
+    the consumer-selected shutdown budget. Explicit stop MUST NOT unsubscribe
+    twice. Forced termination and transport failures require consumer recovery;
+    local process termination does not prove remote cleanup.
 
 ## Evidence
 

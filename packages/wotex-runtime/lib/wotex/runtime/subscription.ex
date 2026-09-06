@@ -11,6 +11,10 @@ defmodule Wotex.Runtime.Subscription do
   Use the child-spec functions on `Wotex.Runtime.ConsumedThing` to construct
   subscriptions. The consumer owns the parent supervisor, child identity,
   restart policy, shutdown budget, receiver, and failure handling.
+
+  Graceful supervisor shutdown requests protocol unsubscription within the
+  consumer's shutdown budget. Forced termination or a failed transport cannot
+  guarantee remote cleanup; the consumer transport owns recovery in those cases.
   """
 
   use GenServer
@@ -29,6 +33,8 @@ defmodule Wotex.Runtime.Subscription do
 
   @impl GenServer
   def init(init) do
+    Process.flag(:trap_exit, true)
+
     case subscribe(init) do
       {:ok, handle} ->
         {:ok,

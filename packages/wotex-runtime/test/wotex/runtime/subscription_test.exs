@@ -62,6 +62,42 @@ defmodule Wotex.Runtime.SubscriptionTest do
     assert_receive {:unsubscribe, _handle, %{operation: :unobserveproperty}, "credential-material"}
   end
 
+  test "supervisor termination releases the handle before a fresh restart", %{consumed: consumed} do
+    context = Context.new!(request_id: "req-supervised")
+
+    {:ok, spec} =
+      ConsumedThing.event_subscription_child_spec(consumed, "alarm", context,
+        id: :supervised_alarm,
+        receiver: self(),
+        restart: :transient
+      )
+
+    supervisor =
+      start_supervised!(%{
+        id: :subscription_supervisor,
+        start: {Supervisor, :start_link, [[], [strategy: :one_for_one]]},
+        type: :supervisor
+      })
+
+    assert {:ok, first_pid} = Supervisor.start_child(supervisor, spec)
+    assert_receive {:subscribe, %{operation: :subscribeevent}, ^first_pid, _}
+    first_handle = :sys.get_state(first_pid).handle
+
+    assert :ok = Supervisor.terminate_child(supervisor, :supervised_alarm)
+    refute Process.alive?(first_pid)
+    assert_receive {:unsubscribe, ^first_handle, %{operation: :unsubscribeevent}, _}
+    refute_receive {:unsubscribe, ^first_handle, _, _}
+
+    assert {:ok, second_pid} = Supervisor.restart_child(supervisor, :supervised_alarm)
+    refute second_pid == first_pid
+    assert_receive {:subscribe, %{operation: :subscribeevent}, ^second_pid, _}
+    second_handle = :sys.get_state(second_pid).handle
+
+    assert :ok = Subscription.stop(second_pid)
+    assert_receive {:unsubscribe, ^second_handle, %{operation: :unsubscribeevent}, _}
+    refute_receive {:unsubscribe, ^second_handle, _, _}
+  end
+
   test "multiple independently named Event subscriptions coexist", %{consumed: consumed} do
     context_a = Context.new!(request_id: "req-a")
     context_b = Context.new!(request_id: "req-b")
