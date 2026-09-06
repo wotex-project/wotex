@@ -1,0 +1,48 @@
+schema_version: "1.1.0"
+package: wotex_directory
+completion_plan: docs/plans/wotex-directory-completion.md
+specifications:
+  - id: WTD.01
+    version: "0.1.0"
+    path: docs/specs/WTD.01-directory-contract.md
+    implementation_status: implemented
+    standards:
+      - name: W3C Web of Things Discovery
+        revision: "Recommendation 2023-12-05"
+        claim: Storage-neutral registration, bounded listing, introduction and expiry subset; not a transport server or complete Discovery conformance.
+      - name: W3C Web of Things Thing Description
+        revision: "1.1 Recommendation 2023-12-05"
+        claim: Uses the public core Thing Description value and validation contract.
+      - name: JSON Merge Patch
+        revision: "RFC 7396"
+        claim: Bounded merge-patch transformation followed by Thing Description validation.
+    requires:
+      - wotex:WTX.01
+      - wotex:WTX.02
+    implementation_modules:
+      - Wotex.Directory
+      - Wotex.Directory.Service
+      - Wotex.Directory.Context
+      - Wotex.Directory.Entry
+      - Wotex.Directory.Registration
+      - Wotex.Directory.Mutation
+      - Wotex.Directory.Event
+      - Wotex.Directory.Query
+      - Wotex.Directory.Page
+      - Wotex.Directory.Introduction
+      - Wotex.Directory.Repository
+      - Wotex.Directory.Authorization
+      - Wotex.Directory.Clock
+      - Wotex.Directory.Identifier
+    executable_evidence:
+      - test/wotex/directory/directory_test.exs
+      - test/wotex/directory/robustness_test.exs
+      - test/wotex/directory/internal_contract_test.exs
+      - test/wotex/directory/error_contract_test.exs
+      - test/wotex/directory/merge_patch_test.exs
+      - test/wotex/directory/registration_test.exs
+      - test/wotex/directory/event_test.exs
+      - test/wotex/directory/library_contract_test.exs
+      - test/wotex/directory/service_test.exs
+      - test/wotex/directory/value_contract_test.exs
+    compatibility_classification: Initial 0.1.0 API; port, value, expiry, pagination and error changes require explicit compatibility review.

@@ -215,7 +215,7 @@ membership observed for the first page. An adapter must return
 `collection_changed` if the supplied revision no longer identifies the same
 active membership at the new `active_at` value.
 
-### 5.7 Introduction
+### 5.8 Introduction
 
 `Wotex.Directory.Introduction` contains:
 

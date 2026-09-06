@@ -101,7 +101,10 @@ defmodule WotexDirectory.MixProject do
         "README.md",
         "CHANGELOG.md",
         "SECURITY.md",
-        "docs",
+        "docs/decisions",
+        "docs/plans",
+        "docs/provenance",
+        "docs/specs",
         "lib",
         "mix.exs"
       ],
@@ -121,6 +124,7 @@ defmodule WotexDirectory.MixProject do
       main: "readme",
       extras: [
         "README.md": [title: "Overview"],
+        "docs/plans/wotex-directory-completion.md": [title: "Completion Contract"],
         "docs/specs/WTD.01-directory-contract.md": [title: "Directory contract"],
         "docs/decisions/0001-consumer-owned-runtime.md": [title: "Consumer-owned runtime"],
         "docs/decisions/0002-listing-and-expiry.md": [title: "Listing and expiry"],
@@ -131,6 +135,7 @@ defmodule WotexDirectory.MixProject do
         LICENSE: [title: "License"]
       ],
       groups_for_extras: [
+        "Completion plans": ~r|docs/plans/|,
         Specifications: ~r|docs/specs/|,
         Decisions: ~r|docs/decisions/|,
         Provenance: ~r|docs/provenance/|,
