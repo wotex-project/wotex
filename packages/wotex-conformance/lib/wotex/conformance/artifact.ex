@@ -3,7 +3,10 @@ defmodule Wotex.Conformance.Artifact do
   Streaming digest verification for an immutable subject archive.
 
   Symbolic links and non-regular files are rejected. Verification performs no
-  extraction and starts no subject code.
+  extraction and starts no subject code. The byte budget is enforced while
+  reading, and the returned size counts the bytes actually hashed. Consumers
+  must keep the file unchanged through verification and subsequent execution;
+  this check does not lock the path or provide filesystem isolation.
   """
 
   alias Wotex.Conformance.{Canonical, Error, Input}
@@ -17,7 +20,9 @@ defmodule Wotex.Conformance.Artifact do
   Verifies that `path` is a bounded regular file with `expected_digest`.
 
   The digest must use the `sha256:` prefix and lowercase hexadecimal form.
-  Use `:max_bytes` to replace the one-gibibyte default size limit.
+  Use `:max_bytes` to replace the one-gibibyte default size limit. Reads stop
+  after at most one byte beyond that budget, including when a file grows while
+  being read. The reported size is independent of filesystem size metadata.
   """
   @spec verify(Path.t(), String.t(), keyword()) ::
           {:ok, verification()} | {:error, Error.t()}
@@ -27,24 +32,32 @@ defmodule Wotex.Conformance.Artifact do
          :ok <- validate_path(path),
          :ok <- validate_digest(expected_digest),
          :ok <- validate_max_bytes(max_bytes),
-         {:ok, stat} <- regular_file_stat(path),
-         :ok <- within_limit(stat.size, max_bytes),
-         {:ok, actual_digest} <- digest_file(path),
-         :ok <- compare_digest(actual_digest, expected_digest) do
-      {:ok, %{digest: actual_digest, size_bytes: stat.size}}
+         {:ok, verification} <- digest_regular_file(path, max_bytes),
+         :ok <- compare_digest(verification.digest, expected_digest) do
+      {:ok, verification}
     end
   end
 
-  @doc "Returns the lowercase SHA-256 digest of a regular file without loading it into memory."
+  @doc """
+  Returns the lowercase SHA-256 digest of a bounded regular file.
+
+  Hashing uses the default one-gibibyte streaming limit and rejects symbolic
+  links and non-regular files. Use `verify/3` to select a different limit while
+  checking an expected digest.
+  """
   @spec digest_file(Path.t()) :: {:ok, String.t()} | {:error, Error.t()}
   def digest_file(path) do
     with :ok <- validate_path(path),
+         {:ok, verification} <- digest_regular_file(path, @default_max_bytes) do
+      {:ok, verification.digest}
+    end
+  end
+
+  defp digest_regular_file(path, max_bytes) do
+    with :ok <- regular_file(path),
          {:ok, io} <- File.open(path, [:read, :binary]) do
       try do
-        case digest_stream(io, :crypto.hash_init(:sha256)) do
-          {:ok, digest} -> {:ok, "sha256:" <> Base.encode16(digest, case: :lower)}
-          {:error, error} -> {:error, error}
-        end
+        digest_stream(io, :crypto.hash_init(:sha256), 0, max_bytes)
       after
         File.close(io)
       end
@@ -57,16 +70,23 @@ defmodule Wotex.Conformance.Artifact do
     end
   end
 
-  defp digest_stream(io, context) do
-    case IO.binread(io, @chunk_bytes) do
+  defp digest_stream(io, context, size_bytes, max_bytes) do
+    read_bytes = min(@chunk_bytes, max_bytes - size_bytes + 1)
+
+    case IO.binread(io, read_bytes) do
       :eof ->
-        {:ok, :crypto.hash_final(context)}
+        digest = "sha256:" <> Base.encode16(:crypto.hash_final(context), case: :lower)
+        {:ok, %{digest: digest, size_bytes: size_bytes}}
 
       {:error, _reason} ->
         {:error, Error.new(:artifact_unreadable, "subject artifact could not be read")}
 
       bytes ->
-        digest_stream(io, :crypto.hash_update(context, bytes))
+        next_size = size_bytes + byte_size(bytes)
+
+        with :ok <- within_limit(next_size, max_bytes) do
+          digest_stream(io, :crypto.hash_update(context, bytes), next_size, max_bytes)
+        end
     end
   end
 
@@ -88,10 +108,10 @@ defmodule Wotex.Conformance.Artifact do
   defp validate_max_bytes(_value),
     do: {:error, Error.new(:invalid_limit, "artifact byte limit must be a positive integer")}
 
-  defp regular_file_stat(path) do
+  defp regular_file(path) do
     case File.lstat(path, time: :posix) do
-      {:ok, %File.Stat{type: :regular} = stat} ->
-        {:ok, stat}
+      {:ok, %File.Stat{type: :regular}} ->
+        :ok
 
       {:ok, _stat} ->
         {:error, Error.new(:invalid_artifact_type, "subject artifact must be a regular file")}

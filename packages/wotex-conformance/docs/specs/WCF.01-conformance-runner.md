@@ -123,6 +123,18 @@ API subject still needs an immutable artifact describing the exact deployed
 build and interface revision; a mutable endpoint alone is insufficient
 identity.
 
+Artifact verification MUST enforce its byte budget during every streaming
+read, including after a file grows. It MAY read one additional byte to detect
+that the budget was exceeded, but MUST NOT hash that over-budget chunk or
+continue reading. Successful verification MUST report the actual number of
+bytes hashed, rather than a size observed before opening the file. Empty and
+exact-budget regular files remain valid when their digests match.
+
+Verification attests to the bytes read. The consumer MUST prevent mutation or
+path replacement through verification and subsequent execution; digest checking
+does not itself provide an immutable file handle, a filesystem snapshot, or
+operating-system isolation.
+
 ## Vector and corpus contracts
 
 A vector contains its identity, revision, claim, input, exact expectation,
