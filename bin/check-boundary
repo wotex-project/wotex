@@ -1,6 +1,12 @@
 #!/bin/sh
 set -eu
 
+if ! command -v rg >/dev/null 2>&1
+then
+  echo "ripgrep (rg) is required for verification" >&2
+  exit 1
+fi
+
 if rg -n \
   '(Application\.start\(|use Ash|use Phoenix|[A-Z][A-Za-z0-9_.]*\.Repo|Ecto\.Repo|Oban\.)' \
   lib test mix.exs
