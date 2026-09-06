@@ -6,7 +6,13 @@ defmodule Wotex.Directory.TestService do
 
   @default_now ~U[2026-09-02 10:00:00Z]
 
-  @spec build(keyword()) :: map()
+  @spec build(keyword()) :: %{
+          service: Service.t(),
+          context: Context.t(),
+          repository: pid(),
+          identifier: pid(),
+          now: term()
+        }
   def build(options \\ []) do
     {:ok, repository} =
       MemoryRepository.start_link(
