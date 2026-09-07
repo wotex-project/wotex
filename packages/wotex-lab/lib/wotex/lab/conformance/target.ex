@@ -17,6 +17,7 @@ defmodule Wotex.Lab.Conformance.Target do
   """
 
   alias Wotex.{JSON, ThingDescription, ThingModel}
+  alias Wotex.Lab.Telemetry
 
   @protocol "wotex.conformance.target"
   @protocol_version "1.0"
@@ -35,12 +36,14 @@ defmodule Wotex.Lab.Conformance.Target do
 
     case Map.fetch(@operations, operation) do
       {:ok, {module, mode}} ->
-        base(vector_id, "observed")
-        |> Map.put(
-          "actual",
-          observe(module, mode, Map.get(input, "document"), Map.get(input, "projection", []))
-        )
-        |> Map.put("codes", [])
+        Telemetry.span(:conformance, :conformance, %{operation: operation}, fn ->
+          base(vector_id, "observed")
+          |> Map.put(
+            "actual",
+            observe(module, mode, Map.get(input, "document"), Map.get(input, "projection", []))
+          )
+          |> Map.put("codes", [])
+        end)
 
       :error ->
         base(vector_id, "unsupported") |> Map.put("codes", ["operation_not_implemented"])

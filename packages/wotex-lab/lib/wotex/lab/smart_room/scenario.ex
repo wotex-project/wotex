@@ -27,6 +27,7 @@ defmodule Wotex.Lab.SmartRoom.Scenario do
   alias Wotex.Lab.Continuum.{Channel, Wire}
   alias Wotex.Lab.Error
   alias Wotex.Lab.SmartRoom.Policy
+  alias Wotex.Lab.Telemetry
   alias Wotex.Nx.{ActionProposal, Decoder, Encoder, Feature, Observation, OutputSchema, Row, Schema}
   alias Wotex.Runtime.{ConsumedThing, Context, Result}
   alias WotexContinuum.ExecutionScope
@@ -202,9 +203,14 @@ defmodule Wotex.Lab.SmartRoom.Scenario do
            feature(meter_id(power, fields.thing_id), "power", "W", {:fill, 0.0}),
          {:ok, schema} <- Schema.new(features: [temperature, power_feature], max_rows: 1),
          {:ok, row} <- Row.new(fields.observed_at, row_values(observation, power)),
-         {:ok, encoded} <- Encoder.encode([row], schema),
+         {:ok, encoded} <-
+           Telemetry.span(:nx, :encode, %{profile: :smart_room}, fn ->
+             Encoder.encode([row], schema)
+           end),
          tensor <-
-           Nx.Defn.jit_apply(&target/2, [encoded, budget], compiler: Nx.Defn.Evaluator),
+           Telemetry.span(:nx, :inference, %{profile: :smart_room}, fn ->
+             Nx.Defn.jit_apply(&target/2, [encoded, budget], compiler: Nx.Defn.Evaluator)
+           end),
          {:ok, output_schema} <- DataSchema.new(document["actions"]["setTarget"]["input"]),
          {:ok, output} <-
            OutputSchema.new(
@@ -215,7 +221,9 @@ defmodule Wotex.Lab.SmartRoom.Scenario do
              data_schema: output_schema,
              dtype: :f32
            ) do
-      Decoder.decode(tensor, output, id: "room-proposal-#{now}", proposed_at: now)
+      Telemetry.span(:nx, :decode, %{profile: :smart_room}, fn ->
+        Decoder.decode(tensor, output, id: "room-proposal-#{now}", proposed_at: now)
+      end)
     end
   end
 

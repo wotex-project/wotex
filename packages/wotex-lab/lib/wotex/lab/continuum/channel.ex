@@ -18,6 +18,7 @@ defmodule Wotex.Lab.Continuum.Channel do
 
   alias Wotex.Lab.Continuum.FaultSchedule
   alias Wotex.Lab.Error
+  alias Wotex.Lab.Telemetry
   alias WotexContinuum.{Codec, Delivery}
 
   @doc false
@@ -91,8 +92,14 @@ defmodule Wotex.Lab.Continuum.Channel do
 
   def handle_call({:send, from, to, value}, _from, state) do
     with :ok <- capacity(state),
-         {:ok, wire} <- encode(value),
+         {:ok, wire} <-
+           Telemetry.span(:continuum, :codec, %{operation: :encode}, fn -> encode(value) end),
          {:ok, map} <- WotexContinuum.to_map(value) do
+      Telemetry.event(:continuum, :codec, %{bytes: byte_size(wire)}, %{
+        kind: map["kind"],
+        operation: :encode
+      })
+
       sequence = state.sequence + 1
       delivery_id = "delivery-#{sequence}"
       now = state.clock.()

@@ -18,6 +18,7 @@ defmodule Wotex.Lab.Adapters.HTTP.SSE.Session do
   """
 
   alias Wotex.Lab.Adapters.HTTP.SSE.Parser
+  alias Wotex.Lab.Telemetry
 
   @doc "Opens a stream and waits up to `timeout` milliseconds for the handshake."
   @spec open(keyword(), pid(), keyword(), timeout()) ::
@@ -95,6 +96,8 @@ defmodule Wotex.Lab.Adapters.HTTP.SSE.Session do
   defp handle_chunks([], response, owner, parser), do: loop(response, owner, parser)
 
   defp handle_chunks([{:data, bytes} | rest], response, owner, parser) do
+    Telemetry.event(:sse, :parse, %{bytes: byte_size(bytes)}, %{profile: :http})
+
     case Parser.feed(parser, bytes) do
       {:ok, events, next_parser} ->
         Enum.each(events, &send(owner, {:wotex_transport_frame, &1}))

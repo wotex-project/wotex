@@ -1,8 +1,10 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 1.1.0. Contract: accepted. Source status: the external
-conformance target for the core package is implemented; evidence records,
-telemetry, fault schedules and benchmarks remain planned.
+Specification version: 1.2.0. Contract: accepted. Source status: the external
+conformance target for the core package, the evidence record with its content
+digests, Lab telemetry spans and measurements, and the versioned Continuum
+fault schedule are implemented; benchmarks and the machine evidence graph
+remain planned.
 
 ## Evidence record and maturity
 
@@ -13,6 +15,16 @@ budgets, input references, assertions, outcomes, durations and cleanup results.
 Source revisions alone cannot identify dirty inputs. Missing archive evidence
 MUST be explicit, not synthesized from a source checkout. No secrets, arbitrary
 callbacks or executable paths appear in public evidence.
+`Wotex.Lab.Evidence.Record` is that record: `new/1` validates every field
+with a typed error and a pointer path, a dependency states `archive: :missing`
+or a `sha256:` digest and is refused when it omits the field, and a deep scan
+refuses functions, process identities, structs, filesystem paths and
+credential-looking strings anywhere in the record. `to_map/1`, `encode/1`
+and `digest/1` give a canonical string-keyed form, canonical bytes and their
+SHA-256; `from_map/1` reads a record back under the same validation and
+refuses other schema versions. `Wotex.Lab.Evidence.Digest` supplies file,
+tree and in-memory content digests and the toolchain strings; it never reads
+a source revision.
 
 Lab uses three separate axes in the catalogue:
 
@@ -77,12 +89,24 @@ not pretend to originate inside passive upstream libraries. Start/stop/
 exception spans cover parse, request, subscription, directory, codec, conformance,
 encode, inference, decode, verification and dispatch. Durations use monotonic
 native units with an explicit exporter conversion. Counts/bytes are measurements.
+`Wotex.Lab.Telemetry.span/4` and `event/4` implement this with a closed
+component and operation vocabulary; the loopback and HTTP adapters, the SSE
+session, both Directory stores, the Continuum channel codec, the conformance
+target, the Nx steps of the examples and the smart room, and the policy
+dispatch emit through them. Verification spans arrive with WLB.09.
 
 Metadata is allowlisted: scenario/attempt/spec/seam IDs, safe Thing reference,
 operation, profile and outcome. TDs, tensor contents, credentials, headers,
 arbitrary callback reasons and unbounded IDs MUST NOT become metric labels.
 Tests attach capture handlers and inject credential/payload sentinels. Logs,
-traces, reports and dashboards must contain neither. The concrete PromEx,
+traces, reports and dashboards must contain neither.
+`Telemetry.metadata/1` enforces this before emission: only allowlisted keys
+survive, values must be atoms, integers or binaries of at most 128 bytes, an
+exception closes a span with its kind and `outcome: :exception` only, and
+`thing_ref/1` replaces a Thing id with a short non-reversible reference.
+`test/wotex/lab/telemetry_test.exs` attaches capture handlers, injects
+credential and payload sentinels through real runtime requests, and shows a
+raising handler is detached without changing the span result. The concrete PromEx,
 bounded ETS, GreptimeDB, OTel and BeamLens contracts are in
 [WLB.10](WLB.10-metrics-storage-and-ai-inspection.md); the lean native workbench
 and design system are in [WLB.11](WLB.11-workbench-and-design-system.md).

@@ -21,6 +21,7 @@ defmodule Wotex.Lab.Adapters.HTTP.ReqClient do
 
   alias Wotex.Binding.HTTP.{Headers, Request, Response}
   alias Wotex.Lab.Adapters.HTTP.SSE.Session
+  alias Wotex.Lab.Telemetry
   alias Wotex.Runtime.Context
 
   @methods %{
@@ -55,7 +56,9 @@ defmodule Wotex.Lab.Adapters.HTTP.ReqClient do
           into: &collect(&1, &2, limit)
         ] ++ finch(config)
 
-      options |> Req.request() |> finite_response()
+      Telemetry.span(:http, :request, %{operation: method, profile: :http}, fn ->
+        options |> Req.request() |> finite_response()
+      end)
     end
   end
 
@@ -96,12 +99,18 @@ defmodule Wotex.Lab.Adapters.HTTP.ReqClient do
         max_event_bytes: Request.max_event_bytes(request)
       ]
 
-      with {:ok, session, status, response_headers} <-
-             Session.open(options, owner, parser, config.handshake_timeout),
-           {:ok, fields} <- Headers.new(response_headers, :response),
-           {:ok, response} <- Response.new(status, fields, "") do
-        {:ok, session, response}
-      end
+      Telemetry.span(:http, :subscription, %{operation: method, profile: :http}, fn ->
+        open_session(options, owner, parser, config.handshake_timeout)
+      end)
+    end
+  end
+
+  defp open_session(options, owner, parser, handshake_timeout) do
+    with {:ok, session, status, response_headers} <-
+           Session.open(options, owner, parser, handshake_timeout),
+         {:ok, fields} <- Headers.new(response_headers, :response),
+         {:ok, response} <- Response.new(status, fields, "") do
+      {:ok, session, response}
     end
   end
 

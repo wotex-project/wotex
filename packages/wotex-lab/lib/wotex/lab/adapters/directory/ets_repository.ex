@@ -20,6 +20,7 @@ defmodule Wotex.Lab.Adapters.Directory.EtsRepository do
   @behaviour Wotex.Directory.Repository
 
   alias Wotex.Directory.{Cursor, Entry, Page, Query, Registration}
+  alias Wotex.Lab.Telemetry
 
   @doc false
   @spec child_spec(keyword()) :: Supervisor.child_spec()
@@ -47,27 +48,40 @@ defmodule Wotex.Lab.Adapters.Directory.EtsRepository do
 
   @impl Wotex.Directory.Repository
   def fetch(repository, identifier, context),
-    do: GenServer.call(repository, {:fetch, identifier, context})
+    do: span(:fetch, fn -> GenServer.call(repository, {:fetch, identifier, context}) end)
 
   @impl Wotex.Directory.Repository
   def insert(repository, %Entry{} = entry, context),
-    do: GenServer.call(repository, {:insert, entry, context})
+    do: span(:insert, fn -> GenServer.call(repository, {:insert, entry, context}) end)
 
   @impl Wotex.Directory.Repository
   def replace(repository, %Entry{} = entry, expected_version, context),
-    do: GenServer.call(repository, {:replace, entry, expected_version, context})
+    do:
+      span(:replace, fn ->
+        GenServer.call(repository, {:replace, entry, expected_version, context})
+      end)
 
   @impl Wotex.Directory.Repository
   def delete(repository, identifier, expected_version, context),
-    do: GenServer.call(repository, {:delete, identifier, expected_version, context})
+    do:
+      span(:delete, fn ->
+        GenServer.call(repository, {:delete, identifier, expected_version, context})
+      end)
 
   @impl Wotex.Directory.Repository
   def list(repository, %Query{} = query, cursor, %DateTime{} = active_at, context),
-    do: GenServer.call(repository, {:list, query, cursor, active_at, context})
+    do:
+      span(:list, fn -> GenServer.call(repository, {:list, query, cursor, active_at, context}) end)
 
   @impl Wotex.Directory.Repository
   def expire_due(repository, %DateTime{} = cutoff, limit, strategy, context),
-    do: GenServer.call(repository, {:expire_due, cutoff, limit, strategy, context})
+    do:
+      span(:expire_due, fn ->
+        GenServer.call(repository, {:expire_due, cutoff, limit, strategy, context})
+      end)
+
+  defp span(operation, fun),
+    do: Telemetry.span(:directory, :directory, %{operation: operation, profile: :ets}, fun)
 
   @impl GenServer
   def init(_opts) do

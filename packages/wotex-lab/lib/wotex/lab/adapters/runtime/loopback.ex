@@ -17,12 +17,15 @@ defmodule Wotex.Lab.Adapters.Runtime.Loopback do
   alias Wotex.Lab.Adapters.Runtime.Loopback.Session
   alias Wotex.Lab.Error
   alias Wotex.Lab.Reference.Thing
+  alias Wotex.Lab.Telemetry
   alias Wotex.Runtime.{ExecutionContext, Request}
 
   @impl Wotex.Runtime.Transport
   def request(%Request{} = request, %ExecutionContext{} = context, %{host: host})
       when is_pid(host) do
-    Thing.request(host, request, context.credential)
+    Telemetry.span(:runtime, :request, %{operation: request.operation, profile: :loopback}, fn ->
+      Thing.request(host, request, context.credential)
+    end)
   end
 
   def request(_request, _context, _config), do: {:error, invalid_config()}
@@ -30,9 +33,13 @@ defmodule Wotex.Lab.Adapters.Runtime.Loopback do
   @impl Wotex.Runtime.Transport
   def subscribe(%Request{} = request, owner, %ExecutionContext{} = context, %{host: host})
       when is_pid(owner) and is_pid(host) do
-    with {:ok, reference} <- Thing.subscribe(host, request, owner, context.credential) do
-      {:ok, {reference, Session.start(host)}}
-    end
+    metadata = %{operation: request.operation, profile: :loopback}
+
+    Telemetry.span(:runtime, :subscription, metadata, fn ->
+      with {:ok, reference} <- Thing.subscribe(host, request, owner, context.credential) do
+        {:ok, {reference, Session.start(host)}}
+      end
+    end)
   end
 
   def subscribe(_request, _owner, _context, _config), do: {:error, invalid_config()}

@@ -148,7 +148,7 @@ specifications:
       - "test/wotex/lab/smart_room_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.06
-    version: "1.1.0"
+    version: "1.2.0"
     path: docs/specs/WLB.06-evidence-conformance-and-observability.md
     implementation_status: partial
     evidence_status: partial
@@ -165,8 +165,15 @@ specifications:
       - "WLB-C07"
     implementation_modules:
       - "Wotex.Lab.Conformance.Target"
+      - "Wotex.Lab.Telemetry"
+      - "Wotex.Lab.Evidence.Record"
+      - "Wotex.Lab.Evidence.Digest"
+      - "Wotex.Lab.Continuum.FaultSchedule"
     executable_evidence:
       - "test/wotex/lab/conformance_test.exs"
+      - "test/wotex/lab/telemetry_test.exs"
+      - "test/wotex/lab/evidence_test.exs"
+      - "test/wotex/lab/continuum_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.07
     version: "0.1.0"

@@ -17,6 +17,7 @@ defmodule Wotex.Lab.Examples.Thermal do
 
   alias Wotex.{DataSchema, ThingDescription}
   alias Wotex.Lab.Adapters.Nx.UnitConverter
+  alias Wotex.Lab.Telemetry
   alias Wotex.Nx.{Decoder, Encoded, Encoder, Feature, Observation, OutputSchema, Row, Schema}
 
   @doc "Runs the checked-in thermal fixture and returns the TD, encoded batch and inert proposal."
@@ -42,20 +43,30 @@ defmodule Wotex.Lab.Examples.Thermal do
     path = Application.app_dir(:wotex_lab, "priv/fixtures/thermal/thing-description.json")
 
     with {:ok, json} <- File.read(path),
-         {:ok, td} <- ThingDescription.parse(json),
+         {:ok, td} <-
+           Telemetry.span(:scenario, :parse, %{profile: :thermal}, fn ->
+             ThingDescription.parse(json)
+           end),
          map <- ThingDescription.to_map(td),
          {:ok, input_schema} <-
            DataSchema.new(Map.take(map["properties"]["temperature"], ["type", "unit"])),
          {:ok, feature} <- feature(ThingDescription.id(td), input_schema),
          {:ok, schema} <- Schema.new(features: [feature], max_rows: 2),
          {:ok, rows} <- rows(ThingDescription.id(td)),
-         {:ok, encoded} <- Encoder.encode(rows, schema, unit_converter: {UnitConverter, []}),
+         {:ok, encoded} <-
+           Telemetry.span(:nx, :encode, %{profile: :thermal}, fn ->
+             Encoder.encode(rows, schema, unit_converter: {UnitConverter, []})
+           end),
          tensor <-
-           Nx.Defn.jit_apply(&target/1, [Encoded.batch(encoded)], compiler: Nx.Defn.Evaluator),
+           Telemetry.span(:nx, :inference, %{profile: :thermal}, fn ->
+             Nx.Defn.jit_apply(&target/1, [Encoded.batch(encoded)], compiler: Nx.Defn.Evaluator)
+           end),
          {:ok, output_schema} <- DataSchema.new(map["actions"]["setTarget"]["input"]),
          {:ok, output} <- output(ThingDescription.id(td), output_schema),
          {:ok, proposal} <-
-           Decoder.decode(tensor, output, id: "thermal-proposal-1", proposed_at: 2_000) do
+           Telemetry.span(:nx, :decode, %{profile: :thermal}, fn ->
+             Decoder.decode(tensor, output, id: "thermal-proposal-1", proposed_at: 2_000)
+           end) do
       {:ok, %{thing_description: td, encoded: encoded, proposal: proposal}}
     end
   end

@@ -15,6 +15,7 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
 
   alias Wotex.DataSchema
   alias Wotex.Lab.Simulators.Thermal
+  alias Wotex.Lab.Telemetry
 
   alias Wotex.Nx.{
     Decoder,
@@ -90,8 +91,14 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
              max_age: Keyword.get(opts, :max_age)
            ),
          {:ok, rows} <- Window.resample(observations, schema, window),
-         {:ok, encoded} <- Encoder.encode(rows, schema),
-         score <- Nx.Defn.jit_apply(&score/1, [encoded], compiler: Nx.Defn.Evaluator),
+         {:ok, encoded} <-
+           Telemetry.span(:nx, :encode, %{profile: :window_anomaly}, fn ->
+             Encoder.encode(rows, schema)
+           end),
+         score <-
+           Telemetry.span(:nx, :inference, %{profile: :window_anomaly}, fn ->
+             Nx.Defn.jit_apply(&score/1, [encoded], compiler: Nx.Defn.Evaluator)
+           end),
          {:ok, anomaly} <- decode_anomaly(score, Keyword.get(opts, :threshold, 1.5), last_at),
          {:ok, last_value} <- last_observed(rows),
          {:ok, prediction} <- decode_prediction(last_value, last_at, step),
@@ -173,7 +180,9 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
              threshold: threshold,
              anomaly_rule: :at_or_above
            ) do
-      Decoder.decode(score, output, id: "anomaly-#{produced_at}", produced_at: produced_at)
+      Telemetry.span(:nx, :decode, %{profile: :window_anomaly}, fn ->
+        Decoder.decode(score, output, id: "anomaly-#{produced_at}", produced_at: produced_at)
+      end)
     end
   end
 

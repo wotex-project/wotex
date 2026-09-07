@@ -15,6 +15,7 @@ defmodule Wotex.Lab.SmartRoom.Policy do
   use GenServer
 
   alias Wotex.Lab.Error
+  alias Wotex.Lab.Telemetry
   alias Wotex.Nx.ActionProposal
 
   @type decision :: %{
@@ -132,7 +133,12 @@ defmodule Wotex.Lab.SmartRoom.Policy do
       {:ok, decision} ->
         case dispatchable(decision, current) do
           :ok ->
-            outcome = dispatcher.()
+            metadata = %{
+              thing_ref: Telemetry.thing_ref(decision.thing_id),
+              operation: decision.action_name
+            }
+
+            outcome = Telemetry.span(:policy, :dispatch, metadata, dispatcher)
             attempt = %{at: current.now, outcome: outcome}
             dispatched = %{decision | status: :dispatched, attempts: [attempt | decision.attempts]}
             {:reply, {:ok, outcome}, put_in(state, [:decisions, decision_id], dispatched)}
