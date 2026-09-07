@@ -7,8 +7,12 @@ defmodule Wotex.Runtime.Retry do
   additional operation into retry with `idempotent?: true`, provide attempt
   counts, perform any delay, and execute the next call itself.
 
+  The failure class is either an explicit atom or a `Wotex.Runtime.Error`
+  whose `class` field was populated from the transport's structured error.
   This module never reads a clock, sleeps, schedules, or executes work.
   """
+
+  alias Wotex.Runtime.Error
 
   @retryable_classes [:timeout, :unavailable, :rate_limited]
   @safe_operations [:readproperty, :queryaction]
@@ -16,8 +20,12 @@ defmodule Wotex.Runtime.Retry do
   @type decision :: :stop | {:retry, non_neg_integer()}
 
   @doc "Returns a retry decision using explicit attempt and delay inputs."
-  @spec decision(atom(), atom(), keyword()) :: decision()
-  def decision(operation, failure_class, opts \\ []) when is_list(opts) do
+  @spec decision(atom(), atom() | Error.t(), keyword()) :: decision()
+  def decision(operation, failure_class, opts \\ [])
+
+  def decision(operation, %Error{} = error, opts), do: decision(operation, Error.class(error), opts)
+
+  def decision(operation, failure_class, opts) when is_list(opts) do
     attempt = Keyword.get(opts, :attempt, 1)
     max_attempts = Keyword.get(opts, :max_attempts, 1)
     delay = Keyword.get(opts, :delay, 0)

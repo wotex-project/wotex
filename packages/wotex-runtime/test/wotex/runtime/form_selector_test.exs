@@ -97,22 +97,46 @@ defmodule Wotex.Runtime.FormSelectorTest do
              FormSelector.select(td, :unknown, "temperature", :readproperty, [profile])
   end
 
-  test "does not guess an operation when Form op is absent" do
+  test "applies TD 1.1 default operations when Form op is absent" do
     map =
       TDFactory.thing_description()
       |> Wotex.ThingDescription.to_map()
       |> update_in(["actions", "calibrate", "forms"], fn [form] -> [Map.delete(form, "op")] end)
+      |> update_in(["properties", "temperature", "forms"], fn [form | _] ->
+        [Map.delete(form, "op")]
+      end)
+      |> put_in(["properties", "temperature", "readOnly"], true)
+      |> update_in(["events", "alarm", "forms"], fn [form] -> [Map.delete(form, "op")] end)
 
     {:ok, td} = Wotex.ThingDescription.from_map(map)
+    profiles = [TDFactory.http_profile()]
+
+    assert {:ok, %{operation: :invokeaction}} =
+             FormSelector.select(td, :action, "calibrate", :invokeaction, profiles)
 
     assert {:error, %Error{code: :compatible_form_not_found}} =
-             FormSelector.select(
-               td,
-               :action,
-               "calibrate",
-               :invokeaction,
-               [TDFactory.http_profile()]
-             )
+             FormSelector.select(td, :action, "calibrate", :queryaction, profiles)
+
+    assert {:ok, %{operation: :readproperty}} =
+             FormSelector.select(td, :property, "temperature", :readproperty, profiles)
+
+    assert {:error, %Error{code: :compatible_form_not_found}} =
+             FormSelector.select(td, :property, "temperature", :writeproperty, profiles)
+
+    assert {:error, %Error{code: :compatible_form_not_found}} =
+             FormSelector.select(td, :property, "temperature", :observeproperty, profiles)
+
+    assert {:ok, %{operation: :subscribeevent}} =
+             FormSelector.select(td, :event, "alarm", :subscribeevent, profiles)
+  end
+
+  test "thing-level Forms receive no default operations" do
+    map =
+      TDFactory.thing_description()
+      |> Wotex.ThingDescription.to_map()
+      |> update_in(["forms"], fn [form] -> [Map.delete(form, "op")] end)
+
+    assert {:error, _errors} = Wotex.ThingDescription.from_map(map)
   end
 
   test "rejects malformed Forms and unresolved relative references" do

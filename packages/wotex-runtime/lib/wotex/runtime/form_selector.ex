@@ -3,8 +3,10 @@ defmodule Wotex.Runtime.FormSelector do
   Deterministically selects an Interaction Affordance or top-level Thing Form
   by TD order and then supplied profile order.
 
-  No implicit operation or transport is guessed. A Form and profile must both
-  declare the exact W3C WoT operation.
+  No transport is guessed. A profile must declare the exact W3C WoT operation,
+  and a Form must declare it or receive it as a TD 1.1 default operation for
+  its interaction context through `Wotex.Form.operations/2`. Thing-level Forms
+  have no defaults.
   """
 
   alias Wotex.{Form, ThingDescription}
@@ -121,7 +123,7 @@ defmodule Wotex.Runtime.FormSelector do
 
   defp match_candidate(
          document,
-         _affordance,
+         affordance,
          form_map,
          interaction,
          %BindingProfile{} = profile
@@ -129,7 +131,11 @@ defmodule Wotex.Runtime.FormSelector do
        when is_map(form_map) do
     with true <- BindingProfile.supports_operation?(profile, interaction.operation),
          {:ok, form} <- Form.new(form_map, for: interaction.type),
-         true <- interaction.operation in Enum.map(Form.operations(form), &operation_atom/1),
+         true <-
+           interaction.operation in Enum.map(
+             effective_operations(form, affordance, interaction.type),
+             &operation_atom/1
+           ),
          {:ok, resolved_href, scheme} <- resolve_href(document, Form.href(form)),
          true <- BindingProfile.supports_scheme?(profile, scheme),
          true <- BindingProfile.supports_media_type?(profile, Map.get(form_map, "contentType")) do
@@ -140,6 +146,14 @@ defmodule Wotex.Runtime.FormSelector do
   end
 
   defp match_candidate(_document, _affordance, _form_map, _interaction, _profile), do: nil
+
+  defp effective_operations(form, affordance, type) do
+    Form.operations(form,
+      for: type,
+      read_only: Map.get(affordance, "readOnly") == true,
+      write_only: Map.get(affordance, "writeOnly") == true
+    )
+  end
 
   defp operation_atom(name) when is_binary(name) do
     Enum.find(Wotex.Runtime.operations(), :invalid, &(Atom.to_string(&1) == name))

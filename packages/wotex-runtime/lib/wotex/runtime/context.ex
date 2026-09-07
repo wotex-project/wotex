@@ -3,7 +3,10 @@ defmodule Wotex.Runtime.Context do
   Immutable caller-supplied interaction context.
 
   The runtime neither generates `request_id` nor reads a clock. A deadline is
-  an absolute value interpreted by the supplied credential and transport ports.
+  absolute: an integer is a point on the calling node's monotonic clock in
+  milliseconds (`System.monotonic_time(:millisecond)`), and a `DateTime` is a
+  UTC wall-clock instant. Ports compute the remaining budget with
+  `remaining_ms/2` using a clock reading they take themselves.
 
   Metadata carries non-secret correlation information such as trace ids or
   actor references. It is passed through interaction planning without policy
@@ -76,6 +79,26 @@ defmodule Wotex.Runtime.Context do
   @doc "Returns caller-supplied non-credential metadata."
   @spec metadata(t()) :: map()
   def metadata(%__MODULE__{metadata: metadata}), do: metadata
+
+  @doc """
+  Returns the milliseconds left before `deadline` at `now`, or `:infinity`.
+
+  `now` must be read by the caller with the clock that matches the deadline
+  kind: `System.monotonic_time(:millisecond)` for an integer deadline and
+  `DateTime.utc_now/0` for a `DateTime` deadline. A mismatched pair returns
+  `{:error, :clock_mismatch}`; an elapsed deadline returns `0`.
+  """
+  @spec remaining_ms(deadline(), integer() | DateTime.t()) ::
+          non_neg_integer() | :infinity | {:error, :clock_mismatch}
+  def remaining_ms(nil, _now), do: :infinity
+
+  def remaining_ms(deadline, now) when is_integer(deadline) and is_integer(now),
+    do: max(deadline - now, 0)
+
+  def remaining_ms(%DateTime{} = deadline, %DateTime{} = now),
+    do: max(DateTime.diff(deadline, now, :millisecond), 0)
+
+  def remaining_ms(_deadline, _now), do: {:error, :clock_mismatch}
 
   defp valid_deadline?(nil), do: true
   defp valid_deadline?(deadline) when is_integer(deadline), do: true

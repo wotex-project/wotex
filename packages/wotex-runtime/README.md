@@ -94,8 +94,9 @@ Thing Description + operation
 ```
 
 Supported operation atoms are available from `Wotex.Runtime.operations/0` and
-use the TD 1.1 operation vocabulary. A Form has to declare the requested
-operation explicitly; the selector does not guess defaults.
+use the TD 1.1 operation vocabulary. A Form declares the requested operation
+or receives the TD 1.1 default operations for its interaction context;
+Thing-level Forms have no defaults.
 
 Thing-level meta-interactions use top-level Forms. For example:
 
@@ -210,9 +211,20 @@ Supervisor.start_child(MyConsumer.Supervisor, child_spec)
 ```
 
 Constructing the specification starts zero processes and performs no credential
-or transport work. The child resolves credentials when it starts, forwards
-transport values to the configured receiver, and requests protocol
-unsubscription when stopped normally.
+or transport work. The child returns from `init/1` immediately, then resolves
+credentials and opens the protocol subscription in a continuation. It monitors
+the receiver, forwards every delivery as
+`{:wotex_runtime, id, {:ok, value, meta} | {:error, error} | {:status, status}}`,
+stops with a `:shutdown` reason when the receiver dies, a linked transport
+process exits, or the transport reports `:session_lost`, and always attempts
+protocol unsubscription on graceful termination. Pass `max_queue_length` and
+`overflow: :drop | :stop` to bound the receiver's mailbox.
+
+Transport errors keep their structured `code`, `phase` and `class` as
+`details.cause`, so `Wotex.Runtime.Retry.decision/3` can classify a failure
+directly from the returned error. Raised or exited port callbacks become
+`port_exception` errors and `[:wotex, :runtime, :port, :exception]` telemetry
+events; see `Wotex.Runtime.Telemetry` for the full event list.
 
 ## Standards baseline
 

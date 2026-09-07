@@ -11,7 +11,13 @@ defmodule Wotex.Runtime.ConsumedThing do
   aggregate requests execute in the caller and return typed protocol results.
   Observation and Event APIs return child specifications and start no process
   themselves. The consumer chooses child ids, names, receivers, restart
-  strategies, shutdown budgets, and supervision placement.
+  strategies, shutdown budgets, mailbox bounds, and supervision placement.
+
+  Subscription child-spec options: `:id` and `:receiver` (a pid or locally
+  registered name) are required; `:name`, `:input`, `:stop_input`, `:restart`
+  (default `:transient`), `:shutdown` (default 5,000 ms), `:max_queue_length`
+  (default unbounded) and `:overflow` (`:drop` or `:stop`, default `:drop`)
+  are optional.
 
   A ConsumedThing is an interaction plan. It does not own the described Thing,
   authorize requests, persist observations, or assert that transport success
@@ -26,11 +32,15 @@ defmodule Wotex.Runtime.ConsumedThing do
     Error,
     ExecutionContext,
     FormSelector,
+    PortCall,
     Request,
     Result,
     Selection,
-    Subscription
+    Subscription,
+    Telemetry
   }
+
+  @overflow_policies [:drop, :stop]
 
   @type t :: %__MODULE__{
           td: ThingDescription.t(),
@@ -231,13 +241,26 @@ defmodule Wotex.Runtime.ConsumedThing do
   def thing_description(%__MODULE__{td: td}), do: td
 
   defp execute(%__MODULE__{} = consumed, interaction, %Context{} = context) do
-    with {:ok, selection} <- select(consumed, interaction, consumed.profiles),
-         {:ok, transport} <- transport_for(consumed, selection),
-         request = Request.from_selection(selection, context, interaction.input),
-         {:ok, execution_context} <- resolve_credentials(consumed, selection, context),
-         {:ok, result} <- transport_request(transport, request, execution_context) do
-      {:ok, result}
-    end
+    metadata = %{
+      request_id: Context.request_id(context),
+      operation: interaction.operation,
+      affordance_type: interaction.type,
+      affordance_name: interaction.name
+    }
+
+    Telemetry.span([:request], metadata, fn ->
+      outcome =
+        with {:ok, selection} <- select(consumed, interaction, consumed.profiles),
+             {:ok, transport} <- transport_for(consumed, selection),
+             request = Request.from_selection(selection, context, interaction.input),
+             {:ok, execution_context} <-
+               resolve_credentials(consumed, selection, context, metadata),
+             {:ok, result} <- transport_request(transport, request, execution_context, metadata) do
+          {:ok, result}
+        end
+
+      {outcome, Map.merge(metadata, outcome_metadata(outcome))}
+    end)
   end
 
   defp execute(%__MODULE__{}, _interaction, _context) do
@@ -257,6 +280,9 @@ defmodule Wotex.Runtime.ConsumedThing do
        when is_list(opts) do
     with {:ok, id} <- required_option(opts, :id),
          {:ok, receiver} <- required_option(opts, :receiver),
+         :ok <- validate_receiver(receiver),
+         {:ok, max_queue_length} <- validate_max_queue_length(Keyword.get(opts, :max_queue_length)),
+         {:ok, overflow} <- validate_overflow(Keyword.get(opts, :overflow, :drop)),
          {:ok, start_selection} <-
            select(consumed, Map.put(interaction, :operation, interaction.start), consumed.profiles),
          {:ok, transport} <- transport_for(consumed, start_selection),
@@ -279,14 +305,16 @@ defmodule Wotex.Runtime.ConsumedThing do
         stop_security: stop_selection.security,
         context: context,
         credentials: consumed.credentials,
-        transport: transport
+        transport: transport,
+        max_queue_length: max_queue_length,
+        overflow: overflow
       }
 
       {:ok,
        %{
          id: id,
          start: {Subscription, :start_link, [init]},
-         restart: Keyword.get(opts, :restart, :permanent),
+         restart: Keyword.get(opts, :restart, :transient),
          shutdown: Keyword.get(opts, :shutdown, 5_000),
          type: :worker
        }}
@@ -344,6 +372,38 @@ defmodule Wotex.Runtime.ConsumedThing do
          )}
     end
   end
+
+  defp validate_receiver(receiver) when is_pid(receiver) or is_atom(receiver), do: :ok
+
+  defp validate_receiver(_receiver) do
+    {:error,
+     Error.new(
+       :invalid_receiver,
+       :construction,
+       "receiver must be a pid or a locally registered name"
+     )}
+  end
+
+  defp validate_max_queue_length(nil), do: {:ok, nil}
+  defp validate_max_queue_length(max) when is_integer(max) and max > 0, do: {:ok, max}
+
+  defp validate_max_queue_length(_max) do
+    {:error,
+     Error.new(
+       :invalid_max_queue_length,
+       :construction,
+       "max_queue_length must be a positive integer"
+     )}
+  end
+
+  defp validate_overflow(policy) when policy in @overflow_policies, do: {:ok, policy}
+
+  defp validate_overflow(_policy) do
+    {:error, Error.new(:invalid_overflow_policy, :construction, "overflow must be :drop or :stop")}
+  end
+
+  defp outcome_metadata({:ok, _result}), do: %{result: :ok, code: nil}
+  defp outcome_metadata({:error, %Error{code: code}}), do: %{result: :error, code: code}
 
   defp select(consumed, %{type: :thing, operation: operation}, profiles),
     do: FormSelector.select_thing(consumed.td, operation, profiles)
@@ -466,18 +526,30 @@ defmodule Wotex.Runtime.ConsumedThing do
   defp resolve_credentials(
          %__MODULE__{credentials: {module, config}},
          %Selection{} = selection,
-         %Context{} = context
+         %Context{} = context,
+         metadata
        ) do
-    case module.resolve(selection.security, selection.form, context, config) do
+    case PortCall.invoke(
+           module,
+           :resolve,
+           [selection.security, selection.form, context, config],
+           :credentials,
+           metadata
+         ) do
       {:ok, credential} ->
         {:ok, ExecutionContext.new(context, credential)}
 
-      {:error, _external} ->
+      {:error, %Error{code: :port_exception} = error} ->
+        {:error, error}
+
+      {:error, external} ->
         {:error,
-         Error.new(:credential_resolution_failed, :credentials, "credential resolution failed", %{
+         :credential_resolution_failed
+         |> Error.new(:credentials, "credential resolution failed", %{
            request_id: Context.request_id(context),
            operation: selection.operation
-         })}
+         })
+         |> Error.with_cause(external)}
 
       _invalid ->
         {:error,
@@ -493,8 +565,17 @@ defmodule Wotex.Runtime.ConsumedThing do
     end
   end
 
-  defp transport_request({module, config}, request, execution_context) do
-    case module.request(request, execution_context, config) do
+  defp transport_request({module, config}, request, execution_context, metadata) do
+    case PortCall.invoke(
+           module,
+           :request,
+           [request, execution_context, config],
+           :transport,
+           metadata
+         ) do
+      {:error, %Error{code: :port_exception} = error} ->
+        {:error, error}
+
       {:ok, %Result{request_id: request_id, operation: operation} = result}
       when request_id == request.request_id and operation == request.operation ->
         {:ok, result}
@@ -511,12 +592,14 @@ defmodule Wotex.Runtime.ConsumedThing do
            }
          )}
 
-      {:error, _external} ->
+      {:error, external} ->
         {:error,
-         Error.new(:transport_request_failed, :transport, "transport request failed", %{
+         :transport_request_failed
+         |> Error.new(:transport, "transport request failed", %{
            request_id: request.request_id,
            operation: request.operation
-         })}
+         })
+         |> Error.with_cause(external)}
 
       _invalid ->
         {:error,

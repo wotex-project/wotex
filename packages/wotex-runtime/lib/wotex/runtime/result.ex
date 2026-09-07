@@ -7,6 +7,12 @@ defmodule Wotex.Runtime.Result do
   identity or operation does not match the request, preventing accidental
   cross-request attribution.
 
+  `status` is binding-neutral: `:ok` means the protocol exchange completed with
+  a representation or acknowledgement, and `:accepted` means the protocol
+  accepted the request while the outcome is still pending (for example an
+  HTTP 202 or a broker acknowledging a publish). Protocol-specific detail such
+  as an HTTP status code or MQTT QoS belongs in `metadata`.
+
   Success describes the protocol exchange only. It does not assert accepted
   Property truth, committed consumer state, or a physical Action effect.
   """
@@ -15,13 +21,16 @@ defmodule Wotex.Runtime.Result do
 
   @operations Wotex.Runtime.operations()
 
+  @type status :: :ok | :accepted
   @type t :: %__MODULE__{
           request_id: String.t(),
           operation: atom(),
-          status: term(),
+          status: status(),
           payload: term(),
           metadata: map()
         }
+
+  @statuses [:ok, :accepted]
 
   @enforce_keys [:request_id, :operation, :status, :payload]
   defstruct [:request_id, :operation, :status, :payload, metadata: %{}]
@@ -34,18 +43,25 @@ defmodule Wotex.Runtime.Result do
       when is_binary(request_id) and byte_size(request_id) > 0 and operation in @operations and
              is_list(opts) do
     metadata = Keyword.get(opts, :metadata, %{})
+    status = Keyword.get(opts, :status, :ok)
 
-    if is_map(metadata) do
-      {:ok,
-       %__MODULE__{
-         request_id: request_id,
-         operation: operation,
-         status: Keyword.get(opts, :status, :ok),
-         payload: payload,
-         metadata: metadata
-       }}
-    else
-      {:error, Error.new(:invalid_result_metadata, :transport, "result metadata must be a map")}
+    cond do
+      not is_map(metadata) ->
+        {:error, Error.new(:invalid_result_metadata, :transport, "result metadata must be a map")}
+
+      status not in @statuses ->
+        {:error,
+         Error.new(:invalid_result_status, :transport, "result status must be :ok or :accepted")}
+
+      true ->
+        {:ok,
+         %__MODULE__{
+           request_id: request_id,
+           operation: operation,
+           status: status,
+           payload: payload,
+           metadata: metadata
+         }}
     end
   end
 

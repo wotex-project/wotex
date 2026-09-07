@@ -87,9 +87,15 @@ defmodule Wotex.Runtime.ValueTest do
   end
 
   test "protocol results validate request identity, operation, and metadata" do
-    assert {:ok, result} = Result.new("req", :readproperty, 21.5, status: 200)
+    assert {:ok, result} = Result.new("req", :readproperty, 21.5, metadata: %{http: %{status: 200}})
     assert result.payload == 21.5
-    assert result.status == 200
+    assert result.status == :ok
+
+    assert {:ok, accepted} = Result.new("req", :invokeaction, nil, status: :accepted)
+    assert accepted.status == :accepted
+
+    assert {:error, %Error{code: :invalid_result_status}} =
+             Result.new("req", :readproperty, nil, status: 200)
 
     assert {:error, %Error{code: :invalid_result_metadata}} =
              Result.new("req", :readproperty, nil, metadata: [])
@@ -114,5 +120,26 @@ defmodule Wotex.Runtime.ValueTest do
 
     assert Retry.decision(:readproperty, :invalid, attempt: 1, max_attempts: 3) == :stop
     assert Retry.decision(:readproperty, :timeout, attempt: 3, max_attempts: 3) == :stop
+  end
+
+  test "retry classification accepts a classified runtime error" do
+    unclassified = Error.new(:transport_request_failed, :transport, "failed")
+    assert Error.class(unclassified) == nil
+    assert Retry.decision(:readproperty, unclassified, attempt: 1, max_attempts: 3) == :stop
+
+    classified = %{unclassified | class: :unavailable}
+
+    assert Retry.decision(:readproperty, classified, attempt: 1, max_attempts: 3, delay: 5) ==
+             {:retry, 5}
+  end
+
+  test "deadline budgets are computed from a caller-supplied clock reading" do
+    assert Context.remaining_ms(nil, 0) == :infinity
+    assert Context.remaining_ms(1_500, 1_000) == 500
+    assert Context.remaining_ms(1_000, 1_500) == 0
+
+    later = DateTime.add(~U[2026-09-07 12:00:00Z], 2, :second)
+    assert Context.remaining_ms(later, ~U[2026-09-07 12:00:00Z]) == 2_000
+    assert Context.remaining_ms(later, 0) == {:error, :clock_mismatch}
   end
 end

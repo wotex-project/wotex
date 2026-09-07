@@ -40,6 +40,7 @@ defmodule WotexRuntime.MixProject do
   defp deps do
     [
       wotex_dep(),
+      {:telemetry, "~> 1.3"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
@@ -122,7 +123,8 @@ defmodule WotexRuntime.MixProject do
           Wotex.Runtime.Error
         ],
         "Consumer Ports": [Wotex.Runtime.Credentials, Wotex.Runtime.Transport],
-        Subscriptions: [Wotex.Runtime.Subscription]
+        Subscriptions: [Wotex.Runtime.Subscription],
+        Observability: [Wotex.Runtime.Telemetry]
       ],
       source_ref: "v#{@version}",
       source_url: @source_url,

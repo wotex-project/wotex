@@ -148,6 +148,123 @@ defmodule Wotex.Runtime.ConsumedThingTest do
     refute inspect(credential_error) =~ secret
   end
 
+  test "retains a structured port error's code, phase, and class as the cause", %{profile: profile} do
+    context = Context.new!(request_id: "req-cause")
+
+    {:ok, consumed} =
+      ConsumedThing.new(TDFactory.thing_description(),
+        profiles: [profile],
+        transports: %{profile.id => {FakeTransport, %{test_pid: self(), mode: :classified_error}}},
+        credentials: {FakeCredentials, %{test_pid: self(), secret: "x"}}
+      )
+
+    assert {:error, %Error{code: :transport_request_failed, class: :rate_limited} = error} =
+             ConsumedThing.read_property(consumed, "temperature", context)
+
+    assert error.details.cause == %{
+             module: FakeTransport.ExternalError,
+             code: :http_status,
+             phase: :response,
+             class: :rate_limited
+           }
+
+    refute inspect(error) =~ "external"
+
+    assert {:retry, 10} =
+             Wotex.Runtime.Retry.decision(:readproperty, error,
+               attempt: 1,
+               max_attempts: 2,
+               delay: 10
+             )
+  end
+
+  test "isolates port exceptions and exits without leaking credentials", %{profile: profile} do
+    context = Context.new!(request_id: "req-exception")
+    secret = "credential-material"
+    parent = self()
+
+    handler = fn event, _measurements, metadata, _config ->
+      send(parent, {:telemetry, event, metadata})
+    end
+
+    :telemetry.attach(
+      "port-exception-#{inspect(self())}",
+      [:wotex, :runtime, :port, :exception],
+      handler,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach("port-exception-#{inspect(parent)}") end)
+
+    for mode <- [:raise, :exit] do
+      {:ok, consumed} =
+        ConsumedThing.new(TDFactory.thing_description(),
+          profiles: [profile],
+          transports: %{profile.id => {FakeTransport, %{test_pid: self(), mode: mode}}},
+          credentials: {FakeCredentials, %{test_pid: self(), secret: secret}}
+        )
+
+      assert {:error, %Error{code: :port_exception, phase: :transport} = error} =
+               ConsumedThing.read_property(consumed, "temperature", context)
+
+      refute inspect(error) =~ secret
+
+      assert_receive {:telemetry, [:wotex, :runtime, :port, :exception],
+                      %{callback: :request, kind: _}}
+    end
+
+    {:ok, raising_credentials} =
+      ConsumedThing.new(TDFactory.thing_description(),
+        profiles: [profile],
+        transports: %{profile.id => {FakeTransport, %{test_pid: self()}}},
+        credentials: {FakeCredentials, %{test_pid: self(), secret: secret, mode: :raise}}
+      )
+
+    assert {:error, %Error{code: :port_exception, phase: :credentials} = error} =
+             ConsumedThing.read_property(raising_credentials, "temperature", context)
+
+    refute inspect(error) =~ secret
+  end
+
+  test "emits request telemetry with identity and outcome only", %{
+    consumed: consumed,
+    secret: secret
+  } do
+    parent = self()
+
+    handler = fn event, measurements, metadata, _config ->
+      send(parent, {:telemetry, event, measurements, metadata})
+    end
+
+    id = "request-#{inspect(self())}"
+
+    :telemetry.attach_many(
+      id,
+      [[:wotex, :runtime, :request, :start], [:wotex, :runtime, :request, :stop]],
+      handler,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
+
+    context = Context.new!(request_id: "req-telemetry")
+    assert {:ok, _result} = ConsumedThing.read_property(consumed, "temperature", context)
+
+    assert_receive {:telemetry, [:wotex, :runtime, :request, :start], _,
+                    %{request_id: "req-telemetry"}}
+
+    assert_receive {:telemetry, [:wotex, :runtime, :request, :stop], %{duration: _},
+                    %{operation: :readproperty, result: :ok, affordance_name: "temperature"} =
+                      metadata}
+
+    refute inspect(metadata) =~ secret
+
+    assert {:error, _error} = ConsumedThing.read_property(consumed, "missing", context)
+
+    assert_receive {:telemetry, [:wotex, :runtime, :request, :stop], _,
+                    %{result: :error, code: :affordance_not_found}}
+  end
+
   test "normalizes invalid and mismatched port returns", %{profile: profile} do
     context = Context.new!(request_id: "req-invalid")
     credentials = {FakeCredentials, %{test_pid: self(), secret: "x"}}
