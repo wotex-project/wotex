@@ -38,22 +38,26 @@ defmodule WotexContinuum.Mode do
   def connectivity_states, do: @connectivity_states
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
+  def from_map(%__MODULE__{} = value), do: from_map(Map.from_struct(value))
 
-  def new(data) do
+  def from_map(data) do
     fields = [:deployment, :connectivity, :extensions]
 
     with {:ok, data} <- Contract.normalize(Contract.envelope(data, @kind), fields, @kind),
          {:ok, deployment} <- Validation.required(data, :deployment),
-         {:ok, deployment} <- Validation.enum(deployment, ["deployment"], @deployments),
+         {:ok, deployment} <- Validation.enum(deployment, "/deployment", @deployments),
          {:ok, connectivity} <- Validation.required(data, :connectivity),
          {:ok, connectivity} <-
-           Validation.enum(connectivity, ["connectivity"], @connectivity_states),
+           Validation.enum(connectivity, "/connectivity", @connectivity_states),
          :ok <- validate_air_gap(deployment, connectivity),
-         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), ["extensions"]) do
+         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok, %__MODULE__{deployment: deployment, connectivity: connectivity, extensions: extensions}}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
@@ -66,7 +70,8 @@ defmodule WotexContinuum.Mode do
   defp validate_air_gap(:air_gapped, connectivity) when connectivity != :disconnected do
     Error.error(
       :invalid_mode,
-      ["connectivity"],
+      :validation,
+      "/connectivity",
       "air-gapped deployment requires disconnected upstream connectivity"
     )
   end

@@ -20,12 +20,13 @@ defmodule WotexContinuum.ThingReference do
       :ok
     else
       nil ->
-        Error.error(:thing_id_required, ["thing_id"], "Thing Description has no ID")
+        Error.error(:thing_id_required, :validation, "/thing_id", "Thing Description has no ID")
 
       false ->
         Error.error(
           :thing_id_mismatch,
-          ["thing_id"],
+          :validation,
+          "/thing_id",
           "Thing reference does not match the Thing Description ID"
         )
 
@@ -35,11 +36,11 @@ defmodule WotexContinuum.ThingReference do
   end
 
   def validate(_, %Wotex.ThingDescription{}) do
-    Error.error(:thing_id_required, ["thing_id"], "value has no Thing reference")
+    Error.error(:thing_id_required, :validation, "/thing_id", "value has no Thing reference")
   end
 
   def validate(_, _) do
-    Error.error(:invalid_type, [], "expected a Wotex Thing Description")
+    Error.error(:invalid_type, :validation, "/", "expected a Wotex Thing Description")
   end
 
   defp validate_thing_description(thing_description) do
@@ -48,9 +49,15 @@ defmodule WotexContinuum.ThingReference do
         {:ok, validated}
 
       {:error, errors} ->
-        Error.error(:invalid_thing_description, [], "Thing Description validation failed", %{
-          errors: Enum.map(List.wrap(errors), &Exception.message/1)
-        })
+        Error.error(
+          :invalid_thing_description,
+          :validation,
+          "/",
+          "Thing Description validation failed",
+          %{
+            errors: Enum.map(List.wrap(errors), &Exception.message/1)
+          }
+        )
     end
   end
 end

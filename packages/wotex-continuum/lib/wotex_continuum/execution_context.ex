@@ -11,7 +11,7 @@ defmodule WotexContinuum.ExecutionContext do
 
   @behaviour WotexContinuum.Value
 
-  alias WotexContinuum.{Contract, Mode, Validation}
+  alias WotexContinuum.{Contract, Error, Mode, Validation}
 
   @kind "execution_context"
 
@@ -30,21 +30,21 @@ defmodule WotexContinuum.ExecutionContext do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
+  def from_map(%__MODULE__{} = value), do: from_map(Map.from_struct(value))
 
-  def new(data) do
+  def from_map(data) do
     fields = [:execution_id, :node_id, :mode, :observed_at, :extensions]
 
     with {:ok, data} <- Contract.normalize(Contract.envelope(data, @kind), fields, @kind),
          {:ok, execution_id} <- Validation.required(data, :execution_id),
-         {:ok, execution_id} <- Validation.string(execution_id, ["execution_id"]),
+         {:ok, execution_id} <- Validation.string(execution_id, "/execution_id"),
          {:ok, node_id} <- Validation.required(data, :node_id),
-         {:ok, node_id} <- Validation.string(node_id, ["node_id"]),
+         {:ok, node_id} <- Validation.string(node_id, "/node_id"),
          {:ok, mode} <- Validation.required(data, :mode),
-         {:ok, mode} <- Validation.nested(mode, ["mode"], Mode),
+         {:ok, mode} <- Validation.nested(mode, "/mode", Mode),
          {:ok, observed_at} <- Validation.required(data, :observed_at),
-         {:ok, observed_at} <- Validation.timestamp(observed_at, ["observed_at"]),
-         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), ["extensions"]) do
+         {:ok, observed_at} <- Validation.timestamp(observed_at, "/observed_at"),
+         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
          execution_id: execution_id,
@@ -55,6 +55,10 @@ defmodule WotexContinuum.ExecutionContext do
        }}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do

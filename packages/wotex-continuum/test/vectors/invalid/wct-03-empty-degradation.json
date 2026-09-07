@@ -1,6 +1,6 @@
 {
   "description": "reduced state names an affected capability and reason",
-  "expected": {"code": "invalid_degradation_state", "path": ["level"]},
+  "expected": {"code": "invalid_degradation_state", "phase": "validation", "path": "/level"},
   "input": {
     "kind": "degradation",
     "schema_version": "1.0.0",

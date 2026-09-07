@@ -20,91 +20,91 @@ defmodule WotexContinuum.ValidationTest do
   end
 
   test "validates strings, identifiers, IRIs, digests, and semantic versions" do
-    assert {:ok, "example"} = Validation.string("example", ["value"])
-    assert {:ok, nil} = Validation.optional_string(nil, ["value"], [])
-    assert {:error, %Error{code: :too_short}} = Validation.string("", ["value"])
-    assert {:error, %Error{code: :too_long}} = Validation.string("abcd", ["value"], max: 3)
-    assert {:error, %Error{code: :invalid_utf8}} = Validation.string(<<255>>, ["value"])
-    assert {:error, %Error{code: :invalid_type}} = Validation.string(1, ["value"])
+    assert {:ok, "example"} = Validation.string("example", "/value")
+    assert {:ok, nil} = Validation.optional_string(nil, "/value", [])
+    assert {:error, %Error{code: :too_short}} = Validation.string("", "/value")
+    assert {:error, %Error{code: :too_long}} = Validation.string("abcd", "/value", max: 3)
+    assert {:error, %Error{code: :invalid_utf8}} = Validation.string(<<255>>, "/value")
+    assert {:error, %Error{code: :invalid_type}} = Validation.string(1, "/value")
 
-    assert {:ok, "urn:example:thing:1"} = Validation.iri("urn:example:thing:1", ["iri"])
-    assert {:error, %Error{code: :invalid_iri}} = Validation.iri("relative", ["iri"])
+    assert {:ok, "urn:example:thing:1"} = Validation.iri("urn:example:thing:1", "/iri")
+    assert {:error, %Error{code: :invalid_iri}} = Validation.iri("relative", "/iri")
 
     digest = "sha256:" <> String.duplicate("a", 64)
-    assert {:ok, ^digest} = Validation.digest(digest, ["digest"])
-    assert {:error, %Error{code: :invalid_digest}} = Validation.digest("sha256:ABC", ["digest"])
+    assert {:ok, ^digest} = Validation.digest(digest, "/digest")
+    assert {:error, %Error{code: :invalid_digest}} = Validation.digest("sha256:ABC", "/digest")
 
-    assert {:ok, "1.2.3"} = Validation.semver("1.2.3", ["version"])
-    assert {:error, %Error{code: :invalid_version}} = Validation.semver("one", ["version"])
-    assert {:ok, "~> 1.2"} = Validation.version_requirement("~> 1.2", ["requirement"])
+    assert {:ok, "1.2.3"} = Validation.semver("1.2.3", "/version")
+    assert {:error, %Error{code: :invalid_version}} = Validation.semver("one", "/version")
+    assert {:ok, "~> 1.2"} = Validation.version_requirement("~> 1.2", "/requirement")
 
     assert {:error, %Error{code: :invalid_version_requirement}} =
-             Validation.version_requirement("not a range", ["requirement"])
+             Validation.version_requirement("not a range", "/requirement")
   end
 
   test "normalizes timestamps and validates enums, booleans, and integers" do
     assert {:ok, "2026-09-02T08:00:00Z"} =
-             Validation.timestamp("2026-09-02T10:00:00+02:00", ["at"])
+             Validation.timestamp("2026-09-02T10:00:00+02:00", "/at")
 
     datetime = ~U[2026-09-02 10:00:00Z]
-    assert {:ok, "2026-09-02T10:00:00Z"} = Validation.timestamp(datetime, ["at"])
-    assert {:error, %Error{code: :invalid_timestamp}} = Validation.timestamp("today", ["at"])
-    assert {:error, %Error{code: :invalid_type}} = Validation.timestamp(0, ["at"])
+    assert {:ok, "2026-09-02T10:00:00Z"} = Validation.timestamp(datetime, "/at")
+    assert {:error, %Error{code: :invalid_timestamp}} = Validation.timestamp("today", "/at")
+    assert {:error, %Error{code: :invalid_type}} = Validation.timestamp(0, "/at")
 
-    assert {:ok, :ready} = Validation.enum(:ready, ["state"], [:ready])
-    assert {:ok, :ready} = Validation.enum("ready", ["state"], [:ready])
-    assert {:error, %Error{code: :invalid_enum}} = Validation.enum(:other, ["state"], [:ready])
-    assert {:error, %Error{code: :invalid_enum}} = Validation.enum("other", ["state"], [:ready])
-    assert {:error, %Error{code: :invalid_type}} = Validation.enum(1, ["state"], [:ready])
+    assert {:ok, :ready} = Validation.enum(:ready, "/state", [:ready])
+    assert {:ok, :ready} = Validation.enum("ready", "/state", [:ready])
+    assert {:error, %Error{code: :invalid_enum}} = Validation.enum(:other, "/state", [:ready])
+    assert {:error, %Error{code: :invalid_enum}} = Validation.enum("other", "/state", [:ready])
+    assert {:error, %Error{code: :invalid_type}} = Validation.enum(1, "/state", [:ready])
 
-    assert {:ok, true} = Validation.boolean(true, ["flag"])
-    assert {:error, %Error{code: :invalid_type}} = Validation.boolean(1, ["flag"])
-    assert {:ok, 0} = Validation.non_negative_integer(0, ["count"])
-    assert {:error, %Error{code: :invalid_integer}} = Validation.non_negative_integer(-1, ["count"])
-    assert {:ok, 1} = Validation.positive_integer(1, ["count"])
-    assert {:error, %Error{code: :invalid_integer}} = Validation.positive_integer(0, ["count"])
+    assert {:ok, true} = Validation.boolean(true, "/flag")
+    assert {:error, %Error{code: :invalid_type}} = Validation.boolean(1, "/flag")
+    assert {:ok, 0} = Validation.non_negative_integer(0, "/count")
+    assert {:error, %Error{code: :invalid_integer}} = Validation.non_negative_integer(-1, "/count")
+    assert {:ok, 1} = Validation.positive_integer(1, "/count")
+    assert {:error, %Error{code: :invalid_integer}} = Validation.positive_integer(0, "/count")
   end
 
   test "validates recursive JSON and extension maps" do
     value = %{"a" => [nil, true, 1, 1.5, "x", %{"b" => false}]}
-    assert {:ok, ^value} = Validation.json_value(value, [])
+    assert {:ok, ^value} = Validation.json_value(value, "/")
 
-    assert {:error, %Error{code: :invalid_key}} = Validation.json_value(%{atom: 1}, [])
-    assert {:error, %Error{code: :invalid_utf8}} = Validation.json_value(<<255>>, [])
-    assert {:error, %Error{code: :invalid_json_value}} = Validation.json_value(self(), [])
-    assert {:error, %Error{code: :invalid_json_value}} = Validation.json_value(%URI{}, [])
+    assert {:error, %Error{code: :invalid_key}} = Validation.json_value(%{atom: 1}, "/")
+    assert {:error, %Error{code: :invalid_utf8}} = Validation.json_value(<<255>>, "/")
+    assert {:error, %Error{code: :invalid_json_value}} = Validation.json_value(self(), "/")
+    assert {:error, %Error{code: :invalid_json_value}} = Validation.json_value(%URI{}, "/")
 
     deep = Enum.reduce(1..66, nil, fn _, acc -> [acc] end)
-    assert {:error, %Error{code: :limit_exceeded}} = Validation.json_value(deep, [])
+    assert {:error, %Error{code: :limit_exceeded}} = Validation.json_value(deep, "/")
 
     extensions = %{"https://example.org/flag" => true}
-    assert {:ok, ^extensions} = Validation.extensions(extensions, ["extensions"])
-    assert {:error, %Error{code: :invalid_iri}} = Validation.extensions(%{"flag" => true}, [])
-    assert {:error, %Error{code: :invalid_type}} = Validation.extensions([], [])
+    assert {:ok, ^extensions} = Validation.extensions(extensions, "/extensions")
+    assert {:error, %Error{code: :invalid_iri}} = Validation.extensions(%{"flag" => true}, "/")
+    assert {:error, %Error{code: :invalid_type}} = Validation.extensions([], "/")
   end
 
   test "validates collections and nested values with exact paths" do
-    assert {:ok, ["a", "b"]} = Validation.string_list(["a", "b"], ["items"])
+    assert {:ok, ["a", "b"]} = Validation.string_list(["a", "b"], "/items")
 
     assert {:error, %Error{code: :duplicate_value}} =
-             Validation.string_list(["a", "a"], ["items"])
+             Validation.string_list(["a", "a"], "/items")
 
     assert {:error, %Error{code: :too_short}} =
-             Validation.string_list([], ["items"], list_min: 1)
+             Validation.string_list([], "/items", list_min: 1)
 
-    assert {:ok, [:a, :b]} = Validation.enum_list(["a", :b], ["items"], [:a, :b], min: 1)
-    assert {:error, %Error{code: :invalid_type}} = Validation.list(%{}, ["items"])
-    assert :ok = Validation.uniqueness([1, 2], ["items"])
+    assert {:ok, [:a, :b]} = Validation.enum_list(["a", :b], "/items", [:a, :b], min: 1)
+    assert {:error, %Error{code: :invalid_type}} = Validation.list(%{}, "/items")
+    assert :ok = Validation.uniqueness([1, 2], "/items")
 
     assert {:ok, failure} = Failure.new(%{code: "failed", message: "example"})
-    assert {:ok, [^failure]} = Validation.structs([failure], ["failures"], Failure)
-    assert {:ok, ^failure} = Validation.nested(failure, ["failure"], Failure)
+    assert {:ok, [^failure]} = Validation.structs([failure], "/failures", Failure)
+    assert {:ok, ^failure} = Validation.nested(failure, "/failure", Failure)
 
-    assert {:error, %Error{path: ["failures", 0, "code"]}} =
-             Validation.structs([%{message: "missing code"}], ["failures"], Failure)
+    assert {:error, %Error{path: "/failures/0/code"}} =
+             Validation.structs([%{message: "missing code"}], "/failures", Failure)
 
     assert {:ok, [2, 4]} =
-             Validation.map_list([1, 2], [], fn value, _ -> {:ok, value * 2} end)
+             Validation.map_list([1, 2], "/", fn value, _ -> {:ok, value * 2} end)
   end
 
   test "converts nested values to wire terms and compares timestamps" do
@@ -120,10 +120,59 @@ defmodule WotexContinuum.ValidationTest do
     assert Validation.compare_timestamps("2026-09-02T10:00:00Z", "2026-09-02T10:00:01Z") == :lt
   end
 
-  test "typed errors render deterministic paths" do
-    error = %Error{code: :invalid, message: "bad value", path: ["items", 2, "id"]}
-    assert Exception.message(error) == "$.items[2].id: bad value"
-    assert Exception.message(%{error | path: []}) == "bad value"
-    assert Error.prepend(error, "root").path == ["root", "items", 2, "id"]
+  test "typed errors carry a phase and render RFC 6901 JSON Pointer paths" do
+    error = %Error{code: :invalid, phase: :validation, message: "bad value", path: "/items/2/id"}
+
+    assert Exception.message(error) == "/items/2/id: bad value"
+    assert Exception.message(%{error | path: nil}) == "bad value"
+    assert Exception.message(%{error | path: Error.root()}) == "bad value"
+
+    assert Error.child(Error.root(), "a/b~c") == "/a~1b~0c"
+    assert Error.child("/items", 2) == "/items/2"
+    assert Error.prepend(error, "root").path == "/root/items/2/id"
+    assert Error.prefix(error, Error.root()) == error
+    assert Error.prefix(%{error | path: nil}, "/parent").path == nil
+    assert Error.prefix(%{error | path: Error.root()}, "/parent").path == "/parent"
+
+    assert %Error{path: "/", phase: :decode, details: %{}} =
+             Error.new(:invalid_json, :decode, "bad bytes")
+  end
+
+  test "core admission errors are translated into the continuum vocabulary" do
+    core = Wotex.Error.new(:duplicate_member, :parse, "duplicated", "/extensions/a~1b")
+
+    assert %Error{code: :duplicate_field, phase: :decode, path: "/extensions/a~1b"} =
+             translated = Error.from_core(core)
+
+    assert translated.details.core_code == :duplicate_member
+
+    for code <- [
+          :byte_limit_exceeded,
+          :depth_limit_exceeded,
+          :node_limit_exceeded,
+          :string_limit_exceeded,
+          :collection_limit_exceeded
+        ] do
+      assert %Error{code: :limit_exceeded, phase: :limits} =
+               Error.from_core(Wotex.Error.new(code, :value, "limit", "/a"))
+    end
+
+    assert %Error{code: :invalid_utf8, phase: :decode} =
+             Error.from_core(Wotex.Error.new(:invalid_string, :parse, "utf8"))
+
+    assert %Error{code: :invalid_key} =
+             Error.from_core(Wotex.Error.new(:non_string_key, :value, "key"))
+
+    assert %Error{code: :invalid_json_value} =
+             Error.from_core(Wotex.Error.new(:invalid_json_value, :value, "value"))
+
+    assert %Error{code: :invalid_limit, phase: :limits} =
+             Error.from_core(Wotex.Error.new(:invalid_limit, :value, "limit"))
+
+    assert %Error{code: :invalid_options, phase: :limits} =
+             Error.from_core(Wotex.Error.new(:invalid_options, :value, "options"))
+
+    assert %Error{code: :invalid_type, phase: :decode} =
+             Error.from_core(Wotex.Error.new(:invalid_input, :parse, "input"))
   end
 end

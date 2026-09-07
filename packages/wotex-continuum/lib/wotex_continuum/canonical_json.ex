@@ -12,7 +12,7 @@ defmodule WotexContinuum.CanonicalJSON do
   @doc "Encodes a JSON-compatible value into deterministic JSON bytes."
   @spec encode(term()) :: {:ok, binary()} | {:error, Error.t()}
   def encode(value) do
-    with {:ok, iodata} <- encode_value(value, []) do
+    with {:ok, iodata} <- encode_value(value, Error.root()) do
       {:ok, IO.iodata_to_binary(iodata)}
     end
   end
@@ -25,7 +25,7 @@ defmodule WotexContinuum.CanonicalJSON do
   defp encode_value(value, path) when is_float(value) do
     case Jason.encode(value) do
       {:ok, encoded} -> {:ok, encoded}
-      {:error, _} -> Error.error(:invalid_number, path, "expected a finite JSON number")
+      {:error, _} -> Error.error(:invalid_number, :encode, path, "expected a finite JSON number")
     end
   end
 
@@ -33,10 +33,10 @@ defmodule WotexContinuum.CanonicalJSON do
     if String.valid?(value) do
       case Jason.encode(value) do
         {:ok, encoded} -> {:ok, encoded}
-        {:error, _} -> Error.error(:invalid_string, path, "cannot encode the string")
+        {:error, _} -> Error.error(:invalid_string, :encode, path, "cannot encode the string")
       end
     else
-      Error.error(:invalid_utf8, path, "expected valid UTF-8")
+      Error.error(:invalid_utf8, :encode, path, "expected valid UTF-8")
     end
   end
 
@@ -53,13 +53,13 @@ defmodule WotexContinuum.CanonicalJSON do
   end
 
   defp encode_value(_, path),
-    do: Error.error(:invalid_json_value, path, "expected a JSON value")
+    do: Error.error(:invalid_json_value, :encode, path, "expected a JSON value")
 
   defp encode_list(values, path) do
     values
     |> Enum.with_index()
     |> Enum.reduce_while({:ok, []}, fn {value, index}, {:ok, acc} ->
-      case encode_value(value, child_path(path, index)) do
+      case encode_value(value, Error.child(path, index)) do
         {:ok, encoded} -> {:cont, {:ok, [encoded | acc]}}
         {:error, _} = error -> {:halt, error}
       end
@@ -74,12 +74,12 @@ defmodule WotexContinuum.CanonicalJSON do
       |> Enum.reduce_while({:ok, []}, &encode_pair(&1, &2, path))
       |> reverse_result()
     else
-      Error.error(:invalid_key, path, "JSON object keys must be strings")
+      Error.error(:invalid_key, :encode, path, "JSON object keys must be strings")
     end
   end
 
   defp encode_pair({key, value}, {:ok, acc}, path) do
-    key_path = child_path(path, key)
+    key_path = Error.child(path, key)
 
     with {:ok, encoded_key} <- encode_value(key, key_path),
          {:ok, encoded_value} <- encode_value(value, key_path) do
@@ -91,6 +91,4 @@ defmodule WotexContinuum.CanonicalJSON do
 
   defp reverse_result({:ok, values}), do: {:ok, Enum.reverse(values)}
   defp reverse_result({:error, _} = error), do: error
-
-  defp child_path(path, segment), do: Enum.concat(path, [segment])
 end

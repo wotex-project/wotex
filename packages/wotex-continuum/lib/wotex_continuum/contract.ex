@@ -7,10 +7,10 @@ defmodule WotexContinuum.Contract do
   def normalize(data, fields, expected_kind) do
     with {:ok, data} <- Validation.normalize(data, [:kind, :schema_version | fields]),
          {:ok, kind} <- Validation.required(data, :kind),
-         {:ok, kind} <- Validation.string(kind, ["kind"], max: 128),
-         :ok <- exact(kind, expected_kind, ["kind"], :wrong_kind),
+         {:ok, kind} <- Validation.string(kind, "/kind", max: 128),
+         :ok <- exact(kind, expected_kind, "/kind", :wrong_kind),
          {:ok, schema_version} <- Validation.required(data, :schema_version),
-         {:ok, schema_version} <- Validation.semver(schema_version, ["schema_version"]),
+         {:ok, schema_version} <- Validation.semver(schema_version, "/schema_version"),
          :ok <- supported_schema(schema_version) do
       {:ok, data}
     end
@@ -28,11 +28,11 @@ defmodule WotexContinuum.Contract do
 
   def envelope(data, _), do: data
 
-  @spec exact(term(), term(), [Error.segment()], atom()) :: :ok | {:error, Error.t()}
+  @spec exact(term(), term(), String.t(), atom()) :: :ok | {:error, Error.t()}
   def exact(value, value, _, _), do: :ok
 
   def exact(_, _, path, code),
-    do: Error.error(code, path, "value does not match the contract")
+    do: Error.error(code, :validation, path, "value does not match the contract")
 
   defp supported_schema(version) do
     if Version.match?(version, "~> 1.0"),
@@ -40,7 +40,8 @@ defmodule WotexContinuum.Contract do
       else:
         Error.error(
           :unsupported_schema_version,
-          ["schema_version"],
+          :compatibility,
+          "/schema_version",
           "schema version is not supported"
         )
   end

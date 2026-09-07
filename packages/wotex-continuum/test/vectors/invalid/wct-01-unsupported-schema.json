@@ -1,6 +1,6 @@
 {
   "description": "unknown schema major is rejected",
-  "expected": {"code": "unsupported_schema_version", "path": ["schema_version"]},
+  "expected": {"code": "unsupported_schema_version", "phase": "compatibility", "path": "/schema_version"},
   "input": {
     "kind": "mode",
     "schema_version": "2.0.0",

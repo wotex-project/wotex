@@ -11,6 +11,10 @@ defmodule WotexContinuum.Value do
   Consumers normally call `WotexContinuum.from_map/1` and
   `WotexContinuum.to_map/1`. Calling a value module directly is useful when the
   expected kind is already known and should not be selected from input.
+
+  `from_map/1` is the documented entry for map-shaped wire input. Value modules
+  also expose `new/1` as an alias of `from_map/1`; `new/1` carries keyword
+  configuration only in `WotexContinuum.Limits`.
   """
 
   @doc """
@@ -25,9 +29,10 @@ defmodule WotexContinuum.Value do
 
   Implementations accept documented atom or string keys, reject unknown or
   malformed contract data, and return a structured `WotexContinuum.Error` for
-  expected failures. Construction performs no I/O and invokes no Action.
+  expected failures. Construction performs no I/O and invokes no Action. An
+  already accepted struct is revalidated instead of trusted.
   """
-  @callback new(map()) :: {:ok, struct()} | {:error, WotexContinuum.Error.t()}
+  @callback from_map(map() | struct()) :: {:ok, struct()} | {:error, WotexContinuum.Error.t()}
 
   @doc """
   Projects an accepted value into its string-keyed wire representation.

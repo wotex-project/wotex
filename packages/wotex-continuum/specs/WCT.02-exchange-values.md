@@ -127,6 +127,6 @@ deduplication, and durable acknowledgement.
 
 ## 8. Compatibility and evidence
 
-Compatibility follows WCT.01 section 8. Normative JSON Schema is
+Compatibility follows WCT.01 section 9. Normative JSON Schema is
 `priv/schemas/wct-02.schema.json`; executable vectors use the `wct-02-` prefix
 under `test/vectors/`.

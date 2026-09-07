@@ -55,9 +55,9 @@ defmodule WotexContinuum.Degradation do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
+  def from_map(%__MODULE__{} = value), do: from_map(Map.from_struct(value))
 
-  def new(data) do
+  def from_map(data) do
     fields = [
       :degradation_id,
       :subject_id,
@@ -72,23 +72,23 @@ defmodule WotexContinuum.Degradation do
 
     with {:ok, data} <- Contract.normalize(Contract.envelope(data, @kind), fields, @kind),
          {:ok, degradation_id} <- Validation.required(data, :degradation_id),
-         {:ok, degradation_id} <- Validation.string(degradation_id, ["degradation_id"]),
+         {:ok, degradation_id} <- Validation.string(degradation_id, "/degradation_id"),
          {:ok, subject_id} <- Validation.required(data, :subject_id),
-         {:ok, subject_id} <- Validation.string(subject_id, ["subject_id"]),
+         {:ok, subject_id} <- Validation.string(subject_id, "/subject_id"),
          {:ok, level} <- Validation.required(data, :level),
-         {:ok, level} <- Validation.enum(level, ["level"], @levels),
+         {:ok, level} <- Validation.enum(level, "/level", @levels),
          {:ok, capabilities} <- Validation.required(data, :capabilities),
-         {:ok, capabilities} <- Validation.string_list(capabilities, ["capabilities"]),
+         {:ok, capabilities} <- Validation.string_list(capabilities, "/capabilities"),
          {:ok, reason_codes} <- Validation.required(data, :reason_codes),
-         {:ok, reason_codes} <- Validation.string_list(reason_codes, ["reason_codes"]),
+         {:ok, reason_codes} <- Validation.string_list(reason_codes, "/reason_codes"),
          :ok <- validate_level(level, capabilities, reason_codes),
          {:ok, since} <- Validation.required(data, :since),
-         {:ok, since} <- Validation.timestamp(since, ["since"]),
+         {:ok, since} <- Validation.timestamp(since, "/since"),
          {:ok, recoverable} <- Validation.required(data, :recoverable),
-         {:ok, recoverable} <- Validation.boolean(recoverable, ["recoverable"]),
+         {:ok, recoverable} <- Validation.boolean(recoverable, "/recoverable"),
          {:ok, evidence} <-
-           Validation.structs(Map.get(data, :evidence, []), ["evidence"], EvidenceReference),
-         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), ["extensions"]) do
+           Validation.structs(Map.get(data, :evidence, []), "/evidence", EvidenceReference),
+         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
          degradation_id: degradation_id,
@@ -103,6 +103,10 @@ defmodule WotexContinuum.Degradation do
        }}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
@@ -127,7 +131,8 @@ defmodule WotexContinuum.Degradation do
   defp validate_level(_, _, _) do
     Error.error(
       :invalid_degradation_state,
-      ["level"],
+      :validation,
+      "/level",
       "degradation details do not match the level"
     )
   end

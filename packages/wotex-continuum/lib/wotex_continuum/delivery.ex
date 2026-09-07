@@ -61,10 +61,10 @@ defmodule WotexContinuum.Delivery do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value),
-    do: new(Validation.struct_input(value, [:sequence, :acknowledged_at, :error]))
+  def from_map(%__MODULE__{} = value),
+    do: from_map(Validation.struct_input(value, [:sequence, :acknowledged_at, :error]))
 
-  def new(data) do
+  def from_map(data) do
     fields = [
       :delivery_id,
       :item_kind,
@@ -82,28 +82,28 @@ defmodule WotexContinuum.Delivery do
 
     with {:ok, data} <- Contract.normalize(Contract.envelope(data, @kind), fields, @kind),
          {:ok, delivery_id} <- Validation.required(data, :delivery_id),
-         {:ok, delivery_id} <- Validation.string(delivery_id, ["delivery_id"]),
+         {:ok, delivery_id} <- Validation.string(delivery_id, "/delivery_id"),
          {:ok, item_kind} <- Validation.required(data, :item_kind),
-         {:ok, item_kind} <- Validation.string(item_kind, ["item_kind"], max: 128),
+         {:ok, item_kind} <- Validation.string(item_kind, "/item_kind", max: 128),
          :ok <- validate_item_kind(item_kind),
          {:ok, item_id} <- Validation.required(data, :item_id),
-         {:ok, item_id} <- Validation.string(item_id, ["item_id"]),
+         {:ok, item_id} <- Validation.string(item_id, "/item_id"),
          {:ok, source} <- Validation.required(data, :source),
-         {:ok, source} <- Validation.string(source, ["source"]),
+         {:ok, source} <- Validation.string(source, "/source"),
          {:ok, destination} <- Validation.required(data, :destination),
-         {:ok, destination} <- Validation.string(destination, ["destination"]),
+         {:ok, destination} <- Validation.string(destination, "/destination"),
          {:ok, status} <- Validation.required(data, :status),
-         {:ok, status} <- Validation.enum(status, ["status"], @statuses),
+         {:ok, status} <- Validation.enum(status, "/status", @statuses),
          {:ok, attempt} <- Validation.required(data, :attempt),
-         {:ok, attempt} <- Validation.positive_integer(attempt, ["attempt"]),
+         {:ok, attempt} <- Validation.positive_integer(attempt, "/attempt"),
          {:ok, sequence} <- optional_sequence(Map.get(data, :sequence)),
          {:ok, emitted_at} <- Validation.required(data, :emitted_at),
-         {:ok, emitted_at} <- Validation.timestamp(emitted_at, ["emitted_at"]),
+         {:ok, emitted_at} <- Validation.timestamp(emitted_at, "/emitted_at"),
          {:ok, acknowledged_at} <- optional_timestamp(data, :acknowledged_at),
          {:ok, failure} <- optional_failure(data),
          :ok <- validate_status(status, acknowledged_at, failure),
          :ok <- validate_time_order(emitted_at, acknowledged_at),
-         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), ["extensions"]) do
+         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
          delivery_id: delivery_id,
@@ -121,6 +121,10 @@ defmodule WotexContinuum.Delivery do
        }}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
@@ -140,19 +144,19 @@ defmodule WotexContinuum.Delivery do
   end
 
   defp optional_sequence(nil), do: {:ok, nil}
-  defp optional_sequence(value), do: Validation.non_negative_integer(value, ["sequence"])
+  defp optional_sequence(value), do: Validation.non_negative_integer(value, "/sequence")
 
   defp optional_timestamp(data, key) do
     case Map.fetch(data, key) do
       :error -> {:ok, nil}
-      {:ok, value} -> Validation.timestamp(value, [Atom.to_string(key)])
+      {:ok, value} -> Validation.timestamp(value, Error.child("/", Atom.to_string(key)))
     end
   end
 
   defp optional_failure(data) do
     case Map.fetch(data, :error) do
       :error -> {:ok, nil}
-      {:ok, value} -> Validation.nested(value, ["error"], Failure)
+      {:ok, value} -> Validation.nested(value, "/error", Failure)
     end
   end
 
@@ -164,9 +168,15 @@ defmodule WotexContinuum.Delivery do
        do: :ok
 
   defp validate_status(status, _, _) do
-    Error.error(:invalid_delivery_state, ["status"], "delivery fields do not match the status", %{
-      status: status
-    })
+    Error.error(
+      :invalid_delivery_state,
+      :validation,
+      "/status",
+      "delivery fields do not match the status",
+      %{
+        status: status
+      }
+    )
   end
 
   defp validate_time_order(_, nil), do: :ok
@@ -175,11 +185,16 @@ defmodule WotexContinuum.Delivery do
     if Validation.compare_timestamps(emitted_at, acknowledged_at) in [:lt, :eq],
       do: :ok,
       else:
-        Error.error(:invalid_time_order, ["acknowledged_at"], "acknowledgement precedes emission")
+        Error.error(
+          :invalid_time_order,
+          :validation,
+          "/acknowledged_at",
+          "acknowledgement precedes emission"
+        )
   end
 
   defp invalid_item_kind do
-    Error.error(:unknown_kind, ["item_kind"], "item kind is not registered")
+    Error.error(:unknown_kind, :validation, "/item_kind", "item kind is not registered")
   end
 
   defp validate_item_kind(item_kind) do

@@ -52,7 +52,7 @@ defmodule WotexContinuum.PropertyContractTest do
 
     ordered = %Jason.OrderedObject{values: [{"a", %Jason.OrderedObject{values: [{"b", true}]}}]}
 
-    assert {:error, %Error{code: :limit_exceeded, path: ["a", "b"]}} =
+    assert {:error, %Error{code: :limit_exceeded, path: "/a/b"}} =
              Limits.normalize_decoded(ordered, limits)
 
     assert {:error, %Error{code: :invalid_type}} = Limits.new(:invalid)

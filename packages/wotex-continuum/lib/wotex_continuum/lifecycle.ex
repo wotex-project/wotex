@@ -45,22 +45,22 @@ defmodule WotexContinuum.Lifecycle do
   def states, do: @states
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: new(Validation.struct_input(value, [:reason]))
+  def from_map(%__MODULE__{} = value), do: from_map(Validation.struct_input(value, [:reason]))
 
-  def new(data) do
+  def from_map(data) do
     fields = [:subject_id, :state, :generation, :changed_at, :reason, :extensions]
 
     with {:ok, data} <- Contract.normalize(Contract.envelope(data, @kind), fields, @kind),
          {:ok, subject_id} <- Validation.required(data, :subject_id),
-         {:ok, subject_id} <- Validation.string(subject_id, ["subject_id"]),
+         {:ok, subject_id} <- Validation.string(subject_id, "/subject_id"),
          {:ok, state} <- Validation.required(data, :state),
-         {:ok, state} <- Validation.enum(state, ["state"], @states),
+         {:ok, state} <- Validation.enum(state, "/state", @states),
          {:ok, generation} <- Validation.required(data, :generation),
-         {:ok, generation} <- Validation.non_negative_integer(generation, ["generation"]),
+         {:ok, generation} <- Validation.non_negative_integer(generation, "/generation"),
          {:ok, changed_at} <- Validation.required(data, :changed_at),
-         {:ok, changed_at} <- Validation.timestamp(changed_at, ["changed_at"]),
-         {:ok, reason} <- Validation.optional_string(Map.get(data, :reason), ["reason"], max: 2_048),
-         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), ["extensions"]) do
+         {:ok, changed_at} <- Validation.timestamp(changed_at, "/changed_at"),
+         {:ok, reason} <- Validation.optional_string(Map.get(data, :reason), "/reason", max: 2_048),
+         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
          subject_id: subject_id,
@@ -78,13 +78,13 @@ defmodule WotexContinuum.Lifecycle do
           {:ok, t()} | {:error, Error.t()}
   def transition(%__MODULE__{} = lifecycle, next_state, changed_at, options \\ []) do
     with :ok <- Validation.options(options, [:reason]),
-         {:ok, %__MODULE__{} = lifecycle} <- new(lifecycle),
-         {:ok, next_state} <- Validation.enum(next_state, ["state"], @states),
+         {:ok, %__MODULE__{} = lifecycle} <- from_map(lifecycle),
+         {:ok, next_state} <- Validation.enum(next_state, "/state", @states),
          :ok <- allowed_transition(lifecycle.state, next_state),
-         {:ok, changed_at} <- Validation.timestamp(changed_at, ["changed_at"]),
+         {:ok, changed_at} <- Validation.timestamp(changed_at, "/changed_at"),
          :ok <- chronological(lifecycle.changed_at, changed_at),
          {:ok, reason} <-
-           Validation.optional_string(Keyword.get(options, :reason), ["reason"], max: 2_048) do
+           Validation.optional_string(Keyword.get(options, :reason), "/reason", max: 2_048) do
       {:ok,
        %__MODULE__{
          lifecycle
@@ -95,6 +95,10 @@ defmodule WotexContinuum.Lifecycle do
        }}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
@@ -108,10 +112,16 @@ defmodule WotexContinuum.Lifecycle do
   end
 
   defp invalid_transition(from, to) do
-    Error.error(:invalid_transition, ["state"], "lifecycle transition is not allowed", %{
-      from: from,
-      to: to
-    })
+    Error.error(
+      :invalid_transition,
+      :validation,
+      "/state",
+      "lifecycle transition is not allowed",
+      %{
+        from: from,
+        to: to
+      }
+    )
   end
 
   defp allowed_transition(from, to) do
@@ -122,7 +132,12 @@ defmodule WotexContinuum.Lifecycle do
     if Validation.compare_timestamps(previous, next) in [:lt, :eq],
       do: :ok,
       else:
-        Error.error(:invalid_time_order, ["changed_at"], "transition time precedes current state")
+        Error.error(
+          :invalid_time_order,
+          :validation,
+          "/changed_at",
+          "transition time precedes current state"
+        )
   end
 
   defp maybe_put(map, _, nil), do: map

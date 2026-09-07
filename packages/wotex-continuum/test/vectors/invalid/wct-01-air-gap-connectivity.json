@@ -1,6 +1,6 @@
 {
   "description": "air-gapped mode rejects upstream connectivity",
-  "expected": {"code": "invalid_mode", "path": ["connectivity"]},
+  "expected": {"code": "invalid_mode", "phase": "validation", "path": "/connectivity"},
   "input": {
     "kind": "mode",
     "schema_version": "1.0.0",

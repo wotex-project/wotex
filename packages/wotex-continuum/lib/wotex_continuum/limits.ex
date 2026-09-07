@@ -75,12 +75,12 @@ defmodule WotexContinuum.Limits do
   def preflight(source, %__MODULE__{} = limits) when is_binary(source) do
     cond do
       byte_size(source) > limits.max_bytes ->
-        Error.error(:limit_exceeded, [], "JSON source exceeds the byte limit", %{
+        Error.error(:limit_exceeded, :limits, "/", "JSON source exceeds the byte limit", %{
           limit: limits.max_bytes
         })
 
       not String.valid?(source) ->
-        Error.error(:invalid_utf8, [], "JSON source is not valid UTF-8")
+        Error.error(:invalid_utf8, :limits, "/", "JSON source is not valid UTF-8")
 
       true ->
         scan_depth(source, limits)
@@ -90,19 +90,27 @@ defmodule WotexContinuum.Limits do
   @doc false
   @spec normalize_decoded(term(), t()) :: {:ok, term()} | {:error, Error.t()}
   def normalize_decoded(value, %__MODULE__{} = limits) do
-    normalize_decoded(value, limits, [], 0)
+    normalize_decoded(value, limits, Error.root(), 0)
   end
 
   defp validate(%__MODULE__{} = limits) do
     fields = Map.from_struct(limits)
 
     case Enum.find(fields, fn {_, value} -> not (is_integer(value) and value > 0) end) do
-      nil -> {:ok, limits}
-      {key, _} -> Error.error(:invalid_limit, [Atom.to_string(key)], "limit must be positive")
+      nil ->
+        {:ok, limits}
+
+      {key, _} ->
+        Error.error(
+          :invalid_limit,
+          :limits,
+          Error.child("/", Atom.to_string(key)),
+          "limit must be positive"
+        )
     end
   end
 
-  defp invalid_options, do: Error.error(:invalid_type, [], "expected limit options")
+  defp invalid_options, do: Error.error(:invalid_type, :limits, "/", "expected limit options")
 
   defp scan_depth(source, limits) do
     result =
@@ -137,7 +145,7 @@ defmodule WotexContinuum.Limits do
 
     if next_size > limits.max_string_bytes do
       {:halt,
-       Error.error(:limit_exceeded, [], "JSON string exceeds the byte limit", %{
+       Error.error(:limit_exceeded, :limits, "/", "JSON string exceeds the byte limit", %{
          limit: limits.max_string_bytes
        })}
     else
@@ -154,7 +162,7 @@ defmodule WotexContinuum.Limits do
 
     if next_depth > limits.max_depth do
       {:halt,
-       Error.error(:limit_exceeded, [], "JSON exceeds the nesting limit", %{
+       Error.error(:limit_exceeded, :limits, "/", "JSON exceeds the nesting limit", %{
          limit: limits.max_depth
        })}
     else
@@ -171,12 +179,12 @@ defmodule WotexContinuum.Limits do
   end
 
   defp normalize_decoded(_, limits, path, depth) when depth > limits.max_depth do
-    Error.error(:limit_exceeded, path, "decoded value exceeds the nesting limit")
+    Error.error(:limit_exceeded, :limits, path, "decoded value exceeds the nesting limit")
   end
 
   defp normalize_decoded(%Jason.OrderedObject{values: pairs}, limits, path, depth) do
     if length(pairs) > limits.max_collection_size do
-      Error.error(:limit_exceeded, path, "object exceeds the member limit")
+      Error.error(:limit_exceeded, :limits, path, "object exceeds the member limit")
     else
       Enum.reduce_while(pairs, {:ok, %{}}, &normalize_object_pair(&1, &2, limits, path, depth))
     end
@@ -184,7 +192,7 @@ defmodule WotexContinuum.Limits do
 
   defp normalize_decoded(value, limits, path, depth) when is_list(value) do
     if length(value) > limits.max_collection_size do
-      Error.error(:limit_exceeded, path, "array exceeds the member limit")
+      Error.error(:limit_exceeded, :limits, path, "array exceeds the member limit")
     else
       value
       |> Enum.with_index()
@@ -196,7 +204,7 @@ defmodule WotexContinuum.Limits do
   defp normalize_decoded(value, limits, path, _) when is_binary(value) do
     if byte_size(value) <= limits.max_string_bytes,
       do: {:ok, :binary.copy(value)},
-      else: Error.error(:limit_exceeded, path, "string exceeds the byte limit")
+      else: Error.error(:limit_exceeded, :limits, path, "string exceeds the byte limit")
   end
 
   defp normalize_decoded(value, _, _, _), do: {:ok, value}
@@ -204,11 +212,17 @@ defmodule WotexContinuum.Limits do
   defp normalize_object_pair({key, value}, {:ok, acc}, limits, path, depth) do
     cond do
       Map.has_key?(acc, key) ->
-        {:halt, Error.error(:duplicate_field, child_path(path, key), "JSON member is duplicated")}
+        {:halt,
+         Error.error(:duplicate_field, :decode, Error.child(path, key), "JSON member is duplicated")}
 
       byte_size(key) > limits.max_string_bytes ->
         {:halt,
-         Error.error(:limit_exceeded, child_path(path, key), "object key exceeds the byte limit")}
+         Error.error(
+           :limit_exceeded,
+           :limits,
+           Error.child(path, key),
+           "object key exceeds the byte limit"
+         )}
 
       true ->
         normalize_object_value(key, value, acc, {limits, path, depth})
@@ -216,14 +230,14 @@ defmodule WotexContinuum.Limits do
   end
 
   defp normalize_object_value(key, value, acc, {limits, path, depth}) do
-    case normalize_decoded(value, limits, child_path(path, key), depth + 1) do
+    case normalize_decoded(value, limits, Error.child(path, key), depth + 1) do
       {:ok, normalized} -> {:cont, {:ok, Map.put(acc, key, normalized)}}
       {:error, _} = error -> {:halt, error}
     end
   end
 
   defp normalize_list_item({item, index}, {:ok, acc}, limits, path, depth) do
-    case normalize_decoded(item, limits, child_path(path, index), depth + 1) do
+    case normalize_decoded(item, limits, Error.child(path, index), depth + 1) do
       {:ok, normalized} -> {:cont, {:ok, [normalized | acc]}}
       {:error, _} = error -> {:halt, error}
     end
@@ -231,6 +245,4 @@ defmodule WotexContinuum.Limits do
 
   defp reverse_normalized({:ok, reversed}), do: {:ok, Enum.reverse(reversed)}
   defp reverse_normalized({:error, _} = error), do: error
-
-  defp child_path(path, segment), do: Enum.concat(path, [segment])
 end

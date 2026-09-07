@@ -109,6 +109,6 @@ evidence; the library never exports, deletes, or verifies state.
 
 ## 6. Compatibility and evidence
 
-Compatibility follows WCT.01 section 8. Normative JSON Schema is
+Compatibility follows WCT.01 section 9. Normative JSON Schema is
 `priv/schemas/wct-03.schema.json`; executable vectors use the `wct-03-` prefix
 under `test/vectors/`.

@@ -104,7 +104,9 @@ Recommendation, and do not imply certification.
 ## Errors
 
 Untrusted maps and JSON return `{:error, %WotexContinuum.Error{}}`. Errors carry
-a stable code, wire path, message, and structured details. Expected input
+a stable code, a phase, an RFC 6901 JSON Pointer path such as
+`"/extensions/urn:example:payload/0"` (or `nil` when no wire location applies),
+a message, and structured details. Expected input
 failures do not raise. Constructors validate identity, time, limits, modes,
 capabilities, lifecycle relationships, and nested values before returning an
 accepted struct.

@@ -32,12 +32,15 @@ defmodule WotexContinuum.Schema do
   @spec fetch(String.t()) :: {:ok, binary()} | {:error, Error.t()}
   def fetch(id) when is_binary(id) do
     case Map.fetch(@schemas, id) do
-      {:ok, source} -> {:ok, source}
-      :error -> Error.error(:unknown_schema, [], "schema ID is not registered", %{id: id})
+      {:ok, source} ->
+        {:ok, source}
+
+      :error ->
+        Error.error(:unknown_schema, :validation, "/", "schema ID is not registered", %{id: id})
     end
   end
 
-  def fetch(_), do: Error.error(:invalid_type, [], "expected a schema ID string")
+  def fetch(_), do: Error.error(:invalid_type, :validation, "/", "expected a schema ID string")
 
   @doc "Returns schema version, byte count, and lowercase SHA-256 identity."
   @spec info(String.t()) :: {:ok, map()} | {:error, Error.t()}

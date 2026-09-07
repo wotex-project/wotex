@@ -1,6 +1,6 @@
 {
   "description": "failed Action result requires failure details",
-  "expected": {"code": "invalid_result_state", "path": ["status"]},
+  "expected": {"code": "invalid_result_state", "phase": "validation", "path": "/status"},
   "input": {
     "kind": "action_result",
     "schema_version": "1.0.0",

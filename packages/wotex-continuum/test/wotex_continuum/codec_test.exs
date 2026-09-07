@@ -9,7 +9,7 @@ defmodule WotexContinuum.CodecTest do
     for bytes <- [<<255>>, <<0xC0, 0xAF>>, <<0xED, 0xA0, 0x80>>, <<0xF0, 0x90>>] do
       extensions = %{"urn:example:payload" => [%{bytes => true}]}
       input = %{deployment: :saas, connectivity: :connected, extensions: extensions}
-      path = ["extensions", "urn:example:payload", 0]
+      path = "/extensions/urn:example:payload/0"
       assert {:error, %Error{code: :invalid_utf8, path: ^path}} = Mode.new(input)
 
       {:ok, valid} = Mode.new(Map.delete(input, :extensions))
@@ -17,10 +17,10 @@ defmodule WotexContinuum.CodecTest do
       assert {:error, %Error{code: :invalid_utf8, path: ^path}} = Codec.encode(forged)
       assert {:error, %Error{code: :invalid_utf8, path: ^path}} = Codec.canonicalize(forged)
 
-      assert {:error, %Error{code: :invalid_utf8, path: []}} =
+      assert {:error, %Error{code: :invalid_utf8, path: "/"}} =
                Mode.new(Map.put(input, bytes, true))
 
-      assert {:error, %Error{code: :invalid_utf8, path: ["details", "nested"]}} =
+      assert {:error, %Error{code: :invalid_utf8, path: "/details/nested"}} =
                WotexContinuum.Failure.new(%{
                  code: "rejected",
                  message: "invalid input",
@@ -57,7 +57,8 @@ defmodule WotexContinuum.CodecTest do
     source =
       ~s({"kind":"mode","kind":"mode","schema_version":"1.0.0","deployment":"saas","connectivity":"connected","extensions":{}})
 
-    assert {:error, %Error{code: :duplicate_field, path: ["kind"]}} = Codec.decode(source)
+    assert {:error, %Error{code: :duplicate_field, phase: :decode, path: "/kind"}} =
+             Codec.decode(source)
   end
 
   test "rejects malformed JSON and non-object roots" do

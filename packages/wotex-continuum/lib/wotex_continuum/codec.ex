@@ -13,7 +13,7 @@ defmodule WotexContinuum.Codec do
   def encode(value, options \\ []) do
     with :ok <- Validation.options(options, [:canonical]),
          {:ok, canonical?} <-
-           Validation.boolean(Keyword.get(options, :canonical, false), ["canonical"]),
+           Validation.boolean(Keyword.get(options, :canonical, false), "/canonical"),
          {:ok, map} <- WotexContinuum.to_map(value) do
       if canonical?, do: CanonicalJSON.encode(map), else: encode_json(map)
     end
@@ -43,7 +43,7 @@ defmodule WotexContinuum.Codec do
         {:ok, encoded}
 
       {:error, reason} ->
-        Error.error(:encode_error, [], "JSON encoding failed", %{reason: inspect(reason)})
+        Error.error(:encode_error, :decode, "/", "JSON encoding failed", %{reason: inspect(reason)})
     end
   end
 
@@ -53,16 +53,18 @@ defmodule WotexContinuum.Codec do
         {:ok, decoded}
 
       {:error, %Jason.DecodeError{position: position}} ->
-        Error.error(:invalid_json, [], "JSON decoding failed", %{position: position})
+        Error.error(:invalid_json, :decode, "/", "JSON decoding failed", %{position: position})
     end
   end
 
   defp to_binary(source) do
     {:ok, IO.iodata_to_binary(source)}
   rescue
-    ArgumentError -> Error.error(:invalid_type, [], "expected JSON iodata")
+    ArgumentError -> Error.error(:invalid_type, :decode, "/", "expected JSON iodata")
   end
 
   defp top_level_object(value) when is_map(value), do: :ok
-  defp top_level_object(_), do: Error.error(:invalid_type, [], "expected a top-level object")
+
+  defp top_level_object(_),
+    do: Error.error(:invalid_type, :decode, "/", "expected a top-level object")
 end

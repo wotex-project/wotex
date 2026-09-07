@@ -1,6 +1,6 @@
 {
   "description": "Thing references are absolute IRIs",
-  "expected": {"code": "invalid_iri", "path": ["thing_id"]},
+  "expected": {"code": "invalid_iri", "phase": "validation", "path": "/thing_id"},
   "input": {
     "kind": "action_intent",
     "schema_version": "1.0.0",

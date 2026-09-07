@@ -15,19 +15,23 @@ defmodule WotexContinuum.CapabilityRequirement do
   @type t :: %__MODULE__{id: String.t(), version_requirement: String.t()}
 
   @doc "Constructs a capability requirement."
-  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
-  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
+  @spec from_map(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def from_map(%__MODULE__{} = value), do: from_map(Map.from_struct(value))
 
-  def new(data) do
+  def from_map(data) do
     with {:ok, data} <- Validation.normalize(data, [:id, :version_requirement]),
          {:ok, id} <- Validation.required(data, :id),
-         {:ok, id} <- Validation.string(id, ["id"]),
+         {:ok, id} <- Validation.string(id, "/id"),
          {:ok, requirement} <- Validation.required(data, :version_requirement),
          {:ok, requirement} <-
-           Validation.version_requirement(requirement, ["version_requirement"]) do
+           Validation.version_requirement(requirement, "/version_requirement") do
       {:ok, %__MODULE__{id: id, version_requirement: requirement}}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @doc "Returns the wire map."
   @spec to_map(t()) :: map()

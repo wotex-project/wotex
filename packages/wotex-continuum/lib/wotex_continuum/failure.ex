@@ -15,19 +15,23 @@ defmodule WotexContinuum.Failure do
   @type t :: %__MODULE__{code: String.t(), message: String.t(), details: term()}
 
   @doc "Constructs portable failure details."
-  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
-  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
+  @spec from_map(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def from_map(%__MODULE__{} = value), do: from_map(Map.from_struct(value))
 
-  def new(data) do
+  def from_map(data) do
     with {:ok, data} <- Validation.normalize(data, [:code, :message, :details]),
          {:ok, code} <- Validation.required(data, :code),
-         {:ok, code} <- Validation.string(code, ["code"], max: 256),
+         {:ok, code} <- Validation.string(code, "/code", max: 256),
          {:ok, message} <- Validation.required(data, :message),
-         {:ok, message} <- Validation.string(message, ["message"], max: 4_096),
-         {:ok, details} <- Validation.json_value(Map.get(data, :details, %{}), ["details"]) do
+         {:ok, message} <- Validation.string(message, "/message", max: 4_096),
+         {:ok, details} <- Validation.json_value(Map.get(data, :details, %{}), "/details") do
       {:ok, %__MODULE__{code: code, message: message, details: details}}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @doc "Returns the wire map."
   @spec to_map(t()) :: map()

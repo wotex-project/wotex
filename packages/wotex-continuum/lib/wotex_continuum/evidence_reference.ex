@@ -10,7 +10,7 @@ defmodule WotexContinuum.EvidenceReference do
 
   @behaviour WotexContinuum.Value
 
-  alias WotexContinuum.{Contract, Validation}
+  alias WotexContinuum.{Contract, Error, Validation}
 
   @kind "evidence_reference"
 
@@ -30,23 +30,23 @@ defmodule WotexContinuum.EvidenceReference do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
+  def from_map(%__MODULE__{} = value), do: from_map(Map.from_struct(value))
 
-  def new(data) do
+  def from_map(data) do
     fields = [:evidence_id, :uri, :digest, :media_type, :captured_at, :extensions]
 
     with {:ok, data} <- Contract.normalize(Contract.envelope(data, @kind), fields, @kind),
          {:ok, evidence_id} <- Validation.required(data, :evidence_id),
-         {:ok, evidence_id} <- Validation.string(evidence_id, ["evidence_id"]),
+         {:ok, evidence_id} <- Validation.string(evidence_id, "/evidence_id"),
          {:ok, uri} <- Validation.required(data, :uri),
-         {:ok, uri} <- Validation.iri(uri, ["uri"]),
+         {:ok, uri} <- Validation.iri(uri, "/uri"),
          {:ok, digest} <- Validation.required(data, :digest),
-         {:ok, digest} <- Validation.digest(digest, ["digest"]),
+         {:ok, digest} <- Validation.digest(digest, "/digest"),
          {:ok, media_type} <- Validation.required(data, :media_type),
-         {:ok, media_type} <- Validation.string(media_type, ["media_type"], max: 512),
+         {:ok, media_type} <- Validation.string(media_type, "/media_type", max: 512),
          {:ok, captured_at} <- Validation.required(data, :captured_at),
-         {:ok, captured_at} <- Validation.timestamp(captured_at, ["captured_at"]),
-         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), ["extensions"]) do
+         {:ok, captured_at} <- Validation.timestamp(captured_at, "/captured_at"),
+         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
          evidence_id: evidence_id,
@@ -58,6 +58,10 @@ defmodule WotexContinuum.EvidenceReference do
        }}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do

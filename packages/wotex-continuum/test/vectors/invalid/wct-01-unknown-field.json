@@ -1,6 +1,6 @@
 {
   "description": "unknown members are rejected",
-  "expected": {"code": "unknown_field", "path": ["ambient_policy"]},
+  "expected": {"code": "unknown_field", "phase": "validation", "path": "/ambient_policy"},
   "input": {
     "kind": "capability",
     "schema_version": "1.0.0",

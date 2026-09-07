@@ -10,20 +10,21 @@ defmodule WotexContinuum.Validation do
   def options(options, allowed) when is_list(options) and is_list(allowed) do
     cond do
       not Keyword.keyword?(options) ->
-        Error.error(:invalid_options, [], "expected a unique keyword list")
+        Error.error(:invalid_options, :validation, nil, "expected a unique keyword list")
 
       duplicate_options?(options) ->
-        Error.error(:invalid_options, [], "option keys must be unique")
+        Error.error(:invalid_options, :validation, nil, "option keys must be unique")
 
       unknown = Enum.find(Keyword.keys(options), &(&1 not in allowed)) ->
-        Error.error(:unknown_field, [Atom.to_string(unknown)], "option is not defined")
+        Error.error(:unknown_field, :validation, nil, "option is not defined", %{option: unknown})
 
       true ->
         :ok
     end
   end
 
-  def options(_, _), do: Error.error(:invalid_options, [], "expected a unique keyword list")
+  def options(_, _),
+    do: Error.error(:invalid_options, :validation, nil, "expected a unique keyword list")
 
   @spec struct_input(struct(), [atom()]) :: map()
   def struct_input(%_{} = value, nil_means_absent \\ []) do
@@ -34,7 +35,7 @@ defmodule WotexContinuum.Validation do
 
   @spec normalize(map(), [atom()]) :: {:ok, map()} | {:error, Error.t()}
   def normalize(%module{} = _, _) when is_atom(module) do
-    Error.error(:invalid_type, [], "expected a plain object")
+    Error.error(:invalid_type, :validation, "/", "expected a plain object")
   end
 
   def normalize(data, allowed) when is_map(data) do
@@ -49,7 +50,8 @@ defmodule WotexContinuum.Validation do
           {:halt,
            Error.error(
              :duplicate_field,
-             [key_to_path(key)],
+             :validation,
+             Error.child("/", key_to_path(key)),
              "field appears in both atom and string form"
            )}
 
@@ -59,17 +61,25 @@ defmodule WotexContinuum.Validation do
     end)
   end
 
-  def normalize(_, _), do: Error.error(:invalid_type, [], "expected an object")
+  def normalize(_, _), do: Error.error(:invalid_type, :validation, "/", "expected an object")
 
   @spec required(map(), atom()) :: {:ok, term()} | {:error, Error.t()}
   def required(data, key) do
     case Map.fetch(data, key) do
-      {:ok, value} -> {:ok, value}
-      :error -> Error.error(:required, [Atom.to_string(key)], "field is required")
+      {:ok, value} ->
+        {:ok, value}
+
+      :error ->
+        Error.error(
+          :required,
+          :validation,
+          Error.child("/", Atom.to_string(key)),
+          "field is required"
+        )
     end
   end
 
-  @spec string(term(), [Error.segment()], keyword()) :: {:ok, String.t()} | {:error, Error.t()}
+  @spec string(term(), String.t(), keyword()) :: {:ok, String.t()} | {:error, Error.t()}
   def string(value, path, opts \\ [])
 
   def string(value, path, opts) when is_binary(value) do
@@ -78,114 +88,133 @@ defmodule WotexContinuum.Validation do
     size = byte_size(value)
 
     cond do
-      not String.valid?(value) -> Error.error(:invalid_utf8, path, "expected valid UTF-8")
-      size < min -> Error.error(:too_short, path, "string is shorter than the allowed minimum")
-      size > max -> Error.error(:too_long, path, "string exceeds the allowed maximum")
-      true -> {:ok, value}
+      not String.valid?(value) ->
+        Error.error(:invalid_utf8, :validation, path, "expected valid UTF-8")
+
+      size < min ->
+        Error.error(:too_short, :validation, path, "string is shorter than the allowed minimum")
+
+      size > max ->
+        Error.error(:too_long, :validation, path, "string exceeds the allowed maximum")
+
+      true ->
+        {:ok, value}
     end
   end
 
-  def string(_, path, _), do: Error.error(:invalid_type, path, "expected a string")
+  def string(_, path, _), do: Error.error(:invalid_type, :validation, path, "expected a string")
 
-  @spec optional_string(term(), [Error.segment()], keyword()) ::
+  @spec optional_string(term(), String.t(), keyword()) ::
           {:ok, String.t() | nil} | {:error, Error.t()}
   def optional_string(nil, _, _), do: {:ok, nil}
   def optional_string(value, path, opts), do: string(value, path, opts)
 
-  @spec iri(term(), [Error.segment()]) :: {:ok, String.t()} | {:error, Error.t()}
+  @spec iri(term(), String.t()) :: {:ok, String.t()} | {:error, Error.t()}
   def iri(value, path) do
     with {:ok, value} <- string(value, path),
          %URI{scheme: scheme} when is_binary(scheme) and scheme != "" <- URI.parse(value) do
       {:ok, value}
     else
       {:error, _} = error -> error
-      _ -> Error.error(:invalid_iri, path, "expected an absolute IRI")
+      _ -> Error.error(:invalid_iri, :validation, path, "expected an absolute IRI")
     end
   end
 
-  @spec digest(term(), [Error.segment()]) :: {:ok, String.t()} | {:error, Error.t()}
+  @spec digest(term(), String.t()) :: {:ok, String.t()} | {:error, Error.t()}
   def digest(value, path) do
     with {:ok, value} <- string(value, path, max: 128),
          true <- Regex.match?(@digest, value) do
       {:ok, value}
     else
       {:error, _} = error -> error
-      false -> Error.error(:invalid_digest, path, "expected a lowercase sha256 digest")
+      false -> Error.error(:invalid_digest, :validation, path, "expected a lowercase sha256 digest")
     end
   end
 
-  @spec semver(term(), [Error.segment()]) :: {:ok, String.t()} | {:error, Error.t()}
+  @spec semver(term(), String.t()) :: {:ok, String.t()} | {:error, Error.t()}
   def semver(value, path) do
     with {:ok, value} <- string(value, path, max: 128),
          {:ok, _} <- Version.parse(value) do
       {:ok, value}
     else
       {:error, %Error{}} = error -> error
-      :error -> Error.error(:invalid_version, path, "expected a semantic version")
+      :error -> Error.error(:invalid_version, :validation, path, "expected a semantic version")
     end
   end
 
-  @spec version_requirement(term(), [Error.segment()]) ::
+  @spec version_requirement(term(), String.t()) ::
           {:ok, String.t()} | {:error, Error.t()}
   def version_requirement(value, path) do
     with {:ok, value} <- string(value, path, max: 256),
          {:ok, _} <- Version.parse_requirement(value) do
       {:ok, value}
     else
-      {:error, %Error{}} = error -> error
-      :error -> Error.error(:invalid_version_requirement, path, "expected a version requirement")
+      {:error, %Error{}} = error ->
+        error
+
+      :error ->
+        Error.error(
+          :invalid_version_requirement,
+          :validation,
+          path,
+          "expected a version requirement"
+        )
     end
   end
 
-  @spec timestamp(term(), [Error.segment()]) :: {:ok, String.t()} | {:error, Error.t()}
+  @spec timestamp(term(), String.t()) :: {:ok, String.t()} | {:error, Error.t()}
   def timestamp(%DateTime{} = value, _), do: {:ok, normalize_datetime(value)}
 
   def timestamp(value, path) when is_binary(value) do
     case DateTime.from_iso8601(value) do
-      {:ok, datetime, _} -> {:ok, normalize_datetime(datetime)}
-      {:error, _} -> Error.error(:invalid_timestamp, path, "expected an RFC 3339 timestamp")
+      {:ok, datetime, _} ->
+        {:ok, normalize_datetime(datetime)}
+
+      {:error, _} ->
+        Error.error(:invalid_timestamp, :validation, path, "expected an RFC 3339 timestamp")
     end
   end
 
-  def timestamp(_, path), do: Error.error(:invalid_type, path, "expected a timestamp string")
+  def timestamp(_, path),
+    do: Error.error(:invalid_type, :validation, path, "expected a timestamp string")
 
-  @spec enum(term(), [Error.segment()], [atom()]) :: {:ok, atom()} | {:error, Error.t()}
+  @spec enum(term(), String.t(), [atom()]) :: {:ok, atom()} | {:error, Error.t()}
   def enum(value, path, allowed) when is_atom(value) do
     if value in allowed,
       do: {:ok, value},
-      else: Error.error(:invalid_enum, path, "value is not in the allowed set")
+      else: Error.error(:invalid_enum, :validation, path, "value is not in the allowed set")
   end
 
   def enum(value, path, allowed) when is_binary(value) do
     case Enum.find(allowed, &(Atom.to_string(&1) == value)) do
-      nil -> Error.error(:invalid_enum, path, "value is not in the allowed set")
+      nil -> Error.error(:invalid_enum, :validation, path, "value is not in the allowed set")
       atom -> {:ok, atom}
     end
   end
 
-  def enum(_, path, _), do: Error.error(:invalid_type, path, "expected an enum string")
+  def enum(_, path, _), do: Error.error(:invalid_type, :validation, path, "expected an enum string")
 
-  @spec boolean(term(), [Error.segment()]) :: {:ok, boolean()} | {:error, Error.t()}
+  @spec boolean(term(), String.t()) :: {:ok, boolean()} | {:error, Error.t()}
   def boolean(value, _) when is_boolean(value), do: {:ok, value}
-  def boolean(_, path), do: Error.error(:invalid_type, path, "expected a boolean")
+  def boolean(_, path), do: Error.error(:invalid_type, :validation, path, "expected a boolean")
 
-  @spec non_negative_integer(term(), [Error.segment()]) ::
+  @spec non_negative_integer(term(), String.t()) ::
           {:ok, non_neg_integer()} | {:error, Error.t()}
   def non_negative_integer(value, _) when is_integer(value) and value >= 0, do: {:ok, value}
 
   def non_negative_integer(_, path) do
-    Error.error(:invalid_integer, path, "expected a non-negative integer")
+    Error.error(:invalid_integer, :validation, path, "expected a non-negative integer")
   end
 
-  @spec positive_integer(term(), [Error.segment()]) ::
+  @spec positive_integer(term(), String.t()) ::
           {:ok, pos_integer()} | {:error, Error.t()}
   def positive_integer(value, _) when is_integer(value) and value > 0, do: {:ok, value}
 
   def positive_integer(_, path) do
-    Error.error(:invalid_integer, path, "expected a positive integer")
+    Error.error(:invalid_integer, :validation, path, "expected a positive integer")
   end
 
-  @spec json_value(term(), [Error.segment()]) :: {:ok, term()} | {:error, Error.t()}
+  @spec json_value(term(), String.t()) :: {:ok, term()} | {:error, Error.t()}
   def json_value(value, path), do: json_value(value, path, 0)
 
   defp json_value(value, _, _)
@@ -195,13 +224,13 @@ defmodule WotexContinuum.Validation do
   defp json_value(value, path, _) when is_binary(value) do
     if String.valid?(value),
       do: {:ok, value},
-      else: Error.error(:invalid_utf8, path, "expected valid UTF-8")
+      else: Error.error(:invalid_utf8, :validation, path, "expected valid UTF-8")
   end
 
   defp json_value(value, path, _) when is_float(value) do
     if finite_float?(value),
       do: {:ok, value},
-      else: Error.error(:invalid_number, path, "expected a finite JSON number")
+      else: Error.error(:invalid_number, :validation, path, "expected a finite JSON number")
   end
 
   defp json_value(value, path, depth) when is_list(value) and depth < 64 do
@@ -213,31 +242,34 @@ defmodule WotexContinuum.Validation do
   end
 
   defp json_value(value, path, depth) when (is_list(value) or is_map(value)) and depth >= 64 do
-    Error.error(:limit_exceeded, path, "JSON value exceeds the nesting limit")
+    Error.error(:limit_exceeded, :validation, path, "JSON value exceeds the nesting limit")
   end
 
   defp json_value(_, path, _),
-    do: Error.error(:invalid_json_value, path, "expected a JSON value")
+    do: Error.error(:invalid_json_value, :validation, path, "expected a JSON value")
 
   defp normalize_json_member({key, item}, {:ok, acc}, path, depth) when is_binary(key) do
     with true <- String.valid?(key),
-         {:ok, normalized} <- json_value(item, child_path(path, key), depth + 1) do
+         {:ok, normalized} <- json_value(item, Error.child(path, key), depth + 1) do
       {:cont, {:ok, Map.put(acc, key, normalized)}}
     else
-      false -> {:halt, Error.error(:invalid_utf8, path, "expected valid UTF-8 object key")}
-      {:error, _} = error -> {:halt, error}
+      false ->
+        {:halt, Error.error(:invalid_utf8, :validation, path, "expected valid UTF-8 object key")}
+
+      {:error, _} = error ->
+        {:halt, error}
     end
   end
 
   defp normalize_json_member({_, _}, _, path, _) do
-    {:halt, Error.error(:invalid_key, path, "JSON object keys must be strings")}
+    {:halt, Error.error(:invalid_key, :validation, path, "JSON object keys must be strings")}
   end
 
-  @spec extensions(term(), [Error.segment()]) :: {:ok, map()} | {:error, Error.t()}
+  @spec extensions(term(), String.t()) :: {:ok, map()} | {:error, Error.t()}
   def extensions(value, path) when is_map(value) and not is_struct(value) do
     Enum.reduce_while(value, {:ok, %{}}, fn {key, item}, {:ok, acc} ->
       with {:ok, key} <- iri(key, path),
-           {:ok, item} <- json_value(item, child_path(path, key)) do
+           {:ok, item} <- json_value(item, Error.child(path, key)) do
         {:cont, {:ok, Map.put(acc, key, item)}}
       else
         {:error, _} = error -> {:halt, error}
@@ -245,9 +277,10 @@ defmodule WotexContinuum.Validation do
     end)
   end
 
-  def extensions(_, path), do: Error.error(:invalid_type, path, "expected an extension object")
+  def extensions(_, path),
+    do: Error.error(:invalid_type, :validation, path, "expected an extension object")
 
-  @spec string_list(term(), [Error.segment()], keyword()) ::
+  @spec string_list(term(), String.t(), keyword()) ::
           {:ok, [String.t()]} | {:error, Error.t()}
   def string_list(value, path, opts \\ []) do
     with {:ok, list} <- list(value, path),
@@ -258,7 +291,7 @@ defmodule WotexContinuum.Validation do
     end
   end
 
-  @spec enum_list(term(), [Error.segment()], [atom()], keyword()) ::
+  @spec enum_list(term(), String.t(), [atom()], keyword()) ::
           {:ok, [atom()]} | {:error, Error.t()}
   def enum_list(value, path, allowed, opts \\ []) do
     with {:ok, list} <- list(value, path),
@@ -269,7 +302,7 @@ defmodule WotexContinuum.Validation do
     end
   end
 
-  @spec structs(term(), [Error.segment()], module()) ::
+  @spec structs(term(), String.t(), module()) ::
           {:ok, [struct()]} | {:error, Error.t()}
   def structs(value, path, module) do
     with {:ok, list} <- list(value, path) do
@@ -278,40 +311,40 @@ defmodule WotexContinuum.Validation do
   end
 
   defp construct_struct(item, item_path, module) do
-    case module.new(item) do
+    case module.from_map(item) do
       {:ok, struct} -> {:ok, struct}
-      {:error, %Error{} = error} -> {:error, prepend_path(error, item_path)}
+      {:error, %Error{} = error} -> {:error, Error.prefix(error, item_path)}
     end
   end
 
-  @spec nested(term(), [Error.segment()], module()) :: {:ok, struct()} | {:error, Error.t()}
+  @spec nested(term(), String.t(), module()) :: {:ok, struct()} | {:error, Error.t()}
   def nested(value, path, module) do
-    case module.new(value) do
+    case module.from_map(value) do
       {:ok, struct} -> {:ok, struct}
-      {:error, %Error{} = error} -> {:error, prepend_path(error, path)}
+      {:error, %Error{} = error} -> {:error, Error.prefix(error, path)}
     end
   end
 
-  @spec list(term(), [Error.segment()]) :: {:ok, list()} | {:error, Error.t()}
+  @spec list(term(), String.t()) :: {:ok, list()} | {:error, Error.t()}
   def list(value, _) when is_list(value), do: {:ok, value}
-  def list(_, path), do: Error.error(:invalid_type, path, "expected an array")
+  def list(_, path), do: Error.error(:invalid_type, :validation, path, "expected an array")
 
-  @spec uniqueness(list(), [Error.segment()]) :: :ok | {:error, Error.t()}
+  @spec uniqueness(list(), String.t()) :: :ok | {:error, Error.t()}
   def uniqueness(values, path) do
     if length(values) == MapSet.size(MapSet.new(values)),
       do: :ok,
-      else: Error.error(:duplicate_value, path, "array members must be unique")
+      else: Error.error(:duplicate_value, :validation, path, "array members must be unique")
   end
 
-  @spec map_list(list(), [Error.segment()], (term(), [Error.segment()] ->
-                                               {:ok, term()} | {:error, Error.t()})) ::
+  @spec map_list(list(), String.t(), (term(), String.t() ->
+                                        {:ok, term()} | {:error, Error.t()})) ::
           {:ok, list()} | {:error, Error.t()}
   def map_list(values, path, mapper) do
     result =
       values
       |> Stream.with_index()
       |> Enum.reduce_while({:ok, []}, fn {value, index}, {:ok, acc} ->
-        case mapper.(value, child_path(path, index)) do
+        case mapper.(value, Error.child(path, index)) do
           {:ok, normalized} -> {:cont, {:ok, [normalized | acc]}}
           {:error, _} = error -> {:halt, error}
         end
@@ -349,25 +382,34 @@ defmodule WotexContinuum.Validation do
   defp normalize_key(key, allowed, _) when is_atom(key) do
     if key in allowed,
       do: {:ok, key},
-      else: Error.error(:unknown_field, [Atom.to_string(key)], "field is not defined")
+      else:
+        Error.error(
+          :unknown_field,
+          :validation,
+          Error.child("/", Atom.to_string(key)),
+          "field is not defined"
+        )
   end
 
   defp normalize_key(key, _, by_string) when is_binary(key) do
     if String.valid?(key) do
       known_string_key(key, by_string)
     else
-      Error.error(:invalid_utf8, [], "expected valid UTF-8 object key")
+      Error.error(:invalid_utf8, :validation, "/", "expected valid UTF-8 object key")
     end
   end
 
   defp normalize_key(_, _, _) do
-    Error.error(:invalid_key, [], "object keys must be strings or known atoms")
+    Error.error(:invalid_key, :validation, "/", "object keys must be strings or known atoms")
   end
 
   defp known_string_key(key, by_string) do
     case Map.fetch(by_string, key) do
-      {:ok, atom} -> {:ok, atom}
-      :error -> Error.error(:unknown_field, [key], "field is not defined")
+      {:ok, atom} ->
+        {:ok, atom}
+
+      :error ->
+        Error.error(:unknown_field, :validation, Error.child("/", key), "field is not defined")
     end
   end
 
@@ -378,7 +420,7 @@ defmodule WotexContinuum.Validation do
   defp minimum_length(values, path, minimum) do
     if length(values) >= minimum,
       do: :ok,
-      else: Error.error(:too_short, path, "array is shorter than the allowed minimum")
+      else: Error.error(:too_short, :validation, path, "array is shorter than the allowed minimum")
   end
 
   defp duplicate_options?(options) do
@@ -396,10 +438,4 @@ defmodule WotexContinuum.Validation do
     <<_::1, exponent::11, _::52>> = <<value::float-64>>
     exponent != 0x7FF
   end
-
-  defp prepend_path(%Error{} = error, path) do
-    %{error | path: path ++ error.path}
-  end
-
-  defp child_path(path, segment), do: Enum.concat(path, [segment])
 end

@@ -59,25 +59,30 @@ defmodule WotexContinuum.ActionResult do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{output_present?: false, output: nil} = value) do
+  def from_map(%__MODULE__{output_present?: false, output: nil} = value) do
     value
     |> Validation.struct_input([:error, :started_at, :completed_at])
     |> Map.drop([:output, :output_present?])
-    |> new()
+    |> from_map()
   end
 
-  def new(%__MODULE__{output_present?: true} = value) do
+  def from_map(%__MODULE__{output_present?: true} = value) do
     value
     |> Validation.struct_input([:error, :started_at, :completed_at])
     |> Map.delete(:output_present?)
-    |> new()
+    |> from_map()
   end
 
-  def new(%__MODULE__{}) do
-    Error.error(:invalid_result_state, ["output"], "Action result fields do not match status")
+  def from_map(%__MODULE__{}) do
+    Error.error(
+      :invalid_result_state,
+      :validation,
+      "/output",
+      "Action result fields do not match status"
+    )
   end
 
-  def new(data) do
+  def from_map(data) do
     fields = [
       :result_id,
       :intent_id,
@@ -93,11 +98,11 @@ defmodule WotexContinuum.ActionResult do
 
     with {:ok, data} <- Contract.normalize(Contract.envelope(data, @kind), fields, @kind),
          {:ok, result_id} <- Validation.required(data, :result_id),
-         {:ok, result_id} <- Validation.string(result_id, ["result_id"]),
+         {:ok, result_id} <- Validation.string(result_id, "/result_id"),
          {:ok, intent_id} <- Validation.required(data, :intent_id),
-         {:ok, intent_id} <- Validation.string(intent_id, ["intent_id"]),
+         {:ok, intent_id} <- Validation.string(intent_id, "/intent_id"),
          {:ok, status} <- Validation.required(data, :status),
-         {:ok, status} <- Validation.enum(status, ["status"], @statuses),
+         {:ok, status} <- Validation.enum(status, "/status", @statuses),
          {:ok, output, output_present?} <- optional_json(data, :output),
          {:ok, failure} <- optional_nested(data, :error, Failure),
          {:ok, started_at} <- optional_timestamp(data, :started_at),
@@ -105,10 +110,10 @@ defmodule WotexContinuum.ActionResult do
          :ok <- validate_status(status, output_present?, failure, completed_at),
          :ok <- validate_time_order(started_at, completed_at),
          {:ok, evidence} <-
-           Validation.structs(Map.get(data, :evidence, []), ["evidence"], EvidenceReference),
+           Validation.structs(Map.get(data, :evidence, []), "/evidence", EvidenceReference),
          {:ok, context} <- Validation.required(data, :context),
-         {:ok, context} <- Validation.nested(context, ["context"], ExecutionContext),
-         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), ["extensions"]) do
+         {:ok, context} <- Validation.nested(context, "/context", ExecutionContext),
+         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
          result_id: result_id,
@@ -125,6 +130,10 @@ defmodule WotexContinuum.ActionResult do
        }}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
@@ -143,7 +152,7 @@ defmodule WotexContinuum.ActionResult do
 
   defp optional_json(data, key) do
     if Map.has_key?(data, key) do
-      case Validation.json_value(Map.fetch!(data, key), [Atom.to_string(key)]) do
+      case Validation.json_value(Map.fetch!(data, key), Error.child("/", Atom.to_string(key))) do
         {:ok, value} -> {:ok, value, true}
         {:error, _} = error -> error
       end
@@ -154,17 +163,37 @@ defmodule WotexContinuum.ActionResult do
 
   defp optional_nested(data, key, module) do
     case Map.fetch(data, key) do
-      :error -> {:ok, nil}
-      {:ok, nil} -> Error.error(:invalid_type, [Atom.to_string(key)], "expected an object")
-      {:ok, value} -> Validation.nested(value, [Atom.to_string(key)], module)
+      :error ->
+        {:ok, nil}
+
+      {:ok, nil} ->
+        Error.error(
+          :invalid_type,
+          :validation,
+          Error.child("/", Atom.to_string(key)),
+          "expected an object"
+        )
+
+      {:ok, value} ->
+        Validation.nested(value, Error.child("/", Atom.to_string(key)), module)
     end
   end
 
   defp optional_timestamp(data, key) do
     case Map.fetch(data, key) do
-      :error -> {:ok, nil}
-      {:ok, nil} -> Error.error(:invalid_type, [Atom.to_string(key)], "expected a timestamp")
-      {:ok, value} -> Validation.timestamp(value, [Atom.to_string(key)])
+      :error ->
+        {:ok, nil}
+
+      {:ok, nil} ->
+        Error.error(
+          :invalid_type,
+          :validation,
+          Error.child("/", Atom.to_string(key)),
+          "expected a timestamp"
+        )
+
+      {:ok, value} ->
+        Validation.timestamp(value, Error.child("/", Atom.to_string(key)))
     end
   end
 
@@ -179,9 +208,15 @@ defmodule WotexContinuum.ActionResult do
     do: :ok
 
   defp validate_status(status, _, _, _) do
-    Error.error(:invalid_result_state, ["status"], "result fields do not match the status", %{
-      status: status
-    })
+    Error.error(
+      :invalid_result_state,
+      :validation,
+      "/status",
+      "result fields do not match the status",
+      %{
+        status: status
+      }
+    )
   end
 
   defp validate_time_order(nil, _), do: :ok
@@ -190,7 +225,8 @@ defmodule WotexContinuum.ActionResult do
   defp validate_time_order(started_at, completed_at) do
     if Validation.compare_timestamps(started_at, completed_at) in [:lt, :eq],
       do: :ok,
-      else: Error.error(:invalid_time_order, ["completed_at"], "completion precedes start")
+      else:
+        Error.error(:invalid_time_order, :validation, "/completed_at", "completion precedes start")
   end
 
   defp maybe_put_output(map, %__MODULE__{output_present?: true, output: output}),

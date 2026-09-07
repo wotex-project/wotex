@@ -13,7 +13,7 @@ defmodule WotexContinuum.Compatibility do
 
   @behaviour WotexContinuum.Value
 
-  alias WotexContinuum.{Capability, CapabilityRequirement, Contract, Validation}
+  alias WotexContinuum.{Capability, CapabilityRequirement, Contract, Error, Validation}
 
   @kind "compatibility"
 
@@ -40,23 +40,23 @@ defmodule WotexContinuum.Compatibility do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
+  def from_map(%__MODULE__{} = value), do: from_map(Map.from_struct(value))
 
-  def new(data) do
+  def from_map(data) do
     fields = [:schema_requirement, :required_capabilities, :extensions]
 
     with {:ok, data} <- Contract.normalize(Contract.envelope(data, @kind), fields, @kind),
          {:ok, requirement} <- Validation.required(data, :schema_requirement),
          {:ok, requirement} <-
-           Validation.version_requirement(requirement, ["schema_requirement"]),
+           Validation.version_requirement(requirement, "/schema_requirement"),
          {:ok, capabilities} <-
            Validation.structs(
              Map.get(data, :required_capabilities, []),
-             ["required_capabilities"],
+             "/required_capabilities",
              CapabilityRequirement
            ),
          :ok <- unique_requirements(capabilities),
-         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), ["extensions"]) do
+         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
          schema_requirement: requirement,
@@ -125,6 +125,10 @@ defmodule WotexContinuum.Compatibility do
     end
   end
 
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
+
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do
     Contract.base(@kind)
@@ -138,7 +142,7 @@ defmodule WotexContinuum.Compatibility do
 
   defp unique_requirements(requirements) do
     ids = Enum.map(requirements, & &1.id)
-    Validation.uniqueness(ids, ["required_capabilities"])
+    Validation.uniqueness(ids, "/required_capabilities")
   end
 
   defp matches_requirement?(version, requirement) do

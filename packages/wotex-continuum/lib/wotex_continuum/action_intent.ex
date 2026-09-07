@@ -13,7 +13,7 @@ defmodule WotexContinuum.ActionIntent do
 
   @behaviour WotexContinuum.Value
 
-  alias WotexContinuum.{Contract, EvidenceReference, ExecutionContext, Validation}
+  alias WotexContinuum.{Contract, Error, EvidenceReference, ExecutionContext, Validation}
 
   @kind "action_intent"
 
@@ -56,9 +56,9 @@ defmodule WotexContinuum.ActionIntent do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: new(Validation.struct_input(value, [:requested_by]))
+  def from_map(%__MODULE__{} = value), do: from_map(Validation.struct_input(value, [:requested_by]))
 
-  def new(data) do
+  def from_map(data) do
     fields = [
       :intent_id,
       :thing_id,
@@ -74,24 +74,24 @@ defmodule WotexContinuum.ActionIntent do
 
     with {:ok, data} <- Contract.normalize(Contract.envelope(data, @kind), fields, @kind),
          {:ok, intent_id} <- Validation.required(data, :intent_id),
-         {:ok, intent_id} <- Validation.string(intent_id, ["intent_id"]),
+         {:ok, intent_id} <- Validation.string(intent_id, "/intent_id"),
          {:ok, thing_id} <- Validation.required(data, :thing_id),
-         {:ok, thing_id} <- Validation.iri(thing_id, ["thing_id"]),
+         {:ok, thing_id} <- Validation.iri(thing_id, "/thing_id"),
          {:ok, action_name} <- Validation.required(data, :action_name),
-         {:ok, action_name} <- Validation.string(action_name, ["action_name"]),
+         {:ok, action_name} <- Validation.string(action_name, "/action_name"),
          {:ok, input} <- Validation.required(data, :input),
-         {:ok, input} <- Validation.json_value(input, ["input"]),
+         {:ok, input} <- Validation.json_value(input, "/input"),
          {:ok, requested_at} <- Validation.required(data, :requested_at),
-         {:ok, requested_at} <- Validation.timestamp(requested_at, ["requested_at"]),
+         {:ok, requested_at} <- Validation.timestamp(requested_at, "/requested_at"),
          {:ok, idempotency_key} <- Validation.required(data, :idempotency_key),
-         {:ok, idempotency_key} <- Validation.string(idempotency_key, ["idempotency_key"]),
+         {:ok, idempotency_key} <- Validation.string(idempotency_key, "/idempotency_key"),
          {:ok, requested_by} <-
-           Validation.optional_string(Map.get(data, :requested_by), ["requested_by"], max: 512),
+           Validation.optional_string(Map.get(data, :requested_by), "/requested_by", max: 512),
          {:ok, evidence} <-
-           Validation.structs(Map.get(data, :evidence, []), ["evidence"], EvidenceReference),
+           Validation.structs(Map.get(data, :evidence, []), "/evidence", EvidenceReference),
          {:ok, context} <- Validation.required(data, :context),
-         {:ok, context} <- Validation.nested(context, ["context"], ExecutionContext),
-         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), ["extensions"]) do
+         {:ok, context} <- Validation.nested(context, "/context", ExecutionContext),
+         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
          intent_id: intent_id,
@@ -107,6 +107,10 @@ defmodule WotexContinuum.ActionIntent do
        }}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do

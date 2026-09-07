@@ -16,20 +16,24 @@ defmodule WotexContinuum.Artifact do
   @type t :: %__MODULE__{name: String.t(), version: String.t(), digest: String.t()}
 
   @doc "Constructs a validated artifact identity."
-  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
-  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
+  @spec from_map(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def from_map(%__MODULE__{} = value), do: from_map(Map.from_struct(value))
 
-  def new(data) do
+  def from_map(data) do
     with {:ok, data} <- Validation.normalize(data, [:name, :version, :digest]),
          {:ok, name} <- Validation.required(data, :name),
-         {:ok, name} <- Validation.string(name, ["name"]),
+         {:ok, name} <- Validation.string(name, "/name"),
          {:ok, version} <- Validation.required(data, :version),
-         {:ok, version} <- Validation.semver(version, ["version"]),
+         {:ok, version} <- Validation.semver(version, "/version"),
          {:ok, digest} <- Validation.required(data, :digest),
-         {:ok, digest} <- Validation.digest(digest, ["digest"]) do
+         {:ok, digest} <- Validation.digest(digest, "/digest") do
       {:ok, %__MODULE__{name: name, version: version, digest: digest}}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @doc "Returns the wire map."
   @spec to_map(t()) :: map()

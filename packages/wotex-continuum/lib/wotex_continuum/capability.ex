@@ -12,7 +12,7 @@ defmodule WotexContinuum.Capability do
 
   @behaviour WotexContinuum.Value
 
-  alias WotexContinuum.{Contract, Mode, Validation}
+  alias WotexContinuum.{Contract, Error, Mode, Validation}
 
   @kind "capability"
   @networks [:none, :local, :external]
@@ -37,26 +37,26 @@ defmodule WotexContinuum.Capability do
   def kind, do: @kind
 
   @impl WotexContinuum.Value
-  def new(%__MODULE__{} = value), do: new(Map.from_struct(value))
+  def from_map(%__MODULE__{} = value), do: from_map(Map.from_struct(value))
 
-  def new(data) do
+  def from_map(data) do
     fields = [:id, :version, :operations, :modes, :network, :degradation, :extensions]
 
     with {:ok, data} <- Contract.normalize(Contract.envelope(data, @kind), fields, @kind),
          {:ok, id} <- Validation.required(data, :id),
-         {:ok, id} <- Validation.string(id, ["id"]),
+         {:ok, id} <- Validation.string(id, "/id"),
          {:ok, version} <- Validation.required(data, :version),
-         {:ok, version} <- Validation.semver(version, ["version"]),
+         {:ok, version} <- Validation.semver(version, "/version"),
          {:ok, operations} <- Validation.required(data, :operations),
-         {:ok, operations} <- Validation.string_list(operations, ["operations"]),
+         {:ok, operations} <- Validation.string_list(operations, "/operations"),
          {:ok, modes} <- Validation.required(data, :modes),
-         {:ok, modes} <- Validation.enum_list(modes, ["modes"], Mode.deployments(), min: 1),
+         {:ok, modes} <- Validation.enum_list(modes, "/modes", Mode.deployments(), min: 1),
          {:ok, network} <- Validation.required(data, :network),
-         {:ok, network} <- Validation.enum(network, ["network"], @networks),
+         {:ok, network} <- Validation.enum(network, "/network", @networks),
          {:ok, degradation} <- Validation.required(data, :degradation),
          {:ok, degradation} <-
-           Validation.enum(degradation, ["degradation"], @degradations),
-         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), ["extensions"]) do
+           Validation.enum(degradation, "/degradation", @degradations),
+         {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
          id: id,
@@ -69,6 +69,10 @@ defmodule WotexContinuum.Capability do
        }}
     end
   end
+
+  @doc "Alias of `from_map/1` retained for the 0.1 constructor API."
+  @spec new(map() | t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(data), do: from_map(data)
 
   @impl WotexContinuum.Value
   def to_map(%__MODULE__{} = value) do

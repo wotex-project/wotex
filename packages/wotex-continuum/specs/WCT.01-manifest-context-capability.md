@@ -70,7 +70,37 @@ emits no insignificant whitespace, and uses the JSON scalar representation of
 the package's supported JSON encoder. This is the WCT project-canonical form;
 it is not a claim of RFC 8785 conformance.
 
-## 4. `continuum_manifest`
+Every value module exposes `from_map/1` as the documented constructor for
+map-shaped input and `to_map/1` for the wire projection. `new/1` remains an
+alias of `from_map/1`; the name `new/1` carries keyword configuration only in
+`WotexContinuum.Limits`. A constructor accepts an already accepted struct and
+revalidates it rather than trusting it.
+
+## 4. Error contract
+
+An expected failure returns `{:error, %WotexContinuum.Error{}}`. The struct
+carries:
+
+| Field | Meaning |
+|---|---|
+| `code` | stable atom naming the failure |
+| `phase` | stage that produced it: `decode`, `validation`, `encode`, `lifecycle`, `compatibility`, or `limits` |
+| `path` | RFC 6901 JSON Pointer string rooted at `/`, or `nil` when no wire location applies |
+| `message` | human-readable text, not a matching interface |
+| `details` | structured, JSON-compatible context |
+
+A path addresses the exact wire location, so `/extensions/urn:example:payload/0`
+names list element `0` of extension key `urn:example:payload`. Segments escape
+`~` as `~0` and `/` as `~1`, as
+[RFC 6901](https://www.rfc-editor.org/rfc/rfc6901) requires. Nested values are
+re-rooted under their parent pointer, so a failure inside a nested value keeps
+the complete path from the top-level value. `nil` is used only where no wire
+member exists, such as an unknown or duplicated keyword option.
+
+Consumers MUST match on `code`, `phase`, and `path`. Message text and the
+membership of `details` MAY change in a compatible release.
+
+## 5. `continuum_manifest`
 
 | Member | Type | Rules |
 |---|---|---|
@@ -85,7 +115,7 @@ An artifact digest is lowercase hexadecimal and covers the immutable artifact
 identified by the manifest. The manifest does not establish that the artifact
 is trusted; a consumer host verifies digest, origin, signature, and policy.
 
-## 5. `compatibility`
+## 6. `compatibility`
 
 | Member | Type | Rules |
 |---|---|---|
@@ -99,7 +129,7 @@ A capability requirement contains a non-empty `id` and semantic-version
 and its declared version MUST match. Evaluation returns all mismatches and has
 no activation side effect.
 
-## 6. `execution_context`
+## 7. `execution_context`
 
 | Member | Type | Rules |
 |---|---|---|
@@ -113,7 +143,7 @@ Context describes the environment in which another value was observed or
 produced. It MUST NOT contain credentials and MUST NOT be interpreted as proof
 of identity, authority, or time correctness.
 
-## 7. `capability`
+## 8. `capability`
 
 | Member | Type | Rules |
 |---|---|---|
@@ -129,7 +159,7 @@ An operation name is a declared mechanical ability, never authorization. A
 consumer host MUST evaluate policy and the current Thing Description before
 using an operation that interacts with a Thing.
 
-## 8. Compatibility
+## 9. Compatibility
 
 Adding an optional extension entry is compatible. Adding an enum member or
 optional field requires a schema-minor release and a vector. Removing or
@@ -137,7 +167,7 @@ renaming a member, changing canonical bytes, tightening previously accepted
 input, or changing a field's meaning is incompatible and requires a new schema
 major version.
 
-## 9. Executable evidence
+## 10. Executable evidence
 
 Normative JSON Schema: `priv/schemas/wct-01.schema.json`.
 

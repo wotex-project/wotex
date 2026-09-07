@@ -57,35 +57,44 @@ defmodule WotexContinuum do
   def from_map(data) when is_map(data) do
     with {:ok, kind} <- fetch_discriminator(data),
          {:ok, module} <- module_for_kind(kind) do
-      module.new(data)
+      module.from_map(data)
     end
   end
 
-  def from_map(_), do: WotexContinuum.Error.error(:invalid_type, [], "expected an object")
+  def from_map(_),
+    do: WotexContinuum.Error.error(:invalid_type, :validation, "/", "expected an object")
 
   @doc "Returns the string-keyed wire map for a registered value."
   @spec to_map(struct()) :: {:ok, map()} | {:error, WotexContinuum.Error.t()}
   def to_map(%module{} = value) when module in @modules do
-    with {:ok, validated} <- module.new(value) do
+    with {:ok, validated} <- module.from_map(value) do
       {:ok, module.to_map(validated)}
     end
   end
 
   def to_map(_) do
-    WotexContinuum.Error.error(:unsupported_value, [], "expected a registered continuum value")
+    WotexContinuum.Error.error(
+      :unsupported_value,
+      :validation,
+      "/",
+      "expected a registered continuum value"
+    )
   end
 
   @doc false
   @spec module_for_kind(String.t()) :: {:ok, module()} | {:error, WotexContinuum.Error.t()}
   def module_for_kind(kind) when is_binary(kind) do
     case Map.fetch(@modules_by_kind, kind) do
-      {:ok, module} -> {:ok, module}
-      :error -> WotexContinuum.Error.error(:unknown_kind, ["kind"], "unknown continuum kind")
+      {:ok, module} ->
+        {:ok, module}
+
+      :error ->
+        WotexContinuum.Error.error(:unknown_kind, :validation, "/kind", "unknown continuum kind")
     end
   end
 
   def module_for_kind(_) do
-    WotexContinuum.Error.error(:invalid_type, ["kind"], "expected a string")
+    WotexContinuum.Error.error(:invalid_type, :validation, "/kind", "expected a string")
   end
 
   defp fetch_discriminator(data) do
@@ -94,7 +103,7 @@ defmodule WotexContinuum do
 
     case {string_value, atom_value} do
       {:missing, :missing} ->
-        WotexContinuum.Error.error(:required, ["kind"], "field is required")
+        WotexContinuum.Error.error(:required, :validation, "/kind", "field is required")
 
       {value, :missing} ->
         validate_discriminator(value)
@@ -103,13 +112,18 @@ defmodule WotexContinuum do
         validate_discriminator(value)
 
       {_, _} ->
-        WotexContinuum.Error.error(:duplicate_field, ["kind"], "field appears more than once")
+        WotexContinuum.Error.error(
+          :duplicate_field,
+          :validation,
+          "/kind",
+          "field appears more than once"
+        )
     end
   end
 
   defp validate_discriminator(value) when is_binary(value), do: {:ok, value}
 
   defp validate_discriminator(_) do
-    WotexContinuum.Error.error(:invalid_type, ["kind"], "expected a string")
+    WotexContinuum.Error.error(:invalid_type, :validation, "/kind", "expected a string")
   end
 end

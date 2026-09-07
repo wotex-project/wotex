@@ -34,11 +34,11 @@ exit records remain claims represented as data, not proof of effects.
 | Owner | Public values/functions and required behavior |
 | --- | --- |
 | `WotexContinuum` | `schema_version/0`, `kinds/0`, `from_map/1`, `to_map/1`, `module_for_kind/1`; registered kinds and exact envelope version. Top-level `to_map/1` reconstructs values before returning success. |
-| WCT.01 | Manifest, Compatibility, ExecutionContext, Capability; nested Artifact and CapabilityRequirement. `new/1`, `to_map/1`; top-level values expose `kind/0`. Compatibility `evaluate/3` returns `:ok` or every mismatch. Manifest `compatible_with?/3` delegates the check; it does not admit an artifact. |
+| WCT.01 | Manifest, Compatibility, ExecutionContext, Capability; nested Artifact and CapabilityRequirement. `from_map/1` with the `new/1` alias, `to_map/1`; top-level values expose `kind/0`. Compatibility `evaluate/3` returns `:ok` or every mismatch. Manifest `compatible_with?/3` delegates the check; it does not admit an artifact. |
 | WCT.02 | ObservationProposal, ActionIntent, ActionResult, EvidenceReference, Delivery; nested Failure. Constructors/maps preserve null-versus-absence rules and status coherence. `ThingReference.validate/2` checks a value's Thing identifier against a supplied validated Thing Description, not identity trust. |
-| WCT.03 | Mode, Lifecycle, Degradation, ExitReceipt with `new/1`, `to_map/1`, `kind/0`; Mode `deployments/0`, `connectivity_states/0`; Lifecycle `states/0`, `transition/4`. No deployment or teardown side effect. |
+| WCT.03 | Mode, Lifecycle, Degradation, ExitReceipt with `from_map/1` and its `new/1` alias, `to_map/1`, `kind/0`; Mode `deployments/0`, `connectivity_states/0`; Lifecycle `states/0`, `transition/4`. No deployment or teardown side effect. |
 | Codec | `decode/2` admits bounded JSON iodata, `encode/2` validates registered values, `canonicalize/1` requests canonical encoding. Canonical bytes are project-defined, not RFC 8785. |
-| Limits, Schema, Error | `Limits.defaults/0`, `new/1`; `Schema.ids/0`, `fetch/1`, `info/1`; errors expose stable `code`, path-segment list and structured details. Schema identity/digest is not runtime schema-conformance proof. |
+| Limits, Schema, Error | `Limits.defaults/0`, `new/1`; `Schema.ids/0`, `fetch/1`, `info/1`; errors expose stable `code`, `phase`, an RFC 6901 JSON Pointer `path` (or `nil`) and structured details. Schema identity/digest is not runtime schema-conformance proof. |
 
 Constructors accept documented native maps and reconstruct their own structs;
 unknown envelope fields, atom/string collisions and unknown or duplicate

@@ -63,6 +63,7 @@ defmodule WotexContinuum.VectorTest do
 
       assert {:error, %Error{} = error} = Codec.decode(source), path
       assert Atom.to_string(error.code) == vector["expected"]["code"], path
+      assert Atom.to_string(error.phase) == vector["expected"]["phase"], path
       assert error.path == vector["expected"]["path"], path
     end
   end
