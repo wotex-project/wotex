@@ -13,9 +13,9 @@
     {:doctor, "mix doctor --summary"},
     {:dialyzer, "mix dialyzer"},
     {:ex_doc, "mix docs --warnings-as-errors"},
-    {:boundary, "bin/check-boundary"},
+    {:boundary, "elixir bin/check_boundary.exs"},
     {:package, "env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"},
-    {:archive, "bin/check-archive"},
-    {:application_free, "bin/check-application-free"}
+    {:archive, "mix run --no-start bin/check_archive.exs"},
+    {:application_free, "mix run --no-start bin/check_application_free.exs"}
   ]
 ]
