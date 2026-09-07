@@ -365,6 +365,9 @@ defmodule Wotex.Lab.LoopbackTest do
     assert {:error, %Error{details: %{cause: %{code: :invalid_input_type}}}} =
              ConsumedThing.write_property(consumed, "target", "hot", context)
 
+    assert {:ok, %Result{status: :ok}} =
+             ConsumedThing.write_property(consumed, "label", "quiet", context)
+
     {:ok, selection} =
       FormSelector.select(td, :property, "temperature", :observeproperty, [profile])
 
@@ -457,5 +460,29 @@ defmodule Wotex.Lab.LoopbackTest do
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_credential_config}} =
              StaticRef.resolve(selection, nil, context, %{})
+  end
+
+  test "a bearer definition without a configured token is never satisfied", %{
+    lab: lab,
+    td: td,
+    profile: profile
+  } do
+    {:ok, host} = Lab.start_child(lab, :things, {Thing, id: :tokenless, td: td})
+
+    {:ok, consumed} =
+      ConsumedThing.new(td,
+        profiles: [profile],
+        transports: %{loopback: {Loopback, %{host: host}}},
+        credentials:
+          {StaticRef, %{references: %{"bearer_sc" => "r"}, lookup: fn _ -> {:ok, "anything"} end}}
+      )
+
+    assert {:error, %Error{details: %{cause: %{code: :unauthorized}}}} =
+             ConsumedThing.write_property(
+               consumed,
+               "target",
+               22.0,
+               Context.new!(request_id: "req-tokenless")
+             )
   end
 end

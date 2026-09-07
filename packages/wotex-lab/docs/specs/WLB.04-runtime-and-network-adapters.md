@@ -1,8 +1,10 @@
 # WLB.04: Runtime and real reference transports
 
-Specification version: 1.1.0. Contract: accepted. Source status: the loopback
-transport, simulated Thing host, NoSec and StaticRef credential adapters are
-implemented; Req/SSE and EMQTT lanes remain planned.
+Specification version: 1.2.0. Contract: accepted. Source status: the loopback
+transport, simulated Thing host, NoSec and StaticRef credential adapters, the
+Req client and its bounded SSE session are implemented and exercised over
+real sockets against a disposable local server; the EMQTT lane, TLS and the
+hosted destination policy remain planned.
 
 ## Public seams and chosen implementations
 
@@ -10,7 +12,7 @@ implemented; Req/SSE and EMQTT lanes remain planned.
 | --- | --- | --- |
 | Runtime transport | Loopback adapter; network binding transports | `c:Wotex.Runtime.Transport.request/3`, `c:Wotex.Runtime.Transport.subscribe/4`, `c:Wotex.Runtime.Transport.unsubscribe/4`, optional `c:Wotex.Runtime.Transport.decode_frame/3` |
 | Runtime credentials | NoSec and StaticRef | `c:Wotex.Runtime.Credentials.resolve/4` |
-| HTTP client | Req request adapter and bounded SSE session | `Wotex.Binding.HTTP.Client.request/3`, `subscribe/4`, `close/2` |
+| HTTP client | `Wotex.Lab.Adapters.HTTP.ReqClient` with `Adapters.HTTP.SSE.Session` and `Adapters.HTTP.SSE.Parser` | `c:Wotex.Binding.HTTP.Client.request/3`, `c:Wotex.Binding.HTTP.Client.subscribe/4`, `c:Wotex.Binding.HTTP.Client.close/2` |
 | MQTT client | EMQTT session adapter | `Wotex.Binding.MQTT.Client.publish/3`, `read/4`, `subscribe/4`, `unsubscribe/4` |
 | Inbound application | Explicit simulated Thing handlers | Public `Wotex.Runtime.ExposedThing` boundary |
 
@@ -50,7 +52,12 @@ and return shapes come from the pinned behaviour modules in the source index.
 
 ## HTTP / SSE
 
-Req performs finite requests with explicit connect/read/overall budgets, bounded
+`ReqClient` performs finite requests with the runtime deadline as the receive
+budget, an explicit connect budget, a response body collected chunk by chunk
+that halts past the request's `max_response_bytes`, and redirects and
+automatic retries disabled. The credential (`{:bearer, token}`,
+`{:basic, user, password}`, or a map of them from `StaticRef`) becomes one
+`authorization` field for that exchange and is never stored. Req performs finite requests with explicit connect/read/overall budgets, bounded
 response bytes and disabled implicit retries of effects. TLS peer/hostname
 verification is required except in an explicitly identified disposable TLS
 fixture. Redirects default to denied; approved destinations require audience
@@ -64,11 +71,16 @@ and redirect hop; reject private/link-local/metadata/multicast targets in the
 hosted profile, pin the admitted peer through connect and verify TLS identity.
 Simulated loopback endpoints are explicit local-profile allowlist entries.
 
-The SSE session MUST incrementally handle UTF-8 splits, LF/CRLF, comments,
+The SSE session MUST incrementally handle UTF-8 splits, LF/CRLF/CR, comments,
 multi-line data, empty events, IDs and retry fields, and emit complete
-`Wotex.Binding.HTTP.SSE.Event` values. It owns bounded buffered bytes and event
-queues. Oversize lines/events terminate with a typed error; a slow receiver
-must apply the declared pause-or-close policy, not grow an unbounded mailbox.
+`Wotex.Binding.HTTP.SSE.Event` values. `SSE.Parser` is that pure, bounded
+parser and `SSE.Session` is a process linked to the runtime subscription that
+issues the handshake with Req in asynchronous mode, feeds every chunk through
+the parser, and sends each event to the owner as a raw frame; the owner
+decodes through the binding's `decode_frame/3`. Oversize lines/events end the
+session with a typed reason, which the owner reports as `:transport_down`; a
+slow receiver is bounded by the runtime's `max_queue_length` policy rather
+than an unbounded mailbox.
 Handshake status/content type are validated before success. Failed opens and
 duplicate closes clean up exactly the identified connection. Closing with a
 transplanted config cannot close a different instance's connection.
@@ -111,7 +123,14 @@ reset identity are part of admission before a sample reaches Wotex Nx.
 
 ## Acceptance
 
-`test/wotex/lab/loopback_test.exs` covers the in-BEAM loopback lane: admission
+`test/wotex/lab/http_test.exs` covers the HTTP/SSE lane over a disposable
+Bandit server: read/write/Action with status mapping and bounds, oversized,
+slow (deadline), redirected, mistyped and unauthorized exchanges with retry
+classes and no credential leakage, incremental SSE parsing with CRLF, split
+UTF-8, comments, ids and retries, undecodable frames, server-side stream end,
+explicit stop closing the connection, oversized events ending the session,
+and a mistyped handshake failing the open. `test/wotex/lab/loopback_test.exs`
+covers the in-BEAM loopback lane: admission
 with identity and inert results, rejected writes leaving the handler counter
 unchanged, retry classification from the transported cause, just-in-time
 credentials that never appear in errors or process state, frame decoding in

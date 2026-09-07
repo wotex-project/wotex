@@ -9,7 +9,7 @@
   ],
   "source_mode": "synthetic",
   "input": "thing-description.json",
-  "input_sha256": "af4580c6d90b1a2ba62c12e7e0a45d174c5c52d09b8122339f7b99a49549f094",
+  "input_sha256": "59da3c2a80403a794cbc38bb8a4a91d0d671df481fa2dd441004b4f3c99d90ec",
   "side_effects": [],
   "license": "Apache-2.0"
 }

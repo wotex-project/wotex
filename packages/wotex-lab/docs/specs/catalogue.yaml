@@ -71,7 +71,7 @@ specifications:
       - "test/wotex/lab/window_anomaly_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.04
-    version: "1.1.0"
+    version: "1.2.0"
     path: docs/specs/WLB.04-runtime-and-network-adapters.md
     implementation_status: partial
     evidence_status: partial
@@ -99,8 +99,12 @@ specifications:
       - "Wotex.Lab.Adapters.Runtime.NoSec"
       - "Wotex.Lab.Adapters.Runtime.StaticRef"
       - "Wotex.Lab.Reference.Thing"
+      - "Wotex.Lab.Adapters.HTTP.ReqClient"
+      - "Wotex.Lab.Adapters.HTTP.SSE.Session"
+      - "Wotex.Lab.Adapters.HTTP.SSE.Parser"
     executable_evidence:
       - "test/wotex/lab/loopback_test.exs"
+      - "test/wotex/lab/http_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.05
     version: "1.1.0"

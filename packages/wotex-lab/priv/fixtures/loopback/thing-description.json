@@ -17,6 +17,10 @@
         {"href": "loopback://room/temperature", "op": ["readproperty", "observeproperty", "unobserveproperty"]}
       ]
     },
+    "label": {
+      "type": "string",
+      "forms": [{"href": "loopback://room/label"}]
+    },
     "target": {
       "type": "number",
       "unit": "Cel",

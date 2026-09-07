@@ -308,4 +308,28 @@ defmodule Wotex.Lab.DirectoryTest do
     {:ok, td} = ThingDescription.from_map(Map.merge(base, extra))
     td
   end
+
+  test "the repository callbacks report absence, conflict and collisions directly", %{
+    repository: repository,
+    service: service,
+    context: context
+  } do
+    name = {:global, {:ets_store, make_ref()}}
+    {:ok, named} = EtsRepository.start_link(name: name)
+    assert GenServer.whereis(name) == named
+
+    {:ok, %Mutation{entry: entry}} =
+      Directory.register(service, thing("urn:wotex:lab:direct:1"), context)
+
+    assert :not_found = EtsRepository.fetch(repository, "urn:none", nil)
+
+    assert {:error, :not_found} =
+             EtsRepository.replace(repository, %{entry | identifier: "urn:none"}, 1, nil)
+
+    assert {:error, :not_found} = EtsRepository.delete(repository, "urn:none", 1, nil)
+    assert {:error, :already_exists} = EtsRepository.insert(repository, entry, nil)
+    assert {:error, :conflict} = EtsRepository.replace(repository, entry, 2, nil)
+    assert {:error, :conflict} = EtsRepository.delete(repository, entry.identifier, 2, nil)
+    assert :ok = EtsRepository.delete(repository, entry.identifier, 1, nil)
+  end
 end
