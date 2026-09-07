@@ -39,4 +39,5 @@ specifications:
       - test/wotex/nx/observation_feature_schema_test.exs
       - test/wotex/nx/shape_property_test.exs
       - test/wotex/nx/window_encoder_test.exs
+      - test/wotex/nx/window_selection_property_test.exs
     compatibility_classification: Initial 0.1.0 API; tensor layout, dtype, mask, quality, temporal selection and output changes require explicit compatibility review.

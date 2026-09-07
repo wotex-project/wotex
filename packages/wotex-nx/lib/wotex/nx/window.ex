@@ -234,16 +234,15 @@ defmodule Wotex.Nx.Window do
 
   defp select(candidates, timestamp, :exact, max_age) do
     candidates
-    |> Enum.filter(&(&1.observed_at == timestamp))
+    |> Stream.filter(&(&1.observed_at == timestamp))
     |> Enum.min_by(& &1.id, fn -> nil end)
     |> enforce_age(timestamp, max_age)
   end
 
   defp select(candidates, timestamp, :latest, max_age) do
     candidates
-    |> Enum.filter(&(&1.observed_at <= timestamp))
-    |> Enum.sort_by(&{-&1.observed_at, &1.id})
-    |> List.first()
+    |> Stream.filter(&(&1.observed_at <= timestamp))
+    |> Enum.min_by(&{-&1.observed_at, &1.id}, fn -> nil end)
     |> enforce_age(timestamp, max_age)
   end
 

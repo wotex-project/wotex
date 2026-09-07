@@ -156,6 +156,7 @@ is the declared dependency cohort; broader backend/version claims require eviden
 | --- | --- |
 | Observation/feature/schema construction, identity, bounds and closed options | `test/wotex/nx/observation_feature_schema_test.exs` |
 | Window order/ties/age, units, fill masks, quality and encoded batch | `test/wotex/nx/window_encoder_test.exs` |
+| Linear latest/exact selection equivalence to a sorted reference, reversed input, empty windows and age boundaries | `test/wotex/nx/window_selection_property_test.exs` |
 | Conjunctive schema checks, revalidation, overflow and finite conversion | `test/wotex/nx/numerical_integrity_test.exs` |
 | Fixed-shape generation and preservation | `test/wotex/nx/shape_property_test.exs` |
 | Exact decoder tensor admission, all inert kinds and anomaly comparisons | `test/wotex/nx/decoder_test.exs` |
@@ -173,6 +174,11 @@ policies, normalization, limits, Nx batches, all output kinds, and negative
 authority/application-callback checks.
 
 ## Compatibility and stability
+
+Replacing per-row sorting with a linear minimum selection is a compatible
+optimization when selected observations, timestamp/ID tie-breaking, row order,
+missing markers and age rejection remain identical. It does not relax the
+declared admission work bound or imply a measured latency guarantee.
 
 Version `0.1.0` defines the initial public contract. Changes to batch layout,
 quality codes, tie-breaking, ports, or inert output fields are compatibility
