@@ -6,7 +6,7 @@
     {
       "id": "wotex",
       "package": "wotex",
-      "revision": "8cfda6a628b5a0efdcf489613301ec3d6eeb8c3f",
+      "revision": "bb042182d3cb16e7ad47cd204881ecca8388281d",
       "repository": "https://github.com/wotex-project/wotex",
       "catalogue": "docs/specs/catalogue.yaml",
       "catalogue_sha256": "f01b90ae472da4548a0469e6fe2b007977b7ab940dbb8ba32756dcfcb5406212",
@@ -62,7 +62,7 @@
     {
       "id": "wotex-runtime",
       "package": "wotex_runtime",
-      "revision": "7d81f0421f236f1373e132a9c41bad6e426e7aff",
+      "revision": "63dac84c63ae621b8c383d78811b4322c45b35e3",
       "repository": "https://github.com/wotex-project/wotex-runtime",
       "catalogue": "docs/specs/catalogue.yaml",
       "catalogue_sha256": "04cf4d7e55ec67244140b0fb00aa47ec6659e952f075468d88f8f4e43e58b582",
@@ -111,7 +111,7 @@
     {
       "id": "wotex-binding-http",
       "package": "wotex_binding_http",
-      "revision": "8b9a4330bb2a5449baf2e0d80a2c34355da25095",
+      "revision": "ceb76c68c493013ed29b89b3c0a5f5476f0c7fd7",
       "repository": "https://github.com/wotex-project/wotex-binding-http",
       "catalogue": "docs/specs/catalogue.yaml",
       "catalogue_sha256": "8a3b3d0c0b86a8b23eb1adc96b4fb8f4a513397697c84efe6936ade71023e02a",
@@ -160,7 +160,7 @@
     {
       "id": "wotex-binding-mqtt",
       "package": "wotex_binding_mqtt",
-      "revision": "e7ae6594686783a8c1bc88e3b72dff756b432d9f",
+      "revision": "3b6239301e87c6fd1218910dddae509ea765792b",
       "repository": "https://github.com/wotex-project/wotex-binding-mqtt",
       "catalogue": "docs/specs/catalogue.yaml",
       "catalogue_sha256": "03c62f3f7c73deb1a3534436763b5f57db7beb20cf5355244e275f1843e6ad33",
@@ -209,7 +209,7 @@
     {
       "id": "wotex-directory",
       "package": "wotex_directory",
-      "revision": "f8cd10404c3a1bc05090133b205a7195ee705041",
+      "revision": "1607f98c8d1bf43579464cf25c5d1a52baae4bf2",
       "repository": "https://github.com/wotex-project/wotex-directory",
       "catalogue": "docs/specs/catalogue.yaml",
       "catalogue_sha256": "bf057a26b013d805cdd9dfa2b1c05cc1c410147bfa01e725799163f78f073bcd",
@@ -242,7 +242,7 @@
     {
       "id": "wotex-continuum",
       "package": "wotex_continuum",
-      "revision": "361f9cebdd29f9a0c1314e8b625974483d1bbca6",
+      "revision": "d722d4d20ed13316e49d87fe0d0b8c286e920f68",
       "repository": "https://github.com/wotex-project/wotex-continuum",
       "catalogue": "docs/specs/catalogue.yaml",
       "catalogue_sha256": "68651dcfa4cbb2cd5df5fa74255dcef173b10d9c0af3010399105fdba3db6ac5",
@@ -290,7 +290,7 @@
     {
       "id": "wotex-conformance",
       "package": "wotex_conformance",
-      "revision": "0d7e9d9f9e6710ca2041bbcbf35802e97ea449f8",
+      "revision": "d7d2218bb5562cf21a73067473d42451691f4170",
       "repository": "https://github.com/wotex-project/wotex-conformance",
       "catalogue": "docs/specs/catalogue.yaml",
       "catalogue_sha256": "465b7b5553f9a461b6067904ca2924380a2d5c7f71614ef4b43bb04d65fc51ea",
@@ -324,7 +324,7 @@
     {
       "id": "wotex-nx",
       "package": "wotex_nx",
-      "revision": "9c93134d2db5cbcaf0d757b329f1ed6afbaa61da",
+      "revision": "6050169f2699ac5b3a9c69f61c3e6fb1353c1e94",
       "repository": "https://github.com/wotex-project/wotex-nx",
       "catalogue": "docs/specs/catalogue.yaml",
       "catalogue_sha256": "4db97c7d01b4af3a35cab98bd41a0027eba3e894f8212a957a4cf69b1a92e806",
@@ -368,7 +368,7 @@
       ],
       "ownership": "package-implements",
       "path": "lib/wotex/thing_description.ex",
-      "source_url": "https://github.com/wotex-project/wotex/blob/8cfda6a628b5a0efdcf489613301ec3d6eeb8c3f/lib/wotex/thing_description.ex",
+      "source_url": "https://github.com/wotex-project/wotex/blob/bb042182d3cb16e7ad47cd204881ecca8388281d/lib/wotex/thing_description.ex",
       "lab_spec": "WLB.03"
     },
     {
@@ -380,7 +380,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/runtime/credentials.ex",
-      "source_url": "https://github.com/wotex-project/wotex-runtime/blob/7d81f0421f236f1373e132a9c41bad6e426e7aff/lib/wotex/runtime/credentials.ex",
+      "source_url": "https://github.com/wotex-project/wotex-runtime/blob/63dac84c63ae621b8c383d78811b4322c45b35e3/lib/wotex/runtime/credentials.ex",
       "lab_spec": "WLB.04"
     },
     {
@@ -395,7 +395,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/runtime/transport.ex",
-      "source_url": "https://github.com/wotex-project/wotex-runtime/blob/7d81f0421f236f1373e132a9c41bad6e426e7aff/lib/wotex/runtime/transport.ex",
+      "source_url": "https://github.com/wotex-project/wotex-runtime/blob/63dac84c63ae621b8c383d78811b4322c45b35e3/lib/wotex/runtime/transport.ex",
       "lab_spec": "WLB.04"
     },
     {
@@ -409,7 +409,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/binding/http/client.ex",
-      "source_url": "https://github.com/wotex-project/wotex-binding-http/blob/8b9a4330bb2a5449baf2e0d80a2c34355da25095/lib/wotex/binding/http/client.ex",
+      "source_url": "https://github.com/wotex-project/wotex-binding-http/blob/ceb76c68c493013ed29b89b3c0a5f5476f0c7fd7/lib/wotex/binding/http/client.ex",
       "lab_spec": "WLB.04"
     },
     {
@@ -424,7 +424,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/binding/mqtt/client.ex",
-      "source_url": "https://github.com/wotex-project/wotex-binding-mqtt/blob/e7ae6594686783a8c1bc88e3b72dff756b432d9f/lib/wotex/binding/mqtt/client.ex",
+      "source_url": "https://github.com/wotex-project/wotex-binding-mqtt/blob/3b6239301e87c6fd1218910dddae509ea765792b/lib/wotex/binding/mqtt/client.ex",
       "lab_spec": "WLB.04"
     },
     {
@@ -441,7 +441,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/directory/repository.ex",
-      "source_url": "https://github.com/wotex-project/wotex-directory/blob/f8cd10404c3a1bc05090133b205a7195ee705041/lib/wotex/directory/repository.ex",
+      "source_url": "https://github.com/wotex-project/wotex-directory/blob/1607f98c8d1bf43579464cf25c5d1a52baae4bf2/lib/wotex/directory/repository.ex",
       "lab_spec": "WLB.05"
     },
     {
@@ -453,7 +453,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/directory/authorization.ex",
-      "source_url": "https://github.com/wotex-project/wotex-directory/blob/f8cd10404c3a1bc05090133b205a7195ee705041/lib/wotex/directory/authorization.ex",
+      "source_url": "https://github.com/wotex-project/wotex-directory/blob/1607f98c8d1bf43579464cf25c5d1a52baae4bf2/lib/wotex/directory/authorization.ex",
       "lab_spec": "WLB.05"
     },
     {
@@ -465,7 +465,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/directory/clock.ex",
-      "source_url": "https://github.com/wotex-project/wotex-directory/blob/f8cd10404c3a1bc05090133b205a7195ee705041/lib/wotex/directory/clock.ex",
+      "source_url": "https://github.com/wotex-project/wotex-directory/blob/1607f98c8d1bf43579464cf25c5d1a52baae4bf2/lib/wotex/directory/clock.ex",
       "lab_spec": "WLB.05"
     },
     {
@@ -477,7 +477,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/directory/identifier.ex",
-      "source_url": "https://github.com/wotex-project/wotex-directory/blob/f8cd10404c3a1bc05090133b205a7195ee705041/lib/wotex/directory/identifier.ex",
+      "source_url": "https://github.com/wotex-project/wotex-directory/blob/1607f98c8d1bf43579464cf25c5d1a52baae4bf2/lib/wotex/directory/identifier.ex",
       "lab_spec": "WLB.05"
     },
     {
@@ -489,7 +489,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/nx/unit_converter.ex",
-      "source_url": "https://github.com/wotex-project/wotex-nx/blob/9c93134d2db5cbcaf0d757b329f1ed6afbaa61da/lib/wotex/nx/unit_converter.ex",
+      "source_url": "https://github.com/wotex-project/wotex-nx/blob/6050169f2699ac5b3a9c69f61c3e6fb1353c1e94/lib/wotex/nx/unit_converter.ex",
       "lab_spec": "WLB.03"
     }
   ]

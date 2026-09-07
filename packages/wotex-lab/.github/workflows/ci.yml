@@ -39,31 +39,31 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex
-          ref: 8cfda6a628b5a0efdcf489613301ec3d6eeb8c3f
+          ref: bb042182d3cb16e7ad47cd204881ecca8388281d
           path: wotex
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-nx
-          ref: 9c93134d2db5cbcaf0d757b329f1ed6afbaa61da
+          ref: 6050169f2699ac5b3a9c69f61c3e6fb1353c1e94
           path: wotex-nx
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-runtime
-          ref: 7d81f0421f236f1373e132a9c41bad6e426e7aff
+          ref: 63dac84c63ae621b8c383d78811b4322c45b35e3
           path: wotex-runtime
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-directory
-          ref: f8cd10404c3a1bc05090133b205a7195ee705041
+          ref: 1607f98c8d1bf43579464cf25c5d1a52baae4bf2
           path: wotex-directory
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-binding-http
-          ref: 8b9a4330bb2a5449baf2e0d80a2c34355da25095
+          ref: ceb76c68c493013ed29b89b3c0a5f5476f0c7fd7
           path: wotex-binding-http
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -75,13 +75,13 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-conformance
-          ref: 0d7e9d9f9e6710ca2041bbcbf35802e97ea449f8
+          ref: d7d2218bb5562cf21a73067473d42451691f4170
           path: wotex-conformance
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-continuum
-          ref: 361f9cebdd29f9a0c1314e8b625974483d1bbca6
+          ref: d722d4d20ed13316e49d87fe0d0b8c286e920f68
           path: wotex-continuum
           persist-credentials: false
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1

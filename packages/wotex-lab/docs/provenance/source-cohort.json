@@ -20,17 +20,17 @@
     {
       "package": "wotex",
       "files": 38,
-      "sha256": "7a83366f6069fe2831e9b726d7bdc35aec41d00f1f5fe240a1a5dbfeae06b7ba"
+      "sha256": "728c9d420fd4276fe510108e9bfacd425a6b393f4280b48e2da844fbd592325c"
     },
     {
       "package": "wotex_runtime",
       "files": 36,
-      "sha256": "c2626395b99a0ba27e89f9cc876ad7356a6d5b2a1e327e158d2d3928387a0a1f"
+      "sha256": "b492cd5d9c8b1862a20b0860da8238e9395f73a5d70f6acd267f4b9ab9f9b02f"
     },
     {
       "package": "wotex_binding_http",
       "files": 34,
-      "sha256": "ffcd8bae7daee2767f277436456b11b00390a8301a4c49757358a8ff0fe2d350"
+      "sha256": "758d9c9a00c463f510eb6bf877bc639d3a820a45c925b8deb118f822796ab6f6"
     },
     {
       "package": "wotex_binding_mqtt",
@@ -45,7 +45,7 @@
     {
       "package": "wotex_continuum",
       "files": 84,
-      "sha256": "23286ebc33c03074ccc1fb1bb038b15d52a06c080592389924634be1c9e90478"
+      "sha256": "93463f4a996f5d627146c89fa0ea06f34c931cd0050418bddff4678ba5084989"
     },
     {
       "package": "wotex_conformance",
@@ -55,7 +55,7 @@
     {
       "package": "wotex_nx",
       "files": 38,
-      "sha256": "80a1da439e54cd9565c582072e5d2131a554a570e21de5f882e94530b44dde60"
+      "sha256": "297189e07a4d43f2f63e95233069f91a864c210d1e7d88ecce5675d488e55231"
     }
   ]
 }
