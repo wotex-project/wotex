@@ -233,13 +233,13 @@ defmodule Wotex.Binding.HTTP.ValueTest do
     assert Event.id(event) == "7"
     assert Event.retry(event) == 500
 
-    notification = Notification.new(event, %{"temperature" => 21}, "request-1", :observeproperty)
-    assert Notification.data(notification) == %{"temperature" => 21}
-    assert Notification.event(notification) == "change"
-    assert Notification.id(notification) == "7"
-    assert Notification.retry(notification) == 500
-    assert Notification.request_id(notification) == "request-1"
-    assert Notification.operation(notification) == :observeproperty
+    assert Notification.new(event, "request-1", :observeproperty) == %{
+             event: "change",
+             id: "7",
+             retry: 500,
+             request_id: "request-1",
+             operation: :observeproperty
+           }
 
     assert {:error, %Error{code: :invalid_sse_event}} = Event.new(:invalid)
     assert {:error, %Error{code: :invalid_sse_event}} = Event.new("data", %{})

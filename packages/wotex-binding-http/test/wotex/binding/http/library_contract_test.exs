@@ -16,6 +16,7 @@ defmodule Wotex.Binding.HTTP.LibraryContractTest do
     assert function_exported?(Transport, :request, 3)
     assert function_exported?(Transport, :subscribe, 4)
     assert function_exported?(Transport, :unsubscribe, 4)
+    assert function_exported?(Transport, :decode_frame, 3)
   end
 
   test "each source and test file defines at most one module" do

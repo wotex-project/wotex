@@ -8,7 +8,7 @@ defmodule Wotex.Binding.HTTP.Test.AlternateClient do
   def request(_, _, _), do: {:error, :unused}
 
   @impl Wotex.Binding.HTTP.Client
-  @spec subscribe(term(), term(), function(), term()) :: {:error, :unused}
+  @spec subscribe(term(), term(), pid(), term()) :: {:error, :unused}
   def subscribe(_, _, _, _), do: {:error, :unused}
 
   @impl Wotex.Binding.HTTP.Client

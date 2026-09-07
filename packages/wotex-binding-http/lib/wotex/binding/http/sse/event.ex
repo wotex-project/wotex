@@ -42,7 +42,8 @@ defmodule Wotex.Binding.HTTP.SSE.Event do
   end
 
   defp invalid_event do
-    {:error, Error.new(:invalid_sse_event, :subscription, "SSE event input is invalid")}
+    {:error,
+     Error.new(:invalid_sse_event, :subscription, "SSE event input is invalid", %{}, :protocol)}
   end
 
   @doc "Returns the event data after SSE line joining and before JSON decoding."
@@ -68,22 +69,38 @@ defmodule Wotex.Binding.HTTP.SSE.Event do
       :ok
     else
       {:error,
-       Error.new(:invalid_sse_field, :subscription, "SSE field contains invalid bytes", %{
-         field: field
-       })}
+       Error.new(
+         :invalid_sse_field,
+         :subscription,
+         "SSE field contains invalid bytes",
+         %{field: field},
+         :protocol
+       )}
     end
   end
 
   defp validate_line_value(_, field) do
     {:error,
-     Error.new(:invalid_sse_field, :subscription, "SSE field must be a string or nil", %{
-       field: field
-     })}
+     Error.new(
+       :invalid_sse_field,
+       :subscription,
+       "SSE field must be a string or nil",
+       %{field: field},
+       :protocol
+     )}
   end
 
   defp validate_retry(nil), do: :ok
   defp validate_retry(value) when is_integer(value) and value >= 0, do: :ok
 
   defp validate_retry(_),
-    do: {:error, Error.new(:invalid_sse_retry, :subscription, "SSE retry must be non-negative")}
+    do:
+      {:error,
+       Error.new(
+         :invalid_sse_retry,
+         :subscription,
+         "SSE retry must be non-negative",
+         %{},
+         :protocol
+       )}
 end

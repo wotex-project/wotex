@@ -9,7 +9,6 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     Config,
     Error,
     Headers,
-    Notification,
     Request,
     Response,
     Subscription,
@@ -38,7 +37,8 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     assert {:ok, %Result{} = result} =
              Transport.request(request, Factory.context(:ephemeral_credential), config)
 
-    assert result.status == 201
+    assert result.status == :ok
+    assert result.metadata.http.status == 201
     assert result.operation == :invokeaction
     assert result.request_id == "request-1"
     assert result.payload == %{"href" => "/actions/fade/1", "status" => "pending"}
@@ -54,12 +54,14 @@ defmodule Wotex.Binding.HTTP.TransportTest do
   end
 
   test "empty successful responses produce nil payloads and may omit content type" do
-    for status <- [200, 202, 204, 205] do
+    for {status, runtime_status} <- [{200, :ok}, {202, :accepted}, {204, :ok}, {205, :ok}] do
       config = Factory.config(%{request_return: {:ok, Factory.response(status)}})
       request = Factory.request(:readproperty)
 
-      assert {:ok, %Result{payload: nil, status: ^status}} =
+      assert {:ok, %Result{payload: nil, status: ^runtime_status} = result} =
                Transport.request(request, Factory.context(), config)
+
+      assert result.metadata.http.status == status
     end
   end
 
@@ -112,6 +114,59 @@ defmodule Wotex.Binding.HTTP.TransportTest do
              Transport.request(Factory.request(:invokeaction, true), Factory.context(), config)
 
     refute inspect(error) =~ "name:value"
+  end
+
+  test "HTTP status codes and client failures carry their retry classification" do
+    statuses = [{408, :timeout}, {429, :rate_limited}, {503, :unavailable}, {404, :permanent}]
+
+    for {status, class} <- statuses do
+      response = Factory.response(status, "", [{"Content-Type", "application/json"}])
+      config = Factory.config(%{request_return: {:ok, response}})
+
+      assert {:error, %Error{code: :http_status, class: ^class, details: %{status: ^status}}} =
+               Transport.request(Factory.request(:readproperty), Factory.context(), config)
+    end
+
+    returns = [
+      {{:error, :timeout}, :client_request_failed, :timeout},
+      {{:error, :econnrefused}, :client_request_failed, :unavailable},
+      {{:raise, RuntimeError.exception("private")}, :client_request_exception, :unavailable},
+      {{:exit, :private_exit}, :client_request_exception, :unavailable},
+      {{:throw, :private_throw}, :client_request_exception, :unavailable},
+      {:invalid, :invalid_client_return, :protocol}
+    ]
+
+    for {returned, code, class} <- returns do
+      config = Factory.config(%{request_return: returned})
+
+      assert {:error, %Error{code: ^code, class: ^class} = error} =
+               Transport.request(Factory.request(:readproperty), Factory.context(), config)
+
+      refute inspect(error) =~ "private"
+    end
+  end
+
+  test "subscribe and close isolate client exits and throws without copying the reason" do
+    request = Factory.request(:subscribeevent, nil, %{"subprotocol" => "sse"})
+
+    for returned <- [{:exit, :private_exit}, {:throw, :private_throw}] do
+      config = Factory.config(%{subscribe_return: returned, close_return: returned})
+
+      assert {:error, %Error{code: :client_subscribe_exception, class: :unavailable} = error} =
+               Transport.subscribe(request, self(), Factory.context(), config)
+
+      refute inspect(error) =~ "private"
+
+      subscription = Subscription.new(config, :handle, "request-1", :subscribeevent)
+
+      assert {:error, %Error{code: :client_close_exception, class: :unavailable}} =
+               Transport.unsubscribe(
+                 subscription,
+                 Factory.request(:unsubscribeevent),
+                 Factory.context(),
+                 config
+               )
+    end
   end
 
   test "client failures, exceptions, malformed returns, and bypassed response values are normalized" do
@@ -167,22 +222,27 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     assert Subscription.unwrap(subscription) ==
              {FakeClient, :client_handle, "request-1", :subscribeevent}
 
-    assert_receive {:client_subscribe, %Request{} = http_request, :stream_credential, handler}
+    owner = self()
+    assert_receive {:client_subscribe, %Request{} = http_request, :stream_credential, ^owner}
     assert Request.method(http_request) == "GET"
     assert Headers.get(Request.headers(http_request), "accept") == "text/event-stream"
-    assert is_function(handler, 1)
 
     {:ok, event} = Event.new(~s({"temperature":22}), event: "overheated", id: "event-1")
-    assert handler.(event) == :ok
 
-    assert_receive {:wotex_transport, {:ok, %Notification{} = notification}}
-    assert Notification.data(notification) == %{"temperature" => 22}
-    assert Notification.event(notification) == "overheated"
-    assert Notification.id(notification) == "event-1"
-    assert Notification.operation(notification) == :subscribeevent
+    assert {:ok, %{"temperature" => 22}, meta} = Transport.decode_frame(event, request, config)
+
+    assert meta == %{
+             event: "overheated",
+             id: "event-1",
+             retry: nil,
+             request_id: "request-1",
+             operation: :subscribeevent
+           }
+
+    refute_receive {:wotex_transport, _delivery}
   end
 
-  test "SSE event handler reports invalid, oversized, and malformed event values" do
+  test "frame decoding ignores keep-alives and reports oversized, malformed, and alien frames" do
     handshake = Factory.response(200, "", [{"Content-Type", "text/event-stream"}])
 
     {:ok, config} =
@@ -195,18 +255,28 @@ defmodule Wotex.Binding.HTTP.TransportTest do
 
     request = Factory.request(:observeproperty, nil, %{"subprotocol" => "sse"})
     assert {:ok, _} = Transport.subscribe(request, self(), Factory.context(), config)
-    assert_receive {:client_subscribe, %Request{}, :credential, handler}
+    assert_receive {:client_subscribe, %Request{}, :credential, _owner}
 
-    assert handler.(%{}) == :ok
-    assert_receive {:wotex_transport, {:error, %Error{code: :invalid_sse_event}}}
+    {:ok, keep_alive} = Event.new("")
+    assert Transport.decode_frame(keep_alive, request, config) == :ignore
 
     {:ok, oversized} = Event.new("12345")
-    assert handler.(oversized) == :ok
-    assert_receive {:wotex_transport, {:error, %Error{code: :sse_event_too_large}}}
+
+    assert {:error, %Error{code: :sse_event_too_large, class: :protocol}} =
+             Transport.decode_frame(oversized, request, config)
 
     {:ok, malformed} = Event.new("bad")
-    assert handler.(malformed) == :ok
-    assert_receive {:wotex_transport, {:error, %Error{code: :json_decode_failed}}}
+
+    assert {:error, %Error{code: :json_decode_failed, class: :protocol}} =
+             Transport.decode_frame(malformed, request, config)
+
+    assert {:error, %Error{code: :invalid_sse_event, class: :protocol}} =
+             Transport.decode_frame(%{}, request, config)
+
+    {:ok, event} = Event.new("1")
+
+    assert {:error, %Error{code: :invalid_sse_event}} =
+             Transport.decode_frame(event, Factory.request(:readproperty), config)
   end
 
   test "failed SSE handshakes close the newly opened handle" do
@@ -225,7 +295,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
       assert {:error, %Error{code: ^code}} =
                Transport.subscribe(request, self(), Factory.context(), config)
 
-      assert_receive {:client_subscribe, %Request{}, :credential, _handler}
+      assert_receive {:client_subscribe, %Request{}, :credential, _owner}
       assert_receive {:client_close, :opened_handle}
     end
   end
@@ -255,7 +325,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
       assert {:error, %Error{code: ^code}} =
                Transport.subscribe(request, self(), Factory.context(), config)
 
-      assert_receive {:client_subscribe, %Request{}, :credential, _handler}
+      assert_receive {:client_subscribe, %Request{}, :credential, _owner}
       refute_receive {:client_close, _handle}
     end
   end

@@ -227,8 +227,8 @@ defmodule Wotex.Binding.HTTP.FormTest do
 
     {:ok, prior} =
       Result.new("request-0", :invokeaction, %{"status" => "pending"},
-        status: 201,
-        metadata: %{http: %{location: "https://thing.example/actions/fade/4"}}
+        status: :accepted,
+        metadata: %{http: %{status: 202, location: "https://thing.example/actions/fade/4"}}
       )
 
     request = Factory.request(:cancelaction, prior, %{"href" => base})
@@ -236,7 +236,7 @@ defmodule Wotex.Binding.HTTP.FormTest do
     assert Request.uri(built) == "https://thing.example/actions/fade/4"
 
     {:ok, payload_prior} =
-      Result.new("request-0", :invokeaction, %{"href" => "/actions/fade/5"}, status: 201)
+      Result.new("request-0", :invokeaction, %{"href" => "/actions/fade/5"}, status: :accepted)
 
     request = Factory.request(:queryaction, payload_prior, %{"href" => base})
     assert {:ok, built} = Form.build(request, Factory.config())

@@ -3,9 +3,22 @@ defmodule Wotex.Binding.HTTP.Transport do
   Wotex Runtime transport backed by a consumer-supplied HTTP client port.
 
   It maps Runtime requests into HTTP values, normalizes callback failures,
-  decodes finite JSON responses, and converts client-framed SSE events into
-  Runtime notifications. Network processes and connection lifecycles remain
+  decodes finite JSON responses, and adapts client-framed SSE events into
+  Runtime deliveries. Network processes and connection lifecycles remain
   owned by the caller.
+
+  `subscribe/4` hands the client the Runtime subscription process as its owner.
+  The client sends raw `{:wotex_transport_frame, event}` messages to that
+  process, and `decode_frame/3` runs there: it enforces the configured event
+  byte limit, decodes one JSON value, and returns `{:ok, data, meta}`, `:ignore`
+  for a keep-alive frame with no data, or a classified binding error. No JSON
+  decoding happens on the client's connection process.
+
+  Every returned `Wotex.Binding.HTTP.Error` carries a retry `class`. HTTP status
+  408 and a client deadline expiry are `:timeout`, 429 is `:rate_limited`, 502,
+  503, and 504 and a failing or raising client call are `:unavailable`, codec,
+  representation, handshake, and client-contract failures are `:protocol`, and
+  every remaining failure is `:permanent`.
   """
 
   @behaviour Wotex.Runtime.Transport
@@ -26,6 +39,11 @@ defmodule Wotex.Binding.HTTP.Transport do
   alias Wotex.Runtime.{ExecutionContext, Request, Result}
 
   @event_stream "text/event-stream"
+  @stream_operations [:observeproperty, :subscribeevent]
+  @accepted_status 202
+  @timeout_statuses [408]
+  @rate_limited_statuses [429]
+  @unavailable_statuses [502, 503, 504]
   @close_operations %{
     observeproperty: :unobserveproperty,
     subscribeevent: :unsubscribeevent
@@ -60,16 +78,15 @@ defmodule Wotex.Binding.HTTP.Transport do
   @impl Wotex.Runtime.Transport
   def subscribe(
         %Request{} = request,
-        receiver,
+        owner,
         %ExecutionContext{} = context,
         %Config{} = config
       )
-      when is_pid(receiver) do
+      when is_pid(owner) do
     with {:ok, http_request} <- Form.build(request, config),
          true <- HTTPRequest.stream?(http_request),
-         handler = event_handler(http_request, receiver, config),
          {:ok, subscription} <-
-           call_subscribe(http_request, context.credential, handler, config) do
+           call_subscribe(http_request, context.credential, owner, config) do
       {:ok, subscription}
     else
       false ->
@@ -90,7 +107,7 @@ defmodule Wotex.Binding.HTTP.Transport do
      Error.new(
        :invalid_subscription_arguments,
        :subscription,
-       "Runtime request, receiver, execution context, and HTTP config are required"
+       "Runtime request, owner pid, execution context, and HTTP config are required"
      )}
   end
 
@@ -119,35 +136,83 @@ defmodule Wotex.Binding.HTTP.Transport do
      )}
   end
 
-  defp call_request(request, credential, config) do
-    {module, client_config} = Config.client(config)
+  @doc """
+  Decodes one client-delivered Server-Sent Event inside the subscription process.
 
-    returned =
-      try do
-        module.request(request, credential, client_config)
-      rescue
-        _ -> {:client_exception, nil}
+  Wotex Runtime calls this callback for every `{:wotex_transport_frame, event}`
+  message the client sends to the subscription owner. A frame with empty data is
+  a keep-alive and returns `:ignore`; a frame above the configured event byte
+  limit or carrying invalid JSON returns a classified
+  `Wotex.Binding.HTTP.Error`.
+  """
+  @impl Wotex.Runtime.Transport
+  def decode_frame(%Event{} = frame, %Request{operation: operation} = request, %Config{} = config)
+      when operation in @stream_operations do
+    decode_event(frame, request.request_id, operation, Config.max_event_bytes(config))
+  end
+
+  def decode_frame(_, _, _) do
+    {:error,
+     Error.new(
+       :invalid_sse_event,
+       :subscription,
+       "transport frame is not a Server-Sent Event of an open stream",
+       %{},
+       :protocol
+     )}
+  end
+
+  defp decode_event(%Event{data: ""}, _, _, _), do: :ignore
+
+  defp decode_event(%Event{data: data} = event, request_id, operation, max_bytes) do
+    if byte_size(data) > max_bytes do
+      {:error,
+       Error.new(
+         :sse_event_too_large,
+         :subscription,
+         "SSE event exceeds byte limit",
+         %{max_bytes: max_bytes, request_id: request_id, operation: operation},
+         :protocol
+       )}
+    else
+      case Codec.decode(data, max_bytes) do
+        {:ok, decoded} -> {:ok, decoded, Notification.new(event, request_id, operation)}
+        {:error, %Error{} = error} -> {:error, error}
       end
-
-    case returned do
-      {:ok, %Response{} = response} -> revalidate_response(response)
-      {:error, _} -> {:error, client_error(:client_request_failed, :client)}
-      {:client_exception, nil} -> {:error, client_error(:client_request_exception, :client)}
-      _ -> {:error, client_error(:invalid_client_return, :client)}
     end
   end
 
-  defp call_subscribe(request, credential, handler, config) do
+  defp call_request(request, credential, config) do
     {module, client_config} = Config.client(config)
 
-    returned =
-      try do
-        module.subscribe(request, credential, handler, client_config)
-      rescue
-        _ -> {:client_exception, nil}
-      end
+    try do
+      module.request(request, credential, client_config)
+    rescue
+      _ -> {:error, client_error(:client_request_exception, :client, :unavailable)}
+    catch
+      _, _ -> {:error, client_error(:client_request_exception, :client, :unavailable)}
+    else
+      {:ok, %Response{} = response} ->
+        revalidate_response(response)
 
-    case returned do
+      {:error, reason} ->
+        {:error, client_error(:client_request_failed, :client, client_class(reason))}
+
+      _ ->
+        {:error, client_error(:invalid_client_return, :client, :protocol)}
+    end
+  end
+
+  defp call_subscribe(request, credential, owner, config) do
+    {module, client_config} = Config.client(config)
+
+    try do
+      module.subscribe(request, credential, owner, client_config)
+    rescue
+      _ -> {:error, client_error(:client_subscribe_exception, :subscription, :unavailable)}
+    catch
+      _, _ -> {:error, client_error(:client_subscribe_exception, :subscription, :unavailable)}
+    else
       {:ok, handle, %Response{} = response} ->
         with {:ok, validated} <- revalidate_response(response),
              :ok <- validate_handshake(validated) do
@@ -164,41 +229,41 @@ defmodule Wotex.Binding.HTTP.Transport do
             {:error, error}
         end
 
-      {:error, _} ->
-        {:error, client_error(:client_subscribe_failed, :subscription)}
-
-      {:client_exception, nil} ->
-        {:error, client_error(:client_subscribe_exception, :subscription)}
+      {:error, reason} ->
+        {:error, client_error(:client_subscribe_failed, :subscription, client_class(reason))}
 
       _ ->
-        {:error, client_error(:invalid_client_return, :subscription)}
+        {:error, client_error(:invalid_client_return, :subscription, :protocol)}
     end
   end
 
   defp call_close(module, handle, config) do
     {_, client_config} = Config.client(config)
 
-    returned =
-      try do
-        module.close(handle, client_config)
-      rescue
-        _ -> {:client_exception, nil}
-      end
+    try do
+      module.close(handle, client_config)
+    rescue
+      _ -> {:error, client_error(:client_close_exception, :subscription, :unavailable)}
+    catch
+      _, _ -> {:error, client_error(:client_close_exception, :subscription, :unavailable)}
+    else
+      :ok ->
+        :ok
 
-    case returned do
-      :ok -> :ok
-      {:error, _} -> {:error, client_error(:client_close_failed, :subscription)}
-      {:client_exception, nil} -> {:error, client_error(:client_close_exception, :subscription)}
-      _ -> {:error, client_error(:invalid_client_return, :subscription)}
+      {:error, reason} ->
+        {:error, client_error(:client_close_failed, :subscription, client_class(reason))}
+
+      _ ->
+        {:error, client_error(:invalid_client_return, :subscription, :protocol)}
     end
   end
 
   defp close_after_failed_handshake(module, handle, client_config) do
-    try do
-      module.close(handle, client_config)
-    rescue
-      _ -> :ok
-    end
+    module.close(handle, client_config)
+  rescue
+    _ -> :ok
+  catch
+    _, _ -> :ok
   end
 
   defp revalidate_response(%Response{} = response) do
@@ -212,23 +277,37 @@ defmodule Wotex.Binding.HTTP.Transport do
     cond do
       status not in 200..299 ->
         {:error,
-         Error.new(:http_status, :response, "HTTP response status is not successful", %{
-           request_id: HTTPRequest.request_id(request),
-           operation: HTTPRequest.operation(request),
-           status: status
-         })}
+         Error.new(
+           :http_status,
+           :response,
+           "HTTP response status is not successful",
+           %{
+             request_id: HTTPRequest.request_id(request),
+             operation: HTTPRequest.operation(request),
+             status: status
+           },
+           status_class(status)
+         )}
 
       byte_size(body) > Config.max_response_bytes(config) ->
         {:error,
-         Error.new(:response_body_too_large, :response, "HTTP response exceeds byte limit", %{
-           max_bytes: Config.max_response_bytes(config)
-         })}
+         Error.new(
+           :response_body_too_large,
+           :response,
+           "HTTP response exceeds byte limit",
+           %{max_bytes: Config.max_response_bytes(config)},
+           :protocol
+         )}
 
       status in [204, 205] and body != "" ->
         {:error,
-         Error.new(:unexpected_response_body, :response, "HTTP status requires an empty body", %{
-           status: status
-         })}
+         Error.new(
+           :unexpected_response_body,
+           :response,
+           "HTTP status requires an empty body",
+           %{status: status},
+           :protocol
+         )}
 
       true ->
         with :ok <- validate_response_media_type(request, response),
@@ -239,13 +318,13 @@ defmodule Wotex.Binding.HTTP.Transport do
                  HTTPRequest.request_id(request),
                  HTTPRequest.operation(request),
                  payload,
-                 status: status,
+                 status: result_status(status),
                  metadata: metadata
                ) do
           {:ok, result}
         else
           {:error, %Error{} = error} -> {:error, error}
-          {:error, _} -> {:error, client_error(:result_build_failed, :response)}
+          {:error, _} -> {:error, client_error(:result_build_failed, :response, :protocol)}
         end
     end
   end
@@ -265,7 +344,8 @@ defmodule Wotex.Binding.HTTP.Transport do
          :unexpected_response_media_type,
          :response,
          "HTTP response is not the Form's JSON representation",
-         %{media_type: normalize_media_type(actual)}
+         %{media_type: normalize_media_type(actual)},
+         :protocol
        )}
     end
   end
@@ -281,6 +361,7 @@ defmodule Wotex.Binding.HTTP.Transport do
       http = %{
         method: HTTPRequest.method(request),
         request_uri: HTTPRequest.uri(request),
+        status: Response.status(response),
         headers: headers
       }
 
@@ -314,7 +395,8 @@ defmodule Wotex.Binding.HTTP.Transport do
   end
 
   defp invalid_location do
-    {:error, Error.new(:invalid_location, :response, "HTTP Location field is invalid")}
+    {:error,
+     Error.new(:invalid_location, :response, "HTTP Location field is invalid", %{}, :protocol)}
   end
 
   defp validate_handshake(response) do
@@ -327,7 +409,8 @@ defmodule Wotex.Binding.HTTP.Transport do
            :sse_handshake_status,
            :subscription,
            "SSE handshake must return HTTP status 200",
-           %{status: Response.status(response)}
+           %{status: Response.status(response)},
+           :protocol
          )}
 
       normalize_media_type(content_type) != @event_stream ->
@@ -335,7 +418,9 @@ defmodule Wotex.Binding.HTTP.Transport do
          Error.new(
            :sse_handshake_media_type,
            :subscription,
-           "SSE handshake must return text/event-stream"
+           "SSE handshake must return text/event-stream",
+           %{},
+           :protocol
          )}
 
       Response.body(response) != "" ->
@@ -343,48 +428,14 @@ defmodule Wotex.Binding.HTTP.Transport do
          Error.new(
            :sse_handshake_body,
            :subscription,
-           "SSE handshake response value must not buffer stream data"
+           "SSE handshake response value must not buffer stream data",
+           %{},
+           :protocol
          )}
 
       true ->
         :ok
     end
-  end
-
-  defp event_handler(request, receiver, config) do
-    request_id = HTTPRequest.request_id(request)
-    operation = HTTPRequest.operation(request)
-    max_bytes = Config.max_event_bytes(config)
-
-    fn event ->
-      payload = decode_event(event, request_id, operation, max_bytes)
-      send(receiver, {:wotex_transport, payload})
-      :ok
-    end
-  end
-
-  defp decode_event(%Event{} = event, request_id, operation, max_bytes) do
-    if byte_size(Event.data(event)) > max_bytes do
-      {:error,
-       Error.new(:sse_event_too_large, :subscription, "SSE event exceeds byte limit", %{
-         max_bytes: max_bytes,
-         request_id: request_id,
-         operation: operation
-       })}
-    else
-      case Codec.decode(Event.data(event), max_bytes) do
-        {:ok, data} -> {:ok, Notification.new(event, data, request_id, operation)}
-        {:error, %Error{} = error} -> {:error, error}
-      end
-    end
-  end
-
-  defp decode_event(_, request_id, operation, _) do
-    {:error,
-     Error.new(:invalid_sse_event, :subscription, "client delivered an invalid SSE event", %{
-       request_id: request_id,
-       operation: operation
-     })}
   end
 
   defp validate_close(request, subscription, config) do
@@ -431,6 +482,24 @@ defmodule Wotex.Binding.HTTP.Transport do
     |> String.downcase()
   end
 
-  defp client_error(code, phase),
-    do: Error.new(code, phase, "supplied HTTP client failed or violated its contract")
+  defp client_error(code, phase, class),
+    do:
+      Error.new(
+        code,
+        phase,
+        "supplied HTTP client failed or violated its contract",
+        %{},
+        class
+      )
+
+  defp client_class(:timeout), do: :timeout
+  defp client_class(_), do: :unavailable
+
+  defp status_class(status) when status in @timeout_statuses, do: :timeout
+  defp status_class(status) when status in @rate_limited_statuses, do: :rate_limited
+  defp status_class(status) when status in @unavailable_statuses, do: :unavailable
+  defp status_class(_), do: :permanent
+
+  defp result_status(@accepted_status), do: :accepted
+  defp result_status(_), do: :ok
 end

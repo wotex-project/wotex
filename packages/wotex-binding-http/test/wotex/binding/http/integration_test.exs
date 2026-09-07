@@ -4,53 +4,124 @@ defmodule Wotex.Binding.HTTP.IntegrationTest do
   use ExUnit.Case, async: false
 
   alias Wotex.Binding.HTTP
-  alias Wotex.Binding.HTTP.{Notification, Request}
+  alias Wotex.Binding.HTTP.Request
   alias Wotex.Binding.HTTP.SSE.Event
-  alias Wotex.Binding.HTTP.Test.{Factory, FakeClient, FakeCredentials}
-  alias Wotex.Runtime.{ConsumedThing, Context, Result, Subscription}
+  alias Wotex.Binding.HTTP.Test.{FakeClient, FakeCredentials}
+  alias Wotex.Runtime.{ConsumedThing, Context, Error, Result, Subscription}
 
   test "ConsumedThing executes a one-shot interaction through the HTTP binding" do
-    response = Factory.response(200, "21", [{"Content-Type", "application/json"}])
+    response = response(200, "21", [{"Content-Type", "application/json"}])
     consumed = consumed_thing(%{request_return: {:ok, response}})
     context = Context.new!(request_id: "integration-request")
 
-    assert {:ok, %Result{payload: 21, operation: :readproperty}} =
+    assert {:ok, %Result{payload: 21, operation: :readproperty, status: :ok} = result} =
              ConsumedThing.read_property(consumed, "temperature", context)
 
+    assert result.metadata.http.status == 200
     assert_receive {:credential_resolve, %{names: ["nosec"]}, %Wotex.Form{}, ^context}
     assert_receive {:client_request, %Request{} = request, :resolved_credential}
     assert Request.uri(request) == "https://thing.example/properties/temperature"
   end
 
-  test "caller-supervised observation opens and explicitly closes one SSE connection" do
-    handshake = Factory.response(200, "", [{"Content-Type", "text/event-stream"}])
-    consumed = consumed_thing(%{subscribe_return: {:ok, :integration_handle, handshake}})
-    context = Context.new!(request_id: "stream-request")
+  test "the subscription process decodes client frames and delivers Runtime values" do
+    {:ok, first} = Event.new("22", event: "temperature", id: "event-22")
 
-    assert {:ok, child_spec} =
-             ConsumedThing.observation_child_spec(consumed, "temperature", context,
-               id: :temperature_observation,
-               receiver: self(),
-               restart: :temporary
-             )
+    pid = observation(%{frames: [first]}, :decoding_observation)
 
-    pid = start_supervised!(child_spec)
-
-    assert_receive {:client_subscribe, %Request{} = request, :resolved_credential, handler}
+    assert_receive {:client_subscribe, %Request{} = request, :resolved_credential, ^pid}
     assert Request.uri(request) == "https://thing.example/properties/temperature"
 
-    {:ok, event} = Event.new("22", event: "temperature", id: "event-22")
-    assert :ok = handler.(event)
+    assert_receive {:wotex_runtime, :decoding_observation, {:ok, 22, meta}}
 
-    assert_receive {:wotex_runtime, :temperature_observation, notification_result}
-    assert {:ok, %Notification{} = notification} = notification_result
+    assert meta == %{
+             event: "temperature",
+             id: "event-22",
+             retry: nil,
+             request_id: "stream-request",
+             operation: :observeproperty
+           }
 
-    assert Notification.data(notification) == 22
-    assert Notification.id(notification) == "event-22"
+    {:ok, keep_alive} = Event.new("")
+    send(pid, {:wotex_transport_frame, keep_alive})
+    refute_receive {:wotex_runtime, :decoding_observation, _event}, 50
 
     assert :ok = Subscription.stop(pid)
     assert_receive {:client_close, :integration_handle}
     refute Process.alive?(pid)
+  end
+
+  test "oversized and malformed frames become undecodable Runtime frame errors" do
+    {:ok, oversized} = Event.new("123456789")
+    {:ok, malformed} = Event.new("bad")
+
+    pid = observation(%{frames: [oversized, malformed]}, :rejecting_observation)
+
+    assert_receive {:wotex_runtime, :rejecting_observation,
+                    {:error,
+                     %Error{
+                       code: :undecodable_frame,
+                       class: :protocol,
+                       details: %{cause: %{code: :sse_event_too_large, phase: :subscription}}
+                     }}}
+
+    assert_receive {:wotex_runtime, :rejecting_observation,
+                    {:error,
+                     %Error{
+                       code: :undecodable_frame,
+                       details: %{cause: %{code: :json_decode_failed, phase: :codec}}
+                     }}}
+
+    assert Process.alive?(pid)
+    assert :ok = Subscription.stop(pid)
+  end
+
+  test "a lost client session stops the subscription after closing the connection" do
+    pid = observation(%{}, :interrupted_observation)
+    monitor = Process.monitor(pid)
+
+    assert_receive {:client_subscribe, %Request{}, :resolved_credential, ^pid}
+
+    send(pid, {:wotex_transport_status, :reconnected})
+    assert_receive {:wotex_runtime, :interrupted_observation, {:status, :reconnected}}
+    assert Process.alive?(pid)
+
+    send(pid, {:wotex_transport_status, :session_lost})
+    assert_receive {:wotex_runtime, :interrupted_observation, {:status, :session_lost}}
+    assert_receive {:client_close, :integration_handle}
+    assert_receive {:DOWN, ^monitor, :process, ^pid, {:shutdown, :session_lost}}
+  end
+
+  test "a client monitoring the owner observes the subscription exit on explicit stop" do
+    pid = observation(%{monitor_owner: true}, :monitored_observation)
+
+    assert_receive {:client_subscribe, %Request{}, :resolved_credential, ^pid}
+    assert :ok = Subscription.stop(pid)
+
+    assert_receive {:client_close, :integration_handle}
+    assert_receive {:owner_down, :normal}
+  end
+
+  defp observation(client_overrides, id) do
+    handshake = response(200, "", [{"Content-Type", "text/event-stream"}])
+
+    consumed =
+      consumed_thing(
+        Map.merge(
+          %{subscribe_return: {:ok, :integration_handle, handshake}},
+          client_overrides
+        )
+      )
+
+    context = Context.new!(request_id: "stream-request")
+
+    {:ok, child_spec} =
+      ConsumedThing.observation_child_spec(consumed, "temperature", context,
+        id: id,
+        receiver: self(),
+        restart: :temporary
+      )
+
+    start_supervised!(child_spec)
   end
 
   defp consumed_thing(client_overrides) do
@@ -67,7 +138,7 @@ defmodule Wotex.Binding.HTTP.IntegrationTest do
         client_overrides
       )
 
-    {:ok, config} = HTTP.config(client: {FakeClient, client_config})
+    {:ok, config} = HTTP.config(client: {FakeClient, client_config}, max_event_bytes: 8)
 
     credentials =
       {FakeCredentials, %{owner: self(), credential: :resolved_credential}}
@@ -80,6 +151,11 @@ defmodule Wotex.Binding.HTTP.IntegrationTest do
       )
 
     consumed
+  end
+
+  defp response(status, body, headers) do
+    {:ok, response} = HTTP.Response.new(status, headers, body)
+    response
   end
 
   defp thing_description do

@@ -4,23 +4,39 @@ defmodule Wotex.Binding.HTTP.Client do
 
   The second argument to `request/3` and `subscribe/4` is the ephemeral
   credential resolved by Wotex Runtime. It is deliberately separate from the
-  immutable request and must not be retained, logged, returned, or included in
-  an event handler. Client configuration must not contain credentials.
+  immutable request and must not be retained, logged, returned, or captured by
+  a connection process. Client configuration must not contain credentials.
 
-  A streaming implementation parses Server-Sent Events framing and invokes the
-  supplied handler with `Wotex.Binding.HTTP.SSE.Event` values. The binding
-  decodes each event's JSON data. Connection ownership, redirects, TLS policy,
-  pooling policy, deadlines, backpressure, and reconnection remain explicit
-  responsibilities of the client and consumer host.
+  A streaming implementation parses Server-Sent Events framing and sends raw
+  `Wotex.Binding.HTTP.SSE.Event` frames to the Runtime subscription process it
+  receives as `owner`. Decoding happens in that owner process through
+  `Wotex.Binding.HTTP.Transport.decode_frame/3`, so the client's connection
+  process never runs the JSON codec. Connection ownership, redirects, TLS
+  policy, pooling policy, deadlines, backpressure, and reconnection remain
+  explicit responsibilities of the client and consumer host.
+
+  ## Messages the client sends to the owner
+
+  | Message | Meaning |
+  | --- | --- |
+  | `{:wotex_transport_frame, %Wotex.Binding.HTTP.SSE.Event{}}` | One dispatched Server-Sent Event |
+  | `{:wotex_transport_status, :reconnected}` | The stream reopened and the subscription is intact |
+  | `{:wotex_transport_status, :session_lost}` | The server-side subscription is gone |
+  | `{:wotex_transport_status, :transport_down}` | The client can no longer serve this subscription |
+
+  A client may `Process.monitor/1` or link the owner to release its connection
+  when the subscription process stops. Runtime stops the subscription with a
+  `:shutdown` reason after `:session_lost` and `:transport_down`, leaving the
+  restart decision to the consumer's supervisor.
 
   Implementations should translate transport-library failures into their own
   reason terms. The binding normalizes those reasons before returning a public
   error, so neither credentials nor client-specific failure values escape the
-  callback boundary.
+  callback boundary. The single reason atom the binding interprets is
+  `:timeout`, which classifies the failure as a retryable deadline expiry.
   """
 
   alias Wotex.Binding.HTTP.{Request, Response}
-  alias Wotex.Binding.HTTP.SSE.Event
 
   @typedoc "Non-credential client options supplied by the consumer host."
   @type config :: term()
@@ -31,16 +47,17 @@ defmodule Wotex.Binding.HTTP.Client do
   @typedoc "Opaque identity of exactly one client-owned SSE connection."
   @type handle :: term()
 
-  @typedoc "Callback invoked once for each complete, client-framed SSE event."
-  @type event_handler :: (Event.t() -> :ok)
+  @typedoc "Runtime subscription process that receives frames and status messages."
+  @type owner :: pid()
 
   @doc """
   Executes one finite HTTP request.
 
   `request` contains the method, absolute target, validated fields, encoded
-  body, deadline, and interaction identity. `credential` is intentionally not
-  part of that value and may be used only while performing this call. `config`
-  is the non-secret value supplied when the binding was configured.
+  body, deadline, byte limits, and interaction identity. `credential` is
+  intentionally not part of that value and may be used only while performing
+  this call. `config` is the non-secret value supplied when the binding was
+  configured.
 
   Return a validated `Wotex.Binding.HTTP.Response` containing the complete body,
   or an implementation-specific error reason. Do not return or retain the
@@ -53,15 +70,16 @@ defmodule Wotex.Binding.HTTP.Client do
   Opens one Server-Sent Events response and transfers its lifecycle to the caller.
 
   The client validates the HTTP exchange at its own transport layer, parses SSE
-  framing, and calls `event_handler` with one `Wotex.Binding.HTTP.SSE.Event` per
-  dispatched event. On success it returns both an opaque connection `handle`
-  and the handshake response. The handle must identify only this connection so
-  a later `close/2` cannot affect another subscription.
+  framing, and sends `{:wotex_transport_frame, event}` to `owner` for each
+  dispatched `Wotex.Binding.HTTP.SSE.Event`. On success it returns both an
+  opaque connection `handle` and the handshake response. The handle must
+  identify only this connection so a later `close/2` cannot affect another
+  subscription.
 
   The credential has the same ephemeral rules as `request/3` and must never be
-  captured by the event handler or stored with the returned handle.
+  captured by a connection process or stored with the returned handle.
   """
-  @callback subscribe(Request.t(), credential(), event_handler(), config()) ::
+  @callback subscribe(Request.t(), credential(), owner(), config()) ::
               {:ok, handle(), Response.t()} | {:error, term()}
 
   @doc """

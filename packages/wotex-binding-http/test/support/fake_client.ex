@@ -11,9 +11,11 @@ defmodule Wotex.Binding.HTTP.Test.FakeClient do
   end
 
   @impl Wotex.Binding.HTTP.Client
-  @spec subscribe(term(), term(), function(), map()) :: term()
-  def subscribe(request, credential, handler, config) do
-    send(config.owner, {:client_subscribe, request, credential, handler})
+  @spec subscribe(term(), term(), pid(), map()) :: term()
+  def subscribe(request, credential, owner, config) do
+    send(config.owner, {:client_subscribe, request, credential, owner})
+    if Map.get(config, :monitor_owner, false), do: watch_owner(owner, config.owner)
+    for frame <- Map.get(config, :frames, []), do: send(owner, {:wotex_transport_frame, frame})
     return(config, :subscribe_return, {:error, :not_configured})
   end
 
@@ -24,9 +26,21 @@ defmodule Wotex.Binding.HTTP.Test.FakeClient do
     return(config, :close_return, :ok)
   end
 
+  defp watch_owner(owner, observer) do
+    spawn(fn ->
+      reference = Process.monitor(owner)
+
+      receive do
+        {:DOWN, ^reference, :process, ^owner, reason} -> send(observer, {:owner_down, reason})
+      end
+    end)
+  end
+
   defp return(config, key, default) do
     case Map.get(config, key, default) do
       {:raise, exception} -> raise exception
+      {:exit, reason} -> exit(reason)
+      {:throw, value} -> throw(value)
       fun when is_function(fun, 0) -> fun.()
       value -> value
     end

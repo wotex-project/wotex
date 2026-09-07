@@ -12,11 +12,20 @@ defmodule Wotex.Binding.HTTP.ErrorTest do
     assert %Error{
              code: :client_request_failed,
              phase: :client,
+             class: :permanent,
              message: "HTTP client request failed",
              details: %{}
            } = error
 
     assert Exception.message(error) == "HTTP client request failed"
+    assert Error.class(error) == :permanent
+  end
+
+  test "an explicit class states the retry classification of a failure" do
+    for class <- [:timeout, :unavailable, :rate_limited, :protocol, :permanent] do
+      error = Error.new(:http_status, :response, "HTTP status is not successful", %{}, class)
+      assert Error.class(error) == class
+    end
   end
 
   test "safe diagnostic details remain available without changing the exception message" do
