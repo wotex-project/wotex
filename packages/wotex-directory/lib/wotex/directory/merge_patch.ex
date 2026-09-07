@@ -16,7 +16,7 @@ defmodule Wotex.Directory.MergePatch do
 
   alias Wotex.Directory.Error
 
-  @type reason :: :invalid_json_value | :maximum_depth_exceeded | :maximum_nodes_exceeded
+  @type reason :: :invalid_json_value | :max_depth_exceeded | :max_nodes_exceeded
 
   @doc """
   Applies a depth- and node-bounded RFC 7396 JSON Merge Patch.
@@ -44,7 +44,7 @@ defmodule Wotex.Directory.MergePatch do
   def apply(_target, _patch, _options), do: invalid("/")
 
   defp merge(_target, _patch, path, depth, max_depth) when depth > max_depth,
-    do: refuse(path, :maximum_depth_exceeded)
+    do: refuse(path, :max_depth_exceeded)
 
   defp merge(target, patch, path, depth, max_depth) do
     initial = if is_map(target), do: target, else: %{}
@@ -66,23 +66,23 @@ defmodule Wotex.Directory.MergePatch do
     end)
   end
 
-  defp validate_json(_value, path, depth, _nodes, max_depth, _maximum_nodes)
+  defp validate_json(_value, path, depth, _nodes, max_depth, _max_nodes)
        when depth > max_depth,
-       do: refuse(path, :maximum_depth_exceeded)
+       do: refuse(path, :max_depth_exceeded)
 
-  defp validate_json(_value, path, _depth, nodes, _maximum_depth, max_nodes)
+  defp validate_json(_value, path, _depth, nodes, _max_depth, max_nodes)
        when nodes >= max_nodes,
-       do: refuse(path, :maximum_nodes_exceeded)
+       do: refuse(path, :max_nodes_exceeded)
 
-  defp validate_json(value, _path, _depth, nodes, _maximum_depth, _maximum_nodes)
+  defp validate_json(value, _path, _depth, nodes, _max_depth, _max_nodes)
        when is_nil(value) or is_boolean(value) or is_binary(value),
        do: {:ok, nodes + 1}
 
-  defp validate_json(value, _path, _depth, nodes, _maximum_depth, _maximum_nodes)
+  defp validate_json(value, _path, _depth, nodes, _max_depth, _max_nodes)
        when is_integer(value),
        do: {:ok, nodes + 1}
 
-  defp validate_json(value, _path, _depth, nodes, _maximum_depth, _maximum_nodes)
+  defp validate_json(value, _path, _depth, nodes, _max_depth, _max_nodes)
        when is_float(value) and value == value,
        do: {:ok, nodes + 1}
 
@@ -128,7 +128,7 @@ defmodule Wotex.Directory.MergePatch do
     end
   end
 
-  defp validate_json(_value, path, _depth, _nodes, _maximum_depth, _maximum_nodes),
+  defp validate_json(_value, path, _depth, _nodes, _max_depth, _max_nodes),
     do: invalid(pointer(path, ""))
 
   defp validate_limit(value) when is_integer(value) and value > 0, do: :ok

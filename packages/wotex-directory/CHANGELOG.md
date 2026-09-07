@@ -19,3 +19,6 @@ All notable changes to this project are documented in this file.
   `limit`, `Page` carries `entries`, `next_cursor`, and `collection_revision`,
   the repository `list` callback receives the decoded cursor, and wall-clock
   expiry between pages no longer ends a page chain.
+- Document the repository transaction and isolation expectations, the lost
+  named-registration create race and its retry, and `Wotex.Directory.Clock.System`
+  as an explicit opt-in default.

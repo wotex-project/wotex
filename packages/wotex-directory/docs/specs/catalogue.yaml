@@ -19,6 +19,7 @@ specifications:
     requires:
       - wotex:WTX.01
       - wotex:WTX.02
+      - wotex:WTX.03
     implementation_modules:
       - Wotex.Directory
       - Wotex.Directory.Service
@@ -27,12 +28,18 @@ specifications:
       - Wotex.Directory.Registration
       - Wotex.Directory.Mutation
       - Wotex.Directory.Event
+      - Wotex.Directory.Expiry
       - Wotex.Directory.Query
+      - Wotex.Directory.Cursor
       - Wotex.Directory.Page
       - Wotex.Directory.Introduction
+      - Wotex.Directory.Error
+      - Wotex.Directory.MergePatch
+      - Wotex.Directory.ThingDescriptions
       - Wotex.Directory.Repository
       - Wotex.Directory.Authorization
       - Wotex.Directory.Clock
+      - Wotex.Directory.Clock.System
       - Wotex.Directory.Identifier
     executable_evidence:
       - test/wotex/directory/directory_test.exs
@@ -45,4 +52,4 @@ specifications:
       - test/wotex/directory/library_contract_test.exs
       - test/wotex/directory/service_test.exs
       - test/wotex/directory/value_contract_test.exs
-    compatibility_classification: Initial 0.1.0 API; port, value, expiry, pagination and error changes require explicit compatibility review.
+    compatibility_classification: Pre-release corrections to the unreleased 0.1 API (family error shape, family limit vocabulary, keyset listing cursor, list callback arity); further port, value, expiry, pagination and error changes require explicit compatibility review.

@@ -1,9 +1,11 @@
 # Wotex Directory completion contract
 
-Plan `WTD-C`, revision `1.0.0`. This is an immutable work-definition baseline,
-not a progress report. Preserve work IDs and accepted evidence requirements;
-change scope through an explicitly versioned successor. Implementation status
-in the catalogue describes WTD.01's bounded implementation, not release readiness.
+Plan `WTD-C`, revision `1.1.0`. This is a work-definition baseline, not a
+progress report. Preserve work IDs and accepted evidence requirements; change
+scope only through an explicit revision of this plan. Revision 1.1.0 restates
+the listing continuation requirement after the WTD.01 1.1.0 keyset cursor
+decision and adds no work item. Implementation status in the catalogue
+describes WTD.01's bounded implementation, not release readiness.
 
 ## Ownership and implementation boundary
 
@@ -25,9 +27,11 @@ must atomically check the version and apply the mutation. A failed mutation must
 not emit a successful mutation/event value.
 
 Expiry is explicit, bounded and idempotent. Retention advances an active entry
-once; purge removes eligible entries. Listing revision binds membership, including
-time-driven expiry, not merely a database update counter. A changed collection
-invalidates continuation. Unicode ordering, clock-regression handling, registration
+once; purge removes eligible entries. Listing continuation is an opaque keyset
+cursor that binds the repository mutation generation, not a client-visible
+offset. A mutation that advances that generation invalidates continuation;
+membership that changed only because an entry reached absolute expiry does not,
+because reads always evaluate activity against the injected clock. Unicode ordering, clock-regression handling, registration
 precedence and retrieval-only enrichment must remain unchanged. The library owns
 no processes to restart or stop: recovery and durable event delivery belong to
 the consumer. Port errors must not expose credentials, raw payloads or principals.
@@ -66,7 +70,7 @@ claims from a passing unit test alone. The remaining claim ledger is:
 | ID | Prerequisites | Exact deliverable | Executable acceptance |
 | --- | --- | --- | --- |
 | WTD-C01 | WTD.01 | Reusable public-port contract tests for fetch/insert/replace/delete/list/expire_due; no production storage implementation | Two independent consumer adapters pass authorization ordering, tenant/context isolation, atomic conflict, expiry and collection-revision tests |
-| WTD-C02 | WTD-C01 | Deterministic concurrent mutation and interrupted-consumer scenarios | Competing expected-version writes have one winner; failure has no successful mutation; repeat expiry makes no second transition; resumed paging detects expiry-only membership changes |
+| WTD-C02 | WTD-C01 | Deterministic concurrent mutation and interrupted-consumer scenarios | Competing expected-version writes have one winner; failure has no successful mutation; repeat expiry makes no second transition; resumed paging detects a changed mutation generation and continues correctly across expiry-only membership changes |
 | WTD-C03 | WTD.01 | Archive-only minimal consumer fixture using no source checkout and no implicit application startup | Build archive, unpack into isolated dependency directory, compile with warnings as errors and run register/get/patch/list/expire plus invalid/conflict cases through public API |
 | WTD-C04 | WTD-C01, WTD-C03 | Independent reference consumer with explicit repository/auth/clock/ID implementations | All public operations and context separation pass against the exact archive digest; consumer tests prove atomicity rather than assuming it |
 | WTD-C05 | WTD-C02, WTD-C04 | Bounded claim-to-test matrix, compatibility review and release evidence manifest | Every claimed clause has a positive and applicable negative test; no unsupported search/transport claim; gate inputs are complete and internally consistent |
@@ -106,7 +110,7 @@ The only mutable completion tracker path is
 allowlist publishable documentation and structurally exclude that path; every
 candidate archive must still prove WTD-C06 because `.gitignore` does not govern
 a Hex archive.
-Its schema is `schema_version: "1.0.0"`, `plan_id: WTD-C`, `plan_revision: "1.0.0"`,
+Its schema is `schema_version: "1.0.0"`, `plan_id: WTD-C`, `plan_revision: "1.1.0"`,
 and `work_items`, each with `id`, `state` (`queued|active|blocked|verified`),
 `prerequisites`, `evidence` (source_commit, archive_sha256 when relevant,
 dependency_cohort, runtime, command, exit_code) and `remaining_claims`.

@@ -50,13 +50,13 @@ defmodule Wotex.Directory.MergePatchTest do
     assert {:error,
             %Error{
               path: "/a/b/c",
-              details: %{reason: :maximum_depth_exceeded}
+              details: %{reason: :max_depth_exceeded}
             }} = MergePatch.apply(%{}, %{"a" => %{"b" => %{"c" => true}}}, max_depth: 2)
 
     assert {:error,
             %Error{
               path: "/a/1",
-              details: %{reason: :maximum_nodes_exceeded}
+              details: %{reason: :max_nodes_exceeded}
             }} = MergePatch.apply(%{}, %{"a" => [1, 2, 3]}, max_nodes: 3)
   end
 

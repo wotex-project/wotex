@@ -23,6 +23,9 @@ the three lifecycle event values defined by the optional Discovery Events API.
 The library is deliberately storage-neutral. A consumer supplies repository,
 authorization, clock, and identifier ports; the library owns validation,
 operation ordering, optimistic concurrency semantics, and normalized errors.
+Every failure is a `Wotex.Directory.Error` with a stable `code`, the `phase`
+that refused the request, an optional JSON Pointer `path`, a deterministic
+`message`, and `details` carrying the directory operation.
 
 ## Installation
 
@@ -75,6 +78,12 @@ Nine callbacks form the complete effect boundary:
 | `Repository` | `delete/4` | Atomically delete the expected entry version. |
 | `Repository` | `list/5` | Return a bounded keyset page tied to a collection revision. |
 | `Repository` | `expire_due/5` | Purge or retain a bounded, ordered set of due entries. |
+
+`Wotex.Directory.Clock.System` is the one port implementation this package
+ships: a stateless UTC system clock selected explicitly with
+`clock: {Wotex.Directory.Clock.System, nil}`. Nothing installs it implicitly,
+and a consumer that owns time supplies its own module. Every other port is
+consumer-owned.
 
 Port state and failure reasons are opaque. Adapter failures become stable
 `Wotex.Directory.Error` values so infrastructure details do not leak across the

@@ -63,6 +63,11 @@ The package does not provide:
 - background expiry scheduling;
 - a credential store or policy engine;
 - JSONPath, XPath, or SPARQL search;
+- listing parameters beyond `limit`, `format`, and the opaque continuation
+  cursor: `sort_by` and `sort_order` are explicit non-goals, and the only order
+  the package produces or accepts is ascending Unicode code point order by
+  identifier;
+- a client-visible pagination offset;
 - an event stream, event persistence, replay, or transport encoding;
 - alternate RDF serializations;
 - Thing provisioning or canonical Thing state; or
@@ -75,20 +80,23 @@ They are never treated as an empty result.
 
 | Concern | W3C baseline | Package choice |
 |---|---|---|
-| Collection | Discovery requires listing at a Things API | Transport-neutral `list/3` and `query/3` values |
-| Named creation | Discovery uses PUT and treats an existing target as update | `register/4` is an atomic-intent upsert; result is `created` or `replaced` |
-| Anonymous creation | Discovery uses POST and requires a directory-local identifier | Identifier port supplies an absolute IRI before repository insertion |
-| Retrieval | Discovery retrieves one Thing Description by identifier | `get/3` returns an enriched entry value |
-| Replacement | Discovery PUT replaces a complete Thing Description | `replace/5` requires an existing entry and an optional version precondition |
-| Partial update | Discovery requires RFC 7396 for PATCH | `patch/5` merge-patches the enriched JSON value, then validates before write |
-| Deletion | Discovery deletes by identifier | `delete/4` is conditional on the observed or supplied version |
-| Validation | Discovery recommends at least TD minimal validation | Every write must pass the core Thing Description 1.1 validator |
-| Listing order | Discovery requires ascending Unicode code point order by identifier when paginated | Every page is checked for that order |
-| Pagination | Discovery defines optional `limit`, an `offset` example, and a `next` Link header that carries every argument needed to continue | Listing uses bounded keyset pages: an opaque cursor binds the collection revision and the last identifier, and a transport host places it in the `next` link |
-| Expiry | Discovery defines `ttl` and `expires`, and recommends purging expired registrations | Reads reject expired entries; consumer-invoked bounded expiry defaults to purge and may explicitly transition an active entry once into retained expired state |
-| Introduction | Discovery allows `/.well-known/wot` and requires the directory's own Thing Description there when used | `introduction/1` returns that value without entry repository access |
-| Events | Discovery optionally defines three lifecycle events over SSE | `Event.from_mutation/2` derives transport-neutral type and data; the consumer owns publication and delivery |
-| Search | JSONPath and XPath are informative; SPARQL is optional | No search profile is implemented |
+| Collection | Discovery 7.3.2.1 defines a Things API collection | Transport-neutral `list/3` and `query/3` values |
+| Named creation | Discovery 7.3.2.1.1 uses PUT and treats an existing target as an update | `register/4` is an atomic-intent upsert; result is `created` or `replaced` |
+| Anonymous creation | Discovery 7.3.2.1.1 uses POST and requires a directory-local identifier | Identifier port supplies an absolute IRI before repository insertion |
+| Retrieval | Discovery 7.3.2.1.2 retrieves one Thing Description by identifier | `get/3` returns an enriched entry value |
+| Replacement | Discovery 7.3.2.1.3 replaces a complete Thing Description with PUT | `replace/5` requires an existing entry and an optional version precondition |
+| Partial update | Discovery 7.3.2.1.3 requires RFC 7396 for PATCH | `patch/5` merge-patches the enriched JSON value, then validates before write |
+| Deletion | Discovery 7.3.2.1.4 deletes by identifier | `delete/4` is conditional on the observed or supplied version |
+| Listing order | Discovery 7.3.2.1.5 requires ascending Unicode code point order by identifier | Every page is checked for that order |
+| Pagination | Discovery 7.3.2.1.5 defines an optional `limit` and a `next` Link header that carries every argument needed to continue | Listing uses bounded keyset pages: an opaque cursor binds the collection revision and the last identifier, and a transport host places it in the `next` link |
+| Registration information | Discovery 7.3.1.1 defines `created`, `modified`, `expires`, `ttl`, and `retrieved` | `Registration` assigns the server-owned members and gives `ttl` precedence over a supplied `expires` |
+| Expiry | Discovery 7.3.1.2 defines registration expiry and recommends purging expired registrations | Reads reject expired entries; consumer-invoked bounded expiry defaults to purge and may explicitly transition an active entry once into retained expired state |
+| Validation | Discovery 7.3.2.1.6 requires validation of submitted Thing Descriptions | Every write must pass the core Thing Description 1.1 validator |
+| Introduction | Discovery 6.2 allows `/.well-known/wot` and requires the directory's own Thing Description there when used | `introduction/1` returns that value without entry repository access |
+| Events | Discovery 7.3.2.2 optionally defines three lifecycle events over SSE | `Event.from_mutation/2` derives transport-neutral type and data; the consumer owns publication and delivery |
+| Search | Discovery 7.3.2.3.1 JSONPath and 7.3.2.3.2 XPath are informative; 7.3.2.3.3 SPARQL is optional | No search profile is implemented |
+
+Section numbers cite the W3C WoT Discovery Recommendation dated 2023-12-05.
 
 The implementation does not own HTTP. A transport host maps values to the exact
 Discovery endpoints, methods, media types, Link headers, and Problem Details.
@@ -327,6 +335,15 @@ The callback returns `{:ok, DateTime.t()}`. All timestamps and expiry decisions
 use this clock. A replacement, patch, or named registration update rejects a
 time earlier than the stored `modified` time as `clock_regression`.
 
+`Wotex.Directory.Clock.System` is the one port implementation the package
+ships. It is a stateless UTC system clock returning `DateTime.utc_now/0`, and
+it is an explicit opt-in default: a consumer selects it by configuring
+`clock: {Wotex.Directory.Clock.System, nil}`. Nothing selects it implicitly,
+no application configuration can install it, and a consumer that owns time
+supplies its own module instead. Because a system clock can be adjusted
+backwards, a mutation whose time precedes stored registration history is
+rejected as `clock_regression` rather than accepted.
+
 ### 6.4 Identifier
 
 ```elixir
@@ -358,6 +375,16 @@ retry count.
 
 The result status is `created` or `replaced`. Registration never creates a
 canonical Thing outside the directory.
+
+Steps 8 and 10 are two repository calls, not one transaction. A named
+registration that observes no entry and then loses the create race to a
+concurrent registration is reported as `conflict`. The package does not retry
+it, does not require an upsert callback, and never reports a create as a
+replacement. The caller may repeat the identical request; the repeated request
+observes the winning entry and takes the deterministic replacement path with
+its own version precondition. An adapter must therefore implement `insert` as
+an atomic conditional create, the guarantee a unique key already provides in an
+ETS table, in SQLite, and in Ecto, rather than as an unconditional write.
 
 ### 7.2 Get
 
@@ -496,7 +523,7 @@ behavior.
 `Wotex.Directory.MergePatch.apply/3` is public and therefore also returns this
 value. Its refusals use `invalid_request` in phase `patch`, the JSON Pointer of
 the offending patch member, and a `reason` detail of `invalid_json_value`,
-`maximum_depth_exceeded`, or `maximum_nodes_exceeded`.
+`max_depth_exceeded`, or `max_nodes_exceeded`.
 
 ## 9. Security invariants
 
@@ -533,6 +560,7 @@ minor version change. Once 1.0 is released:
 | No application callback or load-time process | application contract test |
 | Consumer ports and callback validation | service tests |
 | Named and anonymous registration | directory registration tests |
+| Lost named-registration create race | registration race test |
 | Update semantics and optimistic conflict | replacement and conflict tests |
 | Retrieval and `retrieved` metadata | retrieval tests |
 | RFC 7396 plus validation-before-write | merge patch and patch tests |

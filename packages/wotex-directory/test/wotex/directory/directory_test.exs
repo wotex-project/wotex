@@ -97,6 +97,37 @@ defmodule Wotex.DirectoryTest do
       assert MemoryRepository.entries(setup.repository) == %{}
     end
 
+    test "a lost named create race is a conflict the caller repeats as a replacement" do
+      setup = TestService.build()
+      thing_description = Fixtures.thing_description("urn:example:thing:1")
+
+      racing = %{
+        setup.service
+        | repository:
+            {Wotex.Directory.StubRepository,
+             %{fetch: :not_found, insert: {:error, :already_exists}}}
+      }
+
+      assert {:error,
+              %Error{
+                code: :conflict,
+                phase: :repository,
+                details: %{operation: :register, identifier: "urn:example:thing:1"}
+              }} = Directory.register(racing, thing_description, setup.context)
+
+      assert {:ok, winner} =
+               Directory.register(setup.service, thing_description, setup.context)
+
+      assert winner.status == :created
+
+      assert {:ok, repeated} =
+               Directory.register(setup.service, thing_description, setup.context)
+
+      assert repeated.status == :replaced
+      assert repeated.entry.version == 2
+      assert repeated.entry.registration.created == winner.entry.registration.created
+    end
+
     test "reports identifier port failure and collision without retrying" do
       invalid_setup = TestService.build(identifiers: ["relative-identifier"])
       anonymous = Fixtures.thing_description(nil)

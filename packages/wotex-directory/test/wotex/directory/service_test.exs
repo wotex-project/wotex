@@ -51,6 +51,18 @@ defmodule Wotex.Directory.ServiceTest do
              |> Service.new()
   end
 
+  test "the shipped system clock is selected explicitly and never implicitly" do
+    options = valid_options()
+
+    assert {:ok, service} =
+             options |> Keyword.put(:clock, {Wotex.Directory.Clock.System, nil}) |> Service.new()
+
+    assert service.clock == {Wotex.Directory.Clock.System, nil}
+
+    assert {:ok, default} = Service.new(options)
+    assert default.clock == Keyword.fetch!(options, :clock)
+  end
+
   test "accepts the core limit vocabulary and rejects every invalid limit" do
     options = valid_options()
 

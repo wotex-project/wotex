@@ -12,6 +12,12 @@ Observed and retrieved: 2026-09-02
 - Used for: Things API CRUDL behavior, registration information, anonymous
   identifiers, validation guidance, pagination, expiry, security ordering, and
   well-known Introduction
+- Section citations observed 2026-09-07 and used in WTD.01 section 4: 6.2
+  well-known URIs; 7.3.1.1 registration information; 7.3.1.2 registration
+  expiry; 7.3.2.1 Things API with 7.3.2.1.1 creation, 7.3.2.1.2 retrieval,
+  7.3.2.1.3 update, 7.3.2.1.4 deletion, 7.3.2.1.5 listing, and 7.3.2.1.6
+  validation; 7.3.2.2 events; 7.3.2.3 search with 7.3.2.3.1 JSONPath,
+  7.3.2.3.2 XPath, and 7.3.2.3.3 SPARQL
 - Revalidation trigger: a superseding Recommendation or an erratum that changes
   an implemented assertion
 
