@@ -5,6 +5,7 @@
 /priv/plts/
 /.elixir_ls/
 /.archive-check.*/
+/tmp/
 /docs/tasks/local/
 /docs/tasks/inbox.md
 erl_crash.dump

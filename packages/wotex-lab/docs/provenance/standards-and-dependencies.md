@@ -29,7 +29,7 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [Axon 0.8.1](https://hexdocs.pm/axon/0.8.1/Axon.html) | Consumer training/serving integration contract; integration dependency cohort requires validation |
 | [Req](https://hexdocs.pm/req/Req.html) | Chosen finite HTTP and streaming reference; SSE lifecycle remains explicit Lab work |
 | [EMQTT](https://github.com/emqx/emqtt) | Chosen MQTT client; wire compatibility, custody and session behavior require pinned integration evidence |
-| [Exqlite](https://hexdocs.pm/exqlite/Exqlite.html) | Chosen SQLite access; transactions/conflicts belong to independent Lab adapter |
+| [Exqlite 0.40.0](https://hexdocs.pm/exqlite/0.40.0/Exqlite.html) | Chosen SQLite access, pinned by `mix.lock`; the transactions, conditional SQL and conflict mapping belong to the independent Lab adapter |
 | [ExMaude 0.4.1 source](https://github.com/futhr/ex_maude/tree/9bc259ff0d1ea3153c20e7f7f439827c1d4ba3d4) | Explicit pools/public search and model-scoped evidence; binary separately provisioned |
 | [Maude](https://maude.cs.illinois.edu/) | Rewriting logic engine; finite-model claims and executable license are separate from WoT standards |
 | [Livebook](https://livebook.dev/) and [Nerves Livebook](https://github.com/livebook-dev/nerves_livebook) | Executable notebooks and bootable embedded adoption convention; Lab supplies its own tested artifacts |

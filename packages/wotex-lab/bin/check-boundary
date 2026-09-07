@@ -6,7 +6,7 @@ if rg -n '(Application\.(put_env|put_all_env|start|ensure_all_started)\(|String\
   exit 1
 fi
 
-if rg -n --hidden -g '!.git/**' -g '!deps/**' -g '!_build/**' -g '!doc/**' -g '!cover/**' -g '!.archive-check.*/**' '([/]Users[/]|[/]home[/])' .; then
+if rg -n --hidden -g '!.git' -g '!.git/**' -g '!deps/**' -g '!_build/**' -g '!doc/**' -g '!cover/**' -g '!.archive-check.*/**' '([/]Users[/]|[/]home[/])' .; then
   echo "machine-local path in publishable source" >&2
   exit 1
 fi
