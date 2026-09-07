@@ -203,6 +203,11 @@ defmodule Wotex.ThingModelTest do
            } = ThingModel.schema_info()
   end
 
+  test "locates a missing required member at its own pointer" do
+    assert {:error, errors} = ThingModel.from_map(Map.delete(valid_tm_map(), "@type"))
+    assert Enum.any?(errors, &(&1.code == :schema_violation and &1.path == "/@type"))
+  end
+
   test "requires the TD 1.1 context first, optionally after the TD 1.0 context" do
     v1 = "https://www.w3.org/2019/wot/td/v1"
 

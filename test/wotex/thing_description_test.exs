@@ -279,6 +279,27 @@ defmodule Wotex.ThingDescriptionTest do
     assert Enum.any?(errors, &(&1.code == :unsupported_context and &1.path == "/@context"))
   end
 
+  test "locates a missing required member at its own pointer" do
+    assert {:error, errors} = ThingDescription.from_map(Map.delete(valid_td_map(), "title"))
+
+    assert [
+             %Error{
+               code: :schema_violation,
+               path: "/title",
+               details: %{assertion: "required", missing: "title"}
+             }
+           ] =
+             Enum.filter(errors, &(&1.code == :schema_violation))
+
+    assert {:error, errors} =
+             ThingDescription.from_map(
+               Map.drop(valid_td_map(), ["securityDefinitions", "security"])
+             )
+
+    assert Enum.map(Enum.filter(errors, &(&1.code == :schema_violation)), & &1.path) ==
+             ["/security", "/securityDefinitions"]
+  end
+
   test "rejects a Thing Model as a Thing Description with a dedicated code" do
     assert {:error, errors} =
              ThingDescription.from_map(Map.put(valid_td_map(), "@type", ["Thing", "tm:ThingModel"]))

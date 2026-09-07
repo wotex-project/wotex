@@ -65,6 +65,10 @@ defmodule Wotex.JSON do
     |> String.replace("/", "~1")
   end
 
+  @doc "Appends one member name to a JSON Pointer, escaping it as RFC 6901 requires."
+  @spec join_pointer(String.t(), String.t()) :: String.t()
+  def join_pointer(pointer, member), do: join(pointer, member)
+
   @doc "Resolves an RFC 6901 JSON Pointer against a JSON-compatible value."
   @spec resolve_pointer(json_value(), String.t()) :: {:ok, json_value()} | :error
   def resolve_pointer(value, ""), do: {:ok, value}

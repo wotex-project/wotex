@@ -67,6 +67,11 @@ defmodule Wotex.ValueTest do
     assert Form.operations(none) == []
   end
 
+  test "a missing required member of a value is located at its pointer" do
+    assert {:error, %Error{code: :schema_violation, path: "/forms", details: %{missing: "forms"}}} =
+             PropertyAffordance.new(%{"type" => "number"})
+  end
+
   test "Form applies TD 1.1 default operations when op is absent" do
     assert {:ok, form} = Form.new(%{"href" => "relative"})
     assert Form.operations(form, for: :property) == ["readproperty", "writeproperty"]

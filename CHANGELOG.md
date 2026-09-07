@@ -10,6 +10,8 @@
   copied strings, duplicate-member rejection, collection limits, and
   `Wotex.JSON.Limits` with `invalid_limit` instead of silent defaults.
 - Resolve `tm:optional` and local `tm:ref` pointers in Thing Models.
+- Report a missing required member at its own pointer, one violation per
+  member.
 - Preserve TD/TM schema error field paths and short-circuit native array
   validation before copying over-budget input.
 

@@ -1,7 +1,7 @@
 defmodule Wotex.ThingDescription.Validator do
   @moduledoc false
 
-  alias Wotex.{Error, SecurityReferences, ThingDescription}
+  alias Wotex.{Error, JSON, SecurityReferences, ThingDescription}
 
   @context "https://www.w3.org/2022/wot/td/v1.1"
   @legacy_context "https://www.w3.org/2019/wot/td/v1"
@@ -46,18 +46,38 @@ defmodule Wotex.ThingDescription.Validator do
   defp schema_errors(document) do
     case ExJsonSchema.Validator.validate(@resolved_schema, document, error_formatter: false) do
       :ok -> []
-      {:error, errors} -> Enum.map(errors, &schema_error/1)
+      {:error, errors} -> Enum.flat_map(errors, &schema_error/1)
     end
   end
 
+  # A missing required member is located at the member's own pointer, one
+  # violation per member, so consumers and conformance vectors see "/title"
+  # rather than the parent object.
+  defp schema_error(%ExJsonSchema.Validator.Error{
+         path: path,
+         error: %ExJsonSchema.Validator.Error.Required{missing: missing}
+       }) do
+    Enum.map(missing, fn member ->
+      Error.new(
+        :schema_violation,
+        :schema,
+        "Thing Description does not satisfy the pinned TD 1.1 schema",
+        JSON.join_pointer(normalize_path(path), member),
+        %{assertion: "required", missing: member}
+      )
+    end)
+  end
+
   defp schema_error(%ExJsonSchema.Validator.Error{path: path, error: raw_error}) do
-    Error.new(
-      :schema_violation,
-      :schema,
-      "Thing Description does not satisfy the pinned TD 1.1 schema",
-      normalize_path(path),
-      %{assertion: inspect(raw_error, limit: 40, printable_limit: 160)}
-    )
+    [
+      Error.new(
+        :schema_violation,
+        :schema,
+        "Thing Description does not satisfy the pinned TD 1.1 schema",
+        normalize_path(path),
+        %{assertion: inspect(raw_error, limit: 40, printable_limit: 160)}
+      )
+    ]
   end
 
   defp semantic_errors(document) do

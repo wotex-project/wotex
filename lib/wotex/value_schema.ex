@@ -1,7 +1,7 @@
 defmodule Wotex.ValueSchema do
   @moduledoc false
 
-  alias Wotex.Error
+  alias Wotex.{Error, JSON}
 
   @external_resource schema_path =
                        Path.expand("../../priv/w3c/td-json-schema-validation-1.1.json", __DIR__)
@@ -64,7 +64,7 @@ defmodule Wotex.ValueSchema do
       {:error, errors} when is_list(errors) ->
         error =
           errors
-          |> Enum.map(&schema_error/1)
+          |> Enum.flat_map(&schema_error/1)
           |> Enum.sort_by(&{&1.path, inspect(&1.details)})
           |> List.first()
 
@@ -72,14 +72,31 @@ defmodule Wotex.ValueSchema do
     end
   end
 
+  defp schema_error(%ExJsonSchema.Validator.Error{
+         path: path,
+         error: %ExJsonSchema.Validator.Error.Required{missing: missing}
+       }) do
+    Enum.map(missing, fn member ->
+      Error.new(
+        :schema_violation,
+        :schema,
+        "Value does not satisfy its pinned TD 1.1 definition",
+        JSON.join_pointer(normalize_path(path), member),
+        %{assertion: "required", missing: member}
+      )
+    end)
+  end
+
   defp schema_error(%ExJsonSchema.Validator.Error{path: path, error: raw_error}) do
-    Error.new(
-      :schema_violation,
-      :schema,
-      "Value does not satisfy its pinned TD 1.1 definition",
-      normalize_path(path),
-      %{assertion: inspect(raw_error, limit: 40, printable_limit: 160)}
-    )
+    [
+      Error.new(
+        :schema_violation,
+        :schema,
+        "Value does not satisfy its pinned TD 1.1 definition",
+        normalize_path(path),
+        %{assertion: inspect(raw_error, limit: 40, printable_limit: 160)}
+      )
+    ]
   end
 
   defp normalize_path("#"), do: "/"

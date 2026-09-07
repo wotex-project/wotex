@@ -27,7 +27,10 @@ with the same fields so a consumer can match errors from any package
 uniformly; transport packages may add a retry `class`.
 
 Schema violations MUST preserve the validator's field location rather than
-collapse formatted errors to the root. Native-array node-limit admission MUST
+collapse formatted errors to the root. A missing required member is one
+`schema_violation` at the member's own pointer (for example `/title`) with
+`details.assertion` `"required"` and `details.missing` naming the member, so
+consumers and conformance vectors see the member rather than its parent. Native-array node-limit admission MUST
 stop at the first over-budget node without materializing an indexed copy of
 the remaining array. These are compatible corrections to the existing path and
 resource-bound contracts; they do not change accepted TD/TM values.
