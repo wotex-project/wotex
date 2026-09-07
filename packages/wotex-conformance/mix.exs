@@ -150,7 +150,8 @@ defmodule WotexConformance.MixProject do
         Integrity: [
           Wotex.Conformance.Artifact,
           Wotex.Conformance.Canonical,
-          Wotex.Conformance.Error
+          Wotex.Conformance.Error,
+          Wotex.Conformance.Pointer
         ]
       ],
       source_ref: "v#{@version}",

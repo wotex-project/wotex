@@ -74,7 +74,7 @@ defmodule Wotex.Conformance.Report do
   end
 
   def new(%Subject{}, _corpus_digest, _generated_at, _environment, _results) do
-    {:error, Error.new(:invalid_report_input, "report inputs are invalid")}
+    {:error, Error.new(:invalid_report_input, :report, "report inputs are invalid")}
   end
 
   @doc "Serializes a report, optionally omitting its digest with `include_digest: false`."
@@ -106,7 +106,7 @@ defmodule Wotex.Conformance.Report do
     if Canonical.valid_digest?(digest) do
       :ok
     else
-      {:error, Error.new(:invalid_digest, "corpus digest must be lowercase SHA-256")}
+      {:error, Error.new(:invalid_digest, :report, "corpus digest must be lowercase SHA-256")}
     end
   end
 
@@ -116,17 +116,19 @@ defmodule Wotex.Conformance.Report do
         {:ok, DateTime.to_iso8601(utc)}
 
       {:error, _reason} ->
-        {:error, Error.new(:invalid_generated_at, "generated_at could not be normalized to UTC")}
+        {:error,
+         Error.new(:invalid_generated_at, :report, "generated_at could not be normalized to UTC")}
     end
   end
 
   defp validate_results(results) do
     cond do
       not Enum.all?(results, &match?(%Result{}, &1)) ->
-        {:error, Error.new(:invalid_type, "results must contain result values")}
+        {:error, Error.new(:invalid_type, :report, "results must contain result values")}
 
       results |> Enum.map(& &1.vector_id) |> duplicate?() ->
-        {:error, Error.new(:duplicate_vector_result, "results contain duplicate vector IDs")}
+        {:error,
+         Error.new(:duplicate_vector_result, :report, "results contain duplicate vector IDs")}
 
       true ->
         :ok

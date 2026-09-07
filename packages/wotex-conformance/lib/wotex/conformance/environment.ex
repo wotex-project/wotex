@@ -17,7 +17,7 @@ defmodule Wotex.Conformance.Environment do
          {:ok, _validated} <-
            Value.validate(environment,
              max_depth: 8,
-             max_entries: 128,
+             max_nodes: 128,
              max_string_bytes: 1_024
            ),
          :ok <- reject_sensitive_keys(environment, []) do
@@ -31,7 +31,10 @@ defmodule Wotex.Conformance.Environment do
         Regex.match?(@sensitive_key, key) ->
           {:halt,
            {:error,
-            Error.new(:sensitive_environment_key, "environment contains a sensitive key",
+            Error.new(
+              :sensitive_environment_key,
+              :environment,
+              "environment contains a sensitive key",
               path: Enum.reverse([key | path])
             )}}
 

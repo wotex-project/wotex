@@ -19,8 +19,8 @@ defmodule Wotex.Conformance.Subject do
         }
 
   @doc "Constructs an immutable subject identity from decoded input."
-  @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
-  def new(input) when is_map(input) do
+  @spec from_map(map()) :: {:ok, t()} | {:error, Error.t()}
+  def from_map(input) when is_map(input) do
     with :ok <- Input.only_keys(input, ~w(id version artifact_digest interface)),
          {:ok, id_input} <- Input.required(input, :id),
          {:ok, id} <- Value.validate_identifier(id_input, "id"),
@@ -39,7 +39,12 @@ defmodule Wotex.Conformance.Subject do
     end
   end
 
-  def new(_input), do: {:error, Error.new(:invalid_type, "subject must be an object")}
+  def from_map(_input),
+    do: {:error, Error.new(:invalid_type, :subject, "subject must be an object")}
+
+  @doc "Alias for `from_map/1`, the map-shaped subject constructor."
+  @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
+  def new(input), do: from_map(input)
 
   @doc "Serializes a subject identity to its string-keyed report form."
   @spec to_map(t()) :: map()
@@ -57,7 +62,7 @@ defmodule Wotex.Conformance.Subject do
       {:ok, digest}
     else
       {:error,
-       Error.new(:invalid_digest, "artifact_digest must be lowercase SHA-256",
+       Error.new(:invalid_digest, :subject, "artifact_digest must be lowercase SHA-256",
          path: ["artifact_digest"]
        )}
     end
@@ -66,7 +71,7 @@ defmodule Wotex.Conformance.Subject do
   defp validate_interface(value) do
     with {:ok, interface} <- Value.string_key_map(value, "interface"),
          {:ok, _validated} <-
-           Value.validate(interface, max_depth: 8, max_entries: 64, max_string_bytes: 512),
+           Value.validate(interface, max_depth: 8, max_nodes: 64, max_string_bytes: 512),
          {:ok, kind} <- required_interface_identifier(interface, "kind"),
          {:ok, revision} <- required_interface_identifier(interface, "revision") do
       {:ok, Map.merge(interface, %{"kind" => kind, "revision" => revision})}
@@ -80,7 +85,9 @@ defmodule Wotex.Conformance.Subject do
 
       :error ->
         {:error,
-         Error.new(:missing_field, "interface #{key} is required", path: ["interface", key])}
+         Error.new(:missing_field, :subject, "interface #{key} is required",
+           path: ["interface", key]
+         )}
     end
   end
 end

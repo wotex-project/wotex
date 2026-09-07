@@ -46,7 +46,7 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
     assert :ok = Input.only_keys(%{id: 1}, ["id"])
     assert {:error, %{code: :invalid_field}} = Input.only_keys(%{1 => "value"}, ["id"])
 
-    assert {:error, %{code: :unknown_field, path: ["extra"]}} =
+    assert {:error, %{code: :unknown_field, phase: :input, path: "/extra"}} =
              Input.only_keys(%{"extra" => true}, ["id"])
 
     assert {:error, %{code: :duplicate_field}} =
@@ -67,7 +67,7 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
     assert {:error, %{code: :invalid_encoding}} = Value.validate(<<255>>)
     assert {:error, %{code: :limit_exceeded}} = Value.validate("ab", max_string_bytes: 1)
     assert {:error, %{code: :limit_exceeded}} = Value.validate(%{"a" => %{"b" => 1}}, max_depth: 1)
-    assert {:error, %{code: :limit_exceeded}} = Value.validate([1], max_entries: 1)
+    assert {:error, %{code: :limit_exceeded}} = Value.validate([1], max_nodes: 1)
     assert {:error, %{code: :invalid_map_key}} = Value.validate(%{atom: "value"})
     assert {:error, %{code: :invalid_type}} = Value.validate({:unsupported, "term"})
     assert_error(Value.validate(%{}, [:malformed]), :invalid_options)
@@ -331,7 +331,7 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
       :invalid_target_callback
     )
 
-    explicit = Error.new(:explicit_failure, "explicit")
+    explicit = Error.new(:explicit_failure, :target, "explicit")
 
     assert Target.artifact_path({FailingTarget, %{artifact_result: {:error, explicit}}}) ==
              {:error, explicit}

@@ -9,9 +9,14 @@ defmodule Wotex.Conformance.Input do
     string_key = Atom.to_string(key)
 
     cond do
-      Map.has_key?(input, key) -> {:ok, Map.fetch!(input, key)}
-      Map.has_key?(input, string_key) -> {:ok, Map.fetch!(input, string_key)}
-      true -> {:error, Error.new(:missing_field, "#{string_key} is required", path: [string_key])}
+      Map.has_key?(input, key) ->
+        {:ok, Map.fetch!(input, key)}
+
+      Map.has_key?(input, string_key) ->
+        {:ok, Map.fetch!(input, string_key)}
+
+      true ->
+        {:error, Error.new(:missing_field, :input, "#{string_key} is required", path: [string_key])}
     end
   end
 
@@ -33,7 +38,7 @@ defmodule Wotex.Conformance.Input do
 
       unknown = Enum.find(Keyword.keys(options), &(&1 not in allowed)) ->
         {:error,
-         Error.new(:invalid_options, "options contain an unknown key",
+         Error.new(:invalid_options, :input, "options contain an unknown key",
            path: [Atom.to_string(unknown)]
          )}
 
@@ -51,13 +56,15 @@ defmodule Wotex.Conformance.Input do
 
     cond do
       Enum.any?(normalized, &match?(:invalid, &1)) ->
-        {:error, Error.new(:invalid_field, "object field names must be strings or atoms")}
+        {:error, Error.new(:invalid_field, :input, "object field names must be strings or atoms")}
 
       unknown = Enum.find(normalized, &(&1 not in allowed)) ->
-        {:error, Error.new(:unknown_field, "object contains an unknown field", path: [unknown])}
+        {:error,
+         Error.new(:unknown_field, :input, "object contains an unknown field", path: [unknown])}
 
       length(normalized) != MapSet.size(MapSet.new(normalized)) ->
-        {:error, Error.new(:duplicate_field, "object contains duplicate field representations")}
+        {:error,
+         Error.new(:duplicate_field, :input, "object contains duplicate field representations")}
 
       true ->
         :ok
@@ -74,6 +81,6 @@ defmodule Wotex.Conformance.Input do
   end
 
   defp invalid_options do
-    {:error, Error.new(:invalid_options, "options must be a unique keyword list")}
+    {:error, Error.new(:invalid_options, :input, "options must be a unique keyword list")}
   end
 end

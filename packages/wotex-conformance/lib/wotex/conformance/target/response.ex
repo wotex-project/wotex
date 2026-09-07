@@ -19,8 +19,8 @@ defmodule Wotex.Conformance.Target.Response do
         }
 
   @doc "Validates a target response against the vector ID from its request."
-  @spec new(map(), String.t()) :: {:ok, t()} | {:error, Error.t()}
-  def new(input, expected_vector_id) when is_map(input) do
+  @spec from_map(map(), String.t()) :: {:ok, t()} | {:error, Error.t()}
+  def from_map(input, expected_vector_id) when is_map(input) do
     with :ok <-
            Input.only_keys(
              input,
@@ -35,9 +35,13 @@ defmodule Wotex.Conformance.Target.Response do
     end
   end
 
-  def new(_input, _expected_vector_id) do
-    {:error, Error.new(:invalid_target_response, "target response must be an object")}
+  def from_map(_input, _expected_vector_id) do
+    {:error, Error.new(:invalid_target_response, :protocol, "target response must be an object")}
   end
+
+  @doc "Alias for `from_map/2`, the map-shaped target response constructor."
+  @spec new(map(), String.t()) :: {:ok, t()} | {:error, Error.t()}
+  def new(input, expected_vector_id), do: from_map(input, expected_vector_id)
 
   defp validate_protocol(%{
          "protocol" => "wotex.conformance.target",
@@ -46,7 +50,8 @@ defmodule Wotex.Conformance.Target.Response do
        do: :ok
 
   defp validate_protocol(_input) do
-    {:error, Error.new(:target_protocol_mismatch, "target response protocol is not supported")}
+    {:error,
+     Error.new(:target_protocol_mismatch, :protocol, "target response protocol is not supported")}
   end
 
   defp validate_vector_id(input, expected) do
@@ -56,7 +61,11 @@ defmodule Wotex.Conformance.Target.Response do
 
       _value ->
         {:error,
-         Error.new(:target_vector_mismatch, "target response vector ID does not match request")}
+         Error.new(
+           :target_vector_mismatch,
+           :protocol,
+           "target response vector ID does not match request"
+         )}
     end
   end
 
@@ -64,19 +73,25 @@ defmodule Wotex.Conformance.Target.Response do
   defp validate_outcome("unsupported"), do: {:ok, :unsupported}
 
   defp validate_outcome(_value) do
-    {:error, Error.new(:invalid_target_outcome, "target response outcome is not supported")}
+    {:error,
+     Error.new(:invalid_target_outcome, :protocol, "target response outcome is not supported")}
   end
 
   defp validate_actual(:observed, %{"actual" => actual}), do: Value.validate(actual)
 
   defp validate_actual(:observed, _input) do
-    {:error, Error.new(:missing_target_observation, "observed target response requires actual")}
+    {:error,
+     Error.new(:missing_target_observation, :protocol, "observed target response requires actual")}
   end
 
   defp validate_actual(:unsupported, input) do
     if Map.has_key?(input, "actual") do
       {:error,
-       Error.new(:unexpected_target_observation, "unsupported target response must omit actual")}
+       Error.new(
+         :unexpected_target_observation,
+         :protocol,
+         "unsupported target response must omit actual"
+       )}
     else
       {:ok, nil}
     end
@@ -97,6 +112,7 @@ defmodule Wotex.Conformance.Target.Response do
   end
 
   defp validate_codes(_codes) do
-    {:error, Error.new(:invalid_target_codes, "target response codes must be a bounded list")}
+    {:error,
+     Error.new(:invalid_target_codes, :protocol, "target response codes must be a bounded list")}
   end
 end

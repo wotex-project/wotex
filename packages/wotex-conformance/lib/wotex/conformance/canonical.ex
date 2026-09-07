@@ -18,7 +18,7 @@ defmodule Wotex.Conformance.Canonical do
     end
   rescue
     Jason.EncodeError ->
-      {:error, Error.new(:encoding_failed, "value could not be encoded as canonical JSON")}
+      {:error, Error.new(:encoding_failed, :value, "value could not be encoded as canonical JSON")}
   end
 
   @doc "Returns the canonical SHA-256 digest for a JSON-compatible value."

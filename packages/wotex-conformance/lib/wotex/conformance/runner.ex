@@ -62,14 +62,18 @@ defmodule Wotex.Conformance.Runner do
 
           {:error, _reason} ->
             {:error,
-             Error.new(:invalid_generated_at, "generated_at could not be normalized to UTC")}
+             Error.new(
+               :invalid_generated_at,
+               :runner,
+               "generated_at could not be normalized to UTC"
+             )}
         end
 
       {:ok, _value} ->
-        {:error, Error.new(:invalid_generated_at, "generated_at must be a DateTime")}
+        {:error, Error.new(:invalid_generated_at, :runner, "generated_at must be a DateTime")}
 
       :error ->
-        {:error, Error.new(:missing_generated_at, "generated_at is required")}
+        {:error, Error.new(:missing_generated_at, :runner, "generated_at is required")}
     end
   end
 
@@ -92,11 +96,12 @@ defmodule Wotex.Conformance.Runner do
         if Enum.all?(ids, &is_binary/1) and MapSet.subset?(requested, all_ids) do
           {:ok, requested}
         else
-          {:error, Error.new(:invalid_selection, "selected vector IDs must exist in the corpus")}
+          {:error,
+           Error.new(:invalid_selection, :runner, "selected vector IDs must exist in the corpus")}
         end
 
       _value ->
-        {:error, Error.new(:invalid_selection, "select must be :all or {:ids, ids}")}
+        {:error, Error.new(:invalid_selection, :runner, "select must be :all or {:ids, ids}")}
     end
   end
 
@@ -139,17 +144,22 @@ defmodule Wotex.Conformance.Runner do
 
   defp evaluate_observation(vector, actual, duration_us) do
     case Canonical.digest(actual) do
-      {:ok, digest} when digest == vector.expectation.digest ->
-        result!(vector, :pass, actual: actual, code: "exact_match", duration_us: duration_us)
-
-      {:ok, _digest} ->
-        result!(vector, :fail, actual: actual, code: "exact_mismatch", duration_us: duration_us)
+      {:ok, digest} ->
+        classify(vector, actual, digest, duration_us)
 
       {:error, _error} ->
         result!(vector, :infrastructure_error,
           code: "invalid_target_observation",
           duration_us: duration_us
         )
+    end
+  end
+
+  defp classify(vector, actual, digest, duration_us) do
+    if digest == vector.expectation.digest do
+      result!(vector, :pass, actual: actual, code: "exact_match", duration_us: duration_us)
+    else
+      result!(vector, :fail, actual: actual, code: "exact_mismatch", duration_us: duration_us)
     end
   end
 

@@ -3,7 +3,7 @@ package: wotex_conformance
 completion_plan: docs/plans/wotex-conformance-completion.md
 specifications:
   - id: WCF.01
-    version: "1.0.0"
+    version: "1.1.0"
     path: docs/specs/WCF.01-conformance-runner.md
     implementation_status: implemented
     standards:
@@ -20,19 +20,26 @@ specifications:
       - Wotex.Conformance.Canonical
       - Wotex.Conformance.Claim
       - Wotex.Conformance.Corpus
+      - Wotex.Conformance.Environment
+      - Wotex.Conformance.Error
+      - Wotex.Conformance.Expectation
+      - Wotex.Conformance.Input
+      - Wotex.Conformance.Pointer
+      - Wotex.Conformance.Report
+      - Wotex.Conformance.Result
+      - Wotex.Conformance.Runner
       - Wotex.Conformance.Subject
-      - Wotex.Conformance.Vector
       - Wotex.Conformance.Target
       - Wotex.Conformance.Target.External
       - Wotex.Conformance.Target.Response
-      - Wotex.Conformance.Runner
-      - Wotex.Conformance.Result
-      - Wotex.Conformance.Report
+      - Wotex.Conformance.Value
+      - Wotex.Conformance.Vector
     executable_evidence:
       - test/wotex/conformance/artifact_test.exs
       - test/wotex/conformance/boundary_test.exs
       - test/wotex/conformance/canonical_test.exs
       - test/wotex/conformance/contracts_test.exs
+      - test/wotex/conformance/conventions_test.exs
       - test/wotex/conformance/corpus_test.exs
       - test/wotex/conformance/external_lifecycle_test.exs
       - test/wotex/conformance/report_test.exs

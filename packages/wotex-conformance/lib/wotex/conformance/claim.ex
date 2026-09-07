@@ -24,8 +24,8 @@ defmodule Wotex.Conformance.Claim do
         }
 
   @doc "Validates external claim data and constructs a versioned claim."
-  @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
-  def new(input) when is_map(input) do
+  @spec from_map(map()) :: {:ok, t()} | {:error, Error.t()}
+  def from_map(input) when is_map(input) do
     with :ok <-
            Input.only_keys(
              input,
@@ -57,7 +57,11 @@ defmodule Wotex.Conformance.Claim do
     end
   end
 
-  def new(_input), do: {:error, Error.new(:invalid_type, "claim must be an object")}
+  def from_map(_input), do: {:error, Error.new(:invalid_type, :claim, "claim must be an object")}
+
+  @doc "Alias for `from_map/1`, the map-shaped claim constructor."
+  @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
+  def new(input), do: from_map(input)
 
   @doc "Serializes a validated claim to its string-keyed interchange form."
   @spec to_map(t()) :: map()
@@ -77,7 +81,7 @@ defmodule Wotex.Conformance.Claim do
 
   defp validate_profile(_value) do
     {:error,
-     Error.new(:invalid_value, "evidence_profile is not supported",
+     Error.new(:invalid_value, :claim, "evidence_profile is not supported",
        path: ["evidence_profile"],
        details: %{"supported" => @profiles}
      )}
@@ -106,7 +110,8 @@ defmodule Wotex.Conformance.Claim do
         Value.validate_identifier(value, key)
 
       :error ->
-        {:error, Error.new(:missing_field, "standard #{key} is required", path: ["standard", key])}
+        {:error,
+         Error.new(:missing_field, :claim, "standard #{key} is required", path: ["standard", key])}
     end
   end
 
@@ -117,14 +122,15 @@ defmodule Wotex.Conformance.Claim do
 
       _uri ->
         {:error,
-         Error.new(:invalid_value, "standard source must be an absolute HTTPS URI",
+         Error.new(:invalid_value, :claim, "standard source must be an absolute HTTPS URI",
            path: ["standard", "source"]
          )}
     end
   end
 
   defp validate_source(_source) do
-    {:error, Error.new(:missing_field, "standard source is required", path: ["standard", "source"])}
+    {:error,
+     Error.new(:missing_field, :claim, "standard source is required", path: ["standard", "source"])}
   end
 
   defp validate_optional_string(nil, _field), do: {:ok, nil}
@@ -135,7 +141,9 @@ defmodule Wotex.Conformance.Claim do
 
   defp validate_optional_string(_value, field) do
     {:error,
-     Error.new(:invalid_value, "#{field} must be a bounded string", path: ["standard", field])}
+     Error.new(:invalid_value, :claim, "#{field} must be a bounded string",
+       path: ["standard", field]
+     )}
   end
 
   defp validate_identifiers(values, field) when is_list(values) and length(values) <= 64 do
@@ -153,6 +161,6 @@ defmodule Wotex.Conformance.Claim do
   end
 
   defp validate_identifiers(_values, field) do
-    {:error, Error.new(:invalid_value, "#{field} must be a bounded list", path: [field])}
+    {:error, Error.new(:invalid_value, :claim, "#{field} must be a bounded list", path: [field])}
   end
 end

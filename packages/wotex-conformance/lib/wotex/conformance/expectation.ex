@@ -14,8 +14,8 @@ defmodule Wotex.Conformance.Expectation do
   @type t :: %__MODULE__{operator: :exact, value: Value.json_value(), digest: String.t()}
 
   @doc "Constructs an exact-match expectation from decoded vector data."
-  @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
-  def new(input) when is_map(input) do
+  @spec from_map(map()) :: {:ok, t()} | {:error, Error.t()}
+  def from_map(input) when is_map(input) do
     with :ok <- Input.only_keys(input, ~w(operator value)),
          {:ok, operator_input} <- Input.required(input, :operator),
          {:ok, operator} <- validate_operator(operator_input),
@@ -26,7 +26,12 @@ defmodule Wotex.Conformance.Expectation do
     end
   end
 
-  def new(_input), do: {:error, Error.new(:invalid_type, "expectation must be an object")}
+  def from_map(_input),
+    do: {:error, Error.new(:invalid_type, :vector, "expectation must be an object")}
+
+  @doc "Alias for `from_map/1`, the map-shaped expectation constructor."
+  @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
+  def new(input), do: from_map(input)
 
   @doc "Serializes the expectation without exposing its derived digest."
   @spec to_map(t()) :: map()
@@ -42,6 +47,8 @@ defmodule Wotex.Conformance.Expectation do
 
   defp validate_operator(_operator) do
     {:error,
-     Error.new(:unsupported_operator, "expectation operator is not supported", path: ["operator"])}
+     Error.new(:unsupported_operator, :vector, "expectation operator is not supported",
+       path: ["operator"]
+     )}
   end
 end

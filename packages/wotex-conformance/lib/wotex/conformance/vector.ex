@@ -22,8 +22,8 @@ defmodule Wotex.Conformance.Vector do
         }
 
   @doc "Validates decoded vector data and derives its canonical digest."
-  @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
-  def new(input) when is_map(input) do
+  @spec from_map(map()) :: {:ok, t()} | {:error, Error.t()}
+  def from_map(input) when is_map(input) do
     with :ok <-
            Input.only_keys(
              input,
@@ -34,11 +34,11 @@ defmodule Wotex.Conformance.Vector do
          {:ok, revision_input} <- Input.required(input, :revision),
          {:ok, revision} <- Value.validate_identifier(revision_input, "revision", max_bytes: 64),
          {:ok, claim_input} <- Input.required(input, :claim),
-         {:ok, claim} <- Claim.new(claim_input),
+         {:ok, claim} <- Claim.from_map(claim_input),
          {:ok, value} <- Input.required(input, :input),
          {:ok, validated_input} <- Value.validate(value),
          {:ok, expectation_input} <- Input.required(input, :expectation),
-         {:ok, expectation} <- Expectation.new(expectation_input),
+         {:ok, expectation} <- Expectation.from_map(expectation_input),
          {:ok, provenance_input} <- Input.required(input, :provenance),
          {:ok, provenance} <- validate_provenance(provenance_input),
          {:ok, tags} <- validate_tags(Input.optional(input, :tags, [])),
@@ -57,7 +57,11 @@ defmodule Wotex.Conformance.Vector do
     end
   end
 
-  def new(_input), do: {:error, Error.new(:invalid_type, "vector must be an object")}
+  def from_map(_input), do: {:error, Error.new(:invalid_type, :vector, "vector must be an object")}
+
+  @doc "Alias for `from_map/1`, the map-shaped vector constructor."
+  @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
+  def new(input), do: from_map(input)
 
   @doc "Serializes a vector, optionally omitting its digest with `include_digest: false`."
   @spec to_map(t(), keyword()) :: map()
@@ -103,7 +107,7 @@ defmodule Wotex.Conformance.Vector do
   defp validate_provenance(value) do
     with {:ok, provenance} <- Value.string_key_map(value, "provenance"),
          {:ok, _validated} <-
-           Value.validate(provenance, max_depth: 8, max_entries: 64, max_string_bytes: 2_048),
+           Value.validate(provenance, max_depth: 8, max_nodes: 64, max_string_bytes: 2_048),
          {:ok, source} <- required_https_source(provenance),
          {:ok, observed} <- required_observed_date(provenance) do
       {:ok, Map.merge(provenance, %{"source" => source, "observed" => observed})}
@@ -119,14 +123,16 @@ defmodule Wotex.Conformance.Vector do
 
           _uri ->
             {:error,
-             Error.new(:invalid_value, "provenance source must be an absolute HTTPS URI",
+             Error.new(:invalid_value, :vector, "provenance source must be an absolute HTTPS URI",
                path: ["provenance", "source"]
              )}
         end
 
       _value ->
         {:error,
-         Error.new(:missing_field, "provenance source is required", path: ["provenance", "source"])}
+         Error.new(:missing_field, :vector, "provenance source is required",
+           path: ["provenance", "source"]
+         )}
     end
   end
 
@@ -139,14 +145,14 @@ defmodule Wotex.Conformance.Vector do
 
           {:error, _reason} ->
             {:error,
-             Error.new(:invalid_value, "provenance observed must be an ISO 8601 date",
+             Error.new(:invalid_value, :vector, "provenance observed must be an ISO 8601 date",
                path: ["provenance", "observed"]
              )}
         end
 
       _value ->
         {:error,
-         Error.new(:missing_field, "provenance observed is required",
+         Error.new(:missing_field, :vector, "provenance observed is required",
            path: ["provenance", "observed"]
          )}
     end
@@ -167,5 +173,5 @@ defmodule Wotex.Conformance.Vector do
   end
 
   defp validate_tags(_tags),
-    do: {:error, Error.new(:invalid_value, "tags must be a bounded list", path: ["tags"])}
+    do: {:error, Error.new(:invalid_value, :vector, "tags must be a bounded list", path: ["tags"])}
 end

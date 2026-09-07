@@ -3,9 +3,9 @@ spec:
   id: WCF.01
   title: Subject-independent conformance runner
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-conformance
-  updated: 2026-09-05
+  updated: 2026-09-07
 ---
 
 # WCF.01: Subject-independent conformance runner
@@ -327,8 +327,40 @@ raw observations, local paths, or exception messages.
 - Public tagged-return APIs reject malformed, duplicated, and unknown keyword
   options before reading any option value.
 
-Errors use stable atom codes internally and bounded static messages. Error
-values do not echo raw target output or environment values.
+### Structured errors
+
+Every rejection returns one structured error with `code`, `phase`, `path`,
+`message`, and `details`.
+
+| Field | Contract |
+|---|---|
+| `code` | stable atom identifying the rejected contract |
+| `phase` | contract stage that rejected the value |
+| `path` | RFC 6901 JSON Pointer string rooted at `/`, or `nil` when no single member is implicated |
+| `message` | bounded static text; improvable, never a matching interface |
+| `details` | bounded identifiers and numeric limits only |
+
+Phases are `input`, `value`, `limits`, `claim`, `vector`, `subject`, `corpus`,
+`artifact`, `target`, `protocol`, `result`, `report`, `environment`, and
+`runner`. `code`, `phase`, and `path` are the matching interface. Pointer
+segments escape `~` as `~0` and `/` as `~1`.
+
+Error values do not echo raw target output or environment values.
+
+### Resource limits
+
+Bounded JSON admission uses one limit vocabulary: `max_bytes`, `max_depth`,
+`max_nodes`, `max_string_bytes`, and `max_collection_size`. `max_nodes` counts
+every JSON value including containers; `max_collection_size` bounds the members
+of one object or array. An invalid limit is rejected with `invalid_limit`
+rather than silently replaced by a default, so a caller cannot believe a bound
+applies when it does not.
+
+### Constructors
+
+Contract values with map-shaped external input are built with `from_map/1`;
+`new/1` remains a documented alias. Keyword configuration uses `new/1` with
+explicit, closed option keys.
 
 ## Process and application behavior
 

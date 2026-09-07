@@ -66,7 +66,7 @@ defmodule Wotex.Conformance.Artifact do
         {:error, error}
 
       {:error, _reason} ->
-        {:error, Error.new(:artifact_unreadable, "subject artifact could not be opened")}
+        {:error, Error.new(:artifact_unreadable, :artifact, "subject artifact could not be opened")}
     end
   end
 
@@ -79,7 +79,7 @@ defmodule Wotex.Conformance.Artifact do
         {:ok, %{digest: digest, size_bytes: size_bytes}}
 
       {:error, _reason} ->
-        {:error, Error.new(:artifact_unreadable, "subject artifact could not be read")}
+        {:error, Error.new(:artifact_unreadable, :artifact, "subject artifact could not be read")}
 
       bytes ->
         next_size = size_bytes + byte_size(bytes)
@@ -93,20 +93,23 @@ defmodule Wotex.Conformance.Artifact do
   defp validate_path(path) when is_binary(path) and path != "", do: :ok
 
   defp validate_path(_path),
-    do: {:error, Error.new(:invalid_artifact_path, "artifact path must be a non-empty string")}
+    do:
+      {:error,
+       Error.new(:invalid_artifact_path, :artifact, "artifact path must be a non-empty string")}
 
   defp validate_digest(digest) do
     if Canonical.valid_digest?(digest) do
       :ok
     else
-      {:error, Error.new(:invalid_digest, "artifact digest must be lowercase SHA-256")}
+      {:error, Error.new(:invalid_digest, :artifact, "artifact digest must be lowercase SHA-256")}
     end
   end
 
   defp validate_max_bytes(value) when is_integer(value) and value > 0, do: :ok
 
   defp validate_max_bytes(_value),
-    do: {:error, Error.new(:invalid_limit, "artifact byte limit must be a positive integer")}
+    do:
+      {:error, Error.new(:invalid_limit, :limits, "artifact byte limit must be a positive integer")}
 
   defp regular_file(path) do
     case File.lstat(path, time: :posix) do
@@ -114,10 +117,12 @@ defmodule Wotex.Conformance.Artifact do
         :ok
 
       {:ok, _stat} ->
-        {:error, Error.new(:invalid_artifact_type, "subject artifact must be a regular file")}
+        {:error,
+         Error.new(:invalid_artifact_type, :artifact, "subject artifact must be a regular file")}
 
       {:error, _reason} ->
-        {:error, Error.new(:artifact_unreadable, "subject artifact could not be inspected")}
+        {:error,
+         Error.new(:artifact_unreadable, :artifact, "subject artifact could not be inspected")}
     end
   end
 
@@ -125,7 +130,7 @@ defmodule Wotex.Conformance.Artifact do
 
   defp within_limit(_size, max_bytes) do
     {:error,
-     Error.new(:limit_exceeded, "subject artifact exceeds its byte limit",
+     Error.new(:limit_exceeded, :limits, "subject artifact exceeds its byte limit",
        details: %{"max_bytes" => max_bytes}
      )}
   end
@@ -135,7 +140,7 @@ defmodule Wotex.Conformance.Artifact do
       :ok
     else
       {:error,
-       Error.new(:artifact_digest_mismatch, "subject artifact digest does not match",
+       Error.new(:artifact_digest_mismatch, :artifact, "subject artifact digest does not match",
          details: %{"actual_digest" => actual, "expected_digest" => expected}
        )}
     end

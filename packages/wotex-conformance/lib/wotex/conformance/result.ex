@@ -91,7 +91,7 @@ defmodule Wotex.Conformance.Result do
   end
 
   def new(%Vector{}, _status, _options) do
-    {:error, Error.new(:invalid_result_status, "result status is not supported")}
+    {:error, Error.new(:invalid_result_status, :result, "result status is not supported")}
   end
 
   @doc "Serializes a result, optionally omitting its evidence digest."
@@ -124,5 +124,6 @@ defmodule Wotex.Conformance.Result do
   defp validate_duration(value) when is_integer(value) and value >= 0, do: :ok
 
   defp validate_duration(_value),
-    do: {:error, Error.new(:invalid_duration, "duration_us must be a non-negative integer")}
+    do:
+      {:error, Error.new(:invalid_duration, :result, "duration_us must be a non-negative integer")}
 end

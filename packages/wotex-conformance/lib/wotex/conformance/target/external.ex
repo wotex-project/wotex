@@ -52,8 +52,8 @@ defmodule Wotex.Conformance.Target.External do
   The executable and archive paths must be absolute. Arguments may use
   `{subject_archive}` exactly once where the archive path should be inserted.
   """
-  @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
-  def new(input) when is_map(input) do
+  @spec from_map(map()) :: {:ok, t()} | {:error, Error.t()}
+  def from_map(input) when is_map(input) do
     with :ok <-
            Input.only_keys(
              input,
@@ -88,7 +88,12 @@ defmodule Wotex.Conformance.Target.External do
     end
   end
 
-  def new(_input), do: {:error, Error.new(:invalid_type, "external target must be an object")}
+  def from_map(_input),
+    do: {:error, Error.new(:invalid_type, :target, "external target must be an object")}
+
+  @doc "Alias for `from_map/1`, the map-shaped external target constructor."
+  @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
+  def new(input), do: from_map(input)
 
   @impl Wotex.Conformance.Target
   def artifact_path(%__MODULE__{artifact_path: artifact_path}), do: {:ok, artifact_path}
@@ -103,7 +108,7 @@ defmodule Wotex.Conformance.Target.External do
            {:ok, vector_id} <- request_vector_id(request),
            {:ok, output} <- exchange(target, encoded, deadline),
            {:ok, decoded} <- decode_response(output),
-           {:ok, response} <- Response.new(decoded, vector_id) do
+           {:ok, response} <- Response.from_map(decoded, vector_id) do
         {:ok, response}
       end
 
@@ -121,10 +126,11 @@ defmodule Wotex.Conformance.Target.External do
   defp validate_executable(value) when is_binary(value) do
     cond do
       Path.type(value) != :absolute ->
-        {:error, Error.new(:invalid_executable, "target executable path must be absolute")}
+        {:error, Error.new(:invalid_executable, :target, "target executable path must be absolute")}
 
       byte_size(value) > @max_arg_bytes ->
-        {:error, Error.new(:limit_exceeded, "target executable path exceeds its byte limit")}
+        {:error,
+         Error.new(:limit_exceeded, :limits, "target executable path exceeds its byte limit")}
 
       true ->
         case File.stat(value) do
@@ -132,30 +138,40 @@ defmodule Wotex.Conformance.Target.External do
             {:ok, value}
 
           _result ->
-            {:error, Error.new(:invalid_executable, "target executable must be a regular file")}
+            {:error,
+             Error.new(:invalid_executable, :target, "target executable must be a regular file")}
         end
     end
   end
 
   defp validate_executable(_value),
-    do: {:error, Error.new(:invalid_executable, "target executable must be a string")}
+    do: {:error, Error.new(:invalid_executable, :target, "target executable must be a string")}
 
   defp validate_args(args) when is_list(args) and length(args) <= @max_args do
     args
     |> Enum.reduce_while({:ok, []}, fn arg, {:ok, valid} ->
       cond do
         not is_binary(arg) ->
-          {:halt, {:error, Error.new(:invalid_argument, "target arguments must be strings")}}
+          {:halt,
+           {:error, Error.new(:invalid_argument, :target, "target arguments must be strings")}}
 
         not String.valid?(arg) or byte_size(arg) > @max_arg_bytes ->
           {:halt,
            {:error,
-            Error.new(:invalid_argument, "target argument exceeds its encoding or byte limit")}}
+            Error.new(
+              :invalid_argument,
+              :target,
+              "target argument exceeds its encoding or byte limit"
+            )}}
 
         String.contains?(arg, @archive_placeholder) and arg != @archive_placeholder ->
           {:halt,
            {:error,
-            Error.new(:invalid_argument, "archive placeholder must occupy one complete argument")}}
+            Error.new(
+              :invalid_argument,
+              :target,
+              "archive placeholder must occupy one complete argument"
+            )}}
 
         true ->
           {:cont, {:ok, [arg | valid]}}
@@ -169,7 +185,11 @@ defmodule Wotex.Conformance.Target.External do
           {:ok, valid}
         else
           {:error,
-           Error.new(:invalid_argument, "target arguments require exactly one archive placeholder")}
+           Error.new(
+             :invalid_argument,
+             :target,
+             "target arguments require exactly one archive placeholder"
+           )}
         end
 
       {:error, error} ->
@@ -178,18 +198,19 @@ defmodule Wotex.Conformance.Target.External do
   end
 
   defp validate_args(_args),
-    do: {:error, Error.new(:invalid_argument, "target arguments must be a bounded list")}
+    do: {:error, Error.new(:invalid_argument, :target, "target arguments must be a bounded list")}
 
   defp validate_artifact_path(path) when is_binary(path) and path != "" do
     if Path.type(path) == :absolute and byte_size(path) <= @max_arg_bytes do
       {:ok, path}
     else
-      {:error, Error.new(:invalid_artifact_path, "artifact path must be an absolute bounded path")}
+      {:error,
+       Error.new(:invalid_artifact_path, :target, "artifact path must be an absolute bounded path")}
     end
   end
 
   defp validate_artifact_path(_path),
-    do: {:error, Error.new(:invalid_artifact_path, "artifact path must be a string")}
+    do: {:error, Error.new(:invalid_artifact_path, :target, "artifact path must be a string")}
 
   defp validate_environment(environment)
        when is_map(environment) and map_size(environment) <= @max_env do
@@ -199,11 +220,16 @@ defmodule Wotex.Conformance.Target.External do
         not is_binary(key) or not is_binary(value) ->
           {:halt,
            {:error,
-            Error.new(:invalid_environment, "target environment keys and values must be strings")}}
+            Error.new(
+              :invalid_environment,
+              :target,
+              "target environment keys and values must be strings"
+            )}}
 
         not Regex.match?(@env_key, key) or Regex.match?(@sensitive_env, String.upcase(key)) ->
           {:halt,
-           {:error, Error.new(:invalid_environment, "target environment key is not allowed")}}
+           {:error,
+            Error.new(:invalid_environment, :target, "target environment key is not allowed")}}
 
         not String.valid?(value) or byte_size(value) > @max_env_bytes or
             String.contains?(value, <<0>>) ->
@@ -211,6 +237,7 @@ defmodule Wotex.Conformance.Target.External do
            {:error,
             Error.new(
               :invalid_environment,
+              :target,
               "target environment value exceeds its encoding or byte limit"
             )}}
 
@@ -221,13 +248,14 @@ defmodule Wotex.Conformance.Target.External do
   end
 
   defp validate_environment(_environment) do
-    {:error, Error.new(:invalid_environment, "target environment must be a bounded object")}
+    {:error,
+     Error.new(:invalid_environment, :target, "target environment must be a bounded object")}
   end
 
   defp validate_positive_limit(value, _field) when is_integer(value) and value > 0, do: {:ok, value}
 
   defp validate_positive_limit(_value, field) do
-    {:error, Error.new(:invalid_limit, "#{field} must be a positive integer")}
+    {:error, Error.new(:invalid_limit, :limits, "#{field} must be a positive integer")}
   end
 
   defp open(target) do
@@ -254,10 +282,10 @@ defmodule Wotex.Conformance.Target.External do
       {:ok, Port.open({:spawn_executable, String.to_charlist(target.executable)}, options)}
     rescue
       ArgumentError ->
-        {:error, Error.new(:target_start_failed, "external target could not be started")}
+        {:error, Error.new(:target_start_failed, :target, "external target could not be started")}
     catch
       :error, _reason ->
-        {:error, Error.new(:target_start_failed, "external target could not be started")}
+        {:error, Error.new(:target_start_failed, :target, "external target could not be started")}
     end
   end
 
@@ -288,12 +316,15 @@ defmodule Wotex.Conformance.Target.External do
 
   defp send_request(port, encoded) do
     case Port.command(port, [encoded, "\n"], [:nosuspend]) do
-      true -> :ok
-      false -> {:error, Error.new(:target_write_failed, "target request could not be written")}
+      true ->
+        :ok
+
+      false ->
+        {:error, Error.new(:target_write_failed, :target, "target request could not be written")}
     end
   rescue
     ArgumentError ->
-      {:error, Error.new(:target_write_failed, "target request could not be written")}
+      {:error, Error.new(:target_write_failed, :target, "target request could not be written")}
   end
 
   defp collect(port, deadline, max_output_bytes, chunks, size) do
@@ -310,7 +341,8 @@ defmodule Wotex.Conformance.Target.External do
         next_size = size + byte_size(bytes)
 
         if next_size > max_output_bytes do
-          {:error, Error.new(:target_output_limit, "target response exceeds its byte limit")}
+          {:error,
+           Error.new(:target_output_limit, :target, "target response exceeds its byte limit")}
         else
           collect(port, deadline, max_output_bytes, [bytes | chunks], next_size)
         end
@@ -319,10 +351,10 @@ defmodule Wotex.Conformance.Target.External do
         {:ok, chunks |> Enum.reverse() |> IO.iodata_to_binary()}
 
       {^port, {:exit_status, _status}} ->
-        {:error, Error.new(:target_exit_nonzero, "external target exited unsuccessfully")}
+        {:error, Error.new(:target_exit_nonzero, :target, "external target exited unsuccessfully")}
     after
       remaining ->
-        {:error, Error.new(:target_timeout, "external target exceeded its time limit")}
+        {:error, Error.new(:target_timeout, :target, "external target exceeded its time limit")}
     end
   end
 
@@ -330,7 +362,7 @@ defmodule Wotex.Conformance.Target.External do
     if System.monotonic_time(:millisecond) < deadline do
       :ok
     else
-      {:error, Error.new(:target_timeout, "external target exceeded its time limit")}
+      {:error, Error.new(:target_timeout, :target, "external target exceeded its time limit")}
     end
   end
 
@@ -346,7 +378,7 @@ defmodule Wotex.Conformance.Target.External do
         {:ok, response}
 
       {:error, _reason} ->
-        {:error, Error.new(:invalid_target_json, "target response is not valid JSON")}
+        {:error, Error.new(:invalid_target_json, :protocol, "target response is not valid JSON")}
     end
   end
 
@@ -355,6 +387,6 @@ defmodule Wotex.Conformance.Target.External do
   end
 
   defp request_vector_id(_request) do
-    {:error, Error.new(:invalid_target_request, "target request has no vector ID")}
+    {:error, Error.new(:invalid_target_request, :protocol, "target request has no vector ID")}
   end
 end

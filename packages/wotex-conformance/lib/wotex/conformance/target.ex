@@ -33,12 +33,18 @@ defmodule Wotex.Conformance.Target do
       {:ok, {module, state}}
     else
       {:error,
-       Error.new(:invalid_target, "target module does not implement the required callbacks")}
+       Error.new(
+         :invalid_target,
+         :target,
+         "target module does not implement the required callbacks"
+       )}
     end
   end
 
   def normalize(_target),
-    do: {:error, Error.new(:invalid_target, "target must be an external target or callback tuple")}
+    do:
+      {:error,
+       Error.new(:invalid_target, :target, "target must be an external target or callback tuple")}
 
   @doc "Calls the target's archive-path callback and validates its result."
   @spec artifact_path(target()) :: {:ok, Path.t()} | {:error, Error.t()}
@@ -52,7 +58,11 @@ defmodule Wotex.Conformance.Target do
 
       _result ->
         {:error,
-         Error.new(:invalid_target_callback, "target artifact callback returned an invalid result")}
+         Error.new(
+           :invalid_target_callback,
+           :target,
+           "target artifact callback returned an invalid result"
+         )}
     end
   end
 
@@ -74,7 +84,8 @@ defmodule Wotex.Conformance.Target do
         {:error, error, 0}
 
       _result ->
-        {:error, Error.new(:invalid_target_callback, "target callback returned an invalid result"),
+        {:error,
+         Error.new(:invalid_target_callback, :target, "target callback returned an invalid result"),
          0}
     end
   end
@@ -82,8 +93,8 @@ defmodule Wotex.Conformance.Target do
   defp safely(callback, code) do
     callback.()
   rescue
-    _exception -> {:error, Error.new(code, "target callback failed")}
+    _exception -> {:error, Error.new(code, :target, "target callback failed")}
   catch
-    _kind, _reason -> {:error, Error.new(code, "target callback failed")}
+    _kind, _reason -> {:error, Error.new(code, :target, "target callback failed")}
   end
 end
