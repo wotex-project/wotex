@@ -153,8 +153,8 @@ defmodule Wotex.Nx.WindowEncoderTest do
 
     assert Nx.to_flat_list(temperature) == [21.5]
     assert Nx.to_flat_list(enabled_tensor) == [1]
-    assert Nx.to_flat_list(temperature_mask) == [0]
-    assert Nx.to_flat_list(enabled_mask) == [0]
+    assert Nx.to_flat_list(temperature_mask) == [1]
+    assert Nx.to_flat_list(enabled_mask) == [1]
     assert Nx.to_flat_list(quality) == [0, 1]
   end
 
@@ -179,7 +179,7 @@ defmodule Wotex.Nx.WindowEncoderTest do
     assert {:ok, encoded} = Encoder.encode([row], schema)
     {{values}, {masks}, quality} = Nx.Defn.jit_apply(&Function.identity/1, [encoded.batch])
     assert Nx.to_flat_list(values) == [3.0, 3.0]
-    assert Nx.to_flat_list(masks) == [1, 1]
+    assert Nx.to_flat_list(masks) == [0, 0]
     assert Nx.to_flat_list(quality) == [3]
   end
 
@@ -196,7 +196,7 @@ defmodule Wotex.Nx.WindowEncoderTest do
     assert {:ok, encoded} = Encoder.encode([row], TestFactory.schema([fill]))
     {{value}, {mask}, quality} = Nx.Defn.jit_apply(&Function.identity/1, [encoded.batch])
     assert Nx.to_flat_list(value) == [0.0]
-    assert Nx.to_flat_list(mask) == [1]
+    assert Nx.to_flat_list(mask) == [0]
     assert Nx.to_flat_list(quality) == [2]
   end
 
@@ -378,5 +378,42 @@ defmodule Wotex.Nx.WindowEncoderTest do
   defp assert_error(code, observation, schema) do
     row = TestFactory.row(100, %{"temperature" => observation})
     assert {:error, %Error{code: ^code}} = Encoder.encode([row], schema)
+  end
+
+  test "rows naming a feature absent from the schema are rejected" do
+    schema = TestFactory.schema()
+    stray = TestFactory.observation(id: "stray", affordance_name: "temperature")
+    row = TestFactory.row(100, %{"temperature" => TestFactory.observation(), "humidity" => stray})
+
+    assert {:error, %Error{code: :unknown_row_feature, details: %{feature: "humidity"}}} =
+             Encoder.encode([row], schema)
+  end
+
+  test "encoded batches expose accessors, templates and a lazy container" do
+    schema = TestFactory.schema([TestFactory.feature(missing: {:fill, 0.0})])
+
+    rows = [
+      TestFactory.row(100, %{"temperature" => TestFactory.observation()}),
+      TestFactory.row(200, %{})
+    ]
+
+    assert {:ok, encoded} = Encoder.encode(rows, schema)
+    assert Encoded.schema(encoded) == schema
+    assert Encoded.timestamps(encoded) == [100, 200]
+    assert [%{"temperature" => "observation-1"}, %{}] = Encoded.provenance(encoded)
+    assert Encoded.layout(encoded) == :feature_tuple_values_masks_quality_vector
+    assert Encoded.row_count(encoded) == 2
+
+    {{value_template}, {mask_template}, quality_template} = Encoded.template(encoded)
+    assert Nx.shape(value_template) == {2}
+    assert Nx.type(value_template) == {:f, 32}
+    assert Nx.shape(mask_template) == {2}
+    assert Nx.type(mask_template) == {:u, 8}
+    assert Nx.shape(quality_template) == {2, 1}
+
+    {{values}, {masks}, quality} = Nx.Defn.jit_apply(&Function.identity/1, [encoded])
+    assert Nx.shape(values) == {2}
+    assert Nx.to_flat_list(masks) == [1, 0]
+    assert Nx.to_flat_list(quality) == [0, 3]
   end
 end

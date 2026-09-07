@@ -265,6 +265,15 @@ defmodule Wotex.Nx.OutputSchema do
      )}
   end
 
+  defp threshold(:anomaly, value, {:f, 64}) when is_number(value), do: {:ok, value * 1.0}
+
+  defp threshold(:anomaly, value, {:f, 32}) when is_number(value) do
+    case <<value * 1.0::float-32>> do
+      <<rounded::float-32>> -> {:ok, rounded}
+      _ -> invalid_threshold()
+    end
+  end
+
   defp threshold(:anomaly, value, dtype) when is_number(value) do
     converted =
       value

@@ -1,6 +1,6 @@
 # WNX.01: Observation and numerical boundary
 
-**Specification version**: 0.1.0. **Contract**: Accepted initial public API.
+**Specification version**: 1.1.0. **Contract**: Accepted initial public API.
 Implementation coverage is indexed in `catalogue.yaml`; acceptance of this
 contract does not assert archive, reference-consumer or stable-API readiness.
 
@@ -42,12 +42,19 @@ identity, model selection and execution, policy, evidence, and Action dispatch.
    policy and MUST set a mask. Silent coercion is forbidden.
 7. Normalization parameters MUST be explicit and validated. The package MUST
    not derive mutable training statistics from input.
-8. Encoding MUST produce typed values, missing masks, quality codes,
+8. Encoding MUST produce typed values, validity masks, quality codes,
    deterministic feature slices, provenance, and an `Nx.Batch` without starting
-   a process or selecting a backend. Each batch entry is
-   `{values_tuple, masks_tuple, quality_vector}`. Both tuples follow feature
-   order; the quality vector uses `good=0`, `uncertain=1`, `bad=2`, and
-   `missing=3`.
+   a process, selecting a backend, or reading a tensor back from a backend.
+   Each batch entry is `{values_tuple, masks_tuple, quality_vector}`. Both
+   tuples follow feature order; a mask element is `1` where observed and `0`
+   where filled; the quality vector uses `good=0`, `uncertain=1`, `bad=2`, and
+   `missing=3`. Axis 0 of the stacked batch is the window row of one sample;
+   the package MUST document that `Nx.Serving` splits that axis. A row that
+   names a feature absent from the schema MUST fail with
+   `unknown_row_feature`. Normalization runs in host double precision before
+   dtype conversion, so a value normalized in `f32` inside a model and a value
+   normalized here can differ by rounding; the package MUST state this and
+   MUST NOT claim bitwise train/serve equivalence.
 9. Decoding MUST validate output shape and finite-value policy, then return an
    inert observation, prediction, anomaly, or Action proposal. It MUST NOT
    execute or authorize an Action. An anomaly threshold MUST be represented in
@@ -99,8 +106,11 @@ also represents the threshold before comparison. Output-schema kind validation
 must prevent Action proposals being relabelled observations or vice versa.
 
 `Encoded` preserves `batch`, `schema`, `feature_order`, `timestamps`, `provenance`
-and `layout: :feature_tuple_values_masks_quality_vector`; `Encoded.batch/1` and
-`feature_order/1` are accessors, not new admission boundaries. Prediction exposes
+and `layout: :feature_tuple_values_masks_quality_vector`; `Encoded.batch/1`,
+`feature_order/1`, `schema/1`, `timestamps/1`, `provenance/1`, `layout/1`,
+`row_count/1` and `template/1` are accessors, not new admission boundaries, and
+consumers MUST use them instead of struct fields. `Encoded` implements
+`Nx.LazyContainer` by delegating to its batch. Prediction exposes
 `id`, `thing_id`, `affordance_type`, `affordance_name`, `value`, `produced_at`,
 `target_at`, `unit`, `metadata`. Anomaly exposes `id`, `thing_id`,
 `affordance_type`, `affordance_name`, `score`, `anomalous?`, `threshold`, `rule`,
@@ -155,8 +165,8 @@ is the declared dependency cohort; broader backend/version claims require eviden
 | Contract | Owning executable evidence |
 | --- | --- |
 | Observation/feature/schema construction, identity, bounds and closed options | `test/wotex/nx/observation_feature_schema_test.exs` |
-| Window order/ties/age, units, fill masks, quality and encoded batch | `test/wotex/nx/window_encoder_test.exs` |
-| Linear latest/exact selection equivalence to a sorted reference, reversed input, empty windows and age boundaries | `test/wotex/nx/window_selection_property_test.exs` |
+| Window order/ties/age, units, fill masks, quality, encoded batch, unknown row features, accessors, template and lazy container | `test/wotex/nx/window_encoder_test.exs` |
+| Binary-search latest/exact/nearest selection equivalence to an exhaustive reference, reversed input, empty windows and age boundaries | `test/wotex/nx/window_selection_property_test.exs` |
 | Conjunctive schema checks, revalidation, overflow and finite conversion | `test/wotex/nx/numerical_integrity_test.exs` |
 | Fixed-shape generation and preservation | `test/wotex/nx/shape_property_test.exs` |
 | Exact decoder tensor admission, all inert kinds and anomaly comparisons | `test/wotex/nx/decoder_test.exs` |
@@ -175,12 +185,18 @@ authority/application-callback checks.
 
 ## Compatibility and stability
 
-Replacing per-row sorting with a linear minimum selection is a compatible
-optimization when selected observations, timestamp/ID tie-breaking, row order,
-missing markers and age rejection remain identical. It does not relax the
-declared admission work bound or imply a measured latency guarantee.
+Window selection sorts each feature group once and selects by binary search;
+the admission work bound is `observations + count * features * ceil(log2 n)`.
+Any selection implementation is compatible only when selected observations,
+timestamp/ID tie-breaking, row order, missing markers and age rejection remain
+identical to the exhaustive reference in the property tests. The bound does
+not imply a measured latency guarantee.
 
-Version `0.1.0` defines the initial public contract. Changes to batch layout,
+Version `1.1.0` of this specification inverts the mask polarity to
+`1 = observed`, `0 = filled` (a pre-release contract correction aligning with
+`Nx.Batch.pad/2` and Axon mask conventions), adds `unknown_row_feature`, host
+side finite checks, the `Encoded` accessors and template, and the batch-axis
+statement. Version `0.1.0` defined the initial public contract. Changes to batch layout,
 quality codes, tie-breaking, ports, or inert output fields are compatibility
 changes and require explicit release notes and tests. W3C and Nx claims remain
 pinned in the provenance document.

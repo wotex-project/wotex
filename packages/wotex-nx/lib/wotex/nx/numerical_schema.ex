@@ -1,7 +1,6 @@
 defmodule Wotex.Nx.NumericalSchema do
   @moduledoc false
 
-  alias Nx, as: Numerical
   alias Wotex.Nx.Error
 
   @spec infer(map()) :: {:ok, tuple(), Nx.Type.t()} | {:error, Error.t()}
@@ -32,8 +31,8 @@ defmodule Wotex.Nx.NumericalSchema do
 
   @spec normalize_dtype(term(), tuple()) :: {:ok, Nx.Type.t()} | {:error, Error.t()}
   def normalize_dtype(dtype, shape) when is_tuple(shape) do
-    template = Numerical.template(shape, dtype)
-    {:ok, Numerical.type(template)}
+    template = Nx.template(shape, dtype)
+    {:ok, Nx.type(template)}
   rescue
     _ in [ArgumentError, FunctionClauseError] ->
       {:error, Error.new(:invalid_dtype, :construction, "numerical dtype is invalid")}

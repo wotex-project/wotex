@@ -6,6 +6,10 @@ defmodule Wotex.Nx.Window do
   selection strategy, and optional maximum age. The module never reads a clock.
   Stable timestamp and observation-ID tie-breaking makes replayed windows
   byte-for-byte interpretable by downstream numerical code.
+
+  Observations are grouped per feature identity, sorted once by
+  `{observed_at, id}`, and each row selects by binary search, so a window costs
+  `O(n log n + count * features * log n)` rather than a scan per row.
   """
 
   alias Wotex.Nx.{Error, Observation, Options, Row, Schema}
@@ -117,7 +121,8 @@ defmodule Wotex.Nx.Window do
          max_observations = Keyword.get(opts, :max_observations, 10_000),
          max_work = Keyword.get(opts, :max_work, 5_000_000),
          feature_count = length(schema.features),
-         work = length(observations) * window.count * feature_count,
+         observation_count = length(observations),
+         work = observation_count + window.count * feature_count * log2_ceil(observation_count),
          :ok <- validate_limits(max_observations, max_work),
          :ok <- validate_observation_count(observations, max_observations),
          :ok <- validate_row_count(window, schema),
@@ -199,11 +204,14 @@ defmodule Wotex.Nx.Window do
     end
   end
 
+  defp log2_ceil(count) when count <= 1, do: 1
+  defp log2_ceil(count), do: trunc(Float.ceil(:math.log2(count)))
+
   defp index(observations) do
     observations
     |> Enum.group_by(&{&1.thing_id, &1.affordance_type, &1.affordance_name})
     |> Map.new(fn {key, values} ->
-      sorted = Enum.sort_by(values, &{&1.observed_at, &1.id})
+      sorted = List.to_tuple(Enum.sort_by(values, &{&1.observed_at, &1.id}))
       {key, sorted}
     end)
   end
@@ -219,7 +227,7 @@ defmodule Wotex.Nx.Window do
               Map.get(
                 index,
                 {feature.thing_id, feature.affordance_type, feature.affordance_name},
-                []
+                {}
               )
 
             {feature.name, select(candidates, timestamp, window.strategy, window.max_age)}
@@ -232,24 +240,71 @@ defmodule Wotex.Nx.Window do
     {:ok, rows}
   end
 
-  defp select(candidates, timestamp, :exact, max_age) do
-    candidates
-    |> Stream.filter(&(&1.observed_at == timestamp))
-    |> Enum.min_by(& &1.id, fn -> nil end)
-    |> enforce_age(timestamp, max_age)
+  # `sorted` is a tuple ordered by {observed_at, id}. `lower_bound/2` returns
+  # the first index whose observed_at is >= timestamp, so the element before it
+  # is the newest observation at or before the timestamp, and the element at it
+  # (when it matches) is the lowest id among exact matches.
+  defp select({}, _, _, _), do: nil
+
+  defp select(sorted, timestamp, :exact, max_age) do
+    at = lower_bound(sorted, timestamp)
+
+    if at < tuple_size(sorted) and elem(sorted, at).observed_at == timestamp,
+      do: enforce_age(elem(sorted, at), timestamp, max_age),
+      else: nil
   end
 
-  defp select(candidates, timestamp, :latest, max_age) do
-    candidates
-    |> Stream.filter(&(&1.observed_at <= timestamp))
-    |> Enum.min_by(&{-&1.observed_at, &1.id}, fn -> nil end)
-    |> enforce_age(timestamp, max_age)
+  defp select(sorted, timestamp, :latest, max_age) do
+    upper = upper_bound(sorted, timestamp)
+
+    if upper == 0 do
+      nil
+    else
+      newest = elem(sorted, upper - 1)
+      first = lower_bound(sorted, newest.observed_at)
+      enforce_age(elem(sorted, first), timestamp, max_age)
+    end
   end
 
-  defp select(candidates, timestamp, :nearest, max_age) do
-    candidates
+  defp select(sorted, timestamp, :nearest, max_age) do
+    at = lower_bound(sorted, timestamp)
+    size = tuple_size(sorted)
+
+    before =
+      if at > 0 do
+        previous = elem(sorted, at - 1)
+        elem(sorted, lower_bound(sorted, previous.observed_at))
+      end
+
+    after_or_at = if at < size, do: elem(sorted, at)
+
+    [before, after_or_at]
+    |> Enum.reject(&is_nil/1)
     |> Enum.min_by(&{abs(&1.observed_at - timestamp), &1.observed_at, &1.id}, fn -> nil end)
     |> enforce_age(timestamp, max_age)
+  end
+
+  # First index with observed_at >= timestamp.
+  defp lower_bound(sorted, timestamp), do: search(sorted, timestamp, 0, tuple_size(sorted), :lower)
+
+  # First index with observed_at > timestamp.
+  defp upper_bound(sorted, timestamp), do: search(sorted, timestamp, 0, tuple_size(sorted), :upper)
+
+  defp search(_, _, low, high, _) when low >= high, do: low
+
+  defp search(sorted, timestamp, low, high, bound) do
+    middle = div(low + high, 2)
+    observed_at = elem(sorted, middle).observed_at
+
+    go_right? =
+      case bound do
+        :lower -> observed_at < timestamp
+        :upper -> observed_at <= timestamp
+      end
+
+    if go_right?,
+      do: search(sorted, timestamp, middle + 1, high, bound),
+      else: search(sorted, timestamp, low, middle, bound)
   end
 
   defp enforce_age(nil, _, _), do: nil

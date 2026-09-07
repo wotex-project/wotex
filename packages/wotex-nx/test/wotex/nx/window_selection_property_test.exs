@@ -45,4 +45,40 @@ defmodule Wotex.Nx.WindowSelectionPropertyTest do
       end
     end
   end
+
+  property "nearest selection agrees with an exhaustive reference for every row" do
+    check all(
+            times <- list_of(integer(-20..20), max_length: 60),
+            age <- member_of([nil, 0, 3, 40])
+          ) do
+      observations =
+        times
+        |> Enum.with_index()
+        |> Enum.map(fn {time, id} ->
+          TestFactory.observation(id: "observation-#{id}", observed_at: time)
+        end)
+
+      schema = TestFactory.schema()
+
+      {:ok, window} =
+        Window.new(start: -25, step: 5, count: 11, strategy: :nearest, max_age: age)
+
+      assert {:ok, rows} = Window.resample(observations, schema, window)
+      assert {:ok, ^rows} = Window.resample(Enum.reverse(observations), schema, window)
+
+      Enum.each(rows, fn row ->
+        selected =
+          observations
+          |> Enum.sort_by(&{abs(&1.observed_at - row.timestamp), &1.observed_at, &1.id})
+          |> List.first()
+
+        expected =
+          if selected && (is_nil(age) || abs(row.timestamp - selected.observed_at) <= age),
+            do: selected,
+            else: nil
+
+        assert row.observations["temperature"] == expected
+      end)
+    end
+  end
 end

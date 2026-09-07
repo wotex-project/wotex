@@ -3,12 +3,19 @@ defmodule Wotex.Nx.Encoder do
   Converts accepted temporal rows into a deterministic lazy `Nx.Batch`.
 
   Encoding follows schema order and emits a tuple of value tensors, mask
-  tensors, and a quality vector for each row. It validates observation identity,
+  tensors, and a quality vector for each row. A mask element is `1` where the
+  value was observed and `0` where the feature's fill policy supplied it, so a
+  zero-padded row reads as unobserved. It validates observation identity,
   DataSchema values, units, quality, missing policy, shape, dtype, and limits
-  before construction. It does not select a backend or execute a model.
+  before construction. Non-finite checks run on host values before any tensor
+  is allocated, so encoding never reads a tensor back from a backend. It does
+  not select a backend or execute a model.
+
+  Axis 0 of the resulting `Nx.Batch` is the window row (time step) of one
+  sample, not an independent sample; see `Wotex.Nx.Encoded` before handing the
+  batch to a serving process that splits batches.
   """
 
-  alias Nx, as: Numerical
   alias Wotex.DataSchema
 
   alias Wotex.Nx.{
@@ -61,7 +68,8 @@ defmodule Wotex.Nx.Encoder do
     do: {:error, Error.new(:invalid_encoder_input, :encoding, "encoder input is invalid")}
 
   defp encode_rows(rows, schema, opts) do
-    with {:ok, containers} <- map_rows(rows, schema.features, opts),
+    with :ok <- known_row_features(rows, schema.features),
+         {:ok, containers} <- map_rows(rows, schema.features, mask_cache(schema.features), opts),
          {:ok, batch} <- build_batch(containers, schema.batch_key) do
       {:ok,
        %Encoded{
@@ -75,10 +83,41 @@ defmodule Wotex.Nx.Encoder do
     end
   end
 
-  defp map_rows(rows, features, opts) do
+  defp known_row_features(rows, features) do
+    names = MapSet.new(features, & &1.name)
+
+    Enum.reduce_while(rows, :ok, fn row, :ok ->
+      case Enum.reject(Map.keys(row.observations), &MapSet.member?(names, &1)) do
+        [] ->
+          {:cont, :ok}
+
+        [unknown | _] ->
+          {:halt,
+           {:error,
+            Error.new(
+              :unknown_row_feature,
+              :encoding,
+              "row names a feature absent from the schema",
+              %{
+                feature: unknown,
+                timestamp: row.timestamp
+              }
+            )}}
+      end
+    end)
+  end
+
+  defp mask_cache(features) do
+    features
+    |> Enum.map(& &1.shape)
+    |> Enum.uniq()
+    |> Map.new(fn shape -> {shape, {mask(shape, 1), mask(shape, 0)}} end)
+  end
+
+  defp map_rows(rows, features, masks, opts) do
     result =
       Enum.reduce_while(rows, {:ok, []}, fn row, {:ok, encoded_rows} ->
-        case encode_row(row, features, opts) do
+        case encode_row(row, features, masks, opts) do
           {:ok, container} -> {:cont, {:ok, [container | encoded_rows]}}
           {:error, error} -> {:halt, {:error, error}}
         end
@@ -90,12 +129,12 @@ defmodule Wotex.Nx.Encoder do
     end
   end
 
-  defp encode_row(row, features, opts) do
+  defp encode_row(row, features, masks, opts) do
     result =
       Enum.reduce_while(
         features,
         {:ok, [], [], []},
-        &encode_feature_for_row(&1, &2, row, opts)
+        &encode_feature_for_row(&1, &2, row, masks, opts)
       )
 
     case result do
@@ -103,7 +142,7 @@ defmodule Wotex.Nx.Encoder do
         quality_tensor =
           qualities
           |> Enum.reverse()
-          |> Numerical.tensor(type: :u8, names: [:feature])
+          |> Nx.tensor(type: :u8, names: [:feature])
 
         value_tuple =
           values
@@ -122,10 +161,10 @@ defmodule Wotex.Nx.Encoder do
     end
   end
 
-  defp encode_feature_for_row(feature, {:ok, values, masks, qualities}, row, opts) do
+  defp encode_feature_for_row(feature, {:ok, values, masks, qualities}, row, mask_cache, opts) do
     observation = Map.get(row.observations, feature.name)
 
-    case encode_feature(observation, feature, row.timestamp, opts) do
+    case encode_feature(observation, feature, row.timestamp, mask_cache, opts) do
       {:ok, value, mask, quality} ->
         {:cont, {:ok, [value | values], [mask | masks], [quality | qualities]}}
 
@@ -134,10 +173,10 @@ defmodule Wotex.Nx.Encoder do
     end
   end
 
-  defp encode_feature(nil, feature, timestamp, _),
-    do: encode_missing(feature, timestamp, :missing)
+  defp encode_feature(nil, feature, timestamp, mask_cache, _),
+    do: encode_missing(feature, timestamp, :missing, mask_cache)
 
-  defp encode_feature(%Observation{} = observation, feature, timestamp, opts) do
+  defp encode_feature(%Observation{} = observation, feature, timestamp, mask_cache, opts) do
     cond do
       observation.thing_id != feature.thing_id or
         observation.affordance_type != feature.affordance_type or
@@ -154,7 +193,7 @@ defmodule Wotex.Nx.Encoder do
          )}
 
       not MapSet.member?(feature.accepted_quality, observation.quality) ->
-        encode_missing(feature, timestamp, observation.quality)
+        encode_missing(feature, timestamp, observation.quality, mask_cache)
 
       true ->
         with {:ok, value} <- convert_unit(observation, feature, opts),
@@ -166,12 +205,13 @@ defmodule Wotex.Nx.Encoder do
                ),
              {:ok, normalized} <- normalize(value, feature.normalization),
              {:ok, tensor} <- tensor(normalized, feature) do
-          {:ok, tensor, mask(feature.shape, 0), quality_code(observation.quality)}
+          {observed, _} = Map.fetch!(mask_cache, feature.shape)
+          {:ok, tensor, observed, quality_code(observation.quality)}
         end
     end
   end
 
-  defp encode_missing(%Feature{missing: :error} = feature, timestamp, quality) do
+  defp encode_missing(%Feature{missing: :error} = feature, timestamp, quality, _) do
     {:error,
      Error.new(
        :missing_feature_value,
@@ -185,7 +225,7 @@ defmodule Wotex.Nx.Encoder do
      )}
   end
 
-  defp encode_missing(%Feature{missing: {:fill, fill}} = feature, _, quality) do
+  defp encode_missing(%Feature{missing: {:fill, fill}} = feature, _, quality, mask_cache) do
     value = broadcast_value(fill, feature.shape)
 
     with :ok <-
@@ -196,7 +236,8 @@ defmodule Wotex.Nx.Encoder do
            ),
          {:ok, normalized} <- normalize(value, feature.normalization),
          {:ok, tensor} <- tensor(normalized, feature) do
-      {:ok, tensor, mask(feature.shape, 1), quality_code(quality)}
+      {_, filled} = Map.fetch!(mask_cache, feature.shape)
+      {:ok, tensor, filled, quality_code(quality)}
     end
   end
 
@@ -292,8 +333,9 @@ defmodule Wotex.Nx.Encoder do
     converted = booleans_to_numbers(value)
 
     with :ok <- validate_integer_range(converted, feature.dtype),
-         numerical <- Numerical.tensor(converted, type: feature.dtype),
-         :ok <- validate_tensor(numerical, feature) do
+         :ok <- validate_finite(converted, feature),
+         numerical <- Nx.tensor(converted, type: feature.dtype),
+         :ok <- validate_shape(numerical, feature) do
       {:ok, numerical}
     end
   rescue
@@ -324,35 +366,53 @@ defmodule Wotex.Nx.Encoder do
   defp within_integer_range?(value, minimum, maximum),
     do: is_integer(value) and value >= minimum and value <= maximum
 
-  defp validate_tensor(numerical, feature) do
-    cond do
-      Numerical.shape(numerical) != feature.shape ->
-        {:error,
-         Error.new(
-           :tensor_shape_mismatch,
-           :encoding,
-           "tensor shape does not match feature shape",
-           %{
-             feature: feature.name,
-             expected_shape: feature.shape,
-             actual_shape: Numerical.shape(numerical)
-           }
-         )}
-
-      not feature.allow_non_finite? and non_finite_tensor?(numerical) ->
-        {:error,
-         Error.new(:non_finite_value, :encoding, "dtype conversion produced a non-finite value")}
-
-      true ->
-        :ok
+  defp validate_shape(numerical, feature) do
+    if Nx.shape(numerical) == feature.shape do
+      :ok
+    else
+      {:error,
+       Error.new(
+         :tensor_shape_mismatch,
+         :encoding,
+         "tensor shape does not match feature shape",
+         %{
+           feature: feature.name,
+           expected_shape: feature.shape,
+           actual_shape: Nx.shape(numerical)
+         }
+       )}
     end
   end
 
-  defp non_finite_tensor?(%Numerical.Tensor{type: {class, _}}) when class in [:s, :u],
-    do: false
+  defp validate_finite(_, %Feature{allow_non_finite?: true}), do: :ok
 
-  defp non_finite_tensor?(numerical),
-    do: Enum.any?(Numerical.to_flat_list(numerical), &(&1 in [:nan, :infinity, :neg_infinity]))
+  defp validate_finite(converted, %Feature{dtype: dtype}) do
+    flattened = List.flatten(List.wrap(converted))
+
+    if Enum.all?(flattened, &finite_in?(&1, dtype)) do
+      :ok
+    else
+      {:error,
+       Error.new(:non_finite_value, :encoding, "dtype conversion produced a non-finite value")}
+    end
+  end
+
+  # Host-side check: a float that would overflow the target dtype rounds to
+  # infinity on every backend, so it is rejected before any tensor exists.
+  defp finite_in?(value, _) when value in [:nan, :infinity, :neg_infinity], do: false
+  defp finite_in?(value, {class, _}) when class in [:s, :u] and is_number(value), do: true
+  defp finite_in?(value, {:f, 64}) when is_number(value), do: true
+
+  defp finite_in?(value, {:f, 32}) when is_number(value),
+    do: match?(<<_::float-32>>, <<value * 1.0::float-32>>)
+
+  defp finite_in?(value, {:f, 16}) when is_number(value),
+    do: match?(<<_::float-16>>, <<value * 1.0::float-16>>)
+
+  defp finite_in?(value, {:bf, 16}) when is_number(value),
+    do: abs(value) <= 3.389_531_389_251_535_5e38
+
+  defp finite_in?(_, _), do: false
 
   defp booleans_to_numbers(values) when is_list(values),
     do: Enum.map(values, &booleans_to_numbers/1)
@@ -368,14 +428,14 @@ defmodule Wotex.Nx.Encoder do
   defp broadcast_dimensions(value, [size | rest]),
     do: List.duplicate(broadcast_dimensions(value, rest), size)
 
-  defp mask({}, value), do: Numerical.tensor(value, type: :u8)
-  defp mask(shape, value), do: Numerical.broadcast(Numerical.tensor(value, type: :u8), shape)
+  defp mask({}, value), do: Nx.tensor(value, type: :u8)
+  defp mask(shape, value), do: Nx.broadcast(Nx.tensor(value, type: :u8), shape)
 
   defp quality_code(quality), do: Map.fetch!(Wotex.Nx.quality_codes(), quality)
 
   defp build_batch(containers, batch_key) do
-    stacked = Numerical.Batch.stack(containers)
-    batch = Numerical.Batch.key(stacked, batch_key)
+    stacked = Nx.Batch.stack(containers)
+    batch = Nx.Batch.key(stacked, batch_key)
     {:ok, batch}
   rescue
     _ in [ArgumentError, FunctionClauseError] ->

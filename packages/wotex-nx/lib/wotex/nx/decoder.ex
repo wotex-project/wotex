@@ -8,7 +8,6 @@ defmodule Wotex.Nx.Decoder do
   this module neither admits canonical state nor invokes an Action.
   """
 
-  alias Nx, as: Numerical
   alias Wotex.DataSchema
 
   alias Wotex.Nx.{
@@ -80,22 +79,22 @@ defmodule Wotex.Nx.Decoder do
            "numerical output must not contain vectorized axes"
          )}
 
-      Numerical.shape(tensor) != schema.shape ->
+      Nx.shape(tensor) != schema.shape ->
         {:error,
          Error.new(
            :output_shape_mismatch,
            :output,
            "numerical output shape does not match OutputSchema",
-           %{expected: schema.shape, actual: Numerical.shape(tensor)}
+           %{expected: schema.shape, actual: Nx.shape(tensor)}
          )}
 
-      Numerical.type(tensor) != schema.dtype ->
+      Nx.type(tensor) != schema.dtype ->
         {:error,
          Error.new(
            :output_dtype_mismatch,
            :output,
            "numerical output dtype does not match OutputSchema",
-           %{expected: schema.dtype, actual: Numerical.type(tensor)}
+           %{expected: schema.dtype, actual: Nx.type(tensor)}
          )}
 
       true ->
@@ -113,10 +112,10 @@ defmodule Wotex.Nx.Decoder do
 
   defp tensor_value(tensor, data_schema) do
     raw =
-      if Numerical.shape(tensor) == {} do
-        Numerical.to_number(tensor)
+      if Nx.shape(tensor) == {} do
+        Nx.to_number(tensor)
       else
-        Numerical.to_list(tensor)
+        Nx.to_list(tensor)
       end
 
     restore_schema_value(raw, data_schema)

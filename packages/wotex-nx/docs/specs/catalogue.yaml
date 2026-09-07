@@ -3,7 +3,7 @@ package: wotex_nx
 completion_plan: docs/plans/wotex-nx-completion.md
 specifications:
   - id: WNX.01
-    version: "0.1.0"
+    version: "1.1.0"
     path: docs/specs/WNX.01-observation-numerical-boundary.md
     implementation_status: implemented
     standards:
@@ -40,4 +40,4 @@ specifications:
       - test/wotex/nx/shape_property_test.exs
       - test/wotex/nx/window_encoder_test.exs
       - test/wotex/nx/window_selection_property_test.exs
-    compatibility_classification: Initial 0.1.0 API; tensor layout, dtype, mask, quality, temporal selection and output changes require explicit compatibility review.
+    compatibility_classification: 0.1 API with a pre-release mask polarity inversion (1 = observed) and additive accessors; tensor layout, dtype, mask, quality, temporal selection and output changes require explicit compatibility review.

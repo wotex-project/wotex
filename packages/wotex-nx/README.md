@@ -93,8 +93,14 @@ alias Wotex.Nx.{Encoded, Encoder, Feature, Observation, Row, Schema}
 batch = Encoded.batch(encoded)
 ```
 
-`Nx.Batch` is lazy. The consumer chooses when and where to realize it and which
-backend or model receives it.
+Value tensors are built on the backend that is the default at encode time and
+only the stack is deferred; the consumer chooses which backend or model
+receives the batch. Masks use `1` for observed and `0` for filled. Axis 0 of
+the batch is the window row of one sample, so hand a whole window to an
+`Nx.Serving` (`batch_size` at least `Encoded.row_count/1`) or reduce per row
+explicitly. `Encoded.template/1` gives the container shapes for an `Axon.input`
+or serving contract, and an `Encoded` value can be passed straight to
+`Nx.Defn.jit_apply/3`.
 
 ## Errors
 
