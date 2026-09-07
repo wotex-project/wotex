@@ -3,8 +3,8 @@ package: "wotex_binding_mqtt"
 completion_plan: "docs/plans/wotex-binding-mqtt-completion.md"
 specifications:
   - id: "WBM.01"
-    version: "1.0.0"
-    path: "docs/specs/mqtt-values-and-client-port.md"
+    version: "1.1.0"
+    path: "docs/specs/WBM.01-values-and-client-port.md"
     implementation_status: "implemented"
     standards:
       - {name: "OASIS MQTT", revision: "5.0 Standard 2019-03-07; 3.1.1 Standard 2014-10-29", claim: "selected Topic Name/Filter and QoS values; no wire/client conformance"}
@@ -12,9 +12,9 @@ specifications:
     requires: ["wotex:WTX.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.Binding.MQTT.Broker", "Wotex.Binding.MQTT.Command", "Wotex.Binding.MQTT.Delivery", "Wotex.Binding.MQTT.QoS", "Wotex.Binding.MQTT.Topic", "Wotex.Binding.MQTT.JSON", "Wotex.Binding.MQTT.Client", "Wotex.Binding.MQTT.TransportConfig", "Wotex.Binding.MQTT.Error"]
     executable_evidence: ["test/wotex/binding/mqtt/broker_test.exs", "test/wotex/binding/mqtt/command_test.exs", "test/wotex/binding/mqtt/delivery_test.exs", "test/wotex/binding/mqtt/qos_test.exs", "test/wotex/binding/mqtt/topic_test.exs", "test/wotex/binding/mqtt/json_test.exs", "test/wotex/binding/mqtt/transport_config_test.exs"]
-    compatibility_classification: "versioned immutable values/client callbacks; broker capability external"
+    compatibility_classification: "versioned immutable values/client callbacks; pre-release seam correction replaced the subscribe delivery callback with the subscription owner pid and added the command payload limit; broker capability external"
   - id: "WBM.02"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WBM.02-form-mapping.md"
     implementation_status: "implemented"
     standards:
@@ -22,15 +22,15 @@ specifications:
     requires: ["WBM.01", "wotex:WTX.02"]
     implementation_modules: ["Wotex.Binding.MQTT.Mapping", "Wotex.Binding.MQTT"]
     executable_evidence: ["test/wotex/binding/mqtt/mapping_test.exs", "test/wotex/binding/mqtt/command_test.exs"]
-    compatibility_classification: "dated draft-derived package mapping; source revision changes require review"
+    compatibility_classification: "dated draft-derived package mapping; pre-release seam correction carries the payload limit into every command; source revision changes require review"
   - id: "WBM.03"
-    version: "1.0.0"
-    path: "docs/specs/runtime-transport.md"
-    implementation_status: "partial"
+    version: "1.1.0"
+    path: "docs/specs/WBM.03-runtime-transport.md"
+    implementation_status: "implemented"
     standards:
       - {name: "W3C WoT MQTT Binding", revision: "Editors Draft 2026-07-01", claim: "retained read and subscription adaptation only"}
       - {name: "W3C WoT Binding Registry", revision: "Draft Registry 2025-11-04", claim: "provenance only; no registered-entry claim"}
     requires: ["WBM.01", "WBM.02", "wotex_runtime:WRT.01"]
-    implementation_modules: ["Wotex.Binding.MQTT.Transport"]
-    executable_evidence: ["test/wotex/binding/mqtt/transport_test.exs", "test/wotex/binding/mqtt/library_contract_test.exs"]
-    compatibility_classification: "passive Runtime adapter; lifecycle/reference-consumer evidence WBM-C02/C04 remains"
+    implementation_modules: ["Wotex.Binding.MQTT.Transport", "Wotex.Binding.MQTT.TransportConfig", "Wotex.Binding.MQTT.Client", "Wotex.Binding.MQTT.Error"]
+    executable_evidence: ["test/wotex/binding/mqtt/transport_test.exs", "test/wotex/binding/mqtt/runtime_subscription_test.exs", "test/wotex/binding/mqtt/library_contract_test.exs"]
+    compatibility_classification: "passive Runtime adapter; pre-release seam corrections moved delivery decoding into the subscription owner, added decode_frame/3, neutral result statuses, error classes and deadline bounding; reference-consumer evidence WBM-C04 remains"

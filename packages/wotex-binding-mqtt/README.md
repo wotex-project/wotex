@@ -88,32 +88,79 @@ Implement four callbacks around the consumer's chosen client:
 |----------|-----------------|
 | `publish/3` | `:ok` after accepting the immutable publish command. |
 | `read/4` | One retained delivery within the supplied finite timeout. |
-| `subscribe/4` | `{:ok, handle}` and delivery through the supplied closure. |
+| `subscribe/4` | `{:ok, handle}`; deliveries are sent to the owner process. |
 | `unsubscribe/4` | `:ok` after releasing the opaque subscription handle. |
 
-Commands contain broker, packet, topic/filter, QoS, retain, content type, and a
-bounded payload. The `Wotex.Runtime.ExecutionContext` is a separate ephemeral
-argument: adapters must not retain it, place credentials in configuration, or
-embed credentials in handles.
+`subscribe/4` receives the subscription owner pid, not a callback. The client
+sends raw deliveries and connection statuses to that process and decodes
+nothing on its connection:
+
+```elixir
+defmodule ConsumerMQTTClient do
+  @behaviour Wotex.Binding.MQTT.Client
+
+  alias Wotex.Binding.MQTT.{Command, Delivery}
+
+  @impl true
+  def subscribe(command, owner, _execution_context, config) do
+    deliver = fn topic, bytes, qos, retained? ->
+      case Delivery.new(bytes, topic: topic, qos: qos, retain: retained?) do
+        {:ok, delivery} -> send(owner, {:wotex_transport_frame, delivery})
+        {:error, _rejected} -> :ok
+      end
+    end
+
+    # Returns {:ok, handle}; the handle comes back to unsubscribe/4.
+    ConsumerConnection.subscribe(config.connection, Command.filters(command), deliver)
+  end
+
+  # After a reconnect the client tells the owner what happened to the Session:
+  # send(owner, {:wotex_transport_status, :reconnected})   # Session resumed
+  # send(owner, {:wotex_transport_status, :session_lost})  # Clean Start or expiry
+end
+```
+
+A client MUST send `:session_lost` when it reconnects with Clean Start or after
+session expiry, because the broker then holds no subscription for the owner;
+`:reconnected` means the Session and its subscription survived. The owner
+reports both to its receiver and stops on `:session_lost`, leaving restart and
+resubscription to the consumer's supervisor.
+
+Commands contain broker, packet, topic/filter, QoS, retain, content type, the
+payload byte limit, and a bounded payload. The `Wotex.Runtime.ExecutionContext`
+is a separate ephemeral argument: adapters must not retain it, place credentials
+in configuration, or embed credentials in handles.
 
 ## Errors and Delivery
 
-`Wotex.Binding.MQTT.Error` identifies the failing stage (`:broker`, `:mapping`,
-`:payload`, `:topic`, `:client`, or `:delivery`) without leaking arbitrary
-client exceptions or return terms. Invalid callback results, raises, throws,
-oversized payloads, malformed JSON, unexpected topic names, and packet/operation
-mismatches all fail as structured transport errors.
+`Wotex.Binding.MQTT.Error` identifies the failing stage (`:broker`, `:command`,
+`:topic`, `:codec`, `:mapping`, `:configuration`, or `:client`) and a retry
+`class` (`:timeout`, `:unavailable`, `:protocol`, or `:permanent`) without
+leaking arbitrary client exceptions or return terms. Invalid callback results,
+raises, throws, oversized payloads, malformed JSON, unexpected topic names, and
+packet/operation mismatches all fail as structured, classified transport errors.
 
-`readproperty` requires `mqv:retain: true`. Observation and Event deliveries
-are size-checked and JSON-decoded before the closure sends
-`{:wotex_transport, payload}` to the Runtime receiver. The closure captures the
-receiver, filters, and byte limit only—not the execution context.
+`readproperty` requires `mqv:retain: true` and is bounded by
+`min(read_timeout, remaining request deadline)`; an exhausted deadline fails as
+`:deadline_exceeded` without calling the client. A publish acknowledgement is an
+`:accepted` result, a retained read an `:ok` result, with control packet, QoS,
+retain flag, and Topic Name in the metadata.
+
+The subscription owner decodes each frame with
+`c:Wotex.Runtime.Transport.decode_frame/3`: a Topic Name outside the Form's
+Topic Filters is ignored, an oversized or malformed payload becomes a classified
+error, and a valid delivery reaches the Runtime receiver as
+
+```elixir
+{:wotex_runtime, subscription_id,
+ {:ok, payload, %{topic: topic, qos: qos, retained: retained?, operation: operation}}}
+```
 
 ## Boundary
 
 The 0.1 series implements the bounded mapping recorded in the
-[MQTT contract](docs/specs/mqtt-values-and-client-port.md) and
-[Runtime contract](docs/specs/runtime-transport.md). Draft provenance is dated
+[MQTT contract](docs/specs/WBM.01-values-and-client-port.md) and
+[Runtime contract](docs/specs/WBM.03-runtime-transport.md). Draft provenance is dated
 in the [dated draft provenance](docs/provenance/mqtt-binding-draft-2026-07-01.md).
 This is not a W3C certification claim.
 

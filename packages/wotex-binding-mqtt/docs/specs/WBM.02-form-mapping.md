@@ -1,6 +1,6 @@
 # WBM.02: WoT MQTT Form mapping
 
-Specification `WBM.02@1.0.0`; package baseline `wotex_binding_mqtt 0.1.0`.
+Specification `WBM.02@1.1.0`; package baseline `wotex_binding_mqtt 0.1.0`.
 Requires `WBM.01` and `wotex:WTX.02`. Wotex owns TD/Form values; the binding owns
 only mapping to immutable commands. No client, broker policy, Thing authority
 or credential custody is transferred.
@@ -24,7 +24,9 @@ baseline, not a fresh maturity review or W3C conformance/endorsement claim.
 
 `Mapping.default_control_packet/1` returns the listed atom or typed unsupported
 operation. `Mapping.command/2` receives Runtime Request and positive byte limit
-and returns Command or typed error, never I/O. Explicit `mqv:controlPacket`
+and returns Command or typed error, never I/O. The byte limit is recorded on
+every command, PUBLISH, SUBSCRIBE and UNSUBSCRIBE alike, so a subscription
+delivery is bounded by the same configured limit as an encoded publish. Explicit `mqv:controlPacket`
 must match the operation. Query/cancel/aggregate operations fail explicitly.
 
 ## Mapping rules

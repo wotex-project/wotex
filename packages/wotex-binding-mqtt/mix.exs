@@ -123,9 +123,9 @@ defmodule WotexBindingMQTT.MixProject do
       extras: [
         "README.md": [title: "Overview"],
         "docs/plans/wotex-binding-mqtt-completion.md": [title: "Completion Contract"],
-        "docs/specs/mqtt-values-and-client-port.md": [title: "Values and client port"],
+        "docs/specs/WBM.01-values-and-client-port.md": [title: "Values and client port"],
         "docs/specs/WBM.02-form-mapping.md": [title: "Form mapping"],
-        "docs/specs/runtime-transport.md": [title: "Runtime transport"],
+        "docs/specs/WBM.03-runtime-transport.md": [title: "Runtime transport"],
         "docs/provenance/mqtt-binding-draft-2026-07-01.md": [title: "MQTT binding draft"],
         "docs/provenance/mqtt-primary-sources.md": [title: "MQTT primary sources"],
         "docs/provenance/wot-binding-registry-2025-11-04.md": [title: "Binding Registry status"],
