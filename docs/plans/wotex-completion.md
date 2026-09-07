@@ -115,7 +115,7 @@ attempt, worker coordinator or cross-repository scheduler to implement these IDs
 | Gate | Required evidence; never inferred from a preceding gate |
 | --- | --- |
 | `repository_green` | `mix deps.get --check-locked` and `mix check --no-retry` pass on the exact checkout; warnings-as-errors, strict Credo, tests, >=95% coverage, Doctor, Dialyzer, dependency audits, docs and existing boundary/package checks. Record toolchain and source/lock digest. |
-| `archive_consumer_green` | WTX-C03: exact archive builds and public API examples pass in an independent consumer. Existing `bin/check-package` compiles the unpacked source and checks no callback; this alone does not exercise consumer examples. |
+| `archive_consumer_green` | WTX-C03: exact archive builds and public API examples pass in an independent consumer. Existing `bin/check_package.exs` compiles the unpacked source and checks no callback; this alone does not exercise consumer examples. |
 | `reference_consumer_green` | WTX-C04: consumer-neutral end-to-end value examples and explicitly scoped independent corpus evidence using the same archive. No unpublished local dependency assumed. |
 | `public_release_candidate` | All three preceding gates, content/license/provenance/security review, accurate docs and non-claims; immutable candidate artifact and evidence. This is permission to evaluate, not to push, tag or publish. |
 | `stable_api_candidate` | WTX-C05 plus explicit review of every public function/result/error, compatibility policy and negative vectors. Version 0.1.0 and high coverage do not themselves promise stable API semantics. |

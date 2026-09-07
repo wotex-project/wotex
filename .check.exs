@@ -14,7 +14,7 @@
     {:doctor, command: "mix doctor"},
     {:dialyzer, command: "mix dialyzer"},
     {:ex_doc, command: "mix docs --warnings-as-errors"},
-    {:boundary, command: "bin/check-boundary"},
-    {:package, command: "bin/check-package"}
+    {:boundary, command: "elixir bin/check_boundary.exs"},
+    {:package, command: "mix run --no-start bin/check_package.exs", env: %{"MIX_ENV" => "prod"}}
   ]
 ]
