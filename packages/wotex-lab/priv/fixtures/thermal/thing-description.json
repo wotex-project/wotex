@@ -1,0 +1,21 @@
+{
+  "@context": "https://www.w3.org/2022/wot/td/v1.1",
+  "id": "urn:wotex:lab:thermostat:1",
+  "title": "Lab thermostat",
+  "security": ["nosec_sc"],
+  "securityDefinitions": {"nosec_sc": {"scheme": "nosec"}},
+  "properties": {
+    "temperature": {
+      "type": "number",
+      "unit": "Cel",
+      "readOnly": true,
+      "forms": [{"href": "https://example.invalid/temperature", "op": "readproperty"}]
+    }
+  },
+  "actions": {
+    "setTarget": {
+      "input": {"type": "number", "unit": "Cel", "minimum": 5, "maximum": 35},
+      "forms": [{"href": "https://example.invalid/target", "op": "invokeaction"}]
+    }
+  }
+}

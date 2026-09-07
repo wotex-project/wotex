@@ -1,0 +1,13 @@
+/_build/
+/deps/
+/cover/
+/doc/
+/priv/plts/
+/.elixir_ls/
+/.archive-check.*/
+/docs/tasks/local/
+/docs/tasks/inbox.md
+erl_crash.dump
+*.ez
+*.tar
+*.tar.gz

@@ -1,0 +1,86 @@
+defmodule Wotex.Lab.Supervisor do
+  @moduledoc """
+  A caller-owned supervision tree with isolated Thing and session children.
+
+  Child supervisors are anonymous and resolved through the supplied instance
+  PID. No Registry, generated atom, global environment or shared store is used.
+  Trusted child specs retain their own shutdown and restart semantics.
+  """
+
+  use Supervisor
+
+  alias Wotex.Lab.{Error, Options}
+
+  @doc "Builds a child spec; malformed configuration raises `ArgumentError` before startup."
+  @spec child_spec(keyword()) :: Supervisor.child_spec()
+  def child_spec(opts) do
+    case validate(opts) do
+      :ok ->
+        %{
+          id: {__MODULE__, Keyword.fetch!(opts, :id)},
+          start: {__MODULE__, :start_link, [opts]},
+          type: :supervisor
+        }
+
+      {:error, error} ->
+        raise ArgumentError, error.message
+    end
+  end
+
+  @doc "Starts an isolated instance; the default capacity is 128 children per role."
+  @spec start_link(keyword()) :: Supervisor.on_start() | {:error, Error.t()}
+  def start_link(opts) do
+    with :ok <- validate(opts) do
+      Supervisor.start_link(__MODULE__, opts, Keyword.take(opts, [:name]))
+    end
+  end
+
+  @doc "Places a child under `:things` or `:sessions` in the supplied live instance."
+  @spec start_child(pid(), :things | :sessions, Supervisor.child_spec() | {module(), term()}) ::
+          DynamicSupervisor.on_start_child() | {:error, Error.t()}
+  def start_child(instance, role, child) when role in [:things, :sessions] do
+    case List.keyfind(Supervisor.which_children(instance), role, 0) do
+      {^role, pid, :supervisor, _modules} when is_pid(pid) ->
+        DynamicSupervisor.start_child(pid, child)
+
+      _unavailable ->
+        {:error, Error.new(:supervisor_unavailable, :composition, "child supervisor unavailable")}
+    end
+  end
+
+  def start_child(_instance, _role, _child),
+    do: {:error, Error.new(:unknown_role, :composition, "role must be things or sessions")}
+
+  @impl true
+  def init(opts) do
+    children =
+      for role <- [:things, :sessions] do
+        Supervisor.child_spec(
+          {DynamicSupervisor,
+           strategy: :one_for_one, max_children: Keyword.get(opts, :max_children, 128)},
+          id: role
+        )
+      end
+
+    Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  defp validate(opts) do
+    with :ok <- Options.validate(opts, [:id, :name, :max_children]) do
+      if Options.identifier?(Keyword.get(opts, :id)) and
+           valid_capacity?(Keyword.get(opts, :max_children, 128)) and
+           valid_name?(Keyword.get(opts, :name)) do
+        :ok
+      else
+        {:error, Error.new(:invalid_instance, :construction, "instance configuration is invalid")}
+      end
+    end
+  end
+
+  defp valid_capacity?(capacity), do: is_integer(capacity) and capacity in 1..10_000
+  defp valid_name?(nil), do: true
+  defp valid_name?(name) when is_atom(name), do: true
+  defp valid_name?({:global, _name}), do: true
+  defp valid_name?({:via, module, _name}) when is_atom(module), do: true
+  defp valid_name?(_name), do: false
+end

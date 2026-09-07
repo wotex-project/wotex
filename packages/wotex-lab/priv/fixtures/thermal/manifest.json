@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "id": "thermal-nx",
+  "specs": [
+    "WLB.03",
+    "WTX.01",
+    "WNX.01"
+  ],
+  "source_mode": "synthetic",
+  "input": "thing-description.json",
+  "input_sha256": "951b814403e00efc5e3a742cfce5c905e5f228db42978b3e59eaaee2e15d2c81",
+  "expected_proposal": {
+    "thing_id": "urn:wotex:lab:thermostat:1",
+    "action_name": "setTarget",
+    "input": 22,
+    "proposed_at": 2000
+  },
+  "absolute_tolerance": 0.00001,
+  "side_effects": [],
+  "license": "Apache-2.0"
+}
