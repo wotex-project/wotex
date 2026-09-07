@@ -1,13 +1,19 @@
 # WBH.03: Server-Sent Events subscriptions
 
-Specification `WBH.03@1.0.0`; package baseline `wotex_binding_http 0.1.0`.
+Specification `WBH.03@1.1.0`; package baseline `wotex_binding_http 0.1.0`.
 Requires `WBH.01`, `WBH.02`, `wotex_runtime:WRT.01`.
 
 ## Open
 
 Only `observeproperty` and `subscribeevent` requests whose selected Form has
 `"subprotocol": "sse"` may call the client `subscribe/4` callback. The request
-defaults to `GET`, carries `accept: text/event-stream`, and has no body.
+defaults to `GET`, carries `accept: text/event-stream`, has no body, and
+publishes the configured `max_event_bytes` so the client can abort an oversized
+event while reading it.
+
+The callback receives the Runtime subscription process as its `owner`. That
+process is the only destination for stream messages, and it is where decoding
+runs.
 
 The callback must return one opaque handle and a credential-free handshake
 response with status 200, `content-type: text/event-stream`, and an empty body
@@ -17,20 +23,49 @@ best-effort close of the newly returned handle.
 
 ## Events
 
-The supplied client parses wire framing and invokes the handler once per
-dispatched `Wotex.Binding.HTTP.SSE.Event`. The event value holds data, optional
-event type, optional id, and optional non-negative retry delay.
-
-The binding checks the event byte limit, decodes data as one JSON value, and
-sends the Runtime subscription process:
+The supplied client parses wire framing and sends the owner one message per
+dispatched event:
 
 ```elixir
-{:wotex_transport, {:ok, notification}}
+{:wotex_transport_frame, %Wotex.Binding.HTTP.SSE.Event{}}
 ```
 
-The notification preserves event metadata and includes request identity and
-the opening WoT operation. Invalid event values, invalid JSON, and oversized
-data use `{:wotex_transport, {:error, error}}`.
+The event value holds data, optional event type, optional id, and optional
+non-negative retry delay. The client performs no decoding, so its connection
+process never runs the JSON codec and never allocates a decoded term.
+
+Runtime calls `Wotex.Binding.HTTP.Transport.decode_frame/3` inside the owner
+process for every frame. It checks the event byte limit, decodes data as one
+JSON value through the bounded core admission limits, and returns
+`{:ok, data, meta}`. The `meta` map carries `event`, `id`, `retry`,
+`request_id`, and the opening WoT operation. A frame with empty data is a
+comment or keep-alive and returns `:ignore`. An invalid frame value, an
+oversized event, and invalid JSON return a `:protocol` binding error, which
+Runtime reports to the receiver as an `:undecodable_frame` error whose
+`details.cause` retains this package's `code`, `phase`, and `class`.
+
+The consumer receiver therefore observes:
+
+```elixir
+{:wotex_runtime, subscription_id, {:ok, data, meta}}
+{:wotex_runtime, subscription_id, {:error, %Wotex.Runtime.Error{}}}
+{:wotex_runtime, subscription_id, {:status, status}}
+```
+
+## Session status
+
+A client that observes a stream-level condition sends the owner
+`{:wotex_transport_status, status}` with `:reconnected` when the session
+survived a reopen, `:session_lost` when the server-side subscription is gone, or
+`:transport_down` when the client can no longer serve the subscription. Runtime
+forwards `:reconnected` to the receiver and keeps the subscription; the other
+two notify the receiver, attempt the close, and stop the process with a
+`:shutdown` reason so the consumer's supervisor decides on resubscription. A
+client that links its connection process to the owner produces the same result
+through the exit signal.
+
+This package sends no status of its own, retries nothing, and installs no
+timer. Deciding that a session was lost is client knowledge.
 
 ## Close
 
@@ -57,8 +92,11 @@ is local connection lifecycle, not a second authenticated request.
 | Configure | No stream or process; fresh nonsecret instance ref | Reuse exact configuration for open/close |
 | Open | Validate Form then pass callback to client | Client owns socket, TLS, framing and deadline |
 | Handshake invalid after handle returned | Attempt immediate close, return failure | Close failure cannot prove remote cleanup |
-| Active event | Validate byte limit, decode JSON, notify Runtime receiver | Receiver and transport own overload/backpressure |
-| Bad event | Send typed error notification; no invented payload | Consumer chooses whether stream continues |
+| Active event | Client sends a raw frame to the owner; the owner decodes it under the event byte limit | Receiver and transport own overload/backpressure |
+| Keep-alive frame | Empty data is ignored without a delivery | Client decides what a heartbeat looks like on the wire |
+| Bad event | Classified `:protocol` error becomes an `:undecodable_frame` delivery; no invented payload | Consumer chooses whether stream continues |
+| Session status | `:reconnected` notifies only; `:session_lost` and `:transport_down` notify, close and stop with `:shutdown` | Consumer supervisor owns restart and resubscription |
+| Owner exit | Client may monitor or link the owner and release its connection | No package process cleans up a client connection |
 | Stop | Check request identity, paired operation, module/config instance; call close once per valid invocation | Runtime owns logical once-only stop and supervision |
 | Duplicate concurrent raw close | No package registry or idempotency state | Consumer client must tolerate duplicate handle close; no global exactly-once claim |
 | Receiver dies / forced kill | No new binding process performs cleanup | Consumer transport/session recovery |
@@ -66,7 +104,8 @@ is local connection lifecycle, not a second authenticated request.
 
 The SSE client supplies already-framed events. This binding does not implement
 the HTML event-stream parser, browser reconnection algorithm, heartbeat timer,
-cursor persistence, event deduplication or bounded process mailbox. The Living
+cursor persistence, event deduplication or bounded process mailbox; Runtime owns
+the optional receiver mailbox bound. The Living
 Standard is a client framing reference; draft WoT Profile use is not conformance.
 
 `transport_test.exs` and `integration_test.exs` under

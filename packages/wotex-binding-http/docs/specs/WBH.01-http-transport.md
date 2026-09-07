@@ -1,6 +1,6 @@
 # WBH.01: HTTP transport specification
 
-Specification `WBH.01@1.0.0`; package baseline `wotex_binding_http 0.1.0`.
+Specification `WBH.01@1.1.0`; package baseline `wotex_binding_http 0.1.0`.
 Requires `WBH.02`, `wotex_runtime:WRT.01`. This is an implementation contract,
 not a completed standards or release claim; see
 the repository completion plan at `docs/plans/wotex-binding-http-completion.md`.
@@ -12,9 +12,13 @@ version `~> 0.1.0`:
 
 ```elixir
 request(request, execution_context, config)
-subscribe(request, receiver, execution_context, config)
+subscribe(request, owner, execution_context, config)
 unsubscribe(handle, request, execution_context, config)
+decode_frame(frame, request, config)
 ```
+
+`subscribe/4` receives the Runtime subscription process as `owner`; the optional
+`decode_frame/3` callback runs inside that process. WBH.03 owns both.
 
 The binding profile is constructed with `Wotex.Runtime.BindingProfile.new/1`,
 uses id `:http`, supports `http` and `https`, and declares the nine operations
@@ -52,17 +56,23 @@ Only status codes 200 through 299 produce Runtime results. Empty response
 bodies become `nil`; non-empty bodies must be JSON and must match the Form
 representation. Status 204 and 205 reject non-empty bodies.
 
-Result metadata contains the HTTP method, request URI, validated response
-fields, and a resolved `Location` when present. It contains no credentials.
-Transport success is only a protocol outcome and does not establish canonical
-Property truth or prove a physical Action effect.
+Runtime result status is binding-neutral. Status 202 maps to `:accepted`; every
+other admitted 2xx maps to `:ok`. The HTTP status code itself is protocol
+detail and lives in `metadata.http.status`.
+
+Result metadata contains the HTTP method, request URI, status code, validated
+response fields, and a resolved `Location` when present. It contains no
+credentials. Transport success is only a protocol outcome and does not
+establish canonical Property truth or prove a physical Action effect.
 
 ## Failure rules
 
 Invalid Form terms, fields, methods, URIs, representations, byte sizes,
 statuses, client returns, and JSON fail as structured
-`Wotex.Binding.HTTP.Error` values. External client reasons and exceptions are
-not retained in returned errors.
+`Wotex.Binding.HTTP.Error` values carrying a retry `class`. WBH.02 fixes the
+complete class mapping. External client reasons and exceptions are not retained
+in returned errors; a raise, exit, or throw inside a client callback becomes one
+`:unavailable` client-exception error.
 
 ## Ownership and public entry points
 
@@ -86,7 +96,8 @@ server route, global registry, framework, connection manager or task scheduler.
 | Map | Validate method, URI, operation, representation and fields before calling client | Invalid multi-op method override, unsafe URI and unsupported operation invoke no client |
 | Encode | JSON or explicit absent body; bound output | Empty marker differs from JSON null; unsupported representation and oversize fail |
 | Execute | One explicit client request in caller; credential passed separately | Invalid/raising client returns become redacted errors; no hidden retry |
-| Decode | Validate response type/status/headers/body before Runtime result | Non-2xx, malformed JSON, unsupported content type and nonempty 204/205 fail |
+| Decode | Validate response type/status/headers/body before Runtime result; bounded JSON admission | Non-2xx, malformed JSON, unsupported content type and nonempty 204/205 fail |
+| Classify | Attach a retry class to every failure for `Wotex.Runtime.Retry` | A retryable class is not permission to repeat a non-idempotent Action |
 | Continue Action | Resolve safe Location/href locator against selected target | Locator is not Action completion, authority or an automatic follow-up request |
 | Recover | Return failure to consumer | No automatic redirect, reconnect, Action retry or compensation |
 

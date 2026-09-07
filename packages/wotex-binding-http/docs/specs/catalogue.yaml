@@ -3,41 +3,45 @@ package: "wotex_binding_http"
 completion_plan: "docs/plans/wotex-binding-http-completion.md"
 specifications:
   - id: "WBH.01"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WBH.01-http-transport.md"
     implementation_status: "implemented"
     standards:
       - {name: "W3C WoT Thing Description 1.1", revision: "Recommendation 2023-12-05", claim: "named HTTP Form subset"}
       - {name: "W3C WoT Profiles", revision: "Working Draft 2025-11-04", claim: "action-status mapping guidance only; no conformance"}
     requires: ["WBH.02", "wotex_runtime:WRT.01"]
-    implementation_modules: ["Wotex.Binding.HTTP", "Wotex.Binding.HTTP.Form", "Wotex.Binding.HTTP.Transport"]
+    implementation_modules: ["Wotex.Binding.HTTP", "Wotex.Binding.HTTP.Config", "Wotex.Binding.HTTP.EmptyBody", "Wotex.Binding.HTTP.Form", "Wotex.Binding.HTTP.Transport"]
     executable_evidence:
       - "test/wotex/binding/http/form_test.exs"
       - "test/wotex/binding/http/transport_test.exs"
-    compatibility_classification: "nine-operation versioned HTTP profile; draft-derived choices remain explicit"
+      - "test/wotex/binding/http/integration_test.exs"
+    compatibility_classification: "nine-operation versioned HTTP profile; draft-derived choices remain explicit; pre-release seam correction maps status 202 to the neutral :accepted result and moves the HTTP status code into metadata.http.status"
   - id: "WBH.02"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WBH.02-client-port-and-values.md"
     implementation_status: "implemented"
     standards:
       - {name: "HTTP Semantics", revision: "RFC 9110, 2022-06", claim: "field/method/status subset; wire client external"}
-      - {name: "JSON", revision: "RFC 8259, 2017-12", claim: "bounded codec adaptation; not streaming parser"}
+      - {name: "JSON", revision: "RFC 8259, 2017-12", claim: "bounded codec adaptation through wotex core admission; not streaming parser"}
     requires: ["wotex_runtime:WRT.01"]
-    implementation_modules: ["Wotex.Binding.HTTP.Client", "Wotex.Binding.HTTP.Config", "Wotex.Binding.HTTP.Request", "Wotex.Binding.HTTP.Response", "Wotex.Binding.HTTP.Headers", "Wotex.Binding.HTTP.Codec", "Wotex.Binding.HTTP.Error"]
+    implementation_modules: ["Wotex.Binding.HTTP.Client", "Wotex.Binding.HTTP.Codec", "Wotex.Binding.HTTP.Config", "Wotex.Binding.HTTP.EmptyBody", "Wotex.Binding.HTTP.Error", "Wotex.Binding.HTTP.Headers", "Wotex.Binding.HTTP.Request", "Wotex.Binding.HTTP.Response"]
     executable_evidence:
       - "test/wotex/binding/http/value_test.exs"
+      - "test/wotex/binding/http/error_test.exs"
+      - "test/wotex/binding/http/form_test.exs"
+      - "test/wotex/binding/http/transport_test.exs"
       - "test/wotex/binding/http/library_contract_test.exs"
-    compatibility_classification: "immutable credential-free values and explicit client callbacks"
+    compatibility_classification: "immutable credential-free values and explicit client callbacks; pre-release seam corrections replace the subscribe event handler with the owner pid, add the retry class to every error, and carry the response and event byte limits on the request"
   - id: "WBH.03"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WBH.03-sse-subscriptions.md"
     implementation_status: "partial"
     standards:
       - {name: "HTML Server-Sent Events", revision: "Living Standard; repository baseline observed 2026-09-02", claim: "framed-event adaptation only; parser/reconnect external"}
       - {name: "W3C WoT Profiles", revision: "Working Draft 2025-11-04", claim: "SSE mapping guidance only"}
     requires: ["WBH.01", "WBH.02", "wotex_runtime:WRT.01"]
-    implementation_modules: ["Wotex.Binding.HTTP.SSE.Event", "Wotex.Binding.HTTP.Notification", "Wotex.Binding.HTTP.Subscription", "Wotex.Binding.HTTP.Transport"]
+    implementation_modules: ["Wotex.Binding.HTTP.Client", "Wotex.Binding.HTTP.Notification", "Wotex.Binding.HTTP.SSE.Event", "Wotex.Binding.HTTP.Subscription", "Wotex.Binding.HTTP.Transport"]
     executable_evidence:
       - "test/wotex/binding/http/transport_test.exs"
       - "test/wotex/binding/http/integration_test.exs"
-    compatibility_classification: "exact configuration-instance lifecycle; recovery evidence WBH-C02/C03 remains"
+    compatibility_classification: "exact configuration-instance lifecycle; pre-release seam correction decodes frames in the owner process through decode_frame/3 and accepts client session statuses; recovery evidence WBH-C02/C03 remains"

@@ -31,7 +31,7 @@ HTTP ownership is intentionally split at a narrow port:
 | TD Form and WoT operation mapping | DNS, sockets, TLS, proxies, and redirects |
 | Immutable request and response values | Connection pools and supervision |
 | Header safety and JSON byte limits | Deadlines and transport cancellation |
-| Runtime result and notification mapping | SSE framing, reconnect, and backpressure |
+| Runtime result and delivery mapping | SSE framing, reconnect, and backpressure |
 | Credential-free error normalization | Applying an ephemeral credential to a request |
 
 This keeps network policy in the consumer host while preserving one stable,
@@ -68,9 +68,13 @@ defmodule ConsumerHTTPClient do
   end
 
   @impl true
-  def subscribe(request, credential, event_handler, config) do
-    # Open one SSE response, parse framing, call event_handler for each complete
-    # Event value, and return {:ok, opaque_handle, handshake_response}.
+  def subscribe(request, credential, owner, config) do
+    # Open one SSE response and parse framing. Send every complete Event value
+    # to the Runtime subscription process as {:wotex_transport_frame, event},
+    # optionally report {:wotex_transport_status, :reconnected | :session_lost |
+    # :transport_down}, and return {:ok, opaque_handle, handshake_response}.
+    # The client never decodes an event; Process.monitor(owner) is enough to
+    # release the connection when the subscription stops.
   end
 
   @impl true
@@ -81,8 +85,17 @@ end
 ```
 
 The credential is a separate, immediate callback argument. It must never be
-retained, logged, included in the opaque handle, captured by the event handler,
-or returned in an error. Client configuration must contain no credentials.
+retained, logged, included in the opaque handle, captured by a connection
+process, or returned in an error. Client configuration must contain no
+credentials.
+
+Each request carries `max_response_bytes` and `max_event_bytes` so the client
+can abort an oversized body or event while reading it, and an absolute
+`deadline` the client honors with its own clock reading. An integer deadline is
+a `System.monotonic_time(:millisecond)` point and a `DateTime` is UTC; use
+`Wotex.Runtime.Context.remaining_ms/2` for the remaining budget. A client that
+expires a call returns `{:error, :timeout}`, the single reason the binding
+interprets.
 
 ## Configure the Runtime transport
 
@@ -133,30 +146,42 @@ Only `observeproperty` and `subscribeevent` Forms with `"subprotocol": "sse"`
 open streams. Runtime returns a child specification, and the consumer chooses
 where and when to supervise it.
 
-The client parses SSE framing into `Wotex.Binding.HTTP.SSE.Event` values. The
-binding validates and decodes each event's JSON `data`, then sends the Runtime
-receiver:
+The client parses SSE framing into `Wotex.Binding.HTTP.SSE.Event` values and
+sends each one to the subscription process it received as `owner`. Decoding
+happens in that process, not on the client's connection: the binding checks the
+event byte limit and decodes the JSON `data`, and the Runtime receiver observes
 
 ```elixir
-{:wotex_runtime, subscription_id,
- {:ok, %Wotex.Binding.HTTP.Notification{}}}
+{:wotex_runtime, subscription_id, {:ok, data, meta}}
 ```
 
-Malformed or oversized event data uses `{:error, error}` in the same payload
-position. `unobserveproperty` and `unsubscribeevent` call `Client.close/2`; they
-never issue a hidden HTTP request.
+where `meta` is `%{event: ..., id: ..., retry: ..., request_id: ..., operation: ...}`.
+A frame with empty data is a keep-alive and produces no delivery. Malformed or
+oversized event data becomes
+`{:wotex_runtime, subscription_id, {:error, %Wotex.Runtime.Error{code: :undecodable_frame}}}`,
+and a client session status becomes `{:status, :reconnected | :session_lost |
+:transport_down}`. `unobserveproperty` and `unsubscribeevent` call
+`Client.close/2`; they never issue a hidden HTTP request.
 
 ## Failure model
 
 Public failures are `Wotex.Binding.HTTP.Error` values with a stable `code`, a
-boundary `phase`, a human-readable `message`, and safe `details`. Client reasons
-and exceptions are normalized rather than copied, which prevents transport
-objects or secrets from crossing the binding boundary.
+boundary `phase`, a retry `class`, a human-readable `message`, and safe
+`details`. Client reasons, exceptions, exits, and throws are normalized rather
+than copied, which prevents transport objects or secrets from crossing the
+binding boundary.
+
+The class feeds `Wotex.Runtime.Retry.decision/3`: status 408 and a client
+timeout are `:timeout`, 429 is `:rate_limited`, 502, 503, 504 and any failing
+client call are `:unavailable`, codec, representation, handshake, and
+client-contract failures are `:protocol`, and everything else is `:permanent`.
+Only the first three are retryable, and only for an operation the consumer
+admits as idempotent.
 
 The package also enforces these invariants:
 
-- Request, response, subscription, notification, and error values contain no credentials.
-- Request, response, and event payload limits are measured in encoded bytes.
+- Request, response, subscription, delivery, and error values contain no credentials.
+- Request, response, and event payload limits are measured in encoded bytes and JSON decoding runs through the bounded `Wotex.JSON` admission limits.
 - Loading the application starts no process and defines no application callback.
 - No database, web framework, endpoint, global registry, or built-in client is present.
 
