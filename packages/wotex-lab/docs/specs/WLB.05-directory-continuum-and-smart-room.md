@@ -1,6 +1,9 @@
 # WLB.05: Directory, Continuum and the smart-room consumer
 
-Specification version: 0.1.0. Contract: accepted.
+Specification version: 1.1.0. Contract: accepted. Source status: the ETS
+repository, explicit authorization/clock/identifier ports and the Directory
+contract suite are implemented; the SQLite store, Continuum channel and smart
+room remain planned.
 
 ## Directory references
 
@@ -12,18 +15,26 @@ Sharing fixtures and the public contract suite is allowed; wrapping the same
 store or transaction implementation twice is not independent evidence.
 
 Both MUST implement `Wotex.Directory.Repository`: `fetch/3`, `insert/3`,
-`replace/4`, `delete/4`, `list/4`, `expire_due/5`. Public Authorization
+`replace/4`, `delete/4`, keyset `list/5`, `expire_due/5`. Public Authorization
 `authorize/5`, Clock `now/1` and Identifier `generate/1` are supplied explicitly.
-Fixed/system clocks and fixed/UUID identifiers teach deterministic versus
-host-provided time/identity. AllowAll is confined to disposable simulations;
-scoped authorization separates principal, tenant and operation context.
+`Wotex.Lab.Adapters.Directory.EtsRepository` is the instance-owned store: a
+private ordered ETS table serialized by its owner process, identifier keys in
+Unicode code point order, a mutation-generation revision, and volatility by
+design (a restarted owner starts empty). `Adapters.Directory.Clock` offers a
+fixed or agent-advanced instant and `Wotex.Directory.Clock.System` supplies
+host time; `Adapters.Directory.Identifier` is a deterministic counter.
+`Adapters.Directory.Authorization` is `:allow_all` for disposable simulations
+or a scoped policy that separates principal, tenant and operation and denies
+before any repository call.
 
 Required cases include register/get/replace/merge-patch/delete/list/expire,
 introduction and returned event values; authorization before repository work;
 context isolation; duplicate registration; competing expected-version writes
-with one winner; interrupted transaction rollback; stable bounded ordering;
-collection revision invalidation on mutation **and expiry**; repeated expiry;
-purge/retain semantics; restart and persistent reopen. No database migration
+with one winner; interrupted transaction rollback (SQLite lane); stable bounded
+keyset ordering; collection revision invalidation on mutation while an entry
+that expires between pages is simply absent (WTD.01 1.1); repeated expiry;
+purge/retain semantics; ETS restart volatility and SQLite persistent reopen.
+`test/wotex/lab/directory_test.exs` covers the ETS lane today. No database migration
 or production policy is installed by loading Lab. SQLite files live under an
 explicit instance data directory and teardown follows retention configuration.
 

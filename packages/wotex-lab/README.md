@@ -110,10 +110,12 @@ Lab depends on the foundational libraries; they must never depend on Lab.
 The loopback lane is implemented: `Wotex.Lab.Reference.Thing` is a simulated
 Thing host and `Wotex.Lab.Adapters.Runtime.Loopback` carries real runtime
 requests, subscriptions and raw frames to it, with `NoSec` and `StaticRef`
-credential adapters. HTTP uses Req and explicit SSE lifecycle ownership; MQTT
-uses EMQTT and a disposable broker; Directory uses independent ETS and SQLite
-implementations. Those are accepted reference choices, not mandatory
-dependencies of the base library or implementations already supplied here. `ex_maude` earns a specific
+credential adapters. The Directory ETS store, explicit authorization, clock and
+identifier ports and their contract suite are implemented too. HTTP uses Req
+and explicit SSE lifecycle ownership; MQTT uses EMQTT and a disposable broker;
+the SQLite Directory store uses Exqlite. Those are accepted reference choices,
+not mandatory dependencies of the base library or implementations already
+supplied here. `ex_maude` earns a specific
 place by exploring modeled conflicting control decisions and unsafe transition
 orders. Its result cannot authorize an Action or certify a physical system.
 

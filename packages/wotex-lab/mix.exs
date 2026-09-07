@@ -34,6 +34,7 @@ defmodule WotexLab.MixProject do
       wotex_dependency(:wotex, "wotex"),
       wotex_dependency(:wotex_nx, "wotex-nx"),
       wotex_dependency(:wotex_runtime, "wotex-runtime"),
+      wotex_dependency(:wotex_directory, "wotex-directory"),
       {:nx, "~> 0.13.1"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
