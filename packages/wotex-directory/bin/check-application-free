@@ -1,5 +1,0 @@
-#!/bin/sh
-set -eu
-
-exec mix run --no-start -e \
-  'unless Application.spec(:wotex_directory, :mod) in [nil, [], :undefined], do: System.halt(1)'
