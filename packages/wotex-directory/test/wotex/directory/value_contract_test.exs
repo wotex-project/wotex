@@ -94,14 +94,14 @@ defmodule Wotex.Directory.ValueContractTest do
 
   describe "query and page values" do
     test "constructs defaults and validates every public query bound" do
-      assert {:ok, query} = Query.new([], default_limit: 3, maximum_limit: 5)
+      assert {:ok, query} = Query.new([], default_limit: 3, max_limit: 5)
       assert query == %Query{profile: :listing, offset: 0, limit: 3, format: :array}
 
       assert {:ok, %Query{collection_revision: "r1", format: :collection}} =
                Query.new(
                  [collection_revision: "r1", format: :collection],
                  default_limit: 3,
-                 maximum_limit: 5
+                 max_limit: 5
                )
 
       for options <- [
@@ -113,11 +113,11 @@ defmodule Wotex.Directory.ValueContractTest do
             [unknown: true]
           ] do
         assert {:error, %Error{code: :invalid_request}} =
-                 Query.new(options, default_limit: 3, maximum_limit: 5)
+                 Query.new(options, default_limit: 3, max_limit: 5)
       end
 
       assert {:error, %Error{code: :unsupported_query_profile}} =
-               Query.new([profile: :jsonpath], default_limit: 3, maximum_limit: 5)
+               Query.new([profile: :jsonpath], default_limit: 3, max_limit: 5)
 
       assert {:error, %Error{code: :invalid_request}} = Query.new(:invalid, [])
       assert {:error, %Error{code: :invalid_request}} = Query.new([], [:not_a_pair])

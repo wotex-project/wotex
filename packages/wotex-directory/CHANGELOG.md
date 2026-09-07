@@ -11,3 +11,7 @@ All notable changes to this project are documented in this file.
 - Return the family error shape `code`, `phase`, `path`, `message`, and
   `details` from every public failure, including `MergePatch.apply/3`. The
   directory operation and entry identifier moved into `details`.
+- Adopt the family limit vocabulary `max_page_limit`, `max_expiry_batch_limit`,
+  `max_patch_depth`, `max_patch_nodes`, `max_limit`, `max_depth`, and
+  `max_nodes`, and forward all five core limits through
+  `thing_description_options`.

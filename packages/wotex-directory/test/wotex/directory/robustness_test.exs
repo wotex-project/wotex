@@ -166,7 +166,7 @@ defmodule Wotex.Directory.RobustnessTest do
   describe "value validation branches" do
     test "constructors reject malformed values at each public seam" do
       assert_error(:invalid_service, Service.new(:invalid))
-      assert_error(:invalid_request, Query.new([], default_limit: 3, maximum_limit: 2))
+      assert_error(:invalid_request, Query.new([], default_limit: 3, max_limit: 2))
       refute Registration.valid?(:invalid)
 
       assert {:ok, registration} = Registration.create(@now, :absent, :register)

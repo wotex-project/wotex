@@ -28,7 +28,7 @@ defmodule Wotex.Directory.Query do
   def new(options, bounds) when is_list(options) and is_list(bounds) do
     with :ok <- validate_keys(options),
          :ok <- validate_bounds(bounds),
-         maximum <- Keyword.get(bounds, :maximum_limit, 200),
+         maximum <- Keyword.get(bounds, :max_limit, 200),
          default <- Keyword.get(bounds, :default_limit, 50),
          query <- %__MODULE__{
            profile: Keyword.get(options, :profile, :listing),
@@ -46,8 +46,8 @@ defmodule Wotex.Directory.Query do
 
   @spec validate(t(), pos_integer()) :: :ok | {:error, Error.t()}
   @doc "Validates a query against a maximum page limit."
-  def validate(%__MODULE__{} = query, maximum_limit)
-      when is_integer(maximum_limit) and maximum_limit > 0 do
+  def validate(%__MODULE__{} = query, max_limit)
+      when is_integer(max_limit) and max_limit > 0 do
     cond do
       query.profile != :listing ->
         {:error, Error.new(:unsupported_query_profile, :listing, :list)}
@@ -55,7 +55,7 @@ defmodule Wotex.Directory.Query do
       not (is_integer(query.offset) and query.offset >= 0) ->
         invalid()
 
-      not (is_integer(query.limit) and query.limit > 0 and query.limit <= maximum_limit) ->
+      not (is_integer(query.limit) and query.limit > 0 and query.limit <= max_limit) ->
         invalid()
 
       query.format not in [:array, :collection] ->
@@ -82,11 +82,11 @@ defmodule Wotex.Directory.Query do
   end
 
   defp validate_bounds(bounds) do
-    allowed = [:default_limit, :maximum_limit]
+    allowed = [:default_limit, :max_limit]
 
     if Keyword.keyword?(bounds) and Enum.all?(Keyword.keys(bounds), &(&1 in allowed)) do
       default = Keyword.get(bounds, :default_limit, 50)
-      maximum = Keyword.get(bounds, :maximum_limit, 200)
+      maximum = Keyword.get(bounds, :max_limit, 200)
 
       if is_integer(default) and default > 0 and is_integer(maximum) and maximum > 0 and
            default <= maximum do

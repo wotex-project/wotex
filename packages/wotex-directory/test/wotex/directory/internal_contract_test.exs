@@ -66,7 +66,7 @@ defmodule Wotex.Directory.InternalContractTest do
 
     assert {:ok, ^patch} = MergePatch.apply(%{}, patch)
 
-    for options <- [[maximum_depth: 0], [maximum_nodes: 0], :not_options, [unknown: 1]] do
+    for options <- [[max_depth: 0], [max_nodes: 0], :not_options, [unknown: 1]] do
       assert {:error, %Error{code: :invalid_request, phase: :patch, path: "/"}} =
                MergePatch.apply(%{}, patch, options)
     end

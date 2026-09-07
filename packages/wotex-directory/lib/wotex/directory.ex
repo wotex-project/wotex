@@ -217,7 +217,7 @@ defmodule Wotex.Directory do
   def list(%Service{} = service, %Context{} = context, options) do
     bounds = [
       default_limit: service.default_page_limit,
-      maximum_limit: service.maximum_page_limit
+      max_limit: service.max_page_limit
     ]
 
     with {:ok, query} <- Query.new(options, bounds) do
@@ -234,7 +234,7 @@ defmodule Wotex.Directory do
   @spec query(Service.t(), Query.t(), Context.t()) :: result(Page.t())
   def query(%Service{} = service, %Query{} = query, %Context{} = context) do
     with :ok <- valid_context(context, :list),
-         :ok <- Query.validate(query, service.maximum_page_limit),
+         :ok <- Query.validate(query, service.max_page_limit),
          :ok <- authorize(service, context, :list, :collection),
          {:ok, active_at} <- now(service, :list),
          {:ok, page} <- list_entries(service, query, active_at, context),
@@ -379,8 +379,8 @@ defmodule Wotex.Directory do
       existing.thing_description
       |> ThingDescriptions.enriched_map(existing.registration)
       |> MergePatch.apply(merge_patch,
-        maximum_depth: service.maximum_patch_depth,
-        maximum_nodes: service.maximum_patch_nodes
+        max_depth: service.max_patch_depth,
+        max_nodes: service.max_patch_nodes
       )
     end
   end
@@ -627,7 +627,7 @@ defmodule Wotex.Directory do
   defp expiry_limit(service, options) do
     limit = Keyword.get(options, :limit, service.default_expiry_batch_limit)
 
-    if is_integer(limit) and limit > 0 and limit <= service.maximum_expiry_batch_limit do
+    if is_integer(limit) and limit > 0 and limit <= service.max_expiry_batch_limit do
       {:ok, limit}
     else
       {:error, Error.new(:invalid_request, :validation, :expire)}

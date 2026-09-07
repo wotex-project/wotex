@@ -3,7 +3,12 @@ defmodule Wotex.Directory.Service do
   Immutable configuration for one consumer-owned directory instance.
 
   Construction validates ports and limits without invoking a callback or
-  performing I/O.
+  performing I/O. Every bound is a positive integer; an invalid bound is
+  rejected with `invalid_service` and is never silently replaced by a default.
+
+  `thing_description_options` accepts only the core limit vocabulary
+  `:max_bytes`, `:max_depth`, `:max_nodes`, `:max_string_bytes`, and
+  `:max_collection_size`, and passes it unchanged to the `wotex` core facade.
   """
 
   alias Wotex.Directory.{Error, Introduction}
@@ -12,6 +17,13 @@ defmodule Wotex.Directory.Service do
   @authorization_callbacks [authorize: 5]
   @clock_callbacks [now: 1]
   @identifier_callbacks [generate: 1]
+  @thing_description_limits [
+    :max_bytes,
+    :max_depth,
+    :max_nodes,
+    :max_string_bytes,
+    :max_collection_size
+  ]
 
   @enforce_keys [:repository, :authorization, :clock, :identifier, :introduction]
   defstruct [
@@ -21,12 +33,12 @@ defmodule Wotex.Directory.Service do
     :identifier,
     :introduction,
     default_page_limit: 50,
-    maximum_page_limit: 200,
+    max_page_limit: 200,
     default_expiry_batch_limit: 100,
-    maximum_expiry_batch_limit: 1_000,
+    max_expiry_batch_limit: 1_000,
     expiry_strategy: :purge,
-    maximum_patch_depth: 64,
-    maximum_patch_nodes: 100_000,
+    max_patch_depth: 64,
+    max_patch_nodes: 100_000,
     thing_description_options: []
   ]
 
@@ -38,12 +50,12 @@ defmodule Wotex.Directory.Service do
           identifier: port_config(),
           introduction: Introduction.t(),
           default_page_limit: pos_integer(),
-          maximum_page_limit: pos_integer(),
+          max_page_limit: pos_integer(),
           default_expiry_batch_limit: pos_integer(),
-          maximum_expiry_batch_limit: pos_integer(),
+          max_expiry_batch_limit: pos_integer(),
           expiry_strategy: :purge | :retain,
-          maximum_patch_depth: pos_integer(),
-          maximum_patch_nodes: pos_integer(),
+          max_patch_depth: pos_integer(),
+          max_patch_nodes: pos_integer(),
           thing_description_options: keyword()
         }
 
@@ -68,12 +80,12 @@ defmodule Wotex.Directory.Service do
          identifier: identifier,
          introduction: introduction,
          default_page_limit: bounds.default_page_limit,
-         maximum_page_limit: bounds.maximum_page_limit,
+         max_page_limit: bounds.max_page_limit,
          default_expiry_batch_limit: bounds.default_expiry_batch_limit,
-         maximum_expiry_batch_limit: bounds.maximum_expiry_batch_limit,
+         max_expiry_batch_limit: bounds.max_expiry_batch_limit,
          expiry_strategy: strategy,
-         maximum_patch_depth: bounds.maximum_patch_depth,
-         maximum_patch_nodes: bounds.maximum_patch_nodes,
+         max_patch_depth: bounds.max_patch_depth,
+         max_patch_nodes: bounds.max_patch_nodes,
          thing_description_options: td_options
        )}
     end
@@ -89,12 +101,12 @@ defmodule Wotex.Directory.Service do
       :identifier,
       :introduction,
       :default_page_limit,
-      :maximum_page_limit,
+      :max_page_limit,
       :default_expiry_batch_limit,
-      :maximum_expiry_batch_limit,
+      :max_expiry_batch_limit,
       :expiry_strategy,
-      :maximum_patch_depth,
-      :maximum_patch_nodes,
+      :max_patch_depth,
+      :max_patch_nodes,
       :thing_description_options
     ]
 
@@ -133,16 +145,16 @@ defmodule Wotex.Directory.Service do
   defp validate_bounds(options) do
     bounds = %{
       default_page_limit: Keyword.get(options, :default_page_limit, 50),
-      maximum_page_limit: Keyword.get(options, :maximum_page_limit, 200),
+      max_page_limit: Keyword.get(options, :max_page_limit, 200),
       default_expiry_batch_limit: Keyword.get(options, :default_expiry_batch_limit, 100),
-      maximum_expiry_batch_limit: Keyword.get(options, :maximum_expiry_batch_limit, 1_000),
-      maximum_patch_depth: Keyword.get(options, :maximum_patch_depth, 64),
-      maximum_patch_nodes: Keyword.get(options, :maximum_patch_nodes, 100_000)
+      max_expiry_batch_limit: Keyword.get(options, :max_expiry_batch_limit, 1_000),
+      max_patch_depth: Keyword.get(options, :max_patch_depth, 64),
+      max_patch_nodes: Keyword.get(options, :max_patch_nodes, 100_000)
     }
 
     if Enum.all?(bounds, fn {_key, value} -> is_integer(value) and value > 0 end) and
-         bounds.default_page_limit <= bounds.maximum_page_limit and
-         bounds.default_expiry_batch_limit <= bounds.maximum_expiry_batch_limit do
+         bounds.default_page_limit <= bounds.max_page_limit and
+         bounds.default_expiry_batch_limit <= bounds.max_expiry_batch_limit do
       {:ok, bounds}
     else
       invalid_service(%{field: :bounds})
@@ -159,9 +171,8 @@ defmodule Wotex.Directory.Service do
   defp validate_thing_description_options(options) do
     case Keyword.get(options, :thing_description_options, []) do
       value when is_list(value) ->
-        allowed = [:max_bytes, :max_depth, :max_nodes]
-
-        if Keyword.keyword?(value) and Enum.all?(Keyword.keys(value), &(&1 in allowed)) and
+        if Keyword.keyword?(value) and
+             Enum.all?(Keyword.keys(value), &(&1 in @thing_description_limits)) and
              Enum.all?(value, fn {_key, limit} -> is_integer(limit) and limit > 0 end) do
           {:ok, value}
         else
@@ -169,7 +180,7 @@ defmodule Wotex.Directory.Service do
         end
 
       _value ->
-        invalid_service()
+        invalid_service(%{field: :thing_description_options})
     end
   end
 

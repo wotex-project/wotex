@@ -37,12 +37,13 @@ defmodule Wotex.Directory.TestService do
       identifier: {TestIdentifier, identifier},
       introduction: Fixtures.thing_description("urn:example:directory"),
       default_page_limit: Keyword.get(options, :default_page_limit, 2),
-      maximum_page_limit: Keyword.get(options, :maximum_page_limit, 4),
+      max_page_limit: Keyword.get(options, :max_page_limit, 4),
       default_expiry_batch_limit: Keyword.get(options, :default_expiry_batch_limit, 2),
-      maximum_expiry_batch_limit: Keyword.get(options, :maximum_expiry_batch_limit, 4),
+      max_expiry_batch_limit: Keyword.get(options, :max_expiry_batch_limit, 4),
       expiry_strategy: Keyword.get(options, :expiry_strategy, :purge),
-      maximum_patch_depth: Keyword.get(options, :maximum_patch_depth, 8),
-      maximum_patch_nodes: Keyword.get(options, :maximum_patch_nodes, 100)
+      max_patch_depth: Keyword.get(options, :max_patch_depth, 8),
+      max_patch_nodes: Keyword.get(options, :max_patch_nodes, 100),
+      thing_description_options: Keyword.get(options, :thing_description_options, [])
     ]
 
     {:ok, service} = Service.new(service_options)

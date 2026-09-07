@@ -31,22 +31,22 @@ defmodule Wotex.Directory.MergePatch do
   def apply(target, patch, options)
       when is_map(target) and is_map(patch) and is_list(options) do
     with :ok <- validate_options(options),
-         maximum_depth <- Keyword.get(options, :maximum_depth, 64),
-         maximum_nodes <- Keyword.get(options, :maximum_nodes, 100_000),
-         :ok <- validate_limit(maximum_depth),
-         :ok <- validate_limit(maximum_nodes),
-         {:ok, _nodes} <- validate_json(patch, "", 0, 0, maximum_depth, maximum_nodes),
-         {:ok, result} <- merge(target, patch, "", 0, maximum_depth) do
+         max_depth <- Keyword.get(options, :max_depth, 64),
+         max_nodes <- Keyword.get(options, :max_nodes, 100_000),
+         :ok <- validate_limit(max_depth),
+         :ok <- validate_limit(max_nodes),
+         {:ok, _nodes} <- validate_json(patch, "", 0, 0, max_depth, max_nodes),
+         {:ok, result} <- merge(target, patch, "", 0, max_depth) do
       {:ok, result}
     end
   end
 
   def apply(_target, _patch, _options), do: invalid("/")
 
-  defp merge(_target, _patch, path, depth, maximum_depth) when depth > maximum_depth,
+  defp merge(_target, _patch, path, depth, max_depth) when depth > max_depth,
     do: refuse(path, :maximum_depth_exceeded)
 
-  defp merge(target, patch, path, depth, maximum_depth) do
+  defp merge(target, patch, path, depth, max_depth) do
     initial = if is_map(target), do: target, else: %{}
 
     patch
@@ -56,7 +56,7 @@ defmodule Wotex.Directory.MergePatch do
         {:cont, {:ok, Map.delete(result, key)}}
 
       {key, value}, {:ok, result} when is_map(value) ->
-        case merge(Map.get(result, key), value, pointer(path, key), depth + 1, maximum_depth) do
+        case merge(Map.get(result, key), value, pointer(path, key), depth + 1, max_depth) do
           {:ok, merged} -> {:cont, {:ok, Map.put(result, key, merged)}}
           {:error, error} -> {:halt, {:error, error}}
         end
@@ -66,12 +66,12 @@ defmodule Wotex.Directory.MergePatch do
     end)
   end
 
-  defp validate_json(_value, path, depth, _nodes, maximum_depth, _maximum_nodes)
-       when depth > maximum_depth,
+  defp validate_json(_value, path, depth, _nodes, max_depth, _maximum_nodes)
+       when depth > max_depth,
        do: refuse(path, :maximum_depth_exceeded)
 
-  defp validate_json(_value, path, _depth, nodes, _maximum_depth, maximum_nodes)
-       when nodes >= maximum_nodes,
+  defp validate_json(_value, path, _depth, nodes, _maximum_depth, max_nodes)
+       when nodes >= max_nodes,
        do: refuse(path, :maximum_nodes_exceeded)
 
   defp validate_json(value, _path, _depth, nodes, _maximum_depth, _maximum_nodes)
@@ -86,7 +86,7 @@ defmodule Wotex.Directory.MergePatch do
        when is_float(value) and value == value,
        do: {:ok, nodes + 1}
 
-  defp validate_json(values, path, depth, nodes, maximum_depth, maximum_nodes)
+  defp validate_json(values, path, depth, nodes, max_depth, max_nodes)
        when is_list(values) do
     values
     |> Enum.with_index()
@@ -96,8 +96,8 @@ defmodule Wotex.Directory.MergePatch do
              pointer(path, Integer.to_string(index)),
              depth + 1,
              count,
-             maximum_depth,
-             maximum_nodes
+             max_depth,
+             max_nodes
            ) do
         {:ok, updated} -> {:cont, {:ok, updated}}
         {:error, error} -> {:halt, {:error, error}}
@@ -105,7 +105,7 @@ defmodule Wotex.Directory.MergePatch do
     end)
   end
 
-  defp validate_json(values, path, depth, nodes, maximum_depth, maximum_nodes)
+  defp validate_json(values, path, depth, nodes, max_depth, max_nodes)
        when is_map(values) do
     if Enum.all?(Map.keys(values), &is_binary/1) do
       values
@@ -116,8 +116,8 @@ defmodule Wotex.Directory.MergePatch do
                pointer(path, key),
                depth + 1,
                count,
-               maximum_depth,
-               maximum_nodes
+               max_depth,
+               max_nodes
              ) do
           {:ok, updated} -> {:cont, {:ok, updated}}
           {:error, error} -> {:halt, {:error, error}}
@@ -135,7 +135,7 @@ defmodule Wotex.Directory.MergePatch do
   defp validate_limit(_value), do: invalid("/")
 
   defp validate_options(options) do
-    allowed = [:maximum_depth, :maximum_nodes]
+    allowed = [:max_depth, :max_nodes]
 
     if Keyword.keyword?(options) and Enum.all?(Keyword.keys(options), &(&1 in allowed)) do
       :ok

@@ -108,18 +108,26 @@ Wotex.Directory.Service.new(
   identifier: {IdentifierModule, identifier_state},
   introduction: directory_thing_description,
   default_page_limit: 50,
-  maximum_page_limit: 200,
+  max_page_limit: 200,
   default_expiry_batch_limit: 100,
-  maximum_expiry_batch_limit: 1_000,
+  max_expiry_batch_limit: 1_000,
   expiry_strategy: :purge,
-  maximum_patch_depth: 64,
-  maximum_patch_nodes: 100_000,
+  max_patch_depth: 64,
+  max_patch_nodes: 100_000,
   thing_description_options: []
 )
 ```
 
 Every dependency is explicit. Construction validates callback availability and
 bounds, and returns `{:ok, service}` or a typed error. It performs no I/O.
+
+Bound names use the family limit vocabulary. `max_page_limit`,
+`max_expiry_batch_limit`, `max_patch_depth`, and `max_patch_nodes` are package
+bounds; `thing_description_options` accepts only the core limits `:max_bytes`,
+`:max_depth`, `:max_nodes`, `:max_string_bytes`, and `:max_collection_size` and
+forwards them unchanged to the core facade. Every bound must be a positive
+integer. An absent bound uses the documented default; an invalid bound is
+rejected with `invalid_service` and is never silently replaced by a default.
 
 ### 5.2 Request context
 

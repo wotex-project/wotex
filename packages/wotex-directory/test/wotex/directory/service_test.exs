@@ -32,12 +32,12 @@ defmodule Wotex.Directory.ServiceTest do
     assert {:error, %Error{code: :invalid_service}} =
              options
              |> Keyword.put(:default_page_limit, 5)
-             |> Keyword.put(:maximum_page_limit, 4)
+             |> Keyword.put(:max_page_limit, 4)
              |> Service.new()
 
     assert {:error, %Error{code: :invalid_service}} =
              options
-             |> Keyword.put(:maximum_patch_nodes, 0)
+             |> Keyword.put(:max_patch_nodes, 0)
              |> Service.new()
 
     assert {:error, %Error{code: :invalid_service}} =
@@ -49,6 +49,38 @@ defmodule Wotex.Directory.ServiceTest do
              options
              |> Keyword.put(:unknown, true)
              |> Service.new()
+  end
+
+  test "accepts the core limit vocabulary and rejects every invalid limit" do
+    options = valid_options()
+
+    limits = [
+      max_bytes: 4_096,
+      max_depth: 32,
+      max_nodes: 5_000,
+      max_string_bytes: 1_024,
+      max_collection_size: 64
+    ]
+
+    assert {:ok, service} =
+             options |> Keyword.put(:thing_description_options, limits) |> Service.new()
+
+    assert service.thing_description_options == limits
+
+    for invalid <- [
+          [max_string_bytes: 0],
+          [max_collection_size: -1],
+          [max_bytes: :large],
+          [validate: false],
+          :not_a_keyword
+        ] do
+      assert {:error,
+              %Error{
+                code: :invalid_service,
+                phase: :configuration,
+                details: %{field: :thing_description_options}
+              }} = options |> Keyword.put(:thing_description_options, invalid) |> Service.new()
+    end
   end
 
   test "constructs context values without interpreting opaque consumer state" do

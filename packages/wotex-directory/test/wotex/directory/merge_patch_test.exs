@@ -51,13 +51,13 @@ defmodule Wotex.Directory.MergePatchTest do
             %Error{
               path: "/a/b/c",
               details: %{reason: :maximum_depth_exceeded}
-            }} = MergePatch.apply(%{}, %{"a" => %{"b" => %{"c" => true}}}, maximum_depth: 2)
+            }} = MergePatch.apply(%{}, %{"a" => %{"b" => %{"c" => true}}}, max_depth: 2)
 
     assert {:error,
             %Error{
               path: "/a/1",
               details: %{reason: :maximum_nodes_exceeded}
-            }} = MergePatch.apply(%{}, %{"a" => [1, 2, 3]}, maximum_nodes: 3)
+            }} = MergePatch.apply(%{}, %{"a" => [1, 2, 3]}, max_nodes: 3)
   end
 
   test "reports the JSON Pointer of an offending nested member" do

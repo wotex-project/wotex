@@ -138,7 +138,7 @@ defmodule Wotex.Directory.ErrorContractTest do
 
   test "rejects invalid core values and bounded merge patches without repository writes" do
     existing = create_entry("urn:example:thing:1")
-    setup = TestService.build(entries: [existing], maximum_patch_depth: 2, maximum_patch_nodes: 3)
+    setup = TestService.build(entries: [existing], max_patch_depth: 2, max_patch_nodes: 3)
     {:ok, invalid} = Wotex.ThingDescription.from_map(%{}, validate: false)
 
     assert {:error, %Error{code: :invalid_thing_description}} =
@@ -153,6 +153,19 @@ defmodule Wotex.Directory.ErrorContractTest do
              )
 
     refute Enum.any?(MemoryRepository.calls(setup.repository), &match?({:replace, _, _, _}, &1))
+  end
+
+  test "core limits bound admission before any repository write" do
+    setup = TestService.build(thing_description_options: [max_string_bytes: 8])
+
+    assert {:error, %Error{code: :invalid_thing_description, phase: :validation}} =
+             Directory.register(
+               setup.service,
+               Fixtures.thing_description("urn:example:thing:1"),
+               setup.context
+             )
+
+    assert MemoryRepository.entries(setup.repository) == %{}
   end
 
   test "every public failure carries the family error shape" do
