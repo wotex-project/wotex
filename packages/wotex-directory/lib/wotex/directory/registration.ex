@@ -196,9 +196,10 @@ defmodule Wotex.Directory.Registration do
   defp validate_server_fields(_raw, false, _operation), do: :ok
 
   defp validate_server_fields(raw, true, operation) do
-    if Enum.any?(@server_fields, &Map.has_key?(raw, &1)),
-      do: invalid(operation),
-      else: :ok
+    case Enum.find(@server_fields, &Map.has_key?(raw, &1)) do
+      nil -> :ok
+      field -> invalid(operation, "/registration/" <> field)
+    end
   end
 
   defp parse_ttl(nil, _operation), do: {:ok, nil}
@@ -207,7 +208,7 @@ defmodule Wotex.Directory.Registration do
        when is_integer(ttl) and ttl >= 0 and ttl <= @maximum_ttl,
        do: {:ok, ttl}
 
-  defp parse_ttl(_ttl, operation), do: invalid(operation)
+  defp parse_ttl(_ttl, operation), do: invalid(operation, "/registration/ttl")
 
   defp parse_datetime(nil, _operation), do: {:ok, nil}
   defp parse_datetime(%DateTime{} = value, _operation), do: {:ok, value}
@@ -215,11 +216,11 @@ defmodule Wotex.Directory.Registration do
   defp parse_datetime(value, operation) when is_binary(value) do
     case DateTime.from_iso8601(value) do
       {:ok, datetime, _offset} -> {:ok, datetime}
-      {:error, _reason} -> invalid(operation)
+      {:error, _reason} -> invalid(operation, "/registration/expires")
     end
   end
 
-  defp parse_datetime(_value, operation), do: invalid(operation)
+  defp parse_datetime(_value, operation), do: invalid(operation, "/registration/expires")
 
   defp expiry(now, ttl, _expires, operation) when is_integer(ttl) do
     now
@@ -236,7 +237,7 @@ defmodule Wotex.Directory.Registration do
 
   defp ensure_clock(%__MODULE__{modified: modified}, now, operation) do
     if DateTime.compare(now, modified) == :lt do
-      {:error, Error.new(:clock_regression, operation)}
+      {:error, Error.new(:clock_regression, :clock, operation)}
     else
       :ok
     end
@@ -276,5 +277,7 @@ defmodule Wotex.Directory.Registration do
   defp put_optional_integer(map, _key, nil), do: map
   defp put_optional_integer(map, key, value), do: Map.put(map, key, value)
 
-  defp invalid(operation), do: {:error, Error.new(:invalid_request, operation)}
+  defp invalid(operation, path \\ nil) do
+    {:error, Error.new(:invalid_request, :validation, operation, path: path)}
+  end
 end

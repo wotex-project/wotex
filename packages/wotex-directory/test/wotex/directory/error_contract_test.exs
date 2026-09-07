@@ -155,6 +155,81 @@ defmodule Wotex.Directory.ErrorContractTest do
     refute Enum.any?(MemoryRepository.calls(setup.repository), &match?({:replace, _, _, _}, &1))
   end
 
+  test "every public failure carries the family error shape" do
+    existing = create_entry("urn:example:thing:1")
+    setup = TestService.build(entries: [existing])
+    expired = TestService.build(authorization: %{result: :deny})
+
+    failures = [
+      Directory.get(setup.service, "relative", setup.context),
+      Directory.get(expired.service, existing.identifier, expired.context),
+      Directory.get(setup.service, "urn:example:missing", setup.context),
+      Directory.patch(setup.service, existing.identifier, %{"title" => nil}, setup.context),
+      Directory.patch(
+        setup.service,
+        existing.identifier,
+        %{"registration" => %{"created" => "2030-01-01T00:00:00Z"}},
+        setup.context
+      ),
+      Directory.expire(setup.service, setup.context, limit: 0),
+      Directory.introduction(:invalid)
+    ]
+
+    for {:error, error} <- failures do
+      assert error.code in codes()
+      assert error.phase in phases()
+      assert is_binary(error.message)
+      assert error.message == Error.message_for(error.code)
+      assert is_map(error.details)
+      assert Map.has_key?(error.details, :operation)
+      assert is_nil(error.path) or String.starts_with?(error.path, "/")
+    end
+
+    assert {:error, %Error{phase: :patch, path: "/registration"}} =
+             Directory.patch(
+               setup.service,
+               existing.identifier,
+               %{"registration" => %{"modified" => nil}},
+               setup.context
+             )
+  end
+
+  defp codes do
+    [
+      :invalid_service,
+      :invalid_context,
+      :invalid_request,
+      :invalid_thing_description,
+      :identifier_mismatch,
+      :not_found,
+      :expired,
+      :forbidden,
+      :conflict,
+      :collection_changed,
+      :unsupported_query_profile,
+      :invalid_page,
+      :authorization_failure,
+      :repository_failure,
+      :clock_failure,
+      :clock_regression,
+      :identifier_failure
+    ]
+  end
+
+  defp phases do
+    [
+      :configuration,
+      :validation,
+      :authorization,
+      :clock,
+      :identifier,
+      :repository,
+      :listing,
+      :patch,
+      :expiry
+    ]
+  end
+
   defp create_entry(identifier) do
     now = ~U[2026-09-02 10:00:00Z]
     {:ok, registration} = Wotex.Directory.Registration.create(now, :absent, :register)

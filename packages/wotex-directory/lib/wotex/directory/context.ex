@@ -21,7 +21,7 @@ defmodule Wotex.Directory.Context do
   @doc "Builds a request context with opaque authorization and repository values."
   def new(principal, options \\ [])
 
-  def new(nil, _options), do: {:error, Error.new(:invalid_context, :service)}
+  def new(nil, _options), do: {:error, Error.new(:invalid_context, :validation, :service)}
 
   def new(principal, options) when is_list(options) do
     allowed = [:authorization, :repository]
@@ -34,11 +34,11 @@ defmodule Wotex.Directory.Context do
          repository: Keyword.get(options, :repository)
        }}
     else
-      {:error, Error.new(:invalid_context, :service)}
+      {:error, Error.new(:invalid_context, :validation, :service)}
     end
   end
 
-  def new(_principal, _options), do: {:error, Error.new(:invalid_context, :service)}
+  def new(_principal, _options), do: {:error, Error.new(:invalid_context, :validation, :service)}
 
   @spec new!(term(), keyword()) :: t()
   @doc "Builds a request context or raises the returned typed error."

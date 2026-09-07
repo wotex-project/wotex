@@ -107,7 +107,7 @@ defmodule Wotex.Directory.Page do
 
       query.collection_revision != nil and
           page.collection_revision != query.collection_revision ->
-        {:error, Error.new(:collection_changed, :list)}
+        {:error, Error.new(:collection_changed, :listing, :list)}
 
       identifiers != Enum.sort(identifiers) or
           length(identifiers) != length(Enum.uniq(identifiers)) ->
@@ -124,5 +124,5 @@ defmodule Wotex.Directory.Page do
     end
   end
 
-  defp invalid, do: {:error, Error.new(:invalid_page, :list)}
+  defp invalid, do: {:error, Error.new(:invalid_page, :listing, :list)}
 end

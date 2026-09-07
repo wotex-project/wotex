@@ -39,5 +39,5 @@ defmodule Wotex.Directory.Introduction do
 
   def new(_thing_description), do: invalid()
 
-  defp invalid, do: {:error, Error.new(:invalid_service, :introduction)}
+  defp invalid, do: {:error, Error.new(:invalid_service, :configuration, :introduction)}
 end

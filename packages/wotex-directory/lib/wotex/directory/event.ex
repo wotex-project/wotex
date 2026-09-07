@@ -88,6 +88,6 @@ defmodule Wotex.Directory.Event do
   end
 
   defp invalid(identifier) do
-    {:error, Error.new(:invalid_request, :event, identifier: identifier)}
+    {:error, Error.new(:invalid_request, :validation, :event, identifier: identifier)}
   end
 end

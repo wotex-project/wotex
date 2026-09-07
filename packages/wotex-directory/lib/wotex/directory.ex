@@ -63,7 +63,7 @@ defmodule Wotex.Directory do
   end
 
   def register(_service, _thing_description, _context, _options),
-    do: {:error, Error.new(:invalid_request, :register)}
+    do: {:error, Error.new(:invalid_request, :validation, :register)}
 
   @doc """
   Retrieves an active entry and assigns `registration.retrieved` on the returned
@@ -82,7 +82,9 @@ defmodule Wotex.Directory do
   end
 
   def get(_service, identifier, _context),
-    do: {:error, Error.new(:invalid_request, :get, identifier: safe_identifier(identifier))}
+    do:
+      {:error,
+       Error.new(:invalid_request, :validation, :get, identifier: safe_identifier(identifier))}
 
   @doc """
   Replaces an existing active entry with a complete Thing Description.
@@ -134,7 +136,9 @@ defmodule Wotex.Directory do
   end
 
   def replace(_service, identifier, _thing_description, _context, _options),
-    do: {:error, Error.new(:invalid_request, :replace, identifier: safe_identifier(identifier))}
+    do:
+      {:error,
+       Error.new(:invalid_request, :validation, :replace, identifier: safe_identifier(identifier))}
 
   @doc """
   Applies a bounded RFC 7396 JSON Merge Patch and validates the resulting Thing
@@ -176,7 +180,9 @@ defmodule Wotex.Directory do
   end
 
   def patch(_service, identifier, _merge_patch, _context, _options),
-    do: {:error, Error.new(:invalid_request, :patch, identifier: safe_identifier(identifier))}
+    do:
+      {:error,
+       Error.new(:invalid_request, :validation, :patch, identifier: safe_identifier(identifier))}
 
   @doc """
   Conditionally deletes one directory entry. No lifecycle operation is applied
@@ -198,7 +204,9 @@ defmodule Wotex.Directory do
   end
 
   def delete(_service, identifier, _context, _options),
-    do: {:error, Error.new(:invalid_request, :delete, identifier: safe_identifier(identifier))}
+    do:
+      {:error,
+       Error.new(:invalid_request, :validation, :delete, identifier: safe_identifier(identifier))}
 
   @doc """
   Builds and executes the supported bounded listing query.
@@ -218,7 +226,7 @@ defmodule Wotex.Directory do
   end
 
   def list(_service, _context, _options),
-    do: {:error, Error.new(:invalid_request, :list)}
+    do: {:error, Error.new(:invalid_request, :validation, :list)}
 
   @doc """
   Executes an existing listing query. Other profiles fail explicitly.
@@ -236,7 +244,7 @@ defmodule Wotex.Directory do
   end
 
   def query(_service, _query, _context),
-    do: {:error, Error.new(:invalid_request, :list)}
+    do: {:error, Error.new(:invalid_request, :validation, :list)}
 
   @doc """
   Executes one authorized, caller-scheduled, bounded expiry batch.
@@ -258,7 +266,7 @@ defmodule Wotex.Directory do
   end
 
   def expire(_service, _context, _options),
-    do: {:error, Error.new(:invalid_request, :expire)}
+    do: {:error, Error.new(:invalid_request, :validation, :expire)}
 
   @doc """
   Returns the directory's own well-known Introduction value without invoking a
@@ -268,7 +276,7 @@ defmodule Wotex.Directory do
   def introduction(%Service{} = service), do: {:ok, service.introduction}
 
   def introduction(_service),
-    do: {:error, Error.new(:invalid_service, :introduction)}
+    do: {:error, Error.new(:invalid_service, :configuration, :introduction)}
 
   defp register_identified(
          service,
@@ -350,16 +358,23 @@ defmodule Wotex.Directory do
 
   defp registration_input(extracted, options, operation) do
     case {extracted, Keyword.fetch(options, :registration)} do
-      {input, :error} -> {:ok, input}
-      {:absent, {:ok, value}} when is_map(value) -> {:ok, {:present, value}}
-      {{:present, _value}, {:ok, _option}} -> {:error, Error.new(:invalid_request, operation)}
-      {_input, {:ok, _value}} -> {:error, Error.new(:invalid_request, operation)}
+      {input, :error} ->
+        {:ok, input}
+
+      {:absent, {:ok, value}} when is_map(value) ->
+        {:ok, {:present, value}}
+
+      {{:present, _value}, {:ok, _option}} ->
+        {:error, Error.new(:invalid_request, :validation, operation)}
+
+      {_input, {:ok, _value}} ->
+        {:error, Error.new(:invalid_request, :validation, operation)}
     end
   end
 
   defp merge_patch(service, existing, merge_patch) do
     if Registration.server_field_patch?(merge_patch) do
-      {:error, Error.new(:invalid_request, :patch)}
+      {:error, Error.new(:invalid_request, :patch, :patch, path: "/registration")}
     else
       existing.thing_description
       |> ThingDescriptions.enriched_map(existing.registration)
@@ -367,10 +382,6 @@ defmodule Wotex.Directory do
         maximum_depth: service.maximum_patch_depth,
         maximum_nodes: service.maximum_patch_nodes
       )
-      |> case do
-        {:ok, merged} -> {:ok, merged}
-        {:error, _reason} -> {:error, Error.new(:invalid_request, :patch)}
-      end
     end
   end
 
@@ -384,20 +395,21 @@ defmodule Wotex.Directory do
 
       {:ok, version} when is_integer(version) and version > 0 ->
         {:error,
-         Error.new(:conflict, operation,
+         Error.new(:conflict, :repository, operation,
            identifier: existing.identifier,
            details: %{expected_version: version}
          )}
 
       {:ok, _version} ->
-        {:error, Error.new(:invalid_request, operation, identifier: existing.identifier)}
+        {:error,
+         Error.new(:invalid_request, :validation, operation, identifier: existing.identifier)}
     end
   end
 
-  defp valid_context(context, _operation) do
+  defp valid_context(context, operation) do
     if Context.valid?(context),
       do: :ok,
-      else: {:error, Error.new(:invalid_context, :service)}
+      else: {:error, Error.new(:invalid_context, :validation, operation)}
   end
 
   defp valid_options(options, allowed, operation) do
@@ -405,29 +417,29 @@ defmodule Wotex.Directory do
          Enum.all?(Keyword.keys(options), &(&1 in allowed)) do
       :ok
     else
-      {:error, Error.new(:invalid_request, operation)}
+      {:error, Error.new(:invalid_request, :validation, operation)}
     end
   end
 
   defp valid_identifier(identifier, operation) do
     if Identifier.valid?(identifier),
       do: :ok,
-      else: {:error, Error.new(:invalid_request, operation)}
+      else: {:error, Error.new(:invalid_request, :validation, operation)}
   end
 
   defp matching_identifier(identifier, identifier, _operation), do: :ok
 
   defp matching_identifier(identifier, _other, operation) do
-    {:error, Error.new(:identifier_mismatch, operation, identifier: identifier)}
+    {:error, Error.new(:identifier_mismatch, :validation, operation, identifier: identifier)}
   end
 
   defp valid_patch(patch) when is_map(patch), do: :ok
-  defp valid_patch(_patch), do: {:error, Error.new(:invalid_request, :patch)}
+  defp valid_patch(_patch), do: {:error, Error.new(:invalid_request, :patch, :patch)}
 
   defp active(entry, now, operation) do
     if Entry.active?(entry, now),
       do: :ok,
-      else: {:error, Error.new(:expired, operation, identifier: entry.identifier)}
+      else: {:error, Error.new(:expired, :expiry, operation, identifier: entry.identifier)}
   end
 
   defp authorize(service, context, operation, target) do
@@ -438,18 +450,24 @@ defmodule Wotex.Directory do
         :ok
 
       :deny ->
-        {:error, Error.new(:forbidden, operation, identifier: target_identifier(target))}
+        {:error,
+         Error.new(:forbidden, :authorization, operation, identifier: target_identifier(target))}
 
       {:error, :forbidden} ->
-        {:error, Error.new(:forbidden, operation, identifier: target_identifier(target))}
+        {:error,
+         Error.new(:forbidden, :authorization, operation, identifier: target_identifier(target))}
 
       {:error, _reason} ->
         {:error,
-         Error.new(:authorization_failure, operation, identifier: target_identifier(target))}
+         Error.new(:authorization_failure, :authorization, operation,
+           identifier: target_identifier(target)
+         )}
 
       _result ->
         {:error,
-         Error.new(:authorization_failure, operation, identifier: target_identifier(target))}
+         Error.new(:authorization_failure, :authorization, operation,
+           identifier: target_identifier(target)
+         )}
     end
   end
 
@@ -458,8 +476,8 @@ defmodule Wotex.Directory do
 
     case module.now(state) do
       {:ok, %DateTime{} = now} -> {:ok, now}
-      {:error, _reason} -> {:error, Error.new(:clock_failure, operation)}
-      _result -> {:error, Error.new(:clock_failure, operation)}
+      {:error, _reason} -> {:error, Error.new(:clock_failure, :clock, operation)}
+      _result -> {:error, Error.new(:clock_failure, :clock, operation)}
     end
   end
 
@@ -471,22 +489,27 @@ defmodule Wotex.Directory do
         if Identifier.valid?(identifier) do
           {:ok, identifier}
         else
-          {:error, Error.new(:identifier_failure, operation)}
+          {:error, Error.new(:identifier_failure, :identifier, operation)}
         end
 
       {:error, _reason} ->
-        {:error, Error.new(:identifier_failure, operation)}
+        {:error, Error.new(:identifier_failure, :identifier, operation)}
 
       _result ->
-        {:error, Error.new(:identifier_failure, operation)}
+        {:error, Error.new(:identifier_failure, :identifier, operation)}
     end
   end
 
   defp fetch(service, identifier, context, operation) do
     case fetch_optional(service, identifier, context, operation) do
-      {:ok, entry} -> {:ok, entry}
-      :not_found -> {:error, Error.new(:not_found, operation, identifier: identifier)}
-      {:error, %Error{} = error} -> {:error, error}
+      {:ok, entry} ->
+        {:ok, entry}
+
+      :not_found ->
+        {:error, Error.new(:not_found, :repository, operation, identifier: identifier)}
+
+      {:error, %Error{} = error} ->
+        {:error, error}
     end
   end
 
@@ -527,7 +550,7 @@ defmodule Wotex.Directory do
         conflict(operation, entry.identifier)
 
       {:error, :not_found} ->
-        {:error, Error.new(:not_found, operation, identifier: entry.identifier)}
+        {:error, Error.new(:not_found, :repository, operation, identifier: entry.identifier)}
 
       {:error, _reason} ->
         repository_error(operation, entry.identifier)
@@ -541,11 +564,20 @@ defmodule Wotex.Directory do
     {module, state} = service.repository
 
     case module.delete(state, identifier, expected_version, context.repository) do
-      :ok -> :ok
-      {:error, :conflict} -> conflict(:delete, identifier)
-      {:error, :not_found} -> {:error, Error.new(:not_found, :delete, identifier: identifier)}
-      {:error, _reason} -> repository_error(:delete, identifier)
-      _result -> repository_error(:delete, identifier)
+      :ok ->
+        :ok
+
+      {:error, :conflict} ->
+        conflict(:delete, identifier)
+
+      {:error, :not_found} ->
+        {:error, Error.new(:not_found, :repository, :delete, identifier: identifier)}
+
+      {:error, _reason} ->
+        repository_error(:delete, identifier)
+
+      _result ->
+        repository_error(:delete, identifier)
     end
   end
 
@@ -557,7 +589,7 @@ defmodule Wotex.Directory do
         {:ok, page}
 
       {:error, :collection_changed} ->
-        {:error, Error.new(:collection_changed, :list)}
+        {:error, Error.new(:collection_changed, :listing, :list)}
 
       {:error, _reason} ->
         repository_error(:list, nil)
@@ -598,14 +630,14 @@ defmodule Wotex.Directory do
     if is_integer(limit) and limit > 0 and limit <= service.maximum_expiry_batch_limit do
       {:ok, limit}
     else
-      {:error, Error.new(:invalid_request, :expire)}
+      {:error, Error.new(:invalid_request, :validation, :expire)}
     end
   end
 
   defp expiry_strategy(service, options) do
     case Keyword.get(options, :strategy, service.expiry_strategy) do
       strategy when strategy in [:purge, :retain] -> {:ok, strategy}
-      _strategy -> {:error, Error.new(:invalid_request, :expire)}
+      _strategy -> {:error, Error.new(:invalid_request, :validation, :expire)}
     end
   end
 
@@ -638,11 +670,11 @@ defmodule Wotex.Directory do
   defp valid_expiry_entry?(_entry, _cutoff, _strategy), do: false
 
   defp conflict(operation, identifier) do
-    {:error, Error.new(:conflict, operation, identifier: identifier)}
+    {:error, Error.new(:conflict, :repository, operation, identifier: identifier)}
   end
 
   defp repository_error(operation, identifier) do
-    {:error, Error.new(:repository_failure, operation, identifier: identifier)}
+    {:error, Error.new(:repository_failure, :repository, operation, identifier: identifier)}
   end
 
   defp target_identifier({:entry, identifier}), do: identifier

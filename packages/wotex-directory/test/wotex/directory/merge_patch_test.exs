@@ -3,7 +3,7 @@ defmodule Wotex.Directory.MergePatchTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Directory.MergePatch
+  alias Wotex.Directory.{Error, MergePatch}
 
   test "implements recursive RFC 7396 replacement, insertion, and removal" do
     target = %{
@@ -36,13 +36,32 @@ defmodule Wotex.Directory.MergePatchTest do
   end
 
   test "rejects non-object roots, non-string keys, and bounded-work violations" do
-    assert {:error, :invalid_json_value} = MergePatch.apply(%{}, ["not", "an", "object"])
-    assert {:error, :invalid_json_value} = MergePatch.apply(%{}, %{atom_key: true})
+    assert {:error,
+            %Error{
+              code: :invalid_request,
+              phase: :patch,
+              path: "/",
+              details: %{operation: :patch, reason: :invalid_json_value}
+            }} = MergePatch.apply(%{}, ["not", "an", "object"])
 
-    assert {:error, :maximum_depth_exceeded} =
-             MergePatch.apply(%{}, %{"a" => %{"b" => %{"c" => true}}}, maximum_depth: 2)
+    assert {:error, %Error{code: :invalid_request, details: %{reason: :invalid_json_value}}} =
+             MergePatch.apply(%{}, %{atom_key: true})
 
-    assert {:error, :maximum_nodes_exceeded} =
-             MergePatch.apply(%{}, %{"a" => [1, 2, 3]}, maximum_nodes: 3)
+    assert {:error,
+            %Error{
+              path: "/a/b/c",
+              details: %{reason: :maximum_depth_exceeded}
+            }} = MergePatch.apply(%{}, %{"a" => %{"b" => %{"c" => true}}}, maximum_depth: 2)
+
+    assert {:error,
+            %Error{
+              path: "/a/1",
+              details: %{reason: :maximum_nodes_exceeded}
+            }} = MergePatch.apply(%{}, %{"a" => [1, 2, 3]}, maximum_nodes: 3)
+  end
+
+  test "reports the JSON Pointer of an offending nested member" do
+    assert {:error, %Error{path: "/forms/0/href~1x"}} =
+             MergePatch.apply(%{}, %{"forms" => [%{"href/x" => {:not, :json}}]})
   end
 end

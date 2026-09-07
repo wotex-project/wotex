@@ -174,6 +174,6 @@ defmodule Wotex.Directory.Service do
   end
 
   defp invalid_service(details \\ %{}) do
-    {:error, Error.new(:invalid_service, :service, details: details)}
+    {:error, Error.new(:invalid_service, :configuration, :service, details: details)}
   end
 end

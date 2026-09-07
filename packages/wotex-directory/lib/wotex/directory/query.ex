@@ -50,7 +50,7 @@ defmodule Wotex.Directory.Query do
       when is_integer(maximum_limit) and maximum_limit > 0 do
     cond do
       query.profile != :listing ->
-        {:error, Error.new(:unsupported_query_profile, :list)}
+        {:error, Error.new(:unsupported_query_profile, :listing, :list)}
 
       not (is_integer(query.offset) and query.offset >= 0) ->
         invalid()
@@ -102,5 +102,5 @@ defmodule Wotex.Directory.Query do
   defp valid_revision?(nil), do: true
   defp valid_revision?(revision), do: is_binary(revision) and revision != ""
 
-  defp invalid, do: {:error, Error.new(:invalid_request, :list)}
+  defp invalid, do: {:error, Error.new(:invalid_request, :listing, :list)}
 end

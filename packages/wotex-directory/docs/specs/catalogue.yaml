@@ -3,7 +3,7 @@ package: wotex_directory
 completion_plan: docs/plans/wotex-directory-completion.md
 specifications:
   - id: WTD.01
-    version: "0.1.0"
+    version: "1.1.0"
     path: docs/specs/WTD.01-directory-contract.md
     implementation_status: implemented
     standards:

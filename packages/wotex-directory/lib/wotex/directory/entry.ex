@@ -107,7 +107,8 @@ defmodule Wotex.Directory.Entry do
   defp safe_identifier(_identifier), do: nil
 
   defp invalid(identifier) do
-    {:error, Error.new(:invalid_request, :service, identifier: safe_identifier(identifier))}
+    {:error,
+     Error.new(:invalid_request, :validation, :service, identifier: safe_identifier(identifier))}
   end
 
   defp valid_options?(options) do

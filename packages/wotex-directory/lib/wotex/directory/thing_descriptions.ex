@@ -36,11 +36,11 @@ defmodule Wotex.Directory.ThingDescriptions do
       {:ok, base, registration}
     else
       {:error, %Error{} = error} -> {:error, error}
-      _result -> invalid(operation)
+      _result -> invalid(operation, "/registration")
     end
   end
 
-  def from_enriched_map(_map, _options, operation), do: invalid(operation)
+  def from_enriched_map(_map, _options, operation), do: invalid(operation, "/")
 
   @doc "Returns the identifier of a validated Thing Description."
   @spec id(Wotex.ThingDescription.t()) :: String.t() | nil
@@ -52,7 +52,7 @@ defmodule Wotex.Directory.ThingDescriptions do
   def put_id(thing_description, identifier, options, operation) do
     case Wotex.ThingDescription.put_id(thing_description, identifier, options) do
       {:ok, updated} -> {:ok, updated}
-      {:error, _errors} -> invalid(operation)
+      {:error, errors} -> invalid(operation, core_path(errors))
     end
   end
 
@@ -77,7 +77,7 @@ defmodule Wotex.Directory.ThingDescriptions do
   defp validate(%Wotex.ThingDescription{} = thing_description, options, operation) do
     case Wotex.ThingDescription.validate(thing_description, options) do
       {:ok, validated} -> {:ok, validated}
-      {:error, _errors} -> invalid(operation)
+      {:error, errors} -> invalid(operation, core_path(errors))
     end
   end
 
@@ -86,7 +86,7 @@ defmodule Wotex.Directory.ThingDescriptions do
   defp from_map(map, options, operation) do
     case Wotex.ThingDescription.from_map(map, options) do
       {:ok, thing_description} -> {:ok, thing_description}
-      {:error, _errors} -> invalid(operation)
+      {:error, errors} -> invalid(operation, core_path(errors))
     end
   end
 
@@ -98,7 +98,7 @@ defmodule Wotex.Directory.ThingDescriptions do
   defp registration_context(map, _registration, operation) do
     contexts = Map.get(map, "@context")
 
-    if context_present?(contexts), do: :ok, else: invalid(operation)
+    if context_present?(contexts), do: :ok, else: invalid(operation, "/@context")
   end
 
   defp context_present?(@discovery_context), do: true
@@ -117,6 +117,9 @@ defmodule Wotex.Directory.ThingDescriptions do
 
   defp append_context(context), do: [context, @discovery_context]
 
-  defp invalid(operation),
-    do: {:error, Error.new(:invalid_thing_description, operation)}
+  defp core_path(%Wotex.Error{path: path}), do: path
+  defp core_path(errors) when is_list(errors), do: Enum.find_value(errors, &core_path/1)
+
+  defp invalid(operation, path \\ nil),
+    do: {:error, Error.new(:invalid_thing_description, :validation, operation, path: path)}
 end

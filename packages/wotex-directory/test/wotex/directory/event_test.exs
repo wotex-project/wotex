@@ -1,4 +1,6 @@
 defmodule Wotex.Directory.EventTest do
+  @moduledoc false
+
   use ExUnit.Case, async: true
 
   alias Wotex.Directory.{Entry, Error, Event, Mutation, Registration}
@@ -56,7 +58,8 @@ defmodule Wotex.Directory.EventTest do
           fn -> Event.from_mutation(valid, unknown: true) end,
           fn -> Event.from_mutation(:not_a_mutation) end
         ] do
-      assert {:error, %Error{code: :invalid_request, operation: :event}} = request.()
+      assert {:error, %Error{code: :invalid_request, details: %{operation: :event}}} =
+               request.()
     end
   end
 

@@ -6,7 +6,7 @@ specification:
   id: WTD.01
   title: Storage-neutral Thing Description Directory contract
   status: accepted
-  version: 0.1.0
+  version: 1.1.0
   target_revision: 2023-12-05
 ---
 
@@ -386,8 +386,37 @@ serve the value at the standardized path.
 
 ## 8. Error contract
 
-Every public failure is `{:error, %Wotex.Directory.Error{}}`. The stable `code`
-set is:
+Every public failure is `{:error, %Wotex.Directory.Error{}}`. No public
+function returns a bare atom or a bare `{:error, atom}` reason. The value has
+the family error shape:
+
+- `code`: the stable failure code below;
+- `phase`: the stage that refused the request;
+- `path`: a JSON Pointer rooted at `/` into the submitted document, or `nil`
+  when no submitted member is at fault;
+- `message`: the deterministic message for `code`; and
+- `details`: a map that always carries the directory `operation` and carries
+  `identifier` when one entry is concerned.
+
+`code`, `phase`, and `message` are enforced keys. The directory `operation` is
+one of `service`, `register`, `get`, `replace`, `patch`, `delete`, `event`,
+`list`, `expire`, or `introduction`.
+
+The stable `phase` set is:
+
+| Phase | Meaning |
+|---|---|
+| `configuration` | Service or Introduction construction |
+| `validation` | Public request, context, registration, or Thing Description admission |
+| `authorization` | Authorization port denial or failure |
+| `clock` | Clock port failure or registration-history regression |
+| `identifier` | Identifier port failure or invalid generated IRI |
+| `repository` | Repository port failure, absence, or version conflict |
+| `listing` | Query, cursor, page, and collection-revision admission |
+| `patch` | Bounded RFC 7396 merge-patch admission |
+| `expiry` | Activity evaluation against the injected clock |
+
+The stable `code` set is:
 
 | Code | Meaning |
 |---|---|
@@ -410,8 +439,17 @@ set is:
 | `identifier_failure` | Identifier adapter failed or returned an invalid IRI |
 
 Messages are deterministic and exclude Thing Description bodies, principals,
-port states, credentials, and unknown adapter terms. HTTP consumers map these
-codes to Problem Details without changing library behavior.
+port states, credentials, and unknown adapter terms. `path` names a member
+position and never carries a member value. `details` carries only package
+vocabulary: the directory operation, an entry identifier, an expected version,
+a rejected configuration field, or a structural merge-patch `reason`. HTTP
+consumers map these codes to Problem Details without changing library
+behavior.
+
+`Wotex.Directory.MergePatch.apply/3` is public and therefore also returns this
+value. Its refusals use `invalid_request` in phase `patch`, the JSON Pointer of
+the offending patch member, and a `reason` detail of `invalid_json_value`,
+`maximum_depth_exceeded`, or `maximum_nodes_exceeded`.
 
 ## 9. Security invariants
 

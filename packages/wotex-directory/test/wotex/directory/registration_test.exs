@@ -45,11 +45,13 @@ defmodule Wotex.Directory.RegistrationTest do
 
   test "rejects client assignment to server fields and invalid ttl" do
     for field <- ~w(created modified retrieved) do
-      assert {:error, %Error{code: :invalid_request}} =
+      path = "/registration/" <> field
+
+      assert {:error, %Error{code: :invalid_request, path: ^path}} =
                Registration.create(@now, {:present, %{field => "value"}}, :register)
     end
 
-    assert {:error, %Error{code: :invalid_request}} =
+    assert {:error, %Error{code: :invalid_request, path: "/registration/ttl"}} =
              Registration.create(@now, {:present, %{"ttl" => -1}}, :register)
 
     assert {:error, %Error{code: :invalid_request}} =
@@ -74,7 +76,8 @@ defmodule Wotex.Directory.RegistrationTest do
 
     earlier = DateTime.add(later, -1, :second)
 
-    assert {:error, %Error{code: :clock_regression, operation: :replace}} =
+    assert {:error,
+            %Error{code: :clock_regression, phase: :clock, details: %{operation: :replace}}} =
              Registration.refresh(refreshed, earlier, :absent, :replace)
   end
 

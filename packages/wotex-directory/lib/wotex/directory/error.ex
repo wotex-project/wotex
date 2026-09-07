@@ -2,8 +2,13 @@ defmodule Wotex.Directory.Error do
   @moduledoc """
   Deterministic, redacted failure returned by directory operations.
 
-  Callers match on `code`; human-readable messages are deliberately free of
-  Thing Description bodies, principals, adapter state, and unknown port terms.
+  Callers match on `code`, `phase`, and `path`. `phase` names the stage that
+  refused the request, `path` is a JSON Pointer into the submitted document
+  when one applies, and `details` carries the directory `operation` and, when
+  the failure concerns one entry, its `identifier`.
+
+  Human-readable messages are deliberately free of Thing Description bodies,
+  principals, adapter state, credentials, and unknown port terms.
   """
 
   @type code ::
@@ -25,6 +30,17 @@ defmodule Wotex.Directory.Error do
           | :clock_regression
           | :identifier_failure
 
+  @type phase ::
+          :configuration
+          | :validation
+          | :authorization
+          | :clock
+          | :identifier
+          | :repository
+          | :listing
+          | :patch
+          | :expiry
+
   @type operation ::
           :service
           | :register
@@ -39,28 +55,39 @@ defmodule Wotex.Directory.Error do
 
   @type t :: %__MODULE__{
           code: code(),
-          operation: operation(),
-          identifier: String.t() | nil,
+          phase: phase(),
+          path: String.t() | nil,
           message: String.t(),
           details: map()
         }
 
-  defexception [:code, :operation, :identifier, :message, details: %{}]
+  @enforce_keys [:code, :phase, :message]
+  defexception [:code, :phase, :message, path: nil, details: %{}]
 
-  @spec new(code(), operation(), keyword()) :: t()
-  @doc "Builds a redacted error with a stable code and operation."
-  def new(code, operation, options \\ []) do
+  @doc """
+  Builds a redacted error with a stable code, phase, and directory operation.
+
+  `:identifier` and `:details` are merged into `details`; `:path` is a JSON
+  Pointer rooted at `/` and stays `nil` when no submitted member is at fault.
+  """
+  @spec new(code(), phase(), operation(), keyword()) :: t()
+  def new(code, phase, operation, options \\ [])
+      when is_atom(code) and is_atom(phase) and is_atom(operation) and is_list(options) do
     %__MODULE__{
       code: code,
-      operation: operation,
-      identifier: Keyword.get(options, :identifier),
+      phase: phase,
+      path: Keyword.get(options, :path),
       message: message_for(code),
-      details: Keyword.get(options, :details, %{})
+      details:
+        options
+        |> Keyword.get(:details, %{})
+        |> Map.put(:operation, operation)
+        |> put_identifier(Keyword.get(options, :identifier))
     }
   end
 
-  @spec message_for(code()) :: String.t()
   @doc "Returns the deterministic message for a stable error code."
+  @spec message_for(code()) :: String.t()
   def message_for(:invalid_service), do: "directory service configuration is invalid"
   def message_for(:invalid_context), do: "directory request context is invalid"
   def message_for(:invalid_request), do: "directory request is invalid"
@@ -81,4 +108,7 @@ defmodule Wotex.Directory.Error do
   def message_for(:clock_failure), do: "directory clock port failed"
   def message_for(:clock_regression), do: "directory clock precedes registration history"
   def message_for(:identifier_failure), do: "directory identifier port failed"
+
+  defp put_identifier(details, nil), do: details
+  defp put_identifier(details, identifier), do: Map.put(details, :identifier, identifier)
 end

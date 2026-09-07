@@ -122,8 +122,12 @@ defmodule Wotex.DirectoryTest do
     test "denial occurs before repository access and does not disclose existence" do
       setup = TestService.build(authorization: %{test_pid: self(), result: :deny})
 
-      assert {:error, %Error{code: :forbidden, identifier: "urn:example:thing:1"}} =
-               Directory.get(setup.service, "urn:example:thing:1", setup.context)
+      assert {:error,
+              %Error{
+                code: :forbidden,
+                phase: :authorization,
+                details: %{operation: :get, identifier: "urn:example:thing:1"}
+              }} = Directory.get(setup.service, "urn:example:thing:1", setup.context)
 
       assert_receive {:authorize, :principal, :get, {:entry, "urn:example:thing:1"},
                       :authorization_context}
@@ -142,7 +146,7 @@ defmodule Wotex.DirectoryTest do
 
       setup = TestService.build(authorization: authorization)
 
-      assert {:error, %Error{code: :forbidden, identifier: ^identifier}} =
+      assert {:error, %Error{code: :forbidden, details: %{identifier: ^identifier}}} =
                Directory.register(
                  setup.service,
                  Fixtures.thing_description(identifier),
