@@ -119,9 +119,14 @@ with its bounded SSE parser and linked stream session (`req` is an optional
 dependency selected by the host), the external conformance target that runs
 the core package through the conformance protocol, and the Continuum channel,
 host and wire conversions that carry proposals, intents and results between a
-simulated edge and cloud with replayable faults. MQTT uses EMQTT and a
-disposable broker; that is an accepted reference choice, not a mandatory
-dependency of the base library and not an implementation supplied here.
+simulated edge and cloud with replayable faults. The canonical smart room
+(`Wotex.Lab.SmartRoom.Scenario`) discovers an HTTP thermostat and a loopback
+actuator from the Directory by TD id, turns a temperature reading into an Nx
+`setTarget` proposal, and lets `Wotex.Lab.SmartRoom.Policy` dispatch one
+decision once; only the result crosses the channel to the cloud host. MQTT uses
+EMQTT and a disposable broker; that is an accepted reference choice, not a
+mandatory dependency of the base library and not an implementation supplied
+here.
 `ex_maude` earns a specific place by exploring modeled conflicting control
 decisions and unsafe transition orders. Its result cannot authorize an Action
 or certify a physical system.

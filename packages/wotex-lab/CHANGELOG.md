@@ -30,6 +30,13 @@
   The Directory contract suite now runs the same public-API cases against both
   stores, and adds aborted-transaction rollback, persistent reopen, corrupt-row
   rejection and `retain: false` file teardown for the SQLite lane.
+- Canonical smart room: Directory discovery by TD id over paged listings, an
+  HTTP thermostat and a loopback actuator consumed through Runtime, an Nx
+  `setTarget` proposal, a decision policy that binds digest, principal,
+  watermark, revision and expiry and dispatches once at the edge, and only the
+  result crossing the Continuum channel. Refusals are recorded by reason and a
+  restarted policy holds no grants. The reference Thing host takes explicit
+  `:actions` effects.
 - Accepted WLB.01–WLB.11 specifications and versioned completion contract.
 - Explicit instance supervision, bounded scenario descriptors and plugin port.
 - Deterministic public-API Nx example with explicit units/backend and inert output.

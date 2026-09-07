@@ -41,7 +41,7 @@ review and renewed evidence, not automatic readiness promotion.
 | `public_release_candidate` | All above plus SBOM/provenance/license/security/API review, verified source/lock/archive/image/model digests and all documented links/commands |
 | `stable_api_candidate` | Explicit compatibility decision over every public result/error/default/schema and minimum/current supported cohort; no inference from version or coverage |
 
-`bin/check-package` implements content inspection only. Full artifact runner
+`bin/check_package.exs` implements content inspection only. Full artifact runner
 implementation is an acceptance obligation, not silently approximated by that
 script. Before running archive-consumer tests, the harness MUST assert Git is
 unavailable (`command -v git` must fail) and inspect the resolved dependency

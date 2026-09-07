@@ -1,11 +1,13 @@
 # WLB.05: Directory, Continuum and the smart-room consumer
 
-Specification version: 1.3.0. Contract: accepted. Source status: both
+Specification version: 1.4.0. Contract: accepted. Source status: both
 repository algorithms are implemented. The ETS store, the SQLite store, the
 explicit authorization/clock/identifier ports, the shared Directory contract
 suite that runs the same public-API cases against both stores, and the
-Continuum channel, host and wire conversions are source complete; the
-canonical smart room remains planned.
+Continuum channel, host and wire conversions are source complete. The
+canonical smart room is implemented with an HTTP thermostat, a loopback
+actuator, an ETS Directory, the Continuum channel and host and the decision
+policy; the MQTT energy meter joins the composition once the MQTT lane lands.
 
 ## Directory references
 
@@ -111,17 +113,34 @@ wire conversions in both directions.
 ## Canonical smart room
 
 The integrated scenario MUST compose an HTTP/SSE thermostat, MQTT energy meter
-and HTTP actuator, discover their TDs through the explicit Directory service,
-consume through Runtime, carry observation/intent/result values through the
-Continuum channel and execute the WLB.03 Nx pipeline. Every Thing identity and
-affordance comes from its admitted TD, never a name-only join.
+and a simulated actuator, discover their TDs through the explicit Directory
+service, consume through Runtime, carry observation and result values through
+the Continuum channel and execute the WLB.03 Nx pipeline. Every Thing identity
+and affordance comes from its admitted TD, never a name-only join.
+`Wotex.Lab.SmartRoom.Scenario.discover/3` pages the Directory listing and
+builds one `ConsumedThing` per admitted TD id from caller-supplied profiles,
+transports and credentials; `run/1` executes the cycle and returns the
+observation, channel deliveries, action proposal, decision, dispatch outcome
+and observed effect as separate values.
 
 A decision record binds proposal digest, Thing/Action, input, principal,
-observation watermark, state revision and expiry. Dispatch uses that record
-once within the simulated host. Concurrent policy attempts, stale data,
-conflicting proposals, revoked decision and duplicate delivery MUST be tested.
+observation watermark, state revision and expiry. `Wotex.Lab.SmartRoom.Policy`
+issues that record and dispatches it at most once, at the edge that owns the
+actuator. Only the `action_result` crosses the channel afterwards: an
+`action_intent` delivered to a host is a request to execute, so the edge MUST
+NOT forward an intent for an action it has already dispatched. Concurrent policy
+attempts, stale data, conflicting proposals, revoked decision and duplicate
+dispatch MUST be tested and every refusal is recorded with its reason.
 Decision, dispatch acknowledgement and observed simulated effect are separately
 inspectable. Restart erases in-memory grants; no grant is implicitly restored.
+The simulated actuator declares its effect explicitly through the reference
+Thing host's `:actions` option; an unmapped action stores its input and
+changes no property.
+
+`test/wotex/lab/smart_room_test.exs` covers discovery by TD id over a paged
+Directory, the full cycle over a real HTTP socket and the loopback host, the
+refusal set, restart erasure and the fail-closed discovery of an unbuildable
+Thing.
 
 All channels expose telemetry and evidence under WLB.06. The same scenario
 definition powers notebooks, CLI, web and MCP. An optional WLB.09 formal

@@ -11,8 +11,11 @@ defmodule Wotex.Lab.Reference.Thing do
   dead subscriber is dropped. `disconnect/1` simulates session loss.
 
   Options: `:td` (a validated `Wotex.ThingDescription`), `:state` (initial
-  Property values), `:tokens` (`security name => expected credential`), and an
-  optional `:name`. Start it under an instance's `:things` role.
+  Property values), `:tokens` (`security name => expected credential`), `:actions`
+  (`action name => fn input, state -> {:ok, payload, status, next_state} end`, the
+  explicit simulated effect of an invocation; unmapped actions store their input
+  under the action name), and an optional `:name`. Start it under an instance's
+  `:things` role.
   """
 
   use GenServer
@@ -82,7 +85,7 @@ defmodule Wotex.Lab.Reference.Thing do
   def init(opts) do
     td = Keyword.fetch!(opts, :td)
 
-    case ExposedThing.new(td, handlers(td)) do
+    case ExposedThing.new(td, handlers(td, Keyword.get(opts, :actions, %{}))) do
       {:ok, exposed} ->
         {:ok,
          %{
@@ -219,7 +222,7 @@ defmodule Wotex.Lab.Reference.Thing do
     end
   end
 
-  defp handlers(td) do
+  defp handlers(td, effects) do
     document = ThingDescription.to_map(td)
 
     properties =
@@ -238,13 +241,20 @@ defmodule Wotex.Lab.Reference.Thing do
       document
       |> Map.get("actions", %{})
       |> Enum.map(fn {name, _affordance} ->
-        {{:invokeaction, name},
-         fn {input, state}, _context ->
-           {:ok, %{"accepted" => true, "input" => input}, :accepted, Map.put(state, name, input)}
-         end}
+        {{:invokeaction, name}, action_handler(name, Map.get(effects, name))}
       end)
 
     Map.new(properties ++ actions)
+  end
+
+  defp action_handler(name, nil) do
+    fn {input, state}, _context ->
+      {:ok, %{"accepted" => true, "input" => input}, :accepted, Map.put(state, name, input)}
+    end
+  end
+
+  defp action_handler(_name, effect) when is_function(effect, 2) do
+    fn {input, state}, _context -> effect.(input, state) end
   end
 
   defp admit_route(_document, %Request{affordance_type: :thing}) do
