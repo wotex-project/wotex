@@ -1,0 +1,60 @@
+name: foundation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-foundation:
+    name: Source foundation / Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: "1.18.4"
+            otp: "27.3"
+          - elixir: "1.20.2"
+            otp: "29.0"
+    defaults:
+      run:
+        working-directory: wotex-lab
+    env:
+      MIX_ENV: test
+      WOTEX_PATH_DEPS: "1"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          path: wotex-lab
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex
+          ref: 26e62bb4e2f9dc7ddc85a95145fe6ae08253225d
+          path: wotex
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex-nx
+          ref: a980e1384e23141b9c90b2c7de6adc61df198c78
+          path: wotex-nx
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+      - name: Install verification utilities
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ripgrep ruby
+      - run: mix deps.get --check-locked
+      - run: mix check --no-retry
