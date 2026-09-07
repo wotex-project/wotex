@@ -88,5 +88,13 @@ jobs:
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
+      # Explicit, digest-verified provisioning of the pinned Maude release for the
+      # formal profile evidence; the Lab itself never downloads an engine.
+      - name: Provision Maude 3.5.1
+        run: |
+          curl -sSL -o /tmp/maude.zip https://github.com/maude-lang/Maude/releases/download/Maude3.5.1/Maude-3.5.1-linux-x86_64.zip
+          echo "72ed1ca87e3b3d0dfc6ee1436baf154bf04c45ff97d521bec040c5e8dfc8f92c  /tmp/maude.zip" | sha256sum --check
+          mkdir -p /tmp/maude && unzip -q -o /tmp/maude.zip -d /tmp/maude && chmod +x /tmp/maude/maude
+          echo "WOTEX_LAB_MAUDE=/tmp/maude/maude" >> "$GITHUB_ENV"
       - run: mix deps.get --check-locked
       - run: mix check --no-retry

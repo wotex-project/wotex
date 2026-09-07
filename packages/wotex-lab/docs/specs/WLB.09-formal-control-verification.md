@@ -1,6 +1,11 @@
 # WLB.09: Optional formal control verification with ex_maude
 
-Specification version: 0.1.0. Contract: accepted.
+Specification version: 0.2.0. Contract: accepted. Source status: the finite
+`thermal-control-v1` model with its safe and deliberately broken modules, the
+explicit abstraction, the closed serializer, the output parsers, the result
+contract, the ex_maude profile with bounded execution and engine reaping, and
+the counterexample replay are implemented; the formal-control notebook lane
+follows WLB.07.
 
 ## Decision and scope
 
@@ -15,6 +20,13 @@ with an explicit instance-owned pool. The port backend is the reference choice;
 no NIF or C-node is needed. The foundation does not depend on `ex_maude`, start
 a pool or download a binary. Exact package/model/binary versions and hashes
 are inputs to the profile, not selected by a remote assistant.
+`Wotex.Lab.Formal.Profile` is that profile behind the optional `ex_maude`
+requirement: `new/1` admits a catalogued model whose bytes match the manifest
+digest, an explicit executable path whose SHA-256 the operator pins, an
+explicit pool name and bounded limits; `child_spec/1` is the published pool
+specification with one port worker for the caller's own supervisor. Tests
+that need the engine run only with `WOTEX_LAB_MAUDE=<path>`; nothing
+downloads a binary.
 
 ## Model contract
 
@@ -24,12 +36,22 @@ delivery/observation age. Define an explicit abstraction from WNX outputs and
 smart-room state into these terms, including units, threshold rounding and
 information lost by discretization. State and transition definitions are
 checked-in executable model source, separately licensed and digest-addressed.
+`priv/models/thermal-control-v1.maude` is that source, addressed by
+`priv/models/manifest.json` and read through `Wotex.Lab.Formal.Model`;
+`Wotex.Lab.Formal.Abstraction` documents the bands, the energy limit, the
+whole-second age rounding and the counter caps, and reports what each
+abstraction loses. The safe module is finite (253 reachable states from
+`init`); each `BROKEN-*` module removes exactly one guard.
 
 Required properties: heat and cool are never simultaneously admitted; no
 dispatch without a matching unexpired decision; stale observation cannot
 authorize a proposal; an energy-limit refusal cannot be bypassed by reordering;
 a duplicate intent cannot create a second simulated effect. Include safe
 models, deliberately broken models and reachable counterexample traces.
+`Wotex.Lab.Formal.Serializer.properties/0` fixes the five search targets;
+"no dispatch without a matching decision" and "no duplicate effect" share
+the target that effects never exceed grants, and are told apart by the broken
+module that reaches it.
 
 ## Execution and result contract
 
@@ -60,6 +82,23 @@ models, deliberately broken models and reachable counterexample traces.
    during model load and concurrent pools MUST terminate boundedly and preserve
    instance isolation. The host must verify whole subprocess-tree cleanup;
    an Erlang Port timeout alone is insufficient.
+
+In source, `Profile.verify/5` runs load, bounded search and `show path` under
+one wall deadline and the output ceiling, maps the engine timeout to
+`timeout`, treats a bounded no-solution answer as `inconclusive` unless the
+unbounded-depth exhaustion attempt terminates (`complete_search` with the
+explored state count), and records the operating-system process ids behind
+the worker through public port introspection so an engine that survives a
+stopped worker is killed; `Profile.stop/4` does the same for a pool removed
+through its owner. `Wotex.Lab.Formal.Replay` replays a trace through
+`Wotex.Lab.SmartRoom.Policy` and a simulated actuator and records the first
+divergence. `test/wotex/lab/formal_test.exs` covers the model digest, the
+abstraction, hostile serializer input, the parsers, admission without a
+binary and replay convergence and divergence from captured traces;
+`test/wotex/lab/formal_maude_test.exs` (tag `:maude`) verifies every property
+of the safe model by complete search, obtains and replays a counterexample
+from every broken module, exercises depth bounds, output overflow, deadline
+expiry with engine reaping, pool removal and two concurrent pools.
 
 ## Binary and distribution boundary
 

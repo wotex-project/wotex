@@ -19,4 +19,9 @@ defmodule Wotex.Lab do
   @spec start_child(pid(), :things | :sessions, Supervisor.child_spec() | {module(), term()}) ::
           DynamicSupervisor.on_start_child() | {:error, Wotex.Lab.Error.t()}
   defdelegate start_child(instance, role, child), to: Wotex.Lab.Supervisor
+
+  @doc "Terminates a child started under a live instance's Thing or session supervisor."
+  @spec stop_child(pid(), :things | :sessions, pid()) ::
+          :ok | {:error, Wotex.Lab.Error.t() | :not_found}
+  defdelegate stop_child(instance, role, child), to: Wotex.Lab.Supervisor
 end

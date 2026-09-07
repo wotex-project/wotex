@@ -155,4 +155,29 @@ defmodule Wotex.Lab.SupervisorTest do
 
     assert {:error, %Error{code: :unknown_role}} = Lab.start_child(self(), :unknown, %{})
   end
+
+  test "a child is terminated through its role supervisor and not restarted" do
+    lab = start_supervised!({Lab, id: "stop-child", max_children: 4})
+
+    {:ok, agent} =
+      Lab.start_child(lab, :sessions, %{
+        id: :agent,
+        start: {Agent, :start_link, [fn -> :state end]},
+        restart: :permanent
+      })
+
+    monitor = Process.monitor(agent)
+
+    assert :ok = Lab.stop_child(lab, :sessions, agent)
+    assert_receive {:DOWN, ^monitor, :process, ^agent, :shutdown}
+    Process.sleep(20)
+
+    {:sessions, sessions, :supervisor, _} =
+      List.keyfind(Supervisor.which_children(lab), :sessions, 0)
+
+    assert DynamicSupervisor.which_children(sessions) == []
+
+    assert {:error, :not_found} = Lab.stop_child(lab, :sessions, agent)
+    assert {:error, %Error{code: :unknown_role}} = Lab.stop_child(lab, :unknown, agent)
+  end
 end

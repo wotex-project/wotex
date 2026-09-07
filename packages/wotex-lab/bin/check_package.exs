@@ -5,7 +5,7 @@ defmodule Wotex.Lab.Check.Package do
   @moduledoc false
 
   @required ~w(lib/wotex/lab.ex mix.exs README.md LICENSE NOTICE
-               docs/specs/catalogue.yaml docs/plans/wotex-lab-completion.md
+               docs/specs/catalogue.yaml docs/plans/wotex-lab-completion.md priv/models/manifest.json
                docs/provenance/source-index.json priv/fixtures/thermal/thing-description.json)
   @excluded ~r{\A(?:docs/tasks|deps|_build|test|bin|\.git)(?:/|\z)}
 

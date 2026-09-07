@@ -51,6 +51,19 @@ prefix and removes the container when the suite ends.
 WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 MIX_ENV=test mix test
 ```
 
+The formal profile needs a Maude executable (GPL-2.0, not part of this
+package). `bin/provision_maude.exs` is the explicit way to get the pinned
+3.5.1 release: it downloads the archive for your platform, refuses any
+digest other than the recorded one, unpacks it under `tmp/maude` and prints
+the path. The tests tagged `:maude` run only when `WOTEX_LAB_MAUDE` names an
+executable, and the coverage gate needs them, so run `mix check` with it set.
+The library itself never downloads or starts an engine.
+
+```sh
+elixir bin/provision_maude.exs
+WOTEX_PATH_DEPS=1 WOTEX_LAB_MAUDE=tmp/maude/maude mix check --no-retry
+```
+
 Development expects `wotex` and `wotex-nx` checkouts alongside Lab. This mode is
 local source evidence. It does not satisfy the clone-free acceptance gate.
 The intended Hex dependency is `{:wotex_lab, "~> 0.1.0"}`; this README does not
@@ -157,7 +170,9 @@ and subscriptions over EMQTT (`emqtt` is an optional dependency selected by
 the host) against a disposable `eclipse-mosquitto:2` broker. TLS, broker ACL
 isolation, Last Will, session expiry and power loss remain planned there.
 `ex_maude` earns a specific place by exploring modeled conflicting control
-decisions and unsafe transition orders. Its result cannot authorize an Action
+decisions and unsafe transition orders: `Wotex.Lab.Formal.Profile` verifies
+the digest-addressed `thermal-control-v1` model under explicit bounds and
+replays counterexamples through the smart-room policy. Its result cannot authorize an Action
 or certify a physical system.
 
 ## Workbench and metrics

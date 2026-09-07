@@ -16,7 +16,12 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)
-    root |> Path.join(".archive-check.consumer-*") |> Path.wildcard() |> Enum.each(&File.rm_rf!/1)
+
+    root
+    |> Path.join(".archive-check.consumer-*")
+    |> Path.wildcard(match_dot: true)
+    |> Enum.each(&File.rm_rf!/1)
+
     work = Path.join(root, ".archive-check.consumer-#{System.unique_integer([:positive])}")
     tarballs = Path.join(work, "tarballs")
     File.mkdir_p!(tarballs)

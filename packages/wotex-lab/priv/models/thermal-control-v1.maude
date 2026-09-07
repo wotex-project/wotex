@@ -1,0 +1,122 @@
+*** thermal-control-v1: a finite control model for the WoTEx Lab smart room.
+***
+*** The model abstracts the smart-room policy (WLB.05) into finite terms:
+*** temperature bands, heater and cooler switches, an energy-limit state, one
+*** decision slot with the observation age at grant time, the current
+*** observation age, and counters of grants and simulated effects. Ages and
+*** counters are bounded, so every module below has a finite reachable state
+*** space from `init` and an unbounded-depth search terminates.
+***
+*** SAFE-THERMAL is the intended policy. Each BROKEN-* module removes exactly
+*** one guard so that one property has a reachable counterexample. Properties
+*** are search targets built by the Lab serializer; nothing in this file
+*** decides authority.
+
+fmod THERMAL-STATE is
+  protecting NAT .
+  sorts Band Switch Energy Action Decision Room .
+  ops cold comfort hot : -> Band [ctor] .
+  ops on off : -> Switch [ctor] .
+  ops within over : -> Energy [ctor] .
+  ops heat cool : -> Action [ctor] .
+  op noDecision : -> Decision [ctor] .
+  op granted : Action Nat -> Decision [ctor] .
+  op dispatched : Action Nat -> Decision [ctor] .
+  op room : Band Switch Switch Energy Decision Nat Nat Nat -> Room [ctor] .
+  op maxAge : -> Nat .
+  op maxGrants : -> Nat .
+  eq maxAge = 3 .
+  eq maxGrants = 2 .
+  op init : -> Room .
+  eq init = room(comfort, off, off, within, noDecision, 0, 0, 0) .
+endfm
+
+*** room(Band, Heater, Cooler, Energy, Decision, Age, Grants, Effects)
+
+mod SAFE-THERMAL is
+  including THERMAL-STATE .
+  vars B : Band . vars H C : Switch . var E : Energy . var X : Action .
+  vars A G N T : Nat .
+  crl [tick] : room(B, H, C, E, noDecision, A, G, N) => room(B, H, C, E, noDecision, A + 1, G, N)
+    if A < maxAge .
+  crl [age] : room(B, H, C, E, granted(X, T), A, G, N) => room(B, H, C, E, granted(X, T), A + 1, G, N)
+    if A < maxAge .
+  rl [warm] : room(cold, H, C, E, noDecision, A, G, N) => room(comfort, H, C, E, noDecision, A, G, N) .
+  rl [heatUp] : room(comfort, H, C, E, noDecision, A, G, N) => room(hot, H, C, E, noDecision, A, G, N) .
+  rl [chill] : room(hot, H, C, E, noDecision, A, G, N) => room(comfort, H, C, E, noDecision, A, G, N) .
+  rl [coolDown] : room(comfort, H, C, E, noDecision, A, G, N) => room(cold, H, C, E, noDecision, A, G, N) .
+  rl [energyOver] : room(B, H, C, within, granted(X, T), A, G, N) => room(B, off, C, over, granted(X, T), A, G, N) .
+  rl [energyWithin] : room(B, H, C, over, noDecision, A, G, N) => room(B, H, C, within, noDecision, A, G, N) .
+  crl [proposeHeat] : room(cold, H, C, within, noDecision, A, G, N) => room(cold, H, C, within, granted(heat, A), A, G + 1, N)
+    if G < maxGrants .
+  crl [proposeCool] : room(hot, H, C, E, noDecision, A, G, N) => room(hot, H, C, E, granted(cool, A), A, G + 1, N)
+    if G < maxGrants .
+  crl [dispatchHeat] : room(B, H, C, within, granted(heat, T), A, G, N) => room(B, on, off, within, dispatched(heat, A), 0, G, N + 1)
+    if A < maxAge .
+  crl [dispatchCool] : room(B, H, C, E, granted(cool, T), A, G, N) => room(B, off, on, E, dispatched(cool, A), 0, G, N + 1)
+    if A < maxAge .
+  crl [expire] : room(B, H, C, E, granted(X, T), A, G, N) => room(B, H, C, E, noDecision, A, G, N)
+    if A >= maxAge .
+  rl [complete] : room(B, H, C, E, dispatched(X, T), A, G, N) => room(B, H, C, E, noDecision, A, G, N) .
+endm
+
+*** A duplicate delivery of an already dispatched intent creates a second effect.
+mod BROKEN-DUPLICATE is
+  including SAFE-THERMAL .
+  vars B : Band . vars H C : Switch . var E : Energy . var X : Action .
+  vars A G N T : Nat .
+  rl [redeliver] : room(B, H, C, E, dispatched(X, T), A, G, N) => room(B, H, C, E, dispatched(X, T), A, G, N + 1) .
+endm
+
+*** A stale decision can still dispatch.
+mod BROKEN-STALE is
+  including THERMAL-STATE .
+  vars B : Band . vars H C : Switch . var E : Energy . var X : Action .
+  vars A G N T : Nat .
+  crl [age] : room(B, H, C, E, granted(X, T), A, G, N) => room(B, H, C, E, granted(X, T), A + 1, G, N)
+    if A < maxAge .
+  crl [proposeCool] : room(hot, H, C, E, noDecision, A, G, N) => room(hot, H, C, E, granted(cool, A), A, G + 1, N)
+    if G < maxGrants .
+  rl [heatUp] : room(comfort, H, C, E, noDecision, A, G, N) => room(hot, H, C, E, noDecision, A, G, N) .
+  rl [dispatchCool] : room(B, H, C, E, granted(cool, T), A, G, N) => room(B, off, on, E, dispatched(cool, A), 0, G, N + 1) .
+endm
+
+*** The energy-limit refusal is bypassed when the limit is reached after the grant.
+mod BROKEN-ENERGY is
+  including THERMAL-STATE .
+  vars B : Band . vars H C : Switch . var E : Energy . var X : Action .
+  vars A G N T : Nat .
+  rl [coolDown] : room(comfort, H, C, E, noDecision, A, G, N) => room(cold, H, C, E, noDecision, A, G, N) .
+  crl [proposeHeat] : room(cold, H, C, within, noDecision, A, G, N) => room(cold, H, C, within, granted(heat, A), A, G + 1, N)
+    if G < maxGrants .
+  rl [energyOver] : room(B, H, C, within, granted(X, T), A, G, N) => room(B, off, C, over, granted(X, T), A, G, N) .
+  crl [dispatchHeat] : room(B, H, C, E, granted(heat, T), A, G, N) => room(B, on, off, E, dispatched(heat, A), 0, G, N + 1)
+    if A < maxAge .
+endm
+
+*** Dispatching heat no longer switches the cooler off.
+mod BROKEN-BOTH is
+  including THERMAL-STATE .
+  vars B : Band . vars H C : Switch . var E : Energy . var X : Action .
+  vars A G N T : Nat .
+  rl [heatUp] : room(comfort, H, C, E, noDecision, A, G, N) => room(hot, H, C, E, noDecision, A, G, N) .
+  rl [coolDown] : room(comfort, H, C, E, noDecision, A, G, N) => room(cold, H, C, E, noDecision, A, G, N) .
+  rl [chill] : room(hot, H, C, E, noDecision, A, G, N) => room(comfort, H, C, E, noDecision, A, G, N) .
+  crl [proposeHeat] : room(cold, H, C, within, noDecision, A, G, N) => room(cold, H, C, within, granted(heat, A), A, G + 1, N)
+    if G < maxGrants .
+  crl [proposeCool] : room(hot, H, C, E, noDecision, A, G, N) => room(hot, H, C, E, granted(cool, A), A, G + 1, N)
+    if G < maxGrants .
+  crl [dispatchHeat] : room(B, H, C, within, granted(heat, T), A, G, N) => room(B, on, C, within, dispatched(heat, A), 0, G, N + 1)
+    if A < maxAge .
+  crl [dispatchCool] : room(B, H, C, E, granted(cool, T), A, G, N) => room(B, off, on, E, dispatched(cool, A), 0, G, N + 1)
+    if A < maxAge .
+  rl [complete] : room(B, H, C, E, dispatched(X, T), A, G, N) => room(B, H, C, E, noDecision, A, G, N) .
+endm
+
+*** An effect happens with no decision at all.
+mod BROKEN-UNGRANTED is
+  including THERMAL-STATE .
+  vars B : Band . vars H C : Switch . var E : Energy . var X : Action .
+  vars A G N T : Nat .
+  rl [dispatchWithoutDecision] : room(B, H, C, E, noDecision, A, G, N) => room(B, on, off, E, dispatched(heat, A), 0, G, N + 1) .
+endm

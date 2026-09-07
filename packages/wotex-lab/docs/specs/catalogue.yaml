@@ -226,11 +226,11 @@ specifications:
       - "bin/check_source_cohort.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.09
-    version: "0.1.0"
+    version: "0.2.0"
     path: docs/specs/WLB.09-formal-control-verification.md
-    implementation_status: planned
-    evidence_status: missing
-    adoption_status: no_reference
+    implementation_status: partial
+    evidence_status: partial
+    adoption_status: reference_available
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -240,8 +240,17 @@ specifications:
       - "WLB.05"
     completion_items:
       - "WLB-C09"
-    implementation_modules: []
-    executable_evidence: []
+    implementation_modules:
+      - "Wotex.Lab.Formal.Model"
+      - "Wotex.Lab.Formal.Abstraction"
+      - "Wotex.Lab.Formal.Serializer"
+      - "Wotex.Lab.Formal.Output"
+      - "Wotex.Lab.Formal.Result"
+      - "Wotex.Lab.Formal.Profile"
+      - "Wotex.Lab.Formal.Replay"
+    executable_evidence:
+      - "test/wotex/lab/formal_test.exs"
+      - "test/wotex/lab/formal_maude_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.10
     version: "0.1.0"

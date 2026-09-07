@@ -51,6 +51,21 @@ defmodule Wotex.Lab.Supervisor do
   def start_child(_instance, _role, _child),
     do: {:error, Error.new(:unknown_role, :composition, "role must be things or sessions")}
 
+  @doc "Terminates a child of the instance's Thing or session supervisor; the child is not restarted."
+  @spec stop_child(pid(), :things | :sessions, pid()) :: :ok | {:error, Error.t() | :not_found}
+  def stop_child(instance, role, child) when role in [:things, :sessions] and is_pid(child) do
+    case List.keyfind(Supervisor.which_children(instance), role, 0) do
+      {^role, pid, :supervisor, _modules} when is_pid(pid) ->
+        DynamicSupervisor.terminate_child(pid, child)
+
+      _unavailable ->
+        {:error, Error.new(:supervisor_unavailable, :composition, "child supervisor unavailable")}
+    end
+  end
+
+  def stop_child(_instance, _role, _child),
+    do: {:error, Error.new(:unknown_role, :composition, "role must be things or sessions")}
+
   @impl true
   def init(opts) do
     children =

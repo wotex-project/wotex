@@ -56,6 +56,7 @@ defmodule WotexLab.MixProject do
       {:telemetry, "~> 1.3"},
       {:exqlite, "~> 0.40", optional: true},
       {:req, "~> 0.7.4", optional: true},
+      {:ex_maude, "~> 0.4.1", optional: true},
       {:bandit, "~> 1.12", only: :test},
       {:plug, "~> 1.18", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
@@ -125,7 +126,7 @@ defmodule WotexLab.MixProject do
       licenses: ["Apache-2.0"],
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       links: %{"GitHub" => @source_url, "Project" => "https://wotex.io"},
-      files: ~w(lib priv/fixtures docs/specs docs/plans docs/decisions docs/provenance
+      files: ~w(lib priv/fixtures priv/models docs/specs docs/plans docs/decisions docs/provenance
         .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md SECURITY.md CONTRIBUTING.md)
     ]
   end

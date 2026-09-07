@@ -46,6 +46,22 @@
   exceeds it. Refusals are recorded by reason and a
   restarted policy holds no grants. The reference Thing host takes explicit
   `:actions` effects.
+- Lab telemetry under `[:wotex, :lab, component, operation, event]` with
+  allowlisted, bounded metadata and exception spans that carry the kind only,
+  emitted by the runtime, HTTP, SSE, Directory, Continuum, conformance, Nx
+  and policy seams. Evidence records with explicit missing-archive statements,
+  public-evidence refusals, canonical encoding and content digests.
+- Base and profile dependency split: Runtime, both bindings, Directory,
+  Continuum and Exqlite are optional requirements whose Lab modules compile
+  only when the package is loaded; the conformance runner is a development
+  dependency. The archive-consumer gate resolves the base profile from admitted
+  archives through a local Hex registry with Git absent from the PATH and
+  records evidence with archive digests.
+- Optional ex_maude formal profile: the digest-addressed `thermal-control-v1`
+  model with safe and deliberately broken modules, an explicit abstraction, a
+  closed serializer, bounded verification with complete-search exhaustion,
+  engine reaping after timeouts and pool removal, counterexample replay
+  through the smart-room policy, and `Wotex.Lab.stop_child/3`.
 - Accepted WLB.01–WLB.11 specifications and versioned completion contract.
 - Explicit instance supervision, bounded scenario descriptors and plugin port.
 - Deterministic public-API Nx example with explicit units/backend and inert output.

@@ -199,7 +199,7 @@ defmodule Wotex.Lab.SmartRoom.Policy do
     cond do
       decision.status == :dispatched -> {:error, :already_dispatched}
       decision.status == :revoked -> {:error, :revoked}
-      current.now > decision.expires_at -> {:error, :expired}
+      current.now >= decision.expires_at -> {:error, :expired}
       current.watermark != decision.watermark -> {:error, :stale_observation}
       current.state_revision != decision.state_revision -> {:error, :stale_state}
       true -> :ok
