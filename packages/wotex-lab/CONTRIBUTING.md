@@ -10,7 +10,7 @@ lifecycle and limit evidence. Keep source/evidence/adoption statuses accurate.
 An integration without an implementation belongs in an accepted specification,
 not a placeholder module that reports success.
 
-For an ecosystem seam review, run `ruby bin/check-source-cohort` with all eight
+For an ecosystem seam review, run `elixir bin/check_source_cohort.exs` with all eight
 WoTEx source owners present. It compares content, including dirty files, to the
 reviewed workspace cohort. A mismatch requires reviewing the affected contracts
 and renewing evidence, not blindly replacing hashes. `--print` only displays

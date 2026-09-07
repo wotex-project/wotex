@@ -23,7 +23,7 @@ The dependency arrow points only from Lab to public packages. Unavailable
 artifacts fail the applicable gate. Do not silently switch to workspace mode,
 claim source builds as published adoption, or change repository visibility.
 
-`ruby bin/check-source-cohort` is a read-only workspace drift guard over the
+`elixir bin/check_source_cohort.exs` is a read-only workspace drift guard over the
 explicit source/spec/test/fixture cohort. It requires all source owners and
 is separate from package-local CI. Dirty content is covered by content digests;
 the historical revision snapshot is not relabeled. A changed hash requires

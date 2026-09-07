@@ -12,7 +12,7 @@ The original immutable revisions remain in `source-index.json`. The separate
 `source-cohort.json` identifies the reviewed working-tree content, including
 repairs not present at those commits. It hashes sorted relative paths and file
 SHA-256 values under an explicit allowlist of source, specs, tests, fixtures,
-dependency locks and ownership documents. Run `ruby bin/check-source-cohort`
+dependency locks and ownership documents. Run `elixir bin/check_source_cohort.exs`
 from the workspace to detect changed inputs. No network, execution scheduler,
 readiness promotion or automatic baseline rewrite occurs.
 

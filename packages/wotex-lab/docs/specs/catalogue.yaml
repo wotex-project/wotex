@@ -204,10 +204,10 @@ specifications:
       - "WLB-C11"
     implementation_modules: []
     executable_evidence:
-      - "bin/check-package"
-      - "bin/check-boundary"
-      - "bin/check-contracts"
-      - "bin/check-source-cohort"
+      - "bin/check_package.exs"
+      - "bin/check_boundary.exs"
+      - "bin/check_contracts.exs"
+      - "bin/check_source_cohort.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.09
     version: "0.1.0"

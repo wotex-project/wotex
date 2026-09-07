@@ -82,9 +82,5 @@ jobs:
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
-      - name: Install verification utilities
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends ripgrep ruby
       - run: mix deps.get --check-locked
       - run: mix check --no-retry

@@ -49,7 +49,8 @@ defmodule WotexLab.MixProject do
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.40", only: [:dev, :test, :docs], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
-      {:excoveralls, "~> 0.18", only: :test}
+      {:excoveralls, "~> 0.18", only: :test},
+      {:yaml_elixir, "~> 2.12", only: [:dev, :test], runtime: false}
     ]
   end
 
