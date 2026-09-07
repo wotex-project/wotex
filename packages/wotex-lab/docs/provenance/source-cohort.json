@@ -19,43 +19,43 @@
   "packages": [
     {
       "package": "wotex",
-      "files": 36,
-      "sha256": "e5677a43b840c052143e09ae82c0be7b37924916591a25f0bdffab07c8da994d"
+      "files": 38,
+      "sha256": "defdc6986fe9bf9746413a643748e859021875b7ac565b8fc8510740175548e8"
     },
     {
       "package": "wotex_runtime",
-      "files": 34,
-      "sha256": "a9ca3314c98ff69139ed20ddd55799224357f7b74e59d7fdc542696124f22e2a"
+      "files": 36,
+      "sha256": "c2626395b99a0ba27e89f9cc876ad7356a6d5b2a1e327e158d2d3928387a0a1f"
     },
     {
       "package": "wotex_binding_http",
       "files": 34,
-      "sha256": "7e9ba91bec23bff996084013f06ca2d190a7f08d73328f9b712b3ed5b8249992"
+      "sha256": "ffcd8bae7daee2767f277436456b11b00390a8301a4c49757358a8ff0fe2d350"
     },
     {
       "package": "wotex_binding_mqtt",
-      "files": 34,
-      "sha256": "9406e464a66a84e1896dfdaab10496793a8e8823dfbf69036e18009337f84de7"
+      "files": 37,
+      "sha256": "434d6307ee6f14fd5b6a7fc29c131f3cd39e9fb991582307cad5b3b2fe02b8ae"
     },
     {
       "package": "wotex_directory",
-      "files": 47,
-      "sha256": "d460665c88a2e189c903b85db0be42d0a3e22b4d0d08696d4123dd8914d24e91"
+      "files": 48,
+      "sha256": "2122422d30a85f33b071ff8c5aabcbe216a4b7557f8b8c7c94cf23c758f76578"
     },
     {
       "package": "wotex_continuum",
-      "files": 71,
-      "sha256": "2d384122eaf23b2a3cb5e35c1c15776db4ac381082bd445e0bc4d60df6efb9ae"
+      "files": 84,
+      "sha256": "23286ebc33c03074ccc1fb1bb038b15d52a06c080592389924634be1c9e90478"
     },
     {
       "package": "wotex_conformance",
-      "files": 72,
-      "sha256": "b7d5516ec3c6868702b5314c3a380a07bdd604357af6c63f453d79dc24f1adf0"
+      "files": 80,
+      "sha256": "bce25690e11161bb1e2f5f2c967ba0d394edb8866c5abe1a953dac314986c5ea"
     },
     {
       "package": "wotex_nx",
-      "files": 37,
-      "sha256": "250e8ee9ee700b6ea8826f28ff3eb805afd2e2cf33356e74bd1f034e06a4e112"
+      "files": 38,
+      "sha256": "80a1da439e54cd9565c582072e5d2131a554a570e21de5f882e94530b44dde60"
     }
   ]
 }

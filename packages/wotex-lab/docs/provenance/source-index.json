@@ -6,10 +6,10 @@
     {
       "id": "wotex",
       "package": "wotex",
-      "revision": "26e62bb4e2f9dc7ddc85a95145fe6ae08253225d",
+      "revision": "8d99e3842b4fe9ed112978d577820110ce9794da",
       "repository": "https://github.com/wotex-project/wotex",
       "catalogue": "docs/specs/catalogue.yaml",
-      "catalogue_sha256": "b9e18ba9322539a4e36ffc6e1dbfa525c4f79096644686f4b2e305c6dea803b0",
+      "catalogue_sha256": "f01b90ae472da4548a0469e6fe2b007977b7ab940dbb8ba32756dcfcb5406212",
       "completion_plan": "docs/plans/wotex-completion.md",
       "completion_plan_sha256": "9b84001e8800c9a438d5546a75fc9c7c5de20dedb62c403b760c32d55e875958",
       "completion_ids": [
@@ -23,7 +23,7 @@
         {
           "id": "WTX.01",
           "path": "docs/specs/WTX.01-thing-description.md",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -31,7 +31,7 @@
         {
           "id": "WTX.02",
           "path": "docs/specs/WTX.02-affordance-values.md",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -39,7 +39,7 @@
         {
           "id": "WTX.03",
           "path": "docs/specs/WTX.03-errors-extensions-and-compatibility.md",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -47,7 +47,7 @@
         {
           "id": "WTX.04",
           "path": "docs/specs/WTX.04-thing-model.md",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -62,10 +62,10 @@
     {
       "id": "wotex-runtime",
       "package": "wotex_runtime",
-      "revision": "beebe65365b61ed1059bb9c04cd7a5c1dc28cb88",
+      "revision": "047c8bf07fbb8410f355a63709d4568e8d0cce78",
       "repository": "https://github.com/wotex-project/wotex-runtime",
       "catalogue": "docs/specs/catalogue.yaml",
-      "catalogue_sha256": "b7623c9df1df3cb392d1cbdbe7fe8b2b00fd7a52de7cdd954709dfa27c90dcde",
+      "catalogue_sha256": "04cf4d7e55ec67244140b0fb00aa47ec6659e952f075468d88f8f4e43e58b582",
       "completion_plan": "docs/plans/wotex-runtime-completion.md",
       "completion_plan_sha256": "3c64c1147c5775207460903fe8ffb99c2669606c797cfa3ea5193a448e819d73",
       "completion_ids": [
@@ -80,7 +80,7 @@
         {
           "id": "WRT.01",
           "path": "docs/specs/WRT.01-consumed-thing-runtime.md",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "implementation_status": "partial",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -111,10 +111,10 @@
     {
       "id": "wotex-binding-http",
       "package": "wotex_binding_http",
-      "revision": "206af54e3b8dc6cd3ec47af4763b085563492521",
+      "revision": "757ba716ef391eac91190d3d1558c168a88ad382",
       "repository": "https://github.com/wotex-project/wotex-binding-http",
       "catalogue": "docs/specs/catalogue.yaml",
-      "catalogue_sha256": "7c706d47265508778cfea2a8316207a836474d046fca1b59e6b90519173e37dd",
+      "catalogue_sha256": "8a3b3d0c0b86a8b23eb1adc96b4fb8f4a513397697c84efe6936ade71023e02a",
       "completion_plan": "docs/plans/wotex-binding-http-completion.md",
       "completion_plan_sha256": "397bfd97a751397ab14fcaba672a8d03707acc3c53671068436ae30aa06bceae",
       "completion_ids": [
@@ -129,7 +129,7 @@
         {
           "id": "WBH.01",
           "path": "docs/specs/WBH.01-http-transport.md",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -137,7 +137,7 @@
         {
           "id": "WBH.02",
           "path": "docs/specs/WBH.02-client-port-and-values.md",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -145,7 +145,7 @@
         {
           "id": "WBH.03",
           "path": "docs/specs/WBH.03-sse-subscriptions.md",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "implementation_status": "partial",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -160,10 +160,10 @@
     {
       "id": "wotex-binding-mqtt",
       "package": "wotex_binding_mqtt",
-      "revision": "06fdb42bb313cf613b6448c81c8daa27021bc78c",
+      "revision": "6abe173b912cf5ed6ae71b267c471b225616202d",
       "repository": "https://github.com/wotex-project/wotex-binding-mqtt",
       "catalogue": "docs/specs/catalogue.yaml",
-      "catalogue_sha256": "3ad1018b00aa0500d8363c8822f4511574dff57f136e68be7a8caab2b17033de",
+      "catalogue_sha256": "03c62f3f7c73deb1a3534436763b5f57db7beb20cf5355244e275f1843e6ad33",
       "completion_plan": "docs/plans/wotex-binding-mqtt-completion.md",
       "completion_plan_sha256": "8bc0d9712c56c2612ae164d19dcefba1bca223461e4554efde369a6c13536542",
       "completion_ids": [
@@ -177,8 +177,8 @@
       "specifications": [
         {
           "id": "WBM.01",
-          "path": "docs/specs/mqtt-values-and-client-port.md",
-          "version": "1.0.0",
+          "path": "docs/specs/WBM.01-values-and-client-port.md",
+          "version": "1.1.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -186,16 +186,16 @@
         {
           "id": "WBM.02",
           "path": "docs/specs/WBM.02-form-mapping.md",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
         },
         {
           "id": "WBM.03",
-          "path": "docs/specs/runtime-transport.md",
-          "version": "1.0.0",
-          "implementation_status": "partial",
+          "path": "docs/specs/WBM.03-runtime-transport.md",
+          "version": "1.1.0",
+          "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
         }
@@ -209,12 +209,12 @@
     {
       "id": "wotex-directory",
       "package": "wotex_directory",
-      "revision": "7476203a94b88ab026802737193509fea436593c",
+      "revision": "890638ece4608bf1e6246de6f78eeeb82acc73d3",
       "repository": "https://github.com/wotex-project/wotex-directory",
       "catalogue": "docs/specs/catalogue.yaml",
-      "catalogue_sha256": "64b89373760bdc9ef118f316233e05b745b3ada2267040d22200630e89c64f43",
+      "catalogue_sha256": "bf057a26b013d805cdd9dfa2b1c05cc1c410147bfa01e725799163f78f073bcd",
       "completion_plan": "docs/plans/wotex-directory-completion.md",
-      "completion_plan_sha256": "711e8658965c913a57fb249d3f2cb162687271df25c071289e674d705717981e",
+      "completion_plan_sha256": "c41cb4fbeff19fde79b5a8f92dd964f4cfcd1af3b5059ab840918af2022a9aa0",
       "completion_ids": [
         "WTD-C01",
         "WTD-C02",
@@ -227,7 +227,7 @@
         {
           "id": "WTD.01",
           "path": "docs/specs/WTD.01-directory-contract.md",
-          "version": "0.1.0",
+          "version": "1.1.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -242,12 +242,12 @@
     {
       "id": "wotex-continuum",
       "package": "wotex_continuum",
-      "revision": "4cd840a8c1b81356ee7a1cf4c10ca2684c714606",
+      "revision": "6351c42d512127c12ec96fd1dc0ee9a74f645fb2",
       "repository": "https://github.com/wotex-project/wotex-continuum",
       "catalogue": "docs/specs/catalogue.yaml",
-      "catalogue_sha256": "5e3b80599ee8ae43f392fbeb2beae7c84b386d7c92d85d827e0a82a861bb4b3a",
+      "catalogue_sha256": "68651dcfa4cbb2cd5df5fa74255dcef173b10d9c0af3010399105fdba3db6ac5",
       "completion_plan": "docs/plans/wotex-continuum-completion.md",
-      "completion_plan_sha256": "78cf0e01e2620d28fa9ccb3e0541de8bfcecfc6bf689becec2a02256dd8ae108",
+      "completion_plan_sha256": "a58e334e4d7b7ebf369761e2c20265138409375cf2e09f48f9298fbeba51f874",
       "completion_ids": [
         "WCT-C01",
         "WCT-C02",
@@ -259,15 +259,15 @@
         {
           "id": "WCT.01",
           "path": "specs/WCT.01-manifest-context-capability.md",
-          "version": "1.0.0",
-          "implementation_status": "partial",
+          "version": "2.0.0",
+          "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
         },
         {
           "id": "WCT.02",
           "path": "specs/WCT.02-exchange-values.md",
-          "version": "1.0.0",
+          "version": "2.0.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -275,7 +275,7 @@
         {
           "id": "WCT.03",
           "path": "specs/WCT.03-mode-lifecycle-exit.md",
-          "version": "1.0.0",
+          "version": "2.0.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -290,12 +290,12 @@
     {
       "id": "wotex-conformance",
       "package": "wotex_conformance",
-      "revision": "00a87511edbf43d5830e93e1d6af8f35ed12e698",
+      "revision": "e1c68d6253a943e757d77a37e69c793209100f8b",
       "repository": "https://github.com/wotex-project/wotex-conformance",
       "catalogue": "docs/specs/catalogue.yaml",
-      "catalogue_sha256": "35fd0f7478ae9efeca66ed1caa1c6d1f17976000a2ec81bacab7260d7ca5d14c",
+      "catalogue_sha256": "465b7b5553f9a461b6067904ca2924380a2d5c7f71614ef4b43bb04d65fc51ea",
       "completion_plan": "docs/plans/wotex-conformance-completion.md",
-      "completion_plan_sha256": "efb8e31cf38c8150b1dd6f8ad650c8963b6be42236a3c74c268efaa8411f9bee",
+      "completion_plan_sha256": "15888e232a58b67608357288b663ec5ab91c56afcc22b30d186e84b8869e725c",
       "completion_ids": [
         "WCF-C01",
         "WCF-C02",
@@ -309,7 +309,7 @@
         {
           "id": "WCF.01",
           "path": "docs/specs/WCF.01-conformance-runner.md",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -324,10 +324,10 @@
     {
       "id": "wotex-nx",
       "package": "wotex_nx",
-      "revision": "a980e1384e23141b9c90b2c7de6adc61df198c78",
+      "revision": "7c53166770e7cef0e72acdfb3a4a5286a152dd65",
       "repository": "https://github.com/wotex-project/wotex-nx",
       "catalogue": "docs/specs/catalogue.yaml",
-      "catalogue_sha256": "b7d7cfb95ac246dd1822849fe19dde949e9300dbf8d17b22e2802990f882da6f",
+      "catalogue_sha256": "4db97c7d01b4af3a35cab98bd41a0027eba3e894f8212a957a4cf69b1a92e806",
       "completion_plan": "docs/plans/wotex-nx-completion.md",
       "completion_plan_sha256": "5685a4e7b27e5ec44c6f54e019bdfe0a879295d011b31b123554fe679a72137f",
       "completion_ids": [
@@ -342,7 +342,7 @@
         {
           "id": "WNX.01",
           "path": "docs/specs/WNX.01-observation-numerical-boundary.md",
-          "version": "0.1.0",
+          "version": "1.1.0",
           "implementation_status": "implemented",
           "evidence_status": "not_reported",
           "adoption_status": "not_reported"
@@ -368,7 +368,7 @@
       ],
       "ownership": "package-implements",
       "path": "lib/wotex/thing_description.ex",
-      "source_url": "https://github.com/wotex-project/wotex/blob/26e62bb4e2f9dc7ddc85a95145fe6ae08253225d/lib/wotex/thing_description.ex",
+      "source_url": "https://github.com/wotex-project/wotex/blob/8d99e3842b4fe9ed112978d577820110ce9794da/lib/wotex/thing_description.ex",
       "lab_spec": "WLB.03"
     },
     {
@@ -380,7 +380,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/runtime/credentials.ex",
-      "source_url": "https://github.com/wotex-project/wotex-runtime/blob/beebe65365b61ed1059bb9c04cd7a5c1dc28cb88/lib/wotex/runtime/credentials.ex",
+      "source_url": "https://github.com/wotex-project/wotex-runtime/blob/047c8bf07fbb8410f355a63709d4568e8d0cce78/lib/wotex/runtime/credentials.ex",
       "lab_spec": "WLB.04"
     },
     {
@@ -390,11 +390,12 @@
       "callbacks": [
         "request/3",
         "subscribe/4",
-        "unsubscribe/4"
+        "unsubscribe/4",
+        "decode_frame/3"
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/runtime/transport.ex",
-      "source_url": "https://github.com/wotex-project/wotex-runtime/blob/beebe65365b61ed1059bb9c04cd7a5c1dc28cb88/lib/wotex/runtime/transport.ex",
+      "source_url": "https://github.com/wotex-project/wotex-runtime/blob/047c8bf07fbb8410f355a63709d4568e8d0cce78/lib/wotex/runtime/transport.ex",
       "lab_spec": "WLB.04"
     },
     {
@@ -408,7 +409,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/binding/http/client.ex",
-      "source_url": "https://github.com/wotex-project/wotex-binding-http/blob/206af54e3b8dc6cd3ec47af4763b085563492521/lib/wotex/binding/http/client.ex",
+      "source_url": "https://github.com/wotex-project/wotex-binding-http/blob/757ba716ef391eac91190d3d1558c168a88ad382/lib/wotex/binding/http/client.ex",
       "lab_spec": "WLB.04"
     },
     {
@@ -423,7 +424,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/binding/mqtt/client.ex",
-      "source_url": "https://github.com/wotex-project/wotex-binding-mqtt/blob/06fdb42bb313cf613b6448c81c8daa27021bc78c/lib/wotex/binding/mqtt/client.ex",
+      "source_url": "https://github.com/wotex-project/wotex-binding-mqtt/blob/6abe173b912cf5ed6ae71b267c471b225616202d/lib/wotex/binding/mqtt/client.ex",
       "lab_spec": "WLB.04"
     },
     {
@@ -435,12 +436,12 @@
         "insert/3",
         "replace/4",
         "delete/4",
-        "list/4",
+        "list/5",
         "expire_due/5"
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/directory/repository.ex",
-      "source_url": "https://github.com/wotex-project/wotex-directory/blob/7476203a94b88ab026802737193509fea436593c/lib/wotex/directory/repository.ex",
+      "source_url": "https://github.com/wotex-project/wotex-directory/blob/890638ece4608bf1e6246de6f78eeeb82acc73d3/lib/wotex/directory/repository.ex",
       "lab_spec": "WLB.05"
     },
     {
@@ -452,7 +453,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/directory/authorization.ex",
-      "source_url": "https://github.com/wotex-project/wotex-directory/blob/7476203a94b88ab026802737193509fea436593c/lib/wotex/directory/authorization.ex",
+      "source_url": "https://github.com/wotex-project/wotex-directory/blob/890638ece4608bf1e6246de6f78eeeb82acc73d3/lib/wotex/directory/authorization.ex",
       "lab_spec": "WLB.05"
     },
     {
@@ -464,7 +465,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/directory/clock.ex",
-      "source_url": "https://github.com/wotex-project/wotex-directory/blob/7476203a94b88ab026802737193509fea436593c/lib/wotex/directory/clock.ex",
+      "source_url": "https://github.com/wotex-project/wotex-directory/blob/890638ece4608bf1e6246de6f78eeeb82acc73d3/lib/wotex/directory/clock.ex",
       "lab_spec": "WLB.05"
     },
     {
@@ -476,7 +477,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/directory/identifier.ex",
-      "source_url": "https://github.com/wotex-project/wotex-directory/blob/7476203a94b88ab026802737193509fea436593c/lib/wotex/directory/identifier.ex",
+      "source_url": "https://github.com/wotex-project/wotex-directory/blob/890638ece4608bf1e6246de6f78eeeb82acc73d3/lib/wotex/directory/identifier.ex",
       "lab_spec": "WLB.05"
     },
     {
@@ -488,7 +489,7 @@
       ],
       "ownership": "consumer-implements",
       "path": "lib/wotex/nx/unit_converter.ex",
-      "source_url": "https://github.com/wotex-project/wotex-nx/blob/a980e1384e23141b9c90b2c7de6adc61df198c78/lib/wotex/nx/unit_converter.ex",
+      "source_url": "https://github.com/wotex-project/wotex-nx/blob/7c53166770e7cef0e72acdfb3a4a5286a152dd65/lib/wotex/nx/unit_converter.ex",
       "lab_spec": "WLB.03"
     }
   ]
