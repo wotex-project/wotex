@@ -16,3 +16,6 @@
   vector projection, so an independent adapter derives the observation from the
   request alone. Bundled vectors now expect the rejection identifiers an
   implementation emits, and every vector and corpus digest changed.
+- Drain the `data` and `exit_status` messages an external target already
+  delivered when its exchange is closed after a timeout, output-limit, or write
+  failure.

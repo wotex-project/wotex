@@ -8,7 +8,9 @@ defmodule Wotex.Conformance.Target.External do
   bounded environment is applied.
 
   The invocation uses one monotonic deadline and non-suspending port writes.
-  Every opened port is closed on return, including write and decoding failures.
+  Every opened port is closed on return, including write and decoding failures,
+  and the messages it had already delivered are drained, so a corpus run does
+  not accumulate the output of a timed-out or oversized exchange.
   This is a cooperative execution budget, not a hard-real-time or OS sandbox
   guarantee; the consumer owns process-tree and resource isolation.
   """
@@ -370,6 +372,20 @@ defmodule Wotex.Conformance.Target.External do
     Port.close(port)
   rescue
     ArgumentError -> :ok
+  after
+    flush(port)
+  end
+
+  # Closing a port discards signals in transit but keeps the messages already
+  # delivered to this mailbox. Drain them so a corpus run cannot accumulate the
+  # output of every timed-out or oversized exchange.
+  defp flush(port) do
+    receive do
+      {^port, {:data, _bytes}} -> flush(port)
+      {^port, {:exit_status, _status}} -> flush(port)
+    after
+      0 -> :ok
+    end
   end
 
   defp decode_response(output) do

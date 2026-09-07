@@ -199,7 +199,10 @@ caller while writing its request; a rejected write is an infrastructure error.
 The collector MUST check deadline exhaustion before consuming another queued
 message, so a continuous output stream cannot reset or starve the deadline.
 Every opened port MUST close on all return paths, including failed writes and
-malformed output. Invalid request identity MUST be rejected before opening it.
+malformed output, and its already-delivered `data` and `exit_status` messages
+MUST be drained from the caller mailbox on those paths, so one bounded failure
+cannot leak into a later invocation. Invalid request identity MUST be rejected
+before opening it.
 These are cooperative runtime bounds, not hard-real-time scheduling guarantees.
 Closing a port does not prove termination of arbitrary descendant OS processes;
 that containment remains the consumer's responsibility.
@@ -426,8 +429,8 @@ explicit, closed option keys.
 
 The library defines no application callback. The runner owns no long-lived
 process and returns no hidden child specification. Each external port exists
-only for one explicit vector invocation and is closed on completion, timeout,
-or output-limit failure.
+only for one explicit vector invocation and is closed, and its remaining
+messages drained, on completion, timeout, or output-limit failure.
 
 No target is invoked while loading modules, reading documentation, starting the
 dependency application, or loading a corpus.

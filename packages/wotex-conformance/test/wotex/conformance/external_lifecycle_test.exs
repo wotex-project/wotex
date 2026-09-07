@@ -41,6 +41,36 @@ defmodule Wotex.Conformance.ExternalLifecycleTest do
     refute File.exists?(marker)
   end
 
+  test "failed exchanges drain the port messages they already received", context do
+    request = %{"vector" => %{"id" => "td11.parse.minimal"}}
+    send(self(), {:unrelated, :caller_message})
+
+    for _repetition <- 1..3 do
+      timeout =
+        TestFixtures.external_target!(context.archive, "chatter",
+          timeout_ms: 100,
+          max_output_bytes: 16_777_216
+        )
+
+      assert {:error, %Error{code: :target_timeout}, _duration} =
+               External.invoke(timeout, request)
+
+      assert port_messages() == []
+
+      oversized =
+        TestFixtures.external_target!(context.archive, "chatter", max_output_bytes: 1_024)
+
+      assert {:error, %Error{code: :target_output_limit}, _duration} =
+               External.invoke(oversized, request)
+
+      assert port_messages() == []
+    end
+
+    # The drain is scoped to the invocation: caller messages are untouched.
+    assert_received {:unrelated, :caller_message}
+    assert Process.info(self(), :message_queue_len) == {:message_queue_len, 0}
+  end
+
   test "completed and failed exchanges leave no owned port", context do
     request = %{"vector" => %{"id" => "td11.parse.minimal"}}
     {:links, before_links} = Process.info(self(), :links)
@@ -62,5 +92,15 @@ defmodule Wotex.Conformance.ExternalLifecycleTest do
     assert response.vector_id == "td11.parse.minimal"
     {:links, after_links} = Process.info(self(), :links)
     assert Enum.filter(after_links, &is_port/1) == before_ports
+  end
+
+  defp port_messages do
+    {:messages, messages} = Process.info(self(), :messages)
+
+    Enum.filter(messages, fn
+      {port, {:data, _bytes}} -> is_port(port)
+      {port, {:exit_status, _status}} -> is_port(port)
+      _message -> false
+    end)
   end
 end
