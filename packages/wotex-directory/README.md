@@ -73,7 +73,7 @@ Nine callbacks form the complete effect boundary:
 | `Repository` | `insert/3` | Atomically reject identifier collisions. |
 | `Repository` | `replace/4` | Atomically enforce the expected entry version. |
 | `Repository` | `delete/4` | Atomically delete the expected entry version. |
-| `Repository` | `list/4` | Return a stable bounded page tied to a collection revision. |
+| `Repository` | `list/5` | Return a bounded keyset page tied to a collection revision. |
 | `Repository` | `expire_due/5` | Purge or retain a bounded, ordered set of due entries. |
 
 Port state and failure reasons are opaque. Adapter failures become stable
@@ -86,6 +86,14 @@ The 0.1 series targets the W3C WoT Discovery Recommendation dated 2023-12-05
 and Thing Description 1.1. Supported behavior is recorded in
 [`WTD.01`](docs/specs/WTD.01-directory-contract.md). This package does not claim
 W3C certification and does not implement JSONPath, XPath, or SPARQL profiles.
+
+Listing is a bounded keyset page chain. `Wotex.Directory.Page` carries its
+entries, the repository-defined collection revision, and an opaque
+`next_cursor` that a transport host places in the Discovery `next` link. A
+cursor binds the revision that issued it to the last listed identifier, so a
+mutation ends the chain with `collection_changed` while an entry that reaches
+expiry between pages is simply absent from the following page. There is no
+public offset.
 
 `Wotex.Directory.Event.from_mutation/2` derives `thing_created`,
 `thing_updated`, or `thing_deleted` data without starting an SSE stream. The

@@ -25,7 +25,7 @@ defmodule Wotex.Directory.ErrorContractTest do
              Directory.delete(:invalid, "urn:x", context)
 
     assert {:error, %Error{code: :invalid_request}} = Directory.list(:invalid, context)
-    query = %Query{profile: :listing, offset: 0, limit: 1, format: :array}
+    query = %Query{profile: :listing, limit: 1, format: :array}
     assert {:error, %Error{code: :invalid_request}} = Directory.query(:invalid, query, context)
     assert {:error, %Error{code: :invalid_request}} = Directory.expire(:invalid, context)
     assert {:error, %Error{code: :invalid_service}} = Directory.introduction(:invalid)

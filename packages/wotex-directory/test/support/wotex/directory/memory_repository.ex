@@ -3,7 +3,7 @@ defmodule Wotex.Directory.MemoryRepository do
 
   @behaviour Wotex.Directory.Repository
 
-  alias Wotex.Directory.{Entry, Page, Query, Registration}
+  alias Wotex.Directory.{Cursor, Entry, Page, Query, Registration}
 
   @spec start_link(keyword()) :: Agent.on_start()
   def start_link(options \\ []) do
@@ -100,15 +100,9 @@ defmodule Wotex.Directory.MemoryRepository do
   end
 
   @impl true
-  def list(agent, %Query{} = query, active_at, context) do
+  def list(agent, %Query{} = query, cursor, active_at, context) do
     Agent.get_and_update(agent, fn state ->
-      result =
-        case listing_revision(state, query.collection_revision, active_at) do
-          {:ok, revision} -> page(state, query, active_at, revision)
-          :collection_changed -> {:error, :collection_changed}
-        end
-
-      {result, record(state, {:list, query, active_at, context})}
+      {page(state, query, cursor, active_at), record(state, {:list, query, cursor, context})}
     end)
   end
 
@@ -152,61 +146,40 @@ defmodule Wotex.Directory.MemoryRepository do
 
   defp due?(%Entry{state: :expired}, _cutoff, :retain), do: false
 
-  defp page(state, query, active_at, revision) do
-    active_entries = active_entries(state, active_at)
-    entries = Enum.slice(active_entries, query.offset, query.limit)
-    consumed = query.offset + length(entries)
-    next_offset = if consumed < length(active_entries), do: consumed
-
-    {:ok,
-     Page.new!(
-       entries: entries,
-       offset: query.offset,
-       limit: query.limit,
-       next_offset: next_offset,
-       collection_revision: revision
-     )}
+  defp page(state, query, nil, active_at) do
+    {:ok, bounded_page(active_entries(state, active_at), query.limit, revision(state))}
   end
 
-  defp listing_revision(state, nil, active_at) do
-    {:ok, encode_revision(state.revision, active_at)}
-  end
+  defp page(state, query, %Cursor{} = cursor, active_at) do
+    revision = revision(state)
 
-  defp listing_revision(state, revision, active_at) do
-    with {:ok, expected_revision, snapshot_at} <- decode_revision(revision),
-         true <- expected_revision == state.revision,
-         true <- active_identifiers(state, snapshot_at) == active_identifiers(state, active_at) do
-      {:ok, revision}
+    if cursor.collection_revision == revision do
+      remaining =
+        state
+        |> active_entries(active_at)
+        |> Enum.filter(&(&1.identifier > cursor.last_identifier))
+
+      {:ok, bounded_page(remaining, query.limit, revision)}
     else
-      _changed_or_invalid -> :collection_changed
+      {:error, :collection_changed}
     end
   end
+
+  defp bounded_page(entries, limit, revision) do
+    Page.new!(
+      entries: Enum.take(entries, limit),
+      collection_revision: revision,
+      more?: length(entries) > limit
+    )
+  end
+
+  defp revision(state), do: "generation:" <> Integer.to_string(state.revision)
 
   defp active_entries(state, active_at) do
     state.entries
     |> Map.values()
     |> Enum.filter(&Entry.active?(&1, active_at))
     |> Enum.sort_by(& &1.identifier)
-  end
-
-  defp active_identifiers(state, active_at) do
-    Enum.map(active_entries(state, active_at), & &1.identifier)
-  end
-
-  defp encode_revision(revision, active_at) do
-    active_at_microseconds = DateTime.to_unix(active_at, :microsecond)
-    "1:#{revision}:#{active_at_microseconds}"
-  end
-
-  defp decode_revision(revision) do
-    with ["1", revision_value, active_at_value] <- String.split(revision, ":"),
-         {revision, ""} when revision >= 0 <- Integer.parse(revision_value),
-         {active_at_microseconds, ""} <- Integer.parse(active_at_value),
-         {:ok, active_at} <- DateTime.from_unix(active_at_microseconds, :microsecond) do
-      {:ok, revision, active_at}
-    else
-      _invalid -> :error
-    end
   end
 
   defp put_entry(state, entry),

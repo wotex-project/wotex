@@ -45,7 +45,7 @@ defmodule Wotex.Directory.RobustnessTest do
       )
 
       assert_error(:invalid_request, Directory.list(:invalid, setup.context))
-      query = %Query{profile: :listing, offset: 0, limit: 1, format: :array}
+      query = %Query{profile: :listing, limit: 1, format: :array}
       assert_error(:invalid_request, Directory.query(:invalid, query, setup.context))
       assert_error(:invalid_request, Directory.expire(:invalid, setup.context))
       assert_error(:invalid_service, Directory.introduction(:invalid))

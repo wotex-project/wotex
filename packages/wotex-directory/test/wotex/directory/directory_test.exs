@@ -4,7 +4,7 @@ defmodule Wotex.DirectoryTest do
   use ExUnit.Case, async: true
 
   alias Wotex.Directory
-  alias Wotex.Directory.{Entry, Error, Fixtures, MemoryRepository, Page, Query}
+  alias Wotex.Directory.{Cursor, Entry, Error, Fixtures, MemoryRepository, Page, Query}
   alias Wotex.Directory.{Registration, TestService, ThingDescriptions}
 
   @now ~U[2026-09-02 10:00:00Z]
@@ -326,15 +326,38 @@ defmodule Wotex.DirectoryTest do
       assert Enum.all?(first.entries, &(&1.registration.retrieved == @now))
       assert is_binary(first.collection_revision)
       refute first.collection_revision == ""
-      assert first.next_offset == 2
+      assert Cursor.valid?(first.next_cursor)
 
-      first_query = %Query{profile: :listing, offset: 0, limit: 2, format: :array}
+      assert {:ok, %Cursor{last_identifier: "urn:example:thing:b"} = decoded} =
+               Cursor.decode(first.next_cursor)
+
+      assert decoded.collection_revision == first.collection_revision
+
+      first_query = %Query{profile: :listing, limit: 2, format: :array}
       next_query = Page.next_query(first, first_query)
+      assert next_query.cursor == first.next_cursor
 
       assert {:ok, second} = Directory.query(setup.service, next_query, setup.context)
       assert Enum.map(second.entries, & &1.identifier) == ["urn:example:thing:c"]
-      assert second.next_offset == nil
+      assert second.next_cursor == nil
       assert second.collection_revision == first.collection_revision
+    end
+
+    test "rejects a malformed cursor before any port is invoked" do
+      setup = TestService.build(entries: [entry("urn:example:a")])
+
+      assert {:error, %Error{code: :invalid_request, phase: :listing}} =
+               Directory.list(setup.service, setup.context, cursor: "not-a-cursor")
+
+      assert {:error, %Error{code: :invalid_request, phase: :listing}} =
+               Directory.query(
+                 setup.service,
+                 %Query{profile: :listing, limit: 1, format: :array, cursor: "wtd1.@.@"},
+                 setup.context
+               )
+
+      assert MemoryRepository.calls(setup.repository) == []
+      refute_received {:authorize, _principal, _operation, _target, _context}
     end
 
     test "detects a collection change between pages" do
@@ -342,7 +365,7 @@ defmodule Wotex.DirectoryTest do
         TestService.build(entries: [entry("urn:example:a"), entry("urn:example:b")], revision: 2)
 
       assert {:ok, first} = Directory.list(setup.service, setup.context, limit: 1)
-      query = %Query{profile: :listing, offset: 0, limit: 1, format: :array}
+      query = %Query{profile: :listing, limit: 1, format: :array}
       next_query = Page.next_query(first, query)
 
       assert {:ok, _mutation} =
@@ -352,17 +375,20 @@ defmodule Wotex.DirectoryTest do
                  setup.context
                )
 
-      assert {:error, %Error{code: :collection_changed}} =
+      assert {:error, %Error{code: :collection_changed, phase: :listing}} =
                Directory.query(setup.service, next_query, setup.context)
     end
 
-    test "detects wall-clock expiry that changes active membership between pages" do
-      crossing = entry("urn:example:a", expires: DateTime.add(@now, 1, :second))
-      stable = entry("urn:example:b", expires: DateTime.add(@now, 60, :second))
-      setup = TestService.build(entries: [crossing, stable], revision: 2)
+    test "wall-clock expiry between pages omits the entry without ending the page chain" do
+      first_entry = entry("urn:example:a", expires: DateTime.add(@now, 60, :second))
+      crossing = entry("urn:example:b", expires: DateTime.add(@now, 1, :second))
+      stable = entry("urn:example:c", expires: DateTime.add(@now, 60, :second))
+      setup = TestService.build(entries: [first_entry, crossing, stable], revision: 2)
 
       assert {:ok, first} = Directory.list(setup.service, setup.context, limit: 1)
-      query = %Query{profile: :listing, offset: 0, limit: 1, format: :array}
+      assert Enum.map(first.entries, & &1.identifier) == ["urn:example:a"]
+
+      query = %Query{profile: :listing, limit: 1, format: :array}
       next_query = Page.next_query(first, query)
 
       later_service = %{
@@ -370,21 +396,17 @@ defmodule Wotex.DirectoryTest do
         | clock: {Wotex.Directory.TestClock, DateTime.add(@now, 2, :second)}
       }
 
-      assert {:error, %Error{code: :collection_changed}} =
-               Directory.query(later_service, next_query, setup.context)
-
+      assert {:ok, second} = Directory.query(later_service, next_query, setup.context)
+      assert Enum.map(second.entries, & &1.identifier) == ["urn:example:c"]
+      assert second.collection_revision == first.collection_revision
+      assert second.next_cursor == nil
       assert MemoryRepository.snapshot(setup.repository).revision == 2
     end
 
     test "rejects unsupported profiles and excessive limits explicitly" do
       setup = TestService.build()
 
-      unsupported = %Query{
-        profile: :sparql,
-        offset: 0,
-        limit: 1,
-        format: :array
-      }
+      unsupported = %Query{profile: :sparql, limit: 1, format: :array}
 
       assert {:error, %Error{code: :unsupported_query_profile}} =
                Directory.query(setup.service, unsupported, setup.context)

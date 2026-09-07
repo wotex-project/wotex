@@ -16,7 +16,7 @@ defmodule Wotex.Directory.StubRepository do
   def delete(state, _identifier, _expected_version, _context), do: Map.fetch!(state, :delete)
 
   @impl Wotex.Directory.Repository
-  def list(state, _query, _active_at, _context), do: Map.fetch!(state, :list)
+  def list(state, _query, _cursor, _active_at, _context), do: Map.fetch!(state, :list)
 
   @impl Wotex.Directory.Repository
   def expire_due(state, _cutoff, _limit, _strategy, _context),

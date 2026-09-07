@@ -15,3 +15,7 @@ All notable changes to this project are documented in this file.
   `max_patch_depth`, `max_patch_nodes`, `max_limit`, `max_depth`, and
   `max_nodes`, and forward all five core limits through
   `thing_description_options`.
+- Page listings with an opaque keyset cursor. `Query` carries `cursor` and
+  `limit`, `Page` carries `entries`, `next_cursor`, and `collection_revision`,
+  the repository `list` callback receives the decoded cursor, and wall-clock
+  expiry between pages no longer ends a page chain.

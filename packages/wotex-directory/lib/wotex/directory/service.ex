@@ -13,7 +13,7 @@ defmodule Wotex.Directory.Service do
 
   alias Wotex.Directory.{Error, Introduction}
 
-  @repository_callbacks [fetch: 3, insert: 3, replace: 4, delete: 4, list: 4, expire_due: 5]
+  @repository_callbacks [fetch: 3, insert: 3, replace: 4, delete: 4, list: 5, expire_due: 5]
   @authorization_callbacks [authorize: 5]
   @clock_callbacks [now: 1]
   @identifier_callbacks [generate: 1]

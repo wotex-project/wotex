@@ -153,6 +153,7 @@ defmodule WotexDirectory.MixProject do
         ],
         "Directory values": [
           Wotex.Directory.Context,
+          Wotex.Directory.Cursor,
           Wotex.Directory.Entry,
           Wotex.Directory.Error,
           Wotex.Directory.Event,

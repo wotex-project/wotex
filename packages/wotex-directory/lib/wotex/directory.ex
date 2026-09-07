@@ -8,6 +8,7 @@ defmodule Wotex.Directory do
 
   alias Wotex.Directory.{
     Context,
+    Cursor,
     Entry,
     Error,
     Expiry,
@@ -210,6 +211,9 @@ defmodule Wotex.Directory do
 
   @doc """
   Builds and executes the supported bounded listing query.
+
+  Options are `:limit`, `:format`, `:cursor`, and `:profile`. The `:cursor`
+  value is the opaque `next_cursor` of a preceding page.
   """
   @spec list(Service.t(), Context.t(), keyword()) :: result(Page.t())
   def list(service, context, options \\ [])
@@ -235,9 +239,10 @@ defmodule Wotex.Directory do
   def query(%Service{} = service, %Query{} = query, %Context{} = context) do
     with :ok <- valid_context(context, :list),
          :ok <- Query.validate(query, service.max_page_limit),
+         {:ok, cursor} <- listing_cursor(query),
          :ok <- authorize(service, context, :list, :collection),
          {:ok, active_at} <- now(service, :list),
-         {:ok, page} <- list_entries(service, query, active_at, context),
+         {:ok, page} <- list_entries(service, query, cursor, active_at, context),
          :ok <- Page.validate(page, query, active_at) do
       {:ok, Page.mark_retrieved(page, active_at)}
     end
@@ -581,10 +586,13 @@ defmodule Wotex.Directory do
     end
   end
 
-  defp list_entries(service, query, active_at, context) do
+  defp listing_cursor(%Query{cursor: nil}), do: {:ok, nil}
+  defp listing_cursor(%Query{cursor: cursor}), do: Cursor.decode(cursor)
+
+  defp list_entries(service, query, cursor, active_at, context) do
     {module, state} = service.repository
 
-    case module.list(state, query, active_at, context.repository) do
+    case module.list(state, query, cursor, active_at, context.repository) do
       {:ok, %Page{} = page} ->
         {:ok, page}
 

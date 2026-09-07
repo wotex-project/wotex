@@ -3,8 +3,8 @@ defmodule Wotex.Directory.ValueContractTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Directory.{Clock, Context, Entry, Error, Fixtures, Identifier, Introduction}
-  alias Wotex.Directory.{Page, Query, Registration}
+  alias Wotex.Directory.{Clock, Context, Cursor, Entry, Error, Fixtures, Identifier}
+  alias Wotex.Directory.{Introduction, Page, Query, Registration}
 
   @now ~U[2026-09-02 10:00:00Z]
 
@@ -95,24 +95,27 @@ defmodule Wotex.Directory.ValueContractTest do
   describe "query and page values" do
     test "constructs defaults and validates every public query bound" do
       assert {:ok, query} = Query.new([], default_limit: 3, max_limit: 5)
-      assert query == %Query{profile: :listing, offset: 0, limit: 3, format: :array}
+      assert query == %Query{profile: :listing, limit: 3, format: :array}
 
-      assert {:ok, %Query{collection_revision: "r1", format: :collection}} =
+      {:ok, cursor} = Cursor.encode("r1", "urn:example:a")
+
+      assert {:ok, %Query{cursor: ^cursor, format: :collection}} =
                Query.new(
-                 [collection_revision: "r1", format: :collection],
+                 [cursor: cursor, format: :collection],
                  default_limit: 3,
                  max_limit: 5
                )
 
       for options <- [
-            [offset: -1],
             [limit: 0],
             [limit: 6],
             [format: :unknown],
-            [collection_revision: ""],
+            [cursor: ""],
+            [cursor: "wtd1.only-two"],
+            [cursor: :not_a_cursor],
             [unknown: true]
           ] do
-        assert {:error, %Error{code: :invalid_request}} =
+        assert {:error, %Error{code: :invalid_request, phase: :listing}} =
                  Query.new(options, default_limit: 3, max_limit: 5)
       end
 
@@ -125,53 +128,71 @@ defmodule Wotex.Directory.ValueContractTest do
       assert {:error, %Error{code: :invalid_request}} = Query.validate(:invalid, 5)
     end
 
+    test "encodes and decodes opaque keyset cursors" do
+      assert {:ok, cursor} = Cursor.encode("revision 1", "urn:example:a")
+      assert is_binary(cursor)
+      refute String.contains?(cursor, "urn:example:a")
+
+      assert {:ok, %Cursor{collection_revision: "revision 1", last_identifier: "urn:example:a"}} =
+               Cursor.decode(cursor)
+
+      assert Cursor.valid?(cursor)
+
+      for invalid <- ["", "wtd1", "wtd0.cmV2.dXJuOmE", "wtd1.@@.@@", :not_a_string] do
+        assert {:error, %Error{code: :invalid_request, phase: :listing}} = Cursor.decode(invalid)
+        refute Cursor.valid?(invalid)
+      end
+
+      assert {:error, %Error{code: :invalid_request}} = Cursor.encode("", "urn:example:a")
+      assert {:error, %Error{code: :invalid_request}} = Cursor.encode("r1", "relative")
+    end
+
     test "validates ordered active pages and produces the next query" do
       first = entry("urn:example:a")
       second = entry("urn:example:b")
-      query = %Query{profile: :listing, offset: 0, limit: 2, format: :collection}
+      query = %Query{profile: :listing, limit: 2, format: :collection}
 
-      page =
-        Page.new!(
-          entries: [first, second],
-          offset: 0,
-          limit: 2,
-          next_offset: 2,
-          collection_revision: "r1"
-        )
+      assert {:ok, page} =
+               Page.new(entries: [first, second], collection_revision: "r1", more?: true)
 
       assert Page.validate(page, query, @now) == :ok
+      assert {:ok, %Cursor{last_identifier: "urn:example:b"}} = Cursor.decode(page.next_cursor)
 
-      assert Page.next_query(page, query) == %Query{
-               profile: :listing,
-               offset: 2,
-               limit: 2,
-               format: :collection,
-               collection_revision: "r1"
-             }
+      next_query = Page.next_query(page, query)
+      assert next_query == %Query{query | cursor: page.next_cursor}
 
-      last = %{page | next_offset: nil}
+      third = entry("urn:example:c")
+      {:ok, continuation} = Page.new(entries: [third], collection_revision: "r1")
+      assert Page.validate(continuation, next_query, @now) == :ok
+
+      assert {:ok, last} =
+               Page.new(entries: [first, second], collection_revision: "r1", more?: false)
+
+      assert last.next_cursor == nil
       assert Page.next_query(last, query) == nil
     end
 
     test "rejects malformed, inconsistent, stale, unordered, and inactive pages" do
       first = entry("urn:example:a")
       second = entry("urn:example:b")
-      query = %Query{profile: :listing, offset: 0, limit: 2, format: :array}
+      query = %Query{profile: :listing, limit: 2, format: :array}
 
       assert {:error, %Error{code: :invalid_page}} = Page.new(:not_options)
       assert {:error, %Error{code: :invalid_page}} = Page.new([:not_a_pair])
       assert {:error, %Error{code: :invalid_page}} = Page.new(unknown: true)
-      assert_raise Error, fn -> Page.new!(entries: :not_entries) end
-
-      base = %Page{
-        entries: [first, second],
-        offset: 0,
-        limit: 2,
-        collection_revision: "r1"
-      }
 
       assert {:error, %Error{code: :invalid_page}} =
-               Page.validate(%{base | offset: 1}, query, @now)
+               Page.new(entries: [], collection_revision: "")
+
+      assert {:error, %Error{code: :invalid_page}} =
+               Page.new(entries: [], collection_revision: "r1", more?: true)
+
+      assert {:error, %Error{code: :invalid_page}} =
+               Page.new(entries: [first], collection_revision: "r1", more?: :maybe)
+
+      assert_raise Error, fn -> Page.new!(entries: :not_entries, collection_revision: "r1") end
+
+      base = %Page{entries: [first, second], collection_revision: "r1"}
 
       assert {:error, %Error{code: :invalid_page}} =
                Page.validate(%{base | entries: [first, second, first]}, query, @now)
@@ -185,7 +206,12 @@ defmodule Wotex.Directory.ValueContractTest do
                Page.validate(%{base | entries: [expired]}, query, @now)
 
       assert {:error, %Error{code: :invalid_page}} =
-               Page.validate(%{base | next_offset: 3}, query, @now)
+               Page.validate(%{base | next_cursor: "not-a-cursor"}, query, @now)
+
+      {:ok, wrong_cursor} = Cursor.encode("r1", "urn:example:a")
+
+      assert {:error, %Error{code: :invalid_page}} =
+               Page.validate(%{base | next_cursor: wrong_cursor}, query, @now)
 
       assert {:error, %Error{code: :invalid_page}} =
                Page.validate(%{base | entries: [nil]}, query, @now)
@@ -196,10 +222,15 @@ defmodule Wotex.Directory.ValueContractTest do
       assert {:error, %Error{code: :invalid_page}} =
                Page.validate(%{base | entries: [malformed_entry]}, query, @now)
 
-      stale_query = %{query | collection_revision: "older"}
+      {:ok, stale} = Cursor.encode("older", "urn:example:a")
 
       assert {:error, %Error{code: :collection_changed}} =
-               Page.validate(base, stale_query, @now)
+               Page.validate(base, %{query | cursor: stale}, @now)
+
+      {:ok, overlapping} = Cursor.encode("r1", "urn:example:b")
+
+      assert {:error, %Error{code: :invalid_page}} =
+               Page.validate(base, %{query | cursor: overlapping}, @now)
 
       assert {:error, %Error{code: :invalid_page}} = Page.validate(:invalid, query, @now)
     end

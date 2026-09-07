@@ -16,7 +16,7 @@ defmodule Wotex.Directory.FailureRepository do
   def delete(_state, _identifier, _expected_version, _context), do: {:error, :unavailable}
 
   @impl true
-  def list(_state, _query, _active_at, _context), do: {:error, :unavailable}
+  def list(_state, _query, _cursor, _active_at, _context), do: {:error, :unavailable}
 
   @impl true
   def expire_due(_state, _cutoff, _limit, _strategy, _context), do: {:error, :unavailable}

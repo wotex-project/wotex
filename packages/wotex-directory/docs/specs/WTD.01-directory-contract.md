@@ -84,7 +84,7 @@ They are never treated as an empty result.
 | Deletion | Discovery deletes by identifier | `delete/4` is conditional on the observed or supplied version |
 | Validation | Discovery recommends at least TD minimal validation | Every write must pass the core Thing Description 1.1 validator |
 | Listing order | Discovery requires ascending Unicode code point order by identifier when paginated | Every page is checked for that order |
-| Pagination | Discovery defines optional `limit`, zero-based `offset`, `next`, and canonical collection revision information | Listing uses bounded offset pages and an immutable collection-revision token that detects both mutations and wall-clock expiry changes |
+| Pagination | Discovery defines optional `limit`, an `offset` example, and a `next` Link header that carries every argument needed to continue | Listing uses bounded keyset pages: an opaque cursor binds the collection revision and the last identifier, and a transport host places it in the `next` link |
 | Expiry | Discovery defines `ttl` and `expires`, and recommends purging expired registrations | Reads reject expired entries; consumer-invoked bounded expiry defaults to purge and may explicitly transition an active entry once into retained expired state |
 | Introduction | Discovery allows `/.well-known/wot` and requires the directory's own Thing Description there when used | `introduction/1` returns that value without entry repository access |
 | Events | Discovery optionally defines three lifecycle events over SSE | `Event.from_mutation/2` derives transport-neutral type and data; the consumer owns publication and delivery |
@@ -200,28 +200,50 @@ SSE event ID: durable ordering, IDs, replay, filtering, authorization, and
 transport encoding belong to the consumer that publishes the optional Events
 API.
 
-### 5.7 Query and page
+### 5.7 Query, cursor, and page
 
 `Wotex.Directory.Query` contains:
 
 - profile: `listing`;
-- zero-based `offset`;
 - positive `limit`;
 - format: `array` or `collection`; and
-- optional `collection_revision` from a preceding page.
+- an optional opaque `cursor` copied from a preceding page.
 
-`Wotex.Directory.Page` contains ordered entries, offset, limit, optional next
-offset, and a non-empty collection revision. `Page.next_query/2` carries the
-same limit, format, and collection revision forward.
+The query exposes no offset. Continuation is a keyset over identifiers, so page
+validity never depends on offset arithmetic over an active view that time
+alone can change.
 
-If a repository cannot honor the supplied collection revision because the
-collection changed, it returns `collection_changed`; it must not silently return
-a page from a different ordering snapshot. The active collection can change
-without a repository mutation when an entry reaches its absolute expiry. A
-revision therefore binds both the repository mutation generation and the active
-membership observed for the first page. An adapter must return
-`collection_changed` if the supplied revision no longer identifies the same
-active membership at the new `active_at` value.
+`Wotex.Directory.Cursor` is that continuation value. Its encoded form is an
+opaque string for clients and transport hosts; the package owns the encoding
+and hands the repository the decoded value, which binds:
+
+- `collection_revision`: the revision that issued the cursor; and
+- `last_identifier`: the last identifier of the page it continues.
+
+`Wotex.Directory.Page` contains ordered `entries`, an optional `next_cursor`,
+and a non-empty `collection_revision`. A repository builds it with
+`Page.new/1` from `entries`, `collection_revision`, and `more?`; the package
+derives `next_cursor` from the revision and the last listed identifier, so a
+page that reports more entries is never empty. `Page.next_query/2` carries the
+same limit and format forward with that cursor.
+
+Continuation rules:
+
+- a repository selects entries whose identifier is greater than
+  `last_identifier`, in ascending Unicode code point order;
+- the revision binds the repository mutation generation, which every insert,
+  replace, delete, and entry-changing expiry batch advances exactly once;
+- a repository that is asked to continue a revision that is no longer current
+  returns `collection_changed` and must not page into a different mutation
+  generation; and
+- membership that changed only because an entry reached absolute expiry does
+  not advance the revision. Keyset continuation stays correct across that
+  change: the expired entry is absent from the following page.
+
+The package validates every returned page: bounded size, ascending unique
+identifier order, activity at the injected time, revision equality with the
+supplied cursor, identifiers strictly after the cursor, and the derivation of
+`next_cursor`.
 
 ### 5.8 Introduction
 
@@ -245,27 +267,42 @@ fetch(state, identifier, repository_context)
 insert(state, entry, repository_context)
 replace(state, entry, expected_version, repository_context)
 delete(state, identifier, expected_version, repository_context)
-list(state, query, active_at, repository_context)
+list(state, query, cursor, active_at, repository_context)
 expire_due(state, cutoff, limit, strategy, repository_context)
 ```
 
+Each callback is one unit of work. The package never wraps two callbacks in one
+logical transaction, never retries a callback, and never compensates a
+partially applied callback.
+
 Repository requirements:
 
-- `insert` is atomic and reports `already_exists` on collision.
-- `replace` and `delete` compare `expected_version` atomically and report
-  `conflict` on mismatch.
-- `list` excludes expired entries at `active_at`, orders by identifier in
-  ascending Unicode code point order, honors the requested collection revision,
-  returns no more than `limit` entries, and reports `collection_changed` when
-  wall-clock expiry changed active membership since the revision was issued.
-- `expire_due` is a bounded transaction. `retain` selects only due active
-  entries, atomically changes each selected entry to `expired`, and advances
-  each selected entry's version once. `purge` removes due active entries and due
-  entries previously retained as expired.
-- An expiry batch that changes no entry does not advance the collection
-  revision. A batch that changes one or more entries advances it exactly once,
-  independently of the number of selected entries.
+- `fetch` reads one committed entry. A read that races a concurrent mutation
+  may observe either committed value; the package revalidates the entry and
+  applies its own version precondition afterwards.
+- `insert` is an atomic conditional create. It reports `already_exists` instead
+  of overwriting an existing identifier, so two concurrent creators cannot both
+  succeed.
+- `replace` and `delete` compare `expected_version` and apply the change in one
+  atomic step, reporting `conflict` on mismatch and `not_found` on absence.
+- `list` observes one committed snapshot for the page it returns, excludes
+  entries expired at `active_at`, orders by identifier in ascending Unicode
+  code point order, returns no more than `limit` entries, selects only
+  identifiers greater than `cursor.last_identifier` when a cursor is supplied,
+  and reports `collection_changed` when the cursor's revision is no longer the
+  current mutation generation. It never mixes two orderings inside one page.
+- `expire_due` selects and changes its bounded batch in one transaction.
+  `retain` selects only due active entries, changes each selected entry to
+  `expired`, and advances each selected entry's version once. `purge` removes
+  due active entries and due entries previously retained as expired.
+- Every successful mutation advances the collection revision exactly once,
+  independently of the number of affected entries. An expiry batch that changed
+  no entry leaves the revision unchanged, and wall-clock expiry alone never
+  advances it.
 - Adapter errors never cause the library to retry implicitly.
+- A consumer that requires a stronger guarantee, such as read-your-writes
+  across two operations or an outbox committed with a mutation, owns that
+  transaction boundary in its adapter.
 
 ### 6.2 Authorization
 
@@ -368,13 +405,15 @@ Thing outside the directory.
 `query(service, query, context)` executes an already constructed query. Both
 authorize the collection, read the clock, and invoke one repository list call.
 
-The library validates page size, offset, result count, entry state, identifier
-order, next offset, and collection revision. Returned entries receive one shared
-`retrieved` timestamp without altering persisted values. Each repository-defined
-revision is opaque to the library and remains unchanged across its page chain.
-If active membership changes because an entry reaches expiry between calls, the
-repository returns `collection_changed` rather than an offset into the changed
-collection.
+A supplied cursor is decoded before authorization; an undecodable cursor is an
+`invalid_request` and reaches no port. The library validates page size, result
+count, entry state, identifier order, keyset monotonicity against the supplied
+cursor, the derived next cursor, and revision equality. Returned entries receive
+one shared `retrieved` timestamp without altering persisted values. Each
+repository-defined revision is opaque to the library and remains unchanged
+across its page chain. A mutation that advances the revision ends the chain with
+`collection_changed`; an entry that reaches expiry between calls is simply
+absent from the following page.
 
 ### 7.7 Expire
 
@@ -498,7 +537,7 @@ minor version change. Once 1.0 is released:
 | Retrieval and `retrieved` metadata | retrieval tests |
 | RFC 7396 plus validation-before-write | merge patch and patch tests |
 | Stable deletion semantics | deletion tests |
-| Bounded, ordered, revision-aware listing | query, page, mutation-change, and wall-clock-expiry tests |
+| Bounded, ordered, cursor-bound listing | query, cursor, page, mutation-change, and expiry-drift tests |
 | Explicit unsupported search | query-profile test |
 | Relative, absolute, retained, purged, and no-op expiry | registration and expiry tests |
 | Introduction isolation | Introduction test |
