@@ -6,7 +6,7 @@
     {
       "id": "wotex",
       "package": "wotex",
-      "revision": "8d99e3842b4fe9ed112978d577820110ce9794da",
+      "revision": "f0a4da6bcbbdda939fb7063f721137f8e8788aa4",
       "repository": "https://github.com/wotex-project/wotex",
       "catalogue": "docs/specs/catalogue.yaml",
       "catalogue_sha256": "f01b90ae472da4548a0469e6fe2b007977b7ab940dbb8ba32756dcfcb5406212",
@@ -368,7 +368,7 @@
       ],
       "ownership": "package-implements",
       "path": "lib/wotex/thing_description.ex",
-      "source_url": "https://github.com/wotex-project/wotex/blob/8d99e3842b4fe9ed112978d577820110ce9794da/lib/wotex/thing_description.ex",
+      "source_url": "https://github.com/wotex-project/wotex/blob/f0a4da6bcbbdda939fb7063f721137f8e8788aa4/lib/wotex/thing_description.ex",
       "lab_spec": "WLB.03"
     },
     {
