@@ -13,8 +13,8 @@
     {:doctor, command: "mix doctor"},
     {:ex_doc, command: "mix docs --warnings-as-errors"},
     {:ex_unit, command: "mix coveralls"},
-    {:boundary, command: "scripts/check_public_boundary.sh"},
-    {:archive, command: "bin/check-archive"}
+    {:boundary, command: "elixir bin/check_boundary.exs"},
+    {:archive, command: "mix run --no-start bin/check_archive.exs"}
   ]
 ]
 
