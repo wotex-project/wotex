@@ -25,7 +25,9 @@ vectors, the external target protocol, evidence classification, and reports.
 
 ## Implementation rules
 
-- Elixir `~> 1.19`; CI uses Erlang/OTP 28.5.
+- Elixir `~> 1.18`, matching `mix.exs`; current CI uses Elixir 1.20 and
+  Erlang/OTP 29. Minimum-runtime evidence and the accepted cohort are reviewed
+  separately under WCF-C06; the Mix requirement alone does not prove coverage.
 - One module per `.ex` file.
 - Use tagged return values and `Wotex.Conformance.Error`; do not raise for
   untrusted data.
