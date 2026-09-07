@@ -2,6 +2,12 @@
 
 **A consumer laboratory for connected Things and numerical experiments in Elixir / OTP.**
 
+[![Hex.pm](https://img.shields.io/hexpm/v/wotex_lab.svg)](https://hex.pm/packages/wotex_lab)
+[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_lab)
+[![CI](https://github.com/wotex-project/wotex-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-lab/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/wotex-project/wotex-lab/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-lab)
+[![License](https://img.shields.io/github/license/wotex-project/wotex-lab.svg)](https://github.com/wotex-project/wotex-lab/blob/main/LICENSE)
+
 WoTEx libraries describe, interact with, discover and exchange Thing values.
 Lab composes their public seams into inspectable experiments. For the Nx
 community, the entry point is a typed sensor observation becoming a numerical
