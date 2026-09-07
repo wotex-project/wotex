@@ -199,8 +199,8 @@ formatting, unused-dependency checks, strict Credo, dependency audits, Doctor,
 Dialyzer, warning-free ExDoc, at least 95% line coverage, architectural boundary
 checks, and a clean unpacked-archive compile with a no-callback proof.
 
-Focused proofs remain available as `bin/check-boundary` and
-`bin/check-archive`.
+Focused proofs remain available as `bin/check_boundary.exs` and
+`bin/check_archive.exs`.
 
 ## License
 

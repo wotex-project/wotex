@@ -20,7 +20,8 @@ mapping and Server-Sent Events adaptation through a consumer-supplied client.
 - No mutable source selection. `WOTEX_PATH_DEPS=1` is the sole local workspace
   switch; normal dependency identities are released package versions.
 
-Run `WOTEX_PATH_DEPS=1 mix check` and `bin/check-boundary` before local commits.
+Run `WOTEX_PATH_DEPS=1 mix check` and `elixir bin/check_boundary.exs` before
+local commits.
 
 ## External automation boundary
 
