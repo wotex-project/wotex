@@ -1,0 +1,19 @@
+{
+  "description": "execution scope canonical bytes embed the mode value",
+  "input": {
+    "kind": "execution_scope",
+    "schema_version": "2.0.0",
+    "execution_id": "exec-example-1",
+    "node_id": "edge-example-a",
+    "mode": {
+      "kind": "mode",
+      "schema_version": "2.0.0",
+      "deployment": "hybrid",
+      "connectivity": "intermittent",
+      "extensions": {}
+    },
+    "observed_at": "2026-09-02T10:00:00Z",
+    "extensions": {}
+  },
+  "canonical": "{\"execution_id\":\"exec-example-1\",\"extensions\":{},\"kind\":\"execution_scope\",\"mode\":{\"connectivity\":\"intermittent\",\"deployment\":\"hybrid\",\"extensions\":{},\"kind\":\"mode\",\"schema_version\":\"2.0.0\"},\"node_id\":\"edge-example-a\",\"observed_at\":\"2026-09-02T10:00:00Z\",\"schema_version\":\"2.0.0\"}"
+}

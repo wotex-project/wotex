@@ -2,10 +2,14 @@
   "description": "unknown schema major is rejected",
   "expected": {"code": "unsupported_schema_version", "phase": "compatibility", "path": "/schema_version"},
   "input": {
-    "kind": "mode",
+    "kind": "capability",
     "schema_version": "3.0.0",
-    "deployment": "saas",
-    "connectivity": "connected",
+    "id": "example-capability",
+    "version": "1.0.0",
+    "operations": [],
+    "modes": ["saas"],
+    "network": "none",
+    "degradation": "fail_closed",
     "extensions": {}
   }
 }

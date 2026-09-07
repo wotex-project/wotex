@@ -1,0 +1,21 @@
+{
+  "description": "degradation canonical bytes are stable",
+  "input": {
+    "kind": "degradation",
+    "schema_version": "2.0.0",
+    "degradation_id": "degradation-example-1",
+    "subject_id": "worker-example-1",
+    "level": "reduced",
+    "capabilities": [
+      "observation-forwarding"
+    ],
+    "reason_codes": [
+      "upstream-unreachable"
+    ],
+    "since": "2026-09-02T10:00:07Z",
+    "recoverable": true,
+    "evidence": [],
+    "extensions": {}
+  },
+  "canonical": "{\"capabilities\":[\"observation-forwarding\"],\"degradation_id\":\"degradation-example-1\",\"evidence\":[],\"extensions\":{},\"kind\":\"degradation\",\"level\":\"reduced\",\"reason_codes\":[\"upstream-unreachable\"],\"recoverable\":true,\"schema_version\":\"2.0.0\",\"since\":\"2026-09-02T10:00:07Z\",\"subject_id\":\"worker-example-1\"}"
+}

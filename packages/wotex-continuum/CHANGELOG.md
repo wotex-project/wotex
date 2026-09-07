@@ -2,6 +2,12 @@
 
 ## 0.1.0
 
+- Validate every canonical and valid vector against the embedded normative JSON
+  Schemas with a dependency-free subset checker, and record which invalid
+  vectors express rules JSON Schema cannot state. Add a canonical vector for
+  every registered kind and move the mode vectors to the `wct-03-` prefix that
+  owns the kind.
+
 - Wire schema 2.0.0, incompatible with wire 1.0.0. Rename the
   `execution_context` kind to `execution_scope` and the module to
   `WotexContinuum.ExecutionScope`, ending the basename collision with the

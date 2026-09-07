@@ -1,0 +1,54 @@
+{
+  "description": "manifest canonical bytes order nested capability members",
+  "input": {
+    "kind": "continuum_manifest",
+    "schema_version": "2.0.0",
+    "manifest_id": "manifest-example-1",
+    "artifact": {
+      "name": "example-edge-worker",
+      "version": "1.2.3",
+      "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "compatibility": {
+      "kind": "compatibility",
+      "schema_version": "2.0.0",
+      "schema_requirement": "~> 2.0",
+      "required_capabilities": [
+        {
+          "id": "observation-forwarding",
+          "version_requirement": ">= 2.0.0 and < 3.0.0"
+        }
+      ],
+      "extensions": {}
+    },
+    "supported_modes": [
+      "hybrid",
+      "connected_onprem",
+      "air_gapped"
+    ],
+    "capabilities": [
+      {
+        "kind": "capability",
+        "schema_version": "2.0.0",
+        "id": "local-buffering",
+        "version": "1.0.0",
+        "operations": [
+          "enqueue",
+          "drain"
+        ],
+        "modes": [
+          "hybrid",
+          "connected_onprem",
+          "air_gapped"
+        ],
+        "network": "local",
+        "degradation": "queue",
+        "extensions": {}
+      }
+    ],
+    "extensions": {
+      "https://example.org/continuum/priority": "normal"
+    }
+  },
+  "canonical": "{\"artifact\":{\"digest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"name\":\"example-edge-worker\",\"version\":\"1.2.3\"},\"capabilities\":[{\"degradation\":\"queue\",\"extensions\":{},\"id\":\"local-buffering\",\"kind\":\"capability\",\"modes\":[\"hybrid\",\"connected_onprem\",\"air_gapped\"],\"network\":\"local\",\"operations\":[\"enqueue\",\"drain\"],\"schema_version\":\"2.0.0\",\"version\":\"1.0.0\"}],\"compatibility\":{\"extensions\":{},\"kind\":\"compatibility\",\"required_capabilities\":[{\"id\":\"observation-forwarding\",\"version_requirement\":\">= 2.0.0 and < 3.0.0\"}],\"schema_requirement\":\"~> 2.0\",\"schema_version\":\"2.0.0\"},\"extensions\":{\"https://example.org/continuum/priority\":\"normal\"},\"kind\":\"continuum_manifest\",\"manifest_id\":\"manifest-example-1\",\"schema_version\":\"2.0.0\",\"supported_modes\":[\"hybrid\",\"connected_onprem\",\"air_gapped\"]}"
+}

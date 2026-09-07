@@ -1,0 +1,19 @@
+{
+  "description": "delivery canonical bytes are stable",
+  "input": {
+    "kind": "delivery",
+    "schema_version": "2.0.0",
+    "delivery_id": "delivery-example-1",
+    "item_kind": "observation_proposal",
+    "item_id": "proposal-example-1",
+    "source": "edge-example-a",
+    "destination": "consumer-example-a",
+    "status": "acknowledged",
+    "attempt": 1,
+    "sequence": 8,
+    "emitted_at": "2026-09-02T10:00:05Z",
+    "acknowledged_at": "2026-09-02T10:00:06Z",
+    "extensions": {}
+  },
+  "canonical": "{\"acknowledged_at\":\"2026-09-02T10:00:06Z\",\"attempt\":1,\"delivery_id\":\"delivery-example-1\",\"destination\":\"consumer-example-a\",\"emitted_at\":\"2026-09-02T10:00:05Z\",\"extensions\":{},\"item_id\":\"proposal-example-1\",\"item_kind\":\"observation_proposal\",\"kind\":\"delivery\",\"schema_version\":\"2.0.0\",\"sequence\":8,\"source\":\"edge-example-a\",\"status\":\"acknowledged\"}"
+}

@@ -1,0 +1,14 @@
+{
+  "description": "evidence reference canonical bytes are stable",
+  "input": {
+    "kind": "evidence_reference",
+    "schema_version": "2.0.0",
+    "evidence_id": "evidence-example-1",
+    "uri": "urn:example:evidence:1",
+    "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "media_type": "application/json",
+    "captured_at": "2026-09-02T10:00:00Z",
+    "extensions": {}
+  },
+  "canonical": "{\"captured_at\":\"2026-09-02T10:00:00Z\",\"digest\":\"sha256:2222222222222222222222222222222222222222222222222222222222222222\",\"evidence_id\":\"evidence-example-1\",\"extensions\":{},\"kind\":\"evidence_reference\",\"media_type\":\"application/json\",\"schema_version\":\"2.0.0\",\"uri\":\"urn:example:evidence:1\"}"
+}

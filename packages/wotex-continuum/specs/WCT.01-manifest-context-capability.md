@@ -210,10 +210,24 @@ major version.
 
 ## 10. Executable evidence
 
-Normative JSON Schema: `priv/schemas/wct-01.schema.json`.
+Normative JSON Schema: `priv/schemas/wct-01.schema.json`. The bytes are
+embedded at compile time and returned by `WotexContinuum.Schema`.
 
 Valid vectors: `test/vectors/valid/wct-01-*.json`.
 
 Invalid vectors: `test/vectors/invalid/wct-01-*.json`.
 
-Canonical vectors: `test/vectors/canonical/wct-01-*.json`.
+Canonical vectors: `test/vectors/canonical/wct-01-*.json`. Every registered kind
+has at least one canonical vector, and a test asserts that coverage. A vector
+carries the prefix of the specification that owns its kind.
+
+`test/wotex_continuum/schema_conformance_test.exs` validates every canonical and
+valid vector against the embedded schema with a dependency-free subset checker.
+The checker evaluates `$ref`, `oneOf`, `allOf`, `if`/`then`, `type`, `const`,
+`enum`, `required`, `properties`, `additionalProperties`, `items`, `minItems`,
+`uniqueItems`, `minLength`, `maxLength`, `pattern`, and `minimum`. It does not
+evaluate `format` or `propertyNames`, so absolute-IRI, media-type, and RFC 3339
+rules are proved by the constructors alone. The same test records which invalid
+vectors the schema rejects and which state semantic rules JSON Schema cannot
+express, so a "normative schema" claim never implies that the schema alone
+admits a value.

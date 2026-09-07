@@ -1,0 +1,35 @@
+{
+  "description": "observation proposal canonical bytes are stable",
+  "input": {
+    "kind": "observation_proposal",
+    "schema_version": "2.0.0",
+    "proposal_id": "proposal-example-1",
+    "thing_id": "urn:example:thing:pump-7",
+    "affordance_type": "property",
+    "affordance_name": "level",
+    "value": 42.5,
+    "observed_at": "2026-09-02T10:00:01Z",
+    "sequence": 8,
+    "quality": {
+      "status": "measured"
+    },
+    "evidence": [],
+    "context": {
+      "kind": "execution_scope",
+      "schema_version": "2.0.0",
+      "execution_id": "exec-example-1",
+      "node_id": "edge-example-a",
+      "mode": {
+        "kind": "mode",
+        "schema_version": "2.0.0",
+        "deployment": "connected_onprem",
+        "connectivity": "connected",
+        "extensions": {}
+      },
+      "observed_at": "2026-09-02T10:00:01Z",
+      "extensions": {}
+    },
+    "extensions": {}
+  },
+  "canonical": "{\"affordance_name\":\"level\",\"affordance_type\":\"property\",\"context\":{\"execution_id\":\"exec-example-1\",\"extensions\":{},\"kind\":\"execution_scope\",\"mode\":{\"connectivity\":\"connected\",\"deployment\":\"connected_onprem\",\"extensions\":{},\"kind\":\"mode\",\"schema_version\":\"2.0.0\"},\"node_id\":\"edge-example-a\",\"observed_at\":\"2026-09-02T10:00:01Z\",\"schema_version\":\"2.0.0\"},\"evidence\":[],\"extensions\":{},\"kind\":\"observation_proposal\",\"observed_at\":\"2026-09-02T10:00:01Z\",\"proposal_id\":\"proposal-example-1\",\"quality\":{\"status\":\"measured\"},\"schema_version\":\"2.0.0\",\"sequence\":8,\"thing_id\":\"urn:example:thing:pump-7\",\"value\":42.5}"
+}
