@@ -28,6 +28,22 @@ defmodule Wotex.Binding.HTTP.FormTest do
     end
   end
 
+  test "mapped requests publish the configured response and event byte limits" do
+    {:ok, config} =
+      HTTP.config(
+        client: {FakeClient, %{owner: self()}},
+        max_response_bytes: 512,
+        max_event_bytes: 64
+      )
+
+    request = Factory.request(:observeproperty, nil, %{"subprotocol" => "sse"})
+
+    assert {:ok, built} = Form.build(request, config)
+    assert Request.max_response_bytes(built) == 512
+    assert Request.max_event_bytes(built) == 64
+    assert Request.deadline(built) == 50_000
+  end
+
   test "explicit htv method is case-sensitive and overrides a single-operation default" do
     request = Factory.request(:writeproperty, 1, %{"htv:methodName" => "PATCH"})
     assert {:ok, built} = Form.build(request, Factory.config())

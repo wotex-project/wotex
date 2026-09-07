@@ -300,6 +300,25 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     end
   end
 
+  test "handshake cleanup tolerates a raising or exiting close callback" do
+    handshake = Factory.response(201, "", [{"Content-Type", "text/event-stream"}])
+
+    for close_return <- [{:raise, RuntimeError.exception("private")}, {:exit, :private_exit}] do
+      config =
+        Factory.config(%{
+          subscribe_return: {:ok, :opened_handle, handshake},
+          close_return: close_return
+        })
+
+      request = Factory.request(:observeproperty, nil, %{"subprotocol" => "sse"})
+
+      assert {:error, %Error{code: :sse_handshake_status, class: :protocol}} =
+               Transport.subscribe(request, self(), Factory.context(), config)
+
+      assert_receive {:client_close, :opened_handle}
+    end
+  end
+
   test "invalid client response during SSE open also closes the handle" do
     invalid_response = %Response{status: 200, headers: [{"set-cookie", "x"}], body: ""}
     config = Factory.config(%{subscribe_return: {:ok, :opened_handle, invalid_response}})

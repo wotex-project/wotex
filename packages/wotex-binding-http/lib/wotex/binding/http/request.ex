@@ -4,8 +4,18 @@ defmodule Wotex.Binding.HTTP.Request do
 
   The value is the complete result of Form mapping: an absolute HTTP target,
   validated fields, an optional encoded body, deadline, interaction identity,
-  selected media type, and streaming intent. Authentication travels separately
-  through the client callback.
+  selected media type, streaming intent, and the response and event byte limits
+  the client must honor. Authentication travels separately through the client
+  callback.
+
+  The deadline is absolute: an integer is a point on the calling node's
+  monotonic clock in milliseconds and a `DateTime` is a UTC instant. The client
+  reads its own clock and computes the remaining budget with
+  `Wotex.Runtime.Context.remaining_ms/2`; this package never reads a clock.
+
+  `max_response_bytes` and `max_event_bytes` travel with the request so a client
+  can abort an oversized body or event while it is still reading. The binding
+  repeats both checks on the complete value it receives.
   """
 
   alias Wotex.Binding.HTTP.{Error, Headers}
@@ -20,7 +30,9 @@ defmodule Wotex.Binding.HTTP.Request do
           deadline: Context.deadline(),
           operation: atom(),
           media_type: String.t(),
-          stream?: boolean()
+          stream?: boolean(),
+          max_response_bytes: pos_integer(),
+          max_event_bytes: pos_integer()
         }
 
   @enforce_keys [
@@ -32,7 +44,9 @@ defmodule Wotex.Binding.HTTP.Request do
     :deadline,
     :operation,
     :media_type,
-    :stream?
+    :stream?,
+    :max_response_bytes,
+    :max_event_bytes
   ]
   defstruct @enforce_keys
 
@@ -55,6 +69,8 @@ defmodule Wotex.Binding.HTTP.Request do
     media_type = Keyword.get(opts, :media_type, "application/json")
     stream? = Keyword.get(opts, :stream?, false)
     deadline = Keyword.get(opts, :deadline)
+    max_response_bytes = Keyword.get(opts, :max_response_bytes)
+    max_event_bytes = Keyword.get(opts, :max_event_bytes)
 
     with :ok <- validate_method(method),
          :ok <- validate_uri(uri),
@@ -63,6 +79,8 @@ defmodule Wotex.Binding.HTTP.Request do
          :ok <- validate_identity(request_id, operation),
          :ok <- validate_deadline(deadline),
          :ok <- validate_media_type(media_type),
+         :ok <- validate_limit(max_response_bytes, :max_response_bytes),
+         :ok <- validate_limit(max_event_bytes, :max_event_bytes),
          true <- is_boolean(stream?) do
       {:ok,
        %__MODULE__{
@@ -74,7 +92,9 @@ defmodule Wotex.Binding.HTTP.Request do
          deadline: deadline,
          operation: operation,
          media_type: media_type,
-         stream?: stream?
+         stream?: stream?,
+         max_response_bytes: max_response_bytes,
+         max_event_bytes: max_event_bytes
        }}
     else
       false -> {:error, Error.new(:invalid_stream_flag, :request, "stream flag must be boolean")}
@@ -121,6 +141,14 @@ defmodule Wotex.Binding.HTTP.Request do
   @doc "Returns whether this request opens a Server-Sent Events stream."
   @spec stream?(t()) :: boolean()
   def stream?(%__MODULE__{stream?: stream?}), do: stream?
+
+  @doc "Returns the maximum complete response body the client may read."
+  @spec max_response_bytes(t()) :: pos_integer()
+  def max_response_bytes(%__MODULE__{max_response_bytes: limit}), do: limit
+
+  @doc "Returns the maximum data size of one Server-Sent Event the client may deliver."
+  @spec max_event_bytes(t()) :: pos_integer()
+  def max_event_bytes(%__MODULE__{max_event_bytes: limit}), do: limit
 
   defp validate_method(method) do
     if Headers.token?(method) do
@@ -208,4 +236,13 @@ defmodule Wotex.Binding.HTTP.Request do
 
   defp validate_media_type(_),
     do: {:error, Error.new(:invalid_media_type, :request, "media type must be non-empty")}
+
+  defp validate_limit(value, _) when is_integer(value) and value > 0, do: :ok
+
+  defp validate_limit(_, name) do
+    {:error,
+     Error.new(:invalid_byte_limit, :request, "request byte limits must be positive integers", %{
+       option: name
+     })}
+  end
 end

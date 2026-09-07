@@ -123,7 +123,9 @@ defmodule Wotex.Binding.HTTP.ValueTest do
                deadline: 100,
                operation: :readproperty,
                media_type: "application/json",
-               stream?: false
+               stream?: false,
+               max_response_bytes: 4_194_304,
+               max_event_bytes: 1_048_576
              )
 
     assert Request.method(request) == "GET"
@@ -134,12 +136,19 @@ defmodule Wotex.Binding.HTTP.ValueTest do
     assert Request.deadline(request) == 100
     assert Request.operation(request) == :readproperty
     assert Request.media_type(request) == "application/json"
+    assert Request.max_response_bytes(request) == 4_194_304
+    assert Request.max_event_bytes(request) == 1_048_576
     refute Request.stream?(request)
     refute Map.has_key?(Map.from_struct(request), :credential)
   end
 
   test "request validation rejects malformed methods, URIs, headers, bodies, and identity" do
-    opts = [request_id: "request-1", operation: :readproperty]
+    opts = [
+      request_id: "request-1",
+      operation: :readproperty,
+      max_response_bytes: 20,
+      max_event_bytes: 10
+    ]
 
     assert {:error, %Error{code: :invalid_method}} =
              Request.new("bad method", valid_uri(), [], nil, opts)
@@ -167,6 +176,11 @@ defmodule Wotex.Binding.HTTP.ValueTest do
 
     assert {:error, %Error{code: :invalid_request_identity}} =
              Request.new("GET", valid_uri(), [], nil, [])
+
+    for option <- [:max_response_bytes, :max_event_bytes] do
+      assert {:error, %Error{code: :invalid_byte_limit, details: %{option: ^option}}} =
+               Request.new("GET", valid_uri(), [], nil, Keyword.put(opts, option, 0))
+    end
 
     assert {:error, %Error{code: :invalid_request_identity}} =
              Request.new("GET", valid_uri(), [], nil,
@@ -221,6 +235,16 @@ defmodule Wotex.Binding.HTTP.ValueTest do
     assert {:error, %Error{code: :json_decode_failed}} = Codec.decode("bad", 20)
     assert {:error, %Error{code: :response_body_too_large}} = Codec.decode("123", 2)
     assert {:error, %Error{code: :invalid_decode_input}} = Codec.decode(:bad, 2)
+
+    assert {:error, %Error{code: :json_decode_failed}} =
+             Codec.decode(~s({"a":1,"a":2}), 20)
+
+    nested = String.duplicate("[", 65) <> String.duplicate("]", 65)
+
+    assert {:error, %Error{code: :json_limit_exceeded, details: details}} =
+             Codec.decode(nested, 200)
+
+    assert details == %{limit: :depth_limit_exceeded}
 
     assert %Error{code: :example, phase: :client, message: "example", details: %{safe: true}} =
              Error.new(:example, :client, "example", %{safe: true})

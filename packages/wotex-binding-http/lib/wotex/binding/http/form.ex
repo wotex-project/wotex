@@ -41,7 +41,9 @@ defmodule Wotex.Binding.HTTP.Form do
         deadline: request.deadline,
         operation: request.operation,
         media_type: media_type,
-        stream?: stream?
+        stream?: stream?,
+        max_response_bytes: Config.max_response_bytes(config),
+        max_event_bytes: Config.max_event_bytes(config)
       )
     end
   end

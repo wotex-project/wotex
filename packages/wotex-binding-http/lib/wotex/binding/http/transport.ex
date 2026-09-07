@@ -356,8 +356,7 @@ defmodule Wotex.Binding.HTTP.Transport do
   defp response_metadata(request, response) do
     headers = Response.headers(response)
 
-    with {:ok, location} <-
-           resolve_location(HTTPRequest.uri(request), Headers.get(headers, "location")) do
+    with {:ok, location} <- resolve_location(request, Headers.get(headers, "location")) do
       http = %{
         method: HTTPRequest.method(request),
         request_uri: HTTPRequest.uri(request),
@@ -374,9 +373,10 @@ defmodule Wotex.Binding.HTTP.Transport do
 
   defp resolve_location(_, nil), do: {:ok, nil}
 
-  defp resolve_location(base, location) when is_binary(location) do
+  defp resolve_location(request, location) when is_binary(location) do
     resolved =
-      base
+      request
+      |> HTTPRequest.uri()
       |> URI.parse()
       |> URI.merge(location)
       |> URI.to_string()
@@ -385,7 +385,9 @@ defmodule Wotex.Binding.HTTP.Transport do
            request_id: "location-validation",
            operation: :queryaction,
            media_type: "application/json",
-           stream?: false
+           stream?: false,
+           max_response_bytes: HTTPRequest.max_response_bytes(request),
+           max_event_bytes: HTTPRequest.max_event_bytes(request)
          ) do
       {:ok, _} -> {:ok, resolved}
       {:error, _} -> invalid_location()
