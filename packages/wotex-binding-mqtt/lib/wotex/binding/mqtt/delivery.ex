@@ -32,6 +32,7 @@ defmodule Wotex.Binding.MQTT.Delivery do
      Error.new(
        :invalid_delivery,
        :client,
+       :protocol,
        "delivery requires a binary payload and keyword options"
      )}
   end
@@ -42,7 +43,12 @@ defmodule Wotex.Binding.MQTT.Delivery do
 
   def normalize(_delivery) do
     {:error,
-     Error.new(:invalid_delivery, :client, "client delivery must be an MQTT delivery value")}
+     Error.new(
+       :invalid_delivery,
+       :client,
+       :protocol,
+       "client delivery must be an MQTT delivery value"
+     )}
   end
 
   @doc "Returns the encoded MQTT Application Message payload."
@@ -64,5 +70,7 @@ defmodule Wotex.Binding.MQTT.Delivery do
   defp validate_retain(value) when is_boolean(value), do: :ok
 
   defp validate_retain(_value),
-    do: {:error, Error.new(:invalid_delivery_retain, :client, "delivery retain must be boolean")}
+    do:
+      {:error,
+       Error.new(:invalid_delivery_retain, :client, :protocol, "delivery retain must be boolean")}
 end

@@ -50,6 +50,7 @@ defmodule Wotex.Binding.MQTT.Transport do
            Error.new(
              :invalid_subscription_packet,
              :mapping,
+             :protocol,
              "Runtime subscription requires an MQTT subscribe command"
            )}
         end
@@ -83,6 +84,7 @@ defmodule Wotex.Binding.MQTT.Transport do
            Error.new(
              :invalid_unsubscription_packet,
              :mapping,
+             :protocol,
              "Runtime unsubscription requires an MQTT unsubscribe command"
            )}
         end
@@ -117,6 +119,7 @@ defmodule Wotex.Binding.MQTT.Transport do
          Error.new(
            :unsupported_request_packet,
            :mapping,
+           :protocol,
            "Runtime request callback cannot execute this MQTT command"
          )}
     end
@@ -175,6 +178,7 @@ defmodule Wotex.Binding.MQTT.Transport do
          Error.new(
            :non_retained_property_read,
            :client,
+           :protocol,
            "Property read requires a retained MQTT delivery"
          )}
 
@@ -183,6 +187,7 @@ defmodule Wotex.Binding.MQTT.Transport do
          Error.new(
            :delivery_topic_mismatch,
            :client,
+           :protocol,
            "MQTT delivery Topic Name does not match the command Topic Filters"
          )}
 
@@ -204,6 +209,7 @@ defmodule Wotex.Binding.MQTT.Transport do
            Error.new(
              :delivery_topic_mismatch,
              :client,
+             :protocol,
              "MQTT delivery Topic Name does not match the command Topic Filters"
            )}
 
@@ -229,7 +235,7 @@ defmodule Wotex.Binding.MQTT.Transport do
 
   defp client_failure(code, packet, operation) do
     {:error,
-     Error.new(code, :client, "MQTT client port call failed", %{
+     Error.new(code, :client, :unavailable, "MQTT client port call failed", %{
        packet: packet,
        operation: operation
      })}
@@ -237,10 +243,16 @@ defmodule Wotex.Binding.MQTT.Transport do
 
   defp invalid_client_return(packet, operation) do
     {:error,
-     Error.new(:invalid_client_return, :client, "MQTT client port returned an invalid value", %{
-       packet: packet,
-       operation: operation
-     })}
+     Error.new(
+       :invalid_client_return,
+       :client,
+       :protocol,
+       "MQTT client port returned an invalid value",
+       %{
+         packet: packet,
+         operation: operation
+       }
+     )}
   end
 
   defp command_metadata(command) do
@@ -263,6 +275,7 @@ defmodule Wotex.Binding.MQTT.Transport do
      Error.new(
        :invalid_transport_input,
        :configuration,
+       :permanent,
        "Runtime transport callback input is invalid",
        %{callback: callback}
      )}

@@ -45,6 +45,7 @@ defmodule Wotex.Binding.MQTT.TransportConfig do
      Error.new(
        :invalid_transport_configuration,
        :configuration,
+       :permanent,
        "transport configuration input is invalid"
      )}
   end
@@ -65,6 +66,7 @@ defmodule Wotex.Binding.MQTT.TransportConfig do
        Error.new(
          :invalid_transport_options,
          :configuration,
+         :permanent,
          "transport options contain an unsupported key"
        )}
     end
@@ -81,6 +83,7 @@ defmodule Wotex.Binding.MQTT.TransportConfig do
        Error.new(
          :invalid_client_port,
          :configuration,
+         :permanent,
          "client module must implement the MQTT client port"
        )}
     end
@@ -96,6 +99,7 @@ defmodule Wotex.Binding.MQTT.TransportConfig do
          Error.new(
            :invalid_transport_option,
            :configuration,
+           :permanent,
            "transport limits must be positive integers"
          )}
     end

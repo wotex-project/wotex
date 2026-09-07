@@ -31,7 +31,12 @@ defmodule Wotex.Binding.MQTT.Mapping do
 
   def command(_request, _max_payload_bytes) do
     {:error,
-     Error.new(:invalid_mapping_input, :mapping, "mapping requires a Runtime request and limit")}
+     Error.new(
+       :invalid_mapping_input,
+       :mapping,
+       :protocol,
+       "mapping requires a Runtime request and limit"
+     )}
   end
 
   @doc "Returns the default MQTT Control Packet for a supported WoT operation."
@@ -47,6 +52,7 @@ defmodule Wotex.Binding.MQTT.Mapping do
          Error.new(
            :unsupported_operation,
            :mapping,
+           :protocol,
            "WoT operation has no MQTT mapping in this package"
          )}
     end
@@ -78,6 +84,7 @@ defmodule Wotex.Binding.MQTT.Mapping do
      Error.new(
        :control_packet_mismatch,
        :mapping,
+       :protocol,
        "mqv:controlPacket does not match the WoT operation mapping"
      )}
   end
@@ -95,6 +102,7 @@ defmodule Wotex.Binding.MQTT.Mapping do
          Error.new(
            :missing_mqtt_target,
            :mapping,
+           :protocol,
            "Form is missing the packet's dedicated MQTT target term"
          )}
 
@@ -103,6 +111,7 @@ defmodule Wotex.Binding.MQTT.Mapping do
          Error.new(
            :mixed_mqtt_targets,
            :mapping,
+           :protocol,
            "Form must not mix mqv:topic and mqv:filter"
          )}
 
@@ -118,6 +127,7 @@ defmodule Wotex.Binding.MQTT.Mapping do
      Error.new(
        :retained_read_required,
        :mapping,
+       :protocol,
        "readproperty requires mqv:retain to be true"
      )}
   end

@@ -105,6 +105,48 @@ defmodule Wotex.Binding.MQTT.TransportTest do
              Transport.request(publish_request(nil), :context, config())
   end
 
+  test "classifies every failure for a consumer retry decision" do
+    execution_context = RequestFactory.execution_context()
+    non_retained = delivery!("null", "things/value", retain: false)
+
+    assert {:error, %Error{code: :client_publish_failed, class: :unavailable}} =
+             Transport.request(
+               publish_request(nil),
+               execution_context,
+               config(%{publish_return: {:error, :external}})
+             )
+
+    assert {:error, %Error{code: :client_publish_failed, class: :unavailable}} =
+             Transport.request(
+               publish_request(nil),
+               execution_context,
+               config(%{publish_return: :raise})
+             )
+
+    assert {:error, %Error{code: :unsupported_request_packet, class: :protocol}} =
+             Transport.request(observe_request(), execution_context, config())
+
+    assert {:error, %Error{code: :non_retained_property_read, class: :protocol}} =
+             Transport.request(
+               read_request(),
+               execution_context,
+               config(%{read_return: {:ok, non_retained}})
+             )
+
+    assert {:error, %Error{code: :invalid_client_return, class: :protocol}} =
+             Transport.request(
+               read_request(),
+               execution_context,
+               config(%{read_return: :invalid})
+             )
+
+    assert {:error, %Error{code: :invalid_transport_input, class: :permanent}} =
+             Transport.request(:request, execution_context, config())
+
+    assert {:error, %Error{code: :invalid_transport_option, class: :permanent}} =
+             TransportConfig.new(FakeClient, %{}, read_timeout: 0)
+  end
+
   test "subscribes with a decoding closure and no captured execution context" do
     request = observe_request()
     execution_context = RequestFactory.execution_context(:one_use_credential)

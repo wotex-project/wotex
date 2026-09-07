@@ -191,12 +191,16 @@ defmodule Wotex.Binding.MQTT.Command do
   defp validate_retain(value) when is_boolean(value), do: {:ok, value}
 
   defp validate_retain(_value),
-    do: {:error, Error.new(:invalid_retain, :command, "mqv:retain must be boolean")}
+    do: {:error, Error.new(:invalid_retain, :command, :protocol, "mqv:retain must be boolean")}
 
   defp max_payload_bytes(opts) do
     case Keyword.get(opts, :max_payload_bytes, @default_max_payload_bytes) do
-      value when is_integer(value) and value > 0 -> {:ok, value}
-      _invalid -> {:error, Error.new(:invalid_payload_limit, :command, "payload limit is invalid")}
+      value when is_integer(value) and value > 0 ->
+        {:ok, value}
+
+      _invalid ->
+        {:error,
+         Error.new(:invalid_payload_limit, :command, :permanent, "payload limit is invalid")}
     end
   end
 
@@ -207,7 +211,12 @@ defmodule Wotex.Binding.MQTT.Command do
       {:ok, "application/json"}
     else
       {:error,
-       Error.new(:unsupported_content_type, :command, "contentType must be application/json")}
+       Error.new(
+         :unsupported_content_type,
+         :command,
+         :protocol,
+         "contentType must be application/json"
+       )}
     end
   end
 
@@ -222,5 +231,6 @@ defmodule Wotex.Binding.MQTT.Command do
 
   defp json_content_type?(_value), do: false
 
-  defp invalid_command(message), do: {:error, Error.new(:invalid_command, :command, message)}
+  defp invalid_command(message),
+    do: {:error, Error.new(:invalid_command, :command, :protocol, message)}
 end

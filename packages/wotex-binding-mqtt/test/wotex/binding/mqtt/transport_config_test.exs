@@ -50,6 +50,7 @@ defmodule Wotex.Binding.MQTT.TransportConfigTest do
   end
 
   defp assert_error(result, code) do
-    assert {:error, %Error{code: ^code, phase: :configuration}} = result
+    assert {:error, %Error{code: ^code, phase: :configuration} = error} = result
+    assert Error.class(error) == :permanent
   end
 end

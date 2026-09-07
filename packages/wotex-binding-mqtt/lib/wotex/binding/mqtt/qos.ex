@@ -17,6 +17,7 @@ defmodule Wotex.Binding.MQTT.QoS do
      Error.new(
        :invalid_qos,
        :command,
+       :protocol,
        "mqv:qos must be an integer or string from zero through two"
      )}
   end

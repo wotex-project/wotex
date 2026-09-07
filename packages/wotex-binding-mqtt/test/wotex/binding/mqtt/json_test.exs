@@ -12,7 +12,8 @@ defmodule Wotex.Binding.MQTT.JSONTest do
   end
 
   test "rejects oversized encoded and received payloads" do
-    assert {:error, %Error{code: :encoded_payload_too_large, details: %{max_bytes: 2}}} =
+    assert {:error,
+            %Error{code: :encoded_payload_too_large, class: :protocol, details: %{max_bytes: 2}}} =
              JSON.encode("value", 2)
 
     assert {:error, %Error{code: :received_payload_too_large}} = JSON.decode("{}", 1)
@@ -22,7 +23,7 @@ defmodule Wotex.Binding.MQTT.JSONTest do
     assert {:error, %Error{code: :json_encode_failed, details: %{}}} = JSON.encode(self(), 100)
     assert {:error, %Error{code: :json_decode_failed, details: %{}}} = JSON.decode("{", 100)
     assert {:error, %Error{code: :invalid_json_payload}} = JSON.decode(:not_binary, 100)
-    assert {:error, %Error{code: :invalid_payload_limit}} = JSON.encode(nil, 0)
+    assert {:error, %Error{code: :invalid_payload_limit, class: :permanent}} = JSON.encode(nil, 0)
     assert {:error, %Error{code: :invalid_payload_limit}} = JSON.decode("null", :infinity)
   end
 end

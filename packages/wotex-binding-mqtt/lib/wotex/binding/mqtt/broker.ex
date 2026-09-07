@@ -41,7 +41,8 @@ defmodule Wotex.Binding.MQTT.Broker do
   end
 
   def new(_href),
-    do: {:error, Error.new(:invalid_broker_href, :broker, "broker href must be a string")}
+    do:
+      {:error, Error.new(:invalid_broker_href, :broker, :protocol, "broker href must be a string")}
 
   @doc "Returns the original validated broker href."
   @spec href(t()) :: String.t()
@@ -63,7 +64,7 @@ defmodule Wotex.Binding.MQTT.Broker do
     if href != "" and href == String.trim(href) do
       :ok
     else
-      {:error, Error.new(:invalid_broker_href, :broker, "broker href must be non-empty")}
+      {:error, Error.new(:invalid_broker_href, :broker, :protocol, "broker href must be non-empty")}
     end
   end
 
@@ -71,7 +72,8 @@ defmodule Wotex.Binding.MQTT.Broker do
     {:ok, URI.parse(href)}
   rescue
     URI.Error ->
-      {:error, Error.new(:invalid_broker_href, :broker, "broker href is not a valid URI")}
+      {:error,
+       Error.new(:invalid_broker_href, :broker, :protocol, "broker href is not a valid URI")}
   end
 
   defp validate_scheme(scheme) when is_binary(scheme) do
@@ -85,19 +87,27 @@ defmodule Wotex.Binding.MQTT.Broker do
   defp validate_scheme(_scheme), do: invalid_scheme()
 
   defp invalid_scheme do
-    {:error, Error.new(:unsupported_broker_scheme, :broker, "broker scheme must be mqtt or mqtts")}
+    {:error,
+     Error.new(
+       :unsupported_broker_scheme,
+       :broker,
+       :protocol,
+       "broker scheme must be mqtt or mqtts"
+     )}
   end
 
   defp validate_host(host) when is_binary(host) and byte_size(host) > 0, do: :ok
 
   defp validate_host(_host),
-    do: {:error, Error.new(:missing_broker_host, :broker, "broker href must include a host")}
+    do:
+      {:error,
+       Error.new(:missing_broker_host, :broker, :protocol, "broker href must include a host")}
 
   defp validate_port(nil), do: :ok
   defp validate_port(port) when is_integer(port) and port in 1..65_535, do: :ok
 
   defp validate_port(_port),
-    do: {:error, Error.new(:invalid_broker_port, :broker, "broker port is invalid")}
+    do: {:error, Error.new(:invalid_broker_port, :broker, :protocol, "broker port is invalid")}
 
   defp validate_credential_free(nil), do: :ok
 
@@ -106,6 +116,7 @@ defmodule Wotex.Binding.MQTT.Broker do
      Error.new(
        :broker_credentials_forbidden,
        :broker,
+       :protocol,
        "broker href must not contain user information"
      )}
   end
@@ -120,7 +131,7 @@ defmodule Wotex.Binding.MQTT.Broker do
     if authority == expected do
       :ok
     else
-      {:error, Error.new(:invalid_broker_port, :broker, "broker port is invalid")}
+      {:error, Error.new(:invalid_broker_port, :broker, :protocol, "broker port is invalid")}
     end
   end
 
@@ -133,6 +144,7 @@ defmodule Wotex.Binding.MQTT.Broker do
      Error.new(
        :broker_href_not_endpoint_only,
        :broker,
+       :protocol,
        "broker href must not contain a topic, filter, query, or fragment"
      )}
   end

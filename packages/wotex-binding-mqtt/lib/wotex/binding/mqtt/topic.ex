@@ -22,6 +22,7 @@ defmodule Wotex.Binding.MQTT.Topic do
          Error.new(
            :topic_name_contains_wildcard,
            :topic,
+           :protocol,
            "Topic Name must not contain wildcard characters"
          )}
 
@@ -43,6 +44,7 @@ defmodule Wotex.Binding.MQTT.Topic do
          Error.new(
            :invalid_topic_filter_wildcard,
            :topic,
+           :protocol,
            "Topic Filter contains a malformed wildcard"
          )}
 
@@ -75,6 +77,7 @@ defmodule Wotex.Binding.MQTT.Topic do
      Error.new(
        :invalid_topic_filters,
        :topic,
+       :protocol,
        "mqv:filter must be a Topic Filter or a non-empty list of Topic Filters"
      )}
   end
@@ -99,19 +102,25 @@ defmodule Wotex.Binding.MQTT.Topic do
   defp validate_common(value, code, label) when is_binary(value) do
     cond do
       value == "" ->
-        {:error, Error.new(code, :topic, "#{label} must contain at least one character")}
+        {:error, Error.new(code, :topic, :protocol, "#{label} must contain at least one character")}
 
       not String.valid?(value) ->
-        {:error, Error.new(code, :topic, "#{label} must be valid UTF-8")}
+        {:error, Error.new(code, :topic, :protocol, "#{label} must be valid UTF-8")}
 
       byte_size(value) > @max_bytes ->
         {:error,
-         Error.new(code, :topic, "#{label} exceeds the MQTT UTF-8 encoded string limit", %{
-           max_bytes: @max_bytes
-         })}
+         Error.new(
+           code,
+           :topic,
+           :protocol,
+           "#{label} exceeds the MQTT UTF-8 encoded string limit",
+           %{
+             max_bytes: @max_bytes
+           }
+         )}
 
       String.contains?(value, <<0>>) ->
-        {:error, Error.new(code, :topic, "#{label} must not contain the null character")}
+        {:error, Error.new(code, :topic, :protocol, "#{label} must not contain the null character")}
 
       true ->
         :ok
@@ -119,7 +128,7 @@ defmodule Wotex.Binding.MQTT.Topic do
   end
 
   defp validate_common(_value, code, label),
-    do: {:error, Error.new(code, :topic, "#{label} must be a string")}
+    do: {:error, Error.new(code, :topic, :protocol, "#{label} must be a string")}
 
   defp validate_shared_prefix("$share/" <> remainder) do
     case String.split(remainder, "/", parts: 2) do
@@ -143,6 +152,7 @@ defmodule Wotex.Binding.MQTT.Topic do
      Error.new(
        :invalid_shared_topic_filter,
        :topic,
+       :protocol,
        "shared Topic Filter must contain a group and a Topic Filter"
      )}
   end
