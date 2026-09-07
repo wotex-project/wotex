@@ -2,6 +2,9 @@
 
 ## 0.1.0
 
+- Preserve TD/TM schema error field paths and short-circuit native array
+  validation before copying over-budget input.
+
 - Add bounded W3C WoT Thing Description 1.1 parsing and validation.
 - Preserve extension members through immutable typed values.
 - Add compact, pretty, source-preserving, and deterministic canonical encoding.

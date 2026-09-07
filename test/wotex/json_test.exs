@@ -6,6 +6,21 @@ defmodule Wotex.JSONTest do
 
   alias Wotex.{Error, JSON}
 
+  test "a tiny node budget does not traverse a large remaining array" do
+    values = List.duplicate(nil, 100_000)
+    assert :ok = JSON.validate([])
+    {:reductions, before} = Process.info(self(), :reductions)
+
+    assert {:error, %Error{code: :node_limit_exceeded, path: "/1"}} =
+             JSON.validate(values, max_nodes: 2)
+
+    {:reductions, after_validation} = Process.info(self(), :reductions)
+
+    # Work-bound regression, not a wall-clock performance threshold. The eager
+    # indexed-list implementation consumes over 100,000 reductions here.
+    assert after_validation - before < 10_000
+  end
+
   property "canonical encoding preserves generated JSON scalar maps and lists" do
     check all(
             entries <- list_of(tuple({json_key(), json_scalar()}), max_length: 20),

@@ -43,7 +43,7 @@ defmodule Wotex.ThingDescription.Validator do
   end
 
   defp schema_errors(document) do
-    case ExJsonSchema.Validator.validate(@resolved_schema, document) do
+    case ExJsonSchema.Validator.validate(@resolved_schema, document, error_formatter: false) do
       :ok -> []
       {:error, errors} -> Enum.map(errors, &schema_error/1)
     end

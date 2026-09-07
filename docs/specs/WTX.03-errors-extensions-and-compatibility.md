@@ -21,6 +21,12 @@ those errors. Stable fields are:
 Raising variants use the same exception value. Error messages are not a stable
 matching interface.
 
+Schema violations MUST preserve the validator's field location rather than
+collapse formatted errors to the root. Native-array node-limit admission MUST
+stop at the first over-budget node without materializing an indexed copy of
+the remaining array. These are compatible corrections to the existing path and
+resource-bound contracts; they do not change accepted TD/TM values.
+
 Option arguments use the documented keyword-list shape. For existing limit
 options, only positive integers replace defaults; invalid limit values fall
 back to the corresponding defaults. This does not declare malformed option

@@ -81,7 +81,7 @@ defmodule Wotex.JSON do
 
   defp walk(values, state) when is_list(values) do
     values
-    |> Enum.with_index()
+    |> Stream.with_index()
     |> Enum.reduce_while({:ok, state.nodes + 1}, fn {value, index}, {:ok, count} ->
       child_state = child_state(state, count, index)
 

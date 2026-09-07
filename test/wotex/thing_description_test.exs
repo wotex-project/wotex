@@ -5,6 +5,14 @@ defmodule Wotex.ThingDescriptionTest do
 
   alias Wotex.{Error, ThingDescription}
 
+  test "schema violations retain the failing field path without copying its value" do
+    sentinel = %{"credential-sentinel" => "must-not-appear"}
+    assert {:error, errors} = ThingDescription.from_map(Map.put(valid_td_map(), "title", sentinel))
+    assert Enum.any?(errors, &(&1.code == :schema_violation and &1.path == "/title"))
+    refute inspect(errors) =~ "credential-sentinel"
+    refute inspect(errors) =~ "must-not-appear"
+  end
+
   test "parses TD 1.1 JSON and preserves original source bytes" do
     json = Jason.encode!(valid_td_map())
 

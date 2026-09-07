@@ -5,6 +5,14 @@ defmodule Wotex.ThingModelTest do
 
   alias Wotex.{Error, ThingModel}
 
+  test "schema violations retain the failing field path without copying its value" do
+    sentinel = %{"credential-sentinel" => "must-not-appear"}
+    assert {:error, errors} = ThingModel.from_map(Map.put(valid_tm_map(), "title", sentinel))
+    assert Enum.any?(errors, &(&1.code == :schema_violation and &1.path == "/title"))
+    refute inspect(errors) =~ "credential-sentinel"
+    refute inspect(errors) =~ "must-not-appear"
+  end
+
   test "parses a Thing Model 1.1 and preserves source and extensions" do
     json = Jason.encode!(valid_tm_map())
 
