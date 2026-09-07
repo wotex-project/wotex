@@ -46,15 +46,15 @@ defmodule WotexLab.MixProject do
     [
       wotex_dependency(:wotex, "wotex"),
       wotex_dependency(:wotex_nx, "wotex-nx"),
-      wotex_dependency(:wotex_runtime, "wotex-runtime"),
-      wotex_dependency(:wotex_directory, "wotex-directory"),
-      wotex_dependency(:wotex_binding_http, "wotex-binding-http"),
-      wotex_dependency(:wotex_binding_mqtt, "wotex-binding-mqtt"),
-      wotex_dependency(:wotex_conformance, "wotex-conformance"),
-      wotex_dependency(:wotex_continuum, "wotex-continuum"),
+      wotex_dependency(:wotex_runtime, "wotex-runtime", optional: true),
+      wotex_dependency(:wotex_directory, "wotex-directory", optional: true),
+      wotex_dependency(:wotex_binding_http, "wotex-binding-http", optional: true),
+      wotex_dependency(:wotex_binding_mqtt, "wotex-binding-mqtt", optional: true),
+      wotex_dependency(:wotex_conformance, "wotex-conformance", only: [:dev, :test]),
+      wotex_dependency(:wotex_continuum, "wotex-continuum", optional: true),
       {:nx, "~> 0.13.1"},
       {:telemetry, "~> 1.3"},
-      {:exqlite, "~> 0.40"},
+      {:exqlite, "~> 0.40", optional: true},
       {:req, "~> 0.7.4", optional: true},
       {:bandit, "~> 1.12", only: :test},
       {:plug, "~> 1.18", only: :test},
@@ -87,14 +87,18 @@ defmodule WotexLab.MixProject do
     end
   end
 
-  defp wotex_dependency(app, directory) do
+  # The base package needs core, Wotex Nx, Nx and telemetry for the first
+  # tensor. Runtime, bindings, Directory and Continuum are optional profile
+  # packages a host selects; the conformance runner is a development and test
+  # dependency because the Lab target answers with the core package alone.
+  defp wotex_dependency(app, directory, opts \\ []) do
     case System.get_env("WOTEX_PATH_DEPS") do
       nil ->
-        {app, "~> 0.1.0"}
+        {app, "~> 0.1.0", opts}
 
       "1" ->
         if Mix.env() in [:dev, :test, :docs] do
-          {app, path: Path.expand("../#{directory}", __DIR__), env: :dev, override: true}
+          {app, [path: Path.expand("../#{directory}", __DIR__), env: :dev, override: true] ++ opts}
         else
           raise "WOTEX_PATH_DEPS is allowed only in development, test or docs"
         end

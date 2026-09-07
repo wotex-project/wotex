@@ -1,6 +1,10 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.1.0. Contract: accepted.
+Specification version: 0.2.0. Contract: accepted. Source status: the workspace
+switch, the base/profile dependency split, the package content gate, the
+source-cohort guard and the archive-consumer gate are implemented; the full
+reference-consumer, distribution and release-candidate runners, OCI, npm,
+hosted and Nerves deliverables remain planned.
 
 ## Dependency modes
 
@@ -18,6 +22,11 @@ Specification version: 0.1.0. Contract: accepted.
    dependencies belong to explicitly selected host profiles inside this repo.
    The base package must not make brokers, SQLite, Maude, Axon, EXLA, Phoenix or
    an LLM necessary for the first tensor. Profiles share public Lab contracts.
+   In source, `mix.exs` declares Runtime, both bindings, Directory, Continuum
+   and Exqlite as optional requirements and the conformance runner as a
+   development and test dependency; every Lab module behind one of those seams
+   is compiled only when its package is loaded, so the base closure is core,
+   Wotex Nx, Nx and telemetry.
 
 The dependency arrow points only from Lab to public packages. Unavailable
 artifacts fail the applicable gate. Do not silently switch to workspace mode,
@@ -41,9 +50,21 @@ review and renewed evidence, not automatic readiness promotion.
 | `public_release_candidate` | All above plus SBOM/provenance/license/security/API review, verified source/lock/archive/image/model digests and all documented links/commands |
 | `stable_api_candidate` | Explicit compatibility decision over every public result/error/default/schema and minimum/current supported cohort; no inference from version or coverage |
 
-`bin/check_package.exs` implements content inspection only. Full artifact runner
-implementation is an acceptance obligation, not silently approximated by that
-script. Before running archive-consumer tests, the harness MUST assert Git is
+`bin/check_package.exs` implements content inspection only.
+`bin/check_archive_consumer.exs` implements the `archive_consumer_green` gate
+for the base profile: it builds the core, Wotex Nx and Lab archives from the
+sibling checkouts without the workspace switch, admits public dependencies only
+at the versions in the Lab lock and only from the local Hex cache, builds a
+local Hex registry from those archives, serves it from OTP `httpd` on a
+loopback port, and drives a fresh Mix application through a PATH that links
+every executable except Git (asserted from inside the consumer) with a fresh
+`HEX_HOME` and the registry as the only mirror. The consumer lock is inspected
+recursively: every package must be an admitted archive and no profile package
+may appear. The smoke runs Thing Description and Nx positive and negative cases
+through public APIs and proves the profile modules are absent. The gate writes
+a `Wotex.Lab.Evidence.Record` with archive digests and retains only that
+record. The reference-consumer, distribution and release-candidate runners
+remain acceptance obligations, not approximated by these scripts. Before running archive-consumer tests, the harness MUST assert Git is
 unavailable (`command -v git` must fail) and inspect the resolved dependency
 graph recursively, including optional/profile/transitive deps. Resolution of
 the normal graph must occur in that restricted environment; merely hiding Git

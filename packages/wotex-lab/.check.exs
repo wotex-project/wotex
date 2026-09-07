@@ -15,6 +15,7 @@
     {:ex_unit, command: "mix coveralls"},
     {:contracts, command: "mix run --no-start bin/check_contracts.exs"},
     {:boundary, command: "elixir bin/check_boundary.exs"},
-    {:package, command: "mix run --no-start bin/check_package.exs"}
+    {:package, command: "mix run --no-start bin/check_package.exs"},
+    {:archive_consumer, command: "mix run --no-start bin/check_archive_consumer.exs"}
   ]
 ]

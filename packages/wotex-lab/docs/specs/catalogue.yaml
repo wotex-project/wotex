@@ -199,7 +199,7 @@ specifications:
     executable_evidence: []
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.08
-    version: "0.1.0"
+    version: "0.2.0"
     path: docs/specs/WLB.08-distribution-and-compatibility.md
     implementation_status: partial
     evidence_status: partial
@@ -221,6 +221,8 @@ specifications:
       - "bin/check_package.exs"
       - "bin/check_boundary.exs"
       - "bin/check_contracts.exs"
+      - "bin/check_source_cohort.exs"
+      - "bin/check_archive_consumer.exs"
       - "bin/check_source_cohort.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.09

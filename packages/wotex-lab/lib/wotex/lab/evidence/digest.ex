@@ -16,6 +16,10 @@ defmodule Wotex.Lab.Evidence.Digest do
     with {:ok, bytes} <- File.read(path), do: {:ok, bytes(bytes)}
   end
 
+  @doc "Digests one file's bytes, raising on a read failure."
+  @spec file!(Path.t()) :: String.t()
+  def file!(path), do: bytes(File.read!(path))
+
   @doc "Digests the files matched by `patterns` under `root`, by relative name and content."
   @spec tree(Path.t(), [String.t()]) :: {:ok, String.t()} | {:error, File.posix()}
   def tree(root, patterns) when is_list(patterns) do

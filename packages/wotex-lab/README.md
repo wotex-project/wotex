@@ -54,7 +54,13 @@ WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 MIX_ENV=test mix test
 Development expects `wotex` and `wotex-nx` checkouts alongside Lab. This mode is
 local source evidence. It does not satisfy the clone-free acceptance gate.
 The intended Hex dependency is `{:wotex_lab, "~> 0.1.0"}`; this README does not
-claim that package is published. Production rejects `WOTEX_PATH_DEPS` and uses
+claim that package is published. That base requirement brings core,
+Wotex Nx, Nx and telemetry only. Runtime, the HTTP and MQTT bindings,
+Directory, Continuum and Exqlite are optional profile packages a host adds
+explicitly; the Lab modules behind each seam compile only when that package is
+present. `mix check` includes an archive-consumer gate that resolves the base
+profile from built archives through a local Hex registry with Git absent from
+the PATH. Production rejects `WOTEX_PATH_DEPS` and uses
 Hex requirements. Publication and repository visibility are maintainer-owned.
 
 ```elixir
