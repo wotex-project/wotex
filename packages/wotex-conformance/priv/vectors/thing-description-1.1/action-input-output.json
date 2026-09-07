@@ -12,40 +12,81 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "5.3.2.2"
     },
-    "assertions": ["action_input_output_and_form_preserved"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "action_input_output_and_form_preserved"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": "https://www.w3.org/2022/wot/td/v1.1",
       "id": "urn:example:thing:action",
       "title": "Action Thing",
-      "securityDefinitions": {"nosec_sc": {"scheme": "nosec"}},
-      "security": ["nosec_sc"],
+      "securityDefinitions": {
+        "nosec_sc": {
+          "scheme": "nosec"
+        }
+      },
+      "security": [
+        "nosec_sc"
+      ],
       "actions": {
         "setLevel": {
-          "input": {"type": "integer", "minimum": 0, "maximum": 100},
-          "output": {"type": "boolean"},
+          "input": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "output": {
+            "type": "boolean"
+          },
           "safe": false,
           "idempotent": true,
           "forms": [
-            {"href": "https://example.test/actions/setLevel", "op": ["invokeaction"]}
+            {
+              "href": "https://example.test/actions/setLevel",
+              "op": [
+                "invokeaction"
+              ]
+            }
           ]
         }
       }
-    }
+    },
+    "projection": [
+      "/actions/setLevel/input",
+      "/actions/setLevel/output",
+      "/actions/setLevel/safe",
+      "/actions/setLevel/idempotent",
+      "/actions/setLevel/forms"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
-      "forms": [
-        {"href": "https://example.test/actions/setLevel", "op": ["invokeaction"]}
-      ],
-      "idempotent": true,
-      "input": {"maximum": 100, "minimum": 0, "type": "integer"},
-      "name": "setLevel",
-      "output": {"type": "boolean"},
-      "safe": false
+      "accepted": true,
+      "document": {
+        "/actions/setLevel/forms": [
+          {
+            "href": "https://example.test/actions/setLevel",
+            "op": [
+              "invokeaction"
+            ]
+          }
+        ],
+        "/actions/setLevel/idempotent": true,
+        "/actions/setLevel/input": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "/actions/setLevel/output": {
+          "type": "boolean"
+        },
+        "/actions/setLevel/safe": false
+      }
     }
   },
   "provenance": {
@@ -54,6 +95,11 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "5.3.2.2"
   },
-  "tags": ["action", "form", "positive", "thing-description-1.1"],
-  "digest": "sha256:6c8dea7d869274701f62428407abb8cfbd8584f61caceb832a19e42b866cb4a9"
+  "tags": [
+    "action",
+    "form",
+    "positive",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:affb8fdbabceb28716cd6b52d33e2f2680d05f0ecfd2cefa7b94c7e7f0d55ff1"
 }

@@ -24,6 +24,17 @@ configuration is an error rather than a fabricated report. Report evidence binds
 subject archive, corpus, claims, vectors, protocol and environment. Observations
 are represented by digests and bounded codes, never raw stdout or secret values.
 
+The bundled `test/fixtures/external_target.exs` is an independent protocol
+fixture, not a subject adapter. It derives one normalized observation from the
+request alone: it decodes the declared document, applies the declared
+projection, and otherwise applies the structural rules stated in the fixture. It
+holds no table of expected answers and never branches on a vector identity. It
+proves protocol, projection, comparison and classification mechanics only; it is
+not a W3C validator and is no evidence about any subject package. A real adapter
+for a Web of Things package belongs in an external consumer laboratory, because
+production code here may not depend on a tested subject. WCF-C03 remains the
+lane for that archive-only consumer and its independently implemented target.
+
 Loading the package starts no process. Explicit execution starts one bounded
 subprocess per vector using an absolute executable, literal arguments and sanitized
 environment, never a shell. Artifact validation precedes execution. Timeout

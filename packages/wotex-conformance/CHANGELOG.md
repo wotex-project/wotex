@@ -12,3 +12,7 @@
   with `invalid_limit` instead of defaulted.
 - Build map-shaped contract values with `from_map/1`, keeping `new/1` as a
   documented alias.
+- Define one normalized observation per document operation and a declared
+  vector projection, so an independent adapter derives the observation from the
+  request alone. Bundled vectors now expect the rejection identifiers an
+  implementation emits, and every vector and corpus digest changed.

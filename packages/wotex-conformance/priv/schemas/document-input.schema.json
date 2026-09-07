@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wotex.io/schemas/conformance/document-input-1.0.json",
+  "title": "Wotex Conformance Document Operation Input 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["document", "projection"],
+  "properties": {
+    "document": {"type": "object"},
+    "projection": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^/"}
+    }
+  }
+}

@@ -575,8 +575,11 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
       id: "example.vector",
       revision: "1",
       claim: claim_input(),
-      input: %{"document" => %{"title" => "Synthetic Thing"}},
-      expectation: %{"operator" => "exact", "value" => %{"ok" => true}},
+      input: %{"document" => %{"title" => "Synthetic Thing"}, "projection" => ["/title"]},
+      expectation: %{
+        "operator" => "exact",
+        "value" => %{"accepted" => true, "document" => %{"/title" => "Synthetic Thing"}}
+      },
       provenance: %{
         "source" => "https://www.w3.org/TR/wot-thing-description11/",
         "observed" => "2026-09-02"

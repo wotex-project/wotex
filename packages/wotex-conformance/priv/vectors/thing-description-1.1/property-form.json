@@ -12,16 +12,26 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "5.3.2.1"
     },
-    "assertions": ["property_data_schema_and_form_preserved"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "property_data_schema_and_form_preserved"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": "https://www.w3.org/2022/wot/td/v1.1",
       "id": "urn:example:thing:property-form",
       "title": "Property Form Thing",
-      "securityDefinitions": {"nosec_sc": {"scheme": "nosec"}},
-      "security": ["nosec_sc"],
+      "securityDefinitions": {
+        "nosec_sc": {
+          "scheme": "nosec"
+        }
+      },
+      "security": [
+        "nosec_sc"
+      ],
       "properties": {
         "temperature": {
           "type": "number",
@@ -31,27 +41,38 @@
             {
               "href": "https://example.test/properties/temperature",
               "contentType": "application/json",
-              "op": ["readproperty"]
+              "op": [
+                "readproperty"
+              ]
             }
           ]
         }
       }
-    }
+    },
+    "projection": [
+      "/properties/temperature"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
-      "forms": [
-        {
-          "contentType": "application/json",
-          "href": "https://example.test/properties/temperature",
-          "op": ["readproperty"]
+      "accepted": true,
+      "document": {
+        "/properties/temperature": {
+          "type": "number",
+          "unit": "Cel",
+          "readOnly": true,
+          "forms": [
+            {
+              "href": "https://example.test/properties/temperature",
+              "contentType": "application/json",
+              "op": [
+                "readproperty"
+              ]
+            }
+          ]
         }
-      ],
-      "name": "temperature",
-      "readOnly": true,
-      "type": "number",
-      "unit": "Cel"
+      }
     }
   },
   "provenance": {
@@ -60,6 +81,11 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "5.3.2.1"
   },
-  "tags": ["form", "positive", "property", "thing-description-1.1"],
-  "digest": "sha256:9468f281b8a7c8d15641bfe2039cc6af10852d8e756cb75c0d04994193faeb53"
+  "tags": [
+    "form",
+    "positive",
+    "property",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:cf41bb79c9c4d2a34fbc7e53024ea9f9f97719d26d2cbc77b2635ac458f92cdc"
 }

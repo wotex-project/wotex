@@ -34,5 +34,39 @@
       "items": {"type": "string", "minLength": 1, "maxLength": 64}
     },
     "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "type": "object",
+        "required": ["claim"],
+        "properties": {
+          "claim": {
+            "type": "object",
+            "required": ["operation"],
+            "properties": {
+              "operation": {
+                "enum": [
+                  "thing_description.parse",
+                  "thing_description.validate",
+                  "thing_model.parse",
+                  "thing_model.validate"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "input": {"$ref": "https://wotex.io/schemas/conformance/document-input-1.0.json"},
+          "expectation": {
+            "properties": {
+              "value": {"$ref": "https://wotex.io/schemas/conformance/observation-1.0.json"}
+            }
+          }
+        }
+      }
+    }
+  ]
 }

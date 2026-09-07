@@ -12,35 +12,57 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "5.3.1"
     },
-    "assertions": ["thing_level_form_preserved"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "thing_level_form_preserved"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": "https://www.w3.org/2022/wot/td/v1.1",
       "id": "urn:example:thing:aggregate-form",
       "title": "Aggregate Form Thing",
-      "securityDefinitions": {"nosec_sc": {"scheme": "nosec"}},
-      "security": ["nosec_sc"],
+      "securityDefinitions": {
+        "nosec_sc": {
+          "scheme": "nosec"
+        }
+      },
+      "security": [
+        "nosec_sc"
+      ],
       "forms": [
         {
           "href": "https://example.test/properties",
           "contentType": "application/json",
-          "op": ["readallproperties", "writeallproperties"]
+          "op": [
+            "readallproperties",
+            "writeallproperties"
+          ]
         }
       ]
-    }
+    },
+    "projection": [
+      "/forms"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
-      "forms": [
-        {
-          "contentType": "application/json",
-          "href": "https://example.test/properties",
-          "op": ["readallproperties", "writeallproperties"]
-        }
-      ]
+      "accepted": true,
+      "document": {
+        "/forms": [
+          {
+            "href": "https://example.test/properties",
+            "contentType": "application/json",
+            "op": [
+              "readallproperties",
+              "writeallproperties"
+            ]
+          }
+        ]
+      }
     }
   },
   "provenance": {
@@ -49,6 +71,11 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "5.3.1"
   },
-  "tags": ["form", "positive", "thing-description-1.1", "thing-level"],
-  "digest": "sha256:86261c00502719eb2e2d04c4d6bb09f53034e29c3092232ab4be7df4b70e9cb7"
+  "tags": [
+    "form",
+    "positive",
+    "thing-description-1.1",
+    "thing-level"
+  ],
+  "digest": "sha256:ad4fcac134e021eaf99a1a677ec58ef495ae4e7ede46c09389cb4711af6cd936"
 }

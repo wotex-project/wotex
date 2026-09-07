@@ -40,6 +40,31 @@ defmodule Wotex.Conformance.RunnerTest do
     refute String.contains?(encoded, "example:profile")
   end
 
+  test "an independent target derives the Thing Model corpus observations", context do
+    corpus = TestFixtures.thing_model_corpus!()
+    target = TestFixtures.external_target!(context.archive, "pass")
+
+    assert {:ok, report} =
+             Runner.run(corpus, context.subject, target,
+               generated_at: @generated_at,
+               environment: @environment
+             )
+
+    assert report.summary == status_counts(corpus, pass: length(corpus.vectors))
+  end
+
+  test "records an observation that is not normalized as an infrastructure error", context do
+    target = TestFixtures.external_target!(context.archive, "unnormalized")
+    selected = hd(context.corpus.vectors).id
+
+    assert {:ok, report} = run(context, target, select: {:ids, [selected]})
+    assert report.summary == status_counts(context.corpus, infrastructure_error: 1)
+
+    result = Enum.find(report.results, &(&1.vector_id == selected))
+    assert result.code == "invalid_target_observation"
+    assert is_nil(result.actual_digest)
+  end
+
   test "classifies a valid non-matching observation as fail", context do
     target = TestFixtures.external_target!(context.archive, "mismatch")
     selected = hd(context.corpus.vectors).id

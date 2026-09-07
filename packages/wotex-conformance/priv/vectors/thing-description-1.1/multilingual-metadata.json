@@ -12,32 +12,55 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "5.3.1"
     },
-    "assertions": ["multilingual_titles_and_descriptions_preserved"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "multilingual_titles_and_descriptions_preserved"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": "https://www.w3.org/2022/wot/td/v1.1",
       "id": "urn:example:thing:multilingual",
       "title": "Weather Thing",
-      "titles": {"en": "Weather Thing", "sv": "Väderting"},
+      "titles": {
+        "en": "Weather Thing",
+        "sv": "Väderting"
+      },
       "description": "Reports local conditions",
       "descriptions": {
         "en": "Reports local conditions",
         "sv": "Rapporterar lokala förhållanden"
       },
-      "securityDefinitions": {"nosec_sc": {"scheme": "nosec"}},
-      "security": ["nosec_sc"]
-    }
+      "securityDefinitions": {
+        "nosec_sc": {
+          "scheme": "nosec"
+        }
+      },
+      "security": [
+        "nosec_sc"
+      ]
+    },
+    "projection": [
+      "/titles",
+      "/descriptions"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
-      "descriptions": {
-        "en": "Reports local conditions",
-        "sv": "Rapporterar lokala förhållanden"
-      },
-      "titles": {"en": "Weather Thing", "sv": "Väderting"}
+      "accepted": true,
+      "document": {
+        "/descriptions": {
+          "en": "Reports local conditions",
+          "sv": "Rapporterar lokala förhållanden"
+        },
+        "/titles": {
+          "en": "Weather Thing",
+          "sv": "Väderting"
+        }
+      }
     }
   },
   "provenance": {
@@ -46,6 +69,11 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "5.3.1"
   },
-  "tags": ["metadata", "multilingual", "positive", "thing-description-1.1"],
-  "digest": "sha256:90f77eb0e4718bd0fc9c050390825ce3cbabdfbdfa71996b98928d5478cf314f"
+  "tags": [
+    "metadata",
+    "multilingual",
+    "positive",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:352ef804b5e34447c3475040cf080354096a6a69257dd5f7533bb460b08ec876"
 }

@@ -73,6 +73,8 @@ Schema revision `1.0` is represented by:
 - `priv/schemas/corpus.schema.json`;
 - `priv/schemas/subject.schema.json`;
 - `priv/schemas/vector.schema.json`;
+- `priv/schemas/document-input.schema.json`;
+- `priv/schemas/observation.schema.json`;
 - `priv/schemas/target-request.schema.json`;
 - `priv/schemas/target-response.schema.json`;
 - `priv/schemas/result.schema.json`; and
@@ -141,6 +143,15 @@ A vector contains its identity, revision, claim, input, exact expectation,
 provenance, tags, and content digest. Revision `1.0` supports only the `exact`
 expectation operator. New comparison semantics require a protocol and schema
 revision; a string flag cannot silently change equality.
+
+A vector for a document operation MUST declare its input as an object with a
+`document` object and a `projection` list of RFC 6901 JSON Pointers, and its
+expectation value MUST be one normalized observation. The projection is
+declared vector material: it travels to the target inside `vector.input`, so an
+independent adapter can produce the expected observation from the request alone,
+without knowing the vector identity or the expectation. Document operations are
+`thing_description.parse`, `thing_description.validate`, `thing_model.parse`,
+and `thing_model.validate`.
 
 The vector digest is the canonical digest of every vector field except
 `digest`. The corpus digest is the canonical digest of the schema version,
@@ -225,7 +236,10 @@ subjects in appropriate process, filesystem, network, and resource isolation.
   "vector": {
     "id": "td11.parse.minimal",
     "revision": "1.0.0",
-    "input": {}
+    "input": {
+      "document": {"@context": "https://www.w3.org/2022/wot/td/v1.1", "title": "Minimal Thing"},
+      "projection": ["/title"]
+    }
   },
   "context": {
     "corpus": {"id": "example", "revision": "1", "digest": "sha256:<64 lowercase hex>"},
@@ -266,6 +280,52 @@ provenance field.
 An unsupported response MUST omit `actual`. Codes are stable bounded
 identifiers. Free-form messages, stack traces, raw output, and credentials are
 not protocol fields.
+
+### Normalized observations
+
+For every document operation the `actual` value MUST be one of exactly two
+shapes.
+
+Accepted:
+
+```json
+{"accepted": true, "document": {"/title": "Minimal Thing"}}
+```
+
+Rejected:
+
+```json
+{
+  "accepted": false,
+  "errors": [{"code": "schema_violation", "phase": "schema", "path": "/title"}]
+}
+```
+
+Requirements:
+
+1. With a non-empty declared projection, `document` maps each declared pointer
+   that resolves in the accepted document to that member value. A declared
+   pointer that does not resolve MUST be omitted, so absence is observable
+   evidence rather than a silent pass.
+2. With an empty projection, `document` is the complete accepted document as
+   the subject normalized it.
+3. Pointers are RFC 6901: array members are addressed by index, `~0` decodes to
+   `~`, and `~1` decodes to `/`.
+4. Every rejection error object has exactly `code`, `phase`, and `path`.
+   `code` and `phase` are lowercase bounded identifiers; `path` is a JSON
+   Pointer rooted at `/`. Errors MUST be unique and sorted ascending by `path`
+   and then `code`.
+5. Messages, details, raw values, exception text, and counts are not
+   observation members. Only codes, phases, and paths are stable enough to
+   compare across subject revisions.
+6. The adapter MUST derive the observation from the operation, the declared
+   document, and the declared projection. It MUST NOT branch on the vector
+   identity.
+
+An observation that does not satisfy the normalized shape of its operation is a
+protocol failure and produces `infrastructure_error`, never `fail`. Operations
+outside this list carry no normalized shape at this revision and are compared
+as bounded JSON values.
 
 The external target receives a scrubbed process environment. The consumer may
 supply bounded non-sensitive variables explicitly. Credentials belong in an
@@ -374,18 +434,7 @@ dependency application, or loading a corpus.
 
 ## Continuum behavior
 
-The value and digest contracts are deployment-neutral. Corpus loading and
-archive verification are local operations.
-
-| Mode | Contract |
-|---|---|
-| hosted | remote subject access occurs only inside the explicit target adapter |
-| connected on-premises | local archives and adapters run without a project service |
-| air-gapped | preloaded artifacts and corpora require no DNS, telemetry, license, or package-registry call |
-| intermittently connected | each run is self-contained; unavailable remote adapters report infrastructure failure without rewriting prior evidence |
-
-Mode metadata is evidence, not inherited capability. A passing hosted run does
-not prove an air-gapped claim.
+Corpus loading is local.
 
 ## Security requirements
 
@@ -441,6 +490,12 @@ placeholder values, and composition references; plus negative declaration
 observations for the model type and TD 1.1 context. Its operations are
 `thing_model.parse` and `thing_model.validate`; passing it makes no claim about
 Thing Model derivation, remote reference resolution, or model registries.
+
+Every bundled vector declares a projection and expects one normalized
+observation. Negative vectors expect the bounded rejection identifiers a
+Thing Description or Thing Model implementation emits for the cited clause,
+such as `schema_violation`, `undefined_security_reference`, and
+`unsupported_context`. A code that no implementation emits is not evidence.
 
 Both corpora are synthetic evidence derived from cited semantics. They copy no
 W3C schema or normative text and carry no W3C certification claim.

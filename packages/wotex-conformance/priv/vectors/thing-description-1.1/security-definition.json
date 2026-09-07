@@ -12,8 +12,12 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "5.3.1"
     },
-    "assertions": ["security_definition_and_selection_preserved"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "security_definition_and_selection_preserved"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
@@ -21,17 +25,34 @@
       "id": "urn:example:thing:secured",
       "title": "Secured Thing",
       "securityDefinitions": {
-        "basic_sc": {"scheme": "basic", "in": "header"}
+        "basic_sc": {
+          "scheme": "basic",
+          "in": "header"
+        }
       },
-      "security": ["basic_sc"]
-    }
+      "security": [
+        "basic_sc"
+      ]
+    },
+    "projection": [
+      "/security",
+      "/securityDefinitions"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
-      "security": ["basic_sc"],
-      "securityDefinitions": {
-        "basic_sc": {"in": "header", "scheme": "basic"}
+      "accepted": true,
+      "document": {
+        "/security": [
+          "basic_sc"
+        ],
+        "/securityDefinitions": {
+          "basic_sc": {
+            "scheme": "basic",
+            "in": "header"
+          }
+        }
       }
     }
   },
@@ -41,6 +62,10 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "5.3.1"
   },
-  "tags": ["positive", "security", "thing-description-1.1"],
-  "digest": "sha256:734963ea5d9b375e10865d18a28b08607a6d40d424c41d9f7fb365f69e6524b6"
+  "tags": [
+    "positive",
+    "security",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:d26c39ca9122fb6ed76f5ee697ef510a997d5c74f117df38563fd1d5fde587bc"
 }

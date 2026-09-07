@@ -12,30 +12,50 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "6"
     },
-    "assertions": ["extension_member_preserved"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "extension_member_preserved"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": [
         "https://www.w3.org/2022/wot/td/v1.1",
-        {"example": "https://example.org/wot#"}
+        {
+          "example": "https://example.org/wot#"
+        }
       ],
       "id": "urn:example:thing:extension",
       "title": "Extension Thing",
       "securityDefinitions": {
-        "no_security": {"scheme": "nosec"}
+        "no_security": {
+          "scheme": "nosec"
+        }
       },
-      "security": ["no_security"],
+      "security": [
+        "no_security"
+      ],
       "example:profile": "synthetic"
-    }
+    },
+    "projection": [
+      "/@context",
+      "/example:profile"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
       "accepted": true,
-      "extension": {
-        "example:profile": "synthetic"
+      "document": {
+        "/@context": [
+          "https://www.w3.org/2022/wot/td/v1.1",
+          {
+            "example": "https://example.org/wot#"
+          }
+        ],
+        "/example:profile": "synthetic"
       }
     }
   },
@@ -45,6 +65,10 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "6"
   },
-  "tags": ["extension", "positive", "thing-description-1.1"],
-  "digest": "sha256:0bc0671a02b172cc2c4747a022f9d3f1fd7542fbf6596d57d38b175d39d22bbb"
+  "tags": [
+    "extension",
+    "positive",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:ca5e099370b1925651febcf090b61da0e8159d08a04a8b6ab9ff5d4a187653c3"
 }

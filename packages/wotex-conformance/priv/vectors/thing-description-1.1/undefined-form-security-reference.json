@@ -12,33 +12,59 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "6.3.4.2"
     },
-    "assertions": ["undefined_form_security_reference_rejected"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "undefined_form_security_reference_rejected"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": "https://www.w3.org/2022/wot/td/v1.1",
       "id": "urn:example:thing:undefined-form-security",
       "title": "Undefined Form Security Thing",
-      "securityDefinitions": {"nosec_sc": {"scheme": "nosec"}},
-      "security": ["nosec_sc"],
+      "securityDefinitions": {
+        "nosec_sc": {
+          "scheme": "nosec"
+        }
+      },
+      "security": [
+        "nosec_sc"
+      ],
       "properties": {
         "level": {
           "type": "number",
           "forms": [
             {
               "href": "https://example.test/properties/level",
-              "op": ["readproperty"],
-              "security": ["missing_sc"]
+              "op": [
+                "readproperty"
+              ],
+              "security": [
+                "missing_sc"
+              ]
             }
           ]
         }
       }
-    }
+    },
+    "projection": [
+      "/properties/level/forms/0/security"
+    ]
   },
   "expectation": {
     "operator": "exact",
-    "value": {"accepted": false, "code": "undefined_security_reference"}
+    "value": {
+      "accepted": false,
+      "errors": [
+        {
+          "code": "undefined_security_reference",
+          "phase": "semantic",
+          "path": "/properties/level/forms/0/security/0"
+        }
+      ]
+    }
   },
   "provenance": {
     "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
@@ -46,6 +72,11 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "6.3.4.2"
   },
-  "tags": ["form", "negative", "security", "thing-description-1.1"],
-  "digest": "sha256:85781e6145820d5c21bf3548f6450d1ac5f9a9efe083103b9e37160746d29966"
+  "tags": [
+    "form",
+    "negative",
+    "security",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:2459e26970fe601c40d694257936c6e5e5270b09c9dbc85671a2a86d8864eaa2"
 }

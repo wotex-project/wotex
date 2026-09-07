@@ -18,7 +18,7 @@ defmodule Wotex.Conformance.ReportTest do
     subject = TestFixtures.subject!(context.digest)
 
     target =
-      {StaticTarget, %{artifact_path: context.archive, actual: %{"ok" => true}, owner: self()}}
+      {StaticTarget, %{artifact_path: context.archive, actual: observation(), owner: self()}}
 
     options = [generated_at: ~U[2026-09-02 12:00:00Z], environment: %{"runtime" => "otp-28"}]
 
@@ -40,7 +40,7 @@ defmodule Wotex.Conformance.ReportTest do
     subject = TestFixtures.subject!(context.digest)
 
     target =
-      {StaticTarget, %{artifact_path: context.archive, actual: %{"ok" => true}, owner: self()}}
+      {StaticTarget, %{artifact_path: context.archive, actual: observation(), owner: self()}}
 
     assert {:error, error} =
              Runner.run(corpus, subject, target,
@@ -51,6 +51,10 @@ defmodule Wotex.Conformance.ReportTest do
     assert error.code == :sensitive_environment_key
     refute String.contains?(inspect(error), "must-not-enter-report")
     refute_receive {:target_request, _request}
+  end
+
+  defp observation do
+    %{"accepted" => true, "document" => %{"/title" => "Synthetic Thing"}}
   end
 
   defp corpus! do
@@ -69,8 +73,11 @@ defmodule Wotex.Conformance.ReportTest do
             "source" => "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/"
           }
         },
-        input: %{"document" => %{"title" => "Synthetic Thing"}},
-        expectation: %{"operator" => "exact", "value" => %{"ok" => true}},
+        input: %{
+          "document" => %{"title" => "Synthetic Thing"},
+          "projection" => ["/title"]
+        },
+        expectation: %{"operator" => "exact", "value" => observation()},
         provenance: %{
           "source" => "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
           "observed" => "2026-09-02"

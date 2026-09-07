@@ -12,8 +12,12 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "6.3.4.3"
     },
-    "assertions": ["undefined_combo_security_reference_rejected"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "undefined_combo_security_reference_rejected"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
@@ -21,18 +25,37 @@
       "id": "urn:example:thing:undefined-combo-security",
       "title": "Undefined Combo Security Thing",
       "securityDefinitions": {
-        "nosec_sc": {"scheme": "nosec"},
+        "nosec_sc": {
+          "scheme": "nosec"
+        },
         "combo_sc": {
           "scheme": "combo",
-          "oneOf": ["nosec_sc", "missing_sc"]
+          "oneOf": [
+            "nosec_sc",
+            "missing_sc"
+          ]
         }
       },
-      "security": ["combo_sc"]
-    }
+      "security": [
+        "combo_sc"
+      ]
+    },
+    "projection": [
+      "/securityDefinitions/combo_sc/oneOf"
+    ]
   },
   "expectation": {
     "operator": "exact",
-    "value": {"accepted": false, "code": "undefined_security_reference"}
+    "value": {
+      "accepted": false,
+      "errors": [
+        {
+          "code": "undefined_security_reference",
+          "phase": "semantic",
+          "path": "/securityDefinitions/combo_sc/oneOf/1"
+        }
+      ]
+    }
   },
   "provenance": {
     "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
@@ -40,6 +63,11 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "6.3.4.3"
   },
-  "tags": ["combo-security", "negative", "security", "thing-description-1.1"],
-  "digest": "sha256:db4d5de9822a6f87fa15fd7099a5697ea08716770bc8018d8e68456797d242ca"
+  "tags": [
+    "combo-security",
+    "negative",
+    "security",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:4100e8822723ff4cd38dcf1fc8c350b7aa6a65d570721d7b2519141636c3a6f2"
 }

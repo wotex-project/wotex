@@ -76,8 +76,14 @@ defmodule Wotex.Conformance.ContractsTest do
             "source" => "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/"
           }
         },
-        input: %{"value" => 1},
-        expectation: %{"operator" => "exact", "value" => %{"ok" => true}},
+        input: %{
+          "document" => %{"title" => "Synthetic Thing"},
+          "projection" => ["/title"]
+        },
+        expectation: %{
+          "operator" => "exact",
+          "value" => %{"accepted" => true, "document" => %{"/title" => "Synthetic Thing"}}
+        },
         provenance: %{
           "source" => "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
           "observed" => "2026-09-02"

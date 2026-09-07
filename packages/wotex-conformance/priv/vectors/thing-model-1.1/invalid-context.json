@@ -12,19 +12,35 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "9.2"
     },
-    "assertions": ["td11_context_required"],
-    "tags": ["thing-model-1.1"]
+    "assertions": [
+      "td11_context_required"
+    ],
+    "tags": [
+      "thing-model-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": "https://www.w3.org/2019/wot/td/v1",
       "@type": "tm:ThingModel",
       "title": "Legacy-context model"
-    }
+    },
+    "projection": [
+      "/@context"
+    ]
   },
   "expectation": {
     "operator": "exact",
-    "value": {"accepted": false, "code": "unsupported_context"}
+    "value": {
+      "accepted": false,
+      "errors": [
+        {
+          "code": "unsupported_context",
+          "phase": "semantic",
+          "path": "/@context"
+        }
+      ]
+    }
   },
   "provenance": {
     "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
@@ -32,6 +48,9 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "9.2"
   },
-  "tags": ["negative", "thing-model-1.1"],
-  "digest": "sha256:5b0d4f84b8620687d23614b9288528517754c6399432c8746bbf7e4464e1c4e9"
+  "tags": [
+    "negative",
+    "thing-model-1.1"
+  ],
+  "digest": "sha256:8310e4dbd3a2529d297a6287c7122c1b161bb22c1c1dd9655990e1ae83e6029f"
 }

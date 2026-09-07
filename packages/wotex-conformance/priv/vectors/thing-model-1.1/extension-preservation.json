@@ -12,25 +12,44 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "9.3.2"
     },
-    "assertions": ["extension_context_preserved", "extension_member_preserved"],
-    "tags": ["thing-model-1.1"]
+    "assertions": [
+      "extension_context_preserved",
+      "extension_member_preserved"
+    ],
+    "tags": [
+      "thing-model-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": [
         "https://www.w3.org/2022/wot/td/v1.1",
-        {"example": "https://example.org/wot#"}
+        {
+          "example": "https://example.org/wot#"
+        }
       ],
       "@type": "tm:ThingModel",
       "title": "Extended model",
       "example:profile": "synthetic"
-    }
+    },
+    "projection": [
+      "/@context",
+      "/example:profile"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
       "accepted": true,
-      "extension": {"example:profile": "synthetic"}
+      "document": {
+        "/@context": [
+          "https://www.w3.org/2022/wot/td/v1.1",
+          {
+            "example": "https://example.org/wot#"
+          }
+        ],
+        "/example:profile": "synthetic"
+      }
     }
   },
   "provenance": {
@@ -39,6 +58,10 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "9.3.2"
   },
-  "tags": ["extension", "positive", "thing-model-1.1"],
-  "digest": "sha256:e731326a46b4438f891202d35730add161b3d172d8ec13dc21e73c7797a57aab"
+  "tags": [
+    "extension",
+    "positive",
+    "thing-model-1.1"
+  ],
+  "digest": "sha256:357310f728c37e87f228f9557dac7b9b5852be0f51192249fd4619c300290deb"
 }

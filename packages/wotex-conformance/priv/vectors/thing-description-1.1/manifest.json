@@ -6,73 +6,73 @@
     {
       "id": "td11.parse.action-input-output",
       "file": "action-input-output.json",
-      "digest": "sha256:6c8dea7d869274701f62428407abb8cfbd8584f61caceb832a19e42b866cb4a9"
+      "digest": "sha256:affb8fdbabceb28716cd6b52d33e2f2680d05f0ecfd2cefa7b94c7e7f0d55ff1"
     },
     {
       "id": "td11.parse.affordance-categories",
       "file": "affordance-categories.json",
-      "digest": "sha256:b0cdd11f56feeed87dfd69b7b063a7bbe07d0d987c2a90a17b76f0a89618a4db"
+      "digest": "sha256:ef27ea05d20f8410bcda900d1feba65fbc91d9fa2fe1b06e712c0804e3390bbc"
     },
     {
       "id": "td11.parse.event-data",
       "file": "event-data.json",
-      "digest": "sha256:5063dbb694bf794c9457c0be6ae0438a05f55dfc189a97c00a8f277c0de066d8"
+      "digest": "sha256:2c477ebb5315bb8f22ae328ce75666bf98ab837bc0a3693f201e5af1c3cfcd43"
     },
     {
       "id": "td11.parse.extension-preservation",
       "file": "extension-preservation.json",
-      "digest": "sha256:0bc0671a02b172cc2c4747a022f9d3f1fd7542fbf6596d57d38b175d39d22bbb"
+      "digest": "sha256:ca5e099370b1925651febcf090b61da0e8159d08a04a8b6ab9ff5d4a187653c3"
     },
     {
       "id": "td11.parse.minimal",
       "file": "minimal-thing-description.json",
-      "digest": "sha256:d10214474ebeeca0ab204570a54c0d523a60ac2dc68724062dde988a33a3dcaa"
+      "digest": "sha256:62b4620c95578584800f14e1166f6b281b51e8acbc0306e77077a7c915db2a35"
     },
     {
       "id": "td11.parse.multilingual-metadata",
       "file": "multilingual-metadata.json",
-      "digest": "sha256:90f77eb0e4718bd0fc9c050390825ce3cbabdfbdfa71996b98928d5478cf314f"
+      "digest": "sha256:352ef804b5e34447c3475040cf080354096a6a69257dd5f7533bb460b08ec876"
     },
     {
       "id": "td11.parse.property-form",
       "file": "property-form.json",
-      "digest": "sha256:9468f281b8a7c8d15641bfe2039cc6af10852d8e756cb75c0d04994193faeb53"
+      "digest": "sha256:cf41bb79c9c4d2a34fbc7e53024ea9f9f97719d26d2cbc77b2635ac458f92cdc"
     },
     {
       "id": "td11.parse.security-definition",
       "file": "security-definition.json",
-      "digest": "sha256:734963ea5d9b375e10865d18a28b08607a6d40d424c41d9f7fb365f69e6524b6"
+      "digest": "sha256:d26c39ca9122fb6ed76f5ee697ef510a997d5c74f117df38563fd1d5fde587bc"
     },
     {
       "id": "td11.parse.thing-level-form",
       "file": "thing-level-form.json",
-      "digest": "sha256:86261c00502719eb2e2d04c4d6bb09f53034e29c3092232ab4be7df4b70e9cb7"
+      "digest": "sha256:ad4fcac134e021eaf99a1a677ec58ef495ae4e7ede46c09389cb4711af6cd936"
     },
     {
       "id": "td11.validate.missing-security-definitions",
       "file": "missing-security-definitions.json",
-      "digest": "sha256:aaf164cd2a67c8e569542086070a3601dc33a828957f4f63937251327b654cf4"
+      "digest": "sha256:f5721e07a993b40e49210f6fc23e98b17cd0fe86d3308cbe251432442e1967f0"
     },
     {
       "id": "td11.validate.missing-title",
       "file": "missing-title.json",
-      "digest": "sha256:dec2b4e9e55b3ce6cf58c30e5251fa40539cd4054f5f8aaed4a3690ff94705ac"
+      "digest": "sha256:8f2aab85c082d193efd529546372968936a24652513783f55f4b42afe756997e"
     },
     {
       "id": "td11.validate.undefined-combo-security-reference",
       "file": "undefined-combo-security-reference.json",
-      "digest": "sha256:db4d5de9822a6f87fa15fd7099a5697ea08716770bc8018d8e68456797d242ca"
+      "digest": "sha256:4100e8822723ff4cd38dcf1fc8c350b7aa6a65d570721d7b2519141636c3a6f2"
     },
     {
       "id": "td11.validate.undefined-form-security-reference",
       "file": "undefined-form-security-reference.json",
-      "digest": "sha256:85781e6145820d5c21bf3548f6450d1ac5f9a9efe083103b9e37160746d29966"
+      "digest": "sha256:2459e26970fe601c40d694257936c6e5e5270b09c9dbc85671a2a86d8864eaa2"
     },
     {
       "id": "td11.validate.undefined-security-reference",
       "file": "undefined-security-reference.json",
-      "digest": "sha256:3f089cb2d96d4fa706c54f4a2ebf093d160d403e8ca5049469d31f2c3a0a3682"
+      "digest": "sha256:9e987c11f72003db02f7a4dbe13e93713061536aad83667ff40feb07de66d721"
     }
   ],
-  "digest": "sha256:b5dc71665ea4d8183d8f52e3908e06ac5126d2ecbed7403114be11968a0c5332"
+  "digest": "sha256:1dc979f8599bbcd0e441bc09c7266169f42bee40384fbacd4ad1e1c2b8caac07"
 }

@@ -12,21 +12,43 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "5.3.1"
     },
-    "assertions": ["undefined_security_reference_rejected"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "undefined_security_reference_rejected"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": "https://www.w3.org/2022/wot/td/v1.1",
       "id": "urn:example:thing:undefined-security",
       "title": "Undefined Security Thing",
-      "securityDefinitions": {"nosec_sc": {"scheme": "nosec"}},
-      "security": ["missing_sc"]
-    }
+      "securityDefinitions": {
+        "nosec_sc": {
+          "scheme": "nosec"
+        }
+      },
+      "security": [
+        "missing_sc"
+      ]
+    },
+    "projection": [
+      "/security"
+    ]
   },
   "expectation": {
     "operator": "exact",
-    "value": {"accepted": false, "code": "undefined_security_reference"}
+    "value": {
+      "accepted": false,
+      "errors": [
+        {
+          "code": "undefined_security_reference",
+          "phase": "semantic",
+          "path": "/security/0"
+        }
+      ]
+    }
   },
   "provenance": {
     "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
@@ -34,6 +56,10 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "5.3.1"
   },
-  "tags": ["negative", "security", "thing-description-1.1"],
-  "digest": "sha256:3f089cb2d96d4fa706c54f4a2ebf093d160d403e8ca5049469d31f2c3a0a3682"
+  "tags": [
+    "negative",
+    "security",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:9e987c11f72003db02f7a4dbe13e93713061536aad83667ff40feb07de66d721"
 }

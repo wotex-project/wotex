@@ -9,7 +9,7 @@ defmodule Wotex.Conformance.CorpusTest do
     corpus = TestFixtures.corpus!()
 
     assert corpus.digest ==
-             "sha256:b5dc71665ea4d8183d8f52e3908e06ac5126d2ecbed7403114be11968a0c5332"
+             "sha256:1dc979f8599bbcd0e441bc09c7266169f42bee40384fbacd4ad1e1c2b8caac07"
 
     assert Enum.map(corpus.vectors, & &1.id) == Enum.sort(Enum.map(corpus.vectors, & &1.id))
     assert length(corpus.vectors) == 14
@@ -21,7 +21,7 @@ defmodule Wotex.Conformance.CorpusTest do
     assert corpus.id == "w3c.wot.thing-model.1.1.baseline"
 
     assert corpus.digest ==
-             "sha256:c964221ee78b775792aabaa9cf1ba668745486a9be9afcde0f4f232228b5577b"
+             "sha256:262e3369986eef648563b5693fdaadab3fa11fb3732cf4db9b7546e2a4af92a7"
 
     assert Enum.map(corpus.vectors, & &1.id) == Enum.sort(Enum.map(corpus.vectors, & &1.id))
     assert length(corpus.vectors) == 6

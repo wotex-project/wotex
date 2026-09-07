@@ -12,8 +12,13 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "9.3.2-9.3.3"
     },
-    "assertions": ["model_reference_preserved", "schema_definition_preserved"],
-    "tags": ["thing-model-1.1"]
+    "assertions": [
+      "model_reference_preserved",
+      "schema_definition_preserved"
+    ],
+    "tags": [
+      "thing-model-1.1"
+    ]
   },
   "input": {
     "document": {
@@ -21,19 +26,33 @@
       "@type": "tm:ThingModel",
       "title": "Referenced temperature model",
       "schemaDefinitions": {
-        "temperature": {"type": "number", "unit": "Cel"}
+        "temperature": {
+          "type": "number",
+          "unit": "Cel"
+        }
       },
       "properties": {
-        "temperature": {"tm:ref": "#/schemaDefinitions/temperature"}
+        "temperature": {
+          "tm:ref": "#/schemaDefinitions/temperature"
+        }
       }
-    }
+    },
+    "projection": [
+      "/properties/temperature/tm:ref",
+      "/schemaDefinitions/temperature"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
       "accepted": true,
-      "reference": "#/schemaDefinitions/temperature",
-      "schema_definition": {"type": "number", "unit": "Cel"}
+      "document": {
+        "/properties/temperature/tm:ref": "#/schemaDefinitions/temperature",
+        "/schemaDefinitions/temperature": {
+          "type": "number",
+          "unit": "Cel"
+        }
+      }
     }
   },
   "provenance": {
@@ -42,6 +61,10 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "9.3.2-9.3.3"
   },
-  "tags": ["composition", "positive", "thing-model-1.1"],
-  "digest": "sha256:80fdfd6182e46cec56f15ffea9e0703e52d523a9b0b338c8e03e8a21c6e6fdd9"
+  "tags": [
+    "composition",
+    "positive",
+    "thing-model-1.1"
+  ],
+  "digest": "sha256:0455ef4ccd15cc59b7eb1114f45cf1f3d330cf1feaf5d05616385f5601312cc6"
 }

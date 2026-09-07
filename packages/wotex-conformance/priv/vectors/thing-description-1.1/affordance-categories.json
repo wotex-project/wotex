@@ -12,8 +12,14 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "5.3.2"
     },
-    "assertions": ["action_affordance_recognized", "event_affordance_recognized", "property_affordance_recognized"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "action_affordance_recognized",
+      "event_affordance_recognized",
+      "property_affordance_recognized"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
@@ -21,41 +27,90 @@
       "id": "urn:example:thing:affordances",
       "title": "Affordance Thing",
       "securityDefinitions": {
-        "no_security": {"scheme": "nosec"}
+        "no_security": {
+          "scheme": "nosec"
+        }
       },
-      "security": ["no_security"],
+      "security": [
+        "no_security"
+      ],
       "properties": {
         "level": {
           "type": "integer",
           "readOnly": true,
           "forms": [
-            {"href": "https://example.com/things/affordances/properties/level", "op": "readproperty"}
+            {
+              "href": "https://example.com/things/affordances/properties/level",
+              "op": "readproperty"
+            }
           ]
         }
       },
       "actions": {
         "reset": {
           "forms": [
-            {"href": "https://example.com/things/affordances/actions/reset", "op": "invokeaction"}
+            {
+              "href": "https://example.com/things/affordances/actions/reset",
+              "op": "invokeaction"
+            }
           ]
         }
       },
       "events": {
         "changed": {
-          "data": {"type": "integer"},
+          "data": {
+            "type": "integer"
+          },
           "forms": [
-            {"href": "https://example.com/things/affordances/events/changed", "op": "subscribeevent"}
+            {
+              "href": "https://example.com/things/affordances/events/changed",
+              "op": "subscribeevent"
+            }
           ]
         }
       }
-    }
+    },
+    "projection": [
+      "/properties/level",
+      "/actions/reset",
+      "/events/changed"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
-      "actions": ["reset"],
-      "events": ["changed"],
-      "properties": ["level"]
+      "accepted": true,
+      "document": {
+        "/actions/reset": {
+          "forms": [
+            {
+              "href": "https://example.com/things/affordances/actions/reset",
+              "op": "invokeaction"
+            }
+          ]
+        },
+        "/events/changed": {
+          "data": {
+            "type": "integer"
+          },
+          "forms": [
+            {
+              "href": "https://example.com/things/affordances/events/changed",
+              "op": "subscribeevent"
+            }
+          ]
+        },
+        "/properties/level": {
+          "type": "integer",
+          "readOnly": true,
+          "forms": [
+            {
+              "href": "https://example.com/things/affordances/properties/level",
+              "op": "readproperty"
+            }
+          ]
+        }
+      }
     }
   },
   "provenance": {
@@ -64,6 +119,10 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "5.3.2"
   },
-  "tags": ["interaction-affordance", "positive", "thing-description-1.1"],
-  "digest": "sha256:b0cdd11f56feeed87dfd69b7b063a7bbe07d0d987c2a90a17b76f0a89618a4db"
+  "tags": [
+    "interaction-affordance",
+    "positive",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:ef27ea05d20f8410bcda900d1feba65fbc91d9fa2fe1b06e712c0804e3390bbc"
 }

@@ -22,6 +22,9 @@ target receives only subject identity, claim, vector identity/input, and bounded
 execution context. It returns an observation or an unsupported outcome; it
 cannot return pass or fail.
 
+The observation shape itself is normalized per operation, and each vector
+declares the projection its observation reports; see decision 0003.
+
 ## Consequences
 
 - Subject packages are absent from production dependencies.

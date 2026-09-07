@@ -7,7 +7,7 @@ defmodule Wotex.Conformance.SchemaTest do
     schema_directory = Path.expand("../../../priv/schemas", __DIR__)
     schemas = Path.wildcard(Path.join(schema_directory, "*.schema.json"))
 
-    assert length(schemas) == 8
+    assert length(schemas) == 10
 
     for path <- schemas do
       assert {:ok, schema} = path |> File.read!() |> Jason.decode()

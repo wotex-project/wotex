@@ -24,6 +24,7 @@ specifications:
       - Wotex.Conformance.Error
       - Wotex.Conformance.Expectation
       - Wotex.Conformance.Input
+      - Wotex.Conformance.Observation
       - Wotex.Conformance.Pointer
       - Wotex.Conformance.Report
       - Wotex.Conformance.Result
@@ -46,4 +47,4 @@ specifications:
       - test/wotex/conformance/runner_test.exs
       - test/wotex/conformance/schema_test.exs
       - test/wotex/conformance/validation_matrix_test.exs
-    compatibility_classification: Package 0.1.0; schema 1.0 and protocol 1.0 compatibility are independently versioned and must not be inferred from the package version.
+    compatibility_classification: Package 0.1.0; schema 1.0 and protocol 1.0 compatibility are independently versioned and must not be inferred from the package version. The normalized protocol observation shape and the declared vector projection are pre-release corrections inside schema 1.0 and protocol 1.0; they change every bundled vector and corpus digest and predate any published release.

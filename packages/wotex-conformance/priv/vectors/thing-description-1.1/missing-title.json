@@ -12,24 +12,41 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "5.3.1"
     },
-    "assertions": ["missing_required_title_rejected"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "missing_required_title_rejected"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": "https://www.w3.org/2022/wot/td/v1.1",
       "id": "urn:example:thing:missing-title",
       "securityDefinitions": {
-        "no_security": {"scheme": "nosec"}
+        "no_security": {
+          "scheme": "nosec"
+        }
       },
-      "security": ["no_security"]
-    }
+      "security": [
+        "no_security"
+      ]
+    },
+    "projection": [
+      "/title"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
       "accepted": false,
-      "code": "missing_required_title"
+      "errors": [
+        {
+          "code": "schema_violation",
+          "phase": "schema",
+          "path": "/title"
+        }
+      ]
     }
   },
   "provenance": {
@@ -38,6 +55,9 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "5.3.1"
   },
-  "tags": ["negative", "thing-description-1.1"],
-  "digest": "sha256:dec2b4e9e55b3ce6cf58c30e5251fa40539cd4054f5f8aaed4a3690ff94705ac"
+  "tags": [
+    "negative",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:8f2aab85c082d193efd529546372968936a24652513783f55f4b42afe756997e"
 }

@@ -12,46 +12,80 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "5.3.2.3"
     },
-    "assertions": ["event_data_and_form_preserved"],
-    "tags": ["thing-description-1.1"]
+    "assertions": [
+      "event_data_and_form_preserved"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": "https://www.w3.org/2022/wot/td/v1.1",
       "id": "urn:example:thing:event",
       "title": "Event Thing",
-      "securityDefinitions": {"nosec_sc": {"scheme": "nosec"}},
-      "security": ["nosec_sc"],
+      "securityDefinitions": {
+        "nosec_sc": {
+          "scheme": "nosec"
+        }
+      },
+      "security": [
+        "nosec_sc"
+      ],
       "events": {
         "alarm": {
           "data": {
             "type": "object",
             "properties": {
-              "severity": {"type": "integer"},
-              "message": {"type": "string"}
+              "severity": {
+                "type": "integer"
+              },
+              "message": {
+                "type": "string"
+              }
             }
           },
           "forms": [
-            {"href": "https://example.test/events/alarm", "op": ["subscribeevent"]}
+            {
+              "href": "https://example.test/events/alarm",
+              "op": [
+                "subscribeevent"
+              ]
+            }
           ]
         }
       }
-    }
+    },
+    "projection": [
+      "/events/alarm/data",
+      "/events/alarm/forms"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
-      "data": {
-        "properties": {
-          "message": {"type": "string"},
-          "severity": {"type": "integer"}
+      "accepted": true,
+      "document": {
+        "/events/alarm/data": {
+          "type": "object",
+          "properties": {
+            "severity": {
+              "type": "integer"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
         },
-        "type": "object"
-      },
-      "forms": [
-        {"href": "https://example.test/events/alarm", "op": ["subscribeevent"]}
-      ],
-      "name": "alarm"
+        "/events/alarm/forms": [
+          {
+            "href": "https://example.test/events/alarm",
+            "op": [
+              "subscribeevent"
+            ]
+          }
+        ]
+      }
     }
   },
   "provenance": {
@@ -60,6 +94,11 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "5.3.2.3"
   },
-  "tags": ["event", "form", "positive", "thing-description-1.1"],
-  "digest": "sha256:5063dbb694bf794c9457c0be6ae0438a05f55dfc189a97c00a8f277c0de066d8"
+  "tags": [
+    "event",
+    "form",
+    "positive",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:2c477ebb5315bb8f22ae328ce75666bf98ab837bc0a3693f201e5af1c3cfcd43"
 }

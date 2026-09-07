@@ -5,7 +5,9 @@ defmodule Wotex.Conformance.Runner do
 
   Results are ordered by vector ID regardless of corpus file order. Archive
   verification failure is recorded as `infrastructure_error` for every selected
-  vector; excluded vectors remain `not_run`.
+  vector; excluded vectors remain `not_run`. An observation that does not satisfy
+  the normalized shape of its operation is a protocol failure recorded as
+  `infrastructure_error`, never as `fail`.
   """
 
   alias Wotex.Conformance.{
@@ -15,6 +17,7 @@ defmodule Wotex.Conformance.Runner do
     Environment,
     Error,
     Input,
+    Observation,
     Report,
     Result,
     Subject,
@@ -143,10 +146,10 @@ defmodule Wotex.Conformance.Runner do
   end
 
   defp evaluate_observation(vector, actual, duration_us) do
-    case Canonical.digest(actual) do
-      {:ok, digest} ->
-        classify(vector, actual, digest, duration_us)
-
+    with {:ok, _normalized} <- Observation.validate(vector.claim.operation, actual),
+         {:ok, digest} <- Canonical.digest(actual) do
+      classify(vector, actual, digest, duration_us)
+    else
       {:error, _error} ->
         result!(vector, :infrastructure_error,
           code: "invalid_target_observation",

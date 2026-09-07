@@ -2,10 +2,24 @@ defmodule Wotex.Conformance.Vector do
   @moduledoc """
   Immutable input and runner-owned expectation for one conformance claim.
 
+  A vector for a document operation declares its input document and the
+  projection its normalized observation reports; see
+  `Wotex.Conformance.Observation`. The declared input, including the
+  projection, is the only vector material the target receives.
+
   `target_request/3` intentionally omits the expectation and provenance.
   """
 
-  alias Wotex.Conformance.{Canonical, Claim, Error, Expectation, Input, Subject, Value}
+  alias Wotex.Conformance.{
+    Canonical,
+    Claim,
+    Error,
+    Expectation,
+    Input,
+    Observation,
+    Subject,
+    Value
+  }
 
   @enforce_keys [:id, :revision, :claim, :input, :expectation, :provenance, :digest]
   defstruct [:id, :revision, :claim, :input, :expectation, :provenance, :digest, tags: []]
@@ -36,9 +50,11 @@ defmodule Wotex.Conformance.Vector do
          {:ok, claim_input} <- Input.required(input, :claim),
          {:ok, claim} <- Claim.from_map(claim_input),
          {:ok, value} <- Input.required(input, :input),
-         {:ok, validated_input} <- Value.validate(value),
+         {:ok, validated} <- Value.validate(value),
+         {:ok, validated_input} <- Observation.validate_input(claim.operation, validated),
          {:ok, expectation_input} <- Input.required(input, :expectation),
          {:ok, expectation} <- Expectation.from_map(expectation_input),
+         {:ok, _observation} <- Observation.validate(claim.operation, expectation.value),
          {:ok, provenance_input} <- Input.required(input, :provenance),
          {:ok, provenance} <- validate_provenance(provenance_input),
          {:ok, tags} <- validate_tags(Input.optional(input, :tags, [])),

@@ -12,8 +12,13 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "9.2"
     },
-    "assertions": ["thing_model_type_recognized", "model_metadata_preserved"],
-    "tags": ["thing-model-1.1"]
+    "assertions": [
+      "thing_model_type_recognized",
+      "model_metadata_preserved"
+    ],
+    "tags": [
+      "thing-model-1.1"
+    ]
   },
   "input": {
     "document": {
@@ -22,18 +27,30 @@
       "id": "urn:example:model:thermostat",
       "title": "Thermostat model",
       "properties": {
-        "temperature": {"type": "number", "unit": "Cel", "readOnly": true}
+        "temperature": {
+          "type": "number",
+          "unit": "Cel",
+          "readOnly": true
+        }
       }
-    }
+    },
+    "projection": [
+      "/@context",
+      "/@type",
+      "/id",
+      "/title"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
       "accepted": true,
-      "context": "https://www.w3.org/2022/wot/td/v1.1",
-      "id": "urn:example:model:thermostat",
-      "title": "Thermostat model",
-      "type": "tm:ThingModel"
+      "document": {
+        "/@context": "https://www.w3.org/2022/wot/td/v1.1",
+        "/@type": "tm:ThingModel",
+        "/id": "urn:example:model:thermostat",
+        "/title": "Thermostat model"
+      }
     }
   },
   "provenance": {
@@ -42,6 +59,9 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "9.2"
   },
-  "tags": ["positive", "thing-model-1.1"],
-  "digest": "sha256:2563da8ea0b99dbaa7fc869dd28c7566062f502a84da32f65997024bbf6df576"
+  "tags": [
+    "positive",
+    "thing-model-1.1"
+  ],
+  "digest": "sha256:584d336d2873caecc61942a38782faca681b331032f89693355aa5e9091f6f79"
 }

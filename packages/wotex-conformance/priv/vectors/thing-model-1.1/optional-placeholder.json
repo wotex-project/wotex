@@ -12,8 +12,13 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "9.3.4-9.3.5"
     },
-    "assertions": ["optional_pointer_preserved", "placeholder_preserved"],
-    "tags": ["thing-model-1.1"]
+    "assertions": [
+      "optional_pointer_preserved",
+      "placeholder_preserved"
+    ],
+    "tags": [
+      "thing-model-1.1"
+    ]
   },
   "input": {
     "document": {
@@ -26,15 +31,25 @@
           "maximum": "{{MAX_TEMPERATURE}}"
         }
       },
-      "tm:optional": ["/properties/temperature"]
-    }
+      "tm:optional": [
+        "/properties/temperature"
+      ]
+    },
+    "projection": [
+      "/tm:optional",
+      "/properties/temperature/maximum"
+    ]
   },
   "expectation": {
     "operator": "exact",
     "value": {
       "accepted": true,
-      "optional": ["/properties/temperature"],
-      "placeholder": "{{MAX_TEMPERATURE}}"
+      "document": {
+        "/properties/temperature/maximum": "{{MAX_TEMPERATURE}}",
+        "/tm:optional": [
+          "/properties/temperature"
+        ]
+      }
     }
   },
   "provenance": {
@@ -43,6 +58,10 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "9.3.4-9.3.5"
   },
-  "tags": ["modeling-tools", "positive", "thing-model-1.1"],
-  "digest": "sha256:09bf7b1ea74e959d2bf5819968e1a1f41e6e02e6a20a983c365b65112045b576"
+  "tags": [
+    "modeling-tools",
+    "positive",
+    "thing-model-1.1"
+  ],
+  "digest": "sha256:d8e9d9267d820a95310e7d10963a65a084c0884b1b029862c4dfe43efdb239b9"
 }

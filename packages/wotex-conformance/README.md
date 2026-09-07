@@ -22,7 +22,9 @@ executable.
 
 The bundled baselines contain fourteen Thing Description 1.1 vectors and six
 Thing Model 1.1 vectors. Each is claim-scoped synthetic evidence; corpus size
-is not a whole-standard conformance or interoperability claim.
+is not a whole-standard conformance or interoperability claim. Negative vectors
+expect the bounded rejection identifiers an implementation emits for the cited
+clause, not invented codes.
 
 ## Installation
 
@@ -100,6 +102,33 @@ Arguments may contain `{subject_archive}` to receive the verified absolute
 archive path. The target response must echo the vector ID and declare either an
 `observed` value or an `unsupported` outcome. The complete protocol and failure
 codes are specified in [`WCF.01`](docs/specs/WCF.01-conformance-runner.md).
+
+### Normalized observations
+
+Vectors for `thing_description.parse`, `thing_description.validate`,
+`thing_model.parse`, and `thing_model.validate` declare their input as a
+document plus a projection of RFC 6901 JSON Pointers, and expect one normalized
+observation:
+
+```json
+{"accepted": true, "document": {"/title": "Minimal Thing"}}
+```
+
+```json
+{
+  "accepted": false,
+  "errors": [{"code": "schema_violation", "phase": "schema", "path": "/title"}]
+}
+```
+
+An accepted observation maps each declared pointer that resolves to its member
+value and omits the pointers that do not; an empty projection declares the whole
+accepted document. Rejection errors carry only bounded `code`, `phase`, and
+`path` identifiers, unique and sorted by path and code, because messages are not
+a stable interface. The projection travels to the target inside `vector.input`,
+so an independent adapter derives the observation from the request alone and
+never needs the runner-owned expectation. A non-normalized observation is an
+`infrastructure_error`, not a `fail`.
 
 ## Security Boundary
 

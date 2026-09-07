@@ -12,19 +12,35 @@
       "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
       "section": "9.2"
     },
-    "assertions": ["invalid_thing_model_type_rejected"],
-    "tags": ["thing-model-1.1"]
+    "assertions": [
+      "invalid_thing_model_type_rejected"
+    ],
+    "tags": [
+      "thing-model-1.1"
+    ]
   },
   "input": {
     "document": {
       "@context": "https://www.w3.org/2022/wot/td/v1.1",
       "@type": "ThingModel",
       "title": "Invalid model"
-    }
+    },
+    "projection": [
+      "/@type"
+    ]
   },
   "expectation": {
     "operator": "exact",
-    "value": {"accepted": false, "code": "invalid_thing_model_type"}
+    "value": {
+      "accepted": false,
+      "errors": [
+        {
+          "code": "schema_violation",
+          "phase": "schema",
+          "path": "/@type"
+        }
+      ]
+    }
   },
   "provenance": {
     "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
@@ -32,6 +48,9 @@
     "classification": "project_authored_synthetic_vector",
     "standard_section": "9.2"
   },
-  "tags": ["negative", "thing-model-1.1"],
-  "digest": "sha256:e3d2961252815f993b7c8a02b71811a230fa5a1230b8071b098367f007be1d80"
+  "tags": [
+    "negative",
+    "thing-model-1.1"
+  ],
+  "digest": "sha256:5cc013ec738e610c342d6982769ee449e7fbf3950c12f1e3f2be4e35ef4892d4"
 }

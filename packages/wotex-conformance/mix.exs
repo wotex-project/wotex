@@ -118,6 +118,9 @@ defmodule WotexConformance.MixProject do
         "docs/specs/WCF.01-conformance-runner.md": [title: "Conformance runner"],
         "docs/decisions/0001-external-target-isolation.md": [title: "External target isolation"],
         "docs/decisions/0002-evidence-digests.md": [title: "Evidence digests"],
+        "docs/decisions/0003-normalized-observations.md": [
+          title: "Normalized observations"
+        ],
         "docs/provenance/source.md": [title: "Source provenance"],
         "docs/provenance/standards.md": [title: "Standards provenance"],
         "CHANGELOG.md": [title: "Changelog"],
@@ -133,6 +136,7 @@ defmodule WotexConformance.MixProject do
       groups_for_modules: [
         Contracts: [
           Wotex.Conformance.Claim,
+          Wotex.Conformance.Observation,
           Wotex.Conformance.Expectation,
           Wotex.Conformance.Subject,
           Wotex.Conformance.Vector,
