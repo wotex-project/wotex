@@ -34,6 +34,16 @@ WOTEX_PATH_DEPS=1 mix run -e 'IO.inspect(Wotex.Lab.Examples.Thermal.run())'
 WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
+`mix check` needs no container runtime: the MQTT broker lane is tagged
+`:broker` and excluded unless `WOTEX_LAB_BROKER=1` is set. Run it explicitly
+with Docker available and the `eclipse-mosquitto:2` image pullable; each test
+starts a disposable broker on an ephemeral loopback port, uses its own topic
+prefix and removes the container when the suite ends.
+
+```sh
+WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 MIX_ENV=test mix test
+```
+
 Development expects `wotex` and `wotex-nx` checkouts alongside Lab. This mode is
 local source evidence. It does not satisfy the clone-free acceptance gate.
 The intended Hex dependency is `{:wotex_lab, "~> 0.1.0"}`; this README does not
@@ -114,8 +124,13 @@ credential adapters. The Directory ETS store, explicit authorization, clock and
 identifier ports and their contract suite are implemented too, as is the Req
 HTTP client with its bounded SSE parser and linked stream session (`req` is an
 optional dependency selected by the host), and the external conformance
-target that runs the core package through the conformance protocol. MQTT uses EMQTT and a disposable broker;
-the SQLite Directory store uses Exqlite. Those are accepted reference choices,
+target that runs the core package through the conformance protocol. The MQTT
+lane is implemented too: `Wotex.Lab.Adapters.MQTT.EmqttClient` and its linked
+`Adapters.MQTT.Session` carry runtime requests, retained reads, publications
+and subscriptions over EMQTT (`emqtt` is an optional dependency selected by
+the host) against a disposable `eclipse-mosquitto:2` broker. TLS, broker ACL
+isolation, Last Will, session expiry and power loss remain planned there.
+The SQLite Directory store uses Exqlite. Those are accepted reference choices,
 not mandatory dependencies of the base library or implementations already
 supplied here. `ex_maude` earns a specific
 place by exploring modeled conflicting control decisions and unsafe transition

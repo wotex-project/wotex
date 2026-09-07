@@ -14,6 +14,13 @@
 - Req HTTP client with a bounded incremental SSE parser and a linked stream
   session, exercised over real sockets against a disposable Bandit server
   through runtime subscriptions.
+- EMQTT MQTT client adapter with a linked broker session: raw deliveries and
+  `:transport_down` to the runtime subscription owner, a bounded retained read
+  that separates a missing retained message from a timeout, publish and read
+  connections that are always torn down, no automatic reconnect and no
+  credential in session state, handles, logs or errors. Exercised against a
+  disposable `eclipse-mosquitto:2` broker behind `WOTEX_LAB_BROKER=1` and,
+  without a container runtime, against a scripted in-BEAM MQTT 5 peer.
 - External conformance target exposing the core package as a subject through
   the runner protocol; both bundled corpora pass over a real port.
 - Instance-owned ETS Directory repository with explicit authorization, clock
