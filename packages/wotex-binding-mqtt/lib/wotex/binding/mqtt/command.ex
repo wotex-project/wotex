@@ -4,6 +4,10 @@ defmodule Wotex.Binding.MQTT.Command do
 
   Publish commands contain one Topic Name and an encoded JSON payload.
   Subscribe and unsubscribe commands contain one or more Topic Filters.
+
+  Every command also carries the JSON payload byte limit that applies to it, so
+  a client port can reject an oversized Application Message before it reaches
+  the subscription owner.
   """
 
   alias Wotex.Binding.MQTT.{Broker, Error, JSON, QoS, Topic}
@@ -14,7 +18,17 @@ defmodule Wotex.Binding.MQTT.Command do
   @default_max_payload_bytes 1_048_576
 
   @derive {Inspect,
-           only: [:broker, :packet, :operation, :topic, :filters, :qos, :retain, :content_type]}
+           only: [
+             :broker,
+             :packet,
+             :operation,
+             :topic,
+             :filters,
+             :qos,
+             :retain,
+             :content_type,
+             :max_payload_bytes
+           ]}
   @opaque t :: %__MODULE__{
             broker: Broker.t(),
             packet: :publish | :subscribe | :unsubscribe,
@@ -24,7 +38,8 @@ defmodule Wotex.Binding.MQTT.Command do
             qos: QoS.t() | nil,
             retain: boolean(),
             payload: binary() | nil,
-            content_type: String.t()
+            content_type: String.t(),
+            max_payload_bytes: pos_integer()
           }
 
   @enforce_keys [
@@ -36,7 +51,8 @@ defmodule Wotex.Binding.MQTT.Command do
     :qos,
     :retain,
     :payload,
-    :content_type
+    :content_type,
+    :max_payload_bytes
   ]
   defstruct @enforce_keys
 
@@ -50,21 +66,18 @@ defmodule Wotex.Binding.MQTT.Command do
     with :ok <- Topic.validate_name(topic),
          {:ok, qos} <- QoS.normalize(Keyword.get(opts, :qos, 0)),
          {:ok, retain} <- validate_retain(Keyword.get(opts, :retain, false)),
-         {:ok, max_bytes} <- max_payload_bytes(opts),
+         {:ok, max_bytes} <- payload_limit(opts),
          {:ok, content_type} <- normalize_content_type(opts),
          {:ok, payload} <- JSON.encode(value, max_bytes) do
       {:ok,
-       build(
-         broker,
-         :publish,
-         operation,
-         topic,
-         [],
-         qos,
-         retain,
-         payload,
-         content_type
-       )}
+       build(broker, :publish, operation, %{
+         topic: topic,
+         qos: qos,
+         retain: retain,
+         payload: payload,
+         content_type: content_type,
+         max_payload_bytes: max_bytes
+       })}
     end
   end
 
@@ -81,19 +94,16 @@ defmodule Wotex.Binding.MQTT.Command do
     with {:ok, normalized_filters} <- Topic.normalize_filters(filters),
          {:ok, qos} <- QoS.normalize(Keyword.get(opts, :qos, 0)),
          {:ok, retain} <- validate_retain(Keyword.get(opts, :retain, false)),
+         {:ok, max_bytes} <- payload_limit(opts),
          {:ok, content_type} <- normalize_content_type(opts) do
       {:ok,
-       build(
-         broker,
-         :subscribe,
-         operation,
-         nil,
-         normalized_filters,
-         qos,
-         retain,
-         nil,
-         content_type
-       )}
+       build(broker, :subscribe, operation, %{
+         filters: normalized_filters,
+         qos: qos,
+         retain: retain,
+         content_type: content_type,
+         max_payload_bytes: max_bytes
+       })}
     end
   end
 
@@ -109,19 +119,15 @@ defmodule Wotex.Binding.MQTT.Command do
       when operation in @unsubscribe_operations and is_list(opts) do
     with {:ok, normalized_filters} <- Topic.normalize_filters(filters),
          {:ok, retain} <- validate_retain(Keyword.get(opts, :retain, false)),
+         {:ok, max_bytes} <- payload_limit(opts),
          {:ok, content_type} <- normalize_content_type(opts) do
       {:ok,
-       build(
-         broker,
-         :unsubscribe,
-         operation,
-         nil,
-         normalized_filters,
-         nil,
-         retain,
-         nil,
-         content_type
-       )}
+       build(broker, :unsubscribe, operation, %{
+         filters: normalized_filters,
+         retain: retain,
+         content_type: content_type,
+         max_payload_bytes: max_bytes
+       })}
     end
   end
 
@@ -164,27 +170,22 @@ defmodule Wotex.Binding.MQTT.Command do
   @spec content_type(t()) :: String.t()
   def content_type(%__MODULE__{content_type: content_type}), do: content_type
 
-  defp build(
-         broker,
-         packet,
-         operation,
-         topic,
-         filters,
-         qos,
-         retain,
-         payload,
-         content_type
-       ) do
+  @doc "Returns the JSON payload byte limit that applies to this command."
+  @spec max_payload_bytes(t()) :: pos_integer()
+  def max_payload_bytes(%__MODULE__{max_payload_bytes: max_payload_bytes}), do: max_payload_bytes
+
+  defp build(broker, packet, operation, attributes) do
     %__MODULE__{
       broker: broker,
       packet: packet,
       operation: operation,
-      topic: topic,
-      filters: filters,
-      qos: qos,
-      retain: retain,
-      payload: payload,
-      content_type: content_type
+      topic: Map.get(attributes, :topic),
+      filters: Map.get(attributes, :filters, []),
+      qos: Map.get(attributes, :qos),
+      retain: attributes.retain,
+      payload: Map.get(attributes, :payload),
+      content_type: attributes.content_type,
+      max_payload_bytes: attributes.max_payload_bytes
     }
   end
 
@@ -193,7 +194,7 @@ defmodule Wotex.Binding.MQTT.Command do
   defp validate_retain(_value),
     do: {:error, Error.new(:invalid_retain, :command, :protocol, "mqv:retain must be boolean")}
 
-  defp max_payload_bytes(opts) do
+  defp payload_limit(opts) do
     case Keyword.get(opts, :max_payload_bytes, @default_max_payload_bytes) do
       value when is_integer(value) and value > 0 ->
         {:ok, value}

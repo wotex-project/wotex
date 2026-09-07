@@ -19,6 +19,26 @@ defmodule Wotex.Binding.MQTT.JSONTest do
     assert {:error, %Error{code: :received_payload_too_large}} = JSON.decode("{}", 1)
   end
 
+  test "rejects hostile structure through the core admission limits" do
+    duplicate = ~s({"value":1,"value":2})
+
+    assert {:error, %Error{code: :json_decode_failed, class: :protocol, details: %{cause: cause}}} =
+             JSON.decode(duplicate, 100)
+
+    assert cause == :duplicate_member
+
+    deep = String.duplicate("[", 200) <> String.duplicate("]", 200)
+
+    assert {:error, %Error{code: :json_decode_failed, details: %{cause: :depth_limit_exceeded}}} =
+             JSON.decode(deep, 1_000)
+
+    refute inspect(JSON.decode(duplicate, 100)) =~ "value"
+  end
+
+  test "encodes the canonical Wotex form with sorted object keys" do
+    assert {:ok, ~s({"a":1,"b":2})} = JSON.encode(%{"b" => 2, "a" => 1}, 100)
+  end
+
   test "normalizes codec failures without external values" do
     assert {:error, %Error{code: :json_encode_failed, details: %{}}} = JSON.encode(self(), 100)
     assert {:error, %Error{code: :json_decode_failed, details: %{}}} = JSON.decode("{", 100)

@@ -89,10 +89,12 @@ defmodule Wotex.Binding.MQTT.MappingTest do
     assert {:ok, subscribe} = Mapping.command(observe, 100)
     assert Command.packet(subscribe) == :subscribe
     assert Command.filters(subscribe) == ["things/events/+", "things/alerts/#"]
+    assert Command.max_payload_bytes(subscribe) == 100
 
     assert {:ok, unsubscribe} = Mapping.command(stop, 100)
     assert Command.packet(unsubscribe) == :unsubscribe
     assert Command.qos(unsubscribe) == nil
+    assert Command.max_payload_bytes(unsubscribe) == 100
   end
 
   test "requires retained semantics for readproperty" do

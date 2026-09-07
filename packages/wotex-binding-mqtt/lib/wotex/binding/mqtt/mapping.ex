@@ -143,19 +143,21 @@ defmodule Wotex.Binding.MQTT.Mapping do
     )
   end
 
-  defp build_command(broker, :subscribe, request, form, _max_payload_bytes) do
+  defp build_command(broker, :subscribe, request, form, max_payload_bytes) do
     Command.subscribe(broker, request.operation, form["mqv:filter"],
       qos: Map.get(form, "mqv:qos", 0),
       retain: Map.get(form, "mqv:retain", false),
-      content_type: content_type(form)
+      content_type: content_type(form),
+      max_payload_bytes: max_payload_bytes
     )
   end
 
-  defp build_command(broker, :unsubscribe, request, form, _max_payload_bytes) do
+  defp build_command(broker, :unsubscribe, request, form, max_payload_bytes) do
     with :ok <- validate_unsubscribe_qos(form) do
       Command.unsubscribe(broker, request.operation, form["mqv:filter"],
         retain: Map.get(form, "mqv:retain", false),
-        content_type: content_type(form)
+        content_type: content_type(form),
+        max_payload_bytes: max_payload_bytes
       )
     end
   end

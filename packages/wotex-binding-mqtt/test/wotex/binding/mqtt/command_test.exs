@@ -26,6 +26,7 @@ defmodule Wotex.Binding.MQTT.CommandTest do
     assert Command.qos(command) == 1
     assert Command.retain?(command)
     assert Command.content_type(command) == "application/json"
+    assert Command.max_payload_bytes(command) == 1_048_576
     assert {:ok, %{"value" => 42}} = JSON.decode(Command.payload(command), 100)
     refute inspect(command) =~ Command.payload(command)
   end
@@ -40,6 +41,13 @@ defmodule Wotex.Binding.MQTT.CommandTest do
     assert Command.qos(subscribe) == 2
     refute Command.retain?(subscribe)
     assert Command.payload(subscribe) == nil
+    assert Command.max_payload_bytes(subscribe) == 1_048_576
+
+    assert {:ok, bounded} =
+             Command.subscribe(broker, :observeproperty, "things/+", max_payload_bytes: 512)
+
+    assert Command.max_payload_bytes(bounded) == 512
+    assert inspect(bounded) =~ "max_payload_bytes: 512"
 
     assert {:ok, unsubscribe} =
              Command.unsubscribe(broker, :unobserveproperty, "things/+", retain: true)
@@ -106,6 +114,11 @@ defmodule Wotex.Binding.MQTT.CommandTest do
       Command.subscribe(broker, :observeproperty, "things/#", retain: :yes),
       :invalid_retain
     )
+
+    assert_error(
+      Command.subscribe(broker, :observeproperty, "things/#", max_payload_bytes: 0),
+      :invalid_payload_limit
+    )
   end
 
   test "rejects invalid unsubscription inputs", %{broker: broker} do
@@ -116,6 +129,11 @@ defmodule Wotex.Binding.MQTT.CommandTest do
     assert_error(
       Command.unsubscribe(broker, :unobserveproperty, "things/#", retain: :yes),
       :invalid_retain
+    )
+
+    assert_error(
+      Command.unsubscribe(broker, :unobserveproperty, "things/#", max_payload_bytes: :all),
+      :invalid_payload_limit
     )
   end
 
