@@ -82,7 +82,10 @@ Schema revision `1.0` is represented by:
 
 The Elixir constructors are the executable validation authority for this
 release. JSON Schemas are portable mirrors. A disagreement is a release blocker
-and requires both forms to be corrected in one change.
+and requires both forms to be corrected in one change. The mirrors are proven
+by validating the bundled corpora, a produced report, and one protocol exchange
+against them in the test suite; a mirror that no artifact exercises is not
+evidence.
 
 ## Claim contract
 
@@ -469,8 +472,11 @@ one commit and package archive:
 4. proof that archive digest mismatch starts no target;
 5. proof that `Application.spec(:wotex_conformance, :mod)` is empty;
 6. production dependency allowlist and no path dependencies;
-7. documentation and package-archive builds; and
-8. tracked-text review for consumer names, internal paths, secrets, and copied
+7. schema-mirror validation of every bundled vector, claim, corpus manifest,
+   normalized observation, produced report and result, target request, and both
+   target response outcomes, including negative controls;
+8. documentation and package-archive builds; and
+9. tracked-text review for consumer names, internal paths, secrets, and copied
    non-public material.
 
 ## Standards sources

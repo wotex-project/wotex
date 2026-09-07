@@ -43,6 +43,7 @@ specifications:
       - test/wotex/conformance/conventions_test.exs
       - test/wotex/conformance/corpus_test.exs
       - test/wotex/conformance/external_lifecycle_test.exs
+      - test/wotex/conformance/observation_test.exs
       - test/wotex/conformance/report_test.exs
       - test/wotex/conformance/runner_test.exs
       - test/wotex/conformance/schema_test.exs
