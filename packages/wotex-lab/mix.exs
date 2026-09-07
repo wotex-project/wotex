@@ -38,6 +38,7 @@ defmodule WotexLab.MixProject do
       wotex_dependency(:wotex_binding_http, "wotex-binding-http"),
       wotex_dependency(:wotex_conformance, "wotex-conformance"),
       {:nx, "~> 0.13.1"},
+      {:exqlite, "~> 0.40"},
       {:req, "~> 0.7.4", optional: true},
       {:bandit, "~> 1.12", only: :test},
       {:plug, "~> 1.18", only: :test},
