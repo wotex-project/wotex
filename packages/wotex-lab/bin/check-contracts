@@ -1,0 +1,99 @@
+#!/usr/bin/env ruby
+# Checks local contracts and the pinned snapshot; performs no network access.
+require 'yaml'
+require 'json'
+require 'pathname'
+require 'digest'
+
+Dir.chdir(File.expand_path('..', __dir__))
+root = Pathname.pwd
+check = ->(condition, message) { abort(message) unless condition }
+local_file = lambda do |path|
+  candidate = root.join(path).cleanpath
+  check.call(candidate.to_s.start_with?(root.to_s + '/') && candidate.file?, "missing/unsafe file: #{path}")
+end
+
+catalogue = YAML.safe_load(File.read('docs/specs/catalogue.yaml'))
+local_file.call(catalogue.fetch('completion_plan'))
+local_file.call(catalogue.fetch('source_index'))
+source = JSON.parse(File.read(catalogue.fetch('source_index')))
+check.call(source.fetch('kind') == 'source_inspection_snapshot', 'source snapshot mislabeled')
+local_file.call(catalogue.fetch('source_cohort'))
+cohort = JSON.parse(File.read(catalogue.fetch('source_cohort')))
+check.call(cohort.fetch('kind') == 'workspace_content_cohort', 'source cohort mislabeled')
+check.call(cohort.fetch('packages').map { |p| p.fetch('package') } == source.fetch('packages').map { |p| p.fetch('package') }, 'source cohort owner mismatch')
+cohort.fetch('packages').each do |package|
+  check.call(package.fetch('sha256').match?(/\A[0-9a-f]{64}\z/), 'invalid source content digest')
+  check.call(package.fetch('files').is_a?(Integer) && package['files'] > 0, 'invalid source file count')
+end
+specs = catalogue.fetch('specifications')
+ids = specs.map { |s| s.fetch('id') }
+check.call(ids.uniq == ids, 'duplicate specification ID')
+check.call(Dir.glob('docs/specs/WLB.*.md').sort == specs.map { |s| s.fetch('path') }.sort, 'uncatalogued spec')
+upstream_ids = source.fetch('packages').flat_map do |p|
+  check.call(p.fetch('revision').match?(/\A[0-9a-f]{40}\z/), 'invalid source revision')
+  %w[catalogue_sha256 completion_plan_sha256].each do |key|
+    check.call(p.fetch(key).match?(/\A[0-9a-f]{64}\z/), 'missing provenance digest')
+  end
+  p.fetch('specifications').map { |s| "#{p.fetch('package')}:#{s.fetch('id')}" }
+end
+plan = File.read(catalogue.fetch('completion_plan'))
+completion_ids = plan.scan(/\| (WLB-C\d+) \|/).flatten
+check.call(completion_ids.uniq == completion_ids, 'duplicate completion ID')
+modules = Dir.glob('lib/**/*.ex').flat_map { |f| File.read(f).scan(/^defmodule ([\w.]+) do/).flatten }
+
+specs.each do |spec|
+  local_file.call(spec.fetch('path'))
+  check.call(File.read(spec['path']).start_with?("# #{spec['id']}:"), 'spec heading mismatch')
+  check.call(File.read(spec['path']).include?("Specification version: #{spec.fetch('version')}."), 'spec version mismatch')
+  check.call(%w[implemented partial planned].include?(spec.fetch('implementation_status')), 'invalid implementation status')
+  check.call(%w[missing partial complete].include?(spec.fetch('evidence_status')), 'invalid evidence status')
+  check.call(%w[no_reference reference_available artifact_verified].include?(spec.fetch('adoption_status')), 'invalid adoption status')
+  spec.fetch('requires').each { |id| check.call((ids + upstream_ids).include?(id), "unresolved requirement: #{id}") }
+  spec.fetch('completion_items').each { |id| check.call(completion_ids.include?(id), "unresolved completion item: #{id}") }
+  spec.fetch('implementation_modules').each { |mod| check.call(modules.include?(mod), "missing module: #{mod}") }
+  spec.fetch('executable_evidence').each { |path| local_file.call(path) }
+  if spec['implementation_status'] == 'planned'
+    check.call(spec['implementation_modules'].empty? && spec['executable_evidence'].empty?, 'planned spec claims implementation')
+    check.call(spec['evidence_status'] == 'missing' && spec['adoption_status'] == 'no_reference', 'planned spec claims readiness')
+  end
+  if spec['evidence_status'] == 'complete' || spec['adoption_status'] == 'artifact_verified'
+    check.call(spec.key?('evidence_manifest'), 'stronger readiness needs an evidence manifest')
+    local_file.call(spec.fetch('evidence_manifest'))
+  end
+end
+
+graph = specs.to_h { |s| [s['id'], s['requires'] & ids] }
+visited = []
+visit = lambda do |id, stack|
+  check.call(!stack.include?(id), "spec dependency cycle at #{id}")
+  next if visited.include?(id)
+  graph.fetch(id).each { |dependency| visit.call(dependency, stack + [id]) }
+  visited << id
+end
+ids.each { |id| visit.call(id, []) }
+
+seams = source.fetch('seams')
+check.call(seams.map { |s| s['id'] }.uniq.size == seams.size, 'duplicate seam ID')
+seams.each do |seam|
+  package = source.fetch('packages').find { |p| p['package'] == seam['package'] }
+  check.call(!package.nil? && ids.include?(seam['lab_spec']), 'unresolved seam owner')
+  expected = "#{package['repository']}/blob/#{package['revision']}/#{seam['path']}"
+  check.call(seam.fetch('source_url') == expected, 'unpinned seam source')
+  check.call(seam.fetch('callbacks').all? { |c| c.match?(/\A\w+[!?]?\/\d+\z/) }, 'invalid callback reference')
+end
+
+Dir.glob('{README.md,CONTRIBUTING.md,docs/**/*.md}').each do |path|
+  File.read(path).scan(/\]\(([^)]+)\)/).flatten.each do |target|
+    next if target.match?(/\A(?:https?:|mailto:|#)/)
+    relative = File.join(File.dirname(path), target.split('#').first)
+    local_file.call(relative)
+  end
+end
+Dir.glob('priv/fixtures/**/manifest.json').each do |path|
+  fixture = JSON.parse(File.read(path))
+  input = File.join(File.dirname(path), fixture.fetch('input'))
+  local_file.call(input)
+  check.call(Digest::SHA256.file(input).hexdigest == fixture.fetch('input_sha256'), 'fixture input digest mismatch')
+end
+puts "contracts: #{specs.size} specs, #{completion_ids.size} work packages, #{source['packages'].size} source owners, #{seams.size} seams"

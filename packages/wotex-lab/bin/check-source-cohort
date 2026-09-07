@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+# Read-only workspace drift guard. Not an artifact-adoption or security proof.
+require 'json'
+require 'digest'
+require 'pathname'
+
+root = Pathname.new(File.expand_path('..', __dir__))
+source = JSON.parse(root.join('docs/provenance/source-index.json').read)
+patterns = %w[lib/**/* test/**/* priv/w3c/**/* priv/schemas/**/* priv/vectors/**/*
+              docs/specs/**/* specs/**/* docs/plans/**/* docs/decisions/**/*
+              mix.exs mix.lock README.md CLAUDE.md]
+
+entries = source.fetch('packages').map do |package|
+  directory = package.fetch('repository').split('/').last
+  abort 'unexpected source owner' unless directory.match?(/\Awotex(?:-[a-z]+)*\z/)
+  repo = root.parent.join(directory)
+  abort "missing source owner: #{directory}" unless repo.directory?
+  files = patterns.flat_map { |pattern| Dir.glob(repo.join(pattern).to_s) }
+                  .select { |path| File.file?(path) }.uniq.sort
+  abort "empty source owner: #{directory}" if files.empty?
+  digest = Digest::SHA256.new
+  files.each do |file|
+    abort "symlink in source cohort: #{directory}" if File.symlink?(file)
+    relative = Pathname.new(file).relative_path_from(repo).to_s
+    digest.update(relative).update("\0").update(Digest::SHA256.file(file).hexdigest).update("\n")
+  end
+  {'package' => package.fetch('package'), 'files' => files.size, 'sha256' => digest.hexdigest}
+end
+
+actual = {'schema_version' => '1.0.0', 'kind' => 'workspace_content_cohort',
+          'patterns' => patterns, 'packages' => entries}
+case ARGV
+when ['--print']
+  puts JSON.pretty_generate(actual)
+when []
+  expected = JSON.parse(root.join('docs/provenance/source-cohort.json').read)
+  abort 'workspace source drift: review changed specs/code/tests and renew evidence before updating the cohort' unless actual == expected
+  puts "source cohort: #{entries.size} owners match recorded content; no readiness promotion"
+else
+  abort 'usage: ruby bin/check-source-cohort [--print]'
+end
