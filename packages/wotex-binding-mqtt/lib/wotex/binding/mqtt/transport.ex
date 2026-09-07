@@ -124,7 +124,7 @@ defmodule Wotex.Binding.MQTT.Transport do
 
   defp normalize_publish(:ok, command, request) do
     Result.new(request.request_id, request.operation, nil,
-      status: :published,
+      status: :accepted,
       metadata: command_metadata(command)
     )
   end
@@ -140,7 +140,7 @@ defmodule Wotex.Binding.MQTT.Transport do
          :ok <- validate_read_delivery(command, delivery),
          {:ok, payload} <- JSON.decode(Delivery.payload(delivery), max_payload_bytes) do
       Result.new(request.request_id, request.operation, payload,
-        status: :received,
+        status: :ok,
         metadata: delivery_metadata(command, delivery)
       )
     end

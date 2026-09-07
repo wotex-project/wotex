@@ -15,7 +15,7 @@ defmodule Wotex.Binding.MQTT.TransportTest do
     assert {:ok, %Result{} = result} = Transport.request(request, execution_context, config)
     assert result.request_id == "request-1"
     assert result.operation == :writeproperty
-    assert result.status == :published
+    assert result.status == :accepted
     assert result.payload == nil
     assert result.metadata.control_packet == :publish
 
@@ -44,7 +44,7 @@ defmodule Wotex.Binding.MQTT.TransportTest do
       config(%{read_return: {:ok, delivery}}, read_timeout: 275, max_payload_bytes: 100)
 
     assert {:ok, %Result{} = result} = Transport.request(request, execution_context, config)
-    assert result.status == :received
+    assert result.status == :ok
     assert result.payload == %{"value" => 21}
     assert result.metadata.delivery_qos == 1
     assert result.metadata.delivery_retained
