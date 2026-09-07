@@ -50,7 +50,7 @@ automated push, tag, release or registry publication.
 | `public_release_candidate` | Prior gates, metadata/license/security, docs links, dependency installation and standards audit; no tracker/secret in archive | Publication permission or stable API |
 | `stable_api_candidate` | RT-C06 compatibility matrix; supported-cell ambiguity closed; advertised bounds/recovery evidenced | Compatibility forever or universal WoT conformance |
 
-Existing `bin/check-package` compiles unpacked source against prebuilt core
+Existing `bin/check_package.exs` compiles unpacked source against prebuilt core
 BEAMs; it does not alone prove independent dependency installation or complete
 reference-consumer semantics. No new hook/script substitutes for ExUnit.
 
