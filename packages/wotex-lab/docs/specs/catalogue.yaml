@@ -1,0 +1,243 @@
+schema_version: "1.2.0"
+package: wotex_lab
+completion_plan: docs/plans/wotex-lab-completion.md
+source_index: docs/provenance/source-index.json
+source_cohort: docs/provenance/source-cohort.json
+specifications:
+  - id: WLB.01
+    version: "0.1.0"
+    path: docs/specs/WLB.01-library-foundation.md
+    implementation_status: implemented
+    evidence_status: partial
+    adoption_status: reference_available
+    standards:
+      - name: WoTEx Lab consumer contract
+        revision: "0.1.0"
+        claim: Project-defined reference composition; no W3C certification or stable API claim.
+    requires: []
+    completion_items:
+      - "WLB-C01"
+    implementation_modules:
+      - "Wotex.Lab"
+      - "Wotex.Lab.Supervisor"
+      - "Wotex.Lab.Error"
+    executable_evidence:
+      - "test/wotex/lab/supervisor_test.exs"
+      - "test/wotex/lab/library_contract_test.exs"
+    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+  - id: WLB.02
+    version: "0.1.0"
+    path: docs/specs/WLB.02-scenarios-and-reference-components.md
+    implementation_status: partial
+    evidence_status: partial
+    adoption_status: reference_available
+    standards:
+      - name: WoTEx Lab consumer contract
+        revision: "0.1.0"
+        claim: Project-defined reference composition; no W3C certification or stable API claim.
+    requires:
+      - "WLB.01"
+    completion_items:
+      - "WLB-C02"
+    implementation_modules:
+      - "Wotex.Lab.Scenario"
+      - "Wotex.Lab.Plugin"
+    executable_evidence:
+      - "test/wotex/lab/scenario_test.exs"
+    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+  - id: WLB.03
+    version: "0.1.0"
+    path: docs/specs/WLB.03-nx-experiments.md
+    implementation_status: partial
+    evidence_status: partial
+    adoption_status: reference_available
+    standards:
+      - name: WoTEx Lab consumer contract
+        revision: "0.1.0"
+        claim: Project-defined reference composition; no W3C certification or stable API claim.
+    requires:
+      - "WLB.01"
+      - "wotex:WTX.01"
+      - "wotex_nx:WNX.01"
+    completion_items:
+      - "WLB-C03"
+    implementation_modules:
+      - "Wotex.Lab.Examples.Thermal"
+      - "Wotex.Lab.Adapters.Nx.UnitConverter"
+    executable_evidence:
+      - "test/wotex/lab/thermal_test.exs"
+    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+  - id: WLB.04
+    version: "0.1.0"
+    path: docs/specs/WLB.04-runtime-and-network-adapters.md
+    implementation_status: planned
+    evidence_status: missing
+    adoption_status: no_reference
+    standards:
+      - name: WoTEx Lab consumer contract
+        revision: "0.1.0"
+        claim: Project-defined reference composition; no W3C certification or stable API claim.
+    requires:
+      - "WLB.02"
+      - "wotex_runtime:WRT.01"
+      - "wotex_runtime:WRT.02"
+      - "wotex_runtime:WRT.03"
+      - "wotex_binding_http:WBH.01"
+      - "wotex_binding_http:WBH.02"
+      - "wotex_binding_http:WBH.03"
+      - "wotex_binding_mqtt:WBM.01"
+      - "wotex_binding_mqtt:WBM.02"
+      - "wotex_binding_mqtt:WBM.03"
+    completion_items:
+      - "WLB-C04"
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+  - id: WLB.05
+    version: "0.1.0"
+    path: docs/specs/WLB.05-directory-continuum-and-smart-room.md
+    implementation_status: planned
+    evidence_status: missing
+    adoption_status: no_reference
+    standards:
+      - name: WoTEx Lab consumer contract
+        revision: "0.1.0"
+        claim: Project-defined reference composition; no W3C certification or stable API claim.
+    requires:
+      - "WLB.03"
+      - "WLB.04"
+      - "wotex_directory:WTD.01"
+      - "wotex_continuum:WCT.01"
+      - "wotex_continuum:WCT.02"
+      - "wotex_continuum:WCT.03"
+    completion_items:
+      - "WLB-C05"
+      - "WLB-C06"
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+  - id: WLB.06
+    version: "0.1.0"
+    path: docs/specs/WLB.06-evidence-conformance-and-observability.md
+    implementation_status: planned
+    evidence_status: missing
+    adoption_status: no_reference
+    standards:
+      - name: WoTEx Lab consumer contract
+        revision: "0.1.0"
+        claim: Project-defined reference composition; no W3C certification or stable API claim.
+    requires:
+      - "WLB.02"
+      - "WLB.05"
+      - "wotex_conformance:WCF.01"
+    completion_items:
+      - "WLB-C07"
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+  - id: WLB.07
+    version: "0.1.0"
+    path: docs/specs/WLB.07-cookbooks-and-machine-interfaces.md
+    implementation_status: planned
+    evidence_status: missing
+    adoption_status: no_reference
+    standards:
+      - name: WoTEx Lab consumer contract
+        revision: "0.1.0"
+        claim: Project-defined reference composition; no W3C certification or stable API claim.
+    requires:
+      - "WLB.03"
+      - "WLB.04"
+      - "WLB.05"
+      - "WLB.06"
+      - "WLB.09"
+      - "WLB.10"
+      - "WLB.11"
+    completion_items:
+      - "WLB-C08"
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+  - id: WLB.08
+    version: "0.1.0"
+    path: docs/specs/WLB.08-distribution-and-compatibility.md
+    implementation_status: partial
+    evidence_status: partial
+    adoption_status: no_reference
+    standards:
+      - name: WoTEx Lab consumer contract
+        revision: "0.1.0"
+        claim: Project-defined reference composition; no W3C certification or stable API claim.
+    requires:
+      - "WLB.01"
+      - "WLB.06"
+      - "WLB.07"
+      - "WLB.09"
+    completion_items:
+      - "WLB-C10"
+      - "WLB-C11"
+    implementation_modules: []
+    executable_evidence:
+      - "bin/check-package"
+      - "bin/check-boundary"
+      - "bin/check-contracts"
+      - "bin/check-source-cohort"
+    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+  - id: WLB.09
+    version: "0.1.0"
+    path: docs/specs/WLB.09-formal-control-verification.md
+    implementation_status: planned
+    evidence_status: missing
+    adoption_status: no_reference
+    standards:
+      - name: WoTEx Lab consumer contract
+        revision: "0.1.0"
+        claim: Project-defined reference composition; no W3C certification or stable API claim.
+    requires:
+      - "WLB.03"
+      - "WLB.05"
+    completion_items:
+      - "WLB-C09"
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+  - id: WLB.10
+    version: "0.1.0"
+    path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md
+    implementation_status: planned
+    evidence_status: missing
+    adoption_status: no_reference
+    standards:
+      - name: Prometheus Remote Write
+        revision: "1.0"
+        claim: Required reference bridge protocol; no implemented sender or compatibility claim.
+    requires:
+      - "WLB.01"
+      - "WLB.06"
+    completion_items:
+      - "WLB-C12"
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: Additive host contract; no mandatory observability dependency in the base library.
+  - id: WLB.11
+    version: "0.1.0"
+    path: docs/specs/WLB.11-workbench-and-design-system.md
+    implementation_status: partial
+    evidence_status: partial
+    adoption_status: reference_available
+    standards:
+      - name: WCAG
+        revision: "2.2 AA"
+        claim: Workbench accessibility target; token contrast tests are not whole-UI conformance.
+    requires:
+      - "WLB.02"
+      - "WLB.03"
+      - "WLB.06"
+      - "WLB.10"
+    completion_items:
+      - "WLB-C13"
+    implementation_modules:
+      - "Wotex.Lab.DesignSystem"
+    executable_evidence:
+      - "test/wotex/lab/design_system_test.exs"
+    compatibility_classification: Additive inert tokens and scoped CSS; no running UI or Phoenix dependency implied.
