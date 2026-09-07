@@ -9,12 +9,19 @@ fi
 
 root=${1:-.}
 
-boundary_pattern='(Application\.start\(|use Application|GenServer|Supervisor|use Ash|use Phoenix|Ecto\.|Oban\.|Plug\.|Bandit\.|Cowboy\.)'
+framework_pattern='(Application\.start\(|use Application|use Ash|use Phoenix|Ecto\.|Oban\.|Plug\.|Bandit\.|Cowboy\.)'
+process_pattern='(GenServer|Supervisor)'
 
-if rg -n "$boundary_pattern" "$root/lib" "$root/mix.exs" || \
-   { [ -d "$root/test" ] && rg -n "$boundary_pattern" "$root/test"; }
+if rg -n "$framework_pattern" "$root/lib" "$root/mix.exs" || \
+   { [ -d "$root/test" ] && rg -n "$framework_pattern" "$root/test"; }
 then
-  echo "process, framework, or database boundary violation" >&2
+  echo "framework or database boundary violation" >&2
+  exit 1
+fi
+
+if rg -n "$process_pattern" "$root/lib" "$root/mix.exs"
+then
+  echo "package process boundary violation" >&2
   exit 1
 fi
 

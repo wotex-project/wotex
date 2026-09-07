@@ -147,40 +147,102 @@ defmodule Wotex.Binding.MQTT.TransportTest do
              TransportConfig.new(FakeClient, %{}, read_timeout: 0)
   end
 
-  test "subscribes with a decoding closure and no captured execution context" do
+  test "hands the client only the subscription owner and a credential-free command" do
     request = observe_request()
     execution_context = RequestFactory.execution_context(:one_use_credential)
+    owner = self()
 
-    assert {:ok, :client_handle} =
-             Transport.subscribe(request, self(), execution_context, config())
+    assert {:ok, :client_handle} = Transport.subscribe(request, owner, execution_context, config())
 
-    assert_receive {:client_subscribe, command, callback, ^execution_context, :client_state}
+    assert_receive {:client_subscribe, command, delivered_owner, ^execution_context, :client_state}
+    assert delivered_owner == owner
+    refute is_function(delivered_owner)
     assert Command.filters(command) == ["things/+"]
-
-    {:env, environment} = :erlang.fun_info(callback, :env)
-    refute inspect(environment) =~ "one_use_credential"
-
-    delivery = delivery!(~s({"value":34}), "things/value", qos: "2")
-    assert :ok = callback.(delivery)
-    assert_receive {:wotex_transport, %{"value" => 34}}
+    assert Command.max_payload_bytes(command) == 1_048_576
+    refute inspect({command, delivered_owner}) =~ "one_use_credential"
   end
 
-  test "subscription closure rejects invalid deliveries without sending Runtime messages" do
+  test "decodes an owner frame with Topic Name, QoS, and retained metadata" do
+    frame = delivery!(~s({"value":34}), "things/value", qos: "2")
+
+    assert {:ok, payload, meta} = Transport.decode_frame(frame, observe_request(), config())
+    assert payload == %{"value" => 34}
+    assert meta.topic == "things/value"
+    assert meta.qos == 2
+    refute meta.retained
+    assert meta.request_id == "request-1"
+    assert meta.operation == :observeproperty
+    assert meta.control_packet == :subscribe
+  end
+
+  test "ignores a frame whose Topic Name matches no command Topic Filter" do
+    frame = delivery!(~s({"value":34}), "other/value")
+
+    assert :ignore = Transport.decode_frame(frame, observe_request(), config())
+  end
+
+  test "rejects malformed, oversized, and non-delivery frames" do
+    request = observe_request()
+
+    assert {:error, %Error{code: :json_decode_failed, class: :protocol}} =
+             Transport.decode_frame(delivery!("{", "things/value"), request, config())
+
+    assert {:error, %Error{code: :received_payload_too_large, class: :protocol}} =
+             Transport.decode_frame(
+               delivery!(~s({"value":34}), "things/value"),
+               request,
+               config(%{}, max_payload_bytes: 4)
+             )
+
+    assert {:error, %Error{code: :invalid_delivery, class: :protocol}} =
+             Transport.decode_frame(:invalid, request, config())
+
+    assert {:error, %Error{code: :invalid_subscription_packet, class: :protocol}} =
+             Transport.decode_frame(
+               delivery!("null", "things/value"),
+               publish_request(nil),
+               config()
+             )
+
+    assert {:error, %Error{code: :invalid_transport_input, class: :permanent}} =
+             Transport.decode_frame(:frame, :request, config())
+  end
+
+  test "bounds a retained read by the remaining request deadline" do
+    execution_context = RequestFactory.execution_context()
+    delivery = delivery!(~s({"value":21}), "things/value", retain: true, qos: 1)
+    read_config = config(%{read_return: {:ok, delivery}}, read_timeout: 5_000)
+
+    monotonic = read_request(deadline: System.monotonic_time(:millisecond) + 40)
+
+    assert {:ok, %Result{status: :ok}} =
+             Transport.request(monotonic, execution_context, read_config)
+
+    assert_receive {:client_read, _command, bounded, _execution_context, :client_state}
+    assert bounded > 0 and bounded <= 40
+
+    wall_clock = read_request(deadline: DateTime.add(DateTime.utc_now(), 60, :second))
+
+    assert {:ok, %Result{status: :ok}} =
+             Transport.request(wall_clock, execution_context, read_config)
+
+    assert_receive {:client_read, _command, 5_000, _execution_context, :client_state}
+  end
+
+  test "refuses a read with no remaining deadline and rejects a mismatched clock" do
     execution_context = RequestFactory.execution_context()
 
-    assert {:ok, :client_handle} =
-             Transport.subscribe(observe_request(), self(), execution_context, config())
+    elapsed = read_request(deadline: System.monotonic_time(:millisecond) - 1)
 
-    assert_receive {:client_subscribe, _command, callback, ^execution_context, :client_state}
+    assert {:error, %Error{code: :deadline_exceeded, class: :timeout, phase: :client}} =
+             Transport.request(elapsed, execution_context, config())
 
-    assert {:error, %Error{code: :delivery_topic_mismatch}} =
-             callback.(delivery!("null", "other/value"))
+    mismatched = read_request(deadline: :soon)
 
-    assert {:error, %Error{code: :json_decode_failed}} =
-             callback.(delivery!("{", "things/value"))
+    assert {:error, %Error{code: :invalid_deadline_clock, class: :permanent}} =
+             Transport.request(mismatched, execution_context, config())
 
-    assert {:error, %Error{code: :invalid_delivery}} = callback.(:invalid)
-    refute_received {:wotex_transport, _payload}
+    refute_received {:client_read, _command, _timeout, _execution_context, _marker}
   end
 
   test "normalizes subscribe client returns and rejects wrong callback packets" do
@@ -285,14 +347,20 @@ defmodule Wotex.Binding.MQTT.TransportTest do
     )
   end
 
-  defp read_request do
-    RequestFactory.request(:readproperty,
-      form: %{
-        "href" => "mqtt://broker.example",
-        "op" => ["readproperty", "observeproperty"],
-        "mqv:retain" => true,
-        "mqv:filter" => "things/value"
-      }
+  defp read_request(opts \\ []) do
+    RequestFactory.request(
+      :readproperty,
+      Keyword.merge(
+        [
+          form: %{
+            "href" => "mqtt://broker.example",
+            "op" => ["readproperty", "observeproperty"],
+            "mqv:retain" => true,
+            "mqv:filter" => "things/value"
+          }
+        ],
+        opts
+      )
     )
   end
 

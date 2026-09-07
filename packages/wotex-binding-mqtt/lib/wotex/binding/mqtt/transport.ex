@@ -3,14 +3,22 @@ defmodule Wotex.Binding.MQTT.Transport do
   Process-free MQTT implementation of `Wotex.Runtime.Transport`.
 
   A consumer-supplied `Wotex.Binding.MQTT.Client` owns every connection and
-  subscription. The delivery closure captures only the Runtime receiver, Topic
-  Filters, and payload limit; it does not capture the execution context.
+  subscription. `subscribe/4` hands the client the subscription owner pid and
+  keeps no state; the client sends raw deliveries to that owner, which decodes
+  them with `decode_frame/3` in its own process. No MQTT delivery is decoded on
+  the client's connection process, and no callback captures the execution
+  context.
+
+  A publish acknowledgement is an `:accepted` result: the broker accepted the
+  Application Message, which is not proof that a subscriber received it. A
+  retained read that yields a representation is an `:ok` result. Control packet,
+  QoS, retain, and Topic Name detail stay in the result metadata.
   """
 
   @behaviour Wotex.Runtime.Transport
 
   alias Wotex.Binding.MQTT.{Command, Delivery, Error, JSON, Mapping, Topic, TransportConfig}
-  alias Wotex.Runtime.{ExecutionContext, Request, Result}
+  alias Wotex.Runtime.{Context, ExecutionContext, Request, Result}
 
   @impl Wotex.Runtime.Transport
   def request(
@@ -29,38 +37,22 @@ defmodule Wotex.Binding.MQTT.Transport do
   @impl Wotex.Runtime.Transport
   def subscribe(
         %Request{} = request,
-        receiver,
+        owner,
         %ExecutionContext{} = execution_context,
         %TransportConfig{} = config
       )
-      when is_pid(receiver) do
-    case Mapping.command(request, config.max_payload_bytes) do
-      {:ok, command} ->
-        if Command.packet(command) == :subscribe do
-          delivery_callback = delivery_callback(receiver, command, config.max_payload_bytes)
-
-          config.client
-          |> safe_client_call(
-            :subscribe,
-            [command, delivery_callback, execution_context, config.client_config]
-          )
-          |> normalize_subscribe(request.operation)
-        else
-          {:error,
-           Error.new(
-             :invalid_subscription_packet,
-             :mapping,
-             :protocol,
-             "Runtime subscription requires an MQTT subscribe command"
-           )}
-        end
-
-      {:error, %Error{} = error} ->
-        {:error, error}
+      when is_pid(owner) do
+    with {:ok, command} <- subscribe_command(request, config) do
+      config.client
+      |> safe_client_call(
+        :subscribe,
+        [command, owner, execution_context, config.client_config]
+      )
+      |> normalize_subscribe(request.operation)
     end
   end
 
-  def subscribe(_request, _receiver, _execution_context, _config),
+  def subscribe(_request, _owner, _execution_context, _config),
     do: invalid_transport_input(:subscribe)
 
   @impl Wotex.Runtime.Transport
@@ -97,6 +89,48 @@ defmodule Wotex.Binding.MQTT.Transport do
   def unsubscribe(_handle, _request, _execution_context, _config),
     do: invalid_transport_input(:unsubscribe)
 
+  @impl Wotex.Runtime.Transport
+  def decode_frame(frame, %Request{} = request, %TransportConfig{} = config) do
+    with {:ok, command} <- subscribe_command(request, config) do
+      decode_delivery(frame, command, request)
+    end
+  end
+
+  def decode_frame(_frame, _request, _config),
+    do: invalid_transport_input(:decode_frame)
+
+  defp decode_delivery(frame, command, request) do
+    with {:ok, delivery} <- Delivery.normalize(frame),
+         true <- matching_delivery?(command, delivery),
+         {:ok, payload} <-
+           JSON.decode(Delivery.payload(delivery), Command.max_payload_bytes(command)) do
+      {:ok, payload, delivery_meta(command, delivery, request)}
+    else
+      false -> :ignore
+      {:error, %Error{} = error} -> {:error, error}
+    end
+  end
+
+  defp subscribe_command(request, config) do
+    case Mapping.command(request, config.max_payload_bytes) do
+      {:ok, command} ->
+        if Command.packet(command) == :subscribe do
+          {:ok, command}
+        else
+          {:error,
+           Error.new(
+             :invalid_subscription_packet,
+             :mapping,
+             :protocol,
+             "Runtime subscription requires an MQTT subscribe command"
+           )}
+        end
+
+      {:error, %Error{} = error} ->
+        {:error, error}
+    end
+  end
+
   defp execute_request(command, request, execution_context, config) do
     case {Command.packet(command), Command.operation(command)} do
       {:publish, _operation} ->
@@ -105,14 +139,7 @@ defmodule Wotex.Binding.MQTT.Transport do
         |> normalize_publish(command, request)
 
       {:subscribe, :readproperty} ->
-        config.client
-        |> safe_client_call(:read, [
-          command,
-          config.read_timeout,
-          execution_context,
-          config.client_config
-        ])
-        |> normalize_read(command, request, config.max_payload_bytes)
+        read(command, request, execution_context, config)
 
       _unsupported ->
         {:error,
@@ -124,6 +151,45 @@ defmodule Wotex.Binding.MQTT.Transport do
          )}
     end
   end
+
+  defp read(command, request, execution_context, config) do
+    with {:ok, timeout} <- read_timeout(request, config) do
+      config.client
+      |> safe_client_call(:read, [command, timeout, execution_context, config.client_config])
+      |> normalize_read(command, request, config.max_payload_bytes)
+    end
+  end
+
+  defp read_timeout(%Request{deadline: deadline}, config) do
+    case Context.remaining_ms(deadline, clock_reading(deadline)) do
+      :infinity ->
+        {:ok, config.read_timeout}
+
+      0 ->
+        {:error,
+         Error.new(
+           :deadline_exceeded,
+           :client,
+           :timeout,
+           "the request deadline leaves no time for a retained Property read"
+         )}
+
+      remaining when is_integer(remaining) ->
+        {:ok, min(config.read_timeout, remaining)}
+
+      {:error, :clock_mismatch} ->
+        {:error,
+         Error.new(
+           :invalid_deadline_clock,
+           :configuration,
+           :permanent,
+           "request deadline must be a monotonic millisecond integer, a DateTime, or nil"
+         )}
+    end
+  end
+
+  defp clock_reading(%DateTime{}), do: DateTime.utc_now()
+  defp clock_reading(_deadline), do: System.monotonic_time(:millisecond)
 
   defp normalize_publish(:ok, command, request) do
     Result.new(request.request_id, request.operation, nil,
@@ -196,29 +262,6 @@ defmodule Wotex.Binding.MQTT.Transport do
     end
   end
 
-  defp delivery_callback(receiver, command, max_payload_bytes) do
-    fn delivery_input ->
-      with {:ok, delivery} <- Delivery.normalize(delivery_input),
-           true <- matching_delivery?(command, delivery),
-           {:ok, payload} <- JSON.decode(Delivery.payload(delivery), max_payload_bytes) do
-        send(receiver, {:wotex_transport, payload})
-        :ok
-      else
-        false ->
-          {:error,
-           Error.new(
-             :delivery_topic_mismatch,
-             :client,
-             :protocol,
-             "MQTT delivery Topic Name does not match the command Topic Filters"
-           )}
-
-        {:error, %Error{} = error} ->
-          {:error, error}
-      end
-    end
-  end
-
   defp matching_delivery?(command, delivery) do
     Enum.any?(Command.filters(command), fn filter ->
       Topic.matches?(filter, Delivery.topic(delivery))
@@ -248,10 +291,7 @@ defmodule Wotex.Binding.MQTT.Transport do
        :client,
        :protocol,
        "MQTT client port returned an invalid value",
-       %{
-         packet: packet,
-         operation: operation
-       }
+       %{packet: packet, operation: operation}
      )}
   end
 
@@ -266,8 +306,21 @@ defmodule Wotex.Binding.MQTT.Transport do
 
   defp delivery_metadata(command, delivery) do
     command_metadata(command)
+    |> Map.put(:topic, Delivery.topic(delivery))
     |> Map.put(:delivery_qos, Delivery.qos(delivery))
     |> Map.put(:delivery_retained, Delivery.retained?(delivery))
+  end
+
+  defp delivery_meta(command, delivery, request) do
+    %{
+      binding: :mqtt,
+      control_packet: Command.packet(command),
+      topic: Delivery.topic(delivery),
+      qos: Delivery.qos(delivery),
+      retained: Delivery.retained?(delivery),
+      request_id: request.request_id,
+      operation: request.operation
+    }
   end
 
   defp invalid_transport_input(callback) do
