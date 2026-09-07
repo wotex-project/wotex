@@ -39,37 +39,37 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex
-          ref: 8d99e3842b4fe9ed112978d577820110ce9794da
+          ref: 8cfda6a628b5a0efdcf489613301ec3d6eeb8c3f
           path: wotex
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-nx
-          ref: 7c53166770e7cef0e72acdfb3a4a5286a152dd65
+          ref: 9c93134d2db5cbcaf0d757b329f1ed6afbaa61da
           path: wotex-nx
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-runtime
-          ref: 11ebf6373e786e584593ff488b23846ac47c5ec0
+          ref: 7d81f0421f236f1373e132a9c41bad6e426e7aff
           path: wotex-runtime
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-directory
-          ref: 890638ece4608bf1e6246de6f78eeeb82acc73d3
+          ref: f8cd10404c3a1bc05090133b205a7195ee705041
           path: wotex-directory
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-binding-http
-          ref: 757ba716ef391eac91190d3d1558c168a88ad382
+          ref: 8b9a4330bb2a5449baf2e0d80a2c34355da25095
           path: wotex-binding-http
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-conformance
-          ref: e1c68d6253a943e757d77a37e69c793209100f8b
+          ref: 0d7e9d9f9e6710ca2041bbcbf35802e97ea449f8
           path: wotex-conformance
           persist-credentials: false
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
