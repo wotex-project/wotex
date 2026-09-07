@@ -40,7 +40,7 @@ end
 plan = File.read(catalogue.fetch('completion_plan'))
 completion_ids = plan.scan(/\| (WLB-C\d+) \|/).flatten
 check.call(completion_ids.uniq == completion_ids, 'duplicate completion ID')
-modules = Dir.glob('lib/**/*.ex').flat_map { |f| File.read(f).scan(/^defmodule ([\w.]+) do/).flatten }
+modules = Dir.glob('lib/**/*.ex').flat_map { |f| File.read(f).scan(/^ *defmodule ([\w.]+) do/).flatten }
 
 specs.each do |spec|
   local_file.call(spec.fetch('path'))

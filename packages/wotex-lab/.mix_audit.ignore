@@ -1,0 +1,11 @@
+# Advisories acknowledged for the optional `emqtt` dependency cohort. The
+# Cowboy/Gun HTTP, cookie, link-header and HPACK/QPACK code paths are reached
+# only through emqtt's WebSocket and QUIC transports; the Lab MQTT adapter
+# selects `emqtt_sock` (plain TCP) exclusively. No patched cowlib or gun
+# release existed on 2026-09-08. See docs/provenance/standards-and-dependencies.md.
+GHSA-w4f7-4cxr-rv3c
+GHSA-g2wm-735q-3f56
+CVE-2026-43966
+CVE-2026-43969
+CVE-2026-43971
+CVE-2026-59248

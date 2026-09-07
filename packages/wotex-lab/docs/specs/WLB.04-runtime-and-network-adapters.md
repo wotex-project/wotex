@@ -13,7 +13,7 @@ hosted destination policy remain planned.
 | Runtime transport | Loopback adapter; network binding transports | `c:Wotex.Runtime.Transport.request/3`, `c:Wotex.Runtime.Transport.subscribe/4`, `c:Wotex.Runtime.Transport.unsubscribe/4`, optional `c:Wotex.Runtime.Transport.decode_frame/3` |
 | Runtime credentials | NoSec and StaticRef | `c:Wotex.Runtime.Credentials.resolve/4` |
 | HTTP client | `Wotex.Lab.Adapters.HTTP.ReqClient` with `Adapters.HTTP.SSE.Session` and `Adapters.HTTP.SSE.Parser` | `c:Wotex.Binding.HTTP.Client.request/3`, `c:Wotex.Binding.HTTP.Client.subscribe/4`, `c:Wotex.Binding.HTTP.Client.close/2` |
-| MQTT client | EMQTT session adapter | `Wotex.Binding.MQTT.Client.publish/3`, `read/4`, `subscribe/4`, `unsubscribe/4` |
+| MQTT client | EMQTT session adapter | `c:Wotex.Binding.MQTT.Client.publish/3`, `c:Wotex.Binding.MQTT.Client.read/4`, `c:Wotex.Binding.MQTT.Client.subscribe/4`, `c:Wotex.Binding.MQTT.Client.unsubscribe/4` |
 | Inbound application | Explicit simulated Thing handlers | Public `Wotex.Runtime.ExposedThing` boundary |
 
 Lab MUST NOT reimplement binding mappings. Fixtures use only supported cells
