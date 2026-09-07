@@ -19,6 +19,14 @@
 - Instance-owned ETS Directory repository with explicit authorization, clock
   and identifier ports and a public-API contract suite over keyset paging,
   conditional writes, expiry and authorization ordering.
+- Second, independent SQLite Directory repository over Exqlite: database
+  transactions and conditional SQL, an explicit instance data directory whose
+  schema is created by `start_link/1`, identifier keyset paging in byte order,
+  a persisted mutation-generation collection revision, and canonical JSON rows
+  revalidated through the public Directory and Thing Description constructors.
+  The Directory contract suite now runs the same public-API cases against both
+  stores, and adds aborted-transaction rollback, persistent reopen, corrupt-row
+  rejection and `retain: false` file teardown for the SQLite lane.
 - Accepted WLB.01–WLB.11 specifications and versioned completion contract.
 - Explicit instance supervision, bounded scenario descriptors and plugin port.
 - Deterministic public-API Nx example with explicit units/backend and inert output.

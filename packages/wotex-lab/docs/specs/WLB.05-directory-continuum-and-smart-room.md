@@ -1,9 +1,10 @@
 # WLB.05: Directory, Continuum and the smart-room consumer
 
-Specification version: 1.1.0. Contract: accepted. Source status: the ETS
-repository, explicit authorization/clock/identifier ports and the Directory
-contract suite are implemented; the SQLite store, Continuum channel and smart
-room remain planned.
+Specification version: 1.2.0. Contract: accepted. Source status: both
+repository algorithms are implemented. The ETS store, the SQLite store, the
+explicit authorization/clock/identifier ports and the shared Directory contract
+suite that runs the same public-API cases against both stores are source
+complete; the Continuum channel and the canonical smart room remain planned.
 
 ## Directory references
 
@@ -27,6 +28,26 @@ host time; `Adapters.Directory.Identifier` is a deterministic counter.
 or a scoped policy that separates principal, tenant and operation and denies
 before any repository call.
 
+`Wotex.Lab.Adapters.Directory.SqliteRepository` is the second, genuinely
+separate algorithm. It uses Exqlite directly, so each callback is one database
+transaction over conditional SQL: `insert/3` is an `INSERT` against the
+identifier primary key whose unique-constraint failure becomes
+`already_exists`; `replace/4` and `delete/4` are one conditional
+`UPDATE`/`DELETE` carrying `expected_version` in the `WHERE` clause, with
+`changes()` separating an applied write from one that changed nothing and a
+following existence check separating `not_found` from `conflict`; `list/5`
+reads one snapshot inside a read transaction and continues the keyset with
+`identifier > ?` ordered by `identifier` under the default `BINARY` collation,
+which is code point order for UTF-8; and `expire_due/5` selects and mutates its
+bounded batch inside a single transaction. The mutation-generation collection
+revision is a table row, so it survives a reopen. Stored rows are canonical
+JSON revalidated on read through `Wotex.ThingDescription.from_map/2`,
+`Wotex.Directory.Registration` and `Wotex.Directory.Entry.new/4`; a row that
+does not rebuild is reported, never trusted. One process owns the connection
+and serializes the callbacks. The consumer names the instance data directory
+with `path:`; `start_link/1` creates that directory and the schema, and
+`retain: false` removes the database file when the owner terminates.
+
 Required cases include register/get/replace/merge-patch/delete/list/expire,
 introduction and returned event values; authorization before repository work;
 context isolation; duplicate registration; competing expected-version writes
@@ -34,7 +55,12 @@ with one winner; interrupted transaction rollback (SQLite lane); stable bounded
 keyset ordering; collection revision invalidation on mutation while an entry
 that expires between pages is simply absent (WTD.01 1.1); repeated expiry;
 purge/retain semantics; ETS restart volatility and SQLite persistent reopen.
-`test/wotex/lab/directory_test.exs` covers the ETS lane today. No database migration
+`test/wotex/lab/directory_test.exs` runs every shared case against both stores
+from one generated pair of describe blocks, and adds the store-specific cases:
+ETS restart volatility, and for SQLite an aborted statement that rolls its
+whole transaction back without a partial write, a reopened file that keeps its
+entries and revision, revalidation of corrupted stored bytes, explicit data
+directory validation and `retain: false` file teardown. No database migration
 or production policy is installed by loading Lab. SQLite files live under an
 explicit instance data directory and teardown follows retention configuration.
 
