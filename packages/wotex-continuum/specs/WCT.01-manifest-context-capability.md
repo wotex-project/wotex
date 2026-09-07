@@ -53,6 +53,13 @@ Implementations MUST accept only finite JSON numbers. Duplicate members, an
 atom/string key collision in native input, invalid UTF-8, or a configured
 resource-limit breach MUST return a typed error.
 
+This includes native JSON object keys nested in payloads, failure details,
+quality and extensions. Invalid key bytes MUST produce `invalid_utf8` at the
+containing object's path; error paths MUST NOT copy invalid key bytes. Valid
+Unicode keys (including empty JSON member names) retain their bytes. Correcting
+admission of invalid UTF-8 is a compatible implementation repair, not a wire
+schema change: invalid UTF-8 was already outside the accepted JSON contract.
+
 Typed values are not a validation bypass. Constructors and the public encoder
 MUST revalidate struct fields, including nested values, and MUST reject a
 tampered or manually assembled struct with the same typed error returned for

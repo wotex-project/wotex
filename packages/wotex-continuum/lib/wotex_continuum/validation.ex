@@ -220,8 +220,11 @@ defmodule WotexContinuum.Validation do
     do: Error.error(:invalid_json_value, path, "expected a JSON value")
 
   defp normalize_json_member({key, item}, {:ok, acc}, path, depth) when is_binary(key) do
-    case json_value(item, child_path(path, key), depth + 1) do
-      {:ok, normalized} -> {:cont, {:ok, Map.put(acc, key, normalized)}}
+    with true <- String.valid?(key),
+         {:ok, normalized} <- json_value(item, child_path(path, key), depth + 1) do
+      {:cont, {:ok, Map.put(acc, key, normalized)}}
+    else
+      false -> {:halt, Error.error(:invalid_utf8, path, "expected valid UTF-8 object key")}
       {:error, _} = error -> {:halt, error}
     end
   end
@@ -306,7 +309,7 @@ defmodule WotexContinuum.Validation do
   def map_list(values, path, mapper) do
     result =
       values
-      |> Enum.with_index()
+      |> Stream.with_index()
       |> Enum.reduce_while({:ok, []}, fn {value, index}, {:ok, acc} ->
         case mapper.(value, child_path(path, index)) do
           {:ok, normalized} -> {:cont, {:ok, [normalized | acc]}}
@@ -350,14 +353,22 @@ defmodule WotexContinuum.Validation do
   end
 
   defp normalize_key(key, _, by_string) when is_binary(key) do
-    case Map.fetch(by_string, key) do
-      {:ok, atom} -> {:ok, atom}
-      :error -> Error.error(:unknown_field, [key], "field is not defined")
+    if String.valid?(key) do
+      known_string_key(key, by_string)
+    else
+      Error.error(:invalid_utf8, [], "expected valid UTF-8 object key")
     end
   end
 
   defp normalize_key(_, _, _) do
     Error.error(:invalid_key, [], "object keys must be strings or known atoms")
+  end
+
+  defp known_string_key(key, by_string) do
+    case Map.fetch(by_string, key) do
+      {:ok, atom} -> {:ok, atom}
+      :error -> Error.error(:unknown_field, [key], "field is not defined")
+    end
   end
 
   defp key_to_path(key) when is_atom(key), do: Atom.to_string(key)

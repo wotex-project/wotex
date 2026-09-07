@@ -5,6 +5,41 @@ defmodule WotexContinuum.CodecTest do
 
   alias WotexContinuum.{CanonicalJSON, Codec, Error, Limits, Mode}
 
+  test "native constructors and encoders reject invalid UTF-8 keys at safe parent paths" do
+    for bytes <- [<<255>>, <<0xC0, 0xAF>>, <<0xED, 0xA0, 0x80>>, <<0xF0, 0x90>>] do
+      extensions = %{"urn:example:payload" => [%{bytes => true}]}
+      input = %{deployment: :saas, connectivity: :connected, extensions: extensions}
+      path = ["extensions", "urn:example:payload", 0]
+      assert {:error, %Error{code: :invalid_utf8, path: ^path}} = Mode.new(input)
+
+      {:ok, valid} = Mode.new(Map.delete(input, :extensions))
+      forged = %{valid | extensions: extensions}
+      assert {:error, %Error{code: :invalid_utf8, path: ^path}} = Codec.encode(forged)
+      assert {:error, %Error{code: :invalid_utf8, path: ^path}} = Codec.canonicalize(forged)
+
+      assert {:error, %Error{code: :invalid_utf8, path: []}} =
+               Mode.new(Map.put(input, bytes, true))
+
+      assert {:error, %Error{code: :invalid_utf8, path: ["details", "nested"]}} =
+               WotexContinuum.Failure.new(%{
+                 code: "rejected",
+                 message: "invalid input",
+                 details: %{"nested" => %{bytes => nil}}
+               })
+    end
+  end
+
+  test "valid Unicode and empty JSON keys survive constructor and canonical round trips" do
+    extensions = %{"urn:example:payload" => %{"温度" => %{"" => "é", "𝄞" => "å"}}}
+
+    assert {:ok, mode} =
+             Mode.new(%{deployment: :saas, connectivity: :connected, extensions: extensions})
+
+    assert {:ok, encoded} = Codec.canonicalize(mode)
+    assert {:ok, ^mode} = Codec.decode(encoded)
+    assert {:ok, ^encoded} = Codec.canonicalize(mode)
+  end
+
   test "registry errors are typed and never create dynamic modules" do
     assert {:error, %Error{code: :required}} = WotexContinuum.from_map(%{})
     assert {:error, %Error{code: :unknown_kind}} = WotexContinuum.from_map(%{"kind" => "unknown"})
