@@ -45,7 +45,8 @@ validators. Foundational packages MUST NOT depend on Lab.
 
 `test/wotex/lab/supervisor_test.exs` exercises simultaneous instances, duplicate
 IDs under a parent, named/anonymous startup, malformed options, capacity,
-isolated role failure and shutdown. `library_contract_test.exs` checks the
+isolated role failure including a brutal kill of one role with the sibling's
+children untouched, and shutdown. `library_contract_test.exs` checks the
 application callback, package dependency direction and callable public surface.
 These are source checks; WLB.08 owns artifact and runtime-cohort evidence.
 

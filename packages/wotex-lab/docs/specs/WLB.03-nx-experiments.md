@@ -1,6 +1,6 @@
 # WLB.03: Nx experiments and numerical adoption
 
-Specification version: 0.1.0. Contract: accepted. Numerical semantics inherit
+Specification version: 1.1.0. Contract: accepted. Numerical semantics inherit
 `wotex_nx:WNX.01`; Lab owns inputs, execution, experiments and policy examples.
 
 ## Primary audience and entry point
@@ -14,18 +14,20 @@ explicit `K` to `Cel` callback -> rows -> `Encoded.batch/1` -> a caller-selected
 The fixture defines the exact Thing ID and two observations at times 0 and
 1,000 with values 293.15 K and 295.15 K. The f32 Celsius batch is approximately
 [20, 22]; mean plus one produces 22 Cel, inside Action input limits [5, 35].
-The run uses process-local `Nx.with_default_backend/2`, restores caller state,
-and explicitly selects `Nx.Defn.Evaluator`. It does not mutate global Nx
-configuration. `target/1` accepts the one-feature values/masks/quality container
-guaranteed by its good-quality, missing-error input contract. It is not a
-general missing-value model. The reference callback handles only K↔Cel;
+`run/0` uses process-local `Nx.with_default_backend/2` with `Nx.BinaryBackend`,
+restores caller state, and explicitly selects `Nx.Defn.Evaluator`; `run/1`
+accepts `backend:` so the same pipeline runs on a backend the caller already
+configured. It does not mutate global Nx configuration. `target/1` reads the
+values and masks of the one-feature container and computes the mask-weighted
+mean, so a filled row (mask `0`) never contributes; masks use `1` for observed
+per `WNX.01` 1.1. It is not a general missing-value model. The reference callback handles only K↔Cel;
 identity units are handled by the encoder; other conversions fail explicitly.
 
 ## Required experiment lanes
 
 | Lane | Public composition | Acceptance |
 | --- | --- | --- |
-| `thermal-nx` | Small deterministic defn and explicit converter | Feature order, masks, quality, timestamps, provenance, output identity and unchanged effects asserted |
+| `thermal-nx` | Small deterministic defn and explicit converter | Feature order, `1 = observed` masks, mask-weighted target, quality, timestamps, provenance through `Encoded` accessors, output identity, caller backend option and unchanged effects asserted |
 | `window-anomaly` | Exact/latest/nearest windows; all inert decoder kinds | Permuted input/ties, stale time, wrong Thing/category, missing fills, rejected quality, units, integer/float limits and dtype-rounded threshold cases |
 | `serving-batches` | Explicit `Nx.Serving` under instance supervision | Inline and process paths agree within declared tolerance; batch padding/keys, timeout, concurrent caller correlation, stop and overload tested |
 | `axon-room-model` | Small consumer-owned Axon model over synthetic room dynamics | Reproducible training/evaluation split; held-out score compared with persistence baseline; saved parameters and model/schema digests; no implied model quality from successful conversion |

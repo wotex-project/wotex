@@ -44,6 +44,27 @@ defmodule Wotex.Lab.SupervisorTest do
     assert {:ok, _child} = Lab.start_child(lab, :things, {Agent, fn -> :new_state end})
   end
 
+  test "killing one role restarts only that role while the sibling keeps its children" do
+    lab = start_supervised!({Lab, id: "kill-isolation"})
+    assert {:ok, session} = Lab.start_child(lab, :sessions, {Agent, fn -> :connected end})
+
+    {:things, things, :supervisor, _modules} =
+      List.keyfind(Supervisor.which_children(lab), :things, 0)
+
+    {:sessions, sessions, :supervisor, _modules} =
+      List.keyfind(Supervisor.which_children(lab), :sessions, 0)
+
+    monitor = Process.monitor(things)
+
+    Process.exit(things, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^things, :killed}
+    assert Process.alive?(sessions)
+    assert Process.alive?(session)
+    assert Agent.get(session, & &1) == :connected
+
+    assert {:ok, _child} = wait_for_role(lab, :things)
+  end
+
   test "child failure follows caller restart semantics" do
     lab = start_supervised!({Lab, id: "restart"})
     receiver = self()
@@ -69,12 +90,31 @@ defmodule Wotex.Lab.SupervisorTest do
     assert Agent.get(replacement, & &1) == :original
   end
 
+  defp wait_for_role(lab, role, attempts \\ 50) do
+    case Lab.start_child(lab, role, {Agent, fn -> :restarted end}) do
+      {:ok, child} ->
+        {:ok, child}
+
+      {:error, %Error{code: :supervisor_unavailable}} when attempts > 0 ->
+        Process.sleep(10)
+        wait_for_role(lab, role, attempts - 1)
+
+      other ->
+        other
+    end
+  end
+
   test "named startup and child identity use explicit caller inputs" do
     name = {:global, {:lab_test, make_ref()}}
     assert {:ok, lab} = Lab.start_link(id: "named", name: name)
     assert :global.whereis_name(elem(name, 1)) == lab
     assert Lab.child_spec(id: "named").id == {Lab.Supervisor, "named"}
     Supervisor.stop(lab)
+
+    atom_name = :"lab_test_#{System.unique_integer([:positive])}"
+    assert {:ok, atom_lab} = Lab.start_link(id: "atom-named", name: atom_name)
+    assert Process.whereis(atom_name) == atom_lab
+    Supervisor.stop(atom_lab)
   end
 
   test "duplicate IDs cannot be silently attached to one parent" do

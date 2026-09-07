@@ -25,10 +25,13 @@ defmodule Wotex.Lab.ThermalTest do
     assert {:ok, result} = Thermal.run()
     assert Nx.default_backend() == backend
     assert Encoded.feature_order(result.encoded) == ["temperature"]
-    assert result.encoded.timestamps == [0, 1_000]
-    assert inspect(result.encoded.provenance) =~ "thermal-1"
-    assert inspect(result.encoded.provenance) =~ "thermal-2"
-    assert result.encoded.layout == :feature_tuple_values_masks_quality_vector
+    assert Encoded.timestamps(result.encoded) == [0, 1_000]
+    assert Encoded.row_count(result.encoded) == 2
+
+    assert [%{"temperature" => "thermal-1"}, %{"temperature" => "thermal-2"}] =
+             Encoded.provenance(result.encoded)
+
+    assert Encoded.layout(result.encoded) == :feature_tuple_values_masks_quality_vector
 
     {{values}, {masks}, quality} =
       Nx.Defn.jit_apply(&Function.identity/1, [Encoded.batch(result.encoded)],
@@ -36,7 +39,7 @@ defmodule Wotex.Lab.ThermalTest do
       )
 
     assert Nx.to_flat_list(values) == [20.0, 22.0]
-    assert Nx.to_flat_list(masks) == [0, 0]
+    assert Nx.to_flat_list(masks) == [1, 1]
     assert Nx.to_flat_list(quality) == [0, 0]
 
     assert %ActionProposal{
@@ -49,7 +52,23 @@ defmodule Wotex.Lab.ThermalTest do
     assert_in_delta input, 22.0, 0.00001
     assert {:ok, repeated} = Thermal.run()
     assert repeated.proposal == result.proposal
+
+    assert {:ok, explicit} = Thermal.run(backend: Nx.BinaryBackend)
+    assert explicit.proposal == result.proposal
     refute_received _unexpected
+  end
+
+  test "the target function weights rows by the observed mask" do
+    values = Nx.tensor([20.0, 40.0], type: :f32)
+    observed = Nx.tensor([1, 0], type: :u8)
+    quality = Nx.tensor([[0], [3]], type: :u8)
+
+    target =
+      Nx.Defn.jit_apply(&Thermal.target/1, [{{values}, {observed}, quality}],
+        compiler: Nx.Defn.Evaluator
+      )
+
+    assert_in_delta Nx.to_number(target), 21.0, 0.00001
   end
 
   test "the fixture manifest is executable and caller backend selection is restored" do
