@@ -121,7 +121,8 @@ defmodule Wotex.MixProject do
           Wotex.ActionAffordance,
           Wotex.EventAffordance
         ],
-        "TD Values": [Wotex.DataSchema, Wotex.Form, Wotex.SecurityScheme]
+        "TD Values": [Wotex.DataSchema, Wotex.Form, Wotex.SecurityScheme],
+        "JSON admission": [Wotex.JSON, Wotex.JSON.Limits]
       ],
       source_ref: "v#{@version}",
       source_url: @source_url,

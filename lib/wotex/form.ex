@@ -46,7 +46,7 @@ defmodule Wotex.Form do
   @spec href(t()) :: String.t()
   def href(%__MODULE__{value: value}), do: Map.fetch!(value, "href")
 
-  @doc "Returns declared operation names in source order."
+  @doc "Returns declared operation names in source order, or `[]` when `op` is absent."
   @spec operations(t()) :: [String.t()]
   def operations(%__MODULE__{value: %{"op" => operation}}) when is_binary(operation),
     do: [operation]
@@ -55,6 +55,47 @@ defmodule Wotex.Form do
     do: operations
 
   def operations(%__MODULE__{}), do: []
+
+  @doc """
+  Returns the effective operation names for an interaction context.
+
+  Declared `op` members always win. When `op` is absent, TD 1.1 section 5.3.4.2
+  assigns default operations by context: a Property Form defaults to
+  `readproperty` and `writeproperty`, reduced to one of them when the affordance
+  is `readOnly` or `writeOnly`; an Action Form defaults to `invokeaction`; an
+  Event Form defaults to `subscribeevent` and `unsubscribeevent`. Thing-level
+  and generic Forms have no default and return `[]`. A Property declared both
+  `readOnly` and `writeOnly` is contradictory and receives no default.
+
+  Options: `for:` (`:property`, `:action`, `:event`, `:thing`, or `:generic`),
+  `read_only:` and `write_only:` booleans that apply to `:property` only.
+  """
+  @spec operations(t(), keyword()) :: [String.t()]
+  def operations(%__MODULE__{value: %{"op" => _declared}} = form, _opts), do: operations(form)
+
+  def operations(%__MODULE__{}, opts) when is_list(opts) do
+    case Keyword.get(opts, :for, :generic) do
+      :property ->
+        property_defaults(
+          Keyword.get(opts, :read_only, false) == true,
+          Keyword.get(opts, :write_only, false) == true
+        )
+
+      :action ->
+        ["invokeaction"]
+
+      :event ->
+        ["subscribeevent", "unsubscribeevent"]
+
+      _context ->
+        []
+    end
+  end
+
+  defp property_defaults(true, true), do: []
+  defp property_defaults(true, false), do: ["readproperty"]
+  defp property_defaults(false, true), do: ["writeproperty"]
+  defp property_defaults(false, false), do: ["readproperty", "writeproperty"]
 
   defp non_empty_binary?(value), do: is_binary(value) and byte_size(String.trim(value)) > 0
   defp valid_operation?(nil), do: true

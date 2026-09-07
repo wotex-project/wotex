@@ -1,9 +1,10 @@
 defmodule Wotex.ThingModel.Validator do
   @moduledoc false
 
-  alias Wotex.{Error, SecurityReferences, ThingModel}
+  alias Wotex.{Error, ModelReferences, SecurityReferences, ThingModel}
 
   @context "https://www.w3.org/2022/wot/td/v1.1"
+  @legacy_context "https://www.w3.org/2019/wot/td/v1"
   @schema_version "1.1-09-November-2023"
   @upstream_sha256 "d4fecbf6e9713a7c98c85ef8065800b85f72dd690be5016511c72406ed7314f2"
   @bundled_sha256 "3c8dedb2a534d089fdbd7fda8eb05a5b13237a2331f42e2af08cdb4a7af9fc7a"
@@ -22,7 +23,9 @@ defmodule Wotex.ThingModel.Validator do
     document = ThingModel.to_map(tm)
 
     errors =
-      schema_errors(document) ++ context_errors(document) ++ SecurityReferences.errors(document)
+      schema_errors(document) ++
+        context_errors(document) ++
+        SecurityReferences.errors(document) ++ ModelReferences.errors(document)
 
     case errors do
       [] -> {:ok, tm}
@@ -52,49 +55,32 @@ defmodule Wotex.ThingModel.Validator do
     end
   end
 
-  defp schema_error(error) do
-    raw_path = map_value(error, :path, "#")
-    raw_error = map_value(error, :error, error)
-
+  defp schema_error(%ExJsonSchema.Validator.Error{path: path, error: raw_error}) do
     Error.new(
       :schema_violation,
       :schema,
       "Thing Model does not satisfy the pinned W3C 1.1 schema",
-      normalize_path(raw_path),
+      normalize_path(path),
       %{assertion: inspect(raw_error, limit: 40, printable_limit: 160)}
     )
   end
 
   defp context_errors(%{"@context" => @context}), do: []
-
-  defp context_errors(%{"@context" => contexts}) when is_list(contexts) do
-    if Enum.any?(contexts, &(&1 == @context)), do: [], else: [unsupported_context()]
-  end
-
+  defp context_errors(%{"@context" => [@context | _rest]}), do: []
+  defp context_errors(%{"@context" => [@legacy_context, @context | _rest]}), do: []
   defp context_errors(_document), do: [unsupported_context()]
 
   defp unsupported_context do
     Error.new(
       :unsupported_context,
       :semantic,
-      "Thing Model context must be the TD 1.1 context or include it",
+      "Thing Model context must be the TD 1.1 context, or an array that begins " <>
+        "with it, optionally preceded only by the TD 1.0 context",
       "/@context",
       %{required: @context}
     )
   end
 
-  defp map_value(value, key, default) when is_map(value), do: Map.get(value, key, default)
-  defp map_value(_value, _key, default), do: default
-
-  defp normalize_path(path) when is_binary(path) do
-    trimmed = String.trim_leading(path, "#")
-
-    case trimmed do
-      "" -> "/"
-      "/" <> _rest = pointer -> pointer
-      other -> "/" <> other
-    end
-  end
-
-  defp normalize_path(path), do: normalize_path(to_string(path))
+  defp normalize_path("#"), do: "/"
+  defp normalize_path("#" <> pointer), do: pointer
 end

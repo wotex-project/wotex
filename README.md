@@ -37,7 +37,7 @@ distributed service without changing their meaning.
 | Extension preservation | Retains unknown JSON object members and native JSON values without interpreting consumer extensions. |
 | Deterministic encoding | Produces key-sorted canonical JSON for package-local comparison and digest inputs. |
 | Typed values | Exposes immutable DataSchema, Form, Property, Action, Event, and security-scheme values. |
-| Bounded input | Enforces caller-configurable byte, nesting-depth, and node-count limits. |
+| Bounded input | Enforces caller-configurable byte, depth, node, string, and collection limits before and during decoding. |
 
 ## Installation
 
@@ -143,16 +143,27 @@ specifications to carry data the package does not yet understand.
 ## Validation and limits
 
 Parsing validates by default. The defaults accept at most 1 MiB of source, 64
-levels of JSON nesting, and 100,000 JSON nodes. Consumers handling constrained
-or untrusted inputs can set smaller positive limits:
+levels of JSON nesting, 100,000 JSON nodes, 256 KiB per string, and 10,000
+members per object or array. Depth and string size are bounded by a lexical
+scan before the decoder allocates, decoded strings never retain the source
+binary, and duplicate object members are rejected. Consumers handling
+constrained or untrusted inputs can set smaller positive limits; an invalid
+limit value is an `invalid_limit` error, never a silent default:
 
 ```elixir
 Wotex.ThingDescription.parse(json,
   max_bytes: 64_000,
   max_depth: 24,
-  max_nodes: 10_000
+  max_nodes: 10_000,
+  max_string_bytes: 4_096,
+  max_collection_size: 512
 )
 ```
+
+The `@context` must be the TD 1.1 URI, or an array that begins with it,
+optionally preceded only by the TD 1.0 URI. Forms without `op` receive the TD
+1.1 default operations through `Wotex.Form.operations/2` and the affordance
+`forms/1` and `operations/2` helpers.
 
 `validate: false` skips the TD schema and semantic pass when constructing from
 a map, but it never disables JSON-value and resource-limit checks. Treat that

@@ -67,6 +67,45 @@ defmodule Wotex.ValueTest do
     assert Form.operations(none) == []
   end
 
+  test "Form applies TD 1.1 default operations when op is absent" do
+    assert {:ok, form} = Form.new(%{"href" => "relative"})
+    assert Form.operations(form, for: :property) == ["readproperty", "writeproperty"]
+    assert Form.operations(form, for: :property, read_only: true) == ["readproperty"]
+    assert Form.operations(form, for: :property, write_only: true) == ["writeproperty"]
+    assert Form.operations(form, for: :property, read_only: true, write_only: true) == []
+    assert Form.operations(form, for: :action) == ["invokeaction"]
+    assert Form.operations(form, for: :event) == ["subscribeevent", "unsubscribeevent"]
+    assert Form.operations(form, for: :thing) == []
+    assert Form.operations(form, []) == []
+
+    assert {:ok, declared} = Form.new(%{"href" => "relative", "op" => "observeproperty"})
+    assert Form.operations(declared, for: :property) == ["observeproperty"]
+  end
+
+  test "affordances expose context-validated Forms and report the failing Form path" do
+    assert {:ok, property} =
+             PropertyAffordance.new(%{
+               "writeOnly" => true,
+               "forms" => [%{"href" => "a"}, %{"href" => "b", "op" => "readproperty"}]
+             })
+
+    assert PropertyAffordance.write_only?(property)
+    refute PropertyAffordance.read_only?(property)
+    refute PropertyAffordance.observable?(property)
+    assert {:ok, [first, second]} = PropertyAffordance.forms(property)
+    assert PropertyAffordance.operations(property, first) == ["writeproperty"]
+    assert PropertyAffordance.operations(property, second) == ["readproperty"]
+
+    assert {:ok, bad_form} = ActionAffordance.new(%{"forms" => [%{"href" => ""}]})
+
+    assert {:error, %Error{code: :invalid_member, path: "/forms/0/href"}} =
+             ActionAffordance.forms(bad_form)
+
+    assert {:ok, event} = EventAffordance.new(%{"forms" => [%{"href" => "a"}]})
+    assert {:ok, [form]} = EventAffordance.forms(event)
+    assert EventAffordance.operations(event, form) == ["subscribeevent", "unsubscribeevent"]
+  end
+
   test "Form validates operation names in an explicit interaction context" do
     assert {:ok, _form} =
              Form.new(%{"href" => "relative", "op" => "readproperty"}, for: :property)

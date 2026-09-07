@@ -65,6 +65,85 @@ defmodule Wotex.JSONTest do
     assert JSON.pointer_segment("a~/b") == "a~0~1b"
   end
 
+  test "decodes under explicit limits with copied strings and no duplicate members" do
+    source = ~s({"title":"Lamp","tags":["a","b"],"nested":{"k":1.5}})
+    assert {:ok, decoded} = JSON.decode(source)
+    assert decoded == %{"title" => "Lamp", "tags" => ["a", "b"], "nested" => %{"k" => 1.5}}
+    assert :binary.referenced_byte_size(decoded["title"]) < byte_size(source)
+
+    assert {:error, %Error{code: :duplicate_member, phase: :parse, path: "/title"}} =
+             JSON.decode(~s({"title":"a","title":"b"}))
+
+    assert {:error, %Error{code: :duplicate_member, path: "/nested/k"}} =
+             JSON.decode(~s({"nested":{"k":1,"k":2}}))
+  end
+
+  test "bounds depth and string size before decoding" do
+    hostile_depth = String.duplicate("[", 100_000)
+
+    assert {:error, %Error{code: :depth_limit_exceeded, phase: :parse}} =
+             JSON.decode(hostile_depth, max_depth: 8)
+
+    assert {:ok, [[[]]]} = JSON.decode("[[[]]]", max_depth: 3)
+    assert {:error, %Error{code: :depth_limit_exceeded}} = JSON.decode("[[[[]]]]", max_depth: 3)
+
+    long = ~s(["#{String.duplicate("x", 32)}"])
+
+    assert {:error, %Error{code: :string_limit_exceeded, phase: :parse}} =
+             JSON.decode(long, max_string_bytes: 16)
+
+    assert {:ok, _value} = JSON.decode(long, max_string_bytes: 32)
+
+    escaped = ~S({"k\"ey":"v"})
+    assert {:ok, %{"k\"ey" => "v"}} = JSON.decode(escaped)
+  end
+
+  test "rejects oversized, invalid, and non-binary sources" do
+    assert {:error, %Error{code: :byte_limit_exceeded, phase: :parse, details: %{max_bytes: 4}}} =
+             JSON.decode("[1,2,3]", max_bytes: 4)
+
+    assert {:error, %Error{code: :invalid_string, phase: :parse}} = JSON.decode(<<?", 255, ?">>)
+    assert {:error, %Error{code: :invalid_json, phase: :parse}} = JSON.decode("{")
+    assert {:error, %Error{code: :invalid_input}} = JSON.decode(:atom)
+    assert {:error, %Error{code: :invalid_json}} = JSON.decode(~S(["unterminated))
+    assert {:error, %Error{code: :invalid_options}} = JSON.validate(%{}, :bad)
+
+    assert {:error, %Error{code: :invalid_limit, details: %{option: :max_depth}}} =
+             JSON.decode("[]", max_depth: -1)
+  end
+
+  test "bounds collection size and node count during and after decoding" do
+    assert {:error, %Error{code: :collection_limit_exceeded, path: "/"}} =
+             JSON.decode("[1,2,3,4]", max_collection_size: 3)
+
+    assert {:error, %Error{code: :collection_limit_exceeded, path: "/o"}} =
+             JSON.validate(%{"o" => %{"a" => 1, "b" => 2}}, max_collection_size: 1)
+
+    assert {:error, %Error{code: :collection_limit_exceeded, path: "/l"}} =
+             JSON.validate(%{"l" => [1, 2]}, max_collection_size: 1)
+
+    assert {:error, %Error{code: :node_limit_exceeded}} = JSON.decode("[1,2,3,4]", max_nodes: 3)
+  end
+
+  test "bounds native string payload bytes and string size" do
+    assert {:error, %Error{code: :byte_limit_exceeded, phase: :value, path: "/b"}} =
+             JSON.validate(%{"a" => "12345", "b" => "6789"}, max_bytes: 8)
+
+    assert :ok = JSON.validate(%{"a" => "12345", "b" => "678"}, max_bytes: 10)
+
+    assert {:error, %Error{code: :string_limit_exceeded, phase: :value, path: "/a"}} =
+             JSON.validate(%{"a" => "12345"}, max_string_bytes: 4)
+  end
+
+  test "resolves RFC 6901 pointers against decoded values" do
+    value = %{"a/b" => [%{"m~n" => "hit"}]}
+    assert {:ok, "hit"} = JSON.resolve_pointer(value, "/a~1b/0/m~0n")
+    assert {:ok, ^value} = JSON.resolve_pointer(value, "")
+    assert :error = JSON.resolve_pointer(value, "/a~1b/1")
+    assert :error = JSON.resolve_pointer(value, "a/b")
+    assert :error = JSON.resolve_pointer(%{"a" => 1}, "/a/b")
+  end
+
   defp json_key do
     string(:alphanumeric, min_length: 1, max_length: 16)
   end

@@ -1,7 +1,7 @@
 # WTX.03: Errors, extension preservation, and compatibility
 
 **Status**: Implemented development contract  
-**Specification version**: 1.0.0
+**Specification version**: 1.1.0
 
 **Owner**: `wotex`  
 **Requires**: WTX.01, WTX.02
@@ -21,18 +21,35 @@ those errors. Stable fields are:
 Raising variants use the same exception value. Error messages are not a stable
 matching interface.
 
+This five-field shape (`code`, `phase`, `path`, `message`, `details`) is the
+WoTEx family error convention. Sibling packages define their own error module
+with the same fields so a consumer can match errors from any package
+uniformly; transport packages may add a retry `class`.
+
 Schema violations MUST preserve the validator's field location rather than
 collapse formatted errors to the root. Native-array node-limit admission MUST
 stop at the first over-budget node without materializing an indexed copy of
 the remaining array. These are compatible corrections to the existing path and
 resource-bound contracts; they do not change accepted TD/TM values.
 
-Option arguments use the documented keyword-list shape. For existing limit
-options, only positive integers replace defaults; invalid limit values fall
-back to the corresponding defaults. This does not declare malformed option
+Option arguments use the documented keyword-list shape. The limit vocabulary
+is `:max_bytes`, `:max_depth`, `:max_nodes`, `:max_string_bytes`, and
+`:max_collection_size`, owned by `Wotex.JSON.Limits`. A limit MUST be a
+positive integer; any other value fails with `invalid_limit` in the `value`
+phase rather than silently replacing the default, so a consumer never believes
+a limit applies when it does not. This does not declare malformed option
 containers or arbitrarily forged typed values to be a total input surface.
 The completion contract requires those surfaces to be classified and tested
 before a stronger admission claim is made.
+
+`Wotex.JSON.decode/2` is the bounded admission pipeline for source bytes:
+byte size and UTF-8 validity first, then a lexical depth and string-size scan
+before allocation, then decoding with copied strings, then duplicate-member,
+collection-size, node-count, and depth checks on the decoded value. Typed
+codes are `byte_limit_exceeded`, `depth_limit_exceeded`,
+`string_limit_exceeded`, `collection_limit_exceeded`, `node_limit_exceeded`,
+`duplicate_member`, `invalid_string`, `invalid_json`, and `invalid_limit`.
+`Wotex.JSON.validate/2` applies the structural subset to native values.
 
 `undefined_security_reference` is a semantic error. Its path identifies the
 offending Thing-level, Form-level, or `ComboSecurityScheme` member, and its safe
@@ -55,7 +72,9 @@ string boundary of [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259), Sections
 
 ## Compatibility contract
 
-- Development versions make no stable API promise.
+- Development versions make no stable API promise. Replacing silent limit
+  defaults with `invalid_limit`, enforcing context order, and rejecting
+  duplicate members are admission corrections made before any release.
 - A stable patch release may fix validation defects without removing accepted
   TD 1.1 values.
 - A stable minor release may add functions, value modules, or optional fields.

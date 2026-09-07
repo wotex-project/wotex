@@ -1,7 +1,7 @@
 # WTX.02: DataSchema, Form, affordance, and security values
 
 **Status**: Implemented development contract  
-**Specification version**: 1.0.0
+**Specification version**: 1.1.0
 
 **Owner**: `wotex`  
 **Requires**: WTX.01
@@ -35,6 +35,15 @@ protocol, accept a Property observation, or prove an Action effect.
    deterministic JSON Pointer-like path.
 8. `to_map/1` MUST return the complete preserved map.
 9. Wrappers MUST perform no I/O and start no process.
+10. `Wotex.Form.operations/2` MUST return declared `op` members when present
+    and otherwise the TD 1.1 section 5.3.4.2 default operations for the
+    interaction context: `readproperty` and `writeproperty` for a Property
+    (reduced to one by `readOnly` or `writeOnly`, and none when both are set),
+    `invokeaction` for an Action, and `subscribeevent` with `unsubscribeevent`
+    for an Event. Thing-level and generic Forms have no default.
+11. Each affordance wrapper MUST expose `forms/1`, returning its Forms validated
+    in that interaction context with the failing Form index in the error path,
+    and `operations/2`, returning the effective operations of one Form.
 
 ## Public values
 
@@ -51,5 +60,7 @@ protocol, accept a Property observation, or prove an Action effect.
 
 Constructor tests cover required members, invalid JSON keys and values,
 round-trip preservation, exact DataSchema constraints, category-specific Form
-operations, affordance requirements, security-scheme variants, and extension
-schemes. Thing Description fixtures cover their aggregate relationship.
+operations, default operations per context and `readOnly`/`writeOnly`,
+affordance Form extraction with failing-index paths, affordance requirements,
+security-scheme variants, and extension schemes. Thing Description fixtures
+cover their aggregate relationship and default operations end to end.

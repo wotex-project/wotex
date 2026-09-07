@@ -1,7 +1,7 @@
 # WTX.01: Thing Description 1.1 value, parsing, and serialization
 
 **Status**: Implemented development contract  
-**Specification version**: 1.0.0
+**Specification version**: 1.1.0
 
 **Owner**: `wotex`  
 **Standard baseline**: W3C WoT Thing Description 1.1, Recommendation
@@ -21,11 +21,17 @@ registration, or Action-effect truth. A consumer resolves those inputs.
 
 1. `Wotex.ThingDescription.parse/2` MUST accept UTF-8 TD JSON and return a
    validated immutable value or a structured error.
-2. The production context MUST include
-   `https://www.w3.org/2022/wot/td/v1.1`. The legacy context is not accepted as
-   a TD 1.1 production claim.
-3. Parsing MUST apply explicit byte, nesting-depth, and node-count limits before
-   the value enters a consumer boundary.
+2. The production `@context` MUST be `https://www.w3.org/2022/wot/td/v1.1`,
+   or an array whose first element is that URI, or an array whose first two
+   elements are `https://www.w3.org/2019/wot/td/v1` followed by that URI, as
+   TD 1.1 section 5.3.1.1 requires. Any other position or the legacy context
+   alone fails with `unsupported_context`. A document whose `@type` includes
+   `tm:ThingModel` fails with `thing_model_not_accepted`.
+3. Parsing MUST apply explicit byte, nesting-depth, node-count, string-size,
+   and collection-size limits before the value enters a consumer boundary.
+   Depth and string size MUST be bounded by a lexical scan before the decoder
+   allocates, decoded strings MUST NOT retain the source binary, and duplicate
+   object members MUST fail with `duplicate_member`.
 4. Parsing and validation MUST NOT fetch a remote JSON-LD context, schema, or
    vocabulary.
 5. `from_map/2` and `to_map/1` MUST preserve every JSON-compatible member,
@@ -59,9 +65,13 @@ registration, or Action-effect truth. A consumer resolves those inputs.
 
 ## Determinism and limits
 
-Defaults are one mebibyte, 64 nested containers, and 100,000 JSON nodes. A
-consumer may lower or explicitly raise these limits. Errors identify the phase,
-stable code, JSON path, and safe details.
+Limit options are `:max_bytes`, `:max_depth`, `:max_nodes`,
+`:max_string_bytes`, and `:max_collection_size`, with defaults of one
+mebibyte, 64 nested containers, 100,000 JSON nodes, 256 KiB per string, and
+10,000 members per container. A consumer may lower or explicitly raise these
+limits; a non-positive or non-integer limit fails with `invalid_limit`. For a
+native map, `:max_bytes` bounds the total string and key payload. Errors
+identify the phase, stable code, JSON path, and safe details.
 
 The documented `validate: false` staged-ingestion option bypasses the aggregate
 schema and semantic pass, not JSON-value or resource-limit admission. Such a
@@ -76,8 +86,10 @@ the package completion contract, `docs/plans/wotex-completion.md`.
 - extension terms survive parse/map/encode;
 - Thing-level, Form-level, and `ComboSecurityScheme` names cannot reference an
   undefined security scheme;
-- legacy context, malformed JSON, non-object roots, excessive bytes, depth, and
-  nodes fail with typed codes;
+- legacy context, misplaced context, Thing Model type, malformed JSON,
+  duplicate members, non-object roots, excessive bytes, depth, nodes, strings,
+  and collections, and invalid limit options fail with typed codes;
+- hostile nesting is rejected before decoding with bounded work;
 - a mutation invalidates source-byte encoding; and
 - bundled schema bytes match the recorded SHA-256 digest.
 

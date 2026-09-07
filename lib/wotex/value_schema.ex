@@ -72,26 +72,16 @@ defmodule Wotex.ValueSchema do
     end
   end
 
-  defp schema_error(error) do
-    raw_path = Map.get(error, :path, "#")
-    raw_error = Map.get(error, :error, error)
-
+  defp schema_error(%ExJsonSchema.Validator.Error{path: path, error: raw_error}) do
     Error.new(
       :schema_violation,
       :schema,
       "Value does not satisfy its pinned TD 1.1 definition",
-      normalize_path(raw_path),
+      normalize_path(path),
       %{assertion: inspect(raw_error, limit: 40, printable_limit: 160)}
     )
   end
 
-  defp normalize_path(path) when is_binary(path) do
-    case String.trim_leading(path, "#") do
-      "" -> "/"
-      "/" <> _rest = pointer -> pointer
-      other -> "/" <> other
-    end
-  end
-
-  defp normalize_path(path), do: normalize_path(to_string(path))
+  defp normalize_path("#"), do: "/"
+  defp normalize_path("#" <> pointer), do: pointer
 end

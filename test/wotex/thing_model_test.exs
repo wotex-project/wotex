@@ -75,8 +75,8 @@ defmodule Wotex.ThingModelTest do
     assert {:error, %Error{code: :node_limit_exceeded}} =
              ThingModel.from_map(valid_tm_map(), max_nodes: 3)
 
-    assert {:ok, _tm} =
-             ThingModel.from_map(valid_tm_map(), max_bytes: 0, max_depth: 0, max_nodes: 0)
+    assert {:error, %Error{code: :invalid_limit, details: %{option: :max_depth}}} =
+             ThingModel.from_map(valid_tm_map(), max_depth: 0)
   end
 
   test "accepts a TD 1.1 context array and rejects arrays without that context" do
@@ -201,6 +201,75 @@ defmodule Wotex.ThingModelTest do
              bundled_sha256: "3c8dedb2a534d089fdbd7fda8eb05a5b13237a2331f42e2af08cdb4a7af9fc7a",
              informative: true
            } = ThingModel.schema_info()
+  end
+
+  test "requires the TD 1.1 context first, optionally after the TD 1.0 context" do
+    v1 = "https://www.w3.org/2019/wot/td/v1"
+
+    assert {:ok, _tm} =
+             ThingModel.from_map(Map.put(valid_tm_map(), "@context", [v1, Wotex.td_context_1_1()]))
+
+    vendor_first =
+      Map.put(valid_tm_map(), "@context", ["https://example.test/context", Wotex.td_context_1_1()])
+
+    assert {:error, errors} = ThingModel.from_map(vendor_first)
+    assert Enum.any?(errors, &(&1.code == :unsupported_context))
+  end
+
+  test "resolves tm:optional and local tm:ref pointers within the model" do
+    assert {:error, errors} =
+             ThingModel.from_map(Map.put(valid_tm_map(), "tm:optional", ["/properties/missing"]))
+
+    assert Enum.any?(
+             errors,
+             &(&1.code == :unresolved_model_reference and &1.path == "/tm:optional/0")
+           )
+
+    assert {:error, errors} =
+             ThingModel.from_map(Map.put(valid_tm_map(), "tm:optional", ["/title"]))
+
+    assert Enum.any?(errors, &(&1.code == :unresolved_model_reference))
+
+    dangling =
+      put_in(valid_tm_map(), ["properties", "temperature", "tm:ref"], "#/schemaDefinitions/nope")
+
+    assert {:error, errors} = ThingModel.from_map(dangling)
+
+    assert Enum.any?(
+             errors,
+             &(&1.code == :unresolved_model_reference and
+                 &1.path == "/properties/temperature/tm:ref")
+           )
+
+    remote =
+      put_in(
+        valid_tm_map(),
+        ["properties", "temperature", "tm:ref"],
+        "https://example.test/m.tm.jsonld#/properties/t"
+      )
+
+    assert {:ok, _tm} = ThingModel.from_map(remote)
+
+    assert {:error, %Error{code: :object_required}} = ThingModel.from_map(42)
+
+    assert {:error, errors} =
+             ThingModel.from_map(Map.put(valid_tm_map(), "tm:optional", [1]))
+
+    assert Enum.any?(errors, &(&1.code == :unresolved_model_reference))
+
+    typed_ref = put_in(valid_tm_map(), ["properties", "temperature", "tm:ref"], 7)
+    assert {:error, errors} = ThingModel.from_map(typed_ref)
+    assert Enum.any?(errors, &(&1.code == :unresolved_model_reference))
+
+    no_fragment =
+      put_in(
+        valid_tm_map(),
+        ["properties", "temperature", "tm:ref"],
+        "https://example.test/m.tm.jsonld"
+      )
+
+    assert {:error, errors} = ThingModel.from_map(no_fragment)
+    assert Enum.any?(errors, &(&1.code == :unresolved_model_reference))
   end
 
   defp valid_tm_map do

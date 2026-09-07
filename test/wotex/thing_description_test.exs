@@ -253,9 +253,82 @@ defmodule Wotex.ThingDescriptionTest do
     assert Enum.any?(errors, &(&1.phase == :schema))
   end
 
-  test "invalid limit options fall back to safe defaults" do
+  test "invalid limit options are rejected instead of silently replaced" do
     json = Jason.encode!(valid_td_map())
-    assert {:ok, _td} = ThingDescription.parse(json, max_bytes: 0, max_depth: 0, max_nodes: 0)
+
+    assert {:error, %Error{code: :invalid_limit, details: %{option: :max_bytes}}} =
+             ThingDescription.parse(json, max_bytes: 0)
+
+    assert {:error, %Error{code: :invalid_limit, details: %{option: :max_nodes}}} =
+             ThingDescription.from_map(valid_td_map(), max_nodes: "many")
+  end
+
+  test "requires the TD 1.1 context first, optionally after the TD 1.0 context" do
+    v1_1 = Wotex.td_context_1_1()
+    v1 = "https://www.w3.org/2019/wot/td/v1"
+
+    assert {:ok, _td} = ThingDescription.from_map(Map.put(valid_td_map(), "@context", [v1, v1_1]))
+
+    assert {:ok, _td} =
+             ThingDescription.from_map(
+               Map.put(valid_td_map(), "@context", [v1_1, "https://example.test/context"])
+             )
+
+    vendor_first = Map.put(valid_td_map(), "@context", ["https://example.test/context", v1_1])
+    assert {:error, errors} = ThingDescription.from_map(vendor_first)
+    assert Enum.any?(errors, &(&1.code == :unsupported_context and &1.path == "/@context"))
+  end
+
+  test "rejects a Thing Model as a Thing Description with a dedicated code" do
+    assert {:error, errors} =
+             ThingDescription.from_map(Map.put(valid_td_map(), "@type", ["Thing", "tm:ThingModel"]))
+
+    assert Enum.any?(errors, &(&1.code == :thing_model_not_accepted and &1.path == "/@type"))
+  end
+
+  test "rejects duplicate members and bounds strings and payload during parsing" do
+    duplicated = ~s({"@context":"#{Wotex.td_context_1_1()}","title":"a","title":"b"})
+
+    assert {:error, %Error{code: :duplicate_member, path: "/title"}} =
+             ThingDescription.parse(duplicated)
+
+    json = Jason.encode!(valid_td_map())
+
+    assert {:error, %Error{code: :string_limit_exceeded}} =
+             ThingDescription.parse(json, max_string_bytes: 8)
+
+    assert {:error, %Error{code: :object_required}} = ThingDescription.parse("[]")
+    assert {:error, %Error{code: :object_required}} = ThingDescription.from_map("x")
+
+    assert {:error, %Error{code: :byte_limit_exceeded, phase: :value}} =
+             ThingDescription.from_map(valid_td_map(), max_bytes: 16)
+  end
+
+  test "applies TD 1.1 default operations to affordance Forms without op" do
+    map =
+      valid_td_map()
+      |> put_in(["properties", "temperature", "forms"], [%{"href" => "https://example.test/t"}])
+      |> Map.put("actions", %{
+        "reset" => %{"forms" => [%{"href" => "https://example.test/reset"}]}
+      })
+      |> Map.put("events", %{
+        "alarm" => %{"forms" => [%{"href" => "https://example.test/alarm"}]}
+      })
+
+    assert {:ok, td} = ThingDescription.from_map(map)
+    document = ThingDescription.to_map(td)
+
+    assert {:ok, property} = Wotex.PropertyAffordance.new(document["properties"]["temperature"])
+    assert {:ok, [form]} = Wotex.PropertyAffordance.forms(property)
+    assert Wotex.PropertyAffordance.operations(property, form) == ["readproperty"]
+
+    assert {:ok, action} = Wotex.ActionAffordance.new(document["actions"]["reset"])
+    assert {:ok, [form]} = Wotex.ActionAffordance.forms(action)
+    assert Wotex.ActionAffordance.operations(action, form) == ["invokeaction"]
+
+    assert {:ok, event} = Wotex.EventAffordance.new(document["events"]["alarm"])
+    assert {:ok, [form]} = Wotex.EventAffordance.forms(event)
+    assert Wotex.EventAffordance.operations(event, form) == ["subscribeevent", "unsubscribeevent"]
   end
 
   defp valid_td_map do

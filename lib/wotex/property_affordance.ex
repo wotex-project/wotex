@@ -11,7 +11,7 @@ defmodule Wotex.PropertyAffordance do
   JSON-value semantics.
   """
 
-  alias Wotex.Value
+  alias Wotex.{Form, Value}
 
   @type t :: %__MODULE__{value: map()}
   @enforce_keys [:value]
@@ -24,4 +24,30 @@ defmodule Wotex.PropertyAffordance do
   @doc "Returns the complete preserved Property Affordance map."
   @spec to_map(t()) :: map()
   def to_map(%__MODULE__{} = affordance), do: Value.to_map(affordance)
+
+  @doc "Returns whether the affordance declares `readOnly: true`."
+  @spec read_only?(t()) :: boolean()
+  def read_only?(%__MODULE__{value: value}), do: Map.get(value, "readOnly") == true
+
+  @doc "Returns whether the affordance declares `writeOnly: true`."
+  @spec write_only?(t()) :: boolean()
+  def write_only?(%__MODULE__{value: value}), do: Map.get(value, "writeOnly") == true
+
+  @doc "Returns whether the affordance declares `observable: true`."
+  @spec observable?(t()) :: boolean()
+  def observable?(%__MODULE__{value: value}), do: Map.get(value, "observable") == true
+
+  @doc "Returns the affordance Forms validated in the Property interaction context."
+  @spec forms(t()) :: {:ok, [Form.t()]} | {:error, Wotex.Error.t()}
+  def forms(%__MODULE__{value: value}), do: Value.forms(value, :property)
+
+  @doc "Returns the effective operations of one Form, applying TD 1.1 Property defaults."
+  @spec operations(t(), Form.t()) :: [String.t()]
+  def operations(%__MODULE__{} = affordance, %Form{} = form) do
+    Form.operations(form,
+      for: :property,
+      read_only: read_only?(affordance),
+      write_only: write_only?(affordance)
+    )
+  end
 end

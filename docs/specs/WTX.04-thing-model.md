@@ -1,7 +1,7 @@
 # WTX.04: Thing Model 1.1 value, parsing, and serialization
 
 **Status**: Implemented development contract  
-**Specification version**: 1.0.0
+**Specification version**: 1.1.0
 
 **Owner**: `wotex`  
 **Requires**: WTX.01, WTX.03  
@@ -23,9 +23,9 @@ which model a Thing implements. A consumer owns those decisions.
 
 1. `Wotex.ThingModel.parse/2` MUST accept UTF-8 `application/tm+json` bytes and
    return a validated immutable value or structured errors.
-2. A production value MUST declare `tm:ThingModel` and include the TD 1.1
-   context `https://www.w3.org/2022/wot/td/v1.1` as required by the pinned W3C
-   schema and semantic context check.
+2. A production value MUST declare `tm:ThingModel` and declare the TD 1.1
+   context `https://www.w3.org/2022/wot/td/v1.1` in the same position rules as
+   a Thing Description: alone, first, or second after the TD 1.0 context.
 3. `tm:optional`, `tm:ref`, `schemaDefinitions`, placeholders, and unknown
    extension members MUST retain native JSON-value semantics.
 4. Parsing MUST apply explicit byte, nesting-depth, and node-count limits
@@ -42,6 +42,11 @@ which model a Thing implements. A consumer owns those decisions.
 10. Security references present in a model MUST resolve to entries in its
     `securityDefinitions` map using the same deterministic semantic rule as a
     Thing Description.
+11. Every `tm:optional` entry MUST be a JSON Pointer of the form
+    `/properties/<name>`, `/actions/<name>`, or `/events/<name>` that resolves
+    in the model. A `tm:ref` beginning with `#` MUST resolve locally; any other
+    `tm:ref` MUST be an absolute URI with a fragment and is never fetched.
+    Failures use `unresolved_model_reference` at the referencing path.
 
 ## Public operations
 
@@ -65,8 +70,9 @@ JSON Pointer-like paths.
 
 ## Compatibility and failure behavior
 
-Thing Models are not accepted by `Wotex.ThingDescription`, and Thing
-Descriptions are not accepted by `Wotex.ThingModel`. Model instantiation is a
+Thing Models are not accepted by `Wotex.ThingDescription`, which reports
+`thing_model_not_accepted` for a `tm:ThingModel` type, and Thing Descriptions
+are not accepted by `Wotex.ThingModel`, whose pinned schema requires that type. Model instantiation is a
 future, separately specified operation rather than an implicit parse side
 effect. Invalid JSON, non-object roots, resource-limit failures, schema
 violations, unsupported contexts, and unresolved security references use the
@@ -79,6 +85,9 @@ shared `Wotex.Error` contract.
 - placeholder, `tm:optional`, `tm:ref`, schema definition, and extension
   preservation;
 - exact unresolved-security-reference paths;
+- unresolved `tm:optional` and local `tm:ref` pointers, and remote `tm:ref`
+  values without a fragment;
+- context position rules;
 - invalid type, context, JSON, root value, and resource limits fail safely;
 - mutation invalidates source-byte encoding; and
 - schema provenance exposes immutable upstream and bundled digests.

@@ -12,15 +12,13 @@ defmodule Wotex.ThingModel do
   uses a schema pinned to the W3C Thing Description 1.1 Recommendation; remote
   JSON-LD contexts are never fetched.
 
-  Byte, depth, and node limits are enforced before a value crosses the package
-  boundary. Source bytes remain available until mutation, while canonical
+  Byte, depth, node, string, and collection limits are enforced before a value
+  crosses the package boundary. Source bytes remain available until mutation, while canonical
   encoding is deterministic within Wotex and makes no RFC 8785 claim.
   """
 
   alias Wotex.{Error, JSON}
   alias Wotex.ThingModel.Validator
-
-  @default_max_bytes 1_048_576
 
   @typedoc "Pinned identity and provenance of the bundled informative Thing Model schema."
   @type schema_info :: %{
@@ -46,8 +44,10 @@ defmodule Wotex.ThingModel do
   @doc """
   Parses and validates `application/tm+json` bytes.
 
-  Options include `:max_bytes`, `:max_depth`, and `:max_nodes`. Positive values
-  replace the safe defaults of 1 MiB, 64 nesting levels, and 100,000 nodes.
+  Limit options are `:max_bytes`, `:max_depth`, `:max_nodes`,
+  `:max_string_bytes`, and `:max_collection_size`; see `Wotex.JSON.Limits` for
+  defaults. Invalid limit values are rejected with `invalid_limit`. Duplicate
+  object members are rejected during decoding.
   `validate: false` skips the Thing Model schema and semantic pass but retains
   JSON-value and resource-limit validation.
   """
@@ -55,11 +55,15 @@ defmodule Wotex.ThingModel do
   def parse(json, opts \\ [])
 
   def parse(json, opts) when is_binary(json) do
-    max_bytes = positive_limit(opts, :max_bytes, @default_max_bytes)
+    validate? = Keyword.get(opts, :validate, true)
 
-    with :ok <- check_byte_limit(json, max_bytes),
-         {:ok, decoded} <- decode(json) do
-      from_map(decoded, Keyword.put(opts, :source, json))
+    with {:ok, decoded} <- JSON.decode(json, opts),
+         {:ok, document} <- require_object(decoded) do
+      maybe_validate(
+        %__MODULE__{document: document, source: json, changed?: false},
+        validate?,
+        opts
+      )
     end
   end
 
@@ -96,9 +100,7 @@ defmodule Wotex.ThingModel do
     end
   end
 
-  def from_map(_document, _opts) do
-    {:error, Error.new(:object_required, :value, "A Thing Model must be a JSON object", "/")}
-  end
+  def from_map(document, _opts), do: require_object(document)
 
   @doc "Returns the complete JSON-compatible Thing Model map."
   @spec to_map(t()) :: map()
@@ -166,27 +168,10 @@ defmodule Wotex.ThingModel do
   @spec schema_info() :: schema_info()
   def schema_info, do: Validator.schema_info()
 
-  defp check_byte_limit(json, max_bytes) when byte_size(json) <= max_bytes, do: :ok
+  defp require_object(document) when is_map(document), do: {:ok, document}
 
-  defp check_byte_limit(json, max_bytes) do
-    {:error,
-     Error.new(:byte_limit_exceeded, :parse, "Thing Model JSON exceeds the byte limit", "/", %{
-       bytes: byte_size(json),
-       max_bytes: max_bytes
-     })}
-  end
-
-  defp decode(json) do
-    case Jason.decode(json) do
-      {:ok, decoded} ->
-        {:ok, decoded}
-
-      {:error, reason} ->
-        {:error,
-         Error.new(:invalid_json, :parse, "Thing Model JSON could not be decoded", "/", %{
-           reason: Exception.message(reason)
-         })}
-    end
+  defp require_object(_document) do
+    {:error, Error.new(:object_required, :value, "A Thing Model must be a JSON object", "/")}
   end
 
   defp maybe_validate(tm, true, opts), do: Validator.validate(tm, opts)
@@ -205,13 +190,6 @@ defmodule Wotex.ThingModel do
          Error.new(:encode_failed, :encode, "Thing Model JSON encoding failed", "/", %{
            reason: inspect(reason, limit: 20, printable_limit: 80)
          })}
-    end
-  end
-
-  defp positive_limit(opts, key, default) do
-    case Keyword.get(opts, key, default) do
-      value when is_integer(value) and value > 0 -> value
-      _invalid -> default
     end
   end
 end

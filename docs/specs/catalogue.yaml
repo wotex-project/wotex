@@ -3,7 +3,7 @@ package: "wotex"
 completion_plan: "docs/plans/wotex-completion.md"
 specifications:
   - id: "WTX.01"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WTX.01-thing-description.md"
     implementation_status: "implemented"
     standards:
@@ -13,9 +13,9 @@ specifications:
     requires: []
     implementation_modules: ["Wotex", "Wotex.ThingDescription", "Wotex.ThingDescription.Validator", "Wotex.SecurityReferences"]
     executable_evidence: ["test/wotex/thing_description_test.exs", "test/wotex/library_contract_test.exs"]
-    compatibility_classification: "Existing 0.1 API; standards scope is not full conformance; stable API admission remains separate"
+    compatibility_classification: "Existing 0.1 API with pre-release admission corrections (context position, duplicate members, invalid limits); standards scope is not full conformance; stable API admission remains separate"
   - id: "WTX.02"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WTX.02-affordance-values.md"
     implementation_status: "implemented"
     standards:
@@ -25,9 +25,9 @@ specifications:
     requires: ["WTX.01"]
     implementation_modules: ["Wotex.DataSchema", "Wotex.Form", "Wotex.PropertyAffordance", "Wotex.ActionAffordance", "Wotex.EventAffordance", "Wotex.SecurityScheme", "Wotex.Value", "Wotex.ValueSchema"]
     executable_evidence: ["test/wotex/value_test.exs"]
-    compatibility_classification: "Existing 0.1 value API; context-specific Form operation validation does not imply runtime support"
+    compatibility_classification: "Existing 0.1 value API plus additive default-operation and affordance Form helpers; context-specific Form validation does not imply runtime support"
   - id: "WTX.03"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WTX.03-errors-extensions-and-compatibility.md"
     implementation_status: "implemented"
     standards:
@@ -35,11 +35,11 @@ specifications:
         revision: "December 2017, sections 7 and 8.1"
         claim: "UTF-8 JSON string boundary; deterministic encoding is not RFC 8785 JCS"
     requires: ["WTX.01", "WTX.02"]
-    implementation_modules: ["Wotex.Error", "Wotex.JSON", "Wotex.Value"]
+    implementation_modules: ["Wotex.Error", "Wotex.JSON", "Wotex.JSON.Limits", "Wotex.Value"]
     executable_evidence: ["test/wotex/json_test.exs", "test/wotex/value_test.exs", "test/wotex/library_contract_test.exs"]
     compatibility_classification: "Stable matching fields and extension preservation within the documented contract; no stable API declaration"
   - id: "WTX.04"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WTX.04-thing-model.md"
     implementation_status: "implemented"
     standards:
@@ -47,6 +47,6 @@ specifications:
         revision: "Recommendation 5 December 2023"
         claim: "Thing Model JSON values; no instantiation or remote reference resolution"
     requires: ["WTX.01", "WTX.03"]
-    implementation_modules: ["Wotex.ThingModel", "Wotex.ThingModel.Validator"]
+    implementation_modules: ["Wotex.ThingModel", "Wotex.ThingModel.Validator", "Wotex.ModelReferences"]
     executable_evidence: ["test/wotex/thing_model_test.exs"]
     compatibility_classification: "Separate aggregate from Thing Description; model instantiation needs a separately admitted contract"

@@ -30,6 +30,31 @@ defmodule Wotex.Value do
   @spec to_map(map()) :: map()
   def to_map(%{value: value}), do: value
 
+  @doc "Builds the Forms of an affordance map in one interaction context."
+  @spec forms(map(), atom()) :: {:ok, [Wotex.Form.t()]} | {:error, Error.t()}
+  def forms(affordance, context) when is_map(affordance) do
+    result =
+      affordance
+      |> Map.get("forms", [])
+      |> List.wrap()
+      |> Enum.with_index()
+      |> Enum.reduce_while({:ok, []}, fn {form_map, index}, {:ok, acc} ->
+        case Wotex.Form.new(form_map, for: context) do
+          {:ok, form} ->
+            {:cont, {:ok, [form | acc]}}
+
+          {:error, %Error{} = error} ->
+            path = String.trim_trailing("/forms/#{index}" <> error.path, "/")
+            {:halt, {:error, %{error | path: path}}}
+        end
+      end)
+
+    case result do
+      {:ok, reversed} -> {:ok, Enum.reverse(reversed)}
+      {:error, error} -> {:error, error}
+    end
+  end
+
   defp validate_requirements(map, requirements) do
     Enum.reduce_while(requirements, :ok, fn {key, predicate, message}, :ok ->
       value = Map.get(map, key)
