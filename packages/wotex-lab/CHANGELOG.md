@@ -16,6 +16,9 @@
   through runtime subscriptions.
 - External conformance target exposing the core package as a subject through
   the runner protocol; both bundled corpora pass over a real port.
+- Bounded in-memory Continuum channel with a versioned fault schedule, a
+  simulated cloud host that admits manifests, watermarks proposals and
+  dispatches intents once, and wire conversions from Nx and runtime values.
 - Instance-owned ETS Directory repository with explicit authorization, clock
   and identifier ports and a public-API contract suite over keyset paging,
   conditional writes, expiry and authorization ordering.

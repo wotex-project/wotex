@@ -37,6 +37,7 @@ defmodule WotexLab.MixProject do
       wotex_dependency(:wotex_directory, "wotex-directory"),
       wotex_dependency(:wotex_binding_http, "wotex-binding-http"),
       wotex_dependency(:wotex_conformance, "wotex-conformance"),
+      wotex_dependency(:wotex_continuum, "wotex-continuum"),
       {:nx, "~> 0.13.1"},
       {:req, "~> 0.7.4", optional: true},
       {:bandit, "~> 1.12", only: :test},

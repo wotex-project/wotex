@@ -72,6 +72,12 @@ jobs:
           ref: 0d7e9d9f9e6710ca2041bbcbf35802e97ea449f8
           path: wotex-conformance
           persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex-continuum
+          ref: 361f9cebdd29f9a0c1314e8b625974483d1bbca6
+          path: wotex-continuum
+          persist-credentials: false
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
           elixir-version: ${{ matrix.elixir }}

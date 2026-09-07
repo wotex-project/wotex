@@ -107,7 +107,7 @@ specifications:
       - "test/wotex/lab/http_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.05
-    version: "1.1.0"
+    version: "1.2.0"
     path: docs/specs/WLB.05-directory-continuum-and-smart-room.md
     implementation_status: partial
     evidence_status: partial
@@ -131,8 +131,13 @@ specifications:
       - "Wotex.Lab.Adapters.Directory.Authorization"
       - "Wotex.Lab.Adapters.Directory.Clock"
       - "Wotex.Lab.Adapters.Directory.Identifier"
+      - "Wotex.Lab.Continuum.Channel"
+      - "Wotex.Lab.Continuum.FaultSchedule"
+      - "Wotex.Lab.Continuum.Host"
+      - "Wotex.Lab.Continuum.Wire"
     executable_evidence:
       - "test/wotex/lab/directory_test.exs"
+      - "test/wotex/lab/continuum_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.06
     version: "1.1.0"

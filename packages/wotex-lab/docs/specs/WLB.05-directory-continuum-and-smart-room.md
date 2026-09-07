@@ -1,9 +1,9 @@
 # WLB.05: Directory, Continuum and the smart-room consumer
 
-Specification version: 1.1.0. Contract: accepted. Source status: the ETS
-repository, explicit authorization/clock/identifier ports and the Directory
-contract suite are implemented; the SQLite store, Continuum channel and smart
-room remain planned.
+Specification version: 1.2.0. Contract: accepted. Source status: the ETS
+repository, explicit authorization/clock/identifier ports, the Directory
+contract suite, the Continuum channel, host and wire conversions are
+implemented; the SQLite store and the smart room remain planned.
 
 ## Directory references
 
@@ -46,7 +46,21 @@ required Directory operations above.
 ## Continuum consumer
 
 The reference edge/cloud channel MUST use public `WotexContinuum` constructors
-and codec; the actual namespace is not `Wotex.Continuum`. Manifest/context/
+and codec; the actual namespace is not `Wotex.Continuum`.
+`Wotex.Lab.Continuum.Channel` is that channel: a bounded, instance-owned
+process that encodes every value canonically, records a `delivery` value per
+send, applies a versioned `FaultSchedule` (drop, duplicate, hold-until for
+reordering) keyed by send sequence, buffers while disconnected and replays
+unacknowledged deliveries with a new attempt on reconnect.
+`Wotex.Lab.Continuum.Host` is the simulated cloud host: it decodes with the
+bounded codec, acknowledges, admits manifests through compatibility
+evaluation, admits proposals only above the per-affordance sequence
+watermark for a known Thing, dispatches each intent at most once per
+idempotency key through a runtime `ConsumedThing` over the loopback lane,
+returns an `action_result`, refuses intents without an accepted manifest or
+while draining, and keeps a lifecycle value. `Wotex.Lab.Continuum.Wire`
+implements the documented wire mapping from Nx observations and proposals
+and runtime results. Manifest/context/
 capability compatibility, TD references, all registered value kinds, observation
 and Action roundtrips and lifecycle transitions need positive/negative vectors.
 Transport is a bounded, instance-owned in-memory channel with explicit delay,
@@ -61,6 +75,11 @@ Invalid compatibility or stale authority cannot fall through to execution.
 Replay after disconnection distinguishes message receipt from observed state.
 Native-map, JSON, schema and constructor disagreement is recorded against
 WCT-C01–C03; exact artifact consumer proof supports WCT-C04/C05.
+`test/wotex/lab/continuum_test.exs` covers all thirteen kinds round-tripping
+as canonical bytes, manifest compatibility gating, stale authority, duplicate
+intent delivery without a second dispatch, reordered and dropped proposals,
+disconnection and replay, capacity exhaustion, lifecycle draining and the
+wire conversions in both directions.
 
 ## Canonical smart room
 

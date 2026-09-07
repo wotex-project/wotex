@@ -95,7 +95,7 @@ implementation is not part of this foundation.
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TD
   T[Thing observations] --> W[Public WoTEx contracts]
   W --> N[Wotex.Nx rows and batches]
   N --> X[Consumer Nx / Nx.Serving / Axon function]
@@ -114,7 +114,9 @@ credential adapters. The Directory ETS store, explicit authorization, clock and
 identifier ports and their contract suite are implemented too, as is the Req
 HTTP client with its bounded SSE parser and linked stream session (`req` is an
 optional dependency selected by the host), and the external conformance
-target that runs the core package through the conformance protocol. MQTT uses EMQTT and a disposable broker;
+target that runs the core package through the conformance protocol. The
+Continuum channel, host and wire conversions carry proposals, intents and
+results between a simulated edge and cloud with replayable faults. MQTT uses EMQTT and a disposable broker;
 the SQLite Directory store uses Exqlite. Those are accepted reference choices,
 not mandatory dependencies of the base library or implementations already
 supplied here. `ex_maude` earns a specific
