@@ -113,7 +113,8 @@ requests, subscriptions and raw frames to it, with `NoSec` and `StaticRef`
 credential adapters. The Directory ETS store, explicit authorization, clock and
 identifier ports and their contract suite are implemented too, as is the Req
 HTTP client with its bounded SSE parser and linked stream session (`req` is an
-optional dependency selected by the host). MQTT uses EMQTT and a disposable broker;
+optional dependency selected by the host), and the external conformance
+target that runs the core package through the conformance protocol. MQTT uses EMQTT and a disposable broker;
 the SQLite Directory store uses Exqlite. Those are accepted reference choices,
 not mandatory dependencies of the base library or implementations already
 supplied here. `ex_maude` earns a specific

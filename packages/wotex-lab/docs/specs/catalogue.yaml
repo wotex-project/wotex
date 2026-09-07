@@ -135,11 +135,11 @@ specifications:
       - "test/wotex/lab/directory_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.06
-    version: "0.1.0"
+    version: "1.1.0"
     path: docs/specs/WLB.06-evidence-conformance-and-observability.md
-    implementation_status: planned
-    evidence_status: missing
-    adoption_status: no_reference
+    implementation_status: partial
+    evidence_status: partial
+    adoption_status: reference_available
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -150,8 +150,10 @@ specifications:
       - "wotex_conformance:WCF.01"
     completion_items:
       - "WLB-C07"
-    implementation_modules: []
-    executable_evidence: []
+    implementation_modules:
+      - "Wotex.Lab.Conformance.Target"
+    executable_evidence:
+      - "test/wotex/lab/conformance_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.07
     version: "0.1.0"

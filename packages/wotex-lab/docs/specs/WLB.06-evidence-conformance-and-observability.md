@@ -1,6 +1,8 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 0.1.0. Contract: accepted.
+Specification version: 1.1.0. Contract: accepted. Source status: the external
+conformance target for the core package is implemented; evidence records,
+telemetry, fault schedules and benchmarks remain planned.
 
 ## Evidence record and maturity
 
@@ -39,6 +41,13 @@ The Lab target MUST be a separate executable/project built against the exact
 subject archive, implementing the WCF.01 external protocol from public docs.
 The runner project MUST NOT import the subject. The target MUST NOT import
 runner internals, inspect expectation files or receive expected values.
+`Wotex.Lab.Conformance.Target` is that target: `respond/1` derives one
+normalized observation from the declared document and projection by running
+the core package, and `main/1` is the process entry the runner starts through
+a port (an `erl` invocation with explicit code paths, no shell, a private
+`HOME`). The subject archive is a tar of the loaded core `ebin` directory, so
+the evidence names the compiled subject that actually answered; it is source
+mode evidence, not a Hex artifact claim.
 Claims/vectors/expected results remain runner-owned. A Lab target wrapping
 WoTEx is independent consumer evidence, **not an independent WoT parser**.
 Core interoperability additionally requires a named independent implementation
@@ -46,6 +55,10 @@ or published corpus with pinned revision/license and counterexamples.
 
 Required outcomes are observed/pass, mismatch/fail, unsupported, timeout,
 malformed/partial/oversized response, target crash and changed archive refusal.
+`test/wotex/lab/conformance_test.exs` runs the core package through both
+bundled corpora (pass on every vector), refuses a changed archive before any
+vector runs, and checks the pure derivation for projections, rejections,
+non-object documents and unsupported operations.
 These are scenarios, not new WCF status values. Preserve the runner's canonical
 `pass`, `fail`, `unsupported`, `not_run` and `infrastructure_error` statuses;
 timeout/crash/malformed output are reasons under the runner's actual outcome.

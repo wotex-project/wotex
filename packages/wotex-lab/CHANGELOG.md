@@ -14,6 +14,8 @@
 - Req HTTP client with a bounded incremental SSE parser and a linked stream
   session, exercised over real sockets against a disposable Bandit server
   through runtime subscriptions.
+- External conformance target exposing the core package as a subject through
+  the runner protocol; both bundled corpora pass over a real port.
 - Instance-owned ETS Directory repository with explicit authorization, clock
   and identifier ports and a public-API contract suite over keyset paging,
   conditional writes, expiry and authorization ordering.

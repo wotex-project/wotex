@@ -266,6 +266,9 @@ defmodule Wotex.Lab.HttpTest do
     assert {:ok, [second], parser} = Parser.feed(parser, "data:2\r\n\r\n")
     assert Event.data(second) == "2" and Event.event(second) == nil
 
+    assert {:ok, [bare], parser} = Parser.feed(parser, "data\n\n")
+    assert Event.data(bare) == ""
+
     assert {:error, %Wotex.Lab.Error{code: :sse_line_too_long}} =
              Parser.feed(parser, String.duplicate("x", 40))
 
