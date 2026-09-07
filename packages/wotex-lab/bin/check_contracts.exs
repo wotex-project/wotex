@@ -56,7 +56,7 @@ defmodule Wotex.Lab.Check.Contracts do
       "lib/**/*.ex"
       |> Path.wildcard()
       |> Enum.flat_map(fn file ->
-        Regex.scan(~r/^defmodule ([\w.]+) do/m, File.read!(file)) |> Enum.map(&Enum.at(&1, 1))
+        Regex.scan(~r/^ *defmodule ([\w.]+) do/m, File.read!(file)) |> Enum.map(&Enum.at(&1, 1))
       end)
 
     Enum.each(specs, fn spec ->

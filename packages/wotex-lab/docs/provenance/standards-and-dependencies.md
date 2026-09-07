@@ -28,7 +28,8 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [Nx 0.13.1](https://hexdocs.pm/nx/0.13.1/Nx.html) and [Serving](https://hexdocs.pm/nx/0.13.1/Nx.Serving.html) | Explicit tensor/backend/defn/batch execution; Serving names/options follow this cohort |
 | [Axon 0.8.1](https://hexdocs.pm/axon/0.8.1/Axon.html) | Consumer training/serving integration contract; integration dependency cohort requires validation |
 | [Req](https://hexdocs.pm/req/Req.html) | Chosen finite HTTP and streaming reference; SSE lifecycle remains explicit Lab work |
-| [EMQTT](https://github.com/emqx/emqtt) | Chosen MQTT client; wire compatibility, custody and session behavior require pinned integration evidence |
+| [EMQTT 1.16.0](https://hex.pm/packages/emqtt/1.16.0) | Chosen MQTT 5 client behind the optional `{:emqtt, "~> 1.15"}` requirement, resolved to 1.16.0 by `mix.lock`; credential custody and no-automatic-reconnect are asserted against this revision, and wire/session behaviour beyond the exercised cases is not claimed |
+| [eclipse-mosquitto 2](https://hub.docker.com/_/eclipse-mosquitto) | Disposable local MQTT broker for the WLB.04 broker lane, selected by tag; not a digest-pinned release artifact and not a broker conformance claim |
 | [Exqlite 0.40.0](https://hexdocs.pm/exqlite/0.40.0/Exqlite.html) | Chosen SQLite access, pinned by `mix.lock`; the transactions, conditional SQL and conflict mapping belong to the independent Lab adapter |
 | [ExMaude 0.4.1 source](https://github.com/futhr/ex_maude/tree/9bc259ff0d1ea3153c20e7f7f439827c1d4ba3d4) | Explicit pools/public search and model-scoped evidence; binary separately provisioned |
 | [Maude](https://maude.cs.illinois.edu/) | Rewriting logic engine; finite-model claims and executable license are separate from WoT standards |
@@ -38,6 +39,23 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [AsyncAPI 3.1.0](https://www.asyncapi.com/docs/reference/specification/v3.1.0) | Selected event/MQTT interface description dialect |
 | [JSON-LD 1.1](https://www.w3.org/TR/json-ld11/) and [RDF 1.1 Turtle](https://www.w3.org/TR/turtle/) | Ecosystem graph representations only |
 | [MCP transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) | Pinned stdio/Streamable HTTP baseline; transport conformance and control policy require separate tests |
+
+## Acknowledged advisories in the optional MQTT cohort
+
+Observation date: 2026-09-08. The optional `emqtt` requirement resolves `gun`
+and `cowlib`, which carry open advisories with no patched Hex release at that
+date: `GHSA-w4f7-4cxr-rv3c` (gun), `EEF-CVE-2026-43966`, `EEF-CVE-2026-43969`
+and `EEF-CVE-2026-43971` (cowlib). Every affected code path is Cowboy/Gun HTTP,
+cookie, link-header or HPACK/QPACK handling reached through emqtt's WebSocket
+and QUIC transports. `Wotex.Lab.Adapters.MQTT.Session` selects `emqtt_sock`,
+the plain TCP transport, and never `emqtt_ws` or `emqtt_quic`.
+
+`mix.exs` (`hex: [ignore_advisories: ...]`) and `.mix_audit.ignore` therefore
+acknowledge exactly these identifiers so `mix check` reports a real regression
+rather than a permanent failure. This is a dated, scoped acknowledgement, not a
+claim that the advisories are invalid: a consumer that also uses gun or cowlib
+for HTTP is affected independently of Lab, and the acknowledgement must be
+removed once a patched release exists.
 
 Selected versions are design baselines, not claims that they are universally
 the newest or compatible. Runtime dependencies are pinned by `mix.lock`; full

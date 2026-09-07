@@ -34,6 +34,23 @@ WOTEX_PATH_DEPS=1 mix run -e 'IO.inspect(Wotex.Lab.Examples.Thermal.run())'
 WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
+Setup needs no C toolchain beyond what Erlang itself uses: `exqlite` ships
+precompiled NIFs and `emqtt` is compiled without its QUIC transport, so its
+`quicer` dependency is fetched to satisfy the resolver but never built and no
+msquic download or cmake run happens. A host that selects `emqtt` itself
+sets `BUILD_WITHOUT_QUIC=1` in its own build to keep that property; the
+published package cannot carry a build environment for a dependency.
+
+`mix check` needs no container runtime: the MQTT broker lane is tagged
+`:broker` and excluded unless `WOTEX_LAB_BROKER=1` is set. Run it explicitly
+with Docker available and the `eclipse-mosquitto:2` image pullable; each test
+starts a disposable broker on an ephemeral loopback port, uses its own topic
+prefix and removes the container when the suite ends.
+
+```sh
+WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 MIX_ENV=test mix test
+```
+
 Development expects `wotex` and `wotex-nx` checkouts alongside Lab. This mode is
 local source evidence. It does not satisfy the clone-free acceptance gate.
 The intended Hex dependency is `{:wotex_lab, "~> 0.1.0"}`; this README does not
@@ -123,10 +140,12 @@ simulated edge and cloud with replayable faults. The canonical smart room
 (`Wotex.Lab.SmartRoom.Scenario`) discovers an HTTP thermostat and a loopback
 actuator from the Directory by TD id, turns a temperature reading into an Nx
 `setTarget` proposal, and lets `Wotex.Lab.SmartRoom.Policy` dispatch one
-decision once; only the result crosses the channel to the cloud host. MQTT uses
-EMQTT and a disposable broker; that is an accepted reference choice, not a
-mandatory dependency of the base library and not an implementation supplied
-here.
+decision once; only the result crosses the channel to the cloud host. The MQTT
+lane is implemented too: `Wotex.Lab.Adapters.MQTT.EmqttClient` and its linked
+`Adapters.MQTT.Session` carry runtime requests, retained reads, publications
+and subscriptions over EMQTT (`emqtt` is an optional dependency selected by
+the host) against a disposable `eclipse-mosquitto:2` broker. TLS, broker ACL
+isolation, Last Will, session expiry and power loss remain planned there.
 `ex_maude` earns a specific place by exploring modeled conflicting control
 decisions and unsafe transition orders. Its result cannot authorize an Action
 or certify a physical system.

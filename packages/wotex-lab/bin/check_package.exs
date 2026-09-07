@@ -16,7 +16,7 @@ defmodule Wotex.Lab.Check.Package do
     File.mkdir_p!(work)
     source = Path.join(work, "source")
 
-    env = [{"WOTEX_PATH_DEPS", nil}, {"MIX_ENV", "dev"}]
+    env = [{"WOTEX_PATH_DEPS", nil}, {"MIX_ENV", "prod"}]
 
     {output, status} =
       System.cmd("mix", ["hex.build", "--unpack", "--output", source],
@@ -50,6 +50,10 @@ defmodule Wotex.Lab.Check.Package do
       opts = dep |> Tuple.to_list() |> List.last()
       if is_list(opts) and Enum.any?([:path, :git, :github], &Keyword.has_key?(opts, &1)) do
         raise "production dependency is not an artifact requirement"
+      end
+
+      if is_list(opts) and Keyword.has_key?(opts, :system_env) do
+        raise "production dependency carries a build environment"
       end
     end)
     IO.puts("package metadata: production requirements use Hex")

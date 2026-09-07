@@ -68,6 +68,12 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
+          repository: wotex-project/wotex-binding-mqtt
+          ref: 3b6239301e87c6fd1218910dddae509ea765792b
+          path: wotex-binding-mqtt
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
           repository: wotex-project/wotex-conformance
           ref: 0d7e9d9f9e6710ca2041bbcbf35802e97ea449f8
           path: wotex-conformance

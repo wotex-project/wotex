@@ -2,6 +2,18 @@ defmodule WotexLab.MixProject do
   use Mix.Project
 
   @version "0.1.0"
+
+  # Cowboy/Gun HTTP, cookie, link-header and HPACK/QPACK advisories reached only
+  # through the WebSocket and QUIC transports of the optional `emqtt` dependency.
+  # The Lab MQTT adapter selects `emqtt_sock` (plain TCP) and never `emqtt_ws` or
+  # `emqtt_quic`, and no patched cowlib or gun release existed on 2026-09-08.
+  # See docs/provenance/standards-and-dependencies.md; renew when one ships.
+  @acknowledged_advisories [
+    "GHSA-w4f7-4cxr-rv3c",
+    "EEF-CVE-2026-43966",
+    "EEF-CVE-2026-43969",
+    "EEF-CVE-2026-43971"
+  ]
   @source_url "https://github.com/wotex-project/wotex-lab"
 
   def project do
@@ -19,6 +31,7 @@ defmodule WotexLab.MixProject do
       package: package(),
       docs: docs(),
       test_coverage: [tool: ExCoveralls],
+      hex: [ignore_advisories: @acknowledged_advisories],
       dialyzer: [plt_file: {:no_warn, "priv/plts/dialyxir.plt"}]
     ]
   end
@@ -36,6 +49,7 @@ defmodule WotexLab.MixProject do
       wotex_dependency(:wotex_runtime, "wotex-runtime"),
       wotex_dependency(:wotex_directory, "wotex-directory"),
       wotex_dependency(:wotex_binding_http, "wotex-binding-http"),
+      wotex_dependency(:wotex_binding_mqtt, "wotex-binding-mqtt"),
       wotex_dependency(:wotex_conformance, "wotex-conformance"),
       wotex_dependency(:wotex_continuum, "wotex-continuum"),
       {:nx, "~> 0.13.1"},
@@ -51,7 +65,25 @@ defmodule WotexLab.MixProject do
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
       {:yaml_elixir, "~> 2.12", only: [:dev, :test], runtime: false}
-    ]
+    ] ++ emqtt_dependencies()
+  end
+
+  # emqtt lists quicer as a hard dependency although its application file does
+  # not start it. Outside production the Lab compiles emqtt without its QUIC
+  # transport and fetches quicer only to satisfy the resolver, never building
+  # it, so no msquic download or cmake run enters the Lab setup. Hex package
+  # metadata cannot carry `:system_env` or `override: true`, so production
+  # declares the plain optional requirement and a host that selects `emqtt`
+  # sets `BUILD_WITHOUT_QUIC=1` in its own build. The adapter uses TCP only.
+  defp emqtt_dependencies do
+    if Mix.env() == :prod do
+      [{:emqtt, "~> 1.15", optional: true}]
+    else
+      [
+        {:emqtt, "~> 1.15", optional: true, system_env: [{"BUILD_WITHOUT_QUIC", "1"}]},
+        {:quicer, "0.2.15", optional: true, compile: false, app: false, override: true}
+      ]
+    end
   end
 
   defp wotex_dependency(app, directory) do
