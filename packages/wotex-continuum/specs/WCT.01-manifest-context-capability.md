@@ -53,6 +53,18 @@ Implementations MUST accept only finite JSON numbers. Duplicate members, an
 atom/string key collision in native input, invalid UTF-8, or a configured
 resource-limit breach MUST return a typed error.
 
+Encoded input is admitted through the Wotex core JSON admission pipeline before
+any continuum rule runs. That pipeline checks byte size and UTF-8 validity
+first, bounds nesting depth and string size with a lexical scan before
+allocation-heavy decoding, copies decoded strings away from the source binary,
+and then rejects duplicate object members and oversized collections, node
+counts, and depth. One `max_depth` bound of 32 nested containers applies to
+encoded and native input alike; for a native value it is measured from the
+value handed to the constructor rather than from the envelope. Byte, node,
+collection, and string bounds are source-admission controls: a native value
+supplied directly to a constructor is bounded by depth, UTF-8 validity, and the
+finite-number rule only.
+
 This includes native JSON object keys nested in payloads, failure details,
 quality and extensions. Invalid key bytes MUST produce `invalid_utf8` at the
 containing object's path; error paths MUST NOT copy invalid key bytes. Valid
@@ -96,6 +108,22 @@ names list element `0` of extension key `urn:example:payload`. Segments escape
 re-rooted under their parent pointer, so a failure inside a nested value keeps
 the complete path from the top-level value. `nil` is used only where no wire
 member exists, such as an unknown or duplicated keyword option.
+
+Admission failures surface with these codes:
+
+| Condition | `code` | `phase` |
+|---|---|---|
+| `max_bytes`, `max_depth`, `max_nodes`, `max_string_bytes`, or `max_collection_size` breach | `limit_exceeded` | `limits` |
+| non-positive or unknown limit option | `invalid_limit`, `unknown_field`, `invalid_options` | `limits` |
+| source or string is not valid UTF-8 | `invalid_utf8` | `decode` |
+| malformed JSON | `invalid_json` | `decode` |
+| duplicated object member | `duplicate_field` | `decode` |
+| non-string object key | `invalid_key` | `decode` |
+| term outside JSON | `invalid_json_value` | `decode` |
+| input is not JSON iodata, or the root is not an object | `invalid_type` | `decode` |
+
+A translated admission failure keeps the original core code under
+`details.core_code`.
 
 Consumers MUST match on `code`, `phase`, and `path`. Message text and the
 membership of `details` MAY change in a compatible release.

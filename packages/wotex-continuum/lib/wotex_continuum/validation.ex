@@ -1,7 +1,7 @@
 defmodule WotexContinuum.Validation do
   @moduledoc false
 
-  alias WotexContinuum.Error
+  alias WotexContinuum.{Error, Limits}
 
   @max_identifier_bytes 512
   @digest ~r/^sha256:[0-9a-f]{64}$/
@@ -233,20 +233,30 @@ defmodule WotexContinuum.Validation do
       else: Error.error(:invalid_number, :validation, path, "expected a finite JSON number")
   end
 
-  defp json_value(value, path, depth) when is_list(value) and depth < 64 do
-    map_list(value, path, &json_value(&1, &2, depth + 1))
+  defp json_value(value, path, depth) when is_list(value) do
+    with :ok <- within_depth(path, depth) do
+      map_list(value, path, &json_value(&1, &2, depth + 1))
+    end
   end
 
-  defp json_value(value, path, depth) when is_map(value) and not is_struct(value) and depth < 64 do
-    Enum.reduce_while(value, {:ok, %{}}, &normalize_json_member(&1, &2, path, depth))
-  end
-
-  defp json_value(value, path, depth) when (is_list(value) or is_map(value)) and depth >= 64 do
-    Error.error(:limit_exceeded, :validation, path, "JSON value exceeds the nesting limit")
+  defp json_value(value, path, depth) when is_map(value) and not is_struct(value) do
+    with :ok <- within_depth(path, depth) do
+      Enum.reduce_while(value, {:ok, %{}}, &normalize_json_member(&1, &2, path, depth))
+    end
   end
 
   defp json_value(_, path, _),
     do: Error.error(:invalid_json_value, :validation, path, "expected a JSON value")
+
+  defp within_depth(path, depth) do
+    if depth < Limits.max_depth() do
+      :ok
+    else
+      Error.error(:limit_exceeded, :limits, path, "JSON value exceeds the nesting limit", %{
+        max_depth: Limits.max_depth()
+      })
+    end
+  end
 
   defp normalize_json_member({key, item}, {:ok, acc}, path, depth) when is_binary(key) do
     with true <- String.valid?(key),

@@ -48,13 +48,16 @@ lists are the documented separate comparison result. Match codes and paths,
 not messages. Low-level typed accessors are not substitutes for reconstruction
 at an untrusted boundary.
 
-Decoder defaults are 1,048,576 bytes, depth 32, 10,000 members per collection
-and 262,144 bytes per string. `Limits.new/1` accepts positive explicit overrides.
-The decoder preflights binary content, then checks decoded members and copies
-strings. Iodata is flattened before byte preflight; this is not a proof of
-bounded pre-allocation memory. Native JSON value validation currently has a
-separate depth-64 boundary, not all decoder limits. WCT-C02 must make those
-differences explicit before stronger uniform-bound claims are admitted.
+Admission defaults are 1,048,576 bytes, depth 32, 100,000 nodes, 10,000 members
+per collection and 262,144 bytes per string. `Limits.new/1` accepts positive
+explicit overrides and `Codec.decode/2` delegates source admission to the core
+`Wotex.JSON.decode/2` pipeline, which preflights binary content, scans depth and
+string size before decoding, copies strings and then checks duplicate members,
+collection size, node count and depth. Iodata is flattened before that byte
+check; this is not a proof of bounded pre-allocation memory. Native JSON values
+share the single depth bound, measured from the validated value; byte, node,
+collection and string bounds remain source-admission controls. WCT-C02 keeps
+that difference explicit rather than claiming a uniform envelope.
 
 ## Concurrency, lifecycle and recovery
 

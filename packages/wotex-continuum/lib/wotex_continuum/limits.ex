@@ -1,55 +1,80 @@
 defmodule WotexContinuum.Limits do
   @moduledoc """
-  Resource limits enforced before and after JSON decoding.
+  Explicit resource limits for continuum JSON admission.
 
-  The byte and lexical scan rejects oversized input, invalid UTF-8, excessive
-  string size, and excessive nesting before allocation-heavy decoding. The
-  post-decode pass then bounds collections, detects duplicate object members,
-  copies strings away from the source binary, and rechecks depth.
+  Limits are values, so a consumer chooses policy without ambient
+  configuration. `WotexContinuum.Codec.decode/2` hands them to
+  `Wotex.JSON.decode/2`, which checks byte size and UTF-8 validity first,
+  bounds nesting depth and string size with a lexical scan before
+  allocation-heavy decoding, copies decoded strings away from the source
+  binary, and then rejects duplicate object members and oversized collections,
+  node counts, and depth. Continuum semantic validation runs on the decoded map
+  afterwards.
 
-  Limits are explicit values so consumers can choose policy without ambient
-  configuration.
+  | Option | Default | Bounds |
+  | --- | --- | --- |
+  | `:max_bytes` | 1,048,576 | JSON source bytes |
+  | `:max_depth` | 32 | nested containers, decoded or native |
+  | `:max_nodes` | 100,000 | JSON values including containers |
+  | `:max_string_bytes` | 262,144 | one string value or object key |
+  | `:max_collection_size` | 10,000 | members of one object or array |
+
+  `max_depth/0` is the single nesting bound. It applies to decoded source and,
+  measured from the validated value, to native JSON values supplied to a
+  constructor.
   """
 
   alias WotexContinuum.{Error, Validation}
 
-  @enforce_keys [:max_bytes, :max_depth, :max_collection_size, :max_string_bytes]
-  defstruct max_bytes: 1_048_576,
-            max_depth: 32,
-            max_collection_size: 10_000,
-            max_string_bytes: 262_144
+  @max_bytes 1_048_576
+  @max_depth 32
+  @max_nodes 100_000
+  @max_string_bytes 262_144
+  @max_collection_size 10_000
+
+  @enforce_keys [:max_bytes, :max_depth, :max_nodes, :max_string_bytes, :max_collection_size]
+  defstruct max_bytes: @max_bytes,
+            max_depth: @max_depth,
+            max_nodes: @max_nodes,
+            max_string_bytes: @max_string_bytes,
+            max_collection_size: @max_collection_size
 
   @type t :: %__MODULE__{
           max_bytes: pos_integer(),
           max_depth: pos_integer(),
-          max_collection_size: pos_integer(),
-          max_string_bytes: pos_integer()
+          max_nodes: pos_integer(),
+          max_string_bytes: pos_integer(),
+          max_collection_size: pos_integer()
         }
 
-  @doc "Returns conservative default decoder limits."
+  @doc "Returns conservative default admission limits."
   @spec defaults() :: %__MODULE__{
           max_bytes: 1_048_576,
           max_depth: 32,
-          max_collection_size: 10_000,
-          max_string_bytes: 262_144
+          max_nodes: 100_000,
+          max_string_bytes: 262_144,
+          max_collection_size: 10_000
         }
   def defaults do
     %__MODULE__{
-      max_bytes: 1_048_576,
-      max_depth: 32,
-      max_collection_size: 10_000,
-      max_string_bytes: 262_144
+      max_bytes: @max_bytes,
+      max_depth: @max_depth,
+      max_nodes: @max_nodes,
+      max_string_bytes: @max_string_bytes,
+      max_collection_size: @max_collection_size
     }
   end
+
+  @doc "Returns the single nesting bound applied to decoded and native JSON."
+  @spec max_depth() :: 32
+  def max_depth, do: @max_depth
 
   @doc "Builds validated limits from a keyword list or map."
   @spec new(keyword() | map() | t()) :: {:ok, t()} | {:error, Error.t()}
   def new(%__MODULE__{} = limits), do: validate(limits)
 
   def new(options) when is_list(options) do
-    allowed = Map.keys(Map.from_struct(defaults()))
-
-    with :ok <- Validation.options(options, allowed) do
+    with :ok <- Validation.options(options, allowed()) do
       options
       |> Map.new()
       |> new()
@@ -57,9 +82,7 @@ defmodule WotexContinuum.Limits do
   end
 
   def new(options) when is_map(options) do
-    allowed = Map.keys(Map.from_struct(defaults()))
-
-    with {:ok, normalized} <- Validation.normalize(options, allowed) do
+    with {:ok, normalized} <- Validation.normalize(options, allowed()) do
       defaults()
       |> Map.from_struct()
       |> Map.merge(normalized)
@@ -68,30 +91,21 @@ defmodule WotexContinuum.Limits do
     end
   end
 
-  def new(_), do: invalid_options()
+  def new(_), do: Error.error(:invalid_type, :limits, nil, "expected limit options")
 
   @doc false
-  @spec preflight(binary(), t()) :: :ok | {:error, Error.t()}
-  def preflight(source, %__MODULE__{} = limits) when is_binary(source) do
-    cond do
-      byte_size(source) > limits.max_bytes ->
-        Error.error(:limit_exceeded, :limits, "/", "JSON source exceeds the byte limit", %{
-          limit: limits.max_bytes
-        })
-
-      not String.valid?(source) ->
-        Error.error(:invalid_utf8, :limits, "/", "JSON source is not valid UTF-8")
-
-      true ->
-        scan_depth(source, limits)
-    end
+  @spec to_options(t()) :: keyword()
+  def to_options(%__MODULE__{} = limits) do
+    [
+      max_bytes: limits.max_bytes,
+      max_depth: limits.max_depth,
+      max_nodes: limits.max_nodes,
+      max_string_bytes: limits.max_string_bytes,
+      max_collection_size: limits.max_collection_size
+    ]
   end
 
-  @doc false
-  @spec normalize_decoded(term(), t()) :: {:ok, term()} | {:error, Error.t()}
-  def normalize_decoded(value, %__MODULE__{} = limits) do
-    normalize_decoded(value, limits, Error.root(), 0)
-  end
+  defp allowed, do: Map.keys(Map.from_struct(defaults()))
 
   defp validate(%__MODULE__{} = limits) do
     fields = Map.from_struct(limits)
@@ -101,148 +115,9 @@ defmodule WotexContinuum.Limits do
         {:ok, limits}
 
       {key, _} ->
-        Error.error(
-          :invalid_limit,
-          :limits,
-          Error.child("/", Atom.to_string(key)),
-          "limit must be positive"
-        )
+        Error.error(:invalid_limit, :limits, nil, "limit must be a positive integer", %{
+          option: key
+        })
     end
   end
-
-  defp invalid_options, do: Error.error(:invalid_type, :limits, "/", "expected limit options")
-
-  defp scan_depth(source, limits) do
-    result =
-      source
-      |> :binary.bin_to_list()
-      |> Enum.reduce_while({:ok, 0, false, false, 0}, fn byte,
-                                                         {:ok, depth, in_string, escaped,
-                                                          string_size} ->
-        scan_byte(byte, {depth, in_string, escaped, string_size}, limits)
-      end)
-
-    case result do
-      {:ok, _, _, _, _} -> :ok
-      {:error, %Error{} = error} -> {:error, error}
-    end
-  end
-
-  defp scan_byte(_, {depth, true, true, string_size}, _) do
-    {:cont, {:ok, depth, true, false, string_size + 1}}
-  end
-
-  defp scan_byte(?\\, {depth, true, false, string_size}, _) do
-    {:cont, {:ok, depth, true, true, string_size + 1}}
-  end
-
-  defp scan_byte(?", {depth, true, false, _}, _) do
-    {:cont, {:ok, depth, false, false, 0}}
-  end
-
-  defp scan_byte(_, {depth, true, false, string_size}, limits) do
-    next_size = string_size + 1
-
-    if next_size > limits.max_string_bytes do
-      {:halt,
-       Error.error(:limit_exceeded, :limits, "/", "JSON string exceeds the byte limit", %{
-         limit: limits.max_string_bytes
-       })}
-    else
-      {:cont, {:ok, depth, true, false, next_size}}
-    end
-  end
-
-  defp scan_byte(?", {depth, false, _, _}, _) do
-    {:cont, {:ok, depth, true, false, 0}}
-  end
-
-  defp scan_byte(byte, {depth, false, _, _}, limits) when byte in [?{, ?[] do
-    next_depth = depth + 1
-
-    if next_depth > limits.max_depth do
-      {:halt,
-       Error.error(:limit_exceeded, :limits, "/", "JSON exceeds the nesting limit", %{
-         limit: limits.max_depth
-       })}
-    else
-      {:cont, {:ok, next_depth, false, false, 0}}
-    end
-  end
-
-  defp scan_byte(byte, {depth, false, _, _}, _) when byte in [?}, ?]] do
-    {:cont, {:ok, max(depth - 1, 0), false, false, 0}}
-  end
-
-  defp scan_byte(_, {depth, false, _, _}, _) do
-    {:cont, {:ok, depth, false, false, 0}}
-  end
-
-  defp normalize_decoded(_, limits, path, depth) when depth > limits.max_depth do
-    Error.error(:limit_exceeded, :limits, path, "decoded value exceeds the nesting limit")
-  end
-
-  defp normalize_decoded(%Jason.OrderedObject{values: pairs}, limits, path, depth) do
-    if length(pairs) > limits.max_collection_size do
-      Error.error(:limit_exceeded, :limits, path, "object exceeds the member limit")
-    else
-      Enum.reduce_while(pairs, {:ok, %{}}, &normalize_object_pair(&1, &2, limits, path, depth))
-    end
-  end
-
-  defp normalize_decoded(value, limits, path, depth) when is_list(value) do
-    if length(value) > limits.max_collection_size do
-      Error.error(:limit_exceeded, :limits, path, "array exceeds the member limit")
-    else
-      value
-      |> Enum.with_index()
-      |> Enum.reduce_while({:ok, []}, &normalize_list_item(&1, &2, limits, path, depth))
-      |> reverse_normalized()
-    end
-  end
-
-  defp normalize_decoded(value, limits, path, _) when is_binary(value) do
-    if byte_size(value) <= limits.max_string_bytes,
-      do: {:ok, :binary.copy(value)},
-      else: Error.error(:limit_exceeded, :limits, path, "string exceeds the byte limit")
-  end
-
-  defp normalize_decoded(value, _, _, _), do: {:ok, value}
-
-  defp normalize_object_pair({key, value}, {:ok, acc}, limits, path, depth) do
-    cond do
-      Map.has_key?(acc, key) ->
-        {:halt,
-         Error.error(:duplicate_field, :decode, Error.child(path, key), "JSON member is duplicated")}
-
-      byte_size(key) > limits.max_string_bytes ->
-        {:halt,
-         Error.error(
-           :limit_exceeded,
-           :limits,
-           Error.child(path, key),
-           "object key exceeds the byte limit"
-         )}
-
-      true ->
-        normalize_object_value(key, value, acc, {limits, path, depth})
-    end
-  end
-
-  defp normalize_object_value(key, value, acc, {limits, path, depth}) do
-    case normalize_decoded(value, limits, Error.child(path, key), depth + 1) do
-      {:ok, normalized} -> {:cont, {:ok, Map.put(acc, key, normalized)}}
-      {:error, _} = error -> {:halt, error}
-    end
-  end
-
-  defp normalize_list_item({item, index}, {:ok, acc}, limits, path, depth) do
-    case normalize_decoded(item, limits, Error.child(path, index), depth + 1) do
-      {:ok, normalized} -> {:cont, {:ok, [normalized | acc]}}
-      {:error, _} = error -> {:halt, error}
-    end
-  end
-
-  defp reverse_normalized({:ok, reversed}), do: {:ok, Enum.reverse(reversed)}
-  defp reverse_normalized({:error, _} = error), do: error
 end

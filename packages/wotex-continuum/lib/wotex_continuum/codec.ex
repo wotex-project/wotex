@@ -2,8 +2,12 @@ defmodule WotexContinuum.Codec do
   @moduledoc """
   Bounded JSON codec for registered continuum values.
 
-  Decoding copies strings out of the input binary and rejects duplicate object
-  members before constructing a typed value.
+  Decoding delegates source admission to `Wotex.JSON.decode/2`, which bounds
+  bytes, UTF-8 validity, nesting depth, string size, node count, and collection
+  size, copies strings out of the source binary, and rejects duplicate object
+  members. Continuum validation then constructs the registered value from the
+  decoded map. Core admission failures are returned as
+  `WotexContinuum.Error` values with the codes documented in WCT.01.
   """
 
   alias WotexContinuum.{CanonicalJSON, Error, Limits, Validation}
@@ -23,13 +27,11 @@ defmodule WotexContinuum.Codec do
   @spec decode(iodata(), keyword() | map() | Limits.t()) ::
           {:ok, struct()} | {:error, Error.t()}
   def decode(source, limit_options \\ []) do
-    with {:ok, source} <- to_binary(source),
+    with {:ok, binary} <- to_binary(source),
          {:ok, limits} <- Limits.new(limit_options),
-         :ok <- Limits.preflight(source, limits),
-         {:ok, ordered} <- decode_json(source),
-         {:ok, map} <- Limits.normalize_decoded(ordered, limits),
-         :ok <- top_level_object(map) do
-      WotexContinuum.from_map(map)
+         {:ok, decoded} <- admit(binary, limits),
+         :ok <- top_level_object(decoded) do
+      WotexContinuum.from_map(decoded)
     end
   end
 
@@ -37,23 +39,22 @@ defmodule WotexContinuum.Codec do
   @spec canonicalize(struct()) :: {:ok, binary()} | {:error, Error.t()}
   def canonicalize(value), do: encode(value, canonical: true)
 
+  defp admit(source, %Limits{} = limits) do
+    case Wotex.JSON.decode(source, Limits.to_options(limits)) do
+      {:ok, decoded} -> {:ok, decoded}
+      {:error, %Wotex.Error{} = error} -> {:error, Error.from_core(error)}
+    end
+  end
+
   defp encode_json(map) do
     case Jason.encode(map) do
       {:ok, encoded} ->
         {:ok, encoded}
 
       {:error, reason} ->
-        Error.error(:encode_error, :decode, "/", "JSON encoding failed", %{reason: inspect(reason)})
-    end
-  end
-
-  defp decode_json(source) do
-    case Jason.decode(source, objects: :ordered_objects, strings: :copy) do
-      {:ok, decoded} ->
-        {:ok, decoded}
-
-      {:error, %Jason.DecodeError{position: position}} ->
-        Error.error(:invalid_json, :decode, "/", "JSON decoding failed", %{position: position})
+        Error.error(:encode_error, :encode, "/", "JSON encoding failed", %{
+          reason: inspect(reason)
+        })
     end
   end
 
