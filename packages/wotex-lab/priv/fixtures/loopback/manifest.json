@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "loopback-room",
+  "specs": [
+    "WLB.04",
+    "WRT.01",
+    "WRT.02",
+    "WTX.02"
+  ],
+  "source_mode": "synthetic",
+  "input": "thing-description.json",
+  "input_sha256": "af4580c6d90b1a2ba62c12e7e0a45d174c5c52d09b8122339f7b99a49549f094",
+  "side_effects": [],
+  "license": "Apache-2.0"
+}

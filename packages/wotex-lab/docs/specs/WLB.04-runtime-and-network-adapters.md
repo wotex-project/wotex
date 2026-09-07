@@ -1,13 +1,15 @@
 # WLB.04: Runtime and real reference transports
 
-Specification version: 0.1.0. Contract: accepted.
+Specification version: 1.1.0. Contract: accepted. Source status: the loopback
+transport, simulated Thing host, NoSec and StaticRef credential adapters are
+implemented; Req/SSE and EMQTT lanes remain planned.
 
 ## Public seams and chosen implementations
 
 | Seam | Lab owner | Exact contract |
 | --- | --- | --- |
-| Runtime transport | Loopback adapter; network binding transports | `Wotex.Runtime.Transport.request/3`, `subscribe/4`, `unsubscribe/4` |
-| Runtime credentials | NoSec and StaticRef | `Wotex.Runtime.Credentials.resolve/4` |
+| Runtime transport | Loopback adapter; network binding transports | `c:Wotex.Runtime.Transport.request/3`, `c:Wotex.Runtime.Transport.subscribe/4`, `c:Wotex.Runtime.Transport.unsubscribe/4`, optional `c:Wotex.Runtime.Transport.decode_frame/3` |
+| Runtime credentials | NoSec and StaticRef | `c:Wotex.Runtime.Credentials.resolve/4` |
 | HTTP client | Req request adapter and bounded SSE session | `Wotex.Binding.HTTP.Client.request/3`, `subscribe/4`, `close/2` |
 | MQTT client | EMQTT session adapter | `Wotex.Binding.MQTT.Client.publish/3`, `read/4`, `subscribe/4`, `unsubscribe/4` |
 | Inbound application | Explicit simulated Thing handlers | Public `Wotex.Runtime.ExposedThing` boundary |
@@ -22,16 +24,29 @@ and return shapes come from the pinned behaviour modules in the source index.
 1. Loopback MUST exercise real ConsumedThing selection and immutable Result
    identity, with supplied credentials and a simulated ExposedThing host. It
    is a transport reference, not evidence that HTTP or MQTT worked.
+   `Wotex.Lab.Adapters.Runtime.Loopback` sends raw frames
+   (`{:sample, name, value, meta}`, `{:event, name, payload, meta}`,
+   `:keepalive`) that the owning subscription decodes through `decode_frame/3`,
+   and starts a linked session process that monitors the host so host death
+   surfaces as `:transport_down` exactly as a dead connection would in a
+   network binding. `Wotex.Lab.Reference.Thing` owns simulated state, admits
+   route, credential and DataSchema bounds before any handler runs, counts
+   handler calls and rejections, monitors subscribers, and can simulate
+   `session_lost`.
 2. Runtime subscription child specs MUST be placed under an instance-owned
-   supervisor. Zero/one/multiple handles, receiver death, restart, concurrent
-   stop, forced kill and cleanup error MUST have observable outcomes.
+   supervisor. Zero/one/multiple handles, receiver death, host death, session
+   loss, permanent restart with fresh credentials, concurrent stop, forced kill
+   and cleanup error MUST have observable outcomes through the runtime envelope
+   `{:wotex_runtime, id, {:ok, value, meta} | {:error, error} | {:status, status}}`.
 3. The inbound host MUST admit authentication, authorization, exact route/Form,
    operation, content type and DataSchema before handler execution. Invalid
    requests MUST leave a handler-call counter unchanged. Effects and canonical
    simulated state live in the host, never in ExposedThing or the binding.
 4. NoSec MUST reject selected non-nosec requirements. StaticRef MUST resolve
-   secret references just in time for the selected audience. Config, TDs,
-   handles, errors and event metadata MUST NOT contain resolved credentials.
+   secret references just in time for the selected audience through a
+   consumer-owned `lookup` function; its configuration holds references only.
+   Config, TDs, handles, errors and event metadata MUST NOT contain resolved
+   credentials or references.
 
 ## HTTP / SSE
 
@@ -95,6 +110,14 @@ Time since receipt is not sensor observation age; clock uncertainty and device
 reset identity are part of admission before a sample reaches Wotex Nx.
 
 ## Acceptance
+
+`test/wotex/lab/loopback_test.exs` covers the in-BEAM loopback lane: admission
+with identity and inert results, rejected writes leaving the handler counter
+unchanged, retry classification from the transported cause, just-in-time
+credentials that never appear in errors or process state, frame decoding in
+the owner, ignored keep-alives and unrelated affordances, undecodable frames,
+session loss, host death, receiver death, permanent restart with fresh
+credentials, and port exception isolation with telemetry.
 
 Real loopback HTTP/SSE and disposable-broker runs cover read, write, Action,
 Property observation and Event subscription where supported, plus wrong

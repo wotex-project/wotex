@@ -46,7 +46,7 @@ specifications:
       - "test/wotex/lab/scenario_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.03
-    version: "0.1.0"
+    version: "1.1.0"
     path: docs/specs/WLB.03-nx-experiments.md
     implementation_status: partial
     evidence_status: partial
@@ -68,11 +68,11 @@ specifications:
       - "test/wotex/lab/thermal_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.04
-    version: "0.1.0"
+    version: "1.1.0"
     path: docs/specs/WLB.04-runtime-and-network-adapters.md
-    implementation_status: planned
-    evidence_status: missing
-    adoption_status: no_reference
+    implementation_status: partial
+    evidence_status: partial
+    adoption_status: reference_available
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -90,8 +90,14 @@ specifications:
       - "wotex_binding_mqtt:WBM.03"
     completion_items:
       - "WLB-C04"
-    implementation_modules: []
-    executable_evidence: []
+    implementation_modules:
+      - "Wotex.Lab.Adapters.Runtime.Loopback"
+      - "Wotex.Lab.Adapters.Runtime.Loopback.Session"
+      - "Wotex.Lab.Adapters.Runtime.NoSec"
+      - "Wotex.Lab.Adapters.Runtime.StaticRef"
+      - "Wotex.Lab.Reference.Thing"
+    executable_evidence:
+      - "test/wotex/lab/loopback_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.05
     version: "0.1.0"

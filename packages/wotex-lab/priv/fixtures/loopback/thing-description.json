@@ -1,0 +1,42 @@
+{
+  "@context": "https://www.w3.org/2022/wot/td/v1.1",
+  "id": "urn:wotex:lab:room:1",
+  "title": "Lab room",
+  "security": ["nosec_sc"],
+  "securityDefinitions": {
+    "nosec_sc": {"scheme": "nosec"},
+    "bearer_sc": {"scheme": "bearer"}
+  },
+  "properties": {
+    "temperature": {
+      "type": "number",
+      "unit": "Cel",
+      "readOnly": true,
+      "observable": true,
+      "forms": [
+        {"href": "loopback://room/temperature", "op": ["readproperty", "observeproperty", "unobserveproperty"]}
+      ]
+    },
+    "target": {
+      "type": "number",
+      "unit": "Cel",
+      "minimum": 5,
+      "maximum": 35,
+      "forms": [
+        {"href": "loopback://room/target", "security": ["bearer_sc"]}
+      ]
+    }
+  },
+  "actions": {
+    "setTarget": {
+      "input": {"type": "number", "unit": "Cel", "minimum": 5, "maximum": 35},
+      "forms": [{"href": "loopback://room/set-target", "security": ["bearer_sc"]}]
+    }
+  },
+  "events": {
+    "alarm": {
+      "data": {"type": "string"},
+      "forms": [{"href": "loopback://room/alarm"}]
+    }
+  }
+}
