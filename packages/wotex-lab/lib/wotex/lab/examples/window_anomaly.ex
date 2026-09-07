@@ -1,0 +1,218 @@
+defmodule Wotex.Lab.Examples.WindowAnomaly do
+  @moduledoc """
+  Windowed anomaly, persistence prediction and observation decoding over a
+  synthetic thermal stream, using only public `Wotex.Nx` APIs.
+
+  The lane resamples simulator samples into a caller-defined window, encodes
+  them with an explicit fill policy, scores the last observed row against the
+  mask-weighted mean of the window with a small `defn`, and decodes the score
+  as an inert anomaly, the last value as a persistence prediction for the next
+  step, and the same value as an observation. Nothing here is a trained model;
+  the numbers are inspectable baselines with recorded provenance.
+  """
+
+  import Nx.Defn
+
+  alias Wotex.DataSchema
+  alias Wotex.Lab.Simulators.Thermal
+
+  alias Wotex.Nx.{
+    Decoder,
+    Encoded,
+    Encoder,
+    Feature,
+    Observation,
+    OutputSchema,
+    Row,
+    Schema,
+    Window
+  }
+
+  @thing_id "urn:wotex:lab:room:simulated"
+
+  @doc """
+  Runs the lane and returns rows, the encoded batch, decoded outputs and the
+  experiment manifest.
+
+  Options: `:seed`, `:count`, `:step`, `:heater`, `:glitches` (simulator
+  inputs), `:window_count` (8), `:window_start` (defaults to the last window
+  ending at the final sample), `:strategy` (`:latest`), `:max_age`,
+  `:threshold` (1.5), `:fill` (18.0), and `:backend` (`Nx.BinaryBackend`).
+  """
+  @spec run(keyword()) :: {:ok, map()} | {:error, term()}
+  def run(opts \\ []) do
+    backend = Keyword.get(opts, :backend, Nx.BinaryBackend)
+    Nx.with_default_backend(backend, fn -> run_lane(opts) end)
+  end
+
+  @doc "Scores the last observed row against the mask-weighted mean of the window."
+  @spec score({{Nx.Tensor.t()}, {Nx.Tensor.t()}, Nx.Tensor.t()}) :: Nx.Tensor.t()
+  defn score({{values}, {masks}, _quality}) do
+    weights = Nx.as_type(masks, Nx.type(values))
+    observed = Nx.max(Nx.sum(weights), 1.0)
+    mean = Nx.sum(values * weights) / observed
+    last_index = Nx.argmax(Nx.iota(Nx.shape(values)) * weights)
+    Nx.abs(values[last_index] - mean)
+  end
+
+  @doc "Builds observations from simulator samples for the lane's Thing and affordance."
+  @spec observations([Thermal.sample()]) :: {:ok, [Observation.t()]} | {:error, term()}
+  def observations(samples) do
+    samples
+    |> Enum.reduce_while({:ok, []}, fn sample, {:ok, acc} ->
+      case observation(sample) do
+        {:ok, observation} -> {:cont, {:ok, [observation | acc]}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, reversed} -> {:ok, Enum.reverse(reversed)}
+      error -> error
+    end
+  end
+
+  defp run_lane(opts) do
+    simulation = Thermal.generate(Keyword.take(opts, [:seed, :count, :step, :heater, :glitches]))
+    step = simulation.manifest["step"]
+    count = Keyword.get(opts, :window_count, 8)
+    final_sample_at = simulation.manifest["start"] + (simulation.manifest["count"] - 1) * step
+    start = Keyword.get(opts, :window_start, final_sample_at - (count - 1) * step)
+    last_at = start + (count - 1) * step
+
+    with {:ok, observations} <- observations(simulation.samples),
+         {:ok, schema} <- schema(Keyword.get(opts, :fill, 18.0)),
+         {:ok, window} <-
+           Window.new(
+             start: start,
+             step: step,
+             count: count,
+             strategy: Keyword.get(opts, :strategy, :latest),
+             max_age: Keyword.get(opts, :max_age)
+           ),
+         {:ok, rows} <- Window.resample(observations, schema, window),
+         {:ok, encoded} <- Encoder.encode(rows, schema),
+         score <- Nx.Defn.jit_apply(&score/1, [encoded], compiler: Nx.Defn.Evaluator),
+         {:ok, anomaly} <- decode_anomaly(score, Keyword.get(opts, :threshold, 1.5), last_at),
+         {:ok, last_value} <- last_observed(rows),
+         {:ok, prediction} <- decode_prediction(last_value, last_at, step),
+         {:ok, observation} <- decode_observation(last_value, last_at) do
+      {:ok,
+       %{
+         rows: rows,
+         encoded: encoded,
+         score: score,
+         anomaly: anomaly,
+         prediction: prediction,
+         observation: observation,
+         manifest:
+           Map.merge(simulation.manifest, %{
+             "window" => %{"start" => start, "step" => step, "count" => count},
+             "feature_order" => Encoded.feature_order(encoded),
+             "fill" => Keyword.get(opts, :fill, 18.0),
+             "threshold" => Keyword.get(opts, :threshold, 1.5),
+             "dtype" => "f32"
+           })
+       }}
+    end
+  end
+
+  defp schema(fill) do
+    with {:ok, data_schema} <- DataSchema.new(%{"type" => "number", "unit" => "Cel"}),
+         {:ok, feature} <-
+           Feature.new(
+             name: "temperature",
+             thing_id: @thing_id,
+             affordance_type: :property,
+             affordance_name: "temperature",
+             data_schema: data_schema,
+             accepted_quality: [:good, :uncertain],
+             missing: {:fill, fill}
+           ) do
+      Schema.new(features: [feature], max_rows: 64)
+    end
+  end
+
+  defp observation(sample) do
+    Observation.new(
+      id: "sim-#{sample.index}",
+      thing_id: @thing_id,
+      affordance_type: :property,
+      affordance_name: "temperature",
+      observed_at: sample.observed_at,
+      value: sample.value,
+      unit: "Cel",
+      quality: sample.quality,
+      source: "wotex_lab.thermal@" <> Thermal.version()
+    )
+  end
+
+  defp last_observed(rows) do
+    rows
+    |> Enum.reverse()
+    |> Enum.find_value({:error, :no_observed_row}, fn %Row{observations: observations} ->
+      case observations["temperature"] do
+        %Observation{value: value, quality: quality} when quality in [:good, :uncertain] ->
+          {:ok, value}
+
+        _missing ->
+          nil
+      end
+    end)
+  end
+
+  defp decode_anomaly(score, threshold, produced_at) do
+    with {:ok, data_schema} <- DataSchema.new(%{"type" => "number", "minimum" => 0}),
+         {:ok, output} <-
+           OutputSchema.new(
+             kind: :anomaly,
+             thing_id: @thing_id,
+             affordance_type: :property,
+             affordance_name: "temperature",
+             data_schema: data_schema,
+             dtype: :f32,
+             threshold: threshold,
+             anomaly_rule: :at_or_above
+           ) do
+      Decoder.decode(score, output, id: "anomaly-#{produced_at}", produced_at: produced_at)
+    end
+  end
+
+  defp decode_prediction(value, produced_at, step) do
+    with {:ok, data_schema} <- DataSchema.new(%{"type" => "number", "unit" => "Cel"}),
+         {:ok, output} <-
+           OutputSchema.new(
+             kind: :prediction,
+             thing_id: @thing_id,
+             affordance_type: :property,
+             affordance_name: "temperature",
+             data_schema: data_schema,
+             dtype: :f32,
+             metadata: %{"baseline" => "persistence"}
+           ) do
+      Decoder.decode(Nx.tensor(value, type: :f32), output,
+        id: "prediction-#{produced_at}",
+        produced_at: produced_at,
+        target_at: produced_at + step
+      )
+    end
+  end
+
+  defp decode_observation(value, observed_at) do
+    with {:ok, data_schema} <- DataSchema.new(%{"type" => "number", "unit" => "Cel"}),
+         {:ok, output} <-
+           OutputSchema.new(
+             kind: :observation,
+             thing_id: @thing_id,
+             affordance_type: :property,
+             affordance_name: "temperature",
+             data_schema: data_schema,
+             dtype: :f32
+           ) do
+      Decoder.decode(Nx.tensor(value, type: :f32), output,
+        id: "decoded-#{observed_at}",
+        observed_at: observed_at,
+        source: "lane:window-anomaly"
+      )
+    end
+  end
+end

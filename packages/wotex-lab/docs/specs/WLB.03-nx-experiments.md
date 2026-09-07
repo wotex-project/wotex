@@ -28,7 +28,7 @@ identity units are handled by the encoder; other conversions fail explicitly.
 | Lane | Public composition | Acceptance |
 | --- | --- | --- |
 | `thermal-nx` | Small deterministic defn and explicit converter | Feature order, `1 = observed` masks, mask-weighted target, quality, timestamps, provenance through `Encoded` accessors, output identity, caller backend option and unchanged effects asserted |
-| `window-anomaly` | Exact/latest/nearest windows; all inert decoder kinds | Permuted input/ties, stale time, wrong Thing/category, missing fills, rejected quality, units, integer/float limits and dtype-rounded threshold cases |
+| `window-anomaly` | `Examples.WindowAnomaly` over the versioned `Simulators.Thermal` stream: exact/latest/nearest windows, mask-weighted anomaly score, persistence prediction and observation decoding | Deterministic seeds, permuted input, stale time, wrong Thing, missing fills with mask zero, rejected quality codes, units, integer dtype limits, dtype-rounded thresholds and output shape/dtype rejection in `window_anomaly_test.exs` |
 | `serving-batches` | Explicit `Nx.Serving` under instance supervision | Inline and process paths agree within declared tolerance; batch padding/keys, timeout, concurrent caller correlation, stop and overload tested |
 | `axon-room-model` | Small consumer-owned Axon model over synthetic room dynamics | Reproducible training/evaluation split; held-out score compared with persistence baseline; saved parameters and model/schema digests; no implied model quality from successful conversion |
 | `backend-cohort` | BinaryBackend/Evaluator and explicit EXLA CPU profile | Same fixtures and shape/error contracts; declared absolute/relative tolerance for permitted rounding; device transfer and cleanup measured; no GPU required for first success |
@@ -69,9 +69,12 @@ pinned Nx release, never names generated from untrusted scenario strings.
 
 ## Acceptance and ownership
 
-`thermal_test.exs` checks the foundation against public core/Nx APIs. Full
-acceptance requires each lane above in a Livebook and automated scenario with
-positive, negative and resource cases. This supplies independent-consumer
+`thermal_test.exs` checks the foundation against public core/Nx APIs and
+`window_anomaly_test.exs` covers the `window-anomaly` lane; the simulator
+satisfies dataset contract item 1 (versioned equation, seed, step, initial
+state, disturbance schedule, units, synthetic label). Full acceptance requires
+each lane above in a Livebook and automated scenario with positive, negative
+and resource cases. This supplies independent-consumer
 evidence toward WNX-C01–C05 and WTX-C03/C04. It does not replace their native
 error matrices, archive gates or stable-API decisions. There is no W3C
 numerical profile, autonomous physical control or general model-serving claim.

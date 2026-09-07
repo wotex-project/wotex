@@ -7,6 +7,9 @@
   through real runtime subscriptions under instance supervision.
 - Thermal example reads `1 = observed` masks with a mask-weighted target,
   accepts a caller backend, and uses `Encoded` accessors.
+- Versioned deterministic thermal simulator and the window-anomaly lane:
+  windowed masked scoring, persistence prediction and observation decoding
+  with negative cases for fills, quality, units, dtype limits and thresholds.
 - Family error shape for `Wotex.Lab.Error` and a role kill-isolation test.
 - Instance-owned ETS Directory repository with explicit authorization, clock
   and identifier ports and a public-API contract suite over keyset paging,

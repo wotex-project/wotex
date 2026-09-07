@@ -63,9 +63,12 @@ specifications:
       - "WLB-C03"
     implementation_modules:
       - "Wotex.Lab.Examples.Thermal"
+      - "Wotex.Lab.Examples.WindowAnomaly"
+      - "Wotex.Lab.Simulators.Thermal"
       - "Wotex.Lab.Adapters.Nx.UnitConverter"
     executable_evidence:
       - "test/wotex/lab/thermal_test.exs"
+      - "test/wotex/lab/window_anomaly_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.04
     version: "1.1.0"
