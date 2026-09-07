@@ -34,4 +34,8 @@ defmodule Wotex.Nx.Anomaly do
     :metadata
   ]
   defstruct @enforce_keys
+
+  @doc "Returns the anomaly fields as a plain map; a read-only view, not an admission boundary."
+  @spec to_map(t()) :: map()
+  def to_map(%__MODULE__{} = value), do: Map.from_struct(value)
 end

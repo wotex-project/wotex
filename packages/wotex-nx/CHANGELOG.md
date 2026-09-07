@@ -11,6 +11,8 @@
 - Add `Encoded.schema/1`, `timestamps/1`, `provenance/1`, `layout/1`,
   `row_count/1`, `template/1` and an `Nx.LazyContainer` implementation.
 - Select window observations by binary search over sorted groups.
+- Add `to_map/1` read-only views to `Observation`, `Prediction`, `Anomaly` and
+  `ActionProposal`.
 - Select latest window observations in a linear pass per row without sorting
   eligible candidates; preserve exact selection, age bounds and ID ties.
 

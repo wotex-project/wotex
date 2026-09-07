@@ -116,7 +116,10 @@ consumers MUST use them instead of struct fields. `Encoded` implements
 `affordance_type`, `affordance_name`, `score`, `anomalous?`, `threshold`, `rule`,
 `produced_at`, `metadata`. ActionProposal exposes `id`, `thing_id`, `action_name`,
 `input`, `proposed_at`, `metadata`. These three output-only structs are produced
-by Decoder; they do not expose separate public `new/1` constructors. Observation
+by Decoder; they do not expose separate public `new/1` constructors. Every
+output struct and `Observation` expose `to_map/1`, a read-only plain-map view
+for consumers that must not depend on opaque struct fields (for example a wire
+conversion); the view is not a constructor and grants no admission. Observation
 output uses the Observation contract above. No output carries an execution
 callback or an authorization decision.
 

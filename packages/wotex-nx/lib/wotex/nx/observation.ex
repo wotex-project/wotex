@@ -187,4 +187,8 @@ defmodule Wotex.Nx.Observation do
 
   defp valid_metadata(_),
     do: {:error, Error.new(:invalid_metadata, :construction, "observation metadata must be a map")}
+
+  @doc "Returns the observation fields as a plain map; a read-only view, not an admission boundary."
+  @spec to_map(t()) :: map()
+  def to_map(%__MODULE__{} = value), do: Map.from_struct(value)
 end

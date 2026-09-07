@@ -380,4 +380,69 @@ defmodule Wotex.Nx.DecoderTest do
       anomaly_rule: rule
     )
   end
+
+  test "outputs and observations expose read-only map views" do
+    {:ok, observation} =
+      Observation.new(
+        id: "o",
+        thing_id: "urn:thing:1",
+        affordance_type: :property,
+        affordance_name: "temperature",
+        observed_at: 0,
+        value: 1.0
+      )
+
+    assert %{id: "o", thing_id: "urn:thing:1", value: 1.0, quality: :good} =
+             Observation.to_map(observation)
+
+    {:ok, schema} =
+      OutputSchema.new(
+        kind: :action_proposal,
+        thing_id: "urn:thing:1",
+        affordance_type: :action,
+        affordance_name: "setLevel",
+        data_schema: TestFactory.data_schema(),
+        dtype: :f32
+      )
+
+    {:ok, proposal} = Decoder.decode(Nx.tensor(21.0, type: :f32), schema, id: "p", proposed_at: 5)
+    assert %{id: "p", action_name: "setLevel", proposed_at: 5} = ActionProposal.to_map(proposal)
+
+    {:ok, prediction_schema} =
+      OutputSchema.new(
+        kind: :prediction,
+        thing_id: "urn:thing:1",
+        affordance_type: :property,
+        affordance_name: "temperature",
+        data_schema: TestFactory.data_schema(),
+        dtype: :f32
+      )
+
+    {:ok, prediction} =
+      Decoder.decode(Nx.tensor(21.0, type: :f32), prediction_schema,
+        id: "f",
+        produced_at: 1,
+        target_at: 2
+      )
+
+    assert %{id: "f", target_at: 2} = Prediction.to_map(prediction)
+
+    {:ok, score_schema} = Wotex.DataSchema.new(%{"type" => "number"})
+
+    {:ok, anomaly_schema} =
+      OutputSchema.new(
+        kind: :anomaly,
+        thing_id: "urn:thing:1",
+        affordance_type: :property,
+        affordance_name: "temperature",
+        data_schema: score_schema,
+        dtype: :f32,
+        threshold: 0.5
+      )
+
+    {:ok, anomaly} =
+      Decoder.decode(Nx.tensor(0.9, type: :f32), anomaly_schema, id: "a", produced_at: 1)
+
+    assert %{id: "a", anomalous?: true} = Anomaly.to_map(anomaly)
+  end
 end
