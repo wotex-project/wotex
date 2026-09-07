@@ -60,6 +60,13 @@ Implementations MUST accept only finite JSON numbers. Duplicate members, an
 atom/string key collision in native input, invalid UTF-8, or a configured
 resource-limit breach MUST return a typed error.
 
+This includes native JSON object keys nested in payloads, failure details,
+quality and extensions. Invalid key bytes MUST produce `invalid_utf8` at the
+containing object's path; error paths MUST NOT copy invalid key bytes. Valid
+Unicode keys (including empty JSON member names) retain their bytes. Correcting
+admission of invalid UTF-8 is a compatible implementation repair, not a wire
+schema change: invalid UTF-8 was already outside the accepted JSON contract.
+
 Encoded input is admitted through the Wotex core JSON admission pipeline before
 any continuum rule runs. That pipeline checks byte size and UTF-8 validity
 first, bounds nesting depth and string size with a lexical scan before
@@ -71,13 +78,6 @@ value handed to the constructor rather than from the envelope. Byte, node,
 collection, and string bounds are source-admission controls: a native value
 supplied directly to a constructor is bounded by depth, UTF-8 validity, and the
 finite-number rule only.
-
-This includes native JSON object keys nested in payloads, failure details,
-quality and extensions. Invalid key bytes MUST produce `invalid_utf8` at the
-containing object's path; error paths MUST NOT copy invalid key bytes. Valid
-Unicode keys (including empty JSON member names) retain their bytes. Correcting
-admission of invalid UTF-8 is a compatible implementation repair, not a wire
-schema change: invalid UTF-8 was already outside the accepted JSON contract.
 
 Typed values are not a validation bypass. Constructors and the public encoder
 MUST revalidate struct fields, including nested values, and MUST reject a

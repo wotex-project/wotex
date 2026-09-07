@@ -95,7 +95,7 @@ Recommendations dated 5 December 2023. All WCT fields are project-defined.
 | WCT.02 observations/Actions/delivery | Project wire 2.0.0, W3C vocabulary | Data conversion and supplied TD identity check | No transport or cross-vendor execution claim | Not WoT Scripting API | None |
 | WCT.03 modes/lifecycle/exit | Project wire 2.0.0 | Pure graph transition only | Does not prove disconnected deployment or recovery | Not deployment-management conformance | None |
 | JSON canonicalization | Package-canonical bytes | Deterministic encoding | Exact encoder/version cohort; not signature portability | Not RFC 8785 JCS | None |
-| Bundled JSON Schemas | WCT schema documents | Fetch and digest | Existing tests parse them; schema-to-constructor agreement needs WCT-C03 | Not W3C conformance | None |
+| Bundled JSON Schemas | WCT schema documents | Fetch, digest and subset validation of every vector | Documented keyword subset only; `format` and `propertyNames` are not evaluated, so full-vocabulary agreement remains WCT-C03 | Not W3C conformance | None |
 
 ## Independent implementation work
 
@@ -140,8 +140,8 @@ source, dependency or schema changes; a commit ID does not identify a dirty tree
 | Claim not discharged by present test shape | Owner | Required closure |
 | --- | --- | --- |
 | Native UTF-8 admission equals JSON decoder admission | WCT-C02 | Native payload object keys are explicitly validated; malformed Unicode cannot enter accepted nested values or error paths. |
-| Uniform resource bounds | WCT-C02 | Characterize iodata flattening and native constructor depth/size differences; specify supported resource envelope and add adversarial tests. |
-| Normative schema/implementation agreement | WCT-C03 | Execute schemas against the same vectors; the existing schema-object/digest test is insufficient. |
+| Uniform resource bounds | WCT-C02 | Source admission is delegated to the core bounded decoder and one `max_depth` covers decoded and native values. The residual claim is the rest of the envelope: iodata flattening precedes the byte check, and byte, node, collection and string bounds still do not apply to a native map handed straight to a constructor. |
+| Normative schema/implementation agreement | WCT-C03 | Canonical, valid and invalid vectors now execute against the embedded schemas through a documented keyword subset, and the invalid set separates schema-expressible from semantic rules. The residual claim is full-vocabulary agreement: `format` and `propertyNames` assertions are not evaluated, so absolute-IRI, media-type and RFC 3339 admission rests on the constructors. |
 | Independent fresh consumer installation | WCT-C04 | Declared package cohort, no development path assumption, representative public API tests. |
 | Local execution files excluded from public archives | WCT-C04 | Explicit package exclusion and archive-content regression; Git ignore is not a package boundary. |
 | Stable API and canonical-byte compatibility | WCT-C05 | Explicit independent wire/package compatibility decisions and version-pinned vectors. |

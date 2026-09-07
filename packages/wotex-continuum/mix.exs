@@ -115,7 +115,14 @@ defmodule WotexContinuum.MixProject do
         Project: ~r/(SECURITY|GOVERNANCE)\.md/
       ],
       groups_for_modules: [
-        "Public API": [WotexContinuum, WotexContinuum.Codec, WotexContinuum.Schema],
+        "Public API": [
+          WotexContinuum,
+          WotexContinuum.Codec,
+          WotexContinuum.CanonicalJSON,
+          WotexContinuum.Error,
+          WotexContinuum.Schema,
+          WotexContinuum.Value
+        ],
         "Continuum context": [
           WotexContinuum.Capability,
           WotexContinuum.CapabilityRequirement,
