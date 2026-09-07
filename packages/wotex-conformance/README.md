@@ -50,7 +50,9 @@ It is not a package-wide interoperability or W3C certification claim.
 | `infrastructure_error` | Archive verification or target execution prevented evaluation. |
 
 Expected values and provenance never cross the target boundary. Reports retain
-expected and actual digests, not raw observations.
+expected and actual digests, not raw observations. An adapter derives its
+observation from the request alone, so a target that guesses by vector identity
+proves nothing.
 
 ## Quick Start
 
@@ -61,7 +63,7 @@ alias Wotex.Conformance.Target.External
 {:ok, corpus} = Corpus.load("priv/vectors/thing-description-1.1")
 
 {:ok, subject} =
-  Subject.new(%{
+  Subject.from_map(%{
     id: "example.thing-description",
     version: "1.2.3",
     artifact_digest: "sha256:" <> String.duplicate("0", 64),
@@ -69,7 +71,7 @@ alias Wotex.Conformance.Target.External
   })
 
 {:ok, target} =
-  External.new(%{
+  External.from_map(%{
     executable: "/absolute/path/to/elixir",
     args: ["/absolute/path/to/adapter.exs", "--archive", "{subject_archive}"],
     artifact_path: "/absolute/path/to/subject.tar.gz"

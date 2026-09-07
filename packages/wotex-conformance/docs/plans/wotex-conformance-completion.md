@@ -11,10 +11,11 @@ WCF.01 and decisions 0001/0002 are normative. The package owns verified local
 corpora, closed claim/subject/vector values, external-target protocol execution,
 comparison and bounded content-addressed evidence. `Wotex.Conformance.load_corpus/1`
 and `run/4` delegate to `Corpus.load/1` and `Runner.run/4`. Construct `Subject`,
-`Claim`, `Vector` and `Target.External` using their closed public constructors;
-validate report metadata with `Environment.validate/1`. Do not trust struct shape.
-Eight JSON schemas mirror the constructors;
-a disagreement is a defect, not permission to accept the looser side.
+`Claim`, `Vector` and `Target.External` with `from_map/1`, their closed public
+map constructors; validate report metadata with `Environment.validate/1`. Do not
+trust struct shape. Ten JSON schemas mirror the constructors, including the
+declared document input and the normalized observation; a disagreement is a
+defect, not permission to accept the looser side.
 
 The runner never compiles a production subject as a dependency. It sends input,
 not expectation, vector digest or provenance, to the target. An observed result
@@ -83,7 +84,7 @@ classification, not evidence that this package performs that activity.
 | WCF-C03 | WCF.01 | Archive-only minimal consumer and independently implemented external target fixture | Exact unpacked archive compiles without subject packages; observed/pass, mismatch/fail, unsupported, timeout and malformed response each produce their distinct contract outcome |
 | WCF-C04 | WCF-C03 | Cross-run isolation and lifecycle proof | Concurrent target runs cannot exchange output; timeout during write/read cleans up ports; oversized/late/partial responses and target crashes remain bounded; changed artifact never starts target |
 | WCF-C05 | WCF-C01 | Decision contract for any proposed Discovery corpus; keep it separate from existing TD/TM evidence | Before implementation, enumerate exact Discovery operations/assertions, source sections, consumer fixture obligations and unsupported profiles; no Discovery claim until vectors and independent target pass |
-| WCF-C06 | WCF-C02, WCF-C03, WCF-C04 | Release evidence and explicit runtime compatibility cohort | Resolve the declared minimum-runtime discrepancy between CLAUDE and mix metadata, test the accepted cohort cleanly, validate all eight schemas and publish no stronger claim than tested |
+| WCF-C06 | WCF-C02, WCF-C03, WCF-C04 | Release evidence and explicit runtime compatibility cohort | Resolve the declared minimum-runtime discrepancy between CLAUDE and mix metadata, test the accepted cohort cleanly, validate all ten schemas and publish no stronger claim than tested |
 | WCF-C07 | None | Allowlisted package documentation inputs that exclude machine-local execution records | `mix hex.build` archive listing excludes docs/tasks/local including a local sentinel |
 
 C02 expands data/evidence, not the target execution protocol. New operations,
