@@ -209,6 +209,12 @@ defmodule Wotex.Runtime.SubscriptionTest do
     send(connection, {:deliver, "alarm-1"})
     assert_receive {:wotex_runtime, :linked_alarm, {:ok, "alarm-1", %{}}}
 
+    helper = spawn_link_from(pid, fn -> :ok end)
+    wait_for_exit(helper)
+    assert Process.alive?(pid)
+    send(pid, {:wotex_transport, {:ok, "still-alive", %{}}})
+    assert_receive {:wotex_runtime, :linked_alarm, {:ok, "still-alive", %{}}}
+
     send(connection, :crash)
     assert_receive {:wotex_runtime, :linked_alarm, {:status, :transport_down}}
     assert_receive {:DOWN, ^monitor, :process, ^pid, {:shutdown, :transport_down}}
@@ -558,6 +564,25 @@ defmodule Wotex.Runtime.SubscriptionTest do
     end
   end
 
+  # Spawns a helper linked to `owner` from inside the owner's own process context.
+  defp spawn_link_from(owner, fun) do
+    parent = self()
+
+    :sys.replace_state(owner, fn state ->
+      helper =
+        spawn_link(fn ->
+          send(parent, {:helper, self()})
+          fun.()
+        end)
+
+      send(parent, {:helper, helper})
+      state
+    end)
+
+    assert_receive {:helper, helper}
+    helper
+  end
+
   # Starts the child under a trapping parent so the exact exit reason is observable.
   defp start_watched(%{start: {module, function, arguments}}) do
     parent = self()
@@ -574,6 +599,16 @@ defmodule Wotex.Runtime.SubscriptionTest do
 
     assert_receive {:started, pid}
     pid
+  end
+
+  defp wait_for_exit(pid) do
+    monitor = Process.monitor(pid)
+
+    receive do
+      {:DOWN, ^monitor, :process, ^pid, _reason} -> :ok
+    after
+      1_000 -> flunk("helper did not exit")
+    end
   end
 
   defp unique_name(suffix),

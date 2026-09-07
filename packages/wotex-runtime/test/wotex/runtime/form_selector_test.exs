@@ -102,7 +102,7 @@ defmodule Wotex.Runtime.FormSelectorTest do
       TDFactory.thing_description()
       |> Wotex.ThingDescription.to_map()
       |> update_in(["actions", "calibrate", "forms"], fn [form] -> [Map.delete(form, "op")] end)
-      |> update_in(["properties", "temperature", "forms"], fn [form | _] ->
+      |> update_in(["properties", "temperature", "forms"], fn [form | _rest] ->
         [Map.delete(form, "op")]
       end)
       |> put_in(["properties", "temperature", "readOnly"], true)

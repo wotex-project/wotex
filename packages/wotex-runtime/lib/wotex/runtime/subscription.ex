@@ -9,7 +9,8 @@ defmodule Wotex.Runtime.Subscription do
   immediately before the open and close exchanges and are never kept in state.
 
   The receiver is monitored: if it exits, the subscription unsubscribes and
-  stops. A linked transport process that exits, or a transport status of
+  stops. A linked transport process that exits abnormally (a normal exit of a
+  helper that finished its work is ignored), or a transport status of
   `:session_lost` or `:transport_down`, is reported to the receiver before the
   process stops with a `:shutdown` reason, leaving the restart decision to the
   consumer's supervisor. An optional `max_queue_length` bounds the receiver's
@@ -106,6 +107,7 @@ defmodule Wotex.Runtime.Subscription do
     {:stop, {:shutdown, :receiver_down}, %{state | monitor: nil}}
   end
 
+  def handle_info({:EXIT, _pid, :normal}, state), do: {:noreply, state}
   def handle_info({:EXIT, _pid, _reason}, state), do: stop_after_status(:transport_down, state)
 
   def handle_info(_message, state), do: {:noreply, state}

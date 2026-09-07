@@ -89,6 +89,9 @@ defmodule Wotex.Runtime.Test.FakeTransport do
         send(owner, {:wotex_transport, {:ok, value, %{}}})
         connection_loop(owner)
 
+      :finish ->
+        :ok
+
       :crash ->
         exit(:connection_reset)
     end
