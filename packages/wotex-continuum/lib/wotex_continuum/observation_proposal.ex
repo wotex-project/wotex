@@ -3,7 +3,7 @@ defmodule WotexContinuum.ObservationProposal do
   Proposed Property observation or Event data from continuum execution.
 
   The proposal binds a Thing affordance value to caller-owned observation time,
-  execution context, sequence, quality, evidence, and extensions. It is
+  execution scope, sequence, quality, evidence, and extensions. It is
   designed for transfer and later admission when a consumer must reconcile
   disconnected observations.
 
@@ -13,7 +13,7 @@ defmodule WotexContinuum.ObservationProposal do
 
   @behaviour WotexContinuum.Value
 
-  alias WotexContinuum.{Contract, Error, EvidenceReference, ExecutionContext, Validation}
+  alias WotexContinuum.{Contract, Error, EvidenceReference, ExecutionScope, Validation}
 
   @kind "observation_proposal"
   @affordance_types [:property, :event]
@@ -52,7 +52,7 @@ defmodule WotexContinuum.ObservationProposal do
           sequence: non_neg_integer() | nil,
           quality: map(),
           evidence: [EvidenceReference.t()],
-          context: ExecutionContext.t(),
+          context: ExecutionScope.t(),
           extensions: map()
         }
 
@@ -97,7 +97,7 @@ defmodule WotexContinuum.ObservationProposal do
          {:ok, evidence} <-
            Validation.structs(Map.get(data, :evidence, []), "/evidence", EvidenceReference),
          {:ok, context} <- Validation.required(data, :context),
-         {:ok, context} <- Validation.nested(context, "/context", ExecutionContext),
+         {:ok, context} <- Validation.nested(context, "/context", ExecutionScope),
          {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
@@ -132,7 +132,7 @@ defmodule WotexContinuum.ObservationProposal do
     |> maybe_put("sequence", value.sequence)
     |> Map.put("quality", value.quality)
     |> Map.put("evidence", Enum.map(value.evidence, &EvidenceReference.to_map/1))
-    |> Map.put("context", ExecutionContext.to_map(value.context))
+    |> Map.put("context", ExecutionScope.to_map(value.context))
     |> Map.put("extensions", value.extensions)
   end
 

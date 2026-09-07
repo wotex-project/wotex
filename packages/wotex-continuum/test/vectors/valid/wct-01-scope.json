@@ -1,11 +1,11 @@
 {
-  "kind": "execution_context",
-  "schema_version": "1.0.0",
+  "kind": "execution_scope",
+  "schema_version": "2.0.0",
   "execution_id": "exec-example-1",
   "node_id": "edge-example-a",
   "mode": {
     "kind": "mode",
-    "schema_version": "1.0.0",
+    "schema_version": "2.0.0",
     "deployment": "hybrid",
     "connectivity": "intermittent",
     "extensions": {}

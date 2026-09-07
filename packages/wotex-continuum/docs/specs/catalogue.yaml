@@ -3,7 +3,7 @@ package: "wotex_continuum"
 completion_plan: "docs/plans/wotex-continuum-completion.md"
 specifications:
   - id: "WCT.01"
-    version: "1.0.0"
+    version: "2.0.0"
     path: "specs/WCT.01-manifest-context-capability.md"
     implementation_status: "partial"
     standards:
@@ -11,11 +11,11 @@ specifications:
         revision: "Recommendations 5 December 2023"
         claim: "Vocabulary only; manifest, context, compatibility and capability fields are project-defined"
     requires: ["wotex:WTX.01", "wotex:WTX.03"]
-    implementation_modules: ["WotexContinuum", "WotexContinuum.Manifest", "WotexContinuum.Artifact", "WotexContinuum.Compatibility", "WotexContinuum.CapabilityRequirement", "WotexContinuum.ExecutionContext", "WotexContinuum.Capability", "WotexContinuum.Codec", "WotexContinuum.Limits", "WotexContinuum.Schema"]
+    implementation_modules: ["WotexContinuum", "WotexContinuum.Value", "WotexContinuum.Manifest", "WotexContinuum.Artifact", "WotexContinuum.Compatibility", "WotexContinuum.CapabilityRequirement", "WotexContinuum.ExecutionScope", "WotexContinuum.Capability", "WotexContinuum.Codec", "WotexContinuum.CanonicalJSON", "WotexContinuum.Limits", "WotexContinuum.Schema", "WotexContinuum.Error"]
     executable_evidence: ["test/wotex_continuum/vector_test.exs", "test/wotex_continuum/codec_test.exs", "test/wotex_continuum/validation_test.exs", "test/wotex_continuum/property_contract_test.exs", "test/wotex_continuum/library_contract_test.exs"]
-    compatibility_classification: "Wire 1.0.0; WCT-C02 closes input-boundary gaps before a broader total-validation claim"
+    compatibility_classification: "Wire 2.0.0, incompatible with wire 1.0.0: the execution_context kind is renamed execution_scope and error paths are RFC 6901 JSON Pointer strings; source admission is delegated to the core bounded decoder"
   - id: "WCT.02"
-    version: "1.0.0"
+    version: "2.0.0"
     path: "specs/WCT.02-exchange-values.md"
     implementation_status: "implemented"
     standards:
@@ -25,13 +25,13 @@ specifications:
     requires: ["WCT.01", "wotex:WTX.01"]
     implementation_modules: ["WotexContinuum.ObservationProposal", "WotexContinuum.ActionIntent", "WotexContinuum.ActionResult", "WotexContinuum.EvidenceReference", "WotexContinuum.Delivery", "WotexContinuum.Failure", "WotexContinuum.ThingReference"]
     executable_evidence: ["test/wotex_continuum/value_state_test.exs", "test/wotex_continuum/thing_reference_test.exs", "test/wotex_continuum/vector_test.exs"]
-    compatibility_classification: "Wire 1.0.0; inherits WCT.01 boundary limitations; no dispatch, deduplication or evidence-authenticity guarantee"
+    compatibility_classification: "Wire 2.0.0, incompatible with wire 1.0.0 through the renamed nested scope kind; inherits WCT.01 boundary limitations; the sibling wire mapping is documentation, not a dependency; no dispatch, deduplication or evidence-authenticity guarantee"
   - id: "WCT.03"
-    version: "1.0.0"
+    version: "2.0.0"
     path: "specs/WCT.03-mode-lifecycle-exit.md"
     implementation_status: "implemented"
     standards: []
     requires: ["WCT.01", "WCT.02"]
     implementation_modules: ["WotexContinuum.Mode", "WotexContinuum.Lifecycle", "WotexContinuum.Degradation", "WotexContinuum.ExitReceipt"]
     executable_evidence: ["test/wotex_continuum/lifecycle_test.exs", "test/wotex_continuum/value_state_test.exs", "test/wotex_continuum/vector_test.exs"]
-    compatibility_classification: "Project-defined wire 1.0.0; pure transitions only, not consumer shutdown or recovery execution"
+    compatibility_classification: "Project-defined wire 2.0.0, incompatible with wire 1.0.0; the changed_at ordering rule is now normative; pure transitions only, not consumer shutdown or recovery execution"

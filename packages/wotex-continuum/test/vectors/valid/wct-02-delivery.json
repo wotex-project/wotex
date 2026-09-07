@@ -1,6 +1,6 @@
 {
   "kind": "delivery",
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "delivery_id": "delivery-example-1",
   "item_kind": "observation_proposal",
   "item_id": "proposal-example-1",

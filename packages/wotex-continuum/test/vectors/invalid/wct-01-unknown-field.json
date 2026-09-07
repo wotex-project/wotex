@@ -3,7 +3,7 @@
   "expected": {"code": "unknown_field", "phase": "validation", "path": "/ambient_policy"},
   "input": {
     "kind": "capability",
-    "schema_version": "1.0.0",
+    "schema_version": "2.0.0",
     "id": "example-capability",
     "version": "1.0.0",
     "operations": [],

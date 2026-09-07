@@ -205,7 +205,7 @@ defmodule WotexContinuum.ValueStateTest do
 
     assert {:ok, value} = Manifest.new(manifest)
     assert {:ok, ^value} = Manifest.new(value)
-    assert :ok = Manifest.compatible_with?(value, "1.0.0", [])
+    assert :ok = Manifest.compatible_with?(value, "2.0.0", [])
 
     assert {:error, %Error{code: :duplicate_value}} =
              Manifest.new(%{manifest | capabilities: [capability, capability]})
@@ -284,7 +284,7 @@ defmodule WotexContinuum.ValueStateTest do
   end
 
   defp compatibility_map do
-    %{schema_requirement: "~> 1.0", required_capabilities: []}
+    %{schema_requirement: "~> 2.0", required_capabilities: []}
   end
 
   defp context_map do

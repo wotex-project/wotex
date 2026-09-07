@@ -35,7 +35,7 @@ defmodule WotexContinuum.Contract do
     do: Error.error(code, :validation, path, "value does not match the contract")
 
   defp supported_schema(version) do
-    if Version.match?(version, "~> 1.0"),
+    if Version.match?(version, "~> 2.0"),
       do: :ok,
       else:
         Error.error(

@@ -17,9 +17,14 @@
 
 ---
 
+*Continuum* is a project term for the span from disconnected edge devices to
+cloud services across which these inert values are exchanged. W3C Web of Things
+does not standardize such exchange values; every member name defined here is a
+Wotex Continuum field, never a Thing Description vocabulary term.
+
 Wotex Continuum provides immutable, host-neutral exchange values for carrying
 Thing observations, Action intent and results, evidence, delivery state, and
-deployment-mode lifecycle across an edge/cloud continuum.
+deployment-mode lifecycle across that continuum.
 
 Loading the library starts no process, performs no I/O, selects no provider,
 evaluates no policy, and owns no database. A consumer host validates values,
@@ -43,12 +48,12 @@ end
 ## Quick Start
 
 ```elixir
-alias WotexContinuum.{ActionIntent, Codec, ExecutionContext, Mode}
+alias WotexContinuum.{ActionIntent, Codec, ExecutionScope, Mode}
 
-{:ok, mode} = Mode.new(%{deployment: :air_gapped, connectivity: :disconnected})
+{:ok, mode} = Mode.from_map(%{deployment: :air_gapped, connectivity: :disconnected})
 
-{:ok, context} =
-  ExecutionContext.new(%{
+{:ok, scope} =
+  ExecutionScope.from_map(%{
     execution_id: "exec-018",
     node_id: "edge-a",
     mode: mode,
@@ -56,14 +61,14 @@ alias WotexContinuum.{ActionIntent, Codec, ExecutionContext, Mode}
   })
 
 {:ok, intent} =
-  ActionIntent.new(%{
+  ActionIntent.from_map(%{
     intent_id: "intent-018",
     thing_id: "urn:example:thing:pump-7",
     action_name: "setLevel",
     input: %{"level" => 42},
     requested_at: "2026-09-02T10:00:01Z",
     idempotency_key: "set-level-018",
-    context: context
+    context: scope
   })
 
 {:ok, canonical_json} = Codec.encode(intent, canonical: true)
@@ -77,7 +82,7 @@ recording belong to the consumer host.
 
 | Owned here | Owned by the consumer |
 |------------|-----------------------|
-| Manifest, compatibility, execution-context, and capability values | Canonical Thing, observation, Action-effect, identity, and policy state |
+| Manifest, compatibility, execution-scope, and capability values | Canonical Thing, observation, Action-effect, identity, and policy state |
 | Observation proposal, Action intent/result, evidence, and delivery values | Activation, entitlement, provider selection, credentials, and dispatch |
 | Deployment mode, connectivity, lifecycle, degradation, and exit values | Persistence, migrations, jobs, network clients, UI, and telemetry exporters |
 | Bounded decoding, canonical encoding, schemas, and executable vectors | Supervision, retries, reconciliation, and final authority |
@@ -86,9 +91,11 @@ Thing Description parsing and validation belongs to Wotex core.
 
 ## Wire Contract
 
-WCT.01, WCT.02, and WCT.03 define the initial public contract. Every encoded
-value carries its independent `schema_version`; package version and wire-schema
-version are deliberately not interchangeable. `WotexContinuum.Codec` performs
+WCT.01, WCT.02, and WCT.03 define the public contract at wire schema 2.0.0.
+Every encoded value carries its independent `schema_version`; package version
+and wire-schema version are deliberately not interchangeable. Wire 2.0.0 renamed
+the `execution_context` kind to `execution_scope`, so a value encoded under wire
+1.0.0 is rejected rather than silently reinterpreted. `WotexContinuum.Codec` performs
 bounded decoding and deterministic canonical encoding, while
 `WotexContinuum.Compatibility` reports every capability mismatch instead of
 hiding partial compatibility behind a boolean.

@@ -1,6 +1,6 @@
 {
   "kind": "evidence_reference",
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "evidence_id": "evidence-example-1",
   "uri": "urn:example:evidence:1",
   "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",

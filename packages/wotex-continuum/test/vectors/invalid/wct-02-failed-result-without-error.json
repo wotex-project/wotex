@@ -3,18 +3,18 @@
   "expected": {"code": "invalid_result_state", "phase": "validation", "path": "/status"},
   "input": {
     "kind": "action_result",
-    "schema_version": "1.0.0",
+    "schema_version": "2.0.0",
     "result_id": "result-example-bad",
     "intent_id": "intent-example-bad",
     "status": "failed",
     "completed_at": "2026-09-02T10:00:01Z",
     "evidence": [],
     "context": {
-      "kind": "execution_context",
-      "schema_version": "1.0.0",
+      "kind": "execution_scope",
+      "schema_version": "2.0.0",
       "execution_id": "exec-example-bad",
       "node_id": "edge-example-a",
-      "mode": {"kind": "mode", "schema_version": "1.0.0", "deployment": "saas", "connectivity": "connected", "extensions": {}},
+      "mode": {"kind": "mode", "schema_version": "2.0.0", "deployment": "saas", "connectivity": "connected", "extensions": {}},
       "observed_at": "2026-09-02T10:00:01Z",
       "extensions": {}
     },

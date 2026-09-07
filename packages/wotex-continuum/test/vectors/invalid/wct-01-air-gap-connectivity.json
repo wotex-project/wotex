@@ -3,7 +3,7 @@
   "expected": {"code": "invalid_mode", "phase": "validation", "path": "/connectivity"},
   "input": {
     "kind": "mode",
-    "schema_version": "1.0.0",
+    "schema_version": "2.0.0",
     "deployment": "air_gapped",
     "connectivity": "connected",
     "extensions": {}

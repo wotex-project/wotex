@@ -1,19 +1,22 @@
-defmodule WotexContinuum.ExecutionContext do
+defmodule WotexContinuum.ExecutionScope do
   @moduledoc """
   Identifies one execution location and its observed deployment mode.
 
   Caller-owned execution and node IDs are paired with explicit mode and
-  normalized observation time. Carrying the context makes disconnected or
+  normalized observation time. Carrying the scope makes disconnected or
   replayed work explainable without reading ambient application configuration.
 
-  It is context data, not a process handle, identity grant, or scheduler.
+  The value is named `ExecutionScope`, and its wire kind is `execution_scope`,
+  so it never collides with the in-memory `Wotex.Runtime.ExecutionContext` of a
+  consumer host. It is scope data, not a process handle, credential carrier,
+  identity grant, or scheduler.
   """
 
   @behaviour WotexContinuum.Value
 
   alias WotexContinuum.{Contract, Error, Mode, Validation}
 
-  @kind "execution_context"
+  @kind "execution_scope"
 
   @enforce_keys [:execution_id, :node_id, :mode, :observed_at]
   defstruct [:execution_id, :node_id, :mode, :observed_at, extensions: %{}]

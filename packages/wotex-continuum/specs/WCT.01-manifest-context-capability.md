@@ -1,19 +1,26 @@
-# WCT.01 — Manifest, compatibility, execution context, and capability values
+# WCT.01 — Manifest, compatibility, execution scope, and capability values
 
 Status: Accepted
 
-Specification version: 1.0.0
+Specification version: 2.0.0
 
-Wire schema version: 1.0.0
+Wire schema version: 2.0.0
 
 Owner: `wotex-continuum`
 
 ## 1. Purpose
 
+*Continuum* is a project term. It names the span from disconnected edge devices
+to cloud services across which these inert values are exchanged. It is not a
+W3C term: W3C Web of Things does not standardize an edge-to-cloud exchange
+contract, and no member name in WCT.01, WCT.02, or WCT.03 is a Thing
+Description vocabulary term.
+
 WCT.01 defines inert values through which a producer declares what an artifact
-can do, where it can execute, and what it requires from a consumer host. The
-contract supports discovery and admission input; it does not perform admission,
-activation, entitlement, provider selection, or policy evaluation.
+can do, where in that continuum it can execute, and what it requires from a
+consumer host. The contract supports discovery and admission input; it does not
+perform admission, activation, entitlement, provider selection, or policy
+evaluation.
 
 The key words MUST, MUST NOT, REQUIRED, SHOULD, SHOULD NOT, and MAY are to be
 interpreted as described by
@@ -157,7 +164,7 @@ A capability requirement contains a non-empty `id` and semantic-version
 and its declared version MUST match. Evaluation returns all mismatches and has
 no activation side effect.
 
-## 7. `execution_context`
+## 7. `execution_scope`
 
 | Member | Type | Rules |
 |---|---|---|
@@ -167,9 +174,15 @@ no activation side effect.
 | `observed_at` | RFC 3339 timestamp | REQUIRED; normalized to UTC |
 | `extensions` | object | OPTIONAL |
 
-Context describes the environment in which another value was observed or
+A scope describes where in the continuum another value was observed or
 produced. It MUST NOT contain credentials and MUST NOT be interpreted as proof
 of identity, authority, or time correctness.
+
+The kind is `execution_scope` and the module is `WotexContinuum.ExecutionScope`.
+Wire schema 1.0.0 named this value `execution_context`; the rename removes the
+basename collision with the in-memory `Wotex.Runtime.ExecutionContext` of a
+consumer host, which carries credential material this value MUST NOT carry.
+WCT.02 members that reference a scope keep the member name `context`.
 
 ## 8. `capability`
 

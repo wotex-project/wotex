@@ -1,6 +1,6 @@
 {
   "kind": "degradation",
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "degradation_id": "degradation-example-1",
   "subject_id": "worker-example-1",
   "level": "reduced",

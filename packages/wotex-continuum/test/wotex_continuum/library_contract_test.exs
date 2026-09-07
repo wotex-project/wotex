@@ -56,7 +56,7 @@ defmodule WotexContinuum.LibraryContractTest do
       assert {:ok, source} = Schema.fetch(id)
       assert {:ok, %{"$schema" => _}} = Jason.decode(source)
 
-      assert {:ok, %{id: ^id, schema_version: "1.0.0", digest: "sha256:" <> digest}} =
+      assert {:ok, %{id: ^id, schema_version: "2.0.0", digest: "sha256:" <> digest}} =
                Schema.info(id)
 
       assert byte_size(digest) == 64

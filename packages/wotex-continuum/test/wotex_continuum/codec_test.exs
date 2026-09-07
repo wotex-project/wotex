@@ -55,7 +55,7 @@ defmodule WotexContinuum.CodecTest do
 
   test "rejects duplicate members before value construction" do
     source =
-      ~s({"kind":"mode","kind":"mode","schema_version":"1.0.0","deployment":"saas","connectivity":"connected","extensions":{}})
+      ~s({"kind":"mode","kind":"mode","schema_version":"2.0.0","deployment":"saas","connectivity":"connected","extensions":{}})
 
     assert {:error, %Error{code: :duplicate_field, phase: :decode, path: "/kind"}} =
              Codec.decode(source)
@@ -69,7 +69,7 @@ defmodule WotexContinuum.CodecTest do
 
   test "enforces source, nesting, collection, and string limits" do
     source =
-      ~s({"kind":"mode","schema_version":"1.0.0","deployment":"saas","connectivity":"connected","extensions":{}})
+      ~s({"kind":"mode","schema_version":"2.0.0","deployment":"saas","connectivity":"connected","extensions":{}})
 
     assert {:error, %Error{code: :limit_exceeded}} = Codec.decode(source, max_bytes: 8)
 

@@ -3,7 +3,7 @@
   "expected": {"code": "invalid_exit_state", "phase": "validation", "path": "/status"},
   "input": {
     "kind": "exit_receipt",
-    "schema_version": "1.0.0",
+    "schema_version": "2.0.0",
     "receipt_id": "exit-example-bad",
     "subject_id": "worker-example-bad",
     "operation": "remove",

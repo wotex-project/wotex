@@ -2,9 +2,9 @@
 
 Status: Accepted
 
-Specification version: 1.0.0
+Specification version: 2.0.0
 
-Wire schema version: 1.0.0
+Wire schema version: 2.0.0
 
 Owner: `wotex-continuum`
 
@@ -67,8 +67,12 @@ removed -> (none)
 ```
 
 A transition MUST increment generation by one and supply its timestamp. The
-pure transition function validates the graph; it performs no activation,
-draining, stopping, or removal effect.
+supplied `changed_at` MUST NOT precede the current `changed_at`; an earlier
+timestamp returns `invalid_time_order` at `/changed_at`. Equal timestamps are
+accepted because a consumer clock has bounded resolution and this value makes
+no clock-correctness claim. The pure transition function validates the graph
+and this ordering rule; it performs no activation, draining, stopping, or
+removal effect.
 
 ## 4. `degradation`
 

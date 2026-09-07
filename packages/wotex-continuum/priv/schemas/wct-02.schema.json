@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://wotex.io/schemas/continuum/wct-02/1.0.0",
+  "$id": "https://wotex.io/schemas/continuum/wct-02/2.0.0",
   "title": "WCT.02 continuum exchange values",
   "oneOf": [
     {"$ref": "#/$defs/observationProposal"},
@@ -10,7 +10,7 @@
     {"$ref": "#/$defs/delivery"}
   ],
   "$defs": {
-    "schemaVersion": {"const": "1.0.0"},
+    "schemaVersion": {"const": "2.0.0"},
     "identifier": {"type": "string", "minLength": 1, "maxLength": 512},
     "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "extensions": {
@@ -62,7 +62,7 @@
         "sequence": {"type": "integer", "minimum": 0},
         "quality": {"type": "object"},
         "evidence": {"$ref": "#/$defs/evidence"},
-        "context": {"$ref": "wct-01.schema.json#/$defs/executionContext"},
+        "context": {"$ref": "wct-01.schema.json#/$defs/executionScope"},
         "extensions": {"$ref": "#/$defs/extensions"}
       },
       "additionalProperties": false
@@ -81,7 +81,7 @@
         "idempotency_key": {"$ref": "#/$defs/identifier"},
         "requested_by": {"$ref": "#/$defs/identifier"},
         "evidence": {"$ref": "#/$defs/evidence"},
-        "context": {"$ref": "wct-01.schema.json#/$defs/executionContext"},
+        "context": {"$ref": "wct-01.schema.json#/$defs/executionScope"},
         "extensions": {"$ref": "#/$defs/extensions"}
       },
       "additionalProperties": false
@@ -100,7 +100,7 @@
         "started_at": {"type": "string", "format": "date-time"},
         "completed_at": {"type": "string", "format": "date-time"},
         "evidence": {"$ref": "#/$defs/evidence"},
-        "context": {"$ref": "wct-01.schema.json#/$defs/executionContext"},
+        "context": {"$ref": "wct-01.schema.json#/$defs/executionScope"},
         "extensions": {"$ref": "#/$defs/extensions"}
       },
       "additionalProperties": false

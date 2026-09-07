@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://wotex.io/schemas/continuum/wct-03/1.0.0",
+  "$id": "https://wotex.io/schemas/continuum/wct-03/2.0.0",
   "title": "WCT.03 continuum mode and lifecycle values",
   "oneOf": [
     {"$ref": "#/$defs/mode"},
@@ -9,7 +9,7 @@
     {"$ref": "#/$defs/exitReceipt"}
   ],
   "$defs": {
-    "schemaVersion": {"const": "1.0.0"},
+    "schemaVersion": {"const": "2.0.0"},
     "identifier": {"type": "string", "minLength": 1, "maxLength": 512},
     "extensions": {
       "type": "object",

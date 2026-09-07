@@ -2,19 +2,19 @@
   "description": "all schema and capability mismatches are reported",
   "requirements": {
     "kind": "compatibility",
-    "schema_version": "1.0.0",
-    "schema_requirement": "~> 1.0",
+    "schema_version": "2.0.0",
+    "schema_requirement": "~> 2.0",
     "required_capabilities": [
       {"id": "observation-forwarding", "version_requirement": "~> 2.0"},
       {"id": "local-buffering", "version_requirement": "~> 1.0"}
     ],
     "extensions": {}
   },
-  "actual_schema_version": "2.0.0",
+  "actual_schema_version": "3.0.0",
   "capabilities": [
     {
       "kind": "capability",
-      "schema_version": "1.0.0",
+      "schema_version": "2.0.0",
       "id": "observation-forwarding",
       "version": "3.0.0",
       "operations": ["forward"],

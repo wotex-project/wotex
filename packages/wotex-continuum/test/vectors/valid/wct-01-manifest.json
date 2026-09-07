@@ -1,6 +1,6 @@
 {
   "kind": "continuum_manifest",
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "manifest_id": "manifest-example-1",
   "artifact": {
     "name": "example-edge-worker",
@@ -9,8 +9,8 @@
   },
   "compatibility": {
     "kind": "compatibility",
-    "schema_version": "1.0.0",
-    "schema_requirement": "~> 1.0",
+    "schema_version": "2.0.0",
+    "schema_requirement": "~> 2.0",
     "required_capabilities": [
       {"id": "observation-forwarding", "version_requirement": ">= 2.0.0 and < 3.0.0"}
     ],
@@ -20,7 +20,7 @@
   "capabilities": [
     {
       "kind": "capability",
-      "schema_version": "1.0.0",
+      "schema_version": "2.0.0",
       "id": "local-buffering",
       "version": "1.0.0",
       "operations": ["enqueue", "drain"],

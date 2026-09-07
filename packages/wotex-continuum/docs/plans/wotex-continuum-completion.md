@@ -1,6 +1,6 @@
 # Wotex Continuum completion contract
 
-Plan version: 1.0.0. Package baseline: 0.1.0. Wire schema: 1.0.0.
+Plan version: 1.1.0. Package baseline: 0.1.0. Wire schema: 2.0.0.
 The single [catalogue](../specs/catalogue.yaml) points to normative WCT owners
 under `specs/`; it does not duplicate them.
 
@@ -34,7 +34,7 @@ exit records remain claims represented as data, not proof of effects.
 | Owner | Public values/functions and required behavior |
 | --- | --- |
 | `WotexContinuum` | `schema_version/0`, `kinds/0`, `from_map/1`, `to_map/1`, `module_for_kind/1`; registered kinds and exact envelope version. Top-level `to_map/1` reconstructs values before returning success. |
-| WCT.01 | Manifest, Compatibility, ExecutionContext, Capability; nested Artifact and CapabilityRequirement. `from_map/1` with the `new/1` alias, `to_map/1`; top-level values expose `kind/0`. Compatibility `evaluate/3` returns `:ok` or every mismatch. Manifest `compatible_with?/3` delegates the check; it does not admit an artifact. |
+| WCT.01 | Manifest, Compatibility, ExecutionScope, Capability; nested Artifact and CapabilityRequirement. `from_map/1` with the `new/1` alias, `to_map/1`; top-level values expose `kind/0`. Compatibility `evaluate/3` returns `:ok` or every mismatch. Manifest `compatible_with?/3` delegates the check; it does not admit an artifact. |
 | WCT.02 | ObservationProposal, ActionIntent, ActionResult, EvidenceReference, Delivery; nested Failure. Constructors/maps preserve null-versus-absence rules and status coherence. `ThingReference.validate/2` checks a value's Thing identifier against a supplied validated Thing Description, not identity trust. |
 | WCT.03 | Mode, Lifecycle, Degradation, ExitReceipt with `from_map/1` and its `new/1` alias, `to_map/1`, `kind/0`; Mode `deployments/0`, `connectivity_states/0`; Lifecycle `states/0`, `transition/4`. No deployment or teardown side effect. |
 | Codec | `decode/2` admits bounded JSON iodata, `encode/2` validates registered values, `canonicalize/1` requests canonical encoding. Canonical bytes are project-defined, not RFC 8785. |
@@ -91,9 +91,9 @@ Recommendations dated 5 December 2023. All WCT fields are project-defined.
 
 | Claim | Value | Operation | Interoperability | Profile | Certification |
 | --- | --- | --- | --- | --- | --- |
-| WCT.01 manifest/context/capability | Project wire 1.0.0 | Construct, encode, compatibility compare | Local vectors; independent consumer proof requires WCT-C04 | Not a WoT Profile or admission standard | None |
-| WCT.02 observations/Actions/delivery | Project wire 1.0.0, W3C vocabulary | Data conversion and supplied TD identity check | No transport or cross-vendor execution claim | Not WoT Scripting API | None |
-| WCT.03 modes/lifecycle/exit | Project wire 1.0.0 | Pure graph transition only | Does not prove disconnected deployment or recovery | Not deployment-management conformance | None |
+| WCT.01 manifest/context/capability | Project wire 2.0.0 | Construct, encode, compatibility compare | Local vectors; independent consumer proof requires WCT-C04 | Not a WoT Profile or admission standard | None |
+| WCT.02 observations/Actions/delivery | Project wire 2.0.0, W3C vocabulary | Data conversion and supplied TD identity check | No transport or cross-vendor execution claim | Not WoT Scripting API | None |
+| WCT.03 modes/lifecycle/exit | Project wire 2.0.0 | Pure graph transition only | Does not prove disconnected deployment or recovery | Not deployment-management conformance | None |
 | JSON canonicalization | Package-canonical bytes | Deterministic encoding | Exact encoder/version cohort; not signature portability | Not RFC 8785 JCS | None |
 | Bundled JSON Schemas | WCT schema documents | Fetch and digest | Existing tests parse them; schema-to-constructor agreement needs WCT-C03 | Not W3C conformance | None |
 

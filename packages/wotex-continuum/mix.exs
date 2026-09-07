@@ -119,7 +119,7 @@ defmodule WotexContinuum.MixProject do
         "Continuum context": [
           WotexContinuum.Capability,
           WotexContinuum.CapabilityRequirement,
-          WotexContinuum.ExecutionContext,
+          WotexContinuum.ExecutionScope,
           WotexContinuum.Manifest,
           WotexContinuum.Mode
         ],

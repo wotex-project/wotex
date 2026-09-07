@@ -14,7 +14,7 @@ defmodule WotexContinuum do
     Degradation,
     Delivery,
     EvidenceReference,
-    ExecutionContext,
+    ExecutionScope,
     ExitReceipt,
     Lifecycle,
     Manifest,
@@ -22,11 +22,11 @@ defmodule WotexContinuum do
     ObservationProposal
   }
 
-  @schema_version "1.0.0"
+  @schema_version "2.0.0"
   @modules [
     Manifest,
     Compatibility,
-    ExecutionContext,
+    ExecutionScope,
     Capability,
     ObservationProposal,
     ActionIntent,

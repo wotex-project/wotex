@@ -5,7 +5,7 @@ defmodule WotexContinuum.ActionResult do
   Status determines which output, failure, and timestamp combinations are
   valid. Successful, failed, and cancelled results must be terminal and
   internally consistent, while accepted or running results remain incomplete.
-  The execution context and evidence references preserve where the report came
+  The execution scope and evidence references preserve where the report came
   from without making it canonical state.
 
   This value reports an outcome; it never performs the Action or changes Thing
@@ -18,7 +18,7 @@ defmodule WotexContinuum.ActionResult do
     Contract,
     Error,
     EvidenceReference,
-    ExecutionContext,
+    ExecutionScope,
     Failure,
     Validation
   }
@@ -49,7 +49,7 @@ defmodule WotexContinuum.ActionResult do
           error: Failure.t() | nil,
           started_at: String.t() | nil,
           completed_at: String.t() | nil,
-          context: ExecutionContext.t(),
+          context: ExecutionScope.t(),
           output_present?: boolean(),
           evidence: [EvidenceReference.t()],
           extensions: map()
@@ -112,7 +112,7 @@ defmodule WotexContinuum.ActionResult do
          {:ok, evidence} <-
            Validation.structs(Map.get(data, :evidence, []), "/evidence", EvidenceReference),
          {:ok, context} <- Validation.required(data, :context),
-         {:ok, context} <- Validation.nested(context, "/context", ExecutionContext),
+         {:ok, context} <- Validation.nested(context, "/context", ExecutionScope),
          {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
@@ -146,7 +146,7 @@ defmodule WotexContinuum.ActionResult do
     |> maybe_put("started_at", value.started_at)
     |> maybe_put("completed_at", value.completed_at)
     |> Map.put("evidence", Enum.map(value.evidence, &EvidenceReference.to_map/1))
-    |> Map.put("context", ExecutionContext.to_map(value.context))
+    |> Map.put("context", ExecutionScope.to_map(value.context))
     |> Map.put("extensions", value.extensions)
   end
 

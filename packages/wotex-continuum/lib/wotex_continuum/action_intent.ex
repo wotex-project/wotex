@@ -3,7 +3,7 @@ defmodule WotexContinuum.ActionIntent do
   A portable, data-only request to invoke a Thing Action.
 
   The value binds the Action name and input to a Thing, idempotency key,
-  execution context, request time, optional requester, and evidence references.
+  execution scope, request time, optional requester, and evidence references.
   It is suitable for durable queues and disconnected transfer because all
   authority-relevant context travels with the request.
 
@@ -13,7 +13,7 @@ defmodule WotexContinuum.ActionIntent do
 
   @behaviour WotexContinuum.Value
 
-  alias WotexContinuum.{Contract, Error, EvidenceReference, ExecutionContext, Validation}
+  alias WotexContinuum.{Contract, Error, EvidenceReference, ExecutionScope, Validation}
 
   @kind "action_intent"
 
@@ -48,7 +48,7 @@ defmodule WotexContinuum.ActionIntent do
           idempotency_key: String.t(),
           requested_by: String.t() | nil,
           evidence: [EvidenceReference.t()],
-          context: ExecutionContext.t(),
+          context: ExecutionScope.t(),
           extensions: map()
         }
 
@@ -90,7 +90,7 @@ defmodule WotexContinuum.ActionIntent do
          {:ok, evidence} <-
            Validation.structs(Map.get(data, :evidence, []), "/evidence", EvidenceReference),
          {:ok, context} <- Validation.required(data, :context),
-         {:ok, context} <- Validation.nested(context, "/context", ExecutionContext),
+         {:ok, context} <- Validation.nested(context, "/context", ExecutionScope),
          {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
@@ -123,7 +123,7 @@ defmodule WotexContinuum.ActionIntent do
     |> Map.put("idempotency_key", value.idempotency_key)
     |> maybe_put("requested_by", value.requested_by)
     |> Map.put("evidence", Enum.map(value.evidence, &EvidenceReference.to_map/1))
-    |> Map.put("context", ExecutionContext.to_map(value.context))
+    |> Map.put("context", ExecutionScope.to_map(value.context))
     |> Map.put("extensions", value.extensions)
   end
 

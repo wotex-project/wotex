@@ -29,7 +29,7 @@ defmodule WotexContinuum.VectorTest do
       "degradation" => :degradation_id,
       "delivery" => :delivery_id,
       "evidence_reference" => :evidence_id,
-      "execution_context" => :execution_id,
+      "execution_scope" => :execution_id,
       "exit_receipt" => :receipt_id,
       "lifecycle" => :subject_id,
       "mode" => :deployment,

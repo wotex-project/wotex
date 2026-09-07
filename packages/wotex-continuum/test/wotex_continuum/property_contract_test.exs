@@ -78,7 +78,7 @@ defmodule WotexContinuum.PropertyContractTest do
 
   test "source scanning accounts for escaped string bytes" do
     source =
-      ~s({"kind":"mode","schema_version":"1.0.0","deployment":"saas","connectivity":"connected","extensions":{"https://example.org/text":"a\\nb"}})
+      ~s({"kind":"mode","schema_version":"2.0.0","deployment":"saas","connectivity":"connected","extensions":{"https://example.org/text":"a\\nb"}})
 
     assert {:ok, _} = Codec.decode(source, max_string_bytes: 128)
   end
@@ -88,7 +88,7 @@ defmodule WotexContinuum.PropertyContractTest do
   defp mode_source(levels) do
     payload = Enum.reduce(1..levels, "true", fn _, acc -> "[" <> acc <> "]" end)
 
-    ~s({"kind":"mode","schema_version":"1.0.0","deployment":"saas","connectivity":"connected",) <>
+    ~s({"kind":"mode","schema_version":"2.0.0","deployment":"saas","connectivity":"connected",) <>
       ~s("extensions":{"https://example.org/deep":) <> payload <> "}}"
   end
 

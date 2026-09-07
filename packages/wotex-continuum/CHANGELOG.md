@@ -2,6 +2,15 @@
 
 ## 0.1.0
 
+- Wire schema 2.0.0, incompatible with wire 1.0.0. Rename the
+  `execution_context` kind to `execution_scope` and the module to
+  `WotexContinuum.ExecutionScope`, ending the basename collision with the
+  in-memory `Wotex.Runtime.ExecutionContext`; members that reference a scope
+  keep the name `context`. State the `changed_at` ordering rule enforced by
+  `WotexContinuum.Lifecycle` in WCT.03, define the project term *continuum* in
+  the README and WCT.01, and add a WCT.02 wire mapping to
+  `Wotex.Nx.Observation`, `Wotex.Nx.ActionProposal` and `Wotex.Runtime.Result`.
+
 - Delegate JSON source admission to `Wotex.JSON.decode/2` and remove the local
   byte scan. `WotexContinuum.Limits` keeps the family option names
   `max_bytes`, `max_depth`, `max_nodes`, `max_string_bytes` and

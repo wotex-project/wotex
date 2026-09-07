@@ -2,9 +2,9 @@
 
 Status: Accepted
 
-Specification version: 1.0.0
+Specification version: 2.0.0
 
-Wire schema version: 1.0.0
+Wire schema version: 2.0.0
 
 Owner: `wotex-continuum`
 
@@ -43,7 +43,7 @@ effect-recording rules before dispatch.
 | `sequence` | non-negative integer | OPTIONAL |
 | `quality` | object | OPTIONAL JSON object, defaults to `{}` |
 | `evidence` | array of `evidence_reference` | OPTIONAL |
-| `context` | `execution_context` | REQUIRED |
+| `context` | `execution_scope` | REQUIRED |
 | `extensions` | object | OPTIONAL |
 
 The value is a proposal. Acceptance, conflict handling, ordering across sources,
@@ -61,7 +61,7 @@ and canonical observation persistence belong to the consumer host.
 | `idempotency_key` | string | REQUIRED |
 | `requested_by` | string | OPTIONAL opaque principal reference |
 | `evidence` | array of `evidence_reference` | OPTIONAL |
-| `context` | `execution_context` | REQUIRED |
+| `context` | `execution_scope` | REQUIRED |
 | `extensions` | object | OPTIONAL |
 
 The pair of consumer-defined scope and `idempotency_key` is the deduplication
@@ -79,7 +79,7 @@ input. This library does not define scope, store keys, or decide replay.
 | `started_at` | RFC 3339 timestamp | OPTIONAL |
 | `completed_at` | RFC 3339 timestamp | OPTIONAL; REQUIRED for terminal status |
 | `evidence` | array of `evidence_reference` | OPTIONAL |
-| `context` | `execution_context` | REQUIRED |
+| `context` | `execution_scope` | REQUIRED |
 | `extensions` | object | OPTIONAL |
 
 Terminal statuses are `succeeded`, `failed`, and `cancelled`. If both times are
@@ -125,7 +125,61 @@ Delivery values do not create a queue, perform a retry, or establish exactly-
 once semantics. A consumer host owns transport, backpressure, retry policy,
 deduplication, and durable acknowledgement.
 
-## 8. Compatibility and evidence
+## 8. Wire mapping to in-memory sibling values
+
+WCT.02 values are the wire form of in-memory values owned by sibling Wotex
+packages. This section is documentation of an intended correspondence, not a
+dependency: `wotex-continuum` depends only on the Wotex core and MUST NOT
+import a sibling package. A consumer host performs the conversion and owns
+every decision the conversion implies.
+
+`observation_proposal` is the wire form of `Wotex.Nx.Observation`:
+
+| WCT.02 member | `Wotex.Nx.Observation` field | Difference |
+|---|---|---|
+| `proposal_id` | `id` | identifier member names differ |
+| `thing_id` | `thing_id` | same meaning |
+| `affordance_type` | `affordance_type` | same enumeration |
+| `affordance_name` | `affordance_name` | same meaning |
+| `value` | `value` | same meaning |
+| `observed_at` | `observed_at` | RFC 3339 string here, caller-owned integer coordinate there |
+| `quality` | `quality` | free JSON object here, closed enumeration there |
+| — | `unit`, `source` | not carried on the wire; place them in `extensions` |
+| `extensions` | `metadata` | absolute-IRI keys here, free map there |
+| `sequence`, `evidence`, `context` | — | continuum-only members |
+
+`action_intent` is the wire form of `Wotex.Nx.ActionProposal`:
+
+| WCT.02 member | `Wotex.Nx.ActionProposal` field | Difference |
+|---|---|---|
+| `intent_id` | `id` | identifier member names differ |
+| `thing_id` | `thing_id` | same meaning |
+| `action_name` | `action_name` | same meaning |
+| `input` | `input` | same meaning |
+| `requested_at` | `proposed_at` | RFC 3339 string here, integer coordinate there |
+| `extensions` | `metadata` | absolute-IRI keys here, free map there |
+| `idempotency_key`, `requested_by`, `evidence`, `context` | — | continuum-only members |
+
+`action_result` is the wire form of `Wotex.Runtime.Result`:
+
+| WCT.02 member | `Wotex.Runtime.Result` field | Difference |
+|---|---|---|
+| `intent_id` | `request_id` | the intent, not a transport request, is the correlation subject |
+| `status` | `status` | six outcome values here; `:ok` and `:accepted` describe a protocol exchange there |
+| `output` | `payload` | present only for `succeeded` here |
+| `extensions` | `metadata` | absolute-IRI keys here, free map there |
+| — | `operation` | protocol operation is not carried on the wire |
+| `result_id`, `error`, `started_at`, `completed_at`, `evidence`, `context` | — | continuum-only members |
+
+`context` carries a WCT.01 `execution_scope`. It is deliberately not
+`Wotex.Runtime.ExecutionContext`: that in-memory value carries a credential,
+and a continuum value MUST NOT carry credential material.
+
+A conversion is lossy in both directions. A consumer host MUST supply the
+missing members explicitly and MUST NOT infer authority, ordering, or effect
+from a successful conversion.
+
+## 9. Compatibility and evidence
 
 Compatibility follows WCT.01 section 9. Normative JSON Schema is
 `priv/schemas/wct-02.schema.json`; executable vectors use the `wct-02-` prefix

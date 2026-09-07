@@ -1,15 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://wotex.io/schemas/continuum/wct-01/1.0.0",
+  "$id": "https://wotex.io/schemas/continuum/wct-01/2.0.0",
   "title": "WCT.01 continuum values",
   "oneOf": [
     {"$ref": "#/$defs/manifest"},
     {"$ref": "#/$defs/compatibility"},
-    {"$ref": "#/$defs/executionContext"},
+    {"$ref": "#/$defs/executionScope"},
     {"$ref": "#/$defs/capability"}
   ],
   "$defs": {
-    "schemaVersion": {"const": "1.0.0"},
+    "schemaVersion": {"const": "2.0.0"},
     "identifier": {"type": "string", "minLength": 1, "maxLength": 512},
     "semver": {
       "type": "string",
@@ -81,11 +81,11 @@
       },
       "additionalProperties": false
     },
-    "executionContext": {
+    "executionScope": {
       "type": "object",
       "required": ["kind", "schema_version", "execution_id", "node_id", "mode", "observed_at", "extensions"],
       "properties": {
-        "kind": {"const": "execution_context"},
+        "kind": {"const": "execution_scope"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
         "execution_id": {"$ref": "#/$defs/identifier"},
         "node_id": {"$ref": "#/$defs/identifier"},
