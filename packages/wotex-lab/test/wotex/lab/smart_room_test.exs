@@ -4,30 +4,35 @@ defmodule Wotex.Lab.SmartRoomTest do
   use ExUnit.Case, async: true
 
   alias Wotex.Binding.HTTP
+  alias Wotex.Binding.MQTT
+  alias Wotex.Binding.MQTT.{Transport, TransportConfig}
   alias Wotex.DataSchema
   alias Wotex.Directory
   alias Wotex.Directory.{Context, Service}
   alias Wotex.Lab
   alias Wotex.Lab.Adapters.Directory.{Authorization, Clock, EtsRepository, Identifier}
   alias Wotex.Lab.Adapters.HTTP.ReqClient
+  alias Wotex.Lab.Adapters.MQTT.EmqttClient
   alias Wotex.Lab.Adapters.Runtime.{Loopback, StaticRef}
   alias Wotex.Lab.Continuum.{Channel, Host}
   alias Wotex.Lab.Error, as: LabError
   alias Wotex.Lab.Reference.Thing
   alias Wotex.Lab.SmartRoom.{Policy, Scenario}
-  alias Wotex.Lab.Test.{ContinuumFixtures, HttpServer}
-  alias Wotex.Nx.{ActionProposal, Decoder, OutputSchema}
+  alias Wotex.Lab.Test.{ContinuumFixtures, HttpServer, MqttBroker, MqttServer}
+  alias Wotex.Nx.{ActionProposal, Decoder, Observation, OutputSchema}
   alias Wotex.Runtime.{BindingProfile, Result}
   alias Wotex.ThingDescription
 
   @epoch ~U[2026-09-08 12:00:00Z]
   @token "room-token-7f3a"
 
-  setup do
+  setup context do
     lab = start_supervised!({Lab, id: "smart-room", max_children: 32})
     {:ok, server} = HttpServer.start(self())
+    {meter_href, meter_prefix} = meter_source(context)
 
     thermostat_td = thermostat(server.port)
+    meter_td = meter(meter_href, meter_prefix)
 
     {:ok, actuator_td} =
       Application.app_dir(:wotex_lab, "priv/fixtures/loopback/thing-description.json")
@@ -65,9 +70,13 @@ defmodule Wotex.Lab.SmartRoomTest do
     context = Context.new!(:operator)
     {:ok, _thermostat} = Directory.register(service, thermostat_td, context)
     {:ok, _actuator} = Directory.register(service, actuator_td, context)
+    {:ok, _meter} = Directory.register(service, meter_td, context)
 
     {:ok, http_profile} = HTTP.profile()
     {:ok, http_config} = HTTP.config(client: {ReqClient, %{}})
+
+    {:ok, mqtt_config} =
+      TransportConfig.new(EmqttClient, %{connect_timeout: 2_000}, read_timeout: 5_000)
 
     {:ok, loopback_profile} =
       BindingProfile.new(
@@ -77,10 +86,11 @@ defmodule Wotex.Lab.SmartRoomTest do
       )
 
     transport_opts = [
-      profiles: [http_profile, loopback_profile],
+      profiles: [http_profile, loopback_profile, MQTT.profile()],
       transports: %{
         http_profile.id => HTTP.transport(http_config),
-        loopback: {Loopback, %{host: actuator}}
+        loopback: {Loopback, %{host: actuator}},
+        mqtt: {Transport, mqtt_config}
       },
       credentials:
         {StaticRef, %{references: %{"bearer_sc" => "ref"}, lookup: fn "ref" -> {:ok, @token} end}}
@@ -122,6 +132,7 @@ defmodule Wotex.Lab.SmartRoomTest do
       things: things,
       thermostat_id: ThingDescription.id(thermostat_td),
       actuator_id: ThingDescription.id(actuator_td),
+      meter_id: nil,
       channel: channel,
       edge: "edge",
       cloud: "cloud",
@@ -144,7 +155,8 @@ defmodule Wotex.Lab.SmartRoomTest do
       channel: channel,
       transport_opts: transport_opts,
       service: service,
-      context: context
+      context: context,
+      meter_id: ThingDescription.id(meter_td)
     }
   end
 
@@ -156,7 +168,12 @@ defmodule Wotex.Lab.SmartRoomTest do
          actuator: actuator,
          things: things
        } do
-    assert Map.keys(things) |> Enum.sort() == ["urn:wotex:lab:http:room", "urn:wotex:lab:room:1"]
+    assert Map.keys(things) |> Enum.sort() == [
+             "urn:wotex:lab:http:room",
+             "urn:wotex:lab:mqtt:meter",
+             "urn:wotex:lab:room:1"
+           ]
+
     assert {:ok, run} = Scenario.run(opts)
 
     assert %ActionProposal{} = run.action_proposal
@@ -179,6 +196,9 @@ defmodule Wotex.Lab.SmartRoomTest do
 
     assert %{{"urn:wotex:lab:http:room", :property, "temperature"} => %{value: 21.5, sequence: 1}} =
              stats.observations
+
+    assert run.power_observation == nil
+    assert length(run.proposal_deliveries) == 1
 
     assert %{decisions: [%{status: :dispatched, attempts: [_one]}], refusals: []} =
              Policy.records(policy)
@@ -347,6 +367,45 @@ defmodule Wotex.Lab.SmartRoomTest do
     assert {:ok, _run} = Scenario.run(opts)
   end
 
+  test "an energy meter over budget lowers the target and under budget raises it", %{
+    run_opts: opts,
+    meter_id: meter_id,
+    host: host,
+    policy: policy
+  } do
+    assert {:ok, run} = Scenario.run(Keyword.put(opts, :meter_id, meter_id))
+    assert %{value: 2500, unit: "W"} = Observation.to_map(run.power_observation)
+    assert length(run.proposal_deliveries) == 2
+    assert_in_delta run.effect, 20.5, 0.0001
+
+    stats = wait_until(fn -> Host.stats(host) end, &(map_size(&1.observations) == 2))
+
+    assert %{{"urn:wotex:lab:mqtt:meter", :property, "power"} => %{value: 2500}} =
+             stats.observations
+
+    assert {:ok, second} =
+             Scenario.run(Keyword.merge(opts, meter_id: meter_id, power_budget: 3_000.0))
+
+    assert_in_delta second.effect, 22.5, 0.0001
+    assert %{decisions: [%{status: :dispatched}, %{status: :dispatched}]} = Policy.records(policy)
+
+    assert {:error, %LabError{code: :thing_not_discovered}} =
+             Scenario.run(Keyword.put(opts, :meter_id, "urn:wotex:lab:ghost-meter"))
+  end
+
+  test "a meter under budget keeps the comfort rule", %{run_opts: opts, meter_id: meter_id} do
+    assert {:ok, run} = Scenario.run(Keyword.merge(opts, meter_id: meter_id, power_budget: 3_000.0))
+    assert_in_delta run.effect, 22.5, 0.0001
+  end
+
+  @tag :broker
+  @tag timeout: 60_000
+  test "the same room runs against a disposable broker", %{run_opts: opts, meter_id: meter_id} do
+    assert {:ok, run} = Scenario.run(Keyword.put(opts, :meter_id, meter_id))
+    assert run.power_observation |> Observation.to_map() |> Map.fetch!(:value) == 2500
+    assert_in_delta run.effect, 20.5, 0.0001
+  end
+
   test "a restarted policy holds no grants and a missing thing is a typed error", %{
     lab: lab,
     run_opts: opts
@@ -405,10 +464,51 @@ defmodule Wotex.Lab.SmartRoomTest do
     end
 
     {:ok, things} = Scenario.discover(service, context, transport_opts)
-    assert map_size(things) == 62
+    assert map_size(things) == 63
 
     assert {:error, _error} =
              Scenario.discover(service, context, Keyword.put(transport_opts, :transports, %{}))
+  end
+
+  defp meter_source(%{broker: true}) do
+    broker = MqttBroker.start()
+    MqttBroker.publish(broker, "#{broker.prefix}/properties/power", "2500", retain: true)
+    {MqttBroker.href(broker), broker.prefix}
+  end
+
+  defp meter_source(_context) do
+    prefix = "lab/meter/#{System.unique_integer([:positive])}"
+    server = MqttServer.start(self(), retained: {"#{prefix}/properties/power", "2500"})
+    {MqttServer.href(server), prefix}
+  end
+
+  defp meter(href, prefix) do
+    {:ok, td} =
+      ThingDescription.from_map(%{
+        "@context" => Wotex.td_context_1_1(),
+        "id" => "urn:wotex:lab:mqtt:meter",
+        "title" => "MQTT energy meter",
+        "security" => ["nosec_sc"],
+        "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+        "properties" => %{
+          "power" => %{
+            "type" => "number",
+            "unit" => "W",
+            "forms" => [
+              %{
+                "href" => href,
+                "contentType" => "application/json",
+                "op" => "readproperty",
+                "mqv:filter" => "#{prefix}/properties/power",
+                "mqv:retain" => true,
+                "mqv:qos" => 1
+              }
+            ]
+          }
+        }
+      })
+
+    td
   end
 
   defp thermostat(port) do

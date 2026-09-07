@@ -6,10 +6,14 @@ defmodule Wotex.Lab.SmartRoom.Scenario do
   Things are discovered from an explicit Directory service; each admitted Thing
   Description identifies a Thing by its own `id`, never by a name-only join.
   Runtime `ConsumedThing` values are built from caller-supplied binding
-  profiles, transports and credential ports. A temperature observation becomes
-  a continuum proposal on the channel, an Nx row, a `setTarget` proposal for
-  the actuator, then a policy decision that is dispatched at most once at the
-  edge. Only the `action_result` travels to the cloud host afterwards: an
+  profiles, transports and credential ports. A temperature observation and, when
+  an energy meter is discovered, a power observation become continuum proposals
+  on the channel and one Nx row: temperature is required, power is a filled
+  feature whose mask row is `0` without a meter. The room rule raises the target
+  by one degree, or lowers it by one when observed power exceeds the budget; a
+  filled power value can never trigger the budget. The `setTarget` proposal for
+  the actuator then becomes a policy decision that is dispatched at most once at
+  the edge. Only the `action_result` travels to the cloud host afterwards: an
   `action_intent` sent to a host is a request to execute, so the edge never
   forwards one for an action it has already dispatched. The effect is read from
   the actuator afterwards. Nothing in this module grants
@@ -49,14 +53,26 @@ defmodule Wotex.Lab.SmartRoom.Scenario do
     end
   end
 
-  @doc "Adds one degree to the observed temperature; the room's target rule."
-  @spec target({{Nx.Tensor.t()}, {Nx.Tensor.t()}, Nx.Tensor.t()}) :: Nx.Tensor.t()
-  defn(target({{temperatures}, {_masks}, _quality}), do: temperatures[0] + 1.0)
+  @doc """
+  The room's target rule: one degree above the observed temperature, or one
+  degree below it when observed power exceeds the budget. The power mask row
+  gates the comparison, so a filled power value never counts as observed.
+  """
+  @spec target(
+          {{Nx.Tensor.t(), Nx.Tensor.t()}, {Nx.Tensor.t(), Nx.Tensor.t()}, Nx.Tensor.t()},
+          Nx.Tensor.t()
+        ) :: Nx.Tensor.t()
+  defn target({{temperatures, powers}, {_temperature_masks, power_masks}, _quality}, budget) do
+    over_budget = power_masks[0] * (powers[0] > budget)
+    Nx.select(over_budget, temperatures[0] - 1.0, temperatures[0] + 1.0)
+  end
 
   @doc """
   Runs one control cycle and returns every record.
 
   Options: `:things` (from `discover/3`), `:thermostat_id`, `:actuator_id`,
+  optional `:meter_id` (an MQTT energy meter exposing `power` in watts) and
+  `:power_budget` (watts, 2000.0),
   `:channel`, `:edge`, `:cloud`, `:policy`, `:principal`, `:now` (monotonic
   milliseconds), `:epoch` (DateTime anchoring `now`), `:scope`
   (`WotexContinuum.ExecutionScope`), `:watermark`, `:state_revision`, `:ttl`.
@@ -70,9 +86,10 @@ defmodule Wotex.Lab.SmartRoom.Scenario do
          {:ok, actuator} <- fetch_thing(things, Keyword.fetch!(opts, :actuator_id)),
          {:ok, reading} <-
            ConsumedThing.read_property(thermostat, "temperature", context("observe", now)),
-         {:ok, observation} <- observation(thermostat, reading, now),
-         {:ok, proposal_delivery} <- exchange(opts, observation),
-         {:ok, action_proposal} <- infer(actuator, observation, now),
+         {:ok, observation} <- observation(thermostat, reading, "temperature", "Cel", now),
+         {:ok, power} <- meter(things, opts, now),
+         {:ok, proposal_deliveries} <- exchange(opts, [observation, power]),
+         {:ok, action_proposal} <- infer(actuator, observation, power, opts, now),
          {:ok, decision} <-
            Policy.decide(Keyword.fetch!(opts, :policy), action_proposal, decision_context(opts)),
          {:ok, dispatch} <- dispatch(opts, decision, actuator, action_proposal),
@@ -81,7 +98,8 @@ defmodule Wotex.Lab.SmartRoom.Scenario do
       {:ok,
        %{
          observation: observation,
-         proposal_delivery: proposal_delivery,
+         power_observation: power,
+         proposal_deliveries: proposal_deliveries,
          action_proposal: action_proposal,
          decision: decision,
          dispatch: dispatch,
@@ -119,20 +137,44 @@ defmodule Wotex.Lab.SmartRoom.Scenario do
     end
   end
 
-  defp observation(thermostat, %Result{payload: value}, now) do
+  defp observation(thing, %Result{payload: value}, name, unit, now) do
     Observation.new(
-      id: "room-temperature-#{now}",
-      thing_id: ThingDescription.id(ConsumedThing.thing_description(thermostat)),
+      id: "room-#{name}-#{now}",
+      thing_id: ThingDescription.id(ConsumedThing.thing_description(thing)),
       affordance_type: :property,
-      affordance_name: "temperature",
+      affordance_name: name,
       observed_at: now,
       value: value,
-      unit: "Cel",
+      unit: unit,
       quality: :good
     )
   end
 
-  defp exchange(opts, observation) do
+  defp meter(things, opts, now) do
+    case Keyword.get(opts, :meter_id) do
+      nil ->
+        {:ok, nil}
+
+      meter_id ->
+        with {:ok, meter} <- fetch_thing(things, meter_id),
+             {:ok, reading} <- ConsumedThing.read_property(meter, "power", context("meter", now)) do
+          observation(meter, reading, "power", "W", now)
+        end
+    end
+  end
+
+  defp exchange(opts, observations) do
+    observations
+    |> Enum.reject(&is_nil/1)
+    |> Enum.reduce_while({:ok, []}, fn observation, {:ok, acc} ->
+      case exchange_one(opts, observation) do
+        {:ok, delivery} -> {:cont, {:ok, acc ++ [delivery]}}
+        {:error, error} -> {:halt, {:error, error}}
+      end
+    end)
+  end
+
+  defp exchange_one(opts, observation) do
     with {:ok, proposal} <-
            Wire.proposal_from_observation(
              observation,
@@ -149,26 +191,20 @@ defmodule Wotex.Lab.SmartRoom.Scenario do
     end
   end
 
-  defp infer(actuator, observation, now) do
+  defp infer(actuator, observation, power, opts, now) do
     actuator_td = ConsumedThing.thing_description(actuator)
     document = ThingDescription.to_map(actuator_td)
     fields = Observation.to_map(observation)
+    budget = Nx.tensor(Keyword.get(opts, :power_budget, 2_000.0) * 1.0, type: :f32)
 
-    with {:ok, input_schema} <- DataSchema.new(%{"type" => "number", "unit" => "Cel"}),
-         {:ok, feature} <-
-           Feature.new(
-             name: "temperature",
-             thing_id: fields.thing_id,
-             affordance_type: :property,
-             affordance_name: "temperature",
-             data_schema: input_schema,
-             accepted_quality: [:good],
-             missing: :error
-           ),
-         {:ok, schema} <- Schema.new(features: [feature], max_rows: 1),
-         {:ok, row} <- Row.new(fields.observed_at, %{"temperature" => observation}),
+    with {:ok, temperature} <- feature(fields.thing_id, "temperature", "Cel", :error),
+         {:ok, power_feature} <-
+           feature(meter_id(power, fields.thing_id), "power", "W", {:fill, 0.0}),
+         {:ok, schema} <- Schema.new(features: [temperature, power_feature], max_rows: 1),
+         {:ok, row} <- Row.new(fields.observed_at, row_values(observation, power)),
          {:ok, encoded} <- Encoder.encode([row], schema),
-         tensor <- Nx.Defn.jit_apply(&target/1, [encoded], compiler: Nx.Defn.Evaluator),
+         tensor <-
+           Nx.Defn.jit_apply(&target/2, [encoded, budget], compiler: Nx.Defn.Evaluator),
          {:ok, output_schema} <- DataSchema.new(document["actions"]["setTarget"]["input"]),
          {:ok, output} <-
            OutputSchema.new(
@@ -182,6 +218,26 @@ defmodule Wotex.Lab.SmartRoom.Scenario do
       Decoder.decode(tensor, output, id: "room-proposal-#{now}", proposed_at: now)
     end
   end
+
+  defp feature(thing_id, name, unit, missing) do
+    with {:ok, input_schema} <- DataSchema.new(%{"type" => "number", "unit" => unit}) do
+      Feature.new(
+        name: name,
+        thing_id: thing_id,
+        affordance_type: :property,
+        affordance_name: name,
+        data_schema: input_schema,
+        accepted_quality: [:good],
+        missing: missing
+      )
+    end
+  end
+
+  defp meter_id(nil, fallback), do: fallback
+  defp meter_id(power, _fallback), do: Observation.to_map(power).thing_id
+
+  defp row_values(observation, nil), do: %{"temperature" => observation}
+  defp row_values(observation, power), do: %{"temperature" => observation, "power" => power}
 
   defp decision_context(opts) do
     [

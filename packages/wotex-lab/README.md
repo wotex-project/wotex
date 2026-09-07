@@ -25,7 +25,7 @@ is an unspecified backlog item or an advertised working feature.
 ## Run the foundation
 
 Requires Elixir 1.18+ and OTP 27+. The source cohort was inspected on
-2026-09-07; the WoTEx dependencies were not available from Hex at that time.
+2026-09-08; the WoTEx dependencies were not available from Hex at that time.
 Use the same explicit development switch as the other libraries:
 
 ```sh
@@ -137,10 +137,11 @@ dependency selected by the host), the external conformance target that runs
 the core package through the conformance protocol, and the Continuum channel,
 host and wire conversions that carry proposals, intents and results between a
 simulated edge and cloud with replayable faults. The canonical smart room
-(`Wotex.Lab.SmartRoom.Scenario`) discovers an HTTP thermostat and a loopback
-actuator from the Directory by TD id, turns a temperature reading into an Nx
-`setTarget` proposal, and lets `Wotex.Lab.SmartRoom.Policy` dispatch one
-decision once; only the result crosses the channel to the cloud host. The MQTT
+(`Wotex.Lab.SmartRoom.Scenario`) discovers an HTTP thermostat, an MQTT energy
+meter and a loopback actuator from the Directory by TD id, turns the readings
+into an Nx `setTarget` proposal under a power budget, and lets
+`Wotex.Lab.SmartRoom.Policy` dispatch one decision once; only the result
+crosses the channel to the cloud host. The MQTT
 lane is implemented too: `Wotex.Lab.Adapters.MQTT.EmqttClient` and its linked
 `Adapters.MQTT.Session` carry runtime requests, retained reads, publications
 and subscriptions over EMQTT (`emqtt` is an optional dependency selected by

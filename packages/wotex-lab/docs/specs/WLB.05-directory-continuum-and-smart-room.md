@@ -1,13 +1,13 @@
 # WLB.05: Directory, Continuum and the smart-room consumer
 
-Specification version: 1.4.0. Contract: accepted. Source status: both
+Specification version: 1.5.0. Contract: accepted. Source status: both
 repository algorithms are implemented. The ETS store, the SQLite store, the
 explicit authorization/clock/identifier ports, the shared Directory contract
 suite that runs the same public-API cases against both stores, and the
 Continuum channel, host and wire conversions are source complete. The
-canonical smart room is implemented with an HTTP thermostat, a loopback
-actuator, an ETS Directory, the Continuum channel and host and the decision
-policy; the MQTT energy meter joins the composition once the MQTT lane lands.
+canonical smart room is implemented with an HTTP thermostat, an MQTT energy
+meter, a loopback actuator, an ETS Directory, the Continuum channel and host
+and the decision policy.
 
 ## Directory references
 
@@ -120,8 +120,12 @@ and affordance comes from its admitted TD, never a name-only join.
 `Wotex.Lab.SmartRoom.Scenario.discover/3` pages the Directory listing and
 builds one `ConsumedThing` per admitted TD id from caller-supplied profiles,
 transports and credentials; `run/1` executes the cycle and returns the
-observation, channel deliveries, action proposal, decision, dispatch outcome
-and observed effect as separate values.
+observations, channel deliveries, action proposal, decision, dispatch outcome
+and observed effect as separate values. The Nx row carries temperature as a
+required feature and the meter's power as a filled feature: without a meter
+the power mask row is `0` and the room rule (`target/2`) cannot treat the fill
+as an observation. Observed power above the caller's budget lowers the target
+by one degree instead of raising it.
 
 A decision record binds proposal digest, Thing/Action, input, principal,
 observation watermark, state revision and expiry. `Wotex.Lab.SmartRoom.Policy`
@@ -138,9 +142,11 @@ Thing host's `:actions` option; an unmapped action stores its input and
 changes no property.
 
 `test/wotex/lab/smart_room_test.exs` covers discovery by TD id over a paged
-Directory, the full cycle over a real HTTP socket and the loopback host, the
-refusal set, restart erasure and the fail-closed discovery of an unbuildable
-Thing.
+Directory, the full cycle over a real HTTP socket, a retained MQTT read from
+the scripted peer and the loopback host, the budget rule in both directions,
+the refusal set, restart erasure and the fail-closed discovery of an
+unbuildable Thing. The `:broker` tagged case runs the same room against the
+disposable mosquitto container.
 
 All channels expose telemetry and evidence under WLB.06. The same scenario
 definition powers notebooks, CLI, web and MCP. An optional WLB.09 formal

@@ -41,7 +41,9 @@
   HTTP thermostat and a loopback actuator consumed through Runtime, an Nx
   `setTarget` proposal, a decision policy that binds digest, principal,
   watermark, revision and expiry and dispatches once at the edge, and only the
-  result crossing the Continuum channel. Refusals are recorded by reason and a
+  result crossing the Continuum channel. An MQTT energy meter adds a filled
+  power feature and a budget rule that lowers the target when observed power
+  exceeds it. Refusals are recorded by reason and a
   restarted policy holds no grants. The reference Thing host takes explicit
   `:actions` effects.
 - Accepted WLB.01–WLB.11 specifications and versioned completion contract.
