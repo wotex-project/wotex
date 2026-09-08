@@ -2,7 +2,17 @@ defmodule Wotex.BLE.Check.Archive do
   @moduledoc false
 
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
-  @packaged ["mix.exs", "LICENSE", "NOTICE", "README.md", "lib", "docs"]
+  @packaged [
+    "mix.exs",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "lib",
+    "docs",
+    "priv/bluez/bridge.py",
+    "priv/bluez/client.py",
+    "priv/bluez/requirements.txt"
+  ]
   @development [".git", "deps", "_build"]
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
   @transport "Elixir.Wotex.BLE.Error.beam"

@@ -1,0 +1,449 @@
+defmodule Wotex.BLE.BlueZ.Connection do
+  @moduledoc """
+  Owns one explicitly started persistent BlueZ bridge and its D-Bus sender.
+
+  `connect/1` waits for the packaged bridge to resolve the selected peer before
+  returning an opaque handle. The supplied absolute `:executable` is a Python
+  interpreter with the pinned dbus-next dependency installed. `:bus_address`
+  selects local IPC explicitly, and `:owner` defaults to the calling process.
+  `start_link/1` supports consumer supervision; `session/1` retrieves its session.
+
+  Discovery requests share a bounded serial queue. Owner death, a deadline or
+  malformed bridge output closes the generation. Cleanup is bounded to one
+  second and never reconnects or powers an adapter. Loading the module starts
+  nothing. Read, write, pairing and stream procedures graduate separately.
+  """
+
+  use GenServer
+  alias Wotex.BLE.BlueZ.{Frame, Options, Response}
+  alias Wotex.BLE.{Error, Session}
+
+  @derive {Inspect, only: [:pid, :generation]}
+  @enforce_keys [:pid, :reference, :generation]
+  defstruct [:pid, :reference, :generation]
+  @opaque t :: %__MODULE__{pid: pid(), reference: reference(), generation: pos_integer()}
+
+  @doc "Opens the explicit peer, with no link to the caller during fallible startup."
+  @spec connect(term()) :: {:ok, t()} | {:error, Error.t()}
+  def connect(options) do
+    with {:ok, options} <- Options.new(options),
+         {:ok, pid} <-
+           GenServer.start(__MODULE__, Map.put(options, :deadline, now() + options.timeout)) do
+      call(pid, :open)
+    end
+  end
+
+  @doc "Links a successfully initialized connection for consumer supervision."
+  @spec start_link(term()) :: {:ok, pid()} | {:error, Error.t()}
+  def start_link(options) do
+    with {:ok, handle} <- connect(options) do
+      Process.link(handle.pid)
+      {:ok, handle.pid}
+    end
+  end
+
+  @doc "Retrieves the session from an explicitly supervised connection process."
+  @spec session(term()) :: {:ok, Session.t()} | {:error, Error.t()}
+  def session(pid) when is_pid(pid), do: call(pid, :session)
+  def session(_), do: {:error, Error.new(:invalid_handle)}
+
+  @doc "Returns a bounded page of the selected peer's verified GATT characteristics."
+  @spec discover(term(), term(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def discover(%__MODULE__{pid: pid, reference: reference, generation: 1}, options, timeout)
+      when is_pid(pid) and is_reference(reference) and is_integer(timeout) and
+             timeout in 1..60_000 do
+    with {:ok, parameters} <- Options.discovery(options) do
+      call(pid, {reference, "discover", parameters, now() + timeout})
+    end
+  end
+
+  def discover(_, _, _), do: {:error, Error.new(:invalid_handle)}
+
+  @doc "Closes the generation and waits for bounded native cleanup; repeated close is safe."
+  @spec disconnect(term()) :: :ok | {:error, Error.t()}
+  def disconnect(%__MODULE__{pid: pid, reference: reference, generation: 1})
+      when is_pid(pid) and is_reference(reference) do
+    case call(pid, {reference, :close}) do
+      {:error, %Error{code: :disconnected}} -> :ok
+      result -> result
+    end
+  end
+
+  def disconnect(_), do: {:error, Error.new(:invalid_handle)}
+
+  @impl GenServer
+  def init(options) do
+    Process.flag(:trap_exit, true)
+
+    {:ok,
+     %{
+       options: options,
+       owner_ref: Process.monitor(options.owner),
+       handle: %__MODULE__{pid: self(), reference: make_ref(), generation: 1},
+       status: :new,
+       port: nil,
+       waiter: nil,
+       start_ref: nil,
+       startup_timer: nil,
+       pending: %{},
+       active: nil,
+       queue: :queue.new(),
+       counter: 0,
+       buffer: <<>>,
+       discovery_generation: 1,
+       close_from: nil,
+       close_result: {:error, Error.new(:disconnected)},
+       close_id: nil
+     }}
+  end
+
+  @impl GenServer
+  def handle_call(:open, from, %{status: :new} = state) do
+    case open_port(state.options.executable) do
+      {:ok, port} ->
+        timer = Process.send_after(self(), :startup_timeout, max(state.options.deadline - now(), 0))
+
+        {:noreply,
+         %{
+           state
+           | port: port,
+             waiter: from,
+             start_ref: Process.monitor(elem(from, 0)),
+             startup_timer: timer,
+             status: :starting
+         }}
+
+      :error ->
+        {:stop, :normal, {:error, Error.new(:transport_unavailable)}, state}
+    end
+  end
+
+  def handle_call(:session, _from, %{status: :ready} = state) do
+    {:reply,
+     {:ok, %Session{client: Wotex.BLE.BlueZ, handle: state.handle, timeout: state.options.timeout}},
+     state}
+  end
+
+  def handle_call({reference, :close}, from, %{handle: %{reference: reference}} = state) do
+    {:noreply, close(state, :disconnected, from)}
+  end
+
+  def handle_call(
+        {reference, "discover", parameters, deadline},
+        from,
+        %{handle: %{reference: reference}, status: :ready} = state
+      )
+      when is_map(parameters) and is_integer(deadline) do
+    cond do
+      deadline <= now() -> {:reply, {:error, Error.new(:timeout)}, state}
+      map_size(state.pending) >= 64 -> {:reply, {:error, Error.new(:busy)}, state}
+      true -> {:noreply, admit(state, from, parameters, deadline)}
+    end
+  end
+
+  def handle_call(_, _from, state), do: {:reply, {:error, Error.new(:invalid_handle)}, state}
+
+  @impl GenServer
+  def handle_info({port, {:data, {:eol, data}}}, %{port: port, buffer: buffer} = state) do
+    decoded =
+      if byte_size(buffer) + byte_size(data) < 131_072,
+        do: Frame.decode(buffer <> data),
+        else: :limit
+
+    case decoded do
+      :limit -> {:noreply, close(state, :response_limit)}
+      {:ok, frame} -> frame(frame, %{state | buffer: <<>>})
+      :error -> {:noreply, close(state, :invalid_response)}
+    end
+  end
+
+  def handle_info({port, {:data, {:noeol, data}}}, %{port: port} = state) do
+    if byte_size(state.buffer) + byte_size(data) < 131_072,
+      do: {:noreply, %{state | buffer: state.buffer <> data}},
+      else: {:noreply, close(state, :response_limit)}
+  end
+
+  def handle_info({port, {:exit_status, _}}, %{port: port} = state) do
+    state = if state.status == :closing, do: state, else: close(state, :disconnected)
+    finish(state)
+  end
+
+  def handle_info(:startup_timeout, %{status: status} = state) when status in [:starting, :opening],
+    do: {:noreply, close(state, :timeout)}
+
+  def handle_info({:deadline, id}, state) do
+    cond do
+      state.active == id ->
+        {:noreply, close(state, :timeout)}
+
+      Map.has_key?(state.pending, id) ->
+        {:noreply, complete(state, id, {:error, Error.new(:timeout)})}
+
+      true ->
+        {:noreply, state}
+    end
+  end
+
+  def handle_info({:DOWN, ref, :process, _, _}, state) do
+    if ref in [state.owner_ref, state.start_ref],
+      do: {:noreply, close(state, :disconnected)},
+      else: {:noreply, caller_down(state, ref)}
+  end
+
+  def handle_info(:terminate_bridge, %{status: :closing} = state) do
+    signal_port(state.port, "-TERM")
+    Process.send_after(self(), :kill_bridge, 100)
+    {:noreply, %{state | close_result: {:error, Error.new(:cleanup_timeout)}}}
+  end
+
+  def handle_info(:kill_bridge, %{status: :closing} = state) do
+    signal_port(state.port, "-KILL")
+    finish(state)
+  end
+
+  def handle_info({:EXIT, pid, _}, %{options: %{owner: pid}} = state),
+    do: {:noreply, close(state, :disconnected)}
+
+  def handle_info(_, state), do: {:noreply, state}
+
+  @impl GenServer
+  def terminate(_, state) do
+    if state.port && Port.info(state.port), do: Port.close(state.port)
+    :ok
+  end
+
+  defp call(pid, request) do
+    GenServer.call(pid, request, :infinity)
+  catch
+    :exit, _ -> {:error, Error.new(:disconnected)}
+  end
+
+  defp open_port(executable) do
+    script = Path.join(to_string(:code.priv_dir(:wotex_ble)), "bluez/bridge.py")
+
+    {:ok,
+     Port.open({:spawn_executable, executable}, [
+       :binary,
+       :exit_status,
+       {:line, 131_071},
+       args: ["-s", "-E", "-B", script],
+       env: Enum.map(System.get_env(), fn {key, _} -> {String.to_charlist(key), false} end)
+     ])}
+  rescue
+    _ -> :error
+  end
+
+  defp frame(
+         %{"version" => 1, "event" => "ready", "backend" => "dbus-next", "revision" => "0.2.3"} =
+           frame,
+         %{status: :starting} = state
+       )
+       when map_size(frame) == 4 do
+    remaining = state.options.deadline - now()
+
+    if remaining > 0 do
+      request(state.port, "open", "open", state.options.parameters, remaining)
+      {:noreply, %{state | status: :opening}}
+    else
+      {:noreply, close(state, :timeout)}
+    end
+  end
+
+  defp frame(%{"id" => "open"} = frame, %{status: :opening} = state) do
+    case timed_parse(frame, "open", state.options.deadline) do
+      {:ok, %{"generation" => generation}} ->
+        Process.cancel_timer(state.startup_timer)
+        Process.demonitor(state.start_ref, [:flush])
+        GenServer.reply(state.waiter, {:ok, state.handle})
+
+        {:noreply,
+         %{state | status: :ready, waiter: nil, start_ref: nil, discovery_generation: generation}}
+
+      {:error, error} ->
+        {:noreply, close(state, error.code)}
+
+      :invalid ->
+        {:noreply, close(state, :invalid_response)}
+    end
+  end
+
+  defp frame(%{"id" => id} = frame, %{status: :ready, active: id} = state) when is_binary(id) do
+    case timed_parse(frame, "discover", state.pending[id].deadline) do
+      :invalid ->
+        {:noreply, close(state, :invalid_response)}
+
+      {:error, %Error{code: code}} when code in [:timeout, :disconnected, :owner_changed] ->
+        {:noreply, close(state, code)}
+
+      {:ok, page} ->
+        accept_page(state, id, page)
+
+      {:error, _} = error ->
+        {:noreply, advance(complete(state, id, error))}
+    end
+  end
+
+  defp frame(%{"id" => id} = frame, %{status: :closing, close_id: id} = state)
+       when is_binary(id) do
+    case Response.parse(frame, "close") do
+      {:ok, nil} -> {:noreply, %{state | close_result: :ok}}
+      {:error, _} = error -> {:noreply, %{state | close_result: error}}
+      _ -> {:noreply, %{state | close_result: {:error, Error.new(:invalid_response)}}}
+    end
+  end
+
+  defp frame(_, %{status: :closing} = state), do: {:noreply, state}
+  defp frame(_, state), do: {:noreply, close(state, :invalid_response)}
+
+  defp timed_parse(frame, operation, deadline) do
+    if now() < deadline, do: Response.parse(frame, operation), else: {:error, Error.new(:timeout)}
+  end
+
+  defp accept_page(state, id, page) do
+    current = state.discovery_generation
+    continuation? = not is_nil(state.pending[id].parameters["cursor"])
+
+    if page.generation < current or (continuation? and page.generation != current) do
+      {:noreply, close(state, :invalid_response)}
+    else
+      updated = complete(%{state | discovery_generation: page.generation}, id, {:ok, page})
+      {:noreply, advance(updated)}
+    end
+  end
+
+  defp admit(state, from, parameters, deadline) do
+    id = Integer.to_string(state.counter + 1)
+
+    pending = %{
+      from: from,
+      parameters: parameters,
+      deadline: deadline,
+      monitor: Process.monitor(elem(from, 0)),
+      timer: Process.send_after(self(), {:deadline, id}, max(deadline - now(), 0))
+    }
+
+    %{
+      state
+      | counter: state.counter + 1,
+        pending: Map.put(state.pending, id, pending),
+        queue: :queue.in(id, state.queue)
+    }
+    |> advance()
+  end
+
+  defp advance(%{active: nil} = state) do
+    case :queue.out(state.queue) do
+      {{:value, id}, queue} ->
+        state = %{state | queue: queue}
+
+        case Map.fetch(state.pending, id) do
+          :error -> advance(state)
+          {:ok, pending} -> dispatch(state, id, pending)
+        end
+
+      {:empty, _} ->
+        state
+    end
+  end
+
+  defp advance(state), do: state
+
+  defp dispatch(state, id, pending) do
+    remaining = pending.deadline - now()
+
+    if remaining <= 0 do
+      updated = complete(state, id, {:error, Error.new(:timeout)})
+      advance(updated)
+    else
+      request(state.port, id, "discover", pending.parameters, remaining)
+      %{state | active: id}
+    end
+  end
+
+  defp complete(state, id, result) do
+    {pending, remaining} = Map.pop(state.pending, id)
+    Process.cancel_timer(pending.timer)
+    Process.demonitor(pending.monitor, [:flush])
+    GenServer.reply(pending.from, result)
+
+    %{
+      state
+      | pending: remaining,
+        queue: :queue.filter(&(&1 != id), state.queue),
+        active: if(state.active == id, do: nil, else: state.active)
+    }
+  end
+
+  defp caller_down(state, monitor) do
+    case Enum.find(state.pending, fn {_, pending} -> pending.monitor == monitor end) do
+      {id, _} when id == state.active -> close(state, :disconnected)
+      {id, _} -> complete(state, id, {:error, Error.new(:disconnected)})
+      nil -> state
+    end
+  end
+
+  defp close(state, code, from \\ nil)
+
+  defp close(%{status: :closing} = state, _, from) do
+    if from, do: GenServer.reply(from, {:error, Error.new(:closing)})
+    state
+  end
+
+  defp close(state, code, from) do
+    if state.waiter, do: GenServer.reply(state.waiter, {:error, Error.new(code)})
+
+    state =
+      Enum.reduce(Map.keys(state.pending), state, &complete(&2, &1, {:error, Error.new(code)}))
+
+    request(state.port, "close", "close", %{}, 800)
+    Process.send_after(self(), :terminate_bridge, 850)
+
+    %{
+      state
+      | status: :closing,
+        waiter: nil,
+        pending: %{},
+        queue: :queue.new(),
+        active: nil,
+        close_id: "close",
+        close_from: from
+    }
+  end
+
+  defp finish(state) do
+    if state.close_from, do: GenServer.reply(state.close_from, state.close_result)
+    {:stop, :normal, %{state | close_from: nil}}
+  end
+
+  defp request(port, id, operation, parameters, timeout) do
+    Port.command(
+      port,
+      Jason.encode!(%{
+        version: 1,
+        id: id,
+        operation: operation,
+        parameters: parameters,
+        timeout_ms: min(timeout, 60_000)
+      }) <> "\n"
+    )
+  rescue
+    _ -> false
+  end
+
+  defp signal_port(port, signal) do
+    case port && Port.info(port, :os_pid) do
+      {:os_pid, pid} ->
+        System.cmd("/bin/kill", [signal, Integer.to_string(pid)],
+          stderr_to_stdout: true,
+          env: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end)
+        )
+
+      _ ->
+        :ok
+    end
+  rescue
+    _ -> :ok
+  end
+
+  defp now, do: System.monotonic_time(:millisecond)
+end

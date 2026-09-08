@@ -2,12 +2,17 @@ defmodule Wotex.BLE.BlueZ do
   @moduledoc "Real Linux BlueZ GATT access through an explicitly supplied busctl executable and object path."
   @behaviour Wotex.BLE.Client
   alias Wotex.BLE.{Address, Error, ObjectPath, UUID}
+  alias Wotex.BLE.BlueZ.Connection
 
   @impl Wotex.BLE.Client
   def connect(opts) when is_list(opts) do
-    if admitted_options?(opts),
-      do: connect_options(opts),
-      else: {:error, Error.new(:invalid_options)}
+    if Keyword.keyword?(opts) and Keyword.get_values(opts, :lifecycle) == [:persistent] do
+      Connection.connect(Keyword.delete(opts, :lifecycle))
+    else
+      if admitted_options?(opts),
+        do: connect_options(opts),
+        else: {:error, Error.new(:invalid_options)}
+    end
   end
 
   def connect(_), do: {:error, Error.new(:invalid_options)}
@@ -36,6 +41,10 @@ defmodule Wotex.BLE.BlueZ do
   end
 
   @impl Wotex.BLE.Client
+  def request(%Connection{}, message, _timeout) do
+    with :ok <- Address.validate_message(message), do: {:error, Error.new(:not_supported)}
+  end
+
   def request(
         %{executable: executable, path: path, service: service, characteristic: characteristic},
         message,
@@ -80,7 +89,15 @@ defmodule Wotex.BLE.BlueZ do
   def request(_, _, _), do: {:error, Error.new(:invalid_request)}
 
   @impl Wotex.BLE.Client
+  def disconnect(%Connection{} = handle), do: Connection.disconnect(handle)
   def disconnect(_), do: :ok
+
+  @doc "Discovers typed GATT identities through the explicitly persistent backend."
+  @spec discover(term(), term(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def discover(%Connection{} = handle, options, timeout),
+    do: Connection.discover(handle, options, timeout)
+
+  def discover(_, _, _), do: {:error, Error.new(:not_supported)}
 
   @doc "Parses busctl's exact byte-array response; bounds count and every byte."
   @spec decode(term()) :: {:ok, binary()} | {:error, Error.t()}

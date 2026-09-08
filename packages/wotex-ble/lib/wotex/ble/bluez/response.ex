@@ -1,0 +1,108 @@
+defmodule Wotex.BLE.BlueZ.Response do
+  @moduledoc false
+
+  alias Wotex.BLE.{Characteristic, Error, ObjectPath}
+
+  @codes ~w(invalid_options invalid_peer disconnected owner_changed not_permitted not_authorized not_supported busy invalid_value_length invalid_offset improperly_configured remote_error object_limit peer_not_found ambiguous_peer invalid_response invalid_characteristic peer_changed generation_exhausted snapshot_unstable timeout services_unresolved stale_discovery invalid_cursor cursor_limit transport_error)a
+  @errors Map.new(@codes, &{Atom.to_string(&1), &1})
+  @fields ~w(service_uuid characteristic_uuid service_path object_path flags generation handle)
+
+  @doc false
+  @spec parse(term(), String.t()) :: {:ok, term()} | {:error, Error.t()} | :invalid
+  def parse(%{"version" => 1, "id" => id, "ok" => true, "result" => result} = frame, operation)
+      when is_binary(id) and map_size(frame) == 4 do
+    result(operation, result)
+  end
+
+  def parse(%{"version" => 1, "id" => id, "ok" => false, "error" => error} = frame, _)
+      when is_binary(id) and map_size(frame) == 4 and is_map(error) do
+    case error do
+      %{"code" => code} when map_size(error) == 1 ->
+        failure(code)
+
+      %{"code" => code, "status" => status} when map_size(error) == 2 and is_integer(status) ->
+        failure(code)
+
+      _ ->
+        :invalid
+    end
+  end
+
+  def parse(_, _), do: :invalid
+
+  defp failure(code) do
+    case Map.fetch(@errors, code) do
+      {:ok, code} -> {:error, Error.new(code)}
+      :error -> :invalid
+    end
+  end
+
+  defp result(
+         "open",
+         %{
+           "generation" => generation,
+           "device_path" => path,
+           "link_owned" => owned,
+           "sender" => sender
+         } = result
+       )
+       when map_size(result) == 4 and is_boolean(owned) and is_binary(sender) do
+    if generation?(generation) and ObjectPath.valid?(path) and byte_size(sender) <= 128 and
+         Regex.match?(~r/\A:[0-9]+\.[0-9]+\z/, sender),
+       do: {:ok, result},
+       else: :invalid
+  end
+
+  defp result(
+         "discover",
+         %{"generation" => generation, "characteristics" => items, "cursor" => cursor} = result
+       )
+       when map_size(result) == 3 and is_list(items) and length(items) <= 64 do
+    if generation?(generation) and cursor?(cursor),
+      do: page(items, generation, cursor),
+      else: :invalid
+  end
+
+  defp result("close", nil), do: {:ok, nil}
+  defp result(_, _), do: :invalid
+
+  defp page(items, generation, cursor) do
+    reduced =
+      Enum.reduce_while(items, {:ok, []}, fn item, {:ok, acc} ->
+        case characteristic(item, generation) do
+          {:ok, characteristic} -> {:cont, {:ok, [characteristic | acc]}}
+          _ -> {:halt, :invalid}
+        end
+      end)
+
+    case reduced do
+      {:ok, items} ->
+        ordered = Enum.reverse(items)
+        identities = Enum.map(ordered, &{&1.service_path, &1.object_path})
+
+        if identities == Enum.sort(Enum.uniq(identities)),
+          do: {:ok, %{generation: generation, characteristics: ordered, cursor: cursor}},
+          else: :invalid
+
+      :invalid ->
+        :invalid
+    end
+  end
+
+  defp characteristic(%{"generation" => generation} = item, generation) when map_size(item) == 7 do
+    if Enum.sort(Map.keys(item)) == Enum.sort(@fields) do
+      Characteristic.new(Map.new(@fields, &{String.to_existing_atom(&1), Map.fetch!(item, &1)}))
+    else
+      :invalid
+    end
+  end
+
+  defp characteristic(_, _), do: :invalid
+  defp generation?(value), do: is_integer(value) and value in 1..0xFFFF_FFFF_FFFF_FFFF
+  defp cursor?(nil), do: true
+
+  defp cursor?(value) when is_binary(value),
+    do: byte_size(value) == 32 and Regex.match?(~r/\A[0-9a-f]{32}\z/, value)
+
+  defp cursor?(_), do: false
+end

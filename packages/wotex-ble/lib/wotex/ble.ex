@@ -83,6 +83,16 @@ defmodule Wotex.BLE do
     end
   end
 
+  @doc "Returns typed, bounded discovery pages from a persistent BlueZ session."
+  @spec discover(term(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def discover(session, options \\ [])
+
+  def discover(%Session{client: Wotex.BLE.BlueZ} = session, options),
+    do: Wotex.BLE.BlueZ.discover(session.handle, options, session.timeout)
+
+  def discover(%Session{}, _), do: {:error, Error.new(:not_supported)}
+  def discover(_, _), do: {:error, Error.new(:invalid_session)}
+
   @doc "Runs work with guaranteed handle cleanup when the function returns or raises."
   @spec with_connection(keyword(), (Session.t() -> term())) :: term()
   def with_connection(opts, fun) when is_function(fun, 1) do
