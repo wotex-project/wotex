@@ -24,6 +24,7 @@
     {:typescript_client, command: "mix run --no-start bin/generate_typescript_client.exs --check"},
     {:oci_source, command: "elixir bin/check_oci_source.exs"},
     {:nerves_source, command: "elixir bin/check_nerves_source.exs"},
+    {:native_containment, command: "elixir bin/check_native_containment.exs"},
     {:boundary, command: "elixir bin/check_boundary.exs"},
     {:package, command: "mix run --no-start bin/check_package.exs"},
     {:archive_consumer, command: "mix run --no-start bin/check_archive_consumer.exs"},

@@ -61,7 +61,7 @@
   "scenario_id": "WLB.03-nx-experiments",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:203ec313f19eb6dfd79ab7596286853757eca5604b70dbfa09db5384d322c4d2",
+  "source_tree_digest": "sha256:e46284305f78aa11aac98a999e09568e312a878c5e491563fe25738f34138041",
   "toolchain": {
     "backend": "Nx.BinaryBackend-Evaluator-and-EXLA-CPU",
     "elixir": "1.20.2",

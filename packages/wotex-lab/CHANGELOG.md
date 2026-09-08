@@ -115,6 +115,9 @@
   successful exits, observed detached descendants and termination signals.
   No NIF or runtime compiler/download is added. Sampled-limit and hostile-target
   limitations are explicit; WLB.06 no longer overclaims complete isolation.
+  The main `mix check` gate now runs the locked Rust unit and feature-gated
+  lifecycle suite in a cleaned OS-temporary target instead of merely listing
+  that suite as evidence or contaminating the later package archive.
 
 - Loopback runtime transport with a linked host session, simulated Thing host
   with admission counters, and NoSec/StaticRef credential adapters exercised

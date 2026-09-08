@@ -174,7 +174,7 @@ specifications:
       - "test/wotex/lab/wlb05_evidence_manifest_test.exs"
     compatibility_classification: WLB.05 is implemented with independent ETS/SQLite algorithms, authenticated per-source Continuum admission and one-effect smart-room policy races; artifact adoption remains a separate axis.
   - id: WLB.06
-    version: "1.4.1"
+    version: "1.4.2"
     path: docs/specs/WLB.06-evidence-conformance-and-observability.md
     implementation_status: partial
     evidence_status: partial
@@ -207,8 +207,9 @@ specifications:
       - "test/wotex/lab/continuum_test.exs"
       - "test/wotex/lab/graph_test.exs"
       - "test/wotex/lab/wlb06_evidence_manifest_test.exs"
+      - "bin/check_native_containment.exs"
       - "priv/conformance/native/tests/lifecycle.rs"
-    compatibility_classification: Profile 2.0.1 gives the external Rust helper a fixed one-second runner margin around its inner deadline and reports the effective margin plus 150 ms cleanup ceiling; sampled Darwin limits do not close hostile whole-tree isolation, and binary artifact adoption remains separate.
+    compatibility_classification: Profile 2.0.1 gives the external Rust helper a fixed one-second runner margin around its inner deadline and reports the effective margin plus 150 ms cleanup ceiling. The main repository gate now executes its locked unit and feature-gated lifecycle tests in a private cleaned target; sampled Darwin limits do not close hostile whole-tree isolation, and binary artifact adoption remains separate.
   - id: WLB.07
     version: "0.4.3"
     path: docs/specs/WLB.07-cookbooks-and-machine-interfaces.md
