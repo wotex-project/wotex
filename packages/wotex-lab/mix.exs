@@ -8,7 +8,6 @@ defmodule WotexLab.MixProject do
   # tests where the affected code is reachable. Renew them whenever the lock or
   # advisory records change.
   @acknowledged_advisories [
-    "EEF-CVE-2026-32686",
     "GHSA-w4f7-4cxr-rv3c",
     "EEF-CVE-2026-43966",
     "EEF-CVE-2026-43969",

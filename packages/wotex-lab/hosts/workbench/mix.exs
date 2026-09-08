@@ -15,10 +15,6 @@ defmodule WotexLabWorkbench.MixProject do
       deps: deps(),
       aliases: aliases(),
       test_coverage: [tool: ExCoveralls],
-      # Exact 3.1.1 cohort: upstream patched range conflicts with EEF metadata.
-      # See the Lab dependency decision and DependencySecurityTest; no other
-      # advisory is suppressed, and a lock change requires renewed review.
-      hex: [ignore_advisories: ["EEF-CVE-2026-32686"]],
       dialyzer: [plt_file: {:no_warn, "priv/plts/dialyxir.plt"}, plt_add_apps: [:mix, :ex_unit]],
       releases: [wotex_lab_workbench: [include_executables_for: [:unix], strip_beams: true]]
     ]

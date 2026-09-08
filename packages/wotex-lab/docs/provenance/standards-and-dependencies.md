@@ -303,12 +303,13 @@ records the decimal128 input limits that reject pathological exponents, and the
 nevertheless listed 3.0.0 through 3.1.1 in its affected-version data on the
 observation date. There is no later Decimal release to select.
 
-The Lab therefore acknowledges `EEF-CVE-2026-32686` for the exact locked
-3.1.1 release. `test/wotex/lab/dependency_security_test.exs` exercises the
-reported unbounded-exponent payload behind a deadline and requires both parse
-entry points to reject it. This is a temporary response to contradictory
-machine-readable metadata, not a general waiver: remove the acknowledgement if
-the lock moves below 3.0.0, the regression fails, or the advisory range changes.
+Hex now reports that `EEF-CVE-2026-32686` matches no locked dependency, so the
+Lab no longer suppresses it. `test/wotex/lab/dependency_security_test.exs`
+still binds Decimal 3.1.1 and exercises the reported unbounded-exponent payload
+behind a deadline, requiring both parse entry points to reject it. A future
+matching advisory must fail the audit unless a new dated review establishes a
+different exact cohort; contradictory historical metadata is not a standing
+waiver.
 
 Selected versions are design baselines, not claims that they are universally
 the newest or compatible. Runtime dependencies are pinned by `mix.lock`; full

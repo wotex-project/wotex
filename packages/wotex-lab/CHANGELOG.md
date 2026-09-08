@@ -2,6 +2,9 @@
 
 ## 0.1.0 — source foundation
 
+- Remove the now-unmatched Decimal advisory suppression from Lab and Workbench
+  audits while retaining exact 3.1.1 lock and bounded parser regressions.
+
 - Align WLB.03 with the owning WNX.01 1.2.0 contract and label the immutable
   source-index revisions/statuses as a historical baseline in JSON, Graph and
   MCP surfaces. The separate source cohort remains the current content guard.

@@ -56,7 +56,7 @@
   "scenario_id": "WLB.04-runtime-and-network-adapters",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:a3f012f95140ab815331098da99ec536432c035a25ee3ff8e9ee883aeec849d6",
+  "source_tree_digest": "sha256:1432dd49316ba6adc411c1b5cea59b1cec75c51211b8e759944d57de3dd6874a",
   "toolchain": {
     "backend": "BEAM-network",
     "elixir": "1.20.2",

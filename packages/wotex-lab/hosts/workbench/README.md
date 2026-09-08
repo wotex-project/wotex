@@ -35,8 +35,8 @@ The host uses a small native check runner because its accepted location is two
 levels below another Mix project, a shape that ex_check interprets as a possible
 umbrella child. `.check.exs` remains the declarative list of the same checks.
 Node is needed only for the optional Playwright browser cohort, not by the
-running Elixir host. The exact Decimal 3.1.1 advisory acknowledgement is
-documented in the Lab's
+running Elixir host. The exact Decimal 3.1.1 parser regression and removal of
+the now-unmatched advisory waiver are documented in the Lab's
 [dependency review](../../docs/provenance/standards-and-dependencies.md) and
 protected by the host's own locked-version and bounded-parser regression.
 
