@@ -24,7 +24,7 @@ defmodule Wotex.Lab.ContinuumTest do
       Lab.start_child(
         lab,
         :sessions,
-        {Channel, id: :channel, clock: clock, capacity: 8, faults: faults}
+        {Channel, id: :channel, clock: clock, capacity: 16, faults: faults}
       )
 
     td = fixture()
