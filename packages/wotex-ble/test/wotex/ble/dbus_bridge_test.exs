@@ -19,7 +19,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
 
     File.write!(
       executable,
-      "#!#{python}\nimport runpy,sys\nsys.argv=[#{Jason.encode!(script)},#{Jason.encode!(mode)},#{Jason.encode!(record)}]\nrunpy.run_path(#{Jason.encode!(script)},run_name='__main__')\n"
+      "#!#{python}\nimport runpy,sys\nsys.dont_write_bytecode=True\nsys.argv=[#{Jason.encode!(script)},#{Jason.encode!(mode)},#{Jason.encode!(record)}]\nrunpy.run_path(#{Jason.encode!(script)},run_name='__main__')\n"
     )
 
     File.chmod!(executable, 0o700)
