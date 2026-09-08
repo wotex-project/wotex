@@ -2,6 +2,10 @@
 
 ## 0.1.0 — source foundation
 
+- The HTTP/SSE test fixture now owns its controller and listener in one ordered
+  supervisor, with bounded connection shutdown and a real-socket cleanup
+  regression. This removes a teardown race shared by the smart-room evidence.
+
 - Expiring local-history query capabilities bind exact owner/history processes
   and server scope, refuse caller-selected authority, and kill pending workers
   on deadline/cancel/expiry. Workbench admits one explicit operator scope per

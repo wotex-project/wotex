@@ -85,7 +85,7 @@ specifications:
       - "test/wotex/lab/cookbook_test.exs"
     compatibility_classification: WLB.03 lanes implemented with optional Axon 0.8 and EXLA 0.13 profiles, fixed work ceilings, monitored cancellation and inert policy-bound outputs; artifact adoption remains a separate axis.
   - id: WLB.04
-    version: "1.4.0"
+    version: "1.4.1"
     path: docs/specs/WLB.04-runtime-and-network-adapters.md
     implementation_status: implemented
     evidence_status: complete

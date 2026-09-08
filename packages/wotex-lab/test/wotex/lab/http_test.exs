@@ -48,6 +48,38 @@ defmodule Wotex.Lab.HttpTest do
     %{server: server, lab: lab, td: td, profile: profile, config: config, consumed: consumed}
   end
 
+  test "fixture shutdown owns the listener, live SSE connection and controller together", %{
+    server: server
+  } do
+    {:ok, socket} = :gen_tcp.connect({127, 0, 0, 1}, server.port, [:binary, active: false], 1_000)
+
+    :ok =
+      :gen_tcp.send(
+        socket,
+        "GET /properties/temperature/observe HTTP/1.1\r\nhost: localhost\r\n\r\n"
+      )
+
+    assert_receive {:stream_opened, []}, 1_000
+    assert {:ok, headers} = :gen_tcp.recv(socket, 0, 1_000)
+    assert headers =~ "200 OK"
+    stream = HttpServer.stream_pid(server.controller)
+    pids = [stream, server.server, server.controller, server.owner]
+    monitors = Enum.map(pids, &{&1, Process.monitor(&1)})
+
+    log = ExUnit.CaptureLog.capture_log(fn -> assert :ok = HttpServer.stop(server) end)
+
+    for {pid, monitor} <- monitors do
+      assert_receive {:DOWN, ^monitor, :process, ^pid, _reason}, 1_000
+      refute Process.alive?(pid)
+    end
+
+    refute log =~ "no process"
+    assert {:error, :closed} = :gen_tcp.recv(socket, 0, 1_000)
+
+    assert {:error, :econnrefused} =
+             :gen_tcp.connect({127, 0, 0, 1}, server.port, [:binary, active: false], 1_000)
+  end
+
   test "finite requests cross real sockets with identity, status mapping and bounds", %{
     consumed: consumed,
     server: server

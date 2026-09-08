@@ -11,7 +11,7 @@
     {"id": "WLB-C05:continuum-cookbook", "status": "pass"},
     {"id": "WLB-C05:manifest-integrity", "status": "pass"}
   ],
-  "attempt": 2,
+  "attempt": 3,
   "budgets": {
     "capacity": 64,
     "deadline_ms": 60000,
@@ -39,23 +39,23 @@
     {"archive": "sha256:9ae72f46d6afc5d95a1de2f5b190a6e24b668f7d3e17b74bbf2f499542b4ce0d", "name": "emqtt", "version": "1.16.0"},
     {"archive": "sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797", "name": "eclipse-mosquitto", "version": "2.1.2"}
   ],
-  "durations": {"run_ms": 19200},
+  "durations": {"run_ms": 19300},
   "fixtures": {
     "loopback/thing-description.json": "sha256:59da3c2a80403a794cbc38bb8a4a91d0d671df481fa2dd441004b4f3c99d90ec"
   },
   "inputs": [
     "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test test/wotex/lab/directory_test.exs test/wotex/lab/continuum_test.exs test/wotex/lab/smart_room_test.exs test/wotex/lab/cookbook_test.exs",
-    "renewal:2026-09-08-explorer-lock;seed=1;manifest-integrity-checked-separately",
+    "renewal:2026-09-08-http-fixture-lifecycle;seed=1;manifest-integrity-checked-separately",
     "broker-image:eclipse-mosquitto:2",
     "fault-schedule:1.0.0"
   ],
   "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
   "outcomes": {"broker_enabled": true, "excluded_count": 0, "test_count": 61},
-  "revision": "c7b79bd+workspace-Explorer-analysis",
+  "revision": "098c9fe+workspace-http-fixture-lifecycle",
   "scenario_id": "WLB.05-directory-continuum-and-smart-room",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:e795aba9437f927e949e71cce43d54bc3a85aafbe5c01808347c65040cd72bcb",
+  "source_tree_digest": "sha256:6e296658c77dd9f8c72f9559fcc1b3af5bc1d15f2fd90b20815060b22af7e58a",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-BEAM-network",
     "elixir": "1.20.2",

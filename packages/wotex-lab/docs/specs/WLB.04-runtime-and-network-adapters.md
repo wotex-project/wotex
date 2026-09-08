@@ -1,6 +1,6 @@
 # WLB.04: Runtime and real reference transports
 
-Specification version: 1.4.0. Contract: accepted. Source status: implemented.
+Specification version: 1.4.1. Contract: accepted. Source status: implemented.
 The loopback transport, simulated Thing host, NoSec and StaticRef credential
 adapters, bounded Req/SSE client, hosted destination policy and EMQTT client
 are exercised over real sockets. The network cohort includes verified local
@@ -172,6 +172,14 @@ classes and no credential leakage, incremental SSE parsing with CRLF, split
 UTF-8, comments, ids and retries, undecodable frames, server-side stream end,
 explicit stop closing the connection, oversized events ending the session,
 and a mistyped handshake failing the open.
+The shared disposable HTTP fixture now has one ExUnit-owned supervisor:
+Bandit and its connections stop before the controller. Its single acceptor
+admits eight connections, with a 250-millisecond connection shutdown grace.
+The real-socket teardown regression checks the listener, live SSE handler and
+controller all terminate and the port closes, without a late controller call
+after owner death. These are fixture lifecycle bounds, not new production
+transport defaults or a suppressed error. The smart-room tests use the same
+fixture and renew their own source evidence when it changes.
 `test/wotex/lab/http_destination_test.exs` covers closed configuration,
 verified TLS success and hostname failure, exact hosted audience admission,
 mixed public/private DNS refusal, global-address classification and connect

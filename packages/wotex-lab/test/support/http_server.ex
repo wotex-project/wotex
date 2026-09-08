@@ -3,6 +3,8 @@ defmodule Wotex.Lab.Test.HttpServer do
 
   # A disposable Bandit/Plug server for the HTTP/SSE lane. The SSE endpoint is
   # scripted: the test pushes raw chunks and closes the stream explicitly.
+  # One ExUnit-owned supervisor stops Bandit before the controller. Linking
+  # both independently to a test let the controller die during stream cleanup.
 
   use Plug.Router
 
@@ -12,24 +14,37 @@ defmodule Wotex.Lab.Test.HttpServer do
   @token "room-token-7f3a"
 
   @spec start(pid(), keyword()) ::
-          {:ok, %{server: pid(), controller: pid(), port: non_neg_integer()}}
+          {:ok, %{owner: pid(), server: pid(), controller: pid(), port: non_neg_integer()}}
   def start(test_pid, opts \\ []) do
-    {:ok, controller} = Agent.start_link(fn -> %{test_pid: test_pid, stream: nil} end)
+    {:ok, owner} =
+      ExUnit.Callbacks.start_supervised(%{
+        id: {__MODULE__, make_ref()},
+        start: {Supervisor, :start_link, [[], [strategy: :one_for_all, max_restarts: 0]]},
+        type: :supervisor,
+        restart: :temporary
+      })
+
+    {:ok, controller} =
+      Supervisor.start_child(owner, {Agent, fn -> %{test_pid: test_pid, stream: nil} end})
 
     bandit_options =
       [
         plug: {__MODULE__, controller},
         ip: {127, 0, 0, 1},
         port: 0,
-        startup_log: false
+        startup_log: false,
+        thousand_island_options: [shutdown_timeout: 250, num_acceptors: 1, num_connections: 8]
       ] ++ Keyword.take(opts, [:scheme, :certfile, :keyfile])
 
     {:ok, server} =
-      Bandit.start_link(bandit_options)
+      Supervisor.start_child(owner, {Bandit, bandit_options})
 
     {:ok, %{port: port}} = listener(server)
-    {:ok, %{server: server, controller: controller, port: port}}
+    {:ok, %{owner: owner, server: server, controller: controller, port: port}}
   end
+
+  @spec stop(map()) :: :ok
+  def stop(%{owner: owner}), do: Supervisor.stop(owner, :normal, 2_000)
 
   @spec push(pid(), binary()) :: :ok
   def push(controller, chunk) do
