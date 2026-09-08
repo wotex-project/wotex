@@ -3,6 +3,7 @@ defmodule Wotex.Modbus do
 
   import Kernel, except: [send: 2]
   alias Wotex.Modbus.{Address, Command, Connection, Error, Session, Value}
+  @writes [:write_coil, :write_coils, :write_holding_register, :write_holding_registers]
 
   @doc "Reports implemented capabilities, without a delivery or physical-effect guarantee."
   @spec capabilities() :: %{
@@ -48,25 +49,30 @@ defmodule Wotex.Modbus do
 
   @doc "Executes a typed command through its owning connection."
   @spec request(Session.t(), Command.t()) :: {:ok, term()} | {:error, Error.t()}
-  def request(%Session{} = session, %Command{} = command),
-    do: Connection.request(session.pid, command, session.timeout)
+  def request(session, command) do
+    with :ok <- Session.validate(session),
+         :ok <- Command.validate(command),
+         do: Connection.request(session.pid, command, session.timeout)
+  end
 
   @doc "Dispatches legacy-shaped read and write message maps through validated commands."
   @spec send(Session.t(), map()) :: {:ok, term()} | :ok | {:error, Error.t()}
-  def send(%Session{} = session, %{type: operation, address: address} = message) do
-    input = Map.get(message, :values, Map.get(message, :value, Map.get(message, :count)))
-
-    with {:ok, command} <- Command.new(operation, address, input, session.unit_id),
-         {:ok, value} <- request(session, command) do
-      if Command.write?(command), do: :ok, else: {:ok, value}
+  def send(session, %{type: operation, address: address} = message)
+      when map_size(message) == 3 do
+    with :ok <- Session.validate(session),
+         {:ok, input} <- message_input(operation, message),
+         {:ok, value} <- execute_helper(session, operation, address, input) do
+      if operation in @writes, do: :ok, else: {:ok, value}
     end
   end
 
   def send(_, _), do: {:error, Error.new(:invalid_message)}
 
   @doc "Closes all resources owned by this session; repeated calls succeed."
-  @spec disconnect(Session.t()) :: :ok
-  def disconnect(%Session{pid: pid}), do: Connection.close(pid)
+  @spec disconnect(Session.t()) :: :ok | {:error, Error.t()}
+  def disconnect(session) do
+    with :ok <- Session.validate(session), do: Connection.close(session.pid)
+  end
 
   @doc "Reads holding register zero as the compatibility health probe."
   @spec health_check(Session.t()) :: {:ok, :healthy} | {:error, Error.t()}
@@ -102,69 +108,78 @@ defmodule Wotex.Modbus do
 
   @doc "Executes read holding registers with validated address and function limits."
   @spec read_holding_registers(Session.t(), term(), term()) :: {:ok, term()} | {:error, Error.t()}
-  def read_holding_registers(session, address, count) do
-    with {:ok, command} <- Command.new(:read_holding_registers, address, count, session.unit_id) do
-      request(session, command)
-    end
-  end
+  def read_holding_registers(session, address, count),
+    do: execute_helper(session, :read_holding_registers, address, count)
 
   @doc "Executes read input registers with validated address and function limits."
   @spec read_input_registers(Session.t(), term(), term()) :: {:ok, term()} | {:error, Error.t()}
-  def read_input_registers(session, address, count) do
-    with {:ok, command} <- Command.new(:read_input_registers, address, count, session.unit_id) do
-      request(session, command)
-    end
-  end
+  def read_input_registers(session, address, count),
+    do: execute_helper(session, :read_input_registers, address, count)
 
   @doc "Executes read coils with validated address and function limits."
   @spec read_coils(Session.t(), term(), term()) :: {:ok, term()} | {:error, Error.t()}
-  def read_coils(session, address, count) do
-    with {:ok, command} <- Command.new(:read_coils, address, count, session.unit_id) do
-      request(session, command)
-    end
-  end
+  def read_coils(session, address, count),
+    do: execute_helper(session, :read_coils, address, count)
 
   @doc "Executes read discrete inputs with validated address and function limits."
   @spec read_discrete_inputs(Session.t(), term(), term()) :: {:ok, term()} | {:error, Error.t()}
-  def read_discrete_inputs(session, address, count) do
-    with {:ok, command} <- Command.new(:read_discrete_inputs, address, count, session.unit_id) do
-      request(session, command)
-    end
-  end
+  def read_discrete_inputs(session, address, count),
+    do: execute_helper(session, :read_discrete_inputs, address, count)
 
   @doc "Executes write holding register with validated address and function limits."
   @spec write_holding_register(Session.t(), term(), term()) :: :ok | {:error, Error.t()}
-  def write_holding_register(session, address, value) do
-    with {:ok, command} <- Command.new(:write_holding_register, address, value, session.unit_id),
-         {:ok, _} <- request(session, command) do
-      :ok
-    end
-  end
+  def write_holding_register(session, address, value),
+    do: write_helper(session, :write_holding_register, address, value)
 
   @doc "Executes write holding registers with validated address and function limits."
   @spec write_holding_registers(Session.t(), term(), term()) :: :ok | {:error, Error.t()}
-  def write_holding_registers(session, address, values) do
-    with {:ok, command} <- Command.new(:write_holding_registers, address, values, session.unit_id),
-         {:ok, _} <- request(session, command) do
-      :ok
-    end
-  end
+  def write_holding_registers(session, address, values),
+    do: write_helper(session, :write_holding_registers, address, values)
 
   @doc "Executes write coil with validated address and function limits."
   @spec write_coil(Session.t(), term(), term()) :: :ok | {:error, Error.t()}
-  def write_coil(session, address, value) do
-    with {:ok, command} <- Command.new(:write_coil, address, value, session.unit_id),
-         {:ok, _} <- request(session, command) do
-      :ok
-    end
-  end
+  def write_coil(session, address, value),
+    do: write_helper(session, :write_coil, address, value)
 
   @doc "Executes write coils with validated address and function limits."
   @spec write_coils(Session.t(), term(), term()) :: :ok | {:error, Error.t()}
-  def write_coils(session, address, values) do
-    with {:ok, command} <- Command.new(:write_coils, address, values, session.unit_id),
-         {:ok, _} <- request(session, command) do
-      :ok
+  def write_coils(session, address, values),
+    do: write_helper(session, :write_coils, address, values)
+
+  defp execute_helper(session, operation, address, input) do
+    with :ok <- Session.validate(session),
+         {:ok, command} <- Command.new(operation, address, input, session.unit_id),
+         do: request(session, command)
+  end
+
+  defp write_helper(session, operation, address, input) do
+    with {:ok, _} <- execute_helper(session, operation, address, input), do: :ok
+  end
+
+  defp message_input(operation, message) do
+    key =
+      cond do
+        operation in [
+          :read_coils,
+          :read_discrete_inputs,
+          :read_holding_registers,
+          :read_input_registers
+        ] ->
+          :count
+
+        operation in [:write_coil, :write_holding_register] ->
+          :value
+
+        operation in [:write_coils, :write_holding_registers] ->
+          :values
+
+        true ->
+          nil
+      end
+
+    case Map.fetch(message, key) do
+      {:ok, input} when key in [:count, :value, :values] -> {:ok, input}
+      _ -> {:error, Error.new(:invalid_message)}
     end
   end
 end

@@ -54,6 +54,7 @@ defmodule Wotex.Modbus.Command do
   @doc "Whether this command can alter a peer's state."
   @spec write?(t()) :: boolean()
   def write?(%__MODULE__{function: function}), do: function in [5, 6, 15, 16]
+  def write?(_), do: false
 
   defp read(function, offset, quantity, unit) do
     limit = if function in [1, 2], do: 2000, else: 125
@@ -78,13 +79,14 @@ defmodule Wotex.Modbus.Command do
   defp limit(quantity, max) when quantity <= max, do: :ok
   defp limit(_, _), do: {:error, Error.new(:invalid_quantity, :quantity)}
 
-  defp values_shape(values, max) when is_list(values) do
-    if values != [] and length(values) <= max,
-      do: :ok,
-      else: {:error, Error.new(:invalid_quantity, :values)}
-  end
-
+  defp values_shape([], _), do: {:error, Error.new(:invalid_quantity, :values)}
+  defp values_shape([_ | _] = values, maximum), do: bounded_values(values, maximum)
   defp values_shape(_, _), do: {:error, Error.new(:invalid_value, :values)}
+
+  defp bounded_values([], _), do: :ok
+  defp bounded_values([_ | _], 0), do: {:error, Error.new(:invalid_quantity, :values)}
+  defp bounded_values([_ | rest], left), do: bounded_values(rest, left - 1)
+  defp bounded_values(_, _), do: {:error, Error.new(:invalid_value, :values)}
 
   defp normalize(values, function) when function in [5, 15] do
     if Enum.all?(values, &(&1 in [true, false, 0, 1])),

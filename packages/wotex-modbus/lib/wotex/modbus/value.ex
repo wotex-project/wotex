@@ -36,21 +36,21 @@ defmodule Wotex.Modbus.Value do
     end
   end
 
-  defp orders(opts) when is_list(opts) do
-    if Keyword.keyword?(opts) and
-         Keyword.get(opts, :byte_order, :big) in [:big, :little] and
-         Keyword.get(opts, :word_order, :big) in [:big, :little],
-       do: :ok,
-       else: {:error, Error.new(:invalid_order)}
-  end
+  defp orders(opts), do: orders(opts, %{})
+  defp orders([], _), do: :ok
 
-  defp orders(_), do: {:error, Error.new(:invalid_order)}
+  defp orders([{key, value} | rest], seen)
+       when key in [:byte_order, :word_order] and value in [:big, :little] and
+              not is_map_key(seen, key),
+       do: orders(rest, Map.put(seen, key, true))
 
-  defp registers(values, width) when is_list(values) do
-    if length(values) == width and Enum.all?(values, &(is_integer(&1) and &1 in 0..65_535)),
-      do: :ok,
-      else: {:error, Error.new(:invalid_value, :registers)}
-  end
+  defp orders(_, _), do: {:error, Error.new(:invalid_order)}
+
+  defp registers([], 0), do: :ok
+
+  defp registers([value | rest], width)
+       when width > 0 and is_integer(value) and value in 0..65_535,
+       do: registers(rest, width - 1)
 
   defp registers(_, _), do: {:error, Error.new(:invalid_value, :registers)}
 

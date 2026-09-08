@@ -5,7 +5,7 @@ defmodule Wotex.Modbus.ConnectionTest do
   alias Wotex.Modbus
   alias Wotex.Modbus.{Command, Connection, Error, TestPeer}
 
-  test "all compatibility operations use actual correlated TCP responses and close" do
+  test "WMB-D01 WMB-D02 all helpers and compatibility operations use correlated TCP responses" do
     {peer, port} =
       TestPeer.start(fn _, _, pdu ->
         case pdu do
@@ -40,6 +40,25 @@ defmodule Wotex.Modbus.ConnectionTest do
     assert :ok = Modbus.write_float(session, 0, 23.5)
     assert {:ok, +0.0} = Modbus.read_float(session, 0)
     assert {:ok, :healthy} = Modbus.health_check(session)
+
+    for operation <- [
+          :read_coils,
+          :read_discrete_inputs,
+          :read_holding_registers,
+          :read_input_registers
+        ] do
+      expected = if operation in [:read_coils, :read_discrete_inputs], do: [true], else: [0]
+      assert {:ok, ^expected} = Modbus.send(session, %{type: operation, address: 0, count: 1})
+    end
+
+    for message <- [
+          %{type: :write_coil, address: 0, value: false},
+          %{type: :write_holding_register, address: 0, value: 0},
+          %{type: :write_coils, address: 0, values: [false, true]},
+          %{type: :write_holding_registers, address: 0, values: [0, 1]}
+        ],
+        do: assert(Modbus.send(session, message) == :ok)
+
     assert {:error, %Error{}} = Modbus.send(session, %{})
     assert {:error, %Error{}} = Modbus.send(session, %{type: :wrong, address: 0})
     assert {:error, %Error{}} = Modbus.receive(session, 100)
@@ -71,6 +90,25 @@ defmodule Wotex.Modbus.ConnectionTest do
       assert_receive {:DOWN, ^monitor, :process, _, :normal}
       assert :ok = Task.await(peer)
     end
+  end
+
+  test "WMB-D02 typed commands retain their unit while helpers use the session unit" do
+    caller = self()
+
+    {peer, port} =
+      TestPeer.start(fn tid, unit, pdu ->
+        send(caller, {:request, tid, unit, pdu})
+        <<3, 2, unit::16>>
+      end)
+
+    {:ok, session} = Modbus.connect(host: "127.0.0.1", port: port, unit_id: 1)
+    {:ok, command} = Command.new(:read_holding_registers, 4, 1, 2)
+    assert {:ok, [2]} = Modbus.request(session, command)
+    assert_receive {:request, 0, 2, <<3, 0, 4, 0, 1>>}
+    assert {:ok, [1]} = Modbus.read_holding_registers(session, 5, 1)
+    assert_receive {:request, 1, 1, <<3, 0, 5, 0, 1>>}
+    assert :ok = Modbus.disconnect(session)
+    assert :ok = Task.await(peer)
   end
 
   test "write timeout has unknown effect and a late reply cannot be reused" do

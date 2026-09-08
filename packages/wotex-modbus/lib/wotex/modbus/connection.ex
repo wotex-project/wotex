@@ -23,8 +23,10 @@ defmodule Wotex.Modbus.Connection do
   @spec request(pid(), Command.t(), pos_integer()) :: {:ok, term()} | {:error, Error.t()}
   def request(pid, %Command{} = command, timeout)
       when is_pid(pid) and is_integer(timeout) and timeout in 1..60_000 do
-    deadline = System.monotonic_time(:millisecond) + timeout
-    GenServer.call(pid, {:request, command, deadline}, timeout + 1000)
+    with :ok <- Command.validate(command) do
+      deadline = System.monotonic_time(:millisecond) + timeout
+      GenServer.call(pid, {:request, command, deadline}, timeout + 1000)
+    end
   catch
     :exit, _reason ->
       {:error,
@@ -153,7 +155,7 @@ defmodule Wotex.Modbus.Connection do
          {:ok, host} <- address(host) do
       if is_integer(port) and port in 1..65_535 and is_integer(timeout) and timeout in 1..60_000 and
            is_integer(transaction) and transaction in 0..65_535 and is_pid(owner) and
-           (unit in 1..247 or unit == 255),
+           is_integer(unit) and (unit in 1..247 or unit == 255),
          do:
            {:ok,
             %{host: host, port: port, timeout: timeout, transaction_id: transaction, owner: owner}},
@@ -182,14 +184,13 @@ defmodule Wotex.Modbus.Connection do
 
   defp address(_), do: {:error, Error.new(:invalid_host, :host)}
 
-  defp admitted_options?(opts) do
-    if Keyword.keyword?(opts) do
-      keys = Keyword.keys(opts)
-      allowed = [:host, :port, :timeout, :transaction_id, :owner, :unit_id, :security]
+  defp admitted_options?(opts), do: admitted_options?(opts, %{})
+  defp admitted_options?([], _), do: true
 
-      keys -- allowed == [] and length(keys) == MapSet.size(MapSet.new(keys))
-    else
-      false
-    end
-  end
+  defp admitted_options?([{key, _value} | rest], seen)
+       when key in [:host, :port, :timeout, :transaction_id, :owner, :unit_id, :security] and
+              not is_map_key(seen, key),
+       do: admitted_options?(rest, Map.put(seen, key, true))
+
+  defp admitted_options?(_, _), do: false
 end
