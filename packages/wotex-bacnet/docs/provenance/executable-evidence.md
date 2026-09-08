@@ -12,8 +12,8 @@ Credo, unit/property tests and minimum 95% coverage, Dialyzer, Doctor, ExDoc,
 dependency audit, Hex packaging, unpacked out-of-tree compilation and the
 Application-free structural check. Runtime path dependencies require the explicit
 switch; the archive preserves ordinary Hex dependency declarations.
-The reviewed Decimal advisory metadata exception and regression are documented
-in SECURITY.md and the dependency-security test.
+No dependency advisory is ignored. The pinned Decimal parser regression is
+documented in SECURITY.md and the dependency-security test.
 
 ## Interoperability
 
@@ -44,7 +44,9 @@ commands above must be rerun after relevant changes.
 | Test source | SHA-256 |
 | --- | --- |
 | `test/interop/cstack_test.exs` | `c489e4c14cd192ea8b221706d24a239a90c51a6f52be8da173c719b4190bf0c3` |
+| `test/wotex/bacnet/dependency_security_test.exs` | `615c7c75ddddfc9bb5d6c25c71c989b00c0940fabaadf22d14f4209e6b1d4b2d` |
 | `test/wotex/bacnet/bacstack_test.exs` | `5676b9f6138d6f2d7e605f6adfff56b35f9b80de9f66b5caa03b1fd3af934dae` |
+| `test/wotex/bacnet/contract_test.exs` | `42a76e6098281c95fb659039b0c1e64f35d9d9ee0486765461c828f85ffa4193` |
 | `test/wotex/bacnet/ipv4_test.exs` | `6a6c65520ec545d6951f89b8494bea416e9b98003cc550f064c15ceb5afc97b2` |
 | `test/wotex/bacnet/mapping_test.exs` | `9ea0ab4a1e054ac8614ed3505495e0d0b70a4f0f2b038ece33df5d0fe5d53e36` |
 | `test/wotex/bacnet/port_test.exs` | `52b2ed99b2edac4d86d6f0bf9ee49d61d45df4ff2a049daef3202d8e35f51ada` |
