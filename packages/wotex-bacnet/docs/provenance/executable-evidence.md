@@ -44,10 +44,10 @@ commands above must be rerun after relevant changes.
 | Test source | SHA-256 |
 | --- | --- |
 | `test/interop/cstack_test.exs` | `c489e4c14cd192ea8b221706d24a239a90c51a6f52be8da173c719b4190bf0c3` |
-| `test/wotex/bacnet/bacstack_test.exs` | `5676b9f6138d6f2d7e605f6adfff56b35f9b80de9f66b5caa03b1fd3af934dae` |
+| `test/wotex/bacnet/bacstack_test.exs` | `7a1c1bcf7cb5b11136c0d07c1cf73f1636cd4e913280e4e79780fc7a11b7d18c` |
 | `test/wotex/bacnet/contract_test.exs` | `42a76e6098281c95fb659039b0c1e64f35d9d9ee0486765461c828f85ffa4193` |
 | `test/wotex/bacnet/dependency_security_test.exs` | `d99c1cbc0641ea67f70eb3d9ceeec62d6ab4619b9547d6f96455ff4d1dac199c` |
-| `test/wotex/bacnet/ipv4_test.exs` | `6a6c65520ec545d6951f89b8494bea416e9b98003cc550f064c15ceb5afc97b2` |
+| `test/wotex/bacnet/ipv4_test.exs` | `34327571fe0863b932ab3d9fb14e23d0c34dd75a9fca0ab415a25cdd517fe88a` |
 | `test/wotex/bacnet/mapping_test.exs` | `9ea0ab4a1e054ac8614ed3505495e0d0b70a4f0f2b038ece33df5d0fe5d53e36` |
 | `test/wotex/bacnet/port_test.exs` | `52b2ed99b2edac4d86d6f0bf9ee49d61d45df4ff2a049daef3202d8e35f51ada` |
 | `test/wotex/bacnet/value_test.exs` | `c6c4c274341713cf7d3753c00f5b876e0039b124198ca33e84688dba416d94d9` |

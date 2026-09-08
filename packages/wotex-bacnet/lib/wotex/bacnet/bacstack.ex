@@ -6,15 +6,25 @@ defmodule Wotex.BACnet.BACstack do
   alias Wotex.BACnet.{Address, Error}
 
   @impl Wotex.BACnet.Client
-  def connect(opts) do
+  def connect(opts) when is_list(opts) do
+    if valid_options?(opts),
+      do: connect_options(opts),
+      else: {:error, Error.new(:invalid_options)}
+  end
+
+  def connect(_), do: {:error, Error.new(:invalid_options)}
+
+  defp connect_options(opts) do
     client = Keyword.get(opts, :stack_client)
     destination = Keyword.get(opts, :destination)
+    writes = Keyword.get(opts, :writes, false)
+    timeout = Keyword.get(opts, :timeout, 5000)
 
-    if is_pid(client) and Process.alive?(client) and valid_destination?(destination),
-      do:
-        {:ok,
-         %{client: client, destination: destination, writes: Keyword.get(opts, :writes, false)}},
-      else: {:error, Error.new(:invalid_options)}
+    if is_pid(client) and Process.alive?(client) and valid_destination?(destination) and
+         is_boolean(writes) and
+         is_integer(timeout) and timeout in 1..60_000,
+       do: {:ok, %{client: client, destination: destination, writes: writes}},
+       else: {:error, Error.new(:invalid_options)}
   end
 
   @impl Wotex.BACnet.Client
@@ -113,4 +123,15 @@ defmodule Wotex.BACnet.BACstack do
     do: Enum.all?([a, b, c, d], &(is_integer(&1) and &1 in 0..255))
 
   defp valid_destination?(_), do: false
+
+  defp valid_options?(opts) do
+    if Keyword.keyword?(opts) do
+      keys = Keyword.keys(opts)
+
+      keys -- [:stack_client, :destination, :writes, :timeout] == [] and
+        length(keys) == MapSet.size(MapSet.new(keys))
+    else
+      false
+    end
+  end
 end

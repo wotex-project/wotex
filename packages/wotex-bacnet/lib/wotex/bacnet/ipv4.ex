@@ -4,7 +4,15 @@ defmodule Wotex.BACnet.IPv4 do
   alias Wotex.BACnet.{BACstack, Error, StackOwner}
 
   @impl Wotex.BACnet.Client
-  def connect(opts) do
+  def connect(opts) when is_list(opts) do
+    if admitted_options?(opts),
+      do: connect_options(opts),
+      else: {:error, Error.new(:invalid_options)}
+  end
+
+  def connect(_), do: {:error, Error.new(:invalid_options)}
+
+  defp connect_options(opts) do
     timeout = Keyword.get(opts, :timeout, 5000)
     local_ip = Keyword.get(opts, :local_ip)
     local_port = Keyword.get(opts, :local_port, 47_809)
@@ -48,4 +56,15 @@ defmodule Wotex.BACnet.IPv4 do
     do: is_integer(port) and port in 47_808..65_535 and is_integer(timeout) and timeout in 1..60_000
 
   defp valid_options?(_, _, _), do: false
+
+  defp admitted_options?(opts) do
+    if Keyword.keyword?(opts) do
+      keys = Keyword.keys(opts)
+
+      keys -- [:local_ip, :local_port, :destination, :timeout] == [] and
+        length(keys) == MapSet.size(MapSet.new(keys))
+    else
+      false
+    end
+  end
 end

@@ -68,10 +68,25 @@ defmodule Wotex.BACnet.IPv4Test do
 
     for opts <- [
           [],
+          [:invalid],
           [local_ip: :none, local_port: 1],
           [local_ip: {999, 0, 0, 1}],
-          [local_ip: :none, destination: nil]
+          [local_ip: :none, destination: nil],
+          [
+            local_ip: :none,
+            local_port: 55_810,
+            destination: {{127, 0, 0, 1}, 55_809},
+            security_mode: :bacnet_sc
+          ],
+          [
+            local_ip: :none,
+            local_port: 55_810,
+            destination: {{127, 0, 0, 1}, 55_809},
+            destination: {{127, 0, 0, 1}, 55_808}
+          ]
         ],
         do: assert(match?({:error, _}, IPv4.connect(opts)))
+
+    assert {:error, _} = IPv4.connect(nil)
   end
 end

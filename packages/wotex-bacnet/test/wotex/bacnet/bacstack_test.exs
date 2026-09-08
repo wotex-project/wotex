@@ -122,10 +122,21 @@ defmodule Wotex.BACnet.BACstackTest do
 
     for opts <- [
           [],
+          [:invalid],
           [stack_client: self(), destination: {{999, 0, 0, 1}, 1}],
-          [stack_client: self(), destination: nil]
+          [stack_client: self(), destination: nil],
+          [stack_client: self(), destination: {{127, 0, 0, 1}, 47_808}, security_mode: :bacnet_sc],
+          [
+            stack_client: self(),
+            destination: {{127, 0, 0, 1}, 47_808},
+            destination: {{127, 0, 0, 1}, 47_809}
+          ],
+          [stack_client: self(), destination: {{127, 0, 0, 1}, 47_808}, writes: :yes],
+          [stack_client: self(), destination: {{127, 0, 0, 1}, 47_808}, timeout: 0]
         ],
         do: assert(match?({:error, _}, BACstack.connect(opts)))
+
+    assert {:error, _} = BACstack.connect(nil)
   end
 
   test "address ranges keep index zero and reject reserved instance and priority" do

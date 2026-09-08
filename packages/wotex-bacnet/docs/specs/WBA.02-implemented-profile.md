@@ -26,6 +26,9 @@ or disconnect. Startup unwinds prior children. APDU retries are always zero.
 A task deadline isolates caller exits/timeouts but cannot retract an APDU.
 Proprietary numeric identifiers pass Address validation; actual support depends
 on BACstack's data model and may fail explicitly.
+Both concrete adapters reject unknown or duplicate configuration keys before
+opening resources. Unsupported security selectors, including BACnet/SC, cannot
+be ignored and therefore fail instead of downgrading to BACnet/IP.
 
 ## Evidence and compatibility
 
