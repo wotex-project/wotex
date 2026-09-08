@@ -54,14 +54,23 @@ defmodule WotexLabWorkbench.ExperimentsTest do
 
     assert {:error, %Error{code: :invalid_parameters}} = Experiments.admit(window, [])
 
-    _warm = Experiments.admit(window, %{"backend" => "unknown"})
-    atoms = :erlang.system_info(:atom_count)
+    prefix = "unknown_" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
 
     for suffix <- 1..100 do
-      assert {:error, %Error{}} =
-               Experiments.admit(window, %{"backend" => "unknown-#{suffix}"})
-    end
+      caller_name = "#{prefix}_#{suffix}"
+      assert_raise ArgumentError, fn -> String.to_existing_atom(caller_name) end
+      assert {:error, %Error{code: :unknown_experiment}} = Experiments.fetch(caller_name)
 
-    assert :erlang.system_info(:atom_count) == atoms
+      for experiment <- Experiments.all(),
+          parameter <- experiment.parameters,
+          parameter.type == :select do
+        assert {:error, %Error{code: :invalid_parameter}} =
+                 Experiments.admit(experiment, %{parameter.name => caller_name})
+      end
+
+      # Other async tests and lazy module loading may add unrelated VM atoms.
+      # The contract is that these exact caller-supplied names never become atoms.
+      assert_raise ArgumentError, fn -> String.to_existing_atom(caller_name) end
+    end
   end
 end

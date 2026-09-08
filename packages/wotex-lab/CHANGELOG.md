@@ -2,6 +2,10 @@
 
 ## 0.1.0 — source foundation
 
+- Workbench atom-safety tests verify that fresh caller-supplied experiment and
+  select names remain absent from the atom table, without confusing unrelated
+  asynchronous VM/module activity with input-derived atom creation.
+
 - Renew all eight owner source inputs and WLB.04/05/06/09 seam evidence after
   their independent quality gates, exact Decimal review guards and core/Nx
   contract corrections. Historical source pins and unproved artifact/lifecycle
