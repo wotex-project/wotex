@@ -1,0 +1,295 @@
+{
+  "format": "wotex.protocol.integration",
+  "version": "1.0.0",
+  "status": "specified_unexecuted",
+  "requirements": [
+    "WBA-I02",
+    "WBA-I03",
+    "WBA-I06",
+    "WBA-I04"
+  ],
+  "cases": [
+    {
+      "id": "WBA-I-F01",
+      "operation": "runtime_read",
+      "input": {
+        "thing_description": {
+          "@context": [
+            "https://www.w3.org/2022/wot/td/v1.1",
+            {
+              "example": "urn:example:"
+            }
+          ],
+          "id": "urn:example:bacnet:fixture",
+          "title": "Protocol fixture",
+          "securityDefinitions": {
+            "none": {
+              "scheme": "nosec"
+            }
+          },
+          "security": [
+            "none"
+          ],
+          "properties": {
+            "reading": {
+              "readOnly": true,
+              "forms": [
+                {
+                  "href": "bacnet://1234/2,1/85",
+                  "op": "readproperty",
+                  "example:extension": {
+                    "keep": [
+                      false,
+                      0,
+                      null
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "profile_mode": "ip",
+        "request_id": "read-1",
+        "affordance": "reading",
+        "peer_reply": {
+          "kind": "bacnet_application_value",
+          "tag": "real",
+          "value": 42.5
+        },
+        "clock": {
+          "kind": "monotonic_ms",
+          "start": 0,
+          "deadline": 1000
+        },
+        "transport_options": {
+          "timeout": 1000,
+          "client": "scripted_client",
+          "target": "1234",
+          "destination": {
+            "ipv4": [
+              127,
+              0,
+              0,
+              1
+            ],
+            "port": 47808
+          }
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "profile_id": "bacnet",
+          "resolved_href": "bacnet://1234/2,1/85",
+          "command": {
+            "type": "read_property",
+            "object_type": 2,
+            "instance": 1,
+            "property": 85,
+            "array_index": null
+          },
+          "result": {
+            "request_id": "read-1",
+            "operation": "readproperty",
+            "status": "ok",
+            "payload": 42.5,
+            "metadata": {
+              "bacnet_type": "real"
+            }
+          },
+          "extension": {
+            "keep": [
+              false,
+              0,
+              null
+            ]
+          },
+          "request_count": 1,
+          "owned_resources_after": 0
+        }
+      }
+    },
+    {
+      "id": "WBA-I-F02",
+      "requirements": [
+        "WBA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "read_timeout",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "deadline_exceeded",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "timeout",
+          "cause_code": "deadline_exceeded",
+          "retained_native_effect": false,
+          "retry_decision": {
+            "retry": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "WBA-I-F03",
+      "requirements": [
+        "WBA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "peer_unavailable",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "connection_failed",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "unavailable",
+          "cause_code": "connection_failed",
+          "retained_native_effect": false,
+          "retry_decision": {
+            "retry": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "WBA-I-F04",
+      "requirements": [
+        "WBA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "admission_full",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "busy",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "rate_limited",
+          "cause_code": "busy",
+          "retained_native_effect": false,
+          "retry_decision": {
+            "retry": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "WBA-I-F05",
+      "requirements": [
+        "WBA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "wrong_correlation",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "response_mismatch",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "protocol",
+          "cause_code": "response_mismatch",
+          "retained_native_effect": false,
+          "retry_decision": "stop"
+        }
+      }
+    },
+    {
+      "id": "WBA-I-F06",
+      "requirements": [
+        "WBA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "invalid_route",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "target_mismatch",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "permanent",
+          "cause_code": "target_mismatch",
+          "retained_native_effect": false,
+          "retry_decision": "stop"
+        }
+      }
+    },
+    {
+      "id": "WBA-I-F07",
+      "requirements": [
+        "WBA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "sent_write_timeout",
+        "wot_operation": "writeproperty",
+        "native_error": {
+          "code": "deadline_exceeded",
+          "effect": "unknown"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0,
+          "idempotent?": true
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "permanent",
+          "cause_code": "deadline_exceeded",
+          "retained_native_effect": false,
+          "retry_decision": "stop"
+        }
+      }
+    }
+  ]
+}

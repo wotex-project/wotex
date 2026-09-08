@@ -1,0 +1,58 @@
+schema_version: "1.1.0"
+package: "wotex_bacnet"
+completion_plan: "docs/plans/wotex-bacnet-completion.md"
+specifications:
+  - id: "WBA.00"
+    version: "1.0.0"
+    path: "docs/specs/WBA.00-library-contract.md"
+    implementation_status: "partial"
+    standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: []
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WBA.01"
+    version: "1.0.0"
+    path: "docs/specs/WBA.01-protocol.md"
+    implementation_status: "partial"
+    standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "selected BACnet/IP read/write integration; full ASHRAE standard access limited"}]
+    requires: []
+    implementation_modules: ["Wotex.BACnet.Address", "Wotex.BACnet.BACstack", "Wotex.BACnet.Client", "Wotex.BACnet.Error", "Wotex.BACnet.IPv4", "Wotex.BACnet.PortCall", "Wotex.BACnet.Session", "Wotex.BACnet.StackOwner", "Wotex.BACnet.Value", "Wotex.BACnet"]
+    executable_evidence: ["test/wotex/bacnet/bacstack_test.exs", "test/wotex/bacnet/contract_test.exs", "test/wotex/bacnet/dependency_security_test.exs", "test/wotex/bacnet/ipv4_test.exs", "test/wotex/bacnet/mapping_test.exs", "test/wotex/bacnet/port_test.exs", "test/wotex/bacnet/value_test.exs"]
+    compatibility_classification: "selected BACnet/IP read/write integration; full ASHRAE standard access limited; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+  - id: "WBA.02"
+    version: "1.0.0"
+    path: "docs/specs/WBA.02-implemented-profile.md"
+    implementation_status: "implemented"
+    standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "selected BACnet/IP read/write integration; full ASHRAE standard access limited"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
+    requires: ["WBA.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
+    implementation_modules: ["Wotex.BACnet.Error", "Wotex.BACnet.Mapping", "Wotex.BACnet.Transport", "Wotex.BACnet.Value"]
+    executable_evidence: ["test/wotex/bacnet/bacstack_test.exs", "test/wotex/bacnet/contract_test.exs", "test/wotex/bacnet/dependency_security_test.exs", "test/wotex/bacnet/ipv4_test.exs", "test/wotex/bacnet/mapping_test.exs", "test/wotex/bacnet/port_test.exs", "test/wotex/bacnet/value_test.exs"]
+    compatibility_classification: "selected BACnet/IP read/write integration; full ASHRAE standard access limited; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+  - id: "WBA.10"
+    version: "1.0.0"
+    path: "docs/specs/WBA.10-software-contract.md"
+    implementation_status: "partial"
+    standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: ["WBA.00", "WBA.01", "WBA.02"]
+    implementation_modules: ["Wotex.BACnet.Address", "Wotex.BACnet.BACstack", "Wotex.BACnet.Client", "Wotex.BACnet.Error", "Wotex.BACnet.IPv4", "Wotex.BACnet.PortCall", "Wotex.BACnet.Session", "Wotex.BACnet.StackOwner", "Wotex.BACnet.Value", "Wotex.BACnet"]
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WBA.11"
+    version: "1.0.0"
+    path: "docs/specs/WBA.11-standalone-client-and-preservation.md"
+    implementation_status: "planned"
+    standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: ["WBA.00", "WBA.10"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WBA.12"
+    version: "1.0.0"
+    path: "docs/specs/WBA.12-wotex-integration.md"
+    implementation_status: "planned"
+    standards: [{"name": "BACstack", "revision": "0.0.1 pinned Hex archive; C stack 3603048350b8ba543ec76cf6aa8a232b3f4d442d", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
+    requires: ["WBA.00", "WBA.10", "WBA.11", "wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03", "wotex_runtime:WRT.01"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."

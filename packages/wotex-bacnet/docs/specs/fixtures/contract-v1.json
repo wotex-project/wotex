@@ -1,0 +1,480 @@
+{
+  "format_version": "1.0.0",
+  "specification": "WBA.11@1.0.0",
+  "execution_status": "specified_unexecuted",
+  "description": "Concrete selected cases; executable bindings and independent-peer evidence are still required.",
+  "cases": [
+    {
+      "id": "WBA-F01",
+      "requirements": [
+        "WBA-S01",
+        "WBA-V01",
+        "WBA-N02"
+      ],
+      "tier": "pure",
+      "operation": "Address.new/1",
+      "input": {
+        "object_type": "analog_output",
+        "instance": 0,
+        "property": "present_value",
+        "array_index": 0,
+        "priority": 16
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "object_type": 1,
+            "instance": 0,
+            "property": 85,
+            "array_index": 0,
+            "priority": 16
+          }
+        }
+      }
+    },
+    {
+      "id": "WBA-F02",
+      "requirements": [
+        "WBA-S01",
+        "WBA-V01"
+      ],
+      "tier": "pure",
+      "operation": "Address.new/1",
+      "input": {
+        "object_type": "analog_output",
+        "instance": 4194303,
+        "property": "present_value"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "invalid_address",
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WBA-F03",
+      "requirements": [
+        "WBA-S01",
+        "WBA-V01",
+        "WBA-N02"
+      ],
+      "tier": "pure",
+      "operation": "Value.encode/2",
+      "input": {
+        "value": null,
+        "schema": {
+          "@type": "bacv:Null"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "encoding": "primitive",
+            "type": "null",
+            "value": null,
+            "extras": []
+          }
+        }
+      }
+    },
+    {
+      "id": "WBA-F04",
+      "requirements": [
+        "WBA-S01",
+        "WBA-V01",
+        "WBA-N02"
+      ],
+      "tier": "pure",
+      "operation": "Address.validate_message/1",
+      "input": {
+        "type": "write_property",
+        "object_type": 1,
+        "instance": 0,
+        "property": 85
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "missing_value",
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WBA-F05",
+      "requirements": [
+        "WBA-N04"
+      ],
+      "tier": "upstream_encoding",
+      "operation": "WhoIs APDU encode",
+      "input": {
+        "low_limit": null,
+        "high_limit": null
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "apdu_hex": "1008"
+        }
+      }
+    },
+    {
+      "id": "WBA-F06",
+      "requirements": [
+        "WBA-N04"
+      ],
+      "tier": "upstream_encoding",
+      "operation": "WhoIs APDU encode",
+      "input": {
+        "low_limit": 1,
+        "high_limit": 10
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "apdu_hex": "10080901190a"
+        }
+      }
+    },
+    {
+      "id": "WBA-F07",
+      "requirements": [
+        "WBA-S04",
+        "WBA-V10"
+      ],
+      "tier": "upstream_encoding",
+      "operation": "SubscribeCOV cancel service parameters",
+      "input": {
+        "process_identifier": 7,
+        "object_type": 1,
+        "instance": 0,
+        "issue_confirmed_notifications": null,
+        "lifetime": null
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "parameters_hex": "09071c00400000",
+          "context_tags": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "id": "WBA-F08",
+      "requirements": [
+        "WBA-N03"
+      ],
+      "tier": "lifecycle_contract",
+      "operation": "read_properties/4",
+      "input": {
+        "session_timeout_ms": 100,
+        "object_type": 1,
+        "instance": 0,
+        "properties": [
+          "present_value",
+          85
+        ],
+        "events": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "duplicate_property",
+            "effect": "none"
+          },
+          "sent_services": [],
+          "active_operations": 0
+        }
+      }
+    },
+    {
+      "id": "WBA-F09",
+      "requirements": [
+        "WBA-N03",
+        "WBA-S02",
+        "WBA-V03"
+      ],
+      "tier": "lifecycle_contract",
+      "operation": "read_properties/4",
+      "input": {
+        "session_timeout_ms": 100,
+        "object_type": 1,
+        "instance": 0,
+        "properties": [
+          85,
+          77,
+          117
+        ],
+        "events": [
+          {
+            "at_ms": 10,
+            "event": "read_ack",
+            "property": 85,
+            "value": {
+              "encoding": "primitive",
+              "type": "real",
+              "value": 25.5,
+              "extras": []
+            }
+          },
+          {
+            "at_ms": 20,
+            "event": "read_error",
+            "property": 77,
+            "error_class": 2,
+            "error_code": 32
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "remote_error",
+            "effect": "none",
+            "details": {
+              "class": 2,
+              "code": 32,
+              "batch_index": 1,
+              "property": 77,
+              "completed_count": 1
+            }
+          },
+          "sent_services": [
+            {
+              "service": "read_property",
+              "property": 85,
+              "timeout_ms": 100
+            },
+            {
+              "service": "read_property",
+              "property": 77,
+              "timeout_ms": 90
+            }
+          ],
+          "active_operations": 0
+        }
+      }
+    },
+    {
+      "id": "WBA-F10",
+      "requirements": [
+        "WBA-N04"
+      ],
+      "tier": "lifecycle_contract",
+      "operation": "who_is/1",
+      "input": {
+        "mode": "borrowed",
+        "session_timeout_ms": 1000,
+        "discovery": {
+          "destination": [
+            [
+              192,
+              0,
+              2,
+              255
+            ],
+            47808
+          ],
+          "timeout_ms": 100,
+          "max_devices": 2
+        },
+        "events": [
+          {
+            "at_ms": 10,
+            "event": "i_am",
+            "device": {
+              "source": [
+                [
+                  192,
+                  0,
+                  2,
+                  20
+                ],
+                47808
+              ],
+              "instance": 10,
+              "max_apdu": 1476,
+              "segmentation": "no_segmentation",
+              "vendor_id": 260
+            }
+          },
+          {
+            "at_ms": 20,
+            "event": "i_am",
+            "device": {
+              "source": [
+                [
+                  192,
+                  0,
+                  2,
+                  20
+                ],
+                47808
+              ],
+              "instance": 10,
+              "max_apdu": 1476,
+              "segmentation": "no_segmentation",
+              "vendor_id": 260
+            }
+          },
+          {
+            "at_ms": 100,
+            "event": "advance_clock"
+          },
+          {
+            "at_ms": 101,
+            "event": "i_am",
+            "device": {
+              "source": [
+                [
+                  192,
+                  0,
+                  2,
+                  20
+                ],
+                47808
+              ],
+              "instance": 11,
+              "max_apdu": 1476,
+              "segmentation": "no_segmentation",
+              "vendor_id": 260
+            }
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": [
+            {
+              "source": [
+                [
+                  192,
+                  0,
+                  2,
+                  20
+                ],
+                47808
+              ],
+              "instance": 10,
+              "max_apdu": 1476,
+              "segmentation": "no_segmentation",
+              "vendor_id": 260
+            }
+          ],
+          "sent_services": [
+            {
+              "service": "who_is",
+              "destination": [
+                [
+                  192,
+                  0,
+                  2,
+                  255
+                ],
+                47808
+              ],
+              "low_limit": null,
+              "high_limit": null
+            }
+          ],
+          "listener_registration_before_send": true,
+          "active_owned_listeners": 0,
+          "active_owned_timers": 0,
+          "borrowed_client_alive": true
+        }
+      }
+    },
+    {
+      "id": "WBA-F11",
+      "requirements": [
+        "WBA-N04"
+      ],
+      "tier": "lifecycle_contract",
+      "operation": "who_is/3",
+      "input": {
+        "session_timeout_ms": 1000,
+        "discovery": {
+          "destination": [
+            [
+              192,
+              0,
+              2,
+              255
+            ],
+            47808
+          ],
+          "timeout_ms": 100,
+          "max_devices": 1
+        },
+        "low_limit": 1,
+        "high_limit": 10,
+        "events": [
+          {
+            "at_ms": 10,
+            "event": "i_am",
+            "device": {
+              "source": [
+                [
+                  192,
+                  0,
+                  2,
+                  20
+                ],
+                47808
+              ],
+              "instance": 10,
+              "max_apdu": 1476,
+              "segmentation": "no_segmentation",
+              "vendor_id": 260
+            }
+          },
+          {
+            "at_ms": 20,
+            "event": "i_am",
+            "device": {
+              "source": [
+                [
+                  192,
+                  0,
+                  2,
+                  21
+                ],
+                47808
+              ],
+              "instance": 10,
+              "max_apdu": 1476,
+              "segmentation": "no_segmentation",
+              "vendor_id": 260
+            }
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "discovery_limit",
+            "effect": "none"
+          },
+          "active_owned_listeners": 0,
+          "active_owned_timers": 0,
+          "result_count": 0
+        }
+      }
+    }
+  ]
+}

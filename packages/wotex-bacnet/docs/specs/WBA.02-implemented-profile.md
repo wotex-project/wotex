@@ -1,3 +1,13 @@
+---
+spec:
+  id: WBA.02
+  title: "Implemented BACnet profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-bacnet
+  updated: 2026-09-09
+---
+
 # WBA.02 Implemented BACnet profile
 
 The implemented draft-derived URI subset is

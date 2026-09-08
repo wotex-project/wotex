@@ -43,3 +43,19 @@ are library policy. [Pinned C-stack COV service source](https://github.com/bacne
 is the independent fixture reference. Full ANSI/ASHRAE paid clauses remain an
 access limitation; source-level and software-peer evidence must not be described
 as full-standard or BTL certification.
+
+## Standalone-client review, 2026-09-09
+
+The pinned package's `ClientHelper.who_is/3` accepts `low_limit`, `high_limit`,
+`apdu_destination`, `max` and `no_subscribe`. Omitting destination asks the Client
+for a broadcast address. The WBA.11 policy requires explicit configuration and
+an independently bounded operation owner; the helper's default destination and
+Task timing are not the public lifecycle contract. I-Am is an unconfirmed
+observation without a Who-Is transaction identifier. Sequential `read_properties`
+composition does not become a ReadPropertyMultiple service claim.
+
+Source encoding checks through BACstack 0.0.1 produced the exact Who-Is APDUs
+`1008` and `10080901190a`, and SubscribeCOV cancellation parameter bytes
+`09071c00400000`, as recorded in the specified WBA-F05/F06/F07 cases. These
+cross-checks validate the chosen upstream byte examples; they do not execute
+the future Wotex discovery/COV operations or accept those work packages.

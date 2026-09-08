@@ -1,6 +1,16 @@
+---
+spec:
+  id: WBA.10
+  title: "Complete BACnet/IP client software profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-bacnet
+  updated: 2026-09-09
+---
+
 # WBA.10 Complete BACnet/IP client software profile
 
-Read [WBA.00](WBA.00-library-contract.md) and the [implementation sequence](../plans/software-implementation.md).
+Read [WBA.00](WBA.00-library-contract.md), [WBA.11 standalone client and preservation](WBA.11-standalone-client-and-preservation.md), and the [implementation sequence](../plans/software-implementation.md).
 This is the target profile. Baseline `fbb9e67` implements typed read/write,
 strict ACK classification, an owned IPv4 stack and independent C-stack evidence.
 COV delivery, its lifecycle and the complete stress matrix remain build work.
@@ -14,11 +24,12 @@ were not inspected. The implementable service contract below is grounded in the
 pinned SDK and independent BACnet C-stack source; it is not a BTL or full-standard
 conformance claim. Keep that access limit in public claims.
 
-Required: unicast BACnet/IP ReadProperty, WriteProperty, SubscribeCOV and
+Required: BACnet/IP ReadProperty, WriteProperty, explicitly configured bounded
+Who-Is/I-Am discovery, sequential property-read helpers, SubscribeCOV and
 SubscribeCOVProperty with confirmed/unconfirmed notifications, finite renewal
-and cancellation. BACnet/SC, MS/TP, BBMD/foreign-device registration, routing,
-broadcast discovery, ReadPropertyMultiple, server objects and trend/alarm
-services are outside this profile. Reject unsupported selectors before I/O.
+and cancellation. WBA.11 defines discovery and named helper contracts. BACnet/SC,
+MS/TP, BBMD/foreign-device registration, routing, ReadPropertyMultiple wire
+services, server objects and trend/alarm services are outside this profile. Reject unsupported selectors before I/O.
 Do not manufacture a transport from a device instance number.
 
 ## WBA-S01 — Address and value boundary
@@ -140,7 +151,7 @@ Add `health_check/2` with an explicit validated ReadProperty probe; retain
 Only a matching successful read reports healthy. Runtime credentials remain
 unsupported; an IP route is explicit configuration, not a security scheme.
 
-## Acceptance vectors
+## Acceptance scenario families
 
 | ID | Scenario | Required result |
 | --- | --- | --- |

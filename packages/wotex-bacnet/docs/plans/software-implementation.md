@@ -12,7 +12,14 @@ starting implementation, not something to replace with fresh scaffolding.
 2. Read [WBA.00 — shared software rules](../specs/WBA.00-library-contract.md).
 3. Read [WBA.10 — exact target profile](../specs/WBA.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
 4. Read [primary source pins and access limits](../provenance/primary-sources.md).
-5. Select the first work package below whose acceptance evidence is absent.
+5. Read [WBA.11 — standalone client and preservation](../specs/WBA.11-standalone-client-and-preservation.md), including the concrete fixture corpus.
+6. Select the first work package below whose acceptance evidence is absent.
+
+Read the [versioned catalogue](../specs/catalogue.yaml) and
+[WBA.12 — Wotex integration](../specs/WBA.12-wotex-integration.md) before choosing
+implementation work. The catalogue lists dependencies and distinguishes planned
+contracts from narrow implemented profiles. Source presence, fixture presence,
+passing baseline tests and accepted work packages are separate facts.
 
 The numbered sequence is dependency order: each package depends on all preceding
 packages. Each is one bounded behavior plus its tests/documentation. A large
@@ -22,7 +29,9 @@ merely to produce a commit. Every proposed module, API and test path below is a
 target addition unless it already exists; no placeholder file implies completion.
 
 For each requirement, record its ID in an ExUnit/native test name or a fixture
-manifest. Vectors specify expected outcomes in .10. The implementation chooses
+manifest. The Vxx rows in .10 are scenario families; concrete .11 JSON cases
+fix selected inputs and expected outputs. Neither ID presence nor JSON parsing
+accepts a requirement without calling the library and asserting the outcome. The implementation chooses
 ordinary internal function names and data structures, while the public behavior,
 state transitions, limits, failure policy and transport choices are fixed there.
 If an upstream API cannot meet a requirement, add the smallest adapter needed
@@ -34,7 +43,7 @@ do not silently skip, simulate or weaken the requirement.
 ### WBA-P01: Harden typed services and segmented response bounds
 
 - Requirements: WBA-S01, WBA-S02; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WBA-V01, WBA-V02, WBA-V03, WBA-V04.
+- Acceptance scenario families: WBA-V01, WBA-V02, WBA-V03, WBA-V04.
 - Change surface: Address, BACstack response adapter, SegmentsStore options and APDU ingress.
 - Test destinations: `test/wotex/bacnet/service_boundary_test.exs`.
 - Done when: Validate every ACK and numeric error; enforce the advertised 32-segment/1476-byte APDU profile and exact typed values.
@@ -43,7 +52,7 @@ do not silently skip, simulate or weaken the requirement.
 ### WBA-P02: Enforce stack and borrowed client ownership
 
 - Requirements: WBA-S03; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WBA-V05, WBA-V14.
+- Acceptance scenario families: WBA-V05, WBA-V14.
 - Change surface: StackOwner, IPv4 and borrowed BACstack operation owner.
 - Test destinations: `test/wotex/bacnet/stack_lifecycle_test.exs`.
 - Done when: Reverse acquisition cleanup, bounded admission and dead-caller cleanup work without stopping borrowed Client or daemon resources.
@@ -52,7 +61,7 @@ do not silently skip, simulate or weaken the requirement.
 ### WBA-P03: Establish typed cov subscriptions and confirm reports
 
 - Requirements: WBA-S04; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WBA-V06, WBA-V07, WBA-V08.
+- Acceptance scenario families: WBA-V06, WBA-V07, WBA-V08.
 - Change surface: new Subscription/COV owner, Client callbacks and service APDU construction.
 - Test destinations: `test/wotex/bacnet/cov_test.exs`.
 - Done when: Object/property COV bind exact source/process/object/index, return after matching ACK, and ACK confirmed duplicates without suppressing fresh values.
@@ -61,7 +70,7 @@ do not silently skip, simulate or weaken the requirement.
 ### WBA-P04: Complete finite cov renewal and cancellation
 
 - Requirements: WBA-S04; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WBA-V09, WBA-V10, WBA-V11.
+- Acceptance scenario families: WBA-V09, WBA-V10, WBA-V11.
 - Change surface: COV timer and listener lifecycle.
 - Test destinations: `test/wotex/bacnet/cov_lifecycle_test.exs`.
 - Done when: Actual cancel encoding omits both optional fields; renewal/death/overflow release listeners and server state even after a lost registration ACK.
@@ -70,19 +79,37 @@ do not silently skip, simulate or weaken the requirement.
 ### WBA-P05: Map property observations and explicit probes
 
 - Requirements: WBA-S05; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WBA-V12.
+- Acceptance scenario families: WBA-V12.
 - Change surface: Mapping, Transport and BACnet.health_check/2.
 - Test destinations: `test/wotex/bacnet/runtime_stream_test.exs`.
 - Done when: Property COV produces identity-bound Runtime values; unsupported Event/security fails and original destination is retained for cancel.
 - Suggested local commit: `feat: map property observations and explicit probes`.
 
+### WBA-P05a: Restore standalone discovery and sequential helpers
+
+- Requirements: WBA-N01, WBA-N02, WBA-N03, WBA-N04, WBA-N05; all preceding packages are dependencies.
+- Acceptance cases: every `WBA-Fxx` case in `docs/specs/fixtures/contract-v1.json`, plus the full N03/N04 boundary matrix.
+- Change surface: root named helpers, new immutable Device, explicit discovery configuration and listener owner, sequential batch operation.
+- Test destinations: `test/wotex/bacnet/standalone_contract_test.exs`, `test/wotex/bacnet/discovery_lifecycle_test.exs`.
+- Done when: native APIs need no TD/Runtime, whole-batch validation and shared deadlines work, Who-Is uses only configured destinations, duplicate/conflicting/late I-Am behavior is asserted, and borrowed resources survive cleanup. Bind concrete fixtures to actual code; no production stub or fixture echo.
+- Suggested local commit: `feat: restore bounded discovery and native property helpers`.
+
+### WBA-P05b: Prove the Wotex consumer boundary
+
+- Requirements: WBA-I01, WBA-I02, WBA-I03, WBA-I04, WBA-I05, WBA-I06; all previous native/profile packages are dependencies.
+- Concrete cases: every `WBA-I-Fxx` case in `docs/specs/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
+- Change surface: root profile/0 and profile/1, Error.class, Mapping, Transport and their public core/Runtime integration; no sibling implementation changes.
+- Test destinations: `test/wotex/bacnet/runtime_integration_test.exs` and explicit test-only credential/client ports.
+- Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.
+- Suggested local commit: `feat: integrate explicit runtime profiles and failure classes`.
+
 ### WBA-P06: Prove cov against an independent bacnet peer
 
 - Requirements: WBA-S01, WBA-S02, WBA-S03, WBA-S04, WBA-S05; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WBA-V13, WBA-V14.
-- Change surface: existing C-stack peer extended with COV controls/counters.
+- Acceptance scenario families: WBA-V13, WBA-V14.
+- Change surface: existing C-stack peer extended with COV controls/counters and bounded Who-Is/I-Am discovery.
 - Test destinations: `test/interop/bacnet_stack_test.exs`, `test/software/lifecycle_stress_test.exs`.
-- Done when: Actual read/write/release/readback and confirmed/unconfirmed COV pass, subscriber count returns to baseline, required matrix/archive gates pass.
+- Done when: Actual discovery, ordered batch reads, read/write/release/readback and confirmed/unconfirmed COV pass, subscriber count returns to baseline, required matrix/archive gates pass.
 - Suggested local commit: `test: prove cov against an independent bacnet peer`.
 
 ## Reproducible software fixture contract
@@ -135,7 +162,8 @@ with command, versions, vector paths/digests and result. Keep unexecuted require
 explicit. Use the author and committer required by `CLAUDE.md`; never configure
 remotes, push, tag, publish, change visibility or edit a consumer.
 
-The final package also runs the full .00 C09 matrix, all .10 vectors and software
+The final package also accepts every .11 standalone and .12 integration requirement,
+then runs the full .00 C09 matrix, all .10 scenario families, .11 concrete cases and software
 peers, then a clean committed-source archive with the lockfile through `mix check`
 and out-of-tree Hex package compilation. Confirm no Application callback or
 dependency-load I/O, no missing packaged bridge assets, no downloaded SDK/build/
@@ -144,7 +172,10 @@ number or stub adapter cannot substitute for a required protocol assertion.
 
 ## Completion checklist
 
-- Every S requirement has its listed V assertions passing, with current digests.
+- Every .11 and .12 requirement is linked to a concrete asserting test/result;
+  no new target requirement is closed merely by an identifier or valid JSON.
+- Every S and N requirement has its scenario assertions and concrete corpus
+  bindings passing, with current digests. The fixture manifest alone is not proof.
 - C01 compatibility, C02 malformed boundaries, C03 ownership, C04 errors/effects,
   applicable C05/C06 streams, C07 native framing, C08 redaction/telemetry and
   C09 stress/matrix each have executable evidence or an explicit scope-based

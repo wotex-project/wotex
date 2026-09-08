@@ -1,3 +1,13 @@
+---
+spec:
+  id: WBA.01
+  title: "BACnet protocol and graduation contract"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-bacnet
+  updated: 2026-09-09
+---
+
 # WBA.01 BACnet protocol and graduation contract
 
 BACstack 0.0.1 (2025-08-20) is the pinned client implementation. ANSI/ASHRAE

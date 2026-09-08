@@ -30,6 +30,12 @@ durable acceptance contract, not a progress tracker.
 
 The concrete software scope, API and state-machine decisions are in
 [WBA.00](../specs/WBA.00-library-contract.md) and
-[WBA.10](../specs/WBA.10-software-contract.md). Follow the
+[WBA.10](../specs/WBA.10-software-contract.md), plus
+[WBA.11 standalone client and preservation](../specs/WBA.11-standalone-client-and-preservation.md). Follow the
 [ordered implementation sequence](software-implementation.md) for required
 software fixtures, vector traceability, validation and local commits.
+
+The [WBA.12 integration contract](../specs/WBA.12-wotex-integration.md) and
+[versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
+requires both native protocol workflows and supported cells through public core/Runtime
+APIs. Dependency artifacts and local source evidence remain separately identified.
