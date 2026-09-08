@@ -1,0 +1,51 @@
+defmodule Wotex.BACnet.IPv4 do
+  @moduledoc "Explicit BACnet/IP client owning its BACstack transport and auxiliary processes."
+  @behaviour Wotex.BACnet.Client
+  alias Wotex.BACnet.{BACstack, Error, StackOwner}
+
+  @impl Wotex.BACnet.Client
+  def connect(opts) do
+    timeout = Keyword.get(opts, :timeout, 5000)
+    local_ip = Keyword.get(opts, :local_ip)
+    local_port = Keyword.get(opts, :local_port, 47_809)
+
+    with true <- valid_options?(local_ip, local_port, timeout),
+         {:ok, _} <-
+           BACstack.connect(stack_client: self(), destination: Keyword.get(opts, :destination)),
+         {:ok, owner} <-
+           StackOwner.start_link(
+             local_ip: local_ip,
+             local_port: local_port,
+             timeout: timeout,
+             owner: self()
+           ),
+         {:ok, client} <- StackOwner.client(owner),
+         {:ok, stack} <-
+           BACstack.connect(
+             stack_client: client,
+             destination: Keyword.get(opts, :destination),
+             writes: true
+           ) do
+      {:ok, %{owner: owner, stack: stack}}
+    else
+      {:error, _} = error -> error
+      _ -> {:error, Error.new(:invalid_options)}
+    end
+  end
+
+  @impl Wotex.BACnet.Client
+  def request(handle, message, timeout), do: BACstack.request(handle.stack, message, timeout)
+
+  @impl Wotex.BACnet.Client
+  def disconnect(handle), do: StackOwner.close(handle.owner)
+
+  defp valid_options?(ip, port, timeout) when is_tuple(ip) and tuple_size(ip) == 4 do
+    Enum.all?(Tuple.to_list(ip), &(is_integer(&1) and &1 in 0..255)) and
+      is_integer(port) and port in 47_808..65_535 and is_integer(timeout) and timeout in 1..60_000
+  end
+
+  defp valid_options?(:none, port, timeout),
+    do: is_integer(port) and port in 47_808..65_535 and is_integer(timeout) and timeout in 1..60_000
+
+  defp valid_options?(_, _, _), do: false
+end

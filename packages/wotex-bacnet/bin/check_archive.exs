@@ -4,7 +4,16 @@ defmodule Wotex.BACnet.Check.Archive do
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
   @packaged ["mix.exs", "LICENSE", "NOTICE", "README.md", "lib", "docs"]
   @development [".git", "deps", "_build"]
-  @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
+  @dependencies [
+    "wotex",
+    "wotex_runtime",
+    "jason",
+    "telemetry",
+    "bacstack",
+    "cidr",
+    "codepagex",
+    "const_enum"
+  ]
   @transport "Elixir.Wotex.BACnet.Error.beam"
 
   @identities [

@@ -44,6 +44,7 @@ defmodule WotexBACnet.MixProject do
       wotex_dep(),
       wotex_runtime_dep(),
       {:jason, "~> 1.4"},
+      {:bacstack, "== 0.0.1", runtime: false},
       {:telemetry, "~> 1.3"},
       {:stream_data, "~> 1.2", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
@@ -134,7 +135,7 @@ defmodule WotexBACnet.MixProject do
   defp dialyzer do
     [
       plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
-      plt_add_apps: [:mix, :ex_unit],
+      plt_add_apps: [:bacstack, :mix, :ex_unit],
       flags: [:error_handling, :missing_return, :underspecs, :extra_return]
     ]
   end
