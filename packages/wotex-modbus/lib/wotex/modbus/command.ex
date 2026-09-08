@@ -29,6 +29,28 @@ defmodule Wotex.Modbus.Command do
     end
   end
 
+  @doc "Revalidates a command struct at a wire boundary without trusting forged fields."
+  @spec validate(term()) :: :ok | {:error, Error.t()}
+  def validate(%__MODULE__{address: %Address{} = a, function: f, values: values} = command) do
+    operation =
+      Enum.find_value(Map.merge(@reads, @writes), fn {op, code} -> if code == f, do: op end)
+
+    input =
+      case {f, values} do
+        {f, []} when f in [1, 2, 3, 4] -> a.quantity
+        {f, [value]} when f in [5, 6] -> value
+        {f, values} when f in [15, 16] -> values
+        _ -> :invalid
+      end
+
+    case new(operation, a.offset, input, a.unit_id) do
+      {:ok, ^command} -> :ok
+      _ -> {:error, Error.new(:invalid_command)}
+    end
+  end
+
+  def validate(_), do: {:error, Error.new(:invalid_command)}
+
   @doc "Whether this command can alter a peer's state."
   @spec write?(t()) :: boolean()
   def write?(%__MODULE__{function: function}), do: function in [5, 6, 15, 16]

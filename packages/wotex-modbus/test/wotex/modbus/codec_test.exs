@@ -5,6 +5,19 @@ defmodule Wotex.Modbus.CodecTest do
   use ExUnitProperties
   alias Wotex.Modbus.{Address, Codec, Command, Error}
 
+  test "forged command structs never overflow or reach the wire" do
+    {:ok, command} = Command.new(:write_holding_register, 0, 1)
+    assert {:error, _} = Command.validate(nil)
+
+    for forged <- [
+          %{command | values: [65_536]},
+          %{command | function: 99},
+          %{command | values: []},
+          %{command | address: %{command.address | offset: 65_536}}
+        ],
+        do: assert(match?({:error, _}, Codec.encode(forged, 1)))
+  end
+
   test "golden request and every split boundary" do
     assert {:ok, cmd} = Command.new(:read_holding_registers, 0, 2, 1)
     assert {:ok, <<0, 7, 0, 0, 0, 6, 1, 3, 0, 0, 0, 2>> = bytes} = Codec.encode(cmd, 7)

@@ -10,9 +10,11 @@ defmodule Wotex.Modbus.Codec do
   @spec encode(Command.t(), term()) :: {:ok, binary()} | {:error, Error.t()}
   def encode(%Command{} = command, transaction_id)
       when is_integer(transaction_id) and transaction_id in 0..65_535 do
-    payload = pdu(command)
-    length = byte_size(payload) + 1
-    {:ok, <<transaction_id::16, 0::16, length::16, command.address.unit_id, payload::binary>>}
+    with :ok <- Command.validate(command) do
+      payload = pdu(command)
+      length = byte_size(payload) + 1
+      {:ok, <<transaction_id::16, 0::16, length::16, command.address.unit_id, payload::binary>>}
+    end
   end
 
   def encode(_, _), do: {:error, Error.new(:invalid_command)}
