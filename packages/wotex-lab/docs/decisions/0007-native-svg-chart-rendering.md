@@ -16,9 +16,10 @@ grammar or interactions. The Workbench does not: it admits only line, area and
 point marks over bounded inline series and forbids caller expressions, signals,
 transforms, URLs and arbitrary datasets.
 
-The existing Elixir chart module already computes domains, ticks, gaps,
-downsampling and mark geometry. The HEEx component can render that closed model
-directly as browser-native SVG with a text/table alternative. Keeping the three
+The existing Elixir chart module already computes domains, ticks, gaps and mark
+geometry after the bounded preview layer has performed any required
+downsampling. The HEEx component can render that closed model directly as
+browser-native SVG with a text/table alternative. Keeping the three
 Vega browser libraries would preserve a second chart compiler and execution
 surface for a grammar the host deliberately does not expose. The removed
 Vega, Vega-Lite and Vega-Embed files totalled 832,280 bytes raw and 280,484
