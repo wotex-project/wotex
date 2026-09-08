@@ -46,6 +46,30 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [Snappy block format](https://github.com/google/snappy/blob/main/format_description.txt) (BSD-3-Clause) | Pure Elixir literal and 16-bit-offset copy encoder plus full block decoder in `Wotex.Lab.Metrics.Snappy`; stream framing is not implemented |
 | [greptime/greptimedb:v1.1.4](https://hub.docker.com/r/greptime/greptimedb) | Disposable standalone container for the `:greptime` lane, selected by tag; ingestion through `/v1/prometheus/write` and read-back through `/v1/sql` are the only exercised endpoints, not a digest-pinned release or a server conformance claim |
 
+## Native containment source cohort
+
+Observation date: 2026-09-08. The external helper replaces the Python runtime
+and test probes. Production `cargo tree --no-default-features` contains only
+the original `wotex-contained-exec` 2.0.0 and libc 0.2.189. The locked
+`test-probes` feature adds serde_json 1.0.151 and its test-only closure. Cargo
+Audit 0.22.2 reported no vulnerabilities for the 13 lock entries against
+RustSec database revision `8a1eb4f933fb5821add5b4e98601ebd90b8b3538`.
+The helper and libc use Apache-2.0 and MIT/Apache-2.0 respectively; no native
+third-party source is vendored and no NIF is added.
+
+The Darwin aarch64 cohort uses Rust/Cargo 1.97.1 with Elixir 1.20.2/OTP 29.
+After reproducing a transient `libproc` exec-accounting gap, the bounded retry
+passed 300 short-lived BEAM launches (ten runs of the 30-launch regression).
+Persistent absent accounting still fails closed. The six native unit tests
+and four lifecycle tests also passed strict Clippy and rustfmt on Linux with
+Rust 1.85.1, in the disposable `rust:1.85.1-bookworm` image manifest
+`sha256:e51d0265072d2d9d5d320f6a44dde6b9ef13653b035098febd68cce8fa7c0bc4`
+with two CPUs, 512 MiB and 128 PIDs. The container mounted a read-only source
+snapshot; it did not alter host namespace or security settings. This proves
+the native Linux helper cohort, not Bubblewrap/cgroup integration or published
+binary adoption. The renewed WLB.06 record identifies the actual Darwin helper
+binary and retains an explicit not-run hostile-worker assertion.
+
 ## Explicit Workbench PromEx cohort
 
 Observation date: 2026-09-08. The host alone selects PromEx 1.12.0 (MIT) and

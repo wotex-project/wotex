@@ -10,6 +10,15 @@ never place secrets in TDs, plugin metadata, handles, logs or evidence.
 Network, hosted and formal profiles require the bounds and admission checks in
 WLB.04, WLB.07 and WLB.09–WLB.11. A limit in a data constructor is not an OS sandbox.
 
+The native conformance helper is for explicitly reviewed local targets. Its
+inherited limits and sampled RSS/process-tree checks do not provide a hostile
+code sandbox: between-sample peaks and unobserved daemonization remain outside
+the proved cohort. The current sandbox policy restricts writes, not arbitrary
+hostile reads, and Darwin `sandbox-exec` is deprecated. Untrusted hosted
+executables require a separately admitted kernel-isolated worker/VM profile.
+An executable digest records operator-selected code; it does not make code
+trustworthy or prevent an administrator replacing a file after admission.
+
 PromEx metrics endpoints and GreptimeDB listeners must not expose tenant data
 publicly. Metric cardinality, history, queries and exports are bounded. BeamLens
 is explicitly enabled with selected skills/provider and read-only scoped tools;

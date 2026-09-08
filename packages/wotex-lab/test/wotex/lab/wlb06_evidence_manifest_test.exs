@@ -15,6 +15,7 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     "docs/provenance/source-cohort.json",
     "docs/provenance/source-index.json",
     "docs/specs/WLB.06-evidence-conformance-and-observability.md",
+    "docs/decisions/0006-native-containment-executable.md",
     "docs/specs/catalogue.yaml",
     "lib/wotex/lab/benchmark.ex",
     "lib/wotex/lab/conformance/containment.ex",
@@ -24,7 +25,14 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     "lib/wotex/lab/evidence/record.ex",
     "lib/wotex/lab/graph.ex",
     "lib/wotex/lab/telemetry.ex",
-    "priv/conformance/contained_exec.py",
+    "priv/conformance/native/Cargo.toml",
+    "priv/conformance/native/Cargo.lock",
+    "priv/conformance/native/src/main.rs",
+    "priv/conformance/native/src/config.rs",
+    "priv/conformance/native/src/accounting.rs",
+    "priv/conformance/native/probes/main.rs",
+    "priv/conformance/native/tests/lifecycle.rs",
+    "test/support/native_containment.ex",
     "test/wotex/lab/benchmark_test.exs",
     "test/wotex/lab/conformance_test.exs",
     "test/wotex/lab/continuum_test.exs",
@@ -55,8 +63,8 @@ defmodule Wotex.Lab.WLB06EvidenceManifestTest do
     assert record.outcomes.test_count > 0
     assert record.durations.run_ms > 0
 
-    assert [%{id: "WCF-C05:discovery-corpus", status: :not_run}] =
-             Enum.filter(record.assertions, &(&1.status == :not_run))
+    assert Enum.map(Enum.filter(record.assertions, &(&1.status == :not_run)), & &1.id) ==
+             ["WCF-C05:discovery-corpus", "WLB-C07:hostile-target-whole-tree-isolation"]
 
     assert Enum.all?(
              Enum.reject(record.assertions, &(&1.status == :not_run)),

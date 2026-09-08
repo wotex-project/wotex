@@ -7,6 +7,9 @@ defmodule Wotex.Lab.Check.Package do
   @required ~w(lib/wotex/lab.ex mix.exs README.md LICENSE NOTICE
                docs/specs/catalogue.yaml docs/plans/wotex-lab-completion.md priv/models/manifest.json
                docs/provenance/source-index.json priv/fixtures/thermal/thing-description.json
+               priv/conformance/native/Cargo.toml priv/conformance/native/Cargo.lock
+               priv/conformance/native/src/main.rs priv/conformance/native/src/config.rs
+               priv/conformance/native/src/accounting.rs
                priv/fixtures/thermal/manifest.json priv/fixtures/thermal/expected-output.json
                priv/cookbooks/thermal-nx.livemd priv/cookbooks/smart-room.livemd)
   @excluded ~r{\A(?:docs/tasks|deps|_build|test|bin|\.git)(?:/|\z)}
@@ -39,6 +42,17 @@ defmodule Wotex.Lab.Check.Package do
     Enum.each(files, fn file ->
       relative = Path.relative_to(file, source)
       Regex.match?(@excluded, relative) && abort("excluded archive content: #{relative}")
+
+      if String.starts_with?(relative, "priv/conformance/") and
+           relative not in ~w(priv/conformance/native/Cargo.toml
+                             priv/conformance/native/Cargo.lock
+                             priv/conformance/native/src/main.rs
+                             priv/conformance/native/src/config.rs
+                             priv/conformance/native/src/accounting.rs
+                             priv/conformance/native/probes/main.rs
+                             priv/conformance/native/tests/lifecycle.rs) do
+        abort("unexpected containment artifact (source-only profile): #{relative}")
+      end
 
       match?({:ok, %File.Stat{type: :symlink}}, File.lstat(file)) &&
         abort("symlink in archive: #{relative}")

@@ -6,3 +6,8 @@ W3C, Nx and Maude references identify external specifications and projects;
 they do not imply endorsement, certification or blanket interoperability.
 The thermal Thing Description is an original synthetic Lab fixture.
 No Maude binary, third-party model weights or external standards text is bundled.
+
+The optional native containment executable is original Apache-2.0 Lab code.
+Its production Cargo dependency is libc (MIT OR Apache-2.0). Feature-gated test
+probes also use serde_json and its Cargo.lock-recorded closure. No third-party
+Rust source or precompiled containment executable is vendored in this package.

@@ -34,12 +34,32 @@ WOTEX_PATH_DEPS=1 mix run -e 'IO.inspect(Wotex.Lab.Examples.Thermal.run())'
 WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
-Setup needs no C toolchain beyond what Erlang itself uses: `exqlite` ships
+Ordinary numerical setup needs no native compiler: `exqlite` ships
 precompiled NIFs and `emqtt` is compiled without its QUIC transport, so its
 `quicer` dependency is fetched to satisfy the resolver but never built and no
 msquic download or cmake run happens. A host that selects `emqtt` itself
 sets `BUILD_WITHOUT_QUIC=1` in its own build to keep that property; the
 published package cannot carry a build environment for a dependency.
+
+The full conformance source suite requires Rust/Cargo 1.85+ with rustfmt and
+Clippy, plus Darwin `sandbox-exec` or an admitted Linux Bubblewrap environment.
+It explicitly builds and checks the external Rust helper and feature-gated
+test probes. No Python interpreter is used. This is separate from compilation
+or first-tensor use of the base package.
+
+For a reviewed local conformance target, provision the helper explicitly:
+
+```sh
+cargo build --locked --release --manifest-path priv/conformance/native/Cargo.toml --target-dir tmp/contained-exec --bin wotex-contained-exec
+```
+
+Record the resulting executable's reviewed SHA-256 and pass
+`launcher: %{executable: absolute_path, digest: expected_digest}` to
+`Wotex.Lab.Conformance.Containment.external_map/5`. The API verifies that
+descriptor; it never compiles, downloads or discovers a helper. The package
+includes source, not platform binaries. See the
+[native containment decision](docs/decisions/0006-native-containment-executable.md)
+for the sampled-limit, hostile-target and deprecated macOS sandbox limitations.
 
 `mix check` needs no container runtime: the MQTT broker lane is tagged
 `:broker` and excluded unless `WOTEX_LAB_BROKER=1` is set. Run it explicitly

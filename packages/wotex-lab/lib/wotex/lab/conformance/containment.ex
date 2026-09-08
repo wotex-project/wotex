@@ -3,12 +3,17 @@ defmodule Wotex.Lab.Conformance.Containment do
   Host containment configuration for an external conformance target.
 
   The external runner owns the request/response protocol; this module wraps
-  its executable in a host sandbox and the packaged `contained_exec.py`
-  supervisor. The wrapper applies CPU, resident-memory, process, open-file and
-  output-file limits, runs the target in its own process group, enforces a
+  its executable in a host sandbox and an explicitly provisioned Rust
+  supervisor. The wrapper applies inherited CPU, open-file and output-file
+  limits, samples process-tree resident memory and process count against
+  ceilings, runs the target in its own process group, enforces a
   deadline shorter than the runner deadline, and kills the process group on
   timeout or termination. The host sandbox denies networking and writes
   outside the caller-owned private temporary directory.
+
+  This profile admits reviewed local targets only. Sampling does not provide
+  kernel-enforced memory/PID limits or proof against unobserved daemonization,
+  and the write policy is not hostile-code read isolation.
 
   `external_map/5` refuses platforms without an admitted network sandbox. It
   returns runner configuration separately from a public, path-free evidence
@@ -17,9 +22,9 @@ defmodule Wotex.Lab.Conformance.Containment do
 
   alias Wotex.Lab.Error
 
-  @profile_version "1.0.0"
+  @profile_version "2.0.0"
   @archive_placeholder "{subject_archive}"
-  @option_keys ~w(timeout_ms max_output_bytes cpu_seconds memory_bytes processes open_files)a
+  @option_keys ~w(timeout_ms max_output_bytes cpu_seconds memory_bytes processes open_files launcher)a
   @defaults %{
     timeout_ms: 10_000,
     max_output_bytes: 1_048_576,
@@ -48,6 +53,11 @@ defmodule Wotex.Lab.Conformance.Containment do
   `executable`, `archive` and `temporary_directory` must be absolute existing
   paths. `args` must include `{subject_archive}` exactly once. The returned
   target map is suitable for `Wotex.Conformance.Target.External.from_map/1`.
+  `:launcher` must be `%{executable: absolute_path, digest: "sha256:..."}` for
+  the operator-provisioned `wotex-contained-exec` binary. No compiler, download,
+  interpreter discovery or NIF loading occurs here. Keep that executable in an
+  operator-owned location; digest admission is not protection against a host
+  administrator replacing the file between validation and process startup.
   """
   @spec external_map(Path.t(), [String.t()], Path.t(), Path.t(), keyword()) ::
           {:ok, %{target: map(), evidence: map()}} | {:error, Error.t()}
@@ -58,7 +68,7 @@ defmodule Wotex.Lab.Conformance.Containment do
          :ok <- directory(temporary_directory),
          :ok <- arguments(args),
          {:ok, limits} <- limits(opts),
-         {:ok, launcher} <- launcher(),
+         {:ok, launcher, launcher_digest} <- launcher(Keyword.get(opts, :launcher)),
          {:ok, sandbox} <- sandbox(temporary_directory),
          wrapper_args = wrapper_args(launcher, limits, temporary_directory, executable, args),
          {:ok, sandbox_args, mechanism} <-
@@ -73,13 +83,12 @@ defmodule Wotex.Lab.Conformance.Containment do
              "HOME" => temporary_directory,
              "TMPDIR" => temporary_directory,
              "LANG" => "C",
-             "LC_ALL" => "C",
-             "PYTHONDONTWRITEBYTECODE" => "1"
+             "LC_ALL" => "C"
            },
            timeout_ms: limits.timeout_ms,
            max_output_bytes: limits.max_output_bytes
          },
-         evidence: evidence(limits, mechanism)
+         evidence: evidence(limits, mechanism, launcher_digest)
        }}
     end
   end
@@ -190,18 +199,30 @@ defmodule Wotex.Lab.Conformance.Containment do
     end)
   end
 
-  defp launcher do
-    path = Application.app_dir(:wotex_lab, "priv/conformance/contained_exec.py")
+  defp launcher(%{executable: path, digest: digest} = launcher) when map_size(launcher) == 2 do
+    with true <- is_binary(path) and Path.type(path) == :absolute,
+         true <-
+           is_binary(digest) and byte_size(digest) == 71 and
+             Regex.match?(~r/\Asha256:[0-9a-f]{64}\z/, digest),
+         {:ok, %File.Stat{type: :regular, mode: mode, size: size}} <- File.lstat(path),
+         true <- Bitwise.band(mode, 0o111) != 0 and size in 1..8_388_608,
+         {:ok, bytes} when is_binary(bytes) <-
+           File.open(path, [:read, :binary], &IO.binread(&1, 8_388_609)),
+         true <- byte_size(bytes) <= 8_388_608 do
+      actual = "sha256:" <> Base.encode16(:crypto.hash(:sha256, bytes), case: :lower)
 
-    case File.stat(path) do
-      {:ok, %File.Stat{type: :regular, mode: mode}} when Bitwise.band(mode, 0o111) != 0 ->
-        {:ok, path}
-
-      _result ->
-        {:error,
-         Error.new(:unsupported, :containment, "packaged containment launcher is unavailable")}
+      if actual == digest,
+        do: {:ok, path, actual},
+        else: invalid(:launcher_mismatch, "containment launcher digest does not match")
+    else
+      _invalid -> invalid(:invalid_launcher, "launcher must be a bounded, digest-pinned executable")
     end
   end
+
+  defp launcher(nil),
+    do: invalid(:unsupported, "an operator-provisioned native containment launcher is required")
+
+  defp launcher(_other), do: invalid(:invalid_launcher, "launcher descriptor is not admitted")
 
   defp sandbox(temporary_directory) do
     case :os.type() do
@@ -303,7 +324,7 @@ defmodule Wotex.Lab.Conformance.Containment do
   defp darwin_canonical_directory("/tmp/" <> rest), do: "/private/tmp/" <> rest
   defp darwin_canonical_directory(path), do: path
 
-  defp evidence(limits, mechanism) do
+  defp evidence(limits, mechanism, launcher_digest) do
     %{
       "schema_version" => @profile_version,
       "kind" => "wotex_lab_conformance_containment",
@@ -311,6 +332,11 @@ defmodule Wotex.Lab.Conformance.Containment do
       "network" => "denied",
       "temporary_directory" => "private",
       "termination" => "process_group",
+      "launcher" => %{
+        "implementation" => "rust-executable",
+        "version" => @profile_version,
+        "digest" => launcher_digest
+      },
       "limits" => %{
         "wall_ms" => inner_wall_ms(limits.timeout_ms),
         "runner_timeout_ms" => limits.timeout_ms,

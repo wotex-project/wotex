@@ -1,0 +1,29 @@
+[package]
+name = "wotex-contained-exec"
+version = "2.0.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Apache-2.0"
+publish = false
+description = "Explicit external resource supervisor for WoTEx Lab conformance"
+
+[dependencies]
+libc = "=0.2.189"
+serde_json = { version = "=1.0.151", optional = true }
+
+[features]
+test-probes = ["dep:serde_json"]
+
+[[bin]]
+name = "wotex-contained-exec"
+path = "src/main.rs"
+
+[[bin]]
+name = "containment-probe"
+path = "probes/main.rs"
+required-features = ["test-probes"]
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1

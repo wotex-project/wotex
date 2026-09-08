@@ -1,10 +1,12 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 1.3.0. Contract: accepted. Source status: implemented.
+Specification version: 1.4.0. Contract: accepted. Source status: partial.
 The external core conformance target and its host containment profile, the
 content-addressed evidence record, Lab telemetry, the versioned Continuum fault
 schedule, bounded benchmark records and the machine evidence overlay all have
-executable positive, negative, lifecycle and resource evidence.
+executable positive, negative, lifecycle and resource evidence for reviewed
+local targets. The native replacement review identified an unclosed hostile
+whole-tree isolation obligation; sampled limits are not kernel enforcement.
 
 ## Evidence record and maturity
 
@@ -87,13 +89,32 @@ WCF-C05 Discovery corpus is an explicit excluded corpus decision, not a TD/TM
 pass. WCF-C07 is package hygiene. Reports MUST state covered assertions and
 exclusions; no certification is implied.
 `Wotex.Lab.Conformance.Containment` refuses a host without an admitted network
-sandbox. On Darwin it combines `sandbox-exec` with the packaged no-shell Python
-launcher; on Linux it requires Bubblewrap. The launcher applies inherited CPU,
+sandbox. On Darwin it combines `sandbox-exec` with an explicitly provisioned
+no-shell Rust executable; on Linux it requires Bubblewrap. The launcher applies inherited CPU,
 open-file, output-file and core limits, accounts resident memory and process
 count over the target tree, gives the target its own process group, and enforces
 an inner deadline before the runner deadline so it can kill descendants. The
 sandbox denies network access and writes outside the private temporary tree.
-Its public descriptor contains limits and mechanism names but no paths.
+Its public descriptor contains limits, mechanism names, helper version and
+the exact native executable SHA-256 but no paths. Profile 2.0.0 requires
+`:launcher` as `%{executable: absolute_path, digest: "sha256:..."}`; absent,
+symlinked, oversized or changed launchers are refused. No Rust toolchain,
+interpreter, download, compiler or NIF is invoked by this runtime API.
+
+The Rust helper also cleans up after normal target exit, keeps the root's PID
+reserved until group cleanup, tracks observed descendants by start identity,
+and fails on accounting/cleanup errors. It samples every ten milliseconds,
+caps process-table/identity work at 65,536 entries and reserves 150 ms for
+cleanup inside the runner margin. CPU/open-file/output/core limits are
+inherited OS limits; RSS/process counts are sampled, not hard cgroup limits.
+Transient root-accounting gaps during `exec` get at most two retries with
+one-millisecond pauses; persistent absence fails instead of becoming zero RSS.
+The [native containment decision](../decisions/0006-native-containment-executable.md)
+records that rapid unobserved daemonization, between-sample peaks, hostile
+filesystem reads and the deprecated Darwin sandbox are not proven isolated.
+The accepted whole-tree hostile-target contract therefore remains open for a
+kernel-isolated worker/VM profile; the reviewed-local source cohort cannot
+close it. No untrusted hosted target is admitted merely by this helper.
 
 ## Telemetry and faults
 

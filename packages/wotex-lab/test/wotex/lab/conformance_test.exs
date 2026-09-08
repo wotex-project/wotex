@@ -6,6 +6,7 @@ defmodule Wotex.Lab.ConformanceTest do
   alias Wotex.Conformance.{Corpus, Report, Runner, Subject}
   alias Wotex.Conformance.Target.External
   alias Wotex.Lab.Conformance.{Containment, Target}
+  alias Wotex.Lab.Test.NativeContainment
 
   @generated_at ~U[2026-09-07 12:00:00Z]
 
@@ -34,7 +35,11 @@ defmodule Wotex.Lab.ConformanceTest do
       })
 
     on_exit(fn -> File.rm_rf!(tmp) end)
-    %{archive: archive, subject: subject, home: tmp}
+
+    Map.merge(
+      %{archive: archive, subject: subject, home: tmp},
+      NativeContainment.build!()
+    )
   end
 
   test "the core package passes both corpora as an external subject", context do
@@ -174,52 +179,18 @@ defmodule Wotex.Lab.ConformanceTest do
 
   test "the host profile is path-free evidence for inherited resource and network limits",
        context do
-    python = "/usr/bin/python3"
     outside = Path.join(Path.dirname(context.home), "wotex-lab-outside-#{System.unique_integer()}")
     on_exit(fn -> File.rm(outside) end)
 
-    probe = """
-    import json, os, resource, socket, sys
-    request = json.loads(sys.stdin.readline())
-    try:
-      candidate = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      candidate.bind(("127.0.0.1", 0))
-      network = "available"
-    except OSError:
-      network = "denied"
-    try:
-      with open(sys.argv[1], "w") as output:
-        output.write("escaped")
-      outside_write = "available"
-    except OSError:
-      outside_write = "denied"
-    with open(os.path.join(os.environ["HOME"], "private-write"), "w") as output:
-      output.write("admitted")
-    print(json.dumps({
-      "protocol": "wotex.conformance.target",
-      "protocol_version": "1.0",
-      "vector_id": request["vector"]["id"],
-      "outcome": "observed",
-      "actual": {
-        "network": network,
-        "outside_write": outside_write,
-        "private_cwd": os.path.realpath(os.getcwd()) == os.path.realpath(os.environ["HOME"]),
-        "private_write": os.path.isfile(os.path.join(os.environ["HOME"], "private-write")),
-        "cpu_seconds": resource.getrlimit(resource.RLIMIT_CPU)[0],
-        "open_files": resource.getrlimit(resource.RLIMIT_NOFILE)[0]
-      },
-      "codes": []
-    }))
-    """
-
     assert {:ok, %{target: config, evidence: evidence}} =
              Containment.external_map(
-               python,
-               ["-c", probe, outside, "{subject_archive}"],
+               context.probe,
+               ["probe", outside, "{subject_archive}"],
                context.archive,
                context.home,
                memory_bytes: 1_073_741_824,
-               processes: 512
+               processes: 512,
+               launcher: context.launcher
              )
 
     assert evidence["network"] == "denied"
@@ -227,7 +198,9 @@ defmodule Wotex.Lab.ConformanceTest do
     assert evidence["termination"] == "process_group"
     assert evidence["limits"]["memory_bytes"] == 1_073_741_824
     refute inspect(evidence) =~ context.home
-    refute inspect(evidence) =~ python
+    refute inspect(evidence) =~ context.probe
+    assert evidence["launcher"]["implementation"] == "rust-executable"
+    assert evidence["launcher"]["digest"] == context.launcher.digest
 
     assert {:ok, external} = External.from_map(config)
 
@@ -255,23 +228,15 @@ defmodule Wotex.Lab.ConformanceTest do
   test "the inner deadline reaps the complete target process group", context do
     pid_file = Path.join(context.home, "descendant.pid")
 
-    probe = """
-    import subprocess, sys, time
-    child = subprocess.Popen(["/bin/sleep", "30"])
-    with open(sys.argv[1], "w") as output:
-      output.write(str(child.pid))
-      output.flush()
-    time.sleep(30)
-    """
-
     assert {:ok, %{target: config}} =
              Containment.external_map(
-               "/usr/bin/python3",
-               ["-c", probe, pid_file, "{subject_archive}"],
+               context.probe,
+               ["descendant", pid_file, "{subject_archive}"],
                context.archive,
                context.home,
                timeout_ms: 500,
-               processes: 1_024
+               processes: 1_024,
+               launcher: context.launcher
              )
 
     assert {:ok, external} = External.from_map(config)
@@ -292,22 +257,19 @@ defmodule Wotex.Lab.ConformanceTest do
   test "CPU, memory and process ceilings terminate the target before the runner deadline",
        context do
     probes = [
-      {"cpu", "while True: pass", [cpu_seconds: 1, timeout_ms: 5_000]},
-      {"memory", "import time; x = bytearray(64 * 1024 * 1024); time.sleep(30)",
-       [memory_bytes: 33_554_432, timeout_ms: 5_000]},
-      {"processes",
-       "import subprocess, time; subprocess.Popen(['/bin/sleep', '30']); time.sleep(30)",
-       [processes: 1, timeout_ms: 5_000]}
+      {"cpu", [cpu_seconds: 1, timeout_ms: 5_000]},
+      {"memory", [memory_bytes: 33_554_432, timeout_ms: 5_000]},
+      {"processes", [processes: 1, timeout_ms: 5_000]}
     ]
 
-    for {id, probe, limits} <- probes do
+    for {id, limits} <- probes do
       assert {:ok, %{target: config}} =
                Containment.external_map(
-                 "/usr/bin/python3",
-                 ["-c", probe, "{subject_archive}"],
+                 context.probe,
+                 [id, "{subject_archive}"],
                  context.archive,
                  context.home,
-                 limits
+                 Keyword.put(limits, :launcher, context.launcher)
                )
 
       assert {:ok, external} = External.from_map(config)
@@ -325,7 +287,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
   test "invalid containment inputs are refused before a target starts", context do
     valid_args = ["{subject_archive}"]
-    assert Containment.profile().version == "1.0.0"
+    assert Containment.profile().version == "2.0.0"
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_path}} =
              Containment.external_map("relative", valid_args, context.archive, context.home)
@@ -337,11 +299,11 @@ defmodule Wotex.Lab.ConformanceTest do
              Containment.external_map(context.archive, valid_args, context.archive, context.home)
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_path}} =
-             Containment.external_map("/usr/bin/python3", valid_args, 1, context.home)
+             Containment.external_map(context.probe, valid_args, 1, context.home)
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_path}} =
              Containment.external_map(
-               "/usr/bin/python3",
+               context.probe,
                valid_args,
                context.archive,
                "relative"
@@ -349,7 +311,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_path}} =
              Containment.external_map(
-               "/usr/bin/python3",
+               context.probe,
                valid_args,
                context.archive,
                Path.join(context.home, "missing")
@@ -359,10 +321,10 @@ defmodule Wotex.Lab.ConformanceTest do
     File.mkdir!(unsafe)
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_path}} =
-             Containment.external_map("/usr/bin/python3", valid_args, context.archive, unsafe)
+             Containment.external_map(context.probe, valid_args, context.archive, unsafe)
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_arguments}} =
-             Containment.external_map("/usr/bin/python3", [], context.archive, context.home)
+             Containment.external_map(context.probe, [], context.archive, context.home)
 
     for args <- [
           [1, "{subject_archive}"],
@@ -371,12 +333,12 @@ defmodule Wotex.Lab.ConformanceTest do
           List.duplicate("argument", 28) ++ ["{subject_archive}"]
         ] do
       assert {:error, %Wotex.Lab.Error{code: :invalid_arguments}} =
-               Containment.external_map("/usr/bin/python3", args, context.archive, context.home)
+               Containment.external_map(context.probe, args, context.archive, context.home)
     end
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_arguments}} =
              Containment.external_map(
-               "/usr/bin/python3",
+               context.probe,
                ["prefix-{subject_archive}"],
                context.archive,
                context.home
@@ -384,7 +346,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_limit}} =
              Containment.external_map(
-               "/usr/bin/python3",
+               context.probe,
                valid_args,
                context.archive,
                context.home,
@@ -393,7 +355,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_options}} =
              Containment.external_map(
-               "/usr/bin/python3",
+               context.probe,
                valid_args,
                context.archive,
                context.home,
@@ -402,7 +364,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_options}} =
              Containment.external_map(
-               "/usr/bin/python3",
+               context.probe,
                valid_args,
                context.archive,
                context.home,
@@ -411,7 +373,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_options}} =
              Containment.external_map(
-               "/usr/bin/python3",
+               context.probe,
                valid_args,
                context.archive,
                context.home,
@@ -421,7 +383,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_limit}} =
              Containment.external_map(
-               "/usr/bin/python3",
+               context.probe,
                valid_args,
                context.archive,
                context.home,
@@ -429,34 +391,138 @@ defmodule Wotex.Lab.ConformanceTest do
              )
   end
 
-  test "a non-symlinked Darwin sandbox directory is represented directly", context do
+  test "a non-symlinked private directory reaches the admitted sandbox", context do
     directory = Path.join(File.cwd!(), ".containment-#{System.unique_integer([:positive])}")
     File.mkdir!(directory)
     on_exit(fn -> File.rmdir(directory) end)
 
     assert {:ok, %{target: config}} =
              Containment.external_map(
-               "/usr/bin/python3",
+               context.probe,
                ["{subject_archive}"],
                context.archive,
-               directory
+               directory,
+               launcher: context.launcher
              )
 
-    assert Enum.at(config.args, 1) =~ "(subpath \"#{directory}\")"
+    case :os.type() do
+      {:unix, :darwin} ->
+        assert Enum.at(config.args, 1) =~ "(subpath \"#{directory}\")"
+
+      {:unix, :linux} ->
+        assert ["--bind", directory, directory] in Enum.chunk_every(config.args, 3, 1, :discard)
+    end
+  end
+
+  test "native launcher admission requires the exact operator-owned executable digest", context do
+    admit = fn launcher ->
+      Containment.external_map(context.probe, ["{subject_archive}"], context.archive, context.home,
+        launcher: launcher
+      )
+    end
+
+    assert {:error, %Wotex.Lab.Error{code: :unsupported}} = admit.(nil)
+
+    for launcher <- [
+          "caller",
+          %{},
+          Map.put(context.launcher, :shell, true),
+          %{context.launcher | executable: "relative"},
+          %{context.launcher | executable: context.archive},
+          %{context.launcher | digest: "missing"},
+          %{context.launcher | digest: String.upcase(context.launcher.digest)}
+        ] do
+      assert {:error, %Wotex.Lab.Error{code: :invalid_launcher}} = admit.(launcher)
+    end
+
+    wrong = %{context.launcher | digest: "sha256:" <> String.duplicate("0", 64)}
+    assert {:error, %Wotex.Lab.Error{code: :launcher_mismatch}} = admit.(wrong)
+
+    link = Path.join(context.home, "launcher-link")
+    File.ln_s!(context.launcher.executable, link)
+
+    assert {:error, %Wotex.Lab.Error{code: :invalid_launcher}} =
+             admit.(%{context.launcher | executable: link})
+
+    changed = Path.join(context.home, "changed-launcher")
+    File.cp!(context.launcher.executable, changed)
+    File.write!(changed, "changed", [:append])
+
+    assert {:error, %Wotex.Lab.Error{code: :launcher_mismatch}} =
+             admit.(%{context.launcher | executable: changed})
+  end
+
+  test "repeated short-lived BEAM targets keep exec-transition accounting stable", context do
+    {:ok, %{target: config}} = target_config(context, timeout_ms: 5_000)
+
+    args =
+      Enum.map(config.args, fn
+        "{subject_archive}" -> context.archive
+        argument -> argument
+      end)
+
+    {:ok, request} =
+      Wotex.JSON.encode(%{
+        "claim" => %{"operation" => "unsupported"},
+        "vector" => %{"id" => "repeated", "input" => %{}}
+      })
+
+    for _attempt <- 1..30 do
+      port =
+        Port.open(
+          {:spawn_executable, String.to_charlist(config.executable)},
+          [
+            :binary,
+            :use_stdio,
+            :exit_status,
+            :stderr_to_stdout,
+            args: args,
+            env:
+              Enum.map(config.environment, fn {key, value} ->
+                {String.to_charlist(key), String.to_charlist(value)}
+              end)
+          ]
+        )
+
+      Port.command(port, request <> "\n")
+      {status, text} = native_response(port, "")
+      assert status == 0, "native supervisor failed (#{status}): #{text}"
+      assert {:ok, %{"vector_id" => "repeated"}} = Wotex.JSON.decode(text)
+    end
+  end
+
+  test "normal target exit also cleans up grouped and observed detached descendants", context do
+    for mode <- ["normal-child", "escaped"] do
+      pid_file = Path.join(context.home, mode <> ".pid")
+
+      assert {:ok, %{target: config}} =
+               Containment.external_map(
+                 context.probe,
+                 [mode, pid_file, "{subject_archive}"],
+                 context.archive,
+                 context.home,
+                 launcher: context.launcher,
+                 timeout_ms: 5_000
+               )
+
+      assert {:ok, external} = External.from_map(config)
+      request = %{"claim" => %{"operation" => "probe"}, "vector" => %{"id" => mode, "input" => %{}}}
+      assert {:ok, _response, _duration} = External.invoke(external, request)
+      assert eventually_stopped?(File.read!(pid_file), 40)
+      refute Enum.any?(File.ls!(context.home), &String.starts_with?(&1, "run-"))
+    end
   end
 
   test "contained protocol failures retain canonical runner error codes", context do
     probes = [
-      {"malformed", "print('{')", :invalid_target_json},
-      {"wrong-vector",
-       "import json, sys; request=json.loads(sys.stdin.readline()); print(json.dumps({'protocol':'wotex.conformance.target','protocol_version':'1.0','vector_id':'other','outcome':'unsupported','codes':['probe']}))",
-       :target_vector_mismatch},
-      {"crash", "import os; os._exit(42)", :target_exit_nonzero},
-      {"oversized", "import sys; sys.stdout.write('x' * 2000000)", :target_exit_nonzero}
+      {"malformed", :invalid_target_json},
+      {"wrong-vector", :target_vector_mismatch},
+      {"crash", :target_exit_nonzero},
+      {"oversized", :target_exit_nonzero}
     ]
 
-    for {id, probe, expected_code} <- probes do
-      assert {:ok, external} = contained_python(context, probe)
+    for {id, expected_code} <- probes do
+      assert {:ok, external} = contained_probe(context, id)
 
       request = %{
         "claim" => %{"operation" => "probe"},
@@ -469,27 +535,7 @@ defmodule Wotex.Lab.ConformanceTest do
   end
 
   test "concurrent contained runs cannot exchange filesystem state or response bytes", context do
-    probe = """
-    import json, os, sys, time
-    request = json.loads(sys.stdin.readline())
-    identifier = request["vector"]["id"]
-    marker = os.path.join(os.environ["HOME"], "marker")
-    with open(marker, "w") as output:
-      output.write(identifier)
-    time.sleep(0.05)
-    with open(marker) as source:
-      observed = source.read()
-    print(json.dumps({
-      "protocol": "wotex.conformance.target",
-      "protocol_version": "1.0",
-      "vector_id": identifier,
-      "outcome": "observed",
-      "actual": {"marker": observed},
-      "codes": []
-    }))
-    """
-
-    assert {:ok, external} = contained_python(context, probe)
+    assert {:ok, external} = contained_probe(context, "concurrent")
 
     results =
       1..12
@@ -520,6 +566,10 @@ defmodule Wotex.Lab.ConformanceTest do
   end
 
   defp target(context, options) do
+    with {:ok, %{target: config}} <- target_config(context, options), do: External.from_map(config)
+  end
+
+  defp target_config(context, options) do
     erl = Path.join([to_string(:code.root_dir()), "bin", "erl"])
 
     paths =
@@ -534,42 +584,70 @@ defmodule Wotex.Lab.ConformanceTest do
       "application:ensure_all_started(elixir), " <>
         "'Elixir.Wotex.Lab.Conformance.Target':main([unicode:characters_to_binary(A) || A <- init:get_plain_arguments()])"
 
+    Containment.external_map(
+      erl,
+      ["+S", "1:1", "+A", "1", "+P", "1024", "-noshell"] ++
+        paths ++ ["-eval", eval, "-extra", "--archive", "{subject_archive}"],
+      context.archive,
+      context.home,
+      timeout_ms: Keyword.get(options, :timeout_ms, 10_000),
+      launcher: context.launcher
+    )
+  end
+
+  defp contained_probe(context, mode) do
     with {:ok, %{target: config}} <-
            Containment.external_map(
-             erl,
-             ["+S", "1:1", "+A", "1", "+P", "1024", "-noshell"] ++
-               paths ++ ["-eval", eval, "-extra", "--archive", "{subject_archive}"],
+             context.probe,
+             [mode, "{subject_archive}"],
              context.archive,
              context.home,
-             timeout_ms: Keyword.get(options, :timeout_ms, 10_000)
+             timeout_ms: 5_000,
+             launcher: context.launcher
            ) do
       External.from_map(config)
     end
   end
 
-  defp contained_python(context, code) do
-    with {:ok, %{target: config}} <-
-           Containment.external_map(
-             "/usr/bin/python3",
-             ["-c", code, "{subject_archive}"],
-             context.archive,
-             context.home,
-             timeout_ms: 5_000
-           ) do
-      External.from_map(config)
+  defp native_response(port, text) do
+    receive do
+      {^port, {:data, bytes}} ->
+        assert byte_size(text) + byte_size(bytes) <= 1_048_576
+        native_response(port, text <> bytes)
+
+      {^port, {:exit_status, status}} ->
+        {status, text}
+    after
+      6_000 ->
+        Port.close(port)
+        flunk("native supervisor did not exit inside its outer deadline")
     end
   end
 
   defp eventually_stopped?(_pid, 0), do: false
 
   defp eventually_stopped?(pid, attempts) do
-    case System.cmd("kill", ["-0", pid], stderr_to_stdout: true) do
-      {_output, 0} ->
-        Process.sleep(25)
-        eventually_stopped?(pid, attempts - 1)
+    if process_alive?(pid) do
+      Process.sleep(25)
+      eventually_stopped?(pid, attempts - 1)
+    else
+      true
+    end
+  end
 
-      {_output, _status} ->
-        true
+  defp process_alive?(identity) do
+    case String.split(identity, "@", parts: 2) do
+      [pid] ->
+        match?({_output, 0}, System.cmd("kill", ["-0", pid], stderr_to_stdout: true))
+
+      [_pid, namespace] ->
+        true = File.dir?("/proc")
+        # A PID inside Bubblewrap is not a PID in the test runner's namespace.
+        # Observe disappearance of that exact owned namespace, never signal or
+        # accidentally inspect a same-numbered unrelated host process.
+        "/proc/[0-9]*/ns/pid"
+        |> Path.wildcard()
+        |> Enum.any?(&(File.read_link(&1) == {:ok, namespace}))
     end
   end
 end

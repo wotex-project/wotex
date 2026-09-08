@@ -2,6 +2,12 @@
 
 ## 0.1.0 — source foundation
 
+- Conformance profile 2.0 replaces the Python helper and probes with an external
+  Rust supervisor and explicit digest-pinned launcher admission. Cleanup covers
+  successful exits, observed detached descendants and termination signals.
+  No NIF or runtime compiler/download is added. Sampled-limit and hostile-target
+  limitations are explicit; WLB.06 no longer overclaims complete isolation.
+
 - Loopback runtime transport with a linked host session, simulated Thing host
   with admission counters, and NoSec/StaticRef credential adapters exercised
   through real runtime subscriptions under instance supervision.

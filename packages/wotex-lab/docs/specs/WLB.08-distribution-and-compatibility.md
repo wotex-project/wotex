@@ -122,7 +122,16 @@ Build instructions accompany the image; no embedded compiler is required to
 try it. Real hardware availability is an evidence prerequisite, not a fabricated
 result or removal from scope.
 
-Maude licensing, binary provenance and platform support follow WLB.09. All
-optional distributions declare their dependency/license closure. Creating or
+Maude licensing, binary provenance and platform support follow WLB.09. The
+native containment distributions follow WLB.06 profile 2.0.0: ship reviewed
+platform/architecture binaries with SHA-256, source/Cargo-lock identity,
+licenses, signing/provenance and no Python interpreter requirement. The package
+currently includes Rust sources, not precompiled binaries. Provisioning is
+explicit; the first tensor neither builds nor starts the helper. Source tests
+compile the feature-gated Rust probes separately. macOS source evidence and
+Linux native tests are not proof of Linux Bubblewrap/cgroup or hostile-target
+worker isolation. Those profile and artifact obligations remain required.
+
+All optional distributions declare their dependency/license closure. Creating or
 publishing remote state, domains, packages, firmware releases or images is a
 maintainer action. Visibility changes are always manual user-only actions.

@@ -170,10 +170,10 @@ specifications:
       - "test/wotex/lab/wlb05_evidence_manifest_test.exs"
     compatibility_classification: WLB.05 is implemented with independent ETS/SQLite algorithms, authenticated per-source Continuum admission and one-effect smart-room policy races; artifact adoption remains a separate axis.
   - id: WLB.06
-    version: "1.3.0"
+    version: "1.4.0"
     path: docs/specs/WLB.06-evidence-conformance-and-observability.md
-    implementation_status: implemented
-    evidence_status: complete
+    implementation_status: partial
+    evidence_status: partial
     adoption_status: reference_available
     evidence_manifest: docs/provenance/WLB.06-evidence.json
     standards:
@@ -203,7 +203,8 @@ specifications:
       - "test/wotex/lab/continuum_test.exs"
       - "test/wotex/lab/graph_test.exs"
       - "test/wotex/lab/wlb06_evidence_manifest_test.exs"
-    compatibility_classification: WLB.06 is implemented with path-free content evidence, isolated external conformance, bounded benchmark cohorts and owner-scoped graph overlays; artifact adoption remains a separate axis.
+      - "priv/conformance/native/tests/lifecycle.rs"
+    compatibility_classification: Reviewed-local conformance now uses a digest-pinned external Rust helper; sampled Darwin limits do not close hostile whole-tree isolation, and binary artifact adoption remains separate.
   - id: WLB.07
     version: "0.3.0"
     path: docs/specs/WLB.07-cookbooks-and-machine-interfaces.md
