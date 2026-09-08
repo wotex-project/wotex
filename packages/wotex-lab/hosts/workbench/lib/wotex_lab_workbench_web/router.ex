@@ -25,6 +25,11 @@ defmodule WotexLabWorkbenchWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :control_api do
+    plug :accepts, ["json"]
+    plug :put_secure_browser_headers
+  end
+
   scope "/", WotexLabWorkbenchWeb do
     pipe_through :assets
     get "/css/tokens.css", AssetController, :tokens
@@ -49,5 +54,13 @@ defmodule WotexLabWorkbenchWeb.Router do
   scope "/api/internal", WotexLabWorkbenchWeb do
     pipe_through :internal_api
     post "/beamlens/v1/chat/completions", InvestigationCompletionController, :create
+  end
+
+  scope "/api/v1", WotexLabWorkbenchWeb do
+    pipe_through :control_api
+    get "/scenarios", ControlController, :scenarios
+    get "/scenarios/:id", ControlController, :scenario
+    get "/evidence/:record_id", ControlController, :evidence
+    get "/metrics/catalogue", ControlController, :metrics_catalogue
   end
 end

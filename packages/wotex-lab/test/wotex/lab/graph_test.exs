@@ -168,7 +168,15 @@ defmodule Wotex.Lab.GraphTest do
 
     {:ok, openapi} = Graph.render(graph, :openapi)
     {:ok, decoded} = Wotex.JSON.decode(openapi)
-    assert decoded["openapi"] == "3.2.0" and decoded["x-wotex-deployment"] == "none"
+
+    assert decoded["openapi"] == "3.2.0" and
+             decoded["x-wotex-deployment"] == "optional-workbench-host"
+
+    assert decoded["servers"] == [%{"description" => "Workbench host", "url" => "/api/v1"}]
+
+    assert decoded["paths"]["/evidence/{record_id}"]["get"]["security"] == [
+             %{"sessionBearer" => []}
+           ]
 
     assert Map.keys(decoded["paths"]) |> Enum.sort() == [
              "/evidence/{record_id}",

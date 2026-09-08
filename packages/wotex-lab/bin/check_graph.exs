@@ -50,7 +50,7 @@ defmodule Wotex.Lab.Check.Graph do
 
       IO.puts(
         "graph: #{length(graph["nodes"])} nodes, #{length(graph["edges"])} edges, " <>
-          "#{length(files)} representations validated; source snapshot, no deployment claim"
+          "#{length(files)} representations validated; source snapshot, optional host contract"
       )
     after
       File.rm_rf(directory)
@@ -87,7 +87,13 @@ defmodule Wotex.Lab.Check.Graph do
     decoded = json!(content, :openapi)
     decoded["openapi"] == Interfaces.openapi_version() || abort("openapi dialect drift")
     decoded["openapi"] == "3.2.0" || abort("openapi must declare 3.2.0")
-    decoded["x-wotex-deployment"] == "none" || abort("openapi must not claim a deployment")
+
+    decoded["x-wotex-deployment"] == "optional-workbench-host" ||
+      abort("openapi must name only the optional workbench host")
+
+    decoded["servers"] == [%{"description" => "Workbench host", "url" => "/api/v1"}] ||
+      abort("openapi server path drift")
+
     Map.has_key?(decoded["paths"], "/scenarios") || abort("openapi lacks /scenarios")
   end
 

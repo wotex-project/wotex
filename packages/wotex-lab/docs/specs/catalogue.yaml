@@ -206,7 +206,7 @@ specifications:
       - "priv/conformance/native/tests/lifecycle.rs"
     compatibility_classification: Profile 2.0.1 gives the external Rust helper a fixed one-second runner margin around its inner deadline and reports the effective margin plus 150 ms cleanup ceiling; sampled Darwin limits do not close hostile whole-tree isolation, and binary artifact adoption remains separate.
   - id: WLB.07
-    version: "0.4.0"
+    version: "0.4.1"
     path: docs/specs/WLB.07-cookbooks-and-machine-interfaces.md
     implementation_status: partial
     evidence_status: partial
@@ -237,11 +237,14 @@ specifications:
       - "Wotex.Lab.MCP.Tools"
       - "Wotex.Lab.MCP.Stdio"
       - "Wotex.Lab.MCP.Plug"
+      - "WotexLabWorkbench.Control"
+      - "WotexLabWorkbenchWeb.ControlController"
     executable_evidence:
       - "test/wotex/lab/cookbook_test.exs"
       - "test/wotex/lab/graph_test.exs"
       - "bin/check_graph.exs"
       - "test/wotex/lab/mcp_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench_web/control_controller_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.08
     version: "0.6.0"

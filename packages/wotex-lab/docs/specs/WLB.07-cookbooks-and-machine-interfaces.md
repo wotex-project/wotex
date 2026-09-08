@@ -1,14 +1,17 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.4.0. Contract: accepted. Source status: the sixteen
+Specification version: 0.4.1. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
 `bin/check_graph.exs` gate, and the MCP server core with stdio and Streamable
-HTTP transports are implemented. Fifteen notebooks have executable workspace
-source evidence, including Axon/EXLA training and formal-control vectors;
-`nerves-and-mcp` retains partial evidence. This does not promote notebook
-installation to artifact acceptance. The control API, generated npm client
+HTTP transports are implemented. The optional Workbench now serves the four
+read-only operations in the generated OpenAPI document at `/api/v1`; static
+catalogue reads are inert and evidence lookup is bearer-bound to the caller's
+existing room. Fifteen notebooks have executable workspace source evidence,
+including Axon/EXLA training and formal-control vectors; `nerves-and-mcp`
+retains partial evidence. This does not promote notebook installation to
+artifact acceptance. Mutation control operations, the generated npm client
 and public site remain planned.
 
 ## Cookbook catalogue

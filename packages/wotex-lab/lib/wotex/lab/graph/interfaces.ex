@@ -2,13 +2,12 @@ defmodule Wotex.Lab.Graph.Interfaces do
   @moduledoc """
   The OpenAPI 3.2.0 and AsyncAPI 3.1.0 documents derived from the graph.
 
-  Both describe accepted interfaces, not running deployments: the OpenAPI
-  document is the minimal Lab HTTP control API (list scenarios, read an
-  evidence record, read the metrics catalogue) and the AsyncAPI document is
-  the event and MQTT interface of the reference MQTT Thing fixture. Neither
-  replaces a Thing Description, and both carry an explicit status extension
-  saying so. The dialect versions are pinned here and validated by
-  `bin/check_graph.exs`.
+  The OpenAPI document describes the minimal Lab HTTP control API implemented
+  by the optional Workbench host (list scenarios, read an evidence record,
+  read the metrics catalogue). The AsyncAPI document is an accepted fixture
+  interface, not a running deployment. Neither replaces a Thing Description,
+  and both carry explicit deployment status. The dialect versions are pinned
+  here and validated by `bin/check_graph.exs`.
   """
 
   @openapi_version "3.2.0"
@@ -34,14 +33,15 @@ defmodule Wotex.Lab.Graph.Interfaces do
         "version" => package["version"],
         "summary" => "Accepted control surface of an explicit Lab instance",
         "description" =>
-          "Describes the accepted Lab HTTP control API. It is not a running deployment: " <>
-            "the control plane of WLB.07 is planned, and no endpoint here is served by " <>
-            "the base library. Writes and Actions are outside this read-oriented surface.",
+          "Describes the read-only Lab HTTP control API served by the optional Workbench " <>
+            "host under /api/v1. The base library starts no endpoint. Writes and Actions " <>
+            "remain outside this surface.",
         "license" => %{"name" => "Apache-2.0", "identifier" => "Apache-2.0"}
       },
       "x-wotex-status" => status(graph, "WLB.07"),
-      "x-wotex-deployment" => "none",
+      "x-wotex-deployment" => "optional-workbench-host",
       "x-wotex-source" => package["source_url"],
+      "servers" => [%{"url" => "/api/v1", "description" => "Workbench host"}],
       "paths" => %{
         "/scenarios" => %{
           "get" => %{
@@ -72,8 +72,12 @@ defmodule Wotex.Lab.Graph.Interfaces do
             ],
             "responses" => %{
               "200" => json_response("An evidence record", "#/components/schemas/EvidenceRecord"),
+              "400" => json_response("Malformed digest", "#/components/schemas/Error"),
+              "401" => json_response("Bearer token required", "#/components/schemas/Error"),
+              "403" => json_response("Session denied", "#/components/schemas/Error"),
               "404" => json_response("Unknown record", "#/components/schemas/Error")
-            }
+            },
+            "security" => [%{"sessionBearer" => []}]
           }
         },
         "/metrics/catalogue" => %{
@@ -91,6 +95,14 @@ defmodule Wotex.Lab.Graph.Interfaces do
         }
       },
       "components" => %{
+        "securitySchemes" => %{
+          "sessionBearer" => %{
+            "type" => "http",
+            "scheme" => "bearer",
+            "description" =>
+              "An existing Workbench session token; it grants access only to that session's room."
+          }
+        },
         "schemas" => %{
           "Scenario" => %{
             "type" => "object",
@@ -192,7 +204,10 @@ defmodule Wotex.Lab.Graph.Interfaces do
                   "properties" => %{
                     "name" => %{"type" => "string"},
                     "unit" => %{"type" => "string"},
-                    "kind" => %{"type" => "string", "enum" => ["counter", "sum", "distribution"]},
+                    "kind" => %{
+                      "type" => "string",
+                      "enum" => ["counter", "gauge", "histogram"]
+                    },
                     "dimensions" => %{"type" => "array", "items" => %{"type" => "string"}}
                   }
                 }
