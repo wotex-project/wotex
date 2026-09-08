@@ -16,7 +16,7 @@
     {"id": "WLB-C07:manifest-integrity", "status": "pass"},
     {"id": "WCF-C05:discovery-corpus", "status": "not_run"}
   ],
-  "attempt": 3,
+  "attempt": 4,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -40,25 +40,25 @@
     {"archive": "missing", "name": "python", "version": "3.9.6"},
     {"archive": "missing", "name": "darwin-sandbox-exec", "version": "25.6.0"}
   ],
-  "durations": {"run_ms": 7600},
+  "durations": {"run_ms": 7400},
   "fixtures": {
     "corpus:thing-description-1.1": "sha256:1dc979f8599bbcd0e441bc09c7266169f42bee40384fbacd4ad1e1c2b8caac07",
     "corpus:thing-model-1.1": "sha256:262e3369986eef648563b5693fdaadab3fa11fb3732cf4db9b7546e2a4af92a7"
   },
   "inputs": [
     "command:WOTEX_PATH_DEPS=1 mix test WLB.06-evidence-files",
-    "renewal:2026-09-08-explorer-lock;seed=1;manifest-integrity-checked-separately",
+    "renewal:2026-09-08-promex-catalogue;seed=1;manifest-integrity-checked-separately",
     "containment:darwin-sandbox-exec+contained-exec-1.0.0",
     "fault-schedule:1.0.0",
     "excluded-corpus:WCF-C05-discovery-not-applicable-to-core-target"
   ],
   "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
   "outcomes": {"excluded_count": 1, "test_count": 49, "thing_description_vectors": 14, "thing_model_vectors": 6},
-  "revision": "c7b79bd+workspace-Explorer-analysis",
+  "revision": "5775d17+workspace-PromEx-catalogue",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:6595fae2ba1fc2434d537202ada3077f519087571efabdfde7c0682453180811",
+  "source_tree_digest": "sha256:f0f1859810ae96e167ff99dd14c36ad75224779a04b065fbc5704a2e1c671ee5",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",

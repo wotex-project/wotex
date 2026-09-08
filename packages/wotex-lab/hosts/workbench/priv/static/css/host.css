@@ -412,3 +412,7 @@
     transition-duration: 0.01ms !important;
   }
 }
+/* Catalogue text is bounded but metric identifiers must wrap on narrow screens. */
+.wl-catalogue-choice { display: flex; gap: 0.75rem; align-items: flex-start; }
+.wl-catalogue-choice > span { min-width: 0; }
+.wl-query-code { white-space: normal; overflow-wrap: anywhere; }

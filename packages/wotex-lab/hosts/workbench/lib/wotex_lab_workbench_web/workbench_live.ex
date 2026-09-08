@@ -26,6 +26,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   }
 
   import WotexLabWorkbenchWeb.Components.Insights
+  import WotexLabWorkbenchWeb.Components.MetricCatalogue
   alias WotexLabWorkbenchWeb.Components.StatusBadge
   alias WotexLabWorkbenchWeb.Scope
 
@@ -545,6 +546,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         phx-disable-with="Freezing…"
       >Freeze visible measurements as dataset</button>
     </div>
+    <.metric_catalogue />
     """
   end
 

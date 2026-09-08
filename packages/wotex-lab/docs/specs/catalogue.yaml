@@ -338,6 +338,13 @@ specifications:
       - "Wotex.Lab.Analytics"
       - "Wotex.Lab.Analytics.Source"
       - "Wotex.Lab.Analytics.Query"
+      - "WotexLabWorkbench.Observability.Definitions"
+      - "WotexLabWorkbench.Observability.Plugin"
+      - "WotexLabWorkbench.Observability.PromEx"
+      - "WotexLabWorkbench.Observability.Relay"
+      - "WotexLabWorkbench.Observability.Store"
+      - "WotexLabWorkbench.Observability.Supervisor"
+      - "WotexLabWorkbench.Observability.Panels"
     executable_evidence:
       - "test/wotex/lab/metrics_catalogue_test.exs"
       - "test/wotex/lab/metrics_collector_test.exs"
@@ -349,6 +356,8 @@ specifications:
       - "test/wotex/lab/greptime_bridge_test.exs"
       - "test/wotex/lab/analytics_test.exs"
       - "priv/fixtures/metrics/equality/manifest.json"
+      - "hosts/workbench/test/wotex_lab_workbench/observability_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/metric_panels_test.exs"
     compatibility_classification: Additive host contract; no mandatory observability dependency in the base library.
   - id: WLB.11
     version: "0.3.0"
@@ -377,6 +386,8 @@ specifications:
       - "WotexLabWorkbench.Chart.Admission"
       - "WotexLabWorkbench.Insights"
       - "WotexLabWorkbenchWeb.Components.Insights"
+      - "WotexLabWorkbenchWeb.Components.MetricCatalogue"
+      - "WotexLabWorkbenchWeb.DashboardController"
       - "WotexLabWorkbench.Report"
       - "WotexLabWorkbenchWeb.Components"
       - "WotexLabWorkbenchWeb.WorkbenchLive"
@@ -391,5 +402,6 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/metrics_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/sessions_room_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/workbench_live_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench_web/dashboard_test.exs"
       - "hosts/workbench/bin/check_boundary.exs"
     compatibility_classification: Additive non-umbrella reference host; base Lab consumers retain inert tokens and scoped CSS without Phoenix.

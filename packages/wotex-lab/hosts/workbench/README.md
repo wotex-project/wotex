@@ -79,10 +79,33 @@ source cohort passed with Node 26.8.1, Playwright 1.63.0-alpha-2026-08-31 and
 Chromium 153.0.8010.12; this is neither a stable-browser compatibility matrix,
 WCAG certification nor installed-artifact evidence.
 
+## Optional operator-owned metrics
+
+`WOTEX_LAB_PROMEX=1 WOTEX_PATH_DEPS=1 mix phx.server` explicitly activates the
+fixed host collector. It is off by default and describes the Workbench Lab
+instance as a whole, not individual browser sessions. It starts no public
+scrape listener, Grafana agent, database, LLM or built-in VM/LiveView inspection.
+The 43 custom definitions come from the Lab catalogue. The selected public
+PromEx storage adapter has a 256-scalar-series budget; histogram buckets, sum
+and count each consume capacity. It aggregates synchronously without buffering
+raw samples, preserves inclusive buckets/subsecond sums, and counts drops and
+invalid source measurements. Backend labels default to `other`, not an inferred
+or changed Nx backend. An attached operator IEx session can call
+`PromEx.get_metrics(WotexLabWorkbench.Observability.PromEx)` without self-HTTP.
+
+The Metrics page's portable-panel selector exports only catalogue definitions
+through `/metrics/dashboard.json`, with 1–16 known IDs. A verified browser
+session is required; no room or collector starts. Importing the JSON and
+choosing a Prometheus-compatible source are operator actions. The export
+preserves label sets, uses five-minute counter rates and bucket-derived p95,
+and never fills missing data with zero. Grafana import compatibility, durable
+history activation, protected scraping and saved arrangements are separate
+acceptance work, not claims made by this source export.
+
 ## Runtime configuration
 
 Production requires `SECRET_KEY_BASE`. Optional variables are `PHX_HOST`,
-`PORT`, `WOTEX_LAB_WORKBENCH_SESSION_TTL_MS` and `WOTEX_LAB_MAUDE`. A Maude
+`PORT`, `WOTEX_LAB_WORKBENCH_SESSION_TTL_MS`, `WOTEX_LAB_PROMEX` and `WOTEX_LAB_MAUDE`. A Maude
 path is verified and supervised explicitly; no configured engine is reported
 as unsupported, never as successful evidence.
 

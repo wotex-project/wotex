@@ -5,7 +5,8 @@ defmodule WotexLabWorkbench.Application do
   Children in order: PubSub, one named `Wotex.Lab` instance, the bounded
   telemetry ring, the optional formal profile (only when the operator
   configured an engine), the session registry and the endpoint. Nothing else
-  starts implicitly and no child starts an experiment.
+  starts implicitly and no child starts an experiment. Explicit `promex_enabled`
+  configuration prepends the host-owned custom metric collector/relay supervisor.
   """
 
   use Application
@@ -31,6 +32,11 @@ defmodule WotexLabWorkbench.Application do
        max_sessions: Keyword.fetch!(env, :max_sessions)},
       WotexLabWorkbenchWeb.Endpoint
     ]
+
+    children =
+      if Keyword.fetch!(env, :promex_enabled),
+        do: [WotexLabWorkbench.Observability.Supervisor | children],
+        else: children
 
     Supervisor.start_link(children, strategy: :one_for_one, name: WotexLabWorkbench.Supervisor)
   end

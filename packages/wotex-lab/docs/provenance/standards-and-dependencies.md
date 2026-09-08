@@ -46,6 +46,38 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [Snappy block format](https://github.com/google/snappy/blob/main/format_description.txt) (BSD-3-Clause) | Pure Elixir literal and 16-bit-offset copy encoder plus full block decoder in `Wotex.Lab.Metrics.Snappy`; stream framing is not implemented |
 | [greptime/greptimedb:v1.1.4](https://hub.docker.com/r/greptime/greptimedb) | Disposable standalone container for the `:greptime` lane, selected by tag; ingestion through `/v1/prometheus/write` and read-back through `/v1/sql` are the only exercised endpoints, not a digest-pinned release or a server conformance claim |
 
+## Explicit Workbench PromEx cohort
+
+Observation date: 2026-09-08. The host alone selects PromEx 1.12.0 (MIT) and
+Telemetry.Metrics 1.2.0. Its lock also records Peep 4.4.0 (Apache-2.0),
+telemetry_metrics_prometheus_core 1.2.1, telemetry_poller 1.3.0, octo_fetch
+0.5.0, castore 1.0.21 and ssl_verify_fun 1.1.7. Existing locked releases did
+not change; archive checksums remain in `hosts/workbench/mix.lock`.
+
+The public [PromEx.Storage behaviour](https://hexdocs.pm/prom_ex/1.12.0/PromEx.Storage.html)
+supports the host's own bounded aggregation adapter. Inspection of the pinned
+[Core adapter](https://github.com/akoutmos/prom_ex/blob/1.12.0/lib/prom_ex/storage/core.ex)
+and [Peep adapter](https://github.com/akoutmos/prom_ex/blob/1.12.0/lib/prom_ex/storage/peep.ex)
+found that Core buffers histogram samples while the Peep dependency's custom
+bucket helper uses strict comparisons and its atomic backend rounds sample
+sums to integers. The Lab catalogue instead requires inclusive buckets and
+fractional seconds. The Workbench therefore uses neither backend: its own
+adapter stores bounded aggregates with inclusive thresholds and nanosecond
+integer sums. Source tests compare the real public PromEx scrape against the
+Lab collector, including 1/5/25 ms boundaries and subsecond sums. No private
+PromEx/Peep storage API or dependency patch is involved.
+
+Activation is explicit and custom-catalogue-only. PromEx's default status group
+is dropped; its optional Cowboy listener, Grafana agent and dashboard upload
+are disabled. The absent optional Plug.Cowboy module produces an upstream
+compile diagnostic; adding an unused HTTP server or hiding that diagnostic is
+not part of this cohort. BEAM/Phoenix/LiveView built-in introspection requires
+a separate admission review and is not enabled. The base library still has no
+PromEx dependency. The portable JSON uses classic Grafana schema 39 and fixed
+[Prometheus rate/histogram queries](https://prometheus.io/docs/prometheus/latest/querying/functions/#histogram_quantile).
+Export shape/query equality is tested; a Grafana import or PromQL-engine cohort
+is not claimed by those source tests.
+
 ## Acknowledged dependency advisories
 
 ### Optional Explorer source cohort

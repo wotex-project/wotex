@@ -36,6 +36,14 @@ mark selection, scope substitution, empty results and unchanged run evidence.
 The browser gate also exercises updated charts after analysis. See the
 [interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md).
 
+The Metrics view also exposes catalogue-derived panel selection and a bounded,
+session-verified Grafana JSON download. This surface shows definitions only,
+never the opt-in PromEx collector's host-wide measurements as session data.
+`metric_panels_test.exs` binds every descriptor/query to the catalogue and
+`dashboard_test.exs` covers session denial, closed selection and inert export.
+Saved per-session arrangements, queried history panels and a Grafana-server
+import/browser cohort are not yet implemented or claimed.
+
 ## Product and implementation boundary
 
 The Lab includes a first-class UI: an experiment workbench for the Nx/Elixir

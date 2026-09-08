@@ -4,8 +4,11 @@ Specification version: 0.3.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
-PromEx plugin generation, dashboard exports, OTLP signal export, the BeamLens
-skill, the LiveView presentation and the MCP query gateway remain planned.
+the Workbench now implements custom PromEx definitions, bounded collection,
+catalogue panel selection and inert Grafana JSON exports. Built-in host
+introspection, collection-to-history host activation, protected scraping, OTLP
+signal export, BeamLens, history presentation and the MCP query gateway remain
+planned. A template export is not proof of a Grafana import or query execution.
 
 ## Stack and ownership
 
@@ -44,8 +47,29 @@ compose admitted descriptors, not arbitrary JavaScript, EEx or module names.
 `Wotex.Lab.Metrics.Catalogue` is that catalogue as data: `validate/1` fails on
 a name, unit, bucket, dimension, scope, event or measurement mismatch and on
 duplicate ids, and `to_definitions/0` emits the plain maps a host turns into
-Telemetry.Metrics and PromEx definitions. That generation, the UI panel
-descriptors and the exported dashboards are host work and remain planned.
+Telemetry.Metrics and PromEx definitions. The explicit Workbench's
+`Observability.Definitions`, `Plugin` and `Panels` now generate all 43 custom
+definitions, UI descriptors and fixed PromQL templates from that catalogue.
+Panels retain exact units, buckets, dimensions and scope. Dashboard composition
+accepts 1–16 distinct known IDs, never caller code or expressions. Counters show
+five-minute rates with per-second display units, gauges their measured values,
+and histograms bucket-derived p95. Each label set is preserved; templates do
+not accidentally aggregate different receiver job/instance labels or fill
+missing data with zeros. The session-verified `/metrics/dashboard.json` route
+exports only inert definitions; it does not read measurements or upload JSON.
+
+PromEx 1.12.0 uses the host's compile-time-selected public `PromEx.Storage`
+adapter. `Observability.Store` admits only this exact definition cohort and
+aggregates synchronously in bounded ETS, with inclusive histogram buckets and
+nanosecond integer sums. It never buffers raw samples or reads private PromEx/
+Peep tables. PromEx's default manual status group is explicitly dropped.
+`Observability.Relay` maps original Lab events to one normalized event per
+metric, preserves closed labels and counts rejected source measurements.
+`WOTEX_LAB_PROMEX=1` explicitly starts the host-owned one-for-all supervisor;
+default collection is off. Public `PromEx.get_metrics/1` works without any HTTP
+listener, Grafana agent, automatic upload, database or LLM. The built-in
+BEAM/Phoenix/LiveView plugin cohort still requires its separate privacy and
+cardinality admission; no raw introspection is enabled by this implementation.
 
 Required metric groups: scenario outcomes/cleanup; transport requests and
 subscription churn/drops; Directory operations/conflicts; Continuum delivery
@@ -96,7 +120,10 @@ changed by a Lab instance. Lab does not mint modules/atoms per instance.
 `Catalogue.dimension_value/4` derives every label from a closed enum, maps
 outcome atoms through `outcome_class/1` and unknown profiles or operations to
 `other`, and the collector stamps its configured instance slot on each
-snapshot. Slot expiry and the PromEx storage adapter belong to the planned host.
+snapshot. The implemented PromEx host adapter describes the single Workbench
+Lab instance, not browser sessions. Its fixed registered names are host-owned;
+no per-session atoms/modules are generated. Slot expiry and tenant-isolated
+collection/history remain planned. VM metrics are not currently enabled.
 
 Counters preserve reset identity and cumulative semantics. Histograms use
 versioned fixed buckets; percentile queries derive from bucket counts, never

@@ -15,9 +15,14 @@ config :wotex_lab_workbench,
   session_sweep_ms: 60 * 1_000,
   max_sessions: 64,
   metrics_capacity: 1_024,
+  promex_enabled: false,
   formal_engine: nil
 
 config :phoenix, :json_library, Jason
+
+# One compile-time adapter choice for the explicit host; never changed by a
+# Lab instance. No PromEx supervisor starts merely by configuring its adapter.
+config :prom_ex, :storage_adapter, WotexLabWorkbench.Observability.Store
 
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",

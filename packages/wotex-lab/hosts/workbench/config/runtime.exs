@@ -1,5 +1,7 @@
 import Config
 
+config :wotex_lab_workbench, promex_enabled: System.get_env("WOTEX_LAB_PROMEX") == "1"
+
 # Every operator-owned value is read here, once, at boot. Nothing below
 # downloads, discovers or starts anything: the formal engine path only names
 # a binary the operator provisioned and the host verifies before use.

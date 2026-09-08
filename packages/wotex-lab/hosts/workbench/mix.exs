@@ -51,6 +51,8 @@ defmodule WotexLabWorkbench.MixProject do
       {:nx, "~> 0.13.1"},
       {:explorer, "~> 0.12.0"},
       {:telemetry, "~> 1.3"},
+      {:telemetry_metrics, "~> 1.1"},
+      {:prom_ex, "~> 1.12.0"},
       {:phoenix, "~> 1.8.13"},
       {:phoenix_html, "~> 4.3"},
       {:phoenix_live_view, "~> 1.2.11"},

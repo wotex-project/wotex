@@ -67,12 +67,38 @@ async function run() {
     await other.goto(new URL(runPath, origin).href);
     assert.ok(await other.getByText("Run unavailable", {exact: true}).isVisible());
     await other.close();
+
+    await page.goto(new URL("/metrics", origin).href);
+    await page.locator("#metric-catalogue summary").focus();
+    await page.keyboard.press("Enter");
+    const choices = page.locator("#dashboard-export input[type=checkbox]");
+    assert.equal(await choices.count(), 43);
+    for (const choice of await choices.all()) await choice.uncheck();
+    await page.locator("#dashboard-export input[value=nx_duration_seconds]").check();
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.locator("#dashboard-export button[type=submit]").click()
+    ]);
+    assert.equal(download.suggestedFilename(), "wotex-lab-dashboard.json");
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of await download.createReadStream()) {
+      size += chunk.length;
+      assert.ok(size <= 65_536);
+      chunks.push(chunk);
+    }
+    const dashboard = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    assert.equal(dashboard.panels.length, 1);
+    assert.equal(dashboard.panels[0].targets[0].expr,
+      "histogram_quantile(0.95, rate(wotex_lab_nx_duration_seconds_bucket[5m]))");
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({
       kind: "local_source_browser_cohort", node: process.version, playwright: version,
       chromium: browser.version(), checks: ["CSP-interpreter", "enhanced-render", "theme-reset",
         "keyboard-reset", "mobile-reflow", "bounded-table", "analysis-mark-updates",
-        "analysis-no-evidence-mutation", "reload-no-replay", "session-isolation"],
+        "analysis-no-evidence-mutation", "reload-no-replay", "session-isolation",
+        "catalogue-selection", "catalogue-mobile-reflow", "dashboard-download"],
       status: "passed", artifact_adoption: false, wcag_certification: false
     }));
   } finally { await browser.close(); }
