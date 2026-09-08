@@ -18,8 +18,12 @@ defmodule Wotex.BACnet.IPv4 do
     local_port = Keyword.get(opts, :local_port, 47_809)
 
     with true <- valid_options?(local_ip, local_port, timeout),
+         true <-
+           BACnet.Stack.Transport.IPv4Transport.is_valid_destination(
+             Keyword.get(opts, :destination)
+           ),
          {:ok, _} <-
-           BACstack.connect(
+           BACstack.configuration(
              stack_client: self(),
              destination: Keyword.get(opts, :destination),
              peer_receive:
@@ -38,17 +42,20 @@ defmodule Wotex.BACnet.IPv4 do
            ),
          {:ok, client} <- StackOwner.client(owner),
          {:ok, stack} <-
-           BACstack.connect(
-             stack_client: client,
-             destination: Keyword.get(opts, :destination),
-             writes: true,
-             peer_receive:
-               Keyword.get(opts, :peer_receive, %{
-                 max_apdu: 50,
-                 max_segments: 1,
-                 segmentation: :no_segmentation
-               }),
-             receive_limits: %{max_apdu: 1476, max_segments: 32, max_bytes: 65_536}
+           BACstack.connect_owned(
+             [
+               stack_client: client,
+               destination: Keyword.get(opts, :destination),
+               writes: true,
+               peer_receive:
+                 Keyword.get(opts, :peer_receive, %{
+                   max_apdu: 50,
+                   max_segments: 1,
+                   segmentation: :no_segmentation
+                 }),
+               receive_limits: %{max_apdu: 1476, max_segments: 32, max_bytes: 65_536}
+             ],
+             owner
            ) do
       {:ok, %{owner: owner, stack: stack}}
     else
@@ -61,7 +68,10 @@ defmodule Wotex.BACnet.IPv4 do
   def request(handle, message, timeout), do: BACstack.request(handle.stack, message, timeout)
 
   @impl Wotex.BACnet.Client
-  def disconnect(handle), do: StackOwner.close(handle.owner)
+  def disconnect(handle) do
+    BACstack.disconnect(handle.stack)
+    StackOwner.close(handle.owner)
+  end
 
   defp valid_options?(ip, port, timeout) when is_tuple(ip) and tuple_size(ip) == 4 do
     Enum.all?(Tuple.to_list(ip), &(is_integer(&1) and &1 in 0..255)) and

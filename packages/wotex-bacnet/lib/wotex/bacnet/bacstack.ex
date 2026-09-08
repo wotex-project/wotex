@@ -3,16 +3,35 @@ defmodule Wotex.BACnet.BACstack do
   @behaviour Wotex.BACnet.Client
   alias BACnet.Protocol.{APDU, Constants}
   alias BACnet.Protocol.ApplicationTags.Encoding
-  alias Wotex.BACnet.{Address, Error, Value, ValueBoundary}
+  alias Wotex.BACnet.{Address, Error, OperationOwner, Value, ValueBoundary}
 
   @impl Wotex.BACnet.Client
-  def connect(opts) when is_list(opts) do
-    if valid_options?(opts),
-      do: connect_options(opts),
-      else: {:error, Error.new(:invalid_options)}
+  def connect(opts) do
+    with {:ok, config} <- configuration(opts), do: start_owner(config)
   end
 
-  def connect(_), do: {:error, Error.new(:invalid_options)}
+  @doc false
+  @spec connect_owned(term(), pid()) :: {:ok, map()} | {:error, Error.t()}
+  def connect_owned(opts, stack) when is_pid(stack) do
+    with {:ok, config} <- configuration(opts), do: start_owner(%{config | owned_stack: stack})
+  end
+
+  defp start_owner(config) do
+    config = Map.put(config, :generation, make_ref())
+
+    case OperationOwner.start_link(config) do
+      {:ok, owner} -> {:ok, Map.put(config, :owner, owner)}
+      _ -> {:error, Error.new(:startup_failed)}
+    end
+  end
+
+  @doc false
+  @spec configuration(term()) :: {:ok, map()} | {:error, Error.t()}
+  def configuration(opts) when is_list(opts) do
+    if valid_options?(opts), do: connect_options(opts), else: {:error, Error.new(:invalid_options)}
+  end
+
+  def configuration(_), do: {:error, Error.new(:invalid_options)}
 
   defp connect_options(opts) do
     client = Keyword.get(opts, :stack_client)
@@ -40,48 +59,33 @@ defmodule Wotex.BACnet.BACstack do
             destination: destination,
             writes: writes,
             peer_receive: peer,
-            receive_limits: receive_limits
+            receive_limits: receive_limits,
+            owned_stack: nil
           }},
        else: {:error, Error.new(:invalid_options)}
   end
 
   @impl Wotex.BACnet.Client
   def request(
-        %{client: client, destination: destination, writes: writes, peer_receive: peer} = handle,
+        %{
+          owner: owner,
+          generation: generation,
+          writes: writes,
+          peer_receive: peer,
+          destination: destination
+        },
         message,
         timeout
       )
-      when is_pid(client) and is_boolean(writes) and is_integer(timeout) and timeout in 1..60_000 do
+      when is_pid(owner) and is_reference(generation) and is_integer(timeout) and
+             timeout in 1..60_000 do
     deadline = System.monotonic_time(:millisecond) + timeout
 
     with true <- valid_destination?(destination) and valid_peer?(peer),
          :ok <- Address.validate_message(message),
          {:ok, address} <- Address.new(message),
-         {:ok, apdu} <- service(address, message, handle.writes) do
-      task =
-        Task.async(fn ->
-          try do
-            BACnet.Stack.Client.send(handle.client, handle.destination, apdu,
-              max_apdu_length: peer.max_apdu,
-              max_segments: peer.max_segments,
-              segmentation_supported: peer.segmentation
-            )
-          catch
-            :exit, _ -> {:error, :connection_closed}
-          end
-        end)
-
-      result =
-        try do
-          case Task.yield(task, max(deadline - System.monotonic_time(:millisecond), 0)) do
-            {:ok, result} -> result
-            _ -> {:error, :timeout}
-          end
-        after
-          Task.shutdown(task, :brutal_kill)
-        end
-
-      response(result, address, message.type)
+         {:ok, _} <- service(address, message, writes) do
+      OperationOwner.request(owner, generation, message, deadline)
     else
       false -> {:error, Error.new(:invalid_options)}
       error -> error
@@ -90,8 +94,41 @@ defmodule Wotex.BACnet.BACstack do
 
   def request(_, _, _), do: {:error, Error.new(:invalid_request)}
 
+  @doc false
+  @spec exchange(map(), map(), integer()) :: {:ok, term()} | {:error, Error.t()}
+  def exchange(config, message, deadline) do
+    with :ok <- Address.validate_message(message),
+         {:ok, address} <- Address.new(message),
+         {:ok, apdu} <- service(address, message, config.writes),
+         true <- System.monotonic_time(:millisecond) < deadline do
+      peer = config.peer_receive
+
+      result =
+        BACnet.Stack.Client.send(config.client, config.destination, apdu,
+          max_apdu_length: peer.max_apdu,
+          max_segments: peer.max_segments,
+          segmentation_supported: peer.segmentation
+        )
+
+      result
+      |> response(address, message.type)
+      |> effect(message.type)
+    else
+      false -> {:error, Error.new(:deadline_exceeded)}
+      error -> error
+    end
+  rescue
+    _ -> effect({:error, Error.new(:transport_error)}, message.type)
+  catch
+    :exit, _ -> effect({:error, Error.new(:connection_closed)}, message.type)
+  end
+
   @impl Wotex.BACnet.Client
-  def disconnect(_handle), do: :ok
+  def disconnect(%{owner: owner}), do: OperationOwner.close(owner)
+  def disconnect(_), do: :ok
+
+  defp effect({:error, error}, :write_property), do: {:error, %{error | effect: :unknown}}
+  defp effect(result, _), do: result
 
   @doc "Accepts only an exact service acknowledgment; missing/negative responses fail."
   @spec response(term(), Address.t(), atom()) :: {:ok, term()} | {:error, Error.t()}
@@ -250,7 +287,14 @@ defmodule Wotex.BACnet.BACstack do
     if Keyword.keyword?(opts) do
       keys = Keyword.keys(opts)
 
-      allowed = [:stack_client, :destination, :writes, :timeout, :peer_receive, :receive_limits]
+      allowed = [
+        :stack_client,
+        :destination,
+        :writes,
+        :timeout,
+        :peer_receive,
+        :receive_limits
+      ]
 
       keys -- allowed == [] and
         length(keys) == MapSet.size(MapSet.new(keys))

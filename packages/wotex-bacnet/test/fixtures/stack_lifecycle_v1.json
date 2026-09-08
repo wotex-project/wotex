@@ -1,0 +1,17 @@
+{
+  "format_version": "1.0.0",
+  "cases": [
+    {
+      "id": "WBA-L01",
+      "requirements": ["WBA-S03", "WBA-V05"],
+      "input": {"acquisitions": ["transport", "segmentator", "segments_store"], "fail": "client"},
+      "expected": {"cleanup_order": ["segments_store", "segmentator", "transport"], "active_owned_resources": 0}
+    },
+    {
+      "id": "WBA-L02",
+      "requirements": ["WBA-S03", "WBA-V14"],
+      "input": {"admitted_callers": 64, "extra_callers": 1},
+      "expected": {"error": "busy", "effect": "none", "pending_after_close": 0, "borrowed_client_alive": true}
+    }
+  ]
+}

@@ -12,6 +12,15 @@ defmodule Wotex.BACnet.IPv4Test do
     state = :sys.get_state(client)
     assert state.opts.apdu_retries == 0
 
+    send(handle.owner, :unrelated)
+    owner_state = :sys.get_state(handle.owner)
+
+    refs =
+      for key <- [:client, :transport, :segmentator, :segments_store],
+          do: Process.monitor(Map.fetch!(owner_state, key))
+
+    assert {:error, _} = IPv4.connect(opts)
+
     assert {:error, _} =
              IPv4.request(
                handle,
@@ -24,14 +33,6 @@ defmodule Wotex.BACnet.IPv4Test do
                10
              )
 
-    send(handle.owner, :unrelated)
-    owner_state = :sys.get_state(handle.owner)
-
-    refs =
-      for key <- [:client, :transport, :segmentator, :segments_store],
-          do: Process.monitor(Map.fetch!(owner_state, key))
-
-    assert {:error, _} = IPv4.connect(opts)
     assert :ok = IPv4.disconnect(handle)
     for ref <- refs, do: assert_receive({:DOWN, ^ref, :process, _, _})
     assert :ok = IPv4.disconnect(handle)
@@ -72,6 +73,8 @@ defmodule Wotex.BACnet.IPv4Test do
           [local_ip: :none, local_port: 1],
           [local_ip: {999, 0, 0, 1}],
           [local_ip: :none, destination: nil],
+          [local_ip: :none, destination: {{127, 0, 0, 1}, 1024}],
+          [local_ip: :none, destination: {{127, 0, 0, 0}, 55_809}],
           [
             local_ip: :none,
             local_port: 55_810,

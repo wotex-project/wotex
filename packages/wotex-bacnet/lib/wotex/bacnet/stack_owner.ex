@@ -7,8 +7,12 @@ defmodule Wotex.BACnet.StackOwner do
 
   @doc "Starts the explicit process group and unwinds partial startup failures."
   @spec start_link(keyword()) :: {:ok, pid()} | {:error, term()}
-  def start_link(opts) do
-    case GenServer.start(__MODULE__, opts) do
+  def start_link(opts), do: start_link(opts, fn _, start -> start.() end)
+
+  @doc false
+  @spec start_link(keyword(), (atom(), (-> term()) -> term())) :: GenServer.on_start()
+  def start_link(opts, acquire) do
+    case GenServer.start(__MODULE__, {opts, acquire}) do
       {:ok, pid} ->
         Process.link(pid)
         {:ok, pid}
@@ -29,13 +33,13 @@ defmodule Wotex.BACnet.StackOwner do
   @doc "Closes all group resources idempotently."
   @spec close(pid()) :: :ok
   def close(pid) do
-    GenServer.stop(pid, :normal)
+    GenServer.stop(pid, :normal, 1100)
   catch
     :exit, _ -> :ok
   end
 
   @impl GenServer
-  def init(opts) do
+  def init({opts, acquire}) do
     Process.flag(:trap_exit, true)
     owner = self()
 
@@ -63,7 +67,7 @@ defmodule Wotex.BACnet.StackOwner do
        end}
     ]
 
-    case start_group(steps, %{}) do
+    case start_group(steps, %{}, acquire) do
       {:ok, group} ->
         {:ok,
          group
@@ -97,12 +101,12 @@ defmodule Wotex.BACnet.StackOwner do
   @impl GenServer
   def terminate(_, state), do: cleanup(state)
 
-  defp start_group([], group), do: {:ok, group}
+  defp start_group([], group, _), do: {:ok, group}
 
-  defp start_group([{name, start} | tail], group) do
-    case safe_start(start, group) do
+  defp start_group([{name, start} | tail], group, acquire) do
+    case safe_start(fn group -> acquire.(name, fn -> start.(group) end) end, group) do
       {:ok, pid} ->
-        start_group(tail, Map.put(group, name, pid))
+        start_group(tail, Map.put(group, name, pid), acquire)
 
       _ ->
         cleanup(group)
@@ -119,11 +123,33 @@ defmodule Wotex.BACnet.StackOwner do
   end
 
   defp cleanup(group) do
+    deadline = System.monotonic_time(:millisecond) + 1000
+
     for key <- [:client, :segments_store, :segmentator, :transport],
         pid = Map.get(group, key),
         is_pid(pid),
-        do: close(pid)
+        do: close_child(pid, deadline, key)
 
     :ok
+  end
+
+  defp close_child(pid, deadline, key) do
+    started = System.monotonic_time()
+    result = stop_child(pid, deadline)
+
+    :telemetry.execute(
+      [:wotex, :bacnet, :resource, :stop],
+      %{duration: System.monotonic_time() - started},
+      %{resource: key, result: result}
+    )
+  end
+
+  defp stop_child(pid, deadline) do
+    timeout = max(deadline - System.monotonic_time(:millisecond), 1)
+    GenServer.stop(pid, :normal, timeout)
+  catch
+    :exit, _ ->
+      Process.exit(pid, :kill)
+      :forced
   end
 end

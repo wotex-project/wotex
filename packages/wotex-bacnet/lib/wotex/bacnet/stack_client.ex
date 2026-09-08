@@ -68,7 +68,9 @@ defmodule Wotex.BACnet.StackClient do
         {:bacnet_transport, _, _, {:apdu, _, _, <<kind::4, 1::1, _::3, _::binary>>}, _},
         state
       )
-      when kind in [0, 3], do: {:noreply, state}
+      when kind in [0, 3] do
+    {:noreply, state}
+  end
 
   def handle_info(message, state), do: Client.handle_info(message, state)
 

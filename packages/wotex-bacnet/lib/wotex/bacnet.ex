@@ -56,7 +56,9 @@ defmodule Wotex.BACnet do
       )
 
       case result do
-        {:error, error} when type in [:write, :write_property, :invoke, :call] ->
+        {:error, error}
+        when type in [:write, :write_property, :invoke, :call] and
+               session.client not in [Wotex.BACnet.BACstack, Wotex.BACnet.IPv4] ->
           {:error, %{error | effect: :unknown}}
 
         {:ok, _} = result ->
