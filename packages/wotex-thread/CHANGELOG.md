@@ -1,5 +1,9 @@
 # Changelog
 
-## 0.1.0-dev
+## Unreleased
 
-- Establish the consumer-neutral Thread library contract and package gates.
+- Establish the ordinary, process-free Wotex Mix package contract and quality gates.
+- Add researched protocol requirements, typed values, structured errors and explicit client ownership.
+- Implement the supported Thread profile and Form/Runtime mapping with bounded operations.
+- Add malformed-input, lifecycle and property/contract tests; separate optional interoperability evidence.
+- Document unsupported features and consumer parity gates without claiming certification.
