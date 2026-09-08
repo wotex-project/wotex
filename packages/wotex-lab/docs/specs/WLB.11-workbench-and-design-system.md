@@ -128,6 +128,19 @@ Inspect dtype, shape, units, mask/quality codes and source IDs before numbers;
 missing and nonfinite/rejected values cannot masquerade as zero. Nx.Serving
 queue latency, compilation/warm-up and execution are distinct measurements.
 
+The tensor preview splits the lazy `Nx.Batch` before stacking, builds only the
+selected features through public `Nx.LazyContainer` traversal, and slices
+vector cells and the quality matrix before host-list conversion. It discloses
+row/feature truncation, caps each vector cell at 32 elements and labels mask
+counts as preview-element counts. `tensor_window_test.exs` traces every
+`Nx.to_list/1` call over a 250-row, 40-feature, 64-element fixture and requires
+only 100×32 tensors to cross that boundary. Min/max downsampling uses gap
+sentinels before/between/after retained extrema, preserves input order and
+cannot draw across an omitted missing span. Missing spans may coalesce;
+interval means input points per bucket. A requested downsampling budget below
+five is refused when truncation is needed, rather than dropping an extremum
+or gap to claim success. The fixed normal budget remains 2,000.
+
 ## Accessibility, lifecycle and security
 
 Target WCAG 2.2 AA: keyboard-only operation, visible focus, semantic landmarks,

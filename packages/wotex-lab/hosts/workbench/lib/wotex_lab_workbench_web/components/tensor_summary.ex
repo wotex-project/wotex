@@ -30,6 +30,11 @@ defmodule WotexLabWorkbenchWeb.Components.TensorSummary do
           <dt>Quality shape</dt><dd>{inspect(@summary.quality.shape)}</dd>
         </div>
       </dl>
+      <p>
+        Preview: {@summary.preview_bounds.rows} of {@summary.rows} rows, {@summary.preview_bounds.features} of {@summary.preview_bounds.total_features} features;
+        at most {@summary.preview_bounds.elements_per_feature} elements per feature cell. {if @summary.preview_bounds.truncated,
+          do: "Preview truncated."} Observed/filled counts describe preview elements, not the full batch.
+      </p>
       <div class="wl-table-wrap">
         <table>
           <caption>Feature metadata</caption>

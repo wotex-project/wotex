@@ -26,8 +26,9 @@ defmodule WotexLabWorkbench.Runs do
   def plain(value, depth \\ 0)
   def plain(_value, depth) when depth > @max_plain_depth, do: "…"
 
-  def plain(%Nx.Tensor{} = tensor, _depth),
-    do: tensor |> Nx.to_list() |> List.wrap() |> Enum.take(32)
+  def plain(%Nx.Tensor{} = tensor, _depth) do
+    tensor |> Nx.flatten() |> Nx.slice_along_axis(0, min(Nx.size(tensor), 32)) |> Nx.to_flat_list()
+  end
 
   def plain(%DateTime{} = value, _depth), do: DateTime.to_iso8601(value)
   def plain(%MapSet{} = value, depth), do: value |> MapSet.to_list() |> plain(depth + 1)
@@ -81,6 +82,8 @@ defmodule WotexLabWorkbench.Runs do
   @doc "Builds a bounded series from raw points with downsampling recorded."
   @spec series(String.t(), String.t(), String.t(), [Preview.point()]) :: map()
   def series(name, unit, source, points) do
+    # The fixed default budget admits min/max plus gap sentinels; no caller
+    # can reduce it below the downsampler's safe minimum here.
     sampled = Preview.downsample(points)
 
     %{

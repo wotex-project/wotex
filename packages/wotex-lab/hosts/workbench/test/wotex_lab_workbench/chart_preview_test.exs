@@ -116,10 +116,8 @@ defmodule WotexLabWorkbench.ChartPreviewTest do
 
     assert {:error, %Error{code: :forbidden_key}} = Chart.validate(Map.put(base, :caller, true))
 
-    assert %{points: points, method: "minmax-bucket"} =
+    assert {:error, %Error{code: :invalid_preview_budget}} =
              Preview.downsample([{1, 10}, {2, nil}, {3, -5}, {4, 20}], 2)
-
-    assert length(points) == 2
 
     assert Runs.series("temperature", "Cel", "observed", [{1, 2}]).points == [{1, 2}]
 

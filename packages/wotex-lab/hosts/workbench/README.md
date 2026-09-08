@@ -59,6 +59,12 @@ changes, resets by keyboard and finalizes obsolete views. Accessible SVG and
 the maximum 100-row table remain available when enhancement fails. The SVG
 supports all three admitted marks and preserves missing-value gaps.
 
+Tensor previews split the lazy batch before stacking and slice before copying
+to host lists. Their observed/filled counts describe only the shown elements,
+with row/feature/vector truncation disclosed. Min/max downsampling keeps gap
+sentinels around retained extrema; it cannot draw a line across an omitted gap.
+Its interval is input points per bucket, not an assumed event-time duration.
+
 The optional browser gate requires an explicitly installed Playwright/browser
 cohort and a disposable local server. It never downloads them. For example,
 start the host with `PORT=4107 WOTEX_PATH_DEPS=1 mix phx.server`, then run:
