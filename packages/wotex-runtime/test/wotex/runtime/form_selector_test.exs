@@ -3,7 +3,7 @@ defmodule Wotex.Runtime.FormSelectorTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Runtime.{Error, FormSelector}
+  alias Wotex.Runtime.{Error, FormSelector, Limits}
   alias Wotex.Runtime.Test.TDFactory
 
   test "TD Form order takes precedence and relative href resolves against base" do
@@ -174,5 +174,54 @@ defmodule Wotex.Runtime.FormSelectorTest do
                :readproperty,
                [TDFactory.http_profile()]
              )
+  end
+
+  test "selection bounds profile and Form scans at exact fixed thresholds" do
+    max_profiles = Limits.maximum(:binding_profiles)
+    max_forms = Limits.maximum(:forms_per_interaction)
+    profile = TDFactory.http_profile()
+    profiles = Enum.map(1..max_profiles, &%{profile | id: &1})
+    td = TDFactory.thing_description()
+
+    assert {:ok, _selection} =
+             FormSelector.select(td, :property, "temperature", :readproperty, profiles)
+
+    assert {:error, %Error{code: :profile_limit_exceeded}} =
+             FormSelector.select(
+               td,
+               :property,
+               "temperature",
+               :readproperty,
+               profiles ++ [%{profile | id: :over}]
+             )
+
+    form =
+      td
+      |> Wotex.ThingDescription.to_map()
+      |> get_in(["properties", "temperature", "forms"])
+      |> hd()
+
+    at_limit =
+      td
+      |> Wotex.ThingDescription.to_map()
+      |> put_in(["properties", "temperature", "forms"], List.duplicate(form, max_forms))
+
+    {:ok, at_limit} = Wotex.ThingDescription.from_map(at_limit)
+
+    assert {:ok, _selection} =
+             FormSelector.select(at_limit, :property, "temperature", :readproperty, [profile])
+
+    over_limit =
+      at_limit
+      |> Wotex.ThingDescription.to_map()
+      |> put_in(
+        ["properties", "temperature", "forms"],
+        List.duplicate(form, max_forms + 1)
+      )
+
+    {:ok, over_limit} = Wotex.ThingDescription.from_map(over_limit)
+
+    assert {:error, %Error{code: :form_limit_exceeded}} =
+             FormSelector.select(over_limit, :property, "temperature", :readproperty, [profile])
   end
 end

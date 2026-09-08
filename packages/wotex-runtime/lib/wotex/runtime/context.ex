@@ -10,11 +10,13 @@ defmodule Wotex.Runtime.Context do
 
   Metadata carries non-secret correlation information such as trace ids or
   actor references. It is passed through interaction planning without policy
-  interpretation. Do not place credentials in metadata; ephemeral credential
+  interpretation. Request ids are limited to 256 bytes and metadata to 64
+  top-level entries. Nested metadata values and interaction payloads remain
+  consumer-bounded. Do not place credentials in metadata; ephemeral credential
   material has a separate execution-only value.
   """
 
-  alias Wotex.Runtime.Error
+  alias Wotex.Runtime.{Error, Limits}
 
   @type deadline :: DateTime.t() | integer() | nil
   @type t :: %__MODULE__{
@@ -29,32 +31,88 @@ defmodule Wotex.Runtime.Context do
   @doc "Builds a validated interaction context."
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
+    if Keyword.keyword?(opts) do
+      build(opts)
+    else
+      invalid_options()
+    end
+  end
+
+  def new(_opts), do: invalid_options()
+
+  defp build(opts) do
     request_id = Keyword.get(opts, :request_id)
     deadline = Keyword.get(opts, :deadline)
     metadata = Keyword.get(opts, :metadata, %{})
 
-    cond do
-      not (is_binary(request_id) and byte_size(String.trim(request_id)) > 0) ->
-        {:error,
-         Error.new(:invalid_request_id, :construction, "request_id must be a non-empty string")}
-
-      not valid_deadline?(deadline) ->
-        {:error,
-         Error.new(
-           :invalid_deadline,
-           :construction,
-           "deadline must be an absolute integer, DateTime, or nil"
-         )}
-
-      not is_map(metadata) ->
-        {:error, Error.new(:invalid_metadata, :construction, "metadata must be a map")}
-
-      true ->
-        {:ok, %__MODULE__{request_id: request_id, deadline: deadline, metadata: metadata}}
+    with :ok <- validate_request_id(request_id),
+         :ok <- validate_deadline(deadline),
+         :ok <- validate_metadata(metadata) do
+      {:ok, %__MODULE__{request_id: request_id, deadline: deadline, metadata: metadata}}
     end
   end
 
-  def new(_opts) do
+  defp validate_request_id(request_id) do
+    cond do
+      not is_binary(request_id) or request_id == "" ->
+        {:error,
+         Error.new(:invalid_request_id, :construction, "request_id must be a non-empty string")}
+
+      not String.valid?(request_id) ->
+        {:error,
+         Error.new(:invalid_request_id, :construction, "request_id must be a valid UTF-8 string")}
+
+      byte_size(request_id) > Limits.maximum(:request_id_bytes) ->
+        {:error,
+         Error.new(
+           :request_id_limit_exceeded,
+           :construction,
+           "request_id exceeds the byte limit",
+           %{max_bytes: Limits.maximum(:request_id_bytes)}
+         )}
+
+      String.trim(request_id) == "" ->
+        {:error,
+         Error.new(:invalid_request_id, :construction, "request_id must be a non-empty string")}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_metadata(metadata) do
+    cond do
+      not is_map(metadata) ->
+        {:error, Error.new(:invalid_metadata, :construction, "metadata must be a map")}
+
+      map_size(metadata) > Limits.maximum(:metadata_entries) ->
+        {:error,
+         Error.new(
+           :metadata_limit_exceeded,
+           :construction,
+           "metadata exceeds the top-level entry limit",
+           %{max_entries: Limits.maximum(:metadata_entries)}
+         )}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_deadline(deadline) do
+    if valid_deadline?(deadline) do
+      :ok
+    else
+      {:error,
+       Error.new(
+         :invalid_deadline,
+         :construction,
+         "deadline must be an absolute integer, DateTime, or nil"
+       )}
+    end
+  end
+
+  defp invalid_options do
     {:error,
      Error.new(:invalid_context_options, :construction, "context options must be a keyword list")}
   end

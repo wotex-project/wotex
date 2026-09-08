@@ -37,7 +37,23 @@ defmodule Wotex.Runtime.Subscription do
 
   @doc "Stops a subscription after requesting protocol unsubscription."
   @spec stop(GenServer.server(), timeout()) :: :ok | {:error, Error.t()}
-  def stop(server, timeout \\ 5_000), do: GenServer.call(server, :stop, timeout)
+  def stop(server, timeout \\ 5_000)
+
+  def stop(server, timeout)
+      when timeout == :infinity or (is_integer(timeout) and timeout >= 0) do
+    GenServer.call(server, :stop, timeout)
+  catch
+    :exit, reason -> stop_failure(reason)
+  end
+
+  def stop(_server, _timeout) do
+    {:error,
+     Error.new(
+       :invalid_stop_timeout,
+       :subscription,
+       "stop timeout must be a non-negative integer or :infinity"
+     )}
+  end
 
   @impl GenServer
   def init(init) do
@@ -114,7 +130,10 @@ defmodule Wotex.Runtime.Subscription do
 
   @impl GenServer
   def terminate(reason, state) do
-    Telemetry.execute([:subscription, :close], Map.put(identity(state), :reason, reason))
+    Telemetry.execute(
+      [:subscription, :close],
+      Map.merge(identity(state), close_outcome(reason))
+    )
 
     cond do
       state.closed? -> :ok
@@ -200,6 +219,9 @@ defmodule Wotex.Runtime.Subscription do
 
   defp normalize_frame({:ok, value, meta}, _state) when is_map(meta), do: {:ok, value, meta}
   defp normalize_frame(:ignore, _state), do: :ignore
+
+  defp normalize_frame({:error, %Error{code: :port_exception} = error}, _state),
+    do: {:error, error}
 
   defp normalize_frame({:error, external}, state) do
     {:error,
@@ -373,5 +395,45 @@ defmodule Wotex.Runtime.Subscription do
       affordance_type: state.start_request.affordance_type,
       affordance_name: state.start_request.affordance_name
     }
+  end
+
+  defp close_outcome(:normal), do: %{outcome: :normal}
+  defp close_outcome({:shutdown, %Error{code: code}}), do: %{outcome: :error, code: code}
+  defp close_outcome({:shutdown, status}) when is_atom(status), do: %{outcome: status}
+  defp close_outcome(:shutdown), do: %{outcome: :shutdown}
+  defp close_outcome(_reason), do: %{outcome: :abnormal}
+
+  defp stop_failure({:timeout, _call}) do
+    error =
+      Error.new(
+        :subscription_stop_timeout,
+        :subscription,
+        "subscription did not stop within the caller timeout"
+      )
+
+    {:error, %{error | class: :timeout}}
+  end
+
+  defp stop_failure({reason, _call}) when reason in [:noproc, :normal] do
+    {:error,
+     Error.new(
+       :subscription_not_running,
+       :subscription,
+       "subscription stopped before the request completed"
+     )}
+  end
+
+  defp stop_failure({{:shutdown, _reason}, _call}) do
+    {:error,
+     Error.new(
+       :subscription_not_running,
+       :subscription,
+       "subscription stopped before the request completed"
+     )}
+  end
+
+  defp stop_failure(_reason) do
+    {:error,
+     Error.new(:subscription_stop_failed, :subscription, "subscription stop request failed")}
   end
 end

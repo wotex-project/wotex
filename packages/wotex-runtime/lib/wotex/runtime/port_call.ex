@@ -14,19 +14,19 @@ defmodule Wotex.Runtime.PortCall do
   def invoke(module, function, arguments, phase, metadata) do
     apply(module, function, arguments)
   rescue
-    exception ->
-      report(:error, exception, __STACKTRACE__, function, metadata)
+    _exception ->
+      report(:error, function, metadata)
       {:error, exception_error(phase, function)}
   catch
-    kind, reason ->
-      report(kind, reason, __STACKTRACE__, function, metadata)
+    kind, _reason ->
+      report(kind, function, metadata)
       {:error, exception_error(phase, function)}
   end
 
-  defp report(kind, reason, stacktrace, function, metadata) do
+  defp report(kind, function, metadata) do
     Telemetry.execute(
       [:port, :exception],
-      Map.merge(metadata, %{callback: function, kind: kind, reason: reason, stacktrace: stacktrace})
+      Map.merge(metadata, %{callback: function, kind: kind, code: :port_exception})
     )
   end
 

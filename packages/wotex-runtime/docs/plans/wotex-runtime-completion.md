@@ -60,7 +60,7 @@ reference-consumer semantics. No new hook/script substitutes for ExUnit.
 |---|---|---|---|
 | Named operations and Form mechanics | TD 1.1 Recommendation 2023-12-05 | `consumed_thing_test.exs`, `form_selector_test.exs` | Explicit profile/Form cells only |
 | Nine Thing-level operations | Same TD, top-level Forms; WRT.03 | ConsumedThing/ExposedThing/FormSelector tests | Binding support separate |
-| Consumer-owned subscription lifecycle | WRT.01 | `subscription_test.exs` | No durability, bounded mailbox or guaranteed remote cleanup |
+| Consumer-owned subscription lifecycle | WRT.01 | `subscription_test.exs` | No durability, automatic recovery or guaranteed remote cleanup |
 | ExposedThing dispatch | WRT.02 | `exposed_thing_test.exs` | No selected inbound Form or policy authority |
 | WoT Scripting API | Note 2023-10-03 | No full conformance suite | Guidance only; no JavaScript API claim |
 
@@ -80,7 +80,7 @@ Broader claims need revision-specific assertions and positive/negative vectors.
 
 | ID | Unsupported or unproven claim | Required closure / owner |
 |---|---|---|
-| RT-R01 | Hard-bounded memory/mailbox/callback latency | RT-C02 and consumer overload contract |
+| RT-R01 | Hard bounds across nested terms, callback latency and all consumer/transport mailboxes | Consumer overload and binding contracts; Runtime only bounds its listed admissions and optional receiver-mailbox check |
 | RT-R02 | Credential-safe handling of every exception/crash | RT-C02; consumer callback code remains trusted |
 | RT-R03 | Request/result identity cannot be substituted | RT-C02 transport-return correlation matrix |
 | RT-R04 | Full selected inbound Form/schema validation | RT-C03 consumer-server contract, not current route lookup |

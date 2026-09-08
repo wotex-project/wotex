@@ -3,7 +3,7 @@ defmodule Wotex.Runtime.ValueTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Runtime.{BindingProfile, Context, Error, Result, Retry}
+  alias Wotex.Runtime.{BindingProfile, Context, Error, Limits, Result, Retry}
 
   test "context accepts caller identity, deadline, and metadata without generating values" do
     deadline = DateTime.from_unix!(1_700_000_000)
@@ -19,13 +19,45 @@ defmodule Wotex.Runtime.ValueTest do
 
   test "context rejects invalid inputs and raising construction uses the same error" do
     assert {:error, %Error{code: :invalid_request_id}} = Context.new([])
+    assert {:error, %Error{code: :invalid_request_id}} = Context.new(request_id: <<255>>)
 
     assert {:error, %Error{code: :invalid_deadline}} =
              Context.new(request_id: "req", deadline: :soon)
 
     assert {:error, %Error{code: :invalid_metadata}} = Context.new(request_id: "req", metadata: [])
     assert {:error, %Error{code: :invalid_context_options}} = Context.new(%{})
+    assert {:error, %Error{code: :invalid_context_options}} = Context.new([:not_keyword])
     assert_raise Error, fn -> Context.new!(request_id: "") end
+  end
+
+  test "context and result identity metadata limits accept the threshold and reject one over" do
+    assert Limits.all() == %{
+             request_id_bytes: 256,
+             metadata_entries: 64,
+             binding_profiles: 32,
+             forms_per_interaction: 128
+           }
+
+    max_id = Limits.maximum(:request_id_bytes)
+    max_metadata = Limits.maximum(:metadata_entries)
+    metadata = Map.new(1..max_metadata, &{&1, &1})
+
+    assert {:ok, _context} =
+             Context.new(request_id: String.duplicate("r", max_id), metadata: metadata)
+
+    assert {:error, %Error{code: :request_id_limit_exceeded}} =
+             Context.new(request_id: String.duplicate("r", max_id + 1))
+
+    assert {:error, %Error{code: :metadata_limit_exceeded}} =
+             Context.new(request_id: "req", metadata: Map.put(metadata, :over, true))
+
+    assert {:ok, result} =
+             Result.new(String.duplicate("r", max_id), :readproperty, nil, metadata: metadata)
+
+    assert :ok = Result.validate(result)
+
+    assert {:error, %Error{code: :result_metadata_limit_exceeded}} =
+             Result.new("req", :readproperty, nil, metadata: Map.put(metadata, :over, true))
   end
 
   test "binding profiles normalize declarations and match media type parameters" do
@@ -67,6 +99,7 @@ defmodule Wotex.Runtime.ValueTest do
              )
 
     assert {:error, %Error{code: :invalid_profile_options}} = BindingProfile.new(%{})
+    assert {:error, %Error{code: :invalid_profile_options}} = BindingProfile.new([:not_keyword])
   end
 
   test "an empty media-type declaration accepts transport defaults and wildcard accepts all" do
@@ -101,6 +134,13 @@ defmodule Wotex.Runtime.ValueTest do
              Result.new("req", :readproperty, nil, metadata: [])
 
     assert {:error, %Error{code: :invalid_result}} = Result.new("", :unknown, nil)
+    assert {:error, %Error{code: :invalid_result}} = Result.new(<<255>>, :readproperty, nil)
+
+    assert {:error, %Error{code: :invalid_result}} =
+             Result.new("req", :readproperty, nil, [:not_keyword])
+
+    malformed = %{result | metadata: []}
+    assert {:error, %Error{code: :invalid_result_metadata}} = Result.validate(malformed)
   end
 
   test "retry classification is pure and conservative for non-idempotent operations" do
@@ -120,6 +160,8 @@ defmodule Wotex.Runtime.ValueTest do
 
     assert Retry.decision(:readproperty, :invalid, attempt: 1, max_attempts: 3) == :stop
     assert Retry.decision(:readproperty, :timeout, attempt: 3, max_attempts: 3) == :stop
+    assert Retry.decision(:readproperty, :timeout, [:not_keyword]) == :stop
+    assert Retry.decision(:readproperty, :timeout, %{}) == :stop
   end
 
   test "retry classification accepts a classified runtime error" do

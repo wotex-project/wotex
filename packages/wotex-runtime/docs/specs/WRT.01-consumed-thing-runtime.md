@@ -1,6 +1,6 @@
 # WRT.01: ConsumedThing runtime mechanics
 
-Specification: `WRT.01@1.1.0`. Package baseline: `wotex_runtime 0.1.0`.
+Specification: `WRT.01@1.2.0`. Package baseline: `wotex_runtime 0.1.0`.
 Implementation and evidence coverage are recorded in the catalogue and
 repository completion plan at `docs/plans/wotex-runtime-completion.md`; this document is not a gate result.
 
@@ -47,6 +47,12 @@ effect, clocks, and supervision.
    `phase`, and `class` under `details.cause` and set the runtime error's
    `class`, so `Retry.decision/3` can act on it. Messages and details of the
    external error are never copied.
+9. A successful result records protocol exchange only, never physical effect or
+   canonical state.
+10. Graceful supervisor shutdown MUST request protocol unsubscription within
+    the consumer-selected shutdown budget. Explicit stop MUST NOT unsubscribe
+    twice. Forced termination and transport failures require consumer recovery;
+    local process termination does not prove remote cleanup.
 11. Port calls MUST be isolated: a raise, exit, or throw in a credential or
     transport callback becomes `port_exception` without the exception in the
     public error, and is reported through
@@ -67,12 +73,11 @@ effect, clocks, and supervision.
     connection process.
 14. Telemetry events listed in `Wotex.Runtime.Telemetry` MUST carry only
     non-secret identity and outcome metadata.
-9. A successful result records protocol exchange only, never physical effect or
-   canonical state.
-10. Graceful supervisor shutdown MUST request protocol unsubscription within
-    the consumer-selected shutdown budget. Explicit stop MUST NOT unsubscribe
-    twice. Forced termination and transport failures require consumer recovery;
-    local process termination does not prove remote cleanup.
+15. Runtime-owned admission MUST cap request identifiers at 256 bytes,
+    top-level Context and Result metadata at 64 entries, ConsumedThing and
+    direct-selection profile lists at 32 entries, and each interaction's Form
+    scan at 128 entries. The threshold MUST be accepted and one over MUST
+    return a typed error before calling a port.
 
 ## Evidence
 
@@ -81,7 +86,10 @@ operations, unsupported cells, credential isolation, transport errors, cause
 retention, port exception isolation, retry classification, deadline budgets,
 telemetry, and zero, one, and multiple subscription instances including open
 failure, receiver death, linked transport exit, session loss, restart after
-loss, brutal kill, mailbox overflow, and credential failure at close.
+loss, brutal kill, mailbox overflow, concurrent stop, credential failure at
+close, and raised, exited or thrown callbacks at every transport lifecycle
+stage. Fixed admission limits have threshold and one-over vectors; forged
+Result structs are revalidated at the transport boundary.
 
 ## Public value and operation matrix
 
@@ -98,11 +106,14 @@ authorization or untrusted-input validation boundary.
 | `FormSelector.select/5` | TD, affordance type/name, exact operation, ordered profiles | Selection or typed absence; never credential resolution; `form_selector_test.exs` |
 | `Request.from_selection/3` | selection, context, input | Credential-free request retaining request identity/deadline; `value_test.exs` |
 | `Result.new/4` | request identity, operation, payload, `:ok` or `:accepted` status, metadata | Protocol result only; protocol status detail lives in metadata; `value_test.exs` |
+| `Result.validate/1` | a Result returned by a transport | Rechecks identity, operation, status and metadata limits even for a forged struct |
+| `Limits.all/0`, `maximum/1` | the four fixed Runtime admission limits | Public, deterministic values; no environment lookup |
 | `Context.remaining_ms/2` | deadline and a caller-read clock value | Pure budget arithmetic; `value_test.exs` |
 | `Credentials.resolve/4` | selected security, Form, context, opaque consumer configuration | Immediate credential resolution; no custody transfer |
 | `Transport.request/3` | request, ephemeral execution context, consumer configuration | One synchronous protocol exchange in caller |
 | `Retry.decision/3` | operation, failure class or classified `Error`, explicit attempt/max/delay/idempotence | `:stop` or `{:retry, delay}`; never sleep, timer or retry |
 | `Transport.decode_frame/3` | raw frame, request, consumer configuration | Optional; runs in the subscription process |
+| `Subscription.stop/2` | explicit server and caller timeout | One unsubscribe or a typed not-running, timeout or stop-failure result; never exits the caller |
 
 Test paths in this specification are relative to `test/wotex/runtime/`.
 
@@ -128,16 +139,15 @@ through the core value API rather than re-deriving them.
 | Construction | Validate TD and declared ports before execution | Configured port is trusted/authorized merely because it exports callbacks |
 | Selection | TD Form order first, profile order second; exact operation/scheme/media match | Pick a fallback transport after a negative match |
 | Credentials | Resolve immediately before each start/request/stop exchange | Persist returned material in Context, Request, Result or subscription state |
-| Transport | Check tagged callback returns; preserve request/operation correlation; isolate raised/exited callbacks | External error term or arbitrary success is canonical truth |
+| Transport | Check tagged callback returns; revalidate Result structs; preserve request/operation correlation; isolate raised/exited/thrown callbacks | External error term or arbitrary success is canonical truth |
 | Failure | Stable Runtime error code/phase/class, nonsecret identity details, and the external error's atoms as `cause` | Raw external reason, message or details in error details |
 | Retry decision | Only timeout/unavailable/rate-limited classes and admitted idempotence | Automatically repeat an Action after unknown physical effect |
 
 Current retry defaults admit `readproperty` and `queryaction`; all other
 operations require explicit `idempotent?: true`. Attempts and delays are
 consumer inputs, not runtime scheduling. Current transport/credential exception
-propagation and callback-return correlation require the additional vectors in
-RT-C02 before declaring hardened execution; a tagged-error test is not an
-exception-isolation test.
+propagation and callback-return correlation are covered by the RT-C02 vectors;
+a tagged-error test is not an exception-isolation test.
 
 ## Subscription lifecycle and ownership
 
@@ -151,7 +161,7 @@ exception-isolation test.
 | Overflow | With `max_queue_length`, an over-bound receiver mailbox drops the delivery (`subscription.drop`) or stops with `{:shutdown, :overloaded}` | Choose the bound and policy; unbounded by default |
 | Receiver exit | Monitor fires; unsubscribe; stop `{:shutdown, :receiver_down}` | Restart or remove the child |
 | Transport exit or status | Linked exit, `:transport_down` or `:session_lost` notify the receiver with `{:status, status}` then stop `{:shutdown, status}` after unsubscribe; `:reconnected` only notifies | Decide resubscription through restart policy |
-| Explicit stop | Resolve stop credentials, call `unsubscribe/4` (with a nil credential when resolution fails), set closed and terminate | Observe error outcome; remote cleanup is not guaranteed |
+| Explicit stop | Resolve stop credentials, call `unsubscribe/4` once (with a nil credential when resolution fails), set closed and terminate; simultaneous callers receive one close result and one typed `subscription_not_running` | Observe error outcome; remote cleanup is not guaranteed |
 | Graceful parent shutdown | `terminate/2` attempts unsubscribe unless already closed | Allow sufficient shutdown budget; transport must honor deadlines |
 | Forced kill/crash | Cleanup cannot be guaranteed; the receiver is not linked and survives | Reconcile external subscription/session; do not infer exactly-once delivery |
 | Supervisor restart | New initialization, fresh credentials, and subscription attempt | Define loss/duplicate handling and replay policy explicitly |
@@ -164,24 +174,29 @@ package, or deduplication is claimed.
 
 ## Limits, allocation and security
 
-Selection scans supplied Forms/profiles; input size and list cardinality remain
-consumer-bounded. Runtime forwards terms without serialization, byte limits, or
-schema validation of interaction payloads; bindings decode under the core JSON
-limits. The receiver mailbox bound is the only delivery-side bound and it is
-opt-in. Per-interaction deadlines are propagated rather than enforced by a
-hidden timer. Memory and latency claims require measured bounded inputs, not
-a claim of constant space.
+Runtime admits request ids up to 256 bytes, Context and Result metadata maps up
+to 64 top-level entries, 32 binding profiles and 128 Forms for one interaction.
+The threshold and one-over paths are executable evidence; rejected selection
+never reaches credentials or transport. Nested metadata values and interaction
+payloads remain consumer-bounded terms, and bindings decode protocol bytes
+under their declared limits. The optional receiver mailbox threshold is
+checked before each delivery. Per-interaction deadlines are propagated rather
+than enforced by a hidden timer because synchronous callbacks must remain in
+the caller. Thus no package claim is made for callback latency, total nested
+term memory, transport allocation or constant-space execution.
 
 The `telemetry` library is a runtime dependency. Its application owns one
 handler table process; this package itself starts no process and attaches no
 handler.
 
-Credential configuration, transport configuration and metadata are trusted
-consumer inputs. Inspect redaction is not secret-memory erasure or a sandbox.
-RT-C02 must prove callback exceptions, forged returns, receiver failure and
-oversized metadata behavior before stronger security/resource claims. No new
-database, framework, scheduler, credential store, policy engine or supervision
-root belongs in this package to close those claims.
+Credential-provider and transport configuration are retained opaque consumer
+inputs and therefore SHOULD contain references to consumer custody, not raw
+secrets. A credential returned by `resolve/4` is confined to the immediate
+execution context and never retained in Request, Result, public errors or
+subscription state. Port and request exception telemetry omits raw reasons and
+stacktraces; only normalized kind/code and identity are emitted. Inspect
+redaction is not secret-memory erasure or a sandbox. No new database, framework,
+scheduler, credential store, policy engine or supervision root belongs here.
 
 ## Standards and compatibility
 

@@ -104,6 +104,12 @@ defmodule Wotex.Runtime.SubscriptionTest do
 
     send(pid, {:wotex_transport_frame, :weird})
     assert_receive {:wotex_runtime, :frames, {:error, %Error{code: :invalid_transport_return}}}
+
+    for mode <- [:raise, :exit, :throw] do
+      send(pid, {:wotex_transport_frame, mode})
+      assert_receive {:wotex_runtime, :frames, {:error, %Error{code: :port_exception}}}
+    end
+
     assert Process.alive?(pid)
   end
 
@@ -115,7 +121,9 @@ defmodule Wotex.Runtime.SubscriptionTest do
     for {mode, code} <- [
           error: :transport_subscribe_failed,
           invalid: :invalid_transport_return,
-          raise: :port_exception
+          raise: :port_exception,
+          exit: :port_exception,
+          throw: :port_exception
         ] do
       {:ok, consumed} =
         ConsumedThing.new(TDFactory.thing_description(),
@@ -414,33 +422,76 @@ defmodule Wotex.Runtime.SubscriptionTest do
                id: :bad,
                receiver: "not-a-process"
              )
+
+    for {option, code} <- [
+          {[name: "not-a-name"], :invalid_subscription_name},
+          {[restart: :sometimes], :invalid_restart_policy},
+          {[shutdown: -1], :invalid_shutdown_budget},
+          {[unknown: true], :invalid_subscription_options}
+        ] do
+      assert {:error, %Error{code: ^code}} =
+               ConsumedThing.observation_child_spec(
+                 consumed,
+                 "temperature",
+                 context,
+                 [id: :bad, receiver: self()] ++ option
+               )
+    end
+
+    assert {:error, %Error{code: :invalid_subscription_options}} =
+             ConsumedThing.observation_child_spec(
+               consumed,
+               "temperature",
+               context,
+               id: :bad,
+               id: :duplicate,
+               receiver: self()
+             )
+
+    assert {:error, %Error{code: :invalid_subscription_options}} =
+             ConsumedThing.observation_child_spec(
+               consumed,
+               "temperature",
+               context,
+               [{:id, :bad}, {:receiver, self()}, :not_keyword]
+             )
   end
 
-  test "a credential failure at close still releases the transport handle", %{profile: profile} do
-    context = Context.new!(request_id: "req-close-credentials")
-    {:ok, counter} = Agent.start_link(fn -> 0 end)
+  test "credential callback failures at close still release the transport handle", %{
+    profile: profile
+  } do
+    for {mode, code} <- [
+          error: :credential_resolution_failed,
+          raise: :port_exception,
+          exit: :port_exception,
+          throw: :port_exception,
+          invalid: :invalid_credentials_return
+        ] do
+      context = Context.new!(request_id: "req-close-credentials-#{mode}")
+      {:ok, counter} = Agent.start_link(fn -> 0 end)
 
-    {:ok, consumed} =
-      ConsumedThing.new(TDFactory.thing_description(),
-        profiles: [profile],
-        transports: %{profile.id => {FakeTransport, %{test_pid: self()}}},
-        credentials:
-          {FakeCredentials, %{test_pid: self(), counter: counter, mode: {:stop_only, :error}}}
-      )
+      {:ok, consumed} =
+        ConsumedThing.new(TDFactory.thing_description(),
+          profiles: [profile],
+          transports: %{profile.id => {FakeTransport, %{test_pid: self()}}},
+          credentials:
+            {FakeCredentials, %{test_pid: self(), counter: counter, mode: {:stop_only, mode}}}
+        )
 
-    {:ok, spec} =
-      ConsumedThing.event_subscription_child_spec(consumed, "alarm", context,
-        id: :close_credentials,
-        receiver: self(),
-        restart: :temporary
-      )
+      {:ok, spec} =
+        ConsumedThing.event_subscription_child_spec(consumed, "alarm", context,
+          id: {:close_credentials, mode},
+          receiver: self(),
+          restart: :temporary
+        )
 
-    pid = start_supervised!(spec)
-    assert_receive {:subscribe, _, ^pid, "credential-material"}
-    handle = :sys.get_state(pid).handle
+      pid = start_supervised!(spec)
+      assert_receive {:subscribe, _, ^pid, "credential-material"}
+      handle = :sys.get_state(pid).handle
 
-    assert {:error, %Error{code: :credential_resolution_failed}} = Subscription.stop(pid)
-    assert_receive {:unsubscribe, ^handle, %{operation: :unsubscribeevent}, nil}
+      assert {:error, %Error{code: ^code}} = Subscription.stop(pid)
+      assert_receive {:unsubscribe, ^handle, %{operation: :unsubscribeevent}, nil}
+    end
   end
 
   test "multiple independently named Event subscriptions coexist", %{consumed: consumed} do
@@ -538,7 +589,13 @@ defmodule Wotex.Runtime.SubscriptionTest do
     profile = TDFactory.http_profile()
     context = Context.new!(request_id: "req-stop-failure")
 
-    failures = [error: :transport_unsubscribe_failed, invalid: :invalid_transport_return]
+    failures = [
+      error: :transport_unsubscribe_failed,
+      invalid: :invalid_transport_return,
+      raise: :port_exception,
+      exit: :port_exception,
+      throw: :port_exception
+    ]
 
     for {mode, code} <- failures do
       {:ok, consumed} =
@@ -562,6 +619,91 @@ defmodule Wotex.Runtime.SubscriptionTest do
       assert Process.alive?(pid)
       assert {:error, %Error{code: ^code}} = Subscription.stop(pid)
     end
+  end
+
+  test "concurrent stop requests unsubscribe once and return typed outcomes", %{profile: profile} do
+    context = Context.new!(request_id: "req-concurrent-stop")
+
+    {:ok, consumed} =
+      ConsumedThing.new(TDFactory.thing_description(),
+        profiles: [profile],
+        transports: %{
+          profile.id => {FakeTransport, %{test_pid: self(), unsubscribe_mode: {:wait, self()}}}
+        },
+        credentials: {FakeCredentials, %{test_pid: self()}}
+      )
+
+    {:ok, spec} =
+      ConsumedThing.event_subscription_child_spec(consumed, "alarm", context,
+        id: :concurrent_stop,
+        receiver: self(),
+        restart: :temporary
+      )
+
+    pid = start_supervised!(spec)
+    assert_receive {:subscribe, _, ^pid, _}
+
+    first = Task.async(fn -> Subscription.stop(pid) end)
+    assert_receive {:unsubscribe, _handle, %{operation: :unsubscribeevent}, _credential}
+    assert_receive {:unsubscribe_waiting, ^pid}
+    second = Task.async(fn -> Subscription.stop(pid) end)
+    wait_for_mailbox(pid)
+    send(pid, :release_unsubscribe)
+
+    results = [Task.await(first), Task.await(second)]
+    assert Enum.count(results, &(&1 == :ok)) == 1
+    assert Enum.count(results, &match?({:error, %Error{code: :subscription_not_running}}, &1)) == 1
+    refute_receive {:unsubscribe, _, _, _}
+  end
+
+  test "close telemetry exposes normalized outcome without raw termination reasons", %{
+    consumed: consumed
+  } do
+    parent = self()
+    secret = "must-not-appear"
+
+    handler = fn event, _measurements, metadata, _config ->
+      send(parent, {:close_telemetry, event, metadata})
+    end
+
+    id = "close-#{inspect(self())}"
+    :telemetry.attach(id, [:wotex, :runtime, :subscription, :close], handler, nil)
+    on_exit(fn -> :telemetry.detach(id) end)
+
+    context = Context.new!(request_id: "req-close-telemetry", metadata: %{marker: secret})
+
+    {:ok, spec} =
+      ConsumedThing.event_subscription_child_spec(consumed, "alarm", context,
+        id: :close_telemetry,
+        receiver: self(),
+        restart: :temporary
+      )
+
+    pid = start_supervised!(spec)
+    assert_receive {:subscribe, _, ^pid, _}
+    assert :ok = Subscription.stop(pid)
+
+    assert_receive {:close_telemetry, [:wotex, :runtime, :subscription, :close],
+                    %{outcome: :normal} = metadata}
+
+    refute Map.has_key?(metadata, :reason)
+    refute inspect(metadata) =~ secret
+  end
+
+  test "stop rejects invalid timeouts and a stopped server without exiting the caller" do
+    assert {:error, %Error{code: :invalid_stop_timeout}} = Subscription.stop(self(), -1)
+
+    blocked = spawn(fn -> Process.sleep(:infinity) end)
+
+    assert {:error, %Error{code: :subscription_stop_timeout, class: :timeout}} =
+             Subscription.stop(blocked, 0)
+
+    Process.exit(blocked, :kill)
+
+    stopped = spawn(fn -> :ok end)
+    wait_for_exit(stopped)
+
+    assert {:error, %Error{code: :subscription_not_running}} = Subscription.stop(stopped)
   end
 
   # Spawns a helper linked to `owner` from inside the owner's own process context.
@@ -608,6 +750,21 @@ defmodule Wotex.Runtime.SubscriptionTest do
       {:DOWN, ^monitor, :process, ^pid, _reason} -> :ok
     after
       1_000 -> flunk("helper did not exit")
+    end
+  end
+
+  defp wait_for_mailbox(pid, attempts \\ 100)
+
+  defp wait_for_mailbox(_pid, 0), do: flunk("concurrent stop did not enter the mailbox")
+
+  defp wait_for_mailbox(pid, attempts) do
+    case Process.info(pid, :message_queue_len) do
+      {:message_queue_len, length} when length > 0 ->
+        :ok
+
+      _other ->
+        Process.sleep(1)
+        wait_for_mailbox(pid, attempts - 1)
     end
   end
 

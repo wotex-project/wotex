@@ -32,6 +32,7 @@ defmodule Wotex.Runtime.ConsumedThing do
     Error,
     ExecutionContext,
     FormSelector,
+    Limits,
     PortCall,
     Request,
     Result,
@@ -41,6 +42,18 @@ defmodule Wotex.Runtime.ConsumedThing do
   }
 
   @overflow_policies [:drop, :stop]
+  @restart_policies [:permanent, :transient, :temporary]
+  @subscription_options [
+    :id,
+    :receiver,
+    :name,
+    :input,
+    :stop_input,
+    :restart,
+    :shutdown,
+    :max_queue_length,
+    :overflow
+  ]
 
   @type t :: %__MODULE__{
           td: ThingDescription.t(),
@@ -55,25 +68,31 @@ defmodule Wotex.Runtime.ConsumedThing do
   @doc "Builds a ConsumedThing from a validated TD and explicit runtime ports."
   @spec new(ThingDescription.t(), keyword()) :: {:ok, t()} | {:error, Error.t() | [Wotex.Error.t()]}
   def new(%ThingDescription{} = td, opts) when is_list(opts) do
-    profiles = Keyword.get(opts, :profiles)
-    transports = Keyword.get(opts, :transports)
-    credentials = Keyword.get(opts, :credentials)
+    if Keyword.keyword?(opts) do
+      profiles = Keyword.get(opts, :profiles)
+      transports = Keyword.get(opts, :transports)
+      credentials = Keyword.get(opts, :credentials)
 
-    with {:ok, validated} <- ThingDescription.validate(td),
-         :ok <- validate_profiles(profiles),
-         :ok <- validate_transports(profiles, transports),
-         :ok <- validate_credentials(credentials) do
-      {:ok,
-       %__MODULE__{
-         td: validated,
-         profiles: profiles,
-         transports: transports,
-         credentials: credentials
-       }}
+      with {:ok, validated} <- ThingDescription.validate(td),
+           :ok <- validate_profiles(profiles),
+           :ok <- validate_transports(profiles, transports),
+           :ok <- validate_credentials(credentials) do
+        {:ok,
+         %__MODULE__{
+           td: validated,
+           profiles: profiles,
+           transports: transports,
+           credentials: credentials
+         }}
+      end
+    else
+      invalid_consumed_thing()
     end
   end
 
-  def new(_td, _opts) do
+  def new(_td, _opts), do: invalid_consumed_thing()
+
+  defp invalid_consumed_thing do
     {:error,
      Error.new(
        :invalid_consumed_thing,
@@ -278,9 +297,13 @@ defmodule Wotex.Runtime.ConsumedThing do
          opts
        )
        when is_list(opts) do
-    with {:ok, id} <- required_option(opts, :id),
+    with :ok <- validate_subscription_options(opts),
+         {:ok, id} <- required_option(opts, :id),
          {:ok, receiver} <- required_option(opts, :receiver),
          :ok <- validate_receiver(receiver),
+         {:ok, name} <- validate_name(Keyword.get(opts, :name)),
+         {:ok, restart} <- validate_restart(Keyword.get(opts, :restart, :transient)),
+         {:ok, shutdown} <- validate_shutdown(Keyword.get(opts, :shutdown, 5_000)),
          {:ok, max_queue_length} <- validate_max_queue_length(Keyword.get(opts, :max_queue_length)),
          {:ok, overflow} <- validate_overflow(Keyword.get(opts, :overflow, :drop)),
          {:ok, start_selection} <-
@@ -298,7 +321,7 @@ defmodule Wotex.Runtime.ConsumedThing do
       init = %{
         id: id,
         receiver: receiver,
-        name: Keyword.get(opts, :name),
+        name: name,
         start_request: start_request,
         stop_request: stop_request,
         start_security: start_selection.security,
@@ -314,8 +337,8 @@ defmodule Wotex.Runtime.ConsumedThing do
        %{
          id: id,
          start: {Subscription, :start_link, [init]},
-         restart: Keyword.get(opts, :restart, :transient),
-         shutdown: Keyword.get(opts, :shutdown, 5_000),
+         restart: restart,
+         shutdown: shutdown,
          type: :worker
        }}
     end
@@ -373,6 +396,32 @@ defmodule Wotex.Runtime.ConsumedThing do
     end
   end
 
+  defp validate_subscription_options(opts) do
+    if Keyword.keyword?(opts) do
+      keys = Keyword.keys(opts)
+      unknown = keys -- @subscription_options
+
+      cond do
+        Enum.uniq(keys) != keys ->
+          invalid_subscription_options("subscription options must not contain duplicate keys")
+
+        unknown != [] ->
+          invalid_subscription_options("subscription options contain an unknown key", %{
+            options: unknown
+          })
+
+        true ->
+          :ok
+      end
+    else
+      invalid_subscription_options("subscription options must be a keyword list")
+    end
+  end
+
+  defp invalid_subscription_options(message, details \\ %{}) do
+    {:error, Error.new(:invalid_subscription_options, :construction, message, details)}
+  end
+
   defp validate_receiver(receiver) when is_pid(receiver) or is_atom(receiver), do: :ok
 
   defp validate_receiver(_receiver) do
@@ -381,6 +430,47 @@ defmodule Wotex.Runtime.ConsumedThing do
        :invalid_receiver,
        :construction,
        "receiver must be a pid or a locally registered name"
+     )}
+  end
+
+  defp validate_name(nil), do: {:ok, nil}
+  defp validate_name(name) when is_atom(name) and not is_nil(name), do: {:ok, name}
+  defp validate_name({:global, _term} = name), do: {:ok, name}
+
+  defp validate_name({:via, module, _term} = name) when is_atom(module) and not is_nil(module),
+    do: {:ok, name}
+
+  defp validate_name(_name) do
+    {:error,
+     Error.new(
+       :invalid_subscription_name,
+       :construction,
+       "name must be nil, an atom, a global name, or a via tuple"
+     )}
+  end
+
+  defp validate_restart(restart) when restart in @restart_policies, do: {:ok, restart}
+
+  defp validate_restart(_restart) do
+    {:error,
+     Error.new(
+       :invalid_restart_policy,
+       :construction,
+       "restart must be :permanent, :transient, or :temporary"
+     )}
+  end
+
+  defp validate_shutdown(shutdown)
+       when shutdown in [:infinity, :brutal_kill] or
+              (is_integer(shutdown) and shutdown >= 0),
+       do: {:ok, shutdown}
+
+  defp validate_shutdown(_shutdown) do
+    {:error,
+     Error.new(
+       :invalid_shutdown_budget,
+       :construction,
+       "shutdown must be a non-negative integer, :infinity, or :brutal_kill"
      )}
   end
 
@@ -442,17 +532,28 @@ defmodule Wotex.Runtime.ConsumedThing do
   defp valid_property_map?(_values), do: false
 
   defp validate_profiles(profiles) when is_list(profiles) and profiles != [] do
-    if Enum.all?(profiles, &match?(%BindingProfile{}, &1)) do
-      ids = Enum.map(profiles, &BindingProfile.id/1)
+    cond do
+      not Limits.list_within?(profiles, Limits.maximum(:binding_profiles)) ->
+        {:error,
+         Error.new(
+           :profile_limit_exceeded,
+           :construction,
+           "ConsumedThing exceeds the binding-profile limit",
+           %{max_profiles: Limits.maximum(:binding_profiles)}
+         )}
 
-      if length(ids) == MapSet.size(MapSet.new(ids)) do
-        :ok
-      else
-        {:error, Error.new(:duplicate_profile_id, :construction, "profile ids must be unique")}
-      end
-    else
-      {:error,
-       Error.new(:invalid_profiles, :construction, "profiles must contain BindingProfile values")}
+      Enum.all?(profiles, &match?(%BindingProfile{}, &1)) ->
+        ids = Enum.map(profiles, &BindingProfile.id/1)
+
+        if length(ids) == MapSet.size(MapSet.new(ids)) do
+          :ok
+        else
+          {:error, Error.new(:duplicate_profile_id, :construction, "profile ids must be unique")}
+        end
+
+      true ->
+        {:error,
+         Error.new(:invalid_profiles, :construction, "profiles must contain BindingProfile values")}
     end
   end
 
@@ -576,21 +677,8 @@ defmodule Wotex.Runtime.ConsumedThing do
       {:error, %Error{code: :port_exception} = error} ->
         {:error, error}
 
-      {:ok, %Result{request_id: request_id, operation: operation} = result}
-      when request_id == request.request_id and operation == request.operation ->
-        {:ok, result}
-
-      {:ok, %Result{}} ->
-        {:error,
-         Error.new(
-           :mismatched_transport_result,
-           :transport,
-           "transport result does not match the request",
-           %{
-             request_id: request.request_id,
-             operation: request.operation
-           }
-         )}
+      {:ok, %Result{} = result} ->
+        validate_transport_result(result, request)
 
       {:error, external} ->
         {:error,
@@ -607,6 +695,28 @@ defmodule Wotex.Runtime.ConsumedThing do
            request_id: request.request_id,
            operation: request.operation
          })}
+    end
+  end
+
+  defp validate_transport_result(result, request) do
+    cond do
+      result.request_id != request.request_id or result.operation != request.operation ->
+        {:error,
+         Error.new(
+           :mismatched_transport_result,
+           :transport,
+           "transport result does not match the request",
+           %{
+             request_id: request.request_id,
+             operation: request.operation
+           }
+         )}
+
+      true ->
+        case Result.validate(result) do
+          :ok -> {:ok, result}
+          {:error, error} -> {:error, error}
+        end
     end
   end
 end

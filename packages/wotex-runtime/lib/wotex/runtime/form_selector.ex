@@ -10,7 +10,7 @@ defmodule Wotex.Runtime.FormSelector do
   """
 
   alias Wotex.{Form, ThingDescription}
-  alias Wotex.Runtime.{BindingProfile, Error, Selection}
+  alias Wotex.Runtime.{BindingProfile, Error, Limits, Selection}
 
   @types %{property: "properties", action: "actions", event: "events"}
 
@@ -79,45 +79,73 @@ defmodule Wotex.Runtime.FormSelector do
   defp choose(document, affordance, interaction, profiles) do
     forms = Map.get(affordance, "forms", [])
 
-    candidate =
-      Enum.find_value(forms, fn form_map ->
-        Enum.find_value(profiles, fn profile ->
-          match_candidate(
-            document,
-            affordance,
-            form_map,
-            interaction,
-            profile
-          )
-        end)
-      end)
-
-    case candidate do
-      {form, resolved_href, profile} ->
-        {:ok,
-         %Selection{
-           affordance_type: interaction.type,
-           affordance_name: interaction.name,
-           affordance: affordance,
-           operation: interaction.operation,
-           form: form,
-           resolved_href: resolved_href,
-           profile: profile,
-           security: security(document, affordance, Form.to_map(form))
-         }}
-
-      nil ->
-        {:error,
-         Error.new(
-           :compatible_form_not_found,
-           :selection,
-           "no Form and profile declare the requested operation",
-           %{
+    with :ok <- validate_candidates(forms, profiles) do
+      case find_candidate(forms, profiles, document, affordance, interaction) do
+        {form, resolved_href, profile} ->
+          {:ok,
+           %Selection{
              affordance_type: interaction.type,
              affordance_name: interaction.name,
-             operation: interaction.operation
-           }
+             affordance: affordance,
+             operation: interaction.operation,
+             form: form,
+             resolved_href: resolved_href,
+             profile: profile,
+             security: security(document, affordance, Form.to_map(form))
+           }}
+
+        nil ->
+          {:error,
+           Error.new(
+             :compatible_form_not_found,
+             :selection,
+             "no Form and profile declare the requested operation",
+             %{
+               affordance_type: interaction.type,
+               affordance_name: interaction.name,
+               operation: interaction.operation
+             }
+           )}
+      end
+    end
+  end
+
+  defp find_candidate(forms, profiles, document, affordance, interaction) do
+    Enum.find_value(forms, fn form_map ->
+      Enum.find_value(profiles, fn profile ->
+        match_candidate(document, affordance, form_map, interaction, profile)
+      end)
+    end)
+  end
+
+  defp validate_candidates(forms, profiles) do
+    cond do
+      not is_list(forms) ->
+        {:error, Error.new(:invalid_selection_input, :selection, "selection input is invalid")}
+
+      not Limits.list_within?(profiles, Limits.maximum(:binding_profiles)) ->
+        {:error,
+         Error.new(
+           :profile_limit_exceeded,
+           :selection,
+           "selection exceeds the binding-profile limit",
+           %{max_profiles: Limits.maximum(:binding_profiles)}
          )}
+
+      not Enum.all?(profiles, &match?(%BindingProfile{}, &1)) ->
+        {:error, Error.new(:invalid_selection_input, :selection, "selection input is invalid")}
+
+      not Limits.list_within?(forms, Limits.maximum(:forms_per_interaction)) ->
+        {:error,
+         Error.new(
+           :form_limit_exceeded,
+           :selection,
+           "interaction exceeds the Form scan limit",
+           %{max_forms: Limits.maximum(:forms_per_interaction)}
+         )}
+
+      true ->
+        :ok
     end
   end
 

@@ -39,14 +39,17 @@ defmodule Wotex.Runtime.Check.Package do
 
     run!("elixir", [Path.join(project_root, "bin/check_boundary.exs")], unpacked, [])
 
-    dependency = Path.join(project_root, "_build/test/lib/wotex/ebin")
+    dependencies =
+      Enum.map(~w(wotex telemetry), &Path.join(project_root, "_build/test/lib/#{&1}/ebin"))
 
-    unless File.dir?(dependency) do
-      violation("compiled core dependency is missing: #{dependency}")
-    end
+    Enum.each(dependencies, fn dependency ->
+      unless File.dir?(dependency) do
+        violation("compiled package dependency is missing: #{dependency}")
+      end
+    end)
 
     File.mkdir_p!(ebin)
-    compile!(project_root, unpacked, ebin, dependency)
+    compile!(project_root, unpacked, ebin, dependencies)
 
     Enum.each(@beams, &beam!(ebin, &1))
 
@@ -60,7 +63,7 @@ defmodule Wotex.Runtime.Check.Package do
     run!("mix", arguments, project_root, [{"WOTEX_PATH_DEPS", nil}, {"MIX_ENV", "prod"}])
   end
 
-  defp compile!(project_root, unpacked, ebin, dependency) do
+  defp compile!(project_root, unpacked, ebin, dependencies) do
     sources =
       unpacked
       |> Path.join("lib/**/*.ex")
@@ -68,7 +71,8 @@ defmodule Wotex.Runtime.Check.Package do
       |> Enum.filter(&File.regular?/1)
       |> Enum.sort()
 
-    arguments = ["--warnings-as-errors", "-pa", dependency, "-o", ebin] ++ sources
+    code_paths = Enum.flat_map(dependencies, &["-pa", &1])
+    arguments = ["--warnings-as-errors"] ++ code_paths ++ ["-o", ebin] ++ sources
     run!("elixirc", arguments, project_root, [])
   end
 

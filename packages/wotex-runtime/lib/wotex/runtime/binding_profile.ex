@@ -39,6 +39,16 @@ defmodule Wotex.Runtime.BindingProfile do
   @doc "Builds a binding profile from an id, URI schemes, operations, and media types."
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
+    if Keyword.keyword?(opts) do
+      build(opts)
+    else
+      invalid_options()
+    end
+  end
+
+  def new(_opts), do: invalid_options()
+
+  defp build(opts) do
     id = Keyword.get(opts, :id)
     schemes = Keyword.get(opts, :schemes, [])
     operations = Keyword.get(opts, :operations, [])
@@ -58,7 +68,7 @@ defmodule Wotex.Runtime.BindingProfile do
     end
   end
 
-  def new(_opts) do
+  defp invalid_options do
     {:error,
      Error.new(
        :invalid_profile_options,

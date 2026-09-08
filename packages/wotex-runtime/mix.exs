@@ -119,6 +119,7 @@ defmodule WotexRuntime.MixProject do
           Wotex.Runtime.Request,
           Wotex.Runtime.Result,
           Wotex.Runtime.Context,
+          Wotex.Runtime.Limits,
           Wotex.Runtime.Retry,
           Wotex.Runtime.Error
         ],

@@ -14,10 +14,16 @@ defmodule Wotex.Runtime.Test.FakeCredentials do
         mode -> mode
       end
 
+    result(mode, secret)
+  end
+
+  defp result(mode, secret) do
     case mode do
       :ok -> {:ok, secret}
       :error -> {:error, {:credential_error, secret}}
       :raise -> raise ArgumentError, "credential defect #{secret}"
+      :exit -> exit({:credential_exit, secret})
+      :throw -> throw({:credential_throw, secret})
       :invalid -> :invalid
     end
   end

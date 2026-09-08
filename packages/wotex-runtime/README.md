@@ -78,7 +78,11 @@ context =
 ```
 
 The consumer creates request identifiers and deadlines. Wotex Runtime does not
-read a clock, generate identity, or infer a default transport.
+read a clock, generate identity, or infer a default transport. Fixed Runtime
+admission limits are available from `Wotex.Runtime.Limits`: 256 request-id
+bytes, 64 top-level metadata entries, 32 binding profiles, and 128 Forms for a
+single interaction scan. Nested metadata and interaction payload bounds remain
+with the consumer and binding.
 
 ## Execution model
 
@@ -158,9 +162,11 @@ defmodule MyTransport do
 end
 ```
 
-Credential material is resolved immediately before the port call. It is not
-stored in a Thing Description, binding profile, request, public error, or
-subscription state.
+Credential material is resolved immediately before the port call. The returned
+credential is not stored in a Thing Description, binding profile, request,
+public error, or subscription state. Provider configuration is retained as an
+opaque consumer input, so it should identify consumer custody rather than
+contain raw credential material.
 
 ## ExposedThings
 
@@ -218,13 +224,17 @@ the receiver, forwards every delivery as
 stops with a `:shutdown` reason when the receiver dies, a linked transport
 process exits, or the transport reports `:session_lost`, and always attempts
 protocol unsubscription on graceful termination. Pass `max_queue_length` and
-`overflow: :drop | :stop` to bound the receiver's mailbox.
+`overflow: :drop | :stop` to bound the receiver's mailbox. Simultaneous stop
+requests perform one unsubscription; the losing caller receives the typed
+`subscription_not_running` error instead of an exit.
 
 Transport errors keep their structured `code`, `phase` and `class` as
 `details.cause`, so `Wotex.Runtime.Retry.decision/3` can classify a failure
 directly from the returned error. Raised or exited port callbacks become
 `port_exception` errors and `[:wotex, :runtime, :port, :exception]` telemetry
-events; see `Wotex.Runtime.Telemetry` for the full event list.
+events. Those events expose only normalized identity, callback, kind and code,
+never the raw reason or stacktrace; see `Wotex.Runtime.Telemetry` for the full
+event list.
 
 ## Standards baseline
 

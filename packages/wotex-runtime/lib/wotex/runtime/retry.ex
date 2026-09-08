@@ -26,16 +26,26 @@ defmodule Wotex.Runtime.Retry do
   def decision(operation, %Error{} = error, opts), do: decision(operation, Error.class(error), opts)
 
   def decision(operation, failure_class, opts) when is_list(opts) do
-    attempt = Keyword.get(opts, :attempt, 1)
-    max_attempts = Keyword.get(opts, :max_attempts, 1)
-    delay = Keyword.get(opts, :delay, 0)
-    idempotent? = Keyword.get(opts, :idempotent?, operation in @safe_operations)
+    if Keyword.keyword?(opts) do
+      attempt = Keyword.get(opts, :attempt, 1)
+      max_attempts = Keyword.get(opts, :max_attempts, 1)
+      delay = Keyword.get(opts, :delay, 0)
+      idempotent? = Keyword.get(opts, :idempotent?, operation in @safe_operations)
 
-    if failure_class in @retryable_classes and idempotent? and is_integer(attempt) and
-         is_integer(max_attempts) and attempt < max_attempts and is_integer(delay) and delay >= 0 do
-      {:retry, delay}
+      if retry?(failure_class, idempotent?, attempt, max_attempts, delay) do
+        {:retry, delay}
+      else
+        :stop
+      end
     else
       :stop
     end
+  end
+
+  def decision(_operation, _failure_class, _opts), do: :stop
+
+  defp retry?(failure_class, idempotent?, attempt, max_attempts, delay) do
+    failure_class in @retryable_classes and idempotent? and is_integer(attempt) and
+      is_integer(max_attempts) and attempt < max_attempts and is_integer(delay) and delay >= 0
   end
 end

@@ -17,7 +17,7 @@ defmodule Wotex.Runtime.Result do
   Property truth, committed consumer state, or a physical Action effect.
   """
 
-  alias Wotex.Runtime.Error
+  alias Wotex.Runtime.{Error, Limits}
 
   @operations Wotex.Runtime.operations()
 
@@ -39,33 +39,71 @@ defmodule Wotex.Runtime.Result do
   @spec new(String.t(), atom(), term(), keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(request_id, operation, payload, opts \\ [])
 
-  def new(request_id, operation, payload, opts)
-      when is_binary(request_id) and byte_size(request_id) > 0 and operation in @operations and
-             is_list(opts) do
-    metadata = Keyword.get(opts, :metadata, %{})
-    status = Keyword.get(opts, :status, :ok)
+  def new(request_id, operation, payload, opts) when is_list(opts) do
+    if Keyword.keyword?(opts) do
+      build(request_id, operation, payload, opts)
+    else
+      invalid_result()
+    end
+  end
 
+  def new(_request_id, _operation, _payload, _opts), do: invalid_result()
+
+  @doc "Validates a Result returned by a transport, including identity and metadata bounds."
+  @spec validate(term()) :: :ok | {:error, Error.t()}
+  def validate(%__MODULE__{} = result) do
     cond do
-      not is_map(metadata) ->
+      not valid_identity?(result.request_id, result.operation) ->
+        invalid_result()
+
+      not is_map(result.metadata) ->
         {:error, Error.new(:invalid_result_metadata, :transport, "result metadata must be a map")}
 
-      status not in @statuses ->
+      map_size(result.metadata) > Limits.maximum(:metadata_entries) ->
+        {:error,
+         Error.new(
+           :result_metadata_limit_exceeded,
+           :transport,
+           "result metadata exceeds the top-level entry limit",
+           %{max_entries: Limits.maximum(:metadata_entries)}
+         )}
+
+      result.status not in @statuses ->
         {:error,
          Error.new(:invalid_result_status, :transport, "result status must be :ok or :accepted")}
 
       true ->
-        {:ok,
-         %__MODULE__{
-           request_id: request_id,
-           operation: operation,
-           status: status,
-           payload: payload,
-           metadata: metadata
-         }}
+        :ok
     end
   end
 
-  def new(_request_id, _operation, _payload, _opts) do
+  def validate(_result), do: invalid_result()
+
+  defp build(request_id, operation, payload, opts) do
+    metadata = Keyword.get(opts, :metadata, %{})
+    status = Keyword.get(opts, :status, :ok)
+
+    result = %__MODULE__{
+      request_id: request_id,
+      operation: operation,
+      status: status,
+      payload: payload,
+      metadata: metadata
+    }
+
+    case validate(result) do
+      :ok -> {:ok, result}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  defp valid_identity?(request_id, operation) do
+    is_binary(request_id) and request_id != "" and String.valid?(request_id) and
+      byte_size(request_id) <= Limits.maximum(:request_id_bytes) and
+      String.trim(request_id) != "" and operation in @operations
+  end
+
+  defp invalid_result do
     {:error,
      Error.new(:invalid_result, :transport, "protocol result identity or operation is invalid")}
   end

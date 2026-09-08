@@ -3,7 +3,17 @@ defmodule Wotex.Runtime.ConsumedThingTest do
 
   use ExUnit.Case, async: true
 
-  alias Wotex.Runtime.{ConsumedThing, Context, Error, ExecutionContext, Request, Result}
+  alias Wotex.Runtime.{
+    ConsumedThing,
+    Context,
+    Error,
+    ExecutionContext,
+    Limits,
+    Request,
+    Result,
+    Telemetry
+  }
+
   alias Wotex.Runtime.Test.{FakeCredentials, FakeTransport, TDFactory}
 
   setup do
@@ -55,6 +65,28 @@ defmodule Wotex.Runtime.ConsumedThingTest do
              )
 
     assert {:error, %Error{code: :invalid_consumed_thing}} = ConsumedThing.new(%{}, [])
+
+    assert {:error, %Error{code: :invalid_consumed_thing}} =
+             ConsumedThing.new(td, [:not_keyword])
+
+    profiles =
+      Enum.map(1..Limits.maximum(:binding_profiles), &%{profile | id: &1})
+
+    transports = Map.new(profiles, &{&1.id, {FakeTransport, %{test_pid: self()}}})
+
+    assert {:ok, _consumed} =
+             ConsumedThing.new(td,
+               profiles: profiles,
+               transports: transports,
+               credentials: credentials
+             )
+
+    assert {:error, %Error{code: :profile_limit_exceeded}} =
+             ConsumedThing.new(td,
+               profiles: profiles ++ [%{profile | id: :over}],
+               transports: transports,
+               credentials: credentials
+             )
   end
 
   test "executes every short operation in the caller and resolves credentials first", %{
@@ -196,7 +228,7 @@ defmodule Wotex.Runtime.ConsumedThingTest do
 
     on_exit(fn -> :telemetry.detach("port-exception-#{inspect(parent)}") end)
 
-    for mode <- [:raise, :exit] do
+    for mode <- [:raise, :exit, :throw] do
       {:ok, consumed} =
         ConsumedThing.new(TDFactory.thing_description(),
           profiles: [profile],
@@ -210,20 +242,31 @@ defmodule Wotex.Runtime.ConsumedThingTest do
       refute inspect(error) =~ secret
 
       assert_receive {:telemetry, [:wotex, :runtime, :port, :exception],
-                      %{callback: :request, kind: _}}
+                      %{callback: :request, kind: _kind, code: :port_exception} = metadata}
+
+      refute Map.has_key?(metadata, :reason)
+      refute Map.has_key?(metadata, :stacktrace)
+      refute inspect(metadata) =~ secret
     end
 
-    {:ok, raising_credentials} =
-      ConsumedThing.new(TDFactory.thing_description(),
-        profiles: [profile],
-        transports: %{profile.id => {FakeTransport, %{test_pid: self()}}},
-        credentials: {FakeCredentials, %{test_pid: self(), secret: secret, mode: :raise}}
-      )
+    for mode <- [:raise, :exit, :throw] do
+      {:ok, failing_credentials} =
+        ConsumedThing.new(TDFactory.thing_description(),
+          profiles: [profile],
+          transports: %{profile.id => {FakeTransport, %{test_pid: self()}}},
+          credentials: {FakeCredentials, %{test_pid: self(), secret: secret, mode: mode}}
+        )
 
-    assert {:error, %Error{code: :port_exception, phase: :credentials} = error} =
-             ConsumedThing.read_property(raising_credentials, "temperature", context)
+      assert {:error, %Error{code: :port_exception, phase: :credentials} = error} =
+               ConsumedThing.read_property(failing_credentials, "temperature", context)
 
-    refute inspect(error) =~ secret
+      refute inspect(error) =~ secret
+
+      assert_receive {:telemetry, [:wotex, :runtime, :port, :exception],
+                      %{callback: :resolve, kind: _kind, code: :port_exception} = metadata}
+
+      refute inspect(metadata) =~ secret
+    end
   end
 
   test "emits request telemetry with identity and outcome only", %{
@@ -265,11 +308,39 @@ defmodule Wotex.Runtime.ConsumedThingTest do
                     %{result: :error, code: :affordance_not_found}}
   end
 
+  test "request exception telemetry re-raises without publishing raw failure terms" do
+    parent = self()
+    secret = "exception-secret"
+
+    handler = fn event, measurements, metadata, _config ->
+      send(parent, {:telemetry, event, measurements, metadata})
+    end
+
+    id = "request-exception-#{inspect(self())}"
+    :telemetry.attach(id, [:wotex, :runtime, :request, :exception], handler, nil)
+    on_exit(fn -> :telemetry.detach(id) end)
+
+    assert_raise RuntimeError, secret, fn ->
+      Telemetry.span([:request], %{request_id: "req-raise"}, fn -> raise secret end)
+    end
+
+    assert_receive {:telemetry, [:wotex, :runtime, :request, :exception], %{duration: _},
+                    %{request_id: "req-raise", kind: :error, code: :request_exception} = metadata}
+
+    refute Map.has_key?(metadata, :reason)
+    refute Map.has_key?(metadata, :stacktrace)
+    refute inspect(metadata) =~ secret
+  end
+
   test "normalizes invalid and mismatched port returns", %{profile: profile} do
     context = Context.new!(request_id: "req-invalid")
     credentials = {FakeCredentials, %{test_pid: self(), secret: "x"}}
 
-    failures = [mismatch: :mismatched_transport_result, invalid: :invalid_transport_return]
+    failures = [
+      mismatch: :mismatched_transport_result,
+      forged_result: :invalid_result_metadata,
+      invalid: :invalid_transport_return
+    ]
 
     for {mode, code} <- failures do
       {:ok, consumed} =
