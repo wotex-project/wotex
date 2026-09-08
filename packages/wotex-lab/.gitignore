@@ -5,6 +5,7 @@
 /priv/plts/
 /.elixir_ls/
 /.archive-check.*/
+/.graph-check.*/
 /tmp/
 /docs/tasks/local/
 /docs/tasks/inbox.md

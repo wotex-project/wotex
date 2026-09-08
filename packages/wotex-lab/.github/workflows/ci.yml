@@ -98,6 +98,8 @@ jobs:
           echo "WOTEX_LAB_MAUDE=/tmp/maude/maude" >> "$GITHUB_ENV"
       - run: mix deps.get --check-locked
       - run: mix check --no-retry
+      - name: graph
+        run: mix run --no-start bin/check_graph.exs
 
   reference:
     name: Reference consumer / broker, GreptimeDB and formal lanes

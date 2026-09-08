@@ -330,7 +330,7 @@ defmodule Wotex.Lab.Cookbook do
       specs: ["WLB.09"],
       completion_ids: ["WLB-C09", "WLB-C08"],
       upstream: [],
-      lane: :planned,
+      lane: :implemented,
       evidence: :partial,
       checks: [
         "conflicting-rule-refused",
@@ -347,7 +347,7 @@ defmodule Wotex.Lab.Cookbook do
       specs: ["WLB.07", "WLB.08"],
       completion_ids: ["WLB-C08", "WLB-C10"],
       upstream: [],
-      lane: :planned,
+      lane: :partial,
       evidence: :partial,
       checks: [
         "tokens-both-themes",
