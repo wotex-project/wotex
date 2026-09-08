@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.2.0. Contract: accepted. Source status: the metric
+Specification version: 0.3.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
@@ -219,6 +219,26 @@ No-data, stale data, denied scope, provider failure and cancellation have
 distinct UI states. Generated advice cannot authorize or invoke an Action.
 
 ## Nx data boundary and acceptance
+
+### Optional Explorer analysis
+
+The [interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md)
+selects Explorer for explicit dataframe analysis, not metric capture, storage
+or plotting. This profile remains planned until its source/evidence is added.
+It operates only on admitted, bounded run data or frozen query results. Use a
+closed descriptor for series/range selection and summary operations; no raw
+SQL, arbitrary expression, caller module, URL or filesystem source is accepted.
+Source and query digests, units, missing/nonfinite counts and preview/downsampling
+provenance accompany every result. Values from unlike units are never silently
+aggregated together. Apply native filtering/aggregation before extracting the
+at-most 100-row, 32-column preview; bound the native input and intermediate work
+as well as final output. Report native failures as unavailable, never empty
+success. The base numerical package closure still excludes Explorer.
+
+LiveView and notebook controls may refine the visible analysis without
+re-running an experiment or mutating its evidence. A filtered chart is not a
+replacement dataset, and live history does not become immutable merely by
+wrapping it in a dataframe. The following dataset contract still applies.
 
 Diagnostic history is lossy and MUST NOT silently become training data. Export
 to an experiment creates an immutable, content-addressed dataset with query,

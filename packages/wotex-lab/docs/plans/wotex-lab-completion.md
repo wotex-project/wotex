@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.1.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.2.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not an execution
@@ -15,6 +15,13 @@ including foundation design tokens, and strengthens transport/security seam
 evidence. Existing package APIs and accepted WoT semantics do not change.
 Reference host dependencies stay optional for library consumers. Sibling fixes
 are package-owned changes; this contract does not promote their readiness.
+
+Version 1.2 selects optional Explorer analysis and interactive chart lifecycle
+acceptance under C03/C08/C10/C12/C13, following the
+[interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md).
+It retains the independent numerical, dataframe and rendering layers, bounded
+missing-aware previews, the passive first-tensor closure and every existing
+acceptance gate. Archived packages and advisory conflicts are not waived.
 
 ## Work packages
 

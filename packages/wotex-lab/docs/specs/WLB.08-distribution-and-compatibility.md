@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.2.0. Contract: accepted. Source status: the workspace
+Specification version: 0.3.0. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard and the archive-consumer gate are implemented; the full
 reference-consumer, distribution and release-candidate runners, OCI, npm,
@@ -101,6 +101,16 @@ The no-LLM/no-durable-store profile must run the same core experiments. UI,
 metric codecs, BeamLens provider/native dependencies and chart assets have
 separately pinned compatibility/license/security cohorts. Whole-VM dependency
 state cannot be used as an untrusted multi-tenant isolation boundary.
+
+The Explorer analytics profile follows the
+[interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md).
+Record Explorer/Polars native artifact, Nx, Decimal and chart compatibility
+independently; the base archive consumer must still exclude Explorer and Kino.
+Archive status and vulnerability warnings need explicit adoption decisions.
+An advisory metadata conflict requires version-specific evidence, not a broad
+audit disable. `kino_explorer` is not an admitted new required dependency.
+Chart wrappers cannot silently upgrade the admitted Vega-Lite dialect or
+enable external URLs, arbitrary expressions or raw JavaScript.
 
 Nerves is a required delivery lane: name the supported target (`rpi4` baseline),
 pin the Nerves system/firmware/toolchain, supply a prebuilt bootable image with

@@ -1,6 +1,6 @@
 # WLB.03: Nx experiments and numerical adoption
 
-Specification version: 1.2.0. Contract: accepted. Numerical semantics inherit
+Specification version: 1.3.0. Contract: accepted. Numerical semantics inherit
 `wotex_nx:WNX.01`; Lab owns inputs, execution, experiments and policy examples.
 
 ## Primary audience and entry point
@@ -83,6 +83,15 @@ shutdown budget. No Serving is started by application loading.
    floating point output and training are not universally byte-deterministic.
 
 ## Acceptance and ownership
+
+Exploratory dataframe work follows the
+[interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md).
+Explorer is optional and distinct from Nx computation and chart rendering.
+Its analytical previews must preserve units, missing/nonfinite states and
+source provenance. Conversion of nullable series to tensors requires an
+explicit missing policy and the existing values/masks/quality contract; a
+dataframe summary is not a new numerical admission or training-data path.
+No Explorer, Kino or chart dependency is necessary for `Thermal.run/0`.
 
 `thermal_test.exs` checks the foundation against public core/Nx APIs and
 `window_anomaly_test.exs` covers the bounded `window-anomaly` lane;

@@ -1,6 +1,6 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.2.0. Contract: accepted. Source status: the sixteen
+Specification version: 0.3.0. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
@@ -40,6 +40,17 @@ must see the underlying package calls beside convenience APIs. Dependency
 installation uses published packages or exact admitted artifacts; first-run
 notebooks cannot depend on a Git checkout. The foundation README example is
 local development documentation and does not claim this notebook gate.
+
+Data exploration follows the
+[interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md):
+Explorer computes bounded dataframe results, Nx handles numerical algorithms,
+and VegaLite/Tucan-style descriptors feed the separate plotting layer.
+Notebooks must expose executable Elixir queries, not require an archived
+`kino_explorer` Smart Cell. Core Kino tables receive at most the admitted
+preview; custom paging is a Lab adapter, not an upstream replacement claim.
+Reactive notebook inputs re-evaluate admitted queries and keep source/query
+identity visible. The notebook and workbench must agree on missing values,
+units, filters, summary counts and transfer limits.
 
 ## Generated knowledge graph
 

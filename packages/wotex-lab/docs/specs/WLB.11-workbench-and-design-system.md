@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.2.0. Contract: accepted.
+Specification version: 0.3.0. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -12,7 +12,7 @@ formal evidence presentation, and a one-MiB JSON evidence report. Its separate
 Action approval names and rechecks the decision, proposal digest, Thing,
 operation, input, revision and expiry; experiment execution cannot approve it.
 
-The host gate compiles with warnings as errors, formats, runs strict Credo,
+The existing host gate compiles with warnings as errors, formats, runs strict Credo,
 unused-dependency and security audits, Dialyzer, Doctor, ExDoc, the boundary
 scan and 26 tests with at least 90% line coverage. Those tests cover empty and
 denied states, themes/sidebar semantics, reflow/reduced-motion source rules,
@@ -22,6 +22,12 @@ unavailability and operation without an LLM. This is implemented source and
 reference evidence, not a WCAG certification or artifact-adoption claim;
 WLB.08 owns clone-free archive/OCI execution and independent real-browser
 cohort evidence.
+
+The interactive analytics extension below adds acceptance obligations. Its
+Explorer analysis and chart lifecycle improvements are planned until backed
+by their own source and executable evidence; the earlier tests do not prove
+these new contracts. See the
+[interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md).
 
 ## Product and implementation boundary
 
@@ -91,6 +97,21 @@ assets, disables external data URLs/expression injection from untrusted input,
 and ships no arbitrary user-authored chart execution. HEEx owns controls and
 state; the hook owns rendering only. Pin the chart/LiveView compatibility cohort.
 
+Explorer owns optional native dataframe analysis, not chart rendering or
+telemetry storage. Series/range/mark controls are server-admitted and keyboard
+accessible; changing a view cannot restart a run, alter its evidence or approve
+an Action. Summary rows show observed and missing/nonfinite counts and retain
+units and source/query identity. Livebook and LiveView consume the same bounded
+analysis semantics without a required `kino_explorer` dependency.
+
+The hook must implement mount, update and destruction, finalize superseded
+views, survive out-of-order asynchronous renders and restore the fallback on
+failure. Fixed host-generated pan/zoom may be added after admission; caller
+`params`, signals and expressions remain forbidden. Line/area/point marks and
+gaps agree between the enhanced chart and fallback. SVG includes axis labels,
+ticks, legend, title/description and an explicit zero area baseline. Tables
+are at most 100 rows and disclose truncation rather than embedding every point.
+
 Browser previews are at most 100 rows, 32 columns and 2,000 points per series,
 eight visible series per panel. The server limits queries before transferring
 data. Downsampling identifies its method and interval and preserves visible
@@ -129,5 +150,6 @@ malicious TD/prompt content, bounded chart data, component/token overrides,
 live query vs immutable dataset distinction and no-LLM operation. Token
 contrast tests support this gate but do not prove whole-UI accessibility.
 
-The foundation implements tokens/CSS only. It does not claim a running Phoenix
-endpoint, implemented HEEx components, charts or the browser acceptance suite.
+The base library's design-system surface remains tokens/CSS only. The separate
+host implements the endpoint/components; neither token tests nor source-only
+component tests claim the complete real-browser acceptance suite.
