@@ -10,6 +10,7 @@ defmodule Wotex.Lab.WLB05EvidenceManifestTest do
 
   @source_files [
     "mix.exs",
+    "docs/provenance/source-cohort.json",
     "docs/specs/WLB.05-directory-continuum-and-smart-room.md",
     "lib/wotex/lab/adapters/directory/authorization.ex",
     "lib/wotex/lab/adapters/directory/clock.ex",

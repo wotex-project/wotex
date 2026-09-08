@@ -10,6 +10,7 @@ defmodule Wotex.Lab.EvidenceManifestTest do
 
   @source_files [
     "mix.exs",
+    "docs/provenance/source-cohort.json",
     "docs/specs/WLB.04-runtime-and-network-adapters.md",
     "lib/wotex/lab/adapters/http/req_client.ex",
     "lib/wotex/lab/adapters/http/sse/parser.ex",

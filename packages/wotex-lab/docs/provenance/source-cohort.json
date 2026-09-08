@@ -24,13 +24,13 @@
     },
     {
       "package": "wotex_runtime",
-      "files": 36,
-      "sha256": "b492cd5d9c8b1862a20b0860da8238e9395f73a5d70f6acd267f4b9ab9f9b02f"
+      "files": 39,
+      "sha256": "aeee93fd1de7a20bb70195dee792dc5bb1cd1ec1361407d6a857f9b1c3b45383"
     },
     {
       "package": "wotex_binding_http",
-      "files": 34,
-      "sha256": "758d9c9a00c463f510eb6bf877bc639d3a820a45c925b8deb118f822796ab6f6"
+      "files": 35,
+      "sha256": "b6ca90d7f2432815e99c3be9cf8685dfc934147d99c8f789b881f9144de327cc"
     },
     {
       "package": "wotex_binding_mqtt",

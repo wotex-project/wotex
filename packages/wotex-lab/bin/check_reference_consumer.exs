@@ -19,7 +19,8 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
              priv/conformance/native/src/*.rs priv/conformance/native/tests/*.rs
              priv/conformance/native/probes/*.rs
              docs/specs/**/* bin/check_reference_consumer.exs bin/support/reference_summary.exs
-             bin/support/work_directory.exs mix.exs mix.lock)
+             bin/support/work_directory.exs bin/check_source_cohort.exs
+             docs/provenance/source-cohort.json .check.exs mix.exs mix.lock)
   @deadline_ms 1_800_000
   @images %{broker: "eclipse-mosquitto:2", greptime: "greptime/greptimedb:v1.1.4"}
   @seed 1
@@ -27,6 +28,11 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)
+
+    System.get_env("WOTEX_PATH_DEPS") == "1" ||
+      abort("reference source suites require explicit WOTEX_PATH_DEPS=1")
+
+    source_cohort?() || abort("reference preflight refused unreviewed workspace source drift")
 
     work = Wotex.Lab.Check.WorkDirectory.create!(root, :reference)
     started = System.monotonic_time()
@@ -52,7 +58,7 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
     summary = ReferenceSummary.parse(output)
     IO.puts("suite: #{inspect(summary)} (exit #{status})")
     elapsed = System.convert_time_unit(System.monotonic_time() - started, :native, :millisecond)
-    unchanged? = Digest.tree(root, @cohort) == {:ok, source_digest}
+    unchanged? = Digest.tree(root, @cohort) == {:ok, source_digest} and source_cohort?()
     evidence = record(root, work, lanes, summary, status, elapsed, {source_digest, unchanged?})
     IO.puts("evidence retained at #{evidence}")
 
@@ -83,6 +89,17 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
     case System.find_executable("docker") do
       nil -> false
       _path -> match?({_out, 0}, System.cmd("docker", ["info"], stderr_to_stdout: true))
+    end
+  end
+
+  defp source_cohort? do
+    case System.cmd("elixir", ["bin/check_source_cohort.exs"], stderr_to_stdout: true) do
+      {_output, 0} ->
+        true
+
+      {output, _status} ->
+        IO.puts(:stderr, output)
+        false
     end
   end
 

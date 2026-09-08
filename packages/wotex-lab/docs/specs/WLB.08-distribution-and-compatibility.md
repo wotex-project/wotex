@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.4.0. Contract: accepted. Source status: the workspace
+Specification version: 0.5.0. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard and the archive-consumer gate are implemented; the full
 reference-consumer, distribution and release-candidate runners, OCI, npm,
@@ -34,9 +34,14 @@ claim source builds as published adoption, or change repository visibility.
 
 `elixir bin/check_source_cohort.exs` is a read-only workspace drift guard over the
 explicit source/spec/test/fixture cohort. It requires all source owners and
-is separate from package-local CI. Dirty content is covered by content digests;
+is required by `mix check` when `WOTEX_PATH_DEPS=1`; package-only checks do not
+require sibling checkouts. Dirty content is covered by content digests;
 the historical revision snapshot is not relabeled. A changed hash requires
 review and renewed evidence, not automatic readiness promotion.
+WLB.04–06 and WLB.09 evidence digests include the reviewed content cohort;
+their `missing` dependency archives remain source-only evidence. A package's
+new source implementation status does not change the historical index or imply
+independent artifact adoption. Dated follow-up decisions live in the seam review.
 
 ## Distinct gates
 
@@ -86,7 +91,10 @@ exclusions. Old-format totals are normalized to executed tests by subtracting
 excluded cases; unsupported/ambiguous/oversized summaries fail closed. Its
 `ReferenceSummary` helper has independent positive and adversarial tests.
 Source identity is checked before and after execution, including the harness
-and native containment sources. Changed inputs invalidate the run. Each attempt
+and native containment sources. The reference harness requires explicit
+workspace mode and checks all sibling content against the reviewed cohort at
+both boundaries; the cohort file and guard are themselves part of its input
+digest. Changed inputs invalidate the run. Each attempt
 gets a new private directory, and earlier evidence is never deleted.
 
 This script still uses a waiting-task deadline around `System.cmd`; that is

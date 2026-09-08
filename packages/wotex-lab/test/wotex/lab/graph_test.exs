@@ -349,9 +349,22 @@ defmodule Wotex.Lab.GraphTest do
 
     File.mkdir_p!(Path.join(root, "priv"))
 
+    # Copy source inputs only. Host docs/build output can change concurrently
+    # and must never become part of this fixture's source snapshot.
     for entry <-
-          ~w(lib test bin hosts priv/fixtures priv/cookbooks priv/conformance docs README.md CHANGELOG.md mix.exs) do
-      File.cp_r!(Path.join(@root, entry), Path.join(root, entry))
+          ~w(lib test bin hosts/workbench/lib hosts/workbench/test hosts/workbench/bin
+             priv/fixtures priv/cookbooks priv/conformance/native/src
+             priv/conformance/native/tests priv/conformance/native/probes
+             priv/conformance/native/Cargo.toml priv/conformance/native/Cargo.lock
+             docs README.md CHANGELOG.md mix.exs) do
+      target = Path.join(root, entry)
+      File.mkdir_p!(Path.dirname(target))
+      File.cp_r!(Path.join(@root, entry), target)
+    end
+
+    for excluded <- ~w(hosts/workbench/doc hosts/workbench/_build hosts/workbench/deps
+                       priv/conformance/native/target) do
+      refute File.exists?(Path.join(root, excluded))
     end
 
     assert {:ok, _graph} = generate(catalogue, root: root)
@@ -451,10 +464,15 @@ defmodule Wotex.Lab.GraphTest do
   end
 
   defp tmp(name) do
-    path =
-      Path.join(System.tmp_dir!(), "wotex-lab-graph-#{name}-#{System.unique_integer([:positive])}")
+    parent =
+      Path.join(
+        System.tmp_dir!(),
+        "wotex-lab-graph-" <> Base.encode16(:crypto.strong_rand_bytes(16))
+      )
 
-    on_exit(fn -> File.rm_rf(path) end)
-    path
+    File.mkdir!(parent)
+    File.chmod!(parent, 0o700)
+    on_exit(fn -> File.rm_rf(parent) end)
+    Path.join(parent, name)
   end
 end

@@ -59,3 +59,57 @@ these source tests. The content guard is checked both for matching input and
 an injected mismatched digest, which must fail. The accepted contracts remain
 required, without a fake
 green status or a “zero drift forever” assertion.
+
+## Runtime and HTTP follow-up cohort
+
+Review date: 2026-09-08. Runtime is reviewed through
+`c9c336a61e6b3cd8a1cd00f3ed7b52fb74a40aa6`, HTTP through
+`b9fd354cfd843daa3bdfab38c667234191e992a5`. The other six content cohorts are
+unchanged. This supplements, rather than rewrites, the historical revision
+snapshot above.
+
+Runtime's WRT.01 is now 1.3.0 and WRT.02 is 1.1.0. Reviewed changes cover
+fixed request/metadata/profile/Form limits, forged Result revalidation,
+credential-safe exception telemetry, explicit subscription option validation,
+receiver/client-loss cleanup and concurrent stop outcomes. Exposed callbacks
+remain synchronous in independent caller processes; their errors and effects
+remain consumer-owned. A reproduced retry defect accepted negative attempt
+counts and ambiguous duplicate options and raised on non-boolean idempotence.
+The owning repair closes the four-option vocabulary, requires positive attempt
+counts and known operations, and returns `:stop` for malformed inputs. Its
+20,250-cell decision matrix passes without introducing timers or port calls.
+Telemetry clock readings are explicitly measurement-only, not deadline or
+retry authority.
+
+HTTP's WBH.03 is now 1.2.0. A returned SSE handle is closed best-effort even
+when its handshake is not a Response value. Tests cover that failure, exact
+event thresholds, cleanup callback failure modes, duplicate raw closes,
+concurrent Runtime stops, receiver death and linked client failure. No hidden
+client, reconnect loop or remote exactly-once cleanup guarantee is added.
+
+Both owners have a dated, exact-Decimal-3.1.1 lock/checksum and parser-regression
+guard for the contradictory advisory range described in their SECURITY files.
+The reported exponent is rejected through parse/cast/new, with default
+threshold vectors; the acknowledgement does not disable other advisories.
+Full owner checks pass on Elixir 1.20.2 / OTP 29.0.4: Runtime 66 tests at 95.6%
+coverage, HTTP 66 cases (including two properties) at 97.2%. HTTP's default
+Gettext/Sobelow probes are inapplicable absent those dependencies; all declared
+package tools run. Archive compilation retains each owner's narrower stated
+scope, not independent archive-only dependency reconstruction.
+
+Workspace `mix check` now requires the content guard. Reference suites check
+it before and after execution and bind the cohort file into their own digest.
+WLB.04/05 transport and store records also bind the cohort, matching WLB.06/09;
+no missing archive becomes an admitted artifact. The guard's actual CLI is
+tested against matching, changed, missing-owner and symlinked fixture trees,
+including preservation of the previous record. Accepted release, hostile-worker,
+complete reference-programme and hardware obligations remain open.
+
+The renewed workspace gate passes all 17 tools (309 tests, 24 excluded,
+95.3% coverage); the concurrently executed Workbench gate passes all 13 tools
+(59 tests, 93.2% coverage, plus five chart lifecycle checks). The all-lanes
+reference attempt `d303bc2972d64f99575a5d9015ac5dcf` correctly records failure:
+332 of 333 tests passed, but the Greptime test expected two rows after rapid
+captures that can share one millisecond. A separate local 100-pair capture
+reproducer observed 75 equal timestamps. The retained failure is not waived;
+timestamp ordering and receiver deduplication require the WLB.10 follow-up.

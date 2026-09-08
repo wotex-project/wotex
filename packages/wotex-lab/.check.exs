@@ -14,6 +14,11 @@
     {:ex_doc, command: "mix docs --warnings-as-errors"},
     {:ex_unit, command: "mix coveralls"},
     {:contracts, command: "mix run --no-start bin/check_contracts.exs"},
+    {:source_cohort,
+     if(System.get_env("WOTEX_PATH_DEPS") == "1",
+       do: [command: "elixir bin/check_source_cohort.exs"],
+       else: false
+     )},
     {:graph, command: "mix run --no-start bin/check_graph.exs"},
     {:boundary, command: "elixir bin/check_boundary.exs"},
     {:package, command: "mix run --no-start bin/check_package.exs"},

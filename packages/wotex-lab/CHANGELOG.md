@@ -2,6 +2,13 @@
 
 ## 0.1.0 — source foundation
 
+- Workspace checks and reference preflight/completion enforce the reviewed
+  sibling source cohort. Runtime/HTTP changes are reviewed independently;
+  transport/store evidence now binds those source inputs without claiming
+  published artifact adoption.
+  Graph-copy fixtures exclude host build/docs/dependency output and use private
+  exclusive temporary roots, allowing independent host checks to run alongside.
+
 - Reference-suite reporting retains earlier evidence, passes/records its exact
   seed, checks service images independently and refuses missing, inconsistent or
   ambiguous test summaries and source drift. Unverified outer-runner cleanup
