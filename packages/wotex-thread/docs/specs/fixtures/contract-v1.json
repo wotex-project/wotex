@@ -1,0 +1,410 @@
+{
+  "format_version": "1.0.0",
+  "package": "wotex_thread",
+  "status": "specified_unexecuted",
+  "normalization_spec": "../WTH.11-standalone-client-and-preservation.md",
+  "cases": [
+    {
+      "id": "WTH-F01",
+      "requirements": [
+        "WTH-S01",
+        "WTH-N01"
+      ],
+      "kind": "pure",
+      "operation": "Dataset.decode",
+      "input": {
+        "bytes_hex": "c8020102"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "entries": [
+              [
+                200,
+                {
+                  "bytes_hex": "0102"
+                }
+              ]
+            ],
+            "types": [
+              200
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "WTH-F02",
+      "requirements": [
+        "WTH-S01",
+        "WTH-N01"
+      ],
+      "kind": "pure",
+      "operation": "Dataset.decode",
+      "input": {
+        "bytes_hex": "c80100c80101"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "duplicate_tlv",
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WTH-F03",
+      "requirements": [
+        "WTH-S01",
+        "WTH-N01"
+      ],
+      "kind": "pure",
+      "operation": "Dataset.decode",
+      "input": {
+        "bytes_hex": "03036162"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "truncated_dataset",
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WTH-F04",
+      "requirements": [
+        "WTH-S01",
+        "WTH-N01"
+      ],
+      "kind": "pure",
+      "operation": "Dataset.decode",
+      "input": {
+        "bytes_hex": "0303616263"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "entries": [
+              [
+                3,
+                {
+                  "bytes_hex": "616263"
+                }
+              ]
+            ],
+            "types": [
+              3
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "WTH-F05",
+      "requirements": [
+        "WTH-S01",
+        "WTH-N01"
+      ],
+      "kind": "pure",
+      "operation": "Dataset.decode",
+      "input": {
+        "bytes_hex": "030161c8020102"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "entries": [
+              [
+                3,
+                {
+                  "bytes_hex": "61"
+                }
+              ],
+              [
+                200,
+                {
+                  "bytes_hex": "0102"
+                }
+              ]
+            ],
+            "types": [
+              3,
+              200
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "WTH-F06",
+      "requirements": [
+        "WTH-S02",
+        "WTH-N02"
+      ],
+      "kind": "lifecycle_contract",
+      "operation": "daemon_fragmented_state",
+      "input": {
+        "request": "state",
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "request"
+          },
+          {
+            "at_ms": 1,
+            "event": "socket_bytes",
+            "bytes_hex": "73746174650d0a6c6561"
+          },
+          {
+            "at_ms": 2,
+            "event": "socket_bytes",
+            "bytes_hex": "6465720d0a446f"
+          },
+          {
+            "at_ms": 3,
+            "event": "socket_bytes",
+            "bytes_hex": "6e650d0a"
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "result": {
+            "ok": "leader"
+          },
+          "daemon_commands": [
+            "state"
+          ],
+          "completion_markers": 1
+        }
+      }
+    },
+    {
+      "id": "WTH-F07",
+      "requirements": [
+        "WTH-S04",
+        "WTH-N01"
+      ],
+      "kind": "lifecycle_contract",
+      "operation": "management_callback_acceptance",
+      "input": {
+        "kind": "pending",
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "submit",
+            "id": "request-1"
+          },
+          {
+            "at_ms": 1,
+            "event": "sdk_submit_return",
+            "status": 0
+          },
+          {
+            "at_ms": 2,
+            "event": "observe_pending_request"
+          },
+          {
+            "at_ms": 3,
+            "event": "sdk_management_callback",
+            "id": "request-1",
+            "status": 0
+          }
+        ],
+        "dataset": {
+          "bytes_hex": "000300000f01021234020800112233445566770307666978747572650510000102030405060708090a0b0c0d0e0f0708fd112233445566770c0402a0f7f80e08000000000001000035060004001fffe033080000000000020000340400007530"
+        },
+        "scripted_sdk_validation_result": true
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "results_before_callback": 0,
+          "result": {
+            "ok": {
+              "accepted": true,
+              "effective": "not_verified"
+            }
+          },
+          "calls": {
+            "sdk_management_pending_set": 1
+          },
+          "active_request_contexts": 0
+        }
+      }
+    },
+    {
+      "id": "WTH-F08",
+      "requirements": [
+        "WTH-S04",
+        "WTH-N01"
+      ],
+      "kind": "lifecycle_contract",
+      "operation": "management_timeout_late_callback",
+      "input": {
+        "kind": "active",
+        "timeout_ms": 10,
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "submit",
+            "id": "request-1"
+          },
+          {
+            "at_ms": 1,
+            "event": "sdk_submit_return",
+            "status": 0
+          },
+          {
+            "at_ms": 10,
+            "event": "deadline"
+          },
+          {
+            "at_ms": 11,
+            "event": "submit",
+            "id": "request-2"
+          },
+          {
+            "at_ms": 12,
+            "event": "sdk_management_callback",
+            "id": "request-1",
+            "status": 0
+          }
+        ],
+        "dataset": {
+          "bytes_hex": "000300000f01021234020800112233445566770307666978747572650510000102030405060708090a0b0c0d0e0f0708fd112233445566770c0402a0f7f80e08000000000001000035060004001fffe0"
+        },
+        "scripted_sdk_validation_result": true
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "results": [
+            {
+              "error": {
+                "code": "timeout",
+                "effect": "unknown"
+              }
+            },
+            {
+              "error": {
+                "code": "busy",
+                "effect": "none"
+              }
+            }
+          ],
+          "calls": {
+            "sdk_management_active_set": 1
+          },
+          "late_successes": 0,
+          "active_request_contexts": 0
+        }
+      }
+    },
+    {
+      "id": "WTH-F09",
+      "requirements": [
+        "WTH-S06",
+        "WTH-N02"
+      ],
+      "kind": "lifecycle_contract",
+      "operation": "state_coalescing",
+      "input": {
+        "initial": {
+          "role": "detached",
+          "network_name": "fixture",
+          "rloc16": null,
+          "ipv6_enabled": true,
+          "thread_enabled": true,
+          "generation": 1
+        },
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "subscribe",
+            "id": "sub-1"
+          },
+          {
+            "at_ms": 1,
+            "event": "state_changed",
+            "iteration": 1,
+            "flags": 4,
+            "role": "child",
+            "rloc16": 5120
+          },
+          {
+            "at_ms": 1,
+            "event": "state_changed",
+            "iteration": 1,
+            "flags": 2147483648,
+            "role": "child",
+            "rloc16": 5120
+          },
+          {
+            "at_ms": 2,
+            "event": "flush_iteration",
+            "iteration": 1
+          },
+          {
+            "at_ms": 3,
+            "event": "cancel",
+            "id": "sub-1"
+          },
+          {
+            "at_ms": 4,
+            "event": "state_changed",
+            "iteration": 2,
+            "flags": 4,
+            "role": "router",
+            "rloc16": 10240
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "roles_delivered": [
+            "detached",
+            "child"
+          ],
+          "changed_flags": [
+            0,
+            2147483652
+          ],
+          "active_listeners": 0,
+          "deliveries_after_cancel": 0
+        }
+      }
+    },
+    {
+      "id": "WTH-F10",
+      "requirements": [
+        "WTH-S01",
+        "WTH-N01"
+      ],
+      "kind": "pure",
+      "operation": "Dataset.decode",
+      "input": {
+        "bytes_hex": "0303610062"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "invalid_tlv",
+            "effect": "none"
+          }
+        }
+      }
+    }
+  ]
+}

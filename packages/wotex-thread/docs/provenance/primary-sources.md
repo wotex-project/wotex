@@ -44,3 +44,10 @@ architectural choice: a library cannot obtain a live C pointer into a separate
 borrowed ot-daemon process. Production SDK management and the existing read-only
 CLI socket profile remain separate explicit adapters. No unreviewed Thread
 normative or physical-radio conformance claim follows from the source review.
+
+## Standalone contract review, 2026-09-09
+
+[WTH.11](../specs/WTH.11-standalone-client-and-preservation.md) records
+additional source-pinned API and retained-workflow decisions. Its concrete
+fixtures are specified, unexecuted acceptance data. This review does not add
+an interoperability or standards-conformance result.

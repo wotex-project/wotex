@@ -1,6 +1,17 @@
+---
+spec:
+  id: WTH.10
+  title: "Complete OpenThread host-management software profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-thread
+  updated: 2026-09-09
+---
+
 # WTH.10 Complete OpenThread host-management software profile
 
 Read [WTH.00](WTH.00-library-contract.md) and the [implementation sequence](../plans/software-implementation.md).
+[WTH.11](WTH.11-standalone-client-and-preservation.md) fixes the native API, retained workflows and concrete fixture contract.
 Baseline `ce7862b` implements bounded Dataset TLV syntax, a read-only Unix-socket
 daemon adapter and management-inspection Forms. Native SDK semantic validation,
 asynchronous management, commissioning roles, state subscriptions and real
@@ -78,7 +89,8 @@ interface name, storage directory, `storage_mode: :open_existing | :create_new`
 and owner. Native configuration rejects an already owned radio/interface/store;
 an exclusive storage lock prevents concurrent local owners. SDK settings and
 Dataset state use owner-only permissions and durable backend storage. No default
-radio selection, root escalation, system service edits or host network changes.
+radio selection, root escalation, system service edits or unrelated host network
+changes. Explicit SDK enable/disable affects only the configured owned interface.
 Tests run within an isolated network namespace or VM with explicit privileges.
 
 Initialize the POSIX platform and one `otInstance`, register
@@ -176,7 +188,7 @@ Capabilities must distinguish daemon inspection from SDK management and never
 claim CoAP/Matter payload support. `health_check/1` may report healthy only from
 a successful explicit state query on its selected adapter.
 
-## Acceptance vectors and software network
+## Acceptance scenarios and software network
 
 | ID | Scenario | Required result |
 | --- | --- | --- |

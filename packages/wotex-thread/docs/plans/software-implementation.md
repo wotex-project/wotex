@@ -11,8 +11,15 @@ starting implementation, not something to replace with fresh scaffolding.
 1. Read `CLAUDE.md` and matching repository rules/skills.
 2. Read [WTH.00 — shared software rules](../specs/WTH.00-library-contract.md).
 3. Read [WTH.10 — exact target profile](../specs/WTH.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
-4. Read [primary source pins and access limits](../provenance/primary-sources.md).
-5. Select the first work package below whose acceptance evidence is absent.
+4. Read [WTH.11 — standalone API, preservation and concrete corpus](../specs/WTH.11-standalone-client-and-preservation.md).
+5. Read [primary source pins and access limits](../provenance/primary-sources.md).
+6. Select the first work package below whose acceptance evidence is absent.
+
+Read the [versioned catalogue](../specs/catalogue.yaml) and
+[WTH.12 — Wotex integration](../specs/WTH.12-wotex-integration.md) before choosing
+implementation work. The catalogue lists dependencies and distinguishes planned
+contracts from narrow implemented profiles. Source presence, fixture presence,
+passing baseline tests and accepted work packages are separate facts.
 
 The numbered sequence is dependency order: each package depends on all preceding
 packages. Each is one bounded behavior plus its tests/documentation. A large
@@ -22,7 +29,8 @@ merely to produce a commit. Every proposed module, API and test path below is a
 target addition unless it already exists; no placeholder file implies completion.
 
 For each requirement, record its ID in an ExUnit/native test name or a fixture
-manifest. Vectors specify expected outcomes in .10. The implementation chooses
+manifest. Scenario families specify required outcomes in .10; concrete inputs and exact
+expectations are in .11 and its fixture corpus. The implementation chooses
 ordinary internal function names and data structures, while the public behavior,
 state transitions, limits, failure policy and transport choices are fixed there.
 If an upstream API cannot meet a requirement, add the smallest adapter needed
@@ -33,26 +41,30 @@ do not silently skip, simulate or weaken the requirement.
 
 ### WTH-P01: Harden dataset syntax and daemon parsing
 
-- Requirements: WTH-S01, WTH-S02; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WTH-V01, WTH-V03.
+- Requirements: WTH-S01, WTH-S02, WTH-N01, WTH-N02, WTH-N04; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WTH-V01, WTH-V03.
 - Change surface: Dataset and read-only Daemon request/response boundary.
 - Test destinations: `test/wotex/thread/dataset_boundary_test.exs`, `test/wotex/thread/daemon_fault_test.exs`.
 - Done when: Preserve unknown TLVs and exact typed daemon results; invalid/missing/extra output closes the socket and never becomes success.
 - Suggested local commit: `feat: harden dataset syntax and daemon parsing`.
 
+- Concrete cases: WTH-F01, WTH-F02, WTH-F03, WTH-F04, WTH-F05, WTH-F06, WTH-F10.
+- Standalone closure: Add the concrete corpus runner and exact Dataset/daemon fixtures; do not mistake presence completeness for semantic validity.
+
 ### WTH-P02: Own an explicit openthread host sdk instance
 
-- Requirements: WTH-S03; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WTH-V04.
+- Requirements: WTH-S03, WTH-N01; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WTH-V04.
 - Change surface: new OpenThread adapter, C bridge and POSIX event-loop integration.
 - Test destinations: `test/wotex/thread/sdk_bridge_test.exs`, `test/native/owner_test.c`.
 - Done when: Explicit RCP/interface/store ownership, versioned framing, nonblocking input and reverse EOF/startup cleanup are enforced.
 - Suggested local commit: `feat: own an explicit openthread host sdk instance`.
+- Standalone closure: Supply the native management API and typed State boundary; Daemon management rejection must happen before socket writes.
 
 ### WTH-P03: Validate datasets through the pinned sdk
 
 - Requirements: WTH-S01, WTH-S03; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WTH-V02.
+- Acceptance scenarios: WTH-V02.
 - Change surface: validate_dataset/get_dataset bridge operations.
 - Test destinations: `test/native/dataset_test.c`, `test/wotex/thread/sdk_dataset_test.exs`.
 - Done when: Call otDatasetIsValid with TLVs and active/pending flag; presence-complete invalid combinations fail before mutation and raw secrets stay redacted.
@@ -60,48 +72,66 @@ do not silently skip, simulate or weaken the requirement.
 
 ### WTH-P04: Implement explicit formation and management callbacks
 
-- Requirements: WTH-S04; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WTH-V05, WTH-V06, WTH-V07.
+- Requirements: WTH-S04, WTH-N01, WTH-N02; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WTH-V05, WTH-V06, WTH-V07.
 - Change surface: form_network, set_enabled and management Active/Pending Set operations.
 - Test destinations: `test/native/management_test.c`, `test/wotex/thread/management_test.exs`.
 - Done when: Formation requires empty owned state and explicit authorization; management completes on callback, reports acceptance separately from effectiveness and safely retires late contexts.
 - Suggested local commit: `feat: implement explicit formation and management callbacks`.
 
+- Concrete cases: WTH-F07, WTH-F08.
+- Standalone closure: Implement exact callback/unknown-effect results and retain timed-out callback context safely until SDK completion.
+
 ### WTH-P05: Implement commissioner and joiner ownership
 
-- Requirements: WTH-S05; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WTH-V08, WTH-V09.
+- Requirements: WTH-S05, WTH-N01, WTH-N02; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WTH-V08, WTH-V09.
 - Change surface: SDK commissioner/joiner state callbacks and admission records.
 - Test destinations: `test/native/commissioning_test.c`.
 - Done when: Finite exact-identity admission, PSKd validation, final role/completion states and timeout/stop cleanup work without wildcard admission or retries.
 - Suggested local commit: `feat: implement commissioner and joiner ownership`.
+- Standalone closure: Expose exact identity types and final commissioning results; Joiner completion does not silently enable Thread or promise attachment.
 
 ### WTH-P06: Deliver bounded non secret state reports
 
-- Requirements: WTH-S06; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WTH-V10, WTH-V11.
+- Requirements: WTH-S06, WTH-N01, WTH-N02; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WTH-V10, WTH-V11.
 - Change surface: native Subscription owner, state flag conversion and capability documentation.
 - Test destinations: `test/wotex/thread/state_subscription_test.exs`.
 - Done when: Initial snapshot and permitted state coalescing are generation-bound; Forms remain read-only inspection and unsupported Runtime streams are explicit.
 - Suggested local commit: `feat: deliver bounded non secret state reports`.
 
+- Concrete cases: WTH-F09.
+- Standalone closure: Keep native State subscriptions separate from Runtime application streams and eliminate inherited QoS/payload guesses.
+
 ### WTH-P07: Build a real openthread software network fixture
 
-- Requirements: WTH-S01, WTH-S02, WTH-S03, WTH-S04, WTH-S05, WTH-S06; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WTH-V02, WTH-V03, WTH-V05, WTH-V06, WTH-V07, WTH-V08, WTH-V09, WTH-V12.
+- Requirements: WTH-S01, WTH-S02, WTH-S03, WTH-S04, WTH-S05, WTH-S06, WTH-N01, WTH-N02, WTH-N03; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WTH-V02, WTH-V03, WTH-V05, WTH-V06, WTH-V07, WTH-V08, WTH-V09, WTH-V12.
 - Change surface: pinned simulation RCP/FTD, separate POSIX daemon and SDK-host instances.
 - Test destinations: `test/interop/openthread_test.exs`.
 - Done when: Unique simulated node IDs, isolated state and actual management/commissioning callbacks prove the profile; no two owners share a radio.
 - Suggested local commit: `test: build a real openthread software network fixture`.
+- Standalone closure: Execute .11 network formation/joining/pending activation and layered sensor/light CoAP workflow with explicit test routing and software peer.
+
+### WTH-P07a: Prove the Wotex consumer boundary
+
+- Requirements: WTH-I01, WTH-I02, WTH-I03, WTH-I04, WTH-I05, WTH-I06; all previous native/profile packages are dependencies.
+- Concrete cases: every `WTH-I-Fxx` case in `docs/specs/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
+- Change surface: root profile/0 and profile/1, Error.class, Mapping, Transport and their public core/Runtime integration; no sibling implementation changes.
+- Test destinations: `test/wotex/thread/runtime_integration_test.exs` and explicit test-only credential/client ports.
+- Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.
+- Suggested local commit: `feat: integrate explicit runtime profiles and failure classes`.
 
 ### WTH-P08: Prove host management cleanup and reproducibility
 
-- Requirements: WTH-S01, WTH-S02, WTH-S03, WTH-S04, WTH-S05, WTH-S06; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WTH-V13.
+- Requirements: WTH-S01, WTH-S02, WTH-S03, WTH-S04, WTH-S05, WTH-S06, WTH-N01, WTH-N02, WTH-N03, WTH-N04; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WTH-V13.
 - Change surface: native sanitizers, stress and complete software runner.
 - Test destinations: `test/software/lifecycle_stress_test.exs`.
 - Done when: Exercise callback lifetime/use-after-free faults plus required concurrency/version/archive/package gates; hardware remains a separate optional lane.
 - Suggested local commit: `test: prove host management cleanup and reproducibility`.
+- Standalone closure: Require all concrete cases, native SDK workflows and software network resource counters before accepting the target.
 
 ## Reproducible software fixture contract
 
@@ -153,7 +183,8 @@ with command, versions, vector paths/digests and result. Keep unexecuted require
 explicit. Use the author and committer required by `CLAUDE.md`; never configure
 remotes, push, tag, publish, change visibility or edit a consumer.
 
-The final package also runs the full .00 C09 matrix, all .10 vectors and software
+The final package also accepts every .11 standalone and .12 integration requirement,
+then runs the full .00 C09 matrix, all .10 scenarios, .11 concrete cases and software
 peers, then a clean committed-source archive with the lockfile through `mix check`
 and out-of-tree Hex package compilation. Confirm no Application callback or
 dependency-load I/O, no missing packaged bridge assets, no downloaded SDK/build/
@@ -162,7 +193,11 @@ number or stub adapter cannot substitute for a required protocol assertion.
 
 ## Completion checklist
 
-- Every S requirement has its listed V assertions passing, with current digests.
+- Every .11 and .12 requirement is linked to a concrete asserting test/result;
+  no new target requirement is closed merely by an identifier or valid JSON.
+- Every S/N requirement has its listed V scenario assertions and F concrete cases
+  passing, with current digests. The .11 native workflow must pass without a
+  Thing Description or consumer-authored backend.
 - C01 compatibility, C02 malformed boundaries, C03 ownership, C04 errors/effects,
   applicable C05/C06 streams, C07 native framing, C08 redaction/telemetry and
   C09 stress/matrix each have executable evidence or an explicit scope-based

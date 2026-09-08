@@ -27,8 +27,9 @@ Supported reads are `:state`, `:version`, `:network_name` and `:rloc16`.
 Responses are capped at 8192 bytes; remote Error, malformed output, closure and
 timeout fail. The package neither starts OpenThread nor changes datasets.
 Thread supplies networking, not generic application Property read/write.
-Dataset installation, joiner/commissioner workflows, border-router management
-and hardware/radio interoperability remain separate graduation gates.
+Dataset installation and joiner/commissioner workflows are required target
+software work in WTH.10/.11. Border-router management and physical-radio
+interoperability remain outside this target profile.
 
 ## Wotex contract
 
@@ -61,13 +62,24 @@ Run `mix check` before commits. It includes package compilation outside the
 checkout, tests/coverage, static checks, docs and dependency audit.
 Optional interoperability suites fail if invoked without their required peer.
 The hardware suite has not been run in this workspace because no configured
-OpenThread daemon/radio was supplied. Commissioning remains outside this profile.
+OpenThread daemon/radio was supplied. Commissioning remains unimplemented in the baseline and required in the SDK target.
 No remote repository, published package or publication action is implied.
 
 ## Software implementation contract
 
 The [ordered implementation sequence](docs/plans/software-implementation.md)
 and [specification index](docs/specs/WTH-index.md) define the remaining software
-profile with exact behavior, limits, failure transitions and acceptance vectors.
+profile with exact behavior, limits, failure transitions and acceptance scenarios.
 These target contracts are build instructions, not claims that every feature
 already exists. Required software peers are separate from physical-device tests.
+
+The [standalone client contract](docs/specs/WTH.11-standalone-client-and-preservation.md)
+defines the supplied backend, exact native APIs and retained end-to-end workflows.
+Its [concrete corpus](docs/specs/fixtures/contract-v1.json) contains specified,
+unexecuted cases; the scenario tables alone are not executable acceptance evidence.
+
+The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
+profiles from planned contracts. The [Wotex integration contract](docs/specs/WTH.12-wotex-integration.md)
+defines explicit Runtime profiles, route/value/error boundaries and real
+ConsumedThing acceptance tests. These are target requirements; a passing baseline
+gate does not accept the unfinished software profile.

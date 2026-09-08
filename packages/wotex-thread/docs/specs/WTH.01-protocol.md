@@ -1,3 +1,13 @@
+---
+spec:
+  id: WTH.01
+  title: "Thread protocol and graduation contract"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-thread
+  updated: 2026-09-09
+---
+
 # WTH.01 Thread protocol and graduation contract
 
 OpenThread v2026.09.0, commit 5c8c318627954c99cd1a957a290bbd4b1027d04b

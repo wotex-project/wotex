@@ -1,3 +1,13 @@
+---
+spec:
+  id: WTH.02
+  title: "Implemented Thread profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-thread
+  updated: 2026-09-09
+---
+
 # WTH.02 Implemented Thread profile
 
 This is a local Wotex Form profile, not a standardized W3C Thread binding:

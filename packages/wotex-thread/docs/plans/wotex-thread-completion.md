@@ -33,3 +33,13 @@ The concrete software scope, API and state-machine decisions are in
 [WTH.10](../specs/WTH.10-software-contract.md). Follow the
 [ordered implementation sequence](software-implementation.md) for required
 software fixtures, vector traceability, validation and local commits.
+
+The mandatory target also includes [WTH.11 standalone API and preservation](../specs/WTH.11-standalone-client-and-preservation.md).
+The ordered software plan assigns its N requirements and concrete F cases to
+implementation packages; parsed fixtures and scenario identifiers alone do not
+accept those packages.
+
+The [WTH.12 integration contract](../specs/WTH.12-wotex-integration.md) and
+[versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
+requires both native protocol workflows and supported cells through public core/Runtime
+APIs. Dependency artifacts and local source evidence remain separately identified.
