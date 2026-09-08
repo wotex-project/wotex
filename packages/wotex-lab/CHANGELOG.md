@@ -2,6 +2,15 @@
 
 ## 0.1.0 — source foundation
 
+- Pin BeamLens 0.3.1 in the Workbench and add its trusted-local reference
+  profile: four bounded read-only Lab callbacks, real eight-turn process limits,
+  one owner-bound no-queue broker, bounded/digested run context, cumulative
+  callback budget, loopback-only BAML bridge, and whole-agent replacement on
+  completion, failure, cancellation, timeout or owner death. Activation requires
+  PromEx/history, `WOTEX_LAB_BEAMLENS=trusted-local` and an explicit `ollama` or
+  `codex_then_ollama` provider. The upstream node/OS/uptime callbacks and log
+  store are disclosed and keep shared hosted tenants out of scope.
+
 - Added the dormant Workbench provider boundary for the planned BeamLens
   integration, adapted from `goatmire-2026`: an existing signed-in ChatGPT-plan
   Codex App Server turn is primary, API-key auth and exhausted quota are

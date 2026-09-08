@@ -53,6 +53,7 @@ defmodule WotexLabWorkbench.MixProject do
       {:telemetry, "~> 1.3"},
       {:telemetry_metrics, "~> 1.1"},
       {:prom_ex, "~> 1.12.0"},
+      {:beamlens, "== 0.3.1"},
       {:phoenix, "~> 1.8.13"},
       {:phoenix_html, "~> 4.3"},
       {:phoenix_live_view, "~> 1.2.11"},

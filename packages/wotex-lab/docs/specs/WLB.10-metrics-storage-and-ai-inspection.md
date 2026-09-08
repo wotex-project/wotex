@@ -1,20 +1,19 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.8.0. Contract: accepted. Source status: the metric
+Specification version: 0.9.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
 the Workbench now implements custom PromEx definitions, bounded collection,
 catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
 history activation, a protected local scrape listener and expiring local-operator
-query capabilities. Built-in host
-introspection, durable-sink host activation, remote/TLS scraping, OTLP
-signal export, the BeamLens agent lifecycle/custom skill, browser history
-presentation and the MCP query gateway remain planned. The Workbench now has a
-dormant, independently tested provider boundary for that future integration:
-existing ChatGPT-plan Codex access first and one fixed local Ollama model as a
-visible fallback. A template export is not proof of a Grafana import or query
-execution.
+query capabilities. The Workbench also implements the explicitly activated
+trusted-local BeamLens 0.3.1 profile, its four read-only callbacks, an
+owner-bound no-queue broker, a loopback provider bridge and explicitly selected
+Codex-plan/local-Ollama providers. Durable-sink host activation, remote/TLS
+scraping, OTLP signal export, browser prompt/answer presentation, isolated
+hosted-tenant BeamLens and the MCP query gateway remain planned. A template
+export is not proof of a Grafana import or query execution.
 
 ## Stack and ownership
 
@@ -288,8 +287,9 @@ history queries return unsupported; ETS does not pretend to implement PromQL.
 `estimate/1` admits the work before anything is read, and `History.query/2`
 answers gauges, counters with reset awareness and histogram quantiles from ETS
 or returns `unsupported_query`. `Metrics.Request` and `Metrics.Gateway` now
-admit local inspection callers of this descriptor; HTTP/MCP transport bindings,
-durable query templates and BeamLens callers remain planned.
+admit local inspection callers of this descriptor; the trusted-local BeamLens
+skill uses that gateway with tighter limits. Public HTTP/MCP query bindings,
+durable query templates and browser BeamLens callers remain planned.
 
 History query admission now binds the store's explicit `:instance` identifier
 and snapshot `:instance_slot` (default 0). Migration: hosts using `query/2`
@@ -370,26 +370,38 @@ the disposable hosted profile. Dependency startup, global names and telemetry
 handlers require inspection in the admitted cohort. A host-scoped BeamLens
 service is not proof that BeamLens supports isolated per-instance supervisors.
 Untrusted hosted tenants require separate worker/OS isolation; shared-VM
-introspection is reserved for the trusted local operator profile.
-The BeamLens agent integration, its custom skill, the prompt entry point and
-the answer presentation in the following paragraphs are planned. The host's
-provider/deadline source exists but starts no process by default and cannot be
-reached from HTTP or LiveView.
+introspection is reserved for the trusted local operator profile. That profile
+is implemented. Browser/session binding and answer presentation remain planned;
+the prompt entry point is currently the trusted in-VM `Investigation.Broker`
+only.
 The 0.3.1 source review found unconditional log-store startup in the standard
 supervisor, inherited node-information callbacks and queued operator invocations
 whose caller timeout does not revoke the run. See the
 [dependency review](../provenance/standards-and-dependencies.md#beamlens-integration-admission).
-Adding a custom skill alone does not admit that lifecycle/privacy contract.
-The provider boundary does not alter that conclusion: no BeamLens dependency
-is yet installed, and no provider or key lookup occurs at boot.
+The Workbench pins BeamLens 0.3.1 and does not use its default supervisor. Its
+host composition sets the custom skill and eight-iteration limit in the actual
+coordinator/operator process state, admits no queue, and replaces both static
+agents after every completion, failure, cancellation, timeout or owner death.
+The unavoidable upstream log store still starts, and the upstream operator
+still merges `get_current_time` and `get_node_info` with the four custom
+callbacks. That node/OS/uptime disclosure is explicitly accepted only for the
+trusted-local profile and is a blocker for disposable hosted-tenant activation.
+No built-in skill, anomaly process, tracer, exception store or VM-event store
+starts. No provider or key lookup occurs at boot.
 
 The custom skill exposes bounded `lab_metric_catalogue`, `lab_metric_query`,
 `lab_run_summary` and `lab_compare_runs` callbacks. Their service-side request
 scope expires with the investigation. A model-supplied instance ID, Lua global,
 prompt or prior conversation cannot substitute for that scope. No shell,
 arbitrary Elixir, raw SQL, raw credentials, external URL or Action callback is
-provided. Dependency base callbacks/node metadata are part of the privacy
-review, not assumed absent merely because the custom skill is restrictive.
+provided by the custom skill. Each metric call creates a server-bound one-call
+gateway with a 2.5-second TTL, five-minute range, 61-point, 2 KiB and 1.5-second
+query ceilings, then revokes it. Current/baseline summaries are supplied by the
+trusted server, canonicalized as JSON, content-addressed and limited to 8 KiB
+combined; the model can select only `current` or `baseline`. A 16 KiB cumulative
+callback-output budget makes repeated calls fail closed. Dependency base
+callbacks/node metadata remain the explicit trusted-local disclosure described
+above, not part of the custom callback claim.
 
 The prompt entry point is on-demand. Default budget: one investigation per
 session, 30 seconds, 8 model turns, 12 tool calls and 32 KiB admitted context;
@@ -398,6 +410,17 @@ terminate the investigation and revoke its query scope, not merely detach the
 UI caller. Local providers are supported; cloud model use requires explicit
 provider selection and disclosure of exactly which redacted data leaves the
 host. No automatic API-key discovery, model download or endless agent loop.
+
+Until browser sessions are bound, the implemented broker is stricter: one
+investigation for the entire trusted host, no queue, a 4 KiB prompt, 8 KiB run
+context, 16 KiB cumulative callback output, 30 seconds, eight turns and hence
+at most eight tool actions. It returns an owner-only reference. A different
+process cannot cancel it. Owner death, cancel and timeout brutally stop the
+worker, clear context and replace both BeamLens agents. `WOTEX_LAB_BEAMLENS`
+must equal `trusted-local`, PromEx and local history must also be enabled, and
+`WOTEX_LAB_BEAMLENS_PROVIDER` must explicitly equal `ollama` or
+`codex_then_ollama`. The bridge is plain HTTP only on an exact loopback host,
+rejects streaming/non-loopback/oversized messages, and is inert when disabled.
 
 The admitted provider design follows the proven `goatmire-2026` boundary. A
 Codex App Server call must use an already signed-in ChatGPT-plan account,
@@ -408,10 +431,12 @@ The fallback is exactly `qwen3.5:4b-q4_K_M` at the configured loopback Ollama
 OpenAI-compatible endpoint, non-streaming, reasoning disabled and capped at
 320 output tokens. It never pulls a model. The 29-second provider deadline
 allocates at most half the remaining time to Codex and gives the balance to
-Ollama. The provider status and fallback reason are explicit result metadata
+Ollama when `codex_then_ollama` was explicitly selected. `ollama` never attempts
+Codex. The provider status and fallback reason are explicit result metadata
 and a PubSub transition; fallback is never silent. Disposable deadline workers
-are killed on timeout and owner death. These are provider-boundary tests, not
-yet proof of whole BeamLens investigation cancellation or scope revocation.
+are killed on timeout and owner death. Tests exercise the real BeamLens process
+tree and metric gateway plus fake provider/agent workers; no live model turn is
+part of default acceptance.
 
 Answers show observed facts separately from hypotheses, source queries/time
 ranges and missing evidence. Queried labels/logs, tool results and prompts are

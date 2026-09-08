@@ -21,6 +21,10 @@ defmodule WotexLabWorkbenchWeb.Router do
     plug :accepts, ["css"]
   end
 
+  pipeline :internal_api do
+    plug :accepts, ["json"]
+  end
+
   scope "/", WotexLabWorkbenchWeb do
     pipe_through :assets
     get "/css/tokens.css", AssetController, :tokens
@@ -40,5 +44,10 @@ defmodule WotexLabWorkbenchWeb.Router do
       live "/metrics", WorkbenchLive, :metrics
       live "/evidence", WorkbenchLive, :evidence
     end
+  end
+
+  scope "/api/internal", WotexLabWorkbenchWeb do
+    pipe_through :internal_api
+    post "/beamlens/v1/chat/completions", InvestigationCompletionController, :create
   end
 end

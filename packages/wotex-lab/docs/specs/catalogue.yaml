@@ -308,7 +308,7 @@ specifications:
       - "test/wotex/lab/wlb09_evidence_manifest_test.exs"
     compatibility_classification: WLB.09 is implemented as an optional, digest-pinned Maude profile with closed serialization, finite-state exhaustion evidence, counterexample replay and process-tree cleanup; results remain inert and model-scoped.
   - id: WLB.10
-    version: "0.8.0"
+    version: "0.9.0"
     path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md
     implementation_status: partial
     evidence_status: partial
@@ -323,6 +323,9 @@ specifications:
       - name: Snappy block format
         revision: "google/snappy format_description"
         claim: Pure Elixir literal and 16-bit-offset copy encoder plus a full block decoder; no stream framing.
+      - name: BeamLens
+        revision: "0.3.1"
+        claim: Trusted-local custom-skill integration only; upstream base node/time callbacks and log-store startup are disclosed, and shared hosted tenants remain blocked.
     requires:
       - "WLB.01"
       - "WLB.06"
@@ -360,6 +363,13 @@ specifications:
       - "WotexLabWorkbench.Investigation.Provider"
       - "WotexLabWorkbench.Investigation.CodexRunner"
       - "WotexLabWorkbench.Investigation.Ollama"
+      - "WotexLabWorkbench.Investigation.Config"
+      - "WotexLabWorkbench.Investigation.ContextStore"
+      - "WotexLabWorkbench.Investigation.Skill"
+      - "WotexLabWorkbench.Investigation.BeamlensSupervisor"
+      - "WotexLabWorkbench.Investigation.OperatorRunner"
+      - "WotexLabWorkbench.Investigation.Broker"
+      - "WotexLabWorkbenchWeb.InvestigationCompletionController"
     executable_evidence:
       - "test/wotex/lab/metrics_catalogue_test.exs"
       - "test/wotex/lab/metrics_collector_test.exs"
@@ -380,7 +390,9 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/investigation_provider_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_codex_runner_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_ollama_test.exs"
-    compatibility_classification: Optional host contract; bridge captures now require strictly advancing wall timestamps and revalidated snapshots. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Storage-only history remains available. The dormant provider seam accepts only existing ChatGPT-plan Codex auth or one fixed local Ollama model and performs no boot-time discovery. BeamLens agent/custom-skill activation remains planned. No mandatory observability or model dependency enters the base library.
+      - "hosts/workbench/test/wotex_lab_workbench/beamlens_integration_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/investigation_completion_controller_test.exs"
+    compatibility_classification: Optional host contract; bridge captures now require strictly advancing wall timestamps and revalidated snapshots. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Storage-only history remains available. The trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-bound investigation and discloses upstream node/time callbacks; shared hosted tenants and browser presentation remain unimplemented. No mandatory observability or model dependency enters the base library.
   - id: WLB.11
     version: "0.3.0"
     path: docs/specs/WLB.11-workbench-and-design-system.md

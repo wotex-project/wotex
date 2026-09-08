@@ -1,6 +1,8 @@
 defmodule WotexLabWorkbench.FakeCodexRunner do
   @moduledoc false
 
+  @doc false
+  @spec complete([map()], keyword()) :: term()
   def complete(_messages, _opts) do
     Application.get_env(
       :wotex_lab_workbench,
@@ -10,6 +12,8 @@ defmodule WotexLabWorkbench.FakeCodexRunner do
     )
   end
 
+  @doc false
+  @spec preflight() :: term()
   def preflight do
     Application.get_env(
       :wotex_lab_workbench,
@@ -22,6 +26,8 @@ end
 defmodule WotexLabWorkbench.FakeOllamaRunner do
   @moduledoc false
 
+  @doc false
+  @spec complete([map()], keyword()) :: term()
   def complete(_messages, _opts) do
     Application.get_env(
       :wotex_lab_workbench,
@@ -30,11 +36,30 @@ defmodule WotexLabWorkbench.FakeOllamaRunner do
     )
   end
 
+  @doc false
+  @spec preflight() :: term()
   def preflight do
     Application.get_env(
       :wotex_lab_workbench,
       :fake_ollama_preflight,
       {:ok, %{model: "test-ollama"}}
     )
+  end
+end
+
+defmodule WotexLabWorkbench.FakeInvestigationRunner do
+  @moduledoc false
+
+  @doc false
+  @spec run(pid(), String.t(), pos_integer()) :: term()
+  def run(_operator, prompt, _timeout) do
+    if owner = Application.get_env(:wotex_lab_workbench, :fake_investigation_owner) do
+      send(owner, {:fake_investigation_started, self(), prompt})
+    end
+
+    case Application.get_env(:wotex_lab_workbench, :fake_investigation_result, :block) do
+      :block -> receive do: (:finish -> {:ok, []})
+      result -> result
+    end
   end
 end

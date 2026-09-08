@@ -12,14 +12,25 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
 
   alias Wotex.Lab.{Error, Options}
   alias Wotex.Lab.Metrics.History
+
+  alias WotexLabWorkbench.Investigation.{
+    BeamlensSupervisor,
+    Broker,
+    ContextStore,
+    Status
+  }
+
   alias WotexLabWorkbench.Observability.{Inspection, PromEx, Relay, Sampler, Scrape}
 
-  @doc "Starts capture/relay; `:history` and `:scrape` explicitly add bounded operator surfaces."
+  @doc "Starts capture/relay; explicit options add bounded history, scrape and BeamLens surfaces."
   @spec start_link(keyword()) :: Supervisor.on_start() | {:error, Error.t()}
   def start_link(opts) do
-    with :ok <- Options.validate(opts, [:history, :scrape]),
+    with :ok <- Options.validate(opts, [:history, :scrape, :beamlens]),
          :ok <- history_options(Keyword.get(opts, :history, false)),
          :ok <- scrape_options(Keyword.get(opts, :scrape, false)),
+         :ok <- beamlens_options(Keyword.get(opts, :beamlens, false)),
+         :ok <-
+           dependencies(Keyword.get(opts, :history, false), Keyword.get(opts, :beamlens, false)),
          do: Supervisor.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
@@ -28,7 +39,8 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
     children =
       [PromEx, {Relay, []}] ++
         history_children(Keyword.get(opts, :history, false)) ++
-        scrape_children(Keyword.get(opts, :scrape, false))
+        scrape_children(Keyword.get(opts, :scrape, false)) ++
+        beamlens_children(Keyword.get(opts, :beamlens, false))
 
     Supervisor.init(children, strategy: :one_for_all)
   end
@@ -41,8 +53,34 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
   defp scrape_options(false), do: :ok
   defp scrape_options(opts), do: Scrape.validate(opts)
 
+  defp beamlens_options(false), do: :ok
+
+  defp beamlens_options(%{primary: primary, clients: clients})
+       when is_binary(primary) and is_list(clients) and clients != [],
+       do: :ok
+
+  defp beamlens_options(_opts),
+    do: {:error, Error.new(:invalid_beamlens, :construction, "BeamLens options are invalid")}
+
+  defp dependencies(false, beamlens) when beamlens != false,
+    do:
+      {:error, Error.new(:beamlens_requires_history, :construction, "BeamLens needs local history")}
+
+  defp dependencies(_history, _beamlens), do: :ok
+
   defp scrape_children(false), do: []
   defp scrape_children(opts), do: [{Scrape, opts}]
+
+  defp beamlens_children(false), do: []
+
+  defp beamlens_children(registry) do
+    [
+      Status,
+      ContextStore,
+      {BeamlensSupervisor, client_registry: registry},
+      Broker
+    ]
+  end
 
   defp history_children(false), do: []
 

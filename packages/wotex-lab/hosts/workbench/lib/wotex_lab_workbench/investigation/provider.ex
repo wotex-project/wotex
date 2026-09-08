@@ -29,6 +29,14 @@ defmodule WotexLabWorkbench.Investigation.Provider do
   @doc "Completes through Codex plan access, falling back visibly to local Ollama."
   @spec complete([map()], keyword()) :: {:ok, String.t(), map()} | {:error, atom()}
   def complete(messages, opts \\ []) when is_list(messages) do
+    case config!(:beamlens_provider) do
+      :codex_then_ollama -> codex_then_ollama(messages, opts)
+      :ollama -> ollama_only(messages, opts)
+      _unselected -> {:error, :diagnostics_unavailable}
+    end
+  end
+
+  defp codex_then_ollama(messages, opts) do
     started_at = now()
     deadline = started_at + Keyword.get(opts, :timeout, 29_000)
     publish(%{state: :running, provider: :codex, model: nil, reason: nil})
@@ -70,11 +78,40 @@ defmodule WotexLabWorkbench.Investigation.Provider do
     end
   end
 
+  defp ollama_only(messages, opts) do
+    started_at = now()
+
+    publish(%{
+      state: :running,
+      provider: :ollama,
+      model: config!(:beamlens_ollama_model),
+      reason: nil
+    })
+
+    case bounded_complete(ollama_runner(), messages, Keyword.put_new(opts, :timeout, 29_000)) do
+      {:ok, content, metadata} ->
+        finish(:ok, content, metadata, nil, started_at)
+
+      {:error, reason} ->
+        finish(:error, nil, %{provider: nil, model: nil}, reason, started_at)
+    end
+  end
+
   @doc "Checks both configured reasoners without consuming a model turn."
   @spec preflight() :: %{codex: term(), ollama: term(), available: boolean()}
   def preflight do
-    codex = bounded_preflight(codex_runner(), 5_000)
-    ollama = bounded_preflight(ollama_runner(), 2_000)
+    {codex, ollama} =
+      case config!(:beamlens_provider) do
+        :codex_then_ollama ->
+          {bounded_preflight(codex_runner(), 5_000), bounded_preflight(ollama_runner(), 2_000)}
+
+        :ollama ->
+          {{:error, :provider_not_selected}, bounded_preflight(ollama_runner(), 2_000)}
+
+        _unselected ->
+          {{:error, :provider_not_selected}, {:error, :provider_not_selected}}
+      end
+
     %{codex: codex, ollama: ollama, available: match?({:ok, _}, codex) or match?({:ok, _}, ollama)}
   end
 

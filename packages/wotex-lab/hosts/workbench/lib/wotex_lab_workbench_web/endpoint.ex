@@ -44,9 +44,10 @@ defmodule WotexLabWorkbenchWeb.Endpoint do
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   plug Plug.Parsers,
-    parsers: [:urlencoded],
+    parsers: [:urlencoded, :json],
     pass: ["*/*"],
-    length: 65_536
+    length: 65_536,
+    json_decoder: Jason
 
   plug Plug.MethodOverride
   plug Plug.Head

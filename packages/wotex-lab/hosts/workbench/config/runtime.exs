@@ -8,7 +8,30 @@ config :wotex_lab_workbench,
 # BeamLens remains completely dormant unless the trusted local operator opts
 # in. Provider availability is checked only when an investigation is requested;
 # boot never searches credentials, contacts Ollama or downloads a model.
-config :wotex_lab_workbench, beamlens_enabled: System.get_env("WOTEX_LAB_BEAMLENS") == "1"
+beamlens_enabled = System.get_env("WOTEX_LAB_BEAMLENS") == "trusted-local"
+config :wotex_lab_workbench, beamlens_enabled: beamlens_enabled
+
+if beamlens_enabled do
+  port = System.get_env("PORT") || "4000"
+
+  provider =
+    case System.get_env("WOTEX_LAB_BEAMLENS_PROVIDER") do
+      "codex_then_ollama" ->
+        :codex_then_ollama
+
+      "ollama" ->
+        :ollama
+
+      _other ->
+        raise "BeamLens requires WOTEX_LAB_BEAMLENS_PROVIDER=codex_then_ollama or ollama"
+    end
+
+  config :wotex_lab_workbench,
+    beamlens_provider: provider,
+    beamlens_bridge_url:
+      System.get_env("WOTEX_LAB_BEAMLENS_BRIDGE_URL") ||
+        "http://127.0.0.1:#{port}/api/internal/beamlens/v1"
+end
 
 # No credential is read unless the listener is explicitly requested. Retain
 # only its digest; never put the supplied Bearer token in application options.

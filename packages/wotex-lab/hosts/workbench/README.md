@@ -154,19 +154,36 @@ There is no result-retention service or queued-query backlog.
 Request fields cannot select scope, credentials, limits, endpoints, SQL or
 modules. Copied gateway PIDs do not authorize a different process. This local
 operator API is not exposed by a browser event, HTTP route or MCP tool, and
-does not imply hostile shared-VM isolation. BeamLens remains unactivated
-pending its separate privacy/lifecycle acceptance; choosing only custom skills
-is not sufficient.
+does not imply hostile shared-VM isolation.
 
-The dormant provider boundary intended for that integration uses an existing
-signed-in ChatGPT-plan Codex session first and visibly falls back to the fixed
-local Ollama model `qwen3.5:4b-q4_K_M`. It never accepts Codex API-key auth,
-downloads a model, starts a provider at boot or exposes a route. Codex runs one
-ephemeral read-only/no-network turn in an empty private directory with tools,
-search, connectors and inherited MCP/plugin entries disabled. Provider
-preflight occurs only when explicitly called. `WOTEX_LAB_BEAMLENS=1` is
-reserved for the still-unimplemented agent lifecycle and currently activates
-nothing by itself.
+The BeamLens profile is trusted-local only and requires all four explicit
+settings:
+
+```console
+WOTEX_LAB_PROMEX=1 \
+WOTEX_LAB_METRICS_HISTORY=1 \
+WOTEX_LAB_BEAMLENS=trusted-local \
+WOTEX_LAB_BEAMLENS_PROVIDER=codex_then_ollama \
+mix phx.server
+```
+
+Use `WOTEX_LAB_BEAMLENS_PROVIDER=ollama` to prohibit Codex entirely. The first
+mode uses an existing signed-in ChatGPT-plan Codex session and visibly falls
+back to the fixed local model `qwen3.5:4b-q4_K_M`; it never accepts Codex
+API-key auth or downloads a model. Codex runs one ephemeral read-only/no-network
+turn in an empty private directory with tools, search, connectors and inherited
+MCP/plugin entries disabled. The internal BAML bridge accepts only bounded,
+non-streaming loopback requests and is unavailable when the profile is off.
+
+`WotexLabWorkbench.Investigation.Broker.ask/2` is currently the trusted in-VM
+prompt entry point; no browser event exposes it yet. It admits one host-wide
+investigation with no queue, returns an owner-only reference, and sends
+`{:investigation, reference, result}`. Its 30-second/eight-turn lifecycle clears
+run context and replaces the BeamLens agents after every terminal state. The
+four custom callbacks cannot issue Actions or select scope/endpoints. BeamLens
+0.3.1 nevertheless adds node/OS/uptime callbacks and starts its log store; that
+explicit disclosure is why this profile is not admitted for shared hosted
+tenants.
 
 The Metrics page's portable-panel selector exports only catalogue definitions
 through `/metrics/dashboard.json`, with 1–16 known IDs. A verified browser

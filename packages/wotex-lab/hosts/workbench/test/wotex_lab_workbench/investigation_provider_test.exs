@@ -7,6 +7,8 @@ defmodule WotexLabWorkbench.InvestigationProviderTest do
 
   setup do
     start_supervised!(Status)
+    saved_provider = Application.get_env(:wotex_lab_workbench, :beamlens_provider)
+    Application.put_env(:wotex_lab_workbench, :beamlens_provider, :codex_then_ollama)
 
     Application.put_env(
       :wotex_lab_workbench,
@@ -21,6 +23,8 @@ defmodule WotexLabWorkbench.InvestigationProviderTest do
     )
 
     on_exit(fn ->
+      restore(:beamlens_provider, saved_provider)
+
       for key <- [
             :beamlens_codex_runner,
             :beamlens_ollama_runner,
@@ -34,6 +38,9 @@ defmodule WotexLabWorkbench.InvestigationProviderTest do
 
     :ok
   end
+
+  defp restore(key, nil), do: Application.delete_env(:wotex_lab_workbench, key)
+  defp restore(key, value), do: Application.put_env(:wotex_lab_workbench, key, value)
 
   test "uses signed-in ChatGPT-plan Codex first" do
     assert {:ok, "codex diagnosis", %{provider: :codex, plan_type: "pro", reason: nil}} =
@@ -79,6 +86,16 @@ defmodule WotexLabWorkbench.InvestigationProviderTest do
     assert %{available: true} = Provider.refresh_status()
     assert %{state: :available, provider: :ollama, reason: reason} = Provider.status()
     assert reason =~ "not installed"
+  end
+
+  test "an explicit local-only selection never attempts Codex" do
+    Application.put_env(:wotex_lab_workbench, :beamlens_provider, :ollama)
+    Application.put_env(:wotex_lab_workbench, :fake_codex_result, {:error, :must_not_run})
+
+    assert {:ok, "ollama diagnosis", %{provider: :ollama, reason: nil}} =
+             Provider.complete([%{"role" => "user", "content" => "local only"}])
+
+    assert %{codex: {:error, :provider_not_selected}, available: true} = Provider.preflight()
   end
 
   test "deadline kills work and work dies when its caller exits" do

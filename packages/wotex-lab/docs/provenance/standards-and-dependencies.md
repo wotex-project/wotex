@@ -155,8 +155,8 @@ MCP/LLM cancellation evidence. No dependency or lockfile changed.
 
 ### BeamLens integration admission
 
-Observation date: 2026-09-08. This is a review of upstream tagged 0.3.1 source,
-not dependency installation, provider execution or artifact adoption. Its
+Observation date: 2026-09-08. Upstream tagged 0.3.1 is now exactly locked in the
+Workbench reference host. Its
 [main supervisor](https://github.com/beamlens/beamlens/blob/v0.3.1/lib/beamlens/supervisor.ex)
 starts a log store independently of the selected skills and uses fixed global
 names. An empty skill list selects the built-in set; it does not disable it.
@@ -167,10 +167,10 @@ include node identity, uptime and OS information. The
 [operator](https://github.com/beamlens/beamlens/blob/v0.3.1/lib/beamlens/operator.ex)
 merges those callbacks into custom skills, queues invocations while running,
 and implements the public call timeout as a waiting-client timeout. The idle
-invocation handler does not apply its supplied options; startup limits require
-independent verification. This is not evidence of bounded per-investigation
-admission, scope revocation or provider cancellation. No private implementation
-is copied or patched, and no API key or provider is discovered or invoked.
+invocation handler does not apply its supplied options. The Workbench therefore
+composes only BeamLens's public coordinator/operator-supervisor building blocks,
+puts the eight-iteration limit into both live process states, and places a
+no-queue owner-bound broker in front. No dependency source is copied or patched.
 
 The Lab query gateway addresses the separate local data-access lifecycle using
 only its own public history contract. It does not close BeamLens admission.
@@ -184,11 +184,42 @@ Req transport tests cover restrictions, identity omission, API-key refusal,
 quota exhaustion, exact-model admission, malformed responses and bounded
 worker death. No live provider was invoked during acceptance.
 
-This closes only the provider choice/deadline seam. An eventual public-API
-composition must still prove the selected callback surface, dependency startup,
-disabled raw introspection, data disclosure, token/cost budgets and
-whole-investigation cancellation in executable tests. The BeamLens agent
-integration remains planned, not waived or simulated.
+The activated tree contains the exact custom skill, coordinator/operator,
+BeamLens task supervisor/registry and the dependency's unavoidable log store.
+Tests assert that anomaly, tracer, exception and VM-event processes do not
+start. They also assert, rather than hide, the upstream base callbacks
+`get_current_time` and `get_node_info`. Node name, OS and uptime can therefore
+reach the selected model. The profile is admitted only when
+`WOTEX_LAB_BEAMLENS=trusted-local`; this disclosure keeps shared/disposable
+hosted tenants blocked pending an upstream change or separately isolated
+worker. Browser routing cannot start an investigation.
+
+The custom skill exposes exactly the four WLB callbacks. Metric calls use
+one-call owner-bound gateways and fixed five-minute/query limits. Run summaries
+are server-supplied JSON with digests, limited to 8 KiB combined; callback
+output has a 16 KiB cumulative budget. The broker admits one host-wide request,
+no queue, 4 KiB prompt, 30 seconds and eight turns/actions. Completion, failure,
+cancel, timeout and owner death clear context and replace both BeamLens agents.
+The loopback-only BAML bridge is disabled outside the profile and refuses
+streaming, remote peers, unknown models and oversized/malformed messages.
+
+The lock addition is BeamLens 0.3.1 plus `baml_elixir` 1.0.0-pre.27, `lua`
+0.4.0, `luerl` 1.5.1, `nimble_ownership` 1.0.2, `puck` 0.2.25, `recon` 2.5.6
+and `zoi` 0.18.7. The inspected package licenses are Apache-2.0 except recon's
+BSD-3-Clause. BAML uses a precompiled native library; the exercised
+`libbaml_elixir-v1.0.0-pre.27-nif-2.15-aarch64-apple-darwin.so` hashes to
+`sha256:558904399ecac2c8547e5794f286f47e1066f65db63f590251829acb5980e136`.
+This is not Linux or other-architecture evidence. `mix hex.audit` and
+`mix deps.audit` reported no matching vulnerability on 2026-09-08; Hex also
+warned that the retained Decimal advisory acknowledgement no longer matched
+its current feed, which does not override the separately recorded maintainer
+range conflict. Fake provider/agent workers and real BeamLens/metric processes
+are final default acceptance. During development, one initial bridge smoke run
+reached the existing signed-in Codex session before the integration test
+installed its fake runner; it received only the fixed BeamLens prompt and
+`finish now` test reason, returned `done`, and made no tool call. The corrected
+test asserts the fake model identity so a live provider cannot silently satisfy
+this gate, and the incidental turn is not counted as acceptance evidence.
 
 ## Acknowledged dependency advisories
 
