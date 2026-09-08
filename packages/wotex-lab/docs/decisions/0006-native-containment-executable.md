@@ -41,6 +41,15 @@ preventing reuse of its group-leader PID. Observed detached descendants retain
 start identities; stale PIDs are not blindly signalled. Accounting and retained
 identities have explicit ceilings, and observation/cleanup failure cannot be
 reported as a successful target response.
+Containment profile 2.0.1 reserves one second between the launcher's inner wall
+deadline and the outer runner deadline. The helper's 150 ms cleanup ceiling sits
+inside that margin, leaving the remainder for sandbox and launcher startup,
+scheduler delay and delivery of the port exit status. Deadlines of one second or
+less reduce the target wall allowance to one millisecond and report the exact
+effective margin; they are prompt-refusal budgets, not useful target-work
+budgets. The helper executable remains version 2.0.0 because this correction is
+in the Elixir profile that derives and reports its deadline.
+
 Transient root-accounting gaps during `exec` get two one-millisecond retries,
 not an unbounded grace period or an invented zero-usage sample. A 30-launch
 BEAM regression reproduced the original failure and passed 300 launches after

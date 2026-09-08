@@ -196,10 +196,16 @@ defmodule Wotex.Lab.ConformanceTest do
     assert evidence["network"] == "denied"
     assert evidence["temporary_directory"] == "private"
     assert evidence["termination"] == "process_group"
+    assert evidence["schema_version"] == "2.0.1"
     assert evidence["limits"]["memory_bytes"] == 1_073_741_824
+    assert evidence["limits"]["wall_ms"] == 9_000
+    assert evidence["limits"]["runner_timeout_ms"] == 10_000
+    assert evidence["limits"]["runner_margin_ms"] == 1_000
+    assert evidence["limits"]["cleanup_reserve_ms"] == 150
     refute inspect(evidence) =~ context.home
     refute inspect(evidence) =~ context.probe
     assert evidence["launcher"]["implementation"] == "rust-executable"
+    assert evidence["launcher"]["version"] == "2.0.0"
     assert evidence["launcher"]["digest"] == context.launcher.digest
 
     assert {:ok, external} = External.from_map(config)
@@ -228,17 +234,20 @@ defmodule Wotex.Lab.ConformanceTest do
   test "the inner deadline reaps the complete target process group", context do
     pid_file = Path.join(context.home, "descendant.pid")
 
-    assert {:ok, %{target: config}} =
+    assert {:ok, %{target: config, evidence: evidence}} =
              Containment.external_map(
                context.probe,
                ["descendant", pid_file, "{subject_archive}"],
                context.archive,
                context.home,
-               timeout_ms: 500,
+               timeout_ms: 2_000,
                processes: 1_024,
                launcher: context.launcher
              )
 
+    assert config.timeout_ms == 2_000
+    assert evidence["limits"]["wall_ms"] == 1_000
+    assert evidence["limits"]["runner_margin_ms"] == 1_000
     assert {:ok, external} = External.from_map(config)
 
     request = %{
@@ -287,7 +296,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
   test "invalid containment inputs are refused before a target starts", context do
     valid_args = ["{subject_archive}"]
-    assert Containment.profile().version == "2.0.0"
+    assert Containment.profile().version == "2.0.1"
 
     assert {:error, %Wotex.Lab.Error{code: :invalid_path}} =
              Containment.external_map("relative", valid_args, context.archive, context.home)
@@ -389,6 +398,23 @@ defmodule Wotex.Lab.ConformanceTest do
                context.home,
                timeout_ms: 120_001
              )
+  end
+
+  test "short runner deadlines retain a positive fail-safe inner deadline", context do
+    assert {:ok, %{target: config, evidence: evidence}} =
+             Containment.external_map(
+               context.probe,
+               ["{subject_archive}"],
+               context.archive,
+               context.home,
+               timeout_ms: 1_000,
+               launcher: context.launcher
+             )
+
+    assert config.timeout_ms == 1_000
+    assert evidence["limits"]["wall_ms"] == 1
+    assert evidence["limits"]["runner_margin_ms"] == 999
+    assert evidence["limits"]["cleanup_reserve_ms"] == 150
   end
 
   test "a non-symlinked private directory reaches the admitted sandbox", context do

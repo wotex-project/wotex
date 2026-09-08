@@ -22,7 +22,10 @@ defmodule Wotex.Lab.Conformance.Containment do
 
   alias Wotex.Lab.Error
 
-  @profile_version "2.0.0"
+  @profile_version "2.0.1"
+  @launcher_version "2.0.0"
+  @runner_margin_ms 1_000
+  @cleanup_reserve_ms 150
   @archive_placeholder "{subject_archive}"
   @option_keys ~w(timeout_ms max_output_bytes cpu_seconds memory_bytes processes open_files launcher)a
   @defaults %{
@@ -334,12 +337,14 @@ defmodule Wotex.Lab.Conformance.Containment do
       "termination" => "process_group",
       "launcher" => %{
         "implementation" => "rust-executable",
-        "version" => @profile_version,
+        "version" => @launcher_version,
         "digest" => launcher_digest
       },
       "limits" => %{
         "wall_ms" => inner_wall_ms(limits.timeout_ms),
         "runner_timeout_ms" => limits.timeout_ms,
+        "runner_margin_ms" => runner_margin_ms(limits.timeout_ms),
+        "cleanup_reserve_ms" => @cleanup_reserve_ms,
         "cpu_seconds" => limits.cpu_seconds,
         "memory_bytes" => limits.memory_bytes,
         "processes" => limits.processes,
@@ -353,7 +358,9 @@ defmodule Wotex.Lab.Conformance.Containment do
     do: {:error, Error.new(code, :containment, message, details: details)}
 
   defp inner_wall_ms(runner_timeout_ms) do
-    margin = runner_timeout_ms |> div(10) |> max(250) |> min(1_000)
-    max(runner_timeout_ms - margin, 1)
+    max(runner_timeout_ms - @runner_margin_ms, 1)
   end
+
+  defp runner_margin_ms(runner_timeout_ms),
+    do: runner_timeout_ms - inner_wall_ms(runner_timeout_ms)
 end

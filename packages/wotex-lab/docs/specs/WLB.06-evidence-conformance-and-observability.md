@@ -1,6 +1,6 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 1.4.0. Contract: accepted. Source status: partial.
+Specification version: 1.4.1. Contract: accepted. Source status: partial.
 The external core conformance target and its host containment profile, the
 content-addressed evidence record, Lab telemetry, the versioned Continuum fault
 schedule, bounded benchmark records and the machine evidence overlay all have
@@ -95,17 +95,23 @@ open-file, output-file and core limits, accounts resident memory and process
 count over the target tree, gives the target its own process group, and enforces
 an inner deadline before the runner deadline so it can kill descendants. The
 sandbox denies network access and writes outside the private temporary tree.
-Its public descriptor contains limits, mechanism names, helper version and
-the exact native executable SHA-256 but no paths. Profile 2.0.0 requires
+Its public descriptor contains limits, mechanism names, profile/helper versions
+and the exact native executable SHA-256 but no paths. Profile 2.0.1 requires
 `:launcher` as `%{executable: absolute_path, digest: "sha256:..."}`; absent,
 symlinked, oversized or changed launchers are refused. No Rust toolchain,
 interpreter, download, compiler or NIF is invoked by this runtime API.
 
 The Rust helper also cleans up after normal target exit, keeps the root's PID
 reserved until group cleanup, tracks observed descendants by start identity,
-and fails on accounting/cleanup errors. It samples every ten milliseconds,
-caps process-table/identity work at 65,536 entries and reserves 150 ms for
-cleanup inside the runner margin. CPU/open-file/output/core limits are
+and fails on accounting/cleanup errors. It samples every ten milliseconds and
+caps process-table/identity work at 65,536 entries. Profile 2.0.1 reserves one
+second between the inner launcher deadline and the outer runner deadline; the
+helper's 150 ms cleanup ceiling is explicit evidence inside that margin, leaving
+the remainder for sandbox/launcher startup, scheduler delay and port exit-status
+delivery. When a caller supplies a runner deadline of one second or less, the
+inner wall limit is one millisecond and the exact smaller effective margin is
+reported; such a deadline is useful only for prompt refusal, not target work.
+CPU/open-file/output/core limits are
 inherited OS limits; RSS/process counts are sampled, not hard cgroup limits.
 Transient root-accounting gaps during `exec` get at most two retries with
 one-millisecond pauses; persistent absence fails instead of becoming zero RSS.
