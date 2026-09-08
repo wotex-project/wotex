@@ -7,6 +7,8 @@ defmodule WotexLabWorkbench.Application do
   configured an engine), the session registry and the endpoint. Nothing else
   starts implicitly and no child starts an experiment. Explicit `promex_enabled`
   configuration prepends the host-owned custom metric collector/relay supervisor.
+  Separate `metrics_history_enabled` activation adds bounded operator history
+  and a self-sampler, and is refused unless PromEx is also explicitly enabled.
   """
 
   use Application
@@ -33,12 +35,26 @@ defmodule WotexLabWorkbench.Application do
       WotexLabWorkbenchWeb.Endpoint
     ]
 
-    children =
-      if Keyword.fetch!(env, :promex_enabled),
-        do: [WotexLabWorkbench.Observability.Supervisor | children],
-        else: children
+    with {:ok, observability} <- observability(env) do
+      Supervisor.start_link(observability ++ children,
+        strategy: :one_for_one,
+        name: WotexLabWorkbench.Supervisor
+      )
+    end
+  end
 
-    Supervisor.start_link(children, strategy: :one_for_one, name: WotexLabWorkbench.Supervisor)
+  defp observability(env) do
+    case {Keyword.fetch!(env, :promex_enabled), Keyword.fetch!(env, :metrics_history_enabled)} do
+      {false, true} ->
+        {:error, :metrics_history_requires_promex}
+
+      {false, false} ->
+        {:ok, []}
+
+      {true, history?} ->
+        history = if history?, do: Keyword.fetch!(env, :metrics_history_options), else: false
+        {:ok, [{WotexLabWorkbench.Observability.Supervisor, history: history}]}
+    end
   end
 
   @impl Application

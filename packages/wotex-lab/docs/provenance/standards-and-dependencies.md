@@ -121,6 +121,16 @@ within-bucket resets, no-data/stale histograms, rollback, forged descriptors,
 scope substitution, caller-death cleanup and cooperative deadline refusal.
 No new dependency or automatic history/HTTP/database activation is introduced.
 
+The same source/toolchain cohort subsequently exercised the explicit Workbench
+PromEx-to-ETS sampler: five dedicated tests cover receipt matching, unavailable
+capture, reset/stale/gap semantics, periodic retention and startup/lifecycle
+boundaries. The owning observability pair passes 11 tests. A separate actual
+application boot with both activation flags and its HTTP endpoint explicitly
+disabled ran the thermal scenario and admitted one 2,923-byte snapshot into the
+default 120-snapshot / 8 MiB history, with zero sampling failures. The application
+was stopped afterward. This is source-host integration, not browser-tenant
+history, a protected HTTP listener, durable activation or artifact adoption.
+
 ## Acknowledged dependency advisories
 
 ### Optional Explorer source cohort

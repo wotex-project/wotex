@@ -1,12 +1,12 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.3.1. Contract: accepted. Source status: the metric
+Specification version: 0.4.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
 the Workbench now implements custom PromEx definitions, bounded collection,
-catalogue panel selection and inert Grafana JSON exports. Built-in host
-introspection, collection-to-history host activation, protected scraping, OTLP
+catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
+history activation. Built-in host introspection, durable-sink host activation, protected scraping, OTLP
 signal export, BeamLens, history presentation and the MCP query gateway remain
 planned. A template export is not proof of a Grafana import or query execution.
 
@@ -151,6 +151,32 @@ integration surface, not a public tenant data endpoint.
 snapshot), `Wotex.Lab.Metrics.Exposition` parses and renders the pinned text
 format, and the same admitted snapshot reaches history and the sink. The
 protected `/metrics` endpoint remains a planned host surface.
+
+For the zero-service profile, the Workbench's `Observability.Capture.sample/0`
+calls public `PromEx.get_metrics/1`, parses the bounded exposition and pairs it
+with the custom Store's matching SHA-256 receipt. The receipt carries the actual
+capture clocks, collector reset identity and loss counters which plain text
+does not contain. A different body or collector restart cannot silently attach
+unrelated metadata: receipt mismatch/unavailability refuses that attempt.
+Identical body hashes can use a later matching receipt from the same live
+collector. This does not promise transactional cross-series capture while
+telemetry handlers are concurrently updating aggregates.
+
+`WOTEX_LAB_METRICS_HISTORY=1` requires `WOTEX_LAB_PROMEX=1` and explicitly adds
+one `Observability.Sampler` writer and instance-bound `History` to the host's
+one-for-all supervisor. Defaults are five seconds, 120 snapshots and 8 MiB;
+`metrics_history_options` allows reviewed interval (1–60 seconds), snapshot,
+byte and active-query budget overrides within their existing hard ceilings.
+The next periodic tick follows completion, with no catch-up queue, and no
+database/sink is faked for the local-only path. Source and history failures
+consume attempt sequence numbers, are counted and are not stored as zeros.
+Subsequent rows disclose gaps/reset identities; vanished series receive one-time
+stale markers. All history is discarded if the optional cohort restarts.
+The fixed `workbench` instance is host-wide, not a browser-tenant scope; no
+route reads it. `metrics_history_test.exs` in the Workbench exercises real
+PromEx capture, receipt loss, reset, stale/gap semantics, periodic sampling,
+eviction, startup refusal and lifecycle cleanup. Durable activation and
+authenticated query/presentation still require their independent acceptance.
 
 The durable sink uses Prometheus Remote Write 1.0 to GreptimeDB's
 `/v1/prometheus/write`: standard generated protobuf, Snappy **block** encoding,

@@ -93,6 +93,24 @@ invalid source measurements. Backend labels default to `other`, not an inferred
 or changed Nx backend. An attached operator IEx session can call
 `PromEx.get_metrics(WotexLabWorkbench.Observability.PromEx)` without self-HTTP.
 
+Add `WOTEX_LAB_METRICS_HISTORY=1` to explicitly activate local history alongside
+PromEx. Enabling history without PromEx refuses startup. The sampler captures
+every five seconds into 120 snapshots / 8 MiB of volatile ETS, with one writer
+and no catch-up queue. It starts no database and uses no fake successful sink.
+Reviewed host configuration can set `metrics_history_options` (`interval_ms`,
+`max_snapshots`, `max_bytes`, `max_queries`) within the documented hard bounds.
+An operator can inspect `WotexLabWorkbench.Observability.Sampler.stats()` and
+`Wotex.Lab.Metrics.History.stats(WotexLabWorkbench.Observability.Supervisor.History)`.
+
+The public capture API pairs PromEx text with the custom adapter's body-hash
+receipt, preserving reset identity, clocks and loss counters. Changed or
+unavailable receipts fail the sample; the sampler counts failures and subsequent
+gaps, preserves one-time stale markers and exposes evictions through history.
+Its fixed instance is `workbench`, not the current browser session. No route
+reads this host-wide history. Authenticated query scope and tenant isolation
+remain separate work. Restarting the optional supervisor discards its history;
+neither sampling nor dataframe conversion makes it durable or training data.
+
 The Metrics page's portable-panel selector exports only catalogue definitions
 through `/metrics/dashboard.json`, with 1–16 known IDs. A verified browser
 session is required; no room or collector starts. Importing the JSON and
@@ -105,7 +123,8 @@ acceptance work, not claims made by this source export.
 ## Runtime configuration
 
 Production requires `SECRET_KEY_BASE`. Optional variables are `PHX_HOST`,
-`PORT`, `WOTEX_LAB_WORKBENCH_SESSION_TTL_MS`, `WOTEX_LAB_PROMEX` and `WOTEX_LAB_MAUDE`. A Maude
+`PORT`, `WOTEX_LAB_WORKBENCH_SESSION_TTL_MS`, `WOTEX_LAB_PROMEX`,
+`WOTEX_LAB_METRICS_HISTORY` and `WOTEX_LAB_MAUDE`. A Maude
 path is verified and supervised explicitly; no configured engine is reported
 as unsupported, never as successful evidence.
 

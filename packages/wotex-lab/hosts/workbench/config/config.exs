@@ -16,6 +16,8 @@ config :wotex_lab_workbench,
   max_sessions: 64,
   metrics_capacity: 1_024,
   promex_enabled: false,
+  metrics_history_enabled: false,
+  metrics_history_options: [],
   formal_engine: nil
 
 config :phoenix, :json_library, Jason

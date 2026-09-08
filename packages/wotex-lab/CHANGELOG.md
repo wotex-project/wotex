@@ -2,6 +2,11 @@
 
 ## 0.1.0 — source foundation
 
+- Explicit PromEx-to-ETS history activation preserves reset identity, clocks and
+  loss through body-hash-checked scrape receipts. Single-writer sampling is
+  bounded and off by default; no database, sink or browser metrics access is
+  implicitly added.
+
 - Metrics history requires explicit instance binding for queries, pins snapshot
   slots and revalidates descriptors and metric cohorts. Monitored bounded query
   leases are released on caller death/deadline. Counter/histogram resets within

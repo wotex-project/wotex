@@ -61,6 +61,17 @@ defmodule WotexLabWorkbench.Observability.Store do
   @spec stats(GenServer.server()) :: map()
   def stats(server), do: GenServer.call(server, :stats, 2_000)
 
+  @doc "Metadata for the latest matching public scrape; a superseded body is refused."
+  @spec receipt(GenServer.server(), binary()) :: {:ok, map()} | {:error, Error.t()}
+  def receipt(server, text) when is_binary(text) and byte_size(text) <= @max_scrape do
+    GenServer.call(server, {:receipt, :crypto.hash(:sha256, text)}, 2_000)
+  catch
+    :exit, _reason -> {:error, Error.new(:collector_unavailable, :metrics, "collector unavailable")}
+  end
+
+  def receipt(_server, _text),
+    do: {:error, Error.new(:invalid_scrape, :metrics, "scrape body exceeds its bound")}
+
   @impl GenServer
   def init({metrics, budget, name}) do
     Process.flag(:trap_exit, true)
@@ -93,6 +104,7 @@ defmodule WotexLabWorkbench.Observability.Store do
        started_at: System.system_time(:millisecond),
        generation: System.unique_integer([:positive, :monotonic]),
        sequence: 0,
+       receipt: nil,
        scrape_failures: 0
      }}
   end
@@ -139,11 +151,25 @@ defmodule WotexLabWorkbench.Observability.Store do
     with {:ok, snapshot} <- Snapshot.new(fields),
          text = Exposition.render(snapshot),
          true <- byte_size(text) <= @max_scrape do
-      {:reply, text, %{state | sequence: sequence}}
+      receipt = %{
+        digest: :crypto.hash(:sha256, text),
+        fields: snapshot |> Map.from_struct() |> Map.delete(:series)
+      }
+
+      {:reply, text, %{state | sequence: sequence, receipt: receipt}}
     else
-      _invalid -> {:reply, :prom_ex_down, %{state | scrape_failures: state.scrape_failures + 1}}
+      _invalid ->
+        {:reply, :prom_ex_down, %{state | scrape_failures: state.scrape_failures + 1, receipt: nil}}
     end
   end
+
+  def handle_call({:receipt, digest}, _from, %{receipt: %{digest: digest, fields: fields}} = state),
+    do: {:reply, {:ok, fields}, state}
+
+  def handle_call({:receipt, _digest}, _from, state),
+    do:
+      {:reply, {:error, Error.new(:scrape_superseded, :metrics, "scrape receipt unavailable")},
+       state}
 
   def handle_call(:stats, _from, state) do
     stats =
