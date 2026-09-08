@@ -1,0 +1,2 @@
+# TYPE demo_latency_seconds histogram
+demo_latency_seconds 1

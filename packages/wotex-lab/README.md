@@ -64,6 +64,17 @@ elixir bin/provision_maude.exs
 WOTEX_PATH_DEPS=1 WOTEX_LAB_MAUDE=tmp/maude/maude mix check --no-retry
 ```
 
+The GreptimeDB ingestion lane is tagged `:greptime` and excluded unless
+`WOTEX_LAB_GREPTIME=1` is set. It starts a disposable
+`greptime/greptimedb:v1.1.4` standalone container on an ephemeral loopback
+port, pushes real collector snapshots through the remote-write bridge, reads
+them back through the HTTP SQL API and removes the container when the test
+ends.
+
+```sh
+WOTEX_PATH_DEPS=1 WOTEX_LAB_GREPTIME=1 MIX_ENV=test mix test test/wotex/lab/greptime_bridge_test.exs
+```
+
 Development expects `wotex` and `wotex-nx` checkouts alongside Lab. This mode is
 local source evidence. It does not satisfy the clone-free acceptance gate.
 The intended Hex dependency is `{:wotex_lab, "~> 0.1.0"}`; this README does not
@@ -194,8 +205,13 @@ CSS; a running endpoint and HEEx components are not built by this foundation.
 | Prompt-driven investigation | BeamLens with an explicit provider and read-only scoped query skill |
 | Native UI | Phoenix LiveView/HEEx and shared semantic CSS tokens |
 
-PromEx does not itself send metrics to GreptimeDB. The accepted host includes
-a bounded BEAM self-scraper/remote-write bridge. No ELK, mandatory Prometheus
+PromEx does not itself send metrics to GreptimeDB. The base library already
+ships the metric catalogue, the in-process collector, the bounded ETS history
+with its read-only query contract, the exposition parser and the remote-write
+bridge under `Wotex.Lab.Metrics`; every process is placed explicitly under a
+Lab instance and the PromEx plugin, BeamLens skill, LiveView panels and MCP
+gateway remain planned host work. The accepted host composes that bounded BEAM
+self-scraper/remote-write bridge. No ELK, mandatory Prometheus
 server or separate collector. GreptimeDB is local/self-hosted, not embedded in
 the BEAM. Prompt results cite measurements and cannot invoke Actions. Plain
 experiments work without an LLM or durable database. See

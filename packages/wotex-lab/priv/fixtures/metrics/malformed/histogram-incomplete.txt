@@ -1,0 +1,3 @@
+# TYPE demo_latency_seconds histogram
+demo_latency_seconds_bucket{le="+Inf"} 1
+demo_latency_seconds_count 1

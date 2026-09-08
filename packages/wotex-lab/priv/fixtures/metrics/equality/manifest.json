@@ -1,0 +1,1 @@
+{"expected":"snapshot.json","id":"metrics-equality","input":"exposition.txt","input_sha256":"ff8d1ebdc54f130dc9a80ab73db9de40faee40767052c03a5c65e2811da970a7","license":"Apache-2.0","schema_version":"1.0.0","source_mode":"synthetic","specs":["WLB.10"]}

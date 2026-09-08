@@ -260,22 +260,47 @@ specifications:
       - "test/wotex/lab/formal_maude_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.10
-    version: "0.1.0"
+    version: "0.2.0"
     path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md
-    implementation_status: planned
-    evidence_status: missing
+    implementation_status: partial
+    evidence_status: partial
     adoption_status: no_reference
     standards:
       - name: Prometheus Remote Write
         revision: "1.0"
-        claim: Required reference bridge protocol; no implemented sender or compatibility claim.
+        claim: Hand-encoded sender proven against greptime/greptimedb:v1.1.4 behind WOTEX_LAB_GREPTIME=1; no compatibility claim for other receivers or senders.
+      - name: Prometheus text exposition format
+        revision: "0.0.4"
+        claim: Pinned self-scraper input contract for counters, gauges and classic histograms; summaries and untyped series are refused.
+      - name: Snappy block format
+        revision: "google/snappy format_description"
+        claim: Pure Elixir literal and 16-bit-offset copy encoder plus a full block decoder; no stream framing.
     requires:
       - "WLB.01"
       - "WLB.06"
     completion_items:
       - "WLB-C12"
-    implementation_modules: []
-    executable_evidence: []
+    implementation_modules:
+      - "Wotex.Lab.Metrics.Catalogue"
+      - "Wotex.Lab.Metrics.Snapshot"
+      - "Wotex.Lab.Metrics.Collector"
+      - "Wotex.Lab.Metrics.History"
+      - "Wotex.Lab.Metrics.Exposition"
+      - "Wotex.Lab.Metrics.Query"
+      - "Wotex.Lab.Metrics.RemoteWrite"
+      - "Wotex.Lab.Metrics.Snappy"
+      - "Wotex.Lab.Metrics.ReqSink"
+      - "Wotex.Lab.Metrics.GreptimeBridge"
+    executable_evidence:
+      - "test/wotex/lab/metrics_catalogue_test.exs"
+      - "test/wotex/lab/metrics_collector_test.exs"
+      - "test/wotex/lab/metrics_history_test.exs"
+      - "test/wotex/lab/metrics_query_test.exs"
+      - "test/wotex/lab/metrics_exposition_test.exs"
+      - "test/wotex/lab/metrics_remote_write_test.exs"
+      - "test/wotex/lab/metrics_bridge_test.exs"
+      - "test/wotex/lab/greptime_bridge_test.exs"
+      - "priv/fixtures/metrics/equality/manifest.json"
     compatibility_classification: Additive host contract; no mandatory observability dependency in the base library.
   - id: WLB.11
     version: "0.1.0"
