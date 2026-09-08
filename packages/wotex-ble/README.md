@@ -3,6 +3,8 @@
 Consumer-neutral BLE library for W3C Web of Things consumers.
 Development version: `0.1.0-dev`.
 
+Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
+
 UUID/address values and a real Linux BlueZ GATT adapter are implemented.
 `BlueZ` invokes an explicitly supplied `busctl` executable without a shell,
 checks the selected service/characteristic, bounds output and duration, and
@@ -55,3 +57,11 @@ Run `mix check` before commits. It includes package compilation outside the
 checkout, tests/coverage, static checks, docs and dependency audit.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
+
+## Software implementation contract
+
+The [ordered implementation sequence](docs/plans/software-implementation.md)
+and [specification index](docs/specs/WBL-index.md) define the remaining software
+profile with exact behavior, limits, failure transitions and acceptance vectors.
+These target contracts are build instructions, not claims that every feature
+already exists. Required software peers are separate from physical-device tests.
