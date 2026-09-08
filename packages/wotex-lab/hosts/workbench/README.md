@@ -154,9 +154,19 @@ There is no result-retention service or queued-query backlog.
 Request fields cannot select scope, credentials, limits, endpoints, SQL or
 modules. Copied gateway PIDs do not authorize a different process. This local
 operator API is not exposed by a browser event, HTTP route or MCP tool, and
-does not imply hostile shared-VM isolation. No model/provider/key discovery is
-added. BeamLens remains unactivated pending its separate privacy/lifecycle and
-provider-budget acceptance; choosing only custom skills is not sufficient.
+does not imply hostile shared-VM isolation. BeamLens remains unactivated
+pending its separate privacy/lifecycle acceptance; choosing only custom skills
+is not sufficient.
+
+The dormant provider boundary intended for that integration uses an existing
+signed-in ChatGPT-plan Codex session first and visibly falls back to the fixed
+local Ollama model `qwen3.5:4b-q4_K_M`. It never accepts Codex API-key auth,
+downloads a model, starts a provider at boot or exposes a route. Codex runs one
+ephemeral read-only/no-network turn in an empty private directory with tools,
+search, connectors and inherited MCP/plugin entries disabled. Provider
+preflight occurs only when explicitly called. `WOTEX_LAB_BEAMLENS=1` is
+reserved for the still-unimplemented agent lifecycle and currently activates
+nothing by itself.
 
 The Metrics page's portable-panel selector exports only catalogue definitions
 through `/metrics/dashboard.json`, with 1–16 known IDs. A verified browser

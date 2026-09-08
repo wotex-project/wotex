@@ -2,6 +2,14 @@
 
 ## 0.1.0 — source foundation
 
+- Added the dormant Workbench provider boundary for the planned BeamLens
+  integration, adapted from `goatmire-2026`: an existing signed-in ChatGPT-plan
+  Codex App Server turn is primary, API-key auth and exhausted quota are
+  refused, and a fixed already-installed local Ollama model is the visible
+  fallback. Tool/search/MCP/plugin surfaces are disabled, calls and output are
+  bounded, and disposable workers die on timeout or caller exit. No provider
+  lookup, model download, BeamLens process or route starts at boot.
+
 - WLB.08 v0.6 binds reference-run identity to executable Livebooks, embedded
   documentation, provenance and evidence manifests as well as code. Mutation,
   removal and addition checks guard the cohort definition; generated output

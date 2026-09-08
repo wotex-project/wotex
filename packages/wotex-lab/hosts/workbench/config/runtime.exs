@@ -5,6 +5,11 @@ config :wotex_lab_workbench, promex_enabled: System.get_env("WOTEX_LAB_PROMEX") 
 config :wotex_lab_workbench,
   metrics_history_enabled: System.get_env("WOTEX_LAB_METRICS_HISTORY") == "1"
 
+# BeamLens remains completely dormant unless the trusted local operator opts
+# in. Provider availability is checked only when an investigation is requested;
+# boot never searches credentials, contacts Ollama or downloads a model.
+config :wotex_lab_workbench, beamlens_enabled: System.get_env("WOTEX_LAB_BEAMLENS") == "1"
+
 # No credential is read unless the listener is explicitly requested. Retain
 # only its digest; never put the supplied Bearer token in application options.
 if port = System.get_env("WOTEX_LAB_METRICS_PORT") do

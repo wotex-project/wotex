@@ -1,0 +1,31 @@
+defmodule WotexLabWorkbench.Investigation.Status do
+  @moduledoc "Owns the latest disclosed provider transition."
+
+  use GenServer
+
+  @doc false
+  @spec start_link(keyword()) :: GenServer.on_start()
+  def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+
+  @doc "Reads the most recently published transition."
+  @spec get() :: map()
+  def get, do: GenServer.call(__MODULE__, :get)
+
+  @doc "Stores one transition."
+  @spec put(map()) :: :ok
+  def put(status), do: GenServer.call(__MODULE__, {:put, status})
+
+  @doc "Restores the idle state."
+  @spec reset() :: :ok
+  def reset, do: put(idle())
+
+  @impl GenServer
+  def init(_opts), do: {:ok, idle()}
+
+  @impl GenServer
+  def handle_call(:get, _from, state), do: {:reply, state, state}
+  def handle_call({:put, status}, _from, _state), do: {:reply, :ok, status}
+
+  defp idle,
+    do: %{state: :idle, provider: nil, model: nil, reason: nil, completed_at: nil}
+end

@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.7.0. Contract: accepted. Source status: the metric
+Specification version: 0.8.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
@@ -9,8 +9,12 @@ catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
 history activation, a protected local scrape listener and expiring local-operator
 query capabilities. Built-in host
 introspection, durable-sink host activation, remote/TLS scraping, OTLP
-signal export, BeamLens, browser history presentation and the MCP query gateway remain
-planned. A template export is not proof of a Grafana import or query execution.
+signal export, the BeamLens agent lifecycle/custom skill, browser history
+presentation and the MCP query gateway remain planned. The Workbench now has a
+dormant, independently tested provider boundary for that future integration:
+existing ChatGPT-plan Codex access first and one fixed local Ollama model as a
+visible fallback. A template export is not proof of a Grafana import or query
+execution.
 
 ## Stack and ownership
 
@@ -367,14 +371,17 @@ handlers require inspection in the admitted cohort. A host-scoped BeamLens
 service is not proof that BeamLens supports isolated per-instance supervisors.
 Untrusted hosted tenants require separate worker/OS isolation; shared-VM
 introspection is reserved for the trusted local operator profile.
-The BeamLens integration, its custom skill, the prompt entry point and the
-answer presentation in the following paragraphs are planned; no source exists.
+The BeamLens agent integration, its custom skill, the prompt entry point and
+the answer presentation in the following paragraphs are planned. The host's
+provider/deadline source exists but starts no process by default and cannot be
+reached from HTTP or LiveView.
 The 0.3.1 source review found unconditional log-store startup in the standard
 supervisor, inherited node-information callbacks and queued operator invocations
 whose caller timeout does not revoke the run. See the
 [dependency review](../provenance/standards-and-dependencies.md#beamlens-integration-admission).
-Adding a custom skill alone does not admit that lifecycle/privacy contract;
-no BeamLens dependency, provider or key lookup is activated by this query slice.
+Adding a custom skill alone does not admit that lifecycle/privacy contract.
+The provider boundary does not alter that conclusion: no BeamLens dependency
+is yet installed, and no provider or key lookup occurs at boot.
 
 The custom skill exposes bounded `lab_metric_catalogue`, `lab_metric_query`,
 `lab_run_summary` and `lab_compare_runs` callbacks. Their service-side request
@@ -391,6 +398,20 @@ terminate the investigation and revoke its query scope, not merely detach the
 UI caller. Local providers are supported; cloud model use requires explicit
 provider selection and disclosure of exactly which redacted data leaves the
 host. No automatic API-key discovery, model download or endless agent loop.
+
+The admitted provider design follows the proven `goatmire-2026` boundary. A
+Codex App Server call must use an already signed-in ChatGPT-plan account,
+refuse API-key accounts and unavailable quota, create an ephemeral thread in a
+private empty directory, disable tools/search/connectors/inherited MCP servers,
+use read-only/no-network/no-approval policies, and close its owned stdio port.
+The fallback is exactly `qwen3.5:4b-q4_K_M` at the configured loopback Ollama
+OpenAI-compatible endpoint, non-streaming, reasoning disabled and capped at
+320 output tokens. It never pulls a model. The 29-second provider deadline
+allocates at most half the remaining time to Codex and gives the balance to
+Ollama. The provider status and fallback reason are explicit result metadata
+and a PubSub transition; fallback is never silent. Disposable deadline workers
+are killed on timeout and owner death. These are provider-boundary tests, not
+yet proof of whole BeamLens investigation cancellation or scope revocation.
 
 Answers show observed facts separately from hypotheses, source queries/time
 ranges and missing evidence. Queried labels/logs, tool results and prompts are

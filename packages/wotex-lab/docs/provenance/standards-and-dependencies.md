@@ -174,10 +174,21 @@ is copied or patched, and no API key or provider is discovered or invoked.
 
 The Lab query gateway addresses the separate local data-access lifecycle using
 only its own public history contract. It does not close BeamLens admission.
-An eventual public-API composition must prove the selected callback surface,
-dependency startup, disabled raw introspection, data disclosure, token/cost
-budgets and whole-investigation cancellation in executable tests. The required
-BeamLens reference integration remains planned, not waived or simulated.
+The Workbench provider boundary now adapts the local `../goatmire-2026`
+implementation: Codex App Server accepts only an existing ChatGPT-plan login
+with available reported quota, uses an ephemeral read-only/no-network turn with
+all tool and inherited MCP/plugin surfaces disabled, and retains no account
+identity. A disclosed fallback calls only the fixed, already-served local
+Ollama model `qwen3.5:4b-q4_K_M`, with no automatic pull. Fake app-server and
+Req transport tests cover restrictions, identity omission, API-key refusal,
+quota exhaustion, exact-model admission, malformed responses and bounded
+worker death. No live provider was invoked during acceptance.
+
+This closes only the provider choice/deadline seam. An eventual public-API
+composition must still prove the selected callback surface, dependency startup,
+disabled raw introspection, data disclosure, token/cost budgets and
+whole-investigation cancellation in executable tests. The BeamLens agent
+integration remains planned, not waived or simulated.
 
 ## Acknowledged dependency advisories
 

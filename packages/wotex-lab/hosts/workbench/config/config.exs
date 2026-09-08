@@ -19,6 +19,13 @@ config :wotex_lab_workbench,
   metrics_history_enabled: false,
   metrics_history_options: [],
   metrics_scrape: false,
+  beamlens_enabled: false,
+  beamlens_codex_model: nil,
+  beamlens_codex_timeout_ms: 18_000,
+  beamlens_ollama_base_url: "http://127.0.0.1:11434/v1",
+  beamlens_ollama_model: "qwen3.5:4b-q4_K_M",
+  beamlens_ollama_timeout_ms: 18_000,
+  beamlens_ollama_max_tokens: 320,
   formal_engine: nil
 
 config :phoenix, :json_library, Jason
