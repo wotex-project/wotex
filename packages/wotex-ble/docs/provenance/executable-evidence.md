@@ -44,7 +44,7 @@ commands above must be rerun after relevant changes.
 | Test source | SHA-256 |
 | --- | --- |
 | `test/interop/bluez_device_test.exs` | `bd7a5e444ec053c87c84de6d387305f365a4c5830afd3cf1298c86571bc1849a` |
-| `test/wotex/ble/bluez_test.exs` | `06ad2f250f848a57bb3e1b50a9a6cdd5df1abac541b215b0e82d3fb817d2daf7` |
+| `test/wotex/ble/bluez_test.exs` | `8f88c670ce1f661e59cb3f84b6024de32c08af768070c13a7325d54112acea21` |
 | `test/wotex/ble/contract_test.exs` | `7c5472597a46331d0537c7d5f7b515a4b8493470eb97c4a341602ea759d6354f` |
 | `test/wotex/ble/dependency_security_test.exs` | `f7ca7a0fe7be419576821f384624c3cfec6700f0fafc760ac83720568113fc8d` |
 | `test/wotex/ble/mapping_test.exs` | `7a5dd81cc91455621cf0b19fb81448e8ee52cd51c4949e541a46c2a0b361e7ec` |

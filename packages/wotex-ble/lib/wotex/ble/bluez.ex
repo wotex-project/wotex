@@ -4,9 +4,18 @@ defmodule Wotex.BLE.BlueZ do
   alias Wotex.BLE.{Error, UUID}
 
   @impl Wotex.BLE.Client
-  def connect(opts) do
+  def connect(opts) when is_list(opts) do
+    if admitted_options?(opts),
+      do: connect_options(opts),
+      else: {:error, Error.new(:invalid_options)}
+  end
+
+  def connect(_), do: {:error, Error.new(:invalid_options)}
+
+  defp connect_options(opts) do
     executable = Keyword.get(opts, :executable)
     path = Keyword.get(opts, :object_path)
+    timeout = Keyword.get(opts, :timeout, 5000)
 
     with true <- is_binary(executable) and Path.type(executable) == :absolute,
          true <-
@@ -16,7 +25,8 @@ defmodule Wotex.BLE.BlueZ do
                path
              ),
          {:ok, service} <- UUID.normalize(Keyword.get(opts, :service)),
-         {:ok, characteristic} <- UUID.normalize(Keyword.get(opts, :characteristic)) do
+         {:ok, characteristic} <- UUID.normalize(Keyword.get(opts, :characteristic)),
+         true <- is_integer(timeout) and timeout in 1..60_000 do
       {:ok, %{executable: executable, path: path, service: service, characteristic: characteristic}}
     else
       _ -> {:error, Error.new(:invalid_options)}
@@ -125,6 +135,17 @@ defmodule Wotex.BLE.BlueZ do
         {:error, Error.new(:remote_error)}
     after
       remaining -> {:error, Error.new(:timeout)}
+    end
+  end
+
+  defp admitted_options?(opts) do
+    if Keyword.keyword?(opts) do
+      keys = Keyword.keys(opts)
+
+      keys -- [:executable, :object_path, :service, :characteristic, :timeout] == [] and
+        length(keys) == MapSet.size(MapSet.new(keys))
+    else
+      false
     end
   end
 end

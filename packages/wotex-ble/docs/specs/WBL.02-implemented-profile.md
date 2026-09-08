@@ -18,6 +18,9 @@ requests acknowledged writes, and validates exact `ay` response length/octets.
 Output is capped at 4096 bytes and calls have finite deadlines. The OS owns the
 connection and ATT transaction state. The package does not stop BlueZ, disconnect
 borrowed devices, or advertise notifications/discovery it does not implement.
+Adapter options are allowlisted and unique. Unknown or duplicate keys and
+unsupported security selectors fail before `busctl` is started; the adapter never
+interprets a caller's requested security level as proof of BlueZ link security.
 
 ## Evidence and compatibility
 

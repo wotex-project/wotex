@@ -8,4 +8,5 @@
 - Add malformed-input, lifecycle and property/contract tests; separate optional interoperability evidence.
 - Document unsupported features and consumer parity gates without claiming certification.
 - Remove the obsolete Decimal advisory waiver while retaining the pinned parser regression.
+- Reject ambiguous, unknown and unsupported-security BlueZ options before execution.
 - Keep the BlueZ timeout fixture single-process so it cannot outlive port cleanup.

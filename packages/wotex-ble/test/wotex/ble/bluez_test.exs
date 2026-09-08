@@ -79,11 +79,17 @@ defmodule Wotex.BLE.BlueZTest do
 
     for opts <- [
           [],
+          [:invalid],
           [executable: "relative"],
           Keyword.put(opts, :object_path, "/bad"),
-          Keyword.put(opts, :service, "bad")
+          Keyword.put(opts, :service, "bad"),
+          Keyword.put(opts, :timeout, 0),
+          Keyword.put(opts, :security_mode, :authenticated),
+          [{:characteristic, 0x2A1A} | opts]
         ],
         do: assert(match?({:error, _}, BlueZ.connect(opts)))
+
+    assert {:error, _} = BlueZ.connect(nil)
   end
 
   property "UUID integers round trip through 128-bit ATT representation" do
