@@ -33,6 +33,7 @@ specifications:
       - Wotex.Nx.ActionProposal
       - Wotex.Nx.Error
     executable_evidence:
+      - test/wotex/nx/dependency_security_test.exs
       - test/wotex/nx/decoder_test.exs
       - test/wotex/nx/library_contract_test.exs
       - test/wotex/nx/numerical_integrity_test.exs

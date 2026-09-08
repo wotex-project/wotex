@@ -2,6 +2,10 @@
 
 ## 0.1.0
 
+- Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
+  checksums, loaded version and bounded parser regression tests. Other advisory
+  checks remain active; remove this acknowledgement when metadata is corrected.
+
 - Invert mask polarity to `1 = observed`, `0 = filled`, matching
   `Nx.Batch.pad/2` and Axon validity masks; document the batch axis as the
   window row of one sample and the `Nx.Serving` split consequence.
