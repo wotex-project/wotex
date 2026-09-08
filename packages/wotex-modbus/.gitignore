@@ -1,0 +1,14 @@
+/_build/
+/cover/
+/deps/
+/doc/
+/docs/tasks/inbox.md
+/docs/tasks/local/
+/priv/plts/
+/.elixir_ls/
+/.lexical/
+*.ez
+erl_crash.dump
+wotex_modbus-*.tar
+
+/.tool-versions
