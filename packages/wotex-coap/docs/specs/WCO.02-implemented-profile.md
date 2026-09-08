@@ -20,6 +20,9 @@ Separate CON replies are acknowledged. IDs are held for the 247-second exchange
 lifetime; exhaustion fails. The production initial ACK timeout is randomized
 between two and three seconds, with exponential backoff and at most four
 retransmissions. Tests may supply a shorter explicit `ack_timeout`.
+Runtime transport configuration admits only the overall `timeout` and the same
+bounded `ack_timeout`; unknown, duplicate or malformed keys fail before a socket
+is opened. The admitted ACK timeout is propagated to the owned Connection.
 
 Observe serial comparison and sequential Block assembly are pure helpers only.
 They do not advertise active network observation, renewal or automatic blockwise

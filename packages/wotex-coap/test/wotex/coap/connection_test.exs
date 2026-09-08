@@ -184,13 +184,26 @@ defmodule Wotex.CoAP.ConnectionTest do
       input: nil
     }
 
-    assert {:ok, %{payload: 42}} = Wotex.CoAP.Transport.request(request, execution, [])
+    assert {:ok, %{payload: 42}} =
+             Wotex.CoAP.Transport.request(request, execution, ack_timeout: 10)
+
     {:ok, conn} = CoAP.connect(host: "127.0.0.1", port: port, timeout: 100)
     assert {:ok, :healthy} = CoAP.health_check(conn)
     assert {:error, _} = CoAP.health_check(conn)
     CoAP.disconnect(conn)
     assert {:error, _} = CoAP.health_check(conn)
     Task.await(peer)
+
+    for config <- [
+          [:invalid],
+          [unknown: true],
+          [timeout: 100, timeout: 200],
+          [ack_timeout: 0],
+          [ack_timeout: 3001]
+        ] do
+      assert {:error, %Wotex.CoAP.Error{}} =
+               Wotex.CoAP.Transport.request(request, execution, config)
+    end
   end
 
   defp peer(fun) do

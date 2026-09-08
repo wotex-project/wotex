@@ -44,7 +44,7 @@ commands above must be rerun after relevant changes.
 | --- | --- |
 | `test/interop/libcoap_test.exs` | `903bef8fb4368d78027b01293c1acdb3779eff9c8187e075defb97e580172888` |
 | `test/wotex/coap/codec_test.exs` | `a810d7c2464a8e874009df3191a276ab72bbccf3ff81ae7ba600e646a5ba660d` |
-| `test/wotex/coap/connection_test.exs` | `16ee05c3ab60ac7ffa7f4df7aacf500549c9c51b4c6f63a5f2db525e7f0d9259` |
+| `test/wotex/coap/connection_test.exs` | `f66d238172e2475e264a21878366b9d54051d0de96cde1e23ee261596ffba8a7` |
 | `test/wotex/coap/contract_test.exs` | `9d02da47a770f4d20aaa4ccac068b36709a948c004923e76904cdcbd6b31f888` |
 | `test/wotex/coap/dependency_security_test.exs` | `651cb6942930d6f9e73db9299a701d8e68b93a3080746c9449eee707968c9bb8` |
 | `test/wotex/coap/mapping_test.exs` | `464984b6e591be3d8d609f76a2953daf76a1f08f0d73bf3ca9741f1867142e8a` |

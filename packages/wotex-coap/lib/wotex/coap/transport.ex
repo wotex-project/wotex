@@ -13,13 +13,16 @@ defmodule Wotex.CoAP.Transport do
         do: DateTime.utc_now(),
         else: System.monotonic_time(:millisecond)
 
-    with {:ok, mapping} <-
+    with :ok <- validate_config(config),
+         {:ok, mapping} <-
            Mapping.command(request.form, request.operation, request.input, request.resolved_href),
          {:ok, timeout} <-
            timeout(Context.remaining_ms(request.deadline, now), Keyword.get(config, :timeout, 5000)),
          deadline = System.monotonic_time(:millisecond) + timeout,
-         {:ok, pid} <-
-           Connection.start_link(host: mapping.host, port: mapping.port, timeout: timeout) do
+         connection_options =
+           [host: mapping.host, port: mapping.port, timeout: timeout] ++
+             Keyword.take(config, [:ack_timeout]),
+         {:ok, pid} <- Connection.start_link(connection_options) do
       try do
         remaining = deadline - System.monotonic_time(:millisecond)
 
@@ -50,4 +53,27 @@ defmodule Wotex.CoAP.Transport do
        do: {:ok, min(left, max)}
 
   defp timeout(_, _), do: {:error, Error.new(:deadline_exceeded)}
+
+  defp validate_config(config) do
+    if Keyword.keyword?(config) do
+      keys = Keyword.keys(config)
+
+      cond do
+        keys -- [:timeout, :ack_timeout] != [] ->
+          {:error, Error.new(:invalid_options)}
+
+        length(keys) != MapSet.size(MapSet.new(keys)) ->
+          {:error, Error.new(:invalid_options)}
+
+        Keyword.has_key?(config, :ack_timeout) and
+            Keyword.get(config, :ack_timeout) not in 1..3000 ->
+          {:error, Error.new(:invalid_ack_timeout)}
+
+        true ->
+          :ok
+      end
+    else
+      {:error, Error.new(:invalid_options)}
+    end
+  end
 end
