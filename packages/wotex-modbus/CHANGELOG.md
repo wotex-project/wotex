@@ -10,3 +10,6 @@
   explicit connection ownership, finite deadlines and structured failures.
 - Add register conversion, draft Form mapping and the Runtime transport.
 - Prove software interoperability against pinned libmodbus source.
+
+- Define the target software contract and ordered implementation packages with
+  pinned sources, explicit APIs/limits and required software acceptance vectors.

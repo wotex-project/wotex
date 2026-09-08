@@ -25,3 +25,15 @@ binary values and the WoT mapping profile; no certification claim.
 The search followed protocol framing, malformed inputs, security and draft
 mapping gaps, then upstream peer pins. Baseline claims have primary evidence;
 physical hardware and Modbus Security certification remain separate evidence.
+
+## Software-contract review, 2026-09-08
+
+The .10 scope deliberately completes the eight-function TCP client rather than
+adding unreviewed serial/security transports. The official
+[Modbus Security v36, 2021-07-30](https://www.modbus.org/file/secure/modbussecurityprotocol.pdf)
+was inspected for that boundary: it includes certificate/role behavior beyond a
+generic TLS tunnel. [Serial Line Guide V1.02, 2006-12-20](https://www.modbus.org/file/secure/modbusoverserial.pdf)
+defines a separate serial framing/timing profile. Neither is a claimed implemented
+cell here. Library admission/cleanup limits in .00/.10 are local design policy.
+The independent software fixture remains
+[libmodbus v3.1.12 source](https://github.com/stephane/libmodbus/tree/9af6c16074df566551bca0a7c37443e48f216289).

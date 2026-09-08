@@ -39,3 +39,11 @@ No RTU/serial, Modbus Security, built-in polling or physical certification is
 claimed. See [protocol contract](docs/specs/WMB.01-protocol.md),
 [Form profile](docs/specs/WMB.02-form-profile.md) and
 [independent interoperability](test/interop/README.md).
+
+## Software implementation contract
+
+The [ordered implementation sequence](docs/plans/software-implementation.md)
+and [specification index](docs/specs/WMB-index.md) define the remaining software
+profile with exact behavior, limits, failure transitions and acceptance vectors.
+These target contracts are build instructions, not claims that every feature
+already exists. Required software peers are separate from physical-device tests.
