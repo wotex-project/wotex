@@ -1,10 +1,11 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.6.0. Contract: accepted. Source status: the workspace
+Specification version: 0.6.1. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
-source-cohort guard and the archive-consumer gate are implemented; the full
-reference-consumer, distribution and release-candidate runners, OCI, npm,
-hosted and Nerves deliverables remain planned.
+source-cohort guard, the archive-consumer gate and generated npm client source
+gate are implemented; the full reference-consumer, distribution and
+release-candidate runners, OCI, published npm artifact, hosted and Nerves
+deliverables remain planned.
 
 ## Dependency modes
 
@@ -134,8 +135,11 @@ Hex and Mix.install run the numerical entry point. Livebooks install the same
 artifacts. OCI provides the full disposable host with least-privilege user,
 read-only base filesystem, quotas, ephemeral instance storage, health/cleanup
 checks and optional digest-pinned broker. npm is schema-generated control
-client code. Hosted sessions expire, isolate users and cannot reach arbitrary
-devices; DNS/domain/deployment actions remain operator-owned.
+client code. The checked-in `clients/typescript/` projection has no runtime
+dependencies and its gate runs Node behavior tests plus `npm pack --dry-run`;
+this is source/archive-shape evidence, not registry publication or an
+installed-artifact smoke. Hosted sessions expire, isolate users and cannot
+reach arbitrary devices; DNS/domain/deployment actions remain operator-owned.
 
 The reference host owns Phoenix/LiveView, PromEx and BeamLens dependencies.
 WLB.10's GreptimeDB process is opt-in; its endpoint/data volume/TTL and resource

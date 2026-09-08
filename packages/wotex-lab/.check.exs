@@ -20,6 +20,7 @@
        else: false
      )},
     {:graph, command: "mix run --no-start bin/check_graph.exs"},
+    {:typescript_client, command: "mix run --no-start bin/generate_typescript_client.exs --check"},
     {:boundary, command: "elixir bin/check_boundary.exs"},
     {:package, command: "mix run --no-start bin/check_package.exs"},
     {:archive_consumer, command: "mix run --no-start bin/check_archive_consumer.exs"}

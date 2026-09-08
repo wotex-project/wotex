@@ -1,6 +1,6 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.4.1. Contract: accepted. Source status: the sixteen
+Specification version: 0.4.2. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
@@ -11,8 +11,11 @@ catalogue reads are inert and evidence lookup is bearer-bound to the caller's
 existing room. Fifteen notebooks have executable workspace source evidence,
 including Axon/EXLA training and formal-control vectors; `nerves-and-mcp`
 retains partial evidence. This does not promote notebook installation to
-artifact acceptance. Mutation control operations, the generated npm client
-and public site remain planned.
+artifact acceptance. The zero-runtime-dependency `@wotex/lab-client` source,
+declarations, schema-drift gate, Node tests and npm archive-content check are
+implemented under `clients/typescript/`; publication and installed-artifact
+adoption remain separate. Mutation control operations and the public site
+remain planned.
 
 ## Cookbook catalogue
 
@@ -92,6 +95,12 @@ expected-output digests, positive/negative vector IDs, spec/seam/operation IDs
 and scenario. Expected outputs cannot be exposed to the conformance target.
 Generated TypeScript/npm `@wotex/lab-client` controls Lab via the control schema;
 it MUST NOT become another WoT semantics implementation.
+`bin/generate_typescript_client.exs` loss-checks the pinned OpenAPI dialect,
+operation IDs, base path and admitted schema fields before regenerating the ESM
+runtime and declarations. The client bounds deadlines and JSON response bytes,
+escapes path segments, rejects URL credentials and sends a bearer only to the
+evidence operation. Its injected Fetch seam is testability, not an alternate
+transport contract.
 
 Retrieval evaluations MUST ask who owns redirects, reconnect, supervision,
 remote contexts, Directory storage, Nx effects, Continuum intent and formal

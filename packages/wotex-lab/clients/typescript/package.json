@@ -1,0 +1,24 @@
+{
+  "description": "Generated read-only client for the WoTEx Lab control API",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "name": "@wotex/lab-client",
+  "scripts": {
+    "test": "node --test"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "version": "0.1.0"
+}
