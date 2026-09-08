@@ -31,6 +31,7 @@ specifications:
       - "test/wotex/binding/http/form_test.exs"
       - "test/wotex/binding/http/transport_test.exs"
       - "test/wotex/binding/http/library_contract_test.exs"
+      - "test/wotex/binding/http/dependency_security_test.exs"
     compatibility_classification: "immutable credential-free values and explicit client callbacks; pre-release seam corrections replace the subscribe event handler with the owner pid, add the retry class to every error, and carry the response and event byte limits on the request"
   - id: "WBH.03"
     version: "1.2.0"

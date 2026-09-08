@@ -2,6 +2,7 @@
 
 ## 0.1.0
 
+- Bind the scoped Decimal advisory acknowledgement to the exact reviewed lock cohort and parser-limit regressions.
 - Establish caller-owned HTTP request and response mapping for selected WoT operations.
 - Define an explicit client port with ephemeral credential handling.
 - Add Server-Sent Events subscriptions with client-owned framing and lifecycle.
