@@ -1,0 +1,296 @@
+defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
+  @moduledoc false
+
+  use WotexLabWorkbenchWeb.ConnCase, async: false
+
+  alias WotexLabWorkbench.Sessions
+  alias WotexLabWorkbenchWeb.ComponentHarness
+  alias WotexLabWorkbenchWeb.Components
+  alias WotexLabWorkbenchWeb.Components.Shell
+  alias WotexLabWorkbenchWeb.Plugs.ContentSecurityPolicy
+  alias WotexLabWorkbenchWeb.Plugs.SessionToken
+
+  test "the endpoint issues a scoped session with restrictive headers and no room side effect", %{
+    conn: conn
+  } do
+    before = Sessions.count()
+    conn = get(conn, "/")
+    html = html_response(conn, 200)
+
+    assert html =~ "Numerical workbench"
+    assert html =~ "mounting this page" or html =~ "Start disposable room"
+    assert Sessions.count() == before + 1
+    assert is_binary(get_session(conn, SessionToken.key()))
+
+    [policy] = get_resp_header(conn, "content-security-policy")
+    assert policy =~ "default-src 'self'"
+    assert policy =~ "frame-ancestors 'none'"
+    assert policy =~ "object-src 'none'"
+    assert get_resp_header(conn, "referrer-policy") == ["no-referrer"]
+    refute html =~ "https://cdn"
+  end
+
+  test "a browser flow runs an experiment and preserves Action separation", %{conn: conn} do
+    conn = get(conn, "/")
+    {:ok, view, html} = live(recycle(conn), "/")
+    assert html =~ "Start disposable room"
+    assert html =~ ~s(phx-disable-with="Running…")
+
+    html = render_click(element(view, "button[phx-click='start_room']"))
+    assert html =~ "Recent runs"
+    refute html =~ "Start disposable room"
+
+    redirect =
+      render_submit(element(view, "#run-thermal"), %{
+        "experiment_id" => "thermal",
+        "params" => %{"backend" => "binary"}
+      })
+
+    {:ok, run_view, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert html =~ "Tensor summary"
+    assert html =~ "setTarget 22.000 Cel (inert)"
+    assert html =~ "Run assertions"
+    refute html =~ "Approve simulated Action"
+
+    assert render(run_view) =~ "Ask about this run"
+  end
+
+  test "a smart-room run needs the separate exact approval form", %{conn: conn} do
+    conn = get(conn, "/")
+    {:ok, view, _html} = live(recycle(conn), "/")
+    render_click(element(view, "button[phx-click='start_room']"))
+
+    redirect =
+      render_submit(element(view, "#run-smart_room"), %{
+        "experiment_id" => "smart_room",
+        "params" => %{
+          "power_budget" => "2000",
+          "meter" => "on",
+          "principal" => "operator",
+          "ttl_ms" => "120000"
+        }
+      })
+
+    {:ok, run_view, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert html =~ "Approve simulated Action"
+    assert html =~ "Running the experiment did not dispatch it"
+    assert html =~ "Proposal digest"
+
+    html = render_submit(element(run_view, "form[phx-submit='approve']"))
+    assert html =~ "dispatched"
+    assert html =~ "target read back"
+
+    refute has_element?(run_view, "form[phx-submit='approve']")
+  end
+
+  test "Things escape untrusted TD text and reports stay in the caller session", %{conn: conn} do
+    conn = get(conn, "/things")
+    {:ok, view, _html} = live(recycle(conn), "/things")
+    render_click(element(view, "button[phx-click='start_room']"))
+
+    source =
+      Jason.encode!(%{
+        "@context" => Wotex.td_context_1_1(),
+        "id" => "urn:test:web",
+        "title" => "<script>alert('x')</script>",
+        "security" => ["nosec_sc"],
+        "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}}
+      })
+
+    html =
+      render_submit(element(view, "form[phx-submit='register_td']"), %{
+        "thing_description" => source
+      })
+
+    assert html =~ "&lt;script&gt;alert"
+    refute html =~ "<script>alert('x')</script>"
+
+    html = render_submit(element(view, "#read-thermostat-temperature"))
+    assert html =~ "Latest reading"
+    assert html =~ "21.5"
+
+    report = get(recycle(conn), "/evidence/report.json")
+    assert json_response(report, 200)["session"] =~ "session-"
+
+    assert get_resp_header(report, "content-disposition") ==
+             [~s(attachment; filename="wotex-lab-evidence.json")]
+  end
+
+  test "generated tokens, host CSS and optional investigation state are explicit", %{conn: conn} do
+    token_conn = get(conn, "/css/tokens.css")
+    css = response(token_conn, 200)
+    assert get_resp_header(token_conn, "content-type") |> hd() =~ "text/css"
+    assert css =~ ".wotex-lab"
+    assert css =~ "--wl-color-bg"
+
+    host_css = File.read!(Application.app_dir(:wotex_lab_workbench, "priv/static/css/host.css"))
+    assert host_css =~ "prefers-reduced-motion"
+    assert host_css =~ "@media (max-width: 48rem)"
+    refute host_css =~ "gradient"
+
+    {:ok, view, _html} = live(conn, "/evidence")
+    render_click(element(view, "button[phx-click='start_room']"))
+    html = render(view)
+    assert html =~ "No investigation provider is configured"
+    assert html =~ "not run"
+  end
+
+  test "the component family renders semantic names and text alternatives" do
+    html = render_component(&ComponentHarness.render/1, %{})
+    assert html =~ "Run"
+    assert html =~ ~s(aria-label="Open menu")
+    assert html =~ "Run context"
+    assert html =~ ~s(aria-describedby="name-help")
+    assert html =~ ~s(role="tablist")
+    assert html =~ ~s(role="alert")
+    assert html =~ "sha256:abc"
+    assert html =~ "unavailable"
+    assert html =~ "Observed"
+  end
+
+  test "unknown and stale browser sessions render denial rather than replacement", %{conn: conn} do
+    conn = init_test_session(conn, %{SessionToken.key() => "forged"})
+    {:ok, _view, html} = live(conn, "/")
+    assert html =~ "Session denied"
+    assert html =~ "unknown_session"
+    assert html =~ "New session"
+  end
+
+  test "window, metric, dataset and investigation controls remain separate and bounded", %{
+    conn: conn
+  } do
+    conn = get(conn, "/")
+    browser = recycle(conn)
+    {:ok, view, _html} = live(browser, "/")
+
+    html = render_click(element(view, "button[phx-click='toggle_sidebar']"))
+    assert html =~ ~s(id="wl-sidebar") and html =~ ~s(hidden)
+
+    html = render_change(element(view, "#theme-settings"), %{"theme" => "dark"})
+    assert html =~ ~s(data-theme="dark")
+
+    html = render_hook(view, "run", %{})
+    assert html =~ "invalid_parameters"
+    assert html =~ "Start disposable room"
+
+    render_click(element(view, "button[phx-click='start_room']"))
+
+    redirect =
+      render_submit(element(view, "#run-window_anomaly"), %{
+        "experiment_id" => "window_anomaly",
+        "params" => %{
+          "seed" => "7",
+          "count" => "32",
+          "window_count" => "8",
+          "threshold" => "1.5",
+          "fill" => "18.0",
+          "backend" => "binary"
+        }
+      })
+
+    {:ok, _run_view, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert html =~ "window_anomaly"
+    assert html =~ "simulated temperature (Cel)"
+    assert html =~ "Persistence prediction"
+    assert html =~ "Data table alternative"
+
+    {:ok, metrics, html} = live(recycle(conn), "/metrics")
+    assert html =~ "Session measurements"
+
+    html =
+      render_submit(element(metrics, "#metric-query"), %{
+        "component" => "scenario",
+        "operation" => "inference"
+      })
+
+    assert html =~ "Retained samples"
+    assert html =~ "Bounded session metric samples"
+
+    html =
+      render_submit(element(metrics, "#metric-query"), %{
+        "component" => "caller",
+        "operation" => "inference"
+      })
+
+    assert html =~ "invalid_filter"
+    render_click(element(metrics, "button[phx-click='export_dataset']"))
+
+    {:ok, evidence, html} = live(recycle(conn), "/evidence")
+    assert html =~ "Bounded session report"
+
+    {property, _description} = Enum.at(WotexLabWorkbench.Formal.properties(), 0)
+
+    html =
+      render_submit(element(evidence, "#formal-verify"), %{
+        "property" => Atom.to_string(property),
+        "variant" => "safe"
+      })
+
+    assert html =~ "unsupported"
+
+    html = render_submit(element(evidence, "#investigation"), %{"prompt" => "status?"})
+    assert html =~ "No investigation provider is configured"
+
+    report = get(recycle(conn), "/evidence/report.json") |> json_response(200)
+    assert [%{"rows" => rows}] = report["datasets"]
+    assert rows > 0 and report["runs"] |> hd() |> Map.fetch!("experiment") == "window_anomaly"
+  end
+
+  test "cancel, session reset, token overrides and hostile Host text have explicit outcomes", %{
+    conn: conn
+  } do
+    conn = get(conn, "/")
+    {:ok, view, _html} = live(recycle(conn), "/")
+    render_click(element(view, "button[phx-click='start_room']"))
+
+    redirect =
+      render_submit(element(view, "#run-smart_room"), %{
+        "experiment_id" => "smart_room",
+        "params" => %{}
+      })
+
+    {:ok, run_view, _html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    html = render_click(element(run_view, "button[phx-click='cancel']"))
+    assert html =~ "cancelled"
+    refute html =~ "Approve this simulated Action"
+
+    reset = get(recycle(conn), "/session/new")
+    assert redirected_to(reset) == "/"
+
+    previous = Application.get_env(:wotex_lab_workbench, :token_overrides)
+
+    on_exit(fn ->
+      if previous do
+        Application.put_env(:wotex_lab_workbench, :token_overrides, previous)
+      else
+        Application.delete_env(:wotex_lab_workbench, :token_overrides)
+      end
+    end)
+
+    Application.put_env(:wotex_lab_workbench, :token_overrides, %{
+      "color-accent" => "#123456",
+      "color-bg" => "red; color: transparent",
+      "caller" => "#ffffff"
+    })
+
+    css = get(build_conn(), "/css/tokens.css") |> response(200)
+    assert css =~ "--wl-color-accent: #123456"
+    refute css =~ "transparent"
+    refute css =~ "--wl-caller"
+
+    hostile = %{
+      build_conn()
+      | host: "safe.test",
+        req_headers: [{"host", "example.test; script-src *"}]
+    }
+
+    hostile = ContentSecurityPolicy.call(hostile, ContentSecurityPolicy.init([]))
+
+    [policy] = get_resp_header(hostile, "content-security-policy")
+    refute policy =~ "example.test;"
+
+    assert length(Components.modules()) == 15
+    assert Enum.map(Shell.items(), &elem(&1, 0)) == [:experiments, :things, :metrics, :evidence]
+    assert :ok = WotexLabWorkbench.Application.config_change([], [], [])
+  end
+end
