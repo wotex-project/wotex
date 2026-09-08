@@ -1,9 +1,10 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.7.0. Contract: accepted. Source status: the workspace
+Specification version: 0.8.0. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
-archive/release gate and generated npm client source gate are implemented. The
+archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
+generated npm client source gate are implemented. The
 Workbench also has a digest-pinned, non-root OCI Dockerfile, data-free health
 route and offline image-source gate; Docker's build-graph check passes, but no
 runnable image is claimed while its WoTEx Hex dependencies are unpublished.
@@ -127,6 +128,29 @@ promotes WLB.08 adoption to `reference_available`; it is not published-Hex,
 OCI-runtime, hosted-browser, independently contained runner or hardware
 evidence, so it does not pass `reference_consumer_green` or
 `distribution_green`.
+
+## Release review artifacts
+
+`docs/provenance/workbench-bom.cdx.json` is a deterministic CycloneDX 1.7 SBOM
+for the exact active production tree resolved by `workbench_archive_green`.
+CycloneDX 1.7 was the current official version at the 2026-09-08 review; the
+official JSON schema is the reference representation. Every component records
+its Hex package URL and declared archive license. Published-cache components
+carry their Hex outer SHA-256; locally built, unpublished WoTEx components are
+explicitly marked `built` and omit a component hash because the SBOM is itself
+inside the Lab archive and cannot truthfully hash its containing archive. The
+separate gate evidence records those exact candidate archive digests. All
+dependency references must resolve inside the BOM and every direct host
+requirement must be present.
+
+`docs/provenance/wotex-lab-api.json` is the pre-1.0 public review baseline for
+the base Lab application. It records every application module's exported
+function/arity, declared behaviour, struct keys and retrievable typespec clauses.
+`bin/generate_api_surface.exs --check` fails on drift and requires an explicit
+`--write` review. This is a change detector, not a stable-API decision: default
+argument semantics, result/error meaning, serialized schemas and the
+minimum/current runtime cohort still require the explicit compatibility review
+before `stable_api_candidate` can pass.
 
 The workspace reference script still uses a waiting-task deadline around
 `System.cmd`; that is not an independently verified descendant-cleanup or

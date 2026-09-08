@@ -5,11 +5,13 @@
 
 Code.require_file("support/work_directory.exs", __DIR__)
 Code.require_file("support/archive_repository.exs", __DIR__)
+Code.require_file("support/release_review.exs", __DIR__)
 
 defmodule Wotex.Lab.Check.WorkbenchArchive do
   @moduledoc false
 
   alias Wotex.Lab.Check.ArchiveRepository
+  alias Wotex.Lab.Check.ReleaseReview
   alias Wotex.Lab.Evidence.{Digest, Record}
 
   @packages [
@@ -29,7 +31,10 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
              hosts/workbench/mix_tasks/**/* hosts/workbench/priv/static/**/*
              hosts/workbench/README.md hosts/workbench/mix.exs hosts/workbench/mix.lock
              bin/check_workbench_archive.exs bin/support/archive_repository.exs
-             bin/support/work_directory.exs docs/specs/WLB.08-distribution-and-compatibility.md)
+             bin/support/release_review.exs
+             bin/support/work_directory.exs docs/specs/WLB.08-distribution-and-compatibility.md
+             docs/provenance/workbench-bom.cdx.json
+             docs/provenance/wotex-lab-api.json)
 
   def run do
     root = Path.expand("..", __DIR__)
@@ -67,6 +72,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
       tree = run!(consumer, env, ["deps.tree", "--only", "prod"], "Workbench dependency graph")
       check_tree!(tree)
       resolved = inspect_graph(consumer, admitted, tree)
+      check_sbom!(root, ReleaseReview.bom!(consumer, resolved, admitted))
       run!(consumer, env, ["compile", "--warnings-as-errors"], "Workbench compilation")
       run!(consumer, env, ["release", "--overwrite"], "Workbench release")
       checks = release_smoke(consumer, env)
@@ -269,6 +275,18 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
 
       nil ->
         abort("Workbench release emitted no checks:\n#{output}")
+    end
+  end
+
+  defp check_sbom!(root, bom) do
+    path = Path.join(root, "docs/provenance/workbench-bom.cdx.json")
+    generated = ReleaseReview.encode!(bom)
+
+    if "--update-sbom" in System.argv() do
+      File.write!(path, generated)
+    else
+      File.read(path) == {:ok, generated} ||
+        abort("Workbench CycloneDX SBOM is stale; run this gate with --update-sbom")
     end
   end
 

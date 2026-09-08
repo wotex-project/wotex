@@ -249,7 +249,7 @@ specifications:
       - "clients/typescript/test/client.test.mjs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.08
-    version: "0.7.0"
+    version: "0.8.0"
     path: docs/specs/WLB.08-distribution-and-compatibility.md
     implementation_status: partial
     evidence_status: partial
@@ -275,6 +275,10 @@ specifications:
       - "bin/check_archive_consumer.exs"
       - "bin/check_workbench_archive.exs"
       - "bin/support/archive_repository.exs"
+      - "bin/support/release_review.exs"
+      - "bin/generate_api_surface.exs"
+      - "docs/provenance/workbench-bom.cdx.json"
+      - "docs/provenance/wotex-lab-api.json"
       - "bin/check_reference_consumer.exs"
       - "test/wotex/lab/reference_summary_test.exs"
       - "test/wotex/lab/reference_inputs_test.exs"

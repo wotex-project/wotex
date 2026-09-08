@@ -297,9 +297,10 @@ release scratch/crash output and declares `/var/lib/wotex-lab` as ephemeral
 instance storage. The documented invocation supplies read-only root, tmpfs,
 memory, CPU and PID ceilings and loopback-only port publication. No broker,
 database, Maude engine, model provider or remote device route is enabled by
-the image source. This is build-source evidence only: the WoTEx Hex artifacts
-are not published, so no successful release build, image digest, SBOM,
-signature, runtime health or cleanup result is recorded.
+the image source. The local archive gate now produces a successful Workbench
+release and a CycloneDX 1.7 production-closure SBOM from candidate archives.
+The WoTEx Hex artifacts remain unpublished, so no image digest, signature,
+container runtime health or container cleanup result is recorded.
 
 ### Optional MQTT cohort
 

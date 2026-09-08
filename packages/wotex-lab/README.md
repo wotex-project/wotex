@@ -116,6 +116,12 @@ publication or a runnable OCI claim. Production rejects `WOTEX_PATH_DEPS` and
 uses Hex requirements. Publication and repository visibility are
 maintainer-owned.
 
+The same gate checks the deterministic CycloneDX 1.7 production SBOM at
+`docs/provenance/workbench-bom.cdx.json`. A separate API-surface gate records
+Lab exports, behaviours, struct keys and typespecs in
+`docs/provenance/wotex-lab-api.json`; drift requires explicit regeneration.
+These are release-review inputs, not a stable-API or public-candidate claim.
+
 The Workbench explicitly selects Explorer 0.12.0 for read-only run inspection:
 inclusive range/series controls, unit-separated summaries and dynamically
 updated line/point/area charts. `Wotex.Lab.Analytics.analyze/2` is shared with
