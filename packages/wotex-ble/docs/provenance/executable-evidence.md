@@ -12,8 +12,8 @@ Credo, unit/property tests and minimum 95% coverage, Dialyzer, Doctor, ExDoc,
 dependency audit, Hex packaging, unpacked out-of-tree compilation and the
 Application-free structural check. Runtime path dependencies require the explicit
 switch; the archive preserves ordinary Hex dependency declarations.
-The reviewed Decimal advisory metadata exception and regression are documented
-in SECURITY.md and the dependency-security test.
+No dependency advisory is ignored. The pinned Decimal parser regression is
+documented in SECURITY.md and the dependency-security test.
 
 ## Interoperability
 
@@ -32,8 +32,6 @@ Replace the object path with the actual selected characteristic. The optional
 suite fails on absent executable, missing service, no response or invalid value.
 Discovery, pairing and notification lifecycle remain separate gates.
 
-Container source commits are pinned. Base-image/package-manager inputs may move;
-these are reproducible source fixtures, not claims of bit-identical image builds.
 Interoperability tags are excluded by default. Explicit invocation requires the
 configured peer and must fail if that peer or expected response is missing.
 
@@ -46,6 +44,8 @@ commands above must be rerun after relevant changes.
 | Test source | SHA-256 |
 | --- | --- |
 | `test/interop/bluez_device_test.exs` | `bd7a5e444ec053c87c84de6d387305f365a4c5830afd3cf1298c86571bc1849a` |
-| `test/wotex/ble/bluez_test.exs` | `8fe5771f925c7e6955561e32ac9a5cac2204e64c5671dd6e5d479148adf237a8` |
+| `test/wotex/ble/dependency_security_test.exs` | `5ebc45264a394338cdb53e76e76cf4fc7c0fbae41c2a101b63973c7ce16af500` |
+| `test/wotex/ble/bluez_test.exs` | `06ad2f250f848a57bb3e1b50a9a6cdd5df1abac541b215b0e82d3fb817d2daf7` |
+| `test/wotex/ble/contract_test.exs` | `7c5472597a46331d0537c7d5f7b515a4b8493470eb97c4a341602ea759d6354f` |
 | `test/wotex/ble/mapping_test.exs` | `7a5dd81cc91455621cf0b19fb81448e8ee52cd51c4949e541a46c2a0b361e7ec` |
 | `test/wotex/ble/port_test.exs` | `5e01b43e5db1a5cdb6ee0dc894c694b1a8fbe9a64ce86243c45014fba8ae9e59` |

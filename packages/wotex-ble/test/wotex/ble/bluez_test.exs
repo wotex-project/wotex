@@ -71,7 +71,7 @@ defmodule Wotex.BLE.BlueZTest do
     assert {:error, _} = BlueZ.request(handle, Map.put(@message, :type, :notify), 100)
     script(path, "exit 1")
     assert {:error, %{code: :remote_error}} = BlueZ.request(handle, @message, 1000)
-    script(path, "sleep 1")
+    script(path, "exec sleep 1")
     assert {:error, %{code: :timeout}} = BlueZ.request(handle, @message, 10)
     script(path, "printf '%05000d' 0")
     assert {:error, %{code: :response_limit}} = BlueZ.request(handle, @message, 1000)
