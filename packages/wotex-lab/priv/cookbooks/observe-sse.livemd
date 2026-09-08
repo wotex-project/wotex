@@ -238,18 +238,13 @@ invalid =
 {handshake_one, frame, keepalive, invalid, Process.alive?(first)}
 ```
 
-Duplicate stop: the first stop closes the session and the connection; a
-second stop finds no process and is a caught exit, never a crash.
+Duplicate stop: the first stop closes the session and connection; a second
+stop finds no process and returns Runtime's typed `subscription_not_running`
+error without exiting the caller.
 
 ```elixir
 :ok = Subscription.stop(first)
-
-duplicate_stop =
-  try do
-    Subscription.stop(first)
-  catch
-    :exit, _reason -> :already_stopped
-  end
+duplicate_stop = Subscription.stop(first)
 
 {Process.alive?(first), duplicate_stop}
 ```
@@ -398,7 +393,7 @@ labels_safe? = parse_bytes != [] and not (text =~ "token-") and not (text =~ "22
 | `invalid-frame-reported` | Multi-line non-JSON data is `:undecodable_frame` and the subscription stays alive |
 | `receiver-death-stops` | The subscription exits with `{:shutdown, :receiver_down}` |
 | `reconnect-fresh-credential` | After `:transport_down` a new handshake carries a different bearer token |
-| `duplicate-stop-safe` | The second stop is a caught exit |
+| `duplicate-stop-safe` | The second stop is a typed not-running error |
 | `oversized-event-ends-session` | A 100-byte event over a 64-byte bound ends with `{:shutdown, :transport_down}` |
 
 ```elixir
@@ -411,7 +406,8 @@ labels_safe? = parse_bytes != [] and not (text =~ "token-") and not (text =~ "22
     lost == :transport_down and after_reconnect == 19.0 and
       match?(["Bearer token-" <> _], handshake_three) and
       match?(["Bearer token-" <> _], handshake_four) and handshake_three != handshake_four,
-  "duplicate-stop-safe" => duplicate_stop == :already_stopped,
+  "duplicate-stop-safe" =>
+    match?({:error, %Error{code: :subscription_not_running}}, duplicate_stop),
   "oversized-event-ends-session" => oversized == {:shutdown, :transport_down} and labels_safe?
 }
 ```
