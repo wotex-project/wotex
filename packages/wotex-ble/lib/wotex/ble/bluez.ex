@@ -1,7 +1,7 @@
 defmodule Wotex.BLE.BlueZ do
   @moduledoc "Real Linux BlueZ GATT access through an explicitly supplied busctl executable and object path."
   @behaviour Wotex.BLE.Client
-  alias Wotex.BLE.{Error, UUID}
+  alias Wotex.BLE.{Address, Error, ObjectPath, UUID}
 
   @impl Wotex.BLE.Client
   def connect(opts) when is_list(opts) do
@@ -17,9 +17,11 @@ defmodule Wotex.BLE.BlueZ do
     path = Keyword.get(opts, :object_path)
     timeout = Keyword.get(opts, :timeout, 5000)
 
-    with true <- is_binary(executable) and Path.type(executable) == :absolute,
+    with true <-
+           is_binary(executable) and byte_size(executable) <= 4096 and
+             Path.type(executable) == :absolute,
          true <-
-           is_binary(path) and
+           ObjectPath.valid?(path) and
              Regex.match?(
                ~r{^/org/bluez/hci[0-9]+/dev_[A-Fa-f0-9_]+/service[0-9a-fA-F]+/char[0-9a-fA-F]+$},
                path
@@ -34,8 +36,22 @@ defmodule Wotex.BLE.BlueZ do
   end
 
   @impl Wotex.BLE.Client
-  def request(handle, message, timeout) do
-    with {:ok, service} <- UUID.normalize(message.service),
+  def request(
+        %{executable: executable, path: path, service: service, characteristic: characteristic},
+        message,
+        timeout
+      ) do
+    with :ok <- Address.validate_message(message),
+         {:ok, handle} <-
+           connect_options(
+             executable: executable,
+             object_path: path,
+             service: service,
+             characteristic: characteristic,
+             timeout: timeout
+           ),
+         :ok <- selection_supported(message, handle),
+         {:ok, service} <- UUID.normalize(message.service),
          {:ok, characteristic} <- UUID.normalize(message.characteristic),
          true <- service == handle.service and characteristic == handle.characteristic,
          {:ok, method, signature, args} <- operation(message),
@@ -60,6 +76,8 @@ defmodule Wotex.BLE.BlueZ do
       _ -> {:error, Error.new(:address_mismatch)}
     end
   end
+
+  def request(_, _, _), do: {:error, Error.new(:invalid_request)}
 
   @impl Wotex.BLE.Client
   def disconnect(_), do: :ok
@@ -99,6 +117,19 @@ defmodule Wotex.BLE.BlueZ do
   end
 
   defp operation(_), do: {:error, Error.new(:invalid_request)}
+
+  defp selection_supported(message, handle) do
+    cond do
+      not is_nil(Map.get(message, :handle)) or not is_nil(Map.get(message, :generation)) ->
+        {:error, Error.new(:not_supported)}
+
+      Map.get(message, :object_path) not in [nil, handle.path] ->
+        {:error, Error.new(:address_mismatch)}
+
+      true ->
+        :ok
+    end
+  end
 
   defp run(executable, args, timeout) do
     port = Port.open({:spawn_executable, executable}, [:binary, :exit_status, args: args])
