@@ -2,6 +2,12 @@
 
 ## 0.1.0 — source foundation
 
+- WLB.07 v0.4 uses per-run function plugs in the four HTTP/SSE cookbooks,
+  with overlapping-evaluation checks and no shared module redefinition. The
+  source test runner no longer treats caller bindings as permission to stop
+  supervisors or recursively delete temporary paths; wider isolation and
+  timeout cleanup remain separate acceptance obligations.
+
 - Workbench atom-safety tests verify that fresh caller-supplied experiment and
   select names remain absent from the atom table, without confusing unrelated
   asynchronous VM/module activity with input-derived atom creation.

@@ -7,9 +7,10 @@ defmodule Wotex.Lab.Test.CookbookRunner do
   # `Mix.install/1` cell is skipped explicitly; artifact installation belongs
   # to Livebook, never to the test suite. Evaluation runs in an unlinked task
   # bounded by the notebook's declared timeout. When the last cell has run,
-  # every process still linked to the evaluator is shut down and counted as a
-  # leak, the `lab` binding is stopped and a `tmp_dir` binding under the
-  # system temporary directory is removed.
+  # every process still linked to the evaluator is signalled and counted as a
+  # leak. Bindings grant no cleanup authority: notebooks explicitly stop their
+  # own resources. This source-only helper is not a sandbox or a proof that
+  # unlinked processes, telemetry handlers or timeout resources were reclaimed.
 
   alias Wotex.Lab.Cookbook
 
@@ -66,8 +67,6 @@ defmodule Wotex.Lab.Test.CookbookRunner do
 
     case outcome do
       {:ok, value, binding, env} ->
-        cleanup(binding)
-
         {:ok,
          %{
            result: value,
@@ -90,19 +89,6 @@ defmodule Wotex.Lab.Test.CookbookRunner do
   catch
     kind, reason ->
       {:error, %{cell: index, kind: kind, reason: reason, stacktrace: __STACKTRACE__}}
-  end
-
-  defp cleanup(binding) do
-    with lab when is_pid(lab) <- Keyword.get(binding, :lab), true <- Process.alive?(lab) do
-      Supervisor.stop(lab)
-    end
-
-    with dir when is_binary(dir) <- Keyword.get(binding, :tmp_dir),
-         true <- String.starts_with?(dir, System.tmp_dir!()) do
-      File.rm_rf(dir)
-    end
-
-    :ok
   end
 
   defp sweep(supervisor) do

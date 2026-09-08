@@ -12,6 +12,7 @@ defmodule Wotex.Lab.CookbookTest do
   @root Path.expand("../../..", __DIR__)
   @spec_path "docs/specs/WLB.07-cookbooks-and-machine-interfaces.md"
   @fault_checks ["connect-reported", "oversized-dropped", "transport-down"]
+  @http_notebooks ~w(consume-http write-and-act observe-sse smart-room)
 
   setup_all do
     catalogue = YamlElixir.read_from_file!(Path.join(@root, "docs/specs/catalogue.yaml"))
@@ -101,6 +102,67 @@ defmodule Wotex.Lab.CookbookTest do
         assert Code.ensure_loaded?(module), "#{entry.id} references unloaded #{inspect(module)}"
       end
     end
+  end
+
+  for id <- @http_notebooks do
+    @http_notebook id
+
+    test "#{id} uses per-run function plugs during overlapping evaluations" do
+      id = @http_notebook
+      {:ok, entry} = Cookbook.fetch(id)
+      {:ok, source} = Cookbook.read(id)
+
+      for cell <- Cookbook.cells(source) do
+        {_ast, definitions} =
+          cell
+          |> Code.string_to_quoted!()
+          |> Macro.prewalk([], fn
+            {:defmodule, _metadata, _arguments} = node, acc -> {node, [node | acc]}
+            node, acc -> {node, acc}
+          end)
+
+        assert definitions == [], "HTTP cookbook helpers must not compile shared modules"
+      end
+
+      outcomes =
+        [1, 2]
+        |> Task.async_stream(fn _run -> CookbookRunner.run(id) end,
+          max_concurrency: 2,
+          timeout: entry.timeout_ms + 5_000
+        )
+        |> Enum.map(fn {:ok, {:ok, outcome}} -> outcome end)
+
+      assert length(outcomes) == 2
+
+      for outcome <- outcomes do
+        assert outcome.leaked == 0
+        assert is_function(Keyword.fetch!(outcome.binding, :http_handler), 2)
+        assert_checks(outcome.result, entry.checks)
+      end
+
+      [first, second] = Enum.map(outcomes, &Keyword.fetch!(&1.binding, :server))
+      refute first == second
+      refute Process.alive?(first)
+      refute Process.alive?(second)
+    end
+  end
+
+  test "caller bindings do not authorize process shutdown or directory deletion" do
+    suffix = Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)
+    dir = Path.join(System.tmp_dir!(), "wotex-cookbook-caller-#{suffix}")
+    File.mkdir!(dir)
+    on_exit(fn -> File.rm_rf!(dir) end)
+    File.chmod!(dir, 0o700)
+    supervisor = start_supervised!(Task.Supervisor)
+    path = Path.join(dir, "caller-owned.txt")
+    File.write!(path, "caller data")
+
+    assert {:ok, outcome} =
+             CookbookRunner.run("parse-td", binding: [lab: supervisor, tmp_dir: dir])
+
+    assert outcome.leaked == 0
+    assert Process.alive?(supervisor)
+    assert File.read!(path) == "caller data"
   end
 
   describe "against a disposable broker" do

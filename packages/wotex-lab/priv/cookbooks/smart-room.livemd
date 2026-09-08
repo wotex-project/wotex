@@ -90,26 +90,24 @@ epoch = ~U[2026-09-08 12:00:00Z]
 token = "room-token-7f3a"
 ```
 
-The thermostat: one HTTP Property.
+The thermostat: one HTTP Property, served by a per-run function plug without
+compiling a shared module when another notebook evaluation is active.
 
 ```elixir
-defmodule WotexLabCookbook.SmartRoomThermostat do
-  use Plug.Router
+import Plug.Conn
 
-  plug(:match)
-  plug(:dispatch)
+http_handler = fn conn, _options ->
+  case {conn.method, conn.request_path} do
+    {"GET", "/properties/temperature"} ->
+      conn |> put_resp_content_type("application/json") |> send_resp(200, "21.5")
 
-  get "/properties/temperature" do
-    conn |> put_resp_content_type("application/json") |> send_resp(200, "21.5")
-  end
-
-  match _ do
-    send_resp(conn, 404, "")
+    _other ->
+      send_resp(conn, 404, "")
   end
 end
 
 {:ok, server} =
-  Bandit.start_link(plug: WotexLabCookbook.SmartRoomThermostat, ip: {127, 0, 0, 1}, port: 0, startup_log: false)
+  Bandit.start_link(plug: http_handler, ip: {127, 0, 0, 1}, port: 0, startup_log: false)
 
 {:ok, {_ip, port}} = ThousandIsland.listener_info(server)
 

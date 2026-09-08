@@ -1,13 +1,15 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.3.0. Contract: accepted. Source status: the sixteen
+Specification version: 0.4.0. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
 `bin/check_graph.exs` gate, and the MCP server core with stdio and Streamable
-HTTP transports are implemented. The `axon-room-model`, `formal-control` and
-`nerves-and-mcp` notebooks retain partial evidence; the control API, generated
-npm client and public site remain planned.
+HTTP transports are implemented. Fifteen notebooks have executable workspace
+source evidence, including Axon/EXLA training and formal-control vectors;
+`nerves-and-mcp` retains partial evidence. This does not promote notebook
+installation to artifact acceptance. The control API, generated npm client
+and public site remain planned.
 
 ## Cookbook catalogue
 
@@ -40,6 +42,17 @@ must see the underlying package calls beside convenience APIs. Dependency
 installation uses published packages or exact admitted artifacts; first-run
 notebooks cannot depend on a Git checkout. The foundation README example is
 local development documentation and does not claim this notebook gate.
+
+The four disposable HTTP/SSE cookbook servers use per-evaluation function
+plugs and ephemeral loopback ports. Repeating or overlapping these examples
+MUST NOT redefine shared named modules or generate module atoms per run.
+The source runner accepts catalogue IDs, not arbitrary submitted code. Caller
+bindings, including values named `lab` or `tmp_dir`, MUST NOT authorize process
+shutdown or filesystem deletion; notebooks explicitly close their owned
+resources. A temporary-directory prefix is not ownership evidence. These
+source tests do not prove isolation of arbitrary notebook code, cleanup after
+timeout, or reclamation of unlinked processes/global telemetry handlers. Those
+lifecycle obligations and clone-free installation remain independently required.
 
 Data exploration follows the
 [interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md):

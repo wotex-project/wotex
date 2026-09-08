@@ -33,7 +33,7 @@ cell). `Mix.install/1` never points at a Git checkout.
 | Operation and Form selection, input carriage, status mapping, retry classes | `wotex_runtime`, `wotex_binding_http` (package-implements) | `ConsumedThing`, `Wotex.Binding.HTTP`, `Wotex.Runtime.Retry` |
 | Credential references and just-in-time lookup | `wotex_lab` (consumer-implements `Wotex.Runtime.Credentials`) | `Wotex.Lab.Adapters.Runtime.StaticRef` |
 | Bytes on the wire | `wotex_lab` (consumer-implements `Wotex.Binding.HTTP.Client`) | `ReqClient` |
-| The server, its token check and its misbehaving action | this notebook | `WotexLabCookbook.WriteAndActServer` |
+| The server, its token check and its misbehaving action | this notebook | per-run `http_handler` function plug |
 
 ## Run
 
@@ -59,55 +59,47 @@ token = "room-token-7f3a"
 
 The server checks the bearer token on writes, accepts the Action with `202`
 and answers the `reboot` Action with HTML on purpose. Written values land in
-an Agent so the effect is observable from outside the request.
+an Agent so the effect is observable from outside the request. Both the handler
+function and its store belong to this run; no shared module is recompiled.
 
 ```elixir
 {:ok, store} = Agent.start_link(fn -> %{} end)
 
-defmodule WotexLabCookbook.WriteAndActServer do
-  use Plug.Router
+import Plug.Conn
 
-  plug(:match)
-  plug(:dispatch)
+http_handler = fn conn, store ->
+  case {conn.method, conn.request_path} do
+    {"PUT", "/properties/target"} ->
+      case get_req_header(conn, "authorization") do
+        ["Bearer " <> ^token] ->
+          {:ok, body, conn} = read_body(conn)
+          Agent.update(store, &Map.put(&1, :target, body))
+          send_resp(conn, 204, "")
 
-  def init(store), do: store
-  def call(conn, store), do: conn |> assign(:store, store) |> super(store)
+        _other ->
+          send_resp(conn, 401, "")
+      end
 
-  put "/properties/target" do
-    case get_req_header(conn, "authorization") do
-      ["Bearer room-token-7f3a"] ->
-        {:ok, body, conn} = read_body(conn)
-        Agent.update(conn.assigns.store, &Map.put(&1, :target, body))
-        send_resp(conn, 204, "")
+    {"POST", "/actions/set-target"} ->
+      {:ok, body, conn} = read_body(conn)
+      body = ~s({"status":"pending","input":#{body}})
+      conn |> put_resp_content_type("application/json") |> send_resp(202, body)
 
-      _other ->
-        send_resp(conn, 401, "")
-    end
-  end
+    {"POST", "/actions/reboot"} ->
+      conn |> put_resp_content_type("text/html") |> send_resp(200, "<b>rebooting</b>")
 
-  post "/actions/set-target" do
-    {:ok, body, conn} = read_body(conn)
-    body = ~s({"status":"pending","input":#{body}})
-    conn |> put_resp_content_type("application/json") |> send_resp(202, body)
-  end
+    {"GET", "/properties/slow"} ->
+      Process.sleep(400)
+      conn |> put_resp_content_type("application/json") |> send_resp(200, "1")
 
-  post "/actions/reboot" do
-    conn |> put_resp_content_type("text/html") |> send_resp(200, "<b>rebooting</b>")
-  end
-
-  get "/properties/slow" do
-    Process.sleep(400)
-    conn |> put_resp_content_type("application/json") |> send_resp(200, "1")
-  end
-
-  match _ do
-    send_resp(conn, 404, "")
+    _other ->
+      send_resp(conn, 404, "")
   end
 end
 
 {:ok, server} =
   Bandit.start_link(
-    plug: {WotexLabCookbook.WriteAndActServer, store},
+    plug: {http_handler, store},
     ip: {127, 0, 0, 1},
     port: 0,
     startup_log: false

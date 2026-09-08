@@ -206,7 +206,7 @@ specifications:
       - "priv/conformance/native/tests/lifecycle.rs"
     compatibility_classification: Reviewed-local conformance now uses a digest-pinned external Rust helper; sampled Darwin limits do not close hostile whole-tree isolation, and binary artifact adoption remains separate.
   - id: WLB.07
-    version: "0.3.0"
+    version: "0.4.0"
     path: docs/specs/WLB.07-cookbooks-and-machine-interfaces.md
     implementation_status: partial
     evidence_status: partial

@@ -20,8 +20,8 @@ defmodule Wotex.Lab.Cookbook do
   * The last Elixir cell returns a map from check id to boolean; `:checks`
     lists the ids the runner expects, so the notebook's stated expected
     output is asserted, not merely described.
-  * Notebooks bind `lab` (the instance they start) and, when they write
-    files, `tmp_dir`; the runner stops and removes both after a run.
+  * Notebooks explicitly close their own processes and temporary files;
+    binding names alone never authorize the runner to stop or delete them.
 
   Reading a notebook happens on request through `read/1`; nothing here reads
   the filesystem or the network when the module loads.

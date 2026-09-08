@@ -37,7 +37,7 @@ disposable server defined below.
 | HTTP request/response values, status and media-type mapping | `wotex_binding_http` (package-implements) | `Wotex.Binding.HTTP` |
 | The HTTP client that moves bytes | `wotex_lab` (consumer-implements `Wotex.Binding.HTTP.Client`) | `Wotex.Lab.Adapters.HTTP.ReqClient` |
 | Redirects | `wotex_lab` client: refused (`redirect: false`), reported as an HTTP status | `ReqClient.request/3` |
-| The server | this notebook | `WotexLabCookbook.ConsumeHttpServer` |
+| The server | this notebook | per-run `http_handler` function plug |
 
 ## Run
 
@@ -63,45 +63,39 @@ events =
 ```
 
 The disposable server. Each route matches one Property of the fixture TD,
-including the ones that misbehave on purpose.
+including the ones that misbehave on purpose. A function plug belongs to this
+evaluation; rerunning the notebook does not redefine a shared BEAM module.
 
 ```elixir
-defmodule WotexLabCookbook.ConsumeHttpServer do
-  use Plug.Router
+import Plug.Conn
 
-  plug(:match)
-  plug(:dispatch)
+http_handler = fn conn, _options ->
+  case {conn.method, conn.request_path} do
+    {"GET", "/properties/temperature"} ->
+      conn |> put_resp_content_type("application/json") |> send_resp(200, "21.5")
 
-  get "/properties/temperature" do
-    conn |> put_resp_content_type("application/json") |> send_resp(200, "21.5")
-  end
+    {"GET", "/properties/large"} ->
+      body = "\"" <> String.duplicate("x", 4_096) <> "\""
+      conn |> put_resp_content_type("application/json") |> send_resp(200, body)
 
-  get "/properties/large" do
-    body = "\"" <> String.duplicate("x", 4_096) <> "\""
-    conn |> put_resp_content_type("application/json") |> send_resp(200, body)
-  end
+    {"GET", "/properties/slow"} ->
+      Process.sleep(400)
+      conn |> put_resp_content_type("application/json") |> send_resp(200, "1")
 
-  get "/properties/slow" do
-    Process.sleep(400)
-    conn |> put_resp_content_type("application/json") |> send_resp(200, "1")
-  end
+    {"GET", "/properties/redirect"} ->
+      conn |> put_resp_header("location", "/properties/temperature") |> send_resp(302, "")
 
-  get "/properties/redirect" do
-    conn |> put_resp_header("location", "/properties/temperature") |> send_resp(302, "")
-  end
+    {"GET", "/properties/html"} ->
+      conn |> put_resp_content_type("text/html") |> send_resp(200, "<b>21</b>")
 
-  get "/properties/html" do
-    conn |> put_resp_content_type("text/html") |> send_resp(200, "<b>21</b>")
-  end
-
-  match _ do
-    send_resp(conn, 404, "")
+    _other ->
+      send_resp(conn, 404, "")
   end
 end
 
 {:ok, server} =
   Bandit.start_link(
-    plug: WotexLabCookbook.ConsumeHttpServer,
+    plug: http_handler,
     ip: {127, 0, 0, 1},
     port: 0,
     startup_log: false
