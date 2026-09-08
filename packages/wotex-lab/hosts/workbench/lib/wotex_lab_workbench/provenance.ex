@@ -97,7 +97,7 @@ defmodule WotexLabWorkbench.Provenance do
   @spec cohort() :: map()
   def cohort, do: @cohort
 
-  @doc "The Lab's source inspection snapshot: package revisions and catalogue digests."
+  @doc "The Lab's historical source baseline: immutable revisions and catalogue digests."
   @spec source_index() :: map()
   def source_index, do: @index
 end

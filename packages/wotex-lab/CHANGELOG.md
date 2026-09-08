@@ -2,6 +2,10 @@
 
 ## 0.1.0 — source foundation
 
+- Align WLB.03 with the owning WNX.01 1.2.0 contract and label the immutable
+  source-index revisions/statuses as a historical baseline in JSON, Graph and
+  MCP surfaces. The separate source cohort remains the current content guard.
+
 - Replace the Workbench's vendored Vega, Vega-Lite and Vega-Embed runtime with
   its existing closed Elixir geometry and server-rendered HEEx/SVG. Explorer
   remains the optional bounded analysis engine; LiveView updates line, area and

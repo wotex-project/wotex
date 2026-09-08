@@ -171,7 +171,7 @@ defmodule Wotex.Lab.Graph.Render do
     ## Optional
 
     - [Completion contract](#{package["source_url"]}/docs/plans/wotex-lab-completion.md): accepted work packages, not an execution tracker
-    - [Source index](#{package["source_url"]}/docs/provenance/source-index.json): upstream catalogue statuses, revisions and digests
+    - [Historical source baseline](#{package["source_url"]}/docs/provenance/source-index.json): immutable inspected revisions and their then-observed catalogue statuses
     """
   end
 

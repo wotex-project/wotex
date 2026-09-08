@@ -4,7 +4,7 @@ defmodule Wotex.Lab.Graph do
 
   `generate/1` joins the Lab specification catalogue (decoded by the caller),
   the completion plan, the upstream package catalogues recorded in the
-  provenance source index and source cohort, the cookbook catalogue, the
+  historical provenance source baseline and current source content cohort, the cookbook catalogue, the
   fixture manifests and the Lab scenario, adapter and seam descriptors into
   one graph of nodes and edges. Lab evidence is a separately namespaced overlay
   that indexes exact completion nodes without changing their status or claiming
@@ -231,6 +231,10 @@ defmodule Wotex.Lab.Graph do
       "schema_version" => @schema_version,
       "kind" => "wotex_lab_source_graph",
       "snapshot" => true,
+      "provenance" => %{
+        "source_index_role" => inputs.index["role"],
+        "source_cohort_kind" => inputs.cohort["kind"]
+      },
       "generated_at" => DateTime.to_iso8601(inputs.generated_at),
       "generator" => %{
         "module" => "Wotex.Lab.Graph",
@@ -306,6 +310,7 @@ defmodule Wotex.Lab.Graph do
       "cohort_files" => cohort["files"],
       "cohort_sha256" => cohort["sha256"],
       "observed_on" => inputs.index["observed_on"],
+      "provenance_role" => inputs.index["role"],
       "snapshot" => true
     }
   end
@@ -349,6 +354,7 @@ defmodule Wotex.Lab.Graph do
           "revision" => package["revision"],
           "catalogue_sha256" => package["catalogue_sha256"],
           "observed_on" => inputs.index["observed_on"],
+          "provenance_role" => inputs.index["role"],
           "snapshot" => true
         }
       end)

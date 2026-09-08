@@ -25,6 +25,12 @@ defmodule Wotex.Lab.GraphTest do
        %{graph: graph, catalogue: catalogue, index: index} do
     assert graph["schema_version"] == "1.0.0" and graph["kind"] == "wotex_lab_source_graph"
     assert graph["snapshot"] == true and graph["generated_at"] == "2026-09-08T00:00:00Z"
+
+    assert graph["provenance"] == %{
+             "source_index_role" => "historical_baseline",
+             "source_cohort_kind" => "workspace_content_cohort"
+           }
+
     assert graph["generator"]["openapi"] == "3.2.0" and graph["generator"]["asyncapi"] == "3.1.0"
 
     assert length(graph["packages"]) == 9
@@ -66,6 +72,7 @@ defmodule Wotex.Lab.GraphTest do
     assert upstream["evidence_status"] == "not_reported"
     assert upstream["adoption_status"] == "not_reported"
     assert upstream["snapshot"] == true and upstream["revision"] == wotex["revision"]
+    assert upstream["provenance_role"] == "historical_baseline"
 
     assert upstream["source_url"] ==
              "#{wotex["repository"]}/blob/#{wotex["revision"]}/#{upstream["path"]}"

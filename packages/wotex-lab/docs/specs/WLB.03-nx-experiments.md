@@ -1,6 +1,6 @@
 # WLB.03: Nx experiments and numerical adoption
 
-Specification version: 1.4.0. Contract: accepted. Numerical semantics inherit
+Specification version: 1.5.0. Contract: accepted. Numerical semantics inherit
 `wotex_nx:WNX.01`; Lab owns inputs, execution, experiments and policy examples.
 
 ## Primary audience and entry point
@@ -21,7 +21,7 @@ a profile the caller already started. It does not mutate global Nx
 configuration. `target/1` reads the
 values and masks of the one-feature container and computes the mask-weighted
 mean, so a filled row (mask `0`) never contributes; masks use `1` for observed
-per `WNX.01` 1.1. It is not a general missing-value model. The reference callback handles only K↔Cel;
+per `WNX.01` 1.2.0. It is not a general missing-value model. The reference callback handles only K↔Cel;
 identity units are handled by the encoder; other conversions fail explicitly.
 
 ## Required experiment lanes
