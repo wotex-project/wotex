@@ -4,6 +4,9 @@ All notable changes to this project are documented in this file.
 
 ## 0.1.0
 
+- Exercise raising context errors through dynamic invalid-input vectors for
+  both arities, preserving typed codes without intentional static type warnings.
+
 - Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
   checksums, loaded version and bounded parser regression tests. Other advisory
   checks remain active; remove this acknowledgement when metadata is corrected.

@@ -21,7 +21,12 @@ defmodule Wotex.Directory.ValueContractTest do
 
     test "raising context constructor reuses the typed error" do
       assert %Context{principal: :principal} = Context.new!(:principal)
-      assert_raise Error, fn -> Context.new!(nil) end
+
+      for arguments <- [[nil], [:principal, :not_options], [:principal, [unknown: true]]] do
+        error = assert_raise Error, fn -> apply(Context, :new!, arguments) end
+        assert error.code == :invalid_context and error.phase == :validation
+      end
+
       assert {:error, %Error{code: :invalid_context}} = Context.new(:principal, :not_options)
       refute Context.valid?(:not_a_context)
     end
