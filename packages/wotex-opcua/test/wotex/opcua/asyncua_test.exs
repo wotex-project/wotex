@@ -9,7 +9,10 @@ defmodule Wotex.OPCUA.AsyncuaTest do
     opts = options("/missing/python")
     assert {:ok, handle} = Asyncua.connect(opts)
     assert {:error, _} = Asyncua.request(handle, @message, 100)
+    assert {:error, _} = Asyncua.request(handle, %{}, 100)
     assert {:error, _} = Asyncua.request(handle, %{node_id: nil}, 100)
+    assert {:error, _} = Asyncua.request(handle, @message, 0)
+    assert {:error, _} = Asyncua.request(%{}, @message, 100)
     assert {:error, _} = Asyncua.request(handle, Map.put(@message, :value, self()), 100)
 
     assert {:error, _} =
@@ -25,9 +28,13 @@ defmodule Wotex.OPCUA.AsyncuaTest do
           [server_uri: ""],
           [trust_certificates: []],
           [endpoint: "http://localhost/"],
-          [security_mode: :none]
+          [security_mode: :none],
+          [server_uri: "urn:duplicate", server_uri: "urn:server"]
         ],
         do: assert(match?({:error, _}, Asyncua.connect(Keyword.merge(opts, change))))
+
+    assert {:error, _} = Asyncua.connect([:invalid])
+    assert {:error, _} = Asyncua.connect(nil)
 
     assert {:ok, 42} = Asyncua.decode(~s({"id":1,"ok":42}), 1)
 
@@ -43,22 +50,20 @@ defmodule Wotex.OPCUA.AsyncuaTest do
   end
 
   test "owned bridge bounds execution, output and abnormal child termination" do
-    path = Path.join(System.tmp_dir!(), "wotex-ua-#{System.unique_integer([:positive])}")
-    on_exit(fn -> File.rm(path) end)
-    {:ok, handle} = Asyncua.connect(options(path))
+    success =
+      script(~S"""
+      IFS= read -r request
+      id=$(printf '%s' "$request" | sed -n 's/.*"id":\([0-9]*\).*/\1/p')
+      printf '{"id":%s,"ok":42}\n' "$id"
+      """)
 
-    script(
-      path,
-      "IFS= read -r request\nid=$(printf '%s' \"$request\" | sed -n 's/.*\"id\":\\([0-9]*\\).*/\\1/p')\nprintf '{\"id\":%s,\"ok\":42}\\n' \"$id\""
-    )
+    assert {:ok, 42} = request(success, 1000)
+    assert {:error, _} = request(script("exit 1"), 1000)
+    assert {:error, %{code: :timeout}} = request(script("sleep 1"), 10)
+    assert {:error, %{code: :response_limit}} = request(script("printf '%0140000d' 0"), 1000)
 
-    assert {:ok, 42} = Asyncua.request(handle, @message, 1000)
-    script(path, "exit 1")
-    assert {:error, _} = Asyncua.request(handle, @message, 1000)
-    script(path, "sleep 1")
-    assert {:error, %{code: :timeout}} = Asyncua.request(handle, @message, 10)
-    script(path, "printf '%0140000d' 0")
-    assert {:error, %{code: :response_limit}} = Asyncua.request(handle, @message, 1000)
+    assert {:error, _} =
+             request(script("printf 'native diagnostic on stderr\\n' >&2; exit 1"), 1000)
   end
 
   defp options(executable) do
@@ -76,8 +81,16 @@ defmodule Wotex.OPCUA.AsyncuaTest do
     ]
   end
 
-  defp script(path, body) do
+  defp request(path, timeout) do
+    {:ok, handle} = Asyncua.connect(options(path))
+    Asyncua.request(handle, @message, timeout)
+  end
+
+  defp script(body) do
+    path = Path.join(System.tmp_dir!(), "wotex-ua-#{System.unique_integer([:positive])}")
     File.write!(path, "#!/bin/sh\n" <> body <> "\n")
     File.chmod!(path, 0o700)
+    on_exit(fn -> File.rm(path) end)
+    path
   end
 end

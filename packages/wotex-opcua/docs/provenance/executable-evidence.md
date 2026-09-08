@@ -12,8 +12,8 @@ Credo, unit/property tests and minimum 95% coverage, Dialyzer, Doctor, ExDoc,
 dependency audit, Hex packaging, unpacked out-of-tree compilation and the
 Application-free structural check. Runtime path dependencies require the explicit
 switch; the archive preserves ordinary Hex dependency declarations.
-The reviewed Decimal advisory metadata exception and regression are documented
-in SECURITY.md and the dependency-security test.
+The pinned Decimal parser regression remains active; there are no advisory
+waivers. See SECURITY.md and the dependency-security test.
 
 ## Interoperability
 
@@ -51,7 +51,7 @@ commands above must be rerun after relevant changes.
 | Test source | SHA-256 |
 | --- | --- |
 | `test/interop/asyncua_test.exs` | `d1eb6dae68bc989ccb5b1df7778d80c9512781cdcc2fb248d4c43b1a09567740` |
-| `test/wotex/opcua/asyncua_test.exs` | `ffab66a7c9d30bbe8bd471c9d0bc4527f89b9fea2f1e9f6da3b6f597c7865158` |
+| `test/wotex/opcua/asyncua_test.exs` | `d36277d2fd7ec90e6fb393f19ee6730c600e6e83713190e83146dfce67182e6e` |
 | `test/wotex/opcua/binary_test.exs` | `bf2417a5fa093a59adaaf262ca08f614bbc995366961bead7df60b9de45c6a96` |
 | `test/wotex/opcua/mapping_test.exs` | `2768c115820bcd56364bde5d2101bc13dc242fc92f5ca0a2c1b62b01e7812f93` |
 | `test/wotex/opcua/port_test.exs` | `bf7dfcf70fa9afc680f07d4b861c56ecf954b01e8d280b12d7981849cc19cb48` |

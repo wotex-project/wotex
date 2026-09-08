@@ -24,12 +24,17 @@ length before allocating/waiting. Chunk framing alone does not validate secure
 channels, sequence numbers, RequestId, RequestHandle or service status.
 
 The real adapter delegates those channel/session checks to pinned asyncua 2.0.1.
+Its externally provisioned Python environment is an explicit implementation
+dependency; the package neither hides nor installs it, and no native Elixir OPC
+UA transport is claimed. Malformed handles, requests, timeouts, unknown options
+and duplicate security options fail before the bridge starts.
 Its HEL negotiation caps messages at 1 MiB and chunks at 16. The JSON process
 boundary caps request/response bytes at 128 KiB and correlates a request ID.
 The caller owns the process; closure of its input cancels the exchange. No
-credentials are placed in command-line arguments. Stdout is a single JSON result;
-failures expose no native exception text. Read scalars retain their Variant type
-and StatusCode. ByteStrings use an explicit base64 representation.
+credentials are placed in command-line arguments. Native stderr joins the same
+bounded result channel and cannot count as success. Stdout is a single JSON
+result; failures expose no native exception text. Read scalars retain their
+Variant type and StatusCode. ByteStrings use an explicit base64 representation.
 
 The certificate profile is described in README. It requires a current, signed
 issuer CRL and a leaf directly issued by a trusted self-signed CA. It is a

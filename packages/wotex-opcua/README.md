@@ -57,7 +57,8 @@ explicitly. Callback names alone do not establish consumer behavioral parity.
 The consumer retains its implementation until differential scenarios and
 interoperability gates pass; migration is outside this repository.
 
-See [implemented profile](docs/specs/WOP.02-implemented-profile.md),
+See [protocol and graduation contract](docs/specs/WOP.01-protocol.md),
+[implemented profile](docs/specs/WOP.02-implemented-profile.md),
 [primary sources](docs/provenance/primary-sources.md) and
 [executable evidence](docs/provenance/executable-evidence.md).
 

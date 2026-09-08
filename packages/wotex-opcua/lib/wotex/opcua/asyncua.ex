@@ -6,7 +6,13 @@ defmodule Wotex.OPCUA.Asyncua do
   @strings [:endpoint, :client_uri, :server_uri]
 
   @impl Wotex.OPCUA.Client
-  def connect(opts) do
+  def connect(opts) when is_list(opts) do
+    if Keyword.keyword?(opts), do: connect_options(opts), else: configuration_error()
+  end
+
+  def connect(_), do: configuration_error()
+
+  defp connect_options(opts) do
     config = Map.new(Keyword.take(opts, [:trust_certificates | @paths ++ @strings]))
     executable = Keyword.get(opts, :executable)
 
@@ -20,27 +26,35 @@ defmodule Wotex.OPCUA.Asyncua do
          true <- Keyword.get(opts, :security_mode, :sign_and_encrypt) == :sign_and_encrypt do
       {:ok, %{executable: executable, config: config}}
     else
-      _ -> {:error, Error.new(:security_configuration_required)}
+      _ -> configuration_error()
     end
   end
 
   @impl Wotex.OPCUA.Client
-  def request(handle, message, timeout) do
-    with {:ok, node} <- Address.new(message.node_id),
+  def request(
+        %{executable: executable, config: config},
+        %{node_id: node_id} = message,
+        timeout
+      )
+      when is_binary(executable) and is_map(config) and is_integer(timeout) and
+             timeout in 1..60_000 do
+    with {:ok, node} <- Address.new(node_id),
          id = System.unique_integer([:positive]),
          wire = %{
            id: id,
-           config: handle.config,
+           config: config,
            timeout_ms: timeout,
            message: Map.put(message, :node_id, Address.to_string(node))
          },
          {:ok, json} <- Jason.encode(wire),
          true <- byte_size(json) < 131_072 do
-      run(handle.executable, json <> "\n", id, timeout)
+      run(executable, json <> "\n", id, timeout)
     else
       _ -> {:error, Error.new(:invalid_request)}
     end
   end
+
+  def request(_, _, _), do: {:error, Error.new(:invalid_request)}
 
   @impl Wotex.OPCUA.Client
   def disconnect(_), do: :ok
@@ -58,7 +72,14 @@ defmodule Wotex.OPCUA.Asyncua do
 
   defp run(executable, json, id, timeout) do
     script = Path.join(:code.priv_dir(:wotex_opcua), "opcua_bridge.py")
-    port = Port.open({:spawn_executable, executable}, [:binary, :exit_status, args: [script]])
+
+    port =
+      Port.open({:spawn_executable, executable}, [
+        :binary,
+        :exit_status,
+        :stderr_to_stdout,
+        args: [script]
+      ])
 
     try do
       true = Port.command(port, json)
@@ -98,7 +119,8 @@ defmodule Wotex.OPCUA.Asyncua do
 
   defp known_options?(opts) do
     allowed = [:executable, :timeout, :security_mode, :trust_certificates | @paths ++ @strings]
-    Keyword.keys(opts) -- allowed == []
+    keys = Keyword.keys(opts)
+    keys -- allowed == [] and length(keys) == MapSet.size(MapSet.new(keys))
   end
 
   defp absolute?(value), do: is_binary(value) and Path.type(value) == :absolute
@@ -108,4 +130,6 @@ defmodule Wotex.OPCUA.Asyncua do
     do: Enum.all?(values, &absolute?/1)
 
   defp valid_trust?(_), do: false
+
+  defp configuration_error, do: {:error, Error.new(:security_configuration_required)}
 end

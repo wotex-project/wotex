@@ -1,4 +1,4 @@
-# WOU.01 OPCUA protocol and graduation contract
+# WOP.01 OPC UA protocol and graduation contract
 
 OPC Foundation Part 4 and Part 6 revision 1.05.07 (2026-04-15), Part 2
 revision 1.05.06 (2025-10-22), Part 7 revision 1.05.02 (2022-11-01), and OPC
