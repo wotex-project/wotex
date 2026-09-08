@@ -5,11 +5,12 @@ source_index: docs/provenance/source-index.json
 source_cohort: docs/provenance/source-cohort.json
 specifications:
   - id: WLB.01
-    version: "0.1.0"
+    version: "0.1.1"
     path: docs/specs/WLB.01-library-foundation.md
     implementation_status: implemented
-    evidence_status: partial
+    evidence_status: complete
     adoption_status: reference_available
+    evidence_manifest: docs/provenance/WLB.01-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -24,7 +25,8 @@ specifications:
     executable_evidence:
       - "test/wotex/lab/supervisor_test.exs"
       - "test/wotex/lab/library_contract_test.exs"
-    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+      - "test/wotex/lab/wlb01_evidence_manifest_test.exs"
+    compatibility_classification: The initial 0.1 API and isolated OTP lifecycle are unchanged; the fixed-seed source cohort now has a content-bound complete local evidence record. Artifact and runtime-cohort adoption remain WLB.08 obligations.
   - id: WLB.02
     version: "0.1.1"
     path: docs/specs/WLB.02-scenarios-and-reference-components.md
@@ -54,11 +56,12 @@ specifications:
       - "test/wotex/lab/runner_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.03
-    version: "1.5.0"
+    version: "1.5.1"
     path: docs/specs/WLB.03-nx-experiments.md
     implementation_status: implemented
-    evidence_status: partial
+    evidence_status: complete
     adoption_status: reference_available
+    evidence_manifest: docs/provenance/WLB.03-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -83,7 +86,8 @@ specifications:
       - "test/wotex/lab/backend_cohort_test.exs"
       - "test/wotex/lab/smart_room_test.exs"
       - "test/wotex/lab/cookbook_test.exs"
-    compatibility_classification: Documentation aligns the unchanged numerical seam with owning WNX.01 1.2.0. Room experiment 2.0.0 fixes future-input identity and replaces raw native-resource terms with Nx-serialized parameters; prior artifacts must be regenerated. Optional profiles and inert outputs remain; artifact adoption is separate.
+      - "test/wotex/lab/wlb03_evidence_manifest_test.exs"
+    compatibility_classification: Documentation aligns the unchanged numerical seam with owning WNX.01 1.2.0. Room experiment 2.0.0 fixes future-input identity and replaces raw native-resource terms with Nx-serialized parameters; prior artifacts must be regenerated. All six required local lanes now have a fixed-seed content-bound evidence record. Optional profiles and inert outputs remain; artifact adoption is separate.
   - id: WLB.04
     version: "1.4.1"
     path: docs/specs/WLB.04-runtime-and-network-adapters.md

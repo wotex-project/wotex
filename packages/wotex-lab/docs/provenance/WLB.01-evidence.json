@@ -1,0 +1,53 @@
+{
+  "assertions": [
+    {"id": "WLB-C01:passive-package", "status": "pass"},
+    {"id": "WLB-C01:isolated-instances", "status": "pass"},
+    {"id": "WLB-C01:bounded-role-supervisors", "status": "pass"},
+    {"id": "WLB-C01:failure-and-shutdown-lifecycle", "status": "pass"},
+    {"id": "WLB-C01:public-contract", "status": "pass"},
+    {"id": "WLB-C01:manifest-integrity", "status": "pass"}
+  ],
+  "attempt": 1,
+  "budgets": {
+    "default_children_per_role": 128,
+    "max_children_per_role": 10000,
+    "roles": 2
+  },
+  "cleanup": {
+    "details": {"children": 0, "instances": 0},
+    "status": "ok"
+  },
+  "dependencies": [
+    {"archive": "missing", "name": "wotex", "version": "0.1.0-source"},
+    {"archive": "missing", "name": "wotex_nx", "version": "0.1.0-source"},
+    {
+      "archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9",
+      "name": "nx",
+      "version": "0.13.1"
+    },
+    {
+      "archive": "sha256:928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1",
+      "name": "telemetry",
+      "version": "1.4.2"
+    }
+  ],
+  "durations": {"run_ms": 90},
+  "fixtures": {},
+  "inputs": [
+    "command:WOTEX_PATH_DEPS=1 mix test --seed 1 WLB.01-evidence-files",
+    "cohort:source-and-public-api-review"
+  ],
+  "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
+  "outcomes": {"test_count": 12},
+  "revision": "d69c3d1+workspace-wlb01-source-evidence",
+  "scenario_id": "WLB.01-library-foundation",
+  "schema_version": "1.0.0",
+  "seed": 1,
+  "source_tree_digest": "sha256:d6c68e2b645d255d756c8e6f7b85cba901fa44dac7880da270f645f1a944be4a",
+  "toolchain": {
+    "backend": "BEAM-supervision",
+    "elixir": "1.20.2",
+    "otp": "29",
+    "platform": "aarch64-apple-darwin"
+  }
+}

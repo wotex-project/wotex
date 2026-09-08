@@ -1,0 +1,71 @@
+{
+  "assertions": [
+    {"id": "WLB-C03:thermal-nx", "status": "pass"},
+    {"id": "WLB-C03:window-anomaly", "status": "pass"},
+    {"id": "WLB-C03:serving-batches", "status": "pass"},
+    {"id": "WLB-C03:axon-room-model", "status": "pass"},
+    {"id": "WLB-C03:backend-cohort", "status": "pass"},
+    {"id": "WLB-C03:proposal-policy", "status": "pass"},
+    {"id": "WLB-C03:livebook-contracts", "status": "pass"},
+    {"id": "WLB-C03:manifest-integrity", "status": "pass"}
+  ],
+  "attempt": 1,
+  "budgets": {
+    "deadline_ms": 60000,
+    "max_samples": 4096,
+    "max_schedule_entries": 256,
+    "tolerance_ppm": 100
+  },
+  "cleanup": {
+    "details": {"device_tensors": 0, "effects": 0, "servings": 0},
+    "status": "ok"
+  },
+  "dependencies": [
+    {"archive": "missing", "name": "wotex", "version": "0.1.0-source"},
+    {"archive": "missing", "name": "wotex_nx", "version": "0.1.0-source"},
+    {
+      "archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9",
+      "name": "nx",
+      "version": "0.13.1"
+    },
+    {
+      "archive": "sha256:682a3517489300507ac9345f28341e7fa95bc5b4960d645816074ce551795d37",
+      "name": "axon",
+      "version": "0.8.1"
+    },
+    {
+      "archive": "sha256:6249be89b4f9c9a544af4ca90353a5d4f1a63c6f1b84ab2e22327c9dc473fbf3",
+      "name": "exla",
+      "version": "0.13.1"
+    },
+    {
+      "archive": "sha256:928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1",
+      "name": "telemetry",
+      "version": "1.4.2"
+    }
+  ],
+  "durations": {"run_ms": 32600},
+  "fixtures": {
+    "expected-output.json": "sha256:ae6f8b18388457d6f8b279ad8dfc0ee49dc7a9a142fe5ca235b5cca6886d56aa",
+    "manifest.json": "sha256:65d8c0fffe9870cae485b14ea072a983fc2cceb77ae40ddd11450316c182bbe2",
+    "thing-description.json": "sha256:951b814403e00efc5e3a742cfce5c905e5f228db42978b3e59eaaee2e15d2c81"
+  },
+  "inputs": [
+    "command:WOTEX_PATH_DEPS=1 mix test --seed 1 WLB.03-evidence-files",
+    "backend:Nx.BinaryBackend-and-EXLA-CPU",
+    "exclusions:three-real-broker-cases-owned-by-WLB.04"
+  ],
+  "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
+  "outcomes": {"excluded_count": 3, "required_lanes": 6, "test_count": 52},
+  "revision": "d69c3d1+workspace-wlb03-source-evidence",
+  "scenario_id": "WLB.03-nx-experiments",
+  "schema_version": "1.0.0",
+  "seed": 1,
+  "source_tree_digest": "sha256:1f1edf2dd721ab317c6fd70383541b00f5741e21720f0af92af24a30ff6674ca",
+  "toolchain": {
+    "backend": "Nx.BinaryBackend-Evaluator-and-EXLA-CPU",
+    "elixir": "1.20.2",
+    "otp": "29",
+    "platform": "aarch64-apple-darwin"
+  }
+}

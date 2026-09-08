@@ -1,7 +1,7 @@
 # WLB.01: Library and instance foundation
 
-Specification version: 0.1.0. Contract: accepted. Source and evidence status are
-owned by `catalogue.yaml`; contract acceptance does not grant release readiness.
+Specification version: 0.1.1. Contract: accepted. Source and local evidence are
+complete; artifact and runtime-cohort adoption remain owned by WLB.08.
 
 ## Ownership
 
@@ -49,6 +49,9 @@ isolated role failure including a brutal kill of one role with the sibling's
 children untouched, and shutdown. `library_contract_test.exs` checks the
 application callback, package dependency direction and callable public surface.
 These are source checks; WLB.08 owns artifact and runtime-cohort evidence.
+`docs/provenance/WLB.01-evidence.json` binds the fixed-seed 12-test result to
+the exact source, lock and API-review cohort and records zero surviving
+instances or children.
 
 ## Compatibility
 

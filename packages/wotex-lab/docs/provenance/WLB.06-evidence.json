@@ -64,7 +64,7 @@
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:6b5f170a9277e13bdb2edf4a484d7db5791a21ec7bc22a5f0fa16d528840cd92",
+  "source_tree_digest": "sha256:edac332ff210e4d35ae0ff46b5e9f522522cfee3cc75c7e51dfe52ed4604d15c",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",

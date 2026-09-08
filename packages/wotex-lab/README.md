@@ -312,8 +312,9 @@ query budgets, isolation, privacy, components and acceptance tests.
 
 `planned` means an accepted contract with no implementation, not a deferred
 milestone. The scenario runner is implemented with partial cross-frontend
-evidence; the wider Nx programme remains partial. The small OTP foundation is
-implemented. No entry claims artifact verification. The
+evidence. The small OTP foundation and all six required local Nx lanes have
+complete content-bound evidence; wider upstream and release programmes remain
+partial. No entry claims artifact verification. The
 [source baseline](docs/provenance/standards-and-dependencies.md) records what
 was actually inspected. Package publication, standards conformance, model
 accuracy and stable API admission are separate claims.
