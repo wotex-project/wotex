@@ -155,6 +155,9 @@ defmodule Wotex.Modbus.ConnectionTest do
           [host: {999, 1, 1, 1}],
           [host: {1, 2}],
           [host: "127.0.0.1", security: :tls],
+          [host: "127.0.0.1", securty: :tls],
+          [host: "127.0.0.1", security: :none, security: :tls],
+          [host: "127.0.0.1", unknown: true],
           [host: "127.0.0.1", port: 0],
           [host: "127.0.0.1", timeout: 0],
           [host: "127.0.0.1", unit_id: 0]

@@ -8,7 +8,8 @@ defmodule Wotex.Modbus.Transport do
   @impl Wotex.Runtime.Transport
   def request(%Request{} = request, %ExecutionContext{credential: nil}, config)
       when is_list(config) do
-    with {:ok, mapping} <-
+    with :ok <- validate_config(config),
+         {:ok, mapping} <-
            Mapping.command(request.form, request.operation, request.input,
              base: request.resolved_href
            ),
@@ -63,4 +64,26 @@ defmodule Wotex.Modbus.Transport do
   end
 
   defp timeout(_, _), do: {:error, Error.new(:invalid_timeout)}
+
+  defp validate_config(config) do
+    if Keyword.keyword?(config) do
+      keys = Keyword.keys(config)
+
+      cond do
+        keys -- [:timeout, :security] != [] ->
+          {:error, Error.new(:invalid_options)}
+
+        length(keys) != MapSet.size(MapSet.new(keys)) ->
+          {:error, Error.new(:invalid_options)}
+
+        Keyword.get(config, :security, :none) != :none ->
+          {:error, Error.new(:unsupported_security, :security)}
+
+        true ->
+          :ok
+      end
+    else
+      {:error, Error.new(:invalid_options)}
+    end
+  end
 end

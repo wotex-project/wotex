@@ -36,3 +36,5 @@ to one interaction, uses finite deadlines covering connection and exchange,
 and returns identity-bound Runtime Results. Credentials are not accepted by
 the classic TCP profile. Unsupported security never downgrades. Persistent
 polling consumers can use explicit `Connection` child specifications instead.
+Runtime configuration admits only `timeout` and `security: :none`; malformed,
+unknown or duplicate keys return a structured error before network access.

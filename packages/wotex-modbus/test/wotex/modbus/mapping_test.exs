@@ -146,6 +146,17 @@ defmodule Wotex.Modbus.MappingTest do
 
     assert {:error, _} = Transport.request(%{request | deadline: :invalid}, execution, [])
     assert {:error, _} = Transport.request(request, execution, timeout: 0)
+
+    for config <- [
+          [:invalid],
+          [unknown: true],
+          [timeout: 100, timeout: 200],
+          [security: :tls],
+          [security: :none, security: :tls]
+        ] do
+      assert {:error, %Wotex.Modbus.Error{}} = Transport.request(request, execution, config)
+    end
+
     assert {:error, _} = Transport.request(request, ExecutionContext.new(context, "secret"), [])
     assert {:error, _} = Transport.subscribe(nil, nil, nil, nil)
     assert {:error, _} = Transport.unsubscribe(nil, nil, nil, nil)

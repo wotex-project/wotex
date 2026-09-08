@@ -39,6 +39,8 @@ Timeout, malformed response or correlation failure closes the session; a late
 response cannot satisfy a later request. Disconnect is idempotent. Owner death
 closes the socket. Load alone starts nothing. Connection health means local
 socket ownership only; compatibility health performs the documented read.
+Connection options are allowlisted and unique. Unknown or duplicate keys,
+including misspelled or conflicting security selectors, fail before TCP startup.
 
 `Error` contains library-owned code/field/details, retryable=false, and an effect
 of `:none` or `:unknown`. Any failed write after transmission conservatively

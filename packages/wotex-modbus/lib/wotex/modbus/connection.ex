@@ -47,7 +47,9 @@ defmodule Wotex.Modbus.Connection do
   @doc "Validates explicit connection options without opening a socket."
   @spec config(term()) :: {:ok, map()} | {:error, Error.t()}
   def config(opts) when is_list(opts) do
-    if Keyword.keyword?(opts), do: config_options(opts), else: {:error, Error.new(:invalid_options)}
+    if admitted_options?(opts),
+      do: config_options(opts),
+      else: {:error, Error.new(:invalid_options)}
   end
 
   def config(_), do: {:error, Error.new(:invalid_options)}
@@ -145,11 +147,13 @@ defmodule Wotex.Modbus.Connection do
     timeout = Keyword.get(opts, :timeout, 5000)
     transaction = Keyword.get(opts, :transaction_id, 0)
     owner = Keyword.get(opts, :owner, self())
+    unit = Keyword.get(opts, :unit_id, 1)
 
     with :ok <- security(Keyword.get(opts, :security, :none)),
          {:ok, host} <- address(host) do
       if is_integer(port) and port in 1..65_535 and is_integer(timeout) and timeout in 1..60_000 and
-           is_integer(transaction) and transaction in 0..65_535 and is_pid(owner),
+           is_integer(transaction) and transaction in 0..65_535 and is_pid(owner) and
+           (unit in 1..247 or unit == 255),
          do:
            {:ok,
             %{host: host, port: port, timeout: timeout, transaction_id: transaction, owner: owner}},
@@ -177,4 +181,15 @@ defmodule Wotex.Modbus.Connection do
   end
 
   defp address(_), do: {:error, Error.new(:invalid_host, :host)}
+
+  defp admitted_options?(opts) do
+    if Keyword.keyword?(opts) do
+      keys = Keyword.keys(opts)
+      allowed = [:host, :port, :timeout, :transaction_id, :owner, :unit_id, :security]
+
+      keys -- allowed == [] and length(keys) == MapSet.size(MapSet.new(keys))
+    else
+      false
+    end
+  end
 end
