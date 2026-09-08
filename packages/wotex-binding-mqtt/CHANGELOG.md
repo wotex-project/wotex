@@ -2,9 +2,8 @@
 
 ## 0.1.0
 
-- Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
-  checksums, loaded version and bounded parser regression tests. Other advisory
-  checks remain active; remove this acknowledgement when metadata is corrected.
+- Retain exact Decimal 3.1.1 lock and bounded parser regressions while removing
+  the stale, unmatched advisory suppression; all advisory checks remain active.
 
 - Establish the standalone, caller-owned MQTT binding package.
 - Hand the client port the subscription owner pid instead of a delivery
