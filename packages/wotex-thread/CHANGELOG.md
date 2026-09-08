@@ -10,3 +10,6 @@
 - Bound daemon line allocation and harden direct owner/client callback validation.
 - Add executable owner-death and oversized-response coverage.
 - Remove the stale Decimal advisory exception while retaining the reviewed regression.
+
+- Define the target software contract and ordered implementation packages with
+  pinned sources, explicit APIs/limits and required software acceptance vectors.

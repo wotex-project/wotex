@@ -3,6 +3,8 @@
 Consumer-neutral Thread library for W3C Web of Things consumers.
 Development version: `0.1.0-dev`.
 
+Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
+
 The implemented package provides bounded Operational Dataset TLVs and a real
 read-only `ot-daemon` Unix-socket adapter. Dataset inspection redacts key material;
 explicit `encode/1` returns the raw bytes. Unknown TLVs are retained, duplicates
@@ -61,3 +63,11 @@ Optional interoperability suites fail if invoked without their required peer.
 The hardware suite has not been run in this workspace because no configured
 OpenThread daemon/radio was supplied. Commissioning remains outside this profile.
 No remote repository, published package or publication action is implied.
+
+## Software implementation contract
+
+The [ordered implementation sequence](docs/plans/software-implementation.md)
+and [specification index](docs/specs/WTH-index.md) define the remaining software
+profile with exact behavior, limits, failure transitions and acceptance vectors.
+These target contracts are build instructions, not claims that every feature
+already exists. Required software peers are separate from physical-device tests.

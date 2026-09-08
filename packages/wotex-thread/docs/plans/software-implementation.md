@@ -1,0 +1,179 @@
+# WTH software implementation sequence
+
+This is the self-contained build handoff for the defined software profile, not
+a statement that these tasks have already passed. The verified starting point
+is commit `ce7862b`; read [current executable evidence](../provenance/executable-evidence.md)
+for the tests and limitations at that baseline. Existing passing code is the
+starting implementation, not something to replace with fresh scaffolding.
+
+## Read before changing code
+
+1. Read `CLAUDE.md` and matching repository rules/skills.
+2. Read [WTH.00 — shared software rules](../specs/WTH.00-library-contract.md).
+3. Read [WTH.10 — exact target profile](../specs/WTH.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
+4. Read [primary source pins and access limits](../provenance/primary-sources.md).
+5. Select the first work package below whose acceptance evidence is absent.
+
+The numbered sequence is dependency order: each package depends on all preceding
+packages. Each is one bounded behavior plus its tests/documentation. A large
+package may be split into consecutive local commits along its stated sub-behaviors;
+never commit knowingly failing tests. Do not reimplement a satisfied requirement
+merely to produce a commit. Every proposed module, API and test path below is a
+target addition unless it already exists; no placeholder file implies completion.
+
+For each requirement, record its ID in an ExUnit/native test name or a fixture
+manifest. Vectors specify expected outcomes in .10. The implementation chooses
+ordinary internal function names and data structures, while the public behavior,
+state transitions, limits, failure policy and transport choices are fixed there.
+If an upstream API cannot meet a requirement, add the smallest adapter needed
+or document a precise source-backed contract correction with regression evidence;
+do not silently skip, simulate or weaken the requirement.
+
+## Ordered work packages
+
+### WTH-P01: Harden dataset syntax and daemon parsing
+
+- Requirements: WTH-S01, WTH-S02; shared C01–C10 apply wherever relevant.
+- Acceptance vectors: WTH-V01, WTH-V03.
+- Change surface: Dataset and read-only Daemon request/response boundary.
+- Test destinations: `test/wotex/thread/dataset_boundary_test.exs`, `test/wotex/thread/daemon_fault_test.exs`.
+- Done when: Preserve unknown TLVs and exact typed daemon results; invalid/missing/extra output closes the socket and never becomes success.
+- Suggested local commit: `feat: harden dataset syntax and daemon parsing`.
+
+### WTH-P02: Own an explicit openthread host sdk instance
+
+- Requirements: WTH-S03; shared C01–C10 apply wherever relevant.
+- Acceptance vectors: WTH-V04.
+- Change surface: new OpenThread adapter, C bridge and POSIX event-loop integration.
+- Test destinations: `test/wotex/thread/sdk_bridge_test.exs`, `test/native/owner_test.c`.
+- Done when: Explicit RCP/interface/store ownership, versioned framing, nonblocking input and reverse EOF/startup cleanup are enforced.
+- Suggested local commit: `feat: own an explicit openthread host sdk instance`.
+
+### WTH-P03: Validate datasets through the pinned sdk
+
+- Requirements: WTH-S01, WTH-S03; shared C01–C10 apply wherever relevant.
+- Acceptance vectors: WTH-V02.
+- Change surface: validate_dataset/get_dataset bridge operations.
+- Test destinations: `test/native/dataset_test.c`, `test/wotex/thread/sdk_dataset_test.exs`.
+- Done when: Call otDatasetIsValid with TLVs and active/pending flag; presence-complete invalid combinations fail before mutation and raw secrets stay redacted.
+- Suggested local commit: `feat: validate datasets through the pinned sdk`.
+
+### WTH-P04: Implement explicit formation and management callbacks
+
+- Requirements: WTH-S04; shared C01–C10 apply wherever relevant.
+- Acceptance vectors: WTH-V05, WTH-V06, WTH-V07.
+- Change surface: form_network, set_enabled and management Active/Pending Set operations.
+- Test destinations: `test/native/management_test.c`, `test/wotex/thread/management_test.exs`.
+- Done when: Formation requires empty owned state and explicit authorization; management completes on callback, reports acceptance separately from effectiveness and safely retires late contexts.
+- Suggested local commit: `feat: implement explicit formation and management callbacks`.
+
+### WTH-P05: Implement commissioner and joiner ownership
+
+- Requirements: WTH-S05; shared C01–C10 apply wherever relevant.
+- Acceptance vectors: WTH-V08, WTH-V09.
+- Change surface: SDK commissioner/joiner state callbacks and admission records.
+- Test destinations: `test/native/commissioning_test.c`.
+- Done when: Finite exact-identity admission, PSKd validation, final role/completion states and timeout/stop cleanup work without wildcard admission or retries.
+- Suggested local commit: `feat: implement commissioner and joiner ownership`.
+
+### WTH-P06: Deliver bounded non secret state reports
+
+- Requirements: WTH-S06; shared C01–C10 apply wherever relevant.
+- Acceptance vectors: WTH-V10, WTH-V11.
+- Change surface: native Subscription owner, state flag conversion and capability documentation.
+- Test destinations: `test/wotex/thread/state_subscription_test.exs`.
+- Done when: Initial snapshot and permitted state coalescing are generation-bound; Forms remain read-only inspection and unsupported Runtime streams are explicit.
+- Suggested local commit: `feat: deliver bounded non secret state reports`.
+
+### WTH-P07: Build a real openthread software network fixture
+
+- Requirements: WTH-S01, WTH-S02, WTH-S03, WTH-S04, WTH-S05, WTH-S06; shared C01–C10 apply wherever relevant.
+- Acceptance vectors: WTH-V02, WTH-V03, WTH-V05, WTH-V06, WTH-V07, WTH-V08, WTH-V09, WTH-V12.
+- Change surface: pinned simulation RCP/FTD, separate POSIX daemon and SDK-host instances.
+- Test destinations: `test/interop/openthread_test.exs`.
+- Done when: Unique simulated node IDs, isolated state and actual management/commissioning callbacks prove the profile; no two owners share a radio.
+- Suggested local commit: `test: build a real openthread software network fixture`.
+
+### WTH-P08: Prove host management cleanup and reproducibility
+
+- Requirements: WTH-S01, WTH-S02, WTH-S03, WTH-S04, WTH-S05, WTH-S06; shared C01–C10 apply wherever relevant.
+- Acceptance vectors: WTH-V13.
+- Change surface: native sanitizers, stress and complete software runner.
+- Test destinations: `test/software/lifecycle_stress_test.exs`.
+- Done when: Exercise callback lifetime/use-after-free faults plus required concurrency/version/archive/package gates; hardware remains a separate optional lane.
+- Suggested local commit: `test: prove host management cleanup and reproducibility`.
+
+## Reproducible software fixture contract
+
+Add or extend `test/interop/build_software.sh` and `test/interop/run_software.sh`
+as explicit maintainer-invoked entry points. They take exactly one absolute
+workspace argument. Build requires a disposable empty workspace or a matching
+manifest; refuses an unrelated nonempty directory; downloads upstream source
+archives at the .10 pins without configuring any Git remote. Record archive
+SHA-256, source commit, compiler/SDK/library versions, build flags, binary hashes
+and fixture configuration in that workspace. Check hashes on reuse. Keep SDKs,
+native builds, keys, certificates, sockets and logs out of the source package.
+
+The run script owns only processes/containers created from that manifest, assigns
+disposable local ports/state, waits for explicit readiness with a finite timeout,
+exports the fixture configuration to tests, and traps all exits to release owned
+resources. It must return nonzero for missing tools, unavailable required kernel
+facilities, missing responses, failed assertions or cleanup failure. Do not
+convert a failed setup to an ExUnit skip. Existing hardware tests require separate
+explicit target configuration and are never selected by this runner.
+
+Use this command contract once the runner is implemented:
+
+```sh
+./test/interop/build_software.sh /absolute/disposable/fixture-workspace
+./test/interop/run_software.sh /absolute/disposable/fixture-workspace
+```
+
+The runner executes `mix test --include interop --include software --exclude hardware`
+and all required native tests/audits from .10. Add `@tag :software` only to tests
+needing this software fixture/stress setup; normal deterministic contract tests
+remain in `mix check`. The explicit runner sets `WOTEX_REQUIRE_SOFTWARE=1` and
+the test helper must make missing fixture configuration fail under that setting.
+Label same-stack, independent-stack, malformed-peer and injected-contract evidence
+separately in the results. Hardware absence is not a software test result.
+
+## Verification and commit procedure
+
+Run focused tests while implementing a package, then run `mix check` before its
+local commit. The ordinary Hex dependency path is authoritative. For the existing
+explicit sibling-development setup, `WOTEX_PATH_DEPS=1 mix check` selects local
+dependency sources; record which mode was used. Do not lower coverage, disable
+warnings, waive audits or exclude newly failing code to make the gate pass.
+Native changes additionally run their required native tests and dependency audit;
+C/C++ adapters run ASan/UBSan in the Linux fault lane.
+
+After each package, update the current-profile/README capability claims only for
+behavior that now passed, and refresh [executable evidence](../provenance/executable-evidence.md)
+with command, versions, vector paths/digests and result. Keep unexecuted requirements
+explicit. Use the author and committer required by `CLAUDE.md`; never configure
+remotes, push, tag, publish, change visibility or edit a consumer.
+
+The final package also runs the full .00 C09 matrix, all .10 vectors and software
+peers, then a clean committed-source archive with the lockfile through `mix check`
+and out-of-tree Hex package compilation. Confirm no Application callback or
+dependency-load I/O, no missing packaged bridge assets, no downloaded SDK/build/
+credential artifacts and no consumer-specific names/history. A passing coverage
+number or stub adapter cannot substitute for a required protocol assertion.
+
+## Completion checklist
+
+- Every S requirement has its listed V assertions passing, with current digests.
+- C01 compatibility, C02 malformed boundaries, C03 ownership, C04 errors/effects,
+  applicable C05/C06 streams, C07 native framing, C08 redaction/telemetry and
+  C09 stress/matrix each have executable evidence or an explicit scope-based
+  inapplicable entry. No missing SDK/software facility is inapplicable.
+- All required software lanes actually ran, including negative security and
+  cancellation/resource assertions where the profile defines them.
+- Current capabilities/docs agree with the implementation; target requirements
+  have not been presented as baseline achievements.
+- The clean-source/package gates pass, intended commits are local and the
+  working tree contains no uncommitted tracked implementation change.
+
+Physical-device validation, certification, consumer migration and publication
+remain separate activities. They are not reasons to leave defined software
+requirements unimplemented or to claim unexecuted software tests passed.
