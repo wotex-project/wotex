@@ -252,12 +252,10 @@ defmodule Wotex.JSON do
   end
 
   defp walk(values, state) when is_list(values) do
-    values
-    |> Stream.with_index()
-    |> Enum.reduce_while({:ok, count_node(state)}, &walk_item(&1, &2, state))
+    walk_list(values, count_node(state), state, 0)
   end
 
-  defp walk(value, state) when is_map(value) do
+  defp walk(value, state) when is_map(value) and not is_struct(value) do
     with :ok <- check_collection(map_size(value), state) do
       Enum.reduce_while(value, {:ok, count_node(state)}, &walk_member(&1, &2, state))
     end
@@ -267,13 +265,18 @@ defmodule Wotex.JSON do
     {:error, Error.new(:invalid_json_value, :value, "Value cannot be represented in JSON", path)}
   end
 
-  defp walk_item({value, index}, {:ok, acc_state}, parent) do
+  defp walk_list([], acc_state, _parent, _index), do: {:ok, acc_state}
+
+  defp walk_list([value | rest], acc_state, parent, index) do
     with :ok <- check_collection(index + 1, parent),
          {:ok, next_state} <- walk(value, child_state(parent, acc_state, index)) do
-      {:cont, {:ok, next_state}}
-    else
-      {:error, error} -> {:halt, {:error, error}}
+      walk_list(rest, next_state, parent, index + 1)
     end
+  end
+
+  defp walk_list(_tail, _acc_state, parent, _index) do
+    {:error,
+     Error.new(:invalid_json_value, :value, "JSON arrays must be proper lists", parent.path)}
   end
 
   defp walk_member({key, child}, {:ok, acc_state}, parent) when is_binary(key) do

@@ -42,6 +42,44 @@ defmodule Wotex.JSONTest do
              JSON.encode(%{"value" => <<255>>})
   end
 
+  test "WTX.03 rejects top-level and nested structs without invoking Enumerable" do
+    for value <- [
+          %Wotex.Form{value: nil},
+          ~D[2026-01-01],
+          MapSet.new([1]),
+          1..3,
+          %{__struct__: UnknownJSONStruct, secret: "private-canary"}
+        ] do
+      assert {:error, %Error{code: :invalid_json_value, phase: :value, path: "/"}} =
+               JSON.validate(value)
+
+      assert {:error, %Error{code: :invalid_json_value, path: "/nested/0"} = error} =
+               JSON.encode(%{"nested" => [value]})
+
+      refute inspect(error) =~ "private-canary"
+    end
+
+    assert {:error, %Error{code: :invalid_json_value}} = Wotex.Form.new(%Wotex.Form{value: nil})
+    value = %{"__struct__" => "extension", "value" => true}
+    assert :ok = JSON.validate(value)
+    assert {:ok, bytes} = JSON.encode(value)
+    assert Jason.decode!(bytes) == value
+  end
+
+  property "WTX.03 rejects improper arrays at their containing path without raising" do
+    check all(
+            values <- list_of(json_scalar(), max_length: 20),
+            tail <- one_of([constant(:invalid_tail), binary(), integer(), constant(%{})])
+          ) do
+      improper = Enum.reduce(Enum.reverse([nil | values]), tail, fn item, rest -> [item | rest] end)
+
+      assert {:error, %Error{code: :invalid_json_value, path: "/nested"}} =
+               JSON.validate(%{"nested" => improper})
+
+      assert {:error, %Error{code: :invalid_json_value}} = JSON.encode(improper)
+    end
+  end
+
   test "rejects invalid UTF-8 strings and object keys without leaking invalid paths" do
     for bytes <- [<<255>>, <<0xC0, 0xAF>>, <<0xED, 0xA0, 0x80>>, <<0xF0, 0x90>>] do
       assert {:error, %Error{code: :invalid_string, path: "/nested/0"}} =
