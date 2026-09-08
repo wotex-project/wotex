@@ -62,6 +62,17 @@ No remote repository, published package or publication action is implied.
 
 The [ordered implementation sequence](docs/plans/software-implementation.md)
 and [specification index](docs/specs/WBL-index.md) define the remaining software
-profile with exact behavior, limits, failure transitions and acceptance vectors.
+profile with exact behavior, limits, failure transitions and acceptance scenarios.
 These target contracts are build instructions, not claims that every feature
 already exists. Required software peers are separate from physical-device tests.
+
+The [standalone client contract](docs/specs/WBL.11-standalone-client-and-preservation.md)
+defines the supplied backend, exact native APIs and retained end-to-end workflows.
+Its [concrete corpus](docs/specs/fixtures/contract-v1.json) contains specified,
+unexecuted cases; the scenario tables alone are not executable acceptance evidence.
+
+The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
+profiles from planned contracts. The [Wotex integration contract](docs/specs/WBL.12-wotex-integration.md)
+defines explicit Runtime profiles, route/value/error boundaries and real
+ConsumedThing acceptance tests. These are target requirements; a passing baseline
+gate does not accept the unfinished software profile.

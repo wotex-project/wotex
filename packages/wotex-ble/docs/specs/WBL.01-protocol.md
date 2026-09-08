@@ -1,3 +1,13 @@
+---
+spec:
+  id: WBL.01
+  title: "BLE protocol and graduation contract"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-ble
+  updated: 2026-09-09
+---
+
 # WBL.01 BLE protocol and graduation contract
 
 Bluetooth Core 6.3, adopted 2026-05-05, Vol 3 Parts F and G is the ATT/GATT

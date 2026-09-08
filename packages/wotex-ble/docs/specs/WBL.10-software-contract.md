@@ -1,6 +1,17 @@
+---
+spec:
+  id: WBL.10
+  title: "Complete BlueZ GATT central software profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-ble
+  updated: 2026-09-09
+---
+
 # WBL.10 Complete BlueZ GATT central software profile
 
 Read [WBL.00](WBL.00-library-contract.md) and the [implementation sequence](../plans/software-implementation.md).
+[WBL.11](WBL.11-standalone-client-and-preservation.md) fixes the native API, retained workflows and concrete fixture contract.
 Baseline `cb56121` provides UUID/address/value helpers, Forms and a bounded
 one-shot `busctl` ReadValue/acknowledged WriteValue adapter. Persistent central
 ownership, live target verification, notifications and software GATT peers remain
@@ -119,8 +130,10 @@ in metadata. BlueZ performs CCCD handling and ATT indication confirmation;
 never issue a second manual CCCD write or forged confirmation.
 
 Accept only Value changes from the bound interface/path/sender and byte type.
-Every signal is a new report; D-Bus exposes no ATT sequence identity for
-value-based deduplication. No synthetic initial read is emitted as a notification.
+Every bound signal is a new value-change report; D-Bus exposes no ATT sequence
+identity for value-based deduplication. A successful ReadValue can also update
+Value. Reports therefore carry source :bluez_value_change, not an assertion that
+each signal originated in an ATT notification; see WBL-N02. No synthetic initial read is emitted as a notification.
 Notifying false, service removal, owner change and device loss terminate the
 subscription. At most one active subscription per characteristic per session;
 duplicate subscribe is `:already_subscribed`. Native subscriptions across
@@ -143,7 +156,7 @@ the S01 type names `uint8`, `int8`, `uint16`, `int16`, `uint32`, `int32`,
 `uint64`, `int64`, `float32`, `float64`, `boolean`, `utf8`) and
 `wotex:bleByteOrder` (`little` by default or `big`). These are library extensions,
 not Bluetooth SIG or W3C terms. Reject invalid known values; preserve unrelated
-extensions. The same decoder applies to subscribed byte values. An Event here carries a characteristic change notification; it does
+extensions. The same decoder applies to subscribed byte values. An Event here carries a characteristic value change; it does
 not claim a decoded SIG application profile. Pairing is explicit native control,
 never a side effect of reading a Form. Runtime security requirements that BlueZ
 cannot attest must fail as unsupported rather than treating Paired as proof of
@@ -157,13 +170,13 @@ object changes invalidate the cursor. Keep the complete bounded snapshot in
 the bridge, and enforce C07 line size on each page.
 Byte values use C07 base64 envelopes; paths/UUIDs/flags remain explicit strings
 or finite enums. A stream report includes subscription ID, generation, bytes
-and effective mode. A pairing challenge uses a separate typed event with a
+and effective mode plus source `bluez_value_change`. A pairing challenge uses a separate typed event with a
 unique challenge ID and deadline; replies must match that ID exactly once.
 `health_check/1` in persistent mode checks current Device1 Connected and
 ServicesResolved; baseline mode retains its probe-required error. Health does
 not imply that a particular characteristic remains readable.
 
-## Acceptance vectors and software fixture
+## Acceptance scenarios and software fixture
 
 | ID | Scenario | Required result |
 | --- | --- | --- |

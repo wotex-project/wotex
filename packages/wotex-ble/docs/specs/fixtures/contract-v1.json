@@ -1,0 +1,340 @@
+{
+  "format_version": "1.0.0",
+  "package": "wotex_ble",
+  "status": "specified_unexecuted",
+  "normalization_spec": "../WBL.11-standalone-client-and-preservation.md",
+  "cases": [
+    {
+      "id": "WBL-F01",
+      "requirements": [
+        "WBL-S01",
+        "WBL-N01"
+      ],
+      "kind": "pure",
+      "operation": "UUID.normalize",
+      "input": {
+        "value": 6159
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": "0000180f-0000-1000-8000-00805f9b34fb"
+        }
+      }
+    },
+    {
+      "id": "WBL-F02",
+      "requirements": [
+        "WBL-S01",
+        "WBL-N01"
+      ],
+      "kind": "pure",
+      "operation": "UUID.encode",
+      "input": {
+        "value": "180f"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "bytes_hex": "fb349b5f80000080001000000f180000"
+          }
+        }
+      }
+    },
+    {
+      "id": "WBL-F03",
+      "requirements": [
+        "WBL-S01",
+        "WBL-N01"
+      ],
+      "kind": "pure",
+      "operation": "Value.decode",
+      "input": {
+        "bytes_hex": "3412",
+        "type": "uint16",
+        "options": {
+          "byte_order": "little"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": 4660
+        }
+      }
+    },
+    {
+      "id": "WBL-F04",
+      "requirements": [
+        "WBL-S01",
+        "WBL-N01"
+      ],
+      "kind": "pure",
+      "operation": "Value.encode",
+      "input": {
+        "value": -1,
+        "type": "int16",
+        "options": {
+          "byte_order": "little"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "bytes_hex": "ffff"
+          }
+        }
+      }
+    },
+    {
+      "id": "WBL-F05",
+      "requirements": [
+        "WBL-S01",
+        "WBL-N02"
+      ],
+      "kind": "pure",
+      "operation": "Address.from_topic",
+      "input": {
+        "value": "180f/not-a-uuid"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "invalid_address",
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WBL-F06",
+      "requirements": [
+        "WBL-S04",
+        "WBL-N02"
+      ],
+      "kind": "lifecycle_contract",
+      "operation": "subscribe_value_changes",
+      "input": {
+        "sender": "bus-1",
+        "path": "/org/bluez/hci0/dev_00_11_22_33_44_55/service001/char002",
+        "mode": "notify",
+        "flags": [
+          "read",
+          "notify"
+        ],
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "subscribe",
+            "id": "sub-1"
+          },
+          {
+            "at_ms": 1,
+            "event": "start_notify_ok"
+          },
+          {
+            "at_ms": 2,
+            "event": "value_changed",
+            "sender": "bus-1",
+            "path": "bound",
+            "bytes_hex": "01"
+          },
+          {
+            "at_ms": 3,
+            "event": "value_changed",
+            "sender": "bus-1",
+            "path": "bound",
+            "bytes_hex": "01"
+          },
+          {
+            "at_ms": 4,
+            "event": "cancel",
+            "id": "sub-1"
+          },
+          {
+            "at_ms": 5,
+            "event": "stop_notify_ok"
+          },
+          {
+            "at_ms": 6,
+            "event": "value_changed",
+            "sender": "bus-1",
+            "path": "bound",
+            "bytes_hex": "02"
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "deliveries": [
+            {
+              "bytes_hex": "01",
+              "source": "bluez_value_change"
+            },
+            {
+              "bytes_hex": "01",
+              "source": "bluez_value_change"
+            }
+          ],
+          "calls": {
+            "start_notify": 1,
+            "stop_notify": 1
+          },
+          "sender_pairs": [
+            [
+              "bus-1",
+              "bus-1"
+            ]
+          ],
+          "active_subscriptions": 0,
+          "deliveries_after_cancel": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-F07",
+      "requirements": [
+        "WBL-S04",
+        "WBL-N02"
+      ],
+      "kind": "lifecycle_contract",
+      "operation": "subscribe_wrong_source",
+      "input": {
+        "sender": "bus-1",
+        "path": "/org/bluez/hci0/dev_00_11_22_33_44_55/service001/char002",
+        "mode": "indicate",
+        "flags": [
+          "indicate"
+        ],
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "subscribe",
+            "id": "sub-1"
+          },
+          {
+            "at_ms": 1,
+            "event": "start_notify_ok"
+          },
+          {
+            "at_ms": 2,
+            "event": "value_changed",
+            "sender": "bus-2",
+            "path": "bound",
+            "bytes_hex": "01"
+          },
+          {
+            "at_ms": 3,
+            "event": "value_changed",
+            "sender": "bus-1",
+            "path": "/unrelated",
+            "bytes_hex": "02"
+          },
+          {
+            "at_ms": 4,
+            "event": "cancel",
+            "id": "sub-1"
+          },
+          {
+            "at_ms": 5,
+            "event": "stop_notify_ok"
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "deliveries": [],
+          "calls": {
+            "start_notify": 1,
+            "stop_notify": 1
+          },
+          "active_subscriptions": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-F08",
+      "requirements": [
+        "WBL-S04",
+        "WBL-N01"
+      ],
+      "kind": "lifecycle_contract",
+      "operation": "subscribe_ambiguous_procedure",
+      "input": {
+        "flags": [
+          "notify",
+          "indicate"
+        ],
+        "mode": "indicate",
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "subscribe",
+            "id": "sub-1"
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "result": {
+            "error": {
+              "code": "unsupported_procedure_selection",
+              "effect": "none"
+            }
+          },
+          "calls": {
+            "start_notify": 0
+          },
+          "active_subscriptions": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-F09",
+      "requirements": [
+        "WBL-S01",
+        "WBL-N01"
+      ],
+      "kind": "pure",
+      "operation": "Value.decode",
+      "input": {
+        "bytes_hex": "02",
+        "type": "boolean",
+        "options": {}
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "invalid_value",
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WBL-F10",
+      "requirements": [
+        "WBL-S01",
+        "WBL-N01"
+      ],
+      "kind": "pure",
+      "operation": "UUID.decode",
+      "input": {
+        "bytes_hex": "0f18"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": "0000180f-0000-1000-8000-00805f9b34fb"
+        }
+      }
+    }
+  ]
+}

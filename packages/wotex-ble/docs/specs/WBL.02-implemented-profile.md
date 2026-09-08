@@ -1,3 +1,13 @@
+---
+spec:
+  id: WBL.02
+  title: "Implemented BLE profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-ble
+  updated: 2026-09-09
+---
+
 # WBL.02 Implemented BLE profile
 
 This is a local Wotex Form profile, not a standardized W3C BLE binding:

@@ -40,3 +40,10 @@ native dependency audit remains mandatory. Its asyncio MessageBus is the chosen
 persistent bridge boundary. The isolated VM fixture uses the inspected btvirt
 `-L -l2` options and a required VHCI-enabled kernel. These are software GATT
 interoperability requirements; physical RF and qualification remain separate.
+
+## Standalone contract review, 2026-09-09
+
+[WBL.11](../specs/WBL.11-standalone-client-and-preservation.md) records
+additional source-pinned API and retained-workflow decisions. Its concrete
+fixtures are specified, unexecuted acceptance data. This review does not add
+an interoperability or standards-conformance result.
