@@ -15,6 +15,7 @@ defmodule WotexLabWorkbench.Sessions do
   use GenServer
 
   alias Wotex.Lab.Error
+  alias WotexLabWorkbench.Observability.Panels
   alias WotexLabWorkbench.Room
 
   @commands ~w(start_room run cancel approve read register query export verify ask)a
@@ -28,6 +29,7 @@ defmodule WotexLabWorkbench.Sessions do
           created_at: integer(),
           expires_at: integer(),
           theme: String.t(),
+          dashboard_panels: [String.t()],
           room: pid() | nil
         }
 
@@ -64,6 +66,12 @@ defmodule WotexLabWorkbench.Sessions do
   @spec put_theme(GenServer.server(), term(), term()) :: {:ok, session()} | {:error, Error.t()}
   def put_theme(server \\ __MODULE__, token, theme),
     do: GenServer.call(server, {:theme, token, theme})
+
+  @doc "Stores a closed, bounded metric-panel arrangement for a session."
+  @spec put_dashboard(GenServer.server(), term(), term()) ::
+          {:ok, session()} | {:error, Error.t()}
+  def put_dashboard(server \\ __MODULE__, token, panel_ids),
+    do: GenServer.call(server, {:dashboard, token, panel_ids})
 
   @doc "Revokes a session and stops its room, discarding pending work."
   @spec revoke(GenServer.server(), term()) :: :ok | {:error, Error.t()}
@@ -103,6 +111,7 @@ defmodule WotexLabWorkbench.Sessions do
         created_at: now,
         expires_at: now + state.ttl_ms,
         theme: "system",
+        dashboard_panels: Panels.defaults(),
         room: nil
       }
 
@@ -142,6 +151,17 @@ defmodule WotexLabWorkbench.Sessions do
 
       {:error, error, state} ->
         {:reply, {:error, error}, state}
+    end
+  end
+
+  def handle_call({:dashboard, token, panel_ids}, _from, state) do
+    with {:ok, session, state} <- live(state, token),
+         {:ok, panels} <- Panels.select(panel_ids) do
+      session = %{session | dashboard_panels: Enum.map(panels, & &1.id)}
+      {:reply, {:ok, session}, put_in(state, [:sessions, token], session)}
+    else
+      {:error, %Error{} = error} -> {:reply, {:error, error}, state}
+      {:error, error, state} -> {:reply, {:error, error}, state}
     end
   end
 

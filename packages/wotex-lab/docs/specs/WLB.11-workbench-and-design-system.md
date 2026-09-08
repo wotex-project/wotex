@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.5.1. Contract: accepted.
+Specification version: 0.5.2. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -50,9 +50,11 @@ The Metrics view also exposes catalogue-derived panel selection and a bounded,
 session-verified Grafana JSON download. This surface shows definitions only,
 never the opt-in PromEx collector's host-wide measurements as session data.
 `metric_panels_test.exs` binds every descriptor/query to the catalogue and
-`dashboard_test.exs` covers session denial, closed selection and inert export.
-Saved per-session arrangements, queried history panels and a Grafana-server
-import/browser cohort are not yet implemented or claimed.
+`dashboard_test.exs` covers session denial, closed selection, inert export,
+session-owned saved arrangements and exact reproducible selection URLs. A deep
+link may preview an admitted arrangement without silently replacing the saved
+one. Query-backed history panels and a Grafana-server import/browser cohort are
+not yet implemented or claimed.
 
 ## Product and implementation boundary
 

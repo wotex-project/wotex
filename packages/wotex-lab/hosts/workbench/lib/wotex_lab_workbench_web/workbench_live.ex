@@ -10,6 +10,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   use WotexLabWorkbenchWeb, :live_view
 
+  alias Plug.Conn.Query
   alias Wotex.Lab.Error
   alias Wotex.Lab.Telemetry
 
@@ -19,6 +20,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     Formal,
     Insights,
     Metrics,
+    Observability.Panels,
     Provenance,
     Room,
     Run,
@@ -43,6 +45,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:things, [])
       |> assign(:snapshot, nil)
       |> assign(:metrics, nil)
+      |> assign(:dashboard_panels, socket.assigns.scope && socket.assigns.scope.dashboard_panels)
       |> assign(:run, nil)
       |> assign(:charts, [])
       |> assign(:insights, nil)
@@ -142,6 +145,27 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           {:error, error}
       end
     end)
+  end
+
+  def handle_event("save_dashboard", %{"panels" => panel_ids}, socket) do
+    with %{token: token} <- socket.assigns.scope,
+         {:ok, session} <- Sessions.put_dashboard(token, panel_ids) do
+      scope = %{socket.assigns.scope | dashboard_panels: session.dashboard_panels}
+
+      {:noreply,
+       socket
+       |> assign(:scope, scope)
+       |> assign(:dashboard_panels, session.dashboard_panels)
+       |> put_flash(:info, "Dashboard arrangement saved for this session.")
+       |> push_patch(to: dashboard_path(session.dashboard_panels))}
+    else
+      nil -> {:noreply, deny(socket, Error.new(:denied, :session, "no session scope"))}
+      {:error, error} -> {:noreply, error_flash(socket, error)}
+    end
+  end
+
+  def handle_event("save_dashboard", _params, socket) do
+    reject_event(socket, Error.new(:invalid_panels, :metrics, "select 1–16 metric panels"))
   end
 
   def handle_event("export_dataset", _params, socket) do
@@ -262,7 +286,11 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           <% :things -> %>
             <.things_view things={@things} room={@scope.room} read_result={@read_result} />
           <% :metrics -> %>
-            <.metrics_view metrics={@metrics} room={@scope.room} />
+            <.metrics_view
+              metrics={@metrics}
+              room={@scope.room}
+              dashboard_panels={@dashboard_panels}
+            />
           <% :evidence -> %>
             <.evidence_view
               snapshot={@snapshot}
@@ -521,6 +549,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   attr :metrics, :any, required: true
   attr :room, :any, required: true
+  attr :dashboard_panels, :list, required: true
 
   defp metrics_view(assigns) do
     latest = assigns.metrics && List.last(assigns.metrics.samples)
@@ -609,7 +638,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         phx-disable-with="Freezing…"
       >Freeze visible measurements as dataset</button>
     </div>
-    <.metric_catalogue />
+    <.metric_catalogue selected={@dashboard_panels} />
     """
   end
 
@@ -745,7 +774,37 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     socket |> assign(:run_id, id) |> refresh() |> reload_run()
   end
 
+  defp load_action(socket, :metrics, params) do
+    selected =
+      case params do
+        %{} when map_size(params) == 0 ->
+          {:ok, socket.assigns.scope.dashboard_panels}
+
+        %{"panels" => panel_ids, "selection" => "custom"} when map_size(params) == 2 ->
+          with {:ok, panels} <- Panels.select(panel_ids), do: {:ok, Enum.map(panels, & &1.id)}
+
+        _other ->
+          {:error, Error.new(:invalid_panels, :metrics, "metric deep link is not admitted")}
+      end
+
+    case selected do
+      {:ok, panel_ids} ->
+        socket |> assign(:run_id, nil) |> assign(:dashboard_panels, panel_ids) |> refresh()
+
+      {:error, error} ->
+        socket
+        |> assign(:run_id, nil)
+        |> assign(:dashboard_panels, socket.assigns.scope.dashboard_panels)
+        |> refresh()
+        |> error_flash(error)
+    end
+  end
+
   defp load_action(socket, _action, _params), do: socket |> assign(:run_id, nil) |> refresh()
+
+  defp dashboard_path(panel_ids) do
+    "/metrics?" <> Query.encode(%{"panels" => panel_ids, "selection" => "custom"})
+  end
 
   defp reload_run(%{assigns: %{run_id: id, scope: %{room: room}}} = socket)
        when is_binary(id) and is_pid(room) do

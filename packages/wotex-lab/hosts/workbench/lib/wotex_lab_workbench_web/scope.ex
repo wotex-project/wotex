@@ -14,7 +14,13 @@ defmodule WotexLabWorkbenchWeb.Scope do
   alias WotexLabWorkbench.Sessions
   alias WotexLabWorkbenchWeb.Plugs.SessionToken
 
-  @type scope :: %{token: String.t(), session_id: String.t(), theme: String.t(), room: pid() | nil}
+  @type scope :: %{
+          token: String.t(),
+          session_id: String.t(),
+          theme: String.t(),
+          dashboard_panels: [String.t()],
+          room: pid() | nil
+        }
 
   @doc false
   @spec on_mount(atom(), map(), map(), Phoenix.LiveView.Socket.t()) ::
@@ -48,5 +54,11 @@ defmodule WotexLabWorkbenchWeb.Scope do
   def verify(_socket), do: {:error, Error.new(:denied, :session, "no session scope")}
 
   defp scope(token, live),
-    do: %{token: token, session_id: live.id, theme: live.theme, room: live.room}
+    do: %{
+      token: token,
+      session_id: live.id,
+      theme: live.theme,
+      dashboard_panels: live.dashboard_panels,
+      room: live.room
+    }
 end

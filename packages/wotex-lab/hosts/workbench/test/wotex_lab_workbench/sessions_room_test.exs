@@ -5,6 +5,7 @@ defmodule WotexLabWorkbench.SessionsRoomTest do
 
   alias Wotex.Lab.Error
   alias WotexLabWorkbench.{Experiments, Metrics, Report, Room, Sessions}
+  alias WotexLabWorkbench.Observability.Panels
   alias WotexLabWorkbench.Runs.SmartRoom
 
   setup do
@@ -29,6 +30,7 @@ defmodule WotexLabWorkbench.SessionsRoomTest do
   } do
     assert {:ok, session} = Sessions.open(registry)
     assert session.room == nil
+    assert session.dashboard_panels == Panels.defaults()
     assert {:ok, verified} = Sessions.verify(registry, session.token)
     assert verified.room == nil
     assert role_count(lab, :sessions) == 0
@@ -185,6 +187,15 @@ defmodule WotexLabWorkbench.SessionsRoomTest do
 
     assert {:error, %Error{code: :invalid_theme}} =
              Sessions.put_theme(registry, session.token, "rainbow")
+
+    assert {:ok, arranged} =
+             Sessions.put_dashboard(registry, session.token, ["nx_duration_seconds"])
+
+    assert arranged.dashboard_panels == ["nx_duration_seconds"]
+    assert arranged.room == nil
+
+    assert {:error, %Error{code: :invalid_panels}} =
+             Sessions.put_dashboard(registry, session.token, ["caller"])
 
     Process.sleep(120)
     assert {:error, %Error{code: code}} = Sessions.verify(registry, session.token)

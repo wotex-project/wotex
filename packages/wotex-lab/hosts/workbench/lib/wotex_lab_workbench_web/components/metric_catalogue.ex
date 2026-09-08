@@ -3,12 +3,22 @@ defmodule WotexLabWorkbenchWeb.Components.MetricCatalogue do
 
   use Phoenix.Component
 
+  alias Plug.Conn.Query
   alias WotexLabWorkbench.Observability.Panels
+
+  attr :selected, :list, required: true
 
   @doc "Shows fixed query semantics and exports only the selected definitions."
   @spec metric_catalogue(map()) :: Phoenix.LiveView.Rendered.t()
   def metric_catalogue(assigns) do
-    assigns = assign(assigns, panels: Panels.all(), defaults: Panels.defaults())
+    selected = assigns.selected
+
+    assigns =
+      assign(assigns,
+        panels: Panels.all(),
+        deep_link: dashboard_path("/metrics", selected),
+        download_link: dashboard_path("/metrics/dashboard.json", selected)
+      )
 
     ~H"""
     <section id="metric-catalogue" class="wl-panel">
@@ -22,12 +32,11 @@ defmodule WotexLabWorkbenchWeb.Components.MetricCatalogue do
       </p>
       <details>
         <summary>Choose up to 16 panels and inspect their queries</summary>
-        <form id="dashboard-export" action="/metrics/dashboard.json" method="get" class="wl-stack">
-          <input type="hidden" name="selection" value="custom" />
+        <form id="dashboard-selection" phx-submit="save_dashboard" class="wl-stack">
           <fieldset class="wl-stack">
-            <legend>Dashboard panels (four numerical panels selected initially)</legend>
+            <legend>Dashboard panels (saved only in this bounded browser session)</legend>
             <label :for={panel <- @panels} class="wl-catalogue-choice">
-              <input type="checkbox" name="panels[]" value={panel.id} checked={panel.id in @defaults} />
+              <input type="checkbox" name="panels[]" value={panel.id} checked={panel.id in @selected} />
               <span>
                 <strong>{panel.title}</strong><br />
                 <span>{panel.aggregation} · {panel.display_unit} · {panel.scope} scope</span><br />
@@ -40,10 +49,28 @@ defmodule WotexLabWorkbenchWeb.Components.MetricCatalogue do
             buckets; it is not an average of percentiles. Missing data remains unavailable.
             Select a Prometheus-compatible source when importing the JSON in Grafana.
           </p>
-          <button type="submit" class="wl-button wl-button-secondary">Download dashboard JSON</button>
+          <div class="wl-actions">
+            <button type="submit" class="wl-button wl-button-secondary">Save arrangement</button>
+            <a id="dashboard-deep-link" class="wl-button wl-button-secondary" href={@deep_link}>
+              Exact link
+            </a>
+            <a
+              id="dashboard-export"
+              class="wl-button wl-button-secondary"
+              href={@download_link}
+              download
+            >
+              Download dashboard JSON
+            </a>
+          </div>
         </form>
       </details>
     </section>
     """
+  end
+
+  defp dashboard_path(path, selected) do
+    query = Query.encode(%{"panels" => selected, "selection" => "custom"})
+    path <> "?" <> query
   end
 end
