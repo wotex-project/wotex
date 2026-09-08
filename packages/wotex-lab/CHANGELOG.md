@@ -2,6 +2,11 @@
 
 ## 0.1.0 — source foundation
 
+- A separately activated, Bearer-protected loopback scrape listener serves
+  bounded PromEx text without entering browser routing. Credentials are
+  digest-only in options; real sockets cover capacity, body refusal and cleanup.
+  It is not a remote/TLS deployment profile.
+
 - Explicit PromEx-to-ETS history activation preserves reset identity, clocks and
   loss through body-hash-checked scrape receipts. Single-writer sampling is
   bounded and off by default; no database, sink or browser metrics access is

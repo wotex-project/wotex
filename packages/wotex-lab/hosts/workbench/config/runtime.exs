@@ -5,6 +5,21 @@ config :wotex_lab_workbench, promex_enabled: System.get_env("WOTEX_LAB_PROMEX") 
 config :wotex_lab_workbench,
   metrics_history_enabled: System.get_env("WOTEX_LAB_METRICS_HISTORY") == "1"
 
+# No credential is read unless the listener is explicitly requested. Retain
+# only its digest; never put the supplied Bearer token in application options.
+if port = System.get_env("WOTEX_LAB_METRICS_PORT") do
+  case WotexLabWorkbench.Observability.Scrape.configure(
+         port,
+         System.get_env("WOTEX_LAB_METRICS_TOKEN")
+       ) do
+    {:ok, options} ->
+      config :wotex_lab_workbench, metrics_scrape: options
+
+    {:error, _invalid} ->
+      raise "metrics listener requires an admitted port and URL-safe token (43–128 characters)"
+  end
+end
+
 # Every operator-owned value is read here, once, at boot. Nothing below
 # downloads, discovers or starts anything: the formal engine path only names
 # a binary the operator provisioned and the host verifies before use.

@@ -17,7 +17,7 @@
     {"id": "WCF-C05:discovery-corpus", "status": "not_run"},
     {"id": "WLB-C07:hostile-target-whole-tree-isolation", "status": "not_run"}
   ],
-  "attempt": 7,
+  "attempt": 8,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -43,14 +43,14 @@
     {"archive": "missing", "name": "rust", "version": "1.97.1"},
     {"archive": "missing", "name": "darwin-sandbox-exec", "version": "25.6.0"}
   ],
-  "durations": {"run_ms": 10500},
+  "durations": {"run_ms": 10400},
   "fixtures": {
     "corpus:thing-description-1.1": "sha256:1dc979f8599bbcd0e441bc09c7266169f42bee40384fbacd4ad1e1c2b8caac07",
     "corpus:thing-model-1.1": "sha256:262e3369986eef648563b5693fdaadab3fa11fb3732cf4db9b7546e2a4af92a7"
   },
   "inputs": [
     "command:WOTEX_PATH_DEPS=1 mix test WLB.06-evidence-files",
-    "renewal:2026-09-08-promex-history-catalogue;seed=1;manifest-integrity-checked-separately",
+    "renewal:2026-09-08-protected-scrape-catalogue;seed=1;manifest-integrity-checked-separately",
     "containment:darwin-sandbox-exec+contained-exec-2.0.0",
     "launcher-executable:sha256:39552acd53a70e6a31d6189b5fa74ce8def24b033c91a300b151c867e0685582",
     "cargo-lock:sha256:de17a723dc3ce87ad3360a2fde43c0ddfb8ce056dae95c4cd1f35329274b1ee5",
@@ -59,11 +59,11 @@
   ],
   "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
   "outcomes": {"excluded_count": 1, "test_count": 52, "thing_description_vectors": 14, "thing_model_vectors": 6},
-  "revision": "08ff825+workspace-promex-history",
+  "revision": "86ee76a+workspace-protected-scrape",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:9b0340874d6d6f873228cac0db2111fe3e920353943cc3f55beac0dc0f5654f9",
+  "source_tree_digest": "sha256:c789466840b22a2913b8987a77190bb19d7abb2ae9a209f5600b0d7901103967",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",

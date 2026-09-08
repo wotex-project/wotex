@@ -1,12 +1,13 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.4.0. Contract: accepted. Source status: the metric
+Specification version: 0.5.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
 the Workbench now implements custom PromEx definitions, bounded collection,
 catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
-history activation. Built-in host introspection, durable-sink host activation, protected scraping, OTLP
+history activation and a protected local scrape listener. Built-in host
+introspection, durable-sink host activation, remote/TLS scraping, OTLP
 signal export, BeamLens, history presentation and the MCP query gateway remain
 planned. A template export is not proof of a Grafana import or query execution.
 
@@ -149,8 +150,33 @@ integration surface, not a public tenant data endpoint.
 `Wotex.Lab.Metrics.GreptimeBridge` is that self-scraper with an explicit
 `scrape` function (a host passes `PromEx.get_metrics/1` or the collector's own
 snapshot), `Wotex.Lab.Metrics.Exposition` parses and renders the pinned text
-format, and the same admitted snapshot reaches history and the sink. The
-protected `/metrics` endpoint remains a planned host surface.
+format, and the same admitted snapshot reaches history and the sink.
+
+The Workbench's optional `Observability.Scrape` supplies `GET /metrics` on a
+separate 127.0.0.1-only HTTP/1 port, leaving the browser host's existing Metrics
+page unchanged. `WOTEX_LAB_METRICS_PORT` and a separately provisioned 43–128
+character URL-safe `WOTEX_LAB_METRICS_TOKEN` explicitly select it; PromEx must
+also be enabled. Only the token digest enters listener configuration, and
+comparison uses constant-time digest equality. A single Bearer header is the
+only authority. Cookies, session identifiers, query strings, non-loopback
+peers and forwarded identities cannot authorize access. Token rotation is an
+operator restart, not automatic credential discovery.
+
+This pinned Bandit profile admits eight connections, one request per
+connection, a 1,024-byte request line, at most 16 admitted headers of 2,048
+bytes each and one MiB of response text. Request bodies, query strings and
+Origin headers are refused. HTTP/2, WebSockets, CORS, compression and keepalive
+are disabled. Read/write inactivity waits are two seconds; they are not a
+whole-header deadline against slow clients. This is a trusted local operator
+surface, not a remote/TLS or untrusted-hosted profile. Do not promote it through
+port forwarding or a proxy without that separately admitted deployment.
+Responses are non-cacheable. Collector failure is 503, never invented zeros.
+Protocol and exception logging are disabled for this listener to avoid
+credential reflection; client statuses remain visible. No public route reads
+history, and no listener credential authorizes any numerical run or Action.
+The host's `metrics_scrape_test.exs` covers pure admission and real sockets:
+auth/URL/cookie/forwarding substitution, absence/failure, connection capacity,
+unread oversized body refusal without draining, shutdown and token sentinels.
 
 For the zero-service profile, the Workbench's `Observability.Capture.sample/0`
 calls public `PromEx.get_metrics/1`, parses the bounded exposition and pairs it
@@ -358,5 +384,5 @@ fixture, reset, stale and histogram cases, series and history budgets, atomic
 admission, bounded exporter overload, retry and no-retry, network loss,
 shutdown, two-instance isolation and the export credential sentinel;
 `test/wotex/lab/greptime_bridge_test.exs` covers actual ingestion. TTL expiry,
-protected endpoints, prompt injection, scope substitution, cloud disclosure and
+remote protected/query endpoints, prompt injection, expiring scope substitution, cloud disclosure and
 cancelled-agent tests arrive with their planned features.

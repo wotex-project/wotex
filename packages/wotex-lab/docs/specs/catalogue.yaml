@@ -305,7 +305,7 @@ specifications:
       - "test/wotex/lab/wlb09_evidence_manifest_test.exs"
     compatibility_classification: WLB.09 is implemented as an optional, digest-pinned Maude profile with closed serialization, finite-state exhaustion evidence, counterexample replay and process-tree cleanup; results remain inert and model-scoped.
   - id: WLB.10
-    version: "0.4.0"
+    version: "0.5.0"
     path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md
     implementation_status: partial
     evidence_status: partial
@@ -346,6 +346,7 @@ specifications:
       - "WotexLabWorkbench.Observability.Store"
       - "WotexLabWorkbench.Observability.Capture"
       - "WotexLabWorkbench.Observability.Sampler"
+      - "WotexLabWorkbench.Observability.Scrape"
       - "WotexLabWorkbench.Observability.Supervisor"
       - "WotexLabWorkbench.Observability.Panels"
     executable_evidence:
@@ -361,6 +362,7 @@ specifications:
       - "priv/fixtures/metrics/equality/manifest.json"
       - "hosts/workbench/test/wotex_lab_workbench/observability_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/metrics_history_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/metrics_scrape_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/metric_panels_test.exs"
     compatibility_classification: Optional host contract; history queries now require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Storage-only history remains available. No mandatory observability dependency in the base library.
   - id: WLB.11

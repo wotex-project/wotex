@@ -9,6 +9,8 @@ defmodule WotexLabWorkbench.Application do
   configuration prepends the host-owned custom metric collector/relay supervisor.
   Separate `metrics_history_enabled` activation adds bounded operator history
   and a self-sampler, and is refused unless PromEx is also explicitly enabled.
+  `metrics_scrape` separately admits a credential-protected loopback listener;
+  it also requires explicit PromEx activation and never joins browser routing.
   """
 
   use Application
@@ -44,16 +46,20 @@ defmodule WotexLabWorkbench.Application do
   end
 
   defp observability(env) do
-    case {Keyword.fetch!(env, :promex_enabled), Keyword.fetch!(env, :metrics_history_enabled)} do
-      {false, true} ->
+    case {Keyword.fetch!(env, :promex_enabled), Keyword.fetch!(env, :metrics_history_enabled),
+          Keyword.fetch!(env, :metrics_scrape)} do
+      {false, true, _scrape} ->
         {:error, :metrics_history_requires_promex}
 
-      {false, false} ->
+      {false, false, false} ->
         {:ok, []}
 
-      {true, history?} ->
+      {false, false, _scrape} ->
+        {:error, :metrics_scrape_requires_promex}
+
+      {true, history?, scrape} ->
         history = if history?, do: Keyword.fetch!(env, :metrics_history_options), else: false
-        {:ok, [{WotexLabWorkbench.Observability.Supervisor, history: history}]}
+        {:ok, [{WotexLabWorkbench.Observability.Supervisor, history: history, scrape: scrape}]}
     end
   end
 

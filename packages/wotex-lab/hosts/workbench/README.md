@@ -117,8 +117,35 @@ session is required; no room or collector starts. Importing the JSON and
 choosing a Prometheus-compatible source are operator actions. The export
 preserves label sets, uses five-minute counter rates and bucket-derived p95,
 and never fills missing data with zero. Grafana import compatibility, durable
-history activation, protected scraping and saved arrangements are separate
+history activation, remote/TLS scraping and saved arrangements are separate
 acceptance work, not claims made by this source export.
+
+### Protected local scrape
+
+The optional scrape listener has its own port and serves only `GET /metrics`;
+it does not replace the browser host's `/metrics` page. Set
+`WOTEX_LAB_METRICS_PORT` explicitly (for example 9464) alongside
+`WOTEX_LAB_PROMEX=1`, and supply `WOTEX_LAB_METRICS_TOKEN` through your process
+manager's secret environment. Use a cryptographically random URL-safe token
+of 43–128 characters (32 random bytes encoded as unpadded base64url is 43).
+No credential is discovered or generated, and only its SHA-256 enters the
+listener's options. Rotate it by restarting with a newly provisioned token.
+
+Clients must send `Authorization: Bearer <token>`. Cookies, browser sessions,
+query strings and forwarding headers grant no access. The address is fixed to
+127.0.0.1; binding another address is not an option. HTTP/2, WebSockets, CORS,
+compression and connection reuse are disabled. It admits eight connections,
+16 headers of at most 2,048 bytes, a 1,024-byte request line, no request body
+and at most one MiB of response text. Socket read/write inactivity timeouts
+are two seconds; this is not an absolute slow-header deadline or an untrusted
+remote-service claim. The same custom metric collector remains host-wide.
+
+An unavailable collector returns 503, never empty success. Responses are
+non-cacheable; protocol/exception logging is disabled on this listener to
+avoid reflecting credential-bearing input. HTTP status remains observable to
+the client. This local operator profile is not a TLS/remote deployment, and
+must not be port-forwarded or exposed by a proxy as if it were one. Neither
+the listener nor its credential starts a database, history, experiment or LLM.
 
 ## Runtime configuration
 
@@ -127,6 +154,9 @@ Production requires `SECRET_KEY_BASE`. Optional variables are `PHX_HOST`,
 `WOTEX_LAB_METRICS_HISTORY` and `WOTEX_LAB_MAUDE`. A Maude
 path is verified and supervised explicitly; no configured engine is reported
 as unsupported, never as successful evidence.
+
+The separately requested operator listener also uses `WOTEX_LAB_METRICS_PORT`
+and `WOTEX_LAB_METRICS_TOKEN`; invalid or incomplete options refuse startup.
 
 All rooms and their child processes are session-owned and bounded. Reports are
 limited to one MiB, previews to 100 rows and 32 columns, charts to 2,000 points

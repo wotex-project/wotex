@@ -131,6 +131,17 @@ default 120-snapshot / 8 MiB history, with zero sampling failures. The applicati
 was stopped afterward. This is source-host integration, not browser-tenant
 history, a protected HTTP listener, durable activation or artifact adoption.
 
+The protected local scrape cohort uses the existing Bandit 1.12.5,
+ThousandIsland 1.5.0 and Plug 1.20.3 lock entries. Five additional tests exercise
+closed auth/configuration and real loopback sockets, including an unread large
+body, eight-connection capacity and cleanup; the three observability test files
+pass 16 tests. A separate actual application boot used an explicit ephemeral
+metrics port, a disposable test credential and a disabled browser HTTP endpoint.
+The thermal scenario produced a 5,917-byte HTTP 200 scrape, with no token in the
+response or listener options, and application shutdown removed the listener.
+No remote/TLS, slow-header whole-request deadline, untrusted-hosted or artifact
+adoption claim follows. The ordinary browser Metrics page was not repurposed.
+
 ## Acknowledged dependency advisories
 
 ### Optional Explorer source cohort

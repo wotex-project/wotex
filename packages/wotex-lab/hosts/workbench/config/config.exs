@@ -18,6 +18,7 @@ config :wotex_lab_workbench,
   promex_enabled: false,
   metrics_history_enabled: false,
   metrics_history_options: [],
+  metrics_scrape: false,
   formal_engine: nil
 
 config :phoenix, :json_library, Jason
