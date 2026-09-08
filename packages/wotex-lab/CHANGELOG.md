@@ -2,6 +2,12 @@
 
 ## 0.1.0 — source foundation
 
+- WLB.03 v1.4 / room experiment 2.0.0 refuses malformed counts before split
+  arithmetic, predicts the future from the latest observations instead of
+  relabeling a held-out estimate, and serializes parameters through Nx. Both
+  Binary and EXLA artifacts replay on BinaryBackend; prior raw-term artifacts
+  require regeneration and remain distinct from corrected forecasts.
+
 - WLB.07 v0.4 uses per-run function plugs in the four HTTP/SSE cookbooks,
   with overlapping-evaluation checks and no shared module redefinition. The
   source test runner no longer treats caller bindings as permission to stop

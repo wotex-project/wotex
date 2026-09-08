@@ -1,6 +1,6 @@
 # WLB.03: Nx experiments and numerical adoption
 
-Specification version: 1.3.0. Contract: accepted. Numerical semantics inherit
+Specification version: 1.4.0. Contract: accepted. Numerical semantics inherit
 `wotex_nx:WNX.01`; Lab owns inputs, execution, experiments and policy examples.
 
 ## Primary audience and entry point
@@ -49,6 +49,25 @@ EXLA CPU vector uses the same input identity and an absolute tolerance of
 `1.0e-4`; transferring its device tensor back to BinaryBackend deallocates the
 source device value. A timed-out experiment kills its monitored worker and
 returns no prediction.
+
+The room experiment contract is now `2.0.0`. Malformed/out-of-budget counts
+MUST return `invalid_experiment` before deriving a default split or starting
+training, including when an explicit split was supplied. Held-out predictions
+only determine held-out scores. The future decoded prediction MUST instead
+use the final two observed rows, with `produced_at` at the latest observation
+and `target_at` one simulator step later; its manifest names both input times.
+The same training-only normalization and values/masks/quality layout apply.
+
+Parameter artifacts use public `Nx.serialize/2` and declare `nx-serialize` in
+the manifest. Restoring each admitted Binary/Evaluator and EXLA CPU artifact
+onto BinaryBackend MUST reproduce that future prediction within the declared
+tolerance without depending on the training worker's native buffers. This
+tests trusted, locally produced artifacts; it does not admit untrusted uploads
+or claim a universal cross-version format. Migration: prior raw external-term
+parameter blobs must be regenerated, not silently relabeled. The earlier
+future result mislabeled the final held-out estimate and cannot be compared as
+the same forecast. Architecture `axon-room-v1` and held-out scoring stay the
+same; result metadata and the manifest bind the new experiment version.
 
 `serving_test.exs` implements the Serving resource vectors: padding and keys,
 finite timeout flush, concurrent caller correlation, instance-capacity

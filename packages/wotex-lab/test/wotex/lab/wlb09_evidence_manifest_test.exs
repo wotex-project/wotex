@@ -20,6 +20,7 @@ defmodule Wotex.Lab.WLB09EvidenceManifestTest do
     "docs/specs/WLB.09-formal-control-verification.md",
     "docs/specs/catalogue.yaml",
     "lib/wotex/lab/cookbook.ex",
+    "lib/wotex/lab/experiments/room_model.ex",
     "lib/wotex/lab/formal/abstraction.ex",
     "lib/wotex/lab/formal/model.ex",
     "lib/wotex/lab/formal/output.ex",

@@ -5,6 +5,8 @@ defmodule Wotex.Lab.RoomModelTest do
 
   alias Wotex.Lab.Error
   alias Wotex.Lab.Experiments.RoomModel
+  alias Wotex.Lab.Simulators.Thermal
+  alias Wotex.Lab.Test.RoomModelReplay
   alias Wotex.Nx.Prediction
 
   test "Axon training is reproducible, split before windows, and scored against persistence" do
@@ -55,6 +57,35 @@ defmodule Wotex.Lab.RoomModelTest do
 
     assert {:error, %Error{code: :invalid_options}} = RoomModel.run(seed: 1, seed: 2)
     assert {:error, %Error{code: :invalid_options}} = RoomModel.run(secret: "not-admitted")
+  end
+
+  test "malformed counts are refused before default split arithmetic" do
+    for count <- [nil, true, false, :rows, "32", [], %{}, {32}, 12.0, -1, 1_000_000_000],
+        split <- [[], [split_at: 24]] do
+      assert {:error, %Error{code: :invalid_experiment}} =
+               RoomModel.run([count: count] ++ split)
+    end
+  end
+
+  test "saved parameters replay a future prediction from the latest observed input pair" do
+    assert {:ok, result} = RoomModel.run(count: 32, split_at: 24, epochs: 2)
+    simulation = Thermal.generate(seed: 11, count: 32, heater: %{20 => 3.0})
+    prediction = Prediction.to_map(result.prediction)
+    next = RoomModelReplay.predict(result, Enum.take(simulation.samples, -2))
+    previous = RoomModelReplay.predict(result, Enum.slice(simulation.samples, -3, 2))
+
+    assert_in_delta prediction.value, next, 1.0e-6
+    refute_in_delta prediction.value, previous, 1.0e-3
+    assert prediction.produced_at == 31_000
+    assert prediction.target_at == 32_000
+    assert result.manifest["experiment_version"] == "2.0.0"
+    assert result.manifest["parameters_encoding"] == "nx-serialize"
+
+    assert result.manifest["prediction"] == %{
+             "input_times" => [30_000, 31_000],
+             "produced_at" => 31_000,
+             "target_at" => 32_000
+           }
   end
 
   test "the wall deadline cancels training without producing a prediction" do

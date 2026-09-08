@@ -54,7 +54,7 @@ specifications:
       - "test/wotex/lab/runner_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.03
-    version: "1.3.0"
+    version: "1.4.0"
     path: docs/specs/WLB.03-nx-experiments.md
     implementation_status: implemented
     evidence_status: partial
@@ -83,7 +83,7 @@ specifications:
       - "test/wotex/lab/backend_cohort_test.exs"
       - "test/wotex/lab/smart_room_test.exs"
       - "test/wotex/lab/cookbook_test.exs"
-    compatibility_classification: WLB.03 lanes implemented with optional Axon 0.8 and EXLA 0.13 profiles, fixed work ceilings, monitored cancellation and inert policy-bound outputs; artifact adoption remains a separate axis.
+    compatibility_classification: Room experiment 2.0.0 fixes future-input identity and replaces raw native-resource terms with Nx-serialized parameters; prior artifacts must be regenerated. Optional profiles and inert outputs remain; artifact adoption is separate.
   - id: WLB.04
     version: "1.4.1"
     path: docs/specs/WLB.04-runtime-and-network-adapters.md

@@ -187,7 +187,11 @@ leak_detected? = leaky_mean != Nx.to_number(mean)
 
 The actual bounded Axon lane records values, masks and quality in its six-field
 window input, trains after the split, decodes an inert prediction, and returns
-a serialized parameter artifact. The same small profile also runs on EXLA CPU;
+a serialized parameter artifact. Experiment contract `2.0.0` computes its future
+prediction from the latest two observed rows, separately from held-out scoring.
+Its manifest records those input times. Parameters use public `Nx.serialize/2`
+so native buffers do not escape as unusable resource references; old raw-term
+artifacts must be regenerated. The same small profile also runs on EXLA CPU;
 the comparison tolerance permits backend rounding but identity fields remain
 exact.
 
@@ -204,7 +208,13 @@ exact.
     timeout_ms: 30_000
   )
 
-backend_delta = abs(axon_binary.prediction.value - axon_exla.prediction.value)
+binary_prediction = Prediction.to_map(axon_binary.prediction)
+exla_prediction = Prediction.to_map(axon_exla.prediction)
+backend_delta = abs(binary_prediction.value - exla_prediction.value)
+
+# These are trusted artifacts just produced above, not uploaded parameter bytes.
+restored_binary = Nx.with_default_backend(Nx.BinaryBackend, fn -> Nx.deserialize(axon_binary.parameters, [:safe]) end)
+restored_exla = Nx.with_default_backend(Nx.BinaryBackend, fn -> Nx.deserialize(axon_exla.parameters, [:safe]) end)
 ```
 
 ## Safe telemetry
@@ -247,6 +257,8 @@ manifest_public? =
       String.starts_with?(manifest["parameters_digest"], "sha256:") and manifest_public?,
   "axon-training" =>
     axon_binary.manifest["model"] == "axon-room-v1" and byte_size(axon_binary.parameters) > 0 and
+      axon_binary.manifest["experiment_version"] == "2.0.0" and
+      match?(%Axon.ModelState{}, restored_binary) and match?(%Axon.ModelState{}, restored_exla) and
       match?(%Prediction{}, axon_binary.prediction),
   "backend-cohort" =>
     backend_delta < 0.0001 and axon_exla.manifest["backend"] == "EXLA.Backend" and

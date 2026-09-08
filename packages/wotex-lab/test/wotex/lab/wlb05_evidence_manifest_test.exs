@@ -14,6 +14,7 @@ defmodule Wotex.Lab.WLB05EvidenceManifestTest do
     "docs/specs/WLB.05-directory-continuum-and-smart-room.md",
     "docs/specs/WLB.07-cookbooks-and-machine-interfaces.md",
     "lib/wotex/lab/cookbook.ex",
+    "lib/wotex/lab/experiments/room_model.ex",
     "lib/wotex/lab/adapters/directory/authorization.ex",
     "lib/wotex/lab/adapters/directory/clock.ex",
     "lib/wotex/lab/adapters/directory/ets_repository.ex",

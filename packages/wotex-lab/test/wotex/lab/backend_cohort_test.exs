@@ -5,7 +5,9 @@ defmodule Wotex.Lab.BackendCohortTest do
 
   alias Wotex.Lab.Examples.Thermal
   alias Wotex.Lab.Experiments.RoomModel
-  alias Wotex.Nx.Encoded
+  alias Wotex.Lab.Simulators.Thermal, as: Simulator
+  alias Wotex.Lab.Test.RoomModelReplay
+  alias Wotex.Nx.{Encoded, Prediction}
 
   @moduletag timeout: 60_000
 
@@ -35,8 +37,14 @@ defmodule Wotex.Lab.BackendCohortTest do
 
     assert compiled_model.manifest["backend"] == "EXLA.Backend"
     assert compiled_model.manifest["compiler"] == "EXLA"
-    assert is_float(compiled_model.prediction.value)
+    prediction = Prediction.to_map(compiled_model.prediction)
+    assert is_float(prediction.value)
     assert byte_size(compiled_model.parameters) > 0
+
+    simulation = Simulator.generate(seed: 11, count: 32, heater: %{20 => 3.0})
+    replayed = RoomModelReplay.predict(compiled_model, Enum.take(simulation.samples, -2))
+    assert_in_delta prediction.value, replayed, 1.0e-4
+    assert Nx.default_backend() == caller_backend
 
     device = Nx.backend_transfer(Nx.tensor([1.0, 2.0]), EXLA.Backend)
     host = Nx.backend_transfer(device, Nx.BinaryBackend)

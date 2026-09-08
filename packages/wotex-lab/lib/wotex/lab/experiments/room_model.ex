@@ -11,6 +11,12 @@ if Code.ensure_loaded?(Axon) do
     inert `Wotex.Nx.Prediction`, a serialized parameter artifact, and a manifest;
     it never dispatches an Action or changes global Nx defaults.
 
+    Experiment contract `2.0.0` predicts the next step from the two latest
+    observations, independently of held-out scoring. Parameters use
+    `Nx.serialize/2`, not raw external terms containing backend resources.
+    Restore trusted artifacts with `Nx.deserialize/2` on an explicitly selected
+    backend; this module does not accept arbitrary uploaded parameter bytes.
+
     Axon and a compiled backend are optional integration-profile dependencies.
     The default uses `Nx.BinaryBackend` with `Nx.Defn.Evaluator`. A caller may
     explicitly select `EXLA.Backend` and `EXLA` after starting that dependency.
@@ -57,7 +63,7 @@ if Code.ensure_loaded?(Axon) do
 
     defp validate(opts) do
       count = Keyword.get(opts, :count, 64)
-      split_at = Keyword.get(opts, :split_at, div(count * 3, 4))
+      split_at = Keyword.get_lazy(opts, :split_at, fn -> default_split(count) end)
 
       config = %{
         backend: Keyword.get(opts, :backend, Nx.BinaryBackend),
@@ -76,6 +82,11 @@ if Code.ensure_loaded?(Axon) do
          Error.new(:invalid_experiment, :construction, "room-model configuration is invalid")}
       end
     end
+
+    defp default_split(count) when is_integer(count) and count in 12..@max_rows,
+      do: div(count * 3, 4)
+
+    defp default_split(_count), do: nil
 
     defp valid_config?(config) do
       Enum.all?([
@@ -185,8 +196,21 @@ if Code.ensure_loaded?(Axon) do
       truth = test_targets |> Nx.multiply(deviation) |> Nx.add(mean)
       persistence = persistence_tensor(held_out_windows)
       metrics = metrics(predictions, truth, persistence)
-      parameters = :erlang.term_to_binary(model_state, [:deterministic])
-      prediction_value = predictions |> Nx.to_flat_list() |> List.last()
+      parameters = model_state |> Nx.serialize() |> IO.iodata_to_binary()
+      latest = Enum.take(held_out, -2)
+
+      prediction_value =
+        model
+        |> Axon.predict(
+          model_state,
+          Nx.tensor([input_pair(latest, mean, deviation)], type: :f32),
+          compiler: config.compiler
+        )
+        |> Nx.multiply(deviation)
+        |> Nx.add(mean)
+        |> Nx.to_flat_list()
+        |> hd()
+
       last_at = held_out |> List.last() |> Map.fetch!(:observed_at)
       {:ok, prediction} = decode_prediction(prediction_value, last_at, simulation.manifest["step"])
 
@@ -206,6 +230,11 @@ if Code.ensure_loaded?(Axon) do
           metrics,
           parameters
         )
+        |> Map.put("prediction", %{
+          "input_times" => Enum.map(latest, & &1.observed_at),
+          "produced_at" => last_at,
+          "target_at" => last_at + simulation.manifest["step"]
+        })
 
       {:ok,
        %{
@@ -234,14 +263,7 @@ if Code.ensure_loaded?(Axon) do
     defp tensors(windows, mean, deviation) do
       inputs =
         Enum.map(windows, fn [first, second, _target] ->
-          [
-            normalize(first.value, mean, deviation),
-            normalize(second.value, mean, deviation),
-            1.0,
-            1.0,
-            quality_code(first.quality),
-            quality_code(second.quality)
-          ]
+          input_pair([first, second], mean, deviation)
         end)
 
       targets =
@@ -250,6 +272,17 @@ if Code.ensure_loaded?(Axon) do
         end)
 
       {Nx.tensor(inputs, type: :f32), Nx.tensor(targets, type: :f32)}
+    end
+
+    defp input_pair([first, second], mean, deviation) do
+      [
+        normalize(first.value, mean, deviation),
+        normalize(second.value, mean, deviation),
+        1.0,
+        1.0,
+        quality_code(first.quality),
+        quality_code(second.quality)
+      ]
     end
 
     defp normalize(value, mean, deviation), do: (value - mean) / deviation
@@ -304,7 +337,11 @@ if Code.ensure_loaded?(Axon) do
                affordance_name: "temperature",
                data_schema: schema,
                dtype: :f32,
-               metadata: %{"model" => "axon-room-v1", "baseline" => "persistence"}
+               metadata: %{
+                 "model" => "axon-room-v1",
+                 "baseline" => "persistence",
+                 "experiment_version" => "2.0.0"
+               }
              ) do
         Decoder.decode(Nx.tensor(value, type: :f32), output,
           id: "axon-room-#{produced_at}",
@@ -336,6 +373,8 @@ if Code.ensure_loaded?(Axon) do
         "schema_digest" => Digest.bytes("temperature:Cel:f32:values,masks,quality"),
         "model_digest" => Digest.bytes(architecture_json),
         "parameters_digest" => Digest.bytes(parameters),
+        "parameters_encoding" => "nx-serialize",
+        "experiment_version" => "2.0.0",
         "feature_order" => ["temperature"],
         "window" => %{"width" => 3, "built_after_split" => true},
         "input_layout" => ["value[0]", "value[1]", "mask[0]", "mask[1]", "quality[0]", "quality[1]"],
