@@ -2,7 +2,7 @@ defmodule Wotex.CoAP.Connection do
   @moduledoc "Explicit UDP socket owner with bounded RFC 7252 request correlation and retransmission."
 
   use GenServer
-  alias Wotex.CoAP.{Codec, Error, Message}
+  alias Wotex.CoAP.{Blockwise, Codec, Error, Message}
 
   @doc "Starts a linked socket owner. Numeric host and finite timeout are explicit inputs."
   @spec start_link(keyword()) :: {:ok, pid()} | {:error, term()}
@@ -33,6 +33,26 @@ defmodule Wotex.CoAP.Connection do
   end
 
   def request(_, _, _), do: {:error, Error.new(:invalid_request)}
+
+  @doc "Runs an exclusive whole-body Block1/Block2 transfer under one finite deadline."
+  @spec transfer(pid(), Message.t(), pos_integer(), keyword()) ::
+          {:ok, Message.t()} | {:error, Error.t()}
+  def transfer(pid, message, timeout, opts \\ [])
+
+  def transfer(pid, %Message{} = message, timeout, opts)
+      when is_pid(pid) and is_integer(timeout) and timeout in 1..60_000 do
+    with {:ok, _} <- Blockwise.config(opts) do
+      GenServer.call(
+        pid,
+        {:transfer, message, opts, System.monotonic_time(:millisecond) + timeout},
+        timeout + 1000
+      )
+    end
+  catch
+    :exit, _ -> {:error, Error.new(:connection_closed)}
+  end
+
+  def transfer(_, _, _, _), do: {:error, Error.new(:invalid_request)}
 
   @doc "Closes a socket owner idempotently."
   @spec close(pid()) :: :ok
@@ -81,32 +101,23 @@ defmodule Wotex.CoAP.Connection do
   end
 
   @impl GenServer
+  def handle_call({:transfer, message, opts, deadline}, _, state) do
+    message = %{message | token: :crypto.strong_rand_bytes(8)}
+    started = System.monotonic_time()
+
+    {result, next} =
+      Blockwise.run(message, opts, state, fn wire, current -> dispatch(wire, deadline, current) end)
+
+    telemetry(message, result, started)
+    {:reply, result, next}
+  end
+
   def handle_call({:request, message, deadline}, _, state) do
-    now = System.monotonic_time(:millisecond)
-    history = Map.reject(state.history, fn {_, time} -> now - time > 247_000 end)
-
-    if now >= deadline or Map.has_key?(history, state.mid) do
-      {:reply, {:error, Error.new(:exchange_unavailable)}, state}
-    else
-      message = %{message | message_id: state.mid, token: <<state.token::64>>}
-      started = System.monotonic_time()
-      result = exchange(state, message, deadline)
-
-      :telemetry.execute(
-        [:wotex, :coap, :request, :stop],
-        %{duration: System.monotonic_time() - started},
-        %{code: message.code, result: if(match?({:ok, _}, result), do: :ok, else: :error)}
-      )
-
-      next = %{
-        state
-        | mid: rem(state.mid + 1, 65_536),
-          token: state.token + 1,
-          history: Map.put(history, state.mid, now)
-      }
-
-      {:reply, result, next}
-    end
+    message = %{message | token: :crypto.strong_rand_bytes(8)}
+    started = System.monotonic_time()
+    {result, next} = dispatch(message, deadline, state)
+    telemetry(message, result, started)
+    {:reply, result, next}
   end
 
   @impl GenServer
@@ -115,6 +126,35 @@ defmodule Wotex.CoAP.Connection do
 
   @impl GenServer
   def terminate(_, state), do: :gen_udp.close(state.socket)
+
+  defp telemetry(message, result, started) do
+    :telemetry.execute(
+      [:wotex, :coap, :request, :stop],
+      %{duration: System.monotonic_time() - started},
+      %{code: message.code, result: if(match?({:ok, _}, result), do: :ok, else: :error)}
+    )
+  end
+
+  defp dispatch(message, deadline, state) do
+    now = System.monotonic_time(:millisecond)
+    history = Map.reject(state.history, fn {_, time} -> now - time > 247_000 end)
+
+    if now >= deadline or Map.has_key?(history, state.mid) do
+      {{:error, Error.new(:exchange_unavailable)}, state}
+    else
+      message = %{message | message_id: state.mid}
+      result = exchange(state, message, deadline)
+
+      next = %{
+        state
+        | mid: rem(state.mid + 1, 65_536),
+          token: state.token + 1,
+          history: Map.put(history, state.mid, now)
+      }
+
+      {result, next}
+    end
+  end
 
   defp exchange(state, message, deadline) do
     with :ok <- Codec.validate_options(message),

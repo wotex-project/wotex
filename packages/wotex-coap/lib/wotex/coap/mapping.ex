@@ -87,7 +87,7 @@ defmodule Wotex.CoAP.Mapping do
 
     if is_integer(accept) and accept in 0..65_535 and content == format do
       message = %{message | options: [{17, Codec.uint(accept)} | message.options]}
-      with {:ok, _} <- Codec.encode(message), do: {:ok, message}
+      with {:ok, _} <- Codec.encode(%{message | payload: <<>>}), do: {:ok, message}
     else
       :error
     end

@@ -19,12 +19,13 @@ waivers. See SECURITY.md and the dependency-security test.
 
 Independent libcoap 4.3.5 at commit
 `7cf7465b784baded4de183290c547d582becfd28`: PASS for UDP content, discovery-resource
-read and unknown-resource status. This is a scoped one-shot CoAP proof, not a
-DTLS/Observe/blockwise interoperability result.
+read and unknown-resource status. Additional PASS evidence covers a 5200-byte
+Block1 upload with server size reduced to 128 bytes, complete echoed Block2
+response, readback and resource deletion. DTLS and Observe are separate proofs.
 
 ```sh
 docker build -t wotex-coap-peer test/interop/libcoap
-docker run --rm -d --name wotex-coap-peer -p 127.0.0.1:56830:5683/udp wotex-coap-peer
+docker run --rm -d --name wotex-coap-peer -p 127.0.0.1:56830:5683/udp --entrypoint coap-server-notls wotex-coap-peer -A 0.0.0.0 -p 5683 -v 0 -d 8 -e -b 128
 WOTEX_PATH_DEPS=1 WOTEX_COAP_INTEROP_PORT=56830 mix test --include interop test/interop/libcoap_test.exs
 docker stop wotex-coap-peer
 ```
@@ -42,7 +43,8 @@ commands above must be rerun after relevant changes.
 
 | Test source | SHA-256 |
 | --- | --- |
-| `test/interop/libcoap_test.exs` | `903bef8fb4368d78027b01293c1acdb3779eff9c8187e075defb97e580172888` |
+| `test/interop/libcoap_test.exs` | `7faaeda0bc8042ac07ac03535ba23ca9ac03e91b128aac1e6d2aeffd432bcc5b` |
+| `test/wotex/coap/blockwise_test.exs` | `129bf6e1a385b689d58593ac1ccf7964221de43b1bda39bdb43f547f771aa173` |
 | `test/wotex/coap/codec_test.exs` | `a810d7c2464a8e874009df3191a276ab72bbccf3ff81ae7ba600e646a5ba660d` |
 | `test/wotex/coap/connection_test.exs` | `f66d238172e2475e264a21878366b9d54051d0de96cde1e23ee261596ffba8a7` |
 | `test/wotex/coap/contract_test.exs` | `9d02da47a770f4d20aaa4ccac068b36709a948c004923e76904cdcbd6b31f888` |

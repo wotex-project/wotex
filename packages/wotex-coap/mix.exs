@@ -24,7 +24,7 @@ defmodule WotexCoAP.MixProject do
     ]
   end
 
-  def application, do: [extra_applications: []]
+  def application, do: [extra_applications: [:crypto]]
 
   def cli do
     [

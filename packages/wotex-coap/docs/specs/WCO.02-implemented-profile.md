@@ -6,8 +6,8 @@ to POST. Explicit `cov:method` may select GET/PUT/POST/DELETE. `cov:confirmable`
 is Boolean; `cov:accept` is a 16-bit Content-Format ID; `cov:contentFormat` must
 match the chosen content type. Supported content types are `application/json`,
 `application/octet-stream`, and `text/plain;charset=utf-8`. Unknown extensions
-are retained. Non-success response codes are errors. Block1/Block2 responses
-are rejected by Runtime until whole-representation exchange is implemented.
+are retained. Non-success response codes are errors. Runtime uses complete Block1/Block2 transfers before content conversion;
+a raw partial response passed directly to Mapping.decode still fails closed.
 
 Codec limits: 1152-byte datagrams, eight token bytes, 64 options; malformed
 reserved option nibbles, length overflow and empty payload markers fail.
@@ -20,13 +20,13 @@ Separate CON replies are acknowledged. IDs are held for the 247-second exchange
 lifetime; exhaustion fails. The production initial ACK timeout is randomized
 between two and three seconds, with exponential backoff and at most four
 retransmissions. Tests may supply a shorter explicit `ack_timeout`.
-Runtime transport configuration admits only the overall `timeout` and the same
-bounded `ack_timeout`; unknown, duplicate or malformed keys fail before a socket
-is opened. The admitted ACK timeout is propagated to the owned Connection.
+Runtime transport configuration admits the overall `timeout`, bounded
+`ack_timeout`, and the Blockwise size/body/exchange budgets; unknown, duplicate
+or malformed keys fail before a socket is opened. The admitted ACK timeout is propagated to the owned Connection.
 
-Observe serial comparison and sequential Block assembly are pure helpers only.
-They do not advertise active network observation, renewal or automatic blockwise
-exchange. Duplicate separate-response ACK caching across exchanges is not yet
+Observe serial comparison is a pure helper. Whole-body Block1/Block2
+exchanges are implemented in [WCO.03](WCO.03-blockwise.md). Active observation
+and renewal remain pending. Duplicate separate-response ACK caching across exchanges is not yet
 implemented. Do not use this profile for long-lived Observe traffic.
 
 ## Evidence and compatibility

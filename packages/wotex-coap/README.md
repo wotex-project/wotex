@@ -5,9 +5,10 @@ Development version: `0.1.0-dev`.
 
 The UDP client performs bounded confirmable/non-confirmable exchanges, correlates
 endpoint/token/Message ID, handles separate responses and retransmits the same
-confirmable datagram. Codec, block descriptors/reassembly helper and Observe
-serial arithmetic are independently usable pure values. Network Observe and
-blockwise transfers are not implemented; Runtime rejects blockwise responses.
+confirmable datagram. Codec, block descriptors and Observe
+serial arithmetic are independently usable pure values. Whole-body Block1 uploads
+and Block2 downloads run serially under one deadline and enforce representation
+identity, acknowledgment and allocation limits. Network Observe remains pending.
 DTLS, OSCORE, multicast, extended tokens and discovery are separate graduation gates.
 
 ```elixir
@@ -23,7 +24,9 @@ end
 opaque binary content. JSON null writes encode as `null`. Runtime spends one
 finite deadline across opening and exchange, and always closes its socket.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
-its owner is monitored. Payloads/datagrams are bounded to 1152 bytes.
+its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
+See the [blockwise contract](docs/specs/WCO.03-blockwise.md) for configurable
+block sizes, aggregate budgets and the atomic upload profile.
 
 ## Wotex contract
 

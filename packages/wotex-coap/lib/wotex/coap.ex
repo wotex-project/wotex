@@ -43,7 +43,7 @@ defmodule Wotex.CoAP do
   @doc "Performs a synchronous exchange from a legacy-shaped method/path/payload map."
   @spec send(session(), map()) :: {:ok, Message.t()} | {:error, Error.t()}
   def send(%{pid: pid, timeout: timeout}, message) do
-    with {:ok, message} <- message(message), do: Connection.request(pid, message, timeout)
+    with {:ok, message} <- message(message), do: Connection.transfer(pid, message, timeout)
   end
 
   @doc "Builds an immutable request with an explicit method and optional raw payload."
@@ -54,7 +54,8 @@ defmodule Wotex.CoAP do
          {:ok, code} <- Map.fetch(@methods, method),
          {:ok, format} <- format(Map.get(input, :content_format)),
          payload = Map.get(input, :payload, <<>>),
-         true <- is_binary(payload) do
+         true <- is_binary(payload) and byte_size(payload) <= 1_048_576,
+         true <- is_boolean(Map.get(input, :confirmable, true)) do
       path_options =
         case String.trim_leading(uri.path || "", "/") do
           "" -> []
@@ -74,7 +75,9 @@ defmodule Wotex.CoAP do
         payload: payload
       }
 
-      with {:ok, _} <- Codec.encode(message), do: {:ok, message}
+      with {:ok, _} <- Codec.encode(%{message | payload: <<>>}),
+           :ok <- Codec.validate_options(message),
+           do: {:ok, message}
     else
       _ -> {:error, Error.new(:invalid_request)}
     end

@@ -7,6 +7,28 @@ defmodule Wotex.CoAP.Codec do
   @maximum 1152
   @single [3, 6, 7, 12, 14, 17, 23, 27, 28, 35, 39, 60]
   @known [1, 3, 4, 5, 6, 7, 8, 11, 12, 14, 15, 17, 20, 23, 27, 28, 35, 39, 60]
+  @lengths %{
+    1 => 0..8,
+    3 => 1..255,
+    4 => 1..8,
+    5 => 0..0,
+    6 => 0..3,
+    7 => 0..2,
+    8 => 0..255,
+    11 => 0..255,
+    12 => 0..2,
+    14 => 0..4,
+    15 => 0..255,
+    17 => 0..2,
+    20 => 0..255,
+    23 => 0..3,
+    27 => 0..3,
+    28 => 0..4,
+    35 => 1..1034,
+    39 => 1..255,
+    60 => 0..4,
+    292 => 0..8
+  }
 
   @doc "Encodes a validated message with canonical option ordering, retaining repeats."
   @spec encode(term()) :: {:ok, binary()} | {:error, Error.t()}
@@ -54,14 +76,28 @@ defmodule Wotex.CoAP.Codec do
   def decode(_), do: failure(:invalid_header)
 
   @doc "Rejects unsupported critical options and duplicate nonrepeatable options."
-  @spec validate_options(Message.t()) :: :ok | {:error, Error.t()}
-  def validate_options(%Message{options: options}) do
+  @spec validate_options(term()) :: :ok | {:error, Error.t()}
+  def validate_options(%Message{} = message) do
+    with :ok <- valid(message), do: semantics(message.options)
+  end
+
+  def validate_options(_), do: failure(:invalid_message)
+
+  defp semantics(options) do
     cond do
       Enum.any?(options, fn {number, _} -> rem(number, 2) == 1 and number not in @known end) ->
         failure(:unsupported_critical_option)
 
       Enum.any?(@single, fn number -> Enum.count(options, &(elem(&1, 0) == number)) > 1 end) ->
         failure(:duplicate_option)
+
+      Enum.any?(options, fn {number, value} ->
+        case Map.fetch(@lengths, number) do
+          {:ok, range} -> byte_size(value) not in range
+          :error -> false
+        end
+      end) ->
+        failure(:invalid_option_length)
 
       true ->
         :ok

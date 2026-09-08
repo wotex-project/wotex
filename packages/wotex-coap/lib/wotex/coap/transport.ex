@@ -26,7 +26,13 @@ defmodule Wotex.CoAP.Transport do
       try do
         remaining = deadline - System.monotonic_time(:millisecond)
 
-        with {:ok, reply} <- Connection.request(pid, mapping.message, remaining),
+        with {:ok, reply} <-
+               Connection.transfer(
+                 pid,
+                 mapping.message,
+                 remaining,
+                 Keyword.take(config, [:block_size, :max_body_size, :max_blocks])
+               ),
              {:ok, value} <- Mapping.decode(mapping, reply),
              do:
                Result.new(request.request_id, request.operation, value,
@@ -59,7 +65,7 @@ defmodule Wotex.CoAP.Transport do
       keys = Keyword.keys(config)
 
       cond do
-        keys -- [:timeout, :ack_timeout] != [] ->
+        keys -- [:timeout, :ack_timeout, :block_size, :max_body_size, :max_blocks] != [] ->
           {:error, Error.new(:invalid_options)}
 
         length(keys) != MapSet.size(MapSet.new(keys)) ->
@@ -70,7 +76,12 @@ defmodule Wotex.CoAP.Transport do
           {:error, Error.new(:invalid_ack_timeout)}
 
         true ->
-          :ok
+          case Wotex.CoAP.Blockwise.config(
+                 Keyword.take(config, [:block_size, :max_body_size, :max_blocks])
+               ) do
+            {:ok, _} -> :ok
+            error -> error
+          end
       end
     else
       {:error, Error.new(:invalid_options)}
