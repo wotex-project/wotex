@@ -109,7 +109,7 @@ defmodule Wotex.BACnet.BACstack do
          true <- :binary.decode_unsigned(property) == address.property,
          true <- index == address.array_index,
          {:ok, encoded} <- native_values(value),
-         :ok <- Value.validate_native(encoded) do
+         :ok <- Value.validate_read(encoded) do
       {:ok, encoded}
     else
       {:error, %Error{}} = error -> error
@@ -137,6 +137,8 @@ defmodule Wotex.BACnet.BACstack do
 
   defp classify({:error, reason}, _, _) when reason in [:timeout, :apdu_timeout],
     do: {:error, Error.new(:deadline_exceeded)}
+
+  defp classify({:error, %Error{}} = error, _, _), do: error
 
   defp classify({:error, _}, _, _), do: {:error, Error.new(:transport_error)}
   defp classify(_, _, _), do: {:error, Error.new(:missing_acknowledgment)}
@@ -188,8 +190,8 @@ defmodule Wotex.BACnet.BACstack do
   defp service(address, %{type: :write_property, value: value}, true) do
     values =
       if is_list(value),
-        do: Enum.map(value, &Encoding.to_encoding!/1),
-        else: Encoding.to_encoding!(value)
+        do: Enum.map(value, &Value.to_tag/1),
+        else: Value.to_tag(value)
 
     parameters =
       selectors(address) ++ [{:constructed, {3, values, 0}}] ++ optional_tag(4, address.priority)

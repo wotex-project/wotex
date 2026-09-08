@@ -166,9 +166,11 @@ defmodule Wotex.BACnet.ServiceBoundaryTest do
           {:"$gen_call", from, {:send, _, apdu, opts}} ->
             send(parent, {:request, apdu, opts})
             GenServer.reply(from, {:ok, %APDU.SimpleACK{invoke_id: 0, service: :write_property}})
+            receive do: (:stop -> :ok)
         end
       end)
 
+    on_exit(fn -> send(client, :stop) end)
     peer = %{max_apdu: 1024, max_segments: 16, segmentation: :segmented_receive}
 
     assert {:ok, handle} =
@@ -359,6 +361,17 @@ defmodule Wotex.BACnet.ServiceBoundaryTest do
                source
              )
 
+    assert {:error, :segments_out_of_order, false} =
+             SegmentsStore.segment(
+               state.segments_store,
+               segment(2, false),
+               Wotex.BACnet.Test.SegmentTransport,
+               self(),
+               source
+             )
+
+    assert map_size(:sys.get_state(state.segments_store).sequences) == 1
+
     SegmentsStore.cancel(state.segments_store, source, 7)
     assert :sys.get_state(state.segments_store).sequences == %{}
 
@@ -372,6 +385,17 @@ defmodule Wotex.BACnet.ServiceBoundaryTest do
              )
 
     send(state.segments_store, {:timer, {source, 7}})
+    assert :sys.get_state(state.segments_store).sequences == %{}
+
+    assert {:error, :invalid_apdu_in_this_state, true} =
+             SegmentsStore.segment(
+               state.segments_store,
+               segment(1, false),
+               Wotex.BACnet.Test.SegmentTransport,
+               self(),
+               source
+             )
+
     assert :sys.get_state(state.segments_store).sequences == %{}
   end
 

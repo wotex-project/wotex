@@ -1,9 +1,9 @@
 defmodule Wotex.BACnet.StackOwner do
   @moduledoc "Monitored owner for an isolated BACstack process group with zero APDU retries."
   use GenServer
-  alias BACnet.Stack.{Client, Segmentator}
+  alias BACnet.Stack.Segmentator
   alias BACnet.Stack.Transport.IPv4Transport
-  alias Wotex.BACnet.{Error, SegmentsStore}
+  alias Wotex.BACnet.{Error, SegmentsStore, StackClient}
 
   @doc "Starts the explicit process group and unwinds partial startup failures."
   @spec start_link(keyword()) :: {:ok, pid()} | {:error, term()}
@@ -53,7 +53,7 @@ defmodule Wotex.BACnet.StackOwner do
        end},
       {:client,
        fn group ->
-         Client.start_link(
+         StackClient.start_link(
            transport: {IPv4Transport, group.transport},
            segmentator: group.segmentator,
            segments_store: group.segments_store,

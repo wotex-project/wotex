@@ -81,7 +81,7 @@ defmodule Wotex.BACnet.Address do
 
   defp validate_operation(:write_property, _, message) do
     case Map.fetch(message, :value) do
-      {:ok, value} -> Value.validate_native(value)
+      {:ok, value} -> Value.validate_write(value)
       :error -> {:error, Error.new(:missing_value)}
     end
   end

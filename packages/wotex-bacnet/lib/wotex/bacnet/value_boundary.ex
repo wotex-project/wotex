@@ -2,7 +2,7 @@ defmodule Wotex.BACnet.ValueBoundary do
   @moduledoc false
 
   alias BACnet.Protocol.ApplicationTags.Encoding
-  alias Wotex.BACnet.Error
+  alias Wotex.BACnet.{CharacterString, Error}
 
   @doc false
   @spec validate(term()) :: :ok | {:error, Error.t()}
@@ -15,6 +15,8 @@ defmodule Wotex.BACnet.ValueBoundary do
 
   defp visit(_, depth, _) when depth > 8, do: :error
   defp visit(_, _, {nodes, _}) when nodes >= 4096, do: :error
+
+  defp visit(%CharacterString{bytes: bytes}, depth, budget), do: visit(bytes, depth, budget)
 
   defp visit(%Encoding{value: value}, depth, {nodes, bytes}),
     do: visit(value, depth + 1, {nodes + 1, bytes})
