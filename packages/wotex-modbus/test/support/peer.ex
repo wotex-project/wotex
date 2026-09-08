@@ -37,6 +37,9 @@ defmodule Wotex.Modbus.TestPeer do
             :gen_tcp.send(socket, bytes)
             loop(socket, handler)
 
+          {:raw_close, bytes} ->
+            :gen_tcp.send(socket, bytes)
+
           {:split, bytes} ->
             for <<byte <- bytes>>, do: :gen_tcp.send(socket, <<byte>>)
             loop(socket, handler)
@@ -47,6 +50,9 @@ defmodule Wotex.Modbus.TestPeer do
         end
 
       {:error, :closed} ->
+        :ok
+
+      {:error, :econnreset} ->
         :ok
     end
   end

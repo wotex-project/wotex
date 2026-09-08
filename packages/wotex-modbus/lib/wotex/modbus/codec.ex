@@ -43,11 +43,21 @@ defmodule Wotex.Modbus.Codec do
   @doc "Validates correlation, byte counts, padding, exception shape and write echoes."
   @spec response(frame(), Command.t(), non_neg_integer()) ::
           {:ok, [non_neg_integer() | boolean()] | :written} | {:error, Error.t()}
-  def response(%{transaction_id: tid, unit_id: unit, pdu: payload}, %Command{} = cmd, tid)
-      when unit == cmd.address.unit_id,
-      do: parse_response(payload, cmd)
+  def response(frame, command, transaction_id) do
+    with :ok <- Command.validate(command),
+         do: correlated_response(frame, command, transaction_id)
+  end
 
-  def response(_, _, _), do: {:error, Error.new(:response_mismatch)}
+  defp correlated_response(
+         %{transaction_id: tid, unit_id: unit, pdu: payload},
+         %Command{address: %{unit_id: unit}} = cmd,
+         tid
+       )
+       when is_integer(tid) and tid in 0..65_535 and is_binary(payload) and
+              byte_size(payload) in 1..253,
+       do: parse_response(payload, cmd)
+
+  defp correlated_response(_, _, _), do: {:error, Error.new(:response_mismatch)}
 
   defp pdu(%Command{function: f, address: a}) when f in [1, 2, 3, 4],
     do: <<f, a.offset::16, a.quantity::16>>

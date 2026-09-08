@@ -28,6 +28,9 @@ defmodule Wotex.Modbus.Connection do
       GenServer.call(pid, {:request, command, deadline}, timeout + 1000)
     end
   catch
+    :exit, {:noproc, _call} ->
+      {:error, Error.new(:connection_closed)}
+
     :exit, _reason ->
       {:error,
        %Error{
@@ -128,8 +131,6 @@ defmodule Wotex.Modbus.Connection do
       end
     end
   end
-
-  defp effect(%Error{code: :remote_exception} = error, _), do: {:error, error}
 
   defp effect(error, command),
     do: {:error, %{error | effect: if(Command.write?(command), do: :unknown, else: :none)}}
