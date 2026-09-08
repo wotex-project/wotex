@@ -3,9 +3,9 @@ defmodule WotexLabWorkbench.InvestigationCompletionControllerTest do
 
   use ExUnit.Case, async: false
 
-  alias WotexLabWorkbenchWeb.InvestigationCompletionController
   alias WotexLabWorkbench.Investigation.Broker
   alias WotexLabWorkbench.Observability.Supervisor
+  alias WotexLabWorkbenchWeb.InvestigationCompletionController
 
   @capability "ccccccccccccccccccccccccccccccccccccccccccc"
   @registry %{
@@ -27,6 +27,7 @@ defmodule WotexLabWorkbench.InvestigationCompletionControllerTest do
     saved = Application.get_env(:wotex_lab_workbench, :beamlens_enabled)
     saved_provider = Application.get_env(:wotex_lab_workbench, :beamlens_provider)
     Application.put_env(:wotex_lab_workbench, :beamlens_provider, :codex_then_ollama)
+
     Application.put_env(
       :wotex_lab_workbench,
       :beamlens_operator_runner,
@@ -141,8 +142,7 @@ defmodule WotexLabWorkbench.InvestigationCompletionControllerTest do
   defp activate_bridge do
     start_supervised!(
       {Supervisor,
-       history: [interval_ms: 60_000],
-       beamlens: %{capability: @capability, registry: @registry}}
+       history: [interval_ms: 60_000], beamlens: %{capability: @capability, registry: @registry}}
     )
 
     room = spawn(fn -> Process.sleep(:infinity) end)

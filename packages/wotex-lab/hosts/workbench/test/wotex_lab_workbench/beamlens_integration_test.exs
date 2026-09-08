@@ -348,10 +348,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
   end
 
   defp start_tree do
-    start_supervised!({Supervisor,
-      history: [interval_ms: 60_000],
-      beamlens: beamlens(@registry)
-    })
+    start_supervised!({Supervisor, history: [interval_ms: 60_000], beamlens: beamlens(@registry)})
   end
 
   defp beamlens(registry) do
