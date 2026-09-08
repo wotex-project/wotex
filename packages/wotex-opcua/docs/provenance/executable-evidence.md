@@ -37,8 +37,6 @@ The Python requirements are fully version-pinned. The Elixir gate does not
 install Python dependencies; audit the optional environment separately with
 `pip-audit --disable-pip --no-deps -r priv/requirements.txt`.
 
-Container source commits are pinned. Base-image/package-manager inputs may move;
-these are reproducible source fixtures, not claims of bit-identical image builds.
 Interoperability tags are excluded by default. Explicit invocation requires the
 configured peer and must fail if that peer or expected response is missing.
 
@@ -53,6 +51,8 @@ commands above must be rerun after relevant changes.
 | `test/interop/asyncua_test.exs` | `d1eb6dae68bc989ccb5b1df7778d80c9512781cdcc2fb248d4c43b1a09567740` |
 | `test/wotex/opcua/asyncua_test.exs` | `d36277d2fd7ec90e6fb393f19ee6730c600e6e83713190e83146dfce67182e6e` |
 | `test/wotex/opcua/binary_test.exs` | `bf2417a5fa093a59adaaf262ca08f614bbc995366961bead7df60b9de45c6a96` |
+| `test/wotex/opcua/contract_test.exs` | `e9d677fe79d5d8b4fdb88d1d597b0d6bb3cb2bdbe2889a9cc4003432cb5e5f33` |
+| `test/wotex/opcua/dependency_security_test.exs` | `3c45b778a241b2a577f9481c6a7ec08f4f8ec747f72a6d5e7deaf3265510e072` |
 | `test/wotex/opcua/mapping_test.exs` | `2768c115820bcd56364bde5d2101bc13dc242fc92f5ca0a2c1b62b01e7812f93` |
 | `test/wotex/opcua/port_test.exs` | `bf7dfcf70fa9afc680f07d4b861c56ecf954b01e8d280b12d7981849cc19cb48` |
 | `test/wotex/opcua/value_test.exs` | `5c173dfdd5a27d60887064fe64041a3d5fd2434442bcd8abe431e00345f96089` |
