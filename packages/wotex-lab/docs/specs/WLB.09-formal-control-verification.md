@@ -1,11 +1,13 @@
 # WLB.09: Optional formal control verification with ex_maude
 
-Specification version: 0.2.0. Contract: accepted. Source status: the finite
+Specification version: 0.3.0. Contract: accepted. Source status: implemented.
+The finite
 `thermal-control-v1` model with its safe and deliberately broken modules, the
 explicit abstraction, the closed serializer, the output parsers, the result
 contract, the ex_maude profile with bounded execution and engine reaping, and
-the counterexample replay are implemented; the formal-control notebook lane
-follows WLB.07.
+the counterexample replay are implemented. The formal-control notebook executes
+the digest, serializer and replay boundary without an engine and runs the real
+profile only when an operator supplies the pinned Maude executable.
 
 ## Decision and scope
 
@@ -99,6 +101,13 @@ binary and replay convergence and divergence from captured traces;
 of the safe model by complete search, obtains and replays a counterexample
 from every broken module, exercises depth bounds, output overflow, deadline
 expiry with engine reaping, pool removal and two concurrent pools.
+
+The exact source result is recorded in
+`docs/provenance/WLB.09-evidence.json`: Maude 3.5.1 was obtained through the
+checked-in digest-verifying provisioner, its release archive and executable
+digests are separate inputs, and the engine-backed, pure-search, MCP and
+cookbook tests pass under a fixed seed. The executable remains outside the
+package and repository.
 
 ## Binary and distribution boundary
 

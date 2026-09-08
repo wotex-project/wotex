@@ -108,7 +108,7 @@ defmodule Wotex.Lab.GraphTest do
     assert fixture["vectors"]["negative"] != [] and fixture["scenario"] == "thermal-nx"
 
     cookbook = Enum.find(graph["cookbooks"], &(&1["id"] == "formal-control"))
-    assert cookbook["lane"] == "implemented" and cookbook["evidence"] == "partial"
+    assert cookbook["lane"] == "implemented" and cookbook["evidence"] == "executable"
     assert cookbook["source_url"] =~ "priv/cookbooks/formal-control.livemd"
 
     formal_seam = Enum.find(graph["seams"], &(&1["id"] == "lab.formal_verification"))
@@ -251,7 +251,7 @@ defmodule Wotex.Lab.GraphTest do
     {:ok, formal} = Graph.answer(graph, :formal_verification)
 
     assert formal["seam_status"] == "implemented" and
-             formal["status"]["implementation_status"] == "partial"
+             formal["status"]["implementation_status"] == "implemented"
 
     assert formal["adapter"] == nil
     assert formal["canonical_source"] =~ "lib/wotex/lab/formal/profile.ex"

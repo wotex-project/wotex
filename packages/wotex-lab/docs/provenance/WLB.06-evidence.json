@@ -40,7 +40,7 @@
     {"archive": "missing", "name": "python", "version": "3.9.6"},
     {"archive": "missing", "name": "darwin-sandbox-exec", "version": "25.6.0"}
   ],
-  "durations": {"run_ms": 7890},
+  "durations": {"run_ms": 8420},
   "fixtures": {
     "corpus:thing-description-1.1": "sha256:1dc979f8599bbcd0e441bc09c7266169f42bee40384fbacd4ad1e1c2b8caac07",
     "corpus:thing-model-1.1": "sha256:262e3369986eef648563b5693fdaadab3fa11fb3732cf4db9b7546e2a4af92a7"
@@ -53,11 +53,11 @@
   ],
   "lock_digest": "sha256:7d40df7fa06d21da796f6758413900f4a2c39b5ba69d93c0da077a995d62ac46",
   "outcomes": {"excluded_count": 1, "test_count": 50, "thing_description_vectors": 14, "thing_model_vectors": 6},
-  "revision": "6d0612e90a0f48d4de1f9eb6a6d0ed8a7e330dd5+workspace-WLB.06-v1.3.0",
+  "revision": "6d77598a63043d019e075b2635ff0b3475c0670e+workspace-WLB.09-v0.3.0",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:4195ff5bc401fccd61dd29077aa757f32c4bc9708950bd22327b2062389fa6cf",
+  "source_tree_digest": "sha256:3faeea06867d2e8571b8bc081b31855b862b232b870748e2db0dd1b84c50557e",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",

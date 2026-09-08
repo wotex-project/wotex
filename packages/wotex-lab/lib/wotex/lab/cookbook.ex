@@ -336,13 +336,17 @@ defmodule Wotex.Lab.Cookbook do
       completion_ids: ["WLB-C09", "WLB-C08"],
       upstream: [],
       lane: :implemented,
-      evidence: :partial,
+      evidence: :executable,
       checks: [
         "conflicting-rule-refused",
         "dispatch-once",
         "revoked-inert",
         "stale-observation-inert",
-        "action-counter-unchanged"
+        "action-counter-unchanged",
+        "model-digest",
+        "closed-search",
+        "counterexample-replayed",
+        "engine-boundary-explicit"
       ],
       timeout_ms: 30_000
     },

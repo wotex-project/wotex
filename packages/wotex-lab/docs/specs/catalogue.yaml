@@ -271,11 +271,12 @@ specifications:
       - "bin/check_source_cohort.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.09
-    version: "0.2.0"
+    version: "0.3.0"
     path: docs/specs/WLB.09-formal-control-verification.md
-    implementation_status: partial
-    evidence_status: partial
+    implementation_status: implemented
+    evidence_status: complete
     adoption_status: reference_available
+    evidence_manifest: docs/provenance/WLB.09-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -295,8 +296,13 @@ specifications:
       - "Wotex.Lab.Formal.Replay"
     executable_evidence:
       - "test/wotex/lab/formal_test.exs"
+      - "test/wotex/lab/formal_search_test.exs"
       - "test/wotex/lab/formal_maude_test.exs"
-    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+      - "test/wotex/lab/formal_maude_mcp_test.exs"
+      - "test/wotex/lab/mcp_formal_tool_test.exs"
+      - "test/wotex/lab/cookbook_test.exs"
+      - "test/wotex/lab/wlb09_evidence_manifest_test.exs"
+    compatibility_classification: WLB.09 is implemented as an optional, digest-pinned Maude profile with closed serialization, finite-state exhaustion evidence, counterexample replay and process-tree cleanup; results remain inert and model-scoped.
   - id: WLB.10
     version: "0.2.0"
     path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md

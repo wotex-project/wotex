@@ -6,21 +6,20 @@ Show the boundary where formal control verification belongs: between the
 numeric proposals `wotex_nx` decodes and the consumer decision that may
 dispatch one of them. The Lab's decision policy already refuses conflicting
 rules, stale observations, revoked and expired grants, and it never lets a
-verifier result grant authority. The `ex_maude` profile of WLB.09 that would
-explore modeled transition orders, prove exhaustion or produce a replayable
-counterexample is **planned**: it is fully specified, has no source in this
-package, and no cell below pretends otherwise.
-
-The notebook's evidence status is `partial`: the policy cells run against
-the cohort; the bounded search and counterexample replay are documentation
-only and are marked as such.
+verifier result grant authority. The optional `ex_maude` profile of WLB.09
+explores modeled transition orders, distinguishes bounded search from complete
+exhaustion and produces replayable counterexamples. The checked-in model,
+closed serializer and replay execute without a Maude installation. An actual
+engine run occurs only when the operator supplies the digest-pinned executable
+through `WOTEX_LAB_MAUDE`; otherwise the engine cell records `:unsupported`.
 
 ## Prerequisites
 
 ```elixir
 Mix.install([
   {:wotex_lab, "~> 0.1.0"},
-  {:nx, "~> 0.13.1"}
+  {:nx, "~> 0.13.1"},
+  {:ex_maude, "~> 0.4.1"}
 ])
 ```
 
@@ -29,9 +28,10 @@ notebook was written none of the `wotex*` packages is published on Hex; the
 notebook is verified against the workspace source cohort recorded in
 `docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
 which evaluates every Elixir cell below in order (skipping this install
-cell). `Mix.install/1` never points at a Git checkout, and it deliberately
-does not list `ex_maude`: no Maude binary is downloaded or started by this
-notebook or by the base library.
+cell). `Mix.install/1` never points at a Git checkout. The optional package is
+declared, but neither it nor this notebook downloads Maude. The operator uses
+the digest-verifying `bin/provision_maude.exs` helper or supplies an independently
+verified Maude 3.5.1 executable.
 
 ## Package and consumer ownership
 
@@ -40,7 +40,7 @@ notebook or by the base library.
 | Decoded proposals | `wotex_nx` (package-implements) | `Wotex.Nx.Decoder`, `ActionProposal` |
 | Decision binding, conflict refusal, dispatch once, revoke, records | `wotex_lab` (consumer) | `Wotex.Lab.SmartRoom.Policy` |
 | The simulated effect | `wotex_lab` reference host | `Wotex.Lab.Reference.Thing` |
-| Finite control model, bounded search, exhaustion basis, counterexample replay | planned `ex_maude` profile (WLB.09) | not in source |
+| Finite control model, bounded search, exhaustion basis, counterexample replay | `wotex_lab` optional profile | `Wotex.Lab.Formal.*` |
 | Formal verification never granting an Action | consumer policy, by construction | `Policy.dispatch/4` takes no verifier input |
 
 ## Run
@@ -50,6 +50,8 @@ alias Wotex.DataSchema
 alias Wotex.Lab
 alias Wotex.Lab.Adapters.Runtime.{Loopback, StaticRef}
 alias Wotex.Lab.Error, as: LabError
+alias Wotex.Lab.Evidence.Digest
+alias Wotex.Lab.Formal.{Abstraction, Model, Output, Profile, Replay, Serializer}
 alias Wotex.Lab.Reference.Thing
 alias Wotex.Lab.SmartRoom.Policy
 alias Wotex.Lab.Telemetry
@@ -169,19 +171,92 @@ decision for the same Thing and Action, so it is revoked explicitly too.
 {revoked, stale, Thing.stats(actuator)}
 ```
 
-The bounded search and counterexample replay of WLB.09, shown as
-documentation only (this block is not an Elixir cell and is not executed):
+The model and serializer are content-addressed and closed: caller text cannot
+become a Maude command. The query below is bounded and therefore does not claim
+verification merely because no solution has yet been found.
 
-```text
-# Planned (WLB.09, implementation_status: planned; ex_maude profile).
-# pool  = ExMaude.Pool.child_spec(name: pool_name, executable: verified_maude_path, size: 1)
-# model = %{id: "thermal-control-v1", digest: "sha256:..."}   # checked-in, digest-addressed
-# query = "search [1] in THERMAL-CONTROL : init(bands, modes, decisions) =>* unsafe(S) ."
-# {:ok, result} = Wotex.Lab.Formal.search(pool, model, query, max_depth: 100, solutions: 1, deadline_ms: 5_000, max_output_bytes: 1_048_576)
-# result.status in [:counterexample, :verified_in_model, :inconclusive, :timeout, :unsupported, :error]
-# A `:counterexample` replays as an ordered finite simulator trace against the smart room;
-# a bounded search with no solution is `:inconclusive` unless exhaustion is proven.
-# Neither outcome touches Thing.stats(actuator).handler_calls.
+```elixir
+{:ok, formal_model} = Model.fetch(:thermal_control_v1)
+{:ok, ^formal_model} = Model.verify(formal_model)
+formal_initial = Abstraction.init()
+{:ok, formal_term} = Serializer.term(formal_initial)
+
+{:ok, formal_query} =
+  Serializer.search(
+    formal_model.modules.safe,
+    formal_term,
+    :no_stale_dispatch,
+    max_depth: 100,
+    max_solutions: 1
+  )
+
+model_digest_ok = formal_model.digest == Digest.file(formal_model.path) |> elem(1)
+closed_query_ok = formal_query =~ "search [1, 100] in SAFE-THERMAL" and not (formal_query =~ ";")
+```
+
+This captured Maude 3.5.1 counterexample is parser input, not an expected
+verdict hidden from an external target. Replaying it against the real policy
+diverges on the duplicate delivery because the consumer dispatches once.
+
+```elixir
+captured_duplicate = """
+state 0, Room: room(comfort, off, off, within, noDecision, 0, 0, 0)
+===[ rl [heatUp] ]===>
+state 1, Room: room(hot, off, off, within, noDecision, 0, 0, 0)
+===[ crl [proposeCool] ]===>
+state 2, Room: room(hot, off, off, within, granted(cool, 0), 0, 1, 0)
+===[ crl [dispatchCool] ]===>
+state 3, Room: room(hot, off, on, within, dispatched(cool, 0), 0, 1, 1)
+===[ rl [redeliver] ]===>
+state 4, Room: room(hot, off, on, within, dispatched(cool, 0), 0, 1, 2)
+"""
+
+{:ok, counterexample_steps} = Output.path(captured_duplicate)
+
+{:ok, replay_policy} =
+  Lab.start_child(
+    lab,
+    :sessions,
+    {Policy, id: :formal_replay, allowed: [:operator], limits: Replay.policy_limits()}
+  )
+
+{:ok, replay_result} = Replay.run(replay_policy, counterexample_steps)
+```
+
+An engine is admitted only from an explicit executable plus its actual digest.
+When the environment variable is absent, `:unsupported` is evidence of that
+boundary—not a successful verification. When present, this cell performs a
+real bounded search of the broken model through an instance-owned one-worker
+pool.
+
+```elixir
+engine_result =
+  case System.get_env("WOTEX_LAB_MAUDE") do
+    nil ->
+      %{status: :unsupported, reason: :no_explicit_binary}
+
+    binary ->
+      with {:ok, binary_digest} <- Digest.file(binary),
+           {:ok, formal_profile} <-
+             Profile.new(
+               pool: :wotex_lab_cookbook_formal_pool,
+               binary: binary,
+               binary_digest: binary_digest
+             ),
+           {:ok, _pool} <-
+             Lab.start_child(lab, :sessions, Profile.child_spec(formal_profile)),
+           {:ok, result} <-
+             Profile.verify(
+               formal_profile,
+               :broken_duplicate,
+               :no_duplicate_effect,
+               formal_initial
+             ) do
+        %{status: result.status, engine: result.engine, model_digest: result.model.digest}
+      else
+        {:error, error} -> %{status: :error, code: error.code}
+      end
+  end
 ```
 
 ## Deliberate breakage
@@ -211,9 +286,9 @@ records = Policy.records(policy)
 
 ## Safe telemetry
 
-Only the granted and current decision produced a dispatch span; refusals
-produce none. The span carries a non-reversible `thing_ref` and the Action
-name, not the Thing id or the input.
+The live decision and the captured-trace replay each produce one admitted
+dispatch span; refusals produce none. The spans carry non-reversible
+`thing_ref` values and Action names, not Thing ids or inputs.
 
 ```elixir
 drain = fn drain ->
@@ -230,7 +305,7 @@ spans = drain.(drain)
 
 dispatches = for {[:wotex, :lab, :policy, :dispatch, :stop], _measurements, metadata} <- spans, do: metadata
 text = inspect(spans)
-labels_safe? = length(dispatches) == 1 and not (text =~ thing_id) and not (text =~ "24.0")
+labels_safe? = length(dispatches) == 2 and not (text =~ thing_id) and not (text =~ "24.0")
 {dispatches, labels_safe?}
 ```
 
@@ -243,6 +318,10 @@ labels_safe? = length(dispatches) == 1 and not (text =~ thing_id) and not (text 
 | `revoked-inert` | A revoked grant is `:revoked` at dispatch and changes nothing |
 | `stale-observation-inert` | A grant dispatched under a newer watermark is `:stale_observation`; a changed revision is `:stale_state` |
 | `action-counter-unchanged` | The actuator saw exactly one handler call across every refusal |
+| `model-digest` | The checked-in finite model matches its manifest digest |
+| `closed-search` | The query comes only from the closed serializer with explicit bounds |
+| `counterexample-replayed` | A captured duplicate-delivery trace diverges at the consumer's dispatch-once policy |
+| `engine-boundary-explicit` | The cell either records explicit unavailability or a real counterexample from the pinned engine |
 
 ```elixir
 %{
@@ -250,26 +329,33 @@ labels_safe? = length(dispatches) == 1 and not (text =~ thing_id) and not (text 
   "dispatch-once" => dispatched == :accepted and second == :already_dispatched,
   "revoked-inert" => revoked == :revoked,
   "stale-observation-inert" => stale == :stale_observation and stale_state == :stale_state,
-  "action-counter-unchanged" => calls_after == 1 and labels_safe?
+  "action-counter-unchanged" => calls_after == 1 and labels_safe?,
+  "model-digest" => model_digest_ok,
+  "closed-search" => closed_query_ok,
+  "counterexample-replayed" =>
+    replay_result.status == :diverged and replay_result.effects == 1,
+  "engine-boundary-explicit" => engine_result.status in [:unsupported, :counterexample]
 }
 ```
 
 ## Public seam
 
 `lab.policy` is Lab-owned: the consumer decision boundary between decoded
-proposals and effects. `lab.formal_verification` is the planned WLB.09
-seam; it has no module in this package and is recorded as planned in the
-generated graph.
+proposals and effects. `lab.formal_verification` is the implemented, optional
+WLB.09 seam in `Wotex.Lab.Formal.Profile`; it accepts only a verified model and
+engine cohort and returns inert, model-scoped evidence.
 
 ## Spec and completion IDs
 
-* Lab: WLB.09, implementation status planned (`WLB-C09`, `WLB-C08`).
-* Upstream: none claimed; `ex_maude` is not part of the source cohort.
+* Lab: WLB.09, implementation status implemented (`WLB-C09`, `WLB-C08`).
+* Upstream: none claimed; `ex_maude` 0.4.1 is an optional inspected dependency.
 
 ## Replacement adapter
 
 A replacement policy must bind at least the proposal digest, principal,
 watermark, state revision and expiry, refuse conflicts instead of queueing
 them, dispatch at most once and record refusals separately from dispatch
-acknowledgements. When the `ex_maude` profile ships, its result is an
-additional input to the decision, never to the dispatch.
+acknowledgements. A formal result is an additional input to the decision,
+never to the dispatch. A replacement formal
+adapter must preserve closed serialization, complete-search evidence,
+deadline/output bounds, process-tree cleanup and content-addressed inputs.
