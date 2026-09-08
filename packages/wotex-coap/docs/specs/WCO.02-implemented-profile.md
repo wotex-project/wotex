@@ -1,3 +1,13 @@
+---
+spec:
+  id: WCO.02
+  title: "Implemented CoAP profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-coap
+  updated: 2026-09-09
+---
+
 # WCO.02 Implemented CoAP profile
 
 `coap://numeric-host:port/path?query` maps to a UDP endpoint and URI-Path/URI-Query

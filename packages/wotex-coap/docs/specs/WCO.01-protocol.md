@@ -1,3 +1,13 @@
+---
+spec:
+  id: WCO.01
+  title: "CoAP protocol contract"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-coap
+  updated: 2026-09-09
+---
+
 # WCO.01 CoAP protocol contract
 
 ## Revision and scope

@@ -1,0 +1,1113 @@
+{
+  "format": "wotex-protocol-contract",
+  "version": "1.0.0",
+  "specification": "WCO.11@1.0.0",
+  "evidence_status": "specified_cases_only",
+  "cases": [
+    {
+      "id": "WCO-F-OBSERVE-REGISTER",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D01"
+      ],
+      "scenarios": [
+        "WCO-V06"
+      ],
+      "tier": "pure",
+      "operation": "codec.encode",
+      "input": {
+        "message": {
+          "type": "con",
+          "code": 1,
+          "message_id": 4660,
+          "token_hex": "01020304",
+          "options": [
+            [
+              6,
+              ""
+            ],
+            [
+              11,
+              "78"
+            ]
+          ],
+          "payload_hex": ""
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "hex": "4401123401020304605178"
+        }
+      }
+    },
+    {
+      "id": "WCO-F-OBSERVE-INITIAL",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D01"
+      ],
+      "scenarios": [
+        "WCO-V07"
+      ],
+      "tier": "pure",
+      "operation": "codec.decode",
+      "input": {
+        "hex": "6445123401020304610aff3230"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": {
+            "type": "ack",
+            "code": 69,
+            "message_id": 4660,
+            "token_hex": "01020304",
+            "options": [
+              [
+                6,
+                "0a"
+              ]
+            ],
+            "payload_hex": "3230"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-EMPTY-ACK",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D01"
+      ],
+      "scenarios": [
+        "WCO-V01"
+      ],
+      "tier": "pure",
+      "operation": "codec.decode",
+      "input": {
+        "hex": "60001234"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": {
+            "type": "ack",
+            "code": 0,
+            "message_id": 4660,
+            "token_hex": "",
+            "options": [],
+            "payload_hex": ""
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-ELECTIVE-OPTION",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D01"
+      ],
+      "scenarios": [
+        "WCO-V01"
+      ],
+      "tier": "pure",
+      "operation": "codec.decode",
+      "input": {
+        "hex": "40011234d2570102"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": {
+            "type": "con",
+            "code": 1,
+            "message_id": 4660,
+            "token_hex": "",
+            "options": [
+              [
+                100,
+                "0102"
+              ]
+            ],
+            "payload_hex": ""
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-CRITICAL-OPTION",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D01"
+      ],
+      "scenarios": [
+        "WCO-V01"
+      ],
+      "tier": "pure",
+      "operation": "codec.validate",
+      "input": {
+        "message": {
+          "type": "con",
+          "code": 1,
+          "message_id": 4660,
+          "token_hex": "01020304",
+          "options": [
+            [
+              99,
+              ""
+            ]
+          ],
+          "payload_hex": ""
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "unsupported_critical_option",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-DUPLICATE-OBSERVE",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D01"
+      ],
+      "scenarios": [
+        "WCO-V06"
+      ],
+      "tier": "pure",
+      "operation": "codec.validate",
+      "input": {
+        "message": {
+          "type": "con",
+          "code": 1,
+          "message_id": 4660,
+          "token_hex": "01020304",
+          "options": [
+            [
+              6,
+              ""
+            ],
+            [
+              6,
+              "01"
+            ]
+          ],
+          "payload_hex": ""
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "duplicate_option",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-LONG-OBSERVE",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D01"
+      ],
+      "scenarios": [
+        "WCO-V06"
+      ],
+      "tier": "pure",
+      "operation": "codec.validate",
+      "input": {
+        "message": {
+          "type": "con",
+          "code": 1,
+          "message_id": 4660,
+          "token_hex": "01020304",
+          "options": [
+            [
+              6,
+              "00000001"
+            ]
+          ],
+          "payload_hex": ""
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_option_length",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-TRUNCATED-TOKEN",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D01"
+      ],
+      "scenarios": [
+        "WCO-V01"
+      ],
+      "tier": "pure",
+      "operation": "codec.decode",
+      "input": {
+        "hex": "44011234010203"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_header",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-TRAILING-MARKER",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D01"
+      ],
+      "scenarios": [
+        "WCO-V01"
+      ],
+      "tier": "pure",
+      "operation": "codec.decode",
+      "input": {
+        "hex": "40011234ff"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "empty_payload_marker",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-URI-SPLIT-DECODE-ONCE",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D02"
+      ],
+      "scenarios": [
+        "WCO-V01"
+      ],
+      "tier": "pure",
+      "operation": "message.new",
+      "input": {
+        "method": "get",
+        "path": "/a%2Fb?x=a%26b&x=+"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": {
+            "type": "con",
+            "code": 1,
+            "message_id": 0,
+            "token_hex": "",
+            "options": [
+              [
+                11,
+                "612f62"
+              ],
+              [
+                15,
+                "783d612662"
+              ],
+              [
+                15,
+                "783d2b"
+              ]
+            ],
+            "payload_hex": ""
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-URI-PERCENT-LITERAL",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D02"
+      ],
+      "scenarios": [
+        "WCO-V01"
+      ],
+      "tier": "pure",
+      "operation": "message.new",
+      "input": {
+        "method": "get",
+        "path": "/%252F"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": {
+            "type": "con",
+            "code": 1,
+            "message_id": 0,
+            "token_hex": "",
+            "options": [
+              [
+                11,
+                "253246"
+              ]
+            ],
+            "payload_hex": ""
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-ACCEPT-ZERO",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D02"
+      ],
+      "scenarios": [
+        "WCO-V01"
+      ],
+      "tier": "pure",
+      "operation": "message.new",
+      "input": {
+        "method": "get",
+        "path": "/x",
+        "accept": 0
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": {
+            "type": "con",
+            "code": 1,
+            "message_id": 0,
+            "token_hex": "",
+            "options": [
+              [
+                11,
+                "78"
+              ],
+              [
+                17,
+                ""
+              ]
+            ],
+            "payload_hex": ""
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-URI-BAD-PERCENT",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D02"
+      ],
+      "scenarios": [
+        "WCO-V01"
+      ],
+      "tier": "pure",
+      "operation": "message.new",
+      "input": {
+        "method": "get",
+        "path": "/x%2"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_request",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-URI-DOT-SEGMENT",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D02"
+      ],
+      "scenarios": [
+        "WCO-V01"
+      ],
+      "tier": "pure",
+      "operation": "message.new",
+      "input": {
+        "method": "get",
+        "path": "/a/%2e%2e/b"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_request",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-URI-AUTHORITY",
+      "requirements": [
+        "WCO-S01",
+        "WCO-D02"
+      ],
+      "scenarios": [
+        "WCO-V01"
+      ],
+      "tier": "pure",
+      "operation": "message.new",
+      "input": {
+        "method": "get",
+        "path": "//127.0.0.2/x"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_request",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-FRESH-WRAP",
+      "requirements": [
+        "WCO-S03",
+        "WCO-D04"
+      ],
+      "scenarios": [
+        "WCO-V05"
+      ],
+      "tier": "pure",
+      "operation": "observe.fresh",
+      "input": {
+        "previous": 16777215,
+        "current": 0,
+        "elapsed_ms": 0
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": true
+      }
+    },
+    {
+      "id": "WCO-F-FRESH-EQUAL",
+      "requirements": [
+        "WCO-S03",
+        "WCO-D04"
+      ],
+      "scenarios": [
+        "WCO-V05"
+      ],
+      "tier": "pure",
+      "operation": "observe.fresh",
+      "input": {
+        "previous": 10,
+        "current": 10,
+        "elapsed_ms": 0
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": false
+      }
+    },
+    {
+      "id": "WCO-F-FRESH-OLDER",
+      "requirements": [
+        "WCO-S03",
+        "WCO-D04"
+      ],
+      "scenarios": [
+        "WCO-V05"
+      ],
+      "tier": "pure",
+      "operation": "observe.fresh",
+      "input": {
+        "previous": 10,
+        "current": 9,
+        "elapsed_ms": 0
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": false
+      }
+    },
+    {
+      "id": "WCO-F-FRESH-HALF-RANGE",
+      "requirements": [
+        "WCO-S03",
+        "WCO-D04"
+      ],
+      "scenarios": [
+        "WCO-V05"
+      ],
+      "tier": "pure",
+      "operation": "observe.fresh",
+      "input": {
+        "previous": 0,
+        "current": 8388608,
+        "elapsed_ms": 0
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": false
+      }
+    },
+    {
+      "id": "WCO-F-FRESH-128000",
+      "requirements": [
+        "WCO-S03",
+        "WCO-D04"
+      ],
+      "scenarios": [
+        "WCO-V05"
+      ],
+      "tier": "pure",
+      "operation": "observe.fresh",
+      "input": {
+        "previous": 10,
+        "current": 10,
+        "elapsed_ms": 128000
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": false
+      }
+    },
+    {
+      "id": "WCO-F-FRESH-128001",
+      "requirements": [
+        "WCO-S03",
+        "WCO-D04"
+      ],
+      "scenarios": [
+        "WCO-V05"
+      ],
+      "tier": "pure",
+      "operation": "observe.fresh",
+      "input": {
+        "previous": 10,
+        "current": 10,
+        "elapsed_ms": 128001
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": true
+      }
+    },
+    {
+      "id": "WCO-F-FRESH-INVALID",
+      "requirements": [
+        "WCO-S03",
+        "WCO-D04"
+      ],
+      "scenarios": [
+        "WCO-V05"
+      ],
+      "tier": "pure",
+      "operation": "observe.fresh",
+      "input": {
+        "previous": -1,
+        "current": 0,
+        "elapsed_ms": 0
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": false
+      }
+    },
+    {
+      "id": "WCO-F-LINK-DELIMITERS",
+      "requirements": [
+        "WCO-S04",
+        "WCO-D03"
+      ],
+      "scenarios": [
+        "WCO-V11"
+      ],
+      "tier": "pure",
+      "operation": "link_format.decode",
+      "input": {
+        "body": "</temperature>;rt=\"temperature-c\";obs;title=\"room, east; \\\"A\\\"\";x=1;x=2,</empty>",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": [
+            {
+              "href": "/temperature",
+              "attributes": [
+                [
+                  "rt",
+                  "temperature-c"
+                ],
+                [
+                  "obs",
+                  true
+                ],
+                [
+                  "title",
+                  "room, east; \"A\""
+                ],
+                [
+                  "x",
+                  "1"
+                ],
+                [
+                  "x",
+                  "2"
+                ]
+              ]
+            },
+            {
+              "href": "/empty",
+              "attributes": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "WCO-F-LINK-EMPTY",
+      "requirements": [
+        "WCO-S04",
+        "WCO-D03"
+      ],
+      "scenarios": [
+        "WCO-V11"
+      ],
+      "tier": "pure",
+      "operation": "link_format.decode",
+      "input": {
+        "body": "",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": []
+        }
+      }
+    },
+    {
+      "id": "WCO-F-LINK-ANCHOR",
+      "requirements": [
+        "WCO-S04",
+        "WCO-D03"
+      ],
+      "scenarios": [
+        "WCO-V11"
+      ],
+      "tier": "pure",
+      "operation": "link_format.decode",
+      "input": {
+        "body": "<https://example.test/model>;anchor=\"/temperature\";rel=\"describedby\"",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": [
+            {
+              "href": "https://example.test/model",
+              "attributes": [
+                [
+                  "anchor",
+                  "/temperature"
+                ],
+                [
+                  "rel",
+                  "describedby"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "WCO-F-LINK-REL-FIRST",
+      "requirements": [
+        "WCO-S04",
+        "WCO-D03"
+      ],
+      "scenarios": [
+        "WCO-V11"
+      ],
+      "tier": "pure",
+      "operation": "link_format.decode",
+      "input": {
+        "body": "</x>;rel=\"alternate\";rel=\"describedby\";hreflang=en;hreflang=sv",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": [
+            {
+              "href": "/x",
+              "attributes": [
+                [
+                  "rel",
+                  "alternate"
+                ],
+                [
+                  "hreflang",
+                  "en"
+                ],
+                [
+                  "hreflang",
+                  "sv"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "WCO-F-LINK-DUPLICATE-RT",
+      "requirements": [
+        "WCO-S04",
+        "WCO-D03"
+      ],
+      "scenarios": [
+        "WCO-V11"
+      ],
+      "tier": "pure",
+      "operation": "link_format.decode",
+      "input": {
+        "body": "</x>;rt=a;rt=b",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_link_format",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-LINK-RESERVED-HREF",
+      "requirements": [
+        "WCO-S04",
+        "WCO-D03"
+      ],
+      "scenarios": [
+        "WCO-V11"
+      ],
+      "tier": "pure",
+      "operation": "link_format.decode",
+      "input": {
+        "body": "</x>;href=y",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_link_format",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-LINK-QUOTE",
+      "requirements": [
+        "WCO-S04",
+        "WCO-D03"
+      ],
+      "scenarios": [
+        "WCO-V11"
+      ],
+      "tier": "pure",
+      "operation": "link_format.decode",
+      "input": {
+        "body": "</x>;title=\"unfinished",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_link_format",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-LINK-TRAILING-COMMA",
+      "requirements": [
+        "WCO-S04",
+        "WCO-D03"
+      ],
+      "scenarios": [
+        "WCO-V11"
+      ],
+      "tier": "pure",
+      "operation": "link_format.decode",
+      "input": {
+        "body": "</x>,",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_link_format",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-LINK-LIMIT",
+      "requirements": [
+        "WCO-S04",
+        "WCO-D03"
+      ],
+      "scenarios": [
+        "WCO-V11"
+      ],
+      "tier": "pure",
+      "operation": "link_format.decode",
+      "input": {
+        "body": "</a>,</b>",
+        "options": [
+          [
+            "max_links",
+            1
+          ]
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "link_limit",
+            "field": "links",
+            "details": {
+              "limit": 1
+            },
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WCO-F-OBSERVE-CANCEL-RACE",
+      "requirements": [
+        "WCO-S01",
+        "WCO-S03",
+        "WCO-D04",
+        "WCO-D05"
+      ],
+      "scenarios": [
+        "WCO-V07",
+        "WCO-V09"
+      ],
+      "tier": "lifecycle_contract",
+      "operation": "observation.trace",
+      "input": {
+        "endpoint": {
+          "host": "127.0.0.1",
+          "port": 5683
+        },
+        "allocate_mids": [
+          4660,
+          4661
+        ],
+        "allocate_tokens_hex": [
+          "01020304"
+        ],
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "subscribe",
+            "handle": "observe",
+            "path": "/x",
+            "renew": false,
+            "deadline_ms": 100
+          },
+          {
+            "at_ms": 1,
+            "event": "peer_datagram",
+            "host": "127.0.0.1",
+            "port": 5683,
+            "hex": "6445123401020304610aff3230"
+          },
+          {
+            "at_ms": 1,
+            "event": "drain"
+          },
+          {
+            "at_ms": 2,
+            "event": "peer_datagram",
+            "host": "127.0.0.1",
+            "port": 5683,
+            "hex": "4445200001020304610bff3231"
+          },
+          {
+            "at_ms": 2,
+            "event": "drain"
+          },
+          {
+            "at_ms": 3,
+            "event": "peer_datagram",
+            "host": "127.0.0.1",
+            "port": 5683,
+            "hex": "4445200001020304610bff3231"
+          },
+          {
+            "at_ms": 3,
+            "event": "drain"
+          },
+          {
+            "at_ms": 4,
+            "event": "unsubscribe",
+            "handle": "observe",
+            "deadline_ms": 100
+          },
+          {
+            "at_ms": 5,
+            "event": "peer_datagram",
+            "host": "127.0.0.1",
+            "port": 5683,
+            "hex": "4445200101020304610cff3232"
+          },
+          {
+            "at_ms": 5,
+            "event": "drain"
+          },
+          {
+            "at_ms": 6,
+            "event": "peer_datagram",
+            "host": "127.0.0.1",
+            "port": 5683,
+            "hex": "6445123501020304"
+          },
+          {
+            "at_ms": 7,
+            "event": "drain"
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "outbound_hex": [
+            "4401123401020304605178",
+            "60002000",
+            "60002000",
+            "440112350102030461015178",
+            "60002001"
+          ],
+          "deliveries": [
+            {
+              "payload_hex": "3230",
+              "observe": 10,
+              "code": 69
+            },
+            {
+              "payload_hex": "3231",
+              "observe": 11,
+              "code": 69
+            }
+          ],
+          "completion": {
+            "subscribe": "ok",
+            "unsubscribe": "ok"
+          },
+          "owned_resources": {
+            "sockets": 0,
+            "pending_timers": 0,
+            "active_subscriptions": 0
+          }
+        }
+      }
+    }
+  ]
+}

@@ -53,3 +53,16 @@ Observe, secure transport and OSCORE target requirements are not promoted to
 implemented claims by this research. The committed blockwise evidence is recorded
 in executable-evidence.md; atomic-only upload and bounded body sizes are explicit
 library profile choices within RFC 7959's wider behavior.
+
+## Standalone-contract review, 2026-09-09
+
+WCO.11 makes native method, URI and discovery behavior explicit. RFC 6690
+sections 3.1–3.3 prohibit senders from repeating rt/if/sz; this package chooses
+strict rejection of those malformed descriptions. This differs from the
+first-occurrence receiver rules for rel/title/title* in
+[RFC 5988, October 2010, sections 5.3–5.4](https://www.rfc-editor.org/rfc/rfc5988.html#section-5.3).
+Repeated extension/hreflang values remain ordered. Anchored-link context is
+preserved without automatic resolution or dereference. URI percent decoding
+follows RFC 7252 section 6.4; package input limits are explicit policy.
+The concrete corpus is specified data and does not claim a discovery/Observe
+implementation or a newly executed protocol result.

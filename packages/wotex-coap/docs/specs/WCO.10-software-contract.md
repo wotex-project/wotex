@@ -1,3 +1,13 @@
+---
+spec:
+  id: WCO.10
+  title: "Complete CoAP client software profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-coap
+  updated: 2026-09-09
+---
+
 # WCO.10 Complete CoAP client software profile
 
 Read [WCO.00](WCO.00-library-contract.md) first. Required software includes bounded
@@ -18,6 +28,10 @@ RFC 7252 (June 2014) owns messages, correlation and congestion control; RFC 7641
 (September 2015) Observe; RFC 7959 (August 2016) blockwise; RFC 9175 (February 2022)
 token processing and Request-Tag; RFC 8613 (July 2019) OSCORE. Primary links and
 the W3C draft pin are in [provenance](../provenance/primary-sources.md).
+
+The [standalone/preservation contract](WCO.11-standalone-client-and-preservation.md)
+fixes native helper signatures, URI processing, discovery results and concrete
+fixture oracles. It is mandatory alongside S01–S06.
 
 Keep the pure `Message`, `Codec`, `Block`, `Blockwise` and `Observe` modules.
 Refactor `Connection` into an event-driven socket owner or extract its exchange
@@ -143,9 +157,11 @@ Add `discover(session, %{query: binary | nil})` which reads `/.well-known/core`
 using complete Block2 transfer and parses Content-Format 40 under RFC 6690
 (August 2012). The pure `LinkFormat.decode/2` returns bounded link maps with
 `href` and a list of repeated `{attribute, value | true}` terms; preserve unknown
-attributes and resolve relative targets only against the explicit endpoint.
+attributes and raw URI references. D03 defines multiplicity and anchored-link
+handling; discovery itself neither resolves nor dereferences advertised targets.
 Limit body to 64 KiB, links to 256, attributes per link to 32 and token/string
-bytes to 1024. Quoted delimiters and escapes must not split links; malformed
+bytes to 1024. Repeated extension attributes survive; singleton and first-occurrence rules
+are explicit in D03. Quoted delimiters and escapes must not split links; malformed
 quotes, controls or excess limits fail. Discovery advertises descriptions, never
 authorizes later operations or initiates connections to discovered endpoints.
 
@@ -224,7 +240,11 @@ Within a live generation libcoap retains and enforces the replay window. Set
 `replay_window` to 32. This intentional restart restriction avoids claiming
 receiver replay persistence that the selected public SDK API does not provide.
 
-## Acceptance vectors and software peers
+## Acceptance scenario families and software peers
+
+These IDs describe required test families. The .11 corpus contains concrete
+selected inputs/output projections; its existence does not accept any family.
+Each family still needs all boundary/fault variants bound to actual assertions.
 
 | ID | Scenario | Required result |
 | --- | --- | --- |
@@ -238,7 +258,7 @@ receiver replay persistence that the selected public SDK API does not provide.
 | WCO-V08 | Renewal same serial, zero/large Max-Age, stale generation timer | Bounded correct refresh; no tight loop or stale timer effect |
 | WCO-V09 | Cancel while a notification arrives, double cancel, foreign handle, receiver death | Correct original token/URI, local closure and no late delivery |
 | WCO-V10 | Observe Block2 with newer notification during assembly | Distinct continuation token, stable ETag, bounded Property coalescing; Event overlap fails |
-| WCO-V11 | Link-format quoted comma/semicolon/escape, repeated/unknown attributes, malformed quote and excess links | Exact parsed values or bounded error |
+| WCO-V11 | Link-format quoted comma/semicolon/escape, repeated extensions, singleton violations, unknown attributes, malformed quote and excess links | Exact parsed values or bounded error |
 | WCO-V12 | DTLS good PSK/PKI, wrong key, expired/untrusted/wrong-SAN/revoked certificate, replayed DTLS record | Authenticated operation or failure; never cleartext fallback |
 | WCO-V13 | RFC 8613 known-answer vectors, modified ciphertext/AAD/KID, replay, concurrent duplicate, sequence exhaustion | Authenticated plaintext once or rejection |
 | WCO-V14 | Kill OSCORE bridge after reservation/before save completion, reopen corrupt or mismatched store | No nonce reuse or replay acceptance; fail unsafe reopen |

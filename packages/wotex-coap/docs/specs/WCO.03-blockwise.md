@@ -1,3 +1,13 @@
+---
+spec:
+  id: WCO.03
+  title: "Whole-body transfers"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-coap
+  updated: 2026-09-09
+---
+
 # WCO.03 Whole-body transfers
 
 RFC 7959 (August 2016), sections 2.3–2.7, defines the block sequencing,

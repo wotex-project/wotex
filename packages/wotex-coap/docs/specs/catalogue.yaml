@@ -1,0 +1,67 @@
+schema_version: "1.1.0"
+package: "wotex_coap"
+completion_plan: "docs/plans/wotex-coap-completion.md"
+specifications:
+  - id: "WCO.00"
+    version: "1.0.0"
+    path: "docs/specs/WCO.00-library-contract.md"
+    implementation_status: "partial"
+    standards: [{"name": "IETF CoAP", "revision": "RFC 7252 2014-06; RFC 7959 2016-08", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: []
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WCO.01"
+    version: "1.0.0"
+    path: "docs/specs/WCO.01-protocol.md"
+    implementation_status: "implemented"
+    standards: [{"name": "IETF CoAP", "revision": "RFC 7252 2014-06; RFC 7959 2016-08", "claim": "UDP exchange and bounded Block1/Block2 only"}]
+    requires: []
+    implementation_modules: ["Wotex.CoAP.Block", "Wotex.CoAP.Blockwise", "Wotex.CoAP.Codec", "Wotex.CoAP.Connection", "Wotex.CoAP.Error", "Wotex.CoAP.Message", "Wotex.CoAP.Observe", "Wotex.CoAP"]
+    executable_evidence: ["test/wotex/coap/blockwise_test.exs", "test/wotex/coap/codec_test.exs", "test/wotex/coap/connection_test.exs", "test/wotex/coap/contract_test.exs", "test/wotex/coap/dependency_security_test.exs", "test/wotex/coap/mapping_test.exs"]
+    compatibility_classification: "UDP exchange and bounded Block1/Block2 only; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+  - id: "WCO.02"
+    version: "1.0.0"
+    path: "docs/specs/WCO.02-implemented-profile.md"
+    implementation_status: "implemented"
+    standards: [{"name": "IETF CoAP", "revision": "RFC 7252 2014-06; RFC 7959 2016-08", "claim": "UDP exchange and bounded Block1/Block2 only"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
+    requires: ["WCO.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
+    implementation_modules: ["Wotex.CoAP.Error", "Wotex.CoAP.Mapping", "Wotex.CoAP.Transport"]
+    executable_evidence: ["test/wotex/coap/blockwise_test.exs", "test/wotex/coap/codec_test.exs", "test/wotex/coap/connection_test.exs", "test/wotex/coap/contract_test.exs", "test/wotex/coap/dependency_security_test.exs", "test/wotex/coap/mapping_test.exs"]
+    compatibility_classification: "UDP exchange and bounded Block1/Block2 only; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+  - id: "WCO.03"
+    version: "1.0.0"
+    path: "docs/specs/WCO.03-blockwise.md"
+    implementation_status: "implemented"
+    standards: [{"name": "IETF CoAP", "revision": "RFC 7252 2014-06; RFC 7959 2016-08", "claim": "UDP exchange and bounded Block1/Block2 only"}]
+    requires: ["WCO.01", "WCO.02"]
+    implementation_modules: ["Wotex.CoAP.Block", "Wotex.CoAP.Blockwise", "Wotex.CoAP.Codec", "Wotex.CoAP.Connection", "Wotex.CoAP.Error", "Wotex.CoAP.Message", "Wotex.CoAP.Observe", "Wotex.CoAP"]
+    executable_evidence: ["test/wotex/coap/blockwise_test.exs", "test/wotex/coap/codec_test.exs", "test/wotex/coap/connection_test.exs", "test/wotex/coap/contract_test.exs", "test/wotex/coap/dependency_security_test.exs", "test/wotex/coap/mapping_test.exs"]
+    compatibility_classification: "UDP exchange and bounded Block1/Block2 only; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+  - id: "WCO.10"
+    version: "1.0.0"
+    path: "docs/specs/WCO.10-software-contract.md"
+    implementation_status: "partial"
+    standards: [{"name": "IETF CoAP", "revision": "RFC 7252 2014-06; RFC 7959 2016-08", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: ["WCO.00", "WCO.01", "WCO.02"]
+    implementation_modules: ["Wotex.CoAP.Block", "Wotex.CoAP.Blockwise", "Wotex.CoAP.Codec", "Wotex.CoAP.Connection", "Wotex.CoAP.Error", "Wotex.CoAP.Message", "Wotex.CoAP.Observe", "Wotex.CoAP"]
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WCO.11"
+    version: "1.0.0"
+    path: "docs/specs/WCO.11-standalone-client-and-preservation.md"
+    implementation_status: "planned"
+    standards: [{"name": "IETF CoAP", "revision": "RFC 7252 2014-06; RFC 7959 2016-08", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: ["WCO.00", "WCO.10"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WCO.12"
+    version: "1.0.0"
+    path: "docs/specs/WCO.12-wotex-integration.md"
+    implementation_status: "planned"
+    standards: [{"name": "IETF CoAP", "revision": "RFC 7252 2014-06; RFC 7959 2016-08", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
+    requires: ["WCO.00", "WCO.10", "WCO.11", "wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03", "wotex_runtime:WRT.01"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
