@@ -1,9 +1,13 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.1.1. Contract: accepted. Source status: the MCP server
-core with stdio and Streamable HTTP transports is implemented; cookbooks,
-the generated knowledge graph, the control API, the npm client and the public
-site remain planned.
+Specification version: 0.2.0. Contract: accepted. Source status: the sixteen
+executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
+catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
+`Wotex.Lab.Graph` generator with its nine representations and the
+`bin/check_graph.exs` gate, and the MCP server core with stdio and Streamable
+HTTP transports are implemented. The `axon-room-model`, `formal-control` and
+`nerves-and-mcp` notebooks retain partial evidence; the control API, generated
+npm client and public site remain planned.
 
 ## Cookbook catalogue
 

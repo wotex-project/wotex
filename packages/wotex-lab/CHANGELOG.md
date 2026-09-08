@@ -71,6 +71,36 @@
   and formal lanes enabled where their dependencies exist and records absent
   lanes as not run; the formal profile now emits under the `formal` telemetry
   component with a budget measurement.
+- Sixteen executable Livebook cookbooks under `priv/cookbooks/`, one per
+  WLB.07 row, each with goal, prerequisites, ownership, run cells, deliberate
+  breakage, safe telemetry, expected output, public seam, spec/completion
+  IDs and replacement adapter instructions, showing the package calls beside
+  any Lab convenience API. `Mix.install` names published-artifact
+  requirements and says plainly that no `wotex*` package is published yet.
+  `Wotex.Lab.Cookbook` catalogues the notebooks with a lane status and a
+  notebook evidence status; `test/wotex/lab/cookbook_test.exs` evaluates
+  every cell of every notebook against the workspace cohort through a
+  test-only runner and asserts sections, catalogue ids, loaded modules and
+  each notebook's final checks. `axon-room-model`, `formal-control` and
+  `nerves-and-mcp` retain partial notebook evidence: Axon and Nerves work is
+  incomplete, while the formal source lane has not yet been wired into its
+  cookbook.
+- Fixture manifests (schema 1.1.0) for the thermal, loopback, HTTP, MQTT,
+  Directory and Continuum fixtures with media type, provenance, input and
+  expected-output digests, positive/negative vector ids, spec/seam/operation
+  ids and scenario.
+- `Wotex.Lab.Graph` generates the versioned source graph that joins the
+  catalogue, the completion plan, the upstream provenance snapshot (statuses
+  verbatim, absent axes `not_reported`), the cookbooks, the fixtures and the
+  Lab scenario, adapter and seam descriptors; it rejects unresolved ids,
+  paths and callbacks, duplicates, undeclared ownership changes and scenario
+  cycles, renders `/.well-known/wotex`, `/manifest.json`, `/manifest.jsonld`,
+  `/ecosystem.ttl`, `/fixtures/index.json`, `/docs-index.jsonl`,
+  `/openapi.json` (3.2.0), `/asyncapi.yaml` (3.1.0) and `/llms.txt`, and
+  answers the WLB.07 ownership questions from graph nodes. `mix run
+  --no-start bin/check_graph.exs` validates every representation in
+  `mix check`. `Wotex.Lab.Telemetry.forward/4` forwards spans to an explicit
+  receiver.
 - Accepted WLB.01–WLB.11 specifications and versioned completion contract.
 - Explicit instance supervision, bounded scenario descriptors and plugin port.
 - Revision-pinned scenario definitions and an explicit trusted-component host,

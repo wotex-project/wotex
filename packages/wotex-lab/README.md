@@ -17,7 +17,7 @@ This checkout supplies the library foundation, not the complete laboratory.
 The [specification catalogue](docs/specs/catalogue.yaml) and
 [completion contract](docs/plans/wotex-lab-completion.md) define the entire
 accepted programme, including network adapters, dual Directory stores,
-Livebooks, Nx.Serving/Axon experiments, formal verification, conformance, MCP,
+Nx.Serving/Axon experiments, formal verification, conformance, MCP,
 PromEx/GreptimeDB/BeamLens, a lean LiveView workbench, hosted and embedded
 distribution. Each has a concrete acceptance gate. None
 is an unspecified backlog item or an advertised working feature.
@@ -110,6 +110,31 @@ needed. The function is a transparent numerical baseline; it is not a trained
 controller or evidence of prediction accuracy. Read
 [`Thermal`](lib/wotex/lab/examples/thermal.ex) to see every public package call.
 
+## Cookbooks
+
+`priv/cookbooks/` holds the sixteen Livebook notebooks of
+[WLB.07](docs/specs/WLB.07-cookbooks-and-machine-interfaces.md), one per
+cookbook row from `parse-td` to `nerves-and-mcp`. Each shows the package
+calls beside any Lab convenience API, breaks something on purpose, inspects
+the telemetry it emitted and ends with a cell that returns its checks.
+`Wotex.Lab.Cookbook` lists them with two separate statuses: the source status
+of the lane and the notebook's own evidence status, `:executable` when every
+cell runs and `:partial` where an accepted lane still leaves
+documentation-only cells (`axon-room-model`, `formal-control`,
+`nerves-and-mcp`).
+`test/wotex/lab/cookbook_test.exs` evaluates every Elixir cell of every
+notebook against the workspace cohort during `mix check`; the MQTT lane runs
+against the scripted in-BEAM peer and, with `WOTEX_LAB_BROKER=1`, against a
+disposable `eclipse-mosquitto:2` broker. The `Mix.install` cells name
+published artifact requirements such as `{:wotex_lab, "~> 0.1.0"}`; those
+packages are not published, so opening a notebook in Livebook today does not
+install them, and every notebook says so. `Wotex.Lab.Graph` and
+`mix run --no-start bin/check_graph.exs` generate and validate the machine
+interface of WLB.07 as a source snapshot with digests; no control plane, MCP
+deployment, npm client or public site is deployed. The MCP server and its
+transports remain explicit host-owned library components and never start on
+application load.
+
 ## Own the processes explicitly
 
 ```elixir
@@ -139,9 +164,9 @@ There is no automatic scenario execution or plugin discovery.
 Wotex.Lab.Scenario.to_map(scenario)
 ```
 
-Descriptors are data. The accepted execution contract assigns topology,
-deadlines, faults, assertions and cleanup to an explicit runner, whose source
-implementation is not part of this foundation.
+Descriptors are data. `Wotex.Lab.Runner` executes revision-pinned definitions
+through an explicit trusted-component host with bounded attempts, deadlines,
+faults, assertions, cancellation, cleanup and deterministic logical replay.
 
 ## Architecture
 
