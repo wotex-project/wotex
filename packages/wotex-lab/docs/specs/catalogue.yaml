@@ -54,9 +54,9 @@ specifications:
       - "test/wotex/lab/runner_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.03
-    version: "1.1.0"
+    version: "1.2.0"
     path: docs/specs/WLB.03-nx-experiments.md
-    implementation_status: partial
+    implementation_status: implemented
     evidence_status: partial
     adoption_status: reference_available
     standards:
@@ -72,12 +72,18 @@ specifications:
     implementation_modules:
       - "Wotex.Lab.Examples.Thermal"
       - "Wotex.Lab.Examples.WindowAnomaly"
+      - "Wotex.Lab.Experiments.RoomModel"
       - "Wotex.Lab.Simulators.Thermal"
       - "Wotex.Lab.Adapters.Nx.UnitConverter"
     executable_evidence:
       - "test/wotex/lab/thermal_test.exs"
       - "test/wotex/lab/window_anomaly_test.exs"
-    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+      - "test/wotex/lab/serving_test.exs"
+      - "test/wotex/lab/room_model_test.exs"
+      - "test/wotex/lab/backend_cohort_test.exs"
+      - "test/wotex/lab/smart_room_test.exs"
+      - "test/wotex/lab/cookbook_test.exs"
+    compatibility_classification: WLB.03 lanes implemented with optional Axon 0.8 and EXLA 0.13 profiles, fixed work ceilings, monitored cancellation and inert policy-bound outputs; artifact adoption remains a separate axis.
   - id: WLB.04
     version: "1.3.0"
     path: docs/specs/WLB.04-runtime-and-network-adapters.md

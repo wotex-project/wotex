@@ -9,7 +9,7 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
   alias Wotex.Lab.Evidence.{Digest, Record}
 
   @base_packages [{:wotex, "wotex"}, {:wotex_nx, "wotex-nx"}, {:wotex_lab, "wotex-lab"}]
-  @profile_packages ~w(wotex_runtime wotex_directory wotex_binding_http wotex_binding_mqtt wotex_conformance wotex_continuum exqlite req emqtt)a
+  @profile_packages ~w(wotex_runtime wotex_directory wotex_binding_http wotex_binding_mqtt wotex_conformance wotex_continuum exqlite req emqtt axon polaris exla fine xla)a
   @cohort ~w(lib/**/* priv/fixtures/**/* docs/specs/**/* mix.exs mix.lock)
   @deadline_ms 900_000
 

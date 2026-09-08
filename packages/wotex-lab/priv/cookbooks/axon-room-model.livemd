@@ -4,23 +4,20 @@
 
 Show the dataset and experiment contract of WLB.03 on the versioned
 synthetic room stream: split by time before windowing, derive training
-statistics from the training split only, fit a tiny consumer-owned model
-with plain Nx, score it on held-out rows against the persistence baseline,
-and record a manifest with content digests. No accuracy claim follows from
-any number below; the data is synthetic and the model is a one-parameter
-baseline.
-
-The Lab lane `axon-room-model` is **planned**: Axon is not a dependency of
-the base library, and no Axon training runs here. The cells that would train
-the Axon model are shown as documentation only and are marked as such. The
-notebook's evidence status is therefore `partial`.
+statistics from the training split only, fit a tiny consumer-owned Axon model,
+score it on held-out rows against the persistence baseline, and record a
+manifest with content digests. No accuracy claim follows from any number
+below; the data is synthetic and the separate plain-Nx coefficient remains an
+inspectable reference baseline.
 
 ## Prerequisites
 
 ```elixir
 Mix.install([
   {:wotex_lab, "~> 0.1.0"},
-  {:nx, "~> 0.13.1"}
+  {:nx, "~> 0.13.1"},
+  {:axon, "~> 0.8.1"},
+  {:exla, "~> 0.13.1"}
 ])
 ```
 
@@ -29,9 +26,9 @@ notebook was written none of the `wotex*` packages is published on Hex; the
 notebook is verified against the workspace source cohort recorded in
 `docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
 which evaluates every Elixir cell below in order (skipping this install
-cell). `Mix.install/1` never points at a Git checkout, and it deliberately
-does not list `axon`: the planned Axon profile belongs to an explicit
-integration profile, not to the base graph.
+cell). `Mix.install/1` never points at a Git checkout. Axon and EXLA are named
+here because this notebook is the explicit model/backend integration profile;
+they remain optional dependencies of the Lab package.
 
 ## Package and consumer ownership
 
@@ -40,7 +37,7 @@ integration profile, not to the base graph.
 | Observation rows, windows, encoded batches, decoded predictions | `wotex_nx` (package-implements) | `Wotex.Nx.Window`, `Encoder`, `Decoder` |
 | Synthetic stream, split, statistics, model, metrics, manifest | consumer (`wotex_lab`) | this notebook and `Wotex.Lab.Simulators.Thermal` |
 | Content digests | `wotex_lab` | `Wotex.Lab.Evidence.Digest` |
-| Axon model, training loop, parameter persistence | planned consumer profile | not in source |
+| Axon model, training loop, parameter artifact | consumer (`wotex_lab`) | `Wotex.Lab.Experiments.RoomModel` |
 
 ## Run
 
@@ -48,6 +45,7 @@ integration profile, not to the base graph.
 alias Wotex.DataSchema
 alias Wotex.Lab.Evidence.Digest
 alias Wotex.Lab.Examples.WindowAnomaly
+alias Wotex.Lab.Experiments.RoomModel
 alias Wotex.Lab.Simulators.Thermal
 alias Wotex.Nx.{Decoder, OutputSchema, Prediction}
 ```
@@ -99,8 +97,8 @@ test_mean_seen? = Nx.to_number(mean) == Nx.to_number(Nx.mean(test_tensor))
 ```
 
 A one-parameter autoregressive model `x[n+1] ~ a * x[n]` in normalized
-space, fitted in closed form on the training windows with Nx. It is the
-consumer-owned model; the planned Axon model takes the same inputs.
+space, fitted in closed form on the training windows with Nx. It remains a
+transparent reference next to the trained Axon lane.
 
 ```elixir
 pairs = fn ws -> {Nx.tensor(Enum.map(ws, &hd/1), type: :f32), Nx.tensor(Enum.map(ws, &List.last/1), type: :f32)} end
@@ -187,15 +185,26 @@ leak_detected? = leaky_mean != Nx.to_number(mean)
 {leaky_mean, Nx.to_number(mean), leak_detected?}
 ```
 
-The planned Axon lane, shown as documentation only (this block is not an
-Elixir cell and is not executed):
+The actual bounded Axon lane records values, masks and quality in its six-field
+window input, trains after the split, decodes an inert prediction, and returns
+a serialized parameter artifact. The same small profile also runs on EXLA CPU;
+the comparison tolerance permits backend rounding but identity fields remain
+exact.
 
-```text
-# Planned (WLB.03 axon-room-model, implementation_status: planned).
-# model = Axon.input("window", shape: {nil, 2}) |> Axon.dense(8, activation: :tanh) |> Axon.dense(1)
-# params = model |> Axon.Loop.trainer(:mean_absolute_error, :adam) |> Axon.Loop.run(train_stream, %{}, epochs: 20)
-# Saved parameters and the model digest would join the manifest above; the
-# held-out score would be compared with `persistence_mae` on the same rows.
+```elixir
+{:ok, axon_binary} = RoomModel.run(count: 32, split_at: 24, epochs: 2)
+
+{:ok, axon_exla} =
+  RoomModel.run(
+    backend: EXLA.Backend,
+    compiler: EXLA,
+    count: 32,
+    split_at: 24,
+    epochs: 2,
+    timeout_ms: 30_000
+  )
+
+backend_delta = abs(axon_binary.prediction.value - axon_exla.prediction.value)
 ```
 
 ## Safe telemetry
@@ -208,7 +217,9 @@ paths, no callbacks, no credentials.
 ```elixir
 manifest_public? =
   not (inspect(manifest) =~ "/Users") and not (inspect(manifest) =~ "/home") and
-    Enum.all?(Map.values(manifest), &(not is_function(&1)))
+    Enum.all?(Map.values(manifest), &(not is_function(&1))) and
+    not (inspect(axon_binary.manifest) =~ "/Users") and
+    not (inspect(axon_binary.manifest) =~ "/home")
 ```
 
 ## Expected output
@@ -220,6 +231,8 @@ manifest_public? =
 | `train-statistics-only` | The training mean differs from the held-out mean and is the one used |
 | `model-vs-persistence-scored` | Both scores exist on the same held-out rows and the decoded prediction targets the next step |
 | `manifest-digest` | Dataset and parameter digests are `sha256:` values |
+| `axon-training` | An Axon parameter artifact and inert decoded prediction are returned |
+| `backend-cohort` | Binary/Evaluator and EXLA CPU agree within the declared tolerance |
 
 ```elixir
 %{
@@ -231,23 +244,30 @@ manifest_public? =
       match?(%Prediction{target_at: target} when target == last_at + 1_000, prediction),
   "manifest-digest" =>
     String.starts_with?(manifest["dataset_digest"], "sha256:") and
-      String.starts_with?(manifest["parameters_digest"], "sha256:") and manifest_public?
+      String.starts_with?(manifest["parameters_digest"], "sha256:") and manifest_public?,
+  "axon-training" =>
+    axon_binary.manifest["model"] == "axon-room-v1" and byte_size(axon_binary.parameters) > 0 and
+      match?(%Prediction{}, axon_binary.prediction),
+  "backend-cohort" =>
+    backend_delta < 0.0001 and axon_exla.manifest["backend"] == "EXLA.Backend" and
+      axon_binary.manifest["feature_order"] == axon_exla.manifest["feature_order"]
 }
 ```
 
 ## Public seam
 
-No WoTEx seam is implemented; the consumer contract is the observation and
-decoded-output shape of `wotex_nx:WNX.01`.
+The consumer contract is the observation and decoded-output shape of
+`wotex_nx:WNX.01`; Axon and EXLA are optional execution profiles, not WoT
+semantics owners.
 
 ## Spec and completion IDs
 
-* Lab: WLB.03 `axon-room-model` lane, implementation status planned
-  (`WLB-C03`, `WLB-C08`).
-* Upstream: none claimed.
+* Lab: WLB.03 `axon-room-model` and `backend-cohort` lanes, implementation
+  status implemented (`WLB-C03`, `WLB-C08`).
+* Upstream consumer evidence: `WNX-C04`, `WNX-C05`.
 
 ## Replacement adapter
 
-Replace the AR(1) fit with your own model function; keep the split, the
-training-only statistics and the manifest fields. Any model output must be
-decoded through `Wotex.Nx.Decoder.decode/3` before a policy sees it.
+Replace the small Axon model with your own explicit model function; keep the
+split, training-only statistics, limits and manifest fields. Any model output
+must be decoded through `Wotex.Nx.Decoder.decode/3` before a policy sees it.

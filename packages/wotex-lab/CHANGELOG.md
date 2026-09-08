@@ -10,6 +10,13 @@
 - Versioned deterministic thermal simulator and the window-anomaly lane:
   windowed masked scoring, persistence prediction and observation decoding
   with negative cases for fills, quality, units, dtype limits and thresholds.
+- Bounded Axon room-model training with a time-first split, training-only
+  normalization, held-out persistence comparison, serialized parameters and
+  content digests; BinaryBackend/Evaluator and EXLA CPU run as an explicit
+  numerical cohort with transfer, deallocation and tolerance evidence.
+- Explicit-instance `Nx.Serving` examples cover inline and supervised serving,
+  batch padding, finite timeout flush, concurrent reply correlation, overload
+  refusal and worker/caller shutdown when a serving child is stopped.
 - Family error shape for `Wotex.Lab.Error` and a role kill-isolation test.
 - Req HTTP client with a bounded incremental SSE parser and a linked stream
   session, exercised over real sockets against a disposable Bandit server
@@ -81,10 +88,11 @@
   notebook evidence status; `test/wotex/lab/cookbook_test.exs` evaluates
   every cell of every notebook against the workspace cohort through a
   test-only runner and asserts sections, catalogue ids, loaded modules and
-  each notebook's final checks. `axon-room-model`, `formal-control` and
-  `nerves-and-mcp` retain partial notebook evidence: Axon and Nerves work is
-  incomplete, while the formal source lane has not yet been wired into its
-  cookbook.
+  each notebook's final checks. `formal-control` and `nerves-and-mcp` retain
+  partial notebook evidence: the formal source lane has not yet been wired
+  into its cookbook and the Nerves target remains incomplete. The Serving and
+  Axon notebooks execute their padding, timeout, overload, training and
+  backend-cohort claims.
 - Fixture manifests (schema 1.1.0) for the thermal, loopback, HTTP, MQTT,
   Directory and Continuum fixtures with media type, provenance, input and
   expected-output digests, positive/negative vector ids, spec/seam/operation

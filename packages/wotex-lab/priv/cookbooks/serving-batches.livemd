@@ -8,11 +8,11 @@ process placed under an explicit Lab instance with a caller-chosen name, and
 show that both paths agree and that concurrent callers get their own rows
 back. The serving function is a plain Nx function; nothing here is a model.
 
-The Lab lane `serving-batches` (WLB.03) is **partial** in source: the
-supervised serving, batch keys and concurrent correlation run below, while
-the acceptance items for batch padding, timeout, stop-under-load and
-overload are not yet automated in the Lab test suite. This notebook does not
-claim them.
+The Lab lane `serving-batches` (WLB.03) is implemented: the supervised
+serving, padding, timeout flush, batch keys, concurrent correlation and
+instance-capacity refusal run below. `serving_test.exs` additionally stops a
+Serving while its execution worker is blocked and proves both worker and
+caller terminate within the child shutdown budget.
 
 ## Prerequisites
 
@@ -93,7 +93,7 @@ The supervised path: an explicit Lab instance owns the serving process under
 its `:sessions` role, with a caller-chosen name and batch size.
 
 ```elixir
-{:ok, lab} = Lab.start_link(id: "serving-batches", max_children: 4)
+{:ok, lab} = Lab.start_link(id: "serving-batches", max_children: 1)
 serving_name = :wotex_lab_cookbook_serving
 
 {:ok, serving_pid} =
@@ -114,6 +114,15 @@ supervised =
   end)
 
 {Nx.to_flat_list(supervised), Process.alive?(serving_pid)}
+```
+
+Padding is explicit. `Nx.Serving` removes padded output rows before returning
+the result to the caller, so the two admitted rows remain the only result rows.
+
+```elixir
+padded = Nx.Batch.pad(batch, 2)
+padded_result = Nx.Serving.batched_run(serving_name, padded)
+{padded.pad, Nx.to_flat_list(padded_result)}
 ```
 
 Concurrent callers each submit a one-row batch; the serving batches them
@@ -140,6 +149,14 @@ correlated =
 correlated
 ```
 
+A single row cannot fill the configured batch of four, so this call exercises
+the finite `batch_timeout` flush instead of waiting forever.
+
+```elixir
+timeout_call = Task.async(fn -> Nx.Serving.batched_run(serving_name, one_row.(0)) end)
+timeout_flush = Task.yield(timeout_call, 1_000)
+```
+
 Batch keys: `Nx.Batch.key/2` tags a batch so a serving can separate work
 that must not be batched together; the serving declared `:room_a` next to
 `:default` when it started and keeps the two apart.
@@ -148,6 +165,21 @@ that must not be batched together; the serving declared `:room_a` next to
 keyed = Nx.Batch.key(batch, :room_a)
 keyed_result = Nx.Serving.batched_run(serving_name, keyed)
 {keyed.key, Nx.to_flat_list(keyed_result)}
+```
+
+The instance has capacity one for this role. A second serving is rejected
+before it starts; no unbounded process queue is substituted for admission.
+
+```elixir
+overload =
+  Lab.start_child(
+    lab,
+    :sessions,
+    {Nx.Serving,
+     serving: serving,
+     name: :wotex_lab_cookbook_serving_over_capacity,
+     batch_size: 1}
+  )
 ```
 
 Stop the serving and the instance explicitly.
@@ -205,6 +237,9 @@ labels_safe? = not (inspect(spans) =~ "21.0") and not (inspect(spans) =~ "urn:")
 | `inline-supervised-agree` | Both paths return about `[21.0, 23.0]` |
 | `concurrent-correlation` | Caller 0 gets `[21.0]`, caller 1 gets `[23.0]` |
 | `batch-keys` | A keyed batch carries its key and computes the same rows |
+| `padding` | Two padded rows do not appear in the returned two-row result |
+| `timeout-flush` | A one-row request returns through the finite batch timeout |
+| `overload-refused` | A second session child is rejected at instance capacity |
 | `serving-stopped` | The serving name is free after the instance stops |
 
 ```elixir
@@ -222,6 +257,9 @@ end
   "concurrent-correlation" =>
     match?([{0, [a]}, {1, [b]}] when abs(a - 21.0) < 0.00001 and abs(b - 23.0) < 0.00001, correlated),
   "batch-keys" => keyed.key == :room_a and agree?.(Nx.to_flat_list(keyed_result), [21.0, 23.0]),
+  "padding" => padded.pad == 2 and agree?.(Nx.to_flat_list(padded_result), [21.0, 23.0]),
+  "timeout-flush" => match?({:ok, _result}, timeout_flush),
+  "overload-refused" => overload == {:error, :max_children},
   "serving-stopped" => serving_stopped? and match?({:refused, _message}, scalar_refusal) and labels_safe?
 }
 ```
@@ -234,7 +272,7 @@ shape from `Wotex.Nx.Encoded.template/1`; the serving process is `nx`'s
 
 ## Spec and completion IDs
 
-* Lab: WLB.03 `serving-batches` lane, source status partial (`WLB-C03`,
+* Lab: WLB.03 `serving-batches` lane, source status implemented (`WLB-C03`,
   `WLB-C08`).
 * Upstream consumer evidence: `WNX-C04`, `WNX-C05`.
 

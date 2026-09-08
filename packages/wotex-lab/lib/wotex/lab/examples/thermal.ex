@@ -7,10 +7,10 @@ defmodule Wotex.Lab.Examples.Thermal do
   inert `setTarget` Action proposal. No Action is invoked, network contacted or
   model downloaded.
 
-  `run/0` selects `Nx.BinaryBackend` for the calling process only and restores
-  the caller's default afterwards, so the example works without any native
-  backend. `run/1` accepts `backend:` to run the same pipeline on a backend the
-  caller already configured, for example `run(backend: Nx.default_backend())`.
+  `run/0` selects `Nx.BinaryBackend` and `Nx.Defn.Evaluator` for the calling
+  process only and restores the caller's default afterwards, so the example
+  works without a native backend. `run/1` accepts explicit `:backend` and
+  `:compiler` options for a profile the caller already started.
   """
 
   import Nx.Defn
@@ -19,14 +19,16 @@ defmodule Wotex.Lab.Examples.Thermal do
 
   alias Wotex.{DataSchema, ThingDescription}
   alias Wotex.Lab.Adapters.Nx.UnitConverter
-  alias Wotex.Lab.Telemetry
+  alias Wotex.Lab.{Error, Options, Telemetry}
   alias Wotex.Nx.{Decoder, Encoded, Encoder, Feature, Observation, OutputSchema, Row, Schema}
 
   @doc "Runs the checked-in thermal fixture and returns the TD, encoded batch and inert proposal."
   @spec run(keyword()) :: {:ok, map()} | {:error, term()}
   def run(opts \\ []) do
-    backend = Keyword.get(opts, :backend, Nx.BinaryBackend)
-    Nx.with_default_backend(backend, &run_example/0)
+    with :ok <- Options.validate(opts, [:backend, :compiler]),
+         {:ok, backend, compiler} <- profile(opts) do
+      safe_run(backend, compiler)
+    end
   end
 
   @doc """
@@ -41,7 +43,34 @@ defmodule Wotex.Lab.Examples.Thermal do
     Nx.sum(temperatures * weights) / Nx.max(Nx.sum(weights), 1.0) + 1.0
   end
 
-  defp run_example do
+  defp profile(opts) do
+    backend = Keyword.get(opts, :backend, Nx.BinaryBackend)
+    compiler = Keyword.get(opts, :compiler, Nx.Defn.Evaluator)
+
+    if valid_backend?(backend) and Code.ensure_loaded?(backend_module(backend)) and
+         is_atom(compiler) and not is_nil(compiler) and Code.ensure_loaded?(compiler) do
+      {:ok, backend, compiler}
+    else
+      {:error, Error.new(:invalid_nx_profile, :construction, "Nx profile is invalid")}
+    end
+  end
+
+  defp valid_backend?(backend) when is_atom(backend), do: not is_nil(backend)
+  defp valid_backend?({backend, opts}), do: is_atom(backend) and is_list(opts)
+  defp valid_backend?(_backend), do: false
+
+  defp backend_module({backend, _opts}), do: backend
+  defp backend_module(backend), do: backend
+
+  defp safe_run(backend, compiler) do
+    Nx.with_default_backend(backend, fn -> run_example(compiler) end)
+  rescue
+    _error -> {:error, Error.new(:nx_profile_failed, :inference, "Nx profile failed")}
+  catch
+    _kind, _reason -> {:error, Error.new(:nx_profile_failed, :inference, "Nx profile failed")}
+  end
+
+  defp run_example(compiler) do
     path = Application.app_dir(:wotex_lab, "priv/fixtures/thermal/thing-description.json")
 
     with {:ok, json} <- File.read(path),
@@ -62,7 +91,7 @@ defmodule Wotex.Lab.Examples.Thermal do
          :ok <- batch_measurements(encoded),
          tensor <-
            Telemetry.span(:nx, :inference, %{profile: :thermal}, fn ->
-             Nx.Defn.jit_apply(&target/1, [Encoded.batch(encoded)], compiler: Nx.Defn.Evaluator)
+             Nx.Defn.jit_apply(&target/1, [Encoded.batch(encoded)], compiler: compiler)
            end),
          {:ok, output_schema} <- DataSchema.new(map["actions"]["setTarget"]["input"]),
          {:ok, output} <- output(ThingDescription.id(td), output_schema),

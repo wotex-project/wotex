@@ -1,6 +1,6 @@
 # WLB.03: Nx experiments and numerical adoption
 
-Specification version: 1.1.0. Contract: accepted. Numerical semantics inherit
+Specification version: 1.2.0. Contract: accepted. Numerical semantics inherit
 `wotex_nx:WNX.01`; Lab owns inputs, execution, experiments and policy examples.
 
 ## Primary audience and entry point
@@ -16,8 +16,9 @@ The fixture defines the exact Thing ID and two observations at times 0 and
 [20, 22]; mean plus one produces 22 Cel, inside Action input limits [5, 35].
 `run/0` uses process-local `Nx.with_default_backend/2` with `Nx.BinaryBackend`,
 restores caller state, and explicitly selects `Nx.Defn.Evaluator`; `run/1`
-accepts `backend:` so the same pipeline runs on a backend the caller already
-configured. It does not mutate global Nx configuration. `target/1` reads the
+accepts closed `backend:` and `compiler:` options so the same pipeline runs on
+a profile the caller already started. It does not mutate global Nx
+configuration. `target/1` reads the
 values and masks of the one-feature container and computes the mask-weighted
 mean, so a filled row (mask `0`) never contributes; masks use `1` for observed
 per `WNX.01` 1.1. It is not a general missing-value model. The reference callback handles only K↔Cel;
@@ -39,6 +40,20 @@ the host; Lab MUST NOT fetch artifacts or change application-wide Nx defaults.
 Axon and EXLA belong to their explicit integration profile, not the base graph.
 Named `Nx.Serving` instances use caller-supplied names compatible with the
 pinned Nx release, never names generated from untrusted scenario strings.
+
+`Experiments.RoomModel.run/1` implements the Axon lane with bounded rows,
+epochs and wall deadline, split-before-window construction, train-only
+normalization, values/masks/quality inputs, a serialized parameter artifact,
+model/schema/dataset digests and an inert decoded prediction. The explicit
+EXLA CPU vector uses the same input identity and an absolute tolerance of
+`1.0e-4`; transferring its device tensor back to BinaryBackend deallocates the
+source device value. A timed-out experiment kills its monitored worker and
+returns no prediction.
+
+`serving_test.exs` implements the Serving resource vectors: padding and keys,
+finite timeout flush, concurrent caller correlation, instance-capacity
+refusal, and termination of an executing worker and caller within the child
+shutdown budget. No Serving is started by application loading.
 
 ## Dataset and experiment contract
 
@@ -70,11 +85,14 @@ pinned Nx release, never names generated from untrusted scenario strings.
 ## Acceptance and ownership
 
 `thermal_test.exs` checks the foundation against public core/Nx APIs and
-`window_anomaly_test.exs` covers the `window-anomaly` lane; the simulator
-satisfies dataset contract item 1 (versioned equation, seed, step, initial
-state, disturbance schedule, units, synthetic label). Full acceptance requires
-each lane above in a Livebook and automated scenario with positive, negative
-and resource cases. This supplies independent-consumer
+`window_anomaly_test.exs` covers the bounded `window-anomaly` lane;
+`serving_test.exs`, `room_model_test.exs` and `backend_cohort_test.exs` cover
+Serving, Axon and EXLA; and `smart_room_test.exs` covers the proposal-policy
+lane. The versioned simulator admits at most 4,096 samples and 256 scheduled
+heater/glitch entries and records step, seed, initial state, disturbances,
+units and its synthetic label. The `thermal-nx`, `window-anomaly`,
+`serving-batches`, `axon-room-model` and `smart-room` Livebooks execute the
+same positive, negative and resource contracts. This supplies independent-consumer
 evidence toward WNX-C01–C05 and WTX-C03/C04. It does not replace their native
 error matrices, archive gates or stable-API decisions. There is no W3C
 numerical profile, autonomous physical control or general model-serving claim.

@@ -14,6 +14,8 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
   import Nx.Defn
 
   alias Wotex.DataSchema
+  alias Wotex.Lab.Error, as: LabError
+  alias Wotex.Lab.Options
   alias Wotex.Lab.Simulators.Thermal
   alias Wotex.Lab.Telemetry
 
@@ -30,6 +32,20 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
   }
 
   @thing_id "urn:wotex:lab:room:simulated"
+  @options [
+    :backend,
+    :count,
+    :fill,
+    :glitches,
+    :heater,
+    :max_age,
+    :seed,
+    :step,
+    :strategy,
+    :threshold,
+    :window_count,
+    :window_start
+  ]
 
   @doc """
   Runs the lane and returns rows, the encoded batch, decoded outputs and the
@@ -42,8 +58,11 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
   """
   @spec run(keyword()) :: {:ok, map()} | {:error, term()}
   def run(opts \\ []) do
-    backend = Keyword.get(opts, :backend, Nx.BinaryBackend)
-    Nx.with_default_backend(backend, fn -> run_lane(opts) end)
+    with :ok <- Options.validate(opts, @options),
+         :ok <- validate_options(opts) do
+      backend = Keyword.get(opts, :backend, Nx.BinaryBackend)
+      safe_run(backend, opts)
+    end
   end
 
   @doc "Scores the last observed row against the mask-weighted mean of the window."
@@ -71,6 +90,64 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
       error -> error
     end
   end
+
+  defp safe_run(backend, opts) do
+    Nx.with_default_backend(backend, fn -> run_lane(opts) end)
+  rescue
+    _error -> {:error, LabError.new(:nx_profile_failed, :inference, "Nx profile failed")}
+  catch
+    _kind, _reason -> {:error, LabError.new(:nx_profile_failed, :inference, "Nx profile failed")}
+  end
+
+  defp validate_options(opts) do
+    backend = Keyword.get(opts, :backend, Nx.BinaryBackend)
+    window_count = Keyword.get(opts, :window_count, 8)
+    strategy = Keyword.get(opts, :strategy, :latest)
+    max_age = Keyword.get(opts, :max_age)
+    threshold = Keyword.get(opts, :threshold, 1.5)
+    fill = Keyword.get(opts, :fill, 18.0)
+    window_start = Keyword.get(opts, :window_start)
+
+    admitted? =
+      Enum.all?([
+        available_backend?(backend),
+        integer_in?(window_count, 2..64),
+        strategy in [:exact, :latest, :nearest],
+        optional_nonnegative_integer?(max_age),
+        finite_nonnegative?(threshold),
+        finite?(fill),
+        is_nil(window_start) or is_integer(window_start)
+      ])
+
+    if admitted? do
+      :ok
+    else
+      {:error, LabError.new(:invalid_experiment, :construction, "window experiment is invalid")}
+    end
+  end
+
+  defp valid_backend?(backend) when is_atom(backend), do: not is_nil(backend)
+  defp valid_backend?({backend, opts}), do: is_atom(backend) and is_list(opts)
+  defp valid_backend?(_backend), do: false
+
+  defp available_backend?(backend),
+    do: valid_backend?(backend) and Code.ensure_loaded?(backend_module(backend))
+
+  defp backend_module({backend, _opts}), do: backend
+  defp backend_module(backend), do: backend
+
+  defp integer_in?(value, range) when is_integer(value), do: value in range
+  defp integer_in?(_value, _range), do: false
+
+  defp optional_nonnegative_integer?(nil), do: true
+  defp optional_nonnegative_integer?(value), do: is_integer(value) and value >= 0
+
+  defp finite_nonnegative?(value), do: finite?(value) and value >= 0
+  defp finite?(value) when is_integer(value), do: abs(value) <= 1_000_000_000_000
+
+  defp finite?(value) when is_float(value), do: abs(value) <= 1_000_000_000_000
+
+  defp finite?(_value), do: false
 
   defp run_lane(opts) do
     simulation = Thermal.generate(Keyword.take(opts, [:seed, :count, :step, :heater, :glitches]))

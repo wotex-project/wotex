@@ -26,7 +26,8 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | --- | --- |
 | [W3C TD 1.1 Recommendation](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/) | Core owns supported TD/TM/DataSchema meaning; no new Lab conformance claim |
 | [Nx 0.13.1](https://hexdocs.pm/nx/0.13.1/Nx.html) and [Serving](https://hexdocs.pm/nx/0.13.1/Nx.Serving.html) | Explicit tensor/backend/defn/batch execution; Serving names/options follow this cohort |
-| [Axon 0.8.1](https://hexdocs.pm/axon/0.8.1/Axon.html) | Consumer training/serving integration contract; integration dependency cohort requires validation |
+| [Axon 0.8.1](https://hexdocs.pm/axon/0.8.1/Axon.html) | Optional consumer training integration selected explicitly by the host; the bounded room-model lane exercises `Axon.Loop` without adding model authority |
+| [EXLA 0.13.1](https://hexdocs.pm/exla/0.13.1/EXLA.html) | Optional compiled CPU backend cohort for the room-model and tensor seams; the Lab asserts declared numerical tolerance, host transfer and deallocation, and makes no GPU claim |
 | [Req](https://hexdocs.pm/req/Req.html) | Chosen finite HTTP and streaming reference; SSE lifecycle remains explicit Lab work |
 | [Telemetry 1.3](https://hexdocs.pm/telemetry/readme.html) | Event emission library for Lab-owned spans and measurements under `[:wotex, :lab, ...]`; exporters, metrics and dashboards are separate WLB.10 host concerns |
 | [EMQTT 1.16.0](https://hex.pm/packages/emqtt/1.16.0) | Chosen MQTT 5 client behind the optional `{:emqtt, "~> 1.15"}` requirement, resolved to 1.16.0 by `mix.lock`; credential custody and no-automatic-reconnect are asserted against this revision, and wire/session behaviour beyond the exercised cases is not claimed |

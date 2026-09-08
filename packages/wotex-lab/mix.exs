@@ -53,6 +53,8 @@ defmodule WotexLab.MixProject do
       wotex_dependency(:wotex_conformance, "wotex-conformance", only: [:dev, :test]),
       wotex_dependency(:wotex_continuum, "wotex-continuum", optional: true),
       {:nx, "~> 0.13.1"},
+      {:axon, "~> 0.8.1", optional: true},
+      {:exla, "~> 0.13.1", optional: true},
       {:telemetry, "~> 1.3"},
       {:exqlite, "~> 0.40", optional: true},
       {:req, "~> 0.7.4", optional: true},

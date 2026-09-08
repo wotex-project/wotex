@@ -36,6 +36,35 @@ defmodule Wotex.Lab.WindowAnomalyTest do
     assert Enum.map(first.samples, & &1.observed_at) == Enum.map(0..15, &(&1 * 1_000))
   end
 
+  test "simulator and window work are admitted by fixed ceilings" do
+    for opts <- [
+          [count: 1],
+          [count: 4_097],
+          [step: 0],
+          [heater: %{32 => 1.0}],
+          [glitches: [1, 1]],
+          [seed: -1],
+          [unknown: true]
+        ] do
+      assert {:error, %Wotex.Lab.Error{}} = Thermal.generate(opts)
+    end
+
+    for opts <- [
+          [window_count: 1],
+          [window_count: 65],
+          [strategy: :guess],
+          [max_age: -1],
+          [threshold: -1],
+          [backend: :missing_backend]
+        ] do
+      assert {:error, %Wotex.Lab.Error{code: :invalid_experiment}} =
+               WindowAnomaly.run(opts)
+    end
+
+    assert {:error, %Wotex.Lab.Error{code: :invalid_options}} =
+             WindowAnomaly.run(window_count: 8, window_count: 9)
+  end
+
   test "a heater step is scored anomalous while a quiet room is not, deterministically" do
     assert {:ok, heated} = WindowAnomaly.run(seed: 7, heater: %{28 => 4.0}, glitches: [30])
     assert {:ok, repeated} = WindowAnomaly.run(seed: 7, heater: %{28 => 4.0}, glitches: [30])

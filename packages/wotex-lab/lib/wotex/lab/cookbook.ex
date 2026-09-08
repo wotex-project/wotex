@@ -124,12 +124,15 @@ defmodule Wotex.Lab.Cookbook do
       specs: ["WLB.03"],
       completion_ids: ["WLB-C03", "WLB-C08"],
       upstream: ["WNX-C04", "WNX-C05"],
-      lane: :partial,
+      lane: :implemented,
       evidence: :executable,
       checks: [
         "inline-supervised-agree",
         "concurrent-correlation",
         "batch-keys",
+        "padding",
+        "timeout-flush",
+        "overload-refused",
         "serving-stopped"
       ],
       timeout_ms: 30_000
@@ -139,15 +142,17 @@ defmodule Wotex.Lab.Cookbook do
       title: "Reproducible synthetic training split and held-out evaluation",
       specs: ["WLB.03"],
       completion_ids: ["WLB-C03", "WLB-C08"],
-      upstream: [],
-      lane: :planned,
-      evidence: :partial,
+      upstream: ["WNX-C04", "WNX-C05"],
+      lane: :implemented,
+      evidence: :executable,
       checks: [
         "split-before-window",
         "no-window-leak",
         "train-statistics-only",
         "model-vs-persistence-scored",
-        "manifest-digest"
+        "manifest-digest",
+        "axon-training",
+        "backend-cohort"
       ],
       timeout_ms: 30_000
     },

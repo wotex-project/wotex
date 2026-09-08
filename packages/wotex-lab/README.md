@@ -84,11 +84,11 @@ local source evidence. It does not satisfy the clone-free acceptance gate.
 The intended Hex dependency is `{:wotex_lab, "~> 0.1.0"}`; this README does not
 claim that package is published. That base requirement brings core,
 Wotex Nx, Nx and telemetry only. Runtime, the HTTP and MQTT bindings,
-Directory, Continuum and Exqlite are optional profile packages a host adds
-explicitly; the Lab modules behind each seam compile only when that package is
-present. `mix check` includes an archive-consumer gate that resolves the base
-profile from built archives through a local Hex registry with Git absent from
-the PATH. Production rejects `WOTEX_PATH_DEPS` and uses
+Directory, Continuum, Exqlite, Axon and EXLA are optional profile packages a
+host adds explicitly; the Lab modules behind each seam compile only when that
+package is present. `mix check` includes an archive-consumer gate that resolves
+the base profile from built archives through a local Hex registry with Git
+absent from the PATH. Production rejects `WOTEX_PATH_DEPS` and uses
 Hex requirements. Publication and repository visibility are maintainer-owned.
 
 ```elixir
@@ -120,8 +120,7 @@ the telemetry it emitted and ends with a cell that returns its checks.
 `Wotex.Lab.Cookbook` lists them with two separate statuses: the source status
 of the lane and the notebook's own evidence status, `:executable` when every
 cell runs and `:partial` where an accepted lane still leaves
-documentation-only cells (`axon-room-model`, `formal-control`,
-`nerves-and-mcp`).
+documentation-only cells (`formal-control` and `nerves-and-mcp`).
 `test/wotex/lab/cookbook_test.exs` evaluates every Elixir cell of every
 notebook against the workspace cohort during `mix check`; the MQTT lane runs
 against the scripted in-BEAM peer and, with `WOTEX_LAB_BROKER=1`, against a
