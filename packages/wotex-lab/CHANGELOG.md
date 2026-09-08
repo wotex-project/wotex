@@ -212,11 +212,15 @@
   notebook evidence status; `test/wotex/lab/cookbook_test.exs` evaluates
   every cell of every notebook against the workspace cohort through a
   test-only runner and asserts sections, catalogue ids, loaded modules and
-  each notebook's final checks. `formal-control` and `nerves-and-mcp` retain
-  partial notebook evidence: the formal source lane has not yet been wired
-  into its cookbook and the Nerves target remains incomplete. The Serving and
-  Axon notebooks execute their padding, timeout, overload, training and
+  each notebook's final checks. `nerves-and-mcp` retains partial notebook
+  evidence because the checked-in Nerves rpi4 source still lacks a released
+  firmware and on-device record. The formal-control, Serving and Axon notebooks
+  execute their verification, padding, timeout, overload, training and
   backend-cohort claims.
+- Raspberry Pi 4 Nerves source host with an exact system/toolchain lock, inert
+  bounded boot tree, explicit BinaryBackend and loopback-reconnect smoke, and a
+  source-cohort gate. Firmware creation and hardware acceptance remain separate
+  maintainer evidence rather than being inferred from the host test.
 - Fixture manifests (schema 1.1.0) for the thermal, loopback, HTTP, MQTT,
   Directory and Continuum fixtures with media type, provenance, input and
   expected-output digests, positive/negative vector ids, spec/seam/operation

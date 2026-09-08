@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.8.0. Contract: accepted. Source status: the workspace
+Specification version: 0.9.0. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -9,8 +9,11 @@ Workbench also has a digest-pinned, non-root OCI Dockerfile, data-free health
 route and offline image-source gate; Docker's build-graph check passes, but no
 runnable image is claimed while its WoTEx Hex dependencies are unpublished.
 The full reference-consumer, distribution and release-candidate runners, built
-OCI image, published npm artifact, hosted and Nerves deliverables remain
-planned.
+OCI image, published npm artifact, hosted deployment, prebuilt Nerves firmware
+and on-device evidence remain planned. The rpi4 firmware project, exact Nerves
+system/toolchain lock, inert host smoke and source gate are implemented under
+`hosts/nerves/`; the local cross-build reaches firmware assembly but cannot
+finish without the operator-installed `fwup` prerequisite.
 
 ## Dependency modes
 
@@ -227,6 +230,19 @@ native EXLA/Maude are capability-specific, not assumed available on firmware.
 Build instructions accompany the image; no embedded compiler is required to
 try it. Real hardware availability is an evidence prerequisite, not a fabricated
 result or removal from scope.
+
+`hosts/nerves/` now names only the `rpi4` target and pins Nerves 1.15.0,
+`nerves_system_rpi4` 2.1.1 and its aarch64 15.3.1 toolchain closure. Firmware
+boot starts one eight-child Lab instance but no experiment, listener,
+discovery, model or effect. `WotexLabNerves.Smoke.run/0` is operator-invoked:
+it runs the BinaryBackend thermal baseline and reads a simulated Property
+through two separately owned loopback Thing processes, returning a public
+evidence record without invoking an Action. Its boot assertion is `not_run` on
+the host target and can pass only in an rpi4-compiled release. The checked-in
+host test and `bin/check_nerves_source.exs` prove this source contract. They do
+not substitute for the still-required released-package firmware build,
+firmware checksum/license dossier, offline boot, physical reconnect or recorded
+on-target smoke.
 
 Maude licensing, binary provenance and platform support follow WLB.09. The
 native containment distributions follow WLB.06 profile 2.0.0: ship reviewed

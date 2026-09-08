@@ -176,6 +176,13 @@ deployment, npm client or public site is deployed. The MCP server and its
 transports remain explicit host-owned library components and never start on
 application load.
 
+`hosts/nerves/` is the explicit Raspberry Pi 4 source host. It pins the Nerves
+system/toolchain closure, starts one bounded Lab instance without running an
+experiment, and provides an operator-invoked BinaryBackend plus loopback
+reconnect smoke. Its host cohort preserves the hardware boot assertion as
+`not_run`; a prebuilt firmware and on-device record are still separate WLB.08
+artifact evidence.
+
 ## Own the processes explicitly
 
 ```elixir

@@ -282,6 +282,18 @@ dynamic without a browser chart compiler. Pan/zoom is neither implemented nor
 claimed. Real-browser and packaged-artifact evidence remain separate WLB.08
 obligations.
 
+### Nerves Raspberry Pi 4 source cohort
+
+Observation date: 2026-09-08. `hosts/nerves/` pins Nerves 1.15.0,
+`nerves_system_rpi4` 2.1.1 and
+`nerves_toolchain_aarch64_nerves_linux_gnu` 15.3.1 in its exact lock. The host
+test resolves workspace WoTEx dependencies, runs the BinaryBackend and
+loopback-reconnect smoke, and deliberately records the hardware boot assertion
+as `not_run`. The rpi4 cross-build resolved and compiled the selected system,
+toolchain and dependency closure, then stopped at firmware assembly because the
+machine has no operator-installed `fwup`. This is source compatibility evidence,
+not a firmware, offline-boot, physical-reconnect or released-artifact claim.
+
 ### OCI build-source cohort
 
 Observation date: 2026-09-08. The Workbench Dockerfile selects

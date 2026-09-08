@@ -210,7 +210,7 @@ specifications:
       - "priv/conformance/native/tests/lifecycle.rs"
     compatibility_classification: Profile 2.0.1 gives the external Rust helper a fixed one-second runner margin around its inner deadline and reports the effective margin plus 150 ms cleanup ceiling; sampled Darwin limits do not close hostile whole-tree isolation, and binary artifact adoption remains separate.
   - id: WLB.07
-    version: "0.4.2"
+    version: "0.4.3"
     path: docs/specs/WLB.07-cookbooks-and-machine-interfaces.md
     implementation_status: partial
     evidence_status: partial
@@ -251,9 +251,9 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench_web/control_controller_test.exs"
       - "bin/generate_typescript_client.exs"
       - "clients/typescript/test/client.test.mjs"
-    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+    compatibility_classification: The Nerves/MCP notebook now identifies the implemented rpi4 and MCP source accurately while retaining partial status for installed firmware and hardware evidence. Protocol expansion is unchanged and separately owned; public-site publication and artifact adoption remain independent obligations.
   - id: WLB.08
-    version: "0.8.0"
+    version: "0.9.0"
     path: docs/specs/WLB.08-distribution-and-compatibility.md
     implementation_status: partial
     evidence_status: partial
@@ -270,7 +270,9 @@ specifications:
     completion_items:
       - "WLB-C10"
       - "WLB-C11"
-    implementation_modules: []
+    implementation_modules:
+      - "WotexLabNerves.Application"
+      - "WotexLabNerves.Smoke"
     executable_evidence:
       - "bin/check_package.exs"
       - "bin/check_boundary.exs"
@@ -291,8 +293,10 @@ specifications:
       - "bin/generate_typescript_client.exs"
       - "clients/typescript/test/client.test.mjs"
       - "bin/check_oci_source.exs"
+      - "bin/check_nerves_source.exs"
+      - "hosts/nerves/test/smoke_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/health_controller_test.exs"
-    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+    compatibility_classification: The rpi4 delivery lane now has a pinned Nerves source host and a host-tested inert Nx/loopback smoke whose evidence preserves the hardware non-claim. Prebuilt firmware, released-package resolution, integrity/license metadata and on-device boot/reconnect evidence remain independent obligations. The package API is unchanged; full distribution and stable-candidate decisions still apply independently of source coverage.
   - id: WLB.09
     version: "0.3.0"
     path: docs/specs/WLB.09-formal-control-verification.md

@@ -2,15 +2,13 @@
 
 ## Goal
 
-Show what a Nerves target and an assistant (MCP) surface would share with
-every other Lab entry point, and which parts already exist: the neutral
-design tokens the workbench renders, the schema-versioned evidence record a
-target smoke test would emit, and the inert scenario descriptor an assistant
-could list. The Nerves firmware, the on-target smoke, the MCP server and
-the control plane of WLB.07 and WLB.08 are **planned**: fully specified,
-maintainer-owned to publish, and absent from source. The cells below run
-only what exists; the planned surfaces are documentation and are marked as
-such. The notebook's evidence status is `partial`.
+Show what the checked-in Nerves target and assistant (MCP) surface share with
+every other Lab entry point: neutral design tokens, schema-versioned evidence
+and inert scenario descriptors. The rpi4 source host and bounded MCP server are
+implemented, but a released bootable firmware, on-target smoke and the
+notebook's installed-artifact execution remain unavailable. The cells below
+run only the packaged foundation; artifact/hardware steps are documentation
+and are marked as such. The notebook's evidence status is `partial`.
 
 ## Prerequisites
 
@@ -36,8 +34,9 @@ no device is contacted and no assistant is started.
 | Design tokens and scoped CSS | `wotex_lab` (implemented) | `Wotex.Lab.DesignSystem` |
 | Evidence record schema, digests, public-content scan | `wotex_lab` (implemented) | `Wotex.Lab.Evidence.Record`, `Digest` |
 | Scenario descriptors as data | `wotex_lab` (implemented) | `Wotex.Lab.Scenario` |
-| Nerves system, firmware image, on-target smoke | planned delivery lane (WLB.08) | not in source |
-| MCP resources, tools, transports, quotas | planned control plane (WLB.07) | not in source |
+| Nerves rpi4 source and inert smoke | `hosts/nerves` (implemented source) | `WotexLabNerves.Smoke` |
+| Firmware image and on-target smoke | WLB.08 artifact lane | not yet evidenced |
+| MCP resources, tools, transports, quotas | `wotex_lab` (implemented source) | `Wotex.Lab.MCP.*` |
 | Publishing firmware, images, packages | maintainer only | never an agent or a notebook |
 
 ## Run
@@ -133,15 +132,12 @@ The planned surfaces, shown as documentation only (this block is not an
 Elixir cell and is not executed):
 
 ```text
-# Planned (WLB.08 Nerves lane, implementation_status: planned):
+# Planned (WLB.08 artifact/hardware evidence for the implemented Nerves source):
 #   MIX_TARGET=rpi4 mix firmware   # pinned Nerves system, toolchain and firmware digest
 #   mix burn / mix upload          # maintainer action; the image ships with license and integrity data
 #   on-target smoke: boot, Wotex.Lab.Examples.Thermal.run/0, loopback reconnect, evidence record
-# Planned (WLB.07 MCP, implementation_status: planned):
-#   stdio and Streamable HTTP transports; resources for package/spec/seam/scenario/Thing/evidence
-#   metadata; tools for parse, validate, explain error, list/discover/read simulated Things,
-#   bounded conformance and benchmark jobs, seam explanations; quotas and cancellation;
-#   writes require explicit instance opt-in and per-request authorization.
+# Protocol expansion is handled separately; this notebook does not start or widen the implemented
+# stdio/Streamable HTTP server.
 ```
 
 ## Deliberate breakage
@@ -211,20 +207,19 @@ public? = not (encoded =~ "/Users") and not (encoded =~ "/home") and not (encode
 
 ## Public seam
 
-No WoTEx seam is implemented here. The Lab contracts exercised are
+No new WoTEx seam is implemented here. The Lab contracts exercised are
 `Wotex.Lab.DesignSystem`, `Wotex.Lab.Evidence.Record` and
-`Wotex.Lab.Scenario`; the target and assistant surfaces are planned
-entries in the generated graph.
+`Wotex.Lab.Scenario`; the checked-in target and assistant source remain
+explicit and dormant during these cells.
 
 ## Spec and completion IDs
 
-* Lab: WLB.07 and WLB.08, control plane, MCP and Nerves lane planned
-  (`WLB-C08`, `WLB-C10`).
+* Lab: WLB.07 and WLB.08, MCP and Nerves source implemented; artifact/hardware
+  evidence partial (`WLB-C08`, `WLB-C10`).
 * Upstream: none claimed.
 
 ## Replacement adapter
 
-There is no adapter to replace until the lanes exist. A host that builds the
-firmware or the MCP server consumes the same three contracts above: render
+The checked-in firmware and MCP server consume the same three contracts above: render
 the tokens, emit records through `Record.new/1`, and list descriptors from
 `Scenario.to_map/1`; none of them may be extended with executable fields.

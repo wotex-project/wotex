@@ -1,6 +1,6 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.4.2. Contract: accepted. Source status: the sixteen
+Specification version: 0.4.3. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
@@ -10,7 +10,8 @@ read-only operations in the generated OpenAPI document at `/api/v1`; static
 catalogue reads are inert and evidence lookup is bearer-bound to the caller's
 existing room. Fifteen notebooks have executable workspace source evidence,
 including Axon/EXLA training and formal-control vectors; `nerves-and-mcp`
-retains partial evidence. This does not promote notebook installation to
+retains partial evidence because its checked-in rpi4 host has no released
+firmware or on-device record. This does not promote notebook installation to
 artifact acceptance. The zero-runtime-dependency `@wotex/lab-client` source,
 declarations, schema-drift gate, Node tests and npm archive-content check are
 implemented under `clients/typescript/`; publication and installed-artifact
