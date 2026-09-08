@@ -38,6 +38,11 @@ defmodule Wotex.Lab.Metrics.History do
   evidence list, and keep missing, stale, dropped and zero apart: a missing
   point is absent, a stale sample is a `:stale` marker, loss is reported from
   the counters and `0` is a value.
+
+  `freeze/2` performs the same admitted query while the owner serializes writes
+  and returns the exact history watermark used. It exists for immutable
+  diagnostic dataset construction; it does not make history durable or feed a
+  model by itself.
   """
 
   use GenServer
@@ -118,7 +123,7 @@ defmodule Wotex.Lab.Metrics.History do
            {:ok, table, token} <-
              GenServer.call(history, {:acquire, query.scope, query.limits.concurrent}) do
         try do
-          answer(table, history, metric, query)
+          answer(table, stats(history), metric, query)
         after
           GenServer.call(history, {:release, token})
         end
@@ -130,6 +135,22 @@ defmodule Wotex.Lab.Metrics.History do
 
     :exit, _reason ->
       {:error, error(:history_unavailable, "history is unavailable")}
+  end
+
+  @doc "Atomically answers an admitted query and returns its exact history watermark."
+  @spec freeze(GenServer.server(), Query.t()) ::
+          {:ok, %{response: map(), watermark: map()}} | {:error, Error.t()}
+  def freeze(history, descriptor) do
+    Telemetry.span(:metrics, :query, %{profile: :ets_freeze}, fn ->
+      with {:ok, query} <- Query.validate(descriptor),
+           {:ok, _estimate} <- Query.estimate(query) do
+        try do
+          GenServer.call(history, {:freeze, query}, query.limits.deadline_ms + 1_000)
+        catch
+          :exit, _reason -> {:error, error(:history_unavailable, "history is unavailable")}
+        end
+      end
+    end)
   end
 
   @impl GenServer
@@ -189,21 +210,7 @@ defmodule Wotex.Lab.Metrics.History do
   end
 
   def handle_call(:stats, _from, state) do
-    stats =
-      Map.merge(state.counters, %{
-        count: :ets.info(state.table, :size),
-        bytes: state.bytes,
-        max_snapshots: state.max_snapshots,
-        max_bytes: state.max_bytes,
-        active_queries: map_size(state.queries),
-        max_queries: state.max_queries,
-        instance: state.instance,
-        instance_slot: state.instance_slot,
-        oldest_wall_time_ms: edge(state.table, :first),
-        newest_wall_time_ms: edge(state.table, :last)
-      })
-
-    {:reply, stats, state}
+    {:reply, state_stats(state), state}
   end
 
   def handle_call(:table, _from, state), do: {:reply, state.table, state}
@@ -237,6 +244,32 @@ defmodule Wotex.Lab.Metrics.History do
       _other ->
         {:reply, {:error, error(:scope_denied, "query lease does not belong to caller")}, state}
     end
+  end
+
+  def handle_call({:freeze, descriptor}, {pid, _tag}, state) do
+    concurrent =
+      case descriptor do
+        %Query{scope: %{session: session}} ->
+          Enum.count(state.queries, fn {_ref, {_pid, active}} -> active == session end)
+
+        _other ->
+          0
+      end
+
+    result =
+      with true <- node(pid) == node() and Process.alive?(pid),
+           {:ok, query} <- Query.validate(descriptor),
+           {:ok, _estimate} <- Query.estimate(query),
+           {:ok, metric} <- Catalogue.fetch(query.metric),
+           :ok <- supported(metric, query),
+           :ok <- admit_query(state, query.scope, query.limits.concurrent, concurrent) do
+        frozen_answer(state, metric, query)
+      else
+        false -> {:error, error(:scope_denied, "query caller is no longer local and live")}
+        {:error, _error} = denied -> denied
+      end
+
+    {:reply, result, state}
   end
 
   @impl GenServer
@@ -332,6 +365,50 @@ defmodule Wotex.Lab.Metrics.History do
     end
   end
 
+  defp state_stats(state) do
+    Map.merge(state.counters, %{
+      count: :ets.info(state.table, :size),
+      bytes: state.bytes,
+      max_snapshots: state.max_snapshots,
+      max_bytes: state.max_bytes,
+      active_queries: map_size(state.queries),
+      max_queries: state.max_queries,
+      instance: state.instance,
+      instance_slot: state.instance_slot,
+      history_sequence: state.sequence,
+      oldest_wall_time_ms: edge(state.table, :first),
+      newest_wall_time_ms: edge(state.table, :last)
+    })
+  end
+
+  defp frozen_answer(state, metric, query) do
+    stats = state_stats(state)
+
+    try do
+      case answer(state.table, stats, metric, query) do
+        {:ok, response} ->
+          {:ok,
+           %{
+             response: response,
+             watermark:
+               Map.take(stats, [
+                 :history_sequence,
+                 :count,
+                 :bytes,
+                 :oldest_wall_time_ms,
+                 :newest_wall_time_ms
+               ])
+           }}
+
+        {:error, _error} = error ->
+          error
+      end
+    catch
+      :throw, :history_query_deadline ->
+        {:error, error(:deadline_exceeded, "query exceeded its deadline", class: :timeout)}
+    end
+  end
+
   defp supported(metric, query) do
     supported? =
       case {metric.type, query.aggregation} do
@@ -349,7 +426,7 @@ defmodule Wotex.Lab.Metrics.History do
          )}
   end
 
-  defp answer(table, history, metric, query) do
+  defp answer(table, history, metric, query) when is_map(history) do
     started = System.monotonic_time(:millisecond)
     start_ms = DateTime.to_unix(query.start_at, :millisecond)
     end_ms = DateTime.to_unix(query.end_at, :millisecond)
@@ -362,7 +439,6 @@ defmodule Wotex.Lab.Metrics.History do
          :ok <- ambiguity(series, query),
          :ok <- work(estimate * max(map_size(series), 1), query) do
       {points, markers} = points(series, rows, metric, query, {start_ms, end_ms}, started)
-      stats = stats(history)
 
       response = %{
         source: :ets_history,
@@ -374,8 +450,8 @@ defmodule Wotex.Lab.Metrics.History do
         interval: %{start_ms: start_ms, end_ms: end_ms, step_ms: query.step_ms},
         freshness: freshness(rows, end_ms),
         points: points,
-        markers: markers ++ loss_markers(rows, stats, start_ms),
-        loss: Map.take(stats, [:evicted, :dropped_oversized, :gaps, :resets, :clock_rollbacks]),
+        markers: markers ++ loss_markers(rows, history, start_ms),
+        loss: Map.take(history, [:evicted, :dropped_oversized, :gaps, :resets, :clock_rollbacks]),
         series_matched: map_size(series),
         digest: Query.digest(query),
         evidence: []

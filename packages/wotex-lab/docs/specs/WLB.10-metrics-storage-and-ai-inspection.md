@@ -1,9 +1,10 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.11.1. Contract: accepted. Source status: the metric
+Specification version: 0.12.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
-query contract, the exposition parser, the remote-write encoder with its Snappy
-codec and the explicit GreptimeDB bridge are implemented in the base library;
+query contract and atomic immutable dataset export, the exposition parser, the
+remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
+are implemented in the base library;
 the Workbench now implements custom PromEx definitions, bounded collection,
 catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
 history activation, a protected local scrape listener, a bounded local
@@ -514,8 +515,16 @@ source interval, snapshot/watermark, ordering, units, quality, masks, missing
 policy and split provenance. Freeze a consistent snapshot before windowing,
 splitting or normalization. Explain every downsampling transform. Resuming a
 run cannot silently read changing live metrics as the original dataset.
-Dataset export from diagnostic history is planned; the history exposes no
-training-data path.
+`Metrics.History.freeze/2` now serializes capture with history writes and returns
+the exact storage sequence/count/byte/time watermark used by the query.
+`Metrics.Dataset.freeze/3` binds that capture to an explicit experiment and
+creates a deterministic content identity over the query, interval, watermark,
+unit, ordered rows, loss and transform provenance. Every query step has a
+numeric-or-null value, observed/missing mask and quality markers. Export is
+always `unsplit`; it performs no normalization or additional downsampling, and
+does not automatically start an experiment or convert rows to tensors. A later
+split or normalization therefore requires a separately recorded provenance
+step rather than silently rereading live history.
 
 Acceptance requires PromEx-to-ETS/Greptime equality fixtures, reset/stale/
 histogram cases, bounded overload, disk/network loss, TTL expiry, shutdown,
@@ -527,7 +536,8 @@ answers resolve to recorded queries; fluent unsupported answers fail.
 `test/wotex/lab/metrics_*.exs` cover the collector-to-exposition equality
 fixture, reset, stale and histogram cases, series and history budgets, atomic
 admission, bounded exporter overload, retry and no-retry, network loss,
-shutdown, two-instance isolation and the export credential sentinel;
+shutdown, two-instance isolation, immutable diagnostic export and the export
+credential sentinel;
 `test/wotex/lab/greptime_bridge_test.exs` covers actual ingestion. TTL expiry,
 remote protected/query endpoints, prompt injection, cloud disclosure and
 cancelled-agent tests arrive with their planned features. Local capability

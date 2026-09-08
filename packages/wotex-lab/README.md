@@ -285,9 +285,12 @@ CSS; a running endpoint and HEEx components are not built by this foundation.
 
 PromEx does not itself send metrics to GreptimeDB. The base library already
 ships the metric catalogue, the in-process collector, the bounded ETS history
-with its read-only query contract, the exposition parser and the remote-write
-bridge under `Wotex.Lab.Metrics`; every process is placed explicitly under a
-Lab instance. The accepted host composes custom PromEx panels, bounded history,
+with its read-only query contract, atomic content-addressed diagnostic dataset
+export, the exposition parser and the remote-write bridge under
+`Wotex.Lab.Metrics`; every process is placed explicitly under a Lab instance.
+Exports retain the exact history watermark, missing masks, quality, units and
+unsplit provenance and never start training implicitly. The accepted host
+composes custom PromEx panels, bounded history,
 the self-scraper/remote-write bridge and an explicitly activated trusted-local
 BeamLens skill/provider profile with owner-bound browser presentation.
 Shared-tenant BeamLens and the MCP gateway remain planned host work. No ELK,

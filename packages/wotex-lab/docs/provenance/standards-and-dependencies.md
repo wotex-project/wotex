@@ -119,7 +119,11 @@ History queries now require explicit instance binding; snapshot slots, query
 leases and catalogue metric semantics are independently admitted. Tests cover
 within-bucket resets, no-data/stale histograms, rollback, forged descriptors,
 scope substitution, caller-death cleanup and cooperative deadline refusal.
-No new dependency or automatic history/HTTP/database activation is introduced.
+Atomic diagnostic export additionally binds the admitted query to its exact
+history watermark and emits content-addressed masked rows with explicit quality,
+loss, transform and unsplit provenance. It neither rereads history nor starts a
+training path. No new dependency or automatic history/HTTP/database activation
+is introduced.
 
 The same source/toolchain cohort subsequently exercised the explicit Workbench
 PromEx-to-ETS sampler: five dedicated tests cover receipt matching, unavailable
