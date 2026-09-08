@@ -3,12 +3,24 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
   use WotexLabWorkbenchWeb.ConnCase, async: false
 
+  alias WotexLabWorkbench.Observability.Supervisor, as: ObservabilitySupervisor
   alias WotexLabWorkbench.Sessions
   alias WotexLabWorkbenchWeb.ComponentHarness
   alias WotexLabWorkbenchWeb.Components
   alias WotexLabWorkbenchWeb.Components.Shell
   alias WotexLabWorkbenchWeb.Plugs.ContentSecurityPolicy
   alias WotexLabWorkbenchWeb.Plugs.SessionToken
+
+  @beamlens_registry %{
+    primary: "Test",
+    clients: [
+      %{
+        name: "Test",
+        provider: "openai-generic",
+        options: %{base_url: "http://127.0.0.1:1/v1", model: "test"}
+      }
+    ]
+  }
 
   test "the endpoint issues a scoped session with restrictive headers and no room side effect", %{
     conn: conn
@@ -179,6 +191,74 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert html =~ "not run"
   end
 
+  test "trusted-local browser investigation is owner-bound and renders structured evidence", %{
+    conn: conn
+  } do
+    start_beamlens_tree(
+      {:ok,
+       [
+         %{
+           context: "Run <script>run-1</script>",
+           observation: "Metric nx_duration_seconds increased.",
+           hypothesis: "Backend contention might explain the increase.",
+           snapshots: [%{id: "snapshot-1"}]
+         }
+       ]}
+    )
+
+    conn = get(conn, "/")
+    {:ok, view, _html} = live(recycle(conn), "/")
+    render_click(element(view, "button[phx-click='start_room']"))
+
+    redirect =
+      render_submit(element(view, "#run-thermal"), %{
+        "experiment_id" => "thermal",
+        "params" => %{"backend" => "binary"}
+      })
+
+    {:ok, run_view, html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    assert html =~ "Trusted-local only"
+    refute has_element?(run_view, "#investigation textarea[disabled]")
+
+    _html = render_submit(element(run_view, "#investigation"), %{"prompt" => "Explain this run"})
+    html = render_until(run_view, "Observed facts")
+    assert html =~ "Observed facts"
+    assert html =~ "Metric nx_duration_seconds increased."
+    assert html =~ "Backend contention might explain the increase."
+    assert html =~ "BeamLens snapshot snapshot-1"
+    assert html =~ "&lt;script&gt;run-1&lt;/script&gt;"
+    refute html =~ "<script>run-1</script>"
+    refute has_element?(run_view, "form[phx-submit='approve']")
+
+    assert_receive {:fake_investigation_context, %{available: true, summary: %{"id" => "run-1"}},
+                    %{available: false}},
+                   1_000
+  end
+
+  test "browser cancellation terminates the worker and clears its prompt context", %{conn: conn} do
+    start_beamlens_tree(:block)
+    conn = get(conn, "/")
+    {:ok, view, _html} = live(recycle(conn), "/")
+    render_click(element(view, "button[phx-click='start_room']"))
+
+    redirect =
+      render_submit(element(view, "#run-thermal"), %{
+        "experiment_id" => "thermal",
+        "params" => %{"backend" => "binary"}
+      })
+
+    {:ok, run_view, _html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    html = render_submit(element(run_view, "#investigation"), %{"prompt" => "Wait for me"})
+    assert html =~ "Cancel investigation"
+    assert_receive {:fake_investigation_started, worker, "Wait for me"}, 1_000
+
+    _html = render_click(element(run_view, "button[phx-click='cancel_investigation']"))
+    html = render_until(run_view, "context was cleared")
+    assert html =~ "cancelled"
+    assert html =~ "context was cleared"
+    refute Process.alive?(worker)
+  end
+
   test "the component family renders semantic names and text alternatives" do
     html = render_component(&ComponentHarness.render/1, %{})
     assert html =~ "Run"
@@ -190,6 +270,48 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert html =~ "sha256:abc"
     assert html =~ "unavailable"
     assert html =~ "Observed"
+  end
+
+  defp start_beamlens_tree(result) do
+    saved_runner = Application.get_env(:wotex_lab_workbench, :beamlens_operator_runner)
+    saved_owner = Application.get_env(:wotex_lab_workbench, :fake_investigation_owner)
+    saved_result = Application.get_env(:wotex_lab_workbench, :fake_investigation_result)
+
+    Application.put_env(
+      :wotex_lab_workbench,
+      :beamlens_operator_runner,
+      WotexLabWorkbench.FakeInvestigationRunner
+    )
+
+    Application.put_env(:wotex_lab_workbench, :fake_investigation_owner, self())
+    Application.put_env(:wotex_lab_workbench, :fake_investigation_result, result)
+
+    on_exit(fn ->
+      restore_env(:beamlens_operator_runner, saved_runner)
+      restore_env(:fake_investigation_owner, saved_owner)
+      restore_env(:fake_investigation_result, saved_result)
+    end)
+
+    start_supervised!(
+      {ObservabilitySupervisor, history: [interval_ms: 60_000], beamlens: @beamlens_registry}
+    )
+  end
+
+  defp restore_env(key, nil), do: Application.delete_env(:wotex_lab_workbench, key)
+  defp restore_env(key, value), do: Application.put_env(:wotex_lab_workbench, key, value)
+
+  defp render_until(view, expected, attempts \\ 50)
+  defp render_until(view, _expected, 0), do: render(view)
+
+  defp render_until(view, expected, attempts) do
+    html = render(view)
+
+    if html =~ expected do
+      html
+    else
+      Process.sleep(5)
+      render_until(view, expected, attempts - 1)
+    end
   end
 
   test "unknown and stale browser sessions render denial rather than replacement", %{conn: conn} do

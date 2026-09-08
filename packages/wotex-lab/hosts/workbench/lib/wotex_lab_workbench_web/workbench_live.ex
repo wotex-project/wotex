@@ -25,6 +25,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     Sessions
   }
 
+  alias WotexLabWorkbench.Investigation.{Answer, Broker, Provider, RunContext}
+
   import WotexLabWorkbenchWeb.Components.Insights
   import WotexLabWorkbenchWeb.Components.MetricCatalogue
   alias WotexLabWorkbenchWeb.Components.StatusBadge
@@ -46,6 +48,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:insights, nil)
       |> assign(:read_result, nil)
       |> assign(:answer, nil)
+      |> assign(:investigation, investigation_state())
       |> refresh()
 
     {:ok, socket}
@@ -53,6 +56,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   @impl Phoenix.LiveView
   def handle_params(params, _uri, socket) do
+    socket = cancel_investigation_on_navigation(socket)
     {:noreply, load_action(socket, socket.assigns.live_action, params)}
   end
 
@@ -175,18 +179,57 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end)
   end
 
-  def handle_event("ask", _params, socket) do
-    command(socket, :ask, fn scope ->
-      {:ok, scope,
-       {:assign, :answer,
-        %{
-          status: "unavailable",
-          text:
-            "No investigation provider is configured. Ordinary workbench functions remain available.",
-          sources: []
-        }}}
-    end)
+  def handle_event("ask", %{"prompt" => prompt}, socket) do
+    with {:ok, scope} <- Scope.admit(socket, :ask),
+         true <- is_pid(scope.room) and Process.alive?(scope.room),
+         {:ok, current, baseline} <- investigation_context(socket, scope),
+         {:ok, request} <- Broker.ask(prompt, run: current, baseline: baseline) do
+      investigation = %{state: :running, request: request, prompt: prompt}
+
+      {:noreply,
+       socket
+       |> assign(:scope, scope)
+       |> assign(:answer, nil)
+       |> assign(:investigation, investigation)}
+    else
+      false ->
+        {:noreply, error_flash(socket, Error.new(:no_room, :session, "room is unavailable"))}
+
+      {:error, %Error{} = error} ->
+        {:noreply, error_flash(socket, error)}
+
+      {:error, reason} ->
+        {:noreply, investigation_failure(socket, reason)}
+    end
   end
+
+  def handle_event("ask", _params, socket) do
+    {:noreply, investigation_failure(socket, :invalid_prompt)}
+  end
+
+  def handle_event("cancel_investigation", _params, socket) do
+    with {:ok, scope} <- Scope.admit(socket, :ask),
+         %{state: :running, request: request} <- socket.assigns.investigation,
+         :ok <- Broker.cancel(request) do
+      {:noreply, assign(socket, :scope, scope)}
+    else
+      {:error, %Error{} = error} -> {:noreply, error_flash(socket, error)}
+      {:error, reason} -> {:noreply, investigation_failure(socket, reason)}
+      _not_running -> {:noreply, investigation_failure(socket, :unknown_investigation)}
+    end
+  end
+
+  @impl Phoenix.LiveView
+  def handle_info(
+        {:investigation, request, result},
+        %{assigns: %{investigation: %{state: :running, request: request}}} = socket
+      ) do
+    answer = Answer.from_result(result, provider_status())
+    investigation = %{state: :idle, request: nil, prompt: ""}
+    {:noreply, socket |> assign(:answer, answer) |> assign(:investigation, investigation)}
+  end
+
+  def handle_info(_message, socket), do: {:noreply, socket}
 
   @impl Phoenix.LiveView
   def render(assigns) do
@@ -208,13 +251,24 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           <% :experiments -> %>
             <.experiments_view experiments={@experiments} runs={@runs} room={@scope.room} />
           <% :run -> %>
-            <.run_view run={@run} charts={@charts} insights={@insights} />
+            <.run_view
+              run={@run}
+              charts={@charts}
+              insights={@insights}
+              investigation={@investigation}
+              answer={@answer}
+            />
           <% :things -> %>
             <.things_view things={@things} room={@scope.room} read_result={@read_result} />
           <% :metrics -> %>
             <.metrics_view metrics={@metrics} room={@scope.room} />
           <% :evidence -> %>
-            <.evidence_view snapshot={@snapshot} room={@scope.room} answer={@answer} />
+            <.evidence_view
+              snapshot={@snapshot}
+              room={@scope.room}
+              answer={@answer}
+              investigation={@investigation}
+            />
         <% end %>
       </.shell>
     <% else %>
@@ -327,6 +381,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr :run, :any, required: true
   attr :charts, :list, required: true
   attr :insights, :any, required: true
+  attr :investigation, :map, required: true
+  attr :answer, :any, required: true
 
   defp run_view(assigns) do
     ~H"""
@@ -380,7 +436,13 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         label="Inspect run evidence"
         digest={@run.record_digest}
       />
-      <.prompt_composer />
+      <.prompt_composer
+        disabled={@investigation.state != :idle}
+        running={@investigation.state == :running}
+        reason={prompt_reason(@investigation, true)}
+        value={@investigation.prompt}
+      />
+      <.answer_block :if={@answer} answer={@answer} />
     </div>
     """
   end
@@ -553,6 +615,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr :snapshot, :any, required: true
   attr :room, :any, required: true
   attr :answer, :any, required: true
+  attr :investigation, :map, required: true
 
   defp evidence_view(assigns) do
     properties = Enum.map(Formal.properties(), fn {id, text} -> {text, Atom.to_string(id)} end)
@@ -611,7 +674,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           </li>
         </ul>
       </section>
-      <.prompt_composer /><.answer_block :if={@answer} answer={@answer} />
+      <.prompt_composer
+        disabled={@investigation.state != :idle or @snapshot.runs == []}
+        running={@investigation.state == :running}
+        reason={prompt_reason(@investigation, @snapshot.runs != [])}
+        value={@investigation.prompt}
+      /><.answer_block :if={@answer} answer={@answer} />
     </div>
     """
   end
@@ -709,6 +777,56 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         {:error, _error} -> []
       end
     end)
+  end
+
+  defp investigation_context(socket, scope) do
+    runs = safe(fn -> Room.runs(scope.room) end, [])
+    selected_id = if(socket.assigns.live_action == :run, do: socket.assigns[:run_id])
+    RunContext.select(runs, selected_id)
+  end
+
+  defp cancel_investigation_on_navigation(
+         %{assigns: %{investigation: %{state: :running, request: request}}} = socket
+       ) do
+    _result = Broker.cancel(request)
+    socket
+  end
+
+  defp cancel_investigation_on_navigation(socket), do: socket
+
+  defp investigation_state do
+    case Broker.status() do
+      %{running: true} -> %{state: :busy, request: nil, prompt: ""}
+      %{running: false} -> %{state: :idle, request: nil, prompt: ""}
+      _unavailable -> %{state: :disabled, request: nil, prompt: ""}
+    end
+  end
+
+  defp prompt_reason(%{state: :running}, _context?),
+    do: "Read-only investigation running; leaving this view cancels its owner-bound worker."
+
+  defp prompt_reason(%{state: :idle}, true),
+    do: "Trusted-local only; one bounded read-only investigation, with no Action capability."
+
+  defp prompt_reason(%{state: :idle}, false),
+    do: "Run an experiment before asking about its evidence."
+
+  defp prompt_reason(%{state: :busy}, _context?),
+    do: "Another trusted-local investigation is running; this host does not queue prompts."
+
+  defp prompt_reason(_investigation, _context?),
+    do: "No investigation provider is configured."
+
+  defp investigation_failure(socket, reason) do
+    answer = Answer.from_result({:error, reason}, provider_status())
+    investigation = investigation_state()
+    socket |> assign(:answer, answer) |> assign(:investigation, investigation)
+  end
+
+  defp provider_status do
+    Provider.status()
+  catch
+    :exit, _reason -> %{}
   end
 
   defp metric_filters(params, scope) do

@@ -308,7 +308,7 @@ specifications:
       - "test/wotex/lab/wlb09_evidence_manifest_test.exs"
     compatibility_classification: WLB.09 is implemented as an optional, digest-pinned Maude profile with closed serialization, finite-state exhaustion evidence, counterexample replay and process-tree cleanup; results remain inert and model-scoped.
   - id: WLB.10
-    version: "0.9.0"
+    version: "0.10.0"
     path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md
     implementation_status: partial
     evidence_status: partial
@@ -369,6 +369,8 @@ specifications:
       - "WotexLabWorkbench.Investigation.BeamlensSupervisor"
       - "WotexLabWorkbench.Investigation.OperatorRunner"
       - "WotexLabWorkbench.Investigation.Broker"
+      - "WotexLabWorkbench.Investigation.RunContext"
+      - "WotexLabWorkbench.Investigation.Answer"
       - "WotexLabWorkbenchWeb.InvestigationCompletionController"
     executable_evidence:
       - "test/wotex/lab/metrics_catalogue_test.exs"
@@ -391,10 +393,11 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/investigation_codex_runner_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_ollama_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/beamlens_integration_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/investigation_presentation_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_completion_controller_test.exs"
-    compatibility_classification: Optional host contract; bridge captures now require strictly advancing wall timestamps and revalidated snapshots. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Storage-only history remains available. The trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-bound investigation and discloses upstream node/time callbacks; shared hosted tenants and browser presentation remain unimplemented. No mandatory observability or model dependency enters the base library.
+    compatibility_classification: Optional host contract; bridge captures now require strictly advancing wall timestamps and revalidated snapshots. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Storage-only history remains available. The trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-bound browser investigation and discloses upstream node/time callbacks; shared hosted tenants remain unimplemented. No mandatory observability or model dependency enters the base library.
   - id: WLB.11
-    version: "0.3.0"
+    version: "0.4.0"
     path: docs/specs/WLB.11-workbench-and-design-system.md
     implementation_status: partial
     evidence_status: partial
@@ -419,6 +422,8 @@ specifications:
       - "WotexLabWorkbench.Chart"
       - "WotexLabWorkbench.Chart.Admission"
       - "WotexLabWorkbench.Insights"
+      - "WotexLabWorkbench.Investigation.RunContext"
+      - "WotexLabWorkbench.Investigation.Answer"
       - "WotexLabWorkbenchWeb.Components.Insights"
       - "WotexLabWorkbenchWeb.Components.MetricCatalogue"
       - "WotexLabWorkbenchWeb.DashboardController"
@@ -430,6 +435,7 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/chart_preview_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/chart_contract_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/insights_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/investigation_presentation_test.exs"
       - "hosts/workbench/test/js/chart_hook_test.cjs"
       - "hosts/workbench/bin/check_chart_browser.cjs"
       - "hosts/workbench/test/wotex_lab_workbench/formal_test.exs"
@@ -438,4 +444,4 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench_web/workbench_live_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/dashboard_test.exs"
       - "hosts/workbench/bin/check_boundary.exs"
-    compatibility_classification: Additive non-umbrella reference host; base Lab consumers retain inert tokens and scoped CSS without Phoenix.
+    compatibility_classification: Additive non-umbrella reference host with an explicitly activated trusted-local investigation UI; base Lab consumers retain inert tokens and scoped CSS without Phoenix or BeamLens.

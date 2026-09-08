@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.3.0. Contract: accepted.
+Specification version: 0.4.0. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -11,6 +11,10 @@ session-owned disposable rooms, bounded live metrics and immutable exports,
 formal evidence presentation, and a one-MiB JSON evidence report. Its separate
 Action approval names and rechecks the decision, proposal digest, Thing,
 operation, input, revision and expiry; experiment execution cannot approve it.
+When the trusted-local BeamLens profile is explicitly active, the run/evidence
+composer submits one owner-bound bounded investigation and presents escaped
+facts, hypotheses, missing evidence, provider/model disclosure and the next
+safe read-only check. The ordinary UI remains complete when it is disabled.
 
 The existing host gate compiles with warnings as errors, formats, runs strict Credo,
 unused-dependency and security audits, Dialyzer, Doctor, ExDoc, the boundary
@@ -96,6 +100,13 @@ Custom dashboards are saved arrangements of admitted metric panels. PromEx
 Grafana JSON exports are available; no automatic upload or mandatory Grafana
 iframe is part of the default UI. LiveDashboard is trusted operator tooling,
 not the public experiment workbench.
+
+The implemented trusted-local slice binds the LiveView owner and revalidated
+session room to one host-wide no-queue broker. It selects only the chosen run
+and the nearest older run of the same experiment. Current snapshot references
+link to the bounded evidence view; exact per-query/chart deep links remain an
+acceptance gap rather than being fabricated from model output. Disconnect,
+explicit cancel and deadline terminate the worker and clear context.
 
 ## Component and chart contract
 

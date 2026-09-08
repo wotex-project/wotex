@@ -192,7 +192,8 @@ start. They also assert, rather than hide, the upstream base callbacks
 reach the selected model. The profile is admitted only when
 `WOTEX_LAB_BEAMLENS=trusted-local`; this disclosure keeps shared/disposable
 hosted tenants blocked pending an upstream change or separately isolated
-worker. Browser routing cannot start an investigation.
+worker. The trusted-local browser can start only its revalidated session-room
+investigation; no public or shared-tenant route is admitted.
 
 The custom skill exposes exactly the four WLB callbacks. Metric calls use
 one-call owner-bound gateways and fixed five-minute/query limits. Run summaries
@@ -202,6 +203,10 @@ no queue, 4 KiB prompt, 30 seconds and eight turns/actions. Completion, failure,
 cancel, timeout and owner death clear context and replace both BeamLens agents.
 The loopback-only BAML bridge is disabled outside the profile and refuses
 streaming, remote peers, unknown models and oversized/malformed messages.
+The LiveView evidence seam supplies a closed run summary, selects an older
+baseline only within the same experiment and keeps the LiveView process as the
+broker owner. Tests cover hostile answer text, ignored model URLs, structured
+fact/hypothesis presentation, successful completion and worker-killing cancel.
 
 The lock addition is BeamLens 0.3.1 plus `baml_elixir` 1.0.0-pre.27, `lua`
 0.4.0, `luerl` 1.5.1, `nimble_ownership` 1.0.2, `puck` 0.2.25, `recon` 2.5.6

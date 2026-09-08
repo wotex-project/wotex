@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.9.0. Contract: accepted. Source status: the metric
+Specification version: 0.10.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
@@ -9,9 +9,9 @@ catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
 history activation, a protected local scrape listener and expiring local-operator
 query capabilities. The Workbench also implements the explicitly activated
 trusted-local BeamLens 0.3.1 profile, its four read-only callbacks, an
-owner-bound no-queue broker, a loopback provider bridge and explicitly selected
-Codex-plan/local-Ollama providers. Durable-sink host activation, remote/TLS
-scraping, OTLP signal export, browser prompt/answer presentation, isolated
+owner-bound no-queue broker, a loopback provider bridge, explicitly selected
+Codex-plan/local-Ollama providers and trusted-local browser presentation.
+Durable-sink host activation, remote/TLS scraping, OTLP signal export, isolated
 hosted-tenant BeamLens and the MCP query gateway remain planned. A template
 export is not proof of a Grafana import or query execution.
 
@@ -289,7 +289,7 @@ answers gauges, counters with reset awareness and histogram quantiles from ETS
 or returns `unsupported_query`. `Metrics.Request` and `Metrics.Gateway` now
 admit local inspection callers of this descriptor; the trusted-local BeamLens
 skill uses that gateway with tighter limits. Public HTTP/MCP query bindings,
-durable query templates and browser BeamLens callers remain planned.
+durable query templates and non-local/multi-tenant BeamLens callers remain planned.
 
 History query admission now binds the store's explicit `:instance` identifier
 and snapshot `:instance_slot` (default 0). Migration: hosts using `query/2`
@@ -371,9 +371,9 @@ handlers require inspection in the admitted cohort. A host-scoped BeamLens
 service is not proof that BeamLens supports isolated per-instance supervisors.
 Untrusted hosted tenants require separate worker/OS isolation; shared-VM
 introspection is reserved for the trusted local operator profile. That profile
-is implemented. Browser/session binding and answer presentation remain planned;
-the prompt entry point is currently the trusted in-VM `Investigation.Broker`
-only.
+is implemented. The trusted-local Workbench browser binds its already-verified
+session and room to the owner-bound `Investigation.Broker`; shared-host tenant
+isolation remains blocked.
 The 0.3.1 source review found unconditional log-store startup in the standard
 supervisor, inherited node-information callbacks and queued operator invocations
 whose caller timeout does not revoke the run. See the
@@ -443,6 +443,10 @@ ranges and missing evidence. Queried labels/logs, tool results and prompts are
 untrusted data, not instructions. Render escaped text, never executable HTML.
 No-data, stale data, denied scope, provider failure and cancellation have
 distinct UI states. Generated advice cannot authorize or invoke an Action.
+The implemented Workbench selects the current run and only the nearest older
+run of the same experiment, reduces both to a closed JSON summary, and renders
+one terminal live-region update. It accepts no model-supplied link: snapshot
+identifiers and the bounded session report resolve only to `/evidence`.
 
 ## Nx data boundary and acceptance
 

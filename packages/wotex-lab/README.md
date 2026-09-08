@@ -275,8 +275,9 @@ with its read-only query contract, the exposition parser and the remote-write
 bridge under `Wotex.Lab.Metrics`; every process is placed explicitly under a
 Lab instance. The accepted host composes custom PromEx panels, bounded history,
 the self-scraper/remote-write bridge and an explicitly activated trusted-local
-BeamLens skill/provider profile. Browser BeamLens presentation and the MCP
-gateway remain planned host work. No ELK, mandatory Prometheus
+BeamLens skill/provider profile with owner-bound browser presentation.
+Shared-tenant BeamLens and the MCP gateway remain planned host work. No ELK,
+mandatory Prometheus
 server or separate collector. GreptimeDB is local/self-hosted, not embedded in
 the BEAM. Prompt results cite measurements and cannot invoke Actions. Plain
 experiments work without an LLM or durable database. See

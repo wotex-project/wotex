@@ -50,11 +50,19 @@ end
 defmodule WotexLabWorkbench.FakeInvestigationRunner do
   @moduledoc false
 
+  alias WotexLabWorkbench.Investigation.ContextStore
+
   @doc false
   @spec run(pid(), String.t(), pos_integer()) :: term()
   def run(_operator, prompt, _timeout) do
     if owner = Application.get_env(:wotex_lab_workbench, :fake_investigation_owner) do
       send(owner, {:fake_investigation_started, self(), prompt})
+
+      send(owner, {
+        :fake_investigation_context,
+        ContextStore.get("current"),
+        ContextStore.get("baseline")
+      })
     end
 
     case Application.get_env(:wotex_lab_workbench, :fake_investigation_result, :block) do

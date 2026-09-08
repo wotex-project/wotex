@@ -11,6 +11,11 @@
   `codex_then_ollama` provider. The upstream node/OS/uptime callbacks and log
   store are disclosed and keep shared hosted tenants out of scope.
 
+- Bind the trusted-local run/evidence composer to the owner-bound BeamLens
+  broker. The browser supplies only closed current/baseline run summaries,
+  cancels work on owner loss or explicit request, ignores model URLs and renders
+  escaped facts, hypotheses, missing evidence and provider/model disclosure.
+
 - Added the dormant Workbench provider boundary for the planned BeamLens
   integration, adapted from `goatmire-2026`: an existing signed-in ChatGPT-plan
   Codex App Server turn is primary, API-key auth and exhausted quota are

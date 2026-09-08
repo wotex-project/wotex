@@ -175,8 +175,8 @@ turn in an empty private directory with tools, search, connectors and inherited
 MCP/plugin entries disabled. The internal BAML bridge accepts only bounded,
 non-streaming loopback requests and is unavailable when the profile is off.
 
-`WotexLabWorkbench.Investigation.Broker.ask/2` is currently the trusted in-VM
-prompt entry point; no browser event exposes it yet. It admits one host-wide
+`WotexLabWorkbench.Investigation.Broker.ask/2` is the trusted-local prompt entry
+point used by the run and evidence LiveViews. It admits one host-wide
 investigation with no queue, returns an owner-only reference, and sends
 `{:investigation, reference, result}`. Its 30-second/eight-turn lifecycle clears
 run context and replaces the BeamLens agents after every terminal state. The
@@ -184,6 +184,13 @@ four custom callbacks cannot issue Actions or select scope/endpoints. BeamLens
 0.3.1 nevertheless adds node/OS/uptime callbacks and starts its log store; that
 explicit disclosure is why this profile is not admitted for shared hosted
 tenants.
+
+The browser revalidates the signed session and live room on every submit and
+cancel, then supplies only the selected run and nearest older same-experiment
+run through a closed summary. It renders one escaped terminal answer with
+facts, hypotheses, missing evidence and provider/model status. Model-supplied
+URLs are ignored; evidence links remain local, and the answer has no Action or
+approval seam.
 
 The Metrics page's portable-panel selector exports only catalogue definitions
 through `/metrics/dashboard.json`, with 1–16 known IDs. A verified browser

@@ -20,7 +20,16 @@ defmodule WotexLabWorkbenchWeb.ComponentHarness do
     assigns =
       assigns
       |> assign(:rows, [%{value: "one"}])
-      |> assign(:answer, %{status: "ok", text: "Observed", sources: []})
+      |> assign(:answer, %{
+        status: "ok",
+        observed: ["Observed"],
+        hypotheses: [],
+        missing: ["No baseline"],
+        next_check: "Inspect evidence",
+        provider: "not reported",
+        model: "not reported",
+        sources: []
+      })
 
     ~H"""
     <.button>Run</.button>

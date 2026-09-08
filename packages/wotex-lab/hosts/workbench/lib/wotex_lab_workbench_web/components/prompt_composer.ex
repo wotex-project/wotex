@@ -5,6 +5,7 @@ defmodule WotexLabWorkbenchWeb.Components.PromptComposer do
 
   attr :value, :string, default: ""
   attr :disabled, :boolean, default: true
+  attr :running, :boolean, default: false
   attr :reason, :string, default: "No investigation provider is configured."
 
   @doc "Renders the optional ask form and states why it is unavailable."
@@ -19,7 +20,17 @@ defmodule WotexLabWorkbenchWeb.Components.PromptComposer do
         <label for="investigation-prompt">Question</label>
         <textarea id="investigation-prompt" name="prompt" maxlength="512" rows="3" disabled={@disabled}>{@value}</textarea>
         <p class="wl-help">{@reason}</p>
-        <button class="wl-button wl-button-secondary" type="submit" disabled={@disabled}>Ask</button>
+        <div class="wl-actions">
+          <button class="wl-button wl-button-secondary" type="submit" disabled={@disabled}>Ask</button>
+          <button
+            :if={@running}
+            class="wl-button wl-button-secondary"
+            type="button"
+            phx-click="cancel_investigation"
+          >
+            Cancel investigation
+          </button>
+        </div>
       </form>
     </section>
     """
