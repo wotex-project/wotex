@@ -2,6 +2,10 @@
 
 ## 0.1.0
 
+- Measure JSON iodata against `max_bytes` before allocating its flattened
+  binary; direct native constructors retain their documented depth-only
+  resource envelope.
+
 - Remove the stale `EEF-CVE-2026-32686` Hex advisory suppression now that the
   registry audit reports no matching advisory. Exact Decimal 3.1.1 lock,
   loaded-version and bounded-parser regression checks remain active.

@@ -27,8 +27,8 @@ defmodule WotexContinuum.Codec do
   @spec decode(iodata(), keyword() | map() | Limits.t()) ::
           {:ok, struct()} | {:error, Error.t()}
   def decode(source, limit_options \\ []) do
-    with {:ok, binary} <- to_binary(source),
-         {:ok, limits} <- Limits.new(limit_options),
+    with {:ok, limits} <- Limits.new(limit_options),
+         {:ok, binary} <- to_binary(source, limits.max_bytes),
          {:ok, decoded} <- admit(binary, limits),
          :ok <- top_level_object(decoded) do
       WotexContinuum.from_map(decoded)
@@ -58,8 +58,23 @@ defmodule WotexContinuum.Codec do
     end
   end
 
-  defp to_binary(source) do
-    {:ok, IO.iodata_to_binary(source)}
+  defp to_binary(source, max_bytes) do
+    size = :erlang.iolist_size(source)
+
+    if size > max_bytes do
+      {:error,
+       Error.from_core(
+         Wotex.Error.new(
+           :byte_limit_exceeded,
+           :parse,
+           "JSON exceeds the configured byte limit",
+           "/",
+           %{bytes: size, max_bytes: max_bytes}
+         )
+       )}
+    else
+      {:ok, IO.iodata_to_binary(source)}
+    end
   rescue
     ArgumentError -> Error.error(:invalid_type, :decode, "/", "expected JSON iodata")
   end

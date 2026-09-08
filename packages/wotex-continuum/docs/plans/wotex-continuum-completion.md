@@ -53,8 +53,9 @@ per collection and 262,144 bytes per string. `Limits.new/1` accepts positive
 explicit overrides and `Codec.decode/2` delegates source admission to the core
 `Wotex.JSON.decode/2` pipeline, which preflights binary content, scans depth and
 string size before decoding, copies strings and then checks duplicate members,
-collection size, node count and depth. Iodata is flattened before that byte
-check; this is not a proof of bounded pre-allocation memory. Native JSON values
+collection size, node count and depth. Iodata byte length is checked before
+flattening; this bounds the additional flattened binary allocation, but is not
+a bound on caller-owned iodata already resident in memory. Native JSON values
 share the single depth bound, measured from the validated value; byte, node,
 collection and string bounds remain source-admission controls. WCT-C02 keeps
 that difference explicit rather than claiming a uniform envelope.
@@ -140,7 +141,7 @@ source, dependency or schema changes; a commit ID does not identify a dirty tree
 | Claim not discharged by present test shape | Owner | Required closure |
 | --- | --- | --- |
 | Native UTF-8 admission equals JSON decoder admission | WCT-C02 | Native payload object keys are explicitly validated; malformed Unicode cannot enter accepted nested values or error paths. |
-| Uniform resource bounds | WCT-C02 | Source admission is delegated to the core bounded decoder and one `max_depth` covers decoded and native values. The residual claim is the rest of the envelope: iodata flattening precedes the byte check, and byte, node, collection and string bounds still do not apply to a native map handed straight to a constructor. |
+| Uniform resource bounds | WCT-C02 | Source admission is delegated to the core bounded decoder, iodata length is checked before flattening, and one `max_depth` covers decoded and native values. The residual claim is native construction: byte, node, collection and string bounds do not apply to a native map handed straight to a constructor. |
 | Normative schema/implementation agreement | WCT-C03 | Canonical, valid and invalid vectors now execute against the embedded schemas through a documented keyword subset, and the invalid set separates schema-expressible from semantic rules. The residual claim is full-vocabulary agreement: `format` and `propertyNames` assertions are not evaluated, so absolute-IRI, media-type and RFC 3339 admission rests on the constructors. |
 | Independent fresh consumer installation | WCT-C04 | Declared package cohort, no development path assumption, representative public API tests. |
 | Local execution files excluded from public archives | WCT-C04 | Explicit package exclusion and archive-content regression; Git ignore is not a package boundary. |

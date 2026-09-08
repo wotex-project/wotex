@@ -71,7 +71,18 @@ defmodule WotexContinuum.CodecTest do
     source =
       ~s({"kind":"mode","schema_version":"2.0.0","deployment":"saas","connectivity":"connected","extensions":{}})
 
-    assert {:error, %Error{code: :limit_exceeded}} = Codec.decode(source, max_bytes: 8)
+    assert {:error,
+            %Error{
+              code: :limit_exceeded,
+              phase: :limits,
+              path: "/",
+              details: %{bytes: bytes, max_bytes: 8, core_code: :byte_limit_exceeded}
+            }} = Codec.decode([source], max_bytes: 8)
+
+    assert bytes == byte_size(source)
+
+    fragmented = [binary_part(source, 0, 8), binary_part(source, 8, byte_size(source) - 8)]
+    assert {:ok, %Mode{}} = Codec.decode(fragmented, max_bytes: byte_size(source))
 
     assert {:error, %Error{code: :limit_exceeded}} =
              Codec.decode(source, max_collection_size: 2)
