@@ -16,7 +16,7 @@
     {"id": "WLB-C07:manifest-integrity", "status": "pass"},
     {"id": "WCF-C05:discovery-corpus", "status": "not_run"}
   ],
-  "attempt": 1,
+  "attempt": 2,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -40,24 +40,25 @@
     {"archive": "missing", "name": "python", "version": "3.9.6"},
     {"archive": "missing", "name": "darwin-sandbox-exec", "version": "25.6.0"}
   ],
-  "durations": {"run_ms": 8420},
+  "durations": {"run_ms": 7600},
   "fixtures": {
     "corpus:thing-description-1.1": "sha256:1dc979f8599bbcd0e441bc09c7266169f42bee40384fbacd4ad1e1c2b8caac07",
     "corpus:thing-model-1.1": "sha256:262e3369986eef648563b5693fdaadab3fa11fb3732cf4db9b7546e2a4af92a7"
   },
   "inputs": [
     "command:WOTEX_PATH_DEPS=1 mix test WLB.06-evidence-files",
+    "renewal:2026-09-08-interactive-analytics-contract;seed=1;manifest-integrity-checked-separately",
     "containment:darwin-sandbox-exec+contained-exec-1.0.0",
     "fault-schedule:1.0.0",
     "excluded-corpus:WCF-C05-discovery-not-applicable-to-core-target"
   ],
   "lock_digest": "sha256:7d40df7fa06d21da796f6758413900f4a2c39b5ba69d93c0da077a995d62ac46",
-  "outcomes": {"excluded_count": 1, "test_count": 50, "thing_description_vectors": 14, "thing_model_vectors": 6},
-  "revision": "6d77598a63043d019e075b2635ff0b3475c0670e+workspace-WLB.09-v0.3.0",
+  "outcomes": {"excluded_count": 1, "test_count": 49, "thing_description_vectors": 14, "thing_model_vectors": 6},
+  "revision": "836f7af+workspace-WLB.11-v0.3.0",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:3faeea06867d2e8571b8bc081b31855b862b232b870748e2db0dd1b84c50557e",
+  "source_tree_digest": "sha256:4554c4c8826cf3cf31284e2f890ba422bc6da0d852db151a938f79ee4c39c7b7",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",

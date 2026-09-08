@@ -13,7 +13,7 @@
     {"id": "WLB-C09:binary-license-and-provenance", "status": "pass"},
     {"id": "WLB-C09:manifest-integrity", "status": "pass"}
   ],
-  "attempt": 1,
+  "attempt": 2,
   "budgets": {
     "deadline_ms": 120000,
     "max_depth": 1000,
@@ -33,23 +33,24 @@
     {"archive": "sha256:928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1", "name": "telemetry", "version": "1.4.2"},
     {"archive": "sha256:95851274f57b3853aab833674e2b770ed800f38fb1f3d03c97dcac56346c13dc", "name": "maude", "version": "3.5.1-macos-arm64"}
   ],
-  "durations": {"run_ms": 19230},
+  "durations": {"run_ms": 18600},
   "fixtures": {
     "model:thermal-control-v1": "sha256:04d49d3e2f8c80e4b1e1199bbc41a22f410c76bbb7606a378a5b0be3ae005b13"
   },
   "inputs": [
     "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_MAUDE=pinned-maude-3.5.1 mix test WLB.09-formal-files",
+    "renewal:2026-09-08-interactive-analytics-contract;seed=1;manifest-integrity-checked-separately",
     "engine-executable:sha256:266eed04679fde6029a18e5e2b1828223d4a7169ac55503aa15d67e126792fbf",
     "model:thermal-control-v1",
     "cookbook:formal-control"
   ],
   "lock_digest": "sha256:7d40df7fa06d21da796f6758413900f4a2c39b5ba69d93c0da077a995d62ac46",
-  "outcomes": {"broken_variants": 5, "cookbook_checks": 9, "excluded_count": 2, "reachable_states": 253, "safe_properties": 5, "test_count": 45},
-  "revision": "6d77598a63043d019e075b2635ff0b3475c0670e+workspace-WLB.09-v0.3.0",
+  "outcomes": {"broken_variants": 5, "cookbook_checks": 9, "excluded_count": 2, "reachable_states": 253, "safe_properties": 5, "test_count": 44},
+  "revision": "836f7af+workspace-WLB.11-v0.3.0",
   "scenario_id": "WLB.09-formal-control-verification",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:895f7101d43fcc85ad078c4a18cd4e021127d023c6f9c8bd32737480246f68ff",
+  "source_tree_digest": "sha256:8c6cdce19f6b51ae7f5a9229a190084b3b309a589bd03a82b2f7ebfed5513af7",
   "toolchain": {
     "backend": "Maude-3.5.1-port",
     "elixir": "1.20.2",

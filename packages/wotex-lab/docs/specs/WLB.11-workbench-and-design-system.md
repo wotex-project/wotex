@@ -23,10 +23,14 @@ reference evidence, not a WCAG certification or artifact-adoption claim;
 WLB.08 owns clone-free archive/OCI execution and independent real-browser
 cohort evidence.
 
-The interactive analytics extension below adds acceptance obligations. Its
-Explorer analysis and chart lifecycle improvements are planned until backed
-by their own source and executable evidence; the earlier tests do not prove
-these new contracts. See the
+The interactive analytics extension below adds acceptance obligations. The
+chart normalization, mark-correct fallback, CSP-interpreted rendering and
+mount/update/disposal lifecycle now have executable source evidence in
+`chart_contract_test.exs` and `test/js/chart_hook_test.cjs`. The explicit
+`bin/check_chart_browser.cjs` host gate checks real Chromium rendering,
+keyboard reset, themes, mobile reflow, reload and session isolation. Its
+recorded cohort is source evidence, not the complete WLB.08 browser matrix.
+Explorer analysis remains planned. See the
 [interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md).
 
 ## Product and implementation boundary

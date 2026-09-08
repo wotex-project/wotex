@@ -36,6 +36,33 @@ WOTEX_PATH_DEPS=1 mix check --no-retry
 The host uses a small native check runner because its accepted location is two
 levels below another Mix project, a shape that ex_check interprets as a possible
 umbrella child. `.check.exs` remains the declarative list of the same checks.
+Node is needed for the dependency-free chart-hook tests, not by the running
+Elixir host. The exact Decimal 3.1.1 advisory acknowledgement is documented in
+the Lab's [dependency review](../../docs/provenance/standards-and-dependencies.md)
+and protected by the host's own locked-version and bounded-parser regression.
+
+## Interactive charts and browser evidence
+
+Vega Embed uses its bundled CSP interpreter (`ast: true`); neither
+`unsafe-eval` nor a fourth script is required. The renderer cannot load URLs.
+The hook applies only a fixed horizontal pan/zoom interaction, follows theme
+changes, resets by keyboard and finalizes obsolete views. Accessible SVG and
+the maximum 100-row table remain available when enhancement fails. The SVG
+supports all three admitted marks and preserves missing-value gaps.
+
+The optional browser gate requires an explicitly installed Playwright/browser
+cohort and a disposable local server. It never downloads them. For example,
+start the host with `PORT=4107 WOTEX_PATH_DEPS=1 mix phx.server`, then run:
+
+```sh
+node bin/check_chart_browser.cjs http://127.0.0.1:4107
+```
+
+Supply Playwright through your tool environment (for example `NODE_PATH`). The
+script reports actual Node, Playwright and Chromium versions. The 2026-09-08
+source cohort passed with Node 26.8.1, Playwright 1.63.0-alpha-2026-08-31 and
+Chromium 153.0.8010.12; this is neither a stable-browser compatibility matrix,
+WCAG certification nor installed-artifact evidence.
 
 ## Runtime configuration
 

@@ -13,6 +13,7 @@
     {:doctor, command: "mix doctor"},
     {:ex_doc, command: "mix docs --warnings-as-errors", env: %{"MIX_ENV" => "docs"}},
     {:ex_unit, command: "mix coveralls"},
+    {:chart_hooks, command: "node --test test/js/chart_hook_test.cjs"},
     {:boundary, command: "elixir bin/check_boundary.exs"}
   ]
 ]
