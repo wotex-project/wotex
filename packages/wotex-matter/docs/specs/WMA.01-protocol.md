@@ -1,3 +1,13 @@
+---
+spec:
+  id: WMA.01
+  title: "Matter protocol and graduation contract"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-matter
+  updated: 2026-09-09
+---
+
 # WMA.01 Matter protocol and graduation contract
 
 Matter 1.6 was announced by CSA on 2026-06-17. The connectedhomeip reference

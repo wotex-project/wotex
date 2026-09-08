@@ -1,6 +1,17 @@
+---
+spec:
+  id: WMA.10
+  title: "Complete SDK-backed Matter controller software profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-matter
+  updated: 2026-09-09
+---
+
 # WMA.10 Complete SDK-backed Matter controller software profile
 
 Read [WMA.00](WMA.00-library-contract.md) and the [implementation sequence](../plans/software-implementation.md).
+[WMA.11](WMA.11-standalone-client-and-preservation.md) fixes the native API, retained workflows and concrete fixture contract.
 Baseline `e546603` includes concrete paths, a bounded TLV codec, Forms and a
 factory-supplied one-shot SDK bridge with Python contract tests. It does not yet
 prove an installed controller against a real SDK example peer. The target below
@@ -39,6 +50,8 @@ by write/invoke or silently inferred from nil. At most 64 requested paths and
 order for concrete multi-read results and sort wildcard expansion lexicographically
 by endpoint/cluster/member for deterministic output. Native `send/2` keeps the
 existing concrete-operation return shapes; add explicit `read_paths/3` for batches.
+WMA-N01 additionally requires typed native helper results and bounded endpoint
+discovery composed from Descriptor reads, without inventing a wire service.
 
 Retain all typed TLV tags/widths, signed/unsigned integers, Boolean, finite float,
 UTF-8, bytes, null, structures, arrays and lists. Absence is not null. Unknown

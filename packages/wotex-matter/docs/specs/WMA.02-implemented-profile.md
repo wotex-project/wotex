@@ -1,3 +1,13 @@
+---
+spec:
+  id: WMA.02
+  title: "Implemented Matter profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-matter
+  updated: 2026-09-09
+---
+
 # WMA.02 Implemented Matter profile
 
 This is a local Wotex Form profile, not a standardized W3C Matter binding:

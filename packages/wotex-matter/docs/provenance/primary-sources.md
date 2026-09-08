@@ -58,3 +58,10 @@ All source links below pin SDK commit
 These inspected implementation APIs make the adapter buildable without invented
 normative clause citations. Full Matter 1.6 normative-text access remains absent;
 SDK-derived software behavior and CSA certification are different claims.
+
+## Standalone contract review, 2026-09-09
+
+[WMA.11](../specs/WMA.11-standalone-client-and-preservation.md) records
+additional source-pinned API and retained-workflow decisions. Its concrete
+fixtures are specified, unexecuted acceptance data. This review does not add
+an interoperability or standards-conformance result.

@@ -11,8 +11,15 @@ starting implementation, not something to replace with fresh scaffolding.
 1. Read `CLAUDE.md` and matching repository rules/skills.
 2. Read [WMA.00 — shared software rules](../specs/WMA.00-library-contract.md).
 3. Read [WMA.10 — exact target profile](../specs/WMA.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
-4. Read [primary source pins and access limits](../provenance/primary-sources.md).
-5. Select the first work package below whose acceptance evidence is absent.
+4. Read [WMA.11 — standalone API, preservation and concrete corpus](../specs/WMA.11-standalone-client-and-preservation.md).
+5. Read [primary source pins and access limits](../provenance/primary-sources.md).
+6. Select the first work package below whose acceptance evidence is absent.
+
+Read the [versioned catalogue](../specs/catalogue.yaml) and
+[WMA.12 — Wotex integration](../specs/WMA.12-wotex-integration.md) before choosing
+implementation work. The catalogue lists dependencies and distinguishes planned
+contracts from narrow implemented profiles. Source presence, fixture presence,
+passing baseline tests and accepted work packages are separate facts.
 
 The numbered sequence is dependency order: each package depends on all preceding
 packages. Each is one bounded behavior plus its tests/documentation. A large
@@ -22,7 +29,8 @@ merely to produce a commit. Every proposed module, API and test path below is a
 target addition unless it already exists; no placeholder file implies completion.
 
 For each requirement, record its ID in an ExUnit/native test name or a fixture
-manifest. Vectors specify expected outcomes in .10. The implementation chooses
+manifest. Scenario families specify required outcomes in .10; concrete inputs and exact
+expectations are in .11 and its fixture corpus. The implementation chooses
 ordinary internal function names and data structures, while the public behavior,
 state transitions, limits, failure policy and transport choices are fixed there.
 If an upstream API cannot meet a requirement, add the smallest adapter needed
@@ -33,17 +41,20 @@ do not silently skip, simulate or weaken the requirement.
 
 ### WMA-P01: Preserve typed batch paths tlv and per path status
 
-- Requirements: WMA-S01, WMA-S03; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WMA-V01, WMA-V02, WMA-V05.
+- Requirements: WMA-S01, WMA-S03, WMA-N01, WMA-N02, WMA-N04; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WMA-V01, WMA-V02, WMA-V05.
 - Change surface: new ReadPath, Address, TLV, descriptor-based value/result conversion.
 - Test destinations: `test/wotex/matter/path_value_test.exs`, `test/native/test_values.py`.
 - Done when: Concrete compatibility stays intact; read-only wildcards, unknown tags, explicit descriptor allowlist and deterministic per-path results are bounded.
 - Suggested local commit: `feat: preserve typed batch paths tlv and per path status`.
 
+- Concrete cases: WMA-F01, WMA-F02, WMA-F03, WMA-F04, WMA-F05, WMA-F06, WMA-F10, WMA-F12.
+- Standalone closure: Add the exact report/catalogue types and pinned recipe descriptors; bind pure cases in the fixture runner. Native SDK calls are completed in P04.
+
 ### WMA-P02: Implement durable exclusive controller storage
 
 - Requirements: WMA-S02; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WMA-V03.
+- Acceptance scenarios: WMA-V03.
 - Change surface: new PersistentStorage implementation and explicit open/create schema.
 - Test destinations: `test/native/test_storage.py`.
 - Done when: Correct pinned storage-object API, fatal Commit failures, exclusive lock, atomic/fsynced state and crash-safe identity retention are proved.
@@ -51,44 +62,56 @@ do not silently skip, simulate or weaken the requirement.
 
 ### WMA-P03: Own a persistent first party sdk controller
 
-- Requirements: WMA-S02; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WMA-V04.
+- Requirements: WMA-S02, WMA-N01, WMA-N02; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WMA-V04.
 - Change surface: SDK persistent mode, bridge event loop and concrete CA/controller factory.
 - Test destinations: `test/wotex/matter/persistent_bridge_test.exs`, `test/native/test_controller.py`.
 - Done when: Explicit PAA/fabric/node configuration produces a controller; partial start/EOF/death unwind all SDK objects and storage locks.
 - Suggested local commit: `feat: own a persistent first party sdk controller`.
 
+- Concrete cases: WMA-F07.
+- Standalone closure: The first-party persistent controller must enforce fabric equality before SDK entry; a custom factory does not complete this package.
+
 ### WMA-P04: Complete timed interactions and event reads
 
-- Requirements: WMA-S03; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WMA-V05, WMA-V06.
+- Requirements: WMA-S03, WMA-N01, WMA-N02; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WMA-V05, WMA-V06.
 - Change surface: SDK read/write/SendCommand/ReadEvent translation.
 - Test destinations: `test/native/test_interactions.py`.
 - Done when: Timed/DataVersion/partial-status semantics are exact, native event identity is preserved and mutation timeouts never replay.
 - Suggested local commit: `feat: complete timed interactions and event reads`.
 
+- Concrete cases: WMA-F11.
+- Standalone closure: Implement named attribute/command APIs and bounded Descriptor endpoint catalogue; enforce OnOff read-only and temperature/null/enum descriptors.
+
 ### WMA-P05: Deliver attribute and event subscriptions
 
-- Requirements: WMA-S04; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WMA-V07, WMA-V09.
+- Requirements: WMA-S04, WMA-N01, WMA-N02; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WMA-V07, WMA-V09.
 - Change surface: Subscription owner and SDK report callbacks.
 - Test destinations: `test/wotex/matter/subscription_test.exs`, `test/native/test_subscription.py`.
 - Done when: Initial snapshot/callback race, interval revisions, paths and generations are validated; cancel/death removes native callbacks and transactions.
 - Suggested local commit: `feat: deliver attribute and event subscriptions`.
 
+- Concrete cases: WMA-F08.
+- Standalone closure: Preserve equal values with distinct report identity, native metadata and zero callbacks after cancellation.
+
 ### WMA-P06: Bound explicit subscription recovery
 
-- Requirements: WMA-S04; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WMA-V08, WMA-V09.
+- Requirements: WMA-S04, WMA-N01; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WMA-V08, WMA-V09.
 - Change surface: resubscription callbacks, budgets and stream statuses.
 - Test destinations: `test/wotex/matter/subscription_recovery_test.exs`.
 - Done when: Default loss is terminal; opted-in recovery emits continuity loss, obeys five-attempt/60-second bounds and cannot replay mutations.
 - Suggested local commit: `feat: bound explicit subscription recovery`.
 
+- Concrete cases: WMA-F09.
+- Standalone closure: Prove default terminal loss and explicitly selected recovery without mutation replay.
+
 ### WMA-P07: Commission on network with verified attestation
 
 - Requirements: WMA-S05; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WMA-V10.
+- Acceptance scenarios: WMA-V10.
 - Change surface: CommissionOnNetwork, OpenCommissioningWindow and typed ACL operations.
 - Test destinations: `test/native/test_commissioning.py`, `test/interop/commissioning_test.exs`.
 - Done when: Explicit new-node/window inputs, final SDK outcome, PAA/attestation failure and denied operational ACL are exercised without bypass flags.
@@ -97,20 +120,30 @@ do not silently skip, simulate or weaken the requirement.
 ### WMA-P08: Map matter property action and event results
 
 - Requirements: WMA-S06; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WMA-V11.
+- Acceptance scenarios: WMA-V11.
 - Change surface: Mapping, Transport and explicit read health probe.
 - Test destinations: `test/wotex/matter/runtime_stream_test.exs`.
 - Done when: Each Interaction Affordance maps to its real service and retains status/version/event metadata and original cancellation route.
 - Suggested local commit: `feat: map matter property action and event results`.
 
+### WMA-P08a: Prove the Wotex consumer boundary
+
+- Requirements: WMA-I01, WMA-I02, WMA-I03, WMA-I04, WMA-I05, WMA-I06; all previous native/profile packages are dependencies.
+- Concrete cases: every `WMA-I-Fxx` case in `docs/specs/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
+- Change surface: root profile/0 and profile/1, Error.class, Mapping, Transport and their public core/Runtime integration; no sibling implementation changes.
+- Test destinations: `test/wotex/matter/runtime_integration_test.exs` and explicit test-only credential/client ports.
+- Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.
+- Suggested local commit: `feat: integrate explicit runtime profiles and failure classes`.
+
 ### WMA-P09: Prove the controller against pinned sdk example peers
 
-- Requirements: WMA-S01, WMA-S02, WMA-S03, WMA-S04, WMA-S05, WMA-S06; shared C01–C10 apply wherever relevant.
-- Acceptance vectors: WMA-V12, WMA-V13.
+- Requirements: WMA-S01, WMA-S02, WMA-S03, WMA-S04, WMA-S05, WMA-S06, WMA-N01, WMA-N02, WMA-N03, WMA-N04; shared C01–C10 apply wherever relevant.
+- Acceptance scenarios: WMA-V12, WMA-V13.
 - Change surface: Linux no-BLE SDK controller/all-clusters/lighting fixture and native audit.
 - Test destinations: `test/interop/sdk_test.exs`, `test/software/lifecycle_stress_test.exs`.
 - Done when: Actual on-network commissioning, CASE, ACL denial, reports, cancellation, persistent restart and required stress/matrix/archive gates all pass.
 - Suggested local commit: `test: prove the controller against pinned sdk example peers`.
+- Standalone closure: Execute .11 lighting/thermostat/bridge catalogue and event recipes, durable restart and native API workflow with no consumer factory.
 
 ## Reproducible software fixture contract
 
@@ -162,7 +195,8 @@ with command, versions, vector paths/digests and result. Keep unexecuted require
 explicit. Use the author and committer required by `CLAUDE.md`; never configure
 remotes, push, tag, publish, change visibility or edit a consumer.
 
-The final package also runs the full .00 C09 matrix, all .10 vectors and software
+The final package also accepts every .11 standalone and .12 integration requirement,
+then runs the full .00 C09 matrix, all .10 scenarios, .11 concrete cases and software
 peers, then a clean committed-source archive with the lockfile through `mix check`
 and out-of-tree Hex package compilation. Confirm no Application callback or
 dependency-load I/O, no missing packaged bridge assets, no downloaded SDK/build/
@@ -171,7 +205,11 @@ number or stub adapter cannot substitute for a required protocol assertion.
 
 ## Completion checklist
 
-- Every S requirement has its listed V assertions passing, with current digests.
+- Every .11 and .12 requirement is linked to a concrete asserting test/result;
+  no new target requirement is closed merely by an identifier or valid JSON.
+- Every S/N requirement has its listed V scenario assertions and F concrete cases
+  passing, with current digests. The .11 native workflow must pass without a
+  Thing Description or consumer-authored backend.
 - C01 compatibility, C02 malformed boundaries, C03 ownership, C04 errors/effects,
   applicable C05/C06 streams, C07 native framing, C08 redaction/telemetry and
   C09 stress/matrix each have executable evidence or an explicit scope-based

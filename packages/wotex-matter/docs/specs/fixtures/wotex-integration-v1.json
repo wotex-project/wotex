@@ -1,0 +1,403 @@
+{
+  "format": "wotex.protocol.integration",
+  "version": "1.0.0",
+  "status": "specified_unexecuted",
+  "requirements": [
+    "WMA-I02",
+    "WMA-I03",
+    "WMA-I06",
+    "WMA-I04"
+  ],
+  "cases": [
+    {
+      "id": "WMA-I-F01",
+      "operation": "runtime_read",
+      "input": {
+        "thing_description": {
+          "@context": [
+            "https://www.w3.org/2022/wot/td/v1.1",
+            {
+              "example": "urn:example:"
+            }
+          ],
+          "id": "urn:example:matter:fixture",
+          "title": "Protocol fixture",
+          "securityDefinitions": {
+            "none": {
+              "scheme": "nosec"
+            }
+          },
+          "security": [
+            "none"
+          ],
+          "properties": {
+            "reading": {
+              "readOnly": true,
+              "forms": [
+                {
+                  "href": "matter://1/1234/1/6/0",
+                  "op": "readproperty",
+                  "example:extension": {
+                    "keep": [
+                      false,
+                      0,
+                      null
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "profile_mode": "oneshot",
+        "request_id": "read-1",
+        "affordance": "reading",
+        "peer_reply": {
+          "kind": "client_return",
+          "value": false
+        },
+        "clock": {
+          "kind": "monotonic_ms",
+          "start": 0,
+          "deadline": 1000
+        },
+        "transport_options": {
+          "timeout": 1000,
+          "client": "scripted_client",
+          "target": "1"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "profile_id": "matter",
+          "resolved_href": "matter://1/1234/1/6/0",
+          "command": {
+            "type": "read",
+            "fabric_id": 1,
+            "node_id": 1234,
+            "endpoint": 1,
+            "cluster": 6,
+            "member": 0
+          },
+          "result": {
+            "request_id": "read-1",
+            "operation": "readproperty",
+            "status": "ok",
+            "payload": false,
+            "metadata": {}
+          },
+          "extension": {
+            "keep": [
+              false,
+              0,
+              null
+            ]
+          },
+          "request_count": 1,
+          "owned_resources_after": 0
+        }
+      }
+    },
+    {
+      "id": "WMA-I-F02",
+      "requirements": [
+        "WMA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "read_timeout",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "deadline_exceeded",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "timeout",
+          "cause_code": "deadline_exceeded",
+          "retained_native_effect": false,
+          "retry_decision": {
+            "retry": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "WMA-I-F03",
+      "requirements": [
+        "WMA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "peer_unavailable",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "connection_failed",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "unavailable",
+          "cause_code": "connection_failed",
+          "retained_native_effect": false,
+          "retry_decision": {
+            "retry": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "WMA-I-F04",
+      "requirements": [
+        "WMA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "admission_full",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "busy",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "rate_limited",
+          "cause_code": "busy",
+          "retained_native_effect": false,
+          "retry_decision": {
+            "retry": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "WMA-I-F05",
+      "requirements": [
+        "WMA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "wrong_correlation",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "response_mismatch",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "protocol",
+          "cause_code": "response_mismatch",
+          "retained_native_effect": false,
+          "retry_decision": "stop"
+        }
+      }
+    },
+    {
+      "id": "WMA-I-F06",
+      "requirements": [
+        "WMA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "invalid_route",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "target_mismatch",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "permanent",
+          "cause_code": "target_mismatch",
+          "retained_native_effect": false,
+          "retry_decision": "stop"
+        }
+      }
+    },
+    {
+      "id": "WMA-I-F07",
+      "requirements": [
+        "WMA-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "sent_write_timeout",
+        "wot_operation": "writeproperty",
+        "native_error": {
+          "code": "deadline_exceeded",
+          "effect": "unknown"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0,
+          "idempotent?": true
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "permanent",
+          "cause_code": "deadline_exceeded",
+          "retained_native_effect": false,
+          "retry_decision": "stop"
+        }
+      }
+    },
+    {
+      "id": "WMA-I-F08",
+      "operation": "runtime_read",
+      "input": {
+        "thing_description": {
+          "@context": [
+            "https://www.w3.org/2022/wot/td/v1.1",
+            {
+              "example": "urn:example:"
+            }
+          ],
+          "id": "urn:example:matter:fixture",
+          "title": "Protocol fixture",
+          "securityDefinitions": {
+            "none": {
+              "scheme": "nosec"
+            }
+          },
+          "security": [
+            "none"
+          ],
+          "properties": {
+            "reading": {
+              "readOnly": true,
+              "forms": [
+                {
+                  "href": "matter://1/1234/1/6/0",
+                  "op": "readproperty",
+                  "example:extension": {
+                    "keep": [
+                      false,
+                      0,
+                      null
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "profile_mode": "controller",
+        "request_id": "read-1",
+        "affordance": "reading",
+        "peer_reply": {
+          "kind": "attribute_report",
+          "path": {
+            "fabric_id": 1,
+            "node_id": 1234,
+            "endpoint": 1,
+            "cluster": 6,
+            "member": 0
+          },
+          "value": {
+            "tag": "anonymous",
+            "type": "boolean",
+            "value": false
+          },
+          "data_version": 7,
+          "status": 0
+        },
+        "clock": {
+          "kind": "monotonic_ms",
+          "start": 0,
+          "deadline": 1000
+        },
+        "transport_options": {
+          "timeout": 1000,
+          "client": "scripted_client",
+          "target": "1",
+          "lifecycle": "persistent"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "profile_id": "matter_controller",
+          "resolved_href": "matter://1/1234/1/6/0",
+          "command": {
+            "type": "read",
+            "fabric_id": 1,
+            "node_id": 1234,
+            "endpoint": 1,
+            "cluster": 6,
+            "member": 0
+          },
+          "result": {
+            "request_id": "read-1",
+            "operation": "readproperty",
+            "status": "ok",
+            "payload": {
+              "tag": "anonymous",
+              "type": "boolean",
+              "value": false
+            },
+            "metadata": {
+              "matter_kind": "attribute",
+              "path": {
+                "fabric_id": 1,
+                "node_id": 1234,
+                "endpoint": 1,
+                "cluster": 6,
+                "member": 0
+              },
+              "status": 0,
+              "data_version": 7
+            }
+          },
+          "extension": {
+            "keep": [
+              false,
+              0,
+              null
+            ]
+          },
+          "request_count": 1,
+          "owned_resources_after": 0
+        }
+      }
+    }
+  ]
+}

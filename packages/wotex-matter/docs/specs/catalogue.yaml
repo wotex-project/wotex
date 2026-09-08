@@ -1,0 +1,67 @@
+schema_version: "1.1.0"
+package: "wotex_matter"
+completion_plan: "docs/plans/wotex-matter-completion.md"
+specifications:
+  - id: "WMA.00"
+    version: "1.0.0"
+    path: "docs/specs/WMA.00-library-contract.md"
+    implementation_status: "partial"
+    standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: []
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WMA.01"
+    version: "1.0.0"
+    path: "docs/specs/WMA.01-protocol.md"
+    implementation_status: "partial"
+    standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "TLV/path and injected SDK/controller boundary only; no completed controller claim"}]
+    requires: []
+    implementation_modules: ["Wotex.Matter.Address", "Wotex.Matter.Client", "Wotex.Matter.Error", "Wotex.Matter.PortCall", "Wotex.Matter.SDK", "Wotex.Matter.Session", "Wotex.Matter.TLV", "Wotex.Matter"]
+    executable_evidence: ["test/wotex/matter/contract_test.exs", "test/wotex/matter/dependency_security_test.exs", "test/wotex/matter/mapping_test.exs", "test/wotex/matter/port_test.exs", "test/wotex/matter/sdk_test.exs", "test/wotex/matter/tlv_test.exs"]
+    compatibility_classification: "TLV/path and injected SDK/controller boundary only; no completed controller claim; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+  - id: "WMA.02"
+    version: "1.0.0"
+    path: "docs/specs/WMA.02-implemented-profile.md"
+    implementation_status: "implemented"
+    standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "TLV/path and injected SDK/controller boundary only; no completed controller claim"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
+    requires: ["WMA.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
+    implementation_modules: ["Wotex.Matter.Error", "Wotex.Matter.Mapping", "Wotex.Matter.Transport"]
+    executable_evidence: ["test/wotex/matter/contract_test.exs", "test/wotex/matter/dependency_security_test.exs", "test/wotex/matter/mapping_test.exs", "test/wotex/matter/port_test.exs", "test/wotex/matter/sdk_test.exs", "test/wotex/matter/tlv_test.exs"]
+    compatibility_classification: "TLV/path and injected SDK/controller boundary only; no completed controller claim; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+  - id: "WMA.03"
+    version: "1.0.0"
+    path: "docs/specs/WMA.03-sdk-client.md"
+    implementation_status: "implemented"
+    standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "TLV/path and injected SDK/controller boundary only; no completed controller claim"}]
+    requires: ["WMA.01", "WMA.02"]
+    implementation_modules: ["Wotex.Matter.Address", "Wotex.Matter.Client", "Wotex.Matter.Error", "Wotex.Matter.PortCall", "Wotex.Matter.SDK", "Wotex.Matter.Session", "Wotex.Matter.TLV", "Wotex.Matter"]
+    executable_evidence: ["test/wotex/matter/contract_test.exs", "test/wotex/matter/dependency_security_test.exs", "test/wotex/matter/mapping_test.exs", "test/wotex/matter/port_test.exs", "test/wotex/matter/sdk_test.exs", "test/wotex/matter/tlv_test.exs"]
+    compatibility_classification: "TLV/path and injected SDK/controller boundary only; no completed controller claim; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+  - id: "WMA.10"
+    version: "1.0.0"
+    path: "docs/specs/WMA.10-software-contract.md"
+    implementation_status: "partial"
+    standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: ["WMA.00", "WMA.01", "WMA.02"]
+    implementation_modules: ["Wotex.Matter.Address", "Wotex.Matter.Client", "Wotex.Matter.Error", "Wotex.Matter.PortCall", "Wotex.Matter.SDK", "Wotex.Matter.Session", "Wotex.Matter.TLV", "Wotex.Matter"]
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WMA.11"
+    version: "1.0.0"
+    path: "docs/specs/WMA.11-standalone-client-and-preservation.md"
+    implementation_status: "planned"
+    standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: ["WMA.00", "WMA.10"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WMA.12"
+    version: "1.0.0"
+    path: "docs/specs/WMA.12-wotex-integration.md"
+    implementation_status: "planned"
+    standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
+    requires: ["WMA.00", "WMA.10", "WMA.11", "wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03", "wotex_runtime:WRT.01"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."

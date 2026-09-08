@@ -1,0 +1,445 @@
+{
+  "format_version": "1.0.0",
+  "package": "wotex_matter",
+  "status": "specified_unexecuted",
+  "normalization_spec": "../WMA.11-standalone-client-and-preservation.md",
+  "cases": [
+    {
+      "id": "WMA-F01",
+      "requirements": [
+        "WMA-S01",
+        "WMA-N01"
+      ],
+      "kind": "pure",
+      "operation": "TLV.decode",
+      "input": {
+        "bytes_hex": "08"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": [
+            {
+              "tag": "anonymous",
+              "type": "boolean",
+              "value": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "WMA-F02",
+      "requirements": [
+        "WMA-S01",
+        "WMA-N01"
+      ],
+      "kind": "pure",
+      "operation": "TLV.decode",
+      "input": {
+        "bytes_hex": "14"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": [
+            {
+              "tag": "anonymous",
+              "type": "null",
+              "value": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "WMA-F03",
+      "requirements": [
+        "WMA-S01",
+        "WMA-N01"
+      ],
+      "kind": "pure",
+      "operation": "TLV.decode",
+      "input": {
+        "bytes_hex": "2101ffff"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": [
+            {
+              "tag": [
+                "context",
+                1
+              ],
+              "type": "i16",
+              "value": -1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "WMA-F04",
+      "requirements": [
+        "WMA-S01",
+        "WMA-N02"
+      ],
+      "kind": "pure",
+      "operation": "TLV.encode",
+      "input": {
+        "elements": [
+          {
+            "tag": "anonymous",
+            "type": "structure",
+            "value": []
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "bytes_hex": "1518"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMA-F05",
+      "requirements": [
+        "WMA-S01",
+        "WMA-N02"
+      ],
+      "kind": "pure",
+      "operation": "TLV.decode",
+      "input": {
+        "bytes_hex": "016608"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": [
+            {
+              "tag": "anonymous",
+              "type": "i16",
+              "value": 2150
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "WMA-F06",
+      "requirements": [
+        "WMA-S01",
+        "WMA-N01"
+      ],
+      "kind": "pure",
+      "operation": "TLV.decode",
+      "input": {
+        "bytes_hex": "15"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "invalid_tlv",
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMA-F07",
+      "requirements": [
+        "WMA-S01",
+        "WMA-S02",
+        "WMA-N01"
+      ],
+      "kind": "lifecycle_contract",
+      "operation": "wrong_fabric_read",
+      "input": {
+        "active_fabric_id": 1,
+        "path": {
+          "fabric_id": 2,
+          "node_id": 2,
+          "endpoint": 1,
+          "cluster": 513,
+          "member": 0
+        },
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "read_attribute"
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "result": {
+            "error": {
+              "code": "fabric_mismatch",
+              "effect": "none"
+            }
+          },
+          "calls": {
+            "sdk_read_attribute": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "WMA-F08",
+      "requirements": [
+        "WMA-S04",
+        "WMA-N02"
+      ],
+      "kind": "lifecycle_contract",
+      "operation": "attribute_subscription_cancel",
+      "input": {
+        "path": {
+          "fabric_id": 1,
+          "node_id": 2,
+          "endpoint": 1,
+          "cluster": 513,
+          "member": 0
+        },
+        "resubscribe": false,
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "subscribe",
+            "id": "sub-1"
+          },
+          {
+            "at_ms": 1,
+            "event": "subscription_established",
+            "generation": 1
+          },
+          {
+            "at_ms": 2,
+            "event": "attribute_report",
+            "generation": 1,
+            "report_id": 1,
+            "data_version": 7,
+            "value": {
+              "tag": "anonymous",
+              "type": "i16",
+              "value": 2150
+            }
+          },
+          {
+            "at_ms": 3,
+            "event": "attribute_report",
+            "generation": 1,
+            "report_id": 2,
+            "data_version": 8,
+            "value": {
+              "tag": "anonymous",
+              "type": "i16",
+              "value": 2150
+            }
+          },
+          {
+            "at_ms": 4,
+            "event": "cancel",
+            "id": "sub-1"
+          },
+          {
+            "at_ms": 5,
+            "event": "shutdown_complete"
+          },
+          {
+            "at_ms": 6,
+            "event": "attribute_report",
+            "generation": 1,
+            "report_id": 3,
+            "data_version": 9,
+            "value": {
+              "tag": "anonymous",
+              "type": "i16",
+              "value": 2160
+            }
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "deliveries": [
+            {
+              "data_version": 7,
+              "value": {
+                "tag": "anonymous",
+                "type": "i16",
+                "value": 2150
+              }
+            },
+            {
+              "data_version": 8,
+              "value": {
+                "tag": "anonymous",
+                "type": "i16",
+                "value": 2150
+              }
+            }
+          ],
+          "calls": {
+            "shutdown": 1
+          },
+          "active_subscriptions": 0,
+          "deliveries_after_cancel": 0
+        }
+      }
+    },
+    {
+      "id": "WMA-F09",
+      "requirements": [
+        "WMA-S04",
+        "WMA-N01"
+      ],
+      "kind": "lifecycle_contract",
+      "operation": "subscription_loss_default",
+      "input": {
+        "resubscribe": false,
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "subscribe",
+            "id": "sub-1"
+          },
+          {
+            "at_ms": 1,
+            "event": "subscription_established",
+            "generation": 1
+          },
+          {
+            "at_ms": 2,
+            "event": "session_lost"
+          },
+          {
+            "at_ms": 3,
+            "event": "shutdown_complete"
+          },
+          {
+            "at_ms": 4,
+            "event": "stale_report",
+            "generation": 1
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "terminal_count": 1,
+          "terminal_code": "session_lost",
+          "calls": {
+            "shutdown": 1,
+            "resubscribe": 0
+          },
+          "active_subscriptions": 0,
+          "deliveries_after_loss": 0
+        }
+      }
+    },
+    {
+      "id": "WMA-F10",
+      "requirements": [
+        "WMA-S01",
+        "WMA-N01"
+      ],
+      "kind": "pure",
+      "operation": "Address.new",
+      "input": {
+        "value": {
+          "fabric_id": 1,
+          "node_id": 2,
+          "endpoint": 65535,
+          "cluster": 513,
+          "member": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "invalid_path",
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMA-F11",
+      "requirements": [
+        "WMA-S01",
+        "WMA-N02"
+      ],
+      "kind": "lifecycle_contract",
+      "operation": "write_readonly_descriptor",
+      "input": {
+        "path": {
+          "fabric_id": 1,
+          "node_id": 2,
+          "endpoint": 1,
+          "cluster": 6,
+          "member": 0
+        },
+        "value": {
+          "tag": "anonymous",
+          "type": "boolean",
+          "value": true
+        },
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "write_attribute"
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "result": {
+            "error": {
+              "code": "not_writable",
+              "effect": "none"
+            }
+          },
+          "calls": {
+            "sdk_write_attribute": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "WMA-F12",
+      "requirements": [
+        "WMA-S01",
+        "WMA-N01"
+      ],
+      "kind": "pure",
+      "operation": "TLV.decode",
+      "input": {
+        "bytes_hex": "2c7f03616263"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": [
+            {
+              "tag": [
+                "context",
+                127
+              ],
+              "type": "utf8",
+              "value": "abc"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

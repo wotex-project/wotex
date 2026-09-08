@@ -1,3 +1,13 @@
+---
+spec:
+  id: WMA.03
+  title: "Explicit SDK client"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-matter
+  updated: 2026-09-09
+---
+
 # WMA.03 Explicit SDK client
 
 The SDK adapter targets connectedhomeip v1.6.0.0, commit
