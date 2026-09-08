@@ -56,6 +56,43 @@ defmodule WotexLabWorkbench.MetricsDurableTest do
     end
   end
 
+  test "hosted configuration requires exact HTTPS audience and bearer authentication" do
+    url = "https://metrics.example:8443/v1/prometheus/write"
+    audience = "https://metrics.example:8443"
+
+    assert {:ok, options} = Durable.configure_hosted(url, audience, true)
+    assert :ok = Durable.validate(options)
+    assert options[:profile] == :hosted
+    assert options[:audience] == audience
+    assert options[:bearer] == true
+    assert is_function(options |> Durable.child_options(nil) |> Keyword.fetch!(:sink), 2)
+
+    for {candidate, expected, bearer} <- [
+          {String.replace(url, "https://", "http://"), audience, true},
+          {String.replace(url, "/v1/prometheus/write", "/v1/sql"), audience, true},
+          {url <> "?token=secret", audience, true},
+          {"https://caller@metrics.example:8443/v1/prometheus/write", audience, true},
+          {url, "https://other.example:8443", true},
+          {url, audience <> "/path", true},
+          {url, audience, false}
+        ] do
+      assert {:error, %Error{code: :invalid_durable_metrics}} =
+               Durable.configure_hosted(candidate, expected, bearer)
+    end
+
+    assert {:error, %Error{code: :invalid_durable_metrics}} =
+             Durable.validate(
+               url: url,
+               profile: :hosted,
+               audience: audience,
+               tls_ca_certfile: nil,
+               bearer: false,
+               interval_ms: 5_000,
+               queue_limit: 16,
+               deadline_ms: 5_000
+             )
+  end
+
   test "bearer credentials resolve just in time and never enter child configuration" do
     previous = System.get_env("WOTEX_LAB_GREPTIME_TOKEN")
     System.put_env("WOTEX_LAB_GREPTIME_TOKEN", @secret)

@@ -43,7 +43,7 @@
   "scenario_id": "WLB.01-library-foundation",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:d6c68e2b645d255d756c8e6f7b85cba901fa44dac7880da270f645f1a944be4a",
+  "source_tree_digest": "sha256:1c32623620bd45ce1f33b742c0b2db28379b48ad6ab607800d0a36f86bb852e9",
   "toolchain": {
     "backend": "BEAM-supervision",
     "elixir": "1.20.2",

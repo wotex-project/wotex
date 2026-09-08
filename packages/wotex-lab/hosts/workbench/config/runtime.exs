@@ -13,7 +13,27 @@ metrics_durable =
     url ->
       bearer? = System.get_env("WOTEX_LAB_GREPTIME_TOKEN") != nil
 
-      case WotexLabWorkbench.Observability.Durable.configure(url, bearer?) do
+      configured =
+        case System.get_env("WOTEX_LAB_GREPTIME_PROFILE") do
+          nil ->
+            WotexLabWorkbench.Observability.Durable.configure(url, bearer?)
+
+          "local" ->
+            WotexLabWorkbench.Observability.Durable.configure(url, bearer?)
+
+          "hosted" ->
+            WotexLabWorkbench.Observability.Durable.configure_hosted(
+              url,
+              System.get_env("WOTEX_LAB_GREPTIME_AUDIENCE"),
+              bearer?,
+              System.get_env("WOTEX_LAB_GREPTIME_CA_CERTFILE")
+            )
+
+          _other ->
+            {:error, :invalid_profile}
+        end
+
+      case configured do
         {:ok, options} -> options
         {:error, _error} -> raise "GreptimeDB exporter configuration is invalid"
       end

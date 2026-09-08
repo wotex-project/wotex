@@ -8,7 +8,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
   alias Wotex.Lab
   alias Wotex.Lab.Error
   alias Wotex.Lab.Metrics.{Exposition, GreptimeBridge, History, ReqSink, Snapshot}
-  alias Wotex.Lab.Test.RemoteWriteServer
+  alias Wotex.Lab.Test.{HttpServer, RemoteWriteServer}
 
   @secret "export-token-sentinel-4d2f"
 
@@ -386,7 +386,69 @@ defmodule Wotex.Lab.MetricsBridgeTest do
     assert {:error, %Error{code: :invalid_sink_request}} =
              ReqSink.write(%{}, nil, %{url: "http://127.0.0.1:9/"})
 
+    assert {:error, %Error{code: :invalid_sink_request}} =
+             ReqSink.write(%{body: :not_binary, headers: []}, nil, %{
+               url: "http://127.0.0.1:9/"
+             })
+
+    assert {:error, %Error{code: :invalid_sink_request}} =
+             ReqSink.write(%{body: "x", headers: [{"x-test", "bad\r\nvalue"}]}, nil, %{
+               url: "http://127.0.0.1:9/"
+             })
+
+    assert {:error, %Error{code: :unsupported_credential}} =
+             ReqSink.write(request, {:bearer, "bad\r\ntoken"}, %{
+               url: "http://127.0.0.1:9/"
+             })
+
     assert {:error, %Error{code: :transport_failed, class: :unavailable}} =
              ReqSink.write(request, {:basic, "u", "p"}, %{url: "http://127.0.0.1:9/"})
+  end
+
+  test "sink verifies local TLS and refuses unpinned hosted destinations" do
+    fixture = Path.expand("../../fixtures/tls", __DIR__)
+    ca_certfile = Path.join(fixture, "ca-cert.pem")
+    certfile = Path.join(fixture, "localhost-cert.pem")
+    keyfile = Path.join(fixture, "localhost-key.pem")
+    {:ok, server} = HttpServer.start(self(), scheme: :https, certfile: certfile, keyfile: keyfile)
+    request = %{body: "bounded", headers: [{"content-type", "application/x-protobuf"}]}
+
+    assert {:ok, %{status: 404}} =
+             ReqSink.write(request, nil, %{
+               url: "https://localhost:#{server.port}/v1/prometheus/write",
+               tls_ca_certfile: ca_certfile
+             })
+
+    assert {:error, %Error{code: :transport_failed}} =
+             ReqSink.write(request, nil, %{
+               url: "https://127.0.0.1:#{server.port}/v1/prometheus/write",
+               tls_ca_certfile: ca_certfile
+             })
+
+    private = fn _host, family ->
+      if family == :inet, do: {:ok, [{127, 0, 0, 1}]}, else: {:ok, []}
+    end
+
+    assert {:error, %Error{code: :destination_not_admitted}} =
+             ReqSink.write(request, nil, %{
+               url: "https://metrics.example/v1/prometheus/write",
+               profile: :hosted,
+               audience: "https://metrics.example",
+               resolver: private
+             })
+
+    for config <- [
+          %{url: "https://metrics.example/v1/prometheus/write", profile: :hosted},
+          %{
+            url: "https://metrics.example/v1/prometheus/write",
+            profile: :hosted,
+            audience: "https://metrics.example",
+            finch: :shared
+          },
+          %{url: "http://127.0.0.1:9/", receive_timeout: 0},
+          %{url: "http://127.0.0.1:9/", unknown: true}
+        ] do
+      assert {:error, %Error{code: :invalid_sink_config}} = ReqSink.write(request, nil, config)
+    end
   end
 end

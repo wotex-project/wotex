@@ -6,8 +6,9 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
   Optional local history shares that lifecycle: a restart discards the whole
   volatile cohort, not just its sampler. Browser sessions cannot activate it.
   `:scrape` separately admits an authenticated loopback-only operator listener.
-  `:durable` adds one bounded local GreptimeDB exporter; when history is also
-  active that exporter is its sole writer, so no capture is duplicated.
+  `:durable` adds one bounded local or explicitly pinned hosted GreptimeDB
+  exporter; when history is also active that exporter is its sole writer, so
+  no capture is duplicated.
   """
 
   use Supervisor

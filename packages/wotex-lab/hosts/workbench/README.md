@@ -124,6 +124,27 @@ same captures to volatile ETS and GreptimeDB through the exporter; the periodic
 standalone sampler is then omitted so captures are not duplicated. Receiver
 provisioning, database TTL and durable-row verification remain operator work.
 
+For an operator-provisioned remote receiver, explicitly select the separate
+hosted profile:
+
+```console
+WOTEX_LAB_PROMEX=1 \
+WOTEX_LAB_GREPTIME_PROFILE=hosted \
+WOTEX_LAB_GREPTIME_URL=https://metrics.example/v1/prometheus/write \
+WOTEX_LAB_GREPTIME_AUDIENCE=https://metrics.example \
+WOTEX_LAB_GREPTIME_TOKEN=<43-128-character-url-safe-token> \
+mix phx.server
+```
+
+`WOTEX_LAB_GREPTIME_CA_CERTFILE` may name an explicitly provisioned private CA;
+otherwise the system trust store is used. Hosted export requires HTTPS, an
+exact audience origin and Bearer authentication. Each write re-resolves the
+host, refuses private/link-local/metadata/multicast or mixed DNS answers, pins
+one public peer, and verifies the original hostname through TLS. It follows no
+redirect and performs no implicit client retry. This is an egress transport
+profile, not evidence that a remote receiver retained the row; remote scrape
+ingress, receiver TTL provisioning and deployment verification remain separate.
+
 An operator attached to this same VM can explicitly open a short-lived query
 scope. This requires the history activation above; it never enables it:
 

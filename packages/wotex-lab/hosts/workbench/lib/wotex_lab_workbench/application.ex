@@ -9,8 +9,9 @@ defmodule WotexLabWorkbench.Application do
   configuration prepends the host-owned custom metric collector/relay supervisor.
   Separate `metrics_history_enabled` activation adds bounded operator history
   and a self-sampler, and is refused unless PromEx is also explicitly enabled.
-  `metrics_durable` adds the bounded local GreptimeDB exporter and replaces the
-  sampler as the writer when local history is also active.
+  `metrics_durable` adds the bounded local or explicitly pinned hosted
+  GreptimeDB exporter and replaces the sampler as the writer when local
+  history is also active.
   `metrics_scrape` separately admits a credential-protected loopback listener;
   it also requires explicit PromEx activation and never joins browser routing.
   BeamLens additionally requires explicit activation plus local history, and

@@ -1,9 +1,13 @@
 defmodule WotexLabWorkbench.Observability.Durable do
   @moduledoc """
-  Closed configuration for the optional local GreptimeDB remote-write exporter.
+  Closed configuration for the optional GreptimeDB remote-write exporter.
 
-  The endpoint is an exact IPv4-loopback HTTP path. Remote and TLS deployments
-  need a separate destination-pinning profile and are deliberately refused.
+  The default endpoint is an exact IPv4-loopback HTTP path. The separately
+  selected hosted profile requires HTTPS, an exact audience origin and Bearer
+  authentication. Every hosted write is resolved and pinned by
+  `Wotex.Lab.Metrics.ReqSink`; private, link-local, metadata, multicast and
+  mixed public/private DNS answers are refused and TLS peer/hostname checks
+  remain enabled.
   When bearer authentication is selected, only a fixed environment reference
   enters supervision; the token is resolved inside each disposable export
   worker and is never retained in application or bridge state.
@@ -16,8 +20,15 @@ defmodule WotexLabWorkbench.Observability.Durable do
 
   @credential_env "WOTEX_LAB_GREPTIME_TOKEN"
   @token ~r/\A[A-Za-z0-9_-]{43,128}\z/
-  @keys ~w(url bearer interval_ms queue_limit deadline_ms)a
-  @defaults [interval_ms: 5_000, queue_limit: 16, deadline_ms: 5_000]
+  @keys ~w(url profile audience tls_ca_certfile bearer interval_ms queue_limit deadline_ms)a
+  @defaults [
+    profile: :local,
+    audience: nil,
+    tls_ca_certfile: nil,
+    interval_ms: 5_000,
+    queue_limit: 16,
+    deadline_ms: 5_000
+  ]
 
   @doc "Admits an exact local write URL and whether just-in-time Bearer lookup is required."
   @spec configure(term(), term()) :: {:ok, keyword()} | {:error, Error.t()}
@@ -28,11 +39,33 @@ defmodule WotexLabWorkbench.Observability.Durable do
 
   def configure(_url, _bearer), do: invalid()
 
+  @doc "Admits an authenticated HTTPS write endpoint with an exact audience and optional CA."
+  @spec configure_hosted(term(), term(), term(), term()) ::
+          {:ok, keyword()} | {:error, Error.t()}
+  def configure_hosted(url, audience, bearer?, tls_ca_certfile \\ nil)
+
+  def configure_hosted(url, audience, true, tls_ca_certfile)
+      when is_binary(url) and is_binary(audience) and
+             (is_nil(tls_ca_certfile) or is_binary(tls_ca_certfile)) do
+    options =
+      [
+        url: url,
+        profile: :hosted,
+        audience: audience,
+        tls_ca_certfile: tls_ca_certfile,
+        bearer: true
+      ] ++ Keyword.drop(@defaults, [:profile, :audience, :tls_ca_certfile])
+
+    with :ok <- validate(options), do: {:ok, options}
+  end
+
+  def configure_hosted(_url, _audience, _bearer, _tls_ca_certfile), do: invalid()
+
   @doc "Validates the closed local exporter configuration without opening a connection."
   @spec validate(term()) :: :ok | {:error, Error.t()}
   def validate(opts) when is_list(opts) do
     with :ok <- Options.validate(opts, @keys),
-         true <- local_write_url?(Keyword.get(opts, :url)),
+         true <- destination?(opts),
          true <- is_boolean(Keyword.get(opts, :bearer)),
          true <- integer?(opts, :interval_ms, 1_000, 60_000),
          true <- integer?(opts, :queue_limit, 1, 256),
@@ -50,6 +83,9 @@ defmodule WotexLabWorkbench.Observability.Durable do
   def child_options(opts, history) do
     sink_config = %{
       url: Keyword.fetch!(opts, :url),
+      profile: Keyword.fetch!(opts, :profile),
+      audience: Keyword.fetch!(opts, :audience),
+      tls_ca_certfile: Keyword.fetch!(opts, :tls_ca_certfile),
       receive_timeout: Keyword.fetch!(opts, :deadline_ms),
       connect_timeout: Keyword.fetch!(opts, :deadline_ms),
       max_response_bytes: 4_096
@@ -85,6 +121,23 @@ defmodule WotexLabWorkbench.Observability.Durable do
 
   def lookup_credential(_reference), do: :error
 
+  defp destination?(opts) do
+    case Keyword.get(opts, :profile) do
+      :local ->
+        is_nil(Keyword.get(opts, :audience)) and
+          is_nil(Keyword.get(opts, :tls_ca_certfile)) and
+          local_write_url?(Keyword.get(opts, :url))
+
+      :hosted ->
+        Keyword.get(opts, :bearer) == true and
+          valid_ca?(Keyword.get(opts, :tls_ca_certfile)) and
+          hosted_write_url?(Keyword.get(opts, :url), Keyword.get(opts, :audience))
+
+      _other ->
+        false
+    end
+  end
+
   defp credential(false), do: nil
 
   defp credential(true),
@@ -111,13 +164,61 @@ defmodule WotexLabWorkbench.Observability.Durable do
 
   defp local_write_url?(_url), do: false
 
+  defp hosted_write_url?(url, audience)
+       when is_binary(url) and byte_size(url) in 1..2_048 and is_binary(audience) and
+              byte_size(audience) in 1..2_048 do
+    with {:ok, uri} <- URI.new(url),
+         {:ok, expected} <- URI.new(audience),
+         true <- exact_hosted_write_uri?(uri),
+         true <- origin_uri?(expected),
+         true <- origin(uri) == origin(expected) do
+      true
+    else
+      _invalid -> false
+    end
+  end
+
+  defp hosted_write_url?(_url, _audience), do: false
+
+  defp exact_hosted_write_uri?(%URI{
+         scheme: "https",
+         host: host,
+         path: "/v1/prometheus/write",
+         query: nil,
+         fragment: nil,
+         userinfo: nil,
+         port: port
+       }),
+       do: is_binary(host) and byte_size(host) > 0 and (is_nil(port) or port in 1..65_535)
+
+  defp exact_hosted_write_uri?(_uri), do: false
+
+  defp origin_uri?(%URI{
+         scheme: "https",
+         host: host,
+         path: path,
+         query: nil,
+         fragment: nil,
+         userinfo: nil
+       }),
+       do: is_binary(host) and byte_size(host) > 0 and path in [nil, "", "/"]
+
+  defp origin_uri?(_uri), do: false
+
+  defp origin(%URI{scheme: scheme, host: host, port: port}) do
+    host = if String.contains?(host, ":"), do: "[#{host}]", else: host
+    suffix = if is_nil(port) or port == 443, do: "", else: ":#{port}"
+    "#{scheme}://#{host}#{suffix}"
+  end
+
+  defp valid_ca?(nil), do: true
+  defp valid_ca?(path), do: is_binary(path) and byte_size(path) in 1..2_048
+
   defp integer?(opts, key, minimum, maximum) do
     value = Keyword.get(opts, key)
     is_integer(value) and value in minimum..maximum
   end
 
   defp invalid,
-    do:
-      {:error,
-       Error.new(:invalid_durable_metrics, :construction, "local durable exporter is invalid")}
+    do: {:error, Error.new(:invalid_durable_metrics, :construction, "durable exporter is invalid")}
 end

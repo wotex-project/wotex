@@ -1,22 +1,24 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.12.0. Contract: accepted. Source status: the metric
+Specification version: 0.13.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
 are implemented in the base library;
 the Workbench now implements custom PromEx definitions, bounded collection,
 catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
-history activation, a protected local scrape listener, a bounded local
-GreptimeDB remote-write exporter and expiring local-operator query capabilities.
+history activation, a protected local scrape listener, bounded local and
+destination-pinned hosted/TLS GreptimeDB remote-write exporters and expiring
+local-operator query capabilities.
 The Workbench also implements the explicitly activated
 trusted-local BeamLens 0.3.1 profile, its four read-only callbacks, an
 owner-bound no-queue broker, an active-scope capability-protected loopback
 provider bridge, explicitly selected
 Codex-plan/local-Ollama providers and trusted-local browser presentation.
-Remote/TLS scraping and exporting, TTL provisioning, OTLP signal export,
-isolated hosted-tenant BeamLens and the MCP query gateway remain planned. A template
-export is not proof of a Grafana import or query execution.
+Remote/TLS scraping, TTL provisioning, OTLP signal export, isolated
+hosted-tenant BeamLens and the MCP query gateway remain planned. Hosted
+exporter source is not deployment or durable-row evidence. A template export
+is not proof of a Grafana import or query execution.
 
 ## Stack and ownership
 
@@ -259,19 +261,28 @@ reports ambiguous writes; the external-collector path is not implemented.
 
 The Workbench local-durable profile sets
 `WOTEX_LAB_GREPTIME_URL=http://127.0.0.1:<port>/v1/prometheus/write` alongside
-`WOTEX_LAB_PROMEX=1`. `Observability.Durable` refuses other hosts, paths,
-userinfo, queries, fragments and HTTPS pretending to be an admitted remote TLS
-profile. It fixes the five-second sampling/deadline, 16-item queue and 4 KiB
-response ceiling. If `WOTEX_LAB_GREPTIME_TOKEN` is present, only its fixed
-environment reference enters supervision and each disposable export worker
-resolves and validates the URL-safe Bearer value just in time. The token is not
-retained in application or bridge state. When volatile history is also active,
-the exporter is its sole writer; the standalone sampler does not duplicate
-captures. The optional cohort shares one-for-all shutdown with PromEx and the
-relay. Tests cover exact endpoint admission, secret absence, missing/invalid
-credential resolution, explicit activation, single-writer composition and
-lifecycle cleanup. This is source proof for the local endpoint, not proof of a
-running receiver or a durable row.
+`WOTEX_LAB_PROMEX=1`. It refuses other local hosts, paths, userinfo, queries and
+fragments. The separate hosted profile additionally sets
+`WOTEX_LAB_GREPTIME_PROFILE=hosted`, an exact HTTPS
+`WOTEX_LAB_GREPTIME_AUDIENCE`, a Bearer token and, only for an explicitly
+selected private CA, `WOTEX_LAB_GREPTIME_CA_CERTFILE`. It refuses HTTP,
+unauthenticated use and mismatched origins. `Metrics.ReqSink` resolves every
+hosted exchange, refuses empty, private, link-local, metadata, multicast and
+mixed public/private answer sets, pins one admitted peer and retains the
+original hostname for HTTP authority, SNI and certificate verification. A
+shared Finch is forbidden for this profile because it would bypass per-write
+pinning. Both profiles fix the five-second sampling/deadline, 16-item queue and
+4 KiB response ceiling. Only the fixed token environment reference enters
+supervision and each disposable export worker resolves and validates the
+URL-safe Bearer value just in time. The token is not retained in application or
+bridge state. When volatile history is also active, the exporter is its sole
+writer; the standalone sampler does not duplicate captures. The optional
+cohort shares one-for-all shutdown with PromEx and the relay. Tests cover exact
+endpoint/audience admission, local TLS hostname verification, private and mixed
+DNS refusal, secret absence, missing/invalid credential resolution, explicit
+activation, single-writer composition and lifecycle cleanup. This is source
+proof for admitted exporter transports, not proof of a running remote receiver
+or a durable row.
 
 GreptimeDB query credentials and export credentials have separate scopes. The
 Lab gateway allows only read templates for inspection, with no arbitrary SQL,
@@ -282,8 +293,9 @@ verify TLS/hostname, restrict egress and redact credentials before diagnostics.
 Default durable metric TTL is seven days; a profile may explicitly override it.
 Run evidence is stored separately and does not disappear with metric TTL.
 Export credentials are resolved just in time from a host reference and
-redacted from stats and errors. The query gateway, TLS and egress policy and
-TTL provisioning remain planned host work.
+redacted from stats and errors. The query gateway and TTL provisioning remain
+planned host work; hosted exporter TLS and egress policy are implemented, while
+remote scrape ingress is not.
 
 Logs/traces use optional OTLP/HTTP-protobuf export to GreptimeDB's documented
 signal endpoints, not a claim that PromEx exports them. Validate signal-specific
