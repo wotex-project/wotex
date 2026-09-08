@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## 0.1.0
 
+- Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
+  checksums, loaded version and bounded parser regression tests. Other advisory
+  checks remain active; remove this acknowledgement when metadata is corrected.
+
 - Establish the storage-neutral Thing Description Directory contract.
 - Provide explicit repository, authorization, clock, and identifier ports.
 - Implement registration, retrieval, replacement, Merge Patch, deletion,

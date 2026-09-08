@@ -42,6 +42,7 @@ specifications:
       - Wotex.Directory.Clock.System
       - Wotex.Directory.Identifier
     executable_evidence:
+      - test/wotex/directory/dependency_security_test.exs
       - test/wotex/directory/directory_test.exs
       - test/wotex/directory/robustness_test.exs
       - test/wotex/directory/internal_contract_test.exs

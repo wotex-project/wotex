@@ -13,6 +13,7 @@ defmodule WotexDirectory.MixProject do
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
+      hex: [ignore_advisories: ["EEF-CVE-2026-32686"]],
       aliases: aliases(),
       description: description(),
       package: package(),
