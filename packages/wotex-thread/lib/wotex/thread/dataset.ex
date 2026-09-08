@@ -29,9 +29,9 @@ defmodule Wotex.Thread.Dataset do
   def decode(_), do: {:error, Error.new(:invalid_dataset)}
 
   @doc "Explicitly serializes raw dataset bytes; returned data may contain credentials."
-  @spec encode(t()) :: {:ok, binary()} | {:error, Error.t()}
-  def encode(%__MODULE__{entries: entries}) when is_list(entries) do
-    if bounded_entries?(entries, 0) do
+  @spec encode(term()) :: {:ok, binary()} | {:error, Error.t()}
+  def encode(%__MODULE__{entries: entries, types: types}) when is_list(entries) do
+    if bounded_entries?(entries, 0) and types == Enum.map(entries, &elem(&1, 0)) do
       bytes =
         for {type, value} <- entries, into: <<>>, do: <<type, byte_size(value), value::binary>>
 
@@ -44,13 +44,21 @@ defmodule Wotex.Thread.Dataset do
   def encode(_), do: {:error, Error.new(:invalid_dataset)}
 
   @doc "Checks required TLV presence only; authoritative semantic validity belongs to OpenThread."
-  @spec complete?(t(), :active | :pending) :: boolean()
-  def complete?(%__MODULE__{types: types}, context) when context in [:active, :pending] do
+  @spec complete?(term(), term()) :: boolean()
+  def complete?(%__MODULE__{} = dataset, context) when context in [:active, :pending] do
     required = [0, 1, 2, 3, 5, 7, 12, 14, 53] ++ if(context == :pending, do: [51, 52], else: [])
 
-    Enum.all?(required, &(&1 in types)) and
-      (context == :pending or (51 not in types and 52 not in types))
+    case encode(dataset) do
+      {:ok, _bytes} ->
+        Enum.all?(required, &(&1 in dataset.types)) and
+          (context == :pending or (51 not in dataset.types and 52 not in dataset.types))
+
+      {:error, _error} ->
+        false
+    end
   end
+
+  def complete?(_, _), do: false
 
   defp parse(<<>>, acc, _), do: {:ok, Enum.reverse(acc)}
 
