@@ -323,7 +323,8 @@ defmodule Wotex.Lab.GraphTest do
 
     File.mkdir_p!(Path.join(root, "priv"))
 
-    for entry <- ~w(lib test bin priv/fixtures priv/cookbooks docs README.md CHANGELOG.md mix.exs) do
+    for entry <-
+          ~w(lib test bin hosts priv/fixtures priv/cookbooks docs README.md CHANGELOG.md mix.exs) do
       File.cp_r!(Path.join(@root, entry), Path.join(root, entry))
     end
 

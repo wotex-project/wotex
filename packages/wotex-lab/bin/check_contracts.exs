@@ -53,8 +53,8 @@ defmodule Wotex.Lab.Check.Contracts do
     check!(Enum.uniq(completion_ids) == completion_ids, "duplicate completion ID")
 
     modules =
-      "lib/**/*.ex"
-      |> Path.wildcard()
+      ["lib/**/*.ex", "hosts/*/lib/**/*.ex"]
+      |> Enum.flat_map(&Path.wildcard/1)
       |> Enum.flat_map(fn file ->
         Regex.scan(~r/^ *defmodule ([\w.]+) do/m, File.read!(file)) |> Enum.map(&Enum.at(&1, 1))
       end)

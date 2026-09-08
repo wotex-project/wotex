@@ -1,6 +1,27 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.1.0. Contract: accepted.
+Specification version: 0.2.0. Contract: accepted.
+
+## Implemented source and evidence boundary
+
+`hosts/workbench/` now contains the non-umbrella Phoenix LiveView reference
+host, all required HEEx components, a scoped semantic CSS layer, vendored and
+digest-pinned Vega assets with upstream licenses, three executable experiments,
+session-owned disposable rooms, bounded live metrics and immutable exports,
+formal evidence presentation, and a one-MiB JSON evidence report. Its separate
+Action approval names and rechecks the decision, proposal digest, Thing,
+operation, input, revision and expiry; experiment execution cannot approve it.
+
+The host gate compiles with warnings as errors, formats, runs strict Credo,
+unused-dependency and security audits, Dialyzer, Doctor, ExDoc, the boundary
+scan and 26 tests with at least 90% line coverage. Those tests cover empty and
+denied states, themes/sidebar semantics, reflow/reduced-motion source rules,
+multi-session isolation, reconnect navigation, cancel/replay, escaped TD text,
+bounded chart/query/report data, token overrides, immutable exports, formal
+unavailability and operation without an LLM. This is implemented source and
+reference evidence, not a WCAG certification or artifact-adoption claim;
+WLB.08 owns clone-free archive/OCI execution and independent real-browser
+cohort evidence.
 
 ## Product and implementation boundary
 

@@ -320,9 +320,9 @@ specifications:
       - "priv/fixtures/metrics/equality/manifest.json"
     compatibility_classification: Additive host contract; no mandatory observability dependency in the base library.
   - id: WLB.11
-    version: "0.1.0"
+    version: "0.2.0"
     path: docs/specs/WLB.11-workbench-and-design-system.md
-    implementation_status: partial
+    implementation_status: implemented
     evidence_status: partial
     adoption_status: reference_available
     standards:
@@ -338,6 +338,20 @@ specifications:
       - "WLB-C13"
     implementation_modules:
       - "Wotex.Lab.DesignSystem"
+      - "WotexLabWorkbench.Application"
+      - "WotexLabWorkbench.Room"
+      - "WotexLabWorkbench.Sessions"
+      - "WotexLabWorkbench.Metrics"
+      - "WotexLabWorkbench.Chart"
+      - "WotexLabWorkbench.Report"
+      - "WotexLabWorkbenchWeb.Components"
+      - "WotexLabWorkbenchWeb.WorkbenchLive"
     executable_evidence:
       - "test/wotex/lab/design_system_test.exs"
-    compatibility_classification: Additive inert tokens and scoped CSS; no running UI or Phoenix dependency implied.
+      - "hosts/workbench/test/wotex_lab_workbench/chart_preview_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/formal_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/metrics_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/sessions_room_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench_web/workbench_live_test.exs"
+      - "hosts/workbench/bin/check_boundary.exs"
+    compatibility_classification: Additive non-umbrella reference host; base Lab consumers retain inert tokens and scoped CSS without Phoenix.
