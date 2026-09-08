@@ -1,0 +1,258 @@
+# An independent conformance target with distinct failure outcomes
+
+## Goal
+
+Run the `wotex_conformance` runner against the core package as an external
+subject: the Lab target is a separate operating-system process started
+through a port with explicit code paths, it receives one request on standard
+input and answers one observation, and it never sees an expectation. Both
+bundled corpora pass, a changed archive is refused before any vector runs,
+and unsupported operations and malformed documents produce distinct outcomes
+rather than a pass.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:wotex_conformance, "~> 0.1.0"}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout. The subject archive
+is a tar of the loaded core `ebin` directory written under a temporary
+directory named here and removed at the end; this is source-mode evidence,
+not a Hex artifact claim.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Claims, vectors, expectations, statuses, report | `wotex_conformance` (package-implements) | `Wotex.Conformance.Corpus`, `Runner`, `Report` |
+| The subject under test | `wotex` | `Wotex.ThingDescription`, `Wotex.ThingModel` |
+| The external target process and its derivation | `wotex_lab` (consumer) | `Wotex.Lab.Conformance.Target` |
+| Process containment (paths, `HOME`, timeout, output bound) | this notebook as host | the `External` definition below |
+
+## Run
+
+```elixir
+alias Wotex.Conformance.{Corpus, Report, Runner, Subject}
+alias Wotex.Conformance.Target.External
+alias Wotex.Lab.Conformance.Target
+alias Wotex.Lab.Telemetry
+
+telemetry_id = "cookbook-conformance-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+generated_at = ~U[2026-09-07 12:00:00Z]
+```
+
+The subject archive names the compiled core that will answer; its digest is
+part of the subject identity the runner checks.
+
+```elixir
+tmp_dir = Path.join(System.tmp_dir!(), "wotex-lab-cookbook-conformance-#{System.unique_integer([:positive])}")
+File.mkdir_p!(tmp_dir)
+archive = Path.join(tmp_dir, "core-ebin.tar")
+
+:ok =
+  :erl_tar.create(
+    String.to_charlist(archive),
+    [{~c"ebin", String.to_charlist(Application.app_dir(:wotex, "ebin"))}],
+    [:compressed]
+  )
+
+digest = "sha256:" <> Base.encode16(:crypto.hash(:sha256, File.read!(archive)), case: :lower)
+
+{:ok, subject} =
+  Subject.from_map(%{
+    "id" => "wotex.core",
+    "version" => to_string(Application.spec(:wotex, :vsn)),
+    "artifact_digest" => digest,
+    "interface" => %{"kind" => "lab_target", "revision" => "1"}
+  })
+
+{subject.id, subject.version}
+```
+
+The external target: `erl` with explicit code paths, no shell, a private
+`HOME`, a wall-clock timeout and an output ceiling. The runner substitutes
+the subject archive path; nothing else reaches the target.
+
+```elixir
+erl = Path.join([to_string(:code.root_dir()), "bin", "erl"])
+
+code_paths =
+  Enum.flat_map([:elixir, :wotex, :jason, :ex_json_schema, :wotex_lab, :wotex_runtime, :nx, :telemetry], fn app ->
+    ["-pa", to_string(:code.lib_dir(app, :ebin))]
+  end)
+
+eval =
+  "application:ensure_all_started(elixir), " <>
+    "'Elixir.Wotex.Lab.Conformance.Target':main([unicode:characters_to_binary(A) || A <- init:get_plain_arguments()])"
+
+target = fn ->
+  {:ok, target} =
+    External.from_map(%{
+      executable: erl,
+      args: ["-noshell"] ++ code_paths ++ ["-eval", eval, "-extra", "--archive", "{subject_archive}"],
+      artifact_path: archive,
+      environment: %{"HOME" => tmp_dir},
+      timeout_ms: 30_000,
+      max_output_bytes: 1_048_576
+    })
+
+  target
+end
+
+Path.basename(erl)
+```
+
+Both bundled corpora, each vector answered by a fresh target process.
+
+```elixir
+run_corpus = fn name ->
+  {:ok, corpus} = Corpus.load(Application.app_dir(:wotex_conformance, "priv/vectors/" <> name))
+
+  {:ok, %Report{} = report} =
+    Runner.run(corpus, subject, target.(), generated_at: generated_at, environment: %{"runtime" => "wotex_lab"})
+
+  {:ok, encoded} = Report.encode(report)
+  failures = report.results |> Enum.reject(&(&1.status == :pass)) |> Enum.map(&{&1.vector_id, &1.status})
+  %{vectors: length(corpus.vectors), summary: report.summary, failures: failures, encoded: encoded}
+end
+
+td_report = run_corpus.("thing-description-1.1")
+tm_report = run_corpus.("thing-model-1.1")
+{td_report.summary, tm_report.summary, td_report.failures, tm_report.failures}
+```
+
+## Deliberate breakage
+
+A subject whose archive digest does not match is refused before any vector
+runs: every result is an infrastructure error, none a pass or a fail. The
+target's derivation, called in-process, reports unsupported operations and
+non-object documents as their own outcomes.
+
+```elixir
+{:ok, forged} =
+  Subject.from_map(%{
+    "id" => "wotex.core",
+    "version" => "0.0.0",
+    "artifact_digest" => "sha256:" <> String.duplicate("0", 64),
+    "interface" => %{"kind" => "lab_target", "revision" => "1"}
+  })
+
+{:ok, tm_corpus} = Corpus.load(Application.app_dir(:wotex_conformance, "priv/vectors/thing-model-1.1"))
+{:ok, refused} = Runner.run(tm_corpus, forged, target.(), generated_at: generated_at, environment: %{})
+
+request = fn operation, input ->
+  %{"claim" => %{"operation" => operation}, "vector" => %{"id" => "v", "input" => input}}
+end
+
+document = %{
+  "@context" => Wotex.td_context_1_1(),
+  "title" => "Lamp",
+  "security" => ["nosec_sc"],
+  "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}}
+}
+
+observed = Target.respond(request.("thing_description.parse", %{"document" => document, "projection" => ["/title"]}))
+unsupported = Target.respond(request.("discovery.list", %{}))
+non_object = Target.respond(request.("thing_model.parse", %{"document" => "not-an-object"}))
+{:error, missing_archive} = Target.run([], fn -> "{}" end)
+{:error, undecodable} = Target.run(["--archive", archive], fn -> "{" end)
+
+{refused.summary, observed["actual"], unsupported["outcome"], non_object["actual"]["errors"], missing_archive, undecodable}
+```
+
+```elixir
+{:ok, _removed} = File.rm_rf(tmp_dir)
+```
+
+## Safe telemetry
+
+The in-process derivation emits a conformance span whose only labels are the
+operation name and the outcome; documents and vector inputs are absent.
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+operations =
+  for {[:wotex, :lab, :conformance, :conformance, :stop], _measurements, metadata} <- spans,
+      do: metadata.operation
+
+text = inspect(spans)
+labels_safe? = operations != [] and not (text =~ "Lamp") and not (text =~ "not-an-object")
+{Enum.uniq(operations), labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `td-corpus-pass` | Every Thing Description vector passes (14 of 14) |
+| `tm-corpus-pass` | Every Thing Model vector passes (6 of 6) |
+| `changed-archive-refused` | A forged digest yields `infrastructure_error` for every vector |
+| `unsupported-operation` | `discovery.list` is `unsupported` with `operation_not_implemented` |
+| `non-object-refused` | A string document is `object_required`; a missing archive is exit 11; undecodable input is exit 14 |
+| `no-expectations-in-target` | The reports never carry the vector documents, and the target request carries no expectation |
+
+```elixir
+%{
+  "td-corpus-pass" => td_report.failures == [] and td_report.summary["pass"] == 14 and td_report.vectors == 14,
+  "tm-corpus-pass" => tm_report.failures == [] and tm_report.summary["pass"] == 6 and tm_report.vectors == 6,
+  "changed-archive-refused" => refused.summary["infrastructure_error"] == length(tm_corpus.vectors),
+  "unsupported-operation" =>
+    unsupported["outcome"] == "unsupported" and unsupported["codes"] == ["operation_not_implemented"] and
+      observed["actual"] == %{"accepted" => true, "document" => %{"/title" => "Lamp"}},
+  "non-object-refused" =>
+    match?([%{"code" => "object_required"}], non_object["actual"]["errors"]) and missing_archive == 11 and
+      undecodable == 14,
+  "no-expectations-in-target" =>
+    not (td_report.encoded =~ "Minimal Thing") and not Map.has_key?(request.("x", %{}), "expectation") and
+      labels_safe?
+}
+```
+
+## Public seam
+
+`lab.conformance_target` is Lab-owned: the runner's external protocol is
+package documentation, the Lab target implements it against the core
+package, and the runner project never imports the subject.
+
+## Spec and completion IDs
+
+* Lab: WLB.06 (`WLB-C07`, `WLB-C08`).
+* Upstream consumer evidence: `WCF-C01`, `WCF-C02`, `WCF-C03`, `WCF-C04`.
+  `WCF-C05` (Discovery corpus) is an explicit excluded corpus decision, not a
+  pass.
+
+## Replacement adapter
+
+A target for another implementation is a separate executable that reads one
+JSON request line, answers one JSON response line with the same `protocol`
+and `outcome` vocabulary, and exits with the documented codes. Wrap it in
+`Wotex.Conformance.Target.External` with your own code paths, environment,
+timeout and output bound; the runner, corpora and expectations do not change.

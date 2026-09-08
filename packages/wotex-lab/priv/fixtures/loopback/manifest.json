@@ -1,15 +1,53 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "id": "loopback-room",
+  "title": "Simulated room Thing Description for the loopback runtime transport",
+  "scenario": "expose-thing",
   "specs": [
     "WLB.04",
     "WRT.01",
     "WRT.02",
     "WTX.02"
   ],
+  "seams": [
+    "runtime.transport",
+    "runtime.credentials"
+  ],
+  "operations": [
+    "readproperty",
+    "writeproperty",
+    "invokeaction",
+    "observeproperty",
+    "subscribeevent"
+  ],
+  "media_type": "application/td+json",
   "source_mode": "synthetic",
+  "license": "Apache-2.0",
+  "provenance": {
+    "author": "wotex-lab",
+    "created": "2026-09-08",
+    "synthetic": true,
+    "statement": "Hand-written consumer-neutral fixture; no device, vendor or private product data."
+  },
   "input": "thing-description.json",
   "input_sha256": "59da3c2a80403a794cbc38bb8a4a91d0d671df481fa2dd441004b4f3c99d90ec",
-  "side_effects": [],
-  "license": "Apache-2.0"
+  "expected_output": "expected-output.json",
+  "expected_output_sha256": "72e38e12c65bfff02b1405c0565a644064ee5aaf2ed9e0819ffcdea27a79faa1",
+  "vectors": {
+    "positive": [
+      "loopback:read-temperature",
+      "loopback:write-target",
+      "loopback:invoke-set-target",
+      "loopback:observe-sample"
+    ],
+    "negative": [
+      "loopback:write-readonly",
+      "loopback:write-out-of-range",
+      "loopback:write-wrong-type",
+      "loopback:unauthorized",
+      "loopback:thing-level-unsupported",
+      "loopback:session-lost"
+    ]
+  },
+  "side_effects": []
 }

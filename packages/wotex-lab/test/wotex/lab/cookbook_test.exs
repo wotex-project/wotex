@@ -1,0 +1,151 @@
+defmodule Wotex.Lab.CookbookTest do
+  @moduledoc false
+
+  use ExUnit.Case, async: false
+
+  alias Wotex.Lab.Cookbook
+  alias Wotex.Lab.Error
+  alias Wotex.Lab.Test.{CookbookRunner, MqttBroker}
+
+  @moduletag capture_log: true
+
+  @root Path.expand("../../..", __DIR__)
+  @spec_path "docs/specs/WLB.07-cookbooks-and-machine-interfaces.md"
+  @fault_checks ["connect-reported", "oversized-dropped", "transport-down"]
+
+  setup_all do
+    catalogue = YamlElixir.read_from_file!(Path.join(@root, "docs/specs/catalogue.yaml"))
+    source = @root |> Path.join(catalogue["source_index"]) |> File.read!() |> JSON.decode!()
+    specs = catalogue["specifications"]
+
+    %{
+      spec_ids: Enum.map(specs, & &1["id"]),
+      completion_ids: specs |> Enum.flat_map(& &1["completion_items"]) |> Enum.uniq(),
+      upstream_ids: Enum.flat_map(source["packages"], & &1["completion_ids"])
+    }
+  end
+
+  test "the catalogue lists the sixteen WLB.07 rows in the spec's order" do
+    table_ids =
+      @root
+      |> Path.join(@spec_path)
+      |> File.read!()
+      |> then(&Regex.scan(~r/^\| ([a-z][a-z-]*) \| /m, &1))
+      |> Enum.map(&Enum.at(&1, 1))
+      |> Enum.reject(&(&1 == "id"))
+
+    assert length(table_ids) == 16
+    assert Enum.map(Cookbook.list(), & &1.id) == table_ids
+
+    for entry <- Cookbook.list() do
+      assert File.regular?(Path.join(@root, entry.path))
+      assert entry.evidence in [:executable, :partial]
+      assert entry.lane in [:implemented, :partial, :planned]
+      assert entry.checks == Enum.uniq(entry.checks)
+      assert {:ok, ^entry} = Cookbook.fetch(entry.id)
+    end
+  end
+
+  test "unknown ids and unreadable notebooks are typed errors" do
+    assert {:error, %Error{code: :unknown_cookbook}} = Cookbook.fetch("nope")
+    assert {:error, %Error{code: :unknown_cookbook}} = Cookbook.fetch(:nope)
+    assert {:error, %Error{code: :unknown_cookbook}} = Cookbook.read("nope")
+  end
+
+  test "cells, headings and missing sections are parsed from Livebook source" do
+    source =
+      "# T\r\n\r\n## Goal\r\n\r\n```elixir\r\nx = 1\r\ny = 2\r\n```\r\n\r\n```text\r\nnot a cell\r\n```\r\n\r\n```elixir\r\nx + y\r\n```\r\n"
+
+    assert Cookbook.cells(source) == ["x = 1\ny = 2", "x + y"]
+    assert Cookbook.headings(source) == ["Goal"]
+    assert Cookbook.missing_sections(source) == Cookbook.required_sections() -- ["Goal"]
+    assert Cookbook.cells("") == []
+  end
+
+  for entry <- Cookbook.list() do
+    @entry entry
+
+    test "#{entry.id} has every section, resolves its ids and runs against the cohort", context do
+      entry = @entry
+      {:ok, source} = Cookbook.read(entry.id)
+
+      assert Cookbook.missing_sections(source) == []
+
+      assert Cookbook.headings(source) --
+               (Cookbook.headings(source) -- Cookbook.required_sections()) ==
+               Cookbook.required_sections()
+
+      [install | _cells] = Cookbook.cells(source)
+      assert CookbookRunner.install_cell?(install)
+      assert install =~ ~s({:wotex_lab, "~> 0.1.0"})
+      refute install =~ "git:"
+      refute install =~ "github:"
+      refute install =~ "path:"
+      assert source =~ "none of the `wotex*` packages is published on Hex"
+      assert source =~ "source-cohort.json"
+
+      assert_honest(source, entry.evidence)
+      assert entry.specs -- context.spec_ids == []
+      assert entry.completion_ids -- context.completion_ids == []
+      assert entry.upstream -- context.upstream_ids == []
+
+      for id <- entry.specs, do: assert(source =~ id)
+      for id <- entry.completion_ids, do: assert(source =~ id)
+
+      assert {:ok, outcome} = CookbookRunner.run(entry.id)
+      assert outcome.leaked == 0
+      assert outcome.cells > 3
+      assert_checks(outcome.result, entry.checks)
+
+      for module <- outcome.modules do
+        assert Code.ensure_loaded?(module), "#{entry.id} references unloaded #{inspect(module)}"
+      end
+    end
+  end
+
+  describe "against a disposable broker" do
+    @describetag :broker
+    @describetag timeout: 120_000
+
+    setup do
+      %{broker: MqttBroker.start()}
+    end
+
+    test "consume-mqtt runs its non-fault cells against eclipse-mosquitto", %{broker: broker} do
+      {:ok, entry} = Cookbook.fetch("consume-mqtt")
+
+      assert {:ok, outcome} =
+               CookbookRunner.run("consume-mqtt", binding: [broker_href: MqttBroker.href(broker)])
+
+      assert outcome.leaked == 0
+      assert_checks(outcome.result, entry.checks -- @fault_checks)
+    end
+
+    test "smart-room reads its meter from eclipse-mosquitto", %{broker: broker} do
+      {:ok, entry} = Cookbook.fetch("smart-room")
+
+      assert {:ok, outcome} =
+               CookbookRunner.run("smart-room", binding: [broker_href: MqttBroker.href(broker)])
+
+      assert outcome.leaked == 0
+      assert_checks(outcome.result, entry.checks)
+    end
+  end
+
+  # A partial notebook must say so and mark its documentation-only code; an
+  # executable one must carry no documentation-only code block.
+  defp assert_honest(source, :partial) do
+    assert source =~ "```text"
+    assert source =~ "# Planned ("
+    assert source =~ "documentation only"
+  end
+
+  defp assert_honest(source, :executable), do: refute(source =~ "```text")
+
+  defp assert_checks(result, checks) do
+    assert is_map(result), "the last cell must return the checks map"
+    assert Enum.sort(Map.keys(result)) == Enum.sort(checks)
+    failed = for {check, value} <- result, value != true, do: check
+    assert failed == [], "checks not satisfied: #{inspect(failed)}"
+  end
+end

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "fixture": "thermal-nx",
+  "vectors": {
+    "thermal-nx:proposal": {
+      "thing_id": "urn:wotex:lab:thermostat:1",
+      "action_name": "setTarget",
+      "input": 22,
+      "proposed_at": 2000,
+      "feature_order": ["temperature"],
+      "timestamps": [0, 1000],
+      "masks": [1, 1],
+      "quality": [0, 0],
+      "absolute_tolerance": 0.00001
+    },
+    "thermal-nx:unit-refusal": {"phase": "unit", "unit": "F"},
+    "thermal-nx:identity-mismatch": {"thing_id": "urn:test:2"},
+    "thermal-nx:output-out-of-range": {"maximum": 35, "value": 40}
+  }
+}

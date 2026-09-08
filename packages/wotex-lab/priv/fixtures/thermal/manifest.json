@@ -1,21 +1,47 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "id": "thermal-nx",
+  "title": "Lab thermostat Thing Description for the thermal Nx foundation",
+  "scenario": "thermal-nx",
   "specs": [
     "WLB.03",
     "WTX.01",
     "WNX.01"
   ],
+  "seams": [
+    "core.td",
+    "nx.unit_converter"
+  ],
+  "operations": [
+    "thing_description.parse",
+    "nx.encode",
+    "nx.inference",
+    "nx.decode"
+  ],
+  "media_type": "application/td+json",
   "source_mode": "synthetic",
+  "license": "Apache-2.0",
+  "provenance": {
+    "author": "wotex-lab",
+    "created": "2026-09-08",
+    "synthetic": true,
+    "statement": "Hand-written consumer-neutral fixture; no device, vendor or private product data."
+  },
   "input": "thing-description.json",
   "input_sha256": "951b814403e00efc5e3a742cfce5c905e5f228db42978b3e59eaaee2e15d2c81",
-  "expected_proposal": {
-    "thing_id": "urn:wotex:lab:thermostat:1",
-    "action_name": "setTarget",
-    "input": 22,
-    "proposed_at": 2000
+  "expected_output": "expected-output.json",
+  "expected_output_sha256": "ae6f8b18388457d6f8b279ad8dfc0ee49dc7a9a142fe5ca235b5cca6886d56aa",
+  "vectors": {
+    "positive": [
+      "thermal-nx:proposal"
+    ],
+    "negative": [
+      "thermal-nx:unit-refusal",
+      "thermal-nx:identity-mismatch",
+      "thermal-nx:output-out-of-range"
+    ]
   },
   "absolute_tolerance": 0.00001,
-  "side_effects": [],
-  "license": "Apache-2.0"
+  "expected_proposal": {"action_name":"setTarget","input":22,"proposed_at":2000,"thing_id":"urn:wotex:lab:thermostat:1"},
+  "side_effects": []
 }

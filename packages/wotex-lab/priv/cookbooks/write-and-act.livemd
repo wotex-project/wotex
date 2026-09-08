@@ -1,0 +1,281 @@
+# Writes and Actions with status, content type and deadline rejection
+
+## Goal
+
+Write a Property and invoke an Action on an HTTP Thing through the runtime,
+with a bearer credential resolved just in time from a reference, and watch
+the runtime refuse a wrong credential, a wrong response content type and an
+exhausted deadline with distinct classes. The runtime's retry decision for a
+permanent failure is `:stop`; nothing retries a rejected write.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:req, "~> 0.7.4"},
+  {:bandit, "~> 1.12"},
+  {:plug, "~> 1.18"}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Operation and Form selection, input carriage, status mapping, retry classes | `wotex_runtime`, `wotex_binding_http` (package-implements) | `ConsumedThing`, `Wotex.Binding.HTTP`, `Wotex.Runtime.Retry` |
+| Credential references and just-in-time lookup | `wotex_lab` (consumer-implements `Wotex.Runtime.Credentials`) | `Wotex.Lab.Adapters.Runtime.StaticRef` |
+| Bytes on the wire | `wotex_lab` (consumer-implements `Wotex.Binding.HTTP.Client`) | `ReqClient` |
+| The server, its token check and its misbehaving action | this notebook | `WotexLabCookbook.WriteAndActServer` |
+
+## Run
+
+```elixir
+alias Wotex.Binding.HTTP
+alias Wotex.Lab.Adapters.HTTP.ReqClient
+alias Wotex.Lab.Adapters.Runtime.StaticRef
+alias Wotex.Lab.Telemetry
+alias Wotex.Runtime.{ConsumedThing, Context, Error, Result, Retry}
+alias Wotex.ThingDescription
+
+telemetry_id = "cookbook-write-and-act-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+token = "room-token-7f3a"
+```
+
+The server checks the bearer token on writes, accepts the Action with `202`
+and answers the `reboot` Action with HTML on purpose. Written values land in
+an Agent so the effect is observable from outside the request.
+
+```elixir
+{:ok, store} = Agent.start_link(fn -> %{} end)
+
+defmodule WotexLabCookbook.WriteAndActServer do
+  use Plug.Router
+
+  plug(:match)
+  plug(:dispatch)
+
+  def init(store), do: store
+  def call(conn, store), do: conn |> assign(:store, store) |> super(store)
+
+  put "/properties/target" do
+    case get_req_header(conn, "authorization") do
+      ["Bearer room-token-7f3a"] ->
+        {:ok, body, conn} = read_body(conn)
+        Agent.update(conn.assigns.store, &Map.put(&1, :target, body))
+        send_resp(conn, 204, "")
+
+      _other ->
+        send_resp(conn, 401, "")
+    end
+  end
+
+  post "/actions/set-target" do
+    {:ok, body, conn} = read_body(conn)
+    body = ~s({"status":"pending","input":#{body}})
+    conn |> put_resp_content_type("application/json") |> send_resp(202, body)
+  end
+
+  post "/actions/reboot" do
+    conn |> put_resp_content_type("text/html") |> send_resp(200, "<b>rebooting</b>")
+  end
+
+  get "/properties/slow" do
+    Process.sleep(400)
+    conn |> put_resp_content_type("application/json") |> send_resp(200, "1")
+  end
+
+  match _ do
+    send_resp(conn, 404, "")
+  end
+end
+
+{:ok, server} =
+  Bandit.start_link(
+    plug: {WotexLabCookbook.WriteAndActServer, store},
+    ip: {127, 0, 0, 1},
+    port: 0,
+    startup_log: false
+  )
+
+{:ok, {_ip, port}} = ThousandIsland.listener_info(server)
+base = "http://127.0.0.1:#{port}/"
+```
+
+The fixture TD gains the `reboot` Action and the real base. Credentials are
+references only: the secret is produced by the lookup function at request
+time and never stored in the consumed Thing.
+
+```elixir
+fixture = Application.app_dir(:wotex_lab, "priv/fixtures/http/thing-description.json")
+{:ok, fixture_td} = fixture |> File.read!() |> ThingDescription.parse()
+
+reboot = %{
+  "forms" => [%{"href" => "actions/reboot", "contentType" => "application/json", "op" => "invokeaction"}]
+}
+
+{:ok, td} =
+  fixture_td
+  |> ThingDescription.to_map()
+  |> Map.put("base", base)
+  |> put_in(["actions", "reboot"], reboot)
+  |> ThingDescription.from_map()
+
+{:ok, profile} = HTTP.profile()
+{:ok, config} = HTTP.config(client: {ReqClient, %{receive_timeout: 2_000}})
+
+credentials = fn secret ->
+  {StaticRef,
+   %{
+     references: %{"bearer_sc" => "vault://room/http"},
+     lookup: fn "vault://room/http" -> {:ok, {:bearer, secret}} end
+   }}
+end
+
+consume = fn credential ->
+  {:ok, consumed} =
+    ConsumedThing.new(td,
+      profiles: [profile],
+      transports: %{profile.id => HTTP.transport(config)},
+      credentials: credential
+    )
+
+  consumed
+end
+
+consumed = consume.(credentials.(token))
+refute_token_in_state? = not (inspect(consumed) =~ token)
+```
+
+Write and invoke. A `204` becomes an `:ok` result with a `nil` payload; a
+`202` becomes `:accepted` with the decoded body.
+
+```elixir
+context =
+  Context.new!(request_id: "http-write", deadline: System.monotonic_time(:millisecond) + 2_000)
+
+{:ok, %Result{} = write} =
+  Telemetry.span(:runtime, :request, %{operation: :writeproperty, profile: :cookbook}, fn ->
+    ConsumedThing.write_property(consumed, "target", 23.5, context)
+  end)
+
+{:ok, %Result{} = action} = ConsumedThing.invoke_action(consumed, "setTarget", 24, context)
+stored = Agent.get(store, &Map.get(&1, :target))
+{write.status, write.payload, action.status, action.payload, stored}
+```
+
+## Deliberate breakage
+
+A wrong token is a permanent `401`; the error never echoes either token. The
+HTML answer to `reboot` is a protocol error. A 100 ms deadline against a
+400 ms server is a timeout. The runtime's retry policy stops on the
+permanent failure.
+
+```elixir
+wrong = consume.(credentials.("wrong-token"))
+
+{:error, %Error{class: denied_class} = denied} =
+  ConsumedThing.write_property(wrong, "target", 1.0, context)
+
+{:error, %Error{class: reboot_class} = reboot_error} =
+  ConsumedThing.invoke_action(consumed, "reboot", nil, context)
+
+quick = Context.new!(request_id: "http-late", deadline: System.monotonic_time(:millisecond) + 100)
+{:error, %Error{class: late_class}} = ConsumedThing.read_property(consumed, "slow", quick)
+
+decision = Retry.decision(:writeproperty, denied, attempt: 1, max_attempts: 3)
+leak_free? = not (inspect(denied) =~ token) and not (inspect(denied) =~ "wrong-token")
+
+%{
+  denied: {denied_class, denied.details.cause.code, leak_free?},
+  reboot: {reboot_class, reboot_error.details.cause.code},
+  late: late_class,
+  retry: decision,
+  still_stored: Agent.get(store, &Map.get(&1, :target))
+}
+```
+
+```elixir
+:ok = ThousandIsland.stop(server)
+:ok = Agent.stop(store)
+```
+
+## Safe telemetry
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+text = inspect(spans)
+labels_safe? = not (text =~ token) and not (text =~ "wrong-token") and not (text =~ "23.5")
+{length(spans), labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `write-through-runtime` | The write is `:ok` with `nil` payload and the server stored `23.5` |
+| `action-accepted` | `setTarget` is `:accepted` with the server's pending body |
+| `unauthorized-permanent` | A wrong bearer is `:permanent` with cause `:http_status`; the stored value is unchanged |
+| `no-credential-leak` | Neither token appears in the error, the consumed Thing or telemetry |
+| `deadline-timeout` | A 100 ms deadline is class `:timeout` |
+| `retry-decision-stop` | `Retry.decision/3` for the permanent failure is `:stop` |
+| `media-type-refused` | The HTML action response is `:protocol` with cause `:unexpected_response_media_type` |
+
+```elixir
+%{
+  "write-through-runtime" => write.status == :ok and write.payload == nil and stored == "23.5",
+  "action-accepted" =>
+    action.status == :accepted and action.payload == %{"status" => "pending", "input" => 24},
+  "unauthorized-permanent" =>
+    denied_class == :permanent and denied.details.cause.code == :http_status,
+  "no-credential-leak" => leak_free? and refute_token_in_state? and labels_safe?,
+  "deadline-timeout" => late_class == :timeout,
+  "retry-decision-stop" => decision == :stop,
+  "media-type-refused" =>
+    reboot_class == :protocol and reboot_error.details.cause.code == :unexpected_response_media_type
+}
+```
+
+## Public seam
+
+`runtime.credentials` — `Wotex.Runtime.Credentials.resolve/4`
+(consumer-implements; `StaticRef` resolves references at request time).
+`http.client` — `Wotex.Binding.HTTP.Client` (`ReqClient`).
+
+## Spec and completion IDs
+
+* Lab: WLB.04 (`WLB-C04`, `WLB-C08`).
+* Upstream consumer evidence: `RT-C02`, `RT-C03`, `WBH-C01`, `WBH-C03`.
+
+## Replacement adapter
+
+Implement `Wotex.Runtime.Credentials.resolve/4` against your secret store:
+receive the selected security names and definitions, return `{:ok, %{name =>
+credential}}` for that one call and never keep the secret in configuration.
+For HTTP the credential is `{:bearer, token}` or `{:basic, user, password}`;
+a scheme you do not support must be an error, not `nil`.

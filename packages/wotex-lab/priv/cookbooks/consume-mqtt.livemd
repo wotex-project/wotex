@@ -1,0 +1,390 @@
+# Retained reads, publications, subscriptions, loss and overload over MQTT
+
+## Goal
+
+Consume an MQTT Thing through the runtime with the Lab's EMQTT client: read
+a retained Property, publish a Property write and an Action invocation,
+observe a Property through a linked broker session, and see what a missing
+retained message, an unreachable broker, an oversized delivery and a lost
+connection look like. The credential, when one is used, builds the CONNECT
+packet only and is never kept.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:emqtt, "~> 1.15", system_env: [{"BUILD_WITHOUT_QUIC", "1"}]}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout. `emqtt` is an optional
+dependency the host selects; it is compiled without its QUIC transport.
+
+The notebook needs a peer. Inside the Lab checkout, the scripted in-BEAM
+MQTT 5 peer from `test/support/mqtt_server.ex` is available and is used
+automatically: it answers CONNECT, SUBSCRIBE, PUBLISH and PINGREQ, and lets a
+cell inject a server DISCONNECT. It is a scripted test peer, not a broker.
+Outside the checkout, bind `broker_href` (the automated `:broker` test does
+this with a disposable `eclipse-mosquitto:2` container) or set
+`WOTEX_LAB_MQTT_HREF`, for example after
+`docker run --rm -p 1883:1883 eclipse-mosquitto:2`. Against a real broker the
+fault-injection cells report `:not_simulated` and the checks they feed are
+omitted, because a real broker cannot be told to drop the connection.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Form to topic/filter mapping, commands, delivery values, retained semantics | `wotex_binding_mqtt` (package-implements) | `Wotex.Binding.MQTT`, `Command`, `Delivery` |
+| Subscription envelope, `:transport_down`, identity | `wotex_runtime` (package-implements) | `Wotex.Runtime.Subscription` |
+| Connections, keep-alive, payload bounds, no automatic reconnect | `wotex_lab` (consumer-implements `Wotex.Binding.MQTT.Client`) | `Adapters.MQTT.EmqttClient`, `Adapters.MQTT.Session` |
+| Reconnect | host decision through the subscription restart policy | `restart:` on the child spec |
+| The peer | scripted test peer or a broker you run | see prerequisites |
+
+## Run
+
+```elixir
+alias Wotex.Binding.MQTT
+alias Wotex.Binding.MQTT.{Broker, Command, Transport, TransportConfig}
+alias Wotex.Lab
+alias Wotex.Lab.Adapters.MQTT.EmqttClient
+alias Wotex.Lab.Adapters.Runtime.NoSec
+alias Wotex.Lab.Error, as: LabError
+alias Wotex.Lab.Telemetry
+alias Wotex.Runtime.{ConsumedThing, Context, Error, ExecutionContext, Result}
+alias Wotex.ThingDescription
+
+telemetry_id = "cookbook-consume-mqtt-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+```
+
+Select the peer: an explicit `broker_href` wins over the scripted peer.
+Every run uses its own topic prefix so nothing retained by an earlier run is
+read back.
+
+```elixir
+broker_href = Keyword.get(binding(), :broker_href) || System.get_env("WOTEX_LAB_MQTT_HREF")
+scripted? = Code.ensure_loaded?(Wotex.Lab.Test.MqttServer) and broker_href == nil
+prefix = "lab/cookbook/#{System.unique_integer([:positive])}"
+temperature_topic = "#{prefix}/properties/temperature"
+execution_context = ExecutionContext.new(Context.new!(request_id: "mqtt-direct"), nil)
+
+peer =
+  if scripted? do
+    Wotex.Lab.Test.MqttServer.start(self(), retained: {temperature_topic, "21.5"}, on_exit: false)
+  else
+    nil
+  end
+
+href = if scripted?, do: Wotex.Lab.Test.MqttServer.href(peer), else: broker_href
+
+if not scripted? do
+  {:ok, broker} = Broker.new(href)
+  {:ok, seed} = Command.publish(broker, :writeproperty, temperature_topic, 21.5, qos: 1, retain: true)
+  :ok = EmqttClient.publish(seed, execution_context, %{connect_timeout: 2_000})
+end
+
+{scripted?, prefix}
+```
+
+The fixture TD names a placeholder broker and topic prefix; both are
+rewritten before parsing. The transport configuration bounds deliveries to
+eight bytes so an oversized message is observable later.
+
+```elixir
+fixture = Application.app_dir(:wotex_lab, "priv/fixtures/mqtt/thing-description.json")
+
+{:ok, td} =
+  fixture
+  |> File.read!()
+  |> String.replace("mqtt://127.0.0.1:1883", href)
+  |> String.replace("lab/cookbook/room", prefix)
+  |> ThingDescription.parse()
+
+{:ok, mqtt_config} =
+  TransportConfig.new(EmqttClient, %{connect_timeout: 2_000},
+    read_timeout: 2_000,
+    max_payload_bytes: 8
+  )
+
+{:ok, consumed} =
+  ConsumedThing.new(td,
+    profiles: [MQTT.profile()],
+    transports: %{mqtt: {Transport, mqtt_config}},
+    credentials: {NoSec, []}
+  )
+
+context = Context.new!(request_id: "mqtt-cookbook")
+```
+
+Retained read: the client subscribes, lets a PINGREQ round trip flush the
+retained delivery, and tears the connection down. The result says the
+delivery was retained.
+
+```elixir
+{:ok, %Result{} = retained} = ConsumedThing.read_property(consumed, "temperature", context)
+
+connect_report =
+  if scripted? do
+    receive do
+      {:mqtt_connect, %{username: username, password: password}} -> {username, password}
+    after
+      2_000 -> :no_connect_report
+    end
+  else
+    :not_simulated
+  end
+
+{retained.payload, retained.metadata.delivery_retained, connect_report}
+```
+
+Publications: a Property write and an Action invocation each publish one
+Application Message on the Form's topic and are `:accepted`.
+
+```elixir
+{:ok, %Result{status: write_status}} = ConsumedThing.write_property(consumed, "target", 23.5, context)
+{:ok, %Result{status: action_status}} = ConsumedThing.invoke_action(consumed, "setTarget", 24, context)
+
+published =
+  if scripted? do
+    receive_publish = fn receive_publish, acc ->
+      receive do
+        {:mqtt_publish, message} -> receive_publish.(receive_publish, [message | acc])
+      after
+        500 -> Enum.reverse(acc)
+      end
+    end
+
+    receive_publish.(receive_publish, [])
+  else
+    :not_simulated
+  end
+
+{write_status, action_status, published}
+```
+
+Subscription: a linked session under the instance's `:sessions` role. The
+retained message arrives first (`retained: true`), then a fresh publication.
+The earlier bounded connections also reported their packets to this process;
+those stale reports are flushed so the cell waits for this subscription's own
+SUBSCRIBE.
+
+```elixir
+flush = fn flush ->
+  receive do
+    {:mqtt_subscribe, _filters} -> flush.(flush)
+    :mqtt_pingreq -> flush.(flush)
+    :mqtt_disconnect -> flush.(flush)
+  after
+    0 -> :ok
+  end
+end
+
+:ok = flush.(flush)
+{:ok, lab} = Lab.start_link(id: "consume-mqtt", max_children: 4)
+
+{:ok, spec} =
+  ConsumedThing.observation_child_spec(consumed, "temperature", context,
+    id: :observe,
+    receiver: self(),
+    restart: :temporary
+  )
+
+{:ok, subscription} = Lab.start_child(lab, :sessions, spec)
+monitor = Process.monitor(subscription)
+
+if scripted? do
+  receive do
+    {:mqtt_subscribe, _filters} -> :ok
+  after
+    2_000 -> :no_subscribe
+  end
+end
+
+retained_delivery =
+  receive do
+    {:wotex_runtime, :observe, {:ok, value, %{retained: true}}} -> value
+  after
+    5_000 -> :no_retained_delivery
+  end
+
+if scripted? do
+  Wotex.Lab.Test.MqttServer.publish(peer, temperature_topic, "21.5")
+else
+  {:ok, broker} = Broker.new(href)
+  {:ok, fresh} = Command.publish(broker, :writeproperty, temperature_topic, 21.5, qos: 1)
+  :ok = EmqttClient.publish(fresh, execution_context, %{connect_timeout: 2_000})
+end
+
+delivery =
+  receive do
+    {:wotex_runtime, :observe, {:ok, value, %{retained: false} = meta}} -> {value, meta.topic}
+  after
+    5_000 -> :no_delivery
+  end
+
+{retained_delivery, delivery}
+```
+
+## Deliberate breakage
+
+A Topic Filter without a retained message is a typed protocol error; an
+unreachable broker is `:mqtt_connect_refused`; a delivery over the payload
+bound is dropped, not forwarded; a server DISCONNECT ends the session with
+`:transport_down`.
+
+```elixir
+{:ok, broker} = Broker.new(href)
+empty_peer = if scripted?, do: Wotex.Lab.Test.MqttServer.start(self(), on_exit: false), else: nil
+empty_href = if scripted?, do: Wotex.Lab.Test.MqttServer.href(empty_peer), else: href
+{:ok, empty_broker} = Broker.new(empty_href)
+
+{:ok, read_power} =
+  Command.subscribe(empty_broker, :readproperty, "#{prefix}/properties/power", qos: 1, retain: true)
+
+{:error, %LabError{code: no_retained}} =
+  EmqttClient.read(read_power, 2_000, execution_context, %{connect_timeout: 2_000})
+
+{:ok, closed_broker} = Broker.new("mqtt://127.0.0.1:1")
+{:ok, unreachable_publish} = Command.publish(closed_broker, :writeproperty, "#{prefix}/x", 1, qos: 1)
+
+{:error, %LabError{code: unreachable, class: unreachable_class}} =
+  EmqttClient.publish(unreachable_publish, execution_context, %{connect_timeout: 1_000})
+
+oversized =
+  if scripted? do
+    Wotex.Lab.Test.MqttServer.publish(peer, temperature_topic, "123456789012345")
+
+    receive do
+      {:wotex_runtime, :observe, message} -> {:delivered, message}
+    after
+      300 -> :dropped
+    end
+  else
+    :not_simulated
+  end
+
+down =
+  if scripted? do
+    Wotex.Lab.Test.MqttServer.disconnect(peer)
+
+    receive do
+      {:wotex_runtime, :observe, {:status, status}} -> status
+    after
+      2_000 -> :no_status
+    end
+  else
+    :not_simulated
+  end
+
+{no_retained, {unreachable, unreachable_class}, oversized, down}
+```
+
+```elixir
+if scripted? do
+  receive do
+    {:DOWN, ^monitor, :process, ^subscription, _reason} -> :ok
+  after
+    2_000 -> :still_alive
+  end
+end
+
+:ok = Supervisor.stop(lab)
+if scripted?, do: Wotex.Lab.Test.MqttServer.stop(peer)
+if scripted?, do: Wotex.Lab.Test.MqttServer.stop(empty_peer)
+:ok
+```
+
+## Safe telemetry
+
+Runtime spans name the operation and outcome; broker addresses, topics and
+payloads are not labels.
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+text = inspect(spans)
+labels_safe? = not (text =~ prefix) and not (text =~ "127.0.0.1") and not (text =~ "23.5")
+{length(spans), labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `retained-read` | The retained `21.5` is read with `delivery_retained: true` |
+| `write-published` | The write is `:accepted` (and the peer saw the target topic when scripted) |
+| `action-published` | The invocation is `:accepted` (and the peer saw the action topic when scripted) |
+| `delivery-decoded` | A fresh publication reaches the receiver as `21.5` on the temperature topic |
+| `unreachable-refused` | `mqtt://127.0.0.1:1` is `:mqtt_connect_refused`, class `:unavailable` |
+| `no-retained-message` | An empty filter is `:no_retained_message` |
+| `connect-reported` (scripted only) | The CONNECT carried no username or password |
+| `oversized-dropped` (scripted only) | A 15-byte delivery over an 8-byte bound is dropped |
+| `transport-down` (scripted only) | A server DISCONNECT is reported as `:transport_down` |
+
+```elixir
+base = %{
+  "retained-read" => retained.payload == 21.5 and retained.metadata.delivery_retained,
+  "write-published" =>
+    write_status == :accepted and
+      (not scripted? or Enum.any?(published, &(&1.topic == "#{prefix}/properties/target"))),
+  "action-published" =>
+    action_status == :accepted and
+      (not scripted? or Enum.any?(published, &(&1.topic == "#{prefix}/actions/set-target"))),
+  "delivery-decoded" => delivery == {21.5, temperature_topic},
+  "unreachable-refused" => unreachable == :mqtt_connect_refused and unreachable_class == :unavailable,
+  "no-retained-message" => no_retained == :no_retained_message and labels_safe?
+}
+
+faults = %{
+  "connect-reported" => connect_report == {nil, nil},
+  "oversized-dropped" => oversized == :dropped,
+  "transport-down" => down == :transport_down
+}
+
+if scripted?, do: Map.merge(base, faults), else: base
+```
+
+## Public seam
+
+`mqtt.client` — `Wotex.Binding.MQTT.Client.publish/3`, `read/4`,
+`subscribe/4`, `unsubscribe/4` (consumer-implements; `EmqttClient`).
+`runtime.credentials` (`NoSec` here; `StaticRef` supplies
+`{:password, user, password}` for a `basic` scheme).
+
+## Spec and completion IDs
+
+* Lab: WLB.04 (`WLB-C04`, `WLB-C08`).
+* Upstream consumer evidence: `WBM-C01`, `WBM-C02`, `WBM-C03`, `WBM-C04`.
+
+## Replacement adapter
+
+Implement `Wotex.Binding.MQTT.Client` with another MQTT library: `read/4`
+must distinguish a missing retained message from a timeout, `subscribe/4`
+must link a session to the owner and send `{:wotex_transport_frame,
+%Wotex.Binding.MQTT.Delivery{}}` and `{:wotex_transport_status,
+:transport_down}`, deliveries over the command's payload bound must be
+dropped, and the client must not reconnect on its own or keep the credential
+after CONNECT. Pass it as the module in `Wotex.Binding.MQTT.TransportConfig.new/3`.

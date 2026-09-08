@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.1.0",
+  "id": "mqtt-room",
+  "title": "MQTT room and meter Thing Description for the EMQTT client",
+  "scenario": "consume-mqtt",
+  "specs": [
+    "WLB.04",
+    "WBM.01",
+    "WBM.02",
+    "WBM.03",
+    "WRT.01"
+  ],
+  "seams": [
+    "mqtt.client",
+    "runtime.credentials"
+  ],
+  "operations": [
+    "readproperty",
+    "writeproperty",
+    "invokeaction",
+    "observeproperty"
+  ],
+  "media_type": "application/td+json",
+  "source_mode": "synthetic",
+  "license": "Apache-2.0",
+  "provenance": {
+    "author": "wotex-lab",
+    "created": "2026-09-08",
+    "synthetic": true,
+    "statement": "Hand-written consumer-neutral fixture; no device, vendor or private product data."
+  },
+  "input": "thing-description.json",
+  "input_sha256": "3881fc86932f0ce9b85dc1831a626353fac691d6491974d29cf7777de76eeb65",
+  "expected_output": "expected-output.json",
+  "expected_output_sha256": "6768e2a6e7f733d44f2dadf0630f0f9443f8400f0c51fedca6517e8941455bce",
+  "vectors": {
+    "positive": [
+      "mqtt:read-retained-temperature",
+      "mqtt:read-retained-power",
+      "mqtt:write-target",
+      "mqtt:invoke-set-target",
+      "mqtt:observe-delivery"
+    ],
+    "negative": [
+      "mqtt:no-retained-message",
+      "mqtt:oversized-delivery",
+      "mqtt:transport-down",
+      "mqtt:unreachable-broker"
+    ]
+  },
+  "topic_prefix_placeholder": "lab/cookbook/room",
+  "side_effects": []
+}

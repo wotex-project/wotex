@@ -7,13 +7,16 @@ defmodule Wotex.Lab.Test.MqttServer do
   # test push an Application Message, a server DISCONNECT or a closed socket.
   # It is a scripted test peer, not a broker: MQTT session, retained-message
   # and shared-subscription semantics are proven against eclipse-mosquitto.
+  # `start/2` registers an `on_exit` cleanup inside an ExUnit test process;
+  # pass `on_exit: false` outside one (the cookbooks do) and call `stop/1`.
 
   import Bitwise
 
   @type t :: %{
           required(:port) => pos_integer(),
           required(:controller) => pid(),
-          required(:listener) => :gen_tcp.socket()
+          required(:listener) => :gen_tcp.socket(),
+          required(:acceptor) => pid()
         }
 
   @spec start(pid(), keyword()) :: t()
@@ -24,13 +27,38 @@ defmodule Wotex.Lab.Test.MqttServer do
     {:ok, port} = :inet.port(listener)
     {:ok, controller} = Agent.start_link(fn -> %{test: test, connection: nil} end)
     acceptor = spawn(fn -> accept(listener, controller, opts) end)
+    server = %{port: port, controller: controller, listener: listener, acceptor: acceptor}
 
-    ExUnit.Callbacks.on_exit(fn ->
-      Process.exit(acceptor, :kill)
-      :gen_tcp.close(listener)
-    end)
+    if Keyword.get(opts, :on_exit, true) do
+      ExUnit.Callbacks.on_exit(fn -> stop(server) end)
+    end
 
-    %{port: port, controller: controller, listener: listener}
+    server
+  end
+
+  @spec stop(t()) :: :ok
+  def stop(server) do
+    Process.exit(server.acceptor, :kill)
+    :gen_tcp.close(server.listener)
+
+    case connection_pid(server.controller) do
+      pid when is_pid(pid) -> send(pid, :close)
+      nil -> :ok
+    end
+
+    stop_controller(server.controller)
+  end
+
+  defp stop_controller(controller) do
+    Agent.stop(controller)
+  catch
+    :exit, _reason -> :ok
+  end
+
+  defp connection_pid(controller) do
+    Agent.get(controller, & &1.connection)
+  catch
+    :exit, _reason -> nil
   end
 
   @spec href(t()) :: String.t()
@@ -81,8 +109,8 @@ defmodule Wotex.Lab.Test.MqttServer do
       {:ok, socket} ->
         connection = spawn(fn -> own(socket, controller, opts) end)
         :ok = :gen_tcp.controlling_process(socket, connection)
-        send(connection, :owned)
         Agent.update(controller, &Map.put(&1, :connection, connection))
+        send(connection, :owned)
         accept(listener, controller, opts)
 
       {:error, _reason} ->

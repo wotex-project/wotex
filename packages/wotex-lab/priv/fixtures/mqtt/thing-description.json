@@ -1,0 +1,75 @@
+{
+  "@context": "https://www.w3.org/2022/wot/td/v1.1",
+  "id": "urn:wotex:lab:mqtt:room",
+  "title": "MQTT room",
+  "security": ["nosec_sc"],
+  "securityDefinitions": {
+    "nosec_sc": {"scheme": "nosec"},
+    "basic_sc": {"scheme": "basic", "in": "header"}
+  },
+  "properties": {
+    "temperature": {
+      "type": "number",
+      "unit": "Cel",
+      "observable": true,
+      "forms": [
+        {
+          "href": "mqtt://127.0.0.1:1883",
+          "contentType": "application/json",
+          "op": "readproperty",
+          "mqv:filter": "lab/cookbook/room/properties/temperature",
+          "mqv:retain": true,
+          "mqv:qos": 1
+        },
+        {
+          "href": "mqtt://127.0.0.1:1883",
+          "contentType": "application/json",
+          "op": ["observeproperty", "unobserveproperty"],
+          "mqv:filter": "lab/cookbook/room/properties/temperature",
+          "mqv:qos": 1
+        }
+      ]
+    },
+    "power": {
+      "type": "number",
+      "unit": "W",
+      "forms": [
+        {
+          "href": "mqtt://127.0.0.1:1883",
+          "contentType": "application/json",
+          "op": "readproperty",
+          "mqv:filter": "lab/cookbook/room/properties/power",
+          "mqv:retain": true,
+          "mqv:qos": 1
+        }
+      ]
+    },
+    "target": {
+      "type": "number",
+      "unit": "Cel",
+      "forms": [
+        {
+          "href": "mqtt://127.0.0.1:1883",
+          "contentType": "application/json",
+          "op": "writeproperty",
+          "mqv:topic": "lab/cookbook/room/properties/target",
+          "mqv:qos": 1
+        }
+      ]
+    }
+  },
+  "actions": {
+    "setTarget": {
+      "input": {"type": "number", "unit": "Cel", "minimum": 5, "maximum": 35},
+      "forms": [
+        {
+          "href": "mqtt://127.0.0.1:1883",
+          "contentType": "application/json",
+          "op": "invokeaction",
+          "mqv:topic": "lab/cookbook/room/actions/set-target",
+          "mqv:qos": 1
+        }
+      ]
+    }
+  }
+}

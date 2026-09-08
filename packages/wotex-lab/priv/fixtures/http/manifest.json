@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.1.0",
+  "id": "http-room",
+  "title": "HTTP room Thing Description for the Req client and SSE session",
+  "scenario": "consume-http",
+  "specs": [
+    "WLB.04",
+    "WBH.01",
+    "WBH.02",
+    "WBH.03",
+    "WRT.01"
+  ],
+  "seams": [
+    "http.client",
+    "runtime.credentials"
+  ],
+  "operations": [
+    "readproperty",
+    "writeproperty",
+    "invokeaction",
+    "observeproperty"
+  ],
+  "media_type": "application/td+json",
+  "source_mode": "synthetic",
+  "license": "Apache-2.0",
+  "provenance": {
+    "author": "wotex-lab",
+    "created": "2026-09-08",
+    "synthetic": true,
+    "statement": "Hand-written consumer-neutral fixture; no device, vendor or private product data."
+  },
+  "input": "thing-description.json",
+  "input_sha256": "72bdc1e159a7d22ec47a09f996cd34a2b1d1d59e192edfd8fad65150c55d56b5",
+  "expected_output": "expected-output.json",
+  "expected_output_sha256": "9c41bf00054b4f18baaf76182f3eeabde4bf727e81dc055951e2e3621498aca3",
+  "vectors": {
+    "positive": [
+      "http:read-temperature",
+      "http:write-target",
+      "http:invoke-set-target",
+      "http:observe-frame"
+    ],
+    "negative": [
+      "http:oversized",
+      "http:deadline",
+      "http:redirect",
+      "http:wrong-media-type",
+      "http:unauthorized",
+      "http:stream-closed"
+    ]
+  },
+  "base_placeholder": "http://127.0.0.1:0/",
+  "side_effects": []
+}

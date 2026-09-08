@@ -1,0 +1,260 @@
+# An exposed Thing with explicit ingress policy and an exact handler boundary
+
+## Goal
+
+Expose a simulated Thing through `Wotex.Runtime.ExposedThing` behind the
+Lab's reference host and see exactly which requests reach a handler: only a
+request whose Form declares the operation, whose credential satisfies the
+Form's security and whose input fits the DataSchema is dispatched. Every
+refusal leaves the handler call counter unchanged. The fixture's
+expected-output file lists the vectors this notebook replays.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"}
+])
+```
+
+The requirement above is a published-artifact requirement. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout. No network is used:
+the loopback transport carries runtime requests to a process in this VM.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Exposed Thing handler table and dispatch | `wotex_runtime` (package-implements) | `Wotex.Runtime.ExposedThing.new/2`, `dispatch/5` |
+| Consumed side: selection, identity, results | `wotex_runtime` | `Wotex.Runtime.ConsumedThing` |
+| Ingress policy: declared operations, security, input bounds, subscriptions | `wotex_lab` host (consumer) | `Wotex.Lab.Reference.Thing` |
+| Loopback transport and credential ports | `wotex_lab` (consumer-implements) | `Adapters.Runtime.Loopback`, `NoSec`, `StaticRef` |
+| Supervision | consumer (`wotex_lab` instance) | `Wotex.Lab.start_child/3` |
+| The simulated effect of `setTarget` | this notebook | the `:actions` option below |
+
+## Run
+
+```elixir
+alias Wotex.Lab
+alias Wotex.Lab.Adapters.Runtime.{Loopback, StaticRef}
+alias Wotex.Lab.Reference.Thing
+alias Wotex.Lab.Telemetry
+alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Error, ExposedThing, FormSelector, Request, Result}
+alias Wotex.ThingDescription
+
+telemetry_id = "cookbook-expose-thing-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+
+fixture_dir = Application.app_dir(:wotex_lab, "priv/fixtures/loopback")
+{:ok, td} = fixture_dir |> Path.join("thing-description.json") |> File.read!() |> ThingDescription.parse()
+{:ok, expected} = fixture_dir |> Path.join("expected-output.json") |> File.read!() |> Wotex.JSON.decode()
+vectors = expected["vectors"]
+Map.keys(vectors)
+```
+
+Start an instance and place the host under its `:things` role. The host
+takes the TD, the initial state, the expected token for `bearer_sc`, and an
+explicit effect for `setTarget`: the only way an Action changes state here.
+
+```elixir
+token = "room-token-7f3a"
+{:ok, lab} = Lab.start_link(id: "expose-thing", max_children: 8)
+
+{:ok, host} =
+  Lab.start_child(
+    lab,
+    :things,
+    {Thing,
+     td: td,
+     state: %{"temperature" => 20.0, "target" => 21.0},
+     tokens: %{"bearer_sc" => token},
+     actions: %{
+       "setTarget" => fn input, state ->
+         {:ok, %{"accepted" => true}, :accepted, Map.put(state, "target", input)}
+       end
+     }}
+  )
+
+Thing.stats(host)
+```
+
+The consumer side: a loopback binding profile, the loopback transport bound
+to the host pid, and a credential port that resolves the bearer reference.
+
+```elixir
+{:ok, profile} =
+  BindingProfile.new(id: :loopback, schemes: ["loopback"], operations: Wotex.Runtime.operations())
+
+consume = fn lookup ->
+  {:ok, consumed} =
+    ConsumedThing.new(td,
+      profiles: [profile],
+      transports: %{loopback: {Loopback, %{host: host}}},
+      credentials: {StaticRef, %{references: %{"bearer_sc" => "vault://room/token"}, lookup: lookup}}
+    )
+
+  consumed
+end
+
+consumed = consume.(fn "vault://room/token" -> {:ok, token} end)
+context = Context.new!(request_id: "expose", deadline: System.monotonic_time(:millisecond) + 1_000)
+```
+
+Positive vectors: read, write, invoke. Three handler calls, no rejection,
+and the Action's explicit effect is visible in the host state.
+
+```elixir
+{:ok, %Result{payload: read_payload}} = ConsumedThing.read_property(consumed, "temperature", context)
+{:ok, %Result{status: write_status}} = ConsumedThing.write_property(consumed, "target", 24.5, context)
+{:ok, %Result{status: invoke_status}} = ConsumedThing.invoke_action(consumed, "setTarget", 23.0, context)
+after_positive = Thing.stats(host)
+{read_payload, write_status, invoke_status, after_positive}
+```
+
+## Deliberate breakage
+
+Each negative vector is refused before a handler runs. The read-only Property
+has no Form declaring `writeproperty`, so the runtime refuses it before the
+transport; the others are refused by the host's admission and counted as
+rejections.
+
+```elixir
+{:error, %Error{code: readonly_code}} =
+  ConsumedThing.write_property(consumed, "temperature", 1.0, context)
+
+{:error, %Error{class: range_class} = range} =
+  ConsumedThing.write_property(consumed, "target", 99.0, context)
+
+{:error, %Error{} = wrong_type} = ConsumedThing.write_property(consumed, "target", "hot", context)
+
+stranger = consume.(fn _reference -> {:ok, "wrong"} end)
+{:error, %Error{} = unauthorized} = ConsumedThing.write_property(stranger, "target", 22.0, context)
+
+{:ok, selection} = FormSelector.select(td, :property, "temperature", :readproperty, [profile])
+request = Request.from_selection(selection, context, nil)
+thing_level = %{request | affordance_type: :thing, affordance_name: nil, operation: :readallproperties}
+{:error, %Wotex.Lab.Error{code: thing_level_code}} = Thing.request(host, thing_level, nil)
+
+after_negative = Thing.stats(host)
+
+%{
+  readonly: readonly_code,
+  range: {range_class, range.details.cause.code},
+  wrong_type: wrong_type.details.cause.code,
+  unauthorized: unauthorized.details.cause.code,
+  thing_level: thing_level_code,
+  stats: after_negative
+}
+```
+
+The package boundary itself, without the host: `ExposedThing.new/2` takes a
+handler table keyed by operation and affordance name, and `dispatch/5` runs
+exactly the handler that was declared, or returns `:handler_not_found`.
+
+```elixir
+handlers = %{
+  {:readproperty, "temperature"} => fn _input, _context -> {:ok, 19.5, :ok, :unchanged} end
+}
+
+{:ok, exposed} = ExposedThing.new(td, handlers)
+direct_context = Context.new!(request_id: "direct")
+direct_read = ExposedThing.dispatch(exposed, :readproperty, "temperature", nil, direct_context)
+direct_missing = ExposedThing.dispatch(exposed, :writeproperty, "target", 22.0, direct_context)
+{direct_read, direct_missing}
+```
+
+```elixir
+:ok = Supervisor.stop(lab)
+```
+
+## Safe telemetry
+
+Runtime request spans name the operation, the `:loopback` profile and the
+outcome. The Thing id, the token and the payloads are absent.
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+outcomes =
+  for {[:wotex, :lab, :runtime, :request, :stop], _measurements, metadata} <- spans,
+      do: {metadata.operation, metadata.outcome}
+
+text = inspect(spans)
+labels_safe? = not (text =~ token) and not (text =~ "urn:wotex") and not (text =~ "24.5")
+{outcomes, labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `handler-boundary-counts` | Three handler calls after the positive vectors; the four host-refused negatives add rejections and no calls |
+| `operation-not-declared` | Writing the read-only Property is `:compatible_form_not_found` before any transport |
+| `out-of-range-refused` | `99.0` is `:permanent` with cause `:input_out_of_range`; `"hot"` is `:invalid_input_type` |
+| `unauthorized-refused` | A wrong token is `:unauthorized` and the token never appears |
+| `thing-level-unsupported` | Thing-level operations are `:unsupported_operation` |
+| `explicit-effect` | `setTarget` changed `target` to `23.0` only through the declared effect |
+| `exposed-thing-direct` | The direct handler answers `19.5`; an undeclared operation is `:handler_not_found` |
+
+```elixir
+%{
+  "handler-boundary-counts" =>
+    after_positive.handler_calls == 3 and after_positive.rejected == 0 and
+      after_negative.handler_calls == 3 and after_negative.rejected == 4,
+  "operation-not-declared" => readonly_code == :compatible_form_not_found,
+  "out-of-range-refused" =>
+    range_class == :permanent and range.details.cause.code == :input_out_of_range and
+      wrong_type.details.cause.code == :invalid_input_type,
+  "unauthorized-refused" =>
+    unauthorized.details.cause.code == :unauthorized and not (inspect(unauthorized) =~ token) and
+      labels_safe?,
+  "thing-level-unsupported" => thing_level_code == :unsupported_operation,
+  "explicit-effect" =>
+    read_payload == vectors["loopback:read-temperature"]["payload"] and
+      after_negative.state["target"] == 23.0 and write_status == :ok and invoke_status == :accepted,
+  "exposed-thing-direct" =>
+    direct_read == {:ok, 19.5, :ok, :unchanged} and
+      match?({:error, %Error{code: :handler_not_found}}, direct_missing)
+}
+```
+
+## Public seam
+
+`runtime.transport` — `Wotex.Runtime.Transport.request/3`, `subscribe/4`,
+`unsubscribe/4`, `decode_frame/3` (consumer-implements; `Loopback`).
+`runtime.credentials` — `Wotex.Runtime.Credentials.resolve/4` (`StaticRef`).
+
+## Spec and completion IDs
+
+* Lab: WLB.04 (`WLB-C04`, `WLB-C08`).
+* Upstream consumer evidence: `RT-C03`.
+
+## Replacement adapter
+
+To expose a Thing over a real protocol, keep `ExposedThing.new/2` as the
+handler boundary and put your own ingress in front of it: decode the wire
+request, check that the selected Form declares the operation, check the
+Form's security against the credential you received, validate the input, and
+only then call `dispatch/5`. The Lab host is the reference for that order;
+nothing in the runtime package performs those checks for you.

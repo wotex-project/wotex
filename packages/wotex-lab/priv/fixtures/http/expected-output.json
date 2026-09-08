@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "fixture": "http-room",
+  "server": {
+    "GET properties/temperature": {"status": 200, "body": "21.5"},
+    "PUT properties/target": {"status": 204, "authorization": "Bearer <token>"},
+    "POST actions/set-target": {"status": 202, "body": "{\"status\":\"pending\",\"input\":<input>}"},
+    "GET properties/large": {"status": 200, "bytes": 4098},
+    "GET properties/slow": {"status": 200, "delay_ms": 400},
+    "GET properties/redirect": {"status": 302},
+    "GET properties/html": {"status": 200, "content_type": "text/html"},
+    "GET properties/temperature/observe": {"status": 200, "content_type": "text/event-stream"}
+  },
+  "vectors": {
+    "http:read-temperature": {"status": "ok", "payload": 21.5, "http_status": 200},
+    "http:write-target": {"status": "ok", "payload": null},
+    "http:invoke-set-target": {"status": "accepted", "payload": {"status": "pending", "input": 24}},
+    "http:observe-frame": {"value": 22.5, "event": "temperature", "id": "41", "retry": 250},
+    "http:oversized": {"class": "unavailable", "cause": "client_request_failed"},
+    "http:deadline": {"class": "timeout"},
+    "http:redirect": {"class": "permanent", "cause": "http_status"},
+    "http:wrong-media-type": {"class": "protocol", "cause": "unexpected_response_media_type"},
+    "http:unauthorized": {"class": "permanent", "cause": "http_status"},
+    "http:stream-closed": {"status": "transport_down"}
+  }
+}

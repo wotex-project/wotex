@@ -6,7 +6,9 @@ defmodule Wotex.Lab.Check.Package do
 
   @required ~w(lib/wotex/lab.ex mix.exs README.md LICENSE NOTICE
                docs/specs/catalogue.yaml docs/plans/wotex-lab-completion.md priv/models/manifest.json
-               docs/provenance/source-index.json priv/fixtures/thermal/thing-description.json)
+               docs/provenance/source-index.json priv/fixtures/thermal/thing-description.json
+               priv/fixtures/thermal/manifest.json priv/fixtures/thermal/expected-output.json
+               priv/cookbooks/thermal-nx.livemd priv/cookbooks/smart-room.livemd)
   @excluded ~r{\A(?:docs/tasks|deps|_build|test|bin|\.git)(?:/|\z)}
 
   def run do

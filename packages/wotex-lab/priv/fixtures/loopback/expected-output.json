@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "fixture": "loopback-room",
+  "initial_state": {"temperature": 20.0, "target": 21.0},
+  "vectors": {
+    "loopback:read-temperature": {"operation": "readproperty", "status": "ok", "payload": 20.0},
+    "loopback:write-target": {"operation": "writeproperty", "input": 24.5, "status": "ok"},
+    "loopback:invoke-set-target": {"operation": "invokeaction", "input": 23.0, "status": "accepted"},
+    "loopback:observe-sample": {"value": 21.5, "observed_at": 1000},
+    "loopback:write-readonly": {"code": "compatible_form_not_found"},
+    "loopback:write-out-of-range": {"input": 99.0, "cause": "input_out_of_range", "class": "permanent"},
+    "loopback:write-wrong-type": {"input": "hot", "cause": "invalid_input_type"},
+    "loopback:unauthorized": {"cause": "unauthorized", "handler_calls": 0},
+    "loopback:thing-level-unsupported": {"code": "unsupported_operation"},
+    "loopback:session-lost": {"status": "session_lost"}
+  }
+}

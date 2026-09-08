@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.1.0",
+  "id": "directory-room",
+  "title": "Registrable Thing Description with discovery registration information",
+  "scenario": "directory",
+  "specs": [
+    "WLB.05",
+    "WTD.01",
+    "WTX.01"
+  ],
+  "seams": [
+    "directory.repository",
+    "directory.authorization",
+    "directory.clock",
+    "directory.identifier"
+  ],
+  "operations": [
+    "register",
+    "get",
+    "replace",
+    "patch",
+    "delete",
+    "list",
+    "expire"
+  ],
+  "media_type": "application/td+json",
+  "source_mode": "synthetic",
+  "license": "Apache-2.0",
+  "provenance": {
+    "author": "wotex-lab",
+    "created": "2026-09-08",
+    "synthetic": true,
+    "statement": "Hand-written consumer-neutral fixture; no device, vendor or private product data."
+  },
+  "input": "thing-description.json",
+  "input_sha256": "32b60ccc6d404f9edb4e646b31e74d03ea74b26544f38b635ab41fa9400d4906",
+  "expected_output": "expected-output.json",
+  "expected_output_sha256": "1751b3159d0a2416c71e66cc3e6508c57dc7c7cd6641ddcc7b77937d84fbfe6e",
+  "vectors": {
+    "positive": [
+      "directory:register-created",
+      "directory:register-replaced",
+      "directory:page-order",
+      "directory:same-contract-both-stores"
+    ],
+    "negative": [
+      "directory:conditional-conflict",
+      "directory:cursor-invalidated",
+      "directory:expired-after-ttl",
+      "directory:forbidden-context"
+    ]
+  },
+  "side_effects": []
+}

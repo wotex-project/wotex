@@ -1,0 +1,435 @@
+# Continuum compatibility, values, disconnect and replay, inert intents
+
+## Goal
+
+Carry continuum values between a simulated edge and a simulated cloud host
+over the Lab's bounded in-memory channel: a manifest is admitted only when it
+is compatible, an intent that arrives before any manifest is inert, a
+duplicated intent dispatches once, reordered and dropped proposals never move
+the observed state backwards, a disconnection replays unacknowledged
+deliveries without a second mutation, and capacity is bounded. The checked-in
+fixture is the canonical manifest bytes produced by the continuum codec.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"}
+])
+```
+
+The requirement above is a published-artifact requirement. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout. No network is used;
+the channel and both endpoints live in this VM.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Value kinds, canonical codec, compatibility, lifecycle | `wotex_continuum` (package-implements) | `WotexContinuum.Codec`, `Manifest`, `Compatibility`, `Lifecycle` |
+| Action dispatch on the cloud side | `wotex_runtime` (package-implements) | `Wotex.Runtime.ConsumedThing.invoke_action/4` |
+| Channel, delivery records, fault schedule, disconnect and replay | `wotex_lab` (consumer) | `Wotex.Lab.Continuum.Channel`, `FaultSchedule` |
+| Admission, watermarks, at-most-once dispatch, remote context | `wotex_lab` host (consumer) | `Wotex.Lab.Continuum.Host` |
+| Wire conversions from Nx and runtime values | `wotex_lab` (consumer) | `Wotex.Lab.Continuum.Wire` |
+
+Continuum intent is owned by the consumer host: the package defines the
+value; the Lab host decides whether an intent is executed, once, or refused.
+
+## Run
+
+```elixir
+alias Wotex.Lab
+alias Wotex.Lab.Adapters.Runtime.{Loopback, StaticRef}
+alias Wotex.Lab.Continuum.{Channel, FaultSchedule, Host, Wire}
+alias Wotex.Lab.Reference.Thing
+alias Wotex.Lab.Telemetry
+alias Wotex.Nx.Observation
+alias Wotex.Runtime.{BindingProfile, ConsumedThing}
+alias Wotex.ThingDescription
+
+alias WotexContinuum.{
+  ActionIntent,
+  ActionResult,
+  Capability,
+  Codec,
+  Compatibility,
+  Delivery,
+  ExecutionScope,
+  Lifecycle,
+  Manifest,
+  Mode
+}
+
+telemetry_id = "cookbook-continuum-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception, :measurement],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+epoch = ~U[2026-09-08 10:00:00Z]
+clock = fn -> epoch end
+```
+
+The fixture manifest decodes through the public codec; the host's capability
+satisfies the manifest's compatibility requirement.
+
+```elixir
+fixture_dir = Application.app_dir(:wotex_lab, "priv/fixtures/continuum")
+{:ok, manifest} = fixture_dir |> Path.join("continuum-manifest.json") |> File.read!() |> Codec.decode()
+{:ok, expected} = fixture_dir |> Path.join("expected-output.json") |> File.read!() |> Wotex.JSON.decode()
+
+{:ok, capability} =
+  Capability.from_map(%{
+    id: "observation-forwarding",
+    version: "2.1.0",
+    operations: ["forward"],
+    modes: [:hybrid, :saas],
+    network: :external,
+    degradation: :queue
+  })
+
+{:ok, mode} = Mode.from_map(%{deployment: :hybrid, connectivity: :connected})
+
+scope = fn node_id ->
+  {:ok, scope} =
+    ExecutionScope.from_map(%{execution_id: "exec-1", node_id: node_id, mode: mode, observed_at: epoch})
+
+  scope
+end
+
+{manifest.manifest_id, Manifest.compatible_with?(manifest, WotexContinuum.schema_version(), [capability])}
+```
+
+The cloud side owns a consumed loopback Thing; the edge is this process.
+Each channel is started with an explicit fault schedule and clock, and a host
+attaches to its `cloud` endpoint.
+
+```elixir
+{:ok, lab} = Lab.start_link(id: "continuum", max_children: 32)
+{:ok, td} = Application.app_dir(:wotex_lab, "priv/fixtures/loopback/thing-description.json") |> File.read!() |> ThingDescription.parse()
+thing_id = ThingDescription.id(td)
+
+{:ok, thing} =
+  Lab.start_child(
+    lab,
+    :things,
+    {Thing, td: td, state: %{"temperature" => 20.0, "target" => 21.0}, tokens: %{"bearer_sc" => "room-token"}}
+  )
+
+{:ok, profile} = BindingProfile.new(id: :loopback, schemes: ["loopback"], operations: Wotex.Runtime.operations())
+
+{:ok, consumed} =
+  ConsumedThing.new(td,
+    profiles: [profile],
+    transports: %{loopback: {Loopback, %{host: thing}}},
+    credentials: {StaticRef, %{references: %{"bearer_sc" => "ref"}, lookup: fn "ref" -> {:ok, "room-token"} end}}
+  )
+
+pair = fn id, faults ->
+  {:ok, channel} =
+    Lab.start_child(lab, :sessions, {Channel, id: id, clock: clock, capacity: 8, faults: faults})
+
+  {:ok, host} =
+    Lab.start_child(
+      lab,
+      :sessions,
+      {Host,
+       id: {:host, id},
+       channel: channel,
+       endpoint: "cloud",
+       clock: clock,
+       things: %{thing_id => consumed},
+       capabilities: [capability]}
+    )
+
+  :ok = Channel.attach(channel, "edge-a", self())
+  {channel, host}
+end
+
+wait_until = fn read, predicate ->
+  Enum.reduce_while(1..200, read.(), fn _attempt, value ->
+    if predicate.(value), do: {:halt, value}, else: (Process.sleep(5) && {:cont, read.()})
+  end)
+end
+
+{:ok, intent} =
+  ActionIntent.from_map(%{
+    intent_id: "intent-1",
+    thing_id: thing_id,
+    action_name: "setTarget",
+    input: 22.0,
+    requested_at: epoch,
+    idempotency_key: "set-22",
+    context: scope.("edge-a")
+  })
+
+{:ok, faults} = FaultSchedule.new(duplicate: [2])
+FaultSchedule.version()
+```
+
+Compatibility gates intents. Before any manifest, an intent is recorded and
+refused as stale authority; an incompatible manifest is refused; the fixture
+manifest is admitted.
+
+```elixir
+{plain, plain_host} = pair.(:plain, [])
+
+{:ok, _delivery} = Channel.send_value(plain, "edge-a", "cloud", intent)
+stats = wait_until.(fn -> Host.stats(plain_host) end, &(length(&1.rejected) == 1))
+[%{reason: before_manifest}] = stats.rejected
+calls_before = Thing.stats(thing).handler_calls
+
+{:ok, incompatible_requirement} =
+  Compatibility.from_map(%{
+    schema_requirement: "~> 2.0",
+    required_capabilities: [%{id: "observation-forwarding", version_requirement: ">= 9.0.0"}]
+  })
+
+{:ok, incompatible} =
+  Manifest.from_map(%{
+    manifest_id: "manifest-old",
+    artifact: %{name: "edge-worker", version: "0.0.1", digest: "sha256:" <> String.duplicate("b", 64)},
+    compatibility: incompatible_requirement,
+    supported_modes: [:hybrid],
+    capabilities: []
+  })
+
+{:ok, _delivery} = Channel.send_value(plain, "edge-a", "cloud", incompatible)
+stats = wait_until.(fn -> Host.stats(plain_host) end, &(length(&1.rejected) == 2))
+incompatible_reason = stats.rejected |> List.last() |> Map.fetch!(:reason)
+
+{:ok, _delivery} = Channel.send_value(plain, "edge-a", "cloud", manifest)
+stats = wait_until.(fn -> Host.stats(plain_host) end, &(&1.manifests == ["manifest-edge-a"]))
+{before_manifest, calls_before, incompatible_reason, stats.manifests}
+```
+
+A duplicated delivery of the intent (fault schedule: sequence 2 twice)
+dispatches once; the result crosses back to the edge as an `action_result`.
+
+```elixir
+{dup, dup_host} = pair.(:duplicate, duplicate: [2])
+{:ok, _delivery} = Channel.send_value(dup, "edge-a", "cloud", manifest)
+{:ok, _delivery} = Channel.send_value(dup, "edge-a", "cloud", intent)
+stats = wait_until.(fn -> Host.stats(dup_host) end, &(length(&1.received) == 3))
+
+result =
+  receive do
+    {:wotex_continuum, "edge-a", delivery_id, wire} ->
+      :ok = Channel.ack(dup, delivery_id)
+      {:ok, %ActionResult{} = decoded} = Codec.decode(wire)
+      decoded
+  after
+    2_000 -> :no_result
+  end
+
+dup_dispatches = stats.dispatches
+dup_calls = Thing.stats(thing).handler_calls
+{dup_dispatches, Enum.map(stats.rejected, & &1.reason), dup_calls, result.status}
+```
+
+Reordering and loss: sequence 3 is held until sequence 4 is sent, and
+sequence 5 is dropped. The watermark keeps the observed value at the highest
+admitted sequence.
+
+```elixir
+{ordered, ordered_host} = pair.(:ordered, hold: %{3 => 4}, drop: [5])
+{:ok, _delivery} = Channel.send_value(ordered, "edge-a", "cloud", manifest)
+
+proposal = fn sequence, value ->
+  {:ok, observation} =
+    Observation.new(
+      id: "obs-#{sequence}",
+      thing_id: thing_id,
+      affordance_type: :property,
+      affordance_name: "temperature",
+      observed_at: sequence * 1_000,
+      value: value,
+      unit: "Cel"
+    )
+
+  {:ok, proposal} = Wire.proposal_from_observation(observation, scope.("edge-a"), epoch, sequence: sequence)
+  proposal
+end
+
+for {sequence, value} <- [{1, 20.0}, {2, 21.0}, {3, 22.0}] do
+  {:ok, _delivery} = Channel.send_value(ordered, "edge-a", "cloud", proposal.(sequence, value))
+end
+
+stats = wait_until.(fn -> Host.stats(ordered_host) end, &(length(&1.received) == 4))
+observed = stats.observations[{thing_id, :property, "temperature"}]
+{:ok, %Delivery{status: dropped_status, error: dropped_error}} = Channel.send_value(ordered, "edge-a", "cloud", proposal.(4, 30.0))
+after_drop = Host.stats(ordered_host).observations[{thing_id, :property, "temperature"}]
+
+{Enum.map(stats.received, & &1.item_id), Enum.map(stats.rejected, & &1.reason), observed.sequence, dropped_status, dropped_error, after_drop.sequence}
+```
+
+Disconnect and replay: a silent endpoint never acknowledges, so the delivery
+stays in flight; a disconnected channel buffers new sends as `pending`, and a
+reconnect replays both with a new attempt. The same replay against a real
+host produces one dispatch.
+
+```elixir
+{:ok, silent_channel} = Lab.start_child(lab, :sessions, {Channel, id: :silent, clock: clock})
+:ok = Channel.attach(silent_channel, "silent", self())
+{:ok, first} = Channel.send_value(silent_channel, "edge-a", "silent", manifest)
+
+first_seen =
+  receive do
+    {:wotex_continuum, "silent", id, _wire} -> id
+  after
+    500 -> :nothing
+  end
+
+:ok = Channel.disconnect(silent_channel)
+{:ok, buffered} = Channel.send_value(silent_channel, "edge-a", "silent", capability)
+
+while_disconnected =
+  receive do
+    {:wotex_continuum, "silent", _id, _wire} -> :delivered
+  after
+    50 -> :nothing
+  end
+
+:ok = Channel.reconnect(silent_channel)
+
+replayed =
+  for _copy <- 1..2 do
+    receive do
+      {:wotex_continuum, "silent", id, _wire} -> id
+    after
+      500 -> :nothing
+    end
+  end
+
+attempts = silent_channel |> Channel.deliveries() |> Enum.map(& &1.attempt)
+
+{replay, replay_host} = pair.(:replay, [])
+:ok = Channel.disconnect(replay)
+{:ok, _manifest} = Channel.send_value(replay, "edge-a", "cloud", manifest)
+{:ok, _intent} = Channel.send_value(replay, "edge-a", "cloud", intent)
+:ok = Channel.reconnect(replay)
+replay_stats = wait_until.(fn -> Host.stats(replay_host) end, &(map_size(&1.dispatches) == 1))
+
+{first.delivery_id == first_seen, buffered.status, while_disconnected, Enum.sort(replayed) == Enum.sort([first.delivery_id, buffered.delivery_id]), attempts, replay_stats.dispatches}
+```
+
+## Deliberate breakage
+
+Capacity is the number of unacknowledged deliveries; the third send on a
+capacity-two channel is refused. A draining host refuses intents, and an
+unregistered value is refused by the channel before encoding.
+
+```elixir
+{:ok, bounded} = Lab.start_child(lab, :sessions, {Channel, id: :bounded, clock: clock, capacity: 2})
+:ok = Channel.attach(bounded, "silent", self())
+{:ok, _one} = Channel.send_value(bounded, "edge-a", "silent", mode)
+{:ok, _two} = Channel.send_value(bounded, "edge-a", "silent", mode)
+{:error, %Wotex.Lab.Error{code: capacity_code, class: capacity_class}} = Channel.send_value(bounded, "edge-a", "silent", mode)
+
+{:ok, %Lifecycle{state: draining_state}} = Host.drain(plain_host)
+{:ok, _delivery} = Channel.send_value(plain, "edge-a", "cloud", intent)
+plain_stats = wait_until.(fn -> Host.stats(plain_host) end, &(length(&1.rejected) == 3))
+draining_reason = plain_stats.rejected |> List.last() |> Map.fetch!(:reason)
+
+{:error, %Wotex.Lab.Error{code: unregistered_code}} = Channel.send_value(plain, "edge-a", "cloud", %{"kind" => "x"})
+{capacity_code, capacity_class, draining_state, draining_reason, unregistered_code}
+```
+
+```elixir
+:ok = Supervisor.stop(lab)
+```
+
+## Safe telemetry
+
+Codec spans label the operation and the value kind; byte counts are
+measurements. Thing ids, inputs and wire bytes never become labels.
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+kinds =
+  for {[:wotex, :lab, :continuum, :codec, :measurement], %{bytes: bytes}, %{kind: kind}} <- spans,
+      do: {kind, bytes}
+
+text = inspect(spans)
+labels_safe? = kinds != [] and not (text =~ thing_id) and not (text =~ "22.0")
+{kinds |> Enum.map(&elem(&1, 0)) |> Enum.uniq(), labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `manifest-compatible` | The fixture manifest is compatible and admitted as `manifest-edge-a` |
+| `manifest-incompatible` | A `>= 9.0.0` requirement is refused as `:incompatible_manifest` |
+| `intent-without-manifest-inert` | The early intent is `:stale_authority` and the Thing handler was never called |
+| `duplicate-intent-once` | One dispatch, one `:duplicate_intent` refusal, one handler call, an `:accepted` result |
+| `reordered-proposal-stale` | Received order `obs-1, obs-3, obs-2`; `obs-2` is `:stale_observation`; watermark 3 |
+| `dropped-delivery` | Sequence 5 is `failed` with error `dropped` and the watermark stays 3 |
+| `replay-after-reconnect` | Both deliveries replay with attempts `[2, 1]`; the real host dispatches once |
+| `capacity-bounded` | The third unacknowledged send is `:capacity_exhausted`, class `:unavailable` |
+
+```elixir
+vectors = expected["vectors"]
+
+%{
+  "manifest-compatible" =>
+    Manifest.compatible_with?(manifest, WotexContinuum.schema_version(), [capability]) == :ok and
+      stats.manifests == ["manifest-edge-a"] and
+      manifest.manifest_id == vectors["continuum:manifest-compatible"]["manifest_id"],
+  "manifest-incompatible" => incompatible_reason == :incompatible_manifest,
+  "intent-without-manifest-inert" => before_manifest == :stale_authority and calls_before == 0,
+  "duplicate-intent-once" =>
+    match?(%{"set-22" => %{duplicates: 1, outcome: {:ok, :accepted}}}, dup_dispatches) and
+      result.status == :accepted and dup_calls == 1,
+  "reordered-proposal-stale" =>
+    Enum.map(stats.received, & &1.item_id) == ["manifest-edge-a", "obs-1", "obs-3", "obs-2"] and
+      Enum.map(stats.rejected, & &1.reason) == [:stale_observation] and observed.sequence == 3,
+  "dropped-delivery" => dropped_status == :failed and dropped_error.code == "dropped" and after_drop.sequence == 3,
+  "replay-after-reconnect" =>
+    buffered.status == :pending and while_disconnected == :nothing and attempts == [2, 1] and
+      match?(%{"set-22" => %{duplicates: 0}}, replay_stats.dispatches),
+  "capacity-bounded" =>
+    capacity_code == :capacity_exhausted and capacity_class == :unavailable and
+      draining_reason == :host_not_accepting and unregistered_code == :invalid_continuum_value and
+      labels_safe?
+}
+```
+
+## Public seam
+
+`lab.continuum_channel` is Lab-owned: the package defines values and the
+codec, and the Lab channel and host implement transport, admission and
+at-most-once dispatch. The runtime seam `runtime.transport` carries the
+dispatched Action.
+
+## Spec and completion IDs
+
+* Lab: WLB.05 (`WLB-C05`, `WLB-C08`).
+* Upstream consumer evidence: `WCT-C01`, `WCT-C02`, `WCT-C03`, `WCT-C04`.
+
+## Replacement adapter
+
+Replace the in-memory channel with a real transport that delivers the
+canonical bytes from `WotexContinuum.Codec.encode/2` and reports the same
+`WotexContinuum.Delivery` states. Keep the host's rules: no intent without an
+admitted manifest, one dispatch per idempotency key, and a watermark per
+affordance. Nothing in the package or the channel grants execution; the host
+does, once.

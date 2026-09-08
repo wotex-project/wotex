@@ -1,0 +1,267 @@
+# Windows, quality, masks and anomaly thresholds over a synthetic stream
+
+## Goal
+
+Resample a versioned synthetic temperature stream into a window, encode it
+with an explicit fill policy so bad-quality samples become masked rows, score
+the last observed value against the window mean with a small `defn`, and
+decode the score as an inert anomaly with a threshold. The Lab convenience
+`Wotex.Lab.Examples.WindowAnomaly.run/1` is shown beside the `wotex_nx`
+calls it makes.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:nx, "~> 0.13.1"}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout. The data is synthetic
+and labeled so; no model is trained and no accuracy is claimed.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Window layout, resampling strategies, fills, masks, quality codes, dtype limits | `wotex_nx` (package-implements) | `Wotex.Nx.Window`, `Encoder`, `Decoder`, `OutputSchema` |
+| The synthetic stream, its equation, seed and glitch schedule | `wotex_lab` (consumer) | `Wotex.Lab.Simulators.Thermal` |
+| The score `defn`, threshold and persistence baseline | `wotex_lab` (consumer) | `Wotex.Lab.Examples.WindowAnomaly` |
+
+## Run
+
+```elixir
+alias Wotex.DataSchema
+alias Wotex.Lab.Examples.WindowAnomaly
+alias Wotex.Lab.Simulators.Thermal
+alias Wotex.Lab.Telemetry
+alias Wotex.Nx.{Anomaly, Decoder, Encoder, Feature, Observation, OutputSchema, Row, Schema, Window}
+
+telemetry_id = "cookbook-window-anomaly-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+```
+
+The convenience lane: a heater step at sample 28 and a sensor glitch at 30.
+
+```elixir
+{:ok, heated} = WindowAnomaly.run(seed: 7, heater: %{28 => 4.0}, glitches: [30])
+{:ok, repeated} = WindowAnomaly.run(seed: 7, heater: %{28 => 4.0}, glitches: [30])
+{:ok, quiet} = WindowAnomaly.run(seed: 7)
+
+%{
+  heated: heated.anomaly,
+  quiet_score: Nx.to_number(quiet.score),
+  window: heated.manifest["window"],
+  deterministic?: heated.anomaly == repeated.anomaly and Nx.to_number(heated.score) == Nx.to_number(repeated.score)
+}
+```
+
+The same lane through the package API. The simulator records its equation
+and inputs in a manifest; every sample is a synthetic Celsius value.
+
+```elixir
+simulation = Thermal.generate(seed: 7, count: 32, heater: %{28 => 4.0}, glitches: [30])
+{:ok, observations} = WindowAnomaly.observations(simulation.samples)
+thing_id = "urn:wotex:lab:room:simulated"
+
+{:ok, data_schema} = DataSchema.new(%{"type" => "number", "unit" => "Cel"})
+
+{:ok, feature} =
+  Feature.new(
+    name: "temperature",
+    thing_id: thing_id,
+    affordance_type: :property,
+    affordance_name: "temperature",
+    data_schema: data_schema,
+    accepted_quality: [:good, :uncertain],
+    missing: {:fill, 18.0}
+  )
+
+{:ok, schema} = Schema.new(features: [feature], max_rows: 64)
+{:ok, window} = Window.new(start: 24_000, step: 1_000, count: 8, strategy: :latest)
+{:ok, rows} = Window.resample(observations, schema, window)
+
+{:ok, encoded} =
+  Nx.with_default_backend(Nx.BinaryBackend, fn -> Encoder.encode(rows, schema) end)
+
+{{_values}, {masks}, quality} =
+  Nx.Defn.jit_apply(&Function.identity/1, [encoded], compiler: Nx.Defn.Evaluator)
+
+%{
+  equation: simulation.manifest["equation"],
+  masks: Nx.to_flat_list(masks),
+  quality: Nx.to_flat_list(quality),
+  glitch_row: Enum.at(rows, 6).provenance["temperature"]
+}
+```
+
+Score and decode: the threshold is rounded to the output dtype, and the
+decoder rejects any output whose shape or dtype disagrees with the schema.
+
+```elixir
+score =
+  Nx.with_default_backend(Nx.BinaryBackend, fn ->
+    Nx.Defn.jit_apply(&WindowAnomaly.score/1, [encoded], compiler: Nx.Defn.Evaluator)
+  end)
+
+{:ok, score_schema} = DataSchema.new(%{"type" => "number", "minimum" => 0})
+
+{:ok, anomaly_output} =
+  OutputSchema.new(
+    kind: :anomaly,
+    thing_id: thing_id,
+    affordance_type: :property,
+    affordance_name: "temperature",
+    data_schema: score_schema,
+    dtype: :f32,
+    threshold: 1.5,
+    anomaly_rule: :at_or_above
+  )
+
+{:ok, anomaly} = Decoder.decode(score, anomaly_output, id: "anomaly-31000", produced_at: 31_000)
+{Nx.to_number(score), anomaly}
+```
+
+## Deliberate breakage
+
+Stale windows, Kelvin observations against a Celsius feature, and integers
+outside an `s8` feature are refused with typed errors instead of values.
+
+```elixir
+{:error, stale} = WindowAnomaly.run(seed: 3, window_start: 1_000_000, max_age: 0)
+
+{:ok, kelvin} =
+  Observation.new(
+    id: "kelvin",
+    thing_id: thing_id,
+    affordance_type: :property,
+    affordance_name: "temperature",
+    observed_at: 0,
+    value: 293.15,
+    unit: "K"
+  )
+
+{:ok, kelvin_row} = Row.new(0, %{"temperature" => kelvin})
+{:error, kelvin_error} = Encoder.encode([kelvin_row], schema)
+
+{:ok, integer_schema} = DataSchema.new(%{"type" => "integer"})
+
+{:ok, count_feature} =
+  Feature.new(
+    name: "count",
+    thing_id: thing_id,
+    affordance_type: :property,
+    affordance_name: "count",
+    data_schema: integer_schema,
+    dtype: :s8
+  )
+
+{:ok, count_schema} = Schema.new(features: [count_feature])
+
+{:ok, big} =
+  Observation.new(
+    id: "big",
+    thing_id: thing_id,
+    affordance_type: :property,
+    affordance_name: "count",
+    observed_at: 0,
+    value: 200
+  )
+
+{:ok, big_row} = Row.new(0, %{"count" => big})
+{:error, dtype_error} = Encoder.encode([big_row], count_schema)
+
+{:error, shape_error} =
+  Decoder.decode(Nx.tensor([1.0, 2.0], type: :f32), anomaly_output, id: "bad", produced_at: 0)
+
+{stale, kelvin_error.code, dtype_error.code, shape_error.code}
+```
+
+## Safe telemetry
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+profiles =
+  for {[:wotex, :lab, :nx, operation, :stop], _measurements, metadata} <- spans,
+      do: {operation, metadata.profile}
+
+labels_safe? = not (inspect(spans) =~ "urn:wotex") and not (inspect(spans) =~ "18.0")
+{Enum.uniq(profiles), labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `heater-anomalous` | The heated run scores at or above `1.5` and is `anomalous?: true` |
+| `quiet-not-anomalous` | The quiet run scores below `0.5` |
+| `deterministic` | The same seed and schedule give the same anomaly and score |
+| `glitch-masked` | Row 6 of the window has mask `0` and quality code `2` (`:bad`) |
+| `stale-window-refused` | A window past every sample yields `:no_observed_row` |
+| `kelvin-refused` | Encoding fails with `:unit_conversion_required` |
+| `dtype-refused` | `200` in `s8` fails with `:dtype_value_out_of_range`; a vector output is `:output_shape_mismatch` |
+
+```elixir
+%{
+  "heater-anomalous" =>
+    match?(%Anomaly{anomalous?: true, threshold: 1.5, rule: :at_or_above}, heated.anomaly) and
+      anomaly.anomalous? and Nx.to_number(score) >= 1.5,
+  "quiet-not-anomalous" => match?(%Anomaly{anomalous?: false}, quiet.anomaly) and Nx.to_number(quiet.score) < 0.5,
+  "deterministic" =>
+    heated.anomaly == repeated.anomaly and Nx.to_number(heated.score) == Nx.to_number(score),
+  "glitch-masked" =>
+    Nx.to_flat_list(masks) == [1, 1, 1, 1, 1, 1, 0, 1] and
+      Nx.to_flat_list(quality) == [0, 0, 0, 0, 0, 0, 2, 0] and
+      Enum.at(rows, 6).provenance["temperature"] == "sim-30",
+  "stale-window-refused" => stale == :no_observed_row,
+  "kelvin-refused" => kelvin_error.code == :unit_conversion_required,
+  "dtype-refused" =>
+    dtype_error.code == :dtype_value_out_of_range and shape_error.code == :output_shape_mismatch and
+      labels_safe?
+}
+```
+
+## Public seam
+
+`nx.unit_converter` is not used here on purpose: the feature and the
+observations share a unit, and a mismatch is a typed refusal. The lane
+exercises `Wotex.Nx.Window` and the encoder/decoder contract of `WNX.01`.
+
+## Spec and completion IDs
+
+* Lab: WLB.03 `window-anomaly` lane (`WLB-C03`, `WLB-C08`).
+* Upstream consumer evidence: `WNX-C01`, `WNX-C02`, `WNX-C04`.
+
+## Replacement adapter
+
+Replace the simulator with your own observation source by producing
+`Wotex.Nx.Observation` values with the Thing id, affordance, time, unit and
+quality your device reports; `Window.resample/3` and the encoder do not care
+where they came from. Replace `WindowAnomaly.score/1` with any function that
+accepts the `{{values}, {masks}, quality}` container and returns a scalar of
+the declared dtype; keep decoding through `Decoder.decode/3` so the
+threshold and schema are applied.

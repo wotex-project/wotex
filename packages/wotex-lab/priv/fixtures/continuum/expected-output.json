@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "fixture": "continuum-manifest",
+  "vectors": {
+    "continuum:manifest-compatible": {"manifest_id": "manifest-edge-a", "schema_requirement": "~> 2.0", "accepted": true},
+    "continuum:manifest-incompatible": {"requirement": ">= 9.0.0", "reason": "incompatible_manifest"},
+    "continuum:intent-without-manifest": {"reason": "stale_authority", "handler_calls": 0},
+    "continuum:duplicate-intent": {"reason": "duplicate_intent", "dispatches": 1},
+    "continuum:reordered-proposal": {"reason": "stale_observation", "admitted_sequence": 3},
+    "continuum:dropped-delivery": {"status": "failed", "error": "dropped"},
+    "continuum:replay-after-reconnect": {"attempt": 2, "dispatches": 1},
+    "continuum:capacity-exhausted": {"code": "capacity_exhausted", "class": "unavailable"}
+  }
+}

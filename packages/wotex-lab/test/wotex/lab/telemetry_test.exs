@@ -97,6 +97,19 @@ defmodule Wotex.Lab.TelemetryTest do
     assert ref == Telemetry.thing_ref("urn:wotex:lab:room:1")
   end
 
+  test "the forwarding handler delivers filtered events to an explicit receiver" do
+    handler = "forward-#{System.unique_integer([:positive])}"
+
+    :ok =
+      :telemetry.attach(handler, [:wotex, :lab, :nx, :encode, :stop], &Telemetry.forward/4, self())
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+    assert :ok = Telemetry.span(:nx, :encode, %{profile: :forward}, fn -> :ok end)
+
+    assert_receive {:wotex_lab_telemetry, [:wotex, :lab, :nx, :encode, :stop], %{duration: _},
+                    %{profile: :forward, outcome: :ok}}
+  end
+
   test "a raising handler is detached by telemetry and never changes a span result" do
     handler = "raising-#{System.unique_integer([:positive])}"
 

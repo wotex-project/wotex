@@ -104,6 +104,20 @@ defmodule Wotex.Lab.Telemetry do
     |> Map.new()
   end
 
+  @doc """
+  A `:telemetry` handler that forwards an event to the pid given as handler config.
+
+  The receiver gets `{:wotex_lab_telemetry, event, measurements, metadata}`.
+  Attach it with `:telemetry.attach_many/4` as `&Wotex.Lab.Telemetry.forward/4`
+  so a notebook or host can inspect Lab spans without an anonymous handler;
+  the metadata has already passed `metadata/1` and carries no payload.
+  """
+  @spec forward([atom()], map(), map(), pid()) :: :ok
+  def forward(event, measurements, metadata, receiver) when is_pid(receiver) do
+    send(receiver, {:wotex_lab_telemetry, event, measurements, metadata})
+    :ok
+  end
+
   @doc "Derives a short non-reversible reference for a Thing id."
   @spec thing_ref(String.t()) :: String.t()
   def thing_ref(thing_id) when is_binary(thing_id) do

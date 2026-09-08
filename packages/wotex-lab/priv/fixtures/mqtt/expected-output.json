@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "fixture": "mqtt-room",
+  "retained": {
+    "<prefix>/properties/temperature": "21.5",
+    "<prefix>/properties/power": "2500"
+  },
+  "vectors": {
+    "mqtt:read-retained-temperature": {"status": "ok", "payload": 21.5, "retained": true},
+    "mqtt:read-retained-power": {"status": "ok", "payload": 2500, "retained": true},
+    "mqtt:write-target": {"status": "accepted", "topic": "<prefix>/properties/target", "payload": "23.5", "qos": 1},
+    "mqtt:invoke-set-target": {"status": "accepted", "topic": "<prefix>/actions/set-target", "payload": "24"},
+    "mqtt:observe-delivery": {"value": 21.5, "retained": false},
+    "mqtt:no-retained-message": {"code": "no_retained_message", "class": "protocol"},
+    "mqtt:oversized-delivery": {"dropped": true, "max_payload_bytes": 8},
+    "mqtt:transport-down": {"status": "transport_down"},
+    "mqtt:unreachable-broker": {"code": "mqtt_connect_refused", "class": "unavailable"}
+  }
+}

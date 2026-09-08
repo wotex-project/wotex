@@ -1,0 +1,352 @@
+# Both Directory stores: conflict, paging, expiry and request context
+
+## Goal
+
+Run the same public Directory contract against the Lab's two independent
+repository algorithms, the instance-owned ETS store and the SQLite store
+over Exqlite, and get the same answers from both: created and replaced
+versions, exactly one winner among competing conditional writes, keyset
+paging in a stable order, a cursor invalidated by a mutation, expiry after
+the registration's TTL, and authorization decided by the request context
+before any repository access. The SQLite store is then stopped and reopened
+from its file with its entries and revision intact.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:exqlite, "~> 0.40"}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout. The SQLite store
+writes only under a temporary directory named in this notebook and removed
+at the end.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Directory operations, mutations, pages, cursors, expiry, errors, events | `wotex_directory` (package-implements) | `Wotex.Directory`, `Wotex.Directory.Service` |
+| Repository storage (two algorithms) | `wotex_lab` (consumer-implements `Wotex.Directory.Repository`) | `Adapters.Directory.EtsRepository`, `SqliteRepository` |
+| Authorization policy, clock, identifiers | `wotex_lab` (consumer-implements the three ports) | `Adapters.Directory.Authorization`, `Clock`, `Identifier` |
+| Instance data directory and lifetime | consumer (this notebook) | `tmp_dir` and `Wotex.Lab.start_child/3` |
+
+## Run
+
+```elixir
+alias Wotex.Directory
+alias Wotex.Directory.{Context, Error, Expiry, Mutation, Page, Service}
+alias Wotex.Lab
+alias Wotex.Lab.Adapters.Directory.{Authorization, Clock, EtsRepository, Identifier, SqliteRepository}
+alias Wotex.Lab.Telemetry
+alias Wotex.ThingDescription
+
+telemetry_id = "cookbook-directory-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+
+fixture_dir = Application.app_dir(:wotex_lab, "priv/fixtures/directory")
+{:ok, room} = fixture_dir |> Path.join("thing-description.json") |> File.read!() |> ThingDescription.parse()
+{:ok, expected} = fixture_dir |> Path.join("expected-output.json") |> File.read!() |> Wotex.JSON.decode()
+{:ok, start} = DateTime.from_iso8601(expected["clock"]) |> then(fn {:ok, at, _offset} -> {:ok, at} end)
+
+thing = fn identifier, extra ->
+  base = %{
+    "@context" => Wotex.td_context_1_1(),
+    "title" => "Lab Thing",
+    "security" => ["nosec_sc"],
+    "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}}
+  }
+
+  base = if identifier, do: Map.put(base, "id", identifier), else: base
+
+  base =
+    if Map.has_key?(extra, "registration"),
+      do: Map.put(base, "@context", [Wotex.td_context_1_1(), "https://www.w3.org/2022/wot/discovery"]),
+      else: base
+
+  {:ok, td} = ThingDescription.from_map(Map.merge(base, extra))
+  td
+end
+
+ThingDescription.id(room)
+```
+
+Both stores under one instance. The clock is an explicit agent that a cell
+advances; identifiers are a counter; the policy for the first part allows
+everything, which is confined to disposable simulations.
+
+```elixir
+{:ok, lab} = Lab.start_link(id: "directory", max_children: 8)
+tmp_dir = Path.join(System.tmp_dir!(), "wotex-lab-cookbook-directory-#{System.unique_integer([:positive])}")
+File.mkdir_p!(tmp_dir)
+
+{:ok, ets} = Lab.start_child(lab, :things, {EtsRepository, id: :ets})
+{:ok, sqlite} = Lab.start_child(lab, :things, {SqliteRepository, id: :sqlite, path: tmp_dir})
+{:ok, clock} = Clock.start_link(start)
+
+service = fn module, repository, policy ->
+  {:ok, identifier} = Identifier.start_link()
+
+  {:ok, service} =
+    Service.new(
+      repository: {module, repository},
+      authorization: {Authorization, policy},
+      clock: {Clock, {:agent, clock}},
+      identifier: {Identifier, identifier},
+      introduction: room,
+      default_page_limit: 2,
+      max_page_limit: 4,
+      default_expiry_batch_limit: 2,
+      max_expiry_batch_limit: 4
+    )
+
+  {service, identifier}
+end
+
+context = Context.new!(:operator, repository: {:tenant, "room-1"})
+stores = [{EtsRepository, ets}, {SqliteRepository, sqlite}]
+```
+
+One contract, run through the public `Wotex.Directory` functions against a
+store, returning only statuses, versions, identifiers and error codes so the
+two stores can be compared directly.
+
+```elixir
+exercise = fn module, repository ->
+  {service, identifier} = service.(module, repository, :allow_all)
+  store = module |> Module.split() |> List.last() |> String.replace_suffix("Repository", "") |> String.downcase()
+  prefix = "urn:lab:#{store}"
+
+  {:ok, %Mutation{status: created_status, entry: created}} = Directory.register(service, room, context)
+  {:ok, %Mutation{status: replaced_status, entry: replaced}} = Directory.register(service, room, context)
+
+  {:ok, %Mutation{status: patched_status, entry: patched}} =
+    Directory.patch(service, ThingDescription.id(room), %{"title" => "Patched"}, context)
+
+  {:ok, fetched} = Directory.get(service, ThingDescription.id(room), context)
+
+  # Competing conditional replacements: exactly one wins.
+  race_id = "#{prefix}:race"
+  {:ok, %Mutation{entry: race}} = Directory.register(service, thing.(race_id, %{}), context)
+
+  results =
+    1..8
+    |> Task.async_stream(fn n ->
+      Directory.replace(service, race_id, thing.(race_id, %{"title" => "writer-#{n}"}), context,
+        if_version: race.version
+      )
+    end)
+    |> Enum.map(fn {:ok, result} -> result end)
+
+  winners = Enum.count(results, &match?({:ok, _mutation}, &1))
+  losers = Enum.count(results, &match?({:error, %Error{code: :conflict}}, &1))
+
+  # Keyset paging in identifier order; one entry expires under a 30 s TTL.
+  for suffix <- ["c", "a", "e", "b", "d"] do
+    ttl = if suffix == "b", do: %{"registration" => %{"ttl" => 30}}, else: %{}
+    {:ok, _mutation} = Directory.register(service, thing.("#{prefix}:list:#{suffix}", ttl), context)
+  end
+
+  {:ok, %Page{entries: page_one, next_cursor: cursor}} =
+    Directory.list(service, Context.new!(:operator), limit: 2)
+
+  Clock.advance(clock, 60)
+  {:ok, %Page{entries: page_two, next_cursor: _cursor}} = Directory.list(service, context, cursor: cursor, limit: 3)
+  {:ok, %Page{entries: fresh}} = Directory.list(service, context, limit: 4)
+  {:ok, %Page{next_cursor: stale}} = Directory.list(service, context)
+  {:ok, _mutation} = Directory.register(service, thing.("#{prefix}:list:f", %{}), context)
+  {:error, %Error{code: stale_code}} = Directory.list(service, context, cursor: stale)
+
+  # Expiry is bounded and repeatable: the room fixture (30 s TTL) and `b` are
+  # due; retained entries answer `:expired`, a purge removes them.
+  {:ok, %Expiry{strategy: retain, entries: retained}} = Directory.expire(service, context, strategy: :retain)
+  {:error, %Error{code: expired_code}} = Directory.get(service, "#{prefix}:list:b", context)
+  {:ok, %Expiry{strategy: purge, entries: purged}} = Directory.expire(service, context)
+  {:ok, %Expiry{entries: nothing_left}} = Directory.expire(service, context)
+
+  Agent.stop(identifier)
+
+  %{
+    "directory:register-created" => {created_status, created.version},
+    "directory:register-replaced" => {replaced_status, replaced.version, patched_status, patched.version},
+    "fetched-title" => ThingDescription.to_map(fetched.thing_description)["title"],
+    "directory:conditional-conflict" => {winners, losers},
+    "directory:page-order" =>
+      {Enum.map(page_one, &String.replace(&1.identifier, prefix, "")),
+       Enum.map(page_two, &String.replace(&1.identifier, prefix, ""))},
+    "fresh-excludes-expired" => not Enum.any?(fresh, &String.ends_with?(&1.identifier, ":list:b")),
+    "directory:cursor-invalidated" => stale_code,
+    "directory:expired-after-ttl" => {retain, length(retained), expired_code, purge, length(purged), length(nothing_left)}
+  }
+end
+
+outcomes = Map.new(stores, fn {module, repository} -> {module, exercise.(module, repository)} end)
+outcomes[EtsRepository]
+```
+
+## Deliberate breakage
+
+A scoped policy denies a stranger, a reader who tries to write, and a writer
+with the wrong tenant, all before the repository sees a call. A broken policy
+value is a typed authorization error, not a pass.
+
+```elixir
+policy = %{
+  reader: [:get, :list],
+  writer: {:tenant, "room-1", [:register, :get, :replace, :patch, :delete, :list, :expire]}
+}
+
+{scoped, scoped_identifier} = service.(EtsRepository, ets, policy)
+insert_calls_before = Map.get(EtsRepository.stats(ets).calls, :insert, 0)
+
+{:error, %Error{code: stranger_code}} =
+  Directory.register(scoped, thing.("urn:wotex:lab:scoped:1", %{}), Context.new!(:stranger))
+
+{:error, %Error{code: reader_code}} =
+  Directory.register(scoped, thing.("urn:wotex:lab:scoped:1", %{}), Context.new!(:reader))
+
+{:error, %Error{code: tenant_code}} =
+  Directory.register(
+    scoped,
+    thing.("urn:wotex:lab:scoped:1", %{}),
+    Context.new!(:writer, authorization: {:tenant, "room-2"})
+  )
+
+insert_calls_after = Map.get(EtsRepository.stats(ets).calls, :insert, 0)
+
+{:ok, _mutation} =
+  Directory.register(
+    scoped,
+    thing.("urn:wotex:lab:scoped:1", %{}),
+    Context.new!(:writer, authorization: {:tenant, "room-1"})
+  )
+
+{broken, broken_identifier} = service.(EtsRepository, ets, :not_a_policy)
+{:error, %Error{phase: broken_phase}} = Directory.get(broken, "urn:wotex:lab:scoped:1", Context.new!(:reader))
+Agent.stop(scoped_identifier)
+Agent.stop(broken_identifier)
+
+{stranger_code, reader_code, tenant_code, insert_calls_before == insert_calls_after, broken_phase}
+```
+
+The SQLite store survives its owner: stop it, reopen the same file, and the
+entries and the persisted collection revision are back. The ETS store is
+volatile by design and starts empty after a restart.
+
+```elixir
+before = SqliteRepository.stats(sqlite)
+file = SqliteRepository.database_path(sqlite)
+:ok = GenServer.stop(sqlite)
+{:ok, reopened} = SqliteRepository.start_link(path: tmp_dir)
+after_reopen = SqliteRepository.stats(reopened)
+{:ok, reopened_entry} = SqliteRepository.fetch(reopened, "urn:lab:sqlite:race", nil)
+:ok = GenServer.stop(reopened)
+
+sqlite_reopen? =
+  File.exists?(file) and before.revision == after_reopen.revision and before.size == after_reopen.size and
+    reopened_entry.version == 2
+
+{before.revision, after_reopen.revision, before.size, sqlite_reopen?}
+```
+
+```elixir
+:ok = Supervisor.stop(lab)
+:ok = Agent.stop(clock)
+{:ok, _removed} = File.rm_rf(tmp_dir)
+```
+
+## Safe telemetry
+
+Directory spans label the repository operation and the store profile only;
+identifiers, tenants and documents never become labels.
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+profiles =
+  for {[:wotex, :lab, :directory, :directory, :stop], _measurements, metadata} <- spans,
+      do: {metadata.profile, metadata.operation}
+
+text = inspect(spans)
+labels_safe? = not (text =~ "urn:wotex") and not (text =~ "room-1") and not (text =~ "Patched")
+{Enum.uniq(profiles) |> Enum.sort(), labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `both-stores-same-contract` | The outcome maps of the ETS and SQLite runs are equal |
+| `conditional-conflict` | Eight competing replacements: 1 winner, 7 `:conflict` |
+| `keyset-paging` | Page one is `a, b`; page two (limit 3) after the cursor is `c, d, e` and the expired `b` is gone from a fresh page |
+| `cursor-invalidated` | A cursor issued before a registration is `:collection_changed` |
+| `expiry` | The room fixture (30 s TTL) and `b` are retained as expired and read `:expired`; a purge removes both; the next batch is empty |
+| `forbidden-context` | Stranger, reader and wrong tenant are `:forbidden` without a repository insert; a broken policy fails in the authorization phase |
+| `sqlite-reopen` | The reopened file has the same revision and size, and the race entry is still version 2 |
+
+```elixir
+ets_outcomes = outcomes[EtsRepository]
+
+%{
+  "both-stores-same-contract" => ets_outcomes == outcomes[SqliteRepository],
+  "conditional-conflict" => ets_outcomes["directory:conditional-conflict"] == {1, 7},
+  "keyset-paging" =>
+    ets_outcomes["directory:page-order"] == {[":list:a", ":list:b"], [":list:c", ":list:d", ":list:e"]} and
+      ets_outcomes["fresh-excludes-expired"],
+  "cursor-invalidated" => ets_outcomes["directory:cursor-invalidated"] == :collection_changed,
+  "expiry" =>
+    ets_outcomes["directory:expired-after-ttl"] == {:retain, 2, :expired, :purge, 2, 0} and
+      ets_outcomes["directory:register-created"] == {:created, 1} and
+      ets_outcomes["directory:register-replaced"] == {:replaced, 2, :patched, 3},
+  "forbidden-context" =>
+    {stranger_code, reader_code, tenant_code} == {:forbidden, :forbidden, :forbidden} and
+      insert_calls_before == insert_calls_after and broken_phase == :authorization and labels_safe?,
+  "sqlite-reopen" => sqlite_reopen?
+}
+```
+
+## Public seam
+
+`directory.repository` — `Wotex.Directory.Repository.fetch/3`, `insert/3`,
+`replace/4`, `delete/4`, `list/5`, `expire_due/5` (consumer-implements; two
+Lab references). `directory.authorization`, `directory.clock` and
+`directory.identifier` (consumer-implements).
+
+## Spec and completion IDs
+
+* Lab: WLB.05 (`WLB-C05`, `WLB-C08`).
+* Upstream consumer evidence: `WTD-C01`, `WTD-C02`, `WTD-C03`, `WTD-C04`.
+
+## Replacement adapter
+
+Implement `Wotex.Directory.Repository` over your database: `insert/3` must
+be an atomic conditional create, `replace/4` and `delete/4` must apply their
+version precondition inside the same unit of work, `list/5` must page by
+identifier in code point order from the cursor, and the collection revision
+must advance once per committed mutation. Run this notebook's `exercise`
+function against your store next to the two references: equal outcome maps
+are the contract.

@@ -1,0 +1,247 @@
+# Inline and supervised Nx.Serving over an encoded batch
+
+## Goal
+
+Run the same row-wise function over a `wotex_nx` encoded batch twice: once
+inline with `Nx.Serving.run/2`, once through a supervised `Nx.Serving`
+process placed under an explicit Lab instance with a caller-chosen name, and
+show that both paths agree and that concurrent callers get their own rows
+back. The serving function is a plain Nx function; nothing here is a model.
+
+The Lab lane `serving-batches` (WLB.03) is **partial** in source: the
+supervised serving, batch keys and concurrent correlation run below, while
+the acceptance items for batch padding, timeout, stop-under-load and
+overload are not yet automated in the Lab test suite. This notebook does not
+claim them.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:nx, "~> 0.13.1"}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Batch construction, feature order, masks, quality | `wotex_nx` (package-implements) | `Wotex.Nx.Encoded.batch/1`, `template/1` |
+| Serving process, batching, keys | `nx` | `Nx.Serving` |
+| Process placement, name, lifetime | consumer (`wotex_lab` instance) | `Wotex.Lab.start_child/3` |
+| The serving function | consumer | the anonymous function below |
+
+The Lab never starts a serving implicitly: the name is chosen here, the
+process is placed under an instance started here, and both are stopped here.
+
+## Run
+
+```elixir
+alias Wotex.Lab
+alias Wotex.Lab.Examples.Thermal
+alias Wotex.Lab.Telemetry
+alias Wotex.Nx.Encoded
+
+telemetry_id = "cookbook-serving-batches-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+```
+
+The encoded batch comes from the thermal foundation; `Encoded.template/1`
+describes the container the serving must accept without realizing tensors.
+
+```elixir
+{:ok, thermal} = Thermal.run()
+encoded = thermal.encoded
+batch = Encoded.batch(encoded)
+{Encoded.feature_order(encoded), Encoded.row_count(encoded), Encoded.template(encoded)}
+```
+
+A row-wise function keeps the batch axis, so `Nx.Serving` can split results
+back to their callers: `value * mask + 1` per row.
+
+```elixir
+row_target = fn {{values}, {masks}, _quality} ->
+  Nx.add(Nx.multiply(values, Nx.as_type(masks, Nx.type(values))), 1.0)
+end
+
+serving = Nx.Serving.jit(row_target, compiler: Nx.Defn.Evaluator)
+
+inline =
+  Telemetry.span(:nx, :inference, %{profile: :serving_inline}, fn ->
+    Nx.Serving.run(serving, batch)
+  end)
+
+Nx.to_flat_list(inline)
+```
+
+The supervised path: an explicit Lab instance owns the serving process under
+its `:sessions` role, with a caller-chosen name and batch size.
+
+```elixir
+{:ok, lab} = Lab.start_link(id: "serving-batches", max_children: 4)
+serving_name = :wotex_lab_cookbook_serving
+
+{:ok, serving_pid} =
+  Lab.start_child(
+    lab,
+    :sessions,
+    {Nx.Serving,
+     serving: serving,
+     name: serving_name,
+     batch_size: 4,
+     batch_timeout: 10,
+     batch_keys: [:default, :room_a]}
+  )
+
+supervised =
+  Telemetry.span(:nx, :inference, %{profile: :serving_supervised}, fn ->
+    Nx.Serving.batched_run(serving_name, batch)
+  end)
+
+{Nx.to_flat_list(supervised), Process.alive?(serving_pid)}
+```
+
+Concurrent callers each submit a one-row batch; the serving batches them
+together and every caller receives exactly its own row.
+
+```elixir
+{{values}, {masks}, quality} =
+  Nx.Defn.jit_apply(&Function.identity/1, [batch], compiler: Nx.Defn.Evaluator)
+
+one_row = fn index ->
+  Nx.Batch.stack([
+    {{values[index..index]}, {masks[index..index]}, quality[index..index]}
+  ])
+end
+
+correlated =
+  0..1
+  |> Task.async_stream(fn index ->
+    {index, Nx.to_flat_list(Nx.Serving.batched_run(serving_name, one_row.(index)))}
+  end)
+  |> Enum.map(fn {:ok, pair} -> pair end)
+  |> Enum.sort()
+
+correlated
+```
+
+Batch keys: `Nx.Batch.key/2` tags a batch so a serving can separate work
+that must not be batched together; the serving declared `:room_a` next to
+`:default` when it started and keeps the two apart.
+
+```elixir
+keyed = Nx.Batch.key(batch, :room_a)
+keyed_result = Nx.Serving.batched_run(serving_name, keyed)
+{keyed.key, Nx.to_flat_list(keyed_result)}
+```
+
+Stop the serving and the instance explicitly.
+
+```elixir
+:ok = Supervisor.stop(lab)
+serving_stopped? = not Process.alive?(serving_pid) and Process.whereis(serving_name) == nil
+```
+
+## Deliberate breakage
+
+A serving function that drops the batch axis cannot serve a batch: the
+thermal `target/1` reduces two rows to one scalar, and `Nx.Serving.run/2`
+refuses the result before any process is involved because it cannot split a
+rank-0 output back to callers. This is a consumer contract, not a Lab rule.
+
+```elixir
+scalar_serving = Nx.Serving.jit(&Thermal.target/1, compiler: Nx.Defn.Evaluator)
+
+scalar_refusal =
+  try do
+    Nx.Serving.run(scalar_serving, batch)
+  rescue
+    error in ArgumentError -> {:refused, Exception.message(error)}
+  end
+```
+
+## Safe telemetry
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+inference_profiles =
+  for {[:wotex, :lab, :nx, :inference, :stop], _measurements, metadata} <- spans,
+      do: metadata.profile
+
+labels_safe? = not (inspect(spans) =~ "21.0") and not (inspect(spans) =~ "urn:")
+{inference_profiles, labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `inline-supervised-agree` | Both paths return about `[21.0, 23.0]` |
+| `concurrent-correlation` | Caller 0 gets `[21.0]`, caller 1 gets `[23.0]` |
+| `batch-keys` | A keyed batch carries its key and computes the same rows |
+| `serving-stopped` | The serving name is free after the instance stops |
+
+```elixir
+close? = fn left, right -> abs(left - right) < 0.00001 end
+
+agree? = fn left, right ->
+  length(left) == length(right) and
+    Enum.zip(left, right) |> Enum.all?(fn {a, b} -> close?.(a, b) end)
+end
+
+%{
+  "inline-supervised-agree" =>
+    agree?.(Nx.to_flat_list(inline), [21.0, 23.0]) and
+      agree?.(Nx.to_flat_list(supervised), [21.0, 23.0]),
+  "concurrent-correlation" =>
+    match?([{0, [a]}, {1, [b]}] when abs(a - 21.0) < 0.00001 and abs(b - 23.0) < 0.00001, correlated),
+  "batch-keys" => keyed.key == :room_a and agree?.(Nx.to_flat_list(keyed_result), [21.0, 23.0]),
+  "serving-stopped" => serving_stopped? and match?({:refused, _message}, scalar_refusal) and labels_safe?
+}
+```
+
+## Public seam
+
+No WoTEx seam is implemented here. The consumer contract is the container
+shape from `Wotex.Nx.Encoded.template/1`; the serving process is `nx`'s
+`Nx.Serving` under the consumer's supervision tree.
+
+## Spec and completion IDs
+
+* Lab: WLB.03 `serving-batches` lane, source status partial (`WLB-C03`,
+  `WLB-C08`).
+* Upstream consumer evidence: `WNX-C04`, `WNX-C05`.
+
+## Replacement adapter
+
+Swap `Nx.Defn.Evaluator` for a compiled backend by changing the
+`compiler:` option and selecting the backend in your host; keep the same
+container function. To serve a real model, build the serving from that
+model's predict function and validate its output through
+`Wotex.Nx.Decoder.decode/3` before any policy reads it.

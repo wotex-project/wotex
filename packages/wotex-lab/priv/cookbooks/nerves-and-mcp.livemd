@@ -1,0 +1,230 @@
+# A bootable target and explicit assistant access
+
+## Goal
+
+Show what a Nerves target and an assistant (MCP) surface would share with
+every other Lab entry point, and which parts already exist: the neutral
+design tokens the workbench renders, the schema-versioned evidence record a
+target smoke test would emit, and the inert scenario descriptor an assistant
+could list. The Nerves firmware, the on-target smoke, the MCP server and
+the control plane of WLB.07 and WLB.08 are **planned**: fully specified,
+maintainer-owned to publish, and absent from source. The cells below run
+only what exists; the planned surfaces are documentation and are marked as
+such. The notebook's evidence status is `partial`.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:nx, "~> 0.13.1"}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout. No firmware is built,
+no device is contacted and no assistant is started.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Design tokens and scoped CSS | `wotex_lab` (implemented) | `Wotex.Lab.DesignSystem` |
+| Evidence record schema, digests, public-content scan | `wotex_lab` (implemented) | `Wotex.Lab.Evidence.Record`, `Digest` |
+| Scenario descriptors as data | `wotex_lab` (implemented) | `Wotex.Lab.Scenario` |
+| Nerves system, firmware image, on-target smoke | planned delivery lane (WLB.08) | not in source |
+| MCP resources, tools, transports, quotas | planned control plane (WLB.07) | not in source |
+| Publishing firmware, images, packages | maintainer only | never an agent or a notebook |
+
+## Run
+
+```elixir
+alias Wotex.Lab.DesignSystem
+alias Wotex.Lab.Evidence.{Digest, Record}
+alias Wotex.Lab.Scenario
+alias Wotex.Lab.Telemetry
+```
+
+The design tokens a workbench on any host, including an embedded one,
+renders: versioned, JSON-compatible, with the same roles in both themes and
+a scoped stylesheet that pulls in no external asset.
+
+```elixir
+tokens = DesignSystem.tokens()
+css = DesignSystem.stylesheet()
+
+%{
+  version: DesignSystem.version(),
+  groups: Map.keys(tokens) |> Enum.sort(),
+  same_roles?: Enum.sort(Map.keys(tokens["light"])) == Enum.sort(Map.keys(tokens["dark"])),
+  scoped?: css =~ ".wotex-lab" and not (css =~ ":root") and not (css =~ "url("),
+  every_token_emitted?:
+    Enum.all?(tokens, fn {_group, group} -> Enum.all?(group, fn {name, value} -> css =~ "--wl-#{name}: #{value};" end) end)
+}
+```
+
+The evidence record an on-target smoke would produce. Every dependency must
+state its archive evidence: because no `wotex*` package is published, each
+states `archive: :missing` rather than a digest synthesized from a checkout.
+The record refuses paths, callbacks, process identities and credentials.
+
+```elixir
+{:ok, fixture_digest} = Digest.file(Application.app_dir(:wotex_lab, "priv/fixtures/thermal/thing-description.json"))
+
+dependencies =
+  for app <- [:wotex, :wotex_nx, :wotex_runtime, :nx] do
+    %{name: Atom.to_string(app), version: to_string(Application.spec(app, :vsn)), archive: :missing}
+  end
+
+record_fields = %{
+  scenario_id: "nerves-smoke",
+  revision: "unrecorded",
+  attempt: 1,
+  source_tree_digest: Digest.bytes("source tree not digested in this notebook"),
+  lock_digest: Digest.bytes("lock not digested in this notebook"),
+  dependencies: dependencies,
+  fixtures: %{"thermal/thing-description.json" => fixture_digest},
+  seed: 42,
+  toolchain: Digest.toolchain(Nx.BinaryBackend),
+  budgets: %{boot_ms: 60_000, deadline_ms: 5_000},
+  inputs: ["fixture:thermal/thing-description.json"],
+  assertions: [
+    %{id: "WLB-C10:nerves-boot", status: :not_run},
+    %{id: "WLB-C10:nerves-reconnect", status: :not_run},
+    %{id: "WLB-C08:mcp-resources", status: :not_run}
+  ],
+  outcomes: %{target: "rpi4", hardware: "unavailable", note: "planned lane; host-only record"},
+  durations: %{},
+  cleanup: %{status: :ok, details: %{}}
+}
+
+{:ok, record} = Record.new(record_fields)
+{:ok, record_digest} = Record.digest(record)
+{:ok, again} = Record.new(record_fields)
+{:ok, again_digest} = Record.digest(again)
+{:ok, encoded} = Record.encode(record)
+{:ok, decoded} = Wotex.JSON.decode(encoded)
+{:ok, read_back} = Record.from_map(decoded)
+
+{record_digest, record_digest == again_digest, Enum.map(read_back.dependencies, & &1.archive), read_back.assertions}
+```
+
+The scenario descriptor an assistant would list: data with string ids and
+capabilities, a seed and a step budget, and no executable authority.
+
+```elixir
+{:ok, scenario} =
+  Scenario.new(
+    id: "nerves-smoke",
+    title: "Boot, run the thermal foundation, reconnect",
+    capabilities: ["nx.encode", "nx.evaluate", "nx.decode", "runtime.loopback"],
+    seed: 42,
+    max_steps: 100
+  )
+
+descriptor = Scenario.to_map(scenario)
+```
+
+The planned surfaces, shown as documentation only (this block is not an
+Elixir cell and is not executed):
+
+```text
+# Planned (WLB.08 Nerves lane, implementation_status: planned):
+#   MIX_TARGET=rpi4 mix firmware   # pinned Nerves system, toolchain and firmware digest
+#   mix burn / mix upload          # maintainer action; the image ships with license and integrity data
+#   on-target smoke: boot, Wotex.Lab.Examples.Thermal.run/0, loopback reconnect, evidence record
+# Planned (WLB.07 MCP, implementation_status: planned):
+#   stdio and Streamable HTTP transports; resources for package/spec/seam/scenario/Thing/evidence
+#   metadata; tools for parse, validate, explain error, list/discover/read simulated Things,
+#   bounded conformance and benchmark jobs, seam explanations; quotas and cancellation;
+#   writes require explicit instance opt-in and per-request authorization.
+```
+
+## Deliberate breakage
+
+Public evidence cannot carry a machine path, a callback or a credential; a
+dependency that omits its archive field is refused so the absence is always
+stated rather than implied.
+
+```elixir
+{:error, %Wotex.Lab.Error{code: path_code, path: path_pointer}} =
+  Record.new(%{record_fields | inputs: ["/tmp/private/fixture.json"]})
+
+{:error, %Wotex.Lab.Error{code: secret_code}} =
+  Record.new(%{record_fields | outcomes: %{note: "token=abc.def"}})
+
+{:error, %Wotex.Lab.Error{code: unstated_code, path: unstated_pointer}} =
+  Record.new(%{record_fields | dependencies: [%{name: "wotex", version: "0.1.0"}]})
+
+{:error, %Wotex.Lab.Error{code: scenario_code}} =
+  Scenario.new(id: "nerves-smoke", title: "x", capabilities: ["a"], seed: 1, max_steps: 1, module: System)
+
+{path_code, path_pointer, secret_code, unstated_code, unstated_pointer, scenario_code}
+```
+
+## Safe telemetry
+
+No Lab span is emitted by tokens, records or descriptors; they are pure
+data. The record itself is scanned so that nothing in it could leak through
+a log or a label.
+
+```elixir
+handler_count = length(:telemetry.list_handlers([:wotex, :lab]))
+public? = not (encoded =~ "/Users") and not (encoded =~ "/home") and not (encoded =~ "token=")
+{handler_count >= 0, public?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `tokens-both-themes` | Version `0.1.0`, groups `base`, `dark`, `light`, identical roles in both themes |
+| `stylesheet-scoped` | Scoped to `.wotex-lab`, no `:root`, no `url(`, every token emitted |
+| `evidence-record-digest` | The canonical digest is stable across two equal records and the record reads back |
+| `archive-missing-stated` | Every dependency states `:missing`; an omitted field is `:archive_evidence_unstated` |
+| `scenario-descriptor-data` | The descriptor is a string-keyed map with schema version `1.0.0` and hidden execution fields are refused |
+
+```elixir
+%{
+  "tokens-both-themes" =>
+    DesignSystem.version() == "0.1.0" and Map.keys(tokens) |> Enum.sort() == ["base", "dark", "light"] and
+      Enum.sort(Map.keys(tokens["light"])) == Enum.sort(Map.keys(tokens["dark"])),
+  "stylesheet-scoped" =>
+    css =~ ".wotex-lab" and not (css =~ ":root") and not (css =~ "url(") and
+      Enum.all?(tokens, fn {_group, group} -> Enum.all?(group, fn {name, value} -> css =~ "--wl-#{name}: #{value};" end) end),
+  "evidence-record-digest" =>
+    record_digest == again_digest and String.starts_with?(record_digest, "sha256:") and
+      read_back.assertions == record.assertions and public?,
+  "archive-missing-stated" =>
+    Enum.all?(read_back.dependencies, &(&1.archive == :missing)) and unstated_code == :archive_evidence_unstated and
+      unstated_pointer == "/dependencies/0/archive" and path_code == :not_public_evidence and
+      secret_code == :not_public_evidence,
+  "scenario-descriptor-data" =>
+    descriptor["schema_version"] == "1.0.0" and Enum.all?(Map.keys(descriptor), &is_binary/1) and
+      scenario_code == :invalid_options
+}
+```
+
+## Public seam
+
+No WoTEx seam is implemented here. The Lab contracts exercised are
+`Wotex.Lab.DesignSystem`, `Wotex.Lab.Evidence.Record` and
+`Wotex.Lab.Scenario`; the target and assistant surfaces are planned
+entries in the generated graph.
+
+## Spec and completion IDs
+
+* Lab: WLB.07 and WLB.08, control plane, MCP and Nerves lane planned
+  (`WLB-C08`, `WLB-C10`).
+* Upstream: none claimed.
+
+## Replacement adapter
+
+There is no adapter to replace until the lanes exist. A host that builds the
+firmware or the MCP server consumes the same three contracts above: render
+the tokens, emit records through `Record.new/1`, and list descriptors from
+`Scenario.to_map/1`; none of them may be extended with executable fields.

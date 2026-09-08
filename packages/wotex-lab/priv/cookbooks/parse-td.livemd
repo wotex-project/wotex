@@ -1,0 +1,202 @@
+# Parse, validate and encode Thing Descriptions and Thing Models
+
+## Goal
+
+Parse a checked-in W3C WoT Thing Description (TD) and a small Thing Model
+(TM) with the core `wotex` package, validate them against the pinned TD 1.1
+schema, encode them canonically, read them back unchanged, and see the
+structured error every malformed input produces. Nothing here contacts a
+device, a network or a broker: a TD is data, and this notebook only ever
+turns bytes into values and values back into bytes.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"}
+])
+```
+
+The requirement above is a published-artifact requirement. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout; when the packages
+ship, this cell installs the same public API the tests exercised.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| TD/TM parsing, schema validation, canonical encoding, error shape | `wotex` (package-implements) | `Wotex.ThingDescription`, `Wotex.ThingModel`, `Wotex.Error` |
+| The fixture document and its manifest | `wotex_lab` (consumer) | `priv/fixtures/thermal/` |
+| Telemetry around the parse | `wotex_lab` (consumer) | `Wotex.Lab.Telemetry.span/4` |
+
+The Lab adds no WoT semantics. The only Lab call in the run cells is the
+telemetry span; every other call is the package API a consumer would use.
+
+## Run
+
+Start by capturing Lab telemetry into this process so the safe-telemetry
+section can inspect what a parse emits.
+
+```elixir
+alias Wotex.{ThingDescription, ThingModel}
+alias Wotex.Lab.Telemetry
+
+telemetry_id = "cookbook-parse-td-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+```
+
+Read the fixture and parse it. `ThingDescription.parse/1` decodes JSON,
+validates the document against the pinned schema and keeps the source bytes.
+
+```elixir
+path = Application.app_dir(:wotex_lab, "priv/fixtures/thermal/thing-description.json")
+json = File.read!(path)
+
+{:ok, td} =
+  Telemetry.span(:scenario, :parse, %{profile: :cookbook}, fn -> ThingDescription.parse(json) end)
+
+{ThingDescription.id(td), ThingDescription.to_map(td)["properties"] |> Map.keys()}
+```
+
+Validation is a separate, explicit call; a parsed TD is already valid, so
+`validate/1` returns it unchanged.
+
+```elixir
+{:ok, ^td} = ThingDescription.validate(td)
+{:ok, canonical} = ThingDescription.encode(td, :canonical)
+{:ok, reparsed} = ThingDescription.parse(canonical)
+{:ok, source} = ThingDescription.encode(td, :source)
+
+%{
+  canonical_bytes: byte_size(canonical),
+  source_bytes: byte_size(source),
+  roundtrip_equal?: ThingDescription.to_map(reparsed) == ThingDescription.to_map(td)
+}
+```
+
+A Thing Model is built the same way from a map and encodes canonically too.
+
+```elixir
+model_map = %{
+  "@context" => Wotex.td_context_1_1(),
+  "@type" => "tm:ThingModel",
+  "title" => "Room model",
+  "properties" => %{"temperature" => %{"type" => "number", "unit" => "Cel"}}
+}
+
+{:ok, model} = ThingModel.from_map(model_map)
+{:ok, ^model} = ThingModel.validate(model)
+{:ok, model_json} = ThingModel.encode(model, :canonical)
+{:ok, model_again} = ThingModel.parse(model_json)
+tm_roundtrip? = ThingModel.to_map(model_again) == model_map
+```
+
+## Deliberate breakage
+
+Every failure is a `Wotex.Error` (or a list of them) with a stable `code`,
+`phase` and JSON pointer `path`; the message never echoes the input.
+
+```elixir
+{:error, invalid_json} = ThingDescription.parse("{")
+{:error, non_object} = ThingDescription.parse("[]")
+{:error, violations} = ThingDescription.from_map(%{"@context" => Wotex.td_context_1_1()})
+{:error, model_non_object} = ThingModel.from_map("not-an-object")
+
+%{
+  invalid_json: {invalid_json.code, invalid_json.phase, invalid_json.path},
+  non_object: {non_object.code, non_object.phase},
+  missing_fields: Enum.map(violations, &{&1.code, &1.path}),
+  model_non_object: model_non_object.code
+}
+```
+
+## Safe telemetry
+
+The span closed with an allowlisted outcome and a profile label. No document,
+identifier or byte count of the TD became a label.
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+parse_stop =
+  Enum.find(spans, fn {event, _measurements, _metadata} ->
+    event == [:wotex, :lab, :scenario, :parse, :stop]
+  end)
+
+{_event, measurements, metadata} = parse_stop
+labels_safe? = metadata == %{profile: :cookbook, outcome: :ok}
+{Telemetry.to_milliseconds(measurements.duration), metadata, labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `td-id` | The fixture identifies `urn:wotex:lab:thermostat:1` |
+| `validate-ok` | A parsed TD validates unchanged |
+| `canonical-roundtrip` | Canonical bytes parse back to the same document |
+| `tm-roundtrip` | The Thing Model encodes and parses back to its map |
+| `invalid-json-error` | `{"` fails with `:invalid_json` in phase `:parse` at `/` |
+| `schema-violation-path` | A missing title is `:schema_violation` at `/title` |
+| `non-object-refused` | Arrays and strings fail with `:object_required` |
+
+The final cell returns these checks as a map; the automated runner asserts
+every value is `true`.
+
+```elixir
+%{
+  "td-id" => ThingDescription.id(td) == "urn:wotex:lab:thermostat:1",
+  "validate-ok" => match?({:ok, ^td}, ThingDescription.validate(td)),
+  "canonical-roundtrip" => ThingDescription.to_map(reparsed) == ThingDescription.to_map(td),
+  "tm-roundtrip" => tm_roundtrip?,
+  "invalid-json-error" =>
+    invalid_json.code == :invalid_json and invalid_json.phase == :parse and
+      invalid_json.path == "/",
+  "schema-violation-path" =>
+    Enum.any?(violations, &(&1.code == :schema_violation and &1.path == "/title")),
+  "non-object-refused" =>
+    non_object.code == :object_required and model_non_object.code == :object_required and
+      labels_safe?
+}
+```
+
+## Public seam
+
+`core.td` — `Wotex.ThingDescription.parse/2`, `from_map/2`, `to_map/1` and
+`encode/2` (package-implements). The seam is recorded with its revision
+pinned source URL in `docs/provenance/source-index.json`.
+
+## Spec and completion IDs
+
+* Lab: WLB.03 (`WLB-C03`, `WLB-C08`).
+* Upstream consumer evidence: `WTX-C01`, `WTX-C02`, `WTX-C03`, `WTX-C04`
+  (`wotex:WTX.01`, `WTX.03`, `WTX.04`). Lab evidence does not close those
+  items; only the `wotex` owner can.
+
+## Replacement adapter
+
+There is nothing to replace here: parsing is package-owned. A consumer that
+needs a different validation profile passes options to `parse/2` or
+`from_map/2` rather than wrapping the result. To use another JSON codec,
+decode yourself and call `from_map/2`; the value semantics do not change.

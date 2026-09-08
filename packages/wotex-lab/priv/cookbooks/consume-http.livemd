@@ -1,0 +1,278 @@
+# Property reads through Req and the runtime over a real socket
+
+## Goal
+
+Read a Property of an HTTP Thing twice: through `Wotex.Runtime.ConsumedThing`
+with the HTTP binding, and directly through the Lab's `Req` client that
+implements the binding's client port. A disposable Bandit server started in
+this notebook answers on a loopback port, so every exchange crosses a real
+socket, and the failure cells show how oversized, slow, redirected and
+mistyped responses become classed runtime errors instead of values.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:req, "~> 0.7.4"},
+  {:bandit, "~> 1.12"},
+  {:plug, "~> 1.18"}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout. `req` is an optional
+dependency of the Lab that a host selects; `bandit` and `plug` serve only the
+disposable server defined below.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Form selection, request identity, deadlines, result and error shape | `wotex_runtime` (package-implements) | `Wotex.Runtime.ConsumedThing` |
+| HTTP request/response values, status and media-type mapping | `wotex_binding_http` (package-implements) | `Wotex.Binding.HTTP` |
+| The HTTP client that moves bytes | `wotex_lab` (consumer-implements `Wotex.Binding.HTTP.Client`) | `Wotex.Lab.Adapters.HTTP.ReqClient` |
+| Redirects | `wotex_lab` client: refused (`redirect: false`), reported as an HTTP status | `ReqClient.request/3` |
+| The server | this notebook | `WotexLabCookbook.ConsumeHttpServer` |
+
+## Run
+
+```elixir
+alias Wotex.Binding.HTTP
+alias Wotex.Binding.HTTP.Request, as: HTTPRequest
+alias Wotex.Binding.HTTP.Response, as: HTTPResponse
+alias Wotex.Lab.Adapters.HTTP.ReqClient
+alias Wotex.Lab.Adapters.Runtime.NoSec
+alias Wotex.Lab.Telemetry
+alias Wotex.Runtime.{ConsumedThing, Context, Error, Result}
+alias Wotex.ThingDescription
+
+telemetry_id = "cookbook-consume-http-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+```
+
+The disposable server. Each route matches one Property of the fixture TD,
+including the ones that misbehave on purpose.
+
+```elixir
+defmodule WotexLabCookbook.ConsumeHttpServer do
+  use Plug.Router
+
+  plug(:match)
+  plug(:dispatch)
+
+  get "/properties/temperature" do
+    conn |> put_resp_content_type("application/json") |> send_resp(200, "21.5")
+  end
+
+  get "/properties/large" do
+    body = "\"" <> String.duplicate("x", 4_096) <> "\""
+    conn |> put_resp_content_type("application/json") |> send_resp(200, body)
+  end
+
+  get "/properties/slow" do
+    Process.sleep(400)
+    conn |> put_resp_content_type("application/json") |> send_resp(200, "1")
+  end
+
+  get "/properties/redirect" do
+    conn |> put_resp_header("location", "/properties/temperature") |> send_resp(302, "")
+  end
+
+  get "/properties/html" do
+    conn |> put_resp_content_type("text/html") |> send_resp(200, "<b>21</b>")
+  end
+
+  match _ do
+    send_resp(conn, 404, "")
+  end
+end
+
+{:ok, server} =
+  Bandit.start_link(
+    plug: WotexLabCookbook.ConsumeHttpServer,
+    ip: {127, 0, 0, 1},
+    port: 0,
+    startup_log: false
+  )
+
+{:ok, {_ip, port}} = ThousandIsland.listener_info(server)
+base = "http://127.0.0.1:#{port}/"
+```
+
+The fixture TD carries a placeholder `base`; point it at the server and build
+a `ConsumedThing` with the HTTP profile, the Lab client and a `nosec`
+credential port.
+
+```elixir
+fixture = Application.app_dir(:wotex_lab, "priv/fixtures/http/thing-description.json")
+{:ok, fixture_td} = fixture |> File.read!() |> ThingDescription.parse()
+{:ok, td} = fixture_td |> ThingDescription.to_map() |> Map.put("base", base) |> ThingDescription.from_map()
+
+{:ok, profile} = HTTP.profile()
+
+{:ok, config} =
+  HTTP.config(client: {ReqClient, %{receive_timeout: 2_000}}, max_response_bytes: 1_024)
+
+{:ok, consumed} =
+  ConsumedThing.new(td,
+    profiles: [profile],
+    transports: %{profile.id => HTTP.transport(config)},
+    credentials: {NoSec, []}
+  )
+
+ThingDescription.id(td)
+```
+
+Read through the runtime: the result carries the operation, the request id,
+the decoded payload and the HTTP status in its metadata.
+
+```elixir
+context =
+  Context.new!(request_id: "http-read", deadline: System.monotonic_time(:millisecond) + 2_000)
+
+{:ok, %Result{} = runtime_result} = ConsumedThing.read_property(consumed, "temperature", context)
+{runtime_result.operation, runtime_result.status, runtime_result.payload, runtime_result.metadata.http.status}
+```
+
+The same bytes through the client port alone. A consumer that only needs
+HTTP values can stop here; the runtime adds selection, identity and retry
+classes on top.
+
+```elixir
+{:ok, request} =
+  HTTPRequest.new("GET", base <> "properties/temperature", [{"accept", "application/json"}], nil,
+    request_id: "http-direct",
+    operation: :readproperty,
+    media_type: "application/json",
+    stream?: false,
+    deadline: nil,
+    max_response_bytes: 1_024,
+    max_event_bytes: 64
+  )
+
+{:ok, %HTTPResponse{status: direct_status} = direct} =
+  Telemetry.span(:http, :request, %{profile: :cookbook_direct}, fn ->
+    ReqClient.request(request, nil, %{})
+  end)
+
+{direct_status, direct.body}
+```
+
+## Deliberate breakage
+
+Each misbehaving Property produces a runtime error with a retry `class` and
+a `cause` from the binding; none of them becomes a payload.
+
+```elixir
+{:error, %Error{class: oversized_class} = oversized} =
+  ConsumedThing.read_property(consumed, "large", context)
+
+quick = Context.new!(request_id: "http-slow", deadline: System.monotonic_time(:millisecond) + 100)
+{:error, %Error{class: slow_class}} = ConsumedThing.read_property(consumed, "slow", quick)
+
+{:error, %Error{class: redirect_class} = redirect} =
+  ConsumedThing.read_property(consumed, "redirect", context)
+
+{:error, %Error{class: html_class} = html} = ConsumedThing.read_property(consumed, "html", context)
+
+%{
+  oversized: {oversized_class, oversized.details.cause.code},
+  slow: slow_class,
+  redirect: {redirect_class, redirect.details.cause.code},
+  html: {html_class, html.details.cause.code}
+}
+```
+
+Stop the server explicitly.
+
+```elixir
+:ok = ThousandIsland.stop(server)
+```
+
+## Safe telemetry
+
+Lab HTTP spans carry the method and the profile; URLs, headers and bodies
+never become labels.
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+http_stops =
+  for {[:wotex, :lab, :http, :request, :stop], _measurements, metadata} <- spans, do: metadata
+
+labels_safe? =
+  http_stops != [] and not (inspect(spans) =~ "127.0.0.1") and not (inspect(spans) =~ "21.5")
+
+{Enum.uniq(http_stops), labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `read-through-runtime` | `readproperty` result with payload `21.5` and HTTP status 200 |
+| `read-through-client` | The client returns status 200 and the body `21.5` |
+| `oversized-refused` | A 4 KiB body over a 1 KiB bound is `:unavailable` with cause `:client_request_failed` |
+| `deadline-refused` | A 400 ms response under a 100 ms deadline is class `:timeout` |
+| `redirect-refused` | A 302 is `:permanent` with cause `:http_status`; nothing follows it |
+| `media-type-refused` | `text/html` for a JSON Property is `:protocol` with cause `:unexpected_response_media_type` |
+
+```elixir
+%{
+  "read-through-runtime" =>
+    runtime_result.operation == :readproperty and runtime_result.payload == 21.5 and
+      runtime_result.metadata.http.status == 200,
+  "read-through-client" => direct_status == 200 and direct.body == "21.5",
+  "oversized-refused" =>
+    oversized_class == :unavailable and oversized.details.cause.code == :client_request_failed,
+  "deadline-refused" => slow_class == :timeout,
+  "redirect-refused" => redirect_class == :permanent and redirect.details.cause.code == :http_status,
+  "media-type-refused" =>
+    html_class == :protocol and html.details.cause.code == :unexpected_response_media_type and
+      labels_safe?
+}
+```
+
+## Public seam
+
+`http.client` — `Wotex.Binding.HTTP.Client.request/3`, `subscribe/4`,
+`close/2` (consumer-implements; the Lab reference is `ReqClient`).
+`runtime.credentials` — `Wotex.Runtime.Credentials.resolve/4` (the `NoSec`
+adapter here).
+
+## Spec and completion IDs
+
+* Lab: WLB.04 (`WLB-C04`, `WLB-C08`).
+* Upstream consumer evidence: `RT-C04`, `WBH-C04`.
+
+## Replacement adapter
+
+Implement `Wotex.Binding.HTTP.Client` with your own HTTP library: `request/3`
+receives a `Wotex.Binding.HTTP.Request` and the resolved credential, must
+honour `deadline/1` and `max_response_bytes/1`, must not follow redirects on
+its own, and returns `Wotex.Binding.HTTP.Response.new/3`. Pass it as
+`client: {YourClient, config}` to `Wotex.Binding.HTTP.config/1`. The binding
+keeps status and media-type mapping, so your client never interprets WoT
+semantics.

@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.1.0",
+  "id": "continuum-manifest",
+  "title": "Canonical continuum manifest for the edge and cloud exchange",
+  "scenario": "continuum",
+  "specs": [
+    "WLB.05",
+    "WCT.01",
+    "WCT.02",
+    "WCT.03"
+  ],
+  "seams": [
+    "lab.continuum_channel"
+  ],
+  "operations": [
+    "codec.encode",
+    "codec.decode",
+    "manifest.compatible_with?"
+  ],
+  "media_type": "application/json",
+  "source_mode": "synthetic",
+  "license": "Apache-2.0",
+  "provenance": {
+    "author": "wotex-lab",
+    "created": "2026-09-08",
+    "synthetic": true,
+    "statement": "Hand-written consumer-neutral fixture; no device, vendor or private product data."
+  },
+  "input": "continuum-manifest.json",
+  "input_sha256": "00acb2b1ce5fc4e9df69202808cb13a20862e780ee1c00217752caedd0a0d7f2",
+  "expected_output": "expected-output.json",
+  "expected_output_sha256": "7052eb2e1d8daa2aedcc7b3909ba5b05eed6ce0e7427aada66696b96657e700b",
+  "vectors": {
+    "positive": [
+      "continuum:manifest-compatible",
+      "continuum:replay-after-reconnect"
+    ],
+    "negative": [
+      "continuum:manifest-incompatible",
+      "continuum:intent-without-manifest",
+      "continuum:duplicate-intent",
+      "continuum:reordered-proposal",
+      "continuum:dropped-delivery",
+      "continuum:capacity-exhausted"
+    ]
+  },
+  "side_effects": []
+}

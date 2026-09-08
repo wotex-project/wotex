@@ -126,7 +126,8 @@ defmodule WotexLab.MixProject do
       licenses: ["Apache-2.0"],
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       links: %{"GitHub" => @source_url, "Project" => "https://wotex.io"},
-      files: ~w(lib priv/fixtures priv/models docs/specs docs/plans docs/decisions docs/provenance
+      files:
+        ~w(lib priv/fixtures priv/models priv/cookbooks docs/specs docs/plans docs/decisions docs/provenance
         .formatter.exs mix.exs README.md LICENSE NOTICE CHANGELOG.md SECURITY.md CONTRIBUTING.md)
     ]
   end

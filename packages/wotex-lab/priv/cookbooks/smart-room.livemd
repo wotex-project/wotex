@@ -1,0 +1,484 @@
+# Discovery to numeric proposal to one explicit simulated effect
+
+## Goal
+
+Run the canonical smart room end to end: discover Things from an explicit
+Directory by their own TD ids, consume an HTTP thermostat, an MQTT energy
+meter and a loopback actuator through the runtime, exchange observation
+proposals over the Continuum channel, infer a `setTarget` proposal with a
+small `defn`, let the policy grant one decision, dispatch it exactly once at
+the edge, read the effect back from the actuator, and let only the
+`action_result` cross to the cloud host. Every step is a separate,
+inspectable record, and a second dispatch of the same decision is refused.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:nx, "~> 0.13.1"},
+  {:req, "~> 0.7.4"},
+  {:emqtt, "~> 1.15", system_env: [{"BUILD_WITHOUT_QUIC", "1"}]},
+  {:bandit, "~> 1.12"},
+  {:plug, "~> 1.18"}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout.
+
+The thermostat is a Bandit server started here. The energy meter needs an
+MQTT peer: inside the Lab checkout the scripted in-BEAM peer from
+`test/support/mqtt_server.ex` serves a retained `2500` W reading; outside
+it, bind `broker_href` or set `WOTEX_LAB_MQTT_HREF` to a broker you run and
+the notebook seeds the retained reading itself. Without either, the room
+runs without a meter and the meter check is omitted.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Directory listing and entries | `wotex_directory` | `Wotex.Directory.list/3` |
+| Consumed Things, requests, results | `wotex_runtime` | `Wotex.Runtime.ConsumedThing` |
+| HTTP and MQTT values and mappings | `wotex_binding_http`, `wotex_binding_mqtt` | the two bindings |
+| Rows, batches, decoded proposals | `wotex_nx` | `Wotex.Nx.Encoder`, `Decoder` |
+| Continuum values and codec | `wotex_continuum` | `WotexContinuum.Codec` |
+| Discovery, inference, the room rule, exchange, dispatch order | `wotex_lab` (consumer) | `Wotex.Lab.SmartRoom.Scenario` |
+| Authority: grant, refuse, dispatch once | `wotex_lab` (consumer) | `Wotex.Lab.SmartRoom.Policy` |
+| Nx effects | none: the proposal is inert until the policy dispatches it | `Policy.dispatch/4` |
+| Servers, peers, stores and their lifetimes | this notebook | below |
+
+## Run
+
+```elixir
+alias Wotex.Binding.HTTP
+alias Wotex.Binding.MQTT
+alias Wotex.Binding.MQTT.{Broker, Command, Transport, TransportConfig}
+alias Wotex.Directory
+alias Wotex.Directory.{Context, Service}
+alias Wotex.Lab
+alias Wotex.Lab.Adapters.Directory.{Authorization, Clock, EtsRepository, Identifier}
+alias Wotex.Lab.Adapters.HTTP.ReqClient
+alias Wotex.Lab.Adapters.MQTT.EmqttClient
+alias Wotex.Lab.Adapters.Runtime.{Loopback, StaticRef}
+alias Wotex.Lab.Continuum.{Channel, Host}
+alias Wotex.Lab.Error, as: LabError
+alias Wotex.Lab.Reference.Thing
+alias Wotex.Lab.SmartRoom.{Policy, Scenario}
+alias Wotex.Lab.Telemetry
+alias Wotex.Nx.{ActionProposal, Observation}
+alias Wotex.Runtime.{BindingProfile, Result}
+alias Wotex.Runtime.Context, as: RuntimeContext
+alias Wotex.Runtime.ExecutionContext
+alias Wotex.ThingDescription
+alias WotexContinuum.{Capability, Codec}
+
+telemetry_id = "cookbook-smart-room-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+epoch = ~U[2026-09-08 12:00:00Z]
+token = "room-token-7f3a"
+```
+
+The thermostat: one HTTP Property.
+
+```elixir
+defmodule WotexLabCookbook.SmartRoomThermostat do
+  use Plug.Router
+
+  plug(:match)
+  plug(:dispatch)
+
+  get "/properties/temperature" do
+    conn |> put_resp_content_type("application/json") |> send_resp(200, "21.5")
+  end
+
+  match _ do
+    send_resp(conn, 404, "")
+  end
+end
+
+{:ok, server} =
+  Bandit.start_link(plug: WotexLabCookbook.SmartRoomThermostat, ip: {127, 0, 0, 1}, port: 0, startup_log: false)
+
+{:ok, {_ip, port}} = ThousandIsland.listener_info(server)
+
+{:ok, thermostat_td} =
+  ThingDescription.from_map(%{
+    "@context" => Wotex.td_context_1_1(),
+    "id" => "urn:wotex:lab:http:room",
+    "title" => "HTTP thermostat",
+    "base" => "http://127.0.0.1:#{port}/",
+    "security" => ["nosec_sc"],
+    "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+    "properties" => %{
+      "temperature" => %{
+        "type" => "number",
+        "unit" => "Cel",
+        "forms" => [%{"href" => "properties/temperature", "contentType" => "application/json", "op" => "readproperty"}]
+      }
+    }
+  })
+
+ThingDescription.id(thermostat_td)
+```
+
+The energy meter: a retained `power` reading on an MQTT peer, when one is
+available.
+
+```elixir
+broker_href = Keyword.get(binding(), :broker_href) || System.get_env("WOTEX_LAB_MQTT_HREF")
+scripted? = Code.ensure_loaded?(Wotex.Lab.Test.MqttServer) and broker_href == nil
+meter_prefix = "lab/cookbook/meter/#{System.unique_integer([:positive])}"
+power_topic = "#{meter_prefix}/properties/power"
+
+peer =
+  if scripted?,
+    do: Wotex.Lab.Test.MqttServer.start(self(), retained: {power_topic, "2500"}, on_exit: false),
+    else: nil
+
+meter_href =
+  cond do
+    scripted? -> Wotex.Lab.Test.MqttServer.href(peer)
+    is_binary(broker_href) -> broker_href
+    true -> nil
+  end
+
+if meter_href != nil and not scripted? do
+  {:ok, broker} = Broker.new(meter_href)
+  {:ok, seed} = Command.publish(broker, :writeproperty, power_topic, 2500, qos: 1, retain: true)
+  execution_context = ExecutionContext.new(RuntimeContext.new!(request_id: "meter-seed"), nil)
+  :ok = EmqttClient.publish(seed, execution_context, %{connect_timeout: 2_000})
+end
+
+meter_td =
+  if meter_href do
+    {:ok, td} =
+      ThingDescription.from_map(%{
+        "@context" => Wotex.td_context_1_1(),
+        "id" => "urn:wotex:lab:mqtt:meter",
+        "title" => "MQTT energy meter",
+        "security" => ["nosec_sc"],
+        "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
+        "properties" => %{
+          "power" => %{
+            "type" => "number",
+            "unit" => "W",
+            "forms" => [
+              %{
+                "href" => meter_href,
+                "contentType" => "application/json",
+                "op" => "readproperty",
+                "mqv:filter" => power_topic,
+                "mqv:retain" => true,
+                "mqv:qos" => 1
+              }
+            ]
+          }
+        }
+      })
+
+    td
+  end
+
+{scripted?, meter_td != nil}
+```
+
+The actuator is the loopback fixture Thing with an explicit `setTarget`
+effect. The Directory holds every TD; discovery pages through it and builds a
+`ConsumedThing` per TD id with the caller's profiles, transports and
+credential port.
+
+```elixir
+{:ok, lab} = Lab.start_link(id: "smart-room", max_children: 32)
+{:ok, actuator_td} = Application.app_dir(:wotex_lab, "priv/fixtures/loopback/thing-description.json") |> File.read!() |> ThingDescription.parse()
+
+{:ok, actuator} =
+  Lab.start_child(
+    lab,
+    :things,
+    {Thing,
+     td: actuator_td,
+     state: %{"temperature" => 20.0, "target" => 21.0},
+     tokens: %{"bearer_sc" => token},
+     actions: %{
+       "setTarget" => fn input, state -> {:ok, %{"accepted" => true}, :accepted, Map.put(state, "target", input)} end
+     }}
+  )
+
+{:ok, repository} = Lab.start_child(lab, :things, {EtsRepository, id: :directory})
+{:ok, clock} = Clock.start_link(epoch)
+{:ok, identifier} = Identifier.start_link()
+
+{:ok, service} =
+  Service.new(
+    repository: {EtsRepository, repository},
+    authorization: {Authorization, :allow_all},
+    clock: {Clock, {:agent, clock}},
+    identifier: {Identifier, identifier},
+    introduction: thermostat_td
+  )
+
+directory_context = Context.new!(:operator)
+{:ok, _thermostat} = Directory.register(service, thermostat_td, directory_context)
+{:ok, _actuator} = Directory.register(service, actuator_td, directory_context)
+if meter_td, do: {:ok, _meter} = Directory.register(service, meter_td, directory_context)
+
+{:ok, http_profile} = HTTP.profile()
+{:ok, http_config} = HTTP.config(client: {ReqClient, %{}})
+{:ok, mqtt_config} = TransportConfig.new(EmqttClient, %{connect_timeout: 2_000}, read_timeout: 5_000)
+{:ok, loopback_profile} = BindingProfile.new(id: :loopback, schemes: ["loopback"], operations: Wotex.Runtime.operations())
+
+transport_opts = [
+  profiles: [http_profile, loopback_profile, MQTT.profile()],
+  transports: %{
+    http_profile.id => HTTP.transport(http_config),
+    loopback: {Loopback, %{host: actuator}},
+    mqtt: {Transport, mqtt_config}
+  },
+  credentials: {StaticRef, %{references: %{"bearer_sc" => "ref"}, lookup: fn "ref" -> {:ok, token} end}}
+]
+
+{:ok, things} = Scenario.discover(service, directory_context, transport_opts)
+Map.keys(things) |> Enum.sort()
+```
+
+The exchange and the authority: a channel to a cloud host that has admitted
+a manifest, and a policy that allows the `:operator` principal to set targets
+between 5 and 35 degrees.
+
+```elixir
+{:ok, capability} =
+  Capability.from_map(%{
+    id: "observation-forwarding",
+    version: "2.1.0",
+    operations: ["forward"],
+    modes: [:hybrid, :saas],
+    network: :external,
+    degradation: :queue
+  })
+
+{:ok, manifest} =
+  Application.app_dir(:wotex_lab, "priv/fixtures/continuum/continuum-manifest.json") |> File.read!() |> Codec.decode()
+
+{:ok, channel} = Lab.start_child(lab, :sessions, {Channel, id: :room_channel, clock: fn -> epoch end, capacity: 32})
+
+{:ok, host} =
+  Lab.start_child(
+    lab,
+    :sessions,
+    {Host, id: :room_host, channel: channel, endpoint: "cloud", clock: fn -> epoch end, things: things, capabilities: [capability]}
+  )
+
+:ok = Channel.attach(channel, "edge", self())
+{:ok, _manifest} = Channel.send_value(channel, "edge", "cloud", manifest)
+
+{:ok, policy} =
+  Lab.start_child(lab, :sessions, {Policy, id: :policy, allowed: [:operator], limits: %{"setTarget" => %{min: 5, max: 35}}})
+
+run_opts = [
+  things: things,
+  thermostat_id: ThingDescription.id(thermostat_td),
+  actuator_id: ThingDescription.id(actuator_td),
+  meter_id: nil,
+  channel: channel,
+  edge: "edge",
+  cloud: "cloud",
+  policy: policy,
+  principal: :operator,
+  now: 1_000,
+  epoch: epoch,
+  scope: Scenario.scope("edge", epoch),
+  watermark: 1,
+  state_revision: 1
+]
+
+wait_until = fn read, predicate ->
+  Enum.reduce_while(1..200, read.(), fn _attempt, value ->
+    if predicate.(value), do: {:halt, value}, else: (Process.sleep(5) && {:cont, read.()})
+  end)
+end
+
+:ok
+```
+
+One control cycle without the meter: `21.5` observed, the comfort rule
+proposes `22.5`, the policy grants, the actuator is set once, and the cloud
+host received the manifest, the proposal and the result.
+
+```elixir
+{:ok, run} = Scenario.run(run_opts)
+proposal_fields = ActionProposal.to_map(run.action_proposal)
+{:ok, %Result{status: dispatch_status}} = run.dispatch
+stats = wait_until.(fn -> Host.stats(host) end, &(length(&1.received) == 3))
+actuator_after_run = Thing.stats(actuator)
+
+%{
+  proposal: {proposal_fields.action_name, proposal_fields.input},
+  decision: {run.decision.status, run.decision.proposal_digest == Policy.proposal_digest(run.action_proposal)},
+  dispatch: dispatch_status,
+  effect: run.effect,
+  actuator: actuator_after_run,
+  cloud_received: Enum.map(stats.received, & &1.kind),
+  cloud_observations: stats.observations
+}
+```
+
+With the meter over budget, the rule lowers the target instead; with a
+higher budget it raises it again.
+
+```elixir
+meter_runs =
+  if meter_td do
+    meter_id = ThingDescription.id(meter_td)
+    {:ok, over} = Scenario.run(Keyword.merge(run_opts, meter_id: meter_id, now: 2_000, watermark: 2))
+    {:ok, under} = Scenario.run(Keyword.merge(run_opts, meter_id: meter_id, now: 3_000, watermark: 3, power_budget: 3_000.0))
+    %{power: Observation.to_map(over.power_observation).value, over_effect: over.effect, under_effect: under.effect}
+  else
+    :no_meter
+  end
+```
+
+## Deliberate breakage
+
+The same decision cannot dispatch twice; a proposal for an undiscovered
+Thing is a typed scenario error; and a stranger, an expired grant and a
+stale watermark dispatch nothing.
+
+```elixir
+{:error, %LabError{code: second_dispatch}} =
+  Policy.dispatch(policy, run.decision.id, [now: 1_001, watermark: 1, state_revision: 1], fn -> raise "dispatched twice" end)
+
+{:error, %LabError{code: ghost}} = Scenario.run(Keyword.put(run_opts, :actuator_id, "urn:wotex:lab:ghost"))
+
+{:error, %LabError{code: stranger}} =
+  Policy.decide(policy, run.action_proposal, principal: :stranger, watermark: 1, state_revision: 1, now: 5_000)
+
+calls_before = Thing.stats(actuator).handler_calls
+
+{:ok, granted} =
+  Policy.decide(policy, run.action_proposal, principal: :operator, watermark: 9, state_revision: 1, now: 5_000, ttl: 100)
+
+{:error, %LabError{code: stale}} =
+  Policy.dispatch(policy, granted.id, [now: 5_001, watermark: 10, state_revision: 1], fn -> raise "stale" end)
+
+{:error, %LabError{code: expired}} =
+  Policy.dispatch(policy, granted.id, [now: 5_200, watermark: 9, state_revision: 1], fn -> raise "expired" end)
+
+refusals = policy |> Policy.records() |> Map.fetch!(:refusals) |> Enum.map(& &1.reason)
+{second_dispatch, ghost, stranger, stale, expired, Thing.stats(actuator).handler_calls == calls_before, refusals}
+```
+
+```elixir
+:ok = Supervisor.stop(lab)
+:ok = ThousandIsland.stop(server)
+:ok = Agent.stop(clock)
+:ok = Agent.stop(identifier)
+if scripted?, do: Wotex.Lab.Test.MqttServer.stop(peer)
+:ok
+```
+
+## Safe telemetry
+
+The cycle emits runtime, HTTP, MQTT, directory, continuum, Nx and policy
+spans. The dispatch span carries a non-reversible `thing_ref`, never the
+Thing id; no reading, token, topic or URL becomes a label.
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+components = spans |> Enum.map(fn {[:wotex, :lab, component, _operation, _event], _m, _md} -> component end) |> Enum.uniq() |> Enum.sort()
+dispatch_refs = for {[:wotex, :lab, :policy, :dispatch, :stop], _m, %{thing_ref: ref}} <- spans, do: ref
+text = inspect(spans)
+
+labels_safe? =
+  dispatch_refs != [] and Enum.all?(dispatch_refs, &String.starts_with?(&1, "thing:")) and
+    not (text =~ "urn:wotex") and not (text =~ token) and not (text =~ "21.5") and not (text =~ "127.0.0.1")
+
+{components, labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `things-discovered` | The thermostat and actuator (and the meter when present) are discovered by TD id |
+| `proposal-in-limits` | `setTarget` with input about `22.5`, inside `[5, 35]` |
+| `decision-granted` | The decision is granted and binds the proposal digest |
+| `dispatched-once` | One `:accepted` dispatch; the actuator saw exactly two handler calls in the cycle |
+| `effect-observed` | The actuator's `target` reads back as about `22.5` |
+| `result-crossed-channel` | The cloud host received manifest, observation proposal and action result, in that order |
+| `second-dispatch-refused` | `:already_dispatched`; ghost, stranger, stale and expired attempts dispatch nothing |
+| `meter-lowers-target` (when a meter is present) | `2500` W over a `2000` W budget gives `20.5`; a `3000` W budget gives `22.5` |
+
+```elixir
+close? = fn left, right -> abs(left - right) < 0.0001 end
+expected_things = if meter_td, do: 3, else: 2
+
+base = %{
+  "things-discovered" =>
+    map_size(things) == expected_things and Map.has_key?(things, ThingDescription.id(actuator_td)) and
+      Map.has_key?(things, ThingDescription.id(thermostat_td)),
+  "proposal-in-limits" => proposal_fields.action_name == "setTarget" and close?.(proposal_fields.input, 22.5),
+  "decision-granted" =>
+    run.decision.status == :granted and run.decision.proposal_digest == Policy.proposal_digest(run.action_proposal),
+  "dispatched-once" => dispatch_status == :accepted and actuator_after_run.handler_calls == 2,
+  "effect-observed" => close?.(run.effect, 22.5),
+  "result-crossed-channel" =>
+    Enum.map(stats.received, & &1.kind) == ["continuum_manifest", "observation_proposal", "action_result"],
+  "second-dispatch-refused" =>
+    second_dispatch == :already_dispatched and ghost == :thing_not_discovered and stranger == :principal_denied and
+      stale == :stale_observation and expired == :expired and labels_safe?
+}
+
+meter = %{
+  "meter-lowers-target" =>
+    match?(%{power: 2500, over_effect: over, under_effect: under} when abs(over - 20.5) < 0.0001 and abs(under - 22.5) < 0.0001, meter_runs)
+}
+
+if meter_td, do: Map.merge(base, meter), else: base
+```
+
+## Public seam
+
+Every consumer-implements seam at once: `runtime.transport` (loopback),
+`runtime.credentials` (`StaticRef`), `http.client` (`ReqClient`),
+`mqtt.client` (`EmqttClient`), `directory.repository` (`EtsRepository`),
+`directory.authorization`, `directory.clock`, `directory.identifier`, and
+the Lab-owned `lab.policy` and `lab.continuum_channel`.
+
+## Spec and completion IDs
+
+* Lab: WLB.03, WLB.04, WLB.05, WLB.06 (`WLB-C06`, `WLB-C08`).
+* Upstream: consumer evidence only through the seams above; no upstream
+  completion item is claimed by this notebook.
+
+## Replacement adapter
+
+Swap any adapter named in the seam list without touching the scenario:
+`Scenario.discover/3` takes the profiles, transports and credential port
+you pass; `Scenario.run/1` takes the channel, host endpoint names and policy
+you started. Replacing the policy means implementing grant, dispatch-once
+and revoke with the same binding fields (digest, principal, watermark,
+revision, expiry); a policy that dispatches on a bare proposal is not a
+replacement, it is a removal of the authority boundary.

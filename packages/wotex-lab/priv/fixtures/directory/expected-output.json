@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "fixture": "directory-room",
+  "clock": "2026-09-07T12:00:00Z",
+  "vectors": {
+    "directory:register-created": {"status": "created", "version": 1},
+    "directory:register-replaced": {"status": "replaced", "version": 2},
+    "directory:conditional-conflict": {"code": "conflict", "winners": 1, "losers": 7},
+    "directory:page-order": {"identifiers": ["urn:wotex:lab:list:a", "urn:wotex:lab:list:b"], "limit": 2},
+    "directory:cursor-invalidated": {"code": "collection_changed"},
+    "directory:expired-after-ttl": {"ttl": 30, "advance_seconds": 60, "code": "expired"},
+    "directory:forbidden-context": {"code": "forbidden"},
+    "directory:same-contract-both-stores": {"stores": ["ets", "sqlite"]}
+  }
+}

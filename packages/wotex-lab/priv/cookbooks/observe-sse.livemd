@@ -1,0 +1,438 @@
+# Real SSE frames, receiver death, reconnect and duplicate stop
+
+## Goal
+
+Observe a Property over Server-Sent Events from a disposable server in this
+notebook: real frames arrive through the runtime subscription envelope, a
+dead receiver ends the subscription, a permanent subscription reconnects
+after the stream closes and resolves a fresh credential for the new
+handshake, a duplicate stop is harmless, and an event over the byte bound
+ends the session instead of growing.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:req, "~> 0.7.4"},
+  {:bandit, "~> 1.12"},
+  {:plug, "~> 1.18"}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Subscription process, envelope, receiver monitoring, restart semantics | `wotex_runtime` (package-implements) | `Wotex.Runtime.Subscription`, `ConsumedThing.observation_child_spec/4` |
+| SSE handshake validation and event values | `wotex_binding_http` (package-implements) | `Wotex.Binding.HTTP.SSE.Event` |
+| Bounded incremental SSE parsing and the linked stream session | `wotex_lab` (consumer-implements `Wotex.Binding.HTTP.Client`) | `Adapters.HTTP.SSE.Parser`, `SSE.Session` |
+| Reconnect | host decision: a permanent child spec restarts and re-enters credential resolution | `restart: :permanent` below |
+| Supervision of subscriptions | consumer (`wotex_lab` instance `:sessions` role) | `Wotex.Lab.start_child/3` |
+| The stream server | this notebook | `WotexLabCookbook.ObserveSseServer` |
+
+## Run
+
+```elixir
+alias Wotex.Binding.HTTP
+alias Wotex.Lab
+alias Wotex.Lab.Adapters.HTTP.ReqClient
+alias Wotex.Lab.Adapters.Runtime.StaticRef
+alias Wotex.Lab.Telemetry
+alias Wotex.Runtime.{ConsumedThing, Context, Error, Subscription}
+alias Wotex.ThingDescription
+
+telemetry_id = "cookbook-observe-sse-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception, :measurement],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+```
+
+The server keeps one scripted stream at a time: it reports each handshake
+(with the Authorization header it saw) to this notebook, then sends whatever
+chunks the notebook pushes until told to close.
+
+```elixir
+owner = self()
+{:ok, controller} = Agent.start_link(fn -> %{owner: owner, stream: nil} end)
+
+defmodule WotexLabCookbook.ObserveSseServer do
+  use Plug.Router
+
+  plug(:match)
+  plug(:dispatch)
+
+  def init(controller), do: controller
+  def call(conn, controller), do: conn |> assign(:controller, controller) |> super(controller)
+
+  get "/properties/temperature/observe" do
+    controller = conn.assigns.controller
+    handler = self()
+    Agent.update(controller, &Map.put(&1, :stream, handler))
+    owner = Agent.get(controller, & &1.owner)
+    send(owner, {:stream_opened, get_req_header(conn, "authorization")})
+
+    conn =
+      conn
+      |> put_resp_content_type("text/event-stream")
+      |> put_resp_header("cache-control", "no-cache")
+      |> send_chunked(200)
+
+    loop(conn, controller)
+  end
+
+  match _ do
+    send_resp(conn, 404, "")
+  end
+
+  defp loop(conn, controller) do
+    receive do
+      {:chunk, data} ->
+        case chunk(conn, data) do
+          {:ok, conn} -> loop(conn, controller)
+          {:error, _reason} -> finish(conn, controller)
+        end
+
+      :close ->
+        finish(conn, controller)
+    after
+      10_000 -> finish(conn, controller)
+    end
+  end
+
+  defp finish(conn, controller) do
+    Agent.update(controller, &Map.put(&1, :stream, nil))
+    conn
+  catch
+    :exit, _controller_gone -> conn
+  end
+end
+
+{:ok, server} =
+  Bandit.start_link(
+    plug: {WotexLabCookbook.ObserveSseServer, controller},
+    ip: {127, 0, 0, 1},
+    port: 0,
+    startup_log: false
+  )
+
+{:ok, {_ip, port}} = ThousandIsland.listener_info(server)
+
+stream = fn ->
+  Enum.find_value(1..200, fn _attempt ->
+    Agent.get(controller, & &1.stream) || (Process.sleep(5) && nil)
+  end)
+end
+
+push = fn chunk -> send(stream.(), {:chunk, chunk}) end
+close_stream = fn -> send(stream.(), :close) end
+```
+
+The observe Form requires a bearer credential so a reconnect visibly
+resolves a new one: the lookup hands out `token-1`, `token-2`, ... in order.
+
+```elixir
+fixture = Application.app_dir(:wotex_lab, "priv/fixtures/http/thing-description.json")
+{:ok, fixture_td} = fixture |> File.read!() |> ThingDescription.parse()
+document = ThingDescription.to_map(fixture_td)
+
+[read_form, observe_form] = document["properties"]["temperature"]["forms"]
+secured_observe = Map.put(observe_form, "security", ["bearer_sc"])
+
+{:ok, td} =
+  document
+  |> Map.put("base", "http://127.0.0.1:#{port}/")
+  |> put_in(["properties", "temperature", "forms"], [read_form, secured_observe])
+  |> ThingDescription.from_map()
+
+{:ok, counter} = Agent.start_link(fn -> 0 end)
+
+credentials =
+  {StaticRef,
+   %{
+     references: %{"bearer_sc" => "vault://room/sse"},
+     lookup: fn "vault://room/sse" ->
+       {:ok, {:bearer, "token-#{Agent.get_and_update(counter, &{&1 + 1, &1 + 1})}"}}
+     end
+   }}
+
+{:ok, profile} = HTTP.profile()
+{:ok, config} = HTTP.config(client: {ReqClient, %{}}, max_event_bytes: 64)
+
+{:ok, consumed} =
+  ConsumedThing.new(td,
+    profiles: [profile],
+    transports: %{profile.id => HTTP.transport(config)},
+    credentials: credentials
+  )
+
+{:ok, lab} = Lab.start_link(id: "observe-sse", max_children: 8)
+context = Context.new!(request_id: "sse-observe")
+
+observe = fn id, receiver, restart ->
+  {:ok, spec} =
+    ConsumedThing.observation_child_spec(consumed, "temperature", context,
+      id: id,
+      receiver: receiver,
+      restart: restart
+    )
+
+  {:ok, pid} = Lab.start_child(lab, :sessions, spec)
+  pid
+end
+```
+
+Real frames: an event with `id` and `retry` fields, a comment keep-alive that
+decodes to nothing, and a multi-line `data` that is not valid JSON and is
+reported as an undecodable frame without ending the stream.
+
+```elixir
+first = observe.(:sse_first, self(), :temporary)
+
+handshake_one =
+  receive do
+    {:stream_opened, auth} -> auth
+  after
+    2_000 -> :no_handshake
+  end
+
+push.("event: temperature\r\nid: 41\r\nretry: 250\r\ndata: 22.5\r\n\r\n")
+
+frame =
+  receive do
+    {:wotex_runtime, :sse_first, {:ok, value, meta}} -> {value, meta}
+  after
+    2_000 -> :no_frame
+  end
+
+push.(": keep-alive\n\n")
+
+keepalive =
+  receive do
+    {:wotex_runtime, :sse_first, message} -> message
+  after
+    100 -> :nothing_delivered
+  end
+
+push.("data: 1\ndata: 2\n\n")
+
+invalid =
+  receive do
+    {:wotex_runtime, :sse_first, {:error, %Error{} = error}} -> error.code
+  after
+    2_000 -> :no_error
+  end
+
+{handshake_one, frame, keepalive, invalid, Process.alive?(first)}
+```
+
+Duplicate stop: the first stop closes the session and the connection; a
+second stop finds no process and is a caught exit, never a crash.
+
+```elixir
+:ok = Subscription.stop(first)
+
+duplicate_stop =
+  try do
+    Subscription.stop(first)
+  catch
+    :exit, _reason -> :already_stopped
+  end
+
+{Process.alive?(first), duplicate_stop}
+```
+
+Receiver death: the subscription monitors its receiver and shuts down with
+`:receiver_down` when it dies.
+
+```elixir
+receiver = spawn(fn -> receive do: (:quit -> :ok) end)
+second = observe.(:sse_receiver, receiver, :temporary)
+monitor = Process.monitor(second)
+
+_handshake_two =
+  receive do
+    {:stream_opened, auth} -> auth
+  after
+    2_000 -> :no_handshake
+  end
+
+send(receiver, :quit)
+
+receiver_down =
+  receive do
+    {:DOWN, ^monitor, :process, ^second, reason} -> reason
+  after
+    2_000 -> :still_alive
+  end
+```
+
+Reconnect: a permanent child is restarted by the instance after the server
+closes the stream, and the new handshake carries a freshly resolved token.
+
+```elixir
+durable = observe.(:sse_durable, self(), :permanent)
+
+handshake_three =
+  receive do
+    {:stream_opened, auth} -> auth
+  after
+    2_000 -> :no_handshake
+  end
+
+close_stream.()
+
+lost =
+  receive do
+    {:wotex_runtime, :sse_durable, {:status, status}} -> status
+  after
+    2_000 -> :no_status
+  end
+
+handshake_four =
+  receive do
+    {:stream_opened, auth} -> auth
+  after
+    2_000 -> :no_reconnect
+  end
+
+push.("data: 19.0\n\n")
+
+after_reconnect =
+  receive do
+    {:wotex_runtime, :sse_durable, {:ok, value, _meta}} -> value
+  after
+    2_000 -> :no_frame
+  end
+
+{handshake_three, lost, handshake_four, after_reconnect, Process.alive?(durable)}
+```
+
+## Deliberate breakage
+
+An event larger than `max_event_bytes` ends the session: the parser refuses
+to buffer it, the session exits and the subscription reports the transport
+as down.
+
+```elixir
+close_stream.()
+
+_replacement =
+  receive do
+    {:stream_opened, _auth} -> :ok
+  after
+    2_000 -> :no_reconnect
+  end
+
+big = observe.(:sse_big, self(), :temporary)
+big_monitor = Process.monitor(big)
+
+_handshake_five =
+  receive do
+    {:stream_opened, _auth} -> :ok
+  after
+    2_000 -> :no_handshake
+  end
+
+push.("data: " <> String.duplicate("9", 100) <> "\n\n")
+
+oversized =
+  receive do
+    {:DOWN, ^big_monitor, :process, ^big, reason} -> reason
+  after
+    2_000 -> :still_alive
+  end
+```
+
+```elixir
+:ok = Supervisor.stop(lab)
+:ok = ThousandIsland.stop(server)
+:ok = Agent.stop(controller)
+:ok = Agent.stop(counter)
+```
+
+## Safe telemetry
+
+Subscription spans carry the method and profile; the parser emits byte
+counts as measurements. Tokens and frame contents never appear.
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+parse_bytes =
+  for {[:wotex, :lab, :sse, :parse, :measurement], %{bytes: bytes}, _metadata} <- spans, do: bytes
+
+text = inspect(spans)
+labels_safe? = parse_bytes != [] and not (text =~ "token-") and not (text =~ "22.5")
+{Enum.sum(parse_bytes), labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `frame-decoded` | `22.5` arrives with `event`, `id` `"41"` and `retry` `250` |
+| `keepalive-ignored` | A comment line delivers nothing |
+| `invalid-frame-reported` | Multi-line non-JSON data is `:undecodable_frame` and the subscription stays alive |
+| `receiver-death-stops` | The subscription exits with `{:shutdown, :receiver_down}` |
+| `reconnect-fresh-credential` | After `:transport_down` a new handshake carries a different bearer token |
+| `duplicate-stop-safe` | The second stop is a caught exit |
+| `oversized-event-ends-session` | A 100-byte event over a 64-byte bound ends with `{:shutdown, :transport_down}` |
+
+```elixir
+%{
+  "frame-decoded" => match?({22.5, %{event: "temperature", id: "41", retry: 250}}, frame),
+  "keepalive-ignored" => keepalive == :nothing_delivered,
+  "invalid-frame-reported" => invalid == :undecodable_frame,
+  "receiver-death-stops" => receiver_down == {:shutdown, :receiver_down},
+  "reconnect-fresh-credential" =>
+    lost == :transport_down and after_reconnect == 19.0 and
+      match?(["Bearer token-" <> _], handshake_three) and
+      match?(["Bearer token-" <> _], handshake_four) and handshake_three != handshake_four,
+  "duplicate-stop-safe" => duplicate_stop == :already_stopped,
+  "oversized-event-ends-session" => oversized == {:shutdown, :transport_down} and labels_safe?
+}
+```
+
+## Public seam
+
+`http.client` — `Wotex.Binding.HTTP.Client.subscribe/4` and `close/2`
+(consumer-implements; the Lab session parses SSE and links to the
+subscription). `runtime.credentials` for the per-handshake token.
+
+## Spec and completion IDs
+
+* Lab: WLB.04 (`WLB-C04`, `WLB-C08`).
+* Upstream consumer evidence: `RT-C02`, `RT-C04`, `WBH-C02`, `WBH-C03`,
+  `WBH-C04`.
+
+## Replacement adapter
+
+A replacement client's `subscribe/4` must open the stream, validate the
+handshake status and media type, send each SSE event to the owner as
+`{:wotex_transport_frame, %Wotex.Binding.HTTP.SSE.Event{}}`, and exit with a
+`:shutdown` reason when the stream ends or a bound is exceeded. Do not
+reconnect inside the client: a restart policy on the subscription child spec
+is the reconnect, and it re-enters `Wotex.Runtime.Credentials.resolve/4`.

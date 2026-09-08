@@ -1,0 +1,275 @@
+# Conflicting control rules, bounded search and counterexample replay
+
+## Goal
+
+Show the boundary where formal control verification belongs: between the
+numeric proposals `wotex_nx` decodes and the consumer decision that may
+dispatch one of them. The Lab's decision policy already refuses conflicting
+rules, stale observations, revoked and expired grants, and it never lets a
+verifier result grant authority. The `ex_maude` profile of WLB.09 that would
+explore modeled transition orders, prove exhaustion or produce a replayable
+counterexample is **planned**: it is fully specified, has no source in this
+package, and no cell below pretends otherwise.
+
+The notebook's evidence status is `partial`: the policy cells run against
+the cohort; the bounded search and counterexample replay are documentation
+only and are marked as such.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:nx, "~> 0.13.1"}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout, and it deliberately
+does not list `ex_maude`: no Maude binary is downloaded or started by this
+notebook or by the base library.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| Decoded proposals | `wotex_nx` (package-implements) | `Wotex.Nx.Decoder`, `ActionProposal` |
+| Decision binding, conflict refusal, dispatch once, revoke, records | `wotex_lab` (consumer) | `Wotex.Lab.SmartRoom.Policy` |
+| The simulated effect | `wotex_lab` reference host | `Wotex.Lab.Reference.Thing` |
+| Finite control model, bounded search, exhaustion basis, counterexample replay | planned `ex_maude` profile (WLB.09) | not in source |
+| Formal verification never granting an Action | consumer policy, by construction | `Policy.dispatch/4` takes no verifier input |
+
+## Run
+
+```elixir
+alias Wotex.DataSchema
+alias Wotex.Lab
+alias Wotex.Lab.Adapters.Runtime.{Loopback, StaticRef}
+alias Wotex.Lab.Error, as: LabError
+alias Wotex.Lab.Reference.Thing
+alias Wotex.Lab.SmartRoom.Policy
+alias Wotex.Lab.Telemetry
+alias Wotex.Nx.{Decoder, OutputSchema}
+alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Result}
+alias Wotex.ThingDescription
+
+telemetry_id = "cookbook-formal-control-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+```
+
+The actuator and the policy. The policy allows `:operator` to set targets
+between 5 and 35; every decision binds the proposal digest, the observation
+watermark and the simulated state revision.
+
+```elixir
+{:ok, lab} = Lab.start_link(id: "formal-control", max_children: 8)
+{:ok, td} = Application.app_dir(:wotex_lab, "priv/fixtures/loopback/thing-description.json") |> File.read!() |> ThingDescription.parse()
+thing_id = ThingDescription.id(td)
+
+{:ok, actuator} =
+  Lab.start_child(
+    lab,
+    :things,
+    {Thing,
+     td: td,
+     state: %{"temperature" => 20.0, "target" => 21.0},
+     tokens: %{"bearer_sc" => "room-token"},
+     actions: %{
+       "setTarget" => fn input, state -> {:ok, %{"accepted" => true}, :accepted, Map.put(state, "target", input)} end
+     }}
+  )
+
+{:ok, profile} = BindingProfile.new(id: :loopback, schemes: ["loopback"], operations: Wotex.Runtime.operations())
+
+{:ok, consumed} =
+  ConsumedThing.new(td,
+    profiles: [profile],
+    transports: %{loopback: {Loopback, %{host: actuator}}},
+    credentials: {StaticRef, %{references: %{"bearer_sc" => "ref"}, lookup: fn "ref" -> {:ok, "room-token"} end}}
+  )
+
+{:ok, policy} =
+  Lab.start_child(lab, :sessions, {Policy, id: :policy, allowed: [:operator], limits: %{"setTarget" => %{min: 5, max: 35}}})
+
+{:ok, bounds} = DataSchema.new(%{"type" => "number", "minimum" => 5, "maximum" => 35})
+
+{:ok, output} =
+  OutputSchema.new(
+    kind: :action_proposal,
+    thing_id: thing_id,
+    affordance_type: :action,
+    affordance_name: "setTarget",
+    data_schema: bounds,
+    dtype: :f32
+  )
+
+proposal = fn id, value ->
+  {:ok, proposal} = Decoder.decode(Nx.tensor(value, type: :f32), output, id: id, proposed_at: 1_000)
+  proposal
+end
+
+dispatcher = fn value ->
+  fn -> ConsumedThing.invoke_action(consumed, "setTarget", value, Context.new!(request_id: "formal-" <> to_string(value))) end
+end
+
+Thing.stats(actuator).handler_calls
+```
+
+Conflicting rules: a comfort rule proposes `24.0`, an energy rule proposes
+`18.0` for the same Thing and Action at the same watermark. The first grant
+is outstanding, so the second is refused as a conflict rather than queued;
+the granted decision dispatches once.
+
+```elixir
+comfort = proposal.("comfort-1", 24.0)
+energy = proposal.("energy-1", 18.0)
+decision_context = [principal: :operator, watermark: 1, state_revision: 1, now: 1_000, ttl: 5_000]
+
+{:ok, granted} = Policy.decide(policy, comfort, decision_context)
+{:error, %LabError{code: conflict}} = Policy.decide(policy, energy, decision_context)
+
+{:ok, {:ok, %Result{status: dispatched}}} =
+  Policy.dispatch(policy, granted.id, [now: 1_001, watermark: 1, state_revision: 1], dispatcher.(24.0))
+
+{:error, %LabError{code: second}} =
+  Policy.dispatch(policy, granted.id, [now: 1_002, watermark: 1, state_revision: 1], dispatcher.(24.0))
+
+{conflict, dispatched, second, Thing.stats(actuator)}
+```
+
+Once the comfort decision is dispatched, the energy rule can be decided at
+the next watermark; revoking it before dispatch leaves the actuator alone. A
+grant that is never dispatched stays outstanding and would block the next
+decision for the same Thing and Action, so it is revoked explicitly too.
+
+```elixir
+{:ok, energy_grant} = Policy.decide(policy, energy, Keyword.merge(decision_context, watermark: 2, now: 2_000))
+:ok = Policy.revoke(policy, energy_grant.id)
+
+{:error, %LabError{code: revoked}} =
+  Policy.dispatch(policy, energy_grant.id, [now: 2_001, watermark: 2, state_revision: 1], dispatcher.(18.0))
+
+{:ok, stale_grant} = Policy.decide(policy, proposal.("energy-2", 18.0), Keyword.merge(decision_context, watermark: 3, now: 3_000))
+
+{:error, %LabError{code: stale}} =
+  Policy.dispatch(policy, stale_grant.id, [now: 3_001, watermark: 4, state_revision: 1], dispatcher.(18.0))
+
+:ok = Policy.revoke(policy, stale_grant.id)
+{revoked, stale, Thing.stats(actuator)}
+```
+
+The bounded search and counterexample replay of WLB.09, shown as
+documentation only (this block is not an Elixir cell and is not executed):
+
+```text
+# Planned (WLB.09, implementation_status: planned; ex_maude profile).
+# pool  = ExMaude.Pool.child_spec(name: pool_name, executable: verified_maude_path, size: 1)
+# model = %{id: "thermal-control-v1", digest: "sha256:..."}   # checked-in, digest-addressed
+# query = "search [1] in THERMAL-CONTROL : init(bands, modes, decisions) =>* unsafe(S) ."
+# {:ok, result} = Wotex.Lab.Formal.search(pool, model, query, max_depth: 100, solutions: 1, deadline_ms: 5_000, max_output_bytes: 1_048_576)
+# result.status in [:counterexample, :verified_in_model, :inconclusive, :timeout, :unsupported, :error]
+# A `:counterexample` replays as an ordered finite simulator trace against the smart room;
+# a bounded search with no solution is `:inconclusive` unless exhaustion is proven.
+# Neither outcome touches Thing.stats(actuator).handler_calls.
+```
+
+## Deliberate breakage
+
+Anything a verifier could say is irrelevant to authority: the policy's
+dispatch takes a decision id and the current watermark and revision, not a
+verification result. Here a "verified" flag is simply not an input, and a
+dispatch under a changed state revision is refused as stale state.
+
+```elixir
+verified_in_model = true
+
+{:ok, revision_grant} =
+  Policy.decide(policy, proposal.("comfort-2", 24.0), Keyword.merge(decision_context, watermark: 5, now: 5_000))
+
+{:error, %LabError{code: stale_state}} =
+  Policy.dispatch(policy, revision_grant.id, [now: 5_001, watermark: 5, state_revision: 2], dispatcher.(24.0))
+
+calls_after = Thing.stats(actuator).handler_calls
+records = Policy.records(policy)
+{verified_in_model, stale_state, calls_after, Enum.map(records.refusals, & &1.reason), Enum.map(records.decisions, & &1.status)}
+```
+
+```elixir
+:ok = Supervisor.stop(lab)
+```
+
+## Safe telemetry
+
+Only the granted and current decision produced a dispatch span; refusals
+produce none. The span carries a non-reversible `thing_ref` and the Action
+name, not the Thing id or the input.
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+dispatches = for {[:wotex, :lab, :policy, :dispatch, :stop], _measurements, metadata} <- spans, do: metadata
+text = inspect(spans)
+labels_safe? = length(dispatches) == 1 and not (text =~ thing_id) and not (text =~ "24.0")
+{dispatches, labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `conflicting-rule-refused` | The energy proposal at the same watermark is `:conflicting_decision` |
+| `dispatch-once` | The comfort decision dispatches once (`:accepted`); a second attempt is `:already_dispatched` |
+| `revoked-inert` | A revoked grant is `:revoked` at dispatch and changes nothing |
+| `stale-observation-inert` | A grant dispatched under a newer watermark is `:stale_observation`; a changed revision is `:stale_state` |
+| `action-counter-unchanged` | The actuator saw exactly one handler call across every refusal |
+
+```elixir
+%{
+  "conflicting-rule-refused" => conflict == :conflicting_decision,
+  "dispatch-once" => dispatched == :accepted and second == :already_dispatched,
+  "revoked-inert" => revoked == :revoked,
+  "stale-observation-inert" => stale == :stale_observation and stale_state == :stale_state,
+  "action-counter-unchanged" => calls_after == 1 and labels_safe?
+}
+```
+
+## Public seam
+
+`lab.policy` is Lab-owned: the consumer decision boundary between decoded
+proposals and effects. `lab.formal_verification` is the planned WLB.09
+seam; it has no module in this package and is recorded as planned in the
+generated graph.
+
+## Spec and completion IDs
+
+* Lab: WLB.09, implementation status planned (`WLB-C09`, `WLB-C08`).
+* Upstream: none claimed; `ex_maude` is not part of the source cohort.
+
+## Replacement adapter
+
+A replacement policy must bind at least the proposal digest, principal,
+watermark, state revision and expiry, refuse conflicts instead of queueing
+them, dispatch at most once and record refusals separately from dispatch
+acknowledgements. When the `ex_maude` profile ships, its result is an
+additional input to the decision, never to the dispatch.

@@ -1,0 +1,278 @@
+# Observations to an inert proposal with an explicit unit callback
+
+## Goal
+
+Turn two Kelvin temperature observations of a Thing into a Celsius Nx batch,
+run a small `defn`, and decode the result as an inert `setTarget` Action
+proposal that nothing dispatches. The convenience call
+`Wotex.Lab.Examples.Thermal.run/0` is shown next to every public `wotex_nx`
+call it makes, so a consumer can copy the pipeline without the Lab.
+
+## Prerequisites
+
+```elixir
+Mix.install([
+  {:wotex_lab, "~> 0.1.0"},
+  {:nx, "~> 0.13.1"}
+])
+```
+
+The requirements above are published-artifact requirements. At the time this
+notebook was written none of the `wotex*` packages is published on Hex; the
+notebook is verified against the workspace source cohort recorded in
+`docs/provenance/source-cohort.json` by `test/wotex/lab/cookbook_test.exs`,
+which evaluates every Elixir cell below in order (skipping this install
+cell). `Mix.install/1` never points at a Git checkout. No native Nx backend,
+model download or server is needed: `Nx.BinaryBackend` and
+`Nx.Defn.Evaluator` are selected explicitly.
+
+## Package and consumer ownership
+
+| Concern | Owner | Where |
+| --- | --- | --- |
+| TD parsing and DataSchema | `wotex` | `Wotex.ThingDescription`, `Wotex.DataSchema` |
+| Observation, row, feature, schema, encoder, decoder, output schema | `wotex_nx` (package-implements) | `Wotex.Nx.*` |
+| Unit conversion policy (`K` to `Cel` only) | `wotex_lab` (consumer-implements `Wotex.Nx.UnitConverter`) | `Wotex.Lab.Adapters.Nx.UnitConverter` |
+| The `defn`, backend and compiler selection | consumer | `Wotex.Lab.Examples.Thermal.target/1` here |
+| Any effect | nobody in this notebook | the proposal stays inert |
+
+## Run
+
+```elixir
+alias Wotex.{DataSchema, ThingDescription}
+alias Wotex.Lab.Adapters.Nx.UnitConverter
+alias Wotex.Lab.Examples.Thermal
+alias Wotex.Lab.Telemetry
+alias Wotex.Nx.{Decoder, Encoded, Encoder, Feature, Observation, OutputSchema, Row, Schema}
+
+telemetry_id = "cookbook-thermal-nx-#{System.unique_integer([:positive])}"
+
+events =
+  for component <- Telemetry.components(),
+      operation <- Telemetry.operations(),
+      event <- [:start, :stop, :exception],
+      do: [:wotex, :lab, component, operation, event]
+
+:ok = :telemetry.attach_many(telemetry_id, events, &Telemetry.forward/4, self())
+```
+
+The convenience path first: one call, a TD, an encoded batch and a proposal.
+
+```elixir
+{:ok, convenience} = Thermal.run()
+{Encoded.feature_order(convenience.encoded), convenience.proposal}
+```
+
+Now the same pipeline written out with the package calls. The fixture TD
+supplies the Thing id, the temperature DataSchema and the Action input schema.
+
+```elixir
+path = Application.app_dir(:wotex_lab, "priv/fixtures/thermal/thing-description.json")
+{:ok, td} = path |> File.read!() |> ThingDescription.parse()
+document = ThingDescription.to_map(td)
+thing_id = ThingDescription.id(td)
+
+{:ok, input_schema} = DataSchema.new(Map.take(document["properties"]["temperature"], ["type", "unit"]))
+{:ok, output_schema} = DataSchema.new(document["actions"]["setTarget"]["input"])
+
+{:ok, feature} =
+  Feature.new(
+    name: "temperature",
+    thing_id: thing_id,
+    affordance_type: :property,
+    affordance_name: "temperature",
+    data_schema: input_schema,
+    accepted_quality: [:good],
+    missing: :error
+  )
+
+{:ok, schema} = Schema.new(features: [feature], max_rows: 2)
+```
+
+Observations carry their own unit; the encoder asks the explicit converter
+to reach the feature's `Cel` schema and revalidates the result.
+
+```elixir
+observe = fn id, at, kelvin ->
+  {:ok, observation} =
+    Observation.new(
+      id: id,
+      thing_id: thing_id,
+      affordance_type: :property,
+      affordance_name: "temperature",
+      observed_at: at,
+      value: kelvin,
+      unit: "K",
+      quality: :good
+    )
+
+  {:ok, row} = Row.new(at, %{"temperature" => observation})
+  row
+end
+
+rows = [observe.("thermal-1", 0, 293.15), observe.("thermal-2", 1_000, 295.15)]
+
+{:ok, encoded} =
+  Nx.with_default_backend(Nx.BinaryBackend, fn ->
+    Encoder.encode(rows, schema, unit_converter: {UnitConverter, []})
+  end)
+
+{{values}, {masks}, quality} =
+  Nx.Defn.jit_apply(&Function.identity/1, [Encoded.batch(encoded)], compiler: Nx.Defn.Evaluator)
+
+%{
+  feature_order: Encoded.feature_order(encoded),
+  timestamps: Encoded.timestamps(encoded),
+  provenance: Encoded.provenance(encoded),
+  values: Nx.to_flat_list(values),
+  masks: Nx.to_flat_list(masks),
+  quality: Nx.to_flat_list(quality)
+}
+```
+
+The numerical step is the Lab's `target/1` `defn` (mask-weighted mean plus
+one degree) run through the evaluator; any consumer function with the same
+container shape works.
+
+```elixir
+tensor =
+  Telemetry.span(:nx, :inference, %{profile: :cookbook}, fn ->
+    Nx.Defn.jit_apply(&Thermal.target/1, [Encoded.batch(encoded)], compiler: Nx.Defn.Evaluator)
+  end)
+
+{:ok, output} =
+  OutputSchema.new(
+    kind: :action_proposal,
+    thing_id: thing_id,
+    affordance_type: :action,
+    affordance_name: "setTarget",
+    data_schema: output_schema,
+    dtype: :f32
+  )
+
+{:ok, proposal} = Decoder.decode(tensor, output, id: "thermal-proposal-1", proposed_at: 2_000)
+proposal
+```
+
+## Deliberate breakage
+
+Three inputs that must never become a proposal: a unit the converter does
+not know, an observation from another Thing, and a model output outside the
+Action's schema bounds.
+
+```elixir
+{:ok, fahrenheit} =
+  Observation.new(
+    id: "sample",
+    thing_id: thing_id,
+    affordance_type: :property,
+    affordance_name: "temperature",
+    observed_at: 0,
+    value: 68,
+    unit: "F"
+  )
+
+{:ok, fahrenheit_row} = Row.new(0, %{"temperature" => fahrenheit})
+
+{:error, unit_error} =
+  Encoder.encode([fahrenheit_row], schema, unit_converter: {UnitConverter, []})
+
+{:ok, stranger} =
+  Observation.new(
+    id: "stranger",
+    thing_id: "urn:test:2",
+    affordance_type: :property,
+    affordance_name: "temperature",
+    observed_at: 0,
+    value: 20.0,
+    unit: "Cel"
+  )
+
+{:ok, stranger_row} = Row.new(0, %{"temperature" => stranger})
+{:error, identity_error} = Encoder.encode([stranger_row], schema)
+
+{:error, range_error} =
+  Decoder.decode(Nx.tensor(40.0, type: :f32), output, id: "too-hot", proposed_at: 0)
+
+{unit_error.phase, identity_error.code, range_error.code}
+```
+
+## Safe telemetry
+
+The Lab spans name the component and operation; labels are the profile and
+the outcome only. Tensor contents and the Thing id never appear.
+
+```elixir
+drain = fn drain ->
+  receive do
+    {:wotex_lab_telemetry, event, measurements, metadata} ->
+      [{event, measurements, metadata} | drain.(drain)]
+  after
+    0 -> []
+  end
+end
+
+spans = drain.(drain)
+:telemetry.detach(telemetry_id)
+
+labels =
+  for {[:wotex, :lab, component, operation, :stop], _measurements, metadata} <- spans,
+      do: {component, operation, metadata}
+
+labels_safe? =
+  Enum.all?(labels, fn {_component, _operation, metadata} ->
+    Enum.all?(Map.values(metadata), &(is_atom(&1) and not (is_binary(&1) and &1 =~ "urn:")))
+  end) and not (inspect(labels) =~ "urn:wotex")
+
+{Enum.map(labels, &{elem(&1, 0), elem(&1, 1)}), labels_safe?}
+```
+
+## Expected output
+
+| Check | Expectation |
+| --- | --- |
+| `feature-order` | `["temperature"]` with timestamps `[0, 1000]` |
+| `observed-masks` | masks `[1, 1]`, quality `[0, 0]`, values about `[20.0, 22.0]` |
+| `proposal-input` | `setTarget` for the fixture Thing with input about `22.0` at `2000` |
+| `convenience-agrees` | `Thermal.run/0` produced the same proposal |
+| `unit-refused` | Fahrenheit fails in phase `:unit` |
+| `identity-refused` | Another Thing's observation is refused by the encoder |
+| `output-range-refused` | `40.0` is outside `[5, 35]` and is not decoded |
+
+```elixir
+close? = fn left, right -> abs(left - right) < 0.00001 end
+
+%{
+  "feature-order" =>
+    Encoded.feature_order(encoded) == ["temperature"] and Encoded.timestamps(encoded) == [0, 1_000],
+  "observed-masks" =>
+    Nx.to_flat_list(masks) == [1, 1] and Nx.to_flat_list(quality) == [0, 0] and
+      Enum.zip(Nx.to_flat_list(values), [20.0, 22.0]) |> Enum.all?(fn {a, b} -> close?.(a, b) end),
+  "proposal-input" =>
+    proposal.thing_id == thing_id and proposal.action_name == "setTarget" and
+      proposal.proposed_at == 2_000 and close?.(proposal.input, 22.0),
+  "convenience-agrees" => convenience.proposal == proposal,
+  "unit-refused" => unit_error.phase == :unit,
+  "identity-refused" => match?(%Wotex.Nx.Error{}, identity_error),
+  "output-range-refused" => match?(%Wotex.Nx.Error{}, range_error) and labels_safe?
+}
+```
+
+## Public seam
+
+`nx.unit_converter` — `Wotex.Nx.UnitConverter.convert/5` (consumer-implements;
+the Lab reference handles `K` and `Cel` only). `core.td` for the parse.
+
+## Spec and completion IDs
+
+* Lab: WLB.03 `thermal-nx` lane (`WLB-C03`, `WLB-C08`).
+* Upstream consumer evidence: `WNX-C03`, `WNX-C04` (`wotex_nx:WNX.01`).
+
+## Replacement adapter
+
+Implement `Wotex.Nx.UnitConverter` in your own module and pass it as
+`unit_converter: {YourConverter, config}` to `Wotex.Nx.Encoder.encode/3`.
+Return `{:ok, number}` only for conversions you can justify; return
+`{:error, reason}` for everything else. The encoder still validates the
+converted value against the feature's DataSchema, so a converter cannot
+smuggle an out-of-schema value into a tensor.
