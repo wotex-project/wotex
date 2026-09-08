@@ -113,3 +113,13 @@ reference attempt `d303bc2972d64f99575a5d9015ac5dcf` correctly records failure:
 captures that can share one millisecond. A separate local 100-pair capture
 reproducer observed 75 equal timestamps. The retained failure is not waived;
 timestamp ordering and receiver deduplication require the WLB.10 follow-up.
+
+The WLB.10 v0.7.0 follow-up rejects new non-advancing captures, revalidates
+snapshot structs and consumes rejected attempt numbers. Its receiver test
+uses explicit fixture timestamps and separately proves last-row deduplication
+for same-label/same-time direct writes. The original failed attempt remains
+retained. With the fix, all 17 Lab and 13 Workbench checks pass, and reference
+attempt `7b4bef25cec0018565a7962ed3f3b07a` passes 336 tests with no exclusions,
+with broker, Greptime and Maude enabled and source guards matching before/after.
+The record still excludes full reference/artifact and outer-runner-containment
+acceptance; a successful request remains distinct from a durable row count.

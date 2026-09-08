@@ -7,7 +7,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
 
   alias Wotex.Lab
   alias Wotex.Lab.Error
-  alias Wotex.Lab.Metrics.{GreptimeBridge, History, ReqSink, Snapshot}
+  alias Wotex.Lab.Metrics.{Exposition, GreptimeBridge, History, ReqSink, Snapshot}
   alias Wotex.Lab.Test.RemoteWriteServer
 
   @secret "export-token-sentinel-4d2f"
@@ -49,6 +49,45 @@ defmodule Wotex.Lab.MetricsBridgeTest do
       attempts == 0 -> flunk("expected #{key} == #{inspect(value)}, got #{inspect(stats)}")
       true -> Process.sleep(10) && await(bridge, key, value, attempts - 1)
     end
+  end
+
+  test "equal or rolled-back capture times are refused before history or sink admission" do
+    {:ok, first} = Exposition.parse(@exposition, sequence: 1, wall_time_ms: 1_700_000_000_000)
+    duplicate = %{first | sequence: 2}
+    rollback = %{first | sequence: 3, wall_time_ms: first.wall_time_ms - 1}
+    forged = %{first | sequence: 4, wall_time_ms: "not a timestamp"}
+    next = %{first | sequence: 5, wall_time_ms: first.wall_time_ms + 1}
+    snapshots = [first, duplicate, rollback, forged, next]
+    calls = :counters.new(1, [])
+    test = self()
+    history = start_supervised!({History, id: :ordering})
+
+    bridge =
+      bridge(
+        scrape: fn ->
+          :counters.add(calls, 1, 1)
+          {:ok, Enum.at(snapshots, :counters.get(calls, 1) - 1)}
+        end,
+        sink: fn request, _credential ->
+          send(test, {:ordered_export, request})
+          {:ok, %{status: 204}}
+        end,
+        history: history
+      )
+
+    assert {:ok, %{sequence: 1}} = GreptimeBridge.scrape_now(bridge)
+
+    for _ <- 1..2 do
+      assert {:error, %Error{code: :unordered_snapshot}} = GreptimeBridge.scrape_now(bridge)
+    end
+
+    assert {:error, %Error{code: :invalid_time}} = GreptimeBridge.scrape_now(bridge)
+    assert {:ok, %{sequence: 5}} = GreptimeBridge.scrape_now(bridge)
+    assert %{scraped: 5, admitted: 2, rejected: 3} = await(bridge, :exported, 2)
+    assert [%{snapshot: ^first}, %{snapshot: ^next, gap: true}] = History.snapshots(history)
+    assert_receive {:ordered_export, _first}
+    assert_receive {:ordered_export, _next}
+    refute_receive {:ordered_export, _rejected}
   end
 
   test "scrapes exposition, writes history and exports with redacted credentials" do
@@ -106,6 +145,18 @@ defmodule Wotex.Lab.MetricsBridgeTest do
       end)
 
     refute log =~ @secret
+  end
+
+  test "a rejected or exhausted export cannot roll back capture admission" do
+    for {status, counter} <- [{400, :rejected_permanent}, {503, :dropped_exhausted}] do
+      {:ok, snapshot} = Exposition.parse(@exposition, sequence: 1, wall_time_ms: 1_700_000_000_000)
+      %{url: url} = server([{:status, status}])
+      bridge = bridge(scrape: fn -> {:ok, snapshot} end, sink: req_sink(url), max_attempts: 1)
+      assert {:ok, _} = GreptimeBridge.scrape_now(bridge)
+      await(bridge, counter, 1)
+      assert {:error, %Error{code: :unordered_snapshot}} = GreptimeBridge.scrape_now(bridge)
+      assert %{admitted: 1, rejected: 1, exported: 0} = GreptimeBridge.stats(bridge)
+    end
   end
 
   test "retries 5xx and bounded 429 with the same snapshot identity, never other 4xx" do
@@ -167,12 +218,23 @@ defmodule Wotex.Lab.MetricsBridgeTest do
       end
     end
 
-    bridge = bridge(sink: blocking, queue_limit: 3)
+    calls = :counters.new(1, [])
+
+    scrape = fn ->
+      :counters.add(calls, 1, 1)
+      n = :counters.get(calls, 1)
+      Exposition.parse(@exposition, sequence: n, wall_time_ms: 1_700_000_000_000 + n)
+    end
+
+    bridge = bridge(sink: blocking, queue_limit: 3, scrape: scrape)
     for _scrape <- 1..6, do: assert({:ok, _} = GreptimeBridge.scrape_now(bridge))
     assert_receive {:sink_called, exporter}
 
     stats = GreptimeBridge.stats(bridge)
     assert stats.in_flight and stats.queue_depth == 3 and stats.dropped_overload == 2
+    :counters.put(calls, 1, 2)
+    assert {:error, %Error{code: :unordered_snapshot}} = GreptimeBridge.scrape_now(bridge)
+    assert %{admitted: 6, rejected: 1, dropped_overload: 2} = GreptimeBridge.stats(bridge)
     send(exporter, :release)
     await(bridge, :exported, 1)
 
@@ -245,13 +307,21 @@ defmodule Wotex.Lab.MetricsBridgeTest do
         series: []
       })
 
+    calls = :counters.new(1, [])
+
     {:ok, bridge} =
       Lab.start_child(
         lab,
         :sessions,
         {GreptimeBridge,
          id: :b,
-         scrape: fn -> {:ok, snapshot} end,
+         scrape: fn ->
+           :counters.add(calls, 1, 1)
+           n = :counters.get(calls, 1) - 1
+
+           {:ok,
+            %{snapshot | sequence: snapshot.sequence + n, wall_time_ms: snapshot.wall_time_ms + n}}
+         end,
          sink: req_sink(url),
          history: history,
          interval_ms: 100}

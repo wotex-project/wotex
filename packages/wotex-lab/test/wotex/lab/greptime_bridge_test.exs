@@ -7,7 +7,7 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
 
   alias Wotex.Lab
   alias Wotex.Lab.Examples.Thermal
-  alias Wotex.Lab.Metrics.{Collector, GreptimeBridge, History, ReqSink}
+  alias Wotex.Lab.Metrics.{Collector, Exposition, GreptimeBridge, History, RemoteWrite, ReqSink}
   alias Wotex.Lab.Test.Greptime
 
   @labels [
@@ -17,7 +17,7 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
     {"profile", "thermal"}
   ]
 
-  test "real snapshots reach GreptimeDB through remote write and read back through the SQL API" do
+  test "real collector values with distinct fixture timestamps round trip through GreptimeDB" do
     greptime = Greptime.start()
     lab = start_supervised!({Lab, id: "greptime-lab", max_children: 8})
     {:ok, collector} = Lab.start_child(lab, :sessions, {Collector, id: :c, backend_class: :binary})
@@ -33,7 +33,11 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
         :sessions,
         {GreptimeBridge,
          id: :b,
-         scrape: fn -> Collector.snapshot(collector) end,
+         scrape: fn ->
+           {:ok, snapshot} = Collector.snapshot(collector)
+           # Explicit fixture clock: execution speed is not a sampling interval.
+           {:ok, %{snapshot | wall_time_ms: 1_700_000_000_000 + snapshot.sequence * 5_000}}
+         end,
          sink: sink,
          history: history,
          labels: [{"instance", "greptime-lab"}]}
@@ -41,7 +45,7 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
 
     assert {:ok, _result} = Thermal.run()
     assert {:ok, %{sequence: 1}} = GreptimeBridge.scrape_now(bridge)
-    {:ok, first} = Collector.snapshot(collector)
+    [%{snapshot: first}] = History.snapshots(history)
     assert {:ok, _result} = Thermal.run()
     assert {:ok, %{sequence: 2}} = GreptimeBridge.scrape_now(bridge)
 
@@ -69,7 +73,7 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
              (counter.sample.value + 1) * 1.0
            ]
 
-    assert Enum.map(rows, & &1.timestamp) == Enum.sort(Enum.map(rows, & &1.timestamp))
+    assert Enum.map(rows, & &1.timestamp) == [first.wall_time_ms, first.wall_time_ms + 5_000]
 
     [bucket | _rest] =
       Greptime.await_rows(
@@ -81,10 +85,34 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
 
     assert bucket.value >= 1.0
 
-    assert length(History.snapshots(history)) == 2
+    assert [%{snapshot: ^first}, %{snapshot: second}] = History.snapshots(history)
+    assert second.sequence == 2 and second.wall_time_ms > first.wall_time_ms
 
     assert Greptime.read(greptime, "wotex_lab_nx_operations_total", [{"profile", "nonexistent"}]) ==
              []
+  end
+
+  test "separate successful same-timestamp writes deduplicate at the pinned receiver" do
+    greptime = Greptime.start()
+    timestamp = 1_700_000_000_000
+    metric = "wotex_lab_fixture_deduplication"
+
+    for value <- [1, 2] do
+      {:ok, snapshot} =
+        Exposition.parse("# TYPE #{metric} gauge\n#{metric} #{value}\n",
+          sequence: value,
+          wall_time_ms: timestamp
+        )
+
+      {:ok, request} = RemoteWrite.encode(snapshot)
+      assert {:ok, %{status: status}} = ReqSink.write(request, nil, %{url: greptime.write_url})
+      assert status in 200..299
+
+      assert [%{timestamp: ^timestamp, value: stored}] =
+               Greptime.await_rows(greptime, metric, [], 1)
+
+      assert stored == value * 1.0
+    end
   end
 
   defp await_exported(bridge, count, attempts) do

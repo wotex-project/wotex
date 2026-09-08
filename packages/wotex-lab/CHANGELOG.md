@@ -2,6 +2,12 @@
 
 ## 0.1.0 — source foundation
 
+- Greptime bridge admission revalidates snapshots and rejects equal or
+  rolled-back capture timestamps before history/export. Loss and failed writes
+  do not rewind its lifetime-local watermark; retries preserve their identity.
+  Real receiver tests distinguish successful requests from deduplicated rows
+  and use explicit fixture intervals for two-row measurement assertions.
+
 - Workspace checks and reference preflight/completion enforce the reviewed
   sibling source cohort. Runtime/HTTP changes are reviewed independently;
   transport/store evidence now binds those source inputs without claiming

@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.6.0. Contract: accepted. Source status: the metric
+Specification version: 0.7.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
@@ -153,6 +153,18 @@ integration surface, not a public tenant data endpoint.
 snapshot), `Wotex.Lab.Metrics.Exposition` parses and renders the pinned text
 format, and the same admitted snapshot reaches history and the sink.
 
+Supplied Snapshot structs are revalidated at bridge admission. New captures
+MUST strictly advance the whole snapshot's wall-clock millisecond timestamp
+relative to the last admitted capture. Equal milliseconds or rollback return
+`unordered_snapshot` and increment `rejected` before history, stale markers or
+queue insertion. Attempt sequence numbers are consumed; later history can show
+the gap. No timestamp is shifted and no zero sample is substituted. This is a
+conservative whole-snapshot rule even when its series set changes. The watermark
+does not rewind on queue loss, retry exhaustion or permanent rejection. Retries
+reuse their already admitted identity and are not new captures. The watermark
+belongs to one live bridge; restart/multi-writer receiver coordination remains
+host work, not persisted or global ordering authority.
+
 The Workbench's optional `Observability.Scrape` supplies `GET /metrics` on a
 separate 127.0.0.1-only HTTP/1 port, leaving the browser host's existing Metrics
 page unchanged. `WOTEX_LAB_METRICS_PORT` and a separately provisioned 43–128
@@ -220,6 +232,14 @@ numbers documented in its moduledoc and `Wotex.Lab.Metrics.Snappy` supplies the
 block codec in pure Elixir; `test/wotex/lab/greptime_bridge_test.exs` proves
 actual ingestion into `greptime/greptimedb:v1.1.4` behind `WOTEX_LAB_GREPTIME=1`.
 Compatibility with other receivers or official senders is not claimed.
+The receiver test uses real Collector measurements with explicit distinct
+fixture timestamps, so machine speed cannot turn two intended sampling
+intervals into one millisecond. A separate direct-encoder/sink test proves the
+pinned Greptime receiver accepts two same-label, same-timestamp writes while
+retaining only the latest row, matching its documented
+[deduplication model](https://docs.greptime.com/user-guide/concepts/data-model/).
+That bypass test is not permission for the bridge to submit new colliding
+captures. Successful-request counters are not a count of durable rows.
 
 Retry only retryable transport/5xx failures with capped jitter/backoff and the
 same snapshot identity; honor bounded 429 retry policy; do not retry invalid

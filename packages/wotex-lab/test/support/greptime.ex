@@ -69,9 +69,12 @@ defmodule Wotex.Lab.Test.Greptime do
       )
 
     rows =
-      case response.body do
-        %{"output" => [%{"records" => %{"rows" => rows}}]} -> rows
-        _other -> []
+      case {response.status, response.body} do
+        {200, %{"output" => [%{"records" => %{"rows" => rows}}]}} when is_list(rows) ->
+          rows
+
+        other ->
+          raise "GreptimeDB query failed: #{inspect(other, limit: 10, printable_limit: 1_024)}"
       end
 
     Enum.map(rows, fn [timestamp, value] -> %{timestamp: timestamp, value: value} end)
@@ -81,9 +84,14 @@ defmodule Wotex.Lab.Test.Greptime do
           [map()]
   def await_rows(greptime, metric, labels, count, attempts \\ 100) do
     case read(greptime, metric, labels) do
-      rows when length(rows) >= count -> rows
-      _fewer when attempts == 0 -> raise "GreptimeDB never returned #{count} rows for #{metric}"
-      _fewer -> Process.sleep(100) && await_rows(greptime, metric, labels, count, attempts - 1)
+      rows when length(rows) >= count ->
+        rows
+
+      fewer when attempts == 0 ->
+        raise "GreptimeDB expected #{count} rows for #{metric}, got #{inspect(fewer, limit: 10)}"
+
+      _fewer ->
+        Process.sleep(100) && await_rows(greptime, metric, labels, count, attempts - 1)
     end
   end
 

@@ -14,6 +14,13 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
   host-supplied `%{reference: term, lookup: (term -> {:ok, credential})}` in
   the export process and never enters the bridge state, stats or errors.
 
+  Supplied snapshots are revalidated. A new capture must have a wall timestamp
+  strictly later than the last admitted capture, even after an export is dropped
+  or fails. Equal milliseconds and clock rollback return `:unordered_snapshot`
+  before history/queue admission; timestamps are never fabricated or shifted.
+  This conservative whole-snapshot watermark is local to this bridge lifetime,
+  not persisted receiver state. Retries reuse an already admitted snapshot.
+
   Budgets are explicit: one export in flight, `:queue_limit` queued snapshots
   (16, ceiling 256) with the oldest unsent snapshot dropped and counted on
   overload, and a `:deadline_ms` per export (5,000, ceiling 60,000) after
@@ -200,11 +207,12 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
   defp scrape(state) do
     state = count(state, :scraped)
     sequence = state.sequence + 1
+    state = %{state | sequence: sequence}
 
     case admit(state, sequence) do
       {:ok, snapshot} ->
         snapshot = with_stale_markers(state.previous, snapshot)
-        state = %{state | sequence: sequence, previous: snapshot} |> count(:admitted)
+        state = %{state | previous: snapshot} |> count(:admitted)
         state = record(state, snapshot)
         state = enqueue(state, snapshot)
         {{:ok, %{sequence: sequence, queue_depth: state.depth}}, export(state)}
@@ -216,20 +224,34 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
   end
 
   defp admit(state, sequence) do
-    case safe_scrape(state.scrape) do
-      {:ok, %Snapshot{} = snapshot} ->
-        {:ok, snapshot}
+    result =
+      case safe_scrape(state.scrape) do
+        {:ok, %Snapshot{} = snapshot} ->
+          Snapshot.new(Map.from_struct(snapshot))
 
-      {:ok, text} when is_binary(text) ->
-        Exposition.parse(text, sequence: sequence, instance_slot: state.config.instance_slot)
+        {:ok, text} when is_binary(text) ->
+          Exposition.parse(text, sequence: sequence, instance_slot: state.config.instance_slot)
 
-      {:error, %Error{} = error} ->
-        {:error, error}
+        {:error, %Error{} = error} ->
+          {:error, error}
 
-      _other ->
-        {:error, Error.new(:scrape_failed, :export, "scrape returned nothing admissible")}
+        _other ->
+          {:error, Error.new(:scrape_failed, :export, "scrape returned nothing admissible")}
+      end
+
+    with {:ok, snapshot} <- result,
+         :ok <- ordered_capture(state.previous, snapshot) do
+      {:ok, snapshot}
     end
   end
+
+  defp ordered_capture(nil, _snapshot), do: :ok
+
+  defp ordered_capture(previous, snapshot) when snapshot.wall_time_ms > previous.wall_time_ms,
+    do: :ok
+
+  defp ordered_capture(_previous, _snapshot),
+    do: {:error, Error.new(:unordered_snapshot, :export, "capture time must strictly advance")}
 
   defp safe_scrape(scrape) do
     scrape.()
