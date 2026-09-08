@@ -19,6 +19,8 @@ defmodule WotexRuntime.MixProject do
       homepage_url: "https://wotex.io",
       test_ignore_filters: [~r{^test/support/}],
       test_coverage: [tool: ExCoveralls],
+      # Exact Decimal cohort and parser regressions guard this dated SECURITY.md review.
+      hex: [ignore_advisories: ["EEF-CVE-2026-32686"]],
       dialyzer: dialyzer(),
       name: "Wotex Runtime"
     ]

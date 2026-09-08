@@ -2,6 +2,9 @@
 
 ## 0.1.0
 
+- Bind the scoped Decimal advisory acknowledgement to the exact reviewed lock
+  cohort and default parser-limit regressions; document the metadata conflict.
+
 - Open subscriptions in a continuation, monitor the receiver, stop on linked
   transport exit or `session_lost`/`transport_down` status, always attempt
   unsubscribe at close, and add an opt-in receiver mailbox bound.
