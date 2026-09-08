@@ -5,8 +5,9 @@
 - Stop on malformed or ambiguous retry options and unknown operations; require
   positive attempt counts and explicit boolean idempotence without raising.
 
-- Bind the scoped Decimal advisory acknowledgement to the exact reviewed lock
-  cohort and default parser-limit regressions; document the metadata conflict.
+- Remove the stale `EEF-CVE-2026-32686` Hex advisory suppression now that the
+  registry audit reports no matching advisory. Exact Decimal 3.1.1 lock,
+  loaded-version and default-parser regression checks remain active.
 
 - Open subscriptions in a continuation, monitor the receiver, stop on linked
   transport exit or `session_lost`/`transport_down` status, always attempt
