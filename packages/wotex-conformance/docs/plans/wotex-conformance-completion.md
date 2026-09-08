@@ -1,13 +1,17 @@
 # Wotex Conformance completion contract
 
-Plan `WCF-C`, revision `1.0.0`. This immutable baseline defines work, not current
+Plan `WCF-C`, revision `1.1.0`. This immutable baseline defines work, not current
 progress. Preserve work IDs; revisions that change scope require an explicit
-successor. Package 0.1.0, WCF.01 specification 1.0.0, corpus/schema revisions and
+successor. Package 0.1.0, WCF.01 specification 1.1.0, corpus/schema revisions and
 target protocol 1.0 are distinct version axes.
+
+Revision 1.1.0 aligns this acceptance baseline with WCF.01 1.1.0 and accepted
+decision 0003's normalized-observation contract. It does not promote any
+interoperability, certification, runtime-cohort, or release claim.
 
 ## Owned contract and exclusions
 
-WCF.01 and decisions 0001/0002 are normative. The package owns verified local
+WCF.01 and decisions 0001/0002/0003 are normative. The package owns verified local
 corpora, closed claim/subject/vector values, external-target protocol execution,
 comparison and bounded content-addressed evidence. `Wotex.Conformance.load_corpus/1`
 and `run/4` delegate to `Corpus.load/1` and `Runner.run/4`. Construct `Subject`,
@@ -84,7 +88,7 @@ classification, not evidence that this package performs that activity.
 | WCF-C03 | WCF.01 | Archive-only minimal consumer and independently implemented external target fixture | Exact unpacked archive compiles without subject packages; observed/pass, mismatch/fail, unsupported, timeout and malformed response each produce their distinct contract outcome |
 | WCF-C04 | WCF-C03 | Cross-run isolation and lifecycle proof | Concurrent target runs cannot exchange output; timeout during write/read cleans up ports; oversized/late/partial responses and target crashes remain bounded; changed artifact never starts target |
 | WCF-C05 | WCF-C01 | Decision contract for any proposed Discovery corpus; keep it separate from existing TD/TM evidence | Before implementation, enumerate exact Discovery operations/assertions, source sections, consumer fixture obligations and unsupported profiles; no Discovery claim until vectors and independent target pass |
-| WCF-C06 | WCF-C02, WCF-C03, WCF-C04 | Release evidence and explicit runtime compatibility cohort | Resolve the declared minimum-runtime discrepancy between CLAUDE and mix metadata, test the accepted cohort cleanly, validate all ten schemas and publish no stronger claim than tested |
+| WCF-C06 | WCF-C02, WCF-C03, WCF-C04 | Release evidence and explicit runtime compatibility cohort | Confirm the matching Elixir `~> 1.18` CLAUDE/Mix requirement, test the accepted minimum/current cohort cleanly, validate all ten schemas and publish no stronger claim than tested |
 | WCF-C07 | None | Allowlisted package documentation inputs that exclude machine-local execution records | `mix hex.build` archive listing excludes docs/tasks/local including a local sentinel |
 
 C02 expands data/evidence, not the target execution protocol. New operations,
@@ -120,7 +124,7 @@ Use only ignored `docs/tasks/local/wotex-conformance-tracker.yaml`. Package
 inputs allowlist publishable documentation and structurally exclude the path;
 every candidate archive still proves WCF-C07 because Git ignore is not Hex
 exclusion. Schema: `schema_version: "1.0.0"`,
-`plan_id: WCF-C`, `plan_revision: "1.0.0"`, `work_items` with `id`,
+`plan_id: WCF-C`, `plan_revision: "1.1.0"`, `work_items` with `id`,
 `state` (`queued|active|blocked|verified`), `prerequisites`, `evidence`
 (source_commit, archive_sha256, corpus_digest, runtime, dependency_cohort,
 command, exit_code), and `remaining_claims`. Unavailable proof is explicit null.
