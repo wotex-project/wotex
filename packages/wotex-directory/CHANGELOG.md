@@ -7,9 +7,8 @@ All notable changes to this project are documented in this file.
 - Exercise raising context errors through dynamic invalid-input vectors for
   both arities, preserving typed codes without intentional static type warnings.
 
-- Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
-  checksums, loaded version and bounded parser regression tests. Other advisory
-  checks remain active; remove this acknowledgement when metadata is corrected.
+- Retain exact Decimal 3.1.1 lock and bounded parser regressions while removing
+  the stale, unmatched advisory suppression; all advisory checks remain active.
 
 - Establish the storage-neutral Thing Description Directory contract.
 - Provide explicit repository, authorization, clock, and identifier ports.
