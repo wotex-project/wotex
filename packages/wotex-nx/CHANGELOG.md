@@ -8,9 +8,8 @@
   require a locked dependency resolution; malformed-constructor tests exercise
   dynamic calls without generating intentional static type warnings.
 
-- Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
-  checksums, loaded version and bounded parser regression tests. Other advisory
-  checks remain active; remove this acknowledgement when metadata is corrected.
+- Retain exact Decimal 3.1.1 lock and bounded parser regressions while removing
+  the stale, unmatched advisory suppression; all advisory checks remain active.
 
 - Invert mask polarity to `1 = observed`, `0 = filled`, matching
   `Nx.Batch.pad/2` and Axon validity masks; document the batch axis as the
