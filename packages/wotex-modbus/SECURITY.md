@@ -21,16 +21,16 @@ prose but an unbounded machine-readable affected range. The
 [3.1.1 implementation](https://github.com/ericmj/decimal/blob/v3.1.1/lib/decimal.ex)
 applies finite default parsing limits.
 
-The repository temporarily acknowledges only this advisory. Its dependency
-security tests bind that acknowledgement to the exact 3.1.1 Hex lock tuple,
+Hex now reports that this advisory matches no locked dependency, so the
+repository does not suppress it. Dependency security tests still bind the
+review to the exact 3.1.1 Hex lock tuple,
 including outer checksum
 `c5f25f2ced74a0587d03e6023f595db8e924c9d3922c8c8ffd9edfc4498cf1f6`,
 and loaded version. They require parse, cast and construction to reject the
 reported pathological exponent and prove the default exponent/digit thresholds.
 No arithmetic on the pathological value is executed.
 
-This is a scoped metadata-conflict decision, not a general Decimal safety or
-whole-VM memory guarantee. Other advisories remain active. Any dependency or
-advisory change requires review; remove this acknowledgement when the metadata
-is corrected. A failed regression or changed lock blocks `mix check`.
+This is a scoped historical metadata-conflict review, not a general Decimal
+safety or whole-VM memory guarantee. All advisories remain active. Any dependency
+or advisory change requires review. A failed regression or changed lock blocks `mix check`.
 Never disable parsing limits for untrusted input.

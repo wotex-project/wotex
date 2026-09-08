@@ -2,6 +2,8 @@
 
 ## 0.1.0-dev
 
+- Remove the obsolete Decimal advisory waiver while retaining the exact lock
+  and bounded parser regression.
 - Establish the consumer-neutral library contract and full package gates.
 - Implement eight Modbus TCP functions, bounded framing, response correlation,
   explicit connection ownership, finite deadlines and structured failures.
