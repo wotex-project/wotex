@@ -1,0 +1,20 @@
+{
+  "format_version": "1.0.0",
+  "profile": "bacnet_ip_read_write",
+  "peer_revision": "3603048350b8ba543ec76cf6aa8a232b3f4d442d",
+  "cases": [
+    {
+      "id": "WBA-ST01",
+      "requirements": ["WBA-S02", "WBA-S03", "WBA-V14"],
+      "input": {"sequential_reads": 1000, "concurrent_reads": 32, "object_type": 1, "instance": 1, "properties": [85, 77]},
+      "expected": {"active_owned_resources": 0, "pending_apdus": 0, "pending_operations": 0, "active_segment_sequences": 0}
+    },
+    {
+      "id": "WBA-ST02",
+      "requirements": ["WBA-S03", "WBA-V14"],
+      "input": {"open_read_close_cycles": 100},
+      "expected": {"active_owned_resources_after_each_cycle": 0, "udp_port_reusable_after_each_cycle": true}
+    }
+  ],
+  "subscription_receiver_cycles": "inapplicable_to_this_read_write_profile"
+}
