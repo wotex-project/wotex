@@ -3,6 +3,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
 
   use WotexLabWorkbenchWeb.ConnCase, async: false
 
+  alias Plug.Conn.Query
   alias WotexLabWorkbench.Observability.Supervisor, as: ObservabilitySupervisor
   alias WotexLabWorkbench.Sessions
   alias WotexLabWorkbenchWeb.ComponentHarness
@@ -117,6 +118,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     assert html =~ "Source preview digest" and html =~ "Analysis query digest"
     assert html =~ "Nonfinite" and html =~ "Observed"
     assert has_element?(run_view, "#analysis-mark option[value='point'][selected]")
+    assert has_element?(run_view, "#analysis-deep-link")
+    assert html =~ "Exact chart link"
+    assert html =~ "analysis[mark]=point"
     render_change(element(run_view, "#theme-settings"), %{"theme" => "dark"})
     assert has_element?(run_view, "#run-insights")
     assert has_element?(run_view, "#analysis-mark option[value='point'][selected]")
@@ -128,6 +132,23 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
       render_submit(element(run_view, "#run-analysis"), %{"from" => "1000000", "mark" => "area"})
 
     assert html =~ "No points match this range. This is not a measured zero."
+
+    exact =
+      "/runs/run-1?" <>
+        Query.encode(%{
+          "analysis" => %{"from" => "", "mark" => "area", "series" => "", "to" => "1000000"}
+        })
+
+    assert {:ok, linked, linked_html} = live(recycle(conn), exact)
+    assert linked_html =~ "Analysis query digest"
+    assert has_element?(linked, "#analysis-mark option[value='area'][selected]")
+    assert has_element?(linked, ~s(a[href$="#run-chart-0"]))
+
+    assert {:ok, refused, refused_html} =
+             live(recycle(conn), "/runs/run-1?analysis[mark]=caller")
+
+    assert refused_html =~ "invalid_analysis_query"
+    refute has_element?(refused, "#run-insights")
 
     after_runs =
       get(recycle(conn), "/evidence/report.json") |> json_response(200) |> Map.fetch!("runs")

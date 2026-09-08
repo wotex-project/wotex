@@ -447,6 +447,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           :for={{chart, index} <- Enum.with_index(@charts)}
           id={"run-chart-#{index}"}
           chart={chart}
+          permalink={chart_path(@run, @insights, index)}
         />
       </section>
       <.data_table id="run-assertions" caption="Run assertions" rows={@run.assertions}>
@@ -770,8 +771,19 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     |> assign(:insights, nil)
   end
 
-  defp load_action(socket, :run, %{"id" => id}) do
-    socket |> assign(:run_id, id) |> refresh() |> reload_run()
+  defp load_action(socket, :run, %{"id" => id} = params) do
+    socket = socket |> assign(:run_id, id) |> refresh() |> reload_run()
+
+    case params do
+      %{} when map_size(params) == 1 ->
+        socket
+
+      %{"id" => ^id, "analysis" => analysis} when map_size(params) == 2 ->
+        load_analysis(socket, analysis)
+
+      _other ->
+        error_flash(socket, Error.new(:invalid_analysis_query, :analytics, "run link is malformed"))
+    end
   end
 
   defp load_action(socket, :metrics, params) do
@@ -805,6 +817,20 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp dashboard_path(panel_ids) do
     "/metrics?" <> Query.encode(%{"panels" => panel_ids, "selection" => "custom"})
   end
+
+  defp load_analysis(%{assigns: %{run: %Run{} = run}} = socket, params) do
+    case Insights.analyze(run, params) do
+      {:ok, insights} -> apply_effect(socket, {:insights, insights})
+      {:error, error} -> error_flash(socket, error)
+    end
+  end
+
+  defp load_analysis(socket, _params), do: socket
+
+  defp chart_path(run, nil, index), do: "/runs/#{URI.encode(run.id)}#run-chart-#{index}"
+
+  defp chart_path(_run, insights, index),
+    do: Insights.path(insights) <> "#run-chart-#{index}"
 
   defp reload_run(%{assigns: %{run_id: id, scope: %{room: room}}} = socket)
        when is_binary(id) and is_pid(room) do

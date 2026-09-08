@@ -8,6 +8,7 @@ defmodule WotexLabWorkbench.Insights do
   this adapter only admits form values and builds the closed chart descriptors.
   """
 
+  alias Plug.Conn.Query
   alias Wotex.Lab.Analytics
   alias Wotex.Lab.Error
   alias WotexLabWorkbench.{Chart, Run}
@@ -35,6 +36,21 @@ defmodule WotexLabWorkbench.Insights do
   end
 
   def analyze(%Run{}, _params), do: invalid()
+
+  @doc "Builds the exact same-origin path for an admitted analysis result."
+  @spec path(map()) :: String.t()
+  def path(%{run_id: run_id, mark: mark, query: query}) do
+    params = %{
+      "analysis" => %{
+        "from" => encode_number(query.from),
+        "mark" => mark,
+        "series" => query.series || "",
+        "to" => encode_number(query.to)
+      }
+    }
+
+    "/runs/#{URI.encode(run_id)}?" <> Query.encode(params)
+  end
 
   defp charts(plots, mark) do
     plots
@@ -64,6 +80,9 @@ defmodule WotexLabWorkbench.Insights do
   end
 
   defp number(_value), do: invalid()
+
+  defp encode_number(nil), do: ""
+  defp encode_number(value), do: to_string(value)
 
   defp invalid,
     do: {:error, Error.new(:invalid_analysis_query, :analytics, "analysis controls are malformed")}

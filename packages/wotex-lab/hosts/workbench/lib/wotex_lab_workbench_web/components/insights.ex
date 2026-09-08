@@ -4,7 +4,7 @@ defmodule WotexLabWorkbenchWeb.Components.Insights do
   use Phoenix.Component
 
   import WotexLabWorkbenchWeb.Components.DataTable
-  alias WotexLabWorkbench.Preview
+  alias WotexLabWorkbench.{Insights, Preview}
 
   attr :run, :any, required: true
   attr :insights, :any, required: true
@@ -15,7 +15,10 @@ defmodule WotexLabWorkbenchWeb.Components.Insights do
     query =
       if assigns.insights, do: assigns.insights.query, else: %{series: nil, from: nil, to: nil}
 
-    assigns = assign(assigns, :query, query)
+    assigns =
+      assigns
+      |> assign(:query, query)
+      |> assign(:deep_link, if(assigns.insights, do: Insights.path(assigns.insights)))
 
     ~H"""
     <section class="wl-section" aria-labelledby="analysis-heading">
@@ -76,6 +79,9 @@ defmodule WotexLabWorkbenchWeb.Components.Insights do
             <dt>Backend</dt><dd>{@insights.backend}</dd>
           </div>
         </dl>
+        <a id="analysis-deep-link" class="wl-button wl-button-secondary" href={@deep_link}>
+          Exact analysis link
+        </a>
         <p :if={@insights.total_rows == 0}>No points match this range. This is not a measured zero.</p>
         <.data_table
           id="analysis-summary"

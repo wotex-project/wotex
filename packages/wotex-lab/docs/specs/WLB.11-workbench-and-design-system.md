@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.5.2. Contract: accepted.
+Specification version: 0.5.3. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -112,9 +112,12 @@ not the public experiment workbench.
 The implemented trusted-local slice binds the LiveView owner and revalidated
 session room to one host-wide no-queue broker. It selects only the chosen run
 and the nearest older run of the same experiment. Current snapshot references
-link to the bounded evidence view; exact per-query/chart deep links remain an
-acceptance gap rather than being fabricated from model output. Disconnect,
-explicit cancel and deadline terminate the worker and clear context.
+link to the bounded evidence view. Admitted Explorer analysis now emits an exact
+same-origin query link and one fragment link per server-rendered chart; opening
+one explicitly reruns only that bounded analysis against the already-owned run.
+Model-output source references still are not converted into caller-selected
+links. Disconnect, explicit cancel and deadline terminate the worker and clear
+context.
 
 ## Component and chart contract
 

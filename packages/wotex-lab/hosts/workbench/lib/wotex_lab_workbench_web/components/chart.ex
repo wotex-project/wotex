@@ -8,6 +8,7 @@ defmodule WotexLabWorkbenchWeb.Components.Chart do
 
   attr :id, :string, required: true
   attr :chart, :any, required: true
+  attr :permalink, :string, default: nil
 
   @doc "Renders admitted chart geometry and the same points as an accessible table."
   @spec chart(map()) :: Phoenix.LiveView.Rendered.t()
@@ -28,6 +29,7 @@ defmodule WotexLabWorkbenchWeb.Components.Chart do
     ~H"""
     <figure id={@id} class="wl-chart">
       <figcaption id={"#{@id}-caption"}>{@chart.title}</figcaption>
+      <a :if={@permalink} class="wl-chart-link" href={@permalink}>Exact chart link</a>
       <p id={"#{@id}-description"}>
         {@chart.mark} chart. Horizontal axis: {@chart.x.title}; vertical axis: {@chart.y.title}.
         Missing values are gaps. The table below previews at most 100 points.
