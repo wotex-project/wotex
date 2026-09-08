@@ -12,8 +12,8 @@ Credo, unit/property tests and minimum 95% coverage, Dialyzer, Doctor, ExDoc,
 dependency audit, Hex packaging, unpacked out-of-tree compilation and the
 Application-free structural check. Runtime path dependencies require the explicit
 switch; the archive preserves ordinary Hex dependency declarations.
-The reviewed Decimal advisory metadata exception and regression are documented
-in SECURITY.md and the dependency-security test.
+The pinned Decimal parser regression remains active; there are no advisory
+waivers. See SECURITY.md and the dependency-security test.
 
 ## Interoperability
 
