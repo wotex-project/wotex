@@ -51,6 +51,23 @@
 - Deterministic public-API Nx example with explicit units/backend and inert output.
 - Source provenance, metadata validation and package quality gates.
 - PromEx/ETS/GreptimeDB/BeamLens and lean Phoenix LiveView workbench contracts.
+- Metrics base library: a checked-in versioned metric catalogue as data with
+  closed dimensions and an outcome-class mapping, an instance-owned collector
+  that aggregates Lab telemetry in the emitter with an atomic series budget,
+  reset identity and negative-duration rejection, a bounded per-instance ETS
+  snapshot history with atomic admission, eviction and loss counters, the
+  admitted read-only query descriptor answered from ETS with reset-aware
+  counters and bucket-derived quantiles or refused as unsupported, a parser
+  and renderer for the pinned Prometheus text exposition, a hand-encoded
+  Remote Write 1.0 sender with a pure Elixir Snappy block codec, and a
+  supervised self-scraper/exporter bridge with bounded retry, overload drops,
+  ambiguous-write reporting and just-in-time redacted credentials. Exercised
+  against a disposable Bandit endpoint and, behind `WOTEX_LAB_GREPTIME=1`,
+  against a disposable `greptime/greptimedb:v1.1.4` container with SQL
+  read-back. The telemetry vocabulary gained `formal` and `metrics`
+  components and `cleanup`, `export`, `query` and `investigation` operations;
+  the Continuum channel and the thermal example emit delivery and batch
+  measurements.
 - Framework-independent neutral design tokens, scoped CSS and contrast tests.
 - Tightened destination/credential and IoT lifecycle acceptance requirements.
 

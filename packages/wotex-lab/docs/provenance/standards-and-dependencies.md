@@ -40,6 +40,10 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [AsyncAPI 3.1.0](https://www.asyncapi.com/docs/reference/specification/v3.1.0) | Selected event/MQTT interface description dialect |
 | [JSON-LD 1.1](https://www.w3.org/TR/json-ld11/) and [RDF 1.1 Turtle](https://www.w3.org/TR/turtle/) | Ecosystem graph representations only |
 | [MCP transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) | Pinned stdio/Streamable HTTP baseline; transport conformance and control policy require separate tests |
+| [Prometheus text exposition 0.0.4](https://prometheus.io/docs/instrumenting/exposition_formats/) | Pinned input contract of the WLB.10 self-scraper; counters, gauges and classic histograms only, parsed and rendered by `Wotex.Lab.Metrics.Exposition` |
+| [Prometheus Remote Write 1.0](https://prometheus.io/docs/specs/prw/remote_write_spec/) and [prompb](https://github.com/prometheus/prometheus/tree/main/prompb) (Apache-2.0) | `WriteRequest`/`TimeSeries`/`Label`/`Sample` field numbers hand-encoded by `Wotex.Lab.Metrics.RemoteWrite`; no generated protobuf and no claim beyond the tested receiver |
+| [Snappy block format](https://github.com/google/snappy/blob/main/format_description.txt) (BSD-3-Clause) | Pure Elixir literal and 16-bit-offset copy encoder plus full block decoder in `Wotex.Lab.Metrics.Snappy`; stream framing is not implemented |
+| [greptime/greptimedb:v1.1.4](https://hub.docker.com/r/greptime/greptimedb) | Disposable standalone container for the `:greptime` lane, selected by tag; ingestion through `/v1/prometheus/write` and read-back through `/v1/sql` are the only exercised endpoints, not a digest-pinned release or a server conformance claim |
 
 ## Acknowledged advisories in the optional MQTT cohort
 
