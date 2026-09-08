@@ -2,6 +2,10 @@
 
 ## 0.1.0
 
+- Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
+  checksums, loaded version and bounded parser regression tests. Other advisory
+  checks remain active; remove this acknowledgement when metadata is corrected.
+
 - Validate every canonical and valid vector against the embedded normative JSON
   Schemas with a dependency-free subset checker, and record which invalid
   vectors express rules JSON Schema cannot state. Add a canonical vector for
