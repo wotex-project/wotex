@@ -33,9 +33,9 @@ specifications:
       - "test/wotex/binding/http/library_contract_test.exs"
     compatibility_classification: "immutable credential-free values and explicit client callbacks; pre-release seam corrections replace the subscribe event handler with the owner pid, add the retry class to every error, and carry the response and event byte limits on the request"
   - id: "WBH.03"
-    version: "1.1.0"
+    version: "1.2.0"
     path: "docs/specs/WBH.03-sse-subscriptions.md"
-    implementation_status: "partial"
+    implementation_status: "implemented"
     standards:
       - {name: "HTML Server-Sent Events", revision: "Living Standard; repository baseline observed 2026-09-02", claim: "framed-event adaptation only; parser/reconnect external"}
       - {name: "W3C WoT Profiles", revision: "Working Draft 2025-11-04", claim: "SSE mapping guidance only"}
@@ -44,4 +44,4 @@ specifications:
     executable_evidence:
       - "test/wotex/binding/http/transport_test.exs"
       - "test/wotex/binding/http/integration_test.exs"
-    compatibility_classification: "exact configuration-instance lifecycle; pre-release seam correction decodes frames in the owner process through decode_frame/3 and accepts client session statuses; recovery evidence WBH-C02/C03 remains"
+    compatibility_classification: "exact configuration-instance lifecycle; malformed returned handshakes are cleaned up, frames decode in the owner process, and threshold, concurrent-stop, receiver-loss and linked-client-loss vectors close the package-owned lifecycle surface"

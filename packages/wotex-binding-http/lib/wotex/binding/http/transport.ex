@@ -213,8 +213,8 @@ defmodule Wotex.Binding.HTTP.Transport do
     catch
       _, _ -> {:error, client_error(:client_subscribe_exception, :subscription, :unavailable)}
     else
-      {:ok, handle, %Response{} = response} ->
-        with {:ok, validated} <- revalidate_response(response),
+      {:ok, handle, response} ->
+        with {:ok, validated} <- revalidate_subscription_response(response),
              :ok <- validate_handshake(validated) do
           {:ok,
            Subscription.new(
@@ -268,6 +268,12 @@ defmodule Wotex.Binding.HTTP.Transport do
 
   defp revalidate_response(%Response{} = response) do
     Response.new(Response.status(response), Response.headers(response), Response.body(response))
+  end
+
+  defp revalidate_subscription_response(%Response{} = response), do: revalidate_response(response)
+
+  defp revalidate_subscription_response(_) do
+    {:error, client_error(:invalid_client_return, :subscription, :protocol)}
   end
 
   defp to_result(request, response, config) do

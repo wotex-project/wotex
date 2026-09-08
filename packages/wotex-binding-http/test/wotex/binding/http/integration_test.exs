@@ -101,7 +101,63 @@ defmodule Wotex.Binding.HTTP.IntegrationTest do
     assert_receive {:owner_down, :normal}
   end
 
-  defp observation(client_overrides, id) do
+  test "concurrent Runtime stops issue one client close" do
+    parent = self()
+
+    close_return = fn ->
+      send(parent, {:close_entered, self()})
+
+      receive do
+        :release_close -> :ok
+      end
+    end
+
+    pid = observation(%{close_return: close_return}, :concurrent_stop)
+    assert_receive {:client_subscribe, %Request{}, :resolved_credential, ^pid}
+
+    tasks = for _ <- 1..2, do: Task.async(fn -> Subscription.stop(pid) end)
+    assert_receive {:close_entered, ^pid}
+    send(pid, :release_close)
+    results = Enum.map(tasks, &Task.await/1)
+
+    assert Enum.count(results, &(&1 == :ok)) == 1
+
+    assert Enum.count(results, fn
+             {:error, %Error{code: :subscription_not_running}} -> true
+             _ -> false
+           end) == 1
+
+    assert_receive {:client_close, :integration_handle}
+    refute_receive {:client_close, :integration_handle}
+  end
+
+  test "receiver death closes the stream and terminates its Runtime owner" do
+    receiver = spawn(fn -> receive do: (:stop -> :ok) end)
+    pid = observation(%{monitor_owner: true}, :receiver_failure, receiver: receiver)
+    monitor = Process.monitor(pid)
+
+    assert_receive {:client_subscribe, %Request{}, :resolved_credential, ^pid}
+    Process.exit(receiver, :kill)
+
+    assert_receive {:client_close, :integration_handle}
+    assert_receive {:owner_down, {:shutdown, :receiver_down}}
+    assert_receive {:DOWN, ^monitor, :process, ^pid, {:shutdown, :receiver_down}}
+  end
+
+  test "a linked client connection failure closes and stops the Runtime owner" do
+    pid = observation(%{link_owner: true}, :linked_client_failure)
+    monitor = Process.monitor(pid)
+
+    assert_receive {:client_subscribe, %Request{}, :resolved_credential, ^pid}
+    assert_receive {:client_connection, connection}
+    send(connection, {:fail, :connection_lost})
+
+    assert_receive {:wotex_runtime, :linked_client_failure, {:status, :transport_down}}
+    assert_receive {:client_close, :integration_handle}
+    assert_receive {:DOWN, ^monitor, :process, ^pid, {:shutdown, :transport_down}}
+  end
+
+  defp observation(client_overrides, id, opts \\ []) do
     handshake = response(200, "", [{"Content-Type", "text/event-stream"}])
 
     consumed =
@@ -117,7 +173,7 @@ defmodule Wotex.Binding.HTTP.IntegrationTest do
     {:ok, child_spec} =
       ConsumedThing.observation_child_spec(consumed, "temperature", context,
         id: id,
-        receiver: self(),
+        receiver: Keyword.get(opts, :receiver, self()),
         restart: :temporary
       )
 

@@ -15,6 +15,7 @@ defmodule Wotex.Binding.HTTP.Test.FakeClient do
   def subscribe(request, credential, owner, config) do
     send(config.owner, {:client_subscribe, request, credential, owner})
     if Map.get(config, :monitor_owner, false), do: watch_owner(owner, config.owner)
+    if Map.get(config, :link_owner, false), do: link_owner(owner, config.owner)
     for frame <- Map.get(config, :frames, []), do: send(owner, {:wotex_transport_frame, frame})
     return(config, :subscribe_return, {:error, :not_configured})
   end
@@ -32,6 +33,18 @@ defmodule Wotex.Binding.HTTP.Test.FakeClient do
 
       receive do
         {:DOWN, ^reference, :process, ^owner, reason} -> send(observer, {:owner_down, reason})
+      end
+    end)
+  end
+
+  defp link_owner(owner, observer) do
+    spawn_link(fn ->
+      reference = Process.monitor(owner)
+      send(observer, {:client_connection, self()})
+
+      receive do
+        {:fail, reason} -> exit(reason)
+        {:DOWN, ^reference, :process, ^owner, _} -> :ok
       end
     end)
   end

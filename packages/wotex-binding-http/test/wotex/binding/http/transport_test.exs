@@ -260,6 +260,9 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     {:ok, keep_alive} = Event.new("")
     assert Transport.decode_frame(keep_alive, request, config) == :ignore
 
+    {:ok, threshold} = Event.new("1234")
+    assert {:ok, 1234, _} = Transport.decode_frame(threshold, request, config)
+
     {:ok, oversized} = Event.new("12345")
 
     assert {:error, %Error{code: :sse_event_too_large, class: :protocol}} =
@@ -300,10 +303,16 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     end
   end
 
-  test "handshake cleanup tolerates a raising or exiting close callback" do
+  test "handshake cleanup tolerates every close callback failure mode" do
     handshake = Factory.response(201, "", [{"Content-Type", "text/event-stream"}])
 
-    for close_return <- [{:raise, RuntimeError.exception("private")}, {:exit, :private_exit}] do
+    for close_return <- [
+          {:error, :private_error},
+          {:raise, RuntimeError.exception("private")},
+          {:exit, :private_exit},
+          {:throw, :private_throw},
+          :invalid
+        ] do
       config =
         Factory.config(%{
           subscribe_return: {:ok, :opened_handle, handshake},
@@ -327,6 +336,17 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     assert {:error, %Error{code: :credential_header_forbidden}} =
              Transport.subscribe(request, self(), Factory.context(), config)
 
+    assert_receive {:client_close, :opened_handle}
+  end
+
+  test "a malformed handshake response still closes the returned handle" do
+    config = Factory.config(%{subscribe_return: {:ok, :opened_handle, :not_a_response}})
+    request = Factory.request(:observeproperty, nil, %{"subprotocol" => "sse"})
+
+    assert {:error, %Error{code: :invalid_client_return, class: :protocol}} =
+             Transport.subscribe(request, self(), Factory.context(), config)
+
+    assert_receive {:client_subscribe, %Request{}, :credential, _owner}
     assert_receive {:client_close, :opened_handle}
   end
 
@@ -384,6 +404,24 @@ defmodule Wotex.Binding.HTTP.TransportTest do
              )
 
     assert_receive {:client_close, :client_handle}
+  end
+
+  test "duplicate raw closes remain explicit client calls" do
+    config = Factory.config(%{close_return: :ok})
+    request = Factory.request(:unsubscribeevent)
+    subscription = Subscription.new(config, :shared_handle, "request-1", :subscribeevent)
+
+    tasks =
+      for _ <- 1..2 do
+        Task.async(fn ->
+          Transport.unsubscribe(subscription, request, Factory.context(), config)
+        end)
+      end
+
+    assert Enum.map(tasks, &Task.await/1) == [:ok, :ok]
+    assert_receive {:client_close, :shared_handle}
+    assert_receive {:client_close, :shared_handle}
+    refute_receive {:client_close, :shared_handle}
   end
 
   test "unsubscribe rejects another instance of the same client before calling close" do

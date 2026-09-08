@@ -1,6 +1,6 @@
 # WBH.03: Server-Sent Events subscriptions
 
-Specification `WBH.03@1.1.0`; package baseline `wotex_binding_http 0.1.0`.
+Specification `WBH.03@1.2.0`; package baseline `wotex_binding_http 0.1.0`.
 Requires `WBH.01`, `WBH.02`, `wotex_runtime:WRT.01`.
 
 ## Open
@@ -99,7 +99,8 @@ is local connection lifecycle, not a second authenticated request.
 | Owner exit | Client may monitor or link the owner and release its connection | No package process cleans up a client connection |
 | Stop | Check request identity, paired operation, module/config instance; call close once per valid invocation | Runtime owns logical once-only stop and supervision |
 | Duplicate concurrent raw close | No package registry or idempotency state | Consumer client must tolerate duplicate handle close; no global exactly-once claim |
-| Receiver dies / forced kill | No new binding process performs cleanup | Consumer transport/session recovery |
+| Receiver dies | Runtime owner invokes the normal close path; no binding process is started | Consumer supervisor owns any restart |
+| Forced kill | No new binding process performs cleanup | Consumer transport/session recovery |
 | Reconnect | No hidden reopen or replay | Client owns retry, Last-Event-ID and duplicate/loss handling |
 
 The SSE client supplies already-framed events. This binding does not implement
@@ -109,8 +110,10 @@ the optional receiver mailbox bound. The Living
 Standard is a client framing reference; draft WoT Profile use is not conformance.
 
 `transport_test.exs` and `integration_test.exs` under
-`test/wotex/binding/http/` cover the current open/event/close boundary. WBH-C02
-adds independently repeated close, failed cleanup and receiver/concurrency
-vectors without transferring connection ownership into the package. WBH-C03
-must measure sustained event delivery and prove the supplied-client overload
-contract before claiming bounded streaming memory or recovery guarantees.
+`test/wotex/binding/http/` cover the open/event/close boundary, including exact
+event-byte thresholds, malformed handshakes, cleanup callback failures,
+configuration transplant, duplicate raw close, concurrent Runtime stop,
+receiver death, session loss and linked-client failure. These vectors do not
+transfer connection ownership into the package. Sustained-delivery allocation
+and supplied-client overload remain consumer evidence prerequisites for any
+future bounded streaming memory or recovery guarantee.
