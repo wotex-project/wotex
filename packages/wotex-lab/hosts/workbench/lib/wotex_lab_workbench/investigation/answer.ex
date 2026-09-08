@@ -110,6 +110,11 @@ defmodule WotexLabWorkbench.Investigation.Answer do
       {"cancelled", "The investigation owner disconnected and the worker was terminated.",
        "Reconnect before submitting a new question."}
 
+  defp failure(:session_revoked),
+    do:
+      {"cancelled", "The session expired or was revoked and the investigation was terminated.",
+       "Open a fresh session before submitting another question."}
+
   defp failure(_reason),
     do:
       {"unavailable", "The investigation provider did not produce an admitted result.",

@@ -17,7 +17,8 @@ defmodule WotexLabWorkbench.Investigation.Broker do
 
   @timeout_ms 30_000
   @max_prompt_bytes 4_096
-  @option_keys [:run, :baseline]
+  @option_keys [:run, :baseline, :room]
+  @max_bridge_calls 8
 
   @doc false
   @spec start_link(keyword()) :: GenServer.on_start()
@@ -49,8 +50,16 @@ defmodule WotexLabWorkbench.Investigation.Broker do
     :exit, _reason -> {:error, :investigation_disabled}
   end
 
+  @doc false
+  @spec authorize_bridge(term()) :: :ok | {:error, :bridge_denied}
+  def authorize_bridge(capability) do
+    GenServer.call(__MODULE__, {:authorize_bridge, capability})
+  catch
+    :exit, _reason -> {:error, :bridge_denied}
+  end
+
   @impl GenServer
-  def init(_opts) do
+  def init(opts) do
     timeout = Application.get_env(:wotex_lab_workbench, :beamlens_timeout_ms, @timeout_ms)
 
     timeout =
@@ -72,7 +81,8 @@ defmodule WotexLabWorkbench.Investigation.Broker do
        cancelled: 0,
        timed_out: 0,
        timeout_ms: timeout,
-       runner: runner
+       runner: runner,
+       bridge_capability: Keyword.fetch!(opts, :bridge_capability)
      }}
   end
 
@@ -85,7 +95,8 @@ defmodule WotexLabWorkbench.Investigation.Broker do
     with :ok <- validate_prompt(prompt),
          :ok <- validate_options(opts),
          :ok <- ContextStore.put(Keyword.get(opts, :run), Keyword.get(opts, :baseline)),
-         {:ok, operator} <- operator() do
+         {:ok, operator} <- operator(),
+         {:ok, room_monitor} <- monitor_room(Keyword.get(opts, :room)) do
       request = make_ref()
       owner_monitor = Process.monitor(owner)
 
@@ -112,7 +123,9 @@ defmodule WotexLabWorkbench.Investigation.Broker do
         owner_monitor: owner_monitor,
         task: task,
         timer: timer,
-        started_at: started_at
+        started_at: started_at,
+        room_monitor: room_monitor,
+        bridge_calls: 0
       }
 
       {:reply, {:ok, request}, %{state | active: active}}
@@ -120,6 +133,16 @@ defmodule WotexLabWorkbench.Investigation.Broker do
       {:error, reason} ->
         ContextStore.clear()
         {:reply, {:error, reason}, state}
+    end
+  end
+
+  def handle_call({:authorize_bridge, capability}, _from, %{active: active} = state) do
+    if active != nil and active.bridge_calls < @max_bridge_calls and
+         secure_match?(capability, state.bridge_capability) do
+      active = %{active | bridge_calls: active.bridge_calls + 1}
+      {:reply, :ok, %{state | active: active}}
+    else
+      {:reply, {:error, :bridge_denied}, state}
     end
   end
 
@@ -163,6 +186,12 @@ defmodule WotexLabWorkbench.Investigation.Broker do
       do: {:noreply, finish(state, {:error, :owner_down}, :cancelled, true, false)}
 
   def handle_info(
+        {:DOWN, monitor, :process, _pid, _reason},
+        %{active: %{room_monitor: monitor}} = state
+      ),
+      do: {:noreply, finish(state, {:error, :session_revoked}, :cancelled, true)}
+
+  def handle_info(
         {:DOWN, task_ref, :process, _pid, reason},
         %{active: %{task: %Task{ref: task_ref}}} = state
       ),
@@ -184,6 +213,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
     active = state.active
     Process.cancel_timer(active.timer)
     Process.demonitor(active.owner_monitor, [:flush])
+    demonitor_room(active.room_monitor)
     if kill?, do: Task.shutdown(active.task, :brutal_kill)
     if notify?, do: send(active.owner, {:investigation, active.request, result})
     usage = ContextStore.usage()
@@ -246,6 +276,22 @@ defmodule WotexLabWorkbench.Investigation.Broker do
   end
 
   defp validate_options(_opts), do: {:error, :invalid_context}
+
+  defp monitor_room(nil), do: {:ok, nil}
+
+  defp monitor_room(room) when is_pid(room) do
+    if Process.alive?(room), do: {:ok, Process.monitor(room)}, else: {:error, :session_revoked}
+  end
+
+  defp monitor_room(_room), do: {:error, :invalid_context}
+  defp demonitor_room(nil), do: :ok
+  defp demonitor_room(monitor), do: Process.demonitor(monitor, [:flush])
+
+  defp secure_match?(left, right)
+       when is_binary(left) and is_binary(right) and byte_size(left) == byte_size(right),
+       do: Plug.Crypto.secure_compare(left, right)
+
+  defp secure_match?(_left, _right), do: false
 
   defp normalize_result({:ok, notifications}),
     do: {:ok, %{notifications: Runs.plain(notifications)}}

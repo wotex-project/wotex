@@ -28,6 +28,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
       }
     ]
   }
+  @capability "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
   setup do
     Application.put_env(
@@ -253,6 +254,11 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
     refute Config.loopback_url?("https://example.test/api")
     refute Config.loopback_url?("http://user:secret@127.0.0.1:4000/api")
 
+    Application.put_env(:wotex_lab_workbench, :beamlens_provider, :codex_then_ollama)
+    assert {:ok, %{capability: capability, registry: registry}} = Config.client_registry()
+    assert byte_size(capability) == 43
+    assert get_in(registry, [:clients, Access.at(0), :options, :api_key]) == capability
+
     Application.put_env(:wotex_lab_workbench, :beamlens_bridge_url, "https://example.test")
     assert {:error, :invalid_bridge_url} = Config.client_registry()
 
@@ -263,7 +269,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
 
   test "direct activation refuses BeamLens without bounded history" do
     assert {:error, %Wotex.Lab.Error{code: :beamlens_requires_history}} =
-             Supervisor.start_link(history: false, beamlens: @registry)
+             Supervisor.start_link(history: false, beamlens: beamlens(@registry))
   end
 
   test "application activation requires history and an explicit provider" do
@@ -329,18 +335,28 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
         "wotex-lab-investigation"
       )
 
-    start_supervised!({Supervisor, history: [interval_ms: 60_000], beamlens: registry})
-    assert :ok = ContextStore.put(%{id: "run-e2e"}, nil)
+    Application.put_env(:wotex_lab_workbench, :beamlens_operator_runner, OperatorRunner)
+    start_supervised!({Supervisor, history: [interval_ms: 60_000], beamlens: beamlens(registry)})
+    room = spawn(fn -> Process.sleep(:infinity) end)
+    on_exit(fn -> Process.exit(room, :kill) end)
 
-    [{operator, _value}] = Registry.lookup(Beamlens.OperatorRegistry, Skill)
-    assert {:ok, []} = OperatorRunner.run(operator, "finish now", 10_000)
+    assert {:ok, request} = Broker.ask("finish now", run: %{id: "run-e2e"}, room: room)
+    assert_receive {:investigation, ^request, {:ok, %{notifications: []}}}, 10_000
 
     assert %{provider: :codex, model: "fake-codex"} =
              Provider.status()
   end
 
   defp start_tree do
-    start_supervised!({Supervisor, history: [interval_ms: 60_000], beamlens: @registry})
+    start_supervised!({Supervisor,
+      history: [interval_ms: 60_000],
+      beamlens: beamlens(@registry)
+    })
+  end
+
+  defp beamlens(registry) do
+    registry = put_in(registry, [:clients, Access.at(0), :options, :api_key], @capability)
+    %{capability: @capability, registry: registry}
   end
 
   defp restore_env(key, nil), do: Application.delete_env(:wotex_lab_workbench, key)

@@ -3,7 +3,7 @@ defmodule WotexLabWorkbench.Investigation.Config do
 
   @app :wotex_lab_workbench
 
-  @doc "Builds BeamLens's one-client registry after admitting a loopback HTTP URL."
+  @doc "Builds BeamLens's registry and a private bridge capability."
   @spec client_registry() ::
           {:ok, map()} | {:error, :invalid_bridge_url | :provider_not_selected}
   def client_registry do
@@ -18,16 +18,25 @@ defmodule WotexLabWorkbench.Investigation.Config do
         {:error, :provider_not_selected}
 
       true ->
+        capability = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+
         {:ok,
          %{
-           primary: "WotexLabInvestigation",
-           clients: [
-             %{
-               name: "WotexLabInvestigation",
-               provider: "openai-generic",
-               options: %{base_url: url, model: "wotex-lab-investigation"}
-             }
-           ]
+           capability: capability,
+           registry: %{
+             primary: "WotexLabInvestigation",
+             clients: [
+               %{
+                 name: "WotexLabInvestigation",
+                 provider: "openai-generic",
+                 options: %{
+                   api_key: capability,
+                   base_url: url,
+                   model: "wotex-lab-investigation"
+                 }
+               }
+             ]
+           }
          }}
     end
   end

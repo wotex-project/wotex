@@ -6,7 +6,7 @@ defmodule WotexLabWorkbenchWeb.InvestigationCompletionController do
 
   use WotexLabWorkbenchWeb, :controller
 
-  alias WotexLabWorkbench.Investigation.Provider
+  alias WotexLabWorkbench.Investigation.{Broker, Provider}
 
   @model "wotex-lab-investigation"
   @max_messages 32
@@ -19,7 +19,8 @@ defmodule WotexLabWorkbenchWeb.InvestigationCompletionController do
          true <- loopback?(conn.remote_ip),
          true <- params["stream"] != true,
          true <- params["model"] in [nil, @model],
-         {:ok, messages} <- admit_messages(messages) do
+         {:ok, messages} <- admit_messages(messages),
+         :ok <- Broker.authorize_bridge(bearer(conn)) do
       opts =
         []
         |> maybe_put(:output_schema, output_schema(params["response_format"]))
@@ -52,6 +53,9 @@ defmodule WotexLabWorkbenchWeb.InvestigationCompletionController do
 
       {:error, :invalid_messages} ->
         refuse(conn, :unprocessable_entity, "messages are not admitted")
+
+      {:error, :bridge_denied} ->
+        refuse(conn, :forbidden, "investigation bridge capability is not active")
     end
   end
 
@@ -117,6 +121,13 @@ defmodule WotexLabWorkbenchWeb.InvestigationCompletionController do
   defp loopback?({127, _, _, _}), do: true
   defp loopback?({0, 0, 0, 0, 0, 0, 0, 1}), do: true
   defp loopback?(_address), do: false
+
+  defp bearer(conn) do
+    case Plug.Conn.get_req_header(conn, "authorization") do
+      ["Bearer " <> capability] -> capability
+      _headers -> nil
+    end
+  end
 
   defp refuse(conn, status, message) do
     conn |> put_status(status) |> json(%{error: %{message: message}})

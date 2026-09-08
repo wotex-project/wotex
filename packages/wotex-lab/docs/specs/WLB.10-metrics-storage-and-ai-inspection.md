@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.10.0. Contract: accepted. Source status: the metric
+Specification version: 0.11.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
@@ -9,7 +9,8 @@ catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
 history activation, a protected local scrape listener and expiring local-operator
 query capabilities. The Workbench also implements the explicitly activated
 trusted-local BeamLens 0.3.1 profile, its four read-only callbacks, an
-owner-bound no-queue broker, a loopback provider bridge, explicitly selected
+owner-bound no-queue broker, an active-scope capability-protected loopback
+provider bridge, explicitly selected
 Codex-plan/local-Ollama providers and trusted-local browser presentation.
 Durable-sink host activation, remote/TLS scraping, OTLP signal export, isolated
 hosted-tenant BeamLens and the MCP query gateway remain planned. A template
@@ -403,24 +404,30 @@ callback-output budget makes repeated calls fail closed. Dependency base
 callbacks/node metadata remain the explicit trusted-local disclosure described
 above, not part of the custom callback claim.
 
-The prompt entry point is on-demand. Default budget: one investigation per
-session, 30 seconds, 8 model turns, 12 tool calls and 32 KiB admitted context;
+The prompt entry point is on-demand. The implemented trusted-local budget is
+one investigation for the entire host, 30 seconds, 8 model turns/tool actions,
+8 provider bridge calls and 32 KiB admitted context;
 provider token/cost limits must also be explicit. Cancellation and timeout
 terminate the investigation and revoke its query scope, not merely detach the
 UI caller. Local providers are supported; cloud model use requires explicit
 provider selection and disclosure of exactly which redacted data leaves the
 host. No automatic API-key discovery, model download or endless agent loop.
 
-Until browser sessions are bound, the implemented broker is stricter: one
-investigation for the entire trusted host, no queue, a 4 KiB prompt, 8 KiB run
-context, 16 KiB cumulative callback output, 30 seconds, eight turns and hence
-at most eight tool actions. It returns an owner-only reference. A different
-process cannot cancel it. Owner death, cancel and timeout brutally stop the
-worker, clear context and replace both BeamLens agents. `WOTEX_LAB_BEAMLENS`
+The browser binds its revalidated live room and LiveView owner to the broker.
+There is one investigation for the entire trusted host, no queue, a 4 KiB
+prompt, 8 KiB run context, 16 KiB cumulative callback output, 30 seconds,
+eight turns/tool actions and eight provider calls. It returns an owner-only
+reference. A different process cannot cancel it. Owner or room death, session
+revocation/expiry, explicit cancel and timeout brutally stop the worker, clear
+context and replace both BeamLens agents. `WOTEX_LAB_BEAMLENS`
 must equal `trusted-local`, PromEx and local history must also be enabled, and
 `WOTEX_LAB_BEAMLENS_PROVIDER` must explicitly equal `ollama` or
-`codex_then_ollama`. The bridge is plain HTTP only on an exact loopback host,
-rejects streaming/non-loopback/oversized messages, and is inert when disabled.
+`codex_then_ollama`. The bridge is plain HTTP only on an exact loopback host.
+Its boot-random 256-bit Bearer capability is shared only by the private BeamLens
+client registry and broker, and is admitted only while the broker owns an active request;
+each admission consumes that request's eight-call budget. Missing, replayed
+outside the active scope and over-budget capabilities are refused. The bridge
+also rejects streaming/non-loopback/oversized messages and is inert when disabled.
 
 The admitted provider design follows the proven `goatmire-2026` boundary. A
 Codex App Server call must use an already signed-in ChatGPT-plan account,

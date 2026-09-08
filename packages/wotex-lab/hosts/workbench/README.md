@@ -172,14 +172,18 @@ back to the fixed local model `qwen3.5:4b-q4_K_M`; it never accepts Codex
 API-key auth or downloads a model. Codex runs one ephemeral read-only/no-network
 turn in an empty private directory with tools, search, connectors and inherited
 MCP/plugin entries disabled. The internal BAML bridge accepts only bounded,
-non-streaming loopback requests and is unavailable when the profile is off.
+non-streaming loopback requests carrying its boot-random capability while the
+broker owns an active investigation. The capability is call-bounded and
+inactive between requests; the bridge is unavailable when the profile is off.
 
 `WotexLabWorkbench.Investigation.Broker.ask/2` is the trusted-local prompt entry
 point used by the run and evidence LiveViews. It admits one host-wide
-investigation with no queue, returns an owner-only reference, and sends
+investigation with no queue, binds browser work to the live session room,
+returns an owner-only reference, and sends
 `{:investigation, reference, result}`. Its 30-second/eight-turn lifecycle clears
-run context and replaces the BeamLens agents after every terminal state. The
-four custom callbacks cannot issue Actions or select scope/endpoints. BeamLens
+run context and replaces the BeamLens agents after every terminal state.
+Session expiry/revocation terminates the room-bound worker. The four custom
+callbacks cannot issue Actions or select scope/endpoints. BeamLens
 0.3.1 nevertheless adds node/OS/uptime callbacks and starts its log store; that
 explicit disclosure is why this profile is not admitted for shared hosted
 tenants.

@@ -21,6 +21,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
       }
     ]
   }
+  @beamlens_capability "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
   test "the endpoint issues a scoped session with restrictive headers and no room side effect", %{
     conn: conn
@@ -259,6 +260,29 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     refute Process.alive?(worker)
   end
 
+  test "session revocation terminates an active investigation", %{conn: conn} do
+    start_beamlens_tree(:block)
+    conn = get(conn, "/")
+    token = get_session(conn, SessionToken.key())
+    {:ok, view, _html} = live(recycle(conn), "/")
+    render_click(element(view, "button[phx-click='start_room']"))
+
+    redirect =
+      render_submit(element(view, "#run-thermal"), %{
+        "experiment_id" => "thermal",
+        "params" => %{"backend" => "binary"}
+      })
+
+    {:ok, run_view, _html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    _html = render_submit(element(run_view, "#investigation"), %{"prompt" => "Wait for me"})
+    assert_receive {:fake_investigation_started, worker, "Wait for me"}, 1_000
+
+    assert :ok = Sessions.revoke(token)
+    html = render_until(run_view, "session expired or was revoked")
+    assert html =~ "cancelled"
+    refute Process.alive?(worker)
+  end
+
   test "the component family renders semantic names and text alternatives" do
     html = render_component(&ComponentHarness.render/1, %{})
     assert html =~ "Run"
@@ -293,8 +317,20 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     end)
 
     start_supervised!(
-      {ObservabilitySupervisor, history: [interval_ms: 60_000], beamlens: @beamlens_registry}
+      {ObservabilitySupervisor,
+       history: [interval_ms: 60_000], beamlens: beamlens_options(@beamlens_registry)}
     )
+  end
+
+  defp beamlens_options(registry) do
+    registry =
+      put_in(
+        registry,
+        [:clients, Access.at(0), :options, :api_key],
+        @beamlens_capability
+      )
+
+    %{capability: @beamlens_capability, registry: registry}
   end
 
   defp restore_env(key, nil), do: Application.delete_env(:wotex_lab_workbench, key)

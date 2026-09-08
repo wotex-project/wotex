@@ -2,6 +2,9 @@
 
 ## 0.1.0 — source foundation
 
+- Bind the trusted-local BeamLens bridge to an active, call-bounded capability
+  and terminate browser investigations when their session room is revoked.
+
 - Remove the now-unmatched Decimal advisory suppression from Lab and Workbench
   audits while retaining exact 3.1.1 lock and bounded parser regressions.
 

@@ -183,7 +183,8 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     with {:ok, scope} <- Scope.admit(socket, :ask),
          true <- is_pid(scope.room) and Process.alive?(scope.room),
          {:ok, current, baseline} <- investigation_context(socket, scope),
-         {:ok, request} <- Broker.ask(prompt, run: current, baseline: baseline) do
+         {:ok, request} <-
+           Broker.ask(prompt, run: current, baseline: baseline, room: scope.room) do
       investigation = %{state: :running, request: request, prompt: prompt}
 
       {:noreply,

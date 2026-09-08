@@ -202,7 +202,11 @@ output has a 16 KiB cumulative budget. The broker admits one host-wide request,
 no queue, 4 KiB prompt, 30 seconds and eight turns/actions. Completion, failure,
 cancel, timeout and owner death clear context and replace both BeamLens agents.
 The loopback-only BAML bridge is disabled outside the profile and refuses
-streaming, remote peers, unknown models and oversized/malformed messages.
+streaming, remote peers, unknown models and oversized/malformed messages. A
+boot-random 256-bit Bearer capability from the private client registry is
+accepted only during the broker's active request and consumes its eight-call
+budget; direct, inactive and over-budget loopback calls are refused. Browser
+room death, including session expiry or revocation, cancels the active worker.
 The LiveView evidence seam supplies a closed run summary, selects an older
 baseline only within the same experiment and keeps the LiveView process as the
 broker owner. Tests cover hostile answer text, ignored model URLs, structured

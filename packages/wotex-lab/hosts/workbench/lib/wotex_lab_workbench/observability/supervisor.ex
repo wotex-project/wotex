@@ -55,8 +55,12 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
 
   defp beamlens_options(false), do: :ok
 
-  defp beamlens_options(%{primary: primary, clients: clients})
-       when is_binary(primary) and is_list(clients) and clients != [],
+  defp beamlens_options(%{
+         capability: capability,
+         registry: %{primary: primary, clients: clients}
+       })
+       when is_binary(capability) and byte_size(capability) in 43..128 and
+              is_binary(primary) and is_list(clients) and clients != [],
        do: :ok
 
   defp beamlens_options(_opts),
@@ -73,12 +77,12 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
 
   defp beamlens_children(false), do: []
 
-  defp beamlens_children(registry) do
+  defp beamlens_children(%{capability: capability, registry: registry}) do
     [
       Status,
       ContextStore,
       {BeamlensSupervisor, client_registry: registry},
-      Broker
+      {Broker, bridge_capability: capability}
     ]
   end
 
