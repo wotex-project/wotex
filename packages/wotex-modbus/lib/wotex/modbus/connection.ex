@@ -168,9 +168,11 @@ defmodule Wotex.Modbus.Connection do
   defp security(_), do: {:error, Error.new(:unsupported_security, :security)}
 
   defp address(host) when is_binary(host) and byte_size(host) <= 64 do
-    case :inet.parse_address(String.to_charlist(host)) do
-      {:ok, ip} -> {:ok, ip}
-      {:error, _} -> {:error, Error.new(:invalid_host, :host)}
+    with true <- String.valid?(host),
+         {:ok, ip} <- :inet.parse_address(String.to_charlist(host)) do
+      {:ok, ip}
+    else
+      _ -> {:error, Error.new(:invalid_host, :host)}
     end
   end
 

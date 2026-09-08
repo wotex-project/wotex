@@ -226,6 +226,16 @@ defmodule Wotex.Modbus.BoundaryTest do
     end
   end
 
+  test "WMB-C02 WMB-D02 malformed numeric host bytes fail before socket acquisition" do
+    for host <- [<<255>>, <<195>>, "127.0.0.1" <> <<255>>, <<0>>, :binary.copy("1", 65)] do
+      assert {:error, %Error{code: :invalid_host, field: :host, effect: :none}} =
+               Connection.config(host: host)
+
+      assert {:error, %Error{code: :invalid_host, field: :host, effect: :none}} =
+               Modbus.connect(host: host)
+    end
+  end
+
   defp session, do: %Session{pid: self(), unit_id: 1, timeout: 1}
 
   defp expected_words(bytes, byte_order, word_order) do
