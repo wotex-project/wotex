@@ -278,6 +278,29 @@ dynamic without a browser chart compiler. Pan/zoom is neither implemented nor
 claimed. Real-browser and packaged-artifact evidence remain separate WLB.08
 obligations.
 
+### OCI build-source cohort
+
+Observation date: 2026-09-08. The Workbench Dockerfile selects
+`hexpm/elixir:1.20.2-erlang-29.0.4-debian-bookworm-20260713-slim` at the
+multi-architecture manifest digest
+`sha256:290e52da1c5d5cbf62344d384387e8bdfa7d8a64784302bb7770e76ad13c88a5`.
+Registry inspection resolved the Linux amd64 child manifest to
+`sha256:c079461a18e8a6e5deefd955291cd1e5871de51175b1844bf7b87637aff9d65d`
+and Linux arm64 to
+`sha256:7abf86163bd3bc60b38bed46116755ffce6a9a960ac57a8c24a3dcb1d9fe67fd`.
+Docker's build-graph check accepted the source on Docker 29.4.0; that command
+resolved builder metadata and populated the local builder cache, but did not
+execute the image stages.
+
+The runtime is uid/gid 65532, emits logs to standard output, uses `/tmp` for
+release scratch/crash output and declares `/var/lib/wotex-lab` as ephemeral
+instance storage. The documented invocation supplies read-only root, tmpfs,
+memory, CPU and PID ceilings and loopback-only port publication. No broker,
+database, Maude engine, model provider or remote device route is enabled by
+the image source. This is build-source evidence only: the WoTEx Hex artifacts
+are not published, so no successful release build, image digest, SBOM,
+signature, runtime health or cleanup result is recorded.
+
 ### Optional MQTT cohort
 
 Observation date: 2026-09-08. The optional `emqtt` requirement resolves `gun`

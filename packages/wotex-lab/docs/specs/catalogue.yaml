@@ -249,7 +249,7 @@ specifications:
       - "clients/typescript/test/client.test.mjs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.08
-    version: "0.6.1"
+    version: "0.6.2"
     path: docs/specs/WLB.08-distribution-and-compatibility.md
     implementation_status: partial
     evidence_status: partial
@@ -280,6 +280,8 @@ specifications:
       - "test/wotex/lab/source_cohort_test.exs"
       - "bin/generate_typescript_client.exs"
       - "clients/typescript/test/client.test.mjs"
+      - "bin/check_oci_source.exs"
+      - "hosts/workbench/test/wotex_lab_workbench_web/health_controller_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.09
     version: "0.3.0"
@@ -404,7 +406,7 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/investigation_completion_controller_test.exs"
     compatibility_classification: Optional host contract; bridge captures now require strictly advancing wall timestamps and revalidated snapshots. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Storage-only history remains available. The trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-and-room-bound browser investigation, gates BAML provider calls with an active-scope capability and discloses upstream node/time callbacks; shared hosted tenants remain unimplemented. No mandatory observability or model dependency enters the base library.
   - id: WLB.11
-    version: "0.5.0"
+    version: "0.5.1"
     path: docs/specs/WLB.11-workbench-and-design-system.md
     implementation_status: partial
     evidence_status: partial
@@ -437,6 +439,8 @@ specifications:
       - "WotexLabWorkbench.Report"
       - "WotexLabWorkbenchWeb.Components"
       - "WotexLabWorkbenchWeb.WorkbenchLive"
+      - "WotexLabWorkbench.Health"
+      - "WotexLabWorkbenchWeb.HealthController"
     executable_evidence:
       - "test/wotex/lab/design_system_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/chart_preview_test.exs"
@@ -449,5 +453,6 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/sessions_room_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/workbench_live_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/dashboard_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench_web/health_controller_test.exs"
       - "hosts/workbench/bin/check_boundary.exs"
     compatibility_classification: The pre-1.0 reference host replaces its internal Vega/browser-hook chart path with the existing closed Elixir geometry and server-rendered HEEx/SVG; Explorer remains optional analysis and pan/zoom is not claimed. It also retains an explicitly activated trusted-local investigation UI. Base Lab consumers keep inert tokens and scoped CSS without Phoenix, Explorer or BeamLens.

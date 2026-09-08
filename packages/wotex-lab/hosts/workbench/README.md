@@ -242,6 +242,29 @@ as unsupported, never as successful evidence.
 The separately requested operator listener also uses `WOTEX_LAB_METRICS_PORT`
 and `WOTEX_LAB_METRICS_TOKEN`; invalid or incomplete options refuse startup.
 
+## OCI release source
+
+`Dockerfile` builds the released Workbench dependency cohort from Hex and then
+runs its release as uid/gid 65532 on an exact multi-architecture base-image
+digest. The public `/healthz` endpoint reads only required-process liveness and
+does not create a session; the image health check reaches it over loopback with
+OTP itself. `/tmp` and `/var/lib/wotex-lab` are the only declared ephemeral
+write locations. A hardened local run is:
+
+```sh
+docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+  --tmpfs /var/lib/wotex-lab:rw,noexec,nosuid,size=64m \
+  --memory 512m --cpus 1 --pids-limit 256 -p 127.0.0.1:4000:4000 \
+  -e SECRET_KEY_BASE -e PHX_HOST=localhost wotex-lab-workbench:candidate
+```
+
+`elixir ../../bin/check_oci_source.exs` is the offline source-shape gate.
+`WOTEX_LAB_OCI_CHECK=1` additionally asks Docker to validate the build graph;
+it resolves image metadata and may populate the local builder cache, but does
+not execute the image build. A full image build remains blocked until the
+WoTEx packages named in `mix.lock` exist in the selected Hex repository. The
+source check is not an image digest, runtime smoke or publication claim.
+
 All rooms and their child processes are session-owned and bounded. Reports are
 limited to one MiB, previews to 100 rows and 32 columns, charts to 2,000 points
 per series and eight series, request bodies and LiveView frames to 64 KiB, and

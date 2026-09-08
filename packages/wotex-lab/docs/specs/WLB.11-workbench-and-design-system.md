@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.5.0. Contract: accepted.
+Specification version: 0.5.1. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -15,6 +15,9 @@ When the trusted-local BeamLens profile is explicitly active, the run/evidence
 composer submits one owner-bound bounded investigation and presents escaped
 facts, hypotheses, missing evidence, provider/model disclosure and the next
 safe read-only check. The ordinary UI remains complete when it is disabled.
+The public `/healthz` route exposes only schema version and required-process
+liveness, creates no session and is usable by the release image's fixed
+loopback probe.
 
 The existing host gate compiles with warnings as errors, formats, runs strict Credo,
 unused-dependency and security audits, Dialyzer, Doctor, ExDoc, the boundary

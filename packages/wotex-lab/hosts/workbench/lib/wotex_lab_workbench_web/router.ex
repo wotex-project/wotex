@@ -63,4 +63,9 @@ defmodule WotexLabWorkbenchWeb.Router do
     get "/evidence/:record_id", ControlController, :evidence
     get "/metrics/catalogue", ControlController, :metrics_catalogue
   end
+
+  scope "/", WotexLabWorkbenchWeb do
+    pipe_through :control_api
+    get "/healthz", HealthController, :show
+  end
 end

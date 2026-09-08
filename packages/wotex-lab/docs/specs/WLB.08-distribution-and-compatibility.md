@@ -1,11 +1,14 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.6.1. Contract: accepted. Source status: the workspace
+Specification version: 0.6.2. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the archive-consumer gate and generated npm client source
-gate are implemented; the full reference-consumer, distribution and
-release-candidate runners, OCI, published npm artifact, hosted and Nerves
-deliverables remain planned.
+gate are implemented. The Workbench also has a digest-pinned, non-root OCI
+Dockerfile, data-free health route and offline image-source gate; Docker's
+build-graph check passes, but no runnable image is claimed while its WoTEx Hex
+dependencies are unpublished. The full reference-consumer, distribution and
+release-candidate runners, built OCI image, published npm artifact, hosted and
+Nerves deliverables remain planned.
 
 ## Dependency modes
 
@@ -140,6 +143,15 @@ dependencies and its gate runs Node behavior tests plus `npm pack --dry-run`;
 this is source/archive-shape evidence, not registry publication or an
 installed-artifact smoke. Hosted sessions expire, isolate users and cannot
 reach arbitrary devices; DNS/domain/deployment actions remain operator-owned.
+
+The checked-in Workbench Dockerfile uses the pinned multi-architecture digest
+of `hexpm/elixir:1.20.2-erlang-29.0.4-debian-bookworm-20260713-slim`, runs the
+release as uid/gid 65532, declares only `/tmp` and `/var/lib/wotex-lab` as
+ephemeral write locations, and uses the fixed `/healthz` loopback probe. The
+documented run profile adds read-only root, tmpfs mounts, memory/CPU/PID limits
+and loopback-only publication. `bin/check_oci_source.exs` validates these
+properties without building; its opt-in Docker `--check` lane validates the
+build graph. Neither is a built-image/runtime/cleanup result.
 
 The reference host owns Phoenix/LiveView, PromEx and BeamLens dependencies.
 WLB.10's GreptimeDB process is opt-in; its endpoint/data volume/TTL and resource

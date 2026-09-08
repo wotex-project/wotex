@@ -1,0 +1,11 @@
+_build
+deps
+doc
+test
+bin
+assets/node_modules
+.coverage
+.elixir_ls
+.git
+.gitignore
+Dockerfile.*
