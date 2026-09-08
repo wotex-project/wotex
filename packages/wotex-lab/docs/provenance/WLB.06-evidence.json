@@ -16,7 +16,7 @@
     {"id": "WLB-C07:manifest-integrity", "status": "pass"},
     {"id": "WCF-C05:discovery-corpus", "status": "not_run"}
   ],
-  "attempt": 2,
+  "attempt": 3,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -47,18 +47,18 @@
   },
   "inputs": [
     "command:WOTEX_PATH_DEPS=1 mix test WLB.06-evidence-files",
-    "renewal:2026-09-08-interactive-analytics-contract;seed=1;manifest-integrity-checked-separately",
+    "renewal:2026-09-08-explorer-lock;seed=1;manifest-integrity-checked-separately",
     "containment:darwin-sandbox-exec+contained-exec-1.0.0",
     "fault-schedule:1.0.0",
     "excluded-corpus:WCF-C05-discovery-not-applicable-to-core-target"
   ],
-  "lock_digest": "sha256:7d40df7fa06d21da796f6758413900f4a2c39b5ba69d93c0da077a995d62ac46",
+  "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
   "outcomes": {"excluded_count": 1, "test_count": 49, "thing_description_vectors": 14, "thing_model_vectors": 6},
-  "revision": "836f7af+workspace-WLB.11-v0.3.0",
+  "revision": "c7b79bd+workspace-Explorer-analysis",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:4554c4c8826cf3cf31284e2f890ba422bc6da0d852db151a938f79ee4c39c7b7",
+  "source_tree_digest": "sha256:6595fae2ba1fc2434d537202ada3077f519087571efabdfde7c0682453180811",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",

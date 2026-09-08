@@ -13,7 +13,7 @@
     {"id": "WLB-C09:binary-license-and-provenance", "status": "pass"},
     {"id": "WLB-C09:manifest-integrity", "status": "pass"}
   ],
-  "attempt": 2,
+  "attempt": 3,
   "budgets": {
     "deadline_ms": 120000,
     "max_depth": 1000,
@@ -29,28 +29,29 @@
     {"archive": "missing", "name": "wotex", "version": "0.1.0-source"},
     {"archive": "missing", "name": "wotex_nx", "version": "0.1.0-source"},
     {"archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9", "name": "nx", "version": "0.13.1"},
+    {"archive": "sha256:3ebc3f84f6f9f829c31f107bc3c2cb484705163d9cb7c62ed2e0405913360595", "name": "explorer", "version": "0.12.0"},
     {"archive": "sha256:ab5290be17c19a3bd61ffde1d54937d32f36f81f6d755f6c1f232b92f7a35266", "name": "ex_maude", "version": "0.4.1"},
     {"archive": "sha256:928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1", "name": "telemetry", "version": "1.4.2"},
     {"archive": "sha256:95851274f57b3853aab833674e2b770ed800f38fb1f3d03c97dcac56346c13dc", "name": "maude", "version": "3.5.1-macos-arm64"}
   ],
-  "durations": {"run_ms": 18600},
+  "durations": {"run_ms": 18500},
   "fixtures": {
     "model:thermal-control-v1": "sha256:04d49d3e2f8c80e4b1e1199bbc41a22f410c76bbb7606a378a5b0be3ae005b13"
   },
   "inputs": [
     "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_MAUDE=pinned-maude-3.5.1 mix test WLB.09-formal-files",
-    "renewal:2026-09-08-interactive-analytics-contract;seed=1;manifest-integrity-checked-separately",
+    "renewal:2026-09-08-explorer-lock;seed=1;manifest-integrity-checked-separately",
     "engine-executable:sha256:266eed04679fde6029a18e5e2b1828223d4a7169ac55503aa15d67e126792fbf",
     "model:thermal-control-v1",
     "cookbook:formal-control"
   ],
-  "lock_digest": "sha256:7d40df7fa06d21da796f6758413900f4a2c39b5ba69d93c0da077a995d62ac46",
+  "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
   "outcomes": {"broken_variants": 5, "cookbook_checks": 9, "excluded_count": 2, "reachable_states": 253, "safe_properties": 5, "test_count": 44},
-  "revision": "836f7af+workspace-WLB.11-v0.3.0",
+  "revision": "c7b79bd+workspace-Explorer-analysis",
   "scenario_id": "WLB.09-formal-control-verification",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:8c6cdce19f6b51ae7f5a9229a190084b3b309a589bd03a82b2f7ebfed5513af7",
+  "source_tree_digest": "sha256:3f2ccf2eb745e67fc153d7ab446afbca54af7eeb7055d722374802fc57125e19",
   "toolchain": {
     "backend": "Maude-3.5.1-port",
     "elixir": "1.20.2",

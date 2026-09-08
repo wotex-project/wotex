@@ -11,7 +11,7 @@
     {"id": "WLB-C05:continuum-cookbook", "status": "pass"},
     {"id": "WLB-C05:manifest-integrity", "status": "pass"}
   ],
-  "attempt": 1,
+  "attempt": 2,
   "budgets": {
     "capacity": 64,
     "deadline_ms": 60000,
@@ -33,27 +33,29 @@
     {"archive": "missing", "name": "wotex_binding_mqtt", "version": "0.1.0-source"},
     {"archive": "sha256:f83350f2d29a38be1fd38f39081dd36f41fc51bbacf0f4c2927d01308ae331d0", "name": "exqlite", "version": "0.40.0"},
     {"archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9", "name": "nx", "version": "0.13.1"},
+    {"archive": "sha256:3ebc3f84f6f9f829c31f107bc3c2cb484705163d9cb7c62ed2e0405913360595", "name": "explorer", "version": "0.12.0"},
     {"archive": "sha256:c5684ca062fa407cac115aec3256383f3e2ec9fdced7904d59cf5a7bb7ed6181", "name": "bandit", "version": "1.12.5"},
     {"archive": "sha256:4b192d63253e8dcc6221ef992ea9ebef7d3555166e8423aa5b553e86bc3c69a2", "name": "req", "version": "0.7.4"},
     {"archive": "sha256:9ae72f46d6afc5d95a1de2f5b190a6e24b668f7d3e17b74bbf2f499542b4ce0d", "name": "emqtt", "version": "1.16.0"},
     {"archive": "sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797", "name": "eclipse-mosquitto", "version": "2.1.2"}
   ],
-  "durations": {"run_ms": 20610},
+  "durations": {"run_ms": 19200},
   "fixtures": {
     "loopback/thing-description.json": "sha256:59da3c2a80403a794cbc38bb8a4a91d0d671df481fa2dd441004b4f3c99d90ec"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test test/wotex/lab/directory_test.exs test/wotex/lab/continuum_test.exs test/wotex/lab/smart_room_test.exs test/wotex/lab/cookbook_test.exs test/wotex/lab/wlb05_evidence_manifest_test.exs",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test test/wotex/lab/directory_test.exs test/wotex/lab/continuum_test.exs test/wotex/lab/smart_room_test.exs test/wotex/lab/cookbook_test.exs",
+    "renewal:2026-09-08-explorer-lock;seed=1;manifest-integrity-checked-separately",
     "broker-image:eclipse-mosquitto:2",
     "fault-schedule:1.0.0"
   ],
-  "lock_digest": "sha256:7d40df7fa06d21da796f6758413900f4a2c39b5ba69d93c0da077a995d62ac46",
-  "outcomes": {"broker_enabled": true, "excluded_count": 0, "test_count": 62},
-  "revision": "6d0612e90a0f48d4de1f9eb6a6d0ed8a7e330dd5+workspace-WLB.06-v1.3.0",
+  "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
+  "outcomes": {"broker_enabled": true, "excluded_count": 0, "test_count": 61},
+  "revision": "c7b79bd+workspace-Explorer-analysis",
   "scenario_id": "WLB.05-directory-continuum-and-smart-room",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:87bd7fd9e0bd561fcf8f62159cb38abbee5374680ccfa69aab6c4cf5fb0d6560",
+  "source_tree_digest": "sha256:e795aba9437f927e949e71cce43d54bc3a85aafbe5c01808347c65040cd72bcb",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-BEAM-network",
     "elixir": "1.20.2",

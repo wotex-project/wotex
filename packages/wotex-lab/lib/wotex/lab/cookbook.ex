@@ -102,8 +102,8 @@ defmodule Wotex.Lab.Cookbook do
     %{
       id: "window-anomaly",
       title: "Windows, quality, masks and anomaly thresholds over a synthetic stream",
-      specs: ["WLB.03"],
-      completion_ids: ["WLB-C03", "WLB-C08"],
+      specs: ["WLB.03", "WLB.10", "WLB.11"],
+      completion_ids: ["WLB-C03", "WLB-C08", "WLB-C12", "WLB-C13"],
       upstream: ["WNX-C01", "WNX-C02", "WNX-C04"],
       lane: :implemented,
       evidence: :executable,
@@ -112,6 +112,7 @@ defmodule Wotex.Lab.Cookbook do
         "quiet-not-anomalous",
         "deterministic",
         "glitch-masked",
+        "explorer-missing-aware",
         "stale-window-refused",
         "kelvin-refused",
         "dtype-refused"

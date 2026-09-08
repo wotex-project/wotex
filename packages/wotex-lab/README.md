@@ -84,12 +84,21 @@ local source evidence. It does not satisfy the clone-free acceptance gate.
 The intended Hex dependency is `{:wotex_lab, "~> 0.1.0"}`; this README does not
 claim that package is published. That base requirement brings core,
 Wotex Nx, Nx and telemetry only. Runtime, the HTTP and MQTT bindings,
-Directory, Continuum, Exqlite, Axon and EXLA are optional profile packages a
+Directory, Continuum, Exqlite, Axon, EXLA and Explorer are optional profile packages a
 host adds explicitly; the Lab modules behind each seam compile only when that
 package is present. `mix check` includes an archive-consumer gate that resolves
 the base profile from built archives through a local Hex registry with Git
 absent from the PATH. Production rejects `WOTEX_PATH_DEPS` and uses
 Hex requirements. Publication and repository visibility are maintainer-owned.
+
+The Workbench explicitly selects Explorer 0.12.0 for read-only run inspection:
+inclusive range/series controls, unit-separated summaries and dynamically
+updated line/point/area charts. `Wotex.Lab.Analytics.analyze/2` is shared with
+the `window-anomaly` notebook. It bounds native input, materializes at most 100
+table rows, distinguishes missing/nonfinite values from observed zeros and
+returns source/query digests without changing the run evidence. Explorer uses
+Rust/Polars for dataframes; Nx remains the numerical layer and the chart
+renderer remains separate. No required `kino_explorer` dependency is added.
 
 ```elixir
 {:ok, result} = Wotex.Lab.Examples.Thermal.run()

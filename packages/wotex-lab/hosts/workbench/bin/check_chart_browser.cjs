@@ -26,6 +26,23 @@ async function run() {
     assert.equal(await chart.count(), 1);
     assert.equal(await page.locator(".wl-chart-svg").isVisible(), false);
 
+    const beforeRuns = await page.evaluate(async () => (await (await fetch("/evidence/report.json")).json()).runs);
+    assert.equal(await page.locator("#run-insights").count(), 0);
+    for (const mark of ["point", "area", "line"]) {
+      await page.locator("#analysis-mark").selectOption(mark);
+      await page.locator("#run-analysis button[type=submit]").click();
+      await page.locator("#run-insights").waitFor({state: "visible"});
+      await page.waitForFunction((mark) => {
+        const figure = document.querySelector("[data-spec]");
+        return figure && JSON.parse(figure.dataset.spec).mark.type === mark;
+      }, mark);
+      await chart.waitFor({state: "visible"});
+      assert.equal(await chart.count(), 1);
+    }
+    assert.ok(await page.locator("#analysis-preview tbody tr").count() <= 100);
+    const afterRuns = await page.evaluate(async () => (await (await fetch("/evidence/report.json")).json()).runs);
+    assert.deepEqual(afterRuns, beforeRuns);
+
     for (const theme of ["dark", "light", "system"]) {
       await page.locator("#wl-theme").selectOption(theme);
       await chart.waitFor({state: "visible"});
@@ -43,6 +60,7 @@ async function run() {
 
     await page.reload();
     await chart.waitFor({state: "visible"});
+    assert.equal(await page.locator("#run-insights").count(), 0);
     assert.equal(new URL(page.url()).pathname, runPath);
     assert.equal(await page.locator("form[phx-submit=approve]").count(), 0);
     const other = await browser.newPage();
@@ -53,7 +71,8 @@ async function run() {
     console.log(JSON.stringify({
       kind: "local_source_browser_cohort", node: process.version, playwright: version,
       chromium: browser.version(), checks: ["CSP-interpreter", "enhanced-render", "theme-reset",
-        "keyboard-reset", "mobile-reflow", "bounded-table", "reload-no-replay", "session-isolation"],
+        "keyboard-reset", "mobile-reflow", "bounded-table", "analysis-mark-updates",
+        "analysis-no-evidence-mutation", "reload-no-replay", "session-isolation"],
       status: "passed", artifact_adoption: false, wcag_certification: false
     }));
   } finally { await browser.close(); }

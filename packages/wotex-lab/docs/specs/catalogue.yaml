@@ -335,6 +335,9 @@ specifications:
       - "Wotex.Lab.Metrics.Snappy"
       - "Wotex.Lab.Metrics.ReqSink"
       - "Wotex.Lab.Metrics.GreptimeBridge"
+      - "Wotex.Lab.Analytics"
+      - "Wotex.Lab.Analytics.Source"
+      - "Wotex.Lab.Analytics.Query"
     executable_evidence:
       - "test/wotex/lab/metrics_catalogue_test.exs"
       - "test/wotex/lab/metrics_collector_test.exs"
@@ -344,6 +347,7 @@ specifications:
       - "test/wotex/lab/metrics_remote_write_test.exs"
       - "test/wotex/lab/metrics_bridge_test.exs"
       - "test/wotex/lab/greptime_bridge_test.exs"
+      - "test/wotex/lab/analytics_test.exs"
       - "priv/fixtures/metrics/equality/manifest.json"
     compatibility_classification: Additive host contract; no mandatory observability dependency in the base library.
   - id: WLB.11
@@ -371,6 +375,8 @@ specifications:
       - "WotexLabWorkbench.Metrics"
       - "WotexLabWorkbench.Chart"
       - "WotexLabWorkbench.Chart.Admission"
+      - "WotexLabWorkbench.Insights"
+      - "WotexLabWorkbenchWeb.Components.Insights"
       - "WotexLabWorkbench.Report"
       - "WotexLabWorkbenchWeb.Components"
       - "WotexLabWorkbenchWeb.WorkbenchLive"
@@ -378,6 +384,7 @@ specifications:
       - "test/wotex/lab/design_system_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/chart_preview_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/chart_contract_test.exs"
+      - "hosts/workbench/test/wotex_lab_workbench/insights_test.exs"
       - "hosts/workbench/test/js/chart_hook_test.cjs"
       - "hosts/workbench/bin/check_chart_browser.cjs"
       - "hosts/workbench/test/wotex_lab_workbench/formal_test.exs"

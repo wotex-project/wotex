@@ -14,7 +14,7 @@ operation, input, revision and expiry; experiment execution cannot approve it.
 
 The existing host gate compiles with warnings as errors, formats, runs strict Credo,
 unused-dependency and security audits, Dialyzer, Doctor, ExDoc, the boundary
-scan and 26 tests with at least 90% line coverage. Those tests cover empty and
+scan and the host suite with at least 90% line coverage. Those tests cover empty and
 denied states, themes/sidebar semantics, reflow/reduced-motion source rules,
 multi-session isolation, reconnect navigation, cancel/replay, escaped TD text,
 bounded chart/query/report data, token overrides, immutable exports, formal
@@ -30,7 +30,10 @@ mount/update/disposal lifecycle now have executable source evidence in
 `bin/check_chart_browser.cjs` host gate checks real Chromium rendering,
 keyboard reset, themes, mobile reflow, reload and session isolation. Its
 recorded cohort is source evidence, not the complete WLB.08 browser matrix.
-Explorer analysis remains planned. See the
+`Insights` and its HEEx controls now invoke the shared optional Lab Explorer
+profile only on explicit inspection. Unit and LiveView tests cover range/series/
+mark selection, scope substitution, empty results and unchanged run evidence.
+The browser gate also exercises updated charts after analysis. See the
 [interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md).
 
 ## Product and implementation boundary

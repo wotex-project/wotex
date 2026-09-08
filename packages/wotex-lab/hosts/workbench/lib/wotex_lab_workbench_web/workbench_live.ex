@@ -12,7 +12,20 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   alias Wotex.Lab.Error
   alias Wotex.Lab.Telemetry
-  alias WotexLabWorkbench.{Chart, Experiments, Formal, Metrics, Provenance, Room, Run, Sessions}
+
+  alias WotexLabWorkbench.{
+    Chart,
+    Experiments,
+    Formal,
+    Insights,
+    Metrics,
+    Provenance,
+    Room,
+    Run,
+    Sessions
+  }
+
+  import WotexLabWorkbenchWeb.Components.Insights
   alias WotexLabWorkbenchWeb.Components.StatusBadge
   alias WotexLabWorkbenchWeb.Scope
 
@@ -29,6 +42,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:metrics, nil)
       |> assign(:run, nil)
       |> assign(:charts, [])
+      |> assign(:insights, nil)
       |> assign(:read_result, nil)
       |> assign(:answer, nil)
       |> refresh()
@@ -132,6 +146,19 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end)
   end
 
+  def handle_event("inspect_run", params, socket) do
+    command(socket, :query, fn scope ->
+      with id when is_binary(id) <- socket.assigns[:run_id],
+           {:ok, run} <- Room.fetch_run(scope.room, id),
+           {:ok, insights} <- Insights.analyze(run, params) do
+        {:ok, scope, {:insights, insights}}
+      else
+        {:error, error} -> {:error, error}
+        _missing -> {:error, Error.new(:unknown_run, :analytics, "no run selected in this session")}
+      end
+    end)
+  end
+
   def handle_event("verify", %{"property" => property, "variant" => variant}, socket) do
     command(socket, :verify, fn scope ->
       with {:ok, property, variant} <- Formal.admit(property, variant),
@@ -180,7 +207,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           <% :experiments -> %>
             <.experiments_view experiments={@experiments} runs={@runs} room={@scope.room} />
           <% :run -> %>
-            <.run_view run={@run} charts={@charts} />
+            <.run_view run={@run} charts={@charts} insights={@insights} />
           <% :things -> %>
             <.things_view things={@things} room={@scope.room} read_result={@read_result} />
           <% :metrics -> %>
@@ -298,6 +325,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   attr :run, :any, required: true
   attr :charts, :list, required: true
+  attr :insights, :any, required: true
 
   defp run_view(assigns) do
     ~H"""
@@ -327,6 +355,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       </dl>
       <.action_approval :if={@run.status == :awaiting_approval} run={@run} />
       <.tensor_summary :if={@run.tensor} summary={@run.tensor} />
+      <.insights :if={@run.timeseries != []} run={@run} insights={@insights} />
       <section :if={@charts != []} class="wl-section">
         <h2>Timeseries</h2><.chart
           :for={{chart, index} <- Enum.with_index(@charts)}
@@ -601,6 +630,9 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp apply_effect(socket, {:assign, key, value}), do: assign(socket, key, value)
   defp apply_effect(socket, {:navigate, path}), do: push_navigate(socket, to: path)
 
+  defp apply_effect(socket, {:insights, insights}),
+    do: socket |> assign(:insights, insights) |> assign(:charts, insights.charts)
+
   defp refresh(%{assigns: %{scope: %{room: room, session_id: session_id}}} = socket)
        when is_pid(room) do
     if Process.alive?(room) do
@@ -635,6 +667,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     |> assign(:metrics, nil)
     |> assign(:run, nil)
     |> assign(:charts, [])
+    |> assign(:insights, nil)
   end
 
   defp load_action(socket, :run, %{"id" => id}) do
@@ -646,8 +679,17 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp reload_run(%{assigns: %{run_id: id, scope: %{room: room}}} = socket)
        when is_binary(id) and is_pid(room) do
     case safe(fn -> Room.fetch_run(room, id) end, {:error, :unavailable}) do
-      {:ok, run} -> socket |> assign(:run, run) |> assign(:charts, charts(run))
-      {:error, _error} -> socket |> assign(:run, nil) |> assign(:charts, [])
+      {:ok, run} ->
+        case socket.assigns.insights do
+          %{run_id: run_id} = insights when run_id == run.id ->
+            socket |> assign(:run, run) |> assign(:charts, insights.charts)
+
+          _other ->
+            socket |> assign(:run, run) |> assign(:charts, charts(run)) |> assign(:insights, nil)
+        end
+
+      {:error, _error} ->
+        socket |> assign(:run, nil) |> assign(:charts, []) |> assign(:insights, nil)
     end
   end
 

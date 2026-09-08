@@ -49,6 +49,7 @@ defmodule WotexLabWorkbench.MixProject do
       wotex_dependency(:wotex_binding_mqtt, "wotex-binding-mqtt"),
       {:ex_maude, "~> 0.4.1"},
       {:nx, "~> 0.13.1"},
+      {:explorer, "~> 0.12.0"},
       {:telemetry, "~> 1.3"},
       {:phoenix, "~> 1.8.13"},
       {:phoenix_html, "~> 4.3"},

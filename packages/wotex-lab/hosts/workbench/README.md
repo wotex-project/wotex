@@ -43,6 +43,15 @@ and protected by the host's own locked-version and bounded-parser regression.
 
 ## Interactive charts and browser evidence
 
+The host explicitly selects Explorer 0.12.0 and invokes the shared
+`Wotex.Lab.Analytics` profile when “Apply analysis” is submitted. Series and
+inclusive event-time filters, line/point/area selection and compatible-unit
+comparisons are read-only: they cannot re-run an experiment or change its
+evidence. Summaries distinguish observations, missing and nonfinite values;
+tables show at most 100 rows and both source and query digests. Empty ranges
+are not measured zeros. Reload does not replay the query. No `kino_explorer`
+dependency, arbitrary SQL/expression or browser-selected instance is admitted.
+
 Vega Embed uses its bundled CSP interpreter (`ast: true`); neither
 `unsafe-eval` nor a fourth script is required. The renderer cannot load URLs.
 The hook applies only a fixed horizontal pan/zoom interaction, follows theme

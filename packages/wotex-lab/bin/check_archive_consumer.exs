@@ -9,7 +9,7 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
   alias Wotex.Lab.Evidence.{Digest, Record}
 
   @base_packages [{:wotex, "wotex"}, {:wotex_nx, "wotex-nx"}, {:wotex_lab, "wotex-lab"}]
-  @profile_packages ~w(wotex_runtime wotex_directory wotex_binding_http wotex_binding_mqtt wotex_conformance wotex_continuum exqlite req emqtt axon polaris exla fine xla)a
+  @profile_packages ~w(wotex_runtime wotex_directory wotex_binding_http wotex_binding_mqtt wotex_conformance wotex_continuum exqlite req emqtt axon polaris exla fine xla explorer aws_signature table table_rex kino kino_explorer)a
   @cohort ~w(lib/**/* priv/fixtures/**/* docs/specs/**/* mix.exs mix.lock)
   @deadline_ms 900_000
 
@@ -237,6 +237,8 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
           not Code.ensure_loaded?(Wotex.Lab.Adapters.Runtime.Loopback) and
           not Code.ensure_loaded?(Wotex.Lab.Adapters.Directory.EtsRepository) and
           not Code.ensure_loaded?(Wotex.Lab.SmartRoom.Scenario) and
+          not Code.ensure_loaded?(Wotex.Lab.Analytics) and
+          not Code.ensure_loaded?(Explorer.DataFrame) and
           not Code.ensure_loaded?(Exqlite.Sqlite3),
       base_modules_present:
         Code.ensure_loaded?(Wotex.Lab) and Code.ensure_loaded?(Wotex.Lab.Telemetry) and

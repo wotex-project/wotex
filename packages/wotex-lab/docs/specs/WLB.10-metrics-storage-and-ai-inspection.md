@@ -224,7 +224,10 @@ distinct UI states. Generated advice cannot authorize or invoke an Action.
 
 The [interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md)
 selects Explorer for explicit dataframe analysis, not metric capture, storage
-or plotting. This profile remains planned until its source/evidence is added.
+or plotting. `Wotex.Lab.Analytics`, `Analytics.Source` and `Analytics.Query`
+implement this optional profile against Explorer 0.12.0/Polars. The explicit
+Workbench host selects it; `window-anomaly.livemd` demonstrates the same API
+beside public Explorer calls. Neither base consumers nor other notebooks need it.
 It operates only on admitted, bounded run data or frozen query results. Use a
 closed descriptor for series/range selection and summary operations; no raw
 SQL, arbitrary expression, caller module, URL or filesystem source is accepted.
@@ -234,6 +237,17 @@ aggregated together. Apply native filtering/aggregation before extracting the
 at-most 100-row, 32-column preview; bound the native input and intermediate work
 as well as final output. Report native failures as unavailable, never empty
 success. The base numerical package closure still excludes Explorer.
+
+The implemented source contract accepts at most eight named series with 2,000
+points each and one MiB of canonical scalar data. Queries select a supplied
+series and inclusive numeric range, with a 1–100 row preview. Aggregates group
+by series and unit; nulls and explicit nonfinite atoms have separate counts.
+The profile uses explicit `f64` and refuses integers outside ±(2^53−1), instead
+of silently losing precision. Stable, versioned canonical identities bind
+source metadata, ordered points and query controls. Tests in
+`test/wotex/lab/analytics_test.exs` cover these bounds, null/nonfinite/empty
+semantics, native summaries and unchanged Nx backend selection. This is bounded
+native computation, not OS containment of untrusted executable code.
 
 LiveView and notebook controls may refine the visible analysis without
 re-running an experiment or mutating its evidence. A filtered chart is not a

@@ -83,6 +83,50 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     refute has_element?(run_view, "form[phx-submit='approve']")
   end
 
+  test "analysis is explicit, scope-owned and cannot mutate or replay its run", %{conn: conn} do
+    conn = get(conn, "/")
+    {:ok, view, _html} = live(recycle(conn), "/")
+    render_click(element(view, "button[phx-click='start_room']"))
+    assert render_hook(view, "inspect_run", %{}) =~ "unknown_run"
+
+    redirect =
+      render_submit(element(view, "#run-window_anomaly"), %{
+        "experiment_id" => "window_anomaly",
+        "params" => %{"backend" => "binary"}
+      })
+
+    {:ok, run_view, _html} = follow_redirect(redirect, recycle(conn), "/runs/run-1")
+    refute has_element?(run_view, "#run-insights")
+    before = get(recycle(conn), "/evidence/report.json") |> json_response(200) |> Map.fetch!("runs")
+
+    html = render_submit(element(run_view, "#run-analysis"), %{"mark" => "point"})
+    assert html =~ "Explorer.PolarsBackend"
+    assert html =~ "Source preview digest" and html =~ "Analysis query digest"
+    assert html =~ "Nonfinite" and html =~ "Observed"
+    assert has_element?(run_view, "#analysis-mark option[value='point'][selected]")
+    render_change(element(run_view, "#theme-settings"), %{"theme" => "dark"})
+    assert has_element?(run_view, "#run-insights")
+    assert has_element?(run_view, "#analysis-mark option[value='point'][selected]")
+
+    html = render_hook(run_view, "inspect_run", %{"instance_id" => "other"})
+    assert html =~ "invalid_analysis_query"
+
+    html =
+      render_submit(element(run_view, "#run-analysis"), %{"from" => "1000000", "mark" => "area"})
+
+    assert html =~ "No points match this range. This is not a measured zero."
+
+    after_runs =
+      get(recycle(conn), "/evidence/report.json") |> json_response(200) |> Map.fetch!("runs")
+
+    assert after_runs == before
+    {:ok, reloaded, _html} = live(recycle(conn), "/runs/run-1")
+    refute has_element?(reloaded, "#run-insights")
+    {:ok, other, _html} = live(build_conn(), "/runs/run-1")
+    refute has_element?(other, "#run-analysis")
+    refute render_hook(other, "inspect_run", %{}) =~ "Explorer.PolarsBackend"
+  end
+
   test "Things escape untrusted TD text and reports stay in the caller session", %{conn: conn} do
     conn = get(conn, "/things")
     {:ok, view, _html} = live(recycle(conn), "/things")

@@ -8,7 +8,7 @@
     {"id": "WLB-C04:mqtt-sample-admission", "status": "pass"},
     {"id": "WLB-C04:manifest-integrity", "status": "pass"}
   ],
-  "attempt": 1,
+  "attempt": 2,
   "budgets": {
     "deadline_ms": 60000,
     "max_inflight": 2,
@@ -37,7 +37,7 @@
     {"archive": "sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797", "name": "eclipse-mosquitto", "version": "2.1.2"},
     {"archive": "missing", "name": "docker-engine", "version": "29.4.0"}
   ],
-  "durations": {"run_ms": 12820},
+  "durations": {"run_ms": 11900},
   "fixtures": {
     "tls/ca-cert.pem": "sha256:f8fa6c43f51909fd87f28bae9fd227ffd10df539261c26accf62bb09611457b6",
     "tls/localhost-cert.pem": "sha256:9b75c22360f6ebc90e04c564ee27c4ce36815fe3dd071a929cfd46b7350868b2",
@@ -45,17 +45,18 @@
   },
   "inputs": [
     "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test WLB.04-evidence-files",
+    "renewal:2026-09-08-explorer-lock;seed=1;manifest-integrity-checked-separately",
     "broker-image:eclipse-mosquitto:2",
     "profile:http-local-and-hosted",
     "profile:mqtt-local-and-mqtts"
   ],
-  "lock_digest": "sha256:7d40df7fa06d21da796f6758413900f4a2c39b5ba69d93c0da077a995d62ac46",
-  "outcomes": {"broker_enabled": true, "test_count": 56},
-  "revision": "6d0612e90a0f48d4de1f9eb6a6d0ed8a7e330dd5+workspace-WLB.06-v1.3.0",
+  "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
+  "outcomes": {"broker_enabled": true, "test_count": 55},
+  "revision": "c7b79bd+workspace-Explorer-analysis",
   "scenario_id": "WLB.04-runtime-and-network-adapters",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:c1b3ab2353ccac790c3e1f35c63fc41f9a55513359c10884ca1b8fd0df7a1073",
+  "source_tree_digest": "sha256:7a4e32b40c055a5dc85ca946e8744b1dbabc48e1fca51334582e0a2614c538da",
   "toolchain": {
     "backend": "BEAM-network",
     "elixir": "1.20.2",

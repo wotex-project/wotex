@@ -14,7 +14,8 @@ calls it makes.
 ```elixir
 Mix.install([
   {:wotex_lab, "~> 0.1.0"},
-  {:nx, "~> 0.13.1"}
+  {:nx, "~> 0.13.1"},
+  {:explorer, "~> 0.12.0"}
 ])
 ```
 
@@ -97,7 +98,7 @@ thing_id = "urn:wotex:lab:room:simulated"
 {:ok, encoded} =
   Nx.with_default_backend(Nx.BinaryBackend, fn -> Encoder.encode(rows, schema) end)
 
-{{_values}, {masks}, quality} =
+{{values}, {masks}, quality} =
   Nx.Defn.jit_apply(&Function.identity/1, [encoded], compiler: Nx.Defn.Evaluator)
 
 %{
@@ -134,6 +135,60 @@ score =
 {:ok, anomaly} = Decoder.decode(score, anomaly_output, id: "anomaly-31000", produced_at: 31_000)
 {Nx.to_number(score), anomaly}
 ```
+
+## Inspect the same run with Explorer
+
+Explorer is the explicit Rust/Polars dataframe profile, not a replacement for
+Nx or a plotting engine. This cell analyzes the existing eight-row window;
+changing its `from`/`to` controls does not run the simulator or score again.
+The mask is applied before dataframe admission: the deliberate `18.0` fill is
+not an observation. Missing values stay null, never an implicit zero. The
+result identifies the supplied preview, not a full or frozen training dataset.
+
+```elixir
+alias Explorer.DataFrame, as: DF
+alias Explorer.Series, as: S
+alias Wotex.Lab.Analytics
+alias Wotex.Lab.Analytics.Source
+
+analysis_points =
+  Enum.zip([rows, Nx.to_flat_list(values), Nx.to_flat_list(masks)])
+  |> Enum.map(fn {row, value, mask} -> {row.timestamp, if(mask == 1, do: value)} end)
+
+analysis_source = [%{name: "temperature", unit: "Cel", source: "encoded eight-row window", points: analysis_points}]
+{:ok, analysis} = Analytics.analyze(analysis_source, from: 24_000, to: 31_000)
+
+# Public Explorer equivalent, beside the Lab convenience call. This source is
+# admitted before native construction; even the intermediate input is bounded.
+{:ok, admitted_source} = Source.new(analysis_source)
+direct = DF.new(admitted_source.rows, backend: Explorer.PolarsBackend)
+direct_summary =
+  direct
+  |> DF.lazy()
+  |> DF.filter_with(fn frame -> S.greater_equal(frame["x"], 24_000) end)
+  |> DF.filter_with(fn frame -> S.less_equal(frame["x"], 31_000) end)
+  |> DF.group_by(["series", "unit"])
+  |> DF.summarise_with(fn frame -> [observed: S.count(frame["value"]), mean: S.mean(frame["value"])] end)
+  |> DF.collect()
+  |> DF.to_rows()
+
+%{summary: analysis.summary, preview: analysis.preview, source: analysis.source_digest, query: analysis.query_digest}
+```
+
+The shared API admits only series, inclusive range and row limit. It rejects
+SQL, caller modules and instance IDs. Both hosts cap previews at 100 rows;
+plots retain at most eight series of 2,000 points and source admission is at
+most one MiB. Summaries are computed before preview truncation, keep units
+separate, and disclose observed, missing and nonfinite counts. Numeric values
+use explicit `f64`; integers outside the exact ±(2^53−1) range are refused.
+
+For a sortable table in a Livebook session that explicitly selects `kino
+~> 0.19.0`, add a display cell with `Kino.DataTable.new(analysis.preview)`.
+Only the already-bounded preview is passed to
+[core Kino's table](https://kino.hexdocs.pm/Kino.DataTable.html), whose sorting
+can traverse its input. That optional UI cell is not part of the headless
+source evidence. No archived `kino_explorer` dependency or successor claim is
+needed, and the text result above works without Kino.
 
 ## Deliberate breakage
 
@@ -238,6 +293,12 @@ labels_safe? = not (inspect(spans) =~ "urn:wotex") and not (inspect(spans) =~ "1
       Nx.to_flat_list(quality) == [0, 0, 0, 0, 0, 0, 2, 0] and
       Enum.at(rows, 6).provenance["temperature"] == "sim-30",
   "stale-window-refused" => stale == :no_observed_row,
+  "explorer-missing-aware" =>
+    hd(analysis.summary)["observed"] == 7 and hd(analysis.summary)["missing"] == 1 and
+      hd(analysis.summary)["nonfinite"] == 0 and analysis.total_rows == 8 and
+      hd(direct_summary)["observed"] == 7 and
+      hd(direct_summary)["mean"] == hd(analysis.summary)["mean"] and
+      Enum.at(analysis.preview, 6)["value"] == nil,
   "kelvin-refused" => kelvin_error.code == :unit_conversion_required,
   "dtype-refused" =>
     dtype_error.code == :dtype_value_out_of_range and shape_error.code == :output_shape_mismatch and
@@ -254,6 +315,7 @@ exercises `Wotex.Nx.Window` and the encoder/decoder contract of `WNX.01`.
 ## Spec and completion IDs
 
 * Lab: WLB.03 `window-anomaly` lane (`WLB-C03`, `WLB-C08`).
+* Shared bounded analysis: WLB.10 and WLB.11 (`WLB-C12`, `WLB-C13`).
 * Upstream consumer evidence: `WNX-C01`, `WNX-C02`, `WNX-C04`.
 
 ## Replacement adapter

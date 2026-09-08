@@ -48,6 +48,28 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 
 ## Acknowledged dependency advisories
 
+### Optional Explorer source cohort
+
+Observation date: 2026-09-08. The optional Lab profile and explicit Workbench
+host resolve Explorer 0.12.0, aws_signature 0.4.3, table 0.1.2 and table_rex
+4.1.0; existing locked versions, including Decimal 3.1.1, are unchanged.
+The exact Hex archive checksums are in both lock files. The exercised native
+target is `libexplorer-v0.12.0-nif-2.15-aarch64-apple-darwin.so`: upstream's
+archive checksum is `sha256:daf57367a83a0cc731af14a7474dfd17f204fa891efa38973983480839ee48c2`,
+and the loaded, extracted library hashes to
+`sha256:84154cdd12b555990453f6dae40d1c28af51f49490bb264fc0615d3e6cb221ce`.
+This is an Elixir 1.20.2 / OTP 29 source cohort, not a Linux, minimum-toolchain,
+Nerves or installed-host artifact claim. Explorer/table_rex emit upstream
+compiler diagnostics on Elixir 1.20; the Lab and host compile cleanly with
+warnings as errors. No dependency code or warning policy was patched to hide them.
+
+`Analytics` uses only admitted in-memory scalar data and closed Polars
+operations. It does not call Explorer filesystem, cloud, SQL or arbitrary
+expression APIs. Native computation remains inside the VM and is not a
+replacement for WLB.06's external-executable containment boundary. The base
+archive gate proves neither Explorer nor its profile module enters the first
+tensor's dependency closure. No `kino_explorer` or chart wrapper is selected.
+
 ### Optional MQTT cohort
 
 Observation date: 2026-09-08. The optional `emqtt` requirement resolves `gun`
