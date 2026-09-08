@@ -67,6 +67,10 @@
   simulated-Thing resources of an explicit instance, bounded read tools with
   session quotas, and writes only behind a host token with per-request
   idempotency keys.
+- Reference-consumer gate that runs every suite with the broker, GreptimeDB
+  and formal lanes enabled where their dependencies exist and records absent
+  lanes as not run; the formal profile now emits under the `formal` telemetry
+  component with a budget measurement.
 - Accepted WLB.01–WLB.11 specifications and versioned completion contract.
 - Explicit instance supervision, bounded scenario descriptors and plugin port.
 - Deterministic public-API Nx example with explicit units/backend and inert output.

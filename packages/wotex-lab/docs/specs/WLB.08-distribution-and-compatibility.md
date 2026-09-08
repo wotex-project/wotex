@@ -63,8 +63,14 @@ recursively: every package must be an admitted archive and no profile package
 may appear. The smoke runs Thing Description and Nx positive and negative cases
 through public APIs and proves the profile modules are absent. The gate writes
 a `Wotex.Lab.Evidence.Record` with archive digests and retains only that
-record. The reference-consumer, distribution and release-candidate runners
-remain acceptance obligations, not approximated by these scripts. Before running archive-consumer tests, the harness MUST assert Git is
+record. `bin/check_reference_consumer.exs` implements the workspace form of
+`reference_consumer_green`: it runs every Lab suite against the same cohort
+with the broker, GreptimeDB and formal lanes enabled where a Docker daemon
+with the pinned images and a pinned Maude engine are present, records a
+lane that could not run as `not_run` rather than passed, and retains an
+evidence record with the cohort digests. It is workspace evidence, not the
+artifact-mode runner; the distribution and release-candidate runners remain
+acceptance obligations, not approximated by these scripts. Before running archive-consumer tests, the harness MUST assert Git is
 unavailable (`command -v git` must fail) and inspect the resolved dependency
 graph recursively, including optional/profile/transitive deps. Resolution of
 the normal graph must occur in that restricted environment; merely hiding Git

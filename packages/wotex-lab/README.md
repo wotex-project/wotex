@@ -75,6 +75,10 @@ ends.
 WOTEX_PATH_DEPS=1 WOTEX_LAB_GREPTIME=1 MIX_ENV=test mix test test/wotex/lab/greptime_bridge_test.exs
 ```
 
+`mix run --no-start bin/check_reference_consumer.exs` runs every suite with
+the lanes that this machine can support and writes an evidence record that
+names which lanes ran; CI runs it with Docker and a provisioned Maude.
+
 Development expects `wotex` and `wotex-nx` checkouts alongside Lab. This mode is
 local source evidence. It does not satisfy the clone-free acceptance gate.
 The intended Hex dependency is `{:wotex_lab, "~> 0.1.0"}`; this README does not

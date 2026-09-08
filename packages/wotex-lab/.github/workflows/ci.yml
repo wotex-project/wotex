@@ -98,3 +98,80 @@ jobs:
           echo "WOTEX_LAB_MAUDE=/tmp/maude/maude" >> "$GITHUB_ENV"
       - run: mix deps.get --check-locked
       - run: mix check --no-retry
+
+  reference:
+    name: Reference consumer / broker, GreptimeDB and formal lanes
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wotex-lab
+    env:
+      MIX_ENV: test
+      WOTEX_PATH_DEPS: "1"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          path: wotex-lab
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex
+          ref: bb042182d3cb16e7ad47cd204881ecca8388281d
+          path: wotex
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex-nx
+          ref: 6050169f2699ac5b3a9c69f61c3e6fb1353c1e94
+          path: wotex-nx
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex-runtime
+          ref: 63dac84c63ae621b8c383d78811b4322c45b35e3
+          path: wotex-runtime
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex-directory
+          ref: 1607f98c8d1bf43579464cf25c5d1a52baae4bf2
+          path: wotex-directory
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex-binding-http
+          ref: ceb76c68c493013ed29b89b3c0a5f5476f0c7fd7
+          path: wotex-binding-http
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex-binding-mqtt
+          ref: 3b6239301e87c6fd1218910dddae509ea765792b
+          path: wotex-binding-mqtt
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex-conformance
+          ref: d7d2218bb5562cf21a73067473d42451691f4170
+          path: wotex-conformance
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: wotex-project/wotex-continuum
+          ref: d722d4d20ed13316e49d87fe0d0b8c286e920f68
+          path: wotex-continuum
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: "1.20.2"
+          otp-version: "29.0"
+      - name: Pull the pinned service images
+        run: docker pull eclipse-mosquitto:2 && docker pull greptime/greptimedb:v1.1.4
+      - name: Provision Maude 3.5.1
+        run: |
+          curl -sSL -o /tmp/maude.zip https://github.com/maude-lang/Maude/releases/download/Maude3.5.1/Maude-3.5.1-linux-x86_64.zip
+          echo "72ed1ca87e3b3d0dfc6ee1436baf154bf04c45ff97d521bec040c5e8dfc8f92c  /tmp/maude.zip" | sha256sum --check
+          mkdir -p /tmp/maude && unzip -q -o /tmp/maude.zip -d /tmp/maude && chmod +x /tmp/maude/maude
+          echo "WOTEX_LAB_MAUDE=/tmp/maude/maude" >> "$GITHUB_ENV"
+      - run: mix deps.get --check-locked
+      - run: mix run --no-start bin/check_reference_consumer.exs

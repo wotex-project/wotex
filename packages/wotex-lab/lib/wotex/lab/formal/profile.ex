@@ -138,18 +138,33 @@ if Code.ensure_loaded?(ExMaude.Pool) do
 
         metadata = %{profile: :formal, operation: property, outcome: :ok}
 
-        Telemetry.span(:policy, :verification, metadata, fn ->
-          run(
-            profile,
-            base,
-            load,
-            command,
-            module,
-            initial_term,
-            property,
-            Keyword.get(opts, :exhaustion, true)
-          )
-        end)
+        started = System.monotonic_time(:millisecond)
+
+        outcome =
+          Telemetry.span(:formal, :verification, metadata, fn ->
+            run(
+              profile,
+              base,
+              load,
+              command,
+              module,
+              initial_term,
+              property,
+              Keyword.get(opts, :exhaustion, true)
+            )
+          end)
+
+        elapsed = System.monotonic_time(:millisecond) - started
+        budget = %{budget_used: elapsed / bounds.deadline_ms}
+
+        Telemetry.event(
+          :formal,
+          :verification,
+          budget,
+          Map.put(metadata, :outcome, status(outcome))
+        )
+
+        outcome
       end
     end
 
@@ -179,6 +194,10 @@ if Code.ensure_loaded?(ExMaude.Pool) do
       {outcome, reaped} = reap(outcome)
       {:ok, Search.conclude(outcome, base, reaped)}
     end
+
+    defp status({:ok, %Result{status: status}}), do: status
+    defp status({:error, %Error{code: code}}), do: code
+    defp status(_outcome), do: :error
 
     defp execute(worker, command, timeout) do
       case ExMaude.Server.execute(worker, command, timeout: timeout) do

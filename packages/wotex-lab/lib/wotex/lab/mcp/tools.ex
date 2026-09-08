@@ -392,7 +392,7 @@ defmodule Wotex.Lab.MCP.Tools do
     end
   end
 
-  if Code.ensure_loaded?(Wotex.Lab.Formal.Profile) do
+  if Code.ensure_loaded?(ExMaude.Pool) do
     defp verify(state, opts, variant, property) do
       variants = Map.new(Model.variants(), &{Atom.to_string(&1), &1})
 
