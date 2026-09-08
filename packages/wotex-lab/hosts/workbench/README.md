@@ -75,8 +75,10 @@ node bin/check_chart_browser.cjs http://127.0.0.1:4107
 Supply Playwright through your tool environment (for example `NODE_PATH`). The
 script reports actual Node, Playwright and Chromium versions. The 2026-09-08
 source cohort passed with Node 26.8.1, Playwright 1.63.0-alpha-2026-08-31 and
-Chromium 153.0.8010.12; this is neither a stable-browser compatibility matrix,
-WCAG certification nor installed-artifact evidence.
+Chromium 153.0.8010.12, including saved dashboard and exact analysis/chart
+links, keyboard disclosure/skip navigation, reflow, session isolation and
+bounded download checks. This is neither a stable-browser compatibility
+matrix, WCAG certification nor installed-artifact evidence.
 
 ## Optional operator-owned metrics
 

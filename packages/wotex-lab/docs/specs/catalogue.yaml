@@ -406,7 +406,7 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/investigation_completion_controller_test.exs"
     compatibility_classification: Optional host contract; bridge captures now require strictly advancing wall timestamps and revalidated snapshots. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Storage-only history remains available. The trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-and-room-bound browser investigation, gates BAML provider calls with an active-scope capability and discloses upstream node/time callbacks; shared hosted tenants remain unimplemented. No mandatory observability or model dependency enters the base library.
   - id: WLB.11
-    version: "0.5.3"
+    version: "0.5.4"
     path: docs/specs/WLB.11-workbench-and-design-system.md
     implementation_status: partial
     evidence_status: partial

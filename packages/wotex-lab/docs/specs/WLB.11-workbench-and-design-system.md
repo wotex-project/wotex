@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.5.3. Contract: accepted.
+Specification version: 0.5.4. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -34,10 +34,12 @@ The interactive analytics extension below adds acceptance obligations. Closed
 chart admission and mark-correct server SVG rendering have executable source
 evidence in `chart_contract_test.exs`. The separately invoked, optional
 `bin/check_chart_browser.cjs` source cohort checks real Chromium rendering,
-mark updates, themes, mobile reflow, reload and session isolation. It is not
-part of the twelve-check `mix check` host gate and requires an operator-owned
-server plus an explicitly installed Playwright/Chromium toolchain. Its recorded
-cohort is source evidence, not the complete WLB.08 browser matrix.
+mark updates, exact analysis/chart/dashboard links, saved session arrangements,
+keyboard disclosure and skip navigation, themes, mobile reflow, bounded
+downloads, reload/no-replay and session isolation. It is not part of the
+twelve-check `mix check` host gate and requires an operator-owned server plus an
+explicitly installed Playwright/Chromium toolchain. Its recorded cohort is
+source evidence, not the complete WLB.08 browser matrix or a WCAG certification.
 `Insights` and its HEEx controls now invoke the shared optional Lab Explorer
 profile only on explicit inspection. Unit and LiveView tests cover range/series/
 mark selection, scope substitution, empty results and unchanged run evidence.

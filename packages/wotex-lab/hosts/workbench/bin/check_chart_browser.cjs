@@ -17,6 +17,10 @@ async function run() {
     page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
     const response = await page.goto(origin.href);
     assert.ok(!response.headers()["content-security-policy"].includes("unsafe-eval"));
+    assert.equal(await page.locator("main#main").count(), 1);
+    assert.equal(await page.locator("nav[aria-label=Workbench]").count(), 1);
+    await page.locator(".wl-skip").focus();
+    assert.ok(await page.locator(".wl-skip").isVisible());
     await page.locator("button[phx-click=start_room]").click();
     await page.locator("#run-thermal button[type=submit]").click();
     await page.waitForURL("**/runs/**");
@@ -46,6 +50,13 @@ async function run() {
       await chart.waitFor({state: "visible"});
       assert.equal(await chart.count(), 1);
     }
+    const analysisHref = await page.locator("#analysis-deep-link").getAttribute("href");
+    assert.ok(analysisHref.includes("analysis[mark]=line"));
+    const chartHref = await page.locator(".wl-chart-link").getAttribute("href");
+    assert.ok(chartHref.endsWith("#run-chart-0"));
+    await page.goto(new URL(chartHref, origin).href);
+    await page.locator("#run-insights").waitFor({state: "visible"});
+    assert.equal(new URL(page.url()).hash, "#run-chart-0");
     assert.ok(await page.locator("#analysis-preview tbody tr").count() <= 100);
     const afterRuns = await page.evaluate(async () => (await (await fetch("/evidence/report.json")).json()).runs);
     assert.deepEqual(afterRuns, beforeRuns);
@@ -62,6 +73,7 @@ async function run() {
     await page.locator(".wl-chart-table summary").click();
     assert.ok(await page.locator(".wl-chart-table tbody tr").count() <= 100);
 
+    await page.goto(new URL(runPath, origin).href);
     await page.reload();
     await chart.waitFor({state: "visible"});
     assert.equal(await page.locator("#run-insights").count(), 0);
@@ -75,14 +87,22 @@ async function run() {
     await page.goto(new URL("/metrics", origin).href);
     await page.locator("#metric-catalogue summary").focus();
     await page.keyboard.press("Enter");
-    const choices = page.locator("#dashboard-export input[type=checkbox]");
+    const choices = page.locator("#dashboard-selection input[type=checkbox]");
     assert.equal(await choices.count(), 43);
     for (const choice of await choices.all()) await choice.uncheck();
-    await page.locator("#dashboard-export input[value=nx_duration_seconds]").check();
+    await page.locator("#dashboard-selection input[value=nx_duration_seconds]").check();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await page.locator("#dashboard-selection button[type=submit]").click();
+    await page.getByText("Dashboard arrangement saved for this session.", {exact: true}).waitFor();
+    await page.goto(new URL("/metrics", origin).href);
+    await page.locator("#metric-catalogue summary").click();
+    assert.ok(await page.locator("#dashboard-selection input[value=nx_duration_seconds]").isChecked());
+    assert.equal(await page.locator("#dashboard-selection input:checked").count(), 1);
+    const dashboardHref = await page.locator("#dashboard-deep-link").getAttribute("href");
+    assert.ok(dashboardHref.includes("nx_duration_seconds"));
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      page.locator("#dashboard-export button[type=submit]").click()
+      page.locator("#dashboard-export").click()
     ]);
     assert.equal(download.suggestedFilename(), "wotex-lab-dashboard.json");
     const chunks = [];
@@ -101,8 +121,10 @@ async function run() {
       kind: "local_source_browser_cohort", node: process.version, playwright: version,
       chromium: browser.version(), checks: ["CSP", "native-svg", "theme",
         "mobile-reflow", "bounded-table", "server-mark-updates",
-        "analysis-no-evidence-mutation", "reload-no-replay", "session-isolation",
-        "catalogue-selection", "catalogue-mobile-reflow", "dashboard-download"],
+        "analysis-deep-link", "chart-fragment", "analysis-no-evidence-mutation",
+        "reload-no-replay", "session-isolation", "keyboard-skip-and-details",
+        "catalogue-selection", "saved-dashboard", "catalogue-mobile-reflow",
+        "dashboard-deep-link", "dashboard-download"],
       status: "passed", artifact_adoption: false, wcag_certification: false
     }));
   } finally { await browser.close(); }
