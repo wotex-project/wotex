@@ -2,6 +2,10 @@
 
 ## 0.1.0
 
+- Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
+  checksums, loaded version and bounded parser regression tests. Other advisory
+  checks remain active; remove this acknowledgement when metadata is corrected.
+
 - Establish the standalone, caller-owned MQTT binding package.
 - Hand the client port the subscription owner pid instead of a delivery
   closure, and decode each `{:wotex_transport_frame, delivery}` in the owner

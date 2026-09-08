@@ -11,7 +11,7 @@ specifications:
       - {name: "JSON", revision: "RFC 8259, 2017-12", claim: "bounded codec adaptation only"}
     requires: ["wotex:WTX.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.Binding.MQTT.Broker", "Wotex.Binding.MQTT.Command", "Wotex.Binding.MQTT.Delivery", "Wotex.Binding.MQTT.QoS", "Wotex.Binding.MQTT.Topic", "Wotex.Binding.MQTT.JSON", "Wotex.Binding.MQTT.Client", "Wotex.Binding.MQTT.TransportConfig", "Wotex.Binding.MQTT.Error"]
-    executable_evidence: ["test/wotex/binding/mqtt/broker_test.exs", "test/wotex/binding/mqtt/command_test.exs", "test/wotex/binding/mqtt/delivery_test.exs", "test/wotex/binding/mqtt/qos_test.exs", "test/wotex/binding/mqtt/topic_test.exs", "test/wotex/binding/mqtt/json_test.exs", "test/wotex/binding/mqtt/transport_config_test.exs"]
+    executable_evidence: ["test/wotex/binding/mqtt/broker_test.exs", "test/wotex/binding/mqtt/command_test.exs", "test/wotex/binding/mqtt/delivery_test.exs", "test/wotex/binding/mqtt/qos_test.exs", "test/wotex/binding/mqtt/topic_test.exs", "test/wotex/binding/mqtt/json_test.exs", "test/wotex/binding/mqtt/transport_config_test.exs", "test/wotex/binding/mqtt/dependency_security_test.exs"]
     compatibility_classification: "versioned immutable values/client callbacks; pre-release seam correction replaced the subscribe delivery callback with the subscription owner pid and added the command payload limit; broker capability external"
   - id: "WBM.02"
     version: "1.1.0"
