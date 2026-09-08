@@ -3,6 +3,8 @@
 # PATH, and runs Thing Description and Nx positive and negative cases through
 # public APIs. Runs through Mix: `mix run --no-start bin/check_archive_consumer.exs`.
 
+Code.require_file("support/work_directory.exs", __DIR__)
+
 defmodule Wotex.Lab.Check.ArchiveConsumer do
   @moduledoc false
 
@@ -10,21 +12,17 @@ defmodule Wotex.Lab.Check.ArchiveConsumer do
 
   @base_packages [{:wotex, "wotex"}, {:wotex_nx, "wotex-nx"}, {:wotex_lab, "wotex-lab"}]
   @profile_packages ~w(wotex_runtime wotex_directory wotex_binding_http wotex_binding_mqtt wotex_conformance wotex_continuum exqlite req emqtt axon polaris exla fine xla explorer aws_signature table table_rex kino kino_explorer)a
-  @cohort ~w(lib/**/* priv/fixtures/**/* docs/specs/**/* mix.exs mix.lock)
+  @cohort ~w(lib/**/* priv/fixtures/**/* docs/specs/**/*
+             bin/check_archive_consumer.exs bin/support/work_directory.exs mix.exs mix.lock)
   @deadline_ms 900_000
 
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)
 
-    root
-    |> Path.join(".archive-check.consumer-*")
-    |> Path.wildcard(match_dot: true)
-    |> Enum.each(&File.rm_rf!/1)
-
-    work = Path.join(root, ".archive-check.consumer-#{System.unique_integer([:positive])}")
+    work = Wotex.Lab.Check.WorkDirectory.create!(root, :archive_consumer)
     tarballs = Path.join(work, "tarballs")
-    File.mkdir_p!(tarballs)
+    File.mkdir!(tarballs)
     started = System.monotonic_time()
 
     admitted = build_archives(root, tarballs) ++ copy_public_archives(root, tarballs)

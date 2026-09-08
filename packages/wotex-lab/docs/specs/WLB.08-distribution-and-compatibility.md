@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.3.0. Contract: accepted. Source status: the workspace
+Specification version: 0.4.0. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard and the archive-consumer gate are implemented; the full
 reference-consumer, distribution and release-candidate runners, OCI, npm,
@@ -51,6 +51,14 @@ review and renewed evidence, not automatic readiness promotion.
 | `stable_api_candidate` | Explicit compatibility decision over every public result/error/default/schema and minimum/current supported cohort; no inference from version or coverage |
 
 `bin/check_package.exs` implements content inspection only.
+Package inspection, archive consumers and reference runs allocate separate
+private attempts through `bin/support/work_directory.exs`: 128-bit random
+names and exclusive directory creation replace per-VM integer names. Reusing
+a staging directory can retain removed files in an unpacked candidate, so
+existing directories are never merged or overwritten. The helper's test
+checks private permissions, fresh allocation and prior-content preservation.
+Successful archive consumers delete only their own generated build/registry
+scratch material and retain their evidence; they do not erase earlier attempts.
 `bin/check_archive_consumer.exs` implements the `archive_consumer_green` gate
 for the base profile: it builds the core, Wotex Nx and Lab archives from the
 sibling checkouts without the workspace switch, admits public dependencies only
@@ -63,12 +71,31 @@ recursively: every package must be an admitted archive and no profile package
 may appear. The smoke runs Thing Description and Nx positive and negative cases
 through public APIs and proves the profile modules are absent. The gate writes
 a `Wotex.Lab.Evidence.Record` with archive digests and retains only that
-record. `bin/check_reference_consumer.exs` implements the workspace form of
-`reference_consumer_green`: it runs every Lab suite against the same cohort
-with the broker, GreptimeDB and formal lanes enabled where a Docker daemon
-with the pinned images and a pinned Maude engine are present, records a
+record. `bin/check_reference_consumer.exs` supplies a workspace suite run,
+not the complete `reference_consumer_green` gate: it runs Lab suites against
+the same cohort with broker, GreptimeDB and formal lanes enabled where a Docker
+daemon with provisioned images and an explicitly supplied Maude engine are present, records a
 lane that could not run as `not_run` rather than passed, and retains an
-evidence record with the cohort digests. It is workspace evidence, not the
+evidence record with the cohort digests. Each service lane checks its own
+already provisioned image; a missing Greptime image no longer disables the
+broker lane or silently admits a database pull. No image is pulled by this
+admission step. The formal lane requires an explicitly supplied engine path.
+The harness passes and records seed 1, requires one valid nonempty terminal
+ExUnit summary in addition to process exit success, and preserves failures and
+exclusions. Old-format totals are normalized to executed tests by subtracting
+excluded cases; unsupported/ambiguous/oversized summaries fail closed. Its
+`ReferenceSummary` helper has independent positive and adversarial tests.
+Source identity is checked before and after execution, including the harness
+and native containment sources. Changed inputs invalidate the run. Each attempt
+gets a new private directory, and earlier evidence is never deleted.
+
+This script still uses a waiting-task deadline around `System.cmd`; that is
+not an independently verified descendant-cleanup or bounded-output-capture
+contract. Its record therefore leaves runner containment and the full reference
+programme as `not_run`, with cleanup conservatively `failed` because it is
+unverified. The parser's eight-MiB input bound does not bound subprocess output
+allocation. A passing suite exit is source-test evidence only, not closure of
+these accepted runner obligations. It is workspace evidence, not the
 artifact-mode runner; the distribution and release-candidate runners remain
 acceptance obligations, not approximated by these scripts. Before running archive-consumer tests, the harness MUST assert Git is
 unavailable (`command -v git` must fail) and inspect the resolved dependency

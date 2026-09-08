@@ -5,31 +5,37 @@
 # whose dependency is absent is recorded as not run, never as passed.
 # Runs through Mix: `mix run --no-start bin/check_reference_consumer.exs`.
 
+Code.require_file("support/reference_summary.exs", __DIR__)
+Code.require_file("support/work_directory.exs", __DIR__)
+
 defmodule Wotex.Lab.Check.ReferenceConsumer do
   @moduledoc false
 
+  alias Wotex.Lab.Check.ReferenceSummary
   alias Wotex.Lab.Evidence.{Digest, Record}
 
-  @cohort ~w(lib/**/* test/**/* priv/fixtures/**/* priv/models/**/* docs/specs/**/* mix.exs mix.lock)
+  @cohort ~w(lib/**/* test/**/* priv/fixtures/**/* priv/models/**/*
+             priv/conformance/native/Cargo.toml priv/conformance/native/Cargo.lock
+             priv/conformance/native/src/*.rs priv/conformance/native/tests/*.rs
+             priv/conformance/native/probes/*.rs
+             docs/specs/**/* bin/check_reference_consumer.exs bin/support/reference_summary.exs
+             bin/support/work_directory.exs mix.exs mix.lock)
   @deadline_ms 1_800_000
-  @images ["eclipse-mosquitto:2", "greptime/greptimedb:v1.1.4"]
+  @images %{broker: "eclipse-mosquitto:2", greptime: "greptime/greptimedb:v1.1.4"}
+  @seed 1
 
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)
 
-    root
-    |> Path.join(".archive-check.reference-*")
-    |> Path.wildcard(match_dot: true)
-    |> Enum.each(&File.rm_rf!/1)
-
-    work = Path.join(root, ".archive-check.reference-#{System.unique_integer([:positive])}")
-    File.mkdir_p!(work)
+    work = Wotex.Lab.Check.WorkDirectory.create!(root, :reference)
     started = System.monotonic_time()
+    {:ok, source_digest} = Digest.tree(root, @cohort)
+    docker = docker?()
 
     lanes = %{
-      broker: docker?() and images?(),
-      greptime: docker?(),
+      broker: docker and image?(@images.broker),
+      greptime: docker and image?(@images.greptime),
       maude: maude_path() != nil
     }
 
@@ -43,22 +49,28 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
 
     {output, status} = bounded_test(env)
     File.write!(Path.join(work, "test-output.txt"), output)
-    summary = summary(output)
+    summary = ReferenceSummary.parse(output)
     IO.puts("suite: #{inspect(summary)} (exit #{status})")
     elapsed = System.convert_time_unit(System.monotonic_time() - started, :native, :millisecond)
-    evidence = record(root, work, lanes, summary, status, elapsed)
+    unchanged? = Digest.tree(root, @cohort) == {:ok, source_digest}
+    evidence = record(root, work, lanes, summary, status, elapsed, {source_digest, unchanged?})
     IO.puts("evidence retained at #{evidence}")
-    status == 0 || abort("reference consumer suite failed")
+
+    (unchanged? and ReferenceSummary.successful?(status, summary)) ||
+      abort("reference suite failed, summary is invalid or source changed during execution")
 
     IO.puts(
-      "reference consumer: every enabled lane passed against the workspace cohort; absent lanes recorded as not run"
+      "reference consumer: enabled source suites passed; absent lanes are not run. This is not full reference/artifact or runner-containment acceptance."
     )
   end
 
   defp bounded_test(env) do
     task =
       Task.async(fn ->
-        System.cmd("mix", ["test", "--no-color"], env: env, stderr_to_stdout: true)
+        System.cmd("mix", ["test", "--no-color", "--seed", Integer.to_string(@seed)],
+          env: env,
+          stderr_to_stdout: true
+        )
       end)
 
     case Task.yield(task, @deadline_ms) || Task.shutdown(task, :brutal_kill) do
@@ -67,37 +79,6 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
     end
   end
 
-  # ExUnit prints either "N tests, F failures[, E excluded]" or the newer
-  # "Result: P/N passed[, E excluded]" plus "Failed: F tests" summary.
-  defp summary(output) do
-    cond do
-      match = Regex.run(~r/(\d+) tests?, (\d+) failures?(?:, (\d+) excluded)?/, output) ->
-        [_all, tests, failures | excluded] = match
-
-        %{
-          tests: String.to_integer(tests),
-          failures: String.to_integer(failures),
-          excluded: excluded(excluded)
-        }
-
-      match = Regex.run(~r/Result: (\d+)(?:\/(\d+))? passed(?:, (\d+) excluded)?/, output) ->
-        [_all, passed | more] = match
-        total = if Enum.at(more, 0) in [nil, ""], do: passed, else: Enum.at(more, 0)
-
-        %{
-          tests: String.to_integer(total),
-          failures: String.to_integer(total) - String.to_integer(passed),
-          excluded: excluded(Enum.drop(more, 1))
-        }
-
-      true ->
-        %{tests: 0, failures: -1, excluded: 0}
-    end
-  end
-
-  defp excluded([value]) when is_binary(value) and value != "", do: String.to_integer(value)
-  defp excluded(_none), do: 0
-
   defp docker? do
     case System.find_executable("docker") do
       nil -> false
@@ -105,11 +86,8 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
     end
   end
 
-  defp images? do
-    Enum.all?(@images, fn image ->
-      match?({_out, 0}, System.cmd("docker", ["image", "inspect", image], stderr_to_stdout: true))
-    end)
-  end
+  defp image?(image),
+    do: match?({_out, 0}, System.cmd("docker", ["image", "inspect", image], stderr_to_stdout: true))
 
   defp maude_path do
     case System.get_env("WOTEX_LAB_MAUDE") do
@@ -118,15 +96,21 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
     end
   end
 
-  defp record(root, work, lanes, summary, status, elapsed) do
-    {:ok, source_tree_digest} = Digest.tree(root, @cohort)
+  defp record(root, work, lanes, summary, status, elapsed, {source_tree_digest, unchanged?}) do
     {:ok, lock_digest} = Digest.file(Path.join(root, "mix.lock"))
+    passed? = unchanged? and ReferenceSummary.successful?(status, summary)
+
+    {summary_valid?, counts} =
+      case summary do
+        {:ok, counts} -> {true, counts}
+        {:error, _reason} -> {false, %{tests: 0, failures: 0, excluded: 0}}
+      end
 
     lane_assertions =
       Enum.map(lanes, fn {lane, on?} ->
         %{
           id: "WLB-C10:reference-consumer:lane:#{lane}",
-          status: if(on?, do: suite_status(status), else: :not_run)
+          status: if(on?, do: suite_status(passed?), else: :not_run)
         }
       end)
 
@@ -139,21 +123,34 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
         lock_digest: lock_digest,
         dependencies: [%{name: "wotex_lab", version: version(), archive: :missing}],
         fixtures: %{},
-        seed: 0,
+        seed: @seed,
         toolchain: Digest.toolchain(Nx.BinaryBackend),
         budgets: %{deadline_ms: @deadline_ms},
-        inputs: ["workspace:WOTEX_PATH_DEPS"] ++ Enum.map(@images, &("image:" <> &1)),
+        inputs:
+          ["workspace:WOTEX_PATH_DEPS"] ++
+            Enum.map(@images, fn {_lane, image} -> "image:" <> image end),
         assertions: [
-          %{id: "WLB-C10:reference-consumer:suite", status: suite_status(status)} | lane_assertions
+          %{id: "WLB-C10:reference-consumer:suite", status: suite_status(passed?)},
+          %{id: "WLB-C10:reference-consumer:unchanged-source", status: suite_status(unchanged?)},
+          %{id: "WLB-C10:reference-consumer:runner-containment", status: :not_run},
+          %{id: "WLB-C10:reference-consumer:complete-reference-programme", status: :not_run}
+          | lane_assertions
         ],
         outcomes: %{
-          tests: summary.tests,
-          failures: summary.failures,
-          excluded: summary.excluded,
+          tests: counts.tests,
+          failures: counts.failures,
+          excluded: counts.excluded,
+          summary_valid: summary_valid?,
           exit_status: status
         },
         durations: %{gate_ms: elapsed},
-        cleanup: %{status: :ok, details: %{retained: "evidence.json and test-output.txt"}}
+        cleanup: %{
+          status: :failed,
+          details: %{
+            retained: "evidence.json and test-output.txt",
+            reason: "outer runner descendant cleanup is not independently verified"
+          }
+        }
       )
 
     {:ok, bytes} = Record.encode(record)
@@ -162,7 +159,7 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
     path
   end
 
-  defp suite_status(0), do: :pass
+  defp suite_status(true), do: :pass
   defp suite_status(_status), do: :fail
 
   defp version, do: Mix.Project.config()[:version]

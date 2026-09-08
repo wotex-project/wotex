@@ -1,6 +1,8 @@
 # Inspects an unpacked Hex candidate and proves production requirements use Hex.
 # Runs through Mix: `mix run --no-start bin/check_package.exs`.
 
+Code.require_file("support/work_directory.exs", __DIR__)
+
 defmodule Wotex.Lab.Check.Package do
   @moduledoc false
 
@@ -17,8 +19,7 @@ defmodule Wotex.Lab.Check.Package do
   def run do
     root = Path.expand("..", __DIR__)
     File.cd!(root)
-    work = Path.join(root, ".archive-check.#{System.unique_integer([:positive])}")
-    File.mkdir_p!(work)
+    work = Wotex.Lab.Check.WorkDirectory.create!(root, :package)
     source = Path.join(work, "source")
 
     env = [{"WOTEX_PATH_DEPS", nil}, {"MIX_ENV", "prod"}]

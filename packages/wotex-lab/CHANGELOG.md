@@ -2,6 +2,13 @@
 
 ## 0.1.0 — source foundation
 
+- Reference-suite reporting retains earlier evidence, passes/records its exact
+  seed, checks service images independently and refuses missing, inconsistent or
+  ambiguous test summaries and source drift. Unverified outer-runner cleanup
+  and full reference-programme acceptance are no longer reported as complete.
+  Package/archive/reference staging uses exclusive private random directories,
+  preventing removed files from leaking back into reused extracted candidates.
+
 - The HTTP/SSE test fixture now owns its controller and listener in one ordered
   supervisor, with bounded connection shutdown and a real-socket cleanup
   regression. This removes a teardown race shared by the smart-room evidence.

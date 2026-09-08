@@ -244,7 +244,7 @@ specifications:
       - "test/wotex/lab/mcp_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.08
-    version: "0.3.0"
+    version: "0.4.0"
     path: docs/specs/WLB.08-distribution-and-compatibility.md
     implementation_status: partial
     evidence_status: partial
@@ -269,6 +269,8 @@ specifications:
       - "bin/check_source_cohort.exs"
       - "bin/check_archive_consumer.exs"
       - "bin/check_reference_consumer.exs"
+      - "test/wotex/lab/reference_summary_test.exs"
+      - "test/wotex/lab/check_work_directory_test.exs"
       - "bin/check_source_cohort.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.09
