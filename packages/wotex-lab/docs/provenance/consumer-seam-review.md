@@ -168,3 +168,14 @@ exclusions, 95.3% coverage). The Workbench gate passes all 13 checks (59 cases,
 `b9dee4382a138959c98e825eeed122e9` passes 336 cases without exclusions, with
 broker, Greptime and Maude enabled and matching source guards before/after.
 These are source-cohort results, not full artifact or runner-containment proof.
+
+## Advisory-waiver removal renewal
+
+Review date: 2026-09-08. Hex no longer associates `EEF-CVE-2026-32686` with
+the locked Decimal 3.1.1 cohort. All eight source owners, Lab and Workbench
+therefore remove that ignore entry instead of preserving a stale waiver. Each
+owner still binds the exact lock tuple and exercises Decimal's finite parser
+thresholds; all owner quality gates pass with the advisory unsuppressed. The
+content cohort below is renewed to those clean trees. This does not waive a
+future matching advisory or turn a parser regression into a general Decimal
+safety claim.
