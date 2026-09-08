@@ -6,21 +6,15 @@
 # Runs through Mix: `mix run --no-start bin/check_reference_consumer.exs`.
 
 Code.require_file("support/reference_summary.exs", __DIR__)
+Code.require_file("support/reference_inputs.exs", __DIR__)
 Code.require_file("support/work_directory.exs", __DIR__)
 
 defmodule Wotex.Lab.Check.ReferenceConsumer do
   @moduledoc false
 
-  alias Wotex.Lab.Check.ReferenceSummary
+  alias Wotex.Lab.Check.{ReferenceInputs, ReferenceSummary}
   alias Wotex.Lab.Evidence.{Digest, Record}
 
-  @cohort ~w(lib/**/* test/**/* priv/fixtures/**/* priv/models/**/*
-             priv/conformance/native/Cargo.toml priv/conformance/native/Cargo.lock
-             priv/conformance/native/src/*.rs priv/conformance/native/tests/*.rs
-             priv/conformance/native/probes/*.rs
-             docs/specs/**/* bin/check_reference_consumer.exs bin/support/reference_summary.exs
-             bin/support/work_directory.exs bin/check_source_cohort.exs
-             docs/provenance/source-cohort.json .check.exs mix.exs mix.lock)
   @deadline_ms 1_800_000
   @images %{broker: "eclipse-mosquitto:2", greptime: "greptime/greptimedb:v1.1.4"}
   @seed 1
@@ -36,7 +30,7 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
 
     work = Wotex.Lab.Check.WorkDirectory.create!(root, :reference)
     started = System.monotonic_time()
-    {:ok, source_digest} = Digest.tree(root, @cohort)
+    {:ok, source_digest} = ReferenceInputs.digest(root)
     docker = docker?()
 
     lanes = %{
@@ -58,7 +52,7 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
     summary = ReferenceSummary.parse(output)
     IO.puts("suite: #{inspect(summary)} (exit #{status})")
     elapsed = System.convert_time_unit(System.monotonic_time() - started, :native, :millisecond)
-    unchanged? = Digest.tree(root, @cohort) == {:ok, source_digest} and source_cohort?()
+    unchanged? = ReferenceInputs.digest(root) == {:ok, source_digest} and source_cohort?()
     evidence = record(root, work, lanes, summary, status, elapsed, {source_digest, unchanged?})
     IO.puts("evidence retained at #{evidence}")
 

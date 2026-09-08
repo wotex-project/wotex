@@ -2,6 +2,11 @@
 
 ## 0.1.0 — source foundation
 
+- WLB.08 v0.6 binds reference-run identity to executable Livebooks, embedded
+  documentation, provenance and evidence manifests as well as code. Mutation,
+  removal and addition checks guard the cohort definition; generated output
+  remains excluded and this does not close runner-containment acceptance.
+
 - WLB.03 v1.4 / room experiment 2.0.0 refuses malformed counts before split
   arithmetic, predicts the future from the latest observations instead of
   relabeling a held-out estimate, and serializes parameters through Nx. Both

@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.5.0. Contract: accepted. Source status: the workspace
+Specification version: 0.6.0. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard and the archive-consumer gate are implemented; the full
 reference-consumer, distribution and release-candidate runners, OCI, npm,
@@ -90,8 +90,16 @@ ExUnit summary in addition to process exit success, and preserves failures and
 exclusions. Old-format totals are normalized to executed tests by subtracting
 excluded cases; unsupported/ambiguous/oversized summaries fail closed. Its
 `ReferenceSummary` helper has independent positive and adversarial tests.
-Source identity is checked before and after execution, including the harness
-and native containment sources. The reference harness requires explicit
+Source identity is checked before and after execution. The
+`bin/support/reference_inputs.exs` definition includes the harness, Elixir/test
+and native containment source, executable Livebooks, fixtures/models,
+configuration and the packaged spec/plan/decision/provenance documents. The
+historical source index and evidence manifests are inputs too; a changed,
+removed or newly added matching resource invalidates the digest. Generated
+builds, dependency caches, PLTs and retained attempt output are excluded.
+`reference_inputs_test.exs` exercises these content/name boundaries. This
+strengthens source identity, not output containment or artifact adoption.
+The reference harness requires explicit
 workspace mode and checks all sibling content against the reviewed cohort at
 both boundaries; the cohort file and guard are themselves part of its input
 digest. Changed inputs invalidate the run. Each attempt
