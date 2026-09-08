@@ -2,6 +2,10 @@
 
 ## 0.1.0
 
+- Reject unknown `WOTEX_PATH_DEPS` values while preserving the explicit
+  workspace cohort used when Mix evaluates a path dependency; align WRT.02
+  with the current WRT.01 contract.
+
 - Stop on malformed or ambiguous retry options and unknown operations; require
   positive attempt counts and explicit boolean idempotence without raising.
 

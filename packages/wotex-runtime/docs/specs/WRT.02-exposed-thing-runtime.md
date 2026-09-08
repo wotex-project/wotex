@@ -1,6 +1,6 @@
 # WRT.02: ExposedThing callback mechanics
 
-Specification: `WRT.02@1.1.0`. Requires `WRT.01@1.1.0`.
+Specification: `WRT.02@1.1.0`. Requires `WRT.01@1.3.0`.
 Package baseline: `wotex_runtime 0.1.0`; see the
 repository completion plan at `docs/plans/wotex-runtime-completion.md` for unproven claims.
 

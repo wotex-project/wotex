@@ -55,8 +55,14 @@ defmodule WotexRuntime.MixProject do
 
   defp wotex_dep do
     case System.get_env("WOTEX_PATH_DEPS") do
-      "1" -> {:wotex, path: "../wotex"}
-      _ -> {:wotex, "~> 0.1.0"}
+      nil ->
+        {:wotex, "~> 0.1.0"}
+
+      "1" ->
+        {:wotex, path: Path.expand("../wotex", __DIR__), override: true}
+
+      _value ->
+        raise "WOTEX_PATH_DEPS must be unset or equal to 1"
     end
   end
 
