@@ -2,6 +2,10 @@
 
 ## 0.1.0
 
+- Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
+  checksums, loaded version and bounded parser regression tests. Other advisory
+  checks remain active; remove this acknowledgement when metadata is corrected.
+
 - Establish versioned claims, immutable vectors, and verified corpora.
 - Provide an isolated external-target protocol and bounded archive verification.
 - Emit deterministic result and evidence-report digests.

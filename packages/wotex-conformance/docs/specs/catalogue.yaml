@@ -36,6 +36,7 @@ specifications:
       - Wotex.Conformance.Value
       - Wotex.Conformance.Vector
     executable_evidence:
+      - test/wotex/conformance/dependency_security_test.exs
       - test/wotex/conformance/artifact_test.exs
       - test/wotex/conformance/boundary_test.exs
       - test/wotex/conformance/canonical_test.exs

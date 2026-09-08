@@ -14,6 +14,7 @@ defmodule WotexConformance.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       test_ignore_filters: [~r|test/fixtures/|],
       deps: deps(),
+      hex: [ignore_advisories: ["EEF-CVE-2026-32686"]],
       aliases: aliases(),
       description: description(),
       package: package(),
