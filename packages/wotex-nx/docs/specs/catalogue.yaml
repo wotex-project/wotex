@@ -3,7 +3,7 @@ package: wotex_nx
 completion_plan: docs/plans/wotex-nx-completion.md
 specifications:
   - id: WNX.01
-    version: "1.1.0"
+    version: "1.2.0"
     path: docs/specs/WNX.01-observation-numerical-boundary.md
     implementation_status: implemented
     standards:

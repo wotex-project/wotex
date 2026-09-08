@@ -2,6 +2,12 @@
 
 ## 0.1.0
 
+- WNX.01 v1.2.0 documents and tests the existing selection-work admission score,
+  including empty/singleton inputs and exact budget thresholds. Selection,
+  tensor/mask semantics and accepted budgets are unchanged. Workspace checks
+  require a locked dependency resolution; malformed-constructor tests exercise
+  dynamic calls without generating intentional static type warnings.
+
 - Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
   checksums, loaded version and bounded parser regression tests. Other advisory
   checks remain active; remove this acknowledgement when metadata is corrected.

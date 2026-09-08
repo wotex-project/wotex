@@ -1,6 +1,6 @@
 # WNX.01: Observation and numerical boundary
 
-**Specification version**: 1.1.0. **Contract**: Accepted initial public API.
+**Specification version**: 1.2.0. **Contract**: Accepted initial public API.
 Implementation coverage is indexed in `catalogue.yaml`; acceptance of this
 contract does not assert archive, reference-consumer or stable-API readiness.
 
@@ -82,7 +82,7 @@ from struct shape. Unknown or duplicate keyword options are rejected.
 | `Feature.new/1` | `name`, exact Thing/affordance identity, core `DataSchema`; optional exact `shape`, compatible `dtype`, `unit`, `accepted_quality` (default good/uncertain), `missing` (default `:error`), `normalization` (default `:none`), `allow_non_finite?` (default false) | Immutable numerical feature; schema-inferred shape/dtype when omitted |
 | `Schema.new/1` | Ordered `features`; positive `max_rows` (1024), `max_features` (256), `max_width` (65536), `batch_key` (`:default`) | Nonempty bounded feature contract; feature names unique |
 | `Window.new/1` | Integer `start`, positive integer `step` and `count`; `strategy` (`:latest` default, `:exact`, `:nearest`), optional nonnegative `max_age` | Clock-free window in the consumer's common integer time coordinate |
-| `Window.resample/3,4` | Observations, Schema, Window; only `max_observations` (10000) and `max_work` (5000000) options | Ordered Rows; work bound is observation count × window count × feature count |
+| `Window.resample/3,4` | Observations, Schema, Window; only `max_observations` (10000) and `max_work` (5000000) options | Ordered Rows; admission score is `n + count * features * L(n)`, with `L(n)` defined below |
 | `Row.new/2` | Integer timestamp and feature-name-to-observation map | Immutable row; supplied feature values are checked again when encoded |
 | `Encoder.encode/2,3` | Nonempty Rows, Schema; only `unit_converter: {module, config}` | Encoded batch, feature order, timestamps, provenance and layout |
 | `OutputSchema.new/1` | `kind`, exact Thing/affordance identity, core `DataSchema`; optional shape/dtype, max_width (65536), unit, metadata, finite policy; anomaly threshold/rule only for anomaly | Closed inert-output contract |
@@ -189,11 +189,24 @@ authority/application-callback checks.
 ## Compatibility and stability
 
 Window selection sorts each feature group once and selects by binary search;
-the admission work bound is `observations + count * features * ceil(log2 n)`.
+the selection-work admission score is `n + count * features * L(n)`, where
+`n` is observation count and `L(n)` is 1 for zero/singleton input and
+`ceil(log2(n))` otherwise. A positive `max_work` equal to the score is admitted;
+a smaller positive budget returns `window_work_limit_exceeded` before indexing.
+This deterministic score is not the total number of sorting/search comparisons,
+CPU reductions or backend allocations. Sorting still costs `O(n log n)`;
+observation and row limits apply independently. Exact score/budget boundaries
+for all three strategies, empty input, singleton input and powers of two are
+covered by `window_selection_property_test.exs`.
 Any selection implementation is compatible only when selected observations,
 timestamp/ID tie-breaking, row order, missing markers and age rejection remain
 identical to the exhaustive reference in the property tests. The bound does
 not imply a measured latency guarantee.
+
+Version `1.2.0` reconciles the obsolete scan-based table with the existing
+selection-work score and makes its zero/singleton convention explicit. This is
+a documentation/evidence correction, not a change to accepted budgets or
+selection results. No mask, tensor, quality or output behavior changes.
 
 Version `1.1.0` of this specification inverts the mask polarity to
 `1 = observed`, `0 = filled` (a pre-release contract correction aligning with

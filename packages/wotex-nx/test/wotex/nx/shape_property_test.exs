@@ -90,12 +90,8 @@ defmodule Wotex.Nx.ShapePropertyTest do
   end
 
   test "structured errors reject malformed constructor arguments" do
-    assert_raise FunctionClauseError, fn ->
-      Error.new("invalid-code", :encoding, "message")
-    end
-
-    assert_raise FunctionClauseError, fn ->
-      Error.new(:invalid, :encoding, :not_a_message)
+    for arguments <- [["invalid-code", :encoding, "message"], [:invalid, :encoding, :not_a_message]] do
+      assert_raise FunctionClauseError, fn -> apply(Error, :new, arguments) end
     end
   end
 end

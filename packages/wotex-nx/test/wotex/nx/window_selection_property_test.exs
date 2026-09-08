@@ -4,7 +4,36 @@ defmodule Wotex.Nx.WindowSelectionPropertyTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias Wotex.Nx.{TestFactory, Window}
+  alias Wotex.Nx.{Error, TestFactory, Window}
+
+  test "selection-work admission uses the documented score including empty and singleton inputs" do
+    all_observations =
+      for n <- 1..9, do: TestFactory.observation(id: "observation-#{n}", observed_at: n)
+
+    features = [
+      TestFactory.feature(),
+      TestFactory.feature(name: "humidity", affordance_name: "humidity")
+    ]
+
+    for {n, log_factor} <- [{0, 1}, {1, 1}, {2, 1}, {3, 2}, {4, 2}, {5, 3}, {7, 3}, {8, 3}, {9, 4}],
+        count <- [2, 3],
+        feature_count <- [1, 2],
+        strategy <- [:exact, :latest, :nearest] do
+      observations = Enum.take(all_observations, n)
+      schema = TestFactory.schema(Enum.take(features, feature_count))
+      {:ok, window} = Window.new(start: 0, step: 2, count: count, strategy: strategy)
+      work = n + count * feature_count * log_factor
+
+      assert {:ok, rows} = Window.resample(observations, schema, window, max_work: work)
+      assert length(rows) == count
+      assert {:ok, ^rows} = Window.resample(Enum.reverse(observations), schema, window)
+
+      assert {:error, %Error{code: :window_work_limit_exceeded, details: details}} =
+               Window.resample(observations, schema, window, max_work: work - 1)
+
+      assert details == %{work: work, max_work: work - 1}
+    end
+  end
 
   property "latest and exact selection agree with a sorted reference for every row" do
     check all(

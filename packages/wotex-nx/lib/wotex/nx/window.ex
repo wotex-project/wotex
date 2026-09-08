@@ -108,6 +108,11 @@ defmodule Wotex.Nx.Window do
   Optional `:max_observations` and `:max_work` bounds are validated before
   indexing. The window count must also fit the schema's row limit. Missing
   selections remain `nil` for the encoder's explicit missing-value policy.
+
+  The selection-work admission score is `n + count * features * L(n)` where
+  `L(n)` is 1 for zero/singleton input and `ceil(log2(n))` otherwise. It is a
+  deterministic admission score, not a count of sorting/search comparisons,
+  backend allocations or CPU reductions; sorting still costs `O(n log n)`.
   """
   @spec resample([Observation.t()], Schema.t(), t(), keyword()) ::
           {:ok, [Row.t()]} | {:error, Error.t()}
