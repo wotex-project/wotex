@@ -36,7 +36,7 @@ specifications:
         claim: "UTF-8 JSON string boundary; deterministic encoding is not RFC 8785 JCS"
     requires: ["WTX.01", "WTX.02"]
     implementation_modules: ["Wotex.Error", "Wotex.JSON", "Wotex.JSON.Limits", "Wotex.Value"]
-    executable_evidence: ["test/wotex/json_test.exs", "test/wotex/value_test.exs", "test/wotex/library_contract_test.exs"]
+    executable_evidence: ["test/wotex/json_test.exs", "test/wotex/value_test.exs", "test/wotex/library_contract_test.exs", "test/wotex/dependency_security_test.exs"]
     compatibility_classification: "Stable matching fields and extension preservation within the documented contract; no stable API declaration"
   - id: "WTX.04"
     version: "1.1.0"

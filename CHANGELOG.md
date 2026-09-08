@@ -2,6 +2,10 @@
 
 ## 0.1.0
 
+- Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
+  checksums, loaded version and bounded parser regression tests. Other advisory
+  checks remain active; remove this acknowledgement when metadata is corrected.
+
 - Apply TD 1.1 default Form operations per interaction context and expose
   affordance `forms/1` and `operations/2` helpers.
 - Enforce TD 1.1 `@context` position rules and reject a Thing Model as a
