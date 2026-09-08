@@ -6,6 +6,8 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
   Optional local history shares that lifecycle: a restart discards the whole
   volatile cohort, not just its sampler. Browser sessions cannot activate it.
   `:scrape` separately admits an authenticated loopback-only operator listener.
+  `:durable` adds one bounded local GreptimeDB exporter; when history is also
+  active that exporter is its sole writer, so no capture is duplicated.
   """
 
   use Supervisor
@@ -20,14 +22,15 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
     Status
   }
 
-  alias WotexLabWorkbench.Observability.{Inspection, PromEx, Relay, Sampler, Scrape}
+  alias WotexLabWorkbench.Observability.{Durable, Inspection, PromEx, Relay, Sampler, Scrape}
 
   @doc "Starts capture/relay; explicit options add bounded history, scrape and BeamLens surfaces."
   @spec start_link(keyword()) :: Supervisor.on_start() | {:error, Error.t()}
   def start_link(opts) do
-    with :ok <- Options.validate(opts, [:history, :scrape, :beamlens]),
+    with :ok <- Options.validate(opts, [:history, :scrape, :durable, :beamlens]),
          :ok <- history_options(Keyword.get(opts, :history, false)),
          :ok <- scrape_options(Keyword.get(opts, :scrape, false)),
+         :ok <- durable_options(Keyword.get(opts, :durable, false)),
          :ok <- beamlens_options(Keyword.get(opts, :beamlens, false)),
          :ok <-
            dependencies(Keyword.get(opts, :history, false), Keyword.get(opts, :beamlens, false)),
@@ -36,9 +39,13 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
 
   @impl Supervisor
   def init(opts) do
+    history = Keyword.get(opts, :history, false)
+    durable = Keyword.get(opts, :durable, false)
+
     children =
       [PromEx, {Relay, []}] ++
-        history_children(Keyword.get(opts, :history, false)) ++
+        history_children(history, durable) ++
+        durable_children(durable, history) ++
         scrape_children(Keyword.get(opts, :scrape, false)) ++
         beamlens_children(Keyword.get(opts, :beamlens, false))
 
@@ -52,6 +59,9 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
 
   defp scrape_options(false), do: :ok
   defp scrape_options(opts), do: Scrape.validate(opts)
+
+  defp durable_options(false), do: :ok
+  defp durable_options(opts), do: Durable.validate(opts)
 
   defp beamlens_options(false), do: :ok
 
@@ -86,17 +96,27 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
     ]
   end
 
-  defp history_children(false), do: []
+  defp history_children(false, _durable), do: []
 
-  defp history_children(opts) do
+  defp history_children(opts, durable) do
     history =
       Keyword.take(opts, [:max_snapshots, :max_bytes, :max_queries]) ++
         [id: :operator, name: __MODULE__.History, instance: "workbench", instance_slot: 0]
 
-    [
+    base = [
       {History, history},
-      {Inspection, history: __MODULE__.History},
-      {Sampler, [history: __MODULE__.History] ++ Keyword.take(opts, [:interval_ms])}
+      {Inspection, history: __MODULE__.History}
     ]
+
+    if durable == false,
+      do: base ++ [{Sampler, [history: __MODULE__.History] ++ Keyword.take(opts, [:interval_ms])}],
+      else: base
+  end
+
+  defp durable_children(false, _history), do: []
+
+  defp durable_children(opts, history) do
+    history = if history == false, do: nil, else: __MODULE__.History
+    [{Wotex.Lab.Metrics.GreptimeBridge, Durable.child_options(opts, history)}]
   end
 end

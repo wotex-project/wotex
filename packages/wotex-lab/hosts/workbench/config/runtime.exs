@@ -5,6 +5,22 @@ config :wotex_lab_workbench, promex_enabled: System.get_env("WOTEX_LAB_PROMEX") 
 config :wotex_lab_workbench,
   metrics_history_enabled: System.get_env("WOTEX_LAB_METRICS_HISTORY") == "1"
 
+metrics_durable =
+  case System.get_env("WOTEX_LAB_GREPTIME_URL") do
+    nil ->
+      false
+
+    url ->
+      bearer? = System.get_env("WOTEX_LAB_GREPTIME_TOKEN") != nil
+
+      case WotexLabWorkbench.Observability.Durable.configure(url, bearer?) do
+        {:ok, options} -> options
+        {:error, _error} -> raise "GreptimeDB exporter configuration is invalid"
+      end
+  end
+
+config :wotex_lab_workbench, metrics_durable: metrics_durable
+
 # BeamLens remains completely dormant unless the trusted local operator opts
 # in. Provider availability is checked only when an investigation is requested;
 # boot never searches credentials, contacts Ollama or downloads a model.

@@ -1,19 +1,20 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.11.0. Contract: accepted. Source status: the metric
+Specification version: 0.11.1. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
 the Workbench now implements custom PromEx definitions, bounded collection,
 catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
-history activation, a protected local scrape listener and expiring local-operator
-query capabilities. The Workbench also implements the explicitly activated
+history activation, a protected local scrape listener, a bounded local
+GreptimeDB remote-write exporter and expiring local-operator query capabilities.
+The Workbench also implements the explicitly activated
 trusted-local BeamLens 0.3.1 profile, its four read-only callbacks, an
 owner-bound no-queue broker, an active-scope capability-protected loopback
 provider bridge, explicitly selected
 Codex-plan/local-Ollama providers and trusted-local browser presentation.
-Durable-sink host activation, remote/TLS scraping, OTLP signal export, isolated
-hosted-tenant BeamLens and the MCP query gateway remain planned. A template
+Remote/TLS scraping and exporting, TTL provisioning, OTLP signal export,
+isolated hosted-tenant BeamLens and the MCP query gateway remain planned. A template
 export is not proof of a Grafana import or query execution.
 
 ## Stack and ownership
@@ -220,8 +221,8 @@ route reads it. Its separately invoked local `Observability.Inspection` API
 opens an owner-bound query capability, not browser-session access.
 `metrics_history_test.exs` in the Workbench exercises real
 PromEx capture, receipt loss, reset, stale/gap semantics, periodic sampling,
-eviction, startup refusal and lifecycle cleanup. Durable activation and
-authenticated query/presentation still require their independent acceptance.
+eviction, startup refusal and lifecycle cleanup. Authenticated browser query/
+presentation still requires its independent tenant-isolation acceptance.
 
 The durable sink uses Prometheus Remote Write 1.0 to GreptimeDB's
 `/v1/prometheus/write`: standard generated protobuf, Snappy **block** encoding,
@@ -254,6 +255,22 @@ has a separate integration test and is not a baseline requirement.
 The bridge implements exactly this policy through `Wotex.Lab.Metrics.ReqSink`
 or any host sink function, keeps the snapshot identity across retries and
 reports ambiguous writes; the external-collector path is not implemented.
+
+The Workbench local-durable profile sets
+`WOTEX_LAB_GREPTIME_URL=http://127.0.0.1:<port>/v1/prometheus/write` alongside
+`WOTEX_LAB_PROMEX=1`. `Observability.Durable` refuses other hosts, paths,
+userinfo, queries, fragments and HTTPS pretending to be an admitted remote TLS
+profile. It fixes the five-second sampling/deadline, 16-item queue and 4 KiB
+response ceiling. If `WOTEX_LAB_GREPTIME_TOKEN` is present, only its fixed
+environment reference enters supervision and each disposable export worker
+resolves and validates the URL-safe Bearer value just in time. The token is not
+retained in application or bridge state. When volatile history is also active,
+the exporter is its sole writer; the standalone sampler does not duplicate
+captures. The optional cohort shares one-for-all shutdown with PromEx and the
+relay. Tests cover exact endpoint admission, secret absence, missing/invalid
+credential resolution, explicit activation, single-writer composition and
+lifecycle cleanup. This is source proof for the local endpoint, not proof of a
+running receiver or a durable row.
 
 GreptimeDB query credentials and export credentials have separate scopes. The
 Lab gateway allows only read templates for inspection, with no arbitrary SQL,

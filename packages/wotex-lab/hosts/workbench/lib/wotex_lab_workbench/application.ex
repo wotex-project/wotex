@@ -9,6 +9,8 @@ defmodule WotexLabWorkbench.Application do
   configuration prepends the host-owned custom metric collector/relay supervisor.
   Separate `metrics_history_enabled` activation adds bounded operator history
   and a self-sampler, and is refused unless PromEx is also explicitly enabled.
+  `metrics_durable` adds the bounded local GreptimeDB exporter and replaces the
+  sampler as the writer when local history is also active.
   `metrics_scrape` separately admits a credential-protected loopback listener;
   it also requires explicit PromEx activation and never joins browser routing.
   BeamLens additionally requires explicit activation plus local history, and
@@ -53,36 +55,40 @@ defmodule WotexLabWorkbench.Application do
     promex? = Keyword.fetch!(env, :promex_enabled)
     history? = Keyword.fetch!(env, :metrics_history_enabled)
     scrape = Keyword.fetch!(env, :metrics_scrape)
+    durable = Keyword.fetch!(env, :metrics_durable)
     beamlens? = Keyword.fetch!(env, :beamlens_enabled)
 
-    with :ok <- observability_requirements(promex?, history?, scrape, beamlens?),
-         do: observability_children(promex?, history?, scrape, beamlens?, env)
+    with :ok <- observability_requirements(promex?, history?, scrape, durable, beamlens?),
+         do: observability_children(promex?, history?, scrape, durable, beamlens?, env)
   end
 
-  defp observability_children(false, _history, _scrape, _beamlens, _env), do: {:ok, []}
+  defp observability_children(false, _history, _scrape, _durable, _beamlens, _env), do: {:ok, []}
 
-  defp observability_children(true, history?, scrape, beamlens?, env) do
+  defp observability_children(true, history?, scrape, durable, beamlens?, env) do
     history = if history?, do: Keyword.fetch!(env, :metrics_history_options), else: false
 
     with {:ok, beamlens} <- beamlens_options(beamlens?) do
       {:ok,
        [
          {WotexLabWorkbench.Observability.Supervisor,
-          history: history, scrape: scrape, beamlens: beamlens}
+          history: history, scrape: scrape, durable: durable, beamlens: beamlens}
        ]}
     end
   end
 
-  defp observability_requirements(false, true, _scrape, _beamlens),
+  defp observability_requirements(false, true, _scrape, _durable, _beamlens),
     do: {:error, :metrics_history_requires_promex}
 
-  defp observability_requirements(_promex, false, _scrape, true),
+  defp observability_requirements(_promex, false, _scrape, _durable, true),
     do: {:error, :beamlens_requires_metrics_history}
 
-  defp observability_requirements(false, false, scrape, false) when scrape != false,
+  defp observability_requirements(false, false, scrape, false, false) when scrape != false,
     do: {:error, :metrics_scrape_requires_promex}
 
-  defp observability_requirements(_promex, _history, _scrape, _beamlens), do: :ok
+  defp observability_requirements(false, false, false, durable, false) when durable != false,
+    do: {:error, :metrics_durable_requires_promex}
+
+  defp observability_requirements(_promex, _history, _scrape, _durable, _beamlens), do: :ok
 
   defp beamlens_options(false), do: {:ok, false}
   defp beamlens_options(true), do: InvestigationConfig.client_registry()

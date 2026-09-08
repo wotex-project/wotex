@@ -112,6 +112,18 @@ reads this host-wide history. Remote query authentication and tenant isolation
 remain separate work. Restarting the optional supervisor discards its history;
 neither sampling nor dataframe conversion makes it durable or training data.
 
+Set `WOTEX_LAB_GREPTIME_URL` to the exact local endpoint
+`http://127.0.0.1:<port>/v1/prometheus/write` together with
+`WOTEX_LAB_PROMEX=1` to activate the bounded remote-write exporter. Other hosts,
+paths, URL credentials, queries and fragments are refused; remote/TLS export is
+not silently treated as this local profile. If `WOTEX_LAB_GREPTIME_TOKEN` is
+present, it must be a 43–128 character URL-safe Bearer token and is resolved
+from that fixed environment reference inside each export worker rather than
+stored in application state. Adding `WOTEX_LAB_METRICS_HISTORY=1` writes the
+same captures to volatile ETS and GreptimeDB through the exporter; the periodic
+standalone sampler is then omitted so captures are not duplicated. Receiver
+provisioning, database TTL and durable-row verification remain operator work.
+
 An operator attached to this same VM can explicitly open a short-lived query
 scope. This requires the history activation above; it never enables it:
 
@@ -202,9 +214,10 @@ through `/metrics/dashboard.json`, with 1–16 known IDs. A verified browser
 session is required; no room or collector starts. Importing the JSON and
 choosing a Prometheus-compatible source are operator actions. The export
 preserves label sets, uses five-minute counter rates and bucket-derived p95,
-and never fills missing data with zero. Grafana import compatibility, durable
-history activation, remote/TLS scraping and saved arrangements are separate
-acceptance work, not claims made by this source export.
+and never fills missing data with zero. Grafana import compatibility and
+remote/TLS scraping remain separate acceptance work, not claims made by this
+source export. Saved arrangements are session-only and cannot activate either
+the collector or the separately configured durable exporter.
 
 ### Protected local scrape
 
