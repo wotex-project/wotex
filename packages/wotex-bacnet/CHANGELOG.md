@@ -9,3 +9,6 @@
 - Document unsupported features and consumer parity gates without claiming certification.
 - Remove the obsolete Decimal advisory waiver while retaining the pinned parser regression.
 - Reject ambiguous, unknown and unsupported-security adapter options before startup.
+
+- Define the target software contract and ordered implementation packages with
+  pinned sources, explicit APIs/limits and required software acceptance vectors.
