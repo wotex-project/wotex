@@ -2,6 +2,11 @@
 
 ## 0.1.0 — source foundation
 
+- Expiring local-history query capabilities bind exact owner/history processes
+  and server scope, refuse caller-selected authority, and kill pending workers
+  on deadline/cancel/expiry. Workbench admits one explicit operator scope per
+  process and 32 host-wide; no browser/MCP access or BeamLens is activated.
+
 - A separately activated, Bearer-protected loopback scrape listener serves
   bounded PromEx text without entering browser routing. Credentials are
   digest-only in options; real sockets cover capacity, body refusal and cleanup.

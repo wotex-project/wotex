@@ -1,14 +1,15 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.5.0. Contract: accepted. Source status: the metric
+Specification version: 0.6.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
 the Workbench now implements custom PromEx definitions, bounded collection,
 catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
-history activation and a protected local scrape listener. Built-in host
+history activation, a protected local scrape listener and expiring local-operator
+query capabilities. Built-in host
 introspection, durable-sink host activation, remote/TLS scraping, OTLP
-signal export, BeamLens, history presentation and the MCP query gateway remain
+signal export, BeamLens, browser history presentation and the MCP query gateway remain
 planned. A template export is not proof of a Grafana import or query execution.
 
 ## Stack and ownership
@@ -199,7 +200,9 @@ consume attempt sequence numbers, are counted and are not stored as zeros.
 Subsequent rows disclose gaps/reset identities; vanished series receive one-time
 stale markers. All history is discarded if the optional cohort restarts.
 The fixed `workbench` instance is host-wide, not a browser-tenant scope; no
-route reads it. `metrics_history_test.exs` in the Workbench exercises real
+route reads it. Its separately invoked local `Observability.Inspection` API
+opens an owner-bound query capability, not browser-session access.
+`metrics_history_test.exs` in the Workbench exercises real
 PromEx capture, receipt loss, reset, stale/gap semantics, periodic sampling,
 eviction, startup refusal and lifecycle cleanup. Durable activation and
 authenticated query/presentation still require their independent acceptance.
@@ -260,8 +263,9 @@ history queries return unsupported; ETS does not pretend to implement PromQL.
 `Wotex.Lab.Metrics.Query` is that descriptor with these defaults, its
 `estimate/1` admits the work before anything is read, and `History.query/2`
 answers gauges, counters with reset awareness and histogram quantiles from ETS
-or returns `unsupported_query`. The MCP gateway and the BeamLens callers of
-the descriptor remain planned.
+or returns `unsupported_query`. `Metrics.Request` and `Metrics.Gateway` now
+admit local inspection callers of this descriptor; HTTP/MCP transport bindings,
+durable query templates and BeamLens callers remain planned.
 
 History query admission now binds the store's explicit `:instance` identifier
 and snapshot `:instance_slot` (default 0). Migration: hosts using `query/2`
@@ -270,8 +274,49 @@ the descriptor's session scope from authenticated server context. Stores
 without that identifier remain storage-only and return `scope_unbound`; a
 different instance or snapshot slot returns `scope_denied`. An identifier is
 not an authorization credential and shared-BEAM processes remain trusted.
-Transport authentication, expiring query capabilities and tenant isolation
-still belong to the unimplemented gateway/host profile.
+Transport authentication and tenant isolation still belong to their unimplemented
+gateway/host profiles. The local expiring capability below is not a substitute
+for either.
+
+`Wotex.Lab.Metrics.Request.decode/3` admits only eight string-keyed fields:
+schema version, catalogue metric, aggregation, finite filters, UTC endpoints,
+step and optional quantile. Scope, limits, endpoint, SQL and callback fields are
+refused, not silently discarded. It looks up existing finite enum values without
+creating atoms. Network frontends must bound encoded input before JSON decoding;
+this decoder bounds the resulting field structure, not an arbitrary HTTP body.
+
+`Wotex.Lab.Metrics.Gateway` is one temporary in-VM capability, explicitly bound
+by a trusted host to an owner PID, instance/session scope and exact live history
+PID. A copied PID cannot authorize another caller. Defaults are a 30-second
+lifetime, 12 admitted calls and at most two query workers. Lifetime is capped
+at 60 seconds and calls at 128; query budgets can only tighten the `Query`
+defaults. The supplied request cannot change these choices. `query/2` returns
+a correlation reference; live completion/cancellation sends one terminal result
+message per admitted call. Consumers must monitor the gateway, since abrupt
+process/VM death can prevent delivery and means unavailable. Missing data and
+typed failures remain distinct, and successful responses
+retain the source, interval, units, loss/freshness markers and query digest.
+
+There is no accepted-work queue. The deadline includes submission/admission
+and blocked history calls, is enforced by the owning gateway and is checked
+again before result delivery. Cancellation, expiry, owner/history death and
+shutdown stop linked query workers; cancelled/failed calls do not regain their
+budget. History refuses late acquisition messages from already-dead local
+callers, avoiding a transient lease after cancelled work resumes. A restarted
+history cannot inherit an old capability. OTP scheduling is not hard real time
+or OS containment; arbitrary same-BEAM callers are trusted, and transport hosts
+must separately bound ingress and simultaneous scopes. Already delivered inert
+messages cannot be recalled: frontends must ignore results for closed scopes.
+
+With history explicitly enabled, Workbench starts an idle
+`Observability.Inspection` broker. `open/1` is an explicit local-operator call:
+the broker binds `workbench`, generates the session ID, admits one capability
+per calling process and caps the whole host at 32 live scopes. Neither owner,
+scope, history nor an endpoint is an operator request option. Opening performs
+no query or LLM call. No browser route, LiveView event or MCP tool exposes this
+host-wide history, and neither a browser token nor the scrape credential grants
+access. Browser tenant isolation, durable reads and investigation-specific
+provider/cost/context budgets remain separate acceptance work.
 
 Snapshots and query structs are revalidated at the execution boundary. Query
 samples must match the catalogue's type, finite labels and exact histogram
@@ -304,6 +349,12 @@ Untrusted hosted tenants require separate worker/OS isolation; shared-VM
 introspection is reserved for the trusted local operator profile.
 The BeamLens integration, its custom skill, the prompt entry point and the
 answer presentation in the following paragraphs are planned; no source exists.
+The 0.3.1 source review found unconditional log-store startup in the standard
+supervisor, inherited node-information callbacks and queued operator invocations
+whose caller timeout does not revoke the run. See the
+[dependency review](../provenance/standards-and-dependencies.md#beamlens-integration-admission).
+Adding a custom skill alone does not admit that lifecycle/privacy contract;
+no BeamLens dependency, provider or key lookup is activated by this query slice.
 
 The custom skill exposes bounded `lab_metric_catalogue`, `lab_metric_query`,
 `lab_run_summary` and `lab_compare_runs` callbacks. Their service-side request
@@ -384,5 +435,11 @@ fixture, reset, stale and histogram cases, series and history budgets, atomic
 admission, bounded exporter overload, retry and no-retry, network loss,
 shutdown, two-instance isolation and the export credential sentinel;
 `test/wotex/lab/greptime_bridge_test.exs` covers actual ingestion. TTL expiry,
-remote protected/query endpoints, prompt injection, expiring scope substitution, cloud disclosure and
-cancelled-agent tests arrive with their planned features.
+remote protected/query endpoints, prompt injection, cloud disclosure and
+cancelled-agent tests arrive with their planned features. Local capability
+scope substitution, bounded admission, blocked calls, expiry, cancellation,
+worker/owner/history death, history replacement and late-result rejection are
+covered by `metrics_gateway_test.exs`. The Workbench's
+`metrics_inspection_test.exs` adds actual PromEx-to-query integration, per-owner
+and 32-scope host admission, startup, shutdown and restart boundaries. These are
+local query lifecycle tests, not provider cancellation or HTTP/MCP evidence.

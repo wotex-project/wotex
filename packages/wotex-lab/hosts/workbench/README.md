@@ -107,9 +107,56 @@ receipt, preserving reset identity, clocks and loss counters. Changed or
 unavailable receipts fail the sample; the sampler counts failures and subsequent
 gaps, preserves one-time stale markers and exposes evictions through history.
 Its fixed instance is `workbench`, not the current browser session. No route
-reads this host-wide history. Authenticated query scope and tenant isolation
+reads this host-wide history. Remote query authentication and tenant isolation
 remain separate work. Restarting the optional supervisor discards its history;
 neither sampling nor dataframe conversion makes it durable or training data.
+
+An operator attached to this same VM can explicitly open a short-lived query
+scope. This requires the history activation above; it never enables it:
+
+```elixir
+alias WotexLabWorkbench.Observability.Inspection
+alias Wotex.Lab.Metrics.Gateway
+
+{:ok, access} = Inspection.open()
+monitor = Process.monitor(access)
+now = DateTime.utc_now()
+{:ok, reference} = Gateway.query(access, %{
+  "schema_version" => "1.0.0",
+  "metric" => "nx_operations_total",
+  "aggregation" => "sum",
+  "start_at" => DateTime.to_iso8601(DateTime.add(now, -60, :second)),
+  "end_at" => DateTime.to_iso8601(now),
+  "step_ms" => 5_000
+})
+receive do
+  {:metric_query, ^access, ^reference, result} -> result
+  {:DOWN, ^monitor, :process, ^access, _reason} -> {:error, :inspection_unavailable}
+after
+  3_000 -> Gateway.cancel(access, reference)
+end
+:ok = Gateway.revoke(access)
+Process.demonitor(monitor, [:flush])
+```
+
+The owner is the calling process, not a supplied identifier. The broker admits
+one scope per process and 32 for the host, binds the exact history PID and
+generates its session identity. A scope defaults to 30 seconds, 12 calls and
+two in-flight queries; `open/1` accepts only `ttl_ms` (1–60,000), `max_calls`
+(1–128) and `query_limits` that tighten the Lab defaults. The two-second query
+deadline includes blocked history calls. Cancellation, expiry, owner/history
+death and host shutdown stop pending workers; failures consume admitted-call
+budget. Already delivered results are inert and must be ignored after closure.
+Monitor the gateway: abrupt process/VM death can prevent a terminal reply and
+must be reported as unavailable, not a completed query or cancellation.
+There is no result-retention service or queued-query backlog.
+
+Request fields cannot select scope, credentials, limits, endpoints, SQL or
+modules. Copied gateway PIDs do not authorize a different process. This local
+operator API is not exposed by a browser event, HTTP route or MCP tool, and
+does not imply hostile shared-VM isolation. No model/provider/key discovery is
+added. BeamLens remains unactivated pending its separate privacy/lifecycle and
+provider-budget acceptance; choosing only custom skills is not sufficient.
 
 The Metrics page's portable-panel selector exports only catalogue definitions
 through `/metrics/dashboard.json`, with 1–16 known IDs. A verified browser

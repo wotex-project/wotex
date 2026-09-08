@@ -212,7 +212,12 @@ defmodule Wotex.Lab.Metrics.History do
     concurrent =
       Enum.count(state.queries, fn {_ref, {_pid, session}} -> session == scope.session end)
 
-    case admit_query(state, scope, limit, concurrent) do
+    admission =
+      if node(pid) == node() and Process.alive?(pid),
+        do: admit_query(state, scope, limit, concurrent),
+        else: {:error, error(:scope_denied, "query caller is no longer local and live")}
+
+    case admission do
       :ok ->
         token = Process.monitor(pid)
         queries = Map.put(state.queries, token, {pid, scope.session})

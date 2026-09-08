@@ -112,8 +112,8 @@ real Remote Write ingestion and SQL read-back test. The disposable
 Its source-test profile uses a loopback-only ephemeral HTTP port, no persistent
 volume, 2 CPUs, 1 GiB memory with no additional swap and 256 PIDs; cleanup was
 verified after the test. This does not prove TTL provisioning, authenticated
-remote deployment, official-sender compatibility or the unimplemented query
-gateway/BeamLens integration.
+remote deployment, official-sender compatibility or the HTTP/MCP/durable-query
+and BeamLens integrations.
 
 History queries now require explicit instance binding; snapshot slots, query
 leases and catalogue metric semantics are independently admitted. Tests cover
@@ -141,6 +141,43 @@ The thermal scenario produced a 5,917-byte HTTP 200 scrape, with no token in the
 response or listener options, and application shutdown removed the listener.
 No remote/TLS, slow-header whole-request deadline, untrusted-hosted or artifact
 adoption claim follows. The ordinary browser Metrics page was not repurposed.
+
+The local-query capability cohort adds 11 base gateway/request tests and four
+Workbench integration tests on that same source toolchain. The nine owning
+metrics files pass 63 tests, including actual Greptime ingestion; the host's
+history/inspection pair passes nine. Suspended real history processes reproduce
+deadline/cancellation and late lease-admission cases, without a successful fake
+query backend. A real opt-in application boot, with browser HTTP disabled, ran
+the thermal example and returned one ETS query point with cumulative value 3
+and a query digest, then revoked the scope and stopped the application. No
+scope broker survived. These are local source-query results, not tenant/HTTP/
+MCP/LLM cancellation evidence. No dependency or lockfile changed.
+
+### BeamLens integration admission
+
+Observation date: 2026-09-08. This is a review of upstream tagged 0.3.1 source,
+not dependency installation, provider execution or artifact adoption. Its
+[main supervisor](https://github.com/beamlens/beamlens/blob/v0.3.1/lib/beamlens/supervisor.ex)
+starts a log store independently of the selected skills and uses fixed global
+names. An empty skill list selects the built-in set; it does not disable it.
+Therefore the standard supervisor is not admitted merely by naming a Lab skill.
+
+The [base callbacks](https://github.com/beamlens/beamlens/blob/v0.3.1/lib/beamlens/skill/base.ex)
+include node identity, uptime and OS information. The
+[operator](https://github.com/beamlens/beamlens/blob/v0.3.1/lib/beamlens/operator.ex)
+merges those callbacks into custom skills, queues invocations while running,
+and implements the public call timeout as a waiting-client timeout. The idle
+invocation handler does not apply its supplied options; startup limits require
+independent verification. This is not evidence of bounded per-investigation
+admission, scope revocation or provider cancellation. No private implementation
+is copied or patched, and no API key or provider is discovered or invoked.
+
+The Lab query gateway addresses the separate local data-access lifecycle using
+only its own public history contract. It does not close BeamLens admission.
+An eventual public-API composition must prove the selected callback surface,
+dependency startup, disabled raw introspection, data disclosure, token/cost
+budgets and whole-investigation cancellation in executable tests. The required
+BeamLens reference integration remains planned, not waived or simulated.
 
 ## Acknowledged dependency advisories
 

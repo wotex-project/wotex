@@ -12,7 +12,7 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
 
   alias Wotex.Lab.{Error, Options}
   alias Wotex.Lab.Metrics.History
-  alias WotexLabWorkbench.Observability.{PromEx, Relay, Sampler, Scrape}
+  alias WotexLabWorkbench.Observability.{Inspection, PromEx, Relay, Sampler, Scrape}
 
   @doc "Starts capture/relay; `:history` and `:scrape` explicitly add bounded operator surfaces."
   @spec start_link(keyword()) :: Supervisor.on_start() | {:error, Error.t()}
@@ -53,6 +53,7 @@ defmodule WotexLabWorkbench.Observability.Supervisor do
 
     [
       {History, history},
+      {Inspection, history: __MODULE__.History},
       {Sampler, [history: __MODULE__.History] ++ Keyword.take(opts, [:interval_ms])}
     ]
   end
