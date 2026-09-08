@@ -25,3 +25,31 @@ Research date: 2026-09-08. Primary protocol evidence:
 Discovery covered framing, security, observation, blockwise and Form gaps.
 Follow-up reconciled draft status and peer versions. Stop reason: baseline
 claims have primary support; hardware and secure interoperability need execution.
+
+## Software-contract review, 2026-09-08
+
+- [RFC 6690, August 2012](https://www.rfc-editor.org/rfc/rfc6690.html), sections
+  2–4, supplies link-format grammar and the well-known resource. Discovery does
+  not authorize later interaction.
+- [OTP 29.0.4 TLS cipher definitions](https://github.com/erlang/otp/blob/OTP-29.0.4/lib/ssl/src/tls_v1.erl)
+  and [OTP ssl API](https://www.erlang.org/doc/apps/ssl/ssl.html) define the DTLS
+  adapter boundary. The web API page was OTP 29.0.6 when reviewed; implementation
+  evidence must name the actual OTP build. A local OTP 29.0.4 capability query
+  confirmed the selected RSA and PSK AES-128-GCM suites. PSK suites are under
+  `ssl:cipher_suites(anonymous, 'dtlsv1.2')`, not the `all` selector; this OTP
+  category does not mean the selected PSK exchange has no key authentication.
+  Configure the one selected suite explicitly, never enable the whole category.
+- [libcoap 4.3.5 OSCORE API](https://libcoap.net/doc/reference/4.3.5/man_coap_oscore.html)
+  exposes configuration, session construction and sender-sequence save callback.
+  Its illustrative file-save code is not a crash-safe store specification.
+  The public API does not supply the receiver-state persistence contract required
+  for unrestricted safe restart. The .10 single-process-generation context rule
+  is an explicit library security decision, not a claim of SDK persistence.
+- [libcoap pinned source](https://github.com/obgm/libcoap/tree/7cf7465b784baded4de183290c547d582becfd28)
+  is the native OSCORE engine and software peer. Label that OSCORE peer same-stack;
+  RFC 8613 known-answer and replay/crash tests remain separate evidence.
+
+Observe, secure transport and OSCORE target requirements are not promoted to
+implemented claims by this research. The committed blockwise evidence is recorded
+in executable-evidence.md; atomic-only upload and bounded body sizes are explicit
+library profile choices within RFC 7959's wider behavior.

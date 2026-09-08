@@ -13,3 +13,6 @@
   atomic upload acknowledgment checks and representation consistency checks.
 - Validate known option lengths and generate cryptographic request tokens.
 - Prove block negotiation, upload echo and readback against libcoap 4.3.5.
+
+- Define the target software contract and ordered implementation packages with
+  pinned sources, explicit APIs/limits and required software acceptance vectors.
