@@ -16,8 +16,10 @@ radio support, timestamps and full SDK semantics still require OpenThread.
 Daemon sessions own their Unix socket in the calling process. Requests are an
 enumerated command set; no shell or arbitrary CLI input is exposed. Output must
 contain Done and no Error status, respect UTF-8 across packet boundaries, and
-fit 8192 bytes. Failure/timeout closes the socket. Owner termination closes it
-through OTP socket ownership. Dataset changes and daemon lifecycle are excluded.
+fit 8192 bytes. The socket line decoder enforces the packet allocation bound.
+Failure/timeout closes the socket. Non-owner request/disconnect calls fail, and
+owner termination closes the socket through OTP socket ownership. Dataset
+changes, commissioning and daemon/radio lifecycle are excluded.
 
 ## Evidence and compatibility
 

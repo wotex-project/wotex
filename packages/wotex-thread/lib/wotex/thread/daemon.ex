@@ -3,25 +3,37 @@ defmodule Wotex.Thread.Daemon do
   @behaviour Wotex.Thread.Client
   alias Wotex.Thread.Error
   @commands %{state: "state", version: "version", network_name: "networkname", rloc16: "rloc16"}
+  @max_response 8192
 
   @impl Wotex.Thread.Client
-  def connect(opts) do
+  def connect(opts) when is_list(opts) do
+    if Keyword.keyword?(opts), do: connect_options(opts), else: invalid_options()
+  end
+
+  def connect(_), do: invalid_options()
+
+  defp connect_options(opts) do
     path = Keyword.get(opts, :socket_path)
     timeout = Keyword.get(opts, :timeout, 5000)
+    keys = Keyword.keys(opts)
 
-    if is_binary(path) and byte_size(path) in 1..100 and not String.contains?(path, <<0>>) and
+    if keys -- [:socket_path, :timeout] == [] and length(keys) == MapSet.size(MapSet.new(keys)) and
+         is_binary(path) and byte_size(path) in 1..100 and not String.contains?(path, <<0>>) and
          is_integer(timeout) and timeout in 1..60_000 do
-      case :gen_tcp.connect({:local, path}, 0, [:binary, active: false], timeout) do
+      options = [:binary, active: false, packet: :line, packet_size: @max_response]
+
+      case :gen_tcp.connect({:local, path}, 0, options, timeout) do
         {:ok, socket} -> {:ok, %{socket: socket, owner: self()}}
         {:error, _} -> {:error, Error.new(:connect_failed)}
       end
     else
-      {:error, Error.new(:invalid_options)}
+      invalid_options()
     end
   end
 
   @impl Wotex.Thread.Client
-  def request(%{socket: socket, owner: owner}, %{type: type}, timeout) when owner == self() do
+  def request(%{socket: socket, owner: owner}, %{type: type}, timeout)
+      when owner == self() and is_integer(timeout) and timeout in 1..60_000 do
     with {:ok, command} <- Map.fetch(@commands, type),
          :ok <- :gen_tcp.send(socket, command <> "\n") do
       collect(socket, <<>>, System.monotonic_time(:millisecond) + timeout)
@@ -30,14 +42,17 @@ defmodule Wotex.Thread.Daemon do
     end
   end
 
-  def request(_, _, _), do: {:error, Error.new(:wrong_owner)}
+  def request(%{owner: owner}, _, _) when owner != self(), do: {:error, Error.new(:wrong_owner)}
+  def request(_, _, _), do: {:error, Error.new(:invalid_request)}
 
   @impl Wotex.Thread.Client
-  def disconnect(%{socket: socket}), do: :gen_tcp.close(socket)
+  def disconnect(%{socket: socket, owner: owner}) when owner == self(), do: :gen_tcp.close(socket)
+  def disconnect(%{owner: owner}) when owner != self(), do: {:error, Error.new(:wrong_owner)}
+  def disconnect(_), do: {:error, Error.new(:invalid_options)}
 
   @doc "Parses bounded daemon output; Error responses never count as Done."
   @spec parse(term()) :: {:ok, String.t()} | :more | {:error, Error.t()}
-  def parse(bytes) when is_binary(bytes) and byte_size(bytes) <= 8192 do
+  def parse(bytes) when is_binary(bytes) and byte_size(bytes) <= @max_response do
     cond do
       match?({:incomplete, _, _}, :unicode.characters_to_binary(bytes, :utf8, :utf8)) ->
         :more
@@ -69,9 +84,20 @@ defmodule Wotex.Thread.Daemon do
           {:ok, data} ->
             collect(socket, bytes <> data, deadline)
 
-          {:error, _} ->
+          {:error, :timeout} ->
             :gen_tcp.close(socket)
             {:error, Error.new(:timeout)}
+
+          {:error, :emsgsize} ->
+            :gen_tcp.close(socket)
+            {:error, Error.new(:response_limit)}
+
+          {:error, :closed} ->
+            {:error, Error.new(:transport_closed)}
+
+          {:error, _} ->
+            :gen_tcp.close(socket)
+            {:error, Error.new(:invalid_response)}
         end
 
       {:error, _} = error ->
@@ -82,4 +108,6 @@ defmodule Wotex.Thread.Daemon do
         result
     end
   end
+
+  defp invalid_options, do: {:error, Error.new(:invalid_options)}
 end

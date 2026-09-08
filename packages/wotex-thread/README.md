@@ -45,7 +45,8 @@ explicitly. Callback names alone do not establish consumer behavioral parity.
 The consumer retains its implementation until differential scenarios and
 interoperability gates pass; migration is outside this repository.
 
-See [implemented profile](docs/specs/WTH.02-implemented-profile.md),
+See [protocol and graduation contract](docs/specs/WTH.01-protocol.md),
+[implemented profile](docs/specs/WTH.02-implemented-profile.md),
 [primary sources](docs/provenance/primary-sources.md) and
 [executable evidence](docs/provenance/executable-evidence.md).
 
@@ -57,4 +58,6 @@ checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
 Run `mix check` before commits. It includes package compilation outside the
 checkout, tests/coverage, static checks, docs and dependency audit.
 Optional interoperability suites fail if invoked without their required peer.
+The hardware suite has not been run in this workspace because no configured
+OpenThread daemon/radio was supplied. Commissioning remains outside this profile.
 No remote repository, published package or publication action is implied.
