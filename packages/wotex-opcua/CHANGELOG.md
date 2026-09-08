@@ -10,3 +10,6 @@
 - Align the protocol specification identifier with the `WOP` catalogue family.
 - Harden direct asyncua callbacks and keep child stderr inside the bounded result channel.
 - Remove the stale Decimal advisory exception while retaining the reviewed regression.
+
+- Define the target software contract and ordered implementation packages with
+  pinned sources, explicit APIs/limits and required software acceptance vectors.

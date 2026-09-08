@@ -3,6 +3,8 @@
 Consumer-neutral OPC UA library for W3C Web of Things consumers.
 Development version: `0.1.0-dev`.
 
+Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
+
 The library contains all four NodeId kinds, strict scalar binary codecs, bounded
 UA TCP chunk framing, Form mapping and a real `Asyncua` adapter. The adapter uses
 asyncua 2.0.1 in an explicitly supplied Python environment. It performs
@@ -71,3 +73,11 @@ Run `mix check` before commits. It includes package compilation outside the
 checkout, tests/coverage, static checks, docs and dependency audit.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
+
+## Software implementation contract
+
+The [ordered implementation sequence](docs/plans/software-implementation.md)
+and [specification index](docs/specs/WOP-index.md) define the remaining software
+profile with exact behavior, limits, failure transitions and acceptance vectors.
+These target contracts are build instructions, not claims that every feature
+already exists. Required software peers are separate from physical-device tests.

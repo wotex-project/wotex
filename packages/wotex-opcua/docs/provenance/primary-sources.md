@@ -31,3 +31,26 @@ restricted to direct CA issuance. A real same-stack secure peer proof is recorde
 separately in executable-evidence.md; it is not independent interoperability.
 Python dependency audit on 2026-09-08 reported no known vulnerabilities for the
 fully pinned requirements. That result is time-bound and must be rerun.
+
+## Software-contract review, 2026-09-08
+
+- [asyncua 2.0.1 policy classes](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/crypto/security_policies.py)
+  contain the three explicit SignAndEncrypt policy implementations selected in .10.
+- [Pinned Client](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/client/client.py)
+  owns Session/security/user-token operations and exposes automatic-reconnect
+  selection. The target explicitly disables it; loss is terminal.
+- [Pinned Subscription](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/common/subscription.py)
+  exposes PublishResult callback dispatch and Republish plumbing. Its ordinary
+  publish callback records the last sequence; it is not sufficient by itself
+  to prove strict duplicate/gap handling. The bridge supplies the bounded
+  sequence validation described in .10.
+- [open62541 v1.4.14](https://github.com/open62541/open62541/releases/tag/v1.4.14),
+  source `76e425ee963e8c16c0414f2f6bd0c7a5761a92c3`, supplies the independent peer.
+  The [encrypted server example](https://github.com/open62541/open62541/blob/76e425ee963e8c16c0414f2f6bd0c7a5761a92c3/examples/encryption/server_encryption.c)
+  is a starting point, not the final fixture policy: replace permissive/default
+  example setup with explicit test certificates, users and restricted endpoints.
+
+Session-loss policy, queue/body limits and the direct-CA-only trust restriction
+are library profile choices. New target policy/token/subscription cells still
+require executable evidence; the existing same-stack proof cannot satisfy the
+new independent-peer requirement.
