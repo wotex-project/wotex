@@ -1,0 +1,333 @@
+defmodule Wotex.Lab.Conformance.Containment do
+  @moduledoc """
+  Host containment configuration for an external conformance target.
+
+  The external runner owns the request/response protocol; this module wraps
+  its executable in a host sandbox and the packaged `contained_exec.py`
+  supervisor. The wrapper applies CPU, resident-memory, process, open-file and
+  output-file limits, runs the target in its own process group, enforces a
+  deadline shorter than the runner deadline, and kills the process group on
+  timeout or termination. The host sandbox denies networking and writes
+  outside the caller-owned private temporary directory.
+
+  `external_map/5` refuses platforms without an admitted network sandbox. It
+  returns runner configuration separately from a public, path-free evidence
+  descriptor so executable and temporary paths never leak into evidence.
+  """
+
+  alias Wotex.Lab.Error
+
+  @profile_version "1.0.0"
+  @archive_placeholder "{subject_archive}"
+  @option_keys ~w(timeout_ms max_output_bytes cpu_seconds memory_bytes processes open_files)a
+  @defaults %{
+    timeout_ms: 10_000,
+    max_output_bytes: 1_048_576,
+    cpu_seconds: 8,
+    memory_bytes: 8_589_934_592,
+    processes: 64,
+    open_files: 128
+  }
+  @ceilings %{
+    timeout_ms: 120_000,
+    max_output_bytes: 8_388_608,
+    cpu_seconds: 120,
+    memory_bytes: 34_359_738_368,
+    processes: 1_024,
+    open_files: 1_024
+  }
+  @minimum_memory 16_777_216
+
+  @doc "The containment profile version and default resource limits."
+  @spec profile() :: map()
+  def profile, do: %{version: @profile_version, defaults: @defaults, ceilings: @ceilings}
+
+  @doc """
+  Builds an external-target map and a separate public containment descriptor.
+
+  `executable`, `archive` and `temporary_directory` must be absolute existing
+  paths. `args` must include `{subject_archive}` exactly once. The returned
+  target map is suitable for `Wotex.Conformance.Target.External.from_map/1`.
+  """
+  @spec external_map(Path.t(), [String.t()], Path.t(), Path.t(), keyword()) ::
+          {:ok, %{target: map(), evidence: map()}} | {:error, Error.t()}
+  def external_map(executable, args, archive, temporary_directory, opts \\ []) do
+    with :ok <- option_keys(opts),
+         :ok <- regular(executable, :executable),
+         :ok <- regular(archive, :archive),
+         :ok <- directory(temporary_directory),
+         :ok <- arguments(args),
+         {:ok, limits} <- limits(opts),
+         {:ok, launcher} <- launcher(),
+         {:ok, sandbox} <- sandbox(temporary_directory),
+         wrapper_args = wrapper_args(launcher, limits, temporary_directory, executable, args),
+         {:ok, sandbox_args, mechanism} <-
+           sandbox_args(sandbox, wrapper_args, temporary_directory) do
+      {:ok,
+       %{
+         target: %{
+           executable: sandbox,
+           args: sandbox_args,
+           artifact_path: archive,
+           environment: %{
+             "HOME" => temporary_directory,
+             "TMPDIR" => temporary_directory,
+             "LANG" => "C",
+             "LC_ALL" => "C",
+             "PYTHONDONTWRITEBYTECODE" => "1"
+           },
+           timeout_ms: limits.timeout_ms,
+           max_output_bytes: limits.max_output_bytes
+         },
+         evidence: evidence(limits, mechanism)
+       }}
+    end
+  end
+
+  defp option_keys(opts) do
+    if Keyword.keyword?(opts) do
+      keys = Keyword.keys(opts)
+      unknown = keys -- @option_keys
+
+      cond do
+        length(keys) != length(Enum.uniq(keys)) ->
+          invalid(:invalid_options, "containment options must not contain duplicate keys")
+
+        unknown != [] ->
+          invalid(:invalid_options, "containment options contain unknown keys", %{keys: unknown})
+
+        true ->
+          :ok
+      end
+    else
+      invalid(:invalid_options, "containment options must be a keyword list")
+    end
+  end
+
+  defp regular(path, field) when is_binary(path) do
+    case File.stat(path) do
+      {:ok, %File.Stat{type: :regular, mode: mode}} ->
+        cond do
+          Path.type(path) != :absolute ->
+            invalid_file(field)
+
+          field == :executable and Bitwise.band(mode, 0o111) == 0 ->
+            invalid_file(field)
+
+          true ->
+            :ok
+        end
+
+      _result ->
+        invalid_file(field)
+    end
+  end
+
+  defp regular(_path, field),
+    do: invalid(:invalid_path, "containment path must be a string", %{field: field})
+
+  defp invalid_file(field) do
+    invalid(:invalid_path, "containment path is not an absolute regular file", %{field: field})
+  end
+
+  defp directory(path) when is_binary(path) do
+    cond do
+      Path.type(path) != :absolute ->
+        invalid(:invalid_path, "temporary directory must be absolute", %{
+          field: :temporary_directory
+        })
+
+      not File.dir?(path) ->
+        invalid(:invalid_path, "temporary directory does not exist", %{
+          field: :temporary_directory
+        })
+
+      unsafe_profile_path?(path) ->
+        invalid(:invalid_path, "temporary directory cannot be represented by the host sandbox", %{
+          field: :temporary_directory
+        })
+
+      true ->
+        :ok
+    end
+  end
+
+  defp directory(_path),
+    do:
+      invalid(:invalid_path, "temporary directory must be a string", %{field: :temporary_directory})
+
+  defp unsafe_profile_path?(path), do: String.contains?(path, ["\"", "\\", "\n", "\r", <<0>>])
+
+  defp arguments(args) when is_list(args) and length(args) <= 28 do
+    cond do
+      Enum.any?(args, &(not is_binary(&1) or byte_size(&1) > 4_096)) ->
+        invalid(:invalid_arguments, "target arguments must be bounded strings")
+
+      Enum.count(args, &(&1 == @archive_placeholder)) != 1 ->
+        invalid(:invalid_arguments, "target arguments require exactly one archive placeholder")
+
+      Enum.any?(args, &(String.contains?(&1, @archive_placeholder) and &1 != @archive_placeholder)) ->
+        invalid(:invalid_arguments, "archive placeholder must occupy one complete argument")
+
+      true ->
+        :ok
+    end
+  end
+
+  defp arguments(_args), do: invalid(:invalid_arguments, "target arguments must be a bounded list")
+
+  defp limits(opts) do
+    limits = Map.new(@defaults, fn {key, default} -> {key, Keyword.get(opts, key, default)} end)
+
+    Enum.reduce_while(limits, {:ok, limits}, fn {key, value}, result ->
+      minimum = if key == :memory_bytes, do: @minimum_memory, else: 1
+
+      if is_integer(value) and value >= minimum and value <= Map.fetch!(@ceilings, key),
+        do: {:cont, result},
+        else:
+          {:halt,
+           invalid(:invalid_limit, "containment resource limit is outside its bound", %{limit: key})}
+    end)
+  end
+
+  defp launcher do
+    path = Application.app_dir(:wotex_lab, "priv/conformance/contained_exec.py")
+
+    case File.stat(path) do
+      {:ok, %File.Stat{type: :regular, mode: mode}} when Bitwise.band(mode, 0o111) != 0 ->
+        {:ok, path}
+
+      _result ->
+        {:error,
+         Error.new(:unsupported, :containment, "packaged containment launcher is unavailable")}
+    end
+  end
+
+  defp sandbox(temporary_directory) do
+    case :os.type() do
+      {:unix, :darwin} -> admitted_executable("/usr/bin/sandbox-exec", temporary_directory)
+      {:unix, _name} -> linux_sandbox(temporary_directory)
+      _other -> unsupported()
+    end
+  end
+
+  defp linux_sandbox(temporary_directory) do
+    case System.find_executable("bwrap") do
+      nil -> unsupported()
+      path -> admitted_executable(path, temporary_directory)
+    end
+  end
+
+  defp admitted_executable(path, _temporary_directory) do
+    case File.stat(path) do
+      {:ok, %File.Stat{type: :regular}} -> {:ok, path}
+      _result -> unsupported()
+    end
+  end
+
+  defp unsupported,
+    do:
+      {:error,
+       Error.new(
+         :unsupported,
+         :containment,
+         "host has no admitted no-network process sandbox"
+       )}
+
+  defp wrapper_args(launcher, limits, temporary_directory, executable, args) do
+    wall_ms = inner_wall_ms(limits.timeout_ms)
+
+    [
+      launcher,
+      "--wall-ms",
+      Integer.to_string(wall_ms),
+      "--cpu-seconds",
+      Integer.to_string(limits.cpu_seconds),
+      "--memory-bytes",
+      Integer.to_string(limits.memory_bytes),
+      "--processes",
+      Integer.to_string(limits.processes),
+      "--open-files",
+      Integer.to_string(limits.open_files),
+      "--file-size-bytes",
+      Integer.to_string(limits.max_output_bytes),
+      "--temp-dir",
+      temporary_directory,
+      "--",
+      executable
+      | args
+    ]
+  end
+
+  defp sandbox_args("/usr/bin/sandbox-exec", wrapper_args, temporary_directory) do
+    canonical_directory = darwin_canonical_directory(temporary_directory)
+
+    profile =
+      "(version 1)\n" <>
+        "(allow default)\n" <>
+        "(deny network*)\n" <>
+        "(deny file-write*)\n" <>
+        "(allow file-write* (subpath \"#{temporary_directory}\"))\n" <>
+        "(allow file-write* (subpath \"#{canonical_directory}\"))\n"
+
+    {:ok, ["-p", profile | wrapper_args], "darwin-sandbox-exec"}
+  end
+
+  defp sandbox_args(_bwrap, wrapper_args, temporary_directory) do
+    args =
+      [
+        "--unshare-net",
+        "--unshare-pid",
+        "--die-with-parent",
+        "--new-session",
+        "--ro-bind",
+        "/",
+        "/",
+        "--proc",
+        "/proc",
+        "--bind",
+        temporary_directory,
+        temporary_directory,
+        "--chdir",
+        temporary_directory,
+        "--"
+        | wrapper_args
+      ]
+
+    {:ok, args, "linux-bubblewrap"}
+  end
+
+  # Darwin presents temporary paths through `/var` while sandbox policy sees
+  # their canonical `/private/var` spelling. Both remain the same private tree.
+  defp darwin_canonical_directory("/var/" <> rest), do: "/private/var/" <> rest
+  defp darwin_canonical_directory("/tmp/" <> rest), do: "/private/tmp/" <> rest
+  defp darwin_canonical_directory(path), do: path
+
+  defp evidence(limits, mechanism) do
+    %{
+      "schema_version" => @profile_version,
+      "kind" => "wotex_lab_conformance_containment",
+      "mechanism" => mechanism,
+      "network" => "denied",
+      "temporary_directory" => "private",
+      "termination" => "process_group",
+      "limits" => %{
+        "wall_ms" => inner_wall_ms(limits.timeout_ms),
+        "runner_timeout_ms" => limits.timeout_ms,
+        "cpu_seconds" => limits.cpu_seconds,
+        "memory_bytes" => limits.memory_bytes,
+        "processes" => limits.processes,
+        "open_files" => limits.open_files,
+        "output_bytes" => limits.max_output_bytes
+      }
+    }
+  end
+
+  defp invalid(code, message, details \\ %{}),
+    do: {:error, Error.new(code, :containment, message, details: details)}
+
+  defp inner_wall_ms(runner_timeout_ms) do
+    margin = runner_timeout_ms |> div(10) |> max(250) |> min(1_000)
+    max(runner_timeout_ms - margin, 1)
+  end
+end

@@ -1,10 +1,10 @@
 # WLB.06: Evidence, conformance and observability
 
-Specification version: 1.2.0. Contract: accepted. Source status: the external
-conformance target for the core package, the evidence record with its content
-digests, Lab telemetry spans and measurements, and the versioned Continuum
-fault schedule are implemented; benchmarks and the machine evidence graph
-remain planned.
+Specification version: 1.3.0. Contract: accepted. Source status: implemented.
+The external core conformance target and its host containment profile, the
+content-addressed evidence record, Lab telemetry, the versioned Continuum fault
+schedule, bounded benchmark records and the machine evidence overlay all have
+executable positive, negative, lifecycle and resource evidence.
 
 ## Evidence record and maturity
 
@@ -46,6 +46,11 @@ source are `not_reported`, not guessed from Lab opinion. Lab's evidence overlay
 is separately namespaced and references exact completion IDs; only the package
 owner can accept closure. It is an evidence index, not cross-repository worker
 coordination, lease state, a scheduler or an execution tracker.
+`Wotex.Lab.Graph` exposes this as `evidence_overlays`: Lab specification and
+cookbook evidence has `wotex_lab`-namespaced IDs, its producer and source are
+explicit, and `indexes` edges resolve to exact Lab or upstream completion
+nodes. The upstream catalogue nodes remain untouched and every overlay states
+that closure authority belongs to the package owner.
 
 ## Conformance independence
 
@@ -81,6 +86,14 @@ Port timeout alone is not descendant cleanup. This supports WCF-C01–C04/C06;
 WCF-C05 Discovery corpus is an explicit excluded corpus decision, not a TD/TM
 pass. WCF-C07 is package hygiene. Reports MUST state covered assertions and
 exclusions; no certification is implied.
+`Wotex.Lab.Conformance.Containment` refuses a host without an admitted network
+sandbox. On Darwin it combines `sandbox-exec` with the packaged no-shell Python
+launcher; on Linux it requires Bubblewrap. The launcher applies inherited CPU,
+open-file, output-file and core limits, accounts resident memory and process
+count over the target tree, gives the target its own process group, and enforces
+an inner deadline before the runner deadline so it can kill descendants. The
+sandbox denies network access and writes outside the private temporary tree.
+Its public descriptor contains limits and mechanism names but no paths.
 
 ## Telemetry and faults
 
@@ -121,3 +134,11 @@ Benchee where suitable and record bytes/nodes/depth/forms/rows/width/window/
 queue/session counts, memory and percentile latency on a pinned machine.
 Absolute shared-runner timings are informational; thresholds require an explicit
 runner/backend/cohort and baseline. A benchmark result is not a correctness test.
+`Wotex.Lab.Benchmark` implements the bounded data record and native short-run
+sampler used by package evidence. It admits only the declared dimensions,
+requires runner/backend/cohort/baseline/machine identity, records process memory
+and nanosecond min/p50/p95/p99/max/mean latency, and marks correctness as
+`not_evaluated`. Shared runs cannot carry thresholds; dedicated thresholds are
+observations inside the record and never turn a benchmark into a correctness
+test. Longer host investigations may use Benchee and normalize its results into
+the same record, while the deterministic package gate remains dependency-free.

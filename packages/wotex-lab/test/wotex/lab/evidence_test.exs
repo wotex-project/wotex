@@ -203,6 +203,20 @@ defmodule Wotex.Lab.EvidenceTest do
 
     assert {:error, %Error{code: :invalid_dependency}} =
              Record.from_map(%{map | "dependencies" => ["x"]})
+
+    malformed_containers = %{
+      map
+      | "dependencies" => :invalid,
+        "assertions" => [42],
+        "budgets" => :invalid,
+        "outcomes" => :invalid,
+        "durations" => :invalid
+    }
+
+    assert {:error, %Error{code: :invalid_budgets}} =
+             Record.from_map(malformed_containers)
+
+    assert {:ok, %Record{scenario_id: "smart-room"}} = Record.new(Map.to_list(fields()))
   end
 
   test "digests are content digests of files and trees, with the toolchain recorded as strings" do

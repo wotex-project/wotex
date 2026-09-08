@@ -1,5 +1,9 @@
 # Compiled only when the optional ex_maude package is present; the base package
 # and every other Lab profile stay usable without a formal engine.
+# ExCoveralls excludes this optional host integration from the base-profile
+# denominator. Its own Maude-tagged suite remains the WLB.09 evidence gate when
+# an operator supplies the pinned executable.
+# coveralls-ignore-start
 if Code.ensure_loaded?(ExMaude.Pool) do
   defmodule Wotex.Lab.Formal.Profile do
     @moduledoc """
@@ -420,3 +424,5 @@ if Code.ensure_loaded?(ExMaude.Pool) do
     end
   end
 end
+
+# coveralls-ignore-stop

@@ -1,12 +1,14 @@
 defmodule Wotex.Lab.Graph do
   @moduledoc """
-  The generator for the versioned JSON source graph of WLB.07.
+  The generator for the versioned JSON source and evidence graph of WLB.06–07.
 
   `generate/1` joins the Lab specification catalogue (decoded by the caller),
   the completion plan, the upstream package catalogues recorded in the
   provenance source index and source cohort, the cookbook catalogue, the
   fixture manifests and the Lab scenario, adapter and seam descriptors into
-  one graph of nodes and edges. Upstream statuses are copied verbatim with
+  one graph of nodes and edges. Lab evidence is a separately namespaced overlay
+  that indexes exact completion nodes without changing their status or claiming
+  closure for another package. Upstream statuses are copied verbatim with
   their revision, digests and observation date; axes absent upstream stay
   `not_reported`. Every input file is digested and every Lab or upstream
   source node carries a revision-specific source URL. Nothing is fetched from
@@ -209,6 +211,7 @@ defmodule Wotex.Lab.Graph do
     adapters = Enum.map(inputs.adapters, &adapter(&1, inputs))
     scenarios = Enum.map(inputs.scenarios, &scenario/1)
     cookbooks = Enum.map(inputs.cookbooks, &cookbook(&1, inputs))
+    evidence_overlays = evidence_overlays(specifications, cookbooks)
     questions = Enum.map(Descriptors.questions(), &question/1)
     lab_status = specifications |> Enum.find(&(&1["id"] == "WLB.07")) |> status_axes()
 
@@ -220,6 +223,7 @@ defmodule Wotex.Lab.Graph do
         Enum.map(adapters, &node_of("adapter", &1)) ++
         Enum.map(scenarios, &node_of("scenario", &1)) ++
         Enum.map(cookbooks, &node_of("cookbook", &1)) ++
+        Enum.map(evidence_overlays, &node_of("evidence_overlay", &1)) ++
         Enum.map(inputs.fixtures, &node_of("fixture", &1)) ++
         Enum.map(inputs.documents, &node_of("document", &1))
 
@@ -248,11 +252,21 @@ defmodule Wotex.Lab.Graph do
       "adapters" => adapters,
       "scenarios" => scenarios,
       "cookbooks" => cookbooks,
+      "evidence_overlays" => evidence_overlays,
       "fixtures" => inputs.fixtures,
       "documents" => inputs.documents,
       "questions" => questions,
       "nodes" => nodes,
-      "edges" => edges(specifications, seams, adapters, scenarios, cookbooks, inputs.fixtures)
+      "edges" =>
+        edges(
+          specifications,
+          seams,
+          adapters,
+          scenarios,
+          cookbooks,
+          evidence_overlays,
+          inputs.fixtures
+        )
     }
   end
 
@@ -312,6 +326,7 @@ defmodule Wotex.Lab.Graph do
         "completion_items" => spec["completion_items"],
         "implementation_modules" => spec["implementation_modules"],
         "executable_evidence" => spec["executable_evidence"],
+        "evidence_manifest" => spec["evidence_manifest"],
         "standards" => spec["standards"],
         "compatibility_classification" => spec["compatibility_classification"],
         "snapshot" => false
@@ -451,6 +466,45 @@ defmodule Wotex.Lab.Graph do
     }
   end
 
+  defp evidence_overlays(specifications, cookbooks) do
+    specification_entries =
+      specifications
+      |> Enum.filter(&(&1["package"] == "wotex_lab"))
+      |> Enum.map(fn spec ->
+        %{
+          "id" => "wotex_lab:spec:" <> spec["id"],
+          "namespace" => "wotex_lab",
+          "producer" => "wotex_lab",
+          "source_kind" => "specification",
+          "source_id" => spec["id"],
+          "status" => spec["evidence_status"],
+          "completion_ids" => List.wrap(spec["completion_items"]),
+          "evidence_sources" =>
+            (List.wrap(spec["executable_evidence"]) ++ List.wrap(spec["evidence_manifest"]))
+            |> Enum.uniq(),
+          "closure_authority" => "package_owner"
+        }
+      end)
+
+    cookbook_entries =
+      Enum.map(cookbooks, fn cookbook ->
+        %{
+          "id" => "wotex_lab:cookbook:" <> cookbook["id"],
+          "namespace" => "wotex_lab",
+          "producer" => "wotex_lab",
+          "source_kind" => "cookbook",
+          "source_id" => cookbook["id"],
+          "status" => cookbook["evidence"],
+          "completion_ids" =>
+            cookbook["completion_ids"] ++ Enum.map(cookbook["upstream"], &upstream_completion/1),
+          "evidence_sources" => [cookbook["path"]],
+          "closure_authority" => "package_owner"
+        }
+      end)
+
+    specification_entries ++ cookbook_entries
+  end
+
   defp question(question) do
     %{
       "id" => Atom.to_string(question.id),
@@ -464,7 +518,7 @@ defmodule Wotex.Lab.Graph do
     }
   end
 
-  defp edges(specifications, seams, adapters, scenarios, cookbooks, fixtures) do
+  defp edges(specifications, seams, adapters, scenarios, cookbooks, evidence_overlays, fixtures) do
     spec_edges =
       Enum.flat_map(specifications, fn spec ->
         Enum.map(spec["requires"] || [], &edge("spec:" <> spec["id"], "spec:" <> &1, "requires")) ++
@@ -528,6 +582,24 @@ defmodule Wotex.Lab.Graph do
           [edge("cookbook:" <> cookbook["id"], "scenario:" <> cookbook["id"], "runs")]
       end)
 
+    evidence_overlay_edges =
+      Enum.flat_map(evidence_overlays, fn overlay ->
+        source = "evidence_overlay:" <> overlay["id"]
+
+        Enum.map(
+          overlay["completion_ids"],
+          &edge(source, "completion:" <> &1, "indexes")
+        ) ++
+          [edge(source, "package:" <> overlay["producer"], "produced_by")] ++
+          [
+            edge(
+              source,
+              overlay_source(overlay),
+              "describes"
+            )
+          ]
+      end)
+
     fixture_edges =
       Enum.flat_map(fixtures, fn fixture ->
         Enum.map(fixture["seams"], &edge("fixture:" <> fixture["id"], "seam:" <> &1, "exercises")) ++
@@ -538,8 +610,14 @@ defmodule Wotex.Lab.Graph do
           [edge("fixture:" <> fixture["id"], "scenario:" <> fixture["scenario"], "used_by")]
       end)
 
-    spec_edges ++ seam_edges ++ adapter_edges ++ scenario_edges ++ cookbook_edges ++ fixture_edges
+    spec_edges ++
+      seam_edges ++
+      adapter_edges ++
+      scenario_edges ++ cookbook_edges ++ evidence_overlay_edges ++ fixture_edges
   end
+
+  defp overlay_source(%{"source_kind" => "specification", "source_id" => id}), do: "spec:" <> id
+  defp overlay_source(%{"source_kind" => "cookbook", "source_id" => id}), do: "cookbook:" <> id
 
   defp edge(from, to, relation), do: %{"from" => from, "to" => to, "relation" => relation}
 
@@ -610,6 +688,7 @@ defmodule Wotex.Lab.Graph do
   defp paths(graph, root) do
     referenced =
       Enum.flat_map(graph["specifications"], &List.wrap(&1["executable_evidence"])) ++
+        Enum.flat_map(graph["evidence_overlays"], & &1["evidence_sources"]) ++
         Enum.map(graph["adapters"], & &1["path"]) ++
         Enum.map(graph["cookbooks"], & &1["path"]) ++
         Enum.flat_map(graph["fixtures"], &[&1["input_path"], &1["expected_output_path"]])

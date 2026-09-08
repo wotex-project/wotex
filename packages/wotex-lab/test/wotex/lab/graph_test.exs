@@ -35,6 +35,7 @@ defmodule Wotex.Lab.GraphTest do
     assert length(graph["adapters"]) == length(Descriptors.adapters())
     assert length(graph["scenarios"]) == 16
     assert length(graph["completions"]) == 13 + 47
+    assert length(graph["evidence_overlays"]) == length(catalogue["specifications"]) + 16
 
     ids = Enum.map(graph["nodes"], & &1["id"])
     assert ids == Enum.uniq(ids)
@@ -70,6 +71,31 @@ defmodule Wotex.Lab.GraphTest do
              "#{wotex["repository"]}/blob/#{wotex["revision"]}/#{upstream["path"]}"
 
     assert upstream["observed_on"] == index["observed_on"]
+
+    overlay =
+      Enum.find(graph["evidence_overlays"], &(&1["id"] == "wotex_lab:cookbook:parse-td"))
+
+    assert overlay["namespace"] == "wotex_lab"
+    assert overlay["producer"] == "wotex_lab"
+    assert overlay["closure_authority"] == "package_owner"
+    assert overlay["status"] == "executable"
+    assert "WLB-C03" in overlay["completion_ids"]
+    assert "wotex:WTX-C01" in overlay["completion_ids"]
+    assert overlay["evidence_sources"] == ["priv/cookbooks/parse-td.livemd"]
+
+    overlay_node =
+      Enum.find(
+        graph["nodes"],
+        &(&1["id"] == "evidence_overlay:wotex_lab:cookbook:parse-td")
+      )
+
+    assert overlay_node["type"] == "evidence_overlay"
+
+    assert %{
+             "from" => "evidence_overlay:wotex_lab:cookbook:parse-td",
+             "to" => "completion:wotex:WTX-C01",
+             "relation" => "indexes"
+           } in graph["edges"]
 
     package = Enum.find(graph["packages"], &(&1["name"] == "wotex"))
     assert package["catalogue_sha256"] == wotex["catalogue_sha256"]

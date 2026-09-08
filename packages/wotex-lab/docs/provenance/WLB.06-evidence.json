@@ -1,0 +1,67 @@
+{
+  "assertions": [
+    {"id": "WLB-C07:evidence-record", "status": "pass"},
+    {"id": "WLB-C07:owner-scoped-overlay", "status": "pass"},
+    {"id": "WLB-C07:external-td-corpus", "status": "pass"},
+    {"id": "WLB-C07:external-tm-corpus", "status": "pass"},
+    {"id": "WLB-C07:changed-archive-refusal", "status": "pass"},
+    {"id": "WLB-C07:mismatch-and-protocol-classification", "status": "pass"},
+    {"id": "WLB-C07:no-network-private-filesystem", "status": "pass"},
+    {"id": "WLB-C07:resource-ceilings", "status": "pass"},
+    {"id": "WLB-C07:process-tree-cleanup", "status": "pass"},
+    {"id": "WLB-C07:concurrent-run-isolation", "status": "pass"},
+    {"id": "WLB-C07:telemetry-leak-sentinels", "status": "pass"},
+    {"id": "WLB-C07:versioned-fault-schedule", "status": "pass"},
+    {"id": "WLB-C07:benchmark-cohorts", "status": "pass"},
+    {"id": "WLB-C07:manifest-integrity", "status": "pass"},
+    {"id": "WCF-C05:discovery-corpus", "status": "not_run"}
+  ],
+  "attempt": 1,
+  "budgets": {
+    "cpu_seconds": 8,
+    "deadline_ms": 30000,
+    "max_output_bytes": 1048576,
+    "memory_bytes": 8589934592,
+    "processes": 64,
+    "samples": 8
+  },
+  "cleanup": {
+    "details": {"descendants": 0, "ports": 0, "temporary_directories": 0},
+    "status": "ok"
+  },
+  "dependencies": [
+    {"archive": "missing", "name": "wotex", "version": "0.1.0-source"},
+    {"archive": "missing", "name": "wotex_conformance", "version": "0.1.0-source"},
+    {"archive": "missing", "name": "wotex_continuum", "version": "0.1.0-source"},
+    {"archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9", "name": "nx", "version": "0.13.1"},
+    {"archive": "sha256:928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1", "name": "telemetry", "version": "1.4.2"},
+    {"archive": "sha256:b0c823996102bcd0239b3c2444eb00409b72f6a140c1950bc8b457d836b30684", "name": "jason", "version": "1.4.5"},
+    {"archive": "sha256:61ed2a8f07bd115e7ab6d45c147642a8c73b962bc419fadbb248046b9d3d0f20", "name": "ex_json_schema", "version": "0.11.5"},
+    {"archive": "missing", "name": "python", "version": "3.9.6"},
+    {"archive": "missing", "name": "darwin-sandbox-exec", "version": "25.6.0"}
+  ],
+  "durations": {"run_ms": 7890},
+  "fixtures": {
+    "corpus:thing-description-1.1": "sha256:1dc979f8599bbcd0e441bc09c7266169f42bee40384fbacd4ad1e1c2b8caac07",
+    "corpus:thing-model-1.1": "sha256:262e3369986eef648563b5693fdaadab3fa11fb3732cf4db9b7546e2a4af92a7"
+  },
+  "inputs": [
+    "command:WOTEX_PATH_DEPS=1 mix test WLB.06-evidence-files",
+    "containment:darwin-sandbox-exec+contained-exec-1.0.0",
+    "fault-schedule:1.0.0",
+    "excluded-corpus:WCF-C05-discovery-not-applicable-to-core-target"
+  ],
+  "lock_digest": "sha256:7d40df7fa06d21da796f6758413900f4a2c39b5ba69d93c0da077a995d62ac46",
+  "outcomes": {"excluded_count": 1, "test_count": 50, "thing_description_vectors": 14, "thing_model_vectors": 6},
+  "revision": "6d0612e90a0f48d4de1f9eb6a6d0ed8a7e330dd5+workspace-WLB.06-v1.3.0",
+  "scenario_id": "WLB.06-evidence-conformance-and-observability",
+  "schema_version": "1.0.0",
+  "seed": 1,
+  "source_tree_digest": "sha256:4195ff5bc401fccd61dd29077aa757f32c4bc9708950bd22327b2062389fa6cf",
+  "toolchain": {
+    "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
+    "elixir": "1.20.2",
+    "otp": "29",
+    "platform": "aarch64-apple-darwin"
+  }
+}

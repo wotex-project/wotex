@@ -38,7 +38,7 @@
     {"archive": "sha256:9ae72f46d6afc5d95a1de2f5b190a6e24b668f7d3e17b74bbf2f499542b4ce0d", "name": "emqtt", "version": "1.16.0"},
     {"archive": "sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797", "name": "eclipse-mosquitto", "version": "2.1.2"}
   ],
-  "durations": {"run_ms": 19980},
+  "durations": {"run_ms": 20610},
   "fixtures": {
     "loopback/thing-description.json": "sha256:59da3c2a80403a794cbc38bb8a4a91d0d671df481fa2dd441004b4f3c99d90ec"
   },
@@ -49,11 +49,11 @@
   ],
   "lock_digest": "sha256:7d40df7fa06d21da796f6758413900f4a2c39b5ba69d93c0da077a995d62ac46",
   "outcomes": {"broker_enabled": true, "excluded_count": 0, "test_count": 62},
-  "revision": "ee1d14b1bad12abd430b0847d05ad433d52db0e9+workspace-WLB.05-v1.6.0",
+  "revision": "6d0612e90a0f48d4de1f9eb6a6d0ed8a7e330dd5+workspace-WLB.06-v1.3.0",
   "scenario_id": "WLB.05-directory-continuum-and-smart-room",
   "schema_version": "1.0.0",
-  "seed": 735095,
-  "source_tree_digest": "sha256:40df8cd59491981d975ad3bb0256a3341cf0b5f48da6f5cf1f9359636d6e399b",
+  "seed": 1,
+  "source_tree_digest": "sha256:87bd7fd9e0bd561fcf8f62159cb38abbee5374680ccfa69aab6c4cf5fb0d6560",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-BEAM-network",
     "elixir": "1.20.2",
