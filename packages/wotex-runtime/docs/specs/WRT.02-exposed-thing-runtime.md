@@ -1,8 +1,18 @@
 # WRT.02: ExposedThing callback mechanics
 
-Specification: `WRT.02@1.0.0`. Requires `WRT.01@1.0.0`.
+Specification: `WRT.02@1.1.0`. Requires `WRT.01@1.1.0`.
 Package baseline: `wotex_runtime 0.1.0`; see the
 repository completion plan at `docs/plans/wotex-runtime-completion.md` for unproven claims.
+
+## Implemented boundary
+
+The complete callback surface below is implemented without a server process or
+implicit serialization. Repository tests prove that invalid named and
+Thing-level routes never invoke an otherwise available handler, eight blocked
+callbacks enter concurrently in eight caller processes, callback error values
+pass through unchanged, and both raises and exits propagate to the caller.
+These are package-source results; inbound authentication, selected Form,
+schema and policy enforcement remain the consumer server's responsibility.
 
 ## Ownership
 
@@ -80,9 +90,10 @@ consumer limits before invoking this API. The package does not accept inbound
 credentials or perform TLS/authentication; do not place secrets in Context
 metadata, handler error messages or public callback outcomes.
 
-`exposed_thing_test.exs` currently proves route/handler checks and forwarding;
-`library_contract_test.exs` proves the passive package boundary. RT-C03 and
-RT-C04 add independent concurrency and consumer-server negative evidence.
+`exposed_thing_test.exs` proves route/handler checks, no-callback negative
+routes, concurrent caller execution, forwarding and exception propagation;
+`library_contract_test.exs` proves the passive package boundary. RT-C04 adds
+independent consumer-server and archive evidence.
 No HTTP/MQTT server, endpoint, policy framework, canonical Property database or
 full WoT Scripting API implementation is implied. Handler-key changes, exception
 policy changes and stronger Form checks are observable compatibility changes,

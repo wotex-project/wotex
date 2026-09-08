@@ -129,5 +129,86 @@ defmodule Wotex.Runtime.ExposedThingTest do
     assert_raise RuntimeError, "handler failure", fn ->
       ExposedThing.dispatch(raising_exposed, :readproperty, "temperature", nil, context)
     end
+
+    {:ok, exiting_exposed} =
+      ExposedThing.new(td, %{
+        {:readproperty, "temperature"} => fn _input, _context -> exit(:handler_failure) end
+      })
+
+    assert catch_exit(
+             ExposedThing.dispatch(exiting_exposed, :readproperty, "temperature", nil, context)
+           ) == :handler_failure
+  end
+
+  test "invalid routes never invoke an available callback" do
+    parent = self()
+    context = Context.new!(request_id: "req-no-dispatch")
+
+    callback = fn input, _context ->
+      send(parent, {:invoked, input})
+      :unexpected
+    end
+
+    {:ok, exposed} =
+      ExposedThing.new(TDFactory.thing_description(), %{
+        {:readproperty, "temperature"} => callback,
+        readallproperties: callback
+      })
+
+    assert {:error, %Error{code: :affordance_not_found}} =
+             ExposedThing.dispatch(exposed, :readproperty, "missing", nil, context)
+
+    assert {:error, %Error{code: :unsupported_operation}} =
+             ExposedThing.dispatch(exposed, :readallproperties, "temperature", nil, context)
+
+    assert {:error, %Error{code: :invalid_dispatch_input}} =
+             ExposedThing.dispatch(exposed, :readproperty, "temperature", nil, %{})
+
+    refute_receive {:invoked, _input}
+  end
+
+  test "concurrent dispatch stays in each independent caller process" do
+    parent = self()
+
+    handler = fn input, context ->
+      send(parent, {:started, self(), input, context.request_id})
+
+      receive do
+        {:release, ^input} -> {:ok, {input, context.request_id}}
+      end
+    end
+
+    {:ok, exposed} =
+      ExposedThing.new(TDFactory.thing_description(), %{
+        {:readproperty, "temperature"} => handler
+      })
+
+    tasks =
+      for input <- 1..8 do
+        Task.async(fn ->
+          context = Context.new!(request_id: "req-concurrent-#{input}")
+          ExposedThing.dispatch(exposed, :readproperty, "temperature", input, context)
+        end)
+      end
+
+    started =
+      for _index <- 1..8 do
+        assert_receive {:started, caller, input, "req-concurrent-" <> request_input}, 1_000
+        assert Integer.to_string(input) == request_input
+        {caller, input}
+      end
+
+    callers =
+      started
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.uniq()
+
+    assert length(callers) == 8
+    Enum.each(started, fn {caller, input} -> send(caller, {:release, input}) end)
+
+    assert tasks
+           |> Enum.map(&Task.await(&1, 1_000))
+           |> Enum.sort() ==
+             Enum.map(1..8, &{:ok, {&1, "req-concurrent-#{&1}"}})
   end
 end

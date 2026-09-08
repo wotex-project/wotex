@@ -14,15 +14,15 @@ specifications:
     executable_evidence: ["test/wotex/runtime/consumed_thing_test.exs", "test/wotex/runtime/form_selector_test.exs", "test/wotex/runtime/subscription_test.exs", "test/wotex/runtime/value_test.exs", "test/wotex/runtime/library_contract_test.exs"]
     compatibility_classification: "versioned Elixir value/callback contract; pre-release corrections to receiver envelope, result status set, default restart policy and default operations; RT-C02 lifecycle vectors implemented"
   - id: "WRT.02"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WRT.02-exposed-thing-runtime.md"
-    implementation_status: "partial"
+    implementation_status: "implemented"
     standards:
       - {name: "W3C WoT Thing Description 1.1", revision: "Recommendation 2023-12-05", claim: "affordance vocabulary and declared Thing operations only"}
     requires: ["WRT.01"]
     implementation_modules: ["Wotex.Runtime.ExposedThing"]
     executable_evidence: ["test/wotex/runtime/exposed_thing_test.exs", "test/wotex/runtime/library_contract_test.exs"]
-    compatibility_classification: "caller callback API; inbound protocol authorization remains external"
+    compatibility_classification: "caller callback API implemented with concurrent/no-invocation negative evidence; inbound protocol authorization remains external"
   - id: "WRT.03"
     version: "1.0.0"
     path: "docs/specs/WRT.03-thing-level-interactions.md"
