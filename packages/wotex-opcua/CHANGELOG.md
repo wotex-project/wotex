@@ -13,3 +13,4 @@
 
 - Define the target software contract and ordered implementation packages with
   pinned sources, explicit APIs/limits and required software acceptance vectors.
+- Specify Null Variants and the pinned SDK timestamp precision/range boundary.

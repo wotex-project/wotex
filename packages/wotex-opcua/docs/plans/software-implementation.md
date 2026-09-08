@@ -37,7 +37,7 @@ do not silently skip, simulate or weaken the requirement.
 - Acceptance vectors: WOP-V01, WOP-V02, WOP-V03, WOP-V04.
 - Change surface: Address, Binary, Frame, Value and typed bridge schemas.
 - Test destinations: `test/wotex/opcua/typed_values_test.exs`.
-- Done when: Define all new envelope fields/types in code; roundtrip null/empty/arrays/opaque values and retain status/timestamps with bounded allocation.
+- Done when: Define all new envelope fields/types in code; roundtrip null/empty/arrays/opaque values, enforce the SDK DateTime precision/range policy and retain status/timestamp metadata with bounded allocation.
 - Suggested local commit: `feat: preserve typed arrays data values and namespace identity`.
 
 ### WOP-P02: Add persistent secure sdk session ownership

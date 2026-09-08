@@ -50,14 +50,26 @@ LocalizedText and opaque ExtensionObject (encoding NodeId plus bytes/XML body).
 Unknown ExtensionObjects roundtrip as opaque tagged values; do not dynamically
 instantiate classes from names received over the bridge. Numeric field and array
 limits are validated before allocation. DateTime conversion never guesses a
-local timezone. Wire signed length -1 means null; values below -1 are malformed.
+local timezone. The pure binary codec can retain signed 64-bit ticks, but asyncua
+2.0.1 converts service DateTime values to Python datetime with microsecond
+resolution and clamps values outside its date range. The SDK adapter accepts
+DateTime writes only at multiples of ten ticks in 0..2650467743989999990, or the
+explicit maximum-time sentinel 9223372036854775807. Other values fail with
+`:unsupported_datetime_precision` or `:unsupported_datetime_range` before I/O.
+SDK-decoded DateTime values and DataValue timestamps carry metadata
+`datetime_resolution_ns: 1000` and `raw_datetime_ticks_available: false`; they
+are normalized SDK observations, not lossless original wire ticks. Do not infer
+that the missing sub-microsecond digits were zero. Preserve picosecond fields
+separately without claiming they recover the discarded timestamp digits.
+Wire signed length -1 means null; values below -1 are malformed.
 
 Version 1 typed payload shapes are fixed below. A Variant envelope always carries
 `type`, `value`, and optional `dimensions`; the table describes its value field.
 
 | Type | JSON value shape |
 | --- | --- |
-| Boolean/integer/finite float/String | Corresponding JSON scalar, checked against the explicit type width |
+| Null | JSON null only; no dimensions |
+| Boolean/integer/finite float/String | Corresponding JSON scalar, checked against the explicit type width; String may also be null |
 | ByteString | C07 `{ "type": "bytes", "base64": "..." }`, or null |
 | DateTime/StatusCode | Integer ticks / unsigned status number, respectively |
 | Guid | Canonical lowercase hyphenated UUID string |
@@ -199,7 +211,7 @@ probe-required error. A successful TCP connection alone is not healthy UA servic
 | ID | Scenario | Required result |
 | --- | --- | --- |
 | WOP-V01 | Four NodeId encodings, URI reserved characters, namespace reordering | Exact identity; URI re-resolves on each new Session |
-| WOP-V02 | Scalar/array/null/empty, integer/float edges, mismatched dimensions, excessive allocation | Exact typed result or pre-I/O validation error |
+| WOP-V02 | Scalar/array/null/empty, integer/float edges, DateTime precision/range/sentinel, mismatched dimensions, excessive allocation | Exact typed result or pre-I/O validation error; SDK timestamp resolution metadata is explicit |
 | WOP-V03 | DataValue missing/null, Good/Uncertain/Bad, timestamps and unknown ExtensionObject | Presence and full status retained; Bad fails |
 | WOP-V04 | Binary invalid signed lengths, every frame split/coalescing, chunk limit | Tail preserved; bounded failure without allocation amplification |
 | WOP-V05 | Kill bridge during each open phase, EOF, wrong ID/version, late response, log flood | No false success, protocol contamination or leaked child/socket |

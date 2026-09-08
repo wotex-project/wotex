@@ -54,3 +54,11 @@ Session-loss policy, queue/body limits and the direct-CA-only trust restriction
 are library profile choices. New target policy/token/subscription cells still
 require executable evidence; the existing same-stack proof cannot satisfy the
 new independent-peer requirement.
+
+The [pinned DateTime conversion](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/ua/uatypes.py)
+and [binary DateTime codec](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/ua/ua_binary.py)
+were also inspected. SDK conversion divides wire ticks by ten to produce Python
+microseconds and clamps extreme dates; raw 100 ns timestamp precision is not
+available after that conversion. The target explicitly limits accepted SDK
+DateTime writes and marks normalized read resolution. Pure-codec exact ticks
+must not be confused with lossless service-level SDK observations.
