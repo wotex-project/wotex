@@ -31,3 +31,30 @@ returns one status per path. The adapter validates both identities and statuses.
 Read options keep existing subscriptions and disable automatic resubscription.
 The native SDK and a commissioned device were not available for execution;
 API-contract tests do not replace that interoperability gate.
+
+## Software-contract review, 2026-09-08
+
+All source links below pin SDK commit
+`250a9e6c50ee2068107f3c4808b680f5f2925415`, v1.6.0.0:
+
+- [ChipStack](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/python/matter/ChipStack.py)
+  takes a PersistentStorage object, not a pathname.
+- [Storage](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/python/matter/storage/__init__.py)
+  defines PersistentStorage and PersistentStorageJSON. The sample JSON backend
+  can log a load/save exception and continue; .10 requires an explicit durable
+  first-party implementation that fails closed and never recreates missing identity.
+- [CertificateAuthority](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/python/matter/CertificateAuthority.py)
+  and [FabricAdmin](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/python/matter/FabricAdmin.py)
+  define explicit authority/fabric/controller creation and shutdown.
+- [ChipDeviceCtrl](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/python/matter/ChipDeviceCtrl.py)
+  defines typed interactions, CommissionOnNetwork and OpenCommissioningWindow.
+- [Attribute subscriptions](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/python/matter/clusters/Attribute.py)
+  expose update/recovery callbacks and Shutdown. Bounded retry/continuity policy
+  in .10 is library policy rather than an SDK guarantee of gap-free event history.
+- [Python build script](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/scripts/build_python.sh)
+  and [host target definitions](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/scripts/build/build/targets.py)
+  define the explicit Linux no-BLE software fixture builds.
+
+These inspected implementation APIs make the adapter buildable without invented
+normative clause citations. Full Matter 1.6 normative-text access remains absent;
+SDK-derived software behavior and CSA certification are different claims.

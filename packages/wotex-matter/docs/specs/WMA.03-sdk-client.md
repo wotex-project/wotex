@@ -16,8 +16,9 @@ policy. Factories must not initialize or modify unrelated consumer stores.
 
 Each request owns one Python process and one factory context. The process
 boundary is newline JSON capped at 128 KiB with a correlated request ID. Native
-stdout is suppressed, while stderr is captured into the same bounded Port and
-therefore makes the structured response fail closed. SDK logs cannot masquerade
+stdout/stderr are redirected to a sink after the dedicated response descriptor
+is acquired. Output emitted before that isolation still reaches the bounded Port
+and causes malformed structured response failure. SDK logs cannot masquerade
 as responses. No exception text or settings are returned to the caller. The
 BEAM-side timeout covers the external process, while the Python timeout covers
 the asynchronous operation; factories must keep synchronous startup/cleanup and
