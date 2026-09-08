@@ -1,6 +1,6 @@
 # WRT.01: ConsumedThing runtime mechanics
 
-Specification: `WRT.01@1.2.0`. Package baseline: `wotex_runtime 0.1.0`.
+Specification: `WRT.01@1.3.0`. Package baseline: `wotex_runtime 0.1.0`.
 Implementation and evidence coverage are recorded in the catalogue and
 repository completion plan at `docs/plans/wotex-runtime-completion.md`; this document is not a gate result.
 
@@ -30,8 +30,9 @@ effect, clocks, and supervision.
    deadline: an integer is a `System.monotonic_time(:millisecond)` instant on
    the calling node, a `DateTime` is a UTC wall-clock instant, and
    `Context.remaining_ms/2` derives the remaining budget from a clock reading
-   the port takes itself. The package MUST NOT call a clock or generate
-   identity.
+   the port takes itself. Planning and retry/budget decisions MUST NOT read a
+   clock or generate identity. Telemetry may read clocks only for event timing;
+   those readings MUST NOT select or authorize an interaction or retry.
 5. Security declarations MUST be passed to a credential port immediately before
    execution. Credential material MUST NOT enter public request values or errors.
 6. Short operations MUST run in the caller process.
@@ -145,7 +146,18 @@ through the core value API rather than re-deriving them.
 
 Current retry defaults admit `readproperty` and `queryaction`; all other
 operations require explicit `idempotent?: true`. Attempts and delays are
-consumer inputs, not runtime scheduling. Current transport/credential exception
+consumer inputs, not runtime scheduling. Retry admission MUST reject operations
+outside the Runtime vocabulary, unknown or duplicate option keys, improper
+lists, non-boolean idempotence, non-positive/non-integer attempt counts and
+negative/non-integer delays with `:stop`, without raising. Only `:attempt`,
+`:max_attempts`, `:delay` and `:idempotent?` are accepted; admission examines at
+most five list cells. A retry requires `0 < attempt < max_attempts`. Defaults
+remain attempt 1, maximum 1 and delay 0. `retry_test.exs` covers malformed
+inputs and the operation/class/idempotence/budget matrix. This stricter
+pre-release admission supersedes permissive malformed-input behavior; valid
+retry decisions and the no-scheduling boundary are unchanged.
+
+Current transport/credential exception
 propagation and callback-return correlation are covered by the RT-C02 vectors;
 a tagged-error test is not an exception-isolation test.
 

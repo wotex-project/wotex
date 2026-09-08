@@ -77,8 +77,9 @@ context =
   Wotex.Runtime.ConsumedThing.read_property(consumed, "temperature", context)
 ```
 
-The consumer creates request identifiers and deadlines. Wotex Runtime does not
-read a clock, generate identity, or infer a default transport. Fixed Runtime
+The consumer creates request identifiers and deadlines. Runtime planning and
+retry/budget decisions do not read a clock, generate identity, or infer a default
+transport; telemetry reads clocks only to measure events. Fixed Runtime
 admission limits are available from `Wotex.Runtime.Limits`: 256 request-id
 bytes, 64 top-level metadata entries, 32 binding profiles, and 128 Forms for a
 single interaction scan. Nested metadata and interaction payload bounds remain

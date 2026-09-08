@@ -2,6 +2,9 @@
 
 ## 0.1.0
 
+- Stop on malformed or ambiguous retry options and unknown operations; require
+  positive attempt counts and explicit boolean idempotence without raising.
+
 - Bind the scoped Decimal advisory acknowledgement to the exact reviewed lock
   cohort and default parser-limit regressions; document the metadata conflict.
 
