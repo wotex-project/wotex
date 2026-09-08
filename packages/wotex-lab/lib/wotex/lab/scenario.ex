@@ -46,6 +46,25 @@ defmodule Wotex.Lab.Scenario do
     }
   end
 
+  @doc false
+  @spec revalidate(term()) :: {:ok, t()} | {:error, Error.t()}
+  def revalidate(%__MODULE__{} = scenario) do
+    case new(
+           id: scenario.id,
+           title: scenario.title,
+           capabilities: scenario.capabilities,
+           seed: scenario.seed,
+           max_steps: scenario.max_steps
+         ) do
+      {:ok, rebuilt} when rebuilt == scenario -> {:ok, rebuilt}
+      {:ok, _rebuilt} -> {:error, Error.new(:invalid_scenario, :preflight, "scenario is forged")}
+      {:error, error} -> {:error, %{error | phase: :preflight}}
+    end
+  end
+
+  def revalidate(_scenario),
+    do: {:error, Error.new(:invalid_scenario, :preflight, "scenario is invalid")}
+
   defp valid_fields?(%{id: id, title: title, capabilities: caps, seed: seed, max_steps: steps}) do
     Options.identifier?(id) and is_binary(title) and byte_size(title) in 1..256 and
       String.valid?(title) and valid_capabilities?(caps) and

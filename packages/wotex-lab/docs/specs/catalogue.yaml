@@ -26,9 +26,9 @@ specifications:
       - "test/wotex/lab/library_contract_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.02
-    version: "0.1.0"
+    version: "0.1.1"
     path: docs/specs/WLB.02-scenarios-and-reference-components.md
-    implementation_status: partial
+    implementation_status: implemented
     evidence_status: partial
     adoption_status: reference_available
     standards:
@@ -42,8 +42,16 @@ specifications:
     implementation_modules:
       - "Wotex.Lab.Scenario"
       - "Wotex.Lab.Plugin"
+      - "Wotex.Lab.Component"
+      - "Wotex.Lab.Runner"
+      - "Wotex.Lab.Runner.Attempt"
+      - "Wotex.Lab.Runner.Budgets"
+      - "Wotex.Lab.Runner.Definition"
+      - "Wotex.Lab.Runner.Host"
+      - "Wotex.Lab.Runner.Recording"
     executable_evidence:
       - "test/wotex/lab/scenario_test.exs"
+      - "test/wotex/lab/runner_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.03
     version: "1.1.0"

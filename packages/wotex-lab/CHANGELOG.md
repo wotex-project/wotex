@@ -73,6 +73,10 @@
   component with a budget measurement.
 - Accepted WLB.01–WLB.11 specifications and versioned completion contract.
 - Explicit instance supervision, bounded scenario descriptors and plugin port.
+- Revision-pinned scenario definitions and an explicit trusted-component host,
+  with strict plugin manifests and dependency pins, preflight reconstruction of
+  forged structs, unique bounded attempts, monitored callback execution,
+  partial-start unwind, cancellation, cleanup and deterministic logical replay.
 - Deterministic public-API Nx example with explicit units/backend and inert output.
 - Source provenance, metadata validation and package quality gates.
 - PromEx/ETS/GreptimeDB/BeamLens and lean Phoenix LiveView workbench contracts.

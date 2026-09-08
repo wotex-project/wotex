@@ -1,6 +1,6 @@
 # WLB.02: Scenarios and reference components
 
-Specification version: 0.1.0. Contract: accepted.
+Specification version: 0.1.1. Contract: accepted.
 
 ## Public descriptor foundation
 
@@ -61,6 +61,11 @@ limits, fixture support, evidence references and cleanup contract. It MUST NOT
 redefine W3C affordances or claim unsupported binding cells. HTTP, MQTT,
 Directory, Nx.Serving, ex_maude, MCP, dashboard and BeamLens use this same port.
 Extension activation is optional per instance, not optional programme completion.
+The string-keyed manifest fields are `id`, `version`, `capabilities`, `package`,
+`behaviours`, `configuration`, `ownership`, `limits`, `fixtures`, `evidence`,
+`cleanup`, `instance_scope` and `dependencies`. Instance scope is
+`"per_instance"`. Dependencies map package strings to exact version strings;
+the host supplies its inspected versions and refuses a missing or unequal pin.
 
 For host-scoped integrations such as PromEx or BeamLens, the instance plugin
 is a scoped bridge to an explicitly supplied host service. It MUST NOT start a
