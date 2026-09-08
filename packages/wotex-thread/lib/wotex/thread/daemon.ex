@@ -81,7 +81,7 @@ defmodule Wotex.Thread.Daemon do
   Parses a response to one read command, removing its optional echo.
 
   State, version and network name results are validated strings. RLOC16 results
-  are unsigned 16-bit integers; the OpenThread invalid address `ffff` becomes
+  are unsigned 16-bit integers; the OpenThread invalid address `fffe` becomes
   `nil`. Missing completion returns `:more`. Invalid or additional output
   returns a structured error without including the received text.
   """
@@ -161,7 +161,7 @@ defmodule Wotex.Thread.Daemon do
   defp typed_value(value, :rloc16) do
     if Regex.match?(~r/\A[0-9a-f]{4}\z/, value) do
       {locator, ""} = Integer.parse(value, 16)
-      {:ok, if(locator == 0xFFFF, do: nil, else: locator)}
+      {:ok, if(locator == 0xFFFE, do: nil, else: locator)}
     else
       {:error, Error.new(:invalid_response)}
     end

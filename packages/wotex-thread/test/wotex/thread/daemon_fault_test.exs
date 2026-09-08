@@ -40,6 +40,8 @@ defmodule Wotex.Thread.DaemonFaultTest do
            }
   end
 
+  @tag sdk_revision: "5c8c318627954c99cd1a957a290bbd4b1027d04b",
+       sdk_sources: ["include/openthread/platform/radio.h", "src/core/thread/mle_types.hpp"]
   test "WTH-S02 WTH-V03 admits exactly one typed result and its matching optional echo" do
     for role <- ~w(disabled detached child router leader) do
       assert Daemon.parse("state\r\n#{role}\r\nDone\r\n> ", :state) == {:ok, role}
@@ -47,8 +49,9 @@ defmodule Wotex.Thread.DaemonFaultTest do
     end
 
     assert {:ok, 0} = Daemon.parse("0000\nDone\n", :rloc16)
-    assert {:ok, 0xFFFE} = Daemon.parse("rloc16\nfffe\nDone\n", :rloc16)
-    assert {:ok, nil} = Daemon.parse("ffff\nDone\n", :rloc16)
+    assert {:ok, 0xFFFD} = Daemon.parse("rloc16\nfffd\nDone\n", :rloc16)
+    assert {:ok, nil} = Daemon.parse("fffe\nDone\n", :rloc16)
+    assert {:ok, 0xFFFF} = Daemon.parse("ffff\nDone\n", :rloc16)
 
     assert {:ok, "OpenThread/1.4.0; POSIX"} =
              Daemon.parse("OpenThread/1.4.0; POSIX\nDone\n", :version)
