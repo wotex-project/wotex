@@ -2,6 +2,11 @@
 
 ## 0.1.0 — source foundation
 
+- Renew all eight owner source inputs and WLB.04/05/06/09 seam evidence after
+  their independent quality gates, exact Decimal review guards and core/Nx
+  contract corrections. Historical source pins and unproved artifact/lifecycle
+  obligations are not promoted by these source results.
+
 - Greptime bridge admission revalidates snapshots and rejects equal or
   rolled-back capture timestamps before history/export. Loss and failed writes
   do not rewind its lifetime-local watermark; retries preserve their identity.

@@ -19,8 +19,8 @@
   "packages": [
     {
       "package": "wotex",
-      "files": 38,
-      "sha256": "728c9d420fd4276fe510108e9bfacd425a6b393f4280b48e2da844fbd592325c"
+      "files": 39,
+      "sha256": "79f2dba7e7ca99bca5d15f98affdbd3209bc40a9b47561e43a17e4df2d2e19e9"
     },
     {
       "package": "wotex_runtime",
@@ -34,28 +34,28 @@
     },
     {
       "package": "wotex_binding_mqtt",
-      "files": 37,
-      "sha256": "434d6307ee6f14fd5b6a7fc29c131f3cd39e9fb991582307cad5b3b2fe02b8ae"
+      "files": 38,
+      "sha256": "2ebf0acc46138265106b86dab40011325c76b1a3f19308b63354f4c0aaa61016"
     },
     {
       "package": "wotex_directory",
-      "files": 48,
-      "sha256": "2122422d30a85f33b071ff8c5aabcbe216a4b7557f8b8c7c94cf23c758f76578"
+      "files": 49,
+      "sha256": "b39d84cff1bd6d03899cc78f298f03a8d864640549a4b5c7cad7eea54b153c64"
     },
     {
       "package": "wotex_continuum",
-      "files": 84,
-      "sha256": "93463f4a996f5d627146c89fa0ea06f34c931cd0050418bddff4678ba5084989"
+      "files": 85,
+      "sha256": "54e65932f34aac49b77a07a4cd8822ccba2d40bdc49a1e97582a2ddeaae2ec27"
     },
     {
       "package": "wotex_conformance",
-      "files": 80,
-      "sha256": "bce25690e11161bb1e2f5f2c967ba0d394edb8866c5abe1a953dac314986c5ea"
+      "files": 81,
+      "sha256": "15f02ef465625e0489f7a4efb5c81b3e591e69d788a1c0c51528b1b13295044b"
     },
     {
       "package": "wotex_nx",
-      "files": 38,
-      "sha256": "297189e07a4d43f2f63e95233069f91a864c210d1e7d88ecce5675d488e55231"
+      "files": 39,
+      "sha256": "cd5e370d585accdaa332024f8aaf32ceb52e6d30399ae9750e7883d6775cd330"
     }
   ]
 }

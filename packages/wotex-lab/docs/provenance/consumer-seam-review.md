@@ -123,3 +123,48 @@ attempt `7b4bef25cec0018565a7962ed3f3b07a` passes 336 tests with no exclusions,
 with broker, Greptime and Maude enabled and source guards matching before/after.
 The record still excludes full reference/artifact and outer-runner-containment
 acceptance; a successful request remains distinct from a durable row count.
+
+## Complete owner quality-cohort renewal
+
+Review date: 2026-09-08. The six remaining owners now carry the same exact
+Decimal 3.1.1 metadata-conflict review and parser/lock regression guard. No
+dependency version is changed, no subject dependency enters Conformance, and
+no numerical backend, clock, transport or storage authority is added. Core's
+completion baseline 1.1.0 explicitly replaces its obsolete invalid-limit
+fallback description with the already implemented WTX.03 refusal/preflight
+contract. Nx's WNX.01 v1.2.0 reconciles the old scan-based table with its actual
+selection-work score; 108 budget-boundary combinations and the existing
+exhaustive selection properties preserve behavior. Nx and Directory's dynamic
+invalid-constructor vectors also pass test compilation with warnings as errors.
+
+All eight owners run their own full quality gate against this source cohort:
+
+| Owner revision | Cases | Coverage |
+| --- | ---: | ---: |
+| core `8be2f24c02d832b3bb40b610566896d3c51b7059` | 77, including one property | 100.0% |
+| Runtime `c9c336a61e6b3cd8a1cd00f3ed7b52fb74a40aa6` | 66 | 95.6% |
+| HTTP `b9fd354cfd843daa3bdfab38c667234191e992a5` | 66, including two properties | 97.2% |
+| MQTT `56119aa684b0f53dfb40b03f3b49d9fd23b2f264` | 61 | 97.7% |
+| Directory `15ac9a7949423f08c44b8ddd15ab682c3b5e6d20` | 79 | 95.7% |
+| Continuum `2e3567d50aba14bde68c0bffa8782675750d1589` | 50, including one property | 96.5% |
+| Conformance `df3a009d2bb66542f4ee5843a1e737a3010218de` | 68, including one doctest | 96.5% |
+| Nx `7d18925312c22256e63e9bdfb780e9ec24845287` | 53, including four properties | 95.1% |
+
+Conformance and Continuum compilation is renewed after cleaning their generated
+development/test application builds. Directory also builds docs in the docs
+environment. HTTP's default absent-package Gettext/Sobelow probes remain
+inapplicable. Upstream development-dependency compiler warnings in archive
+reconstruction are visible; these results do not claim a warning-free dependency
+closure. Existing owner archive checks retain their documented narrower scope.
+The reviewed content guard matches all eight owners; the historical source index
+is unchanged. Renewed WLB.04/05/06/09 source records bind this cohort, not missing
+published archives. During WLB.05 renewal, repeated in-VM cookbook evaluation
+also emitted a module-redefinition warning; the passing suite does not establish
+isolated cookbook compilation.
+
+The renewed Lab root gate passes all 17 checks (311 cases, 25 optional-lane
+exclusions, 95.3% coverage). The Workbench gate passes all 13 checks (59 cases,
+93.2% coverage and five chart JavaScript checks). The separate reference attempt
+`b9dee4382a138959c98e825eeed122e9` passes 336 cases without exclusions, with
+broker, Greptime and Maude enabled and matching source guards before/after.
+These are source-cohort results, not full artifact or runner-containment proof.
