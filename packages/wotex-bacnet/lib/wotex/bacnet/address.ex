@@ -1,6 +1,6 @@
 defmodule Wotex.BACnet.Address do
   @moduledoc "Typed BACnet object/property addressing, including array-index zero and write priority."
-  alias Wotex.BACnet.Error
+  alias Wotex.BACnet.{Error, Value}
 
   @objects %{
     analog_input: 0,
@@ -66,11 +66,23 @@ defmodule Wotex.BACnet.Address do
 
   @doc "Validates legacy message addressing and requires an explicit write value."
   @spec validate_message(map()) :: :ok | {:error, Error.t()}
-  def validate_message(message) do
-    with {:ok, _} <- new(message) do
-      if message.type == :write_property and not Map.has_key?(message, :value),
-        do: {:error, Error.new(:missing_value)},
-        else: :ok
+  def validate_message(%{type: type} = message) when type in [:read_property, :write_property] do
+    with {:ok, address} <- new(message) do
+      validate_operation(type, address, message)
+    end
+  end
+
+  def validate_message(_), do: {:error, Error.new(:invalid_message)}
+
+  defp validate_operation(:read_property, %{priority: nil}, _), do: :ok
+
+  defp validate_operation(:read_property, _, _),
+    do: {:error, Error.new(:invalid_priority, :priority)}
+
+  defp validate_operation(:write_property, _, message) do
+    case Map.fetch(message, :value) do
+      {:ok, value} -> Value.validate_native(value)
+      :error -> {:error, Error.new(:missing_value)}
     end
   end
 

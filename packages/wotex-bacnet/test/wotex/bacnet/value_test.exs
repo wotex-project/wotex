@@ -24,10 +24,10 @@ defmodule Wotex.BACnet.ValueTest do
     for {name, value} <- [
           {"Real", 1.0e100},
           {"Boolean", 1},
-          {"Signed", 2_147_483_648},
+          {"Signed", 9_223_372_036_854_775_808},
           {"Unsigned", -1},
           {"String", <<255>>},
-          {"OctetString", String.duplicate("x", 4097)},
+          {"OctetString", String.duplicate("x", 65_537)},
           {"Unknown", 1}
         ],
         do: assert(match?({:error, _}, Value.encode(value, %{"@type" => "bacv:" <> name})))

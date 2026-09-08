@@ -19,7 +19,16 @@ defmodule Wotex.BACnet.IPv4 do
 
     with true <- valid_options?(local_ip, local_port, timeout),
          {:ok, _} <-
-           BACstack.connect(stack_client: self(), destination: Keyword.get(opts, :destination)),
+           BACstack.connect(
+             stack_client: self(),
+             destination: Keyword.get(opts, :destination),
+             peer_receive:
+               Keyword.get(opts, :peer_receive, %{
+                 max_apdu: 50,
+                 max_segments: 1,
+                 segmentation: :no_segmentation
+               })
+           ),
          {:ok, owner} <-
            StackOwner.start_link(
              local_ip: local_ip,
@@ -32,7 +41,14 @@ defmodule Wotex.BACnet.IPv4 do
            BACstack.connect(
              stack_client: client,
              destination: Keyword.get(opts, :destination),
-             writes: true
+             writes: true,
+             peer_receive:
+               Keyword.get(opts, :peer_receive, %{
+                 max_apdu: 50,
+                 max_segments: 1,
+                 segmentation: :no_segmentation
+               }),
+             receive_limits: %{max_apdu: 1476, max_segments: 32, max_bytes: 65_536}
            ) do
       {:ok, %{owner: owner, stack: stack}}
     else
@@ -61,7 +77,7 @@ defmodule Wotex.BACnet.IPv4 do
     if Keyword.keyword?(opts) do
       keys = Keyword.keys(opts)
 
-      keys -- [:local_ip, :local_port, :destination, :timeout] == [] and
+      keys -- [:local_ip, :local_port, :destination, :timeout, :peer_receive] == [] and
         length(keys) == MapSet.size(MapSet.new(keys))
     else
       false

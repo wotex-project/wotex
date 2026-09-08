@@ -1,9 +1,9 @@
 defmodule Wotex.BACnet.StackOwner do
   @moduledoc "Monitored owner for an isolated BACstack process group with zero APDU retries."
   use GenServer
-  alias BACnet.Stack.{Client, Segmentator, SegmentsStore}
+  alias BACnet.Stack.{Client, Segmentator}
   alias BACnet.Stack.Transport.IPv4Transport
-  alias Wotex.BACnet.Error
+  alias Wotex.BACnet.{Error, SegmentsStore}
 
   @doc "Starts the explicit process group and unwinds partial startup failures."
   @spec start_link(keyword()) :: {:ok, pid()} | {:error, term()}
@@ -44,8 +44,13 @@ defmodule Wotex.BACnet.StackOwner do
        fn _ ->
          IPv4Transport.open(owner, local_ip: opts[:local_ip], bacnet_port: opts[:local_port])
        end},
-      {:segmentator, fn _ -> Segmentator.start_link([]) end},
-      {:segments_store, fn _ -> SegmentsStore.start_link([]) end},
+      {:segmentator,
+       fn _ -> Segmentator.start_link(apdu_retries: 0, apdu_timeout: opts[:timeout]) end},
+      # BACstack 0.0.1 start_link/1 drops max_segments before init/1.
+      {:segments_store,
+       fn _ ->
+         SegmentsStore.start_link(opts[:timeout])
+       end},
       {:client,
        fn group ->
          Client.start_link(
@@ -59,8 +64,14 @@ defmodule Wotex.BACnet.StackOwner do
     ]
 
     case start_group(steps, %{}) do
-      {:ok, group} -> {:ok, Map.put(group, :monitor, Process.monitor(opts[:owner]))}
-      {:error, _} -> {:stop, Error.new(:startup_failed)}
+      {:ok, group} ->
+        {:ok,
+         group
+         |> Map.put(:monitor, Process.monitor(opts[:owner]))
+         |> Map.put(:portal, IPv4Transport.get_portal(group.transport))}
+
+      {:error, _} ->
+        {:stop, Error.new(:startup_failed)}
     end
   end
 
@@ -68,7 +79,11 @@ defmodule Wotex.BACnet.StackOwner do
   def handle_call(:client, _, state), do: {:reply, {:ok, state.client}, state}
 
   @impl GenServer
-  def handle_info({:bacnet_transport, _, _, _, _} = message, state) do
+  def handle_info(
+        {:bacnet_transport, {_, IPv4Transport}, _, {:apdu, _, _, bytes}, portal} = message,
+        %{portal: portal} = state
+      )
+      when is_binary(bytes) and byte_size(bytes) <= 1476 do
     send(state.client, message)
     {:noreply, state}
   end

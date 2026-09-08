@@ -62,7 +62,7 @@ defmodule Wotex.BACnet.PortTest do
                object_type: :analog_output,
                instance: 1,
                property: :present_value,
-               value: 1.5
+               value: Elixir.BACnet.Protocol.ApplicationTags.Encoding.create!({:real, 1.5})
              })
 
     assert {:error, %{effect: :none}} = BACnet.send(conn, %{type: :read_property})
