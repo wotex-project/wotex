@@ -1,0 +1,605 @@
+{
+  "format_version": "1.0.0",
+  "specification": "WOP.11@1.0.0",
+  "execution_status": "specified_unexecuted",
+  "description": "Concrete selected cases; executable bindings and independent-peer evidence are still required.",
+  "cases": [
+    {
+      "id": "WOP-F01",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V01",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_node_id/1",
+      "input": {
+        "binary_hex": "0001aabb"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": "ns=0;i=1",
+          "tail_hex": "aabb"
+        }
+      }
+    },
+    {
+      "id": "WOP-F02",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V01",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_node_id/1",
+      "input": {
+        "binary_hex": "02020040e20100"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": "ns=2;i=123456",
+          "tail_hex": ""
+        }
+      }
+    },
+    {
+      "id": "WOP-F03",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V02",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_variant/1",
+      "input": {
+        "binary_hex": "860200000001000000ffffffffaa"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "type": "Int32",
+            "array": true,
+            "value": [
+              1,
+              -1
+            ]
+          },
+          "tail_hex": "aa"
+        }
+      }
+    },
+    {
+      "id": "WOP-F04",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V02",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_variant/1",
+      "input": {
+        "binary_hex": "86ffffffff"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "type": "Int32",
+            "array": true,
+            "value": null
+          },
+          "tail_hex": ""
+        }
+      }
+    },
+    {
+      "id": "WOP-F05",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V02",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_variant/1",
+      "input": {
+        "binary_hex": "8600000000"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "type": "Int32",
+            "array": true,
+            "value": []
+          },
+          "tail_hex": ""
+        }
+      }
+    },
+    {
+      "id": "WOP-F06",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V02",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_variant/1",
+      "input": {
+        "binary_hex": "00"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "type": "Null",
+            "array": false,
+            "value": null
+          },
+          "tail_hex": ""
+        }
+      }
+    },
+    {
+      "id": "WOP-F07",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V03",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_data_value/1",
+      "input": {
+        "binary_hex": "03010000000000"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "has_value": true,
+            "value": {
+              "type": "Boolean",
+              "array": false,
+              "value": false
+            },
+            "status": 0
+          },
+          "tail_hex": ""
+        }
+      }
+    },
+    {
+      "id": "WOP-F08",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V04",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_variant/1",
+      "input": {
+        "binary_hex": "86feffffff"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "invalid_binary",
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-F09",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V01",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_expanded_node_id/1",
+      "input": {
+        "binary_hex": "c0010500000075726e3a7802000000aa"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "node_id": "ns=0;i=1",
+            "namespace_uri": "urn:x",
+            "server_index": 2
+          },
+          "tail_hex": "aa"
+        }
+      }
+    },
+    {
+      "id": "WOP-F10",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V02",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_variant/1",
+      "input": {
+        "binary_hex": "1a02000000dead"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "type": "Reserved",
+            "type_id": 26,
+            "array": false,
+            "value": {
+              "type": "bytes",
+              "base64": "3q0="
+            }
+          },
+          "tail_hex": ""
+        }
+      }
+    },
+    {
+      "id": "WOP-F11",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V03",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_data_value/1",
+      "input": {
+        "binary_hex": "140a000000000000001027"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "has_value": false,
+            "status": 0,
+            "source_timestamp": 10,
+            "source_picoseconds": 9999
+          },
+          "tail_hex": ""
+        }
+      }
+    },
+    {
+      "id": "WOP-F12",
+      "requirements": [
+        "WOP-S01",
+        "WOP-V03",
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_data_value/1",
+      "input": {
+        "binary_hex": "102a00"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "has_value": false,
+            "status": 0
+          },
+          "tail_hex": ""
+        }
+      }
+    },
+    {
+      "id": "WOP-F13",
+      "requirements": [
+        "WOP-N02"
+      ],
+      "tier": "pure",
+      "operation": "Binary.decode_reference_description/1",
+      "input": {
+        "binary_hex": "002f01010201000200010000007802010000007802000000003faa"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ok": {
+            "reference_type_id": "ns=0;i=47",
+            "is_forward": true,
+            "node_id": {
+              "node_id": "ns=2;i=1",
+              "namespace_uri": null,
+              "server_index": 0
+            },
+            "browse_name": {
+              "namespace": 2,
+              "name": "x"
+            },
+            "display_name": {
+              "locale": null,
+              "text": "x"
+            },
+            "node_class": 2,
+            "type_definition": {
+              "node_id": "ns=0;i=63",
+              "namespace_uri": null,
+              "server_index": 0
+            }
+          },
+          "tail_hex": "aa"
+        }
+      }
+    },
+    {
+      "id": "WOP-F14",
+      "requirements": [
+        "WOP-N03",
+        "WOP-N04"
+      ],
+      "tier": "lifecycle_contract",
+      "operation": "Browse.references then release",
+      "input": {
+        "session_generation": 1,
+        "node_id": "ns=0;i=85",
+        "options": {
+          "page_size": 1,
+          "max_pages": 2,
+          "max_references": 2,
+          "timeout_ms": 100
+        },
+        "events": [
+          {
+            "at_ms": 10,
+            "event": "browse_result",
+            "status": 0,
+            "references": [
+              {
+                "reference_type_id": "ns=0;i=47",
+                "is_forward": true,
+                "node_id": {
+                  "node_id": "ns=2;i=1",
+                  "namespace_uri": null,
+                  "server_index": 0
+                },
+                "browse_name": {
+                  "namespace": 2,
+                  "name": "x"
+                },
+                "display_name": {
+                  "locale": null,
+                  "text": "x"
+                },
+                "node_class": 2,
+                "type_definition": {
+                  "node_id": "ns=0;i=63",
+                  "namespace_uri": null,
+                  "server_index": 0
+                }
+              }
+            ],
+            "continuation_hex": "0102"
+          },
+          {
+            "at_ms": 20,
+            "event": "caller_release",
+            "handle": "h1"
+          },
+          {
+            "at_ms": 21,
+            "event": "release_response",
+            "status": 0,
+            "results": [],
+            "diagnostic_infos": []
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "sent_services": [
+            {
+              "service": "browse",
+              "requested_max_references_per_node": 1
+            },
+            {
+              "service": "browse_next",
+              "release_continuation_points": true,
+              "continuation_hex": "0102"
+            }
+          ],
+          "page": {
+            "references": [
+              {
+                "reference_type_id": "ns=0;i=47",
+                "is_forward": true,
+                "node_id": {
+                  "node_id": "ns=2;i=1",
+                  "namespace_uri": null,
+                  "server_index": 0
+                },
+                "browse_name": {
+                  "namespace": 2,
+                  "name": "x"
+                },
+                "display_name": {
+                  "locale": null,
+                  "text": "x"
+                },
+                "node_class": 2,
+                "type_definition": {
+                  "node_id": "ns=0;i=63",
+                  "namespace_uri": null,
+                  "server_index": 0
+                }
+              }
+            ],
+            "status": 0,
+            "continuation": "h1"
+          },
+          "release": "ok",
+          "active_continuations": 0,
+          "session_open": true
+        }
+      }
+    },
+    {
+      "id": "WOP-F15",
+      "requirements": [
+        "WOP-N03",
+        "WOP-N04"
+      ],
+      "tier": "lifecycle_contract",
+      "operation": "Browse.references then deadline",
+      "input": {
+        "session_generation": 1,
+        "node_id": "ns=0;i=85",
+        "options": {
+          "page_size": 1,
+          "max_pages": 2,
+          "max_references": 2,
+          "timeout_ms": 100
+        },
+        "events": [
+          {
+            "at_ms": 10,
+            "event": "browse_result",
+            "status": 0,
+            "references": [
+              {
+                "reference_type_id": "ns=0;i=47",
+                "is_forward": true,
+                "node_id": {
+                  "node_id": "ns=2;i=1",
+                  "namespace_uri": null,
+                  "server_index": 0
+                },
+                "browse_name": {
+                  "namespace": 2,
+                  "name": "x"
+                },
+                "display_name": {
+                  "locale": null,
+                  "text": "x"
+                },
+                "node_class": 2,
+                "type_definition": {
+                  "node_id": "ns=0;i=63",
+                  "namespace_uri": null,
+                  "server_index": 0
+                }
+              }
+            ],
+            "continuation_hex": "0102"
+          },
+          {
+            "at_ms": 100,
+            "event": "advance_clock"
+          },
+          {
+            "at_ms": 1100,
+            "event": "advance_clock"
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "sent_services": [
+            "browse",
+            "browse_release",
+            "close_session",
+            "close_channel"
+          ],
+          "active_continuations": 0,
+          "active_owned_native_tasks": 0,
+          "session_open": false,
+          "deadline_renewals": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-F16",
+      "requirements": [
+        "WOP-N03",
+        "WOP-N04"
+      ],
+      "tier": "lifecycle_contract",
+      "operation": "Browse.next lost response",
+      "input": {
+        "session_generation": 1,
+        "node_id": "ns=0;i=85",
+        "options": {
+          "page_size": 1,
+          "max_pages": 2,
+          "max_references": 2,
+          "timeout_ms": 100
+        },
+        "events": [
+          {
+            "at_ms": 10,
+            "event": "browse_result",
+            "status": 0,
+            "references": [
+              {
+                "reference_type_id": "ns=0;i=47",
+                "is_forward": true,
+                "node_id": {
+                  "node_id": "ns=2;i=1",
+                  "namespace_uri": null,
+                  "server_index": 0
+                },
+                "browse_name": {
+                  "namespace": 2,
+                  "name": "x"
+                },
+                "display_name": {
+                  "locale": null,
+                  "text": "x"
+                },
+                "node_class": 2,
+                "type_definition": {
+                  "node_id": "ns=0;i=63",
+                  "namespace_uri": null,
+                  "server_index": 0
+                }
+              }
+            ],
+            "continuation_hex": "0102"
+          },
+          {
+            "at_ms": 20,
+            "event": "caller_next",
+            "handle": "h1"
+          },
+          {
+            "at_ms": 100,
+            "event": "advance_clock"
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "sent_services": [
+            "browse",
+            "browse_next",
+            "close_session",
+            "close_channel"
+          ],
+          "next_result": {
+            "error": {
+              "code": "deadline_exceeded",
+              "effect": "none"
+            }
+          },
+          "active_continuations": 0,
+          "active_owned_native_tasks": 0,
+          "session_open": false
+        }
+      }
+    }
+  ]
+}

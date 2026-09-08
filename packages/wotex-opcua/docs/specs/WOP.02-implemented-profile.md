@@ -1,3 +1,13 @@
+---
+spec:
+  id: WOP.02
+  title: "Implemented OPC UA profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-opcua
+  updated: 2026-09-09
+---
+
 # WOP.02 Implemented OPC UA profile
 
 The OPC 10101 URI subset is

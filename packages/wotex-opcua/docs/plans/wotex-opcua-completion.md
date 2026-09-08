@@ -30,6 +30,12 @@ durable acceptance contract, not a progress tracker.
 
 The concrete software scope, API and state-machine decisions are in
 [WOP.00](../specs/WOP.00-library-contract.md) and
-[WOP.10](../specs/WOP.10-software-contract.md). Follow the
+[WOP.10](../specs/WOP.10-software-contract.md), plus
+[WOP.11 standalone client and preservation](../specs/WOP.11-standalone-client-and-preservation.md). Follow the
 [ordered implementation sequence](software-implementation.md) for required
 software fixtures, vector traceability, validation and local commits.
+
+The [WOP.12 integration contract](../specs/WOP.12-wotex-integration.md) and
+[versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
+requires both native protocol workflows and supported cells through public core/Runtime
+APIs. Dependency artifacts and local source evidence remain separately identified.

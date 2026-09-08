@@ -1,6 +1,16 @@
+---
+spec:
+  id: WOP.10
+  title: "Complete secure OPC UA client software profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-opcua
+  updated: 2026-09-09
+---
+
 # WOP.10 Complete secure OPC UA client software profile
 
-Read [WOP.00](WOP.00-library-contract.md) and the [implementation sequence](../plans/software-implementation.md).
+Read [WOP.00](WOP.00-library-contract.md), [WOP.11 standalone client and preservation](WOP.11-standalone-client-and-preservation.md), and the [implementation sequence](../plans/software-implementation.md).
 Baseline `35a9137` implements concrete NodeIds, scalar codecs, Forms and a
 one-shot asyncua bridge with secure same-stack negative tests. Persistent
 Sessions, richer values, subscriptions and independent secure interoperability
@@ -10,8 +20,9 @@ are requirements below, not existing achievements.
 
 Use OPC 10000 Parts 4/6 1.05.07, Part 2 1.05.06, Part 7 1.05.02 and OPC 10101
 1.00, pinned in [primary sources](../provenance/primary-sources.md).
-Required services are Read, Write, Call, namespace resolution, secure channel/
-Session lifecycle, and data-change monitored subscriptions. Browse/history,
+Required services are Read, Write, Call, bounded Browse/BrowseNext/release,
+namespace resolution, secure channel/Session lifecycle, and data-change
+monitored subscriptions. WOP.11 specifies the complete browse contract. History,
 PubSub, redundant-server failover, event filters, reverse connect, discovery
 server hosting and a native BEAM security stack are separate profiles.
 No certification is claimed.
@@ -19,7 +30,8 @@ No certification is claimed.
 Use pinned asyncua 2.0.1 behind the first-party persistent Python bridge.
 The SDK owns UA TCP framing, secure channel token renewal, Session activation,
 Publish/Republish and protocol security operations. Existing pure `Binary` and
-`Frame` modules remain independently tested values; do not turn them into a
+`Frame` modules remain independently tested values and grow the public pure
+contracts in WOP-N02; do not turn them into a
 second security implementation around SDK traffic. A consumer-selected custom
 Client remains an explicit port with its own trust/ownership obligations.
 
@@ -35,17 +47,18 @@ Concrete namespace is 0..65535; numeric ID 0..4294967295; string identifier at m
 Percent-decoded Form identity must roundtrip reserved `;`, `=`, `&`, `?`, `%`.
 
 Preserve scalar `Value.encode/2`; add explicit array envelope
-`%{type: type_name, value: flat_list_or_nil, dimensions: dimensions_or_nil}`.
+`%{type: type_name, array: true, value: flat_list_or_nil}` with optional
+`dimensions: [positive_integer]`. Scalars explicitly carry `array: false`.
 Nil array, empty array and scalar null differ. Dimensions are positive integers,
-at most eight, whose checked product equals element count; omit dimensions for
-a one-dimensional array. Limit 1024 elements, 64 KiB per string/ByteString and
+at least two and at most eight, whose checked product equals element count;
+omit dimensions for a one-dimensional, empty or null array. Limit 1024 elements, 64 KiB per string/ByteString and
 1 MiB total native value; the 128 KiB bridge line limit may reject a smaller
 serialized result with `:response_limit`, never truncate it. No type inference
 from a JSON number. Preserve all existing scalar widths, signed zero and finite
 float limits; non-finite numbers fail before JSON serialization.
 
 Add typed DateTime (UTC integer ticks of 100 ns since 1601-01-01, signed 64-bit),
-Guid (canonical text), NodeId, StatusCode (unsigned 32-bit), QualifiedName,
+Guid (canonical text), NodeId, ExpandedNodeId, StatusCode (unsigned 32-bit), QualifiedName,
 LocalizedText and opaque ExtensionObject (encoding NodeId plus bytes/XML body).
 Unknown ExtensionObjects roundtrip as opaque tagged values; do not dynamically
 instantiate classes from names received over the bridge. Numeric field and array
@@ -64,21 +77,37 @@ separately without claiming they recover the discarded timestamp digits.
 Wire signed length -1 means null; values below -1 are malformed.
 
 Version 1 typed payload shapes are fixed below. A Variant envelope always carries
-`type`, `value`, and optional `dimensions`; the table describes its value field.
+`type`, `array`, `value`, and optional `dimensions`; `array` is a required Boolean
+on the bridge, not inferred from value shape. The table describes an element
+value field. `array: false` requires an element payload; `array: true` requires an
+ordered list of element payloads or JSON null. Reject dimensions on scalar, null
+array or empty array. Null Variants are scalar-only.
 
 | Type | JSON value shape |
 | --- | --- |
-| Null | JSON null only; no dimensions |
+| Null | JSON null only; `array: false`, no dimensions |
 | Boolean/integer/finite float/String | Corresponding JSON scalar, checked against the explicit type width; String may also be null |
 | ByteString | C07 `{ "type": "bytes", "base64": "..." }`, or null |
 | DateTime/StatusCode | Integer ticks / unsigned status number, respectively |
 | Guid | Canonical lowercase hyphenated UUID string |
 | NodeId | Canonical NodeId text accepted by Address.new/1 |
+| ExpandedNodeId | `{ "node_id": "ns=0;i=1", "namespace_uri": null, "server_index": 0 }`; WOP-N02 defines URI/index rules |
 | QualifiedName | `{ "namespace": 0, "name": "..." }`; name may be null |
 | LocalizedText | `{ "locale": null, "text": null }`; both keys required, each null or UTF-8 |
-| ExtensionObject | `{ "encoding_id": "ns=0;i=...", "encoding": "binary", "body": { "type": "bytes", "base64": "..." } }`; encoding is binary or xml, null body is explicit |
+| ExtensionObject | `{ "encoding_id": "ns=0;i=...", "encoding": "binary", "body": { "type": "bytes", "base64": "..." } }`; encoding is none, binary or xml; none requires null body, and binary/xml preserve an explicit null body separately |
 
-Array envelopes contain an ordered list of those element payloads or a null array.
+The supported built-in type IDs are 0..15 and 17..22. XmlElement (16),
+DataValue-as-Variant (23), Variant arrays (24) and DiagnosticInfo (25) are outside
+this value profile and fail `:unsupported_type`. This does not exclude the
+standalone DataValue decoder containing a supported Variant. On binary decode,
+future type IDs 26..31 must be retained as `{ "type": "Reserved", "type_id": n,
+"array": false, "value": bytes_or_null }`, or the corresponding byte-payload
+array with `array: true`; do not guess a known type. This read-only envelope
+retains the numeric type ID. Encoders and SDK writes reject Reserved with
+`:unsupported_type`; IDs 32..63 fail `:invalid_binary`. The pinned SDK exposes
+custom Variant type IDs: the bridge must preserve their numeric ID and bytes in
+the same read-only envelope. It must not infer a known type from their value.
+
 Reject unknown keys and malformed payload/type combinations. Keep existing
 one-shot result shapes through an explicit version translation, not permissive
 guessing. Namespace-URI addresses are native API values in this milestone;
@@ -89,7 +118,12 @@ with optional `source_timestamp`, `server_timestamp`, `source_picoseconds` and
 `server_picoseconds`. When has_value is false, omit value; when true, a typed
 null Variant is valid. Timestamp fields use the S01 DateTime tick representation.
 DataValue validation requires value-presence, Variant type, unsigned StatusCode and
-optional source/server timestamps with picosecond fractions 0..9999. Absence is
+optional source/server timestamps. Writes require picosecond fractions 0..9999
+and the corresponding timestamp. Pure binary decode follows Part 6: encoded
+fractions >=10000 normalize to 9999; fractions without their matching timestamp
+are consumed but omitted from the semantic value. These fields count 10 ps
+intervals. The source/server fields must not be interchanged. SDK observations
+retain the same normalized rule. Absence is
 distinct from a present null Variant. Good and Uncertain status preserve value
 and full status metadata; Bad severity returns a structured failure retaining
 the status. Uncertain must never be relabelled Good. A service-wide success
@@ -98,15 +132,16 @@ cannot erase individual Write/Call result statuses.
 ## WOP-S02 — Persistent bridge and resource lifecycle
 
 Add explicit `lifecycle: :persistent` to `Asyncua.connect/1`; retain the baseline
-one-shot mode as a documented read/write/Call compatibility adapter. Persistent
+one-shot mode as a documented read/write/browse/Call compatibility adapter. Persistent
 mode is required for subscriptions. Its `connect/1` returns only after channel
 creation, CreateSession, ActivateSession and namespace initialization succeed.
 Use WOP-C07 versioned envelopes; fail an unsupported bridge version explicitly.
 Version 1 is an intentional new executable contract, not silent compatibility
 with arbitrary unversioned third-party programs.
 
-Bridge operations are `open`, `read`, `write`, `call`, `subscribe`, `unsubscribe`,
-`health`, `close`. Open contains validated endpoint/security/authentication and
+Bridge operations are `open`, `read`, `write`, `call`, `browse`, `browse_next`,
+`browse_release`, `subscribe`, `unsubscribe`, `health`, `close`. Browse payloads
+and ownership follow WOP-N03/N04. Open contains validated endpoint/security/authentication and
 finite Session timeout (default 60000 ms, range 1000..3600000, server revision
 retained). Read/write accept one concrete node and optional index range; this
 profile rejects nonempty index ranges until an explicit range implementation is
@@ -206,7 +241,7 @@ Return typed arrays and metadata through Runtime only after complete validation.
 Add `health_check/2` with a concrete read probe; `health_check/1` keeps its
 probe-required error. A successful TCP connection alone is not healthy UA service.
 
-## Acceptance vectors
+## Acceptance scenario families
 
 | ID | Scenario | Required result |
 | --- | --- | --- |

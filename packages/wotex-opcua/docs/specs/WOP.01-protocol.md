@@ -1,3 +1,13 @@
+---
+spec:
+  id: WOP.01
+  title: "OPC UA protocol and graduation contract"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-opcua
+  updated: 2026-09-09
+---
+
 # WOP.01 OPC UA protocol and graduation contract
 
 OPC Foundation Part 4 and Part 6 revision 1.05.07 (2026-04-15), Part 2

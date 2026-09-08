@@ -62,3 +62,31 @@ microseconds and clamps extreme dates; raw 100 ns timestamp precision is not
 available after that conversion. The target explicitly limits accepted SDK
 DateTime writes and marks normalized read resolution. Pure-codec exact ticks
 must not be confused with lossless service-level SDK observations.
+
+## Standalone-client and binary review, 2026-09-09
+
+OPC 10000-4 1.05.07 [Browse, 5.9.2](https://reference.opcfoundation.org/specs/OPC-10000-4/5.9.2)
+and [BrowseNext, 5.9.3](https://reference.opcfoundation.org/specs/OPC-10000-4/5.9.3)
+were reviewed for full reference fields, page limits, original-Session ownership
+and release. The [pinned asyncua Node source](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/common/node.py)
+uses requested reference count zero and accumulates continuation pages in its
+convenience path. WOP.11 therefore requires direct service calls with bounded
+pages, consuming local handles and an absolute deadline. The extra numeric caps
+and conservative Session-close fallback are library policies.
+
+OPC 10000-6 1.05.07 [Variant, 5.2.2.16](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.16)
+requires retaining future IDs 26..31 as ByteString-like values while prohibiting
+their use by encoders. [DataValue, 5.2.2.17](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.17)
+distinguishes write validation from decoded picosecond normalization. These
+clauses corrected the target's previous blanket unknown-type/range rejection.
+[ExpandedNodeId, 5.2.2.10](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.10)
+preserves URI/server identity; the target normalizes the ignored namespace index
+to zero when a URI is present.
+
+The exact WOP-F01..F07, F09, F10 and F13 byte examples were independently decoded
+through the installed pinned asyncua 2.0.1 scalar/structure codecs. Their NodeIds,
+array/null distinction, Boolean DataValue, future Variant type, full reference
+fields and unconsumed tails matched the specified values. F08 malformed handling,
+F11/F12 normalization and all lifecycle cases remain contract expectations rather
+than upstream execution claims. None is evidence that the new Wotex pure or
+stateful API has been implemented; executable acceptance bindings remain work.

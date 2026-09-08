@@ -78,6 +78,16 @@ No remote repository, published package or publication action is implied.
 
 The [ordered implementation sequence](docs/plans/software-implementation.md)
 and [specification index](docs/specs/WOP-index.md) define the remaining software
-profile with exact behavior, limits, failure transitions and acceptance vectors.
+profile with exact behavior, limits, failure transitions and acceptance scenario families.
 These target contracts are build instructions, not claims that every feature
 already exists. Required software peers are separate from physical-device tests.
+
+The [WOP.11 standalone client contract](docs/specs/WOP.11-standalone-client-and-preservation.md)
+records required native APIs, preserved protocol assets and concrete specified
+fixtures. These cases are not passing evidence until executable bindings run.
+
+The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
+profiles from planned contracts. The [Wotex integration contract](docs/specs/WOP.12-wotex-integration.md)
+defines explicit Runtime profiles, route/value/error boundaries and real
+ConsumedThing acceptance tests. These are target requirements; a passing baseline
+gate does not accept the unfinished software profile.

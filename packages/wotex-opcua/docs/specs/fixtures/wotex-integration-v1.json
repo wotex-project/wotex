@@ -1,0 +1,287 @@
+{
+  "format": "wotex.protocol.integration",
+  "version": "1.0.0",
+  "status": "specified_unexecuted",
+  "requirements": [
+    "WOP-I02",
+    "WOP-I03",
+    "WOP-I06",
+    "WOP-I04"
+  ],
+  "cases": [
+    {
+      "id": "WOP-I-F01",
+      "operation": "runtime_read",
+      "input": {
+        "thing_description": {
+          "@context": [
+            "https://www.w3.org/2022/wot/td/v1.1",
+            {
+              "example": "urn:example:"
+            }
+          ],
+          "id": "urn:example:opcua:fixture",
+          "title": "Protocol fixture",
+          "securityDefinitions": {
+            "none": {
+              "scheme": "nosec"
+            }
+          },
+          "security": [
+            "none"
+          ],
+          "properties": {
+            "reading": {
+              "readOnly": true,
+              "forms": [
+                {
+                  "href": "opc.tcp://127.0.0.1:4840/server?id=ns%3D2%3Bi%3D42",
+                  "op": "readproperty",
+                  "example:extension": {
+                    "keep": [
+                      false,
+                      0,
+                      null
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "profile_mode": "oneshot",
+        "request_id": "read-1",
+        "affordance": "reading",
+        "peer_reply": {
+          "kind": "client_return",
+          "value": {
+            "type": "Boolean",
+            "value": false,
+            "status": 0
+          }
+        },
+        "clock": {
+          "kind": "monotonic_ms",
+          "start": 0,
+          "deadline": 1000
+        },
+        "transport_options": {
+          "timeout": 1000,
+          "client": "scripted_client",
+          "target": "opc.tcp://127.0.0.1:4840/server"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "profile_id": "opcua",
+          "resolved_href": "opc.tcp://127.0.0.1:4840/server?id=ns%3D2%3Bi%3D42",
+          "command": {
+            "type": "read",
+            "node_id": "ns=2;i=42"
+          },
+          "result": {
+            "request_id": "read-1",
+            "operation": "readproperty",
+            "status": "ok",
+            "payload": false,
+            "metadata": {
+              "opcua_type": "Boolean",
+              "status": 0
+            }
+          },
+          "extension": {
+            "keep": [
+              false,
+              0,
+              null
+            ]
+          },
+          "request_count": 1,
+          "owned_resources_after": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-I-F02",
+      "requirements": [
+        "WOP-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "read_timeout",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "deadline_exceeded",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "timeout",
+          "cause_code": "deadline_exceeded",
+          "retained_native_effect": false,
+          "retry_decision": {
+            "retry": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-I-F03",
+      "requirements": [
+        "WOP-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "peer_unavailable",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "connection_failed",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "unavailable",
+          "cause_code": "connection_failed",
+          "retained_native_effect": false,
+          "retry_decision": {
+            "retry": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-I-F04",
+      "requirements": [
+        "WOP-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "admission_full",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "busy",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "rate_limited",
+          "cause_code": "busy",
+          "retained_native_effect": false,
+          "retry_decision": {
+            "retry": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-I-F05",
+      "requirements": [
+        "WOP-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "wrong_correlation",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "response_mismatch",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "protocol",
+          "cause_code": "response_mismatch",
+          "retained_native_effect": false,
+          "retry_decision": "stop"
+        }
+      }
+    },
+    {
+      "id": "WOP-I-F06",
+      "requirements": [
+        "WOP-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "invalid_route",
+        "wot_operation": "readproperty",
+        "native_error": {
+          "code": "target_mismatch",
+          "effect": "none"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "permanent",
+          "cause_code": "target_mismatch",
+          "retained_native_effect": false,
+          "retry_decision": "stop"
+        }
+      }
+    },
+    {
+      "id": "WOP-I-F07",
+      "requirements": [
+        "WOP-I04"
+      ],
+      "operation": "error_retry_projection",
+      "input": {
+        "fault": "sent_write_timeout",
+        "wot_operation": "writeproperty",
+        "native_error": {
+          "code": "deadline_exceeded",
+          "effect": "unknown"
+        },
+        "retry_options": {
+          "attempt": 1,
+          "max_attempts": 2,
+          "delay": 0,
+          "idempotent?": true
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "class": "permanent",
+          "cause_code": "deadline_exceeded",
+          "retained_native_effect": false,
+          "retry_decision": "stop"
+        }
+      }
+    }
+  ]
+}
