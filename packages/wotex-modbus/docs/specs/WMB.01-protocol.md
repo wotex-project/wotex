@@ -1,3 +1,13 @@
+---
+spec:
+  id: WMB.01
+  title: "Modbus values and TCP exchanges"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-modbus
+  updated: 2026-09-09
+---
+
 # WMB.01 Modbus values and TCP exchanges
 
 ## Ownership and revision

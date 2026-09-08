@@ -1,8 +1,20 @@
+---
+spec:
+  id: WMB.00
+  title: "Software implementation rules"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-modbus
+  updated: 2026-09-09
+---
+
 # WMB.00 Software implementation rules
 
 This is a target contract for the library's software completion milestone.
 Requirements below are not claims that the current code already implements them.
-Read this file with [WMB.10](WMB.10-software-contract.md), the existing
+Read this file with [WMB.10](WMB.10-software-contract.md),
+[standalone client preservation](WMB.11-standalone-client-and-preservation.md),
+[Wotex integration](WMB.12-wotex-integration.md), and the existing
 protocol specifications, and [the implementation sequence](../plans/software-implementation.md).
 `CLAUDE.md` governs repository boundaries. Exact protocol requirements come from
 the revisions in [primary sources](../provenance/primary-sources.md); limits and
@@ -88,7 +100,8 @@ handle startup exits with equivalent caller-safe semantics.
 ## WMB-C04 — Errors, effects and retry
 
 Keep `%Wotex.Modbus.Error{}` with fields `code`, `field`, `details`,
-`retryable` and `effect`.
+`retryable`, `effect` and the additive Runtime retry `class` defined in .12 I04.
+Unknown-effect mutations must be non-retryable through both native and Runtime APIs.
 `code` and `field` use library-owned atoms; details contain bounded counts,
 status numbers and non-secret path identity. Never include credentials, raw
 bridge settings, protocol payloads, stack traces or arbitrary exception strings.
@@ -217,8 +230,10 @@ Avoid a global registry for sessions, receivers or protocol IDs.
 
 ## WMB-C09 — Mandatory software evidence
 
-Each requirement ID in WMB.10 has an acceptance vector with expected output,
-not just a list of test categories. Add valid, invalid, boundary, forged-struct,
+Each requirement ID in WMB.10/.11/.12 requires concrete acceptance cases with
+exact inputs and expected output. The V tables are scenario families, not
+executed vectors. Bind concrete fixture IDs to actual assertions before accepting
+a requirement; fixture presence alone is insufficient. Add valid, invalid, boundary, forged-struct,
 extension-preservation, lifecycle and late-message cases. Generate bounded random
 frames/values and retain the seed for failures. Test every split of representative
 stream frames plus coalescing, replay and truncation. Use local software peers;

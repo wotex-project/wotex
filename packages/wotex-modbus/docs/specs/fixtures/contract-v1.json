@@ -1,0 +1,1161 @@
+{
+  "format": "wotex-protocol-contract",
+  "version": "1.0.0",
+  "specification": "WMB.11@1.0.0",
+  "evidence_status": "specified_cases_only",
+  "cases": [
+    {
+      "id": "WMB-F-FC01",
+      "requirements": [
+        "WMB-D01",
+        "WMB-D02",
+        "WMB-S01",
+        "WMB-S02"
+      ],
+      "scenarios": [
+        "WMB-V01",
+        "WMB-V04"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "read_coils",
+          "offset": 19,
+          "input": 10,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "000100000005010102cd01"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "00010000000601010013000a",
+          "result": {
+            "status": "ok",
+            "value": [
+              true,
+              false,
+              true,
+              true,
+              false,
+              false,
+              true,
+              true,
+              true,
+              false
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FC02",
+      "requirements": [
+        "WMB-D01",
+        "WMB-D02",
+        "WMB-S01",
+        "WMB-S02"
+      ],
+      "scenarios": [
+        "WMB-V01",
+        "WMB-V04"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "read_discrete_inputs",
+          "offset": 0,
+          "input": 3,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "00010000000401020105"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "000100000006010200000003",
+          "result": {
+            "status": "ok",
+            "value": [
+              true,
+              false,
+              true
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FC03",
+      "requirements": [
+        "WMB-D01",
+        "WMB-D02",
+        "WMB-S01",
+        "WMB-S02"
+      ],
+      "scenarios": [
+        "WMB-V01",
+        "WMB-V04"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "read_holding_registers",
+          "offset": 0,
+          "input": 2,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "00010000000701030400010002"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "000100000006010300000002",
+          "result": {
+            "status": "ok",
+            "value": [
+              1,
+              2
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FC04",
+      "requirements": [
+        "WMB-D01",
+        "WMB-D02",
+        "WMB-S01",
+        "WMB-S02"
+      ],
+      "scenarios": [
+        "WMB-V01",
+        "WMB-V04"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "read_input_registers",
+          "offset": 8,
+          "input": 1,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "0001000000050104021234"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "000100000006010400080001",
+          "result": {
+            "status": "ok",
+            "value": [
+              4660
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FC05",
+      "requirements": [
+        "WMB-D01",
+        "WMB-D02",
+        "WMB-S01",
+        "WMB-S02"
+      ],
+      "scenarios": [
+        "WMB-V01",
+        "WMB-V04"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "write_coil",
+          "offset": 19,
+          "input": true,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "00010000000601050013ff00"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "00010000000601050013ff00",
+          "result": {
+            "status": "ok",
+            "value": "written"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FC06",
+      "requirements": [
+        "WMB-D01",
+        "WMB-D02",
+        "WMB-S01",
+        "WMB-S02"
+      ],
+      "scenarios": [
+        "WMB-V01",
+        "WMB-V04"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "write_holding_register",
+          "offset": 10,
+          "input": 4660,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "0001000000060106000a1234"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "0001000000060106000a1234",
+          "result": {
+            "status": "ok",
+            "value": "written"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FC15",
+      "requirements": [
+        "WMB-D01",
+        "WMB-D02",
+        "WMB-S01",
+        "WMB-S02"
+      ],
+      "scenarios": [
+        "WMB-V01",
+        "WMB-V04"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "write_coils",
+          "offset": 19,
+          "input": [
+            true,
+            false,
+            true,
+            true,
+            false,
+            false,
+            true,
+            true,
+            true,
+            false
+          ],
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "000100000006010f0013000a"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "000100000009010f0013000a02cd01",
+          "result": {
+            "status": "ok",
+            "value": "written"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FC16",
+      "requirements": [
+        "WMB-D01",
+        "WMB-D02",
+        "WMB-S01",
+        "WMB-S02"
+      ],
+      "scenarios": [
+        "WMB-V01",
+        "WMB-V04"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "write_holding_registers",
+          "offset": 10,
+          "input": [
+            16844,
+            0
+          ],
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "0001000000060110000a0002"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "00010000000b0110000a00020441cc0000",
+          "result": {
+            "status": "ok",
+            "value": "written"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-WRONG-TID",
+      "requirements": [
+        "WMB-S02",
+        "WMB-D04"
+      ],
+      "scenarios": [
+        "WMB-V04",
+        "WMB-V05"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "read_holding_registers",
+          "offset": 0,
+          "input": 2,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "00020000000701030400010002"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "000100000006010300000002",
+          "result": {
+            "status": "error",
+            "error": {
+              "code": "response_mismatch",
+              "field": null,
+              "details": {},
+              "retryable": false,
+              "effect": "none"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-WRONG-UNIT",
+      "requirements": [
+        "WMB-S02",
+        "WMB-D04"
+      ],
+      "scenarios": [
+        "WMB-V04",
+        "WMB-V05"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "read_holding_registers",
+          "offset": 0,
+          "input": 2,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "00010000000702030400010002"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "000100000006010300000002",
+          "result": {
+            "status": "error",
+            "error": {
+              "code": "response_mismatch",
+              "field": null,
+              "details": {},
+              "retryable": false,
+              "effect": "none"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-EXCEPTION-02",
+      "requirements": [
+        "WMB-S02",
+        "WMB-D04"
+      ],
+      "scenarios": [
+        "WMB-V04",
+        "WMB-V05"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "read_holding_registers",
+          "offset": 0,
+          "input": 2,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "000100000003018302"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "000100000006010300000002",
+          "result": {
+            "status": "error",
+            "error": {
+              "code": "remote_exception",
+              "field": null,
+              "details": {
+                "exception_code": 2,
+                "function": 3
+              },
+              "retryable": false,
+              "effect": "none"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-EXCEPTION-FF",
+      "requirements": [
+        "WMB-S02",
+        "WMB-D04"
+      ],
+      "scenarios": [
+        "WMB-V04",
+        "WMB-V05"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "read_holding_registers",
+          "offset": 0,
+          "input": 2,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "0001000000030183ff"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "000100000006010300000002",
+          "result": {
+            "status": "error",
+            "error": {
+              "code": "remote_exception",
+              "field": null,
+              "details": {
+                "exception_code": 255,
+                "function": 3
+              },
+              "retryable": false,
+              "effect": "none"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-EXCEPTION-EXTRA",
+      "requirements": [
+        "WMB-S02",
+        "WMB-D04"
+      ],
+      "scenarios": [
+        "WMB-V04",
+        "WMB-V05"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "read_holding_registers",
+          "offset": 0,
+          "input": 2,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "00010000000401830200"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "000100000006010300000002",
+          "result": {
+            "status": "error",
+            "error": {
+              "code": "invalid_response",
+              "field": null,
+              "details": {},
+              "retryable": false,
+              "effect": "none"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-BYTE-COUNT",
+      "requirements": [
+        "WMB-S02",
+        "WMB-D04"
+      ],
+      "scenarios": [
+        "WMB-V04",
+        "WMB-V05"
+      ],
+      "tier": "pure",
+      "operation": "codec.exchange",
+      "input": {
+        "command": {
+          "operation": "read_holding_registers",
+          "offset": 0,
+          "input": 2,
+          "unit_id": 1
+        },
+        "transaction_id": 1,
+        "response_hex": "0001000000050103020001"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "request_hex": "000100000006010300000002",
+          "result": {
+            "status": "error",
+            "error": {
+              "code": "invalid_response",
+              "field": null,
+              "details": {},
+              "retryable": false,
+              "effect": "none"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FRAME-INCOMPLETE",
+      "requirements": [
+        "WMB-S02",
+        "WMB-D04"
+      ],
+      "scenarios": [
+        "WMB-V03"
+      ],
+      "tier": "pure",
+      "operation": "codec.decode",
+      "input": {
+        "hex": "000100000007010304000100"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "more"
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FRAME-TAIL",
+      "requirements": [
+        "WMB-S02",
+        "WMB-D04"
+      ],
+      "scenarios": [
+        "WMB-V03"
+      ],
+      "tier": "pure",
+      "operation": "codec.decode",
+      "input": {
+        "hex": "000100000007010304000100020002"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "frame": {
+            "transaction_id": 1,
+            "unit_id": 1,
+            "pdu_hex": "030400010002"
+          },
+          "tail_hex": "0002"
+        }
+      }
+    },
+    {
+      "id": "WMB-F-MBAP-TOO-LARGE",
+      "requirements": [
+        "WMB-S02",
+        "WMB-D04"
+      ],
+      "scenarios": [
+        "WMB-V03"
+      ],
+      "tier": "pure",
+      "operation": "codec.decode",
+      "input": {
+        "hex": "0001000000ff"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_mbap",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-RANGE-LAST",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V01"
+      ],
+      "tier": "pure",
+      "operation": "command.new",
+      "input": {
+        "operation": "read_holding_registers",
+        "offset": 65535,
+        "input": 1,
+        "unit_id": 255
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": {
+            "function": 3,
+            "address": {
+              "offset": 65535,
+              "quantity": 1,
+              "unit_id": 255
+            },
+            "values": []
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-RANGE-OVERFLOW",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V01"
+      ],
+      "tier": "pure",
+      "operation": "command.new",
+      "input": {
+        "operation": "read_holding_registers",
+        "offset": 65535,
+        "input": 2,
+        "unit_id": 1
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "address_overflow",
+            "field": "quantity",
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-QUANTITY-126",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V01"
+      ],
+      "tier": "pure",
+      "operation": "command.new",
+      "input": {
+        "operation": "read_holding_registers",
+        "offset": 0,
+        "input": 126,
+        "unit_id": 1
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_quantity",
+            "field": "quantity",
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FORGED-FUNCTION",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V02"
+      ],
+      "tier": "pure",
+      "operation": "command.forged_encode",
+      "input": {
+        "function": 256,
+        "address": {
+          "offset": 0,
+          "quantity": 1,
+          "unit_id": 1
+        },
+        "values": [],
+        "transaction_id": 1
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_command",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-ORDER-BIG-BIG",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V06"
+      ],
+      "tier": "pure",
+      "operation": "value.encode",
+      "input": {
+        "value": 287454020,
+        "kind": "uint32",
+        "options": [
+          [
+            "byte_order",
+            "big"
+          ],
+          [
+            "word_order",
+            "big"
+          ]
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": [
+            4386,
+            13124
+          ]
+        }
+      }
+    },
+    {
+      "id": "WMB-F-ORDER-BIG-LITTLE",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V06"
+      ],
+      "tier": "pure",
+      "operation": "value.encode",
+      "input": {
+        "value": 287454020,
+        "kind": "uint32",
+        "options": [
+          [
+            "byte_order",
+            "big"
+          ],
+          [
+            "word_order",
+            "little"
+          ]
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": [
+            13124,
+            4386
+          ]
+        }
+      }
+    },
+    {
+      "id": "WMB-F-ORDER-LITTLE-BIG",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V06"
+      ],
+      "tier": "pure",
+      "operation": "value.encode",
+      "input": {
+        "value": 287454020,
+        "kind": "uint32",
+        "options": [
+          [
+            "byte_order",
+            "little"
+          ],
+          [
+            "word_order",
+            "big"
+          ]
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": [
+            8721,
+            17459
+          ]
+        }
+      }
+    },
+    {
+      "id": "WMB-F-ORDER-LITTLE-LITTLE",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V06"
+      ],
+      "tier": "pure",
+      "operation": "value.encode",
+      "input": {
+        "value": 287454020,
+        "kind": "uint32",
+        "options": [
+          [
+            "byte_order",
+            "little"
+          ],
+          [
+            "word_order",
+            "little"
+          ]
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": [
+            17459,
+            8721
+          ]
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FLOAT32",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V06"
+      ],
+      "tier": "pure",
+      "operation": "value.encode",
+      "input": {
+        "value": 25.5,
+        "kind": "float32",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": [
+            16844,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "id": "WMB-F-INT16-NEGATIVE",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V06"
+      ],
+      "tier": "pure",
+      "operation": "value.decode",
+      "input": {
+        "registers": [
+          65535
+        ],
+        "kind": "int16",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "ok",
+          "value": -1
+        }
+      }
+    },
+    {
+      "id": "WMB-F-FLOAT-NAN",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V06"
+      ],
+      "tier": "pure",
+      "operation": "value.decode",
+      "input": {
+        "registers": [
+          32704,
+          0
+        ],
+        "kind": "float32",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_value",
+            "field": "value",
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-WIDTH",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V06"
+      ],
+      "tier": "pure",
+      "operation": "value.decode",
+      "input": {
+        "registers": [
+          1
+        ],
+        "kind": "uint32",
+        "options": []
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_value",
+            "field": "registers",
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-DUPLICATE-ORDER",
+      "requirements": [
+        "WMB-S01",
+        "WMB-D02"
+      ],
+      "scenarios": [
+        "WMB-V06"
+      ],
+      "tier": "pure",
+      "operation": "value.encode",
+      "input": {
+        "value": 1,
+        "kind": "uint16",
+        "options": [
+          [
+            "byte_order",
+            "big"
+          ],
+          [
+            "byte_order",
+            "little"
+          ]
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "status": "error",
+          "error": {
+            "code": "invalid_order",
+            "field": null,
+            "details": {},
+            "retryable": false,
+            "effect": "none"
+          }
+        }
+      }
+    },
+    {
+      "id": "WMB-F-WRITE-UNCERTAINTY",
+      "requirements": [
+        "WMB-S02",
+        "WMB-S03",
+        "WMB-D03",
+        "WMB-D04"
+      ],
+      "scenarios": [
+        "WMB-V04",
+        "WMB-V08"
+      ],
+      "tier": "lifecycle_contract",
+      "operation": "session.trace",
+      "input": {
+        "endpoint": {
+          "host": "127.0.0.1",
+          "port": 1502,
+          "unit_id": 1
+        },
+        "initial_transaction_id": 1,
+        "events": [
+          {
+            "at_ms": 0,
+            "event": "call",
+            "id": "write1",
+            "operation": "write_holding_register",
+            "offset": 10,
+            "input": 4660,
+            "deadline_ms": 100
+          },
+          {
+            "at_ms": 1,
+            "event": "peer_close"
+          },
+          {
+            "at_ms": 1,
+            "event": "drain"
+          },
+          {
+            "at_ms": 2,
+            "event": "call",
+            "id": "write2",
+            "operation": "write_holding_register",
+            "offset": 10,
+            "input": 2,
+            "deadline_ms": 100
+          },
+          {
+            "at_ms": 3,
+            "event": "drain"
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "outbound_hex": [
+            "0001000000060106000a1234"
+          ],
+          "results": {
+            "write1": {
+              "status": "error",
+              "error": {
+                "code": "transport_error",
+                "field": null,
+                "details": {
+                  "reason": "closed"
+                },
+                "retryable": false,
+                "effect": "unknown"
+              }
+            },
+            "write2": {
+              "status": "error",
+              "error": {
+                "code": "connection_closed",
+                "field": null,
+                "details": {},
+                "retryable": false,
+                "effect": "none"
+              }
+            }
+          },
+          "owned_resources": {
+            "sockets": 0,
+            "owners": 0,
+            "pending_calls": 0
+          }
+        }
+      }
+    }
+  ]
+}

@@ -30,6 +30,12 @@ durable acceptance contract, not a progress tracker.
 
 The concrete software scope, API and state-machine decisions are in
 [WMB.00](../specs/WMB.00-library-contract.md) and
-[WMB.10](../specs/WMB.10-software-contract.md). Follow the
+[WMB.10](../specs/WMB.10-software-contract.md), plus the mandatory
+[WMB.11 standalone/preservation contract](../specs/WMB.11-standalone-client-and-preservation.md). Follow the
 [ordered implementation sequence](software-implementation.md) for required
 software fixtures, vector traceability, validation and local commits.
+
+The [WMB.12 integration contract](../specs/WMB.12-wotex-integration.md) and
+[versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
+requires both native protocol workflows and supported cells through public core/Runtime
+APIs. Dependency artifacts and local source evidence remain separately identified.

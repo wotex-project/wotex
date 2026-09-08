@@ -37,3 +37,12 @@ defines a separate serial framing/timing profile. Neither is a claimed implement
 cell here. Library admission/cleanup limits in .00/.10 are local design policy.
 The independent software fixture remains
 [libmodbus v3.1.12 source](https://github.com/stephane/libmodbus/tree/9af6c16074df566551bca0a7c37443e48f216289).
+
+## Standalone-contract review, 2026-09-09
+
+WMB.11 preserves the eight named function helpers and float helpers already in
+the public baseline. Its exact wire examples were checked against the official
+Application Protocol V1.1b3 sections listed above. Typed engineering-value
+composition, strict map admission and the fixture oracle are library policy.
+The new corpus contains specified cases, not newly executed interoperability
+evidence. Wotex core/Runtime remain owners of TD values/interaction mechanics.

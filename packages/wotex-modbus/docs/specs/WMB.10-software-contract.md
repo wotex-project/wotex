@@ -1,3 +1,13 @@
+---
+spec:
+  id: WMB.10
+  title: "Complete Modbus TCP client software profile"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-modbus
+  updated: 2026-09-09
+---
+
 # WMB.10 Complete Modbus TCP client software profile
 
 Read [WMB.00](WMB.00-library-contract.md) first. This target contract closes the
@@ -25,6 +35,10 @@ unreviewed shortcuts while completing the defined profile.
 
 ## WMB-S01 — Address, command and conversion invariants
 
+The [standalone/preservation contract](WMB.11-standalone-client-and-preservation.md)
+defines exact helper results, compatibility message admission and concrete
+fixture adapters. These obligations apply throughout S01–S04.
+
 Public entry points remain `Address.new/3`, `Command.new/4`, `Value.encode/3`,
 `Value.decode/3`, the named read/write helpers and `request/2`.
 Wire offsets are zero-based 0..65535; ranges cannot cross 65536. Unicast units
@@ -43,7 +57,7 @@ atom coercion is permitted.
 | Write multiple registers | 1..123 integers 0..65535 | `:ok` |
 
 Typed values remain signed/unsigned 16/32/64-bit integers and finite IEEE754
-32/64-bit floats. Byte and word order are explicit conversion options; TCP
+32/64-bit floats. Byte and word order are explicit conversion options with unique known keys; TCP
 register bytes are always big-endian. Exact width is required. Both signed zero
 and all finite boundary values roundtrip; NaN/infinity are rejected. Booleans
 and integers are not interchangeable outside the explicit coil convention.
@@ -101,7 +115,11 @@ PDU limit. Do not call that limit the complete TCP ADU size or imply every helpe
 accepts 253 payload bytes. Unsupported credentials/security fail before a socket
 is opened. Runtime closes every scoped connection and preserves request identity.
 
-## Exact acceptance vectors
+## Acceptance scenario families
+
+These IDs identify test families, not already executable vectors. Concrete
+inputs and exact projected outputs are in the .11 fixture corpus; every family
+still needs its complete boundary/fault expansion in executable tests.
 
 | ID | Input or fault | Required observation |
 | --- | --- | --- |

@@ -1,3 +1,13 @@
+---
+spec:
+  id: WMB.02
+  title: "Form profile and compatibility"
+  status: accepted
+  version: 1.0.0
+  owner: wotex-modbus
+  updated: 2026-09-09
+---
+
 # WMB.02 Form profile and compatibility
 
 This library implements a bounded subset of the W3C Modbus binding draft,

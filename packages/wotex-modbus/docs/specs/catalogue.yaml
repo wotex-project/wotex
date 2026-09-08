@@ -1,0 +1,58 @@
+schema_version: "1.1.0"
+package: "wotex_modbus"
+completion_plan: "docs/plans/wotex-modbus-completion.md"
+specifications:
+  - id: "WMB.00"
+    version: "1.0.0"
+    path: "docs/specs/WMB.00-library-contract.md"
+    implementation_status: "partial"
+    standards: [{"name": "Modbus Application Protocol / TCP/IP guide", "revision": "1.1b3 2012-04-26 / 1.0b 2006-10-24", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: []
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WMB.01"
+    version: "1.0.0"
+    path: "docs/specs/WMB.01-protocol.md"
+    implementation_status: "implemented"
+    standards: [{"name": "Modbus Application Protocol / TCP/IP guide", "revision": "1.1b3 2012-04-26 / 1.0b 2006-10-24", "claim": "eight classic TCP functions and typed registers only"}]
+    requires: []
+    implementation_modules: ["Wotex.Modbus.Address", "Wotex.Modbus.Codec", "Wotex.Modbus.Command", "Wotex.Modbus.Connection", "Wotex.Modbus.Error", "Wotex.Modbus.Session", "Wotex.Modbus.Value", "Wotex.Modbus"]
+    executable_evidence: ["test/wotex/modbus/codec_test.exs", "test/wotex/modbus/connection_test.exs", "test/wotex/modbus/contract_test.exs", "test/wotex/modbus/dependency_security_test.exs", "test/wotex/modbus/mapping_test.exs", "test/wotex/modbus/value_test.exs"]
+    compatibility_classification: "eight classic TCP functions and typed registers only; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+  - id: "WMB.02"
+    version: "1.0.0"
+    path: "docs/specs/WMB.02-form-profile.md"
+    implementation_status: "implemented"
+    standards: [{"name": "Modbus Application Protocol / TCP/IP guide", "revision": "1.1b3 2012-04-26 / 1.0b 2006-10-24", "claim": "eight classic TCP functions and typed registers only"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
+    requires: ["WMB.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
+    implementation_modules: ["Wotex.Modbus.Error", "Wotex.Modbus.Mapping", "Wotex.Modbus.Transport", "Wotex.Modbus.Value"]
+    executable_evidence: ["test/wotex/modbus/codec_test.exs", "test/wotex/modbus/connection_test.exs", "test/wotex/modbus/contract_test.exs", "test/wotex/modbus/dependency_security_test.exs", "test/wotex/modbus/mapping_test.exs", "test/wotex/modbus/value_test.exs"]
+    compatibility_classification: "eight classic TCP functions and typed registers only; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+  - id: "WMB.10"
+    version: "1.0.0"
+    path: "docs/specs/WMB.10-software-contract.md"
+    implementation_status: "partial"
+    standards: [{"name": "Modbus Application Protocol / TCP/IP guide", "revision": "1.1b3 2012-04-26 / 1.0b 2006-10-24", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: ["WMB.00", "WMB.01", "WMB.02"]
+    implementation_modules: ["Wotex.Modbus.Address", "Wotex.Modbus.Codec", "Wotex.Modbus.Command", "Wotex.Modbus.Connection", "Wotex.Modbus.Error", "Wotex.Modbus.Session", "Wotex.Modbus.Value", "Wotex.Modbus"]
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WMB.11"
+    version: "1.0.0"
+    path: "docs/specs/WMB.11-standalone-client-and-preservation.md"
+    implementation_status: "planned"
+    standards: [{"name": "Modbus Application Protocol / TCP/IP guide", "revision": "1.1b3 2012-04-26 / 1.0b 2006-10-24", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
+    requires: ["WMB.00", "WMB.10"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+  - id: "WMB.12"
+    version: "1.0.0"
+    path: "docs/specs/WMB.12-wotex-integration.md"
+    implementation_status: "planned"
+    standards: [{"name": "Modbus Application Protocol / TCP/IP guide", "revision": "1.1b3 2012-04-26 / 1.0b 2006-10-24", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
+    requires: ["WMB.00", "WMB.10", "WMB.11", "wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03", "wotex_runtime:WRT.01"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
