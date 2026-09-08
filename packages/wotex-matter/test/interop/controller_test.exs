@@ -5,7 +5,7 @@ defmodule Wotex.Matter.ControllerTest do
   alias Wotex.Matter
   @moduletag :hardware
 
-  test "an explicitly installed SDK driver reads a commissioned fixture and rejects an unknown path" do
+  test "a configured controller module reads its fixture and rejects an unknown path" do
     module = System.fetch_env!("WOTEX_MATTER_CLIENT_MODULE") |> String.to_existing_atom()
 
     fixture =
@@ -19,7 +19,8 @@ defmodule Wotex.Matter.ControllerTest do
         &{&1, Map.fetch!(fixture, Atom.to_string(&1))}
       )
 
-    assert {:ok, session} = Matter.connect(client: module, fixture: fixture, timeout: 10_000)
+    assert {:ok, session} =
+             Matter.connect([client: module, timeout: 10_000] ++ options(module, fixture))
 
     try do
       assert {:ok, value} = Matter.send(session, Map.put(path, :type, :read))
@@ -30,4 +31,13 @@ defmodule Wotex.Matter.ControllerTest do
       Matter.disconnect(session)
     end
   end
+
+  defp options(Wotex.Matter.SDK, fixture),
+    do:
+      Enum.map(
+        [:executable, :factory, :settings, :fabric_id],
+        &{&1, Map.fetch!(fixture, Atom.to_string(&1))}
+      )
+
+  defp options(_, fixture), do: [fixture: fixture]
 end

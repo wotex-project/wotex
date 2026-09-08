@@ -4,10 +4,13 @@ Consumer-neutral Matter library for W3C Web of Things consumers.
 Development version: `0.1.0-dev`.
 
 The implemented package provides fabric-scoped interaction paths, bounded TLV,
-a validated `Client` behaviour, compatibility callbacks and WoT Form/Runtime
-mapping. TLV preserves tags, explicit scalar widths, null and containers while
-bounding bytes, nodes and nesting. This is a controller integration library;
-a bundled CASE/PASE/Interaction Model transport is not yet implemented.
+a validated `Client` behaviour, an opt-in Python SDK interaction adapter,
+compatibility callbacks and WoT Form/Runtime mapping. TLV preserves tags,
+explicit scalar widths, null and containers while bounding bytes, nodes and
+nesting. The `SDK` adapter targets read/write/invoke calls in the pinned native
+SDK; an explicitly supplied controller factory owns SDK startup, credentials
+and shutdown. No Python runtime, native SDK binary, controller factory or
+commissioning workflow is bundled.
 
 ```elixir
 {:ok, path} = Wotex.Matter.Address.new(%{
@@ -19,15 +22,20 @@ a bundled CASE/PASE/Interaction Model transport is not yet implemented.
 {:ok, [%{value: 42}]} = Wotex.Matter.TLV.decode(bytes)
 ```
 
-A consumer explicitly supplies `client: ControllerModule` implementing
-`Wotex.Matter.Client`. The driver owns the pinned SDK, secure fabric storage,
+Use `client: Wotex.Matter.SDK` with an absolute Python executable,
+`factory: "sdk_host:controller"`, `fabric_id` and a `settings` map. The selected
+factory must be a synchronous context manager yielding an initialized SDK
+controller. See [SDK contract](docs/specs/WMA.03-sdk-client.md).
+Alternatively, supply a module implementing `Wotex.Matter.Client`. The driver
+owns the pinned SDK, secure fabric storage,
 commissioning, attestation, sessions and per-path status validation. Missing
 transport, crashed driver, invalid return and missing write input all fail.
 Failed writes/invokes have unknown effect; the library never retries them.
 No real SDK/device parity is claimed by the fake-port contract tests.
 
-Timed interactions, subscription delivery and full cluster-specific reserved
-identifier semantics need SDK integration. The current `member` field enforces
+The SDK adapter forwards explicit `timed_request_timeout_ms` for writes/invokes.
+Subscription delivery and full device qualification need further integration.
+The current `member` field enforces
 width and excludes the wildcard; the driver must validate attribute/command
 semantics against its pinned data model. No CSA certification is claimed.
 

@@ -18,8 +18,14 @@ keep fabric stores isolated, enforce attestation/ACLs, inspect all per-path stat
 results, respect finite request budgets and clean up owned resources. Contract
 tests use an explicitly selected test module, never a production fallback.
 The optional controller fixture harness also requires an explicitly installed
-module; its existence is not evidence of SDK or device interoperability.
-No commissioning or operational transport is bundled in this version.
+module. Selecting a module and passing the harness do not independently prove
+that the module is SDK-backed or that the fixture is a physical device; that
+provenance must be reviewed and recorded separately.
+The SDK adapter maps read/write/invoke calls to an explicitly initialized native
+controller supplied by its factory. It does not implement CASE/PASE or the
+Interaction Model; those remain inside the caller-provisioned SDK/controller.
+No Python runtime, SDK binary, controller factory or commissioning workflow is
+bundled. See [SDK client contract](WMA.03-sdk-client.md).
 
 ## Evidence and compatibility
 

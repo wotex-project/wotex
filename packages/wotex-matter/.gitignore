@@ -12,3 +12,5 @@ erl_crash.dump
 wotex_matter-*.tar
 
 /.tool-versions
+
+__pycache__/
