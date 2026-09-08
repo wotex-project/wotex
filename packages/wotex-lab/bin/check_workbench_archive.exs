@@ -64,9 +64,9 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
           [{"RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH", Path.join(work, "native_cache")}]
 
       run!(consumer, env, ["deps.get", "--only", "prod"], "Workbench dependency resolution")
-      resolved = inspect_graph(consumer, admitted)
       tree = run!(consumer, env, ["deps.tree", "--only", "prod"], "Workbench dependency graph")
       check_tree!(tree)
+      resolved = inspect_graph(consumer, admitted, tree)
       run!(consumer, env, ["compile", "--warnings-as-errors"], "Workbench compilation")
       run!(consumer, env, ["release", "--overwrite"], "Workbench release")
       checks = release_smoke(consumer, env)
@@ -167,20 +167,24 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
       |> to_string()
   end
 
-  defp inspect_graph(consumer, admitted) do
+  defp inspect_graph(consumer, admitted, tree) do
     lock = ArchiveRepository.read_lock!(Path.join(consumer, "mix.lock"))
+    lock_by_name = Map.new(lock, fn {name, entry} -> {Atom.to_string(name), entry} end)
     archives = Map.new(admitted, &{{&1.name, &1.version}, &1})
+    active = active_packages(tree)
 
     resolved =
-      Enum.map(lock, fn {name, entry} ->
+      Enum.map(active, fn name ->
+        entry = Map.fetch!(lock_by_name, name)
+
         (is_tuple(entry) and elem(entry, 0) == :hex) ||
           abort("#{name} did not resolve to a Hex archive")
 
         version = elem(entry, 2)
-        key = {Atom.to_string(name), version}
+        key = {name, version}
         Map.has_key?(archives, key) || abort("#{name} #{version} is not an admitted archive")
 
-        %{name: elem(key, 0), version: version, archive: Digest.file!(archives[key].path)}
+        %{name: name, version: version, archive: Digest.file!(archives[key].path)}
       end)
 
     names = MapSet.new(resolved, & &1.name)
@@ -191,6 +195,20 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     end)
 
     resolved
+  end
+
+  defp active_packages(tree) do
+    tree
+    |> String.split("\n", trim: true)
+    |> Enum.drop(1)
+    |> Enum.map(fn line ->
+      case Regex.run(~r/([a-z][a-z0-9_]*)\s+(?:==|~>|>=|<=|>|<|\d)/, line) do
+        [_line, name] -> name
+        nil -> abort("Workbench dependency tree line is malformed: #{inspect(line)}")
+      end
+    end)
+    |> Enum.uniq()
+    |> Enum.sort()
   end
 
   defp check_tree!(tree) do
