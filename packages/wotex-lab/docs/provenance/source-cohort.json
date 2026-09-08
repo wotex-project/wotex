@@ -25,7 +25,7 @@
     {
       "package": "wotex_runtime",
       "files": 39,
-      "sha256": "2872d63ccac46a3b825c6d52702a3365910a1d718bb4fb18cd02448b0760ea4f"
+      "sha256": "4ab20ae74fb232bc51b442a2e2e13093c3e48a46c5183c3677881707c7dd3d4c"
     },
     {
       "package": "wotex_binding_http",
@@ -45,12 +45,12 @@
     {
       "package": "wotex_continuum",
       "files": 85,
-      "sha256": "8f49e201acc93e07ef4724e0d2e25f59033c471d9485eac3d5e5251c6360195b"
+      "sha256": "0b2b1cb52d076f74f3cd6efde4c07a1713f5d2cec35d0fe026c59a0c775e3722"
     },
     {
       "package": "wotex_conformance",
       "files": 81,
-      "sha256": "9339e1fe69827a023fb3af658b9421bccf92bceaacd85c14f2341bc840c1f7aa"
+      "sha256": "3774b1df00de7d5507a31f6e37d711c59f7f6de64c1202dbc05455fb3ad46a70"
     },
     {
       "package": "wotex_nx",

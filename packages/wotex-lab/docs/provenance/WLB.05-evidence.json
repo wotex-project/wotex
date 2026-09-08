@@ -55,7 +55,7 @@
   "scenario_id": "WLB.05-directory-continuum-and-smart-room",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:9cd45be6f90dcb875d7ca54fcd2c9b65a62baa32a8d80f8b5f2f887dcd3fb134",
+  "source_tree_digest": "sha256:f51f1db87a596c159fba6343cee1aef590b6bff81bd5fd002fb5c67e9fc8e88d",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-BEAM-network",
     "elixir": "1.20.2",

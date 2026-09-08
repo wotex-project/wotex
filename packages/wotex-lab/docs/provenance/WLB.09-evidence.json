@@ -51,7 +51,7 @@
   "scenario_id": "WLB.09-formal-control-verification",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:b5490852340e5dc3d165b45e2fc1a5e971dcee7357cc9a10ccb330bc87e19399",
+  "source_tree_digest": "sha256:72958dc4901e6e2ec2df375cca932e74758482d4f9c0550c6bde1432785d4532",
   "toolchain": {
     "backend": "Maude-3.5.1-port",
     "elixir": "1.20.2",

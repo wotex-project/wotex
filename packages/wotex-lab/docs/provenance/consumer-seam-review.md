@@ -179,3 +179,21 @@ thresholds; all owner quality gates pass with the advisory unsuppressed. The
 content cohort below is renewed to those clean trees. This does not waive a
 future matching advisory or turn a parser regression into a general Decimal
 safety claim.
+
+## Final hardening cohort renewal
+
+Review date: 2026-09-08. The current content cohort incorporates Runtime
+`ba2706073ada`, Continuum `9fbaf3d6cd0c` and Conformance `dd53f8052a5b`.
+Runtime now fails closed when selecting dependency source mode, Continuum
+bounds iodata before flattening it, and Conformance makes acceptance authority
+explicit in its completion plan. The other five owner digests are unchanged.
+Lab head `e14e68f` is the pre-renewal consumer revision; its catalogue and
+BeamLens session-binding changes do not promote any source, artifact or
+external-evidence axis.
+
+`elixir bin/check_source_cohort.exs` matches all eight recorded owners. The
+WLB.04, WLB.05, WLB.06 and WLB.09 evidence-manifest tests pass after rebinding
+their exact source trees; WLB.06 and WLB.09 include the current catalogue.
+Contract and graph checks remain source validation only. Historical
+`source-index.json` revisions, missing dependency archives, optional external
+lanes and the WLB.06 hostile whole-tree isolation exclusion remain unchanged.
