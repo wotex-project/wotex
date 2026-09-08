@@ -4,6 +4,7 @@ defmodule Wotex.Lab.Check.WorkDirectory do
   @prefixes %{
     package: ".archive-check.",
     archive_consumer: ".archive-check.consumer-",
+    workbench_archive: ".archive-check.workbench-",
     reference: ".archive-check.reference-"
   }
 

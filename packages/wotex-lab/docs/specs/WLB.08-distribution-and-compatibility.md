@@ -1,14 +1,15 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.6.2. Contract: accepted. Source status: the workspace
+Specification version: 0.7.0. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
-source-cohort guard, the archive-consumer gate and generated npm client source
-gate are implemented. The Workbench also has a digest-pinned, non-root OCI
-Dockerfile, data-free health route and offline image-source gate; Docker's
-build-graph check passes, but no runnable image is claimed while its WoTEx Hex
-dependencies are unpublished. The full reference-consumer, distribution and
-release-candidate runners, built OCI image, published npm artifact, hosted and
-Nerves deliverables remain planned.
+source-cohort guard, the base archive-consumer gate, the full-host Workbench
+archive/release gate and generated npm client source gate are implemented. The
+Workbench also has a digest-pinned, non-root OCI Dockerfile, data-free health
+route and offline image-source gate; Docker's build-graph check passes, but no
+runnable image is claimed while its WoTEx Hex dependencies are unpublished.
+The full reference-consumer, distribution and release-candidate runners, built
+OCI image, published npm artifact, hosted and Nerves deliverables remain
+planned.
 
 ## Dependency modes
 
@@ -54,6 +55,7 @@ independent artifact adoption. Dated follow-up decisions live in the seam review
 | `foundation_green` | WLB.01, implemented WLB.02/WLB.03/WLB.11 surfaces; warnings-as-errors, format/Credo, >=95% lines, docs/Doctor, Dialyzer, audits, metadata/boundary/package checks |
 | `package_contents_green` | Exact built archive has public lib/spec/plan/decision/provenance/fixtures/license files; no trackers, credentials, deps, build output or private paths; production dependency metadata has no path/git refs |
 | `archive_consumer_green` | Fresh unrelated Mix application, exact archive-only dependency closure, read-only admitted archives, Git absent from executable PATH during resolution/build/run; TD and Nx positive/negative cases |
+| `workbench_archive_green` | Fresh extracted Workbench source artifact, complete host dependency closure from admitted local/public archives, exact cached native-artifact digests, Git absent during resolution/build/release smoke, production compilation and executable release |
 | `reference_consumer_green` | WLB.02–WLB.07/WLB.09–WLB.11 complete scenarios against the same cohort; real transport, dual-store, metric/AI and workbench tests; independent target; exact ownership/effect boundary |
 | `distribution_green` | Hex/Mix.install, all Livebooks, OCI, generated npm client, disposable hosted demo and declared Nerves target tested; installed-artifact smoke repeated for published cohort |
 | `public_release_candidate` | All above plus SBOM/provenance/license/security/API review, verified source/lock/archive/image/model digests and all documented links/commands |
@@ -109,20 +111,39 @@ both boundaries; the cohort file and guard are themselves part of its input
 digest. Changed inputs invalidate the run. Each attempt
 gets a new private directory, and earlier evidence is never deleted.
 
-This script still uses a waiting-task deadline around `System.cmd`; that is
-not an independently verified descendant-cleanup or bounded-output-capture
-contract. Its record therefore leaves runner containment and the full reference
-programme as `not_run`, with cleanup conservatively `failed` because it is
-unverified. The parser's eight-MiB input bound does not bound subprocess output
-allocation. A passing suite exit is source-test evidence only, not closure of
-these accepted runner obligations. It is workspace evidence, not the
-artifact-mode runner; the distribution and release-candidate runners remain
-acceptance obligations, not approximated by these scripts. Before running archive-consumer tests, the harness MUST assert Git is
-unavailable (`command -v git` must fail) and inspect the resolved dependency
-graph recursively, including optional/profile/transitive deps. Resolution of
-the normal graph must occur in that restricted environment; merely hiding Git
-after dependencies were fetched does not prove the condition. Registry setup
-and artifact admission happen explicitly and are captured separately.
+`bin/check_workbench_archive.exs` independently exercises the explicit full
+host. It builds all eight selected WoTEx packages without workspace paths,
+admits every public dependency at the exact Workbench lock version from the
+local Hex cache, and admits only the platform-specific Explorer, ExMaude and
+BeamLens/BAML precompiled archives needed by this host. Their bytes and the
+generated Workbench source tar are digested. The source tar contains only the
+declared host source/config/static/lock cohort, is extracted into a fresh
+private directory and is rejected if it contains a symlink. The shared local
+registry and restricted PATH implementation keeps Git unavailable for
+resolution, recursive graph inspection, production compilation and release
+creation. The release is executed in `eval` mode and proves the selected public
+modules load without Git. This is clone-free local candidate evidence and
+promotes WLB.08 adoption to `reference_available`; it is not published-Hex,
+OCI-runtime, hosted-browser, independently contained runner or hardware
+evidence, so it does not pass `reference_consumer_green` or
+`distribution_green`.
+
+The workspace reference script still uses a waiting-task deadline around
+`System.cmd`; that is not an independently verified descendant-cleanup or
+bounded-output-capture contract. Its record therefore leaves runner containment
+and the full reference programme as `not_run`, with cleanup conservatively
+`failed` because it is unverified. The parser's eight-MiB input bound does not
+bound subprocess output allocation. A passing suite exit is source-test
+evidence only, not closure of these accepted runner obligations. It is
+workspace evidence, not the artifact-mode runner; the distribution and
+release-candidate runners remain acceptance obligations, not approximated by
+these scripts. Before running archive-consumer tests, the harness MUST assert
+Git is unavailable (`command -v git` must fail) and inspect the resolved
+dependency graph recursively, including optional/profile/transitive deps.
+Resolution of the normal graph must occur in that restricted environment;
+merely hiding Git after dependencies were fetched does not prove the condition.
+Registry setup and artifact admission happen explicitly and are captured
+separately.
 
 CI modes are foundation/package, archive, lab, interop, chaos, conformance,
 matrix, benchmark, distribution and release-candidate. A disabled or unsupported

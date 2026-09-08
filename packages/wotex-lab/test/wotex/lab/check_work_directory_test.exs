@@ -21,7 +21,7 @@ defmodule Wotex.Lab.CheckWorkDirectoryTest do
     File.write!(Path.join(old, "retention-sentinel"), "previous attempt")
 
     paths =
-      for kind <- [:package, :archive_consumer, :reference], _ <- 1..12 do
+      for kind <- [:package, :archive_consumer, :workbench_archive, :reference], _ <- 1..12 do
         path = WorkDirectory.create!(root, kind)
         assert Path.dirname(path) == root
         assert Regex.match?(~r/[a-f0-9]{32}\z/, Path.basename(path))
@@ -31,10 +31,10 @@ defmodule Wotex.Lab.CheckWorkDirectoryTest do
         path
       end
 
-    assert length(Enum.uniq(paths)) == 36
+    assert length(Enum.uniq(paths)) == 48
     assert File.read!(Path.join(old, "retention-sentinel")) == "previous attempt"
     assert Enum.all?(paths, &(File.read!(Path.join(&1, "retention-sentinel")) == "new attempt"))
     assert_raise KeyError, fn -> WorkDirectory.create!(root, :unknown) end
-    assert length(File.ls!(root)) == 37
+    assert length(File.ls!(root)) == 49
   end
 end

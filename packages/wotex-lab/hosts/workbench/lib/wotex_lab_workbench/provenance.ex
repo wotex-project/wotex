@@ -15,16 +15,17 @@ defmodule WotexLabWorkbench.Provenance do
 
   @lab_path Mix.Project.deps_paths()[:wotex_lab]
   @lock Mix.Dep.Lock.read()
-  @dependency_versions Map.new(Mix.Dep.cached(), fn dependency ->
-                         version =
-                           case dependency.status do
-                             {:ok, value} when is_binary(value) -> value
-                             {:nomatchvsn, value} when is_binary(value) -> value
-                             _other -> "unavailable"
-                           end
+  dependency_versions =
+    Map.new(Mix.Dep.cached(), fn dependency ->
+      version =
+        case dependency.status do
+          {:ok, value} when is_binary(value) -> value
+          {:nomatchvsn, value} when is_binary(value) -> value
+          _other -> "unavailable"
+        end
 
-                         {dependency.app, version}
-                       end)
+      {dependency.app, version}
+    end)
 
   @external_resource Path.join(@lab_path, "docs/provenance/source-cohort.json")
   @external_resource Path.join(@lab_path, "docs/provenance/source-index.json")
@@ -62,7 +63,7 @@ defmodule WotexLabWorkbench.Provenance do
                         %{name: Atom.to_string(name), version: version, archive: "sha256:" <> outer}
 
                       _path_or_absent ->
-                        version = Map.get(@dependency_versions, name, "absent")
+                        version = Map.get(dependency_versions, name, "absent")
 
                         %{name: Atom.to_string(name), version: version, archive: :missing}
                     end

@@ -73,8 +73,9 @@ repository's spec, regression-test and verification workflow.
 
 ## Independent acceptance
 
-The gates in WLB.08 are independent: foundation, package contents, archive
-consumer, reference consumer, distribution, public candidate, stable API.
+The gates in WLB.08 are independent: foundation, package contents, base archive
+consumer, full-host Workbench archive, reference consumer, distribution, public
+candidate, stable API.
 Record exact commands, source tree/lock/artifact/schema/model digests,
 toolchains, resource envelope and claim dimensions. Missing artifacts or hardware
 remain unsatisfied evidence prerequisites. They do not permit a fake pass,

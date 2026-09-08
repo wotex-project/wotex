@@ -249,11 +249,11 @@ specifications:
       - "clients/typescript/test/client.test.mjs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.08
-    version: "0.6.2"
+    version: "0.7.0"
     path: docs/specs/WLB.08-distribution-and-compatibility.md
     implementation_status: partial
     evidence_status: partial
-    adoption_status: no_reference
+    adoption_status: reference_available
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -273,6 +273,8 @@ specifications:
       - "bin/check_contracts.exs"
       - "bin/check_source_cohort.exs"
       - "bin/check_archive_consumer.exs"
+      - "bin/check_workbench_archive.exs"
+      - "bin/support/archive_repository.exs"
       - "bin/check_reference_consumer.exs"
       - "test/wotex/lab/reference_summary_test.exs"
       - "test/wotex/lab/reference_inputs_test.exs"

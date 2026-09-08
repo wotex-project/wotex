@@ -108,8 +108,13 @@ Directory, Continuum, Exqlite, Axon, EXLA and Explorer are optional profile pack
 host adds explicitly; the Lab modules behind each seam compile only when that
 package is present. `mix check` includes an archive-consumer gate that resolves
 the base profile from built archives through a local Hex registry with Git
-absent from the PATH. Production rejects `WOTEX_PATH_DEPS` and uses
-Hex requirements. Publication and repository visibility are maintainer-owned.
+absent from the PATH. It also extracts a declared Workbench source artifact,
+resolves the complete host closure from admitted archives, records the three
+required native artifact digests, compiles in production and executes the
+resulting release without Git. This is local candidate evidence, not package
+publication or a runnable OCI claim. Production rejects `WOTEX_PATH_DEPS` and
+uses Hex requirements. Publication and repository visibility are
+maintainer-owned.
 
 The Workbench explicitly selects Explorer 0.12.0 for read-only run inspection:
 inclusive range/series controls, unit-separated summaries and dynamically
@@ -306,9 +311,11 @@ accuracy and stable API admission are separate claims.
 
 `mix check` runs compilation, formatting, strict Credo, tests with 95% line
 coverage, Doctor, Dialyzer, dependency audits, ExDoc, metadata checks and package
-content inspection. That last check inspects an unpacked candidate; it does not
-claim an independent archive consumer. See [WLB.08](docs/specs/WLB.08-distribution-and-compatibility.md)
-for the stronger release gates.
+content inspection. Separate base-consumer and Workbench-release gates resolve
+from local candidate archives with Git unavailable; they do not claim registry
+publication, OCI runtime, hosted or hardware evidence. See
+[WLB.08](docs/specs/WLB.08-distribution-and-compatibility.md) for the stronger
+release gates.
 
 ## License
 
