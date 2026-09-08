@@ -1,0 +1,51 @@
+# TYPE wotex_lab_directory_conflicts_total counter
+wotex_lab_directory_conflicts_total{action="put",profile="ets"} 1
+# TYPE wotex_lab_directory_duration_seconds histogram
+wotex_lab_directory_duration_seconds_bucket{action="fetch",le="0.001",outcome_class="not_found",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="fetch",le="0.005",outcome_class="not_found",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="fetch",le="0.025",outcome_class="not_found",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="fetch",le="0.1",outcome_class="not_found",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="fetch",le="0.5",outcome_class="not_found",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="fetch",le="2.5",outcome_class="not_found",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="fetch",le="10",outcome_class="not_found",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="fetch",le="+Inf",outcome_class="not_found",profile="ets"} 1
+wotex_lab_directory_duration_seconds_sum{action="fetch",outcome_class="not_found",profile="ets"} 0.001
+wotex_lab_directory_duration_seconds_count{action="fetch",outcome_class="not_found",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="put",le="0.001",outcome_class="conflict",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="put",le="0.005",outcome_class="conflict",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="put",le="0.025",outcome_class="conflict",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="put",le="0.1",outcome_class="conflict",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="put",le="0.5",outcome_class="conflict",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="put",le="2.5",outcome_class="conflict",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="put",le="10",outcome_class="conflict",profile="ets"} 1
+wotex_lab_directory_duration_seconds_bucket{action="put",le="+Inf",outcome_class="conflict",profile="ets"} 1
+wotex_lab_directory_duration_seconds_sum{action="put",outcome_class="conflict",profile="ets"} 0.001
+wotex_lab_directory_duration_seconds_count{action="put",outcome_class="conflict",profile="ets"} 1
+# TYPE wotex_lab_directory_operations_total counter
+wotex_lab_directory_operations_total{action="fetch",outcome_class="not_found",profile="ets"} 1
+wotex_lab_directory_operations_total{action="put",outcome_class="conflict",profile="ets"} 1
+# TYPE wotex_lab_nx_batch_fill_ratio gauge
+wotex_lab_nx_batch_fill_ratio{profile="thermal"} 0.5
+# TYPE wotex_lab_nx_batch_rows gauge
+wotex_lab_nx_batch_rows{profile="thermal"} 2
+# TYPE wotex_lab_nx_batch_width gauge
+wotex_lab_nx_batch_width{profile="thermal"} 1
+# TYPE wotex_lab_nx_duration_seconds histogram
+wotex_lab_nx_duration_seconds_bucket{backend_class="binary",le="0.001",operation="encode",outcome_class="ok",profile="thermal"} 0
+wotex_lab_nx_duration_seconds_bucket{backend_class="binary",le="0.005",operation="encode",outcome_class="ok",profile="thermal"} 1
+wotex_lab_nx_duration_seconds_bucket{backend_class="binary",le="0.025",operation="encode",outcome_class="ok",profile="thermal"} 1
+wotex_lab_nx_duration_seconds_bucket{backend_class="binary",le="0.1",operation="encode",outcome_class="ok",profile="thermal"} 2
+wotex_lab_nx_duration_seconds_bucket{backend_class="binary",le="0.5",operation="encode",outcome_class="ok",profile="thermal"} 2
+wotex_lab_nx_duration_seconds_bucket{backend_class="binary",le="2.5",operation="encode",outcome_class="ok",profile="thermal"} 2
+wotex_lab_nx_duration_seconds_bucket{backend_class="binary",le="10",operation="encode",outcome_class="ok",profile="thermal"} 2
+wotex_lab_nx_duration_seconds_bucket{backend_class="binary",le="+Inf",operation="encode",outcome_class="ok",profile="thermal"} 2
+wotex_lab_nx_duration_seconds_sum{backend_class="binary",operation="encode",outcome_class="ok",profile="thermal"} 0.032
+wotex_lab_nx_duration_seconds_count{backend_class="binary",operation="encode",outcome_class="ok",profile="thermal"} 2
+# TYPE wotex_lab_nx_operations_total counter
+wotex_lab_nx_operations_total{backend_class="binary",operation="encode",outcome_class="ok",profile="thermal"} 2
+# TYPE wotex_lab_nx_rows_total counter
+wotex_lab_nx_rows_total{backend_class="binary",profile="thermal"} 2
+# TYPE wotex_lab_policy_dispatches_total counter
+wotex_lab_policy_dispatches_total{outcome_class="exception"} 1
+# TYPE wotex_lab_transport_bytes_total counter
+wotex_lab_transport_bytes_total{component="sse",profile="http"} 512

@@ -1,0 +1,4 @@
+# TYPE demo_latency_seconds histogram
+demo_latency_seconds_bucket{le="0.5"} 1
+demo_latency_seconds_sum 0.1
+demo_latency_seconds_count 1

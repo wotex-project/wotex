@@ -1,0 +1,19 @@
+# HELP demo_requests_total Requests seen by a demo host.
+# TYPE demo_requests_total counter
+demo_requests_total{outcome="ok",path="a\"b\\c\n"} 12 1700000000000
+demo_requests_total{outcome="error",path="x"} 0
+
+# TYPE demo_temperature_celsius gauge
+demo_temperature_celsius 21.5
+demo_temperature_celsius{room="lab"} -3.25e1
+demo_temperature_celsius{room="nan"} NaN
+demo_temperature_celsius{room="inf"} +Inf
+demo_temperature_celsius{room="neg"} -Inf
+# TYPE demo_latency_seconds histogram
+demo_latency_seconds_bucket{le="0.005",profile="test"} 1
+demo_latency_seconds_bucket{le="0.05",profile="test"} 3
+demo_latency_seconds_bucket{le="+Inf",profile="test"} 4
+demo_latency_seconds_sum{profile="test"} 0.75
+demo_latency_seconds_count{profile="test"} 4
+# TYPE demo_empty_labels gauge
+demo_empty_labels{} 7

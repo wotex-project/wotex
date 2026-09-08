@@ -1,0 +1,2 @@
+# TYPE demo_summary summary
+demo_summary{quantile="0.5"} 1

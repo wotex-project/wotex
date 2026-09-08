@@ -129,7 +129,9 @@ defmodule Wotex.Lab.Continuum.Channel do
       state = state |> transmit(delivery_id) |> release_holds(sequence)
       {:reply, {:ok, delivery(state.items[delivery_id])}, state}
     else
-      {:error, error} -> {:reply, {:error, error}, state}
+      {:error, error} ->
+        Telemetry.event(:continuum, :dispatch, %{deliveries: 1}, %{outcome: error.code})
+        {:reply, {:error, error}, state}
     end
   end
 
@@ -199,6 +201,7 @@ defmodule Wotex.Lab.Continuum.Channel do
 
   defp fail(state, item) do
     failure = %{code: "dropped", message: "delivery dropped by the fault schedule"}
+    Telemetry.event(:continuum, :dispatch, %{deliveries: 1}, %{outcome: :rejected})
     put_in(state, [:items, item.id], %{item | status: :failed, error: failure})
   end
 
@@ -207,6 +210,7 @@ defmodule Wotex.Lab.Continuum.Channel do
   defp dispatch(state, item) do
     copies = if fault?(state, item, :duplicate), do: 2, else: 1
     Enum.each(1..copies, fn _copy -> deliver(state, item) end)
+    Telemetry.event(:continuum, :dispatch, %{deliveries: copies}, %{outcome: :ok})
     put_in(state, [:items, item.id], %{item | status: :in_flight})
   end
 

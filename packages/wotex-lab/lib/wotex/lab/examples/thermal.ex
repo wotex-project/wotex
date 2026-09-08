@@ -15,6 +15,8 @@ defmodule Wotex.Lab.Examples.Thermal do
 
   import Nx.Defn
 
+  @max_rows 2
+
   alias Wotex.{DataSchema, ThingDescription}
   alias Wotex.Lab.Adapters.Nx.UnitConverter
   alias Wotex.Lab.Telemetry
@@ -51,12 +53,13 @@ defmodule Wotex.Lab.Examples.Thermal do
          {:ok, input_schema} <-
            DataSchema.new(Map.take(map["properties"]["temperature"], ["type", "unit"])),
          {:ok, feature} <- feature(ThingDescription.id(td), input_schema),
-         {:ok, schema} <- Schema.new(features: [feature], max_rows: 2),
+         {:ok, schema} <- Schema.new(features: [feature], max_rows: @max_rows),
          {:ok, rows} <- rows(ThingDescription.id(td)),
          {:ok, encoded} <-
            Telemetry.span(:nx, :encode, %{profile: :thermal}, fn ->
              Encoder.encode(rows, schema, unit_converter: {UnitConverter, []})
            end),
+         :ok <- batch_measurements(encoded),
          tensor <-
            Telemetry.span(:nx, :inference, %{profile: :thermal}, fn ->
              Nx.Defn.jit_apply(&target/1, [Encoded.batch(encoded)], compiler: Nx.Defn.Evaluator)
@@ -69,6 +72,18 @@ defmodule Wotex.Lab.Examples.Thermal do
            end) do
       {:ok, %{thing_description: td, encoded: encoded, proposal: proposal}}
     end
+  end
+
+  defp batch_measurements(encoded) do
+    rows = Encoded.row_count(encoded)
+    width = length(Encoded.feature_order(encoded))
+
+    Telemetry.event(
+      :nx,
+      :encode,
+      %{rows: rows, width: width, fill: rows / @max_rows},
+      %{profile: :thermal}
+    )
   end
 
   defp feature(thing_id, schema) do

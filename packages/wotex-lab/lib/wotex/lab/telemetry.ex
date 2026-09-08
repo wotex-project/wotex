@@ -26,8 +26,8 @@ defmodule Wotex.Lab.Telemetry do
   """
 
   @prefix [:wotex, :lab]
-  @components ~w(runtime http sse mqtt directory continuum conformance nx policy scenario)a
-  @operations ~w(parse request subscription directory codec conformance encode inference decode verification dispatch)a
+  @components ~w(runtime http sse mqtt directory continuum conformance nx policy scenario formal metrics)a
+  @operations ~w(parse request subscription directory codec conformance encode inference decode verification dispatch cleanup export query investigation)a
   @metadata_keys ~w(scenario_id attempt spec_id seam_id thing_ref operation profile outcome kind)a
   @max_label_bytes 128
 

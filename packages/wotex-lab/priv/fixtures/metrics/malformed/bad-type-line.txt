@@ -1,0 +1,2 @@
+# TYPE demo_gauge
+demo_gauge 1
