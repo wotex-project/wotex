@@ -2,7 +2,7 @@ defmodule Wotex.Modbus.Mapping do
   @moduledoc "Explicit Wotex profile of the draft Modbus Form vocabulary; extensions are preserved."
 
   alias Wotex.Form
-  alias Wotex.Modbus.{Command, Error, Value}
+  alias Wotex.Modbus.{Command, Connection, Error, Value}
 
   @functions %{
     "readCoil" => :read_coils,
@@ -34,23 +34,13 @@ defmodule Wotex.Modbus.Mapping do
   @spec command(Form.t() | map(), atom(), term(), keyword()) :: {:ok, map()} | {:error, term()}
   def command(form, operation, input \\ nil, opts \\ [])
 
-  def command(%Form{} = form, operation, input, opts) do
-    context = if operation == :invokeaction, do: :action, else: :property
-    map = Form.to_map(form)
-
-    with :ok <- operation(form, operation, context),
-         {:ok, endpoint, offset, quantity, unit} <- endpoint(Form.href(form), map, opts),
-         {:ok, function} <- function(map, operation, quantity),
-         {:ok, kind, orders} <- conversion(map),
-         {:ok, argument} <- argument(function, input, quantity, kind, orders),
-         {:ok, command} <- Command.new(function, offset, argument, unit),
-         :ok <- quantity_matches(command, quantity) do
-      {:ok,
-       %{endpoint: endpoint, command: command, value_type: kind, value_options: orders, form: form}}
-    end
+  def command(%Form{value: map}, operation, input, opts) when is_map(map) and not is_struct(map) do
+    with :ok <- options(opts),
+         {:ok, form} <- Form.new(map),
+         do: map_form(form, operation, input, opts)
   end
 
-  def command(form, operation, input, opts) when is_map(form) do
+  def command(form, operation, input, opts) when is_map(form) and not is_struct(form) do
     with {:ok, form} <- Form.new(form), do: command(form, operation, input, opts)
   end
 
@@ -64,6 +54,47 @@ defmodule Wotex.Modbus.Mapping do
   def decode(%{value_type: type, value_options: options}, registers),
     do: Value.decode(registers, type, options)
 
+  def decode(_, _), do: {:error, Error.new(:invalid_mapping)}
+
+  defp map_form(form, operation, input, opts) do
+    context = if operation == :invokeaction, do: :action, else: :property
+    map = Form.to_map(form)
+
+    with :ok <- operation(form, operation, context),
+         {:ok, endpoint, offset, quantity, unit} <- endpoint(Form.href(form), map, opts),
+         {:ok, function} <- function(map, operation, quantity),
+         {:ok, kind, orders} <- conversion(map),
+         :ok <- scalar_shape(function, quantity, kind),
+         {:ok, argument} <- argument(function, input, quantity, kind, orders),
+         {:ok, command} <- Command.new(function, offset, argument, unit),
+         :ok <- quantity_matches(command, quantity) do
+      {:ok,
+       %{endpoint: endpoint, command: command, value_type: kind, value_options: orders, form: form}}
+    end
+  end
+
+  defp options([]), do: :ok
+  defp options(base: base) when is_binary(base) or is_nil(base), do: :ok
+  defp options(_), do: {:error, Error.new(:invalid_options)}
+
+  defp scalar_shape(_function, _quantity, nil), do: :ok
+
+  defp scalar_shape(function, quantity, kind)
+       when function in [
+              :read_holding_registers,
+              :read_input_registers,
+              :write_holding_register,
+              :write_holding_registers
+            ] do
+    {:ok, registers} = Value.encode(if(kind in [:float32, :float64], do: 0.0, else: 0), kind)
+
+    if length(registers) == quantity,
+      do: :ok,
+      else: {:error, Error.new(:quantity_mismatch)}
+  end
+
+  defp scalar_shape(_, _, _), do: {:error, Error.new(:unsupported_conversion)}
+
   defp operation(form, op, context) do
     if Map.has_key?(@operations, op) and @operations[op] in Form.operations(form, for: context),
       do: :ok,
@@ -74,7 +105,8 @@ defmodule Wotex.Modbus.Mapping do
     with {:ok, uri} <- URI.new(href),
          {:ok, uri} <- resolve(uri, Keyword.get(opts, :base)),
          :ok <- uri_shape(uri),
-         [unit, offset] <- String.split(uri.path || "", "/", trim: true),
+         {:ok, _} <- Connection.config(host: uri.host, port: uri.port || 502),
+         ["", unit, offset] <- String.split(uri.path || "", "/"),
          {unit, ""} <- Integer.parse(unit),
          {offset, ""} <- Integer.parse(offset),
          {:ok, quantity} <- quantity(uri.query),
@@ -86,7 +118,12 @@ defmodule Wotex.Modbus.Mapping do
     end
   end
 
-  defp resolve(%URI{scheme: nil} = uri, base) when is_binary(base), do: {:ok, URI.merge(base, uri)}
+  defp resolve(%URI{scheme: nil} = uri, base) when is_binary(base) do
+    with {:ok, base} <- URI.new(base),
+         :ok <- uri_shape(base),
+         do: {:ok, URI.merge(base, uri)}
+  end
+
   defp resolve(uri, _), do: {:ok, uri}
 
   defp uri_shape(%URI{scheme: "modbus+tcp", host: host, userinfo: nil, fragment: nil, port: port})

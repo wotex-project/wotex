@@ -13,6 +13,7 @@ defmodule Wotex.Modbus do
           multicast: false,
           qos_levels: [:at_most_once, ...],
           max_payload_size: 253,
+          max_adu_size: 260,
           connection_oriented: true,
           supports_streaming: false,
           discovery_capable: false,
@@ -28,6 +29,7 @@ defmodule Wotex.Modbus do
       multicast: false,
       qos_levels: [:at_most_once],
       max_payload_size: 253,
+      max_adu_size: 260,
       connection_oriented: true,
       supports_streaming: false,
       discovery_capable: false,
@@ -78,6 +80,20 @@ defmodule Wotex.Modbus do
   @spec health_check(Session.t()) :: {:ok, :healthy} | {:error, Error.t()}
   def health_check(session) do
     with {:ok, [_]} <- read_holding_registers(session, 0, 1), do: {:ok, :healthy}
+  end
+
+  @doc "Probes health using a validated read command, retaining its unit and address."
+  @spec health_check(Session.t(), Command.t()) :: {:ok, :healthy} | {:error, Error.t()}
+  def health_check(session, command) do
+    with :ok <- Session.validate(session),
+         :ok <- Command.validate(command),
+         false <- Command.write?(command),
+         {:ok, _values} <- request(session, command) do
+      {:ok, :healthy}
+    else
+      true -> {:error, Error.new(:invalid_health_probe)}
+      {:error, _} = error -> error
+    end
   end
 
   @doc "Modbus has no unsolicited receive operation in this profile."
