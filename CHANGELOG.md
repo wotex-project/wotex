@@ -2,6 +2,10 @@
 
 ## 0.1.0
 
+- Completion baseline 1.1.0 now matches the existing WTX.03 invalid-limit and
+  lexical-preflight contract. All independent-consumer and resource evidence
+  obligations remain required; this documentation correction changes no values.
+
 - Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
   checksums, loaded version and bounded parser regression tests. Other advisory
   checks remain active; remove this acknowledgement when metadata is corrected.

@@ -1,6 +1,6 @@
 # Wotex completion contract
 
-Plan version: 1.0.0. Package baseline: 0.1.0. Normative owners:
+Plan version: 1.1.0. Package baseline: 0.1.0. Normative owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not a progress log.
@@ -13,6 +13,13 @@ must continue to prove that boundary whenever package inputs change.
 The catalogue's `implementation_status` describes source coverage of a spec,
 not a passed release gate. No checkbox, green build or package version implies
 W3C certification, complete standards conformance or stable API admission.
+
+Revision 1.1.0 aligns this acceptance baseline with WTX.03 v1.1.0's already
+implemented pre-release admission corrections: invalid limits fail explicitly,
+and source JSON receives lexical checks before decoding. It replaces the old
+fallback characterization, not the malformed-input, resource-measurement or
+independent-consumer obligations. No public value behavior changes in this
+plan revision; all work IDs and separate release gates remain required.
 
 ## Package boundary
 
@@ -46,9 +53,10 @@ to advertise a second independently stable public API.
 
 `parse/2` accepts binary JSON and enforces a byte limit before decoding;
 map admission enforces native JSON values, depth and node limits. Defaults are
-1,048,576 source bytes, 64 nested containers and 100,000 nodes. Positive keyword
-limit values override defaults; existing invalid limit values fall back to
-defaults. Malformed option containers are not currently a documented total
+1,048,576 source bytes, 64 nested containers, 100,000 nodes, 262,144 bytes per
+string/key and 10,000 members per collection. Positive keyword limit values
+override defaults; invalid values return `invalid_limit` in the `value` phase,
+never silently fall back. Malformed option containers are not currently a documented total
 input surface. `validate: false` skips aggregate schema/semantic validation,
 not JSON admission, and is never a conformance result.
 
@@ -72,7 +80,10 @@ JSON-LD contexts are never fetched. The consumer must keep credentials out of
 public examples and logs; parsing preserves supplied values and is not a secret
 redactor. Review error details separately before claiming they are universally
 safe to log. Byte bounds do not constitute a CPU or peak-memory benchmark:
-depth/node checks follow decoding, and bounded source can still amplify memory.
+lexical depth and string-size checks precede decoding, while duplicate-member,
+collection-size and structural depth/node checks inspect the decoded value.
+Bounded source can still amplify memory; the lexical preflight is not an
+independent hostile-process containment boundary.
 
 ## Standards-claim matrix
 
@@ -100,7 +111,7 @@ Test additions belong beside the listed package tests, not in coordination hooks
 
 | ID | Prerequisites | Deliverable | Acceptance |
 | --- | --- | --- | --- |
-| WTX-C01 | WTX.01–WTX.04 | Requirement-to-test inventory and exact exported API/error catalogue, including raising variants, invalid option fallback and staged validation | Every advertised behavior links to valid, invalid and boundary cases; uncovered claims remain explicit rather than marked complete. |
+| WTX-C01 | WTX.01–WTX.04 | Requirement-to-test inventory and exact exported API/error catalogue, including raising variants, explicit invalid-limit refusal and staged validation | Every advertised behavior links to valid, invalid and boundary cases; uncovered claims remain explicit rather than marked complete. |
 | WTX-C02 | WTX-C01 | Admission and safety tests for both aggregates and every wrapper | Unicode keys/values, escaped paths, byte/depth/node boundaries, extension preservation, source invalidation and security references pass. Characterize duplicate JSON keys, manually forged structs, malformed option containers and error-detail disclosure; change any accepted behavior only with an explicit compatibility classification. |
 | WTX-C03 | WTX-C01 | Archive consumer evidence and package-content inspection | Unpacked package builds without source checkout dependencies; contains both pinned schemas, notices and specs; runs TD/TM parse, wrapper and typed-error examples in an independent minimal Mix consumer. Local trackers and generated audit artifacts are absent. |
 | WTX-C04 | WTX-C02, WTX-C03 | Consumer-neutral reference examples and independent standards corpus | Known valid/invalid TD and TM documents exchange with a named, revision-pinned independent implementation or published test corpus. Record exact operations and counterexamples; no transport or profile claims follow from value exchange. |
