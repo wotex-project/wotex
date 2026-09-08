@@ -9,3 +9,10 @@ CVE-2026-43966
 CVE-2026-43969
 CVE-2026-43971
 CVE-2026-59248
+
+# Decimal 3.1.1 enforces the decimal128 input limits introduced in 3.0.0. The
+# EEF/OSV record nevertheless included 3.x releases on 2026-09-08, contrary to
+# its own affected-range text and the upstream/GitHub patched range. A bounded
+# regression test exercises the reported exponent payload. See provenance.
+EEF-CVE-2026-32686
+CVE-2026-32686

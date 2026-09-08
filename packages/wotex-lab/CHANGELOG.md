@@ -28,6 +28,12 @@
   credential in session state, handles, logs or errors. Exercised against a
   disposable `eclipse-mosquitto:2` broker behind `WOTEX_LAB_BROKER=1` and,
   without a container runtime, against a scripted in-BEAM MQTT 5 peer.
+- Hosted HTTP destination admission requires HTTPS, an exact origin and an
+  all-public DNS answer, pins the selected peer through connect and retains TLS
+  hostname verification; the local profile verifies a CA-signed fixture.
+- The MQTT profile adds closed session/inflight/packet/Last-Will configuration,
+  verified MQTTS, broker ACL isolation, abrupt-loss Will delivery, session
+  expiry and device-clock/reset-aware sample admission before `Wotex.Nx`.
 - External conformance target exposing the core package as a subject through
   the runner protocol; both bundled corpora pass over a real port.
 - Bounded in-memory Continuum channel with a versioned fault schedule, a

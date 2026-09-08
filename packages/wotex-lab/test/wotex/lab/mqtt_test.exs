@@ -151,11 +151,73 @@ defmodule Wotex.Lab.MqttTest do
   test "configuration defaults are explicit and a malformed configuration is not adopted" do
     context = execution_context(nil)
 
-    assert {:error, %LabError{code: :mqtt_connect_refused}} =
+    assert {:error, %LabError{code: :invalid_mqtt_config, class: :permanent}} =
              EmqttClient.publish(publish_command(@closed), context, :not_a_configuration)
 
     assert {:error, %LabError{code: :mqtt_connect_refused}} =
              EmqttClient.publish(publish_command(@closed), context, client_id_prefix: "lab")
+
+    for config <- [
+          [unknown: true],
+          [connect_timeout: 0],
+          [max_inflight: 0],
+          [session_expiry_interval: 1],
+          [clean_start: false],
+          [tls_certfile: "client.pem"],
+          [will: %{topic: "bad/+", payload: "offline"}],
+          [maximum_packet_size: 4, will: %{topic: "lab/status", payload: "offline"}]
+        ] do
+      assert {:error, %LabError{code: :invalid_mqtt_config}} =
+               EmqttClient.publish(publish_command(@closed), context, config)
+    end
+  end
+
+  test "CONNECT carries bounded session, packet and Last Will policy" do
+    server = MqttServer.start(self())
+    context = execution_context(nil)
+
+    config = %{
+      client_id: "lab-stable-client",
+      clean_start: false,
+      session_expiry_interval: 30,
+      receive_maximum: 7,
+      maximum_packet_size: 1_024,
+      max_inflight: 3,
+      keepalive: 12,
+      will: %{
+        topic: "lab/status",
+        payload: "offline",
+        qos: 1,
+        retain: true,
+        delay_interval: 2
+      }
+    }
+
+    assert {:ok, session} =
+             EmqttClient.subscribe(read_command(MqttServer.href(server)), self(), context, config)
+
+    assert_receive {:mqtt_connect,
+                    %{
+                      client_id: "lab-stable-client",
+                      clean_start: false,
+                      keepalive: 12,
+                      properties: %{
+                        session_expiry_interval: 30,
+                        receive_maximum: 7,
+                        maximum_packet_size: 1_024
+                      },
+                      will: %{
+                        topic: "lab/status",
+                        payload: "offline",
+                        qos: 1,
+                        retain: true,
+                        properties: %{will_delay_interval: 2}
+                      }
+                    }}
+
+    client = :sys.get_state(session).client
+    assert :emqtt.info(client, :max_inflight) == 3
+    assert :ok = Session.close(session)
   end
 
   test "the Lab client satisfies the MQTT client port and the JSON-over-MQTT profile" do

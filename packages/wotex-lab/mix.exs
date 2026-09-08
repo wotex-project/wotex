@@ -3,12 +3,12 @@ defmodule WotexLab.MixProject do
 
   @version "0.1.0"
 
-  # Cowboy/Gun HTTP, cookie, link-header and HPACK/QPACK advisories reached only
-  # through the WebSocket and QUIC transports of the optional `emqtt` dependency.
-  # The Lab MQTT adapter selects `emqtt_sock` (plain TCP) and never `emqtt_ws` or
-  # `emqtt_quic`, and no patched cowlib or gun release existed on 2026-09-08.
-  # See docs/provenance/standards-and-dependencies.md; renew when one ships.
+  # Dated, scoped acknowledgements are justified in
+  # docs/provenance/standards-and-dependencies.md and protected by regression
+  # tests where the affected code is reachable. Renew them whenever the lock or
+  # advisory records change.
   @acknowledged_advisories [
+    "EEF-CVE-2026-32686",
     "GHSA-w4f7-4cxr-rv3c",
     "EEF-CVE-2026-43966",
     "EEF-CVE-2026-43969",

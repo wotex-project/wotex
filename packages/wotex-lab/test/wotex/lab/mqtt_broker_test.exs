@@ -6,7 +6,7 @@ defmodule Wotex.Lab.MqttBrokerTest do
   alias Wotex.Binding.MQTT
   alias Wotex.Binding.MQTT.{Broker, Command, Delivery, Transport, TransportConfig}
   alias Wotex.Lab
-  alias Wotex.Lab.Adapters.MQTT.EmqttClient
+  alias Wotex.Lab.Adapters.MQTT.{EmqttClient, Session}
   alias Wotex.Lab.Adapters.Runtime.{NoSec, StaticRef}
   alias Wotex.Lab.Error, as: LabError
   alias Wotex.Lab.Test.{MqttBroker, MqttThing}
@@ -250,6 +250,137 @@ defmodule Wotex.Lab.MqttBrokerTest do
     assert :ok = Subscription.stop(system)
   end
 
+  test "MQTTS verifies the fixture CA and broker hostname" do
+    broker = MqttBroker.start(tls: true)
+    topic = "lab/#{MqttBroker.token()}/secure"
+    listener = MqttBroker.listen(broker, topic)
+    {:ok, mqtt_broker} = Broker.new(MqttBroker.href(broker))
+    {:ok, command} = Command.publish(mqtt_broker, :writeproperty, topic, 21.5, qos: 1)
+
+    assert :ok =
+             EmqttClient.publish(command, execution_context(), %{
+               tls_ca_certfile: broker.ca_certfile,
+               connect_timeout: 5_000
+             })
+
+    assert_receive {:publish, %{topic: ^topic, payload: "21.5"}}, 5_000
+
+    {:ok, wrong_host} = Broker.new("mqtts://127.0.0.1:#{broker.port}")
+    {:ok, wrong_command} = Command.publish(wrong_host, :writeproperty, topic, 22.0, qos: 1)
+
+    assert {:error, %LabError{code: :mqtt_connect_refused}} =
+             EmqttClient.publish(wrong_command, execution_context(), %{
+               tls_ca_certfile: broker.ca_certfile,
+               connect_timeout: 5_000
+             })
+
+    :ok = :emqtt.disconnect(listener)
+  end
+
+  test "broker ACLs isolate credentialed device prefixes" do
+    user_a = "device-a"
+    user_b = "device-b"
+    password_a = "a-secret"
+    password_b = "b-secret"
+
+    broker =
+      MqttBroker.start(
+        credentials: [{user_a, password_a}, {user_b, password_b}],
+        acl: %{user_a => ["lab/a/#"], user_b => ["lab/b/#"]}
+      )
+
+    {:ok, mqtt_broker} = Broker.new(MqttBroker.href(broker))
+
+    context_a = execution_context({:password, user_a, password_a})
+
+    {:ok, other_prefix} =
+      Command.subscribe(mqtt_broker, :observeproperty, "lab/b/properties/temperature", qos: 1)
+
+    # Mosquitto may accept the filter while enforcing the ACL on delivery.
+    assert {:ok, isolated} = EmqttClient.subscribe(other_prefix, self(), context_a, %{})
+
+    MqttBroker.publish(broker, "lab/b/properties/temperature", "22.0",
+      username: user_b,
+      password: password_b
+    )
+
+    refute_receive {:wotex_transport_frame, _delivery}, 500
+    assert :ok = EmqttClient.unsubscribe(isolated, other_prefix, context_a, %{})
+
+    {:ok, own_prefix} =
+      Command.subscribe(mqtt_broker, :observeproperty, "lab/a/properties/temperature", qos: 1)
+
+    assert {:ok, admitted} = EmqttClient.subscribe(own_prefix, self(), context_a, %{})
+
+    MqttBroker.publish(broker, "lab/a/properties/temperature", "21.0",
+      username: user_a,
+      password: password_a
+    )
+
+    assert_receive {:wotex_transport_frame, %Delivery{topic: "lab/a/properties/temperature"}},
+                   5_000
+
+    assert :ok = EmqttClient.unsubscribe(admitted, own_prefix, context_a, %{})
+  end
+
+  test "an abrupt client loss publishes the bounded Last Will and stops the session" do
+    broker = MqttBroker.start()
+    will_topic = "lab/#{MqttBroker.token()}/status"
+    listener = MqttBroker.listen(broker, will_topic)
+    {:ok, mqtt_broker} = Broker.new(MqttBroker.href(broker))
+
+    {:ok, command} =
+      Command.subscribe(mqtt_broker, :observeproperty, "lab/power/properties/temperature", qos: 1)
+
+    config = %{
+      will: %{topic: will_topic, payload: "offline", qos: 1, retain: true},
+      max_inflight: 2
+    }
+
+    assert {:ok, session} = EmqttClient.subscribe(command, self(), execution_context(), config)
+    Process.unlink(session)
+    client = :sys.get_state(session).client
+    assert :emqtt.info(client, :max_inflight) == 2
+    monitor = Process.monitor(session)
+    Process.exit(client, :kill)
+
+    assert_receive {:wotex_transport_status, :transport_down}, 5_000
+    assert_receive {:DOWN, ^monitor, :process, ^session, {:shutdown, :transport_down}}, 5_000
+    assert_receive {:publish, %{topic: ^will_topic, payload: "offline"}}, 5_000
+    :ok = :emqtt.disconnect(listener)
+
+    retained = MqttBroker.listen(broker, will_topic)
+    assert_receive {:publish, %{topic: ^will_topic, payload: "offline", retain: true}}, 5_000
+    :ok = :emqtt.disconnect(retained)
+  end
+
+  test "a stable client resumes only within its declared session expiry" do
+    broker = MqttBroker.start()
+    {:ok, mqtt_broker} = Broker.new(MqttBroker.href(broker))
+
+    {:ok, command} =
+      Command.subscribe(mqtt_broker, :observeproperty, "lab/session/properties/value", qos: 1)
+
+    initial = %{
+      client_id: "wotex-lab-session-expiry",
+      clean_start: true,
+      session_expiry_interval: 1
+    }
+
+    assert {:ok, first} = EmqttClient.subscribe(command, self(), execution_context(), initial)
+    assert :ok = Session.close(first)
+
+    resume = %{initial | clean_start: false}
+    assert {:ok, second} = EmqttClient.subscribe(command, self(), execution_context(), resume)
+    assert Keyword.fetch!(:emqtt.info(:sys.get_state(second).client), :session_present) == 1
+    assert :ok = Session.close(second)
+
+    Process.sleep(2_100)
+    assert {:ok, expired} = EmqttClient.subscribe(command, self(), execution_context(), resume)
+    assert Keyword.fetch!(:emqtt.info(:sys.get_state(expired).client), :session_present) == 0
+    assert :ok = Session.close(expired)
+  end
+
   defp observe(broker, prefix, name, opts) do
     consumed = consumed_thing(broker, prefix, opts)
     context = Context.new!(request_id: "mqtt-observe")
@@ -325,7 +456,9 @@ defmodule Wotex.Lab.MqttBrokerTest do
         _other -> nil
       end)
 
-    case Enum.find(children, fn {_id, pid, _type, _modules} -> is_pid(pid) and pid != previous end) do
+    case Enum.find(children, fn {_id, pid, _type, _modules} ->
+           is_pid(pid) and pid != previous and subscription_active?(pid)
+         end) do
       {_id, pid, _type, _modules} ->
         pid
 
@@ -335,11 +468,17 @@ defmodule Wotex.Lab.MqttBrokerTest do
     end
   end
 
+  defp subscription_active?(pid) do
+    :sys.get_state(pid).active?
+  catch
+    :exit, _reason -> false
+  end
+
   defp unrelated_delivery do
     {:ok, delivery} = Delivery.new("null", topic: "other/thing/value", qos: 0, retain: false)
     delivery
   end
 
-  defp execution_context,
-    do: ExecutionContext.new(Context.new!(request_id: "mqtt-client"), nil)
+  defp execution_context(credential \\ nil),
+    do: ExecutionContext.new(Context.new!(request_id: "mqtt-client"), credential)
 end

@@ -405,7 +405,7 @@ defmodule Wotex.Lab.HttpTest do
     {:ok, closed} = request("GET", "http://127.0.0.1:1/properties/temperature", deadline: nil)
     assert {:error, :transport_failed} = ReqClient.request(closed, nil, %{})
     assert {:error, :invalid_handle} = ReqClient.close(:not_a_session, %{})
-    assert {:ok, %HTTPResponse{}} = ReqClient.request(get, nil, :bad_config)
+    assert {:error, :invalid_config} = ReqClient.request(get, nil, :bad_config)
   end
 
   test "stream opens report connection failures and non-stream handshakes", %{server: server} do

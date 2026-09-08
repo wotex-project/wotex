@@ -209,8 +209,13 @@ with a token. The MQTT
 lane is implemented too: `Wotex.Lab.Adapters.MQTT.EmqttClient` and its linked
 `Adapters.MQTT.Session` carry runtime requests, retained reads, publications
 and subscriptions over EMQTT (`emqtt` is an optional dependency selected by
-the host) against a disposable `eclipse-mosquitto:2` broker. TLS, broker ACL
-isolation, Last Will, session expiry and power loss remain planned there.
+the host) against a disposable `eclipse-mosquitto:2` broker. The broker cohort
+covers verified MQTTS, credentialed ACL isolation, Last Will after abrupt
+client loss, retained Will state, session expiry and finite inflight limits.
+`Adapters.MQTT.SampleAdmission` keeps stale retained values, implausible clocks
+and reset-ambiguous identities out of `Wotex.Nx`. HTTP hosted mode separately
+binds every Req exchange to an exact audience and globally routable resolved
+peer while preserving TLS hostname verification.
 `ex_maude` earns a specific place by exploring modeled conflicting control
 decisions and unsafe transition orders: `Wotex.Lab.Formal.Profile` verifies
 the digest-addressed `thermal-control-v1` model under explicit bounds and

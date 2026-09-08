@@ -17,24 +17,24 @@ if Code.ensure_loaded?(:emqtt) do
     User Name and Password for that one connection and is never stored: emqtt
     runs with `reconnect: false`, so no automatic reconnect can reuse it.
 
-    Configuration is non-secret. `:host` is an optional admitted-peer pin that
-    the Form's broker host must match, `:port` (1883) is the port for a Form
-    href without one, `:client_id_prefix` (`"wotex-lab"`) prefixes a random
-    Client Identifier, `:keepalive` (30) is the MQTT Keep Alive in seconds and
-    `:connect_timeout` (5,000) bounds the connect exchange in milliseconds.
+    Configuration is closed, bounded and non-secret. It admits an optional host
+    pin, port, random Client Identifier prefix or explicit stable identifier,
+    finite connect/keepalive/inflight/packet bounds, clean-start and session
+    expiry policy, verified TLS material, and a bounded Last Will. Reconnect is
+    always disabled; a new Runtime subscription must resolve credentials again.
     """
 
     @behaviour Wotex.Binding.MQTT.Client
 
+    alias Wotex.Binding.MQTT.Topic
     alias Wotex.Lab.Adapters.MQTT.Session
     alias Wotex.Lab.Error
     alias Wotex.Runtime.{Context, ExecutionContext}
 
     @impl Wotex.Binding.MQTT.Client
     def publish(command, %ExecutionContext{} = execution_context, config) do
-      config = normalize_config(config)
-
-      with {:ok, credential} <- connect_credential(execution_context.credential) do
+      with {:ok, config} <- normalize_config(config),
+           {:ok, credential} <- connect_credential(execution_context.credential) do
         Session.publish(command, credential, config, budget(execution_context, config))
       end
     end
@@ -42,9 +42,8 @@ if Code.ensure_loaded?(:emqtt) do
     @impl Wotex.Binding.MQTT.Client
     def read(command, timeout, %ExecutionContext{} = execution_context, config)
         when is_integer(timeout) and timeout > 0 do
-      config = normalize_config(config)
-
-      with {:ok, credential} <- connect_credential(execution_context.credential) do
+      with {:ok, config} <- normalize_config(config),
+           {:ok, credential} <- connect_credential(execution_context.credential) do
         Session.read(command, credential, config, timeout)
       end
     end
@@ -52,9 +51,8 @@ if Code.ensure_loaded?(:emqtt) do
     @impl Wotex.Binding.MQTT.Client
     def subscribe(command, owner, %ExecutionContext{} = execution_context, config)
         when is_pid(owner) do
-      config = normalize_config(config)
-
-      with {:ok, credential} <- connect_credential(execution_context.credential) do
+      with {:ok, config} <- normalize_config(config),
+           {:ok, credential} <- connect_credential(execution_context.credential) do
         Session.subscribe(command, credential, config, owner)
       end
     end
@@ -98,16 +96,94 @@ if Code.ensure_loaded?(:emqtt) do
     defp normalize_config(config) when is_map(config) or is_list(config) do
       config = Map.new(config)
 
-      %{
+      normalized = %{
         host: Map.get(config, :host),
-        port: Map.get(config, :port, 1883),
+        port: Map.get(config, :port),
         client_id_prefix: Map.get(config, :client_id_prefix, "wotex-lab"),
+        client_id: Map.get(config, :client_id),
         keepalive: Map.get(config, :keepalive, 30),
-        connect_timeout: Map.get(config, :connect_timeout, 5_000)
+        connect_timeout: Map.get(config, :connect_timeout, 5_000),
+        clean_start: Map.get(config, :clean_start, true),
+        session_expiry_interval: Map.get(config, :session_expiry_interval, 0),
+        receive_maximum: Map.get(config, :receive_maximum, 64),
+        maximum_packet_size: Map.get(config, :maximum_packet_size, 1_048_576),
+        max_inflight: Map.get(config, :max_inflight, 16),
+        tls_ca_certfile: Map.get(config, :tls_ca_certfile),
+        tls_certfile: Map.get(config, :tls_certfile),
+        tls_keyfile: Map.get(config, :tls_keyfile),
+        will: Map.get(config, :will)
       }
+
+      allowed = Map.keys(normalized)
+
+      if Enum.all?(Map.keys(config), &(&1 in allowed)) and valid_config?(normalized),
+        do: {:ok, normalized},
+        else: invalid_config()
+    rescue
+      _error -> invalid_config()
     end
 
-    defp normalize_config(_config), do: normalize_config(%{})
+    defp normalize_config(_config), do: invalid_config()
+
+    defp valid_config?(config) do
+      Enum.all?([
+        is_nil(config.host) or nonempty_binary?(config.host, 253),
+        is_nil(config.port) or integer_in?(config.port, 1..65_535),
+        nonempty_binary?(config.client_id_prefix, 64),
+        is_nil(config.client_id) or nonempty_binary?(config.client_id, 128),
+        integer_in?(config.keepalive, 0..65_535),
+        integer_in?(config.connect_timeout, 1..60_000),
+        is_boolean(config.clean_start),
+        integer_in?(config.session_expiry_interval, 0..4_294_967_295),
+        integer_in?(config.receive_maximum, 1..65_535),
+        integer_in?(config.maximum_packet_size, 1..16_777_216),
+        integer_in?(config.max_inflight, 1..1_024),
+        optional_path?(config.tls_ca_certfile),
+        optional_path?(config.tls_certfile),
+        optional_path?(config.tls_keyfile),
+        paired_client_certificate?(config),
+        valid_will?(config.will, config.maximum_packet_size),
+        stable_session_policy?(config)
+      ])
+    end
+
+    defp nonempty_binary?(value, limit),
+      do: is_binary(value) and byte_size(value) in 1..limit and String.valid?(value)
+
+    defp integer_in?(value, range), do: is_integer(value) and value in range
+    defp optional_path?(nil), do: true
+    defp optional_path?(value), do: nonempty_binary?(value, 4_096)
+
+    defp paired_client_certificate?(config),
+      do: is_nil(config.tls_certfile) == is_nil(config.tls_keyfile)
+
+    defp valid_will?(nil, _maximum_packet_size), do: true
+
+    defp valid_will?(will, maximum_packet_size) when is_map(will) do
+      allowed = [:topic, :payload, :qos, :retain, :delay_interval]
+      topic = Map.get(will, :topic)
+      payload = Map.get(will, :payload)
+
+      Enum.all?([
+        Enum.all?(Map.keys(will), &(&1 in allowed)),
+        match?(:ok, Topic.validate_name(topic)),
+        is_binary(payload) and byte_size(payload) <= maximum_packet_size,
+        Map.get(will, :qos, 0) in 0..2,
+        is_boolean(Map.get(will, :retain, false)),
+        integer_in?(Map.get(will, :delay_interval, 0), 0..4_294_967_295)
+      ])
+    end
+
+    defp valid_will?(_will, _maximum_packet_size), do: false
+
+    defp stable_session_policy?(
+           %{clean_start: clean_start, session_expiry_interval: expiry} = config
+         ) do
+      if clean_start and expiry == 0, do: true, else: is_binary(config.client_id)
+    end
+
+    defp invalid_config,
+      do: error(:invalid_mqtt_config, "the MQTT client configuration is invalid")
 
     defp error(code, message),
       do: {:error, Error.new(code, :transport, message, class: :permanent)}

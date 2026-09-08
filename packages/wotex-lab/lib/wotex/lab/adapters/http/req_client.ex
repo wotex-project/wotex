@@ -15,15 +15,20 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
     The credential resolved by the runtime is `nil`, `{:bearer, token}`,
     `{:basic, user, password}`, or a map of security names to those tuples; it
     becomes an `authorization` field for that one exchange and is never stored.
-    Configuration is non-secret: `:receive_timeout` (5,000 ms), `:connect_timeout`
-    (5,000 ms), `:handshake_timeout` (5,000 ms), `:max_line_bytes` (65,536), and
-    `:finch` (an optional Finch instance name).
+    Configuration is closed and non-secret. In addition to finite receive,
+    connect, handshake and line budgets, `:profile` is `:local` or `:hosted`.
+    Hosted requests require an exact `:audience` origin and resolve through
+    `:resolver`; private, link-local, metadata, multicast and mixed public/private
+    answers are refused, and the admitted address is pinned through connect.
+    TLS peer and hostname verification stays enabled. A local TLS fixture may
+    name its CA with `:tls_ca_certfile`.
     """
 
     @behaviour Wotex.Binding.HTTP.Client
 
     alias Wotex.Binding.HTTP.{Headers, Request, Response}
     alias Wotex.Lab.Adapters.HTTP.SSE.Session
+    alias Wotex.Lab.Network.Destination
     alias Wotex.Lab.Telemetry
     alias Wotex.Runtime.Context
 
@@ -38,9 +43,9 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
 
     @impl Wotex.Binding.HTTP.Client
     def request(%Request{} = request, credential, config) do
-      config = normalize_config(config)
-
-      with {:ok, method} <- method(Request.method(request)),
+      with {:ok, config} <- normalize_config(config),
+           {:ok, destination} <- Destination.admit(Request.uri(request), config),
+           {:ok, method} <- method(Request.method(request)),
            {:ok, headers} <- authorize(Request.headers(request), credential),
            {:ok, budget} <- budget(request, config) do
         limit = Request.max_response_bytes(request)
@@ -48,16 +53,15 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
         options =
           [
             method: method,
-            url: Request.uri(request),
+            url: destination.url,
             headers: headers,
             body: Request.body(request),
             redirect: false,
             retry: false,
             decode_body: false,
             receive_timeout: budget,
-            connect_options: [timeout: min(budget, config.connect_timeout)],
             into: &collect(&1, &2, limit)
-          ] ++ finch(config)
+          ] ++ connection(config, destination, budget)
 
         Telemetry.span(:http, :request, %{operation: method, profile: :http}, fn ->
           options |> Req.request() |> finite_response()
@@ -80,22 +84,21 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
 
     @impl Wotex.Binding.HTTP.Client
     def subscribe(%Request{} = request, credential, owner, config) when is_pid(owner) do
-      config = normalize_config(config)
-
-      with {:ok, method} <- method(Request.method(request)),
+      with {:ok, config} <- normalize_config(config),
+           {:ok, destination} <- Destination.admit(Request.uri(request), config),
+           {:ok, method} <- method(Request.method(request)),
            {:ok, headers} <- authorize(Request.headers(request), credential),
            {:ok, budget} <- budget(request, config) do
         options =
           [
             method: method,
-            url: Request.uri(request),
+            url: destination.url,
             headers: headers,
             redirect: false,
             retry: false,
             decode_body: false,
-            receive_timeout: :infinity,
-            connect_options: [timeout: min(budget, config.connect_timeout)]
-          ] ++ finch(config)
+            receive_timeout: :infinity
+          ] ++ connection(config, destination, budget)
 
         parser = [
           max_line_bytes: config.max_line_bytes,
@@ -175,8 +178,18 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
     defp remaining(ms) when is_integer(ms), do: {:ok, ms}
     defp remaining({:error, _reason}), do: {:error, :timeout}
 
-    defp finch(%{finch: nil}), do: []
-    defp finch(%{finch: name}), do: [finch: name]
+    defp connection(%{finch: nil}, destination, budget) do
+      options =
+        Keyword.put(
+          destination.connect_options,
+          :timeout,
+          min(budget, destination.connect_options[:timeout])
+        )
+
+      [connect_options: options]
+    end
+
+    defp connection(%{finch: name}, _destination, _budget), do: [finch: name]
 
     defp flatten(headers) when is_map(headers),
       do: Enum.flat_map(headers, fn {name, values} -> Enum.map(List.wrap(values), &{name, &1}) end)
@@ -184,15 +197,44 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
     defp normalize_config(config) when is_map(config) or is_list(config) do
       config = Map.new(config)
 
-      %{
+      normalized = %{
         receive_timeout: Map.get(config, :receive_timeout, 5_000),
         connect_timeout: Map.get(config, :connect_timeout, 5_000),
         handshake_timeout: Map.get(config, :handshake_timeout, 5_000),
         max_line_bytes: Map.get(config, :max_line_bytes, 65_536),
-        finch: Map.get(config, :finch)
+        finch: Map.get(config, :finch),
+        profile: Map.get(config, :profile, :local),
+        audience: Map.get(config, :audience),
+        resolver: Map.get(config, :resolver, &:inet.getaddrs/2),
+        tls_ca_certfile: Map.get(config, :tls_ca_certfile)
       }
+
+      allowed = Map.keys(normalized)
+
+      if Enum.all?(Map.keys(config), &(&1 in allowed)) and valid_config?(normalized),
+        do: {:ok, normalized},
+        else: {:error, :invalid_config}
+    rescue
+      _error -> {:error, :invalid_config}
     end
 
-    defp normalize_config(_config), do: normalize_config(%{})
+    defp normalize_config(_config), do: {:error, :invalid_config}
+
+    defp valid_config?(config) do
+      Enum.all?([
+        timeout?(config.receive_timeout),
+        timeout?(config.connect_timeout),
+        timeout?(config.handshake_timeout),
+        is_integer(config.max_line_bytes) and config.max_line_bytes in 1..1_048_576,
+        is_nil(config.finch) or is_atom(config.finch),
+        config.profile in [:local, :hosted],
+        is_nil(config.audience) or is_binary(config.audience),
+        is_function(config.resolver, 2),
+        is_nil(config.tls_ca_certfile) or is_binary(config.tls_ca_certfile),
+        config.profile == :local or is_nil(config.finch)
+      ])
+    end
+
+    defp timeout?(value), do: is_integer(value) and value in 1..60_000
   end
 end

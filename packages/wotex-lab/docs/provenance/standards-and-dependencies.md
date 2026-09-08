@@ -46,7 +46,9 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [Snappy block format](https://github.com/google/snappy/blob/main/format_description.txt) (BSD-3-Clause) | Pure Elixir literal and 16-bit-offset copy encoder plus full block decoder in `Wotex.Lab.Metrics.Snappy`; stream framing is not implemented |
 | [greptime/greptimedb:v1.1.4](https://hub.docker.com/r/greptime/greptimedb) | Disposable standalone container for the `:greptime` lane, selected by tag; ingestion through `/v1/prometheus/write` and read-back through `/v1/sql` are the only exercised endpoints, not a digest-pinned release or a server conformance claim |
 
-## Acknowledged advisories in the optional MQTT cohort
+## Acknowledged dependency advisories
+
+### Optional MQTT cohort
 
 Observation date: 2026-09-08. The optional `emqtt` requirement resolves `gun`
 and `cowlib`, which carry open advisories with no patched Hex release at that
@@ -62,6 +64,25 @@ rather than a permanent failure. This is a dated, scoped acknowledgement, not a
 claim that the advisories are invalid: a consumer that also uses gun or cowlib
 for HTTP is affected independently of Lab, and the acknowledgement must be
 removed once a patched release exists.
+
+### Decimal affected-range inconsistency
+
+Observation date: 2026-09-08. `decimal` 3.1.1 is reported as vulnerable by the
+current EEF/OSV record for `EEF-CVE-2026-32686`, even though that record's prose
+says versions before 3.0.0 are affected. The upstream
+[3.0.0 changelog](https://github.com/ericmj/decimal/blob/v3.1.1/CHANGELOG.md)
+records the decimal128 input limits that reject pathological exponents, and the
+[GitHub advisory](https://github.com/advisories/GHSA-rhv4-8758-jx7v) names
+3.0.0 as the patched version. The [EEF/OSV record](https://osv.dev/vulnerability/EEF-CVE-2026-32686)
+nevertheless listed 3.0.0 through 3.1.1 in its affected-version data on the
+observation date. There is no later Decimal release to select.
+
+The Lab therefore acknowledges `EEF-CVE-2026-32686` for the exact locked
+3.1.1 release. `test/wotex/lab/dependency_security_test.exs` exercises the
+reported unbounded-exponent payload behind a deadline and requires both parse
+entry points to reject it. This is a temporary response to contradictory
+machine-readable metadata, not a general waiver: remove the acknowledgement if
+the lock moves below 3.0.0, the regression fails, or the advisory range changes.
 
 Selected versions are design baselines, not claims that they are universally
 the newest or compatible. Runtime dependencies are pinned by `mix.lock`; full

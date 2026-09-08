@@ -1,12 +1,11 @@
 # WLB.04: Runtime and real reference transports
 
-Specification version: 1.3.0. Contract: accepted. Source status: the loopback
-transport, simulated Thing host, NoSec and StaticRef credential adapters, the
-Req client with its bounded SSE session, and the EMQTT client with its linked
-broker session are implemented and exercised over real sockets against a
-disposable local server and a disposable MQTT broker container; TLS, broker
-ACL isolation, Last Will, session expiry, power loss and the hosted
-destination policy remain planned.
+Specification version: 1.4.0. Contract: accepted. Source status: implemented.
+The loopback transport, simulated Thing host, NoSec and StaticRef credential
+adapters, bounded Req/SSE client, hosted destination policy and EMQTT client
+are exercised over real sockets. The network cohort includes verified local
+TLS fixtures and a disposable MQTT broker with TLS, ACL, Last Will, abrupt
+power-loss, session-expiry and inflight evidence.
 
 ## Public seams and chosen implementations
 
@@ -15,7 +14,9 @@ destination policy remain planned.
 | Runtime transport | Loopback adapter; network binding transports | `c:Wotex.Runtime.Transport.request/3`, `c:Wotex.Runtime.Transport.subscribe/4`, `c:Wotex.Runtime.Transport.unsubscribe/4`, optional `c:Wotex.Runtime.Transport.decode_frame/3` |
 | Runtime credentials | NoSec and StaticRef | `c:Wotex.Runtime.Credentials.resolve/4` |
 | HTTP client | `Wotex.Lab.Adapters.HTTP.ReqClient` with `Adapters.HTTP.SSE.Session` and `Adapters.HTTP.SSE.Parser` | `c:Wotex.Binding.HTTP.Client.request/3`, `c:Wotex.Binding.HTTP.Client.subscribe/4`, `c:Wotex.Binding.HTTP.Client.close/2` |
+| Hosted HTTP destination | `Wotex.Lab.Network.Destination` | Exact audience, DNS-address admission, peer pin and TLS hostname identity before Req connects |
 | MQTT client | `Wotex.Lab.Adapters.MQTT.EmqttClient` with `Adapters.MQTT.Session` | `c:Wotex.Binding.MQTT.Client.publish/3`, `c:Wotex.Binding.MQTT.Client.read/4`, `c:Wotex.Binding.MQTT.Client.subscribe/4`, `c:Wotex.Binding.MQTT.Client.unsubscribe/4` |
+| MQTT sample admission | `Wotex.Lab.Adapters.MQTT.SampleAdmission` | Retained age, device clock uncertainty and reset-scoped sample identity before `Wotex.Nx.Observation` |
 | Inbound application | Explicit simulated Thing handlers | Public `Wotex.Runtime.ExposedThing` boundary |
 
 Lab MUST NOT reimplement binding mappings. Fixtures use only supported cells
@@ -140,12 +141,13 @@ The disposable broker is an `eclipse-mosquitto:2` container with a generated
 minimal configuration, an ephemeral loopback port, no persistence and an
 isolated run topic prefix per test, removed when the suite ends. The image is
 selected by tag for local evidence; a digest-pinned image belongs to the
-release profile of WLB.08 and is not claimed here. MQTT `$SYS` topics and
-MQTT 5 shared Topic Filters are exercised against that broker. TLS, broker ACL
-isolation, retained stale samples, Last Will, session expiry, inflight/QoS
-bounds and power loss remain planned. Time since receipt is not sensor
-observation age; clock uncertainty and device reset identity are part of
-admission before a sample reaches Wotex Nx.
+release profile of WLB.08 and is not claimed here. MQTT `$SYS` topics, MQTT 5
+shared Topic Filters, a CA-signed MQTTS listener, credentialed ACL isolation,
+a retained Last Will after abrupt client loss, session resumption/expiry and
+finite inflight/receive/packet bounds are exercised against that broker. Time
+since receipt is not sensor observation age: `SampleAdmission` requires device
+observation time, received time, bounded clock uncertainty, device/boot
+identity and sequence, and rejects stale retained values before `Wotex.Nx`.
 
 Run the broker lane explicitly; it is excluded unless the switch is set, so a
 machine without a container runtime still runs a complete `mix check`:
@@ -153,6 +155,13 @@ machine without a container runtime still runs a complete `mix check`:
 ```sh
 WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 MIX_ENV=test mix test
 ```
+
+The complete source-run record is
+[`WLB.04-evidence.json`](../provenance/WLB.04-evidence.json). It binds the
+passing assertions to the source-tree, lock, TLS fixture and observed broker
+image digests, exact toolchain, seed, budgets, duration and cleanup outcome.
+The source dependency archives remain explicitly missing, so this record does
+not imply the artifact-verification claim owned by WLB.08.
 
 ## Acceptance
 
@@ -162,7 +171,11 @@ slow (deadline), redirected, mistyped and unauthorized exchanges with retry
 classes and no credential leakage, incremental SSE parsing with CRLF, split
 UTF-8, comments, ids and retries, undecodable frames, server-side stream end,
 explicit stop closing the connection, oversized events ending the session,
-and a mistyped handshake failing the open. `test/wotex/lab/loopback_test.exs`
+and a mistyped handshake failing the open.
+`test/wotex/lab/http_destination_test.exs` covers closed configuration,
+verified TLS success and hostname failure, exact hosted audience admission,
+mixed public/private DNS refusal, global-address classification and connect
+pinning. `test/wotex/lab/loopback_test.exs`
 covers the in-BEAM loopback lane: admission
 with identity and inert results, rejected writes leaving the handler counter
 unchanged, retry classification from the transported cause, just-in-time
@@ -180,13 +193,18 @@ oversized Application Message, an explicit stop that unsubscribes and
 disconnects every session process, a stopped broker container surfacing
 `:transport_down` and stopping the child, a permanent child resubscribing after
 restart with freshly resolved credentials, an authenticated profile whose
-password appears in no process diagnostic, a bounded receiver mailbox, and
-shared plus `$SYS` Topic Filters. `test/wotex/lab/mqtt_test.exs` covers the
+password appears in no process diagnostic, a bounded receiver mailbox, shared
+plus `$SYS` Topic Filters, verified MQTTS, ACL delivery isolation, Last Will
+after abrupt loss, retained Will state, session expiry and inflight limits.
+`test/wotex/lab/mqtt_test.exs` covers the
 container-free client paths against a scripted in-BEAM MQTT 5 peer and closed
 or silent sockets: refused connections, a bounded handshake and read budget,
 credential mapping and rejection, an unadmitted broker host, an alien handle, a
 denied Topic Filter, a server DISCONNECT, a closed socket and a killed
-subscription owner. The scripted peer is a test peer, not broker evidence.
+subscription owner, closed bounded lifecycle configuration and its exact MQTT
+5 CONNECT fields. `test/wotex/lab/mqtt_sample_admission_test.exs` covers stale
+retained and live samples, future clocks, uncertainty and boot-scoped identity.
+The scripted peer is a test peer, not broker evidence.
 
 Real loopback HTTP/SSE and disposable-broker runs cover read, write, Action,
 Property observation and Event subscription where supported, plus wrong

@@ -85,11 +85,12 @@ specifications:
       - "test/wotex/lab/cookbook_test.exs"
     compatibility_classification: WLB.03 lanes implemented with optional Axon 0.8 and EXLA 0.13 profiles, fixed work ceilings, monitored cancellation and inert policy-bound outputs; artifact adoption remains a separate axis.
   - id: WLB.04
-    version: "1.3.0"
+    version: "1.4.0"
     path: docs/specs/WLB.04-runtime-and-network-adapters.md
-    implementation_status: partial
-    evidence_status: partial
+    implementation_status: implemented
+    evidence_status: complete
     adoption_status: reference_available
+    evidence_manifest: docs/provenance/WLB.04-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -116,14 +117,19 @@ specifications:
       - "Wotex.Lab.Adapters.HTTP.ReqClient"
       - "Wotex.Lab.Adapters.HTTP.SSE.Session"
       - "Wotex.Lab.Adapters.HTTP.SSE.Parser"
+      - "Wotex.Lab.Network.Destination"
       - "Wotex.Lab.Adapters.MQTT.EmqttClient"
       - "Wotex.Lab.Adapters.MQTT.Session"
+      - "Wotex.Lab.Adapters.MQTT.SampleAdmission"
     executable_evidence:
       - "test/wotex/lab/loopback_test.exs"
       - "test/wotex/lab/http_test.exs"
+      - "test/wotex/lab/http_destination_test.exs"
       - "test/wotex/lab/mqtt_test.exs"
       - "test/wotex/lab/mqtt_broker_test.exs"
-    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+      - "test/wotex/lab/mqtt_sample_admission_test.exs"
+      - "test/wotex/lab/evidence_manifest_test.exs"
+    compatibility_classification: WLB.04 is implemented through explicit local/hosted profiles, verified TLS, pinned hosted peers and bounded MQTT lifecycle policy; artifact adoption remains a separate axis.
   - id: WLB.05
     version: "1.5.0"
     path: docs/specs/WLB.05-directory-continuum-and-smart-room.md

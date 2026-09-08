@@ -11,17 +11,21 @@ defmodule Wotex.Lab.Test.HttpServer do
 
   @token "room-token-7f3a"
 
-  @spec start(pid()) :: {:ok, %{server: pid(), controller: pid(), port: non_neg_integer()}}
-  def start(test_pid) do
+  @spec start(pid(), keyword()) ::
+          {:ok, %{server: pid(), controller: pid(), port: non_neg_integer()}}
+  def start(test_pid, opts \\ []) do
     {:ok, controller} = Agent.start_link(fn -> %{test_pid: test_pid, stream: nil} end)
 
-    {:ok, server} =
-      Bandit.start_link(
+    bandit_options =
+      [
         plug: {__MODULE__, controller},
         ip: {127, 0, 0, 1},
         port: 0,
         startup_log: false
-      )
+      ] ++ Keyword.take(opts, [:scheme, :certfile, :keyfile])
+
+    {:ok, server} =
+      Bandit.start_link(bandit_options)
 
     {:ok, %{port: port}} = listener(server)
     {:ok, %{server: server, controller: controller, port: port}}

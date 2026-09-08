@@ -316,23 +316,69 @@ if Code.ensure_loaded?(:emqtt) do
       host = Broker.host(broker)
 
       if is_nil(config.host) or config.host == host do
-        {:ok, endpoint(host, Broker.port(broker) || config.port, config) ++ connect_credential}
+        port = Broker.port(broker) || config.port || default_port(Broker.scheme(broker))
+        {:ok, endpoint(broker, host, port, config) ++ connect_credential}
       else
         {:error, failure(:broker_host_not_admitted, :permanent)}
       end
     end
 
-    defp endpoint(host, port, config) do
-      [
+    defp endpoint(broker, host, port, config) do
+      base = [
         host: String.to_charlist(host),
         port: port,
-        clientid: client_id(config.client_id_prefix),
+        clientid: config.client_id || client_id(config.client_id_prefix),
         proto_ver: :v5,
-        clean_start: true,
+        clean_start: config.clean_start,
         keepalive: config.keepalive,
         connect_timeout: seconds(config.connect_timeout),
+        max_inflight: config.max_inflight,
+        properties: %{
+          "Session-Expiry-Interval": config.session_expiry_interval,
+          "Receive-Maximum": config.receive_maximum,
+          "Maximum-Packet-Size": config.maximum_packet_size
+        },
         reconnect: false,
         retry_calls_on_reconnect: false
+      ]
+
+      base ++ tls_options(Broker.scheme(broker), host, config) ++ will_options(config.will)
+    end
+
+    defp default_port(:mqtt), do: 1_883
+    defp default_port(:mqtts), do: 8_883
+
+    defp tls_options(:mqtt, _host, _config), do: []
+
+    defp tls_options(:mqtts, host, config) do
+      ssl_options =
+        [
+          verify: :verify_peer,
+          server_name_indication: String.to_charlist(host),
+          customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]
+        ]
+        |> trust_store(config.tls_ca_certfile)
+        |> put_if(:certfile, config.tls_certfile)
+        |> put_if(:keyfile, config.tls_keyfile)
+
+      [ssl: true, ssl_opts: ssl_options]
+    end
+
+    defp trust_store(options, nil), do: Keyword.put(options, :cacerts, :public_key.cacerts_get())
+    defp trust_store(options, path), do: Keyword.put(options, :cacertfile, String.to_charlist(path))
+
+    defp put_if(options, _key, nil), do: options
+    defp put_if(options, key, value), do: Keyword.put(options, key, String.to_charlist(value))
+
+    defp will_options(nil), do: []
+
+    defp will_options(will) do
+      [
+        will_topic: will.topic,
+        will_payload: will.payload,
+        will_qos: Map.get(will, :qos, 0),
+        will_retain: Map.get(will, :retain, false),
+        will_props: %{"Will-Delay-Interval": Map.get(will, :delay_interval, 0)}
       ]
     end
 

@@ -227,22 +227,40 @@ defmodule Wotex.Lab.Test.MqttServer do
   defp variable(length),
     do: <<(length &&& 0x7F) ||| 0x80>> <> variable(length >>> 7)
 
-  defp connect_info(<<_size::16, "MQTT", _version, flags, _keepalive::16, rest::binary>>) do
-    {_properties, rest} = properties(rest)
+  defp connect_info(<<_size::16, "MQTT", _version, flags, keepalive::16, rest::binary>>) do
+    {property_bytes, rest} = properties(rest)
     {client_id, rest} = string(rest)
-    rest = skip_will(flags &&& 0x04, rest)
+    {will, rest} = will_info(flags, rest)
     {username, rest} = optional(flags &&& 0x80, rest)
     {password, _rest} = optional(flags &&& 0x40, rest)
-    %{client_id: client_id, username: username, password: password}
+
+    %{
+      client_id: client_id,
+      username: username,
+      password: password,
+      clean_start: (flags &&& 0x02) != 0,
+      keepalive: keepalive,
+      properties: decode_properties(property_bytes, %{}),
+      will: will
+    }
   end
 
-  defp skip_will(0, rest), do: rest
+  defp will_info(flags, rest) when (flags &&& 0x04) == 0, do: {nil, rest}
 
-  defp skip_will(_flag, rest) do
-    {_properties, rest} = properties(rest)
-    {_topic, rest} = string(rest)
-    {_payload, rest} = string(rest)
-    rest
+  defp will_info(flags, rest) do
+    {property_bytes, rest} = properties(rest)
+    {topic, rest} = string(rest)
+    {payload, rest} = string(rest)
+
+    will = %{
+      topic: topic,
+      payload: payload,
+      qos: flags >>> 3 &&& 0x03,
+      retain: (flags &&& 0x20) != 0,
+      properties: decode_properties(property_bytes, %{})
+    }
+
+    {will, rest}
   end
 
   defp optional(0, rest), do: {nil, rest}
@@ -284,6 +302,22 @@ defmodule Wotex.Lab.Test.MqttServer do
     <<properties::binary-size(^size), payload::binary>> = rest
     {properties, payload}
   end
+
+  defp decode_properties(<<>>, decoded), do: decoded
+
+  defp decode_properties(<<0x11, value::32, rest::binary>>, decoded),
+    do: decode_properties(rest, Map.put(decoded, :session_expiry_interval, value))
+
+  defp decode_properties(<<0x18, value::32, rest::binary>>, decoded),
+    do: decode_properties(rest, Map.put(decoded, :will_delay_interval, value))
+
+  defp decode_properties(<<0x21, value::16, rest::binary>>, decoded),
+    do: decode_properties(rest, Map.put(decoded, :receive_maximum, value))
+
+  defp decode_properties(<<0x27, value::32, rest::binary>>, decoded),
+    do: decode_properties(rest, Map.put(decoded, :maximum_packet_size, value))
+
+  defp decode_properties(_unknown, decoded), do: Map.put(decoded, :unknown, true)
 
   defp string(<<size::16, value::binary-size(size), rest::binary>>), do: {value, rest}
 end
