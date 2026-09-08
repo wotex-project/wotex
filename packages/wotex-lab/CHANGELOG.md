@@ -2,6 +2,11 @@
 
 ## 0.1.0 — source foundation
 
+- Metrics history requires explicit instance binding for queries, pins snapshot
+  slots and revalidates descriptors and metric cohorts. Monitored bounded query
+  leases are released on caller death/deadline. Counter/histogram resets within
+  coarse intervals, empty/stale histograms and clock rollback are now explicit.
+
 - Conformance profile 2.0 replaces the Python helper and probes with an external
   Rust supervisor and explicit digest-pinned launcher admission. Cleanup covers
   successful exits, observed detached descendants and termination signals.

@@ -102,6 +102,25 @@ PromEx dependency. The portable JSON uses classic Grafana schema 39 and fixed
 Export shape/query equality is tested; a Grafana import or PromQL-engine cohort
 is not claimed by those source tests.
 
+## History admission and metrics source cohort
+
+Observation date: 2026-09-08. The eight metrics/Greptime test files passed
+52 tests with seed 1 on Elixir 1.20.2 / OTP 29 / aarch64 Darwin, including the
+real Remote Write ingestion and SQL read-back test. The disposable
+`greptime/greptimedb:v1.1.4` image resolved to
+`sha256:9726587eac95d0360755254cd59a528dbf48abfdf268478aea6a644f62afe44c`.
+Its source-test profile uses a loopback-only ephemeral HTTP port, no persistent
+volume, 2 CPUs, 1 GiB memory with no additional swap and 256 PIDs; cleanup was
+verified after the test. This does not prove TTL provisioning, authenticated
+remote deployment, official-sender compatibility or the unimplemented query
+gateway/BeamLens integration.
+
+History queries now require explicit instance binding; snapshot slots, query
+leases and catalogue metric semantics are independently admitted. Tests cover
+within-bucket resets, no-data/stale histograms, rollback, forged descriptors,
+scope substitution, caller-death cleanup and cooperative deadline refusal.
+No new dependency or automatic history/HTTP/database activation is introduced.
+
 ## Acknowledged dependency advisories
 
 ### Optional Explorer source cohort

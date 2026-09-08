@@ -4,18 +4,32 @@ defmodule Wotex.Lab.Metrics.History do
 
   Capacity is explicit positive configuration: `:max_snapshots` (120, hard
   ceiling 10,000) and `:max_bytes` (8 MiB of encoded snapshot bytes, hard
-  ceiling 64 MiB). `put/2` is a call serialized through the owning process, so
-  admission is atomic and a burst of writers is held back rather than piling
-  into an unbounded mailbox; the oldest snapshots are evicted to make room, a
+  ceiling 64 MiB). `put/2` serializes atomic admission through the owning
+  process; hosts must bound their writer concurrency (the reference scraper
+  has one writer). A synchronous call alone does not bound arbitrary callers.
+  The oldest snapshots are evicted to make room, a
   snapshot larger than the whole byte budget is dropped, and every eviction,
   drop and rejection is counted in `stats/1`. A gap in a source's sequence and
   a change of its reset identity are flagged on the stored row so reads can
   show them. Nothing here is durable: the table dies with the process and the
   store never claims to be a system of record.
 
+  `:instance_slot` (default 0) binds snapshot admission. Querying additionally
+  requires an explicit `:instance` identifier; an unbound store is storage-only.
+  Hosts must construct session scope from their authenticated context, never
+  caller text. These bindings are not credentials or a hostile-BEAM boundary.
+  Query descriptors and snapshots are revalidated; a struct is not admission.
+  Matched metric types, finite labels and histogram buckets must agree with
+  the catalogue. Wall-clock rollback is counted and affected queries refused.
+
   `query/2` answers a `Wotex.Lab.Metrics.Query` against the stored snapshots
   in the calling process, after admitting the estimated work and the session
-  concurrency limit. It supports only what ETS can answer honestly: `last`,
+  concurrency limit. Monitored leases also enforce `:max_queries` (32, ceiling
+  128) across all sessions, disappear on caller death and retain no idle session
+  keys. Indexed query buckets avoid rescanning every series for every point;
+  deadline checks interrupt work and release the lease. This is a cooperative
+  query deadline over bounded data, not process/OS containment.
+  It supports only what ETS can answer honestly: `last`,
   `sum`, `min`, `max` and `avg` of gauges, `last`, `sum`, `increase` and `rate`
   of counters with reset awareness, and `histogram_quantile` and `increase`
   from histogram bucket counts. Anything else returns `unsupported_query`; ETS
@@ -37,8 +51,8 @@ defmodule Wotex.Lab.Metrics.History do
   @max_snapshots 10_000
   @default_bytes 8 * 1_048_576
   @max_bytes 64 * 1_048_576
-  @options ~w(id max_snapshots max_bytes restart name)a
-  @counters ~w(evicted dropped_oversized rejected gaps resets admitted)a
+  @options ~w(id max_snapshots max_bytes instance instance_slot max_queries restart name)a
+  @counters ~w(evicted dropped_oversized rejected gaps resets clock_rollbacks admitted)a
 
   @doc false
   @spec child_spec(keyword()) :: Supervisor.child_spec()
@@ -51,7 +65,7 @@ defmodule Wotex.Lab.Metrics.History do
     }
   end
 
-  @doc "Starts a history with `:max_snapshots` (120) and `:max_bytes` (8 MiB)."
+  @doc "Starts bounded history; bind `:instance` explicitly to enable queries."
   @spec start_link(keyword()) :: GenServer.on_start() | {:error, Error.t()}
   def start_link(opts) do
     with :ok <- validate(opts) do
@@ -67,9 +81,9 @@ defmodule Wotex.Lab.Metrics.History do
           {:ok, %{sequence: pos_integer(), evicted: non_neg_integer()}} | {:error, Error.t()}
   def put(history, snapshot), do: GenServer.call(history, {:put, snapshot})
 
-  @doc "Every stored snapshot in admission order with its gap and reset flags."
+  @doc "Every stored snapshot in admission order with gap, reset and clock-rollback flags."
   @spec snapshots(GenServer.server()) :: [
-          %{snapshot: Snapshot.t(), gap: boolean(), reset: boolean()}
+          %{snapshot: Snapshot.t(), gap: boolean(), reset: boolean(), clock_rollback: boolean()}
         ]
   def snapshots(history) do
     history
@@ -95,31 +109,40 @@ defmodule Wotex.Lab.Metrics.History do
 
   @doc "Answers an admitted query from the stored snapshots, or explains why it cannot."
   @spec query(GenServer.server(), Query.t()) :: {:ok, map()} | {:error, Error.t()}
-  def query(history, %Query{} = query) do
+  def query(history, descriptor) do
     Telemetry.span(:metrics, :query, %{profile: :ets}, fn ->
-      with {:ok, _estimate} <- Query.estimate(query),
+      with {:ok, query} <- Query.validate(descriptor),
+           {:ok, _estimate} <- Query.estimate(query),
            {:ok, metric} <- Catalogue.fetch(query.metric),
            :ok <- supported(metric, query),
-           {table, inflight} = tables(history),
-           :ok <- acquire(inflight, query) do
+           {:ok, table, token} <-
+             GenServer.call(history, {:acquire, query.scope, query.limits.concurrent}) do
         try do
           answer(table, history, metric, query)
         after
-          release(inflight, query)
+          GenServer.call(history, {:release, token})
         end
       end
     end)
+  catch
+    :throw, :history_query_deadline ->
+      {:error, error(:deadline_exceeded, "query exceeded its deadline", class: :timeout)}
+
+    :exit, _reason ->
+      {:error, error(:history_unavailable, "history is unavailable")}
   end
 
   @impl GenServer
   def init(opts) do
-    table = :ets.new(__MODULE__, [:ordered_set, :public, read_concurrency: true])
-    inflight = :ets.new(__MODULE__, [:set, :public, write_concurrency: true])
+    table = :ets.new(__MODULE__, [:ordered_set, :protected, read_concurrency: true])
 
     {:ok,
      %{
        table: table,
-       inflight: inflight,
+       queries: %{},
+       instance: Keyword.get(opts, :instance),
+       instance_slot: Keyword.get(opts, :instance_slot, 0),
+       max_queries: Keyword.get(opts, :max_queries, 32),
        max_snapshots: Keyword.get(opts, :max_snapshots, @default_snapshots),
        max_bytes: Keyword.get(opts, :max_bytes, @default_bytes),
        sequence: 0,
@@ -130,25 +153,33 @@ defmodule Wotex.Lab.Metrics.History do
   end
 
   @impl GenServer
+  def handle_call({:put, %Snapshot{instance_slot: slot}}, _from, %{instance_slot: bound} = state)
+      when slot != bound do
+    {:reply, {:error, error(:scope_denied, "snapshot instance slot does not match history")},
+     count(state, :rejected)}
+  end
+
   def handle_call({:put, %Snapshot{} = snapshot}, _from, state) do
     bytes = Snapshot.encoded_size(snapshot)
 
-    if bytes > state.max_bytes do
-      state = count(state, :dropped_oversized)
-      {:reply, {:error, error(:oversized_snapshot, "snapshot exceeds the byte budget")}, state}
-    else
-      {state, evicted} = evict(state, bytes, 0)
-      flags = flags(state.last, snapshot)
-      sequence = state.sequence + 1
-      :ets.insert(state.table, {sequence, snapshot, bytes, flags})
+    case admit_snapshot(snapshot, bytes, state.max_bytes) do
+      {:error, reason, counter} ->
+        {:reply, {:error, reason}, count(state, counter)}
 
-      state =
-        %{state | sequence: sequence, bytes: state.bytes + bytes, last: identity(snapshot)}
-        |> count(:admitted)
-        |> count(:gaps, if(flags.gap, do: 1, else: 0))
-        |> count(:resets, if(flags.reset, do: 1, else: 0))
+      {:ok, snapshot} ->
+        {state, evicted} = evict(state, bytes, 0)
+        flags = flags(state.last, snapshot)
+        sequence = state.sequence + 1
+        :ets.insert(state.table, {sequence, snapshot, bytes, flags})
 
-      {:reply, {:ok, %{sequence: sequence, evicted: evicted}}, state}
+        state =
+          %{state | sequence: sequence, bytes: state.bytes + bytes, last: identity(snapshot)}
+          |> count(:admitted)
+          |> count(:gaps, if(flags.gap, do: 1, else: 0))
+          |> count(:resets, if(flags.reset, do: 1, else: 0))
+          |> count(:clock_rollbacks, if(flags.clock_rollback, do: 1, else: 0))
+
+        {:reply, {:ok, %{sequence: sequence, evicted: evicted}}, state}
     end
   end
 
@@ -164,6 +195,10 @@ defmodule Wotex.Lab.Metrics.History do
         bytes: state.bytes,
         max_snapshots: state.max_snapshots,
         max_bytes: state.max_bytes,
+        active_queries: map_size(state.queries),
+        max_queries: state.max_queries,
+        instance: state.instance,
+        instance_slot: state.instance_slot,
         oldest_wall_time_ms: edge(state.table, :first),
         newest_wall_time_ms: edge(state.table, :last)
       })
@@ -171,25 +206,89 @@ defmodule Wotex.Lab.Metrics.History do
     {:reply, stats, state}
   end
 
-  def handle_call(:tables, _from, state), do: {:reply, {state.table, state.inflight}, state}
+  def handle_call(:table, _from, state), do: {:reply, state.table, state}
 
-  defp table(history), do: history |> tables() |> elem(0)
+  def handle_call({:acquire, scope, limit}, {pid, _tag}, state) do
+    concurrent =
+      Enum.count(state.queries, fn {_ref, {_pid, session}} -> session == scope.session end)
 
-  defp tables(history), do: GenServer.call(history, :tables)
+    case admit_query(state, scope, limit, concurrent) do
+      :ok ->
+        token = Process.monitor(pid)
+        queries = Map.put(state.queries, token, {pid, scope.session})
+        {:reply, {:ok, state.table, token}, %{state | queries: queries}}
+
+      {:error, _error} = denied ->
+        {:reply, denied, state}
+    end
+  end
+
+  def handle_call({:release, token}, {pid, _tag}, state) do
+    case Map.get(state.queries, token) do
+      {^pid, _session} ->
+        Process.demonitor(token, [:flush])
+        {:reply, :ok, %{state | queries: Map.delete(state.queries, token)}}
+
+      _other ->
+        {:reply, {:error, error(:scope_denied, "query lease does not belong to caller")}, state}
+    end
+  end
+
+  @impl GenServer
+  def handle_info({:DOWN, token, :process, _pid, _reason}, state),
+    do: {:noreply, %{state | queries: Map.delete(state.queries, token)}}
+
+  defp table(history), do: GenServer.call(history, :table)
+
+  defp admit_snapshot(_snapshot, bytes, max_bytes) when bytes > max_bytes,
+    do: {:error, error(:oversized_snapshot, "snapshot exceeds the byte budget"), :dropped_oversized}
+
+  defp admit_snapshot(snapshot, _bytes, _max_bytes) do
+    case Snapshot.new(Map.from_struct(snapshot)) do
+      {:ok, admitted} ->
+        {:ok, admitted}
+
+      {:error, _invalid} ->
+        {:error, error(:invalid_snapshot, "snapshot descriptor is not admitted"), :rejected}
+    end
+  end
+
+  defp admit_query(state, scope, limit, concurrent) do
+    cond do
+      state.instance == nil ->
+        {:error, error(:scope_unbound, "querying requires an explicitly bound history instance")}
+
+      state.instance != scope.instance ->
+        {:error, error(:scope_denied, "query instance does not match history")}
+
+      concurrent >= limit or map_size(state.queries) >= state.max_queries ->
+        {:error, error(:too_many_queries, "query capacity reached", class: :rate_limited)}
+
+      true ->
+        :ok
+    end
+  end
 
   defp validate(opts) do
     with :ok <- Options.validate(opts, @options) do
       snapshots = Keyword.get(opts, :max_snapshots, @default_snapshots)
       bytes = Keyword.get(opts, :max_bytes, @default_bytes)
+      instance = Keyword.get(opts, :instance)
+      slot = Keyword.get(opts, :instance_slot, 0)
+      queries = Keyword.get(opts, :max_queries, 32)
 
-      if is_integer(snapshots) and snapshots in 1..@max_snapshots and is_integer(bytes) and
-           bytes in 1..@max_bytes do
+      if bounded?(snapshots, 1, @max_snapshots) and bounded?(bytes, 1, @max_bytes) and
+           (instance == nil or Options.identifier?(instance)) and
+           bounded?(slot, 0, 65_535) and bounded?(queries, 1, 128) do
         :ok
       else
         {:error, Error.new(:invalid_history, :construction, "limits exceed the hard ceilings")}
       end
     end
   end
+
+  defp bounded?(value, minimum, maximum),
+    do: is_integer(value) and value >= minimum and value <= maximum
 
   defp evict(state, incoming, evicted) do
     size = :ets.info(state.table, :size)
@@ -204,13 +303,18 @@ defmodule Wotex.Lab.Metrics.History do
     end
   end
 
-  defp identity(snapshot), do: {snapshot.source, snapshot.identity, snapshot.sequence}
+  defp identity(snapshot), do: Map.take(snapshot, [:source, :identity, :sequence, :wall_time_ms])
 
-  defp flags(nil, _snapshot), do: %{gap: false, reset: false}
+  defp flags(nil, _snapshot), do: %{gap: false, reset: false, clock_rollback: false}
 
-  defp flags({source, identity, sequence}, snapshot) do
-    reset = source != snapshot.source or identity != snapshot.identity
-    %{gap: not reset and snapshot.sequence != sequence + 1, reset: reset}
+  defp flags(previous, snapshot) do
+    reset = previous.source != snapshot.source or previous.identity != snapshot.identity
+
+    %{
+      gap: not reset and snapshot.sequence != previous.sequence + 1,
+      reset: reset,
+      clock_rollback: snapshot.wall_time_ms < previous.wall_time_ms
+    }
   end
 
   defp count(state, counter, increment \\ 1),
@@ -240,20 +344,6 @@ defmodule Wotex.Lab.Metrics.History do
          )}
   end
 
-  defp acquire(table, query) do
-    key = {:inflight, query.scope.session}
-
-    if :ets.update_counter(table, key, {2, 1}, {key, 0}) > query.limits.concurrent do
-      :ets.update_counter(table, key, {2, -1})
-      {:error, error(:too_many_queries, "session concurrency limit reached", class: :rate_limited)}
-    else
-      :ok
-    end
-  end
-
-  defp release(table, query),
-    do: :ets.update_counter(table, {:inflight, query.scope.session}, {2, -1})
-
   defp answer(table, history, metric, query) do
     started = System.monotonic_time(:millisecond)
     start_ms = DateTime.to_unix(query.start_at, :millisecond)
@@ -262,9 +352,11 @@ defmodule Wotex.Lab.Metrics.History do
     series = matching(rows, metric, query)
     estimate = div(end_ms - start_ms, query.step_ms) + 1
 
-    with :ok <- ambiguity(series, query),
+    with :ok <- catalogue_samples(rows, metric, started + query.limits.deadline_ms),
+         :ok <- chronology(rows),
+         :ok <- ambiguity(series, query),
          :ok <- work(estimate * max(map_size(series), 1), query) do
-      {points, markers} = points(series, rows, metric, query, start_ms, end_ms)
+      {points, markers} = points(series, rows, metric, query, {start_ms, end_ms}, started)
       stats = stats(history)
 
       response = %{
@@ -278,7 +370,7 @@ defmodule Wotex.Lab.Metrics.History do
         freshness: freshness(rows, end_ms),
         points: points,
         markers: markers ++ loss_markers(rows, stats, start_ms),
-        loss: Map.take(stats, [:evicted, :dropped_oversized, :gaps, :resets]),
+        loss: Map.take(stats, [:evicted, :dropped_oversized, :gaps, :resets, :clock_rollbacks]),
         series_matched: map_size(series),
         digest: Query.digest(query),
         evidence: []
@@ -340,6 +432,41 @@ defmodule Wotex.Lab.Metrics.History do
       else: :ok
   end
 
+  defp chronology(rows) do
+    if Enum.any?(rows, fn {_seq, _snapshot, flags} -> flags.clock_rollback end),
+      do: {:error, error(:clock_rollback, "query interval contains a wall-clock rollback")},
+      else: :ok
+  end
+
+  defp catalogue_samples(rows, metric, deadline) do
+    dimensions = Catalogue.dimensions()
+
+    labels =
+      Map.new(metric.dimensions, fn key ->
+        {Atom.to_string(key), Enum.map(dimensions[key], &Atom.to_string/1)}
+      end)
+
+    valid =
+      Enum.all?(rows, fn {_seq, snapshot, _flags} ->
+        check_deadline!(deadline)
+
+        Enum.all?(snapshot.series, fn series ->
+          series.name != metric.name or matching_cohort?(series, metric, labels)
+        end)
+      end)
+
+    if valid,
+      do: :ok,
+      else: {:error, error(:invalid_metric_cohort, "stored metric does not match the catalogue")}
+  end
+
+  defp matching_cohort?(series, metric, labels) do
+    series.type == metric.type and length(series.labels) == map_size(labels) and
+      Enum.all?(series.labels, fn {key, value} -> value in Map.get(labels, key, []) end) and
+      (metric.type != :histogram or
+         Enum.map(series.sample.buckets, &elem(&1, 0)) == metric.buckets ++ [:infinity])
+  end
+
   defp work(estimate, query) do
     if estimate <= query.limits.points,
       do: :ok,
@@ -363,9 +490,10 @@ defmodule Wotex.Lab.Metrics.History do
       else: []
   end
 
-  defp points(series, rows, metric, query, start_ms, end_ms) do
-    labels = Map.keys(series)
-    steps = Enum.take_while(Stream.iterate(start_ms, &(&1 + query.step_ms)), &(&1 <= end_ms))
+  defp points(series, rows, metric, query, {start_ms, end_ms}, started) do
+    deadline = started + query.limits.deadline_ms
+    windows = windows(rows, series, metric.name, start_ms, query.step_ms, deadline)
+    steps = Stream.take_while(Stream.iterate(start_ms, &(&1 + query.step_ms)), &(&1 <= end_ms))
 
     flag_markers =
       Enum.flat_map(rows, fn {_seq, snapshot, flags} ->
@@ -374,10 +502,8 @@ defmodule Wotex.Lab.Metrics.History do
 
     {points, markers, _previous} =
       Enum.reduce(steps, {[], flag_markers, %{}}, fn t, {points, markers, previous} ->
-        window =
-          Enum.filter(rows, fn {_s, snapshot, _f} -> in_window?(snapshot, t, query.step_ms) end)
-
-        samples = samples(window, labels, metric.name)
+        check_deadline!(deadline)
+        samples = Map.get(windows, t, %{})
         {value, extra, previous} = aggregate(query, metric, samples, previous, t)
 
         {if(value == nil, do: points, else: [%{t: t, value: value} | points]), markers ++ extra,
@@ -387,25 +513,35 @@ defmodule Wotex.Lab.Metrics.History do
     {Enum.reverse(points), markers |> Enum.uniq() |> Enum.sort_by(& &1.t)}
   end
 
-  defp in_window?(snapshot, t, step),
-    do: snapshot.wall_time_ms > t - step and snapshot.wall_time_ms <= t
+  defp windows(rows, labels, name, start, step, deadline) do
+    rows
+    |> Enum.reduce(%{}, fn {_seq, snapshot, _flags}, windows ->
+      check_deadline!(deadline)
+      t = start + div(snapshot.wall_time_ms - start + step - 1, step) * step
+      samples = Map.get(windows, t, %{})
 
-  defp samples(window, labels, name) do
-    Map.new(labels, fn label_set ->
-      values =
-        Enum.flat_map(window, fn {_seq, snapshot, _flags} ->
-          find_sample(snapshot, name, label_set)
-        end)
+      samples = window_samples(snapshot, samples, name, labels)
 
-      {label_set, values}
+      Map.put(windows, t, samples)
+    end)
+    |> Map.new(fn {t, samples} ->
+      {t, Map.new(samples, fn {labels, values} -> {labels, Enum.reverse(values)} end)}
     end)
   end
 
-  defp find_sample(snapshot, name, labels) do
-    case Enum.find(snapshot.series, &(&1.name == name and &1.labels == labels)) do
-      nil -> []
-      series -> [{snapshot.identity, series.sample}]
-    end
+  defp window_samples(snapshot, samples, name, labels) do
+    Enum.reduce(snapshot.series, samples, fn series, samples ->
+      if series.name == name and Map.has_key?(labels, series.labels) do
+        value = {snapshot.identity, series.sample}
+        Map.update(samples, series.labels, [value], &[value | &1])
+      else
+        samples
+      end
+    end)
+  end
+
+  defp check_deadline!(deadline) do
+    if System.monotonic_time(:millisecond) >= deadline, do: throw(:history_query_deadline)
   end
 
   defp aggregate(%Query{aggregation: aggregation}, _metric, samples, previous, t)
@@ -427,6 +563,12 @@ defmodule Wotex.Lab.Metrics.History do
 
         {delta, reset?, previous} = delta(labels, list, previous)
         markers = if reset?, do: [%{t: t, kind: :reset} | markers], else: markers
+
+        markers =
+          if Enum.any?(list, &(elem(&1, 1) == :stale)),
+            do: [%{t: t, kind: :stale} | markers],
+            else: markers
+
         {sum_nil(acc, delta), markers, previous}
       end)
 
@@ -441,24 +583,33 @@ defmodule Wotex.Lab.Metrics.History do
   end
 
   defp aggregate(%Query{aggregation: :histogram_quantile} = query, _metric, samples, previous, t) do
-    [{labels, list}] = Map.to_list(samples)
-
-    numeric =
-      for {identity, %{buckets: buckets, count: count}} <- list, do: {identity, buckets, count}
-
-    case numeric do
-      [] ->
-        {nil, [], previous}
-
-      _list ->
-        {identity, buckets, count} = List.last(numeric)
-        {base_buckets, reset?} = base(Map.get(previous, labels), identity, buckets)
-        deltas = Enum.zip_with(buckets, base_buckets, fn {le, c}, {_le, b} -> {le, c - b} end)
-        markers = if reset?, do: [%{t: t, kind: :reset}], else: []
-        value = quantile(deltas, query.quantile)
-        {value, markers, Map.put(previous, labels, {identity, buckets, count})}
+    case Map.to_list(samples) do
+      [] -> {nil, [], previous}
+      [{labels, list}] -> histogram_delta(query, labels, list, previous, t)
     end
   end
+
+  defp histogram_delta(query, labels, list, previous, t) do
+    {deltas, markers, last} =
+      Enum.reduce(list, {nil, [], Map.get(previous, labels)}, fn
+        {_identity, %{stale: true}}, {deltas, markers, _prior} ->
+          {deltas, [%{t: t, kind: :stale} | markers], nil}
+
+        {identity, %{buckets: buckets, count: count}}, {deltas, markers, prior} ->
+          {base_buckets, reset?} = base(prior, identity, buckets)
+          added = Enum.zip_with(buckets, base_buckets, fn {le, c}, {_le, b} -> {le, c - b} end)
+          markers = if reset?, do: [%{t: t, kind: :reset} | markers], else: markers
+          {add_buckets(deltas, added), markers, {identity, buckets, count}}
+      end)
+
+    value = if deltas == nil, do: nil, else: quantile(deltas, query.quantile)
+    {value, markers, Map.put(previous, labels, last)}
+  end
+
+  defp add_buckets(nil, added), do: added
+
+  defp add_buckets(deltas, added),
+    do: Enum.zip_with(deltas, added, fn {le, a}, {_le, b} -> {le, a + b} end)
 
   defp scalar_value(_aggregation, [], _last), do: nil
   defp scalar_value(:last, _numeric, last), do: List.last(last)
@@ -467,29 +618,32 @@ defmodule Wotex.Lab.Metrics.History do
   defp scalar_value(:max, numeric, _last), do: Enum.max(numeric)
   defp scalar_value(:avg, numeric, _last), do: Snapshot.number(Enum.sum(numeric) / length(numeric))
 
+  defp counter_value(%{type: :histogram}, %{stale: true}), do: :stale
   defp counter_value(%{type: :histogram}, %{count: count}), do: count
   defp counter_value(_metric, %{value: value}), do: value
 
   defp delta(_labels, [], previous), do: {nil, false, previous}
 
   defp delta(labels, list, previous) do
-    {identity, current} = List.last(list)
-    base = Map.get(previous, labels)
-    previous = Map.put(previous, labels, {identity, current})
+    {increase, reset, last} =
+      Enum.reduce(list, {nil, false, Map.get(previous, labels)}, fn {identity, current},
+                                                                    {total, reset, base} ->
+        cond do
+          not is_number(current) ->
+            {total, reset, nil}
 
-    cond do
-      not is_number(current) -> {nil, false, previous}
-      base == nil -> {first_delta(list, current), false, previous}
-      elem(base, 0) != identity or elem(base, 1) > current -> {current, true, previous}
-      true -> {current - elem(base, 1), false, previous}
-    end
-  end
+          base == nil ->
+            {sum_nil(total, 0), reset, {identity, current}}
 
-  defp first_delta(list, current) do
-    case Enum.find(list, fn {_identity, value} -> is_number(value) end) do
-      {_identity, first} when first <= current -> current - first
-      _other -> current
-    end
+          elem(base, 0) != identity or elem(base, 1) > current ->
+            {sum_nil(total, current), true, {identity, current}}
+
+          true ->
+            {sum_nil(total, current - elem(base, 1)), reset, {identity, current}}
+        end
+      end)
+
+    {increase, reset, Map.put(previous, labels, last)}
   end
 
   defp sum_nil(nil, delta), do: delta

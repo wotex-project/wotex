@@ -143,11 +143,27 @@ defmodule Wotex.Lab.MetricsHistoryTest do
              History.start_link(max_bytes: limits.max_bytes + 1)
 
     assert {:error, %Error{code: :invalid_history}} = History.start_link(max_bytes: "8MiB")
+    assert {:error, %Error{code: :invalid_history}} = History.start_link(max_queries: 129)
+    assert {:error, %Error{code: :invalid_history}} = History.start_link(instance_slot: -1)
+    assert {:error, %Error{code: :invalid_history}} = History.start_link(instance: "Not an ID")
     assert {:error, %Error{code: :invalid_options}} = History.start_link(durable: true)
     assert %{id: {History, :h}, restart: :transient} = History.child_spec(id: :h)
 
     {:ok, named} = History.start_link(name: :"history-#{System.unique_integer([:positive])}")
     assert History.stats(named).max_snapshots == 120
     :ok = GenServer.stop(named)
+  end
+
+  test "slot substitution and forged snapshot structs are refused without mutating history" do
+    history = start_supervised!({History, id: :admission, instance_slot: 7})
+    assert {:error, %Error{code: :scope_denied}} = History.put(history, snapshot(1))
+    admitted = %{snapshot(1) | instance_slot: 7}
+    assert {:ok, _} = History.put(history, admitted)
+
+    assert {:error, %Error{code: :invalid_snapshot}} =
+             History.put(history, %{admitted | series: nil})
+
+    assert %{count: 1, rejected: 2, instance_slot: 7} = History.stats(history)
+    assert [%{snapshot: ^admitted}] = History.snapshots(history)
   end
 end

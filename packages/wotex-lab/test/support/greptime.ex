@@ -3,7 +3,8 @@ defmodule Wotex.Lab.Test.Greptime do
 
   # A disposable greptime/greptimedb:v1.1.4 standalone container for the
   # metrics lane. It binds an ephemeral loopback port for the HTTP API only,
-  # keeps no volume, and is removed in `on_exit`. `read/3` is the bounded read
+  # keeps no volume, has a 2 CPU / 1 GiB / 256 PID budget, and is removed in
+  # `on_exit`. `read/3` is the bounded read
   # template used to verify ingestion: a fixed SELECT over one metric table
   # with validated identifiers, never caller-supplied SQL.
 
@@ -90,7 +91,22 @@ defmodule Wotex.Lab.Test.Greptime do
     {output, 0} =
       System.cmd(
         "docker",
-        ["run", "--detach", "--rm", "--publish", "127.0.0.1::4000", @image] ++
+        [
+          "run",
+          "--detach",
+          "--rm",
+          "--cpus",
+          "2",
+          "--memory",
+          "1g",
+          "--memory-swap",
+          "1g",
+          "--pids-limit",
+          "256",
+          "--publish",
+          "127.0.0.1::4000",
+          @image
+        ] ++
           ["standalone", "start", "--http-addr", "0.0.0.0:4000"],
         stderr_to_stdout: true
       )

@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.3.0. Contract: accepted. Source status: the metric
+Specification version: 0.3.1. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract, the exposition parser, the remote-write encoder with its Snappy
 codec and the explicit GreptimeDB bridge are implemented in the base library;
@@ -210,6 +210,36 @@ history queries return unsupported; ETS does not pretend to implement PromQL.
 answers gauges, counters with reset awareness and histogram quantiles from ETS
 or returns `unsupported_query`. The MCP gateway and the BeamLens callers of
 the descriptor remain planned.
+
+History query admission now binds the store's explicit `:instance` identifier
+and snapshot `:instance_slot` (default 0). Migration: hosts using `query/2`
+must configure `instance: "their-host-id"` when starting history and construct
+the descriptor's session scope from authenticated server context. Stores
+without that identifier remain storage-only and return `scope_unbound`; a
+different instance or snapshot slot returns `scope_denied`. An identifier is
+not an authorization credential and shared-BEAM processes remain trusted.
+Transport authentication, expiring query capabilities and tenant isolation
+still belong to the unimplemented gateway/host profile.
+
+Snapshots and query structs are revalidated at the execution boundary. Query
+samples must match the catalogue's type, finite labels and exact histogram
+buckets. A store permits 32 active query leases by default (hard ceiling 128),
+as well as the descriptor's session limit; leases are monitored, revoked on
+caller death and removed on success/error/deadline without retaining idle
+session keys. Query buckets are indexed once instead of repeatedly scanning
+all stored series for each point. Cooperative deadline checks run during
+validation, indexing and point evaluation; they are not OS containment.
+
+Counter and histogram deltas retain all resets inside each query bucket,
+including when the interval is coarser than capture. Empty histogram queries
+return no data; stale samples are markers, not new zero-valued counters.
+Wall-clock rollback is retained as a row flag/loss counter and affected
+queries return `clock_rollback`, rather than silently sorting cumulative data.
+`metrics_query_test.exs` and `metrics_history_test.exs` reproduce and guard
+these cases, forged descriptors, cross-instance/slot substitution, capacity,
+caller death and deadline cleanup. Snapshot storage is bounded; hosts must
+also bound writer concurrency. Serial GenServer calls alone do not bound an
+arbitrary population of callers.
 
 BeamLens is a required reference integration with optional user activation.
 Use its public custom-skill callbacks and explicitly selected skills. Never

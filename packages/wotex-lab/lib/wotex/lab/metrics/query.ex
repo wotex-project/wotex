@@ -103,9 +103,23 @@ defmodule Wotex.Lab.Metrics.Query do
 
   def new(_opts), do: {:error, error(:invalid_query, "query options must be a keyword list")}
 
+  @doc "Revalidates a descriptor at an execution boundary; a struct is not admission."
+  @spec validate(term()) :: {:ok, t()} | {:error, Error.t()}
+  def validate(%__MODULE__{schema_version: @schema_version} = query) do
+    query |> Map.from_struct() |> Map.delete(:schema_version) |> Map.to_list() |> new()
+  rescue
+    _invalid -> {:error, error(:invalid_query, "query descriptor is not admitted")}
+  end
+
+  def validate(_query), do: {:error, error(:invalid_query, "query descriptor is not admitted")}
+
   @doc "Admits the estimated work: the number of points over the range against the point limit."
   @spec estimate(t()) :: {:ok, %{points: pos_integer()}} | {:error, Error.t()}
-  def estimate(%__MODULE__{} = query) do
+  def estimate(query) do
+    with {:ok, admitted} <- validate(query), do: estimate_admitted(admitted)
+  end
+
+  defp estimate_admitted(query) do
     points = div(DateTime.diff(query.end_at, query.start_at, :millisecond), query.step_ms) + 1
 
     if points <= query.limits.points,
@@ -139,7 +153,7 @@ defmodule Wotex.Lab.Metrics.Query do
     "sha256:" <> (:crypto.hash(:sha256, canonical) |> Base.encode16(case: :lower))
   end
 
-  defp scope(%{instance: instance, session: session}) do
+  defp scope(%{instance: instance, session: session} = scope) when map_size(scope) == 2 do
     if Options.identifier?(instance) and Options.identifier?(session),
       do: {:ok, %{instance: instance, session: session}},
       else: {:error, error(:invalid_scope, "scope needs instance and session identifiers")}

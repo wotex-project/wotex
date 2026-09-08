@@ -94,6 +94,193 @@ defmodule Wotex.Lab.MetricsQueryTest do
     query
   end
 
+  test "an empty histogram query reports no data instead of crashing" do
+    history = start_supervised!({History, id: :empty_histogram, instance: "lab-1"})
+
+    assert {:ok, %{points: [], freshness: nil, series_matched: 0}} =
+             History.query(
+               history,
+               query!(metric: :nx_duration_seconds, aggregation: :histogram_quantile, quantile: 0.5)
+             )
+  end
+
+  test "counter increases retain resets and multiple samples inside the same query bucket" do
+    history = start_supervised!({History, id: :within_bucket, instance: "lab-1"})
+    store(history, 0, [counter(10)], 0)
+    store(history, 1, [counter(50)], 0)
+    store(history, 2, [counter(5)], 1)
+    store(history, 3, [counter(15)], 1)
+
+    assert {:ok, response} =
+             History.query(
+               history,
+               query!(metric: :nx_operations_total, aggregation: :increase, step_ms: 15_000)
+             )
+
+    assert Enum.map(response.points, & &1.value) == [0, 55]
+  end
+
+  test "query text cannot substitute another history instance" do
+    history = start_supervised!({History, id: :bound, instance: "lab-1"})
+    store(history, 0, [gauge(91)], 0)
+
+    assert {:error, %Error{code: :scope_denied}} =
+             History.query(
+               history,
+               query!(
+                 metric: :nx_queue_depth,
+                 aggregation: :last,
+                 scope: %{instance: "lab-2", session: "session-1"}
+               )
+             )
+  end
+
+  test "unbound storage cannot claim a query scope and forged descriptors never execute" do
+    unbound = start_supervised!({History, id: :unbound})
+    descriptor = query!(metric: :nx_queue_depth, aggregation: :last)
+    assert {:error, %Error{code: :scope_unbound}} = History.query(unbound, descriptor)
+    bound = start_supervised!({History, id: :forge, instance: "lab-1"})
+
+    for forged <- [
+          nil,
+          %{},
+          %{descriptor | step_ms: 0},
+          %{descriptor | schema_version: "99"},
+          %{descriptor | limits: %{points: -1}},
+          %{descriptor | start_at: nil}
+        ] do
+      assert {:error, %Error{}} = History.query(bound, forged)
+      assert {:error, %Error{}} = Query.estimate(forged)
+    end
+
+    assert History.stats(bound).active_queries == 0
+    :ok = stop_supervised({History, :forge})
+    assert {:error, %Error{code: :history_unavailable}} = History.query(bound, descriptor)
+  end
+
+  test "query leases have a global ceiling, expire on caller death and leave no session keys" do
+    history = start_supervised!({History, id: :leases, instance: "lab-1", max_queries: 1})
+    owner = self()
+
+    {holder, monitor} =
+      spawn_monitor(fn ->
+        {:ok, _table, token} = GenServer.call(history, {:acquire, @scope, 2})
+        send(owner, {:leased, token})
+
+        receive do
+          :stop -> :ok
+        end
+      end)
+
+    assert_receive {:leased, token}
+    assert History.stats(history).active_queries == 1
+    assert {:error, %Error{code: :scope_denied}} = GenServer.call(history, {:release, token})
+
+    descriptor =
+      query!(
+        metric: :nx_queue_depth,
+        aggregation: :last,
+        scope: %{instance: "lab-1", session: "other-session"}
+      )
+
+    assert {:error, %Error{code: :too_many_queries}} = History.query(history, descriptor)
+    Process.exit(holder, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^holder, :killed}
+    await_idle(history)
+
+    for index <- 1..100 do
+      assert {:ok, _result} =
+               History.query(
+                 history,
+                 %{descriptor | scope: %{instance: "lab-1", session: "session-#{index}"}}
+               )
+    end
+
+    assert History.stats(history).active_queries == 0
+  end
+
+  test "histogram deltas include every reset within a bucket and stale is not a new zero" do
+    history = start_supervised!({History, id: :histogram_resets, instance: "lab-1"})
+    low = fn count -> histogram(List.duplicate(count, 8), count * 0.001) end
+    high = fn count -> histogram([0, 0, 0, count, count, count, count, count], count * 0.1) end
+    store(history, 0, [low.(10)], 0)
+    store(history, 1, [low.(50)], 0)
+    store(history, 2, [high.(5)], 1)
+    store(history, 3, [high.(15)], 1)
+    stale = %{high.(0) | sample: Map.merge(high.(0).sample, %{sum: :stale, stale: true})}
+    store(history, 4, [stale], 1)
+
+    descriptor =
+      query!(
+        metric: :nx_duration_seconds,
+        aggregation: :histogram_quantile,
+        quantile: 0.5,
+        step_ms: 15_000
+      )
+
+    assert {:ok, response} = History.query(history, descriptor)
+    assert [%{value: 0.0005}, %{value: second}] = response.points
+    assert_in_delta second, 0.0006875, 0.00000001
+    assert %{kind: :stale, t: @t0 + 30_000} in response.markers
+    refute %{kind: :reset, t: @t0 + 30_000} in response.markers
+  end
+
+  test "wall-clock rollback is visible and affected queries are refused" do
+    history = start_supervised!({History, id: :clock, instance: "lab-1"})
+    store(history, 0, [gauge(1)], 0)
+    store(history, 2, [gauge(2)], 0)
+    store(history, 1, [gauge(3)], 0)
+    assert History.stats(history).clock_rollbacks == 1
+    assert List.last(History.snapshots(history)).clock_rollback
+
+    assert {:error, %Error{code: :clock_rollback}} =
+             History.query(history, query!(metric: :nx_queue_depth, aggregation: :last))
+  end
+
+  test "changed types and histogram buckets cannot borrow a catalogue metric's meaning" do
+    for {id, series, metric, aggregation, extra} <- [
+          {:type, %{counter(3) | type: :gauge}, :nx_operations_total, :increase, []},
+          {:buckets,
+           %{
+             histogram(List.duplicate(3, 8), 1)
+             | sample: %{buckets: [{1, 3}, {:infinity, 3}], count: 3, sum: 1}
+           }, :nx_duration_seconds, :histogram_quantile, [quantile: 0.5]},
+          {:labels, %{gauge(3) | labels: [{"profile", "user-controlled"}]}, :nx_queue_depth, :last,
+           []}
+        ] do
+      history = start_supervised!({History, id: id, instance: "lab-1"})
+      store(history, 0, [series], 0)
+
+      assert {:error, %Error{code: :invalid_metric_cohort}} =
+               History.query(history, query!([metric: metric, aggregation: aggregation] ++ extra))
+    end
+  end
+
+  test "deadline checks interrupt bounded query work and release its lease" do
+    history = start_supervised!({History, id: :deadline, instance: "lab-1"})
+    store(history, 0, [gauge(1)], 0)
+
+    query =
+      query!(
+        metric: :nx_queue_depth,
+        aggregation: :last,
+        end_at: at(99_999_000),
+        step_ms: 1_000,
+        limits: %{range_ms: 100_000_000, min_step_ms: 1_000, points: 100_000, deadline_ms: 1}
+      )
+
+    assert {:error, %Error{code: :deadline_exceeded}} = History.query(history, query)
+    assert History.stats(history).active_queries == 0
+  end
+
+  defp await_idle(history, attempts \\ 100) do
+    cond do
+      History.stats(history).active_queries == 0 -> :ok
+      attempts == 0 -> flunk("query lease survived caller death")
+      true -> Process.sleep(1) && await_idle(history, attempts - 1)
+    end
+  end
+
   test "the descriptor validates scope, metric, aggregation, filters, range, step and limits" do
     now = at(0)
     {:ok, query} = Query.new(scope: @scope, metric: :nx_queue_depth, aggregation: :last, now: now)
@@ -174,7 +361,7 @@ defmodule Wotex.Lab.MetricsQueryTest do
   end
 
   test "gauges answer last, min, max, avg and sum; stale samples are markers, zero is a value" do
-    history = seed(start_supervised!({History, id: :gauges}))
+    history = seed(start_supervised!({History, id: :gauges, instance: "lab-1"}))
     {:ok, last} = History.query(history, query!(metric: :nx_queue_depth, aggregation: :last))
 
     assert last.source == :ets_history and last.instance == "lab-1"
@@ -189,7 +376,7 @@ defmodule Wotex.Lab.MetricsQueryTest do
     assert %{t: t, kind: :stale} = Enum.find(last.markers, &(&1.kind == :stale))
     assert t == @t0 + 7 * @step
     assert Enum.any?(last.markers, &(&1.kind == :reset and &1.t == @t0 + 5 * @step))
-    assert last.loss == %{evicted: 0, dropped_oversized: 0, gaps: 0, resets: 1}
+    assert last.loss == %{evicted: 0, dropped_oversized: 0, gaps: 0, resets: 1, clock_rollbacks: 0}
     assert last.evidence == [] and last.series_matched == 1
     assert String.starts_with?(last.digest, "sha256:")
 
@@ -236,7 +423,7 @@ defmodule Wotex.Lab.MetricsQueryTest do
   end
 
   test "counters answer increase and rate with reset awareness and sum across series" do
-    history = seed(start_supervised!({History, id: :counters}))
+    history = seed(start_supervised!({History, id: :counters, instance: "lab-1"}))
     filters = %{operation: :encode, profile: :test}
 
     {:ok, increase} =
@@ -284,7 +471,7 @@ defmodule Wotex.Lab.MetricsQueryTest do
   end
 
   test "histogram quantiles derive from bucket counts, never from averages" do
-    history = seed(start_supervised!({History, id: :histograms}))
+    history = seed(start_supervised!({History, id: :histograms, instance: "lab-1"}))
     filters = %{operation: :encode}
 
     {:ok, median} =
@@ -331,7 +518,7 @@ defmodule Wotex.Lab.MetricsQueryTest do
   end
 
   test "unsupported or ambiguous questions are refused instead of answered fluently" do
-    history = seed(start_supervised!({History, id: :unsupported}))
+    history = seed(start_supervised!({History, id: :unsupported, instance: "lab-1"}))
 
     unsupported = [
       [metric: :nx_queue_depth, aggregation: :rate],
@@ -376,22 +563,23 @@ defmodule Wotex.Lab.MetricsQueryTest do
                query!(metric: :nx_queue_depth, aggregation: :last, limits: %{output_bytes: 64})
              )
 
-    {_table, inflight} = GenServer.call(history, :tables)
-    :ets.insert(inflight, {{:inflight, "session-1"}, 2})
+    {:ok, _table, first} = GenServer.call(history, {:acquire, @scope, 2})
+    {:ok, _table, second} = GenServer.call(history, {:acquire, @scope, 2})
 
     assert {:error, %Error{code: :too_many_queries, class: :rate_limited}} =
              History.query(history, query!(metric: :nx_queue_depth, aggregation: :last))
 
-    :ets.insert(inflight, {{:inflight, "session-1"}, 0})
+    :ok = GenServer.call(history, {:release, first})
+    :ok = GenServer.call(history, {:release, second})
 
     assert {:ok, _response} =
              History.query(history, query!(metric: :nx_queue_depth, aggregation: :last))
 
-    assert [{{:inflight, "session-1"}, 0}] = :ets.lookup(inflight, {:inflight, "session-1"})
+    assert History.stats(history).active_queries == 0
   end
 
   test "evicted history is reported as loss rather than as missing data" do
-    history = start_supervised!({History, id: :evicted, max_snapshots: 3})
+    history = start_supervised!({History, id: :evicted, max_snapshots: 3, instance: "lab-1"})
     for index <- 0..9, do: store(history, index, [gauge(index)], 0)
 
     {:ok, response} = History.query(history, query!(metric: :nx_queue_depth, aggregation: :last))
