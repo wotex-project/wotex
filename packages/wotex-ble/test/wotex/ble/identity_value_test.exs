@@ -116,7 +116,7 @@ defmodule Wotex.BLE.IdentityValueTest do
   end
 
   test "WBL-S01 WBL-V01/WBL-V02 malformed messages fail before the client boundary" do
-    assert {:ok, session} = BLE.connect(client: TestClient, mode: :raise)
+    assert {:ok, session} = BLE.connect(client: TestClient)
 
     for message <- [
           nil,
