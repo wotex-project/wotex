@@ -176,11 +176,11 @@ specifications:
       - "test/wotex/lab/continuum_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.07
-    version: "0.1.0"
+    version: "0.1.1"
     path: docs/specs/WLB.07-cookbooks-and-machine-interfaces.md
-    implementation_status: planned
-    evidence_status: missing
-    adoption_status: no_reference
+    implementation_status: partial
+    evidence_status: partial
+    adoption_status: reference_available
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -195,8 +195,15 @@ specifications:
       - "WLB.11"
     completion_items:
       - "WLB-C08"
-    implementation_modules: []
-    executable_evidence: []
+    implementation_modules:
+      - "Wotex.Lab.MCP.Server"
+      - "Wotex.Lab.MCP.Resources"
+      - "Wotex.Lab.MCP.Seams"
+      - "Wotex.Lab.MCP.Tools"
+      - "Wotex.Lab.MCP.Stdio"
+      - "Wotex.Lab.MCP.Plug"
+    executable_evidence:
+      - "test/wotex/lab/mcp_test.exs"
     compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
   - id: WLB.08
     version: "0.2.0"

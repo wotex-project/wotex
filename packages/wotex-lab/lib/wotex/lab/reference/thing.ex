@@ -84,6 +84,10 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
     @spec stats(pid()) :: map()
     def stats(host), do: GenServer.call(host, :stats)
 
+    @doc "Returns the validated Thing Description this host simulates."
+    @spec thing_description(pid()) :: ThingDescription.t()
+    def thing_description(host), do: GenServer.call(host, :thing_description)
+
     @impl GenServer
     def init(opts) do
       td = Keyword.fetch!(opts, :td)
@@ -92,6 +96,7 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
         {:ok, exposed} ->
           {:ok,
            %{
+             td: td,
              exposed: exposed,
              document: ThingDescription.to_map(td),
              state: Keyword.get(opts, :state, %{}),
@@ -176,6 +181,8 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
 
       {:reply, :ok, %{state | subscriptions: %{}}}
     end
+
+    def handle_call(:thing_description, _from, state), do: {:reply, state.td, state}
 
     def handle_call(:stats, _from, state) do
       {:reply,

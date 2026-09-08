@@ -62,6 +62,11 @@
   closed serializer, bounded verification with complete-search exhaustion,
   engine reaping after timeouts and pool removal, counterexample replay
   through the smart-room policy, and `Wotex.Lab.stop_child/3`.
+- Model Context Protocol server pinned to 2025-11-25 with stdio and
+  Streamable HTTP transports, embedded catalogue and provenance resources,
+  simulated-Thing resources of an explicit instance, bounded read tools with
+  session quotas, and writes only behind a host token with per-request
+  idempotency keys.
 - Accepted WLB.01–WLB.11 specifications and versioned completion contract.
 - Explicit instance supervision, bounded scenario descriptors and plugin port.
 - Deterministic public-API Nx example with explicit units/backend and inert output.

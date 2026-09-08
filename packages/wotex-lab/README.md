@@ -163,7 +163,10 @@ into an Nx `setTarget` proposal under a power budget, and lets
 crosses the channel to the cloud host. Every seam emits Lab-owned telemetry
 under `[:wotex, :lab, component, operation, event]` with allowlisted metadata,
 and `Wotex.Lab.Evidence.Record` is the schema-versioned run record whose
-content digests and canonical encoding make evidence attributable. The MQTT
+content digests and canonical encoding make evidence attributable. An assistant
+reaches the same data through `Wotex.Lab.MCP` over stdio or Streamable HTTP:
+read tools and resources only, unless the host opts a session into writes
+with a token. The MQTT
 lane is implemented too: `Wotex.Lab.Adapters.MQTT.EmqttClient` and its linked
 `Adapters.MQTT.Session` carry runtime requests, retained reads, publications
 and subscriptions over EMQTT (`emqtt` is an optional dependency selected by

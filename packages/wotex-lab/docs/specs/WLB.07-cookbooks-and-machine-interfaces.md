@@ -1,6 +1,9 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.1.0. Contract: accepted.
+Specification version: 0.1.1. Contract: accepted. Source status: the MCP server
+core with stdio and Streamable HTTP transports is implemented; cookbooks,
+the generated knowledge graph, the control API, the npm client and the public
+site remain planned.
 
 ## Cookbook catalogue
 
@@ -79,8 +82,25 @@ expose package/spec/seam/scenario/Thing/evidence metadata. Tools support parse,
 validate, explain error, list/discover/read simulated Things, bounded conformance
 and benchmark jobs, and seam explanations. Long jobs have quotas, cancellation
 and bounded retained output; read-oriented is not permission for unlimited work.
+`Wotex.Lab.MCP.Server` is the transport-independent core pinned to protocol
+version 2025-11-25, `Wotex.Lab.MCP.Stdio` the newline-delimited stdio
+transport and `Wotex.Lab.MCP.Plug` the Streamable HTTP transport behind the
+optional Plug requirement (origin allowlist, random `Mcp-Session-Id`,
+expiring sessions, body ceiling, no server push). Resources embed the
+catalogue, completion plan and provenance at compile time and expose fixture
+and model manifests, design tokens, the seam table and the simulated Things
+of the session's explicit instance. Tools are `parse_td`, `parse_tm`,
+`explain_error`, `list_things`, `read_property`, `conformance_observe`,
+`explain_seam` and `verify_control_model`; every call is bounded by per-call
+limits and per-session call and output quotas. Benchmark jobs and the shared
+metrics query descriptor remain planned.
 
 Writes/Actions require explicit instance opt-in and per-request authorization.
+`invoke_action` is listed only when the host built the session with
+`writes: true` and a token of at least sixteen bytes; each call presents that
+token, a session-unique idempotency key and a bounded deadline, targets a
+simulated Thing of that instance only and dispatches through the runtime with
+the credential port the host supplied.
 Remote mutation requires a target bound to that disposable instance, operation
 and schema admission, origin/auth checks, anti-replay identity, deadline and
 rate/body/concurrency limits. The hosted default allows no external device
