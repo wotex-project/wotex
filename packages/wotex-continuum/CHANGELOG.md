@@ -2,9 +2,9 @@
 
 ## 0.1.0
 
-- Bind the reviewed Decimal advisory metadata conflict to exact 3.1.1 lock
-  checksums, loaded version and bounded parser regression tests. Other advisory
-  checks remain active; remove this acknowledgement when metadata is corrected.
+- Remove the stale `EEF-CVE-2026-32686` Hex advisory suppression now that the
+  registry audit reports no matching advisory. Exact Decimal 3.1.1 lock,
+  loaded-version and bounded-parser regression checks remain active.
 
 - Validate every canonical and valid vector against the embedded normative JSON
   Schemas with a dependency-free subset checker, and record which invalid

@@ -11,7 +11,6 @@ defmodule WotexContinuum.MixProject do
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
-      hex: [ignore_advisories: ["EEF-CVE-2026-32686"]],
       aliases: aliases(),
       description: description(),
       package: package(),
