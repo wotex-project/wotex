@@ -7,12 +7,13 @@ defmodule Wotex.BLE.DependencySecurityTest do
                  "430d87b04011ce6cbd4fd205be758311a81f87d552d40904abd00f015935b1d0", [:mix], [],
                  "hexpm", "c5f25f2ced74a0587d03e6023f595db8e924c9d3922c8c8ffd9edfc4498cf1f6"}
 
-  test "the locked Decimal cohort is reviewed without an advisory waiver" do
+  test "the Decimal parser regression stays pinned without advisory waivers" do
     assert Mix.Dep.Lock.read()[:decimal] == @decimal_lock
     assert Application.spec(:decimal, :vsn) == ~c"3.1.1"
 
-    hex = Keyword.get(Mix.Project.config(), :hex, [])
-    assert Keyword.get(hex, :ignore_advisories, []) == []
+    assert Mix.Project.config()
+           |> Keyword.get(:hex, [])
+           |> Keyword.get(:ignore_advisories, []) == []
   end
 
   test "default parser limits reject the reported payload and enforce exact thresholds" do
