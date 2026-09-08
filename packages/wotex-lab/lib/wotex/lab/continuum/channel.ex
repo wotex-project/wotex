@@ -7,7 +7,13 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
 
     Every send is encoded canonically with the continuum codec and delivered to
     the pid attached to the destination endpoint as
-    `{:wotex_continuum, destination, delivery_id, wire_bytes}`. Each send yields
+    `{:wotex_continuum, destination, delivery_id, wire_bytes}`. A source-aware
+    attachment receives the source and an unforgeable acknowledgement token as
+    additional tuple elements. The token never enters a public delivery record.
+    Endpoint
+    attachment establishes in-process source ownership: only the attached
+    process may send from that endpoint, and an endpoint cannot be transplanted
+    to another live process. Each send yields
     a `WotexContinuum.Delivery` record that moves `pending` to `in_flight` to
     `acknowledged`, or to `failed` when the fault schedule drops it. Capacity
     bounds the number of unacknowledged deliveries. `disconnect/1` buffers new
@@ -44,10 +50,15 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
       end
     end
 
-    @doc "Attaches a receiving pid to an endpoint name."
-    @spec attach(pid(), String.t(), pid()) :: :ok
-    def attach(channel, endpoint, pid) when is_binary(endpoint) and is_pid(pid),
-      do: GenServer.call(channel, {:attach, endpoint, pid})
+    @doc "Attaches a receiving pid to an endpoint name; `source: true` includes the authenticated source in deliveries."
+    @spec attach(pid(), String.t(), pid(), keyword()) :: :ok | {:error, Error.t()}
+    def attach(channel, endpoint, pid, opts \\ [])
+
+    def attach(channel, endpoint, pid, opts) when is_pid(pid),
+      do: GenServer.call(channel, {:attach, endpoint, pid, opts})
+
+    def attach(_channel, _endpoint, _pid, _opts),
+      do: {:error, error(:invalid_endpoint, "endpoint attachment is invalid")}
 
     @doc "Sends a continuum value from one endpoint to another."
     @spec send_value(pid(), String.t(), String.t(), struct()) ::
@@ -57,6 +68,11 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
     @doc "Acknowledges a delivery."
     @spec ack(pid(), String.t()) :: :ok | {:error, Error.t()}
     def ack(channel, delivery_id), do: GenServer.call(channel, {:ack, delivery_id})
+
+    @doc "Acknowledges a source-aware delivery with its in-process receipt token."
+    @spec ack(pid(), String.t(), reference()) :: :ok | {:error, Error.t()}
+    def ack(channel, delivery_id, receipt_token),
+      do: GenServer.call(channel, {:ack, delivery_id, receipt_token})
 
     @doc "Returns every delivery record in send order."
     @spec deliveries(pid()) :: [Delivery.t()]
@@ -84,17 +100,43 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
          connected?: true,
          items: %{},
          order: [],
-         held: %{}
+         held: %{},
+         monitors: %{}
        }}
     end
 
     @impl GenServer
-    def handle_call({:attach, endpoint, pid}, _from, state) do
-      {:reply, :ok, put_in(state, [:endpoints, endpoint], pid)}
+    def handle_call({:attach, endpoint, pid, opts}, _from, state) do
+      source? = if Keyword.keyword?(opts), do: Keyword.get(opts, :source, false), else: :invalid
+
+      cond do
+        not endpoint?(endpoint) or not Keyword.keyword?(opts) or
+          Enum.any?(Keyword.keys(opts), &(&1 != :source)) or not is_boolean(source?) ->
+          {:reply, {:error, error(:invalid_endpoint, "endpoint attachment is invalid")}, state}
+
+        match?(%{pid: owner} when owner != pid, state.endpoints[endpoint]) ->
+          {:reply, {:error, error(:endpoint_in_use, "endpoint already has an owner")}, state}
+
+        match?(%{pid: ^pid}, state.endpoints[endpoint]) ->
+          {:reply, :ok, put_in(state, [:endpoints, endpoint, :source?], source?)}
+
+        true ->
+          monitor = Process.monitor(pid)
+          attachment = %{pid: pid, monitor: monitor, source?: source?}
+
+          state =
+            state
+            |> put_in([:endpoints, endpoint], attachment)
+            |> put_in([:monitors, monitor], endpoint)
+
+          {:reply, :ok, state}
+      end
     end
 
-    def handle_call({:send, from, to, value}, _from, state) do
-      with :ok <- capacity(state),
+    def handle_call({:send, from, to, value}, {caller, _tag}, state) do
+      with :ok <- endpoint_names(from, to),
+           :ok <- owns_source(state, from, caller),
+           :ok <- capacity(state),
            {:ok, wire} <-
              Telemetry.span(:continuum, :codec, %{operation: :encode}, fn -> encode(value) end),
            {:ok, map} <- WotexContinuum.to_map(value) do
@@ -119,6 +161,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
           status: :pending,
           emitted_at: now,
           acknowledged_at: nil,
+          receipt_token: make_ref(),
           error: nil
         }
 
@@ -138,20 +181,12 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
       end
     end
 
-    def handle_call({:ack, delivery_id}, _from, state) do
-      case Map.fetch(state.items, delivery_id) do
-        {:ok, %{status: status} = item} when status in [:in_flight, :delivered] ->
-          item = %{item | status: :acknowledged, acknowledged_at: state.clock.()}
-          {:reply, :ok, put_in(state, [:items, delivery_id], item)}
+    def handle_call({:ack, delivery_id}, {caller, _tag}, state) do
+      acknowledge(state, delivery_id, {:owner, caller})
+    end
 
-        {:ok, %{status: :acknowledged}} ->
-          {:reply, :ok, state}
-
-        _other ->
-          {:reply,
-           {:error, Error.new(:unknown_delivery, :channel, "delivery cannot be acknowledged")},
-           state}
-      end
+    def handle_call({:ack, delivery_id, receipt_token}, {caller, _tag}, state) do
+      acknowledge(state, delivery_id, {:token, caller, receipt_token})
     end
 
     def handle_call(:deliveries, _from, state) do
@@ -178,6 +213,56 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
 
       {:reply, :ok, state}
     end
+
+    defp acknowledge(state, delivery_id, authorization) do
+      case Map.fetch(state.items, delivery_id) do
+        {:ok, item} ->
+          if authorized_ack?(state, item, authorization) do
+            acknowledge_item(state, delivery_id, item)
+          else
+            {:reply, {:error, error(:invalid_receipt_token, "delivery token is invalid")}, state}
+          end
+
+        :error ->
+          {:reply,
+           {:error, Error.new(:unknown_delivery, :channel, "delivery cannot be acknowledged")},
+           state}
+      end
+    end
+
+    defp acknowledge_item(state, delivery_id, %{status: status} = item)
+         when status in [:in_flight, :delivered] do
+      item = %{item | status: :acknowledged, acknowledged_at: state.clock.()}
+      {:reply, :ok, put_in(state, [:items, delivery_id], item)}
+    end
+
+    defp acknowledge_item(state, _delivery_id, %{status: :acknowledged}),
+      do: {:reply, :ok, state}
+
+    defp acknowledge_item(state, _delivery_id, _item),
+      do:
+        {:reply,
+         {:error, Error.new(:unknown_delivery, :channel, "delivery cannot be acknowledged")}, state}
+
+    defp authorized_ack?(state, item, {:owner, caller}),
+      do: get_in(state, [:endpoints, item.to, :pid]) == caller
+
+    defp authorized_ack?(state, item, {:token, caller, token}),
+      do: get_in(state, [:endpoints, item.to, :pid]) == caller and item.receipt_token == token
+
+    @impl GenServer
+    def handle_info({:DOWN, monitor, :process, _pid, _reason}, state) do
+      case Map.pop(state.monitors, monitor) do
+        {nil, _monitors} ->
+          {:noreply, state}
+
+        {endpoint, monitors} ->
+          {:noreply,
+           %{state | endpoints: Map.delete(state.endpoints, endpoint), monitors: monitors}}
+      end
+    end
+
+    def handle_info(_message, state), do: {:noreply, state}
 
     defp transmit(state, delivery_id) do
       item = state.items[delivery_id]
@@ -231,10 +316,37 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
 
     defp deliver(state, item) do
       case Map.fetch(state.endpoints, item.to) do
-        {:ok, pid} -> send(pid, {:wotex_continuum, item.to, item.id, item.wire})
-        :error -> :ok
+        {:ok, %{pid: pid, source?: true}} ->
+          send(
+            pid,
+            {:wotex_continuum, item.to, item.from, item.id, item.receipt_token, item.wire}
+          )
+
+        {:ok, %{pid: pid}} ->
+          send(pid, {:wotex_continuum, item.to, item.id, item.wire})
+
+        :error ->
+          :ok
       end
     end
+
+    defp endpoint_names(from, to) do
+      if endpoint?(from) and endpoint?(to),
+        do: :ok,
+        else: {:error, error(:invalid_endpoint, "source and destination endpoints are invalid")}
+    end
+
+    defp owns_source(state, endpoint, caller) do
+      case state.endpoints do
+        %{^endpoint => %{pid: ^caller}} -> :ok
+        _other -> {:error, error(:source_not_attached, "caller does not own the source endpoint")}
+      end
+    end
+
+    defp endpoint?(value),
+      do: is_binary(value) and byte_size(value) in 1..256 and String.valid?(value)
+
+    defp error(code, message), do: Error.new(code, :channel, message, class: :permanent)
 
     defp capacity(state) do
       open =

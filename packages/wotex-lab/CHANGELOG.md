@@ -39,6 +39,9 @@
 - Bounded in-memory Continuum channel with a versioned fault schedule, a
   simulated cloud host that admits manifests, watermarks proposals and
   dispatches intents once, and wire conversions from Nx and runtime values.
+  Channel endpoint names are bound to live process owners, source-aware host
+  deliveries preserve that identity, and compatible manifests authorize only
+  the source that supplied them.
 - Instance-owned ETS Directory repository with explicit authorization, clock
   and identifier ports and a public-API contract suite over keyset paging,
   conditional writes, expiry and authorization ordering.
@@ -57,7 +60,8 @@
   result crossing the Continuum channel. An MQTT energy meter adds a filled
   power feature and a budget rule that lowers the target when observed power
   exceeds it. Refusals are recorded by reason and a
-  restarted policy holds no grants. The reference Thing host takes explicit
+  restarted policy holds no grants. Concurrent proposals yield one grant and
+  concurrent dispatches execute one effect. The reference Thing host takes explicit
   `:actions` effects.
 - Lab telemetry under `[:wotex, :lab, component, operation, event]` with
   allowlisted, bounded metadata and exception spans that carry the kind only,

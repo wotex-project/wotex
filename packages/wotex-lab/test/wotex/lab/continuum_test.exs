@@ -88,7 +88,11 @@ defmodule Wotex.Lab.ContinuumTest do
     assert :ok = Channel.ack(channel, result_delivery)
     assert Enum.all?(Channel.deliveries(channel), &(&1.status == :acknowledged))
 
-    {:ok, delivery} = Channel.send_value(channel, "cloud", "edge-a", Fixtures.manifest())
+    :ok = Channel.attach(channel, "fixture-cloud", self())
+
+    {:ok, delivery} =
+      Channel.send_value(channel, "fixture-cloud", "edge-a", Fixtures.manifest())
+
     assert_receive {:wotex_continuum, "edge-a", delivery_id, wire}
     assert delivery_id == delivery.delivery_id
     assert {:ok, decoded} = Codec.decode(wire)
@@ -121,6 +125,67 @@ defmodule Wotex.Lab.ContinuumTest do
     {:ok, _delivery} = Channel.send_value(channel, "edge-a", "cloud", Fixtures.manifest())
     stats = wait_until(fn -> Host.stats(host) end, &(&1.manifests == ["manifest-edge-a"]))
     assert stats.manifests == ["manifest-edge-a"]
+  end
+
+  test "source ownership and per-source manifests prevent identity transplantation", %{
+    channel: channel,
+    host: host,
+    thing: thing
+  } do
+    parent = self()
+
+    attacker =
+      spawn_link(fn ->
+        send(parent, {:attacker_attached, Channel.attach(channel, "edge-b", self())})
+
+        for _attempt <- 1..2 do
+          receive do
+            {:send, value} ->
+              send(
+                parent,
+                {:attacker_result, Channel.send_value(channel, "edge-b", "cloud", value)}
+              )
+          end
+        end
+      end)
+
+    assert_receive {:attacker_attached, :ok}
+
+    assert {:error, %Wotex.Lab.Error{code: :endpoint_in_use}} =
+             Channel.attach(channel, "edge-b", self())
+
+    assert {:error, %Wotex.Lab.Error{code: :source_not_attached}} =
+             Channel.send_value(channel, "edge-b", "cloud", Fixtures.manifest())
+
+    [_, _, _, _, _, intent | _] = Fixtures.all_kinds()
+    {:ok, forged_wire} = Codec.encode(intent, canonical: true)
+
+    send(
+      host,
+      {:wotex_continuum, "cloud", "edge-a", "forged-delivery", make_ref(), forged_wire}
+    )
+
+    Process.sleep(10)
+    assert Process.alive?(host)
+    assert Host.stats(host).received == []
+
+    send(attacker, {:send, intent})
+    assert_receive {:attacker_result, {:ok, _delivery}}
+
+    edge_b_intent = %{
+      intent
+      | intent_id: "intent-edge-b",
+        idempotency_key: "set-edge-b",
+        context: Fixtures.scope("edge-b")
+    }
+
+    send(attacker, {:send, edge_b_intent})
+    assert_receive {:attacker_result, {:ok, _delivery}}
+
+    stats = wait_until(fn -> Host.stats(host) end, &(length(&1.rejected) == 2))
+    assert Enum.map(stats.rejected, & &1.reason) == [:source_mismatch, :stale_authority]
+    assert Enum.all?(stats.rejected, &(&1.source == "edge-b"))
+    assert %{handler_calls: 0} = Thing.stats(thing)
   end
 
   @tag faults: [duplicate: [2]]
@@ -284,6 +349,7 @@ defmodule Wotex.Lab.ContinuumTest do
     {:ok, silent_channel} =
       Lab.start_child(lab, :sessions, {Channel, id: :bounded, clock: fn -> @epoch end, capacity: 2})
 
+    :ok = Channel.attach(silent_channel, "edge-a", self())
     :ok = Channel.attach(silent_channel, "silent", self())
     {:ok, _one} = Channel.send_value(silent_channel, "edge-a", "silent", Fixtures.mode())
     {:ok, _two} = Channel.send_value(silent_channel, "edge-a", "silent", Fixtures.mode())

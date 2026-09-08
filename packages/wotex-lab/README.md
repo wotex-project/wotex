@@ -194,12 +194,14 @@ with its bounded SSE parser and linked stream session (`req` is an optional
 dependency selected by the host), the external conformance target that runs
 the core package through the conformance protocol, and the Continuum channel,
 host and wire conversions that carry proposals, intents and results between a
-simulated edge and cloud with replayable faults. The canonical smart room
+simulated edge and cloud with replayable faults, live endpoint source ownership
+and per-source manifest admission. The canonical smart room
 (`Wotex.Lab.SmartRoom.Scenario`) discovers an HTTP thermostat, an MQTT energy
 meter and a loopback actuator from the Directory by TD id, turns the readings
 into an Nx `setTarget` proposal under a power budget, and lets
 `Wotex.Lab.SmartRoom.Policy` dispatch one decision once; only the result
-crosses the channel to the cloud host. Every seam emits Lab-owned telemetry
+crosses the channel to the cloud host, including under concurrent decision and
+dispatch races. Every seam emits Lab-owned telemetry
 under `[:wotex, :lab, component, operation, event]` with allowlisted metadata,
 and `Wotex.Lab.Evidence.Record` is the schema-versioned run record whose
 content digests and canonical encoding make evidence attributable. An assistant

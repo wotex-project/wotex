@@ -1,6 +1,7 @@
 # WLB.05: Directory, Continuum and the smart-room consumer
 
-Specification version: 1.5.0. Contract: accepted. Source status: both
+Specification version: 1.6.0. Contract: accepted. Source status: implemented
+with complete source-run evidence. Both
 repository algorithms are implemented. The ETS store, the SQLite store, the
 explicit authorization/clock/identifier ports, the shared Directory contract
 suite that runs the same public-API cases against both stores, and the
@@ -80,10 +81,17 @@ and codec; the actual namespace is not `Wotex.Continuum`.
 process that encodes every value canonically, records a `delivery` value per
 send, applies a versioned `FaultSchedule` (drop, duplicate, hold-until for
 reordering) keyed by send sequence, buffers while disconnected and replays
-unacknowledged deliveries with a new attempt on reconnect.
+unacknowledged deliveries with a new attempt on reconnect. An endpoint is
+owned by its attached live process, only that process may send from the source
+name, and a source-aware receiver gets the authenticated source with the wire
+delivery plus an in-process receipt token that is absent from public evidence.
+Only the destination owner can acknowledge, and the source-aware host also
+requires that token before decoding. Dead owners release their endpoint; a
+live endpoint cannot be transplanted to another process.
 `Wotex.Lab.Continuum.Host` is the simulated cloud host: it decodes with the
 bounded codec, acknowledges, admits manifests through compatibility
-evaluation, admits proposals only above the per-affordance sequence
+evaluation per authenticated source, refuses an intent or proposal whose
+declared node differs from that source, admits proposals only above the per-affordance sequence
 watermark for a known Thing, dispatches each intent at most once per
 idempotency key through a runtime `ConsumedThing` over the loopback lane,
 returns an `action_result`, refuses intents without an accepted manifest or
@@ -108,7 +116,9 @@ WCT-C01–C03; exact artifact consumer proof supports WCT-C04/C05.
 as canonical bytes, manifest compatibility gating, stale authority, duplicate
 intent delivery without a second dispatch, reordered and dropped proposals,
 disconnection and replay, capacity exhaustion, lifecycle draining and the
-wire conversions in both directions.
+wire conversions in both directions. It also proves that an unattached caller
+cannot claim a source, a live endpoint cannot be transplanted, and one edge's
+accepted manifest cannot authorize another edge.
 
 ## Canonical smart room
 
@@ -144,9 +154,17 @@ changes no property.
 `test/wotex/lab/smart_room_test.exs` covers discovery by TD id over a paged
 Directory, the full cycle over a real HTTP socket, a retained MQTT read from
 the scripted peer and the loopback host, the budget rule in both directions,
-the refusal set, restart erasure and the fail-closed discovery of an
+the refusal set, concurrent decision and dispatch races with one grant and one
+effect, restart erasure and the fail-closed discovery of an
 unbuildable Thing. The `:broker` tagged case runs the same room against the
 disposable mosquitto container.
+
+The complete source-run record is
+[`WLB.05-evidence.json`](../provenance/WLB.05-evidence.json). It binds the dual
+repository, authenticated channel, fault/replay and smart-room assertions to
+the exact source tree, lock, fixture and observed broker image digests. Source
+dependency archives remain explicitly missing, so artifact verification stays
+with WLB.08.
 
 All channels expose telemetry and evidence under WLB.06. The same scenario
 definition powers notebooks, CLI, web and MCP. An optional WLB.09 formal

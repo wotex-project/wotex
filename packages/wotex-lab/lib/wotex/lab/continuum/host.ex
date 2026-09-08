@@ -77,7 +77,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
       channel = Keyword.fetch!(opts, :channel)
       endpoint = Keyword.fetch!(opts, :endpoint)
       clock = Keyword.get(opts, :clock, fn -> DateTime.utc_now() end)
-      :ok = Channel.attach(channel, endpoint, self())
+      :ok = Channel.attach(channel, endpoint, self(), source: true)
 
       {:ok, mode} = Mode.from_map(%{deployment: :saas, connectivity: :connected})
 
@@ -119,7 +119,13 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
          observations: state.observations,
          dispatches: state.dispatches,
          results: Enum.reverse(state.results),
-         manifests: Map.keys(state.manifests),
+         manifests:
+           state.manifests |> Map.keys() |> Enum.map(fn {_source, id} -> id end) |> Enum.sort(),
+         manifest_sources:
+           state.manifests
+           |> Map.keys()
+           |> Enum.map(fn {source, id} -> %{source: source, manifest_id: id} end)
+           |> Enum.sort_by(&{&1.source, &1.manifest_id}),
          lifecycle: state.lifecycle
        }, state}
     end
@@ -132,16 +138,23 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
     end
 
     @impl GenServer
-    def handle_info({:wotex_continuum, endpoint, delivery_id, wire}, %{endpoint: endpoint} = state) do
+    def handle_info(
+          {:wotex_continuum, endpoint, source, delivery_id, receipt_token, wire},
+          %{endpoint: endpoint} = state
+        ) do
       state =
-        case Codec.decode(wire, state.limits) do
-          {:ok, value} ->
-            :ok = Channel.ack(state.channel, delivery_id)
-            admit(value, delivery_id, state)
+        case Channel.ack(state.channel, delivery_id, receipt_token) do
+          :ok ->
+            case Codec.decode(wire, state.limits) do
+              {:ok, value} ->
+                admit(value, delivery_id, source, state)
 
-          {:error, error} ->
-            :ok = Channel.ack(state.channel, delivery_id)
-            reject(state, delivery_id, :undecodable, error.code)
+              {:error, error} ->
+                reject(state, delivery_id, source, :undecodable, error.code)
+            end
+
+          {:error, _error} ->
+            state
         end
 
       {:noreply, state}
@@ -149,34 +162,37 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
 
     def handle_info(_message, state), do: {:noreply, state}
 
-    defp admit(%Manifest{} = manifest, delivery_id, state) do
-      state = record(state, delivery_id, "continuum_manifest", manifest.manifest_id)
+    defp admit(%Manifest{} = manifest, delivery_id, source, state) do
+      state = record(state, delivery_id, source, "continuum_manifest", manifest.manifest_id)
 
       schema_version = WotexContinuum.schema_version()
 
       case Manifest.compatible_with?(manifest, schema_version, state.capabilities) do
         :ok ->
-          put_in(state, [:manifests, manifest.manifest_id], manifest)
+          put_in(state, [:manifests, {source, manifest.manifest_id}], manifest)
 
         {:error, _mismatches} ->
-          reject(state, delivery_id, :incompatible_manifest, manifest.manifest_id)
+          reject(state, delivery_id, source, :incompatible_manifest, manifest.manifest_id)
       end
     end
 
-    defp admit(%ObservationProposal{} = proposal, delivery_id, state) do
-      state = record(state, delivery_id, "observation_proposal", proposal.proposal_id)
+    defp admit(%ObservationProposal{} = proposal, delivery_id, source, state) do
+      state = record(state, delivery_id, source, "observation_proposal", proposal.proposal_id)
       key = {proposal.thing_id, proposal.affordance_type, proposal.affordance_name}
       watermark = get_in(state.observations, [key, :sequence])
 
       cond do
+        proposal.context.node_id != source ->
+          reject(state, delivery_id, source, :source_mismatch, proposal.proposal_id)
+
         not Map.has_key?(state.things, proposal.thing_id) ->
-          reject(state, delivery_id, :unknown_thing, proposal.proposal_id)
+          reject(state, delivery_id, source, :unknown_thing, proposal.proposal_id)
 
         is_nil(proposal.sequence) ->
-          reject(state, delivery_id, :missing_sequence, proposal.proposal_id)
+          reject(state, delivery_id, source, :missing_sequence, proposal.proposal_id)
 
         is_integer(watermark) and proposal.sequence <= watermark ->
-          reject(state, delivery_id, :stale_observation, proposal.proposal_id)
+          reject(state, delivery_id, source, :stale_observation, proposal.proposal_id)
 
         true ->
           observed = %{
@@ -190,31 +206,34 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
       end
     end
 
-    defp admit(%ActionIntent{} = intent, delivery_id, state) do
-      state = record(state, delivery_id, "action_intent", intent.intent_id)
+    defp admit(%ActionIntent{} = intent, delivery_id, source, state) do
+      state = record(state, delivery_id, source, "action_intent", intent.intent_id)
       key = intent.idempotency_key || intent.intent_id
 
       cond do
         state.lifecycle.state != :ready and state.lifecycle.state != :active ->
-          reject(state, delivery_id, :host_not_accepting, intent.intent_id)
+          reject(state, delivery_id, source, :host_not_accepting, intent.intent_id)
 
-        map_size(state.manifests) == 0 ->
-          reject(state, delivery_id, :stale_authority, intent.intent_id)
+        intent.context.node_id != source ->
+          reject(state, delivery_id, source, :source_mismatch, intent.intent_id)
+
+        not accepted_manifest?(state, source) ->
+          reject(state, delivery_id, source, :stale_authority, intent.intent_id)
 
         Map.has_key?(state.dispatches, key) ->
           state = update_in(state.dispatches[key], &%{&1 | duplicates: &1.duplicates + 1})
-          reject(state, delivery_id, :duplicate_intent, intent.intent_id)
+          reject(state, delivery_id, source, :duplicate_intent, intent.intent_id)
 
         not Map.has_key?(state.things, intent.thing_id) ->
-          reject(state, delivery_id, :unknown_thing, intent.intent_id)
+          reject(state, delivery_id, source, :unknown_thing, intent.intent_id)
 
         true ->
-          dispatch(state, intent, key)
+          dispatch(state, intent, key, source)
       end
     end
 
-    defp admit(%module{} = value, delivery_id, state) do
-      state = record(state, delivery_id, module.kind(), item_id(value))
+    defp admit(%module{} = value, delivery_id, source, state) do
+      state = record(state, delivery_id, source, module.kind(), item_id(value))
 
       case value do
         %Lifecycle{} -> state
@@ -222,7 +241,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
       end
     end
 
-    defp dispatch(state, intent, key) do
+    defp dispatch(state, intent, key, source) do
       consumed = Map.fetch!(state.things, intent.thing_id)
       context = Context.new!(request_id: "intent:" <> intent.intent_id)
       outcome = ConsumedThing.invoke_action(consumed, intent.action_name, intent.input, context)
@@ -234,10 +253,10 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
           outcome: outcome_tag(outcome)
         })
 
-      reply(state, intent, outcome)
+      reply(state, intent, outcome, source)
     end
 
-    defp reply(state, intent, outcome) do
+    defp reply(state, intent, outcome, source) do
       sequence = state.result_sequence + 1
 
       {:ok, scope} =
@@ -258,7 +277,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
         )
 
       {:ok, _delivery} =
-        Channel.send_value(state.channel, state.endpoint, intent.context.node_id, result)
+        Channel.send_value(state.channel, state.endpoint, source, result)
 
       %{state | result_sequence: sequence, results: [result | state.results]}
     end
@@ -266,16 +285,28 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
     defp outcome_tag({:ok, result}), do: {:ok, result.status}
     defp outcome_tag({:error, error}), do: {:error, error.code}
 
-    defp record(state, delivery_id, kind, item_id),
+    defp accepted_manifest?(state, source) do
+      Enum.any?(state.manifests, fn {{manifest_source, _id}, _manifest} ->
+        manifest_source == source
+      end)
+    end
+
+    defp record(state, delivery_id, source, kind, item_id),
       do: %{
         state
-        | received: [%{delivery_id: delivery_id, kind: kind, item_id: item_id} | state.received]
+        | received: [
+            %{delivery_id: delivery_id, source: source, kind: kind, item_id: item_id}
+            | state.received
+          ]
       }
 
-    defp reject(state, delivery_id, reason, item_id),
+    defp reject(state, delivery_id, source, reason, item_id),
       do: %{
         state
-        | rejected: [%{delivery_id: delivery_id, reason: reason, item_id: item_id} | state.rejected]
+        | rejected: [
+            %{delivery_id: delivery_id, source: source, reason: reason, item_id: item_id}
+            | state.rejected
+          ]
       }
 
     defp item_id(%{__struct__: _module} = value) do

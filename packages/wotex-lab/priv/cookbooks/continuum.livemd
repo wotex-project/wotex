@@ -277,6 +277,7 @@ host produces one dispatch.
 
 ```elixir
 {:ok, silent_channel} = Lab.start_child(lab, :sessions, {Channel, id: :silent, clock: clock})
+:ok = Channel.attach(silent_channel, "edge-a", self())
 :ok = Channel.attach(silent_channel, "silent", self())
 {:ok, first} = Channel.send_value(silent_channel, "edge-a", "silent", manifest)
 
@@ -328,6 +329,7 @@ unregistered value is refused by the channel before encoding.
 
 ```elixir
 {:ok, bounded} = Lab.start_child(lab, :sessions, {Channel, id: :bounded, clock: clock, capacity: 2})
+:ok = Channel.attach(bounded, "edge-a", self())
 :ok = Channel.attach(bounded, "silent", self())
 {:ok, _one} = Channel.send_value(bounded, "edge-a", "silent", mode)
 {:ok, _two} = Channel.send_value(bounded, "edge-a", "silent", mode)

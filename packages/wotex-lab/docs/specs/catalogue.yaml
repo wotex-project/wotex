@@ -131,11 +131,12 @@ specifications:
       - "test/wotex/lab/evidence_manifest_test.exs"
     compatibility_classification: WLB.04 is implemented through explicit local/hosted profiles, verified TLS, pinned hosted peers and bounded MQTT lifecycle policy; artifact adoption remains a separate axis.
   - id: WLB.05
-    version: "1.5.0"
+    version: "1.6.0"
     path: docs/specs/WLB.05-directory-continuum-and-smart-room.md
-    implementation_status: partial
-    evidence_status: partial
+    implementation_status: implemented
+    evidence_status: complete
     adoption_status: reference_available
+    evidence_manifest: docs/provenance/WLB.05-evidence.json
     standards:
       - name: WoTEx Lab consumer contract
         revision: "0.1.0"
@@ -166,7 +167,8 @@ specifications:
       - "test/wotex/lab/directory_test.exs"
       - "test/wotex/lab/continuum_test.exs"
       - "test/wotex/lab/smart_room_test.exs"
-    compatibility_classification: Initial 0.1 API; full spec and evidence obligations apply independently of source coverage.
+      - "test/wotex/lab/wlb05_evidence_manifest_test.exs"
+    compatibility_classification: WLB.05 is implemented with independent ETS/SQLite algorithms, authenticated per-source Continuum admission and one-effect smart-room policy races; artifact adoption remains a separate axis.
   - id: WLB.06
     version: "1.2.0"
     path: docs/specs/WLB.06-evidence-conformance-and-observability.md

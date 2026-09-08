@@ -367,6 +367,70 @@ defmodule Wotex.Lab.SmartRoomTest do
     assert {:ok, _run} = Scenario.run(opts)
   end
 
+  test "concurrent decisions admit one grant and concurrent dispatches execute it once", %{
+    policy: policy
+  } do
+    decisions =
+      1..8
+      |> Task.async_stream(
+        fn attempt ->
+          Policy.decide(policy, proposal("concurrent-#{attempt}", 23.0),
+            principal: :operator,
+            watermark: 7,
+            state_revision: 4,
+            now: 1_000
+          )
+        end,
+        ordered: false,
+        max_concurrency: 8
+      )
+      |> Enum.map(fn {:ok, result} -> result end)
+
+    assert [{:ok, granted}] = Enum.filter(decisions, &match?({:ok, _decision}, &1))
+
+    assert Enum.count(
+             decisions,
+             &match?({:error, %LabError{code: :conflicting_decision}}, &1)
+           ) == 7
+
+    counter = start_supervised!({Agent, fn -> 0 end})
+
+    dispatcher = fn ->
+      Agent.get_and_update(counter, fn count -> {:effect, count + 1} end)
+    end
+
+    dispatches =
+      1..8
+      |> Task.async_stream(
+        fn _attempt ->
+          Policy.dispatch(
+            policy,
+            granted.id,
+            [now: 1_001, watermark: 7, state_revision: 4],
+            dispatcher
+          )
+        end,
+        ordered: false,
+        max_concurrency: 8
+      )
+      |> Enum.map(fn {:ok, result} -> result end)
+
+    assert Enum.count(dispatches, &(&1 == {:ok, :effect})) == 1
+
+    assert Enum.count(
+             dispatches,
+             &match?({:error, %LabError{code: :already_dispatched}}, &1)
+           ) == 7
+
+    assert Agent.get(counter, & &1) == 1
+
+    assert %{decisions: [%{status: :dispatched, attempts: [_one]}], refusals: refusals} =
+             Policy.records(policy)
+
+    assert Enum.count(refusals, &(&1.reason == :conflicting_decision)) == 7
+    assert Enum.count(refusals, &(&1.reason == :already_dispatched)) == 7
+  end
+
   test "an energy meter over budget lowers the target and under budget raises it", %{
     run_opts: opts,
     meter_id: meter_id,
@@ -555,6 +619,25 @@ defmodule Wotex.Lab.SmartRoomTest do
       })
 
     td
+  end
+
+  defp proposal(id, input) do
+    {:ok, data_schema} = DataSchema.new(%{"type" => "number", "minimum" => 5, "maximum" => 35})
+
+    {:ok, output} =
+      OutputSchema.new(
+        kind: :action_proposal,
+        thing_id: "urn:wotex:lab:room:1",
+        affordance_type: :action,
+        affordance_name: "setTarget",
+        data_schema: data_schema,
+        dtype: :f32
+      )
+
+    {:ok, proposal} =
+      Decoder.decode(Nx.tensor(input, type: :f32), output, id: id, proposed_at: 1_000)
+
+    proposal
   end
 
   defp wait_until(read, predicate, attempts \\ 200) do
