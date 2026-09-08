@@ -22,10 +22,8 @@ WOTEX_PATH_DEPS=1 mix phx.server
 ```
 
 `WOTEX_PATH_DEPS=1` is the sole workspace switch. With it unset, dependencies
-are resolved as versioned artifacts. The application never downloads chart
-code: pinned Vega, Vega-Lite and Vega-Embed builds and their BSD licenses ship
-under `priv/static/vendor/`. `elixir bin/provision_chart_assets.exs` is the
-explicit digest-verifying renewal command.
+are resolved as versioned artifacts. Charts are rendered server-side as native
+HEEx/SVG; the application neither downloads nor ships a browser chart runtime.
 
 The local completion gate is:
 
@@ -36,10 +34,11 @@ WOTEX_PATH_DEPS=1 mix check --no-retry
 The host uses a small native check runner because its accepted location is two
 levels below another Mix project, a shape that ex_check interprets as a possible
 umbrella child. `.check.exs` remains the declarative list of the same checks.
-Node is needed for the dependency-free chart-hook tests, not by the running
-Elixir host. The exact Decimal 3.1.1 advisory acknowledgement is documented in
-the Lab's [dependency review](../../docs/provenance/standards-and-dependencies.md)
-and protected by the host's own locked-version and bounded-parser regression.
+Node is needed only for the optional Playwright browser cohort, not by the
+running Elixir host. The exact Decimal 3.1.1 advisory acknowledgement is
+documented in the Lab's
+[dependency review](../../docs/provenance/standards-and-dependencies.md) and
+protected by the host's own locked-version and bounded-parser regression.
 
 ## Interactive charts and browser evidence
 
@@ -52,12 +51,12 @@ tables show at most 100 rows and both source and query digests. Empty ranges
 are not measured zeros. Reload does not replay the query. No `kino_explorer`
 dependency, arbitrary SQL/expression or browser-selected instance is admitted.
 
-Vega Embed uses its bundled CSP interpreter (`ast: true`); neither
-`unsafe-eval` nor a fourth script is required. The renderer cannot load URLs.
-The hook applies only a fixed horizontal pan/zoom interaction, follows theme
-changes, resets by keyboard and finalizes obsolete views. Accessible SVG and
-the maximum 100-row table remain available when enhancement fails. The SVG
-supports all three admitted marks and preserves missing-value gaps.
+The sole renderer is server-owned HEEx/SVG; it accepts no URL, expression,
+signal or arbitrary Vega grammar. LiveView replaces the SVG after admitted
+analysis changes. The accessible chart and maximum 100-row table support all
+three admitted marks and preserve missing-value gaps. Pan/zoom is not an
+implemented feature. Explorer remains the dynamic analysis engine, not the
+renderer.
 
 Tensor previews split the lazy batch before stacking and slice before copying
 to host lists. Their observed/filled counts describe only the shown elements,

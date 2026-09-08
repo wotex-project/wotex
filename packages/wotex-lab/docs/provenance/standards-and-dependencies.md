@@ -250,6 +250,30 @@ replacement for WLB.06's external-executable containment boundary. The base
 archive gate proves neither Explorer nor its profile module enters the first
 tensor's dependency closure. No `kino_explorer` or chart wrapper is selected.
 
+### Native SVG chart cohort
+
+Observation date: 2026-09-08. The Workbench's admitted line, area and point
+charts are rendered by its own HEEx component from geometry computed in Elixir.
+Explorer 0.12.0 remains the optional bounded filtering and aggregation engine;
+it is not described as a renderer. The chart descriptor admits inline series
+only and exposes no URL, transform, expression, signal or arbitrary JavaScript
+execution seam.
+
+The removed vendored Vega 6.4.0, Vega-Lite 6.4.3 and Vega-Embed 7.2.0 files
+totalled 832,280 bytes raw and 280,484 bytes gzipped in the reviewed source
+tree. Their browser hook, asset provisioner and vendored license copies were
+removed with the runtime because the host no longer distributes or executes
+those packages. This is a source-composition decision, not a negative claim
+about those projects. Consumers needing their broader grammar may compose a
+separate renderer and own its compatibility, licensing, CSP and browser tests.
+
+The native renderer retains bounded tables, accessible title/description,
+axes, ticks, legend, semantic series classes, missing-value gaps and an explicit
+zero baseline for area marks. LiveView updates make Explorer-driven inspection
+dynamic without a browser chart compiler. Pan/zoom is neither implemented nor
+claimed. Real-browser and packaged-artifact evidence remain separate WLB.08
+obligations.
+
 ### Optional MQTT cohort
 
 Observation date: 2026-09-08. The optional `emqtt` requirement resolves `gun`

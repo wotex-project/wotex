@@ -118,7 +118,9 @@ the `window-anomaly` notebook. It bounds native input, materializes at most 100
 table rows, distinguishes missing/nonfinite values from observed zeros and
 returns source/query digests without changing the run evidence. Explorer uses
 Rust/Polars for dataframes; Nx remains the numerical layer and the chart
-renderer remains separate. No required `kino_explorer` dependency is added.
+renderer remains separate. The Workbench renders the bounded result as native
+server-owned HEEx/SVG, without Vega browser libraries or a required
+`kino_explorer` dependency.
 
 ```elixir
 {:ok, result} = Wotex.Lab.Examples.Thermal.run()
@@ -268,6 +270,7 @@ CSS; a running endpoint and HEEx components are not built by this foundation.
 | Durable metrics | GreptimeDB, one local process or your existing service |
 | Prompt-driven investigation | BeamLens with an explicit provider and read-only scoped query skill |
 | Native UI | Phoenix LiveView/HEEx and shared semantic CSS tokens |
+| Chart presentation | Server-rendered native SVG over closed descriptors; Explorer supplies bounded analysis |
 
 PromEx does not itself send metrics to GreptimeDB. The base library already
 ships the metric catalogue, the in-process collector, the bounded ETS history

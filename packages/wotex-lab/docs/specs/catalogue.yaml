@@ -397,7 +397,7 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/investigation_completion_controller_test.exs"
     compatibility_classification: Optional host contract; bridge captures now require strictly advancing wall timestamps and revalidated snapshots. History queries require an explicitly bound instance and refuse substituted scope, altered metric cohorts and wall-clock rollback. Storage-only history remains available. The trusted-local BeamLens profile requires explicit history/provider activation, has one bounded owner-bound browser investigation and discloses upstream node/time callbacks; shared hosted tenants remain unimplemented. No mandatory observability or model dependency enters the base library.
   - id: WLB.11
-    version: "0.4.0"
+    version: "0.5.0"
     path: docs/specs/WLB.11-workbench-and-design-system.md
     implementation_status: partial
     evidence_status: partial
@@ -436,7 +436,6 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/chart_contract_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/insights_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_presentation_test.exs"
-      - "hosts/workbench/test/js/chart_hook_test.cjs"
       - "hosts/workbench/bin/check_chart_browser.cjs"
       - "hosts/workbench/test/wotex_lab_workbench/formal_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/metrics_test.exs"
@@ -444,4 +443,4 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench_web/workbench_live_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/dashboard_test.exs"
       - "hosts/workbench/bin/check_boundary.exs"
-    compatibility_classification: Additive non-umbrella reference host with an explicitly activated trusted-local investigation UI; base Lab consumers retain inert tokens and scoped CSS without Phoenix or BeamLens.
+    compatibility_classification: The pre-1.0 reference host replaces its internal Vega/browser-hook chart path with the existing closed Elixir geometry and server-rendered HEEx/SVG; Explorer remains optional analysis and pan/zoom is not claimed. It also retains an explicitly activated trusted-local investigation UI. Base Lab consumers keep inert tokens and scoped CSS without Phoenix, Explorer or BeamLens.

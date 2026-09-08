@@ -5,7 +5,7 @@ defmodule WotexLabWorkbench.Check.Boundary do
 
   @unsafe ~r/(Application\.(put_env|put_all_env|ensure_all_started)\(|String\.to_atom\(|:erlang\.binary_to_atom\(|apps_path:|git:|github:)/
   @machine_path ~r{/(?:U)sers/|/(?:h)ome/}
-  @excluded ~w(.git deps _build cover doc priv/plts priv/static/vendor)
+  @excluded ~w(.git deps _build cover doc priv/plts)
 
   def run do
     source = files(["lib/**/*.{ex,exs}", "config/*.{ex,exs}", "mix.exs"])

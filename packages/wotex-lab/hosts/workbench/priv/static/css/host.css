@@ -345,7 +345,6 @@
 }
 
 .wl-chart [hidden] { display: none; }
-.wl-chart-enhanced svg { max-width: 100%; height: auto; }
 .wl-chart-axis line { stroke: var(--wl-color-border); opacity: 0.35; }
 .wl-chart-axis text, .wl-chart-axis-title { fill: var(--wl-color-text); font-size: 10px; }
 .wl-chart-legend { display: flex; flex-wrap: wrap; gap: 1rem; list-style: none; padding: 0; }

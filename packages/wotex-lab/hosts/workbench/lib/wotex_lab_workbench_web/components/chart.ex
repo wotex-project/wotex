@@ -1,5 +1,5 @@
 defmodule WotexLabWorkbenchWeb.Components.Chart do
-  @moduledoc "A bounded chart with server-rendered SVG and a visible data-table alternative."
+  @moduledoc "A bounded chart with server-rendered SVG and a keyboard-accessible data-table disclosure."
 
   use Phoenix.Component
 
@@ -24,23 +24,14 @@ defmodule WotexLabWorkbenchWeb.Components.Chart do
       |> assign(:geometry, Chart.geometry(chart))
       |> assign(:rows, rows)
       |> assign(:total, Enum.sum(Enum.map(chart.series, &length(&1.points))))
-      |> assign(:spec, Jason.encode!(chart.spec))
 
     ~H"""
-    <figure id={@id} class="wl-chart" phx-hook="WotexChart" data-spec={@spec}>
+    <figure id={@id} class="wl-chart">
       <figcaption id={"#{@id}-caption"}>{@chart.title}</figcaption>
       <p id={"#{@id}-description"}>
         {@chart.mark} chart. Horizontal axis: {@chart.x.title}; vertical axis: {@chart.y.title}.
         Missing values are gaps. The table below previews at most 100 points.
       </p>
-      <div
-        id={"#{@id}-enhanced"}
-        class="wl-chart-enhanced"
-        phx-update="ignore"
-        aria-hidden="true"
-        hidden
-      />
-      <button type="button" data-chart-reset hidden>Reset chart zoom</button>
       <svg
         class="wl-chart-svg"
         viewBox={"0 0 #{@geometry.width} #{@geometry.height}"}

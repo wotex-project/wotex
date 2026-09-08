@@ -3,14 +3,11 @@ defmodule WotexLabWorkbenchWeb.Layouts do
   The root document and the app layout.
 
   The root layout loads the generated token stylesheet, the host stylesheet,
-  the Phoenix and LiveView clients from their packages, the pinned Vega
-  builds when the operator provisioned them, and the host script, every
-  script carrying the request's CSP nonce. No inline script exists.
+  the Phoenix and LiveView clients from their packages, and the host script,
+  every script carrying the request's CSP nonce. No inline script exists.
   """
 
   use WotexLabWorkbenchWeb, :html
-
-  alias WotexLabWorkbench.ChartAssets
 
   attr :conn, :map, required: true
   attr :inner_content, :any, required: true
@@ -18,10 +15,7 @@ defmodule WotexLabWorkbenchWeb.Layouts do
   @doc "The HTML document."
   @spec root(map()) :: Phoenix.LiveView.Rendered.t()
   def root(assigns) do
-    assigns =
-      assigns
-      |> assign(:nonce, assigns.conn.assigns[:csp_nonce])
-      |> assign(:vendor, if(ChartAssets.available?(), do: ChartAssets.paths(), else: []))
+    assigns = assign(assigns, :nonce, assigns.conn.assigns[:csp_nonce])
 
     ~H"""
     <!DOCTYPE html>
@@ -36,8 +30,6 @@ defmodule WotexLabWorkbenchWeb.Layouts do
         <script nonce={@nonce} src="/js/phoenix/phoenix.min.js">
         </script>
         <script nonce={@nonce} src="/js/live_view/phoenix_live_view.min.js">
-        </script>
-        <script :for={path <- @vendor} nonce={@nonce} src={path}>
         </script>
         <script nonce={@nonce} src="/js/app.js">
         </script>

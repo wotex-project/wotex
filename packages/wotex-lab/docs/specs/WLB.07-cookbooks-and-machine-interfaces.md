@@ -57,7 +57,7 @@ lifecycle obligations and clone-free installation remain independently required.
 Data exploration follows the
 [interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md):
 Explorer computes bounded dataframe results, Nx handles numerical algorithms,
-and VegaLite/Tucan-style descriptors feed the separate plotting layer.
+and renderer-neutral chart descriptors feed the separate presentation layer.
 Notebooks must expose executable Elixir queries, not require an archived
 `kino_explorer` Smart Cell. Core Kino tables receive at most the admitted
 preview; custom paging is a Lab adapter, not an upstream replacement claim.

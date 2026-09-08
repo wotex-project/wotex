@@ -21,10 +21,9 @@ async function run() {
     await page.locator("#run-thermal button[type=submit]").click();
     await page.waitForURL("**/runs/**");
     const runPath = new URL(page.url()).pathname;
-    const chart = page.locator(".wl-chart-enhanced svg");
+    const chart = page.locator(".wl-chart-svg");
     await chart.waitFor({state: "visible"});
     assert.equal(await chart.count(), 1);
-    assert.equal(await page.locator(".wl-chart-svg").isVisible(), false);
 
     const beforeRuns = await page.evaluate(async () => (await (await fetch("/evidence/report.json")).json()).runs);
     assert.equal(await page.locator("#run-insights").count(), 0);
@@ -32,10 +31,18 @@ async function run() {
       await page.locator("#analysis-mark").selectOption(mark);
       await page.locator("#run-analysis button[type=submit]").click();
       await page.locator("#run-insights").waitFor({state: "visible"});
-      await page.waitForFunction((mark) => {
-        const figure = document.querySelector("[data-spec]");
-        return figure && JSON.parse(figure.dataset.spec).mark.type === mark;
-      }, mark);
+      await page.waitForFunction(({selector, alternatives}) => {
+        const series = document.querySelector(".wl-chart-svg .wl-chart-series");
+        return series && series.querySelector(selector) &&
+          alternatives.every((alternative) => !series.querySelector(alternative));
+      }, {
+        selector: {point: "circle", area: "polygon", line: "polyline"}[mark],
+        alternatives: {
+          point: ["polygon", "polyline"],
+          area: ["circle", "polyline"],
+          line: ["circle", "polygon"]
+        }[mark]
+      });
       await chart.waitFor({state: "visible"});
       assert.equal(await chart.count(), 1);
     }
@@ -45,9 +52,6 @@ async function run() {
 
     for (const theme of ["dark", "light", "system"]) {
       await page.locator("#wl-theme").selectOption(theme);
-      await chart.waitFor({state: "visible"});
-      await page.locator("[data-chart-reset]").focus();
-      await page.keyboard.press("Enter");
       await chart.waitFor({state: "visible"});
       assert.equal(await chart.count(), 1);
     }
@@ -95,8 +99,8 @@ async function run() {
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({
       kind: "local_source_browser_cohort", node: process.version, playwright: version,
-      chromium: browser.version(), checks: ["CSP-interpreter", "enhanced-render", "theme-reset",
-        "keyboard-reset", "mobile-reflow", "bounded-table", "analysis-mark-updates",
+      chromium: browser.version(), checks: ["CSP", "native-svg", "theme",
+        "mobile-reflow", "bounded-table", "server-mark-updates",
         "analysis-no-evidence-mutation", "reload-no-replay", "session-isolation",
         "catalogue-selection", "catalogue-mobile-reflow", "dashboard-download"],
       status: "passed", artifact_adoption: false, wcag_certification: false

@@ -1,12 +1,12 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.4.0. Contract: accepted.
+Specification version: 0.5.0. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
 `hosts/workbench/` now contains the non-umbrella Phoenix LiveView reference
-host, all required HEEx components, a scoped semantic CSS layer, vendored and
-digest-pinned Vega assets with upstream licenses, three executable experiments,
+host, all required HEEx components, a scoped semantic CSS layer,
+server-rendered native SVG charts, three executable experiments,
 session-owned disposable rooms, bounded live metrics and immutable exports,
 formal evidence presentation, and a one-MiB JSON evidence report. Its separate
 Action approval names and rechecks the decision, proposal digest, Thing,
@@ -27,18 +27,19 @@ reference evidence, not a WCAG certification or artifact-adoption claim;
 WLB.08 owns clone-free archive/OCI execution and independent real-browser
 cohort evidence.
 
-The interactive analytics extension below adds acceptance obligations. The
-chart normalization, mark-correct fallback, CSP-interpreted rendering and
-mount/update/disposal lifecycle now have executable source evidence in
-`chart_contract_test.exs` and `test/js/chart_hook_test.cjs`. The explicit
+The interactive analytics extension below adds acceptance obligations. Closed
+chart admission and mark-correct server SVG rendering have executable source
+evidence in `chart_contract_test.exs`. The explicit
 `bin/check_chart_browser.cjs` host gate checks real Chromium rendering,
-keyboard reset, themes, mobile reflow, reload and session isolation. Its
+mark updates, themes, mobile reflow, reload and session isolation. Its
 recorded cohort is source evidence, not the complete WLB.08 browser matrix.
 `Insights` and its HEEx controls now invoke the shared optional Lab Explorer
 profile only on explicit inspection. Unit and LiveView tests cover range/series/
 mark selection, scope substitution, empty results and unchanged run evidence.
 The browser gate also exercises updated charts after analysis. See the
 [interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md).
+The renderer selection is recorded separately in the
+[native SVG decision](../decisions/0007-native-svg-chart-rendering.md).
 
 The Metrics view also exposes catalogue-derived panel selection and a bounded,
 session-verified Grafana JSON download. This surface shows definitions only,
@@ -117,11 +118,10 @@ link, prompt composer, answer/source block, and explicit Action approval form.
 All use semantic token roles, slots and documented attributes. No caller HTML
 string injection, Tailwind/DaisyUI requirement, React runtime or second SPA.
 
-Use bounded Vega-Lite chart specifications shared with the Livebook/Kino lane,
-rendered by a narrowly scoped LiveView hook. The host vendors pinned chart
-assets, disables external data URLs/expression injection from untrusted input,
-and ships no arbitrary user-authored chart execution. HEEx owns controls and
-state; the hook owns rendering only. Pin the chart/LiveView compatibility cohort.
+Use bounded, renderer-neutral chart descriptors shared with the Livebook/Kino
+lane. The server computes a closed geometry model and HEEx renders native SVG;
+the host ships no client chart compiler, external data loader or arbitrary
+user-authored chart execution. Pin the chart/LiveView compatibility cohort.
 
 Explorer owns optional native dataframe analysis, not chart rendering or
 telemetry storage. Series/range/mark controls are server-admitted and keyboard
@@ -130,13 +130,12 @@ an Action. Summary rows show observed and missing/nonfinite counts and retain
 units and source/query identity. Livebook and LiveView consume the same bounded
 analysis semantics without a required `kino_explorer` dependency.
 
-The hook must implement mount, update and destruction, finalize superseded
-views, survive out-of-order asynchronous renders and restore the fallback on
-failure. Fixed host-generated pan/zoom may be added after admission; caller
-`params`, signals and expressions remain forbidden. Line/area/point marks and
-gaps agree between the enhanced chart and fallback. SVG includes axis labels,
-ticks, legend, title/description and an explicit zero area baseline. Tables
-are at most 100 rows and disclose truncation rather than embedding every point.
+LiveView updates replace the admitted server-owned SVG atomically; there is no
+browser chart hook or client interpreter lifecycle. Caller `params`, signals,
+expressions and URLs remain forbidden. Pan/zoom is not implemented or claimed.
+Line/area/point marks preserve missing-value gaps. SVG includes axis labels,
+ticks, legend, title/description and an explicit zero area baseline. Tables are
+at most 100 rows and disclose truncation rather than embedding every point.
 
 Browser previews are at most 100 rows, 32 columns and 2,000 points per series,
 eight visible series per panel. The server limits queries before transferring

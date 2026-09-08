@@ -33,18 +33,18 @@ numerical layer when the operation warrants tensors. Neither is a renderer,
 telemetry store, authorization mechanism or mandatory first-tensor dependency.
 The explicit workbench host may select Explorer; notebook consumers opt in.
 
-Keep the bounded Vega-Lite renderer and its local, digest-pinned assets. The
-Elixir VegaLite/Tucan ecosystem informs the shared descriptor, but arbitrary
-specifications produced by these libraries are not automatically admitted:
-schema versions, marks, expressions, selections and resource bounds differ.
-Normalize through Lab's closed contract before rendering. Do not add a
-wrapper dependency merely to serialize an already-supported descriptor.
+The chart-rendering part of this decision is superseded by
+[ADR 0007](0007-native-svg-chart-rendering.md). Explorer remains the selected
+optional analysis engine, while the Workbench renders its closed line, area and
+point vocabulary as server-owned HEEx/SVG. Vega-Lite, Vega Embed and their
+browser hook are not part of the selected host. VegaLite/Tucan remain useful
+community references, not an interchange format that the Workbench promises
+to execute.
 
-HEEx owns server-admitted filters, selected series, mark choice and resets.
-The hook owns local rendering, safe fixed pan/zoom configuration, update races
-and disposal. Browser selections do not alter raw evidence, execute queries
-without admission, or authorize an Action. SVG and bounded tables remain
-accessible fallbacks; they are not the primary analytical experience.
+HEEx and LiveView own admitted filters, selected series, mark choice and the
+resulting SVG. Browser selections do not alter raw evidence, execute queries
+without admission, or authorize an Action. The bounded table is a coequal
+accessible representation. Pan/zoom is not implemented or claimed.
 
 Analysis preserves source identity, units, order, missing/nonfinite state and
 the distinction between a preview, live lossy metrics and an immutable dataset.
@@ -75,9 +75,9 @@ with infinite precision/exponent limits. Renew the check when either changes.
 
 Each implementation slice needs bounded and malformed-input tests, explicit
 dependency/profile evidence and logical local commits. Chart acceptance adds
-updated/destroyed hook tests, out-of-order render completion, failed rendering,
-empty/all-missing/negative/flat/gapped data, mark parity, a maximum 100-row
-table preview and keyboard-equivalent server controls. Explorer acceptance
-adds filter/aggregate parity, null counts, source/query digests, unit isolation,
-work limits and native failure reporting. Browser and artifact evidence remain
-separate from source tests. No source-only gate closes WLB.08.
+empty/all-missing/negative/flat/gapped data, native line/area/point parity,
+accessible title/description/axes/legend, a maximum 100-row table preview and
+keyboard-accessible server controls. Explorer acceptance adds filter/aggregate
+parity, null counts, source/query digests, unit isolation, work limits and
+native failure reporting. Browser and artifact evidence remain separate from
+source tests. No source-only gate closes WLB.08.

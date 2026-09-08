@@ -2,6 +2,12 @@
 
 ## 0.1.0 — source foundation
 
+- Replace the Workbench's vendored Vega, Vega-Lite and Vega-Embed runtime with
+  its existing closed Elixir geometry and server-rendered HEEx/SVG. Explorer
+  remains the optional bounded analysis engine; LiveView updates line, area and
+  point charts with accessible descriptions/tables and preserved gaps. The
+  browser hook, asset provisioner and unimplemented pan/zoom claim are removed.
+
 - Pin BeamLens 0.3.1 in the Workbench and add its trusted-local reference
   profile: four bounded read-only Lab callbacks, real eight-turn process limits,
   one owner-bound no-queue broker, bounded/digested run context, cumulative

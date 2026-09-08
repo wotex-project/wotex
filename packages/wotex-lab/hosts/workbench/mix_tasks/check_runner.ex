@@ -13,7 +13,6 @@ defmodule WotexLabWorkbench.CheckRunner do
     {:doctor, "mix", ["doctor"], "test"},
     {:ex_doc, "mix", ["docs", "--warnings-as-errors"], "docs"},
     {:ex_unit, "mix", ["coveralls"], "test"},
-    {:chart_hooks, "node", ["--test", "test/js/chart_hook_test.cjs"], "test"},
     {:boundary, "elixir", ["bin/check_boundary.exs"], "test"}
   ]
 

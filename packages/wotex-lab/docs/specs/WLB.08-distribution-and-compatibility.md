@@ -147,13 +147,15 @@ state cannot be used as an untrusted multi-tenant isolation boundary.
 
 The Explorer analytics profile follows the
 [interactive analytics decision](../decisions/0005-interactive-elixir-analytics.md).
+Chart presentation follows the
+[native SVG decision](../decisions/0007-native-svg-chart-rendering.md).
 Record Explorer/Polars native artifact, Nx, Decimal and chart compatibility
 independently; the base archive consumer must still exclude Explorer and Kino.
 Archive status and vulnerability warnings need explicit adoption decisions.
 An advisory metadata conflict requires version-specific evidence, not a broad
 audit disable. `kino_explorer` is not an admitted new required dependency.
-Chart wrappers cannot silently upgrade the admitted Vega-Lite dialect or
-enable external URLs, arbitrary expressions or raw JavaScript.
+Chart wrappers cannot introduce a client-side renderer/dialect or widen the
+native descriptor to external URLs, arbitrary expressions or raw JavaScript.
 
 Nerves is a required delivery lane: name the supported target (`rpi4` baseline),
 pin the Nerves system/firmware/toolchain, supply a prebuilt bootable image with

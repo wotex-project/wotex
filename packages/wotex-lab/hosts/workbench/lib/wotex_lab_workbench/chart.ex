@@ -1,9 +1,9 @@
 defmodule WotexLabWorkbench.Chart do
   @moduledoc """
-  Closed Vega-Lite charts with equivalent missing-aware SVG geometry.
+  Closed renderer-neutral charts with missing-aware server-side SVG geometry.
 
   Admission accepts only line, area or point marks, scalar quantitative axes
-  and bounded inline data. `new/1` and `validate/1` return structured refusals
+  and bounded inline data. `new/1` returns structured refusals
   before rendering. No caller expression, selection, URL or arbitrary renderer
   configuration survives normalization. Area marks use a zero baseline.
   """
@@ -11,17 +11,15 @@ defmodule WotexLabWorkbench.Chart do
   alias Wotex.Lab.Error
   alias WotexLabWorkbench.Chart.Admission
 
-  @schema "https://vega.github.io/schema/vega-lite/v6.json"
   @type series :: %{name: String.t(), points: [{number(), number() | nil}]}
   @type t :: %__MODULE__{
           title: String.t(),
           mark: String.t(),
           x: %{field: String.t(), title: String.t()},
           y: %{field: String.t(), title: String.t()},
-          series: [series()],
-          spec: map()
+          series: [series()]
         }
-  @enforce_keys [:title, :mark, :x, :y, :series, :spec]
+  @enforce_keys [:title, :mark, :x, :y, :series]
   defstruct @enforce_keys
 
   @doc "Series and point ceilings."
@@ -31,15 +29,7 @@ defmodule WotexLabWorkbench.Chart do
   @doc "Builds an admitted chart from title, mark, x/y axes and named point series."
   @spec new(term()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) do
-    with {:ok, spec} <- Admission.build(opts), do: validate(spec)
-  end
-
-  @doc "Normalizes a closed Vega-Lite subset; never forwards caller configuration."
-  @spec validate(term()) :: {:ok, t()} | {:error, Error.t()}
-  def validate(spec) do
-    with {:ok, fields} <- Admission.normalize(spec) do
-      {:ok, struct!(__MODULE__, Map.put(fields, :spec, specification(fields)))}
-    end
+    with {:ok, fields} <- Admission.build(opts), do: {:ok, struct!(__MODULE__, fields)}
   end
 
   @doc "Projects series, gaps, axes and a zero area baseline into an SVG box."
@@ -64,40 +54,6 @@ defmodule WotexLabWorkbench.Chart do
       x_ticks: ticks(x0, x1, 5) |> Enum.map(&%{value: &1, px: sx.(&1)}),
       y_ticks: ticks(y0, y1, 4) |> Enum.map(&%{value: &1, px: sy.(&1)}),
       series: Enum.map(chart.series, &project(&1, sx, sy))
-    }
-  end
-
-  defp specification(chart) do
-    %{
-      "$schema" => @schema,
-      "title" => chart.title,
-      "mark" => %{"type" => chart.mark, "invalid" => "break-paths-show-domains"},
-      "data" => %{
-        "values" =>
-          Enum.flat_map(chart.series, fn series ->
-            series.points
-            |> Enum.with_index()
-            |> Enum.map(fn {{x, y}, index} ->
-              %{"x" => x, "y" => y, "series" => series.name, "position" => index}
-            end)
-          end)
-      },
-      "encoding" => %{
-        "x" => %{
-          "field" => "x",
-          "type" => "quantitative",
-          "title" => chart.x.title,
-          "scale" => %{"zero" => false}
-        },
-        "y" => %{
-          "field" => "y",
-          "type" => "quantitative",
-          "title" => chart.y.title,
-          "scale" => %{"zero" => chart.mark == "area"}
-        },
-        "color" => %{"field" => "series", "type" => "nominal"},
-        "order" => %{"field" => "position", "type" => "quantitative"}
-      }
     }
   end
 
