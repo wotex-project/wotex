@@ -36,8 +36,6 @@ Missing module/configuration or missing response fails instead of skipping.
 The default gate additionally executes five Python SDK API-contract tests.
 Those use a deliberately selected test controller, not a native SDK session.
 
-Container source commits are pinned. Base-image/package-manager inputs may move;
-these are reproducible source fixtures, not claims of bit-identical image builds.
 Interoperability tags are excluded by default. Explicit invocation requires the
 configured peer and must fail if that peer or expected response is missing.
 
@@ -51,6 +49,8 @@ commands above must be rerun after relevant changes.
 | --- | --- |
 | `test/bridge/matter_bridge_test.py` | `f2f41e95a68180c117433d395221d4984683e333edddad2f325cdb49fd52422b` |
 | `test/interop/controller_test.exs` | `06131cf65e51fc6992ed1df0d11aa4b31c27e8a2f803538c078eb8b3983cc6e4` |
+| `test/wotex/matter/contract_test.exs` | `45d55f0df387085d6ed9f7667cc41267ce63e0c0e084578dbcb1b0150e8f8099` |
+| `test/wotex/matter/dependency_security_test.exs` | `59eb7e3416dd44b8c237729661a8fe306e40b1cb882b2596b75a969a2db79a61` |
 | `test/wotex/matter/mapping_test.exs` | `41934eee1994453451d53d158253409b3d0220e5b69f7f6738c92bbfbac00369` |
 | `test/wotex/matter/port_test.exs` | `933378f379e77c07c76e6b175a66adcf52d0616c0921b58f0aa136db52e5db90` |
 | `test/wotex/matter/sdk_test.exs` | `b7699b283063ce3884b24fa5e39d55a5834c359872567d3a225c330ed33673ae` |
