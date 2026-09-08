@@ -1,0 +1,130 @@
+defmodule Wotex.BLE.BlueZ do
+  @moduledoc "Real Linux BlueZ GATT access through an explicitly supplied busctl executable and object path."
+  @behaviour Wotex.BLE.Client
+  alias Wotex.BLE.{Error, UUID}
+
+  @impl Wotex.BLE.Client
+  def connect(opts) do
+    executable = Keyword.get(opts, :executable)
+    path = Keyword.get(opts, :object_path)
+
+    with true <- is_binary(executable) and Path.type(executable) == :absolute,
+         true <-
+           is_binary(path) and
+             Regex.match?(
+               ~r{^/org/bluez/hci[0-9]+/dev_[A-Fa-f0-9_]+/service[0-9a-fA-F]+/char[0-9a-fA-F]+$},
+               path
+             ),
+         {:ok, service} <- UUID.normalize(Keyword.get(opts, :service)),
+         {:ok, characteristic} <- UUID.normalize(Keyword.get(opts, :characteristic)) do
+      {:ok, %{executable: executable, path: path, service: service, characteristic: characteristic}}
+    else
+      _ -> {:error, Error.new(:invalid_options)}
+    end
+  end
+
+  @impl Wotex.BLE.Client
+  def request(handle, message, timeout) do
+    with {:ok, service} <- UUID.normalize(message.service),
+         {:ok, characteristic} <- UUID.normalize(message.characteristic),
+         true <- service == handle.service and characteristic == handle.characteristic,
+         {:ok, method, signature, args} <- operation(message),
+         {:ok, output} <-
+           run(
+             handle.executable,
+             [
+               "--system",
+               "--timeout=#{timeout}ms",
+               "call",
+               "org.bluez",
+               handle.path,
+               "org.bluez.GattCharacteristic1",
+               method,
+               signature
+             ] ++ args,
+             timeout
+           ) do
+      if message.type == :read, do: decode(output), else: {:ok, :written}
+    else
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:address_mismatch)}
+    end
+  end
+
+  @impl Wotex.BLE.Client
+  def disconnect(_), do: :ok
+
+  @doc "Parses busctl's exact byte-array response; bounds count and every byte."
+  @spec decode(term()) :: {:ok, binary()} | {:error, Error.t()}
+  def decode(text) when is_binary(text) and byte_size(text) <= 4096 do
+    case String.split(text) do
+      ["ay", count | values] ->
+        with {count, ""} when count in 0..512 <- Integer.parse(count),
+             true <- length(values) == count,
+             numbers = Enum.map(values, &Integer.parse/1),
+             true <-
+               Enum.all?(numbers, fn
+                 {n, rest} -> rest == "" and n in 0..255
+                 _ -> false
+               end) do
+          {:ok, :binary.list_to_bin(Enum.map(numbers, &elem(&1, 0)))}
+        else
+          _ -> {:error, Error.new(:invalid_response)}
+        end
+
+      _ ->
+        {:error, Error.new(:invalid_response)}
+    end
+  end
+
+  def decode(_), do: {:error, Error.new(:response_limit)}
+
+  defp operation(%{type: :read}), do: {:ok, "ReadValue", "a{sv}", ["0"]}
+
+  defp operation(%{type: :write, value: value}) when is_binary(value) and byte_size(value) <= 512 do
+    values = for <<byte <- value>>, do: Integer.to_string(byte)
+
+    {:ok, "WriteValue", "aya{sv}",
+     [Integer.to_string(byte_size(value)) | values] ++ ["1", "type", "s", "request"]}
+  end
+
+  defp operation(_), do: {:error, Error.new(:invalid_request)}
+
+  defp run(executable, args, timeout) do
+    port = Port.open({:spawn_executable, executable}, [:binary, :exit_status, args: args])
+
+    try do
+      collect(port, <<>>, System.monotonic_time(:millisecond) + timeout)
+    after
+      if Port.info(port), do: Port.close(port)
+    end
+  rescue
+    _ -> {:error, Error.new(:transport_unavailable)}
+  end
+
+  defp collect(port, output, deadline) do
+    remaining = deadline - System.monotonic_time(:millisecond)
+
+    if remaining <= 0,
+      do: {:error, Error.new(:timeout)},
+      else: receive_output(port, output, deadline, remaining)
+  end
+
+  defp receive_output(port, output, deadline, remaining) do
+    receive do
+      {^port, {:data, data}} when byte_size(output) + byte_size(data) <= 4096 ->
+        collect(port, output <> data, deadline)
+
+      {^port, {:data, _}} ->
+        {:error, Error.new(:response_limit)}
+
+      {^port, {:exit_status, 0}} ->
+        {:ok, output}
+
+      {^port, {:exit_status, _}} ->
+        {:error, Error.new(:remote_error)}
+    after
+      remaining -> {:error, Error.new(:timeout)}
+    end
+  end
+end
