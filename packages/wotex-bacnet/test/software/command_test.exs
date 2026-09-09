@@ -12,7 +12,7 @@ defmodule Wotex.BACnet.SoftwareCommandTest do
     on_exit(fn -> File.rm_rf!(directory) end)
     compiler = System.find_executable("cc") || flunk("native fixture tests require a C11 compiler")
 
-    for name <- ["command", "probe"] do
+    for name <- ["command", "probe", "command_launcher"] do
       args = [
         "-std=c11",
         "-O1",
@@ -36,10 +36,36 @@ defmodule Wotex.BACnet.SoftwareCommandTest do
       assert {_, 0} = drain(port, 15_000)
     end
 
+    fault_args = [
+      "-std=c11",
+      "-O1",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Dsetpgid=wotex_test_setpgid",
+      Path.join(@native, "command.c"),
+      Path.join(@native, "command_group_fault.c"),
+      "-o",
+      Path.join(directory, "command_group_fault")
+    ]
+
+    fault_port =
+      Port.open({:spawn_executable, compiler}, [
+        :binary,
+        :exit_status,
+        :stderr_to_stdout,
+        args: fault_args
+      ])
+
+    assert {_, 0} = drain(fault_port, 15_000)
+
     context = %{
       directory: directory,
       guardian: Path.join(directory, "command"),
-      probe: Path.join(directory, "probe")
+      group_fault: Path.join(directory, "command_group_fault"),
+      probe: Path.join(directory, "probe"),
+      launcher: Path.join(directory, "command_launcher")
     }
 
     initialized = launch(context, "output", timeout: "10000")
@@ -53,6 +79,54 @@ defmodule Wotex.BACnet.SoftwareCommandTest do
     assert output =~ "stdout\n"
     assert output =~ "stderr\n"
     assert {"", 7} = execute(context, "exit")
+  end
+
+  test "WBA-C09 WBA-V14 guardian resets inherited SIGCHLD disposition and signal mask", context do
+    arguments = [
+      context.guardian,
+      "2000",
+      "65536",
+      "400",
+      context.directory,
+      context.probe,
+      "output"
+    ]
+
+    port =
+      Port.open({:spawn_executable, context.launcher}, [
+        :binary,
+        :exit_status,
+        :stderr_to_stdout,
+        args: arguments
+      ])
+
+    assert {output, 0} = drain(port)
+    assert output =~ "stdout\n" and output =~ "stderr\n"
+  end
+
+  test "WBA-C09 WBA-V14 one thousand short-lived commands retain exact terminal status", context do
+    for _ <- 1..1000 do
+      assert {"", 7} = execute(context, "exit")
+    end
+
+    1..32
+    |> Task.async_stream(fn _ -> execute(context, "output") end,
+      max_concurrency: 32,
+      ordered: false,
+      timeout: 5000
+    )
+    |> Enum.each(fn
+      {:ok, {output, 0}} -> assert output =~ "stdout\n" and output =~ "stderr\n"
+      result -> flunk("short-lived command failed: #{inspect(result)}")
+    end)
+  end
+
+  test "WBA-C09 WBA-V14 parent group failure prevents child execution", context do
+    context = %{context | guardian: context.group_fault}
+    started = System.monotonic_time(:millisecond)
+
+    assert {"", 126} = execute(context, "output")
+    assert System.monotonic_time(:millisecond) - started < 1000
   end
 
   test "WBA-C09 WBA-V14 missing executable and invalid limits fail", context do
@@ -358,5 +432,9 @@ defmodule Wotex.BACnet.SoftwareCommandTest do
   end
 
   defp temporary,
-    do: Path.join(System.tmp_dir!(), "wotex-bacnet-command-#{System.unique_integer([:positive])}")
+    do:
+      Path.join(
+        System.tmp_dir!(),
+        "wotex-bacnet-command-" <> Base.encode16(:crypto.strong_rand_bytes(12), case: :lower)
+      )
 end
