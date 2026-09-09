@@ -1,5 +1,20 @@
 defmodule Wotex.Thread.Mapping do
-  @moduledoc "Pure Form mapping for the explicitly documented Wotex protocol profile."
+  @moduledoc """
+  Maps a W3C Web of Things Form to a read-only Thread management request.
+
+  `command/4` accepts a declared Property read and parses a `thread+unix` href.
+  The supported paths map to daemon state, version, network-name, or 16-bit
+  Routing Locator (RLOC16) commands, and the URI host becomes the explicit
+  controller target. The source
+  Form map is retained so unknown extension terms remain available to the
+  consumer.
+
+  Mapping is pure and does not open a Unix socket, contact an OpenThread daemon,
+  or change an Operational Dataset. Malformed URIs, user information,
+  fragments, unsupported paths, and operations other than `readproperty`
+  return `Wotex.Thread.Error`. Success does not authorize daemon access or turn
+  Thread management data into application Property truth.
+  """
   alias Wotex.Form
   alias Wotex.Thread.Error
   @operations %{readproperty: :read}

@@ -1,5 +1,11 @@
 defmodule Wotex.Thread.PortCall do
-  @moduledoc false
+  @moduledoc """
+  Normalizes calls to a Thread client port.
+
+  This internal boundary converts client callback failures, invalid return
+  values, exceptions, exits, and throws into `Wotex.Thread.Error` values so
+  callers do not depend on client-specific failure shapes.
+  """
 
   alias Wotex.Thread.Error
 

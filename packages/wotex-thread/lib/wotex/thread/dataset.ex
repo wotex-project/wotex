@@ -1,5 +1,20 @@
 defmodule Wotex.Thread.Dataset do
-  @moduledoc "Bounded OpenThread Operational Dataset TLVs with credential-redacted inspection."
+  @moduledoc """
+  Preserves a bounded OpenThread Operational Dataset as ordered Type-Length-Value
+  (TLV) entries.
+
+  `decode/1` parses at most 254 bytes, rejects duplicate types and truncated
+  values, and validates known field widths and network-name text. Unknown types
+  and their raw values remain in order. `encode/1` emits the retained bytes only
+  after revalidating the complete value. Because an Operational Dataset may
+  contain network credentials, the struct's inspection representation exposes
+  only its type list; `encode/1` is the explicit credential-bearing boundary.
+
+  `complete?/2` checks the presence of the fields required for an active or
+  pending dataset and the placement of pending-only fields. It does not perform
+  the OpenThread Software Development Kit's full semantic validation, install a
+  dataset, or assert that a network can be formed.
+  """
   alias Wotex.Thread.Error
   @derive {Inspect, only: [:types]}
   @enforce_keys [:entries, :types]

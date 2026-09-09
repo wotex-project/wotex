@@ -9,8 +9,10 @@ defmodule Wotex.Thread.OpenThread do
   owned SDK, radio descendants and interface while preserving durable settings.
 
   `start_link/1` supports caller supervision. `session/1` waits for successful
-  SDK acquisition. Loading the library starts nothing. Dataset mutation and
-  commissioning operations require their separately implemented API contracts.
+  SDK acquisition. Loading the library starts nothing. Explicit APIs support
+  Dataset validation/export, enablement, network formation, management updates
+  and commissioner admissions. Joiner execution and state subscriptions remain
+  planned; commissioner admission alone does not commission a peer.
   """
 
   @behaviour Wotex.Thread.Client

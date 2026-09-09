@@ -1,5 +1,22 @@
 defmodule Wotex.Thread.Daemon do
-  @moduledoc "Real read-only ot-daemon Unix-socket client; never starts a daemon or changes a dataset."
+  @moduledoc """
+  Reads bounded management values from an existing `ot-daemon` Unix socket.
+
+  `Wotex.Thread.Daemon` implements `Wotex.Thread.Client` for the four operations
+  admitted by `Wotex.Thread.Address`. `connect/1` validates a caller-supplied
+  socket path and timeout. `request/3` sends one fixed command, parses its
+  optional echo and `Done` terminator, and returns a typed state, version,
+  network name, or 16-bit Routing Locator (RLOC16) value. Responses are limited
+  to 8192 bytes.
+
+  ## Ownership
+
+  The adapter never starts OpenThread, discovers a socket, or changes an
+  Operational Dataset. The session is bound to its creating process; use from a
+  different owner fails. Remote `Error` output, malformed or additional lines,
+  invalid UTF-8, connection closure, and timeout return structured errors
+  without retaining daemon text.
+  """
   @behaviour Wotex.Thread.Client
   alias Wotex.Thread.{Address, Error}
   @commands %{state: "state", version: "version", network_name: "networkname", rloc16: "rloc16"}

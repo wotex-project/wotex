@@ -1,5 +1,25 @@
 defmodule Wotex.Thread do
-  @moduledoc "Consumer-neutral Thread operations over an explicitly supplied real client port."
+  @moduledoc """
+  Executes bounded Thread management operations through an explicit client.
+
+  `Wotex.Thread` is the package facade for connection lifecycle and both
+  the read-only daemon operations and explicit native SDK management APIs.
+  `connect/1` returns a `Wotex.Thread.Session`, `send/2` performs one request,
+  and `disconnect/1` releases the selected client handle.
+  `with_connection/2` provides deterministic cleanup around the same API.
+
+  ## Execution boundary
+
+  The consumer selects a `Wotex.Thread.Client`, supplies credentials and radio
+  configuration, and owns authorization, routing and supervision.
+  `Wotex.Thread.Daemon` connects to a consumer-owned daemon;
+  `Wotex.Thread.OpenThread` explicitly acquires and cleans up its SDK resources. Loading this
+  module starts no process and changes no Operational Dataset. Native Dataset
+  updates, network formation and commissioner operations require explicit calls. Thread provides
+  network management; application Property, Action, and Event operations remain
+  with their protocol bindings. Unsupported receive, probe, and subscription
+  operations return explicit failures.
+  """
 
   import Kernel, except: [send: 2]
   alias Wotex.Thread.{Dataset, Error, OpenThread, PortCall, Session, State}

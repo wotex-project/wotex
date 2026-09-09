@@ -1,15 +1,52 @@
 # Wotex Thread
 
-Consumer-neutral Thread library for W3C Web of Things consumers.
-Development version: `0.1.0-dev`.
+**Consumer-neutral Thread inspection and explicit OpenThread SDK management.**
+
+[![Hex.pm](https://img.shields.io/hexpm/v/wotex_thread.svg)](https://hex.pm/packages/wotex_thread)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_thread)
+[![CI](https://github.com/wotex-project/wotex-thread/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-thread/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/wotex-project/wotex-thread/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-thread)
+[![License](https://img.shields.io/hexpm/l/wotex_thread.svg)](https://github.com/wotex-project/wotex-thread/blob/main/LICENSE)
+
+[Installation](#installation) ·
+[Implemented profile](#implemented-profile) ·
+[Quick start](#quick-start) ·
+[Wotex contract](#wotex-contract) ·
+[Development](#development) ·
+[Software contract](#software-implementation-contract)
+
+---
+
+This is a development checkout. The public API remains unstable, and the
+software implementation plan is not complete. Package publication is separate.
 
 Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
+
+## Installation
+
+This development checkout is prepared as the `wotex_thread` Hex package but
+does not assert that a release has been published. A sibling-checkout consumer
+can select it explicitly:
+
+```elixir
+def deps do
+  [{:wotex_thread, path: "../wotex-thread"}]
+end
+```
+
+Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
+and Runtime dependencies resolve from sibling checkouts. Published consumers
+should replace the path with the constraint of an available Hex release.
+
+## Implemented profile
 
 The implemented package provides bounded Operational Dataset TLVs and a real
 read-only `ot-daemon` Unix-socket adapter. Dataset inspection redacts key material;
 explicit `encode/1` returns the raw bytes. Unknown TLVs are retained, duplicates
 are rejected, and known lengths/network-name encoding are validated.
 `complete?/2` checks required field presence, not the SDK's full semantic validity.
+
+## Quick start
 
 ```elixir
 {:ok, session} = Wotex.Thread.connect(
@@ -22,14 +59,22 @@ after
 end
 ```
 
-The caller owns the socket and must use the session from its owning process.
+The daemon session owns its client socket and must be used from its creating
+process. The consumer owns the daemon.
 Supported reads are `:state`, `:version`, `:network_name` and `:rloc16`.
 Responses are capped at 8192 bytes; remote Error, malformed output, closure and
-timeout fail. The package neither starts OpenThread nor changes datasets.
-Thread supplies networking, not generic application Property read/write.
-Dataset installation and joiner/commissioner workflows are required target
-software work in WTH.10/.11. Border-router management and physical-radio
-interoperability remain outside this target profile.
+timeout fail. This adapter neither starts OpenThread nor changes datasets.
+
+`Wotex.Thread.OpenThread` is a separate, explicitly started Linux SDK adapter.
+It owns the native host, SDK instance, radio child processes, interface and
+settings lock. Its implemented APIs validate and export Datasets, enable IPv6
+and Thread, form an explicitly permitted network, submit management updates,
+and start/stop the commissioner with exact, finite joiner admissions. Management
+acceptance is separate from Dataset activation; commissioner admission is
+separate from joining. Joiner execution and native state subscriptions remain
+planned. Thread management does not provide generic application Property writes.
+Border-router management and physical-radio interoperability remain outside
+this target profile.
 
 ## Wotex contract
 
@@ -61,8 +106,10 @@ checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
 Run `mix check` before commits. It includes package compilation outside the
 checkout, tests/coverage, static checks, docs and dependency audit.
 Optional interoperability suites fail if invoked without their required peer.
-The hardware suite has not been run in this workspace because no configured
-OpenThread daemon/radio was supplied. Commissioning remains unimplemented in the baseline and required in the SDK target.
+The software suite includes native OpenThread simulation tests for Dataset
+validation, formation, management callbacks and commissioner admission/cleanup,
+plus BEAM-to-SDK tests. These do not establish physical-radio interoperability
+or complete the remaining software-network and lifecycle requirements.
 No remote repository, published package or publication action is implied.
 
 ## Software implementation contract

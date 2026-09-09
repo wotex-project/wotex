@@ -1,5 +1,22 @@
 defmodule Wotex.Thread.Transport do
-  @moduledoc "Scoped Wotex Runtime execution over an explicit client and exact target identity."
+  @moduledoc """
+  Executes Wotex Runtime requests through a scoped Thread management session.
+
+  The transport validates the Runtime request and execution context, maps the
+  selected Form through `Wotex.Thread.Mapping`, opens the configured client,
+  performs one read-only command, and closes the exact session. Subscription
+  callbacks return explicit unsupported errors because the current profile does
+  not produce application observations or Events.
+
+  ## Runtime boundary
+
+  An exact controller target is required. Credentials are rejected because this
+  adapter contract defines no credential transport. Runtime Form selection is
+  not authorization, and returned network-management data does not establish
+  canonical application Property truth. The consumer owns socket access,
+  daemon and radio lifecycle, deadlines, authorization, supervision, and
+  interpretation of the result.
+  """
   @behaviour Wotex.Runtime.Transport
   alias Wotex.Runtime.{Context, ExecutionContext, Request, Result}
   alias Wotex.Thread

@@ -6,6 +6,15 @@ defmodule Wotex.Thread.State do
   IPv6 and Thread enablement, and the owning session generation. It contains no
   Operational Dataset or credentials. `new/1` validates a supplied snapshot;
   it performs no SDK call and does not establish attachment or reachability.
+
+  Validation accepts the defined OpenThread roles, a network name of at most
+  16 bytes, an optional 16-bit locator, boolean enablement fields, and a
+  non-negative session generation. The invariants require Thread enablement to
+  imply IPv6 enablement and reserve the `:disabled` role for disabled Thread.
+
+  Session adapters construct snapshots after querying their owned stack. The
+  generation allows callers to relate a value to that session lifetime; it is
+  not a globally persistent network revision or an authorization credential.
   """
 
   alias Wotex.Thread.Error
