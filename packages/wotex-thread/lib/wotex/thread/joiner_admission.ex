@@ -17,7 +17,7 @@ defmodule Wotex.Thread.JoinerAdmission do
 
   def new(%{identity: identity, pskd: pskd, lifetime: lifetime} = input)
       when map_size(input) == 3 and is_integer(lifetime) and lifetime in 1..3600 do
-    with {:ok, _} <- JoinerIdentity.encode(identity), true <- CommissioningValue.pskd?(pskd) do
+    with {:ok, identity} <- normalized_identity(identity), true <- CommissioningValue.pskd?(pskd) do
       {:ok, %__MODULE__{identity: identity, pskd: pskd, lifetime: lifetime}}
     else
       _ -> {:error, Error.new(:invalid_joiner_admission)}
@@ -25,6 +25,20 @@ defmodule Wotex.Thread.JoinerAdmission do
   end
 
   def new(_), do: {:error, Error.new(:invalid_joiner_admission)}
+
+  @doc false
+  @spec parameters(term()) :: {:ok, map()} | {:error, Error.t()}
+  def parameters(%__MODULE__{} = admission), do: encode(admission)
+
+  def parameters(input) do
+    with {:ok, admission} <- new(input), do: encode(admission)
+  end
+
+  defp normalized_identity(%JoinerIdentity{} = identity) do
+    with {:ok, _} <- JoinerIdentity.encode(identity), do: {:ok, identity}
+  end
+
+  defp normalized_identity(input), do: JoinerIdentity.new(input)
 
   @doc false
   @spec encode(term()) :: {:ok, map()} | {:error, Error.t()}

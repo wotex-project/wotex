@@ -93,6 +93,22 @@ def apply_spinel_fix(sdk, pin):
     path.write_bytes(content)
 
 
+def apply_discerner_fix(sdk, pin):
+    """Define the 64-bit mask without shifting by the integer width in the pinned SDK."""
+    path = sdk / "src/core/meshcop/meshcop.hpp"
+    if digest(path) != pin["before_sha256"]:
+        raise ValueError("unexpected discerner source before full-width fix")
+    content = path.read_bytes()
+    before = b"return (static_cast<uint64_t>(1ULL) << mLength) - 1;"
+    after = b"return mLength == 64 ? ~static_cast<uint64_t>(0) : (static_cast<uint64_t>(1ULL) << mLength) - 1;"
+    if content.count(before) != 1:
+        raise ValueError("unexpected discerner mask count")
+    content = content.replace(before, after)
+    if hashlib.sha256(content).hexdigest() != pin["after_sha256"]:
+        raise ValueError("unexpected discerner source after full-width fix")
+    path.write_bytes(content)
+
+
 def sources(workspace, pins):
     archives = workspace / "archives"
     archives.mkdir(exist_ok=True)
@@ -112,6 +128,7 @@ def sources(workspace, pins):
             raise ValueError("unexpected archive root")
     sdk = roots["openthread"]
     apply_spinel_fix(sdk, pins["spinel_unsigned_shift_fix"])
+    apply_discerner_fix(sdk, pins["discerner_full_width_fix"])
     shutil.copytree(roots["mbedtls-framework"], roots["mbedtls"] / "framework", dirs_exist_ok=True)
     shutil.copytree(roots["mbedtls"], sdk / "third_party/mbedtls/repo", dirs_exist_ok=True)
     return sdk
@@ -163,7 +180,7 @@ def build(workspace, sanitizers):
                                "build/include/nlohmann/json.hpp": digest(build_dir / "include/nlohmann/json.hpp")},
                     compiler=subprocess.check_output(["c++", "--version"], text=True).splitlines()[0],
                     cmake=subprocess.check_output(["cmake", "--version"], text=True).splitlines()[0],
-                    configure_command=command, sdk_override="Mbed TLS 3.6.7; unsigned Spinel integer shifts", networking_started=False)
+                    configure_command=command, sdk_override="Mbed TLS 3.6.7; unsigned Spinel integer shifts; full-width discerner mask", networking_started=False)
     if manifest["artifacts"]["build/include/nlohmann/json.hpp"] != pins["json"]["sha256"]:
         raise ValueError("JSON dependency digest mismatch")
     save(manifest_path, manifest)

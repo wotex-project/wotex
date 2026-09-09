@@ -123,7 +123,12 @@ configuration. `open` then initializes the POSIX platform and one `otInstance`
 and registers `otSetStateChangedCallback`; only its successful response admits
 a Session. The build manifest records exact SDK, crypto and build features.
 Run tasklets and platform mainloop with nonblocking request input so owner EOF,
-cancel and deadlines remain observable. At most 64 admitted requests, one active
+cancel and deadlines remain observable. At most 64 admitted requests; ordinary
+work uses at most 63 slots, reserving capacity for an explicit commissioner or
+joiner stop. One stop may be on the wire alongside the ordinary active request;
+stops precede queued ordinary work, retain separate reply/deadline correlation,
+and never evict admitted work. A stop failure after submission has unknown effect.
+There is one active
 management update and one active joiner attempt. On EOF/close: stop owned joiner
 and commissioner, unregister callbacks, disable owned Thread/IP state, finalize
 instance/platform, close RCP/storage/locks and exit. Child RCP processes started
@@ -212,8 +217,23 @@ back to `ot-ctl dataset set` or a local setter for a production management updat
 
 ## WTH-S05 — Commissioner and Joiner
 
+The pinned SDK's discerner mask shifts a 64-bit integer by 64 for the supported
+maximum length. The native builder applies a digest-checked full-width mask fix
+to `src/core/meshcop/meshcop.hpp`; CMake rejects an unpatched source. WTH-S05/V08
+exercises actual SDK admission/removal at every length 1..64 under sanitizers.
+
 Native Commissioner start uses `otCommissionerStart` with state/joiner callbacks.
 Return success only when state becomes active, not merely after petition starts.
+The public commissioner operations use .11's exact options/result contracts:
+`commissioner_start(session, options)` returns `{:ok, %{state: :active}}`, and
+stop returns `{:ok, %{state: :disabled}}`. Options permit only a finite `timeout`
+(default Session limit). Add returns `{:ok, %{identity: identity, lifetime_s: seconds}}`;
+remove returns `:ok`. Admission success means an owned SDK record was installed,
+not that a joiner commissioned. C07 start/stop parameters are empty; successes
+are exactly `{state: "active"}` and `{state: "disabled"}`. Add parameters contain
+exactly `identity`, `pskd`, `lifetime`; success echoes the validated identity and
+`lifetime_s`, both checked against the submitted request. Remove parameters
+contain exactly `identity`; success is `null`.
 Stop uses `otCommissionerStop` and clears this owner's admission records. An
 existing externally owned commissioner/instance is not adopted or stopped.
 `add_joiner/3` requires an explicit EUI-64 or discerner, PSKd and finite lifetime
@@ -224,11 +244,12 @@ before SDK submission, while preserving a lower SDK capacity error.
 
 `JoinerIdentity.new/1` accepts exactly `%{eui64: <<eight bytes>>}` or
 `%{discerner: %{length: 1..64, value: non_neg_integer}}`; it never accepts a
-wildcard. `JoinerAdmission.new/1` accepts a typed `identity`, `pskd` and optional
+wildcard. `JoinerAdmission.new/1` accepts an exact identity map or typed `identity`, `pskd` and optional
 `lifetime` (default 60). `JoinerConfig.new/1` accepts `pskd` and the optional
 strings below, plus an optional typed discerner identity; absence uses the
 SDK's factory-EUI-derived Joiner ID. Unknown fields and forged structs fail
-before native submission. Credential-bearing values redact PSKd in `Inspect`.
+before native submission. Public operation boundaries accept .11 maps as well
+as these validated value structs. Credential-bearing structs redact PSKd in `Inspect`.
 C07 identities are exact `{type: "eui64", value: uppercase_hex_16}` or
 `{type: "discerner", length: integer, value: canonical_unsigned_decimal_string}`.
 The decimal value must fit the stated bit length; it is never a JSON float.

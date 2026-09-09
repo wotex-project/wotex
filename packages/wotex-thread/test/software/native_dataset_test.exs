@@ -168,6 +168,33 @@ defmodule Wotex.Thread.NativeDatasetTest do
     refute File.exists?("/sys/class/net/wthdataset")
   end
 
+  @tag requirements: ["WTH-S05", "WTH-C03", "WTH-C04"], vectors: ["WTH-V08"]
+  test "owned commissioner activates and admits only exact finite joiner records", context do
+    assert {:ok, session} =
+             Thread.connect(Keyword.put(context.options, :allow_network_creation, true))
+
+    assert {:ok, %State{role: :leader}} = Thread.form_network(session, dataset(:active), 30_000)
+    assert {:ok, %{state: :active}} = Thread.commissioner_start(session, timeout: 5000)
+
+    for input <- [%{eui64: <<42::64>>}, %{discerner: %{length: 64, value: 42}}] do
+      {:ok, identity} = Wotex.Thread.JoinerIdentity.new(input)
+
+      {:ok, admission} =
+        Wotex.Thread.JoinerAdmission.new(%{identity: identity, pskd: "WTEST123", lifetime: 1})
+
+      assert {:ok, %{identity: ^input, lifetime_s: 1}} = Thread.add_joiner(session, admission, 1000)
+      assert :ok = Thread.remove_joiner(session, identity, 1000)
+
+      assert {:error, %Error{code: :remote_error, effect: :unknown, details: %{status: 23}}} =
+               Thread.remove_joiner(session, identity, 1000)
+    end
+
+    assert {:ok, %{state: :disabled}} = Thread.commissioner_stop(session, timeout: 1000)
+    assert {:ok, %{state: :disabled}} = Thread.commissioner_stop(session, timeout: 1000)
+    assert :ok = Thread.disconnect(session)
+    refute File.exists?("/sys/class/net/wthdataset")
+  end
+
   defp timestamp(dataset, seconds) do
     entries =
       Enum.map(dataset.entries, fn

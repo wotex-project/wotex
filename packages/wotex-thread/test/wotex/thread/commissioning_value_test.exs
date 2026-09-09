@@ -7,6 +7,101 @@ defmodule Wotex.Thread.CommissioningValueTest do
 
   @moduletag requirements: ["WTH-S05", "WTH-C02"], vectors: ["WTH-V08", "WTH-V09"]
 
+  test "commissioner commands have exact shapes and conservative mutation classification" do
+    alias Wotex.Thread.OpenThread.{Frame, Request}
+
+    for type <- [:commissioner_start, :commissioner_stop] do
+      assert {:ok, {operation, %{}}} = Request.encode(%{type: type})
+      assert Request.mutation?(operation)
+      assert {:error, %Error{}} = Request.encode(%{type: type, extra: true})
+    end
+
+    {:ok, identity} = JoinerIdentity.new(%{eui64: <<42::64>>})
+    {:ok, admission} = JoinerAdmission.new(%{identity: identity, pskd: "WTEST123"})
+
+    assert {:ok, {"add_joiner", %{identity: %{value: "000000000000002A"}}}} =
+             Request.encode(%{type: :add_joiner, admission: admission})
+
+    assert {:ok, {"remove_joiner", %{identity: %{value: "000000000000002A"}}}} =
+             Request.encode(%{type: :remove_joiner, identity: identity})
+
+    for type <- ["add_joiner", "remove_joiner"] do
+      assert Request.mutation?(type)
+    end
+
+    for code <- [
+          "invalid_joiner_identity",
+          "invalid_joiner_admission",
+          "commissioner_timeout",
+          "commissioner_rejected",
+          "not_owned",
+          "cancelled"
+        ] do
+      assert {:error, %Error{code: value}} =
+               Frame.response(
+                 %{"version" => 1, "id" => "1", "ok" => false, "error" => %{"code" => code}},
+                 "1",
+                 "commissioner_start"
+               )
+
+      assert Atom.to_string(value) == code
+    end
+  end
+
+  test "canonical identity replies and raw standalone requests retain their exact shape" do
+    alias Wotex.Thread.OpenThread.{Frame, Request}
+    raw = %{eui64: <<42::64>>}
+    assert {:ok, %{type: "eui64", value: "000000000000002A"}} = JoinerIdentity.parameters(raw)
+
+    assert {:ok, %{identity: %{value: "000000000000002A"}, lifetime: 60}} =
+             JoinerAdmission.parameters(%{identity: raw, pskd: "WTEST123"})
+
+    assert {:error, %Error{}} = JoinerAdmission.parameters(nil)
+    assert {:error, %Error{}} = JoinerIdentity.parameters(nil)
+
+    for input <- [raw, %{discerner: %{length: 64, value: 18_446_744_073_709_551_615}}] do
+      {:ok, wire} = JoinerIdentity.parameters(input)
+      wire = Map.new(wire, fn {key, value} -> {Atom.to_string(key), value} end)
+      assert {:ok, ^input} = JoinerIdentity.decode(wire)
+    end
+
+    for wire <- [
+          nil,
+          %{},
+          %{"type" => "eui64", "value" => "000000000000002a"},
+          %{"type" => "eui64", "value" => "00"},
+          %{"type" => "discerner", "length" => 1, "value" => "01"},
+          %{"type" => "discerner", "length" => 1, "value" => "+1"},
+          %{"type" => "discerner", "length" => 1, "value" => "x"},
+          %{"type" => "discerner", "length" => 1, "value" => "2"},
+          %{"type" => "discerner", "length" => 64, "value" => "18446744073709551616"}
+        ] do
+      assert {:error, %Error{}} = JoinerIdentity.decode(wire)
+    end
+
+    parameters = %{identity: %{type: "eui64", value: "000000000000002A"}, lifetime: 60}
+    assert Request.matches_result?("add_joiner", parameters, %{identity: raw, lifetime_s: 60})
+    refute Request.matches_result?("add_joiner", parameters, %{identity: raw, lifetime_s: 1})
+
+    refute Request.matches_result?("add_joiner", parameters, %{
+             identity: %{eui64: <<43::64>>},
+             lifetime_s: 60
+           })
+
+    for result <- [
+          %{},
+          %{"identity" => nil, "lifetime_s" => 60},
+          %{"identity" => %{"type" => "eui64", "value" => "000000000000002A"}, "lifetime_s" => 0}
+        ] do
+      assert :invalid =
+               Frame.response(
+                 %{"version" => 1, "id" => "1", "ok" => true, "result" => result},
+                 "1",
+                 "add_joiner"
+               )
+    end
+  end
+
   test "identities preserve exact EUI-64 bytes and canonical discerner values" do
     assert {:ok, identity} = JoinerIdentity.new(%{eui64: <<0, 1, 2, 3, 0xFE, 0xFF, 6, 7>>})
     assert {:ok, %{type: "eui64", value: "00010203FEFF0607"}} = JoinerIdentity.encode(identity)

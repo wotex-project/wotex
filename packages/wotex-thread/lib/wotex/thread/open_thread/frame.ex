@@ -1,7 +1,7 @@
 defmodule Wotex.Thread.OpenThread.Frame do
   @moduledoc false
 
-  alias Wotex.Thread.{Error, State}
+  alias Wotex.Thread.{Error, JoinerIdentity, State}
   alias Wotex.Thread.OpenThread.DatasetWire
 
   @revision "5c8c318627954c99cd1a957a290bbd4b1027d04b"
@@ -21,6 +21,12 @@ defmodule Wotex.Thread.OpenThread.Frame do
     "dataset_required" => :dataset_required,
     "creation_not_allowed" => :creation_not_allowed,
     "dataset_exists" => :dataset_exists,
+    "invalid_joiner_identity" => :invalid_joiner_identity,
+    "invalid_joiner_admission" => :invalid_joiner_admission,
+    "commissioner_timeout" => :commissioner_timeout,
+    "commissioner_rejected" => :commissioner_rejected,
+    "not_owned" => :not_owned,
+    "cancelled" => :cancelled,
     "management_timeout" => :management_timeout,
     "formation_timeout" => :formation_timeout,
     "busy" => :busy,
@@ -157,6 +163,22 @@ defmodule Wotex.Thread.OpenThread.Frame do
        when map_size(result) == 2 and
               operation in ["management_active_set", "management_pending_set"],
        do: {:ok, %{accepted: true, effective: :not_verified}}
+
+  defp value(%{"state" => "active"} = result, "commissioner_start") when map_size(result) == 1,
+    do: {:ok, %{state: :active}}
+
+  defp value(%{"state" => "disabled"} = result, "commissioner_stop") when map_size(result) == 1,
+    do: {:ok, %{state: :disabled}}
+
+  defp value(%{"identity" => identity, "lifetime_s" => lifetime} = result, "add_joiner")
+       when map_size(result) == 2 and is_integer(lifetime) and lifetime in 1..3600 do
+    case JoinerIdentity.decode(identity) do
+      {:ok, identity} -> {:ok, %{identity: identity, lifetime_s: lifetime}}
+      _ -> :invalid
+    end
+  end
+
+  defp value(nil, "remove_joiner"), do: {:ok, nil}
 
   defp value(nil, "validate_dataset"), do: {:ok, nil}
 

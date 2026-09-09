@@ -28,6 +28,37 @@ defmodule Wotex.Thread.JoinerIdentity do
   def new(_), do: {:error, Error.new(:invalid_joiner_identity)}
 
   @doc false
+  @spec parameters(term()) :: {:ok, map()} | {:error, Error.t()}
+  def parameters(%__MODULE__{} = identity), do: encode(identity)
+
+  def parameters(input) do
+    with {:ok, identity} <- new(input), do: encode(identity)
+  end
+
+  @doc false
+  @spec decode(term()) :: {:ok, map()} | {:error, Error.t()}
+  def decode(%{"type" => "eui64", "value" => value} = wire)
+      when map_size(wire) == 2 and is_binary(value) and byte_size(value) == 16 do
+    case Base.decode16(value) do
+      {:ok, <<_::64>> = bytes} -> {:ok, %{eui64: bytes}}
+      _ -> {:error, Error.new(:invalid_joiner_identity)}
+    end
+  end
+
+  def decode(%{"type" => "discerner", "length" => length, "value" => value} = wire)
+      when map_size(wire) == 3 and is_binary(value) and byte_size(value) in 1..20 do
+    with {integer, ""} <- Integer.parse(value),
+         true <- Integer.to_string(integer) == value,
+         {:ok, _} <- new(%{discerner: %{length: length, value: integer}}) do
+      {:ok, %{discerner: %{length: length, value: integer}}}
+    else
+      _ -> {:error, Error.new(:invalid_joiner_identity)}
+    end
+  end
+
+  def decode(_), do: {:error, Error.new(:invalid_joiner_identity)}
+
+  @doc false
   @spec encode(term()) :: {:ok, map()} | {:error, Error.t()}
   def encode(%__MODULE__{kind: :eui64, value: value, length: nil} = identity)
       when map_size(identity) == 4 do

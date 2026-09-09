@@ -212,20 +212,20 @@ defmodule Wotex.Thread.SdkBridgeTest do
     assert Enum.map(requests(context), & &1["operation"]) == ["open", "state", "close"]
   end
 
-  test "WTH-C03 all 64 admitted callers are bounded and the 65th is busy", context do
+  test "WTH-C03 ordinary admission reserves one of 64 bounded slots for stop", context do
     File.write!(Path.join(context.directory, "mode"), "wait")
     assert {:ok, handle} = OpenThread.connect(context.options)
 
     tasks =
-      for _ <- 1..64, do: Task.async(fn -> OpenThread.request(handle, %{type: :state}, 5000) end)
+      for _ <- 1..63, do: Task.async(fn -> OpenThread.request(handle, %{type: :state}, 5000) end)
 
-    eventually(fn -> map_size(:sys.get_state(handle.pid).pending) == 64 end)
+    eventually(fn -> map_size(:sys.get_state(handle.pid).pending) == 63 end)
     assert {:error, %Error{code: :busy}} = OpenThread.request(handle, %{type: :state}, 1000)
     assert length(requests(context)) == 2
     File.write!(Path.join(context.directory, "release"), "yes")
     for task <- tasks, do: assert(Task.await(task) == {:ok, "disabled"})
     assert :ok = OpenThread.disconnect(handle)
-    assert length(requests(context)) == 66
+    assert length(requests(context)) == 65
   end
 
   test "WTH-C03 receiver and explicit owner death close their native generation", context do
@@ -551,6 +551,135 @@ defmodule Wotex.Thread.SdkBridgeTest do
              Wotex.Thread.management_pending_set(session, %{dataset: dataset}, 1000)
 
     eventually(fn -> not Process.alive?(session.handle.pid) end)
+  end
+
+  test "WTH-S05 exact commissioner operations preserve their public contracts", context do
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+    {:ok, identity} = Wotex.Thread.JoinerIdentity.new(%{eui64: <<42::64>>})
+    {:ok, admission} = Wotex.Thread.JoinerAdmission.new(%{identity: identity, pskd: "WTEST123"})
+    assert {:ok, %{state: :active}} = Wotex.Thread.commissioner_start(session, timeout: 1000)
+
+    assert {:ok, %{identity: %{eui64: <<42::64>>}, lifetime_s: 60}} =
+             Wotex.Thread.add_joiner(session, admission, 1000)
+
+    assert :ok = Wotex.Thread.remove_joiner(session, identity, 1000)
+    assert {:ok, %{state: :disabled}} = Wotex.Thread.commissioner_stop(session, timeout: 1000)
+    assert :ok = Wotex.Thread.disconnect(session)
+
+    assert Enum.map(requests(context), & &1["operation"]) ==
+             [
+               "open",
+               "commissioner_start",
+               "add_joiner",
+               "remove_joiner",
+               "commissioner_stop",
+               "close"
+             ]
+  end
+
+  test "WTH-N01 map admissions and options follow the standalone contract", context do
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+    assert {:ok, %{state: :active}} = Wotex.Thread.commissioner_start(session, [])
+    identity = %{discerner: %{length: 1, value: 1}}
+
+    assert {:ok, %{identity: ^identity, lifetime_s: 60}} =
+             Wotex.Thread.add_joiner(session, %{identity: identity, pskd: "WTEST123"}, 1000)
+
+    assert :ok = Wotex.Thread.remove_joiner(session, identity, 1000)
+
+    for options <- [1000, [unknown: true], [timeout: 1, timeout: 2], [timeout: 0]] do
+      assert {:error, %Error{effect: :none}} = Wotex.Thread.commissioner_start(session, options)
+      assert {:error, %Error{effect: :none}} = Wotex.Thread.commissioner_stop(session, options)
+    end
+
+    assert {:ok, %{state: :disabled}} = Wotex.Thread.commissioner_stop(session, [])
+    assert :ok = Wotex.Thread.disconnect(session)
+  end
+
+  test "WTH-C07 successful admission must match the submitted identity and lifetime", context do
+    for mode <- ["admission_wrong", "admission_lifetime"] do
+      File.write!(Path.join(context.directory, "mode"), mode)
+      assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+      assert {:error, %Error{code: :invalid_response, effect: :unknown}} =
+               Wotex.Thread.add_joiner(
+                 session,
+                 %{identity: %{eui64: <<42::64>>}, pskd: "WTEST123"},
+                 1000
+               )
+
+      eventually(fn -> not Process.alive?(session.handle.pid) end)
+    end
+  end
+
+  test "WTH-C03 stop bypasses queued reads and cancels a pending commissioner petition", context do
+    File.write!(Path.join(context.directory, "mode"), "petition_pending")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+    petition = Task.async(fn -> Wotex.Thread.commissioner_start(session, timeout: 5000) end)
+    eventually(fn -> Enum.any?(requests(context), &(&1["operation"] == "commissioner_start")) end)
+    read = Task.async(fn -> Wotex.Thread.inspect_state(session, []) end)
+    eventually(fn -> map_size(:sys.get_state(session.handle.pid).pending) == 2 end)
+    assert {:ok, %{state: :disabled}} = Wotex.Thread.commissioner_stop(session, timeout: 1000)
+    assert {:error, %Error{code: :cancelled, effect: :unknown}} = Task.await(petition)
+    assert {:ok, %State{}} = Task.await(read)
+    state = :sys.get_state(session.handle.pid)
+    assert state.pending == %{} and state.active == nil and state.control == nil
+    assert :queue.is_empty(state.queue) and :queue.is_empty(state.controls)
+    assert :ok = Wotex.Thread.disconnect(session)
+
+    assert Enum.map(requests(context), & &1["operation"]) ==
+             ["open", "commissioner_start", "commissioner_stop", "inspect", "close"]
+  end
+
+  test "WTH-C03 a saturated ordinary queue still admits explicit stop", context do
+    File.write!(Path.join(context.directory, "mode"), "petition_pending")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+    petition = Task.async(fn -> Wotex.Thread.commissioner_start(session, timeout: 5000) end)
+    eventually(fn -> Enum.any?(requests(context), &(&1["operation"] == "commissioner_start")) end)
+    reads = for _ <- 1..62, do: Task.async(fn -> Wotex.Thread.inspect_state(session, []) end)
+    eventually(fn -> map_size(:sys.get_state(session.handle.pid).pending) == 63 end)
+    assert {:error, %Error{code: :busy, effect: :none}} = Wotex.Thread.inspect_state(session, [])
+    assert {:ok, %{state: :disabled}} = Wotex.Thread.commissioner_stop(session, timeout: 1000)
+    assert {:error, %Error{code: :cancelled, effect: :unknown}} = Task.await(petition)
+    Enum.each(reads, fn task -> assert {:ok, %State{}} = Task.await(task) end)
+    assert :ok = Wotex.Thread.disconnect(session)
+  end
+
+  test "WTH-C04 stop deadline closes both submitted mutations with unknown effect", context do
+    File.write!(Path.join(context.directory, "mode"), "petition_stop_wait")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+    petition = Task.async(fn -> Wotex.Thread.commissioner_start(session, timeout: 5000) end)
+    eventually(fn -> Enum.any?(requests(context), &(&1["operation"] == "commissioner_start")) end)
+
+    assert {:error, %Error{code: :timeout, effect: :unknown}} =
+             Wotex.Thread.commissioner_stop(session, timeout: 50)
+
+    assert {:error, %Error{code: :timeout, effect: :unknown}} = Task.await(petition)
+    eventually(fn -> not Process.alive?(session.handle.pid) end)
+    assert File.read!(Path.join(context.directory, "exited")) == "done"
+  end
+
+  test "WTH-C07 petitioning is not a successful active commissioner", context do
+    File.write!(Path.join(context.directory, "mode"), "commissioner_bad")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error, %Error{code: :invalid_response, effect: :unknown}} =
+             Wotex.Thread.commissioner_start(session, timeout: 1000)
+
+    eventually(fn -> not Process.alive?(session.handle.pid) end)
+  end
+
+  test "WTH-S05 native admission errors remain structured before client acquisition", context do
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error, %Error{code: :invalid_joiner_admission, effect: :none}} =
+             Wotex.Thread.add_joiner(session, nil, 1000)
+
+    assert {:error, %Error{code: :invalid_joiner_identity, effect: :none}} =
+             Wotex.Thread.remove_joiner(session, :any, 1000)
+
+    assert Enum.map(requests(context), & &1["operation"]) == ["open"]
+    assert :ok = Wotex.Thread.disconnect(session)
   end
 
   defp requests(context) do

@@ -104,6 +104,8 @@ defmodule Wotex.Thread.OpenThread.Connection do
       pending: %{},
       queue: :queue.new(),
       active: nil,
+      control: nil,
+      controls: :queue.new(),
       counter: 0,
       close_waiters: [],
       close_ack: false,
@@ -118,7 +120,7 @@ defmodule Wotex.Thread.OpenThread.Connection do
   end
 
   @impl GenServer
-  def handle_call(:session, _from, %{status: :ready} = state) do
+  def handle_call(:session, _, %{status: :ready} = state) do
     {:reply, {:ok, session_value(state)}, state}
   end
 
@@ -152,7 +154,7 @@ defmodule Wotex.Thread.OpenThread.Connection do
           not is_integer(deadline) or deadline <= now() ->
             {:reply, {:error, Error.new(:timeout)}, state}
 
-          map_size(state.pending) >= 64 ->
+          map_size(state.pending) >= admission_limit(operation) ->
             {:reply, {:error, Error.new(:busy)}, state}
 
           true ->
@@ -164,10 +166,10 @@ defmodule Wotex.Thread.OpenThread.Connection do
     end
   end
 
-  def handle_call(_, _from, %{status: :closing} = state),
+  def handle_call(_, _, %{status: :closing} = state),
     do: {:reply, {:error, Error.new(:connection_closed)}, state}
 
-  def handle_call(_, _from, state), do: {:reply, {:error, Error.new(:invalid_handle)}, state}
+  def handle_call(_, _, state), do: {:reply, {:error, Error.new(:invalid_handle)}, state}
 
   @impl GenServer
   def handle_info({port, {:data, {:eol, bytes}}}, %{port: port} = state) do
@@ -211,7 +213,7 @@ defmodule Wotex.Thread.OpenThread.Connection do
 
   def handle_info({:deadline, id}, state) do
     cond do
-      state.active == id ->
+      id in [state.active, state.control] ->
         {:noreply, close(state, Error.new(:timeout))}
 
       Map.has_key?(state.pending, id) ->
@@ -322,7 +324,8 @@ defmodule Wotex.Thread.OpenThread.Connection do
     end
   end
 
-  defp frame(message, %{status: :ready, active: id} = state) when is_binary(id) do
+  defp frame(%{"id" => id} = message, %{status: :ready} = state)
+       when is_binary(id) and (id == state.active or id == state.control) do
     pending = state.pending[id]
 
     case timed_response(message, id, pending.operation, pending.deadline) do
@@ -333,7 +336,12 @@ defmodule Wotex.Thread.OpenThread.Connection do
       when code in [:timeout, :connection_closed, :invalid_response] ->
         close(state, error)
 
-      result ->
+      {:ok, value} = result ->
+        if Request.matches_result?(pending.operation, pending.parameters, value),
+          do: advance(complete(state, id, result)),
+          else: close(state, Error.new(:invalid_response))
+
+      {:error, _} = result ->
         advance(complete(state, id, result))
     end
   end
@@ -353,6 +361,9 @@ defmodule Wotex.Thread.OpenThread.Connection do
       else: {:error, Error.new(:timeout)}
   end
 
+  defp admission_limit(operation) when operation in ["commissioner_stop", "joiner_stop"], do: 64
+  defp admission_limit(_), do: 63
+
   defp admit(state, from, operation, parameters, deadline, receipt) do
     id = Integer.to_string(state.counter + 1)
 
@@ -366,24 +377,32 @@ defmodule Wotex.Thread.OpenThread.Connection do
       timer: Process.send_after(self(), {:deadline, id}, max(deadline - now(), 0))
     }
 
-    advance(%{
-      state
-      | counter: state.counter + 1,
-        pending: Map.put(state.pending, id, pending),
-        queue: :queue.in(id, state.queue)
-    })
+    queue = if operation in ["commissioner_stop", "joiner_stop"], do: :controls, else: :queue
+
+    state
+    |> Map.put(:counter, state.counter + 1)
+    |> Map.put(:pending, Map.put(state.pending, id, pending))
+    |> Map.put(queue, :queue.in(id, Map.fetch!(state, queue)))
+    |> advance()
   end
 
-  defp advance(%{active: nil, status: :ready} = state) do
-    case :queue.out(state.queue) do
+  defp advance(%{control: nil, status: :ready} = state) do
+    cond do
+      not :queue.is_empty(state.controls) -> advance_queue(state, :controls, :control)
+      state.active == nil -> advance_queue(state, :queue, :active)
+      true -> state
+    end
+  end
+
+  defp advance(state), do: state
+
+  defp advance_queue(state, queue_key, slot) do
+    case :queue.out(Map.fetch!(state, queue_key)) do
       {{:value, id}, queue} ->
-        state = %{state | queue: queue}
-        pending = state.pending[id]
+        state = Map.put(state, queue_key, queue)
+        pending = Map.fetch!(state.pending, id)
 
         cond do
-          pending == nil ->
-            advance(state)
-
           not Process.alive?(elem(pending.from, 0)) ->
             advance(complete(state, id, {:error, Error.new(:owner_down)}))
 
@@ -391,7 +410,7 @@ defmodule Wotex.Thread.OpenThread.Connection do
             advance(complete(state, id, {:error, Error.new(:timeout)}))
 
           submit(state.port, id, pending) ->
-            %{state | active: id}
+            Map.put(state, slot, id)
 
           true ->
             close(state, Error.new(:connection_closed))
@@ -401,8 +420,6 @@ defmodule Wotex.Thread.OpenThread.Connection do
         state
     end
   end
-
-  defp advance(state), do: state
 
   defp submit(port, id, pending) do
     if Request.mutation?(pending.operation),
@@ -415,20 +432,27 @@ defmodule Wotex.Thread.OpenThread.Connection do
     {pending, rest} = Map.pop(state.pending, id)
     Process.cancel_timer(pending.timer)
     Process.demonitor(pending.monitor, [:flush])
-    result = if state.active == id, do: mutation_result(result, pending.operation), else: result
+
+    result =
+      if id in [state.active, state.control],
+        do: mutation_result(result, pending.operation),
+        else: result
+
     GenServer.reply(pending.from, result)
 
     %{
       state
       | pending: rest,
         queue: :queue.filter(&(&1 != id), state.queue),
+        controls: :queue.filter(&(&1 != id), state.controls),
+        control: if(state.control == id, do: nil, else: state.control),
         active: if(state.active == id, do: nil, else: state.active)
     }
   end
 
   defp caller_down(state, monitor) do
     case Enum.find(state.pending, fn {_, request} -> request.monitor == monitor end) do
-      {id, _} when id == state.active -> close(state, Error.new(:owner_down))
+      {id, _} when id == state.active or id == state.control -> close(state, Error.new(:owner_down))
       {id, _} -> complete(state, id, {:error, Error.new(:owner_down)})
       nil -> state
     end

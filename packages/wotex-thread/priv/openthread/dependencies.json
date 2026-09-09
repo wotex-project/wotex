@@ -26,5 +26,10 @@
     "source": "src/lib/spinel/spinel.c",
     "before_sha256": "93961a75cee933737206500462ece18805a13544781488ad982c5abfddeb2127",
     "after_sha256": "28841f049ab1c95c8a0b6baa73d7f6579ff2f97f007ef1496751453dfe4ba57b"
+  },
+  "discerner_full_width_fix": {
+    "source": "src/core/meshcop/meshcop.hpp",
+    "before_sha256": "e594633e9b8bdeb6e7fe60907d9ecc543145e0b9c2aca61b159edff87cba0365",
+    "after_sha256": "4dd6b16b20b3df58756fdfe1519404e9520fcef16d916c9848e983bdf97edfa6"
   }
 }

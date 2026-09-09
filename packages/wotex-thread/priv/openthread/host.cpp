@@ -63,6 +63,7 @@ class Worker final {
       if (sdk_) sdk_->process(loop);
       finish_formation();
       finish_management();
+      finish_commissioner();
       if (FD_ISSET(output_, &loop.mWriteFdSet)) flush();
       if (!closing_ && FD_ISSET(STDIN_FILENO, &loop.mReadFdSet)) input();
     }
@@ -83,7 +84,7 @@ class Worker final {
     char bytes[4096]; const ssize_t count = ::read(STDIN_FILENO, bytes, sizeof bytes);
     if (count == 0) {
       if (!incoming_.empty()) throw ProtocolError();
-      forming_.reset(); managing_.reset(); sdk_.reset(); closing_ = true; return;
+      forming_.reset(); managing_.reset(); petitioning_.reset(); sdk_.reset(); closing_ = true; return;
     }
     if (count < 0) {
       if (errno == EAGAIN || errno == EINTR) return;
@@ -107,7 +108,7 @@ class Worker final {
         append(success(command, sdk_->snapshot()));
       } else if (command.operation == "close") {
         if (!command.parameters.empty()) throw ProtocolError();
-        forming_.reset(); managing_.reset(); sdk_.reset();
+        forming_.reset(); managing_.reset(); petitioning_.reset(); sdk_.reset();
 #ifdef WOTEX_NATIVE_SANITIZERS
         // Check explicit, fully torn-down sessions before acknowledging close.
         __lsan_do_leak_check();
@@ -130,6 +131,29 @@ class Worker final {
         const auto deadline = Clock::now() + std::chrono::milliseconds(command.timeout_ms);
         sdk_->management_set(command.operation, command.parameters);
         managing_ = Formation{Request{command.id, command.operation, Json::object(), command.timeout_ms}, deadline};
+      } else if (command.operation == "commissioner_start") {
+        if (!command.parameters.empty()) throw ProtocolError();
+        if (!sdk_) throw SdkError("not_open");
+        if (forming_ || managing_ || petitioning_) throw SdkError("busy");
+        const auto deadline = Clock::now() + std::chrono::milliseconds(command.timeout_ms);
+        sdk_->commissioning().start();
+        petitioning_ = Formation{command, deadline};
+      } else if (command.operation == "commissioner_stop") {
+        if (!command.parameters.empty()) throw ProtocolError();
+        if (!sdk_) throw SdkError("not_open");
+        sdk_->commissioning().stop();
+        if (petitioning_) { reject(petitioning_->command, "cancelled"); petitioning_.reset(); }
+        append(success(command, {{"state", "disabled"}}));
+      } else if (command.operation == "add_joiner" || command.operation == "remove_joiner") {
+        if (!sdk_) throw SdkError("not_open");
+        if (command.operation == "add_joiner") {
+          sdk_->commissioning().add(command.parameters);
+          append(success(command, {{"identity", command.parameters.at("identity")},
+                                   {"lifetime_s", command.parameters.at("lifetime")}}));
+        } else {
+          sdk_->commissioning().remove(command.parameters);
+          append(success(command, nullptr));
+        }
       } else if (command.operation == "set_enabled") {
         if (forming_ || (sdk_ && sdk_->management_busy())) throw SdkError("busy");
         if (!sdk_) throw SdkError("not_open");
@@ -141,6 +165,7 @@ class Worker final {
         throw SdkError("not_supported");
       }
     } catch (otError error) { reject(command, "remote_error", static_cast<unsigned>(error)); }
+      catch (const CommissioningError &error) { reject(command, error.what()); }
       catch (const DatasetError &) { reject(command, "invalid_dataset"); }
       catch (const ProtocolError &) { reject(command, "invalid_request"); }
       catch (const StorageError &) { reject(command, "storage_unavailable"); }
@@ -181,8 +206,26 @@ class Worker final {
       managing_.reset();
     }
   }
+  void finish_commissioner() {
+    if (!petitioning_) return;
+    if (Clock::now() >= petitioning_->deadline) {
+      sdk_->commissioning().stop();
+      reject(petitioning_->command, "commissioner_timeout");
+      petitioning_.reset();
+    } else {
+      const auto state = sdk_->commissioning().observed_state();
+      if (state == OT_COMMISSIONER_STATE_ACTIVE) {
+        append(success(petitioning_->command, {{"state", "active"}}));
+        petitioning_.reset();
+      } else if (state == OT_COMMISSIONER_STATE_DISABLED) {
+        sdk_->commissioning().stop();
+        reject(petitioning_->command, "commissioner_rejected");
+        petitioning_.reset();
+      }
+    }
+  }
   struct Formation { Request command; Clock::time_point deadline; };
-  std::optional<Formation> forming_, managing_;
+  std::optional<Formation> forming_, managing_, petitioning_;
   int output_ = -1;
   std::unique_ptr<Sdk> sdk_;
   std::string incoming_, outgoing_;

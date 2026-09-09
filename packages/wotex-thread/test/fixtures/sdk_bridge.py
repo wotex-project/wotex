@@ -11,6 +11,7 @@ import time
 root=Path(__file__).parent
 mode=(root/'mode').read_text().strip()
 (root/'pid').write_text(str(os.getpid()))
+petition=None
 state=dict(role='disabled',network_name=None,rloc16=None,ipv6_enabled=False,thread_enabled=False,generation=1)
 def await_release():
     while not (root/'release').exists():
@@ -58,6 +59,23 @@ for line in sys.stdin:
             if mode=='error':write(dict(version=1,id=request['id'],ok=False,error=dict(code='remote_error',status=37)))
             elif mode=='management_bad':reply(request,dict(accepted=True,effective='verified'))
             else:reply(request,dict(accepted=True,effective='not_verified'))
+        elif operation=='commissioner_start':
+            if mode in ['petition_pending','petition_stop_wait']:petition=request
+            elif mode=='commissioner_bad':reply(request,'petition')
+            elif mode=='error':write(dict(version=1,id=request['id'],ok=False,error=dict(code='remote_error',status=13)))
+            else:reply(request,dict(state='active'))
+        elif operation=='commissioner_stop':
+            if mode=='petition_stop_wait':continue
+            if petition is not None:
+                write(dict(version=1,id=petition['id'],ok=False,error=dict(code='cancelled')))
+                petition=None
+            reply(request,dict(state='disabled'))
+        elif operation=='add_joiner':
+            parameters=request['parameters']
+            identity=dict(type='eui64',value='000000000000002B') if mode=='admission_wrong' else parameters['identity']
+            lifetime=1 if mode=='admission_lifetime' else parameters['lifetime']
+            reply(request,dict(identity=identity,lifetime_s=lifetime))
+        elif operation=='remove_joiner':reply(request,None)
         elif operation=='set_enabled':
             if mode=='error':write(dict(version=1,id=request['id'],ok=False,error=dict(code='remote_error',status=253)))
             else:

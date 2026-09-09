@@ -133,6 +133,27 @@ defmodule Wotex.Thread do
   def management_pending_set(session, update, timeout),
     do: native_request(session, %{type: :management_pending_set, update: update}, timeout)
 
+  @doc "Starts the owned commissioner and waits for its active state callback."
+  @spec commissioner_start(term(), term()) :: {:ok, %{state: :active}} | {:error, Error.t()}
+  def commissioner_start(session, options),
+    do: native_options_request(session, %{type: :commissioner_start}, options)
+
+  @doc "Stops the owned commissioner and clears its finite admission records."
+  @spec commissioner_stop(term(), term()) :: {:ok, %{state: :disabled}} | {:error, Error.t()}
+  def commissioner_stop(session, options),
+    do: native_options_request(session, %{type: :commissioner_stop}, options)
+
+  @doc "Installs a typed, finite joiner admission in the owned active commissioner."
+  @spec add_joiner(term(), term(), term()) ::
+          {:ok, %{identity: map(), lifetime_s: 1..3600}} | {:error, Error.t()}
+  def add_joiner(session, admission, timeout),
+    do: native_request(session, %{type: :add_joiner, admission: admission}, timeout)
+
+  @doc "Removes exactly the specified typed joiner identity from the owned commissioner."
+  @spec remove_joiner(term(), term(), term()) :: :ok | {:error, Error.t()}
+  def remove_joiner(session, identity, timeout),
+    do: native_ack(session, %{type: :remove_joiner, identity: identity}, timeout)
+
   @doc "Runs work with guaranteed handle cleanup when the function returns or raises."
   @spec with_connection(keyword(), (Session.t() -> term())) :: term()
   def with_connection(opts, fun) when is_function(fun, 1) do
@@ -175,6 +196,26 @@ defmodule Wotex.Thread do
       end
     else
       {:error, Error.new(:transport_required)}
+    end
+  end
+
+  defp native_options_request(session, message, options) do
+    entered = System.monotonic_time(:millisecond)
+
+    with :ok <- Session.validate(session),
+         {:ok, timeout} <- inspection_timeout(options, session.timeout) do
+      remaining = timeout - (System.monotonic_time(:millisecond) - entered)
+
+      if remaining > 0,
+        do: native_request(session, message, remaining),
+        else: {:error, Error.new(:timeout)}
+    end
+  end
+
+  defp native_ack(session, message, timeout) do
+    case native_request(session, message, timeout) do
+      {:ok, nil} -> :ok
+      {:error, _} = error -> error
     end
   end
 

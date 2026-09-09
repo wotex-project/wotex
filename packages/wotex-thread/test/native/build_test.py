@@ -47,6 +47,29 @@ class BuildBoundary(unittest.TestCase):
                 native.apply_spinel_fix(root, dict(pin, before_sha256=hashlib.sha256(wrong).hexdigest()))
             self.assertEqual(source.read_bytes(), wrong)
 
+    def test_WTH_S05_V08_discerner_fix_rejects_unknown_or_incomplete_transform(self):
+        original = b"return (static_cast<uint64_t>(1ULL) << mLength) - 1;"
+        expected = b"return mLength == 64 ? ~static_cast<uint64_t>(0) : (static_cast<uint64_t>(1ULL) << mLength) - 1;"
+        pin = dict(before_sha256=hashlib.sha256(original).hexdigest(),
+                   after_sha256=hashlib.sha256(expected).hexdigest())
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "src/core/meshcop/meshcop.hpp"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(original)
+            with self.assertRaises(ValueError):
+                native.apply_discerner_fix(root, dict(pin, after_sha256="0"*64))
+            self.assertEqual(source.read_bytes(), original)
+            native.apply_discerner_fix(root, pin)
+            self.assertEqual(source.read_bytes(), expected)
+            with self.assertRaises(ValueError):
+                native.apply_discerner_fix(root, pin)
+            wrong = original + original
+            source.write_bytes(wrong)
+            with self.assertRaises(ValueError):
+                native.apply_discerner_fix(root, dict(pin, before_sha256=hashlib.sha256(wrong).hexdigest()))
+            self.assertEqual(source.read_bytes(), wrong)
+
     def archive(self, name, kind=tarfile.REGTYPE):
         buffer = io.BytesIO()
         with tarfile.open(fileobj=buffer, mode="w") as stream:

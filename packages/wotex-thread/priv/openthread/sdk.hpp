@@ -4,6 +4,7 @@
 #include "protocol.hpp"
 #include "dataset.hpp"
 #include "storage.hpp"
+#include "commissioning.hpp"
 #include <openthread/commissioner.h>
 #include <openthread/instance.h>
 #include <openthread/ip6.h>
@@ -62,6 +63,7 @@ class Sdk final {
       otSysDeinit(); instance_ = nullptr;
       throw SdkError("sdk_start_failed");
     }
+    commissioning_ = std::make_unique<Commissioning>(instance_);
   }
   ~Sdk() { close(); }
   Sdk(const Sdk &) = delete;
@@ -94,6 +96,7 @@ class Sdk final {
     if (operation == "rloc16") return state.at("rloc16");
     throw SdkError("not_supported");
   }
+  Commissioning &commissioning() { return *commissioning_; }
   void form_network(const Json &parameters) {
     if (!exact_keys(parameters, {"dataset"})) throw ProtocolError();
     DatasetValue active(parameters.at("dataset"));
@@ -172,12 +175,13 @@ class Sdk final {
   void close() {
     if (instance_ != nullptr) {
       otJoinerStop(instance_);
-      (void)otCommissionerStop(instance_);
+      commissioning_->close();
       otRemoveStateChangeCallback(instance_, changed, this);
       (void)otThreadSetEnabled(instance_, false);
       (void)otIp6SetEnabled(instance_, false);
       otSysDeinit();
       instance_ = nullptr;
+      commissioning_.reset();
     }
     storage_.reset();
   }
@@ -224,6 +228,7 @@ class Sdk final {
   }
   std::string radio_, interface_, path_, sdk_path_;
   std::unique_ptr<Storage> storage_;
+  std::unique_ptr<Commissioning> commissioning_;
   otInstance *instance_ = nullptr;
   otChangedFlags changed_flags_ = 0;
   bool allow_creation_ = false;
