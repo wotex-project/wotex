@@ -1,5 +1,24 @@
 defmodule Wotex.Thread.JoinerIdentity do
-  @moduledoc "An exact EUI-64 or bounded discerner identifying a permitted Thread joiner."
+  @moduledoc """
+  Identifies one Thread joiner by an EUI-64 or a bounded discerner.
+
+  `new/1` accepts an exact eight-byte `:eui64` value, or a `:discerner`
+  map with `:length` in 1..64 and a nonnegative integer `:value` smaller
+  than two raised to that length. Unknown fields, wildcards, hexadecimal
+  text in place of EUI-64 bytes and out-of-range values return
+  `:invalid_joiner_identity` errors.
+
+  `Wotex.Thread.JoinerAdmission` uses this value to select a commissioner
+  admission. `Wotex.Thread.JoinerConfig` accepts only the discerner variant.
+  Construction performs no discovery or admission; a well-formed identifier
+  does not establish that a peer exists or possesses the required credential.
+
+  ## Examples
+
+      iex> {:ok, identity} = Wotex.Thread.JoinerIdentity.new(%{discerner: %{length: 12, value: 42}})
+      iex> {identity.kind, identity.value, identity.length}
+      {:discerner, 42, 12}
+  """
 
   alias Wotex.Thread.Error
 

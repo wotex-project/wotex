@@ -1,5 +1,27 @@
 defmodule Wotex.Thread.JoinerAdmission do
-  @moduledoc "A finite, exact-identity Thread commissioner admission with a redacted PSKd."
+  @moduledoc """
+  Defines a finite commissioner admission for one Thread joiner identity.
+
+  `new/1` requires an `:identity` accepted by `Wotex.Thread.JoinerIdentity`
+  and a `:pskd` of 6..32 uppercase ASCII letters or digits, excluding I, O,
+  Q and Z. The optional `:lifetime` is an integer from 1 through 3600 seconds
+  and defaults to 60. Extra fields and invalid values return
+  `:invalid_joiner_admission` errors.
+
+  Construction validates a value without installing it or starting an expiry
+  timer. Pass the value to `Wotex.Thread.add_joiner/3` with an owned active
+  commissioner session to install the admission. `Inspect` omits the PSKd,
+  but the struct and its encoded request still contain the credential; the
+  caller owns their storage and lifetime.
+
+  ## Examples
+
+      iex> {:ok, admission} = Wotex.Thread.JoinerAdmission.new(%{
+      ...>   identity: %{eui64: <<42::64>>}, pskd: "WTEST123"
+      ...> })
+      iex> admission.lifetime
+      60
+  """
 
   alias Wotex.Thread.{Error, JoinerIdentity}
   alias Wotex.Thread.OpenThread.CommissioningValue

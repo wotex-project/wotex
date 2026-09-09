@@ -3,6 +3,10 @@ defmodule Wotex.Thread.CommissioningValueTest do
 
   use ExUnit.Case, async: true
 
+  doctest Wotex.Thread.JoinerIdentity
+  doctest Wotex.Thread.JoinerAdmission
+  doctest Wotex.Thread.JoinerConfig
+
   doctest Wotex.Thread.OpenThread.CommissioningValue
   use ExUnitProperties
   alias Wotex.Thread.{Error, JoinerAdmission, JoinerConfig, JoinerIdentity}
