@@ -74,3 +74,24 @@ These cases exercise the native accounting component. The trace fixture supplies
 consumer acknowledgements from observed reservations; actual BEAM/Port credit
 flow, bounded unsent report storage and sustained-callback process cases remain
 unexecuted. No native SDK or software GATT claim follows from this unit evidence.
+
+## Native private D-Bus ownership
+
+`test/interop/native_bus_test.exs` compiles `test/native/bus_test.cpp` against
+libdbus 1.16.2. The production `bus.hpp` component owns a private connection,
+asynchronous Hello registration, watches, timers and at most 64 pending calls.
+It rejects reused message serials, invalid reply signatures and success after
+the absolute deadline. Closing cancels pending calls and releases only that
+connection; a second sender retains its bus identity and remains usable.
+Closing from a reply callback is an asserted lifecycle case.
+
+The selected macOS fixture and Linux ARM64 GCC ASan/UBSan component executable
+pass against private daemons. The Linux x86_64 reference lane is separate. The
+ExUnit test command
+guardian owns the daemon's process group and bounds command time/output/cleanup.
+The fixture does not open the host system or session bus. Exact libdbus source
+identity is specified in WBL.13; the selected fixture requires explicit source
+and build directories and rejects a runtime library version mismatch.
+
+This component evidence does not establish BlueZ service ownership, GATT,
+Agent1 procedures, the complete native Port helper or the planned SDK build task.

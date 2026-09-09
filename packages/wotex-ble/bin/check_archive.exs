@@ -17,6 +17,7 @@ defmodule Wotex.BLE.Check.Archive do
     "priv/bluez/requirements.txt",
     "priv/bluez/native/frame.hpp",
     "priv/bluez/native/credit.hpp",
+    "priv/bluez/native/bus.hpp",
     "priv/bluez/native/vendor/json.hpp",
     "priv/bluez/native/vendor/LICENSE.MIT"
   ]
