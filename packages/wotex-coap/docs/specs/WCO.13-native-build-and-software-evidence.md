@@ -3,7 +3,7 @@ spec:
   id: WCO.13
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.0.0
+  version: 1.0.1
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -26,6 +26,17 @@ The native source is libcoap 4.3.5 at commit
 The [public 4.3.5 OSCORE API](https://libcoap.net/doc/reference/4.3.5/man_coap_oscore.html)
 owns configuration, exchange context and sender-sequence callbacks. No private
 SDK layout or Python bridge is part of the interface.
+
+Apply the ordered patches and verify their resulting source hashes from
+[`native/oscore/source.json`](../../native/oscore/source.json). The sequence
+patch requires a successful persistence callback before advancing the cached
+boundary or encrypting a PDU. The CBOR patch avoids a null-pointer copy for a
+valid empty byte string. The native manifest records base archive, patches and
+resulting source hashes separately; it cannot describe this build as unmodified
+upstream. `test/native/oscore_sequence_test.c` asserts the actual public send
+path on macOS and under Linux ASan/UBSan. Its narrow
+[receipt](../provenance/native-sequence-v1.json) does not accept the remaining
+native owner or durable store.
 
 `mix wotex.native.build --workspace ABS` builds `wotex-coap-oscore` from
 `native/oscore/` and the pinned static libcoap library. This task is explicit;
@@ -197,9 +208,9 @@ Existing missing, corrupt or mismatched records never authorize reuse.
 
 Use `coap_new_oscore_conf`'s public sequence-save callback. It acknowledges
 success only after the requested future boundary is durable. Native source
-tests at the pinned revision prove callback failure prevents encryption; if
-upstream continues on callback failure, the adapter must stop the session
-before any subsequent PDU transmission. No unchecked upstream example using
+tests at the pinned revision with the N01 sequence patch prove callback failure
+prevents encryption and transmission, including repeated attempts after failure.
+The adapter must also stop the failed session. No unchecked upstream example using
 only `fflush` satisfies this requirement. Exhaustion of the 40-bit Partial IV
 space terminates the context. A helper exit permanently consumes that identity;
 reopen returns `fresh_context_required` even after graceful close. This policy

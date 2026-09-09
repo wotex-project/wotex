@@ -54,6 +54,11 @@ free Runtime handles and diagnostics. These are OTP peer tests, separate from
 independent libcoap secure interoperability and the complete software matrix.
 
 Independent PKI tests under development are not committed peer acceptance.
+The [native sequence receipt](native-sequence-v1.json) identifies a real public-API
+libcoap regression with two narrowly scoped source patches. Rejected sender
+reservations emit no UDP datagrams; accepted sends remain inside the reserved
+boundary. The test passes on macOS and Linux with ASan/UBSan and leak detection.
+It does not exercise a durable filesystem, a native Port or an independent peer.
 OSCORE known-answer/replay/store fault tests, native helper ownership and complete stress/matrix closure remain
 required by [the ordered plan](../plans/software-implementation.md).
 

@@ -1,0 +1,21 @@
+{
+  "schema": "wotex.coap.libcoap-source@1",
+  "version": "4.3.5",
+  "commit": "7cf7465b784baded4de183290c547d582becfd28",
+  "url": "https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28",
+  "sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+  "patches": [
+    {
+      "path": "patches/0001-reject-unsaved-sender-sequences.patch",
+      "sha256": "58ea9aa566e6306b811e3845c01931e7887d66e00923e285d7be779d58251350"
+    },
+    {
+      "path": "patches/0002-skip-empty-cbor-byte-copy.patch",
+      "sha256": "29d0e421a446b0ec347c71b8e3ac7421ff541254df6eced4f91c2bd6ff92f8a2"
+    }
+  ],
+  "patched_sources": {
+    "src/coap_oscore.c": "5c778ae3e899404ebba7f254b9fe7422eb06fb0811e61dfcc7e1bd8122c3d410",
+    "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c"
+  }
+}

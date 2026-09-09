@@ -1,4 +1,10 @@
-Wotex MQTT Binding
+Wotex CoAP
 Copyright 2026 Wotex contributors
 
 Licensed under the Apache License, Version 2.0.
+
+The patches in native/oscore/patches modify libcoap 4.3.5, copyright
+2010-2024 Olaf Bergmann and others. The OSCORE CBOR implementation is
+copyright 2018 SICS, RISE AB. Their source notices and redistribution terms
+are preserved in native/oscore/LICENSE.libcoap. Native builds retain these
+notices and record the exact upstream revision and applied patches.

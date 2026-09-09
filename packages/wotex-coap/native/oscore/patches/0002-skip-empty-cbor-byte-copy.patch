@@ -1,0 +1,12 @@
+--- a/src/oscore/oscore_cbor.c
++++ b/src/oscore/oscore_cbor.c
+@@ -106,7 +106,8 @@
+   assert(*buf_size >= bytes_len);
+   (*buf_size) -= bytes_len;
+   *pt = (*pt | 0x40);
+-  memcpy(*buffer, bytes, bytes_len);
++  if (bytes_len)
++    memcpy(*buffer, bytes, bytes_len);
+   (*buffer) += bytes_len;
+   return nb + bytes_len;
+ }

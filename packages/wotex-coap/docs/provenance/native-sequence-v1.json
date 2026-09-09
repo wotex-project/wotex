@@ -1,0 +1,66 @@
+{
+  "schema": "wotex.coap.native-sequence-evidence@1",
+  "scope": "Actual libcoap sequence-save callback admission; not the production Port or durable store",
+  "requirements": ["WCO-N04", "WCO-S06"],
+  "upstream": {
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "patches": {
+      "native/oscore/patches/0001-reject-unsaved-sender-sequences.patch": "58ea9aa566e6306b811e3845c01931e7887d66e00923e285d7be779d58251350",
+      "native/oscore/patches/0002-skip-empty-cbor-byte-copy.patch": "29d0e421a446b0ec347c71b8e3ac7421ff541254df6eced4f91c2bd6ff92f8a2"
+    },
+    "patched_sources": {
+      "src/coap_oscore.c": "5c778ae3e899404ebba7f254b9fe7422eb06fb0811e61dfcc7e1bd8122c3d410",
+      "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c"
+    }
+  },
+  "first_party_sources": {
+    "test/native/oscore_sequence_test.c": "087fb307600bfd3da6eb4e17e7d5048205d1f048875b72fcfcce993ee4be03c4",
+    "test/native/Dockerfile": "55aab78437fc38f6fd06946b877f37035cd174df51fb54b2075ba02b09224a1d"
+  },
+  "cmake_options": ["-DENABLE_OSCORE=ON", "-DENABLE_DTLS=ON", "-DDTLS_BACKEND=openssl", "-DBUILD_SHARED_LIBS=OFF", "-DENABLE_DOCS=OFF", "-DENABLE_EXAMPLES=OFF"],
+  "asserted_outcomes": {
+    "rejected_reservation_context": {"attempts": 3, "callback_failures": 3, "successful_sends": 0, "received_datagrams": 0, "saved_boundary": 0},
+    "accepted_reservation_context": {"attempts": 3, "callback_successes": 1, "successful_sends": 3, "received_oscore_datagrams": 3, "saved_boundary": 32},
+    "cleanup": "Both libcoap sessions and contexts released; UDP peer descriptors closed; Linux leak detection passes"
+  },
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "compiler": "Apple clang 21.0.0 clang-2100.1.1.101",
+      "cmake": "4.4.3",
+      "openssl": "3.6.4",
+      "sanitizers": [],
+      "test_compile_flags": ["-std=c11", "-O1", "-g", "-Wall", "-Wextra", "-Werror"],
+      "static_library_sha256": "a79fbd4b7153e220373cbec208f1e629c7494595b1c600a673633d6f94a9ddf2",
+      "executable_sha256": "7a813120ad553da1776d0f29cde7084b6466881d225f310157a09477dacacb1e",
+      "result": "passed",
+      "exit_code": 0,
+      "output_sha256": "105be8c0fe99b6d22c754f62629bbb691f74fe36552e27fd263aa7ee5f818b52"
+    },
+    {
+      "platform": "Linux arm64",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "image": "sha256:6cda7481f6fcc95f3bad50b5d05e890599f571ac2d5a4d761c561fa4a1fca39b",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "cmake_package": "3.25.1-1",
+      "openssl_development_package": "3.0.20-1~deb12u2",
+      "package_versions_are_recorded_not_locked": true,
+      "toolchain_and_artifact_log_sha256": "f835e5185d7c12825ecd864daa893fd45f703c036bf1e1f9f26ca8af30977e7d",
+      "sanitizers": ["address", "undefined"],
+      "sanitizer_flags": ["-O1", "-g", "-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-fno-omit-frame-pointer"],
+      "environment": {"ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1:abort_on_error=1", "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1"},
+      "run_argv": ["docker", "run", "--rm", "--network", "none", "--read-only", "--pids-limit", "64", "--memory", "512m", "sha256:6cda7481f6fcc95f3bad50b5d05e890599f571ac2d5a4d761c561fa4a1fca39b"],
+      "static_library_sha256": "85d55e3fc26fc07e9731bb3b4c924ca67ef089bfd093c73b3268ca57aa4fe76f",
+      "executable_sha256": "85ffc2ee3512e7a23a7db8e6e10a2fc6cc884f86766a4fd9fb4255a00f54040c",
+      "result": "passed",
+      "exit_code": 0,
+      "output_sha256": "105be8c0fe99b6d22c754f62629bbb691f74fe36552e27fd263aa7ee5f818b52"
+    }
+  ],
+  "negative_controls": [
+    {"build": "unmodified pinned libcoap, macOS", "observed": "coap_send returns success after reservation callback failure", "assertion": "sent == COAP_INVALID_MID", "exit_code": 134},
+    {"build": "sequence patch only, Linux UBSan", "observed": "null pointer passed to memcpy in empty OSCORE CBOR byte-string encoding during context derivation", "source": "src/oscore/oscore_cbor.c:109", "exit_code": 1}
+  ],
+  "unaccepted": ["durable filesystem store", "native Port ownership", "IPC and credit", "RFC 8613 known answers", "replay", "independent interoperability", "Mix native and software tasks", "complete software matrix"]
+}

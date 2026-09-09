@@ -1,0 +1,17 @@
+--- a/src/coap_oscore.c
++++ b/src/coap_oscore.c
+@@ -441,9 +441,11 @@
+     if (osc_ctx->save_seq_num_func) {
+       if (osc_ctx->sender_context->seq > osc_ctx->sender_context->next_seq) {
+         /* Only update at ssn_freq rate */
+-        osc_ctx->sender_context->next_seq += osc_ctx->ssn_freq;
+-        osc_ctx->save_seq_num_func(osc_ctx->sender_context->next_seq,
+-                                   osc_ctx->save_seq_num_func_param);
++        uint64_t next_seq = osc_ctx->sender_context->next_seq + osc_ctx->ssn_freq;
++        if (!osc_ctx->save_seq_num_func(next_seq,
++                                       osc_ctx->save_seq_num_func_param))
++          goto error;
++        osc_ctx->sender_context->next_seq = next_seq;
+       }
+     }
+   } else {

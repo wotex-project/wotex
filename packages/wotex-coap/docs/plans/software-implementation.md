@@ -129,7 +129,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 ### WCO-P08b: Native Mix orchestration
 
 - Requirements: WCO-N01–N05 and C09; protocol behavior and accepted peer fixtures remain prerequisites.
-- Change surface: explicit `Mix.Tasks.Wotex.Software.Build` and `Mix.Tasks.Wotex.Software.Run`, test-only owned Port/process helpers, manifest/result projection.
+- Change surface: unique `Mix.Tasks.Wotex.Coap.Software.Build` and `Mix.Tasks.Wotex.Coap.Software.Run` with root-project aliases `wotex.software.build` and `wotex.software.run`, test-only owned Port/process helpers, manifest/result projection. The native build uses `Mix.Tasks.Wotex.Coap.Native.Build` behind the `wotex.native.build` alias. Multiple protocol dependencies must not define duplicate task modules.
 - Acceptance: every .13 build/reuse/failure/cleanup case has an actual assertion, both runtime lanes run against native peers, and no generic Python orchestration remains necessary. Existing results retain their original command and source identities.
 - Tests: `test/software/fixture_tasks_test.exs` plus the retained protocol/stress suites.
 - Commit scope: validated native fixture orchestration and its tests.
