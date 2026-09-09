@@ -59,7 +59,9 @@ defmodule Wotex.BACnet.COV do
         parameters: parameters,
         invoke_id: id
       })
-      when is_integer(id) and id in 0..255, do: decode(parameters, true, id)
+      when is_integer(id) and id in 0..255 do
+    decode(parameters, true, id)
+  end
 
   def notification(%APDU.UnconfirmedServiceRequest{
         service: :unconfirmed_cov_notification,

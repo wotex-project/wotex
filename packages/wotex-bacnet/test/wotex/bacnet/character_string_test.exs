@@ -148,7 +148,7 @@ defmodule Wotex.BACnet.CharacterStringTest do
                Task.await(task)
 
       client = :sys.get_state(handle.owner).client
-      assert :sys.get_state(client).apdu_timers == %{}
+      assert :sys.get_state(client).sdk.apdu_timers == %{}
       store = :sys.get_state(handle.owner).segments_store
       assert :sys.get_state(store).sequences == %{}
     end

@@ -93,6 +93,31 @@ disconnect. It owns only its listener/operation/subscription processes and timer
 establish a wire COV subscription. Always unregister that listener on cleanup.
 On a dead borrowed Client, fail promptly; never start a replacement stack.
 
+COV requires the verified `StackClient` wrapper. Owned IPv4 uses it
+explicitly. A borrowed configuration selects `stack_client_kind: :wotex` and
+passes a finite local version handshake before the session opens; an incompatible
+PID returns `:unsupported_stack_client` without listener or wire registration.
+The default `:bacstack` kind retains raw borrowed SDK ReadProperty/WriteProperty,
+but rejects COV before registration. Unknown kinds fail configuration validation.
+The wrapper owns its finite COV listener filters and per-receipt reply references;
+it does not mutate another process's SDK state. This boundary preserves original
+CharacterString bytes and lets every validated confirmed receipt be acknowledged,
+including a duplicate received before the prior ACK. The [pinned SDK Client](https://hex.pm/packages/bacstack/0.0.1/files/lib/bacnet/stack/client.ex)
+normalizes application tags before notification dispatch and drops confirmed
+requests with an outstanding identical source/Invoke-ID reply entry. The wrapper
+therefore intercepts COV before those SDK paths rather than claiming the raw
+Client can satisfy the same profile.
+The wrapper admits at most 64 pending service calls across borrowed sessions.
+A cancelled or timed-out exchange retires its Invoke ID for 60000 ms; a finite
+256-entry map prevents reuse during that retry window and returns `:busy` when
+no ID is available. Allocation rotates through free IDs; retiring a call releases
+its SDK timer and partial response assembly without closing a borrowed stack.
+COV request assemblies use separate keys from response assemblies, retain the
+request maxima octet lost by the pinned SDK decoder, compare normalized headers
+across segments, and expire after 1000 ms. They are limited to 64 active assemblies,
+32 segments each. Confirmed receipt contexts expire after 1000 ms and never exceed
+1024 entries; a saturated or slow listener closes locally with `:slow_consumer`.
+
 ## WBA-S04 — COV registration, correlation and cancellation
 
 Add native `subscribe(session, request)` and Client `subscribe/4`/`unsubscribe/3`

@@ -128,7 +128,7 @@ defmodule Wotex.BACnet.LifecycleStressTest do
        ) do
     state = :sys.get_state(handle.owner)
     assert map_size(:sys.get_state(handle.stack.owner).pending) == expected["pending_operations"]
-    assert map_size(:sys.get_state(state.client).apdu_timers) == expected["pending_apdus"]
+    assert map_size(:sys.get_state(state.client).sdk.apdu_timers) == expected["pending_apdus"]
 
     assert map_size(:sys.get_state(state.segments_store).sequences) ==
              expected["active_segment_sequences"]

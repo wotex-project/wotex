@@ -330,7 +330,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
   end
 
   defp await_pending(client, deadline) do
-    if :sys.get_state(client).apdu_timers == %{} do
+    if :sys.get_state(client).sdk.apdu_timers == %{} do
       assert System.monotonic_time(:millisecond) < deadline
       Process.sleep(1)
       await_pending(client, deadline)

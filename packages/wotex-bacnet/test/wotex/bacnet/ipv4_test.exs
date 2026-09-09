@@ -9,7 +9,7 @@ defmodule Wotex.BACnet.IPv4Test do
     opts = [local_ip: :none, local_port: 55_808, destination: {{127, 0, 0, 1}, 55_809}, timeout: 20]
     assert {:ok, handle} = IPv4.connect(opts)
     assert {:ok, client} = StackOwner.client(handle.owner)
-    state = :sys.get_state(client)
+    state = :sys.get_state(client).sdk
     assert state.opts.apdu_retries == 0
 
     send(handle.owner, :unrelated)

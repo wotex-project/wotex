@@ -4,25 +4,123 @@ defmodule Wotex.BACnet.StackClient do
   use GenServer
   alias BACnet.Protocol.{APDU, NPCI}
   alias BACnet.Stack.{Client, SegmentsStore}
-  alias Wotex.BACnet.{Error, Tags}
+  alias Wotex.BACnet.{Error, InvokeIds, StackCOV, Tags}
 
   @doc false
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts), do: GenServer.start_link(__MODULE__, Map.new(opts))
 
   @impl GenServer
-  def init(opts), do: Client.init(opts)
-  @impl GenServer
-  def handle_call(message, from, state), do: Client.handle_call(message, from, state)
-  @impl GenServer
-  def handle_cast(message, state), do: Client.handle_cast(message, state)
+  def init(opts) do
+    with {:ok, sdk} <- Client.init(Map.put(opts, :disable_invoke_id_management, true)),
+         do: {:ok, %{sdk: sdk, cov: StackCOV.new(), calls: %{}, invoke_ids: InvokeIds.new()}}
+  end
+
+  @doc false
+  @spec verify(pid(), pos_integer()) :: :ok | {:error, Error.t()}
+  def verify(client, timeout) do
+    case GenServer.call(client, {:wotex_client, :capabilities}, timeout) do
+      {:wotex_client, 1, :cov} -> :ok
+      _ -> {:error, Error.new(:unsupported_stack_client)}
+    end
+  catch
+    :exit, _ -> {:error, Error.new(:unsupported_stack_client)}
+  end
 
   @impl GenServer
+  def handle_call({:wotex_client, :capabilities}, _, state),
+    do: {:reply, {:wotex_client, 1, :cov}, state}
+
+  def handle_call({:wotex_client, :register_cov, request, destination}, {owner, _}, state) do
+    {reply, cov} = StackCOV.register(state.cov, owner, request, destination, state.sdk)
+    {:reply, reply, %{state | cov: cov}}
+  end
+
+  def handle_call({:wotex_client, :unregister_cov}, {owner, _}, state),
+    do: {:reply, :ok, %{state | cov: StackCOV.remove(state.cov, owner, state.sdk)}}
+
+  def handle_call({:reply, ref, data, opts} = message, from, state) do
+    if Map.has_key?(state.cov.replies, ref) do
+      {reply, cov} = StackCOV.reply(state.cov, ref, data, elem(from, 0), opts, state.sdk)
+      {:reply, reply, %{state | cov: cov}}
+    else
+      delegate(Client.handle_call(message, from, state.sdk), state)
+    end
+  end
+
+  def handle_call({:send, destination, %APDU.ConfirmedServiceRequest{} = apdu, opts}, from, state) do
+    if map_size(state.sdk.apdu_timers) >= 64 do
+      {:reply, {:error, Error.new(:busy)}, state}
+    else
+      case InvokeIds.allocate(state.invoke_ids, state.sdk.apdu_timers, now()) do
+        {:ok, id, ids} ->
+          delegate(
+            Client.handle_call(
+              {:send, destination, %{apdu | invoke_id: id}, opts},
+              from,
+              state.sdk
+            ),
+            %{state | invoke_ids: ids}
+          )
+
+        :busy ->
+          {:reply, {:error, Error.new(:busy)}, state}
+      end
+    end
+  end
+
+  def handle_call(message, from, state),
+    do: delegate(Client.handle_call(message, from, state.sdk), state)
+
+  @impl GenServer
+  def handle_cast(message, state), do: delegate(Client.handle_cast(message, state.sdk), state)
+
+  @impl GenServer
+  def handle_info({:wotex_cov_expire, kind, ref}, state),
+    do: {:noreply, %{state | cov: StackCOV.expire(state.cov, kind, ref, state.sdk)}}
+
+  def handle_info({:apdu_timer, {_, _, id} = key} = message, state) do
+    result = Client.handle_info(message, state.sdk)
+
+    ids =
+      if Map.has_key?(state.sdk.apdu_timers, key),
+        do: InvokeIds.retire(state.invoke_ids, id, now()),
+        else: state.invoke_ids
+
+    delegate(result, %{state | invoke_ids: ids})
+  end
+
+  def handle_info({:DOWN, reference, :process, pid, _} = message, state) do
+    state = %{state | cov: StackCOV.down(state.cov, reference, pid, state.sdk)}
+    state = cancel_calls(state, reference)
+    delegate(Client.handle_info(message, state.sdk), state)
+  end
+
   def handle_info(
-        {:bacnet_transport, _protocol, source,
-         {:apdu, _bvlc, %NPCI{source: nil}, <<48, id, 12, bytes::binary>>}, _portal},
+        {:bacnet_transport, protocol, source, {:apdu, bvlc, %NPCI{source: nil} = npci, bytes},
+         portal},
         state
-      ) do
+      )
+      when byte_size(bytes) <= 1476 do
+    if StackCOV.service?(bytes) do
+      cov = StackCOV.receive(state.cov, source, bytes, {protocol, bvlc, npci, portal}, state.sdk)
+      {:noreply, %{state | cov: cov}}
+    else
+      receive_apdu({:bacnet_transport, protocol, source, {:apdu, bvlc, npci, bytes}, portal}, state)
+    end
+  end
+
+  def handle_info({:bacnet_transport, _, _, {:apdu, _, _, bytes}, _} = message, state) do
+    if StackCOV.service?(bytes), do: {:noreply, state}, else: receive_apdu(message, state)
+  end
+
+  def handle_info(message, state), do: receive_apdu(message, state)
+
+  defp receive_apdu(
+         {:bacnet_transport, _protocol, source,
+          {:apdu, _bvlc, %NPCI{source: nil}, <<48, id, 12, bytes::binary>>}, _portal},
+         state
+       ) do
     result =
       case Tags.decode(bytes) do
         {:ok, tags} ->
@@ -42,45 +140,45 @@ defmodule Wotex.BACnet.StackClient do
     complete(source, id, result, state)
   end
 
-  def handle_info(
-        {:bacnet_transport, protocol, source,
-         {:apdu, bvlc, %NPCI{source: nil} = npci,
-          <<3::4, 1::1, _::3, id, _, _, 12, _::binary>> = bytes}, portal},
-        state
-      ) do
-    if Map.has_key?(state.apdu_timers, {source, nil, id}) do
+  defp receive_apdu(
+         {:bacnet_transport, protocol, source,
+          {:apdu, bvlc, %NPCI{source: nil} = npci,
+           <<3::4, 1::1, _::3, id, _, _, 12, _::binary>> = bytes}, portal},
+         state
+       ) do
+    if Map.has_key?(state.sdk.apdu_timers, {source, nil, id}) do
       segment(bytes, source, id, {protocol, bvlc, npci, portal}, state)
     else
       {:noreply, state}
     end
   end
 
-  def handle_info(
-        {:bacnet_transport, _, source,
-         {:apdu, _, %NPCI{source: nil}, <<3::4, 1::1, _::3, id, _::binary>>}, _},
-        state
-      ),
-      do: complete(source, id, {:error, Error.new(:response_mismatch)}, state)
+  defp receive_apdu(
+         {:bacnet_transport, _, source,
+          {:apdu, _, %NPCI{source: nil}, <<3::4, 1::1, _::3, id, _::binary>>}, _},
+         state
+       ),
+       do: complete(source, id, {:error, Error.new(:response_mismatch)}, state)
 
-  # This client profile has no segmented incoming request service. Keep unrelated
-  # traffic out of the store even when the SDK would assemble it before dispatch.
-  def handle_info(
-        {:bacnet_transport, _, _, {:apdu, _, _, <<kind::4, 1::1, _::3, _::binary>>}, _},
-        state
-      )
-      when kind in [0, 3] do
+  # Only matched COV requests enter request assembly. Keep other segmented
+  # traffic out of the store before the SDK dispatches it.
+  defp receive_apdu(
+         {:bacnet_transport, _, _, {:apdu, _, _, <<kind::4, 1::1, _::3, _::binary>>}, _},
+         state
+       )
+       when kind in [0, 3] do
     {:noreply, state}
   end
 
-  def handle_info(message, state), do: Client.handle_info(message, state)
+  defp receive_apdu(message, state), do: delegate(Client.handle_info(message, state.sdk), state)
 
   defp segment(bytes, source, id, {protocol, bvlc, npci, portal}, state) do
     case APDU.decode(bytes) do
       {:incomplete, incomplete} ->
         case SegmentsStore.segment(
-               state.segments_store,
+               state.sdk.segments_store,
                incomplete,
-               state.transport_mod,
+               state.sdk.transport_mod,
                portal,
                source
              ) do
@@ -103,15 +201,56 @@ defmodule Wotex.BACnet.StackClient do
   end
 
   defp complete(source, id, result, state) do
-    case Map.pop(state.apdu_timers, {source, nil, id}) do
+    case Map.pop(state.sdk.apdu_timers, {source, nil, id}) do
       {nil, _} ->
         {:noreply, state}
 
       {timer, pending} ->
         Process.cancel_timer(timer.timer)
-        SegmentsStore.cancel(state.segments_store, source, id)
+        SegmentsStore.cancel(state.sdk.segments_store, source, id)
         GenServer.reply(timer.call_ref, result)
-        {:noreply, %{state | apdu_timers: pending}}
+        {:noreply, sync_calls(%{state | sdk: %{state.sdk | apdu_timers: pending}})}
     end
   end
+
+  defp delegate({:reply, reply, sdk}, state), do: {:reply, reply, sync_calls(%{state | sdk: sdk})}
+  defp delegate({:noreply, sdk}, state), do: {:noreply, sync_calls(%{state | sdk: sdk})}
+
+  defp sync_calls(state) do
+    current = Map.keys(state.sdk.apdu_timers)
+
+    kept =
+      Map.new(state.calls, fn {key, monitor} ->
+        if key not in current, do: Process.demonitor(monitor, [:flush])
+        {key, monitor}
+      end)
+      |> Map.take(current)
+
+    calls =
+      Map.new(state.sdk.apdu_timers, fn {key, timer} ->
+        {key, Map.get_lazy(kept, key, fn -> Process.monitor(elem(timer.call_ref, 0)) end)}
+      end)
+
+    %{state | calls: calls}
+  end
+
+  defp cancel_calls(state, reference) do
+    case Enum.find(state.calls, fn {_, monitor} -> monitor == reference end) do
+      nil ->
+        state
+
+      {{source, _, id} = key, _} ->
+        {timer, pending} = Map.pop(state.sdk.apdu_timers, key)
+        if timer, do: Process.cancel_timer(timer.timer)
+        SegmentsStore.cancel(state.sdk.segments_store, source, id)
+
+        sync_calls(%{
+          state
+          | sdk: %{state.sdk | apdu_timers: pending},
+            invoke_ids: InvokeIds.retire(state.invoke_ids, id, now())
+        })
+    end
+  end
+
+  defp now, do: System.monotonic_time(:millisecond)
 end

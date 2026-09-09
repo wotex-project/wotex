@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "WBA-CT01",
+      "requirements": [
+        "WBA-S04",
+        "WBA-V06",
+        "WBA-V07"
+      ],
+      "request": {
+        "object_type": 1,
+        "instance": 0,
+        "device_instance": 123
+      },
+      "notification": {
+        "invoke_id": 7,
+        "character_set": 255,
+        "bytes_hex": "00ff"
+      },
+      "receipts": 2,
+      "expected": {
+        "reply_contexts_before_ack": 2,
+        "ack_apdu_hex": "200701",
+        "reply_contexts_after_ack": 0
+      }
+    },
+    {
+      "id": "WBA-CT02",
+      "requirements": [
+        "WBA-S02",
+        "WBA-S04",
+        "WBA-N02"
+      ],
+      "directions": [
+        "incoming_confirmed_request",
+        "incoming_complex_ack"
+      ],
+      "invoke_ids_equal": true,
+      "expected": {
+        "simultaneous_assemblies": 2,
+        "assemblies_after_completion": 0
+      }
+    },
+    {
+      "id": "WBA-CT03",
+      "requirements": [
+        "WBA-S03",
+        "WBA-S04",
+        "WBA-V09"
+      ],
+      "live_listeners": 64,
+      "overflow_error": "busy",
+      "expected": {
+        "identifier_after_release": 65,
+        "reuse": false
+      }
+    }
+  ]
+}

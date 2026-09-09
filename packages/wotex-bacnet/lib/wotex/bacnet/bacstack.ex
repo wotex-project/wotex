@@ -3,18 +3,36 @@ defmodule Wotex.BACnet.BACstack do
   @behaviour Wotex.BACnet.Client
   alias BACnet.Protocol.{APDU, Constants}
   alias BACnet.Protocol.ApplicationTags.Encoding
-  alias Wotex.BACnet.{Address, Error, OperationOwner, Value, ValueBoundary}
+  alias Wotex.BACnet.{Address, Error, OperationOwner, StackClient, StackOwner, Value, ValueBoundary}
 
   @impl Wotex.BACnet.Client
   def connect(opts) do
-    with {:ok, config} <- configuration(opts), do: start_owner(config)
+    with {:ok, config} <- configuration(opts), :ok <- verify_client(config), do: start_owner(config)
   end
 
   @doc false
   @spec connect_owned(term(), pid()) :: {:ok, map()} | {:error, Error.t()}
   def connect_owned(opts, stack) when is_pid(stack) do
-    with {:ok, config} <- configuration(opts), do: start_owner(%{config | owned_stack: stack})
+    result =
+      with {:ok, config} <- configuration(opts),
+           config <- %{config | stack_client_kind: :wotex},
+           :ok <- verify_client(config),
+           do: start_owner(%{config | owned_stack: stack})
+
+    case result do
+      {:ok, _} ->
+        result
+
+      error ->
+        StackOwner.close(stack)
+        error
+    end
   end
+
+  defp verify_client(%{stack_client_kind: :wotex, client: client}),
+    do: StackClient.verify(client, 100)
+
+  defp verify_client(_), do: :ok
 
   defp start_owner(config) do
     config = Map.put(config, :generation, make_ref())
@@ -35,6 +53,7 @@ defmodule Wotex.BACnet.BACstack do
 
   defp connect_options(opts) do
     client = Keyword.get(opts, :stack_client)
+    kind = Keyword.get(opts, :stack_client_kind, :bacstack)
     destination = Keyword.get(opts, :destination)
     writes = Keyword.get(opts, :writes, false)
     timeout = Keyword.get(opts, :timeout, 5000)
@@ -48,7 +67,8 @@ defmodule Wotex.BACnet.BACstack do
 
     receive_limits = Keyword.get(opts, :receive_limits)
 
-    if is_pid(client) and Process.alive?(client) and valid_destination?(destination) and
+    if is_pid(client) and Process.alive?(client) and kind in [:bacstack, :wotex] and
+         valid_destination?(destination) and
          is_boolean(writes) and
          is_integer(timeout) and timeout in 1..60_000 and valid_peer?(peer) and
          receive_limits in [nil, %{max_apdu: 1476, max_segments: 32, max_bytes: 65_536}],
@@ -56,6 +76,7 @@ defmodule Wotex.BACnet.BACstack do
          {:ok,
           %{
             client: client,
+            stack_client_kind: kind,
             destination: destination,
             writes: writes,
             peer_receive: peer,
@@ -289,6 +310,7 @@ defmodule Wotex.BACnet.BACstack do
 
       allowed = [
         :stack_client,
+        :stack_client_kind,
         :destination,
         :writes,
         :timeout,
