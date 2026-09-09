@@ -127,6 +127,18 @@ jobs:
       - run: mix check --no-retry
       - name: graph
         run: mix run --no-start bin/check_graph.exs
+      - name: Generate LCOV coverage
+        if: matrix.elixir == '1.20.2' && matrix.otp == '29.0'
+        run: mix coveralls.lcov
+      - name: Upload coverage to Codecov
+        if: matrix.elixir == '1.20.2' && matrix.otp == '29.0'
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
+        with:
+          use_oidc: true
+          files: ./cover/lcov.info
+          disable_search: true
+          fail_ci_if_error: true
+          working-directory: wotex-lab
 
   reference:
     name: Reference consumer / broker, GreptimeDB and formal lanes
