@@ -35,6 +35,31 @@ defmodule Wotex.BACnet do
       discovery_capable: false
     }
 
+  @doc "Returns the pure native read/write Runtime profile; it performs no discovery or startup."
+  @spec profile() :: Wotex.Runtime.BindingProfile.t()
+  def profile do
+    {:ok, profile} = profile(:ip)
+    profile
+  end
+
+  @doc "Returns an explicit native Property profile, with optional COV observations."
+  @spec profile(term()) :: {:ok, Wotex.Runtime.BindingProfile.t()} | {:error, Error.t()}
+  def profile(mode) when mode in [:ip, :ip_cov] do
+    operations = [:readproperty, :writeproperty]
+
+    operations =
+      if mode == :ip_cov, do: operations ++ [:observeproperty, :unobserveproperty], else: operations
+
+    Wotex.Runtime.BindingProfile.new(
+      id: if(mode == :ip, do: :bacnet, else: :bacnet_cov),
+      schemes: ["bacnet"],
+      operations: operations,
+      media_types: []
+    )
+  end
+
+  def profile(_), do: {:error, Error.new(:unsupported_profile)}
+
   @doc "Opens the supplied client module; absent transport fails explicitly."
   @spec connect(term()) :: {:ok, Session.t()} | {:error, Error.t()}
   def connect(opts) when is_list(opts) do

@@ -18,6 +18,7 @@ defmodule Wotex.BACnet.Mapping do
 
     with {:ok, type} <- Map.fetch(@operations, operation),
          true <- Atom.to_string(operation) in Form.operations(form, for: affordance),
+         :ok <- selectors(Form.to_map(form)),
          {:ok, uri} <- uri(href || Form.href(form)),
          {:ok, mapping} <- target(uri, type, input),
          {:ok, mapping} <- convert(mapping, Form.to_map(form)) do
@@ -32,6 +33,10 @@ defmodule Wotex.BACnet.Mapping do
 
   def command(_, _, _, _), do: {:error, Error.new(:invalid_form)}
 
+  defp selectors(%{"contentType" => _}), do: {:error, Error.new(:unsupported_content_type)}
+  defp selectors(%{"bacv:hasDataType" => type}), do: Value.validate_type(type)
+  defp selectors(_), do: :ok
+
   defp uri(href) when is_binary(href) and byte_size(href) <= 4096 do
     case URI.parse(href) do
       %URI{userinfo: nil, fragment: nil} = uri -> {:ok, uri}
@@ -42,7 +47,7 @@ defmodule Wotex.BACnet.Mapping do
   defp uri(_), do: {:error, Error.new(:invalid_form_address)}
 
   defp target(%URI{scheme: "bacnet", host: device, port: nil, query: nil, path: path}, type, input) do
-    with {device_id, ""} <- Integer.parse(device || ""),
+    with device_id when is_integer(device_id) <- number(device || ""),
          true <- device_id in 0..4_194_302,
          [object | rest] <- String.split(path || "", "/", trim: true),
          [object_type, instance] <- String.split(object, ","),
@@ -82,11 +87,12 @@ defmodule Wotex.BACnet.Mapping do
   defp property(_), do: :error
 
   defp number(text) do
-    case Integer.parse(text) do
-      {n, ""} -> n
-      _ -> :invalid
-    end
+    if text != "" and unsigned_decimal?(text), do: String.to_integer(text), else: :invalid
   end
+
+  defp unsigned_decimal?(<<>>), do: true
+  defp unsigned_decimal?(<<digit, rest::binary>>) when digit in ?0..?9, do: unsigned_decimal?(rest)
+  defp unsigned_decimal?(_), do: false
 
   defp input(message, type, value) when type in [:write, :write_property, :invoke],
     do: Map.put(message, :value, value)

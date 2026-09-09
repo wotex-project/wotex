@@ -4,7 +4,7 @@ defmodule Wotex.BACnet.RuntimeStreamTest do
   use ExUnit.Case, async: false
   alias Wotex.BACnet.{Error, IPv4, RuntimeHandle, RuntimeRelay, Tags, Transport}
   alias Wotex.BACnet.Test.RuntimeCredentials
-  alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Subscription}
+  alias Wotex.Runtime.{ConsumedThing, Context, Subscription}
   @moduletag :capture_log
 
   setup do
@@ -29,12 +29,7 @@ defmodule Wotex.BACnet.RuntimeStreamTest do
         }
       })
 
-    {:ok, profile} =
-      BindingProfile.new(
-        id: :cov_test,
-        schemes: ["bacnet"],
-        operations: [:observeproperty, :unobserveproperty]
-      )
+    {:ok, profile} = Wotex.BACnet.profile(:ip_cov)
 
     config = [
       client: IPv4,
@@ -49,7 +44,7 @@ defmodule Wotex.BACnet.RuntimeStreamTest do
     {:ok, consumed} =
       ConsumedThing.new(td,
         profiles: [profile],
-        transports: %{cov_test: {Transport, config}},
+        transports: %{bacnet_cov: {Transport, config}},
         credentials: {RuntimeCredentials, []}
       )
 

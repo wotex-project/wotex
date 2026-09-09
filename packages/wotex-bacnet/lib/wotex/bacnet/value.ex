@@ -15,6 +15,11 @@ defmodule Wotex.BACnet.Value do
     "bacv:OctetString" => :octet_string
   }
 
+  @doc "Validates an explicit Form type selector without inferring or converting a value."
+  @spec validate_type(term()) :: :ok | {:error, Error.t()}
+  def validate_type(%{"@type" => name}) when is_map_key(@types, name), do: :ok
+  def validate_type(_), do: {:error, Error.new(:invalid_value_type)}
+
   @doc "Encodes an explicitly declared scalar; absent type never triggers inference."
   @spec encode(term(), term()) :: {:ok, Encoding.t()} | {:error, Error.t()}
   def encode(value, %{"@type" => name}) do
