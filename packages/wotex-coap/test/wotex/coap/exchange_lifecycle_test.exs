@@ -51,7 +51,7 @@ defmodule Wotex.CoAP.ExchangeLifecycleTest do
 
   test "WCO-D01 capability claims admit only established implementation cells" do
     assert CoAP.capabilities().max_payload_size == 1152
-    refute CoAP.capabilities().supports_streaming
+    assert CoAP.capabilities().supports_streaming
     refute CoAP.capabilities().discovery_capable
   end
 

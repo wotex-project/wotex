@@ -84,6 +84,8 @@ defmodule Wotex.CoAP.TestDatagram do
     {:reply, outcome(mode, fail, :arm), %{state | arms: count}}
   end
 
+  def handle_call(:sync, _, state), do: {:reply, :ok, state}
+
   def handle_call(:close, _, state) do
     result =
       if state.config.options.mode == :close_error,
@@ -94,6 +96,12 @@ defmodule Wotex.CoAP.TestDatagram do
   end
 
   @impl GenServer
+  def handle_info({:emit, host, port, bytes}, state) do
+    {:ok, host} = :inet.parse_address(String.to_charlist(host))
+    Kernel.send(state.owner, {:wotex_datagram, state.config.generation, {:data, host, port, bytes}})
+    {:noreply, state}
+  end
+
   def handle_info({:emit, bytes}, state) do
     config = state.config
 

@@ -120,6 +120,14 @@ defmodule Wotex.CoAP.Datagram.UDP do
   def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
+  def format_status(status) do
+    Map.new(status, fn
+      {:log, _} -> {:log, []}
+      {key, _} -> {key, :redacted}
+    end)
+  end
+
+  @impl GenServer
   def terminate(_, state) do
     :gen_udp.close(state.socket)
     deliver(state, :closed)

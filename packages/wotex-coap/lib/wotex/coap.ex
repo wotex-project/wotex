@@ -18,7 +18,7 @@ defmodule Wotex.CoAP do
           max_datagram_size: 1152,
           max_body_size: 1_048_576,
           connection_oriented: false,
-          supports_streaming: false,
+          supports_streaming: true,
           discovery_capable: false
         }
   def capabilities,
@@ -32,7 +32,7 @@ defmodule Wotex.CoAP do
       max_datagram_size: 1152,
       max_body_size: 1_048_576,
       connection_oriented: false,
-      supports_streaming: false,
+      supports_streaming: true,
       discovery_capable: false
     }
 

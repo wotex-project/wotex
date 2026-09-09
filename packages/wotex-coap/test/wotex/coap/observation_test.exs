@@ -492,6 +492,129 @@ defmodule Wotex.CoAP.ObservationTest do
     refute_received {:wotex_coap, ^reference, _}
   end
 
+  test "WCO-S02 WCO-S03 WCO-V10 Event overlap terminates instead of coalescing ordered reports" do
+    {peer, session, handle, request} =
+      established(10, "initial", connect: [observation_kind: :event])
+
+    first = %{
+      report(request, :con, 11, :binary.copy("x", 16))
+      | message_id: 970,
+        options: [{6, <<11>>}, {23, <<8>>}]
+    }
+
+    send(peer.pid, {:reply, first})
+    assert wire().message.type == :ack
+    assert Codec.option(wire().message, 23) == [<<16>>]
+    send(peer.pid, {:reply, %{report(request, :con, 12, "next") | message_id: 971}})
+    assert wire().message.type == :ack
+    reference = handle.reference
+    assert_receive {:wotex_coap, ^reference, {:error, %Error{code: :overlapping_event_report}}}
+    assert Codec.option(wire().message, 6) == [<<1>>]
+    assert :ok = CoAP.disconnect(session)
+    close(peer)
+    refute_received {:wotex_coap, ^reference, _}
+  end
+
+  test "WCO-C03 WCO-V06 suspended establishment cannot outlive its connection deadline" do
+    {peer, port} = peer()
+    {:ok, session} = CoAP.connect(host: "127.0.0.1", port: port, timeout: 200)
+    receiver = self()
+    task = Task.async(fn -> CoAP.subscribe(session, %{path: "/x", receiver: receiver}) end)
+    request = wire().message
+    state = :sys.get_state(session.pid)
+    socket = :sys.get_state(state.handle.pid).socket
+    monitors = Enum.map([session.pid, state.observation.pid, state.handle.pid], &Process.monitor/1)
+    true = :erlang.suspend_process(state.observation.pid)
+    send(peer.pid, {:reply, report(request, :ack, 10, "too late")})
+    assert {:error, %Error{code: :timeout}} = Task.await(task)
+    assert_receive {:wotex_coap, _, {:error, %Error{code: :timeout}}}
+    for monitor <- monitors, do: assert_receive({:DOWN, ^monitor, :process, _, _}, 1000)
+    assert :erlang.port_info(socket) == :undefined
+    cancellation = wire().message
+    assert cancellation.token == request.token
+    assert Codec.option(cancellation, 6) == [<<1>>]
+    assert :ok = CoAP.disconnect(session)
+    close(peer)
+    refute_received {:wotex_coap, _, _}
+  end
+
+  test "WCO-C03 WCO-V09 suspended cancellation releases the socket without inventing confirmation" do
+    {peer, session, handle, request} = established(10, "initial")
+    state = :sys.get_state(session.pid)
+    socket = :sys.get_state(state.handle.pid).socket
+    monitors = Enum.map([session.pid, state.observation.pid, state.handle.pid], &Process.monitor/1)
+    true = :erlang.suspend_process(state.observation.pid)
+    task = Task.async(fn -> Connection.unobserve(session.pid, handle, 40) end)
+    assert {:error, %Error{code: :timeout}} = Task.await(task)
+    reference = handle.reference
+    assert_receive {:wotex_coap, ^reference, {:error, %Error{code: :timeout}}}
+    for monitor <- monitors, do: assert_receive({:DOWN, ^monitor, :process, _, _}, 1000)
+    assert :erlang.port_info(socket) == :undefined
+    cancellation = wire().message
+    assert cancellation.token == request.token
+    assert Codec.option(cancellation, 6) == [<<1>>]
+    assert :ok = CoAP.disconnect(session)
+    close(peer)
+    refute_received {:wotex_coap, ^reference, _}
+    refute_received {:wire, _, _, _, _}
+  end
+
+  test "WCO-S02 WCO-V10 Event overlap before the initial result cannot lose a report" do
+    {peer, port} = peer()
+
+    {:ok, session} =
+      CoAP.connect(host: "127.0.0.1", port: port, timeout: 1000, observation_kind: :event)
+
+    receiver = self()
+    task = Task.async(fn -> CoAP.subscribe(session, %{path: "/x", receiver: receiver}) end)
+    request = wire().message
+    owner = :sys.get_state(session.pid).observation.pid
+    true = :erlang.suspend_process(:sys.get_state(owner).task)
+    send(peer.pid, {:reply, report(request, :ack, 10, "initial")})
+    send(peer.pid, {:reply, %{report(request, :con, 11, "next") | message_id: 972}})
+    assert wire().message.type == :ack
+    assert {:error, %Error{code: :overlapping_event_report}} = Task.await(task)
+    assert_receive {:wotex_coap, _, {:error, %Error{code: :overlapping_event_report}}}
+    assert Codec.option(wire().message, 6) == [<<1>>]
+    assert :ok = CoAP.disconnect(session)
+    close(peer)
+    refute_received {:wotex_coap, _, _}
+  end
+
+  test "WCO-C07 WCO-V15 owner diagnostics redact report values and terminating messages" do
+    for role <- [:connection, :observation, :datagram] do
+      secret = "private-observed-value-" <> Atom.to_string(role)
+      {peer, session, _, _} = established(10, secret)
+      state = :sys.get_state(session.pid)
+
+      pid =
+        case role do
+          :connection -> session.pid
+          :observation -> state.observation.pid
+          :datagram -> state.handle.pid
+        end
+
+      Process.unlink(session.pid)
+      monitor = Process.monitor(session.pid)
+      status = inspect(:sys.get_status(pid), limit: :infinity)
+      refute String.contains?(status, secret)
+      assert String.contains?(status, "redacted")
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          GenServer.cast(pid, {:unsupported, secret})
+          assert_receive {:DOWN, ^monitor, :process, _, _}, 1000
+        end)
+
+      refute String.contains?(log, secret)
+      if role != :observation, do: assert(String.contains?(log, "redacted"), inspect(role))
+      assert_receive {:wotex_coap, _, {:error, %Error{code: :connection_closed}}}
+      if role != :datagram, do: assert(Codec.option(wire().message, 6) == [<<1>>])
+      assert :ok = CoAP.disconnect(session)
+      close(peer)
+    end
+  end
+
   defp await(owner, predicate),
     do: await(owner, predicate, System.monotonic_time(:millisecond) + 1000)
 

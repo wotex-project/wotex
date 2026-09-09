@@ -18,7 +18,7 @@ defmodule Wotex.CoAP.NativeContractTest do
     end
   end
 
-  test "WCO-D05 corpus identities are unique and remaining parser/trace adapters are explicit" do
+  test "WCO-D05 corpus identities are unique with a closed pure, parser and lifecycle operation set" do
     assert @fixture["format"] == "wotex-protocol-contract"
     assert @fixture["version"] == "1.0.0"
     assert @fixture["specification"] == "WCO.11@1.0.0"

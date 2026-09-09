@@ -9,7 +9,7 @@ defmodule Wotex.CoAP.Observation do
 
   use GenServer
   alias Wotex.CoAP
-  alias Wotex.CoAP.{Codec, Connection, Error, Observe}
+  alias Wotex.CoAP.{Block, Blockwise, Codec, Connection, Error, Execution, Observe}
   alias Wotex.CoAP.Observation.Report
 
   @doc "Validates a native Observe request without opening or registering anything."
@@ -34,6 +34,7 @@ defmodule Wotex.CoAP.Observation do
   @impl GenServer
   def init(config) do
     Process.flag(:trap_exit, true)
+    :ok = Execution.install(config.execution)
     Process.put(:wotex_coap_observation, {__MODULE__, config.handle.generation})
     send(self(), :register)
 
@@ -48,6 +49,7 @@ defmodule Wotex.CoAP.Observation do
        timer: nil,
        timer_ref: nil,
        expiry: nil,
+       refresh_at: nil,
        phase_deadline: config.deadline,
        from: config.from,
        cancel_from: nil,
@@ -108,7 +110,7 @@ defmodule Wotex.CoAP.Observation do
 
   def handle_info({:expiry, reference}, %{timer_ref: reference} = state) do
     cond do
-      now() < state.expiry -> {:noreply, arm(state)}
+      now() < state.refresh_at -> {:noreply, arm(state)}
       state.config.renew -> renew(state)
       true -> terminal(state, Error.new(:observation_stale))
     end
@@ -127,6 +129,14 @@ defmodule Wotex.CoAP.Observation do
     do: terminal(state, Error.new(:observation_failed))
 
   def handle_info(_, state), do: {:noreply, state}
+
+  @impl GenServer
+  def format_status(status) do
+    Map.new(status, fn
+      {:log, _} -> {:log, []}
+      {key, _} -> {key, :redacted}
+    end)
+  end
 
   @impl GenServer
   def terminate(_, state) do
@@ -164,7 +174,14 @@ defmodule Wotex.CoAP.Observation do
   defp task(state, function) do
     owner = self()
     reference = make_ref()
-    worker = spawn_link(fn -> send(owner, {:result, reference, function.()}) end)
+    execution = Execution.context()
+
+    worker =
+      spawn_link(fn ->
+        :ok = Execution.install(execution)
+        send(owner, {:result, reference, function.()})
+      end)
+
     %{state | task: worker, task_ref: reference}
   end
 
@@ -206,6 +223,9 @@ defmodule Wotex.CoAP.Observation do
     end
   end
 
+  defp candidate(%{report: nil, config: %{kind: :event}} = state, _),
+    do: terminal(state, Error.new(:overlapping_event_report))
+
   defp candidate(%{report: nil, pending: nil} = state, report),
     do: {:noreply, %{state | pending: report}}
 
@@ -233,6 +253,9 @@ defmodule Wotex.CoAP.Observation do
       ) ->
         {:noreply, state}
 
+      state.phase in [:assembling, :renewing] and state.config.kind == :event ->
+        terminal(state, Error.new(:overlapping_event_report))
+
       state.phase in [:assembling, :renewing] ->
         {:noreply, %{state | pending: candidate}}
 
@@ -250,20 +273,45 @@ defmodule Wotex.CoAP.Observation do
   end
 
   defp assemble(state, report) do
-    if state.phase_deadline > now() do
-      {:noreply,
-       task(state, fn ->
-         Connection.observation_exchange(
-           state.config.handle.pid,
-           state.config.capability,
-           state.config.request,
-           {:continue, report.first},
-           budget(state)
-         )
-       end)}
-    else
-      terminal(state, Error.new(:timeout))
+    watch_phase(state)
+
+    cond do
+      state.phase_deadline <= now() ->
+        terminal(state, Error.new(:timeout))
+
+      complete_first?(report.first) ->
+        complete_first(state, report.first)
+
+      true ->
+        {:noreply,
+         task(state, fn ->
+           Connection.observation_exchange(
+             state.config.handle.pid,
+             state.config.capability,
+             state.config.request,
+             {:continue, report.first},
+             budget(state)
+           )
+         end)}
     end
+  end
+
+  defp complete_first?(message) do
+    case Codec.option(message, 23) do
+      [] -> true
+      [value] -> match?({:ok, %{more: false}}, Block.decode(value))
+    end
+  end
+
+  defp complete_first(state, first) do
+    request = %{state.config.request | token: <<>>}
+
+    {result, _} =
+      Blockwise.continue(request, first, [], nil, fn _, value ->
+        {failure(:invalid_observation_response), value}
+      end)
+
+    completed(state, result)
   end
 
   defp budget(state), do: max(1, state.phase_deadline - now())
@@ -294,20 +342,25 @@ defmodule Wotex.CoAP.Observation do
     end
   end
 
-  defp established(%{from: nil} = state), do: state
-
   defp established(state) do
     :ok =
       GenServer.call(state.config.handle.pid, {:observation_established, state.config.capability})
 
-    GenServer.reply(state.from, {:ok, state.config.handle})
-    Process.demonitor(state.caller_monitor, [:flush])
+    if state.from do
+      GenServer.reply(state.from, {:ok, state.config.handle})
+      Process.demonitor(state.caller_monitor, [:flush])
+    end
+
     %{state | from: nil, caller_monitor: nil}
   end
 
   defp pending(%{pending: nil} = state) do
-    expiry = state.report.received_at + max(state.report.metadata.max_age * 1000, 1000)
-    {:noreply, arm(%{state | phase: :active, expiry: expiry})}
+    expiry = state.report.received_at + state.report.metadata.max_age * 1000
+
+    refresh_at =
+      if state.config.renew, do: max(expiry, state.report.received_at + 1000), else: expiry
+
+    {:noreply, arm(%{state | phase: :active, expiry: expiry, refresh_at: refresh_at})}
   end
 
   defp pending(state) do
@@ -324,9 +377,18 @@ defmodule Wotex.CoAP.Observation do
 
   defp renew(state) do
     state = cancel_timer(%{state | phase: :renewing, phase_deadline: now() + state.config.timeout})
+    watch_phase(state)
     request = put_observe(state.config.request, 0)
 
     {:noreply, task(state, fn -> exchange(state, request, :renew, state.phase_deadline) end)}
+  end
+
+  defp watch_phase(state) do
+    :ok =
+      GenServer.call(
+        state.config.handle.pid,
+        {:observation_phase, state.config.capability, state.phase_deadline}
+      )
   end
 
   defp arm(state) do
@@ -334,13 +396,13 @@ defmodule Wotex.CoAP.Observation do
     reference = make_ref()
 
     timer =
-      Process.send_after(self(), {:expiry, reference}, min(60_000, max(0, state.expiry - now())))
+      Execution.schedule({:expiry, reference}, min(60_000, max(0, state.refresh_at - now())))
 
     %{state | timer: timer, timer_ref: reference}
   end
 
   defp cancel_timer(state) do
-    if state.timer, do: Process.cancel_timer(state.timer)
+    if state.timer, do: Execution.cancel(state.timer)
     %{state | timer: nil, timer_ref: nil}
   end
 
@@ -359,6 +421,6 @@ defmodule Wotex.CoAP.Observation do
   defp put_observe(request, value),
     do: %{request | options: [{6, Codec.uint(value)} | request.options]}
 
-  defp now, do: System.monotonic_time(:millisecond)
+  defp now, do: Execution.now_ms()
   defp failure(code), do: {:error, Error.new(code)}
 end
