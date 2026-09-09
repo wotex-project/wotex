@@ -125,11 +125,11 @@
     "safe_properties": 5,
     "test_count": 49
   },
-  "revision": "2955498b8e45215ef779d84f89f972b97a173afb",
+  "revision": "2ffd20f587945a82948c5fa1830cccae30cbbb3c",
   "scenario_id": "WLB.09-formal-control-verification",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:9b951a4db1a4d36b8f39865e3fde10721d45a6885a3cb352ee00a32e5ff91966",
+  "source_tree_digest": "sha256:5ef2ba9a56eabcf4b8e8093366d0c1420d9e25711bcbb2186f01975a29b7d26a",
   "toolchain": {
     "backend": "Maude-3.5.1-port",
     "elixir": "1.20.2",

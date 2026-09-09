@@ -35,7 +35,7 @@
     {
       "package": "wotex_binding_mqtt",
       "files": 38,
-      "sha256": "955a295af43e09760017520913b6cd1262516cf0a7c3f26af5b87759574aee67"
+      "sha256": "b592a0d654aeb6b4a19a89e2f7400cdd75dc1840df75ebd4e5737291beb253d3"
     },
     {
       "package": "wotex_directory",

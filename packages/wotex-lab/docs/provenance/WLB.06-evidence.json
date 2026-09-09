@@ -163,11 +163,11 @@
     "thing_description_vectors": 14,
     "thing_model_vectors": 6
   },
-  "revision": "2955498b8e45215ef779d84f89f972b97a173afb",
+  "revision": "2ffd20f587945a82948c5fa1830cccae30cbbb3c",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:d4406122b285cf6d0537110e2b826ce22a341996eb41fa78b6ca1e9cc7e42270",
+  "source_tree_digest": "sha256:039de5b0419ddacb013907221762838283762577b36be0a0174491a5ce3e4935",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",

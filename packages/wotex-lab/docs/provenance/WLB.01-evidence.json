@@ -73,11 +73,11 @@
   "outcomes": {
     "test_count": 12
   },
-  "revision": "2955498b8e45215ef779d84f89f972b97a173afb",
+  "revision": "2ffd20f587945a82948c5fa1830cccae30cbbb3c",
   "scenario_id": "WLB.01-library-foundation",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:4daaf890a70685a2da2b9254d0763e4b0018348af6e7dea6c7ea612c96be7537",
+  "source_tree_digest": "sha256:a83da6f5f9715dbc0e47ba5c3c6488164067c78c63e0ca7fd68a05b9a81cf9d5",
   "toolchain": {
     "backend": "BEAM-supervision",
     "elixir": "1.20.2",

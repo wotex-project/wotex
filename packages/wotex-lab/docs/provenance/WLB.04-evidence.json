@@ -137,11 +137,11 @@
     "broker_enabled": true,
     "test_count": 56
   },
-  "revision": "2955498b8e45215ef779d84f89f972b97a173afb",
+  "revision": "2ffd20f587945a82948c5fa1830cccae30cbbb3c",
   "scenario_id": "WLB.04-runtime-and-network-adapters",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:a77198be390b217d970dcf87fa39303c2bd9c6e18bc23703efae87dddb277c38",
+  "source_tree_digest": "sha256:1562726ecc9aee965cd60dfa1fae4b5d138a4fbc6d0388c41ea3388412a9639e",
   "toolchain": {
     "backend": "BEAM-network",
     "elixir": "1.20.2",

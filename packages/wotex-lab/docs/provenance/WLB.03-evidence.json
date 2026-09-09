@@ -100,11 +100,11 @@
     "required_lanes": 6,
     "test_count": 52
   },
-  "revision": "2955498b8e45215ef779d84f89f972b97a173afb",
+  "revision": "2ffd20f587945a82948c5fa1830cccae30cbbb3c",
   "scenario_id": "WLB.03-nx-experiments",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:7bb06ab7bc45f462f00664c89f1335fc14e7c82d2f815764051a9c35e45e7fc8",
+  "source_tree_digest": "sha256:6d788649b58e3fe2e7ff292774d8f78c0a58882adbbe4fe200abc06a46ff2c46",
   "toolchain": {
     "backend": "Nx.BinaryBackend-Evaluator-and-EXLA-CPU",
     "elixir": "1.20.2",

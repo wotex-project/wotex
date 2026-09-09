@@ -147,11 +147,11 @@
     "excluded_count": 0,
     "test_count": 66
   },
-  "revision": "2955498b8e45215ef779d84f89f972b97a173afb",
+  "revision": "2ffd20f587945a82948c5fa1830cccae30cbbb3c",
   "scenario_id": "WLB.05-directory-continuum-and-smart-room",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:4862b8b83d74a5195d0ea05572ac9e6c79654d0f35b9d7e6c4c2f6077ca722fd",
+  "source_tree_digest": "sha256:2a18c2c65b5e1e73c15e971003ffa167996bb0b66b7b3b2602506d8eb77dfeed",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-BEAM-network",
     "elixir": "1.20.2",
