@@ -1,14 +1,52 @@
 # Wotex Modbus
 
-Consumer-neutral Modbus protocol library for W3C Web of Things consumers.
-Development version: API unstable; no certification or complete protocol
-conformance claim. No remote repository or published package is implied.
+**Consumer-neutral Modbus interactions for W3C Web of Things consumers.**
+
+[![Hex.pm](https://img.shields.io/hexpm/v/wotex_modbus.svg)](https://hex.pm/packages/wotex_modbus)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_modbus)
+[![CI](https://github.com/wotex-project/wotex-modbus/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-modbus/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/wotex-project/wotex-modbus/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-modbus)
+[![License](https://img.shields.io/hexpm/l/wotex_modbus.svg)](https://github.com/wotex-project/wotex-modbus/blob/main/LICENSE)
+
+[Installation](#installation) ·
+[Ownership](#ownership) ·
+[Development](#development) ·
+[Implemented profile](#implemented-profile) ·
+[Quick start](#quick-start) ·
+[Software contract](#software-implementation-contract)
+
+---
+
+This is a development checkout. The public API remains unstable; software
+interoperability does not establish certification or a published release.
+
+## Installation
+
+This development checkout is prepared as the `wotex_modbus` Hex package but
+does not assert that a release has been published. A sibling-checkout consumer
+can select it explicitly:
+
+```elixir
+def deps do
+  [{:wotex_modbus, path: "../wotex-modbus"}]
+end
+```
+
+Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
+and Runtime dependencies resolve from sibling checkouts. Published consumers
+should replace the path with the constraint of an available Hex release.
 
 ## Ownership
 
 Values, validation and Form mapping belong here. The consumer owns credentials,
 policy, supervision and the interpretation of protocol acknowledgements.
 Loading the package does not start a transport. No simulator is selected implicitly.
+
+Each connection is linked to its caller and serializes requests over one
+numeric Internet Protocol endpoint. The library validates Modbus Application
+Protocol headers, transaction correlation, Unit Identifiers, function-specific
+limits, and response shapes. It does not silently retry writes; a transport
+failure can therefore leave the physical effect unknown to the caller.
 
 ## Development
 
@@ -25,6 +63,14 @@ See [delivery contract](docs/plans/wotex-modbus-completion.md).
 Classic Modbus TCP functions 1, 2, 3, 4, 5, 6, 15 and 16; strict MBAP/response
 validation; integer/float register conversion; explicit socket ownership;
 WoT Forms and Runtime requests; neutral compatibility callbacks.
+
+`Wotex.Modbus.profile/0` supplies the native TCP Runtime profile. Admission is
+bounded to 64 requests per connection, with one active exchange and a deadline
+that includes queue time. An unsent rejected request has no write effect;
+a transmitted write with an uncertain outcome reports `effect: :unknown` and
+cannot be classified as retryable.
+
+## Quick start
 
 ```elixir
 {:ok, session} = Wotex.Modbus.connect(host: "127.0.0.1", port: 1502, unit_id: 1)
@@ -43,11 +89,20 @@ claimed. See [protocol contract](docs/specs/WMB.01-protocol.md),
 ## Software implementation contract
 
 The [ordered implementation sequence](docs/plans/software-implementation.md)
-and [specification index](docs/specs/WMB-index.md) define the remaining software
-profile with exact behavior, limits, failure transitions, acceptance scenarios
-and concrete fixtures.
-These target contracts are build instructions, not claims that every feature
-already exists. Required software peers are separate from physical-device tests.
+and [specification index](docs/specs/WMB-index.md) define the software profile's
+behavior, limits, failure transitions, acceptance scenarios and concrete fixtures.
+Executable tests cover the contract corpus, real Runtime interactions, strict
+stream correlation, bounded admission, and owner cleanup. The software fixture
+builds a pinned libmodbus peer and records commands, hashes, failures, cleanup,
+and the active toolchain. It requires Docker and runs once per selected toolchain:
+
+```sh
+test/interop/build_software.sh /absolute/disposable/workspace
+WOTEX_PATH_DEPS=1 test/interop/run_software.sh /absolute/disposable/workspace
+```
+
+Required software peers are separate from physical-device tests. A specification
+or catalogue status alone is not execution evidence.
 
 The [standalone client contract](docs/specs/WMB.11-standalone-client-and-preservation.md)
 defines native workflows and feature-preservation obligations. Its concrete
@@ -56,5 +111,5 @@ fixture corpus contains specified cases; execution results remain in provenance.
 The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
 profiles from planned contracts. The [Wotex integration contract](docs/specs/WMB.12-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
-ConsumedThing acceptance tests. These are target requirements; a passing baseline
-gate does not accept the unfinished software profile.
+ConsumedThing acceptance tests. Re-run the checked-in software harness for the
+source revision under review; earlier results do not validate later changes.

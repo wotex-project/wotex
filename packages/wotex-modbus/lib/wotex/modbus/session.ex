@@ -1,5 +1,21 @@
 defmodule Wotex.Modbus.Session do
-  @moduledoc "Consumer-held reference to an explicitly owned Modbus TCP connection."
+  @moduledoc """
+  Carries the process, Unit Identifier, and timeout for one Modbus TCP session.
+
+  `Wotex.Modbus.connect/1` returns a `t:t/0` after starting a scoped
+  `Wotex.Modbus.Connection`. The `pid` identifies that socket owner, `unit_id`
+  selects the destination unit for commands, and `timeout` bounds each request
+  including time spent waiting behind another serialized exchange.
+
+  `validate/1` checks field types and ranges at the public boundary. The
+  connection separately verifies local process ownership before dispatch or
+  cleanup. Invalid fields or foreign live processes return
+  `Wotex.Modbus.Error`. A session is an
+  explicit caller-held capability, not a globally registered client. The
+  consumer owns its larger supervision and authorization context and must call
+  `Wotex.Modbus.disconnect/1` to release the socket. Possessing a session does
+  not establish permission to read or write any address.
+  """
 
   @enforce_keys [:pid, :unit_id, :timeout]
   defstruct [:pid, :unit_id, :timeout]

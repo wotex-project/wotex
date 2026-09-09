@@ -1,5 +1,19 @@
 defmodule Wotex.Modbus.Command do
-  @moduledoc "Validated function-specific request, independent of sockets and host policy."
+  @moduledoc """
+  Represents a validated request for the supported Modbus function subset.
+
+  `new/4` maps a named read or write operation to function codes 1, 2, 3, 4, 5,
+  6, 15, or 16. It constructs a `Wotex.Modbus.Address`, normalizes coil values,
+  and enforces function-specific quantity and 16-bit register bounds. Read
+  commands carry their quantity in the address; write commands retain explicit
+  normalized values.
+
+  `validate/1` rebuilds a command at the wire boundary so a forged struct cannot
+  bypass these rules. `write?/1` identifies commands whose transport failure may
+  leave an unknown peer effect. The value does not own a socket, deadline,
+  retry policy, or authorization decision; those concerns remain with
+  `Wotex.Modbus.Connection` and the consumer.
+  """
 
   alias Wotex.Modbus.{Address, Error}
 

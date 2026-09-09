@@ -1,5 +1,20 @@
 defmodule Wotex.Modbus.Codec do
-  @moduledoc "Bounded Modbus TCP framing and strict function-specific response validation."
+  @moduledoc """
+  Encodes Modbus TCP requests and validates function-specific responses.
+
+  `encode/2` combines a validated `Wotex.Modbus.Command` with a 16-bit
+  transaction identifier and produces a Modbus Application Protocol header and
+  Protocol Data Unit. `decode/1` incrementally parses one bounded frame and
+  returns any unconsumed bytes. Protocol Identifier, length, and frame-size
+  constraints are checked before the frame is returned for correlation.
+
+  `response/3` then correlates the transaction and Unit Identifier, detects
+  Modbus exception responses, and verifies byte counts, echoed addresses, and
+  echoed values for the exact function. A malformed or mismatched response is
+  never returned as application data. The codec is pure and performs no socket
+  operation; connection deadlines and effect classification belong to
+  `Wotex.Modbus.Connection`.
+  """
 
   import Bitwise
   alias Wotex.Modbus.{Command, Error}

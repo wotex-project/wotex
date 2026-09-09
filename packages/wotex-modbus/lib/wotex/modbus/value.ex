@@ -1,5 +1,19 @@
 defmodule Wotex.Modbus.Value do
-  @moduledoc "Exact-width register conversion with explicit application byte and word order."
+  @moduledoc """
+  Converts exact-width Modbus registers to and from typed scalar values.
+
+  `decode/3` accepts the exact register count required by `t:kind/0` and returns
+  a signed or unsigned integer or an IEEE 754 floating-point value. `encode/3`
+  performs the inverse conversion while rejecting overflow and lossy integer
+  coercion. Byte order within each 16-bit register and word order across a
+  multi-register value are explicit options; both default to big-endian.
+
+  Conversion is pure and does not infer a type, unit, scale, or semantic meaning
+  from a register range. Invalid option combinations, wrong-width input,
+  out-of-range registers, unsupported kinds, and non-representable values return
+  `Wotex.Modbus.Error`. The consumer or Form mapping must select the conversion
+  defined by the addressed data model.
+  """
 
   alias Wotex.Modbus.Error
 

@@ -1,5 +1,20 @@
 defmodule Wotex.Modbus.Error do
-  @moduledoc "Stable, credential-free failures at the Modbus public boundary."
+  @moduledoc """
+  Represents a bounded, credential-free Modbus failure.
+
+  A `t:t/0` contains a stable code, an optional field, bounded diagnostic
+  details, a retry classification, and an effect classification. The effect is
+  `:none` for validation failures and reads, and may be `:unknown` when a socket
+  failure prevents the package from determining whether a write reached the
+  peer.
+
+  `new/3` is shared by address and command validation, codecs, register
+  conversion, Form mapping, connections, and Runtime transport. Consumers can
+  branch on structured fields rather than parsing exception or socket text.
+  Diagnostic details must not contain credentials, payload values, opaque
+  socket state, or unbounded remote responses. A failure classification informs
+  policy but does not itself authorize a retry.
+  """
 
   @enforce_keys [:code]
   defstruct [:code, :field, class: nil, details: %{}, retryable: false, effect: :none]

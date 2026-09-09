@@ -1,5 +1,22 @@
 defmodule Wotex.Modbus.Transport do
-  @moduledoc "Wotex Runtime transport that scopes one TCP session to one bounded interaction."
+  @moduledoc """
+  Executes one Wotex Runtime interaction through one scoped Modbus TCP session.
+
+  The transport validates the Runtime request and execution context, maps the
+  selected Form through `Wotex.Modbus.Mapping`, opens a connection to the mapped
+  endpoint, performs the exact command, converts its result, and closes the
+  session. Subscription callbacks return explicit unsupported errors because
+  this profile does not create a polling or push process.
+
+  ## Runtime boundary
+
+  Credentials are rejected because classic Modbus TCP in this package defines
+  no credential transport. Runtime Form selection is not authorization, and a
+  successful response does not establish canonical Property truth or a physical
+  Action effect. The consumer owns routing, authorization, deadlines,
+  supervision, Modbus Security where required, and any policy for interpreting
+  returned register values.
+  """
 
   @behaviour Wotex.Runtime.Transport
   alias Wotex.Form

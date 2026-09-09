@@ -1,5 +1,22 @@
 defmodule Wotex.Modbus.Address do
-  @moduledoc "Validated zero-based register or coil range for a unicast Unit Identifier."
+  @moduledoc """
+  Represents a validated Modbus register or coil range.
+
+  A `t:t/0` contains a zero-based offset, a positive quantity, and a unicast
+  Unit Identifier. `new/3` accepts offsets within the 16-bit address space and
+  rejects a range whose final element would exceed that space. Unit Identifiers
+  1 through 247 and 255 are admitted by the package profile.
+
+  The value is independent of a function code. Function-specific quantity
+  limits are applied by `Wotex.Modbus.Command`, which combines an address with
+  a read or write operation. Construction performs no socket I/O and does not
+  resolve one-based references from a Form; that conversion belongs to
+  `Wotex.Modbus.Mapping`.
+
+  ## Examples
+
+      {:ok, range} = Wotex.Modbus.Address.new(0, 2, 1)
+  """
 
   alias Wotex.Modbus.Error
 

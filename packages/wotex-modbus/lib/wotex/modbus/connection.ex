@@ -1,5 +1,22 @@
 defmodule Wotex.Modbus.Connection do
-  @moduledoc "Explicitly started socket owner with serialized, deadline-bounded TCP exchanges."
+  @moduledoc """
+  Owns one Modbus TCP socket and serializes deadline-bounded exchanges.
+
+  `start_link/1` validates an explicit numeric IPv4 or IPv6 host, port, timeout,
+  initial transaction identifier, Unit Identifier, owner, and security mode
+  before opening the socket. `request/3` includes caller queue time in one
+  finite deadline, sends a `Wotex.Modbus.Command`, reads one bounded response,
+  and validates it with `Wotex.Modbus.Codec`.
+
+  ## Lifecycle and effects
+
+  The process monitors its explicit owner and closes the socket when that owner
+  exits or `close/1` is called. It is not globally registered and never starts
+  at dependency load. A failed read or unsent rejected request has no write
+  effect. A transmitted write reports an unknown effect when its response does
+  not establish the outcome; a correlated Modbus exception remains explicit.
+  The connection never silently reconnects or retries a write.
+  """
 
   use GenServer
   alias Wotex.Modbus.{Codec, Command, Error}

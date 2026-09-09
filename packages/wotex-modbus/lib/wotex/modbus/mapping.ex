@@ -1,5 +1,19 @@
 defmodule Wotex.Modbus.Mapping do
-  @moduledoc "Explicit Wotex profile of the draft Modbus Form vocabulary; extensions are preserved."
+  @moduledoc """
+  Maps a W3C Web of Things Form through the package's draft Modbus profile.
+
+  `command/4` validates the selected WoT operation, resolves an explicit
+  `modbus+tcp` endpoint, converts one-based or zero-based addressing, selects a
+  function, and constructs `Wotex.Modbus.Command`. Draft `modv:` terms may also
+  select an explicit scalar type and byte and word order. Relative hrefs are
+  resolved only when the caller supplies `:base`.
+
+  `decode/2` applies the conversion recorded by the mapping to a read result.
+  The source `Wotex.Form` remains attached so unknown extension terms survive.
+  Mapping performs no DNS lookup, socket I/O, or authorization decision. This
+  module documents a dated project profile and does not claim W3C binding or
+  complete Modbus conformance.
+  """
 
   alias Wotex.Form
   alias Wotex.Modbus.{Command, Connection, Error, Value}

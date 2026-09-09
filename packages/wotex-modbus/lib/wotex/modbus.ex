@@ -1,5 +1,23 @@
 defmodule Wotex.Modbus do
-  @moduledoc "Modbus TCP client and neutral compatibility surface for the supported function subset."
+  @moduledoc """
+  Executes the supported Modbus TCP function subset through an explicit session.
+
+  `Wotex.Modbus` provides lifecycle, native request, typed convenience, and
+  compatibility functions. `connect/1` opens one caller-owned
+  `Wotex.Modbus.Connection`; `request/2` sends a validated
+  `Wotex.Modbus.Command`; and `disconnect/1` closes the exact connection.
+  Helpers cover function codes 1, 2, 3, 4, 5, 6, 15, and 16, including
+  explicit floating-point register conversion.
+
+  ## Execution boundary
+
+  Loading this module opens no socket. The consumer supplies the numeric TCP
+  endpoint, Unit Identifier, deadline, authorization policy, and supervision.
+  Requests on a session are serialized. Writes are never retried silently, and
+  failures report when their effect may be unknown. The package does not
+  implement RTU or serial transport, Modbus Security, polling, or physical
+  certification.
+  """
 
   import Kernel, except: [send: 2]
   alias Wotex.Modbus.{Address, Command, Connection, Error, Session, Value}
