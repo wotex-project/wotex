@@ -1,5 +1,24 @@
 defmodule Wotex.CoAP.Transport do
-  @moduledoc "Wotex Runtime adapter with an explicitly scoped CoAP socket and finite deadline."
+  @moduledoc """
+  Executes Wotex Runtime requests through an explicitly scoped CoAP socket.
+
+  The transport validates the Runtime request and execution context, maps the
+  selected Form through `Wotex.CoAP.Mapping`, spends one finite deadline across
+  connection setup and exchange, decodes the reply, and closes the exact socket
+  owner. Property observations and Event subscriptions use an explicitly owned
+  relay process. The relay validates complete native reports and
+  retains the exact subscription generation until cancellation or cleanup.
+
+  ## Runtime boundary
+
+  Credentials are rejected because this UDP profile defines no credential
+  transport; native DTLS support is not yet exposed by this Runtime adapter.
+  Runtime Form selection does not authorize network access, and a
+  successful CoAP response does not establish canonical Property truth or a
+  physical Action effect. The consumer owns routing, authorization,
+  supervision, security-layer selection, and any policy for interpreting
+  returned protocol metadata.
+  """
 
   @behaviour Wotex.Runtime.Transport
   alias Wotex.CoAP.{Connection, Error, Mapping, RuntimeFrame, RuntimeRelay}

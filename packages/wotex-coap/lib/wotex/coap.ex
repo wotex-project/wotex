@@ -1,5 +1,27 @@
 defmodule Wotex.CoAP do
-  @moduledoc "Consumer-neutral CoAP UDP exchanges and compatibility callbacks."
+  @moduledoc """
+  Executes bounded Constrained Application Protocol exchanges over UDP or DTLS.
+
+  `Wotex.CoAP` is the package facade for connection lifecycle and native
+  request construction. `connect/1` starts one caller-scoped
+  `Wotex.CoAP.Connection`; `message/1` validates a request map;
+  `send/2` performs a correlated exchange; and `disconnect/1` closes the exact
+  socket owner. GET, POST, PUT, and DELETE helpers assemble complete bodies.
+  `discover/2` returns bounded CoRE links. `subscribe/2` establishes an owned
+  Observe relationship, and `unsubscribe/2` cancels its exact generation.
+  The session serializes requests and applies a finite timeout.
+
+  ## Execution boundary
+
+  Loading the module performs no network operation. The consumer supplies a
+  numeric IPv4 or IPv6 destination and owns routing, authorization,
+  supervision, and credential policy. Explicit `coaps` sessions use Datagram
+  Transport Layer Security (DTLS) 1.2 with validated PSK or PKI values from
+  `Wotex.CoAP.Security`. Object Security for Constrained RESTful Environments
+  (OSCORE), multicast, and extended tokens remain unsupported. The separate
+  compatibility `receive/2` callback is unsupported because `send/2` returns
+  its correlated response directly.
+  """
 
   import Kernel, except: [send: 2]
   alias Wotex.CoAP.{Codec, Connection, Error, Message}

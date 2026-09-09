@@ -1,5 +1,23 @@
 defmodule Wotex.CoAP.Codec do
-  @moduledoc "Bounded RFC 7252 UDP encoding and parsing; malformed input returns structured errors."
+  @moduledoc """
+  Encodes and decodes bounded RFC 7252 CoAP messages for UDP transport.
+
+  `encode/1` validates the fixed header, token, numeric option ordering, option
+  lengths, payload marker, and datagram-size limit before producing a binary.
+  `decode/1` performs the inverse operation and returns a
+  `Wotex.CoAP.Message` with raw option values. Malformed or oversized input
+  returns `Wotex.CoAP.Error` instead of raising.
+
+  ## Option representation
+
+  Options retain their integer identities and binary values. `option/2`
+  retrieves every occurrence without interpreting extension meaning, while
+  `uint/1` produces the minimal unsigned integer form used by numeric options.
+  The codec does not apply Form defaults, decode application payloads, perform
+  blockwise transfer, or contact a peer; those responsibilities belong to
+  `Wotex.CoAP.Mapping`, `Wotex.CoAP.Blockwise`, and
+  `Wotex.CoAP.Connection`.
+  """
 
   alias Wotex.CoAP.{Error, Message}
   @types %{con: 0, non: 1, ack: 2, rst: 3}

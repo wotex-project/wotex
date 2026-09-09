@@ -1,5 +1,23 @@
 defmodule Wotex.CoAP.Observe do
-  @moduledoc "Pure RFC 7641 notification freshness decisions with caller-supplied elapsed time."
+  @moduledoc """
+  Evaluates RFC 7641 Observe sequence freshness without reading a clock.
+
+  `fresh?/3` compares a previous 24-bit sequence value with a candidate and
+  uses caller-supplied elapsed milliseconds for the RFC freshness rule. Invalid
+  sequence numbers and elapsed values return `false`. The function is pure and
+  can therefore be tested or replayed with an explicit time observation.
+
+  This module implements only the sequence-arithmetic decision. It does not
+  establish a network observation, schedule renewal, receive notifications, or
+  own subscriber state. `Wotex.CoAP.Connection` applies the predicate within
+  its owned observation lifecycle. `Wotex.CoAP.Observation.Report` validates
+  notification metadata separately from the transport state.
+
+  ## Examples
+
+      true = Wotex.CoAP.Observe.fresh?(10, 11, 100)
+      false = Wotex.CoAP.Observe.fresh?(11, 10, 100)
+  """
 
   import Bitwise
 

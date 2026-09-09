@@ -1,17 +1,61 @@
 # Wotex CoAP
 
-Consumer-neutral CoAP library for W3C Web of Things consumers.
-Development version: `0.1.0-dev`.
+**Consumer-neutral Constrained Application Protocol interactions for W3C Web of Things consumers.**
+
+[![Hex.pm](https://img.shields.io/hexpm/v/wotex_coap.svg)](https://hex.pm/packages/wotex_coap)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_coap)
+[![CI](https://github.com/wotex-project/wotex-coap/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-coap/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/wotex-project/wotex-coap/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-coap)
+[![License](https://img.shields.io/hexpm/l/wotex_coap.svg)](https://github.com/wotex-project/wotex-coap/blob/main/LICENSE)
+
+[Installation](#installation) ·
+[Implemented profile](#implemented-profile) ·
+[Quick start](#quick-start) ·
+[Wotex contract](#wotex-contract) ·
+[Development](#development) ·
+[Software contract](#software-implementation-contract)
+
+---
+
+This is a development checkout. The public API remains unstable, and the
+ordered software implementation plan is not complete.
 
 Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
+
+## Installation
+
+This development checkout is prepared as the `wotex_coap` Hex package but does
+not assert that a release has been published. A sibling-checkout consumer can
+select it explicitly:
+
+```elixir
+def deps do
+  [{:wotex_coap, path: "../wotex-coap"}]
+end
+```
+
+Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
+and Runtime dependencies resolve from sibling checkouts. Published consumers
+should replace the path with the constraint of an available Hex release.
+
+## Implemented profile
 
 The UDP client performs bounded confirmable/non-confirmable exchanges, correlates
 endpoint/token/Message ID, handles separate responses and retransmits the same
 confirmable datagram. Codec, block descriptors and Observe
 serial arithmetic are independently usable pure values. Whole-body Block1 uploads
 and Block2 downloads run serially under one deadline and enforce representation
-identity, acknowledgment and allocation limits. Network Observe remains pending.
-DTLS, OSCORE, multicast, extended tokens and discovery are separate graduation gates.
+identity, acknowledgment and allocation limits. Native Observe owns its initial
+representation, renewal, notification freshness, cancellation, and cleanup.
+Discovery parses bounded CoRE Link Format results without following the links.
+
+Native `coaps` sessions support explicit DTLS 1.2 PSK and PKI credentials through
+OTP SSL. PSK exchanges and Observe have independent pinned libcoap evidence;
+PKI currently has real OTP peer tests. Independent PKI evidence, Runtime DTLS
+credentials, OSCORE, and the final software matrix remain ordered work.
+Multicast and extended tokens are outside the implemented profile.
+
+## Quick start
 
 ```elixir
 {:ok, session} = Wotex.CoAP.connect(host: "127.0.0.1", port: 5683, timeout: 3000)
@@ -23,8 +67,11 @@ end
 ```
 
 `Mapping` supports the documented draft `cov:` subset and JSON, UTF-8 text or
-opaque binary content. JSON null writes encode as `null`. Runtime spends one
-finite deadline across opening and exchange, and always closes its socket.
+opaque binary content. JSON null writes encode as `null`. Runtime unary requests
+spend one finite deadline across opening and exchange and close their socket.
+Runtime Property observations and Event subscriptions use an owned Observe relay
+with complete-body decoding and bounded cleanup. Runtime currently accepts only
+`coap` Forms and rejects immediate credentials.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
 See the [blockwise contract](docs/specs/WCO.03-blockwise.md) for configurable
@@ -42,8 +89,9 @@ mapping. These development APIs are not yet stable or certified.
 The compatibility callbacks are `capabilities/0`, `connect/1`, `send/2`,
 `receive/2`, `disconnect/1`, `health_check/1`, `subscribe/2`, `unsubscribe/2`.
 `send/2` returns the correlated operation result synchronously. No separate
-receive queue is fabricated; unsupported receive/subscription calls fail
-explicitly. Callback names alone do not establish consumer behavioral parity.
+receive queue is fabricated; `receive/2` fails explicitly. Native subscriptions
+return an exact owned handle after validating the initial complete representation.
+Callback names alone do not establish consumer behavioral parity.
 The consumer retains its implementation until differential scenarios and
 interoperability gates pass; migration is outside this repository.
 

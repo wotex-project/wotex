@@ -1,5 +1,22 @@
 defmodule Wotex.CoAP.Blockwise do
-  @moduledoc "Bounded RFC 7959 whole-body transfers over a caller-owned serial exchange function."
+  @moduledoc """
+  Runs bounded RFC 7959 whole-body transfers through a serial exchange function.
+
+  `run/4` divides eligible request payloads into Block1 requests and reassembles
+  Block2 responses without interleaving another transfer. Upload
+  acknowledgments, negotiated block size, representation identity, response
+  codes, and block sequence are checked at every step. The callback carries its
+  own state and enforces one absolute transport deadline across all exchanges.
+
+  ## Resource limits
+
+  `config/1` validates the block size, complete-body limit, and maximum exchange
+  count before a transfer starts. Defaults are 512-byte blocks, a 1 MiB body,
+  and at most 4096 exchanges. Existing managed block options are rejected so
+  the module remains the sole owner of their evolution. A failed write reports
+  an unknown effect when the exchange history cannot establish whether the
+  peer accepted a block.
+  """
 
   alias Wotex.CoAP.{Block, Codec, Error, Message}
   @sizes [16, 32, 64, 128, 256, 512, 1024]

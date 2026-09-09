@@ -1,5 +1,25 @@
 defmodule Wotex.CoAP.Connection do
-  @moduledoc "Explicit UDP socket owner with bounded RFC 7252 request correlation and retransmission."
+  @moduledoc """
+  Owns one selected datagram adapter and serializes bounded CoAP exchanges.
+
+  `start_link/1` validates a numeric destination, port, timeouts, owner, scheme,
+  and security mode before opening UDP or an authenticated DTLS association.
+  `request/3` correlates responses
+  by endpoint, token, and Message ID, handles separate responses, and
+  retransmits the same confirmable datagram within one deadline. `transfer/4`
+  gives `Wotex.CoAP.Blockwise` exclusive use of the connection for a complete
+  body. CoAP datagrams are limited to 1152 bytes before DTLS encapsulation.
+
+  ## Lifecycle
+
+  The process monitors its explicit owner and closes the socket when that owner
+  exits or `close/1` is called. It is not registered and is never started at
+  dependency load. Requests on a session are serialized. The consumer owns
+  placement in a supervision tree, routing policy, and interpretation of
+  transport failures. Dedicated observation state owns registration, complete
+  reports, renewal, cancellation, and the receiver monitor. Cleanup uses
+  bounded escalation for an unresponsive owned process.
+  """
 
   use GenServer
 

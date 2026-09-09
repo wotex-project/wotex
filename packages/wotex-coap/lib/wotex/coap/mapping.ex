@@ -1,5 +1,19 @@
 defmodule Wotex.CoAP.Mapping do
-  @moduledoc "Draft CoAP Form mapping with explicit content conversion and preserved extensions."
+  @moduledoc """
+  Maps a W3C Web of Things Form to the package's dated CoAP profile.
+
+  `command/4` selects the declared or default method, validates a `coap` href,
+  converts JSON, UTF-8 text, or opaque binary input, and constructs a
+  `Wotex.CoAP.Message`. The supported `cov:` terms are interpreted according to
+  the draft baseline documented by the package. The original `Wotex.Form` is
+  retained so unknown extension terms are not discarded.
+
+  `decode/2` accepts successful CoAP response codes, verifies content format,
+  and converts the payload without treating a remote error response as a
+  Property value. Mapping is pure: it does not authorize an operation, resolve
+  DNS, open a socket, or prove peer behavior. This module does not claim W3C
+  binding-registry or Profile conformance.
+  """
 
   alias Wotex.{CoAP, Form, JSON}
   alias Wotex.CoAP.{Codec, Error, Message}
