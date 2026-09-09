@@ -307,7 +307,7 @@ defmodule Wotex.CoAP.Observation do
     request = %{state.config.request | token: <<>>}
 
     {result, _} =
-      Blockwise.continue(request, first, [], nil, fn _, value ->
+      Blockwise.continue(request, first, [block_size: 1024], nil, fn _, value ->
         {failure(:invalid_observation_response), value}
       end)
 

@@ -418,7 +418,7 @@ defmodule Wotex.CoAP.Connection do
 
   defp validate(message, {:observation, capability, {:continue, first}}, [])
        when is_reference(capability),
-       do: Blockwise.validate_continuation(message, first, [])
+       do: Blockwise.validate_continuation(message, first, block_size: 1024)
 
   defp validate(message, {:observation, capability, operation}, [])
        when is_reference(capability) and operation in [:register, :renew, :cancel],
@@ -589,7 +589,7 @@ defmodule Wotex.CoAP.Connection do
           elem(Blockwise.continue(call.message, first, call.options, nil, exchange), 0)
 
         {:observation, _, {:continue, first}} ->
-          elem(Blockwise.continue(call.message, first, [], nil, exchange), 0)
+          elem(Blockwise.continue(call.message, first, [block_size: 1024], nil, exchange), 0)
 
         {:observation, _, _} ->
           {result, _} = exchange.(call.message, nil)

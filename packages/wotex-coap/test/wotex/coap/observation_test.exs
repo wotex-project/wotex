@@ -615,6 +615,51 @@ defmodule Wotex.CoAP.ObservationTest do
     end
   end
 
+  test "WCO-S02 WCO-V10 native initial and subsequent notifications accept 1024-byte Block2" do
+    {peer, port} = peer()
+    {:ok, session} = CoAP.connect(host: "127.0.0.1", port: port, timeout: 1000)
+    receiver = self()
+    task = Task.async(fn -> CoAP.subscribe(session, %{path: "/x", receiver: receiver}) end)
+    request = wire().message
+
+    for sequence <- [10, 11] do
+      type = if sequence == 10, do: :ack, else: :con
+      mid = if sequence == 10, do: request.message_id, else: 799
+
+      first = %{
+        report(request, type, sequence, :binary.copy("x", 1024))
+        | message_id: mid,
+          options: [{6, Codec.uint(sequence)}, {23, <<14>>}]
+      }
+
+      send(peer.pid, {:reply, first})
+      if sequence == 11, do: assert(wire().message.type == :ack)
+      continuation = wire().message
+      assert Codec.option(continuation, 23) == [<<22>>]
+      assert continuation.token != request.token
+      assert Codec.option(continuation, 6) == []
+
+      send(
+        peer.pid,
+        {:reply, %{continuation | type: :ack, code: 69, options: [{23, <<22>>}], payload: "!"}}
+      )
+
+      assert_receive {:wotex_coap, _, {:ok, %{payload: body}, %{observe: ^sequence}}}
+      assert body == :binary.copy("x", 1024) <> "!"
+    end
+
+    send(
+      peer.pid,
+      {:reply,
+       %{report(request, :con, 12, "small") | message_id: 798, options: [{6, <<12>>}, {23, <<6>>}]}}
+    )
+
+    assert wire().message.type == :ack
+    assert_receive {:wotex_coap, _, {:ok, %{payload: "small"}, %{observe: 12}}}
+    assert {:ok, handle} = Task.await(task)
+    cancel(peer, session, handle)
+  end
+
   defp await(owner, predicate),
     do: await(owner, predicate, System.monotonic_time(:millisecond) + 1000)
 
