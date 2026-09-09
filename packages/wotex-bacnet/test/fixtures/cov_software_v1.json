@@ -1,0 +1,35 @@
+{
+  "format_version": "1.0.0",
+  "profile": "bacnet_ip_cov",
+  "peer_revision": "3603048350b8ba543ec76cf6aa8a232b3f4d442d",
+  "cases": [
+    {
+      "id": "WBA-ST03",
+      "requirements": ["WBA-S03", "WBA-S04", "WBA-C09", "WBA-V11", "WBA-V14"],
+      "input": {
+        "receiver_death_cycles": 100,
+        "modes": ["object_confirmed", "object_unconfirmed", "property_confirmed", "property_unconfirmed"],
+        "held_subscriptions": 1,
+        "lifetime_seconds": 60,
+        "renew": true
+      },
+      "expected": {
+        "cycles_per_mode": 25,
+        "local_cleanup_budget_ms": 1000,
+        "scheduler_tolerance_ms": 100,
+        "owned_subscription_processes_after_each_cycle": 0,
+        "captured_subscription_timers_after_each_cycle": 0,
+        "pending_operations_after_each_cycle": 0,
+        "pending_controls_after_each_cycle": 0,
+        "pending_apdus_after_each_cycle": 0,
+        "local_subscriptions_after_each_cycle": 1,
+        "local_listeners_after_each_cycle": 1,
+        "server_subscriptions_after_each_cycle": 1,
+        "server_invoke_ids_after_each_cycle": 0,
+        "owned_processes_after_close": 0,
+        "owned_sockets_after_close": 0,
+        "server_subscriptions_after_close": 0
+      }
+    }
+  ]
+}

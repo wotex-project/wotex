@@ -97,10 +97,19 @@ eviction, unsupported selectors, public Runtime observation/stop and all four
 registration/renewal/cancellation loss controls. Runtime stop retains the
 original association when the selected stop Form contains a different target.
 
+`test/software/cov_lifecycle_stress_test.exs` binds WBA-ST03 to 100 receiver
+deaths, with 25 cycles in each object/Property and confirmed/unconfirmed mode.
+One independent Property subscription remains live throughout. Every cycle
+checks actual cancellation and server counts, both local subscription processes,
+captured lease/renew timers and settled client control/APDU/listener tables.
+Final close checks all six stack processes and its UDP socket. The JSON receipt
+records per-cycle elapsed cleanup, tracked BEAM heap/process memory and native
+peak RSS separately. It requires the explicit `WOTEX_BACNET_RESULTS_DIR`.
+
 The existing Dockerfile and shell entry points run the upstream read/write demo.
 They do not select this instrumented fixture or implement the required Mix
-workspace/manifest contract. Final WBA-P06 acceptance also needs receiver-death
-stress and the complete supported source/archive cohorts.
+workspace/manifest contract. Final WBA-P06 acceptance also needs the complete
+fault workflow and supported source/archive cohorts.
 
 ## Property COV fixture
 

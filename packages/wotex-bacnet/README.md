@@ -94,7 +94,8 @@ borrowed BACstack Client supports read/write operations only. Native and real
 Runtime lifecycle tests exercise COV ownership. The independent C fixture tests
 object and Property COV, discovery, batch reads, priority release and
 acknowledgment loss. Property tests include the public Runtime observation path.
-The complete stress workflow and final source/archive cohorts
+Receiver-death stress covers 100 cycles with another association retained.
+The complete fault workflow and final source/archive cohorts
 remain open in WBA-P06. Routing/BBMD, MS/TP and
 BACnet/SC are unsupported.
 

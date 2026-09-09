@@ -62,7 +62,7 @@ described below.
 The checked-in `build_software.sh` and `run_software.sh` exercise the read/write
 fixture. They accept environment configuration and do not implement the target
 absolute-workspace admission or complete source/toolchain/binary manifest.
-The required Mix build/run tasks, full receiver-death stress and final software
+The required Mix build/run tasks, complete fault workflow and final software
 matrix/archive cohort remain required.
 A COV listener or final receiver queue bound does not bound an earlier
 SDK-to-StackOwner mailbox.
@@ -119,6 +119,24 @@ Peak native RSS is reported separately from live resource counts. These cases
 do not establish complete C09 stress or the final immutable package consumer
 cohort. The fixture's explicit source/options and counter semantics are part of
 its contract, not a claim of general-purpose server support.
+
+## Receiver-death stress
+
+WBA-ST03 in `test/software/cov_lifecycle_stress_test.exs` executes 100 receiver
+deaths against the instrumented C peer. Its versioned vector is
+`test/fixtures/cov_software_v1.json`. Each object/Property and
+confirmed/unconfirmed combination runs 25 times. A second subscription remains
+live throughout; every cycle observes one server cancellation and preserves
+exactly that second server record and client listener. Both subscription
+processes terminate, both captured lease/renew timers cancel, and pending
+operation/control/APDU/COV-reply/assembly tables return to baseline.
+
+The current Elixir 1.20.2 / OTP 29.0.4 execution uses the Linux ARM64 ASan/UBSan
+peer. All 101 subscriptions are cancelled, including the held association.
+Final server subscription/Invoke-ID counts are zero, and the six owned stack
+processes and UDP socket close. The receipt separates elapsed local cleanup,
+per-cycle client heap words/process bytes and native peak RSS. Those memory
+observations do not assert constant heap size or unchanged RSS.
 
 ## Evidence identities
 
