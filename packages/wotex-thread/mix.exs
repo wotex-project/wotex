@@ -1,7 +1,7 @@
 defmodule WotexThread.MixProject do
   use Mix.Project
 
-  @version "0.1.0-dev"
+  @version "0.1.0"
   @source_url "https://github.com/wotex-project/wotex-thread"
 
   def project do
@@ -46,6 +46,7 @@ defmodule WotexThread.MixProject do
       {:telemetry, "~> 1.3"},
       {:stream_data, "~> 1.2", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:git_ops, "~> 2.10", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -67,7 +68,7 @@ defmodule WotexThread.MixProject do
           raise "WOTEX_PATH_DEPS is allowed only in non-production development environments"
         end
 
-      _value ->
+      _ ->
         raise "WOTEX_PATH_DEPS must be unset or equal to 1"
     end
   end
@@ -84,7 +85,7 @@ defmodule WotexThread.MixProject do
           raise "WOTEX_PATH_DEPS is allowed only in non-production development environments"
         end
 
-      _value ->
+      _ ->
         raise "WOTEX_PATH_DEPS must be unset or equal to 1"
     end
   end
