@@ -1,5 +1,6 @@
 defmodule Wotex.OPCUA.PortTest do
   @moduledoc false
+
   use ExUnit.Case, async: true
   alias Wotex.OPCUA
   alias Wotex.OPCUA.{Error, TestClient}

@@ -1,5 +1,6 @@
 defmodule Wotex.OPCUA.TestClient do
   @moduledoc false
+
   @behaviour Wotex.OPCUA.Client
 
   @impl Wotex.OPCUA.Client
