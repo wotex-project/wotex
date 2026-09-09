@@ -25,7 +25,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 3,
+  "attempt": 4,
   "budgets": {
     "default_children_per_role": 128,
     "max_children_per_role": 10000,
@@ -61,23 +61,23 @@
     }
   ],
   "durations": {
-    "run_ms": 3358
+    "run_ms": 100
   },
   "fixtures": {},
   "inputs": [
     "command:WOTEX_PATH_DEPS=1 mix test test/wotex/lab/library_contract_test.exs test/wotex/lab/supervisor_test.exs --seed 1",
     "cohort:source-and-public-api-review",
-    "renewal:2026-09-09-native-contract-alignment;seed=1;manifest-integrity-checked-separately"
+    "verification:2026-09-09-committed-quality-boundary;seed=1;manifest-integrity-checked-separately"
   ],
-  "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
+  "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
   "outcomes": {
     "test_count": 12
   },
-  "revision": "8de712b66f261772e2cd78affe150df19984274f+documentation-review",
+  "revision": "db63f34a08d410014c15e4f901ccdb0837e01cbc",
   "scenario_id": "WLB.01-library-foundation",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:a24c21df568b75e26ee3debae878d9780a8e884f25a89b118304032a53c42d07",
+  "source_tree_digest": "sha256:736182dddcb08bec753897b513ab73a3b1499b173cf1f2c16dcc7cebe9ad2193",
   "toolchain": {
     "backend": "BEAM-supervision",
     "elixir": "1.20.2",

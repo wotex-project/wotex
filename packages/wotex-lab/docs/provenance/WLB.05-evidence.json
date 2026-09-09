@@ -41,7 +41,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 9,
+  "attempt": 10,
   "budgets": {
     "capacity": 64,
     "deadline_ms": 60000,
@@ -130,7 +130,7 @@
     }
   ],
   "durations": {
-    "run_ms": 34044
+    "run_ms": 38000
   },
   "fixtures": {
     "loopback/thing-description.json": "sha256:59da3c2a80403a794cbc38bb8a4a91d0d671df481fa2dd441004b4f3c99d90ec"
@@ -139,19 +139,19 @@
     "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test test/wotex/lab/continuum_test.exs test/wotex/lab/cookbook_test.exs test/wotex/lab/directory_test.exs test/wotex/lab/smart_room_test.exs --seed 1",
     "broker-image:eclipse-mosquitto:2",
     "fault-schedule:1.0.0",
-    "renewal:2026-09-09-native-contract-alignment;seed=1;manifest-integrity-checked-separately"
+    "verification:2026-09-09-committed-quality-boundary;seed=1;manifest-integrity-checked-separately"
   ],
-  "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
+  "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
   "outcomes": {
     "broker_enabled": true,
     "excluded_count": 0,
     "test_count": 66
   },
-  "revision": "8de712b66f261772e2cd78affe150df19984274f+documentation-review",
+  "revision": "db63f34a08d410014c15e4f901ccdb0837e01cbc",
   "scenario_id": "WLB.05-directory-continuum-and-smart-room",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:080985843166c9eb93648ba673427876294eb9d1909ef62f342fbbe14723cd55",
+  "source_tree_digest": "sha256:53bf7b488d94530df35d8d19bfbb0290a4812de0255ea460732e52c70a0d84da",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-BEAM-network",
     "elixir": "1.20.2",

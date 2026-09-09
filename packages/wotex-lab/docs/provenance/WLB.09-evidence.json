@@ -49,7 +49,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 20,
+  "attempt": 21,
   "budgets": {
     "deadline_ms": 120000,
     "max_depth": 1000,
@@ -103,7 +103,7 @@
     }
   ],
   "durations": {
-    "run_ms": 33211
+    "run_ms": 32600
   },
   "fixtures": {
     "model:thermal-control-v1": "sha256:04d49d3e2f8c80e4b1e1199bbc41a22f410c76bbb7606a378a5b0be3ae005b13"
@@ -114,9 +114,9 @@
     "engine-executable:sha256:266eed04679fde6029a18e5e2b1828223d4a7169ac55503aa15d67e126792fbf",
     "model:thermal-control-v1",
     "cookbook:formal-control",
-    "renewal:2026-09-09-native-contract-alignment;seed=1;manifest-integrity-checked-separately"
+    "verification:2026-09-09-committed-quality-boundary;seed=1;manifest-integrity-checked-separately"
   ],
-  "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
+  "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
   "outcomes": {
     "broken_variants": 5,
     "cookbook_checks": 9,
@@ -125,11 +125,11 @@
     "safe_properties": 5,
     "test_count": 49
   },
-  "revision": "8de712b66f261772e2cd78affe150df19984274f+documentation-review",
+  "revision": "db63f34a08d410014c15e4f901ccdb0837e01cbc",
   "scenario_id": "WLB.09-formal-control-verification",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:eff002cb0f815901b0fb832dd8c8d6c545d5725fbf09b03907d2805f7b073941",
+  "source_tree_digest": "sha256:1dd2cea3a9c3231fb062d8234691141618962cdb7a22b41f621d5d182273c0ba",
   "toolchain": {
     "backend": "Maude-3.5.1-port",
     "elixir": "1.20.2",

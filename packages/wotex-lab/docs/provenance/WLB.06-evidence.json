@@ -65,7 +65,7 @@
       "status": "not_run"
     }
   ],
-  "attempt": 20,
+  "attempt": 21,
   "budgets": {
     "cpu_seconds": 8,
     "deadline_ms": 30000,
@@ -140,7 +140,7 @@
     }
   ],
   "durations": {
-    "run_ms": 17194
+    "run_ms": 10100
   },
   "fixtures": {
     "corpus:thing-description-1.1": "sha256:1dc979f8599bbcd0e441bc09c7266169f42bee40384fbacd4ad1e1c2b8caac07",
@@ -154,20 +154,20 @@
     "excluded-corpus:WCF-C05-discovery-not-applicable-to-core-target",
     "launcher-executable:sha256:21917819b2d8811107f42bd236bce3e7dea9adf752bd2b9501dae399e43d86a5",
     "exclusion-scope:one-discovery-corpus;exunit-excluded=0",
-    "renewal:2026-09-09-native-contract-alignment;seed=1;manifest-integrity-checked-separately"
+    "verification:2026-09-09-committed-quality-boundary;seed=1;manifest-integrity-checked-separately"
   ],
-  "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
+  "lock_digest": "sha256:f43db45a4bdfcc9a55e73dab8465de210b26773f9083329b3a200f4d2655bfe5",
   "outcomes": {
     "excluded_count": 1,
     "test_count": 53,
     "thing_description_vectors": 14,
     "thing_model_vectors": 6
   },
-  "revision": "8de712b66f261772e2cd78affe150df19984274f+documentation-review",
+  "revision": "db63f34a08d410014c15e4f901ccdb0837e01cbc",
   "scenario_id": "WLB.06-evidence-conformance-and-observability",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:af22481509131641c6bcebb288c687273b969548b1ba7f7d7ecc0647891b01e9",
+  "source_tree_digest": "sha256:ff12d05423b165de3c6a4d8e8e2279431b4c4f140a99b3e6b10acbaff8ecc614",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-Darwin-sandbox-exec",
     "elixir": "1.20.2",
