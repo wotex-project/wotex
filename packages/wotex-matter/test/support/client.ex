@@ -1,5 +1,6 @@
 defmodule Wotex.Matter.TestClient do
   @moduledoc false
+
   @behaviour Wotex.Matter.Client
 
   @impl Wotex.Matter.Client
