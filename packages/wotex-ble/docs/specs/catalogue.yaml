@@ -57,7 +57,7 @@ specifications:
     executable_evidence: []
     compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WBL.13"
-    version: "1.0.3"
+    version: "1.0.4"
     path: "docs/specs/WBL.13-native-backend.md"
     implementation_status: "partial"
     standards: [{"name": "Native BlueZ GATT central", "revision": "Exact source hashes and build profile in .13", "claim": "Accepted native target; current baseline evidence is separate"}]

@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.3
+  version: 1.0.4
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -92,9 +92,14 @@ The native event loop keeps stdin and framed output nonblocking. Its report
 output backlog is at most 1048576 bytes, with the separate control reservation
 below; overflow terminates the owned generation
 and releases its resources. Logs use a separate sink. EOF, owner death, bad
-framing and deadline escalation share the cleanup path. The owner allows C03's
-1000 ms local cleanup grace, then terminates and reaps its own native process
-and descendants. Neither graceful close nor timeout claims remote rollback.
+framing and deadline escalation share the cleanup path. Cooperative SDK cleanup
+uses at most the first 500 ms of C03's single 1000 ms local cleanup deadline.
+The independent process guardian has the remaining 500 ms to terminate and
+reap its direct SDK child and terminate ordinary members of that child's process
+group. The BLE SDK host does not fork. This portable boundary does not claim
+containment of deliberate process-group/session escapes or uninterruptible kernel
+state. Repeated close, EOF or signals cannot restart either allowance. Neither
+graceful close nor timeout claims remote rollback.
 The admission record bounds, original-route cancellation and callback ownership
 below apply even when data work is blocked or the ordinary queue is full.
 
@@ -326,10 +331,25 @@ selected device's false Connected or ServicesResolved state for explicit owned
 connection handling. After that acceptance, false state or removal of the
 selected adapter, device, service or characteristic terminates the generation.
 NameOwnerChanged reports `:owner_changed`; it never adopts the replacement.
-This discovery component issues no Connect, Disconnect or Pair method. The
-Central owns those explicit procedures and the link-layer ownership decision.
-Closing the discovery owner cancels its pending refresh and releases its private
-bus resources; late replies produce no callback. Integer libdbus timeouts round
+Metadata-only acquisition issues no link procedure. Explicit connection startup
+adopts the caller's owned/borrowed mode. An initially connected device remains
+borrowed even in owned mode. An initially disconnected device in owned mode
+permits exactly one Connect attempt, followed by event-driven waiting and
+reconciliation of Connected and ServicesResolved within the original deadline.
+There is no Connect retry. A typed remote rejection does not confer link
+ownership; a missing or malformed acknowledgement retains responsibility for
+cleaning up this explicitly owned attempt.
+
+An owned attempt's cleanup cancels ordinary pending D-Bus calls, submits
+Disconnect to the original unique sender and exact device path, and drains
+that call only within the 500 ms cooperative allowance. It then releases its
+private connection, listeners and timers. A blocked Disconnect reply cannot
+extend that allowance. Disconnect submission is distinct from BlueZ controller
+disconnection under S02. Loss of the original D-Bus channel prevents further
+method submission; cleanup never acquires a replacement sender or targets a new
+BlueZ owner. Borrowed links receive no Disconnect. Explicit close joins a single
+closing phase. Startup failure is reported only after this local cleanup;
+cancelled queries and late replies produce no callback. Integer libdbus timeouts round
 up to milliseconds, while the absolute deadline still rejects late success.
 
 The pinned libdbus 1.16.2 [connection API](https://dbus.freedesktop.org/doc/api/html/group__DBusConnection.html)

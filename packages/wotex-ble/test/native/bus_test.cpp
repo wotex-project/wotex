@@ -101,11 +101,12 @@ static std::string id(Bus &bus) {
   check(result.size() == 32);
   return result;
 }
-static bool has_owner(Bus &bus, const std::string &name) {
+static bool has_owner(Bus &bus, const std::string &name,
+                       Deadline deadline = Clock::now() + std::chrono::seconds(1)) {
   auto request = method("NameHasOwner"); const char *argument = name.c_str();
   check(dbus_message_append_args(request.get(), DBUS_TYPE_STRING, &argument, DBUS_TYPE_INVALID));
   bool complete = false; dbus_bool_t result = true;
-  check(bus.call(request.get(), "b", Clock::now() + std::chrono::seconds(1), [&](BusReply reply) {
+  check(bus.call(request.get(), "b", deadline, [&](BusReply reply) {
     check(!reply.error);
     check(dbus_message_get_args(reply.message.get(), nullptr, DBUS_TYPE_BOOLEAN, &result, DBUS_TYPE_INVALID));
     complete = true;
@@ -165,7 +166,12 @@ static void service_identity(const std::string &address) {
   until_service(service, [&] { return lost == 1; });
   check(!service.active() && service.owner().empty());
   check(service.bus().pending_count() == 0 && service.bus().listener_count() == 0);
-  check(!has_owner(replacement, client));
+  // A different sender's query can reach the daemon before the closed socket's
+  // EOF. Observe release within the ownership grace, without assuming ordering
+  // between those two connections.
+  const auto released_by = Clock::now() + std::chrono::milliseconds(1000);
+  while (Clock::now() < released_by && has_owner(replacement, client, released_by)) {}
+  check(Clock::now() < released_by);
   check(ready == 1 && lost == 1 && has_owner(replacement, "org.bluez"));
   check(!service.start(Clock::now() + std::chrono::seconds(1), [](auto) {}, [](auto) {}));
   service.close(); service.close();
@@ -448,6 +454,7 @@ int main(int argc, char **argv) {
     signals(daemon.address);
     service_identity(daemon.address);
     discovery_test::invariants(daemon.address);
+    discovery_test::connection_invariants(daemon.address);
     unix_fds(daemon.address, 1);
 #ifdef __linux__
     unix_fds(daemon.address, 2);

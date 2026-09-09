@@ -156,7 +156,19 @@ returns `timeout`; close and late replies leave zero pending calls, listeners,
 watches and timers. A callback can close its own discovery owner.
 
 This peer implements the D-Bus boundary without a Bluetooth controller. These
-tests do not establish radio discovery, native Connect/Pair/ReadValue/WriteValue,
+tests do not establish radio discovery, real BlueZ Connect/Pair/ReadValue/WriteValue,
 GATT notifications, the complete Port helper or the virtual-controller profile.
 The existing public Elixir connection still executes the separately described
 Python adapter baseline.
+
+The native connection cases issue actual D-Bus Connect and Disconnect methods to
+the private fixture service. Both owned and borrowed modes preserve an initially
+connected link without either method. Borrowed disconnected/unresolved devices
+fail. Owned startup waits for an actual ServicesResolved signal and a fresh typed
+snapshot after Connect acknowledgement. Lost or malformed Connect acknowledgements
+retain the attempt's cleanup responsibility; a typed rejection acquires no link.
+The fixture asserts the identical unique sender for Connect and Disconnect,
+suppression of late replies, and cancellation of pending calls. A blocked
+Disconnect reply releases local resources within the cooperative allowance.
+This is native D-Bus procedure/ownership evidence. BlueZ/controller execution
+and the independent production guardian remain separate acceptance requirements.

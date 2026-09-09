@@ -307,6 +307,8 @@ public:
     listeners_.erase(found);
   }
 
+  void cancel_calls() noexcept { pending_.clear(); }
+
   // Extra descriptors belong to the caller (typically native stdin/stdout).
   // Their readiness is returned without transferring their ownership to libdbus.
   void poll(std::vector<pollfd> &extra, int wait_ms) {
