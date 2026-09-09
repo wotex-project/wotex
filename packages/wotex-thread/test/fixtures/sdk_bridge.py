@@ -43,7 +43,14 @@ for line in sys.stdin:
         if mode=='bad_json':sys.stdout.write('{bad}\n');sys.stdout.flush();break
         if mode=='truncated':sys.stdout.write('{');sys.stdout.flush();break
         if mode=='large':sys.stdout.write('x'*131072+'\n');sys.stdout.flush();break
-        if mode=='error':
+        if operation=='validate_dataset':
+            if mode=='dataset_invalid':write(dict(version=1,id=request['id'],ok=False,error=dict(code='invalid_dataset')))
+            else:reply(request,None)
+        elif operation=='get_dataset':
+            if mode=='dataset_invalid':reply(request,dict(type='bytes',base64='AB=='))
+            elif mode=='dataset_missing':write(dict(version=1,id=request['id'],ok=False,error=dict(code='dataset_not_found')))
+            else:reply(request,dict(type='bytes',base64='+gEA'))
+        elif mode=='error':
             write(dict(version=1,id=request['id'],ok=False,error=dict(code='remote_error',status=253)))
         else:reply(request,dict(inspect=state,state='disabled',version='fixture',network_name=None,rloc16=None)[operation])
 (root/'exited').write_text('done')

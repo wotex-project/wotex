@@ -47,7 +47,7 @@ defmodule Wotex.Thread.OpenThread do
   @spec session(term()) :: {:ok, Session.t()} | {:error, Error.t()}
   defdelegate session(pid), to: Connection
 
-  @doc "Executes one validated inspection under a single finite deadline."
+  @doc "Executes one validated native request under a single finite deadline."
   @impl Wotex.Thread.Client
   @spec request(term(), term(), term()) :: {:ok, term()} | {:error, Error.t()}
   defdelegate request(handle, message, timeout), to: Connection

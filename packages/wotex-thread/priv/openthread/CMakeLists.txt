@@ -65,8 +65,15 @@ if(WOTEX_OPENTHREAD_SOURCE)
     endforeach()
   endif()
   add_executable(wotex-thread-host host.cpp)
-  target_include_directories(wotex-thread-host PRIVATE "${WOTEX_OPENTHREAD_SOURCE}/include")
-  target_link_libraries(wotex-thread-host PRIVATE wotex-thread-protocol openthread-posix
-    openthread-ftd openthread-posix openthread-cli-ftd openthread-hdlc
-    openthread-radio-spinel openthread-spinel-rcp ot-config-ftd ot-config)
+  set(host_targets wotex-thread-host)
+  if(WOTEX_NATIVE_TEST_SOURCE)
+    add_executable(wotex-thread-dataset-seed "${WOTEX_NATIVE_TEST_SOURCE}/dataset_seed.cpp")
+    list(APPEND host_targets wotex-thread-dataset-seed)
+  endif()
+  foreach(host_target ${host_targets})
+    target_include_directories(${host_target} PRIVATE "${WOTEX_OPENTHREAD_SOURCE}/include")
+    target_link_libraries(${host_target} PRIVATE wotex-thread-protocol openthread-posix
+      openthread-ftd openthread-posix openthread-cli-ftd openthread-hdlc
+      openthread-radio-spinel openthread-spinel-rcp ot-config-ftd ot-config)
+  endforeach()
 endif()

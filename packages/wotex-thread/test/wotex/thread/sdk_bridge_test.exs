@@ -265,6 +265,7 @@ defmodule Wotex.Thread.SdkBridgeTest do
     tasks = for _ <- 1..64, do: Task.async(fn -> OpenThread.disconnect(handle) end)
     eventually(fn -> length(:sys.get_state(handle.pid).close_waiters) == 64 end)
     assert {:error, %Error{code: :busy}} = OpenThread.disconnect(handle)
+    send(handle.pid, {:EXIT, :sys.get_state(handle.pid).port, :normal})
 
     assert {:error, %Error{code: :connection_closed}} =
              OpenThread.request(handle, %{type: :state}, 100)
@@ -339,15 +340,22 @@ defmodule Wotex.Thread.SdkBridgeTest do
     deadline = System.monotonic_time(:millisecond) + 1000
 
     assert {:error, %Error{code: :invalid_message}} =
-             GenServer.call(handle.pid, {handle.reference, :request, "unknown", deadline})
+             GenServer.call(handle.pid, {handle.reference, :request, %{type: :unknown}, deadline})
 
     assert {:error, %Error{code: :timeout}} =
-             GenServer.call(handle.pid, {handle.reference, :request, "state", deadline - 1000})
+             GenServer.call(
+               handle.pid,
+               {handle.reference, :request, %{type: :state}, deadline - 1000}
+             )
 
     assert {:error, %Error{code: :invalid_handle}} = GenServer.call(handle.pid, :forged)
     send(handle.pid, {:deadline, "missing"})
     send(handle.pid, {:DOWN, make_ref(), :process, self(), :normal})
     send(handle.pid, :stale)
+    helper = Port.open({:spawn_executable, System.find_executable("cat")}, [:binary])
+    send(handle.pid, {:EXIT, helper, :normal})
+    Port.close(helper)
+    send(handle.pid, {:EXIT, :sys.get_state(handle.pid).port, :normal})
     assert {:ok, "disabled"} = OpenThread.request(handle, %{type: :state}, 1000)
     assert Enum.map(requests(context), & &1["operation"]) == ["open", "state"]
     assert :ok = OpenThread.disconnect(handle)
@@ -373,6 +381,39 @@ defmodule Wotex.Thread.SdkBridgeTest do
     refute inspect(redacted) =~ "secret"
     assert redacted.state == %{status: :ready, pending: 1}
     assert redacted.unrelated == :preserved
+  end
+
+  test "WTH-S01 WTH-V02 native Dataset dispatch keeps credential bytes out of status", context do
+    {:ok, dataset} = Wotex.Thread.Dataset.decode(<<5, 16, "canary-key-16byt">>)
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+    assert :ok = Wotex.Thread.validate_dataset(session, dataset, :active, 1000)
+
+    assert {:ok, %Wotex.Thread.Dataset{entries: [{250, <<0>>}]}} =
+             Wotex.Thread.get_dataset(session, :pending, 1000)
+
+    refute inspect(:sys.get_status(session.handle.pid)) =~ "canary-key"
+    assert :ok = Wotex.Thread.disconnect(session)
+
+    File.write!(Path.join(context.directory, "mode"), "dataset_missing")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error, %Error{code: :dataset_not_found}} =
+             Wotex.Thread.get_dataset(session, :active, 1000)
+
+    assert :ok = Wotex.Thread.disconnect(session)
+
+    File.write!(Path.join(context.directory, "mode"), "dataset_invalid")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error, %Error{code: :invalid_dataset}} =
+             Wotex.Thread.validate_dataset(session, dataset, :active, 1000)
+
+    assert Process.alive?(session.handle.pid)
+
+    assert {:error, %Error{code: :invalid_response}} =
+             Wotex.Thread.get_dataset(session, :active, 1000)
+
+    refute Process.alive?(session.handle.pid)
   end
 
   defp requests(context) do

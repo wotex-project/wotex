@@ -2,6 +2,7 @@ defmodule Wotex.Thread.OpenThread.Frame do
   @moduledoc false
 
   alias Wotex.Thread.{Error, State}
+  alias Wotex.Thread.OpenThread.DatasetWire
 
   @revision "5c8c318627954c99cd1a957a290bbd4b1027d04b"
   @roles ~w(disabled detached child router leader)
@@ -14,6 +15,8 @@ defmodule Wotex.Thread.OpenThread.Frame do
   }
   @errors %{
     "invalid_request" => :invalid_message,
+    "invalid_dataset" => :invalid_dataset,
+    "dataset_not_found" => :dataset_not_found,
     "storage_unavailable" => :storage_unavailable,
     "interface_in_use" => :interface_in_use,
     "already_open" => :already_open,
@@ -129,6 +132,15 @@ defmodule Wotex.Thread.OpenThread.Frame do
       {:ok, state}
     else
       _ -> :invalid
+    end
+  end
+
+  defp value(nil, "validate_dataset"), do: {:ok, nil}
+
+  defp value(value, "get_dataset") do
+    case DatasetWire.decode(value) do
+      {:ok, dataset} -> {:ok, dataset}
+      {:error, _} -> :invalid
     end
   end
 

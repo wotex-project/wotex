@@ -2,6 +2,7 @@
 #define WOTEX_THREAD_SDK_HPP
 
 #include "protocol.hpp"
+#include "dataset.hpp"
 #include "storage.hpp"
 #include <openthread/commissioner.h>
 #include <openthread/instance.h>
@@ -91,6 +92,19 @@ class Sdk final {
     if (operation == "network_name") return state.at("network_name");
     if (operation == "rloc16") return state.at("rloc16");
     throw SdkError("not_supported");
+  }
+  Json dataset(const std::string &operation, const Json &parameters) const {
+    const bool active = dataset_kind(parameters, operation == "validate_dataset");
+    if (operation == "validate_dataset") {
+      DatasetValue value(parameters.at("dataset"));
+      if (!value.valid(active)) throw DatasetError();
+      return nullptr;
+    }
+    otOperationalDatasetTlvs tlvs {};
+    const otError error = active ? otDatasetGetActiveTlvs(instance_, &tlvs) : otDatasetGetPendingTlvs(instance_, &tlvs);
+    if (error == OT_ERROR_NOT_FOUND) throw SdkError("dataset_not_found");
+    if (error != OT_ERROR_NONE) throw SdkError("invalid_sdk_state");
+    return dataset_envelope(tlvs);
   }
   void update(otSysMainloopContext &mainloop) {
     otTaskletsProcess(instance_);

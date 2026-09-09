@@ -2,8 +2,8 @@ defmodule Wotex.Thread.OpenThread.Connection do
   @moduledoc false
 
   use GenServer
-  alias Wotex.Thread.{Address, Error, Session}
-  alias Wotex.Thread.OpenThread.{Config, Frame}
+  alias Wotex.Thread.{Error, Session}
+  alias Wotex.Thread.OpenThread.{Config, Frame, Request}
 
   @owner_key {__MODULE__, :owner}
 
@@ -46,8 +46,8 @@ defmodule Wotex.Thread.OpenThread.Connection do
 
     with :ok <- validate(handle),
          true <- is_integer(timeout) and timeout in 1..60_000,
-         {:ok, operation} <- operation(message) do
-      call(handle.pid, {handle.reference, :request, operation, entered + timeout}, timeout + 1000)
+         {:ok, _} <- Request.encode(message) do
+      call(handle.pid, {handle.reference, :request, message, entered + timeout}, timeout + 1000)
     else
       false -> {:error, Error.new(:invalid_options)}
       {:error, _} = error -> error
@@ -135,39 +135,25 @@ defmodule Wotex.Thread.OpenThread.Connection do
   end
 
   def handle_call(
-        {reference, :request, operation, deadline},
+        {reference, :request, message, deadline},
         from,
         %{handle: %{reference: reference}, status: :ready} = state
       ) do
-    cond do
-      operation not in ["inspect", "state", "version", "network_name", "rloc16"] ->
-        {:reply, {:error, Error.new(:invalid_message)}, state}
+    case Request.encode(message) do
+      {:ok, {operation, parameters}} ->
+        cond do
+          not is_integer(deadline) or deadline <= now() ->
+            {:reply, {:error, Error.new(:timeout)}, state}
 
-      not is_integer(deadline) or deadline <= now() ->
-        {:reply, {:error, Error.new(:timeout)}, state}
+          map_size(state.pending) >= 64 ->
+            {:reply, {:error, Error.new(:busy)}, state}
 
-      map_size(state.pending) >= 64 ->
-        {:reply, {:error, Error.new(:busy)}, state}
+          true ->
+            {:noreply, admit(state, from, operation, parameters, deadline)}
+        end
 
-      true ->
-        id = Integer.to_string(state.counter + 1)
-
-        pending = %{
-          from: from,
-          operation: operation,
-          deadline: deadline,
-          monitor: Process.monitor(elem(from, 0)),
-          timer: Process.send_after(self(), {:deadline, id}, max(deadline - now(), 0))
-        }
-
-        updated = %{
-          state
-          | counter: state.counter + 1,
-            pending: Map.put(state.pending, id, pending),
-            queue: :queue.in(id, state.queue)
-        }
-
-        {:noreply, advance(updated)}
+      {:error, error} ->
+        {:reply, {:error, error}, state}
     end
   end
 
@@ -256,7 +242,14 @@ defmodule Wotex.Thread.OpenThread.Connection do
   def handle_info(:cleanup_deadline, %{status: :closing} = state),
     do: {:stop, :normal, reply_all(%{state | failure: Error.new(:cleanup_timeout)})}
 
-  def handle_info({:EXIT, _, _}, state), do: {:noreply, close(state, Error.new(:owner_down))}
+  def handle_info({:EXIT, port, :normal}, %{port: port} = state), do: {:noreply, state}
+
+  def handle_info({:EXIT, port, _}, %{port: port} = state),
+    do: {:noreply, close(state, Error.new(:connection_closed))}
+
+  def handle_info({:EXIT, pid, _}, state) when is_pid(pid),
+    do: {:noreply, close(state, Error.new(:owner_down))}
+
   def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
@@ -282,11 +275,6 @@ defmodule Wotex.Thread.OpenThread.Connection do
        do: :ok
 
   defp validate(_), do: {:error, Error.new(:invalid_handle)}
-  defp operation(%{type: :inspect} = request) when map_size(request) == 1, do: {:ok, "inspect"}
-
-  defp operation(request) do
-    with :ok <- Address.validate_message(request), do: {:ok, Atom.to_string(request.type)}
-  end
 
   defp frame(message, %{status: :starting} = state) do
     if Frame.ready?(message) and now() < state.deadline do
@@ -358,6 +346,26 @@ defmodule Wotex.Thread.OpenThread.Connection do
       else: {:error, Error.new(:timeout)}
   end
 
+  defp admit(state, from, operation, parameters, deadline) do
+    id = Integer.to_string(state.counter + 1)
+
+    pending = %{
+      from: from,
+      operation: operation,
+      parameters: parameters,
+      deadline: deadline,
+      monitor: Process.monitor(elem(from, 0)),
+      timer: Process.send_after(self(), {:deadline, id}, max(deadline - now(), 0))
+    }
+
+    advance(%{
+      state
+      | counter: state.counter + 1,
+        pending: Map.put(state.pending, id, pending),
+        queue: :queue.in(id, state.queue)
+    })
+  end
+
   defp advance(%{active: nil, status: :ready} = state) do
     case :queue.out(state.queue) do
       {{:value, id}, queue} ->
@@ -368,10 +376,13 @@ defmodule Wotex.Thread.OpenThread.Connection do
           pending == nil ->
             advance(state)
 
+          not Process.alive?(elem(pending.from, 0)) ->
+            advance(complete(state, id, {:error, Error.new(:owner_down)}))
+
           pending.deadline <= now() ->
             advance(complete(state, id, {:error, Error.new(:timeout)}))
 
-          send_frame(state.port, id, pending.operation, %{}, pending.deadline) ->
+          send_frame(state.port, id, pending.operation, pending.parameters, pending.deadline) ->
             %{state | active: id}
 
           true ->

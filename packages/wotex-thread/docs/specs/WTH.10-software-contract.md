@@ -67,8 +67,18 @@ At this pin the API takes **TLVs**, not an `otOperationalDataset` pointer.
 Use `otDatasetParseTlvs` separately when structured field access is needed.
 No pure Elixir presence check may be advertised as SDK semantic validity.
 
-Validate channel/page/mask agreement, active/pending timestamp and Delay Timer
-rules through the SDK before mutation. The bridge returns `:invalid_dataset`
+Call the pinned SDK before mutation. Its validity function requires PSKc as
+well as the other required TLVs and validates individual TLV values and lengths.
+The bridge additionally requires the selected Channel to belong to the parsed
+Channel Mask and rejects Pending Timestamp or Delay Timer in an active Dataset;
+`otDatasetIsValid` alone does not enforce those two profile rules. Pending
+Timestamp and Delay Timer must be present for a pending Dataset, but validation
+does not invent an ordering between active and pending timestamps or promise
+acceptance against a live network's current Dataset. The management callback
+owns that decision. These distinctions follow the pinned
+[Dataset validity implementation](https://github.com/openthread/openthread/blob/5c8c318627954c99cd1a957a290bbd4b1027d04b/src/core/meshcop/dataset.cpp)
+and [Dataset API](https://github.com/openthread/openthread/blob/5c8c318627954c99cd1a957a290bbd4b1027d04b/src/core/api/dataset_api.cpp).
+The bridge returns `:invalid_dataset`
 without sending network management traffic on failed validation. Unknown TLVs
 survive pure roundtrip; if the SDK does not accept their semantics, return its
 failure rather than removing them. Full Dataset bytes, Network Key, PSKc and
@@ -120,6 +130,17 @@ Unknown names and unknown parameters fail before SDK calls. Dataset request/
 result bytes use C07's typed base64 envelope and the 254-byte decoded limit.
 Inspection returns only the named non-secret fields from S02 plus role-change
 flags; secret Dataset export is a separately explicit `get_dataset` operation.
+
+| Dataset operation | Exact C07 parameters | Success result |
+| --- | --- | --- |
+| `validate_dataset` | `kind: "active" | "pending"`, `dataset: {"type":"bytes","base64":"..."}` | `null`, after SDK and profile validation |
+| `get_dataset` | `kind: "active" | "pending"` | exact typed bytes envelope; absent SDK data returns `dataset_not_found` |
+
+Both operations require an acquired SDK instance and leave IPv6, Thread and
+stored Dataset state unchanged. Reject extra parameters and noncanonical base64;
+Dataset syntax errors use `invalid_dataset` without echoing decoded or encoded
+bytes. Get is explicit credential export; inspection never calls it.
+
 
 ## WTH-S04 — Explicit network changes and callback completion
 

@@ -2,7 +2,7 @@ defmodule Wotex.Thread do
   @moduledoc "Consumer-neutral Thread operations over an explicitly supplied real client port."
 
   import Kernel, except: [send: 2]
-  alias Wotex.Thread.{Error, OpenThread, PortCall, Session, State}
+  alias Wotex.Thread.{Dataset, Error, OpenThread, PortCall, Session, State}
   @operations [:state, :version, :network_name, :rloc16]
 
   @doc "Reports the operations implemented by this library's validated client boundary."
@@ -90,10 +90,26 @@ defmodule Wotex.Thread do
       remaining = timeout - (System.monotonic_time(:millisecond) - entered)
 
       if remaining > 0,
-        do: OpenThread.request(session.handle, %{type: :inspect}, remaining),
+        do: native_exchange(session, %{type: :inspect}, remaining),
         else: {:error, Error.new(:timeout)}
     end
   end
+
+  @doc "Validates a Dataset through the owned SDK without changing network or stored state."
+  @spec validate_dataset(term(), term(), term(), term()) :: :ok | {:error, Error.t()}
+  def validate_dataset(session, dataset, kind, timeout) do
+    message = %{type: :validate_dataset, dataset: dataset, kind: kind}
+
+    case native_request(session, message, timeout) do
+      {:ok, nil} -> :ok
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Explicitly exports the active or pending Dataset, including its credential bytes."
+  @spec get_dataset(term(), term(), term()) :: {:ok, Dataset.t()} | {:error, Error.t()}
+  def get_dataset(session, kind, timeout),
+    do: native_request(session, %{type: :get_dataset, kind: kind}, timeout)
 
   @doc "Runs work with guaranteed handle cleanup when the function returns or raises."
   @spec with_connection(keyword(), (Session.t() -> term())) :: term()
@@ -138,6 +154,34 @@ defmodule Wotex.Thread do
     else
       {:error, Error.new(:transport_required)}
     end
+  end
+
+  defp native_request(session, message, timeout) do
+    entered = System.monotonic_time(:millisecond)
+
+    with :ok <- Session.validate(session),
+         {:ok, timeout} <- inspection_timeout([timeout: timeout], session.timeout),
+         {:ok, _} <- Wotex.Thread.OpenThread.Request.encode(message),
+         :ok <- native_client(session) do
+      remaining = timeout - (System.monotonic_time(:millisecond) - entered)
+
+      if remaining > 0,
+        do: native_exchange(session, message, remaining),
+        else: {:error, Error.new(:timeout)}
+    end
+  end
+
+  defp native_exchange(session, message, timeout) do
+    started = System.monotonic_time()
+    result = OpenThread.request(session.handle, message, timeout)
+
+    :telemetry.execute(
+      [:wotex, :thread, :request, :stop],
+      %{duration: System.monotonic_time() - started},
+      %{operation: message.type, result: if(match?({:ok, _}, result), do: :ok, else: :error)}
+    )
+
+    result
   end
 
   defp native_client(%Session{client: OpenThread}), do: :ok
