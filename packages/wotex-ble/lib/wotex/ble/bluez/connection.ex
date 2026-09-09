@@ -547,10 +547,10 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
-  defp mark_unknown_write_effect(error, %{operation: "write"}), do: %{error | effect: :unknown}
+  defp mark_unknown_write_effect(error, %{operation: "write"}), do: Error.unknown_effect(error)
   defp mark_unknown_write_effect(error, _), do: error
 
-  defp mark_unknown_submitted_effect(error, %{submitted: true}), do: %{error | effect: :unknown}
+  defp mark_unknown_submitted_effect(error, %{submitted: true}), do: Error.unknown_effect(error)
   defp mark_unknown_submitted_effect(error, _), do: error
 
   defp accept_unsubscribe(state, id, frame) do
@@ -799,7 +799,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
         error =
           if acc.active == id and acc.pending[id].operation == "write",
-            do: %{error | effect: :unknown},
+            do: Error.unknown_effect(error),
             else: error
 
         complete(acc, id, {:error, error})

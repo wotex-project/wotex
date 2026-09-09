@@ -475,7 +475,10 @@ defmodule Wotex.BLE.DBusBridgeTest do
     for mode <- ["procedure_timeout", "procedure_crash_before_event"] do
       {session, record} = connect(mode)
       monitor = Process.monitor(session.handle.pid)
-      assert {:error, %Error{effect: :unknown}} = BLE.write(session, target(), <<42>>, timeout: 100)
+
+      assert {:error, %Error{effect: :unknown, class: :permanent, retryable: false}} =
+               BLE.write(session, target(), <<42>>, timeout: 100)
+
       assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1100
 
       assert Enum.count(calls(record), &(&1["method"] == "WriteValue")) ==

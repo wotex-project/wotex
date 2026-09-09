@@ -9,7 +9,7 @@ defmodule Wotex.BLE.PortCall do
     case apply(module, function, args) do
       {:ok, _} = result -> result
       :ok when function == :disconnect -> :ok
-      {:error, %Error{}} = result -> result
+      {:error, %Error{} = error} -> {:error, Error.classify(error)}
       {:error, _} -> {:error, Error.new(:transport_error)}
       _ -> {:error, Error.new(:invalid_transport_return)}
     end

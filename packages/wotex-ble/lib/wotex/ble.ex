@@ -76,7 +76,7 @@ defmodule Wotex.BLE do
           if session.client == Wotex.BLE.BlueZ and
                match?(%Wotex.BLE.BlueZ.Connection{}, session.handle),
              do: {:error, error},
-             else: {:error, %{error | effect: :unknown}}
+             else: {:error, Error.unknown_effect(error)}
 
         {:ok, _} = result ->
           result
@@ -120,7 +120,7 @@ defmodule Wotex.BLE do
       case send(%{session | timeout: config.timeout}, message) do
         {:ok, :written} = result -> result
         {:error, _} = error -> error
-        _ -> {:error, %{Error.new(:invalid_transport_return) | effect: :unknown}}
+        _ -> {:error, Error.unknown_effect(Error.new(:invalid_transport_return))}
       end
     end
   end
