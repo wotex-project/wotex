@@ -184,10 +184,16 @@ defmodule Wotex.CoAP.Blockwise do
        Enum.map(Codec.option(reply, 12), &:binary.decode_unsigned/1)}
 
   defp finish(reply, body, context) do
-    if byte_size(body) <= context.config.limit do
-      {{:ok, %{drop_options(reply, [23, 27]) | payload: body}}, context}
+    with :ok <- success(reply),
+         true <- reply.code != 95 do
+      if byte_size(body) <= context.config.limit do
+        {{:ok, %{drop_options(reply, [23, 27]) | payload: body}}, context}
+      else
+        {failure(:body_limit), context}
+      end
     else
-      {failure(:body_limit), context}
+      false -> {failure(:incomplete_response), context}
+      error -> {error, context}
     end
   end
 
@@ -219,7 +225,11 @@ defmodule Wotex.CoAP.Blockwise do
   defp without_if_none_match(message, 0), do: message
   defp without_if_none_match(message, _), do: drop_options(message, [5])
   defp success(%{code: code}) when code in 64..95, do: :ok
-  defp success(%{code: code}), do: {:error, Error.new(:remote_response, nil, %{code: code})}
+
+  defp success(%{code: code}) when code in 128..191,
+    do: {:error, Error.new(:remote_response, nil, %{code: code})}
+
+  defp success(_), do: failure(:invalid_response)
 
   defp effect({:error, error}, code) when code in [2, 3, 4],
     do: {:error, %{error | effect: :unknown}}

@@ -119,11 +119,8 @@ defmodule Wotex.CoAP.Codec do
         not is_binary(message.payload) ->
           failure(:invalid_payload)
 
-        not is_list(message.options) or length(message.options) > 64 ->
-          failure(:option_limit)
-
-        not Enum.all?(message.options, &valid_option?/1) ->
-          failure(:invalid_option)
+        options_shape(message.options, 64) != :ok ->
+          options_shape(message.options, 64)
 
         message.code == 0 and
             (message.token != <<>> or message.options != [] or message.payload != <<>>) ->
@@ -156,6 +153,15 @@ defmodule Wotex.CoAP.Codec do
         :ok
     end
   end
+
+  defp options_shape([], _), do: :ok
+
+  defp options_shape([entry | rest], left) when left > 0 do
+    if valid_option?(entry), do: options_shape(rest, left - 1), else: failure(:invalid_option)
+  end
+
+  defp options_shape([_ | _], 0), do: failure(:option_limit)
+  defp options_shape(_, _), do: failure(:invalid_option)
 
   defp valid_option?({number, value}),
     do:
