@@ -1,8 +1,8 @@
 # Executable evidence
 
 Evidence collected 2026-09-08 using Elixir 1.20.2 / OTP 29.0.4.
-Development contract supports Elixir 1.18+; the lower-version matrix has not been
-executed in this workspace. Use CI before graduation. No consumer parity or
+That historical baseline covered the stated toolchain only. The package
+requires fresh source-specific matrix and archive checks before graduation. No consumer parity or
 certification is inferred from unit coverage.
 
 ## Mandatory local gate

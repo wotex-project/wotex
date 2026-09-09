@@ -1,5 +1,21 @@
 defmodule Wotex.OPCUA.Mapping do
-  @moduledoc "Pure Form mapping for the explicitly documented Wotex protocol profile."
+  @moduledoc """
+  Maps a W3C Web of Things Form to a concrete OPC UA request.
+
+  `command/4` accepts Property reads and writes declared by the Form. It parses
+  an `opc.tcp` href, requires exactly one NodeId in the `id` query parameter,
+  supplies the default port 4840, and constructs an immutable request map. A
+  write value is converted through `Wotex.OPCUA.Value` when the Form declares
+  `wotex:variantType`, or when the supplied value already carries its type. The original Form map is retained
+  with unknown extension terms.
+
+  Mapping is pure and opens no secure channel. It rejects malformed endpoints,
+  user information, fragments, invalid NodeIds, missing type information, and
+  unsupported operations. Explicit media selectors currently remain preserved
+  data; the stricter rejection required by the target profile is not implemented.
+  Success does not authorize service access, prove that
+  the node exists, or establish canonical Property state.
+  """
   alias Wotex.Form
   alias Wotex.OPCUA.{Address, Error, Value}
   @operations %{readproperty: :read, writeproperty: :write}

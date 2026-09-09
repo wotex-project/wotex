@@ -1,5 +1,31 @@
 defmodule Wotex.OPCUA.Value do
-  @moduledoc "Explicit Variant conversion between WoT values and the secure client profile."
+  @moduledoc """
+  Converts explicitly typed OPC UA Variant scalars at the WoT boundary.
+
+  `encode/2` accepts a value with a supported OPC UA built-in type name. With
+  a nil type argument, the value must be a map containing `type` and `value`.
+  The scalar is validated through
+  `Wotex.OPCUA.Binary`; byte strings are represented as Base64 for the JSON
+  bridge. The module never infers a Variant type from an arbitrary Elixir value.
+
+  `result/1` accepts a native value with a 32-bit StatusCode and type name. It
+  rejects bad StatusCodes, preserves non-bad status and type as protocol
+  metadata, and decodes the explicit byte-string envelope. It does not validate
+  the returned type against its payload; values without a StatusCode envelope
+  pass through with empty metadata. Invalid status envelopes and malformed
+  Base64 return `Wotex.OPCUA.Error`. Full typed result validation, arrays and
+  DataValue metadata remain target work. Conversion does not validate an
+  application DataSchema, perform unit conversion, or establish Property state.
+
+  ## Examples
+
+      iex> Wotex.OPCUA.Value.encode(<<0, 255>>, "ByteString")
+      {:ok, %{type: "ByteString", value: "AP8="}}
+      iex> {:error, error} = Wotex.OPCUA.Value.encode(256, "Byte")
+      iex> error.code
+      :variant_type_required
+
+  """
   import Bitwise
   alias Wotex.OPCUA.{Binary, Error}
 

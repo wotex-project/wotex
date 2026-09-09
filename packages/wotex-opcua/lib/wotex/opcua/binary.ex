@@ -1,5 +1,33 @@
 defmodule Wotex.OPCUA.Binary do
-  @moduledoc "Bounded OPC UA Part 6 scalar and NodeId binary values, independent of channel ownership."
+  @moduledoc """
+  Encodes and decodes bounded OPC UA Part 6 scalar values and NodeIds.
+
+  `encode/2` and `decode/2` support the declared integer widths, booleans,
+  single- and double-precision floating-point values, UTF-8 strings, and byte
+  strings in OPC UA little-endian form. Nullable strings and byte strings retain
+  their protocol distinction. Decoding returns the unconsumed binary so callers
+  can compose larger structures without discarding trailing data.
+
+  `encode_node_id/1` selects the compact numeric form where applicable and
+  preserves numeric, string, globally unique identifier, and opaque identities.
+  `decode_node_id/1` returns a validated `Wotex.OPCUA.Address` with the remaining
+  input. Operations are pure, bounded, and independent of secure-channel or
+  service ownership. Invalid lengths, encodings, and values return
+  `Wotex.OPCUA.Error`.
+
+  ## Examples
+
+      iex> Wotex.OPCUA.Binary.encode(:uint16, 513)
+      {:ok, <<1, 2>>}
+      iex> Wotex.OPCUA.Binary.decode(:uint16, <<1, 2, 99>>)
+      {:ok, 513, <<99>>}
+
+      iex> Wotex.OPCUA.Binary.encode(:string, nil)
+      {:ok, <<255, 255, 255, 255>>}
+      iex> Wotex.OPCUA.Binary.encode(:string, "")
+      {:ok, <<0, 0, 0, 0>>}
+
+  """
   alias Wotex.OPCUA.{Address, Error}
 
   @type scalar ::

@@ -1,5 +1,22 @@
 defmodule Wotex.OPCUA.Transport do
-  @moduledoc "Scoped Wotex Runtime execution over an explicit client and exact target identity."
+  @moduledoc """
+  Executes Wotex Runtime requests through a scoped OPC UA client session.
+
+  The transport validates the Runtime request and execution context, maps the
+  selected Form through `Wotex.OPCUA.Mapping`, opens the configured client,
+  performs one read or write, normalizes the result, and closes the exact
+  session. Subscription callbacks return explicit unsupported errors because
+  the current transport does not maintain OPC UA subscriptions.
+
+  ## Runtime boundary
+
+  Credentials are rejected at this boundary because the client configuration
+  owns the secure-channel material. Runtime Form selection is not
+  authorization, and successful service completion does not establish canonical
+  Property truth or a physical effect. The consumer owns endpoint policy,
+  credential provisioning, deadlines, supervision, data-model validation, and
+  interpretation of returned status metadata.
+  """
   @behaviour Wotex.Runtime.Transport
   alias Wotex.OPCUA
   alias Wotex.OPCUA.{Error, Mapping, Value}

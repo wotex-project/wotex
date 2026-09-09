@@ -1,5 +1,28 @@
 defmodule Wotex.OPCUA.Address do
-  @moduledoc "Typed OPC UA NodeId values; string identifiers retain reserved characters verbatim."
+  @moduledoc """
+  Represents a validated OPC UA NodeId in all four identifier forms.
+
+  A `t:t/0` contains a 16-bit namespace index and a numeric, string, globally
+  unique identifier (GUID), or opaque identifier. `new/1` accepts a struct, a
+  `{namespace, identifier}` tuple, or standard NodeId text. String identifiers
+  preserve reserved characters verbatim; opaque identifiers use Base64 in the
+  text form. No input string is converted to an atom.
+
+  `to_string/1` emits standard text notation, and `validate_message/1` requires
+  an explicit value for write and call requests while preserving `nil` as a
+  possible supplied value. Construction checks syntax and bounds only. It does
+  not browse a server, resolve a namespace URI, or establish that the addressed
+  node exists.
+
+  ## Examples
+
+      iex> {:ok, node} = Wotex.OPCUA.Address.new("ns=2;s=plant/temperature")
+      iex> {node.namespace, node.kind, node.identifier}
+      {2, :string, "plant/temperature"}
+      iex> Wotex.OPCUA.Address.to_string(node)
+      "ns=2;s=plant/temperature"
+
+  """
   alias Wotex.OPCUA.Error
   @enforce_keys [:namespace, :kind, :identifier]
   defstruct [:namespace, :kind, :identifier]

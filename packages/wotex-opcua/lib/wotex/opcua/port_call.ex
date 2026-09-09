@@ -1,5 +1,16 @@
 defmodule Wotex.OPCUA.PortCall do
-  @moduledoc false
+  @moduledoc """
+  Normalizes calls to the consumer-selected OPC UA client implementation.
+
+  The facade and session use this synchronous boundary to invoke client
+  callbacks. It preserves `{:ok, value}` and typed `Wotex.OPCUA.Error` results,
+  accepts bare `:ok` only for disconnect, and converts other return shapes,
+  exceptions, exits, and throws into stable errors without their original terms.
+
+  This helper does not start a worker or enforce a callback deadline. The
+  selected client must honor the supplied timeout and own its resources;
+  `Wotex.OPCUA.Asyncua` provides the bounded native bridge implementation.
+  """
 
   alias Wotex.OPCUA.Error
 

@@ -1,5 +1,24 @@
 defmodule Wotex.OPCUA do
-  @moduledoc "Consumer-neutral OPCUA operations over an explicitly supplied real client port."
+  @moduledoc """
+  Executes bounded OPC Unified Architecture operations through an explicit client.
+
+  `Wotex.OPCUA` is the package facade for connection lifecycle and native read,
+  write, browse, and call requests supported by the selected client.
+  `connect/1` returns a `Wotex.OPCUA.Session`, `send/2` validates and performs
+  one request, and `disconnect/1` releases the session resources.
+  `with_connection/2` calls the selected client cleanup function when the work
+  returns or raises. Custom clients must implement the timeout and resource
+  ownership guarantees required by `Wotex.OPCUA.Client`.
+
+  ## Execution boundary
+
+  The consumer selects a `Wotex.OPCUA.Client` and owns endpoint policy,
+  credentials, certificates, trust configuration, authorization, and
+  supervision. Loading this module opens no channel or Python process.
+  Subscriptions and persistent sessions are unsupported and are not simulated.
+  A successful service result is protocol evidence only; it does not establish
+  canonical Property state, authorization, or a physical Action effect.
+  """
 
   import Kernel, except: [send: 2]
   alias Wotex.OPCUA.{Error, PortCall, Session}

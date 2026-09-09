@@ -1,5 +1,24 @@
 defmodule Wotex.OPCUA.Asyncua do
-  @moduledoc "Explicit asyncua 2.0.1 bridge using SignAndEncrypt, pinned server identity and verified CRLs."
+  @moduledoc """
+  Bridges explicit requests to an asyncua 2.0.1 Python client process.
+
+  `Wotex.OPCUA.Asyncua` implements `Wotex.OPCUA.Client` for the package's
+  Basic256Sha256 SignAndEncrypt profile. `connect/1` validates option shapes,
+  absolute executable/certificate/key/revocation-list paths, endpoint and URI
+  fields, and one to sixteen trust-anchor paths. It does not read certificates
+  or authenticate the server. `request/3` invokes the packaged bridge and bounds
+  each correlated JSON request and response to 131,072 bytes.
+
+  ## Security and lifecycle
+
+  The bridge checks the pinned server certificate, direct-issuer trust profile,
+  certificate time and usage constraints, application URI, host identity, and
+  revocation data described by the package contract. Each request opens and
+  closes its own external process, secure channel, and session. The adapter does
+  not install Python packages, manage credentials, commission trust, reconnect,
+  or retry writes. Native Browse returns up to 256 child NodeId strings; typed
+  Browse results and explicit continuation ownership are separate target work.
+  """
   @behaviour Wotex.OPCUA.Client
   alias Wotex.OPCUA.{Address, Error}
   @paths [:certificate, :private_key, :server_certificate, :issuer_certificate, :crl]
