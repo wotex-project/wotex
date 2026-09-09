@@ -1,5 +1,6 @@
 defmodule Wotex.Thread.TestClient do
   @moduledoc false
+
   @behaviour Wotex.Thread.Client
 
   @impl Wotex.Thread.Client

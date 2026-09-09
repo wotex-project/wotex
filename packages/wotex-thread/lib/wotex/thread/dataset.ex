@@ -65,11 +65,11 @@ defmodule Wotex.Thread.Dataset do
     required = [0, 1, 2, 3, 5, 7, 12, 14, 53] ++ if(context == :pending, do: [51, 52], else: [])
 
     case encode(dataset) do
-      {:ok, _bytes} ->
+      {:ok, _} ->
         Enum.all?(required, &(&1 in dataset.types)) and
           (context == :pending or (51 not in dataset.types and 52 not in dataset.types))
 
-      {:error, _error} ->
+      {:error, _} ->
         false
     end
   end

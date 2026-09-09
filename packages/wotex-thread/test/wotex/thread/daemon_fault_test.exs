@@ -245,7 +245,7 @@ defmodule Wotex.Thread.DaemonFaultTest do
   end
 
   test "WTH-S02 WTH-V03 a peer close before a command cannot become a successful read" do
-    {path, task} = peer(fn _socket -> :closed end)
+    {path, task} = peer(fn _ -> :closed end)
     assert {:ok, handle} = Daemon.connect(socket_path: path)
     assert :closed = Task.await(task)
     assert {:error, %{code: :transport_closed}} = Daemon.request(handle, %{type: :state}, 1000)

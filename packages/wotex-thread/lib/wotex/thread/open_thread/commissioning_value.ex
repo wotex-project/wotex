@@ -29,7 +29,7 @@ defmodule Wotex.Thread.OpenThread.CommissioningValue do
 
   @doc false
   @spec text?(term(), pos_integer()) :: boolean()
-  def text?(nil, _maximum), do: true
+  def text?(nil, _), do: true
 
   def text?(value, maximum) when is_binary(value) and byte_size(value) <= maximum,
     do: String.valid?(value) and not Regex.match?(~r/[\x00-\x1f\x7f]/, value)

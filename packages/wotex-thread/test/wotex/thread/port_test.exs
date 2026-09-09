@@ -1,5 +1,6 @@
 defmodule Wotex.Thread.PortTest do
   @moduledoc false
+
   use ExUnit.Case, async: true
   alias Wotex.Thread
   alias Wotex.Thread.{Error, TestClient}
