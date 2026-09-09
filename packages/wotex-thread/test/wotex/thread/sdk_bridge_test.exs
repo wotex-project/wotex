@@ -37,7 +37,10 @@ defmodule Wotex.Thread.SdkBridgeTest do
   end
 
   test "WTH-S03 native Client opens, inspects and closes a persistent generation", context do
-    assert {:ok, handle} = OpenThread.connect(context.options)
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+    handle = session.handle
+    assert {:ok, %State{role: :disabled}} = Wotex.Thread.inspect_state(session, [])
+    assert {:ok, %State{role: :disabled}} = Wotex.Thread.inspect_state(session, timeout: 1000)
 
     assert {:ok, %State{role: :disabled, generation: 1}} =
              OpenThread.request(handle, %{type: :inspect}, 1000)
@@ -53,6 +56,8 @@ defmodule Wotex.Thread.SdkBridgeTest do
 
     assert Enum.map(requests(context), & &1["operation"]) == [
              "open",
+             "inspect",
+             "inspect",
              "inspect",
              "state",
              "version",
