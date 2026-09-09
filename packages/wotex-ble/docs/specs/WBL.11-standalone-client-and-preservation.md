@@ -73,6 +73,14 @@ monitored, deadline-bound worker so it cannot block bridge EOF or cancellation.
 A crash/timeout rejects, unregisters this Agent and returns `:pairing_rejected`.
 Display acknowledgement is not a claim of user confirmation or MITM security.
 
+Cancellation follows S02's owned-sender rule: reject the pending Agent prompt,
+unregister only this Agent, and close this session generation if Pair is still
+unresolved. Device1.CancelPairing is excluded because the pinned implementation
+can unpair after raced completion. BlueZ may disconnect an initially borrowed
+peer when a pending Pair sender disappears; this is a consequence of the explicit
+pairing operation, not permission for ordinary borrowed cleanup to disconnect.
+No cancellation removes an existing bond or guarantees that Pair had no effect.
+
 Stable D-Bus name mapping is part of the public contract: `NotConnected` becomes
 `:disconnected`, `NotPermitted` becomes `:not_permitted`, `NotAuthorized` becomes
 `:not_authorized`, `NotSupported` becomes `:not_supported`, `InProgress` becomes

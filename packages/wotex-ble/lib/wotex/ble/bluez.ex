@@ -99,6 +99,11 @@ defmodule Wotex.BLE.BlueZ do
 
   def discover(_, _, _), do: {:error, Error.new(:not_supported)}
 
+  @doc "Pairs through the persistent sender and an explicit consumer Agent callback."
+  @spec pair(term(), term(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def pair(%Connection{} = handle, request, timeout), do: Connection.pair(handle, request, timeout)
+  def pair(_, _, _), do: {:error, Error.new(:not_supported)}
+
   @doc "Parses busctl's exact byte-array response; bounds count and every byte."
   @spec decode(term()) :: {:ok, binary()} | {:error, Error.t()}
   def decode(text) when is_binary(text) and byte_size(text) <= 4096 do

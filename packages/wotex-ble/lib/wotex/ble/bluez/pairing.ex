@@ -3,6 +3,11 @@ defmodule Wotex.BLE.BlueZ.Pairing do
 
   alias Wotex.BLE.{Challenge, Error}
 
+  @kinds Map.new(
+           ~w(confirm_passkey request_passkey request_pin authorize_pairing authorize_service display_passkey display_pin)a,
+           &{Atom.to_string(&1), &1}
+         )
+
   @capabilities %{
     no_input_no_output: "NoInputNoOutput",
     display_yes_no: "DisplayYesNo",
@@ -39,6 +44,56 @@ defmodule Wotex.BLE.BlueZ.Pairing do
       reply(challenge.kind, decision)
     end
   end
+
+  @doc false
+  @spec challenge(term(), map(), integer(), integer()) :: {:ok, Challenge.t()} | {:error, Error.t()}
+  def challenge(
+        %{"id" => id, "peer" => peer, "kind" => kind, "value" => value, "timeout_ms" => remaining} =
+          input,
+        peer,
+        deadline,
+        now
+      )
+      when map_size(input) == 5 and is_integer(remaining) and remaining in 1..60_000 and
+             deadline > now do
+    with {:ok, kind} <- Map.fetch(@kinds, kind),
+         {:ok, value} <- prompt_value(kind, value) do
+      Challenge.new(%{
+        id: id,
+        peer: %{
+          adapter: peer["adapter"],
+          address: peer["address"],
+          address_type: peer_type(peer["address_type"])
+        },
+        kind: kind,
+        value: value,
+        deadline_ms: min(deadline, now + remaining)
+      })
+    else
+      _ -> {:error, Error.new(:invalid_challenge)}
+    end
+  end
+
+  def challenge(_, _, _, _), do: {:error, Error.new(:invalid_challenge)}
+
+  @doc false
+  @spec invoke(map(), Challenge.t()) :: {:ok, map()} | {:error, Error.t()}
+  def invoke(%{module: module, config: config}, challenge) do
+    decision(challenge, module.decide(challenge, config))
+  rescue
+    _ -> invalid()
+  catch
+    _, _ -> invalid()
+  end
+
+  defp prompt_value(:display_passkey, %{"passkey" => passkey, "entered" => entered} = value)
+       when map_size(value) == 2, do: {:ok, %{passkey: passkey, entered: entered}}
+
+  defp prompt_value(:display_passkey, _), do: :error
+  defp prompt_value(_, value), do: {:ok, value}
+  defp peer_type("public"), do: :public
+  defp peer_type("random"), do: :random
+  defp peer_type(_), do: nil
 
   defp reply(_, :reject), do: {:ok, %{"action" => "reject"}}
 

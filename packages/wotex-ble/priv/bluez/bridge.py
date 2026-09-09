@@ -74,6 +74,7 @@ class Bridge:
         self.emit = emit
         self.stop = asyncio.Event()
         self.central = central_factory(self.terminal)
+        self.central.emit = emit
         self.queue = asyncio.Queue(maxsize=64)
         self.seen = set()
         self.active = None
@@ -98,6 +99,13 @@ class Bridge:
             if request["id"] in self.seen or len(self.seen) >= 65536:
                 return
             self.seen.add(request["id"])
+            if request["operation"] == "agent_reply":
+                try:
+                    self.central.agent_reply(request["parameters"])
+                    self.response(request, ok=True, result=None)
+                except Failure as error:
+                    self.response(request, ok=False, error={"code": error.code})
+                continue
             if request["operation"] == "close" and request["parameters"] == {}:
                 self.close_request = request
                 return
@@ -117,6 +125,8 @@ class Bridge:
             return result
         if not self.opened:
             raise Failure("disconnected")
+        if operation == "pair":
+            return await self.central.pair(request["parameters"], remaining, request["id"])
         if operation == "discover":
             return await self.central.discover(request["parameters"], remaining)
         if operation == "close" and request["parameters"] == {}:
@@ -141,6 +151,8 @@ class Bridge:
                 self.stop.set()
             finally:
                 self.active = None
+                if self.central.closed:
+                    self.stop.set()
 
     async def run(self, reader):
         tasks = [asyncio.create_task(self.accept(reader)), asyncio.create_task(self.work()), asyncio.create_task(self.stop.wait())]
@@ -148,6 +160,7 @@ class Bridge:
             await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         finally:
             self.stop.set()
+            self.central.cleanup_deadline = time.monotonic() + 0.8
             for task in tasks:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)

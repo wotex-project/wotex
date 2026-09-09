@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "test" / "native"))
 import bridge
 import client
 from test_bluez import Bus, objects
+from test_agent import AgentBus
 
 MODE, RECORD = sys.argv[1:]
 
@@ -49,6 +50,16 @@ class RecordedBus(Bus):
         super().disconnect()
 
 
+class RecordedAgentBus(AgentBus):
+    async def call(self, *args):
+        record({"method": args[3], "sender": self.unique_name})
+        return await super().call(*args)
+
+    def disconnect(self):
+        super().disconnect()
+        record({"bus_closed": True, "agents": int(self.registered is not None), "listeners": len(self.handlers) + len(self.methods), "bonds": len(self.bonds)})
+
+
 async def main():
     ready = {"version": 1, "event": "ready", "backend": "dbus-next", "revision": "0.2.3"}
     if MODE == "wrong_ready":
@@ -73,7 +84,11 @@ async def main():
     reader = asyncio.StreamReader(limit=bridge.MAX_LINE)
     protocol = asyncio.StreamReaderProtocol(reader)
     transport, _ = await asyncio.get_running_loop().connect_read_pipe(lambda: protocol, sys.stdin.buffer)
-    bus = RecordedBus(objects())
+    bus = RecordedAgentBus() if MODE.startswith("pair") else RecordedBus(objects())
+    if MODE == "pair_pin":
+        bus.prompts = [("RequestPinCode", "o", ["/unrelated/device"])]
+    if MODE == "pair_passkey":
+        bus.prompts = [("RequestPasskey", "o", ["/unrelated/device"])]
     if MODE == "startup_error":
         bus.data = objects(False, False)
     owner = bridge.Bridge(emit, lambda signal: client.Central(signal, lambda _: bus))

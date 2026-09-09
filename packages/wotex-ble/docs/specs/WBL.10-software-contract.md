@@ -67,7 +67,7 @@ There is no UUID-to-unit/value-format database guessed from characteristic names
 Persistent open requires `peer`, `connection: :borrowed | :owned` (default
 borrowed), and the explicit D-Bus address/socket configuration. Borrowed mode
 requires an already connected Device1 with ServicesResolved true; it never
-disconnects the device or alters pairing. Owned mode may call Device1.Connect,
+calls Device1.Disconnect or starts pairing during open/close. Owned mode may call Device1.Connect,
 wait for Connected and ServicesResolved within the absolute deadline, and call
 Disconnect on cleanup only if this handle established the connection. A device
 already connected when opened remains borrowed at the link layer.
@@ -89,6 +89,18 @@ policy callback for requests. Agent cancellation/timeout rejects the pairing and
 unregisters the Agent. Do not remove an existing bond during cleanup. Credentials
 and pairing challenges never enter logs/telemetry. Pairing is not a claim that
 every characteristic is authorized or that MITM protection was achieved.
+
+For a pending explicit Pair, cancellation rejects our pending Agent prompt and
+unregisters only our Agent. If Pair completion remains unknown, close our unique
+D-Bus sender and its session generation. Never call Device1.CancelPairing or
+RemoveDevice: at the pinned revision, CancelPairing with no pending request can
+issue an unpair command. BlueZ watches the Pair request's sender and can itself
+disconnect the peer when that sender disappears. Consequently an explicitly
+requested Pair may lose an otherwise borrowed link during cancellation; ordinary
+borrowed discovery/open/close still sends no Device1.Disconnect. Preserve existing
+bonds and make no claim that an unresolved Pair did not finish. This follows the
+pinned [Pair sender and cancellation implementation](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/src/device.c)
+and [unpair command implementation](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/src/adapter.c).
 
 ## WBL-S03 — Read and acknowledged write
 
@@ -172,6 +184,21 @@ Byte values use C07 base64 envelopes; paths/UUIDs/flags remain explicit strings
 or finite enums. A stream report includes subscription ID, generation, bytes
 and effective mode plus source `bluez_value_change`. A pairing challenge uses a separate typed event with a
 unique challenge ID and deadline; replies must match that ID exactly once.
+
+The pairing event envelope has exactly `version: 1`, the active Pair request
+`id`, `event: "agent_challenge"`, and `challenge`. Its challenge map has exactly
+`id`, `peer`, `kind`, `value`, and `timeout_ms`; peer has the same three string
+fields as open, and kind/value use N01's finite types. `timeout_ms` is the
+remaining native budget, never a foreign absolute clock reading. The BEAM owner
+sets Challenge.deadline_ms from its own monotonic clock and the smaller of that
+budget and its original Pair deadline. Only that active request, peer and
+challenge can invoke policy. Agent configuration never enters the bridge.
+`agent_reply` parameters are exactly `challenge_id` and `decision`; decision is
+`{"action":"accept"}`, `{"action":"reject"}`, or `{"action":"pin" | "passkey",
+"value": typed_value}`. The reply uses its own unique request ID and a null
+success result. Dispatch this bounded control request while Pair is waiting;
+never put it behind Pair in the serial operation queue. Unknown/duplicate prompt
+IDs reject the pairing and cannot answer a later prompt.
 `health_check/1` in persistent mode checks current Device1 Connected and
 ServicesResolved; baseline mode retains its probe-required error. Health does
 not imply that a particular characteristic remains readable.

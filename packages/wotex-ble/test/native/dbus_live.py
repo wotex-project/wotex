@@ -21,6 +21,7 @@ from dbus_next.aio import MessageBus
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "priv" / "bluez"))
 from client import Central, Failure, DEVICE, ADAPTER, SERVICE, CHARACTERISTIC, MANAGER, PROPERTIES
+from pairing import AGENT, MANAGER as AGENT_MANAGER
 
 PEER = {"adapter": "/org/bluez/hci0", "address": "AA:BB:CC:DD:EE:FF", "address_type": "random"}
 DEVICE_PATH = "/fixture/device"
@@ -35,6 +36,13 @@ class GattFixture:
         self.connected = True
         self.race = False
         self.handle = 7
+        self.agents = {}
+        self.pair_tasks = {}
+        self.pair_prompts = [("RequestConfirmation", "ou", [DEVICE_PATH, 123456])]
+        self.pair_responses = []
+        self.hang_pair = False
+        self.bonds = {"existing-bond"}
+        self.sender_loss_disconnects = 0
         self.bus.add_message_handler(self.receive)
 
     def objects(self):
@@ -48,10 +56,57 @@ class GattFixture:
     def changed(self, object_path, interface, properties):
         return self.bus.send(Message.new_signal(object_path, PROPERTIES, "PropertiesChanged", "sa{sv}as", [interface, properties, []]))
 
+    async def pair(self, message):
+        try:
+            for member, signature, body in self.pair_prompts:
+                reply = await self.bus.call(Message(destination=message.sender, path=self.agents[message.sender], interface=AGENT, member=member, signature=signature, body=body))
+                self.pair_responses.append((reply.message_type.name, reply.signature, reply.body))
+                if self.hang_pair:
+                    await asyncio.Event().wait()
+                if reply.message_type != MessageType.METHOD_RETURN:
+                    self.bus.send(Message.new_error(message, "org.bluez.Error.AuthenticationRejected", "Fixture rejected"))
+                    return
+            self.bus.send(Message.new_method_return(message))
+        finally:
+            self.pair_tasks.pop(message.sender, None)
+
     def receive(self, message):
+        if message.message_type == MessageType.SIGNAL and message.sender == "org.freedesktop.DBus" and message.interface == "org.freedesktop.DBus" and message.member == "NameOwnerChanged":
+            name, _, current = message.body
+            if not current:
+                self.agents.pop(name, None)
+                pending = self.pair_tasks.pop(name, None)
+                if pending is not None:
+                    # Pinned BlueZ device.c:create_bond_req_exit owns this side
+                    # effect when the unresolved Pair sender disappears.
+                    self.connected = False
+                    self.sender_loss_disconnects += 1
+                    pending.cancel()
+                    self.changed(DEVICE_PATH, DEVICE, {"Connected": Variant("b", False), "ServicesResolved": Variant("b", False)})
+            return None
         if message.message_type != MessageType.METHOD_CALL:
             return None
         self.calls.append((message.sender, message.interface, message.member))
+        if message.path == "/org/bluez" and message.interface == AGENT_MANAGER:
+            if message.member == "RegisterAgent":
+                assert message.signature == "os"
+                assert message.sender not in self.agents
+                self.agents[message.sender] = message.body[0]
+                return Message.new_method_return(message)
+            if message.member == "UnregisterAgent":
+                assert message.signature == "o"
+                assert self.agents.pop(message.sender) == message.body[0]
+                return Message.new_method_return(message)
+        if message.interface == DEVICE and message.path == DEVICE_PATH:
+            if message.member == "Pair":
+                assert message.signature == ""
+                assert message.sender in self.agents
+                assert message.sender not in self.pair_tasks
+                self.pair_tasks[message.sender] = asyncio.create_task(self.pair(message))
+                return True
+            if message.member in ("CancelPairing", "RemoveDevice"):
+                self.bonds.clear()
+                return Message.new_method_return(message)
         if message.interface == MANAGER and message.member == "GetManagedObjects":
             data = self.objects()
             if self.race:
@@ -69,6 +124,7 @@ class GattFixture:
 async def lane(address):
     server = await MessageBus(bus_address=address).connect()
     fixture = GattFixture(server)
+    await server.call(Message(destination="org.freedesktop.DBus", path="/org/freedesktop/DBus", interface="org.freedesktop.DBus", member="AddMatch", signature="s", body=["type='signal',interface='org.freedesktop.DBus',member='NameOwnerChanged'"]))
     await server.request_name("org.bluez")
     parameters = {"peer": PEER, "connection": "borrowed", "bus_address": address}
     owners = []
@@ -98,6 +154,58 @@ async def lane(address):
         assert fixture.connected is False
         assert [(sender, member) for sender, _, member in fixture.calls if member in ("Connect", "Disconnect")] == [(acquired["sender"], "Connect"), (acquired["sender"], "Disconnect")]
 
+        # Same-sender Agent1 registration and real callback signatures: policy
+        # remains explicit, with no default agent or bond removal.
+        fixture.connected = True
+        pairing = Central(events.append)
+        owners.append(pairing)
+        paired_owner = await pairing.open(parameters, 2000)
+        challenges = []
+        def accept(challenge):
+            challenges.append(challenge)
+            kind = challenge["challenge"]["kind"]
+            answer = {"action": "pin", "value": "000042"} if kind == "request_pin" else {"action": "passkey", "value": 42} if kind == "request_passkey" else {"action": "accept"}
+            pairing.agent_reply({"challenge_id": challenge["challenge"]["id"], "decision": answer})
+        pairing.emit = accept
+        fixture.pair_prompts = [("RequestPinCode", "o", [DEVICE_PATH]), ("RequestPasskey", "o", [DEVICE_PATH]), ("RequestConfirmation", "ou", [DEVICE_PATH, 123456])]
+        assert await pairing.pair({"capability": "DisplayYesNo"}, 2000, "pair-1") == {"paired": True}
+        assert fixture.pair_responses == [("METHOD_RETURN", "s", ["000042"]), ("METHOD_RETURN", "u", [42]), ("METHOD_RETURN", "", [])]
+        assert len(challenges) == 3
+        assert fixture.agents == {} and fixture.pair_tasks == {}
+        assert {sender for sender, interface, _ in fixture.calls if interface == AGENT_MANAGER} == {paired_owner["sender"]}
+        await pairing.close()
+        assert fixture.connected is True
+
+        # Cancelling a still-pending Pair drops only this application sender.
+        # BlueZ's documented source behavior may disconnect the borrowed link;
+        # it must never erase a completed/pre-existing bond.
+        canceled = Central(events.append)
+        owners.append(canceled)
+        await canceled.open(parameters, 2000)
+        prompted = asyncio.Event()
+        canceled.emit = lambda _: prompted.set()
+        fixture.pair_prompts = [("RequestConfirmation", "ou", [DEVICE_PATH, 123456])]
+        fixture.hang_pair = True
+        pair_task = asyncio.create_task(canceled.pair({"capability": "DisplayYesNo"}, 2000, "pair-2"))
+        await asyncio.wait_for(prompted.wait(), 1)
+        pair_task.cancel()
+        try:
+            await pair_task
+        except asyncio.CancelledError:
+            pass
+        else:
+            raise AssertionError("canceled Pair reported success")
+        for _ in range(100):
+            if fixture.sender_loss_disconnects:
+                break
+            await asyncio.sleep(0.001)
+        assert fixture.sender_loss_disconnects == 1
+        assert fixture.connected is False
+        assert canceled.closed and canceled.bus.handlers == {}
+        assert fixture.agents == {} and fixture.pair_tasks == {}
+        assert fixture.bonds == {"existing-bond"}
+        assert not any(member in ("CancelPairing", "RemoveDevice", "RequestDefaultAgent") for _, _, member in fixture.calls)
+
         # The old owner is terminal when the well-known name changes.
         fixture.connected = True
         observed = Central(events.append)
@@ -115,10 +223,14 @@ async def lane(address):
             assert error.code == "owner_changed"
         else:
             raise AssertionError("old bus owner remained usable")
-        return {"requirements": ["WBL-C03", "WBL-C07", "WBL-S01", "WBL-S02", "WBL-V03", "WBL-V04"], "dbus_next": version("dbus-next"), "snapshots": sum(call[2] == "GetManagedObjects" for call in fixture.calls), "owned_connects": sum(call[2] == "Connect" for call in fixture.calls), "owned_disconnects": sum(call[2] == "Disconnect" for call in fixture.calls), "borrowed_disconnects": 0, "status": "passed", "evidence": "real_dbus_injected_gatt"}
+        return {"requirements": ["WBL-C03", "WBL-C07", "WBL-S01", "WBL-S02", "WBL-V03", "WBL-V04", "WBL-S05", "WBL-V06"], "dbus_next": version("dbus-next"), "snapshots": sum(call[2] == "GetManagedObjects" for call in fixture.calls), "owned_connects": sum(call[2] == "Connect" for call in fixture.calls), "owned_disconnects": sum(call[2] == "Disconnect" for call in fixture.calls), "borrowed_disconnect_calls": 0, "pending_pair_sender_loss_disconnects": fixture.sender_loss_disconnects, "agents_remaining": len(fixture.agents), "pair_requests_remaining": len(fixture.pair_tasks), "pairing_callbacks": len(fixture.pair_responses), "bonds_preserved": len(fixture.bonds), "status": "passed", "evidence": "real_dbus_injected_gatt"}
     finally:
         for owner in owners:
             await owner.close()
+        pending = list(fixture.pair_tasks.values())
+        for task in pending:
+            task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
         server.remove_message_handler(fixture.receive)
         server.disconnect()
         await server.wait_for_disconnect()

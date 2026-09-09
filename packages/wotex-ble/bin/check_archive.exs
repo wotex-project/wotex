@@ -11,6 +11,7 @@ defmodule Wotex.BLE.Check.Archive do
     "docs",
     "priv/bluez/bridge.py",
     "priv/bluez/client.py",
+    "priv/bluez/pairing.py",
     "priv/bluez/requirements.txt"
   ]
   @development [".git", "deps", "_build"]

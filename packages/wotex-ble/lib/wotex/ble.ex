@@ -93,6 +93,14 @@ defmodule Wotex.BLE do
   def discover(%Session{}, _), do: {:error, Error.new(:not_supported)}
   def discover(_, _), do: {:error, Error.new(:invalid_session)}
 
+  @doc "Pairs the selected persistent peer using an explicit consumer Agent decision."
+  @spec pair(term(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def pair(%Session{client: Wotex.BLE.BlueZ} = session, request),
+    do: Wotex.BLE.BlueZ.pair(session.handle, request, session.timeout)
+
+  def pair(%Session{}, _), do: {:error, Error.new(:not_supported)}
+  def pair(_, _), do: {:error, Error.new(:invalid_session)}
+
   @doc "Runs work with guaranteed handle cleanup when the function returns or raises."
   @spec with_connection(keyword(), (Session.t() -> term())) :: term()
   def with_connection(opts, fun) when is_function(fun, 1) do

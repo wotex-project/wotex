@@ -1,11 +1,30 @@
 defmodule Wotex.BLE.DBusBridgeTest do
   @moduledoc false
 
+  @behaviour Wotex.BLE.Agent
+
   use ExUnit.Case, async: true
 
   alias Wotex.BLE
   alias Wotex.BLE.{BlueZ, Characteristic, Error, Peer, Session}
   alias Wotex.BLE.BlueZ.Connection
+
+  @impl Wotex.BLE.Agent
+  def decide(challenge, {receiver, action, _secret}) do
+    send(receiver, {:challenge, challenge, self()})
+
+    case action do
+      :accept -> :accept
+      :reject -> :reject
+      :sleep -> Process.sleep(60_000)
+      :raise -> raise "POLICY_SECRET_CANARY"
+      :throw -> throw(:policy_failed)
+      :exit -> exit(:policy_failed)
+      :passkey -> {:passkey, 42}
+      :pin -> {:pin, "000042"}
+      :invalid -> :not_a_decision
+    end
+  end
 
   defp options(mode \\ "normal") do
     directory = Path.join(System.tmp_dir!(), "wbl-dbus-#{System.unique_integer([:positive])}")
@@ -230,10 +249,133 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 4
   end
 
+  test "WBL-C03 an already queued native reply cannot cross the absolute deadline" do
+    {session, record} = connect("slow")
+    task = Task.async(fn -> Connection.discover(session.handle, [], 100) end)
+    eventually(fn -> Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 2 end)
+    :sys.suspend(session.handle.pid)
+    Process.sleep(150)
+    :sys.resume(session.handle.pid)
+    assert {:error, %Error{code: :timeout}} = Task.await(task)
+    eventually(fn -> not Process.alive?(session.handle.pid) end)
+  end
+
   test "WBL-C07 uncooperative bridge is killed within cleanup grace" do
     {session, _} = connect("uncooperative")
     monitor = Process.monitor(session.handle.pid)
     assert {:error, %Error{code: :cleanup_timeout}} = BLE.disconnect(session)
     assert_receive {:DOWN, ^monitor, :process, _, :normal}, 50
+  end
+
+  test "WBL-P03 WBL-V06 explicit policy completes first-party Agent exchange" do
+    for {mode, action} <- [{"pair", :accept}, {"pair_pin", :pin}, {"pair_passkey", :passkey}] do
+      {session, record} = connect(mode)
+
+      assert {:ok, %{paired: true}} =
+               BLE.pair(session, %{
+                 capability: :display_yes_no,
+                 agent: {__MODULE__, {self(), action, "POLICY_SECRET_CANARY"}}
+               })
+
+      assert_receive {:challenge, %Wotex.BLE.Challenge{} = challenge, worker}
+      refute Process.alive?(worker)
+      assert challenge.peer.address == "AA:BB:CC:DD:EE:FF"
+      refute inspect(challenge) =~ "123456"
+      refute File.read!(record) =~ "POLICY_SECRET_CANARY"
+      assert Enum.count(calls(record), &(&1["method"] == "RegisterAgent")) == 1
+      assert Enum.count(calls(record), &(&1["method"] == "UnregisterAgent")) == 1
+      assert :ok = BLE.disconnect(session)
+      assert %{"agents" => 0, "listeners" => 0, "bonds" => 1, "bus_closed" => true} in calls(record)
+    end
+  end
+
+  test "WBL-V06 rejection, callback exceptions and invalid decisions fail without default acceptance" do
+    for action <- [:reject, :raise, :throw, :exit, :invalid] do
+      {session, record} = connect("pair")
+
+      assert {:error, %Error{code: :pairing_rejected}} =
+               BLE.pair(session, %{
+                 capability: :no_input_no_output,
+                 agent: {__MODULE__, {self(), action, "POLICY_SECRET_CANARY"}}
+               })
+
+      assert_receive {:challenge, _, worker}
+      refute Process.alive?(worker)
+
+      refute Enum.any?(
+               calls(record),
+               &(&1["method"] in ["CancelPairing", "RemoveDevice", "RequestDefaultAgent"])
+             )
+
+      BLE.disconnect(session)
+    end
+  end
+
+  test "WBL-C03 policy timeout and owner loss release worker and Agent" do
+    {session, record} = connect("pair")
+
+    receiver = self()
+
+    task =
+      Task.async(fn ->
+        BLE.pair(session, %{
+          capability: :display_yes_no,
+          timeout: 100,
+          agent: {__MODULE__, {receiver, :sleep, "POLICY_SECRET_CANARY"}}
+        })
+      end)
+
+    assert_receive {:challenge, _, worker}, 1000
+    assert {:error, %Error{code: :pairing_rejected}} = Task.await(task)
+    eventually(fn -> not Process.alive?(worker) end)
+    BLE.disconnect(session)
+    assert %{"agents" => 0, "listeners" => 0, "bonds" => 1, "bus_closed" => true} in calls(record)
+
+    {options, record} = options("pair")
+    receiver = self()
+
+    owner =
+      spawn(fn ->
+        {:ok, handle} = Connection.connect(options)
+        send(receiver, {:handle, handle})
+
+        Connection.pair(
+          handle,
+          %{
+            capability: :display_yes_no,
+            agent: {__MODULE__, {receiver, :sleep, "POLICY_SECRET_CANARY"}}
+          },
+          60_000
+        )
+      end)
+
+    assert_receive {:handle, handle}, 2000
+    assert_receive {:challenge, _, worker}, 2000
+    status = inspect(:sys.get_status(handle.pid))
+    refute status =~ "POLICY_SECRET_CANARY"
+    monitor = Process.monitor(handle.pid)
+    Process.exit(owner, :kill)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1100
+    refute Process.alive?(worker)
+    assert %{"agents" => 0, "listeners" => 0, "bonds" => 1, "bus_closed" => true} in calls(record)
+  end
+
+  test "WBL-C02 pairing unsupported and invalid policies acquire nothing" do
+    assert {:error, %Error{code: :invalid_session}} = BLE.pair(nil, %{})
+
+    assert {:error, %Error{code: :not_supported}} =
+             BLE.pair(%Session{client: __MODULE__, handle: nil, timeout: 1}, %{})
+
+    assert {:error, %Error{code: :invalid_handle}} = Connection.pair(nil, %{}, 1)
+    assert {:error, %Error{code: :not_supported}} = BlueZ.pair(%{}, %{}, 1)
+    {session, record} = connect("pair")
+
+    assert {:error, %Error{code: :invalid_options}} =
+             BLE.pair(session, %{capability: :display_yes_no, agent: {__MODULE__, nil}, timeout: 0})
+
+    assert {:error, %Error{code: :invalid_options}} =
+             BLE.pair(session, %{capability: :display_yes_no, agent: {:erlang, nil}})
+
+    refute Enum.any?(calls(record), &(&1["method"] == "RegisterAgent"))
   end
 end

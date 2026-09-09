@@ -160,6 +160,20 @@ class DBusConnection:
         self.handlers[handler] = receive
         self.bus.add_message_handler(receive)
 
+    def listen_calls(self, handler):
+        from dbus_next import Message, MessageType
+        def receive(message):
+            if message.message_type != MessageType.METHOD_CALL:
+                return None
+            def respond(signature, body, error):
+                reply = (Message.new_error(message, error, "Pairing rejected") if error
+                         else Message.new_method_return(message, signature, body))
+                return self.bus.send(reply)
+            return handler(message.sender, message.path, message.interface, message.member,
+                           message.signature, message.body, respond)
+        self.handlers[handler] = receive
+        self.bus.add_message_handler(receive)
+
     def unlisten(self, handler):
         receive = self.handlers.pop(handler, None)
         if receive is not None:
@@ -224,6 +238,9 @@ class Central:
         self.terminal = None
         self.listener_installed = False
         self.disconnect_task = None
+        self.agent = None
+        self.emit = None
+        self.cleanup_deadline = None
 
     async def watch_disconnect(self):
         try:
@@ -276,6 +293,8 @@ class Central:
             self.terminal = code
             self.wake.set()
             self.signal(code)
+            if self.agent is not None:
+                self.agent.abort(code)
 
     async def bounded(self, awaitable, deadline):
         remaining = deadline - time.monotonic()
@@ -395,14 +414,34 @@ class Central:
             self.cursors[next_cursor] = next_offset
         return {"generation": self.generation, "characteristics": page, "cursor": next_cursor}
 
+    async def pair(self, parameters, timeout_ms, request_id):
+        if not self.ready or self.closed or self.terminal:
+            raise Failure(self.terminal or "disconnected")
+        if self.agent is not None:
+            raise Failure("busy")
+        from pairing import PairingAgent
+        self.agent = PairingAgent(self, request_id, timeout_ms)
+        try:
+            return await self.agent.pair(parameters)
+        finally:
+            self.agent = None
+
+    def agent_reply(self, parameters):
+        if self.agent is None:
+            raise Failure("pairing_rejected")
+        self.agent.reply(parameters)
+
     async def close(self):
         if self.closed:
             return
         self.closed = True
+        deadline = self.cleanup_deadline or time.monotonic() + 0.8
         if self.bus is not None:
             try:
+                if self.agent is not None:
+                    await self.agent.close(deadline)
                 if self.link_owned and self.device_path is not None and self.bluez_owner is not None:
-                    await asyncio.wait_for(self.bus.call(self.bluez_owner, self.device_path, DEVICE, "Disconnect", "", []), 0.8)
+                    await asyncio.wait_for(self.bus.call(self.bluez_owner, self.device_path, DEVICE, "Disconnect", "", []), max(deadline - time.monotonic(), 0.001))
             except Exception:
                 pass
             finally:

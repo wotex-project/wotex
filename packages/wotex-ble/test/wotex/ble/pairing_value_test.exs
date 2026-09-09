@@ -6,7 +6,7 @@ defmodule Wotex.BLE.PairingValueTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias Wotex.BLE.BlueZ.Pairing
+  alias Wotex.BLE.BlueZ.{Pairing, Response}
   alias Wotex.BLE.{Challenge, Error}
   @impl Wotex.BLE.Agent
   def decide(_, _), do: :reject
@@ -150,6 +150,60 @@ defmodule Wotex.BLE.PairingValueTest do
         ] do
       assert {:error, %Error{code: :invalid_options}} = Pairing.options(invalid, 5000)
     end
+  end
+
+  test "WBL-S05 challenge frames bind exact peer and convert only remaining time" do
+    peer = %{"adapter" => "/adapter", "address" => "00:11:22:33:44:55", "address_type" => "public"}
+
+    wire = %{
+      "id" => "challenge-1",
+      "peer" => peer,
+      "kind" => "display_passkey",
+      "value" => %{"passkey" => 42, "entered" => 2},
+      "timeout_ms" => 50
+    }
+
+    assert {:ok, %Challenge{value: %{passkey: 42, entered: 2}, deadline_ms: -150}} =
+             Pairing.challenge(wire, peer, -100, -200)
+
+    assert {:ok, %Challenge{deadline_ms: -175}} = Pairing.challenge(wire, peer, -175, -200)
+
+    assert {:ok, %Challenge{peer: %{address_type: :random}}} =
+             Pairing.challenge(
+               %{wire | "peer" => %{peer | "address_type" => "random"}},
+               %{peer | "address_type" => "random"},
+               200,
+               0
+             )
+
+    for invalid <- [
+          nil,
+          Map.put(wire, "extra", true),
+          %{wire | "peer" => %{peer | "address" => "11:22:33:44:55:66"}},
+          %{wire | "kind" => "unknown"},
+          %{wire | "value" => %{"passkey" => 42}},
+          %{wire | "timeout_ms" => 0},
+          %{wire | "timeout_ms" => 60_001}
+        ] do
+      assert {:error, %Error{code: :invalid_challenge}} = Pairing.challenge(invalid, peer, 100, 0)
+    end
+
+    assert {:error, %Error{code: :invalid_challenge}} = Pairing.challenge(wire, peer, 100, 100)
+    invalid_peer = %{peer | "address_type" => "unknown"}
+
+    assert {:error, %Error{code: :invalid_challenge}} =
+             Pairing.challenge(%{wire | "peer" => invalid_peer}, invalid_peer, 100, 0)
+  end
+
+  test "WBL-C07 Pair results cannot infer success from arbitrary truthy payloads" do
+    frame = %{"version" => 1, "id" => "1", "ok" => true, "result" => %{"paired" => true}}
+    assert {:ok, %{paired: true}} = Response.parse(frame, "pair")
+
+    for result <- [%{"paired" => false}, %{"paired" => true, "extra" => 1}, true, nil] do
+      assert :invalid = Response.parse(%{frame | "result" => result}, "pair")
+    end
+
+    assert {:ok, nil} = Response.parse(%{frame | "result" => nil}, "agent_reply")
   end
 
   property "WBL-C02 arbitrary prompt bytes remain total and redacted" do
