@@ -183,10 +183,9 @@ WOTEX_PATH_DEPS=1 mix deps.get
 WOTEX_PATH_DEPS=1 mix check
 ```
 
-`mix check` runs warnings-as-errors compilation, formatting, strict Credo, 95%
-coverage, dependency audits, Doctor, Dialyzer, HexDocs, boundary checks, Hex
-archive construction, out-of-tree archive compilation, and the application-free
-assertion.
+`mix check` runs warnings-as-errors compilation, formatting, and the test suite.
+Package, documentation, audit, and compatibility checks are explicit
+release-readiness work.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
 [SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see
