@@ -1,5 +1,23 @@
 defmodule Wotex.Matter.Address do
-  @moduledoc "Concrete fabric-scoped Matter interaction paths; wildcard writes are rejected."
+  @moduledoc """
+  Represents a concrete, fabric-scoped Matter interaction path.
+
+  A `t:t/0` identifies the fabric, node, endpoint, cluster, and member used by a
+  read, write, or invoke operation. `new/1` validates each identifier against
+  the width and reserved-value profile accepted by the pinned Software
+  Development Kit (SDK). Wildcard members are excluded so state-changing
+  requests always address a concrete path.
+
+  `validate_message/1` applies the same path checks to a request and
+  distinguishes a missing write or invoke input from an explicit `nil` value.
+  Construction is pure and performs no fabric lookup or data-model discovery.
+
+  ## Examples
+
+      iex> {:ok, path} = Wotex.Matter.Address.new(%{fabric_id: 1, node_id: 2, endpoint: 1, cluster: 6, member: 0})
+      iex> {path.fabric_id, path.node_id, path.endpoint, path.cluster, path.member}
+      {1, 2, 1, 6, 0}
+  """
   alias Wotex.Matter.Error
   @enforce_keys [:fabric_id, :node_id, :endpoint, :cluster, :member]
   defstruct [:fabric_id, :node_id, :endpoint, :cluster, :member]

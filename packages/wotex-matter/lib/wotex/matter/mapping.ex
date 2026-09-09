@@ -1,5 +1,21 @@
 defmodule Wotex.Matter.Mapping do
-  @moduledoc "Pure Form mapping for the explicitly documented Wotex protocol profile."
+  @moduledoc """
+  Maps a W3C Web of Things Form to a concrete Matter interaction request.
+
+  `command/4` accepts Property reads and writes and Action invocations declared
+  by the Form. It parses a `matter` href into the fabric, node, endpoint,
+  cluster, and member required by `Wotex.Matter.Address`, attaches write or
+  invoke input, and returns an immutable request map. The original Form map is
+  retained so unknown extension terms are preserved.
+
+  ## Semantics
+
+  Mapping is pure and performs no commissioning, fabric lookup, or SDK call. It
+  rejects malformed hrefs, user information, fragments, wildcard paths, and
+  unsupported operations as `Wotex.Matter.Error`. Successful mapping means only
+  that the Form fits the documented package profile. It does not authorize the
+  interaction, validate cluster semantics, or prove a device effect.
+  """
   alias Wotex.Form
   alias Wotex.Matter.{Address, Error}
   @operations %{readproperty: :read, writeproperty: :write, invokeaction: :invoke}

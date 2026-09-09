@@ -1,5 +1,28 @@
 defmodule Wotex.Matter.TLV do
-  @moduledoc "Bounded Matter SDK 1.6 TLV values with explicit widths, tags and containers."
+  @moduledoc """
+  Encodes and decodes bounded Matter Type-Length-Value data for the SDK 1.6 profile.
+
+  Elements retain their tag, exact scalar width, type, and value. Supported
+  values include signed and unsigned integers, floating-point values, booleans,
+  UTF-8 strings, byte strings, null, structures, arrays, and lists. Anonymous,
+  context-specific, common-profile, implicit-profile, and fully qualified tags
+  remain explicit; the codec does not infer a narrower type or discard a tag.
+
+  `decode/1` requires a complete input and `encode/1` verifies its result by
+  decoding it again. Both operations are limited to 64 KiB, 1024 elements, and
+  eight container levels. Array children must be anonymous, and structure tags
+  must be unique and non-anonymous. Invalid values return
+  `Wotex.Matter.Error` without partial output.
+
+  ## Examples
+
+      iex> elements = [%{tag: {:context, 1}, type: :u8, value: 42}]
+      iex> {:ok, bytes} = Wotex.Matter.TLV.encode(elements)
+      iex> bytes
+      <<36, 1, 42>>
+      iex> Wotex.Matter.TLV.decode(bytes)
+      {:ok, [%{tag: {:context, 1}, type: :u8, value: 42}]}
+  """
   import Bitwise
   alias Wotex.Matter.Error
   @type element :: %{tag: term(), type: atom(), value: term()}

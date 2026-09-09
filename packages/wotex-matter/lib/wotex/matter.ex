@@ -1,5 +1,23 @@
 defmodule Wotex.Matter do
-  @moduledoc "Consumer-neutral Matter operations over an explicitly supplied real client port."
+  @moduledoc """
+  Executes bounded Matter operations through an explicitly selected client.
+
+  `Wotex.Matter` is the package facade for connection lifecycle and native
+  read, write, and invoke requests. `connect/1` returns a
+  `Wotex.Matter.Session`, `send/2` validates and performs one request, and
+  `disconnect/1` releases only the resources represented by that session.
+  `with_connection/2` provides deterministic cleanup around the same API.
+
+  ## Execution boundary
+
+  The consumer selects a `Wotex.Matter.Client` and owns commissioning, fabric
+  storage, attestation, secure sessions, credentials, authorization, routing,
+  and supervision. Loading the module starts no controller or Python process.
+  Subscription delivery is unsupported and is not simulated. A successful
+  interaction is protocol evidence for the addressed path; it does not
+  establish canonical Property state, authorization, or a certified physical
+  effect.
+  """
 
   import Kernel, except: [send: 2]
   alias Wotex.Matter.{Error, PortCall, Session}

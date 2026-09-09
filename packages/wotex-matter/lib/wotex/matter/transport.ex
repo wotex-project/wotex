@@ -1,5 +1,23 @@
 defmodule Wotex.Matter.Transport do
-  @moduledoc "Scoped Wotex Runtime execution over an explicit client and exact target identity."
+  @moduledoc """
+  Executes Wotex Runtime requests through a scoped Matter client session.
+
+  The transport accepts Runtime request and execution-context structs, maps the
+  selected Form through `Wotex.Matter.Mapping`, opens the configured client,
+  performs one read, write, or invoke, and closes the exact session.
+  Subscription callbacks return explicit unsupported errors because this
+  profile does not implement Matter subscription delivery.
+
+  ## Runtime boundary
+
+  A concrete fabric-scoped path is required, and its fabric identity must match
+  the configured target. Credentials are rejected because
+  this adapter contract keeps them inside the consumer-owned controller.
+  Runtime Form selection is not authorization, and successful protocol
+  completion does not establish canonical Property truth or a physical Action
+  effect. The consumer owns commissioning, trust policy, deadlines,
+  supervision, data-model validation, and interpretation of protocol results.
+  """
   @behaviour Wotex.Runtime.Transport
   alias Wotex.Matter
   alias Wotex.Matter.{Error, Mapping}

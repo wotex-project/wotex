@@ -1,10 +1,26 @@
 defmodule Wotex.Matter.SDK do
   @moduledoc """
-  Opt-in external-process adapter for the Matter SDK v1.6.0.0 Python controller API.
+  Opt-in external-process adapter for the Matter Software Development Kit (SDK)
+  v1.6.0.0 Python controller API.
 
   The caller supplies an absolute Python executable and a trusted controller
   factory. The adapter does not install the SDK, commission a fabric, validate
-  attestation, provide CASE/PASE, or prove the provenance of either dependency.
+  attestation, provide Certificate Authenticated Session Establishment (CASE) or
+  Passcode Authenticated Session Establishment (PASE), or prove the provenance
+  of either dependency.
+
+  `connect/1` validates the executable, factory reference, settings map, and
+  fabric identity without starting Python. `request/3` validates the concrete
+  `Wotex.Matter.Address`, sends one correlated JSON request to the packaged
+  bridge, and bounds combined output to 128 KiB. `decode/2` accepts only the
+  exact response identifier and success envelope; logs and foreign output never
+  count as a result.
+
+  Each request starts and closes its own external process. The trusted factory
+  supplies a synchronous, initialized controller context and remains
+  responsible for secure storage, attestation, commissioning, sessions, and
+  per-path data-model validation. Transport failure after a write or invoke is
+  reported with unknown effect and is never retried by this adapter.
   """
 
   @behaviour Wotex.Matter.Client

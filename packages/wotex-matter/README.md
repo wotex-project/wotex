@@ -1,9 +1,45 @@
 # Wotex Matter
 
-Consumer-neutral Matter library for W3C Web of Things consumers.
-Development version: `0.1.0-dev`.
+**Consumer-neutral Matter interactions for W3C Web of Things consumers.**
+
+[![Hex.pm](https://img.shields.io/hexpm/v/wotex_matter.svg)](https://hex.pm/packages/wotex_matter)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_matter)
+[![CI](https://github.com/wotex-project/wotex-matter/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-matter/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/wotex-project/wotex-matter/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-matter)
+[![License](https://img.shields.io/hexpm/l/wotex_matter.svg)](https://github.com/wotex-project/wotex-matter/blob/main/LICENSE)
+
+[Installation](#installation) ·
+[Implemented profile](#implemented-profile) ·
+[Quick start](#quick-start) ·
+[Wotex contract](#wotex-contract) ·
+[Development](#development) ·
+[Software contract](#software-implementation-contract)
+
+---
+
+This checkout is a `0.1.0-dev` development baseline. The public API remains
+unstable, and the ordered software profile is unfinished. Package metadata
+does not establish publication or release readiness.
 
 Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
+
+## Installation
+
+This development checkout is prepared as the `wotex_matter` Hex package but
+does not assert that a release has been published. A sibling-checkout consumer
+can select it explicitly:
+
+```elixir
+def deps do
+  [{:wotex_matter, path: "../wotex-matter"}]
+end
+```
+
+Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
+and Runtime dependencies resolve from sibling checkouts. Published consumers
+should replace the path with the constraint of an available Hex release.
+
+## Implemented profile
 
 The implemented package provides fabric-scoped interaction paths, bounded TLV,
 a validated `Client` behaviour, an opt-in Python SDK interaction adapter,
@@ -14,6 +50,8 @@ SDK; an explicitly supplied controller factory owns SDK startup, credentials
 and shutdown. No Python runtime, native SDK binary, controller factory or
 commissioning workflow is bundled.
 
+## Quick start
+
 ```elixir
 {:ok, path} = Wotex.Matter.Address.new(%{
   fabric_id: 1, node_id: 2, endpoint: 1, cluster: 6, member: 0
@@ -21,7 +59,7 @@ commissioning workflow is bundled.
 {:ok, bytes} = Wotex.Matter.TLV.encode([
   %{tag: {:context, 1}, type: :u8, value: 42}
 ])
-{:ok, [%{value: 42}]} = Wotex.Matter.TLV.decode(bytes)
+{:ok, [%{tag: {:context, 1}, type: :u8, value: 42}]} = Wotex.Matter.TLV.decode(bytes)
 ```
 
 Use `client: Wotex.Matter.SDK` with an absolute Python executable,
