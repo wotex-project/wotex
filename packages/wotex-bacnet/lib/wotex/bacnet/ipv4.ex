@@ -107,6 +107,13 @@ defmodule Wotex.BACnet.IPv4 do
 
   def subscribe(_, _, _, _), do: {:error, Error.new(:invalid_subscription)}
 
+  @doc false
+  @spec subscribe_deadline(term(), term(), term(), term(), term()) :: term()
+  def subscribe_deadline(%{stack: stack}, request, receiver, deadline, timeout),
+    do: BACstack.subscribe_deadline(stack, request, receiver, deadline, timeout)
+
+  def subscribe_deadline(_, _, _, _, _), do: {:error, Error.new(:invalid_subscription)}
+
   @impl Wotex.BACnet.Client
   def unsubscribe(%{stack: stack}, subscription, timeout),
     do: BACstack.unsubscribe(stack, subscription, timeout)

@@ -3,7 +3,7 @@ defmodule Wotex.BACnet do
 
   import Kernel, except: [send: 2]
   alias BACnet.Protocol.ApplicationTags.Encoding
-  alias Wotex.BACnet.{COVRequest, Error, NativeCall, PortCall, Session, Subscription}
+  alias Wotex.BACnet.{Error, NativeCall, PortCall, Session, Subscription}
   @operations [:read_property, :write_property]
 
   @doc "Reports the operations implemented by this library's validated client boundary."
@@ -190,27 +190,16 @@ defmodule Wotex.BACnet do
 
   @doc "Establishes a finite native COV subscription through the selected client."
   @spec subscribe(term(), term()) :: {:ok, Subscription.t()} | {:error, Error.t()}
-  def subscribe(%Session{client: client, timeout: timeout} = session, request)
-      when is_atom(client) and not is_nil(client) and is_integer(timeout) and
-             timeout in 1..60_000 do
-    with {:ok, request} <- COVRequest.new(request, self()),
-         {:ok, subscription} <-
-           PortCall.optional(client, :subscribe, [
-             session.handle,
-             request,
-             request.receiver,
-             timeout
-           ]) do
-      if Subscription.valid?(subscription),
-        do: {:ok, subscription},
-        else: {:error, Error.new(:invalid_transport_return)}
-    else
-      {:error, _} = error -> error
-      _ -> {:error, Error.new(:invalid_transport_return)}
-    end
-  end
+  def subscribe(%Session{timeout: timeout} = session, request)
+      when is_integer(timeout) and timeout in 1..60_000,
+      do: subscribe_deadline(session, request, System.monotonic_time(:millisecond) + timeout)
 
   def subscribe(_, _), do: {:error, Error.new(:invalid_subscription)}
+
+  @doc false
+  @spec subscribe_deadline(term(), term(), term()) :: {:ok, Subscription.t()} | {:error, Error.t()}
+  def subscribe_deadline(session, request, deadline),
+    do: Wotex.BACnet.NativeSubscription.open(session, request, deadline)
 
   @doc "Cancels through the original client and validates the opaque subscription handle."
   @spec unsubscribe(term(), term()) :: :ok | {:error, Error.t()}

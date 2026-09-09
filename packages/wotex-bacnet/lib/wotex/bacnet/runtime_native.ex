@@ -79,8 +79,7 @@ defmodule Wotex.BACnet.RuntimeNative do
 
       receive do
         {:subscribe, ^token, receiver} ->
-          remaining = options.deadline - now()
-          result = subscribe(session, options.request, receiver, remaining)
+          result = subscribe(session, options.request, receiver, options.deadline)
           send(parent, {:runtime_subscribed, token, self(), result})
           hold(token)
       after
@@ -103,16 +102,14 @@ defmodule Wotex.BACnet.RuntimeNative do
     end
   end
 
-  defp subscribe(session, request, receiver, remaining) when remaining > 0 do
+  defp subscribe(session, request, receiver, deadline) do
     message =
       request
       |> Map.from_struct()
       |> Map.put(:receiver, receiver)
 
-    BACnet.subscribe(%{session | timeout: remaining}, message)
+    BACnet.subscribe_deadline(session, message, deadline)
   end
-
-  defp subscribe(_, _, _, _), do: {:error, Error.new(:deadline_exceeded)}
 
   defp hold(token) do
     receive do

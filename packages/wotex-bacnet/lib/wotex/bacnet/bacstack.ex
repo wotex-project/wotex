@@ -236,11 +236,30 @@ defmodule Wotex.BACnet.BACstack do
   def who_is_deadline(_, _, _, _, _), do: {:error, Error.new(:invalid_request)}
 
   @impl Wotex.BACnet.Client
-  def subscribe(%{owner: owner, generation: generation}, request, receiver, timeout)
-      when is_pid(owner) and is_reference(generation) and is_pid(receiver) and
-             is_integer(timeout) and timeout in 1..60_000 do
-    deadline = System.monotonic_time(:millisecond) + timeout
+  def subscribe(config, request, receiver, timeout)
+      when is_integer(timeout) and timeout in 1..60_000,
+      do:
+        subscribe_deadline(
+          config,
+          request,
+          receiver,
+          System.monotonic_time(:millisecond) + timeout,
+          timeout
+        )
 
+  def subscribe(_, _, _, _), do: {:error, Error.new(:invalid_subscription)}
+
+  @doc false
+  @spec subscribe_deadline(term(), term(), term(), term(), term()) :: term()
+  def subscribe_deadline(
+        %{owner: owner, generation: generation},
+        request,
+        receiver,
+        deadline,
+        timeout
+      )
+      when is_pid(owner) and is_reference(generation) and is_pid(receiver) and
+             is_integer(deadline) and is_integer(timeout) and timeout in 1..60_000 do
     with :ok <- COVRequest.validate(request), true <- request.receiver == receiver do
       OperationOwner.subscribe(owner, generation, request, deadline, timeout)
     else
@@ -249,7 +268,7 @@ defmodule Wotex.BACnet.BACstack do
     end
   end
 
-  def subscribe(_, _, _, _), do: {:error, Error.new(:invalid_subscription)}
+  def subscribe_deadline(_, _, _, _, _), do: {:error, Error.new(:invalid_subscription)}
 
   @impl Wotex.BACnet.Client
   def unsubscribe(%{owner: owner, generation: generation}, subscription, timeout)
