@@ -17,7 +17,7 @@ defmodule Wotex.CoAP do
           max_payload_size: 1152,
           connection_oriented: false,
           supports_streaming: false,
-          discovery_capable: true
+          discovery_capable: false
         }
   def capabilities,
     do: %{
@@ -29,7 +29,7 @@ defmodule Wotex.CoAP do
       max_payload_size: 1152,
       connection_oriented: false,
       supports_streaming: false,
-      discovery_capable: true
+      discovery_capable: false
     }
 
   @doc "Explicitly opens a linked UDP owner; no simulator fallback or security downgrade."

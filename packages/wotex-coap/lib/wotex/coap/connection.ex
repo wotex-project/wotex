@@ -2,330 +2,730 @@ defmodule Wotex.CoAP.Connection do
   @moduledoc "Explicit UDP socket owner with bounded RFC 7252 request correlation and retransmission."
 
   use GenServer
-  alias Wotex.CoAP.{Blockwise, Codec, Error, Message}
+  alias Wotex.CoAP.{Blockwise, Codec, Error, Exchange, Message}
+  alias Wotex.CoAP.Datagram.UDP
+  @keys [:host, :port, :timeout, :ack_timeout, :owner, :scheme, :dtls_mode, :datagram]
 
-  @doc "Starts a linked socket owner. Numeric host and finite timeout are explicit inputs."
-  @spec start_link(keyword()) :: {:ok, pid()} | {:error, term()}
+  @doc "Starts a caller-safe linked owner for an explicitly selected datagram adapter."
+  @spec start_link(keyword()) :: {:ok, pid()} | {:error, Error.t()}
   def start_link(opts) do
-    with {:ok, config} <- config(opts) do
-      case GenServer.start(__MODULE__, config) do
-        {:ok, pid} ->
-          Process.link(pid)
-          {:ok, pid}
-
-        {:error, _} = error ->
-          error
-      end
+    with {:ok, config} <- config(opts),
+         {:ok, pid} <- GenServer.start(__MODULE__, Map.put(config, :creator, self())) do
+      await_ready(pid, config.timeout)
     end
   end
 
-  @doc "Runs one exchange; caller queue time is part of the deadline."
+  @doc "Runs one validated wire exchange with a finite deadline including queue time."
   @spec request(pid(), Message.t(), pos_integer()) :: {:ok, Message.t()} | {:error, Error.t()}
-  def request(pid, %Message{} = message, timeout)
-      when is_pid(pid) and is_integer(timeout) and timeout in 1..60_000 do
-    GenServer.call(
-      pid,
-      {:request, message, System.monotonic_time(:millisecond) + timeout},
-      timeout + 1000
-    )
-  catch
-    :exit, _ -> {:error, Error.new(:connection_closed)}
-  end
+  def request(pid, message, timeout), do: submit(pid, message, timeout, :request, [])
 
-  def request(_, _, _), do: {:error, Error.new(:invalid_request)}
-
-  @doc "Runs an exclusive whole-body Block1/Block2 transfer under one finite deadline."
+  @doc "Preserves exclusive complete-body transfer under a single absolute deadline."
   @spec transfer(pid(), Message.t(), pos_integer(), keyword()) ::
           {:ok, Message.t()} | {:error, Error.t()}
-  def transfer(pid, message, timeout, opts \\ [])
+  def transfer(pid, message, timeout, options \\ []),
+    do: submit(pid, message, timeout, :transfer, options)
 
-  def transfer(pid, %Message{} = message, timeout, opts)
-      when is_pid(pid) and is_integer(timeout) and timeout in 1..60_000 do
-    with {:ok, _} <- Blockwise.config(opts) do
-      GenServer.call(
-        pid,
-        {:transfer, message, opts, System.monotonic_time(:millisecond) + timeout},
-        timeout + 1000
-      )
-    end
-  catch
-    :exit, _ -> {:error, Error.new(:connection_closed)}
-  end
-
-  def transfer(_, _, _, _), do: {:error, Error.new(:invalid_request)}
-
-  @doc "Closes a socket owner idempotently."
-  @spec close(pid()) :: :ok
+  @doc "Closes only a validated local connection owner, with bounded cleanup escalation."
+  @spec close(pid()) :: :ok | {:error, Error.t()}
   def close(pid) do
-    GenServer.stop(pid, :normal, 61_000)
-  catch
-    :exit, _ -> :ok
+    case identity(pid) do
+      :owned -> stop(pid)
+      :closed -> :ok
+      :invalid -> failure(:invalid_session)
+    end
   end
 
-  @doc "Validates configuration without accessing the network."
+  @doc "Validates explicit configuration without opening a resource or selecting a fallback."
   @spec config(term()) :: {:ok, map()} | {:error, Error.t()}
-  def config(opts) when is_list(opts) do
-    allowed = [:host, :port, :timeout, :ack_timeout, :owner, :scheme, :dtls_mode]
-
-    if Keyword.keyword?(opts) and Keyword.keys(opts) -- allowed == [],
-      do: options(opts),
-      else: {:error, Error.new(:invalid_options)}
+  def config(options) do
+    with {:ok, values} <- options(options, %{}), do: configuration(values)
   end
-
-  def config(_), do: {:error, Error.new(:invalid_options)}
 
   @impl GenServer
   def init(config) do
-    family = if tuple_size(config.host) == 8, do: :inet6, else: :inet
+    Process.flag(:trap_exit, true)
+    generation = make_ref()
+    Process.put(:wotex_coap_owner, {__MODULE__, generation})
+    owner = self()
+    owner_monitor = Process.monitor(config.owner)
+    creator_monitor = Process.monitor(config.creator)
+    worker = spawn_link(fn -> open(config, owner, generation) end)
+    timer = Process.send_after(self(), {:startup_deadline, generation}, config.timeout)
+    <<mid::16>> = :crypto.strong_rand_bytes(2)
 
-    config =
-      if is_nil(config.ack_timeout),
-        do: %{config | ack_timeout: 2000 + :rand.uniform(1000)},
-        else: config
+    {:ok,
+     %{
+       config: config,
+       generation: generation,
+       phase: :opening,
+       handle: nil,
+       adapter_monitor: nil,
+       open_worker: worker,
+       startup_timer: timer,
+       ready_from: nil,
+       owner_monitor: owner_monitor,
+       creator_monitor: creator_monitor,
+       active: nil,
+       calls: %{},
+       queue: :queue.new(),
+       mid: mid,
+       history: %{},
+       responses: %{},
+       response_order: 0
+     }}
+  end
 
-    case :gen_udp.open(0, [family, :binary, active: false]) do
-      {:ok, socket} ->
-        {:ok,
-         %{
-           config: config,
-           socket: socket,
-           mid: :rand.uniform(65_536) - 1,
-           token: :rand.uniform(4_294_967_296) - 1,
-           history: %{},
-           monitor: Process.monitor(config.owner)
-         }}
+  @impl GenServer
+  def handle_call(:close, _, state) do
+    result = if state.handle, do: adapter_call(state, :close), else: :ok
+    {:stop, :normal, result, %{state | handle: nil}}
+  end
 
-      {:error, reason} ->
-        {:stop, Error.new(:socket_failed, nil, %{reason: reason})}
+  def handle_call(:ready, from, %{phase: :opening} = state),
+    do: {:noreply, %{state | ready_from: from}}
+
+  def handle_call(:ready, _, %{phase: :ready} = state) do
+    Process.link(state.config.creator)
+    {:reply, :ok, state}
+  end
+
+  def handle_call(:ready, _, %{phase: {:failed, error}} = state),
+    do: {:stop, :normal, {:error, error}, state}
+
+  def handle_call(
+        {:submit, message, kind, options, deadline, receipt},
+        from,
+        %{phase: :ready} = state
+      ) do
+    cond do
+      remaining(deadline) == 0 -> {:reply, failure(:timeout), state}
+      map_size(state.calls) >= 64 -> {:reply, failure(:busy), state}
+      true -> {:noreply, admit(state, from, message, kind, options, deadline, receipt)}
     end
   end
 
-  @impl GenServer
-  def handle_call({:transfer, message, opts, deadline}, _, state) do
-    message = %{message | token: :crypto.strong_rand_bytes(8)}
-    started = System.monotonic_time()
+  def handle_call({:submit, _, _, _, _, _}, _, state),
+    do: {:reply, failure(:connection_closed), state}
 
-    {result, next} =
-      Blockwise.run(message, opts, state, fn wire, current -> dispatch(wire, deadline, current) end)
+  def handle_call({:exchange, ref, message}, {worker, _} = from, %{active: ref} = state) do
+    call = Map.fetch!(state.calls, ref)
 
-    telemetry(message, result, started)
-    {:reply, result, next}
+    if worker == call.worker and is_nil(call.exchange),
+      do: begin_exchange(state, ref, call, message, from),
+      else: {:reply, failure(:invalid_exchange), state}
   end
 
-  def handle_call({:request, message, deadline}, _, state) do
-    message = %{message | token: :crypto.strong_rand_bytes(8)}
-    started = System.monotonic_time()
-    {result, next} = dispatch(message, deadline, state)
-    telemetry(message, result, started)
-    {:reply, result, next}
-  end
+  def handle_call({:exchange, _, _}, _, state), do: {:reply, failure(:connection_closed), state}
 
   @impl GenServer
-  def handle_info({:DOWN, ref, :process, _, _}, %{monitor: ref} = state),
+  def handle_info({:opened, generation, result}, %{generation: generation, phase: :opening} = state) do
+    Process.cancel_timer(state.startup_timer)
+    startup(result, %{state | open_worker: nil})
+  end
+
+  def handle_info(
+        {:startup_deadline, generation},
+        %{generation: generation, phase: :opening} = state
+      ) do
+    stop_worker(state.open_worker)
+    startup(failure(:timeout), %{state | open_worker: nil})
+  end
+
+  def handle_info(
+        {:wotex_datagram, generation, {:data, host, port, bytes}},
+        %{generation: generation, phase: :ready} = state
+      ) do
+    state =
+      if host == state.config.host and port == state.config.port,
+        do: incoming(state, bytes),
+        else: state
+
+    case adapter_call(state, :set_active_once) do
+      :ok -> {:noreply, state}
+      {:error, _} -> {:stop, :normal, state}
+    end
+  end
+
+  def handle_info({:wotex_datagram, generation, _failure}, %{generation: generation} = state),
     do: {:stop, :normal, state}
 
+  def handle_info({:retry, ref, exchange_ref}, %{active: ref} = state) do
+    call = Map.fetch!(state.calls, ref)
+
+    case call.exchange do
+      %{reference: ^exchange_ref} = exchange -> retry(state, ref, call, exchange)
+      _ -> {:noreply, state}
+    end
+  end
+
+  def handle_info({:deadline, ref}, %{active: ref} = state),
+    do: {:stop, :normal, finish(state, ref, failure(:timeout))}
+
+  def handle_info({:deadline, ref}, state), do: {:noreply, finish(state, ref, failure(:timeout))}
+
+  def handle_info({:completed, ref, result}, %{active: ref} = state) do
+    next =
+      state
+      |> finish(ref, result)
+      |> next()
+
+    {:noreply, next}
+  end
+
+  def handle_info({:DOWN, monitor, :process, _, _}, state) do
+    if monitor in [state.owner_monitor, state.creator_monitor, state.adapter_monitor],
+      do: {:stop, :normal, state},
+      else: caller_down(state, monitor)
+  end
+
+  def handle_info({:EXIT, worker, reason}, %{open_worker: worker, phase: :opening} = state)
+      when reason != :normal,
+      do: startup(failure(:datagram_failed), %{state | open_worker: nil})
+
+  def handle_info({:EXIT, creator, _}, %{config: %{creator: creator}} = state),
+    do: {:stop, :normal, state}
+
+  def handle_info({:EXIT, worker, reason}, %{active: ref} = state)
+      when is_reference(ref) and reason != :normal do
+    if Map.fetch!(state.calls, ref).worker == worker,
+      do: {:stop, :normal, state},
+      else: {:noreply, state}
+  end
+
+  def handle_info(_, state), do: {:noreply, state}
+
   @impl GenServer
-  def terminate(_, state), do: :gen_udp.close(state.socket)
-
-  defp telemetry(message, result, started) do
-    :telemetry.execute(
-      [:wotex, :coap, :request, :stop],
-      %{duration: System.monotonic_time() - started},
-      %{code: message.code, result: if(match?({:ok, _}, result), do: :ok, else: :error)}
-    )
+  def terminate(_, state) do
+    stop_worker(state.open_worker)
+    Process.cancel_timer(state.startup_timer)
+    if state.active, do: stop_worker(Map.fetch!(state.calls, state.active).worker)
+    if state.handle, do: adapter_call(state, :close)
+    Enum.each(state.calls, fn {_, call} -> reply(call, failure(:connection_closed)) end)
   end
 
-  defp dispatch(message, deadline, state) do
-    now = System.monotonic_time(:millisecond)
-    history = Map.reject(state.history, fn {_, time} -> now - time > 247_000 end)
+  defp submit(pid, %Message{} = message, timeout, kind, options)
+       when is_integer(timeout) and timeout in 1..60_000 do
+    deadline = System.monotonic_time(:millisecond) + timeout
 
-    if now >= deadline or Map.has_key?(history, state.mid) do
-      {{:error, Error.new(:exchange_unavailable)}, state}
-    else
-      message = %{message | message_id: state.mid}
-      result = exchange(state, message, deadline)
-
-      next = %{
-        state
-        | mid: rem(state.mid + 1, 65_536),
-          token: state.token + 1,
-          history: Map.put(history, state.mid, now)
-      }
-
-      {result, next}
+    with :ok <- validate(message, kind, options) do
+      case identity(pid) do
+        :owned -> call(pid, message, kind, options, deadline, timeout)
+        :closed -> failure(:connection_closed)
+        :invalid -> failure(:invalid_session)
+      end
     end
   end
 
-  defp exchange(state, message, deadline) do
-    with :ok <- Codec.validate_options(message),
-         {:ok, bytes} <- Codec.encode(message),
-         :ok <- transmit(state, bytes) do
-      timeout = state.config.ack_timeout
+  defp submit(_, _, _, _, _), do: failure(:invalid_request)
 
-      wait(
-        state,
-        message,
-        bytes,
-        deadline,
-        System.monotonic_time(:millisecond) + timeout,
-        timeout,
-        0,
-        false
-      )
-    else
-      {:error, %Error{}} = error -> error
-      {:error, _} -> {:error, Error.new(:transport_error)}
+  defp validate(message, :transfer, options), do: Blockwise.validate(message, options)
+
+  defp validate(%Message{type: type, code: code} = message, :request, [])
+       when type in [:con, :non] and code in 1..4 do
+    with :ok <- Codec.validate_options(message), {:ok, _} <- Codec.encode(message), do: :ok
+  end
+
+  defp validate(_, _, _), do: failure(:invalid_request)
+
+  defp call(pid, message, kind, options, deadline, timeout) do
+    receipt = make_ref()
+
+    try do
+      GenServer.call(pid, {:submit, message, kind, options, deadline, receipt}, timeout + 1000)
+    catch
+      :exit, {:noproc, _} -> failure(:connection_closed)
+      :exit, {:normal, _} -> effect(failure(:connection_closed), message, admitted?(receipt))
+      :exit, _ -> effect(failure(:connection_closed), message, true)
+    after
+      admitted?(receipt)
     end
   end
 
-  defp wait(state, request, bytes, deadline, retry_at, interval, retries, acknowledged) do
-    now = System.monotonic_time(:millisecond)
-    retransmit? = retransmit?(request.type, acknowledged, retries)
-    wake = if retransmit?, do: min(deadline, retry_at), else: deadline
+  defp admitted?(receipt) do
+    receive do
+      {:wotex_coap_admitted, ^receipt} -> true
+    after
+      0 -> false
+    end
+  end
 
-    result = receive_before(state.socket, now, deadline, wake)
+  defp await_ready(pid, timeout) do
+    case GenServer.call(pid, :ready, timeout + 1000) do
+      :ok -> {:ok, pid}
+      error -> error
+    end
+  catch
+    :exit, _ ->
+      close(pid)
+      failure(:connection_failed)
+  end
 
-    case result do
-      {:ok, {host, port, data}} when host == state.config.host and port == state.config.port ->
-        continue(
-          incoming(data, request),
-          {state, request, bytes, deadline, retry_at, interval, retries, acknowledged}
+  defp open(config, owner, generation) do
+    result =
+      try do
+        config.adapter.open(
+          %{
+            host: config.host,
+            port: config.port,
+            generation: generation,
+            options: config.adapter_options
+          },
+          owner,
+          config.timeout
         )
+      catch
+        _, _ -> failure(:datagram_failed)
+      end
 
-      {:ok, _} ->
-        wait(state, request, bytes, deadline, retry_at, interval, retries, acknowledged)
+    send(owner, {:opened, generation, result})
+  end
 
-      {:error, :timeout} when retransmit? and wake < deadline ->
-        case transmit(state, bytes) do
-          :ok ->
-            wait(
-              state,
-              request,
-              bytes,
-              deadline,
-              wake + interval * 2,
-              interval * 2,
-              retries + 1,
-              false
-            )
+  defp startup(
+         {:ok, %{pid: pid, generation: generation} = handle},
+         %{generation: generation} = state
+       )
+       when is_pid(pid) do
+    state = %{state | handle: handle, adapter_monitor: Process.monitor(pid)}
 
-          {:error, _} ->
-            {:error, Error.new(:transport_error)}
+    case adapter_call(state, :set_active_once) do
+      :ok ->
+        if state.ready_from do
+          Process.link(state.config.creator)
+          GenServer.reply(state.ready_from, :ok)
         end
 
-      {:error, _} ->
-        {:error,
-         %Error{code: :timeout, effect: if(request.code in [2, 3, 4], do: :unknown, else: :none)}}
+        {:noreply, %{state | phase: :ready, ready_from: nil}}
+
+      {:error, error} ->
+        startup({:error, error}, state)
     end
   end
 
-  defp continue(
-         result,
-         {state, request, bytes, deadline, retry_at, interval, retries, acknowledged}
-       ) do
-    case result do
-      :ack ->
-        wait(state, request, bytes, deadline, retry_at, interval, retries, true)
+  defp startup({:error, %Error{} = error}, state) do
+    if state.ready_from,
+      do: {:stop, :normal, reply_ready(state, error)},
+      else: {:noreply, %{state | phase: {:failed, error}}}
+  end
 
-      :ignore ->
-        wait(state, request, bytes, deadline, retry_at, interval, retries, acknowledged)
+  defp startup(_, state), do: startup(failure(:datagram_failed), state)
 
-      {:ok, %Message{type: :con} = reply} ->
-        {:ok, ack} = Codec.encode(%Message{type: :ack, code: 0, message_id: reply.message_id})
-        with :ok <- transmit(state, ack), do: {:ok, reply}
+  defp reply_ready(state, error) do
+    GenServer.reply(state.ready_from, {:error, error})
+    %{state | ready_from: nil}
+  end
 
-      result ->
-        result
+  defp admit(state, from, message, kind, options, deadline, receipt) do
+    ref = make_ref()
+
+    call = %{
+      from: from,
+      message: message,
+      kind: kind,
+      options: options,
+      deadline: deadline,
+      monitor: Process.monitor(elem(from, 0)),
+      timer: Process.send_after(self(), {:deadline, ref}, remaining(deadline)),
+      started: System.monotonic_time(),
+      sent: false,
+      worker: nil,
+      exchange: nil
+    }
+
+    send(elem(from, 0), {:wotex_coap_admitted, receipt})
+    next(%{state | calls: Map.put(state.calls, ref, call), queue: :queue.in(ref, state.queue)})
+  end
+
+  defp next(%{active: nil} = state) do
+    case :queue.out(state.queue) do
+      {:empty, _} -> state
+      {{:value, ref}, queue} -> activate(%{state | queue: queue}, ref)
     end
   end
 
-  defp incoming(data, request) do
-    with {:ok, reply} <- Codec.decode(data), :ok <- Codec.validate_options(reply) do
-      cond do
-        reply.type == :rst and reply.message_id == request.message_id ->
-          {:error, Error.new(:reset)}
+  defp next(state), do: state
 
-        reply.type == :ack and (reply.message_id != request.message_id or request.type != :con) ->
-          :ignore
+  defp activate(state, ref) do
+    call = Map.fetch!(state.calls, ref)
 
-        reply.type == :ack and reply.code == 0 ->
-          :ack
+    if remaining(call.deadline) == 0 or not Process.alive?(elem(call.from, 0)) do
+      state
+      |> finish(ref, failure(:timeout))
+      |> next()
+    else
+      owner = self()
+      token = unique_token(state.responses, 8)
 
-        reply.code < 64 or reply.token != request.token ->
-          :ignore
+      case token do
+        {:ok, token} ->
+          call = %{call | message: %{call.message | token: token}}
+          worker = spawn_link(fn -> transfer_worker(owner, ref, call) end)
+          %{state | active: ref, calls: Map.put(state.calls, ref, %{call | worker: worker})}
 
-        reply.type not in [:con, :non, :ack] ->
-          :ignore
+        {:error, _} = error ->
+          state
+          |> finish(ref, error)
+          |> next()
+      end
+    end
+  end
 
-        true ->
-          {:ok, reply}
+  defp transfer_worker(owner, ref, call) do
+    exchange = fn wire, state ->
+      {GenServer.call(owner, {:exchange, ref, wire}, remaining(call.deadline) + 1000), state}
+    end
+
+    result =
+      case call.kind do
+        :transfer ->
+          elem(Blockwise.run(call.message, call.options, nil, exchange), 0)
+
+        :request ->
+          {result, _} = exchange.(call.message, nil)
+          terminal(result)
+      end
+
+    send(owner, {:completed, ref, result})
+  end
+
+  defp terminal({:ok, %Message{code: 95}}), do: failure(:incomplete_response)
+  defp terminal(result), do: result
+
+  defp begin_exchange(state, ref, call, message, from) do
+    now = System.monotonic_time(:millisecond)
+    history = Map.reject(state.history, fn {_, timestamp} -> now - timestamp >= 247_000 end)
+    interval = state.config.ack_timeout || 2000 + :rand.uniform(1001) - 1
+    message = %{message | message_id: state.mid}
+
+    with false <- Map.has_key?(history, state.mid),
+         {:ok, exchange} <- Exchange.new(message, now, call.deadline, interval) do
+      record = %{from: from, value: exchange, reference: make_ref(), timer: nil}
+      state = %{state | mid: rem(state.mid + 1, 65_536), history: Map.put(history, state.mid, now)}
+      call = %{call | sent: true, exchange: arm(record, ref)}
+      state = put_call(state, ref, call)
+
+      case transmit(state, exchange.bytes) do
+        :ok -> {:noreply, state}
+        {:error, error} -> {:noreply, exchange_reply(state, {:error, error})}
       end
     else
-      {:error, _} -> :ignore
+      true -> {:reply, failure(:exchange_unavailable), %{state | history: history}}
+      error -> {:reply, error, %{state | history: history}}
     end
   end
 
-  defp transmit(state, bytes),
-    do: :gen_udp.send(state.socket, state.config.host, state.config.port, bytes)
+  defp retry(state, ref, call, record) do
+    case Exchange.tick(record.value, System.monotonic_time(:millisecond)) do
+      :timeout ->
+        {:noreply, exchange_reply(state, failure(:timeout))}
 
-  defp options(opts) do
-    host = Keyword.get(opts, :host)
-    port = Keyword.get(opts, :port, 5683)
-    timeout = Keyword.get(opts, :timeout, 5000)
-    ack_timeout = Keyword.get(opts, :ack_timeout)
-    host = if is_binary(host), do: :inet.parse_address(String.to_charlist(host)), else: {:ok, host}
+      {:wait, exchange} ->
+        {:noreply, put_call(state, ref, %{call | exchange: arm(%{record | value: exchange}, ref)})}
 
-    case host do
-      {:ok, host} when is_tuple(host) ->
-        cond do
-          Keyword.get(opts, :scheme, :coap) != :coap or
-              Keyword.get(opts, :dtls_mode, :none) != :none ->
-            {:error, Error.new(:unsupported_security)}
+      {:send, bytes, exchange} ->
+        state = put_call(state, ref, %{call | exchange: arm(%{record | value: exchange}, ref)})
 
-          not valid_ip?(host) ->
-            {:error, Error.new(:invalid_host)}
-
-          not bounded_integer?(port, 65_535) ->
-            {:error, Error.new(:invalid_port)}
-
-          not bounded_integer?(timeout, 60_000) ->
-            {:error, Error.new(:invalid_timeout)}
-
-          not valid_ack_timeout?(ack_timeout) ->
-            {:error, Error.new(:invalid_ack_timeout)}
-
-          not is_pid(Keyword.get(opts, :owner, self())) ->
-            {:error, Error.new(:invalid_owner)}
-
-          true ->
-            {:ok,
-             %{
-               host: host,
-               port: port,
-               timeout: timeout,
-               ack_timeout: ack_timeout,
-               owner: Keyword.get(opts, :owner, self())
-             }}
+        case transmit(state, bytes) do
+          :ok -> {:noreply, state}
+          {:error, error} -> {:noreply, exchange_reply(state, {:error, error})}
         end
+    end
+  end
+
+  defp arm(record, ref) do
+    if record.timer, do: Process.cancel_timer(record.timer)
+
+    %{
+      record
+      | timer:
+          Process.send_after(
+            self(),
+            {:retry, ref, record.reference},
+            remaining(Exchange.wake(record.value))
+          )
+    }
+  end
+
+  defp incoming(state, bytes) do
+    with {:ok, reply} <- Codec.decode(bytes), :ok <- Codec.validate_options(reply) do
+      state = expire_responses(state)
+      key = {reply.message_id, reply.token}
+
+      cond do
+        reply.type == :con and Map.has_key?(state.responses, key) ->
+          control(state, :ack, reply.message_id)
+          state
+
+        is_nil(state.active) ->
+          unknown(state, reply)
+
+        true ->
+          correlate(state, reply)
+      end
+    else
+      _ -> state
+    end
+  end
+
+  defp correlate(state, reply) do
+    case Map.fetch!(state.calls, state.active).exchange do
+      nil ->
+        unknown(state, reply)
+
+      record ->
+        case Exchange.incoming(record.value, reply) do
+          :ignore ->
+            unknown(state, reply)
+
+          :ack ->
+            call = Map.fetch!(state.calls, state.active)
+            record = %{record | value: %{record.value | acknowledged: true}}
+            put_call(state, state.active, %{call | exchange: arm(record, state.active)})
+
+          result ->
+            case accept_con(state, reply) do
+              {:ok, state} -> exchange_reply(state, result)
+              {:error, error} -> exchange_reply(state, {:error, error})
+            end
+        end
+    end
+  end
+
+  defp accept_con(state, %Message{type: :con} = reply) do
+    with :ok <- control(state, :ack, reply.message_id), do: {:ok, remember(state, reply)}
+  end
+
+  defp accept_con(state, _), do: {:ok, state}
+
+  defp remember(state, reply) do
+    responses =
+      Map.put(
+        state.responses,
+        {reply.message_id, reply.token},
+        {System.monotonic_time(:millisecond), state.response_order}
+      )
+
+    responses =
+      if map_size(responses) > 1024,
+        do: Map.delete(responses, elem(Enum.min_by(responses, fn {_, {_, order}} -> order end), 0)),
+        else: responses
+
+    %{state | responses: responses, response_order: state.response_order + 1}
+  end
+
+  defp unknown(state, %Message{type: :con, message_id: mid}) do
+    control(state, :rst, mid)
+    state
+  end
+
+  defp unknown(state, _), do: state
+
+  defp control(state, type, mid) do
+    {:ok, bytes} = Codec.encode(%Message{type: type, code: 0, message_id: mid})
+    transmit(state, bytes)
+  end
+
+  defp transmit(state, bytes), do: adapter_call(state, :send, [bytes])
+
+  defp adapter_call(state, operation, extra \\ []) do
+    case apply(state.config.adapter, operation, [state.handle | extra]) do
+      :ok -> :ok
+      {:error, %Error{}} = error -> error
+      _ -> failure(:datagram_failed)
+    end
+  catch
+    _, _ -> failure(:datagram_failed)
+  end
+
+  defp expire_responses(state) do
+    now = System.monotonic_time(:millisecond)
+
+    %{
+      state
+      | responses:
+          Map.reject(state.responses, fn {_, {timestamp, _}} -> now - timestamp >= 247_000 end)
+    }
+  end
+
+  defp exchange_reply(state, result) do
+    call = Map.fetch!(state.calls, state.active)
+    Process.cancel_timer(call.exchange.timer)
+    GenServer.reply(call.exchange.from, result)
+    put_call(state, state.active, %{call | exchange: nil})
+  end
+
+  defp finish(state, ref, result) do
+    case Map.pop(state.calls, ref) do
+      {nil, _} ->
+        state
+
+      {call, calls} ->
+        stop_worker(call.worker)
+        reply(call, result)
+
+        %{
+          state
+          | active: if(state.active == ref, do: nil, else: state.active),
+            calls: calls,
+            queue: :queue.filter(&(&1 != ref), state.queue)
+        }
+    end
+  end
+
+  defp reply(call, result) do
+    Process.demonitor(call.monitor, [:flush])
+    Process.cancel_timer(call.timer)
+    if call.exchange, do: Process.cancel_timer(call.exchange.timer)
+    result = effect(result, call.message, call.sent)
+
+    :telemetry.execute(
+      [:wotex, :coap, :request, :stop],
+      %{duration: System.monotonic_time() - call.started},
+      %{code: call.message.code, result: if(match?({:ok, _}, result), do: :ok, else: :error)}
+    )
+
+    GenServer.reply(call.from, result)
+  end
+
+  defp effect({:error, error}, message, sent),
+    do:
+      {:error, %{error | effect: if(sent and message.code in [2, 3, 4], do: :unknown, else: :none)}}
+
+  defp effect(result, _, _), do: result
+
+  defp caller_down(state, monitor) do
+    case Enum.find(state.calls, fn {_, call} -> call.monitor == monitor end) do
+      {ref, _} when ref == state.active -> {:stop, :normal, state}
+      {ref, _} -> {:noreply, finish(state, ref, failure(:connection_closed))}
+      nil -> {:noreply, state}
+    end
+  end
+
+  defp put_call(state, ref, call), do: %{state | calls: Map.put(state.calls, ref, call)}
+  defp stop_worker(nil), do: :ok
+  defp stop_worker(pid), do: Process.exit(pid, :kill)
+  defp remaining(deadline), do: max(0, deadline - System.monotonic_time(:millisecond))
+  defp failure(code), do: {:error, Error.new(code)}
+
+  defp unique_token(_, 0), do: failure(:exchange_unavailable)
+
+  defp unique_token(responses, remaining) do
+    token = :crypto.strong_rand_bytes(8)
+
+    if Enum.any?(responses, fn {{_, previous}, _} -> previous == token end),
+      do: unique_token(responses, remaining - 1),
+      else: {:ok, token}
+  end
+
+  defp identity(pid) when is_pid(pid) and node(pid) == node() and pid != self() do
+    case :erlang.process_info(pid, {:dictionary, :wotex_coap_owner}) do
+      :undefined ->
+        :closed
+
+      {{:dictionary, :wotex_coap_owner}, {__MODULE__, generation}} when is_reference(generation) ->
+        :owned
 
       _ ->
-        {:error, Error.new(:invalid_host)}
+        :invalid
     end
   end
 
-  defp valid_ip?(host) do
-    maximum = if tuple_size(host) == 4, do: 255, else: 65_535
+  defp identity(_), do: :invalid
 
-    tuple_size(host) in [4, 8] and
-      Enum.all?(Tuple.to_list(host), &(is_integer(&1) and &1 in 0..maximum))
+  defp stop(pid) do
+    GenServer.call(pid, :close, 900)
+  catch
+    :exit, {reason, _} when reason in [:normal, :noproc] ->
+      :ok
+
+    :exit, {{:normal, {:sys, :terminate, _}}, _} ->
+      :ok
+
+    :exit, _ ->
+      Process.unlink(pid)
+      monitor = Process.monitor(pid)
+      if identity(pid) == :owned, do: Process.exit(pid, :kill)
+
+      receive do
+        {:DOWN, ^monitor, :process, _, _} -> failure(:cleanup_timeout)
+      after
+        100 ->
+          Process.demonitor(monitor, [:flush])
+          failure(:cleanup_timeout)
+      end
   end
 
-  defp bounded_integer?(value, max), do: is_integer(value) and value in 1..max
-  defp valid_ack_timeout?(nil), do: true
-  defp valid_ack_timeout?(value), do: bounded_integer?(value, 3000)
-  defp receive_before(_, now, deadline, _) when now >= deadline, do: {:error, :timeout}
-  defp receive_before(socket, now, _, wake), do: :gen_udp.recv(socket, 0, max(0, wake - now))
+  defp options([], values), do: {:ok, values}
 
-  defp retransmit?(type, acknowledged, retries),
-    do: type == :con and not acknowledged and retries < 4
+  defp options([{key, value} | rest], values) when key in @keys and not is_map_key(values, key),
+    do: options(rest, Map.put(values, key, value))
+
+  defp options(_, _), do: failure(:invalid_options)
+
+  defp configuration(values) do
+    with {:ok, host} <- address(Map.get(values, :host)) do
+      port = Map.get(values, :port, 5683)
+      timeout = Map.get(values, :timeout, 5000)
+      ack = Map.get(values, :ack_timeout)
+      owner = Map.get(values, :owner, self())
+      datagram = Map.get(values, :datagram, {UDP, []})
+
+      cond do
+        Map.get(values, :scheme, :coap) != :coap or Map.get(values, :dtls_mode, :none) != :none ->
+          failure(:unsupported_security)
+
+        not (is_integer(port) and port in 1..65_535) ->
+          failure(:invalid_port)
+
+        not (is_integer(timeout) and timeout in 1..60_000) ->
+          failure(:invalid_timeout)
+
+        not valid_ack?(ack) ->
+          failure(:invalid_ack_timeout)
+
+        not is_pid(owner) or node(owner) != node() ->
+          failure(:invalid_owner)
+
+        true ->
+          adapter_config(datagram, %{
+            host: host,
+            port: port,
+            timeout: timeout,
+            ack_timeout: ack,
+            owner: owner
+          })
+      end
+    end
+  end
+
+  defp valid_ack?(nil), do: true
+  defp valid_ack?(value), do: is_integer(value) and value in 1..3000
+
+  defp adapter_config({UDP, []}, config),
+    do: {:ok, Map.merge(config, %{adapter: UDP, adapter_options: []})}
+
+  defp adapter_config({UDP, _}, _), do: failure(:invalid_datagram_config)
+
+  defp adapter_config({module, options}, config)
+       when is_atom(module) and module not in [nil, false, true],
+       do: {:ok, Map.merge(config, %{adapter: module, adapter_options: options})}
+
+  defp adapter_config(_, _), do: failure(:invalid_datagram_config)
+
+  defp address(host) when is_binary(host) and byte_size(host) <= 64 do
+    with true <- String.valid?(host),
+         {:ok, ip} <- :inet.parse_address(String.to_charlist(host)),
+         do: address(ip),
+         else: (_ -> failure(:invalid_host))
+  end
+
+  defp address(host) when is_tuple(host) do
+    maximum = if tuple_size(host) == 4, do: 255, else: 65_535
+
+    if tuple_size(host) in [4, 8] and
+         Enum.all?(Tuple.to_list(host), &(is_integer(&1) and &1 in 0..maximum)),
+       do: {:ok, host},
+       else: failure(:invalid_host)
+  end
+
+  defp address(_), do: failure(:invalid_host)
 end

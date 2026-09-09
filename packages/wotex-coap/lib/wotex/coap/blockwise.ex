@@ -35,7 +35,7 @@ defmodule Wotex.CoAP.Blockwise do
         when state: var
   def run(message, opts, state, exchange) do
     with {:ok, config} <- config(opts),
-         :ok <- validate(message, config) do
+         :ok <- validate_request(message, config) do
       context = %{exchange: exchange, state: state, left: config.blocks, config: config}
       {result, context} = start(message, context)
       {effect(result, message.code), context.state}
@@ -44,7 +44,13 @@ defmodule Wotex.CoAP.Blockwise do
     end
   end
 
-  defp validate(%Message{} = message, config) do
+  @doc "Validates a complete-body request before allocating any transport resources."
+  @spec validate(term(), keyword()) :: :ok | {:error, Error.t()}
+  def validate(message, opts) do
+    with {:ok, config} <- config(opts), do: validate_request(message, config)
+  end
+
+  defp validate_request(%Message{} = message, config) do
     with :ok <- Codec.validate_options(message),
          {:ok, _} <- Codec.encode(%{message | payload: <<>>}) do
       cond do
@@ -54,7 +60,7 @@ defmodule Wotex.CoAP.Blockwise do
         Enum.any?([23, 27, 28, 60, 292], &(Codec.option(message, &1) != [])) ->
           failure(:managed_block_option)
 
-        message.code not in 1..4 ->
+        message.code not in 1..4 or message.type not in [:con, :non] ->
           failure(:invalid_request)
 
         true ->
@@ -62,6 +68,8 @@ defmodule Wotex.CoAP.Blockwise do
       end
     end
   end
+
+  defp validate_request(_, _), do: failure(:invalid_request)
 
   defp start(message, context) do
     if byte_size(message.payload) > context.config.size do
