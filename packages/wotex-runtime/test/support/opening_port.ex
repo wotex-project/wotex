@@ -26,7 +26,16 @@ defmodule Wotex.Runtime.Test.OpeningPort do
         do: send(owner, {:wotex_transport_frame, {:value, value}})
 
     receive do
-      :release -> {:ok, resource}
+      :release ->
+        {:ok, resource}
+
+      {:reject, error} ->
+        monitor = Process.monitor(resource)
+        Process.exit(resource, :shutdown)
+
+        receive do
+          {:DOWN, ^monitor, :process, ^resource, :shutdown} -> {:error, error}
+        end
     end
   end
 

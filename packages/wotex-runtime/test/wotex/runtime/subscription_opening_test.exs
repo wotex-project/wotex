@@ -2,7 +2,7 @@ defmodule Wotex.Runtime.SubscriptionOpeningTest do
   @moduledoc false
 
   use ExUnit.Case, async: true
-  alias Wotex.Runtime.{ConsumedThing, Context, Subscription, SubscriptionOpening}
+  alias Wotex.Runtime.{ConsumedThing, Context, Error, Subscription, SubscriptionOpening}
   alias Wotex.Runtime.Test.{OpeningPort, TDFactory}
 
   test "WRT.01-12 receiver death interrupts pending transport establishment" do
@@ -13,6 +13,45 @@ defmodule Wotex.Runtime.SubscriptionOpeningTest do
     assert_receive {:DOWN, ^monitor, :process, ^owner, {:shutdown, :receiver_down}}, 500
     eventually(fn -> not Process.alive?(callback) and not Process.alive?(resource) end)
     refute_receive {:wotex_runtime, :pending, {:ok, _ignored_1, _ignored_2}}, 10
+  end
+
+  test "WRT.01-12 callback rejection survives linked resource cleanup with its typed cause" do
+    {owner, _receiver} = start_opening(monitor_owner: false)
+    assert_receive {:opening, callback, ^owner, resource}
+    opening = :sys.get_state(owner).opening
+    monitor = Process.monitor(owner)
+
+    rejection = %Error{
+      code: :handshake_media_type,
+      phase: :subscription,
+      class: :protocol,
+      message: "OPENING_ERROR_CANARY",
+      details: %{credential: "OPENING_ERROR_CANARY"}
+    }
+
+    send(callback, {:reject, rejection})
+
+    assert_receive {:wotex_runtime, id,
+                    {:error, %Error{code: :transport_subscribe_failed, class: :protocol} = error}},
+                   500
+
+    assert error.details.cause == %{
+             module: Error,
+             code: :handshake_media_type,
+             phase: :subscription,
+             class: :protocol
+           }
+
+    refute inspect(error) =~ "OPENING_ERROR_CANARY"
+    assert_receive {:DOWN, ^monitor, :process, ^owner, {:shutdown, ^error}}, 500
+
+    eventually(fn ->
+      not Process.alive?(callback) and not Process.alive?(resource) and
+        not Process.alive?(opening.pid)
+    end)
+
+    refute_received {:opening_unsubscribe, ^resource}
+    refute_received {:wotex_runtime, ^id, {:status, :transport_down}}
   end
 
   test "WRT.01-12 receiver death interrupts credential resolution before transport acquisition" do

@@ -122,10 +122,27 @@ defmodule Wotex.Runtime.SubscriptionOpening do
   end
 
   defp run(guardian, reference, function) do
-    result = function.()
     Process.flag(:trap_exit, true)
+    worker = self()
+    spawn(fn -> watch_worker(guardian, worker) end)
+    result = function.()
     send(guardian, {:opening_result, reference, result})
     proxy(guardian, reference)
+  end
+
+  # Exit trapping must cover the callback's linked-resource cleanup. This
+  # independent monitor still interrupts a blocked callback if its guardian dies.
+  defp watch_worker(guardian, worker) do
+    guardian_monitor = Process.monitor(guardian)
+    worker_monitor = Process.monitor(worker)
+
+    receive do
+      {:DOWN, ^guardian_monitor, :process, ^guardian, _guardian_reason} ->
+        Process.exit(worker, :kill)
+
+      {:DOWN, ^worker_monitor, :process, ^worker, _worker_reason} ->
+        :ok
+    end
   end
 
   # The callback may have linked a transport to its calling process. Keep that
