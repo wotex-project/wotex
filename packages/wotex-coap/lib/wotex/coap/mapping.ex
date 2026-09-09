@@ -2,7 +2,7 @@ defmodule Wotex.CoAP.Mapping do
   @moduledoc """
   Maps a W3C Web of Things Form to the package's dated CoAP profile.
 
-  `command/4` selects the declared or default method, validates a `coap` href,
+  `command/4` selects the declared or default method, validates a `coap` or `coaps` href,
   converts JSON, UTF-8 text, or opaque binary input, and constructs a
   `Wotex.CoAP.Message`. The supported `cov:` terms are interpreted according to
   the draft baseline documented by the package. The original `Wotex.Form` is
@@ -67,7 +67,8 @@ defmodule Wotex.CoAP.Mapping do
       {:ok,
        %{
          host: uri.host,
-         port: uri.port || 5683,
+         port: uri.port || default_port(uri.scheme),
+         scheme: if(uri.scheme == "coaps", do: :coaps, else: :coap),
          message: message,
          format: format,
          form: form,
@@ -134,7 +135,7 @@ defmodule Wotex.CoAP.Mapping do
   defp endpoint(value) do
     with {:ok, uri} <- URI.new(value),
          true <-
-           uri.scheme == "coap" and is_binary(uri.host) and uri.host != "" and
+           uri.scheme in ["coap", "coaps"] and is_binary(uri.host) and uri.host != "" and
              is_nil(uri.userinfo) and is_nil(uri.fragment) and
              (is_nil(uri.port) or uri.port in 1..65_535),
          do: {:ok, uri},
@@ -143,6 +144,9 @@ defmodule Wotex.CoAP.Mapping do
 
   defp media_format(value) when is_binary(value), do: Map.fetch(@formats, String.downcase(value))
   defp media_format(_), do: :error
+
+  defp default_port("coaps"), do: 5684
+  defp default_port("coap"), do: 5683
 
   defp method(map, op) do
     with {:ok, default} <- Map.fetch(@defaults, op) do

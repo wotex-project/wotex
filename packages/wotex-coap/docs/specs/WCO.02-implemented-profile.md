@@ -3,15 +3,16 @@ spec:
   id: WCO.02
   title: "Implemented CoAP profile"
   status: accepted
-  version: 1.2.0
+  version: 1.3.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
 
 # WCO.02 Implemented CoAP profile
 
-`coap://numeric-host:port/path?query` maps to a UDP endpoint and URI-Path/URI-Query
-options. `readproperty` defaults to GET, `writeproperty` to PUT and `invokeaction`
+`coap://numeric-host:port/path?query` selects UDP and default port 5683;
+`coaps://numeric-host:port/path?query` selects DTLS and default port 5684. Both
+map URI-Path/URI-Query options. `readproperty` defaults to GET, `writeproperty` to PUT and `invokeaction`
 to POST. Explicit `cov:method` may select GET/PUT/POST/DELETE. `cov:confirmable`
 is Boolean; `cov:accept` is a 16-bit Content-Format ID; `cov:contentFormat` must
 match the chosen content type. Supported content types are `application/json`,
@@ -41,14 +42,21 @@ Duplicate separate replies retain ACK behavior across completed exchanges.
 `discover/2` validates status/Content-Format and parses bounded RFC 6690 links.
 
 Native `coaps` uses DTLS 1.2 with explicit PSK or PKI credentials and no UDP
-fallback. Runtime currently exposes only credential-free UDP unary/stream cells.
+fallback. Runtime exposes credential-free UDP and authenticated DTLS cells.
 `profile/0` and `profile(:udp)` expose the unary `:coap` profile;
 `profile(:udp_observe)` exposes the seven-operation `:coap_observe` profile.
-Both use the three documented media types. Other profile modes are unsupported.
+`profile(:dtls)` exposes the seven-operation `:coaps` profile. All use the
+three documented media types. Other profile modes are unsupported.
 Transport validates the exact profile and Runtime context before acquisition;
 decode and cleanup cannot turn an expired request into success. Error.class
-retains conservative retry decisions through Runtime. Runtime DTLS configuration
-and OSCORE remain planned under .10/.12/.13. OSCORE's C Port owns one libcoap engine; no native
+retains conservative retry decisions through Runtime. For DTLS unary requests,
+exactly one typed Security value is supplied through either the immediate
+ExecutionContext credential or the transport `security:` option. Configured
+and immediate credentials together fail as ambiguous. Subscriptions require
+configured `security:` and a nil immediate credential; the handle contains no
+secret or execution context. UDP rejects either credential source. Security
+validation and matching the Form scheme to the selected profile precede socket
+acquisition. OSCORE remains planned under .10/.12/.13. OSCORE's C Port owns one libcoap engine; no native
 helper is needed for the existing UDP or OTP DTLS paths.
 
 ## Evidence and compatibility

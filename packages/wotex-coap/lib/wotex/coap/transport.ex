@@ -11,8 +11,12 @@ defmodule Wotex.CoAP.Transport do
 
   ## Runtime boundary
 
-  Credentials are rejected because this UDP profile defines no credential
-  transport; native DTLS support is not yet exposed by this Runtime adapter.
+  UDP routes reject credentials. DTLS routes require one validated
+  `Wotex.CoAP.Security` value: unary calls accept either an immediate credential
+  or the `:security` transport option, while subscriptions require the configured
+  option and a nil immediate credential. Supplying both sources fails before
+  acquisition. Scoped sessions close before the callback returns. Persistent
+  native security custody is explicit configured state; handles contain no secret.
   Runtime Form selection does not authorize network access, and a
   successful CoAP response does not establish canonical Property truth or a
   physical Action effect. The consumer owns routing, authorization,
@@ -21,12 +25,12 @@ defmodule Wotex.CoAP.Transport do
   """
 
   @behaviour Wotex.Runtime.Transport
-  alias Wotex.CoAP.{Connection, Error, Mapping, RuntimeFrame, RuntimeRelay}
+  alias Wotex.CoAP.{Connection, Error, Mapping, RuntimeFrame, RuntimeRelay, RuntimeSecurity}
   alias Wotex.Runtime.{BindingProfile, Context, ExecutionContext, Request, Result}
   @unary_operations [:readproperty, :writeproperty, :invokeaction]
 
   @impl Wotex.Runtime.Transport
-  def request(%Request{} = request, %ExecutionContext{credential: nil} = execution, config)
+  def request(%Request{} = request, %ExecutionContext{} = execution, config)
       when is_list(config) and request.operation in @unary_operations do
     now =
       if is_struct(request.deadline, DateTime),
@@ -37,11 +41,14 @@ defmodule Wotex.CoAP.Transport do
          :ok <- request_context(request, execution),
          {:ok, mapping} <-
            Mapping.command(request.form, request.operation, request.input, request.resolved_href),
+         :ok <- mapping_profile(request, mapping),
+         {:ok, security} <- RuntimeSecurity.options(mapping.scheme, execution.credential, config),
          {:ok, timeout} <-
            timeout(Context.remaining_ms(request.deadline, now), Keyword.get(config, :timeout, 5000)),
          deadline = System.monotonic_time(:millisecond) + timeout,
          connection_options =
            [host: mapping.host, port: mapping.port, timeout: timeout] ++
+             security ++
              Keyword.take(config, [:ack_timeout]),
          {:ok, pid} <- Connection.start_link(connection_options) do
       scoped_request(pid, request, mapping, deadline, config)
@@ -108,7 +115,8 @@ defmodule Wotex.CoAP.Transport do
          {:ok, deadline} <- deadline(request.deadline, Keyword.get(config, :timeout, 5000)),
          {:ok, mapping} <-
            Mapping.command(request.form, request.operation, nil, request.resolved_href),
-         :ok <- stream_profile(request, mapping) do
+         :ok <- mapping_profile(request, mapping),
+         {:ok, security} <- RuntimeSecurity.options(mapping.scheme, nil, config) do
       RuntimeRelay.open(%{
         owner: owner,
         path: mapping.path,
@@ -119,6 +127,7 @@ defmodule Wotex.CoAP.Transport do
             observation_kind: if(request.operation == :subscribeevent, do: :event, else: :property),
             observation_options: [accept: mapping.format, confirmable: mapping.message.type == :con]
           ] ++
+            security ++
             Keyword.take(config, [:ack_timeout]),
         renew: Keyword.get(config, :renew, true),
         max_queue_length: Keyword.get(config, :max_queue_length, 1000),
@@ -200,14 +209,15 @@ defmodule Wotex.CoAP.Transport do
 
   defp valid_profile?(profile, operation) do
     {:ok, observed} = Wotex.CoAP.profile(:udp_observe)
+    {:ok, secured} = Wotex.CoAP.profile(:dtls)
 
-    profile in [Wotex.CoAP.profile(), observed] and
+    profile in [Wotex.CoAP.profile(), observed, secured] and
       BindingProfile.supports_operation?(profile, operation)
   end
 
-  defp stream_profile(%Request{profile: %BindingProfile{} = profile} = request, mapping) do
+  defp mapping_profile(%Request{profile: %BindingProfile{} = profile} = request, mapping) do
     valid =
-      BindingProfile.supports_scheme?(profile, "coap") and
+      BindingProfile.supports_scheme?(profile, Atom.to_string(mapping.scheme)) and
         BindingProfile.supports_operation?(profile, request.operation) and
         BindingProfile.supports_media_type?(profile, Map.get(mapping.form.value, "contentType"))
 
@@ -216,7 +226,7 @@ defmodule Wotex.CoAP.Transport do
     _ -> {:error, Error.new(:invalid_transport_context)}
   end
 
-  defp stream_profile(_, _), do: {:error, Error.new(:invalid_transport_context)}
+  defp mapping_profile(_, _), do: {:error, Error.new(:invalid_transport_context)}
 
   defp request_config(config) do
     with :ok <- validate_config(config),
@@ -228,7 +238,9 @@ defmodule Wotex.CoAP.Transport do
 
   defp stream_config(config) do
     with :ok <- validate_config(config),
-         true <- Keyword.keys(config) -- [:timeout, :ack_timeout, :renew, :max_queue_length] == [],
+         true <-
+           Keyword.keys(config) -- [:timeout, :ack_timeout, :renew, :max_queue_length, :security] ==
+             [],
          do: :ok,
          else: (_ -> {:error, Error.new(:invalid_options)})
   end
@@ -266,7 +278,8 @@ defmodule Wotex.CoAP.Transport do
             :max_body_size,
             :max_blocks,
             :renew,
-            :max_queue_length
+            :max_queue_length,
+            :security
           ] != [] ->
           {:error, Error.new(:invalid_options)}
 

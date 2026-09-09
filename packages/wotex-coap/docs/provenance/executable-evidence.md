@@ -42,12 +42,19 @@ ConsumedThing route, including the preserved extension and zero remaining
 sockets. It covers all three unary operation/media cells, explicit null/false/
 zero/empty outcomes, rejected forged contexts/profiles and a complete response
 held past the callback deadline. `runtime_stream_test.exs` uses the public
-Observe profile for its Property/Event lifecycle assertions. These tests do not
-accept secure Runtime modes or the complete software/toolchain matrix.
+Observe profile for its Property/Event lifecycle assertions.
+
+`runtime_dtls_test.exs` executes the public DTLS profile through ConsumedThing
+with real OTP PSK and PKI peers. Its assertions cover scoped immediate/configured
+credentials for read/write/Action calls, zero-I/O invalid custody/profile cells,
+authentication failure or handshake deadline without a CoAP mutation, configured
+Property/Event observations, exact-route cancellation, and receiver death during
+and after establishment. It checks authenticated socket release and credential-
+free Runtime handles and diagnostics. These are OTP peer tests, separate from
+independent libcoap secure interoperability and the complete software matrix.
 
 Independent PKI tests under development are not committed peer acceptance.
-Runtime DTLS credentials/profiles, OSCORE known-answer/replay/store
-fault tests, native helper ownership and complete stress/matrix closure remain
+OSCORE known-answer/replay/store fault tests, native helper ownership and complete stress/matrix closure remain
 required by [the ordered plan](../plans/software-implementation.md).
 
 ## Required verification

@@ -51,8 +51,8 @@ Discovery parses bounded CoRE Link Format results without following the links.
 
 Native `coaps` sessions support explicit DTLS 1.2 PSK and PKI credentials through
 OTP SSL. PSK exchanges and Observe have independent pinned libcoap evidence;
-PKI currently has real OTP peer tests. Independent PKI evidence, Runtime DTLS
-credentials, OSCORE, and the final software matrix remain ordered work.
+PKI currently has real OTP peer tests. Independent PKI evidence, OSCORE,
+and the final software matrix remain ordered work.
 Multicast and extended tokens are outside the implemented profile.
 
 ## Quick start
@@ -70,11 +70,13 @@ end
 opaque binary content. JSON null writes encode as `null`. Runtime unary requests
 spend one finite deadline across opening and exchange and close their socket.
 Runtime Property observations and Event subscriptions use an owned Observe relay
-with complete-body decoding and bounded cleanup. Runtime currently accepts only
-`coap` Forms and rejects immediate credentials.
+with complete-body decoding and bounded cleanup. DTLS unary requests accept one
+typed immediate or configured Security value; subscriptions require configured
+security and a nil immediate credential. UDP routes reject credentials.
 `Wotex.CoAP.profile/0` selects unary UDP operations;
 `Wotex.CoAP.profile(:udp_observe)` selects unary operations and Observe streams.
-Both admit JSON, UTF-8 text and opaque bytes. Secure Runtime modes remain unsupported.
+`Wotex.CoAP.profile(:dtls)` selects authenticated DTLS unary operations and streams.
+All admit JSON, UTF-8 text and opaque bytes. OSCORE remains unsupported.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
 See the [blockwise contract](docs/specs/WCO.03-blockwise.md) for configurable

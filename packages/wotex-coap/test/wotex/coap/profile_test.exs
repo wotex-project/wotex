@@ -39,7 +39,7 @@ defmodule Wotex.CoAP.ProfileTest do
       assert BindingProfile.supports_operation?(observed, operation)
     end
 
-    for mode <- [:dtls, :oscore, nil, %{}, [:udp]] do
+    for mode <- [:oscore, nil, %{}, [:udp]] do
       assert {:error, %Error{code: :unsupported_profile, class: :permanent}} = CoAP.profile(mode)
     end
   end

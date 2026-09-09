@@ -35,19 +35,20 @@ defmodule Wotex.CoAP do
       iex> Wotex.Runtime.BindingProfile.id(Wotex.CoAP.profile())
       :coap
 
-  Native DTLS support is separate from admission of a secure Runtime profile.
   Profile construction starts no process and checks no installed backend.
   """
   @spec profile() :: Wotex.Runtime.BindingProfile.t()
   def profile, do: runtime_profile(:coap, [:readproperty, :writeproperty, :invokeaction])
 
-  @doc "Selects implemented UDP unary or Observe Runtime operations without acquiring resources."
+  @doc "Selects UDP unary, UDP Observe, or authenticated DTLS Runtime operations without acquisition."
   @spec profile(term()) :: {:ok, Wotex.Runtime.BindingProfile.t()} | {:error, Error.t()}
   def profile(:udp), do: {:ok, profile()}
 
-  def profile(:udp_observe) do
+  def profile(mode) when mode in [:udp_observe, :dtls] do
+    id = if mode == :dtls, do: :coaps, else: :coap_observe
+
     {:ok,
-     runtime_profile(:coap_observe, [
+     runtime_profile(id, [
        :readproperty,
        :writeproperty,
        :invokeaction,
@@ -64,7 +65,7 @@ defmodule Wotex.CoAP do
     {:ok, profile} =
       Wotex.Runtime.BindingProfile.new(
         id: id,
-        schemes: ["coap"],
+        schemes: [if(id == :coaps, do: "coaps", else: "coap")],
         operations: operations,
         media_types: ["application/json", "application/octet-stream", "text/plain;charset=utf-8"]
       )

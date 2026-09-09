@@ -71,7 +71,7 @@ defmodule Wotex.CoAP.MappingTest do
              })
 
     for extra <- [
-          %{"href" => "coaps://127.0.0.1/"},
+          %{"href" => "https://127.0.0.1/"},
           %{"cov:method" => "PATCH"},
           %{"cov:confirmable" => nil},
           %{"cov:contentFormat" => 99},
