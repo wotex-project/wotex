@@ -1,5 +1,22 @@
 defmodule Wotex.BLE.Error do
-  @moduledoc "Stable, credential-free failures at the BLE public boundary."
+  @moduledoc """
+  Carries structured BLE failure information and Runtime classification.
+
+  Each `t:t/0` contains a stable code, an optional field, diagnostic details, a
+  retry classification, and an effect classification. The effect remains
+  `:none` when no write reached the client and may be `:unknown` when transport
+  failure prevents the package from determining whether an acknowledged write
+  reached BlueZ or the peer.
+
+  `new/3` is used by address validation, UUID and value codecs, Form mapping,
+  Runtime transport, and client adapters. Consumers can branch on structured
+  fields instead of parsing exception or command output. Details are diagnostic
+  data only; they must not contain credentials, opaque handles, or unbounded
+  operating-system responses. The constructor stores details without sanitizing
+  or sizing them; library call sites and client implementations enforce those
+  restrictions. Unknown mutation effect forces permanent classification and
+  disables retry.
+  """
 
   @enforce_keys [:code]
   defstruct [:code, :field, :class, details: %{}, retryable: false, effect: :none]

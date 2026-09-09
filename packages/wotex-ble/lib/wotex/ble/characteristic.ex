@@ -7,6 +7,11 @@ defmodule Wotex.BLE.Characteristic do
   Construction validates these fields without performing discovery. The
   persistent BlueZ owner separately verifies their live device associations.
   Unknown flag names remain bounded strings and never become atoms.
+
+  `address/1` converts a validated discovery result into the generation-bound
+  `Wotex.BLE.Address` used for later I/O. A generation change invalidates that
+  address, preventing a stale object path from being silently retargeted to a
+  different characteristic.
   """
 
   alias Wotex.BLE.{Address, Error, ObjectPath}

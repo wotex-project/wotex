@@ -1,5 +1,23 @@
 defmodule Wotex.BLE.Address do
-  @moduledoc "A GATT target preserves service, characteristic and optional instance handle."
+  @moduledoc """
+  Represents a validated GATT service and characteristic target.
+
+  The required `service` and `characteristic` fields are normalized Bluetooth
+  UUIDs. Optional fields retain an Attribute Protocol handle, D-Bus object path,
+  and caller-supplied generation used to distinguish a concrete characteristic
+  instance. Construction validates these identities without discovering or
+  contacting hardware.
+
+  `new/1` accepts an explicit map, while `from_topic/1` parses exactly two UUIDs
+  separated by one slash. `validate_message/1` admits reads and acknowledged
+  writes and enforces the 512-byte attribute-value limit.
+
+  ## Examples
+
+      iex> {:ok, address} = Wotex.BLE.Address.new(%{service: 0x180F, characteristic: 0x2A19, handle: 37})
+      iex> {address.service, address.characteristic, address.handle}
+      {"0000180f-0000-1000-8000-00805f9b34fb", "00002a19-0000-1000-8000-00805f9b34fb", 37}
+  """
   alias Wotex.BLE.{Error, ObjectPath, UUID}
   @enforce_keys [:service, :characteristic]
   defstruct [:service, :characteristic, :handle, :object_path, :generation]

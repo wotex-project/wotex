@@ -1,5 +1,19 @@
 defmodule Wotex.BLE.Value do
-  @moduledoc "Explicit bounded GATT scalar codecs with caller-selected byte order."
+  @moduledoc """
+  Encodes and decodes bounded scalar GATT attribute values.
+
+  `encode/3` and `decode/3` require an explicit `t:codec/0`. Integer widths,
+  IEEE 754 floating-point widths, booleans, UTF-8 text, and opaque bytes are
+  supported. Multi-byte values use caller-selected `:little` or `:big` byte
+  order; little-endian is the documented default. Input and output are limited
+  to 512 bytes, and exact-width codecs reject mismatched binaries.
+
+  Conversion is pure and never infers a scalar type, unit, scale, or semantic
+  meaning from the bytes. Malformed UTF-8, out-of-range integers, non-finite or
+  wrongly sized values, unsupported codecs, and invalid options return
+  `Wotex.BLE.Error`. The consumer remains responsible for selecting a codec that
+  matches the characteristic specification.
+  """
 
   import Bitwise
   alias Wotex.BLE.Error

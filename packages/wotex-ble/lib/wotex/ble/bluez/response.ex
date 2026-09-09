@@ -1,5 +1,19 @@
 defmodule Wotex.BLE.BlueZ.Response do
-  @moduledoc false
+  @moduledoc """
+  Validates operation-specific replies from the persistent BlueZ bridge.
+
+  This implementation helper admits exact versioned success or error envelopes
+  and converts only a fixed set of error-code strings to existing atoms.
+  Optional BlueZ error names must match the bounded org.bluez.Error namespace;
+  public details retain that name without external error-message text. The
+  connection separately correlates the reply ID with dispatched work.
+
+  Result validation checks discovery ordering, unique characteristic paths,
+  generation and cursor syntax, paired state, live health fields and bounded
+  read bytes. Stream establishment is delegated to `Wotex.BLE.BlueZ.Stream`.
+  Unknown fields, codes and response shapes return `:invalid`; no malformed
+  reply can count as successful protocol completion.
+  """
 
   alias Wotex.BLE.BlueZ.Stream
   alias Wotex.BLE.{Characteristic, Error, ObjectPath, Procedure}

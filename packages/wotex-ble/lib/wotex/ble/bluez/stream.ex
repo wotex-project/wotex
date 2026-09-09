@@ -1,5 +1,23 @@
 defmodule Wotex.BLE.BlueZ.Stream do
-  @moduledoc false
+  @moduledoc """
+  Validates native subscription options, establishment and value-change frames.
+
+  This implementation helper checks receiver and queue limits, reuses the
+  GATT address and value-codec validators, and binds every report to the exact
+  established characteristic and subscription identity. Wire data has closed
+  field sets and bounded canonical byte envelopes. It creates no subscription
+  or process; lifecycle belongs to the connection and SubscriptionOwner.
+
+  With only notify or indicate available, auto selects that procedure. When
+  both are advertised, BlueZ chooses and the effective mode is bluez_selected;
+  explicitly forcing either procedure is rejected. Metadata states
+  bluez_value_change because D-Bus Value changes do not identify ATT origin.
+
+  ## Examples
+
+      iex> Wotex.BLE.BlueZ.Stream.mode(["notify", "indicate"], :auto)
+      {:ok, :bluez_selected}
+  """
 
   alias Wotex.BLE.{Address, Characteristic, Error, Procedure, Subscription}
   alias Wotex.BLE.BlueZ.Response

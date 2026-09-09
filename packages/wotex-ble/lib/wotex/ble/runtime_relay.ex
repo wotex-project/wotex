@@ -1,5 +1,21 @@
 defmodule Wotex.BLE.RuntimeRelay do
-  @moduledoc false
+  @moduledoc """
+  Owns a persistent BLE session for one Wotex Runtime subscription.
+
+  This implementation process monitors the public Runtime owner and the
+  establishing caller while a worker opens the first-party BlueZ session.
+  It returns an opaque handle only after native subscription establishment,
+  bounds early frames to 64, and validates each frame against the original
+  mapping before forwarding it to Runtime. Equal values remain distinct
+  updates; metadata changes cannot silently retarget the stream.
+
+  Owner loss, establishment expiry, native failure or bounded receiver-queue
+  overflow closes the original session. Cancellation has a one-second local
+  cleanup grace and at most 64 concurrent waiters. The relay owns no reconnect
+  policy, credentials or final observation timestamp. Runtime owns public
+  stream identity and result projection; the relay uses only its transport
+  callback and owner-message contracts.
+  """
 
   use GenServer
   alias Wotex.BLE

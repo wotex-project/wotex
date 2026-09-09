@@ -1,5 +1,21 @@
 defmodule Wotex.BLE.BlueZ.SubscriptionOwner do
-  @moduledoc false
+  @moduledoc """
+  Owns one native subscription's delivery and bounded cancellation lifecycle.
+
+  This implementation process monitors the connection, establishing caller and
+  selected receiver. It returns a generation-bound `Wotex.BLE.Subscription`
+  only after native establishment succeeds. Active reports are decoded with
+  the configured codec and delivered under that handle's reference; malformed
+  values, receiver overflow and connection loss end delivery with at most one
+  terminal error.
+
+  Receiver death or explicit cancellation asks the connection's control lane
+  to release the original subscription. Cleanup has a one-second grace and at
+  most 64 simultaneous cancellation waiters. Closed owner processes retain no
+  lifetime tombstone. Session membership is checked by the connection before
+  this helper treats an already-dead handle as idempotently closed. Status
+  inspection omits peer data, credentials and queued values.
+  """
 
   use GenServer
   alias Wotex.BLE.{Error, Subscription, Value}

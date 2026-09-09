@@ -1,5 +1,18 @@
 defmodule Wotex.BLE.PortCall do
-  @moduledoc false
+  @moduledoc """
+  Normalizes synchronous calls to a selected BLE client implementation.
+
+  This implementation helper accepts tagged success, typed `Wotex.BLE.Error`
+  failures and `:ok` from disconnect. Invalid returns, untyped errors, raised
+  exceptions, exits and throws become stable transport errors without carrying
+  external exception text. Typed errors receive the package classification;
+  unknown mutation effect always disables retry and becomes permanent.
+
+  Calls run in the invoking process. The helper starts no worker and adds no
+  deadline; the client must enforce the supplied timeout. Typed diagnostic
+  details are preserved, so client authors must exclude secrets and bound them.
+  The facade separately applies conservative write-effect handling.
+  """
 
   alias Wotex.BLE.Error
 

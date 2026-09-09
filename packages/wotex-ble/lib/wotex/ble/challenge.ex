@@ -6,6 +6,11 @@ defmodule Wotex.BLE.Challenge do
   clock or invoking policy. The connection supplies `deadline_ms` in the BEAM
   monotonic millisecond time domain; it enforces expiry separately. PIN and
   passkey values are excluded from inspection, alongside peer and prompt IDs.
+
+  A challenge is evidence of a pending protocol decision, not authorization.
+  The consumer-owned agent decides how to answer it, while the persistent
+  connection verifies that the identifier, peer, owner, and deadline still
+  match before accepting a reply.
   """
 
   alias Wotex.BLE.{Error, Peer, UUID}

@@ -1,5 +1,22 @@
 defmodule Wotex.BLE.Mapping do
-  @moduledoc "Pure Form mapping for the explicitly documented Wotex protocol profile."
+  @moduledoc """
+  Maps W3C Web of Things Forms to typed native BLE operations.
+
+  `command/4` accepts Property read, write, observe and unobserve operations,
+  plus Event subscribe and unsubscribe operations. It validates the contextual
+  Form, parses the device target and two UUIDs from the ble href, and retains
+  the original Form's extension members. Writes are encoded with the selected
+  `Wotex.BLE.Value` codec; subscription mappings retain the requested mode.
+
+  The native-value profile requires omitted contentType and rejects every
+  explicit media type. `wotex:bleValueType` defaults to bytes and
+  `wotex:bleByteOrder` to little-endian. `wotex:bleMode` applies only to streams
+  and defaults to auto. Invalid selectors fail without contacting a peer.
+
+  Mapping performs no discovery, pairing, authorization or radio I/O. Success
+  establishes syntax and package-profile compatibility, not that the target
+  exists or that an interaction produced a physical effect.
+  """
   alias Wotex.BLE.{Address, Error, Value}
   alias Wotex.Form
 

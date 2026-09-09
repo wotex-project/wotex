@@ -1,5 +1,22 @@
 defmodule Wotex.BLE.Procedure do
-  @moduledoc false
+  @moduledoc """
+  Validates shared GATT procedure options and bridge byte envelopes.
+
+  This implementation helper admits a closed, duplicate-free keyword list for
+  timeout, value type and byte order. Timeouts range from 1 to 60,000 ms; the
+  owning operation supplies the default. Scalar conversion belongs to
+  `Wotex.BLE.Value`, while `parameters/1` validates the native address and
+  constructs the exact read or write bridge parameters.
+
+  Byte envelopes contain exactly type and canonical Base64 fields. Decoding
+  rejects extra fields, noncanonical encodings and values larger than 512
+  bytes. These pure helpers perform no process startup or protocol I/O.
+
+  ## Examples
+
+      iex> Wotex.BLE.Procedure.decode_bytes(%{"type" => "bytes", "base64" => "NBI="})
+      {:ok, <<52, 18>>}
+  """
 
   alias Wotex.BLE.{Address, Error}
 

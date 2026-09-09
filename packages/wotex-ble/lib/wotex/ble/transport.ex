@@ -1,5 +1,24 @@
 defmodule Wotex.BLE.Transport do
-  @moduledoc "Scoped Wotex Runtime execution over an explicit client and exact target identity."
+  @moduledoc """
+  Executes Wotex Runtime requests and subscriptions through explicit BLE sessions.
+
+  One-shot requests validate the Runtime request/context identity, profile,
+  deadline and exact configured target, then map the Form, open the client,
+  perform one read or acknowledged write and close the session. Native value
+  codecs decode reads; write completion is `:written`, not a readback value.
+
+  The `:ble_gatt` profile requires the first-party persistent BlueZ backend.
+  Property observation and Event subscriptions use `Wotex.BLE.RuntimeRelay`,
+  which owns a session until cancellation or failure and forwards only
+  validated value-change frames to the public Runtime owner. Cancellation
+  closes the original handle; later request configuration cannot retarget it.
+
+  Forms must omit contentType. Explicit Runtime credentials and security-mode
+  configuration are rejected because this binding defines no credential
+  transport. Peer selection, pairing trust and physical interpretation remain
+  consumer policy. BlueZ value-change metadata does not distinguish ATT
+  notifications from read-induced Value updates or certify security strength.
+  """
   @behaviour Wotex.Runtime.Transport
   alias Wotex.BLE
   alias Wotex.BLE.{BlueZ, Error, Mapping, RuntimeFrame, RuntimeRelay, Value}

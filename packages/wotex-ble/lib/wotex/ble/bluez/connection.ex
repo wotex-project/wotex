@@ -3,15 +3,22 @@ defmodule Wotex.BLE.BlueZ.Connection do
   Owns one explicitly started persistent BlueZ bridge and its D-Bus sender.
 
   `connect/1` waits for the packaged bridge to resolve the selected peer before
-  returning an opaque handle. The supplied absolute `:executable` is a Python
-  interpreter with the pinned dbus-next dependency installed. `:bus_address`
-  selects local IPC explicitly, and `:owner` defaults to the calling process.
-  `start_link/1` supports consumer supervision; `session/1` retrieves its session.
+  returning an opaque handle. The absolute executable is a Python interpreter
+  with dbus-next installed. The caller supplies local `:bus_address` and peer
+  identity; `:owner` defaults to the caller. `start_link/1` supports consumer
+  supervision, and `session/1` retrieves the session.
 
-  Discovery, pairing and GATT requests share a bounded serial queue. Owner
-  death, a deadline or malformed bridge output closes the generation. Cleanup
-  is bounded to one second and never reconnects or powers an adapter. Loading
-  the module starts nothing. Stream procedures graduate separately.
+  The owner bounds ordinary pending work and concurrent subscriptions to 64
+  each. Discovery, pairing and GATT procedures share serial data dispatch;
+  bounded cancellation controls can overtake an active procedure. Wire IDs
+  are assigned at dispatch, preserving monotonic order without lifetime
+  tombstones. Each native subscription has its own monitored process.
+
+  Owner death, fatal bridge output, peer loss and expired active work close
+  the connection generation. Cleanup has a one-second local grace and never
+  reconnects or powers an adapter. An owned link receives Disconnect; ordinary
+  borrowed cleanup does not. BlueZ link teardown can complete after the local
+  resources close, and pending Pair sender loss may disconnect a borrowed peer.
   """
 
   use GenServer

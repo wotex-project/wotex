@@ -1,5 +1,22 @@
 defmodule Wotex.BLE.BlueZ.Options do
-  @moduledoc false
+  @moduledoc """
+  Validates configuration for persistent BlueZ ownership and GATT discovery.
+
+  This implementation helper rejects unknown or duplicate options, validates
+  an explicit `Wotex.BLE.Peer`, and admits only local Unix D-Bus addresses.
+  The Python executable must be an absolute path. The owner defaults to the
+  caller, connection mode to borrowed, and timeout to 5000 ms within the
+  accepted 1 to 60,000 ms range. Validation does not probe that executable or bus.
+
+  Discovery pages have a limit from 1 to 64 and an optional 32-byte cursor.
+  The live bridge separately validates cursor identity and generation. No
+  environment lookup, peer scan or connection occurs in this helper.
+
+  ## Examples
+
+      iex> Wotex.BLE.BlueZ.Options.discovery([])
+      {:ok, %{"limit" => 64, "cursor" => nil}}
+  """
 
   alias Wotex.BLE.{Error, Peer}
 

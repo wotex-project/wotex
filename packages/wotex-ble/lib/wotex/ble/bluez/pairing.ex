@@ -1,5 +1,19 @@
 defmodule Wotex.BLE.BlueZ.Pairing do
-  @moduledoc false
+  @moduledoc """
+  Validates pairing configuration, challenges and consumer Agent decisions.
+
+  This implementation helper maps the supported input/output capabilities to
+  BlueZ names and requires a loaded consumer module implementing decide/2.
+  Incoming prompts must match the selected peer and an unexpired supplied
+  deadline. Challenge conversion uses supplied monotonic timestamps and never
+  reads a clock or authorizes pairing by itself.
+
+  Reply validation admits PINs only for PIN requests, passkeys only for
+  passkey requests, and explicit accept/reject decisions for compatible prompt
+  kinds. Exceptions or incompatible callback results become pairing_rejected.
+  The connection owns the monitored decision worker, enforces its deadline
+  and unregisters only its Agent. This helper does not alter bonds or trust.
+  """
 
   alias Wotex.BLE.{Challenge, Error}
 

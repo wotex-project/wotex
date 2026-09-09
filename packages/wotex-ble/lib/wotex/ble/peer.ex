@@ -1,5 +1,23 @@
 defmodule Wotex.BLE.Peer do
-  @moduledoc "Explicit BLE adapter and typed peer identity, independent of discovery."
+  @moduledoc """
+  Represents an explicit BLE adapter path and peer identity.
+
+  A `t:t/0` combines a validated D-Bus adapter path, a six-octet Bluetooth
+  address, and an explicit `:public` or `:random` address type. `new/1`
+  normalizes the address to uppercase and rejects extra struct state, malformed
+  addresses, invalid adapter paths, and missing address-type information.
+
+  This value identifies a caller-selected peer; it does not perform scanning,
+  resolve a resolvable private address, establish a connection, or express an
+  authorization decision. Consumers retain ownership of discovery results and
+  identity policy.
+
+  ## Examples
+
+      iex> {:ok, peer} = Wotex.BLE.Peer.new(%{adapter: "/org/bluez/hci0", address: "aa:bb:cc:dd:ee:ff", address_type: :public})
+      iex> {peer.adapter, peer.address, peer.address_type}
+      {"/org/bluez/hci0", "AA:BB:CC:DD:EE:FF", :public}
+  """
 
   alias Wotex.BLE.{Error, ObjectPath}
 

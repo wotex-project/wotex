@@ -1,5 +1,26 @@
 defmodule Wotex.BLE.BlueZ do
-  @moduledoc "Real Linux BlueZ GATT access through an explicitly supplied busctl executable and object path."
+  @moduledoc """
+  Performs Linux BlueZ GATT access through two explicit client lifecycles.
+
+  The default one-shot mode uses an absolute `busctl` executable and an exact
+  characteristic object path for an already connected device. It validates
+  the service and characteristic UUIDs, invokes ReadValue or acknowledged
+  WriteValue without a shell, and limits command output to 4096 bytes.
+  Attribute values are limited to 512 bytes in both modes.
+
+  With `lifecycle: :persistent`, the executable is a Python interpreter with
+  dbus-next installed. `Wotex.BLE.BlueZ.Connection` owns the packaged bridge,
+  one unique D-Bus sender and the selected peer. This mode implements GATT
+  discovery, consumer-directed pairing, health probes, reads, acknowledged
+  writes and value-change streams. The consumer supplies the local bus address
+  and chooses borrowed or owned connection behavior.
+
+  Neither mode starts the BlueZ service, powers an adapter or installs native
+  dependencies. Ordinary borrowed-session cleanup leaves the existing device
+  connection intact. An outstanding Pair call is a separate BlueZ lifecycle:
+  losing its sender may make BlueZ disconnect that peer. The adapter does not
+  call CancelPairing or remove a bond to manufacture cancellation.
+  """
   @behaviour Wotex.BLE.Client
   alias Wotex.BLE.{Address, Error, ObjectPath, UUID}
   alias Wotex.BLE.BlueZ.Connection

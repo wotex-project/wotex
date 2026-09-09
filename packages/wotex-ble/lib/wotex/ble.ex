@@ -1,5 +1,29 @@
 defmodule Wotex.BLE do
-  @moduledoc "Consumer-neutral BLE operations over an explicitly supplied real client port."
+  @moduledoc """
+  Executes Bluetooth Low Energy operations through an explicitly selected client.
+
+  `connect/1` returns a `Wotex.BLE.Session`; `read/3` and `write/4` combine a
+  validated GATT address with an explicit value codec. `send/2` exposes the
+  corresponding raw-byte operations. `disconnect/1` releases that client's
+  resources, and `with_connection/2` runs cleanup after a return or exception.
+
+  The persistent `Wotex.BLE.BlueZ` backend also provides paginated GATT
+  discovery, explicit Agent pairing, live peer health, and notification or
+  indication subscriptions. Subscription messages reach the selected process
+  as `{:wotex_ble, reference, {:ok, value, metadata}}` or a terminal error.
+  `receive/2` remains unsupported; it is not the subscription delivery API.
+
+  `profile/0` describes one-shot Runtime reads and writes. `profile(:gatt)`
+  admits Property observation and Event subscriptions through the persistent
+  backend. Profile construction starts nothing and attests no peer capability.
+  Both profiles require omitted Form contentType and use the native value
+  codec selectors documented by `Wotex.BLE.Mapping`.
+
+  Consumers select peers, pairing policy, credentials and supervision. The
+  backend executes those explicit lifecycle choices; loading the library
+  starts no radio or operating-system service. An acknowledged write is
+  protocol evidence, not canonical Property state or proof of a physical effect.
+  """
 
   import Kernel, except: [send: 2]
   alias Wotex.BLE.{Address, Error, PortCall, Procedure, Session, Value}
@@ -206,7 +230,7 @@ defmodule Wotex.BLE do
     end
   end
 
-  @doc "Unsolicited receive requires a separately graduated subscription transport."
+  @doc "Returns unsupported; established subscriptions deliver messages directly to their receiver."
   @spec receive(term(), term()) :: {:error, Error.t()}
   def receive(_, _), do: {:error, Error.new(:not_supported)}
 

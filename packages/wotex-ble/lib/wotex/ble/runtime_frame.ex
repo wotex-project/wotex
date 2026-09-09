@@ -1,5 +1,19 @@
 defmodule Wotex.BLE.RuntimeFrame do
-  @moduledoc false
+  @moduledoc """
+  Validates and decodes BLE subscription frames at the Runtime boundary.
+
+  This implementation helper requires bounded raw bytes and exact
+  bluez_value_change metadata, revalidates the characteristic value and its
+  effective stream mode, and matches the selected address and requested mode.
+  Well-formed frames for another characteristic are ignored; malformed frames
+  return a structured invalid_response error.
+
+  `decode/2` applies the Form's explicit scalar codec and byte order after
+  metadata validation. Terminal errors are reconstructed from their code and
+  mutation-effect classification, without forwarding arbitrary native details.
+  The helper performs no I/O, timestamps no observations and does not infer
+  notification origin or canonical Property state.
+  """
 
   alias Wotex.BLE.BlueZ.Stream
   alias Wotex.BLE.{Characteristic, Error, Value}

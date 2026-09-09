@@ -1,5 +1,27 @@
 defmodule Wotex.BLE.UUID do
-  @moduledoc "Bluetooth UUID normalization with exact ATT little-endian representation."
+  @moduledoc """
+  Normalizes Bluetooth UUIDs and their Attribute Protocol representation.
+
+  `normalize/1` accepts 16-bit and 32-bit integer or hexadecimal forms and the
+  canonical 128-bit text form. It returns lowercase canonical text without
+  consulting a Bluetooth registry. `encode/1` always expands short identities to a 16-octet little-endian
+  Attribute Protocol representation, and `decode/1` accepts
+  exact 16-bit or 128-bit encodings.
+
+  The functions are pure and return `Wotex.BLE.Error` for malformed, oversized,
+  or unsupported representations. Normalization establishes identifier syntax
+  only; it does not assert that a UUID is assigned, that a service exists, or
+  that a characteristic belongs to a selected peer.
+
+  ## Examples
+
+      iex> {:ok, uuid} = Wotex.BLE.UUID.normalize(0x2A19)
+      iex> {:ok, bytes} = Wotex.BLE.UUID.encode(uuid)
+      iex> byte_size(bytes)
+      16
+      iex> Wotex.BLE.UUID.decode(bytes)
+      {:ok, "00002a19-0000-1000-8000-00805f9b34fb"}
+  """
   alias Wotex.BLE.Error
   @suffix "00001000800000805f9b34fb"
 
