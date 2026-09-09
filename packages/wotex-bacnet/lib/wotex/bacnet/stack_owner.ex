@@ -30,6 +30,14 @@ defmodule Wotex.BACnet.StackOwner do
     :exit, _ -> {:error, Error.new(:connection_closed)}
   end
 
+  @doc false
+  @spec bind_session(pid(), pid()) :: :ok | {:error, Error.t()}
+  def bind_session(stack, session) do
+    GenServer.call(stack, {:bind_session, session}, 100)
+  catch
+    :exit, _ -> {:error, Error.new(:connection_closed)}
+  end
+
   @doc "Closes all group resources idempotently."
   @spec close(pid()) :: :ok
   def close(pid), do: close(pid, System.monotonic_time(:millisecond) + 1000)
@@ -90,6 +98,8 @@ defmodule Wotex.BACnet.StackOwner do
         {:ok,
          group
          |> Map.put(:monitor, Process.monitor(opts[:owner]))
+         |> Map.put(:owner_pid, opts[:owner])
+         |> Map.put(:session_monitor, nil)
          |> Map.put(:portal, IPv4Transport.get_portal(group.transport))}
 
       {:error, _} ->
@@ -99,6 +109,20 @@ defmodule Wotex.BACnet.StackOwner do
 
   @impl GenServer
   def handle_call(:client, _, state), do: {:reply, {:ok, state.client}, state}
+
+  def handle_call(
+        {:bind_session, session},
+        {caller, _},
+        %{owner_pid: caller, session_monitor: nil} = state
+      )
+      when is_pid(session) do
+    if Process.alive?(session),
+      do: {:reply, :ok, %{state | session_monitor: Process.monitor(session)}},
+      else: {:reply, {:error, Error.new(:invalid_session)}, state}
+  end
+
+  def handle_call({:bind_session, _}, _, state),
+    do: {:reply, {:error, Error.new(:invalid_session)}, state}
 
   def handle_call({:close, deadline}, _, state),
     do: {:stop, :normal, :ok, Map.put(state, :cleanup_deadline, deadline)}
@@ -115,6 +139,10 @@ defmodule Wotex.BACnet.StackOwner do
 
   def handle_info({:DOWN, ref, :process, _, _}, %{monitor: ref} = state),
     do: {:stop, :normal, state}
+
+  def handle_info({:DOWN, ref, :process, _, _}, %{session_monitor: ref} = state)
+      when is_reference(ref),
+      do: {:stop, :normal, state}
 
   def handle_info({:EXIT, _, _}, state), do: {:stop, :normal, state}
   def handle_info(_, state), do: {:noreply, state}

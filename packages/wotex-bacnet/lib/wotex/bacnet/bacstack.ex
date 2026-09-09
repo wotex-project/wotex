@@ -31,8 +31,16 @@ defmodule Wotex.BACnet.BACstack do
            do: start_owner(%{config | owned_stack: stack})
 
     case result do
-      {:ok, _} ->
-        result
+      {:ok, config} ->
+        case StackOwner.bind_session(stack, config.owner) do
+          :ok ->
+            result
+
+          {:error, _} = error ->
+            OperationOwner.close(config.owner)
+            StackOwner.close(stack)
+            error
+        end
 
       error ->
         StackOwner.close(stack)
