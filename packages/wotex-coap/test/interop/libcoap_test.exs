@@ -3,6 +3,7 @@ defmodule Wotex.CoAP.LibcoapTest do
 
   use ExUnit.Case, async: false
   alias Wotex.CoAP
+  alias Wotex.CoAP.Error
   @moduletag :interop
 
   test "independent libcoap server replies over UDP with content and not-found status" do
@@ -12,7 +13,10 @@ defmodule Wotex.CoAP.LibcoapTest do
     try do
       assert {:ok, %{code: 69, payload: payload}} = CoAP.send(session, %{method: :get, path: "/"})
       assert byte_size(payload) > 0
-      assert {:ok, %{code: 132}} = CoAP.send(session, %{method: :get, path: "/missing-fixture"})
+
+      assert {:error, %Error{code: :remote_response, details: %{code: 132}}} =
+               CoAP.send(session, %{method: :get, path: "/missing-fixture"})
+
       assert {:ok, %{code: 69}} = CoAP.send(session, %{method: :get, path: "/.well-known/core"})
     after
       CoAP.disconnect(session)
@@ -35,7 +39,9 @@ defmodule Wotex.CoAP.LibcoapTest do
       assert code in [65, 68]
       assert {:ok, %{code: 69, payload: ^body}} = CoAP.send(session, %{method: :get, path: path})
       assert {:ok, %{code: 66}} = CoAP.send(session, %{method: :delete, path: path})
-      assert {:ok, %{code: 132}} = CoAP.send(session, %{method: :get, path: path})
+
+      assert {:error, %Error{code: :remote_response, details: %{code: 132}}} =
+               CoAP.send(session, %{method: :get, path: path})
     after
       CoAP.disconnect(session)
     end

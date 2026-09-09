@@ -158,6 +158,9 @@ defmodule Wotex.CoAP.Blockwise do
       |> put_option(60, Codec.uint(byte_size(message.payload)))
       |> without_if_none_match(offset)
 
+    request =
+      if more, do: request, else: put_block(request, 23, 0, false, context.config.size)
+
     {result, context} = exchange(request, context)
 
     with {:ok, reply} <- result,

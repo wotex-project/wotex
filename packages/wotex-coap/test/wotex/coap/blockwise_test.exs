@@ -25,6 +25,7 @@ defmodule Wotex.CoAP.BlockwiseTest do
               assert {:ok, %{number: ^number}} = Block.decode(encoded)
               assert byte_size(request.payload) == count
               more = number != 8
+              assert Codec.option(request, 23) == if(more, do: [], else: [block(0, false, 512)])
 
               reply = %{
                 response(request, if(more, do: 95, else: 68))
