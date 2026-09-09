@@ -34,10 +34,10 @@ defmodule Wotex.Lab.HttpTest do
   end
 
   @doc false
-  def subscription_opened(_event, _measurements, %{request_id: "http-stop"}, receiver),
+  def subscription_opened(_, _, %{request_id: "http-stop"}, receiver),
     do: send(receiver, {:runtime_subscription_opened, self()})
 
-  def subscription_opened(_event, _measurements, _metadata, _receiver), do: :ok
+  def subscription_opened(_, _, _, _), do: :ok
 
   setup do
     {:ok, server} = HttpServer.start(self())
@@ -154,7 +154,7 @@ defmodule Wotex.Lab.HttpTest do
       {StaticRef,
        %{
          references: %{"bearer_sc" => "ref"},
-         lookup: fn _reference -> {:ok, {:bearer, "wrong"}} end
+         lookup: fn _ -> {:ok, {:bearer, "wrong"}} end
        }}
 
     {:ok, unauthorized} =
@@ -238,7 +238,7 @@ defmodule Wotex.Lab.HttpTest do
 
     assert_receive {:runtime_subscription_opened, ^pid}, 2_000
 
-    {ReqClient, session, _request_id, _operation} =
+    {ReqClient, session, _, _} =
       HTTPSubscription.unwrap(:sys.get_state(pid).handle)
 
     assert Process.alive?(session)
@@ -334,13 +334,13 @@ defmodule Wotex.Lab.HttpTest do
              Parser.feed(parser, "data: \xFF\n\n")
   end
 
-  defp nudge_until_down(_stream, _monitor, 0), do: :timeout
+  defp nudge_until_down(_, _, 0), do: :timeout
 
   defp nudge_until_down(stream, monitor, attempts) do
     send(stream, {:chunk, "data: 1\n\n"})
 
     receive do
-      {:DOWN, ^monitor, :process, ^stream, _reason} -> :ok
+      {:DOWN, ^monitor, :process, ^stream, _} -> :ok
     after
       100 -> nudge_until_down(stream, monitor, attempts - 1)
     end

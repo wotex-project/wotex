@@ -25,7 +25,7 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
     alias Wotex.Lab.Error
 
     @impl Wotex.Runtime.Credentials
-    def resolve(%{names: names, definitions: definitions}, _form, _context, config)
+    def resolve(%{names: names, definitions: definitions}, _, _, config)
         when is_list(names) and is_map(definitions) do
       with {:ok, references, lookup} <- configuration(config) do
         names
@@ -35,7 +35,7 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       end
     end
 
-    def resolve(_security, _form, _context, _config) do
+    def resolve(_, _, _, _) do
       {:error,
        Error.new(:invalid_security_selection, :credentials, "security selection is invalid")}
     end
@@ -45,7 +45,7 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
            {:ok, secret} <- lookup.(reference) do
         {:cont, {:ok, Map.put(acc, name, secret)}}
       else
-        _missing -> {:halt, {:error, unresolved(name)}}
+        _ -> {:halt, {:error, unresolved(name)}}
       end
     end
 
@@ -59,7 +59,7 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
          when is_map(references) and is_function(lookup, 1),
          do: {:ok, references, lookup}
 
-    defp configuration(_config) do
+    defp configuration(_) do
       {:error,
        Error.new(:invalid_credential_config, :credentials, "references and lookup are required")}
     end
@@ -68,6 +68,6 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
     defp finish(result), do: result
 
     defp nosec?(%{"scheme" => "nosec"}), do: true
-    defp nosec?(_definition), do: false
+    defp nosec?(_), do: false
   end
 end

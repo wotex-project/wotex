@@ -143,7 +143,7 @@ defmodule Wotex.Lab.Graph do
   def render(graph, :asyncapi), do: {:ok, Render.yaml(Interfaces.asyncapi(graph))}
   def render(graph, :llms), do: {:ok, Render.llms(graph)}
 
-  def render(_graph, _other),
+  def render(_, _),
     do: {:error, Error.new(:unknown_representation, :render, "representation is not accepted")}
 
   @doc "Writes every representation under `directory` using its endpoint path; returns the files."
@@ -365,7 +365,7 @@ defmodule Wotex.Lab.Graph do
     lab =
       ~r/\| (WLB-C\d+) \| ([^|]*) \| ([^|]*) \|/
       |> Regex.scan(inputs.plan)
-      |> Enum.map(fn [_line, id, prerequisites, deliverable] ->
+      |> Enum.map(fn [_, id, prerequisites, deliverable] ->
         %{
           "id" => id,
           "package" => "wotex_lab",
@@ -631,7 +631,7 @@ defmodule Wotex.Lab.Graph do
   # the graph names them with their package.
   defp spec_ref(id) do
     case String.split(id, ":", parts: 2) do
-      [_package, _spec] -> id
+      [_, _] -> id
       [bare] -> if String.starts_with?(bare, "WLB."), do: bare, else: prefixed(bare, ".")
     end
   end
@@ -639,7 +639,7 @@ defmodule Wotex.Lab.Graph do
   defp upstream_completion(id), do: prefixed(id, "-")
 
   defp prefixed(id, separator) do
-    [prefix | _rest] = String.split(id, separator, parts: 2)
+    [prefix | _] = String.split(id, separator, parts: 2)
     Map.get(@upstream_prefixes, prefix, "unknown") <> ":" <> id
   end
 
@@ -658,7 +658,7 @@ defmodule Wotex.Lab.Graph do
   defp unique(ids) do
     case ids -- Enum.uniq(ids) do
       [] -> :ok
-      [id | _rest] -> {:error, reject(:duplicate_id, "graph identifiers must be unique", %{id: id})}
+      [id | _] -> {:error, reject(:duplicate_id, "graph identifiers must be unique", %{id: id})}
     end
   end
 
@@ -686,7 +686,7 @@ defmodule Wotex.Lab.Graph do
       [] ->
         :ok
 
-      [id | _rest] ->
+      [id | _] ->
         {:error, reject(:unresolved_id, "graph references an unknown identifier", %{id: id})}
     end
   end
@@ -767,7 +767,7 @@ defmodule Wotex.Lab.Graph do
       continue(visit(id, [], graph, visited))
     end)
     |> case do
-      {:ok, _visited} ->
+      {:ok, _} ->
         :ok
 
       {:cycle, path} ->
@@ -836,7 +836,7 @@ defmodule Wotex.Lab.Graph do
         Atom.to_string(fun) == name and fun_arity == arity
       end)
     else
-      _other -> false
+      _ -> false
     end
   end
 
@@ -888,13 +888,13 @@ defmodule Wotex.Lab.Graph do
                file: file
              })}
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error,
          reject(:unresolved_path, "fixture file is missing", %{fixture: fixture, file: file})}
     end
   end
 
-  defp digest_matches(_directory, _file, _expected, fixture),
+  defp digest_matches(_, _, _, fixture),
     do:
       {:error,
        reject(:unresolved_path, "fixture manifest must name its input and expected output", %{
@@ -939,7 +939,7 @@ defmodule Wotex.Lab.Graph do
 
   defp title(content) do
     case Regex.run(~r/^# (.+)$/m, content) do
-      [_line, title] -> String.trim(title)
+      [_, title] -> String.trim(title)
       nil -> "untitled"
     end
   end
@@ -950,7 +950,7 @@ defmodule Wotex.Lab.Graph do
         "package" -> map["id"]
         "specification" -> "spec:" <> map["id"]
         "document" -> map["id"]
-        _other -> type <> ":" <> map["id"]
+        _ -> type <> ":" <> map["id"]
       end
 
     map |> Map.put("id", id) |> Map.put("type", type)
@@ -963,7 +963,7 @@ defmodule Wotex.Lab.Graph do
     end
   end
 
-  defp optional_node(_graph, _prefix, nil), do: {:ok, nil}
+  defp optional_node(_, _, nil), do: {:ok, nil}
   defp optional_node(graph, prefix, id), do: node(graph, prefix <> id)
 
   defp status_axes(nil), do: %{}
@@ -979,7 +979,7 @@ defmodule Wotex.Lab.Graph do
          Error.new(:invalid_input, :construction, "root must hold docs/specs and priv/fixtures")}
   end
 
-  defp root(_other),
+  defp root(_),
     do:
       {:error,
        Error.new(
@@ -990,7 +990,7 @@ defmodule Wotex.Lab.Graph do
 
   defp catalogue(%{"specifications" => specs} = catalogue) when is_list(specs), do: {:ok, catalogue}
 
-  defp catalogue(_other),
+  defp catalogue(_),
     do:
       {:error,
        Error.new(
@@ -1007,7 +1007,7 @@ defmodule Wotex.Lab.Graph do
          Error.new(:invalid_input, :construction, "revision must be a 40-hex source revision")}
   end
 
-  defp revision(_other),
+  defp revision(_),
     do:
       {:error,
        Error.new(:invalid_input, :construction, "revision must be a 40-hex source revision")}
@@ -1026,7 +1026,7 @@ defmodule Wotex.Lab.Graph do
          reject(:unresolved_path, "input file is missing or outside the root", %{path: path})}
   end
 
-  defp read_file(_root, _path),
+  defp read_file(_, _),
     do: {:error, reject(:unresolved_path, "input path must be a string", %{})}
 
   defp local_file?(root, path) when is_binary(path) do
@@ -1034,9 +1034,9 @@ defmodule Wotex.Lab.Graph do
     String.starts_with?(candidate, Path.expand(root) <> "/") and File.regular?(candidate)
   end
 
-  defp local_file?(_root, _path), do: false
+  defp local_file?(_, _), do: false
 
-  defp wrap({:ok, value}, _path), do: {:ok, value}
+  defp wrap({:ok, value}, _), do: {:ok, value}
 
   defp wrap({:error, reason}, path),
     do:
@@ -1059,7 +1059,7 @@ defmodule Wotex.Lab.Graph do
   defp file_sha256(root, path) do
     case File.read(Path.join(root, path)) do
       {:ok, content} -> sha256(content)
-      {:error, _reason} -> nil
+      {:error, _} -> nil
     end
   end
 

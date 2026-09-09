@@ -23,7 +23,7 @@ defmodule Wotex.Lab.FormalMaudeTest do
     {:ok, profile} =
       Profile.new(pool: :wotex_lab_formal_pool, binary: binary, binary_digest: digest)
 
-    {:ok, _pool} = Lab.start_child(lab, :sessions, Profile.child_spec(profile))
+    {:ok, _} = Lab.start_child(lab, :sessions, Profile.child_spec(profile))
 
     {:ok, policy} =
       Lab.start_child(
@@ -111,7 +111,7 @@ defmodule Wotex.Lab.FormalMaudeTest do
         limits: %{max_output_bytes: 64}
       )
 
-    {:ok, _pool} = Lab.start_child(lab, :sessions, Profile.child_spec(tiny))
+    {:ok, _} = Lab.start_child(lab, :sessions, Profile.child_spec(tiny))
 
     assert {:ok, %Result{status: :error, error: %{code: code}}} =
              Profile.verify(tiny, :safe, :no_stale_dispatch, Abstraction.init())
@@ -158,7 +158,7 @@ defmodule Wotex.Lab.FormalMaudeTest do
 
   defp running(binary) do
     # Anchored so the shell that carries the path in its own command line is not counted.
-    {ps, _status} = System.cmd("pgrep", ["-f", "^" <> Regex.escape(binary)], stderr_to_stdout: true)
+    {ps, _} = System.cmd("pgrep", ["-f", "^" <> Regex.escape(binary)], stderr_to_stdout: true)
     ps |> String.split("\n", trim: true) |> length()
   end
 
@@ -169,8 +169,8 @@ defmodule Wotex.Lab.FormalMaudeTest do
   } do
     {:ok, a} = Profile.new(pool: :wotex_lab_formal_a, binary: binary, binary_digest: digest)
     {:ok, b} = Profile.new(pool: :wotex_lab_formal_b, binary: binary, binary_digest: digest)
-    {:ok, _a} = Lab.start_child(lab, :sessions, Profile.child_spec(a))
-    {:ok, _b} = Lab.start_child(lab, :sessions, Profile.child_spec(b))
+    {:ok, _} = Lab.start_child(lab, :sessions, Profile.child_spec(a))
+    {:ok, _} = Lab.start_child(lab, :sessions, Profile.child_spec(b))
 
     [ra, rb] =
       [{a, :safe, :no_simultaneous_heat_cool}, {b, :broken_both, :no_simultaneous_heat_cool}]

@@ -24,7 +24,7 @@ defmodule Wotex.Lab.DesignSystemTest do
     refute css =~ "@import"
     refute css =~ "url("
 
-    for {_group, tokens} <- DesignSystem.tokens(), {name, value} <- tokens do
+    for {_, tokens} <- DesignSystem.tokens(), {name, value} <- tokens do
       assert css =~ "--wl-#{name}: #{value};"
     end
   end

@@ -136,12 +136,12 @@ defmodule Wotex.Lab.HttpDestinationTest do
   end
 
   defp resolver(answers) do
-    fn _host, family -> {:ok, Keyword.get(answers, family, [])} end
+    fn _, family -> {:ok, Keyword.get(answers, family, [])} end
   end
 
   defp stop_server(server) do
     if Process.alive?(server), do: Supervisor.stop(server)
   catch
-    :exit, _reason -> :ok
+    :exit, _ -> :ok
   end
 end

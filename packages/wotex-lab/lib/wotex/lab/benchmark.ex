@@ -58,7 +58,7 @@ defmodule Wotex.Lab.Benchmark do
     end
   end
 
-  def run(_id, _operation, _opts),
+  def run(_, _, _),
     do: {:error, Error.new(:invalid_benchmark, :admission, "benchmark inputs are invalid")}
 
   defp option_keys(opts) do
@@ -87,7 +87,7 @@ defmodule Wotex.Lab.Benchmark do
       else: invalid(:invalid_identifier, "benchmark id is outside the admitted syntax")
   end
 
-  defp identifier(_id), do: invalid(:invalid_identifier, "benchmark id must be a string")
+  defp identifier(_), do: invalid(:invalid_identifier, "benchmark id must be a string")
 
   defp dimensions(value) when is_map(value) and map_size(value) > 0 do
     Enum.reduce_while(value, {:ok, %{}}, fn {key, count}, {:ok, admitted} ->
@@ -107,7 +107,7 @@ defmodule Wotex.Lab.Benchmark do
     end)
   end
 
-  defp dimensions(_value),
+  defp dimensions(_),
     do: invalid(:invalid_dimensions, "benchmark dimensions must be a non-empty map")
 
   defp identity(opts) do
@@ -124,7 +124,7 @@ defmodule Wotex.Lab.Benchmark do
     if public_identity?(value), do: {:ok, value}, else: invalid_identity(key)
   end
 
-  defp identity_value(_value, key), do: invalid_identity(key)
+  defp identity_value(_, key), do: invalid_identity(key)
 
   defp invalid_identity(key) do
     invalid(:invalid_identity, "benchmark identity field is missing or unbounded", %{
@@ -137,42 +137,42 @@ defmodule Wotex.Lab.Benchmark do
       not Regex.match?(@path, value)
   end
 
-  defp count(value, maximum, _field, minimum \\ 1)
+  defp count(value, maximum, _, minimum \\ 1)
 
-  defp count(value, maximum, _field, minimum)
+  defp count(value, maximum, _, minimum)
        when is_integer(value) and value >= minimum and value <= maximum,
        do: {:ok, value}
 
-  defp count(_value, _maximum, field, _minimum),
+  defp count(_, _, field, _),
     do: invalid(:invalid_limit, "benchmark count is outside its bound", %{field: field})
 
   defp shared(value) when is_boolean(value), do: {:ok, value}
-  defp shared(_value), do: invalid(:invalid_runner, "shared must be a boolean")
+  defp shared(_), do: invalid(:invalid_runner, "shared must be a boolean")
 
-  defp threshold(nil, _shared), do: {:ok, nil}
+  defp threshold(nil, _), do: {:ok, nil}
 
   defp threshold(%{p95_ns: value}, false) when is_integer(value) and value > 0,
     do: {:ok, value}
 
-  defp threshold(%{p95_ns: _value}, true),
+  defp threshold(%{p95_ns: _}, true),
     do: invalid(:invalid_threshold, "shared-runner benchmarks cannot enforce thresholds")
 
-  defp threshold(_value, _shared),
+  defp threshold(_, _),
     do: invalid(:invalid_threshold, "threshold must contain one positive p95_ns bound")
 
-  defp warm(_operation, 0), do: :ok
+  defp warm(_, 0), do: :ok
 
   defp warm(operation, count) do
-    Enum.reduce_while(1..count, :ok, fn _index, :ok ->
+    Enum.reduce_while(1..count, :ok, fn _, :ok ->
       case invoke(operation) do
-        {:ok, _observation} -> {:cont, :ok}
+        {:ok, _} -> {:cont, :ok}
         {:error, error} -> {:halt, {:error, error}}
       end
     end)
   end
 
   defp sample(operation, count) do
-    Enum.reduce_while(1..count, {:ok, []}, fn _index, {:ok, observations} ->
+    Enum.reduce_while(1..count, {:ok, []}, fn _, {:ok, observations} ->
       case invoke(operation) do
         {:ok, observation} -> {:cont, {:ok, [observation | observations]}}
         {:error, error} -> {:halt, {:error, error}}
@@ -189,7 +189,7 @@ defmodule Wotex.Lab.Benchmark do
     started = System.monotonic_time()
 
     try do
-      _result = operation.()
+      _ = operation.()
       duration = System.monotonic_time() - started
       after_memory = process_memory()
 
@@ -199,9 +199,9 @@ defmodule Wotex.Lab.Benchmark do
          memory_bytes: max(before_memory, after_memory)
        }}
     rescue
-      _exception -> benchmark_failed()
+      _ -> benchmark_failed()
     catch
-      _kind, _reason -> benchmark_failed()
+      _, _ -> benchmark_failed()
     end
   end
 
@@ -249,7 +249,7 @@ defmodule Wotex.Lab.Benchmark do
     Enum.at(sorted, index)
   end
 
-  defp threshold_result(nil, _p95), do: nil
+  defp threshold_result(nil, _), do: nil
 
   defp threshold_result(maximum, p95) do
     %{

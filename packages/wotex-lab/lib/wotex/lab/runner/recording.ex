@@ -57,7 +57,7 @@ defmodule Wotex.Lab.Runner.Recording do
       else: {:error, Error.new(:invalid_recording, :preflight, "recording fields are invalid")}
   end
 
-  def validate(_recording),
+  def validate(_),
     do: {:error, Error.new(:invalid_recording, :preflight, "recording is invalid")}
 
   defp valid_recording?(recording) do
@@ -81,7 +81,7 @@ defmodule Wotex.Lab.Runner.Recording do
   defp valid_events?(events) when is_list(events) and length(events) <= 100_000,
     do: Enum.all?(events, &valid_event?/1)
 
-  defp valid_events?(_events), do: false
+  defp valid_events?(_), do: false
 
   @doc "Compares a replay recording with the original."
   @spec compare(t(), t()) :: {:reproduced, non_neg_integer()} | {:diverged, map()}
@@ -143,7 +143,7 @@ defmodule Wotex.Lab.Runner.Recording do
        when outcome in [:ok, :error],
        do: bounded_string?(step) and digest?(input) and digest?(digest)
 
-  defp valid_event?(_event), do: false
+  defp valid_event?(_), do: false
 
   defp bounded_string?(value),
     do: is_binary(value) and byte_size(value) in 1..256 and String.valid?(value)

@@ -122,8 +122,8 @@ defmodule Wotex.Lab.DirectoryTest do
         assert %{calls: calls} = module.stats(repository)
         refute Map.has_key?(calls, :insert)
 
-        assert {:ok, _mutation} = Directory.register(service, thing("urn:x:1"), writer)
-        assert {:ok, _entry} = Directory.get(service, "urn:x:1", reader)
+        assert {:ok, _} = Directory.register(service, thing("urn:x:1"), writer)
+        assert {:ok, _} = Directory.get(service, "urn:x:1", reader)
         assert {:error, %Error{code: :forbidden}} = Directory.delete(service, "urn:x:1", reader)
 
         broken = scoped_service(module, repository, clock, identifier, :not_a_policy)
@@ -157,7 +157,7 @@ defmodule Wotex.Lab.DirectoryTest do
         assert {:error, %Error{code: :conflict}} =
                  Directory.delete(service, "urn:wotex:lab:race:1", context, if_version: 1)
 
-        assert {:ok, _deleted} =
+        assert {:ok, _} =
                  Directory.delete(service, "urn:wotex:lab:race:1", context, if_version: 2)
       end
 
@@ -166,7 +166,7 @@ defmodule Wotex.Lab.DirectoryTest do
         for suffix <- ["c", "a", "e", "b", "d"] do
           ttl = if suffix == "b", do: %{"registration" => %{"ttl" => 30}}, else: %{}
 
-          {:ok, _mutation} =
+          {:ok, _} =
             Directory.register(service, thing("urn:wotex:lab:list:" <> suffix, ttl), context)
         end
 
@@ -197,7 +197,7 @@ defmodule Wotex.Lab.DirectoryTest do
         refute Enum.any?(fresh, &(&1.identifier == "urn:wotex:lab:list:b"))
 
         {:ok, %Page{next_cursor: stale}} = Directory.list(service, context)
-        {:ok, _mutation} = Directory.register(service, thing("urn:wotex:lab:list:f"), context)
+        {:ok, _} = Directory.register(service, thing("urn:wotex:lab:list:f"), context)
 
         assert {:error, %Error{code: :collection_changed}} =
                  Directory.list(service, context, cursor: stale)
@@ -217,7 +217,7 @@ defmodule Wotex.Lab.DirectoryTest do
         repository: repository
       } do
         for n <- 1..5 do
-          {:ok, _mutation} =
+          {:ok, _} =
             Directory.register(
               service,
               thing("urn:wotex:lab:ttl:#{n}", %{"registration" => %{"ttl" => n * 10}}),
@@ -251,7 +251,7 @@ defmodule Wotex.Lab.DirectoryTest do
         assert {:error, %Error{code: :expired}} = Directory.get(service, four.identifier, context)
         assert %{size: 2} = module.stats(repository)
 
-        assert {:ok, %Expiry{entries: [_a, _b]}} =
+        assert {:ok, %Expiry{entries: [_, _]}} =
                  Directory.expire(service, context, strategy: :purge)
 
         assert %{size: 0} = module.stats(repository)
@@ -263,7 +263,7 @@ defmodule Wotex.Lab.DirectoryTest do
         clock: clock
       } do
         for n <- 1..4 do
-          {:ok, _mutation} =
+          {:ok, _} =
             Directory.register(
               service,
               thing("urn:wotex:lab:drift:#{n}", %{"registration" => %{"ttl" => 30}}),
@@ -272,10 +272,10 @@ defmodule Wotex.Lab.DirectoryTest do
         end
 
         {:ok, %Page{next_cursor: cursor}} = Directory.list(service, context)
-        assert {:ok, %Page{entries: [_c, _d]}} = Directory.list(service, context, cursor: cursor)
+        assert {:ok, %Page{entries: [_, _]}} = Directory.list(service, context, cursor: cursor)
 
         Clock.advance(clock, 60)
-        assert {:ok, %Expiry{entries: [_one, _two]}} = Directory.expire(service, context)
+        assert {:ok, %Expiry{entries: [_, _]}} = Directory.expire(service, context)
 
         assert {:error, %Error{code: :collection_changed}} =
                  Directory.list(service, context, cursor: cursor)
@@ -323,7 +323,7 @@ defmodule Wotex.Lab.DirectoryTest do
       context: context,
       repository: repository
     } do
-      {:ok, _mutation} = Directory.register(service, thing("urn:wotex:lab:volatile:1"), context)
+      {:ok, _} = Directory.register(service, thing("urn:wotex:lab:volatile:1"), context)
       assert %{revision: "ets:1"} = EtsRepository.stats(repository)
 
       monitor = Process.monitor(repository)
@@ -332,7 +332,7 @@ defmodule Wotex.Lab.DirectoryTest do
 
       {:ok, replacement} = Lab.start_child(lab, :things, {EtsRepository, id: :replacement})
       assert %{revision: "ets:0", size: 0} = EtsRepository.stats(replacement)
-      assert {:ok, [_directory, _store]} = {:ok, Enum.take(Supervisor.which_children(lab), 2)}
+      assert {:ok, [_, _]} = {:ok, Enum.take(Supervisor.which_children(lab), 2)}
     end
   end
 
@@ -349,7 +349,7 @@ defmodule Wotex.Lab.DirectoryTest do
       context: context,
       repository: repository
     } do
-      {:ok, _mutation} = Directory.register(service, thing("urn:wotex:lab:tx:1"), context)
+      {:ok, _} = Directory.register(service, thing("urn:wotex:lab:tx:1"), context)
       assert %{revision: "sqlite:1", size: 1} = SqliteRepository.stats(repository)
 
       connection = open_database(repository)
@@ -381,8 +381,8 @@ defmodule Wotex.Lab.DirectoryTest do
       repository: repository,
       tmp_dir: tmp_dir
     } do
-      {:ok, _one} = Directory.register(service, thing("urn:wotex:lab:durable:1"), context)
-      {:ok, _two} = Directory.register(service, thing("urn:wotex:lab:durable:2"), context)
+      {:ok, _} = Directory.register(service, thing("urn:wotex:lab:durable:1"), context)
+      {:ok, _} = Directory.register(service, thing("urn:wotex:lab:durable:2"), context)
       file = SqliteRepository.database_path(repository)
 
       :ok = GenServer.stop(repository)
@@ -403,7 +403,7 @@ defmodule Wotex.Lab.DirectoryTest do
       {:ok, %Mutation{entry: entry}} =
         Directory.register(service, thing("urn:wotex:lab:abort:1"), context)
 
-      {:ok, _due} =
+      {:ok, _} =
         Directory.register(
           service,
           thing("urn:wotex:lab:abort:2", %{"registration" => %{"ttl" => 1}}),
@@ -434,21 +434,21 @@ defmodule Wotex.Lab.DirectoryTest do
       context: context,
       repository: repository
     } do
-      {:ok, _mutation} = Directory.register(service, thing("urn:wotex:lab:missing:1"), context)
+      {:ok, _} = Directory.register(service, thing("urn:wotex:lab:missing:1"), context)
       connection = open_database(repository)
       {:ok, query} = Query.new([limit: 2], [])
 
       :ok = Sqlite3.execute(connection, "DROP TABLE collection")
 
-      assert {:error, {:sqlite, _revision}} =
+      assert {:error, {:sqlite, _}} =
                SqliteRepository.list(repository, query, nil, @start, nil)
 
       :ok = Sqlite3.execute(connection, "DROP TABLE entries")
 
-      assert {:error, {:sqlite, _fetch}} =
+      assert {:error, {:sqlite, _}} =
                SqliteRepository.fetch(repository, "urn:wotex:lab:missing:1", nil)
 
-      assert {:error, {:sqlite, _expiry}} =
+      assert {:error, {:sqlite, _}} =
                SqliteRepository.expire_due(repository, @start, 2, :purge, nil)
     end
 
@@ -457,7 +457,7 @@ defmodule Wotex.Lab.DirectoryTest do
       context: context,
       repository: repository
     } do
-      {:ok, _mutation} = Directory.register(service, thing("urn:wotex:lab:corrupt:1"), context)
+      {:ok, _} = Directory.register(service, thing("urn:wotex:lab:corrupt:1"), context)
       connection = open_database(repository)
 
       overwrite(connection, "urn:wotex:lab:corrupt:1", ~s({"registration": {}}))
@@ -508,7 +508,7 @@ defmodule Wotex.Lab.DirectoryTest do
       path = Path.join(tmp_dir, "blocked")
       File.mkdir_p!(Path.join(path, "directory.sqlite3"))
 
-      assert {:error, {:sqlite, _reason}} = SqliteRepository.start_link(path: path)
+      assert {:error, {:sqlite, _}} = SqliteRepository.start_link(path: path)
     end
 
     test "retain false removes the database file when the owner terminates", %{tmp_dir: tmp_dir} do
@@ -564,7 +564,7 @@ defmodule Wotex.Lab.DirectoryTest do
     }
   end
 
-  defp start_store(:ets, lab, _tmp_dir) do
+  defp start_store(:ets, lab, _) do
     {:ok, repository} = Lab.start_child(lab, :things, {EtsRepository, id: :store})
     {EtsRepository, repository}
   end
@@ -576,7 +576,7 @@ defmodule Wotex.Lab.DirectoryTest do
     {SqliteRepository, repository}
   end
 
-  defp start_named(EtsRepository, name, _tmp_dir), do: EtsRepository.start_link(name: name)
+  defp start_named(EtsRepository, name, _), do: EtsRepository.start_link(name: name)
 
   defp start_named(SqliteRepository, name, tmp_dir),
     do: SqliteRepository.start_link(name: name, path: Path.join(tmp_dir, "named"))

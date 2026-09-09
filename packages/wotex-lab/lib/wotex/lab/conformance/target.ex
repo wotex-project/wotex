@@ -50,7 +50,7 @@ defmodule Wotex.Lab.Conformance.Target do
     end
   end
 
-  def respond(_request), do: base("unknown", "unsupported") |> Map.put("codes", ["invalid_request"])
+  def respond(_), do: base("unknown", "unsupported") |> Map.put("codes", ["invalid_request"])
 
   @doc "Runs the target as an operating-system process: `--archive <path>` then one request line on stdin."
   @spec main([String.t()]) :: no_return()
@@ -75,7 +75,7 @@ defmodule Wotex.Lab.Conformance.Target do
   @spec run([String.t()], (-> binary() | :eof | {:error, term()})) ::
           {:ok, binary()} | {:error, 11..14}
   def run(args, read_line) when is_function(read_line, 0) do
-    with {:ok, _archive} <- archive(args),
+    with {:ok, _} <- archive(args),
          {:ok, request} <- read_request(read_line.()) do
       JSON.encode(respond(request))
     end
@@ -85,16 +85,16 @@ defmodule Wotex.Lab.Conformance.Target do
     if File.regular?(path), do: {:ok, path}, else: {:error, 12}
   end
 
-  defp archive(_args), do: {:error, 11}
+  defp archive(_), do: {:error, 11}
 
   defp read_request(line) when is_binary(line) do
     case JSON.decode(line) do
       {:ok, request} when is_map(request) -> {:ok, request}
-      _invalid -> {:error, 14}
+      _ -> {:error, 14}
     end
   end
 
-  defp read_request(_eof_or_error), do: {:error, 13}
+  defp read_request(_), do: {:error, 13}
 
   defp observe(module, mode, document, projection) when is_map(document) do
     result =
@@ -119,7 +119,7 @@ defmodule Wotex.Lab.Conformance.Target do
     end
   end
 
-  defp observe(_module, _mode, _document, _projection) do
+  defp observe(_, _, _, _) do
     %{
       "accepted" => false,
       "errors" => [%{"code" => "object_required", "phase" => "value", "path" => "/"}]

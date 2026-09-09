@@ -201,7 +201,7 @@ if Code.ensure_loaded?(ExMaude.Pool) do
 
     defp status({:ok, %Result{status: status}}), do: status
     defp status({:error, %Error{code: code}}), do: code
-    defp status(_outcome), do: :error
+    defp status(_), do: :error
 
     defp execute(worker, command, timeout) do
       case ExMaude.Server.execute(worker, command, timeout: timeout) do
@@ -227,7 +227,7 @@ if Code.ensure_loaded?(ExMaude.Pool) do
           monitor = Process.monitor(worker)
 
           receive do
-            {:DOWN, ^monitor, :process, ^worker, _reason} -> {result, kill_alive(os_pids)}
+            {:DOWN, ^monitor, :process, ^worker, _} -> {result, kill_alive(os_pids)}
           after
             @reap_grace_ms ->
               Process.demonitor(monitor, [:flush])
@@ -302,7 +302,7 @@ if Code.ensure_loaded?(ExMaude.Pool) do
         {:ok, module} when is_binary(module) ->
           {:ok, module}
 
-        _other ->
+        _ ->
           {:error,
            Error.new(:unknown_variant, :admission, "model has no such variant",
              details: %{variant: variant}
@@ -335,7 +335,7 @@ if Code.ensure_loaded?(ExMaude.Pool) do
 
     defp pool(name) when is_atom(name) and not is_nil(name), do: {:ok, name}
 
-    defp pool(_name),
+    defp pool(_),
       do: {:error, Error.new(:invalid_pool, :admission, "an explicit pool name atom is required")}
 
     defp limits(overrides) when is_map(overrides) do
@@ -353,7 +353,7 @@ if Code.ensure_loaded?(ExMaude.Pool) do
       end)
     end
 
-    defp limits(_overrides),
+    defp limits(_),
       do: {:error, Error.new(:invalid_limits, :admission, "limits must be a map")}
 
     defp binary(path, expected) when is_binary(path) and is_binary(expected) do
@@ -372,7 +372,7 @@ if Code.ensure_loaded?(ExMaude.Pool) do
       end
     end
 
-    defp binary(_path, _expected),
+    defp binary(_, _),
       do:
         {:error,
          Error.new(
@@ -386,7 +386,7 @@ if Code.ensure_loaded?(ExMaude.Pool) do
         {:ok, %File.Stat{type: :regular, mode: mode}} when Bitwise.band(mode, 0o111) != 0 ->
           :ok
 
-        {:ok, _stat} ->
+        {:ok, _} ->
           {:error, Error.new(:unsupported, :admission, "executable path is not an executable file")}
 
         {:error, reason} ->
@@ -403,7 +403,7 @@ if Code.ensure_loaded?(ExMaude.Pool) do
       case Task.yield(task, @version_timeout_ms) || Task.shutdown(task, :brutal_kill) do
         {:ok, {output, 0}} ->
           case Regex.run(~r/\A\s*(\d+\.\d+(?:\.\d+)?)\s*\z/, output) do
-            [_all, version] ->
+            [_, version] ->
               {:ok, version}
 
             nil ->
@@ -411,7 +411,7 @@ if Code.ensure_loaded?(ExMaude.Pool) do
                Error.new(:unsupported, :admission, "executable did not report a Maude version")}
           end
 
-        _other ->
+        _ ->
           {:error, Error.new(:unsupported, :admission, "executable cannot run on this platform")}
       end
     end

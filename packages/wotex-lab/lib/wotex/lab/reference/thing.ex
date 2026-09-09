@@ -106,13 +106,13 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
              rejected: 0
            }}
 
-        {:error, _reason} ->
+        {:error, _} ->
           {:stop, :invalid_thing_description}
       end
     end
 
     @impl GenServer
-    def handle_call({:request, %Request{} = request, credential}, _from, state) do
+    def handle_call({:request, %Request{} = request, credential}, _, state) do
       with :ok <- admit_route(state.document, request),
            :ok <- admit_credential(state, request, credential),
            :ok <- admit_input(state.document, request) do
@@ -122,7 +122,7 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       end
     end
 
-    def handle_call({:subscribe, %Request{} = request, owner, credential}, _from, state) do
+    def handle_call({:subscribe, %Request{} = request, owner, credential}, _, state) do
       with :ok <- admit_route(state.document, request),
            :ok <- admit_credential(state, request, credential) do
         reference = make_ref()
@@ -142,9 +142,9 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       end
     end
 
-    def handle_call({:unsubscribe, reference}, _from, state) do
+    def handle_call({:unsubscribe, reference}, _, state) do
       case Map.pop(state.subscriptions, reference) do
-        {nil, _subscriptions} ->
+        {nil, _} ->
           {:reply, {:error, Error.new(:unknown_subscription, :host, "subscription is unknown")},
            state}
 
@@ -154,27 +154,27 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       end
     end
 
-    def handle_call({:emit, name, value, meta}, _from, state) do
+    def handle_call({:emit, name, value, meta}, _, state) do
       state = put_in(state, [:state, name], value)
       broadcast(state, :property, name, {:sample, name, value, meta})
       {:reply, :ok, state}
     end
 
-    def handle_call({:event, name, payload, meta}, _from, state) do
+    def handle_call({:event, name, payload, meta}, _, state) do
       broadcast(state, :event, name, {:event, name, payload, meta})
       {:reply, :ok, state}
     end
 
-    def handle_call(:keepalive, _from, state) do
-      Enum.each(state.subscriptions, fn {_reference, subscription} ->
+    def handle_call(:keepalive, _, state) do
+      Enum.each(state.subscriptions, fn {_, subscription} ->
         send(subscription.owner, {:wotex_transport_frame, :keepalive})
       end)
 
       {:reply, :ok, state}
     end
 
-    def handle_call(:disconnect, _from, state) do
-      Enum.each(state.subscriptions, fn {_reference, subscription} ->
+    def handle_call(:disconnect, _, state) do
+      Enum.each(state.subscriptions, fn {_, subscription} ->
         Process.demonitor(subscription.monitor, [:flush])
         send(subscription.owner, {:wotex_transport_status, :session_lost})
       end)
@@ -182,9 +182,9 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       {:reply, :ok, %{state | subscriptions: %{}}}
     end
 
-    def handle_call(:thing_description, _from, state), do: {:reply, state.td, state}
+    def handle_call(:thing_description, _, state), do: {:reply, state.td, state}
 
-    def handle_call(:stats, _from, state) do
+    def handle_call(:stats, _, state) do
       {:reply,
        %{
          handler_calls: state.handler_calls,
@@ -195,16 +195,16 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
     end
 
     @impl GenServer
-    def handle_info({:DOWN, monitor, :process, _pid, _reason}, state) do
+    def handle_info({:DOWN, monitor, :process, _, _}, state) do
       subscriptions =
         state.subscriptions
-        |> Enum.reject(fn {_reference, subscription} -> subscription.monitor == monitor end)
+        |> Enum.reject(fn {_, subscription} -> subscription.monitor == monitor end)
         |> Map.new()
 
       {:noreply, %{state | subscriptions: subscriptions}}
     end
 
-    def handle_info(_message, state), do: {:noreply, state}
+    def handle_info(_, state), do: {:noreply, state}
 
     defp dispatch(%Request{} = request, state) do
       context = Context.new!(request_id: request.request_id, deadline: request.deadline)
@@ -238,19 +238,19 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       properties =
         document
         |> Map.get("properties", %{})
-        |> Enum.flat_map(fn {name, _affordance} ->
+        |> Enum.flat_map(fn {name, _} ->
           [
             {{:readproperty, name},
-             fn {_input, state}, _context -> {:ok, Map.get(state, name), :ok, state} end},
+             fn {_, state}, _ -> {:ok, Map.get(state, name), :ok, state} end},
             {{:writeproperty, name},
-             fn {input, state}, _context -> {:ok, nil, :ok, Map.put(state, name, input)} end}
+             fn {input, state}, _ -> {:ok, nil, :ok, Map.put(state, name, input)} end}
           ]
         end)
 
       actions =
         document
         |> Map.get("actions", %{})
-        |> Enum.map(fn {name, _affordance} ->
+        |> Enum.map(fn {name, _} ->
           {{:invokeaction, name}, action_handler(name, Map.get(effects, name))}
         end)
 
@@ -258,16 +258,16 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
     end
 
     defp action_handler(name, nil) do
-      fn {input, state}, _context ->
+      fn {input, state}, _ ->
         {:ok, %{"accepted" => true, "input" => input}, :accepted, Map.put(state, name, input)}
       end
     end
 
-    defp action_handler(_name, effect) when is_function(effect, 2) do
-      fn {input, state}, _context -> effect.(input, state) end
+    defp action_handler(_, effect) when is_function(effect, 2) do
+      fn {input, state}, _ -> effect.(input, state) end
     end
 
-    defp admit_route(_document, %Request{affordance_type: :thing}) do
+    defp admit_route(_, %Request{affordance_type: :thing}) do
       {:error, Error.new(:unsupported_operation, :host, "Thing-level operations are not simulated")}
     end
 
@@ -289,7 +289,7 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
                 write_only: Map.get(affordance, "writeOnly") == true
               )
 
-            {:error, _error} ->
+            {:error, _} ->
               false
           end
         end)
@@ -319,13 +319,13 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       end)
     end
 
-    defp satisfied?(%{"scheme" => "nosec"}, _expected, _credential, _name), do: true
-    defp satisfied?(_definition, nil, _credential, _name), do: false
+    defp satisfied?(%{"scheme" => "nosec"}, _, _, _), do: true
+    defp satisfied?(_, nil, _, _), do: false
 
-    defp satisfied?(_definition, expected, credential, name) when is_map(credential),
+    defp satisfied?(_, expected, credential, name) when is_map(credential),
       do: Map.get(credential, name) == expected
 
-    defp satisfied?(_definition, _expected, _credential, _name), do: false
+    defp satisfied?(_, _, _, _), do: false
 
     defp unauthorized do
       Error.new(:unauthorized, :host, "credential does not satisfy the selected security",
@@ -350,7 +350,7 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       check_number(schema, request.input)
     end
 
-    defp admit_input(_document, _request), do: :ok
+    defp admit_input(_, _), do: :ok
 
     defp check_number(%{"type" => "number"} = schema, value) when is_number(value) do
       minimum = Map.get(schema, "minimum")
@@ -366,14 +366,14 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       end
     end
 
-    defp check_number(%{"type" => "number"}, _value) do
+    defp check_number(%{"type" => "number"}, _) do
       {:error, Error.new(:invalid_input_type, :host, "input must be a number", class: :permanent)}
     end
 
-    defp check_number(_schema, _value), do: :ok
+    defp check_number(_, _), do: :ok
 
     defp broadcast(state, type, name, frame) do
-      Enum.each(state.subscriptions, fn {_reference, subscription} ->
+      Enum.each(state.subscriptions, fn {_, subscription} ->
         if subscription.affordance_type == type and subscription.affordance_name == name do
           send(subscription.owner, {:wotex_transport_frame, frame})
         end

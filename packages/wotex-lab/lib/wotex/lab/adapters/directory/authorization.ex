@@ -22,24 +22,24 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
     @behaviour Wotex.Directory.Authorization
 
     @impl Wotex.Directory.Authorization
-    def authorize(:allow_all, _principal, _operation, _target, _context), do: :ok
+    def authorize(:allow_all, _, _, _, _), do: :ok
 
-    def authorize(policy, principal, operation, _target, context) when is_map(policy) do
+    def authorize(policy, principal, operation, _, context) when is_map(policy) do
       case Map.get(policy, principal) do
         nil -> :deny
         allowed -> decide(allowed, operation, context)
       end
     end
 
-    def authorize(_policy, _principal, _operation, _target, _context),
+    def authorize(_, _, _, _, _),
       do: {:error, :invalid_policy}
 
     defp decide({:tenant, tenant, operations}, operation, {:tenant, tenant}),
       do: decide(operations, operation, nil)
 
-    defp decide({:tenant, _tenant, _operations}, _operation, _context), do: :deny
+    defp decide({:tenant, _, _}, _, _), do: :deny
 
-    defp decide(operations, operation, _context) when is_list(operations) do
+    defp decide(operations, operation, _) when is_list(operations) do
       if operation in operations, do: :ok, else: :deny
     end
   end

@@ -84,7 +84,7 @@ defmodule Wotex.Lab.Runner.Host do
     end
   end
 
-  def new(_opts),
+  def new(_),
     do: {:error, Error.new(:invalid_host, :preflight, "host options must be a keyword list")}
 
   @doc "Capabilities the host can serve."
@@ -115,10 +115,10 @@ defmodule Wotex.Lab.Runner.Host do
         {:error, error}
     end
   rescue
-    _exception -> {:error, Error.new(:invalid_host, :preflight, "host struct is forged")}
+    _ -> {:error, Error.new(:invalid_host, :preflight, "host struct is forged")}
   end
 
-  def revalidate(_host),
+  def revalidate(_),
     do: {:error, Error.new(:invalid_host, :preflight, "host is invalid")}
 
   defp modules(entries, dependency_versions) when is_list(entries) and length(entries) <= 256 do
@@ -131,12 +131,12 @@ defmodule Wotex.Lab.Runner.Host do
       end
     end)
     |> case do
-      {:ok, {modules, configs, _ids}} -> {:ok, modules, configs}
+      {:ok, {modules, configs, _}} -> {:ok, modules, configs}
       {:error, error} -> {:error, error}
     end
   end
 
-  defp modules(_entries, _dependency_versions),
+  defp modules(_, _),
     do: {:error, Error.new(:invalid_host, :preflight, "modules must be a list")}
 
   defp add_module(entry, {modules, configs, ids}, dependency_versions) do
@@ -205,10 +205,10 @@ defmodule Wotex.Lab.Runner.Host do
 
     validate_metadata(id, capabilities, manifest, dependency_versions)
   rescue
-    _exception ->
+    _ ->
       {:error, Error.new(:invalid_plugin, :preflight, "plugin inspection raised")}
   catch
-    _kind, _reason ->
+    _, _ ->
       {:error, Error.new(:invalid_plugin, :preflight, "plugin inspection failed")}
   end
 
@@ -237,7 +237,7 @@ defmodule Wotex.Lab.Runner.Host do
       else: invalid_capabilities()
   end
 
-  defp plugin_capabilities(_capabilities), do: invalid_capabilities()
+  defp plugin_capabilities(_), do: invalid_capabilities()
 
   defp invalid_capabilities,
     do:
@@ -286,7 +286,7 @@ defmodule Wotex.Lab.Runner.Host do
     |> Enum.all?()
   end
 
-  defp valid_manifest?(_manifest, _id, _capabilities), do: false
+  defp valid_manifest?(_, _, _), do: false
 
   defp missing_dependencies(required, available) do
     Enum.flat_map(required, fn {package, version} ->
@@ -321,7 +321,7 @@ defmodule Wotex.Lab.Runner.Host do
        else: {:error, Error.new(:invalid_host, :preflight, "dependency versions are invalid")}
   end
 
-  defp dependencies(_versions),
+  defp dependencies(_),
     do: {:error, Error.new(:invalid_host, :preflight, "dependency versions must be a map")}
 
   defp instance(pid) when is_pid(pid) do
@@ -330,7 +330,7 @@ defmodule Wotex.Lab.Runner.Host do
       else: {:error, Error.new(:invalid_host, :preflight, "instance is not alive")}
   end
 
-  defp instance(_other),
+  defp instance(_),
     do: {:error, Error.new(:invalid_host, :preflight, "instance must be a live Wotex.Lab pid")}
 
   defp observer(nil), do: :ok
@@ -341,17 +341,17 @@ defmodule Wotex.Lab.Runner.Host do
       else: {:error, Error.new(:invalid_host, :preflight, "observer is not alive")}
   end
 
-  defp observer(_other),
+  defp observer(_),
     do: {:error, Error.new(:invalid_host, :preflight, "observer must be a pid")}
 
   defp seed(nil), do: :ok
   defp seed(seed) when is_integer(seed) and seed >= 0 and seed <= 4_294_967_295, do: :ok
 
-  defp seed(_seed),
+  defp seed(_),
     do: {:error, Error.new(:invalid_host, :preflight, "seed must be an integer in 0..4294967295")}
 
   defp clock(clock) when is_function(clock, 0), do: :ok
-  defp clock(_clock), do: {:error, Error.new(:invalid_host, :preflight, "clock must be a function")}
+  defp clock(_), do: {:error, Error.new(:invalid_host, :preflight, "clock must be a function")}
 
   defp work_root(path) when is_binary(path) and byte_size(path) in 1..4_096 do
     if Path.type(path) == :absolute,
@@ -359,7 +359,7 @@ defmodule Wotex.Lab.Runner.Host do
       else: {:error, Error.new(:invalid_host, :preflight, "work root must be an absolute path")}
   end
 
-  defp work_root(_path),
+  defp work_root(_),
     do: {:error, Error.new(:invalid_host, :preflight, "work root must be a bounded path")}
 
   defp bounded_string?(value),
@@ -368,7 +368,7 @@ defmodule Wotex.Lab.Runner.Host do
   defp string_list?(values) when is_list(values) and length(values) <= 256,
     do: Enum.all?(values, &bounded_string?/1)
 
-  defp string_list?(_values), do: false
+  defp string_list?(_), do: false
 
   defp default_work_root, do: Path.join(System.tmp_dir!(), "wotex-lab-runs")
 end

@@ -230,7 +230,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
     end
 
     @impl GenServer
-    def handle_call({:fetch, identifier, context}, _from, state) do
+    def handle_call({:fetch, identifier, context}, _, state) do
       result =
         case run_query(state.connection, @fetch_sql, [identifier]) do
           {:ok, [row]} -> decode_entry(row)
@@ -241,36 +241,36 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
       {:reply, result, count(state, :fetch, context)}
     end
 
-    def handle_call({:insert, entry, context}, _from, state) do
+    def handle_call({:insert, entry, context}, _, state) do
       reply = write(state, fn connection -> insert_work(connection, entry) end)
       {:reply, reply, count(state, :insert, context)}
     end
 
-    def handle_call({:replace, entry, expected_version, context}, _from, state) do
+    def handle_call({:replace, entry, expected_version, context}, _, state) do
       reply = write(state, fn connection -> replace_work(connection, entry, expected_version) end)
       {:reply, reply, count(state, :replace, context)}
     end
 
-    def handle_call({:delete, identifier, expected_version, context}, _from, state) do
+    def handle_call({:delete, identifier, expected_version, context}, _, state) do
       reply =
         write(state, fn connection -> delete_work(connection, identifier, expected_version) end)
 
       {:reply, reply, count(state, :delete, context)}
     end
 
-    def handle_call({:list, query, cursor, active_at, context}, _from, state) do
+    def handle_call({:list, query, cursor, active_at, context}, _, state) do
       reply =
         read(state, fn connection -> list_work(connection, query, cursor, active_at) end)
 
       {:reply, reply, count(state, :list, context)}
     end
 
-    def handle_call({:expire_due, cutoff, limit, strategy, context}, _from, state) do
+    def handle_call({:expire_due, cutoff, limit, strategy, context}, _, state) do
       reply = write(state, fn connection -> expire_work(connection, cutoff, limit, strategy) end)
       {:reply, reply, count(state, :expire_due, context)}
     end
 
-    def handle_call(:stats, _from, state) do
+    def handle_call(:stats, _, state) do
       {:ok, [[revision]]} = run_query(state.connection, @revision_sql, [])
       {:ok, [[size]]} = run_query(state.connection, @size_sql, [])
 
@@ -283,11 +283,11 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
        }, state}
     end
 
-    def handle_call(:database_path, _from, state), do: {:reply, state.file, state}
+    def handle_call(:database_path, _, state), do: {:reply, state.file, state}
 
     @impl GenServer
-    def terminate(_reason, state) do
-      _closed = Sqlite3.close(state.connection)
+    def terminate(_, state) do
+      _ = Sqlite3.close(state.connection)
       teardown(state.retain?, state.file)
     end
 
@@ -322,10 +322,10 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
       end)
     end
 
-    defp teardown(true, _file), do: :ok
+    defp teardown(true, _), do: :ok
 
     defp teardown(false, file) do
-      Enum.each([file, file <> "-wal", file <> "-shm"], fn path -> _removed = File.rm(path) end)
+      Enum.each([file, file <> "-wal", file <> "-shm"], fn path -> _ = File.rm(path) end)
     end
 
     defp write(state, work), do: transaction(state.connection, "BEGIN IMMEDIATE", work)
@@ -348,7 +348,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
     defp finish(connection, {:rollback, reply}), do: undo(connection, reply)
 
     defp undo(connection, reply) do
-      _rolled_back = Sqlite3.execute(connection, "ROLLBACK")
+      _ = Sqlite3.execute(connection, "ROLLBACK")
       reply
     end
 
@@ -359,7 +359,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
       end
     end
 
-    defp insert_reason({:sqlite, "UNIQUE constraint failed" <> _rest}), do: :already_exists
+    defp insert_reason({:sqlite, "UNIQUE constraint failed" <> _}), do: :already_exists
     defp insert_reason(reason), do: reason
 
     defp replace_work(connection, entry, expected_version) do
@@ -383,14 +383,14 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
     defp missing_or_conflict(connection, identifier) do
       case run_query(connection, @exists_sql, [identifier]) do
         {:ok, []} -> {:error, :not_found}
-        {:ok, _rows} -> {:error, :conflict}
+        {:ok, _} -> {:error, :conflict}
         {:error, reason} -> {:error, reason}
       end
     end
 
     defp advance_revision(connection, reply) do
       case mutate(connection, @advance_sql, []) do
-        {:ok, _changes} -> {:commit, reply}
+        {:ok, _} -> {:commit, reply}
         {:error, reason} -> {:rollback, {:error, reason}}
       end
     end
@@ -412,7 +412,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
       end
     end
 
-    defp continues?(nil, _current), do: true
+    defp continues?(nil, _), do: true
     defp continues?(%Cursor{collection_revision: bound}, current), do: bound == current
 
     defp select_page(connection, listing, cursor, active_at, revision) do
@@ -452,7 +452,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
     defp due_sql(:purge), do: @purge_due_sql
     defp due_sql(:retain), do: @retain_due_sql
 
-    defp apply_expiry(_connection, [], _strategy), do: {:commit, {:ok, []}}
+    defp apply_expiry(_, [], _), do: {:commit, {:ok, []}}
 
     defp apply_expiry(connection, entries, strategy) do
       expired =
@@ -530,7 +530,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
              ) do
         {:ok, entry}
       else
-        _invalid -> {:error, {:corrupt_entry, identifier}}
+        _ -> {:error, {:corrupt_entry, identifier}}
       end
     end
 
@@ -545,15 +545,15 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
            true <- Registration.to_map(registration) == raw do
         {:ok, registration}
       else
-        _invalid -> :error
+        _ -> :error
       end
     end
 
-    defp decode_registration(_raw), do: :error
+    defp decode_registration(_), do: :error
 
     defp decode_state("active"), do: {:ok, :active}
     defp decode_state("expired"), do: {:ok, :expired}
-    defp decode_state(_state), do: :error
+    defp decode_state(_), do: :error
 
     defp revision_value(revision), do: "sqlite:" <> Integer.to_string(revision)
 
@@ -588,7 +588,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
     defp run_statement(connection, statement, params, work) do
       :ok = Sqlite3.bind(statement, params)
       result = work.(statement)
-      _released = Sqlite3.release(connection, statement)
+      _ = Sqlite3.release(connection, statement)
       result
     end
 

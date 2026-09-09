@@ -12,7 +12,7 @@ defmodule Wotex.Lab.MetricsCatalogueTest do
 
   test "the checked-in catalogue validates and covers every required group" do
     assert :ok = Catalogue.validate()
-    assert {:ok, _version} = Version.parse(Catalogue.version())
+    assert {:ok, _} = Version.parse(Catalogue.version())
     metrics = Catalogue.metrics()
     assert Enum.sort(Enum.uniq(Enum.map(metrics, & &1.group))) == Enum.sort(@groups)
     assert length(metrics) > 30
@@ -39,7 +39,7 @@ defmodule Wotex.Lab.MetricsCatalogueTest do
       refute dimension in @forbidden
     end
 
-    for {_name, values} <- dimensions, value <- values, do: assert(is_atom(value))
+    for {_, values} <- dimensions, value <- values, do: assert(is_atom(value))
   end
 
   test "outcome atoms map to a finite class and never pass through" do

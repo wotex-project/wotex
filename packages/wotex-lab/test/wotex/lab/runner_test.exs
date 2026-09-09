@@ -508,7 +508,7 @@ defmodule Wotex.Lab.RunnerTest do
     {:ok, sleeping_scenario} = scenario(sleeping)
     assert {:ok, worker_run} = Runner.start(sleeping_scenario, sleeping, host)
     assert eventually(fn -> Runner.status(worker_run).phase == :running end)
-    {ref, _step, worker} = :sys.get_state(worker_run).worker
+    {ref, _, worker} = :sys.get_state(worker_run).worker
     send(worker_run, {:step_result, Runner.status(worker_run).attempt_id, "wrong", ref, {:ok, 1}})
     send(worker_run, :unrelated)
     Process.exit(worker, :kill)
@@ -704,7 +704,7 @@ defmodule Wotex.Lab.RunnerTest do
   end
 
   defp role_children(lab, role) do
-    {^role, supervisor, :supervisor, _modules} =
+    {^role, supervisor, :supervisor, _} =
       List.keyfind(Supervisor.which_children(lab), role, 0)
 
     DynamicSupervisor.which_children(supervisor)
@@ -721,5 +721,5 @@ defmodule Wotex.Lab.RunnerTest do
     end
   end
 
-  defp eventually(_fun, 0), do: false
+  defp eventually(_, 0), do: false
 end

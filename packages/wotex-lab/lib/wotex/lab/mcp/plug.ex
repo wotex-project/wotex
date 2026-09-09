@@ -60,7 +60,7 @@ if Code.ensure_loaded?(Plug.Conn) do
         {:error, :too_large} ->
           refuse(conn, 413, "body exceeds the ceiling")
 
-        {:error, _decode} ->
+        {:error, _} ->
           reply(conn, 400, %{
             "jsonrpc" => "2.0",
             "id" => nil,
@@ -76,11 +76,11 @@ if Code.ensure_loaded?(Plug.Conn) do
         send_resp(conn, 204, "")
       else
         {:error, :origin} -> refuse(conn, 403, "origin not allowed")
-        _missing -> refuse(conn, 400, "mcp-session-id required")
+        _ -> refuse(conn, 400, "mcp-session-id required")
       end
     end
 
-    def call(conn, _config), do: refuse(conn, 405, "only POST and DELETE are served")
+    def call(conn, _), do: refuse(conn, 405, "only POST and DELETE are served")
 
     defp dispatch(conn, config, %{"method" => "initialize"} = message) do
       id = Base.url_encode64(:crypto.strong_rand_bytes(18), padding: false)
@@ -105,7 +105,7 @@ if Code.ensure_loaded?(Plug.Conn) do
         :ets.insert(config.sessions, {id, state, expires})
         if reply, do: reply(conn, 200, reply), else: send_resp(conn, 202, "")
       else
-        _missing -> refuse(conn, 404, "unknown or expired session; initialize first")
+        _ -> refuse(conn, 404, "unknown or expired session; initialize first")
       end
     end
 
@@ -113,15 +113,15 @@ if Code.ensure_loaded?(Plug.Conn) do
       case get_req_header(conn, "origin") do
         [] -> :ok
         [origin] -> if origin in origins, do: :ok, else: {:error, :origin}
-        _many -> {:error, :origin}
+        _ -> {:error, :origin}
       end
     end
 
     defp body(conn, max) do
       case read_body(conn, length: max, read_length: max) do
         {:ok, body, conn} -> {:ok, body, conn}
-        {:more, _partial, _conn} -> {:error, :too_large}
-        {:error, _reason} -> {:error, :too_large}
+        {:more, _, _} -> {:error, :too_large}
+        {:error, _} -> {:error, :too_large}
       end
     end
 

@@ -49,7 +49,7 @@ defmodule Wotex.Lab.Formal.Replay do
   @spec run(GenServer.server(), [map()], keyword()) :: {:ok, outcome()} | {:error, Error.t()}
   def run(policy, steps, opts \\ [])
 
-  def run(policy, [%{state: _first, term: term} | rest], opts) when is_list(rest) do
+  def run(policy, [%{state: _, term: term} | rest], opts) when is_list(rest) do
     max_age = Keyword.get(opts, :max_age, 3)
 
     concrete = %{
@@ -81,10 +81,10 @@ defmodule Wotex.Lab.Formal.Replay do
     end
   end
 
-  def run(_policy, _steps, _opts),
+  def run(_, _, _),
     do: {:error, Error.new(:invalid_trace, :replay, "a trace needs at least its initial state")}
 
-  defp walk([], _policy, concrete, index, refusals),
+  defp walk([], _, concrete, index, refusals),
     do:
       {:ok,
        %{
@@ -121,15 +121,15 @@ defmodule Wotex.Lab.Formal.Replay do
     end
   end
 
-  defp apply_rule(rule, _policy, concrete) when rule in ["tick", "age"],
+  defp apply_rule(rule, _, concrete) when rule in ["tick", "age"],
     do: {:ok, %{concrete | now: concrete.now + @second, age_ms: concrete.age_ms + @second}, nil}
 
-  defp apply_rule("warm", _policy, concrete), do: {:ok, reading(concrete, :comfort), nil}
-  defp apply_rule("heatUp", _policy, concrete), do: {:ok, reading(concrete, :hot), nil}
-  defp apply_rule("chill", _policy, concrete), do: {:ok, reading(concrete, :comfort), nil}
-  defp apply_rule("coolDown", _policy, concrete), do: {:ok, reading(concrete, :cold), nil}
+  defp apply_rule("warm", _, concrete), do: {:ok, reading(concrete, :comfort), nil}
+  defp apply_rule("heatUp", _, concrete), do: {:ok, reading(concrete, :hot), nil}
+  defp apply_rule("chill", _, concrete), do: {:ok, reading(concrete, :comfort), nil}
+  defp apply_rule("coolDown", _, concrete), do: {:ok, reading(concrete, :cold), nil}
 
-  defp apply_rule("energyOver", _policy, concrete),
+  defp apply_rule("energyOver", _, concrete),
     do:
       {:ok,
        %{
@@ -139,7 +139,7 @@ defmodule Wotex.Lab.Formal.Replay do
            state_revision: concrete.state_revision + 1
        }, nil}
 
-  defp apply_rule("energyWithin", _policy, concrete),
+  defp apply_rule("energyWithin", _, concrete),
     do: {:ok, %{concrete | power: 0.0, state_revision: concrete.state_revision + 1}, nil}
 
   defp apply_rule("proposeHeat", policy, concrete), do: propose(policy, concrete, :heat)
@@ -148,7 +148,7 @@ defmodule Wotex.Lab.Formal.Replay do
   defp apply_rule("dispatchCool", policy, concrete), do: dispatch(policy, concrete, :cool)
   defp apply_rule("redeliver", policy, concrete), do: redeliver(policy, concrete)
 
-  defp apply_rule("dispatchWithoutDecision", _policy, concrete),
+  defp apply_rule("dispatchWithoutDecision", _, concrete),
     do: {:ok, concrete, :no_decision_to_dispatch}
 
   defp apply_rule("expire", policy, concrete) do
@@ -161,15 +161,15 @@ defmodule Wotex.Lab.Formal.Replay do
       {:error, %Error{code: code}} ->
         {:ok, concrete, code}
 
-      {:ok, _outcome} ->
+      {:ok, _} ->
         {:error, Error.new(:replay_error, :replay, "policy dispatched an expired decision")}
     end
   end
 
-  defp apply_rule("complete", _policy, concrete),
+  defp apply_rule("complete", _, concrete),
     do: {:ok, %{concrete | decision: :no_decision, decision_id: nil}, nil}
 
-  defp apply_rule(rule, _policy, _concrete),
+  defp apply_rule(rule, _, _),
     do:
       {:error,
        Error.new(:unknown_rule, :replay, "trace rule has no simulator counterpart",
@@ -205,7 +205,7 @@ defmodule Wotex.Lab.Formal.Replay do
     end
   end
 
-  defp dispatch(_policy, %{decision_id: nil} = concrete, _action),
+  defp dispatch(_, %{decision_id: nil} = concrete, _),
     do: {:ok, concrete, :unknown_decision}
 
   defp dispatch(policy, concrete, action) do
@@ -231,7 +231,7 @@ defmodule Wotex.Lab.Formal.Replay do
     end
   end
 
-  defp redeliver(_policy, %{decision_id: nil} = concrete), do: {:ok, concrete, :unknown_decision}
+  defp redeliver(_, %{decision_id: nil} = concrete), do: {:ok, concrete, :unknown_decision}
 
   defp redeliver(policy, concrete) do
     case Policy.dispatch(policy, concrete.decision_id, current(concrete), fn ->
@@ -240,7 +240,7 @@ defmodule Wotex.Lab.Formal.Replay do
       {:error, %Error{code: code}} ->
         {:ok, concrete, code}
 
-      {:ok, _outcome} ->
+      {:ok, _} ->
         {:error, Error.new(:replay_error, :replay, "policy dispatched a duplicate delivery")}
     end
   end
@@ -281,10 +281,10 @@ defmodule Wotex.Lab.Formal.Replay do
            ]),
            %{max_age: concrete.max_age, max_grants: 2}
          ) do
-      {:ok, ^expected, _lost} ->
+      {:ok, ^expected, _} ->
         :ok
 
-      {:ok, observed, _lost} ->
+      {:ok, observed, _} ->
         {:diverged, %{step: index, rule: rule, expected: expected, observed: observed}}
 
       {:error, error} ->

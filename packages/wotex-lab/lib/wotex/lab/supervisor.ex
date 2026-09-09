@@ -51,30 +51,30 @@ defmodule Wotex.Lab.Supervisor do
           DynamicSupervisor.on_start_child() | {:error, Error.t()}
   def start_child(instance, role, child) when role in [:things, :sessions] do
     case List.keyfind(Supervisor.which_children(instance), role, 0) do
-      {^role, pid, :supervisor, _modules} when is_pid(pid) ->
+      {^role, pid, :supervisor, _} when is_pid(pid) ->
         DynamicSupervisor.start_child(pid, child)
 
-      _unavailable ->
+      _ ->
         {:error, Error.new(:supervisor_unavailable, :composition, "child supervisor unavailable")}
     end
   end
 
-  def start_child(_instance, _role, _child),
+  def start_child(_, _, _),
     do: {:error, Error.new(:unknown_role, :composition, "role must be things or sessions")}
 
   @doc "Terminates a child of the instance's Thing or session supervisor; the child is not restarted."
   @spec stop_child(pid(), :things | :sessions, pid()) :: :ok | {:error, Error.t() | :not_found}
   def stop_child(instance, role, child) when role in [:things, :sessions] and is_pid(child) do
     case List.keyfind(Supervisor.which_children(instance), role, 0) do
-      {^role, pid, :supervisor, _modules} when is_pid(pid) ->
+      {^role, pid, :supervisor, _} when is_pid(pid) ->
         DynamicSupervisor.terminate_child(pid, child)
 
-      _unavailable ->
+      _ ->
         {:error, Error.new(:supervisor_unavailable, :composition, "child supervisor unavailable")}
     end
   end
 
-  def stop_child(_instance, _role, _child),
+  def stop_child(_, _, _),
     do: {:error, Error.new(:unknown_role, :composition, "role must be things or sessions")}
 
   @impl true
@@ -106,7 +106,7 @@ defmodule Wotex.Lab.Supervisor do
   defp valid_capacity?(capacity), do: is_integer(capacity) and capacity in 1..10_000
   defp valid_name?(nil), do: true
   defp valid_name?(name) when is_atom(name), do: true
-  defp valid_name?({:global, _name}), do: true
-  defp valid_name?({:via, module, _name}) when is_atom(module), do: true
-  defp valid_name?(_name), do: false
+  defp valid_name?({:global, _}), do: true
+  defp valid_name?({:via, module, _}) when is_atom(module), do: true
+  defp valid_name?(_), do: false
 end

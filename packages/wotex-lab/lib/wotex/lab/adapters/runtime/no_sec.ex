@@ -26,8 +26,8 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
     alias Wotex.Lab.Error
 
     @impl Wotex.Runtime.Credentials
-    def resolve(%{definitions: definitions}, _form, _context, _config) when is_map(definitions) do
-      if Enum.all?(definitions, fn {_name, definition} -> nosec?(definition) end) do
+    def resolve(%{definitions: definitions}, _, _, _) when is_map(definitions) do
+      if Enum.all?(definitions, fn {_, definition} -> nosec?(definition) end) do
         {:ok, nil}
       else
         {:error,
@@ -35,12 +35,12 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       end
     end
 
-    def resolve(_security, _form, _context, _config) do
+    def resolve(_, _, _, _) do
       {:error,
        Error.new(:invalid_security_selection, :credentials, "security selection is invalid")}
     end
 
     defp nosec?(%{"scheme" => "nosec"}), do: true
-    defp nosec?(_definition), do: false
+    defp nosec?(_), do: false
   end
 end

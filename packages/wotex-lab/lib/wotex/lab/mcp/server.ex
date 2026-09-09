@@ -100,11 +100,11 @@ defmodule Wotex.Lab.MCP.Server do
   def handle(state, %{"jsonrpc" => "2.0", "id" => id}) when not is_nil(id),
     do: {error(id, -32_600, "request needs a method"), state}
 
-  def handle(state, _message),
+  def handle(state, _),
     do: {error(nil, -32_600, "message is not a JSON-RPC 2.0 request"), state}
 
-  defp notification(state, "notifications/initialized", _params), do: %{state | initialized: true}
-  defp notification(state, _method, _params), do: state
+  defp notification(state, "notifications/initialized", _), do: %{state | initialized: true}
+  defp notification(state, _, _), do: state
 
   defp request(state, id, "initialize", params) do
     requested = Map.get(params, "protocolVersion")
@@ -123,9 +123,9 @@ defmodule Wotex.Lab.MCP.Server do
      }), state}
   end
 
-  defp request(state, id, "ping", _params), do: {result(id, %{}), state}
+  defp request(state, id, "ping", _), do: {result(id, %{}), state}
 
-  defp request(state, id, "resources/list", _params),
+  defp request(state, id, "resources/list", _),
     do: {result(id, %{"resources" => Resources.list(state)}), state}
 
   defp request(state, id, "resources/read", %{"uri" => uri}) when is_binary(uri) do
@@ -135,10 +135,10 @@ defmodule Wotex.Lab.MCP.Server do
     end
   end
 
-  defp request(state, id, "resources/read", _params),
+  defp request(state, id, "resources/read", _),
     do: {error(id, -32_602, "uri is required"), state}
 
-  defp request(state, id, "tools/list", _params),
+  defp request(state, id, "tools/list", _),
     do: {result(id, %{"tools" => Tools.list(state)}), state}
 
   defp request(state, id, "tools/call", %{"name" => name} = params) when is_binary(name) do
@@ -159,10 +159,10 @@ defmodule Wotex.Lab.MCP.Server do
     end
   end
 
-  defp request(state, id, "tools/call", _params),
+  defp request(state, id, "tools/call", _),
     do: {error(id, -32_602, "name is required"), state}
 
-  defp request(state, id, method, _params),
+  defp request(state, id, method, _),
     do: {error(id, -32_601, "method not found: #{String.slice(method, 0, 64)}"), state}
 
   defp account(state, id, payload) do

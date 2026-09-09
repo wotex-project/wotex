@@ -31,7 +31,7 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       end)
     end
 
-    def request(_request, _context, _config), do: {:error, invalid_config()}
+    def request(_, _, _), do: {:error, invalid_config()}
 
     @impl Wotex.Runtime.Transport
     def subscribe(%Request{} = request, owner, %ExecutionContext{} = context, %{host: host})
@@ -45,7 +45,7 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       end)
     end
 
-    def subscribe(_request, _owner, _context, _config), do: {:error, invalid_config()}
+    def subscribe(_, _, _, _), do: {:error, invalid_config()}
 
     @impl Wotex.Runtime.Transport
     def unsubscribe({reference, session}, %Request{}, %ExecutionContext{}, %{host: host})
@@ -54,20 +54,20 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
       Thing.unsubscribe(host, reference)
     end
 
-    def unsubscribe(_handle, _request, _context, _config), do: {:error, invalid_config()}
+    def unsubscribe(_, _, _, _), do: {:error, invalid_config()}
 
     @impl Wotex.Runtime.Transport
-    def decode_frame({:sample, name, value, meta}, %Request{}, _config) when is_map(meta) do
+    def decode_frame({:sample, name, value, meta}, %Request{}, _) when is_map(meta) do
       {:ok, value, Map.merge(meta, %{affordance_type: :property, affordance_name: name})}
     end
 
-    def decode_frame({:event, name, payload, meta}, %Request{}, _config) when is_map(meta) do
+    def decode_frame({:event, name, payload, meta}, %Request{}, _) when is_map(meta) do
       {:ok, payload, Map.merge(meta, %{affordance_type: :event, affordance_name: name})}
     end
 
-    def decode_frame(:keepalive, %Request{}, _config), do: :ignore
+    def decode_frame(:keepalive, %Request{}, _), do: :ignore
 
-    def decode_frame(_frame, %Request{}, _config) do
+    def decode_frame(_, %Request{}, _) do
       {:error,
        Error.new(:invalid_frame, :transport, "loopback host delivered an unknown frame",
          class: :protocol

@@ -58,7 +58,7 @@ defmodule Wotex.Lab.Test.CookbookRunner do
     outcome =
       runnable
       |> Enum.with_index(1)
-      |> Enum.reduce_while({:ok, nil, seed, env}, fn {cell, index}, {:ok, _last, binding, env} ->
+      |> Enum.reduce_while({:ok, nil, seed, env}, fn {cell, index}, {:ok, _, binding, env} ->
         case eval_cell(cell, index, binding, env) do
           {:ok, value, binding, env} -> {:cont, {:ok, value, binding, env}}
           {:error, failure} -> {:halt, {:error, failure}}
@@ -77,7 +77,7 @@ defmodule Wotex.Lab.Test.CookbookRunner do
          }}
 
       {:error, failure} ->
-        _leaked = sweep(supervisor)
+        _ = sweep(supervisor)
         {:error, failure}
     end
   end
@@ -105,10 +105,10 @@ defmodule Wotex.Lab.Test.CookbookRunner do
       |> Code.string_to_quoted!()
       |> Macro.prewalk([], fn
         # `alias A.B.{C, D}`: the prefix is a namespace, not a module.
-        {{:., _dot, [_prefix, :{}]}, _meta, children}, acc ->
+        {{:., _, [_, :{}]}, _, children}, acc ->
           {{:__block__, [], children}, acc}
 
-        {:__aliases__, _meta, [first | _rest]} = node, acc when is_atom(first) ->
+        {:__aliases__, _, [first | _]} = node, acc when is_atom(first) ->
           {node, [Macro.expand(node, env) | acc]}
 
         node, acc ->

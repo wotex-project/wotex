@@ -80,13 +80,13 @@ defmodule Wotex.Lab.Runner.Definition do
     end
   end
 
-  def new(_opts),
+  def new(_),
     do: {:error, Error.new(:invalid_definition, :preflight, "definition must be a keyword list")}
 
   @doc "Steps in dependency order; every dependency precedes its dependants."
   @spec order(t()) :: [step()]
   def order(%__MODULE__{steps: steps}) do
-    {ordered, _seen} =
+    {ordered, _} =
       Enum.reduce(steps, {[], MapSet.new()}, fn step, acc -> visit(step, steps, acc) end)
 
     Enum.reverse(ordered)
@@ -130,10 +130,10 @@ defmodule Wotex.Lab.Runner.Definition do
       {:error, error} -> {:error, error}
     end
   rescue
-    _exception -> invalid_forgery()
+    _ -> invalid_forgery()
   end
 
-  def revalidate(_definition), do: invalid_forgery()
+  def revalidate(_), do: invalid_forgery()
 
   defp visit(step, steps, {ordered, seen}) do
     if MapSet.member?(seen, step.id) do
@@ -167,7 +167,7 @@ defmodule Wotex.Lab.Runner.Definition do
     end
   end
 
-  defp steps(_steps),
+  defp steps(_),
     do:
       {:error, Error.new(:invalid_definition, :preflight, "steps must be a bounded non-empty list")}
 
@@ -202,7 +202,7 @@ defmodule Wotex.Lab.Runner.Definition do
     end
   end
 
-  defp typed_step(_step, _acc),
+  defp typed_step(_, _),
     do:
       {:halt,
        {:error,
@@ -328,7 +328,7 @@ defmodule Wotex.Lab.Runner.Definition do
     end
   end
 
-  defp capabilities(_capabilities, _steps),
+  defp capabilities(_, _),
     do: {:error, Error.new(:invalid_definition, :preflight, "capabilities must be a list")}
 
   defp fixtures(fixtures) when is_map(fixtures) and map_size(fixtures) <= 1_024 do
@@ -346,7 +346,7 @@ defmodule Wotex.Lab.Runner.Definition do
           )}
   end
 
-  defp fixtures(_fixtures),
+  defp fixtures(_),
     do: {:error, Error.new(:invalid_fixture_digest, :preflight, "fixtures must be a bounded map")}
 
   defp assertions(assertions, steps) when is_list(assertions) and length(assertions) <= 1_024 do
@@ -363,7 +363,7 @@ defmodule Wotex.Lab.Runner.Definition do
          )}
   end
 
-  defp assertions(_assertions, _steps),
+  defp assertions(_, _),
     do: {:error, Error.new(:invalid_assertion, :preflight, "assertions must be a bounded list")}
 
   defp valid_assertion?(%{"id" => id, "step" => step} = assertion, ids) do
@@ -378,7 +378,7 @@ defmodule Wotex.Lab.Runner.Definition do
     |> Enum.all?()
   end
 
-  defp valid_assertion?(_assertion, _ids), do: false
+  defp valid_assertion?(_, _), do: false
 
   defp faults(faults, steps) when is_map(faults) and map_size(faults) <= @max_steps do
     ids = MapSet.new(steps, & &1.id)
@@ -394,7 +394,7 @@ defmodule Wotex.Lab.Runner.Definition do
          )}
   end
 
-  defp faults(_faults, _steps),
+  defp faults(_, _),
     do: {:error, Error.new(:invalid_fault, :preflight, "faults must be a map")}
 
   defp upstream(refs) when is_list(refs) and length(refs) <= 256 do
@@ -405,7 +405,7 @@ defmodule Wotex.Lab.Runner.Definition do
          Error.new(:invalid_definition, :preflight, "upstream references must be bounded strings")}
   end
 
-  defp upstream(_refs),
+  defp upstream(_),
     do: {:error, Error.new(:invalid_definition, :preflight, "upstream must be a list")}
 
   defp valid_fixture_name?(name) when is_binary(name) and byte_size(name) in 1..1_024 do
@@ -413,7 +413,7 @@ defmodule Wotex.Lab.Runner.Definition do
       not String.contains?(name, <<0>>)
   end
 
-  defp valid_fixture_name?(_name), do: false
+  defp valid_fixture_name?(_), do: false
 
   defp json_value?(nil), do: true
   defp json_value?(value) when is_boolean(value) or is_binary(value), do: true
@@ -425,7 +425,7 @@ defmodule Wotex.Lab.Runner.Definition do
     Enum.all?(value, fn {key, member} -> is_binary(key) and json_value?(member) end)
   end
 
-  defp json_value?(_value), do: false
+  defp json_value?(_), do: false
 
   defp invalid_forgery,
     do: {:error, Error.new(:invalid_definition, :preflight, "definition struct is forged")}

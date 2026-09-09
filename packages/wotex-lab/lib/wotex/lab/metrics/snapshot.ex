@@ -103,7 +103,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
     end
   end
 
-  def new(_fields), do: {:error, error(:invalid_snapshot, "", "snapshot fields must be a map")}
+  def new(_), do: {:error, error(:invalid_snapshot, "", "snapshot fields must be a map")}
 
   @doc "Encoded size in bytes, the cost history charges against its byte budget."
   @spec encoded_size(t()) :: pos_integer()
@@ -133,7 +133,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
   def value?(value), do: value in @specials
 
   defp stale(%{type: :histogram} = series) do
-    buckets = Enum.map(series.sample.buckets, fn {le, _count} -> {le, 0} end)
+    buckets = Enum.map(series.sample.buckets, fn {le, _} -> {le, 0} end)
     %{series | sample: %{buckets: buckets, sum: :stale, count: 0, stale: true}}
   end
 
@@ -141,7 +141,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
 
   defp slot(slot) when is_integer(slot) and slot >= 0 and slot < 65_536, do: :ok
 
-  defp slot(_slot),
+  defp slot(_),
     do: {:error, error(:invalid_instance_slot, "/instance_slot", "slot is unbounded")}
 
   defp identity(nil), do: :ok
@@ -150,7 +150,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
        when is_integer(started) and is_integer(generation) and generation >= 0,
        do: :ok
 
-  defp identity(_identity),
+  defp identity(_),
     do: {:error, error(:invalid_identity, "/identity", "identity needs started_at and generation")}
 
   defp counters(map) when is_map(map) do
@@ -159,7 +159,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
       else: {:error, error(:invalid_counters, "/counters", "counters must be atom => count")}
   end
 
-  defp counters(_map), do: {:error, error(:invalid_counters, "/counters", "counters must be a map")}
+  defp counters(_), do: {:error, error(:invalid_counters, "/counters", "counters must be a map")}
 
   defp series(list) when is_list(list) and length(list) <= @max_series do
     list
@@ -176,7 +176,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
     end
   end
 
-  defp series(_list),
+  defp series(_),
     do: {:error, error(:invalid_series, "/series", "series must be a bounded list")}
 
   defp unique(sorted) do
@@ -187,7 +187,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
 
     case duplicate do
       nil -> {:ok, sorted}
-      [a, _b] -> {:error, error(:duplicate_series, "/series", "duplicate series", %{name: a.name})}
+      [a, _] -> {:error, error(:duplicate_series, "/series", "duplicate series", %{name: a.name})}
     end
   end
 
@@ -200,7 +200,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
     end
   end
 
-  defp one_series(_series, path),
+  defp one_series(_, path),
     do: {:error, error(:invalid_series, path, "series needs name, type, labels and sample")}
 
   defp labels(labels, path) when is_list(labels) and length(labels) <= @max_labels do
@@ -219,13 +219,13 @@ defmodule Wotex.Lab.Metrics.Snapshot do
     end
   end
 
-  defp labels(_labels, path),
+  defp labels(_, path),
     do: {:error, error(:invalid_label, path, "labels must be a short list")}
 
   defp label?({name, value}) when is_binary(name) and is_binary(value),
     do: Regex.match?(@label_name, name) and byte_size(value) <= 128 and String.valid?(value)
 
-  defp label?(_label), do: false
+  defp label?(_), do: false
 
   defp sample(:histogram, %{buckets: buckets, sum: sum, count: count} = sample, path)
        when is_list(buckets) and buckets != [] and
@@ -238,7 +238,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
     check(value?(value) and (type == :gauge or counter?(value)), :invalid_sample, path)
   end
 
-  defp sample(_type, _sample, path),
+  defp sample(_, _, path),
     do: {:error, error(:invalid_sample, path, "sample does not match the series type")}
 
   defp histogram_sample(buckets, sum, count, path) do
@@ -267,7 +267,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
   defp counter?(value), do: value in [:stale, :nan]
 
   defp bucket?({le, count}), do: (is_number(le) or le == :infinity) and non_neg?(count)
-  defp bucket?(_bucket), do: false
+  defp bucket?(_), do: false
 
   defp sorted_buckets?(buckets) do
     buckets
@@ -279,7 +279,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
 
   defp non_neg?(value), do: is_integer(value) and value >= 0
 
-  defp check(true, _code, _path), do: :ok
+  defp check(true, _, _), do: :ok
   defp check(false, code, path), do: {:error, error(code, path, "snapshot field is invalid")}
 
   defp error(code, path, message, details \\ %{}),

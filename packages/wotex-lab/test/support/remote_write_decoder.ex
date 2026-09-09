@@ -35,17 +35,17 @@ defmodule Wotex.Lab.Test.RemoteWriteDecoder do
 
   defp label(bytes) do
     Enum.reduce(fields(bytes), {nil, nil}, fn
-      {1, 2, name}, {_name, value} -> {name, value}
-      {2, 2, value}, {name, _value} -> {name, value}
+      {1, 2, name}, {_, value} -> {name, value}
+      {2, 2, value}, {name, _} -> {name, value}
     end)
   end
 
   defp sample(bytes) do
     Enum.reduce(fields(bytes), {nil, nil}, fn
-      {1, 1, <<pattern::unsigned-little-64>> = double}, {timestamp, _value} ->
+      {1, 1, <<pattern::unsigned-little-64>> = double}, {timestamp, _} ->
         {timestamp, float(double, pattern)}
 
-      {2, 0, varint}, {_timestamp, value} ->
+      {2, 0, varint}, {_, value} ->
         {if(varint >= 1 <<< 63, do: varint - (1 <<< 64), else: varint), value}
     end)
     |> then(fn {timestamp, value} -> {timestamp, value} end)
@@ -54,7 +54,7 @@ defmodule Wotex.Lab.Test.RemoteWriteDecoder do
   defp float(double, pattern) do
     case double do
       <<value::little-float-64>> -> value
-      _special -> {:special, pattern}
+      _ -> {:special, pattern}
     end
   end
 

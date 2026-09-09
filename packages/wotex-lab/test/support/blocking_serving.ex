@@ -4,10 +4,10 @@ defmodule Wotex.Lab.Test.BlockingServing do
   @behaviour Nx.Serving
 
   @impl Nx.Serving
-  def init(_type, observer, _defn_options), do: {:ok, observer}
+  def init(_, observer, _), do: {:ok, observer}
 
   @impl Nx.Serving
-  def handle_batch(batch, _partition, observer) do
+  def handle_batch(batch, _, observer) do
     execute = fn ->
       send(observer, {:serving_execution, self()})
 

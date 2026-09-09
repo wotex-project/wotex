@@ -11,11 +11,11 @@ defmodule Wotex.Lab.Test.InvalidManifestComponent do
   def capabilities, do: ["invalid.manifest"]
 
   @impl Wotex.Lab.Plugin
-  def child_specs(_config), do: []
+  def child_specs(_), do: []
 
   @impl Wotex.Lab.Plugin
   def manifest, do: %{"id" => id(), "capabilities" => capabilities()}
 
   @impl Wotex.Lab.Component
-  def execute(_operation, input, _context), do: {:ok, input}
+  def execute(_, input, _), do: {:ok, input}
 end

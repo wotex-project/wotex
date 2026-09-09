@@ -64,7 +64,7 @@ defmodule Wotex.Lab.Test.HttpServer do
   @spec stream_pid(pid()) :: pid()
   def stream_pid(controller), do: wait_stream(controller, 200)
 
-  defp wait_stream(_controller, 0), do: raise("no SSE stream connected")
+  defp wait_stream(_, 0), do: raise("no SSE stream connected")
 
   defp wait_stream(controller, attempts) do
     case Agent.get(controller, & &1.stream) do
@@ -78,7 +78,7 @@ defmodule Wotex.Lab.Test.HttpServer do
   end
 
   defp listener(server) do
-    {:ok, {_ip, port}} = ThousandIsland.listener_info(server)
+    {:ok, {_, port}} = ThousandIsland.listener_info(server)
     {:ok, %{port: port}}
   end
 
@@ -118,7 +118,7 @@ defmodule Wotex.Lab.Test.HttpServer do
         Agent.update(conn.assigns.controller, &Map.put(&1, :target, body))
         send_resp(conn, 204, "")
 
-      _other ->
+      _ ->
         send_resp(conn, 401, "")
     end
   end
@@ -160,7 +160,7 @@ defmodule Wotex.Lab.Test.HttpServer do
       {:chunk, data} ->
         case chunk(conn, data) do
           {:ok, conn} -> stream_loop(conn, controller)
-          {:error, _reason} -> finish(conn, controller)
+          {:error, _} -> finish(conn, controller)
         end
 
       :close ->

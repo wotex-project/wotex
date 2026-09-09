@@ -101,17 +101,17 @@ defmodule Wotex.Lab.Metrics.Query do
     end
   end
 
-  def new(_opts), do: {:error, error(:invalid_query, "query options must be a keyword list")}
+  def new(_), do: {:error, error(:invalid_query, "query options must be a keyword list")}
 
   @doc "Revalidates a descriptor at an execution boundary; a struct is not admission."
   @spec validate(term()) :: {:ok, t()} | {:error, Error.t()}
   def validate(%__MODULE__{schema_version: @schema_version} = query) do
     query |> Map.from_struct() |> Map.delete(:schema_version) |> Map.to_list() |> new()
   rescue
-    _invalid -> {:error, error(:invalid_query, "query descriptor is not admitted")}
+    _ -> {:error, error(:invalid_query, "query descriptor is not admitted")}
   end
 
-  def validate(_query), do: {:error, error(:invalid_query, "query descriptor is not admitted")}
+  def validate(_), do: {:error, error(:invalid_query, "query descriptor is not admitted")}
 
   @doc "Admits the estimated work: the number of points over the range against the point limit."
   @spec estimate(t()) :: {:ok, %{points: pos_integer()}} | {:error, Error.t()}
@@ -159,11 +159,11 @@ defmodule Wotex.Lab.Metrics.Query do
       else: {:error, error(:invalid_scope, "scope needs instance and session identifiers")}
   end
 
-  defp scope(_scope), do: {:error, error(:invalid_scope, "scope needs instance and session")}
+  defp scope(_), do: {:error, error(:invalid_scope, "scope needs instance and session")}
 
   defp aggregation(aggregation) when aggregation in @aggregations, do: {:ok, aggregation}
 
-  defp aggregation(_aggregation),
+  defp aggregation(_),
     do: {:error, error(:invalid_aggregation, "aggregation is outside the closed enum")}
 
   defp filters(filters, metric) when is_map(filters) do
@@ -179,21 +179,21 @@ defmodule Wotex.Lab.Metrics.Query do
       else: {:error, error(:invalid_filter, "filters must name closed dimension values")}
   end
 
-  defp filters(_filters, _metric), do: {:error, error(:invalid_filter, "filters must be a map")}
+  defp filters(_, _), do: {:error, error(:invalid_filter, "filters must be a map")}
 
   defp quantile(:histogram_quantile, quantile)
        when is_float(quantile) and quantile > 0 and
               quantile < 1,
        do: {:ok, quantile}
 
-  defp quantile(:histogram_quantile, _quantile),
+  defp quantile(:histogram_quantile, _),
     do: {:error, error(:invalid_quantile, "histogram_quantile needs a quantile in (0, 1)")}
 
-  defp quantile(_aggregation, nil), do: {:ok, nil}
-  defp quantile(_aggregation, _quantile), do: {:error, error(:invalid_quantile, "quantile unused")}
+  defp quantile(_, nil), do: {:ok, nil}
+  defp quantile(_, _), do: {:error, error(:invalid_quantile, "quantile unused")}
 
   defp limits(overrides) when is_map(overrides) do
-    with true <- Enum.all?(overrides, fn {key, _v} -> Map.has_key?(@default_limits, key) end),
+    with true <- Enum.all?(overrides, fn {key, _} -> Map.has_key?(@default_limits, key) end),
          limits = Map.merge(@default_limits, overrides),
          true <- Enum.all?(limits, fn {key, value} -> positive?(value, key) end) do
       {:ok, limits}
@@ -202,7 +202,7 @@ defmodule Wotex.Lab.Metrics.Query do
     end
   end
 
-  defp limits(_overrides), do: {:error, error(:invalid_limits, "limits must be a map")}
+  defp limits(_), do: {:error, error(:invalid_limits, "limits must be a map")}
 
   defp positive?(value, key) do
     is_integer(value) and value >= Map.get(@floors, key, 1) and value <= @ceilings[key]
@@ -229,10 +229,10 @@ defmodule Wotex.Lab.Metrics.Query do
   end
 
   defp add(%DateTime{} = datetime, ms), do: DateTime.add(datetime, ms, :millisecond)
-  defp add(other, _ms), do: other
+  defp add(other, _), do: other
 
   defp utc?(%DateTime{time_zone: "Etc/UTC"}), do: true
-  defp utc?(_datetime), do: false
+  defp utc?(_), do: false
 
   # Grafana-style default: the coarsest whole-second step keeping the range within the limit.
   defp default_step(start_at, end_at, limits) do
@@ -242,7 +242,7 @@ defmodule Wotex.Lab.Metrics.Query do
   end
 
   defp step(step, limits) when is_integer(step) and step >= limits.min_step_ms, do: {:ok, step}
-  defp step(_step, _limits), do: {:error, error(:invalid_step, "step is below the minimum")}
+  defp step(_, _), do: {:error, error(:invalid_step, "step is below the minimum")}
 
   defp error(code, message, opts \\ []), do: Error.new(code, :query, message, opts)
 end

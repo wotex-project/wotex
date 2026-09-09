@@ -60,7 +60,7 @@ defmodule Wotex.Lab.Metrics.ReqSink do
     end
   end
 
-  def write(_request, _credential, _config),
+  def write(_, _, _),
     do: {:error, Error.new(:invalid_sink_request, :export, "request needs body and headers")}
 
   defp normalize_config(config) do
@@ -80,7 +80,7 @@ defmodule Wotex.Lab.Metrics.ReqSink do
       do: {:ok, normalized},
       else: invalid_config()
   rescue
-    _error -> invalid_config()
+    _ -> invalid_config()
   end
 
   defp valid_config?(config) do
@@ -106,14 +106,14 @@ defmodule Wotex.Lab.Metrics.ReqSink do
   defp profile_options?(%{profile: :hosted, audience: audience, finch: nil}),
     do: is_binary(audience) and byte_size(audience) in 1..@max_url_bytes
 
-  defp profile_options?(_config), do: false
+  defp profile_options?(_), do: false
 
   defp destination(config) do
     case Destination.admit(config.url, config) do
       {:ok, admitted} ->
         {:ok, admitted}
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error,
          Error.new(:destination_not_admitted, :export, "remote write destination is not admitted")}
     end
@@ -128,14 +128,14 @@ defmodule Wotex.Lab.Metrics.ReqSink do
            byte_size(name) in 1..128 and byte_size(value) <= 8_192 and safe_field?(name) and
              safe_field?(value)
 
-         _other ->
+         _ ->
            false
        end),
        do: :ok,
        else: invalid_request()
   end
 
-  defp validate_headers(_headers), do: invalid_request()
+  defp validate_headers(_), do: invalid_request()
 
   defp invalid_request,
     do: {:error, Error.new(:invalid_sink_request, :export, "request needs bounded headers")}
@@ -154,7 +154,7 @@ defmodule Wotex.Lab.Metrics.ReqSink do
       else: unsupported_credential()
   end
 
-  defp authorize(_headers, _credential), do: unsupported_credential()
+  defp authorize(_, _), do: unsupported_credential()
 
   defp credential_field?(value),
     do: byte_size(value) in 1..8_192 and safe_field?(value)
@@ -176,7 +176,7 @@ defmodule Wotex.Lab.Metrics.ReqSink do
       else: {:cont, {req, %{resp | body: body <> data}}}
   end
 
-  defp collect({:data, _data}, acc, _limit), do: {:halt, acc}
+  defp collect({:data, _}, acc, _), do: {:halt, acc}
 
   defp classify({:ok, %{status: status, headers: headers}}) do
     flattened =
@@ -188,11 +188,11 @@ defmodule Wotex.Lab.Metrics.ReqSink do
   defp classify({:error, %{reason: :timeout}}),
     do: {:error, Error.new(:timeout, :export, "remote write timed out", class: :timeout)}
 
-  defp classify({:error, _exception}),
+  defp classify({:error, _}),
     do: {:error, Error.new(:transport_failed, :export, "remote write failed", class: :unavailable)}
 
-  defp connection(%{finch: name}, _destination) when is_atom(name) and not is_nil(name),
+  defp connection(%{finch: name}, _) when is_atom(name) and not is_nil(name),
     do: [finch: name]
 
-  defp connection(_config, destination), do: [connect_options: destination.connect_options]
+  defp connection(_, destination), do: [connect_options: destination.connect_options]
 end

@@ -269,7 +269,7 @@ defmodule Wotex.Lab.MetricsGatewayTest do
     :sys.suspend(replacement)
 
     try do
-      assert {:ok, _reference} = Gateway.query(access, @request)
+      assert {:ok, _} = Gateway.query(access, @request)
       [worker] = workers(access, replacement, self())
       monitor = Process.monitor(worker)
       Process.exit(access, :kill)

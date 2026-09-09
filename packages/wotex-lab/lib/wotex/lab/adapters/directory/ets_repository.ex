@@ -87,13 +87,13 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
       do: Telemetry.span(:directory, :directory, %{operation: operation, profile: :ets}, fun)
 
     @impl GenServer
-    def init(_opts) do
+    def init(_) do
       table = :ets.new(__MODULE__, [:ordered_set, :private])
       {:ok, %{table: table, revision: 0, calls: %{}, last_context: nil}}
     end
 
     @impl GenServer
-    def handle_call({:fetch, identifier, context}, _from, state) do
+    def handle_call({:fetch, identifier, context}, _, state) do
       result =
         case :ets.lookup(state.table, identifier) do
           [{^identifier, entry}] -> {:ok, entry}
@@ -103,7 +103,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
       {:reply, result, count(state, :fetch, context)}
     end
 
-    def handle_call({:insert, entry, context}, _from, state) do
+    def handle_call({:insert, entry, context}, _, state) do
       if :ets.insert_new(state.table, {entry.identifier, Entry.for_storage(entry)}) do
         {:reply, {:ok, entry}, state |> advance() |> count(:insert, context)}
       else
@@ -111,16 +111,16 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
       end
     end
 
-    def handle_call({:replace, entry, expected_version, context}, _from, state) do
+    def handle_call({:replace, entry, expected_version, context}, _, state) do
       result =
         case :ets.lookup(state.table, entry.identifier) do
           [] ->
             {:error, :not_found}
 
-          [{_identifier, %Entry{version: version}}] when version != expected_version ->
+          [{_, %Entry{version: version}}] when version != expected_version ->
             {:error, :conflict}
 
-          [{identifier, _existing}] ->
+          [{identifier, _}] ->
             true = :ets.insert(state.table, {identifier, Entry.for_storage(entry)})
             {:ok, entry}
         end
@@ -128,16 +128,16 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
       {:reply, result, state |> advance_if(match?({:ok, _}, result)) |> count(:replace, context)}
     end
 
-    def handle_call({:delete, identifier, expected_version, context}, _from, state) do
+    def handle_call({:delete, identifier, expected_version, context}, _, state) do
       result =
         case :ets.lookup(state.table, identifier) do
           [] ->
             {:error, :not_found}
 
-          [{_identifier, %Entry{version: version}}] when version != expected_version ->
+          [{_, %Entry{version: version}}] when version != expected_version ->
             {:error, :conflict}
 
-          [{^identifier, _entry}] ->
+          [{^identifier, _}] ->
             true = :ets.delete(state.table, identifier)
             :ok
         end
@@ -145,11 +145,11 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
       {:reply, result, state |> advance_if(result == :ok) |> count(:delete, context)}
     end
 
-    def handle_call({:list, query, cursor, active_at, context}, _from, state) do
+    def handle_call({:list, query, cursor, active_at, context}, _, state) do
       {:reply, page(state, query, cursor, active_at), count(state, :list, context)}
     end
 
-    def handle_call({:expire_due, cutoff, limit, strategy, context}, _from, state) do
+    def handle_call({:expire_due, cutoff, limit, strategy, context}, _, state) do
       due =
         state.table
         |> :ets.tab2list()
@@ -162,7 +162,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
       {:reply, {:ok, returned}, state |> advance_if(due != []) |> count(:expire_due, context)}
     end
 
-    def handle_call(:stats, _from, state) do
+    def handle_call(:stats, _, state) do
       {:reply,
        %{
          calls: state.calls,
@@ -200,8 +200,8 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
       )
     end
 
-    defp collect(_table, :"$end_of_table", _active_at, _remaining, acc), do: Enum.reverse(acc)
-    defp collect(_table, _key, _active_at, 0, acc), do: Enum.reverse(acc)
+    defp collect(_, :"$end_of_table", _, _, acc), do: Enum.reverse(acc)
+    defp collect(_, _, _, 0, acc), do: Enum.reverse(acc)
 
     defp collect(table, key, active_at, remaining, acc) do
       [{^key, entry}] = :ets.lookup(table, key)
@@ -217,7 +217,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
     defp due?(%Entry{state: :active} = entry, cutoff, :retain),
       do: Registration.expired?(entry.registration, cutoff)
 
-    defp due?(%Entry{state: :expired}, _cutoff, :retain), do: false
+    defp due?(%Entry{state: :expired}, _, :retain), do: false
 
     defp expire(entry, table, :purge) do
       true = :ets.delete(table, entry.identifier)

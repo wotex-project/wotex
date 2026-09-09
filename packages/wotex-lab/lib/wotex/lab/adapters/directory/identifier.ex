@@ -36,6 +36,6 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
        end)}
     end
 
-    def generate(_state), do: {:error, :invalid_identifier_state}
+    def generate(_), do: {:error, :invalid_identifier_state}
   end
 end

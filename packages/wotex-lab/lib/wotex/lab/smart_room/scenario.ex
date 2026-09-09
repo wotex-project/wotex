@@ -258,7 +258,7 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) and
     end
 
     defp meter_id(nil, fallback), do: fallback
-    defp meter_id(power, _fallback), do: Observation.to_map(power).thing_id
+    defp meter_id(power, _), do: Observation.to_map(power).thing_id
 
     defp row_values(observation, nil), do: %{"temperature" => observation}
     defp row_values(observation, power), do: %{"temperature" => observation, "power" => power}

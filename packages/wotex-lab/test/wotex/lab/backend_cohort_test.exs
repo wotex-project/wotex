@@ -12,7 +12,7 @@ defmodule Wotex.Lab.BackendCohortTest do
   @moduletag timeout: 60_000
 
   test "Binary/Evaluator and EXLA CPU preserve the declared numerical contract" do
-    assert {:ok, _started} = Application.ensure_all_started(:exla)
+    assert {:ok, _} = Application.ensure_all_started(:exla)
     caller_backend = Nx.default_backend()
 
     assert {:ok, binary} =

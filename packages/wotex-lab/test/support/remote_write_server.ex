@@ -25,7 +25,7 @@ defmodule Wotex.Lab.Test.RemoteWriteServer do
         startup_log: false
       )
 
-    {:ok, {_ip, port}} = ThousandIsland.listener_info(server)
+    {:ok, {_, port}} = ThousandIsland.listener_info(server)
     url = "http://127.0.0.1:#{port}/v1/prometheus/write"
     %{server: server, controller: controller, port: port, url: url}
   end
@@ -37,8 +37,8 @@ defmodule Wotex.Lab.Test.RemoteWriteServer do
   def await_requests(controller, count, attempts \\ 200) do
     case requests(controller) do
       requests when length(requests) >= count -> requests
-      _fewer when attempts == 0 -> raise "expected #{count} remote-write requests"
-      _fewer -> Process.sleep(10) && await_requests(controller, count, attempts - 1)
+      _ when attempts == 0 -> raise "expected #{count} remote-write requests"
+      _ -> Process.sleep(10) && await_requests(controller, count, attempts - 1)
     end
   end
 

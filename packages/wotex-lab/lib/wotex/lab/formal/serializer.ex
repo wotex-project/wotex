@@ -86,7 +86,7 @@ defmodule Wotex.Lab.Formal.Serializer do
     end
   end
 
-  def term(_other),
+  def term(_),
     do: {:error, Error.new(:invalid_term, :serialize, "abstract room must be a complete map")}
 
   @doc "Builds a bounded `search` command for a property from an initial term."
@@ -105,7 +105,7 @@ defmodule Wotex.Lab.Formal.Serializer do
     end
   end
 
-  def search(_module, _initial, _property, _opts),
+  def search(_, _, _, _),
     do:
       {:error, Error.new(:invalid_command, :serialize, "search inputs must be strings and options")}
 
@@ -114,7 +114,7 @@ defmodule Wotex.Lab.Formal.Serializer do
   def path(state) when is_integer(state) and state >= 0 and state <= 1_000_000,
     do: {:ok, "show path #{state} ."}
 
-  def path(_state),
+  def path(_),
     do:
       {:error,
        Error.new(:invalid_command, :serialize, "state number must be a bounded natural number")}
@@ -146,7 +146,7 @@ defmodule Wotex.Lab.Formal.Serializer do
     end
   end
 
-  defp closed(_value, _table, field),
+  defp closed(_, _, field),
     do:
       {:error,
        Error.new(:invalid_term, :serialize, "#{field} must be an atom of the model sort",
@@ -162,13 +162,13 @@ defmodule Wotex.Lab.Formal.Serializer do
     end
   end
 
-  defp decision(_decision),
+  defp decision(_),
     do: {:error, Error.new(:invalid_term, :serialize, "decision is outside the model sort")}
 
-  defp nat(value, _field) when is_integer(value) and value >= 0 and value <= @max_nat,
+  defp nat(value, _) when is_integer(value) and value >= 0 and value <= @max_nat,
     do: {:ok, Integer.to_string(value)}
 
-  defp nat(_value, field),
+  defp nat(_, field),
     do:
       {:error,
        Error.new(:invalid_term, :serialize, "#{field} must be a natural number at most #{@max_nat}",
@@ -199,15 +199,15 @@ defmodule Wotex.Lab.Formal.Serializer do
          {:ok, ^initial} <- term(abstract) do
       {:ok, initial}
     else
-      _other ->
+      _ ->
         {:error, Error.new(:invalid_term, :serialize, "initial term is not a canonical room state")}
     end
   end
 
-  defp bound(value, _field) when is_integer(value) and value >= 1 and value <= 64,
+  defp bound(value, _) when is_integer(value) and value >= 1 and value <= 64,
     do: {:ok, Integer.to_string(value)}
 
-  defp bound(_value, field),
+  defp bound(_, field),
     do:
       {:error,
        Error.new(:invalid_command, :serialize, "#{field} must be between 1 and 64",
@@ -219,7 +219,7 @@ defmodule Wotex.Lab.Formal.Serializer do
   defp depth(value) when is_integer(value) and value >= 1 and value <= 10_000,
     do: {:ok, Integer.to_string(value)}
 
-  defp depth(_value),
+  defp depth(_),
     do:
       {:error,
        Error.new(

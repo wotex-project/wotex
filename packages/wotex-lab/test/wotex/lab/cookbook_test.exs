@@ -76,7 +76,7 @@ defmodule Wotex.Lab.CookbookTest do
                (Cookbook.headings(source) -- Cookbook.required_sections()) ==
                Cookbook.required_sections()
 
-      [install | _cells] = Cookbook.cells(source)
+      [install | _] = Cookbook.cells(source)
       assert CookbookRunner.install_cell?(install)
       assert install =~ ~s({:wotex_lab, "~> 0.1.0"})
       refute install =~ "git:"
@@ -113,11 +113,11 @@ defmodule Wotex.Lab.CookbookTest do
       {:ok, source} = Cookbook.read(id)
 
       for cell <- Cookbook.cells(source) do
-        {_ast, definitions} =
+        {_, definitions} =
           cell
           |> Code.string_to_quoted!()
           |> Macro.prewalk([], fn
-            {:defmodule, _metadata, _arguments} = node, acc -> {node, [node | acc]}
+            {:defmodule, _, _} = node, acc -> {node, [node | acc]}
             node, acc -> {node, acc}
           end)
 
@@ -126,7 +126,7 @@ defmodule Wotex.Lab.CookbookTest do
 
       outcomes =
         [1, 2]
-        |> Task.async_stream(fn _run -> CookbookRunner.run(id) end,
+        |> Task.async_stream(fn _ -> CookbookRunner.run(id) end,
           max_concurrency: 2,
           timeout: entry.timeout_ms + 5_000
         )

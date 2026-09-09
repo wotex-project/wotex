@@ -14,7 +14,7 @@ defmodule Wotex.Lab.ServingTest do
     assert {:ok, thermal} = Thermal.run()
     batch = Encoded.batch(thermal.encoded)
 
-    row_target = fn {{values}, {masks}, _quality} ->
+    row_target = fn {{values}, {masks}, _} ->
       Nx.add(Nx.multiply(values, Nx.as_type(masks, Nx.type(values))), 1.0)
     end
 

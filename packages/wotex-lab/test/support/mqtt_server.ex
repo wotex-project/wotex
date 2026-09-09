@@ -52,13 +52,13 @@ defmodule Wotex.Lab.Test.MqttServer do
   defp stop_controller(controller) do
     Agent.stop(controller)
   catch
-    :exit, _reason -> :ok
+    :exit, _ -> :ok
   end
 
   defp connection_pid(controller) do
     Agent.get(controller, & &1.connection)
   catch
-    :exit, _reason -> nil
+    :exit, _ -> nil
   end
 
   @spec href(t()) :: String.t()
@@ -91,7 +91,7 @@ defmodule Wotex.Lab.Test.MqttServer do
   @spec connection(t()) :: pid()
   def connection(server), do: await_connection(server.controller, 200)
 
-  defp await_connection(_controller, 0), do: raise("no MQTT client connected")
+  defp await_connection(_, 0), do: raise("no MQTT client connected")
 
   defp await_connection(controller, attempts) do
     case Agent.get(controller, & &1.connection) do
@@ -113,7 +113,7 @@ defmodule Wotex.Lab.Test.MqttServer do
         send(connection, :owned)
         accept(listener, controller, opts)
 
-      {:error, _reason} ->
+      {:error, _} ->
         :ok
     end
   end
@@ -148,12 +148,12 @@ defmodule Wotex.Lab.Test.MqttServer do
     end
   end
 
-  defp handle({1, _flags, body}, socket, controller, _opts) do
+  defp handle({1, _, body}, socket, controller, _) do
     report(controller, {:mqtt_connect, connect_info(body)})
     :gen_tcp.send(socket, <<0x20, 3, 0, 0, 0>>)
   end
 
-  defp handle({3, flags, body}, socket, controller, _opts) do
+  defp handle({3, flags, body}, socket, controller, _) do
     message = publish_info(flags, body)
     report(controller, {:mqtt_publish, message})
 
@@ -162,7 +162,7 @@ defmodule Wotex.Lab.Test.MqttServer do
     end
   end
 
-  defp handle({8, _flags, body}, socket, controller, opts) do
+  defp handle({8, _, body}, socket, controller, opts) do
     {packet_id, filters} = subscribe_info(body)
     report(controller, {:mqtt_subscribe, filters})
     code = if Keyword.get(opts, :deny_subscribe, false), do: 0x87, else: 0x00
@@ -172,26 +172,26 @@ defmodule Wotex.Lab.Test.MqttServer do
     retain(socket, Keyword.get(opts, :retained))
   end
 
-  defp handle({10, _flags, body}, socket, controller, _opts) do
+  defp handle({10, _, body}, socket, controller, _) do
     {packet_id, filters} = unsubscribe_info(body)
     report(controller, {:mqtt_unsubscribe, filters})
     frame = <<packet_id::16, 0>> <> :binary.copy(<<0>>, length(filters))
     :gen_tcp.send(socket, <<0xB0>> <> variable(byte_size(frame)) <> frame)
   end
 
-  defp handle({12, _flags, _body}, socket, controller, _opts) do
+  defp handle({12, _, _}, socket, controller, _) do
     report(controller, :mqtt_pingreq)
     :gen_tcp.send(socket, <<0xD0, 0>>)
   end
 
-  defp handle({14, _flags, _body}, socket, controller, _opts) do
+  defp handle({14, _, _}, socket, controller, _) do
     report(controller, :mqtt_disconnect)
     :gen_tcp.close(socket)
   end
 
-  defp handle(_packet, _socket, _controller, _opts), do: :ok
+  defp handle(_, _, _, _), do: :ok
 
-  defp retain(_socket, nil), do: :ok
+  defp retain(_, nil), do: :ok
 
   defp retain(socket, {topic, payload}),
     do: :gen_tcp.send(socket, publication(topic, payload, retain: true))
@@ -204,7 +204,7 @@ defmodule Wotex.Lab.Test.MqttServer do
       <<packet::binary-size(^length), tail::binary>> = body
       split(tail, [{header >>> 4, header &&& 0x0F, packet} | acc])
     else
-      _incomplete -> {Enum.reverse(acc), buffer}
+      _ -> {Enum.reverse(acc), buffer}
     end
   end
 
@@ -220,19 +220,19 @@ defmodule Wotex.Lab.Test.MqttServer do
     end
   end
 
-  defp remaining(<<>>, _acc, _multiplier), do: :incomplete
+  defp remaining(<<>>, _, _), do: :incomplete
 
   defp variable(length) when length < 128, do: <<length>>
 
   defp variable(length),
     do: <<(length &&& 0x7F) ||| 0x80>> <> variable(length >>> 7)
 
-  defp connect_info(<<_size::16, "MQTT", _version, flags, keepalive::16, rest::binary>>) do
+  defp connect_info(<<_::16, "MQTT", _, flags, keepalive::16, rest::binary>>) do
     {property_bytes, rest} = properties(rest)
     {client_id, rest} = string(rest)
     {will, rest} = will_info(flags, rest)
     {username, rest} = optional(flags &&& 0x80, rest)
-    {password, _rest} = optional(flags &&& 0x40, rest)
+    {password, _} = optional(flags &&& 0x40, rest)
 
     %{
       client_id: client_id,
@@ -264,38 +264,38 @@ defmodule Wotex.Lab.Test.MqttServer do
   end
 
   defp optional(0, rest), do: {nil, rest}
-  defp optional(_flag, rest), do: string(rest)
+  defp optional(_, rest), do: string(rest)
 
   defp publish_info(flags, body) do
     qos = flags >>> 1 &&& 0x03
     {topic, rest} = string(body)
     {packet_id, rest} = packet_id(qos, rest)
-    {_properties, payload} = properties(rest)
+    {_, payload} = properties(rest)
     %{topic: topic, qos: qos, packet_id: packet_id, payload: payload, retain: (flags &&& 1) == 1}
   end
 
   defp packet_id(0, rest), do: {nil, rest}
-  defp packet_id(_qos, <<packet_id::16, rest::binary>>), do: {packet_id, rest}
+  defp packet_id(_, <<packet_id::16, rest::binary>>), do: {packet_id, rest}
 
   defp subscribe_info(<<packet_id::16, rest::binary>>) do
-    {_properties, payload} = properties(rest)
+    {_, payload} = properties(rest)
     {packet_id, subscribe_filters(payload, [])}
   end
 
-  defp subscribe_filters(<<size::16, filter::binary-size(size), _options, rest::binary>>, acc),
+  defp subscribe_filters(<<size::16, filter::binary-size(size), _, rest::binary>>, acc),
     do: subscribe_filters(rest, [filter | acc])
 
-  defp subscribe_filters(_rest, acc), do: Enum.reverse(acc)
+  defp subscribe_filters(_, acc), do: Enum.reverse(acc)
 
   defp unsubscribe_info(<<packet_id::16, rest::binary>>) do
-    {_properties, payload} = properties(rest)
+    {_, payload} = properties(rest)
     {packet_id, unsubscribe_filters(payload, [])}
   end
 
   defp unsubscribe_filters(<<size::16, filter::binary-size(size), rest::binary>>, acc),
     do: unsubscribe_filters(rest, [filter | acc])
 
-  defp unsubscribe_filters(_rest, acc), do: Enum.reverse(acc)
+  defp unsubscribe_filters(_, acc), do: Enum.reverse(acc)
 
   defp properties(binary) do
     {:ok, size, rest} = remaining(binary, 0, 1)
@@ -317,7 +317,7 @@ defmodule Wotex.Lab.Test.MqttServer do
   defp decode_properties(<<0x27, value::32, rest::binary>>, decoded),
     do: decode_properties(rest, Map.put(decoded, :maximum_packet_size, value))
 
-  defp decode_properties(_unknown, decoded), do: Map.put(decoded, :unknown, true)
+  defp decode_properties(_, decoded), do: Map.put(decoded, :unknown, true)
 
   defp string(<<size::16, value::binary-size(size), rest::binary>>), do: {value, rest}
 end

@@ -43,10 +43,10 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
          labels: [{"instance", "greptime-lab"}]}
       )
 
-    assert {:ok, _result} = Thermal.run()
+    assert {:ok, _} = Thermal.run()
     assert {:ok, %{sequence: 1}} = GreptimeBridge.scrape_now(bridge)
     [%{snapshot: first}] = History.snapshots(history)
-    assert {:ok, _result} = Thermal.run()
+    assert {:ok, _} = Thermal.run()
     assert {:ok, %{sequence: 2}} = GreptimeBridge.scrape_now(bridge)
 
     stats = await_exported(bridge, 2, 100)
@@ -75,7 +75,7 @@ defmodule Wotex.Lab.GreptimeBridgeTest do
 
     assert Enum.map(rows, & &1.timestamp) == [first.wall_time_ms, first.wall_time_ms + 5_000]
 
-    [bucket | _rest] =
+    [bucket | _] =
       Greptime.await_rows(
         greptime,
         "wotex_lab_nx_duration_seconds_bucket",

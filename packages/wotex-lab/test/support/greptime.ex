@@ -37,7 +37,7 @@ defmodule Wotex.Lab.Test.Greptime do
 
   @spec halt(String.t()) :: :ok
   def halt(container) do
-    _removed =
+    _ =
       System.cmd("docker", ["rm", "--force", "--volumes", container], stderr_to_stdout: true)
 
     :ok
@@ -90,7 +90,7 @@ defmodule Wotex.Lab.Test.Greptime do
       fewer when attempts == 0 ->
         raise "GreptimeDB expected #{count} rows for #{metric}, got #{inspect(fewer, limit: 10)}"
 
-      _fewer ->
+      _ ->
         Process.sleep(100) && await_rows(greptime, metric, labels, count, attempts - 1)
     end
   end
@@ -129,10 +129,10 @@ defmodule Wotex.Lab.Test.Greptime do
       {output, 0} ->
         case String.split(String.trim(output), "\n", trim: true) do
           [] -> retry_port(container, attempts)
-          [mapping | _rest] -> mapping |> String.split(":") |> List.last() |> String.to_integer()
+          [mapping | _] -> mapping |> String.split(":") |> List.last() |> String.to_integer()
         end
 
-      {_output, _status} ->
+      {_, _} ->
         retry_port(container, attempts)
     end
   end
@@ -149,7 +149,7 @@ defmodule Wotex.Lab.Test.Greptime do
       {:ok, %{status: 200}} ->
         :ok
 
-      _other ->
+      _ ->
         Process.sleep(100)
         await_health(base_url, attempts - 1)
     end

@@ -17,7 +17,7 @@ defmodule Wotex.Lab.FormalMaudeMCPTest do
     lab = start_supervised!({Lab, id: "formal-mcp", max_children: 4})
     formal = [pool: :wotex_lab_formal_mcp, binary: binary, binary_digest: digest]
     {:ok, profile} = Profile.new(formal)
-    {:ok, _pool} = Lab.start_child(lab, :sessions, Profile.child_spec(profile))
+    {:ok, _} = Lab.start_child(lab, :sessions, Profile.child_spec(profile))
     {:ok, state} = Server.new(formal: formal)
 
     {reply, _} =

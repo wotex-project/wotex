@@ -217,8 +217,8 @@ defmodule Wotex.Lab.Graph.Render do
 
   defp prefixed?(token, prefixes) do
     case String.split(token, ":", parts: 2) do
-      [prefix, _local] -> prefix in prefixes
-      _other -> false
+      [prefix, _] -> prefix in prefixes
+      _ -> false
     end
   end
 
@@ -264,13 +264,13 @@ defmodule Wotex.Lab.Graph.Render do
   defp turtle_property(key, value) when is_map(value) do
     value
     |> Enum.sort()
-    |> Enum.filter(fn {_nested, nested_value} -> scalar?(nested_value) end)
+    |> Enum.filter(fn {_, nested_value} -> scalar?(nested_value) end)
     |> Enum.map(fn {nested, nested_value} ->
       "    wl:#{camel(key)}_#{camel(nested)} #{turtle_literal(nested_value)} ;"
     end)
   end
 
-  defp turtle_property(_key, nil), do: []
+  defp turtle_property(_, nil), do: []
   defp turtle_property(key, value), do: ["    wl:#{camel(key)} #{turtle_literal(value)} ;"]
 
   defp turtle_literal(value) when is_boolean(value), do: to_string(value)
@@ -312,7 +312,7 @@ defmodule Wotex.Lab.Graph.Render do
   end
 
   defp yaml(value, indent) when is_map(value) and map_size(value) == 0 and indent >= 0, do: "{}"
-  defp yaml([], _indent), do: "[]"
+  defp yaml([], _), do: "[]"
 
   defp yaml(value, indent) when is_map(value) do
     value
@@ -326,7 +326,7 @@ defmodule Wotex.Lab.Graph.Render do
     Enum.map_join(value, "\n", fn item -> pad(indent) <> "-" <> yaml_nested(item, indent) end)
   end
 
-  defp yaml(value, _indent), do: yaml_scalar(value)
+  defp yaml(value, _), do: yaml_scalar(value)
 
   defp yaml_nested(value, indent)
        when (is_map(value) and map_size(value) > 0) or (is_list(value) and value != []),

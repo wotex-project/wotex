@@ -92,7 +92,7 @@ defmodule Wotex.Lab.ConformanceTest do
     {:ok, corpus} =
       Corpus.load(Application.app_dir(:wotex_conformance, "priv/vectors/thing-model-1.1"))
 
-    [first | _rest] = corpus.vectors
+    [first | _] = corpus.vectors
 
     mismatched = %{
       first
@@ -215,7 +215,7 @@ defmodule Wotex.Lab.ConformanceTest do
       "vector" => %{"id" => "containment", "input" => %{}}
     }
 
-    assert {:ok, response, _duration} = External.invoke(external, request)
+    assert {:ok, response, _} = External.invoke(external, request)
 
     assert response.actual == %{
              "network" => "denied",
@@ -255,7 +255,7 @@ defmodule Wotex.Lab.ConformanceTest do
       "vector" => %{"id" => "descendant", "input" => %{}}
     }
 
-    assert {:error, error, _duration} = External.invoke(external, request)
+    assert {:error, error, _} = External.invoke(external, request)
     assert error.code == :target_exit_nonzero
     assert File.regular?(pid_file)
 
@@ -493,7 +493,7 @@ defmodule Wotex.Lab.ConformanceTest do
         "vector" => %{"id" => "repeated", "input" => %{}}
       })
 
-    for _attempt <- 1..30 do
+    for _ <- 1..30 do
       port =
         Port.open(
           {:spawn_executable, String.to_charlist(config.executable)},
@@ -533,7 +533,7 @@ defmodule Wotex.Lab.ConformanceTest do
 
       assert {:ok, external} = External.from_map(config)
       request = %{"claim" => %{"operation" => "probe"}, "vector" => %{"id" => mode, "input" => %{}}}
-      assert {:ok, _response, _duration} = External.invoke(external, request)
+      assert {:ok, _, _} = External.invoke(external, request)
       assert eventually_stopped?(File.read!(pid_file), 40)
       refute Enum.any?(File.ls!(context.home), &String.starts_with?(&1, "run-"))
     end
@@ -555,7 +555,7 @@ defmodule Wotex.Lab.ConformanceTest do
         "vector" => %{"id" => id, "input" => %{}}
       }
 
-      assert {:error, error, _duration} = External.invoke(external, request)
+      assert {:error, error, _} = External.invoke(external, request)
       assert error.code == expected_code
     end
   end
@@ -583,7 +583,7 @@ defmodule Wotex.Lab.ConformanceTest do
       |> Enum.map(fn {:ok, result} -> result end)
 
     for {id, result} <- results do
-      assert {:ok, response, _duration} = result
+      assert {:ok, response, _} = result
       assert response.vector_id == id
       assert response.actual == %{"marker" => id}
     end
@@ -650,7 +650,7 @@ defmodule Wotex.Lab.ConformanceTest do
     end
   end
 
-  defp eventually_stopped?(_pid, 0), do: false
+  defp eventually_stopped?(_, 0), do: false
 
   defp eventually_stopped?(pid, attempts) do
     if process_alive?(pid) do
@@ -666,7 +666,7 @@ defmodule Wotex.Lab.ConformanceTest do
       [pid] ->
         match?({_output, 0}, System.cmd("kill", ["-0", pid], stderr_to_stdout: true))
 
-      [_pid, namespace] ->
+      [_, namespace] ->
         true = File.dir?("/proc")
         # A PID inside Bubblewrap is not a PID in the test runner's namespace.
         # Observe disappearance of that exact owned namespace, never signal or

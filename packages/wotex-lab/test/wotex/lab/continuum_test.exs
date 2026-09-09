@@ -109,7 +109,7 @@ defmodule Wotex.Lab.ContinuumTest do
   } do
     [_, _, _, _, _, intent | _] = Fixtures.all_kinds()
 
-    {:ok, _delivery} = Channel.send_value(channel, "edge-a", "cloud", intent)
+    {:ok, _} = Channel.send_value(channel, "edge-a", "cloud", intent)
     stats = wait_until(fn -> Host.stats(host) end, &(length(&1.rejected) == 1))
     assert [%{reason: :stale_authority}] = stats.rejected
     assert %{handler_calls: 0} = Thing.stats(thing)
@@ -117,12 +117,12 @@ defmodule Wotex.Lab.ContinuumTest do
     incompatible =
       Fixtures.manifest(id: "manifest-old", compatibility: Fixtures.compatibility(">= 9.0.0"))
 
-    {:ok, _delivery} = Channel.send_value(channel, "edge-a", "cloud", incompatible)
+    {:ok, _} = Channel.send_value(channel, "edge-a", "cloud", incompatible)
     stats = wait_until(fn -> Host.stats(host) end, &(length(&1.rejected) == 2))
     assert Enum.any?(stats.rejected, &(&1.reason == :incompatible_manifest))
     assert stats.manifests == []
 
-    {:ok, _delivery} = Channel.send_value(channel, "edge-a", "cloud", Fixtures.manifest())
+    {:ok, _} = Channel.send_value(channel, "edge-a", "cloud", Fixtures.manifest())
     stats = wait_until(fn -> Host.stats(host) end, &(&1.manifests == ["manifest-edge-a"]))
     assert stats.manifests == ["manifest-edge-a"]
   end
@@ -138,7 +138,7 @@ defmodule Wotex.Lab.ContinuumTest do
       spawn_link(fn ->
         send(parent, {:attacker_attached, Channel.attach(channel, "edge-b", self())})
 
-        for _attempt <- 1..2 do
+        for _ <- 1..2 do
           receive do
             {:send, value} ->
               send(
@@ -194,9 +194,9 @@ defmodule Wotex.Lab.ContinuumTest do
     host: host,
     thing: thing
   } do
-    {:ok, _delivery} = Channel.send_value(channel, "edge-a", "cloud", Fixtures.manifest())
+    {:ok, _} = Channel.send_value(channel, "edge-a", "cloud", Fixtures.manifest())
     [_, _, _, _, _, intent | _] = Fixtures.all_kinds()
-    {:ok, _delivery} = Channel.send_value(channel, "edge-a", "cloud", intent)
+    {:ok, _} = Channel.send_value(channel, "edge-a", "cloud", intent)
 
     stats = wait_until(fn -> Host.stats(host) end, &(length(&1.received) == 3))
     assert %{"set-22" => %{duplicates: 1, outcome: {:ok, :accepted}}} = stats.dispatches
@@ -215,7 +215,7 @@ defmodule Wotex.Lab.ContinuumTest do
     td: td
   } do
     thing_id = ThingDescription.id(td)
-    {:ok, _delivery} = Channel.send_value(channel, "edge-a", "cloud", Fixtures.manifest())
+    {:ok, _} = Channel.send_value(channel, "edge-a", "cloud", Fixtures.manifest())
 
     proposals =
       for {sequence, value} <- [{1, 20.0}, {2, 21.0}, {3, 22.0}], into: [] do
@@ -236,7 +236,7 @@ defmodule Wotex.Lab.ContinuumTest do
         proposal
       end
 
-    Enum.each(proposals, &({:ok, _delivery} = Channel.send_value(channel, "edge-a", "cloud", &1)))
+    Enum.each(proposals, &({:ok, _} = Channel.send_value(channel, "edge-a", "cloud", &1)))
     stats = wait_until(fn -> Host.stats(host) end, &(length(&1.received) == 3))
     key = {thing_id, :property, "temperature"}
 
@@ -246,7 +246,7 @@ defmodule Wotex.Lab.ContinuumTest do
 
     assert Enum.map(stats.received, & &1.item_id) == ["manifest-edge-a", "obs-1", "obs-3", "obs-2"]
     assert [%{reason: :stale_observation, item_id: "obs-2"}] = stats.rejected
-    assert [_manifest, _first, _second, _third | _] = deliveries = Channel.deliveries(channel)
+    assert [_, _, _, _ | _] = deliveries = Channel.deliveries(channel)
 
     assert Enum.at(deliveries, 3).status == :in_flight or
              Enum.at(deliveries, 3).status == :acknowledged
@@ -329,9 +329,9 @@ defmodule Wotex.Lab.ContinuumTest do
 
     :ok = Channel.attach(replay_channel, "edge-a", self())
     :ok = Channel.disconnect(replay_channel)
-    {:ok, _m} = Channel.send_value(replay_channel, "edge-a", "cloud", Fixtures.manifest())
+    {:ok, _} = Channel.send_value(replay_channel, "edge-a", "cloud", Fixtures.manifest())
     [_, _, _, _, _, intent | _] = Fixtures.all_kinds()
-    {:ok, _i} = Channel.send_value(replay_channel, "edge-a", "cloud", intent)
+    {:ok, _} = Channel.send_value(replay_channel, "edge-a", "cloud", intent)
     :ok = Channel.reconnect(replay_channel)
     stats = wait_until(fn -> Host.stats(host) end, &(map_size(&1.dispatches) == 1))
     :ok = Channel.disconnect(replay_channel)
@@ -351,17 +351,17 @@ defmodule Wotex.Lab.ContinuumTest do
 
     :ok = Channel.attach(silent_channel, "edge-a", self())
     :ok = Channel.attach(silent_channel, "silent", self())
-    {:ok, _one} = Channel.send_value(silent_channel, "edge-a", "silent", Fixtures.mode())
-    {:ok, _two} = Channel.send_value(silent_channel, "edge-a", "silent", Fixtures.mode())
+    {:ok, _} = Channel.send_value(silent_channel, "edge-a", "silent", Fixtures.mode())
+    {:ok, _} = Channel.send_value(silent_channel, "edge-a", "silent", Fixtures.mode())
 
     assert {:error, %Wotex.Lab.Error{code: :capacity_exhausted, class: :unavailable}} =
              Channel.send_value(silent_channel, "edge-a", "silent", Fixtures.mode())
 
     assert {:ok, %Lifecycle{state: :draining, generation: 1}} = Host.drain(host)
-    assert {:error, _error} = Host.drain(host)
-    {:ok, _delivery} = Channel.send_value(channel, "edge-a", "cloud", Fixtures.manifest())
+    assert {:error, _} = Host.drain(host)
+    {:ok, _} = Channel.send_value(channel, "edge-a", "cloud", Fixtures.manifest())
     [_, _, _, _, _, intent | _] = Fixtures.all_kinds()
-    {:ok, _delivery} = Channel.send_value(channel, "edge-a", "cloud", intent)
+    {:ok, _} = Channel.send_value(channel, "edge-a", "cloud", intent)
     stats = wait_until(fn -> Host.stats(host) end, &(length(&1.rejected) == 1))
     assert [%{reason: :host_not_accepting}] = stats.rejected
     assert %Lifecycle{state: :draining} = stats.lifecycle
@@ -450,7 +450,7 @@ defmodule Wotex.Lab.ContinuumTest do
                @epoch
              )
 
-    assert {:error, _error} = FaultSchedule.new(drop: [0])
+    assert {:error, _} = FaultSchedule.new(drop: [0])
   end
 
   defp bearer_credentials do

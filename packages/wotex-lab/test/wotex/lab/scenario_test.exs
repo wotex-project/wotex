@@ -42,7 +42,7 @@ defmodule Wotex.Lab.ScenarioTest do
   end
 
   test "all required fields and bounded identities are enforced" do
-    for {key, _value} <- @valid do
+    for {key, _} <- @valid do
       assert {:error, %Error{code: :invalid_scenario}} = Scenario.new(Keyword.delete(@valid, key))
     end
 

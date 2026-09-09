@@ -63,7 +63,7 @@ defmodule Wotex.Lab.Simulators.Thermal do
     heater = Keyword.get(opts, :heater, %{})
     glitches = Keyword.get(opts, :glitches, [])
 
-    {samples, _state} =
+    {samples, _} =
       Enum.map_reduce(0..(count - 1)//1, {initial * 1.0, seed}, fn index, {temperature, lcg} ->
         {jitter, next_lcg} = next_noise(lcg, noise)
 
@@ -145,7 +145,7 @@ defmodule Wotex.Lab.Simulators.Thermal do
     end)
   end
 
-  defp valid_heater?(_heater, _count), do: false
+  defp valid_heater?(_, _), do: false
 
   defp valid_glitches?(glitches, count)
        when is_list(glitches) and is_integer(count) and count >= 1 and
@@ -154,13 +154,13 @@ defmodule Wotex.Lab.Simulators.Thermal do
       Enum.all?(glitches, &(is_integer(&1) and &1 in 0..(count - 1)))
   end
 
-  defp valid_glitches?(_glitches, _count), do: false
+  defp valid_glitches?(_, _), do: false
 
   defp integer_in?(value, range) when is_integer(value), do: value in range
-  defp integer_in?(_value, _range), do: false
+  defp integer_in?(_, _), do: false
 
   defp safe_integer?(value) when is_integer(value), do: abs(value) <= 9_007_199_254_740_991
-  defp safe_integer?(_value), do: false
+  defp safe_integer?(_), do: false
 
   defp number_in?(value, minimum, maximum),
     do: finite?(value) and value >= minimum and value <= maximum
@@ -171,7 +171,7 @@ defmodule Wotex.Lab.Simulators.Thermal do
 
   defp finite?(value) when is_float(value), do: abs(value) <= 1_000_000_000_000
 
-  defp finite?(_value), do: false
+  defp finite?(_), do: false
 
   defp next_noise(state, amplitude) do
     next = rem(state * @lcg_multiplier + @lcg_increment, @lcg_modulus)

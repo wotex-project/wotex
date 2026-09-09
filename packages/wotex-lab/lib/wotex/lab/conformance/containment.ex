@@ -130,12 +130,12 @@ defmodule Wotex.Lab.Conformance.Containment do
             :ok
         end
 
-      _result ->
+      _ ->
         invalid_file(field)
     end
   end
 
-  defp regular(_path, field),
+  defp regular(_, field),
     do: invalid(:invalid_path, "containment path must be a string", %{field: field})
 
   defp invalid_file(field) do
@@ -164,7 +164,7 @@ defmodule Wotex.Lab.Conformance.Containment do
     end
   end
 
-  defp directory(_path),
+  defp directory(_),
     do:
       invalid(:invalid_path, "temporary directory must be a string", %{field: :temporary_directory})
 
@@ -186,7 +186,7 @@ defmodule Wotex.Lab.Conformance.Containment do
     end
   end
 
-  defp arguments(_args), do: invalid(:invalid_arguments, "target arguments must be a bounded list")
+  defp arguments(_), do: invalid(:invalid_arguments, "target arguments must be a bounded list")
 
   defp limits(opts) do
     limits = Map.new(@defaults, fn {key, default} -> {key, Keyword.get(opts, key, default)} end)
@@ -218,20 +218,20 @@ defmodule Wotex.Lab.Conformance.Containment do
         do: {:ok, path, actual},
         else: invalid(:launcher_mismatch, "containment launcher digest does not match")
     else
-      _invalid -> invalid(:invalid_launcher, "launcher must be a bounded, digest-pinned executable")
+      _ -> invalid(:invalid_launcher, "launcher must be a bounded, digest-pinned executable")
     end
   end
 
   defp launcher(nil),
     do: invalid(:unsupported, "an operator-provisioned native containment launcher is required")
 
-  defp launcher(_other), do: invalid(:invalid_launcher, "launcher descriptor is not admitted")
+  defp launcher(_), do: invalid(:invalid_launcher, "launcher descriptor is not admitted")
 
   defp sandbox(temporary_directory) do
     case :os.type() do
       {:unix, :darwin} -> admitted_executable("/usr/bin/sandbox-exec", temporary_directory)
-      {:unix, _name} -> linux_sandbox(temporary_directory)
-      _other -> unsupported()
+      {:unix, _} -> linux_sandbox(temporary_directory)
+      _ -> unsupported()
     end
   end
 
@@ -242,10 +242,10 @@ defmodule Wotex.Lab.Conformance.Containment do
     end
   end
 
-  defp admitted_executable(path, _temporary_directory) do
+  defp admitted_executable(path, _) do
     case File.stat(path) do
       {:ok, %File.Stat{type: :regular}} -> {:ok, path}
-      _result -> unsupported()
+      _ -> unsupported()
     end
   end
 
@@ -297,7 +297,7 @@ defmodule Wotex.Lab.Conformance.Containment do
     {:ok, ["-p", profile | wrapper_args], "darwin-sandbox-exec"}
   end
 
-  defp sandbox_args(_bwrap, wrapper_args, temporary_directory) do
+  defp sandbox_args(_, wrapper_args, temporary_directory) do
     args =
       [
         "--unshare-net",

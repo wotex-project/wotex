@@ -35,10 +35,10 @@ defmodule Wotex.Lab.MqttTest do
   end
 
   @doc false
-  def subscription_opened(_event, _measurements, %{request_id: "mqtt-scripted"}, receiver),
+  def subscription_opened(_, _, %{request_id: "mqtt-scripted"}, receiver),
     do: send(receiver, {:runtime_subscription_opened, self()})
 
-  def subscription_opened(_event, _measurements, _metadata, _receiver), do: :ok
+  def subscription_opened(_, _, _, _), do: :ok
 
   test "an unreachable broker refuses a publish, a retained read and a subscription" do
     context = execution_context(nil)
@@ -242,7 +242,7 @@ defmodule Wotex.Lab.MqttTest do
   end
 
   test "the Lab client satisfies the MQTT client port and the JSON-over-MQTT profile" do
-    assert {:ok, _config} = TransportConfig.new(EmqttClient, %{connect_timeout: 500})
+    assert {:ok, _} = TransportConfig.new(EmqttClient, %{connect_timeout: 500})
     assert MQTT.profile().id == :mqtt
   end
 
@@ -481,8 +481,8 @@ defmodule Wotex.Lab.MqttTest do
 
   defp accept(listener) do
     case :gen_tcp.accept(listener) do
-      {:ok, _socket} -> accept(listener)
-      {:error, _reason} -> :ok
+      {:ok, _} -> accept(listener)
+      {:error, _} -> :ok
     end
   end
 end

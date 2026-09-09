@@ -39,5 +39,5 @@ defmodule Wotex.Lab.Test.BadStartComponent do
   end
 
   @impl Wotex.Lab.Component
-  def execute(_operation, _input, _context), do: {:ok, nil}
+  def execute(_, _, _), do: {:ok, nil}
 end

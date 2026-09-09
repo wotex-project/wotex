@@ -60,7 +60,7 @@ if Code.ensure_loaded?(:emqtt) do
     def close(session) when is_pid(session) do
       GenServer.stop(session, :normal, 5_000)
     catch
-      :exit, _reason -> :ok
+      :exit, _ -> :ok
     end
 
     @doc "Publishes one Application Message over a bounded connection owned by this call."
@@ -114,18 +114,18 @@ if Code.ensure_loaded?(:emqtt) do
       {:noreply, state}
     end
 
-    def handle_info({:disconnected, _reason_code, _properties}, state), do: down(state)
-    def handle_info({:EXIT, client, _reason}, %{client: client} = state), do: down(state)
-    def handle_info({:EXIT, _pid, _reason}, state), do: {:stop, :normal, state}
-    def handle_info(_message, state), do: {:noreply, state}
+    def handle_info({:disconnected, _, _}, state), do: down(state)
+    def handle_info({:EXIT, client, _}, %{client: client} = state), do: down(state)
+    def handle_info({:EXIT, _, _}, state), do: {:stop, :normal, state}
+    def handle_info(_, state), do: {:noreply, state}
 
     @impl GenServer
-    def terminate(_reason, %{client: client, filters: filters}) when is_pid(client) do
-      _unsubscribed = call(fn -> :emqtt.unsubscribe(client, %{}, filters) end)
+    def terminate(_, %{client: client, filters: filters}) when is_pid(client) do
+      _ = call(fn -> :emqtt.unsubscribe(client, %{}, filters) end)
       stop_client(client)
     end
 
-    def terminate(_reason, _state), do: :ok
+    def terminate(_, _), do: :ok
 
     defp start_session(command, options, config, owner) do
       init = %{
@@ -139,7 +139,7 @@ if Code.ensure_loaded?(:emqtt) do
 
       case GenServer.start_link(__MODULE__, init) do
         {:ok, session} -> await(session, config.connect_timeout * 2)
-        {:error, _reason} -> {:error, failure(:mqtt_session_unavailable, :unavailable)}
+        {:error, _} -> {:error, failure(:mqtt_session_unavailable, :unavailable)}
       end
     end
 
@@ -165,11 +165,11 @@ if Code.ensure_loaded?(:emqtt) do
            {:ok, delivery} <- delivery(message) do
         send(state.owner, {:wotex_transport_frame, delivery})
       else
-        _dropped -> :ok
+        _ -> :ok
       end
     end
 
-    defp forward(_message, _state), do: :ok
+    defp forward(_, _), do: :ok
 
     defp delivery(%{topic: topic, payload: payload} = message) do
       case Delivery.new(payload,
@@ -178,7 +178,7 @@ if Code.ensure_loaded?(:emqtt) do
              retain: Map.get(message, :retain, false) in [true, 1]
            ) do
         {:ok, delivery} -> {:ok, delivery}
-        {:error, _rejected} -> :error
+        {:error, _} -> :error
       end
     end
 
@@ -201,7 +201,7 @@ if Code.ensure_loaded?(:emqtt) do
           Process.demonitor(monitor, [:flush])
           result
 
-        {:DOWN, ^monitor, :process, ^worker, _reason} ->
+        {:DOWN, ^monitor, :process, ^worker, _} ->
           {:error, failure(:mqtt_connection_lost, :unavailable)}
       after
         budget ->
@@ -234,8 +234,8 @@ if Code.ensure_loaded?(:emqtt) do
 
       case result do
         :ok -> :ok
-        {:ok, _packet_id} -> :ok
-        _rejected -> {:error, failure(:mqtt_publish_rejected, :unavailable)}
+        {:ok, _} -> :ok
+        _ -> {:error, failure(:mqtt_publish_rejected, :unavailable)}
       end
     end
 
@@ -245,7 +245,7 @@ if Code.ensure_loaded?(:emqtt) do
         first_retained()
       else
         {:error, %Error{} = error} -> {:error, error}
-        _unavailable -> {:error, failure(:mqtt_connection_lost, :unavailable)}
+        _ -> {:error, failure(:mqtt_connection_lost, :unavailable)}
       end
     end
 
@@ -267,16 +267,16 @@ if Code.ensure_loaded?(:emqtt) do
     defp connect(options) do
       case call(fn -> :emqtt.start_link(options) end) do
         {:ok, client} -> handshake(client)
-        _unavailable -> {:error, failure(:mqtt_client_unavailable, :unavailable)}
+        _ -> {:error, failure(:mqtt_client_unavailable, :unavailable)}
       end
     end
 
     defp handshake(client) do
       case call(fn -> :emqtt.connect(client) end) do
-        {:ok, _properties} ->
+        {:ok, _} ->
           {:ok, client}
 
-        _refused ->
+        _ ->
           stop_client(client)
           {:error, failure(:mqtt_connect_refused, :unavailable)}
       end
@@ -286,8 +286,8 @@ if Code.ensure_loaded?(:emqtt) do
       topics = Enum.map(filters, &{&1, [qos: qos]})
 
       case call(fn -> :emqtt.subscribe(client, %{}, topics) end) do
-        {:ok, _properties, codes} -> admitted(codes)
-        _refused -> {:error, failure(:mqtt_subscribe_refused, :unavailable)}
+        {:ok, _, codes} -> admitted(codes)
+        _ -> {:error, failure(:mqtt_subscribe_refused, :unavailable)}
       end
     end
 
@@ -300,15 +300,15 @@ if Code.ensure_loaded?(:emqtt) do
     end
 
     defp stop_client(client) do
-      _disconnected = call(fn -> :emqtt.disconnect(client) end)
-      _stopped = call(fn -> :emqtt.stop(client) end)
+      _ = call(fn -> :emqtt.disconnect(client) end)
+      _ = call(fn -> :emqtt.stop(client) end)
       :ok
     end
 
     defp call(work) do
       work.()
     catch
-      _kind, _reason -> :mqtt_call_failed
+      _, _ -> :mqtt_call_failed
     end
 
     defp options(command, connect_credential, config) do
@@ -348,7 +348,7 @@ if Code.ensure_loaded?(:emqtt) do
     defp default_port(:mqtt), do: 1_883
     defp default_port(:mqtts), do: 8_883
 
-    defp tls_options(:mqtt, _host, _config), do: []
+    defp tls_options(:mqtt, _, _), do: []
 
     defp tls_options(:mqtts, host, config) do
       ssl_options =
@@ -367,7 +367,7 @@ if Code.ensure_loaded?(:emqtt) do
     defp trust_store(options, nil), do: Keyword.put(options, :cacerts, :public_key.cacerts_get())
     defp trust_store(options, path), do: Keyword.put(options, :cacertfile, String.to_charlist(path))
 
-    defp put_if(options, _key, nil), do: options
+    defp put_if(options, _, nil), do: options
     defp put_if(options, key, value), do: Keyword.put(options, key, String.to_charlist(value))
 
     defp will_options(nil), do: []

@@ -86,7 +86,7 @@ if Code.ensure_loaded?(Axon) do
     defp default_split(count) when is_integer(count) and count in 12..@max_rows,
       do: div(count * 3, 4)
 
-    defp default_split(_count), do: nil
+    defp default_split(_), do: nil
 
     defp valid_config?(config) do
       Enum.all?([
@@ -101,12 +101,12 @@ if Code.ensure_loaded?(Axon) do
     end
 
     defp integer_in?(value, range) when is_integer(value), do: value in range
-    defp integer_in?(_value, _range), do: false
+    defp integer_in?(_, _), do: false
 
     defp valid_split?(split_at, count) when is_integer(split_at) and is_integer(count),
       do: split_at >= 6 and split_at <= count - 3
 
-    defp valid_split?(_split_at, _count), do: false
+    defp valid_split?(_, _), do: false
 
     defp backend?(backend) when is_atom(backend), do: not is_nil(backend)
     defp backend?({backend, opts}), do: is_atom(backend) and not is_nil(backend) and is_list(opts)
@@ -130,7 +130,7 @@ if Code.ensure_loaded?(Axon) do
       end
     end
 
-    defp backend_module({backend, _opts}), do: backend
+    defp backend_module({backend, _}), do: backend
     defp backend_module(backend), do: backend
 
     defp bounded_run(config) do
@@ -145,12 +145,12 @@ if Code.ensure_loaded?(Axon) do
           Process.demonitor(monitor, [:flush])
           result
 
-        {:DOWN, ^monitor, :process, ^pid, _reason} ->
+        {:DOWN, ^monitor, :process, ^pid, _} ->
           execution_failure()
       after
         config.timeout_ms ->
           Process.exit(pid, :kill)
-          receive do: ({:DOWN, ^monitor, :process, ^pid, _reason} -> :ok)
+          receive do: ({:DOWN, ^monitor, :process, ^pid, _} -> :ok)
 
           {:error,
            Error.new(:experiment_timeout, :inference, "model experiment exceeded its deadline",
@@ -162,9 +162,9 @@ if Code.ensure_loaded?(Axon) do
     defp safe_execute(config) do
       Nx.with_default_backend(config.backend, fn -> execute(config) end)
     rescue
-      _error -> execution_failure()
+      _ -> execution_failure()
     catch
-      _kind, _reason -> execution_failure()
+      _, _ -> execution_failure()
     end
 
     defp execution_failure do
@@ -249,7 +249,7 @@ if Code.ensure_loaded?(Axon) do
 
     defp heater_schedule(count) do
       [{20, 3.0}, {44, 2.0}]
-      |> Enum.filter(fn {index, _value} -> index < count end)
+      |> Enum.filter(fn {index, _} -> index < count end)
       |> Map.new()
     end
 
@@ -262,12 +262,12 @@ if Code.ensure_loaded?(Axon) do
 
     defp tensors(windows, mean, deviation) do
       inputs =
-        Enum.map(windows, fn [first, second, _target] ->
+        Enum.map(windows, fn [first, second, _] ->
           input_pair([first, second], mean, deviation)
         end)
 
       targets =
-        Enum.map(windows, fn [_first, _second, target] ->
+        Enum.map(windows, fn [_, _, target] ->
           [normalize(target.value, mean, deviation)]
         end)
 
@@ -287,7 +287,7 @@ if Code.ensure_loaded?(Axon) do
 
     defp normalize(value, mean, deviation), do: (value - mean) / deviation
     defp quality_code(:good), do: 0.0
-    defp quality_code(_other), do: 1.0
+    defp quality_code(_), do: 1.0
 
     defp model do
       Axon.input("window", shape: {nil, 6})
@@ -308,7 +308,7 @@ if Code.ensure_loaded?(Axon) do
 
     defp persistence_tensor(windows) do
       windows
-      |> Enum.map(fn [_first, second, _target] -> [second.value] end)
+      |> Enum.map(fn [_, second, _] -> [second.value] end)
       |> Nx.tensor(type: :f32)
     end
 

@@ -69,12 +69,12 @@ defmodule Wotex.Lab.Scenario do
            max_steps: scenario.max_steps
          ) do
       {:ok, rebuilt} when rebuilt == scenario -> {:ok, rebuilt}
-      {:ok, _rebuilt} -> {:error, Error.new(:invalid_scenario, :preflight, "scenario is forged")}
+      {:ok, _} -> {:error, Error.new(:invalid_scenario, :preflight, "scenario is forged")}
       {:error, error} -> {:error, %{error | phase: :preflight}}
     end
   end
 
-  def revalidate(_scenario),
+  def revalidate(_),
     do: {:error, Error.new(:invalid_scenario, :preflight, "scenario is invalid")}
 
   defp valid_fields?(%{id: id, title: title, capabilities: caps, seed: seed, max_steps: steps}) do
@@ -84,10 +84,10 @@ defmodule Wotex.Lab.Scenario do
       is_integer(steps) and steps in 1..100_000
   end
 
-  defp valid_fields?(_fields), do: false
+  defp valid_fields?(_), do: false
 
   defp valid_capabilities?(caps) when is_list(caps) and length(caps) in 1..64,
     do: Enum.all?(caps, &Options.identifier?/1) and Enum.uniq(caps) == caps
 
-  defp valid_capabilities?(_caps), do: false
+  defp valid_capabilities?(_), do: false
 end

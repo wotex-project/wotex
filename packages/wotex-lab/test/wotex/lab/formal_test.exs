@@ -268,7 +268,7 @@ defmodule Wotex.Lab.FormalTest do
                map["exhaustion"] == %{"basis" => "depth_bound", "states" => nil}
 
       assert map["error"] == %{"code" => "exhaustion_timeout"} and map["counterexample"] == nil
-      assert {:ok, _bytes} = Wotex.JSON.encode(map)
+      assert {:ok, _} = Wotex.JSON.encode(map)
     end
   end
 

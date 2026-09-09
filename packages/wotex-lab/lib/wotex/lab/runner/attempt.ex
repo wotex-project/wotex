@@ -56,7 +56,7 @@ defmodule Wotex.Lab.Runner.Attempt do
         Process.demonitor(monitor, [:flush])
         {:ok, status}
 
-      {:DOWN, ^monitor, :process, ^attempt, _reason} ->
+      {:DOWN, ^monitor, :process, ^attempt, _} ->
         {:error, :timeout}
     after
       timeout ->
@@ -122,7 +122,7 @@ defmodule Wotex.Lab.Runner.Attempt do
             state = phase(%{state | pending: Definition.order(state.definition)}, :running)
             {:noreply, next_step(state)}
 
-          {:error, _reason} ->
+          {:error, _} ->
             {:noreply, finish(state, :error, %{code: :work_directory_unavailable})}
         end
 
@@ -132,31 +132,31 @@ defmodule Wotex.Lab.Runner.Attempt do
   end
 
   @impl GenServer
-  def handle_call(:status, _from, state), do: {:reply, status_map(state), state}
+  def handle_call(:status, _, state), do: {:reply, status_map(state), state}
 
-  def handle_call({:await, pid}, _from, %{phase: :terminal} = state) do
+  def handle_call({:await, pid}, _, %{phase: :terminal} = state) do
     send(pid, {:wotex_lab_run_done, self(), status_map(state)})
     {:reply, :ok, state}
   end
 
-  def handle_call({:await, pid}, _from, state),
+  def handle_call({:await, pid}, _, state),
     do: {:reply, :ok, %{state | waiters: [pid | state.waiters]}}
 
-  def handle_call(:cancel, _from, %{phase: phase} = state) when phase in [:stopping, :terminal],
+  def handle_call(:cancel, _, %{phase: phase} = state) when phase in [:stopping, :terminal],
     do: {:reply, :ok, state}
 
-  def handle_call(:cancel, _from, state),
+  def handle_call(:cancel, _, state),
     do: {:reply, :ok, finish(state, :cancelled, %{code: :cancelled})}
 
-  def handle_call(:kill, _from, %{phase: :terminal} = state), do: {:reply, :ok, state}
+  def handle_call(:kill, _, %{phase: :terminal} = state), do: {:reply, :ok, state}
 
-  def handle_call(:kill, _from, state),
+  def handle_call(:kill, _, state),
     do: {:reply, :ok, finish(%{state | forced: true}, :error, %{code: :forced_kill})}
 
   @impl GenServer
   def handle_info(
         {:step_result, attempt_id, step_id, ref, result},
-        %{phase: :running, worker: {ref, worker_step_id, _pid}, attempt_id: attempt_id} = state
+        %{phase: :running, worker: {ref, worker_step_id, _}, attempt_id: attempt_id} = state
       ) do
     if step_id == worker_step_id do
       Process.demonitor(ref, [:flush])
@@ -166,16 +166,16 @@ defmodule Wotex.Lab.Runner.Attempt do
     end
   end
 
-  def handle_info({:step_result, _attempt, _step, _ref, _result}, state), do: {:noreply, state}
+  def handle_info({:step_result, _, _, _, _}, state), do: {:noreply, state}
 
   def handle_info(
-        {:DOWN, ref, :process, _pid, reason},
-        %{phase: :running, worker: {ref, step_id, _worker_pid}} = state
+        {:DOWN, ref, :process, _, reason},
+        %{phase: :running, worker: {ref, step_id, _}} = state
       ) do
     {:noreply, state |> record_step(step_id, {:error, crash(reason)}) |> next_step()}
   end
 
-  def handle_info({:DOWN, ref, :process, _pid, _reason}, %{observer_monitor: ref} = state)
+  def handle_info({:DOWN, ref, :process, _, _}, %{observer_monitor: ref} = state)
       when state.phase in [:starting, :running] do
     {:noreply, finish(%{state | observer_monitor: nil}, :error, %{code: :receiver_down})}
   end
@@ -185,13 +185,13 @@ defmodule Wotex.Lab.Runner.Attempt do
     {:noreply, finish(state, :timeout, %{code: :wall_budget_exhausted})}
   end
 
-  def handle_info(_message, state), do: {:noreply, state}
+  def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
-  def terminate(_reason, %{phase: :terminal}), do: :ok
+  def terminate(_, %{phase: :terminal}), do: :ok
 
-  def terminate(_reason, state) do
-    _cleanup_result = cleanup(state)
+  def terminate(_, state) do
+    _ = cleanup(state)
     :ok
   end
 
@@ -246,14 +246,14 @@ defmodule Wotex.Lab.Runner.Attempt do
       specs when is_list(specs) and length(specs) <= 10_000 ->
         {:ok, specs}
 
-      _other ->
+      _ ->
         {:error, Error.new(:invalid_child_specs, :starting, "component child specs are invalid")}
     end
   rescue
-    _exception ->
+    _ ->
       {:error, Error.new(:child_specs_raised, :starting, "component child specs raised")}
   catch
-    _kind, _reason ->
+    _, _ ->
       {:error, Error.new(:child_specs_failed, :starting, "component child specs failed")}
   end
 
@@ -279,7 +279,7 @@ defmodule Wotex.Lab.Runner.Attempt do
   defp start_child(instance, spec) do
     Lab.start_child(instance, :things, spec)
   catch
-    :exit, _reason ->
+    :exit, _ ->
       {:error, Error.new(:supervisor_unavailable, :starting, "component supervisor is unavailable")}
   end
 
@@ -347,7 +347,7 @@ defmodule Wotex.Lab.Runner.Attempt do
     # The worker learns its own monitor reference from the attempt so a late
     # message cannot masquerade as the current step.
     send(pid, {:monitor_ref, ref})
-    {_pid, _ref} = {pid, ref}
+    {_, _} = {pid, ref}
     %{state | worker: {ref, step.id, pid}}
   end
 
@@ -359,11 +359,11 @@ defmodule Wotex.Lab.Runner.Attempt do
     end
   end
 
-  defp execute("raise", _module, _step, _context), do: raise("injected fault")
-  defp execute("throw", _module, _step, _context), do: throw(:injected_fault)
-  defp execute("exit", _module, _step, _context), do: exit(:injected_fault)
-  defp execute("invalid_return", _module, _step, _context), do: :not_a_result
-  defp execute("hang", _module, _step, _context), do: Process.sleep(:infinity)
+  defp execute("raise", _, _, _), do: raise("injected fault")
+  defp execute("throw", _, _, _), do: throw(:injected_fault)
+  defp execute("exit", _, _, _), do: exit(:injected_fault)
+  defp execute("invalid_return", _, _, _), do: :not_a_result
+  defp execute("hang", _, _, _), do: Process.sleep(:infinity)
   defp execute(nil, module, step, context), do: module.execute(step.operation, step.input, context)
 
   defp safe_execute(fault, module, step, context) do
@@ -375,8 +375,8 @@ defmodule Wotex.Lab.Runner.Attempt do
          details: %{exception: exception.__struct__}
        )}
   catch
-    :throw, _value -> {:error, Error.new(:component_threw, :running, "component threw")}
-    :exit, _reason -> {:error, Error.new(:component_exited, :running, "component exited")}
+    :throw, _ -> {:error, Error.new(:component_threw, :running, "component threw")}
+    :exit, _ -> {:error, Error.new(:component_exited, :running, "component exited")}
   end
 
   defp record_step(state, step_id, {:ok, value}) do
@@ -424,7 +424,7 @@ defmodule Wotex.Lab.Runner.Attempt do
     }
   end
 
-  defp record_step(state, step_id, _invalid),
+  defp record_step(state, step_id, _),
     do:
       record_step(
         state,
@@ -444,13 +444,13 @@ defmodule Wotex.Lab.Runner.Attempt do
 
   defp crash(:killed), do: Error.new(:component_killed, :running, "component worker was killed")
 
-  defp crash({%{__struct__: exception}, _stack}) when is_atom(exception),
+  defp crash({%{__struct__: exception}, _}) when is_atom(exception),
     do: Error.new(:component_raised, :running, "component raised", details: %{exception: exception})
 
-  defp crash({{:nocatch, _value}, _stack}),
+  defp crash({{:nocatch, _}, _}),
     do: Error.new(:component_threw, :running, "component threw")
 
-  defp crash(_reason), do: Error.new(:component_exited, :running, "component exited")
+  defp crash(_), do: Error.new(:component_exited, :running, "component exited")
 
   defp assess(state) do
     cond do
@@ -466,7 +466,7 @@ defmodule Wotex.Lab.Runner.Attempt do
         case Map.get(assertion, "key") do
           nil -> value == expected
           key when is_map(value) -> Map.get(value, key) == expected
-          _key -> false
+          _ -> false
         end
 
       :error ->
@@ -474,7 +474,7 @@ defmodule Wotex.Lab.Runner.Attempt do
     end
   end
 
-  defp finish(%{phase: :terminal} = state, _outcome, _reason), do: state
+  defp finish(%{phase: :terminal} = state, _, _), do: state
 
   defp finish(state, outcome, reason) do
     state = phase(state, :stopping)
@@ -492,7 +492,7 @@ defmodule Wotex.Lab.Runner.Attempt do
     %{state | waiters: []}
   end
 
-  defp kill_worker(%{worker: {ref, _step, pid}} = state) do
+  defp kill_worker(%{worker: {ref, _, pid}} = state) do
     Process.demonitor(ref, [:flush])
     Process.exit(pid, :kill)
     %{state | worker: nil}
@@ -506,8 +506,8 @@ defmodule Wotex.Lab.Runner.Attempt do
     failures = Enum.flat_map(state.children, &stop_owned_child(&1, state, deadline))
 
     case File.rm_rf(state.work_dir) do
-      {:ok, _paths} -> cleanup_result(failures)
-      {:error, reason, _path} -> %{children: failures, work_dir: reason}
+      {:ok, _} -> cleanup_result(failures)
+      {:error, reason, _} -> %{children: failures, work_dir: reason}
     end
   end
 
@@ -538,7 +538,7 @@ defmodule Wotex.Lab.Runner.Attempt do
   defp notify(%{host: %{observer: pid}, attempt_id: id}, event) when is_pid(pid),
     do: send(pid, {:wotex_lab_run, id, event})
 
-  defp notify(_state, _event), do: :ok
+  defp notify(_, _), do: :ok
 
   defp status_map(state) do
     %{
@@ -588,6 +588,6 @@ defmodule Wotex.Lab.Runner.Attempt do
   defp digest(term), do: Digest.bytes(:erlang.term_to_binary(term, [:deterministic]))
 
   defp redact(reason) when is_atom(reason), do: reason
-  defp redact({reason, _detail}) when is_atom(reason), do: reason
-  defp redact(_reason), do: :redacted
+  defp redact({reason, _}) when is_atom(reason), do: reason
+  defp redact(_), do: :redacted
 end

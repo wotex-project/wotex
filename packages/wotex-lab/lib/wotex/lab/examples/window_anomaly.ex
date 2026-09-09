@@ -94,9 +94,9 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
   defp safe_run(backend, opts) do
     Nx.with_default_backend(backend, fn -> run_lane(opts) end)
   rescue
-    _error -> {:error, LabError.new(:nx_profile_failed, :inference, "Nx profile failed")}
+    _ -> {:error, LabError.new(:nx_profile_failed, :inference, "Nx profile failed")}
   catch
-    _kind, _reason -> {:error, LabError.new(:nx_profile_failed, :inference, "Nx profile failed")}
+    _, _ -> {:error, LabError.new(:nx_profile_failed, :inference, "Nx profile failed")}
   end
 
   defp validate_options(opts) do
@@ -128,16 +128,16 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
 
   defp valid_backend?(backend) when is_atom(backend), do: not is_nil(backend)
   defp valid_backend?({backend, opts}), do: is_atom(backend) and is_list(opts)
-  defp valid_backend?(_backend), do: false
+  defp valid_backend?(_), do: false
 
   defp available_backend?(backend),
     do: valid_backend?(backend) and Code.ensure_loaded?(backend_module(backend))
 
-  defp backend_module({backend, _opts}), do: backend
+  defp backend_module({backend, _}), do: backend
   defp backend_module(backend), do: backend
 
   defp integer_in?(value, range) when is_integer(value), do: value in range
-  defp integer_in?(_value, _range), do: false
+  defp integer_in?(_, _), do: false
 
   defp optional_nonnegative_integer?(nil), do: true
   defp optional_nonnegative_integer?(value), do: is_integer(value) and value >= 0
@@ -147,7 +147,7 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
 
   defp finite?(value) when is_float(value), do: abs(value) <= 1_000_000_000_000
 
-  defp finite?(_value), do: false
+  defp finite?(_), do: false
 
   defp run_lane(opts) do
     simulation = Thermal.generate(Keyword.take(opts, [:seed, :count, :step, :heater, :glitches]))
@@ -238,7 +238,7 @@ defmodule Wotex.Lab.Examples.WindowAnomaly do
         %Observation{value: value, quality: quality} when quality in [:good, :uncertain] ->
           {:ok, value}
 
-        _missing ->
+        _ ->
           nil
       end
     end)

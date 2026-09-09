@@ -33,11 +33,11 @@ defmodule Wotex.Lab.Formal.Search do
   @doc "Runs the session; the outcome is a result, a typed error or the engine's error term."
   @spec run(session(), execute()) :: {:ok, Result.t()} | {:error, term()}
   def run(session, execute) when is_function(execute, 2) do
-    with {:ok, _loaded} <- command(session, session.load, execute),
+    with {:ok, _} <- command(session, session.load, execute),
          {:ok, output} <- command(session, session.command, execute),
          {:ok, search} <- Output.search(output, max_bytes: session.ceiling) do
       case search.solutions do
-        [%{state: state} | _rest] -> counterexample(session, search, state, execute)
+        [%{state: state} | _] -> counterexample(session, search, state, execute)
         [] -> exhaust(session, search, execute)
       end
     end
@@ -45,29 +45,29 @@ defmodule Wotex.Lab.Formal.Search do
 
   @doc "Maps a session outcome to the result the profile returns."
   @spec conclude({:ok, Result.t()} | {:error, term()}, Result.t(), non_neg_integer()) :: Result.t()
-  def conclude({:ok, %Result{} = result}, _base, _reaped), do: result
+  def conclude({:ok, %Result{} = result}, _, _), do: result
 
-  def conclude({:error, %Error{} = error}, base, _reaped),
+  def conclude({:error, %Error{} = error}, base, _),
     do: %{
       base
       | status: :error,
         error: %{code: error.code, phase: error.phase, details: error.details}
     }
 
-  def conclude({:error, {:engine_timeout, _message}}, base, reaped),
+  def conclude({:error, {:engine_timeout, _}}, base, reaped),
     do: %{base | status: :timeout, error: %{code: :engine_timeout, reaped: reaped}}
 
-  def conclude({:error, {:engine_error, type}}, base, _reaped),
+  def conclude({:error, {:engine_error, type}}, base, _),
     do: %{base | status: :error, error: %{code: :engine_error, type: type}}
 
-  def conclude({:error, other}, base, _reaped),
+  def conclude({:error, other}, base, _),
     do: %{base | status: :error, error: %{code: :engine_error, reason: inspect(other, limit: 20)}}
 
   @doc "True when an outcome ended in an engine timeout in either phase."
   @spec timed_out?({:ok, Result.t()} | {:error, term()}) :: boolean()
-  def timed_out?({:error, {:engine_timeout, _message}}), do: true
+  def timed_out?({:error, {:engine_timeout, _}}), do: true
   def timed_out?({:ok, %Result{error: %{code: :exhaustion_timeout}}}), do: true
-  def timed_out?(_outcome), do: false
+  def timed_out?(_), do: false
 
   defp counterexample(session, search, state, execute) do
     with {:ok, path_command} <- Serializer.path(state),
@@ -84,7 +84,7 @@ defmodule Wotex.Lab.Formal.Search do
     end
   end
 
-  defp exhaust(%{exhaustion?: false} = session, search, _execute) do
+  defp exhaust(%{exhaustion?: false} = session, search, _) do
     {:ok,
      %{
        session.base
@@ -112,7 +112,7 @@ defmodule Wotex.Lab.Formal.Search do
                exhaustion: %{basis: :complete_search, states: complete.states}
            }}
 
-        _deeper ->
+        _ ->
           # A solution beyond the bound: the bounded answer stays inconclusive.
           {:ok,
            %{
@@ -123,7 +123,7 @@ defmodule Wotex.Lab.Formal.Search do
            }}
       end
     else
-      {:error, {:engine_timeout, _message}} ->
+      {:error, {:engine_timeout, _}} ->
         {:ok,
          %{
            session.base

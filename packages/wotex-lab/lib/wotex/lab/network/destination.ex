@@ -30,7 +30,7 @@ defmodule Wotex.Lab.Network.Destination do
     end
   end
 
-  def admit(_uri, _config), do: {:error, :destination_not_admitted}
+  def admit(_, _), do: {:error, :destination_not_admitted}
 
   @doc "Returns whether an IPv4 or IPv6 address is globally routable."
   @spec public_address?(term()) :: boolean()
@@ -38,7 +38,7 @@ defmodule Wotex.Lab.Network.Destination do
 
   def public_address?({_, _, _, _, _, _, _, _} = address), do: not reserved_ipv6?(address)
 
-  def public_address?(_address), do: false
+  def public_address?(_), do: false
 
   defp parse(uri) do
     {:ok, URI.parse(uri)}
@@ -50,7 +50,7 @@ defmodule Wotex.Lab.Network.Destination do
        when scheme in ["http", "https"] and is_binary(host) and byte_size(host) > 0,
        do: :ok
 
-  defp valid_http_uri(_uri), do: {:error, :destination_not_admitted}
+  defp valid_http_uri(_), do: {:error, :destination_not_admitted}
 
   defp admit_profile(uri, %{profile: :local} = config) do
     {:ok,
@@ -78,11 +78,11 @@ defmodule Wotex.Lab.Network.Destination do
          connect_options: connect_options(uri, config, uri.host)
        }}
     else
-      _rejected -> {:error, :destination_not_admitted}
+      _ -> {:error, :destination_not_admitted}
     end
   end
 
-  defp admit_profile(_uri, _config), do: {:error, :destination_not_admitted}
+  defp admit_profile(_, _), do: {:error, :destination_not_admitted}
 
   defp audience_matches(uri, audience) when is_binary(audience) do
     case parse(audience) do
@@ -91,12 +91,12 @@ defmodule Wotex.Lab.Network.Destination do
           do: :ok,
           else: {:error, :destination_not_admitted}
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error, :destination_not_admitted}
     end
   end
 
-  defp audience_matches(_uri, _audience), do: {:error, :destination_not_admitted}
+  defp audience_matches(_, _), do: {:error, :destination_not_admitted}
 
   defp origin_uri?(%URI{path: path, query: nil, fragment: nil, userinfo: nil}),
     do: path in [nil, "", "/"]
@@ -108,7 +108,7 @@ defmodule Wotex.Lab.Network.Destination do
       results
       |> Enum.flat_map(fn
         {:ok, values} when is_list(values) -> values
-        _error -> []
+        _ -> []
       end)
       |> Enum.filter(&:inet.is_ip_address/1)
       |> Enum.uniq()
@@ -131,15 +131,15 @@ defmodule Wotex.Lab.Network.Destination do
     |> put_if(:cacertfile, config.tls_ca_certfile)
   end
 
-  defp tls_options(_uri, _config), do: nil
+  defp tls_options(_, _), do: nil
 
-  defp put_if(options, _key, nil), do: options
+  defp put_if(options, _, nil), do: options
   defp put_if(options, key, value), do: Keyword.put(options, key, value)
 
   defp address_string(address) do
     case :inet.ntoa(address) do
       value when is_list(value) -> {:ok, List.to_string(value)}
-      _invalid -> {:error, :destination_not_admitted}
+      _ -> {:error, :destination_not_admitted}
     end
   end
 

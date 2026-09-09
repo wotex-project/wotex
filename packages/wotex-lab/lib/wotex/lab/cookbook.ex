@@ -387,7 +387,7 @@ defmodule Wotex.Lab.Cookbook do
     end
   end
 
-  def fetch(_id),
+  def fetch(_),
     do: {:error, Error.new(:unknown_cookbook, :catalogue, "cookbook id must be a string")}
 
   @doc "Reads a notebook's Livebook source from the packaged `priv` directory."

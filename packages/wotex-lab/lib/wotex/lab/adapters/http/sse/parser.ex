@@ -66,7 +66,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
       end
     end
 
-    defp consume(state, line, _events) when byte_size(line) > state.max_line_bytes do
+    defp consume(state, line, _) when byte_size(line) > state.max_line_bytes do
       {:error,
        Error.new(:sse_line_too_long, :transport, "SSE line exceeds the byte bound",
          class: :protocol
@@ -104,7 +104,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
     end
 
     defp handle_line(state, ""), do: dispatch(state)
-    defp handle_line(state, ":" <> _comment), do: {:ok, nil, state}
+    defp handle_line(state, ":" <> _), do: {:ok, nil, state}
 
     defp handle_line(state, line) do
       {field, value} =
@@ -144,11 +144,11 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
     defp field(state, "retry", value) do
       case Integer.parse(value) do
         {retry, ""} when retry >= 0 -> {:ok, nil, %{state | retry: retry}}
-        _other -> {:ok, nil, state}
+        _ -> {:ok, nil, state}
       end
     end
 
-    defp field(state, _unknown, _value), do: {:ok, nil, state}
+    defp field(state, _, _), do: {:ok, nil, state}
 
     defp dispatch(%{data: []} = state), do: {:ok, nil, reset(state)}
 
@@ -160,7 +160,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
           {:ok, event} ->
             {:ok, event, reset(state)}
 
-          {:error, _error} ->
+          {:error, _} ->
             {:error,
              Error.new(:sse_event_invalid, :transport, "SSE event is invalid", class: :protocol)}
         end

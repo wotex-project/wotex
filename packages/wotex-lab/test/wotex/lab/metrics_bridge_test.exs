@@ -68,7 +68,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
           :counters.add(calls, 1, 1)
           {:ok, Enum.at(snapshots, :counters.get(calls, 1) - 1)}
         end,
-        sink: fn request, _credential ->
+        sink: fn request, _ ->
           send(test, {:ordered_export, request})
           {:ok, %{status: 204}}
         end,
@@ -131,7 +131,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
         :sys.replace_state(bridge, &%{&1 | scrape: vanished})
         assert {:ok, %{sequence: 2}} = GreptimeBridge.scrape_now(bridge)
         await(bridge, :exported, 2)
-        [_first, second] = RemoteWriteServer.await_requests(controller, 2)
+        [_, second] = RemoteWriteServer.await_requests(controller, 2)
 
         stale =
           Enum.find(
@@ -139,7 +139,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
             &({"__name__", "wotex_lab_nx_operations_total"} in &1.labels)
           )
 
-        assert [{_t, {:special, 0x7FF0000000000002}}] = stale.samples
+        assert [{_, {:special, 0x7FF0000000000002}}] = stale.samples
         assert [_, %{snapshot: %Snapshot{sequence: 2} = marked}] = History.snapshots(history)
         assert Enum.any?(marked.series, &(&1.sample == %{value: :stale}))
       end)
@@ -210,7 +210,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
   test "overload drops the oldest unsent snapshot, sink crashes are contained and stats stay honest" do
     test = self()
 
-    blocking = fn _request, _credential ->
+    blocking = fn _, _ ->
       send(test, {:sink_called, self()})
 
       receive do
@@ -227,7 +227,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
     end
 
     bridge = bridge(sink: blocking, queue_limit: 3, scrape: scrape)
-    for _scrape <- 1..6, do: assert({:ok, _} = GreptimeBridge.scrape_now(bridge))
+    for _ <- 1..6, do: assert({:ok, _} = GreptimeBridge.scrape_now(bridge))
     assert_receive {:sink_called, exporter}
 
     stats = GreptimeBridge.stats(bridge)
@@ -238,7 +238,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
     send(exporter, :release)
     await(bridge, :exported, 1)
 
-    crashing = bridge(sink: fn _request, _credential -> raise "sink down" end, max_attempts: 1)
+    crashing = bridge(sink: fn _, _ -> raise "sink down" end, max_attempts: 1)
 
     capture_log(fn ->
       assert {:ok, _} = GreptimeBridge.scrape_now(crashing)
@@ -246,14 +246,14 @@ defmodule Wotex.Lab.MetricsBridgeTest do
       assert stats.last_error.code == :export_crashed and Process.alive?(crashing)
     end)
 
-    odd = bridge(sink: fn _request, _credential -> :whatever end)
+    odd = bridge(sink: fn _, _ -> :whatever end)
     assert {:ok, _} = GreptimeBridge.scrape_now(odd)
     assert await(odd, :failed, 1).last_error.code == :invalid_sink_result
 
     unresolved =
       bridge(
-        sink: fn _request, _credential -> flunk("must not be called") end,
-        credential: %{reference: :r, lookup: fn _r -> :error end}
+        sink: fn _, _ -> flunk("must not be called") end,
+        credential: %{reference: :r, lookup: fn _ -> :error end}
       )
 
     assert {:ok, _} = GreptimeBridge.scrape_now(unresolved)
@@ -272,7 +272,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
         2 -> {:ok, "# TYPE a summary\na 1\n"}
         3 -> {:error, Error.new(:unavailable, :test, "no scrape")}
         4 -> :nothing
-        _later -> {:ok, @exposition}
+        _ -> {:ok, @exposition}
       end
     end
 
@@ -328,7 +328,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
       )
 
     assert RemoteWriteServer.await_requests(controller, 1) != []
-    assert [%{snapshot: ^snapshot} | _later] = History.snapshots(history)
+    assert [%{snapshot: ^snapshot} | _] = History.snapshots(history)
     assert GreptimeBridge.stats(bridge).admitted >= 1
 
     :ok = GenServer.stop(history)
@@ -338,7 +338,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
 
   test "configuration is explicit and bounded; the Req sink validates its own inputs" do
     scrape = fn -> {:ok, @exposition} end
-    sink = fn _request, _credential -> {:ok, %{status: 204, headers: []}} end
+    sink = fn _, _ -> {:ok, %{status: 204, headers: []}} end
 
     assert {:error, %Error{code: :invalid_options}} =
              GreptimeBridge.start_link(scrape: scrape, sink: sink, url: "x")
@@ -425,7 +425,7 @@ defmodule Wotex.Lab.MetricsBridgeTest do
                tls_ca_certfile: ca_certfile
              })
 
-    private = fn _host, family ->
+    private = fn _, family ->
       if family == :inet, do: {:ok, [{127, 0, 0, 1}]}, else: {:ok, []}
     end
 

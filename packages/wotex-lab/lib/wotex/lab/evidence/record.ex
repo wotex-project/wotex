@@ -113,7 +113,7 @@ defmodule Wotex.Lab.Evidence.Record do
     end
   end
 
-  def new(_fields),
+  def new(_),
     do: {:error, Error.new(:invalid_record, :construction, "record fields must be a map")}
 
   @doc "Reads a record back from its string-keyed map form."
@@ -148,7 +148,7 @@ defmodule Wotex.Lab.Evidence.Record do
      )}
   end
 
-  def from_map(_map),
+  def from_map(_),
     do:
       {:error, Error.new(:invalid_record, :construction, "record map must name its schema version")}
 
@@ -255,7 +255,7 @@ defmodule Wotex.Lab.Evidence.Record do
     end)
   end
 
-  defp dependencies(_list),
+  defp dependencies(_),
     do:
       {:error,
        Error.new(:invalid_dependencies, :construction, "dependencies must be a bounded list",
@@ -276,7 +276,7 @@ defmodule Wotex.Lab.Evidence.Record do
           "archive must be a sha256 digest"
         )
 
-      _other ->
+      _ ->
         {:error,
          Error.new(
            :archive_evidence_unstated,
@@ -287,7 +287,7 @@ defmodule Wotex.Lab.Evidence.Record do
     end
   end
 
-  defp dependency(_dependency, path),
+  defp dependency(_, path),
     do:
       {:error,
        Error.new(:invalid_dependency, :construction, "dependency needs name and version",
@@ -307,7 +307,7 @@ defmodule Wotex.Lab.Evidence.Record do
     end)
   end
 
-  defp fixtures(_map),
+  defp fixtures(_),
     do:
       {:error,
        Error.new(:invalid_fixtures, :construction, "fixtures must be a bounded map",
@@ -318,7 +318,7 @@ defmodule Wotex.Lab.Evidence.Record do
        when is_binary(elixir) and is_binary(otp) and is_binary(backend) and is_binary(platform),
        do: :ok
 
-  defp toolchain(_toolchain),
+  defp toolchain(_),
     do:
       {:error,
        Error.new(
@@ -338,7 +338,7 @@ defmodule Wotex.Lab.Evidence.Record do
          )}
   end
 
-  defp counts(_map, code, path),
+  defp counts(_, code, path),
     do: {:error, Error.new(code, :construction, "must be a bounded map", path: path)}
 
   defp inputs(list) when is_list(list) and length(list) <= @max_collection do
@@ -351,7 +351,7 @@ defmodule Wotex.Lab.Evidence.Record do
          )}
   end
 
-  defp inputs(_list),
+  defp inputs(_),
     do:
       {:error,
        Error.new(:invalid_inputs, :construction, "inputs must be a bounded list", path: "/inputs")}
@@ -369,7 +369,7 @@ defmodule Wotex.Lab.Evidence.Record do
           )}
   end
 
-  defp assertions(_list),
+  defp assertions(_),
     do:
       {:error,
        Error.new(:invalid_assertions, :construction, "assertions must be a bounded list",
@@ -386,7 +386,7 @@ defmodule Wotex.Lab.Evidence.Record do
          )}
   end
 
-  defp outcomes(_map),
+  defp outcomes(_),
     do:
       {:error,
        Error.new(:invalid_outcomes, :construction, "outcomes must be a bounded map",
@@ -397,7 +397,7 @@ defmodule Wotex.Lab.Evidence.Record do
        when status in [:ok, :failed] and is_map(details),
        do: :ok
 
-  defp cleanup(_cleanup),
+  defp cleanup(_),
     do:
       {:error,
        Error.new(:invalid_cleanup, :construction, "cleanup needs status :ok or :failed and details",
@@ -463,11 +463,11 @@ defmodule Wotex.Lab.Evidence.Record do
     end)
   end
 
-  defp public(_value, _path), do: :ok
+  defp public(_, _), do: :ok
 
   defp scalar?(value), do: is_atom(value) or is_binary(value) or is_number(value)
 
-  defp check(true, _code, _path, _message), do: :ok
+  defp check(true, _, _, _), do: :ok
 
   defp check(false, code, path, message),
     do: {:error, Error.new(code, :construction, message, path: path)}
@@ -481,22 +481,22 @@ defmodule Wotex.Lab.Evidence.Record do
     do: Map.new(map, fn {key, value} -> {to_string(key), value} end)
 
   defp list(value) when is_list(value), do: value
-  defp list(_value), do: []
+  defp list(_), do: []
 
   defp atom_keys(map, keys) when is_map(map),
     do: Map.new(keys, fn key -> {key, Map.get(map, Atom.to_string(key))} end)
 
-  defp atom_keys(_map, _keys), do: %{}
+  defp atom_keys(_, _), do: %{}
 
   defp counts_from_map(map) when is_map(map) and map_size(map) <= @max_collection,
     do: Map.new(map, fn {key, value} -> {existing_atom(key), value} end)
 
-  defp counts_from_map(_map), do: :invalid
+  defp counts_from_map(_), do: :invalid
 
   defp outcomes_from_map(map) when is_map(map) and map_size(map) <= @max_collection,
     do: Map.new(map, fn {key, value} -> {existing_atom(key), value} end)
 
-  defp outcomes_from_map(_map), do: :invalid
+  defp outcomes_from_map(_), do: :invalid
 
   defp dependency_from_map(%{"name" => name, "version" => version} = map) do
     case Map.fetch(map, "archive") do
@@ -519,7 +519,7 @@ defmodule Wotex.Lab.Evidence.Record do
       details: details
     }
 
-  defp cleanup_from_map(_other), do: :invalid
+  defp cleanup_from_map(_), do: :invalid
 
   # Keys are read back only as atoms that already exist; unknown keys stay
   # strings and fail validation.

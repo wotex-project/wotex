@@ -143,7 +143,7 @@ defmodule Wotex.Lab.MCP.Tools do
     })
   end
 
-  def call(state, "list_things", _args) do
+  def call(state, "list_things", _) do
     things =
       case state.instance do
         pid when is_pid(pid) ->
@@ -160,7 +160,7 @@ defmodule Wotex.Lab.MCP.Tools do
             }
           end)
 
-        _none ->
+        _ ->
           []
       end
 
@@ -271,13 +271,13 @@ defmodule Wotex.Lab.MCP.Tools do
     end
   end
 
-  def call(%{writes: false}, "invoke_action", _args),
+  def call(%{writes: false}, "invoke_action", _),
     do: {:error, -32_601, "writes are not enabled for this session"}
 
-  def call(_state, name, _args) when name in @tool_names,
+  def call(_, name, _) when name in @tool_names,
     do: {:error, -32_602, "invalid arguments for #{name}"}
 
-  def call(_state, name, _args), do: {:error, -32_601, "unknown tool: #{String.slice(name, 0, 64)}"}
+  def call(_, name, _), do: {:error, -32_601, "unknown tool: #{String.slice(name, 0, 64)}"}
 
   defp authorize(state, token, key) do
     cond do
@@ -295,7 +295,7 @@ defmodule Wotex.Lab.MCP.Tools do
     end
   end
 
-  defp parse(_state, document, _parser, _projection) when byte_size(document) > @max_document_bytes,
+  defp parse(_, document, _, _) when byte_size(document) > @max_document_bytes,
     do: {:error, -32_602, "document exceeds #{@max_document_bytes} bytes"}
 
   defp parse(state, document, parser, projection) do
@@ -324,7 +324,7 @@ defmodule Wotex.Lab.MCP.Tools do
   defp deadline(args) do
     case Map.get(args, "deadline_ms", 5_000) do
       ms when is_integer(ms) and ms > 0 and ms <= @max_deadline_ms -> {:ok, ms}
-      _other -> {:error, -32_602, "deadline_ms must be 1..#{@max_deadline_ms}"}
+      _ -> {:error, -32_602, "deadline_ms must be 1..#{@max_deadline_ms}"}
     end
   end
 
@@ -360,10 +360,10 @@ defmodule Wotex.Lab.MCP.Tools do
           deadline: System.monotonic_time(:millisecond) + deadline
         )
   else
-    defp consumed(_state, _thing),
+    defp consumed(_, _),
       do: {:error, -32_601, "the runtime profile is not part of this host"}
 
-    defp context(_label, _deadline), do: nil
+    defp context(_, _), do: nil
   end
 
   defp invoke(state, thing_id, action, input, args) do
@@ -397,7 +397,7 @@ defmodule Wotex.Lab.MCP.Tools do
       variants = Map.new(Model.variants(), &{Atom.to_string(&1), &1})
 
       properties =
-        Map.new(Serializer.properties(), fn {id, _text} ->
+        Map.new(Serializer.properties(), fn {id, _} ->
           {Atom.to_string(id), id}
         end)
 
@@ -421,7 +421,7 @@ defmodule Wotex.Lab.MCP.Tools do
       end
     end
   else
-    defp verify(state, _opts, _variant, _property),
+    defp verify(state, _, _, _),
       do:
         text(state, %{
           "status" => "unsupported",
@@ -446,7 +446,7 @@ defmodule Wotex.Lab.MCP.Tools do
            "isError" => error?
          }, state}
 
-      {:error, _error} ->
+      {:error, _} ->
         {:error, -32_000, "tool result is not encodable"}
     end
   end

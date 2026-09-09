@@ -27,7 +27,7 @@ defmodule Wotex.Lab.MCP.Stdio do
       :eof ->
         state
 
-      {:error, _reason} ->
+      {:error, _} ->
         state
 
       line when is_binary(line) ->
@@ -61,7 +61,7 @@ defmodule Wotex.Lab.MCP.Stdio do
         if reply, do: write(output, reply)
         state
 
-      {:error, _error} ->
+      {:error, _} ->
         write(output, parse_error("line is not a JSON object"))
         state
     end
@@ -69,7 +69,7 @@ defmodule Wotex.Lab.MCP.Stdio do
 
   @doc "Process entry: a read-only session over standard input and output."
   @spec main([String.t()]) :: :ok
-  def main(_args) do
+  def main(_) do
     {:ok, state} = Server.new()
     run(state, :stdio, :stdio)
     :ok

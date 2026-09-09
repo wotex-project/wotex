@@ -57,7 +57,7 @@ defmodule Wotex.Lab.MetricsQueryTest do
         series: series
       })
 
-    {:ok, _admission} = History.put(history, snapshot)
+    {:ok, _} = History.put(history, snapshot)
   end
 
   defp seed(history) do
@@ -164,7 +164,7 @@ defmodule Wotex.Lab.MetricsQueryTest do
 
     {holder, monitor} =
       spawn_monitor(fn ->
-        {:ok, _table, token} = GenServer.call(history, {:acquire, @scope, 2})
+        {:ok, _, token} = GenServer.call(history, {:acquire, @scope, 2})
         send(owner, {:leased, token})
 
         receive do
@@ -189,7 +189,7 @@ defmodule Wotex.Lab.MetricsQueryTest do
     await_idle(history)
 
     for index <- 1..100 do
-      assert {:ok, _result} =
+      assert {:ok, _} =
                History.query(
                  history,
                  %{descriptor | scope: %{instance: "lab-1", session: "session-#{index}"}}
@@ -563,8 +563,8 @@ defmodule Wotex.Lab.MetricsQueryTest do
                query!(metric: :nx_queue_depth, aggregation: :last, limits: %{output_bytes: 64})
              )
 
-    {:ok, _table, first} = GenServer.call(history, {:acquire, @scope, 2})
-    {:ok, _table, second} = GenServer.call(history, {:acquire, @scope, 2})
+    {:ok, _, first} = GenServer.call(history, {:acquire, @scope, 2})
+    {:ok, _, second} = GenServer.call(history, {:acquire, @scope, 2})
 
     assert {:error, %Error{code: :too_many_queries, class: :rate_limited}} =
              History.query(history, query!(metric: :nx_queue_depth, aggregation: :last))
@@ -572,7 +572,7 @@ defmodule Wotex.Lab.MetricsQueryTest do
     :ok = GenServer.call(history, {:release, first})
     :ok = GenServer.call(history, {:release, second})
 
-    assert {:ok, _response} =
+    assert {:ok, _} =
              History.query(history, query!(metric: :nx_queue_depth, aggregation: :last))
 
     assert History.stats(history).active_queries == 0

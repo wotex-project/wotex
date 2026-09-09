@@ -40,5 +40,5 @@ defmodule Wotex.Lab.Options do
   def identifier?(value) when is_binary(value) and byte_size(value) in 1..128,
     do: Regex.match?(~r/\A[a-z0-9][a-z0-9._:-]*\z/, value)
 
-  def identifier?(_value), do: false
+  def identifier?(_), do: false
 end

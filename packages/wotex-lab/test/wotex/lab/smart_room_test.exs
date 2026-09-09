@@ -68,9 +68,9 @@ defmodule Wotex.Lab.SmartRoomTest do
       )
 
     context = Context.new!(:operator)
-    {:ok, _thermostat} = Directory.register(service, thermostat_td, context)
-    {:ok, _actuator} = Directory.register(service, actuator_td, context)
-    {:ok, _meter} = Directory.register(service, meter_td, context)
+    {:ok, _} = Directory.register(service, thermostat_td, context)
+    {:ok, _} = Directory.register(service, actuator_td, context)
+    {:ok, _} = Directory.register(service, meter_td, context)
 
     {:ok, http_profile} = HTTP.profile()
     {:ok, http_config} = HTTP.config(client: {ReqClient, %{}})
@@ -119,7 +119,7 @@ defmodule Wotex.Lab.SmartRoomTest do
       )
 
     :ok = Channel.attach(channel, "edge", self())
-    {:ok, _manifest} = Channel.send_value(channel, "edge", "cloud", ContinuumFixtures.manifest())
+    {:ok, _} = Channel.send_value(channel, "edge", "cloud", ContinuumFixtures.manifest())
 
     {:ok, policy} =
       Lab.start_child(
@@ -200,7 +200,7 @@ defmodule Wotex.Lab.SmartRoomTest do
     assert run.power_observation == nil
     assert length(run.proposal_deliveries) == 1
 
-    assert %{decisions: [%{status: :dispatched, attempts: [_one]}], refusals: []} =
+    assert %{decisions: [%{status: :dispatched, attempts: [_]}], refusals: []} =
              Policy.records(policy)
 
     assert {:error, %LabError{code: :already_dispatched}} =
@@ -364,7 +364,7 @@ defmodule Wotex.Lab.SmartRoomTest do
            ]
 
     assert [%{status: :revoked}] = records.decisions
-    assert {:ok, _run} = Scenario.run(opts)
+    assert {:ok, _} = Scenario.run(opts)
   end
 
   test "concurrent decisions admit one grant and concurrent dispatches execute it once", %{
@@ -386,7 +386,7 @@ defmodule Wotex.Lab.SmartRoomTest do
       )
       |> Enum.map(fn {:ok, result} -> result end)
 
-    assert [{:ok, granted}] = Enum.filter(decisions, &match?({:ok, _decision}, &1))
+    assert [{:ok, granted}] = Enum.filter(decisions, &match?({:ok, _}, &1))
 
     assert Enum.count(
              decisions,
@@ -402,7 +402,7 @@ defmodule Wotex.Lab.SmartRoomTest do
     dispatches =
       1..8
       |> Task.async_stream(
-        fn _attempt ->
+        fn _ ->
           Policy.dispatch(
             policy,
             granted.id,
@@ -424,7 +424,7 @@ defmodule Wotex.Lab.SmartRoomTest do
 
     assert Agent.get(counter, & &1) == 1
 
-    assert %{decisions: [%{status: :dispatched, attempts: [_one]}], refusals: refusals} =
+    assert %{decisions: [%{status: :dispatched, attempts: [_]}], refusals: refusals} =
              Policy.records(policy)
 
     assert Enum.count(refusals, &(&1.reason == :conflicting_decision)) == 7
@@ -487,7 +487,7 @@ defmodule Wotex.Lab.SmartRoomTest do
       )
 
     {:ok, run} = Scenario.run(Keyword.put(opts, :policy, policy))
-    assert %{decisions: [_one]} = Policy.records(policy)
+    assert %{decisions: [_]} = Policy.records(policy)
 
     monitor = Process.monitor(policy)
     Process.exit(policy, :kill)
@@ -519,7 +519,7 @@ defmodule Wotex.Lab.SmartRoomTest do
     transport_opts: transport_opts
   } do
     for n <- 1..60 do
-      {:ok, _mutation} =
+      {:ok, _} =
         Directory.register(
           service,
           thing("urn:wotex:lab:extra:#{String.pad_leading(Integer.to_string(n), 3, "0")}"),
@@ -530,7 +530,7 @@ defmodule Wotex.Lab.SmartRoomTest do
     {:ok, things} = Scenario.discover(service, context, transport_opts)
     assert map_size(things) == 63
 
-    assert {:error, _error} =
+    assert {:error, _} =
              Scenario.discover(service, context, Keyword.put(transport_opts, :transports, %{}))
   end
 
@@ -540,7 +540,7 @@ defmodule Wotex.Lab.SmartRoomTest do
     {MqttBroker.href(broker), broker.prefix}
   end
 
-  defp meter_source(_context) do
+  defp meter_source(_) do
     prefix = "lab/meter/#{System.unique_integer([:positive])}"
     server = MqttServer.start(self(), retained: {"#{prefix}/properties/power", "2500"})
     {MqttServer.href(server), prefix}

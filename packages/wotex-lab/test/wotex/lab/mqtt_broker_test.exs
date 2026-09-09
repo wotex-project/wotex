@@ -36,10 +36,10 @@ defmodule Wotex.Lab.MqttBrokerTest do
   end
 
   @doc false
-  def subscription_opened(_event, _measurements, %{request_id: "mqtt-observe"}, receiver),
+  def subscription_opened(_, _, %{request_id: "mqtt-observe"}, receiver),
     do: send(receiver, {:runtime_subscription_opened, self()})
 
-  def subscription_opened(_event, _measurements, _metadata, _receiver), do: :ok
+  def subscription_opened(_, _, _, _), do: :ok
 
   setup_all do
     %{server: MqttBroker.start()}
@@ -116,7 +116,7 @@ defmodule Wotex.Lab.MqttBrokerTest do
     server: broker,
     prefix: prefix
   } do
-    {_lab, subscription} = observe(broker, prefix, "temperature", id: :observed)
+    {_, subscription} = observe(broker, prefix, "temperature", id: :observed)
 
     MqttBroker.publish(broker, "#{prefix}/properties/temperature", "21.5")
 
@@ -142,7 +142,7 @@ defmodule Wotex.Lab.MqttBrokerTest do
     server: broker,
     prefix: prefix
   } do
-    {_lab, subscription} =
+    {_, subscription} =
       observe(broker, prefix, "temperature", id: :bounded, max_payload_bytes: 8)
 
     send(subscription, {:wotex_transport_frame, unrelated_delivery()})
@@ -161,7 +161,7 @@ defmodule Wotex.Lab.MqttBrokerTest do
     server: broker,
     prefix: prefix
   } do
-    {_lab, subscription} = observe(broker, prefix, "temperature", id: :stopped)
+    {_, subscription} = observe(broker, prefix, "temperature", id: :stopped)
     session = :sys.get_state(subscription).handle
     client = :sys.get_state(session).client
     assert is_pid(session) and is_pid(client)
@@ -177,7 +177,7 @@ defmodule Wotex.Lab.MqttBrokerTest do
 
   test "a stopped broker container surfaces transport_down and stops the child", %{prefix: prefix} do
     broker = MqttBroker.start()
-    {_lab, subscription} = observe(broker, prefix, "temperature", id: :gone)
+    {_, subscription} = observe(broker, prefix, "temperature", id: :gone)
     monitor = Process.monitor(subscription)
 
     :ok = MqttBroker.stop(broker.container)
@@ -209,7 +209,7 @@ defmodule Wotex.Lab.MqttBrokerTest do
   test "an authenticated session keeps the password out of every process diagnostic" do
     prefix = "lab/" <> MqttBroker.token()
     broker = MqttBroker.start(credentials: {@user, @password})
-    {_lab, subscription} = observe(broker, prefix, "temperature", id: :secured, secured: true)
+    {_, subscription} = observe(broker, prefix, "temperature", id: :secured, secured: true)
 
     MqttBroker.publish(broker, "#{prefix}/properties/temperature", "21.5",
       username: @user,
@@ -237,7 +237,7 @@ defmodule Wotex.Lab.MqttBrokerTest do
     on_exit(fn -> Process.exit(receiver, :kill) end)
     Enum.each(1..4, &send(receiver, {:backlog, &1}))
 
-    {_lab, subscription} =
+    {_, subscription} =
       observe(broker, prefix, "temperature",
         id: :overloaded,
         receiver: receiver,
@@ -254,14 +254,14 @@ defmodule Wotex.Lab.MqttBrokerTest do
     server: broker,
     prefix: prefix
   } do
-    {_lab, shared} = observe(broker, prefix, "shared", id: :shared)
+    {_, shared} = observe(broker, prefix, "shared", id: :shared)
     MqttBroker.publish(broker, "#{prefix}/properties/shared", "42")
 
     assert_receive {:wotex_runtime, :shared, {:ok, 42, %{topic: topic}}}, 5_000
     assert topic == "#{prefix}/properties/shared"
     assert :ok = Subscription.stop(shared)
 
-    {_lab, system} = observe(broker, prefix, "system", id: :system)
+    {_, system} = observe(broker, prefix, "system", id: :system)
 
     assert_receive {:wotex_runtime, :system,
                     {:ok, connected, %{topic: "$SYS/broker/clients/connected"}}},
@@ -464,21 +464,21 @@ defmodule Wotex.Lab.MqttBrokerTest do
      }}
   end
 
-  defp await_restart(_lab, _previous, 0), do: raise("the permanent subscription never restarted")
+  defp await_restart(_, _, 0), do: raise("the permanent subscription never restarted")
 
   defp await_restart(lab, previous, attempts) do
     children =
       lab
       |> Supervisor.which_children()
       |> Enum.find_value(fn
-        {:sessions, pid, :supervisor, _modules} -> DynamicSupervisor.which_children(pid)
-        _other -> nil
+        {:sessions, pid, :supervisor, _} -> DynamicSupervisor.which_children(pid)
+        _ -> nil
       end)
 
-    case Enum.find(children, fn {_id, pid, _type, _modules} ->
+    case Enum.find(children, fn {_, pid, _, _} ->
            is_pid(pid) and pid != previous and subscription_active?(pid)
          end) do
-      {_id, pid, _type, _modules} ->
+      {_, pid, _, _} ->
         pid
 
       nil ->
@@ -490,7 +490,7 @@ defmodule Wotex.Lab.MqttBrokerTest do
   defp subscription_active?(pid) do
     :sys.get_state(pid).active?
   catch
-    :exit, _reason -> false
+    :exit, _ -> false
   end
 
   defp unrelated_delivery do

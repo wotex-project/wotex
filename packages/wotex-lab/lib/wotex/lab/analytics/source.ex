@@ -48,7 +48,7 @@ defmodule Wotex.Lab.Analytics.Source do
     end
   end
 
-  def new(_source), do: error(:invalid_analysis_source)
+  def new(_), do: error(:invalid_analysis_source)
 
   defp validate_series(series) do
     Enum.reduce_while(series, MapSet.new(), fn series, names ->
@@ -71,12 +71,12 @@ defmodule Wotex.Lab.Analytics.Source do
       Enum.all?(points, &point?/1)
   end
 
-  defp valid_series?(_series), do: false
+  defp valid_series?(_), do: false
   defp interval?(nil), do: true
   defp interval?(value), do: is_number(value) and value > 0 and value <= 1.0e100
   defp dropped?(value), do: is_integer(value) and value in 0..1_000_000
   defp point?({x, y}), do: number?(x) and (number?(y) or y in [nil, :nan, :infinity, :neg_infinity])
-  defp point?(_point), do: false
+  defp point?(_), do: false
   defp number?(value) when is_integer(value), do: abs(value) <= 9_007_199_254_740_991
   defp number?(value), do: is_float(value) and abs(value) <= 1.0e100
   defp text?(value), do: is_binary(value) and byte_size(value) in 1..128 and String.valid?(value)

@@ -102,23 +102,23 @@ defmodule Wotex.Lab.Test.RoomComponent do
     end
   end
 
-  def execute("echo", input, _context), do: {:ok, input}
-  def execute("seed", _input, context), do: {:ok, context.seed}
-  def execute("sum", _input, context), do: {:ok, context.results |> Map.values() |> Enum.sum()}
-  def execute("sleep", ms, _context) when is_integer(ms), do: Process.sleep(ms) && {:ok, ms}
-  def execute("big", bytes, _context) when is_integer(bytes), do: {:ok, :binary.copy("x", bytes)}
+  def execute("echo", input, _), do: {:ok, input}
+  def execute("seed", _, context), do: {:ok, context.seed}
+  def execute("sum", _, context), do: {:ok, context.results |> Map.values() |> Enum.sum()}
+  def execute("sleep", ms, _) when is_integer(ms), do: Process.sleep(ms) && {:ok, ms}
+  def execute("big", bytes, _) when is_integer(bytes), do: {:ok, :binary.copy("x", bytes)}
 
   def execute("write", name, context) do
     :ok = File.write(Path.join(context.work_dir, name), "scratch")
     {:ok, name}
   end
 
-  def execute("bad", _input, _context), do: :not_a_result
+  def execute("bad", _, _), do: :not_a_result
 
-  def execute("fail", _input, _context),
+  def execute("fail", _, _),
     do: {:error, Error.new(:step_failed, :running, "step failed on request")}
 
-  def execute(operation, _input, _context),
+  def execute(operation, _, _),
     do:
       {:error,
        Error.new(:unknown_operation, :running, "unknown operation",

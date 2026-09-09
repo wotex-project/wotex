@@ -109,7 +109,7 @@ defmodule Wotex.Lab.Formal.Model do
            JSON.decode(bytes, max_bytes: 65_536) do
       {:ok, models}
     else
-      _other -> {:error, Error.new(:invalid_manifest, :admission, "model manifest is not readable")}
+      _ -> {:error, Error.new(:invalid_manifest, :admission, "model manifest is not readable")}
     end
   end
 
@@ -125,7 +125,7 @@ defmodule Wotex.Lab.Formal.Model do
       when is_binary(file) and is_binary(safe) and is_map(broken) and is_map(bounds) ->
         {:ok, entry}
 
-      _other ->
+      _ ->
         {:error,
          Error.new(:invalid_manifest, :admission, "model manifest entry is incomplete",
            details: %{id: name}

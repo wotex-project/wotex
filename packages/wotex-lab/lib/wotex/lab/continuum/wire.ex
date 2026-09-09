@@ -120,7 +120,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
       end
     end
 
-    defp put_extension(extensions, _iri, nil), do: extensions
+    defp put_extension(extensions, _, nil), do: extensions
     defp put_extension(extensions, iri, value), do: Map.put(extensions, iri, value)
   end
 end

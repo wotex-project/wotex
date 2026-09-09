@@ -41,7 +41,7 @@ defmodule Wotex.Lab.BenchmarkTest do
         assert latency["p95"] <= latency["p99"]
         assert latency["p99"] <= latency["maximum"]
         assert is_integer(latency["mean"]) and latency["mean"] >= 0
-        assert {:ok, _json} = Wotex.JSON.encode(result)
+        assert {:ok, _} = Wotex.JSON.encode(result)
         result
       end)
 

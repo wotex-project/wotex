@@ -142,6 +142,6 @@ defmodule Wotex.Lab.MetricsDatasetTest do
         ]
       })
 
-    assert {:ok, _admission} = History.put(history, snapshot)
+    assert {:ok, _} = History.put(history, snapshot)
   end
 end

@@ -36,7 +36,7 @@ defmodule Wotex.Lab.Formal.Output do
       solutions =
         ~r/Solution (\d+) \(state (\d+)\)/
         |> Regex.scan(output)
-        |> Enum.map(fn [_all, number, state] ->
+        |> Enum.map(fn [_, number, state] ->
           %{number: String.to_integer(number), state: String.to_integer(state)}
         end)
 
@@ -79,7 +79,7 @@ defmodule Wotex.Lab.Formal.Output do
   defp step(line, {steps, rule}) do
     cond do
       match = Regex.run(~r/\Astate (\d+), Room: (.+)\z/, String.trim_trailing(line)) ->
-        [_all, state, term] = match
+        [_, state, term] = match
         {[%{state: String.to_integer(state), rule: rule, term: String.trim(term)} | steps], nil}
 
       match = Regex.run(~r/\A===\[ c?rl \[([A-Za-z]+)\]/, line) ->
@@ -104,7 +104,7 @@ defmodule Wotex.Lab.Formal.Output do
       nil ->
         :ok
 
-      [_all, kind, text] ->
+      [_, kind, text] ->
         {:error,
          Error.new(:engine_warning, :parse, "engine reported a problem",
            details: %{kind: kind, text: String.slice(text, 0, 200)}
@@ -114,7 +114,7 @@ defmodule Wotex.Lab.Formal.Output do
 
   defp statistics(output) do
     case Regex.run(~r/states: (\d+)\s+rewrites: (\d+) in (\d+)ms cpu/, output) do
-      [_all, states, rewrites, time] ->
+      [_, states, rewrites, time] ->
         {:ok, String.to_integer(states), String.to_integer(rewrites), String.to_integer(time)}
 
       nil ->

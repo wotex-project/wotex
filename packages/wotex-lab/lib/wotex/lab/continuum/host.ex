@@ -111,7 +111,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
     end
 
     @impl GenServer
-    def handle_call(:stats, _from, state) do
+    def handle_call(:stats, _, state) do
       {:reply,
        %{
          received: Enum.reverse(state.received),
@@ -119,8 +119,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
          observations: state.observations,
          dispatches: state.dispatches,
          results: Enum.reverse(state.results),
-         manifests:
-           state.manifests |> Map.keys() |> Enum.map(fn {_source, id} -> id end) |> Enum.sort(),
+         manifests: state.manifests |> Map.keys() |> Enum.map(fn {_, id} -> id end) |> Enum.sort(),
          manifest_sources:
            state.manifests
            |> Map.keys()
@@ -130,7 +129,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
        }, state}
     end
 
-    def handle_call(:drain, _from, state) do
+    def handle_call(:drain, _, state) do
       case Lifecycle.transition(state.lifecycle, :draining, state.clock.(), reason: "host drain") do
         {:ok, lifecycle} -> {:reply, {:ok, lifecycle}, %{state | lifecycle: lifecycle}}
         {:error, error} -> {:reply, {:error, error}, state}
@@ -153,14 +152,14 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
                 reject(state, delivery_id, source, :undecodable, error.code)
             end
 
-          {:error, _error} ->
+          {:error, _} ->
             state
         end
 
       {:noreply, state}
     end
 
-    def handle_info(_message, state), do: {:noreply, state}
+    def handle_info(_, state), do: {:noreply, state}
 
     defp admit(%Manifest{} = manifest, delivery_id, source, state) do
       state = record(state, delivery_id, source, "continuum_manifest", manifest.manifest_id)
@@ -171,7 +170,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
         :ok ->
           put_in(state, [:manifests, {source, manifest.manifest_id}], manifest)
 
-        {:error, _mismatches} ->
+        {:error, _} ->
           reject(state, delivery_id, source, :incompatible_manifest, manifest.manifest_id)
       end
     end
@@ -237,7 +236,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
 
       case value do
         %Lifecycle{} -> state
-        _other -> state
+        _ -> state
       end
     end
 
@@ -276,7 +275,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
           state.clock.()
         )
 
-      {:ok, _delivery} =
+      {:ok, _} =
         Channel.send_value(state.channel, state.endpoint, source, result)
 
       %{state | result_sequence: sequence, results: [result | state.results]}
@@ -286,7 +285,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
     defp outcome_tag({:error, error}), do: {:error, error.code}
 
     defp accepted_manifest?(state, source) do
-      Enum.any?(state.manifests, fn {{manifest_source, _id}, _manifest} ->
+      Enum.any?(state.manifests, fn {{manifest_source, _}, _} ->
         manifest_source == source
       end)
     end
@@ -309,7 +308,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
           ]
       }
 
-    defp item_id(%{__struct__: _module} = value) do
+    defp item_id(%{__struct__: _} = value) do
       Enum.find_value(
         [
           :result_id,

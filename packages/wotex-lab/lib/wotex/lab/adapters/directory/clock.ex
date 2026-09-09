@@ -35,6 +35,6 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
     @impl Wotex.Directory.Clock
     def now({:fixed, %DateTime{} = instant}), do: {:ok, instant}
     def now({:agent, agent}) when is_pid(agent), do: {:ok, Agent.get(agent, & &1)}
-    def now(_state), do: {:error, :invalid_clock}
+    def now(_), do: {:error, :invalid_clock}
   end
 end

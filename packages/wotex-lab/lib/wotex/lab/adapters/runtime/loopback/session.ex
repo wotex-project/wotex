@@ -21,7 +21,7 @@ defmodule Wotex.Lab.Adapters.Runtime.Loopback.Session do
       monitor = Process.monitor(host)
 
       receive do
-        {:DOWN, ^monitor, :process, ^host, _reason} -> exit({:shutdown, :host_down})
+        {:DOWN, ^monitor, :process, ^host, _} -> exit({:shutdown, :host_down})
         :close -> :ok
       end
     end)

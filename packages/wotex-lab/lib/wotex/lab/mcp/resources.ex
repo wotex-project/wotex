@@ -27,7 +27,7 @@ defmodule Wotex.Lab.MCP.Resources do
     "docs/provenance/standards-and-dependencies.md" =>
       Path.join(@root, "docs/provenance/standards-and-dependencies.md")
   }
-  for {_relative, absolute} <- @documents, do: @external_resource(absolute)
+  for {_, absolute} <- @documents, do: @external_resource(absolute)
   @embedded Map.new(@documents, fn {relative, absolute} -> {relative, File.read!(absolute)} end)
 
   @static [
@@ -55,7 +55,7 @@ defmodule Wotex.Lab.MCP.Resources do
   @spec list(map()) :: [map()]
   def list(state) do
     static =
-      Enum.map(@static, fn {uri, name, mime, _source} ->
+      Enum.map(@static, fn {uri, name, mime, _} ->
         %{"uri" => uri, "name" => name, "mimeType" => mime}
       end)
 
@@ -66,7 +66,7 @@ defmodule Wotex.Lab.MCP.Resources do
   @spec read(map(), String.t()) :: {:ok, [map()]} | {:error, integer(), String.t()}
   def read(state, uri) do
     case List.keyfind(@static, uri, 0) do
-      {^uri, _name, mime, source} -> content(uri, mime, source)
+      {^uri, _, mime, source} -> content(uri, mime, source)
       nil -> thing(state, uri)
     end
   end
@@ -94,8 +94,8 @@ defmodule Wotex.Lab.MCP.Resources do
          {:ok, text} <- File.read(path) do
       {:ok, [%{"uri" => uri, "mimeType" => mime, "text" => text}]}
     else
-      {:ok, _stat} -> {:error, -32_000, "resource exceeds the size ceiling"}
-      {:error, _reason} -> {:error, -32_002, "resource is not available in this package"}
+      {:ok, _} -> {:error, -32_000, "resource exceeds the size ceiling"}
+      {:error, _} -> {:error, -32_002, "resource is not available in this package"}
     end
   end
 
@@ -104,7 +104,7 @@ defmodule Wotex.Lab.MCP.Resources do
   defp things(%{instance: instance}) when is_pid(instance) do
     instance
     |> reference_things()
-    |> Enum.map(fn {id, _pid} ->
+    |> Enum.map(fn {id, _} ->
       %{
         "uri" => "wotex-lab://things/" <> id,
         "name" => "Simulated Thing " <> id,
@@ -113,7 +113,7 @@ defmodule Wotex.Lab.MCP.Resources do
     end)
   end
 
-  defp things(_state), do: []
+  defp things(_), do: []
 
   defp thing(state, "wotex-lab://things/" <> id) do
     case fetch_thing(state, id) do
@@ -138,7 +138,7 @@ defmodule Wotex.Lab.MCP.Resources do
     end
   end
 
-  defp thing(_state, _uri), do: {:error, -32_002, "unknown resource"}
+  defp thing(_, _), do: {:error, -32_002, "unknown resource"}
 
   @doc false
   @spec fetch_thing(map(), String.t()) :: {:ok, pid()} | :error
@@ -149,24 +149,24 @@ defmodule Wotex.Lab.MCP.Resources do
     end
   end
 
-  def fetch_thing(_state, _id), do: :error
+  def fetch_thing(_, _), do: :error
 
   @doc false
   @spec reference_things(pid()) :: [{String.t(), pid()}]
   def reference_things(instance) do
     case List.keyfind(Supervisor.which_children(instance), :things, 0) do
-      {:things, things, :supervisor, _modules} ->
+      {:things, things, :supervisor, _} ->
         things
         |> DynamicSupervisor.which_children()
         |> Enum.flat_map(&reference_thing/1)
 
-      _unavailable ->
+      _ ->
         []
     end
   end
 
-  defp reference_thing({_id, pid, :worker, [Thing]}) when is_pid(pid),
+  defp reference_thing({_, pid, :worker, [Thing]}) when is_pid(pid),
     do: [{pid |> Thing.thing_description() |> ThingDescription.id(), pid}]
 
-  defp reference_thing(_child), do: []
+  defp reference_thing(_), do: []
 end

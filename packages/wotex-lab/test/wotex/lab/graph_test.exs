@@ -307,7 +307,7 @@ defmodule Wotex.Lab.GraphTest do
   test "duplicate, unresolved, cyclic and undeclared descriptors are rejected", %{
     catalogue: catalogue
   } do
-    [first | _rest] = scenarios = Descriptors.scenarios()
+    [first | _] = scenarios = Descriptors.scenarios()
     [adapter | adapters] = Descriptors.adapters()
 
     assert {:error, %Error{code: :duplicate_id, details: %{id: "scenario:parse-td"}}} =
@@ -383,7 +383,7 @@ defmodule Wotex.Lab.GraphTest do
       refute File.exists?(Path.join(root, excluded))
     end
 
-    assert {:ok, _graph} = generate(catalogue, root: root)
+    assert {:ok, _} = generate(catalogue, root: root)
 
     thermal = Path.join(root, "priv/fixtures/thermal/thing-description.json")
     File.write!(thermal, File.read!(thermal) <> "\n")
@@ -443,7 +443,7 @@ defmodule Wotex.Lab.GraphTest do
                "@prefix wl: <https://wotex.io/lab/graph#> .\n\n<urn:a> a ex:Thing .\n"
              )
 
-    assert {:error, {:unterminated, _statement}} =
+    assert {:error, {:unterminated, _}} =
              Render.check_turtle(
                "@prefix wl: <https://wotex.io/lab/graph#> .\n\n<urn:a> a wl:Thing\n"
              )

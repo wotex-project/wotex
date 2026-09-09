@@ -40,18 +40,18 @@ defmodule Wotex.Lab.SupervisorTest do
              Lab.start_child(lab, :things, {Agent, fn -> :state end})
 
     assert Process.alive?(session)
-    assert {:ok, _role} = Supervisor.restart_child(lab, :things)
-    assert {:ok, _child} = Lab.start_child(lab, :things, {Agent, fn -> :new_state end})
+    assert {:ok, _} = Supervisor.restart_child(lab, :things)
+    assert {:ok, _} = Lab.start_child(lab, :things, {Agent, fn -> :new_state end})
   end
 
   test "killing one role restarts only that role while the sibling keeps its children" do
     lab = start_supervised!({Lab, id: "kill-isolation"})
     assert {:ok, session} = Lab.start_child(lab, :sessions, {Agent, fn -> :connected end})
 
-    {:things, things, :supervisor, _modules} =
+    {:things, things, :supervisor, _} =
       List.keyfind(Supervisor.which_children(lab), :things, 0)
 
-    {:sessions, sessions, :supervisor, _modules} =
+    {:sessions, sessions, :supervisor, _} =
       List.keyfind(Supervisor.which_children(lab), :sessions, 0)
 
     monitor = Process.monitor(things)
@@ -62,7 +62,7 @@ defmodule Wotex.Lab.SupervisorTest do
     assert Process.alive?(session)
     assert Agent.get(session, & &1) == :connected
 
-    assert {:ok, _child} = wait_for_role(lab, :things)
+    assert {:ok, _} = wait_for_role(lab, :things)
   end
 
   test "child failure follows caller restart semantics" do
@@ -82,7 +82,7 @@ defmodule Wotex.Lab.SupervisorTest do
 
     assert_receive {:started, ^child}
     monitor = Process.monitor(child)
-    Agent.update(child, fn _state -> :changed end)
+    Agent.update(child, fn _ -> :changed end)
     Process.exit(child, :kill)
     assert_receive {:DOWN, ^monitor, :process, ^child, :killed}
     assert_receive {:started, replacement}

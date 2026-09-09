@@ -103,7 +103,7 @@ defmodule Wotex.Lab.LoopbackTest do
       {StaticRef,
        %{
          references: %{"bearer_sc" => "vault://room/token"},
-         lookup: fn _reference -> {:ok, "wrong"} end
+         lookup: fn _ -> {:ok, "wrong"} end
        }}
 
     {:ok, consumed} =
@@ -140,7 +140,7 @@ defmodule Wotex.Lab.LoopbackTest do
              ConsumedThing.write_property(nosec, "target", 22.0, context)
 
     missing =
-      {StaticRef, %{references: %{}, lookup: fn _reference -> {:ok, @secret} end}}
+      {StaticRef, %{references: %{}, lookup: fn _ -> {:ok, @secret} end}}
 
     {:ok, unresolved} =
       ConsumedThing.new(td,
@@ -328,7 +328,7 @@ defmodule Wotex.Lab.LoopbackTest do
   end
 
   @doc false
-  def forward_telemetry(event, _measurements, metadata, parent),
+  def forward_telemetry(event, _, metadata, parent),
     do: send(parent, {:telemetry, event, metadata})
 
   defp fixture do

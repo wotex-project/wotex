@@ -103,7 +103,7 @@ defmodule Wotex.Lab.SmartRoom.Policy do
   end
 
   @impl GenServer
-  def handle_call({:decide, proposal, context}, _from, state) do
+  def handle_call({:decide, proposal, context}, _, state) do
     fields = ActionProposal.to_map(proposal)
     limits = Map.get(state.limits, fields.action_name)
 
@@ -125,7 +125,7 @@ defmodule Wotex.Lab.SmartRoom.Policy do
     end
   end
 
-  def handle_call({:dispatch, decision_id, current, dispatcher}, _from, state) do
+  def handle_call({:dispatch, decision_id, current, dispatcher}, _, state) do
     case Map.fetch(state.decisions, decision_id) do
       :error ->
         refuse(state, :unknown_decision, decision_id)
@@ -149,17 +149,17 @@ defmodule Wotex.Lab.SmartRoom.Policy do
     end
   end
 
-  def handle_call({:revoke, decision_id}, _from, state) do
+  def handle_call({:revoke, decision_id}, _, state) do
     case Map.fetch(state.decisions, decision_id) do
       {:ok, %{status: :granted} = decision} ->
         {:reply, :ok, put_in(state, [:decisions, decision_id], %{decision | status: :revoked})}
 
-      _other ->
+      _ ->
         refuse(state, :not_revocable, %{decision_id: decision_id})
     end
   end
 
-  def handle_call(:records, _from, state) do
+  def handle_call(:records, _, state) do
     {:reply,
      %{
        decisions: state.order |> Enum.reverse() |> Enum.map(&state.decisions[&1]),
@@ -207,7 +207,7 @@ defmodule Wotex.Lab.SmartRoom.Policy do
   end
 
   defp outstanding?(state, thing_id, action_name) do
-    Enum.any?(state.decisions, fn {_id, decision} ->
+    Enum.any?(state.decisions, fn {_, decision} ->
       decision.status == :granted and decision.thing_id == thing_id and
         decision.action_name == action_name
     end)
@@ -216,7 +216,7 @@ defmodule Wotex.Lab.SmartRoom.Policy do
   defp inside?(input, %{min: min, max: max}) when is_number(input),
     do: input >= min and input <= max
 
-  defp inside?(_input, _limits), do: false
+  defp inside?(_, _), do: false
 
   defp refuse(state, reason, subject) do
     refusal = %{reason: reason, subject: subject}

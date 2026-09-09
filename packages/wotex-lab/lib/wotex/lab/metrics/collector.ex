@@ -93,7 +93,7 @@ defmodule Wotex.Lab.Metrics.Collector do
 
     :ok
   catch
-    _kind, _reason ->
+    _, _ ->
       invalid(config.table)
       :ok
   end
@@ -130,7 +130,7 @@ defmodule Wotex.Lab.Metrics.Collector do
   end
 
   @impl GenServer
-  def handle_call(:snapshot, _from, state) do
+  def handle_call(:snapshot, _, state) do
     sequence = state.sequence + 1
 
     fields = %{
@@ -147,14 +147,14 @@ defmodule Wotex.Lab.Metrics.Collector do
     {:reply, Snapshot.new(fields), %{state | sequence: sequence}}
   end
 
-  def handle_call(:reset, _from, state) do
+  def handle_call(:reset, _, state) do
     delete_rows(state.table)
     :ets.insert(state.table, {:series_count, 0})
     :ets.update_counter(state.table, :resets, 1)
     {:reply, :ok, %{state | generation: state.generation + 1}}
   end
 
-  def handle_call(:stats, _from, state) do
+  def handle_call(:stats, _, state) do
     stats =
       state.table
       |> counters()
@@ -170,7 +170,7 @@ defmodule Wotex.Lab.Metrics.Collector do
   end
 
   @impl GenServer
-  def terminate(_reason, state) do
+  def terminate(_, state) do
     :telemetry.detach(state.handler_id)
     :ok
   end
@@ -180,8 +180,8 @@ defmodule Wotex.Lab.Metrics.Collector do
     |> :ets.tab2list()
     |> Enum.each(fn row ->
       case elem(row, 0) do
-        {kind, _id, _labels} when kind in [:c, :g, :h] -> :ets.delete(table, elem(row, 0))
-        _counter -> :ok
+        {kind, _, _} when kind in [:c, :g, :h] -> :ets.delete(table, elem(row, 0))
+        _ -> :ok
       end
     end)
   end
@@ -224,7 +224,7 @@ defmodule Wotex.Lab.Metrics.Collector do
     do: Enum.map(buckets, &round(&1 * @nanoseconds_per_second))
 
   defp thresholds(%{type: :histogram, buckets: buckets}), do: buckets
-  defp thresholds(_metric), do: nil
+  defp thresholds(_), do: nil
 
   defp record(table, metric, event, measurements, metadata, context) do
     with true <- selected?(metric, event, metadata, context),
@@ -253,7 +253,7 @@ defmodule Wotex.Lab.Metrics.Collector do
     end)
   end
 
-  defp value(_table, %{measurement: nil}, _measurements), do: {:ok, 1}
+  defp value(_, %{measurement: nil}, _), do: {:ok, 1}
 
   defp value(table, %{measurement: :duration}, measurements) do
     case Map.get(measurements, :duration) do
@@ -267,7 +267,7 @@ defmodule Wotex.Lab.Metrics.Collector do
       nil ->
         :skip
 
-      _other ->
+      _ ->
         invalid(table)
     end
   end
@@ -277,7 +277,7 @@ defmodule Wotex.Lab.Metrics.Collector do
       nil -> :skip
       value when is_number(value) and metric.type == :gauge -> {:ok, value}
       value when is_integer(value) and value >= 0 -> {:ok, value}
-      _other -> invalid(table)
+      _ -> invalid(table)
     end
   end
 
@@ -286,7 +286,7 @@ defmodule Wotex.Lab.Metrics.Collector do
   defp kind(:histogram), do: :h
 
   defp cost(%{type: :histogram, buckets: buckets}), do: length(buckets) + 3
-  defp cost(_metric), do: 1
+  defp cost(_), do: 1
 
   defp reserve(table, metric, key) do
     cost = cost(metric)
@@ -309,7 +309,7 @@ defmodule Wotex.Lab.Metrics.Collector do
   defp initial(%{type: :histogram, buckets: buckets}, key),
     do: List.to_tuple([key | List.duplicate(0, length(buckets) + 3)])
 
-  defp initial(_metric, key), do: {key, 0}
+  defp initial(_, key), do: {key, 0}
 
   defp update(table, %{type: :counter}, key, value),
     do: :ets.update_counter(table, key, {2, value})
@@ -328,7 +328,7 @@ defmodule Wotex.Lab.Metrics.Collector do
     :ets.update_counter(table, :invalid_samples, 1)
     :skip
   catch
-    _kind, _reason -> :ok
+    _, _ -> :ok
   end
 
   defp series(table) do
@@ -341,7 +341,7 @@ defmodule Wotex.Lab.Metrics.Collector do
         {:c, id, labels} -> [one(metrics[id], labels, %{value: elem(row, 1)})]
         {:g, id, labels} -> [one(metrics[id], labels, %{value: Snapshot.number(elem(row, 1))})]
         {:h, id, labels} -> [one(metrics[id], labels, histogram(metrics[id], row))]
-        _counter -> []
+        _ -> []
       end
     end)
   end
@@ -363,7 +363,7 @@ defmodule Wotex.Lab.Metrics.Collector do
   end
 
   defp sum(:seconds, nanoseconds), do: Snapshot.number(nanoseconds / @nanoseconds_per_second)
-  defp sum(_unit, value), do: value
+  defp sum(_, value), do: value
 
   defp counters(table), do: Map.new(@counters, &{&1, lookup(table, &1)})
 

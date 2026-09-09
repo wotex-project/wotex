@@ -61,7 +61,7 @@ defmodule Wotex.Lab.SourceCohortTest do
     assert Enum.all?(cohort["packages"], &(&1["files"] == 1 and &1["sha256"] == expected))
     record = Path.join(provenance, "source-cohort.json")
     File.write!(record, json)
-    assert {_output, 0} = System.cmd(executable, [script], stderr_to_stdout: true)
+    assert {_, 0} = System.cmd(executable, [script], stderr_to_stdout: true)
 
     source = Path.join(workspace, "wotex/lib/value.ex")
     File.write!(source, value <> "changed\n")

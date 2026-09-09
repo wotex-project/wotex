@@ -57,7 +57,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
     def attach(channel, endpoint, pid, opts) when is_pid(pid),
       do: GenServer.call(channel, {:attach, endpoint, pid, opts})
 
-    def attach(_channel, _endpoint, _pid, _opts),
+    def attach(_, _, _, _),
       do: {:error, error(:invalid_endpoint, "endpoint attachment is invalid")}
 
     @doc "Sends a continuum value from one endpoint to another."
@@ -106,7 +106,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
     end
 
     @impl GenServer
-    def handle_call({:attach, endpoint, pid, opts}, _from, state) do
+    def handle_call({:attach, endpoint, pid, opts}, _, state) do
       source? = if Keyword.keyword?(opts), do: Keyword.get(opts, :source, false), else: :invalid
 
       cond do
@@ -133,7 +133,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
       end
     end
 
-    def handle_call({:send, from, to, value}, {caller, _tag}, state) do
+    def handle_call({:send, from, to, value}, {caller, _}, state) do
       with :ok <- endpoint_names(from, to),
            :ok <- owns_source(state, from, caller),
            :ok <- capacity(state),
@@ -181,21 +181,21 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
       end
     end
 
-    def handle_call({:ack, delivery_id}, {caller, _tag}, state) do
+    def handle_call({:ack, delivery_id}, {caller, _}, state) do
       acknowledge(state, delivery_id, {:owner, caller})
     end
 
-    def handle_call({:ack, delivery_id, receipt_token}, {caller, _tag}, state) do
+    def handle_call({:ack, delivery_id, receipt_token}, {caller, _}, state) do
       acknowledge(state, delivery_id, {:token, caller, receipt_token})
     end
 
-    def handle_call(:deliveries, _from, state) do
+    def handle_call(:deliveries, _, state) do
       {:reply, state.order |> Enum.reverse() |> Enum.map(&delivery(state.items[&1])), state}
     end
 
-    def handle_call(:disconnect, _from, state), do: {:reply, :ok, %{state | connected?: false}}
+    def handle_call(:disconnect, _, state), do: {:reply, :ok, %{state | connected?: false}}
 
-    def handle_call(:reconnect, _from, state) do
+    def handle_call(:reconnect, _, state) do
       replay =
         state.order
         |> Enum.reverse()
@@ -236,10 +236,10 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
       {:reply, :ok, put_in(state, [:items, delivery_id], item)}
     end
 
-    defp acknowledge_item(state, _delivery_id, %{status: :acknowledged}),
+    defp acknowledge_item(state, _, %{status: :acknowledged}),
       do: {:reply, :ok, state}
 
-    defp acknowledge_item(state, _delivery_id, _item),
+    defp acknowledge_item(state, _, _),
       do:
         {:reply,
          {:error, Error.new(:unknown_delivery, :channel, "delivery cannot be acknowledged")}, state}
@@ -251,9 +251,9 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
       do: get_in(state, [:endpoints, item.to, :pid]) == caller and item.receipt_token == token
 
     @impl GenServer
-    def handle_info({:DOWN, monitor, :process, _pid, _reason}, state) do
+    def handle_info({:DOWN, monitor, :process, _, _}, state) do
       case Map.pop(state.monitors, monitor) do
-        {nil, _monitors} ->
+        {nil, _} ->
           {:noreply, state}
 
         {endpoint, monitors} ->
@@ -262,7 +262,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
       end
     end
 
-    def handle_info(_message, state), do: {:noreply, state}
+    def handle_info(_, state), do: {:noreply, state}
 
     defp transmit(state, delivery_id) do
       item = state.items[delivery_id]
@@ -283,7 +283,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
     end
 
     # Faults apply to the first attempt only; a replay after reconnect is clean.
-    defp fault?(_state, %{attempt: attempt}, _kind) when attempt != 1, do: false
+    defp fault?(_, %{attempt: attempt}, _) when attempt != 1, do: false
     defp fault?(state, item, :drop), do: MapSet.member?(state.faults.drop, item.sequence)
     defp fault?(state, item, :duplicate), do: MapSet.member?(state.faults.duplicate, item.sequence)
     defp fault?(state, item, :hold), do: Map.has_key?(state.faults.hold, item.sequence)
@@ -298,13 +298,13 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
 
     defp dispatch(state, item) do
       copies = if fault?(state, item, :duplicate), do: 2, else: 1
-      Enum.each(1..copies, fn _copy -> deliver(state, item) end)
+      Enum.each(1..copies, fn _ -> deliver(state, item) end)
       Telemetry.event(:continuum, :dispatch, %{deliveries: copies}, %{outcome: :ok})
       put_in(state, [:items, item.id], %{item | status: :in_flight})
     end
 
     defp release_holds(state, sequence) do
-      due = state.held |> Enum.filter(fn {held, _id} -> state.faults.hold[held] <= sequence end)
+      due = state.held |> Enum.filter(fn {held, _} -> state.faults.hold[held] <= sequence end)
 
       Enum.reduce(due, state, fn {held, id}, acc ->
         acc = %{acc | held: Map.delete(acc.held, held)}
@@ -339,7 +339,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
     defp owns_source(state, endpoint, caller) do
       case state.endpoints do
         %{^endpoint => %{pid: ^caller}} -> :ok
-        _other -> {:error, error(:source_not_attached, "caller does not own the source endpoint")}
+        _ -> {:error, error(:source_not_attached, "caller does not own the source endpoint")}
       end
     end
 
@@ -350,7 +350,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
 
     defp capacity(state) do
       open =
-        Enum.count(state.items, fn {_id, item} ->
+        Enum.count(state.items, fn {_, item} ->
           item.status in [:pending, :in_flight, :delivered]
         end)
 
@@ -368,7 +368,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) do
         {:ok, wire} ->
           {:ok, wire}
 
-        {:error, _error} ->
+        {:error, _} ->
           {:error,
            Error.new(
              :invalid_continuum_value,

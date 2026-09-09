@@ -86,7 +86,7 @@ defmodule Wotex.Lab.WindowAnomalyTest do
   test "rejected quality rows are filled with mask zero and their quality code" do
     assert {:ok, result} = WindowAnomaly.run(seed: 7, glitches: [30])
 
-    {{_values}, {masks}, quality} =
+    {{_}, {masks}, quality} =
       Nx.Defn.jit_apply(&Function.identity/1, [result.encoded], compiler: Nx.Defn.Evaluator)
 
     assert Nx.to_flat_list(masks) == [1, 1, 1, 1, 1, 1, 0, 1]
@@ -127,7 +127,7 @@ defmodule Wotex.Lab.WindowAnomalyTest do
         unit: "Cel"
       )
 
-    assert {:ok, [row, _next]} = Window.resample([stranger], schema, window)
+    assert {:ok, [row, _]} = Window.resample([stranger], schema, window)
     assert row.observations["temperature"] == nil
 
     {:ok, kelvin} =

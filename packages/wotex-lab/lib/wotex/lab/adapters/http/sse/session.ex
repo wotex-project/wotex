@@ -75,7 +75,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
           send(parent, {:sse_handshake, self(), {:error, :timeout}})
           exit(:normal)
 
-        {:error, _exception} ->
+        {:error, _} ->
           send(parent, {:sse_handshake, self(), {:error, :connect_failed}})
           exit(:normal)
       end
@@ -112,12 +112,12 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
       end
     end
 
-    defp handle_chunks([:done | _rest], response, _owner, _parser) do
+    defp handle_chunks([:done | _], response, _, _) do
       _ = Req.cancel_async_response(response)
       exit({:shutdown, :stream_ended})
     end
 
-    defp handle_chunks([_other | rest], response, owner, parser),
+    defp handle_chunks([_ | rest], response, owner, parser),
       do: handle_chunks(rest, response, owner, parser)
 
     defp flatten(headers) when is_map(headers) do

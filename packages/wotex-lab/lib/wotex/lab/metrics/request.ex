@@ -47,16 +47,16 @@ defmodule Wotex.Lab.Metrics.Request do
         quantile: request["quantile"]
       )
     else
-      _invalid -> invalid()
+      _ -> invalid()
     end
   end
 
-  def decode(_request, _scope, _limits), do: invalid()
+  def decode(_, _, _), do: invalid()
 
   defp enum(values, key) when is_binary(key) and byte_size(key) <= 128,
     do: Map.fetch(values, key)
 
-  defp enum(_values, _key), do: :error
+  defp enum(_, _), do: :error
 
   defp filters(filters) when is_map(filters) and map_size(filters) <= map_size(@dimensions) do
     Enum.reduce_while(filters, {:ok, %{}}, fn {key, value}, {:ok, result} ->
@@ -64,21 +64,21 @@ defmodule Wotex.Lab.Metrics.Request do
            {:ok, admitted} <- enum(values, value) do
         {:cont, {:ok, Map.put(result, dimension, admitted)}}
       else
-        _invalid -> {:halt, :error}
+        _ -> {:halt, :error}
       end
     end)
   end
 
-  defp filters(_filters), do: :error
+  defp filters(_), do: :error
 
   defp utc(value) when is_binary(value) and byte_size(value) in 20..35 do
     case DateTime.from_iso8601(value) do
       {:ok, datetime, 0} -> {:ok, datetime}
-      _invalid -> :error
+      _ -> :error
     end
   end
 
-  defp utc(_value), do: :error
+  defp utc(_), do: :error
 
   defp invalid,
     do: {:error, Error.new(:invalid_request, :query, "query fields are not admitted")}

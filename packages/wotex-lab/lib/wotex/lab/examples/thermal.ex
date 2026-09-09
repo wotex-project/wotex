@@ -57,17 +57,17 @@ defmodule Wotex.Lab.Examples.Thermal do
 
   defp valid_backend?(backend) when is_atom(backend), do: not is_nil(backend)
   defp valid_backend?({backend, opts}), do: is_atom(backend) and is_list(opts)
-  defp valid_backend?(_backend), do: false
+  defp valid_backend?(_), do: false
 
-  defp backend_module({backend, _opts}), do: backend
+  defp backend_module({backend, _}), do: backend
   defp backend_module(backend), do: backend
 
   defp safe_run(backend, compiler) do
     Nx.with_default_backend(backend, fn -> run_example(compiler) end)
   rescue
-    _error -> {:error, Error.new(:nx_profile_failed, :inference, "Nx profile failed")}
+    _ -> {:error, Error.new(:nx_profile_failed, :inference, "Nx profile failed")}
   catch
-    _kind, _reason -> {:error, Error.new(:nx_profile_failed, :inference, "Nx profile failed")}
+    _, _ -> {:error, Error.new(:nx_profile_failed, :inference, "Nx profile failed")}
   end
 
   defp run_example(compiler) do

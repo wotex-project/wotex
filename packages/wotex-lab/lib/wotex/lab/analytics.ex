@@ -64,7 +64,7 @@ if Code.ensure_loaded?(Explorer.DataFrame) do
          value_dtype: "f64"
        }}
     rescue
-      _error ->
+      _ ->
         {:error,
          Error.new(:analysis_unavailable, :analytics, "native analysis failed; no result admitted")}
     end
@@ -83,7 +83,7 @@ if Code.ensure_loaded?(Explorer.DataFrame) do
         )
 
     defp columns(rows) do
-      Map.new(@dtypes, fn {key, _type} ->
+      Map.new(@dtypes, fn {key, _} ->
         field = Atom.to_string(key)
         {field, Enum.map(rows, & &1[field])}
       end)

@@ -87,7 +87,7 @@ defmodule Wotex.Lab.Metrics.RemoteWrite do
     end
   end
 
-  def encode(_snapshots, _opts),
+  def encode(_, _),
     do: {:error, Error.new(:invalid_batch, :remote_write, "batch must be admitted snapshots")}
 
   @doc "The 64-bit pattern used for a stale marker."
@@ -108,13 +108,13 @@ defmodule Wotex.Lab.Metrics.RemoteWrite do
       else: {:error, Error.new(:invalid_labels, :remote_write, "labels must be unique pairs")}
   end
 
-  defp extra_labels(_labels),
+  defp extra_labels(_),
     do: {:error, Error.new(:invalid_labels, :remote_write, "too many labels")}
 
   defp label?({name, value}) when is_binary(name) and is_binary(value),
     do: Regex.match?(~r/\A[a-zA-Z_][a-zA-Z0-9_]*\z/, name) and byte_size(value) <= 128
 
-  defp label?(_label), do: false
+  defp label?(_), do: false
 
   defp timeseries(snapshots, extra) do
     snapshots

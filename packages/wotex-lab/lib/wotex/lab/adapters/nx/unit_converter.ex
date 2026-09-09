@@ -28,6 +28,6 @@ defmodule Wotex.Lab.Adapters.Nx.UnitConverter do
   def convert(value, "Cel", "K", %Wotex.DataSchema{}, []) when is_number(value),
     do: {:ok, value + 273.15}
 
-  def convert(_value, _source, _target, _schema, _config),
+  def convert(_, _, _, _, _),
     do: {:error, :unsupported_conversion}
 end

@@ -66,7 +66,7 @@ defmodule Wotex.Lab.Runner.Budgets do
     end
   end
 
-  def new(_overrides), do: {:error, Error.new(:invalid_budget, :preflight, "budgets must be a map")}
+  def new(_), do: {:error, Error.new(:invalid_budget, :preflight, "budgets must be a map")}
 
   defp validate(budgets) do
     case Enum.find_value(budgets, &invalid_value/1) do

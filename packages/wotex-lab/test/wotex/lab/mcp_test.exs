@@ -240,13 +240,13 @@ defmodule Wotex.Lab.MCPTest do
     assert reply["error"]["code"] == -32_601
     {reply, state} = call(state, "teleport", %{})
     assert reply["error"]["code"] == -32_601
-    {reply, _state} = call(state, "explain_seam", %{})
+    {reply, _} = call(state, "explain_seam", %{})
     assert reply["error"]["code"] == -32_602
   end
 
   test "an explicit instance exposes its simulated Things to list, read and resource reads" do
     lab = start_supervised!({Lab, id: "mcp-things", max_children: 4})
-    {id, _thing} = start_thing(lab)
+    {id, _} = start_thing(lab)
     state = session(instance: lab)
 
     {reply, _} = Server.handle(state, request(2, "resources/list"))
@@ -265,7 +265,7 @@ defmodule Wotex.Lab.MCPTest do
 
     {reply, state} = call(state, "read_property", %{"thing_id" => id, "property" => "temperature"})
     assert %{"value" => 20.5, "status" => "ok"} = reply["result"]["structuredContent"]
-    {reply, _state} = call(state, "read_property", %{"thing_id" => id, "property" => "missing"})
+    {reply, _} = call(state, "read_property", %{"thing_id" => id, "property" => "missing"})
 
     assert reply["result"]["isError"] and
              reply["result"]["structuredContent"]["error"]["code"] != nil
@@ -318,7 +318,7 @@ defmodule Wotex.Lab.MCPTest do
 
     assert reply["result"]["isError"]
 
-    {reply, _state} =
+    {reply, _} =
       call(
         state,
         "invoke_action",
@@ -367,7 +367,7 @@ defmodule Wotex.Lab.MCPTest do
     {:ok, output} = StringIO.open("")
     final = Stdio.run(state, input, output, max_line_bytes: 256)
     assert final.calls == 1 and final.initialized
-    {_in, written} = StringIO.contents(output)
+    {_, written} = StringIO.contents(output)
     replies = written |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!/1)
 
     assert [

@@ -78,7 +78,7 @@ defmodule Wotex.Lab.FormalSearchTest do
              {"search [1] in SAFE-THERMAL : " <> _, _}
            ] = commands.()
 
-    assert Enum.all?(commands.(), fn {_command, remaining} ->
+    assert Enum.all?(commands.(), fn {_, remaining} ->
              remaining > 0 and remaining <= 5_000
            end)
 
@@ -183,7 +183,7 @@ defmodule Wotex.Lab.FormalSearchTest do
     assert map["counterexample"] == [%{"state" => 0, "rule" => nil, "term" => @init}]
     assert map["explored"] == %{"states" => 6, "rewrites" => 15}
     assert map["error"] == %{"code" => "x", "details" => %{"a" => "b"}}
-    assert {:ok, _bytes} = Wotex.JSON.encode(map)
+    assert {:ok, _} = Wotex.JSON.encode(map)
   end
 
   describe "replay rules" do

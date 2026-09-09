@@ -36,7 +36,7 @@ defmodule Wotex.Lab.Runner do
     end
   end
 
-  def preflight(_scenario, _definition, _host),
+  def preflight(_, _, _),
     do:
       {:error,
        Error.new(:invalid_run, :preflight, "preflight needs a scenario, a definition and a host")}
@@ -105,7 +105,7 @@ defmodule Wotex.Lab.Runner do
     end
   end
 
-  def replay(_recording, _definition, _host, _timeout),
+  def replay(_, _, _, _),
     do: {:error, Error.new(:invalid_recording, :preflight, "replay input is invalid")}
 
   defp agree(descriptor, definition) do

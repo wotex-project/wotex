@@ -19,8 +19,8 @@ defmodule Wotex.Lab.Test.NativeContainment do
 
     Enum.each(commands, fn args ->
       case System.cmd("cargo", args, cd: root, stderr_to_stdout: true) do
-        {_output, 0} -> :ok
-        {output, _status} -> raise "native containment build/test failed:\n#{output}"
+        {_, 0} -> :ok
+        {output, _} -> raise "native containment build/test failed:\n#{output}"
       end
     end)
 

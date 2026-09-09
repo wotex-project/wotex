@@ -29,8 +29,8 @@ defmodule Wotex.Lab.MetricsCollectorTest do
     {:ok, collector} =
       Lab.start_child(lab, :sessions, {Collector, id: :metrics, backend_class: :binary})
 
-    assert {:ok, _result} = Thermal.run()
-    assert {:ok, _result} = loopback_request(lab)
+    assert {:ok, _} = Thermal.run()
+    assert {:ok, _} = loopback_request(lab)
     assert {:ok, %Snapshot{} = snapshot} = Collector.snapshot(collector)
 
     assert snapshot.source == :collector and snapshot.sequence == 1 and snapshot.instance_slot == 0
@@ -314,7 +314,7 @@ defmodule Wotex.Lab.MetricsCollectorTest do
       sample: %{buckets: [{1, 1}, {:infinity, 2}], sum: 1.5, count: 2}
     }
 
-    assert {:ok, _snapshot} = Snapshot.new(%{base | series: [histogram]})
+    assert {:ok, _} = Snapshot.new(%{base | series: [histogram]})
 
     for sample <- [
           %{buckets: [{1, 1}], sum: 1, count: 1},

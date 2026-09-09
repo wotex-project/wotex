@@ -131,13 +131,13 @@ defmodule Wotex.Lab.TelemetryTest do
   end
 
   test "the examples and directory emit parse, encode, inference, decode and directory spans" do
-    assert {:ok, _result} = Thermal.run()
+    assert {:ok, _} = Thermal.run()
     assert_receive {:span, [:wotex, :lab, :scenario, :parse, :stop], _, %{outcome: :ok}}
     assert_receive {:span, [:wotex, :lab, :nx, :encode, :stop], _, %{profile: :thermal}}
     assert_receive {:span, [:wotex, :lab, :nx, :inference, :stop], _, %{profile: :thermal}}
     assert_receive {:span, [:wotex, :lab, :nx, :decode, :stop], _, %{profile: :thermal}}
 
-    assert {:ok, _result} = WindowAnomaly.run()
+    assert {:ok, _} = WindowAnomaly.run()
     assert_receive {:span, [:wotex, :lab, :nx, :decode, :stop], _, %{profile: :window_anomaly}}
 
     lab = start_supervised!({Lab, id: "telemetry-directory", max_children: 4})
@@ -215,7 +215,7 @@ defmodule Wotex.Lab.TelemetryTest do
     do: send(test, {:span, event, measurements, metadata})
 
   @doc false
-  def raise_event(_event, _measurements, _metadata, _config), do: raise("exporter down")
+  def raise_event(_, _, _, _), do: raise("exporter down")
 
   defp flush(acc) do
     receive do

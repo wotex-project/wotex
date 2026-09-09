@@ -55,7 +55,7 @@ defmodule Wotex.Lab.Metrics.Exposition do
     end
   end
 
-  def parse(_text, _opts), do: {:error, error(:invalid_exposition, "", "exposition must be text")}
+  def parse(_, _), do: {:error, error(:invalid_exposition, "", "exposition must be text")}
 
   @doc "Renders a snapshot as exposition text."
   @spec render(Snapshot.t()) :: binary()
@@ -107,7 +107,7 @@ defmodule Wotex.Lab.Metrics.Exposition do
 
   defp size(text, max_bytes) when byte_size(text) <= max_bytes, do: :ok
 
-  defp size(_text, max_bytes),
+  defp size(_, max_bytes),
     do: {:error, error(:oversized, "", "exposition exceeds #{max_bytes} bytes")}
 
   defp lines(text) do
@@ -128,17 +128,17 @@ defmodule Wotex.Lab.Metrics.Exposition do
     end
   end
 
-  defp parse_line("", _number), do: :skip
+  defp parse_line("", _), do: :skip
 
   defp parse_line("# TYPE " <> rest, number) do
     case String.split(String.trim(rest), ~r/\s+/) do
       [name, type] when is_map_key(@types, type) -> {:type, name, Map.fetch!(@types, type)}
-      [_name, type] when type in @unsupported -> {:error, line_error(:unsupported_type, number)}
-      _other -> {:error, line_error(:malformed_line, number)}
+      [_, type] when type in @unsupported -> {:error, line_error(:unsupported_type, number)}
+      _ -> {:error, line_error(:malformed_line, number)}
     end
   end
 
-  defp parse_line("#" <> _comment, _number), do: :skip
+  defp parse_line("#" <> _, _), do: :skip
 
   defp parse_line(line, number) do
     with {:ok, name, rest} <- token(line, @name, number),
@@ -160,7 +160,7 @@ defmodule Wotex.Lab.Metrics.Exposition do
   end
 
   defp labels("{" <> rest, number), do: label_pairs(String.trim_leading(rest), [], number)
-  defp labels(rest, _number), do: {:ok, [], rest}
+  defp labels(rest, _), do: {:ok, [], rest}
 
   defp label_pairs("}" <> rest, acc, number) do
     labels = Enum.reverse(acc)
@@ -181,15 +181,15 @@ defmodule Wotex.Lab.Metrics.Exposition do
       case String.trim_leading(rest) do
         "," <> rest -> label_pairs(String.trim_leading(rest), [{name, value} | acc], number)
         "}" <> _ = rest -> label_pairs(rest, [{name, value} | acc], number)
-        _other -> {:error, line_error(:malformed_line, number)}
+        _ -> {:error, line_error(:malformed_line, number)}
       end
     else
       {:error, error} -> {:error, error}
-      _other -> {:error, line_error(:malformed_line, number)}
+      _ -> {:error, line_error(:malformed_line, number)}
     end
   end
 
-  defp quoted("\"" <> rest, acc, _number),
+  defp quoted("\"" <> rest, acc, _),
     do: {:ok, acc |> Enum.reverse() |> IO.iodata_to_binary(), rest}
 
   defp quoted("\\\\" <> rest, acc, number), do: quoted(rest, ["\\" | acc], number)
@@ -199,7 +199,7 @@ defmodule Wotex.Lab.Metrics.Exposition do
   defp quoted(<<char::utf8, rest::binary>>, acc, number),
     do: quoted(rest, [<<char::utf8>> | acc], number)
 
-  defp quoted(_rest, _acc, number), do: {:error, line_error(:malformed_line, number)}
+  defp quoted(_, _, number), do: {:error, line_error(:malformed_line, number)}
 
   defp value(text, number) do
     {token, rest} =
@@ -224,20 +224,20 @@ defmodule Wotex.Lab.Metrics.Exposition do
       {integer, ""} ->
         {:ok, integer}
 
-      _other ->
+      _ ->
         case Float.parse(token) do
           {float, ""} -> {:ok, Snapshot.number(float)}
-          _other -> :error
+          _ -> :error
         end
     end
   end
 
-  defp timestamp("", _number), do: :ok
+  defp timestamp("", _), do: :ok
 
   defp timestamp(token, number) do
     case Integer.parse(token) do
-      {_timestamp, ""} -> :ok
-      _other -> {:error, line_error(:malformed_line, number)}
+      {_, ""} -> :ok
+      _ -> {:error, line_error(:malformed_line, number)}
     end
   end
 
@@ -289,7 +289,7 @@ defmodule Wotex.Lab.Metrics.Exposition do
          true <- is_integer(sample.value) and sample.value >= 0 do
       put_bucket(scalars, histograms, {base, labels}, le, sample)
     else
-      _invalid -> {:halt, {:error, line_error(:malformed_histogram, sample.line)}}
+      _ -> {:halt, {:error, line_error(:malformed_histogram, sample.line)}}
     end
   end
 
@@ -306,7 +306,7 @@ defmodule Wotex.Lab.Metrics.Exposition do
   defp bucket_bound(text) do
     case number(text) do
       {:ok, le} when is_number(le) or le == :infinity -> {:ok, le}
-      _other -> :error
+      _ -> :error
     end
   end
 
@@ -338,7 +338,7 @@ defmodule Wotex.Lab.Metrics.Exposition do
 
   defp histogram_series({name, labels}, entry) do
     buckets =
-      Enum.sort_by(entry.buckets, fn {le, _count} ->
+      Enum.sort_by(entry.buckets, fn {le, _} ->
         if le == :infinity, do: {1, 0}, else: {0, le}
       end)
 

@@ -40,7 +40,7 @@ defmodule Wotex.Lab.Metrics.Snappy do
     end
   end
 
-  def compress(_data, _opts),
+  def compress(_, _),
     do: {:error, Error.new(:invalid_input, :snappy, "input must be binary")}
 
   @doc "Decompresses one Snappy block."
@@ -56,10 +56,10 @@ defmodule Wotex.Lab.Metrics.Snappy do
     end
   end
 
-  def decompress(_block, _opts),
+  def decompress(_, _),
     do: {:error, Error.new(:invalid_input, :snappy, "block must be binary")}
 
-  defp elements(data, position, literal_start, _table, acc)
+  defp elements(data, position, literal_start, _, acc)
        when position + @min_match > byte_size(data) do
     Enum.reverse(flush(acc, data, literal_start, byte_size(data)))
   end
@@ -75,7 +75,7 @@ defmodule Wotex.Lab.Metrics.Snappy do
         table = Map.put(table, key, position)
         elements(data, position + length, position + length, table, acc)
 
-      _missing_or_far ->
+      _ ->
         elements(data, position + 1, literal_start, Map.put(table, key, position), acc)
     end
   end
@@ -89,7 +89,7 @@ defmodule Wotex.Lab.Metrics.Snappy do
     ])
   end
 
-  defp flush(acc, _data, start, stop) when stop <= start, do: acc
+  defp flush(acc, _, start, stop) when stop <= start, do: acc
 
   defp flush(acc, data, start, stop) do
     literal(binary_part(data, start, stop - start), acc)
@@ -122,12 +122,12 @@ defmodule Wotex.Lab.Metrics.Snappy do
   defp read_varint(<<1::1, byte::7, rest::binary>>, shift, acc) when shift < 35,
     do: read_varint(rest, shift + 7, acc ||| byte <<< shift)
 
-  defp read_varint(_block, _shift, _acc),
+  defp read_varint(_, _, _),
     do: {:error, Error.new(:malformed_block, :snappy, "preamble is not a varint")}
 
   defp bounded(length, max) when length <= max, do: :ok
 
-  defp bounded(_length, max),
+  defp bounded(_, max),
     do: {:error, Error.new(:oversized, :snappy, "output exceeds #{max} bytes")}
 
   defp decode(<<>>, output, length) when byte_size(output) == length, do: {:ok, output}
@@ -156,7 +156,7 @@ defmodule Wotex.Lab.Metrics.Snappy do
   defp decode(<<length::6, 3::2, offset::little-32, rest::binary>>, output, total),
     do: take_copy(rest, length + 1, offset, output, total)
 
-  defp decode(_block, _output, _total), do: malformed()
+  defp decode(_, _, _), do: malformed()
 
   defp take_literal(rest, length, output, total)
        when byte_size(rest) >= length and byte_size(output) + length <= total do
@@ -164,14 +164,14 @@ defmodule Wotex.Lab.Metrics.Snappy do
     decode(rest, output <> chunk, total)
   end
 
-  defp take_literal(_rest, _length, _output, _total), do: malformed()
+  defp take_literal(_, _, _, _), do: malformed()
 
   defp take_copy(rest, length, offset, output, total)
        when offset > 0 and offset <= byte_size(output) and byte_size(output) + length <= total do
     decode(rest, output <> copy_bytes(output, offset, length), total)
   end
 
-  defp take_copy(_rest, _length, _offset, _output, _total), do: malformed()
+  defp take_copy(_, _, _, _, _), do: malformed()
 
   # A copy may overlap its own output (offset < length): repeat the window.
   defp copy_bytes(output, offset, length) do

@@ -100,7 +100,7 @@ defmodule Wotex.Lab.Telemetry do
   def metadata(map) when is_map(map) do
     map
     |> Map.take(@metadata_keys)
-    |> Enum.filter(fn {_key, value} -> label?(value) end)
+    |> Enum.filter(fn {_, value} -> label?(value) end)
     |> Map.new()
   end
 
@@ -146,11 +146,11 @@ defmodule Wotex.Lab.Telemetry do
   end
 
   defp outcome({:error, %{code: code}}) when is_atom(code), do: code
-  defp outcome({:error, _reason}), do: :error
+  defp outcome({:error, _}), do: :error
   defp outcome(:ignore), do: :ignored
   defp outcome(tag) when is_atom(tag) and not is_nil(tag), do: tag
   defp outcome(tuple) when is_tuple(tuple) and is_atom(elem(tuple, 0)), do: elem(tuple, 0)
-  defp outcome(_other), do: :ok
+  defp outcome(_), do: :ok
 
   defp measurements(map) do
     map
@@ -160,5 +160,5 @@ defmodule Wotex.Lab.Telemetry do
 
   defp label?(value) when is_atom(value) or is_integer(value), do: true
   defp label?(value) when is_binary(value), do: byte_size(value) <= @max_label_bytes
-  defp label?(_value), do: false
+  defp label?(_), do: false
 end

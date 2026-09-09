@@ -137,7 +137,7 @@ defmodule Wotex.Lab.MetricsRemoteWriteTest do
 
     {:ok, request} = RemoteWrite.encode(snapshot(1, series))
     decoded = RemoteWriteDecoder.decode_body(request.body)
-    values = Map.new(decoded, fn %{labels: labels, samples: [{_t, value}]} -> {labels, value} end)
+    values = Map.new(decoded, fn %{labels: labels, samples: [{_, value}]} -> {labels, value} end)
 
     stale = {:special, RemoteWrite.stale_marker()}
     assert stale == {:special, 0x7FF0000000000002}
@@ -197,7 +197,7 @@ defmodule Wotex.Lab.MetricsRemoteWriteTest do
       <<byte_size(String.duplicate("y", 100)), 60::6, 0::2, 99::8,
         String.duplicate("y", 100)::binary>>
 
-    assert {:ok, "yyyyyyyyyy" <> _rest} = Snappy.decompress(long_literal)
+    assert {:ok, "yyyyyyyyyy" <> _} = Snappy.decompress(long_literal)
 
     assert {:error, %Error{code: :malformed_block}} =
              Snappy.decompress(<<255, 255, 255, 255, 255, 255>>)

@@ -80,7 +80,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
 
     defp finite_response({:ok, %Req.Response{}}), do: {:error, :unexpected_body}
     defp finite_response({:error, %{reason: :timeout}}), do: {:error, :timeout}
-    defp finite_response({:error, _exception}), do: {:error, :transport_failed}
+    defp finite_response({:error, _}), do: {:error, :transport_failed}
 
     @impl Wotex.Binding.HTTP.Client
     def subscribe(%Request{} = request, credential, owner, config) when is_pid(owner) do
@@ -121,8 +121,8 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
     end
 
     @impl Wotex.Binding.HTTP.Client
-    def close(session, _config) when is_pid(session), do: Session.close(session)
-    def close(_handle, _config), do: {:error, :invalid_handle}
+    def close(session, _) when is_pid(session), do: Session.close(session)
+    def close(_, _), do: {:error, :invalid_handle}
 
     defp collect({:data, data}, {req, %Req.Response{body: body} = resp}, limit)
          when is_binary(body) do
@@ -133,7 +133,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
       end
     end
 
-    defp collect({:data, _data}, acc, _limit), do: {:halt, acc}
+    defp collect({:data, _}, acc, _), do: {:halt, acc}
 
     defp method(name) do
       case Map.fetch(@methods, name) do
@@ -151,7 +151,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
       do: {:ok, [{"authorization", "Basic " <> Base.encode64(user <> ":" <> password)} | headers]}
 
     defp authorize(headers, credentials) when is_map(credentials) do
-      Enum.reduce_while(credentials, {:ok, headers}, fn {_name, credential}, {:ok, acc} ->
+      Enum.reduce_while(credentials, {:ok, headers}, fn {_, credential}, {:ok, acc} ->
         case authorize(acc, credential) do
           {:ok, next} -> {:cont, {:ok, next}}
           error -> {:halt, error}
@@ -159,7 +159,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
       end)
     end
 
-    defp authorize(_headers, _credential), do: {:error, :unsupported_credential}
+    defp authorize(_, _), do: {:error, :unsupported_credential}
 
     defp budget(request, config) do
       case Request.deadline(request) do
@@ -176,7 +176,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
 
     defp remaining(0), do: {:error, :timeout}
     defp remaining(ms) when is_integer(ms), do: {:ok, ms}
-    defp remaining({:error, _reason}), do: {:error, :timeout}
+    defp remaining({:error, _}), do: {:error, :timeout}
 
     defp connection(%{finch: nil}, destination, budget) do
       options =
@@ -189,7 +189,7 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
       [connect_options: options]
     end
 
-    defp connection(%{finch: name}, _destination, _budget), do: [finch: name]
+    defp connection(%{finch: name}, _, _), do: [finch: name]
 
     defp flatten(headers) when is_map(headers),
       do: Enum.flat_map(headers, fn {name, values} -> Enum.map(List.wrap(values), &{name, &1}) end)
@@ -215,10 +215,10 @@ if Code.ensure_loaded?(Wotex.Binding.HTTP.Client) do
         do: {:ok, normalized},
         else: {:error, :invalid_config}
     rescue
-      _error -> {:error, :invalid_config}
+      _ -> {:error, :invalid_config}
     end
 
-    defp normalize_config(_config), do: {:error, :invalid_config}
+    defp normalize_config(_), do: {:error, :invalid_config}
 
     defp valid_config?(config) do
       Enum.all?([

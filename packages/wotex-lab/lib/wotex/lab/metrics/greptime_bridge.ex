@@ -115,12 +115,12 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
   end
 
   @impl GenServer
-  def handle_call(:scrape, _from, state) do
+  def handle_call(:scrape, _, state) do
     {result, state} = scrape(state)
     {:reply, result, state}
   end
 
-  def handle_call(:stats, _from, state) do
+  def handle_call(:stats, _, state) do
     stats =
       Map.merge(state.counters, %{
         queue_depth: state.depth,
@@ -135,7 +135,7 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
 
   @impl GenServer
   def handle_info(:tick, state) do
-    {_result, state} = scrape(state)
+    {_, state} = scrape(state)
     {:noreply, schedule(state)}
   end
 
@@ -154,17 +154,17 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
     {:noreply, state |> Map.put(:in_flight, nil) |> settle(flight.item, {:error, error})}
   end
 
-  def handle_info({:DOWN, ref, :process, _pid, _reason}, %{in_flight: %{ref: ref} = flight} = state) do
+  def handle_info({:DOWN, ref, :process, _, _}, %{in_flight: %{ref: ref} = flight} = state) do
     Process.cancel_timer(flight.timer)
     error = Error.new(:export_crashed, :export, "export process exited", class: :unavailable)
     {:noreply, state |> Map.put(:in_flight, nil) |> settle(flight.item, {:error, error})}
   end
 
-  def handle_info(_message, state), do: {:noreply, state}
+  def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
-  def terminate(_reason, %{in_flight: %{pid: pid}}), do: Process.exit(pid, :kill)
-  def terminate(_reason, _state), do: :ok
+  def terminate(_, %{in_flight: %{pid: pid}}), do: Process.exit(pid, :kill)
+  def terminate(_, _), do: :ok
 
   defp validate(opts) do
     with :ok <- Options.validate(opts, @options),
@@ -186,8 +186,8 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
   end
 
   defp credential?(nil), do: true
-  defp credential?(%{reference: _reference, lookup: lookup}), do: is_function(lookup, 1)
-  defp credential?(_credential), do: false
+  defp credential?(%{reference: _, lookup: lookup}), do: is_function(lookup, 1)
+  defp credential?(_), do: false
 
   defp interval?(nil), do: true
   defp interval?(interval), do: is_integer(interval) and interval >= 100
@@ -235,7 +235,7 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
         {:error, %Error{} = error} ->
           {:error, error}
 
-        _other ->
+        _ ->
           {:error, Error.new(:scrape_failed, :export, "scrape returned nothing admissible")}
       end
 
@@ -245,18 +245,18 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
     end
   end
 
-  defp ordered_capture(nil, _snapshot), do: :ok
+  defp ordered_capture(nil, _), do: :ok
 
   defp ordered_capture(previous, snapshot) when snapshot.wall_time_ms > previous.wall_time_ms,
     do: :ok
 
-  defp ordered_capture(_previous, _snapshot),
+  defp ordered_capture(_, _),
     do: {:error, Error.new(:unordered_snapshot, :export, "capture time must strictly advance")}
 
   defp safe_scrape(scrape) do
     scrape.()
   catch
-    _kind, _reason -> {:error, Error.new(:scrape_failed, :export, "scrape function failed")}
+    _, _ -> {:error, Error.new(:scrape_failed, :export, "scrape function failed")}
   end
 
   defp with_stale_markers(nil, snapshot), do: snapshot
@@ -269,26 +269,26 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
       markers ->
         case Snapshot.new(%{Map.from_struct(snapshot) | series: snapshot.series ++ markers}) do
           {:ok, marked} -> marked
-          {:error, _error} -> snapshot
+          {:error, _} -> snapshot
         end
     end
   end
 
-  defp record(%{history: nil} = state, _snapshot), do: state
+  defp record(%{history: nil} = state, _), do: state
 
   defp record(state, snapshot) do
     case History.put(state.history, snapshot) do
-      {:ok, _admission} -> state
+      {:ok, _} -> state
       {:error, error} -> state |> count(:history_failures) |> Map.put(:last_error, redact(error))
     end
   catch
-    :exit, _reason -> count(state, :history_failures)
+    :exit, _ -> count(state, :history_failures)
   end
 
   defp enqueue(state, snapshot) do
     state =
       if state.depth >= state.config.queue_limit do
-        {{:value, _oldest}, queue} = :queue.out(state.queue)
+        {{:value, _}, queue} = :queue.out(state.queue)
         Telemetry.event(:metrics, :export, %{dropped: 1}, %{profile: state.config.profile})
         %{state | queue: queue, depth: state.depth - 1} |> count(:dropped_overload)
       else
@@ -344,7 +344,7 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
   defp resolve(%{reference: reference, lookup: lookup}) do
     case lookup.(reference) do
       {:ok, credential} -> {:ok, credential}
-      _other -> {:error, Error.new(:unresolved_reference, :export, "export credential unresolved")}
+      _ -> {:error, Error.new(:unresolved_reference, :export, "export credential unresolved")}
     end
   end
 
@@ -352,7 +352,7 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
     case sink.(request, credential) do
       {:ok, %{status: status} = response} when is_integer(status) -> {:ok, response}
       {:error, %Error{} = error} -> {:error, error}
-      _other -> {:error, Error.new(:invalid_sink_result, :export, "sink returned an unknown shape")}
+      _ -> {:error, Error.new(:invalid_sink_result, :export, "sink returned an unknown shape")}
     end
   end
 
@@ -422,11 +422,11 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
   end
 
   defp retry_after(headers) do
-    with {_name, value} <- List.keyfind(headers, "retry-after", 0),
+    with {_, value} <- List.keyfind(headers, "retry-after", 0),
          {seconds, ""} when seconds >= 0 <- Integer.parse(String.trim(value)) do
       seconds
     else
-      _absent -> nil
+      _ -> nil
     end
   end
 

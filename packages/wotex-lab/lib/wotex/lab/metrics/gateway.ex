@@ -64,7 +64,7 @@ defmodule Wotex.Lab.Metrics.Gateway do
   def cancel(gateway, reference) when is_reference(reference),
     do: call(gateway, {:cancel, reference})
 
-  def cancel(_gateway, _reference), do: failure(:invalid_request)
+  def cancel(_, _), do: failure(:invalid_request)
 
   @doc "Revokes this scope, cancels pending work and stops the temporary gateway."
   @spec revoke(pid()) :: :ok | {:error, Error.t()}
@@ -95,24 +95,24 @@ defmodule Wotex.Lab.Metrics.Gateway do
   end
 
   @impl GenServer
-  def handle_call(_request, {caller, _tag}, %{owner: owner} = state) when caller != owner,
+  def handle_call(_, {caller, _}, %{owner: owner} = state) when caller != owner,
     do: {:reply, failure(:scope_denied), state}
 
-  def handle_call({:query, request, submitted_at}, _from, state) do
+  def handle_call({:query, request, submitted_at}, _, state) do
     with :ok <- capacity(state),
          {:ok, query} <- Request.decode(request, state.scope, state.limits),
-         {:ok, _estimate} <- Query.estimate(query),
+         {:ok, _} <- Query.estimate(query),
          deadline = min(submitted_at + query.limits.deadline_ms, state.expires_at),
          true <- now() < deadline do
       {reference, state} = launch(state, query, deadline)
       {:reply, {:ok, reference}, state}
     else
       false -> {:reply, failure(:deadline_exceeded), state}
-      {:error, _error} = denied -> {:reply, denied, state}
+      {:error, _} = denied -> {:reply, denied, state}
     end
   end
 
-  def handle_call({:cancel, reference}, _from, state) do
+  def handle_call({:cancel, reference}, _, state) do
     if Map.has_key?(state.queries, reference) do
       {:reply, :ok, finish(state, reference, failure(:query_cancelled), :cancelled)}
     else
@@ -120,10 +120,10 @@ defmodule Wotex.Lab.Metrics.Gateway do
     end
   end
 
-  def handle_call(:revoke, _from, state),
+  def handle_call(:revoke, _, state),
     do: {:stop, :normal, :ok, close(state, :scope_revoked)}
 
-  def handle_call(:stats, _from, state) do
+  def handle_call(:stats, _, state) do
     stats =
       Map.merge(state.counters, %{
         active: map_size(state.queries),
@@ -141,7 +141,7 @@ defmodule Wotex.Lab.Metrics.Gateway do
         {result, counter} = outcome(result, deadline)
         {:noreply, finish(state, reference, result, counter)}
 
-      _unknown ->
+      _ ->
         {:noreply, state}
     end
   end
@@ -152,13 +152,13 @@ defmodule Wotex.Lab.Metrics.Gateway do
   def handle_info({:expire, expiry}, %{expiry: expiry} = state),
     do: {:stop, :normal, close(state, :scope_expired)}
 
-  def handle_info({:DOWN, monitor, :process, _pid, _reason}, state)
+  def handle_info({:DOWN, monitor, :process, _, _}, state)
       when monitor == state.owner_monitor or monitor == state.history_monitor do
     code = if monitor == state.owner_monitor, do: :scope_revoked, else: :history_unavailable
     {:stop, :normal, close(state, code)}
   end
 
-  def handle_info({:DOWN, monitor, :process, _pid, _reason}, state) do
+  def handle_info({:DOWN, monitor, :process, _, _}, state) do
     reference =
       Enum.find_value(state.queries, fn {ref, query} -> if query.monitor == monitor, do: ref end)
 
@@ -167,11 +167,11 @@ defmodule Wotex.Lab.Metrics.Gateway do
 
   # Worker DOWN messages carry the outcome. Parent exits are handled by OTP;
   # normal linked worker exits do not change this gateway's scope.
-  def handle_info({:EXIT, _pid, _reason}, state), do: {:noreply, state}
-  def handle_info(_late, state), do: {:noreply, state}
+  def handle_info({:EXIT, _, _}, state), do: {:noreply, state}
+  def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
-  def terminate(_reason, state) do
+  def terminate(_, state) do
     Process.cancel_timer(state.expiry_timer)
     close(state, :scope_revoked)
     :ok
@@ -196,7 +196,7 @@ defmodule Wotex.Lab.Metrics.Gateway do
 
   defp finish(state, reference, result, counter) do
     case Map.pop(state.queries, reference) do
-      {nil, _queries} ->
+      {nil, _} ->
         state
 
       {entry, queries} ->
@@ -213,7 +213,7 @@ defmodule Wotex.Lab.Metrics.Gateway do
     Process.exit(entry.worker, :kill)
 
     receive do
-      {:DOWN, ^monitor, :process, _pid, _reason} -> :ok
+      {:DOWN, ^monitor, :process, _, _} -> :ok
     after
       1_000 -> exit(:worker_shutdown_timeout)
     end
@@ -237,7 +237,7 @@ defmodule Wotex.Lab.Metrics.Gateway do
   end
 
   defp before_delivery(result, :completed, deadline), do: outcome(result, deadline)
-  defp before_delivery(result, counter, _deadline), do: {result, counter}
+  defp before_delivery(result, counter, _), do: {result, counter}
 
   defp count(state, counter),
     do: %{state | counters: Map.update!(state.counters, counter, &(&1 + 1))}
@@ -268,7 +268,7 @@ defmodule Wotex.Lab.Metrics.Gateway do
          true <- reduced_limits?(probe.limits) do
       {:ok, Map.merge(config, %{ttl_ms: ttl, max_calls: calls, limits: probe.limits})}
     else
-      _invalid -> failure(:invalid_gateway)
+      _ -> failure(:invalid_gateway)
     end
   end
 
@@ -289,10 +289,10 @@ defmodule Wotex.Lab.Metrics.Gateway do
   defp call(gateway, message) when is_pid(gateway) and node(gateway) == node() do
     GenServer.call(gateway, message, 5_000)
   catch
-    :exit, _reason -> failure(:scope_unavailable)
+    :exit, _ -> failure(:scope_unavailable)
   end
 
-  defp call(_gateway, _message), do: failure(:scope_unavailable)
+  defp call(_, _), do: failure(:scope_unavailable)
 
   defp failure(code),
     do: {:error, Error.new(code, :query, "inspection request is unavailable or refused")}

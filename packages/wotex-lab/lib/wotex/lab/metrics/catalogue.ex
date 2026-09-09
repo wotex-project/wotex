@@ -133,34 +133,34 @@ defmodule Wotex.Lab.Metrics.Catalogue do
   @doc "Maps a telemetry outcome atom to its finite class; unknown codes are `:error`."
   @spec outcome_class(term()) :: atom()
   def outcome_class(outcome) when is_atom(outcome), do: Map.get(@outcome_map, outcome, :error)
-  def outcome_class(_outcome), do: :error
+  def outcome_class(_), do: :error
 
   @doc "Derives one closed dimension value from an event, its metadata and the collector context."
   @spec dimension_value(atom(), [atom()], map(), map()) :: atom()
-  def dimension_value(:component, [_wotex, _lab, component, _operation, _kind], _meta, _context),
+  def dimension_value(:component, [_, _, component, _, _], _, _),
     do: component
 
-  def dimension_value(:operation, [_wotex, _lab, _component, operation, _kind], _meta, _context),
+  def dimension_value(:operation, [_, _, _, operation, _], _, _),
     do: operation
 
-  def dimension_value(:outcome_class, _event, meta, _context),
+  def dimension_value(:outcome_class, _, meta, _),
     do: outcome_class(Map.get(meta, :outcome))
 
-  def dimension_value(:action, _event, meta, _context),
+  def dimension_value(:action, _, meta, _),
     do: closed(Map.get(meta, :operation), @actions)
 
-  def dimension_value(:profile, _event, meta, _context),
+  def dimension_value(:profile, _, meta, _),
     do: closed(Map.get(meta, :profile), @profiles)
 
-  def dimension_value(:backend_class, _event, _meta, context),
+  def dimension_value(:backend_class, _, _, context),
     do: closed(Map.get(context, :backend_class), @backend_classes)
 
-  def dimension_value(:reason, _event, meta, _context) do
+  def dimension_value(:reason, _, meta, _) do
     outcome = Map.get(meta, :outcome)
     if is_atom(outcome), do: Map.get(@reason_map, outcome, :other), else: :other
   end
 
-  def dimension_value(:kind, _event, meta, _context), do: closed(Map.get(meta, :kind), @kinds)
+  def dimension_value(:kind, _, meta, _), do: closed(Map.get(meta, :kind), @kinds)
 
   @doc "Every metric of this catalogue version."
   @spec metrics() :: [metric()]
@@ -179,7 +179,7 @@ defmodule Wotex.Lab.Metrics.Catalogue do
     end
   end
 
-  def fetch(_id), do: {:error, Error.new(:unknown_metric, :catalogue, "metric id must be an atom")}
+  def fetch(_), do: {:error, Error.new(:unknown_metric, :catalogue, "metric id must be an atom")}
 
   @doc "Validates the checked-in catalogue, or a supplied list of metrics."
   @spec validate([metric()]) :: :ok | {:error, Error.t()}
@@ -571,12 +571,12 @@ defmodule Wotex.Lab.Metrics.Catalogue do
     ]
 
     Enum.find_value(checks, :ok, fn
-      {true, _code, _message} -> nil
+      {true, _, _} -> nil
       {false, code, message} -> {:error, Error.new(code, :catalogue, message, details: %{id: id})}
     end)
   end
 
-  defp validate_metric(_metric),
+  defp validate_metric(_),
     do: {:error, Error.new(:invalid_metric, :catalogue, "metric must be a map with an atom id")}
 
   defp name?(%{name: name, type: type, unit: unit}) when is_binary(name) do
@@ -585,12 +585,12 @@ defmodule Wotex.Lab.Metrics.Catalogue do
       suffix?(name, unit)
   end
 
-  defp name?(_metric), do: false
+  defp name?(_), do: false
 
   defp suffix?(name, :seconds), do: String.contains?(name, "_seconds")
   defp suffix?(name, :bytes), do: String.contains?(name, "_bytes")
   defp suffix?(name, :ratio), do: String.ends_with?(name, "_ratio")
-  defp suffix?(name, _unit), do: not String.contains?(name, ["_seconds", "_bytes", "_ratio"])
+  defp suffix?(name, _), do: not String.contains?(name, ["_seconds", "_bytes", "_ratio"])
 
   defp buckets?(%{type: :histogram, buckets: buckets}) when is_list(buckets) do
     buckets != [] and length(buckets) <= @max_buckets and
@@ -600,14 +600,14 @@ defmodule Wotex.Lab.Metrics.Catalogue do
 
   defp buckets?(%{type: :histogram}), do: false
   defp buckets?(%{buckets: nil}), do: true
-  defp buckets?(_metric), do: false
+  defp buckets?(_), do: false
 
   defp dimensions?(dimensions) when is_list(dimensions) do
     known = Map.keys(dimensions())
     dimensions == Enum.uniq(dimensions) and Enum.all?(dimensions, &(&1 in known))
   end
 
-  defp dimensions?(_dimensions), do: false
+  defp dimensions?(_), do: false
 
   defp only?(%{only: only}) when is_map(only) do
     enums = dimensions()
@@ -618,7 +618,7 @@ defmodule Wotex.Lab.Metrics.Catalogue do
     end)
   end
 
-  defp only?(_metric), do: false
+  defp only?(_), do: false
 
   defp events?(events) when is_list(events) and events != [] do
     Enum.all?(events, fn
@@ -626,12 +626,12 @@ defmodule Wotex.Lab.Metrics.Catalogue do
         component in Telemetry.components() and operation in Telemetry.operations() and
           kind in @event_kinds
 
-      _other ->
+      _ ->
         false
     end)
   end
 
-  defp events?(_events), do: false
+  defp events?(_), do: false
 
   defp measurement?(%{measurement: nil, type: :counter, unit: :count}), do: true
   defp measurement?(%{measurement: nil}), do: false
@@ -645,17 +645,17 @@ defmodule Wotex.Lab.Metrics.Catalogue do
   defp measurement?(%{measurement: measurement, events: events}) when is_atom(measurement),
     do: Enum.all?(events, &(List.last(&1) == :measurement))
 
-  defp measurement?(_metric), do: false
+  defp measurement?(_), do: false
 
   defp version?(version) when is_binary(version) do
     match?({:ok, _}, Version.parse(version)) and Version.compare(version, @version) != :gt
   end
 
-  defp version?(_version), do: false
+  defp version?(_), do: false
 
   defp closed(value, enum) when is_atom(value) do
     if value in enum, do: value, else: :other
   end
 
-  defp closed(_value, _enum), do: :other
+  defp closed(_, _), do: :other
 end

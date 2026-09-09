@@ -43,7 +43,7 @@ defmodule Wotex.Lab.Test.MqttBroker do
 
   @spec halt(String.t()) :: :ok
   def halt(container) do
-    _removed =
+    _ =
       System.cmd("docker", ["rm", "--force", "--volumes", container], stderr_to_stdout: true)
 
     :ok
@@ -51,7 +51,7 @@ defmodule Wotex.Lab.Test.MqttBroker do
 
   @spec stop(String.t()) :: :ok
   def stop(container) do
-    _stopped = System.cmd("docker", ["stop", "--time", "2", container], stderr_to_stdout: true)
+    _ = System.cmd("docker", ["stop", "--time", "2", container], stderr_to_stdout: true)
     :ok
   end
 
@@ -63,9 +63,9 @@ defmodule Wotex.Lab.Test.MqttBroker do
     {:ok, client} =
       :emqtt.start_link(fixture_options(broker) ++ Keyword.take(opts, [:username, :password]))
 
-    {:ok, _properties} = :emqtt.connect(client)
+    {:ok, _} = :emqtt.connect(client)
 
-    {:ok, _packet_id} =
+    {:ok, _} =
       :emqtt.publish(client, topic, %{}, payload,
         qos: 1,
         retain: Keyword.get(opts, :retain, false)
@@ -79,8 +79,8 @@ defmodule Wotex.Lab.Test.MqttBroker do
   def listen(broker, filter, opts \\ []) do
     credentials = Keyword.take(opts, [:username, :password])
     {:ok, client} = :emqtt.start_link(fixture_options(broker) ++ credentials)
-    {:ok, _properties} = :emqtt.connect(client)
-    {:ok, _properties, _codes} = :emqtt.subscribe(client, %{}, [{filter, [qos: 1]}])
+    {:ok, _} = :emqtt.connect(client)
+    {:ok, _, _} = :emqtt.subscribe(client, %{}, [{filter, [qos: 1]}])
     client
   end
 
@@ -145,7 +145,7 @@ defmodule Wotex.Lab.Test.MqttBroker do
   defp add_credential(directory, {{user, password}, index}) do
     create = if index == 0, do: ["-c"], else: []
 
-    {_output, 0} =
+    {_, 0} =
       System.cmd(
         "docker",
         ["run", "--rm", "--volume", directory <> ":/work", @image] ++
@@ -177,7 +177,7 @@ defmodule Wotex.Lab.Test.MqttBroker do
     end
   end
 
-  defp tls(_directory, false), do: []
+  defp tls(_, false), do: []
 
   defp tls(directory, true) do
     for filename <- ["ca-cert.pem", "localhost-cert.pem", "localhost-key.pem"] do
@@ -222,7 +222,7 @@ defmodule Wotex.Lab.Test.MqttBroker do
     String.trim(output)
   end
 
-  defp mapped_port(container, _listener, 0),
+  defp mapped_port(container, _, 0),
     do: raise("broker #{container} published no mapped port")
 
   defp mapped_port(container, listener, attempts) do
@@ -232,10 +232,10 @@ defmodule Wotex.Lab.Test.MqttBroker do
       {output, 0} ->
         case String.split(String.trim(output), "\n", trim: true) do
           [] -> retry_port(container, listener, attempts)
-          [mapping | _rest] -> mapping |> String.split(":") |> List.last() |> String.to_integer()
+          [mapping | _] -> mapping |> String.split(":") |> List.last() |> String.to_integer()
         end
 
-      {_output, _status} ->
+      {_, _} ->
         retry_port(container, listener, attempts)
     end
   end
@@ -252,7 +252,7 @@ defmodule Wotex.Lab.Test.MqttBroker do
       {:ok, socket} ->
         :gen_tcp.close(socket)
 
-      {:error, _reason} ->
+      {:error, _} ->
         Process.sleep(50)
         await_port(port, attempts - 1)
     end

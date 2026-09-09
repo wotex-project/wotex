@@ -58,10 +58,10 @@ if Code.ensure_loaded?(:emqtt) do
     end
 
     @impl Wotex.Binding.MQTT.Client
-    def unsubscribe(session, _command, %ExecutionContext{}, _config) when is_pid(session),
+    def unsubscribe(session, _, %ExecutionContext{}, _) when is_pid(session),
       do: Session.close(session)
 
-    def unsubscribe(_handle, _command, _execution_context, _config),
+    def unsubscribe(_, _, _, _),
       do: error(:invalid_handle, "the subscription handle is not a Lab MQTT session")
 
     defp connect_credential(nil), do: {:ok, []}
@@ -71,7 +71,7 @@ if Code.ensure_loaded?(:emqtt) do
          do: {:ok, [username: user, password: password]}
 
     defp connect_credential(credentials) when is_map(credentials) do
-      Enum.reduce_while(credentials, {:ok, []}, fn {_name, credential}, {:ok, acc} ->
+      Enum.reduce_while(credentials, {:ok, []}, fn {_, credential}, {:ok, acc} ->
         case connect_credential(credential) do
           {:ok, options} -> {:cont, {:ok, acc ++ options}}
           {:error, error} -> {:halt, {:error, error}}
@@ -79,19 +79,19 @@ if Code.ensure_loaded?(:emqtt) do
       end)
     end
 
-    defp connect_credential(_credential),
+    defp connect_credential(_),
       do: error(:unsupported_credential, "the resolved credential is not an MQTT one")
 
     defp budget(%ExecutionContext{context: context}, config) do
       case Context.remaining_ms(Context.deadline(context), clock(Context.deadline(context))) do
         :infinity -> config.connect_timeout
         remaining when is_integer(remaining) and remaining > 0 -> remaining
-        _exhausted -> 1
+        _ -> 1
       end
     end
 
     defp clock(%DateTime{}), do: DateTime.utc_now()
-    defp clock(_deadline), do: System.monotonic_time(:millisecond)
+    defp clock(_), do: System.monotonic_time(:millisecond)
 
     defp normalize_config(config) when is_map(config) or is_list(config) do
       config = Map.new(config)
@@ -120,10 +120,10 @@ if Code.ensure_loaded?(:emqtt) do
         do: {:ok, normalized},
         else: invalid_config()
     rescue
-      _error -> invalid_config()
+      _ -> invalid_config()
     end
 
-    defp normalize_config(_config), do: invalid_config()
+    defp normalize_config(_), do: invalid_config()
 
     defp valid_config?(config) do
       Enum.all?([
@@ -157,7 +157,7 @@ if Code.ensure_loaded?(:emqtt) do
     defp paired_client_certificate?(config),
       do: is_nil(config.tls_certfile) == is_nil(config.tls_keyfile)
 
-    defp valid_will?(nil, _maximum_packet_size), do: true
+    defp valid_will?(nil, _), do: true
 
     defp valid_will?(will, maximum_packet_size) when is_map(will) do
       allowed = [:topic, :payload, :qos, :retain, :delay_interval]
@@ -174,7 +174,7 @@ if Code.ensure_loaded?(:emqtt) do
       ])
     end
 
-    defp valid_will?(_will, _maximum_packet_size), do: false
+    defp valid_will?(_, _), do: false
 
     defp stable_session_policy?(
            %{clean_start: clean_start, session_expiry_interval: expiry} = config

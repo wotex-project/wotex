@@ -91,7 +91,7 @@ defmodule Wotex.Lab.Formal.Abstraction do
     end
   end
 
-  def room(_concrete, _bounds), do: {:error, invalid()}
+  def room(_, _), do: {:error, invalid()}
 
   @fields [:temperature, :heater, :cooler, :power, :budget, :decision, :age_ms, :grants, :effects]
 
@@ -123,7 +123,7 @@ defmodule Wotex.Lab.Formal.Abstraction do
       ~r/\Aroom\((cold|comfort|hot), (on|off), (on|off), (within|over), (noDecision|granted\((heat|cool), (\d+)\)|dispatched\((heat|cool), (\d+)\)), (\d+), (\d+), (\d+)\)\z/
 
     case Regex.run(regex, String.trim(term)) do
-      [_all, band, heater, cooler, energy, decision, ga, gage, da, dage, age, grants, effects] ->
+      [_, band, heater, cooler, energy, decision, ga, gage, da, dage, age, grants, effects] ->
         {:ok,
          %{
            band: closed(band, %{"cold" => :cold, "comfort" => :comfort, "hot" => :hot}),
@@ -136,7 +136,7 @@ defmodule Wotex.Lab.Formal.Abstraction do
            effects: String.to_integer(effects)
          }}
 
-      _other ->
+      _ ->
         {:error,
          Error.new(:invalid_term, :abstraction, "term is not a room state",
            details: %{term: String.slice(term, 0, 128)}
@@ -146,16 +146,16 @@ defmodule Wotex.Lab.Formal.Abstraction do
 
   defp band(temperature) when temperature < @cold_below, do: :cold
   defp band(temperature) when temperature >= @hot_from, do: :hot
-  defp band(_temperature), do: :comfort
+  defp band(_), do: :comfort
 
-  defp decision(:no_decision, _max_age), do: {:ok, :no_decision, nil}
+  defp decision(:no_decision, _), do: {:ok, :no_decision, nil}
 
   defp decision({status, action, ms}, max_age)
        when status in [:granted, :dispatched] and action in [:heat, :cool] and is_integer(ms) and
               ms >= 0,
        do: {:ok, {status, action, min(div(ms, 1_000), max_age)}, %{age_ms: ms}}
 
-  defp decision(_decision, _max_age),
+  defp decision(_, _),
     do:
       {:error,
        Error.new(
@@ -166,11 +166,11 @@ defmodule Wotex.Lab.Formal.Abstraction do
 
   defp closed(value, table), do: Map.fetch!(table, value)
 
-  defp decision_from("noDecision", _ga, _gage, _da, _dage), do: :no_decision
+  defp decision_from("noDecision", _, _, _, _), do: :no_decision
 
-  defp decision_from("granted" <> _, action, age, _da, _dage),
+  defp decision_from("granted" <> _, action, age, _, _),
     do: {:granted, closed(action, %{"heat" => :heat, "cool" => :cool}), String.to_integer(age)}
 
-  defp decision_from("dispatched" <> _, _ga, _gage, action, age),
+  defp decision_from("dispatched" <> _, _, _, action, age),
     do: {:dispatched, closed(action, %{"heat" => :heat, "cool" => :cool}), String.to_integer(age)}
 end
