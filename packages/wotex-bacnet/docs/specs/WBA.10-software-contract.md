@@ -145,7 +145,7 @@ At most 64 live subscriptions per session; overflow fails before registration.
 | Opening | Register local listener before sending SubscribeCOV/SubscribeCOVProperty |
 | Correct subscription SimpleACK | Return the C05 handle; begin finite lifetime timer |
 | Notification before ACK | Buffer at most one validated initial report; deliver only after ACK |
-| Correct notification | Validate source, initiating device, process ID, object and each property/index; deliver typed values |
+| Correct notification | Validate source, initiating device, process ID, object and all values; require the requested Property/index entry and retain companion entries |
 | Confirmed notification | Reply using `BACnet.Stack.Client.reply/4` and its received reference, with matching invoke ID/service; ACK duplicates without redelivery |
 | Renewal | At half the requested lifetime, resend original identity with a fresh service exchange and original finite lifetime |
 | Renewal failure or expiry | One terminal error; cancel and close local state |
@@ -175,6 +175,16 @@ COV Property reports are not BACnet alarm/Event service support. Runtime deliver
 the selected property value plus source/property/tag/time-remaining metadata.
 An object-level native COV report is an ordered list of property/index/typed-value
 entries, not a map that loses duplicate indices. Bound a report to 1024 entries.
+Property COV selects the value whose property and array index exactly match the
+request, and preserves the complete validated ordered list in
+`metadata.report_values`. Missing selectors and wrong indices do not correlate.
+Companion entries are valid: [135-2016 errata, July 6 2020, Table 13-1a](https://bacnet.org/wp-content/uploads/sites/4/2022/08/135-2016-Errata-Summary-2020-07-06-v1.pdf)
+includes Status_Flags, and [BTL 15.2 interim tests v18, 9.11.1.X11/X21](https://btl.org/wp-content/uploads/sites/3/2022/06/interim_tests_15.2_v18.pdf#page=122)
+also allow associated properties. **Library projection policy:** repeated selected
+entries with exactly equal typed values yield that value once and remain intact
+in metadata. Conflicting selected values fail with `:conflicting_cov_values`;
+list order never chooses a winning value. This projection policy does not remove
+or reinterpret duplicates in an object-level native report.
 No report is an authorization decision or canonical consumer state.
 
 Add `health_check/2` with an explicit validated ReadProperty probe; retain

@@ -157,6 +157,36 @@ defmodule Wotex.BACnet.StackCOVTest do
     assert :sys.get_state(client).cov.filters == %{}
   end
 
+  test "WBA-S04 WBA-S05 WBA-V07 WBA-CT04 UDP Property COV retains companion fields", c do
+    {:ok, request} =
+      COVRequest.new(
+        Map.merge(
+          @request,
+          %{type: :cov_property, property: 85, array_index: 0}
+        ),
+        self()
+      )
+
+    {:ok, identifier} = register(c.client, request)
+    send_apdu(c.peer, property_notification(identifier, 0))
+    assert_receive {:bacnet_client, ref, apdu, _, _}, 1000
+    assert {:ok, report} = Wotex.BACnet.COV.notification(apdu)
+    assert [%{property: 85, array_index: 0}, %{property: 111}, %{property: 512}] = report.values
+    assert {:ok, %Encoding{type: :real, value: 1.5}} = Wotex.BACnet.COV.value(report, request)
+
+    assert :ok =
+             Client.reply(c.client, ref, %APDU.SimpleACK{
+               invoke_id: 7,
+               service: :confirmed_cov_notification
+             })
+
+    assert {:ok, _} = :gen_udp.recv(c.peer, 0, 1000)
+    send_apdu(c.peer, property_notification(identifier, 1))
+    refute_receive {:bacnet_client, _, _, _, _}, 20
+    assert :sys.get_state(c.client).cov.replies == %{}
+    assert {:error, :timeout} = :gen_udp.recv(c.peer, 0, 20)
+  end
+
   test "WBA-S04 WBA-V06 unrelated identity and malformed notifications allocate nothing", c do
     {:ok, id} = register(c.client, c.request)
 
@@ -416,6 +446,12 @@ defmodule Wotex.BACnet.StackCOVTest do
 
     <<2, 0x65, invoke, 1, 0::4, 1::1, byte_size(process)::3, process::binary, 0x1C, 8::10,
       device::22, 0x2C, 1::10, 0::22, 0x39, 60, 0x4E, 0x09, 85, 0x2E, value::binary, 0x2F, 0x4F>>
+  end
+
+  defp property_notification(identifier, index) do
+    <<2, 0x65, 7, 1, 0x09, identifier, 0x1C, 8::10, 123::22, 0x2C, 1::10, 0::22, 0x39, 60, 0x4E,
+      0x09, 85, 0x19, index, 0x2E, 0x44, 1.5::float-32, 0x2F, 0x09, 111, 0x2E, 0x82, 4, 0, 0x2F,
+      0x0A, 2, 0, 0x2E, 0x44, 7.5::float-32, 0x2F, 0x4F>>
   end
 
   defp send_apdu(peer, apdu),

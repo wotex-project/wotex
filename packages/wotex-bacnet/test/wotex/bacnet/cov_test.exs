@@ -178,6 +178,82 @@ defmodule Wotex.BACnet.COVTest do
     assert {:ok, %{confirmed: false, invoke_id: nil}} = COV.notification(unconfirmed)
   end
 
+  test "WBA-S04 WBA-S05 WBA-V07 WBA-CT04 companions survive exact Property projection" do
+    corpus = Jason.decode!(File.read!(Path.expand("../../fixtures/cov_transport_v1.json", __DIR__)))
+    row = Enum.find(corpus["cases"], &(&1["id"] == "WBA-CT04"))
+
+    values =
+      Enum.flat_map(row["entries"], fn entry ->
+        tag =
+          case entry["tag"] do
+            "real" -> {:real, entry["value"]}
+            "bitstring" -> {:bitstring, List.to_tuple(entry["value"])}
+          end
+
+        property_tags(entry["property"], entry["array_index"], tag)
+      end)
+
+    {:ok, selected} =
+      COVRequest.new(
+        Map.merge(
+          @request,
+          %{type: :cov_property, property: row["property"], array_index: row["array_index"]}
+        ),
+        self()
+      )
+
+    assert {:ok, report} = COV.notification(notification(values))
+    assert length(report.values) == row["expected"]["retained_entries"]
+    assert COV.matches?(report, selected, 7)
+    assert {:ok, %Encoding{type: :real, value: value}} = COV.value(report, selected)
+    assert value == row["expected"]["selected_value"]
+    assert {:ok, object} = COVRequest.new(@request, self())
+    assert COV.value(report, object) == {:ok, report.values}
+    refute COV.matches?(report, %{selected | array_index: nil}, 7)
+
+    assert {:error, %{code: :missing_cov_property}} =
+             COV.value(report, %{selected | array_index: nil})
+
+    [_ | companions] = report.values
+    refute COV.matches?(%{report | values: companions}, selected, 7)
+
+    assert {:error, %{code: :missing_cov_property}} =
+             COV.value(%{report | values: companions}, selected)
+
+    assert {:error, %{code: :missing_cov_property}} =
+             COV.value(%{report | values: [:bad]}, selected)
+
+    assert {:error, %{code: :invalid_cov_notification}} = COV.value(nil, selected)
+  end
+
+  test "WBA-S04 WBA-S05 WBA-V07 WBA-CT05 conflicting selected values never use list precedence" do
+    corpus = Jason.decode!(File.read!(Path.expand("../../fixtures/cov_transport_v1.json", __DIR__)))
+    row = Enum.find(corpus["cases"], &(&1["id"] == "WBA-CT05"))
+
+    {:ok, selected} =
+      COVRequest.new(
+        Map.merge(
+          @request,
+          %{type: :cov_property, property: row["property"], array_index: row["array_index"]}
+        ),
+        self()
+      )
+
+    values =
+      Enum.flat_map(row["values"], fn value ->
+        property_tags(row["property"], row["array_index"], {:real, value})
+      end)
+
+    assert {:ok, report} = COV.notification(notification(values))
+    assert {:error, error} = COV.value(report, selected)
+    assert Atom.to_string(error.code) == row["expected_error"]
+    assert COV.value(%{report | values: Enum.reverse(report.values)}, selected) == {:error, error}
+    [first | _] = report.values
+    repeated = %{report | values: [first, first]}
+    assert COV.value(repeated, selected) == {:ok, first.value}
+    assert repeated.values == [first, first]
+  end
+
   test "WBA-S04 WBA-V07 complete malformed or oversized notifications never yield partial values" do
     apdu = notification(property_tags(85, nil, {:real, 1.5}))
 

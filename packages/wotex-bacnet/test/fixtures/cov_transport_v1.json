@@ -55,6 +55,60 @@
         "identifier_after_release": 65,
         "reuse": false
       }
+    },
+    {
+      "id": "WBA-CT04",
+      "requirements": [
+        "WBA-S04",
+        "WBA-S05",
+        "WBA-V07"
+      ],
+      "property": 85,
+      "array_index": 0,
+      "entries": [
+        {
+          "property": 85,
+          "array_index": 0,
+          "tag": "real",
+          "value": 1.5
+        },
+        {
+          "property": 111,
+          "array_index": null,
+          "tag": "bitstring",
+          "value": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "property": 512,
+          "array_index": null,
+          "tag": "real",
+          "value": 7.5
+        }
+      ],
+      "expected": {
+        "selected_value": 1.5,
+        "retained_entries": 3
+      }
+    },
+    {
+      "id": "WBA-CT05",
+      "requirements": [
+        "WBA-S04",
+        "WBA-S05",
+        "WBA-V07"
+      ],
+      "property": 85,
+      "array_index": 0,
+      "values": [
+        1.5,
+        2.0
+      ],
+      "expected_error": "conflicting_cov_values"
     }
   ]
 }

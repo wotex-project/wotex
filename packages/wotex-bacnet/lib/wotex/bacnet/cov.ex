@@ -73,19 +73,57 @@ defmodule Wotex.BACnet.COV do
 
   @doc false
   @spec matches?(map(), COVRequest.t(), non_neg_integer()) :: boolean()
-  def matches?(report, request, identifier) do
+  def matches?(
+        %{
+          process_identifier: _,
+          device_instance: _,
+          object_type: _,
+          instance: _,
+          confirmed: _,
+          values: _
+        } = report,
+        %COVRequest{} = request,
+        identifier
+      ) do
     report.process_identifier == identifier and
       report.device_instance == request.device_instance and
       report.object_type == request.object_type and report.instance == request.instance and
       report.confirmed == request.confirmed and
       (request.type == :cov or
-         Enum.all?(report.values, &property_matches?(&1, request)))
+         Enum.any?(report.values, &property_matches?(&1, request)))
   rescue
     _ -> false
   end
 
-  defp property_matches?(entry, request),
-    do: entry.property == request.property and entry.array_index == request.array_index
+  def matches?(_, _, _), do: false
+
+  @doc false
+  @spec value(map(), COVRequest.t()) :: {:ok, term()} | {:error, Error.t()}
+  def value(%{values: values}, %COVRequest{type: :cov}) when is_list(values), do: {:ok, values}
+
+  def value(%{values: values}, %COVRequest{type: :cov_property} = request) when is_list(values) do
+    case Enum.filter(values, &property_matches?(&1, request)) do
+      [] ->
+        {:error, Error.new(:missing_cov_property)}
+
+      [first | rest] ->
+        if Enum.all?(rest, &(&1.value === first.value)),
+          do: {:ok, first.value},
+          else: {:error, Error.new(:conflicting_cov_values)}
+    end
+  rescue
+    _ -> {:error, Error.new(:invalid_cov_notification)}
+  end
+
+  def value(_, _), do: {:error, Error.new(:invalid_cov_notification)}
+
+  defp property_matches?(
+         %{property: property, array_index: index},
+         %COVRequest{property: property, array_index: index}
+       ),
+       do: true
+
+  defp property_matches?(_, _), do: false
 
   defp decode(
          [
