@@ -71,6 +71,22 @@ defmodule Wotex.BLE do
     {:ok, profile}
   end
 
+  def profile(:gatt) do
+    Wotex.Runtime.BindingProfile.new(
+      id: :ble_gatt,
+      schemes: ["ble"],
+      operations: [
+        :readproperty,
+        :writeproperty,
+        :observeproperty,
+        :unobserveproperty,
+        :subscribeevent,
+        :unsubscribeevent
+      ],
+      media_types: []
+    )
+  end
+
   def profile(_), do: {:error, Error.new(:unsupported_profile)}
 
   @doc "Opens the supplied client module; absent transport fails explicitly."

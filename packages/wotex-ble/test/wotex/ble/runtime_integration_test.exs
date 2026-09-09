@@ -70,7 +70,7 @@ defmodule Wotex.BLE.RuntimeIntegrationTest do
     assert profile.operations == MapSet.new([:readproperty, :writeproperty])
     assert profile.media_types == MapSet.new()
 
-    for mode <- [:gatt, nil, "oneshot", :guess, %{}] do
+    for mode <- [nil, "oneshot", :guess, %{}] do
       assert {:error, %Error{code: :unsupported_profile}} = BLE.profile(mode)
     end
 

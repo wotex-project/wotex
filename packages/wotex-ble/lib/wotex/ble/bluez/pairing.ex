@@ -87,7 +87,9 @@ defmodule Wotex.BLE.BlueZ.Pairing do
   end
 
   defp prompt_value(:display_passkey, %{"passkey" => passkey, "entered" => entered} = value)
-       when map_size(value) == 2, do: {:ok, %{passkey: passkey, entered: entered}}
+       when map_size(value) == 2 do
+    {:ok, %{passkey: passkey, entered: entered}}
+  end
 
   defp prompt_value(:display_passkey, _), do: :error
   defp prompt_value(_, value), do: {:ok, value}

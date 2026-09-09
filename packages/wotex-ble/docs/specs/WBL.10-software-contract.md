@@ -239,6 +239,13 @@ never a side effect of reading a Form. Runtime security requirements that BlueZ
 cannot attest must fail as unsupported rather than treating Paired as proof of
 a requested encryption/MITM level.
 
+The `:gatt` Runtime profile requires the explicit first-party `client: Wotex.BLE.BlueZ`
+and `lifecycle: :persistent` backend configuration. Its Transport rejects an
+`owner` option because the relay owns the stream's native connection. The Transport
+`max_queue_length` option bounds the relay/native delivery queues using C05's
+1..10000 range and default 1000; it is removed before connection configuration.
+The Runtime's final receiver mailbox bound remains a separate child-spec option.
+
 Bridge operations are `open`, `discover`, `read`, `write`, `subscribe`,
 `unsubscribe`, `pair`, `agent_reply`, `health`, `close`. Discover is a bounded
 snapshot of the selected connected peer's GATT objects, not an unfiltered scan.

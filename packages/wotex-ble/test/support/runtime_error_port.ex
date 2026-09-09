@@ -5,6 +5,12 @@ defmodule Wotex.BLE.RuntimeErrorPort do
   @behaviour Wotex.Runtime.Credentials
 
   @impl Wotex.Runtime.Credentials
+  def resolve(selection, form, context, :reject_stop) do
+    if Wotex.Form.to_map(form)["op"] in ["unobserveproperty", "unsubscribeevent"],
+      do: {:error, Wotex.BLE.Error.new(:unsupported_security)},
+      else: resolve(selection, form, context, nil)
+  end
+
   def resolve(%{names: ["none"], definitions: %{"none" => %{"scheme" => "nosec"}}}, _, _, _),
     do: {:ok, nil}
 

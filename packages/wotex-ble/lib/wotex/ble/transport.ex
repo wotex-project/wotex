@@ -2,7 +2,7 @@ defmodule Wotex.BLE.Transport do
   @moduledoc "Scoped Wotex Runtime execution over an explicit client and exact target identity."
   @behaviour Wotex.Runtime.Transport
   alias Wotex.BLE
-  alias Wotex.BLE.{Error, Mapping, Value}
+  alias Wotex.BLE.{BlueZ, Error, Mapping, RuntimeFrame, RuntimeRelay, Value}
   alias Wotex.Runtime.{Context, ExecutionContext, Request, Result}
 
   @impl Wotex.Runtime.Transport
@@ -22,17 +22,41 @@ defmodule Wotex.BLE.Transport do
   def request(_, _, _), do: {:error, Error.new(:invalid_transport_context)}
 
   @impl Wotex.Runtime.Transport
+  def subscribe(
+        %Request{affordance_type: type, operation: operation} = request,
+        owner,
+        execution,
+        config
+      )
+      when is_pid(owner) and
+             ((type == :property and operation == :observeproperty) or
+                (type == :event and operation == :subscribeevent)) do
+    with {:ok, prepared} <- prepare(request, execution, config),
+         do: RuntimeRelay.open(prepared, owner, prepared.limit)
+  end
+
   def subscribe(_, _, _, _), do: {:error, Error.new(:not_supported)}
 
   @impl Wotex.Runtime.Transport
+  def unsubscribe(%RuntimeRelay{} = handle, _, _, _), do: RuntimeRelay.close(handle)
   def unsubscribe(_, _, _, _), do: {:error, Error.new(:not_supported)}
+
+  @impl Wotex.Runtime.Transport
+  def decode_frame(frame, %Request{} = request, _) do
+    with {:ok, mapping} <-
+           Mapping.command(request.form, request.operation, request.input, request.resolved_href),
+         do: RuntimeFrame.decode(frame, mapping)
+  end
+
+  def decode_frame(_, _, _), do: {:error, Error.new(:invalid_transport_context)}
 
   @doc false
   @spec prepare(Request.t(), ExecutionContext.t(), term()) :: {:ok, map()} | {:error, Error.t()}
   def prepare(%Request{} = request, %ExecutionContext{credential: nil, context: context}, config) do
     with :ok <- request_context(request, context),
          :ok <- configuration(config),
-         :ok <- profile(request),
+         :ok <- profile(request, config),
+         {:ok, limit} <- queue_limit(config),
          {:ok, timeout} <- budget(request.deadline, Keyword.get(config, :timeout, 5000)),
          deadline = System.monotonic_time(:millisecond) + timeout,
          {:ok, mapping} <-
@@ -41,10 +65,10 @@ defmodule Wotex.BLE.Transport do
          {:ok, remaining} <- remaining(deadline) do
       options =
         config
-        |> Keyword.delete(:target)
+        |> Keyword.drop([:target, :max_queue_length])
         |> Keyword.put(:timeout, remaining)
 
-      {:ok, %{mapping: mapping, options: options, deadline: deadline}}
+      {:ok, %{mapping: mapping, options: options, deadline: deadline, limit: limit}}
     else
       {:error, %Error{}} = error -> error
       _ -> {:error, Error.new(:target_mismatch)}
@@ -82,10 +106,35 @@ defmodule Wotex.BLE.Transport do
     end
   end
 
-  defp profile(%Request{profile: profile, operation: operation}) do
-    if profile == BLE.profile() and operation in [:readproperty, :writeproperty],
-      do: :ok,
-      else: {:error, Error.new(:unsupported_profile)}
+  defp profile(%Request{profile: profile, operation: operation}, config) do
+    {:ok, gatt} = BLE.profile(:gatt)
+
+    cond do
+      profile == BLE.profile() and operation in [:readproperty, :writeproperty] ->
+        :ok
+
+      profile == gatt and
+          operation in [:readproperty, :writeproperty, :observeproperty, :subscribeevent] ->
+        streaming_options(config)
+
+      true ->
+        {:error, Error.new(:unsupported_profile)}
+    end
+  end
+
+  defp streaming_options(config) do
+    if Keyword.get(config, :client) == BlueZ and Keyword.get(config, :lifecycle) == :persistent and
+         not Keyword.has_key?(config, :owner),
+       do: :ok,
+       else: {:error, Error.new(:unsupported_profile)}
+  end
+
+  defp queue_limit(config) do
+    limit = Keyword.get(config, :max_queue_length, 1000)
+
+    if is_integer(limit) and limit in 1..10_000,
+      do: {:ok, limit},
+      else: {:error, Error.new(:invalid_options)}
   end
 
   defp execute(session, prepared, request) do

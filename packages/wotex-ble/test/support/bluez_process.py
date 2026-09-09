@@ -138,6 +138,8 @@ class RecordedNotificationBus(NotificationBus):
             self.value(b"\x34\x12")
             return [b"\x34\x12"]
         result = await super().call(*args)
+        if args[3] == "StartNotify" and MODE == "stream_runtime_repeat":
+            asyncio.get_running_loop().call_later(0.05, lambda: [self.value(b"\x01\x00"), self.value(b"\x01\x00")])
         if args[3] == "StopNotify":
             if MODE == "stream_dispatch_overtake":
                 self.data_gate.set()
@@ -173,7 +175,7 @@ async def main():
     reader = asyncio.StreamReader(limit=bridge.MAX_LINE)
     protocol = asyncio.StreamReaderProtocol(reader)
     transport, _ = await asyncio.get_running_loop().connect_read_pipe(lambda: protocol, sys.stdin.buffer)
-    bus = RecordedNotificationBus(count=65 if MODE == "stream_capacity" else 2) if MODE.startswith("stream") else RecordedAgentBus() if MODE.startswith("pair") else RecordedProcedureBus() if MODE.startswith("procedure") else RecordedBus(objects())
+    bus = RecordedNotificationBus(count=65 if MODE == "stream_capacity" else 1 if MODE.startswith("stream_runtime") else 2) if MODE.startswith("stream") else RecordedAgentBus() if MODE.startswith("pair") else RecordedProcedureBus() if MODE.startswith("procedure") else RecordedBus(objects())
     if MODE.startswith("stream"):
         bus.early = [b"\x01\x00"]
         if MODE == "stream_canary":
@@ -186,6 +188,16 @@ async def main():
             bus.stop_blocked = True
         if MODE == "stream_stop_error":
             bus.stop_error = client.Failure("remote_error", "org.bluez.Error.Failed")
+        if MODE in ("stream_pending_start", "stream_runtime_pending"):
+            bus.start_blocked = True
+        if MODE == "stream_runtime_silent":
+            bus.early = []
+        if MODE == "stream_runtime_failed":
+            bus.start_error = client.Failure("not_permitted", "org.bluez.Error.NotPermitted")
+        if MODE == "stream_runtime_invalid_value":
+            bus.early = [b"\x01"]
+        if MODE == "stream_runtime_stop_blocked":
+            bus.stop_blocked = True
         if MODE == "stream_pending_start":
             bus.start_blocked = True
         if MODE == "stream_indicate":
