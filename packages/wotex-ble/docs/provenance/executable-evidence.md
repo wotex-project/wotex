@@ -204,3 +204,20 @@ reads establish kernel backpressure; they do not establish a suspended BEAM
 mailbox bound. The guardian implementation has no SDK or GATT behavior. Admission
 of both executable digests, actual host integration and report-credit acceptance
 remain separate requirements.
+
+## Native Agent method boundary
+
+The actual libdbus fixture in `test/interop/native_bus_test.exs` executes
+`exported_methods` in `test/native/bus_test.cpp`. It checks exact unique sender,
+object path and interface routing, bounded PIN/passkey returns, fixed rejection
+without diagnostic text, deferred same-serial replies and no-reply suppression.
+Malformed registrations and duplicate routes fail. One hundred thousand export
+lifetimes retain no closed records; 64 concurrent exports exhaust admission.
+A callback can remove its own export or close its bus connection.
+
+The fault driver stops its own independent D-Bus daemon to apply kernel
+backpressure. The producer reaches the explicit two-response queue bound and
+fails closed; close releases queued responses and export records. The driver
+resumes only its owned daemon. This is method dispatch and allocation evidence,
+not acceptance of RegisterAgent, Device1.Pair, policy challenge forwarding or
+bond/connection cleanup through the complete native helper.

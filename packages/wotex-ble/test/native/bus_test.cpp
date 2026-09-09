@@ -38,6 +38,19 @@ class Daemon {
   Child child_;
 public:
   std::string address;
+  void suspend() {
+    check(kill(child_.pid, SIGSTOP) == 0);
+    int status = 0;
+    const auto deadline = Clock::now() + std::chrono::seconds(1);
+    while (Clock::now() < deadline) {
+      const auto result = waitpid(child_.pid, &status, WUNTRACED | WNOHANG);
+      if (result == child_.pid) { check(WIFSTOPPED(status)); return; }
+      check(result == 0 || (result == -1 && errno == EINTR));
+      ::poll(nullptr, 0, 1);
+    }
+    check(false);
+  }
+  void resume() { check(kill(child_.pid, SIGCONT) == 0); }
   Daemon(const std::string &executable, const std::string &config) {
     int descriptors[2]; check(pipe(descriptors) == 0);
     Fd input{descriptors[0]}, output{descriptors[1]};
@@ -370,6 +383,174 @@ static void signals(const std::string &address) {
   until(closing, [&] { return closed; });
   check(closing.listener_count() == 0 && closing.pending_count() == 0 && closing.watch_count() == 0);
 }
+static void exported_methods(Daemon &daemon) {
+  const auto &address = daemon.address;
+  // WBL-S02/V06: Agent method ownership is exact at sender, path and interface.
+  Bus owner(address), source(address), foreign(address);
+  hello(owner); hello(source); hello(foreign);
+  const char *path = "/org/wotex/ble/agent_test";
+  const char *interface = "org.bluez.Agent1";
+  unsigned calls = 0;
+  Message deferred;
+  auto identity = owner.export_interface(source.unique_name(), path, interface, [&](DBusMessage *request) {
+    ++calls;
+    check(dbus_message_has_signature(request, ""));
+    const std::string member = dbus_message_get_member(request);
+    if (member == "Deferred") { deferred.reset(dbus_message_ref(request)); return; }
+    Message reply(dbus_message_new_method_return(request));
+    if (member == "RequestPasskey") {
+      dbus_uint32_t value = 999999;
+      check(dbus_message_append_args(reply.get(), DBUS_TYPE_UINT32, &value, DBUS_TYPE_INVALID));
+    } else if (member == "RequestPinCode") {
+      const char *value = "1234";
+      check(dbus_message_append_args(reply.get(), DBUS_TYPE_STRING, &value, DBUS_TYPE_INVALID));
+    }
+    check(owner.respond(std::move(reply)));
+  });
+  const auto pump = [&](Bus &caller, const std::function<bool()> &done) {
+    const auto deadline = Clock::now() + std::chrono::seconds(2);
+    while (!done() && Clock::now() < deadline) {
+      std::vector<pollfd> none; owner.poll(none, 1); caller.poll(none, 1);
+      check(!owner.failure() && !caller.failure());
+    }
+    check(done());
+  };
+  for (const auto *member : {"Release", "RequestPasskey", "RequestPinCode"}) {
+    const std::string signature = std::string(member) == "RequestPasskey" ? "u" : std::string(member) == "RequestPinCode" ? "s" : "";
+    Message request(dbus_message_new_method_call(owner.unique_name().c_str(), path, interface, member));
+    bool done = false;
+    check(source.call(request.get(), signature, Clock::now() + std::chrono::seconds(2), [&](BusReply reply) {
+      check(!reply.error && dbus_message_has_signature(reply.message.get(), signature.c_str()));
+      if (signature == "u") {
+        dbus_uint32_t value = 0;
+        check(dbus_message_get_args(reply.message.get(), nullptr, DBUS_TYPE_UINT32, &value, DBUS_TYPE_INVALID) && value == 999999);
+      } else if (signature == "s") {
+        const char *value = nullptr;
+        check(dbus_message_get_args(reply.message.get(), nullptr, DBUS_TYPE_STRING, &value, DBUS_TYPE_INVALID) && std::string(value) == "1234");
+      }
+      done = true;
+    }));
+    pump(source, [&] { return done; });
+  }
+  check(calls == 3 && owner.export_count() == 1);
+  {
+    Message request(dbus_message_new_method_call(owner.unique_name().c_str(), path, interface, "Release"));
+    bool done = false;
+    check(foreign.call(request.get(), "", Clock::now() + std::chrono::seconds(2), [&](BusReply reply) {
+      check(reply.error && std::string(reply.error) == "remote_error");
+      check(dbus_message_has_signature(reply.message.get(), "") &&
+            std::string(dbus_message_get_error_name(reply.message.get())) == "org.bluez.Error.Rejected");
+      done = true;
+    }));
+    pump(foreign, [&] { return done; });
+    check(calls == 3);
+  }
+  {
+    Message request(dbus_message_new_method_call(owner.unique_name().c_str(), path, interface, "Deferred"));
+    bool done = false;
+    check(source.call(request.get(), "", Clock::now() + std::chrono::seconds(2), [&](BusReply reply) {
+      check(!reply.error); done = true;
+    }));
+    pump(source, [&] { return bool(deferred); });
+    check(!done && calls == 4);
+    // WBL-C02: a forged outbound Agent reply cannot enqueue values or diagnostic text.
+    for (const auto *value : {"", "12345678901234567", "\n", "\xC3\xA4"}) {
+      Message response(dbus_message_new_method_return(deferred.get()));
+      check(dbus_message_append_args(response.get(), DBUS_TYPE_STRING, &value, DBUS_TYPE_INVALID));
+      bool rejected = false;
+      try { owner.respond(std::move(response)); } catch (const std::invalid_argument &) { rejected = true; }
+      check(rejected);
+    }
+    {
+      Message response(dbus_message_new_error(deferred.get(), "org.bluez.Error.Rejected", "private challenge"));
+      bool rejected = false;
+      try { owner.respond(std::move(response)); } catch (const std::invalid_argument &) { rejected = true; }
+      check(rejected);
+    }
+    check(owner.respond(Message(dbus_message_new_method_return(deferred.get()))));
+    deferred.reset(); pump(source, [&] { return done; });
+  }
+  for (const bool wrong_path : {false, true}) {
+    Message request(dbus_message_new_method_call(owner.unique_name().c_str(),
+      wrong_path ? "/org/wotex/ble/other" : path,
+      wrong_path ? interface : "org.bluez.Other", "Release"));
+    bool done = false;
+    check(source.call(request.get(), "", Clock::now() + std::chrono::seconds(1), [&](BusReply reply) {
+      check(reply.error && std::string(reply.error) == "remote_error"); done = true;
+    }));
+    pump(source, [&] { return done; }); check(calls == 4);
+  }
+  {
+    Message request(dbus_message_new_method_call(owner.unique_name().c_str(), path, interface, "Release"));
+    dbus_message_set_no_reply(request.get(), true);
+    bool done = false;
+    check(source.call(request.get(), "", Clock::now() + std::chrono::milliseconds(25), [&](BusReply reply) {
+      check(reply.error && std::string(reply.error) == "timeout"); done = true;
+    }));
+    pump(source, [&] { return done; }); check(calls == 4);
+  }
+  for (const std::string &sender : {std::string(), std::string("org.bluez"), std::string(4097, 'x'), std::string(":1.2\0bad", 8)}) {
+    bool invalid = false;
+    try { owner.export_interface(sender, path, interface, [](auto) {}); }
+    catch (const std::invalid_argument &) { invalid = true; }
+    check(invalid && owner.export_count() == 1);
+  }
+  for (const auto *invalid_path : {"", "relative", "/bad-path"}) {
+    bool invalid = false;
+    try { owner.export_interface(source.unique_name(), invalid_path, interface, [](auto) {}); }
+    catch (const std::invalid_argument &) { invalid = true; }
+    check(invalid && owner.export_count() == 1);
+  }
+  bool duplicate = false;
+  try { owner.export_interface(source.unique_name(), path, interface, [](auto) {}); }
+  catch (const std::invalid_argument &) { duplicate = true; }
+  check(duplicate && owner.export_count() == 1);
+  owner.unexport(identity); owner.unexport(identity);
+  // WBL-C03: repeated lifetimes consume bounded active records, not tombstones.
+  for (unsigned count = 0; count < 100000; ++count) {
+    auto next = owner.export_interface(source.unique_name(), path, interface, [](auto) {});
+    check(next > identity); identity = next;
+    owner.unexport(identity); check(owner.export_count() == 0);
+  }
+  for (unsigned count = 0; count < 64; ++count)
+    owner.export_interface(source.unique_name(), std::string(path) + std::to_string(count), interface, [](auto) {});
+  bool full = false;
+  try { owner.export_interface(source.unique_name(), path, interface, [](auto) {}); }
+  catch (const std::runtime_error &) { full = true; }
+  check(full && owner.export_count() == 64);
+  owner.close();
+  check(owner.export_count() == 0 && owner.watch_count() == 0 && owner.timeout_count() == 0 && owner.listener_count() == 0);
+
+  Bus closing(address); hello(closing);
+  closing.export_interface(source.unique_name(), path, interface, [&](DBusMessage *request) {
+    // Removing the current callback while it executes does not invalidate it.
+    check(closing.respond(Message(dbus_message_new_method_return(request)))); closing.close();
+  });
+  Message request(dbus_message_new_method_call(closing.unique_name().c_str(), path, interface, "Release"));
+  check(source.call(request.get(), "", Clock::now() + std::chrono::milliseconds(100), [](auto) {}));
+  const auto close_deadline = Clock::now() + std::chrono::seconds(2);
+  while (!closing.unique_name().empty() && Clock::now() < close_deadline) {
+    std::vector<pollfd> none; closing.poll(none, 1); source.poll(none, 1);
+  }
+  check(closing.unique_name().empty() && closing.export_count() == 0 && !closing.failure());
+
+  // A stopped independent daemon applies real kernel backpressure. The callback
+  // producer cannot grow the response queue after its two reserved entries.
+  Bus blocked(address); hello(blocked);
+  Message request_template(dbus_message_new_method_call(blocked.unique_name().c_str(), path, interface, "Release"));
+  check(dbus_message_set_sender(request_template.get(), source.unique_name().c_str()));
+  dbus_message_set_serial(request_template.get(), 1);
+  struct Resume { Daemon &daemon; ~Resume() { daemon.resume(); } } resume{daemon};
+  daemon.suspend();
+  unsigned admitted = 0;
+  while (admitted < 10000 && blocked.respond(Message(dbus_message_new_method_return(request_template.get())))) {
+    ++admitted; check(blocked.response_count() <= 2);
+  }
+  check(admitted > 0 && admitted < 10000 && blocked.response_count() == 2 &&
+        blocked.failure() && std::string(blocked.failure()) == "resource_limit");
+  blocked.close(); check(blocked.response_count() == 0 && blocked.export_count() == 0);
+}
+
 static void invariants(const std::string &address) {
   for (const auto &invalid : {"", "tcp:host=127.0.0.1,port=123", "unix:path=", "unix:path=,guid=00000000000000000000000000000000",
                               "unix:path=/tmp/x;unix:path=/tmp/y", "unix:path=/tmp/x,guid=x", "unix:path=/tmp/x,key=value",
@@ -453,6 +634,7 @@ int main(int argc, char **argv) {
     invariants(daemon.address);
     signals(daemon.address);
     service_identity(daemon.address);
+    exported_methods(daemon);
     discovery_test::invariants(daemon.address);
     discovery_test::connection_invariants(daemon.address);
     unix_fds(daemon.address, 1);

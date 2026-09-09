@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.6
+  version: 1.0.7
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -393,7 +393,30 @@ is the package's ownership rule for that failure.
 S02 owns peer association and listener/snapshot reconciliation. The Agent1 object
 is exported only for the pending explicit Pair operation; exact-peer prompts
 cross IPC to the existing monitored BEAM policy worker. Native pending Agent
-messages remain owned until reply/rejection. No default agent registration,
+messages remain owned until reply/rejection.
+
+Local method exports bind one exact object path and interface to the selected
+BlueZ unique sender and this connection's unique destination. At most 64 active
+exports are admitted; duplicate routes fail. Their positive uint64 registration
+counter never rolls over, and removal retains no tombstones. Foreign senders
+receive only `org.bluez.Error.Rejected` with no message body. A no-reply request
+receives no response and reaches no policy callback. Unsupported members,
+signatures and peer/challenge values are rejected by the Agent operation.
+Callbacks do not block the shared event loop and may remove their own export.
+
+Agent method returns admit only an empty body, uint32 passkey in 0..999999, or
+1..16 printable ASCII PIN bytes. Method errors admit only the fixed rejection
+name and an empty body. All response headers are bounded D-Bus fields; no
+object path, interface, member, sender, descriptor or diagnostic text is admitted
+in a response. Each encoded response is below 1024 bytes. Two responses can wait
+in the native owner's queue; at most one additional response is submitted to
+libdbus until `dbus_connection_has_messages_to_send` reports an empty outgoing
+queue. Full response admission fails `:resource_limit` and ends the affected
+session. The SDK's approximate outgoing byte counter is not an allocation bound.
+Closing releases queued replies and active export records. Pipe/guardian cleanup
+remains required when the native process or selected daemon stops making progress.
+The signatures follow the [pinned BlueZ Agent API](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.Agent.rst).
+ No default agent registration,
 trust change, bond removal or CancelPairing is permitted. S03's write_submitted
 event precedes WriteValue submission and has its exact active request ID;
 loss without a received pre-submission rejection is conservatively unknown.

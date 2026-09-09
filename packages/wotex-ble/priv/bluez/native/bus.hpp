@@ -8,6 +8,8 @@
 #include <cerrno>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
+#include <deque>
 #include <functional>
 #include <map>
 #include <limits>
@@ -28,6 +30,11 @@ using BusCallback = std::function<void(BusReply)>;
 using SignalCallback = std::function<void(DBusMessage *)>;
 
 class Bus {
+  struct Export {
+    std::string sender, path, interface;
+    SignalCallback callback;
+    bool active = true;
+  };
   struct Listener {
     std::string sender, path, interface, member, signature;
     SignalCallback callback;
@@ -56,6 +63,9 @@ class Bus {
   std::map<DBusPendingCall *, std::unique_ptr<Pending>> pending_;
   std::map<std::uint64_t, std::shared_ptr<Listener>> listeners_;
   std::uint64_t listener_sequence_ = 0;
+  std::map<std::uint64_t, std::shared_ptr<Export>> exports_;
+  std::uint64_t export_sequence_ = 0;
+  std::deque<Message> method_replies_;
   std::string unique_name_;
   const char *failure_ = nullptr;
   bool hello_sent_ = false;
@@ -65,6 +75,27 @@ class Bus {
     auto &owner = *static_cast<Bus *>(data);
     if (dbus_message_contains_unix_fds(message)) {
       owner.failure_ = "invalid_response";
+      return DBUS_HANDLER_RESULT_HANDLED;
+    }
+    if (dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL) {
+      try {
+        std::shared_ptr<Export> selected;
+        for (const auto &[unused, endpoint] : owner.exports_) {
+          (void)unused;
+          if (endpoint->active && dbus_message_has_path(message, endpoint->path.c_str()) &&
+              dbus_message_has_interface(message, endpoint->interface.c_str())) {
+            selected = endpoint; break;
+          }
+        }
+        if (!selected) return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+        const char *sender = dbus_message_get_sender(message);
+        if (!sender || selected->sender != sender ||
+            !dbus_message_has_destination(message, owner.unique_name_.c_str()) ||
+            dbus_message_get_no_reply(message)) {
+          if (!dbus_message_get_no_reply(message))
+            owner.respond(Message(dbus_message_new_error(message, "org.bluez.Error.Rejected", nullptr)));
+        } else selected->callback(message);
+      } catch (...) { owner.failure_ = "callback_failed"; }
       return DBUS_HANDLER_RESULT_HANDLED;
     }
     if (dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_SIGNAL)
@@ -193,6 +224,14 @@ class Bus {
     }
     return true;
   }
+  void send_method_reply() {
+    if (!connection_ || failure_ || method_replies_.empty() ||
+        dbus_connection_has_messages_to_send(connection_)) return;
+    if (!dbus_connection_send(connection_, method_replies_.front().get(), nullptr)) {
+      failure_ = "transport_error"; return;
+    }
+    method_replies_.pop_front();
+  }
   void dispatch() {
     std::size_t budget = 64;
     while (connection_ && !failure_ && budget-- && dbus_connection_get_dispatch_status(connection_) == DBUS_DISPATCH_DATA_REMAINS) {
@@ -307,6 +346,75 @@ public:
     listeners_.erase(found);
   }
 
+  // Agent methods are exported only for this unique destination and the selected
+  // BlueZ sender. The callback validates member/signature/body without blocking.
+  std::uint64_t export_interface(std::string sender, std::string path,
+                                 std::string interface, SignalCallback callback) {
+    if (!connection_ || failure_ || unique_name_.empty() || exports_.size() >= 64 ||
+        export_sequence_ == std::numeric_limits<std::uint64_t>::max())
+      throw std::runtime_error("resource_limit");
+    for (const auto *field : {&sender, &path, &interface})
+      if (field->size() > 4096 || field->find('\0') != std::string::npos)
+        throw std::invalid_argument("invalid_export");
+    if (sender.empty() || sender[0] != ':' || !dbus_validate_bus_name(sender.c_str(), nullptr) ||
+        !dbus_validate_path(path.c_str(), nullptr) ||
+        !dbus_validate_interface(interface.c_str(), nullptr) || !callback)
+      throw std::invalid_argument("invalid_export");
+    for (const auto &[unused, endpoint] : exports_) {
+      (void)unused;
+      if (endpoint->path == path && endpoint->interface == interface)
+        throw std::invalid_argument("duplicate_export");
+    }
+    const auto identity = ++export_sequence_;
+    exports_.emplace(identity, std::make_shared<Export>(Export{
+      std::move(sender), std::move(path), std::move(interface), std::move(callback)}));
+    return identity;
+  }
+  void unexport(std::uint64_t identity) noexcept {
+    const auto found = exports_.find(identity);
+    if (found == exports_.end()) return;
+    found->second->active = false;
+    exports_.erase(found);
+  }
+  // These are the bounded Agent1 response types: empty, passkey, or PIN. Error
+  // replies have a fixed name and no diagnostic body. No request body is echoed.
+  bool respond(Message message) {
+    if (!connection_ || failure_ || unique_name_.empty()) return false;
+    if (!message || dbus_message_get_serial(message.get()) ||
+        !dbus_message_get_reply_serial(message.get()) || dbus_message_contains_unix_fds(message.get()) ||
+        dbus_message_get_path(message.get()) || dbus_message_get_interface(message.get()) ||
+        dbus_message_get_member(message.get()) || dbus_message_get_sender(message.get()))
+      throw std::invalid_argument("invalid_reply");
+    const char *destination = dbus_message_get_destination(message.get());
+    if (!destination || destination[0] != ':' || !dbus_validate_bus_name(destination, nullptr))
+      throw std::invalid_argument("invalid_reply");
+    const int type = dbus_message_get_type(message.get());
+    if (type == DBUS_MESSAGE_TYPE_ERROR) {
+      const char *name = dbus_message_get_error_name(message.get());
+      if (!name || std::string(name) != "org.bluez.Error.Rejected" ||
+          !dbus_message_has_signature(message.get(), "")) throw std::invalid_argument("invalid_reply");
+    } else if (type == DBUS_MESSAGE_TYPE_METHOD_RETURN) {
+      if (dbus_message_has_signature(message.get(), "u")) {
+        dbus_uint32_t value;
+        if (!dbus_message_get_args(message.get(), nullptr, DBUS_TYPE_UINT32, &value, DBUS_TYPE_INVALID) || value > 999999)
+          throw std::invalid_argument("invalid_reply");
+      } else if (dbus_message_has_signature(message.get(), "s")) {
+        const char *value = nullptr;
+        if (!dbus_message_get_args(message.get(), nullptr, DBUS_TYPE_STRING, &value, DBUS_TYPE_INVALID) ||
+            !value || !*value || strnlen(value, 17) > 16 ||
+            std::any_of(value, value + std::strlen(value), [](unsigned char c) { return c < 32 || c > 126; }))
+          throw std::invalid_argument("invalid_reply");
+      } else if (!dbus_message_has_signature(message.get(), "")) throw std::invalid_argument("invalid_reply");
+    } else throw std::invalid_argument("invalid_reply");
+    // One reply can be in libdbus transit and two more await that queue's
+    // empty barrier. Each admitted Agent reply is below 1024 encoded bytes.
+    // The SDK's approximate outgoing-size counter is not an allocation bound.
+    if (method_replies_.size() == 2) { failure_ = "resource_limit"; return false; }
+    method_replies_.push_back(std::move(message));
+    send_method_reply();
+    return !failure_;
+  }
+
   void cancel_calls() noexcept { pending_.clear(); }
 
   // Extra descriptors belong to the caller (typically native stdin/stdout).
@@ -315,6 +423,7 @@ public:
     for (auto &descriptor : extra) descriptor.revents = 0;
     if (!connection_) return;
     dispatch();
+    send_method_reply();
     if (!connection_ || failure_) return;
     std::vector<std::shared_ptr<Watch>> selected;
     std::vector<pollfd> descriptors = extra;
@@ -359,9 +468,13 @@ public:
       if (!dbus_timeout_handle(timer->value)) failure_ = "resource_limit";
     }
     dispatch();
+    send_method_reply();
   }
 
   void close() noexcept {
+    for (const auto &[unused, endpoint] : exports_) { (void)unused; endpoint->active = false; }
+    exports_.clear();
+    method_replies_.clear();
     for (const auto &[unused, listener] : listeners_) { (void)unused; listener->active = false; }
     listeners_.clear();
     pending_.clear();
@@ -382,5 +495,7 @@ public:
   std::size_t watch_count() const { return watches_.size(); }
   std::size_t timeout_count() const { return timeouts_.size(); }
   std::size_t listener_count() const { return listeners_.size(); }
+  std::size_t export_count() const { return exports_.size(); }
+  std::size_t response_count() const { return method_replies_.size(); }
 };
 } // namespace wotex::ble
