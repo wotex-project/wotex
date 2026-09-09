@@ -61,10 +61,12 @@ described below.
 
 The explicit Mix build task and its thin `build_software.sh` entry point verify
 the pinned sources, installed BACstack files, native build options and peer
-binary/toolchain identities in an absolute workspace. The existing
-`run_software.sh` still exercises the read/write fixture through environment
-configuration. The required Mix run task, complete fault workflow and final
-software matrix/archive cohort remain required.
+binary/toolchain identities in an absolute workspace. The Mix run task and its
+thin `run_software.sh` entry point own four normal/sanitizer and
+shared/terminal peer lanes. Local fault cases require exact container identity,
+bounded readiness/output/deadline behavior, owner-death recovery, actual cleanup
+counters and exact labelled-container absence. The final supported-runtime
+software matrix and archive cohort remain required.
 A COV listener or final receiver queue bound does not bound an earlier
 SDK-to-StackOwner mailbox.
 

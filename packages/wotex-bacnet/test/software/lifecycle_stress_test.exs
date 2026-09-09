@@ -17,9 +17,10 @@ defmodule Wotex.BACnet.LifecycleStressTest do
     %{destination: {{127, 0, 0, 1}, port}}
   end
 
-  test "WBA-S02 WBA-S03 WBA-V14 1000 sequential and32 concurrent independent C-stack reads", %{
-    destination: destination
-  } do
+  test "WBA-ST01 WBA-S02 WBA-S03 WBA-V14 1000 sequential and 32 concurrent independent C-stack reads",
+       %{
+         destination: destination
+       } do
     row = Enum.find(@cases, &(&1["id"] == "WBA-ST01"))
     sequential = row["input"]["sequential_reads"]
     concurrent = row["input"]["concurrent_reads"]
@@ -74,9 +75,10 @@ defmodule Wotex.BACnet.LifecycleStressTest do
     )
   end
 
-  test "WBA-S03 WBA-V14 100 real stack lifecycles close all tracked processes and UDP ports", %{
-    destination: destination
-  } do
+  test "WBA-ST02 WBA-S03 WBA-V14 100 real stack lifecycles close all tracked processes and UDP ports",
+       %{
+         destination: destination
+       } do
     row = Enum.find(@cases, &(&1["id"] == "WBA-ST02"))
     cycles = row["input"]["open_read_close_cycles"]
 

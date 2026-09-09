@@ -24,7 +24,7 @@ commits, each with focused tests and a passing complete local gate.
 | WBA-P05 | S05; V12: Runtime Property COV and explicit read probe | runtime_stream_test.exs, runtime_frame_test.exs, runtime_integration_test.exs; CP17 executes public Runtime observation and original-association stop; CP22–CP24 verify final-owner/receiver/opening-worker death after accepted C-peer registration | Retain independent opening and admitted-observation cases in final cohorts; verified ingress admission is exercised by ingress_lifecycle_test.exs |
 | WBA-P05a | N01–N05: native helpers, bounded Who-Is/I-Am, sequential 1..64 Property reads | F01–F11 corpus bindings listed in WBA-N05; standalone_contract_test.exs, discovery_lifecycle_test.exs; independent discovery/batch/write/readback/release in CP02 | Retain helpers in the final combined workflow in P06 |
 | WBA-P05b | I01–I06: exact profiles, route/value/error/Retry and consumer ownership | runtime_integration_test.exs binds I-F01; error_class_test.exs binds each I-F02–I-F07 through native Error, Runtime cause and Retry; runtime_stream_test.exs exercises public observations | Retain exact corpus projections and all I06 security/media/context/stream assertions in the final software and archive cohorts |
-| WBA-P06 | S01–S05/S03a/N01–N05/I01–I06/C09; V13/V14: bounded owned UDP ingress and full independent software acceptance | cstack_test.exs and lifecycle_stress_test.exs cover read/write, 1000 sequential reads, 32 concurrent reads and 100 stack cycles; cstack_cov_test.exs and cstack_property_test.exs cover CP02–CP21 discovery, batch, release, object/Property COV and loss controls; cov_lifecycle_stress_test.exs covers ST03's 100 receiver deaths | Complete Mix tooling, the complete fault workflow and final cohorts; the implemented cells do not accept the full profile |
+| WBA-P06 | S01–S05/S03a/N01–N05/I01–I06/C09; V13/V14: bounded owned UDP ingress and full independent software acceptance | cstack_test.exs and lifecycle_stress_test.exs cover read/write, 1000 sequential reads, 32 concurrent reads and 100 stack cycles; cstack_cov_test.exs and cstack_property_test.exs cover CP02–CP21 discovery, batch, release, object/Property COV and loss controls; cov_lifecycle_stress_test.exs covers ST03's 100 receiver deaths; the Mix runner owns four peer lanes and rejects incomplete case, cleanup and sanitizer evidence | Execute the final minimum/current supported cohorts and archive validation against the committed runner source |
 
 Test filenames without a directory are under `test/wotex/bacnet/`; independent
 peer tests are under `test/interop/` and stress tests under `test/software/`.
@@ -41,14 +41,16 @@ for every requirement family. Evidence includes its exact source and corpus SHA.
    [ingress-v1.json](../specs/fixtures/ingress-v1.json) trace and sustained software-UDP observations.
 2. `mix wotex.software.build --workspace ABS` builds or verifies the pinned
    instrumented peers and their source/toolchain manifest. Its shell entry point
-   delegates directly to the unique Mix task. Implement
-   `mix wotex.software.run --workspace ABS` with the ownership and evidence
-   contract below. The existing run shell script remains a read/write fixture
-   entry point; its existence does not satisfy the Mix run contract.
+   delegates directly to the unique Mix task.
+   `mix wotex.software.run --workspace ABS` owns normal/shared,
+   normal/terminal, sanitizer/shared and sanitizer/terminal containers and emits
+   bounded source-bound evidence for each lane. `run_software.sh` delegates to
+   that task.
    The [command guardian](../../test/interop/native/README.md) supplies bounded
-   process-group ownership and workspace leases. Its fifteen ExUnit cases and
-   eight standalone native cases cover local command faults; container ownership
-   and the complete Mix workflow require their own evidence.
+   process-group ownership and workspace leases. Its ExUnit and standalone
+   native cases cover inherited signal state, short-lived process-group races,
+   local command faults and owner loss. Runner fault cases cover container
+   identity, readiness, bounded output, deadlines and cleanup failures.
    `Dockerfile.software` is the instrumented normal/sanitizer build recipe.
    The shared selection excludes `peer_shutdown`; a separate owned peer runs
    `test/interop/cstack/shutdown_test.exs --include peer_shutdown` for CP25.

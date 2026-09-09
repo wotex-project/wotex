@@ -7,7 +7,7 @@ defmodule Wotex.BACnet.CStackTest do
   alias Wotex.BACnet.IPv4
   @moduletag :interop
 
-  test "independent C stack acknowledges read/write and rejects an unknown object" do
+  test "WBA-C09 WBA-S01 WBA-S02 independent C stack acknowledges read/write and rejects an unknown object" do
     port = System.fetch_env!("WOTEX_BACNET_INTEROP_PORT") |> String.to_integer()
 
     assert {:ok, session} =

@@ -1,6 +1,7 @@
 Code.require_file("command.exs", __DIR__)
 Code.require_file("manifest.exs", __DIR__)
 Code.require_file("package.exs", __DIR__)
+Code.require_file("run.exs", __DIR__)
 
 defmodule Wotex.BACnet.SoftwareFixture do
   @moduledoc false
@@ -20,8 +21,8 @@ defmodule Wotex.BACnet.SoftwareFixture do
     "link" => ["-Wl,--wrap=bip_send_pdu"]
   }
 
-  @spec main(:build, [String.t()]) :: :ok
-  def main(:build = operation, arguments) do
+  @spec main(:build | :run, [String.t()]) :: :ok
+  def main(operation, arguments) when operation in [:build, :run] do
     root = File.cwd!()
     workspace = SoftwareManifest.arguments(arguments, root)
     prepare(operation, workspace)
@@ -124,10 +125,21 @@ defmodule Wotex.BACnet.SoftwareFixture do
     end
   end
 
+  defp dispatch(:run, context) do
+    manifest =
+      verify(context, SoftwareManifest.read(Path.join(context.workspace, "peer-manifest.json")))
+
+    Wotex.BACnet.SoftwareRun.run(context, manifest)
+  end
+
   defp prepare(:build, workspace) do
     File.mkdir_p!(workspace)
     entries = File.ls!(workspace)
     unless entries == [] or "peer-manifest.json" in entries, do: fail(:unrelated_workspace)
+  end
+
+  defp prepare(:run, workspace) do
+    unless File.dir?(workspace), do: fail(:invalid_workspace)
   end
 
   defp build(context, manifest_path) do
@@ -358,6 +370,12 @@ defmodule Wotex.BACnet.SoftwareFixture do
 
     unless manifest["container_base"] == @base and manifest["build_options"] == @build_options,
       do: fail(:build_options_mismatch)
+
+    unless manifest["build_source"] == context.source, do: fail(:build_source_mismatch)
+
+    unless manifest["native_cases"] ==
+             ["WBA-CP01-control-boundaries", "WBA-CP10-property-boundaries"],
+           do: fail(:native_case_mismatch)
 
     package =
       SoftwarePackage.verify(

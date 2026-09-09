@@ -89,6 +89,14 @@ defmodule Wotex.BACnet.BuildTaskTest do
       Build.run(["--workspace", workspace])
     end
 
+    for {field, value, error} <- [
+          {"build_source", %{}, "build_source_mismatch"},
+          {"native_cases", ["WBA-CP01-control-boundaries"], "native_case_mismatch"}
+        ] do
+      SoftwareManifest.write(manifest_path, Map.put(manifest, field, value))
+      assert_raise Mix.Error, error, fn -> Build.run(["--workspace", workspace]) end
+    end
+
     SoftwareManifest.write(manifest_path, manifest)
     guardian = Path.join(workspace, "command")
     File.write!(guardian, "changed")

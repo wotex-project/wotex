@@ -12,11 +12,17 @@ defmodule Wotex.BACnet.SoftwareManifest do
     "test/interop/cstack/property_peer.c",
     "test/interop/cstack/property_peer.h",
     "test/interop/native/command.c",
+    "test/interop/native/command_group_fault.c",
+    "test/interop/native/command_launcher.c",
+    "test/interop/run_software.sh",
     "test/support/software/command.exs",
     "test/support/software/manifest.exs",
     "test/support/software/package.exs",
     "test/support/software/fixture.exs",
+    "test/support/software/run.exs",
+    "test/support/software_formatter.ex",
     "lib/mix/tasks/wotex.bacnet.software.build.ex",
+    "lib/mix/tasks/wotex.bacnet.software.run.ex",
     "mix.exs",
     "mix.lock"
   ]

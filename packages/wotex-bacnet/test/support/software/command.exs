@@ -90,7 +90,26 @@ defmodule Wotex.BACnet.SoftwareCommand do
 
   @spec await(port(), non_neg_integer(), pos_integer(), binary()) :: result()
   def await(port, timeout, limit \\ @limit, initial \\ "") do
+    case observe(port, timeout, limit, initial) do
+      {:error, reason, :unverified, _output} -> {:error, reason, :unverified}
+      result -> result
+    end
+  end
+
+  @spec observe(port(), non_neg_integer(), pos_integer(), binary()) ::
+          {:ok, binary(), non_neg_integer()} | {:error, atom(), :unverified, binary()}
+  def observe(port, timeout, limit, initial) do
     try do
+      poll(port, timeout, limit, initial)
+    after
+      if Port.info(port), do: Port.close(port)
+    end
+  end
+
+  @spec poll(port(), non_neg_integer(), pos_integer(), binary()) ::
+          {:ok, binary(), non_neg_integer()} | {:error, atom(), :unverified, binary()}
+  def poll(port, timeout, limit, initial) do
+    if byte_size(initial) <= limit do
       collect(
         port,
         [initial],
@@ -98,8 +117,8 @@ defmodule Wotex.BACnet.SoftwareCommand do
         limit,
         System.monotonic_time(:millisecond) + timeout
       )
-    after
-      if Port.info(port), do: Port.close(port)
+    else
+      {:error, :command_output_limit, :unverified, binary_part(initial, 0, limit)}
     end
   end
 
@@ -125,14 +144,16 @@ defmodule Wotex.BACnet.SoftwareCommand do
       {^port, {:data, bytes}} when byte_size(bytes) + count <= limit ->
         collect(port, [bytes | output], count + byte_size(bytes), limit, deadline)
 
-      {^port, {:data, _}} ->
-        {:error, :command_output_limit, :unverified}
+      {^port, {:data, bytes}} ->
+        prefix = binary_part(bytes, 0, max(limit - count, 0))
+        retained = IO.iodata_to_binary(Enum.reverse([prefix | output]))
+        {:error, :command_output_limit, :unverified, retained}
 
       {^port, {:exit_status, code}} ->
         {:ok, IO.iodata_to_binary(Enum.reverse(output)), code}
     after
       max(deadline - System.monotonic_time(:millisecond), 0) ->
-        {:error, :command_deadline, :unverified}
+        {:error, :command_deadline, :unverified, IO.iodata_to_binary(Enum.reverse(output))}
     end
   end
 

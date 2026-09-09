@@ -10,6 +10,14 @@ The [POSIX guardian](../../interop/native/README.md) owns its local commands.
 These test-support modules are loaded by the fixture workflow; BACnet runtime
 dependency loading never invokes them.
 
+After a successful build, run
+`mix wotex.software.run --workspace /absolute/disposable/workspace`. The runner
+uses four separately owned containers: normal and sanitizer variants each run a
+shared suite and a terminal-shutdown suite. It binds required requirement/vector
+IDs to the ExUnit output, records native cleanup counters and sanitizer output,
+and verifies removal of the exact labelled container. `run_software.sh` is a
+thin entry point for the same Mix task.
+
 `SoftwarePackage` verifies the exact BACstack version, inner checksum and outer
 archive hash in the Mix lock. It checks the outer SHA-256 before decompression.
 For Hex format 3, the inner checksum covers the version bytes, metadata bytes
@@ -38,8 +46,8 @@ must additionally establish that the hashed inputs match that committed tree.
 `test/software/source_manifest_test.exs` binds WBA-C09/WBA-V13 to workspace,
 archive, receipt and installed-source assertions. Its software-tagged case
 requires `WOTEX_BACNET_SOFTWARE_WORKSPACE/bacstack.tar` and verifies the actual
-pinned dependency, then rejects a changed copy. The Mix workflow and final
-software cohorts remain separate acceptance obligations.
+pinned dependency, then rejects a changed copy. Acceptance still requires the
+complete supported-runtime software cohorts against a clean committed source.
 
 The build records both normal and ASan/UBSan peer versions, their static SDK
 libraries and binary hashes. Its pinned Linux image records compiler, linker,

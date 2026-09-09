@@ -4,6 +4,7 @@ defmodule Wotex.BACnet.SoftwareCommandTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
+  alias Wotex.BACnet.SoftwareCommand
   @native Path.expand("../interop/native", __DIR__)
 
   setup_all do
@@ -320,7 +321,6 @@ defmodule Wotex.BACnet.SoftwareCommandTest do
 
   test "WBA-C09 WBA-V14 lease readiness accumulates split bytes and rejects malformed output",
        context do
-    alias Wotex.BACnet.SoftwareCommand
     assert {:ok, port} = SoftwareCommand.lease(context.probe, "/split")
     assert :ok = SoftwareCommand.release_lease(port)
 
@@ -329,6 +329,38 @@ defmodule Wotex.BACnet.SoftwareCommandTest do
       assert {:error, :invalid_workspace_lock} = SoftwareCommand.lease(context.probe, path)
       assert System.monotonic_time(:millisecond) - started < 500
     end
+  end
+
+  test "WBA-C09 WBA-V14 observation retains bounded failure output and exact completed status",
+       context do
+    assert {:ok, output, 0} =
+             SoftwareCommand.observe(launch(context, "output"), 1000, 128, "ready\n")
+
+    assert String.starts_with?(output, "ready\n")
+    assert output =~ "stdout\n" and output =~ "stderr\n"
+
+    port = launch(context, "hang")
+    assert_receive {^port, {:data, initial}}, 1000
+
+    assert {:error, :command_deadline, :unverified, ^initial} =
+             SoftwareCommand.observe(port, 20, 128, initial)
+
+    assert_dead(pids(initial))
+
+    port = launch(context, "flood")
+
+    assert {:error, :command_output_limit, :unverified, output} =
+             SoftwareCommand.observe(port, 1000, 128, "ready\n")
+
+    assert output == "ready\n" <> String.duplicate("x", 122)
+    assert Port.info(port) == nil
+
+    port = launch(context, "output")
+
+    assert {:error, :command_output_limit, :unverified, "read"} =
+             SoftwareCommand.observe(port, 1000, 4, "ready\n")
+
+    assert Port.info(port) == nil
   end
 
   defp lock(context, path) do
