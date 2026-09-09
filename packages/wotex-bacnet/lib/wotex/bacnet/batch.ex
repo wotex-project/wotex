@@ -70,11 +70,11 @@ defmodule Wotex.BACnet.Batch do
   @spec failure(Error.t(), non_neg_integer(), non_neg_integer()) :: Error.t()
   def failure(%Error{} = error, index, property) do
     details = Map.take(error.details, [:class, :code, :reason])
+    error = Error.with_effect(error, :none)
 
     %{
       error
-      | effect: :none,
-        details:
+      | details:
           Map.merge(details, %{batch_index: index, property: property, completed_count: index})
     }
   end
@@ -104,7 +104,10 @@ defmodule Wotex.BACnet.Batch do
   end
 
   defp finish_read({:ok, value}, true) do
-    with :ok <- Value.validate_read(value), do: {:ok, value}
+    case Value.validate_read(value) do
+      :ok -> {:ok, value}
+      {:error, error} -> {:error, Error.protocol(error)}
+    end
   end
 
   defp finish_read({:error, %Error{}} = error, _), do: error

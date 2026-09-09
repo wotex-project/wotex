@@ -37,7 +37,7 @@ defmodule Wotex.BACnet.NativeCall do
       result
     else
       effect = if match?(%{type: :write_property}, request), do: :unknown, else: :none
-      {:error, %{Error.new(:deadline_exceeded) | effect: effect}}
+      {:error, Error.with_effect(Error.new(:deadline_exceeded), effect)}
     end
   end
 

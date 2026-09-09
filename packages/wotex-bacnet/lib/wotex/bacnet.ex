@@ -72,7 +72,7 @@ defmodule Wotex.BACnet do
         {:error, error}
         when type in [:write, :write_property, :invoke, :call] and
                session.client not in [Wotex.BACnet.BACstack, Wotex.BACnet.IPv4] ->
-          {:error, %{error | effect: :unknown}}
+          {:error, Error.with_effect(error, :unknown)}
 
         {:ok, _} = result ->
           result

@@ -610,7 +610,7 @@ defmodule Wotex.BACnet.OperationOwner do
     do: {:error, Batch.failure(Error.new(code), 0, property)}
 
   defp failure(code, %{type: :write_property}),
-    do: {:error, %{Error.new(code) | effect: :unknown}}
+    do: {:error, Error.with_effect(Error.new(code), :unknown)}
 
   defp failure(code, _), do: {:error, Error.new(code)}
 

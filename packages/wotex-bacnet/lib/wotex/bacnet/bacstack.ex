@@ -274,7 +274,7 @@ defmodule Wotex.BACnet.BACstack do
 
   defp effect({:error, %Error{details: %{dispatch: :not_started}}} = error, _), do: error
 
-  defp effect({:error, error}, :write_property), do: {:error, %{error | effect: :unknown}}
+  defp effect({:error, error}, :write_property), do: {:error, Error.with_effect(error, :unknown)}
   defp effect(result, _), do: result
 
   @doc "Accepts only an exact service acknowledgment; missing/negative responses fail."
@@ -305,7 +305,7 @@ defmodule Wotex.BACnet.BACstack do
          :ok <- Value.validate_read(encoded) do
       {:ok, encoded}
     else
-      {:error, %Error{}} = error -> error
+      {:error, %Error{} = error} -> {:error, Error.protocol(error)}
       _ -> {:error, Error.new(:response_mismatch)}
     end
   end

@@ -16,7 +16,7 @@ defmodule Wotex.BACnet.NativeDiscovery do
          :ok <- completed(deadline) do
       {:ok, devices}
     else
-      {:error, %Error{} = error} -> {:error, %{error | effect: :none}}
+      {:error, %Error{} = error} -> {:error, Error.with_effect(error, :none)}
       false -> {:error, Error.new(:invalid_transport_return)}
     end
   end

@@ -20,7 +20,7 @@ defmodule Wotex.BACnet.PortCall do
     case apply(module, function, args) do
       {:ok, _} = result -> result
       :ok when function in [:disconnect, :unsubscribe] -> :ok
-      {:error, %Error{}} = result -> result
+      {:error, %Error{} = error} -> {:error, Error.normalize(error)}
       {:error, _} -> {:error, Error.new(:transport_error)}
       _ -> {:error, Error.new(:invalid_transport_return)}
     end

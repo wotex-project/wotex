@@ -10,11 +10,11 @@ defmodule Wotex.BACnet.NativeHelpers do
     with {:ok, deadline} <- deadline(session),
          {:ok, request} <- request(:read_property, object, instance, property),
          {:ok, value} <- BACnet.send_deadline(session, request, deadline),
-         :ok <- Value.validate_read(value),
+         :ok <- validate_read(value),
          :ok <- completed(deadline, :none) do
       {:ok, value}
     else
-      {:error, %Error{} = error} -> {:error, %{error | effect: :none}}
+      {:error, %Error{} = error} -> {:error, Error.with_effect(error, :none)}
     end
   end
 
@@ -29,7 +29,7 @@ defmodule Wotex.BACnet.NativeHelpers do
       :ok
     else
       {:error, _} = error -> error
-      _ -> {:error, %{Error.new(:invalid_transport_return) | effect: :unknown}}
+      _ -> {:error, Error.with_effect(Error.new(:invalid_transport_return), :unknown)}
     end
   end
 
@@ -43,7 +43,14 @@ defmodule Wotex.BACnet.NativeHelpers do
          :ok <- completed_batch(requests, deadline) do
       {:ok, values}
     else
-      {:error, %Error{} = error} -> {:error, %{error | effect: :none}}
+      {:error, %Error{} = error} -> {:error, Error.with_effect(error, :none)}
+    end
+  end
+
+  defp validate_read(value) do
+    case Value.validate_read(value) do
+      :ok -> :ok
+      {:error, error} -> {:error, Error.protocol(error)}
     end
   end
 
@@ -71,7 +78,7 @@ defmodule Wotex.BACnet.NativeHelpers do
   defp completed(deadline, effect) do
     if System.monotonic_time(:millisecond) < deadline,
       do: :ok,
-      else: {:error, %{Error.new(:deadline_exceeded) | effect: effect}}
+      else: {:error, Error.with_effect(Error.new(:deadline_exceeded), effect)}
   end
 
   defp call_batch(session, requests, deadline) do
