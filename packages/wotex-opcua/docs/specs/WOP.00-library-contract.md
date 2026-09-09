@@ -197,6 +197,7 @@ backend revision; an unsupported version/revision fails before application I/O.
 | Request | `version: 1`, `generation`, `id`, `operation`, `parameters`, finite `timeout_ms`, `deadline_ms` |
 | Success | `version: 1`, matching `generation` and `id`, `ok: true`, `result` (explicit null allowed) |
 | Failure | `version: 1`, matching `generation` and `id`, `ok: false`, closed `error` map from WOP.13 |
+| Terminal control | `version: 1`, `generation` (null only before generation admission), `event: "terminal"`, closed `error` map; no request ID |
 | Stream report | `version: 1`, `subscription_id`, `generation`, `event`, `value`, bounded `metadata` |
 | Credit | `version: 1`, `generation`, `event: "credit"`, monotonic `sequence`, bounded `messages` and `bytes`; no response |
 

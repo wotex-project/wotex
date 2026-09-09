@@ -1486,6 +1486,112 @@
           "native_requests": 0
         }
       }
+    },
+    {
+      "id": "WOP-X-F56",
+      "requirements": [
+        "WOP-X03",
+        "WOP-X04"
+      ],
+      "tier": "native_trace",
+      "operation": "terminal_control",
+      "input": {
+        "owner_generation": 1,
+        "normal_credits": 0,
+        "pending_operations": [
+          {
+            "id": "read-1",
+            "operation": "read",
+            "emitted_to_native": true
+          },
+          {
+            "id": "write-1",
+            "operation": "write",
+            "emitted_to_native": true
+          },
+          {
+            "id": "queued-write",
+            "operation": "write",
+            "emitted_to_native": false
+          }
+        ],
+        "frame": {
+          "version": 1,
+          "generation": 1,
+          "event": "terminal",
+          "error": {
+            "code": "receiver_overflow",
+            "phase": "exchange",
+            "effect": "none"
+          }
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "terminal_error": "receiver_overflow",
+          "effects": {
+            "read-1": "none",
+            "write-1": "unknown",
+            "queued-write": "none"
+          },
+          "successful_results": 0,
+          "owned_resources_after_grace": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F57",
+      "requirements": [
+        "WOP-X03",
+        "WOP-X04"
+      ],
+      "tier": "native_trace",
+      "operation": "terminal_control",
+      "input": {
+        "owner_generation": 1,
+        "normal_credits": 0,
+        "pending_operations": [
+          {
+            "id": "read-1",
+            "operation": "read",
+            "emitted_to_native": true
+          },
+          {
+            "id": "write-1",
+            "operation": "write",
+            "emitted_to_native": true
+          },
+          {
+            "id": "queued-write",
+            "operation": "write",
+            "emitted_to_native": false
+          }
+        ],
+        "frame": {
+          "version": 1,
+          "generation": 2,
+          "event": "terminal",
+          "error": {
+            "code": "receiver_overflow",
+            "phase": "exchange",
+            "effect": "none"
+          }
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "terminal_error": "response_mismatch",
+          "effects": {
+            "read-1": "none",
+            "write-1": "unknown",
+            "queued-write": "none"
+          },
+          "successful_results": 0,
+          "owned_resources_after_grace": 0
+        }
+      }
     }
   ]
 }

@@ -254,6 +254,16 @@ credit grants. Credit envelopes require no response. Initial credit is explicit;
 transmitting normal output with zero credit is a protocol failure; generated
 output waits only in the bounded native queue. Ready and one terminal
 failure may use a separate aggregate 4096-byte control allowance per generation.
+The terminal control is exactly `{version: 1, generation, event: "terminal",
+error: {code, phase, effect}}`, with optional uint32 `error.status`. It has no
+request ID and uses null generation only before the first valid generation-bearing
+input. Once a generation is admitted it must match. Only one terminal control
+is permitted; no normal output follows it. An unexpected/duplicate terminal or
+generation mismatch is a local protocol failure. Native death without this frame
+still fails all unfinished work. Association failure gives unfinished reads
+effect none and potentially transmitted mutations effect unknown; a global
+terminal frame cannot assert rollback for an individual write. Locally queued
+work never emitted to the native process retains effect none.
 
 A suspended BEAM owner therefore receives at most the credited output plus that
 finite control allowance. Native notification buffering remains at most 64
