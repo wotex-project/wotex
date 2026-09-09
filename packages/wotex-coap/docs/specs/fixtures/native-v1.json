@@ -393,6 +393,410 @@
         "complete_reports": 2,
         "partial_deliveries": 0
       }
+    },
+    {
+      "id": "WCO-N-F16",
+      "operation": "decode_command",
+      "input": {
+        "version": 1,
+        "id": "17",
+        "operation": "observe",
+        "parameters": {
+          "path": "/value",
+          "confirmable": true,
+          "observation_kind": "property"
+        },
+        "timeout_ms": 1000
+      },
+      "expected": {
+        "error": "native_protocol_error",
+        "generation_closed": true,
+        "network_datagrams": 0
+      }
+    },
+    {
+      "id": "WCO-N-F17",
+      "operation": "decode_command",
+      "input": {
+        "version": 1,
+        "id": "17",
+        "operation": "observe",
+        "parameters": {
+          "path": "/value",
+          "confirmable": true,
+          "observation_kind": "property",
+          "renew": null
+        },
+        "timeout_ms": 1000
+      },
+      "expected": {
+        "error": "native_protocol_error",
+        "generation_closed": true,
+        "network_datagrams": 0
+      }
+    },
+    {
+      "id": "WCO-N-F18",
+      "operation": "decode_command",
+      "input": {
+        "version": 1,
+        "id": "17",
+        "operation": "observe",
+        "parameters": {
+          "path": "/value",
+          "confirmable": true,
+          "observation_kind": "property",
+          "renew": 0
+        },
+        "timeout_ms": 1000
+      },
+      "expected": {
+        "error": "native_protocol_error",
+        "generation_closed": true,
+        "network_datagrams": 0
+      }
+    },
+    {
+      "id": "WCO-N-F19",
+      "operation": "decode_command",
+      "input": {
+        "version": 1,
+        "id": "17",
+        "operation": "observe",
+        "parameters": {
+          "path": "/value",
+          "confirmable": true,
+          "observation_kind": "property",
+          "renew": "true"
+        },
+        "timeout_ms": 1000
+      },
+      "expected": {
+        "error": "native_protocol_error",
+        "generation_closed": true,
+        "network_datagrams": 0
+      }
+    },
+    {
+      "id": "WCO-N-F20",
+      "operation": "decode_command",
+      "input": {
+        "version": 1,
+        "id": "17",
+        "operation": "observe",
+        "parameters": {
+          "path": "/value",
+          "confirmable": true,
+          "observation_kind": "property",
+          "renew": {}
+        },
+        "timeout_ms": 1000
+      },
+      "expected": {
+        "error": "native_protocol_error",
+        "generation_closed": true,
+        "network_datagrams": 0
+      }
+    },
+    {
+      "id": "WCO-N-F21",
+      "operation": "observe_establishment_trace",
+      "input": {
+        "generation": 1,
+        "steps": [
+          {
+            "command": {
+              "version": 1,
+              "id": "17",
+              "operation": "observe",
+              "parameters": {
+                "path": "/value",
+                "confirmable": true,
+                "observation_kind": "property",
+                "renew": false
+              },
+              "timeout_ms": 1000
+            }
+          },
+          {
+            "authenticated_response": {
+              "type": "ack",
+              "code": 69,
+              "message_id": 71,
+              "token": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "options": [
+                {
+                  "number": 6,
+                  "value": {
+                    "type": "bytes",
+                    "base64": "CQ=="
+                  }
+                }
+              ],
+              "payload": {
+                "type": "bytes",
+                "base64": "QUJD"
+              }
+            }
+          },
+          {
+            "command": {
+              "version": 1,
+              "id": "18",
+              "operation": "credit",
+              "parameters": {
+                "generation": 1,
+                "ack_seq": 0
+              },
+              "timeout_ms": 1000
+            }
+          }
+        ]
+      },
+      "expected": {
+        "stdout": [
+          {
+            "version": 1,
+            "id": "17",
+            "ok": true,
+            "result": {
+              "subscription_id": "17",
+              "generation": 1
+            }
+          },
+          {
+            "version": 1,
+            "id": "18",
+            "ok": true,
+            "result": null
+          },
+          {
+            "version": 1,
+            "event": "report",
+            "subscription_id": "17",
+            "generation": 1,
+            "report_seq": 1,
+            "value": {
+              "type": "ack",
+              "code": 69,
+              "message_id": 71,
+              "token": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "options": [
+                {
+                  "number": 6,
+                  "value": {
+                    "type": "bytes",
+                    "base64": "CQ=="
+                  }
+                }
+              ],
+              "payload": {
+                "type": "bytes",
+                "base64": "QUJD"
+              }
+            },
+            "metadata": {
+              "code": 69,
+              "observe": 9,
+              "etag": null,
+              "content_format": null,
+              "max_age": 60
+            }
+          }
+        ],
+        "reports_before_credit": 0
+      }
+    },
+    {
+      "id": "WCO-N-F22",
+      "operation": "observe_cancel_trace",
+      "input": {
+        "precondition": "F21 complete; report sequence 1 delivered",
+        "steps": [
+          {
+            "command": {
+              "version": 1,
+              "id": "19",
+              "operation": "cancel",
+              "parameters": {
+                "subscription_id": "17",
+                "generation": 1
+              },
+              "timeout_ms": 1000
+            }
+          },
+          {
+            "authenticated_response": {
+              "type": "ack",
+              "code": 69,
+              "message_id": 71,
+              "token": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "options": [
+                {
+                  "number": 6,
+                  "value": {
+                    "type": "bytes",
+                    "base64": "CQ=="
+                  }
+                }
+              ],
+              "payload": {
+                "type": "bytes",
+                "base64": "QUJD"
+              }
+            }
+          },
+          {
+            "authenticated_response": {
+              "type": "ack",
+              "code": 69,
+              "message_id": 72,
+              "token": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "options": [],
+              "payload": {
+                "type": "bytes",
+                "base64": "QUJD"
+              }
+            }
+          },
+          {
+            "authenticated_response": {
+              "type": "ack",
+              "code": 69,
+              "message_id": 71,
+              "token": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "options": [
+                {
+                  "number": 6,
+                  "value": {
+                    "type": "bytes",
+                    "base64": "CQ=="
+                  }
+                }
+              ],
+              "payload": {
+                "type": "bytes",
+                "base64": "QUJD"
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "stdout": [
+          {
+            "version": 1,
+            "id": "19",
+            "ok": true,
+            "result": null
+          }
+        ],
+        "intervening_observe_successes": 0,
+        "reports_after_cancel": 0,
+        "subscriptions_after": 0
+      }
+    },
+    {
+      "id": "WCO-N-F23",
+      "operation": "observe_establishment_failure_trace",
+      "input": {
+        "generation": 1,
+        "steps": [
+          {
+            "command": {
+              "version": 1,
+              "id": "17",
+              "operation": "observe",
+              "parameters": {
+                "path": "/value",
+                "confirmable": true,
+                "observation_kind": "property",
+                "renew": false
+              },
+              "timeout_ms": 1000
+            }
+          },
+          {
+            "authenticated_response": {
+              "type": "ack",
+              "code": 69,
+              "message_id": 72,
+              "token": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "options": [],
+              "payload": {
+                "type": "bytes",
+                "base64": "QUJD"
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "stdout": [
+          {
+            "version": 1,
+            "id": "17",
+            "ok": false,
+            "error": {
+              "code": "invalid_observation_response"
+            }
+          }
+        ],
+        "establishments": 0,
+        "reports": 0,
+        "subscriptions_after": 0
+      }
+    },
+    {
+      "id": "WCO-N-F24",
+      "operation": "established_loss_trace",
+      "input": {
+        "precondition": "F21 complete; all report credit outstanding",
+        "steps": [
+          {
+            "native_failure": "session_lost"
+          },
+          {
+            "native_failure": "session_lost"
+          }
+        ]
+      },
+      "expected": {
+        "stdout": [
+          {
+            "version": 1,
+            "subscription_id": "17",
+            "generation": 1,
+            "event": "error",
+            "value": {
+              "code": "session_lost"
+            },
+            "metadata": {}
+          }
+        ],
+        "terminal_frames": 1,
+        "report_credit_consumed": 0,
+        "subscriptions_after": 0,
+        "generation_closed": true
+      }
     }
   ]
 }

@@ -2,6 +2,7 @@
 """Run loopback UDP/DTLS acceptance against a verified pinned libcoap executable."""
 
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -12,6 +13,24 @@ import subprocess
 import time
 
 REVISION = "7cf7465b784baded4de183290c547d582becfd28"
+PKI_PROFILES = ["server", "wrong-san", "expired", "wrong-ku", "wrong-eku", "critical",
+                "cn-only", "wildcard", "revoked"]
+
+
+def pki_material(source, output, profile):
+    fixtures = source / "test/fixtures/dtls_pki"
+    manifest = json.loads((fixtures / "manifest.json").read_text())
+    for name, expected in manifest["files"].items():
+        if hashlib.sha256((fixtures / name).read_bytes()).hexdigest() != expected:
+            raise RuntimeError("PKI fixture does not match its checked-in manifest")
+    for name, label, target in [(profile + ".der", "CERTIFICATE", "server.pem"),
+                                (profile + "-key.der", "RSA PRIVATE KEY", "server-key.pem"),
+                                ("root.der", "CERTIFICATE", "root.pem")]:
+        encoded = base64.b64encode((fixtures / name).read_bytes()).decode("ascii")
+        lines = [encoded[index:index + 64] for index in range(0, len(encoded), 64)]
+        (output / target).write_text("-----BEGIN " + label + "-----\n" +
+                                     "\n".join(lines) + "\n-----END " + label + "-----\n")
+    return hashlib.sha256((fixtures / "manifest.json").read_bytes()).hexdigest()
 
 
 def reserve_ports():
@@ -50,20 +69,26 @@ def run(options):
         raise RuntimeError("peer executable does not match the pinned manifest")
     output = options.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
+    source = Path(__file__).resolve().parents[3]
+    pki_sha = pki_material(source, output, options.pki_profile)
     identities = output / "test-identities.csv"
     identities.write_text("fixture-hint,client,fixture-key-12345\n")
     port = reserve_ports()
     command = [str(executable), "-A", "127.0.0.1", "-p", str(port), "-d", "32", "-e",
                "-h", "fixture-hint", "-k", "fallback-key-4567", "-i", str(identities),
-               "-v", "0", "-V", "0"]
+               "-c", str(output / "server.pem"), "-j", str(output / "server-key.pem"),
+               "-C", str(output / "root.pem"), "-v", "0", "-V", "0"]
     environment = os.environ.copy()
     environment.update(MIX_ENV="test", WOTEX_COAP_INTEROP_PORT=str(port),
-                       WOTEX_COAP_DTLS_INTEROP_PORT=str(port + 1))
-    tests = ["mix", "test", "test/interop/libcoap_test.exs", "test/interop/dtls_test.exs",
-             "--include", "interop", "--seed", "0"]
-    source = Path(__file__).resolve().parents[3]
+                       WOTEX_COAP_DTLS_INTEROP_PORT=str(port + 1),
+                       WOTEX_COAP_PKI_INTEROP_PROFILE=options.pki_profile)
+    cases = (["test/interop/libcoap_test.exs", "test/interop/dtls_test.exs",
+              "test/interop/dtls_pki_test.exs"] if options.pki_profile == "server" else
+             ["test/interop/dtls_pki_rejection_test.exs"])
+    tests = ["mix", "test", *cases, "--include", "interop", "--seed", "0"]
     files = sorted({*source.glob("lib/**/*.ex"), *source.glob("test/**/*.exs"),
-                    *source.glob("test/interop/**/*.py"), source / "mix.exs", source / "mix.lock"})
+                    *source.glob("test/interop/**/*.py"), *source.glob("test/fixtures/dtls_pki/*"),
+                    source / "mix.exs", source / "mix.lock"})
     source_hash = hashlib.sha256()
     for path in files:
         source_hash.update(str(path.relative_to(source)).encode() + b"\0" + path.read_bytes() + b"\0")
@@ -92,6 +117,8 @@ def run(options):
             cleanup = {"peer_alive": int(peer.poll() is None),
                        "udp_ports_retained": int(not free(port)) + int(not free(port + 1))}
             evidence = {"schema": "wotex-coap-libcoap-result-v1", "peer": manifest,
+                        "pki_profile": options.pki_profile, "pki_manifest_sha256": pki_sha,
+                        "peer_command": command,
                         "source_sha256": source_hash.hexdigest(), "toolchain": toolchain,
                         "test_command": tests, "test_exit_status": status,
                         "elapsed_ms": round((time.monotonic() - started) * 1000),
@@ -112,6 +139,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--pki-profile", choices=PKI_PROFILES, default="server")
     run(parser.parse_args())
 
 

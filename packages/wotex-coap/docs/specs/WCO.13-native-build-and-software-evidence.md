@@ -3,7 +3,7 @@ spec:
   id: WCO.13
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.6.0
+  version: 1.7.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -163,7 +163,7 @@ The operation-specific parameter fields are:
 | body_chunk | `body_id`, zero-based byte `offset`, C07 bytes envelope `data` |
 | body_end | `body_id` |
 | request | `method` (GET/POST/PUT/DELETE), `path`, `confirmable`, optional `accept`, `content_format`, `body_id` |
-| observe | `path`, `confirmable`, `observation_kind` (`property` or `event`), optional `accept`; GET with Observe=0 |
+| observe | `path`, `confirmable`, `observation_kind` (`property` or `event`), Boolean `renew`, optional `accept`; GET with Observe=0 |
 | credit | `generation`, `ack_seq` (unsigned 64-bit cumulative report-frame acknowledgment); fixed eight-frame window |
 | cancel | `subscription_id`, `generation`; original route/token only |
 | close | empty object |
@@ -177,7 +177,9 @@ NUL-free absolute UTF-8 path of at most 4096 bytes. The BEAM sender normalizes a
 omitted public ID Context to null. Native host values are numeric IPv4/IPv6
 text, ports are 1..65535, and generations are nonzero unsigned 64-bit integers.
 Optional request `accept`, `content_format` and `body_id` fields are omitted
-when absent, never replaced by null. Observe requires its explicit kind.
+when absent, never replaced by null. Observe requires its explicit kind and Boolean `renew`; omission, null, numeric
+or textual truth values fail admission. `renew` retains the .10 freshness policy,
+including the one-second minimum interval for a zero Max-Age.
 
 The [native command receipt](../provenance/native-command-v1.json) accepts only
 structural command admission: exact field allowlists, scalar/byte/path bounds
@@ -207,7 +209,7 @@ body. The two choices are mutually exclusive. Body events on stdout use `id`
 naming their originating call or subscription and
 `generation` for subscriptions. The begin event carries `body_id`, `length`
 and `sha256`; chunk carries `body_id`, `offset`, `data`; end carries `body_id`.
-The success `result` or report `value` is an exact message object with `type`
+A unary `request` success `result` or report `value` is an exact message object with `type`
 (`con`, `non`, `ack` or `rst`), `code` (0..255), `message_id` (0..65535), `token`
 (C07 bytes, 0..8 bytes), and `options` (at most 64 ordered objects with exact
 `number` and C07-byte `value` fields). Option numbers are 0..65535 and each value
@@ -219,6 +221,34 @@ explicit empty bytes envelope. Both fields, or neither field, fail admission.
 A failed body never permits a final success or public partial delivery. A body
 reference is resolved once before public construction; caller-visible Messages
 contain complete binary payloads, never native body IDs.
+
+Successful `open`, `body_begin`, `body_chunk`, `body_end`, `credit`, `cancel`
+and `close` replies have `result: null`. Successful `observe` establishment has
+exactly `result: {subscription_id: original_observe_request_id, generation}`.
+Establishment follows the first complete, authenticated, successful response
+containing a valid Observe option. This control reply precedes that first report
+on stdout and consumes no report credit. The first report remains retained until
+credit permits delivery. A report has `event: "report"`, `subscription_id`,
+`generation`, `report_seq`, a Message `value`, and exactly five `metadata` fields:
+`code` (64..94), `observe` (0..16777215), `etag` (null or C07 bytes of length
+1..8), `content_format` (null or 0..65535) and `max_age` (0..4294967295).
+Metadata equals the corresponding validated Message options; absent Max-Age
+means 60. The wire envelope carries no caller PID or native address.
+
+A `cancel` request retains its own command ID and the original subscription
+identity. An intervening response with Observe is neither cancellation success
+nor a post-cancellation report. Only a correlated successful response without
+Observe completes `cancel` with null. Failure or deadline releases the local
+session without a successful cancellation result. No report follows a successful
+cancel reply. Registration failure produces no establishment or report. The
+exact schema and ordering vectors remain specified until a real helper/owner
+runner executes them. An established subscription failure emits at most one
+terminal envelope with exactly `version: 1`, `subscription_id`, `generation`,
+`event: "error"`, `value: {code: finite_library_code, status?: numeric_status}`
+and `metadata: {}` before local close. It has no `report_seq`, uses a reserved
+control slot and consumes no report credit. A failure before establishment uses
+only the original command failure envelope. A blocked terminal channel cannot
+delay local cleanup.
 
 An inline report consumes one report-frame credit. Each begin, chunk, end and
 final envelope of a streamed report consumes its own credit in order. A 32769-byte
