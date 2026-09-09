@@ -62,6 +62,29 @@ defmodule Wotex.BACnet.BACstack do
     end
   end
 
+  @impl Wotex.BACnet.Client
+  def read_properties(config, requests, timeout)
+      when is_integer(timeout) and timeout in 1..60_000,
+      do: read_properties_deadline(config, requests, System.monotonic_time(:millisecond) + timeout)
+
+  def read_properties(_, _, _), do: {:error, Error.new(:invalid_properties)}
+
+  @doc false
+  @spec read_properties_deadline(term(), term(), integer()) :: {:ok, map()} | {:error, Error.t()}
+  def read_properties_deadline(%{owner: owner, generation: generation}, requests, deadline)
+      when is_pid(owner) and is_reference(generation) and is_integer(deadline) do
+    with {:ok, requests} <- Wotex.BACnet.Batch.validate(requests) do
+      OperationOwner.request(
+        owner,
+        generation,
+        %{type: :read_properties, requests: requests},
+        deadline
+      )
+    end
+  end
+
+  def read_properties_deadline(_, _, _), do: {:error, Error.new(:invalid_properties)}
+
   @doc false
   @spec configuration(term()) :: {:ok, map()} | {:error, Error.t()}
   def configuration(opts) when is_list(opts) do
@@ -106,7 +129,14 @@ defmodule Wotex.BACnet.BACstack do
   end
 
   @impl Wotex.BACnet.Client
-  def request(
+  def request(config, message, timeout) when is_integer(timeout) and timeout in 1..60_000,
+    do: request_deadline(config, message, System.monotonic_time(:millisecond) + timeout)
+
+  def request(_, _, _), do: {:error, Error.new(:invalid_request)}
+
+  @doc false
+  @spec request_deadline(term(), term(), integer()) :: {:ok, term()} | {:error, Error.t()}
+  def request_deadline(
         %{
           owner: owner,
           generation: generation,
@@ -115,12 +145,9 @@ defmodule Wotex.BACnet.BACstack do
           destination: destination
         },
         message,
-        timeout
+        deadline
       )
-      when is_pid(owner) and is_reference(generation) and is_integer(timeout) and
-             timeout in 1..60_000 do
-    deadline = System.monotonic_time(:millisecond) + timeout
-
+      when is_pid(owner) and is_reference(generation) and is_integer(deadline) do
     with true <- valid_destination?(destination) and valid_peer?(peer),
          :ok <- Address.validate_message(message),
          {:ok, address} <- Address.new(message),
@@ -132,7 +159,7 @@ defmodule Wotex.BACnet.BACstack do
     end
   end
 
-  def request(_, _, _), do: {:error, Error.new(:invalid_request)}
+  def request_deadline(_, _, _), do: {:error, Error.new(:invalid_request)}
 
   @doc false
   @spec exchange(map(), map(), integer()) :: {:ok, term()} | {:error, Error.t()}

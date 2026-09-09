@@ -3,7 +3,7 @@ defmodule Wotex.BACnet.OperationOwner do
 
   use GenServer
 
-  alias Wotex.BACnet.{BACstack, COVOwner, Error, StackOwner, Subscription}
+  alias Wotex.BACnet.{BACstack, Batch, COVOwner, Error, StackOwner, Subscription}
 
   @doc false
   @spec start_link(map()) :: GenServer.on_start()
@@ -111,13 +111,13 @@ defmodule Wotex.BACnet.OperationOwner do
 
     cond do
       generation != state.config.generation ->
-        {:reply, {:error, Error.new(:connection_closed)}, state}
+        {:reply, admission_failure(:connection_closed, message), state}
 
       remaining <= 0 ->
-        {:reply, {:error, Error.new(:deadline_exceeded)}, state}
+        {:reply, admission_failure(:deadline_exceeded, message), state}
 
       pending_count(state) >= 64 ->
-        {:reply, {:error, Error.new(:busy)}, state}
+        {:reply, admission_failure(:busy, message), state}
 
       true ->
         {:noreply, admit(state, from, message, deadline, remaining)}
@@ -188,12 +188,7 @@ defmodule Wotex.BACnet.OperationOwner do
         {:noreply, state}
 
       {operation, pending} ->
-        release(operation)
-        expired = System.monotonic_time(:millisecond) >= operation.deadline
-        reply = if expired, do: failure(:deadline_exceeded, operation.message), else: result
-        GenServer.reply(operation.from, reply)
-        next = %{state | pending: pending}
-        if expired and state.config.owned_stack, do: {:stop, :normal, next}, else: {:noreply, next}
+        operation_result(state, operation, reference, pending, result)
     end
   end
 
@@ -249,7 +244,7 @@ defmodule Wotex.BACnet.OperationOwner do
 
       {operation, pending} ->
         stop_worker(operation)
-        GenServer.reply(operation.from, failure(:deadline_exceeded, operation.message))
+        GenServer.reply(operation.from, operation_failure(:deadline_exceeded, operation))
         next = %{state | pending: pending}
         if state.config.owned_stack, do: {:stop, :normal, next}, else: {:noreply, next}
     end
@@ -302,7 +297,7 @@ defmodule Wotex.BACnet.OperationOwner do
         stop_worker(operation)
 
         if reference == operation.worker_monitor,
-          do: GenServer.reply(operation.from, failure(:connection_closed, operation.message))
+          do: GenServer.reply(operation.from, operation_failure(:connection_closed, operation))
 
         next = %{state | pending: Map.delete(state.pending, key)}
         if state.config.owned_stack, do: {:stop, :normal, next}, else: {:noreply, next}
@@ -313,7 +308,7 @@ defmodule Wotex.BACnet.OperationOwner do
   def terminate(_, state) do
     Enum.each(state.pending, fn {_, operation} ->
       stop_worker(operation)
-      GenServer.reply(operation.from, failure(:connection_closed, operation.message))
+      GenServer.reply(operation.from, operation_failure(:connection_closed, operation))
     end)
 
     deadline =
@@ -332,14 +327,16 @@ defmodule Wotex.BACnet.OperationOwner do
     reference = make_ref()
     caller = Process.monitor(elem(from, 0))
 
-    {worker, monitor} =
-      :erlang.spawn_opt(
-        fn ->
-          result = BACstack.exchange(state.config, message, deadline)
-          send(receiver, {:result, reference, result})
-        end,
-        [:link, :monitor]
-      )
+    {message, batch} =
+      case message do
+        %{type: :read_properties, requests: [first | _] = requests} ->
+          {first, Batch.start(requests, deadline)}
+
+        _ ->
+          {message, nil}
+      end
+
+    {worker, monitor} = start_worker(receiver, reference, state.config, message, deadline)
 
     operation = %{
       from: from,
@@ -347,12 +344,68 @@ defmodule Wotex.BACnet.OperationOwner do
       worker: worker,
       worker_monitor: monitor,
       message: message,
+      batch: batch,
       deadline: deadline,
       timer: Process.send_after(self(), {:timeout, reference}, remaining)
     }
 
     %{state | pending: Map.put(state.pending, reference, operation)}
   end
+
+  defp start_worker(receiver, reference, config, message, deadline) do
+    :erlang.spawn_opt(
+      fn ->
+        result = BACstack.exchange(config, message, deadline)
+        send(receiver, {:result, reference, result})
+      end,
+      [:link, :monitor]
+    )
+  end
+
+  defp operation_result(state, %{batch: nil} = operation, _, pending, result),
+    do: finish_operation(state, operation, pending, result)
+
+  defp operation_result(state, operation, reference, pending, result) do
+    case Batch.accept(operation.batch, result, System.monotonic_time(:millisecond)) do
+      {:continue, batch} ->
+        Process.exit(operation.worker, :kill)
+        Process.demonitor(operation.worker_monitor, [:flush])
+        [message | _] = batch.remaining
+
+        {worker, monitor} =
+          start_worker(self(), reference, state.config, message, operation.deadline)
+
+        next = %{
+          operation
+          | batch: batch,
+            message: message,
+            worker: worker,
+            worker_monitor: monitor
+        }
+
+        {:noreply, %{state | pending: Map.put(pending, reference, next)}}
+
+      {:done, values} ->
+        finish_operation(state, operation, pending, {:ok, values})
+
+      {:error, _} = error ->
+        finish_operation(state, operation, pending, error)
+    end
+  end
+
+  defp finish_operation(state, operation, pending, result) do
+    release(operation)
+    expired = System.monotonic_time(:millisecond) >= operation.deadline
+    reply = if expired, do: operation_failure(:deadline_exceeded, operation), else: result
+    GenServer.reply(operation.from, reply)
+    next = %{state | pending: pending}
+    if expired and state.config.owned_stack, do: {:stop, :normal, next}, else: {:noreply, next}
+  end
+
+  defp operation_failure(code, %{batch: %{index: index}, message: %{property: property}}),
+    do: {:error, Batch.failure(Error.new(code), index, property)}
+
+  defp operation_failure(code, operation), do: failure(code, operation.message)
 
   defp start_subscription(state, from, request, deadline, timeout) do
     lease = make_ref()
@@ -416,6 +469,12 @@ defmodule Wotex.BACnet.OperationOwner do
 
   defp pending_count(state), do: map_size(state.pending) + map_size(state.controls)
   defp remaining(deadline), do: max(deadline - System.monotonic_time(:millisecond), 0)
+
+  defp admission_failure(code, %{type: :read_properties} = message), do: failure(code, message)
+  defp admission_failure(code, _), do: {:error, Error.new(code)}
+
+  defp failure(code, %{type: :read_properties, requests: [%{property: property} | _]}),
+    do: {:error, Batch.failure(Error.new(code), 0, property)}
 
   defp failure(code, %{type: :write_property}),
     do: {:error, %{Error.new(code) | effect: :unknown}}

@@ -17,5 +17,8 @@ defmodule Wotex.BACnet.Client do
   @callback unsubscribe(term(), Wotex.BACnet.Subscription.t(), pos_integer()) ::
               :ok | {:error, term()}
 
-  @optional_callbacks subscribe: 4, unsubscribe: 3
+  @doc "Reads an already normalized batch sequentially in one bounded operation slot."
+  @callback read_properties(term(), [map()], pos_integer()) :: {:ok, map()} | {:error, term()}
+
+  @optional_callbacks subscribe: 4, unsubscribe: 3, read_properties: 3
 end

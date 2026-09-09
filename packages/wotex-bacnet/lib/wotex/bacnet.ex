@@ -2,7 +2,8 @@ defmodule Wotex.BACnet do
   @moduledoc "Consumer-neutral BACnet operations over an explicitly supplied real client port."
 
   import Kernel, except: [send: 2]
-  alias Wotex.BACnet.{COVRequest, Error, PortCall, Session, Subscription}
+  alias BACnet.Protocol.ApplicationTags.Encoding
+  alias Wotex.BACnet.{COVRequest, Error, NativeCall, PortCall, Session, Subscription}
   @operations [:read_property, :write_property]
 
   @doc "Reports the operations implemented by this library's validated client boundary."
@@ -44,10 +45,19 @@ defmodule Wotex.BACnet do
 
   @doc "Validates and executes one operation without implicit retry."
   @spec send(Session.t(), map()) :: {:ok, term()} | {:error, Error.t()}
-  def send(%Session{} = session, %{type: type} = message) when type in @operations do
+  def send(%Session{timeout: timeout} = session, message)
+      when is_integer(timeout) and timeout in 1..60_000,
+      do: send_deadline(session, message, System.monotonic_time(:millisecond) + timeout)
+
+  def send(_, _), do: {:error, Error.new(:invalid_message)}
+
+  @doc false
+  @spec send_deadline(Session.t(), map(), integer()) :: {:ok, term()} | {:error, Error.t()}
+  def send_deadline(%Session{} = session, %{type: type} = message, deadline)
+      when type in @operations and is_integer(deadline) do
     with :ok <- validate(message) do
       started = System.monotonic_time()
-      result = PortCall.invoke(session.client, :request, [session.handle, message, session.timeout])
+      result = NativeCall.invoke(session, :request, message, deadline)
 
       :telemetry.execute(
         [:wotex, :bacnet, :request, :stop],
@@ -56,6 +66,9 @@ defmodule Wotex.BACnet do
       )
 
       case result do
+        {:not_started, error} ->
+          {:error, error}
+
         {:error, error}
         when type in [:write, :write_property, :invoke, :call] and
                session.client not in [Wotex.BACnet.BACstack, Wotex.BACnet.IPv4] ->
@@ -66,14 +79,11 @@ defmodule Wotex.BACnet do
 
         {:error, _} = error ->
           error
-
-        _ ->
-          {:error, Error.new(:invalid_transport_return)}
       end
     end
   end
 
-  def send(_, _), do: {:error, Error.new(:invalid_message)}
+  def send_deadline(_, _, _), do: {:error, Error.new(:invalid_message)}
 
   @doc "Releases the explicit handle; the client owns idempotent transport cleanup."
   @spec disconnect(Session.t()) :: :ok | {:error, Error.t()}
@@ -97,6 +107,29 @@ defmodule Wotex.BACnet do
     end
   end
 
+  @doc "Reads one entire Property as a validated native BACnet value."
+  @spec read_property(Session.t(), atom() | 0..1023, 0..4_194_302, atom() | 0..4_194_303) ::
+          {:ok, Encoding.t() | [Encoding.t()]} | {:error, Error.t()}
+  def read_property(session, object, instance, property),
+    do: Wotex.BACnet.NativeHelpers.read_property(session, object, instance, property)
+
+  @doc "Writes one entire Property without a priority override, requiring its matching ACK."
+  @spec write_property(
+          Session.t(),
+          atom() | 0..1023,
+          0..4_194_302,
+          atom() | 0..4_194_303,
+          Encoding.t() | [Encoding.t()]
+        ) :: :ok | {:error, Error.t()}
+  def write_property(session, object, instance, property, value),
+    do: Wotex.BACnet.NativeHelpers.write_property(session, object, instance, property, value)
+
+  @doc "Reads 1..64 distinct Properties sequentially under one admission slot and deadline."
+  @spec read_properties(Session.t(), atom() | 0..1023, 0..4_194_302, [atom() | 0..4_194_303]) ::
+          {:ok, %{non_neg_integer() => Encoding.t() | [Encoding.t()]}} | {:error, Error.t()}
+  def read_properties(session, object, instance, properties),
+    do: Wotex.BACnet.NativeHelpers.read_properties(session, object, instance, properties)
+
   @doc "Unsolicited receive requires a separately graduated subscription transport."
   @spec receive(term(), term()) :: {:error, Error.t()}
   def receive(_, _), do: {:error, Error.new(:not_supported)}
@@ -112,7 +145,7 @@ defmodule Wotex.BACnet do
     deadline = System.monotonic_time(:millisecond) + timeout
 
     with :ok <- validate(probe),
-         {:ok, value} <- send(session, probe),
+         {:ok, value} <- send_deadline(session, probe, deadline),
          :ok <- Wotex.BACnet.Value.validate_read(value),
          true <- System.monotonic_time(:millisecond) < deadline do
       {:ok, :healthy}

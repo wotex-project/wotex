@@ -68,6 +68,26 @@ defmodule Wotex.BACnet.IPv4 do
   def request(handle, message, timeout), do: BACstack.request(handle.stack, message, timeout)
 
   @impl Wotex.BACnet.Client
+  def read_properties(%{stack: stack}, requests, timeout),
+    do: BACstack.read_properties(stack, requests, timeout)
+
+  def read_properties(_, _, _), do: {:error, Error.new(:invalid_properties)}
+
+  @doc false
+  @spec request_deadline(term(), term(), integer()) :: {:ok, term()} | {:error, Error.t()}
+  def request_deadline(%{stack: stack}, message, deadline),
+    do: BACstack.request_deadline(stack, message, deadline)
+
+  def request_deadline(_, _, _), do: {:error, Error.new(:invalid_request)}
+
+  @doc false
+  @spec read_properties_deadline(term(), term(), integer()) :: {:ok, map()} | {:error, Error.t()}
+  def read_properties_deadline(%{stack: stack}, requests, deadline),
+    do: BACstack.read_properties_deadline(stack, requests, deadline)
+
+  def read_properties_deadline(_, _, _), do: {:error, Error.new(:invalid_properties)}
+
+  @impl Wotex.BACnet.Client
   def subscribe(%{stack: stack}, request, receiver, timeout),
     do: BACstack.subscribe(stack, request, receiver, timeout)
 
