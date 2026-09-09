@@ -411,7 +411,7 @@ defmodule Wotex.Modbus.Connection do
   defp stop_worker(pid), do: Process.exit(pid, :kill)
 
   defp effect(error, command),
-    do: {:error, %{error | effect: if(Command.write?(command), do: :unknown, else: :none)}}
+    do: {:error, Error.with_effect(error, if(Command.write?(command), do: :unknown, else: :none))}
 
   defp remaining(deadline), do: max(0, deadline - System.monotonic_time(:millisecond))
 

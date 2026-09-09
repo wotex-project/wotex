@@ -45,7 +45,19 @@ defmodule Wotex.Modbus.MappingTest do
           {"HoldingRegister", :writeproperty, 1, 7, 6},
           {"HoldingRegister", :invokeaction, 2, [7, 8], 16}
         ] do
-      assert {:ok, mapping} = Mapping.command(form(%{"modv:entity" => entity}, quantity), op, input)
+      terms = %{"modv:entity" => entity}
+
+      terms =
+        if op == :invokeaction,
+          do:
+            Map.put(
+              terms,
+              "modv:function",
+              if(entity == "Coil", do: "writeMultipleCoils", else: "writeMultipleHoldingRegisters")
+            ),
+          else: terms
+
+      assert {:ok, mapping} = Mapping.command(form(terms, quantity), op, input)
       assert mapping.command.function == function
       assert {:ok, [3]} = Mapping.decode(mapping, [3])
     end
@@ -172,7 +184,7 @@ defmodule Wotex.Modbus.MappingTest do
       affordance_name: "reading",
       form: form,
       resolved_href: Wotex.Form.href(form),
-      profile: nil,
+      profile: Wotex.Modbus.profile(),
       request_id: "read-1",
       deadline: nil,
       input: nil

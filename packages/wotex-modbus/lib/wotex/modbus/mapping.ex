@@ -60,9 +60,12 @@ defmodule Wotex.Modbus.Mapping do
     context = if operation == :invokeaction, do: :action, else: :property
     map = Form.to_map(form)
 
-    with :ok <- operation(form, operation, context),
+    with :ok <- representation(map),
+         :ok <- action_function(map, operation),
+         :ok <- operation(form, operation, context),
          {:ok, endpoint, offset, quantity, unit} <- endpoint(Form.href(form), map, opts),
          {:ok, function} <- function(map, operation, quantity),
+         :ok <- action_matches(map, operation, function),
          {:ok, kind, orders} <- conversion(map),
          :ok <- scalar_shape(function, quantity, kind),
          {:ok, argument} <- argument(function, input, quantity, kind, orders),
@@ -72,6 +75,37 @@ defmodule Wotex.Modbus.Mapping do
        %{endpoint: endpoint, command: command, value_type: kind, value_options: orders, form: form}}
     end
   end
+
+  defp representation(%{"contentType" => _}),
+    do: {:error, Error.new(:unsupported_content_type, :content_type)}
+
+  defp representation(_), do: :ok
+
+  defp action_function(map, :invokeaction) do
+    case Map.fetch(@functions, Map.get(map, "modv:function")) do
+      {:ok, function}
+      when function in [
+             :write_coil,
+             :write_coils,
+             :write_holding_register,
+             :write_holding_registers
+           ] ->
+        :ok
+
+      _ ->
+        {:error, Error.new(:missing_function)}
+    end
+  end
+
+  defp action_function(_, _), do: :ok
+
+  defp action_matches(map, :invokeaction, function) do
+    if @functions[map["modv:function"]] == function,
+      do: :ok,
+      else: {:error, Error.new(:operation_mismatch)}
+  end
+
+  defp action_matches(_, _, _), do: :ok
 
   defp options([]), do: :ok
   defp options(base: base) when is_binary(base) or is_nil(base), do: :ok

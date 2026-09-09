@@ -5,6 +5,25 @@ defmodule Wotex.Modbus do
   alias Wotex.Modbus.{Address, Command, Connection, Error, Session, Value}
   @writes [:write_coil, :write_coils, :write_holding_register, :write_holding_registers]
 
+  @doc "Returns the pure Runtime profile for the implemented native Modbus TCP binding."
+  @spec profile() :: Wotex.Runtime.BindingProfile.t()
+  def profile do
+    {:ok, profile} =
+      Wotex.Runtime.BindingProfile.new(
+        id: :modbus,
+        schemes: ["modbus+tcp"],
+        operations: [:readproperty, :writeproperty, :invokeaction],
+        media_types: []
+      )
+
+    profile
+  end
+
+  @doc "Selects an explicitly supported Runtime mode without opening a connection."
+  @spec profile(term()) :: {:ok, Wotex.Runtime.BindingProfile.t()} | {:error, Error.t()}
+  def profile(:tcp), do: {:ok, profile()}
+  def profile(_), do: {:error, Error.new(:unsupported_profile)}
+
   @doc "Reports implemented capabilities, without a delivery or physical-effect guarantee."
   @spec capabilities() :: %{
           bidirectional: true,
