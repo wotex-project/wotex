@@ -296,9 +296,10 @@ defmodule Wotex.CoAP.ExchangeLifecycleTest do
 
     assert_receive {:opening, worker, connection, _}
     monitor = Process.monitor(worker)
+    connection_monitor = Process.monitor(connection)
     assert {:error, %Error{code: :timeout}} = Task.await(call)
     assert_receive {:DOWN, ^monitor, :process, ^worker, :killed}
-    refute Process.alive?(connection)
+    assert_receive {:DOWN, ^connection_monitor, :process, ^connection, _}, 1000
   end
 
   test "WCO-C04 WCO-V15 transport and ACK send errors cannot produce native success" do

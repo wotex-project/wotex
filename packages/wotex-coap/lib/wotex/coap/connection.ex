@@ -149,7 +149,13 @@ defmodule Wotex.CoAP.Connection do
     end
   end
 
-  @doc "Validates explicit configuration without opening a resource or selecting a fallback."
+  @doc """
+  Validates explicit configuration without opening a resource or selecting a fallback.
+
+  `:observation_options` accepts unique `:accept` (0..65535) and `:confirmable`
+  (boolean) entries. Omission leaves Accept absent and uses confirmable requests;
+  the configured choices persist through registration, renewal and cancellation.
+  """
   @spec config(term()) :: {:ok, map()} | {:error, Error.t()}
   def config(options) do
     with {:ok, values} <- options(options, %{}), do: configuration(values)
@@ -169,6 +175,7 @@ defmodule Wotex.CoAP.Connection do
   defp init_owner(config, mid) do
     generation = make_ref()
     Process.put(:wotex_coap_owner, {__MODULE__, generation})
+    Process.put(:wotex_coap_route, Map.take(config, [:owner, :creator, :host, :port]))
     owner = self()
     owner_monitor = Process.monitor(config.owner)
     creator_monitor = Process.monitor(config.creator)
