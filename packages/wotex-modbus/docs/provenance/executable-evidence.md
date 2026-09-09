@@ -1,25 +1,51 @@
 # Modbus executable evidence
 
-Verified 2026-09-08 with Elixir 1.20.2 / OTP 29.0.4. `WOTEX_PATH_DEPS=1 mix check`
-passes compilation, formatting, Credo, Dialyzer, dependency audits, Doctor,
-coverage, docs, archive inspection and application-callback absence.
-The supported Elixir 1.18+ lower-version matrix has not been executed here.
-The pinned Decimal parser regression remains active without advisory waivers.
-The explicit interoperability suite passed against libmodbus v3.1.12 commit
-`9af6c16074df566551bca0a7c37443e48f216289` in the repository container fixture.
-All eight advertised functions and remote exceptions have asserted responses.
-This evidence covers software peers, not physical equipment or certification.
+The [TCP cohort receipt](software-tcp-v1.json) binds source commit
+`0c32a64b2c3a6f6813cd0d7976d5359b7585c8d3` to actual independent libmodbus responses,
+standalone/Runtime fixture assertions, malformed boundaries and software stress.
+Every recorded subject file hash matches that commit. Dependency identities are
+source digests; the execution uses explicit path dependencies, not registry or
+independent artifact installation.
 
-| Test source | SHA-256 |
+| Lane | Executed result | Native peer |
+| --- | --- | --- |
+| Elixir 1.18.4 / OTP 27.3.4.15 | 137 passing checks: 4 properties, 133 tests | pinned libmodbus 3.1.12, Linux ASan/UBSan/leak checks |
+| Elixir 1.20.2 / OTP 29.0.4 | 137 passing checks: 4 properties, 133 tests | same pinned peer and native checks |
+
+The suite asserts all eight functions, readback and remote exceptions; 1,000
+sequential operations; 100 open/close cycles; 32 concurrent callers; and ten
+cycles each of timeout, peer close and malformed response. Final owned sockets,
+contexts, mappings and containers are zero. A separate malformed peer exercises
+invalid frames; the independent C peer is not presented as an injected simulator.
+
+The executed entry point is `test/interop/run_software.sh`, which invokes the
+checked-in Python harness and ExUnit. The native protocol peer is C; the
+production client is BEAM TCP. These results do not validate the planned
+[WMB.13 Mix tasks](../specs/WMB.13-native-build-and-software-evidence.md).
+
+## Requirement evidence
+
+| Contract | Concrete asserting sources |
 | --- | --- |
-| `test/interop/modbus_test.exs` | `1ce2829ea172ae0eae6377d20522797e1cec561b37e1cd55f52ce272110384a4` |
-| `test/wotex/modbus/codec_test.exs` | `7407a96dbd3a86fd0bb1e961095541d2152692431b52d299b758e9333d8b4dd4` |
-| `test/wotex/modbus/connection_test.exs` | `61deffb801f1586095a0ad17716da3b1b602189a832ef93261893fc0af7d2ae7` |
-| `test/wotex/modbus/contract_test.exs` | `c967cb1432a1682b8990c8a496da98b2e0d402a9a23fce88f461f99ea13b7f80` |
-| `test/wotex/modbus/dependency_security_test.exs` | `aed05db96411eaf7a8fbc030092387a556abbd9c7e7cdaef8ddfd145b91b91c3` |
-| `test/wotex/modbus/mapping_test.exs` | `1173c9c2ff25c66d5b6a96c37c38541b62d7f0bb37f301817cbd5d147545cc2a` |
-| `test/wotex/modbus/value_test.exs` | `a94472085e36bd1c03f0b53e585e660182ff15d2e43024fb95bfce9b1a63fe3b` |
+| S01 / D01–D04 | `boundary_test.exs`, `value_test.exs`, `connection_test.exs`, `compatibility_test.exs` |
+| S02 / V03–V05 | `codec_test.exs`, `stream_fault_test.exs` |
+| S03 / C03 | `lifecycle_test.exs`, `connection_test.exs` |
+| S04 / I01–I06 | `compatibility_test.exs`, `runtime_integration_test.exs`, `mapping_test.exs` |
+| C09 / V11–V12 | `test/interop/modbus_test.exs`, `test/software/lifecycle_stress_test.exs` |
 
-Follow-up wire-boundary regression: forged Command structs are revalidated before
-encoding. Invalid function, value, quantity and offset cannot silently wrap into
-an ADU. This change is covered by the codec test and the full local gate.
+Unqualified filenames above are under `test/wotex/modbus/`. The receipt contains
+exact source and fixture hashes. The tests compare actual public API/peer
+outcomes with expected projections; a fixture ID alone is not acceptance.
+
+## Package and ongoing validation
+
+The mandatory gate is `WOTEX_PATH_DEPS=1 mix check --no-retry`, including complete
+static checks, tests/coverage, docs and unpacked out-of-tree package compilation.
+The documentation cohort `b214e99` has 132 passing checks (1 doctest, 4 properties,
+127 tests), 95.3% coverage and a passing complete latest-toolchain gate. It is a
+different cohort from the explicit software run above. Relevant source changes
+require fresh software evidence; a prior receipt cannot validate new code or tools.
+
+The eight-function client, standalone and Runtime contracts are implemented.
+WMB.13 Mix orchestration remains planned. This evidence supplies neither a
+published release, stable API decision, hardware result nor certification.

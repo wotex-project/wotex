@@ -22,11 +22,10 @@ binary values and the WoT mapping profile; no certification claim.
 - libmodbus, [v3.1.12](https://github.com/stephane/libmodbus/tree/9af6c16074df566551bca0a7c37443e48f216289),
   released 2026-02-13. Independent TCP server chosen for interoperability.
 
-The search followed protocol framing, malformed inputs, security and draft
-mapping gaps, then upstream peer pins. Baseline claims have primary evidence;
-physical hardware and Modbus Security certification remain separate evidence.
+Protocol framing, bounds and draft mapping use the cited revisions. Physical
+hardware and Modbus Security certification remain separate evidence.
 
-## Software-contract review, 2026-09-08
+## Software scope and source authority
 
 The .10 scope deliberately completes the eight-function TCP client rather than
 adding unreviewed serial/security transports. The official
@@ -38,11 +37,11 @@ cell here. Library admission/cleanup limits in .00/.10 are local design policy.
 The independent software fixture remains
 [libmodbus v3.1.12 source](https://github.com/stephane/libmodbus/tree/9af6c16074df566551bca0a7c37443e48f216289).
 
-## Standalone-contract review, 2026-09-09
+## Standalone source authority
 
 WMB.11 preserves the eight named function helpers and float helpers already in
-the public baseline. Its exact wire examples were checked against the official
+the native API. Its exact wire examples were checked against the official
 Application Protocol V1.1b3 sections listed above. Typed engineering-value
 composition, strict map admission and the fixture oracle are library policy.
-The new corpus contains specified cases, not newly executed interoperability
-evidence. Wotex core/Runtime remain owners of TD values/interaction mechanics.
+The corpus defines exact cases; execution evidence binds cases to source and
+toolchain identities. Wotex core/Runtime remain owners of TD values/interaction mechanics.

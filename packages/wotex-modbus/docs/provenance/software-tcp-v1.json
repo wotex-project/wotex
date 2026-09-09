@@ -1,0 +1,153 @@
+{
+  "schema": "wotex.modbus.executed-cohort@1",
+  "source_commit": "0c32a64b2c3a6f6813cd0d7976d5359b7585c8d3",
+  "source_sha256": "68aeaec73da224c14062da4d8dd919776188c012d43adf8c6816105d08bb0825",
+  "source_files_sha256": {
+    "bin/check_application_free.exs": "60801d8f850643367f9640dd5d7c526eb31b4e2d1b7dee65d9d5c9e107f0177b",
+    "bin/check_archive.exs": "441b117bfd7de651c6df5b06819ebe63cf60e8834b3bc35cb5c71d6289c07c47",
+    "docs/specs/fixtures/contract-v1.json": "6b63d8d6d2e16f8b63ac278d435fe70e521105760bc25b8e7544fd31356b5b62",
+    "docs/specs/fixtures/wotex-integration-v1.json": "9d368dc08a50b5055cf9d3beada7a031110de9cf609cb19026037135bdafdd39",
+    "lib/wotex/modbus.ex": "bf286c839e9b32e83a9546219e53ca4f2b706d590acf27523c8cd928682b1079",
+    "lib/wotex/modbus/address.ex": "a98fd988fed9ade294876e5696d1fc234e04442af8d997d5528ccb297390794e",
+    "lib/wotex/modbus/codec.ex": "dcc4de74c3ee8c0f8a4a0c390645d95e1e82da0f0a2256fc9c181b01fd4123f1",
+    "lib/wotex/modbus/command.ex": "76d1c3fffa8b9baa0d254a80e3197c236b2ab0d1a3f362afd8ffe628a662e4d7",
+    "lib/wotex/modbus/connection.ex": "d47b39839fabcba3452c672ebb6616423f536f065e5478c4ac38b8d822d9c552",
+    "lib/wotex/modbus/error.ex": "fb92a76166cf5f5ba2be80d9a9dd8e9728ec8bddbc038d9c5c46d73986084a9c",
+    "lib/wotex/modbus/mapping.ex": "a6a8aebd3533f450e223fde050d8cc8981f69d5b70c5743fee930bfff7472fdd",
+    "lib/wotex/modbus/session.ex": "ca77f45718a2ef6c013b1554bf33ebb13f9d6a714c1cb2a3c095ceff4b0d314c",
+    "lib/wotex/modbus/transport.ex": "d36aadc57e2f4544d812ca388e0d076bce279eb7fb3acfeb46681c6a5654f5cc",
+    "lib/wotex/modbus/value.ex": "7240de7736d08c37539f0074f91971dfd13d04284d84782d7b363a441f89e35a",
+    "mix.exs": "1b0b0bc08b89b1dd45464e050d86d4c1e33b66d5611696938788e271f2985832",
+    "mix.lock": "255bde7feadb9e0d18879fd452127bfff199f941335e81c0b4013b73e62c334c",
+    "test/interop/build_software.sh": "5129857c7d373cc0abe9c389ca2551407761e215a5c217e2315b1c6101d610f2",
+    "test/interop/libmodbus/Dockerfile": "d079758f8a918a9b8be0d0e30105c27a754dfe74d98af1b7f8c9317264a5c76f",
+    "test/interop/libmodbus/server.c": "f5801850d843ed132ff8a117a4b04aa6d665a034bce4cc8b5aae9cbe8f97ca1a",
+    "test/interop/modbus_test.exs": "fe47364ef4ab80911efc86b102dffae967b8254c4ca65b0e789342f0a372ff5b",
+    "test/interop/run_software.sh": "4ddb8c1be706e75faa623db24ad1e0a35d18d5e3b6cfb446c57b9fe719bbd1d8",
+    "test/interop/software_fixture.py": "4e32dbc329826a6b4a6c75fbd21627bbf766855848a1cdc676a3c37cdb82cd8f",
+    "test/interop/software_fixture_test.py": "23f958ba2ca27b680e2432db0860d78c061a579b6ec065fb8998c331d9809980",
+    "test/software/lifecycle_stress_test.exs": "5cdc32993d4ec8a261dd33a11270ad2f052e431520161bc846fd0f538d00546c",
+    "test/support/contract_fixture.ex": "1e823cfd7121c84594a83bfb0d0c42d4d959056f4696eded655d0bc7078701dc",
+    "test/support/peer.ex": "5d485262ec638c00ad4585e0bf10acbf42de3cd4ddb5e07aa8785cfe1138912b",
+    "test/support/runtime_credentials.ex": "7170be4a5f7f8a4d9795592b91c310e241e11973b0cbe676a1cb5d9240f1e1c1",
+    "test/support/runtime_fixture.ex": "bb0f823d4c1c58e882f185beb3e311d64e8250964f28d79172bafad34fa4c4a7",
+    "test/support/runtime_transport.ex": "6fcc80f4d3c8a4b4937316935a9b87d170372b001a8bf44bad0f2a90c6676f66",
+    "test/support/session_trace.ex": "92e5cbc6deb969ad3420d779e82e27a6f267417a6c71314b668077755c42f380",
+    "test/test_helper.exs": "673dbf3485292eae89e61b8bccb4d973ab67137097f2be11c13d9a015a01ef52",
+    "test/wotex/modbus/boundary_test.exs": "aeb9dc3a7fe7fc37243c5243adf295c5902761952423728b3b34f44cbbf3a9f9",
+    "test/wotex/modbus/codec_test.exs": "7407a96dbd3a86fd0bb1e961095541d2152692431b52d299b758e9333d8b4dd4",
+    "test/wotex/modbus/compatibility_test.exs": "c8ae217206f636ee99f51306e48db730ff8d2763fc2cc5c57a640e374f096a32",
+    "test/wotex/modbus/connection_test.exs": "1d549872580ab5a5b0fc40e2bffede093f8bf2c6d3bf05635988a959ef40f2b5",
+    "test/wotex/modbus/contract_test.exs": "c967cb1432a1682b8990c8a496da98b2e0d402a9a23fce88f461f99ea13b7f80",
+    "test/wotex/modbus/dependency_security_test.exs": "aed05db96411eaf7a8fbc030092387a556abbd9c7e7cdaef8ddfd145b91b91c3",
+    "test/wotex/modbus/lifecycle_test.exs": "b64705096d69c713655d71379fe5dceb637d1936f1f1ab7bf5936c5930877e1e",
+    "test/wotex/modbus/mapping_test.exs": "c06b334cb09771a9399f5008b0c3797d19d58ce47456b4791242062f07702617",
+    "test/wotex/modbus/runtime_integration_test.exs": "81b3b4ebc48b95f34b01da0408eb2e29be96b23ecc600c268778391cb0297533",
+    "test/wotex/modbus/stream_fault_test.exs": "e91ee0313eb1e5e87b21c01bb22d16bcb51b7647ae531e82bb507250a2505102",
+    "test/wotex/modbus/telemetry_test.exs": "75ae20ff469acabefa4b9932c5df2730adc6a8e728f3ecb939af4a621ac1662d",
+    "test/wotex/modbus/value_test.exs": "a94472085e36bd1c03f0b53e585e660182ff15d2e43024fb95bfce9b1a63fe3b"
+  },
+  "dependencies": {
+    "wotex": {
+      "source_sha256": "ed59aaa1317934a2ffc35506da490f64bb2e81701c146d8fd817c4a3dca24e9a"
+    },
+    "wotex-runtime": {
+      "source_sha256": "945fe2a0986abe60a12d196bc2276098abd32b8d9f6b17e490cd4d56cb002382"
+    }
+  },
+  "dependency_mode": "path",
+  "runner": "test/interop/run_software.sh (Python orchestration; native C peer)",
+  "command": [
+    "mix",
+    "test",
+    "--include",
+    "interop",
+    "--include",
+    "software",
+    "--exclude",
+    "hardware",
+    "--seed",
+    "731942"
+  ],
+  "fixture_sha256": {
+    "docs/specs/fixtures/contract-v1.json": "6b63d8d6d2e16f8b63ac278d435fe70e521105760bc25b8e7544fd31356b5b62",
+    "docs/specs/fixtures/wotex-integration-v1.json": "9d368dc08a50b5055cf9d3beada7a031110de9cf609cb19026037135bdafdd39"
+  },
+  "manifest_sha256": "61bf84655ded5bebacb295793663d4d8f893376059dfeb8393a72a251609c4cc",
+  "fixture_image": "sha256:8b5b122c70b02887afdfb426831112593885c92d3ec2402561b310b11f3f11ac",
+  "source_archive_sha256": "5d0f56cdd9f4f4bc6863dcac6bc9bdc7ea862566aefa29eef2f1bf649cc1ea3a",
+  "peer_revision": "9af6c16074df566551bca0a7c37443e48f216289",
+  "lanes": [
+    {
+      "elixir": "1.18.4",
+      "otp": "27.3.4.15",
+      "result": "passed",
+      "checks": 137,
+      "properties": 4,
+      "tests": 133,
+      "result_sha256": "effa3f58ef528492fc8d6cf6d29f4cd398f0a4ac204ccc541a14d314b40782c4",
+      "test_log_sha256": "a08f02821bf3f8d4adae7333d1987e521be07b213bf0c3ad64b7d0993da4f48d",
+      "peer_exit_code": 0,
+      "peer_cleanup": [
+        {
+          "connections": 108,
+          "contexts": 0,
+          "event": "cleanup",
+          "mappings": 0,
+          "open_sockets": 0,
+          "requests": 1187,
+          "result": 0
+        }
+      ],
+      "owned_containers_after": 0,
+      "native_sanitizers": {
+        "address": true,
+        "leak": true,
+        "undefined": true
+      }
+    },
+    {
+      "elixir": "1.20.2",
+      "otp": "29.0.4",
+      "result": "passed",
+      "checks": 137,
+      "properties": 4,
+      "tests": 133,
+      "result_sha256": "b214583a80ab041efb6e82d01067baace623d017cd4bd863754e103f19ba3845",
+      "test_log_sha256": "9cee8621fabeb1d93601ff678cb114de8a2e5aa3a5062a5072824b5a245bc983",
+      "peer_exit_code": 0,
+      "peer_cleanup": [
+        {
+          "connections": 108,
+          "contexts": 0,
+          "event": "cleanup",
+          "mappings": 0,
+          "open_sockets": 0,
+          "requests": 1187,
+          "result": 0
+        }
+      ],
+      "owned_containers_after": 0,
+      "native_sanitizers": {
+        "address": true,
+        "leak": true,
+        "undefined": true
+      }
+    }
+  ],
+  "assertions": {
+    "sequential_operations": 1000,
+    "open_close_cycles": 100,
+    "concurrent_callers": 32,
+    "fault_cycles": {
+      "deadline": 10,
+      "peer_close": 10,
+      "malformed": 10
+    }
+  },
+  "limitations": [
+    "No acceptance of unbuilt Mix orchestration",
+    "No hardware, certification, registry installation or artifact-adoption claim",
+    "Original full logs are external artifacts identified by their digests; this is a publishable projection"
+  ]
+}

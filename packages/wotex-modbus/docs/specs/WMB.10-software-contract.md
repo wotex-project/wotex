@@ -3,20 +3,19 @@ spec:
   id: WMB.10
   title: "Complete Modbus TCP client software profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-modbus
   updated: 2026-09-09
 ---
 
 # WMB.10 Complete Modbus TCP client software profile
 
-Read [WMB.00](WMB.00-library-contract.md) first. This target contract closes the
-software obligations of the existing eight-function TCP profile; it does not
-turn this package into every member of the Modbus standards family. The baseline
-at commit `0c2a7f4` already implements the main wire, conversion and Form paths.
-The build work is boundary hardening, lifecycle/admission, compatibility and
-complete software evidence. Tests passing at that commit are recorded in
-[executable evidence](../provenance/executable-evidence.md).
+Read [WMB.00](WMB.00-library-contract.md) first. This contract defines the
+implemented eight-function BEAM TCP profile and its mandatory software evidence.
+Native peer build and Mix/ExUnit orchestration follow
+[WMB.13](WMB.13-native-build-and-software-evidence.md); those tasks remain planned.
+[Executable evidence](../provenance/executable-evidence.md) identifies the
+verified protocol cohorts and both supported runtime lanes.
 
 ## Revision and scope decision
 
@@ -104,7 +103,7 @@ explicit finite Runtime timeout is authoritative.
 
 `health_check/1` retains the documented register-zero compatibility probe and
 can fail on a healthy server whose register zero is not readable. Its meaning
-must stay explicit. Add `health_check/2` accepting a validated read Command for
+must stay explicit. `health_check/2` accepts a validated read Command for
 consumers needing a different probe; writes are rejected as health probes.
 Only an actual matching read response produces `{:ok, :healthy}`.
 `receive/2`, `subscribe/2` and `unsubscribe/2` retain their unsupported behavior;
@@ -117,9 +116,9 @@ is opened. Runtime closes every scoped connection and preserves request identity
 
 ## Acceptance scenario families
 
-These IDs identify test families, not already executable vectors. Concrete
-inputs and exact projected outputs are in the .11 fixture corpus; every family
-still needs its complete boundary/fault expansion in executable tests.
+These IDs identify scenario families. Concrete inputs and projected outputs
+are in the .11 fixture corpus; executable evidence names the actual boundary,
+fault, native peer and Runtime assertions.
 
 | ID | Input or fault | Required observation |
 | --- | --- | --- |

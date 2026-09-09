@@ -15,3 +15,9 @@ The opt-in suite requires both environment variables. A missing peer, failed
 write, wrong readback or timeout fails the test. The base image and apt build
 packages are moving inputs; only the protocol peer source revision is pinned.
 This is software interoperability evidence, not hardware certification.
+
+The planned [Mix software tasks](../../docs/specs/WMB.13-native-build-and-software-evidence.md)
+own reproducible native peer builds, disposable process lifecycle and machine-readable
+results. The commands above remain the implemented manual entry point; the
+[recorded software cohort](../../docs/provenance/executable-evidence.md) identifies
+the executed shell/Python harness separately from acceptance of those Mix tasks.

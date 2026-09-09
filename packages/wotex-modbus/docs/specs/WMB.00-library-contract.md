@@ -3,7 +3,7 @@ spec:
   id: WMB.00
   title: "Software implementation rules"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-modbus
   updated: 2026-09-09
 ---
@@ -182,7 +182,11 @@ than allowing an unrelated stop Form to redirect the cancellation.
 
 ## WMB-C07 — Optional native executable contract
 
-Applies where a Python/C/native SDK bridge is specified. The executable is an
+The eight-function BEAM TCP profile has no native runtime executable. Its C
+libmodbus peer is test-only and follows WMB.13. The following rules apply only
+to a separately specified future native-runtime profile.
+
+Applies only to explicitly specified native SDK executables through Erlang Ports. The executable is an
 absolute caller-selected path; arguments are separate values, never shell text.
 Owned bridges use a persistent process only when the profile requires sessions
 or signals. One-shot profiles retain their existing documented lifecycle.
@@ -199,7 +203,9 @@ backend revision; an unsupported version/revision fails before application I/O.
 | Failure | `version: 1`, matching `id`, `ok: false`, bounded library `error.code` and optional numeric `error.status` |
 | Stream report | `version: 1`, `subscription_id`, `generation`, `event`, `value`, bounded `metadata` |
 
-Protocol-specific parameters and value envelopes are defined in WMB.10.
+Protocol-specific parameters and value envelopes are defined in WMB.10 and
+[WMB.13](WMB.13-native-build-and-software-evidence.md). Native protocols execute in BEAM/OTP or
+the named SDK; Mix/ExUnit owns build and fixture orchestration.
 Reject duplicate JSON keys, fields outside the selected envelope/operation
 allowlist, extra responses for one ID,
 malformed JSON, non-finite numbers, wrong IDs and incomplete lines at EOF.
@@ -229,6 +235,10 @@ with canary credentials and payloads, including exception and startup failure.
 Avoid a global registry for sessions, receivers or protocol IDs.
 
 ## WMB-C09 — Mandatory software evidence
+
+[WMB.13](WMB.13-native-build-and-software-evidence.md) fixes the explicit Mix task, native
+manifest, resource ownership and evidence contract. Its task acceptance requires
+actual executions; results from a different harness remain separately identified.
 
 Each requirement ID in WMB.10/.11/.12 requires concrete acceptance cases with
 exact inputs and expected output. The V tables are scenario families, not

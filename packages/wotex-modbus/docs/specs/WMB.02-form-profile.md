@@ -3,7 +3,7 @@ spec:
   id: WMB.02
   title: "Form profile and compatibility"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-modbus
   updated: 2026-09-09
 ---
@@ -23,6 +23,9 @@ Userinfo, fragments, duplicate/unknown query terms and ambiguous paths fail.
 A Form needs `modv:entity` (Coil, DiscreteInput, HoldingRegister, InputRegister)
 or lowercase `modv:function` using the eight function names in `Mapping`.
 Entity takes precedence, as in the draft. Read-only entities cannot write.
+An Action requires an explicit mutation function; any entity-selected function
+must match that explicit function. Explicit contentType is rejected before I/O
+because this profile exposes native values without a serialization codec.
 Only readproperty, writeproperty and invokeaction are implemented. Wotex core
 applies contextual operation defaults; declared operations still constrain use.
 Polling and observation scheduling are not implemented.
@@ -37,9 +40,9 @@ A scalar conversion requires an exact matching width and otherwise fails.
 `Wotex.Modbus` is the compatibility adapter. Callback names and arities match
 the neutral protocol interface. Reads return `{:ok, values}`; writes `:ok`;
 optional subscriptions `:not_supported`; failures contain `Wotex.Modbus.Error`.
-The PDU capability is corrected to 253 bytes, write replay is disabled, input
-limits are strict, numeric hosts are required, and errors are now structured.
-These intentional changes require consumer-side compatibility assertions.
+The PDU capability is 253 bytes, write replay is disabled, input
+limits are strict, numeric hosts are required, and errors are structured.
+Consumer adoption requires explicit compatibility assertions for these boundaries.
 
 `Wotex.Modbus.Transport` implements the Runtime request port, scopes one session
 to one interaction, uses finite deadlines covering connection and exchange,

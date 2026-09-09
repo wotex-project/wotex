@@ -3,17 +3,18 @@ spec:
   id: WMB.11
   title: "Standalone client and feature preservation"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-modbus
   updated: 2026-09-09
 ---
 
 # WMB.11 Standalone client and feature preservation
 
-Specification: `WMB.11@1.0.0`. Status: required target behavior, not an
-implementation or interoperability result. Requires [WMB.00](WMB.00-library-contract.md)
-and [WMB.10](WMB.10-software-contract.md). The current narrow implementation is
-described separately in [WMB.02](WMB.02-form-profile.md).
+Specification: `WMB.11@1.1.0`. This is the standalone behavior contract.
+Requires [WMB.00](WMB.00-library-contract.md) and
+[WMB.10](WMB.10-software-contract.md). The implemented helpers and their exact
+assertions are recorded in [executable evidence](../provenance/executable-evidence.md).
+Native Mix orchestration has separate .13 acceptance.
 
 ## Library boundary
 
@@ -54,7 +55,7 @@ these successful results and the stronger negative behavior in WMB.10.
 | Connection recovery attempts | Replace implicit retry/reconnect with finite caller-controlled startup and terminal failed sessions | No second connection or write replay after uncertain effect |
 | Receive/subscription callbacks | Preserve explicit unsupported outcomes | No fabricated queue, observation, native Event or polling process |
 
-The eight named helpers and float helpers are already present. Their existence
+The eight named helpers and float helpers are present. Their existence
 is not new implementation work; closing their malformed-input, lifecycle and
 independent-peer evidence is. Compatibility refers to the declared values and
 outcomes, not preservation of unvalidated input handling or unsafe retry policy.
@@ -133,8 +134,8 @@ after
 end
 ```
 
-This example is a target workflow: `health_check/2` remains planned until its
-work package passes. The independent fixture must assert the server received
+This resource-dependent workflow uses the implemented `health_check/2`.
+The independent fixture asserts the server received
 one FC 16 mutation and the expected reads, no extra reconnect, and zero surviving
 client socket/owner after the `after` clause. Its readback proves the peer's
 register content, not calibration, engineering units or a physical effect.
@@ -209,5 +210,5 @@ The wire examples use the fields in Modbus Application Protocol V1.1b3
 (2012-04-26), §§4.2, 6.1–6.6, 6.11–6.12 and 7, and the TCP/IP Guide V1.0b
 (2006-10-24). [Exact source links](../provenance/primary-sources.md) retain access
 limits. Helper names and current return values were checked against the public
-modules at baseline `0c2a7f4`. Strict message-map admission, fixture format,
+modules identified by the executable-evidence cohort. Strict message-map admission, fixture format,
 bounded ownership and standalone release workflows are library design decisions.
