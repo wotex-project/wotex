@@ -44,6 +44,7 @@ defmodule WotexBindingHTTP.MixProject do
       wotex_runtime_dep(),
       {:jason, "~> 1.4"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:git_ops, "~> 2.10", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:doctest_formatter, "~> 0.4", only: [:dev, :test], runtime: false},
