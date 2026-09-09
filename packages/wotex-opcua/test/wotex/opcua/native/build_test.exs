@@ -80,6 +80,18 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert custody_hash == receipt["artifacts"]["output/bin/wotex_opcua_custody"]
     assert receipt["identity"]["native_sources"]["custody.c"] =~ ~r/\A[0-9a-f]{64}\z/
 
+    assert {:ok, host, %{ready: %Wotex.OPCUA.Native.Ready{}, received_at_ms: received}} =
+             Wotex.OPCUA.Native.Host.start_link(
+               executable: native,
+               executable_digest: receipt["artifacts"]["output/bin/wotex_opcua_native"],
+               guardian: custody,
+               guardian_digest: custody_hash,
+               timeout: 5000
+             )
+
+    assert received <= System.monotonic_time(:millisecond)
+    assert :ok = GenServer.stop(host, :normal)
+
     assert {:ok, %{output: self_test}} =
              Command.run(guardian, %{
                id: :native_self_test,

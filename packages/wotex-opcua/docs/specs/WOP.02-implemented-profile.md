@@ -3,16 +3,17 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.2
+  version: 1.0.3
   owner: wotex-opcua
   updated: 2026-09-09
 ---
 
 # WOP.02 Implemented OPC UA profile
 
-This document inventories the current Python-backed implementation. It does not
-accept the native target in WOP.10–WOP.13. Python is a runtime requirement of this
-existing adapter; the accepted native architecture has no runtime Python process.
+This document inventories the current Python-backed protocol adapter and the
+native build/bootstrap subset. It does not accept the complete native target in
+WOP.10–WOP.13. Python is a runtime requirement of the existing protocol adapter;
+the accepted native architecture has no runtime Python process.
 
 The OPC 10101 URI subset is
 `opc.tcp://host:port/path?id=percent-encoded-NodeId`. A single `id` query parameter
@@ -75,8 +76,16 @@ The current C executable emits versioned readiness, exits on owner EOF and runs
 explicit SHA-256/SDK DateTime dependency self-tests. Requests fail closed until
 the native service owner is implemented. These are WOP-P00 build/ownership cells,
 not acceptance of WOP.13 secure Session, subscription or interoperability cells.
-The BEAM native startup owner, executable admission and SDK report credits remain
-required implementation; the transparent guardian supplies none of those APIs.
+`Native.Host` admits both explicit executable digests before process creation,
+receives strict versioned readiness, and links to the original caller only after
+successful initialization and a one-use ownership claim. Hashing, spawn,
+readiness and claim share the original startup deadline. Owner death, an
+unclaimed-host deadline or failed readiness closes the Port; independent custody
+handles stopped SDKs. The readiness corpus preserves integer clock boundaries
+and rejects duplicate keys, invalid UTF-8, extra frames and oversized control
+output. Actual built-SDK startup is exercised by the required native build test.
+SDK report credits, authenticated native Sessions and services remain required
+implementation; bootstrap readiness advertises none of those capabilities.
 
 ## Evidence and compatibility
 

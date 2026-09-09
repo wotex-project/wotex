@@ -88,3 +88,20 @@ post-main exit time; ordinary and ASan/UBSan timing lanes retain the 500 ms tota
 guardian bound. The [runtime custody contract](../../priv/native/runtime-guardian.md)
 defines those separate acceptance conditions. These checks do not implement or
 accept SDK frame credits, secure Sessions or OPC UA subscription ownership.
+
+## BEAM native bootstrap
+
+`native/ready_test.exs` executes every exact frame in `native-ready-v1.json`.
+`native/executable_test.exs` exercises bounded file admission and SHA-256 identity.
+`native/host_test.exs` compiles the real custody guardian with a separate C fault
+peer, then asserts malformed readiness, fragmented output, failed executable
+admission, stopped SDKs, owner death during hashing and readiness, post-startup
+loss, and a suspended claimant's original deadline. A temporary Supervisor child
+does not restart a failed host. Each started fault peer records both native
+process identities and the tests check their absence after cleanup; the separate
+C custody driver verifies direct-child reaping.
+
+The required native build test starts the installed SDK helper and guardian
+through `Native.Host` using their receipt digests. This is a real process-ready
+integration check without an OPC UA endpoint or service. It does not accept a
+secure Session, application data, subscription credit flow or remote cleanup.

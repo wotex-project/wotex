@@ -3,15 +3,16 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-opcua
   updated: 2026-09-09
 ---
 
 # WOP.13 Native OPC UA executable and software acceptance
 
-This accepted target is **planned implementation**. WOP.02 describes the current
-code. Runtime uses an Elixir API and an explicitly owned open62541 C executable.
+This accepted target is **partially implemented**. WOP.02 identifies the executable
+build and bootstrap subset; secure native services remain required implementation.
+The target runtime uses an Elixir API and an explicitly owned open62541 C executable.
 Python is confined to the independent test peer and upstream build generators.
 A native executable, a protocol service, a WoT binding and an interoperability
 result are distinct deliverables. All requirements below are mandatory.
@@ -33,6 +34,49 @@ requires authenticated Session activation and NamespaceArray initialization.
 One-shot configuration admits no network activity until a request; each request
 owns a temporary native Session and retains the existing compatibility result
 projection. The native typed helpers use persistent mode.
+
+The internal `Native.Host.start_link/1` bootstrap accepts exactly the four
+executable identity options above plus `timeout` (default 5000, range 1..60000).
+Its caller owns the linked host; a supervising native Session starts this child
+itself before waiting for protocol activation. It is a temporary child, with no
+automatic restart or reconnect. The return is `{:ok, pid, %{ready: ready,
+received_at_ms: integer}}` after exact process readiness, or a library Error.
+It does not implement `Client.connect/1`, send credentials or activate a Session.
+An invalid or failed startup must leave its caller alive and no owned Port.
+Initialization is unlinked while the caller is monitored. Only its original
+caller can claim a one-use readiness token; the host establishes the link after
+successful readiness and a final owner/deadline check. A failed or timed-out
+claim tears down the unclaimed host. The host enforces that same deadline even
+when a live caller is suspended before submitting its claim. Linking during fallible initialization is
+not an equivalent caller-safe startup mechanism.
+Malformed options fail before file or process I/O. File hashing, native spawn and
+readiness share the API-entry deadline; owner loss remains observable during each
+phase. Native paths are absolute UTF-8 strings of at most 4096 bytes without NUL.
+Files are regular, executable, nonempty, at most 512 MiB and SHA-256 checked;
+the consumer keeps these deployment artifacts immutable. Path-based process
+spawn does not claim atomic execution of a hashed inode under adversarial file
+replacement. Neither native executable is selected through PATH.
+
+`Native.Ready.decode/1` is the pure bootstrap decoder for one LF-terminated
+control frame, at most 4096 bytes including LF. It accepts only the exact five
+ready fields below, without duplicate keys, embedded unescaped LF, unknown
+fields, trailing data or invalid UTF-8. `clock_ms` is an integer in 0..2^63-1;
+booleans and floating-point lookalikes fail. The decoder returns
+`{:ok, %Native.Ready{clock_ms: integer}}` or a payload-free `invalid_native_ready`
+Error. The host captures the BEAM monotonic receive time separately, before
+decoding, for X03's conservative clock mapping. The 4096-byte bootstrap control
+limit is separate from the 131072-byte service frame limit. A second ready or
+unsolicited data after bootstrap closes this process generation with one bounded
+error; native Session/credit ownership remains a separate implementation layer.
+`invalid_native_configuration`, `invalid_native_executable`,
+`invalid_native_ready`, `native_startup_failed`, `native_owner_lost`,
+`native_process_terminated`, `invalid_native_handle`, `invalid_native_frame` and
+`deadline_exceeded` are finite bootstrap Error codes. Only a native exit status
+may appear in their bounded details; native output and filesystem exception text
+are never exposed. The readiness corpus
+[native-ready-v1.json](fixtures/native-ready-v1.json) contains exact byte frames;
+its runner decodes `frame_base64` and compares either the complete clock value
+or the exact Error code. These cases establish no service acceptance.
 
 The Elixir configuration is a keyword list with exactly `executable`,
 `executable_digest`, `guardian`, `guardian_digest`, `endpoint`, `security_policy`, `security_mode`, `client_uri`,
