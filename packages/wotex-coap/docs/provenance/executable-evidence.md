@@ -65,6 +65,11 @@ faults, interrupted atomic replacements, SIGKILL, capacity and sequence bounds.
 Its real libcoap callback assertions cover durable-write failure before wire
 transmission. These primitives do not implement the production Port or accept
 end-to-end restart/replay behavior through that owner.
+The [native JSON receipt](native-json-v1.json) identifies exact-source parser and
+framer tests for UTF-8, decoded duplicate keys, exact 64-bit integers, finite
+allocation bounds, split/coalesced input and terminal EOF/failure. These native
+primitives do not accept the complete helper protocol or its report-credit/body
+assembly behavior.
 OSCORE protected-message/replay/bridge restart tests, native helper ownership and complete stress/matrix closure remain
 required by [the ordered plan](../plans/software-implementation.md).
 

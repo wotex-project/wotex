@@ -1,0 +1,178 @@
+{
+  "schema": "wotex.coap.native-json-evidence@1",
+  "scope": "Native JSON parser and line framer primitives; production Port and complete native-v1 helper cases remain unaccepted",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/json.c": "a50d46c2e518d5e3d932c6603306a54dd49abcf545cc5a97fbd2b7ec994d5d46",
+      "native/oscore/json.h": "46d614f17a8c51abbd656369558562a202937983fc46755fa541b33be2236c1c",
+      "native/oscore/frame.c": "d122c2d763e967472d00a79eb4a01cebdbcd9c1b747578a43346141448349906",
+      "native/oscore/frame.h": "86cf2bc67e1f886f2021a6f804d7fabc8818dd320bf9be68d438b3ace21ee5e5",
+      "native/oscore/vendor/yyjson/source.json": "34d79572c21e231f9257a59add2478d8e6473c2b43e676d946d6365ca7275457",
+      "native/oscore/vendor/yyjson/yyjson.c": "ac2e9bbb2e2d9149d90878d40506a1d624fa0b33c979a11b61075c54782c6d6a",
+      "native/oscore/vendor/yyjson/yyjson.h": "175867c5493a5df648cec566717fa1c29aa2f6096f5f0cf1efad0b65e1f6d7b3",
+      "native/oscore/vendor/yyjson/LICENSE": "45e384d3d52c73cba3a64d6e6c25d47cd738cd8a55c30629e3201046eda62947",
+      "test/native/oscore_json_test.c": "d8aff1b171b7972d39a5aaf8e015eaa841b1970989d2e5d9f943a985f29f29ca",
+      "test/native/oscore_frame_test.c": "1b953de8bcf96c012b8fe603bd0e16abe9a6bcb7314a14a0245f7fcfd1be495b",
+      "test/native/Dockerfile.json": "4194cc06288d188a11125e7057e2076fe5142adff2fdecc4ce5ab54618f849bb"
+    }
+  },
+  "upstream": {
+    "schema": "wotex.coap.yyjson-source@1",
+    "version": "0.12.0",
+    "commit": "8b4a38dc994a110abaec8a400615567bd996105f",
+    "url": "https://codeload.github.com/ibireme/yyjson/tar.gz/refs/tags/0.12.0",
+    "sha256": "b16246f617b2a136c78d73e5e2647c6f1de1313e46678062985bdcf1f40bb75d",
+    "license": "MIT",
+    "modifications": [],
+    "files": {
+      "yyjson.c": "ac2e9bbb2e2d9149d90878d40506a1d624fa0b33c979a11b61075c54782c6d6a",
+      "yyjson.h": "175867c5493a5df648cec566717fa1c29aa2f6096f5f0cf1efad0b65e1f6d7b3",
+      "LICENSE": "45e384d3d52c73cba3a64d6e6c25d47cd738cd8a55c30629e3201046eda62947"
+    },
+    "compile_definitions": [
+      "YYJSON_DISABLE_NON_STANDARD=1",
+      "YYJSON_DISABLE_UTILS=1",
+      "YYJSON_DISABLE_INCR_READER=1"
+    ],
+    "read_flags": [
+      "YYJSON_READ_NUMBER_AS_RAW"
+    ]
+  },
+  "requirements": [
+    "WCO-C07",
+    "WCO-N03"
+  ],
+  "limits": {
+    "line_bytes_including_newline": 131072,
+    "yyjson_pool_bytes": 2097152,
+    "container_depth_including_root": 8,
+    "entries_per_container": 1024,
+    "value_nodes_excluding_keys": 4096,
+    "numeric_token_bytes": 128
+  },
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "native_cases": [
+        {
+          "executable": "oscore-json",
+          "exit_code": 0,
+          "output_sha256": "5080554aa288c76f2202fc0241c0c906ec4932ad63c066e6c6db2de6bd4b0cee",
+          "assertion_output": [
+            "WCO-C07 WCO-N03: strict UTF-8, duplicate decoded keys and exact field lookup",
+            "WCO-C07 WCO-N03: exact uint64, Boolean/type rejection and finite number bounds",
+            "WCO-C07 WCO-N03: exact depth/node/container/frame boundaries and fixed pool",
+            "WCO-C07 WCO-N03: 1000 bounded parser resets release all document state"
+          ],
+          "executable_sha256": "357c0a6db099a62e6b02cc8b05f90a4cd5cecf45451177e42011cf050c0cf2ac"
+        },
+        {
+          "executable": "oscore-frame",
+          "exit_code": 0,
+          "output_sha256": "865895b03eceb9a49dcc176a6237173eb191dd2a2fc4842f0f722ec8d97d87ee",
+          "assertion_output": [
+            "WCO-C07 WCO-N03: every UTF-8 byte split and one-byte delivery preserve exact single frame",
+            "WCO-C07 WCO-N03: coalesced frames stay ordered; malformed middle frame permanently closes ingress",
+            "WCO-C07 WCO-N03: 128-KiB line accepted; plus-one contiguous/split ingress fails with bounded erased buffer",
+            "WCO-C07 WCO-N03: truncated/clean EOF and invalid callbacks cannot revive terminated generation"
+          ],
+          "executable_sha256": "3b93ed7e0517529ce2e5603cedfd2ac68caf2899e524ea8c548b1f020c4d0ae6"
+        }
+      ],
+      "compiler": "Apple clang 21.0.0 clang-2100.1.1.101",
+      "openssl": "3.6.4",
+      "sanitizers": [],
+      "compile_options": [
+        "-std=c11",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-Werror"
+      ]
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "native_cases": [
+        {
+          "executable": "oscore-json",
+          "exit_code": 0,
+          "output_sha256": "5080554aa288c76f2202fc0241c0c906ec4932ad63c066e6c6db2de6bd4b0cee",
+          "assertion_output": [
+            "WCO-C07 WCO-N03: strict UTF-8, duplicate decoded keys and exact field lookup",
+            "WCO-C07 WCO-N03: exact uint64, Boolean/type rejection and finite number bounds",
+            "WCO-C07 WCO-N03: exact depth/node/container/frame boundaries and fixed pool",
+            "WCO-C07 WCO-N03: 1000 bounded parser resets release all document state"
+          ],
+          "executable_sha256": "2f44b5c85bb4a6d5758fae22a82ee706132c17dbab2443b6b43d0b2d2da34a65",
+          "argv": [
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "--read-only",
+            "--pids-limit",
+            "16",
+            "--memory",
+            "128m",
+            "--entrypoint",
+            "/usr/local/bin/oscore-json",
+            "sha256:84b66cbddb389247cdab63192e89bc6c2986422dfb3439848533cff4a9e28cfa"
+          ]
+        },
+        {
+          "executable": "oscore-frame",
+          "exit_code": 0,
+          "output_sha256": "865895b03eceb9a49dcc176a6237173eb191dd2a2fc4842f0f722ec8d97d87ee",
+          "assertion_output": [
+            "WCO-C07 WCO-N03: every UTF-8 byte split and one-byte delivery preserve exact single frame",
+            "WCO-C07 WCO-N03: coalesced frames stay ordered; malformed middle frame permanently closes ingress",
+            "WCO-C07 WCO-N03: 128-KiB line accepted; plus-one contiguous/split ingress fails with bounded erased buffer",
+            "WCO-C07 WCO-N03: truncated/clean EOF and invalid callbacks cannot revive terminated generation"
+          ],
+          "executable_sha256": "c157daf2220e81042a706d399201bf39e8b6bcb45e801bc2f0ece31a75df3b5f",
+          "argv": [
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "--read-only",
+            "--pids-limit",
+            "16",
+            "--memory",
+            "128m",
+            "--entrypoint",
+            "/usr/local/bin/oscore-frame",
+            "sha256:84b66cbddb389247cdab63192e89bc6c2986422dfb3439848533cff4a9e28cfa"
+          ]
+        }
+      ],
+      "image": "sha256:84b66cbddb389247cdab63192e89bc6c2986422dfb3439848533cff4a9e28cfa",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "3.0.20-1~deb12u2",
+      "sanitizers": [
+        "address",
+        "undefined"
+      ],
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1:abort_on_error=1",
+        "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1"
+      },
+      "toolchain_packages_recorded_not_locked": true,
+      "artifact_and_package_log_sha256": "bfa4284da6db5fb071048a383d5529a5947ddd26ed4e84bc82145633b340437c",
+      "build_log_sha256": "3b5055fe3f15014d9263098a13986ad8694272a36ca39b3b1afc4dbd8e2d4f9f"
+    }
+  ],
+  "unaccepted": [
+    "Complete helper request/reply and generation correlation",
+    "Body/base64/hash assembly and report credit",
+    "Port mailbox, suspended-owner and process cleanup behavior",
+    "Native Mix build/run tasks and OSCORE software profile"
+  ]
+}

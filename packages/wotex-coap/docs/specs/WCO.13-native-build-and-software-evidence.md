@@ -3,7 +3,7 @@ spec:
   id: WCO.13
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.1.0
+  version: 1.2.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -37,6 +37,15 @@ upstream. `test/native/oscore_sequence_test.c` asserts the actual public send
 path on macOS and under Linux ASan/UBSan. Its narrow
 [receipt](../provenance/native-sequence-v1.json) does not accept the remaining
 native owner or durable store.
+
+The native JSON dependency is unmodified yyjson 0.12.0, commit
+`8b4a38dc994a110abaec8a400615567bd996105f`. Its
+[pin and MIT notice](../../native/oscore/vendor/yyjson/source.json) identify the
+archive and vendored file hashes. Compile with `YYJSON_DISABLE_NON_STANDARD=1`,
+`YYJSON_DISABLE_UTILS=1` and `YYJSON_DISABLE_INCR_READER=1`; the sole read flag is
+`YYJSON_READ_NUMBER_AS_RAW`. The native manifest includes these hashes and flags.
+The pinned [0.12.0 API](https://github.com/ibireme/yyjson/blob/8b4a38dc994a110abaec8a400615567bd996105f/doc/API.md)
+defines the fixed-pool and raw-number interfaces.
 
 `mix wotex.native.build --workspace ABS` builds `wotex-coap-oscore` from
 `native/oscore/` and the pinned static libcoap library. This task is explicit;
@@ -115,7 +124,12 @@ rules. OSCORE interoperability against libcoap is labelled same-stack.
 
 C07 retains its 128 KiB line, depth-eight, 1,024-entry/container and
 4,096-node limits. IDs are 1..64 printable ASCII bytes and never reused in a
-generation. Operations are `open`, `body_begin`, `body_chunk`, `body_end`,
+generation. The BEAM sender allocates monotonically increasing unsigned 64-bit
+identities scoped to that generation and fails before exhaustion or reuse. The
+helper retains only the bounded outstanding request/control identities, not an
+unbounded historical-ID set. Duplicate outstanding IDs fail admission. Late SDK
+callbacks retain their original exchange identity and cannot attach to a later
+request. Operations are `open`, `body_begin`, `body_chunk`, `body_end`,
 `request`, `observe`, `credit`, `cancel` and `close`. Each uses the C07 request/reply
 envelope and a finite `timeout_ms`; unknown fields and operations fail closed.
 The operation-specific parameter fields are:
@@ -127,7 +141,7 @@ The operation-specific parameter fields are:
 | body_chunk | `body_id`, zero-based byte `offset`, C07 bytes envelope `data` |
 | body_end | `body_id` |
 | request | `method` (GET/POST/PUT/DELETE), `path`, `confirmable`, optional `accept`, `content_format`, `body_id` |
-| observe | `path`, `confirmable`, optional `accept`; GET with Observe=0 |
+| observe | `path`, `confirmable`, `observation_kind` (`property` or `event`), optional `accept`; GET with Observe=0 |
 | credit | `generation`, `ack_seq` (unsigned 64-bit cumulative report-frame acknowledgment); fixed eight-frame window |
 | cancel | `subscription_id`, `generation`; original route/token only |
 | close | empty object |
@@ -148,8 +162,24 @@ CoAP code/options/metadata. No partial chunk reaches the public API. A mismatche
 hash, missing chunk, interleaved body, extra bytes or late generation is a
 terminal protocol failure. Chunk framing changes no public .10 body limit.
 The body limit is enforced before allocation and before base64 decoding.
-The native JSON reader rejects duplicate keys and Unicode/number violations
-with the same C07 limits; the parser and base64 decoder have native fault tests.
+The native JSON reader rejects duplicate decoded keys and Unicode/number
+violations before field lookup. Its parser uses one fixed 2 MiB yyjson pool,
+without allocator fallback. It retains numeric tokens, capped at 128 bytes, so
+64-bit generations, sizes and offsets never pass through a floating-point
+conversion. Integer fields reject Boolean, fractional and exponent tokens;
+mathematical negative zero is zero. A separate C-locale range check rejects
+non-finite values and underflow to zero while permitting representable subnormals.
+The eight-level depth count includes the root container; the 4,096-node count
+includes containers and values, excluding object keys.
+
+One fixed 131,072-byte ingress buffer accepts arbitrary byte splits and multiple
+lines per read. It never stores an extra byte past this bound. Each complete
+line is parsed synchronously before the next line; malformed input, callback
+failure or truncated EOF permanently closes this generation. A clean EOF also
+closes input and cannot be followed by another request. Parser pools and consumed
+line bytes are erased after use or failure. Native parser/framer tests assert
+these primitives; base64/body and complete helper fault tests remain separate
+acceptance obligations.
 
 Report flow begins with zero credit. The first `credit` with `ack_seq: 0`
 opens an eight-frame window exactly once per generation. Every body event or
@@ -297,7 +327,8 @@ Observe and Block1/Block2 interactions, 1,000 sequential operations, 100
 open/close cycles, 100 Observe/cancel cycles, 100 receiver-termination cycles,
 32 concurrent callers and sustained
 Property/Event overload. Run Elixir 1.18.4/OTP 27.3.4.15 and
-Elixir 1.20.2/OTP 29.0.4 with isolated builds/PLTs, Linux ASan/UBSan and clean
+Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
+per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. Earlier Python-run results validate their
 recorded cohort only; Mix tasks and OSCORE retain planned status until these
 assertions execute. Hardware and publication are separate.

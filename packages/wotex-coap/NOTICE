@@ -8,3 +8,8 @@ The patches in native/oscore/patches modify libcoap 4.3.5, copyright
 copyright 2018 SICS, RISE AB. Their source notices and redistribution terms
 are preserved in native/oscore/LICENSE.libcoap. Native builds retain these
 notices and record the exact upstream revision and applied patches.
+
+The unmodified yyjson 0.12.0 source in native/oscore/vendor/yyjson is
+copyright (c) 2020 YaoYuan <ibireme@gmail.com>, distributed under the MIT
+license preserved beside that source. Its exact revision and file hashes are
+recorded in native/oscore/vendor/yyjson/source.json.
