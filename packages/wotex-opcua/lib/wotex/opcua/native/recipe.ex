@@ -16,7 +16,7 @@ defmodule Wotex.OPCUA.Native.Recipe do
   alias Wotex.OPCUA.Native.Source
 
   @tools [:cc, :cmake, :ctest, :make, :perl, :python, :ar, :ranlib]
-  @clear ~w(CFLAGS CXXFLAGS CPPFLAGS LDFLAGS LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH PKG_CONFIG_PATH CMAKE_PREFIX_PATH MAKEFLAGS MFLAGS)
+  @clear ~w(CFLAGS CXXFLAGS CPPFLAGS LDFLAGS LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR CMAKE_PREFIX_PATH MAKEFLAGS MFLAGS)
   @targets %{
     {:linux, :x86_64} => "linux-x86_64",
     {:linux, :aarch64} => "linux-aarch64",
@@ -152,7 +152,8 @@ defmodule Wotex.OPCUA.Native.Recipe do
       "-DUA_MULTITHREADING=0",
       "-DUA_BUILD_EXAMPLES=OFF",
       "-DUA_BUILD_UNIT_TESTS=OFF",
-      "-DCMAKE_DISABLE_FIND_PACKAGE_PkgConfig=TRUE",
+      "-DPKG_CONFIG_EXECUTABLE:FILEPATH=",
+      "-DPKG_CONFIG_ARGN:STRING=",
       "-DOPENSSL_USE_STATIC_LIBS=TRUE",
       "-DOPENSSL_ROOT_DIR=" <> ssl,
       "-DOPENSSL_INCLUDE_DIR=" <> Path.join(ssl, "include"),

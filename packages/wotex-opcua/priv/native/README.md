@@ -63,3 +63,9 @@ license beside its native artifacts. `json_check.c` supplies parser and numeric
 projections for executable corpus checks. It is not installed as a runtime
 program. Typed SDK value conversion, serialization and service admission remain
 required implementation.
+
+The build supplies explicit static OpenSSL paths and disables pkg-config
+executable discovery through an empty, typed CMake cache entry. FindPkgConfig's
+command definitions remain available to CMake versions whose FindOpenSSL module
+calls them unconditionally. The recipe clears pkg-config executable, search-path,
+system-root and library-directory environment inputs before every command.

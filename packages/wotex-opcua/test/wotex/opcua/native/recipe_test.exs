@@ -24,7 +24,8 @@ defmodule Wotex.OPCUA.Native.RecipeTest do
           "-DUA_ENABLE_METHODCALLS=ON",
           "-DUA_MULTITHREADING=0",
           "-DOPENSSL_USE_STATIC_LIBS=TRUE",
-          "-DCMAKE_DISABLE_FIND_PACKAGE_PkgConfig=TRUE",
+          "-DPKG_CONFIG_EXECUTABLE:FILEPATH=",
+          "-DPKG_CONFIG_ARGN:STRING=",
           "-DPython3_EXECUTABLE=/tools/python",
           "-DOPENSSL_CRYPTO_LIBRARY=/isolated/workspace/openssl-prefix/lib/libcrypto.a"
         ] do
@@ -36,7 +37,11 @@ defmodule Wotex.OPCUA.Native.RecipeTest do
       assert step.output_bytes == 16_777_216
       assert step.cleanup_ms == 1000
       assert {"LDFLAGS", nil} in step.env
-      assert {"PKG_CONFIG_PATH", nil} in step.env
+
+      for name <- ~w(PKG_CONFIG PKG_CONFIG_PATH PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR) do
+        assert {name, nil} in step.env
+      end
+
       assert {"CC", "/tools/cc"} in step.env
       refute step.executable in ["sh", "bash", "/bin/sh"]
     end
