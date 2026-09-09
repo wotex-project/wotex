@@ -1,5 +1,19 @@
 defmodule Wotex.Thread.OpenThread.Frame do
-  @moduledoc false
+  @moduledoc """
+  Decodes and validates messages from the pinned OpenThread bridge.
+
+  JSON input is limited to less than 128 KiB, eight nesting levels, 1024 members
+  per container and a 4096-node normalization budget. Duplicate object keys and
+  malformed JSON fail before a result is interpreted. The ready handshake must
+  name the exact SDK revision and protocol version.
+
+  Response validation checks version, request identity, exact envelope fields
+  and the operation-specific result shape. Known strings map through a fixed
+  atom table; unknown native error codes are rejected rather than creating
+  atoms. Dataset bytes and state snapshots pass through their typed validators.
+  This parser does not own a Port or establish that an uncorrelated response
+  belongs to a live request; the connection supplies that context.
+  """
 
   alias Wotex.Thread.{Error, JoinerIdentity, State}
   alias Wotex.Thread.OpenThread.DatasetWire

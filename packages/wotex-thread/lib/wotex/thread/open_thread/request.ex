@@ -1,5 +1,18 @@
 defmodule Wotex.Thread.OpenThread.Request do
-  @moduledoc false
+  @moduledoc """
+  Maps the admitted Thread operation set to native bridge commands.
+
+  Exact request shapes select inspection, Dataset operations, enablement,
+  network formation, management updates and commissioner admissions. Dataset
+  and joiner helpers revalidate their values before parameters are produced.
+  Unsupported operations and extra fields return a structured error before
+  native submission; arbitrary daemon command text is never accepted.
+
+  The connection uses the mutation classification to distinguish an unsent
+  failure from an uncertain effect after submission. Admission replies also
+  must echo the requested identity and lifetime. This module performs no I/O,
+  allocates no request identity and owns neither deadlines nor retry policy.
+  """
 
   alias Wotex.Thread.{Error, JoinerAdmission, JoinerIdentity}
   alias Wotex.Thread.OpenThread.DatasetWire

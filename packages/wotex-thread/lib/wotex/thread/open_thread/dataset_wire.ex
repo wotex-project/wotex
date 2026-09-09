@@ -1,5 +1,19 @@
 defmodule Wotex.Thread.OpenThread.DatasetWire do
-  @moduledoc false
+  @moduledoc """
+  Converts validated Operational Datasets to the native bridge's byte envelope.
+
+  Outbound conversion revalidates `Wotex.Thread.Dataset` values before producing
+  canonical base64. Inbound conversion requires the exact envelope fields,
+  canonical encoding and at most 254 decoded bytes, then parses the Dataset
+  again. Active and pending selectors are explicit; this layer does not infer
+  SDK semantic validity from the presence of fields.
+
+  Management updates append bounded extra TLVs in order and reparse the merged
+  Dataset, which catches duplicate types, invalid widths and oversized values.
+  The envelope intentionally contains credentials when the Dataset does.
+  Consumers must keep it out of logs and diagnostics. No SDK call or filesystem
+  access occurs in this conversion layer.
+  """
 
   alias Wotex.Thread.{Dataset, Error}
 

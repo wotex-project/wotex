@@ -2,6 +2,8 @@ defmodule Wotex.Thread.CommissioningValueTest do
   @moduledoc false
 
   use ExUnit.Case, async: true
+
+  doctest Wotex.Thread.OpenThread.CommissioningValue
   use ExUnitProperties
   alias Wotex.Thread.{Error, JoinerAdmission, JoinerConfig, JoinerIdentity}
 

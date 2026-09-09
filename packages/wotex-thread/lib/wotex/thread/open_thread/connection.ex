@@ -1,5 +1,24 @@
 defmodule Wotex.Thread.OpenThread.Connection do
-  @moduledoc false
+  @moduledoc """
+  Owns one explicitly started OpenThread bridge process and its request queue.
+
+  The GenServer monitors the supplied owner, validates the native ready/open
+  handshake and returns an opaque handle for one acquired generation. Calls
+  have finite admission deadlines and correlated replies. Ordinary work uses
+  at most 63 pending slots, reserving the 64th for a stop operation that can
+  precede queued work and cancel an outstanding commissioning operation.
+
+  An owner or submitted caller dying, a submitted deadline expiring, or a broken
+  native channel closes the generation instead of replaying uncertain work.
+  Submitted mutations report an unknown effect when completion is lost; queued
+  work has not been sent. Closing waits for bounded native teardown, and the
+  host retains responsibility for its SDK, interface, settings and radio children.
+  Status inspection redacts configuration and pending request contents.
+
+  Consumers configure `Wotex.Thread.OpenThread` or its child specification.
+  This connection is a per-session implementation component, with no global
+  registry, automatic reconnection or dependency-load startup.
+  """
 
   use GenServer
   alias Wotex.Thread.{Error, Session}

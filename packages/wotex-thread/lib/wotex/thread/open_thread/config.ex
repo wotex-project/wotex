@@ -1,5 +1,19 @@
 defmodule Wotex.Thread.OpenThread.Config do
-  @moduledoc false
+  @moduledoc """
+  Admits explicit configuration for an owned native OpenThread session.
+
+  Configuration requires absolute executable and storage paths, a supported
+  Spinel radio URL, an interface name, a storage mode and a local owner PID.
+  Unknown or duplicate options fail. Paths and URLs are limited to 4096 bytes,
+  interface names to 15 bytes, and timeout to 1..60,000 milliseconds. Network
+  creation is disabled unless explicitly permitted.
+
+  Admission is pure: it checks syntax and field relationships without opening
+  files, probing a radio or checking whether an owner is alive. The connection
+  and native host perform resource acquisition and ownership checks afterward.
+  Inspection omits paths, radio configuration and the owner PID. Callers normally
+  supply these options through `Wotex.Thread.OpenThread`.
+  """
 
   alias Wotex.Thread.Error
 

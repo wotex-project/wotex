@@ -1,5 +1,24 @@
 defmodule Wotex.Thread.OpenThread.CommissioningValue do
-  @moduledoc false
+  @moduledoc """
+  Checks the scalar credential fields used by Thread commissioning values.
+
+  PSKd admission accepts 6..32 ASCII uppercase letters or digits, excluding
+  I, O, Q and Z as required by the pinned OpenThread profile. Optional text may
+  be absent; present text must be valid UTF-8, fit the caller's byte limit and
+  contain no NUL, ASCII control character or DEL. These checks do not store,
+  log, authenticate or submit credentials.
+
+  Joiner configuration and admission constructors compose these predicates
+  with identity and lifetime validation. A valid PSKd is only well-formed input;
+  it says nothing about a peer's credential or the outcome of commissioning.
+
+  ## Examples
+
+      iex> Wotex.Thread.OpenThread.CommissioningValue.pskd?("WTEST123")
+      true
+      iex> Wotex.Thread.OpenThread.CommissioningValue.pskd?("INVALID")
+      false
+  """
 
   @doc false
   @spec pskd?(term()) :: boolean()
