@@ -61,10 +61,28 @@ defmodule Wotex.BACnet.OperationOwner do
 
   @doc false
   @spec close(pid()) :: :ok
-  def close(pid) do
-    GenServer.stop(pid, :normal, 1100)
-  catch
-    :exit, _ -> :ok
+  def close(pid), do: close(pid, System.monotonic_time(:millisecond) + 1000)
+
+  @doc false
+  @spec close(pid(), integer()) :: :ok
+  def close(pid, deadline) do
+    monitor = Process.monitor(pid)
+
+    try do
+      GenServer.call(pid, {:close, deadline}, remaining(deadline) + 100)
+
+      receive do
+        {:DOWN, ^monitor, :process, ^pid, _} -> :ok
+      after
+        remaining(deadline + 100) -> force_close(pid)
+      end
+    catch
+      :exit, _ -> force_close(pid)
+    after
+      Process.demonitor(monitor, [:flush])
+    end
+
+    :ok
   end
 
   @impl GenServer
@@ -79,11 +97,15 @@ defmodule Wotex.BACnet.OperationOwner do
        client: Process.monitor(config.client),
        pending: %{},
        subscriptions: %{},
-       controls: %{}
+       controls: %{},
+       cleanup_deadline: nil
      }}
   end
 
   @impl GenServer
+  def handle_call({:close, deadline}, _, state),
+    do: {:stop, :normal, :ok, %{state | cleanup_deadline: deadline}}
+
   def handle_call({:request, generation, message, deadline}, from, state) do
     remaining = deadline - System.monotonic_time(:millisecond)
 
@@ -294,7 +316,12 @@ defmodule Wotex.BACnet.OperationOwner do
       GenServer.reply(operation.from, failure(:connection_closed, operation.message))
     end)
 
-    deadline = System.monotonic_time(:millisecond) + 1000
+    deadline =
+      min(
+        state.cleanup_deadline || System.monotonic_time(:millisecond) + 1000,
+        System.monotonic_time(:millisecond) + 1000
+      )
+
     close_subscriptions(state, deadline)
     if state.config.owned_stack, do: StackOwner.close(state.config.owned_stack, deadline)
     :ok
@@ -371,7 +398,7 @@ defmodule Wotex.BACnet.OperationOwner do
       receive do
         {:DOWN, ref, :process, ^pid, _} when ref == subscription.monitor -> :ok
       after
-        remaining(deadline) -> Process.exit(pid, :kill)
+        remaining(deadline + 100) -> force_close(pid)
       end
 
       if subscription.from,
@@ -380,6 +407,11 @@ defmodule Wotex.BACnet.OperationOwner do
       if subscription.cancel_from,
         do: GenServer.reply(subscription.cancel_from, subscription.cancel_result)
     end)
+  end
+
+  defp force_close(pid) do
+    Process.unlink(pid)
+    Process.exit(pid, :kill)
   end
 
   defp pending_count(state), do: map_size(state.pending) + map_size(state.controls)

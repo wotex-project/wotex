@@ -1,0 +1,22 @@
+{
+  "format": "wotex.bacnet.runtime-frame",
+  "version": 1,
+  "requirements": ["WBA-S05", "WBA-V12", "WBA-I05"],
+  "cases": [
+    {"id": "RF01", "type": "boolean", "value": false, "expected": false},
+    {"id": "RF02", "type": "unsigned_integer", "value": 0, "expected": 0},
+    {"id": "RF03", "type": "null", "value": null, "expected": null},
+    {"id": "RF04", "type": "octet_string", "value": "", "expected": ""},
+    {"id": "RF05", "type": "real", "value": 1.5, "expected": 1.5}
+  ],
+  "association": {"device_instance": 123, "object_type": 1, "instance": 7, "property": 85, "array_index": null},
+  "reject_mutations": [
+    {"id": "RF06", "field": "device_instance", "value": 123.0},
+    {"id": "RF07", "field": "property", "value": 77},
+    {"id": "RF08", "field": "array_index", "value": 0},
+    {"id": "RF09", "field": "object_type", "value": 2},
+    {"id": "RF10", "field": "instance", "value": 8},
+    {"id": "RF11", "field": "time_remaining", "value": 4294967296},
+    {"id": "RF12", "field": "process_identifier", "value": -1}
+  ]
+}
