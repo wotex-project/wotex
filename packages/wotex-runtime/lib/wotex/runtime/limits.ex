@@ -12,6 +12,11 @@ defmodule Wotex.Runtime.Limits do
   | top-level metadata entries | 64 |
   | binding profiles per ConsumedThing or selection | 32 |
   | Forms scanned for one interaction | 128 |
+
+  `all/0` exposes the fixed contract, `maximum/1` retrieves a named ceiling, and
+  `list_within?/2` checks list length without traversing beyond the permitted
+  count. Binding implementations retain responsibility for their protocol and
+  payload limits.
   """
 
   @limits %{

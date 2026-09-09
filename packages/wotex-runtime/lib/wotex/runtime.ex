@@ -5,7 +5,7 @@ defmodule Wotex.Runtime do
   The runtime composes validated Thing Descriptions with explicit binding
   profiles, credential providers, and transports. It deterministically selects
   a compatible Interaction Affordance or top-level Thing Form, creates a
-  credential-free request, resolves credentials just in time, and invokes a
+  credential-free request, resolves credentials for that request, and invokes a
   consumer port.
 
   It does not own persistence, authorization, credential custody, protocol

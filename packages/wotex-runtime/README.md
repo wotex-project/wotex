@@ -3,10 +3,10 @@
 **Caller-owned ConsumedThing and ExposedThing mechanics for Elixir.**
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_runtime.svg)](https://hex.pm/packages/wotex_runtime)
-[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_runtime)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_runtime)
 [![CI](https://github.com/wotex-project/wotex-runtime/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-runtime/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/wotex-project/wotex-runtime/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-runtime)
-[![License](https://img.shields.io/hexpm/l/wotex_runtime.svg)](LICENSE)
+[![License](https://img.shields.io/hexpm/l/wotex_runtime.svg)](https://github.com/wotex-project/wotex-runtime/blob/main/LICENSE)
 
 [Installation](#installation) ·
 [Quick start](#quick-start) ·
@@ -17,6 +17,9 @@
 [Development](#development)
 
 ---
+
+This is a development checkout with an unstable public API. Package
+publication and release readiness require separate verification.
 
 Wotex Runtime turns the values in `wotex` into explicit interaction plans. It
 constructs ConsumedThings and ExposedThings, selects compatible Forms and
@@ -93,7 +96,7 @@ Each synchronous operation follows one visible path:
 Thing Description + operation
   -> deterministic Form and binding-profile selection
   -> credential-free protocol request
-  -> just-in-time consumer credential resolution
+  -> per-request consumer credential resolution
   -> consumer transport call
   -> typed protocol result
 ```
@@ -115,7 +118,7 @@ Thing-level meta-interactions use top-level Forms. For example:
 ```
 
 `Wotex.Runtime.thing_operations/0` returns the exact nine TD 1.1 top-level
-operation atoms. A binding advertises only the subset it actually implements.
+operation atoms. A binding advertises only the subset it implements.
 
 Form selection proves only that the declarations are compatible. It does not
 authorize the interaction. Likewise, a successful transport result proves the

@@ -7,6 +7,11 @@ defmodule Wotex.Runtime.FormSelector do
   and a Form must declare it or receive it as a TD 1.1 default operation for
   its interaction context through `Wotex.Form.operations/2`. Thing-level Forms
   have no defaults.
+
+  `select/5` handles Property, Action, and Event affordances; `select_thing/3`
+  handles top-level Thing operations. Both resolve relative references against
+  the validated Thing Description and return a selection value without
+  resolving credentials, authorizing the operation, or invoking a transport.
   """
 
   alias Wotex.{Form, ThingDescription}
