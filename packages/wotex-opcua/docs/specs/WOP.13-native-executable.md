@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.0.2
+  version: 1.1.0
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -19,25 +19,27 @@ result are distinct deliverables. All requirements below are mandatory.
 ## WOP-X01 — SDK and reuse boundary
 
 `Wotex.OPCUA.Open62541` implements the Client port. `connect/1` accepts an explicit
-`executable` absolute path, its SHA-256 `executable_digest`, the endpoint and
+`executable` absolute path, its SHA-256 `executable_digest`, an absolute
+`guardian` path and its SHA-256 `guardian_digest`, the endpoint and
 security options from S03 (explicit keys defined below), `lifecycle: :persistent | :oneshot` (default
 `:persistent`), `timeout: 1..60000` (default 5000), and
 `session_timeout_ms: 1000..3600000` (default 60000). Unknown or duplicate keys fail
 before process creation. These options remain consumer-owned; no application
 configuration, PATH search, automatic installation or runtime download occurs.
-The executable is `wotex_opcua_native`; the package supplies its C source, build
-task, protocol schema, attribution and tests. Successful persistent connect
+The SDK executable is `wotex_opcua_native`; its separate custody executable is
+`wotex_opcua_custody`. The package supplies both C sources, build task, protocol
+schema, attribution and tests. Successful persistent connect
 requires authenticated Session activation and NamespaceArray initialization.
 One-shot configuration admits no network activity until a request; each request
 owns a temporary native Session and retains the existing compatibility result
 projection. The native typed helpers use persistent mode.
 
 The Elixir configuration is a keyword list with exactly `executable`,
-`executable_digest`, `endpoint`, `security_policy`, `security_mode`, `client_uri`,
+`executable_digest`, `guardian`, `guardian_digest`, `endpoint`, `security_policy`, `security_mode`, `client_uri`,
 `server_uri`, `certificate`, `private_key`, `server_certificate`,
 `trust_certificate`, `crl`, `authentication`, `lifecycle`, `timeout` and
 `session_timeout_ms`. Only the last three have the defaults above. All other
-keys are required. Executable digest is lowercase 64-digit hexadecimal;
+keys are required. Both executable digests are lowercase 64-digit hexadecimal;
 certificate/key/CRL values are explicit absolute file paths. Authentication is
 `%{type: :anonymous}`, `%{type: :username, username: utf8, password: binary}` or
 `%{type: :certificate, certificate: absolute_path, private_key: absolute_path}`.
@@ -146,7 +148,7 @@ Elixir 1.18/OTP 27 and Elixir 1.20/OTP 29 with exact patch versions recorded.
 The full secure/fault/sanitizer lane runs on Linux; macOS runs native open,
 read/write/subscription/cancel/EOF and package smoke tests. No hardware is needed.
 
-The final archive includes C sources, reviewed patches, the source manifest,
+The final archive includes SDK-host and runtime-guardian C sources, reviewed patches, the source manifest,
 Mix tasks and protocol schemas. It excludes built executables, downloads,
 credentials, PLTs and fixture state. An isolated archive consumer builds the
 helper explicitly, removes Python from the runtime PATH, and performs the
@@ -168,8 +170,9 @@ C parsing has bounded tokens/stack and no input-proportional unchecked VLA.
 
 Ready is exactly `{version: 1, event: "ready", backend: "open62541",
 revision: "d1173ccc31560ffc60c29e24ce8adb19f8c3c686", clock_ms: native_monotonic_ms}`.
-The caller verifies the executable digest before spawn and the revision before
-network admission. `clock_ms` is an integer in 0..2^63-1. Generation is a BEAM-owner allocated integer in 1..2^64-1,
+The caller verifies both executable digests before spawning the guardian and
+verifies the SDK revision before network admission. The guardian forwards the SDK
+stream and owns the SDK process group under WOP-X07. `clock_ms` is an integer in 0..2^63-1. Generation is a BEAM-owner allocated integer in 1..2^64-1,
 constant for that native process. IPC IDs are nonempty ASCII strings of at most
 64 bytes, unique within that generation. Generation/ID never derives from a TD.
 Only one ready frame is valid. Unsolicited responses and duplicate IDs are fatal.
@@ -259,8 +262,10 @@ control reserve admits cancel/close while application capacity is full. At most
 64 IPC output envelopes and 1 MiB aggregate encoded output await delivery;
 exceeding either bound terminates the association with bounded cleanup. Native
 SDK message/chunk limits are 1 MiB and 16; application value limits remain S01.
-No native process forks descendants. Stderr is separate from protocol stdout and
-contains only library-owned diagnostic codes; raw SDK logging is disabled.
+The SDK host never forks descendants. Its separate runtime guardian forks
+exactly one SDK child and retains process-group custody under WOP-X07. Stderr is
+separate from protocol stdout; any SDK stderr bytes are contained as a fixed
+guardian failure. Raw SDK logging is disabled.
 
 IPC uses explicit credit flow control, independent of mailbox sampling. After
 ready, normal responses/reports consume both message and encoded-byte credits.
@@ -317,8 +322,11 @@ EOF, invalid framing, owner death and deadline initiate cleanup. Partial open
 tracks acquisitions in order: process, SDK client, socket/channel, Session,
 namespace map, operation/subscription/continuation. Cleanup deletes owned server
 resources, closes Session with deletion enabled, closes channel/socket, clears
-all UA allocations, then exits. No acknowledgment within the one 1000 ms grace
-causes owner termination of its executable. A paused peer cannot extend grace.
+all UA allocations, then exits. At most the first 500 ms of the one absolute
+1000 ms grace is available for cooperative SDK cleanup. Failure or expiry closes
+the guardian Port; its independently executing teardown has the reserved 500 ms.
+Owner EOF begins guardian teardown immediately. No second 1000 ms grace or BEAM
+`kill(os_pid)` fallback is allowed. A paused peer cannot extend the deadline.
 Local process exit is not proof of instantaneous remote deletion: server state
 is verified against revised Session timeout when explicit cleanup cannot reach
 the server. Reports distinguish local release from remote expiry evidence.
@@ -403,3 +411,20 @@ forced deadlines, peer loss, malformed replies and bounded RSS/heap accounting.
 Software completion requires all rows on their required cohorts, the unpacked
 archive consumer and Python-free runtime execution. No device or certification
 result is inferred.
+
+## WOP-X07 — Independent runtime process custody
+
+The [native runtime guardian contract](../../priv/native/runtime-guardian.md)
+is normative for this profile. It defines separate executable identities,
+opaque bidirectional forwarding, exact buffer/argument limits, process-group
+identity retention, status mapping and WOP-G01..G10 acceptance. Those scenarios
+require executable bindings before acceptance. The runtime guardian is distinct
+from the build-command guardian and cannot use its `/dev/null` child input mode.
+
+Both executables are consumer-owned deployment inputs. An external executable
+is not admitted merely because it prints the right readiness revision. Digest
+verification precedes spawn; readiness, secure Session activation and per-service
+validation remain separate gates. Guardian exit fails unfinished operations;
+mutation effect remains unknown whenever service emission may have occurred.
+Guardian cleanup proves local process release only. Remote Session/subscription
+cleanup retains the separate acknowledgment or revised-expiry evidence in X04.

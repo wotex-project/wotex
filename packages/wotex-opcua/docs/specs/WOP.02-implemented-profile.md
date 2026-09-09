@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.1
+  version: 1.0.2
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -63,6 +63,10 @@ security policy or complete OPC UA conformance/certification claim is made.
 The build pins source digests, static SDK/OpenSSL options and tool identities;
 its completion receipt binds downloaded archives, static libraries, executable
 and command logs. Reuse verifies every artifact and current tool-version output.
+The separate `wotex_opcua_custody` executable has its own receipt digest. Its
+opaque bidirectional queues and independently executing owner-loss cleanup are
+tested through real pipes; CTest includes stopped-worker, blocked-consumer,
+complete final-output, descriptor isolation and direct-reaping cases.
 The build guardian bounds command output, time and ordinary owned process groups.
 Its trusted compiler bootstrap has explicitly unverified descendant cleanup on
 failure. Source, workspace and tool failures cannot produce a completion receipt.
@@ -71,6 +75,8 @@ The current C executable emits versioned readiness, exits on owner EOF and runs
 explicit SHA-256/SDK DateTime dependency self-tests. Requests fail closed until
 the native service owner is implemented. These are WOP-P00 build/ownership cells,
 not acceptance of WOP.13 secure Session, subscription or interoperability cells.
+The BEAM native startup owner, executable admission and SDK report credits remain
+required implementation; the transparent guardian supplies none of those APIs.
 
 ## Evidence and compatibility
 

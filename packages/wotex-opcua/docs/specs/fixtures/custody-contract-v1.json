@@ -1,0 +1,177 @@
+{
+  "format_version": "1.0.0",
+  "specification": "WOP.13@1.1.0",
+  "description": "Native pipe-level fault cases. Each case has additional exact assertions in custody_check.c; fixture existence is not execution evidence. WOP-G10 requires this complete corpus on macOS and Linux with ASan/UBSan.",
+  "cases": [
+    {
+      "id": "WOP-G01",
+      "requirements": [
+        "WOP-X07"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 513,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WOP-G02",
+      "requirements": [
+        "WOP-X07"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 4097
+        },
+        "received_bytes": 4097,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WOP-G03",
+      "requirements": [
+        "WOP-X07"
+      ],
+      "input_capacity": 3072,
+      "output_capacity": 4096,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 1048576
+        },
+        "received_bytes": 2097152,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WOP-G04",
+      "requirements": [
+        "WOP-X07"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "positive"
+        },
+        "received_bytes": 0,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WOP-G05",
+      "requirements": [
+        "WOP-X07"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 0,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WOP-G06",
+      "requirements": [
+        "WOP-X07"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 0,
+        "direct_reaped": 3,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WOP-G07",
+      "requirements": [
+        "WOP-X07"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 135168,
+        "direct_reaped": 5,
+        "background_stopped": 1,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WOP-G08",
+      "requirements": [
+        "WOP-X07"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 1024
+        },
+        "received_bytes": 1024,
+        "direct_reaped": 2,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WOP-G09",
+      "requirements": [
+        "WOP-X07"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 0,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    }
+  ]
+}

@@ -21,7 +21,7 @@ specifications:
     executable_evidence: ["test/wotex/opcua/asyncua_test.exs", "test/wotex/opcua/binary_test.exs", "test/wotex/opcua/contract_test.exs", "test/wotex/opcua/dependency_security_test.exs", "test/wotex/opcua/mapping_test.exs", "test/wotex/opcua/port_test.exs", "test/wotex/opcua/value_test.exs"]
     compatibility_classification: "listed typed scalar, URI and secure one-shot adapter subset only; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
   - id: "WOP.02"
-    version: "1.0.1"
+    version: "1.0.2"
     path: "docs/specs/WOP.02-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "OPC UA / asyncua", "revision": "OPC 10000 Parts 4/6 1.05.07; asyncua 2.0.1", "claim": "listed typed scalar, URI and secure one-shot adapter subset only"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
@@ -57,11 +57,11 @@ specifications:
     executable_evidence: []
     compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
   - id: "WOP.13"
-    version: "1.0.2"
+    version: "1.1.0"
     path: "docs/specs/WOP.13-native-executable.md"
-    implementation_status: "planned"
-    standards: [{"name": "OPC UA / open62541 / OpenSSL", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Pinned native target and executable acceptance requirements; no native implementation or interoperability acceptance"}]
+    implementation_status: "partial"
+    standards: [{"name": "OPC UA / open62541 / OpenSSL", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Pinned native target; actual static build and opaque-stream custody subset only, no Session or interoperability acceptance"}]
     requires: ["WOP.00", "WOP.10", "WOP.11", "WOP.12"]
-    implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: "Native executable, credit flow control, exact metadata and independent peer lanes are specified implementation work; source downloads and fixture presence do not establish a passed build."
+    implementation_modules: ["Wotex.OPCUA.Native.Build", "Wotex.OPCUA.Native.Source", "Wotex.OPCUA.Native.Archive", "Wotex.OPCUA.Native.Workspace"]
+    executable_evidence: ["test/wotex/opcua/native/build_test.exs", "test/wotex/opcua/native/build_fault_test.exs", "test/wotex/opcua/native/custody_test.exs", "priv/native/custody_check.c"]
+    compatibility_classification: "Static native build and bidirectional custody have executable evidence. BEAM startup admission, native Session, credits, exact metadata and independent peers remain required implementation; this does not close WOP-P00 or the complete native profile."

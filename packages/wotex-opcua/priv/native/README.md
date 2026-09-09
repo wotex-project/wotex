@@ -37,3 +37,18 @@ failure cannot imply verified whole-process-tree cleanup.
 The CMake build consumes already verified static open62541/OpenSSL prefixes. It
 never downloads SDKs or selects an ambient shared OpenSSL installation. Source,
 compiler/options and resulting executable hashes remain separate build identities.
+
+`custody.c` supplies the separate production bidirectional process guardian.
+Its [runtime contract](runtime-guardian.md) defines exact CLI values, bounded
+queues, independent owner-loss cleanup and output-drain semantics. The build
+installs `wotex_opcua_custody` alongside `wotex_opcua_native`; both hashes belong
+to the completion receipt. The SDK process's frame and credit protocol remains
+responsible for bounded notification delivery to BEAM.
+
+`custody_check.c` is a packaged build-time fault driver, excluded from installed
+executables. CTest runs its WOP-G01..G09 cases against actual pipes and processes.
+It deliberately stops SDK workers, suspends output consumption, checks binary
+transfers and audits direct-child reaping. Linux builds with
+`WOTEX_SANITIZERS=ON` run both strict ASan/UBSan timing tests and the separately
+labeled LeakSanitizer tests described in the runtime contract. A successful
+custody test is independent of OPC UA Session or interoperability acceptance.

@@ -73,3 +73,18 @@ commands above must be rerun after relevant changes.
 | `test/wotex/opcua/mapping_test.exs` | `2768c115820bcd56364bde5d2101bc13dc242fc92f5ca0a2c1b62b01e7812f93` |
 | `test/wotex/opcua/port_test.exs` | `bf7dfcf70fa9afc680f07d4b861c56ecf954b01e8d280b12d7981849cc19cb48` |
 | `test/wotex/opcua/value_test.exs` | `5c173dfdd5a27d60887064fe64041a3d5fd2434442bcd8abe431e00345f96089` |
+
+## Native runtime custody
+
+`test/wotex/opcua/native/custody_test.exs` executes the checked-in
+`custody-contract-v1.json` cases using `priv/native/custody_check.c`. CTest repeats
+those nine native cases during each actual SDK build. Assertions cover exact
+fragmented bytes, simultaneous traffic, owner EOF with full pipes, stopped SDKs,
+receiver loss, contained stderr, complete final output, blocked final drains,
+group isolation and one shared cleanup deadline. The Linux test driver audits
+orphan adoption independently of the guardian. A separate LeakSanitizer lane
+retains the 500 ms SDK reap bound and explicitly reports instrumentation-only
+post-main exit time; ordinary and ASan/UBSan timing lanes retain the 500 ms total
+guardian bound. The [runtime custody contract](../../priv/native/runtime-guardian.md)
+defines those separate acceptance conditions. These checks do not implement or
+accept SDK frame credits, secure Sessions or OPC UA subscription ownership.

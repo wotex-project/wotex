@@ -18,7 +18,7 @@ defmodule Wotex.OPCUA.Native.Build do
 
   alias Wotex.OPCUA.Native.{Archive, Bootstrap, Command, Recipe, Source, Toolchain, Workspace}
 
-  @native_files ~w(CMakeLists.txt main.c build_command.c README.md)
+  @native_files ~w(CMakeLists.txt main.c build_command.c custody.c custody_check.c README.md runtime-guardian.md)
   @build_sources [
     Path.expand("../../../mix/tasks/wotex.opcua.native.build.ex", __DIR__)
     | Path.wildcard(Path.join(__DIR__, "*.ex"))
@@ -31,7 +31,7 @@ defmodule Wotex.OPCUA.Native.Build do
                 end)
   @artifacts ~w(bin/build-command downloads/open62541.tar.gz downloads/openssl.tar.gz
     openssl-prefix/lib/libssl.a openssl-prefix/lib/libcrypto.a sdk-prefix/lib/libopen62541.a
-    output/bin/wotex_opcua_native) ++
+    output/bin/wotex_opcua_native output/bin/wotex_opcua_custody) ++
                Enum.map(
                  ~w(openssl open62541 openssl_configure openssl_compile openssl_install
       sdk_configure sdk_compile sdk_install native_configure native_compile native_test native_install),

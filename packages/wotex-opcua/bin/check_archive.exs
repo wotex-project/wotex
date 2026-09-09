@@ -11,7 +11,10 @@ defmodule Wotex.OPCUA.Check.Archive do
     "docs",
     "priv/native/main.c",
     "priv/native/CMakeLists.txt",
-    "priv/native/build_command.c"
+    "priv/native/build_command.c",
+    "priv/native/custody.c",
+    "priv/native/custody_check.c",
+    "priv/native/runtime-guardian.md"
   ]
   @development [".git", "deps", "_build"]
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]

@@ -73,7 +73,12 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     end
 
     native = Path.join(workspace, "output/bin/wotex_opcua_native")
+    custody = Path.join(workspace, "output/bin/wotex_opcua_custody")
     guardian = Path.join(workspace, "bin/build-command")
+
+    assert {:ok, custody_hash} = Workspace.digest(custody)
+    assert custody_hash == receipt["artifacts"]["output/bin/wotex_opcua_custody"]
+    assert receipt["identity"]["native_sources"]["custody.c"] =~ ~r/\A[0-9a-f]{64}\z/
 
     assert {:ok, %{output: self_test}} =
              Command.run(guardian, %{
@@ -115,6 +120,10 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert File.read!(native) == "tampered-native-executable"
     assert File.read!(receipt_path) == original
     File.write!(native, native_bytes)
+    custody_bytes = File.read!(custody)
+    File.write!(custody, "tampered-custody-executable")
+    assert {:error, :build_manifest_mismatch} = Build.run(workspace)
+    File.write!(custody, custody_bytes)
     forged_versions = put_in(receipt, ["evidence", "tool_versions"], %{})
     File.write!(receipt_path, Jason.encode!(forged_versions))
     assert {:error, :build_manifest_mismatch} = Build.run(workspace)
