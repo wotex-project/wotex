@@ -1,9 +1,15 @@
 # Executable evidence
 
-Evidence collected 2026-09-08 using Elixir 1.20.2 / OTP 29.0.4.
-Development contract supports Elixir 1.18+; the lower-version matrix has not been
-executed in this workspace. Use CI before graduation. No consumer parity or
-certification is inferred from unit coverage.
+Current implementation: bounded Dataset/daemon APIs and a first-party C++ SDK
+host with semantic Dataset validation/export, interface/Thread enablement,
+formation, management callbacks and commissioner lifecycle/admissions. Native
+ExUnit and C++/process fixtures exercise real SDK/RCP software boundaries; their
+presence is scoped evidence, not a complete Thread profile. Joiner execution,
+state subscriptions, complete simulated-network/application workflows, Mix fixture
+orchestration and final stress/native/package closure remain required.
+The production runtime requires no Python; existing Python build/test utilities
+are current tooling. Selected native lanes must fail if their SDK/peer/configuration
+is absent. Physical-radio testing is a separate optional lane.
 
 ## Mandatory local gate
 
@@ -15,36 +21,26 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
-## Interoperability
+## Acceptance boundary
 
-NOT RUN: a real ot-daemon/radio or POSIX RCP fixture was not supplied.
-The default suite uses a local Unix peer to verify stream fragmentation, errors,
-timeout and ownership; it is not Thread radio interoperability.
-With an explicitly started OpenThread daemon:
+[WTH.13](../specs/WTH.13-native-backend.md) defines the required native binary,
+Mix/ExUnit tasks, exact version lanes and credit/resource tests. Its corpus is
+specified and unexecuted. A passing current gate, a listed test path or a source
+hash cannot establish execution of that target. Each completed software run must
+bind case, corpus, source, SDK/binary, toolchain and cleanup-result hashes.
+The mandatory runtime matrix is Elixir 1.18.4/OTP 27.3.4.15 and Elixir
+1.20.2/OTP 29.0.4. Only identified executed lanes count as passing evidence.
 
-```sh
-WOTEX_PATH_DEPS=1 WOTEX_THREAD_DAEMON_SOCKET=/run/openthread-wpan0.sock \
-mix test --include hardware test/interop/daemon_device_test.exs
-```
+## Committed source identities
 
-This is read-only and must return a real version plus valid state. Dataset
-installation, joining and commissioner/radio lifecycle are not yet implemented.
+These hashes identify the committed implementation/test inputs reviewed here;
+they are not release artifacts or a claim about every future run. Fixture WIP is
+excluded. Native software results require their own immutable manifest.
 
-Interoperability tags are excluded by default. Explicit invocation requires the
-configured peer and must fail if that peer or expected response is missing.
-
-## Evidence identities
-
-The hashes identify reviewed test sources, not an immutable release or a promise
-that all future test executions will pass. The mandatory gate and optional peer
-commands above must be rerun after relevant changes.
-
-| Test source | SHA-256 |
+| Source | SHA-256 |
 | --- | --- |
-| `test/interop/daemon_device_test.exs` | `624b89f9069b0ef5a12cc5af123fdc71ae6be12361b4ae6f2b25f1b9653346e9` |
-| `test/wotex/thread/contract_test.exs` | `ce6378d3a63e0af4a842c480b2aedfff263f86bdd4e605f709c84dd835c9d638` |
-| `test/wotex/thread/daemon_test.exs` | `1877bb41f4a31dfb5a702180d99e6b6e1f0eceeeb72f2615931b4f36556e06da` |
-| `test/wotex/thread/dataset_test.exs` | `80c196b1756836b259e16fbe1ff8de58e4087fe462c033b4635820185bd76d73` |
-| `test/wotex/thread/dependency_security_test.exs` | `827b01a3b81f234361673d8a7c9c4220b75fa06ad11915c7f89124e80fea1860` |
-| `test/wotex/thread/mapping_test.exs` | `a00c7f0d76e63d98cd4289eb4500da805a8ddc9389e2160722f21594bf6d5b3a` |
-| `test/wotex/thread/port_test.exs` | `6e92830343848cb643e529d63a331c739f3187d05d28a5f33a7d88c85bf47fbe` |
+| `test/software/native_owner_test.exs` | `c247296bcc4b61170ea0d625c3c1e72c01b95df57f063408262657c972097c0a` |
+| `test/software/native_dataset_test.exs` | `68fbf4c69a9a460e20a4470844ea8029b740215af8da9a9c388b482a41a65811` |
+| `test/native/management_test.py` | `c2bc8d0271ed2b6ff2f3db593b1bae8a28c95bbf4ad51b695732b96778352557` |
+| `test/native/commissioner_test.py` | `408d99e4e0fc57d1e0f107baf6808865d3d6b0f8a3419c9cbf72a6673219e573` |
+| `priv/openthread/host.cpp` | `9253964efa577ff27401c912865500322f0bd7636f30453fe59c1128c573a083` |

@@ -1,10 +1,9 @@
 # WTH software implementation sequence
 
-This is the self-contained build handoff for the defined software profile, not
-a statement that these tasks have already passed. The verified starting point
-is commit `ce7862b`; read [current executable evidence](../provenance/executable-evidence.md)
-for the tests and limitations at that baseline. Existing passing code is the
-starting implementation, not something to replace with fresh scaffolding.
+This sequence defines acceptance of the native OpenThread host profile.
+[Current implementation evidence](../provenance/executable-evidence.md) identifies
+implemented cells; [WTH.13](../specs/WTH.13-native-backend.md) owns native
+build, IPC and tooling requirements. Source presence alone is not acceptance.
 
 ## Read before changing code
 
@@ -39,6 +38,15 @@ do not silently skip, simulate or weaken the requirement.
 
 ## Ordered work packages
 
+### WTH-P00: Own reproducible native build and fixture tooling
+
+- Requirements: WTH-B01, WTH-B02, WTH-B03, WTH-B04; C01–C10 apply.
+- Concrete cases: every WTH-B-Fxx case in `native-port-v1.json`.
+- Change surface: first-party native build/host, BEAM Port and Mix/ExUnit fixture ownership.
+- Test destinations: `test/wotex/thread/native_contract_test.exs`, `test/native/flow_test.cpp`, `test/software/lifecycle_stress_test.exs`.
+- Done when: Implement the .13 Mix native/software tasks around the existing C++ host, pinned fixes and SDK build. ExUnit owns generic fixture assertions; native C++ tests share production parser/storage/credit code. Preserve existing host behavior and complete flow credits before accepting state streams.
+- Suggested local commit: `feat: own native thread build and bounded IPC`.
+
 ### WTH-P01: Harden dataset syntax and daemon parsing
 
 - Requirements: WTH-S01, WTH-S02, WTH-N01, WTH-N02, WTH-N04; shared C01–C10 apply wherever relevant.
@@ -55,8 +63,8 @@ do not silently skip, simulate or weaken the requirement.
 
 - Requirements: WTH-S03, WTH-N01; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WTH-V04.
-- Change surface: new OpenThread adapter, C bridge and POSIX event-loop integration.
-- Test destinations: `test/wotex/thread/sdk_bridge_test.exs`, `test/native/owner_test.c`.
+- Change surface: OpenThread adapter, C++ host and POSIX event-loop integration.
+- Test destinations: `test/wotex/thread/sdk_bridge_test.exs`, `test/native/owner_test.cpp`.
 - Done when: Explicit RCP/interface/store ownership, versioned framing, nonblocking input and reverse EOF/startup cleanup are enforced.
 - Suggested local commit: `feat: own an explicit openthread host sdk instance`.
 - Standalone closure: Supply the native management API and typed State boundary; Daemon management rejection must happen before socket writes.
@@ -66,7 +74,7 @@ do not silently skip, simulate or weaken the requirement.
 - Requirements: WTH-S01, WTH-S03; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WTH-V02.
 - Change surface: validate_dataset/get_dataset bridge operations.
-- Test destinations: `test/native/dataset_test.c`, `test/wotex/thread/sdk_dataset_test.exs`.
+- Test destinations: `test/native/dataset_test.cpp`, `test/wotex/thread/sdk_dataset_test.exs`.
 - Done when: Call otDatasetIsValid with TLVs and active/pending flag; presence-complete invalid combinations fail before mutation and raw secrets stay redacted.
 - Suggested local commit: `feat: validate datasets through the pinned sdk`.
 
@@ -135,9 +143,12 @@ do not silently skip, simulate or weaken the requirement.
 
 ## Reproducible software fixture contract
 
-Add or extend `test/interop/build_software.sh` and `test/interop/run_software.sh`
-as explicit maintainer-invoked entry points. They take exactly one absolute
-workspace argument. Build requires a disposable empty workspace or a matching
+The entry points are `mix wotex.native.build --workspace ABS`,
+`mix wotex.software.build --workspace ABS` and
+`mix wotex.software.run --workspace ABS`. Each requires exactly one absolute
+workspace argument. Generic orchestration and assertions use Mix and ExUnit.
+The native build contract is .13; production binaries never require Python.
+Build requires a disposable empty workspace or a matching
 manifest; refuses an unrelated nonempty directory; downloads upstream source
 archives at the .10 pins without configuring any Git remote. Record archive
 SHA-256, source commit, compiler/SDK/library versions, build flags, binary hashes
@@ -155,8 +166,8 @@ explicit target configuration and are never selected by this runner.
 Use this command contract once the runner is implemented:
 
 ```sh
-./test/interop/build_software.sh /absolute/disposable/fixture-workspace
-./test/interop/run_software.sh /absolute/disposable/fixture-workspace
+mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
+mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
 The runner executes `mix test --include interop --include software --exclude hardware`
@@ -178,13 +189,13 @@ Native changes additionally run their required native tests and dependency audit
 C/C++ adapters run ASan/UBSan in the Linux fault lane.
 
 After each package, update the current-profile/README capability claims only for
-behavior that now passed, and refresh [executable evidence](../provenance/executable-evidence.md)
+behavior covered by passing evidence, and refresh [executable evidence](../provenance/executable-evidence.md)
 with command, versions, vector paths/digests and result. Keep unexecuted requirements
 explicit. Use the author and committer required by `CLAUDE.md`; never configure
 remotes, push, tag, publish, change visibility or edit a consumer.
 
-The final package also accepts every .11 standalone and .12 integration requirement,
-then runs the full .00 C09 matrix, all .10 scenarios, .11 concrete cases and software
+The final package accepts every .11 standalone, .12 integration and .13 native requirement,
+then runs the full .00 C09 matrix, all .10 scenarios, .11/.13 concrete cases and software
 peers, then a clean committed-source archive with the lockfile through `mix check`
 and out-of-tree Hex package compilation. Confirm no Application callback or
 dependency-load I/O, no missing packaged bridge assets, no downloaded SDK/build/
@@ -209,6 +220,6 @@ number or stub adapter cannot substitute for a required protocol assertion.
 - The clean-source/package gates pass, intended commits are local and the
   working tree contains no uncommitted tracked implementation change.
 
-Physical-device validation, certification, consumer migration and publication
+Physical-device validation, certification and publication
 remain separate activities. They are not reasons to leave defined software
 requirements unimplemented or to claim unexecuted software tests passed.

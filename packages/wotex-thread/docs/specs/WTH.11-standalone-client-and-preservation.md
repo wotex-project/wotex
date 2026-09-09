@@ -1,16 +1,16 @@
 ---
 spec:
   id: WTH.11
-  title: "Standalone network management and retained composition"
+  title: "Standalone network management and application composition"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-thread
   updated: 2026-09-09
 ---
 
-# WTH.11 Standalone network management and retained composition
+# WTH.11 Standalone network management and application composition
 
-Specification version: `1.0.0`. Status: planned target, not implemented capability.
+Specification version: `1.1.0`. Status: planned target, not implemented capability.
 Requires [WTH.00](WTH.00-library-contract.md) and
 [WTH.10](WTH.10-software-contract.md). The narrower baseline is
 [WTH.02](WTH.02-implemented-profile.md).
@@ -21,7 +21,7 @@ This package's useful standalone product is bounded Thread network management:
 inspect a borrowed daemon, or explicitly own an OpenThread host instance, validate
 and manage Datasets, form a network, commission a joiner and observe state.
 The supplied OpenThread adapter must complete these operations without a
-consumer-authored C bridge or a Thing Description. The SDK owns Thread mesh/radio
+consumer-authored native host or a Thing Description. The SDK owns Thread mesh/radio
 semantics. Wotex Thread owns typed calls, deadlines, secret handling and resource
 cleanup. It is not an application transport or a border-router distribution.
 
@@ -69,21 +69,19 @@ These decisions target OpenThread v2026.09.0 commit
 [Dataset API](https://raw.githubusercontent.com/openthread/openthread/5c8c318627954c99cd1a957a290bbd4b1027d04b/include/openthread/dataset.h).
 They are an SDK-derived profile, not full Thread standard verification.
 
-## WTH-N02 — Preserve useful boundaries, correct simulator assumptions
+## WTH-N02 — Network and application boundaries
 
-| Asset/behavior | Required disposition | Proof |
+| Behavior | Required contract | Proof owner |
 | --- | --- | --- |
-| Operational Dataset TLV values | Retain unknown types/order, validate all forged values and bounds, separately invoke SDK semantics | P01/P03, F01–F05, V01/V02 |
-| Daemon inspection | Retain exact four read operations with fragmented framing and real completion marker; daemon survives disconnect | P01, F06, V03 |
-| Network role, creation and commissioning scenarios | Replace simulated transitions with OpenThread callback/role observations | P04/P05/P07, F07/F08, V05–V09 |
-| Sleepy sensor and full end-device light scenarios | Retain as explicitly layered composition fixtures; Thread provides mesh connectivity, CoAP carries application data | P07, workflow below |
-| Simulator-only generic subscribe/read/write | Replace native subscribe with non-secret network State; application subscriptions belong to their actual protocol | P06, F09, V10/V11 |
-| Exactly-once/QoS and 1280-byte application payload claims | Remove unsupported claims; IPv6 MTU is not a guarantee for one application message or its effect | P06/P08 capability assertions |
+| Dataset/address inspection | Exact TLV bytes, semantic SDK validation and redacted native state | P01/P03, F01–F06 |
+| Network formation and commissioning | Actual SDK callbacks/roles, explicit authority and final outcomes | P04/P05/P07, F07/F08, V05–V09 |
+| Sleepy sensor and end-device light | Thread mesh configuration with a separately owned CoAP application fixture | P07 |
+| Native subscriptions | Non-secret network State and explicit coalescing metadata; application streams belong to their protocol | P06, F09, V10/V11 |
+| Delivery/payload capability | No exactly-once or universal 1280-byte application payload promise | P06/P08 |
 
-A retained application recipe is not a reason to expose `read_temperature/1` or
-`write_light/2` from this package. Nor should SDK management be excluded simply
-because existing Wotex binding packages supply only Form mapping. This package
-must own and prove its complete native management workflow.
+Application recipes compose with this management client. Temperature and light
+read/write functions are not native Thread services. The library owns and proves
+its native management workflow independently of any Thing Description.
 
 ## WTH-N03 — Real software network and application composition
 
@@ -105,7 +103,7 @@ After closing both owners, prove RCP descendants, callbacks, sockets and store
 locks returned to baseline. Inspect the separately started borrowed daemon in its
 own fixture and prove it survives library disconnect.
 
-Retain the sensor/light composition as a second lane using a pinned OpenThread
+Exercise the sensor/light composition as a second lane using a pinned OpenThread
 software application fixture. The fixture exposes CoAP GET
 `/sensor/temperature` with content format text/plain and exact payload `21.50`,
 and `/light/on_off` with GET `0`, PUT `1`, then GET `1`. The CoAP client is the

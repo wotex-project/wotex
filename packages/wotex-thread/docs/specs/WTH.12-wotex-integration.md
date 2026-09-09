@@ -3,7 +3,7 @@ spec:
   id: WTH.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-thread
   updated: 2026-09-09
 ---
@@ -23,20 +23,20 @@ Description, Runtime Context or BindingProfile. Mapping and Transport are leaf
 adapters over those APIs. Compile dependencies remain the released `wotex` and
 `wotex_runtime` requirements in `mix.exs`; `WOTEX_PATH_DEPS=1` is only the explicit
 development override. No runtime sibling discovery, global registration or
-application callback is added.
+application callback exists.
 
 | Owner | Reused contract | This package's obligation |
 | --- | --- | --- |
 | Wotex core | WTX.01/02/03 version 1.1.0: ThingDescription, Form, DataSchema, security references, bounded JSON/extensions | Use public constructors/accessors; do not copy TD parsing, default-operation tables or JSON-LD fetching into the protocol |
-| Wotex Runtime | WRT.01 version 1.3.0: ConsumedThing, Context, BindingProfile, Request, Result, Credentials, Transport, Subscription, Retry | Implement existing ports; preserve identity, deadline and ownership semantics |
+| Wotex Runtime | WRT.01 version 1.3.1: ConsumedThing, Context, BindingProfile, Request, Result, Credentials, Transport, Subscription, Retry | Implement existing ports; preserve identity, deadline and ownership semantics |
 | This protocol | .00/.10/.11: native values, operation validation, backend, errors and cleanup | Revalidate inputs at I/O boundaries; SDK delegation does not transfer this obligation to consumer code |
 | Wotex Conformance | WCF.01 version 1.1.0: isolated artifact/vector/evidence contracts | Optional external report integration; no production dependency in either direction |
 | Wotex Lab | Explicit reference consumer and artifact adoption | May consume immutable public archives; a local protocol pass does not close Lab's claims |
 | Wotex Directory / Nx / Continuum | Discovery values / numerical conversion / inert exchange values | Consumer composition only; no dependency, automatic registration, persistence or canonical state promotion |
 
-The read-only reference review used the checked-in contracts and public APIs at
+Reference source identities for the checked-in contracts and public APIs:
 [core `e03ea9733e30`](https://github.com/wotex-project/wotex/blob/e03ea9733e30fb05caa1749dff62e57b3670be28/CLAUDE.md),
-[Runtime `ba2706073ada`](https://github.com/wotex-project/wotex-runtime/blob/ba2706073adae037254ca187b5c8c78fc5708652/docs/specs/WRT.01-consumed-thing-runtime.md),
+[Runtime `6bf5c0db5024`](https://github.com/wotex-project/wotex-runtime/blob/6bf5c0db502499fb7ebc3705846039f9899e2b6b/docs/specs/WRT.01-consumed-thing-runtime.md),
 [HTTP `2513174d0784`](https://github.com/wotex-project/wotex-binding-http/blob/2513174d0784c635a99db1a950db0e6812f3aab7/CLAUDE.md) and
 [MQTT `ee1392412aa3`](https://github.com/wotex-project/wotex-binding-mqtt/blob/ee1392412aa37716dada585c8cede5efd6ccf0d3/docs/specs/catalogue.yaml).
 These commit references identify reviewed source, not a claim that it is published
@@ -52,13 +52,13 @@ No constructor checks installed modules, opens a backend, reads environment or
 advertises a mode whose required implementation/evidence has not been admitted.
 Until a mode is implemented it returns unsupported. Mode availability is a static
 library-version decision; actual configured peer capabilities still fail explicitly.
-`profile/0` is added together with its baseline integration evidence, not as a stub.
+`profile/0` requires executable baseline integration evidence.
 
 | Mode | BindingProfile id | URI schemes | Exact operations | Stream meaning |
 | --- | --- | --- | --- | --- |
 | `:daemon` | `:thread` | `thread+unix` | readproperty | none |
 
-The baseline profile has `media_types: []`. The baseline adapter exposes native protocol values, not a general content decoder. The empty media-type set is an explicit Runtime selection wildcard, not a claim that JSON/XML/CBOR serializers are implemented. The baseline preserves Forms that omit contentType; the reviewed core Form.to_map/1 preserves that omission. An explicitly supplied contentType fails with :unsupported_content_type before I/O until a separately named serialization profile defines it. This is an intentional target tightening of the baseline adapters, which currently ignore that selector. Do not interpret TD 1.1's application/json default as evidence of a JSON wire encoding for these native protocols. The .02/.10 conversion selectors are authoritative. A future negotiated serialization profile requires a separate named profile and exact codec fixtures. Do not advertise media-type conformance from this wildcard.
+The baseline profile has `media_types: []`. The baseline adapter exposes native protocol values, not a general content decoder. The empty media-type set is an explicit Runtime selection wildcard, not a claim that JSON/XML/CBOR serializers are implemented. The baseline preserves Forms that omit contentType; the reviewed core Form.to_map/1 preserves that omission. An explicitly supplied contentType fails with :unsupported_content_type before I/O until a separately named serialization profile defines it. This is the accepted native binding policy; current-profile behavior is recorded separately in .02. Do not interpret TD 1.1's application/json default as evidence of a JSON wire encoding for these native protocols. The .02/.10 conversion selectors are authoritative. A future negotiated serialization profile requires a separate named profile and exact codec fixtures. Do not advertise media-type conformance from this wildcard.
 All modes inherit the same media policy unless .10 states a narrower supported
 cell. A profile declares possible operations, not backend presence, authorization
 or physical effect. The caller passes profiles in precedence order and routes
@@ -224,8 +224,7 @@ never expectation; the test process compares the returned projection. Atoms beco
 finite documented strings and bytes use the envelope above. Exclude pids, refs,
 clocks, secrets and implementation-specific map keys from normalized observations.
 
-`runtime_read` projects Modbus function codes to the fixed public helper name,
-CoAP codes/options to method/path/Accept, and other native messages to the listed
+`runtime_read` projects the native message to its listed operation and typed
 address fields; additional internal fields are excluded explicitly. Peer reply
 kinds select an exact protocol PDU or a tagged Client success as named by input.
 The finite `scripted_client` selector resolves to a test-only Client module; its
@@ -233,8 +232,6 @@ explicit target/options come from input, never from expectation. Clock offsets
 are relative to the test-owned monotonic origin. A loopback peer may reserve an
 ephemeral port and substitute its one symbolic endpoint consistently in input
 and normalized observation; it cannot change addresses using expected output.
-The OPC UA one-shot stimulus deliberately uses the baseline scalar translation;
-persistent version 1 cases additionally require explicit array flags from .10.
 `error_retry_projection` injects the named failure stage into the native error
 classification boundary, obtains the library Error (the expected class is not
 supplied), and passes it through a test Runtime Transport's failure return and
@@ -283,18 +280,22 @@ adapter must use an admitted WCF operation/schema or explicitly version that
 extension in the owning project; never relabel a local test as conformance.
 No external report integration is required to implement these protocol tests.
 
-## Compatibility and evidence classification
+## API and evidence classification
 
-Profile factories and Error.class are additive target changes. Strict validation
-of formerly ignored known selectors and unknown-effect retry classification are
-intentional pre-release safety corrections requiring regression evidence.
-The current .02 profile remains the baseline authority until implementation lands.
-I01–I06 are open until their listed public-boundary assertions and required
-software lanes pass. A scenario family may need many concrete cases; merely
-attaching S/V/I/F identifiers to an unrelated passing test is not closure.
+Profile factories, explicit selector validation and Error.class must satisfy
+I01–I06 with public-boundary assertions and the required software lanes. Current
+implementation scope is recorded in .02 and executable evidence. A scenario
+family may need many concrete cases; attaching identifiers to unrelated passing
+tests cannot establish acceptance.
 
 W3C terminology and Form/default-operation ownership refer to
 [TD 1.1, Recommendation 2023-12-05, sections 5.3.4.2 and 5.4](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/).
 The [Scripting API Note 2023-10-03](https://www.w3.org/TR/2023/NOTE-wot-scripting-api-20231003/)
 is conceptual guidance, not an API conformance claim. The client modes, limits,
 fixture projection, retry restrictions and test gates here are library policy.
+
+The native implementation and bounded callback flow follow [WTH.13](WTH.13-native-backend.md). Runtime owns the final subscription process; an
+opening worker owns only its temporary call. Native resources must be tied to
+the final owner before establishment waits, and late successful native replies
+must be cancelled when that owner is gone. Store/SDK ownership remains explicit
+native configuration; no immediate ExecutionContext credential is retained.

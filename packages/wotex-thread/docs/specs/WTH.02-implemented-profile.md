@@ -3,7 +3,7 @@ spec:
   id: WTH.02
   title: "Implemented Thread profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-thread
   updated: 2026-09-09
 ---
@@ -31,13 +31,28 @@ Failure/timeout closes the socket. Non-owner request/disconnect calls fail, and
 owner termination closes the socket through OTP socket ownership. Dataset
 changes, commissioning and daemon/radio lifecycle are excluded.
 
+## Explicit native SDK implementation
+
+`Wotex.Thread.OpenThread` owns the first-party C++ host, one SDK instance,
+explicit RCP/radio child, interface and exclusive settings lock. It implements
+SDK Dataset validation/export, IPv6/Thread enablement, authorized formation,
+management callbacks, commissioner start/stop and finite joiner admissions.
+Management acceptance is distinct from pending Dataset activation. Typed Joiner
+configuration validates admission; joiner execution and native state streams
+remain target work. The default Runtime profile is still daemon inspection.
+
+The production helper has no Python runtime. Its current Python build and native
+test utilities are scoped tooling; .13 requires Mix/ExUnit orchestration and
+native production-code test executables. Existing SDK simulation cases do not
+establish the complete multi-node application workflow or final stress profile.
+
 ## Evidence and compatibility
 
 See [executable evidence](../provenance/executable-evidence.md) for specific tests,
 commands and remaining gates, and [source revisions](../provenance/primary-sources.md).
 Public callbacks provide a neutral compatibility surface, not drop-in semantic
 parity. `send/2` completes synchronously; no fictitious receive queue exists.
-The consumer must run differential scenarios before replacing its implementation.
+Compatibility claims require exact differential scenarios for the advertised API.
 
 Runtime adapters reject credential objects they cannot interpret. Native client
 credentials/options are supplied explicitly by the consumer. A custom Client

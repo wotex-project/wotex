@@ -1,0 +1,417 @@
+{
+  "format": "wotex.native-contract",
+  "version": "1.0.0",
+  "package": "wotex_thread",
+  "status": "specified_unexecuted",
+  "normalization_spec": "../WTH.13-native-backend.md",
+  "cases": [
+    {
+      "id": "WTH-B-F01",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "parse_request",
+      "input": {
+        "line_utf8": "{\"version\":1,\"id\":\"1\",\"operation\":\"health\",\"parameters\":{},\"timeout_ms\":1000}\n"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": true
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F02",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "parse_request",
+      "input": {
+        "line_utf8": "{\"version\":1,\"id\":\"1\",\"id\":\"2\",\"operation\":\"health\",\"parameters\":{},\"timeout_ms\":1000}\n"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F03",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "parse_request",
+      "input": {
+        "line_utf8": "{\"version\":1,\"id\":\"1\",\"operation\":\"health\",\"parameters\":{},\"timeout_ms\":0}\n"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F04",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "parse_request",
+      "input": {
+        "line_utf8": "{\"version\":1,\"id\":\"1\",\"operation\":\"health\",\"parameters\":{},\"timeout_ms\":1000,\"extra\":true}\n"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F05",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "parse_request",
+      "input": {
+        "line_utf8": "{\"version\":1,\"id\":\"1\",\"operation\":\"health\",\"parameters\":[],\"timeout_ms\":1000}\n"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F06",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "ready",
+      "input": {
+        "stdin": "close_after_ready"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "frame": {
+            "version": 1,
+            "event": "ready",
+            "backend": "openthread",
+            "revision": "5c8c318627954c99cd1a957a290bbd4b1027d04b"
+          },
+          "owned_processes_after_grace": 0
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F07",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "flow_trace",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "queue_limit": 64,
+        "events": [
+          {
+            "event": "transmit",
+            "stream": "s1",
+            "bytes": 128
+          },
+          {
+            "event": "ack",
+            "session_generation": "0123456789abcdef0123456789abcdef",
+            "report_sequence": 1,
+            "acknowledged_bytes": 128
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "transmitted": 1,
+          "queued": 0,
+          "terminal": null,
+          "frame_credit": 64,
+          "byte_credit": 1048576
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F08",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "flow_trace",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "queue_limit": 64,
+        "events": [
+          {
+            "event": "transmit",
+            "stream": "s1",
+            "bytes": 128
+          },
+          {
+            "event": "ack",
+            "session_generation": "0123456789abcdef0123456789abcdef",
+            "report_sequence": 1,
+            "acknowledged_bytes": 129
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "transmitted": 1,
+          "queued": 0,
+          "terminal": "invalid_frame",
+          "frame_credit": 63,
+          "byte_credit": 1048448
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F09",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "flow_trace",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "queue_limit": 64,
+        "events": [
+          {
+            "event": "transmit",
+            "stream": "s1",
+            "bytes": 128
+          },
+          {
+            "event": "ack",
+            "session_generation": "0123456789abcdef0123456789abcdef",
+            "report_sequence": 1,
+            "acknowledged_bytes": 128
+          },
+          {
+            "event": "ack",
+            "session_generation": "0123456789abcdef0123456789abcdef",
+            "report_sequence": 1,
+            "acknowledged_bytes": 128
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "transmitted": 1,
+          "queued": 0,
+          "terminal": "invalid_frame",
+          "frame_credit": 64,
+          "byte_credit": 1048576
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F10",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "flow_trace",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "queue_limit": 64,
+        "events": [
+          {
+            "event": "transmit",
+            "stream": "s1",
+            "bytes": 128,
+            "count": 17
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "transmitted": 16,
+          "queued": 1,
+          "terminal": null,
+          "frame_credit": 48,
+          "byte_credit": 1046528
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F11",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "process_flow",
+      "input": {
+        "suspend": "connection",
+        "resume_at_ms": 50,
+        "observe_until_ms": 1050,
+        "callback_count": 10000,
+        "value_bytes": 128,
+        "queue_limit": 64,
+        "callbacks_per_iteration": 1
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "frame_bound": true,
+          "byte_bound": true,
+          "terminal_count": 1,
+          "deliveries_after_terminal": 0,
+          "owned_processes_after_grace": 0
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F12",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "process_flow",
+      "input": {
+        "suspend": "stream_owner",
+        "resume_at_ms": 50,
+        "observe_until_ms": 1050,
+        "callback_count": 10000,
+        "value_bytes": 128,
+        "queue_limit": 64,
+        "callbacks_per_iteration": 1
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "frame_bound": true,
+          "byte_bound": true,
+          "terminal_count": 1,
+          "deliveries_after_terminal": 0,
+          "owned_processes_after_grace": 0
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F13",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "process_flow",
+      "input": {
+        "suspend": "receiver",
+        "resume_at_ms": 50,
+        "observe_until_ms": 1050,
+        "callback_count": 10000,
+        "value_bytes": 128,
+        "queue_limit": 64,
+        "callbacks_per_iteration": 1
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "frame_bound": true,
+          "byte_bound": true,
+          "terminal_count": 1,
+          "deliveries_after_terminal": 0,
+          "owned_processes_after_grace": 0
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F14",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "flow_trace",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "queue_limit": 64,
+        "events": [
+          {
+            "event": "transmit",
+            "stream": "s1",
+            "bytes": 128
+          },
+          {
+            "event": "transmit",
+            "stream": "s2",
+            "bytes": 128
+          },
+          {
+            "event": "retire",
+            "stream": "s1",
+            "last_report_sequence": 1
+          },
+          {
+            "event": "consume",
+            "stream": "s2",
+            "report_sequence": 2
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "transmitted": 2,
+          "queued": 0,
+          "terminal": null,
+          "frame_credit": 64,
+          "byte_credit": 1048576
+        }
+      }
+    },
+    {
+      "id": "WTH-B-F15",
+      "requirements": [
+        "WTH-B02",
+        "WTH-B03"
+      ],
+      "operation": "flow_trace",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "queue_limit": 64,
+        "events": [
+          {
+            "event": "transmit",
+            "stream": "s1",
+            "bytes": 128
+          },
+          {
+            "event": "retire",
+            "stream": "s1",
+            "last_report_sequence": 2
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "transmitted": 1,
+          "queued": 0,
+          "terminal": "invalid_frame",
+          "frame_credit": 63,
+          "byte_credit": 1048448
+        }
+      }
+    }
+  ]
+}

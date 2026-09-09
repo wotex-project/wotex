@@ -3,7 +3,7 @@ spec:
   id: WTH.10
   title: "Complete OpenThread host-management software profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-thread
   updated: 2026-09-09
 ---
@@ -11,11 +11,11 @@ spec:
 # WTH.10 Complete OpenThread host-management software profile
 
 Read [WTH.00](WTH.00-library-contract.md) and the [implementation sequence](../plans/software-implementation.md).
-[WTH.11](WTH.11-standalone-client-and-preservation.md) fixes the native API, retained workflows and concrete fixture contract.
-Baseline `ce7862b` implements bounded Dataset TLV syntax, a read-only Unix-socket
-daemon adapter and management-inspection Forms. Native SDK semantic validation,
-asynchronous management, commissioning roles, state subscriptions and real
-OpenThread software-network evidence remain target requirements.
+[WTH.11](WTH.11-standalone-client-and-preservation.md) fixes the native API, protocol workflows and concrete fixture contract.
+The current Dataset/daemon and native SDK management boundaries are described in
+[WTH.02](WTH.02-implemented-profile.md) and executable evidence. The accepted
+complete profile combines those behaviors with the joiner, state subscription,
+software-network and native/tooling obligations in [WTH.13](WTH.13-native-backend.md).
 
 ## Scope and architectural decision
 
@@ -25,7 +25,7 @@ access limit and SDK-derived status from [primary sources](../provenance/primary
 No Thread certification is implied. Thread supplies IPv6 networking; application
 Property read/write semantics belong to a protocol such as CoAP or Matter.
 
-The host replaces that SDK's bundled Mbed TLS 3.6.5 with **Mbed TLS 3.6.7**,
+The host uses **Mbed TLS 3.6.7** with this SDK,
 commit `068ff080b369adfac81509f9b57b2afabaf82dc5`, and its framework commit
 `dde0c4a0e448a0552f18817dcea633bb851fd288`. The upstream
 [3.6.7 security changelog](https://raw.githubusercontent.com/Mbed-TLS/mbedtls/v3.6.7/ChangeLog)
@@ -34,7 +34,8 @@ The native build must pin this override and record its archive hashes; using
 the unmodified SDK crypto submodule is not an accepted build.
 
 Keep `Daemon` read-only and explicitly connected to a consumer-supplied Unix
-socket. Add `Wotex.Thread.OpenThread`, a first-party C bridge that owns a host
+socket. `Wotex.Thread.OpenThread` is a first-party C++ host using the C SDK API.
+It owns a host
 OpenThread instance and explicitly configured radio URL. The bridge links the
 pinned POSIX OpenThread platform and runs its event loop, processing requests
 through WTH-C07. It is a separate host process, not a C pointer into an already

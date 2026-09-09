@@ -3,16 +3,16 @@ package: "wotex_thread"
 completion_plan: "docs/plans/wotex-thread-completion.md"
 specifications:
   - id: "WTH.00"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WTH.00-library-contract.md"
     implementation_status: "partial"
     standards: [{"name": "OpenThread", "revision": "v2026.09.0; 5c8c318627954c99cd1a957a290bbd4b1027d04b", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
     requires: []
     implementation_modules: []
     executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WTH.01"
-    version: "1.0.0"
+    version: "1.0.1"
     path: "docs/specs/WTH.01-protocol.md"
     implementation_status: "partial"
     standards: [{"name": "OpenThread", "revision": "v2026.09.0; 5c8c318627954c99cd1a957a290bbd4b1027d04b", "claim": "Dataset syntax and local daemon inspection only; full Thread standard access limited"}]
@@ -21,38 +21,47 @@ specifications:
     executable_evidence: ["test/wotex/thread/contract_test.exs", "test/wotex/thread/daemon_test.exs", "test/wotex/thread/dataset_test.exs", "test/wotex/thread/dependency_security_test.exs", "test/wotex/thread/mapping_test.exs", "test/wotex/thread/port_test.exs"]
     compatibility_classification: "Dataset syntax and local daemon inspection only; full Thread standard access limited; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
   - id: "WTH.02"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WTH.02-implemented-profile.md"
     implementation_status: "implemented"
-    standards: [{"name": "OpenThread", "revision": "v2026.09.0; 5c8c318627954c99cd1a957a290bbd4b1027d04b", "claim": "Dataset syntax and local daemon inspection only; full Thread standard access limited"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
+    standards: [{"name": "OpenThread", "revision": "v2026.09.0; 5c8c318627954c99cd1a957a290bbd4b1027d04b", "claim": "Dataset/daemon inspection and scoped C++ SDK management; complete software network remains planned"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
     requires: ["WTH.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
-    implementation_modules: ["Wotex.Thread.Error", "Wotex.Thread.Mapping", "Wotex.Thread.Transport"]
-    executable_evidence: ["test/wotex/thread/contract_test.exs", "test/wotex/thread/daemon_test.exs", "test/wotex/thread/dataset_test.exs", "test/wotex/thread/dependency_security_test.exs", "test/wotex/thread/mapping_test.exs", "test/wotex/thread/port_test.exs"]
-    compatibility_classification: "Dataset syntax and local daemon inspection only; full Thread standard access limited; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+    implementation_modules: ["Wotex.Thread.Error", "Wotex.Thread.Mapping", "Wotex.Thread.Transport", "Wotex.Thread.OpenThread", "Wotex.Thread.OpenThread.Connection", "Wotex.Thread.State", "Wotex.Thread.JoinerConfig"]
+    executable_evidence: ["test/wotex/thread/contract_test.exs", "test/wotex/thread/daemon_test.exs", "test/wotex/thread/dataset_test.exs", "test/wotex/thread/dependency_security_test.exs", "test/wotex/thread/mapping_test.exs", "test/wotex/thread/port_test.exs", "test/software/native_owner_test.exs", "test/software/native_dataset_test.exs", "test/native/management_test.py", "test/native/commissioner_test.py"]
+    compatibility_classification: "Dataset/daemon inspection and scoped C++ SDK management; complete software network remains planned; native .13 and final software acceptance remain open"
   - id: "WTH.10"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WTH.10-software-contract.md"
     implementation_status: "partial"
     standards: [{"name": "OpenThread", "revision": "v2026.09.0; 5c8c318627954c99cd1a957a290bbd4b1027d04b", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
     requires: ["WTH.00", "WTH.01", "WTH.02"]
     implementation_modules: ["Wotex.Thread.Address", "Wotex.Thread.Client", "Wotex.Thread.Daemon", "Wotex.Thread.Dataset", "Wotex.Thread.Error", "Wotex.Thread.PortCall", "Wotex.Thread.Session", "Wotex.Thread"]
     executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WTH.11"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WTH.11-standalone-client-and-preservation.md"
     implementation_status: "planned"
     standards: [{"name": "OpenThread", "revision": "v2026.09.0; 5c8c318627954c99cd1a957a290bbd4b1027d04b", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
     requires: ["WTH.00", "WTH.10"]
     implementation_modules: []
     executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WTH.12"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WTH.12-wotex-integration.md"
     implementation_status: "planned"
     standards: [{"name": "OpenThread", "revision": "v2026.09.0; 5c8c318627954c99cd1a957a290bbd4b1027d04b", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
     requires: ["WTH.00", "WTH.10", "WTH.11", "wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03", "wotex_runtime:WRT.01"]
     implementation_modules: []
     executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
+  - id: "WTH.13"
+    version: "1.0.0"
+    path: "docs/specs/WTH.13-native-backend.md"
+    implementation_status: "planned"
+    standards: [{"name": "Native OpenThread host", "revision": "Exact source hashes and build profile in .13", "claim": "Accepted native target; current baseline evidence is separate"}]
+    requires: ["WTH.00", "WTH.10", "WTH.11", "WTH.12"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Required native Port, typed IPC, resource ownership and Mix/ExUnit evidence; fixtures/native-port-v1.json cases are specified, unexecuted."
