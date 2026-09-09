@@ -41,6 +41,18 @@ does not require a responsive BEAM callback to begin guardian cleanup. A caller
 using another cleanup allowance must reserve that allowance in its existing
 deadline. Repeated EOF, signals or failed writes never move a started deadline.
 
+## Startup ownership barrier
+
+Before fork, the guardian restores the default SIGCHLD disposition and clears
+its signal mask. The direct child waits on a private CLOEXEC pipe. Only the
+parent establishes the child's process group and releases one byte after
+checking that identity. The child verifies the byte and its own group before
+changing directory, duplicating SDK descriptors or executing the SDK. A failed
+admission closes the barrier and kills/reaps only the unreleased direct child
+within the supplied cleanup budget. Clock or reaping failure is status 129.
+No group signal targets a group that admission did not establish. The startup
+barrier does not change buffer capacities or extend the caller's cleanup grace.
+
 ## Pipe and process ownership
 
 The guardian creates separate SDK stdin, stdout and stderr pipes. Each guardian
@@ -149,7 +161,7 @@ lane; its normal invocation has no additional exit allowance.
 
 The runtime implementation is the shared Wotex guardian at commit
 `ca2c4afc2fe8d4afa42b7621363c567da89ce288`, source SHA-256
-`ba2e2cc2ef7d32ed5e9691fce34a58f1f04e8605b73f3257caee31d619c71e41`.
+`d08b553ed0cd4ba9b166e8b01aae8eddd96f97a8accc418632d68e3c75ad37d2`.
 Its Apache-2.0 attribution is retained. The BLE fault driver uses package-specific
 case identifiers for the same pipe-level assertions. Source equivalence does not
 establish execution evidence for a BLE SDK host or its credit protocol.

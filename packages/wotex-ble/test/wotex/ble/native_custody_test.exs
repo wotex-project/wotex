@@ -13,7 +13,7 @@ defmodule Wotex.BLE.NativeCustodyTest do
             |> File.read!()
             |> Jason.decode!()
             |> Map.fetch!("cases")
-  @source_digest "ba2e2cc2ef7d32ed5e9691fce34a58f1f04e8605b73f3257caee31d619c71e41"
+  @source_digest "d08b553ed0cd4ba9b166e8b01aae8eddd96f97a8accc418632d68e3c75ad37d2"
 
   setup_all do
     compiler = System.find_executable("cc") || flunk("native custody tests require C11")

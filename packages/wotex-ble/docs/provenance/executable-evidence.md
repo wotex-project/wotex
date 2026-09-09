@@ -193,7 +193,7 @@ and the standalone pipe-level `test/native/custody_check.c` fault driver under
 the tooling command guardian. WBL-G01 through WBL-G09 bind the exact custody
 corpus to observed byte counts, resource reaping and timing. The shared runtime
 source is SHA-256
-`ba2e2cc2ef7d32ed5e9691fce34a58f1f04e8605b73f3257caee31d619c71e41`.
+`d08b553ed0cd4ba9b166e8b01aae8eddd96f97a8accc418632d68e3c75ad37d2`.
 
 Cases cover malformed startup, unintended inherited descriptors above a lowered
 descriptor limit, fragmented and simultaneous bidirectional streams, full pipes,
@@ -372,3 +372,19 @@ The error-code/name shape is shared with actual SDK failures. These are native
 component and wire-serialization tests. SDK notification callbacks, complete
 host dispatch and actual BEAM process suspension still require their integrated
 execution; this evidence does not complete the accepted Port backend.
+
+## Native guardian startup ownership
+
+`test/wotex/ble/native_command_test.exs` checks the fixture guardian through
+actual BEAM Ports: 1,000 short commands retain exact exit status, 32 concurrent
+commands retain separate groups, and inherited ignored SIGCHLD/blocked signals
+cannot discard child status. An injected parent setpgid failure leaves the
+child's marker file absent and returns a bounded setup failure.
+
+`test/wotex/ble/native_guardian_startup_test.exs` and
+`test/native/guardian_startup_check.c` exercise the runtime guardian's release
+barrier with 1,000 short SDK processes, inherited signal state and injected group
+admission failures. Both guardians establish the group before releasing their
+child. The native probe checks its own process-group identity and inherited
+signal state. The existing opaque-stream custody matrix remains applicable;
+startup serialization grants no additional time or report credits.

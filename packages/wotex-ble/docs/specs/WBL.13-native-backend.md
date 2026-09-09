@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.13
+  version: 1.0.14
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -114,7 +114,11 @@ defines opaque bidirectional forwarding, bounded queue capacities, stable direct
 child/process-group custody, descriptor inheritance, fixed exit statuses and
 pipe-level fault cases WBL-G01 through WBL-G10. This profile fixes guardian
 input/output capacities at 131072/65536 bytes and its cleanup allowance at
-500 ms. Both guardian and SDK executable paths are absolute and both SHA-256
+500 ms. Both native guardians normalize SIGCHLD and the signal mask before fork. A
+parent-release pipe prevents the child from executing before its process group
+is established and checked. Failed pre-release admission kills and reaps only
+the unreleased direct child under the existing cleanup budget; unknown reaping
+or clock failure is an explicit failure. Both guardian and SDK executable paths are absolute and both SHA-256
 identities are checked before spawn. Credentials and connection values travel
 through typed SDK IPC, never argv. The cleared environment contains only explicit
 reviewed SDK execution values. Transparent guardian buffers do not replace
