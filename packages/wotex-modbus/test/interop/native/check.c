@@ -94,10 +94,11 @@ int main(int argc, char **argv) {
     check(argv[1], argv[2], "output", "1000", "65536", 0, 0, 14);
     check(argv[1], argv[2], "exit", "1000", "65536", 0, 7, 0);
     check(argv[1], argv[2], "hang", "80", "65536", 0, 124, 0);
+    check(argv[1], argv[2], "stopped", "100", "65536", 0, 124, 0);
     check(argv[1], argv[2], "background", "1000", "65536", 0, 0, 0);
     check(argv[1], argv[2], "flood", "1000", "4097", 0, 125, 4097);
     check(argv[1], argv[2], "hang", "1000", "65536", 1, 127, 0);
     locks(argv[1]);
-    puts("WMB-N01 WMB-N02 WMB-N03 native guardian: 7 cases passed");
+    puts("WMB-N01 WMB-N02 WMB-N03 native guardian: 8 cases passed");
     return 0;
 }

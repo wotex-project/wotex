@@ -1,3 +1,5 @@
+Code.require_file("../support/software/command.exs", __DIR__)
+
 defmodule Wotex.Modbus.SoftwareCommandTest do
   @moduledoc false
 
@@ -34,11 +36,16 @@ defmodule Wotex.Modbus.SoftwareCommandTest do
       assert {_, 0} = drain(port, 15_000)
     end
 
-    %{
+    context = %{
       directory: directory,
       guardian: Path.join(directory, "command"),
       probe: Path.join(directory, "probe")
     }
+
+    initialized = launch(context, "output", timeout: "10000")
+    assert {output, 0} = drain(initialized, 15_000)
+    assert output =~ "stdout\n" and output =~ "stderr\n"
+    context
   end
 
   test "WMB-N02 WMB-N03 direct argv preserves combined output and child exit", context do
@@ -73,6 +80,19 @@ defmodule Wotex.Modbus.SoftwareCommandTest do
   test "WMB-N02 WMB-N03 successful root exit still kills background descendants", context do
     assert {output, 0} = execute(context, "background")
     assert_dead(pids(output))
+  end
+
+  test "WMB-N02 WMB-N03 stopped children remain owned until the command deadline", context do
+    port = launch(context, "hang", timeout: "1000")
+    assert_receive {^port, {:data, output}}, 1000
+    [child, _] = children = pids(output)
+
+    assert {_, 0} =
+             System.cmd("/bin/kill", ["-STOP", Integer.to_string(child)], env: empty_environment())
+
+    refute_receive {^port, {:exit_status, _}}, 100
+    assert {"", 124} = drain(port)
+    assert_dead(children)
   end
 
   test "WMB-N02 WMB-N03 output flood never emits beyond the exact bound", context do
@@ -222,6 +242,19 @@ defmodule Wotex.Modbus.SoftwareCommandTest do
     end
 
     assert File.read!(path) == ""
+  end
+
+  test "WMB-N01 WMB-N03 lease readiness accumulates split bytes and rejects malformed output",
+       context do
+    alias Wotex.Modbus.SoftwareCommand
+    assert {:ok, port} = SoftwareCommand.lease(context.probe, "/split")
+    assert :ok = SoftwareCommand.release_lease(port)
+
+    for path <- ["/invalid", "/extra"] do
+      started = System.monotonic_time(:millisecond)
+      assert {:error, :invalid_workspace_lock} = SoftwareCommand.lease(context.probe, path)
+      assert System.monotonic_time(:millisecond) - started < 500
+    end
   end
 
   defp lock(context, path) do

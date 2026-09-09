@@ -31,9 +31,13 @@ compiler during explicit helper build and native fixture unit tests. No native
 SDK or protocol peer is built by the ordinary unit suite.
 
 `probe.c` generates real output, exit, timeout and process-group faults.
-`check.c` runs seven standalone cases for native sanitizer execution.
+`check.c` runs eight standalone cases for native sanitizer execution, including
+a stopped child whose actual exit remains owned until its command deadline.
 `test/software/command_test.exs` additionally checks actual BEAM-owner death,
 suspended output consumers, exact descendant termination and malformed input.
+The freshly compiled guardian and producer execute one bounded ten-second
+initialization probe before the shorter fault deadlines begin. Failure of that
+probe fails setup; it is never retried. Production command limits are unchanged.
 These assertions cover the command guardian; the Mix build/run tasks and full
 P06 acceptance remain separate until their tests execute.
 
@@ -47,3 +51,5 @@ during release, which prevents concurrent callers from locking different inodes.
 The explicit one-byte `R` command closes the descriptor before emitting
 `wotex_fixture_unlocked` followed by newline and exiting zero. The Mix caller
 waits for this acknowledgment and exit before reporting normal task completion.
+Readiness is a byte stream: the Mix owner accepts the exact marker across bounded
+chunks under one absolute 1000 ms deadline. Unexpected bytes fail immediately.

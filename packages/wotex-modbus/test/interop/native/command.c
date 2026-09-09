@@ -91,7 +91,8 @@ static int observe(struct state *state) {
     if (waitid(P_PID, (id_t)state->child, &info, WEXITED | WNOHANG | WNOWAIT) < 0) {
         return errno == EINTR ? 0 : -1;
     }
-    if (info.si_pid == state->child) {
+    if (info.si_pid == state->child &&
+        (info.si_code == CLD_EXITED || info.si_code == CLD_KILLED || info.si_code == CLD_DUMPED)) {
         state->exited = 1;
         state->child_code = info.si_code == CLD_EXITED && (info.si_status < 124 || info.si_status == 126)
                                 ? info.si_status : 128;

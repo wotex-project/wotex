@@ -352,6 +352,12 @@ defmodule Wotex.Modbus.FixtureTasksTest do
                  cd: context.root,
                  timeout: 2000
                )
+
+      assert_removed(
+        %{root: context.root, guardian: guardian, docker: docker},
+        cid,
+        System.monotonic_time(:millisecond) + 1000
+      )
     end
 
     native = %{

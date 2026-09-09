@@ -2,20 +2,45 @@ defmodule Wotex.Modbus.SoftwareCommand do
   @moduledoc false
 
   @limit 16_777_216
+  @lease "wotex_fixture_lock\n"
   @type result :: {:ok, binary(), non_neg_integer()} | {:error, atom(), :unverified}
 
   @spec lease(String.t(), String.t()) :: {:ok, port()} | {:error, atom()}
   def lease(guardian, path) do
     port = spawn_port(guardian, ["--lock", path], [])
 
-    receive do
-      {^port, {:data, "wotex_fixture_lock\n"}} -> {:ok, port}
-      {^port, {:exit_status, 130}} -> {:error, :workspace_locked}
-      {^port, {:exit_status, _}} -> {:error, :invalid_workspace_lock}
-    after
-      1000 ->
+    case lease_ready(port, "", System.monotonic_time(:millisecond) + 1000) do
+      {:ok, ^port} = result ->
+        result
+
+      error ->
         if Port.info(port), do: Port.close(port)
-        {:error, :workspace_lock_deadline}
+        error
+    end
+  end
+
+  defp lease_ready(port, buffer, deadline) do
+    receive do
+      {^port, {:data, bytes}} when byte_size(buffer) + byte_size(bytes) <= 128 ->
+        value = buffer <> bytes
+
+        cond do
+          System.monotonic_time(:millisecond) >= deadline -> {:error, :workspace_lock_deadline}
+          value == @lease -> {:ok, port}
+          String.starts_with?(@lease, value) -> lease_ready(port, value, deadline)
+          true -> {:error, :invalid_workspace_lock}
+        end
+
+      {^port, {:data, _}} ->
+        {:error, :invalid_workspace_lock}
+
+      {^port, {:exit_status, 130}} when buffer == "" ->
+        {:error, :workspace_locked}
+
+      {^port, {:exit_status, _}} ->
+        {:error, :invalid_workspace_lock}
+    after
+      max(deadline - System.monotonic_time(:millisecond), 0) -> {:error, :workspace_lock_deadline}
     end
   end
 
