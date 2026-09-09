@@ -4,6 +4,23 @@ defmodule Wotex.Directory do
 
   A `Wotex.Directory.Service` carries explicit consumer ports. Operations are
   synchronous, start no process, and return deterministic tagged results.
+
+  The facade implements registration, retrieval, replacement, merge-patch,
+  deletion, bounded listing, and expiry. It validates Thing Descriptions
+  through `Wotex.ThingDescription`, evaluates authorization before repository
+  access, and treats repository implementations as consumer-owned
+  infrastructure. No operation contacts or controls the described Thing.
+
+  Registration metadata follows the W3C Web of Things Discovery model. The
+  directory assigns server-controlled timestamps, keeps response-only
+  retrieval data out of storage, and uses entry versions for conditional
+  mutation. Errors are returned as `Wotex.Directory.Error` values so callers
+  can distinguish validation, policy, repository, and conflict failures.
+
+  Build a `Wotex.Directory.Service` with the required ports, create a
+  `Wotex.Directory.Context` for each request, and call this module at the
+  application boundary. Transport adapters remain responsible for mapping
+  HTTP or other protocol concepts onto these transport-independent results.
   """
 
   alias Wotex.Directory.{

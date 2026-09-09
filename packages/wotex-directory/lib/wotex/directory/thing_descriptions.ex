@@ -4,6 +4,18 @@ defmodule Wotex.Directory.ThingDescriptions do
 
   Consumers normally use `Wotex.Directory`; this module is public so custom
   service layers can apply the same normalization rules at their boundaries.
+
+  Incoming values are validated by the core `Wotex.ThingDescription` model.
+  The conversion functions separate the Discovery `registration` member from
+  the stored document, verify that enriched documents declare the W3C
+  Discovery context, and preserve the core library's ownership of Thing
+  Description validation.
+
+  The inverse functions add registration information and the Discovery
+  context when producing a response representation. Failures are translated
+  into `Wotex.Directory.Error` values with JSON Pointer paths where the core
+  validator supplies a location. These functions do not read a repository or
+  assign registration timestamps.
   """
 
   alias Wotex.Directory.{Error, Registration}

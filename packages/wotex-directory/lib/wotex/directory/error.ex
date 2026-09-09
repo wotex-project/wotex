@@ -9,6 +9,13 @@ defmodule Wotex.Directory.Error do
 
   Human-readable messages are deliberately free of Thing Description bodies,
   principals, adapter state, credentials, and unknown port terms.
+
+  `new/4` derives its message from the supported code vocabulary. Callers of
+  this low-level constructor must supply valid phases and operations and safe
+  details; it does not redact arbitrary caller-supplied details. The facade
+  normalizes returned port failures without retaining unknown reasons. Port
+  implementations remain responsible for exceptions, which the facade does
+  not rescue.
   """
 
   @type code ::

@@ -10,8 +10,16 @@ defmodule Wotex.Directory.Cursor do
   order.
 
   Keyset continuation never depends on an offset into a time-dependent view, so
-  an entry that reaches absolute expiry between pages is simply absent from the
+  an entry that reaches absolute expiry between pages is omitted from the
   following page.
+
+  ## Examples
+
+      iex> {:ok, encoded} = Wotex.Directory.Cursor.encode("revision-1", "urn:example:thing:1")
+      iex> {:ok, cursor} = Wotex.Directory.Cursor.decode(encoded)
+      iex> {cursor.collection_revision, cursor.last_identifier}
+      {"revision-1", "urn:example:thing:1"}
+
   """
 
   alias Wotex.Directory.{Error, Identifier}

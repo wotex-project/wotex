@@ -9,6 +9,11 @@ defmodule Wotex.Directory.Service do
   `thing_description_options` accepts only the core limit vocabulary
   `:max_bytes`, `:max_depth`, `:max_nodes`, `:max_string_bytes`, and
   `:max_collection_size`, and passes it unchanged to the `wotex` core facade.
+
+  A service records explicit repository, authorization, identifier, and clock
+  ports together with expiry and listing policy. It owns no process and opens no
+  storage connection; the consumer places any stateful adapter under its own
+  supervision tree.
   """
 
   alias Wotex.Directory.{Error, Introduction}

@@ -4,6 +4,18 @@ defmodule Wotex.Directory.Entry do
 
   `version` is an optimistic-concurrency value. `state` and `version` are
   package mechanics and are never emitted as W3C terms.
+
+  An entry contains the validated core `Wotex.ThingDescription`, its
+  `Wotex.Directory.Registration` information, and the identifier by which the
+  repository addresses it. Construction requires the Thing Description `id`
+  to equal the entry identifier and excludes the Discovery `registration`
+  member from the stored core document.
+
+  Retrieval can attach a response-only timestamp with `mark_retrieved/2`.
+  Call `for_storage/1` before persistence to remove that value, or
+  `enriched_thing_description/2` to produce the W3C Discovery representation.
+  `active?/2` combines the explicit entry state with the registration expiry
+  time; it does not mutate or delete expired data.
   """
 
   alias Wotex.Directory.{Error, Identifier, Registration, ThingDescriptions}

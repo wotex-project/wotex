@@ -7,6 +7,11 @@ defmodule Wotex.Directory.Query do
   preceding page. There is no public offset: continuation is a keyset over
   identifiers, so page validity never depends on offset arithmetic over a
   time-dependent active view.
+
+  `new/2` applies service bounds to admitted options, and `validate/2` rechecks
+  a struct received across a port boundary. Unsupported profiles, unknown
+  option keys, malformed cursors, and limits above the configured maximum return a
+  typed `Wotex.Directory.Error`.
   """
 
   alias Wotex.Directory.{Cursor, Error}

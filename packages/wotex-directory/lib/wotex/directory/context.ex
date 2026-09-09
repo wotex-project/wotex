@@ -4,6 +4,18 @@ defmodule Wotex.Directory.Context do
 
   The package interprets only `principal` as the subject to authorize. The two
   context values have no package-defined scope or persistence semantics.
+
+  `authorization` can carry request-specific policy material, while
+  `repository` can carry transaction, tenant, or tracing information for a
+  repository adapter. Both values pass unchanged to consumer ports. This
+  separation permits applications to propagate boundary context without
+  coupling directory mechanics to an authentication framework or storage
+  system.
+
+  A principal is required and may be any non-`nil` term selected by the
+  application. `new/2` returns a typed validation error for unknown options;
+  `new!/2` is provided for trusted configuration paths where failure should
+  raise.
   """
 
   alias Wotex.Directory.Error

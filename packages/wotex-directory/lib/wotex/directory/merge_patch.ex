@@ -12,6 +12,18 @@ defmodule Wotex.Directory.MergePatch do
   it does not merge array elements. The directory revalidates the complete
   merged Thing Description and separately protects server-owned registration
   members before persistence.
+
+  `apply/3` enforces caller-supplied depth and node ceilings on the submitted
+  patch and bounds merge recursion. It reports the refusing JSON Pointer
+  without retaining the submitted value. These checks do not count untouched
+  target members; the directory validates the complete merged Thing Description
+  separately.
+
+  ## Examples
+
+      iex> Wotex.Directory.MergePatch.apply(%{"title" => "Old", "links" => [1]}, %{"title" => "New", "links" => nil})
+      {:ok, %{"title" => "New"}}
+
   """
 
   alias Wotex.Directory.Error

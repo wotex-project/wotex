@@ -3,16 +3,19 @@
 **Storage-neutral W3C WoT Thing Description Directory mechanics for Elixir.**
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_directory.svg)](https://hex.pm/packages/wotex_directory)
-[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_directory)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_directory)
 [![CI](https://github.com/wotex-project/wotex-directory/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-directory/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/wotex-project/wotex-directory/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-directory)
-[![License](https://img.shields.io/github/license/wotex-project/wotex-directory.svg)](LICENSE)
+[![License](https://img.shields.io/hexpm/l/wotex_directory.svg)](https://github.com/wotex-project/wotex-directory/blob/main/LICENSE)
 
 [Installation](#installation) · [Quick Start](#quick-start) ·
 [Consumer Ports](#consumer-ports) · [Discovery Semantics](#discovery-semantics) ·
 [Boundary](#boundary) · [Development](#development)
 
 ---
+
+This development checkout has an unstable public API. Package publication
+requires a separately reviewed release.
 
 `wotex_directory` implements the deterministic application mechanics of a W3C
 Web of Things Discovery Thing Description Directory: registration, retrieval,
@@ -41,6 +44,9 @@ values and validation. For coordinated source development, set
 explicitly. Normal builds always resolve the Hex package.
 
 ## Quick Start
+
+This configuration sketch requires the caller-owned port modules, state,
+principal, and Thing Description values shown below.
 
 ```elixir
 alias Wotex.Directory
@@ -85,9 +91,9 @@ ships: a stateless UTC system clock selected explicitly with
 and a consumer that owns time supplies its own module. Every other port is
 consumer-owned.
 
-Port state and failure reasons are opaque. Adapter failures become stable
-`Wotex.Directory.Error` values so infrastructure details do not leak across the
-library boundary.
+Port state and returned failure reasons are opaque. Returned adapter failures
+become stable `Wotex.Directory.Error` values without retaining unknown reasons.
+Adapters must handle their own exceptions; the facade does not rescue them.
 
 ## Discovery Semantics
 
@@ -101,7 +107,7 @@ entries, the repository-defined collection revision, and an opaque
 `next_cursor` that a transport host places in the Discovery `next` link. A
 cursor binds the revision that issued it to the last listed identifier, so a
 mutation ends the chain with `collection_changed` while an entry that reaches
-expiry between pages is simply absent from the following page. There is no
+expiry between pages is omitted from the following page. There is no
 public offset.
 
 `Wotex.Directory.Event.from_mutation/2` derives `thing_created`,

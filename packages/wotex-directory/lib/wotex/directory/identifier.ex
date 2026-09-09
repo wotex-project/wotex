@@ -2,8 +2,19 @@ defmodule Wotex.Directory.Identifier do
   @moduledoc """
   Consumer identifier-generation port for anonymous Thing Descriptions.
 
-  Generated values must be absolute IRI strings. The package validates the
-  result before repository access.
+  Generated values must be absolute Internationalized Resource Identifier (IRI)
+  strings. The package validates the result before repository access.
+
+  The port is consulted only when a submitted Thing Description has no `id`.
+  A generator may use a sequence, a random identifier, or an external naming
+  service, but it must return the identifier through the tagged callback
+  result. Repository collision handling remains part of directory
+  registration rather than this behavior.
+
+  `valid?/1` accepts a non-empty, valid UTF-8 string with an RFC 3986-style
+  scheme and rejects spaces and control characters. It checks the structural
+  requirements imposed by this library; it does not establish ownership,
+  dereferenceability, or uniqueness.
   """
 
   @callback generate(state :: term()) :: {:ok, String.t()} | {:error, term()}

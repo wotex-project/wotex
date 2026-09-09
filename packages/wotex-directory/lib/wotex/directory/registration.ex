@@ -5,6 +5,18 @@ defmodule Wotex.Directory.Registration do
   `created`, `modified`, and `retrieved` are assigned by the directory. A
   relative `ttl` takes precedence over a supplied absolute `expires` value.
   Unknown string-keyed members are preserved as extension terms.
+
+  Creation and refresh operations derive absolute expiry from the current
+  time when a time-to-live (`ttl`) is present. The accepted range is zero
+  through 4,294,967,295 seconds. Refresh preserves `created`, sets
+  `modified` to the supplied time, and rejects a clock value earlier than the stored modification
+  time. Merge-patch reconstruction applies the same value invariants.
+
+  `retrieved` belongs only to a response representation and is removed by
+  `for_storage/1`. `to_map/1` emits JSON-compatible Discovery members, while
+  `valid?/1` checks timestamp ordering, relative expiry, extension values, and
+  the remaining struct invariant. This module represents registration data;
+  repository persistence and expiry deletion belong to the directory service.
   """
 
   alias Wotex.Directory.{Error, MergePatch}

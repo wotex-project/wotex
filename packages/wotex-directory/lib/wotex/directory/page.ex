@@ -7,6 +7,11 @@ defmodule Wotex.Directory.Page do
   reported further entries. A repository builds the value with `new/1` and
   reports continuation with `more?: true`; the package derives the cursor from
   the collection revision and the last listed identifier.
+
+  `validate/3` rechecks entry order, activity at the shared retrieval instant,
+  page size, cursor consistency, and collection revision before exposure.
+  `next_query/2` carries the same format and limit forward without revealing
+  cursor internals to a transport host.
   """
 
   alias Wotex.Directory.{Cursor, Entry, Error, Query}

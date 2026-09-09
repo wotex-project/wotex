@@ -4,6 +4,16 @@ defmodule Wotex.Directory.Introduction do
 
   A transport host serves the directory's own Thing Description at `path`.
   This value never contains or reads directory entries.
+
+  `new/1` validates the supplied `Wotex.ThingDescription` and returns the
+  fixed well-known path `/.well-known/wot` together with the
+  `application/td+json` media type. The resulting value describes how a
+  client discovers the directory service itself; listing or retrieving
+  registered Things is a separate directory operation.
+
+  This module contains no HTTP server and performs no content negotiation.
+  A transport adapter is responsible for exposing the value, choosing status
+  codes and headers, and serializing the validated Thing Description.
   """
 
   alias Wotex.Directory.Error
