@@ -130,3 +130,10 @@ dictionary entries, 4096-byte paths and 1024 selected services/characteristics
 at their boundaries. Unknown variant payloads are skipped without copying them
 into the owned snapshot. These are typed native decoding tests; live BlueZ
 GetManagedObjects acquisition and listener/snapshot reconciliation remain open.
+
+The native decoder also accepts exact typed metadata change/removal signals.
+Its signal vectors exercise changed booleans, unknown-property omission,
+invalidated properties, added objects and removed interfaces. Wrong signatures,
+wrong variants, duplicate names, changed/invalidated overlap and the 256/64-entry
+boundaries are asserted. This validates decoding; it does not establish the
+live reconciliation state machine or notification delivery.

@@ -75,6 +75,92 @@ inline Message message(const std::vector<Object> &objects) {
   OBJECT_CHECK(dbus_message_iter_close_container(&root, &array));
   return result;
 }
+inline Message changed_message(const std::vector<Property> &properties,
+                                const std::vector<std::string> &invalidated = {},
+                                const std::string &interface = device_interface) {
+  Message result(dbus_message_new_signal("/org/bluez/hci0/device", "org.freedesktop.DBus.Properties", "PropertiesChanged"));
+  OBJECT_CHECK(result != nullptr);
+  DBusMessageIter root, array;
+  dbus_message_iter_init_append(result.get(), &root);
+  string(root, interface);
+  OBJECT_CHECK(dbus_message_iter_open_container(&root, DBUS_TYPE_ARRAY, "{sv}", &array));
+  for (const auto &value : properties) property(array, value);
+  OBJECT_CHECK(dbus_message_iter_close_container(&root, &array));
+  OBJECT_CHECK(dbus_message_iter_open_container(&root, DBUS_TYPE_ARRAY, "s", &array));
+  for (const auto &name : invalidated) string(array, name);
+  OBJECT_CHECK(dbus_message_iter_close_container(&root, &array));
+  return result;
+}
+inline Message removed_message(const std::vector<std::string> &interfaces) {
+  Message result(dbus_message_new_signal("/", "org.freedesktop.DBus.ObjectManager", "InterfacesRemoved"));
+  OBJECT_CHECK(result != nullptr);
+  DBusMessageIter root, array;
+  dbus_message_iter_init_append(result.get(), &root);
+  string(root, "/org/bluez/hci0/device", DBUS_TYPE_OBJECT_PATH);
+  OBJECT_CHECK(dbus_message_iter_open_container(&root, DBUS_TYPE_ARRAY, "s", &array));
+  for (const auto &name : interfaces) string(array, name);
+  OBJECT_CHECK(dbus_message_iter_close_container(&root, &array));
+  return result;
+}
+inline Message added_message() {
+  Message result(dbus_message_new_signal("/", "org.freedesktop.DBus.ObjectManager", "InterfacesAdded"));
+  OBJECT_CHECK(result != nullptr);
+  DBusMessageIter root, array, pair, properties;
+  dbus_message_iter_init_append(result.get(), &root);
+  string(root, "/org/bluez/hci0/device", DBUS_TYPE_OBJECT_PATH);
+  OBJECT_CHECK(dbus_message_iter_open_container(&root, DBUS_TYPE_ARRAY, "{sa{sv}}", &array));
+  OBJECT_CHECK(dbus_message_iter_open_container(&array, DBUS_TYPE_DICT_ENTRY, nullptr, &pair));
+  string(pair, device_interface);
+  OBJECT_CHECK(dbus_message_iter_open_container(&pair, DBUS_TYPE_ARRAY, "{sv}", &properties));
+  property(properties, {"Connected", "b", true});
+  OBJECT_CHECK(dbus_message_iter_close_container(&pair, &properties));
+  OBJECT_CHECK(dbus_message_iter_close_container(&array, &pair));
+  OBJECT_CHECK(dbus_message_iter_close_container(&root, &array));
+  return result;
+}
+inline void signal_invariants() {
+  auto input = changed_message({{"Connected", "b", false}, {"Unknown", "s", "future"}}, {"ServicesResolved"});
+  const auto changed = ObjectReader().changed(input.get());
+  OBJECT_CHECK(changed.interface == device_interface);
+  OBJECT_CHECK(changed.values == Json({{"Connected", false}}));
+  OBJECT_CHECK(changed.invalidated == std::set<std::string>{"ServicesResolved"});
+  for (const auto &invalid : std::vector<std::pair<std::vector<Property>, std::vector<std::string>>>{
+    {{{"Connected", "q", 1}}, {}}, {{{"Connected", "b", true}}, {"Connected"}},
+    {{{"Unknown", "s", "x"}}, {"Unknown"}}, {{}, {"Connected", "Connected"}}, {{}, {"bad.member"}}
+  }) {
+    input = changed_message(invalid.first, invalid.second);
+    bool rejected = false;
+    try { ObjectReader().changed(input.get()); } catch (const InvalidObjects &) { rejected = true; }
+    OBJECT_CHECK(rejected);
+  }
+  std::vector<std::string> names;
+  for (unsigned i = 0; i < 256; ++i) names.push_back("Field" + std::to_string(i));
+  input = changed_message({}, names);
+  OBJECT_CHECK(ObjectReader().changed(input.get()).invalidated.size() == 256);
+  names.push_back("Excess"); input = changed_message({}, names);
+  bool rejected = false;
+  try { ObjectReader().changed(input.get()); } catch (const InvalidObjects &error) { rejected = std::string(error.what()) == "object_limit"; }
+  OBJECT_CHECK(rejected);
+  input = removed_message({device_interface, "org.example.Future"});
+  const auto removed = ObjectReader().removed(input.get());
+  OBJECT_CHECK(removed.path == "/org/bluez/hci0/device" && removed.interfaces.size() == 2);
+  input = removed_message({device_interface, device_interface}); rejected = false;
+  try { ObjectReader().removed(input.get()); } catch (const InvalidObjects &) { rejected = true; }
+  OBJECT_CHECK(rejected);
+  names.clear();
+  for (unsigned i = 0; i < 64; ++i) names.push_back("org.example.Interface" + std::to_string(i));
+  input = removed_message(names); OBJECT_CHECK(ObjectReader().removed(input.get()).interfaces.size() == 64);
+  names.push_back("org.example.Excess"); input = removed_message(names); rejected = false;
+  try { ObjectReader().removed(input.get()); } catch (const InvalidObjects &error) { rejected = std::string(error.what()) == "object_limit"; }
+  OBJECT_CHECK(rejected);
+  input = added_message();
+  OBJECT_CHECK(ObjectReader().added(input.get()).values() == Json({
+    {"/org/bluez/hci0/device", {{device_interface, {{"Connected", true}}}}}
+  }));
+  input = changed_message({}); rejected = false;
+  try { ObjectReader().added(input.get()); } catch (const InvalidObjects &) { rejected = true; }
+  OBJECT_CHECK(rejected);
+}
 inline void rejects(const std::vector<Object> &objects, const std::string &reason) {
   auto input = message(objects); bool rejected = false;
   try { ObjectReader().read(input.get()); }
@@ -103,6 +189,7 @@ inline const std::vector<Object> baseline{
     {"Handle", "q", 17}, {"Flags", "as", Json::array({"read", "notify", "future-flag"})}}}}}
 };
 inline void invariants() {
+  signal_invariants();
   const auto peer = NativePeer::from(peer_fields);
   OBJECT_CHECK(peer.address == "AA:BB:CC:DD:EE:FF");
   auto input = message(baseline);

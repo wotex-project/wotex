@@ -47,6 +47,13 @@ public:
   const Json &values() const { return objects_; }
 };
 
+struct PropertiesChange {
+  std::string interface;
+  Json values;
+  std::set<std::string> invalidated;
+};
+struct RemovedInterfaces { std::string path; std::set<std::string> interfaces; };
+
 class ObjectReader {
   std::size_t entries_ = 0;
   void entry() { if (++entries_ > 65536) throw InvalidObjects("object_limit"); }
@@ -122,7 +129,8 @@ class ObjectReader {
     }
     end(data); return result;
   }
-  Json properties(DBusMessageIter &array, const std::string &interface) {
+  Json properties(DBusMessageIter &array, const std::string &interface,
+                  std::set<std::string> *names = nullptr) {
     auto item = child(array, DBUS_TYPE_ARRAY);
     Json result = Json::object(); std::set<std::string> seen;
     while (dbus_message_iter_get_arg_type(&item) != DBUS_TYPE_INVALID) {
@@ -136,6 +144,7 @@ class ObjectReader {
       if (expected != DBUS_TYPE_INVALID) result[name] = value(pair, expected);
       end(pair); dbus_message_iter_next(&item);
     }
+    if (names) *names = std::move(seen);
     return result;
   }
   Json interfaces(DBusMessageIter &array) {
@@ -173,6 +182,60 @@ public:
       end(pair); dbus_message_iter_next(&item);
     }
     end(root); return ObjectSnapshot(std::move(result));
+  }
+
+  PropertiesChange changed(DBusMessage *message) {
+    entries_ = 0;
+    if (!message || dbus_message_contains_unix_fds(message) ||
+        !dbus_message_is_signal(message, "org.freedesktop.DBus.Properties", "PropertiesChanged") ||
+        !dbus_message_has_signature(message, "sa{sv}as")) throw InvalidObjects();
+    DBusMessageIter root;
+    if (!dbus_message_iter_init(message, &root)) throw InvalidObjects();
+    auto interface = text(root, DBUS_TYPE_STRING, 255);
+    if (!dbus_validate_interface(interface.c_str(), nullptr)) throw InvalidObjects();
+    next(root); std::set<std::string> changed;
+    auto values = properties(root, interface, &changed);
+    next(root); auto item = child(root, DBUS_TYPE_ARRAY);
+    std::set<std::string> invalidated;
+    while (dbus_message_iter_get_arg_type(&item) != DBUS_TYPE_INVALID) {
+      if (invalidated.size() == 256) throw InvalidObjects("object_limit");
+      const auto name = text(item, DBUS_TYPE_STRING, 255);
+      if (!dbus_validate_member(name.c_str(), nullptr) || !invalidated.insert(name).second || changed.count(name))
+        throw InvalidObjects();
+      dbus_message_iter_next(&item);
+    }
+    end(root); return {std::move(interface), std::move(values), std::move(invalidated)};
+  }
+
+  ObjectSnapshot added(DBusMessage *message) {
+    entries_ = 0;
+    if (!message || dbus_message_contains_unix_fds(message) ||
+        !dbus_message_is_signal(message, "org.freedesktop.DBus.ObjectManager", "InterfacesAdded") ||
+        !dbus_message_has_signature(message, "oa{sa{sv}}")) throw InvalidObjects();
+    DBusMessageIter root;
+    if (!dbus_message_iter_init(message, &root)) throw InvalidObjects();
+    entry(); const auto path = text(root, DBUS_TYPE_OBJECT_PATH, 4096);
+    next(root); Json result = Json::object(); result[path] = interfaces(root);
+    end(root); return ObjectSnapshot(std::move(result));
+  }
+
+  RemovedInterfaces removed(DBusMessage *message) {
+    entries_ = 0;
+    if (!message || dbus_message_contains_unix_fds(message) ||
+        !dbus_message_is_signal(message, "org.freedesktop.DBus.ObjectManager", "InterfacesRemoved") ||
+        !dbus_message_has_signature(message, "oas")) throw InvalidObjects();
+    DBusMessageIter root;
+    if (!dbus_message_iter_init(message, &root)) throw InvalidObjects();
+    auto path = text(root, DBUS_TYPE_OBJECT_PATH, 4096);
+    next(root); auto item = child(root, DBUS_TYPE_ARRAY);
+    std::set<std::string> interfaces;
+    while (dbus_message_iter_get_arg_type(&item) != DBUS_TYPE_INVALID) {
+      if (interfaces.size() == 64) throw InvalidObjects("object_limit");
+      const auto name = text(item, DBUS_TYPE_STRING, 255);
+      if (!dbus_validate_interface(name.c_str(), nullptr) || !interfaces.insert(name).second) throw InvalidObjects();
+      dbus_message_iter_next(&item);
+    }
+    end(root); return {std::move(path), std::move(interfaces)};
   }
 };
 

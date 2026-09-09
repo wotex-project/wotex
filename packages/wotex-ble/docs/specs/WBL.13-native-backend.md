@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-version: 1.0.1
+version: 1.0.2
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -291,6 +291,15 @@ without expanding their variant payloads. Only a successfully decoded snapshot
 and a validated peer value enter discovery association. Selected services must
 name the exact device path; selected characteristics must name a selected
 service path. Lexical path-prefix similarity establishes no association.
+
+Metadata change decoding uses the exact PropertiesChanged `sa{sv}as`,
+InterfacesAdded `oa{sa{sv}}` and InterfacesRemoved `oas` signatures. Known
+property variants use the snapshot rules above. Invalidated property names have
+a 256-entry bound; removed interface names have a 64-entry bound. Names obey the
+same grammar as snapshot keys, and duplicate names fail. A property cannot occur
+in both the changed and invalidated collections, including an unknown property.
+Changed metadata does not itself constitute a characteristic notification;
+S04's byte/source/subscription validation separately governs report delivery.
 
 The pinned libdbus 1.16.2 [connection API](https://dbus.freedesktop.org/doc/api/html/group__DBusConnection.html)
 defines the receive watermark. Its [transport dispatch condition](https://dbus.freedesktop.org/doc/api/html/dbus-transport_8c_source.html#l01129)
