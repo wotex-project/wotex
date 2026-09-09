@@ -23,7 +23,11 @@ credentials, supervision, connection configuration and canonical Property truth.
 - `WOTEX_PATH_DEPS=1` is the sole local dependency switch and is development-only.
   Normal package identity uses released Wotex dependencies.
 
-Run `WOTEX_PATH_DEPS=1 mix check` before every local commit. The gate includes
+Native protocol execution uses BEAM/OTP and the explicitly specified native SDK
+Port, where applicable. Build and test orchestration uses Mix/ExUnit. No Python
+runtime or target orchestration dependency is part of this contract.
+
+Run `WOTEX_PATH_DEPS=1 mix check --no-retry` before every local commit. The gate includes
 formatting, compilation, tests, documentation and unpacked archive inspection.
 Apply `.claude/skills/spec-delivery/SKILL.md` for public behavior and standards
 claims and `.claude/skills/release-readiness/SKILL.md` for compatibility claims.

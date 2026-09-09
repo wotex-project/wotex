@@ -1,9 +1,9 @@
 # WCO specification index
 
 Start with the [software implementation sequence](../plans/software-implementation.md).
-The .00/.10/.11/.12 contracts describe required target behavior; the existing protocol
-and implemented-profile documents distinguish current tested behavior from it.
-Implementation readiness does not mean implementation or conformance is complete.
+The implemented profile contains BEAM UDP/Observe/discovery, Runtime UDP
+streams and OTP DTLS. Secure Runtime profiles, OSCORE and complete Mix software
+closure remain planned. The catalogue and provenance distinguish these scopes.
 
 - [WCO.00 Software implementation rules](WCO.00-library-contract.md)
 - [WCO.01 CoAP protocol contract](WCO.01-protocol.md)
@@ -15,6 +15,8 @@ Implementation readiness does not mean implementation or conformance is complete
 
 [Source revisions](../provenance/primary-sources.md) and [executed evidence](../provenance/executable-evidence.md) are separate records.
 
-- [Versioned specification catalogue](catalogue.yaml) — owning contracts, dependencies, status and baseline evidence
+- [Versioned specification catalogue](catalogue.yaml) — owning contracts, dependencies, status and scoped execution evidence
 - [WCO.12 Wotex integration and evidence contract](WCO.12-wotex-integration.md)
 - [Concrete Wotex integration corpus](fixtures/wotex-integration-v1.json) — specified assertions, not a passed profile
+
+- [WCO.13 Native build and software evidence](WCO.13-native-build-and-software-evidence.md) — explicit Mix tasks, native peer ownership and acceptance

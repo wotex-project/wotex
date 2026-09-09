@@ -1,52 +1,51 @@
-# Executable evidence
+# CoAP executable evidence
 
-Evidence collected 2026-09-08 using Elixir 1.20.2 / OTP 29.0.4.
-Development contract supports Elixir 1.18+; the lower-version matrix has not been
-executed in this workspace. Use CI before graduation. No consumer parity or
-certification is inferred from unit coverage.
+Evidence describes exact source cohorts. A passing package gate does not accept
+all secure transports, software stress or artifact adoption.
 
-## Mandatory local gate
+| Cohort | Executed evidence | Limits |
+| --- | --- | --- |
+| source digest `3ecd430d192f` | Five independent libcoap UDP/PSK DTLS tests on Elixir 1.20.2 / OTP 29.0.4; normal and native ASan/UBSan builds | UDP, Block1/Block2, authenticated PSK operations and Observe/cancel; no PKI or OSCORE claim |
+| `1479968` | Complete latest-toolchain gate, 189 tests, 95.6% coverage | Native PKI certificate/identity/CRL tests use an OTP DTLS peer |
+| `32bceed` | Complete latest-toolchain gate, 191 passing checks (2 doctests, 8 properties, 181 tests), 95.5% coverage | Documentation/contract cohort; interop is explicitly excluded from the ordinary gate |
 
-`WOTEX_PATH_DEPS=1 mix check` runs compile warnings-as-errors, formatting, strict
-Credo, unit/property tests and minimum 95% coverage, Dialyzer, Doctor, ExDoc,
-dependency audit, Hex packaging, unpacked out-of-tree compilation and the
-Application-free structural check. Runtime path dependencies require the explicit
-switch; the archive preserves ordinary Hex dependency declarations.
-The pinned Decimal parser regression remains active; there are no advisory
-waivers. See SECURITY.md and the dependency-security test.
+The [UDP/DTLS peer receipt](software-udp-dtls-v1.json) contains the independently
+verified source digest, exact peer source/archive/binary hashes, commands,
+result/log digests and zero retained peer/UDP resources. This receipt identifies
+the executed source digest and does not assert an independently verified Git
+commit association. Native peer builds use libcoap 4.3.5 at
+`7cf7465b784baded4de183290c547d582becfd28`. The executed orchestration is Python;
+protocol traffic is exchanged with native `coap-server`. The result does not
+validate the planned .13 Mix tasks. The sanitizer lane is macOS; the required
+Linux full-software lane is a separate acceptance obligation.
 
-## Interoperability
+## Implemented assertions
 
-Independent libcoap 4.3.5 at commit
-`7cf7465b784baded4de183290c547d582becfd28`: PASS for UDP content, discovery-resource
-read and unknown-resource status. Additional PASS evidence covers a 5200-byte
-Block1 upload with server size reduced to 128 bytes, complete echoed Block2
-response, readback and resource deletion. DTLS and Observe are separate proofs.
+Tests under `test/wotex/coap/` cover codec boundaries, exchange correlation and
+lifecycle, complete Block1/Block2, owned Observe registration/renewal/cancellation,
+discovery and RFC 6690 parsing, native PSK/PKI admission and real Runtime UDP
+Property/Event streams. The native PKI suite checks exact DNS/IP SAN, certificate
+time/usage, unknown critical extensions, untrusted roots, CRL expiry/signature,
+revocation and isolated simultaneous trust snapshots. `dtls_test.exs` includes
+replayed and tampered-record outcomes and bounded cleanup. This does not claim
+continued service after every malformed DTLS record or a complete certificate
+chain-depth fault matrix.
 
-```sh
-docker build -t wotex-coap-peer test/interop/libcoap
-docker run --rm -d --name wotex-coap-peer -p 127.0.0.1:56830:5683/udp --entrypoint coap-server-notls wotex-coap-peer -A 0.0.0.0 -p 5683 -v 0 -d 8 -e -b 128
-WOTEX_PATH_DEPS=1 WOTEX_COAP_INTEROP_PORT=56830 mix test --include interop test/interop/libcoap_test.exs
-docker stop wotex-coap-peer
-```
+Independent PKI tests under development are not committed peer acceptance.
+Runtime DTLS credentials/profiles, Error.class, OSCORE known-answer/replay/store
+fault tests, native helper ownership and complete stress/matrix closure remain
+required by [the ordered plan](../plans/software-implementation.md).
 
-Container source commits are pinned. Base-image/package-manager inputs may move;
-these are reproducible source fixtures, not claims of bit-identical image builds.
-Interoperability tags are excluded by default. Explicit invocation requires the
-configured peer and must fail if that peer or expected response is missing.
+## Required verification
 
-## Evidence identities
+`WOTEX_PATH_DEPS=1 mix check --no-retry` includes strict compilation/static checks,
+unit/property/doctests, coverage, docs, dependency checks and unpacked out-of-tree
+package compilation. Interoperability requires explicit invocation and fails on
+missing peers/responses. The mandatory final software matrix is Elixir 1.18.4 /
+OTP 27.3.4.15 and Elixir 1.20.2 / OTP 29.0.4; the complete secure/stress matrix is
+not accepted by the cohorts above. Hardware and certification are separate.
 
-The hashes identify reviewed test sources, not an immutable release or a promise
-that all future test executions will pass. The mandatory gate and optional peer
-commands above must be rerun after relevant changes.
-
-| Test source | SHA-256 |
-| --- | --- |
-| `test/interop/libcoap_test.exs` | `7faaeda0bc8042ac07ac03535ba23ca9ac03e91b128aac1e6d2aeffd432bcc5b` |
-| `test/wotex/coap/blockwise_test.exs` | `129bf6e1a385b689d58593ac1ccf7964221de43b1bda39bdb43f547f771aa173` |
-| `test/wotex/coap/codec_test.exs` | `a810d7c2464a8e874009df3191a276ab72bbccf3ff81ae7ba600e646a5ba660d` |
-| `test/wotex/coap/connection_test.exs` | `f66d238172e2475e264a21878366b9d54051d0de96cde1e23ee261596ffba8a7` |
-| `test/wotex/coap/contract_test.exs` | `9d02da47a770f4d20aaa4ccac068b36709a948c004923e76904cdcbd6b31f888` |
-| `test/wotex/coap/dependency_security_test.exs` | `651cb6942930d6f9e73db9299a701d8e68b93a3080746c9449eee707968c9bb8` |
-| `test/wotex/coap/mapping_test.exs` | `464984b6e591be3d8d609f76a2953daf76a1f08f0d73bf3ca9741f1867142e8a` |
+[WCO.13](../specs/WCO.13-native-build-and-software-evidence.md) defines explicit
+Mix builds/runs, native manifests, bounded Port framing and durable context
+rules. Implementation status remains partial until the required exact assertions
+and those task runs pass. No Python-based result transfers to an unbuilt tool.

@@ -127,3 +127,12 @@ profiles from planned contracts. The [Wotex integration contract](docs/specs/WCO
 defines explicit Runtime profiles, route/value/error boundaries and real
 ConsumedThing acceptance tests. These are target requirements; a passing baseline
 gate does not accept the unfinished software profile.
+
+## Native build and software orchestration
+
+[WCO.13](docs/specs/WCO.13-native-build-and-software-evidence.md) defines
+the planned `mix wotex.software.build --workspace ABS` and
+`mix wotex.software.run --workspace ABS` interfaces. Protocol execution remains
+BEAM UDP, OTP DTLS and a planned explicit libcoap OSCORE Port.
+Existing Python files perform test/build orchestration only. Their recorded
+results do not establish acceptance of the planned Mix tasks.

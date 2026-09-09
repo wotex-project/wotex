@@ -3,7 +3,7 @@ spec:
   id: WCO.10
   title: "Complete CoAP client software profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -16,11 +16,12 @@ discovery, DTLS and the explicitly selected OSCORE adapter below. TCP/WebSocket
 CoAP, multicast/group communication, extended tokens, Group OSCORE and a server
 implementation are separate profiles. Physical radios are unnecessary.
 
-Baseline `1ff4320` includes the native UDP exchange, strict known-option lengths,
-cryptographic tokens, complete blockwise transfers and independent libcoap
-upload/echo/readback evidence. Active Observe and secure profiles are target
-requirements, not implemented claims. [WCO.03](WCO.03-blockwise.md) describes the
-committed blockwise behavior; preserve that tested implementation.
+The implemented profile includes native UDP exchange, duplicate discipline,
+complete Block1/Block2, active Observe, discovery, Runtime UDP streams and OTP
+DTLS PSK/PKI. Runtime secure mapping, profile factories and OSCORE remain planned.
+[WCO.02](WCO.02-implemented-profile.md) defines supported behavior;
+[WCO.13](WCO.13-native-build-and-software-evidence.md) fixes native build, Port
+framing, durable state and Mix/ExUnit acceptance. Evidence is cohort-specific.
 
 ## Sources and architecture
 
@@ -99,9 +100,8 @@ Observe still represents eventual resource state and cannot promise delivery
 of every historical application event.
 
 Capabilities must distinguish `max_datagram_size: 1152` and
-`max_body_size: 1_048_576`. Correct the baseline's ambiguous `max_payload_size`
-documentation while retaining a documented compatibility alias. Update capability
-flags only as their software proofs pass.
+`max_body_size: 1_048_576`. The compatibility `max_payload_size`
+alias is documented independently. Capability flags require their software proofs.
 
 ## WCO-S03 — Observe API and state machine
 
@@ -264,10 +264,10 @@ Each family still needs all boundary/fault variants bound to actual assertions.
 | WCO-V14 | Kill OSCORE bridge after reservation/before save completion, reopen corrupt or mismatched store | No nonce reuse or replay acceptance; fail unsafe reopen |
 | WCO-V15 | Receiver overflow, owner death during I/O, saturated admission, C09 stress/matrix | Bounded cleanup and correct terminal status |
 
-The existing libcoap server fixture proves plain UDP and blockwise. Extend it
-with a resource changed by a second client, so Observe establishment, changes and
-cancellation are actual peer assertions. Build its OpenSSL variant for DTLS and
-OSCORE. Own disposable certificates, keys, counters and resources inside the
+The libcoap server fixture supplies plain UDP, blockwise and PSK Observe
+assertions. A second client changes its resource so establishment, changes and
+cancellation have wire evidence. The OpenSSL variant supplies DTLS and
+OSCORE. Mix/ExUnit owns disposable certificates, keys, counters and resources inside the
 fixture workspace. Record exact source/build options. Same-stack OSCORE testing
 must be labelled as such; RFC known-answer vectors and restart/replay fault tests
 are additional required evidence. A mock security callback cannot satisfy V12–V14.

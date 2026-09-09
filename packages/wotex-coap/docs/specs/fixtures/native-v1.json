@@ -1,0 +1,203 @@
+{
+  "schema": "wotex.coap.native-contract@1",
+  "status": "specified_unexecuted",
+  "runner_contract": "Inputs drive a real native IPC decoder/helper; expected values remain ExUnit-owned. Traces name test-controlled events, not helper answers. Native durable-state cases require the compiled helper and local store.",
+  "cases": [
+    {
+      "id": "WCO-N-F01",
+      "operation": "decode_line",
+      "input": "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\",\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n",
+      "expected": {
+        "event": "ready",
+        "backend": "libcoap",
+        "revision": "7cf7465b784baded4de183290c547d582becfd28"
+      }
+    },
+    {
+      "id": "WCO-N-F02",
+      "operation": "decode_line",
+      "input": "{\"version\":1,\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\",\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n",
+      "expected": {
+        "error": "native_protocol_error",
+        "effect": "none",
+        "generation_closed": true
+      }
+    },
+    {
+      "id": "WCO-N-F03",
+      "operation": "assemble_body",
+      "input": [
+        {
+          "event": "body_begin",
+          "body_id": "b1",
+          "length": 3,
+          "sha256": "b5d4045c3f466fa91fe2cc6abe79232a1a57cdf104f7a26e716e0a1e2789df78"
+        },
+        {
+          "event": "body_chunk",
+          "body_id": "b1",
+          "offset": 0,
+          "data": {
+            "type": "bytes",
+            "base64": "QUJD"
+          }
+        },
+        {
+          "event": "body_end",
+          "body_id": "b1"
+        }
+      ],
+      "expected": {
+        "body": {
+          "type": "bytes",
+          "base64": "QUJD"
+        },
+        "partial_deliveries": 0
+      }
+    },
+    {
+      "id": "WCO-N-F04",
+      "operation": "assemble_body",
+      "input": [
+        {
+          "event": "body_begin",
+          "body_id": "b1",
+          "length": 3,
+          "sha256": "b5d4045c3f466fa91fe2cc6abe79232a1a57cdf104f7a26e716e0a1e2789df78"
+        },
+        {
+          "event": "body_chunk",
+          "body_id": "b1",
+          "offset": 1,
+          "data": {
+            "type": "bytes",
+            "base64": "QUJD"
+          }
+        }
+      ],
+      "expected": {
+        "error": "native_protocol_error",
+        "partial_deliveries": 0,
+        "generation_closed": true
+      }
+    },
+    {
+      "id": "WCO-N-F05",
+      "operation": "report_credit_trace",
+      "input": {
+        "precondition": "open Event subscription; ready/control replies drained",
+        "steps": [
+          {
+            "grant_report_credit": 8
+          },
+          {
+            "suspend_beam_owner": true
+          },
+          {
+            "produce_complete_single_frame_reports": 10
+          }
+        ]
+      },
+      "expected": {
+        "report_frames": 8,
+        "terminal_frames": 1,
+        "terminal": "session_lost",
+        "queued_reports": 0,
+        "subscriptions_after": 0
+      }
+    },
+    {
+      "id": "WCO-N-F06",
+      "operation": "context_reopen_trace",
+      "input": {
+        "steps": [
+          "provision fresh context",
+          "open helper generation 1",
+          "close helper generation 1",
+          "open same context in generation 2"
+        ]
+      },
+      "expected": {
+        "error": "fresh_context_required",
+        "generation_2_encryptions": 0,
+        "generation_2_network_datagrams": 0
+      }
+    },
+    {
+      "id": "WCO-N-F07",
+      "operation": "sequence_boundary",
+      "input": {
+        "next_sender_sequence": 1099511627776,
+        "method": "GET"
+      },
+      "expected": {
+        "error": "sequence_exhausted",
+        "encryptions": 0,
+        "network_datagrams": 0
+      }
+    },
+    {
+      "id": "WCO-N-F08",
+      "operation": "decode_line",
+      "input": {
+        "repeat_ascii": "x",
+        "bytes": 131073
+      },
+      "expected": {
+        "error": "native_protocol_error",
+        "generation_closed": true,
+        "maximum_buffer_bytes": 131072
+      }
+    },
+    {
+      "id": "WCO-N-F09",
+      "operation": "report_credit_replay_trace",
+      "input": {
+        "precondition": "open Event subscription; ready/control replies drained",
+        "steps": [
+          {
+            "request_id": "c1",
+            "ack_seq": 0
+          },
+          {
+            "produce_complete_single_frame_reports": 8
+          },
+          {
+            "validate_report_frames_through": 4
+          },
+          {
+            "request_id": "c2",
+            "ack_seq": 4
+          },
+          {
+            "produce_complete_single_frame_reports": 4
+          },
+          {
+            "request_id": "c3",
+            "ack_seq": 4
+          },
+          {
+            "request_id": "c4",
+            "ack_seq": 2
+          },
+          {
+            "request_id": "c5",
+            "ack_seq": 0
+          },
+          {
+            "produce_complete_single_frame_reports": 1
+          }
+        ]
+      },
+      "expected": {
+        "report_frames": 12,
+        "highest_assigned_seq": 12,
+        "acknowledged_seq": 4,
+        "unused_report_credit": 0,
+        "queued_reports": 1,
+        "terminal_frames": 0,
+        "subscriptions_after": 1
+      }
+    }
+  ]
+}

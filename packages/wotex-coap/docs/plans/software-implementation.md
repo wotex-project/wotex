@@ -1,10 +1,10 @@
 # WCO software implementation sequence
 
-This is the self-contained build handoff for the defined software profile, not
-a statement that these tasks have already passed. The verified starting point
-is commit `1ff4320`; read [current executable evidence](../provenance/executable-evidence.md)
-for the tests and limitations at that baseline. Existing passing code is the
-starting implementation, not something to replace with fresh scaffolding.
+The BEAM UDP exchange, complete blockwise transfer, owned Observe, discovery,
+Runtime UDP streams and native OTP PSK/PKI DTLS are implemented. Runtime secure
+profiles, OSCORE, Mix orchestration and complete software closure remain targets.
+[Executable evidence](../provenance/executable-evidence.md) identifies each
+executed cohort and its limits. The ordered packages define acceptance.
 
 ## Read before changing code
 
@@ -19,14 +19,14 @@ Read the [versioned catalogue](../specs/catalogue.yaml) and
 [WCO.12 — Wotex integration](../specs/WCO.12-wotex-integration.md) before choosing
 implementation work. The catalogue lists dependencies and distinguishes planned
 contracts from narrow implemented profiles. Source presence, fixture presence,
-passing baseline tests and accepted work packages are separate facts.
+passing tests and accepted work packages are separate facts.
 
 The numbered sequence is dependency order: each package depends on all preceding
 packages. Each is one bounded behavior plus its tests/documentation. A large
 package may be split into consecutive local commits along its stated sub-behaviors;
 never commit knowingly failing tests. Do not reimplement a satisfied requirement
-merely to produce a commit. Every proposed module, API and test path below is a
-target addition unless it already exists; no placeholder file implies completion.
+merely to produce a commit. A named module, API or test below may already satisfy its requirement.
+Source and exact assertions determine acceptance; a placeholder proves nothing.
 
 For each requirement, record its ID in an ExUnit/native test name or a fixture
 manifest. Scenario families specify required outcomes in .10; .11 defines
@@ -125,6 +125,14 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.
 - Suggested local commit: `feat: integrate explicit runtime profiles and failure classes`.
 
+### WCO-P08b: Native Mix orchestration
+
+- Requirements: WCO-N01–N05 and C09; protocol behavior and accepted peer fixtures remain prerequisites.
+- Change surface: explicit `Mix.Tasks.Wotex.Software.Build` and `Mix.Tasks.Wotex.Software.Run`, test-only owned Port/process helpers, manifest/result projection.
+- Acceptance: every .13 build/reuse/failure/cleanup case has an actual assertion, both runtime lanes run against native peers, and no generic Python orchestration remains necessary. Existing results retain their original command and source identities.
+- Tests: `test/software/fixture_tasks_test.exs` plus the retained protocol/stress suites.
+- Commit scope: validated native fixture orchestration and its tests.
+
 ### WCO-P09: Prove all coap software transport profiles
 
 - Requirements: WCO-S01, WCO-S02, WCO-S03, WCO-S04, WCO-S05, WCO-S06, WCO-D01–D05; shared C01–C10 apply wherever relevant.
@@ -136,50 +144,32 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 
 ## Reproducible software fixture contract
 
-Add or extend `test/interop/build_software.sh` and `test/interop/run_software.sh`
-as explicit maintainer-invoked entry points. They take exactly one absolute
-workspace argument. Build requires a disposable empty workspace or a matching
-manifest; refuses an unrelated nonempty directory; downloads upstream source
-archives at the .10 pins without configuring any Git remote. Record archive
-SHA-256, source commit, compiler/SDK/library versions, build flags, binary hashes
-and fixture configuration in that workspace. Check hashes on reuse. Keep SDKs,
-native builds, keys, certificates, sockets and logs out of the source package.
-
-The run script owns only processes/containers created from that manifest, assigns
-disposable local ports/state, waits for explicit readiness with a finite timeout,
-exports the fixture configuration to tests, and traps all exits to release owned
-resources. It must return nonzero for missing tools, unavailable required kernel
-facilities, missing responses, failed assertions or cleanup failure. Do not
-convert a failed setup to an ExUnit skip. Existing hardware tests require separate
-explicit target configuration and are never selected by this runner.
-
-Use this command contract once the runner is implemented:
+[WCO.13](../specs/WCO.13-native-build-and-software-evidence.md) is authoritative for the planned
+Mix tasks, native source pins, manifests, deadlines, cleanup and result schemas.
+The command contract is:
 
 ```sh
-./test/interop/build_software.sh /absolute/disposable/fixture-workspace
-./test/interop/run_software.sh /absolute/disposable/fixture-workspace
+mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
+WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
-The runner executes `mix test --include interop --include software --exclude hardware`
-and all required native tests/audits from .10. Add `@tag :software` only to tests
-needing this software fixture/stress setup; normal deterministic contract tests
-remain in `mix check`. The explicit runner sets `WOTEX_REQUIRE_SOFTWARE=1` and
-the test helper must make missing fixture configuration fail under that setting.
-Label same-stack, independent-stack, malformed-peer and injected-contract evidence
-separately in the results. Hardware absence is not a software test result.
+These commands are target interfaces until their implementation and task tests
+pass. Existing shell/Python harnesses are identified only by the executed
+provenance they support. The native peer and protocol assertions remain the
+same independent software obligations. No build or peer starts implicitly.
 
 ## Verification and commit procedure
 
-Run focused tests while implementing a package, then run `mix check` before its
+Run focused tests while implementing a package, then run `mix check --no-retry` before its
 local commit. The ordinary Hex dependency path is authoritative. For the existing
-explicit sibling-development setup, `WOTEX_PATH_DEPS=1 mix check` selects local
+explicit sibling-development setup, `WOTEX_PATH_DEPS=1 mix check --no-retry` selects local
 dependency sources; record which mode was used. Do not lower coverage, disable
 warnings, waive audits or exclude newly failing code to make the gate pass.
 Native changes additionally run their required native tests and dependency audit;
 C/C++ adapters run ASan/UBSan in the Linux fault lane.
 
 After each package, update the current-profile/README capability claims only for
-behavior that now passed, and refresh [executable evidence](../provenance/executable-evidence.md)
+behavior supported by the recorded assertions, and refresh [executable evidence](../provenance/executable-evidence.md)
 with command, versions, vector paths/digests and result. Keep unexecuted requirements
 explicit. Use the author and committer required by `CLAUDE.md`; never configure
 remotes, push, tag, publish, change visibility or edit a consumer.

@@ -3,7 +3,7 @@ spec:
   id: WCO.02
   title: "Implemented CoAP profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -24,7 +24,7 @@ reserved option nibbles, length overflow and empty payload markers fail.
 Options are ordered numerically and unknown elective options survive.
 Critical option validation is separate from syntactic decode.
 
-A Connection owns one UDP socket and serializes requests with queue time inside
+A Connection owns one UDP or explicitly selected OTP DTLS socket and serializes requests with queue time inside
 the deadline. Empty ACK ends retransmission but does not finish a request.
 Separate CON replies are acknowledged. IDs are held for the 247-second exchange
 lifetime; exhaustion fails. The production initial ACK timeout is randomized
@@ -34,10 +34,17 @@ Runtime transport configuration admits the overall `timeout`, bounded
 `ack_timeout`, and the Blockwise size/body/exchange budgets; unknown, duplicate
 or malformed keys fail before a socket is opened. The admitted ACK timeout is propagated to the owned Connection.
 
-Observe serial comparison is a pure helper. Whole-body Block1/Block2
-exchanges are implemented in [WCO.03](WCO.03-blockwise.md). Active observation
-and renewal remain pending. Duplicate separate-response ACK caching across exchanges is not yet
-implemented. Do not use this profile for long-lived Observe traffic.
+Whole-body Block1/Block2 exchanges follow [WCO.03](WCO.03-blockwise.md).
+Observe registration, initial complete representation, serial freshness, renewal,
+blockwise reports, cancellation and receiver-loss cleanup are implemented.
+Duplicate separate replies retain ACK behavior across completed exchanges.
+`discover/2` validates status/Content-Format and parses bounded RFC 6690 links.
+
+Native `coaps` uses DTLS 1.2 with explicit PSK or PKI credentials and no UDP
+fallback. Runtime currently exposes only credential-free UDP unary/stream cells.
+Runtime DTLS configuration, profile factories, Error.class and OSCORE remain
+planned under .10/.12/.13. OSCORE's C Port owns one libcoap engine; no native
+helper is needed for the existing UDP or OTP DTLS paths.
 
 ## Evidence and compatibility
 

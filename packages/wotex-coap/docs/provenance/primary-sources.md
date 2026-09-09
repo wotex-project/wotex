@@ -20,13 +20,19 @@ Research date: 2026-09-08. Primary protocol evidence:
   source ef00e4d208c9f1ecc0eb7274ce3e90a7fc3bafc3 (2025-10-22). The binding is
   work in progress; Wotex implements a documented subset without conformance claims.
 - [libcoap 4.3.5 server manual](https://libcoap.net/doc/reference/4.3.5/man_coap-server.html),
-  upstream revision 7cf7465b784baded4de183290c547d582becfd28. Independent fixture candidate.
+  upstream revision 7cf7465b784baded4de183290c547d582becfd28. Independent UDP/DTLS software peer.
 
-Discovery covered framing, security, observation, blockwise and Form gaps.
-Follow-up reconciled draft status and peer versions. Stop reason: baseline
-claims have primary support; hardware and secure interoperability need execution.
+Protocol, SDK and draft revisions define distinct authorities. Software
+interoperability requires actual peer assertions; source review is not execution.
 
-## Software-contract review, 2026-09-08
+## Software scope and SDK authority
+
+- [RFC 6347, January 2012](https://www.rfc-editor.org/rfc/rfc6347.html)
+  defines the selected DTLS 1.2 wire protocol; OTP owns record processing and
+  handshake retransmission. [RFC 5280, May 2008](https://www.rfc-editor.org/rfc/rfc5280.html)
+  supplies certificate/CRL validation semantics. The fixed cipher allowlist,
+  exact SAN matching, bounded offline trust material and no-downgrade behavior
+  in WCO-S05 are explicit library profile choices.
 
 - [RFC 6690, August 2012](https://www.rfc-editor.org/rfc/rfc6690.html), sections
   2–4, supplies link-format grammar and the well-known resource. Discovery does
@@ -49,12 +55,12 @@ claims have primary support; hardware and secure interoperability need execution
   is the native OSCORE engine and software peer. Label that OSCORE peer same-stack;
   RFC 8613 known-answer and replay/crash tests remain separate evidence.
 
-Observe, secure transport and OSCORE target requirements are not promoted to
-implemented claims by this research. The committed blockwise evidence is recorded
-in executable-evidence.md; atomic-only upload and bounded body sizes are explicit
+Implemented Observe, OTP DTLS and blockwise evidence is recorded in
+executable-evidence.md. OSCORE remains a target; source review alone does not
+accept its native Port or durable-state behavior. Atomic-only upload and body limits are
 library profile choices within RFC 7959's wider behavior.
 
-## Standalone-contract review, 2026-09-09
+## Standalone source authority
 
 WCO.11 makes native method, URI and discovery behavior explicit. RFC 6690
 sections 3.1–3.3 prohibit senders from repeating rt/if/sz; this package chooses
@@ -64,5 +70,5 @@ first-occurrence receiver rules for rel/title/title* in
 Repeated extension/hreflang values remain ordered. Anchored-link context is
 preserved without automatic resolution or dereference. URI percent decoding
 follows RFC 7252 section 6.4; package input limits are explicit policy.
-The concrete corpus is specified data and does not claim a discovery/Observe
-implementation or a newly executed protocol result.
+The concrete corpus fixes inputs and expected outcomes. Execution receipts
+identify the implemented discovery/Observe cases and their tested source.

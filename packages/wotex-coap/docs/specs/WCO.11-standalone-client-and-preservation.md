@@ -3,14 +3,14 @@ spec:
   id: WCO.11
   title: "Standalone client and feature preservation"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
 
 # WCO.11 Standalone client and feature preservation
 
-Specification: `WCO.11@1.0.0`. Status: required target behavior; this document is
+Specification: `WCO.11@1.1.0`. Status: required target behavior; this document is
 not a test result. Requires [WCO.00](WCO.00-library-contract.md),
 [WCO.10](WCO.10-software-contract.md) and the existing
 [atomic blockwise profile](WCO.03-blockwise.md).
@@ -40,21 +40,20 @@ state machine. Dependency loading performs no network activity or startup.
 | Pure codec/options | Preserve `Message`, `Codec`, `Block` and `Observe` | Exact bytes, malformed boundaries, elective extension preservation, finite pure calls |
 | Existing Block1/Block2 implementation | Retain the working whole-body path; add initial-report continuation | Current upload/readback regressions plus representation identity and incomplete-body failures |
 | Resource discovery | Complete first-party `discover/2` and `LinkFormat.decode/2` | Actual GET, Content-Format 40, bounded parse, raw references and unknown attribute preservation |
-| Observe registration/cancellation scenarios | Preserve the useful interaction; replace partial request-only handling with WCO-S03 ownership | A registration request alone cannot set `supports_streaming: true`; initial response, reports, refresh, cancel and receiver loss must pass |
+| Observe registration/cancellation scenarios | Owned registration, report, renewal and cancellation under WCO-S03 | A registration request alone cannot set `supports_streaming: true`; initial response, reports, refresh, cancel and receiver loss must pass |
 | Synchronous compatibility calls | Preserve `send/2`, explicit session lifecycle and live probe behavior | No separate receive queue; no successful socket-open result presented as remote health |
 | Security seams | First-party OTP DTLS and optional pinned libcoap OSCORE adapters | Real protocol operations and failure tests; a callback stub is insufficient |
 | Consumer retry, polling and durable delivery | Remain consumer policy | No hidden reconnect, new write attempt, durable event-log promise or automatic discovered-resource traversal |
 
-The baseline already proves UDP and atomic blockwise against libcoap. It has
-pure Observe arithmetic, not an active subscription implementation. Likewise,
-the current `discovery_capable: true` flag does not prove a discovery parser:
-capability claims must be corrected to match the implemented cells, then enabled
-only with the evidence required here. Helper and discovery completion belongs
-inside this protocol package rather than a consumer adapter.
+The implemented native helpers include complete transfer, discovery parsing and
+owned Observe registration, reports, renewal and cancellation. Native DTLS uses
+OTP. The remaining secure Runtime and OSCORE cells have separate acceptance;
+[executable evidence](../provenance/executable-evidence.md) records the actual
+native and independent-peer cohorts. Capabilities describe only admitted modes.
 
 ## WCO-D02 — Exact helper and URI contract
 
-All names below are under `Wotex.CoAP`. Target method helpers are:
+All names below are under `Wotex.CoAP`. Method helper signatures are:
 
 ```elixir
 get(session, path, options \\ [])
@@ -162,7 +161,7 @@ because an advertised target is absolute or belongs to another authority.
 
 ## WCO-D04 — Complete standalone observation workflow
 
-This target workflow needs only native calls, a software peer with `/temperature`
+This resource-dependent workflow uses only native calls, a software peer with `/temperature`
 and explicit supervision. It must appear as an executable integration example:
 
 1. Open a session for `127.0.0.1:5683` with timeout 3000 ms. Discover with query
@@ -259,7 +258,6 @@ test or an assertion that an identifier exists is not requirement acceptance.
 Protocol revision pins remain in [primary sources](../provenance/primary-sources.md).
 Method/URI behavior was checked against RFC 7252 (June 2014); discovery grammar,
 singleton and anchored-link rules against RFC 6690 (August 2012); freshness and
-cancellation against RFC 7641 (September 2015). Existing modules and baseline
-`1ff4320` establish what is currently implemented. Native wrappers, strict local
+cancellation against RFC 7641 (September 2015). The executable-evidence cohorts identify implemented source and tests. Native wrappers, strict local
 limits, projected fixture format and mandatory standalone workflows are library
 design requirements, not claims that a standards body specifies this Elixir API.

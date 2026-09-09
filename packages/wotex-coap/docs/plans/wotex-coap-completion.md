@@ -39,3 +39,7 @@ The [WCO.12 integration contract](../specs/WCO.12-wotex-integration.md) and
 [versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.
+
+[WCO.13](../specs/WCO.13-native-build-and-software-evidence.md) defines native build and software
+runner contracts. Mix/ExUnit owns orchestration; BEAM/OTP and the explicitly
+selected native SDK own protocol execution.

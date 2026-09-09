@@ -1,0 +1,67 @@
+{
+  "schema": "wotex.coap.executed-peer-cohort@1",
+  "source_commit": null,
+  "source_sha256": "3ecd430d192f7bdc81720b28d5466c58a2df44fa062e2799720a4431b8631211",
+  "source_identity_note": "Receipt identifies the executed source digest; no Git commit association is asserted.",
+  "elixir": "1.20.2",
+  "otp": "29.0.4",
+  "command": [
+    "mix",
+    "test",
+    "test/interop/libcoap_test.exs",
+    "test/interop/dtls_test.exs",
+    "--include",
+    "interop",
+    "--seed",
+    "0"
+  ],
+  "runner": "test/interop/libcoap/run.py",
+  "peer_revision": "7cf7465b784baded4de183290c547d582becfd28",
+  "peer_archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+  "tests": 5,
+  "lanes": [
+    {
+      "sanitizers": [],
+      "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+      "cmake": "cmake version 4.4.3",
+      "executable_sha256": "9579b559344dd3b4091dbb0a187d3873896cb4152aa4de97115b07b816c24acc",
+      "source_sha256": "3ecd430d192f7bdc81720b28d5466c58a2df44fa062e2799720a4431b8631211",
+      "test_log_sha256": "270745aa21c092ab5b38b2d73af5f683a51541871df87aeaa191337ce5858b80",
+      "result_sha256": "258403be060e7e67a379421b45a96ae50ae1b7d7aa46b5c84d30d7e6e08ef87d",
+      "test_exit_status": 0,
+      "peer_exit_status": 0,
+      "cleanup": {
+        "peer_alive": 0,
+        "udp_ports_retained": 0
+      },
+      "native_diagnostic_failure": false
+    },
+    {
+      "sanitizers": [
+        "address",
+        "undefined"
+      ],
+      "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+      "cmake": "cmake version 4.4.3",
+      "executable_sha256": "958b59151e45cad0f3bcdeee6a3dc8dc776e45e83cd5c6e22da0644a446a554b",
+      "source_sha256": "3ecd430d192f7bdc81720b28d5466c58a2df44fa062e2799720a4431b8631211",
+      "test_log_sha256": "270745aa21c092ab5b38b2d73af5f683a51541871df87aeaa191337ce5858b80",
+      "result_sha256": "1edab650770b71a8b8eda25a8ac7ad6f67e3c8e58f5941052d83d87b17dcebdf",
+      "test_exit_status": 0,
+      "peer_exit_status": 0,
+      "cleanup": {
+        "peer_alive": 0,
+        "udp_ports_retained": 0
+      },
+      "native_diagnostic_failure": false
+    }
+  ],
+  "limitations": [
+    "UDP and PSK DTLS only; no independent PKI acceptance",
+    "No OSCORE or new Mix-task acceptance",
+    "Same host native sanitizer evidence; Linux full software profile remains required",
+    "Original full logs are external artifacts identified by their digests"
+  ]
+}

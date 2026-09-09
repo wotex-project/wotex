@@ -3,7 +3,7 @@ spec:
   id: WCO.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -28,7 +28,7 @@ application callback is added.
 | Owner | Reused contract | This package's obligation |
 | --- | --- | --- |
 | Wotex core | WTX.01/02/03 version 1.1.0: ThingDescription, Form, DataSchema, security references, bounded JSON/extensions | Use public constructors/accessors; do not copy TD parsing, default-operation tables or JSON-LD fetching into the protocol |
-| Wotex Runtime | WRT.01 version 1.3.0: ConsumedThing, Context, BindingProfile, Request, Result, Credentials, Transport, Subscription, Retry | Implement existing ports; preserve identity, deadline and ownership semantics |
+| Wotex Runtime | WRT.01 version 1.3.1: ConsumedThing, Context, BindingProfile, Request, Result, Credentials, Transport, Subscription, Retry | Implement existing ports; preserve identity, deadline and ownership semantics |
 | This protocol | .00/.10/.11: native values, operation validation, backend, errors and cleanup | Revalidate inputs at I/O boundaries; SDK delegation does not transfer this obligation to consumer code |
 | Wotex Conformance | WCF.01 version 1.1.0: isolated artifact/vector/evidence contracts | Optional external report integration; no production dependency in either direction |
 | Wotex Lab | Explicit reference consumer and artifact adoption | May consume immutable public archives; a local protocol pass does not close Lab's claims |
@@ -36,7 +36,7 @@ application callback is added.
 
 The read-only reference review used the checked-in contracts and public APIs at
 [core `e03ea9733e30`](https://github.com/wotex-project/wotex/blob/e03ea9733e30fb05caa1749dff62e57b3670be28/CLAUDE.md),
-[Runtime `ba2706073ada`](https://github.com/wotex-project/wotex-runtime/blob/ba2706073adae037254ca187b5c8c78fc5708652/docs/specs/WRT.01-consumed-thing-runtime.md),
+[Runtime `6bf5c0db5024`](https://github.com/wotex-project/wotex-runtime/blob/6bf5c0db502499fb7ebc3705846039f9899e2b6b/docs/specs/WRT.01-consumed-thing-runtime.md),
 [HTTP `2513174d0784`](https://github.com/wotex-project/wotex-binding-http/blob/2513174d0784c635a99db1a950db0e6812f3aab7/CLAUDE.md) and
 [MQTT `ee1392412aa3`](https://github.com/wotex-project/wotex-binding-mqtt/blob/ee1392412aa37716dada585c8cede5efd6ccf0d3/docs/specs/catalogue.yaml).
 These commit references identify reviewed source, not a claim that it is published
@@ -52,7 +52,7 @@ No constructor checks installed modules, opens a backend, reads environment or
 advertises a mode whose required implementation/evidence has not been admitted.
 Until a mode is implemented it returns unsupported. Mode availability is a static
 library-version decision; actual configured peer capabilities still fail explicitly.
-`profile/0` is added together with its baseline integration evidence, not as a stub.
+The baseline profile requires its complete integration assertions.
 
 | Mode | BindingProfile id | URI schemes | Exact operations | Stream meaning |
 | --- | --- | --- | --- | --- |
@@ -227,17 +227,14 @@ never expectation; the test process compares the returned projection. Atoms beco
 finite documented strings and bytes use the envelope above. Exclude pids, refs,
 clocks, secrets and implementation-specific map keys from normalized observations.
 
-`runtime_read` projects Modbus function codes to the fixed public helper name,
-CoAP codes/options to method/path/Accept, and other native messages to the listed
-address fields; additional internal fields are excluded explicitly. Peer reply
+`runtime_read` projects CoAP codes/options to method, path and Accept.
+Additional internal fields are excluded explicitly. Peer reply
 kinds select an exact protocol PDU or a tagged Client success as named by input.
 The finite `scripted_client` selector resolves to a test-only Client module; its
 explicit target/options come from input, never from expectation. Clock offsets
 are relative to the test-owned monotonic origin. A loopback peer may reserve an
 ephemeral port and substitute its one symbolic endpoint consistently in input
 and normalized observation; it cannot change addresses using expected output.
-The OPC UA one-shot stimulus deliberately uses the baseline scalar translation;
-persistent version 1 cases additionally require explicit array flags from .10.
 `error_retry_projection` injects the named failure stage into the native error
 classification boundary, obtains the library Error (the expected class is not
 supplied), and passes it through a test Runtime Transport's failure return and
@@ -245,10 +242,9 @@ ConsumedThing. It then calls Retry with the input options. `retained_native_effe
 asserts whether Runtime's cause includes that field; it must be false. This
 classification test does not advertise support for the input WoT operation in
 a production profile; its test profile explicitly admits that one operation.
-Thus Thread can prove conservative mutation error classification without gaining
-a production writeproperty binding. The native error fields shown are stimuli,
+The native error fields shown are stimuli,
 not a bypass of the production classifier or a consumer permission to set class.
-The full I04 table also needs malformed/unclassified and default mutation cases.
+The full I04 table requires malformed/unclassified and default mutation cases.
 
 Add `test/wotex/coap/runtime_integration_test.exs`, exercising real core and
 Runtime public APIs with an explicitly selected deterministic protocol peer/port.
@@ -288,10 +284,9 @@ No external report integration is required to implement these protocol tests.
 
 ## Compatibility and evidence classification
 
-Profile factories and Error.class are additive target changes. Strict validation
-of formerly ignored known selectors and unknown-effect retry classification are
-intentional pre-release safety corrections requiring regression evidence.
-The current .02 profile remains the baseline authority until implementation lands.
+The profile factories, known-selector validation and Error.class table require
+positive/negative integration assertions. The implementation scope and outstanding
+acceptance cells are identified in the catalogue and executable evidence.
 I01–I06 are open until their listed public-boundary assertions and required
 software lanes pass. A scenario family may need many concrete cases; merely
 attaching S/V/I/F identifiers to an unrelated passing test is not closure.
@@ -306,3 +301,7 @@ The classifier-only invalid_header case tests propagation of an admitted codec
 failure. It does not redefine how unrelated/malformed UDP traffic is handled:
 S01 still ignores or rejects such traffic without spuriously completing another
 exchange. Exercise that actual exchange behavior in its separate wire tests.
+
+Native execution and Mix/ExUnit software ownership follow
+[WCO.13](WCO.13-native-build-and-software-evidence.md); protocol-specific security selection
+remains explicit at this Runtime boundary.
