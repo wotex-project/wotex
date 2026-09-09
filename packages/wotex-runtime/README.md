@@ -273,11 +273,9 @@ WOTEX_PATH_DEPS=1 mix check
 WOTEX_PATH_DEPS=1 mix docs
 ```
 
-`mix check` compiles with warnings as errors, checks formatting and strict
-Credo, requires at least 95% line coverage, audits dependencies, runs Doctor and
-Dialyzer, builds HexDocs, scans the runtime boundary, and inspects the unpacked
-Hex package. CI tests locked and latest allowed dependency graphs at the
-supported floor and current toolchains.
+`mix check` compiles with warnings as errors, checks formatting, and runs the
+test suite. Package, documentation, audit, and compatibility checks are explicit
+release-readiness work.
 
 ## Contributing
 

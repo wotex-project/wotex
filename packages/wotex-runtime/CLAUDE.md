@@ -18,8 +18,8 @@ those types and owns only consumer-neutral interaction mechanics.
 - No mutable source selection. `WOTEX_PATH_DEPS=1` is the sole local workspace
   switch; normal dependency identity is a released core version.
 
-Run `WOTEX_PATH_DEPS=1 mix check` before local commits. The single gate includes
-structural boundary checks and unpacked Hex-package inspection.
+Run `WOTEX_PATH_DEPS=1 mix check` before local commits. It checks formatting,
+compiles with warnings as errors, and runs the default test suite.
 Consumer-neutrality is a review obligation governed by this contract and the
 runtime-proof skill; do not create a public denylist of private consumers.
 
