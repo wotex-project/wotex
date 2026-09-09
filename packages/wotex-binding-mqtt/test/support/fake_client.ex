@@ -21,12 +21,13 @@ defmodule Wotex.Binding.MQTT.Test.FakeClient do
 
   @impl Wotex.Binding.MQTT.Client
   def subscribe(command, owner, execution_context, config) do
+    watch_owner(owner, config)
+
     send(
       config.test_pid,
       {:client_subscribe, command, owner, execution_context, config.client_marker}
     )
 
-    watch_owner(owner, config)
     client_return(config, :subscribe_return, {:ok, :client_handle})
   end
 
@@ -41,13 +42,21 @@ defmodule Wotex.Binding.MQTT.Test.FakeClient do
   end
 
   defp watch_owner(owner, %{watch_owner: true, test_pid: test_pid}) do
-    spawn(fn ->
-      reference = Process.monitor(owner)
+    subscriber = self()
 
-      receive do
-        {:DOWN, ^reference, :process, ^owner, reason} -> send(test_pid, {:owner_down, reason})
-      end
-    end)
+    watcher =
+      spawn(fn ->
+        reference = Process.monitor(owner)
+        send(subscriber, {:owner_watched, self()})
+
+        receive do
+          {:DOWN, ^reference, :process, ^owner, reason} -> send(test_pid, {:owner_down, reason})
+        end
+      end)
+
+    receive do
+      {:owner_watched, ^watcher} -> :ok
+    end
   end
 
   defp watch_owner(_, _), do: :ok
