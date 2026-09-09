@@ -461,13 +461,14 @@ defmodule Wotex.Modbus.SoftwareRun do
       end
 
     clean = clean and Enum.all?(paths, &(&1 in tracked))
-    commit = if clean, do: git_value(command.(["rev-parse", "HEAD"])), else: nil
-    tree = if clean, do: git_value(command.(["rev-parse", "HEAD^{tree}"])), else: nil
+
+    {commit, tree} =
+      if clean,
+        do: SoftwareManifest.git_identity(command.(["rev-parse", "HEAD", "HEAD^{tree}"])),
+        else: {nil, nil}
+
     Map.merge(identity, %{"source_commit" => commit, "source_tree" => tree})
   end
-
-  defp git_value({:ok, value, 0}), do: String.trim(value)
-  defp git_value(_), do: nil
 
   defp otp_version do
     path =

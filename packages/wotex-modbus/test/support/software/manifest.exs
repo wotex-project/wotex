@@ -157,6 +157,23 @@ defmodule Wotex.Modbus.SoftwareManifest do
     %{"source_sha256" => hash(IO.iodata_to_binary(canonical)), "source_files_sha256" => files}
   end
 
+  @spec git_identity(term()) :: {String.t(), String.t()}
+  def git_identity({:ok, output, 0}) when is_binary(output) do
+    case String.split(output, "\n", trim: true) do
+      [commit, tree] ->
+        unless Regex.match?(~r/\A[0-9a-f]{40}\z/, commit) and
+                 Regex.match?(~r/\A[0-9a-f]{40}\z/, tree),
+               do: fail(:invalid_git_identity)
+
+        {commit, tree}
+
+      _ ->
+        fail(:invalid_git_identity)
+    end
+  end
+
+  def git_identity(_), do: fail(:invalid_git_identity)
+
   defp safe_name?(name) when is_binary(name) do
     byte_size(name) in 1..4096 and Path.type(name) == :relative and
       not String.contains?(name, ["\\", <<0>>]) and

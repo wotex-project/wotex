@@ -140,6 +140,25 @@ defmodule Wotex.Modbus.FixtureTasksTest do
     refute SoftwareManifest.identity(context.directory)["source_sha256"] == first["source_sha256"]
   end
 
+  test "WMB-N03 clean-source Git metadata requires one complete successful commit and tree result" do
+    commit = String.duplicate("a", 40)
+    tree = String.duplicate("b", 40)
+    assert SoftwareManifest.git_identity({:ok, commit <> "\n" <> tree <> "\n", 0}) == {commit, tree}
+
+    for invalid <- [
+          {:ok, commit <> "\n", 0},
+          {:ok, "\n", 0},
+          {:ok, commit <> "\ninvalid\n", 0},
+          {:ok, commit <> "\n" <> tree <> "\nextra\n", 0},
+          {:ok, commit <> "\n" <> tree <> "\n", 127},
+          {:error, :command_deadline, :unverified}
+        ] do
+      assert_raise Mix.Error, "invalid_git_identity", fn ->
+        SoftwareManifest.git_identity(invalid)
+      end
+    end
+  end
+
   test "WMB-N03 atomic evidence writes are complete and preserve an occupied temporary path",
        context do
     path = Path.join(context.directory, "result.json")
