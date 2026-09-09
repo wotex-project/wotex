@@ -1,7 +1,7 @@
 defmodule WotexModbus.MixProject do
   use Mix.Project
 
-  @version "0.1.0-dev"
+  @version "0.1.0"
   @source_url "https://github.com/wotex-project/wotex-modbus"
 
   def project do
@@ -46,6 +46,7 @@ defmodule WotexModbus.MixProject do
       {:telemetry, "~> 1.3"},
       {:stream_data, "~> 1.2", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:git_ops, "~> 2.10", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.22", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
