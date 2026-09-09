@@ -9,6 +9,7 @@ defmodule Wotex.CoAP.Connection do
     Error,
     Exchange,
     Execution,
+    Lifetime,
     Message,
     Observation,
     Subscription
@@ -123,6 +124,31 @@ defmodule Wotex.CoAP.Connection do
     end
   end
 
+  @doc false
+  @spec abort(pid()) :: :ok | {:error, Error.t()}
+  def abort(pid) do
+    case identity(pid) do
+      :owned ->
+        monitor = Process.monitor(pid)
+        Process.unlink(pid)
+        if identity(pid) == :owned, do: Process.exit(pid, :kill)
+
+        receive do
+          {:DOWN, ^monitor, :process, _, _} -> :ok
+        after
+          100 ->
+            Process.demonitor(monitor, [:flush])
+            failure(:cleanup_timeout)
+        end
+
+      :closed ->
+        :ok
+
+      :invalid ->
+        failure(:invalid_session)
+    end
+  end
+
   @doc "Validates explicit configuration without opening a resource or selecting a fallback."
   @spec config(term()) :: {:ok, map()} | {:error, Error.t()}
   def config(options) do
@@ -146,6 +172,7 @@ defmodule Wotex.CoAP.Connection do
     owner = self()
     owner_monitor = Process.monitor(config.owner)
     creator_monitor = Process.monitor(config.creator)
+    lifetime = Lifetime.start([config.owner, config.creator], 900)
     timer = Execution.schedule({:startup_deadline, generation}, config.timeout)
     worker = spawn_link(fn -> open(config, owner, generation) end)
 
@@ -161,6 +188,7 @@ defmodule Wotex.CoAP.Connection do
        ready_from: nil,
        owner_monitor: owner_monitor,
        creator_monitor: creator_monitor,
+       lifetime: lifetime,
        active: nil,
        calls: %{},
        queue: :queue.new(),
@@ -1114,17 +1142,8 @@ defmodule Wotex.CoAP.Connection do
       :ok
 
     :exit, _ ->
-      Process.unlink(pid)
-      monitor = Process.monitor(pid)
-      if identity(pid) == :owned, do: Process.exit(pid, :kill)
-
-      receive do
-        {:DOWN, ^monitor, :process, _, _} -> failure(:cleanup_timeout)
-      after
-        100 ->
-          Process.demonitor(monitor, [:flush])
-          failure(:cleanup_timeout)
-      end
+      abort(pid)
+      failure(:cleanup_timeout)
   end
 
   defp options([], values), do: {:ok, values}

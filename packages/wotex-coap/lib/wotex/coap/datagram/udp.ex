@@ -10,7 +10,7 @@ defmodule Wotex.CoAP.Datagram.UDP do
   @behaviour Wotex.CoAP.Datagram
   use GenServer
   import Kernel, except: [send: 2]
-  alias Wotex.CoAP.{Datagram, Error}
+  alias Wotex.CoAP.{Datagram, Error, Lifetime}
 
   @impl Datagram
   @spec open(Datagram.config(), pid(), pos_integer()) ::
@@ -82,11 +82,15 @@ defmodule Wotex.CoAP.Datagram.UDP do
   def init({config, owner}) do
     Process.put(:wotex_coap_datagram, {__MODULE__, config.generation})
     monitor = Process.monitor(owner)
+    lifetime = Lifetime.start([owner], 0)
     family = if tuple_size(config.host) == 8, do: :inet6, else: :inet
 
     case :gen_udp.open(0, [family, :binary, active: false]) do
-      {:ok, socket} -> {:ok, %{config: config, owner: owner, monitor: monitor, socket: socket}}
-      {:error, reason} -> {:stop, Error.new(:socket_failed, nil, %{reason: reason})}
+      {:ok, socket} ->
+        {:ok, %{config: config, owner: owner, monitor: monitor, socket: socket, lifetime: lifetime}}
+
+      {:error, reason} ->
+        {:stop, Error.new(:socket_failed, nil, %{reason: reason})}
     end
   end
 

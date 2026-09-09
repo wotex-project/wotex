@@ -602,7 +602,8 @@ defmodule Wotex.CoAP.ExchangeLifecycleTest do
   defp assert_clean(resources) do
     adapter_monitor = resources.adapter_monitor
     adapter = resources.adapter
-    assert_receive {:DOWN, ^adapter_monitor, :process, ^adapter, :normal}, 1000
+    assert_receive {:DOWN, ^adapter_monitor, :process, ^adapter, reason}, 1000
+    assert reason in [:normal, :killed]
     refute Process.alive?(resources.pid)
     assert :erlang.port_info(resources.socket) == :undefined
     assert Enum.all?(resources.timers, &(Process.read_timer(&1) == false))

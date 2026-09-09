@@ -2,8 +2,8 @@ defmodule Wotex.CoAP.DatagramTest do
   @moduledoc false
 
   use ExUnit.Case, async: true
+  alias Wotex.CoAP.{Connection, Error}
   alias Wotex.CoAP.Datagram.UDP
-  alias Wotex.CoAP.Error
 
   test "WCO-C02 WCO-S01 malformed adapter values never touch an unrelated process" do
     config = config()
@@ -74,7 +74,8 @@ defmodule Wotex.CoAP.DatagramTest do
     socket = :sys.get_state(handle.pid).socket
     monitor = Process.monitor(handle.pid)
     send(owner, :done)
-    assert_receive {:DOWN, ^monitor, :process, _, :normal}
+    assert_receive {:DOWN, ^monitor, :process, _, reason}
+    assert reason in [:normal, :killed]
     assert :erlang.port_info(socket) == :undefined
 
     {:ok, handle} = UDP.open(config(), self(), 100)
@@ -92,6 +93,64 @@ defmodule Wotex.CoAP.DatagramTest do
     assert {:error, %Error{code: :transport_error}} = UDP.send(handle, "request")
     assert {:error, %Error{code: :transport_error}} = UDP.set_active_once(handle)
     assert :ok = UDP.close(handle)
+  end
+
+  test "WCO-C03 WCO-I05 suspended UDP and connection owners still release the owned socket" do
+    {:ok, connection} = Connection.start_link(host: "127.0.0.1")
+    adapter = :sys.get_state(connection).handle.pid
+    %{socket: socket, lifetime: lifetime} = :sys.get_state(adapter)
+    adapter_monitor = Process.monitor(adapter)
+    lifetime_monitor = Process.monitor(lifetime)
+    true = :erlang.suspend_process(adapter)
+    true = :erlang.suspend_process(connection)
+    assert :ok = Connection.abort(connection)
+    assert_receive {:DOWN, ^adapter_monitor, :process, ^adapter, :killed}, 100
+    assert_receive {:DOWN, ^lifetime_monitor, :process, ^lifetime, :normal}, 100
+    assert :erlang.port_info(socket) == :undefined
+    assert :ok = Connection.abort(connection)
+
+    {:ok, unrelated} = Agent.start_link(fn -> :untouched end)
+
+    for pid <- [self(), unrelated, nil] do
+      assert {:error, %Error{code: :invalid_session}} = Connection.abort(pid)
+    end
+
+    assert Agent.get(unrelated, & &1) == :untouched
+    Agent.stop(unrelated)
+    refute_received {:"$gen_call", _, _}
+  end
+
+  test "WCO-C03 a suspended adapter's lifetime monitor never stops its consumer owner" do
+    owner = spawn(fn -> receive do: (:done -> :ok) end)
+    {:ok, handle} = UDP.open(config(), owner, 100)
+    %{socket: socket, lifetime: lifetime} = :sys.get_state(handle.pid)
+    monitor = Process.monitor(lifetime)
+    true = :erlang.suspend_process(handle.pid)
+    Process.exit(handle.pid, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^lifetime, _}, 100
+    assert :erlang.port_info(socket) == :undefined
+    assert Process.alive?(owner)
+    send(owner, :done)
+  end
+
+  test "WCO-C03 WCO-I05 owner death escalates even while both owned processes are suspended" do
+    owner = spawn(fn -> receive do: (:done -> :ok) end)
+    {:ok, connection} = Connection.start_link(host: "127.0.0.1", owner: owner)
+    Process.unlink(connection)
+    %{handle: %{pid: adapter}, lifetime: connection_lifetime} = :sys.get_state(connection)
+    %{socket: socket, lifetime: adapter_lifetime} = :sys.get_state(adapter)
+
+    references =
+      for pid <- [connection, adapter, connection_lifetime, adapter_lifetime],
+          do: Process.monitor(pid)
+
+    true = :erlang.suspend_process(adapter)
+    true = :erlang.suspend_process(connection)
+    started = System.monotonic_time(:millisecond)
+    send(owner, :done)
+    for reference <- references, do: assert_receive({:DOWN, ^reference, :process, _, _}, 1000)
+    assert System.monotonic_time(:millisecond) - started < 1000
+    assert :erlang.port_info(socket) == :undefined
   end
 
   defp config, do: %{host: {127, 0, 0, 1}, port: 5683, generation: make_ref(), options: []}
