@@ -13,18 +13,17 @@ defmodule Wotex do
   not execute protocols or own persistence, identity, authorization,
   credentials, supervision, or canonical Thing state.
 
-  ## Start with a Thing Description
+  ## Examples
 
-      json = ~S({
-        "@context":"https://www.w3.org/2022/wot/td/v1.1",
-        "title":"Lamp",
-        "security":["nosec_sc"],
-        "securityDefinitions":{"nosec_sc":{"scheme":"nosec"}}
-      })
-
-      {:ok, td} = Wotex.ThingDescription.parse(json)
-      Wotex.ThingDescription.to_map(td)["title"]
-      #=> "Lamp"
+      iex> json = ~S({
+      ...>   "@context":"https://www.w3.org/2022/wot/td/v1.1",
+      ...>   "title":"Lamp",
+      ...>   "security":["nosec_sc"],
+      ...>   "securityDefinitions":{"nosec_sc":{"scheme":"nosec"}}
+      ...> })
+      iex> {:ok, td} = Wotex.ThingDescription.parse(json)
+      iex> Wotex.ThingDescription.to_map(td)["title"]
+      "Lamp"
 
   Loading the package starts no process and performs no network or runtime
   filesystem access. The bundled TD schema is compiled into the package.
@@ -37,8 +36,8 @@ defmodule Wotex do
   @doc """
   Returns the exact TD 1.1 context URI supported as the production baseline.
 
-      Wotex.td_context_1_1()
-      #=> "https://www.w3.org/2022/wot/td/v1.1"
+      iex> Wotex.td_context_1_1()
+      "https://www.w3.org/2022/wot/td/v1.1"
   """
   @spec td_context_1_1() :: String.t()
   def td_context_1_1, do: @td_context_1_1
@@ -46,8 +45,8 @@ defmodule Wotex do
   @doc """
   Returns the registered media type for a JSON Thing Description.
 
-      Wotex.td_media_type()
-      #=> "application/td+json"
+      iex> Wotex.td_media_type()
+      "application/td+json"
   """
   @spec td_media_type() :: String.t()
   def td_media_type, do: @td_media_type
@@ -55,8 +54,8 @@ defmodule Wotex do
   @doc """
   Returns the registered media type for a JSON Thing Model.
 
-      Wotex.tm_media_type()
-      #=> "application/tm+json"
+      iex> Wotex.tm_media_type()
+      "application/tm+json"
   """
   @spec tm_media_type() :: String.t()
   def tm_media_type, do: @tm_media_type

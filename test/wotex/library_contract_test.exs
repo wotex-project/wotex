@@ -3,6 +3,8 @@ defmodule Wotex.LibraryContractTest do
 
   use ExUnit.Case, async: false
 
+  doctest Wotex
+
   test "the library has no application callback" do
     assert Application.spec(:wotex, :mod) in [nil, [], :undefined]
   end
