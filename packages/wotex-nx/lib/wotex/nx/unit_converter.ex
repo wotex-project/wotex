@@ -7,6 +7,12 @@ defmodule Wotex.Nx.UnitConverter do
   this port with the value, source unit, target unit, exact DataSchema, and
   consumer configuration. The returned value is validated again before tensor
   construction.
+
+  Implementations return `{:ok, value}` or `{:error, reason}`. The encoder
+  translates error tuples to `:unit_conversion_failed` and validates successful
+  values against the feature's DataSchema, shape and finite-value policy. The
+  callback has no implicit deadline or exception isolation. It is never called
+  when source and target units already match.
   """
 
   alias Wotex.DataSchema

@@ -1,5 +1,23 @@
 defmodule Wotex.Nx.NumericalSchema do
-  @moduledoc false
+  @moduledoc """
+  Derives the package's numerical representation from a supported DataSchema map.
+
+  This implementation helper maps number, integer and boolean scalars to
+  `{:f, 32}`, `{:s, 64}` and `{:u, 8}` respectively. Nested arrays require one
+  item schema and equal positive `minItems` and `maxItems`; their lengths form
+  the tensor shape. Other schema categories return `Wotex.Nx.Error`.
+
+  Feature and output constructors use this helper after core DataSchema
+  admission. Dtype checks preserve the scalar category, normalization requires
+  a floating-point dtype, and `width/1` multiplies admitted shape dimensions.
+  Nx templates validate representation without allocating observation tensors.
+  This is the package's numerical subset, not a general DataSchema validator.
+
+  ## Examples
+
+      iex> Wotex.Nx.NumericalSchema.infer(%{"type" => "integer"})
+      {:ok, {}, {:s, 64}}
+  """
 
   alias Wotex.Nx.Error
 

@@ -5,6 +5,16 @@ defmodule Wotex.Nx.Prediction do
   `produced_at` and `target_at` are caller-supplied integer time coordinates;
   the library does not read a clock or interpret their unit. A prediction is
   advisory data until the consumer validates and admits it.
+
+  `Wotex.Nx.Decoder` constructs this value only after an output tensor satisfies
+  its `Wotex.Nx.OutputSchema`. The value preserves the caller-supplied result
+  identity, Thing and affordance identity, decoded value, optional unit, and
+  metadata associated with that output contract.
+
+  The struct records what a numerical process predicted, not what a Thing
+  reported or what later occurred. Consumers remain responsible for checking
+  freshness, provenance, model revision, current Thing state, and any policy
+  that governs use of the prediction.
   """
 
   @typedoc "A timestamped numerical prediction that has no canonical-state authority."

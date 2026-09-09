@@ -6,6 +6,18 @@ defmodule Wotex.Nx.Decoder do
   output-specific bounds, and required caller context before returning an
   observation, prediction, anomaly, or Action proposal. Every result is inert:
   this module neither admits canonical state nor invokes an Action.
+
+  `decode/3` rejects vectorized axes and requires the tensor's shape and data
+  type to equal the `Wotex.Nx.OutputSchema`. It restores booleans and nested
+  arrays according to the underlying `Wotex.DataSchema`, checks value and
+  finite-number constraints, and combines schema metadata with the caller's
+  result metadata map. Metadata size and contents remain caller policy.
+
+  The requested output kind determines the remaining identity and time
+  options. Expected data failures return `Wotex.Nx.Error`; dependency failures
+  encountered while reading a tensor are translated to a typed read error.
+  Successful decoding establishes conformance to the output contract, not
+  authorization, state admission, or evidence that a proposed effect occurred.
   """
 
   alias Wotex.DataSchema

@@ -1,10 +1,20 @@
 defmodule Wotex.Nx.Row do
   @moduledoc """
-  A timestamped row keyed by accepted feature names.
+  A timestamped row keyed by caller-supplied feature names.
 
   Each entry contains either the selected `Wotex.Nx.Observation` or `nil` so
   the encoder can apply the feature's explicit missing-value policy. The row
   also records source observation identifiers as provenance.
+
+  Row keys identify features for later encoding with a `Wotex.Nx.Schema`. The constructor accepts
+  valid observations and explicit absence, then derives an equally keyed
+  provenance map from observation IDs. It does not choose observations,
+  interpolate values, convert units, or fill missing features.
+
+  The integer timestamp is a caller-defined coordinate and is not read from a
+  system clock. Window selection establishes the row's temporal membership;
+  encoding later checks feature identity, quality, units, value constraints,
+  and missing policy before allocating tensor data.
   """
 
   alias Wotex.Nx.{Error, Observation}

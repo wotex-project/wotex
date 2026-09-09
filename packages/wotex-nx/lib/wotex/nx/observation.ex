@@ -6,6 +6,17 @@ defmodule Wotex.Nx.Observation do
   or Event affordance value, optional unit, quality, source, and metadata. It is
   suitable for deterministic window selection and tensor encoding, but does not
   assert canonical Property state or Event truth.
+
+  `new/1` validates the closed option set, identity fields, affordance type,
+  integer time coordinate, quality, optional unit and source, and metadata.
+  The observation value must be present, although its DataSchema and numerical
+  admissibility are deliberately checked later against a `Wotex.Nx.Feature`.
+
+  This separation allows windowing to preserve received values and provenance
+  before a particular numerical policy is selected. Quality values are
+  `:good`, `:uncertain`, `:bad`, or `:missing`; a feature decides which are
+  admissible. The caller remains responsible for observation identity, time
+  semantics, and source authenticity.
   """
 
   alias Wotex.Nx.{Error, Options}

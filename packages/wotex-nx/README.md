@@ -1,12 +1,12 @@
 # Wotex Nx
 
-**Typed Thing observations in. Deterministic Nx batches and inert results out.**
+**Transforms typed Thing observations into deterministic Nx batches and inert result values.**
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_nx.svg)](https://hex.pm/packages/wotex_nx)
-[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_nx)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_nx)
 [![CI](https://github.com/wotex-project/wotex-nx/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-nx/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/wotex-project/wotex-nx/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-nx)
-[![License](https://img.shields.io/github/license/wotex-project/wotex-nx.svg)](https://github.com/wotex-project/wotex-nx/blob/main/LICENSE)
+[![License](https://img.shields.io/hexpm/l/wotex_nx.svg)](https://github.com/wotex-project/wotex-nx/blob/main/LICENSE)
 
 [Installation](#installation) ·
 [Quick Start](#quick-start) ·
@@ -16,6 +16,10 @@
 [Development](#development)
 
 ---
+
+This development checkout has package version `0.1.0`. The public API remains
+unstable. Package metadata does not establish publication or acceptance of every
+work package in the completion contract.
 
 Wotex Nx is the consumer-neutral numerical boundary between W3C Web of Things
 values and Elixir Nx. It converts explicitly typed Property and Event
@@ -31,7 +35,8 @@ preparation reproducible while allowing any consumer-selected Nx backend.
 
 ## Installation
 
-Wotex Nx 0.1 requires Elixir 1.18 or later.
+Wotex Nx requires Elixir 1.18 or later. After a compatible release is
+available, a consumer can declare the published package as follows.
 
 ```elixir
 def deps do

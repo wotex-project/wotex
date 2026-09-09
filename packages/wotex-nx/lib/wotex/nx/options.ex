@@ -1,9 +1,24 @@
 defmodule Wotex.Nx.Options do
-  @moduledoc false
+  @moduledoc """
+  Validates closed keyword options for numerical constructors and operations.
+
+  This implementation helper checks keyword-list shape, rejects duplicate
+  keys, and rejects keys outside the caller-supplied allowlist. The owning
+  operation supplies the error code and phase; an unknown option is retained
+  as the error's field detail. Option values are validated by that operation.
+
+  Validation performs no numerical allocation, conversion or configuration
+  lookup. It does not infer defaults or authorize a unit-conversion callback.
+
+  ## Examples
+
+      iex> Wotex.Nx.Options.validate([missing: :error], [:missing], :invalid_options, :construction)
+      :ok
+  """
 
   alias Wotex.Nx.Error
 
-  @doc false
+  @doc "Checks option names and keyword structure with an operation-owned error code and phase."
   @spec validate(term(), [atom()], atom(), Error.phase()) :: :ok | {:error, Error.t()}
   def validate(options, allowed, code, phase) when is_list(options) and is_list(allowed) do
     cond do

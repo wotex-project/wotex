@@ -5,6 +5,16 @@ defmodule Wotex.Nx.Error do
   Stable `code` and `phase` values support programmatic handling while
   `message` and `details` explain the rejected contract. Errors represent
   expected invalid input and are returned in tagged tuples by public APIs.
+
+  Phases distinguish construction, window selection, encoding, unit
+  conversion, output decoding, and resource-limit rejection. The details map
+  may carry values such as expected and actual shapes, field names, or
+  configured ceilings. Consumers should branch on `code` and `phase`; message
+  text is explanatory and is not a compatibility surface.
+
+  These errors describe data and numerical-contract failures. They do not
+  confer retry policy, authorize an effect, or replace exceptions raised by an
+  unexpected dependency or programming fault.
   """
 
   @typedoc "The stage at which a numerical contract was rejected."

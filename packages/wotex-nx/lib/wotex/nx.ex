@@ -10,6 +10,11 @@ defmodule Wotex.Nx do
 
   Conversions are deterministic and clock-free. Loading the package starts no
   process, and decoding never dispatches a Thing Action.
+
+  `Wotex.Nx.Encoder` owns observation admission and tensor construction;
+  `Wotex.Nx.Decoder` owns the return path into typed result values. Schemas,
+  units, quality codes, provenance, and output meanings remain explicit inputs
+  at both boundaries.
   """
 
   @quality_codes %{good: 0, uncertain: 1, bad: 2, missing: 3}

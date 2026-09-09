@@ -5,6 +5,17 @@ defmodule Wotex.Nx.Schema do
   Feature order is authoritative: it determines tuple positions, masks, and
   quality-vector positions in every encoded row. Limits are validated before
   tensor allocation so untrusted schemas cannot create unbounded work.
+
+  `new/1` requires a non-empty list of distinct, valid `Wotex.Nx.Feature`
+  values. The default ceilings admit 1,024 rows, 256 features, and a flattened
+  width of 65,536 elements; callers can supply smaller or larger positive
+  limits subject to their own application boundary. `batch_key` labels the
+  resulting lazy batch without changing numerical layout.
+
+  The schema describes admission and allocation, not a model architecture.
+  Encoders must use `features/1` order for values, observed masks, quality
+  codes, and provenance so downstream computation can interpret every tensor
+  position from the same contract.
   """
 
   alias Wotex.Nx.{Error, Feature, Options}

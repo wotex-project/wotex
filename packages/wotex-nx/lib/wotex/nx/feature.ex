@@ -6,6 +6,17 @@ defmodule Wotex.Nx.Feature do
   with unit, quality, missing-value, normalization, and non-finite policies.
   Construction rejects ambiguous or unsafe combinations before any observation
   can reach tensor allocation.
+
+  `new/1` infers the fixed shape and compatible Nx data type from a validated
+  `Wotex.DataSchema`, then checks any explicit overrides against that semantic
+  shape. Identity fields bind the feature to one Thing Property or Event.
+  Accepted quality states, unit conversion requirements, fill behavior, and
+  finite-value policy remain part of the stored contract.
+
+  During encoding, a `Wotex.Nx.Observation` must match this identity and policy
+  before its value enters a tensor. `width/1` exposes the flattened allocation
+  cost used by `Wotex.Nx.Schema`. A feature does not select a window, learn
+  normalization statistics, or infer conversions from unit names.
   """
 
   alias Wotex.DataSchema

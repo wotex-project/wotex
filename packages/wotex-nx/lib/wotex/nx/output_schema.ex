@@ -6,6 +6,18 @@ defmodule Wotex.Nx.OutputSchema do
   shape, dtype, maximum width, unit, finite-value policy, and metadata. Anomaly
   outputs additionally preserve their threshold and comparison rule. This
   removes model-specific guesswork from result interpretation.
+
+  Construction infers the semantic shape and compatible Nx data type from a
+  validated `Wotex.DataSchema`, checks any explicit representation against that
+  shape, and enforces the flattened-width limit before decoding. Identity
+  requirements depend on whether the inert result is an observation,
+  prediction, anomaly, or Action proposal.
+
+  Non-finite output is an explicit policy and is prohibited for result kinds
+  whose contract requires finite values. Anomaly schemas additionally bind a
+  finite threshold and one of four comparison rules. `Wotex.Nx.Decoder` uses
+  the completed value as its numerical interpretation contract; the schema does not
+  run a model or authorize use of its output.
   """
 
   alias Wotex.DataSchema

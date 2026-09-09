@@ -5,6 +5,16 @@ defmodule Wotex.Nx.Anomaly do
   The value preserves the score, threshold, and comparison rule used to derive
   `anomalous?`, so a consumer can audit the numerical interpretation without
   treating it as canonical Thing state or an Event emitted by the Thing.
+
+  `Wotex.Nx.Decoder` derives the classification from an explicit anomaly
+  `Wotex.Nx.OutputSchema`. Alongside the numerical result, the value records
+  caller-supplied identity, Thing and affordance identity, the production time
+  coordinate, and metadata for the admitted output.
+
+  The four comparison rules distinguish strict and inclusive upper or lower
+  thresholds. The stored boolean therefore remains reproducible from the score,
+  threshold, and rule. Consumers decide how to investigate or act on the
+  assessment; construction alone emits no Event and changes no Thing state.
   """
 
   @typedoc "An auditable anomaly score and the explicit rule used to classify it."

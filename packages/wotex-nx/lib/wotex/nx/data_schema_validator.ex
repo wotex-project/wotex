@@ -1,5 +1,23 @@
 defmodule Wotex.Nx.DataSchemaValidator do
-  @moduledoc false
+  @moduledoc """
+  Checks admitted host values against the supported numerical DataSchema subset.
+
+  Encoder and Decoder use this implementation helper for numbers, integers,
+  booleans and nested homogeneous arrays. It checks the value category, array
+  lengths, enumeration, strict constant equality and numeric bounds before
+  tensor admission or construction of an inert result. The caller supplies the
+  non-finite policy explicitly; symbolic non-finite number values require it.
+
+  Expected mismatches return `Wotex.Nx.Error`. The helper receives an already
+  admitted schema map and does not interpret arbitrary Thing Descriptions,
+  resolve references, convert units or validate every JSON Schema keyword.
+  Core DataSchema admission and numerical shape inference remain separate.
+
+  ## Examples
+
+      iex> Wotex.Nx.DataSchemaValidator.validate(3, %{"type" => "integer", "minimum" => 0}, false)
+      :ok
+  """
 
   alias Wotex.Nx.Error
 
