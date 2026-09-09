@@ -1,146 +1,150 @@
-# WBA BEAM client software implementation sequence
+# BACnet software implementation and acceptance plan
 
 The production architecture is Elixir/OTP with pinned BACstack codecs and an
-explicitly owned or borrowed BACnet/IP stack. Independent native C peers belong
-to the software fixture. No Python process, C executable or NIF supplies the
-production client. WBA.02 inventories the implemented profile; the
-[executed evidence](../provenance/executable-evidence.md) identifies the tested
-source/cohorts. This sequence states acceptance obligations, not release status.
+explicitly owned or borrowed BACnet/IP stack. Independent native C peers are
+software fixtures. No Python process, native executable or NIF supplies the
+production client. WBA.02 defines the implemented profile and
+[executable evidence](../provenance/executable-evidence.md) identifies the exact
+tested source, toolchains and cohorts.
 
-Read CLAUDE, matching rules/skills, WBA.00/.10/.11/.12, the source register and
-catalogue before selecting work. Existing asserting implementation remains the
-regression boundary. Do not reimplement a satisfied cell to create a commit.
-Package order below follows dependencies. A package may contain several logical
-commits, each with focused tests and a passing complete local gate.
+Read `CLAUDE.md`, the matching rules and skills, WBA.00, WBA.10, WBA.11,
+WBA.12, the source register and the catalogue before changing this profile.
+The packages below follow their dependency order. A changed package requires
+focused assertions, the complete local gate and every affected native or peer
+cohort.
 
-## Ordered packages and implementation boundary
+## Accepted software packages
 
-| Package | Required behavior | Existing local evidence | Remaining acceptance |
+| Package | Required behavior | Executable boundary | Status |
 | --- | --- | --- | --- |
-| WBA-P01 | S01/S02; V01–V04: typed values, original CharacterString identity, exact ACK/error classification, segmentation limits | service_boundary_test.exs, character_string_test.exs | Retain full malformed/segmentation regression; execute it in final exact-source cohort |
-| WBA-P02 | S03; V05/V14: reverse acquisition cleanup, 64-operation admission, final caller/deadline check, borrowed stack retention | stack_lifecycle_test.exs, stack_cov_test.exs, invoke_ids_test.exs | S03a ingress has IG01–IG06 local bindings; retain these in the final supported software cohort |
-| WBA-P03 | S04; V06–V08: typed object/Property COV, initiator/selector correlation, exact confirmed receipt ACK and early report buffering | cov_test.exs, cov_boundary_test.exs, stack_cov_test.exs, native_subscription_test.exs; independent object COV in CP03/CP04 and Property increments/flags/capacity/selection in CP11–CP16 | Retain the combined independent COV workflow in the final P06 cohorts |
-| WBA-P04 | S04; V09–V11: finite leases, renewal, encoded cancellation, receiver death, overflow and terminal-once cleanup | cov_lifecycle_test.exs, cov_cache_test.exs, native_subscription_test.exs; independent object renewal/lost-ACK/expiry counters in CP05–CP09, Property cases CP14/CP18–CP21 and 100 receiver deaths in ST03 | Retain the complete lifecycle/fault workflow in final P06 cohorts |
-| WBA-P05 | S05; V12: Runtime Property COV and explicit read probe | runtime_stream_test.exs, runtime_frame_test.exs, runtime_integration_test.exs; CP17 executes public Runtime observation and original-association stop; CP22–CP24 verify final-owner/receiver/opening-worker death after accepted C-peer registration | Retain independent opening and admitted-observation cases in final cohorts; verified ingress admission is exercised by ingress_lifecycle_test.exs |
-| WBA-P05a | N01–N05: native helpers, bounded Who-Is/I-Am, sequential 1..64 Property reads | F01–F11 corpus bindings listed in WBA-N05; standalone_contract_test.exs, discovery_lifecycle_test.exs; independent discovery/batch/write/readback/release in CP02 | Retain helpers in the final combined workflow in P06 |
-| WBA-P05b | I01–I06: exact profiles, route/value/error/Retry and consumer ownership | runtime_integration_test.exs binds I-F01; error_class_test.exs binds each I-F02–I-F07 through native Error, Runtime cause and Retry; runtime_stream_test.exs exercises public observations | Retain exact corpus projections and all I06 security/media/context/stream assertions in the final software and archive cohorts |
-| WBA-P06 | S01–S05/S03a/N01–N05/I01–I06/C09; V13/V14: bounded owned UDP ingress and full independent software acceptance | cstack_test.exs and lifecycle_stress_test.exs cover read/write, 1000 sequential reads, 32 concurrent reads and 100 stack cycles; cstack_cov_test.exs and cstack_property_test.exs cover CP02–CP21 discovery, batch, release, object/Property COV and loss controls; cov_lifecycle_stress_test.exs covers ST03's 100 receiver deaths; the Mix runner owns four peer lanes and rejects incomplete case, cleanup and sanitizer evidence | Execute the final minimum/current supported cohorts and archive validation against the committed runner source |
+| WBA-P01 | S01/S02 and V01–V04: typed values, CharacterString identity, exact ACK/error classification and segmentation limits | `service_boundary_test.exs`, `character_string_test.exs`, malformed and segmentation cases in the four software lanes | Accepted |
+| WBA-P02 | S03/S03a and V05/V14: reverse acquisition cleanup, 64-operation admission, caller/deadline checks, borrowed-stack retention and bounded UDP ingress | `stack_lifecycle_test.exs`, `stack_cov_test.exs`, `invoke_ids_test.exs`, IG01–IG06 and sustained local UDP cases | Accepted |
+| WBA-P03 | S04 and V06–V08: typed object/Property COV, initiator/selector correlation, confirmed receipt ACK and early-report buffering | local COV suites plus independent CP03/CP04 and CP11–CP16 peer cases | Accepted |
+| WBA-P04 | S04 and V09–V11: finite leases, renewal, encoded cancellation, receiver death, overflow and terminal-once cleanup | local lifecycle suites, CP05–CP09, CP14/CP18–CP21 and ST03 | Accepted |
+| WBA-P05 | S05 and V12: Runtime Property COV and explicit read probe | Runtime stream/frame/integration suites, CP17 and opening-state CP22–CP24 | Accepted |
+| WBA-P05a | N01–N05: native helpers, bounded Who-Is/I-Am and sequential Property reads | F01–F11 corpus, standalone/discovery lifecycle suites and CP02 | Accepted |
+| WBA-P05b | I01–I06: exact profiles, route/value/error/Retry projection and consumer ownership | I-F01 plus I-F02–I-F07 through the protocol and Runtime boundaries | Accepted |
+| WBA-P06 | S01–S05, S03a, N01–N05, I01–I06, C09 and V13/V14: complete independent software acceptance | source-bound normal/sanitizer shared and terminal cohorts on both supported runtimes | Accepted |
 
-Test filenames without a directory are under `test/wotex/bacnet/`; independent
-peer tests are under `test/interop/` and stress tests under `test/software/`.
-An existing test path is an implementation inventory, not a current pass result
-for every requirement family. Evidence includes its exact source and corpus SHA.
+Test filenames without a directory are under `test/wotex/bacnet/`. Independent
+peer tests are under `test/interop/` and stress tests are under
+`test/software/`. The status column applies to the software profile identified
+in the evidence document. Hardware, certification, publication and downstream
+consumer parity use separate evidence scopes.
 
-## WBA-P06 implementation order
+## Implementation boundaries
 
-1. S03a uses BACstack's public TransportBehaviour and reviewed pinned packet
-   codecs. IngressTransport, StackOwner and StackClient preserve receipt identity
-   and grant credits only after consumption. Local tests cover starvation, socket
-   loss, saturated counters and verified borrowed receive policy. Retain these
-   assertions in the final supported cohort. Tests at `test/wotex/bacnet/ingress_lifecycle_test.exs` bind every
-   [ingress-v1.json](../specs/fixtures/ingress-v1.json) trace and sustained software-UDP observations.
-2. `mix wotex.software.build --workspace ABS` builds or verifies the pinned
-   instrumented peers and their source/toolchain manifest. Its shell entry point
-   delegates directly to the unique Mix task.
-   `mix wotex.software.run --workspace ABS` owns normal/shared,
-   normal/terminal, sanitizer/shared and sanitizer/terminal containers and emits
-   bounded source-bound evidence for each lane. `run_software.sh` delegates to
-   that task.
-   The [command guardian](../../test/interop/native/README.md) supplies bounded
-   process-group ownership and workspace leases. Its ExUnit and standalone
-   native cases cover inherited signal state, short-lived process-group races,
-   local command faults and owner loss. Runner fault cases cover container
-   identity, readiness, bounded output, deadlines and cleanup failures.
-   `Dockerfile.software` is the instrumented normal/sanitizer build recipe.
-   The shared selection excludes `peer_shutdown`; a separate owned peer runs
-   `test/interop/cstack/shutdown_test.exs --include peer_shutdown` for CP25.
-   Native cleanup requires the actual final JSON counters and exit status as
-   well as verified owned-container removal.
-3. Extend the pinned C peer with read/write/release, Who-Is/I-Am and confirmed/
-   unconfirmed object/Property COV controls. Expose actual active subscriber count,
-   ACK/renewal/cancel counters, object value and process identity. A second real
-   client changes a disposable Analog Output. The test checks every ACK/value,
-   requested selector plus Status_Flags companion, renewal, cancellation and
-   subscriber return to baseline. CP02–CP09 in `test/interop/cstack_cov_test.exs`
-   cover this workflow for object COV using the instrumented fixture's actual
-   registry and wire counters. CP10–CP21 cover Property COV service boundaries,
-   independent delivery and Runtime mapping. Lost registration/renewal/deletion ACK scenarios
-   distinguish local resource release from server lifetime expiry. Discovery uses
-   only explicit local destinations and never edits an existing route.
-   WBA-ST03 exercises 100 receiver deaths across all four object/Property and
-   confirmed/unconfirmed modes, preserves a separate association, and records
-   actual local timer/listener/process and server subscriber/Invoke-ID cleanup.
-4. Execute full typed/malformed/lifecycle/Runtime coverage and the independent
-   C workflow, C09 stress, minimum/current Elixir/OTP, native fixture sanitizers/
-   audit, archive-only package checks and final clean-source evidence. Every
-   required lane fails on unavailable setup or response. Hardware is separate.
+### Owned ingress
 
-No implementation substitutes an injected response for an independent peer.
-Native C changes belong to fixtures, not production library transport.
+S03a uses BACstack's public `TransportBehaviour` and reviewed pinned packet
+codecs. `IngressTransport`, `StackOwner` and `StackClient` preserve receipt
+identity and grant credits only after consumption. IG01–IG06 cover starvation,
+socket loss, counter saturation, borrowed receive policy and sustained UDP
+input. A suspended owner or client admits at most eight outstanding receipts;
+terminal slow-consumer handling releases owned processes and sockets.
 
-## Reproducible software fixture contract
+### Reproducible peer fixture
 
-Both Mix tasks require exactly one `--workspace ABS` option. ABS is absolute
-and either empty/disposable or contains a matching verified manifest. Unknown
-options, an unrelated nonempty directory and mismatched hashes fail without
-changing unrelated contents. Tasks configure no Git remote and execute tools
-as executable/argument vectors, never interpolated shell text.
+`mix wotex.software.build --workspace ABS` builds or verifies pinned normal and
+instrumented peers and writes their source, toolchain and binary manifest.
+`mix wotex.software.run --workspace ABS` owns four lanes:
 
-Build verifies BACstack's locked Hex source and the C-stack archive in the
-[software-sources-v1.json](../specs/fixtures/software-sources-v1.json) before extraction. Archive members cannot
-escape the workspace. Downloads have a 120-second/100-MiB per-archive ceiling.
-The source verifier applies narrower compressed limits of 1 MiB for BACstack
-and 16 MiB for the C stack, plus 4096-member/64-MiB expanded archive limits.
-It compares all installed BACstack
-package files to the verified Hex archive, including the archived metadata.
-Reuse rechecks source and binary hashes. The manifest records source URL/commit/
-archive SHA-256, all fixture/patch source hashes, compiler/linker/libc/CMake/OS/CPU
-versions and executable hashes, exact build options, binary SHA-256, container
-base digest/package versions if used, and the project lockfile/source identity.
-Changed tools/options require a fresh build. A pinned source alone does not imply
-bit-identical container or compiler output.
+- normal/shared
+- normal/terminal
+- sanitizer/shared
+- sanitizer/terminal
 
-The Linux native fault build uses `-fsanitize=address,undefined
--fno-omit-frame-pointer` for C fixture and linked C-stack code. Sanitizer findings
-fail the lane. The manifest separates normal and sanitizer binaries/options;
-native audit records SDK/source/patch identities and reviewed advisories. No
-waiver silently suppresses an applicable finding.
+The POSIX `build_software.sh` and `run_software.sh` files delegate directly to
+those Mix tasks. The command guardian owns process groups, bounded output,
+deadlines, cleanup and workspace leases without interpreting command text.
+Native cases cover inherited signal state, short-lived startup races, group
+setup failure, owner loss and descendant cleanup. Runner fault cases RF01–RF05
+cover exact container identity, readiness, output limits, deadlines and cleanup
+failures.
 
-Run owns only manifest-created processes/containers/ports/state. It allocates
-disposable local ports, waits for explicit readiness within 10 seconds, and
-bounds captured stdout/stderr to 1 MiB each; overflow fails the lane. Every exit
-releases owned resources within 1000 ms locally. Remote subscriber expiry uses
-the requested finite lease and is recorded separately when cancellation cannot
-reach the peer. Missing tools, responses, counters or cleanup are failures.
+The shared lane excludes `peer_shutdown`. The terminal lane owns a separate
+peer and runs CP25, where an explicit peer exit occurs with live COV and Invoke
+ID state. Acceptance requires the peer's cleanup receipt and exact absence of
+all labelled containers.
+
+### Independent BACnet behavior
+
+The pinned C peer supplies read/write/release, Who-Is/I-Am and confirmed or
+unconfirmed object/Property COV controls. Its observation surface reports
+subscriber, Invoke ID, ACK, renewal, cancellation, object-value, socket and
+process state.
+
+CP02–CP09 cover discovery, batch access, write/readback/release and object COV.
+CP10–CP21 cover native Property boundaries, Property COV, increments,
+Status_Flags, capacity, selector rejection, Runtime mapping and lost ACK paths.
+CP22–CP24 cover Runtime owner, receiver and callback-worker death during an
+accepted registration whose ACK is withheld. CP25 covers peer loss with live
+state.
+
+ST01 executes 1000 sequential reads and 32 concurrent callers. ST02 executes
+100 stack ownership cycles. ST03 executes 100 receiver-death cycles across
+object/Property and confirmed/unconfirmed modes while preserving a separate
+live association. Every stress receipt separates local resource cleanup from
+finite remote lease expiry.
+
+## Fixture contract
+
+Both Mix tasks require exactly one `--workspace ABS` option. `ABS` is absolute
+and is either empty and disposable or contains a matching verified manifest.
+Unknown options, an unrelated nonempty directory and mismatched identities fail
+without changing unrelated contents. Tools are invoked as executable and
+argument vectors.
+
+The build task verifies the locked BACstack Hex source and the C-stack archive
+listed in
+[software-sources-v1.json](../specs/fixtures/software-sources-v1.json) before
+extraction. Archive members cannot escape the workspace. Downloads have a
+120-second and 100-MiB per-archive ceiling. BACstack and C-stack source checks
+apply their narrower compressed limits and a 4096-member, 64-MiB expanded
+limit. Every installed BACstack package file is compared with the verified Hex
+archive.
+
+The manifest records source URL and commit, archive SHA-256, fixture and patch
+hashes, compiler/linker/libc/CMake/OS/CPU versions, executable hashes, build
+options, binary hashes, base image identity, package versions, lockfile and
+project source identity. Reuse rechecks these values. A changed source, tool or
+option requires a new workspace build.
+
+The instrumented Linux build applies ASan and UBSan to fixture and linked SDK
+code. A diagnostic fails its lane. Normal and instrumented binaries and options
+have separate manifest entries. CP01 and CP10 execute inside the built image;
+the shared and terminal suites execute against the corresponding peer binary.
+
+The run task allocates disposable local ports, requires readiness within ten
+seconds and bounds each captured stdout/stderr stream to one MiB. Locally owned
+resources have a 1000-ms cleanup budget. Missing tools, responses, counters,
+case receipts or cleanup evidence fail acceptance. A remote subscription whose
+cancellation cannot reach the peer is measured through its requested finite
+lease rather than treated as local cleanup.
 
 The runner selects `mix test --include interop --include software --exclude
-hardware`, the C peer tests, ASan/UBSan and dependency audits. It sets
-`WOTEX_REQUIRE_SOFTWARE=1`; missing fixture configuration is then an assertion
-failure, never an ExUnit skip. Pure and injected-boundary tests stay in the local
-`mix check` gate. Required runtime cohorts are Elixir 1.18/OTP 27 and
-Elixir 1.20/OTP 29 with exact patch versions. The independent C/fault lane runs
-on Linux. No physical BACnet network, device or certification is required.
+hardware` with `WOTEX_REQUIRE_SOFTWARE=1`. Missing fixture configuration is an
+assertion failure. Pure and injected-boundary tests remain in the local
+`mix check --no-retry` gate. Supported cohorts are Elixir 1.18.4/OTP 27.3.4.15
+and Elixir 1.20.2/OTP 29.0.4.
 
-Evidence records every command/exit status, source/archive/fixture/binary hashes,
-case IDs and corpus digests, actual service/callback/failure observations, and
-resource counters before and after cleanup. C09 requires at least 1000 sequential
-operations, 32 concurrent callers, 100 open/close cycles and 100 receiver-death
-cycles with forced deadline, malformed reply and peer-loss cases. Heap/RSS and
-owned process/port/timer/listener/Invoke-ID/subscriber counts are separate
-measurements. Zero local delivery is not proof of zero server subscriptions.
+## Verification contract
 
-## Verification and completion
+Each logical implementation commit requires focused tests and
+`WOTEX_PATH_DEPS=1 mix check --no-retry`. The gate includes compilation,
+formatting, strict Credo, unit/property/doctest execution, at least 95% coverage,
+Dialyzer, Doctor, ExDoc, dependency checks, Hex packaging, clean archive
+contents, out-of-tree archive compilation and the Application-free structural
+check.
 
-Each logical implementation commit requires focused assertions and full
-`WOTEX_PATH_DEPS=1 mix check --no-retry`. The ordinary Hex identity remains the
-package contract; the path switch is explicit development evidence. Keep the
-95% coverage floor, warnings and dependency audits intact. Native fixture edits
-also require their sanitizer and source-audit lanes. Use configured Git identity;
-no remote, push, tag, publication, visibility or consumer changes are permitted.
+Native fixture changes also require CP01/CP10, ordinary and instrumented peer
+lanes, source identity checks and cleanup receipts. Evidence records commands,
+exit status, source/archive/fixture/binary hashes, case and requirement IDs,
+corpus digests, protocol observations and resource counts before and after
+cleanup. Heap/RSS observations are reported separately from owned resource
+counts.
 
-Completion requires every S/N/I/C requirement, exact corpus binding and required
-software lane, plus a clean committed-source `mix check` and out-of-tree archive
-consumer. Archive contents include declared runtime/test source assets and exclude
-SDK downloads, native fixture binaries, secrets, state, sockets, PLTs and logs.
-Documentation and capability claims name only executed cells. Independent peer
-acceptance, certification and consumer parity are distinct evidence scopes.
+Archive contents include declared runtime and documentation sources. They
+exclude downloaded SDKs, fixture binaries, secrets, sockets, state, logs and
+PLTs. Repository visibility, remote operations, tags, publication, hardware and
+certification are outside this plan.

@@ -1,203 +1,147 @@
 # Executable evidence
 
-Implementation commit `848312a8deb3a18e2ded0b5103ea1a2e2964831d` passed the full
-local gate on Elixir 1.20.2 / OTP 29.0.4 and Elixir 1.18.4 / OTP 27.3.4.15.
-Both lanes executed 214 cases (four properties and 210 tests); the three optional
-interop/software cases remained excluded. Coverage was 95.5% and 95.4%,
-respectively. These results establish that source's local native/Runtime test
-boundary. They do not establish independent C-peer COV or the complete WBA-P06
-software workflow.
+This document records the accepted software evidence for the BACnet profile.
+The subject is implementation commit
+`868cca4cb4c1be88410aa6c88ae03f90c26a1053`, tree
+`21e24f6f090ed5e17a6e9b879f58e83213835178` and canonical source digest
+`e6d379d6885986d62abd410541082aa2a79b317464401ecc1416102d5f855d15`.
+These identities describe tested source. They do not identify a published
+release or establish hardware, certification or downstream consumer parity.
 
-The tested implementation tree was
-`9a8df0d569b8b50cf665de3f9011ba8e9618d3d6`. Both lanes produced archive SHA-256
-`6197f31dfad80afaa8041bff470f1026b691c33472b1fad4ca9061bc29eb15d0`.
-These hashes identify that tested implementation and archive, not a published
-release. No consumer parity or certification is inferred.
+## Local and package gate
 
-## Mandatory local gate
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passed on both supported toolchains.
+The gate includes warnings-as-errors for project compilation, formatting,
+strict Credo, Dialyzer, Doctor, ExDoc, dependency checks, unit/property/doctest
+execution, coverage, Hex packaging, archive inspection, out-of-tree archive
+compilation and the Application-free structural check.
 
-`WOTEX_PATH_DEPS=1 mix check` runs compile warnings-as-errors, formatting, strict
-Credo, unit/property tests and minimum 95% coverage, Dialyzer, Doctor, ExDoc,
-dependency audit, Hex packaging, unpacked out-of-tree compilation and the
-Application-free structural check. Runtime path dependencies require the explicit
-switch; the archive preserves ordinary Hex dependency declarations.
-The pinned Decimal parser regression remains active; there are no advisory
-waivers. See SECURITY.md and the dependency-security test.
+| Elixir / OTP | Executed | Excluded peer/hardware tags | Coverage | Documentation/spec coverage | Archive SHA-256 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 1.20.2 / 29.0.4 | 285 | 35 | 95.1% | 100% | `93c6a13568b6aee868c1307b426accdd4351ae7c8f5fb680e74cbfd04e365c55` |
+| 1.18.4 / 27.3.4.15 | 285 | 35 | 95.0% | 100% | `93c6a13568b6aee868c1307b426accdd4351ae7c8f5fb680e74cbfd04e365c55` |
 
-## Interoperability
+The ordinary package declares Hex dependencies. `WOTEX_PATH_DEPS=1` selects the
+sibling Wotex projects explicitly for workspace verification; the generated
+archive retains the published dependency declarations.
 
-Independent BACnet C stack at commit
-`3603048350b8ba543ec76cf6aa8a232b3f4d442d`: PASS for Analog Output 1 Present_Value,
-write/readback/restore and unknown-object Error. The test owns its complete
-BACstack group with retries disabled and exercises actual UDP transport.
-No COV, routed network, MS/TP or BACnet/SC claim follows.
+## Source-bound software cohorts
 
-```sh
-docker build -t wotex-bacnet-peer test/interop/cstack
-docker run --rm -d --name wotex-bacnet-peer -p 127.0.0.1:57808:47808/udp wotex-bacnet-peer
-WOTEX_PATH_DEPS=1 WOTEX_BACNET_INTEROP_PORT=57808 mix test --include interop test/interop/cstack_test.exs
-docker stop wotex-bacnet-peer
-```
+The explicit build task produced fixture manifest
+`94d1dc501dc6d8eb80461c1b38e1c78dc7468a26c1dbd53d9da460b178315144`
+and image
+`sha256:c83e9599f2cd8677797ae5e39a71b0c67c35f520b112d81e08a275f1c6286809`.
+The build verifies the pinned BACstack package, C-stack source archive, fixture
+sources, compiler/linker/CMake/libc identities, normal and instrumented build
+options and every executable hash before a run can reuse the workspace.
 
-Container source commits are pinned. Base-image/package-manager inputs may move;
-these are reproducible source fixtures, not claims of bit-identical image builds.
-Interoperability tags are excluded by default. Explicit invocation requires the
-configured peer and must fail if that peer or expected response is missing.
+The four-lane run passed independently on both supported toolchains.
 
-## Current software acceptance boundary
+| Toolchain | Lane | Cases | Cleanup | Owned containers after | Local cleanup |
+| --- | --- | ---: | --- | ---: | ---: |
+| Elixir 1.20.2 / OTP 29.0.4 | normal/shared | 320 | passed | 0 | 185 ms |
+| Elixir 1.20.2 / OTP 29.0.4 | normal/terminal | 1 | passed | 0 | 51 ms |
+| Elixir 1.20.2 / OTP 29.0.4 | sanitizer/shared | 320 | passed | 0 | 723 ms |
+| Elixir 1.20.2 / OTP 29.0.4 | sanitizer/terminal | 1 | passed | 0 | 63 ms |
+| Elixir 1.18.4 / OTP 27.3.4.15 | normal/shared | 320 | passed | 0 | 211 ms |
+| Elixir 1.18.4 / OTP 27.3.4.15 | normal/terminal | 1 | passed | 0 | 62 ms |
+| Elixir 1.18.4 / OTP 27.3.4.15 | sanitizer/shared | 320 | passed | 0 | 702 ms |
+| Elixir 1.18.4 / OTP 27.3.4.15 | sanitizer/terminal | 1 | passed | 0 | 64 ms |
 
-The standalone F01–F11 corpus has local pure/adapter bindings listed in WBA-N05.
-Runtime I-F01 is bound to real ConsumedThing execution. Each I-F02–I-F07 case
-has a separately named executable test in `error_class_test.exs`. It supplies
-the corpus native error code and effect to the library classifier, executes the
-real Transport and ConsumedThing path, then compares the complete Runtime error
-and Retry projection. The expected class never enters the protocol client.
-A corpus assertion requires all seven case IDs and their local bindings; an
-empty or incomplete case list fails. These injected native-error cases establish
-the Runtime boundary, not independent wire-fault behavior.
-Local COV and Runtime lifecycle tests exercise the native BEAM wrapper over UDP
-fault peers. Independent object/Property COV evidence comes from the separate C suites
-described below.
+The aggregate result SHA-256 values are:
 
-The explicit Mix build task and its thin `build_software.sh` entry point verify
-the pinned sources, installed BACstack files, native build options and peer
-binary/toolchain identities in an absolute workspace. The Mix run task and its
-thin `run_software.sh` entry point own four normal/sanitizer and
-shared/terminal peer lanes. Local fault cases require exact container identity,
-bounded readiness/output/deadline behavior, owner-death recovery, actual cleanup
-counters and exact labelled-container absence. The final supported-runtime
-software matrix and archive cohort remain required.
-A COV listener or final receiver queue bound does not bound an earlier
-SDK-to-StackOwner mailbox.
+- Elixir 1.20.2 / OTP 29.0.4:
+  `2873dac6d048f9209d10a9dd7bc540caa53ab3b8a38d7aecc77ab074bafb7331`
+- Elixir 1.18.4 / OTP 27.3.4.15:
+  `aa3175bc4d656846875c1147e1ff987046061158361f2c6c1d943701fa45541b`
 
-The S03a receive pipeline has executable unit/property and local UDP tests.
-`ingress_window_test.exs` binds accounting projections of IG01–IG03 and
-`ipv4_packet_test.exs` exercises the pinned codecs. `ingress_lifecycle_test.exs`
-binds IG01–IG06 to actual transport handlers, owned process cleanup, verified
-borrowed capabilities and sustained UDP. For each separately suspended
-StackOwner/StackClient, 10000 datagrams of 1536 bytes produce a peak of eight
-outstanding receipts, zero armed sockets at exhaustion, one terminal
-`:slow_consumer` and released owned processes/socket. Counter saturation uses
-the actual transport handler; the 65507-byte deterministic input does not claim
-the host OS accepted that UDP payload size.
+Each aggregate contains the exact command, seed, source file hashes, dependency
+source identities, fixture and binary hashes, toolchain, test receipt, protocol
+observations, peer cleanup counters, local cleanup time, container absence and
+log hashes. The shared receipts contain 95 distinct executed requirement IDs.
+An absent or incomplete required case, sanitizer diagnostic, response,
+observation or cleanup receipt makes the aggregate fail.
 
-Additional fault cases cover timer cancellation, forged acknowledgments,
-malformed datagrams, actual socket closure and a 64-session watcher ceiling.
-`ipv4_interface_test.exs` covers explicit IPv4 selection among multiple interface
-addresses without changing any host interface. Actual receive buffer sizes are
-recorded; kernel packet loss is unavailable through the selected portable inet
-API and is never reported as zero. These local tests do not replace the required
-Linux independent C-peer workflow, final supported matrix or complete C09 stress.
+## Protocol and lifecycle coverage
 
-## Independent C object and Property COV execution
+### Typed services and owned ingress
 
-The instrumented [C fixture](../../test/interop/cstack/README.md) links the
-unmodified pinned C stack. WBA-CP01/WBA-CP10's native control/Property boundary
-checks and WBA-CP02–CP09/WBA-CP11–CP21's 19 ExUnit cases pass with a
-Linux ARM64 peer built with GCC 12.2.0,
-both normally and with ASan/UBSan applied to the fixture and linked SDK. The
-ExUnit subject uses Elixir 1.20.2 / OTP 29.0.4 and actual UDP transport.
+P01 and P02 execute typed value and CharacterString handling, ACK/Error mapping,
+segmentation limits, 64-operation admission, caller/deadline checks, reverse
+cleanup and borrowed-stack preservation. IG01–IG06 exercise the actual receive
+pipeline, including a suspended owner or client under 10,000 datagrams of 1536
+bytes. The peak admitted receipt count is eight, exhausted credit leaves zero
+armed sockets, and terminal slow-consumer handling releases the owned process
+and socket set.
 
-The suite observes Who-Is/I-Am, three sequential Property reads, write/readback
-and priority release through a second actual client. Confirmed and unconfirmed
-object COV deliver Present_Value and Status_Flags. Successful renewal changes
-the actual SDK subscription record. ACK-loss cases apply registration/renewal/
-cancellation in the C stack, then drop only the outgoing acknowledgment. A lost
-cancellation request leaves an observed server subscription after local cleanup;
-the finite server lease subsequently expires. Tests assert actual subscriber,
-Invoke ID, ACK and cancellation counts, native process exits and socket release.
+Additional cases cover forged acknowledgments, malformed datagrams, socket
+closure, timer cancellation, a 64-session watcher bound, explicit IPv4 interface
+selection and saturated counters. Host kernel packet loss is unavailable through
+the selected portable inet API and is not represented as zero.
 
-Property COV has a separate bounded server table using the pinned SDK's service
-and notification codecs. Cases cover confirmed/unconfirmed reports, increments
-below the object's default, Status_Flags changes, Property-only selection,
-fresh equal reports after renewal, all 16 capacity slots without eviction and
-rejected selectors. Four loss cases independently exercise accepted registration,
-renewal and deletion, plus finite expiry after an undelivered cancellation.
-The public Runtime case observes two actual values and stops the original
-association despite a different target in the stop Form. Both native CTest cases
-and all 19 peer cases pass with ASan/UBSan; the sanitizer process's complete
-SIGTERM shutdown exits zero without findings.
+### Independent read, write and discovery
 
-Peak native RSS is reported separately from live resource counts. These cases
-do not establish complete C09 stress or the final immutable package consumer
-cohort. The fixture's explicit source/options and counter semantics are part of
-its contract, not a claim of general-purpose server support.
+The peer links the pinned BACnet C stack and owns actual UDP transport. CP02
+observes Who-Is/I-Am, three sequential Property reads, write/readback and
+priority release through a second client. The peer also returns a protocol Error
+for an unknown object. Discovery uses an explicit local destination and does not
+modify host routes.
 
-## Receiver-death stress
+CP01 and CP10 execute native control and Property boundary matrices inside both
+normal and ASan/UBSan image builds. All linked SDK and fixture diagnostics remain
+observable and fail acceptance.
 
-WBA-ST03 in `test/software/cov_lifecycle_stress_test.exs` executes 100 receiver
-deaths against the instrumented C peer. Its versioned vector is
-`test/fixtures/cov_software_v1.json`. Each object/Property and
-confirmed/unconfirmed combination runs 25 times. A second subscription remains
-live throughout; every cycle observes one server cancellation and preserves
-exactly that second server record and client listener. Both subscription
-processes terminate, both captured lease/renew timers cancel, and pending
-operation/control/APDU/COV-reply/assembly tables return to baseline.
+### Object and Property COV
 
-The current Elixir 1.20.2 / OTP 29.0.4 execution uses the Linux ARM64 ASan/UBSan
-peer. All 101 subscriptions are cancelled, including the held association.
-Final server subscription/Invoke-ID counts are zero, and the six owned stack
-processes and UDP socket close. The receipt separates elapsed local cleanup,
-per-cycle client heap words/process bytes and native peak RSS. Those memory
-observations do not assert constant heap size or unchanged RSS.
+CP03–CP09 execute confirmed and unconfirmed object COV, Status_Flags, renewal,
+lost registration/renewal/cancellation ACKs and finite lease expiry. The peer
+reports its actual subscription records, ACK counters, cancellation counters,
+Invoke IDs and object values.
 
-## Pending Runtime establishment
+CP11–CP21 execute confirmed and unconfirmed Property COV, configured increments,
+Status_Flags changes, Property-only selection, equal reports after renewal, all
+16 capacity slots, rejected selectors, loss paths and public Runtime observation.
+Cancellation loss distinguishes completed local cleanup from the peer's finite
+server lifetime.
 
-WBA-CP22–CP24 in `test/interop/cstack_runtime_lifecycle_test.exs` use an actual
-accepted C-peer Property registration with its ACK deliberately lost. While
-the final Runtime child and native COV owner remain in opening state, each case
-kills either the final Runtime owner, final receiver or callback worker. The
-tests verify that the relay watches the final owner, then observe the original
-server record's cancellation, zero remaining server subscribers/Invoke IDs,
-all captured process exits, actual UDP port closure and cancellation of captured
-control/opening timers within one local cleanup budget.
+CP17 observes two values through the public Runtime path and stops the original
+association even if a different target appears in the stop Form. I-F01 and
+I-F02–I-F07 cover exact route, value, error and Retry projection through the
+protocol and Runtime boundaries. The expected result is compared after execution
+and is not supplied to the implementation under test.
 
-All three cases pass with Elixir 1.20.2 / OTP 29.0.4 and the independent Linux
-ARM64 sanitizer peer. The earlier CP17 case retains the successful handoff and
-public observation/stop boundary. Pending acquisition and admitted observation
-are separate lifecycle observations.
+### Ownership and stress
 
-## Instrumented native build and terminal lane
+ST01 performs 1000 sequential reads and 32 concurrent reads. ST02 performs 100
+complete owned-stack lifecycles. ST03 performs 100 receiver deaths across object
+and Property COV in confirmed and unconfirmed modes. A second association stays
+live during every ST03 cycle. Every cycle observes the expected server
+cancellation, preserves the held association, terminates both captured local
+subscription processes, cancels lease/renew timers and returns operation,
+control, APDU, COV-reply and assembly tables to baseline.
 
-`test/interop/cstack/Dockerfile.software` builds separate normal and ASan/UBSan
-fixtures and their static SDK libraries from the verified C-stack archive.
-Both variants pass WBA-CP01 and WBA-CP10 in CTest. The compiled version command
-reports fixture protocol 1 and the pinned SDK header version `1.7.0-rc4`.
-SDK request diagnostics are disabled through its `PRINT_ENABLED=0` build
-definition. Sanitizer diagnostics remain observable and fail acceptance.
+CP22–CP24 start from an accepted Property registration whose ACK is withheld and
+then terminate the Runtime owner, receiver or callback worker. Each case observes
+cancellation of the original peer record, zero remaining peer subscriptions and
+Invoke IDs, all captured process exits, UDP closure and cancellation of captured
+opening/control timers within one cleanup budget.
 
-The shared C-peer/software selection executes 26 cases, including ST01's 1000
-sequential reads and 32 concurrent callers, ST02's 100 stack lifecycles and
-ST03's 100 receiver deaths. It excludes `peer_shutdown`. The separate CP25
-terminal lane establishes object and Property subscriptions and observes two
-pending confirmed Invoke IDs while the target client is suspended. An explicit
-peer quit leaves those resources live at entry to native cleanup. A subsequent
-real read times out, and local stack cleanup remains bounded.
+CP25 establishes object and Property subscriptions and two confirmed Invoke IDs,
+then exits the independently owned peer. The subsequent read times out and the
+local stack closes within its cleanup budget. The peer's terminal receipt reports
+zero sockets, subscriptions, Invoke IDs and disposable Analog Output objects.
+The peer exit status and runner stop status are recorded separately because the
+terminal test owns peer shutdown.
 
-The Linux ARM64 sanitizer peer reports actual zero socket descriptors,
-object/Property subscribers, Invoke IDs and Analog Output objects, then exits
-zero without sanitizer findings. The native event and ExUnit receipt prove
-different sides of cleanup. This Docker recipe and manual execution do not yet
-accept the required Mix workspace/manifest/fault workflow or final package
-consumer cohort.
+## Reproduction boundary
 
-## Evidence identities
+Use the Mix tasks described in the
+[software implementation plan](../plans/software-implementation.md) with a fresh
+absolute workspace. The shell files are thin delegates. The build task rejects a
+workspace whose source, tool, option or binary identities do not match. The run
+task creates four labelled container cohorts, uses disposable ports and removes
+only those exact owned containers.
 
-The hashes below identify test sources from implementation commit
-`848312a8deb3a18e2ded0b5103ea1a2e2964831d`. They are source identities, not a
-promise that later executions will pass. Rerun the mandatory gate and the
-required peer suites after relevant changes.
-
-| Test source | SHA-256 |
-| --- | --- |
-| `test/interop/cstack_test.exs` | `c489e4c14cd192ea8b221706d24a239a90c51a6f52be8da173c719b4190bf0c3` |
-| `test/wotex/bacnet/stack_lifecycle_test.exs` | `0d097a4eca6f527d2c8d5a0b7edaea126a5c82de4f4a829aa0d440d6524acfd4` |
-| `test/wotex/bacnet/service_boundary_test.exs` | `0b594b12ce8678055a046834f9931b9fb8f196554182f9c7a7c2927f4f061b78` |
-| `test/wotex/bacnet/character_string_test.exs` | `cb77f9febdfa26db22a2f518295f2e958b2aa59054fe85ee4b21db2ec6734476` |
-| `test/wotex/bacnet/cov_lifecycle_test.exs` | `7df574aa3fea2976930c24f5685404418483b33ce353b642308b959f130b7862` |
-| `test/wotex/bacnet/standalone_contract_test.exs` | `eb9d3d1c26cc5bfda3e3da30f44826c66ad066bb91911103b0e4128ba0824ed7` |
-| `test/wotex/bacnet/discovery_lifecycle_test.exs` | `4572d50b9a0d386587096f20c9859a70664e4ddf7a02148836df9d8f7dfc7285` |
-| `test/wotex/bacnet/runtime_stream_test.exs` | `c16783cd63fef66dffc0262bc610595802022b77e6129038a3b40a56c973f4ea` |
-| `test/wotex/bacnet/runtime_integration_test.exs` | `81526f9ee70be6495bb12763d545c8c673f186b93797e77568f158d6d97ec0ca` |
-| `test/wotex/bacnet/error_class_test.exs` | `a5ebbe39edbacdc6dbd451662405228251a6fd563c4b4c08ecc91d9be23027db` |
-| `test/wotex/bacnet/native_subscription_test.exs` | `843247062474e4d01546cd5254c2895e6d004b4228612ebdfec838abbd62e9bf` |
+Re-run the local gate and affected peer cohorts after changing source, fixtures,
+pins, build options or supported toolchains. Hardware and conformance-lab results
+belong in separate evidence documents and do not alter this software acceptance.
