@@ -161,7 +161,9 @@ defmodule Wotex.Modbus.Mapping do
   defp resolve(uri, _), do: {:ok, uri}
 
   defp uri_shape(%URI{scheme: "modbus+tcp", host: host, userinfo: nil, fragment: nil, port: port})
-       when is_binary(host) and host != "" and (is_nil(port) or port in 1..65_535), do: :ok
+       when is_binary(host) and host != "" and (is_nil(port) or port in 1..65_535) do
+    :ok
+  end
 
   defp uri_shape(_), do: {:error, Error.new(:invalid_href, :href)}
 

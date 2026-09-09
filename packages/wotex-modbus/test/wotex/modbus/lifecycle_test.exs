@@ -191,6 +191,57 @@ defmodule Wotex.Modbus.LifecycleTest do
     assert :ok = :gen_tcp.close(listener)
   end
 
+  test "WMB-S02 WMB-S03 idle unsolicited bytes cannot seed the next transaction" do
+    {:ok, listener} = :gen_tcp.listen(0, [:binary, active: false, ip: {127, 0, 0, 1}])
+    {:ok, {_, port}} = :inet.sockname(listener)
+
+    peer =
+      Task.async(fn ->
+        {:ok, socket} = :gen_tcp.accept(listener)
+
+        receive do
+          :send ->
+            :ok = :gen_tcp.send(socket, <<0::16, 0::16, 5::16, 1, 3, 2, 0, 42>>)
+            assert {:error, :closed} = :gen_tcp.recv(socket, 0, 1000)
+            :ok = :gen_tcp.close(socket)
+        end
+      end)
+
+    {:ok, session} = Modbus.connect(host: "127.0.0.1", port: port)
+    socket = :sys.get_state(session.pid).socket
+    monitor = Process.monitor(session.pid)
+    send(peer.pid, :send)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+    assert :erlang.port_info(socket) == :undefined
+
+    assert {:error, %Error{code: :connection_closed, effect: :none}} =
+             Modbus.read_holding_registers(session, 0, 1)
+
+    assert :ok = Task.await(peer)
+    assert :ok = :gen_tcp.close(listener)
+  end
+
+  test "WMB-C03 WMB-C04 a killed owner leaves a transmitted mutation unknown and closes its socket" do
+    {peer, port} = controlled_peer()
+    {:ok, session} = Modbus.connect(host: "127.0.0.1", port: port)
+    socket = :sys.get_state(session.pid).socket
+    call = Task.async(fn -> Modbus.write_holding_register(session, 0, 42) end)
+    assert_receive {:wire, 0, 1, <<6, 0, 0, 0, 42>>}
+    monitor = Process.monitor(session.pid)
+    Process.unlink(session.pid)
+    Process.exit(session.pid, :kill)
+    assert_receive {:DOWN, ^monitor, :process, _, :killed}, 1000
+
+    assert {:error, %Error{code: :connection_closed, effect: :unknown, class: :permanent}} =
+             Task.await(call)
+
+    assert :erlang.port_info(socket) == :undefined
+    assert :ok = Modbus.disconnect(session)
+    send(peer.pid, :close)
+    assert :ok = Task.await(peer)
+    refute_received {:wire, _, _, _}
+  end
+
   test "WMB-C03 graceful cleanup timeout force-closes its owned socket without claiming success" do
     {peer, port} = controlled_peer()
     {:ok, session} = Modbus.connect(host: "127.0.0.1", port: port)
@@ -236,6 +287,22 @@ defmodule Wotex.Modbus.LifecycleTest do
                Connection.request(closing, write, 100)
 
       refute_received {:wotex_modbus_admitted, _}
+    end
+  end
+
+  test "WMB-C03 WMB-V08 normal exit during the OTP system stop handshake is successful cleanup" do
+    for _ <- 1..20 do
+      closing =
+        spawn(fn ->
+          receive do
+            {:system, _from, {:terminate, :normal}} -> :ok
+          end
+        end)
+
+      monitor = Process.monitor(closing)
+      assert :ok = Connection.close(closing)
+      assert_receive {:DOWN, ^monitor, :process, ^closing, :normal}
+      assert :ok = Connection.close(closing)
     end
   end
 

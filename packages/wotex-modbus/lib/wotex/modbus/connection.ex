@@ -39,6 +39,9 @@ defmodule Wotex.Modbus.Connection do
     :exit, {:normal, _} ->
       :ok
 
+    :exit, {{:normal, {:sys, :terminate, _}}, {GenServer, :stop, _}} ->
+      :ok
+
     :exit, _ ->
       Process.unlink(pid)
       monitor = Process.monitor(pid)
