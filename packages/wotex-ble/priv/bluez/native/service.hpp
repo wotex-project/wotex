@@ -41,7 +41,7 @@ class BlueZService {
         const auto state = weak.lock();
         if (!state || !state->active) return;
         if (reply.error) { state->fail(reply.error); return; }
-        if (revision != state->changes) { state->fail("disconnected"); return; }
+        if (revision != state->changes) { state->fail("owner_changed"); return; }
         const char *name = nullptr;
         if (!dbus_message_get_args(reply.message.get(), nullptr, DBUS_TYPE_STRING, &name, DBUS_TYPE_INVALID) ||
             !name || name[0] != ':' || !dbus_validate_bus_name(name, nullptr) || name == state->bus.unique_name()) {
@@ -70,7 +70,7 @@ class BlueZService {
             state->fail("invalid_response"); return;
           }
           if (state->established || state->changes == std::numeric_limits<std::uint64_t>::max())
-            state->fail("disconnected");
+            state->fail("owner_changed");
           else ++state->changes;
         });
       auto request = method("AddMatch");

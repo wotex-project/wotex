@@ -2,6 +2,7 @@
 #include "bus.hpp"
 #include "service.hpp"
 #include "objects_test.hpp"
+#include "discovery_test.hpp"
 #include <csignal>
 #include <fcntl.h>
 #include <dirent.h>
@@ -153,7 +154,7 @@ static void service_identity(const std::string &address) {
   unsigned ready = 0, lost = 0;
   check(service.start(Clock::now() + std::chrono::seconds(2),
     [&](const char *error) { check(!error); ++ready; },
-    [&](const char *error) { check(error && std::string(error) == "disconnected"); ++lost; }));
+    [&](const char *error) { check(error && std::string(error) == "owner_changed"); ++lost; }));
   until_service(service, [&] { return ready == 1; });
   check(service.owner() == server.unique_name());
   check(service.owner() != service.bus().unique_name());
@@ -446,6 +447,7 @@ int main(int argc, char **argv) {
     invariants(daemon.address);
     signals(daemon.address);
     service_identity(daemon.address);
+    discovery_test::invariants(daemon.address);
     unix_fds(daemon.address, 1);
 #ifdef __linux__
     unix_fds(daemon.address, 2);

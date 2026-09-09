@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-version: 1.0.2
+  version: 1.0.3
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -300,6 +300,37 @@ same grammar as snapshot keys, and duplicate names fail. A property cannot occur
 in both the changed and invalidated collections, including an unknown property.
 Changed metadata does not itself constitute a characteristic notification;
 S04's byte/source/subscription validation separately governs report delivery.
+
+ObjectManager ownership installs all local metadata listeners, then awaits both
+Properties and ObjectManager AddMatch acknowledgements before its first
+GetManagedObjects call to the pinned unique sender. The metadata revision is
+captured at dispatch. Every reply is decoded within the same bounds; a revision
+change discards that snapshot and permits at most four total snapshot attempts
+within the original absolute deadline. Four raced replies fail
+`:snapshot_unstable` and close this sender. At most one discovery refresh is
+pending; admission of another refresh fails before D-Bus submission.
+
+The owner retains the exact selected Device1 path and selected service paths,
+including services without characteristics. A different matching Device1 path
+fails `:peer_changed`; there is no automatic retargeting. Relevant typed metadata
+changes mark the current discovery stale immediately. The next stable snapshot
+advances its uint64 generation once if metadata changed or its selected topology
+differs. Even a change restored before refresh invalidates the previous
+generation. Unknown properties and Value-only signals do not alter discovery.
+The conservative revision scope includes known metadata from the pinned BlueZ
+sender; an unrelated peer change may therefore invalidate a cursor without
+authorizing any operation on that peer. There is no generation rollover.
+
+Before a Central accepts a resolved link, its discovery owner may return the
+selected device's false Connected or ServicesResolved state for explicit owned
+connection handling. After that acceptance, false state or removal of the
+selected adapter, device, service or characteristic terminates the generation.
+NameOwnerChanged reports `:owner_changed`; it never adopts the replacement.
+This discovery component issues no Connect, Disconnect or Pair method. The
+Central owns those explicit procedures and the link-layer ownership decision.
+Closing the discovery owner cancels its pending refresh and releases its private
+bus resources; late replies produce no callback. Integer libdbus timeouts round
+up to milliseconds, while the absolute deadline still rejects late success.
 
 The pinned libdbus 1.16.2 [connection API](https://dbus.freedesktop.org/doc/api/html/group__DBusConnection.html)
 defines the receive watermark. Its [transport dispatch condition](https://dbus.freedesktop.org/doc/api/html/dbus-transport_8c_source.html#l01129)

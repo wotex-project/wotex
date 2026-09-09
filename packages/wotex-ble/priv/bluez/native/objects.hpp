@@ -243,6 +243,7 @@ struct Discovery {
   std::string device_path;
   bool connected, services_resolved;
   Json characteristics;
+  std::set<std::string> service_paths;
 };
 
 class NativePeer {
@@ -319,6 +320,8 @@ inline Discovery discovery(const ObjectSnapshot &snapshot, const NativePeer &pee
     return std::make_pair(a.at("service_path"), a.at("object_path")) <
            std::make_pair(b.at("service_path"), b.at("object_path"));
   });
-  return {path, device.at("Connected"), device.at("ServicesResolved"), std::move(characteristics)};
+  std::set<std::string> service_paths;
+  for (const auto &[key, unused] : services) { (void)unused; service_paths.insert(key); }
+  return {path, device.at("Connected"), device.at("ServicesResolved"), std::move(characteristics), std::move(service_paths)};
 }
 } // namespace wotex::ble

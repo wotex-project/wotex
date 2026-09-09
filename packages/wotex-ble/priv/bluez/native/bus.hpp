@@ -172,7 +172,9 @@ class Bus {
     const char *destination = dbus_message_get_destination(message);
     if (!destination || (destination[0] != ':' && std::string(destination) != DBUS_SERVICE_DBUS))
       throw std::invalid_argument("invalid_destination");
-    auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
+    // libdbus synthesizes a senderless timeout reply. Its integer interval must
+    // not expire before our absolute deadline, or that reply looks uncorrelated.
+    auto remaining = std::chrono::ceil<std::chrono::milliseconds>(deadline - Clock::now()).count();
     if (remaining < 1 || remaining > 60000) return false;
     auto state = std::make_unique<Pending>(Pending{this, nullptr, destination, signature,
                                                  deadline, std::move(callback)});

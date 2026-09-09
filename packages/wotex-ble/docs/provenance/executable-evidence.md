@@ -85,8 +85,8 @@ the absolute deadline. Closing cancels pending calls and releases only that
 connection; a second sender retains its bus identity and remains usable.
 Closing from a reply callback is an asserted lifecycle case.
 
-The selected macOS fixture and Linux ARM64 GCC ASan/UBSan component executable
-pass against private daemons. The Linux x86_64 reference lane is separate. The
+The selected macOS fixture and Linux ARM64 and x86_64 GCC ASan/UBSan component
+executables pass against private daemons. The
 ExUnit test command
 guardian owns the daemon's process group and bounds command time/output/cleanup.
 The fixture does not open the host system or session bus. Exact libdbus source
@@ -128,12 +128,35 @@ restrict discovery to validated values.
 The fixture exercises 4096 objects, 64 interfaces, 256 properties, 65536 aggregate
 dictionary entries, 4096-byte paths and 1024 selected services/characteristics
 at their boundaries. Unknown variant payloads are skipped without copying them
-into the owned snapshot. These are typed native decoding tests; live BlueZ
-GetManagedObjects acquisition and listener/snapshot reconciliation remain open.
+into the owned snapshot. These are typed native decoding tests; the separate
+live ObjectManager fixture below exercises acquisition and reconciliation.
 
 The native decoder also accepts exact typed metadata change/removal signals.
 Its signal vectors exercise changed booleans, unknown-property omission,
 invalidated properties, added objects and removed interfaces. Wrong signatures,
 wrong variants, duplicate names, changed/invalidated overlap and the 256/64-entry
-boundaries are asserted. This validates decoding; it does not establish the
-live reconciliation state machine or notification delivery.
+boundaries are asserted. This validates decoding; notification delivery is a
+separate procedure.
+
+## Native live ObjectManager discovery
+
+`test/native/discovery_test.hpp` serves typed ObjectManager replies and metadata
+signals through an actual private D-Bus daemon. It exercises `discovery.hpp`:
+listeners precede the first snapshot, a signal before a stale reply forces a
+fresh query, and four continuously raced replies fail `snapshot_unstable`.
+Only the pinned BlueZ unique sender can change state. A directly addressed
+forged signal from another sender is ignored; Value-only and unknown-property
+changes do not invalidate discovery.
+
+The fixture checks stable generations, changes restored before refresh, changes
+visible only in a new snapshot, identity retargeting rejection, selected service
+removal with no characteristics, malformed variants, loss of ServicesResolved
+and owner replacement. A pending query admits no second refresh. Its deadline
+returns `timeout`; close and late replies leave zero pending calls, listeners,
+watches and timers. A callback can close its own discovery owner.
+
+This peer implements the D-Bus boundary without a Bluetooth controller. These
+tests do not establish radio discovery, native Connect/Pair/ReadValue/WriteValue,
+GATT notifications, the complete Port helper or the virtual-controller profile.
+The existing public Elixir connection still executes the separately described
+Python adapter baseline.

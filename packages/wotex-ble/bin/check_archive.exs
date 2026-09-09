@@ -20,6 +20,7 @@ defmodule Wotex.BLE.Check.Archive do
     "priv/bluez/native/bus.hpp",
     "priv/bluez/native/service.hpp",
     "priv/bluez/native/objects.hpp",
+    "priv/bluez/native/discovery.hpp",
     "priv/bluez/native/vendor/json.hpp",
     "priv/bluez/native/vendor/LICENSE.MIT"
   ]

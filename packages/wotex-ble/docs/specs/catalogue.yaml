@@ -57,11 +57,11 @@ specifications:
     executable_evidence: []
     compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WBL.13"
-    version: "1.0.2"
+    version: "1.0.3"
     path: "docs/specs/WBL.13-native-backend.md"
     implementation_status: "partial"
     standards: [{"name": "Native BlueZ GATT central", "revision": "Exact source hashes and build profile in .13", "claim": "Accepted native target; current baseline evidence is separate"}]
     requires: ["WBL.00", "WBL.10", "WBL.11", "WBL.12"]
     implementation_modules: []
-    executable_evidence: ["test/wotex/ble/native_frame_test.exs", "test/native/frame_test.cpp", "test/wotex/ble/native_credit_test.exs", "test/native/credit_test.cpp", "test/interop/native_bus_test.exs", "test/native/bus_test.cpp", "test/native/objects_test.hpp"]
+    executable_evidence: ["test/wotex/ble/native_frame_test.exs", "test/native/frame_test.cpp", "test/wotex/ble/native_credit_test.exs", "test/native/credit_test.cpp", "test/interop/native_bus_test.exs", "test/native/bus_test.cpp", "test/native/objects_test.hpp", "test/native/discovery_test.hpp"]
     compatibility_classification: "B-F01 through B-F05 execute the C++ request parser; B-F07/B-F08/B-F09/B-F14/B-F15 execute report reservation/retirement accounting. The private libdbus owner and source-checked service identity tracker have real daemon lifecycle tests. Complete BlueZ backend, output queue, BEAM credit flow and software GATT acceptance remain open."
