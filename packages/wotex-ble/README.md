@@ -136,8 +136,8 @@ See the [implemented profile](docs/specs/WBL.02-implemented-profile.md),
 Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
 checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
 `WOTEX_PATH_DEPS=1 mix check`. Normal dependency resolution uses Hex versions.
-Run `mix check` before commits. It includes package compilation outside the
-checkout, tests/coverage, static checks, docs and dependency audit.
+Run `mix check` before commits. It checks formatting, compiles with warnings as
+errors, and runs the default test suite. Wider checks belong to release readiness.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
 
