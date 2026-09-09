@@ -46,13 +46,36 @@ defmodule Wotex.OPCUA.BinaryTest do
         do: assert(match?({:error, _}, Binary.encode(type, value)))
 
     for {type, bytes} <- [
-          boolean: <<2>>,
+          boolean: <<>>,
           string: <<-2::32-little-signed>>,
           string: <<1::32-little, 255>>,
           double: <<0, 0, 0, 0, 0, 0, 240, 127>>,
           int32: <<0>>
         ],
         do: assert(match?({:error, _}, Binary.decode(type, bytes)))
+  end
+
+  @tag requirement_ids: ["WOP-S01", "WOP-N02", "WOP-V01"]
+  test "every Boolean byte follows Part 6 truth semantics and encodes canonically" do
+    for byte <- 0..255 do
+      truth = byte != 0
+      canonical = if truth, do: 1, else: 0
+      scalar = %{type: "Boolean", array: false, value: truth}
+      array = %{type: "Boolean", array: true, value: [truth]}
+      data_value = %{has_value: true, value: scalar, status: 0}
+
+      assert {:ok, ^truth, "tail"} = Binary.decode(:boolean, <<byte, "tail">>)
+      assert {:ok, <<^canonical>>} = Binary.encode(:boolean, truth)
+      assert {:ok, ^scalar, "tail"} = Binary.decode_variant(<<1, byte, "tail">>)
+      assert {:ok, <<1, ^canonical>>} = Binary.encode_variant(scalar)
+
+      assert {:ok, ^array, "tail"} =
+               Binary.decode_variant(<<0x81, 1::32-little-signed, byte, "tail">>)
+
+      assert {:ok, <<0x81, 1::32-little-signed, ^canonical>>} = Binary.encode_variant(array)
+      assert {:ok, ^data_value, "tail"} = Binary.decode_data_value(<<1, 1, byte, "tail">>)
+      assert {:ok, <<1, 1, ^canonical>>} = Binary.encode_data_value(data_value)
+    end
   end
 
   test "all NodeId encodings and textual reserved characters round trip" do

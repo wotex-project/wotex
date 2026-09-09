@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.6
+  version: 1.0.7
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -34,6 +34,10 @@ NodeIds support numeric, string, GUID and opaque identifiers. Namespace is
 to 4096 bytes. GUID text is canonical and wire encoding observes mixed byte
 order. Scalar codecs bound strings to 65536 bytes, preserve null versus empty,
 reject overflow/non-finite values, and return the unconsumed stream tail.
+Boolean decoding maps zero to false and every nonzero byte to true; encoding
+uses zero and one, as required by OPC UA Part 6 v1.05.07
+[§5.2.2.1](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.1).
+The same rule applies inside Variants, DataValues and reference directions.
 ExpandedNodeId codecs retain explicit URI/server fields and normalize the
 numeric namespace when a URI is present. QualifiedName and LocalizedText retain
 namespaces, locales and null-versus-empty text. Full ReferenceDescription codecs

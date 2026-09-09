@@ -21,7 +21,7 @@ specifications:
     executable_evidence: ["test/wotex/opcua/asyncua_test.exs", "test/wotex/opcua/binary_test.exs", "test/wotex/opcua/contract_test.exs", "test/wotex/opcua/dependency_security_test.exs", "test/wotex/opcua/mapping_test.exs", "test/wotex/opcua/port_test.exs", "test/wotex/opcua/value_test.exs"]
     compatibility_classification: "listed typed scalar, URI and secure one-shot adapter subset only; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
   - id: "WOP.02"
-    version: "1.0.6"
+    version: "1.0.7"
     path: "docs/specs/WOP.02-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "OPC UA / asyncua", "revision": "OPC 10000 Parts 4/6 1.05.07; asyncua 2.0.1", "claim": "listed typed scalar, URI and secure one-shot adapter subset only"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]

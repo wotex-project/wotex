@@ -5,7 +5,8 @@ defmodule Wotex.OPCUA.Binary do
   `encode/2` and `decode/2` support the declared integer widths, booleans,
   single- and double-precision floating-point values, UTF-8 strings, and byte
   strings in OPC UA little-endian form. Nullable strings and byte strings retain
-  their protocol distinction. Decoding returns the unconsumed binary so callers
+  their protocol distinction. Boolean decoding maps every nonzero byte to true;
+  encoding uses only zero and one. Decoding returns the unconsumed binary so callers
   can compose larger structures without discarding trailing data.
 
   `encode_node_id/1` selects the compact numeric form where applicable and
@@ -126,7 +127,7 @@ defmodule Wotex.OPCUA.Binary do
   def decode(:uint32, <<value::32-little-unsigned, rest::binary>>), do: {:ok, value, rest}
   def decode(:int64, <<value::64-little-signed, rest::binary>>), do: {:ok, value, rest}
   def decode(:uint64, <<value::64-little-unsigned, rest::binary>>), do: {:ok, value, rest}
-  def decode(:boolean, <<value, rest::binary>>) when value in [0, 1], do: {:ok, value == 1, rest}
+  def decode(:boolean, <<value, rest::binary>>), do: {:ok, value != 0, rest}
   def decode(:float, <<value::32-little-float, rest::binary>>), do: {:ok, value, rest}
   def decode(:double, <<value::64-little-float, rest::binary>>), do: {:ok, value, rest}
 

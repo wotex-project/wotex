@@ -15,6 +15,25 @@ defmodule Wotex.OPCUA.Binary.ReferenceTest do
     end
   end
 
+  test "every wire direction byte decodes with Boolean semantics and canonical reencoding" do
+    forward = reference()
+    {:ok, prefix} = Binary.encode_node_id(forward.reference_type_id)
+    {:ok, canonical_forward} = Binary.encode_reference_description(forward)
+    prefix_size = byte_size(prefix)
+    <<^prefix::binary-size(^prefix_size), 1, suffix::binary>> = canonical_forward
+
+    for byte <- 0..255 do
+      expected = %{forward | is_forward: byte != 0}
+      canonical = if byte == 0, do: 0, else: 1
+
+      assert {:ok, ^expected, "tail"} =
+               Binary.decode_reference_description(<<prefix::binary, byte, suffix::binary, "tail">>)
+
+      assert {:ok, <<^prefix::binary-size(^prefix_size), ^canonical, ^suffix::binary>>} =
+               Binary.encode_reference_description(expected)
+    end
+  end
+
   test "missing, extra, mistyped and unsupported reference fields fail before any transport" do
     valid = reference()
 
