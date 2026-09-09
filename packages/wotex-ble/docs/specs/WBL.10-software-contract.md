@@ -161,6 +161,14 @@ response reuse. Cleanup does not imply that an in-flight ATT write was canceled.
 
 `subscribe(session, request)` includes concrete characteristic address,
 `receiver`, `mode: :auto | :notify | :indicate` (default auto), and C05 queue bound.
+The request map uses `address` for the concrete Address, with optional `receiver`,
+`mode`, `max_queue_length`, `value_type`, `byte_order`, and `timeout`; reject other
+keys. Each established subscription has its own monitored owner process. Its
+opaque handle adds a redacted `session_reference` bound to the originating
+connection generation. A foreign session reference fails before I/O, including
+when the subscription owner is dead. Repeated cancellation of a well-formed,
+already-dead same-session owner is idempotent under C05. Keep at most 64 active
+subscriptions per connection and no lifetime tombstone registry.
 Before StartNotify, install the Value PropertiesChanged listener on the exact
 characteristic and BlueZ owner generation. Return the C05 handle only after
 StartNotify succeeds. Buffer at most one early Value signal until then.
