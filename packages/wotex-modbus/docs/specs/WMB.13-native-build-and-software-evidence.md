@@ -3,7 +3,7 @@ spec:
   id: WMB.13
   title: "Native peer build and software evidence"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-modbus
   updated: 2026-09-09
 ---
@@ -22,8 +22,13 @@ are planned; the shell/Python harness has separate executed evidence in
 `mix wotex.software.build --workspace ABS` requires one absolute workspace and
 rejects duplicate, unknown or positional arguments. It uses an empty disposable
 directory or verifies an existing matching manifest. It rejects symlink roots,
-unrelated contents and changed inputs. No compilation, download or peer process
+unrelated contents and changed inputs. No native SDK compilation, download or peer process
 starts during dependency loading, `mix compile` or normal `mix test`.
+The first-party command guardian is compiled explicitly by task builds and its
+isolated native unit tests, using a POSIX C11 compiler. The source contract in
+`test/interop/native/README.md` defines owner EOF, bounded output and
+process-group cleanup; it does not claim adversarial descendant
+containment. The compiler identity belongs in the helper build manifest.
 
 The source is libmodbus 3.1.12 at commit
 `9af6c16074df566551bca0a7c37443e48f216289`, archive SHA-256

@@ -49,3 +49,13 @@ require fresh software evidence; a prior receipt cannot validate new code or too
 The eight-function client, standalone and Runtime contracts are implemented.
 WMB.13 Mix orchestration remains planned. This evidence supplies neither a
 published release, stable API decision, hardware result nor certification.
+
+## Native command ownership
+
+`test/software/command_test.exs` asserts real process-group cleanup on timeout,
+owner death, TERM, output overflow and successful root exit, plus suspended
+consumer output bounds and preservation of a separate owned group. The native
+`test/interop/native/check.c` suite supplies six standalone cases and runs with
+ASan/UBSan on Linux. These first-party command fixtures are not a protocol peer.
+The command guardian is an implemented P06 prerequisite; the Mix manifest/build/
+run tasks and their complete acceptance matrix remain planned.
