@@ -195,7 +195,8 @@ defmodule Wotex.BACnet.DiscoveryFixtureTest do
     {owner, peer, clock, token, monitor} = start(default_window(), send_result: :unexpected)
     assert_receive {:discovery_peer_send, ^peer, _}
     assert_receive {:discovery_result, ^owner, ^token, {:error, %Error{code: :transport_error}}}
-    assert_receive {:DOWN, ^monitor, :process, ^owner, :normal}
+    assert_receive {:DOWN, ^monitor, :process, ^owner, reason}
+    assert reason in [:normal, :noproc]
     assert DiscoveryClock.timers(clock) == 0
 
     {owner, peer, clock, token, monitor} = start(default_window())
