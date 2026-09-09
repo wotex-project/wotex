@@ -75,7 +75,7 @@ defmodule Wotex.Form do
   `read_only:` and `write_only:` booleans that apply to `:property` only.
   """
   @spec operations(t(), keyword()) :: [String.t()]
-  def operations(%__MODULE__{value: %{"op" => _declared}} = form, _opts), do: operations(form)
+  def operations(%__MODULE__{value: %{"op" => _}} = form, _), do: operations(form)
 
   def operations(%__MODULE__{}, opts) when is_list(opts) do
     case Keyword.get(opts, :for, :generic) do
@@ -91,7 +91,7 @@ defmodule Wotex.Form do
       :event ->
         ["subscribeevent", "unsubscribeevent"]
 
-      _context ->
+      _ ->
         []
     end
   end
@@ -108,5 +108,5 @@ defmodule Wotex.Form do
   defp valid_operation?(values) when is_list(values),
     do: values != [] and Enum.all?(values, &(is_binary(&1) and byte_size(&1) > 0))
 
-  defp valid_operation?(_value), do: false
+  defp valid_operation?(_), do: false
 end

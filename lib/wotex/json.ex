@@ -31,12 +31,12 @@ defmodule Wotex.JSON do
     with {:ok, limits} <- Limits.new(opts),
          :ok <- preflight(json, limits),
          {:ok, decoded} <- jason_decode(json),
-         {:ok, normalized, _acc} <- normalize(decoded, initial_state(limits)) do
+         {:ok, normalized, _} <- normalize(decoded, initial_state(limits)) do
       {:ok, normalized}
     end
   end
 
-  def decode(_json, _opts) do
+  def decode(_, _) do
     {:error, Error.new(:invalid_input, :parse, "JSON input must be binary")}
   end
 
@@ -44,7 +44,7 @@ defmodule Wotex.JSON do
   @spec validate(term(), keyword()) :: :ok | {:error, Error.t()}
   def validate(value, opts \\ []) do
     with {:ok, limits} <- Limits.new(opts),
-         {:ok, _acc} <- walk(value, initial_state(limits)) do
+         {:ok, _} <- walk(value, initial_state(limits)) do
       :ok
     end
   end
@@ -85,18 +85,18 @@ defmodule Wotex.JSON do
     end)
   end
 
-  def resolve_pointer(_value, _pointer), do: :error
+  def resolve_pointer(_, _), do: :error
 
   defp step(current, segment) when is_map(current), do: Map.fetch(current, segment)
 
   defp step(current, segment) when is_list(current) do
     case Integer.parse(segment) do
       {index, ""} when index >= 0 and index < length(current) -> {:ok, Enum.at(current, index)}
-      _other -> :error
+      _ -> :error
     end
   end
 
-  defp step(_current, _segment), do: :error
+  defp step(_, _), do: :error
 
   defp unescape_segment(segment) do
     segment
@@ -125,7 +125,7 @@ defmodule Wotex.JSON do
     end
   end
 
-  defp scan(<<>>, _depth, _limits), do: :ok
+  defp scan(<<>>, _, _), do: :ok
 
   defp scan(<<?", rest::binary>>, depth, limits), do: scan_string(rest, 0, depth, limits)
 
@@ -144,16 +144,16 @@ defmodule Wotex.JSON do
     scan(rest, max(depth - 1, 0), limits)
   end
 
-  defp scan(<<_byte, rest::binary>>, depth, limits), do: scan(rest, depth, limits)
+  defp scan(<<_, rest::binary>>, depth, limits), do: scan(rest, depth, limits)
 
-  defp scan_string(<<?\\, _escaped, rest::binary>>, size, depth, limits) do
+  defp scan_string(<<?\\, _, rest::binary>>, size, depth, limits) do
     scan_string(rest, size + 2, depth, limits)
   end
 
-  defp scan_string(<<?", rest::binary>>, _size, depth, limits), do: scan(rest, depth, limits)
-  defp scan_string(<<>>, _size, _depth, _limits), do: :ok
+  defp scan_string(<<?", rest::binary>>, _, depth, limits), do: scan(rest, depth, limits)
+  defp scan_string(<<>>, _, _, _), do: :ok
 
-  defp scan_string(<<_byte, rest::binary>>, size, depth, limits) do
+  defp scan_string(<<_, rest::binary>>, size, depth, limits) do
     if size + 1 > limits.max_string_bytes do
       {:error,
        Error.new(
@@ -183,7 +183,7 @@ defmodule Wotex.JSON do
     end
   end
 
-  defp normalize(_value, %{nodes: nodes, limits: %{max_nodes: max_nodes}, path: path})
+  defp normalize(_, %{nodes: nodes, limits: %{max_nodes: max_nodes}, path: path})
        when nodes >= max_nodes do
     {:error, node_limit(path, max_nodes)}
   end
@@ -231,12 +231,12 @@ defmodule Wotex.JSON do
     end
   end
 
-  defp walk(_value, %{nodes: nodes, limits: %{max_nodes: max_nodes}, path: path})
+  defp walk(_, %{nodes: nodes, limits: %{max_nodes: max_nodes}, path: path})
        when nodes >= max_nodes do
     {:error, node_limit(path, max_nodes)}
   end
 
-  defp walk(_value, %{depth: depth, limits: %{max_depth: max_depth}, path: path})
+  defp walk(_, %{depth: depth, limits: %{max_depth: max_depth}, path: path})
        when depth > max_depth do
     {:error, depth_limit(path, max_depth)}
   end
@@ -261,11 +261,11 @@ defmodule Wotex.JSON do
     end
   end
 
-  defp walk(_value, %{path: path}) do
+  defp walk(_, %{path: path}) do
     {:error, Error.new(:invalid_json_value, :value, "Value cannot be represented in JSON", path)}
   end
 
-  defp walk_list([], acc_state, _parent, _index), do: {:ok, acc_state}
+  defp walk_list([], acc_state, _, _), do: {:ok, acc_state}
 
   defp walk_list([value | rest], acc_state, parent, index) do
     with :ok <- check_collection(index + 1, parent),
@@ -274,7 +274,7 @@ defmodule Wotex.JSON do
     end
   end
 
-  defp walk_list(_tail, _acc_state, parent, _index) do
+  defp walk_list(_, _, parent, _) do
     {:error,
      Error.new(:invalid_json_value, :value, "JSON arrays must be proper lists", parent.path)}
   end
@@ -289,7 +289,7 @@ defmodule Wotex.JSON do
     end
   end
 
-  defp walk_member({key, _child}, _acc, parent) do
+  defp walk_member({key, _}, _, parent) do
     {:halt,
      {:error,
       Error.new(:non_string_key, :value, "JSON object keys must be strings", parent.path, %{
@@ -309,7 +309,7 @@ defmodule Wotex.JSON do
      )}
   end
 
-  defp check_collection(_size, _state), do: :ok
+  defp check_collection(_, _), do: :ok
 
   defp count_node(state), do: %{state | nodes: state.nodes + 1}
 
@@ -377,7 +377,7 @@ defmodule Wotex.JSON do
   defp encode_value(value) when is_map(value) do
     encoded_entries =
       value
-      |> Enum.sort_by(fn {key, _value} -> key end)
+      |> Enum.sort_by(fn {key, _} -> key end)
       |> Enum.map(fn {key, child} ->
         [Jason.encode_to_iodata!(key), ?:, encode_value(child)]
       end)

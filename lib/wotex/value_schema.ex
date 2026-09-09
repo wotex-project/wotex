@@ -54,7 +54,7 @@ defmodule Wotex.ValueSchema do
     validate_fragment(value, Map.fetch!(@form_fragments, context))
   end
 
-  def validate_form(_value, context) do
+  def validate_form(_, context) do
     {:error,
      Error.new(
        :invalid_form_context,

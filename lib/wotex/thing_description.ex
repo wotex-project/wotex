@@ -72,7 +72,7 @@ defmodule Wotex.ThingDescription do
     end
   end
 
-  def parse(_json, _opts) do
+  def parse(_, _) do
     {:error, Error.new(:invalid_input, :parse, "Thing Description input must be binary")}
   end
 
@@ -81,7 +81,7 @@ defmodule Wotex.ThingDescription do
   def parse!(json, opts \\ []) do
     case parse(json, opts) do
       {:ok, td} -> td
-      {:error, [%Error{} = first | _rest]} -> raise first
+      {:error, [%Error{} = first | _]} -> raise first
       {:error, %Error{} = error} -> raise error
     end
   end
@@ -106,7 +106,7 @@ defmodule Wotex.ThingDescription do
     end
   end
 
-  def from_map(document, _opts), do: require_object(document)
+  def from_map(document, _), do: require_object(document)
 
   @doc "Returns the complete JSON-compatible Thing Description map."
   @spec to_map(t()) :: map()
@@ -128,7 +128,7 @@ defmodule Wotex.ThingDescription do
     |> mark_changed()
   end
 
-  def put_id(%__MODULE__{}, _id, _opts) do
+  def put_id(%__MODULE__{}, _, _) do
     {:error, Error.new(:invalid_id, :value, "Thing Description id must be non-empty", "/id")}
   end
 
@@ -179,12 +179,12 @@ defmodule Wotex.ThingDescription do
 
   defp require_object(document) when is_map(document), do: {:ok, document}
 
-  defp require_object(_document) do
+  defp require_object(_) do
     {:error, Error.new(:object_required, :value, "A Thing Description must be a JSON object", "/")}
   end
 
   defp maybe_validate(td, true, opts), do: Validator.validate(td, opts)
-  defp maybe_validate(td, false, _opts), do: {:ok, td}
+  defp maybe_validate(td, false, _), do: {:ok, td}
 
   defp mark_changed({:ok, %__MODULE__{} = td}), do: {:ok, %{td | changed?: true, source: nil}}
   defp mark_changed({:error, error}), do: {:error, error}

@@ -33,7 +33,7 @@ defmodule Wotex.ThingModel.Validator do
 
   @doc "Validates a Thing Model with the pinned schema and semantic checks."
   @spec validate(ThingModel.t(), keyword()) :: {:ok, ThingModel.t()} | {:error, [Error.t()]}
-  def validate(%ThingModel{} = tm, _opts) do
+  def validate(%ThingModel{} = tm, _) do
     document = ThingModel.to_map(tm)
 
     errors =
@@ -100,9 +100,9 @@ defmodule Wotex.ThingModel.Validator do
   end
 
   defp context_errors(%{"@context" => @context}), do: []
-  defp context_errors(%{"@context" => [@context | _rest]}), do: []
-  defp context_errors(%{"@context" => [@legacy_context, @context | _rest]}), do: []
-  defp context_errors(_document), do: [unsupported_context()]
+  defp context_errors(%{"@context" => [@context | _]}), do: []
+  defp context_errors(%{"@context" => [@legacy_context, @context | _]}), do: []
+  defp context_errors(_), do: [unsupported_context()]
 
   defp unsupported_context do
     Error.new(

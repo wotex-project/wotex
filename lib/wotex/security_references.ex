@@ -27,7 +27,7 @@ defmodule Wotex.SecurityReferences do
     document
     |> references(definitions)
     |> Enum.reduce([], fn
-      {_path, reference}, errors when is_map_key(definitions, reference) ->
+      {_, reference}, errors when is_map_key(definitions, reference) ->
         errors
 
       {path, reference}, errors ->
@@ -45,7 +45,7 @@ defmodule Wotex.SecurityReferences do
     |> Enum.reverse()
   end
 
-  def errors(_document), do: []
+  def errors(_), do: []
 
   defp references(document, definitions) do
     security_values(Map.get(document, "security"), "/security") ++
@@ -73,7 +73,7 @@ defmodule Wotex.SecurityReferences do
     end)
   end
 
-  defp form_references(_forms, _path), do: []
+  defp form_references(_, _), do: []
 
   defp combo_references(definitions) do
     definitions
@@ -85,7 +85,7 @@ defmodule Wotex.SecurityReferences do
           security_values(Map.get(definition, member), path)
         end)
 
-      {_name, _definition} ->
+      {_, _} ->
         []
     end)
   end
@@ -97,15 +97,15 @@ defmodule Wotex.SecurityReferences do
     |> Enum.with_index()
     |> Enum.flat_map(fn
       {reference, index} when is_binary(reference) -> [{"#{path}/#{index}", reference}]
-      {_reference, _index} -> []
+      {_, _} -> []
     end)
   end
 
-  defp security_values(_references, _path), do: []
+  defp security_values(_, _), do: []
 
   defp sorted_map_entries(value) when is_map(value), do: Enum.sort_by(value, &elem(&1, 0))
-  defp sorted_map_entries(_value), do: []
+  defp sorted_map_entries(_), do: []
 
   defp map_value(value, key, default) when is_map(value), do: Map.get(value, key, default)
-  defp map_value(_value, _key, default), do: default
+  defp map_value(_, _, default), do: default
 end

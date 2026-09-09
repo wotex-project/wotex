@@ -56,7 +56,7 @@ defmodule Wotex.JSON.Limits do
     end)
   end
 
-  def new(_opts) do
+  def new(_) do
     {:error, Error.new(:invalid_options, :value, "options must be a keyword list")}
   end
 end

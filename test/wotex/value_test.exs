@@ -112,19 +112,19 @@ defmodule Wotex.ValueTest do
   end
 
   test "Form validates operation names in an explicit interaction context" do
-    assert {:ok, _form} =
+    assert {:ok, _} =
              Form.new(%{"href" => "relative", "op" => "readproperty"}, for: :property)
 
     assert {:error, %Error{code: :schema_violation, path: "/op"}} =
              Form.new(%{"href" => "relative", "op" => "invokeaction"}, for: :property)
 
-    assert {:ok, _form} =
+    assert {:ok, _} =
              Form.new(%{"href" => "relative", "op" => "invokeaction"}, for: :action)
 
-    assert {:ok, _form} =
+    assert {:ok, _} =
              Form.new(%{"href" => "relative", "op" => "subscribeevent"}, for: :event)
 
-    assert {:ok, _form} =
+    assert {:ok, _} =
              Form.new(%{"href" => "relative", "op" => "readallproperties"}, for: :thing)
 
     assert {:error, %Error{code: :invalid_form_context}} =
@@ -140,10 +140,10 @@ defmodule Wotex.ValueTest do
   end
 
   test "security scheme validates standard and extension variants" do
-    assert {:ok, _scheme} =
+    assert {:ok, _} =
              SecurityScheme.new(%{"scheme" => "apikey", "in" => "header", "name" => "X-Key"})
 
-    assert {:ok, _scheme} =
+    assert {:ok, _} =
              SecurityScheme.new(%{"scheme" => "ace:ACESecurityScheme", "ace:cnonce" => true})
 
     assert {:error, %Error{code: :schema_violation, phase: :schema}} =

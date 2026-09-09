@@ -130,7 +130,7 @@ defmodule Wotex.JSONTest do
     assert {:error, %Error{code: :string_limit_exceeded, phase: :parse}} =
              JSON.decode(long, max_string_bytes: 16)
 
-    assert {:ok, _value} = JSON.decode(long, max_string_bytes: 32)
+    assert {:ok, _} = JSON.decode(long, max_string_bytes: 32)
 
     escaped = ~S({"k\"ey":"v"})
     assert {:ok, %{"k\"ey" => "v"}} = JSON.decode(escaped)

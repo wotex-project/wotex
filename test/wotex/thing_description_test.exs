@@ -170,7 +170,7 @@ defmodule Wotex.ThingDescriptionTest do
         %{"x-example" => "https://example.test/vocabulary#"}
       ])
 
-    assert {:ok, _td} = ThingDescription.from_map(map)
+    assert {:ok, _} = ThingDescription.from_map(map)
   end
 
   test "rejects a context array without the TD 1.1 context and an empty title" do
@@ -269,9 +269,9 @@ defmodule Wotex.ThingDescriptionTest do
     v1_1 = Wotex.td_context_1_1()
     v1 = "https://www.w3.org/2019/wot/td/v1"
 
-    assert {:ok, _td} = ThingDescription.from_map(Map.put(valid_td_map(), "@context", [v1, v1_1]))
+    assert {:ok, _} = ThingDescription.from_map(Map.put(valid_td_map(), "@context", [v1, v1_1]))
 
-    assert {:ok, _td} =
+    assert {:ok, _} =
              ThingDescription.from_map(
                Map.put(valid_td_map(), "@context", [v1_1, "https://example.test/context"])
              )

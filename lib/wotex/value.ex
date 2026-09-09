@@ -36,7 +36,7 @@ defmodule Wotex.Value do
     end
   end
 
-  def build(_module, _map, _requirements, _schema_kind, _opts) do
+  def build(_, _, _, _, _) do
     {:error, Error.new(:object_required, :value, "Value must be a JSON object")}
   end
 

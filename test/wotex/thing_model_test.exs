@@ -88,7 +88,7 @@ defmodule Wotex.ThingModelTest do
         %{"x-example" => "https://example.test/vocabulary#"}
       ])
 
-    assert {:ok, _tm} = ThingModel.from_map(with_context)
+    assert {:ok, _} = ThingModel.from_map(with_context)
 
     without_context =
       Map.put(valid_tm_map(), "@context", ["https://example.test/vocabulary"])
@@ -213,7 +213,7 @@ defmodule Wotex.ThingModelTest do
   test "requires the TD 1.1 context first, optionally after the TD 1.0 context" do
     v1 = "https://www.w3.org/2019/wot/td/v1"
 
-    assert {:ok, _tm} =
+    assert {:ok, _} =
              ThingModel.from_map(Map.put(valid_tm_map(), "@context", [v1, Wotex.td_context_1_1()]))
 
     vendor_first =
@@ -255,7 +255,7 @@ defmodule Wotex.ThingModelTest do
         "https://example.test/m.tm.jsonld#/properties/t"
       )
 
-    assert {:ok, _tm} = ThingModel.from_map(remote)
+    assert {:ok, _} = ThingModel.from_map(remote)
 
     assert {:error, %Error{code: :object_required}} = ThingModel.from_map(42)
 

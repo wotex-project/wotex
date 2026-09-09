@@ -43,7 +43,7 @@ defmodule Wotex.ModelReferences do
     end)
   end
 
-  defp optional_errors(_document), do: []
+  defp optional_errors(_), do: []
 
   defp ref_errors(%{"tm:ref" => reference} = value, document, path) do
     own =
@@ -63,7 +63,7 @@ defmodule Wotex.ModelReferences do
 
   defp ref_errors(value, document, path) when is_map(value) do
     value
-    |> Enum.sort_by(fn {key, _child} -> key end)
+    |> Enum.sort_by(fn {key, _} -> key end)
     |> Enum.flat_map(fn {key, child} ->
       ref_errors(child, document, join(path, JSON.pointer_segment(key)))
     end)
@@ -75,7 +75,7 @@ defmodule Wotex.ModelReferences do
     |> Enum.flat_map(fn {child, index} -> ref_errors(child, document, join(path, index)) end)
   end
 
-  defp ref_errors(_scalar, _document, _path), do: []
+  defp ref_errors(_, _, _), do: []
 
   defp check_local("#" <> pointer, document, path) do
     if resolves?(document, pointer) do
@@ -104,11 +104,11 @@ defmodule Wotex.ModelReferences do
   defp affordance_pointer?(pointer) when is_binary(pointer) do
     case String.split(pointer, "/") do
       ["", category, name] when category in @affordance_categories and name != "" -> true
-      _other -> false
+      _ -> false
     end
   end
 
-  defp affordance_pointer?(_pointer), do: false
+  defp affordance_pointer?(_), do: false
 
   defp resolves?(document, pointer) do
     match?({:ok, _value}, JSON.resolve_pointer(document, pointer))

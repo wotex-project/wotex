@@ -33,7 +33,7 @@ defmodule Wotex.ThingDescription.Validator do
   @doc "Validates a Thing Description with the pinned schema and semantic checks."
   @spec validate(ThingDescription.t(), keyword()) ::
           {:ok, ThingDescription.t()} | {:error, [Error.t()]}
-  def validate(%ThingDescription{} = td, _opts) do
+  def validate(%ThingDescription{} = td, _) do
     document = ThingDescription.to_map(td)
     errors = schema_errors(document) ++ semantic_errors(document)
 
@@ -112,10 +112,10 @@ defmodule Wotex.ThingDescription.Validator do
   end
 
   defp require_context(errors, @context), do: errors
-  defp require_context(errors, [@context | _rest]), do: errors
-  defp require_context(errors, [@legacy_context, @context | _rest]), do: errors
+  defp require_context(errors, [@context | _]), do: errors
+  defp require_context(errors, [@legacy_context, @context | _]), do: errors
 
-  defp require_context(errors, _context) do
+  defp require_context(errors, _) do
     [
       Error.new(
         :unsupported_context,
@@ -156,7 +156,7 @@ defmodule Wotex.ThingDescription.Validator do
     end
   end
 
-  defp require_non_empty_title(errors, _title), do: errors
+  defp require_non_empty_title(errors, _), do: errors
 
   defp normalize_path("#"), do: "/"
   defp normalize_path("#" <> pointer), do: pointer
