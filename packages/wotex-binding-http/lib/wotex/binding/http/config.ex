@@ -2,9 +2,13 @@ defmodule Wotex.Binding.HTTP.Config do
   @moduledoc """
   Immutable configuration for the HTTP Runtime transport.
 
-  Configuration binds a client module to non-secret client options, validated
-  static request fields, and independent request, response, and event limits.
-  Credential material is never accepted here.
+  Configuration binds a client module to consumer-supplied client options,
+  validated static request fields, and independent request, response, and event
+  limits. Consumers must supply credential-free client options. The constructor
+  retains the opaque client configuration unchanged without validating its
+  contents. Inspection omits `:client_config`, but the struct retains the
+  original term. Runtime supplies credentials separately for the immediate
+  client call.
 
   Supported options are:
 
