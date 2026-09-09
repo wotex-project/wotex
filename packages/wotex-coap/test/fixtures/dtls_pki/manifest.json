@@ -1,0 +1,33 @@
+{
+  "schema": "wotex-coap-public-pki-fixtures-v1",
+  "purpose": "public test-only credentials",
+  "openssl": "OpenSSL 3.6.4 25 Aug 2026 (Library: OpenSSL 3.6.4 25 Aug 2026)\nbuilt on: Tue Aug 25 11:48:34 2026 UTC\nplatform: darwin64-arm64-cc\noptions:  bn(64,64)\ncompiler: clang -fPIC -arch arm64 -O3 -Wall -DL_ENDIAN -DOPENSSL_PIC -D_REENTRANT -DOPENSSL_BUILDING_OPENSSL -DNDEBUG\nOPENSSLDIR: \"/opt/homebrew/etc/openssl@3\"\nENGINESDIR: \"/opt/homebrew/Cellar/openssl@3/3.6.4/lib/engines-3\"\nMODULESDIR: \"/opt/homebrew/Cellar/openssl@3/3.6.4/lib/ossl-modules\"\nSeeding source: os-specific\nCPUINFO: OPENSSL_armcap=0x87d\n",
+  "files": {
+    "client-key.der": "205bfc42f8a4047df2b8b7ae9ec084486fa3853e71b4b58544984f59cb3c5ab5",
+    "client-pkcs8.der": "c0b01eb2cc78659a2e59ffbe0060a46b756689c45d7fdcc7cc0811e2ae7c8ea7",
+    "client.der": "fc9d6df4462e5a99d04e3403cde0e98870f3555fc367603c71cb70c3d208df9b",
+    "cn-only-key.der": "4eceab8b5bffb7c6bf22259b2b4337db4963162275d6b82011583a53914ed5fe",
+    "cn-only.der": "3cc974df63fa8eb95b813e84a692b056a110a989baa77799e637ef2366d129a6",
+    "critical-key.der": "af7c0893d256e422af131cf85ddcce96fe07334797c69e7bacbf4b33667bb239",
+    "critical.der": "3152ee4189238028e0046b99753b34df792fd164a1074021f8237284f4a1104f",
+    "expired-key.der": "1d4e50a7765b496f9fed7b541adca166c0c1af4d460be4779e561dafd464d7ae",
+    "expired.der": "634724112e9c512a20e8016b14633fe513078ed5fd8dee597b0b30b6e4738879",
+    "revoked-crl.der": "db83c43f8c9d01d36576bc2cdb5b4594b2a9934612217970e058b2b48ca847c7",
+    "revoked-key.der": "4c89a8410562a3ebeafe0b478112a75b8bf86003ce92583d55187804e4e9d407",
+    "revoked.der": "d415c05fed60ebe9b493cce36b380f282333fbf58ef4c9e3a706f17e447650bc",
+    "root.der": "9321d62ba64b52fd37bd1de70d424e1381e15bca7e7e73a20ba714021ab2102b",
+    "server-key.der": "611f57f584c10a8c1b9117d8df83ed258e77474e55cdc49fd43cff3f4cf8c42a",
+    "server.der": "d11d8860f1f23642024b8911b5bb5cc59e7707f15f50f8a4e346e06ab5b8b78f",
+    "valid-crl.der": "578cdac674653c3039a3fe0775053364322bf7323ad52bb1b9a5c8fb4db0e15f",
+    "weak-key.der": "27712d0fe2d38a809a78454b718debde16cd1b9f9fabc562002da234fd5c89dd",
+    "weak.der": "0bfedfc4395c5cfd92e30a867d10c280fd6c63cafcc9942a9173606d8bd10e2a",
+    "wildcard-key.der": "fe84ac618c0505c2588b3dfd8441cca679a7999c09f11994ef794b7f1d2d416b",
+    "wildcard.der": "a01099322291b16123c12dd6db68fe98551be000794ad2245356c5633b353b8c",
+    "wrong-eku-key.der": "247f9488975fe11eaf6f9d864eea3d885f8e14b9eaee09298c7d6db5ed3b0782",
+    "wrong-eku.der": "a4da56915d0929a34a6350cd63600d0ab0ea75da5ef100607641e0ce46e09aca",
+    "wrong-ku-key.der": "bab4380aba4c5657d32d8b698616df466c1662b3e8a537b767949ceee39f1602",
+    "wrong-ku.der": "1e87e176dab0639f89508411321e44f92adc36c5b452a05bf542850ef2ba66a5",
+    "wrong-san-key.der": "c11a2811c9628f831668fd785ffa7980c34efc1016a19ff89a29a00c5e0dd989",
+    "wrong-san.der": "0f500585d99d0318e5fa49e0edb9ff743edaf5b864ce2919eca90bc912f99d62"
+  }
+}

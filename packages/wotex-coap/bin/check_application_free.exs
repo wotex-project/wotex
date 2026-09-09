@@ -16,6 +16,13 @@ defmodule Wotex.CoAP.Check.ApplicationFree do
     {:ok, value} = Wotex.CoAP.Security.new(mode: :dtls_psk, identity: "client", key: <<0::128>>)
     :ok = Wotex.CoAP.Security.validate(value)
     nil = Process.whereis(:ssl_sup)
+    fixture = fn name -> File.read!("test/fixtures/dtls_pki/" <> name) end
+    {:ok, pki} = Wotex.CoAP.Security.new(mode: :dtls_pki,
+      trust_roots: [fixture.("root.der")], certificate: fixture.("client.der"),
+      private_key: fixture.("client-key.der"), server_identity: {:dns, "fixture.test"},
+      crls: [fixture.("valid-crl.der")])
+    :ok = Wotex.CoAP.Security.validate(pki)
+    nil = Process.whereis(:ssl_sup)
     IO.puts("WCO-C01 explicit SSL startup passed")
     """
 

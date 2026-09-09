@@ -9,19 +9,49 @@ defmodule Wotex.CoAP.Security do
   """
 
   alias Wotex.CoAP.Error
+  alias Wotex.CoAP.Security.PKI
   @derive {Inspect, only: [:mode]}
-  @enforce_keys [:mode, :identity, :key]
-  defstruct [:mode, :identity, :key]
+  @enforce_keys [:mode]
+  defstruct [
+    :mode,
+    :identity,
+    :key,
+    :trust_roots,
+    :certificate,
+    :private_key,
+    :server_identity,
+    :crls
+  ]
 
-  @opaque t :: %__MODULE__{mode: :dtls_psk, identity: String.t(), key: binary()}
+  @psk_keys [:mode, :identity, :key]
+  @pki_keys [:mode, :trust_roots, :certificate, :private_key, :server_identity, :crls]
+
+  @opaque t :: %__MODULE__{
+            mode: :dtls_psk | :dtls_pki,
+            identity: String.t() | nil,
+            key: binary() | nil,
+            trust_roots: [binary()] | nil,
+            certificate: binary() | nil,
+            private_key: binary() | nil,
+            server_identity: {:dns, String.t()} | {:ip, :inet.ip_address()} | nil,
+            crls: [binary()] | nil
+          }
 
   @doc """
-  Constructs a PSK credential from an exact atom-keyed map or unique keyword list.
+  Constructs a credential from an exact atom-keyed map or unique keyword list.
 
   Required keys are `:mode` (`:dtls_psk`), `:identity` (1..128 UTF-8 bytes without
   ASCII controls), and `:key` (16..64 binary bytes). Unknown keys, duplicate options,
   malformed lists and unsupported modes return a structured error. There is no
   default identity or key; error values contain neither.
+
+  PKI uses `:mode` (`:dtls_pki`), `:trust_roots` and `:crls` (1..8 DER binaries
+  each), `:certificate` (DER client certificate), `:private_key` (unencrypted DER
+  PKCS#1 or PKCS#8 for two-prime RSA), and `:server_identity` (`{:dns, ascii_name}` or
+  `{:ip, numeric_tuple}`). Each binary is at most 64 KiB, with a 1 MiB aggregate
+  limit. RSA keys require at least 2048 bits and the client key must match its
+  certificate. Construction parses immutable material without consulting clocks;
+  time, chain, peer identity and revocation are checked during the handshake.
   """
   @spec new(term()) :: {:ok, t()} | {:error, Error.t()}
   def new(options) when is_list(options) do
@@ -36,12 +66,21 @@ defmodule Wotex.CoAP.Security do
     end
   end
 
+  def new(%{mode: :dtls_pki} = values) when map_size(values) == 6 do
+    with true <- Map.keys(values) -- @pki_keys == [],
+         :ok <- PKI.validate(values),
+         do: {:ok, struct!(__MODULE__, values)},
+         else: (_ -> failure(:pki))
+  end
+
   def new(_), do: failure(:security)
 
   @doc "Revalidates an exact credential value before a transport can acquire a resource."
   @spec validate(term()) :: :ok | {:error, Error.t()}
-  def validate(%__MODULE__{} = value) when map_size(value) == 4 do
-    case new(Map.from_struct(value)) do
+  def validate(%__MODULE__{} = value) when map_size(value) == 9 do
+    keys = if value.mode == :dtls_psk, do: @psk_keys, else: @pki_keys
+
+    case new(Map.take(Map.from_struct(value), keys)) do
       {:ok, ^value} -> :ok
       {:error, %Error{}} = error -> error
       _ -> failure(:security)
@@ -53,8 +92,12 @@ defmodule Wotex.CoAP.Security do
   defp options([], values), do: {:ok, values}
 
   defp options([{key, value} | rest], values)
-       when key in [:mode, :identity, :key] and not is_map_key(values, key),
-       do: options(rest, Map.put(values, key, value))
+       when key in @psk_keys or key in @pki_keys,
+       do:
+         if(is_map_key(values, key),
+           do: failure(:security),
+           else: options(rest, Map.put(values, key, value))
+         )
 
   defp options(_, _), do: failure(:security)
 

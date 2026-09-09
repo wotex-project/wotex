@@ -28,6 +28,7 @@ defmodule Wotex.CoAP.Datagram.DTLS do
              is_reference(generation) and is_pid(owner) and node(owner) == node() and
              timeout in 1..60_000 do
     with :ok <- Security.validate(security),
+         :ok <- supported_security(security),
          true <- valid_ip?(host),
          :ok <- prepare_ssl(),
          {:ok, pid} <- GenServer.start(__MODULE__, {config, owner, timeout}, timeout: timeout + 100) do
@@ -143,6 +144,9 @@ defmodule Wotex.CoAP.Datagram.DTLS do
         {:stop, Error.new(:security_handshake_failed)}
     end
   end
+
+  defp supported_security(%Security{mode: :dtls_psk}), do: :ok
+  defp supported_security(_), do: failure(:unsupported_security)
 
   defp prepare_ssl do
     with {:ok, _} <- Application.ensure_all_started(:ssl),
