@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.4
+  version: 1.0.5
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -34,6 +34,12 @@ NodeIds support numeric, string, GUID and opaque identifiers. Namespace is
 to 4096 bytes. GUID text is canonical and wire encoding observes mixed byte
 order. Scalar codecs bound strings to 65536 bytes, preserve null versus empty,
 reject overflow/non-finite values, and return the unconsumed stream tail.
+ExpandedNodeId codecs retain explicit URI/server fields and normalize the
+numeric namespace when a URI is present. QualifiedName and LocalizedText retain
+namespaces, locales and null-versus-empty text. Full ReferenceDescription codecs
+preserve both expanded identities, direction, names and the finite NodeClass.
+These pure structures do not resolve a namespace or follow a remote reference.
+Variant/DataValue codecs and native SDK value conversion remain required work.
 UA chunk framing defaults to 1 MiB and validates message type, chunk kind and
 length before allocating/waiting. Chunk framing alone does not validate secure
 channels, sequence numbers, RequestId, RequestHandle or service status.

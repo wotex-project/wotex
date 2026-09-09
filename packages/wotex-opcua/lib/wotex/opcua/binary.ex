@@ -1,6 +1,6 @@
 defmodule Wotex.OPCUA.Binary do
   @moduledoc """
-  Encodes and decodes bounded OPC UA Part 6 scalar values and NodeIds.
+  Encodes and decodes bounded OPC UA Part 6 values and reference identities.
 
   `encode/2` and `decode/2` support the declared integer widths, booleans,
   single- and double-precision floating-point values, UTF-8 strings, and byte
@@ -15,6 +15,12 @@ defmodule Wotex.OPCUA.Binary do
   service ownership. Invalid lengths, encodings, and values return
   `Wotex.OPCUA.Error`.
 
+  ExpandedNodeId codecs preserve an explicit namespace URI and remote server
+  index. QualifiedName and LocalizedText codecs retain namespace, locale and
+  null-versus-empty text. ReferenceDescription codecs compose those values
+  without reducing references to display names or resolving remote identities.
+  These structured encoders require their exact atom-keyed fields.
+
   ## Examples
 
       iex> Wotex.OPCUA.Binary.encode(:uint16, 513)
@@ -27,8 +33,14 @@ defmodule Wotex.OPCUA.Binary do
       iex> Wotex.OPCUA.Binary.encode(:string, "")
       {:ok, <<0, 0, 0, 0>>}
 
+      iex> Wotex.OPCUA.Binary.encode_localized_text(%{locale: nil, text: ""})
+      {:ok, <<2, 0, 0, 0, 0>>}
+      iex> Wotex.OPCUA.Binary.decode_qualified_name(<<2, 0, 1, 0, 0, 0, ?x, 99>>)
+      {:ok, %{namespace: 2, name: "x"}, <<99>>}
+
   """
   alias Wotex.OPCUA.{Address, Error}
+  alias Wotex.OPCUA.Binary.{Names, Reference}
 
   @type scalar ::
           :boolean
@@ -151,6 +163,42 @@ defmodule Wotex.OPCUA.Binary do
       do: node(ns, :guid, <<a::32, b::16, c::16, tail::binary>>, rest)
 
   def decode_node_id(_), do: {:error, Error.new(:invalid_node_id)}
+
+  @doc "Encodes an explicit ExpandedNodeId; a supplied URI requires namespace index zero."
+  @spec encode_expanded_node_id(term()) :: {:ok, binary()} | {:error, Error.t()}
+  def encode_expanded_node_id(value), do: Names.encode(:expanded_node_id, value)
+
+  @doc "Decodes an ExpandedNodeId, normalizing its namespace index when a URI is present."
+  @spec decode_expanded_node_id(term()) ::
+          {:ok, Names.expanded_node_id(), binary()} | {:error, Error.t()}
+  def decode_expanded_node_id(bytes), do: Names.decode(:expanded_node_id, bytes)
+
+  @doc "Encodes a UInt16 namespace and nullable UTF-8 name without resolving either."
+  @spec encode_qualified_name(term()) :: {:ok, binary()} | {:error, Error.t()}
+  def encode_qualified_name(value), do: Names.encode(:qualified_name, value)
+
+  @doc "Decodes a QualifiedName with its original namespace, nullable text and unconsumed tail."
+  @spec decode_qualified_name(term()) ::
+          {:ok, Names.qualified_name(), binary()} | {:error, Error.t()}
+  def decode_qualified_name(bytes), do: Names.decode(:qualified_name, bytes)
+
+  @doc "Encodes independently nullable locale and text, retaining an explicitly empty field."
+  @spec encode_localized_text(term()) :: {:ok, binary()} | {:error, Error.t()}
+  def encode_localized_text(value), do: Names.encode(:localized_text, value)
+
+  @doc "Decodes a LocalizedText mask and both nullable fields without discarding trailing bytes."
+  @spec decode_localized_text(term()) ::
+          {:ok, Names.localized_text(), binary()} | {:error, Error.t()}
+  def decode_localized_text(bytes), do: Names.decode(:localized_text, bytes)
+
+  @doc "Encodes the complete seven-field ReferenceDescription profile with a finite NodeClass."
+  @spec encode_reference_description(term()) :: {:ok, binary()} | {:error, Error.t()}
+  defdelegate encode_reference_description(value), to: Reference, as: :encode
+
+  @doc "Decodes a reference with both expanded identities, original names and exact tail."
+  @spec decode_reference_description(term()) ::
+          {:ok, Reference.t(), binary()} | {:error, Error.t()}
+  defdelegate decode_reference_description(bytes), to: Reference, as: :decode
 
   defp node(ns, kind, id, rest) do
     with {:ok, node} <- Address.new(%Address{namespace: ns, kind: kind, identifier: id}),

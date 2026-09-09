@@ -1,8 +1,14 @@
 {
   "format_version": "1.0.0",
-  "specification": "WOP.11@1.1.0",
-  "execution_status": "specified_unexecuted",
-  "description": "Concrete selected cases; executable bindings and independent-peer evidence are still required.",
+  "specification": "WOP.11@1.1.1",
+  "execution_status": "partially_bound",
+  "description": "F01, F02, F09 and F13 execute through the public pure codecs. Other cases remain specified and unexecuted; package acceptance and independent-peer evidence are still required.",
+  "executable_bindings": [
+    {
+      "path": "test/wotex/opcua/standalone_contract_test.exs",
+      "case_ids": ["WOP-F01", "WOP-F02", "WOP-F09", "WOP-F13"]
+    }
+  ],
   "cases": [
     {
       "id": "WOP-F01",

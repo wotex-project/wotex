@@ -117,3 +117,17 @@ space count and suffix instead of repeated literal whitespace in the fixture.
 The CTest self-test separately exercises strict flags and basic pool ownership.
 Vendor tests reject missing, altered and symbolic source/license files. These
 checks do not accept typed SDK construction, response serialization or services.
+
+## Pure identity and reference structures
+
+`standalone_contract_test.exs` executes WOP-F01, F02, F09 and F13 from
+`contract-v1.json` through public `Binary` functions. The fixture input alone
+reaches each decoder; the complete actual projection is compared with the
+declared expectation. Test tags contain the fixture case, requirement IDs and
+SHA-256 of the corpus bytes. `binary/names_test.exs` and
+`binary/reference_test.exs` exercise exact masks and field order, all NodeId
+kinds and NodeClasses, nullable/empty text, maximum string and URI lengths,
+numeric overflow, every truncated field, invalid masks, and arbitrary byte
+streams. Unconsumed tails remain byte-exact, including a tail larger than the
+consumed identity limit. These checks cover the pure identity/reference subset
+of N02; they do not accept Variant/DataValue, SDK construction or Browse services.

@@ -21,7 +21,7 @@ specifications:
     executable_evidence: ["test/wotex/opcua/asyncua_test.exs", "test/wotex/opcua/binary_test.exs", "test/wotex/opcua/contract_test.exs", "test/wotex/opcua/dependency_security_test.exs", "test/wotex/opcua/mapping_test.exs", "test/wotex/opcua/port_test.exs", "test/wotex/opcua/value_test.exs"]
     compatibility_classification: "listed typed scalar, URI and secure one-shot adapter subset only; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
   - id: "WOP.02"
-    version: "1.0.4"
+    version: "1.0.5"
     path: "docs/specs/WOP.02-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "OPC UA / asyncua", "revision": "OPC 10000 Parts 4/6 1.05.07; asyncua 2.0.1", "claim": "listed typed scalar, URI and secure one-shot adapter subset only"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
@@ -39,14 +39,14 @@ specifications:
     executable_evidence: []
     compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
   - id: "WOP.11"
-    version: "1.1.0"
+    version: "1.1.1"
     path: "docs/specs/WOP.11-standalone-client-and-preservation.md"
-    implementation_status: "planned"
-    standards: [{"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Native target requirements; exact source digests are in WOP.13 and native-sources-v1.json; no native acceptance evidence"}]
+    implementation_status: "partial"
+    standards: [{"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Pure identity/reference subset; no native service or complete value acceptance"}]
     requires: ["WOP.00", "WOP.10"]
-    implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+    implementation_modules: ["Wotex.OPCUA.Binary", "Wotex.OPCUA.Binary.Names", "Wotex.OPCUA.Binary.Reference"]
+    executable_evidence: ["test/wotex/opcua/standalone_contract_test.exs", "test/wotex/opcua/binary/names_test.exs", "test/wotex/opcua/binary/reference_test.exs"]
+    compatibility_classification: "F01/F02/F09/F13 execute pure identity/reference codecs with boundary and malformed-input tests. Variant/DataValue, SDK construction, Browse and lifecycle cases remain required; N02 and P01 are incomplete."
   - id: "WOP.12"
     version: "1.1.0"
     path: "docs/specs/WOP.12-wotex-integration.md"

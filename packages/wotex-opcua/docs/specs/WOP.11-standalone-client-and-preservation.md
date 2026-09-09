@@ -3,7 +3,7 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -209,10 +209,13 @@ do not silently change them to the richer native helper shapes.
 
 ## WOP-N05 — Concrete fixtures and acceptance binding
 
-[contract-v1.json](fixtures/contract-v1.json) is a **specified, unexecuted**
-corpus. Existing WOP-Vxx entries in .10 are scenario families, not implemented
-test vectors. The starter corpus fixes representative bytes and state outcomes;
-every family still requires its complete boundary/security/fault cases.
+[contract-v1.json](fixtures/contract-v1.json) is a partially bound corpus.
+`standalone_contract_test.exs` executes F01, F02, F09 and F13 through the public
+pure codecs and compares every declared output field. Its test tags bind the
+case, requirements and exact corpus SHA-256. Other corpus cases remain specified
+and unexecuted. Existing WOP-Vxx entries in .10 are scenario families, not
+implemented test vectors. Every family still requires its complete boundary,
+security and fault cases; these four bindings do not accept WOP-P01 or N02.
 
 Corpus format version 1.0.0 separates `input` from `expectation`. The runner
 passes only `input` to the operation/test adapter and compares the complete
