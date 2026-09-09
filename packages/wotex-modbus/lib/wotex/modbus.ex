@@ -125,7 +125,7 @@ defmodule Wotex.Modbus do
     with :ok <- Session.validate(session),
          :ok <- Command.validate(command),
          false <- Command.write?(command),
-         {:ok, _values} <- request(session, command) do
+         {:ok, _} <- request(session, command) do
       {:ok, :healthy}
     else
       true -> {:error, Error.new(:invalid_health_probe)}

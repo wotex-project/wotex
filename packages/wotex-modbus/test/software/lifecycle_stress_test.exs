@@ -91,9 +91,9 @@ defmodule Wotex.Modbus.SoftwareLifecycleStressTest do
   end
 
   test "WMB-C09 WMB-S02 WMB-S03 WMB-V04 WMB-V08 WMB-V12 repeated failure cleanup uses a separate malformed peer" do
-    for failure <- [:deadline, :peer_close, :malformed], _cycle <- 1..10 do
+    for failure <- [:deadline, :peer_close, :malformed], _ <- 1..10 do
       {peer, port} =
-        TestPeer.start(fn tid, unit, _pdu ->
+        TestPeer.start(fn tid, unit, _ ->
           case failure do
             :deadline ->
               receive do

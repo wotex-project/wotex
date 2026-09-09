@@ -7,8 +7,8 @@ defmodule Wotex.Modbus.RuntimeCredentials do
   @impl Wotex.Runtime.Credentials
   def resolve(
         %{names: ["none"], definitions: %{"none" => %{"scheme" => "nosec"}}},
-        _form,
-        _context,
+        _,
+        _,
         credential
       ),
       do: {:ok, credential}

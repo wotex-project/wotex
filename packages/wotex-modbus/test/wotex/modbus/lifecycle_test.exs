@@ -70,7 +70,7 @@ defmodule Wotex.Modbus.LifecycleTest do
     assert System.monotonic_time(:millisecond) - started < 1000
     assert {:error, %Error{code: :connection_closed, effect: :unknown}} = Task.await(call)
     assert :erlang.port_info(state.socket) == :undefined
-    assert Enum.all?(state.calls, fn {_ref, entry} -> Process.read_timer(entry.timer) == false end)
+    assert Enum.all?(state.calls, fn {_, entry} -> Process.read_timer(entry.timer) == false end)
     send(peer.pid, :close)
     assert :ok = Task.await(peer)
     assert :ok = Modbus.disconnect(session)
@@ -90,7 +90,7 @@ defmodule Wotex.Modbus.LifecycleTest do
       assert {:error, %Error{code: :connection_closed, effect: :none}} = Task.await(queued)
       assert :erlang.port_info(state.socket) == :undefined
 
-      assert Enum.all?(state.calls, fn {_ref, entry} -> Process.read_timer(entry.timer) == false end)
+      assert Enum.all?(state.calls, fn {_, entry} -> Process.read_timer(entry.timer) == false end)
 
       send(peer.pid, :close)
       assert :ok = Task.await(peer)
@@ -324,7 +324,7 @@ defmodule Wotex.Modbus.LifecycleTest do
       closing =
         injected_owner(fn ->
           receive do
-            {:"$gen_call", {caller, _}, {:request, ^write, _deadline, admission}} ->
+            {:"$gen_call", {caller, _}, {:request, ^write, _, admission}} ->
               if admitted, do: send(caller, {:wotex_modbus_admitted, admission})
           end
         end)
@@ -341,7 +341,7 @@ defmodule Wotex.Modbus.LifecycleTest do
       closing =
         injected_owner(fn ->
           receive do
-            {:system, _from, {:terminate, :normal}} -> :ok
+            {:system, _, {:terminate, :normal}} -> :ok
           end
         end)
 
@@ -356,7 +356,7 @@ defmodule Wotex.Modbus.LifecycleTest do
     closing =
       injected_owner(fn ->
         receive do
-          {:system, _from, {:terminate, :normal}} -> exit(:injected_stop_failure)
+          {:system, _, {:terminate, :normal}} -> exit(:injected_stop_failure)
         end
       end)
 
@@ -366,7 +366,7 @@ defmodule Wotex.Modbus.LifecycleTest do
     unrelated =
       injected_owner(fn ->
         receive do
-          {:system, _from, {:terminate, :normal}} ->
+          {:system, _, {:terminate, :normal}} ->
             Process.delete({Connection, :owner})
 
             receive do

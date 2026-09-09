@@ -156,12 +156,12 @@ defmodule Wotex.Modbus.Connection do
   def handle_call(:ready, from, %{phase: :connecting} = state),
     do: {:noreply, %{state | ready_from: from}}
 
-  def handle_call(:ready, _from, %{phase: :ready} = state) do
+  def handle_call(:ready, _, %{phase: :ready} = state) do
     Process.link(state.creator)
     {:reply, :ok, state}
   end
 
-  def handle_call(:ready, _from, %{phase: {:failed, error}} = state),
+  def handle_call(:ready, _, %{phase: {:failed, error}} = state),
     do: {:stop, :normal, {:error, error}, state}
 
   def handle_call({:request, command, deadline, admission}, from, %{phase: :ready} = state) do
@@ -172,7 +172,7 @@ defmodule Wotex.Modbus.Connection do
     end
   end
 
-  def handle_call({:request, _, _, _}, _from, state),
+  def handle_call({:request, _, _, _}, _, state),
     do: {:reply, {:error, Error.new(:connection_closed)}, state}
 
   @impl GenServer
@@ -201,7 +201,7 @@ defmodule Wotex.Modbus.Connection do
     receive_bytes(state, bytes)
   end
 
-  def handle_info({:tcp, socket, _bytes}, %{socket: socket} = state),
+  def handle_info({:tcp, socket, _}, %{socket: socket} = state),
     do: fail(state, Error.new(:response_mismatch))
 
   def handle_info({:tcp_closed, socket}, %{socket: socket} = state),
@@ -217,22 +217,22 @@ defmodule Wotex.Modbus.Connection do
     {:noreply, finish(state, ref, {:error, Error.new(:deadline_exceeded)})}
   end
 
-  def handle_info({:DOWN, monitor, :process, _pid, _reason}, state) do
+  def handle_info({:DOWN, monitor, :process, _, _}, state) do
     if monitor in [state.owner_monitor, state.creator_monitor],
       do: {:stop, :normal, state},
       else: caller_down(state, monitor)
   end
 
-  def handle_info({:EXIT, creator, _reason}, %{creator: creator} = state),
+  def handle_info({:EXIT, creator, _}, %{creator: creator} = state),
     do: {:stop, :normal, state}
 
   def handle_info({:EXIT, worker, reason}, %{worker: worker} = state) when reason != :normal,
     do: worker_failed(state)
 
-  def handle_info(_stale_message, state), do: {:noreply, state}
+  def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
-  def terminate(_reason, state) do
+  def terminate(_, state) do
     stop_worker(state.worker)
     if state.socket, do: :gen_tcp.close(state.socket)
     Process.cancel_timer(state.connect_timer)
@@ -253,15 +253,15 @@ defmodule Wotex.Modbus.Connection do
     try do
       GenServer.call(pid, {:request, command, deadline, admission}, timeout + 1000)
     catch
-      :exit, {:noproc, _call} ->
+      :exit, {:noproc, _} ->
         {:error, Error.new(:connection_closed)}
 
-      :exit, {:normal, _call} ->
+      :exit, {:normal, _} ->
         if admitted?(admission),
           do: effect(Error.new(:connection_closed), command),
           else: {:error, Error.new(:connection_closed)}
 
-      :exit, _reason ->
+      :exit, _ ->
         effect(Error.new(:connection_closed), command)
     after
       admitted?(admission)
@@ -282,7 +282,7 @@ defmodule Wotex.Modbus.Connection do
       {:error, _} = error -> error
     end
   catch
-    :exit, _reason ->
+    :exit, _ ->
       Process.unlink(pid)
       Process.exit(pid, :kill)
       {:error, Error.new(:connect_failed)}
@@ -426,7 +426,7 @@ defmodule Wotex.Modbus.Connection do
       case Codec.response(frame, call.command, call.transaction) do
         {:error, %Error{code: code} = error} when code != :remote_exception -> fail(state, error)
         result when tail == <<>> -> complete(state, result)
-        _result -> fail(state, Error.new(:response_mismatch))
+        _ -> fail(state, Error.new(:response_mismatch))
       end
     end
   end
@@ -446,11 +446,11 @@ defmodule Wotex.Modbus.Connection do
 
     case :inet.setopts(state.socket, active: :once) do
       :ok -> {:noreply, next(state)}
-      {:error, _reason} -> {:stop, :normal, state}
+      {:error, _} -> {:stop, :normal, state}
     end
   end
 
-  defp fail(%{active: nil} = state, _error), do: {:stop, :normal, state}
+  defp fail(%{active: nil} = state, _), do: {:stop, :normal, state}
 
   defp fail(state, error) do
     call = Map.fetch!(state.calls, state.active)
@@ -458,9 +458,9 @@ defmodule Wotex.Modbus.Connection do
   end
 
   defp caller_down(state, monitor) do
-    case Enum.find(state.calls, fn {_ref, call} -> call.monitor == monitor end) do
-      {ref, _call} when ref == state.active -> {:stop, :normal, state}
-      {ref, _call} -> {:noreply, finish(state, ref, {:error, Error.new(:connection_closed)})}
+    case Enum.find(state.calls, fn {_, call} -> call.monitor == monitor end) do
+      {ref, _} when ref == state.active -> {:stop, :normal, state}
+      {ref, _} -> {:noreply, finish(state, ref, {:error, Error.new(:connection_closed)})}
       nil -> {:noreply, state}
     end
   end
@@ -546,7 +546,7 @@ defmodule Wotex.Modbus.Connection do
   defp admitted_options?(opts), do: admitted_options?(opts, %{})
   defp admitted_options?([], _), do: true
 
-  defp admitted_options?([{key, _value} | rest], seen)
+  defp admitted_options?([{key, _} | rest], seen)
        when key in [:host, :port, :timeout, :transaction_id, :owner, :unit_id, :security] and
               not is_map_key(seen, key),
        do: admitted_options?(rest, Map.put(seen, key, true))

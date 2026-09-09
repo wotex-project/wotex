@@ -44,7 +44,7 @@ defmodule Wotex.Modbus.SessionTrace do
       owned_resources: %{
         sockets: if(:erlang.port_info(socket) == :undefined, do: 0, else: 1),
         owners: if(Process.alive?(session.pid), do: 1, else: 0),
-        pending_calls: Enum.count(final.calls, fn {_id, task} -> Process.alive?(task.pid) end)
+        pending_calls: Enum.count(final.calls, fn {_, task} -> Process.alive?(task.pid) end)
       }
     }
 

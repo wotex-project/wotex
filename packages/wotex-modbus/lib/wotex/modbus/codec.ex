@@ -38,7 +38,7 @@ defmodule Wotex.Modbus.Codec do
   @spec decode(term()) :: {:ok, frame(), binary()} | :more | {:error, Error.t()}
   def decode(data) when is_binary(data) and byte_size(data) < 6, do: :more
 
-  def decode(<<_transaction::16, protocol::16, length::16, _::binary>>)
+  def decode(<<_::16, protocol::16, length::16, _::binary>>)
       when protocol != 0 or length not in 2..254,
       do: {:error, Error.new(:invalid_mbap)}
 

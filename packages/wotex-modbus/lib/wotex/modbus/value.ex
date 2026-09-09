@@ -36,7 +36,7 @@ defmodule Wotex.Modbus.Value do
   @doc "Encodes a scalar, rejecting overflow and lossy integer conversion."
   @spec encode(term(), kind(), keyword()) :: {:ok, [non_neg_integer()]} | {:error, Error.t()}
   def encode(value, kind, opts \\ []) do
-    with {:ok, _width} <- width(kind),
+    with {:ok, _} <- width(kind),
          :ok <- orders(opts),
          {:ok, bytes} <- encode_scalar(value, kind) do
       {:ok, reorder(for(<<register::16 <- bytes>>, do: register), opts)}

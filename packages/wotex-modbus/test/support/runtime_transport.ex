@@ -15,9 +15,9 @@ defmodule Wotex.Modbus.RuntimeTransport do
     result
   end
 
-  def request(_request, _execution, {:fault, error}), do: {:error, error}
+  def request(_, _, {:fault, error}), do: {:error, error}
 
-  def request(request, _execution, {:result, payload, changes}) do
+  def request(request, _, {:result, payload, changes}) do
     {:ok, result} = Result.new(request.request_id, request.operation, payload)
     {:ok, struct!(result, changes)}
   end

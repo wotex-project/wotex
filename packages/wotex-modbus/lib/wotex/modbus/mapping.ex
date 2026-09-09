@@ -63,7 +63,7 @@ defmodule Wotex.Modbus.Mapping do
   @doc "Converts a read payload according to the mapped explicit scalar type."
   @spec decode(map(), term()) :: {:ok, term()} | {:error, Error.t()}
   def decode(%{value_type: nil}, value), do: {:ok, value}
-  def decode(_mapping, :written), do: {:ok, :written}
+  def decode(_, :written), do: {:ok, :written}
 
   def decode(%{value_type: type, value_options: options}, registers),
     do: Value.decode(registers, type, options)
@@ -125,7 +125,7 @@ defmodule Wotex.Modbus.Mapping do
   defp options(base: base) when is_binary(base) or is_nil(base), do: :ok
   defp options(_), do: {:error, Error.new(:invalid_options)}
 
-  defp scalar_shape(_function, _quantity, nil), do: :ok
+  defp scalar_shape(_, _, nil), do: :ok
 
   defp scalar_shape(function, quantity, kind)
        when function in [
@@ -231,7 +231,7 @@ defmodule Wotex.Modbus.Mapping do
     end
   end
 
-  defp function(%{"modv:function" => name}, operation, _quantity) do
+  defp function(%{"modv:function" => name}, operation, _) do
     case Map.fetch(@functions, name) do
       {:ok, function} ->
         read? = String.starts_with?(Atom.to_string(function), "read_")
@@ -262,7 +262,7 @@ defmodule Wotex.Modbus.Mapping do
       else: {:error, Error.new(:unsupported_conversion)}
   end
 
-  defp argument(function, _input, quantity, _kind, _orders)
+  defp argument(function, _, quantity, _, _)
        when function in [
               :read_coils,
               :read_discrete_inputs,
@@ -271,9 +271,9 @@ defmodule Wotex.Modbus.Mapping do
             ],
        do: {:ok, quantity}
 
-  defp argument(_function, input, _quantity, nil, _orders), do: {:ok, input}
+  defp argument(_, input, _, nil, _), do: {:ok, input}
 
-  defp argument(function, input, _quantity, kind, orders) do
+  defp argument(function, input, _, kind, orders) do
     with {:ok, registers} <- Value.encode(input, kind, orders) do
       if function == :write_holding_register and length(registers) == 1,
         do: {:ok, hd(registers)},

@@ -9,14 +9,14 @@ defmodule Wotex.Modbus.ConnectionTest do
     {peer, port} =
       TestPeer.start(fn _, _, pdu ->
         case pdu do
-          <<f, _address::16, quantity::16>> when f in [1, 2] ->
+          <<f, _::16, quantity::16>> when f in [1, 2] ->
             <<f, div(quantity + 7, 8), 1>>
 
-          <<f, _address::16, quantity::16>> when f in [3, 4] ->
+          <<f, _::16, quantity::16>> when f in [3, 4] ->
             registers = for _ <- 1..quantity, into: <<>>, do: <<0, 0>>
             <<f, quantity * 2, registers::binary>>
 
-          <<f, address::16, quantity::16, _rest::binary>> when f in [15, 16] ->
+          <<f, address::16, quantity::16, _::binary>> when f in [15, 16] ->
             <<f, address::16, quantity::16>>
 
           echo ->
