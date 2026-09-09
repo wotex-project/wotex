@@ -1,6 +1,6 @@
 # WRT.01: ConsumedThing runtime mechanics
 
-Specification: `WRT.01@1.3.0`. Package baseline: `wotex_runtime 0.1.0`.
+Specification: `WRT.01@1.3.1`. Package baseline: `wotex_runtime 0.1.0`.
 Implementation and evidence coverage are recorded in the catalogue and
 repository completion plan at `docs/plans/wotex-runtime-completion.md`; this document is not a gate result.
 
@@ -199,6 +199,44 @@ The returned default restart policy is `:transient`, shutdown is 5,000 ms and
 resubscription after session loss chooses `:permanent` and its own restart
 intensity. No durable offset, process registry, automatic reconnect inside the
 package, or deduplication is claimed.
+
+## Protocol SDK and external-process boundary
+
+The transport behaviour is independent of the language used by a protocol
+implementation. An Elixir callback may exchange messages with an explicitly
+owned native SDK process. Runtime neither launches that executable nor loads a
+protocol SDK into the VM. Connection creation, executable admission, build
+provenance, wire parsing and SDK configuration belong to the binding.
+
+The binding's public configuration identifies the connection owner or an
+explicit connection child specification. Package loading, Form selection and
+profile construction remain inert. Native handles, file descriptors and SDK
+pointers do not cross into a `Wotex.Runtime.Request`, `Result` or observation.
+The binding converts protocol values into the selected Form's admitted value
+representation and retains protocol status and timestamps as typed metadata.
+
+`subscribe/4` receives the final Runtime subscription owner, even though the
+callback executes in a temporary opening worker. A binding attaches each
+partially opened resource to that owner before waiting for SDK completion.
+Owner loss cancels pending establishment and releases local resources. A
+shared connection remains alive while other admitted owners use it. Callback
+worker exit alone does not revoke a successfully handed-off subscription.
+
+An external-process binding defines its own request correlation, generation,
+frame-size, queue, timeout and cancellation limits. The Runtime deadline
+constrains the binding's total exchange budget; starting another SDK call does
+not grant another full budget. A late native reply cannot satisfy a different
+request or revive a closed subscription. Native process loss maps to a typed
+transport failure or `:session_lost`; it does not silently replay a write or
+Action. Local cleanup and remote acknowledgement are distinct outcomes.
+
+These obligations use the existing callback and delivery contracts. Binding
+acceptance exercises them through a real `ConsumedThing` and Runtime
+subscription, including owner death during establishment, native process
+failure, late replies, concurrent owners, overload and shutdown. A helper's
+standalone test does not establish Runtime integration. Runtime's own gate
+proves the generic opening-worker and subscription lifecycle independently of
+any protocol SDK.
 
 ## Limits, allocation and security
 

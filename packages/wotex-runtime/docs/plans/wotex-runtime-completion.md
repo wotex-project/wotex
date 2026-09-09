@@ -36,6 +36,15 @@ Form/profile selection cost, callback budgets, mailbox overload and receiver
 behavior. Each bound needs threshold/over-threshold tests and allocation
 evidence. Consumer-owned limits must not be relabelled package guarantees.
 
+RT-C04 includes protocol bindings backed by external native SDK processes.
+Their owning specifications define executable admission, bounded IPC, SDK
+storage and protocol interoperability. Runtime integration proves the common
+owner and result boundary: callback-worker handoff, owner death during opening,
+shared-connection isolation, native failure, late delivery and deadline
+propagation. Those tests belong to the binding's independent consumer suite;
+Runtime retains its protocol-independent transport behaviour and does not
+acquire an SDK dependency or native process manager.
+
 ## Five evidence gates
 
 Each gate records exact source/dependency tree or archive digest, command,

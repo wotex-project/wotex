@@ -3,7 +3,7 @@ package: "wotex_runtime"
 completion_plan: "docs/plans/wotex-runtime-completion.md"
 specifications:
   - id: "WRT.01"
-    version: "1.3.0"
+    version: "1.3.1"
     path: "docs/specs/WRT.01-consumed-thing-runtime.md"
     implementation_status: "implemented"
     standards:
@@ -11,8 +11,8 @@ specifications:
       - {name: "W3C WoT Scripting API", revision: "Note 2023-10-03", claim: "conceptual guidance; no API conformance"}
     requires: ["wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03"]
     implementation_modules: ["Wotex.Runtime.ConsumedThing", "Wotex.Runtime.FormSelector", "Wotex.Runtime.Context", "Wotex.Runtime.ExecutionContext", "Wotex.Runtime.Selection", "Wotex.Runtime.BindingProfile", "Wotex.Runtime.Request", "Wotex.Runtime.Result", "Wotex.Runtime.Error", "Wotex.Runtime.Credentials", "Wotex.Runtime.Transport", "Wotex.Runtime.Subscription", "Wotex.Runtime.Retry", "Wotex.Runtime.Telemetry", "Wotex.Runtime.PortCall", "Wotex.Runtime.Limits"]
-    executable_evidence: ["test/wotex/runtime/consumed_thing_test.exs", "test/wotex/runtime/form_selector_test.exs", "test/wotex/runtime/subscription_test.exs", "test/wotex/runtime/value_test.exs", "test/wotex/runtime/retry_test.exs", "test/wotex/runtime/library_contract_test.exs", "test/wotex/runtime/dependency_security_test.exs"]
-    compatibility_classification: "pre-release hardening adds fixed admission bounds, forged-Result revalidation, sanitized exception telemetry, typed concurrent stop outcomes and closed fail-safe retry admission; RT-C02 lifecycle vectors implemented"
+    executable_evidence: ["test/wotex/runtime/consumed_thing_test.exs", "test/wotex/runtime/form_selector_test.exs", "test/wotex/runtime/subscription_test.exs", "test/wotex/runtime/subscription_opening_test.exs", "test/wotex/runtime/value_test.exs", "test/wotex/runtime/retry_test.exs", "test/wotex/runtime/library_contract_test.exs", "test/wotex/runtime/dependency_security_test.exs"]
+    compatibility_classification: "explicit admission bounds, Result correlation, sanitized exception telemetry, typed concurrent stop, opening-worker handoff and closed retry admission; protocol SDK ownership and native interoperability remain binding obligations"
   - id: "WRT.02"
     version: "1.1.0"
     path: "docs/specs/WRT.02-exposed-thing-runtime.md"

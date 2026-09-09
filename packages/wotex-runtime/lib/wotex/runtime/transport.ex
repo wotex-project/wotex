@@ -25,6 +25,19 @@ defmodule Wotex.Runtime.Transport do
   behavior remain with the implementation. Every callback receives consumer
   configuration explicitly; no binding is discovered from application
   environment or a global registry.
+
+  A binding may use an explicitly owned native SDK process behind this
+  behaviour. It owns process startup, framed-message limits, request
+  correlation and cancellation. Native process failure becomes a typed
+  transport error or session-loss status. Runtime does not launch executables
+  or retain native handles in public results.
+
+  During subscription establishment, the supplied owner is the final Runtime
+  subscription process; the callback itself runs in a temporary worker.
+  Attach partial resources to the supplied owner before waiting for the SDK.
+  Its death must cancel establishment and release local resources without
+  closing a shared connection still used by other owners. After successful
+  handoff, the callback worker's exit must not close the subscription.
   """
 
   alias Wotex.Runtime.{ExecutionContext, Request, Result}
