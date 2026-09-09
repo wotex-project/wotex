@@ -45,10 +45,10 @@ defmodule Wotex.BACnet.StackOwner do
       receive do
         {:DOWN, ^monitor, :process, ^pid, _} -> :ok
       after
-        max(deadline - now(), 0) -> Process.exit(pid, :kill)
+        max(deadline - now(), 0) + 100 -> force_close(pid)
       end
     catch
-      :exit, _ -> Process.exit(pid, :kill)
+      :exit, _ -> force_close(pid)
     after
       Process.demonitor(monitor, [:flush])
     end
@@ -168,11 +168,28 @@ defmodule Wotex.BACnet.StackOwner do
   end
 
   defp stop_child(pid, deadline) do
-    timeout = max(deadline - System.monotonic_time(:millisecond), 1)
-    GenServer.stop(pid, :normal, timeout)
+    remaining = deadline - now()
+    if remaining > 0, do: GenServer.stop(pid, :normal, remaining), else: kill_child(pid, deadline)
   catch
-    :exit, _ ->
-      Process.exit(pid, :kill)
-      :forced
+    :exit, _ -> kill_child(pid, deadline)
+  end
+
+  defp kill_child(pid, deadline) do
+    monitor = Process.monitor(pid)
+    Process.exit(pid, :kill)
+
+    receive do
+      {:DOWN, ^monitor, :process, ^pid, _} -> :ok
+    after
+      max(deadline + 100 - now(), 0) -> :ok
+    end
+
+    Process.demonitor(monitor, [:flush])
+    :forced
+  end
+
+  defp force_close(pid) do
+    Process.unlink(pid)
+    Process.exit(pid, :kill)
   end
 end

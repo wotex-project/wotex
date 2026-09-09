@@ -329,6 +329,68 @@ defmodule Wotex.BACnet.StackLifecycleTest do
     for caller <- callers, do: Task.await(caller)
   end
 
+  test "WBA-S03 WBA-V05 deadline escalation cannot propagate a kill to the closing caller" do
+    {:ok, owner} =
+      StackOwner.start_link(local_ip: :none, local_port: 55_832, timeout: 1000, owner: self())
+
+    group = :sys.get_state(owner)
+
+    monitors =
+      for key <- [:client, :segments_store, :segmentator, :transport],
+          do: Process.monitor(group[key])
+
+    monitor = Process.monitor(owner)
+    :ok = :sys.suspend(owner)
+    started = System.monotonic_time(:millisecond)
+    assert :ok = StackOwner.close(owner, started + 1)
+    assert_receive {:DOWN, ^monitor, :process, ^owner, :killed}, 100
+    for ref <- monitors, do: assert_receive({:DOWN, ^ref, :process, _, _}, 100)
+    assert System.monotonic_time(:millisecond) - started < 200
+    {:ok, socket} = :gen_udp.open(55_832, [:binary])
+    :gen_udp.close(socket)
+  end
+
+  test "WBA-S03 WBA-V05 exhausted grace still lets the owner finish reverse cleanup normally" do
+    receiver = self()
+
+    acquire = fn
+      :client, _ ->
+        pid =
+          spawn_link(fn ->
+            receive do
+              :never -> :ok
+            end
+          end)
+
+        send(receiver, {:deadline_child, pid})
+        {:ok, pid}
+
+      _, start ->
+        start.()
+    end
+
+    for _ <- 1..10 do
+      {:ok, owner} =
+        StackOwner.start_link(
+          [local_ip: :none, local_port: 55_832, timeout: 1000, owner: self()],
+          acquire
+        )
+
+      group = :sys.get_state(owner)
+      monitor = Process.monitor(owner)
+      assert_receive {:deadline_child, child}
+      assert :ok = StackOwner.close(owner, System.monotonic_time(:millisecond) + 2)
+      assert_receive {:DOWN, ^monitor, :process, ^owner, :normal}, 100
+      refute Process.alive?(child)
+
+      for key <- [:transport, :segmentator, :segments_store],
+          do: refute(Process.alive?(group[key]))
+
+      {:ok, socket} = :gen_udp.open(55_832, [:binary])
+      :gen_udp.close(socket)
+    end
+  end
+
   defp await_pending(client, deadline) do
     if :sys.get_state(client).sdk.apdu_timers == %{} do
       assert System.monotonic_time(:millisecond) < deadline
