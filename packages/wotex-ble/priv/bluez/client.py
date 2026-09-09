@@ -162,6 +162,7 @@ class DBusConnection:
             ("org.bluez.AgentManager1", "RegisterAgent"): "",
             ("org.bluez.AgentManager1", "UnregisterAgent"): "",
             (CHARACTERISTIC, "ReadValue"): "ay", (CHARACTERISTIC, "WriteValue"): "",
+            (CHARACTERISTIC, "StartNotify"): "", (CHARACTERISTIC, "StopNotify"): "",
         }.get((interface, member))
         if expected is None or reply.signature != expected:
             raise Failure("invalid_response")
@@ -261,6 +262,8 @@ class Central:
         self.agent = None
         self.emit = None
         self.cleanup_deadline = None
+        from notifications import Notifications
+        self.notifications = Notifications(self)
 
     async def watch_disconnect(self):
         try:
@@ -275,6 +278,7 @@ class Central:
     def on_signal(self, sender, object_path, interface, member, body):
         if self.closed:
             return
+        self.notifications.signal(sender, object_path, interface, member, body)
         if sender == "org.freedesktop.DBus" and interface == "org.freedesktop.DBus" and member == "NameOwnerChanged" and isinstance(body, list) and len(body) == 3 and body[0] == "org.bluez":
             self.fail("owner_changed")
             return
@@ -285,7 +289,7 @@ class Central:
         if member not in ("PropertiesChanged", "InterfacesAdded", "InterfacesRemoved"):
             return
         if member == "PropertiesChanged":
-            if not isinstance(body, list) or len(body) != 3 or not isinstance(body[1], dict) or not isinstance(body[2], list):
+            if not isinstance(body, list) or len(body) != 3 or not isinstance(body[0], str) or not isinstance(body[1], dict) or not isinstance(body[2], list) or any(not isinstance(key, str) for key in [*body[1], *body[2]]):
                 self.fail("invalid_response")
                 return
             identity_fields = {
@@ -313,6 +317,7 @@ class Central:
             self.terminal = code
             self.wake.set()
             self.signal(code)
+            self.notifications.fail_all(code)
             if self.agent is not None:
                 self.agent.abort(code)
 
@@ -461,6 +466,7 @@ class Central:
         deadline = self.cleanup_deadline or time.monotonic() + 0.8
         if self.bus is not None:
             try:
+                await self.notifications.close(deadline)
                 if self.agent is not None:
                     await self.agent.close(deadline)
                 if self.link_owned and self.device_path is not None and self.bluez_owner is not None:

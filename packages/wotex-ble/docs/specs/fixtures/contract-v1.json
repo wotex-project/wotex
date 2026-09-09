@@ -119,6 +119,7 @@
       "operation": "subscribe_value_changes",
       "input": {
         "sender": "bus-1",
+        "client_sender": "client-1",
         "path": "/org/bluez/hci0/dev_00_11_22_33_44_55/service001/char002",
         "mode": "notify",
         "flags": [
@@ -186,8 +187,8 @@
           },
           "sender_pairs": [
             [
-              "bus-1",
-              "bus-1"
+              "client-1",
+              "client-1"
             ]
           ],
           "active_subscriptions": 0,
@@ -205,6 +206,7 @@
       "operation": "subscribe_wrong_source",
       "input": {
         "sender": "bus-1",
+        "client_sender": "client-1",
         "path": "/org/bluez/hci0/dev_00_11_22_33_44_55/service001/char002",
         "mode": "indicate",
         "flags": [
@@ -289,7 +291,8 @@
             }
           },
           "calls": {
-            "start_notify": 0
+            "start_notify": 0,
+            "stop_notify": 0
           },
           "active_subscriptions": 0
         }

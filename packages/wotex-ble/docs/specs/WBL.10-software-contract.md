@@ -171,7 +171,30 @@ already-dead same-session owner is idempotent under C05. Keep at most 64 active
 subscriptions per connection and no lifetime tombstone registry.
 Before StartNotify, install the Value PropertiesChanged listener on the exact
 characteristic and BlueZ owner generation. Return the C05 handle only after
-StartNotify succeeds. Buffer at most one early Value signal until then.
+StartNotify succeeds. Buffer at most one early Value signal until then. A
+second early Value fails establishment with `:response_limit` and cleans up;
+never silently discard an arbitrary number of early reports. Emit the subscribe
+acknowledgement before releasing the buffered value to the bridge output.
+
+The native subscribe parameters are exactly `address` (S03 shape) and `mode`
+(`auto`, `notify`, `indicate`). The success result has exactly `subscription_id`
+(the establishment request ID), `generation: 1` (this bridge owner's generation),
+`characteristic` (S01's complete typed discovery record), `requested_mode` and
+`effective_mode` (`notify`, `indicate`, `bluez_selected`). The characteristic's
+own generation remains its discovery-snapshot identity; it is not the bridge
+owner generation. Unsubscribe parameters are exactly `subscription_id` and its
+successful result is null. Unsubscribe uses a separately correlated control
+lane so an unrelated blocked read cannot postpone receiver cleanup. Data and
+control requests share the 64-request admission bound. Failed or stalled
+StopNotify closes this sender within C03's ownership cleanup grace.
+
+Stream envelopes have exactly `version: 1`, `subscription_id`, `generation: 1`,
+`event`, `value`, and `metadata`. A `value` event uses the C07 bytes envelope and
+metadata with exactly `source: "bluez_value_change"`, the established
+`characteristic`, `requested_mode`, and `effective_mode`. Validate all bound
+metadata, not only the subscription ID. An `error` event has null value and
+exactly `metadata.error`, using S03's bounded failure shape. Deliver at most one
+terminal error. Unknown or stale subscription IDs are never deliveries.
 
 BlueZ StartNotify does not expose a procedure selector. If only notify or only
 indicate is advertised, the requested matching mode or auto succeeds. If both

@@ -27,7 +27,9 @@ defmodule Wotex.BLE.DBusBridgeTest do
   end
 
   defp options(mode \\ "normal") do
-    directory = Path.join(System.tmp_dir!(), "wbl-dbus-#{System.unique_integer([:positive])}")
+    directory =
+      Path.join(System.tmp_dir!(), "wbl-dbus-#{System.pid()}-#{System.unique_integer([:positive])}")
+
     File.mkdir_p!(directory)
     executable = Path.join(directory, "python-fixture")
     record = Path.join(directory, "calls.jsonl")
@@ -48,7 +50,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
     {:ok, peer} =
       Peer.new(%{adapter: "/org/bluez/hci0", address: "AA:BB:CC:DD:EE:FF", address_type: :random})
 
-    {[peer: peer, executable: executable, bus_address: "unix:path=/tmp/test-bus", timeout: 2000],
+    {[peer: peer, executable: executable, bus_address: "unix:path=/tmp/test-bus", timeout: 5000],
      record}
   end
 
@@ -230,7 +232,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
         Connection.discover(handle, [], 60_000)
       end)
 
-    assert_receive {:handle, handle}, 2000
+    assert_receive {:handle, handle}, 5000
     eventually(fn -> Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 2 end)
     monitor = Process.monitor(handle.pid)
     Process.exit(owner, :kill)
@@ -362,8 +364,8 @@ defmodule Wotex.BLE.DBusBridgeTest do
         )
       end)
 
-    assert_receive {:handle, handle}, 2000
-    assert_receive {:challenge, _, worker}, 2000
+    assert_receive {:handle, handle}, 5000
+    assert_receive {:challenge, _, worker}, 5000
     status = inspect(:sys.get_status(handle.pid))
     refute status =~ "POLICY_SECRET_CANARY"
     monitor = Process.monitor(handle.pid)

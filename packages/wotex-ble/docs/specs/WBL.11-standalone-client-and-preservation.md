@@ -161,7 +161,10 @@ values inside output use `{"bytes_hex": "..."}`, never guessed UTF-8.
 Lifecycle cases inject the ordered input `events` at explicit relative `at_ms`
 using a controllable clock and a scripted backend. An event at the same time
 runs in list order. Symbolic handles such as `bus-1`/`sub-1` identify distinct
-resources in this test only. The observation consists of ordered deliveries,
+resources in this test only. In BLE lifecycle inputs, `sender` identifies the
+BlueZ service's signal source, while `client_sender` identifies the distinct
+application connection that calls StartNotify and StopNotify. Trace and compare
+these roles independently. The observation consists of ordered deliveries,
 terminal results and backend call/resource counters listed in the expectation.
 The runner must inspect real owner state and recorded backend calls to produce
 that observation; it must not reproduce the expected state machine inside the

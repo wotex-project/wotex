@@ -80,6 +80,7 @@ class Bridge:
         self.active = None
         self.opened = False
         self.close_request = None
+        self.controls = set()
 
     def terminal(self, _code):
         self.stop.set()
@@ -106,13 +107,41 @@ class Bridge:
                 except Failure as error:
                     self.response(request, ok=False, error=error.envelope())
                 continue
+            if request["operation"] == "unsubscribe":
+                if self.queue.qsize() + (self.active is not None) + len(self.controls) >= 64:
+                    self.response(request, ok=False, error={"code": "busy"})
+                else:
+                    task = asyncio.create_task(self.control(request))
+                    self.controls.add(task)
+                    task.add_done_callback(self.control_done)
+                continue
             if request["operation"] == "close" and request["parameters"] == {}:
                 self.close_request = request
                 return
-            if self.queue.qsize() + (self.active is not None) >= 64:
+            if self.queue.qsize() + (self.active is not None) + len(self.controls) >= 64:
                 self.response(request, ok=False, error={"code": "busy"})
                 continue
             self.queue.put_nowait((request, time.monotonic() + request["timeout_ms"] / 1000))
+
+    def control_done(self, task):
+        self.controls.discard(task)
+        if not task.cancelled():
+            task.exception()
+
+    async def control(self, request):
+        try:
+            if not self.opened:
+                raise Failure("disconnected")
+            await self.central.notifications.unsubscribe(request["parameters"], request["timeout_ms"])
+            self.response(request, ok=True, result=None)
+        except Failure as error:
+            self.response(request, ok=False, error=error.envelope())
+        except Exception:
+            self.response(request, ok=False, error={"code": "transport_error"})
+            self.stop.set()
+        finally:
+            if self.central.closed:
+                self.stop.set()
 
     async def execute(self, request, deadline):
         remaining = int((deadline - time.monotonic()) * 1000)
@@ -125,6 +154,10 @@ class Bridge:
             return result
         if not self.opened:
             raise Failure("disconnected")
+        if operation == "subscribe":
+            return await self.central.notifications.subscribe(request["parameters"], remaining, request["id"])
+        if operation == "unsubscribe":
+            return await self.central.notifications.unsubscribe(request["parameters"], remaining)
         if operation in ("read", "write"):
             from procedures import execute
             return await execute(self.central, operation, request["parameters"], remaining, request["id"])
@@ -145,6 +178,8 @@ class Bridge:
             try:
                 result = await self.execute(request, deadline)
                 self.response(request, ok=True, result=result)
+                if request["operation"] == "subscribe":
+                    self.central.notifications.activate(request["id"])
             except Failure as error:
                 self.response(request, ok=False, error=error.envelope())
                 if error.code in ("timeout", "disconnected", "owner_changed") or request["operation"] == "open":
@@ -163,10 +198,11 @@ class Bridge:
             await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         finally:
             self.stop.set()
-            self.central.cleanup_deadline = time.monotonic() + 0.8
-            for task in tasks:
+            self.central.cleanup_deadline = self.central.cleanup_deadline or time.monotonic() + 0.8
+            pending = tasks + list(self.controls)
+            for task in pending:
                 task.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
+            await asyncio.gather(*pending, return_exceptions=True)
             await self.central.close()
             if self.close_request is not None:
                 self.response(self.close_request, ok=True, result=None)

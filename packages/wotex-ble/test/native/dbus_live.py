@@ -48,6 +48,11 @@ class GattFixture:
         self.value = b"\x2a\x00"
         self.procedure_error = None
         self.procedure_signature = None
+        self.flags = ["read", "write", "fixture-extension"]
+        self.notify_sessions = set()
+        self.notify_early = None
+        self.notify_stop_errors = set()
+        self.notify_signature = ""
         self.bus.add_message_handler(self.receive)
 
     def objects(self):
@@ -55,7 +60,7 @@ class GattFixture:
             PEER["adapter"]: {ADAPTER: {}},
             DEVICE_PATH: {DEVICE: {"Adapter": Variant("o", PEER["adapter"]), "Address": Variant("s", PEER["address"]), "AddressType": Variant("s", "random"), "Connected": Variant("b", self.connected), "ServicesResolved": Variant("b", self.connected)}},
             SERVICE_PATH: {SERVICE: {"Device": Variant("o", DEVICE_PATH), "UUID": Variant("s", "180f")}},
-            CHAR_PATH: {CHARACTERISTIC: {"Service": Variant("o", SERVICE_PATH), "UUID": Variant("s", "2a19"), "Handle": Variant("q", self.handle), "Flags": Variant("as", ["read", "write", "fixture-extension"])}},
+            CHAR_PATH: {CHARACTERISTIC: {"Service": Variant("o", SERVICE_PATH), "UUID": Variant("s", "2a19"), "Handle": Variant("q", self.handle), "Flags": Variant("as", self.flags)}},
         }
 
     def changed(self, object_path, interface, properties):
@@ -80,6 +85,7 @@ class GattFixture:
             name, _, current = message.body
             if not current:
                 self.agents.pop(name, None)
+                self.notify_sessions.difference_update(item for item in list(self.notify_sessions) if item[0] == name)
                 pending = self.pair_tasks.pop(name, None)
                 if pending is not None:
                     # Pinned BlueZ device.c:create_bond_req_exit owns this side
@@ -112,6 +118,19 @@ class GattFixture:
             if message.member in ("CancelPairing", "RemoveDevice"):
                 self.bonds.clear()
                 return Message.new_method_return(message)
+        if message.path == CHAR_PATH and message.interface == CHARACTERISTIC and message.member in ("StartNotify", "StopNotify"):
+            assert message.signature == "" and message.body == []
+            session = (message.sender, message.path)
+            if message.member == "StartNotify":
+                assert session not in self.notify_sessions
+                self.notify_sessions.add(session)
+                if self.notify_early is not None:
+                    self.changed(CHAR_PATH, CHARACTERISTIC, {"Value": Variant("ay", self.notify_early)})
+            elif message.sender in self.notify_stop_errors:
+                return Message.new_error(message, "org.bluez.Error.Failed", "SECRET_NATIVE_MESSAGE")
+            else:
+                self.notify_sessions.discard(session)
+            return Message.new_method_return(message, self.notify_signature, [True] if self.notify_signature else [])
         if message.path == CHAR_PATH and message.interface == CHARACTERISTIC and message.member in ("ReadValue", "WriteValue"):
             if message.member == "WriteValue":
                 assert message.signature == "aya{sv}"
@@ -122,6 +141,8 @@ class GattFixture:
                 self.value = value
             else:
                 assert message.signature == "a{sv}" and message.body == [{}]
+                if self.notify_sessions:
+                    self.changed(CHAR_PATH, CHARACTERISTIC, {"Value": Variant("ay", self.value)})
             if self.procedure_error:
                 return Message.new_error(message, self.procedure_error, "SECRET_NATIVE_MESSAGE")
             signature = self.procedure_signature if self.procedure_signature is not None else "ay" if message.member == "ReadValue" else ""
@@ -198,6 +219,106 @@ async def lane(address):
         assert {sender for sender, _, member in fixture.calls if member in ("ReadValue", "WriteValue")} == {procedure_owner["sender"]}
         await procedures.close()
         assert fixture.connected is True
+
+        # Real SDK StartNotify/StopNotify use separate unique client senders;
+        # PropertiesChanged comes from the independent BlueZ service sender.
+        notification_cases = 0
+        signal_sources = set()
+        def record_signal(message):
+            if message.message_type == MessageType.SIGNAL and message.path == CHAR_PATH and message.interface == PROPERTIES:
+                signal_sources.add(message.sender)
+        async def settle(predicate):
+            for _ in range(200):
+                if predicate():
+                    return
+                await asyncio.sleep(0.001)
+            raise AssertionError("notification ownership did not settle")
+        for flags, expected in [(["read", "notify"], "notify"), (["read", "indicate"], "indicate"), (["read", "notify", "indicate"], "bluez_selected")]:
+            fixture.flags = flags
+            fixture.notify_early = b"early"
+            notify = Central(events.append)
+            owners.append(notify)
+            owner = await notify.open(parameters, 2000)
+            assert owner["sender"] != server.unique_name
+            notify.bus.bus.add_message_handler(record_signal)
+            reports = []
+            notify.emit = reports.append
+            result = await notify.notifications.subscribe({"address": target, "mode": "auto"}, 1000, "notify")
+            assert result["effective_mode"] == expected
+            assert reports == []
+            notify.notifications.activate("notify")
+            assert bytes_value(reports[0]["value"]) == b"early"
+            await execute(notify, "read", {"address": target}, 1000, "read-caused-change")
+            await settle(lambda: len(reports) == 2)
+            assert all(report["metadata"]["source"] == "bluez_value_change" for report in reports)
+            await notify.notifications.unsubscribe({"subscription_id": "notify"}, 1000)
+            assert fixture.notify_sessions == set()
+            before = len(reports)
+            await fixture.changed(CHAR_PATH, CHARACTERISTIC, {"Value": Variant("ay", b"late")})
+            # A following D-Bus reply bounds delivery of the earlier signal.
+            await notify.discover({}, 1000)
+            assert len(reports) == before
+            notify.bus.bus.remove_message_handler(record_signal)
+            await notify.close()
+            notification_cases += 1
+        assert signal_sources == {server.unique_name}
+
+        fixture.flags = ["read", "notify"]
+        fixture.notify_early = None
+        shared = []
+        for identifier in ("shared-a", "shared-b"):
+            notify = Central(events.append)
+            owners.append(notify)
+            owner = await notify.open(parameters, 2000)
+            reports = []
+            notify.emit = reports.append
+            await notify.notifications.subscribe({"address": target, "mode": "auto"}, 1000, identifier)
+            notify.notifications.activate(identifier)
+            shared.append((notify, owner["sender"], identifier, reports))
+        first, second = shared
+        assert len({server.unique_name, first[1], second[1]}) == 3
+        assert fixture.notify_sessions == {(first[1], CHAR_PATH), (second[1], CHAR_PATH)}
+        await first[0].notifications.unsubscribe({"subscription_id": first[2]}, 1000)
+        assert fixture.notify_sessions == {(second[1], CHAR_PATH)}
+        await fixture.changed(CHAR_PATH, CHARACTERISTIC, {"Value": Variant("ay", b"shared")})
+        await settle(lambda: len(second[3]) == 1)
+        assert first[3] == []
+        await first[0].notifications.subscribe({"address": target, "mode": "auto"}, 1000, "again")
+        first[0].notifications.activate("again")
+        fixture.notify_stop_errors.add(first[1])
+        try:
+            await first[0].notifications.unsubscribe({"subscription_id": "again"}, 1000)
+        except Failure as error:
+            assert error.code == "remote_error" and error.name == "org.bluez.Error.Failed"
+        else:
+            raise AssertionError("failed StopNotify reported success")
+        await settle(lambda: fixture.notify_sessions == {(second[1], CHAR_PATH)})
+        assert first[0].closed and fixture.connected
+        assert not second[0].closed
+        await second[0].notifications.unsubscribe({"subscription_id": second[2]}, 1000)
+        await second[0].close()
+        assert fixture.notify_sessions == set()
+        for notify, sender, _, _ in shared:
+            calls = [(source, member) for source, _, member in fixture.calls if source == sender and member in ("StartNotify", "StopNotify")]
+            assert calls == [(sender, "StartNotify"), (sender, "StopNotify")] * (2 if notify is first[0] else 1)
+        fixture.notify_stop_errors.clear()
+
+        # The real SDK rejects a non-void StartNotify acknowledgement and
+        # releases the uncertain acquisition through the same sender.
+        malformed = Central(events.append)
+        owners.append(malformed)
+        await malformed.open(parameters, 2000)
+        malformed.emit = lambda _: None
+        fixture.notify_signature = "b"
+        try:
+            await malformed.notifications.subscribe({"address": target, "mode": "auto"}, 1000, "malformed")
+        except Failure as error:
+            assert error.code == "invalid_response"
+        else:
+            raise AssertionError("wrong StartNotify acknowledgement reported success")
+        await malformed.close()
+        fixture.notify_signature = ""
+        assert fixture.notify_sessions == set()
 
         # New sender owns its own connection attempt and releases only that link.
         fixture.connected = False
@@ -289,7 +410,7 @@ async def lane(address):
             assert error.code == "owner_changed"
         else:
             raise AssertionError("old bus owner remained usable")
-        return {"requirements": ["WBL-C03", "WBL-C07", "WBL-S01", "WBL-S02", "WBL-V03", "WBL-V04", "WBL-S05", "WBL-V06", "WBL-S03", "WBL-V05"], "dbus_next": version("dbus-next"), "snapshots": sum(call[2] == "GetManagedObjects" for call in fixture.calls), "owned_connects": sum(call[2] == "Connect" for call in fixture.calls), "owned_disconnects": sum(call[2] == "Disconnect" for call in fixture.calls), "borrowed_disconnect_calls": 0, "pending_pair_sender_loss_disconnects": fixture.sender_loss_disconnects, "agents_remaining": len(fixture.agents), "pair_requests_remaining": len(fixture.pair_tasks), "pairing_callbacks": len(fixture.pair_responses), "acknowledged_writes": 3, "named_write_rejections": 9, "malformed_signatures_rejected": 3, "bonds_preserved": len(fixture.bonds), "status": "passed", "evidence": "real_dbus_injected_gatt"}
+        return {"requirements": ["WBL-C03", "WBL-C07", "WBL-S01", "WBL-S02", "WBL-V03", "WBL-V04", "WBL-S05", "WBL-V06", "WBL-S03", "WBL-V05", "WBL-P05", "WBL-S04", "WBL-V07", "WBL-V08", "WBL-V09"], "dbus_next": version("dbus-next"), "snapshots": sum(call[2] == "GetManagedObjects" for call in fixture.calls), "owned_connects": sum(call[2] == "Connect" for call in fixture.calls), "owned_disconnects": sum(call[2] == "Disconnect" for call in fixture.calls), "borrowed_disconnect_calls": 0, "pending_pair_sender_loss_disconnects": fixture.sender_loss_disconnects, "agents_remaining": len(fixture.agents), "pair_requests_remaining": len(fixture.pair_tasks), "pairing_callbacks": len(fixture.pair_responses), "acknowledged_writes": 3, "named_write_rejections": 9, "malformed_signatures_rejected": 4, "notification_mode_cases": notification_cases, "notification_clients_isolated": 2, "notification_sessions_remaining": len(fixture.notify_sessions), "notification_signal_sources": len(signal_sources), "bonds_preserved": len(fixture.bonds), "status": "passed", "evidence": "real_dbus_injected_gatt"}
     finally:
         for owner in owners:
             await owner.close()

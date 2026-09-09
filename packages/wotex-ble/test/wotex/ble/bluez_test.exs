@@ -51,7 +51,12 @@ defmodule Wotex.BLE.BlueZTest do
   end
 
   test "native command boundary owns processes, has deadlines and checks remote errors" do
-    path = Path.join(System.tmp_dir!(), "wotex-busctl-#{System.unique_integer([:positive])}")
+    path =
+      Path.join(
+        System.tmp_dir!(),
+        "wotex-busctl-#{System.pid()}-#{System.unique_integer([:positive])}"
+      )
+
     on_exit(fn -> File.rm(path) end)
     opts = [executable: path, object_path: @path, service: 0x180F, characteristic: 0x2A19]
     assert {:ok, handle} = BlueZ.connect(opts)
