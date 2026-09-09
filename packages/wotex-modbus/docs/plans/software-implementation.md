@@ -1,10 +1,10 @@
 # WMB software implementation sequence
 
 The eight-function BEAM TCP client, standalone helpers, Runtime integration and
-software peer assertions are implemented. The required Mix orchestration remains
-planned. [Executable evidence](../provenance/executable-evidence.md) binds the
+software peer assertions are implemented. Mix build/run orchestration is
+implemented with acceptance still incomplete. [Executable evidence](../provenance/executable-evidence.md) binds the
 accepted protocol assertions to exact source and toolchains; it does not validate
-unbuilt tasks. The ordered packages define acceptance, not a mutable tracker.
+later task revisions. The ordered packages define acceptance, not a mutable tracker.
 
 ## Read before changing code
 
@@ -101,14 +101,14 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 ### WMB-P06: Native Mix orchestration
 
 - Requirements: WMB-N01–N03 and C09; protocol behavior and accepted peer fixtures remain prerequisites.
-- Change surface: explicit `Mix.Tasks.Wotex.Software.Build` and `Mix.Tasks.Wotex.Software.Run`, test-only owned Port/process helpers, manifest/result projection.
+- Change surface: root aliases to unique `Mix.Tasks.Wotex.Modbus.Software.Build` and `Mix.Tasks.Wotex.Modbus.Software.Run`, test-only owned Port/process helpers, manifest/result projection.
 - Acceptance: every .13 build/reuse/failure/cleanup case has an actual assertion, both runtime lanes run against native peers, and no generic Python orchestration remains necessary. Existing results retain their original command and source identities.
 - Tests: `test/software/fixture_tasks_test.exs` plus the retained protocol/stress suites.
 - Commit scope: validated native fixture orchestration and its tests.
 
 ## Reproducible software fixture contract
 
-[WMB.13](../specs/WMB.13-native-build-and-software-evidence.md) is authoritative for the planned
+[WMB.13](../specs/WMB.13-native-build-and-software-evidence.md) is authoritative for the
 Mix tasks, native source pins, manifests, deadlines, cleanup and result schemas.
 The command contract is:
 
@@ -117,8 +117,8 @@ mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
 WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
-These commands are target interfaces until their implementation and task tests
-pass. Existing shell/Python harnesses are identified only by the executed
+These commands execute the checked-in Mix implementation. Passing task fixtures
+do not close an unexecuted toolchain or whole-VM opening cell. Existing shell/Python harnesses are identified only by the executed
 provenance they support. The native peer and protocol assertions remain the
 same independent software obligations. No build or peer starts implicitly.
 

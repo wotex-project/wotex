@@ -117,8 +117,11 @@ source revision under review; earlier results do not validate later changes.
 ## Native build and software orchestration
 
 [WMB.13](docs/specs/WMB.13-native-build-and-software-evidence.md) defines
-the planned `mix wotex.software.build --workspace ABS` and
+the explicit `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` interfaces. Protocol execution remains
 BEAM TCP with a C libmodbus test peer.
-Existing Python files perform test/build orchestration only. Their recorded
-results do not establish acceptance of the planned Mix tasks.
+The Mix tasks build and verify manifests, run the independent peer and record
+actual ExUnit outcomes and cleanup results. Full task acceptance requires fresh
+results on both supported toolchains; whole-VM loss during Docker opening is
+not yet accepted. Existing Python files retain their historical test/build
+entry points and evidence; they are unnecessary for the Mix commands.

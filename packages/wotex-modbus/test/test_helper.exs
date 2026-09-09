@@ -9,6 +9,8 @@ Code.require_file("support/runtime_transport.ex", __DIR__)
 Code.require_file("support/runtime_fixture.ex", __DIR__)
 
 if System.get_env("WOTEX_REQUIRE_SOFTWARE") == "1" do
+  Code.require_file("support/software_formatter.ex", __DIR__)
+  ExUnit.configure(formatters: [ExUnit.CLIFormatter, Wotex.Modbus.SoftwareFormatter])
   "127.0.0.1" = System.fetch_env!("WOTEX_MODBUS_INTEROP_HOST")
   port = String.to_integer(System.fetch_env!("WOTEX_MODBUS_INTEROP_PORT"))
   true = port in 1..65_535

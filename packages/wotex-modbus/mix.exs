@@ -92,6 +92,8 @@ defmodule WotexModbus.MixProject do
   defp aliases do
     [
       setup: ["deps.get", "deps.compile"],
+      "wotex.software.build": ["wotex.modbus.software.build"],
+      "wotex.software.run": ["wotex.modbus.software.run"],
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
       "test.cover": ["coveralls"],
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"

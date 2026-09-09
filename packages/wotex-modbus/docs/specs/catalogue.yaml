@@ -10,7 +10,7 @@ specifications:
     requires: []
     implementation_modules: ["Wotex.Modbus", "Wotex.Modbus.Address", "Wotex.Modbus.Codec", "Wotex.Modbus.Command", "Wotex.Modbus.Connection", "Wotex.Modbus.Error", "Wotex.Modbus.Mapping", "Wotex.Modbus.Session", "Wotex.Modbus.Transport", "Wotex.Modbus.Value"]
     executable_evidence: ["test/interop/modbus_test.exs", "test/software/lifecycle_stress_test.exs", "test/wotex/modbus/boundary_test.exs", "test/wotex/modbus/codec_test.exs", "test/wotex/modbus/compatibility_test.exs", "test/wotex/modbus/connection_test.exs", "test/wotex/modbus/contract_test.exs", "test/wotex/modbus/dependency_security_test.exs", "test/wotex/modbus/lifecycle_test.exs", "test/wotex/modbus/mapping_test.exs", "test/wotex/modbus/runtime_integration_test.exs", "test/wotex/modbus/stream_fault_test.exs", "test/wotex/modbus/telemetry_test.exs", "test/wotex/modbus/value_test.exs"]
-    compatibility_classification: "Cross-cutting pure values, explicit socket ownership, lifecycle bounds and structured errors are implemented. Native C07 is inapplicable to this BEAM TCP client; the C09 Mix orchestration requirement remains planned."
+    compatibility_classification: "Cross-cutting pure values, explicit socket ownership, lifecycle bounds and structured errors are implemented. Native C07 is inapplicable to this BEAM TCP client; C09 Mix orchestration has incomplete acceptance."
   - id: "WMB.01"
     version: "1.0.0"
     path: "docs/specs/WMB.01-protocol.md"
@@ -57,11 +57,11 @@ specifications:
     executable_evidence: ["test/interop/modbus_test.exs", "test/software/lifecycle_stress_test.exs", "test/wotex/modbus/boundary_test.exs", "test/wotex/modbus/codec_test.exs", "test/wotex/modbus/compatibility_test.exs", "test/wotex/modbus/connection_test.exs", "test/wotex/modbus/contract_test.exs", "test/wotex/modbus/dependency_security_test.exs", "test/wotex/modbus/lifecycle_test.exs", "test/wotex/modbus/mapping_test.exs", "test/wotex/modbus/runtime_integration_test.exs", "test/wotex/modbus/stream_fault_test.exs", "test/wotex/modbus/telemetry_test.exs", "test/wotex/modbus/value_test.exs"]
     compatibility_classification: "Implemented pure BindingProfile factories, native Form selection, real ConsumedThing unary mapping, structured Error.class retry decisions and no-stream rejection. Local path-dependency evidence does not establish publication or independent released-artifact adoption."
   - id: "WMB.13"
-    version: "1.1.0"
+    version: "1.2.0"
     path: "docs/specs/WMB.13-native-build-and-software-evidence.md"
     implementation_status: "partial"
-    standards: [{"name": "Native peer / SDK", "revision": "libmodbus 3.1.12", "claim": "Native execution and Mix orchestration target; no execution acceptance"}]
+    standards: [{"name": "Native peer / SDK", "revision": "libmodbus 3.1.12", "claim": "Independent C peer with implemented explicit Mix tasks; complete task acceptance pending"}]
     requires: ["WMB.00", "WMB.10", "WMB.11", "WMB.12"]
-    implementation_modules: []
-    executable_evidence: ["test/software/command_test.exs", "test/interop/native/check.c"]
-    compatibility_classification: "The first-party command guardian has native and BEAM-owner lifecycle assertions. Explicit Mix build/run tasks for the test-only libmodbus C peer remain planned. Prior shell/Python software evidence retains its exact source and command identity; production Modbus execution remains BEAM TCP."
+    implementation_modules: ["Mix.Tasks.Wotex.Modbus.Software.Build", "Mix.Tasks.Wotex.Modbus.Software.Run"]
+    executable_evidence: ["test/software/command_test.exs", "test/interop/native/check.c", "test/software/fixture_tasks_test.exs"]
+    compatibility_classification: "Unique Modbus Mix build/run tasks, manifests, actual ExUnit outcomes and native command/advisory-lock ownership are implemented. Task assertions cover real reuse, command faults, active/opening BEAM-owner death and failed cleanup. Both-toolchain committed-source task evidence and whole-VM opening acceptance remain incomplete. Prior shell/Python evidence retains its source identity; production Modbus remains BEAM TCP."

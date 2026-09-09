@@ -3,7 +3,7 @@ spec:
   id: WMB.13
   title: "Native peer build and software evidence"
   status: accepted
-  version: 1.1.0
+  version: 1.2.0
   owner: wotex-modbus
   updated: 2026-09-09
 ---
@@ -13,8 +13,9 @@ spec:
 The runtime is the existing BEAM TCP client. The independent peer is the C
 libmodbus server in `test/interop/libmodbus/server.c`. Neither a Python runtime,
 a C client wrapper nor a native runtime helper belongs to this profile.
-Build and test orchestration belongs to Mix and ExUnit. These task contracts
-are planned; the shell/Python harness has separate executed evidence in
+Build and test orchestration belongs to Mix and ExUnit. The explicit tasks and
+their native command guardian are implemented. Complete two-toolchain task
+acceptance remains separate from the shell/Python evidence in
 [provenance](../provenance/executable-evidence.md).
 
 ## WMB-N01 — Explicit build task
@@ -29,6 +30,17 @@ isolated native unit tests, using a POSIX C11 compiler. The source contract in
 `test/interop/native/README.md` defines owner EOF, bounded output and
 process-group cleanup; it does not claim adversarial descendant
 containment. The compiler identity belongs in the helper build manifest.
+
+The root project exposes these command names through aliases to the unique
+`Mix.Tasks.Wotex.Modbus.Software.Build` and `Mix.Tasks.Wotex.Modbus.Software.Run`
+modules. Loading several protocol dependencies cannot redefine a shared task
+module. Invocations require the Modbus source project and its test assets.
+The initial host C compiler is trusted bootstrap tooling: its direct Port has
+a five-second deadline and 16 MiB capture bound. Failed bootstrap reports
+unverified descendant cleanup; it is not evidence for the guardian's stronger
+subsequent command ownership. Ready workspaces use a private empty advisory-lock
+sidecar. Kernel ownership, rather than the sidecar's presence, denotes a live
+lease; owner exit releases the lock without unlinking its inode.
 
 The source is libmodbus 3.1.12 at commit
 `9af6c16074df566551bca0a7c37443e48f216289`, archive SHA-256
@@ -71,6 +83,16 @@ five-second harness cleanup budget. This harness budget does not extend the
 library's one-second resource cleanup contract. Other containers/processes are
 never selected by name patterns or killed. Output capture is bounded to 16 MiB
 per stream; overflow fails while cleanup remains active.
+
+The runner separates Docker create from attach/start and verifies the exact
+container ID and random ownership label. An independent BEAM monitor reconciles
+that label after invoking-process loss, including a created but unstarted peer.
+It removes only independently verified exact container IDs. An unavailable
+daemon or unverified removal produces failed/unverified cleanup, never zero
+resource counts. Native command ownership survives BEAM VM loss, but the BEAM
+container monitor does not: whole-VM interruption during create/start remains
+an explicitly unaccepted opening case. Active foreground signal forwarding is
+not evidence for that case.
 
 ## WMB-N03 — Results and acceptance
 

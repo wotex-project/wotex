@@ -20,7 +20,7 @@ invalid frames; the independent C peer is not presented as an injected simulator
 
 The executed entry point is `test/interop/run_software.sh`, which invokes the
 checked-in Python harness and ExUnit. The native protocol peer is C; the
-production client is BEAM TCP. These results do not validate the planned
+production client is BEAM TCP. These results do not validate the
 [WMB.13 Mix tasks](../specs/WMB.13-native-build-and-software-evidence.md).
 
 ## Requirement evidence
@@ -47,7 +47,8 @@ different cohort from the explicit software run above. Relevant source changes
 require fresh software evidence; a prior receipt cannot validate new code or tools.
 
 The eight-function client, standalone and Runtime contracts are implemented.
-WMB.13 Mix orchestration remains planned. This evidence supplies neither a
+WMB.13 Mix orchestration has separate task assertions and incomplete acceptance.
+This evidence supplies neither a
 published release, stable API decision, hardware result nor certification.
 
 ## Native command ownership
@@ -55,7 +56,16 @@ published release, stable API decision, hardware result nor certification.
 `test/software/command_test.exs` asserts real process-group cleanup on timeout,
 owner death, TERM, output overflow and successful root exit, plus suspended
 consumer output bounds and preservation of a separate owned group. The native
-`test/interop/native/check.c` suite supplies six standalone cases and runs with
-ASan/UBSan on Linux. These first-party command fixtures are not a protocol peer.
-The command guardian is an implemented P06 prerequisite; the Mix manifest/build/
-run tasks and their complete acceptance matrix remain planned.
+`test/interop/native/check.c` suite supplies seven standalone cases and runs with
+ASan/UBSan on macOS and Linux. The lease cohort `56ac074` passed the complete
+latest-toolchain gate with 145 checks. These first-party command fixtures are
+not a protocol peer.
+
+The Mix tasks use `test/support/software/` and assert source/manifests, real
+reuse, failed commands, bounded output, readiness failure, active owner death,
+created-before-start owner death and explicit failed cleanup in
+`test/software/fixture_tasks_test.exs`. The software formatter records actual
+test-finished names, requirement IDs and outcomes. Full P06 acceptance requires
+committed-source task results on both supported toolchains. Whole-VM loss during
+container opening and unavailable-daemon removal remain unverified; neither
+may be reported as successful cleanup or inferred from a passing active case.
