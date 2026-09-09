@@ -15,7 +15,8 @@ defmodule Wotex.Modbus.Address do
 
   ## Examples
 
-      {:ok, range} = Wotex.Modbus.Address.new(0, 2, 1)
+      iex> Wotex.Modbus.Address.new(0, 2, 1)
+      {:ok, %Wotex.Modbus.Address{offset: 0, quantity: 2, unit_id: 1}}
   """
 
   alias Wotex.Modbus.Error

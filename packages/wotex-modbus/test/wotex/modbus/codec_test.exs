@@ -2,6 +2,7 @@ defmodule Wotex.Modbus.CodecTest do
   @moduledoc false
 
   use ExUnit.Case, async: true
+  doctest Wotex.Modbus.Address
   use ExUnitProperties
   alias Wotex.Modbus.{Address, Codec, Command, Error}
 
