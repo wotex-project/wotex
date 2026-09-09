@@ -11,14 +11,15 @@ defmodule Wotex.Modbus.SessionTrace do
     endpoint = input["endpoint"]
 
     {:ok, listener} =
-      :gen_tcp.listen(endpoint["port"], [:binary, active: false, ip: {127, 0, 0, 1}])
+      :gen_tcp.listen(0, [:binary, active: false, ip: {127, 0, 0, 1}])
 
+    {:ok, {_, port}} = :inet.sockname(listener)
     peer = Task.async(fn -> observe_wire(listener) end)
 
     {:ok, session} =
       Modbus.connect(
         host: endpoint["host"],
-        port: endpoint["port"],
+        port: port,
         unit_id: endpoint["unit_id"],
         transaction_id: input["initial_transaction_id"]
       )

@@ -23,12 +23,7 @@ defmodule Wotex.Modbus.Connection do
       when is_pid(pid) and is_integer(timeout) and timeout in 1..60_000 do
     deadline = System.monotonic_time(:millisecond) + timeout
 
-    with :ok <- Command.validate(command) do
-      GenServer.call(pid, {:request, command, deadline}, timeout + 1000)
-    end
-  catch
-    :exit, {:noproc, _call} -> {:error, Error.new(:connection_closed)}
-    :exit, _reason -> effect(Error.new(:connection_closed), command)
+    with :ok <- Command.validate(command), do: call(pid, command, deadline, timeout)
   end
 
   def request(_, _, _), do: {:error, Error.new(:invalid_request)}
@@ -109,15 +104,15 @@ defmodule Wotex.Modbus.Connection do
   def handle_call(:ready, _from, %{phase: {:failed, error}} = state),
     do: {:stop, :normal, {:error, error}, state}
 
-  def handle_call({:request, command, deadline}, from, %{phase: :ready} = state) do
+  def handle_call({:request, command, deadline, admission}, from, %{phase: :ready} = state) do
     cond do
       remaining(deadline) == 0 -> {:reply, {:error, Error.new(:deadline_exceeded)}, state}
       map_size(state.calls) >= 64 -> {:reply, {:error, Error.new(:busy)}, state}
-      true -> {:noreply, admit(state, command, deadline, from)}
+      true -> {:noreply, admit(state, command, deadline, from, admission)}
     end
   end
 
-  def handle_call({:request, _, _}, _from, state),
+  def handle_call({:request, _, _, _}, _from, state),
     do: {:reply, {:error, Error.new(:connection_closed)}, state}
 
   @impl GenServer
@@ -192,6 +187,35 @@ defmodule Wotex.Modbus.Connection do
     end)
   end
 
+  defp call(pid, command, deadline, timeout) do
+    admission = make_ref()
+
+    try do
+      GenServer.call(pid, {:request, command, deadline, admission}, timeout + 1000)
+    catch
+      :exit, {:noproc, _call} ->
+        {:error, Error.new(:connection_closed)}
+
+      :exit, {:normal, _call} ->
+        if admitted?(admission),
+          do: effect(Error.new(:connection_closed), command),
+          else: {:error, Error.new(:connection_closed)}
+
+      :exit, _reason ->
+        effect(Error.new(:connection_closed), command)
+    after
+      admitted?(admission)
+    end
+  end
+
+  defp admitted?(admission) do
+    receive do
+      {:wotex_modbus_admitted, ^admission} -> true
+    after
+      0 -> false
+    end
+  end
+
   defp await_start(pid, timeout) do
     case GenServer.call(pid, :ready, timeout + 1000) do
       :ok -> {:ok, pid}
@@ -262,7 +286,7 @@ defmodule Wotex.Modbus.Connection do
     do:
       fail(%{state | worker: nil}, Error.new(:transport_error, nil, %{reason: :worker_terminated}))
 
-  defp admit(state, command, deadline, from) do
+  defp admit(state, command, deadline, from, admission) do
     ref = make_ref()
 
     call = %{
@@ -276,6 +300,7 @@ defmodule Wotex.Modbus.Connection do
       transaction: nil
     }
 
+    send(elem(from, 0), {:wotex_modbus_admitted, admission})
     next(%{state | calls: Map.put(state.calls, ref, call), queue: :queue.in(ref, state.queue)})
   end
 

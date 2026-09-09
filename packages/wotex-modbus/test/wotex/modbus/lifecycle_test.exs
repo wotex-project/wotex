@@ -220,6 +220,44 @@ defmodule Wotex.Modbus.LifecycleTest do
     refute pid in elem(Process.info(self(), :links), 1)
   end
 
+  test "WMB-S03 an ordered admission receipt distinguishes normal-close failure effects" do
+    {:ok, write} = Command.new(:write_holding_register, 0, 42)
+
+    for {admitted, effect} <- [{false, :none}, {true, :unknown}] do
+      closing =
+        spawn(fn ->
+          receive do
+            {:"$gen_call", {caller, _}, {:request, ^write, _deadline, admission}} ->
+              if admitted, do: send(caller, {:wotex_modbus_admitted, admission})
+          end
+        end)
+
+      assert {:error, %Error{code: :connection_closed, effect: ^effect}} =
+               Connection.request(closing, write, 100)
+
+      refute_received {:wotex_modbus_admitted, _}
+    end
+  end
+
+  test "WMB-S03 a transmitted mutation closed normally stays unknown and is never retried" do
+    {peer, port} = controlled_peer()
+    {:ok, session} = Modbus.connect(host: "127.0.0.1", port: port)
+    call = Task.async(fn -> Modbus.write_holding_register(session, 0, 42) end)
+    assert_receive {:wire, 0, 1, <<6, 0, 0, 0, 42>>}
+    :ok = GenServer.stop(session.pid, :normal)
+
+    assert {:error, %Error{code: :connection_closed, effect: :unknown, class: :permanent}} =
+             Task.await(call)
+
+    assert {:error, %Error{code: :connection_closed, effect: :none}} =
+             Modbus.write_holding_register(session, 0, 43)
+
+    send(peer.pid, :close)
+    assert :ok = Task.await(peer)
+    refute_received {:wire, _, _, _}
+    refute_received {:wotex_modbus_admitted, _}
+  end
+
   @tag requirements: ["WMB-S03", "WMB-D03", "WMB-D04"], scenarios: ["WMB-V08"]
   test "WMB-F-WRITE-UNCERTAINTY uses the virtual event clock and actual TCP observations" do
     path = Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
