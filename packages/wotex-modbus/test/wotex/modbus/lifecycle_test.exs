@@ -242,6 +242,52 @@ defmodule Wotex.Modbus.LifecycleTest do
     refute_received {:wire, _, _, _}
   end
 
+  test "WMB-C03 WMB-S03 forged PIDs cannot receive calls or cleanup signals" do
+    {:ok, command} = Command.new(:write_holding_register, 0, 42)
+    observer = self()
+
+    unrelated =
+      spawn(fn ->
+        receive do
+          message -> send(observer, {:unexpected, message})
+        end
+      end)
+
+    {:ok, agent} = Agent.start(fn -> :unrelated end)
+
+    for pid <- [self(), unrelated, agent] do
+      session = %Wotex.Modbus.Session{pid: pid, unit_id: 1, timeout: 100}
+
+      assert {:error, %Error{code: :invalid_session, effect: :none}} =
+               Connection.request(pid, command, 100)
+
+      assert {:error, %Error{code: :invalid_session, effect: :none}} =
+               Modbus.write_holding_register(session, 0, 42)
+
+      assert {:error, %Error{code: :invalid_session}} = Connection.close(pid)
+      assert {:error, %Error{code: :invalid_session}} = Modbus.disconnect(session)
+      assert Process.alive?(pid)
+    end
+
+    assert Agent.get(agent, & &1) == :unrelated
+    assert Process.info(unrelated, :message_queue_len) == {:message_queue_len, 0}
+    refute_received {:unexpected, _}
+    refute_received {:"$gen_call", _, _}
+    refute_received {:system, _, _}
+
+    for value <- [nil, :connection, %{}, make_ref()],
+        do: assert({:error, %Error{code: :invalid_session}} = Connection.close(value))
+
+    Agent.stop(agent)
+    monitor = Process.monitor(unrelated)
+    Process.exit(unrelated, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^unrelated, :killed}
+    assert :ok = Connection.close(unrelated)
+
+    assert {:error, %Error{code: :connection_closed, effect: :none}} =
+             Connection.request(unrelated, command, 100)
+  end
+
   test "WMB-C03 graceful cleanup timeout force-closes its owned socket without claiming success" do
     {peer, port} = controlled_peer()
     {:ok, session} = Modbus.connect(host: "127.0.0.1", port: port)
@@ -276,7 +322,7 @@ defmodule Wotex.Modbus.LifecycleTest do
 
     for {admitted, effect} <- [{false, :none}, {true, :unknown}] do
       closing =
-        spawn(fn ->
+        injected_owner(fn ->
           receive do
             {:"$gen_call", {caller, _}, {:request, ^write, _deadline, admission}} ->
               if admitted, do: send(caller, {:wotex_modbus_admitted, admission})
@@ -293,7 +339,7 @@ defmodule Wotex.Modbus.LifecycleTest do
   test "WMB-C03 WMB-V08 normal exit during the OTP system stop handshake is successful cleanup" do
     for _ <- 1..20 do
       closing =
-        spawn(fn ->
+        injected_owner(fn ->
           receive do
             {:system, _from, {:terminate, :normal}} -> :ok
           end
@@ -304,6 +350,36 @@ defmodule Wotex.Modbus.LifecycleTest do
       assert_receive {:DOWN, ^monitor, :process, ^closing, :normal}
       assert :ok = Connection.close(closing)
     end
+  end
+
+  test "WMB-C03 cleanup rechecks ownership after a failed stop handshake" do
+    closing =
+      injected_owner(fn ->
+        receive do
+          {:system, _from, {:terminate, :normal}} -> exit(:injected_stop_failure)
+        end
+      end)
+
+    assert :ok = Connection.close(closing)
+    refute Process.alive?(closing)
+
+    unrelated =
+      injected_owner(fn ->
+        receive do
+          {:system, _from, {:terminate, :normal}} ->
+            Process.delete({Connection, :owner})
+
+            receive do
+              :done -> :ok
+            end
+        end
+      end)
+
+    assert {:error, %Error{code: :invalid_session}} = Connection.close(unrelated)
+    assert Process.alive?(unrelated)
+    monitor = Process.monitor(unrelated)
+    send(unrelated, :done)
+    assert_receive {:DOWN, ^monitor, :process, ^unrelated, :normal}
   end
 
   test "WMB-S03 a transmitted mutation closed normally stays unknown and is never retried" do
@@ -344,6 +420,21 @@ defmodule Wotex.Modbus.LifecycleTest do
     actual = SessionTrace.run(fixture["input"], advance)
     assert actual == fixture["expectation"]["value"]
     assert :atomics.get(clock, 1) == 3
+  end
+
+  defp injected_owner(run) do
+    caller = self()
+    ready = make_ref()
+
+    pid =
+      spawn(fn ->
+        Process.put({Connection, :owner}, make_ref())
+        send(caller, ready)
+        run.()
+      end)
+
+    assert_receive ^ready
+    pid
   end
 
   defp controlled_peer do

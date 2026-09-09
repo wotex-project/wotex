@@ -4,6 +4,8 @@ defmodule Wotex.Modbus.Connection do
   use GenServer
   alias Wotex.Modbus.{Codec, Command, Error}
 
+  @owner_key {__MODULE__, :owner}
+
   @doc "Starts a linked connection. The caller supplies host; no named process is registered."
   @spec start_link(keyword()) :: {:ok, pid()} | {:error, term()}
   def start_link(opts) do
@@ -23,14 +25,38 @@ defmodule Wotex.Modbus.Connection do
       when is_pid(pid) and is_integer(timeout) and timeout in 1..60_000 do
     deadline = System.monotonic_time(:millisecond) + timeout
 
-    with :ok <- Command.validate(command), do: call(pid, command, deadline, timeout)
+    with :ok <- Command.validate(command) do
+      case owner_status(pid) do
+        :owned -> call(pid, command, deadline, timeout)
+        :closed -> {:error, Error.new(:connection_closed)}
+        :invalid -> {:error, Error.new(:invalid_session)}
+      end
+    end
   end
 
   def request(_, _, _), do: {:error, Error.new(:invalid_request)}
 
   @doc "Closes the connection idempotently."
   @spec close(pid()) :: :ok | {:error, Error.t()}
-  def close(pid) when is_pid(pid) do
+  def close(pid) do
+    case owner_status(pid) do
+      :owned -> stop_owned(pid)
+      :closed -> :ok
+      :invalid -> {:error, Error.new(:invalid_session)}
+    end
+  end
+
+  defp owner_status(pid) when is_pid(pid) and node(pid) == node() and pid != self() do
+    case :erlang.process_info(pid, {:dictionary, @owner_key}) do
+      {{:dictionary, @owner_key}, reference} when is_reference(reference) -> :owned
+      :undefined -> :closed
+      _ -> :invalid
+    end
+  end
+
+  defp owner_status(_), do: :invalid
+
+  defp stop_owned(pid) do
     GenServer.stop(pid, :normal, 900)
   catch
     :exit, {:noproc, _} ->
@@ -43,17 +69,30 @@ defmodule Wotex.Modbus.Connection do
       :ok
 
     :exit, _ ->
-      Process.unlink(pid)
-      monitor = Process.monitor(pid)
-      Process.exit(pid, :kill)
+      force_close_owned(pid)
+  end
 
-      receive do
-        {:DOWN, ^monitor, :process, _, _} -> {:error, Error.new(:cleanup_timeout)}
-      after
-        100 ->
-          Process.demonitor(monitor, [:flush])
-          {:error, Error.new(:cleanup_timeout)}
-      end
+  defp force_close_owned(pid) do
+    case owner_status(pid) do
+      :closed ->
+        :ok
+
+      :invalid ->
+        {:error, Error.new(:invalid_session)}
+
+      :owned ->
+        Process.unlink(pid)
+        monitor = Process.monitor(pid)
+        Process.exit(pid, :kill)
+
+        receive do
+          {:DOWN, ^monitor, :process, _, _} -> {:error, Error.new(:cleanup_timeout)}
+        after
+          100 ->
+            Process.demonitor(monitor, [:flush])
+            {:error, Error.new(:cleanup_timeout)}
+        end
+    end
   end
 
   @doc "Validates explicit connection options without opening a socket."
@@ -68,6 +107,7 @@ defmodule Wotex.Modbus.Connection do
 
   @impl GenServer
   def init(config) do
+    Process.put(@owner_key, make_ref())
     Process.flag(:trap_exit, true)
     server = self()
     token = make_ref()
