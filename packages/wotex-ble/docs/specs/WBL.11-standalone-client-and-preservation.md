@@ -27,7 +27,10 @@ policy. WoT mapping delegates to these same operations and owns no second sessio
 
 All functions below are on `Wotex.BLE` unless qualified. Public target additions
 are documented here before implementation; existing `connect/1`, `send/2` and
-`disconnect/1` retain their compatible baseline cells.
+`disconnect/1` retain their compatible baseline cells. A successful local
+`disconnect/1` closes the owned library generation; it does not attest immediate
+controller disconnection. S02 distinguishes the 1000 ms local ownership grace
+from the pinned BlueZ daemon's delayed link drain, tested separately in N03.
 
 | API | Exact contract |
 | --- | --- |

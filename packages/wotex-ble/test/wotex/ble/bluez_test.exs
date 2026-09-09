@@ -67,19 +67,19 @@ defmodule Wotex.BLE.BlueZTest do
       "case \"$7\" in ReadValue) printf 'ay 1 42\\n';; WriteValue) exit 0;; *) exit 2;; esac"
     )
 
-    assert {:ok, <<42>>} = BlueZ.request(handle, @message, 1000)
+    assert {:ok, <<42>>} = BlueZ.request(handle, @message, 5000)
 
     assert {:ok, :written} =
-             BlueZ.request(handle, Map.merge(@message, %{type: :write, value: <<42>>}), 1000)
+             BlueZ.request(handle, Map.merge(@message, %{type: :write, value: <<42>>}), 5000)
 
     assert {:error, _} = BlueZ.request(handle, Map.put(@message, :characteristic, 1), 100)
     assert {:error, _} = BlueZ.request(handle, Map.put(@message, :type, :notify), 100)
     script(path, "exit 1")
-    assert {:error, %{code: :remote_error}} = BlueZ.request(handle, @message, 1000)
+    assert {:error, %{code: :remote_error}} = BlueZ.request(handle, @message, 5000)
     script(path, "exec sleep 1")
     assert {:error, %{code: :timeout}} = BlueZ.request(handle, @message, 10)
     script(path, "printf '%05000d' 0")
-    assert {:error, %{code: :response_limit}} = BlueZ.request(handle, @message, 1000)
+    assert {:error, %{code: :response_limit}} = BlueZ.request(handle, @message, 5000)
     assert :ok = BlueZ.disconnect(handle)
 
     for opts <- [

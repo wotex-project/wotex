@@ -74,6 +74,17 @@ already connected when opened remains borrowed at the link layer. Concurrent
 close callers join the same bounded cleanup result, with at most 64 waiting
 callers; excess callers receive `:busy` without another native close attempt.
 
+C03's 1000 ms grace releases library-owned processes, bus sender, listeners and
+subscription/Agent state. For a link this owner established, it also bounds
+submission of Device1.Disconnect; local close does not attest that BlueZ has
+already disconnected the controller. Pinned BlueZ
+[`device_request_disconnect` and `DISCONNECT_TIMER`](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/src/device.c)
+schedule daemon-owned kernel disconnection with a two-second timer. The required
+VM fixture measures sender/resource release within 1000 ms and separately
+requires Connected=false within 3500 ms from close entry, recording both
+latencies. Do not extend the library's cleanup grace, send privileged HCI
+commands or disconnect a borrowed link to satisfy that separate drain assertion.
+
 Install PropertiesChanged, InterfacesRemoved and NameOwnerChanged listeners
 before checking initial state, then reconcile the snapshot so no state-change
 race is lost. BlueZ owner change, device/service removal or disconnection closes
@@ -311,11 +322,19 @@ Device1 state meanings use the pinned
 
 Pin BlueZ to `2123ab772fbe97d1369fc9e179ea87c3469cf98f` and dbus-next 0.2.3
 (source `74dc9706e8d0ebb17f27818b8ef9e214172514ec`). Build BlueZ with its test and
-emulator tools. Use an isolated Linux VM with CONFIG_BT_VHCI and two virtual
+emulator tools. Use an isolated Linux VM with `CONFIG_BT_HCIVHCI` support and two virtual
 LE controllers created by `btvirt -L -l2`; verify no physical HCI controller
 is present before selecting fixture devices. Run a disposable private D-Bus and
 bluetoothd, and a fixture GATT server with duplicate UUID instances, readable/
 writable values and separate notify-only/indicate-only characteristics.
+
+A distribution kernel that omits this driver may use its unmodified matching
+`hci_vhci.c` built by [Kbuild](https://docs.kernel.org/kbuild/modules.html)
+against the exact guest kernel headers, configuration and `Module.symvers`.
+Record the source archive, driver source, configuration and module hashes plus
+vermagic; load that module only in the disposable guest. Required `/dev/vhci`
+and exactly two `/sys/devices/virtual/bluetooth/hci*` controllers remain runtime
+assertions. A missing or mismatched driver fails the lane.
 
 Capture actual server writes, active notification sessions and disconnects.
 Inject permission/authentication failures in the fixture service and D-Bus
