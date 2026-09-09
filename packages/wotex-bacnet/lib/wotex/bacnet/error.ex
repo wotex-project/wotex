@@ -1,5 +1,22 @@
 defmodule Wotex.BACnet.Error do
-  @moduledoc "Stable, credential-free failures at the BACnet public boundary."
+  @moduledoc """
+  Represents a bounded, credential-free BACnet failure.
+
+  Each `t:t/0` contains a stable code, an optional field, bounded diagnostic
+  details, a retry classification, and an effect classification. The effect is
+  `:none` when the package can establish that no write reached the peer and may
+  be `:unknown` when transport failure prevents that conclusion. Consumers can
+  therefore make policy decisions without parsing exception text or adapter
+  messages.
+
+  `new/3` classifies the error but does not redact or bound caller-supplied
+  details. Custom clients must uphold that contract. Unknown-effect mutations
+  force `class: :permanent` and `retryable: false`; the library never schedules
+  a retry. Runtime retains code and class in its cause, while dropping native
+  details, effect, and retryable fields. Diagnostic details are
+  descriptive data, not authorization or proof of device state. Credential
+  material and raw unbounded peer responses must never be stored in this value.
+  """
 
   @classes [:timeout, :unavailable, :rate_limited, :protocol, :permanent]
   @enforce_keys [:code]

@@ -1,5 +1,24 @@
 defmodule Wotex.BACnet.Transport do
-  @moduledoc "Scoped Wotex Runtime execution over an explicit client and exact target identity."
+  @moduledoc """
+  Executes Wotex Runtime requests through a scoped BACnet client session.
+
+  `Wotex.BACnet.Transport` implements the Runtime transport boundary for the
+  package's supported Property operations. It validates the execution context,
+  maps the selected Form through `Wotex.BACnet.Mapping`, opens the configured
+  client, validates the native reply, and closes the exact session. A single
+  deadline covers mapping, setup, exchange, conversion, and successful cleanup.
+  Property observations use a relay that monitors the Runtime owner and owns
+  the native COV session, handle, reports, and cancellation lifecycle.
+
+  ## Runtime boundary
+
+  The transport requires an exact target identity and rejects credentials in
+  the execution context because this profile has no credential transport
+  contract. Runtime selection does not grant permission to contact a peer, and
+  a successful request does not establish canonical Property truth. The
+  consumer owns authorization, routing, deadlines, supervision, and any policy
+  for interpreting returned BACnet metadata.
+  """
   @behaviour Wotex.Runtime.Transport
   alias Wotex.BACnet.{COVOptions, Error, Mapping, RuntimeExchange, RuntimeFrame, RuntimeRelay}
   alias Wotex.Runtime.{Context, ExecutionContext, Request}

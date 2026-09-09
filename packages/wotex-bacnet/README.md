@@ -1,9 +1,42 @@
 # Wotex BACnet
 
-Consumer-neutral BACnet library for W3C Web of Things consumers.
-Development version: `0.1.0-dev`.
+Consumer-neutral BACnet interactions for W3C Web of Things consumers.
+
+[![Hex.pm](https://img.shields.io/hexpm/v/wotex_bacnet.svg)](https://hex.pm/packages/wotex_bacnet)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_bacnet)
+[![CI](https://github.com/wotex-project/wotex-bacnet/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-bacnet/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/wotex-project/wotex-bacnet/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-bacnet)
+[![License](https://img.shields.io/hexpm/l/wotex_bacnet.svg)](https://github.com/wotex-project/wotex-bacnet/blob/main/LICENSE)
+
+[Installation](#installation) ·
+[Implemented profile](#implemented-profile) ·
+[Quick start](#quick-start) ·
+[Wotex contract](#wotex-contract) ·
+[Development](#development) ·
+[Software contract](#software-implementation-contract)
+
+---
+
+This is a development checkout with an unstable public API. The ordered plan
+tracks the remaining software verification and implementation work.
 
 Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
+
+## Installation
+
+A local consumer can select this checkout explicitly:
+
+```elixir
+def deps do
+  [{:wotex_bacnet, path: "../wotex-bacnet"}]
+end
+```
+
+Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
+and Runtime dependencies resolve from sibling checkouts. Published consumers
+should replace the path with the constraint of an available Hex release.
+
+## Implemented profile
 
 ReadProperty and WriteProperty use pinned BACstack 0.0.1. `Value` provides
 explicit scalar conversion for declared Form types and retains native tags. The adapter accepts only
@@ -11,6 +44,8 @@ matching acknowledgments and retains tagged values. Abort, Error, Reject,
 missing ACK and wrong object/property/index all fail. `Address` preserves array
 index zero and explicit priorities. `IPv4` owns the complete stack with zero APDU
 retries; `BACstack` borrows an already supervised Client and never stops it.
+
+## Quick start
 
 ```elixir
 {:ok, address} = Wotex.BACnet.Address.new(%{
@@ -32,11 +67,21 @@ Use an IP assigned to a broadcast-capable interface. Upstream BACstack does not
 support binding a loopback interface; explicit `local_ip: :none` binds all
 interfaces and is provided for isolated fixtures. It is never selected by default.
 For borrowed clients, writes require `writes: true`; the consumer must disable
-BACstack retries itself. A wrapper timeout cannot cancel BACstack's internal
-pending operation. Use `IPv4` when this library should own that configuration.
+BACstack retries itself. A timeout cannot retract an emitted APDU or cancel a pending request held by
+a raw borrowed BACstack Client. The owned `IPv4` adapter checks caller liveness
+and the absolute deadline again before transmission.
 
-COV delivery/renewal, routing/BBMD, MS/TP and BACnet/SC are not implemented here.
-The COV cancellation requirements are documented for later graduation.
+Native helpers provide typed single-Property access, sequential batches of up
+to 64 distinct Properties, and bounded Who-Is discovery with an explicitly
+configured destination. Discovery results never replace the configured route.
+
+Object and Property Change of Value (COV) subscriptions support finite leases,
+renewal, confirmed and unconfirmed reports, bounded queues, and cancellation.
+They require the owned `IPv4` client or a verified Wotex stack wrapper; a raw
+borrowed BACstack Client supports read/write operations only. Native and real
+Runtime lifecycle tests exercise COV ownership. Independent C-peer COV and the
+complete software workflow remain open in WBA-P06. Routing/BBMD, MS/TP and
+BACnet/SC are unsupported.
 
 ## Wotex contract
 
@@ -44,16 +89,25 @@ This is an ordinary Mix library, with no Application callback or implicit runtim
 work on dependency load. The consumer supplies credentials, routing policy and
 supervision. Telemetry uses `[:wotex, :bacnet, :request, :stop]`, with bounded status
 metadata and duration in native monotonic units; no credentials or values.
-Errors are structured and credential-free. Unknown Form extension terms survive
-mapping. These development APIs are not yet stable or certified.
+Library-generated errors contain structured, bounded diagnostics; custom clients
+are responsible for keeping their Error details bounded and free of secrets.
+Unknown Form extension terms survive mapping. These development APIs are not yet stable or certified.
 
 The compatibility callbacks are `capabilities/0`, `connect/1`, `send/2`,
 `receive/2`, `disconnect/1`, `health_check/1`, `subscribe/2`, `unsubscribe/2`.
 `send/2` returns the correlated operation result synchronously. No separate
-receive queue is fabricated; unsupported receive/subscription calls fail
-explicitly. Callback names alone do not establish consumer behavioral parity.
+receive queue is fabricated; `receive/2` is unsupported. `health_check/1`
+requires a probe, while `health_check/2` performs an explicit validated read.
+Subscriptions return an opaque handle bound to the original native session. Callback names alone do not establish consumer behavioral parity.
 The consumer retains its implementation until differential scenarios and
 interoperability gates pass; migration is outside this repository.
+
+`profile/0` returns the native read/write Runtime profile. `profile(:ip_cov)`
+adds Property observation through a consumer-owned Runtime subscription. Forms
+that omit `contentType` retain that omission; explicit content types are rejected
+because this profile supplies native values rather than a serialization codec.
+Runtime request tests preserve false, zero, empty values, typed metadata and
+request identity, and reject positive replies that arrive after the deadline.
 
 See [implemented profile](docs/specs/WBA.02-implemented-profile.md),
 [primary sources](docs/provenance/primary-sources.md) and

@@ -1,5 +1,26 @@
 defmodule Wotex.BACnet do
-  @moduledoc "Consumer-neutral BACnet operations over an explicitly supplied real client port."
+  @moduledoc """
+  Executes bounded BACnet operations through an explicitly selected client.
+
+  `Wotex.BACnet` is the package entry point for connection lifecycle and native
+  BACnet requests. `connect/1` validates client configuration and returns a
+  `Wotex.BACnet.Session`; `send/2` accepts the supported request maps; and
+  `disconnect/1` releases only the resources represented by that session.
+  `with_connection/2` provides the same lifecycle with deterministic cleanup.
+
+  ## Execution boundary
+
+  The consumer selects the `Wotex.BACnet.Client` implementation, supplies
+  addressing and timeouts, and owns credentials, authorization, supervision,
+  and routing policy. Loading this module performs no network operation.
+  Native helpers provide single and sequential Property reads, writes, and
+  explicit Who-Is discovery. `subscribe/2` establishes finite object or Property
+  Change of Value (COV) subscriptions through a supported client. `profile/0`
+  and `profile/1` declare the corresponding Runtime Property operations.
+  `receive/2` remains unsupported; `health_check/2` requires an explicit probe.
+  A successful BACnet exchange is protocol evidence only;
+  it does not establish canonical Property state or authorization.
+  """
 
   import Kernel, except: [send: 2]
   alias BACnet.Protocol.ApplicationTags.Encoding

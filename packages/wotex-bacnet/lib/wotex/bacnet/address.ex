@@ -1,5 +1,28 @@
 defmodule Wotex.BACnet.Address do
-  @moduledoc "Typed BACnet object/property addressing, including array-index zero and write priority."
+  @moduledoc """
+  Represents a validated BACnet object and Property address.
+
+  An address contains an object type, object instance, and Property identifier.
+  It may also carry an array index and a BACnet write priority. The constructor
+  preserves array index zero rather than treating it as absent, and rejects
+  values outside the package's documented protocol bounds.
+
+  `new/1` constructs the value from a map. `validate_message/1` then checks that
+  a read or write request contains the fields required by its operation. The
+  resulting `t:t/0` is used by `Wotex.BACnet`,
+  `Wotex.BACnet.Mapping`, and the selected `Wotex.BACnet.Client`.
+
+  ## Examples
+
+      {:ok, address} =
+        Wotex.BACnet.Address.new(%{
+          object_type: :analog_output,
+          instance: 0,
+          property: :present_value,
+          array_index: 0,
+          priority: 8
+        })
+  """
   alias Wotex.BACnet.{Error, Value}
 
   @objects %{

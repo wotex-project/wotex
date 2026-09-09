@@ -1,5 +1,24 @@
 defmodule Wotex.BACnet.Client do
-  @moduledoc "Explicit client port; the consumer owns its implementation, supervision and trust policy."
+  @moduledoc """
+  Defines the client port used for one explicitly configured BACnet session.
+
+  A client implementation validates its own connection options in
+  `c:connect/1`, performs one bounded native operation in `c:request/3`, and
+  releases its session resources in `c:disconnect/1`. The opaque handle returned
+  from `c:connect/1` is stored in `Wotex.BACnet.Session`. Custom handles remain
+  opaque to the facade; first-party adapters use their known owner and deadline
+  contracts. Optional callbacks expose sequential reads, explicit discovery,
+  and finite Change of Value subscriptions.
+
+  ## Consumer responsibility
+
+  The consumer chooses the implementation and owns network configuration,
+  credentials, trust policy, supervision, and any process lifetime beneath the
+  handle. Custom callbacks are trusted executable code and must honor timeout
+  and cleanup bounds themselves. Typed `Wotex.BACnet.Error` values retain their
+  details when normalized; they must not expose credentials or unbounded
+  peer output. Implementations must not add silent retries to write operations.
+  """
 
   @doc "Opens a client handle using explicit configuration. No simulator fallback is allowed."
   @callback connect(keyword()) :: {:ok, term()} | {:error, term()}

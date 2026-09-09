@@ -1,5 +1,23 @@
 defmodule Wotex.BACnet.Value do
-  @moduledoc "Explicit BACnet scalar conversion for WoT payloads with native tags retained as metadata."
+  @moduledoc """
+  Converts supported WoT payloads to and from typed BACnet scalar values.
+
+  `encode/2` requires an explicit BACnet type declaration or an already encoded
+  BACstack value. It validates the value against the selected scalar type and
+  returns the native encoding consumed by the client adapter. `result/1`
+  separates a decoded Property value from its BACnet type metadata so Runtime
+  can retain protocol evidence without changing the value's WoT meaning.
+
+  ## Conversion boundary
+
+  Conversion is deterministic and performs no I/O. Native tags are preserved;
+  the module does not infer a BACnet type from an arbitrary Elixir value.
+  Encoding and validation reject unsupported types, malformed native encodings,
+  and out-of-range values with `Wotex.BACnet.Error`. `result/1` is a projection,
+  not a validator; the Runtime adapter validates native values before calling it. The conversion result is
+  protocol data, not a unit conversion, authorization decision, or claim about
+  canonical Property state.
+  """
   alias BACnet.Protocol.ApplicationTags
   alias BACnet.Protocol.ApplicationTags.Encoding
   alias Wotex.BACnet.{CharacterString, Error, ValueBoundary}

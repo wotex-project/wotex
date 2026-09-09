@@ -1,5 +1,23 @@
 defmodule Wotex.BACnet.Mapping do
-  @moduledoc "Pure Form mapping for the explicitly documented Wotex protocol profile."
+  @moduledoc """
+  Maps a W3C Web of Things Form to a native BACnet request value.
+
+  `command/4` reads only the BACnet extension terms supported by the package's
+  documented Form profile. It combines those terms with the selected WoT
+  operation, optional input, and resolved href, then returns an immutable
+  request map for `Wotex.BACnet.send/2` or a Property COV subscription. Unknown Form extension members
+  remain owned by the original `Wotex.Form` value and are not reinterpreted.
+  Known scalar type selectors are validated for every mapped operation. Explicit
+  `contentType` selectors fail because this profile does not define a serializer.
+
+  ## Semantics
+
+  Mapping proves that a Form has the fields required for a supported protocol
+  operation. It does not authorize that operation, establish peer reachability,
+  or prove a physical effect. Invalid fields, unsupported operations, and
+  inconsistent addressing return `Wotex.BACnet.Error` values without opening a
+  connection or performing network I/O.
+  """
   alias Wotex.BACnet.{Address, Error, Value}
   alias Wotex.Form
 

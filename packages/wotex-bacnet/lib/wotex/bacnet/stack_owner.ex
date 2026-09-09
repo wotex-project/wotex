@@ -1,5 +1,20 @@
 defmodule Wotex.BACnet.StackOwner do
-  @moduledoc "Monitored owner for an isolated BACstack process group with zero APDU retries."
+  @moduledoc """
+  Owns and monitors the BACstack processes created for one IPv4 session.
+
+  `start_link/1` starts an isolated transport and client process group with
+  Application Protocol Data Unit (APDU) retries set to zero. `client/1` returns
+  the client pid used for native requests. `close/1` terminates the group and
+  waits for its cleanup path.
+  Transport messages and linked-process exits remain scoped to this owner.
+
+  This module supports `Wotex.BACnet.IPv4`; it is not a global registry or an
+  application supervisor. Every owner is started by an explicit connection
+  call and represents only that connection. The caller determines where the
+  owner sits in a larger supervision tree. Failure of the BACstack client stops
+  the isolated group instead of silently creating a replacement connection or
+  retrying a write.
+  """
   use GenServer
   alias BACnet.Stack.Segmentator
   alias BACnet.Stack.Transport.IPv4Transport

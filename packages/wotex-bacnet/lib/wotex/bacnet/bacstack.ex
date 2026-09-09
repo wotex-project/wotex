@@ -1,5 +1,26 @@
 defmodule Wotex.BACnet.BACstack do
-  @moduledoc "BACstack 0.0.1 adapter over a borrowed, explicitly configured Client process."
+  @moduledoc """
+  Adapts a borrowed BACstack 0.0.1 client process to `Wotex.BACnet.Client`.
+
+  The adapter translates validated Wotex request maps into BACstack operations
+  and normalizes ComplexACK, SimpleACK, Error, Abort, Reject, timeout, and
+  missing-acknowledgment outcomes. Read acknowledgments are correlated with the
+  requested object, Property, and array index before their values are returned.
+
+  ## Ownership
+
+  The client process already exists when `connect/1` is called. Its consumer
+  owns startup, supervision, retry configuration, networking, and shutdown;
+  `disconnect/1` therefore leaves the borrowed process running. Writes require
+  explicit enablement in the adapter options. For a raw SDK Client, a Wotex
+  timeout cannot cancel a retained pending operation; the consumer must disable
+  BACstack retries when one-attempt behavior is required.
+
+  The verified Wotex stack wrapper adds deadline and caller checks at dispatch.
+  Object and Property Change of Value subscriptions require that wrapper; Who-Is
+  discovery also requires its discovery capability and an explicit destination.
+  A raw borrowed BACstack Client does not provide those listener contracts.
+  """
   @behaviour Wotex.BACnet.Client
   alias BACnet.Protocol.{APDU, Constants}
   alias BACnet.Protocol.ApplicationTags.Encoding

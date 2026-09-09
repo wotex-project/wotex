@@ -1,5 +1,18 @@
 defmodule Wotex.BACnet.COVRequest do
-  @moduledoc "A finite COV request with explicit device and object identity."
+  @moduledoc """
+  Finite Change of Value subscription request with explicit device and object identity.
+
+  The value fixes the subscription form, BACnet object and optional Property,
+  target device, receiver process, confirmation mode, lifetime, renewal policy,
+  increment threshold, queue bound, and duplicate-suppression window before a
+  listener is registered. Device identity is supplied by the consumer and is
+  never inferred from a notification.
+
+  Construct requests with `new/2`. Validation is pure and performs no network
+  exchange or process registration; the persistent BACnet owner remains
+  responsible for issuing, renewing, cancelling, and bounding delivery for the
+  admitted request.
+  """
 
   alias Wotex.BACnet.{Address, Error}
 

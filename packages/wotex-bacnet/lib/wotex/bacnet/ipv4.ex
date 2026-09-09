@@ -1,5 +1,22 @@
 defmodule Wotex.BACnet.IPv4 do
-  @moduledoc "Explicit BACnet/IP client owning its BACstack transport and auxiliary processes."
+  @moduledoc """
+  Owns an isolated BACnet/IP transport for a `Wotex.BACnet.Session`.
+
+  `Wotex.BACnet.IPv4` implements `Wotex.BACnet.Client` by starting a bounded
+  BACstack process group through `Wotex.BACnet.StackOwner`. Connection options
+  identify the local interface, UDP port, destination, and request timeout.
+  Requests are delegated to BACstack with Application Protocol Data Unit
+  (APDU) retries configured to zero, and
+  `disconnect/1` closes the exact process group created for the session.
+
+  ## Network boundary
+
+  Startup occurs only after an explicit `Wotex.BACnet.connect/1` call. The
+  consumer still owns routing policy, interface availability, credentials, and
+  supervision of the calling workflow. Upstream BACstack cannot bind a loopback
+  interface; `local_ip: :none` is an explicit isolated-fixture option and is
+  never selected as a default.
+  """
   @behaviour Wotex.BACnet.Client
   alias Wotex.BACnet.{BACstack, Error, StackOwner}
 

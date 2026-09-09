@@ -1,5 +1,18 @@
 defmodule Wotex.BACnet.Subscription do
-  @moduledoc "A redacted handle bound to a subscription owner and its original session."
+  @moduledoc """
+  Redacted handle bound to a Change of Value subscription and its original session.
+
+  The handle carries the owner PID, an opaque subscription reference, and
+  generation references for both the listener and session. These fields let the
+  BACnet transport reject stale, forged, or cross-session cancellation attempts
+  without exposing device addresses, credentials, queue contents, or protocol
+  state through inspection.
+
+  Consumers treat the struct as opaque and return it to the matching close
+  operation. `valid?/1` checks only its field types; live ownership, generation,
+  and session identity are verified by the persistent subscription owner before
+  any protocol request is issued.
+  """
 
   @enforce_keys [:pid, :reference, :generation, :session_generation]
   @derive {Inspect, only: []}

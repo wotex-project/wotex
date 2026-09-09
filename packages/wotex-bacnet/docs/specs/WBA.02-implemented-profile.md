@@ -12,13 +12,15 @@ spec:
 
 The implemented draft-derived URI subset is
 `bacnet://device-instance/object-type,object-instance[/property[/array-index]]`.
-All identifiers are decimal. Omitted property means Present_Value (85); omitted
+All identifiers use unsigned decimal digits. Omitted property means Present_Value (85); omitted
 array index means the whole property. `.this`, named URI identifiers, query
 parameters and fragments are unsupported. Property read/write select
 ReadProperty/WriteProperty. Command priority remains available in the explicit
 protocol API, not the URI profile. The `bacv:hasDataType` scalar subset supports Null, Boolean, Signed, Unsigned,
 Real, Double, String and OctetString. Other extension semantics are not applied;
-extension terms remain preserved in the Form.
+extension terms remain preserved in the Form. Known type selectors are validated
+for reads and observations as well as writes. Forms that omit `contentType`
+retain that omission; explicit content types fail before native acquisition.
 
 `Transport.request/3` requires `target: "device-instance"` matching the Form plus
 an explicitly configured client/destination. The device identity does not encode
@@ -39,6 +41,33 @@ on BACstack's data model and may fail explicitly.
 Both concrete adapters reject unknown or duplicate configuration keys before
 opening resources. Unsupported security selectors, including BACnet/SC, cannot
 be ignored and therefore fail instead of downgrading to BACnet/IP.
+
+## Native helpers and observations
+
+`read_property/4` and `write_property/5` validate native values and acknowledgments.
+`read_properties/4` performs 1..64 distinct Property reads sequentially under one
+admission slot and absolute deadline. `who_is/1..3` requires an explicit bounded
+discovery configuration and returns typed `Device` observations. Identical
+I-Am reports are deduplicated; conflicting identities fail the complete window.
+Neither helper implements a Runtime aggregate operation or directory service.
+
+Finite object and Property COV subscriptions support confirmed and unconfirmed
+reports, renewal, selector validation, and cleanup of owned listeners, timers,
+and workers. COV and discovery require the owned `IPv4` client or a verified
+Wotex stack wrapper with the corresponding capability. Raw borrowed BACstack
+Clients preserve read/write support and never gain implicit listener ownership.
+
+`profile/0` returns the native read/write Runtime profile; `profile(:ip_cov)`
+adds Property observation. The Runtime relay owns its native association and
+monitors the Runtime subscription owner. Request results require native value
+validation or the matching write acknowledgment. Mapping, setup, exchange,
+conversion, and successful cleanup share one deadline. Native numeric error
+details remain available to direct callers; Runtime retains the finite class
+and code, and unknown-effect writes remain non-retryable.
+
+These native and Runtime behaviors have executable lifecycle tests. Independent
+C-peer COV, the full discovery/batch/COV workflow, and final WBA-P06 evidence are
+still required; this section does not accept the complete target profile.
 
 ## Evidence and compatibility
 

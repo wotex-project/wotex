@@ -1,5 +1,19 @@
 defmodule Wotex.BACnet.CharacterString do
-  @moduledoc "A BACnet character-set identifier and its original encoded bytes."
+  @moduledoc """
+  Preserves a BACnet character-set identifier and its original encoded bytes.
+
+  BACnet CharacterString values carry an encoding selector alongside their
+  octets. This struct retains both fields so transport and mapping layers do
+  not lose the wire-level character-set identity by converting every value to
+  an Elixir string prematurely.
+
+  `new/2` accepts character-set identifiers from 0 through 255 and byte strings
+  up to 65,536 bytes. Character set zero denotes UTF-8 in this package and
+  therefore requires valid UTF-8 bytes; other identifiers preserve their bytes
+  without claiming that the library can
+  transcode them. The value contains decoded protocol data and owns no client
+  or transport resource.
+  """
 
   alias Wotex.BACnet.Error
   @enforce_keys [:character_set, :bytes]
