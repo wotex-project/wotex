@@ -39,6 +39,20 @@ Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
 and Runtime dependencies resolve from sibling checkouts. Published consumers
 should replace the path with the constraint of an available Hex release.
 
+## Accepted native target
+
+The accepted backend is a first-party persistent C++17 connectedhomeip
+controller Port, with an owned durable authority/store, attestation, commissioning,
+CASE interactions and subscriptions. The current Python factory adapter is a
+narrow executable baseline; it does not provide or accept that controller.
+
+[WMA.13](docs/specs/WMA.13-native-backend.md) fixes source/build pins, typed IPC,
+flow control and native ownership. The target tooling is `mix wotex.native.build`,
+`mix wotex.software.build` and `mix wotex.software.run`, each with an explicit
+`--workspace` absolute directory. These tasks are specified implementation work,
+not commands claimed to exist in this checkout. Generic orchestration and
+assertions belong to Mix/ExUnit; upstream SDK Python is build-time only.
+
 ## Implemented profile
 
 The implemented package provides fabric-scoped interaction paths, bounded TLV,
@@ -93,8 +107,8 @@ The compatibility callbacks are `capabilities/0`, `connect/1`, `send/2`,
 `send/2` returns the correlated operation result synchronously. No separate
 receive queue is fabricated; unsupported receive/subscription calls fail
 explicitly. Callback names alone do not establish consumer behavioral parity.
-The consumer retains its implementation until differential scenarios and
-interoperability gates pass; migration is outside this repository.
+Compatibility requires concrete differential scenarios and independently observed
+software interactions for each advertised operation.
 
 See [implemented profile](docs/specs/WMA.02-implemented-profile.md),
 [primary sources](docs/provenance/primary-sources.md) and
@@ -119,7 +133,7 @@ These target contracts are build instructions, not claims that every feature
 already exists. Required software peers are separate from physical-device tests.
 
 The [standalone client contract](docs/specs/WMA.11-standalone-client-and-preservation.md)
-defines the supplied backend, exact native APIs and retained end-to-end workflows.
+defines the supplied backend, exact native APIs and end-to-end workflows.
 Its [concrete corpus](docs/specs/fixtures/contract-v1.json) contains specified,
 unexecuted cases; the scenario tables alone are not executable acceptance evidence.
 

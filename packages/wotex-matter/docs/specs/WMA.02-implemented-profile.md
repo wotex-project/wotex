@@ -3,7 +3,7 @@ spec:
   id: WMA.02
   title: "Implemented Matter profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-matter
   updated: 2026-09-09
 ---
@@ -43,7 +43,7 @@ See [executable evidence](../provenance/executable-evidence.md) for specific tes
 commands and remaining gates, and [source revisions](../provenance/primary-sources.md).
 Public callbacks provide a neutral compatibility surface, not drop-in semantic
 parity. `send/2` completes synchronously; no fictitious receive queue exists.
-The consumer must run differential scenarios before replacing its implementation.
+Compatibility claims require exact differential scenarios for the advertised API.
 
 Runtime adapters reject credential objects they cannot interpret. Native client
 credentials/options are supplied explicitly by the consumer. A custom Client

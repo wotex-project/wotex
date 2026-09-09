@@ -1,27 +1,27 @@
 ---
 spec:
   id: WMA.11
-  title: "Standalone controller and retained cluster workflows"
+  title: "Standalone controller and cluster workflows"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-matter
   updated: 2026-09-09
 ---
 
-# WMA.11 Standalone controller and retained cluster workflows
+# WMA.11 Standalone controller and cluster workflows
 
-Specification version: `1.0.0`. Status: planned target, not implemented capability.
+Specification version: `1.1.0`. Status: planned target, not implemented capability.
 Requires [WMA.00](WMA.00-library-contract.md) and
 [WMA.10](WMA.10-software-contract.md). [WMA.02](WMA.02-implemented-profile.md)
 and [WMA.03](WMA.03-sdk-client.md) remain the narrower current baseline.
 
-## WMA-N01 — A supplied controller, not only an SDK forwarding seam
+## WMA-N01 — First-party native controller
 
 A release must include the first-party persistent SDK controller, durable fabric
 store and typed interactions specified in .10. A consumer can commission and
-interact with a real software peer without writing a Python factory, inventing
-cluster schemas or constructing a Thing Description. The custom factory remains
-an explicit extension seam; its contract tests do not complete this backend.
+interact with a real software peer with the compiled registry and without constructing a Thing Description. The
+first-party native backend is .13; current factory contract tests are baseline
+evidence only.
 Wotex Runtime maps operations to the same native session. It does not own a second
 controller or authorize commissioning as a side effect of Form execution.
 
@@ -67,7 +67,7 @@ path yields an entry error, not an invented empty list. No consistent network
 snapshot is claimed across separate reads; retain per-path DataVersion and mark
 `consistency: :not_atomic`. Discovery never creates a fabric or scans networks.
 
-## WMA-N02 — Retained recipes with exact SDK descriptors
+## WMA-N02 — Cluster recipes with exact SDK descriptors
 
 The minimum descriptor registry includes the following SDK-derived recipes. This
 is a client interoperability profile, not complete device-type certification.
@@ -95,13 +95,10 @@ The exact descriptor sources at connectedhomeip v1.6.0.0 commit
 The full Matter Core text access limitation in .10 remains; these mappings do
 not widen the claim to CSA certification or every cluster.
 
-| Retained asset | Disposition and proof |
-| --- | --- |
-| Typed paths, TLV and read/write/invoke contract | Retain and harden, including tag/width/null distinction; P01, F01–F06 |
-| Thermostat/light/bridge scenarios | Retain as the explicit registry and software peer recipes above; replace simulator-only outcomes; P01/P04/P09 |
-| Simulated controller/automatic fabric assumptions | Replace with S02 supplied durable controller and explicit fabric equality; P02/P03, F07 |
-| Attribute notifications and Event scenarios | Retain complete initial/update/status identity and cleanup; P05/P06, F08/F09 |
-| Implicit cluster-name maps or writable light-state assumption | Replace with pinned descriptors and command semantics; no consumer-specific schema database |
+The required tests cover typed tags/widths/null (P01, F01–F06), exact cluster
+recipes (P01/P04/P09), durable controller/fabric equality (P02/P03, F07), and
+attribute/event identity and cleanup (P05/P06, F08/F09). Numeric generated
+schemas determine operations; OnOff state is read-only and its commands mutate.
 
 ## WMA-N03 — Complete controller-to-peer workflow
 

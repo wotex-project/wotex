@@ -3,12 +3,16 @@ spec:
   id: WMA.03
   title: "Explicit SDK client"
   status: accepted
-  version: 1.0.0
+  version: 1.0.1
   owner: wotex-matter
   updated: 2026-09-09
 ---
 
 # WMA.03 Explicit SDK client
+
+This page describes the current one-shot adapter only. The accepted first-party
+native controller is [WMA.13](WMA.13-native-backend.md), with .10/.11 ownership
+and typed interactions. Factory execution cannot accept that target.
 
 The SDK adapter targets connectedhomeip v1.6.0.0, commit
 250a9e6c50ee2068107f3c4808b680f5f2925415, with Python's `matter` namespace.
@@ -42,7 +46,7 @@ resubscription. The requested endpoint, cluster and attribute must exist in the
 result cache; SDK ValueDecodeFailure results are errors. Writes require exactly one matching AttributeStatus with success
 status zero. Empty lists, mismatched paths and nonzero statuses fail.
 Commands use the SDK's generated command descriptor and do not suppress responses.
-SDK errors propagate as a neutral failure; no wrapper retries are added.
+SDK errors propagate as a neutral failure; the wrapper performs no retries.
 
 Explicit `timed_request_timeout_ms` is accepted for writes/invokes only within
 the remaining interaction budget and 1..65535 ms. The SDK receives the interaction

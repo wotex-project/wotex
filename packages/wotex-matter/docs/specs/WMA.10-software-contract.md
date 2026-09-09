@@ -3,7 +3,7 @@ spec:
   id: WMA.10
   title: "Complete SDK-backed Matter controller software profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-matter
   updated: 2026-09-09
 ---
@@ -11,12 +11,11 @@ spec:
 # WMA.10 Complete SDK-backed Matter controller software profile
 
 Read [WMA.00](WMA.00-library-contract.md) and the [implementation sequence](../plans/software-implementation.md).
-[WMA.11](WMA.11-standalone-client-and-preservation.md) fixes the native API, retained workflows and concrete fixture contract.
-Baseline `e546603` includes concrete paths, a bounded TLV codec, Forms and a
-factory-supplied one-shot SDK bridge with Python contract tests. It does not yet
-prove an installed controller against a real SDK example peer. The target below
-adds the first-party persistent controller, subscriptions, explicit on-network
-commissioning and complete software evidence.
+[WMA.11](WMA.11-standalone-client-and-preservation.md) fixes the native API, protocol workflows and concrete fixture contract.
+The accepted target is the persistent first-party C++ controller in
+[WMA.13](WMA.13-native-backend.md). The current one-shot Python factory adapter,
+path/TLV helpers and contract tests are scoped implementation evidence in
+[WMA.02](WMA.02-implemented-profile.md) and [WMA.03](WMA.03-sdk-client.md).
 
 ## Scope and source limitations
 
@@ -32,8 +31,7 @@ on-network PASE commissioning with attestation, subsequent CASE operations and
 explicit commissioning-window control. Group/multicast operations, BLE radio
 commissioning, OTA, ICD support, bridge-device hosting and arbitrary cluster code
 generation are separate profiles. SDK-defined standard cluster descriptors are
-supported through their pinned generated types; unknown vendor schemas require
-an explicitly registered consumer descriptor or return unsupported-schema.
+supported through their pinned generated types; schemas outside the finite .11/.13 registry return `:unsupported_schema`.
 
 ## WMA-S01 — Paths and values
 
@@ -53,6 +51,19 @@ existing concrete-operation return shapes; add explicit `read_paths/3` for batch
 WMA-N01 additionally requires typed native helper results and bounded endpoint
 discovery composed from Descriptor reads, without inventing a wire service.
 
+A finite batch reply has an aggregate 98304-byte result budget, measured as its
+canonical compact JSON result value before the enclosing C07 envelope. The
+serializer enforces this budget incrementally before growing its output buffer;
+1024 individually valid paths do not permit 1024 independent 64 KiB results.
+Use at most 98304 aggregate retained encoded result bytes plus bounded path/status
+records. A callback that would exceed the result budget stops collection and
+returns `:response_limit` with `effect: :none` for the read, after SDK cleanup.
+No partial success, silent truncation, hidden pagination or replay is permitted.
+The caller may explicitly request a smaller batch. A single unrepresentable
+result fails identically. Bytes count after Base64/JSON encoding; the separate
+131072-byte frame limit still applies to the complete envelope. A mutation result
+that exceeds bounds remains an unknown-effect error, never a safe retry.
+
 Retain all typed TLV tags/widths, signed/unsigned integers, Boolean, finite float,
 UTF-8, bytes, null, structures, arrays and lists. Absence is not null. Unknown
 context/profile tags remain tagged opaque values. Reject unbalanced containers,
@@ -62,53 +73,63 @@ invalid UTF-8, impossible lengths, illegal tags and width overflow before alloca
 limit. No arbitrary Python object names or import paths come from the peer.
 
 Use descriptor-based conversion in the pinned SDK registry: key is cluster ID,
-member kind and member ID, never a display name. A caller-registered descriptor
-is trusted executable code supplied in native configuration, with an explicit
-allowlist. Enforce the same scalar/container limits on its output. Do not turn
+member kind and member ID, never a display name. The first-party registry is compiled from the pinned generated C++ schema.
+Enforce the same scalar/container limits on every conversion output. Do not turn
 an unknown structure into a generic JSON object and claim typed parity.
 
 ## WMA-S02 — First-party persistent controller and storage
 
-Implement a versioned persistent bridge alongside the existing one-shot factory
-contract. Select `lifecycle: :persistent` explicitly. `open` requires absolute
-storage path, `storage_mode: :open_existing | :create_new`, vendor ID, fabric ID,
-controller node ID, explicit PAA trust directory and controller credentials.
-No default fabric, temporary store or test commissioner. `create_new` refuses
-an existing store; `open_existing` refuses missing/corrupt state or a fabric mismatch.
+The first-party C++ controller uses `lifecycle: :persistent`; .13 separately
+defines the bounded native one-shot read/write/invoke mode. `open` requires
+an absolute native executable, absolute `storage_path`, `storage_mode:
+:open_existing | :create_new`, vendor ID, fabric ID, controller node ID,
+absolute PAA trust directory and `.13`'s explicit authority mode. The complete
+create mode is `authority: :generate_root`; the complete existing mode is
+`authority: :stored`. No default fabric, temporary store or factory callback.
+`create_new` refuses existing storage; `open_existing` refuses missing/corrupt
+state, unknown schema, key/certificate mismatch or a different fabric/controller.
 
-Use the pinned API accurately: construct an object implementing
-`matter.storage.PersistentStorage`, pass that object to
-`ChipStack.ChipStack(persistentStorage=storage)`, then create
-`CertificateAuthorityManager(chipStack, persistentStorage=storage)`.
-Call `LoadAuthoritiesFromStorage()` for existing state. For authorized creation,
-use `NewCertificateAuthority()`, `NewFabricAdmin(vendorId=..., fabricId=...)`,
-then `NewController(nodeId=..., paaTrustStorePath=..., useTestCommissioner=False)`.
-Do not pass a filesystem string where ChipStack expects a storage object.
+Implement `chip::PersistentStorageDelegate` with `SyncGetKeyValue`,
+`SyncSetKeyValue`, `SyncDeleteKeyValue`, preserving the SDK key names and opaque
+bytes. Use `chip::PersistentStorageOperationalKeystore` and
+`chip::Credentials::PersistentStorageOpCertStore` with that delegate. Root issuer
+state is first-party durable state, distinct from peer attestation trust; issuance
+and controller factory initialization follow .13. No Python storage schema or
+CertificateAuthorityManager is a production requirement.
 
-The SDK's `PersistentStorageJSON(path)` is a reference serialization format;
-the first-party store must add exclusive process locking, owner-only permissions,
-atomic replacement and fsync of file and parent directory on Commit. Preserve
-its SDK and CA key semantics. Persist before acknowledging changes that depend
-on the stored identity. A failed store Commit is terminal, not a warning.
-Never regenerate credentials or reuse a stale snapshot after a failed write.
-No automatic store migration: an unknown schema version returns an explicit error.
-Test process death at each write/rename/fsync boundary and two-process lock contention.
+The storage directory is owner-only (0700), with a process-held exclusive lock
+and regular no-follow state/temporary files (0600). The version-1 document has
+`schema: "wotex.matter.store"`, `version: 1`, exact fabric/controller/vendor
+identity, and a `values` map from SDK keys to canonical base64 byte strings.
+First-party authority keys use the `wotex/authority/` namespace. Maximum key
+length is 255 UTF-8 bytes without NUL; values are at most 65535 decoded bytes,
+4096 keys and 16 MiB encoded file. Duplicate keys, invalid base64 or bounds fail
+before SDK startup. This store has its own bounded parser; C07 frame limits do
+not restrict durable file size. A checksum is not an authenticity claim.
 
-One bridge owns one ChipStack, authority manager, fabric administrator and
-controller. SDK thread/event-loop ownership follows its API; serialize controller
-entry through one asyncio owner. At most 64 admitted operations and 64 live
-subscriptions. EOF/owner death cancels native tasks and subscriptions, shuts down
-controller then authority manager then stack/storage, releases lock and exits.
-Borrowed custom controllers remain consumer-owned; no first-party lifecycle
-guarantee is inferred for arbitrary factories. No SDK import starts from loading
-the Elixir dependency alone.
+Each successful setter/deleter means the complete new snapshot is written to an
+owned same-directory exclusive temporary file, fsynced, atomically renamed and
+the parent directory fsynced before success. Partial-write/fsync/rename failure
+poisons the store and terminates controller operations. SDK transaction semantics
+remain SDK-owned; the wrapper does not invent atomicity across separate SDK
+writes. Unknown/incomplete authority state fails closed, with no regenerated key
+or stale-state recovery. Test crashes at every write/rename/fsync boundary and
+concurrent open from two processes. Secrets never enter logs or generic metadata.
+
+One native owner holds the SDK factory/system state and one DeviceCommissioner.
+Only its SDK event-loop thread enters APIs; callback contexts, finite admission,
+reverse startup cleanup and shutdown are specified in .13. EOF/owner death
+releases subscriptions, controller/system state and the storage lock within the
+local grace or terminates/reaps its own process. Loading the dependency starts
+no SDK and opens no storage.
 
 ## WMA-S03 — Interaction results and timed operations
 
 Bridge operations are `open`, `read`, `read_paths`, `read_events`, `write`,
 `invoke`, `subscribe`, `unsubscribe`, `commission_on_network`, `open_window`,
-`health`, `close`. Route reads/writes/commands through `ReadAttribute`,
-`ReadEvent`, `WriteAttribute`, `SendCommand` with explicit node/path/descriptors.
+`health`, `close`. Route interactions through the pinned C++ `ReadClient`,
+`WriteClient` and `CommandSender` APIs and callback ownership in .13 with
+explicit node/path/generated descriptors.
 Add native `read_events/3` with concrete event paths and optional minimum event
 number; preserve event number (unsigned 64-bit), priority, timestamp kind/value
 and path. Unknown priority is numeric metadata, not atom creation.
@@ -132,17 +153,17 @@ retransmission remains SDK-owned. Native cancellation cannot promise rollback.
 Native `subscribe/2` requires `kind: :attribute | :event`, 1..64 concrete paths,
 receiver, `min_interval_s` (default 1, 0..65535), `max_interval_s` (default 60,
 1..65535), `resubscribe` (Boolean, default false), and C05 queue limit. Require
-min <= max. Pass intervals and explicit automatic-resubscription selection to
-SDK ReadAttribute/ReadEvent. Return a C05 handle after the SDK establishes a
-SubscriptionTransaction; capture revised intervals and subscription identity.
+min <= max. Pass intervals through `ReadPrepareParams`; a `ReadClient` Subscribe interaction
+returns a C05 handle only after `OnSubscriptionEstablished`. Capture revised
+intervals and the SDK subscription identity.
 
-Install `SetAttributeUpdateCallback`, `SetEventUpdateCallback`,
-`SetResubscriptionAttemptedCallback` and `SetResubscriptionSucceededCallback`
-before delivering application reports. Reconcile the initial cached snapshot
-with callbacks so initial values are emitted once; paths without a report remain
-absent. Attribute metadata carries DataVersion; Event metadata carries event
-number and timestamp. Use SDK event/report identity for deduplication, never
-equal scalar values. Callback output validates the complete path and fabric.
+Implement `ReadClient::Callback` report, attribute/event data, error, completion
+and establishment callbacks. Preserve the bounded initial report buffer until
+establishment; emit each reported initial path once, never invent missing paths.
+Attribute metadata carries DataVersion; event metadata carries event number and
+timestamp. Use SDK event/report identity for deduplication, never equal scalar
+values. Callback output validates the complete path and fabric. Credit flow and
+callback-safe destruction follow .13; report callbacks cannot block on stdout.
 
 Default session/subscription loss is terminal. With explicit `resubscribe: true`,
 emit a bounded `:resubscribing` control status, mark the stream continuity as lost,
@@ -152,8 +173,8 @@ deliver the new initial snapshot. It is not gap-free Event recovery; never imply
 missing events were replayed. Expiry/attempt limit terminates. No write/invoke is
 replayed as part of subscription recovery.
 
-Cancel with SubscriptionTransaction.Shutdown, detach callbacks and cancel retry
-timers. Receiver death/overflow uses the same path. Late native callbacks from
+Cancel by retiring delivery and scheduling ReadClient destruction on its SDK
+thread after callbacks return; detach callbacks and cancel retry timers. Receiver death/overflow uses the same path. Late native callbacks from
 an old generation cannot deliver. A controller shutdown closes all subscriptions
 and persists its owned state before releasing the lock.
 
@@ -162,7 +183,7 @@ and persists its owned state before releasing the lock.
 Add native `commission_on_network(session, request)` with concrete new node ID,
 setup PIN (1..99999998 excluding repeated-digit and 12345678/87654321 reserved
 codes), `discriminator` (0..4095) and finite timeout. Use exactly the SDK's
-LONG_DISCRIMINATOR discovery filter; unfiltered commissioning is unsupported. Use `CommissionOnNetwork`;
+LONG_DISCRIMINATOR discovery filter; unfiltered commissioning is unsupported. Use filtered `DiscoverCommissionableNodes`, `PairDevice` and `AutoCommissioner`;
 do not shell-parse CHIP Tool text. Require explicit PAA trust and SDK attestation
 validation; reject invalid chain, untrusted PAA, invalid attestation signature
 and failed proof. Do not set attestation bypass flags or test commissioner mode.
@@ -177,8 +198,9 @@ Setup code, PSK and operational credentials are secret C04 data.
 
 Add `open_commissioning_window/2` with node, timeout in 180..900 seconds,
 iteration count in 1000..100000 and discriminator 0..4095, mapped to
-`OpenCommissioningWindow` with `option: kTokenWithRandomPIN` (numeric 1);
-the original setup-code mode is unsupported by this API. Native returned onboarding material is explicit secret
+`CommissioningWindowOpener::OpenCommissioningWindow` with no caller PIN or salt,
+so SDK crypto generates the onboarding material; wait for its final callback.
+The original setup-code mode is unsupported by this API. Native returned onboarding material is explicit secret
 output with redacted Inspect; never place it in generic telemetry. Window expiry
 is SDK/peer-owned and opening does not create an immortal bridge timer.
 ACL reads/writes use typed AccessControl cluster descriptors and explicit
@@ -214,14 +236,14 @@ one-argument compatibility function retains probe-required behavior.
 | WMA-V12 | SDK example peer commissioned, CASE read/write/command/event/subscription and restart | Real software controller/peer interactions, asserted results |
 | WMA-V13 | C09 stress/admission/matrix and native storage/resource counters | Bounded ownership and durable identity after cycles |
 
-Build the pinned Python SDK with `scripts/build_python.sh -m platform -i
-out/python_env -b false` in an isolated fixture checkout. Build Linux lighting
-and all-clusters applications from the same commit, with BLE disabled, using the
-pinned `scripts/build/build_examples.py` host targets
-`linux-x64-light-no-ble` and `linux-x64-all-clusters-no-ble` on the required x64
-Linux fixture. Record host architecture; do not run an x64 binary on another ISA. Add a fixture wrapper that
-records exact build target/flags, controller/peer store paths and software ports,
-owns their lifecycle, and generates disposable test attestation material.
+`mix wotex.software.build --workspace ABS` builds the first-party native controller
+and pinned C++ lighting/all-clusters/bridge peers. The SDK's upstream build and
+ZAP/GN generation scripts may require build-time Python; source/executable hashes
+and exact flags belong in the .13 manifest. Required peer targets are
+`linux-x64-light-no-ble` and `linux-x64-all-clusters-no-ble`; the bridge extension
+has a separate source hash. The runner owns peer/controller stores, software
+ports, disposable fixture attestation material and all process cleanup. A shared
+SDK does not constitute independent-stack conformance.
 
 The required Linux lane performs on-network commissioning, CASE, denied ACL,
 read/write/readback, a typed command, event generation, subscription cancellation

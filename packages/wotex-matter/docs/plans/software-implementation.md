@@ -1,10 +1,9 @@
 # WMA software implementation sequence
 
-This is the self-contained build handoff for the defined software profile, not
-a statement that these tasks have already passed. The verified starting point
-is commit `e546603`; read [current executable evidence](../provenance/executable-evidence.md)
-for the tests and limitations at that baseline. Existing passing code is the
-starting implementation, not something to replace with fresh scaffolding.
+This sequence defines acceptance of the native Matter controller profile.
+[Current implementation evidence](../provenance/executable-evidence.md) identifies
+implemented cells; [WMA.13](../specs/WMA.13-native-backend.md) owns native
+build, IPC and tooling requirements. Source presence alone is not acceptance.
 
 ## Read before changing code
 
@@ -44,7 +43,7 @@ do not silently skip, simulate or weaken the requirement.
 - Requirements: WMA-S01, WMA-S03, WMA-N01, WMA-N02, WMA-N04; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WMA-V01, WMA-V02, WMA-V05.
 - Change surface: new ReadPath, Address, TLV, descriptor-based value/result conversion.
-- Test destinations: `test/wotex/matter/path_value_test.exs`, `test/native/test_values.py`.
+- Test destinations: `test/wotex/matter/path_value_test.exs`, `test/native/value_test.cpp`.
 - Done when: Concrete compatibility stays intact; read-only wildcards, unknown tags, explicit descriptor allowlist and deterministic per-path results are bounded.
 - Suggested local commit: `feat: preserve typed batch paths tlv and per path status`.
 
@@ -53,19 +52,19 @@ do not silently skip, simulate or weaken the requirement.
 
 ### WMA-P02: Implement durable exclusive controller storage
 
-- Requirements: WMA-S02; shared C01–C10 apply wherever relevant.
+- Requirements: WMA-S02, WMA-B01, WMA-B04; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WMA-V03.
-- Change surface: new PersistentStorage implementation and explicit open/create schema.
-- Test destinations: `test/native/test_storage.py`.
-- Done when: Correct pinned storage-object API, fatal Commit failures, exclusive lock, atomic/fsynced state and crash-safe identity retention are proved.
+- Change surface: C++ PersistentStorageDelegate, operational keystore/certificate store and explicit authority/open/create schema.
+- Test destinations: `test/native/storage_test.cpp`.
+- Done when: Exact synchronous storage delegate, fatal durable-write failures, exclusive lock, atomic/fsynced state and crash-safe identity retention are proved.
 - Suggested local commit: `feat: implement durable exclusive controller storage`.
 
 ### WMA-P03: Own a persistent first party sdk controller
 
-- Requirements: WMA-S02, WMA-N01, WMA-N02; shared C01–C10 apply wherever relevant.
+- Requirements: WMA-S02, WMA-N01, WMA-N02, WMA-B01, WMA-B02, WMA-B03, WMA-B04, WMA-B05; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WMA-V04.
-- Change surface: SDK persistent mode, bridge event loop and concrete CA/controller factory.
-- Test destinations: `test/wotex/matter/persistent_bridge_test.exs`, `test/native/test_controller.py`.
+- Change surface: C++ GN host, framed Port, SDK event loop, first-party credentials delegate and controller factory.
+- Test destinations: `test/wotex/matter/persistent_bridge_test.exs`, `test/native/controller_test.cpp`.
 - Done when: Explicit PAA/fabric/node configuration produces a controller; partial start/EOF/death unwind all SDK objects and storage locks.
 - Suggested local commit: `feat: own a persistent first party sdk controller`.
 
@@ -76,8 +75,8 @@ do not silently skip, simulate or weaken the requirement.
 
 - Requirements: WMA-S03, WMA-N01, WMA-N02; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WMA-V05, WMA-V06.
-- Change surface: SDK read/write/SendCommand/ReadEvent translation.
-- Test destinations: `test/native/test_interactions.py`.
+- Change surface: C++ ReadClient/WriteClient/CommandSender translation.
+- Test destinations: `test/native/interaction_test.cpp`.
 - Done when: Timed/DataVersion/partial-status semantics are exact, native event identity is preserved and mutation timeouts never replay.
 - Suggested local commit: `feat: complete timed interactions and event reads`.
 
@@ -89,7 +88,7 @@ do not silently skip, simulate or weaken the requirement.
 - Requirements: WMA-S04, WMA-N01, WMA-N02; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WMA-V07, WMA-V09.
 - Change surface: Subscription owner and SDK report callbacks.
-- Test destinations: `test/wotex/matter/subscription_test.exs`, `test/native/test_subscription.py`.
+- Test destinations: `test/wotex/matter/subscription_test.exs`, `test/native/subscription_test.cpp`.
 - Done when: Initial snapshot/callback race, interval revisions, paths and generations are validated; cancel/death removes native callbacks and transactions.
 - Suggested local commit: `feat: deliver attribute and event subscriptions`.
 
@@ -112,8 +111,8 @@ do not silently skip, simulate or weaken the requirement.
 
 - Requirements: WMA-S05; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WMA-V10.
-- Change surface: CommissionOnNetwork, OpenCommissioningWindow and typed ACL operations.
-- Test destinations: `test/native/test_commissioning.py`, `test/interop/commissioning_test.exs`.
+- Change surface: DeviceCommissioner/AutoCommissioner, CommissioningWindowOpener and typed ACL operations.
+- Test destinations: `test/native/commissioning_test.cpp`, `test/interop/commissioning_test.exs`.
 - Done when: Explicit new-node/window inputs, final SDK outcome, PAA/attestation failure and denied operational ACL are exercised without bypass flags.
 - Suggested local commit: `feat: commission on network with verified attestation`.
 
@@ -147,9 +146,12 @@ do not silently skip, simulate or weaken the requirement.
 
 ## Reproducible software fixture contract
 
-Add or extend `test/interop/build_software.sh` and `test/interop/run_software.sh`
-as explicit maintainer-invoked entry points. They take exactly one absolute
-workspace argument. Build requires a disposable empty workspace or a matching
+The entry points are `mix wotex.native.build --workspace ABS`,
+`mix wotex.software.build --workspace ABS` and
+`mix wotex.software.run --workspace ABS`. Each requires exactly one absolute
+workspace argument. Generic orchestration and assertions use Mix and ExUnit.
+The native build contract is .13; production binaries never require Python.
+Build requires a disposable empty workspace or a matching
 manifest; refuses an unrelated nonempty directory; downloads upstream source
 archives at the .10 pins without configuring any Git remote. Record archive
 SHA-256, source commit, compiler/SDK/library versions, build flags, binary hashes
@@ -167,8 +169,8 @@ explicit target configuration and are never selected by this runner.
 Use this command contract once the runner is implemented:
 
 ```sh
-./test/interop/build_software.sh /absolute/disposable/fixture-workspace
-./test/interop/run_software.sh /absolute/disposable/fixture-workspace
+mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
+mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
 The runner executes `mix test --include interop --include software --exclude hardware`
@@ -190,13 +192,13 @@ Native changes additionally run their required native tests and dependency audit
 C/C++ adapters run ASan/UBSan in the Linux fault lane.
 
 After each package, update the current-profile/README capability claims only for
-behavior that now passed, and refresh [executable evidence](../provenance/executable-evidence.md)
+behavior covered by passing evidence, and refresh [executable evidence](../provenance/executable-evidence.md)
 with command, versions, vector paths/digests and result. Keep unexecuted requirements
 explicit. Use the author and committer required by `CLAUDE.md`; never configure
 remotes, push, tag, publish, change visibility or edit a consumer.
 
-The final package also accepts every .11 standalone and .12 integration requirement,
-then runs the full .00 C09 matrix, all .10 scenarios, .11 concrete cases and software
+The final package accepts every .11 standalone, .12 integration and .13 native requirement,
+then runs the full .00 C09 matrix, all .10 scenarios, .11/.13 concrete cases and software
 peers, then a clean committed-source archive with the lockfile through `mix check`
 and out-of-tree Hex package compilation. Confirm no Application callback or
 dependency-load I/O, no missing packaged bridge assets, no downloaded SDK/build/
@@ -221,6 +223,6 @@ number or stub adapter cannot substitute for a required protocol assertion.
 - The clean-source/package gates pass, intended commits are local and the
   working tree contains no uncommitted tracked implementation change.
 
-Physical-device validation, certification, consumer migration and publication
+Physical-device validation, certification and publication
 remain separate activities. They are not reasons to leave defined software
 requirements unimplemented or to claim unexecuted software tests passed.

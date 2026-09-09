@@ -1,9 +1,13 @@
 # Executable evidence
 
-Evidence collected 2026-09-08 using Elixir 1.20.2 / OTP 29.0.4.
-Development contract supports Elixir 1.18+; the lower-version matrix has not been
-executed in this workspace. Use CI before graduation. No consumer parity or
-certification is inferred from unit coverage.
+Current implementation: bounded paths/TLV, explicit Client contract and the
+one-shot Python factory adapter. The committed documentation cohort `8f1f34a`
+has a passing full local gate: 2 doctests, 1 property and 14 tests, one
+interoperability exclusion; 96.6% coverage. Python SDK-contract tests use an
+explicit test controller. No first-party persistent C++ controller, durable
+authority, actual commissioning/CASE/attestation or subscription lane is accepted.
+The .10/.11/.12/.13 controller/software-peer packages remain implementation work.
+An arbitrary supplied factory is not a substitute for that acceptance.
 
 ## Mandatory local gate
 
@@ -15,43 +19,25 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
-## Interoperability
+## Acceptance boundary
 
-NOT RUN: no native SDK controller factory or commissioned fixture was supplied.
-No CASE/PASE, commissioning, ACL, attestation, subscription or device parity is
-claimed. The mandatory tests use an explicitly selected test Client to check
-contract failures and cleanup, plus TLV/path malformed-input and property tests.
+[WMA.13](../specs/WMA.13-native-backend.md) defines the required native binary,
+Mix/ExUnit tasks, exact version lanes and credit/resource tests. Its corpus is
+specified and unexecuted. A passing current gate, a listed test path or a source
+hash cannot establish execution of that target. Each completed software run must
+bind case, corpus, source, SDK/binary, toolchain and cleanup-result hashes.
+The mandatory runtime matrix is Elixir 1.18.4/OTP 27.3.4.15 and Elixir
+1.20.2/OTP 29.0.4. Only identified executed lanes count as passing evidence.
 
-The optional harness can use the bundled `Wotex.Matter.SDK` adapter with an
-installed native SDK and explicitly supplied Python controller factory. Its
-fixture also needs executable, factory, settings and fabric_id. Alternatively,
-load a custom Client module on the test VM code path. Set
-`WOTEX_MATTER_CLIENT_MODULE=Elixir.Wotex.Matter.SDK` and
-`WOTEX_MATTER_FIXTURE=/absolute/fixture.json` when running
-`mix test --include hardware test/interop/controller_test.exs`.
-The fixture contains fabric_id, node_id, endpoint, cluster, member,
-expected_value and unsupported_member; the driver receives the complete map in
-its `:fixture` option. It must represent a real, isolated commissioned fixture.
-Missing module/configuration or missing response fails instead of skipping.
-The default gate additionally executes five Python SDK API-contract tests.
-Those use a deliberately selected test controller, not a native SDK session.
+## Committed source identities
 
-Interoperability tags are excluded by default. Explicit invocation requires the
-configured peer and must fail if that peer or expected response is missing.
+These hashes identify the committed implementation/test inputs reviewed here;
+they are not release artifacts or a claim about every future run. Fixture WIP is
+excluded. Native software results require their own immutable manifest.
 
-## Evidence identities
-
-The hashes identify reviewed test sources, not an immutable release or a promise
-that all future test executions will pass. The mandatory gate and optional peer
-commands above must be rerun after relevant changes.
-
-| Test source | SHA-256 |
+| Source | SHA-256 |
 | --- | --- |
 | `test/bridge/matter_bridge_test.py` | `f2f41e95a68180c117433d395221d4984683e333edddad2f325cdb49fd52422b` |
-| `test/interop/controller_test.exs` | `06131cf65e51fc6992ed1df0d11aa4b31c27e8a2f803538c078eb8b3983cc6e4` |
 | `test/wotex/matter/contract_test.exs` | `45d55f0df387085d6ed9f7667cc41267ce63e0c0e084578dbcb1b0150e8f8099` |
-| `test/wotex/matter/dependency_security_test.exs` | `59eb7e3416dd44b8c237729661a8fe306e40b1cb882b2596b75a969a2db79a61` |
-| `test/wotex/matter/mapping_test.exs` | `41934eee1994453451d53d158253409b3d0220e5b69f7f6738c92bbfbac00369` |
-| `test/wotex/matter/port_test.exs` | `933378f379e77c07c76e6b175a66adcf52d0616c0921b58f0aa136db52e5db90` |
 | `test/wotex/matter/sdk_test.exs` | `b7699b283063ce3884b24fa5e39d55a5834c359872567d3a225c330ed33673ae` |
 | `test/wotex/matter/tlv_test.exs` | `eb245cee8ec6ae71543839d00b5faf2468c66a496c7e06695772a5dcab3fd242` |
