@@ -1,0 +1,1836 @@
+{
+  "format_version": 1,
+  "status": "implemented_native_conversion_cases",
+  "cases": [
+    {
+      "id": "WOP-NC001",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Null scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Null\",\"array\":false,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "00"
+    },
+    {
+      "id": "WOP-NC002",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Boolean scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Boolean\",\"array\":false,\"value\":true}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0101"
+    },
+    {
+      "id": "WOP-NC003",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Boolean null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Boolean\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "81ffffffff"
+    },
+    {
+      "id": "WOP-NC004",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Boolean empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Boolean\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8100000000"
+    },
+    {
+      "id": "WOP-NC005",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Boolean two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Boolean\",\"array\":true,\"value\":[true,true]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "81020000000101"
+    },
+    {
+      "id": "WOP-NC006",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "SByte scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"SByte\",\"array\":false,\"value\":-128}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0280"
+    },
+    {
+      "id": "WOP-NC007",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "SByte null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"SByte\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "82ffffffff"
+    },
+    {
+      "id": "WOP-NC008",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "SByte empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"SByte\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8200000000"
+    },
+    {
+      "id": "WOP-NC009",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "SByte two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"SByte\",\"array\":true,\"value\":[-128,-128]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "82020000008080"
+    },
+    {
+      "id": "WOP-NC010",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Byte scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Byte\",\"array\":false,\"value\":255}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "03ff"
+    },
+    {
+      "id": "WOP-NC011",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Byte null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Byte\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "83ffffffff"
+    },
+    {
+      "id": "WOP-NC012",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Byte empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Byte\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8300000000"
+    },
+    {
+      "id": "WOP-NC013",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Byte two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Byte\",\"array\":true,\"value\":[255,255]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8302000000ffff"
+    },
+    {
+      "id": "WOP-NC014",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int16 scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int16\",\"array\":false,\"value\":-32768}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "040080"
+    },
+    {
+      "id": "WOP-NC015",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int16 null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int16\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "84ffffffff"
+    },
+    {
+      "id": "WOP-NC016",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int16 empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int16\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8400000000"
+    },
+    {
+      "id": "WOP-NC017",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int16 two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int16\",\"array\":true,\"value\":[-32768,-32768]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "840200000000800080"
+    },
+    {
+      "id": "WOP-NC018",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt16 scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt16\",\"array\":false,\"value\":65535}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "05ffff"
+    },
+    {
+      "id": "WOP-NC019",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt16 null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt16\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "85ffffffff"
+    },
+    {
+      "id": "WOP-NC020",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt16 empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt16\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8500000000"
+    },
+    {
+      "id": "WOP-NC021",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt16 two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt16\",\"array\":true,\"value\":[65535,65535]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8502000000ffffffff"
+    },
+    {
+      "id": "WOP-NC022",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int32 scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":false,\"value\":-2147483648}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0600000080"
+    },
+    {
+      "id": "WOP-NC023",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int32 null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "86ffffffff"
+    },
+    {
+      "id": "WOP-NC024",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int32 empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8600000000"
+    },
+    {
+      "id": "WOP-NC025",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int32 two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":true,\"value\":[-2147483648,-2147483648]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "86020000000000008000000080"
+    },
+    {
+      "id": "WOP-NC026",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt32 scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt32\",\"array\":false,\"value\":4294967295}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "07ffffffff"
+    },
+    {
+      "id": "WOP-NC027",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt32 null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt32\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "87ffffffff"
+    },
+    {
+      "id": "WOP-NC028",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt32 empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt32\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8700000000"
+    },
+    {
+      "id": "WOP-NC029",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt32 two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt32\",\"array\":true,\"value\":[4294967295,4294967295]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8702000000ffffffffffffffff"
+    },
+    {
+      "id": "WOP-NC030",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int64 scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int64\",\"array\":false,\"value\":-9223372036854775808}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "080000000000000080"
+    },
+    {
+      "id": "WOP-NC031",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int64 null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int64\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "88ffffffff"
+    },
+    {
+      "id": "WOP-NC032",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int64 empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int64\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8800000000"
+    },
+    {
+      "id": "WOP-NC033",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Int64 two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int64\",\"array\":true,\"value\":[-9223372036854775808,-9223372036854775808]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "880200000000000000000000800000000000000080"
+    },
+    {
+      "id": "WOP-NC034",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt64 scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt64\",\"array\":false,\"value\":18446744073709551615}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "09ffffffffffffffff"
+    },
+    {
+      "id": "WOP-NC035",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt64 null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt64\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "89ffffffff"
+    },
+    {
+      "id": "WOP-NC036",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt64 empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt64\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8900000000"
+    },
+    {
+      "id": "WOP-NC037",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "UInt64 two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt64\",\"array\":true,\"value\":[18446744073709551615,18446744073709551615]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8902000000ffffffffffffffffffffffffffffffff"
+    },
+    {
+      "id": "WOP-NC038",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Float scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Float\",\"array\":false,\"value\":-0.0}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0a00000080"
+    },
+    {
+      "id": "WOP-NC039",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Float null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Float\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8affffffff"
+    },
+    {
+      "id": "WOP-NC040",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Float empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Float\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8a00000000"
+    },
+    {
+      "id": "WOP-NC041",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Float two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Float\",\"array\":true,\"value\":[-0.0,-0.0]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8a020000000000008000000080"
+    },
+    {
+      "id": "WOP-NC042",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Double scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Double\",\"array\":false,\"value\":-0.0}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0b0000000000000080"
+    },
+    {
+      "id": "WOP-NC043",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Double null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Double\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8bffffffff"
+    },
+    {
+      "id": "WOP-NC044",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Double empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Double\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8b00000000"
+    },
+    {
+      "id": "WOP-NC045",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Double two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Double\",\"array\":true,\"value\":[-0.0,-0.0]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8b0200000000000000000000800000000000000080"
+    },
+    {
+      "id": "WOP-NC046",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "String scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"String\",\"array\":false,\"value\":\"x\\u0000é\"}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0c040000007800c3a9"
+    },
+    {
+      "id": "WOP-NC047",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "String null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"String\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8cffffffff"
+    },
+    {
+      "id": "WOP-NC048",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "String empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"String\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8c00000000"
+    },
+    {
+      "id": "WOP-NC049",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "String two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"String\",\"array\":true,\"value\":[\"x\\u0000é\",\"x\\u0000é\"]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8c02000000040000007800c3a9040000007800c3a9"
+    },
+    {
+      "id": "WOP-NC050",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "DateTime scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"DateTime\",\"array\":false,\"value\":132541920000000001}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0d01c0728b2ce2d601"
+    },
+    {
+      "id": "WOP-NC051",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "DateTime null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"DateTime\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8dffffffff"
+    },
+    {
+      "id": "WOP-NC052",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "DateTime empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"DateTime\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8d00000000"
+    },
+    {
+      "id": "WOP-NC053",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "DateTime two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"DateTime\",\"array\":true,\"value\":[132541920000000001,132541920000000001]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8d0200000001c0728b2ce2d60101c0728b2ce2d601"
+    },
+    {
+      "id": "WOP-NC054",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Guid scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Guid\",\"array\":false,\"value\":\"00112233-4455-6677-8899-aabbccddeeff\"}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0e33221100554477668899aabbccddeeff"
+    },
+    {
+      "id": "WOP-NC055",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Guid null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Guid\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8effffffff"
+    },
+    {
+      "id": "WOP-NC056",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Guid empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Guid\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8e00000000"
+    },
+    {
+      "id": "WOP-NC057",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Guid two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Guid\",\"array\":true,\"value\":[\"00112233-4455-6677-8899-aabbccddeeff\",\"00112233-4455-6677-8899-aabbccddeeff\"]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8e0200000033221100554477668899aabbccddeeff33221100554477668899aabbccddeeff"
+    },
+    {
+      "id": "WOP-NC058",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ByteString scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ByteString\",\"array\":false,\"value\":{\"type\":\"bytes\",\"base64\":\"AP8=\"}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0f0200000000ff"
+    },
+    {
+      "id": "WOP-NC059",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ByteString null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ByteString\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8fffffffff"
+    },
+    {
+      "id": "WOP-NC060",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ByteString empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ByteString\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8f00000000"
+    },
+    {
+      "id": "WOP-NC061",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ByteString two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ByteString\",\"array\":true,\"value\":[{\"type\":\"bytes\",\"base64\":\"AP8=\"},{\"type\":\"bytes\",\"base64\":\"AP8=\"}]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "8f020000000200000000ff0200000000ff"
+    },
+    {
+      "id": "WOP-NC062",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "NodeId scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"NodeId\",\"array\":false,\"value\":\"ns=65535;i=4294967295\"}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "1102ffffffffffff"
+    },
+    {
+      "id": "WOP-NC063",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "NodeId null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"NodeId\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "91ffffffff"
+    },
+    {
+      "id": "WOP-NC064",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "NodeId empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"NodeId\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "9100000000"
+    },
+    {
+      "id": "WOP-NC065",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "NodeId two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"NodeId\",\"array\":true,\"value\":[\"ns=65535;i=4294967295\",\"ns=65535;i=4294967295\"]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "910200000002ffffffffffff02ffffffffffff"
+    },
+    {
+      "id": "WOP-NC066",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ExpandedNodeId scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExpandedNodeId\",\"array\":false,\"value\":{\"node_id\":\"ns=0;s=x\",\"namespace_uri\":\"urn:x\",\"server_index\":2}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "12c3000001000000780500000075726e3a7802000000"
+    },
+    {
+      "id": "WOP-NC067",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ExpandedNodeId null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExpandedNodeId\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "92ffffffff"
+    },
+    {
+      "id": "WOP-NC068",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ExpandedNodeId empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExpandedNodeId\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "9200000000"
+    },
+    {
+      "id": "WOP-NC069",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ExpandedNodeId two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExpandedNodeId\",\"array\":true,\"value\":[{\"node_id\":\"ns=0;s=x\",\"namespace_uri\":\"urn:x\",\"server_index\":2},{\"node_id\":\"ns=0;s=x\",\"namespace_uri\":\"urn:x\",\"server_index\":2}]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "9202000000c3000001000000780500000075726e3a7802000000c3000001000000780500000075726e3a7802000000"
+    },
+    {
+      "id": "WOP-NC070",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "StatusCode scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"StatusCode\",\"array\":false,\"value\":4294967295}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "13ffffffff"
+    },
+    {
+      "id": "WOP-NC071",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "StatusCode null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"StatusCode\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "93ffffffff"
+    },
+    {
+      "id": "WOP-NC072",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "StatusCode empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"StatusCode\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "9300000000"
+    },
+    {
+      "id": "WOP-NC073",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "StatusCode two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"StatusCode\",\"array\":true,\"value\":[4294967295,4294967295]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "9302000000ffffffffffffffff"
+    },
+    {
+      "id": "WOP-NC074",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "QualifiedName scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"QualifiedName\",\"array\":false,\"value\":{\"namespace\":3,\"name\":null}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "140300ffffffff"
+    },
+    {
+      "id": "WOP-NC075",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "QualifiedName null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"QualifiedName\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "94ffffffff"
+    },
+    {
+      "id": "WOP-NC076",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "QualifiedName empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"QualifiedName\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "9400000000"
+    },
+    {
+      "id": "WOP-NC077",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "QualifiedName two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"QualifiedName\",\"array\":true,\"value\":[{\"namespace\":3,\"name\":null},{\"namespace\":3,\"name\":null}]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "94020000000300ffffffff0300ffffffff"
+    },
+    {
+      "id": "WOP-NC078",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "LocalizedText scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"LocalizedText\",\"array\":false,\"value\":{\"locale\":null,\"text\":\"\"}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "150200000000"
+    },
+    {
+      "id": "WOP-NC079",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "LocalizedText null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"LocalizedText\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "95ffffffff"
+    },
+    {
+      "id": "WOP-NC080",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "LocalizedText empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"LocalizedText\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "9500000000"
+    },
+    {
+      "id": "WOP-NC081",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "LocalizedText two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"LocalizedText\",\"array\":true,\"value\":[{\"locale\":null,\"text\":\"\"},{\"locale\":null,\"text\":\"\"}]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "950200000002000000000200000000"
+    },
+    {
+      "id": "WOP-NC082",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ExtensionObject scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExtensionObject\",\"array\":false,\"value\":{\"encoding_id\":\"ns=2;i=5000\",\"encoding\":\"binary\",\"body\":{\"type\":\"bytes\",\"base64\":\"/wA=\"}}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "16010288130102000000ff00"
+    },
+    {
+      "id": "WOP-NC083",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ExtensionObject null array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExtensionObject\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "96ffffffff"
+    },
+    {
+      "id": "WOP-NC084",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ExtensionObject empty array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExtensionObject\",\"array\":true,\"value\":[]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "9600000000"
+    },
+    {
+      "id": "WOP-NC085",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "ExtensionObject two-element array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExtensionObject\",\"array\":true,\"value\":[{\"encoding_id\":\"ns=2;i=5000\",\"encoding\":\"binary\",\"body\":{\"type\":\"bytes\",\"base64\":\"/wA=\"}},{\"encoding_id\":\"ns=2;i=5000\",\"encoding\":\"binary\",\"body\":{\"type\":\"bytes\",\"base64\":\"/wA=\"}}]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "9602000000010288130102000000ff00010288130102000000ff00"
+    },
+    {
+      "id": "WOP-NC086",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Exact signed DateTime ticks",
+      "operation": "variant",
+      "input_json": "{\"type\":\"DateTime\",\"array\":false,\"value\":-9223372036854775808}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0d0000000000000080"
+    },
+    {
+      "id": "WOP-NC087",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Exact signed DateTime ticks",
+      "operation": "variant",
+      "input_json": "{\"type\":\"DateTime\",\"array\":false,\"value\":132541920000000002}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0d02c0728b2ce2d601"
+    },
+    {
+      "id": "WOP-NC088",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Exact signed DateTime ticks",
+      "operation": "variant",
+      "input_json": "{\"type\":\"DateTime\",\"array\":false,\"value\":9223372036854775807}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0dffffffffffffff7f"
+    },
+    {
+      "id": "WOP-NC089",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Nullable scalar String",
+      "operation": "variant",
+      "input_json": "{\"type\":\"String\",\"array\":false,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0cffffffff"
+    },
+    {
+      "id": "WOP-NC090",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Nullable scalar String",
+      "operation": "variant",
+      "input_json": "{\"type\":\"String\",\"array\":false,\"value\":\"\"}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0c00000000"
+    },
+    {
+      "id": "WOP-NC091",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Nullable scalar ByteString",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ByteString\",\"array\":false,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0fffffffff"
+    },
+    {
+      "id": "WOP-NC092",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Nullable scalar ByteString",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ByteString\",\"array\":false,\"value\":{\"type\":\"bytes\",\"base64\":\"\"}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0f00000000"
+    },
+    {
+      "id": "WOP-NC093",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Opaque extension none",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExtensionObject\",\"array\":false,\"value\":{\"encoding_id\":\"ns=2;i=42\",\"encoding\":\"none\",\"body\":null}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "1601022a0000"
+    },
+    {
+      "id": "WOP-NC094",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Opaque extension binary",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExtensionObject\",\"array\":false,\"value\":{\"encoding_id\":\"ns=2;i=42\",\"encoding\":\"binary\",\"body\":null}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "1601022a0001ffffffff"
+    },
+    {
+      "id": "WOP-NC095",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Opaque extension binary",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExtensionObject\",\"array\":false,\"value\":{\"encoding_id\":\"ns=2;i=42\",\"encoding\":\"binary\",\"body\":{\"type\":\"bytes\",\"base64\":\"\"}}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "1601022a000100000000"
+    },
+    {
+      "id": "WOP-NC096",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Opaque extension xml",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExtensionObject\",\"array\":false,\"value\":{\"encoding_id\":\"ns=2;i=42\",\"encoding\":\"xml\",\"body\":{\"type\":\"bytes\",\"base64\":\"PHg+w6k8L3g+\"}}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "1601022a0002090000003c783ec3a93c2f783e"
+    },
+    {
+      "id": "WOP-NC097",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "Flat two-dimensional array",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":true,\"value\":[1,2,3,4],\"dimensions\":[2,2]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "c60400000001000000020000000300000004000000020000000200000002000000"
+    },
+    {
+      "id": "WOP-NC098",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "DataValue exact fields",
+      "operation": "data_value",
+      "input_json": "{\"has_value\":false,\"status\":0}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "00"
+    },
+    {
+      "id": "WOP-NC099",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "DataValue exact fields",
+      "operation": "data_value",
+      "input_json": "{\"has_value\":true,\"value\":{\"type\":\"Null\",\"array\":false,\"value\":null},\"status\":0}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0100"
+    },
+    {
+      "id": "WOP-NC100",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "DataValue exact fields",
+      "operation": "data_value",
+      "input_json": "{\"has_value\":true,\"value\":{\"type\":\"UInt64\",\"array\":false,\"value\":18446744073709551615},\"status\":2147483648,\"source_timestamp\":-9223372036854775808,\"server_timestamp\":9223372036854775807,\"source_picoseconds\":9999,\"server_picoseconds\":1}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "3f09ffffffffffffffff0000008000000000000000800f27ffffffffffffff7f0100"
+    },
+    {
+      "id": "WOP-NC101",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V01"
+      ],
+      "description": "DataValue exact fields",
+      "operation": "data_value",
+      "input_json": "{\"has_value\":false,\"status\":1073741824,\"server_timestamp\":1}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "ok",
+      "expected_hex": "0a000000400100000000000000"
+    },
+    {
+      "id": "WOP-NC102",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "null\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC103",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC104",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"value\":1}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC105",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":null,\"value\":1}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC106",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":false,\"value\":1,\"extra\":0}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC107",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":false,\"value\":2147483648}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC108",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"UInt64\",\"array\":false,\"value\":18446744073709551616}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC109",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int64\",\"array\":false,\"value\":-9223372036854775809}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC110",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Boolean\",\"array\":false,\"value\":1}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC111",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":true,\"value\":[1],\"dimensions\":[1]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC112",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":true,\"value\":[1,2],\"dimensions\":[1,3]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC113",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":true,\"value\":null,\"dimensions\":[1,1]}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC114",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Null\",\"array\":true,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC115",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Guid\",\"array\":false,\"value\":\"00112233-4455-6677-8899-AABBCCDDEEFF\"}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC116",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"NodeId\",\"array\":false,\"value\":\"ns=02;i=1\"}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC117",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExpandedNodeId\",\"array\":false,\"value\":{\"node_id\":\"ns=1;i=1\",\"namespace_uri\":\"urn:x\",\"server_index\":0}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC118",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ByteString\",\"array\":false,\"value\":{\"type\":\"bytes\",\"base64\":\"AB==\"}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC119",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ByteString\",\"array\":false,\"value\":{\"type\":\"bytes\",\"base64\":\"AA=A\"}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC120",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ByteString\",\"array\":false,\"value\":{\"type\":\"bytes\",\"base64\":\"AAA\"}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC121",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid typed schema or bounded conversion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"ExtensionObject\",\"array\":false,\"value\":{\"encoding_id\":\"ns=0;i=1\",\"encoding\":\"xml\",\"body\":{\"type\":\"bytes\",\"base64\":\"/w==\"}}}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC122",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Unsupported fixed type XmlElement",
+      "operation": "variant",
+      "input_json": "{\"type\":\"XmlElement\",\"array\":false,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "unsupported"
+    },
+    {
+      "id": "WOP-NC123",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Unsupported fixed type Variant",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Variant\",\"array\":false,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "unsupported"
+    },
+    {
+      "id": "WOP-NC124",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Unsupported fixed type DataValue",
+      "operation": "variant",
+      "input_json": "{\"type\":\"DataValue\",\"array\":false,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "unsupported"
+    },
+    {
+      "id": "WOP-NC125",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Unsupported fixed type Reserved",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Reserved\",\"array\":false,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "unsupported"
+    },
+    {
+      "id": "WOP-NC126",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Unsupported fixed type Invented",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Invented\",\"array\":false,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "unsupported"
+    },
+    {
+      "id": "WOP-NC127",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid DataValue field relation",
+      "operation": "data_value",
+      "input_json": "{\"has_value\":false,\"status\":0,\"value\":null}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC128",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid DataValue field relation",
+      "operation": "data_value",
+      "input_json": "{\"has_value\":true,\"status\":0}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC129",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid DataValue field relation",
+      "operation": "data_value",
+      "input_json": "{\"has_value\":false,\"status\":-1}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC130",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid DataValue field relation",
+      "operation": "data_value",
+      "input_json": "{\"has_value\":false,\"status\":0,\"source_picoseconds\":0}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC131",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Invalid DataValue field relation",
+      "operation": "data_value",
+      "input_json": "{\"has_value\":false,\"status\":0,\"source_timestamp\":1,\"source_picoseconds\":10000}\n",
+      "pool_bytes": 2097152,
+      "expected_status": "invalid"
+    },
+    {
+      "id": "WOP-NC132",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Value arena exhaustion",
+      "operation": "variant",
+      "input_json": "{\"type\":\"Int32\",\"array\":false,\"value\":1}\n",
+      "pool_bytes": 1,
+      "expected_status": "limit"
+    },
+    {
+      "id": "WOP-NC133",
+      "requirements": [
+        "WOP-S01",
+        "WOP-N02",
+        "WOP-V03"
+      ],
+      "description": "Failure rolls back a partially allocated scalar",
+      "operation": "variant",
+      "input_json": "{\"type\":\"String\",\"array\":false,\"value\":\"retained\"}\n",
+      "pool_bytes": 16,
+      "expected_status": "limit"
+    }
+  ]
+}

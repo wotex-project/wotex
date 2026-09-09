@@ -54,7 +54,7 @@ tool, option and artifact hashes in `wotex-native-build.json`; its command logs
 are also hash-bound. The executable's one-tick SDK check is a dependency test,
 not complete DataValue metadata or wire interoperability evidence.
 
-The native secure Session, credit protocol, complete 100 ns metadata and
+The native secure Session, credit protocol, end-to-end 100 ns metadata and
 independent asyncua/native workflow remain required implementation. Software
 build/run entry points remain specified work. The interoperability command above
 exercises the current Python runtime adapter.
@@ -67,7 +67,7 @@ commands above must be rerun after relevant changes.
 | --- | --- |
 | `test/interop/asyncua_test.exs` | `d1eb6dae68bc989ccb5b1df7778d80c9512781cdcc2fb248d4c43b1a09567740` |
 | `test/wotex/opcua/asyncua_test.exs` | `d36277d2fd7ec90e6fb393f19ee6730c600e6e83713190e83146dfce67182e6e` |
-| `test/wotex/opcua/binary_test.exs` | `bf2417a5fa093a59adaaf262ca08f614bbc995366961bead7df60b9de45c6a96` |
+| `test/wotex/opcua/binary_test.exs` | `a173b9a4687c7965e4b45eab7809b066a428c0de26fe254f230e2fb7a8f23a9b` |
 | `test/wotex/opcua/contract_test.exs` | `e9d677fe79d5d8b4fdb88d1d597b0d6bb3cb2bdbe2889a9cc4003432cb5e5f33` |
 | `test/wotex/opcua/dependency_security_test.exs` | `3c45b778a241b2a577f9481c6a7ec08f4f8ec747f72a6d5e7deaf3265510e072` |
 | `test/wotex/opcua/mapping_test.exs` | `2768c115820bcd56364bde5d2101bc13dc242fc92f5ca0a2c1b62b01e7812f93` |
@@ -136,3 +136,28 @@ DataValue assertions cover metadata masks, Bad/Uncertain status, present null
 versus absent data, clamped/orphan fractions and the complete 1 MiB byte budget.
 These checks cover the pure value and identity/reference structures of N02;
 they do not accept SDK construction or Browse services.
+
+## Native typed value conversion
+
+`priv/native/fixtures/value-v1.json` contains 133 concrete JSON inputs and exact
+Part 6 binary results or typed rejection results. The required native build
+executes each case separately through `value_check` against pinned open62541
+1.5.7. The constructor retains exact signed and unsigned integers, DateTime
+100 ns ticks, explicit array shapes and encoded ExtensionObject identities.
+The checker clears and overwrites the parser storage before SDK encoding, then
+clears the SDK arena before serializing the projected result. Rejected inputs
+must leave no result and restore the arena checkpoint.
+
+`value_fault_check` adds 16 direct SDK structure cases. They cover invalid
+parameters, unknown types, dimensions, finite floating values, UTF-8, namespace
+conflicts, DataValue flags, allocation exhaustion and size boundaries. Maximum
+1024-element arrays, 65536-byte strings and byte bodies, and an exactly 1 MiB
+encoded Variant succeed. The corresponding excessive values fail. An input
+constructor cannot mask these direct SDK faults by rejecting them first.
+
+The source-bound native build receipt includes the corpus, both test drivers,
+typed library sources and CTest log. The [value codec contract](../../priv/native/value-codec.md)
+defines its arenas and result lifetimes. This evidence accepts conversion
+primitives only. SDK network-decoder allocation checks, received reserved type
+IDs, complete framed service output, native Session ownership and independent
+peer metadata workflows remain separate required implementation.

@@ -129,7 +129,8 @@ defmodule WotexOPCUA.MixProject do
           "CHANGELOG.md",
           "SECURITY.md",
           "priv/native/runtime-guardian.md",
-          "priv/native/json-codec.md"
+          "priv/native/json-codec.md",
+          "priv/native/value-codec.md"
         ] ++
           Path.wildcard("docs/{specs,plans,provenance}/*.md"),
       source_url: @source_url,

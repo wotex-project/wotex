@@ -30,7 +30,8 @@ defmodule Wotex.OPCUA.Native.Build do
   }
 
   @native_files ~w(CMakeLists.txt main.c build_command.c custody.c custody_check.c README.md runtime-guardian.md
-    json_codec.c json_codec.h json_check.c json-codec.md vendor/yyjson/yyjson.c vendor/yyjson/yyjson.h vendor/yyjson/LICENSE)
+    json_codec.c json_codec.h json_check.c json-codec.md value_codec.c value_codec.h value_check.c value_fault_check.c
+    value-codec.md fixtures/value-v1.json vendor/yyjson/yyjson.c vendor/yyjson/yyjson.h vendor/yyjson/LICENSE)
   @build_sources [
     Path.expand("../../../mix/tasks/wotex.opcua.native.build.ex", __DIR__)
     | Path.wildcard(Path.join(__DIR__, "*.ex"))

@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.7
+  version: 1.0.8
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -48,8 +48,10 @@ distinctions, checked dimensions, opaque ExtensionObjects and read-only future
 IDs 26..31. DataValue codecs retain value presence, full status and exact signed
 100 ns timestamps, normalize 10 ps fractions, and preserve unconsumed bytes.
 Arrays have a 1024-element ceiling; Variant/DataValue consumed bytes are limited
-to 1 MiB including metadata. Native SDK conversion and typed service projection
-remain required work; the existing `Value` adapter still has its scalar contract.
+to 1 MiB including metadata. The native C value library constructs bounded SDK
+Variants/DataValues and projects their finite typed fields. Native request/service
+integration and SDK receive-side preallocation limits remain required work; the
+existing `Value` adapter still has its scalar contract.
 UA chunk framing defaults to 1 MiB and validates message type, chunk kind and
 length before allocating/waiting. Chunk framing alone does not validate secure
 channels, sequence numbers, RequestId, RequestHandle or service status.
@@ -108,8 +110,11 @@ pool, rejects duplicate decoded keys, and validates exact signed/unsigned
 integer and finite floating-point projections. Vendored parser and license
 digests are verified before native builds. The standalone corpus includes
 integer endpoints, adjacent 100 ns tick integers, negative zero, malformed
-Unicode and allocation/structural boundaries. This foundation does not yet
-convert SDK Variant/DataValue structures or serialize service responses.
+Unicode and allocation/structural boundaries. The typed C conversion corpus
+checks exact SDK binary bytes, arena rollback and retained response copies.
+Direct SDK tests cover count, string, ByteString, complete wire-size and writer
+pool boundaries. These primitives neither admit a service response nor prove
+that its complete JSON frame fits the native transport budget.
 
 ## Evidence and compatibility
 

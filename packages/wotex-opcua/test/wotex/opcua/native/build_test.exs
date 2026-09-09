@@ -86,7 +86,21 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert receipt["artifacts"]["output/share/licenses/yyjson/LICENSE"] ==
              "45e384d3d52c73cba3a64d6e6c25d47cd738cd8a55c30629e3201046eda62947"
 
-    assert File.read!(Path.join(workspace, "logs/native_test.log")) =~ "native_json_self_test"
+    native_tests = File.read!(Path.join(workspace, "logs/native_test.log"))
+    assert native_tests =~ "native_json_self_test"
+    corpus_path = Application.app_dir(:wotex_opcua, "priv/native/fixtures/value-v1.json")
+    corpus_bytes = File.read!(corpus_path)
+    corpus_hash = :crypto.hash(:sha256, corpus_bytes) |> Base.encode16(case: :lower)
+    assert receipt["identity"]["native_sources"]["fixtures/value-v1.json"] == corpus_hash
+
+    for row <- Jason.decode!(corpus_bytes)["cases"] do
+      assert native_tests =~ "native_value_#{row["id"]}"
+    end
+
+    for number <- 1..16 do
+      id = String.pad_leading(Integer.to_string(number), 2, "0")
+      assert native_tests =~ "native_value_fault_WOP-NF#{id}"
+    end
 
     assert {:ok, host, %{ready: %Wotex.OPCUA.Native.Ready{}, received_at_ms: received}} =
              Wotex.OPCUA.Native.Host.start_link(
