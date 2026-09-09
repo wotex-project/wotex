@@ -173,6 +173,192 @@ defmodule Wotex.BACnet.RuntimeIntegrationTest do
     end
   end
 
+  test "WBA-I03 WBA-I06 malformed positive replies fail protocol validation and close exact resources" do
+    for malformed <- [
+          nil,
+          false,
+          0,
+          %{},
+          {:ok, 1},
+          encoded(:real, :invalid),
+          encoded(:character_string, "lost-character-set")
+        ] do
+      consumed = consumed(td(), BACnet.profile(), {:ok, malformed})
+      {:ok, context} = Context.new(request_id: "malformed")
+      assert {:error, failure} = ConsumedThing.read_property(consumed, "reading", context)
+      assert failure.class == :protocol
+      assert_closed(true)
+    end
+
+    for {reply, code} <- [
+          {{:ok, true}, :invalid_transport_return},
+          {{:ok, :accepted}, :invalid_transport_return},
+          {{:ok, encoded(:real, 1.0)}, :invalid_transport_return},
+          {{:error, Error.new(:timeout)}, :timeout}
+        ] do
+      consumed = consumed(writable_td(), BACnet.profile(), reply)
+      {:ok, context} = Context.new(request_id: "write-ack")
+      assert {:error, failure} = ConsumedThing.write_property(consumed, "reading", 2.5, context)
+      assert failure.class == :permanent
+      assert failure.details.cause.code == code
+      assert_closed(true)
+    end
+
+    consumed = consumed(writable_td(), BACnet.profile(), {:ok, :written})
+    {:ok, context} = Context.new(request_id: "write-ack")
+    assert {:ok, result} = ConsumedThing.write_property(consumed, "reading", 2.5, context)
+
+    assert result.status == :ok and result.payload == :written and
+             result.operation == :writeproperty
+
+    assert_closed(true)
+  end
+
+  test "WBA-I04 WBA-I06 one finite budget includes connect, exchange and cleanup with no late success" do
+    for operation <- [:readproperty, :writeproperty],
+        delay <- [:connect_delay, :request_delay, :close_delay] do
+      reply = if operation == :readproperty, do: encoded(:real, 1.0), else: :written
+      options = [{delay, 60}, {:timeout, 30}]
+      consumed = consumed(writable_td(), BACnet.profile(), {:ok, reply}, options)
+      {:ok, context} = Context.new(request_id: "deadline")
+
+      result =
+        case operation do
+          :readproperty -> ConsumedThing.read_property(consumed, "reading", context)
+          :writeproperty -> ConsumedThing.write_property(consumed, "reading", 2.5, context)
+        end
+
+      assert {:error, failure} = result
+      assert failure.details.cause.code == :deadline_exceeded
+
+      expected_class =
+        if operation == :writeproperty and delay != :connect_delay, do: :permanent, else: :timeout
+
+      assert failure.class == expected_class
+      assert_closed(delay != :connect_delay)
+    end
+  end
+
+  test "WBA-I04 cleanup failures cannot produce successful Results or mask an exchange failure" do
+    for operation <- [:readproperty, :writeproperty] do
+      reply = if operation == :readproperty, do: encoded(:real, 1.0), else: :written
+
+      consumed =
+        consumed(writable_td(), BACnet.profile(), {:ok, reply},
+          close_reply: {:error, Error.new(:connection_closed)}
+        )
+
+      {:ok, context} = Context.new(request_id: "cleanup")
+
+      result =
+        case operation do
+          :readproperty -> ConsumedThing.read_property(consumed, "reading", context)
+          :writeproperty -> ConsumedThing.write_property(consumed, "reading", 2.5, context)
+        end
+
+      assert {:error, failure} = result
+      assert failure.details.cause.code == :connection_closed
+      assert failure.class == if(operation == :writeproperty, do: :permanent, else: :unavailable)
+      assert_closed(true)
+    end
+
+    consumed =
+      consumed(td(), BACnet.profile(), {:error, Error.new(:remote_error)},
+        close_reply: {:error, Error.new(:connection_closed)}
+      )
+
+    {:ok, context} = Context.new(request_id: "original-failure")
+    assert {:error, failure} = ConsumedThing.read_property(consumed, "reading", context)
+    assert failure.details.cause.code == :remote_error
+    assert failure.class == :protocol
+    assert_closed(true)
+  end
+
+  test "WBA-I06 real Runtime rejects foreign result identity and unsupported credentials before binding I/O" do
+    for tamper <- [:request_id, :operation] do
+      consumed = consumed(td(), BACnet.profile(), {:ok, encoded(:real, 1.0)}, tamper: tamper)
+      {:ok, context} = Context.new(request_id: "exact-request")
+      assert {:error, failure} = ConsumedThing.read_property(consumed, "reading", context)
+      assert failure.code == :mismatched_transport_result
+      assert_closed(true)
+    end
+
+    secured = td() |> Map.put("securityDefinitions", %{"none" => %{"scheme" => "basic"}})
+    consumed = consumed(secured, BACnet.profile(), {:ok, encoded(:real, 1.0)})
+    {:ok, context} = Context.new(request_id: "credentials")
+    assert {:error, _} = ConsumedThing.read_property(consumed, "reading", context)
+    refute_receive {:runtime_request, _}, 0
+    refute_receive {:native_opened, _}, 0
+  end
+
+  test "WBA-I04 expired exchange admission and unsupported write character sets acquire nothing" do
+    request = %Wotex.Runtime.Request{
+      operation: :readproperty,
+      affordance_type: :property,
+      affordance_name: "reading",
+      form: nil,
+      resolved_href: "bacnet://1234/2,1/85",
+      profile: BACnet.profile(),
+      request_id: "expired",
+      deadline: nil,
+      input: nil
+    }
+
+    assert {:error, %Error{code: :deadline_exceeded, effect: :none}} =
+             Wotex.BACnet.RuntimeExchange.run(
+               [],
+               %{},
+               request,
+               System.monotonic_time(:millisecond) - 1
+             )
+
+    assert {:error, %Error{code: :transport_required}} =
+             Wotex.BACnet.RuntimeExchange.run(
+               [],
+               %{},
+               request,
+               System.monotonic_time(:millisecond) + 1000
+             )
+
+    description =
+      writable_td()
+      |> update_in(["properties", "reading", "forms"], fn [form] ->
+        [Map.delete(form, "bacv:hasDataType")]
+      end)
+
+    consumed = consumed(description, BACnet.profile(), {:ok, :written})
+    {:ok, context} = Context.new(request_id: "unsupported-charset")
+    value = encoded(:character_string, %CharacterString{character_set: 5, bytes: "latin"})
+    assert {:error, failure} = ConsumedThing.write_property(consumed, "reading", value, context)
+    assert failure.details.cause.code == :unsupported_character_set
+    assert failure.class == :permanent
+    assert_receive {:runtime_request, _}
+    refute_receive {:native_opened, _}, 0
+    refute_receive {:native_request, _, _, _}, 0
+  end
+
+  defp assert_closed(requested) do
+    assert_receive {:runtime_request, _}
+    assert_receive {:native_opened, pid}
+
+    if requested,
+      do: assert_receive({:native_request, ^pid, _, _}),
+      else: refute_receive({:native_request, _, _, _}, 0)
+
+    assert_receive {:native_closed, ^pid}
+    refute Process.alive?(pid)
+    refute_receive {:native_opened, _}, 0
+    refute_receive {:native_request, _, _, _}, 0
+  end
+
+  defp writable_td do
+    td(%{
+      "op" => ["readproperty", "writeproperty"],
+      "bacv:hasDataType" => %{"@type" => "bacv:Real"}
+    })
+    |> update_in(["properties", "reading"], &Map.delete(&1, "readOnly"))
+  end
+
   defp consumed(td, profile, reply, options \\ []) do
     {:ok, td} = Wotex.ThingDescription.from_map(td)
 

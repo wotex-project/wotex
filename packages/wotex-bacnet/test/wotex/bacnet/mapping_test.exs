@@ -67,7 +67,7 @@ defmodule Wotex.BACnet.MappingTest do
       input: nil
     }
 
-    opts = [client: TestClient, target: @target]
+    opts = [client: TestClient, target: @target, mode: :native_value]
 
     for deadline <- [
           nil,

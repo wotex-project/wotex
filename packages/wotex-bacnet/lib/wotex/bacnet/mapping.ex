@@ -101,6 +101,7 @@ defmodule Wotex.BACnet.Mapping do
 
   defp convert(%{message: %{type: :write_property, value: value}} = mapping, form) do
     with {:ok, encoded} <- Value.encode(value, Map.get(form, "bacv:hasDataType")),
+         :ok <- Value.validate_write(encoded),
          do: {:ok, put_in(mapping.message.value, encoded)}
   end
 

@@ -20,6 +20,7 @@ defmodule Wotex.BACnet.TestClient do
       :error -> {:error, :private}
       :typed -> {:error, Wotex.BACnet.Error.new(:remote_error)}
       :invalid -> :unexpected
+      :native_value -> {:ok, BACnet.Protocol.ApplicationTags.Encoding.create!({:real, 1.0})}
       _ -> {:ok, message}
     end
   end

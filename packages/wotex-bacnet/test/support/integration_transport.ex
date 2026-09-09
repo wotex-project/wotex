@@ -7,7 +7,13 @@ defmodule Wotex.BACnet.Test.IntegrationTransport do
   @impl Wotex.Runtime.Transport
   def request(request, context, config) do
     send(Keyword.fetch!(config, :observer), {:runtime_request, request})
-    Transport.request(request, context, config)
+    outcome = Transport.request(request, context, Keyword.delete(config, :tamper))
+
+    case {outcome, Keyword.get(config, :tamper)} do
+      {{:ok, result}, :request_id} -> {:ok, %{result | request_id: "foreign-request"}}
+      {{:ok, result}, :operation} -> {:ok, %{result | operation: :writeproperty}}
+      _ -> outcome
+    end
   end
 
   @impl Wotex.Runtime.Transport
