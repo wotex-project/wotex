@@ -412,6 +412,76 @@
           "byte_credit": 1048448
         }
       }
+    },
+    {
+      "id": "WBL-B-F16",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-C07",
+        "WBL-S03"
+      ],
+      "operation": "decode_bytes",
+      "input": {
+        "value": {
+          "type": "bytes",
+          "base64": "NBI="
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": true,
+          "bytes": [
+            52,
+            18
+          ]
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F17",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-C07",
+        "WBL-S03"
+      ],
+      "operation": "decode_bytes",
+      "input": {
+        "value": {
+          "type": "bytes",
+          "base64": "NBJ="
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F18",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-C07",
+        "WBL-S03"
+      ],
+      "operation": "decode_bytes",
+      "input": {
+        "value": {
+          "type": "bytes",
+          "base64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false
+        }
+      }
     }
   ],
   "executed_cases": [
@@ -424,6 +494,9 @@
     "WBL-B-F08",
     "WBL-B-F09",
     "WBL-B-F14",
-    "WBL-B-F15"
+    "WBL-B-F15",
+    "WBL-B-F16",
+    "WBL-B-F17",
+    "WBL-B-F18"
   ]
 }

@@ -16,6 +16,7 @@ defmodule Wotex.BLE.Check.Archive do
     "priv/bluez/notifications.py",
     "priv/bluez/requirements.txt",
     "priv/bluez/native/frame.hpp",
+    "priv/bluez/native/bytes.hpp",
     "priv/bluez/native/credit.hpp",
     "priv/bluez/native/bus.hpp",
     "priv/bluez/native/service.hpp",

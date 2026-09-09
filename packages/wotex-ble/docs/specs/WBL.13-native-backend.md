@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.4
+  version: 1.0.5
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -82,7 +82,15 @@ does not require a runtime or test-time download.
 Request parameters and results have the exact operation-specific shapes in .10
 and .11. No native pointer, process address or foreign object name crosses IPC.
 Bytes use the exact canonical Base64 envelope from C07 and obey the owning
-protocol's decoded-size bound. Only fixed library error codes and admitted
+protocol's decoded-size bound. Attribute byte envelopes admit exactly `type:
+"bytes"` and a string `base64`, with no extra fields. The encoded string has at
+most 684 bytes and the decoded value at most 512 bytes; reject a larger decoded
+length before allocating its storage. Empty values are valid. The standard
+alphabet, required final padding and zero pad bits follow
+[RFC 4648 sections 3–4](https://www.rfc-editor.org/rfc/rfc4648.html#section-3).
+Whitespace, URL-safe alphabet variants, misplaced/excess padding and nonzero pad
+bits fail `:invalid_value`; the wire profile has one encoding per byte sequence.
+Only fixed library error codes and admitted
 numeric status/error-name fields cross the boundary; native exception text,
 credentials and values do not. Unknown mutation effect remains non-retryable
 and maps to permanent Runtime classification. A late native result cannot turn
@@ -216,6 +224,9 @@ production frame/request validator without SDK I/O and projects either
 `{"accepted":true}` or `{"accepted":false}`; it is not a fabricated protocol
 response. The native contract-test binary receives input only. ExUnit reads the
 expected projection and compares the independently observed result.
+`decode_bytes` calls the production bounded byte-envelope decoder, with exact
+input in `value`. Its projection is `{"accepted":true,"bytes":[0,255]}` with
+the actual ordered octets, or exactly `{"accepted":false}`. No SDK call occurs.
 `ready` starts the actual helper, captures its first frame and closes its input;
 the expectation is exact JSON-object equality plus zero surviving owned
 processes after the grace. Parser cases never count as SDK interoperability.

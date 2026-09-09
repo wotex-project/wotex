@@ -172,3 +172,16 @@ suppression of late replies, and cancellation of pending calls. A blocked
 Disconnect reply releases local resources within the cooperative allowance.
 This is native D-Bus procedure/ownership evidence. BlueZ/controller execution
 and the independent production guardian remain separate acceptance requirements.
+
+## Native canonical byte envelopes
+
+`test/wotex/ble/native_bytes_test.exs` builds the production `bytes.hpp` codec
+under the bounded native command guardian. WBL-B-F16 through WBL-B-F18 bind
+exact corpus inputs to native results. RFC 4648 section 10 known answers and
+an independent BEAM Base codec comparison establish the expected byte order
+and encoding. Native checks cover every length from zero through 512, all octet
+values, 513-byte rejection, zero-length views, invalid schema fields, embedded
+NULs, non-alphabet text, missing padding and every nonzero pad-bit value.
+The codec enforces decoded length before allocating output storage. It has no
+SDK or process side effects. ReadValue, WriteValue and stream delivery through
+the complete native backend remain separate procedure acceptance requirements.
