@@ -215,6 +215,17 @@ Pass records to `otCommissionerAddJoiner` or `...WithDiscerner`; removal uses th
 matching API and identity. Maximum 64 local admission records; reject excess
 before SDK submission, while preserving a lower SDK capacity error.
 
+`JoinerIdentity.new/1` accepts exactly `%{eui64: <<eight bytes>>}` or
+`%{discerner: %{length: 1..64, value: non_neg_integer}}`; it never accepts a
+wildcard. `JoinerAdmission.new/1` accepts a typed `identity`, `pskd` and optional
+`lifetime` (default 60). `JoinerConfig.new/1` accepts `pskd` and the optional
+strings below, plus an optional typed discerner identity; absence uses the
+SDK's factory-EUI-derived Joiner ID. Unknown fields and forged structs fail
+before native submission. Credential-bearing values redact PSKd in `Inspect`.
+C07 identities are exact `{type: "eui64", value: uppercase_hex_16}` or
+`{type: "discerner", length: integer, value: canonical_unsigned_decimal_string}`.
+The decimal value must fit the stated bit length; it is never a JSON float.
+
 PSKd is 6..32 ASCII uppercase letters/digits excluding I, O, Q and Z, matching
 the pinned SDK. Discerner is length 1..64 and a value fitting that many bits.
 Joiner start requires explicit PSKd and optional provisioning URL (UTF-8 at most 64 bytes), vendor name/model/software
