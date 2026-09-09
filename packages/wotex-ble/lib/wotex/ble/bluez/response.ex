@@ -1,9 +1,9 @@
 defmodule Wotex.BLE.BlueZ.Response do
   @moduledoc false
 
-  alias Wotex.BLE.{Characteristic, Error, ObjectPath}
+  alias Wotex.BLE.{Characteristic, Error, ObjectPath, Procedure}
 
-  @codes ~w(invalid_options invalid_peer disconnected owner_changed not_permitted not_authorized not_supported busy invalid_value_length invalid_offset improperly_configured remote_error object_limit peer_not_found ambiguous_peer invalid_response invalid_characteristic peer_changed generation_exhausted snapshot_unstable timeout services_unresolved stale_discovery invalid_cursor cursor_limit transport_error pairing_rejected)a
+  @codes ~w(invalid_options invalid_peer disconnected owner_changed not_permitted not_authorized not_supported busy invalid_value_length invalid_offset improperly_configured remote_error object_limit peer_not_found ambiguous_peer invalid_response invalid_characteristic peer_changed generation_exhausted snapshot_unstable timeout services_unresolved stale_discovery invalid_cursor cursor_limit transport_error pairing_rejected invalid_address invalid_value address_mismatch ambiguous_characteristic)a
   @errors Map.new(@codes, &{Atom.to_string(&1), &1})
   @fields ~w(service_uuid characteristic_uuid service_path object_path flags generation handle)
 
@@ -23,6 +23,13 @@ defmodule Wotex.BLE.BlueZ.Response do
       %{"code" => code, "status" => status} when map_size(error) == 2 and is_integer(status) ->
         failure(code)
 
+      %{"code" => code, "name" => name} when map_size(error) == 2 ->
+        named_failure(code, name)
+
+      %{"code" => code, "status" => status, "name" => name}
+      when map_size(error) == 3 and is_integer(status) ->
+        named_failure(code, name)
+
       _ ->
         :invalid
     end
@@ -36,6 +43,24 @@ defmodule Wotex.BLE.BlueZ.Response do
       :error -> :invalid
     end
   end
+
+  defp named_failure(code, name) when is_binary(name) and byte_size(name) <= 128 do
+    with true <-
+           Regex.match?(
+             ~r/\Aorg\.bluez\.Error\.[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\z/,
+             name
+           ),
+         {:error, error} <- failure(code) do
+      {:error, %{error | details: %{dbus_name: name}}}
+    else
+      _ -> :invalid
+    end
+  end
+
+  defp named_failure(_, _), do: :invalid
+
+  defp result("read", value), do: Procedure.decode_bytes(value)
+  defp result("write", nil), do: {:ok, :written}
 
   defp result(
          "open",

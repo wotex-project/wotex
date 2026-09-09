@@ -149,13 +149,13 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert {:error, %Error{code: :not_supported}} = BlueZ.discover(%{}, [], 1)
   end
 
-  test "WBL-C02 forged handles and ungraduated procedures acquire nothing" do
+  test "WBL-C02 forged handles and ambiguous procedures acquire nothing" do
     {session, record} = connect()
     handle = %{session.handle | reference: make_ref()}
     assert {:error, %Error{code: :invalid_handle}} = Connection.discover(handle, [], 500)
     assert {:error, %Error{code: :invalid_handle}} = Connection.disconnect(handle)
 
-    assert {:error, %Error{code: :not_supported}} =
+    assert {:error, %Error{code: :ambiguous_characteristic}} =
              BlueZ.request(
                session.handle,
                %{type: :read, service: "180f", characteristic: "2a19"},
@@ -165,7 +165,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert {:error, %Error{code: :invalid_address}} =
              BlueZ.request(session.handle, %{type: :read}, 500)
 
-    assert Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 1
+    assert Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 2
   end
 
   test "WBL-C07 startup envelopes and process output fail closed" do
@@ -267,6 +267,19 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert_receive {:DOWN, ^monitor, :process, _, :normal}, 50
   end
 
+  test "WBL-C03 concurrent close callers join bounded cleanup and admission stays finite" do
+    {session, record} = connect("close_slow")
+    tasks = for _ <- 1..32, do: Task.async(fn -> BLE.disconnect(session) end)
+    assert Task.await_many(tasks) == List.duplicate(:ok, 32)
+    assert Enum.any?(calls(record), &(&1["bus_closed"] == true))
+
+    {session, _} = connect("uncooperative")
+    tasks = for _ <- 1..64, do: Task.async(fn -> BLE.disconnect(session) end)
+    eventually(fn -> length(:sys.get_state(session.handle.pid).close_from) == 64 end)
+    assert {:error, %Error{code: :busy}} = BLE.disconnect(session)
+    assert Enum.all?(Task.await_many(tasks), &match?({:error, %Error{code: :cleanup_timeout}}, &1))
+  end
+
   test "WBL-P03 WBL-V06 explicit policy completes first-party Agent exchange" do
     for {mode, action} <- [{"pair", :accept}, {"pair_pin", :pin}, {"pair_passkey", :passkey}] do
       {session, record} = connect(mode)
@@ -328,7 +341,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert_receive {:challenge, _, worker}, 1000
     assert {:error, %Error{code: :pairing_rejected}} = Task.await(task)
     eventually(fn -> not Process.alive?(worker) end)
-    BLE.disconnect(session)
+    assert :ok = BLE.disconnect(session)
     assert %{"agents" => 0, "listeners" => 0, "bonds" => 1, "bus_closed" => true} in calls(record)
 
     {options, record} = options("pair")
@@ -358,6 +371,158 @@ defmodule Wotex.BLE.DBusBridgeTest do
     assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1100
     refute Process.alive?(worker)
     assert %{"agents" => 0, "listeners" => 0, "bonds" => 1, "bus_closed" => true} in calls(record)
+  end
+
+  defp target do
+    %{
+      service: "180f",
+      characteristic: "2a19",
+      object_path: "/another/characteristic0",
+      handle: 1,
+      generation: 1
+    }
+  end
+
+  test "WBL-P04 WBL-S03 WBL-V05 explicit codecs share the acknowledged native procedure" do
+    {session, record} = connect("procedure")
+    assert {:ok, 42} = BLE.read(session, target(), value_type: :uint16)
+
+    assert {:ok, :written} =
+             BLE.write(session, target(), 1234, value_type: :uint16, byte_order: :big)
+
+    assert {:ok, 1234} = BLE.read(session, target(), value_type: :uint16, byte_order: :big)
+
+    for bytes <- [<<>>, :binary.copy(<<42>>, 512)] do
+      assert {:ok, :written} = BLE.write(session, target(), bytes)
+      assert {:ok, ^bytes} = BLE.read(session, target())
+    end
+
+    assert Enum.count(calls(record), &(&1["method"] == "WriteValue")) == 3
+    assert Enum.count(calls(record), &(&1["method"] == "ReadValue")) == 4
+
+    assert Enum.uniq(
+             for call <- calls(record),
+                 call["method"] in ["WriteValue", "ReadValue"],
+                 do: call["sender"]
+           ) == [":1.55"]
+  end
+
+  test "WBL-C02 forged native inputs and command-only flags never submit a write" do
+    {session, record} = connect("procedure_command_only")
+
+    assert {:error, %Error{code: :not_permitted, effect: :none}} =
+             BLE.write(session, target(), <<42>>)
+
+    for invalid <- [
+          target() |> Map.put(:object_path, "/foreign"),
+          target() |> Map.put(:handle, 2),
+          target() |> Map.put(:generation, 0)
+        ] do
+      assert {:error, %Error{effect: :none}} = BLE.write(session, invalid, <<42>>)
+    end
+
+    assert {:error, %Error{code: :invalid_value, effect: :none}} =
+             BLE.write(session, target(), :binary.copy(<<42>>, 513))
+
+    assert {:error, %Error{code: :invalid_value, effect: :none}} =
+             BLE.write(session, target(), 256, value_type: :uint8)
+
+    assert {:error, %Error{code: :invalid_value, effect: :none}} =
+             BLE.read(session, target(), value_type: :guess)
+
+    assert {:error, %Error{code: :invalid_options, effect: :none}} =
+             BLE.write(session, target(), <<1>>, timeout: 0)
+
+    refute Enum.any?(calls(record), &(&1["method"] in ["WriteValue", "ReadValue"]))
+  end
+
+  test "WBL-V05 named D-Bus failures preserve phase and never retry submitted writes" do
+    for {name, code} <- [
+          {"NotPermitted", :not_permitted},
+          {"NotAuthorized", :not_authorized},
+          {"NotSupported", :not_supported},
+          {"InProgress", :busy},
+          {"InvalidOffset", :invalid_offset},
+          {"InvalidValueLength", :invalid_value_length},
+          {"ImproperlyConfigured", :improperly_configured},
+          {"Failed", :remote_error},
+          {"FutureCase", :remote_error},
+          {"NotConnected", :disconnected}
+        ],
+        operation <- [:read, :write] do
+      {session, record} = connect("procedure_error_" <> name)
+      dbus_name = "org.bluez.Error." <> name
+
+      effect = if operation == :write, do: :unknown, else: :none
+
+      result =
+        if operation == :write,
+          do: BLE.write(session, target(), <<42>>),
+          else: BLE.read(session, target())
+
+      assert {:error, %Error{code: ^code, effect: ^effect, details: %{dbus_name: ^dbus_name}}} =
+               result
+
+      method = if operation == :write, do: "WriteValue", else: "ReadValue"
+      assert Enum.count(calls(record), &(&1["method"] == method)) == 1
+      BLE.disconnect(session)
+    end
+  end
+
+  test "WBL-C03 active write timeout and uncertain process loss have unknown effect" do
+    for mode <- ["procedure_timeout", "procedure_crash_before_event"] do
+      {session, record} = connect(mode)
+      monitor = Process.monitor(session.handle.pid)
+      assert {:error, %Error{effect: :unknown}} = BLE.write(session, target(), <<42>>, timeout: 100)
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1100
+
+      assert Enum.count(calls(record), &(&1["method"] == "WriteValue")) ==
+               if(mode == "procedure_timeout", do: 1, else: 0)
+    end
+  end
+
+  test "WBL-C03 queued write expiration has no effect and an expired ACK cannot succeed" do
+    {session, record} = connect("procedure_timeout")
+    active = spawn(fn -> BLE.read(session, target()) end)
+    eventually(fn -> Enum.any?(calls(record), &(&1["method"] == "ReadValue")) end)
+
+    assert {:error, %Error{code: :timeout, effect: :none}} =
+             BLE.write(session, target(), <<42>>, timeout: 20)
+
+    refute Enum.any?(calls(record), &(&1["method"] == "WriteValue"))
+    Process.exit(active, :kill)
+    eventually(fn -> not Process.alive?(session.handle.pid) end)
+
+    {session, record} = connect("procedure_slow")
+    task = Task.async(fn -> BLE.write(session, target(), <<42>>, timeout: 100) end)
+    eventually(fn -> Enum.any?(calls(record), &(&1["method"] == "WriteValue")) end)
+    :sys.suspend(session.handle.pid)
+    Process.sleep(150)
+    :sys.resume(session.handle.pid)
+    assert {:error, %Error{code: :timeout, effect: :unknown}} = Task.await(task)
+    eventually(fn -> not Process.alive?(session.handle.pid) end)
+    assert Enum.count(calls(record), &(&1["method"] == "WriteValue")) == 1
+  end
+
+  test "WBL-C07 invalid submission phases and malformed acknowledgements close the generation" do
+    for mode <- [
+          "procedure_missing_event",
+          "procedure_wrong_event",
+          "procedure_extra_event",
+          "procedure_duplicate_event",
+          "procedure_malformed"
+        ] do
+      {session, _} = connect(mode)
+
+      assert {:error, %Error{code: :invalid_response, effect: :unknown}} =
+               BLE.write(session, target(), <<42>>)
+
+      eventually(fn -> not Process.alive?(session.handle.pid) end)
+    end
+
+    {session, _} = connect("procedure_read_event")
+    assert {:error, %Error{code: :invalid_response, effect: :none}} = BLE.read(session, target())
+    eventually(fn -> not Process.alive?(session.handle.pid) end)
   end
 
   test "WBL-C02 pairing unsupported and invalid policies acquire nothing" do

@@ -41,9 +41,8 @@ defmodule Wotex.BLE.BlueZ do
   end
 
   @impl Wotex.BLE.Client
-  def request(%Connection{}, message, _timeout) do
-    with :ok <- Address.validate_message(message), do: {:error, Error.new(:not_supported)}
-  end
+  def request(%Connection{} = handle, message, timeout),
+    do: Connection.request(handle, message, timeout)
 
   def request(
         %{executable: executable, path: path, service: service, characteristic: characteristic},

@@ -30,9 +30,13 @@ ERRORS = {
 class Failure(Exception):
     """Carries only a finite library-owned failure code."""
 
-    def __init__(self, code):
+    def __init__(self, code, name=None):
         self.code = code
+        self.name = name if isinstance(name, str) and len(name) <= 128 and re.fullmatch(r"org\.bluez\.Error\.[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*", name) else None
         super().__init__(code)
+
+    def envelope(self):
+        return {"code": self.code, **({"name": self.name} if self.name is not None else {})}
 
 
 def path(value):
@@ -149,8 +153,24 @@ class DBusConnection:
         if reply.sender != destination:
             raise Failure("invalid_response")
         if reply.message_type == MessageType.ERROR:
-            raise Failure(ERRORS.get(reply.error_name, "remote_error"))
+            raise Failure(ERRORS.get(reply.error_name, "remote_error"), reply.error_name)
+        expected = {
+            (MANAGER, "GetManagedObjects"): "a{oa{sa{sv}}}",
+            ("org.freedesktop.DBus", "GetNameOwner"): "s",
+            ("org.freedesktop.DBus", "AddMatch"): "",
+            (DEVICE, "Connect"): "", (DEVICE, "Disconnect"): "", (DEVICE, "Pair"): "",
+            ("org.bluez.AgentManager1", "RegisterAgent"): "",
+            ("org.bluez.AgentManager1", "UnregisterAgent"): "",
+            (CHARACTERISTIC, "ReadValue"): "ay", (CHARACTERISTIC, "WriteValue"): "",
+        }.get((interface, member))
+        if expected is None or reply.signature != expected:
+            raise Failure("invalid_response")
         return reply.body
+
+    @staticmethod
+    def write_options():
+        from dbus_next import Variant
+        return {"type": Variant("s", "request"), "offset": Variant("q", 0)}
 
     def listen(self, handler):
         from dbus_next import MessageType
@@ -319,6 +339,9 @@ class Central:
             device_path, device, characteristics = catalogue(DBusConnection.snapshot(body), self.peer, self.generation)
             if revision != self.revision:
                 continue
+            if self.ready and (not device["Connected"] or not device["ServicesResolved"]):
+                self.fail("disconnected")
+                raise Failure("disconnected")
             if self.device_path is not None and device_path != self.device_path:
                 raise Failure("peer_changed")
             if self.ready and (self.changed or characteristics != self.characteristics):

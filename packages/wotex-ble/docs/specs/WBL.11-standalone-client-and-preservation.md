@@ -88,7 +88,8 @@ Stable D-Bus name mapping is part of the public contract: `NotConnected` becomes
 becomes `:invalid_offset`, and `ImproperlyConfigured` becomes
 `:improperly_configured`. `Failed` and unknown names become `:remote_error`.
 Names carry the bounded `org.bluez.Error.` prefix in error details; arbitrary
-message strings are discarded. The local phase controls effect: validation
+message strings are discarded. S03 fixes the optional wire `error.name` field,
+128-byte ASCII identifier limit, and sole public projection `details.dbus_name`. The local phase controls effect: validation
 failure is `:none`; submitted write timeout/disconnect is `:unknown`, with no
 library retry. Pairing Agent cancellation uses `:pairing_rejected`; connection
 loss remains `:disconnected` even during pairing.

@@ -70,7 +70,9 @@ requires an already connected Device1 with ServicesResolved true; it never
 calls Device1.Disconnect or starts pairing during open/close. Owned mode may call Device1.Connect,
 wait for Connected and ServicesResolved within the absolute deadline, and call
 Disconnect on cleanup only if this handle established the connection. A device
-already connected when opened remains borrowed at the link layer.
+already connected when opened remains borrowed at the link layer. Concurrent
+close callers join the same bounded cleanup result, with at most 64 waiting
+callers; excess callers receive `:busy` without another native close attempt.
 
 Install PropertiesChanged, InterfacesRemoved and NameOwnerChanged listeners
 before checking initial state, then reconcile the snapshot so no state-change
@@ -118,6 +120,36 @@ NotPermitted, NotAuthorized, NotSupported, InProgress, InvalidValueLength,
 InvalidOffset, Failed) to stable library codes; retain the bounded D-Bus error
 name, never the arbitrary message text. Unknown names map to `:remote_error`.
 An expired or canceled write after submission has unknown effect.
+
+Read parameters have exactly `address`; write parameters have exactly `address`
+and `value`. Address has exactly `service`, `characteristic`, `object_path`,
+`handle`, and `generation`, with absent optional selectors represented by null.
+UUID fields are normalized strings, and selectors use S01's bounds. Write value
+and read result use the exact C07 bytes envelope; write success result is null.
+Resolve the current peer's UUID associations and supplied selectors together;
+multiple matches fail `:ambiguous_characteristic`, zero matches fail
+`:address_mismatch`, and a stale supplied generation fails `:stale_discovery`.
+
+Immediately before WriteValue, the bridge emits exactly `version: 1`, the
+active write request `id`, and `event: "write_submitted"`. This is a phase marker,
+not success or proof of effect. Accept it once for the current active write;
+wrong IDs, duplicates, extra fields, or a read/other phase close the generation.
+An acknowledged write result without this marker is invalid. A received typed
+pre-submission rejection has `effect: :none` only when the native procedure
+proved no WriteValue call occurred. Submitted failures have `effect: :unknown`.
+Process loss or malformed output during an active write remains conservative
+unknown even if the marker was not observed; a queued, never dispatched write
+has no effect. Never retry either case automatically.
+
+For this bridge only, C07 failure `error` additionally permits optional `name`.
+It is at most 128 ASCII bytes, starts with `org.bluez.Error.`, and has nonempty
+D-Bus identifier segments (ASCII letter/underscore followed by letters, digits,
+or underscores). Preserve it only as `Error.details.dbus_name`; there is no
+message-text field. All other unknown fields remain invalid, and `status`, when
+present, remains numeric. The prefix is protocol-specific; the bounds are this
+library's narrower limit over [D-Bus error-name syntax, revision 0.43](https://dbus.freedesktop.org/doc/dbus-specification.html#message-protocol-names-error).
+The [pinned BlueZ characteristic API](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.GattCharacteristic.rst)
+owns method signatures and named procedure failures.
 
 On an ATT transaction timeout, BlueZ owns bearer invalidation. The wrapper
 closes its affected session and requires an explicit new connection; it must

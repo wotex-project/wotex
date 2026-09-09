@@ -104,7 +104,7 @@ class Bridge:
                     self.central.agent_reply(request["parameters"])
                     self.response(request, ok=True, result=None)
                 except Failure as error:
-                    self.response(request, ok=False, error={"code": error.code})
+                    self.response(request, ok=False, error=error.envelope())
                 continue
             if request["operation"] == "close" and request["parameters"] == {}:
                 self.close_request = request
@@ -125,6 +125,9 @@ class Bridge:
             return result
         if not self.opened:
             raise Failure("disconnected")
+        if operation in ("read", "write"):
+            from procedures import execute
+            return await execute(self.central, operation, request["parameters"], remaining, request["id"])
         if operation == "pair":
             return await self.central.pair(request["parameters"], remaining, request["id"])
         if operation == "discover":
@@ -143,7 +146,7 @@ class Bridge:
                 result = await self.execute(request, deadline)
                 self.response(request, ok=True, result=result)
             except Failure as error:
-                self.response(request, ok=False, error={"code": error.code})
+                self.response(request, ok=False, error=error.envelope())
                 if error.code in ("timeout", "disconnected", "owner_changed") or request["operation"] == "open":
                     self.stop.set()
             except Exception:

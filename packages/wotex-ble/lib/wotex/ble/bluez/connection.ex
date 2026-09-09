@@ -8,15 +8,15 @@ defmodule Wotex.BLE.BlueZ.Connection do
   selects local IPC explicitly, and `:owner` defaults to the calling process.
   `start_link/1` supports consumer supervision; `session/1` retrieves its session.
 
-  Discovery and pairing requests share a bounded serial queue. Owner death, a deadline or
-  malformed bridge output closes the generation. Cleanup is bounded to one
-  second and never reconnects or powers an adapter. Loading the module starts
-  nothing. Read, write and stream procedures graduate separately.
+  Discovery, pairing and GATT requests share a bounded serial queue. Owner
+  death, a deadline or malformed bridge output closes the generation. Cleanup
+  is bounded to one second and never reconnects or powers an adapter. Loading
+  the module starts nothing. Stream procedures graduate separately.
   """
 
   use GenServer
   alias Wotex.BLE.BlueZ.{Frame, Options, Pairing, Response}
-  alias Wotex.BLE.{Error, Session}
+  alias Wotex.BLE.{Error, Procedure, Session}
 
   @derive {Inspect, only: [:pid, :generation]}
   @enforce_keys [:pid, :reference, :generation]
@@ -58,6 +58,18 @@ defmodule Wotex.BLE.BlueZ.Connection do
   end
 
   def discover(_, _, _), do: {:error, Error.new(:invalid_handle)}
+
+  @doc "Executes a validated read or acknowledged write on this persistent sender."
+  @spec request(term(), term(), term()) :: {:ok, binary() | :written} | {:error, Error.t()}
+  def request(%__MODULE__{pid: pid, reference: reference, generation: 1}, message, timeout)
+      when is_pid(pid) and is_reference(reference) and is_integer(timeout) and
+             timeout >= 1 and timeout <= 60_000 do
+    with {:ok, operation, parameters} <- Procedure.parameters(message) do
+      call(pid, {reference, operation, parameters, now() + timeout})
+    end
+  end
+
+  def request(_, _, _), do: {:error, Error.new(:invalid_handle)}
 
   @doc "Pairs only through an explicitly supplied consumer Agent policy."
   @spec pair(term(), term(), term()) :: {:ok, map()} | {:error, Error.t()}
@@ -104,7 +116,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
        discovery_generation: 1,
        policy: nil,
        policy_control: nil,
-       close_from: nil,
+       close_from: [],
        close_result: {:error, Error.new(:disconnected)},
        close_id: nil
      }}
@@ -142,15 +154,16 @@ defmodule Wotex.BLE.BlueZ.Connection do
   end
 
   def handle_call(
-        {reference, "discover", parameters, deadline},
+        {reference, operation, parameters, deadline},
         from,
         %{handle: %{reference: reference}, status: :ready} = state
       )
-      when is_map(parameters) and is_integer(deadline) do
+      when operation in ["discover", "read", "write"] and is_map(parameters) and
+             is_integer(deadline) do
     cond do
       deadline <= now() -> {:reply, {:error, Error.new(:timeout)}, state}
       map_size(state.pending) >= 64 -> {:reply, {:error, Error.new(:busy)}, state}
-      true -> {:noreply, admit(state, from, parameters, deadline)}
+      true -> {:noreply, admit(state, from, parameters, deadline, operation)}
     end
   end
 
@@ -324,6 +337,24 @@ defmodule Wotex.BLE.BlueZ.Connection do
   end
 
   defp frame(
+         %{"version" => 1, "id" => id, "event" => "write_submitted"} = frame,
+         %{status: :ready, active: id} = state
+       )
+       when map_size(frame) == 3 and is_binary(id) do
+    case state.pending[id] do
+      %{operation: "write", submitted: false, deadline: deadline} when is_integer(deadline) ->
+        if now() < deadline do
+          {:noreply, put_in(state.pending[id].submitted, true)}
+        else
+          {:noreply, close(state, :timeout)}
+        end
+
+      _ ->
+        {:noreply, close(state, :invalid_response)}
+    end
+  end
+
+  defp frame(
          %{"version" => 1, "id" => id, "event" => "agent_challenge", "challenge" => challenge} =
            frame,
          %{status: :ready, active: id, policy: nil, policy_control: nil} = state
@@ -356,19 +387,28 @@ defmodule Wotex.BLE.BlueZ.Connection do
       :invalid ->
         {:noreply, close(state, :invalid_response)}
 
-      {:error, %Error{code: code}} when code in [:timeout, :disconnected, :owner_changed] ->
-        {:noreply, close(state, code)}
+      {:error, %Error{code: code} = error}
+      when code in [:timeout, :disconnected, :owner_changed, :invalid_response, :transport_error] ->
+        error =
+          if state.pending[id].operation == "write", do: %{error | effect: :unknown}, else: error
+
+        {:noreply, close(complete(state, id, {:error, error}), code)}
 
       {:ok, %{paired: true}} ->
-        if is_nil(state.policy) and is_nil(state.policy_control),
-          do: {:noreply, advance(complete(state, id, {:ok, %{paired: true}}))},
-          else: {:noreply, close(state, :invalid_response)}
+        accept_pair(state, id)
 
-      {:ok, page} ->
+      {:ok, page} when is_map(page) ->
         accept_page(state, id, page)
 
-      {:error, _} = error ->
-        {:noreply, advance(complete(state, id, error))}
+      {:ok, :written} ->
+        accept_write(state, id)
+
+      {:ok, value} when is_binary(value) ->
+        {:noreply, advance(complete(state, id, {:ok, value}))}
+
+      {:error, error} ->
+        error = if state.pending[id].submitted, do: %{error | effect: :unknown}, else: error
+        {:noreply, advance(complete(state, id, {:error, error}))}
     end
   end
 
@@ -383,6 +423,18 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   defp frame(_, %{status: :closing} = state), do: {:noreply, state}
   defp frame(_, state), do: {:noreply, close(state, :invalid_response)}
+
+  defp accept_pair(state, id) do
+    if is_nil(state.policy) and is_nil(state.policy_control),
+      do: {:noreply, advance(complete(state, id, {:ok, %{paired: true}}))},
+      else: {:noreply, close(state, :invalid_response)}
+  end
+
+  defp accept_write(state, id) do
+    if state.pending[id].submitted,
+      do: {:noreply, advance(complete(state, id, {:ok, :written}))},
+      else: {:noreply, close(state, :invalid_response)}
+  end
 
   defp timed_parse(frame, operation, deadline) do
     if now() < deadline,
@@ -402,13 +454,14 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
-  defp admit(state, from, parameters, deadline, operation \\ "discover", policy \\ nil) do
+  defp admit(state, from, parameters, deadline, operation, policy \\ nil) do
     id = Integer.to_string(state.counter + 1)
 
     pending = %{
       from: from,
       operation: operation,
       policy: policy,
+      submitted: false,
       parameters: parameters,
       deadline: deadline,
       monitor: Process.monitor(elem(from, 0)),
@@ -478,9 +531,15 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   defp close(state, code, from \\ nil)
 
-  defp close(%{status: :closing} = state, _, from) do
-    if from, do: GenServer.reply(from, {:error, Error.new(:closing)})
-    state
+  defp close(%{status: :closing} = state, _, nil), do: state
+
+  defp close(%{status: :closing, close_from: waiters} = state, _, from) do
+    if length(waiters) < 64 do
+      %{state | close_from: [from | waiters]}
+    else
+      GenServer.reply(from, {:error, Error.new(:busy)})
+      state
+    end
   end
 
   defp close(state, code, from) do
@@ -488,7 +547,16 @@ defmodule Wotex.BLE.BlueZ.Connection do
     if state.waiter, do: GenServer.reply(state.waiter, {:error, Error.new(code)})
 
     state =
-      Enum.reduce(Map.keys(state.pending), state, &complete(&2, &1, {:error, Error.new(code)}))
+      Enum.reduce(Map.keys(state.pending), state, fn id, acc ->
+        error = Error.new(code)
+
+        error =
+          if acc.active == id and acc.pending[id].operation == "write",
+            do: %{error | effect: :unknown},
+            else: error
+
+        complete(acc, id, {:error, error})
+      end)
 
     request(state.port, "close", "close", %{}, 800)
     Process.send_after(self(), :terminate_bridge, 850)
@@ -501,13 +569,13 @@ defmodule Wotex.BLE.BlueZ.Connection do
         queue: :queue.new(),
         active: nil,
         close_id: "close",
-        close_from: from
+        close_from: if(from, do: [from], else: [])
     }
   end
 
   defp finish(state) do
-    if state.close_from, do: GenServer.reply(state.close_from, state.close_result)
-    {:stop, :normal, %{state | close_from: nil}}
+    Enum.each(state.close_from, &GenServer.reply(&1, state.close_result))
+    {:stop, :normal, %{state | close_from: []}}
   end
 
   defp request(port, id, operation, parameters, timeout) do

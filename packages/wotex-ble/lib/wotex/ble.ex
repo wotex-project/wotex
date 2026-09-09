@@ -2,7 +2,7 @@ defmodule Wotex.BLE do
   @moduledoc "Consumer-neutral BLE operations over an explicitly supplied real client port."
 
   import Kernel, except: [send: 2]
-  alias Wotex.BLE.{Error, PortCall, Session}
+  alias Wotex.BLE.{Address, Error, PortCall, Procedure, Session, Value}
   @operations [:read, :write]
 
   @doc "Reports the operations implemented by this library's validated client boundary."
@@ -56,8 +56,11 @@ defmodule Wotex.BLE do
       )
 
       case result do
-        {:error, error} when type in [:write, :write_property, :invoke, :call] ->
-          {:error, %{error | effect: :unknown}}
+        {:error, error} when type == :write ->
+          if session.client == Wotex.BLE.BlueZ and
+               match?(%Wotex.BLE.BlueZ.Connection{}, session.handle),
+             do: {:error, error},
+             else: {:error, %{error | effect: :unknown}}
 
         {:ok, _} = result ->
           result
@@ -72,6 +75,41 @@ defmodule Wotex.BLE do
   end
 
   def send(_, _), do: {:error, Error.new(:invalid_message)}
+
+  @doc "Reads raw bytes or an explicitly selected value codec from a GATT address."
+  @spec read(term(), term(), term()) :: {:ok, term()} | {:error, Error.t()}
+  def read(session, address, options \\ [])
+
+  def read(%Session{} = session, address, options) do
+    with {:ok, config} <- Procedure.options(options, session.timeout),
+         {:ok, address} <- Address.new(address),
+         message = Map.put(Map.from_struct(address), :type, :read),
+         {:ok, bytes} <- send(%{session | timeout: config.timeout}, message) do
+      Value.decode(bytes, config.type, config.codec)
+    end
+  end
+
+  def read(_, _, _), do: {:error, Error.new(:invalid_session)}
+
+  @doc "Writes an explicit value codec and waits for acknowledged GATT completion."
+  @spec write(term(), term(), term(), term()) :: {:ok, :written} | {:error, Error.t()}
+  def write(session, address, value, options \\ [])
+
+  def write(%Session{} = session, address, value, options) do
+    with {:ok, config} <- Procedure.options(options, session.timeout),
+         {:ok, address} <- Address.new(address),
+         {:ok, bytes} <- Value.encode(value, config.type, config.codec) do
+      message = Map.merge(Map.from_struct(address), %{type: :write, value: bytes})
+
+      case send(%{session | timeout: config.timeout}, message) do
+        {:ok, :written} = result -> result
+        {:error, _} = error -> error
+        _ -> {:error, %{Error.new(:invalid_transport_return) | effect: :unknown}}
+      end
+    end
+  end
+
+  def write(_, _, _, _), do: {:error, Error.new(:invalid_session)}
 
   @doc "Releases the explicit handle; the client owns idempotent transport cleanup."
   @spec disconnect(Session.t()) :: :ok | {:error, Error.t()}

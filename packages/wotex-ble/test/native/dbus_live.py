@@ -22,6 +22,7 @@ from dbus_next.aio import MessageBus
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "priv" / "bluez"))
 from client import Central, Failure, DEVICE, ADAPTER, SERVICE, CHARACTERISTIC, MANAGER, PROPERTIES
 from pairing import AGENT, MANAGER as AGENT_MANAGER
+from procedures import execute, bytes_value
 
 PEER = {"adapter": "/org/bluez/hci0", "address": "AA:BB:CC:DD:EE:FF", "address_type": "random"}
 DEVICE_PATH = "/fixture/device"
@@ -43,6 +44,10 @@ class GattFixture:
         self.hang_pair = False
         self.bonds = {"existing-bond"}
         self.sender_loss_disconnects = 0
+        self.pair_ack_signature = ""
+        self.value = b"\x2a\x00"
+        self.procedure_error = None
+        self.procedure_signature = None
         self.bus.add_message_handler(self.receive)
 
     def objects(self):
@@ -66,7 +71,7 @@ class GattFixture:
                 if reply.message_type != MessageType.METHOD_RETURN:
                     self.bus.send(Message.new_error(message, "org.bluez.Error.AuthenticationRejected", "Fixture rejected"))
                     return
-            self.bus.send(Message.new_method_return(message))
+            self.bus.send(Message.new_method_return(message, self.pair_ack_signature, [True] if self.pair_ack_signature else []))
         finally:
             self.pair_tasks.pop(message.sender, None)
 
@@ -107,6 +112,21 @@ class GattFixture:
             if message.member in ("CancelPairing", "RemoveDevice"):
                 self.bonds.clear()
                 return Message.new_method_return(message)
+        if message.path == CHAR_PATH and message.interface == CHARACTERISTIC and message.member in ("ReadValue", "WriteValue"):
+            if message.member == "WriteValue":
+                assert message.signature == "aya{sv}"
+                value, options = message.body
+                assert set(options) == {"type", "offset"}
+                assert options["type"].signature == "s" and options["type"].value == "request"
+                assert options["offset"].signature == "q" and options["offset"].value == 0
+                self.value = value
+            else:
+                assert message.signature == "a{sv}" and message.body == [{}]
+            if self.procedure_error:
+                return Message.new_error(message, self.procedure_error, "SECRET_NATIVE_MESSAGE")
+            signature = self.procedure_signature if self.procedure_signature is not None else "ay" if message.member == "ReadValue" else ""
+            body = [self.value] if signature == "ay" else [] if signature == "" else [True]
+            return Message.new_method_return(message, signature, body)
         if message.interface == MANAGER and message.member == "GetManagedObjects":
             data = self.objects()
             if self.race:
@@ -143,6 +163,42 @@ async def lane(address):
         assert not any(call[2] == "Disconnect" for call in fixture.calls)
         assert central.bus.handlers == {}
 
+        procedures = Central(events.append)
+        owners.append(procedures)
+        procedure_owner = await procedures.open(parameters, 2000)
+        submissions = []
+        procedures.emit = submissions.append
+        target = {"service": "180f", "characteristic": "2a19", "object_path": CHAR_PATH, "handle": 8, "generation": 1}
+        assert bytes_value(await execute(procedures, "read", {"address": target}, 1000, "r")) == b"\x2a\x00"
+        for encoded in ("", "AQI=", "AA=="):
+            value = {"type": "bytes", "base64": encoded}
+            assert await execute(procedures, "write", {"address": target, "value": value}, 1000, "w") is None
+            assert await execute(procedures, "read", {"address": target}, 1000, "r") == value
+        for name in ("NotPermitted", "NotAuthorized", "NotSupported", "InProgress", "InvalidValueLength", "InvalidOffset", "ImproperlyConfigured", "Failed", "FutureCase"):
+            fixture.procedure_error = "org.bluez.Error." + name
+            try:
+                await execute(procedures, "write", {"address": target, "value": {"type": "bytes", "base64": "AQ=="}}, 1000, "w-error")
+            except Failure as error:
+                assert error.name == fixture.procedure_error
+                assert "SECRET_NATIVE_MESSAGE" not in str(error) + json.dumps(error.envelope())
+            else:
+                raise AssertionError("D-Bus procedure denial reported success")
+        fixture.procedure_error = None
+        fixture.procedure_signature = "b"
+        for operation in ("read", "write"):
+            request = {"address": target, **({"value": {"type": "bytes", "base64": "AQ=="}} if operation == "write" else {})}
+            try:
+                await execute(procedures, operation, request, 1000, "bad-ack")
+            except Failure as error:
+                assert error.code == "invalid_response"
+            else:
+                raise AssertionError("wrong D-Bus return signature reported success")
+        fixture.procedure_signature = None
+        assert len(submissions) == 13
+        assert {sender for sender, _, member in fixture.calls if member in ("ReadValue", "WriteValue")} == {procedure_owner["sender"]}
+        await procedures.close()
+        assert fixture.connected is True
+
         # New sender owns its own connection attempt and releases only that link.
         fixture.connected = False
         owned = Central(events.append)
@@ -171,6 +227,16 @@ async def lane(address):
         assert await pairing.pair({"capability": "DisplayYesNo"}, 2000, "pair-1") == {"paired": True}
         assert fixture.pair_responses == [("METHOD_RETURN", "s", ["000042"]), ("METHOD_RETURN", "u", [42]), ("METHOD_RETURN", "", [])]
         assert len(challenges) == 3
+        assert fixture.agents == {} and fixture.pair_tasks == {}
+        fixture.pair_ack_signature = "b"
+        fixture.pair_prompts = []
+        try:
+            await pairing.pair({"capability": "DisplayYesNo"}, 2000, "bad-pair-ack")
+        except Failure as error:
+            assert error.code == "invalid_response"
+        else:
+            raise AssertionError("wrong Pair acknowledgement signature reported success")
+        fixture.pair_ack_signature = ""
         assert fixture.agents == {} and fixture.pair_tasks == {}
         assert {sender for sender, interface, _ in fixture.calls if interface == AGENT_MANAGER} == {paired_owner["sender"]}
         await pairing.close()
@@ -223,7 +289,7 @@ async def lane(address):
             assert error.code == "owner_changed"
         else:
             raise AssertionError("old bus owner remained usable")
-        return {"requirements": ["WBL-C03", "WBL-C07", "WBL-S01", "WBL-S02", "WBL-V03", "WBL-V04", "WBL-S05", "WBL-V06"], "dbus_next": version("dbus-next"), "snapshots": sum(call[2] == "GetManagedObjects" for call in fixture.calls), "owned_connects": sum(call[2] == "Connect" for call in fixture.calls), "owned_disconnects": sum(call[2] == "Disconnect" for call in fixture.calls), "borrowed_disconnect_calls": 0, "pending_pair_sender_loss_disconnects": fixture.sender_loss_disconnects, "agents_remaining": len(fixture.agents), "pair_requests_remaining": len(fixture.pair_tasks), "pairing_callbacks": len(fixture.pair_responses), "bonds_preserved": len(fixture.bonds), "status": "passed", "evidence": "real_dbus_injected_gatt"}
+        return {"requirements": ["WBL-C03", "WBL-C07", "WBL-S01", "WBL-S02", "WBL-V03", "WBL-V04", "WBL-S05", "WBL-V06", "WBL-S03", "WBL-V05"], "dbus_next": version("dbus-next"), "snapshots": sum(call[2] == "GetManagedObjects" for call in fixture.calls), "owned_connects": sum(call[2] == "Connect" for call in fixture.calls), "owned_disconnects": sum(call[2] == "Disconnect" for call in fixture.calls), "borrowed_disconnect_calls": 0, "pending_pair_sender_loss_disconnects": fixture.sender_loss_disconnects, "agents_remaining": len(fixture.agents), "pair_requests_remaining": len(fixture.pair_tasks), "pairing_callbacks": len(fixture.pair_responses), "acknowledged_writes": 3, "named_write_rejections": 9, "malformed_signatures_rejected": 3, "bonds_preserved": len(fixture.bonds), "status": "passed", "evidence": "real_dbus_injected_gatt"}
     finally:
         for owner in owners:
             await owner.close()
