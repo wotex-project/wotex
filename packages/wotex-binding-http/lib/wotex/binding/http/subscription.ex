@@ -6,6 +6,10 @@ defmodule Wotex.Binding.HTTP.Subscription do
   request and stream operation. Only the matching close operation and client
   configuration instance can consume it. The handle retains only a non-secret
   instance reference, never the client configuration or opening credentials.
+
+  Construction and unwrapping are internal transport operations. Consumers
+  treat the struct as an opaque capability and pass it back to the close path;
+  serializing, forging, or reusing it across binding instances is unsupported.
   """
 
   alias Wotex.Binding.HTTP.Config

@@ -1,17 +1,22 @@
 # Wotex HTTP Binding
 
+**Caller-owned HTTP and Server-Sent Events transport for Wotex Runtime.**
+
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_binding_http.svg)](https://hex.pm/packages/wotex_binding_http)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_binding_http)
 [![CI](https://github.com/wotex-project/wotex-binding-http/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-binding-http/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/wotex-project/wotex-binding-http/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-binding-http)
-[![License](https://img.shields.io/github/license/wotex-project/wotex-binding-http.svg)](LICENSE)
-
-Caller-owned HTTP and Server-Sent Events transport for the Wotex Runtime.
+[![License](https://img.shields.io/hexpm/l/wotex_binding_http.svg)](https://github.com/wotex-project/wotex-binding-http/blob/main/LICENSE)
 
 [Documentation](https://hexdocs.pm/wotex_binding_http) ·
 [Hex package](https://hex.pm/packages/wotex_binding_http) ·
 [Source](https://github.com/wotex-project/wotex-binding-http) ·
 [Wotex](https://wotex.io)
+
+---
+
+This is a development checkout. The public API remains unstable; no published
+release or W3C certification is implied.
 
 `wotex_binding_http` maps selected W3C Web of Things Thing Description (TD)
 Forms to immutable HTTP messages. A consumer-supplied client performs every
@@ -39,18 +44,20 @@ testable HTTP meaning for Wotex interactions.
 
 ## Installation
 
-Add the package to `mix.exs`:
+For a sibling-checkout consumer, select the package explicitly:
 
 ```elixir
 def deps do
   [
-    {:wotex_binding_http, "~> 0.1.0"}
+    {:wotex_binding_http, path: "../wotex-binding-http"}
   ]
 end
 ```
 
-Normal builds resolve `wotex ~> 0.1.0` and `wotex_runtime ~> 0.1.0` from Hex.
-The released archive contains no local path dependencies or agent files.
+Package builds resolve `wotex ~> 0.1.0` and `wotex_runtime ~> 0.1.0` from Hex.
+Once a suitable release is available, replace the consumer's path dependency
+with its version constraint. Archive checks reject local path dependencies and
+agent files in the packaged source.
 
 ## Implement the client port
 
@@ -73,8 +80,8 @@ defmodule ConsumerHTTPClient do
     # to the Runtime subscription process as {:wotex_transport_frame, event},
     # optionally report {:wotex_transport_status, :reconnected | :session_lost |
     # :transport_down}, and return {:ok, opaque_handle, handshake_response}.
-    # The client never decodes an event; Process.monitor(owner) is enough to
-    # release the connection when the subscription stops.
+    # The client does not JSON-decode event data. Monitor owner and close the
+    # exact connection on DOWN, including while establishment is pending.
   end
 
   @impl true
@@ -204,4 +211,5 @@ Focused proofs remain available as `bin/check_boundary.exs` and
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Apache-2.0. See [LICENSE](https://github.com/wotex-project/wotex-binding-http/blob/main/LICENSE)
+and [NOTICE](https://github.com/wotex-project/wotex-binding-http/blob/main/NOTICE).

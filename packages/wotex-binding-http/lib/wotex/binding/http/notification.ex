@@ -8,6 +8,11 @@ defmodule Wotex.Binding.HTTP.Notification do
   interaction identity, while the decoded JSON value travels as `data`.
 
   The map contains no credential, connection, or client value.
+
+  `new/3` is called after Server-Sent Events framing and payload decoding. It
+  accepts only Property observation and Event subscription operations, keeping
+  transport bookkeeping separate from the application value delivered by
+  `Wotex.Runtime`.
   """
 
   alias Wotex.Binding.HTTP.SSE.Event

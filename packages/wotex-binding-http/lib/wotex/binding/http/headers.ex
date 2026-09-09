@@ -5,6 +5,17 @@ defmodule Wotex.Binding.HTTP.Headers do
   Names are normalized to lowercase and duplicates are rejected. Credential,
   connection, host, and message-framing fields stay under the supplied client's
   control and cannot enter a request through static configuration or TD Forms.
+
+  `new/2` validates field-name tokens and text values for request or response
+  use. Request construction rejects connection-specific framing fields;
+  credential-bearing fields are rejected in both directions. `merge/2` and
+  `put/3` compose already validated lists deterministically, and `get/2`
+  performs a case-insensitive lookup against their normalized names.
+
+  A `t:t/0` preserves field order and original values while representing names
+  in lowercase. The module does not apply an execution credential, calculate
+  Content-Length, or choose HTTP connection behavior. The supplied client owns
+  those operations at the immediate network boundary.
   """
 
   alias Wotex.Binding.HTTP.Error

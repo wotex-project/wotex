@@ -4,6 +4,18 @@ defmodule Wotex.Binding.HTTP.Response do
 
   The client provides a complete binary body and raw HTTP fields. Construction
   revalidates status and fields before Runtime response decoding begins.
+
+  `new/3` accepts status codes from 100 through 599, validates the response
+  fields with `Wotex.Binding.HTTP.Headers`, and retains the body without
+  interpreting its media type. Accessors expose the three components to the
+  binding's response mapper. The value contains no request credential, client
+  handle, connection state, or redirect history.
+
+  The supplied client owns framing, decompression, redirect policy, and body
+  collection. It must apply its own transport limits before construction; the
+  binding applies the configured representation limit before decoding. A valid
+  `t:t/0` proves only that the response has the required local shape. Status and
+  content semantics are evaluated by the operation that consumes it.
   """
 
   alias Wotex.Binding.HTTP.{Error, Headers}

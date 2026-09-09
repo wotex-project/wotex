@@ -5,6 +5,19 @@ defmodule Wotex.Binding.HTTP.SSE.Event do
   The client joins repeated `data` lines and validates SSE framing before
   constructing this value. The binding then validates field values and decodes
   the complete data payload as JSON.
+
+  `new/2` retains the joined data together with optional event type,
+  last-event identifier, and non-negative reconnection delay. Event and
+  identifier values must be valid text without null, carriage-return, or
+  line-feed bytes. Accessors expose each field without granting the binding
+  ownership of stream parsing or reconnect policy.
+
+  The value represents one event after dispatch framing, not an HTTP response
+  chunk. `Wotex.Binding.HTTP.Transport` decodes its JSON data;
+  `Wotex.Binding.HTTP.Notification` builds Runtime delivery metadata.
+  The client remains responsible for
+  byte framing, line joining, connection lifetime, backpressure, and deciding
+  whether to act on the optional retry field.
   """
 
   alias Wotex.Binding.HTTP.Error
