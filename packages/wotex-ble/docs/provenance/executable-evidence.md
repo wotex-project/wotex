@@ -93,5 +93,15 @@ The fixture does not open the host system or session bus. Exact libdbus source
 identity is specified in WBL.13; the selected fixture requires explicit source
 and build directories and rejects a runtime library version mismatch.
 
-This component evidence does not establish BlueZ service ownership, GATT,
-Agent1 procedures, the complete native Port helper or the planned SDK build task.
+The same fixture exercises source/path/signature-checked signal listeners,
+removal inside callbacks, a 64-listener limit and 100000 listener lifetimes with
+no retained records. `service.hpp` installs its ownership listener before the
+asynchronous match/owner lookup. The fixture owns `org.bluez` on the private
+daemon, asserts the distinct client/service unique names, then releases and
+reacquires that name from a separate sender. The original service tracker
+terminates once, cancels pending work and closes its private connection without
+adopting the replacement. Cancelled establishment and late Hello also clean up.
+
+The service-name fixture is an identity/ownership test, not a BlueZ GATT peer.
+This evidence does not establish GATT, Agent1 procedures, the complete native
+Port helper or the planned SDK build task.

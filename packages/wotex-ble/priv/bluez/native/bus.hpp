@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <limits>
 #include <memory>
 #include <poll.h>
 #include <stdexcept>
@@ -24,8 +25,14 @@ struct MessageDelete { void operator()(DBusMessage *value) const { if (value) db
 using Message = std::unique_ptr<DBusMessage, MessageDelete>;
 struct BusReply { const char *error; Message message; };
 using BusCallback = std::function<void(BusReply)>;
+using SignalCallback = std::function<void(DBusMessage *)>;
 
 class Bus {
+  struct Listener {
+    std::string sender, path, interface, member, signature;
+    SignalCallback callback;
+    bool active = true;
+  };
   struct Watch { DBusWatch *value; bool active = true; };
   struct Timeout { DBusTimeout *value; Deadline due; bool active = true; };
   struct Pending {
@@ -47,9 +54,39 @@ class Bus {
   std::map<DBusWatch *, std::shared_ptr<Watch>> watches_;
   std::map<DBusTimeout *, std::shared_ptr<Timeout>> timeouts_;
   std::map<DBusPendingCall *, std::unique_ptr<Pending>> pending_;
+  std::map<std::uint64_t, std::shared_ptr<Listener>> listeners_;
+  std::uint64_t listener_sequence_ = 0;
   std::string unique_name_;
   const char *failure_ = nullptr;
   bool hello_sent_ = false;
+  bool filter_installed_ = false;
+
+  static DBusHandlerResult received(DBusConnection *, DBusMessage *message, void *data) noexcept {
+    auto &owner = *static_cast<Bus *>(data);
+    if (dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_SIGNAL)
+      return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    const char *sender = dbus_message_get_sender(message);
+    if (!sender) return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    try {
+      std::vector<std::shared_ptr<Listener>> selected;
+      for (const auto &[unused, listener] : owner.listeners_) {
+        (void)unused;
+        if (listener->sender == sender &&
+            (listener->path.empty() || dbus_message_has_path(message, listener->path.c_str())) &&
+            dbus_message_is_signal(message, listener->interface.c_str(), listener->member.c_str()))
+          selected.push_back(listener);
+      }
+      for (const auto &listener : selected) {
+        if (!listener->active) continue;
+        if (!dbus_message_has_signature(message, listener->signature.c_str())) {
+          owner.failure_ = "invalid_response";
+          break;
+        }
+        listener->callback(message);
+      }
+    } catch (...) { owner.failure_ = "callback_failed"; }
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  }
 
   static Deadline after(int interval) {
     return Clock::now() + std::chrono::milliseconds(std::max(0, interval));
@@ -199,6 +236,8 @@ public:
       close();
       throw std::runtime_error("resource_limit");
     }
+    filter_installed_ = dbus_connection_add_filter(connection_, received, this, nullptr);
+    if (!filter_installed_) { close(); throw std::runtime_error("resource_limit"); }
   }
   Bus(const Bus &) = delete;
   Bus &operator=(const Bus &) = delete;
@@ -225,6 +264,36 @@ public:
             Deadline deadline, BusCallback callback) {
     if (unique_name_.empty()) return false;
     return enqueue(message, signature, deadline, std::move(callback));
+  }
+
+  // Registration is local and precedes the caller's asynchronous AddMatch and
+  // snapshot. Source checks remain necessary even when the daemon filters.
+  std::uint64_t listen(std::string sender, std::string path, std::string interface,
+                       std::string member, std::string signature, SignalCallback callback) {
+    if (!connection_ || failure_ || unique_name_.empty() || listeners_.size() >= 64 ||
+        listener_sequence_ == std::numeric_limits<std::uint64_t>::max())
+      throw std::runtime_error("resource_limit");
+    for (const auto *field : {&sender, &path, &interface, &member, &signature})
+      if (field->size() > 4096 || field->find('\0') != std::string::npos)
+        throw std::invalid_argument("invalid_listener");
+    if (sender.empty() || (sender[0] != ':' && sender != DBUS_SERVICE_DBUS) ||
+        !dbus_validate_bus_name(sender.c_str(), nullptr) ||
+        (!path.empty() && !dbus_validate_path(path.c_str(), nullptr)) ||
+        !dbus_validate_interface(interface.c_str(), nullptr) ||
+        !dbus_validate_member(member.c_str(), nullptr) ||
+        !dbus_signature_validate(signature.c_str(), nullptr) || !callback)
+      throw std::invalid_argument("invalid_listener");
+    const auto identity = ++listener_sequence_;
+    listeners_.emplace(identity, std::make_shared<Listener>(Listener{
+      std::move(sender), std::move(path), std::move(interface), std::move(member),
+      std::move(signature), std::move(callback)}));
+    return identity;
+  }
+  void unlisten(std::uint64_t identity) noexcept {
+    const auto found = listeners_.find(identity);
+    if (found == listeners_.end()) return;
+    found->second->active = false;
+    listeners_.erase(found);
   }
 
   // Extra descriptors belong to the caller (typically native stdin/stdout).
@@ -280,8 +349,12 @@ public:
   }
 
   void close() noexcept {
+    for (const auto &[unused, listener] : listeners_) { (void)unused; listener->active = false; }
+    listeners_.clear();
     pending_.clear();
     if (connection_) {
+      if (filter_installed_) dbus_connection_remove_filter(connection_, received, this);
+      filter_installed_ = false;
       dbus_connection_set_watch_functions(connection_, nullptr, nullptr, nullptr, nullptr, nullptr);
       dbus_connection_set_timeout_functions(connection_, nullptr, nullptr, nullptr, nullptr, nullptr);
       dbus_connection_close(connection_);
@@ -295,5 +368,6 @@ public:
   std::size_t pending_count() const { return pending_.size(); }
   std::size_t watch_count() const { return watches_.size(); }
   std::size_t timeout_count() const { return timeouts_.size(); }
+  std::size_t listener_count() const { return listeners_.size(); }
 };
 } // namespace wotex::ble
