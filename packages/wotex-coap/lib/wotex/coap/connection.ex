@@ -26,7 +26,8 @@ defmodule Wotex.CoAP.Connection do
     :dtls_mode,
     :datagram,
     :execution,
-    :observation_kind
+    :observation_kind,
+    :observation_options
   ]
 
   @doc "Starts a caller-safe linked owner for an explicitly selected datagram adapter."
@@ -915,10 +916,12 @@ defmodule Wotex.CoAP.Connection do
   end
 
   defp start_observation(state, config, deadline, timeout, from) do
-    with {:ok, token} <- unique_token(state.responses, 8, nil),
+    with {:ok, request} <-
+           Observation.wire_request(config.request, state.config.observation_options),
+         {:ok, token} <- unique_token(state.responses, 8, nil),
          {:ok, handle} <- Subscription.new(self(), make_ref(), state.generation) do
       capability = make_ref()
-      request = %{config.request | token: token}
+      request = %{request | token: token}
 
       config =
         Map.merge(config, %{
@@ -1139,8 +1142,10 @@ defmodule Wotex.CoAP.Connection do
          :ok <- valid_timeout_config?(config.timeout),
          :ok <- valid_ack_config?(config.ack_timeout),
          :ok <- valid_owner_config?(config.owner),
-         :ok <- valid_execution_config?(config.execution, config.observation_kind, datagram) do
-      adapter_config(datagram, config)
+         :ok <- valid_execution_config?(config.execution, config.observation_kind, datagram),
+         {:ok, observation_options} <-
+           Observation.wire_options(Map.get(values, :observation_options, [])) do
+      adapter_config(datagram, Map.put(config, :observation_options, observation_options))
     end
   end
 

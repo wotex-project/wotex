@@ -9,7 +9,7 @@ defmodule Wotex.CoAP.Observation do
 
   use GenServer
   alias Wotex.CoAP
-  alias Wotex.CoAP.{Block, Blockwise, Codec, Connection, Error, Execution, Observe}
+  alias Wotex.CoAP.{Block, Blockwise, Codec, Connection, Error, Execution, Message, Observe}
   alias Wotex.CoAP.Observation.Report
 
   @doc "Validates a native Observe request without opening or registering anything."
@@ -25,6 +25,32 @@ defmodule Wotex.CoAP.Observation do
     else
       _ -> failure(:invalid_observation_options)
     end
+  end
+
+  @doc "Validates explicit connection defaults for Observe Accept and confirmable requests."
+  @spec wire_options(term()) :: {:ok, map()} | {:error, Error.t()}
+  def wire_options(options) do
+    with {:ok, values} <- wire_values(options, %{}),
+         true <- is_boolean(Map.get(values, :confirmable, true)),
+         true <- not is_map_key(values, :accept) or values.accept in 0..65_535 do
+      {:ok, Map.merge(%{accept: nil, confirmable: true}, values)}
+    else
+      _ -> failure(:invalid_observation_options)
+    end
+  end
+
+  @doc false
+  @spec wire_request(Message.t(), map()) :: {:ok, Message.t()} | {:error, Error.t()}
+  def wire_request(request, options) do
+    accept = if is_nil(options.accept), do: [], else: [{17, Codec.uint(options.accept)}]
+
+    request = %{
+      request
+      | type: if(options.confirmable, do: :con, else: :non),
+        options: accept ++ request.options
+    }
+
+    with {:ok, _} <- Codec.encode(request), do: {:ok, request}
   end
 
   @doc false
@@ -157,6 +183,14 @@ defmodule Wotex.CoAP.Observation do
        do: option_values(rest, Map.put(values, key, value))
 
   defp option_values(_, _), do: failure(:invalid_observation_options)
+
+  defp wire_values([], values), do: {:ok, values}
+
+  defp wire_values([{key, value} | rest], values)
+       when key in [:accept, :confirmable] and not is_map_key(values, key),
+       do: wire_values(rest, Map.put(values, key, value))
+
+  defp wire_values(_, _), do: failure(:invalid_observation_options)
 
   defp exchange(state, request, operation, deadline) do
     if deadline > now(),

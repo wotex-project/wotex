@@ -49,7 +49,7 @@ defmodule Wotex.CoAP.Mapping do
              confirmable: Map.get(map, "cov:confirmable", true),
              content_format: if(is_nil(input) and method in [:get, :delete], do: nil, else: format)
            }),
-         {:ok, message} <- options(message, map, format) do
+         {:ok, message} <- options(message, map, format, op) do
       {:ok,
        %{
          host: uri.host,
@@ -156,12 +156,19 @@ defmodule Wotex.CoAP.Mapping do
 
   defp encode(_, _), do: :error
 
-  defp options(message, map, format) do
+  defp options(message, map, format, operation) do
     accept = Map.get(map, "cov:accept", format)
     content = Map.get(map, "cov:contentFormat", format)
 
     if accept == format and content == format do
-      message = %{message | options: [{17, Codec.uint(accept)} | message.options]}
+      options = [{17, Codec.uint(accept)} | message.options]
+
+      options =
+        if operation in [:observeproperty, :subscribeevent],
+          do: [{6, <<>>} | options],
+          else: options
+
+      message = %{message | options: options}
       with {:ok, _} <- Codec.encode(%{message | payload: <<>>}), do: {:ok, message}
     else
       :error

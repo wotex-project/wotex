@@ -660,6 +660,73 @@ defmodule Wotex.CoAP.ObservationTest do
     cancel(peer, session, handle)
   end
 
+  test "WCO-S04 WCO-I05 explicit wire defaults survive registration, renewal and cancellation" do
+    for accept <- [0, 50, 65_535] do
+      {peer, port} = peer()
+
+      {:ok, session} =
+        CoAP.connect(
+          host: "127.0.0.1",
+          port: port,
+          timeout: 1000,
+          observation_options: [accept: accept, confirmable: false]
+        )
+
+      receiver = self()
+      task = Task.async(fn -> CoAP.subscribe(session, %{path: "/x?a=b", receiver: receiver}) end)
+      initial = wire().message
+      assert initial.type == :non and Codec.option(initial, 17) == [Codec.uint(accept)]
+
+      send(
+        peer.pid,
+        {:reply,
+         %{
+           report(initial, :non, 10, "value")
+           | message_id: 700,
+             options: [{6, <<10>>}, {14, <<1>>}]
+         }}
+      )
+
+      assert {:ok, handle} = Task.await(task)
+      assert_receive {:wotex_coap, _, {:ok, _, %{observe: 10}}}
+      renewal = wire().message
+      assert renewal.type == :non and renewal.token == initial.token
+      assert Codec.option(renewal, 17) == [Codec.uint(accept)]
+      assert Codec.option(renewal, 15) == ["a=b"]
+      send(peer.pid, {:reply, %{report(renewal, :non, 11, "next") | message_id: 701}})
+      assert_receive {:wotex_coap, _, {:ok, _, %{observe: 11}}}
+      cancel = Task.async(fn -> CoAP.unsubscribe(session, handle) end)
+      request = wire().message
+      assert request.type == :non and request.token == initial.token
+      assert Codec.option(request, 17) == [Codec.uint(accept)]
+      assert Codec.option(request, 6) == [<<1>>]
+      send(peer.pid, {:reply, %{request | type: :non, code: 69, message_id: 702, options: []}})
+      assert :ok = Task.await(cancel)
+      assert :ok = CoAP.disconnect(session)
+      close(peer)
+    end
+  end
+
+  test "WCO-C02 WCO-S04 malformed explicit wire defaults fail before socket acquisition" do
+    for options <- [
+          nil,
+          %{},
+          [accept: nil],
+          [accept: -1],
+          [accept: 65_536],
+          [accept: 50.0],
+          [confirmable: nil],
+          [accept: 50, accept: 50],
+          [path: "/x"],
+          [{:accept, 50} | nil]
+        ] do
+      assert {:error, %Error{code: :invalid_observation_options}} =
+               CoAP.connect(host: "127.0.0.1", observation_options: options)
+    end
+
+    assert {:ok, %{accept: nil, confirmable: true}} = Observation.wire_options([])
+  end
+
   defp await(owner, predicate),
     do: await(owner, predicate, System.monotonic_time(:millisecond) + 1000)
 

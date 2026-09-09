@@ -120,6 +120,7 @@ defmodule Wotex.CoAP.MappingTest do
       assert Codec.option(mapping.message, 11) == ["a/b"]
       assert Codec.option(mapping.message, 15) == ["x=a&b", "plus=a+b"]
       assert Codec.option(mapping.message, 17) == [<<50>>]
+      assert Codec.option(mapping.message, 6) == [<<>>]
 
       for extra <- [%{"cov:method" => "POST"}, %{"cov:accept" => 0}, %{"cov:contentFormat" => 42}] do
         {:ok, bad} = Wotex.Form.new(Map.merge(map, extra), for: context)
