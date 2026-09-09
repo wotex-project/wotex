@@ -91,8 +91,10 @@ The WBA-S03a owned ingress bound covers suspended stack owners and clients;
 the consumption window also bounds packets waiting before the COV receiver.
 They require the owned `IPv4` client or a verified Wotex stack wrapper; a raw
 borrowed BACstack Client supports read/write operations only. Native and real
-Runtime lifecycle tests exercise COV ownership. Independent C-peer COV and the
-complete software workflow remain open in WBA-P06. Routing/BBMD, MS/TP and
+Runtime lifecycle tests exercise COV ownership. The independent C fixture tests
+object COV, discovery, batch reads, priority release and acknowledgment loss.
+Property COV, the complete stress workflow and final source/archive cohorts
+remain open in WBA-P06. Routing/BBMD, MS/TP and
 BACnet/SC are unsupported.
 
 ## Wotex contract

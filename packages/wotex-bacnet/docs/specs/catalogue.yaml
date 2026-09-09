@@ -37,7 +37,7 @@ specifications:
     requires: ["WBA.00", "WBA.01", "WBA.02"]
     implementation_modules: ["Wotex.BACnet.Address", "Wotex.BACnet.BACstack", "Wotex.BACnet.Client", "Wotex.BACnet.Error", "Wotex.BACnet.IPv4", "Wotex.BACnet.PortCall", "Wotex.BACnet.Session", "Wotex.BACnet.StackOwner", "Wotex.BACnet.Value", "Wotex.BACnet", "Wotex.BACnet.IngressTransport", "Wotex.BACnet.IngressWindow", "Wotex.BACnet.IPv4Packet", "Wotex.BACnet.IPv4Interface", "Wotex.BACnet.StackClient"]
     executable_evidence: ["test/wotex/bacnet/service_boundary_test.exs", "test/wotex/bacnet/character_string_test.exs", "test/wotex/bacnet/stack_lifecycle_test.exs", "test/wotex/bacnet/stack_cov_test.exs", "test/wotex/bacnet/cov_lifecycle_test.exs", "test/wotex/bacnet/native_subscription_test.exs", "test/wotex/bacnet/runtime_stream_test.exs", "test/wotex/bacnet/ingress_lifecycle_test.exs", "test/wotex/bacnet/ingress_window_test.exs", "test/wotex/bacnet/ipv4_packet_test.exs", "test/wotex/bacnet/ipv4_interface_test.exs"]
-    compatibility_classification: "Typed service, COV and bounded owned UDP lifecycle have local evidence, including IG01–IG06. Independent C-peer COV/discovery and final supported software matrix remain open."
+    compatibility_classification: "Typed service, COV and bounded owned UDP lifecycle have local evidence, including IG01–IG06. Independent object COV, discovery, batch, release and ACK-loss cases have C-peer evidence; Property COV and the final complete software matrix remain open."
   - id: "WBA.11"
     version: "1.1.0"
     path: "docs/specs/WBA.11-standalone-client-and-preservation.md"

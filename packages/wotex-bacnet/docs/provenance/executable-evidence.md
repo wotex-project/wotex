@@ -4,8 +4,9 @@ Implementation commit `848312a8deb3a18e2ded0b5103ea1a2e2964831d` passed the full
 local gate on Elixir 1.20.2 / OTP 29.0.4 and Elixir 1.18.4 / OTP 27.3.4.15.
 Both lanes executed 214 cases (four properties and 210 tests); the three optional
 interop/software cases remained excluded. Coverage was 95.5% and 95.4%,
-respectively. These results establish the local native/Runtime test boundary;
-independent C-peer COV and the complete WBA-P06 software workflow remain open.
+respectively. These results establish that source's local native/Runtime test
+boundary. They do not establish independent C-peer COV or the complete WBA-P06
+software workflow.
 
 The tested implementation tree was
 `9a8df0d569b8b50cf665de3f9011ba8e9618d3d6`. Both lanes produced archive SHA-256
@@ -54,16 +55,17 @@ and Retry projection. The expected class never enters the protocol client.
 A corpus assertion requires all seven case IDs and their local bindings; an
 empty or incomplete case list fails. These injected native-error cases establish
 the Runtime boundary, not independent wire-fault behavior.
-COV and Runtime lifecycle tests exercise the native BEAM wrapper over UDP fault
-peers. They do not establish independent C-stack COV.
+Local COV and Runtime lifecycle tests exercise the native BEAM wrapper over UDP
+fault peers. Independent object-COV evidence comes from the separate C suite
+described below.
 
 The checked-in `build_software.sh` and `run_software.sh` exercise the read/write
 fixture. They accept environment configuration and do not implement the target
 absolute-workspace admission or complete source/toolchain/binary manifest.
-The required Mix build/run tasks, independent
-C-peer discovery/batch/COV/resource counters, and final software matrix/archive
-cohort remain required. A COV listener or final receiver queue bound does not
-bound an earlier SDK-to-StackOwner mailbox.
+The required Mix build/run tasks, independent C-peer Property COV, full
+receiver-death stress and final software matrix/archive cohort remain required.
+A COV listener or final receiver queue bound does not bound an earlier
+SDK-to-StackOwner mailbox.
 
 The S03a receive pipeline has executable unit/property and local UDP tests.
 `ingress_window_test.exs` binds accounting projections of IG01–IG03 and
@@ -83,6 +85,28 @@ addresses without changing any host interface. Actual receive buffer sizes are
 recorded; kernel packet loss is unavailable through the selected portable inet
 API and is never reported as zero. These local tests do not replace the required
 Linux independent C-peer workflow, final supported matrix or complete C09 stress.
+
+## Independent C object-COV execution
+
+The instrumented [C fixture](../../test/interop/cstack/README.md) links the
+unmodified pinned C stack. WBA-CP01's native parser/counter checks and WBA-CP02
+through WBA-CP09's eight ExUnit cases pass on Linux ARM64 with GCC 12.2.0,
+both normally and with ASan/UBSan applied to the fixture and linked SDK. The
+ExUnit subject uses Elixir 1.20.2 / OTP 29.0.4 and actual UDP transport.
+
+The suite observes Who-Is/I-Am, three sequential Property reads, write/readback
+and priority release through a second actual client. Confirmed and unconfirmed
+object COV deliver Present_Value and Status_Flags. Successful renewal changes
+the actual SDK subscription record. ACK-loss cases apply registration/renewal/
+cancellation in the C stack, then drop only the outgoing acknowledgment. A lost
+cancellation request leaves an observed server subscription after local cleanup;
+the finite server lease subsequently expires. Tests assert actual subscriber,
+Invoke ID, ACK and cancellation counts, native process exits and socket release.
+
+Peak native RSS is reported separately from live resource counts. These cases
+do not establish SubscribeCOVProperty, complete C09 stress or the final immutable
+package consumer cohort. The fixture's explicit source/options and counter
+semantics are part of its contract, not a claim of general-purpose server support.
 
 ## Evidence identities
 

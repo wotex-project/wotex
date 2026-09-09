@@ -71,3 +71,16 @@ The [TransportBehaviour](https://hexdocs.pm/bacstack/0.0.1/BACnet.Stack.Transpor
 is the public seam for the package's required bounded BEAM transport. S03a's
 credit count, starvation timeout and datagram bound are library policy, not an
 ASHRAE requirement or an existing BACstack callback.
+
+## Independent object COV fixture
+
+The pinned C stack's
+[server registration](https://github.com/bacnet-stack/bacnet-stack/blob/3603048350b8ba543ec76cf6aa8a232b3f4d442d/apps/server/main.c)
+and [COV handler](https://github.com/bacnet-stack/bacnet-stack/blob/3603048350b8ba543ec76cf6aa8a232b3f4d442d/src/bacnet/basic/service/h_cov.c)
+implement SubscribeCOV. Its public cov.h supplies a SubscribeCOVProperty codec,
+but the server has no corresponding handler. The instrumented fixture links the
+unmodified SDK object-COV handler. Its resource observations decode the actual
+Active_COV_Subscriptions representation and read the public transaction table.
+The fixture's finite control interface and loss controls are first-party test
+code; they are not production SDK extensions or a certification claim. Their
+exact scope is in [the fixture contract](../../test/interop/cstack/README.md).

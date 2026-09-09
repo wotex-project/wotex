@@ -76,9 +76,10 @@ Borrowed native sessions default to `receive_policy: :consumer_managed`.
 `:wotex_bounded` requires the version-three wrapper plus verification of its
 actual live transport and generation. Borrowed Runtime COV requires that mode.
 Local tests exercise each ingress corpus case, including 10000 maximum-size
-datagrams with StackOwner and StackClient suspended separately. Independent
-C-peer COV, the full discovery/batch/COV workflow and final WBA-P06 evidence
-remain required; this section does not accept the complete target profile.
+datagrams with StackOwner and StackClient suspended separately. Independent C
+tests exercise object COV, discovery, batch reads, priority release and lost ACKs.
+Property COV, full receiver-death stress and final WBA-P06 evidence remain
+required; this section does not accept the complete target profile.
 
 ## Evidence and compatibility
 
