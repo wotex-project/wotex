@@ -10,6 +10,10 @@ defmodule Wotex.Form do
 
   A valid Form is descriptive metadata. It does not select a transport,
   resolve credentials, authorize an interaction, or establish its outcome.
+
+  Use `href/1` and `operations/1` or `operations/2` to inspect admitted fields;
+  enclosing affordance modules supply the interaction context required for W3C
+  default-operation rules.
   """
 
   alias Wotex.Value

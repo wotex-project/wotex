@@ -9,6 +9,11 @@ defmodule Wotex.ActionAffordance do
 
   Build values with `new/2` and recover the preserved representation with
   `to_map/1`. Consumers should use those functions rather than struct fields.
+
+  `forms/1` returns validated `Wotex.Form` values in declaration order, and
+  `operations/2` derives the effective Action operations for one Form. These
+  accessors interpret Thing Description metadata only; selection and execution
+  belong to a consuming runtime.
   """
 
   alias Wotex.{Form, Value}

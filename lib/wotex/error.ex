@@ -4,6 +4,20 @@ defmodule Wotex.Error do
 
   Match on `code`, `phase`, and `path`. Human-readable messages may improve in
   compatible releases and are not a matching interface.
+
+  `phase` locates the failing parse, value, schema, semantic, or encoding
+  boundary. `path` is a JSON Pointer-style location within the input, while
+  `details` carries machine-readable context specific to the error code.
+  Constructors do not sanitize arbitrary diagnostic input; callers must bound
+  and review it before reporting a failure. Make control-flow decisions only
+  from documented stable fields.
+
+  `Wotex.Error` implements the exception protocol for inspection and optional
+  raising by a consumer, although Wotex public operations return it in tagged
+  error tuples for expected invalid input. Messages and details must not be used
+  to transport credentials, unbounded source documents, or consumer-specific
+  policy. A validation error describes the package boundary; it is not an
+  authorization result or a standards-certification record.
   """
 
   @type phase :: :parse | :value | :schema | :semantic | :encode

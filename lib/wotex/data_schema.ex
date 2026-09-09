@@ -9,6 +9,11 @@ defmodule Wotex.DataSchema do
 
   Use `new/2` at a value boundary and `to_map/1` when serializing or projecting
   the schema. Consumers should use those functions rather than struct fields.
+
+  Construction enforces bounded JSON-value structure through the shared Wotex
+  limits. It deliberately does not decide whether an instance satisfies
+  vocabulary constraints; validation engines and numerical encoders make that
+  separate, context-specific decision.
   """
 
   alias Wotex.Value

@@ -3,10 +3,10 @@
 **W3C Web of Things values and Thing Description mechanics for Elixir.**
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex.svg)](https://hex.pm/packages/wotex)
-[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex)
 [![CI](https://github.com/wotex-project/wotex/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/wotex-project/wotex/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex)
-[![License](https://img.shields.io/hexpm/l/wotex.svg)](LICENSE)
+[![License](https://img.shields.io/hexpm/l/wotex.svg)](https://github.com/wotex-project/wotex/blob/main/LICENSE)
 
 [Installation](#installation) ·
 [Quick start](#quick-start) ·
@@ -16,6 +16,9 @@
 [Development](#development)
 
 ---
+
+This is a development checkout with an unstable public API. Package
+publication and release readiness require separate verification.
 
 Wotex is the storage-neutral value layer for W3C Web of Things applications.
 It parses, validates, preserves, and encodes W3C WoT Thing Description 1.1 and

@@ -4,11 +4,17 @@ defmodule Wotex.SecurityScheme do
 
   The value requires the standard non-empty `scheme` discriminator and
   preserves every additional JSON-compatible member. It describes the security
-  mechanism referenced by a Thing Description; it never contains resolved
-  credential material and does not perform authentication or authorization.
+  mechanism referenced by a Thing Description. It does not resolve credentials
+  or perform authentication or authorization. Extension preservation does not
+  sanitize secrets supplied by a caller; keep credentials outside declarations.
 
   Consumers can inspect the discriminator with `scheme/1` or serialize the
   complete declaration with `to_map/1`.
+
+  Scheme names and extension members remain descriptive input to a credential
+  provider. Secret lookup, user consent, authentication exchange, and transport
+  protection occur outside this value and should use consumer-owned storage and
+  process boundaries.
   """
 
   alias Wotex.Value

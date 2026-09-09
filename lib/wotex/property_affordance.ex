@@ -9,6 +9,11 @@ defmodule Wotex.PropertyAffordance do
 
   Unknown extension members survive `new/2` and `to_map/1` unchanged at native
   JSON-value semantics.
+
+  The read-only, write-only, and observable predicates report declared flags,
+  not verified device behavior. `forms/1` preserves Form order and
+  `operations/2` applies the Property default-operation rules before a runtime
+  performs binding-profile selection.
   """
 
   alias Wotex.{Form, Value}

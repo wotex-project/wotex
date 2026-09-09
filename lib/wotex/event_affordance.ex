@@ -9,6 +9,11 @@ defmodule Wotex.EventAffordance do
 
   Use `new/2` to validate JSON-value semantics and `to_map/1` to recover the
   complete declaration.
+
+  `forms/1` preserves declaration order as validated `Wotex.Form` values, while
+  `operations/2` determines the effective subscription or cancellation
+  operation for a selected Form. Neither function opens a stream or interprets
+  an Event payload.
   """
 
   alias Wotex.{Form, Value}
