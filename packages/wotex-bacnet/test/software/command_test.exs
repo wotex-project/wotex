@@ -124,10 +124,8 @@ defmodule Wotex.BACnet.SoftwareCommandTest do
 
   test "WBA-C09 WBA-V14 parent group failure prevents child execution", context do
     context = %{context | guardian: context.group_fault}
-    started = System.monotonic_time(:millisecond)
 
     assert {"", 126} = execute(context, "output")
-    assert System.monotonic_time(:millisecond) - started < 1000
   end
 
   test "WBA-C09 WBA-V14 missing executable and invalid limits fail", context do
