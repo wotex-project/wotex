@@ -19,7 +19,7 @@ defmodule Wotex.CoAP do
           max_body_size: 1_048_576,
           connection_oriented: false,
           supports_streaming: true,
-          discovery_capable: false
+          discovery_capable: true
         }
   def capabilities,
     do: %{
@@ -33,7 +33,7 @@ defmodule Wotex.CoAP do
       max_body_size: 1_048_576,
       connection_oriented: false,
       supports_streaming: true,
-      discovery_capable: false
+      discovery_capable: true
     }
 
   @doc "Explicitly opens a linked UDP owner; no simulator fallback or security downgrade."
@@ -68,6 +68,16 @@ defmodule Wotex.CoAP do
   @doc "Deletes a resource with an empty request body and explicit native options."
   @spec delete(session(), binary(), keyword()) :: {:ok, Message.t()} | {:error, Error.t()}
   def delete(session, path, options \\ []), do: method(session, :delete, path, <<>>, options)
+
+  @doc "Discovers bounded raw links with GET/Accept 40 under one complete-body deadline."
+  @spec discover(session(), map()) :: {:ok, [Wotex.CoAP.LinkFormat.link()]} | {:error, Error.t()}
+  def discover(session, input) do
+    with :ok <- session(session),
+         {:ok, request} <- discovery_request(input),
+         {:ok, reply} <-
+           Connection.transfer(session.pid, request, session.timeout, max_body_size: 65_536),
+         do: discovery_links(reply)
+  end
 
   @doc "Builds an immutable request with an explicit method and optional raw payload."
   @spec message(term()) :: {:ok, Message.t()} | {:error, Error.t()}
@@ -174,6 +184,31 @@ defmodule Wotex.CoAP do
        do: helper_options(rest, Map.put(values, key, value))
 
   defp helper_options(_, _), do: {:error, Error.new(:invalid_request)}
+
+  defp discovery_request(input) when is_map(input) and map_size(input) <= 1 do
+    query = Map.get(input, :query)
+
+    if Map.keys(input) -- [:query] == [] and
+         (is_nil(query) or
+            (is_binary(query) and byte_size(query) <= 1024 and
+               not String.starts_with?(query, "?"))) do
+      path = "/.well-known/core" <> if(is_nil(query), do: "", else: "?" <> query)
+      message(%{method: :get, path: path, accept: 40})
+    else
+      {:error, Error.new(:invalid_discovery_request)}
+    end
+  end
+
+  defp discovery_request(_), do: {:error, Error.new(:invalid_discovery_request)}
+
+  defp discovery_links(%Message{code: 69} = reply) do
+    case Codec.option(reply, 12) do
+      [value] when value in [<<40>>, <<0, 40>>] -> Wotex.CoAP.LinkFormat.decode(reply.payload)
+      _ -> {:error, Error.new(:unexpected_content_format)}
+    end
+  end
+
+  defp discovery_links(_), do: {:error, Error.new(:invalid_discovery_response)}
 
   defp session(%{pid: pid, timeout: timeout} = value)
        when map_size(value) == 2 and is_pid(pid) and is_integer(timeout) and timeout in 1..60_000,

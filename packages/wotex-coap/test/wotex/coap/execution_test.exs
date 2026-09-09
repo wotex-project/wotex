@@ -209,6 +209,8 @@ defmodule Wotex.CoAP.ExecutionTest do
     emit(adapter, %{request | type: :ack, code: 69, options: [{6, <<10>>}, {14, <<1>>}]})
     assert {:ok, handle} = Task.await(task)
     assert_receive {:wotex_coap, _, {:ok, _, %{observe: 10}}}
+    owner = :sys.get_state(session.pid).observation.pid
+    assert :sys.get_state(owner).phase == :active
     {clock, session, adapter, handle, request}
   end
 
