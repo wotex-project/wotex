@@ -66,6 +66,22 @@ effect, clocks, and supervision.
     protocol unsubscribe on graceful termination even when stop credentials
     cannot be resolved; and MUST honor an optional receiver mailbox bound
     (`max_queue_length` with `overflow: :drop | :stop`).
+    Establishment runs in a private callback worker so receiver monitoring and
+    explicit stop remain responsive while credential resolution or subscribe is
+    pending. `Transport.subscribe/4` still receives the Runtime subscription's
+    owner pid. A private guardian monitors that owner and cancels the callback
+    worker on owner loss, including forced termination. Callback-linked transport
+    processes remain owned for the established subscription lifetime; abnormal
+    exits retain the same terminal-status behavior. No provisional successful
+    handle or value is published before the transport returns success.
+    Buffer at most 64 early frame/delivery/reconnected messages until establishment;
+    overflow stops with `:overloaded`. Values are decoded in the Runtime owner
+    after binding, in arrival order. Terminal loss and receiver death preempt this
+    buffer. Canceling a pending call releases its worker and attempts unsubscribe
+    for any completed handle recovered during handoff, at most once. A transport
+    must bind partial resources to the supplied owner or callback process before
+    acquisition; cancellation without a returned handle cannot prove remote
+    cleanup. Callback duration remains the transport/credential port's obligation.
 13. Every delivery to the receiver MUST be `{:wotex_runtime, id, event}` with
     `event` one of `{:ok, value, meta}`, `{:error, %Error{}}`, or
     `{:status, status}`. Raw frames sent as `{:wotex_transport_frame, frame}`

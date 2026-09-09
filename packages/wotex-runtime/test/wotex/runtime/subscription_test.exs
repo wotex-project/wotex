@@ -314,7 +314,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
 
     assert {:ok, first_pid} = Supervisor.start_child(supervisor, spec)
     assert_receive {:subscribe, %{operation: :subscribeevent}, ^first_pid, _}
-    first_handle = :sys.get_state(first_pid).handle
+    first_handle = bound_handle(first_pid)
 
     assert :ok = Supervisor.terminate_child(supervisor, :supervised_alarm)
     refute Process.alive?(first_pid)
@@ -324,7 +324,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
     assert {:ok, second_pid} = Supervisor.restart_child(supervisor, :supervised_alarm)
     refute second_pid == first_pid
     assert_receive {:subscribe, %{operation: :subscribeevent}, ^second_pid, _}
-    second_handle = :sys.get_state(second_pid).handle
+    second_handle = bound_handle(second_pid)
 
     assert :ok = Subscription.stop(second_pid)
     assert_receive {:unsubscribe, ^second_handle, %{operation: :unsubscribeevent}, _}
@@ -487,7 +487,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
 
       pid = start_supervised!(spec)
       assert_receive {:subscribe, _, ^pid, "credential-material"}
-      handle = :sys.get_state(pid).handle
+      handle = bound_handle(pid)
 
       assert {:error, %Error{code: ^code}} = Subscription.stop(pid)
       assert_receive {:unsubscribe, ^handle, %{operation: :unsubscribeevent}, nil}
@@ -770,4 +770,16 @@ defmodule Wotex.Runtime.SubscriptionTest do
 
   defp unique_name(suffix),
     do: {:global, {:wotex_runtime_test, suffix, System.unique_integer([:positive])}}
+
+  defp bound_handle(pid, remaining \\ 50) do
+    case :sys.get_state(pid) do
+      %{active?: true, handle: handle} ->
+        handle
+
+      _ignored_1 ->
+        assert remaining > 0
+        Process.sleep(1)
+        bound_handle(pid, remaining - 1)
+    end
+  end
 end

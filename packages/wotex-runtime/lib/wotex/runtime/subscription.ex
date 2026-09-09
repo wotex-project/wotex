@@ -24,7 +24,7 @@ defmodule Wotex.Runtime.Subscription do
 
   use GenServer
 
-  alias Wotex.Runtime.{Context, Error, ExecutionContext, PortCall, Telemetry}
+  alias Wotex.Runtime.{Context, Error, ExecutionContext, PortCall, SubscriptionOpening, Telemetry}
 
   @type status :: :reconnected | :session_lost | :transport_down | :receiver_down | :overloaded
   @type event :: {:ok, term(), map()} | {:error, Error.t()} | {:status, status()}
@@ -58,15 +58,29 @@ defmodule Wotex.Runtime.Subscription do
   @impl GenServer
   def init(init) do
     Process.flag(:trap_exit, true)
-    state = Map.merge(init, %{handle: nil, closed?: false, active?: false, monitor: nil})
+
+    state =
+      Map.merge(init, %{
+        handle: nil,
+        closed?: false,
+        active?: false,
+        monitor: nil,
+        opening: nil,
+        opening_buffer: :queue.new(),
+        opening_count: 0
+      })
+
     {:ok, state, {:continue, :subscribe}}
   end
 
   @impl GenServer
   def handle_continue(:subscribe, state) do
     case monitor_receiver(state) do
-      {:ok, monitored} -> open(monitored)
-      {:error, reason} -> {:stop, {:shutdown, reason}, %{state | closed?: true}}
+      {:ok, monitored} ->
+        start_opening(monitored)
+
+      {:error, reason} ->
+        {:stop, {:shutdown, reason}, %{state | closed?: true}}
     end
   end
 
@@ -77,6 +91,33 @@ defmodule Wotex.Runtime.Subscription do
   end
 
   @impl GenServer
+  def handle_info(
+        {:wotex_opening, reference, :ready},
+        %{opening: %{reference: reference}, active?: false} = state
+      ) do
+    open(state, SubscriptionOpening.claim(state.opening))
+  end
+
+  def handle_info(
+        {:wotex_opening, reference, :transport_down},
+        %{opening: %{reference: reference}} = state
+      ),
+      do: stop_after_status(:transport_down, state)
+
+  def handle_info(
+        {:DOWN, reference, :process, _ignored_1, _ignored_2},
+        %{opening: %{monitor: reference}} = state
+      ),
+      do: stop_after_status(:transport_down, state)
+
+  def handle_info({tag, _ignored_3} = message, %{active?: false} = state)
+      when tag in [:wotex_transport_frame, :wotex_transport] do
+    buffer_opening(state, message)
+  end
+
+  def handle_info({:wotex_transport_status, :reconnected} = message, %{active?: false} = state),
+    do: buffer_opening(state, message)
+
   def handle_info({:wotex_transport_frame, frame}, state) do
     {module, config} = state.transport
 
@@ -138,20 +179,51 @@ defmodule Wotex.Runtime.Subscription do
     cond do
       state.closed? -> :ok
       state.active? -> close(state)
-      true -> :ok
+      true -> close_opening(state)
     end
   end
 
-  defp open(state) do
-    case subscribe(state) do
+  defp start_opening(state) do
+    owner = self()
+
+    case SubscriptionOpening.start(owner, fn -> subscribe(state, owner) end) do
+      {:ok, opening} -> {:noreply, %{state | opening: opening}}
+      {:error, _ignored_4} -> stop_after_status(:transport_down, state)
+    end
+  end
+
+  defp open(state, result) do
+    case result do
       {:ok, handle} ->
         Telemetry.execute([:subscription, :open], identity(state))
-        {:noreply, %{state | handle: handle, active?: true}}
+        flush_opening(%{state | handle: handle, active?: true})
 
       {:error, error} ->
         forward({:error, error}, state)
         {:stop, {:shutdown, error}, %{state | closed?: true}}
+
+      _ignored_5 ->
+        stop_after_status(:transport_down, state)
     end
+  end
+
+  defp buffer_opening(%{opening_count: count} = state, message) when count < 64,
+    do:
+      {:noreply,
+       %{state | opening_buffer: :queue.in(message, state.opening_buffer), opening_count: count + 1}}
+
+  defp buffer_opening(state, _ignored_6), do: stop_after_status(:overloaded, state)
+
+  defp flush_opening(state) do
+    messages = :queue.to_list(state.opening_buffer)
+    state = %{state | opening_buffer: :queue.new(), opening_count: 0}
+
+    Enum.reduce_while(messages, {:noreply, state}, fn message, {:noreply, state} ->
+      case handle_info(message, state) do
+        {:noreply, _ignored_7} = result -> {:cont, result}
+        result -> {:halt, result}
+      end
+    end)
   end
 
   defp deliver(:ignore, state), do: {:noreply, state}
@@ -259,7 +331,7 @@ defmodule Wotex.Runtime.Subscription do
      )}
   end
 
-  defp subscribe(state) do
+  defp subscribe(state, owner) do
     with {:ok, execution_context} <-
            resolve_credentials(
              state.credentials,
@@ -272,13 +344,15 @@ defmodule Wotex.Runtime.Subscription do
       module
       |> PortCall.invoke(
         :subscribe,
-        [state.start_request, self(), execution_context, config],
+        [state.start_request, owner, execution_context, config],
         :subscription,
         identity(state)
       )
       |> normalize_subscribe(state)
     end
   end
+
+  defp close(%{active?: false} = state), do: close_opening(state)
 
   defp close(state) do
     {module, config} = state.transport
@@ -309,6 +383,15 @@ defmodule Wotex.Runtime.Subscription do
       {:ok, nil} -> :ok
       {:ok, error} -> {:error, error}
       {{:error, error}, _credential_error} -> {:error, error}
+    end
+  end
+
+  defp close_opening(%{opening: nil}), do: :ok
+
+  defp close_opening(state) do
+    case SubscriptionOpening.cancel(state.opening) do
+      {:ok, handle} -> close(%{state | handle: handle, active?: true})
+      _ignored_8 -> :ok
     end
   end
 
