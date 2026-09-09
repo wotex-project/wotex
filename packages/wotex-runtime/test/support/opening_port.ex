@@ -5,7 +5,7 @@ defmodule Wotex.Runtime.Test.OpeningPort do
   @behaviour Wotex.Runtime.Transport
 
   @impl Wotex.Runtime.Credentials
-  def resolve(_ignored_1, _ignored_2, _ignored_3, config) do
+  def resolve(_, _, _, config) do
     if config[:credential_wait] do
       send(config.test_pid, {:credential_wait, self()})
 
@@ -18,7 +18,7 @@ defmodule Wotex.Runtime.Test.OpeningPort do
   end
 
   @impl Wotex.Runtime.Transport
-  def subscribe(_ignored_4, owner, _ignored_5, config) do
+  def subscribe(_, owner, _, config) do
     resource = spawn_link(fn -> resource(owner, config) end)
     send(config.test_pid, {:opening, self(), owner, resource})
 
@@ -40,17 +40,17 @@ defmodule Wotex.Runtime.Test.OpeningPort do
   end
 
   @impl Wotex.Runtime.Transport
-  def unsubscribe(resource, _ignored_6, _ignored_7, config) do
+  def unsubscribe(resource, _, _, config) do
     send(config.test_pid, {:opening_unsubscribe, resource})
     send(resource, :stop)
     :ok
   end
 
   @impl Wotex.Runtime.Transport
-  def request(_ignored_8, _ignored_9, _ignored_10), do: {:error, :not_supported}
+  def request(_, _, _), do: {:error, :not_supported}
 
   @impl Wotex.Runtime.Transport
-  def decode_frame({:value, value}, _ignored_11, config) do
+  def decode_frame({:value, value}, _, config) do
     send(config.test_pid, {:opening_decoded, self(), value})
     {:ok, value, %{source: :opening_fixture}}
   end
@@ -60,7 +60,7 @@ defmodule Wotex.Runtime.Test.OpeningPort do
     send(config.test_pid, {:resource_started, self()})
 
     receive do
-      {:DOWN, ^ref, :process, ^owner, _ignored_12} -> :ok
+      {:DOWN, ^ref, :process, ^owner, _} -> :ok
       :stop -> :ok
     end
   end

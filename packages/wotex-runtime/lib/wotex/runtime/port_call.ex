@@ -28,11 +28,11 @@ defmodule Wotex.Runtime.PortCall do
   def invoke(module, function, arguments, phase, metadata) do
     apply(module, function, arguments)
   rescue
-    _exception ->
+    _ ->
       report(:error, function, metadata)
       {:error, exception_error(phase, function)}
   catch
-    kind, _reason ->
+    kind, _ ->
       report(kind, function, metadata)
       {:error, exception_error(phase, function)}
   end

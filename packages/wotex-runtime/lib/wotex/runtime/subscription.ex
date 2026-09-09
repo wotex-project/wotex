@@ -46,7 +46,7 @@ defmodule Wotex.Runtime.Subscription do
     :exit, reason -> stop_failure(reason)
   end
 
-  def stop(_server, _timeout) do
+  def stop(_, _) do
     {:error,
      Error.new(
        :invalid_stop_timeout,
@@ -85,7 +85,7 @@ defmodule Wotex.Runtime.Subscription do
   end
 
   @impl GenServer
-  def handle_call(:stop, _from, state) do
+  def handle_call(:stop, _, state) do
     result = close(state)
     {:stop, :normal, result, %{state | closed?: true}}
   end
@@ -105,12 +105,12 @@ defmodule Wotex.Runtime.Subscription do
       do: stop_after_status(:transport_down, state)
 
   def handle_info(
-        {:DOWN, reference, :process, _ignored_1, _ignored_2},
+        {:DOWN, reference, :process, _, _},
         %{opening: %{monitor: reference}} = state
       ),
       do: stop_after_status(:transport_down, state)
 
-  def handle_info({tag, _ignored_3} = message, %{active?: false} = state)
+  def handle_info({tag, _} = message, %{active?: false} = state)
       when tag in [:wotex_transport_frame, :wotex_transport] do
     buffer_opening(state, message)
   end
@@ -159,15 +159,15 @@ defmodule Wotex.Runtime.Subscription do
     stop_after_status(status, state)
   end
 
-  def handle_info({:DOWN, monitor, :process, _pid, _reason}, %{monitor: monitor} = state) do
+  def handle_info({:DOWN, monitor, :process, _, _}, %{monitor: monitor} = state) do
     Telemetry.execute([:subscription, :status], Map.put(identity(state), :status, :receiver_down))
     {:stop, {:shutdown, :receiver_down}, %{state | monitor: nil}}
   end
 
-  def handle_info({:EXIT, _pid, :normal}, state), do: {:noreply, state}
-  def handle_info({:EXIT, _pid, _reason}, state), do: stop_after_status(:transport_down, state)
+  def handle_info({:EXIT, _, :normal}, state), do: {:noreply, state}
+  def handle_info({:EXIT, _, _}, state), do: stop_after_status(:transport_down, state)
 
-  def handle_info(_message, state), do: {:noreply, state}
+  def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
   def terminate(reason, state) do
@@ -188,7 +188,7 @@ defmodule Wotex.Runtime.Subscription do
 
     case SubscriptionOpening.start(owner, fn -> subscribe(state, owner) end) do
       {:ok, opening} -> {:noreply, %{state | opening: opening}}
-      {:error, _ignored_4} -> stop_after_status(:transport_down, state)
+      {:error, _} -> stop_after_status(:transport_down, state)
     end
   end
 
@@ -202,7 +202,7 @@ defmodule Wotex.Runtime.Subscription do
         forward({:error, error}, state)
         {:stop, {:shutdown, error}, %{state | closed?: true}}
 
-      _ignored_5 ->
+      _ ->
         stop_after_status(:transport_down, state)
     end
   end
@@ -212,7 +212,7 @@ defmodule Wotex.Runtime.Subscription do
       {:noreply,
        %{state | opening_buffer: :queue.in(message, state.opening_buffer), opening_count: count + 1}}
 
-  defp buffer_opening(state, _ignored_6), do: stop_after_status(:overloaded, state)
+  defp buffer_opening(state, _), do: stop_after_status(:overloaded, state)
 
   defp flush_opening(state) do
     messages = :queue.to_list(state.opening_buffer)
@@ -220,7 +220,7 @@ defmodule Wotex.Runtime.Subscription do
 
     Enum.reduce_while(messages, {:noreply, state}, fn message, {:noreply, state} ->
       case handle_info(message, state) do
-        {:noreply, _ignored_7} = result -> {:cont, result}
+        {:noreply, _} = result -> {:cont, result}
         result -> {:halt, result}
       end
     end)
@@ -258,10 +258,10 @@ defmodule Wotex.Runtime.Subscription do
       pid when is_pid(pid) ->
         case Process.info(pid, :message_queue_len) do
           {:message_queue_len, length} when length >= max -> {policy, length}
-          _other -> :ok
+          _ -> :ok
         end
 
-      _not_found ->
+      _ ->
         :ok
     end
   end
@@ -281,7 +281,7 @@ defmodule Wotex.Runtime.Subscription do
           do: {:ok, %{state | monitor: Process.monitor(pid)}},
           else: {:error, :receiver_down}
 
-      _not_found ->
+      _ ->
         {:error, :receiver_down}
     end
   end
@@ -289,10 +289,10 @@ defmodule Wotex.Runtime.Subscription do
   defp receiver_pid(%{receiver: pid}) when is_pid(pid), do: pid
   defp receiver_pid(%{receiver: name}) when is_atom(name), do: Process.whereis(name)
 
-  defp normalize_frame({:ok, value, meta}, _state) when is_map(meta), do: {:ok, value, meta}
-  defp normalize_frame(:ignore, _state), do: :ignore
+  defp normalize_frame({:ok, value, meta}, _) when is_map(meta), do: {:ok, value, meta}
+  defp normalize_frame(:ignore, _), do: :ignore
 
-  defp normalize_frame({:error, %Error{code: :port_exception} = error}, _state),
+  defp normalize_frame({:error, %Error{code: :port_exception} = error}, _),
     do: {:error, error}
 
   defp normalize_frame({:error, external}, state) do
@@ -302,7 +302,7 @@ defmodule Wotex.Runtime.Subscription do
      |> Error.with_cause(external)}
   end
 
-  defp normalize_frame(_invalid, state) do
+  defp normalize_frame(_, state) do
     {:error,
      Error.new(
        :invalid_transport_return,
@@ -312,7 +312,7 @@ defmodule Wotex.Runtime.Subscription do
      )}
   end
 
-  defp normalize_delivery({:ok, value, meta}, _state) when is_map(meta), do: {:ok, value, meta}
+  defp normalize_delivery({:ok, value, meta}, _) when is_map(meta), do: {:ok, value, meta}
 
   defp normalize_delivery({:error, external}, state) do
     {:error,
@@ -321,7 +321,7 @@ defmodule Wotex.Runtime.Subscription do
      |> Error.with_cause(external)}
   end
 
-  defp normalize_delivery(_invalid, state) do
+  defp normalize_delivery(_, state) do
     {:error,
      Error.new(
        :invalid_transport_delivery,
@@ -382,7 +382,7 @@ defmodule Wotex.Runtime.Subscription do
     case {result, credential_error} do
       {:ok, nil} -> :ok
       {:ok, error} -> {:error, error}
-      {{:error, error}, _credential_error} -> {:error, error}
+      {{:error, error}, _} -> {:error, error}
     end
   end
 
@@ -391,7 +391,7 @@ defmodule Wotex.Runtime.Subscription do
   defp close_opening(state) do
     case SubscriptionOpening.cancel(state.opening) do
       {:ok, handle} -> close(%{state | handle: handle, active?: true})
-      _ignored_8 -> :ok
+      _ -> :ok
     end
   end
 
@@ -415,7 +415,7 @@ defmodule Wotex.Runtime.Subscription do
          |> Error.new(:credentials, "credential resolution failed", identity(state))
          |> Error.with_cause(external)}
 
-      _invalid ->
+      _ ->
         {:error,
          Error.new(
            :invalid_credentials_return,
@@ -426,9 +426,9 @@ defmodule Wotex.Runtime.Subscription do
     end
   end
 
-  defp normalize_subscribe({:ok, handle}, _state), do: {:ok, handle}
+  defp normalize_subscribe({:ok, handle}, _), do: {:ok, handle}
 
-  defp normalize_subscribe({:error, %Error{code: :port_exception} = error}, _state),
+  defp normalize_subscribe({:error, %Error{code: :port_exception} = error}, _),
     do: {:error, error}
 
   defp normalize_subscribe({:error, external}, state) do
@@ -438,7 +438,7 @@ defmodule Wotex.Runtime.Subscription do
      |> Error.with_cause(external)}
   end
 
-  defp normalize_subscribe(_invalid, state) do
+  defp normalize_subscribe(_, state) do
     {:error,
      Error.new(
        :invalid_transport_return,
@@ -448,9 +448,9 @@ defmodule Wotex.Runtime.Subscription do
      )}
   end
 
-  defp normalize_unsubscribe(:ok, _state), do: :ok
+  defp normalize_unsubscribe(:ok, _), do: :ok
 
-  defp normalize_unsubscribe({:error, %Error{code: :port_exception} = error}, _state),
+  defp normalize_unsubscribe({:error, %Error{code: :port_exception} = error}, _),
     do: {:error, error}
 
   defp normalize_unsubscribe({:error, external}, state) do
@@ -460,7 +460,7 @@ defmodule Wotex.Runtime.Subscription do
      |> Error.with_cause(external)}
   end
 
-  defp normalize_unsubscribe(_invalid, state) do
+  defp normalize_unsubscribe(_, state) do
     {:error,
      Error.new(
        :invalid_transport_return,
@@ -484,9 +484,9 @@ defmodule Wotex.Runtime.Subscription do
   defp close_outcome({:shutdown, %Error{code: code}}), do: %{outcome: :error, code: code}
   defp close_outcome({:shutdown, status}) when is_atom(status), do: %{outcome: status}
   defp close_outcome(:shutdown), do: %{outcome: :shutdown}
-  defp close_outcome(_reason), do: %{outcome: :abnormal}
+  defp close_outcome(_), do: %{outcome: :abnormal}
 
-  defp stop_failure({:timeout, _call}) do
+  defp stop_failure({:timeout, _}) do
     error =
       Error.new(
         :subscription_stop_timeout,
@@ -497,7 +497,7 @@ defmodule Wotex.Runtime.Subscription do
     {:error, %{error | class: :timeout}}
   end
 
-  defp stop_failure({reason, _call}) when reason in [:noproc, :normal] do
+  defp stop_failure({reason, _}) when reason in [:noproc, :normal] do
     {:error,
      Error.new(
        :subscription_not_running,
@@ -506,7 +506,7 @@ defmodule Wotex.Runtime.Subscription do
      )}
   end
 
-  defp stop_failure({{:shutdown, _reason}, _call}) do
+  defp stop_failure({{:shutdown, _}, _}) do
     {:error,
      Error.new(
        :subscription_not_running,
@@ -515,7 +515,7 @@ defmodule Wotex.Runtime.Subscription do
      )}
   end
 
-  defp stop_failure(_reason) do
+  defp stop_failure(_) do
     {:error,
      Error.new(:subscription_stop_failed, :subscription, "subscription stop request failed")}
   end

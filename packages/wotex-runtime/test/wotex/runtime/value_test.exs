@@ -44,7 +44,7 @@ defmodule Wotex.Runtime.ValueTest do
     max_metadata = Limits.maximum(:metadata_entries)
     metadata = Map.new(1..max_metadata, &{&1, &1})
 
-    assert {:ok, _context} =
+    assert {:ok, _} =
              Context.new(request_id: String.duplicate("r", max_id), metadata: metadata)
 
     assert {:error, %Error{code: :request_id_limit_exceeded}} =

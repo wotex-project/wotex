@@ -49,7 +49,7 @@ defmodule Wotex.Runtime.BindingProfile do
     end
   end
 
-  def new(_opts), do: invalid_options()
+  def new(_), do: invalid_options()
 
   defp build(opts) do
     id = Keyword.get(opts, :id)
@@ -110,7 +110,7 @@ defmodule Wotex.Runtime.BindingProfile do
   defp validate_id(id) when is_atom(id) and not is_nil(id), do: :ok
   defp validate_id(id) when is_binary(id) and byte_size(id) > 0, do: :ok
 
-  defp validate_id(_id) do
+  defp validate_id(_) do
     {:error,
      Error.new(:invalid_profile_id, :construction, "profile id must be an atom or non-empty string")}
   end
@@ -129,7 +129,7 @@ defmodule Wotex.Runtime.BindingProfile do
     end
   end
 
-  defp normalize_schemes(_values) do
+  defp normalize_schemes(_) do
     {:error,
      Error.new(
        :invalid_profile_schemes,
@@ -153,7 +153,7 @@ defmodule Wotex.Runtime.BindingProfile do
     end
   end
 
-  defp normalize_operations(_values) do
+  defp normalize_operations(_) do
     {:error,
      Error.new(
        :invalid_profile_operations,
@@ -168,7 +168,7 @@ defmodule Wotex.Runtime.BindingProfile do
     Enum.find(@operations, :invalid, &(Atom.to_string(&1) == value))
   end
 
-  defp normalize_operation(_value), do: :invalid
+  defp normalize_operation(_), do: :invalid
 
   defp normalize_media_types(values) when is_list(values) do
     if Enum.all?(values, &(is_binary(&1) and byte_size(String.trim(&1)) > 0)) do
@@ -184,7 +184,7 @@ defmodule Wotex.Runtime.BindingProfile do
     end
   end
 
-  defp normalize_media_types(_values) do
+  defp normalize_media_types(_) do
     {:error, Error.new(:invalid_profile_media_types, :construction, "media types must be a list")}
   end
 

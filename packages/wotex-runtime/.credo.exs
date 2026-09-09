@@ -13,7 +13,7 @@
       color: true,
       checks: %{
         enabled: [
-          {Credo.Check.Consistency.UnusedVariableNames, []},
+          {Credo.Check.Consistency.UnusedVariableNames, [force: :anonymous]},
           {Credo.Check.Design.SkipTestWithoutComment, []},
           {Credo.Check.Design.TagFIXME, []},
           {Credo.Check.Design.TagTODO, []},

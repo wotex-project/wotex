@@ -28,7 +28,7 @@ defmodule Wotex.Runtime.Test.FakeCredentials do
     end
   end
 
-  defp stop_operation?(_context, config) do
+  defp stop_operation?(_, config) do
     counter = Map.get(config, :counter)
     is_pid(counter) and Agent.get_and_update(counter, &{&1, &1 + 1}) > 0
   end

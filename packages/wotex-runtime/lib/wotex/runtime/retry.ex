@@ -51,7 +51,7 @@ defmodule Wotex.Runtime.Retry do
     end
   end
 
-  def decision(_operation, _failure_class, _opts), do: :stop
+  def decision(_, _, _), do: :stop
 
   # Four distinct keys mean admission visits at most five list cells, including
   # the rejecting cell. Malformed and improper lists use the same stop path.
@@ -61,7 +61,7 @@ defmodule Wotex.Runtime.Retry do
        when key in @options and not is_map_key(options, key),
        do: admit_options(rest, Map.put(options, key, value))
 
-  defp admit_options(_opts, _options), do: :error
+  defp admit_options(_, _), do: :error
 
   defp retry?(failure_class, true, attempt, max_attempts, delay)
        when failure_class in @retryable_classes and is_integer(attempt) and attempt > 0 and
@@ -69,5 +69,5 @@ defmodule Wotex.Runtime.Retry do
               delay >= 0,
        do: true
 
-  defp retry?(_failure_class, _idempotent, _attempt, _max_attempts, _delay), do: false
+  defp retry?(_, _, _, _, _), do: false
 end

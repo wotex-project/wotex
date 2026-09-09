@@ -7,6 +7,7 @@ defmodule Wotex.Runtime.Test.FakeTransport do
 
   defmodule ExternalError do
     @moduledoc false
+
     defstruct [:code, :phase, :class, message: "external"]
   end
 
@@ -20,17 +21,17 @@ defmodule Wotex.Runtime.Test.FakeTransport do
     request_result(Map.get(config, :mode, :ok), request, execution_context)
   end
 
-  defp request_result(:ok, request, _execution_context) do
+  defp request_result(:ok, request, _) do
     Result.new(request.request_id, request.operation, request.input,
       status: :ok,
       metadata: %{binding: :fake, http: %{status: 200}}
     )
   end
 
-  defp request_result(:mismatch, request, _execution_context),
+  defp request_result(:mismatch, request, _),
     do: Result.new("another-request", request.operation, nil)
 
-  defp request_result(:forged_result, request, _execution_context) do
+  defp request_result(:forged_result, request, _) do
     {:ok,
      %Result{
        request_id: request.request_id,
@@ -41,22 +42,22 @@ defmodule Wotex.Runtime.Test.FakeTransport do
      }}
   end
 
-  defp request_result(:error, _request, execution_context),
+  defp request_result(:error, _, execution_context),
     do: {:error, {:transport_error, execution_context.credential}}
 
-  defp request_result(:classified_error, _request, _execution_context),
+  defp request_result(:classified_error, _, _),
     do: {:error, %ExternalError{code: :http_status, phase: :response, class: :rate_limited}}
 
-  defp request_result(:raise, _request, execution_context),
+  defp request_result(:raise, _, execution_context),
     do: raise(ArgumentError, "adapter defect #{execution_context.credential}")
 
-  defp request_result(:exit, _request, execution_context),
+  defp request_result(:exit, _, execution_context),
     do: exit({:adapter_exit, execution_context.credential})
 
-  defp request_result(:throw, _request, execution_context),
+  defp request_result(:throw, _, execution_context),
     do: throw({:adapter_throw, execution_context.credential})
 
-  defp request_result(:invalid, _request, _execution_context), do: :invalid
+  defp request_result(:invalid, _, _), do: :invalid
 
   @impl Wotex.Runtime.Transport
   def subscribe(request, receiver, execution_context, %{test_pid: test_pid} = config) do
@@ -102,7 +103,7 @@ defmodule Wotex.Runtime.Test.FakeTransport do
       :raise -> raise ArgumentError, "decoder defect"
       :exit -> exit(:decoder_exit)
       :throw -> throw(:decoder_throw)
-      _other -> :invalid
+      _ -> :invalid
     end
   end
 

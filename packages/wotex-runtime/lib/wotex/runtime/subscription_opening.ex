@@ -64,24 +64,20 @@ defmodule Wotex.Runtime.SubscriptionOpening do
   @impl GenServer
   def handle_call(
         {reference, :claim},
-        {owner, _ignored_1},
+        {owner, _},
         %{reference: reference, owner: owner, claimed?: false, result: result} = state
       )
       when result != :pending do
     {:reply, result, %{state | result: nil, claimed?: true}}
   end
 
-  def handle_call(
-        {reference, :cancel},
-        {owner, _ignored_2},
-        %{reference: reference, owner: owner} = state
-      ) do
+  def handle_call({reference, :cancel}, {owner, _}, %{reference: reference, owner: owner} = state) do
     state = stop_worker(state)
     result = if state.claimed? or state.result == :pending, do: :none, else: state.result
     {:reply, result, %{state | result: nil, claimed?: true}}
   end
 
-  def handle_call(_ignored_3, _ignored_4, state), do: {:reply, :none, state}
+  def handle_call(_, _, state), do: {:reply, :none, state}
 
   @impl GenServer
   def handle_info(
@@ -97,26 +93,23 @@ defmodule Wotex.Runtime.SubscriptionOpening do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, monitor, :process, _ignored_5, _ignored_6}, %{monitor: monitor} = state),
+  def handle_info({:DOWN, monitor, :process, _, _}, %{monitor: monitor} = state),
     do: {:stop, :normal, stop_worker(state)}
 
-  def handle_info(
-        {:DOWN, monitor, :process, _ignored_7, _ignored_8},
-        %{worker_monitor: monitor} = state
-      ) do
+  def handle_info({:DOWN, monitor, :process, _, _}, %{worker_monitor: monitor} = state) do
     send(state.owner, {:wotex_opening, state.reference, :transport_down})
     {:noreply, %{state | worker: nil, worker_monitor: nil}}
   end
 
-  def handle_info(_ignored_9, state), do: {:noreply, state}
+  def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
   def format_status(status) do
     Map.new(status, fn
       {:state, state} -> {:state, %{claimed?: state.claimed?, pending?: state.result == :pending}}
-      {:message, _ignored_10} -> {:message, :redacted}
-      {:reason, _ignored_11} -> {:reason, :redacted}
-      {:log, _ignored_12} -> {:log, []}
+      {:message, _} -> {:message, :redacted}
+      {:reason, _} -> {:reason, :redacted}
+      {:log, _} -> {:log, []}
       entry -> entry
     end)
   end
@@ -137,10 +130,10 @@ defmodule Wotex.Runtime.SubscriptionOpening do
     worker_monitor = Process.monitor(worker)
 
     receive do
-      {:DOWN, ^guardian_monitor, :process, ^guardian, _guardian_reason} ->
+      {:DOWN, ^guardian_monitor, :process, ^guardian, _} ->
         Process.exit(worker, :kill)
 
-      {:DOWN, ^worker_monitor, :process, ^worker, _worker_reason} ->
+      {:DOWN, ^worker_monitor, :process, ^worker, _} ->
         :ok
     end
   end
@@ -151,17 +144,17 @@ defmodule Wotex.Runtime.SubscriptionOpening do
     :erlang.garbage_collect()
 
     receive do
-      {:EXIT, ^guardian, _ignored_13} ->
+      {:EXIT, ^guardian, _} ->
         exit(:shutdown)
 
-      {:EXIT, _ignored_14, :normal} ->
+      {:EXIT, _, :normal} ->
         proxy(guardian, reference)
 
-      {:EXIT, _ignored_15, _ignored_16} ->
+      {:EXIT, _, _} ->
         send(guardian, {:opening_transport_down, reference})
         proxy(guardian, reference)
 
-      _ignored_17 ->
+      _ ->
         proxy(guardian, reference)
     end
   end
@@ -173,7 +166,7 @@ defmodule Wotex.Runtime.SubscriptionOpening do
     monitor = state.worker_monitor
 
     receive do
-      {:DOWN, ^monitor, :process, _ignored_18, _ignored_19} -> :ok
+      {:DOWN, ^monitor, :process, _, _} -> :ok
     after
       100 -> Process.demonitor(monitor, [:flush])
     end
@@ -193,6 +186,6 @@ defmodule Wotex.Runtime.SubscriptionOpening do
   defp call(opening, operation) do
     GenServer.call(opening.pid, {opening.reference, operation}, 1000)
   catch
-    :exit, _ignored_20 -> :none
+    :exit, _ -> :none
   end
 end

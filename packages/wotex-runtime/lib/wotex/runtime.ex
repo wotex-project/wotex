@@ -84,5 +84,5 @@ defmodule Wotex.Runtime do
       do: :event
 
   def interaction_type(operation) when operation in @thing_operations, do: :thing
-  def interaction_type(_operation), do: nil
+  def interaction_type(_), do: nil
 end

@@ -37,7 +37,7 @@ defmodule Wotex.Runtime.ExposedThing do
     end
   end
 
-  def new(_td, _handlers) do
+  def new(_, _) do
     {:error,
      Error.new(
        :invalid_exposed_thing,
@@ -58,11 +58,11 @@ defmodule Wotex.Runtime.ExposedThing do
     end
   end
 
-  def dispatch(%__MODULE__{}, _operation, _name, _input, _context) do
+  def dispatch(%__MODULE__{}, _, _, _, _) do
     {:error, Error.new(:invalid_dispatch_input, :dispatch, "dispatch input is invalid")}
   end
 
-  def dispatch(_exposed, _operation, _name, _input, _context) do
+  def dispatch(_, _, _, _, _) do
     {:error, Error.new(:invalid_exposed_thing, :dispatch, "an ExposedThing is required")}
   end
 
@@ -74,7 +74,7 @@ defmodule Wotex.Runtime.ExposedThing do
          {:ok, handler} <- fetch_thing_handler(exposed.handlers, operation) do
       handler.(input, context)
     else
-      {:ok, _affordance_type} ->
+      {:ok, _} ->
         {:error, Error.new(:unsupported_operation, :dispatch, "operation is not Thing-level")}
 
       {:error, %Error{} = error} ->
@@ -82,11 +82,11 @@ defmodule Wotex.Runtime.ExposedThing do
     end
   end
 
-  def dispatch_thing(%__MODULE__{}, _operation, _input, _context) do
+  def dispatch_thing(%__MODULE__{}, _, _, _) do
     {:error, Error.new(:invalid_dispatch_input, :dispatch, "dispatch input is invalid")}
   end
 
-  def dispatch_thing(_exposed, _operation, _input, _context) do
+  def dispatch_thing(_, _, _, _) do
     {:error, Error.new(:invalid_exposed_thing, :dispatch, "an ExposedThing is required")}
   end
 
@@ -104,7 +104,7 @@ defmodule Wotex.Runtime.ExposedThing do
         {operation, handler} when is_atom(operation) and is_function(handler, 2) ->
           Wotex.Runtime.interaction_type(operation) != :thing
 
-        _entry ->
+        _ ->
           true
       end)
 
@@ -155,7 +155,7 @@ defmodule Wotex.Runtime.ExposedThing do
       |> Enum.any?(fn
         %{"op" => operations} when is_list(operations) -> operation_string(operation) in operations
         %{"op" => declared} when is_binary(declared) -> operation_string(operation) == declared
-        _form -> false
+        _ -> false
       end)
 
     if declared? do

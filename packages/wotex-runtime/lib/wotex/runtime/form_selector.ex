@@ -34,7 +34,7 @@ defmodule Wotex.Runtime.FormSelector do
     end
   end
 
-  def select(_td, _type, _name, _operation, _profiles) do
+  def select(_, _, _, _, _) do
     {:error, Error.new(:invalid_selection_input, :selection, "selection input is invalid")}
   end
 
@@ -51,7 +51,7 @@ defmodule Wotex.Runtime.FormSelector do
     end
   end
 
-  def select_thing(_td, _operation, _profiles) do
+  def select_thing(_, _, _) do
     {:error, Error.new(:invalid_selection_input, :selection, "selection input is invalid")}
   end
 
@@ -72,7 +72,7 @@ defmodule Wotex.Runtime.FormSelector do
       affordance when is_map(affordance) ->
         {:ok, affordance}
 
-      _missing ->
+      _ ->
         {:error,
          Error.new(:affordance_not_found, :selection, "Interaction Affordance was not found", %{
            affordance_type: type,
@@ -174,11 +174,11 @@ defmodule Wotex.Runtime.FormSelector do
          true <- BindingProfile.supports_media_type?(profile, Map.get(form_map, "contentType")) do
       {form, resolved_href, profile}
     else
-      _no_match -> nil
+      _ -> nil
     end
   end
 
-  defp match_candidate(_document, _affordance, _form_map, _interaction, _profile), do: nil
+  defp match_candidate(_, _, _, _, _), do: nil
 
   defp effective_operations(form, affordance, type) do
     Form.operations(form,

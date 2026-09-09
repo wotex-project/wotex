@@ -102,7 +102,7 @@ defmodule Wotex.Runtime.FormSelectorTest do
       TDFactory.thing_description()
       |> Wotex.ThingDescription.to_map()
       |> update_in(["actions", "calibrate", "forms"], fn [form] -> [Map.delete(form, "op")] end)
-      |> update_in(["properties", "temperature", "forms"], fn [form | _rest] ->
+      |> update_in(["properties", "temperature", "forms"], fn [form | _] ->
         [Map.delete(form, "op")]
       end)
       |> put_in(["properties", "temperature", "readOnly"], true)
@@ -136,7 +136,7 @@ defmodule Wotex.Runtime.FormSelectorTest do
       |> Wotex.ThingDescription.to_map()
       |> update_in(["forms"], fn [form] -> [Map.delete(form, "op")] end)
 
-    assert {:error, _errors} = Wotex.ThingDescription.from_map(map)
+    assert {:error, _} = Wotex.ThingDescription.from_map(map)
   end
 
   test "rejects malformed Forms and unresolved relative references" do
@@ -183,7 +183,7 @@ defmodule Wotex.Runtime.FormSelectorTest do
     profiles = Enum.map(1..max_profiles, &%{profile | id: &1})
     td = TDFactory.thing_description()
 
-    assert {:ok, _selection} =
+    assert {:ok, _} =
              FormSelector.select(td, :property, "temperature", :readproperty, profiles)
 
     assert {:error, %Error{code: :profile_limit_exceeded}} =
@@ -208,7 +208,7 @@ defmodule Wotex.Runtime.FormSelectorTest do
 
     {:ok, at_limit} = Wotex.ThingDescription.from_map(at_limit)
 
-    assert {:ok, _selection} =
+    assert {:ok, _} =
              FormSelector.select(at_limit, :property, "temperature", :readproperty, [profile])
 
     over_limit =

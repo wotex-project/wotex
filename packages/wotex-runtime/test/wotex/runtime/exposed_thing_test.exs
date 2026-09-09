@@ -8,7 +8,7 @@ defmodule Wotex.Runtime.ExposedThingTest do
 
   setup do
     handlers = %{
-      {:readproperty, "temperature"} => fn _input, context ->
+      {:readproperty, "temperature"} => fn _, context ->
         {:ok, {:temperature, context.request_id}}
       end,
       {:invokeaction, "calibrate"} => fn input, context ->
@@ -17,7 +17,7 @@ defmodule Wotex.Runtime.ExposedThingTest do
       {:subscribeevent, "alarm"} => fn input, context ->
         {:ok, {:subscribed, input, context.request_id}}
       end,
-      readallproperties: fn _input, context -> {:ok, {:all, context.request_id}} end
+      readallproperties: fn _, context -> {:ok, {:all, context.request_id}} end
     }
 
     {:ok, exposed} = ExposedThing.new(TDFactory.thing_description(), handlers)
@@ -44,7 +44,7 @@ defmodule Wotex.Runtime.ExposedThingTest do
 
     {:ok, undeclared} =
       ExposedThing.new(td_without_root_forms, %{
-        readallproperties: fn _input, _context -> :ok end
+        readallproperties: fn _, _ -> :ok end
       })
 
     assert {:error, %Error{code: :thing_operation_not_found}} =
@@ -95,15 +95,15 @@ defmodule Wotex.Runtime.ExposedThingTest do
 
     assert {:error, %Error{code: :invalid_handler}} =
              ExposedThing.new(td, %{
-               {:invented, "temperature"} => fn _input, _context -> :ok end
+               {:invented, "temperature"} => fn _, _ -> :ok end
              })
 
     assert {:error, %Error{code: :invalid_handler}} =
-             ExposedThing.new(td, %{{:readproperty, "temperature"} => fn _input -> :ok end})
+             ExposedThing.new(td, %{{:readproperty, "temperature"} => fn _ -> :ok end})
 
     assert {:error, %Error{code: :invalid_handler}} =
              ExposedThing.new(td, %{
-               {:readallproperties, "temperature"} => fn _input, _context -> :ok end
+               {:readallproperties, "temperature"} => fn _, _ -> :ok end
              })
 
     assert {:error, %Error{code: :invalid_exposed_thing}} = ExposedThing.new(%{}, %{})
@@ -115,7 +115,7 @@ defmodule Wotex.Runtime.ExposedThingTest do
 
     {:ok, error_exposed} =
       ExposedThing.new(td, %{
-        {:readproperty, "temperature"} => fn _input, _context -> {:error, :rejected} end
+        {:readproperty, "temperature"} => fn _, _ -> {:error, :rejected} end
       })
 
     assert ExposedThing.dispatch(error_exposed, :readproperty, "temperature", nil, context) ==
@@ -123,7 +123,7 @@ defmodule Wotex.Runtime.ExposedThingTest do
 
     {:ok, raising_exposed} =
       ExposedThing.new(td, %{
-        {:readproperty, "temperature"} => fn _input, _context -> raise "handler failure" end
+        {:readproperty, "temperature"} => fn _, _ -> raise "handler failure" end
       })
 
     assert_raise RuntimeError, "handler failure", fn ->
@@ -132,7 +132,7 @@ defmodule Wotex.Runtime.ExposedThingTest do
 
     {:ok, exiting_exposed} =
       ExposedThing.new(td, %{
-        {:readproperty, "temperature"} => fn _input, _context -> exit(:handler_failure) end
+        {:readproperty, "temperature"} => fn _, _ -> exit(:handler_failure) end
       })
 
     assert catch_exit(
@@ -144,7 +144,7 @@ defmodule Wotex.Runtime.ExposedThingTest do
     parent = self()
     context = Context.new!(request_id: "req-no-dispatch")
 
-    callback = fn input, _context ->
+    callback = fn input, _ ->
       send(parent, {:invoked, input})
       :unexpected
     end
@@ -192,7 +192,7 @@ defmodule Wotex.Runtime.ExposedThingTest do
       end
 
     started =
-      for _index <- 1..8 do
+      for _ <- 1..8 do
         assert_receive {:started, caller, input, "req-concurrent-" <> request_input}, 1_000
         assert Integer.to_string(input) == request_input
         {caller, input}

@@ -22,7 +22,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
   test "building zero child specifications starts zero processes", %{consumed: consumed} do
     context = Context.new!(request_id: "req-zero")
 
-    assert {:ok, %{start: {Subscription, :start_link, [_init]}, restart: :transient}} =
+    assert {:ok, %{start: {Subscription, :start_link, [_]}, restart: :transient}} =
              ConsumedThing.observation_child_spec(consumed, "temperature", context,
                id: :observation_zero,
                receiver: self()
@@ -289,7 +289,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
     assert_receive {:subscribe, _, second_pid, _}
     refute second_pid == first_pid
 
-    assert [{:restarting_alarm, ^second_pid, :worker, _modules}] =
+    assert [{:restarting_alarm, ^second_pid, :worker, _}] =
              Supervisor.which_children(supervisor)
 
     assert :ok = Subscription.stop(second_pid)
@@ -356,7 +356,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
     context = Context.new!(request_id: "req-overflow")
     parent = self()
 
-    handler = fn event, measurements, metadata, _config ->
+    handler = fn event, measurements, metadata, _ ->
       send(parent, {:telemetry, event, measurements, metadata})
     end
 
@@ -662,7 +662,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
     parent = self()
     secret = "must-not-appear"
 
-    handler = fn event, _measurements, metadata, _config ->
+    handler = fn event, _, metadata, _ ->
       send(parent, {:close_telemetry, event, metadata})
     end
 
@@ -747,7 +747,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
     monitor = Process.monitor(pid)
 
     receive do
-      {:DOWN, ^monitor, :process, ^pid, _reason} -> :ok
+      {:DOWN, ^monitor, :process, ^pid, _} -> :ok
     after
       1_000 -> flunk("helper did not exit")
     end
@@ -755,14 +755,14 @@ defmodule Wotex.Runtime.SubscriptionTest do
 
   defp wait_for_mailbox(pid, attempts \\ 100)
 
-  defp wait_for_mailbox(_pid, 0), do: flunk("concurrent stop did not enter the mailbox")
+  defp wait_for_mailbox(_, 0), do: flunk("concurrent stop did not enter the mailbox")
 
   defp wait_for_mailbox(pid, attempts) do
     case Process.info(pid, :message_queue_len) do
       {:message_queue_len, length} when length > 0 ->
         :ok
 
-      _other ->
+      _ ->
         Process.sleep(1)
         wait_for_mailbox(pid, attempts - 1)
     end
@@ -776,7 +776,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
       %{active?: true, handle: handle} ->
         handle
 
-      _ignored_1 ->
+      _ ->
         assert remaining > 0
         Process.sleep(1)
         bound_handle(pid, remaining - 1)

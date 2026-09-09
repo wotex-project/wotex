@@ -47,7 +47,7 @@ defmodule Wotex.Runtime.Limits do
   def list_within?(values, maximum) when is_list(values) and maximum >= 0,
     do: within?(values, maximum)
 
-  defp within?([], _remaining), do: true
-  defp within?([_value | _rest], 0), do: false
-  defp within?([_value | rest], remaining), do: within?(rest, remaining - 1)
+  defp within?([], _), do: true
+  defp within?([_ | _], 0), do: false
+  defp within?([_ | rest], remaining), do: within?(rest, remaining - 1)
 end

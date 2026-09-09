@@ -74,7 +74,7 @@ defmodule Wotex.Runtime.ConsumedThingTest do
 
     transports = Map.new(profiles, &{&1.id, {FakeTransport, %{test_pid: self()}}})
 
-    assert {:ok, _consumed} =
+    assert {:ok, _} =
              ConsumedThing.new(td,
                profiles: profiles,
                transports: transports,
@@ -146,7 +146,7 @@ defmodule Wotex.Runtime.ConsumedThingTest do
     profile: profile
   } do
     context = Context.new!(request_id: "req-secret")
-    assert {:ok, _result} = ConsumedThing.read_property(consumed, "temperature", context)
+    assert {:ok, _} = ConsumedThing.read_property(consumed, "temperature", context)
 
     assert_receive {:credentials, _security, _form, "req-secret"}
     assert_receive {:request, request, "req-secret", ^secret}
@@ -215,7 +215,7 @@ defmodule Wotex.Runtime.ConsumedThingTest do
     secret = "credential-material"
     parent = self()
 
-    handler = fn event, _measurements, metadata, _config ->
+    handler = fn event, _, metadata, _ ->
       send(parent, {:telemetry, event, metadata})
     end
 
@@ -242,7 +242,7 @@ defmodule Wotex.Runtime.ConsumedThingTest do
       refute inspect(error) =~ secret
 
       assert_receive {:telemetry, [:wotex, :runtime, :port, :exception],
-                      %{callback: :request, kind: _kind, code: :port_exception} = metadata}
+                      %{callback: :request, kind: _, code: :port_exception} = metadata}
 
       refute Map.has_key?(metadata, :reason)
       refute Map.has_key?(metadata, :stacktrace)
@@ -263,7 +263,7 @@ defmodule Wotex.Runtime.ConsumedThingTest do
       refute inspect(error) =~ secret
 
       assert_receive {:telemetry, [:wotex, :runtime, :port, :exception],
-                      %{callback: :resolve, kind: _kind, code: :port_exception} = metadata}
+                      %{callback: :resolve, kind: _, code: :port_exception} = metadata}
 
       refute inspect(metadata) =~ secret
     end
@@ -275,7 +275,7 @@ defmodule Wotex.Runtime.ConsumedThingTest do
   } do
     parent = self()
 
-    handler = fn event, measurements, metadata, _config ->
+    handler = fn event, measurements, metadata, _ ->
       send(parent, {:telemetry, event, measurements, metadata})
     end
 
@@ -291,7 +291,7 @@ defmodule Wotex.Runtime.ConsumedThingTest do
     on_exit(fn -> :telemetry.detach(id) end)
 
     context = Context.new!(request_id: "req-telemetry")
-    assert {:ok, _result} = ConsumedThing.read_property(consumed, "temperature", context)
+    assert {:ok, _} = ConsumedThing.read_property(consumed, "temperature", context)
 
     assert_receive {:telemetry, [:wotex, :runtime, :request, :start], _,
                     %{request_id: "req-telemetry"}}
@@ -302,7 +302,7 @@ defmodule Wotex.Runtime.ConsumedThingTest do
 
     refute inspect(metadata) =~ secret
 
-    assert {:error, _error} = ConsumedThing.read_property(consumed, "missing", context)
+    assert {:error, _} = ConsumedThing.read_property(consumed, "missing", context)
 
     assert_receive {:telemetry, [:wotex, :runtime, :request, :stop], _,
                     %{result: :error, code: :affordance_not_found}}
@@ -312,7 +312,7 @@ defmodule Wotex.Runtime.ConsumedThingTest do
     parent = self()
     secret = "exception-secret"
 
-    handler = fn event, measurements, metadata, _config ->
+    handler = fn event, measurements, metadata, _ ->
       send(parent, {:telemetry, event, measurements, metadata})
     end
 

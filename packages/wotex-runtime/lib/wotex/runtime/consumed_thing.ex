@@ -90,7 +90,7 @@ defmodule Wotex.Runtime.ConsumedThing do
     end
   end
 
-  def new(_td, _opts), do: invalid_consumed_thing()
+  def new(_, _), do: invalid_consumed_thing()
 
   defp invalid_consumed_thing do
     {:error,
@@ -282,11 +282,11 @@ defmodule Wotex.Runtime.ConsumedThing do
     end)
   end
 
-  defp execute(%__MODULE__{}, _interaction, _context) do
+  defp execute(%__MODULE__{}, _, _) do
     {:error, Error.new(:invalid_context, :construction, "a Wotex Runtime Context is required")}
   end
 
-  defp execute(_consumed, _interaction, _context) do
+  defp execute(_, _, _) do
     {:error, Error.new(:invalid_consumed_thing, :construction, "a ConsumedThing is required")}
   end
 
@@ -346,9 +346,9 @@ defmodule Wotex.Runtime.ConsumedThing do
 
   defp subscription_child_spec(
          %__MODULE__{},
-         _interaction,
-         _context,
-         _opts
+         _,
+         _,
+         _
        ) do
     {:error,
      Error.new(
@@ -359,10 +359,10 @@ defmodule Wotex.Runtime.ConsumedThing do
   end
 
   defp subscription_child_spec(
-         _consumed,
-         _interaction,
-         _context,
-         _opts
+         _,
+         _,
+         _,
+         _
        ) do
     {:error, Error.new(:invalid_consumed_thing, :construction, "a ConsumedThing is required")}
   end
@@ -424,7 +424,7 @@ defmodule Wotex.Runtime.ConsumedThing do
 
   defp validate_receiver(receiver) when is_pid(receiver) or is_atom(receiver), do: :ok
 
-  defp validate_receiver(_receiver) do
+  defp validate_receiver(_) do
     {:error,
      Error.new(
        :invalid_receiver,
@@ -435,12 +435,12 @@ defmodule Wotex.Runtime.ConsumedThing do
 
   defp validate_name(nil), do: {:ok, nil}
   defp validate_name(name) when is_atom(name) and not is_nil(name), do: {:ok, name}
-  defp validate_name({:global, _term} = name), do: {:ok, name}
+  defp validate_name({:global, _} = name), do: {:ok, name}
 
-  defp validate_name({:via, module, _term} = name) when is_atom(module) and not is_nil(module),
+  defp validate_name({:via, module, _} = name) when is_atom(module) and not is_nil(module),
     do: {:ok, name}
 
-  defp validate_name(_name) do
+  defp validate_name(_) do
     {:error,
      Error.new(
        :invalid_subscription_name,
@@ -451,7 +451,7 @@ defmodule Wotex.Runtime.ConsumedThing do
 
   defp validate_restart(restart) when restart in @restart_policies, do: {:ok, restart}
 
-  defp validate_restart(_restart) do
+  defp validate_restart(_) do
     {:error,
      Error.new(
        :invalid_restart_policy,
@@ -465,7 +465,7 @@ defmodule Wotex.Runtime.ConsumedThing do
               (is_integer(shutdown) and shutdown >= 0),
        do: {:ok, shutdown}
 
-  defp validate_shutdown(_shutdown) do
+  defp validate_shutdown(_) do
     {:error,
      Error.new(
        :invalid_shutdown_budget,
@@ -477,7 +477,7 @@ defmodule Wotex.Runtime.ConsumedThing do
   defp validate_max_queue_length(nil), do: {:ok, nil}
   defp validate_max_queue_length(max) when is_integer(max) and max > 0, do: {:ok, max}
 
-  defp validate_max_queue_length(_max) do
+  defp validate_max_queue_length(_) do
     {:error,
      Error.new(
        :invalid_max_queue_length,
@@ -488,11 +488,11 @@ defmodule Wotex.Runtime.ConsumedThing do
 
   defp validate_overflow(policy) when policy in @overflow_policies, do: {:ok, policy}
 
-  defp validate_overflow(_policy) do
+  defp validate_overflow(_) do
     {:error, Error.new(:invalid_overflow_policy, :construction, "overflow must be :drop or :stop")}
   end
 
-  defp outcome_metadata({:ok, _result}), do: %{result: :ok, code: nil}
+  defp outcome_metadata({:ok, _}), do: %{result: :ok, code: nil}
   defp outcome_metadata({:error, %Error{code: code}}), do: %{result: :error, code: code}
 
   defp select(consumed, %{type: :thing, operation: operation}, profiles),
@@ -524,12 +524,12 @@ defmodule Wotex.Runtime.ConsumedThing do
   defp valid_property_names?(names) when is_list(names) and names != [],
     do: Enum.all?(names, &(is_binary(&1) and byte_size(String.trim(&1)) > 0))
 
-  defp valid_property_names?(_names), do: false
+  defp valid_property_names?(_), do: false
 
   defp valid_property_map?(values) when is_map(values) and map_size(values) > 0,
     do: Enum.all?(Map.keys(values), &(is_binary(&1) and byte_size(String.trim(&1)) > 0))
 
-  defp valid_property_map?(_values), do: false
+  defp valid_property_map?(_), do: false
 
   defp validate_profiles(profiles) when is_list(profiles) and profiles != [] do
     cond do
@@ -557,7 +557,7 @@ defmodule Wotex.Runtime.ConsumedThing do
     end
   end
 
-  defp validate_profiles(_profiles) do
+  defp validate_profiles(_) do
     {:error, Error.new(:invalid_profiles, :construction, "at least one BindingProfile is required")}
   end
 
@@ -565,10 +565,10 @@ defmodule Wotex.Runtime.ConsumedThing do
     missing =
       Enum.reject(profiles, fn profile ->
         case Map.get(transports, BindingProfile.id(profile)) do
-          {module, _config} when is_atom(module) and not is_nil(module) ->
+          {module, _} when is_atom(module) and not is_nil(module) ->
             transport_module?(module)
 
-          _missing_or_invalid ->
+          _ ->
             false
         end
       end)
@@ -583,11 +583,11 @@ defmodule Wotex.Runtime.ConsumedThing do
     end
   end
 
-  defp validate_transports(_profiles, _transports) do
+  defp validate_transports(_, _) do
     {:error, Error.new(:invalid_transports, :construction, "transports must be a profile-id map")}
   end
 
-  defp validate_credentials({module, _config}) when is_atom(module) and not is_nil(module) do
+  defp validate_credentials({module, _}) when is_atom(module) and not is_nil(module) do
     if Code.ensure_loaded?(module) and function_exported?(module, :resolve, 4) do
       :ok
     else
@@ -600,7 +600,7 @@ defmodule Wotex.Runtime.ConsumedThing do
     end
   end
 
-  defp validate_credentials(_credentials) do
+  defp validate_credentials(_) do
     {:error,
      Error.new(
        :invalid_credentials_port,
@@ -614,7 +614,7 @@ defmodule Wotex.Runtime.ConsumedThing do
       {:ok, {module, config}} when is_atom(module) and not is_nil(module) ->
         {:ok, {module, config}}
 
-      _missing ->
+      _ ->
         {:error, Error.new(:transport_not_found, :transport, "selected transport was not found")}
     end
   end
@@ -652,7 +652,7 @@ defmodule Wotex.Runtime.ConsumedThing do
          })
          |> Error.with_cause(external)}
 
-      _invalid ->
+      _ ->
         {:error,
          Error.new(
            :invalid_credentials_return,
@@ -689,7 +689,7 @@ defmodule Wotex.Runtime.ConsumedThing do
          })
          |> Error.with_cause(external)}
 
-      _invalid ->
+      _ ->
         {:error,
          Error.new(:invalid_transport_return, :transport, "transport returned an invalid value", %{
            request_id: request.request_id,

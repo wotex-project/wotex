@@ -58,11 +58,11 @@ defmodule Wotex.Runtime.Error do
     %{error | class: class, details: Map.put(error.details, :cause, cause)}
   end
 
-  def with_cause(%__MODULE__{} = error, _external), do: error
+  def with_cause(%__MODULE__{} = error, _), do: error
 
   defp safe_atom(value) when is_atom(value), do: value
-  defp safe_atom(_value), do: nil
+  defp safe_atom(_), do: nil
 
   defp safe_class(value) when value in @classes, do: value
-  defp safe_class(_value), do: nil
+  defp safe_class(_), do: nil
 end

@@ -47,7 +47,7 @@ defmodule Wotex.Runtime.Result do
     end
   end
 
-  def new(_request_id, _operation, _payload, _opts), do: invalid_result()
+  def new(_, _, _, _), do: invalid_result()
 
   @doc "Validates a Result returned by a transport, including identity and metadata bounds."
   @spec validate(term()) :: :ok | {:error, Error.t()}
@@ -77,7 +77,7 @@ defmodule Wotex.Runtime.Result do
     end
   end
 
-  def validate(_result), do: invalid_result()
+  def validate(_), do: invalid_result()
 
   defp build(request_id, operation, payload, opts) do
     metadata = Keyword.get(opts, :metadata, %{})

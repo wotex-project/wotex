@@ -38,7 +38,7 @@ defmodule Wotex.Runtime.Context do
     end
   end
 
-  def new(_opts), do: invalid_options()
+  def new(_), do: invalid_options()
 
   defp build(opts) do
     request_id = Keyword.get(opts, :request_id)
@@ -148,7 +148,7 @@ defmodule Wotex.Runtime.Context do
   """
   @spec remaining_ms(deadline(), integer() | DateTime.t()) ::
           non_neg_integer() | :infinity | {:error, :clock_mismatch}
-  def remaining_ms(nil, _now), do: :infinity
+  def remaining_ms(nil, _), do: :infinity
 
   def remaining_ms(deadline, now) when is_integer(deadline) and is_integer(now),
     do: max(deadline - now, 0)
@@ -156,10 +156,10 @@ defmodule Wotex.Runtime.Context do
   def remaining_ms(%DateTime{} = deadline, %DateTime{} = now),
     do: max(DateTime.diff(deadline, now, :millisecond), 0)
 
-  def remaining_ms(_deadline, _now), do: {:error, :clock_mismatch}
+  def remaining_ms(_, _), do: {:error, :clock_mismatch}
 
   defp valid_deadline?(nil), do: true
   defp valid_deadline?(deadline) when is_integer(deadline), do: true
   defp valid_deadline?(%DateTime{}), do: true
-  defp valid_deadline?(_deadline), do: false
+  defp valid_deadline?(_), do: false
 end
