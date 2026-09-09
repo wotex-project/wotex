@@ -27,10 +27,10 @@ this repository to import their product models or redefine the standard terms.
 
 ## Gates
 
-Run `mix check` before a local commit. The single gate includes structural
-boundary checks and unpacked Hex-package inspection. Consumer-neutrality is a
-review obligation governed by this contract and the release-readiness skill;
-do not create a public denylist of private consumers.
+Run `mix check` before a local commit. It checks formatting, compiles with
+warnings as errors, and runs the test suite. Consumer-neutrality is a review
+obligation governed by this contract and the release-readiness skill; do not
+create a public denylist of private consumers.
 
 ## External automation boundary
 

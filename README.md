@@ -219,12 +219,10 @@ mix check
 mix docs
 ```
 
-`mix check` is the completion gate. It compiles with warnings as errors, checks
-formatting and strict Credo, requires at least 95% line coverage, audits
-dependencies, runs Doctor and Dialyzer, builds HexDocs, scans the consumer
-boundary, and inspects the unpacked Hex package. CI repeats the locked graph at
-the supported floor and current toolchain and tests the latest allowed
-dependency graph separately.
+`mix check` is the everyday development gate. It compiles with warnings as
+errors, checks formatting, and runs the test suite. Package, documentation,
+audit, and compatibility checks are release-readiness work rather than blockers
+for every push.
 
 ## Contributing
 

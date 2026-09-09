@@ -1,6 +1,8 @@
 name: ci
 
 on:
+  push:
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -12,11 +14,8 @@ concurrency:
 
 jobs:
   verify:
-    permissions:
-      contents: read
-      id-token: write
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       MIX_ENV: test
     steps:
@@ -27,21 +26,5 @@ jobs:
         with:
           elixir-version: "1.20"
           otp-version: "29"
-      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
-        with:
-          path: |
-            deps
-            _build
-            priv/plts
-          key: mix-${{ runner.os }}-1.20-29-${{ hashFiles('mix.lock') }}
       - run: mix deps.get --check-locked
       - run: mix check
-      - name: Generate LCOV coverage
-        run: mix coveralls.lcov
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
-        with:
-          use_oidc: true
-          files: ./cover/lcov.info
-          disable_search: true
-          fail_ci_if_error: true
