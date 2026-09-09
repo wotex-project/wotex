@@ -3,7 +3,7 @@ spec:
   id: WBA.10
   title: "Complete BACnet/IP client software profile"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-bacnet
   updated: 2026-09-09
 ---
@@ -134,6 +134,14 @@ explicit interface, portal and destination behavior. A source patch to the
 pinned transport is permitted only with exact source assertions and its own
 regression suite. Never invent an upstream consumption callback or mutate a
 borrowed Client's private state. Runtime remains BEAM-only.
+
+Outbound packets use `TransportBehaviour.build_bacnet_packet/3` for NPCI and
+APDU encoding. The package constructs the four-byte IPv4 BVLL envelope, including
+an explicitly supplied BVLC extension when present. Encoded APDU data is at most
+1476 bytes; the complete datagram is at most 1536 bytes. Empty APDU data requires
+an explicit BVLC value. Header suppression and explicit NPCI retain the public
+builder's semantics. Confirmed broadcasts fail before UDP transmission. Codec
+failures expose finite reasons without exception text, stack traces or payloads.
 
 The transport exposes an explicit package consumption protocol. It forwards
 `{:wotex_bacnet_datagram, generation, receipt_ref, transport_message}` to its

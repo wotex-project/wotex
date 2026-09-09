@@ -22,8 +22,7 @@ defmodule Wotex.BACnet.IngressTransport do
 
   @behaviour BACnet.Stack.TransportBehaviour
   use GenServer
-  alias BACnet.Stack.Transport.IPv4Transport
-  alias Wotex.BACnet.{Error, IngressWindow, IPv4Interface, IPv4Packet, StackOwner}
+  alias Wotex.BACnet.{Device, Error, IngressWindow, IPv4Interface, IPv4Packet, StackOwner}
 
   @type portal :: {port(), :inet.ip4_address()}
 
@@ -55,17 +54,30 @@ defmodule Wotex.BACnet.IngressTransport do
   def is_destination_routed(pid, destination), do: GenServer.call(pid, {:routed, destination})
 
   @impl BACnet.Stack.TransportBehaviour
-  def is_valid_destination(destination), do: IPv4Transport.is_valid_destination(destination)
+  def is_valid_destination({{255, 255, 255, 255}, _} = destination),
+    do: Device.valid_source?(destination)
+
+  def is_valid_destination({{first, _, _, _}, _} = destination),
+    do: first in 1..223 and Device.valid_source?(destination)
+
+  def is_valid_destination(_), do: false
 
   @impl BACnet.Stack.TransportBehaviour
-  def send({socket, broadcast}, {ip, _} = destination, data, opts \\ []) do
-    IPv4Transport.send(
-      socket,
-      destination,
-      data,
-      Keyword.put_new(opts, :is_broadcast, ip == broadcast)
-    )
+  def send(portal, destination, data, opts \\ [])
+
+  def send({socket, broadcast}, {ip, _} = destination, data, opts) when is_port(socket) do
+    with true <- is_valid_destination(destination),
+         {:ok, packet} <- IPv4Packet.encode(data, ip in [broadcast, {255, 255, 255, 255}], opts) do
+      :gen_udp.send(socket, destination, packet)
+    else
+      false -> {:error, :invalid_destination}
+      {:error, _} = error -> error
+    end
+  rescue
+    _ -> {:error, :invalid_transport}
   end
+
+  def send(_, _, _, _), do: {:error, :invalid_transport}
 
   @doc false
   @spec attach(pid(), pid()) :: {:ok, reference()} | {:error, Error.t()}

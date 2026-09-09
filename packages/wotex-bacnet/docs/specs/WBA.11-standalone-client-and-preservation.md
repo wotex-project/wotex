@@ -3,14 +3,14 @@ spec:
   id: WBA.11
   title: "Standalone BACnet client and feature preservation"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-bacnet
   updated: 2026-09-09
 ---
 
 # WBA.11 Standalone BACnet client and feature preservation
 
-Specification version: **1.1.0**. Implementation status: **partial**. Requirements
+Specification version: **1.1.1**. Implementation status: **partial**. Requirements
 in this file extend [WBA.10](WBA.10-software-contract.md). Named helpers, discovery
 and their lifecycle bindings exist; complete independent software acceptance
 remains required. The [current profile](WBA.02-implemented-profile.md) and
@@ -33,6 +33,17 @@ typed read; typed write; readback; finite COV; cancellation; explicit close.
 First-party and borrowed modes run the same public contract suite, with the
 ownership differences asserted separately. Callback availability is insufficient:
 capabilities must reflect the selected adapter's validated operations.
+
+The owned IPv4 adapter accepts explicitly configured local and destination UDP
+ports in 1..65535. Port zero is not an implicit allocation request. Destinations
+accept integer IPv4 octets with first octet 1..223, or the explicit limited
+broadcast address 255.255.255.255. The selected interface and its mask determine
+local broadcast and routing; a final zero octet alone does not establish a
+network address. Destination validation does not imply route availability.
+This is package addressing policy. BACstack 0.0.1's own IPv4 transport restricts
+ports to 47808..65535; the owned adapter implements destination validation and
+UDP sending through its public transport behaviour and packet builder. Borrowed
+transports retain their owner's port restrictions.
 
 | Useful baseline asset | Required disposition | Owning surface and proof |
 | --- | --- | --- |

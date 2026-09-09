@@ -5,6 +5,7 @@ defmodule Wotex.BACnet.IPv4 do
   `Wotex.BACnet.IPv4` implements `Wotex.BACnet.Client` by starting a bounded
   BACstack process group through `Wotex.BACnet.StackOwner`. Connection options
   identify the local interface, UDP port, destination, and request timeout.
+  Local and destination ports accept the explicit range 1 through 65535.
   Requests are delegated to BACstack with Application Protocol Data Unit
   (APDU) retries configured to zero, and
   `disconnect/1` closes the exact process group created for the session.
@@ -18,7 +19,7 @@ defmodule Wotex.BACnet.IPv4 do
   never selected as a default.
   """
   @behaviour Wotex.BACnet.Client
-  alias Wotex.BACnet.{BACstack, Error, StackOwner}
+  alias Wotex.BACnet.{BACstack, Error, IngressTransport, StackOwner}
 
   @impl Wotex.BACnet.Client
   def connect(opts) when is_list(opts) do
@@ -36,9 +37,7 @@ defmodule Wotex.BACnet.IPv4 do
 
     with true <- valid_options?(local_ip, local_port, timeout),
          true <-
-           BACnet.Stack.Transport.IPv4Transport.is_valid_destination(
-             Keyword.get(opts, :destination)
-           ),
+           IngressTransport.is_valid_destination(Keyword.get(opts, :destination)),
          {:ok, _} <-
            BACstack.configuration(
              discovery: Keyword.get(opts, :discovery),
@@ -145,11 +144,11 @@ defmodule Wotex.BACnet.IPv4 do
 
   defp valid_options?(ip, port, timeout) when is_tuple(ip) and tuple_size(ip) == 4 do
     Enum.all?(Tuple.to_list(ip), &(is_integer(&1) and &1 in 0..255)) and
-      is_integer(port) and port in 47_808..65_535 and is_integer(timeout) and timeout in 1..60_000
+      is_integer(port) and port in 1..65_535 and is_integer(timeout) and timeout in 1..60_000
   end
 
   defp valid_options?(:none, port, timeout),
-    do: is_integer(port) and port in 47_808..65_535 and is_integer(timeout) and timeout in 1..60_000
+    do: is_integer(port) and port in 1..65_535 and is_integer(timeout) and timeout in 1..60_000
 
   defp valid_options?(_, _, _), do: false
 
