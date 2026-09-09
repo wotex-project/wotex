@@ -4,6 +4,17 @@ defmodule WotexContinuum.Schema do
 
   Schema bytes are embedded at compile time; fetching them performs no runtime
   filesystem operation.
+
+  `ids/0` lists the registered WCT.01, WCT.02, and WCT.03 schema identifiers in
+  lexical order. `fetch/1` returns the exact embedded bytes, and `info/1`
+  reports their byte count, continuum schema version, and lowercase SHA-256
+  digest. Unknown and malformed identifiers return `WotexContinuum.Error`.
+
+  Embedding makes the schema identity independent of a runtime working
+  directory. It does not make JSON Schema evaluation part of the module or
+  replace the typed constructors. Consumers may use the bytes with a selected
+  validator, while `WotexContinuum.from_map/1` remains the authoritative
+  constructor boundary for package values.
   """
 
   alias WotexContinuum.Error

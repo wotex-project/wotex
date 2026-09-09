@@ -5,6 +5,17 @@ defmodule WotexContinuum.ThingReference do
 
   The helper delegates Thing Description meaning to the core and performs no
   resolution, authorization, or interaction.
+
+  `validate/2` first validates the supplied `Wotex.ThingDescription`, requires
+  its identifier, and compares that identifier exactly with the continuum
+  value's `thing_id`. A missing reference, invalid Thing Description, or
+  mismatch returns a structured `WotexContinuum.Error` at the relevant path.
+
+  Equality confirms only that two explicit references agree. The function does
+  not retrieve the Thing Description, establish that it is current, verify an
+  external signature, or grant authority over the described Thing. The Wotex
+  core continues to own Thing Description parsing and semantics; continuum
+  values retain only their project-defined reference.
   """
 
   alias WotexContinuum.Error

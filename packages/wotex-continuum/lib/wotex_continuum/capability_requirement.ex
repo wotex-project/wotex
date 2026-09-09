@@ -5,6 +5,17 @@ defmodule WotexContinuum.CapabilityRequirement do
   Compatibility values use this nested contract to state what a consumer must
   provide. Parsing proves requirement syntax only; it does not locate, load, or
   authorize an implementation.
+
+  `from_map/1` validates the capability identifier and parses the
+  `version_requirement` with Elixir's semantic-version requirement rules. An
+  existing struct is converted to a map and revalidated rather than trusted.
+  `to_map/1` returns the string-keyed nested representation used by
+  `WotexContinuum.Compatibility`.
+
+  The requirement describes an accepted version range. It does not establish
+  that an installed capability exists, that its declared operations are
+  compatible, or that it may be invoked. Those determinations require the
+  supplied capability set and consumer policy at the composition boundary.
   """
 
   alias WotexContinuum.{Error, Validation}

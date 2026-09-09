@@ -8,6 +8,18 @@ defmodule WotexContinuum.Capability do
 
   Declaration is descriptive, not authoritative: it grants no permission and
   invokes no operation.
+
+  `from_map/1` validates the capability identifier and semantic version, a
+  unique operation list, which may be empty, supported deployment modes, required network class,
+  degradation behavior, and namespaced extensions. `to_map/1` emits the common
+  continuum envelope with deterministic string representations of enumerated
+  values.
+
+  Compatibility compares these declarations with explicit requirements. It
+  does not inspect a module, start a provider, test an operation, or infer
+  authorization. The consumer remains responsible for establishing that a
+  concrete implementation matches the declaration and for enforcing its
+  network and degradation policy.
   """
 
   @behaviour WotexContinuum.Value

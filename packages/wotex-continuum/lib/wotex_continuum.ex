@@ -4,6 +4,18 @@ defmodule WotexContinuum do
 
   Values are inert data. `from_map/1` validates a decoded map and `to_map/1`
   returns its wire representation without performing I/O or host decisions.
+
+  `schema_version/0` identifies the common 2.0.0 envelope, and `kinds/0`
+  returns the closed top-level kind registry in lexical order. `from_map/1`
+  resolves that discriminator without creating atoms from input, then delegates
+  to the owning value module. `to_map/1` revalidates registered structs before
+  returning string-keyed JSON-compatible data.
+
+  This facade selects the value constructor by kind and defines wire identity. It does not resolve a Thing,
+  authorize or execute an Action, reconcile state, fetch evidence, deliver an
+  item, or apply lifecycle changes to a runtime. Consumers retain those
+  responsibilities and can use `WotexContinuum.Schema` for the embedded schema
+  bytes that describe the accepted values.
   """
 
   alias WotexContinuum.{

@@ -1,5 +1,25 @@
 defmodule WotexContinuum.Validation do
-  @moduledoc false
+  @moduledoc """
+  Shared field validators used by continuum value constructors.
+
+  This implementation helper normalizes declared atom and string keys without
+  creating atoms from input. Validators return tagged values or
+  `WotexContinuum.Error` with the owning field's JSON Pointer. Nested validators
+  preserve error paths while checking identifiers, versions, timestamps,
+  enumerations, JSON values, extension keys and cross-field inputs.
+
+  Default identifier strings contain 1 to 512 UTF-8 bytes. Native JSON values
+  obey the nesting bound in `WotexContinuum.Limits`; encoded-source byte and
+  collection limits are separately enforced by `WotexContinuum.Codec`.
+  Timestamp normalization uses supplied values and never reads a clock.
+  Internal helpers such as timestamp comparison and wire conversion expect
+  already admitted values; consumer admission uses the owning constructor.
+
+  ## Examples
+
+      iex> WotexContinuum.Validation.normalize(%{"name" => "example"}, [:name])
+      {:ok, %{name: "example"}}
+  """
 
   alias WotexContinuum.{Error, Limits}
 

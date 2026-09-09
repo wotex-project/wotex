@@ -6,6 +6,16 @@ defmodule WotexContinuum.Artifact do
   SHA-256 digest binds the exact bytes. The value contains no fetch location or
   installation callback, so acquisition and trust policy stay with the
   consumer.
+
+  `from_map/1` validates a bounded artifact name, semantic version, and
+  lowercase prefixed digest. Existing structs are converted and revalidated at
+  the boundary. `to_map/1` returns the nested string-keyed representation used
+  by `WotexContinuum.Manifest`.
+
+  Name and version support compatibility reasoning; the digest is the identity
+  for a concrete artifact. Neither field proves availability, authenticity, or
+  adoption by a running consumer. Retrieval, signature verification,
+  installation, activation, and rollback remain outside this inert value.
   """
 
   alias WotexContinuum.{Error, Validation}

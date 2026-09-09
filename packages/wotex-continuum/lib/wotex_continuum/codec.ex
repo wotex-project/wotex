@@ -8,6 +8,12 @@ defmodule WotexContinuum.Codec do
   members. Continuum validation then constructs the registered value from the
   decoded map. Core admission failures are returned as
   `WotexContinuum.Error` values with the codes documented in WCT.01.
+
+  `encode/2` accepts registered continuum values and can select canonical JSON
+  for digest-bearing workflows. `decode/2` requires a top-level object with a
+  registered kind. The owning constructor supplies the current schema version
+  when absent and rejects unsupported explicit versions. Member names never
+  cause module loading or construction of new atoms.
   """
 
   alias WotexContinuum.{CanonicalJSON, Error, Limits, Validation}
@@ -35,7 +41,7 @@ defmodule WotexContinuum.Codec do
     end
   end
 
-  @doc "Encodes a value, decodes it, and returns the canonical re-encoding."
+  @doc "Validates a registered value and returns its canonical JSON encoding."
   @spec canonicalize(struct()) :: {:ok, binary()} | {:error, Error.t()}
   def canonicalize(value), do: encode(value, canonical: true)
 

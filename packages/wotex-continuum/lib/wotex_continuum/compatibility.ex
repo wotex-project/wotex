@@ -9,6 +9,11 @@ defmodule WotexContinuum.Compatibility do
 
   Compatibility proves declared version relationships only. It does not prove
   conformance, trust, availability, or permission.
+
+  Requirements are normalized during construction and evaluated by
+  `evaluate/3` against an explicit schema version and capability collection.
+  The stable mismatch values are suitable for evidence and user interfaces;
+  consumers, rather than this module, decide whether a mismatch blocks work.
   """
 
   @behaviour WotexContinuum.Value

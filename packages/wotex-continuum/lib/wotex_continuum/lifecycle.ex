@@ -6,6 +6,17 @@ defmodule WotexContinuum.Lifecycle do
   generation and normalized change time make updates deterministic and
   replayable. A transition returns a new value only; it never starts, drains,
   stops, or removes the represented runtime.
+
+  `from_map/1` validates subject identity, state, generation, UTC timestamp,
+  optional reason, and extensions. `transition/4` admits only an edge in the
+  documented graph, requires non-decreasing time, increments the generation,
+  and returns a new value. Removed is terminal; stopped subjects may return to
+  ready or be removed.
+
+  The lifecycle is reported state, not a supervisor or command channel.
+  Consumers perform the actual deployment action and decide when an observed
+  transition may be recorded. Replay can verify the explicit graph and
+  generation sequence without consulting a clock or mutable registry.
   """
 
   @behaviour WotexContinuum.Value

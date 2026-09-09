@@ -8,6 +8,11 @@ defmodule WotexContinuum.Degradation do
 
   The value reports consumer-supplied state; it does not monitor health or
   change runtime behavior itself.
+
+  Cross-field validation prevents a `:none` report from carrying affected
+  capabilities or reasons and requires reduced or unavailable reports to name
+  both. `to_map/1` preserves the admitted evidence and extensions for transport
+  without promoting the report to a health authority.
   """
 
   @behaviour WotexContinuum.Value

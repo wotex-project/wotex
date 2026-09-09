@@ -9,6 +9,11 @@ defmodule WotexContinuum.Mode do
 
   Mode reports where execution occurs; it does not select a provider or
   establish a network connection.
+
+  Construction admits only the enumerations returned by `deployments/0` and
+  `connectivity_states/0`. It additionally requires `:air_gapped` deployment to
+  be `:disconnected`, preventing a contradictory placement claim from entering
+  another continuum value.
   """
 
   @behaviour WotexContinuum.Value

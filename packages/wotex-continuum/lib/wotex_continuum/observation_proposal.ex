@@ -9,6 +9,11 @@ defmodule WotexContinuum.ObservationProposal do
 
   A proposal is not canonical Thing state and does not emit a W3C Event.
   Consumers validate authority, ordering, and policy before admission.
+
+  `from_map/1` validates the affordance kind, caller-supplied timestamp,
+  optional non-negative sequence, quality object, and nested evidence before
+  constructing the value. `to_map/1` produces a versioned, JSON-compatible form
+  for later reconciliation or durable transfer.
   """
 
   @behaviour WotexContinuum.Value

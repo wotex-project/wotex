@@ -7,6 +7,18 @@ defmodule WotexContinuum.Delivery do
   combinations such as acknowledgement without an acknowledgement time.
 
   The value does not enqueue, transmit, retry, or acknowledge anything.
+
+  `from_map/1` validates identifiers, endpoints, attempt and optional sequence,
+  normalized timestamps, status-specific failure data, and extension terms. An
+  acknowledged delivery requires an acknowledgment time; a failed delivery
+  requires `WotexContinuum.Failure`; other states exclude contradictory fields.
+  The acknowledgment time cannot precede emission. `to_map/1` preserves these
+  facts in the common continuum envelope.
+
+  Each value is a snapshot for one item and attempt. A later observation may be
+  represented by another value, but this module owns no mutable delivery log or
+  retry counter. Status describes reported progress and is not proof of a
+  downstream application effect.
   """
 
   @behaviour WotexContinuum.Value

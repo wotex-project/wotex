@@ -5,6 +5,18 @@ defmodule WotexContinuum.Failure do
   A stable string code, readable message, and JSON-compatible details carry an
   observed failure across boundaries without serializing exceptions, stack
   traces, or consumer-specific modules.
+
+  `from_map/1` bounds the code to 256 bytes, the message to 4096 bytes, and
+  validates details as a JSON-compatible value. It accepts an existing struct
+  only by converting and revalidating it. `to_map/1` returns the portable
+  string-keyed representation.
+
+  The code is the matching interface; prose may become more precise in a
+  compatible release. Details obey the JSON nesting limit; consumers exclude
+  credentials, opaque process state and unbounded external output. A failure
+  value records an observation. It does not select retry policy, assign
+  authority, or prove whether an external effect occurred unless the enclosing
+  contract states that classification explicitly.
   """
 
   alias WotexContinuum.{Error, Validation}

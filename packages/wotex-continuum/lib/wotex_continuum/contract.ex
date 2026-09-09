@@ -1,5 +1,23 @@
 defmodule WotexContinuum.Contract do
-  @moduledoc false
+  @moduledoc """
+  Shared envelope validation for typed continuum values.
+
+  Value constructors use `envelope/2` to supply absent kind and schema-version
+  fields, then `normalize/3` to admit only declared atom or string keys. An
+  explicit wrong kind, duplicate key spelling, malformed semantic version, or
+  version outside `~> 2.0` returns `WotexContinuum.Error`. Existing envelope
+  fields are preserved for validation rather than silently replaced.
+
+  This implementation helper validates wire identity. The owning value module
+  validates its payload and cross-field relationships. `base/1` constructs the
+  current envelope for serialization; it does not register a kind, authorize an
+  interaction, or migrate an older schema.
+
+  ## Examples
+
+      iex> WotexContinuum.Contract.base("mode")
+      %{"kind" => "mode", "schema_version" => "2.0.0"}
+  """
 
   alias WotexContinuum.{Error, Validation}
 

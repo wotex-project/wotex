@@ -9,6 +9,11 @@ defmodule WotexContinuum.Manifest do
 
   The manifest describes composition. It does not load code, grant capability,
   choose a provider, or start supervision.
+
+  `compatible_with?/3` delegates the declared requirement comparison to
+  `WotexContinuum.Compatibility` and returns its complete mismatch set.
+  Serialization retains extensions but never turns their keys into atoms, which
+  keeps a received manifest within the data boundary.
   """
 
   @behaviour WotexContinuum.Value

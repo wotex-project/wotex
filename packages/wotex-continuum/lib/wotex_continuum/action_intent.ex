@@ -9,6 +9,11 @@ defmodule WotexContinuum.ActionIntent do
 
   Construction validates the envelope; it does not authorize, schedule, dedupe,
   or dispatch the Action. Those decisions remain with the consumer.
+
+  `from_map/1` admits either the public struct or its string-keyed wire form,
+  while `to_map/1` emits the versioned representation used by
+  `WotexContinuum.Codec`. The idempotency key identifies a request but does not
+  itself provide exactly-once execution.
   """
 
   @behaviour WotexContinuum.Value

@@ -5,6 +5,17 @@ defmodule WotexContinuum.CanonicalJSON do
   Object keys are ordered by UTF-8 bytes, list order is preserved, and no
   insignificant whitespace is emitted. The form is project-defined and does
   not claim RFC 8785 conformance.
+
+  `encode/1` accepts JSON null, booleans, finite numbers, valid UTF-8 strings,
+  proper lists, and maps with string keys. It traverses nested values with structured
+  paths and returns `WotexContinuum.Error` for unsupported terms, invalid
+  numbers, invalid text, or non-string object keys. Structs are not silently
+  converted to objects.
+
+  The output provides stable package-local bytes for wire vectors and digests.
+  It does not normalize Unicode, reinterpret numeric values, or promise
+  byte-equivalence with another canonicalization scheme. Callers must first
+  serialize a typed continuum value with its owning `to_map/1` function.
   """
 
   alias WotexContinuum.Error

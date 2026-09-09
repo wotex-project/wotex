@@ -8,6 +8,11 @@ defmodule WotexContinuum.ExitReceipt do
   without claiming more than the consumer observed.
 
   Constructing a receipt performs no export or removal.
+
+  Validation relates operation, status, completion time, residuals, artifacts,
+  and failure details. In particular, a completed removal cannot report
+  residual state, whereas a partial outcome must. The versioned map returned by
+  `to_map/1` is evidence supplied by the caller, not proof of deletion.
   """
 
   @behaviour WotexContinuum.Value

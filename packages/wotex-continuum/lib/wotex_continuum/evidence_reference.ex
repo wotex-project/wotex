@@ -6,6 +6,17 @@ defmodule WotexContinuum.EvidenceReference do
   digest refer to exact external bytes without importing a storage system.
   Consumers decide retrieval, retention, authorization, and verification
   policy.
+
+  `from_map/1` validates the identifier, absolute Internationalized Resource
+  Identifier, media type, normalized capture time, lowercase SHA-256 digest,
+  and extension map. `to_map/1` emits the common continuum envelope and retains
+  unknown namespaced extension values.
+
+  The digest binds the referenced bytes but does not verify them until a
+  consumer retrieves and hashes the resource. The capture time is supplied
+  evidence rather than a clock observation made by this library. Constructing
+  the value performs no network or filesystem I/O and confers no permission to
+  access the referenced location.
   """
 
   @behaviour WotexContinuum.Value

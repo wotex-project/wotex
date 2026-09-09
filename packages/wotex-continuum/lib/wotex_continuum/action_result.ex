@@ -10,6 +10,11 @@ defmodule WotexContinuum.ActionResult do
 
   This value reports an outcome; it never performs the Action or changes Thing
   state.
+
+  Construction also checks temporal order and distinguishes an absent output
+  from an explicit JSON `null`. Use `from_map/1` at an admission boundary and
+  `to_map/1` for the versioned wire representation; do not infer authorization
+  or canonical state from either conversion.
   """
 
   @behaviour WotexContinuum.Value

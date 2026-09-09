@@ -61,11 +61,20 @@ coordination daemon, graph database, shared-workspace application, or
 tool-specific project metadata. External automation must adapt to this
 consumer-neutral repository contract.
 
+## Release metadata
+
+`CHANGELOG.md` is maintained only by GitOps. Never edit it directly.
+Once GitOps is configured for this repository, the human maintainer prepares
+the first release from the existing changelog with
+`mix git_ops.release --override 0.1.0` and later releases with `mix git_ops.release`. Automated agents must not invoke either release task.
+
 ## Git authority
 
 Automated agents must never configure, add, change, or remove a Git remote;
 push; create a tag; publish a package; or create equivalent remote state. Only
-the human maintainer performs publication.
+the human maintainer performs publication. Never change repository visibility.
 
-Every local commit uses `Tobias Bohwalli <hi@futhr.io>` as both author and
-committer. Never substitute an agent, tool, bot, or shared contributor identity.
+Local commits use the identity already configured by the contributor running
+Git. Automated agents must never set or override Git identity; record an agent,
+tool, or bot as an author, committer, or co-author; invent a contributor
+identity; or remove attribution supplied by a human contributor.

@@ -3,10 +3,10 @@
 **Portable continuum values without persistence, dispatch, or hidden runtime authority.**
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_continuum.svg)](https://hex.pm/packages/wotex_continuum)
-[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_continuum)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_continuum)
 [![CI](https://github.com/wotex-project/wotex-continuum/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-continuum/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/wotex-project/wotex-continuum/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-continuum)
-[![License](https://img.shields.io/github/license/wotex-project/wotex-continuum.svg)](https://github.com/wotex-project/wotex-continuum/blob/main/LICENSE)
+[![License](https://img.shields.io/hexpm/l/wotex_continuum.svg)](https://github.com/wotex-project/wotex-continuum/blob/main/LICENSE)
 
 [Installation](#installation) ·
 [Quick Start](#quick-start) ·
@@ -16,6 +16,10 @@
 [Development](#development)
 
 ---
+
+This development checkout has package version `0.1.0`. The public API remains
+unstable. Package metadata does not establish publication or acceptance of every
+work package in the completion contract.
 
 *Continuum* is a project term for the span from disconnected edge devices to
 cloud services across which these inert values are exchanged. W3C Web of Things
@@ -35,7 +39,8 @@ consumer.
 
 ## Installation
 
-Wotex Continuum 0.1 requires Elixir 1.18 or later.
+Wotex Continuum requires Elixir 1.18 or later. After a compatible release is
+available, a consumer can declare the published package as follows.
 
 ```elixir
 def deps do
