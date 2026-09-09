@@ -20,6 +20,20 @@ RUN cmake -S /fixture -B /normal -DWOTEX_BACNET_STACK_SOURCE=/sdk \
     cmake --build /sanitizer --target wotex-bacnet-peer -j2 && \
     ctest --test-dir /sanitizer --output-on-failure
 
+RUN mkdir /provenance && \
+    cc --version > /provenance/compiler.txt && \
+    ld --version > /provenance/linker.txt && \
+    cmake --version > /provenance/cmake.txt && \
+    getconf GNU_LIBC_VERSION > /provenance/libc.txt && \
+    cat /etc/os-release > /provenance/os.txt && \
+    uname -m > /provenance/cpu.txt && \
+    dpkg-query --show > /provenance/packages.txt && \
+    sha256sum /normal/wotex-bacnet-peer /normal/sdk/libbacnet-stack.a \
+      /sanitizer/wotex-bacnet-peer /sanitizer/sdk/libbacnet-stack.a \
+      /usr/bin/cc /usr/bin/ld /usr/bin/cmake > /provenance/sha256.txt && \
+    cp /normal/CMakeCache.txt /provenance/normal-cmake.txt && \
+    cp /sanitizer/CMakeCache.txt /provenance/sanitizer-cmake.txt
+
 USER 65534:65534
 EXPOSE 47808/udp 47809/udp
 ENTRYPOINT ["/sanitizer/wotex-bacnet-peer"]

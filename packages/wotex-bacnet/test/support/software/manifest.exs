@@ -14,7 +14,11 @@ defmodule Wotex.BACnet.SoftwareManifest do
     "test/interop/native/command.c",
     "test/support/software/command.exs",
     "test/support/software/manifest.exs",
-    "test/support/software/package.exs"
+    "test/support/software/package.exs",
+    "test/support/software/fixture.exs",
+    "lib/mix/tasks/wotex.bacnet.software.build.ex",
+    "mix.exs",
+    "mix.lock"
   ]
   @patterns [
     "lib/**/*.ex",
@@ -100,6 +104,8 @@ defmodule Wotex.BACnet.SoftwareManifest do
     unless Enum.all?(expected, fn {key, value} -> manifest[key] == value end),
       do: fail(:manifest_mismatch)
 
+    unless bounded_file?(workspace, "source.tar.gz"), do: fail(:artifact_hash_mismatch)
+
     unless digest(Path.join(workspace, "source.tar.gz")) == @archive,
       do: fail(:archive_hash_mismatch)
 
@@ -129,7 +135,7 @@ defmodule Wotex.BACnet.SoftwareManifest do
       unless safe_name?(name) and valid_hash?(expected_hash), do: fail(:manifest_files)
       path = Path.join(workspace, name)
 
-      unless ordinary_file?(workspace, name) and digest(path) == expected_hash,
+      unless bounded_file?(workspace, name) and digest(path) == expected_hash,
         do: fail(:artifact_hash_mismatch)
     end
 
@@ -219,6 +225,11 @@ defmodule Wotex.BACnet.SoftwareManifest do
     else
       false
     end
+  end
+
+  defp bounded_file?(root, name) do
+    ordinary_file?(root, name) and
+      match?({:ok, %{size: size}} when size <= 16_777_216, File.stat(Path.join(root, name)))
   end
 
   defp safe_name?(name) when is_binary(name) do

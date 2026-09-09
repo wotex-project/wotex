@@ -95,6 +95,7 @@ defmodule WotexBACnet.MixProject do
       setup: ["deps.get", "deps.compile"],
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
       "test.cover": ["coveralls"],
+      "wotex.software.build": "wotex.bacnet.software.build",
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
     ]
   end

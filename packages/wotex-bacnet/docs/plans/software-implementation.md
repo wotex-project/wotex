@@ -39,10 +39,12 @@ for every requirement family. Evidence includes its exact source and corpus SHA.
    loss, saturated counters and verified borrowed receive policy. Retain these
    assertions in the final supported cohort. Tests at `test/wotex/bacnet/ingress_lifecycle_test.exs` bind every
    [ingress-v1.json](../specs/fixtures/ingress-v1.json) trace and sustained software-UDP observations.
-2. Implement `mix wotex.software.build --workspace ABS` and
-   `mix wotex.software.run --workspace ABS` with the exact workspace/manifest
-   contract below. Existing shell scripts remain read/write fixture entry points;
-   their existence does not satisfy the Mix task contract.
+2. `mix wotex.software.build --workspace ABS` builds or verifies the pinned
+   instrumented peers and their source/toolchain manifest. Its shell entry point
+   delegates directly to the unique Mix task. Implement
+   `mix wotex.software.run --workspace ABS` with the ownership and evidence
+   contract below. The existing run shell script remains a read/write fixture
+   entry point; its existence does not satisfy the Mix run contract.
    The [command guardian](../../test/interop/native/README.md) supplies bounded
    process-group ownership and workspace leases. Its fifteen ExUnit cases and
    eight standalone native cases cover local command faults; container ownership
@@ -85,8 +87,9 @@ as executable/argument vectors, never interpolated shell text.
 Build verifies BACstack's locked Hex source and the C-stack archive in the
 [software-sources-v1.json](../specs/fixtures/software-sources-v1.json) before extraction. Archive members cannot
 escape the workspace. Downloads have a 120-second/100-MiB per-archive ceiling.
-The source verifier applies the narrower 1-MiB compressed BACstack limit and
-4096-member/64-MiB expanded archive limits. It compares all installed BACstack
+The source verifier applies narrower compressed limits of 1 MiB for BACstack
+and 16 MiB for the C stack, plus 4096-member/64-MiB expanded archive limits.
+It compares all installed BACstack
 package files to the verified Hex archive, including the archived metadata.
 Reuse rechecks source and binary hashes. The manifest records source URL/commit/
 archive SHA-256, all fixture/patch source hashes, compiler/linker/libc/CMake/OS/CPU

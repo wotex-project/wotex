@@ -59,11 +59,12 @@ Local COV and Runtime lifecycle tests exercise the native BEAM wrapper over UDP
 fault peers. Independent object/Property COV evidence comes from the separate C suites
 described below.
 
-The checked-in `build_software.sh` and `run_software.sh` exercise the read/write
-fixture. They accept environment configuration and do not implement the target
-absolute-workspace admission or complete source/toolchain/binary manifest.
-The required Mix build/run tasks, complete fault workflow and final software
-matrix/archive cohort remain required.
+The explicit Mix build task and its thin `build_software.sh` entry point verify
+the pinned sources, installed BACstack files, native build options and peer
+binary/toolchain identities in an absolute workspace. The existing
+`run_software.sh` still exercises the read/write fixture through environment
+configuration. The required Mix run task, complete fault workflow and final
+software matrix/archive cohort remain required.
 A COV listener or final receiver queue bound does not bound an earlier
 SDK-to-StackOwner mailbox.
 
