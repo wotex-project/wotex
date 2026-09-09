@@ -49,6 +49,13 @@ defmodule Wotex.BACnet.Test.CStackPeer do
   @doc false
   @spec connect(keyword()) :: BACnet.Session.t()
   def connect(options \\ []) do
+    assert {:ok, session} = BACnet.connect(options(options))
+    session
+  end
+
+  @doc false
+  @spec options(keyword()) :: keyword()
+  def options(options \\ []) do
     port = System.fetch_env!("WOTEX_BACNET_INTEROP_PORT") |> String.to_integer()
     destination = {{127, 0, 0, 1}, port}
     {:ok, reservation} = :gen_udp.open(0, [:binary, active: false])
@@ -64,8 +71,7 @@ defmodule Wotex.BACnet.Test.CStackPeer do
       discovery: %{destination: destination, timeout_ms: 100, max_devices: 16}
     ]
 
-    assert {:ok, session} = BACnet.connect(Keyword.merge(defaults, options))
-    session
+    Keyword.merge(defaults, options)
   end
 
   @doc false

@@ -34,5 +34,8 @@ bool peer_uint(const char *text, uint32_t minimum, uint32_t maximum, uint32_t *o
 bool peer_parse(const char *data, size_t size, struct peer_command *out);
 int peer_parser_test(void);
 void peer_increment(uint64_t *value);
+void peer_control_begin(enum peer_fault kind);
+void peer_control_end(bool matching);
+bool peer_drop_cancel(void);
 
 #endif

@@ -56,14 +56,14 @@ A corpus assertion requires all seven case IDs and their local bindings; an
 empty or incomplete case list fails. These injected native-error cases establish
 the Runtime boundary, not independent wire-fault behavior.
 Local COV and Runtime lifecycle tests exercise the native BEAM wrapper over UDP
-fault peers. Independent object-COV evidence comes from the separate C suite
+fault peers. Independent object/Property COV evidence comes from the separate C suites
 described below.
 
 The checked-in `build_software.sh` and `run_software.sh` exercise the read/write
 fixture. They accept environment configuration and do not implement the target
 absolute-workspace admission or complete source/toolchain/binary manifest.
-The required Mix build/run tasks, independent C-peer Property COV, full
-receiver-death stress and final software matrix/archive cohort remain required.
+The required Mix build/run tasks, full receiver-death stress and final software
+matrix/archive cohort remain required.
 A COV listener or final receiver queue bound does not bound an earlier
 SDK-to-StackOwner mailbox.
 
@@ -86,11 +86,12 @@ recorded; kernel packet loss is unavailable through the selected portable inet
 API and is never reported as zero. These local tests do not replace the required
 Linux independent C-peer workflow, final supported matrix or complete C09 stress.
 
-## Independent C object-COV execution
+## Independent C object and Property COV execution
 
 The instrumented [C fixture](../../test/interop/cstack/README.md) links the
-unmodified pinned C stack. WBA-CP01's native parser/counter checks and WBA-CP02
-through WBA-CP09's eight ExUnit cases pass on Linux ARM64 with GCC 12.2.0,
+unmodified pinned C stack. WBA-CP01/WBA-CP10's native control/Property boundary
+checks and WBA-CP02–CP09/WBA-CP11–CP21's 19 ExUnit cases pass with a
+Linux ARM64 peer built with GCC 12.2.0,
 both normally and with ASan/UBSan applied to the fixture and linked SDK. The
 ExUnit subject uses Elixir 1.20.2 / OTP 29.0.4 and actual UDP transport.
 
@@ -103,10 +104,21 @@ cancellation request leaves an observed server subscription after local cleanup;
 the finite server lease subsequently expires. Tests assert actual subscriber,
 Invoke ID, ACK and cancellation counts, native process exits and socket release.
 
+Property COV has a separate bounded server table using the pinned SDK's service
+and notification codecs. Cases cover confirmed/unconfirmed reports, increments
+below the object's default, Status_Flags changes, Property-only selection,
+fresh equal reports after renewal, all 16 capacity slots without eviction and
+rejected selectors. Four loss cases independently exercise accepted registration,
+renewal and deletion, plus finite expiry after an undelivered cancellation.
+The public Runtime case observes two actual values and stops the original
+association despite a different target in the stop Form. Both native CTest cases
+and all 19 peer cases pass with ASan/UBSan; the sanitizer process's complete
+SIGTERM shutdown exits zero without findings.
+
 Peak native RSS is reported separately from live resource counts. These cases
-do not establish SubscribeCOVProperty, complete C09 stress or the final immutable
-package consumer cohort. The fixture's explicit source/options and counter
-semantics are part of its contract, not a claim of general-purpose server support.
+do not establish complete C09 stress or the final immutable package consumer
+cohort. The fixture's explicit source/options and counter semantics are part of
+its contract, not a claim of general-purpose server support.
 
 ## Evidence identities
 

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #define _POSIX_C_SOURCE 200809L
 #include "peer.h"
+#include "property_peer.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -29,6 +30,36 @@ static uint32_t Faults[PEER_FAULT_COUNT];
 static enum peer_fault Current_Request;
 static bool Control_Ack_Generated;
 static volatile sig_atomic_t Stopping;
+
+void peer_control_begin(enum peer_fault kind)
+{
+    Current_Request = kind;
+    Control_Ack_Generated = false;
+}
+
+void peer_control_end(bool matching)
+{
+    if (Control_Ack_Generated) {
+        if (Current_Request == PEER_FAULT_REGISTER_ACK) {
+            peer_increment(&Counters.registrations);
+        } else if (Current_Request == PEER_FAULT_RENEW_ACK) {
+            peer_increment(&Counters.renewals);
+        } else if (Current_Request == PEER_FAULT_CANCEL_ACK && matching) {
+            peer_increment(&Counters.cancellations);
+        }
+    }
+    Current_Request = PEER_FAULT_NONE;
+}
+
+bool peer_drop_cancel(void)
+{
+    if (Faults[PEER_FAULT_CANCEL_REQUEST]) {
+        --Faults[PEER_FAULT_CANCEL_REQUEST];
+        peer_increment(&Counters.dropped_requests);
+        return true;
+    }
+    return false;
+}
 
 static uint64_t monotonic_ms(void)
 {
@@ -109,24 +140,13 @@ static void subscribe_cov(uint8_t *request, uint16_t length, BACNET_ADDRESS *sou
         }
         Current_Request = decoded.cancellationRequest ? PEER_FAULT_CANCEL_ACK :
             (matching ? PEER_FAULT_RENEW_ACK : PEER_FAULT_REGISTER_ACK);
-        if (decoded.cancellationRequest && Faults[PEER_FAULT_CANCEL_REQUEST]) {
-            --Faults[PEER_FAULT_CANCEL_REQUEST];
-            peer_increment(&Counters.dropped_requests);
+        if (decoded.cancellationRequest && peer_drop_cancel()) {
             Current_Request = PEER_FAULT_NONE;
             return;
         }
     }
     handler_cov_subscribe(request, length, source, service);
-    if (Control_Ack_Generated) {
-        if (Current_Request == PEER_FAULT_REGISTER_ACK) {
-            peer_increment(&Counters.registrations);
-        } else if (Current_Request == PEER_FAULT_RENEW_ACK) {
-            peer_increment(&Counters.renewals);
-        } else if (Current_Request == PEER_FAULT_CANCEL_ACK && matching) {
-            peer_increment(&Counters.cancellations);
-        }
-    }
-    Current_Request = PEER_FAULT_NONE;
+    peer_control_end(matching);
 }
 
 static void notification_ack(BACNET_ADDRESS *source, uint8_t invoke_id)
@@ -138,6 +158,7 @@ static void notification_ack(BACNET_ADDRESS *source, uint8_t invoke_id)
     if (tsm_get_transaction_pdu(invoke_id, &destination, &npdu, apdu, &length) &&
         bacnet_address_same(source, &destination)) {
         peer_increment(&Counters.notification_acks);
+        property_peer_ack(source, invoke_id);
     }
 }
 
@@ -157,7 +178,9 @@ int __wrap_bip_send_pdu(BACNET_ADDRESS *destination, BACNET_NPDU_DATA *npdu,
         uint8_t *apdu = pdu + offset;
         unsigned remaining = length - (unsigned)offset;
         control_ack = remaining == 3 && apdu[0] == PDU_TYPE_SIMPLE_ACK &&
-            apdu[2] == SERVICE_CONFIRMED_SUBSCRIBE_COV && Current_Request != PEER_FAULT_NONE;
+            (apdu[2] == SERVICE_CONFIRMED_SUBSCRIBE_COV ||
+             apdu[2] == SERVICE_CONFIRMED_SUBSCRIBE_COV_PROPERTY) &&
+            Current_Request != PEER_FAULT_NONE;
         notification = (remaining >= 4 && (apdu[0] & 0xF0) == PDU_TYPE_CONFIRMED_SERVICE_REQUEST &&
             apdu[3] == SERVICE_CONFIRMED_COV_NOTIFICATION) ||
             (remaining >= 2 && apdu[0] == PDU_TYPE_UNCONFIRMED_SERVICE_REQUEST &&
@@ -188,19 +211,22 @@ int __wrap_bip_send_pdu(BACNET_ADDRESS *destination, BACNET_NPDU_DATA *npdu,
 static int snapshot(char *output, size_t capacity, uint32_t nonce)
 {
     struct rusage usage;
-    int count = subscriptions(NULL, NULL, NULL);
-    if (count < 0 || getrusage(RUSAGE_SELF, &usage) != 0) {
+    int object_count = subscriptions(NULL, NULL, NULL);
+    unsigned property_count = property_peer_count();
+    if (object_count < 0 || getrusage(RUSAGE_SELF, &usage) != 0) {
         return -1;
     }
     return snprintf(output, capacity,
-        "{\"version\":1,\"nonce\":%" PRIu32 ",\"pid\":%ld,\"active_subscribers\":%d,"
+        "{\"version\":1,\"nonce\":%" PRIu32 ",\"pid\":%ld,\"active_subscribers\":%u,"
+        "\"object_subscribers\":%d,\"property_subscribers\":%u,"
         "\"active_invoke_ids\":%u,\"present_value\":%.9g,\"priority\":%u,\"max_rss_kib\":%ld,"
         "\"reads\":%" PRIu64 ",\"writes\":%" PRIu64 ",\"who_is\":%" PRIu64 ","
         "\"registrations\":%" PRIu64 ",\"renewals\":%" PRIu64 ",\"cancellations\":%" PRIu64 ","
         "\"control_acks\":%" PRIu64 ",\"notification_acks\":%" PRIu64 ",\"notifications\":%" PRIu64 ","
         "\"datagrams\":%" PRIu64 ",\"dropped_acks\":%" PRIu64 ",\"dropped_requests\":%" PRIu64 ","
         "\"failed_sends\":%" PRIu64 "}\n",
-        nonce, (long)getpid(), count, (unsigned)(MAX_TSM_TRANSACTIONS - tsm_transaction_idle_count()),
+        nonce, (long)getpid(), (unsigned)object_count + property_count, object_count, property_count,
+        (unsigned)(MAX_TSM_TRANSACTIONS - tsm_transaction_idle_count()),
         (double)Analog_Output_Present_Value(1), Analog_Output_Present_Value_Priority(1), usage.ru_maxrss,
         Counters.reads, Counters.writes, Counters.who_is, Counters.registrations, Counters.renewals,
         Counters.cancellations, Counters.control_acks, Counters.notification_acks, Counters.notifications,
@@ -269,6 +295,9 @@ int main(int argc, char **argv)
     if (argc == 2 && strcmp(argv[1], "--self-test") == 0) {
         return peer_parser_test();
     }
+    if (argc == 2 && strcmp(argv[1], "--property-self-test") == 0) {
+        return property_peer_test();
+    }
     if (argc != 5 || !argv[1][0] || strlen(argv[1]) > 15 ||
         !peer_uint(argv[2], 1, 65535, &protocol_port) ||
         !peer_uint(argv[3], 1, 65535, &control_port) || protocol_port == control_port ||
@@ -298,6 +327,7 @@ int main(int argc, char **argv)
     apdu_set_confirmed_handler(SERVICE_CONFIRMED_READ_PROPERTY, read_property);
     apdu_set_confirmed_handler(SERVICE_CONFIRMED_WRITE_PROPERTY, write_property);
     apdu_set_confirmed_handler(SERVICE_CONFIRMED_SUBSCRIBE_COV, subscribe_cov);
+    apdu_set_confirmed_handler(SERVICE_CONFIRMED_SUBSCRIBE_COV_PROPERTY, property_peer_subscribe);
     apdu_set_unconfirmed_handler(SERVICE_UNCONFIRMED_WHO_IS, who_is);
     apdu_set_confirmed_simple_ack_handler(SERVICE_CONFIRMED_COV_NOTIFICATION, notification_ack);
     bip_set_port((uint16_t)protocol_port);
@@ -333,7 +363,9 @@ int main(int argc, char **argv)
         for (unsigned index = 0; index < 5; index++) {
             handler_cov_task();
         }
+        property_peer_tick(now);
     }
+    property_peer_close();
     handler_cov_init();
     for (unsigned index = 1; index <= UINT8_MAX; index++) {
         tsm_free_invoke_id((uint8_t)index);
