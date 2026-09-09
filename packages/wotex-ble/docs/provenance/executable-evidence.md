@@ -58,3 +58,19 @@ The focused ExUnit lane and Linux ARM64 GCC ASan/UBSan executable pass. This is
 native parser evidence, not D-Bus ownership, complete .13 flow control or GATT
 interoperability. The required Linux x86_64 reference lane remains separate.
 No production connection selects an incomplete native helper.
+
+## Native report reservations
+
+`test/wotex/ble/native_credit_test.exs` binds B-F07/B-F08/B-F09/B-F14/B-F15
+to the production `credit.hpp` manager. Exact byte/sequence acknowledgements
+release only the consumed prefix; retirement preserves outstanding credits until
+acknowledged and cannot release a different stream's reservations. Native tests
+exercise 64 active streams, 64 outstanding frames, the 1 MiB byte ceiling, forged
+acknowledgements, a false retirement barrier and 100000 subscription lifetimes
+with no retained closed-stream records. The six focused ExUnit tests and Linux
+ARM64 GCC ASan/UBSan invariants pass.
+
+These cases exercise the native accounting component. The trace fixture supplies
+consumer acknowledgements from observed reservations; actual BEAM/Port credit
+flow, bounded unsent report storage and sustained-callback process cases remain
+unexecuted. No native SDK or software GATT claim follows from this unit evidence.

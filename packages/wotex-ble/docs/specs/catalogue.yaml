@@ -63,5 +63,5 @@ specifications:
     standards: [{"name": "Native BlueZ GATT central", "revision": "Exact source hashes and build profile in .13", "claim": "Accepted native target; current baseline evidence is separate"}]
     requires: ["WBL.00", "WBL.10", "WBL.11", "WBL.12"]
     implementation_modules: []
-    executable_evidence: ["test/wotex/ble/native_frame_test.exs", "test/native/frame_test.cpp"]
-    compatibility_classification: "Required native Port, typed IPC, resource ownership and Mix/ExUnit evidence; B-F01 through B-F05 execute the bounded C++ request parser; backend, flow and software-peer acceptance remain open."
+    executable_evidence: ["test/wotex/ble/native_frame_test.exs", "test/native/frame_test.cpp", "test/wotex/ble/native_credit_test.exs", "test/native/credit_test.cpp"]
+    compatibility_classification: "Required native Port, typed IPC, resource ownership and Mix/ExUnit evidence; B-F01 through B-F05 execute the C++ request parser; B-F07/B-F08/B-F09/B-F14/B-F15 execute report reservation/retirement accounting. Actual backend, output queue, BEAM credit flow and software-peer acceptance remain open."
