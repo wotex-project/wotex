@@ -27,8 +27,8 @@ Native protocol execution uses BEAM/OTP and the explicitly specified native SDK
 Port, where applicable. Build and test orchestration uses Mix/ExUnit. No Python
 runtime or target orchestration dependency is part of this contract.
 
-Run `WOTEX_PATH_DEPS=1 mix check --no-retry` before every local commit. The gate includes
-formatting, compilation, tests, documentation and unpacked archive inspection.
+Run `WOTEX_PATH_DEPS=1 mix check --no-retry` before every local commit. The gate
+includes formatting, warnings-as-errors compilation, and the default test suite.
 Apply `.claude/skills/spec-delivery/SKILL.md` for public behavior and standards
 claims and `.claude/skills/release-readiness/SKILL.md` for compatibility claims.
 Consumer-neutrality is a review obligation; never add a consumer denylist.
