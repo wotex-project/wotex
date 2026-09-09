@@ -1,5 +1,21 @@
 defmodule Wotex.CoAP.RuntimeRelay do
-  @moduledoc false
+  @moduledoc """
+  Owns the bridge from one native CoAP observation to a Runtime subscription.
+
+  The relay opens an explicitly configured session through
+  `Wotex.CoAP.RuntimeNative` and returns a generation-bound
+  `Wotex.CoAP.RuntimeHandle` only after validating the initial subscription.
+  Establishment buffers at most 64 native reports. Once bound, it validates
+  complete reports, checks the receiver queue limit, and forwards Runtime frame
+  messages. Native failure or overflow sends a terminal status and begins cleanup.
+
+  Caller and receiver monitors cover interrupted establishment; the receiver
+  remains the lifetime owner after opening. Cancellation, deadlines, and owner
+  death converge on bounded cleanup with escalation for an unresponsive owned
+  process. Process diagnostics are redacted. The relay stores no Runtime
+  execution context, makes no automatic reconnection, and establishes no
+  canonical Property state from received values.
+  """
 
   use GenServer
   alias Wotex.CoAP.{Connection, Error, Lifetime, RuntimeFrame, RuntimeHandle, RuntimeNative}

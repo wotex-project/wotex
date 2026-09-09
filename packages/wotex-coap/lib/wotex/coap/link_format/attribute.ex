@@ -1,5 +1,19 @@
 defmodule Wotex.CoAP.LinkFormat.Attribute do
-  @moduledoc false
+  @moduledoc """
+  Validates attribute syntax for the package's CoRE Link Format parser.
+
+  `Wotex.CoAP.LinkFormat` supplies an attribute name, its raw binary or flag
+  value, and whether the source value was quoted. This helper checks names,
+  relation lists, Content-Format identifiers, language tags, media types, and
+  extended attribute encoding. Unknown attributes retain the generic token or
+  quoted-string syntax instead of acquiring application meaning.
+
+  URI-reference checks validate permitted characters, percent escapes, and
+  authority/path syntax without resolving or following a link. The surrounding
+  parser owns byte limits, duplicate-attribute policy, ordering, and structured
+  errors. These predicates operate on parser-admitted inputs and perform no
+  network, filesystem, or registry lookup.
+  """
 
   @name ~r/\A[A-Za-z0-9!#$&+.^_`|~-]+\*?\z/
   @token ~r/\A[A-Za-z0-9!#$%&'()*+.\/:<=>?@\[\]^_`{|}~-]+\z/

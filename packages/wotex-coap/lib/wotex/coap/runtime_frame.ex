@@ -1,5 +1,18 @@
 defmodule Wotex.CoAP.RuntimeFrame do
-  @moduledoc false
+  @moduledoc """
+  Validates complete native Observe reports before Runtime content decoding.
+
+  The relay supplies a `Wotex.CoAP.Message` and its five-field report metadata.
+  Validation reconstructs the observation metadata and checks complete-body
+  consistency before `Wotex.CoAP.Mapping` decodes JSON, text, or binary content.
+  A successful result preserves the validated metadata beside the decoded value.
+
+  Native errors pass a separate structural check: details may contain only the
+  library-owned code, reason, or limit keys with atom or integer values.
+  Unexpected frame or error shapes become `:invalid_runtime_frame` errors;
+  arbitrary native output is not copied into Runtime diagnostics. This helper
+  is pure and owns no receiver, queue, session, or subscription lifecycle.
+  """
 
   alias Wotex.CoAP.{Error, Mapping, Message}
   alias Wotex.CoAP.Observation.Report

@@ -2,6 +2,7 @@ defmodule Wotex.CoAP.ObservationValueTest do
   @moduledoc false
 
   use ExUnit.Case, async: true
+  doctest Wotex.CoAP.Observe
   use ExUnitProperties
   alias Wotex.CoAP.{Blockwise, Codec, Error, Message, Observe, Subscription}
   alias Wotex.CoAP.Observation.Report

@@ -1,5 +1,20 @@
 defmodule Wotex.CoAP.Security.PKI do
-  @moduledoc false
+  @moduledoc """
+  Validates the explicit PKI material admitted by a CoAP security value.
+
+  `Wotex.CoAP.Security` supplies the mode-specific credential fields. This
+  helper bounds each DER certificate, key, or revocation list to 64 KiB, admits
+  one through eight trust certificates and revocation lists each, and enforces
+  a 1 MiB aggregate limit before decoding. It accepts coherent two-prime RSA
+  private keys in unencrypted PKCS 1 or PKCS 8 form and checks that the client
+  certificate carries the matching public key of at least 2048 bits.
+
+  Server identities use an ASCII DNS name or a numeric IPv4/IPv6 tuple. These
+  checks are pure: they read no clock, environment, file, or network service.
+  Credential admission verifies encoding and key consistency; peer trust,
+  certificate dates, signatures, and revocation are checked during the explicit
+  DTLS handshake. Invalid material returns a bounded `:invalid_security` error.
+  """
 
   import Bitwise
   alias Wotex.CoAP.Error

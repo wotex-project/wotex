@@ -1,5 +1,18 @@
 defmodule Wotex.CoAP.Security.CRLCache do
-  @moduledoc false
+  @moduledoc """
+  Supplies session-local certificate revocation lists to OTP SSL validation.
+
+  The DTLS adapter installs this callback module with the immutable DER-encoded
+  revocation lists admitted by `Wotex.CoAP.Security`. Lookup selects lists by
+  normalized issuer name, including explicit directory-name issuers from a
+  distribution point. Missing or malformed material produces no matching list.
+
+  Refresh returns the same supplied bytes. The module has no global cache,
+  filesystem store, HTTP fetch, or automatic trust rotation. OTP's certificate
+  validation engine checks signatures, validity dates, scope, and revocation;
+  strict CRL checking in `Wotex.CoAP.Datagram.DTLS` rejects insufficient material.
+  A new session is required to select a different revocation snapshot.
+  """
 
   require Record
 

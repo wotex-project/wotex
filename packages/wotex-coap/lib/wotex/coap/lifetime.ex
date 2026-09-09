@@ -1,5 +1,18 @@
 defmodule Wotex.CoAP.Lifetime do
-  @moduledoc false
+  @moduledoc """
+  Enforces owner-death cleanup when a transport process cannot handle messages.
+
+  A transport explicitly starts this linked guardian with its owner processes
+  and a cleanup grace in milliseconds. The guardian monitors its parent and
+  every owner. When an owner exits, it allows the parent the supplied grace to
+  terminate, then kills that exact parent if it is still alive. The guardian
+  exits when its parent exits.
+
+  Connections, datagram adapters, and Runtime relays use this internal lifecycle
+  mechanism alongside their normal monitor handling. It owns no socket, retry,
+  or protocol cancellation exchange. Loading the module starts no guardian;
+  the caller must supply already validated process identities and grace values.
+  """
 
   @doc false
   @spec start([pid()], non_neg_integer()) :: pid()

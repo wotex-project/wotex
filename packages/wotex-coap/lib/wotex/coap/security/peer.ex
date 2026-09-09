@@ -1,5 +1,19 @@
 defmodule Wotex.CoAP.Security.Peer do
-  @moduledoc false
+  @moduledoc """
+  Adds the package's peer-certificate restrictions to OTP DTLS verification.
+
+  The callback rejects OTP certificate failures and leaves extension processing
+  to OTP. Validated certificates must carry an RSA key of at least 2048 bits.
+  The peer certificate additionally requires digital-signature key usage,
+  server-authentication extended key usage, and the caller's exact DNS or IP
+  identity in a Subject Alternative Name. DNS comparison ignores ASCII case;
+  wildcard matching and Common Name fallback are not accepted.
+
+  The callback retains only the expected identity. It reports fixed failure
+  atoms without copying certificates or arbitrary OTP reasons. Chain, signature,
+  time, critical-extension, and revocation validation remain owned by OTP SSL
+  under the configuration selected by `Wotex.CoAP.Datagram.DTLS`.
+  """
 
   alias Wotex.CoAP.Security.PKI
   require Record

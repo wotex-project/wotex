@@ -15,8 +15,11 @@ defmodule Wotex.CoAP.Observe do
 
   ## Examples
 
-      true = Wotex.CoAP.Observe.fresh?(10, 11, 100)
-      false = Wotex.CoAP.Observe.fresh?(11, 10, 100)
+      iex> Wotex.CoAP.Observe.fresh?(10, 11, 100)
+      true
+
+      iex> Wotex.CoAP.Observe.fresh?(11, 10, 100)
+      false
   """
 
   import Bitwise

@@ -1,5 +1,20 @@
 defmodule Wotex.CoAP.RuntimeNative do
-  @moduledoc false
+  @moduledoc """
+  Performs native session establishment and cleanup for a CoAP Runtime relay.
+
+  An explicitly started linked worker opens the configured session under one
+  monotonic deadline. It reports the session to `Wotex.CoAP.RuntimeRelay`, waits
+  for permission to register Observe, and returns the resulting subscription.
+  The relay verifies the worker, owner, numeric endpoint, and generation through
+  library-owned process markers before accepting either resource.
+
+  Closing spends the remaining operation budget on native cancellation and
+  always aborts the exact connection afterward. An expired cancellation budget
+  remains an error even when local resources are released. The worker retains
+  only its generation after establishment; it receives no Runtime execution
+  context. This module is an internal transport mechanism, not a connection
+  pool or consumer supervision policy.
+  """
 
   alias Wotex.CoAP
   alias Wotex.CoAP.{Connection, Error, Subscription}
