@@ -1,5 +1,17 @@
 defmodule Wotex.BACnet.NativeCall do
-  @moduledoc false
+  @moduledoc """
+  Preserves a native request deadline across client dispatch and return.
+
+  An expired request returns an internal `:not_started` outcome before invoking
+  a callback. First-party clients receive the absolute deadline; other clients
+  receive the remaining milliseconds through `Wotex.BACnet.PortCall`.
+
+  Successful single-operation responses arriving after expiry become deadline
+  errors. A write then carries unknown effect because transmission may already
+  have occurred. Batch completion checks belong to `Wotex.BACnet.NativeHelpers`
+  and `Wotex.BACnet.Batch`. This helper does not independently interrupt a
+  custom client callback.
+  """
 
   alias Wotex.BACnet.{Error, PortCall, Session}
 

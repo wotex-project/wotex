@@ -1,5 +1,19 @@
 defmodule Wotex.BACnet.DiscoveryOwner do
-  @moduledoc false
+  @moduledoc """
+  Owns the listener and send worker for one explicit Who-Is window.
+
+  Registration precedes transmission. The verified wrapper checks the caller,
+  listener, and absolute deadline again immediately before sending. Direct
+  I-Am messages from the selected client feed
+  `Wotex.BACnet.DiscoveryWindow`; routed or unrelated messages do not become
+  discovered devices through this path.
+
+  Caller, session, or client loss terminates collection. Completion unregisters
+  the listener, cancels timers, and stops the owned send worker within the
+  cleanup budget. Overflow or failed cleanup is reported as failure rather than
+  a successful partial device list. No continuous discovery process is started
+  by loading the library.
+  """
 
   use GenServer
   alias BACnet.Protocol.NPCI

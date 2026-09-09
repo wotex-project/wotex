@@ -1,5 +1,24 @@
 defmodule Wotex.BACnet.Device do
-  @moduledoc "A validated I-Am observation retaining its source without selecting a route."
+  @moduledoc """
+  Represents one validated I-Am observation with its original IPv4 source.
+
+  The exact value records source address and port, device instance, maximum
+  APDU size, segmentation capability, and vendor identifier. `new/1` validates
+  an existing struct or a map with precisely those fields. Unknown fields,
+  invalid numeric bounds, and unsupported segmentation values return
+  `:invalid_device`.
+
+  `Wotex.BACnet.NativeDiscovery` returns these values in source-and-instance
+  order. An observation describes what the sender advertised; it does not
+  establish trust, choose a destination for later operations, or modify session
+  receive limits. The consumer configures any subsequent connection explicitly.
+
+  ## Examples
+
+      iex> {:ok, device} = Wotex.BACnet.Device.new(%{source: {{192, 0, 2, 1}, 47808}, instance: 42, max_apdu: 1476, segmentation: :no_segmentation, vendor_id: 0})
+      iex> {device.source, device.instance}
+      {{{192, 0, 2, 1}, 47808}, 42}
+  """
 
   alias BACnet.Protocol.{APDU, ObjectIdentifier}
   alias BACnet.Protocol.Services.IAm

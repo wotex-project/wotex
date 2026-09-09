@@ -1,5 +1,17 @@
 defmodule Wotex.BACnet.DiscoveryOptions do
-  @moduledoc false
+  @moduledoc """
+  Validates explicit BACnet/IP Who-Is configuration and instance ranges.
+
+  Discovery is disabled when configuration is absent. Enabled configuration
+  contains exactly a destination, a 10 through 60,000 millisecond collection
+  window, and a maximum of one through 1024 devices. A broadcast destination
+  must be supplied explicitly; no default broadcast is inferred.
+
+  The request builder accepts either no instance range or an ordered inclusive
+  pair from zero through 4,194,302. It builds the pinned SDK Who-Is APDU without
+  sending it. `Wotex.BACnet.DiscoveryWindow` combines this admission with the
+  caller's absolute deadline.
+  """
 
   alias BACnet.Protocol.Services.WhoIs
   alias Wotex.BACnet.{Device, Error}

@@ -1,5 +1,22 @@
 defmodule Wotex.BACnet.RuntimeRelay do
-  @moduledoc false
+  @moduledoc """
+  Owns a native COV subscription on behalf of a Runtime observation.
+
+  Establishment runs in a monitored worker, leaving the relay responsive to
+  caller or Runtime-owner death. Session custody arrives before subscription
+  success; early native reports are buffered up to 64 entries and are delivered
+  only after the matching native handle has been admitted.
+
+  Bound reports must match the native subscription reference and pass
+  `Wotex.BACnet.RuntimeFrame` validation before they become transport frames.
+  Queue overflow, native failure, or session loss ends the relay and reports a
+  transport status change. Close uses a one-second cleanup deadline and retains
+  the generation check carried by `Wotex.BACnet.RuntimeHandle`.
+
+  Runtime owns final receiver membership. This process owns only its native
+  session, workers, and relay state and does not inspect Runtime's private
+  subscription state.
+  """
 
   use GenServer
   alias Wotex.BACnet.{Error, RuntimeFrame, RuntimeHandle, RuntimeNative, Session}

@@ -1,5 +1,18 @@
 defmodule Wotex.BACnet.COV do
-  @moduledoc false
+  @moduledoc """
+  Pure BACnet COV request encoding and notification validation.
+
+  The codec builds SubscribeCOV or SubscribeCOVProperty requests, including
+  cancellation by omission of the confirmation and lifetime fields. Notification
+  decoding validates the subscriber identifier, initiating device, monitored
+  object, time remaining, and one through 1024 bounded Property entries.
+
+  Property selection requires an exact Property and array-index match. Equal
+  repeated selected values are accepted; conflicting values fail instead of
+  choosing the last report entry. Companion entries remain available as native
+  report metadata. The codec opens no subscription and sends no ACK; correlation
+  and lifecycle ownership belong to the SDK wrapper and COV owner.
+  """
 
   alias BACnet.Protocol.APDU
   alias BACnet.Protocol.ApplicationTags.Encoding

@@ -1,5 +1,22 @@
 defmodule Wotex.BACnet.COVOwner do
-  @moduledoc false
+  @moduledoc """
+  Owns one native COV subscription from registration through cancellation.
+
+  The process monitors the session, client, receiver, listener, and establishing
+  caller. It uses cancellable workers for control exchanges so renewal and
+  cleanup remain responsive to owner loss. Establishment succeeds only after a
+  validated control ACK; an early report is buffered until that point.
+
+  A finite local lease starts with the control exchange and may renew halfway
+  through its configured lifetime. Server time remaining is retained as report
+  metadata and cannot silently extend the lease. Confirmed duplicate reports
+  are acknowledged by the listener while repeated delivery is suppressed.
+
+  Queue overflow, expiry, protocol failure, and owner death end delivery and
+  begin bounded cancellation. Cleanup stops owned workers and timers and settles
+  their wrapper registrations without terminating a borrowed client. Consumers
+  interact through `Wotex.BACnet.Subscription`, not process messages.
+  """
 
   use GenServer
   alias Wotex.BACnet.{COVCache, COVListener, COVWire, Error, Subscription}

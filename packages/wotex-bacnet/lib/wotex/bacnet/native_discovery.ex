@@ -1,5 +1,16 @@
 defmodule Wotex.BACnet.NativeDiscovery do
-  @moduledoc false
+  @moduledoc """
+  Facade admission and result validation for explicit native Who-Is calls.
+
+  One session timeout covers range validation, client dispatch, and result
+  admission. First-party clients receive the original start time and deadline;
+  custom clients use an optional Who-Is callback with the remaining budget.
+
+  Results must be a sorted list of at most 1024 valid `Wotex.BACnet.Device`
+  values with unique source-and-instance pairs. Invalid or late results become
+  typed errors. This helper neither supplies a broadcast destination nor starts
+  ambient discovery; collection belongs to the selected client.
+  """
 
   alias Wotex.BACnet.{Device, DiscoveryOptions, Error, PortCall, Session}
 

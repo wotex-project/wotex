@@ -1,5 +1,22 @@
 defmodule Wotex.BACnet.StackClient do
-  @moduledoc false
+  @moduledoc """
+  Hosts the pinned BACstack client with bounded Wotex ownership extensions.
+
+  This wrapper delegates ordinary SDK behavior while adding capability
+  negotiation, monitored exchanges, invoke-ID retirement, and explicit COV and
+  discovery registrations. Confirmed service capacity is bounded. Absolute
+  deadline and caller-liveness checks run at final admission before a wrapped
+  send, including sends that were queued while the process was paused.
+
+  Direct incoming APDUs use the tag decoder that preserves CharacterString
+  selectors; COV reports follow the scoped filter and reassembly path in
+  `Wotex.BACnet.StackCOV`. Owner loss retires or removes the associated work.
+
+  The wrapper is created and owned explicitly. Borrowing a raw BACstack Client
+  does not install these extensions or authorize mutation of its internals.
+  This module depends on the pinned SDK's callback state contract and requires
+  compatibility review when that dependency changes.
+  """
 
   use GenServer
   alias BACnet.Protocol.{APDU, NPCI}

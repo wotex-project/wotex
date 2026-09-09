@@ -1,5 +1,17 @@
 defmodule Wotex.BACnet.RuntimeExchange do
-  @moduledoc false
+  @moduledoc """
+  Executes one Runtime Property request through an explicitly owned session.
+
+  `Wotex.BACnet.Transport` supplies the mapped native request and its absolute
+  deadline. Connect, request, returned-value validation, result construction,
+  and successful cleanup consume that same budget. Reads require valid native
+  values; writes require the exact `:written` acknowledgement.
+
+  The result retains the Runtime request ID and operation. A cleanup failure
+  prevents a successful result, and a late or uncertain write failure carries
+  unknown effect. Callback return normalization belongs to the client boundary;
+  custom clients remain responsible for honoring the budget they receive.
+  """
 
   alias Wotex.BACnet
   alias Wotex.BACnet.{Error, Value}

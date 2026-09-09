@@ -1,5 +1,21 @@
 defmodule Wotex.BACnet.OperationOwner do
-  @moduledoc false
+  @moduledoc """
+  Coordinates finite native operations within one BACnet session generation.
+
+  The owner admits reads, writes, sequential batches, explicit discovery, and
+  COV control under their absolute deadlines. It bounds pending work and COV
+  subscriptions to 64 and permits one discovery window at a time. Session
+  generation checks prevent a handle from authorizing work in a later session.
+
+  Individual workers and subscription owners carry caller monitors, timers,
+  and cleanup responsibility. Renewal obtains capacity through an explicit
+  control lease. Closing the session cancels its operations and children,
+  releases owned stack resources, and preserves a borrowed SDK client.
+
+  `Wotex.BACnet.BACstack` and `Wotex.BACnet.IPv4` construct this owner. Its
+  internal process protocol is not a consumer API; callers use the facade and
+  return native subscription handles intact.
+  """
 
   use GenServer
 

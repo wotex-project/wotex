@@ -1,5 +1,16 @@
 defmodule Wotex.BACnet.COVSegmentTransport do
-  @moduledoc false
+  @moduledoc """
+  Adapts COV reassembly destinations to the pinned BACstack transport.
+
+  COV assemblies use a tagged source containing the transport module and actual
+  source. This keeps their segment-store identity separate from ordinary
+  confirmed exchanges. The adapter unwraps that identity for destination
+  validation and SegmentACK transmission through the original transport.
+
+  `Wotex.BACnet.StackCOV` constructs these internal destinations. This module
+  owns no transport and performs no independent validation of an arbitrary
+  module supplied by a caller.
+  """
 
   @doc false
   @spec is_valid_destination(term()) :: boolean()

@@ -1,5 +1,18 @@
 defmodule Wotex.BACnet.RuntimeFrame do
-  @moduledoc false
+  @moduledoc """
+  Validates native Property COV frames before Runtime projection.
+
+  A frame must contain the exact nine metadata fields and match the configured
+  source, device instance, object, Property, and array index. Process identifiers
+  and server time-remaining values retain their unsigned 32-bit bounds. Report
+  entries and the selected value must satisfy the native value contract and
+  agree exactly with one another.
+
+  Companion properties remain bounded native metadata. Projection uses
+  `Wotex.BACnet.Value` to expose the selected Property payload; it neither treats
+  native values as JSON nor uses server time remaining to extend a local lease.
+  Invalid frames return a structured error before delivery.
+  """
 
   alias Wotex.BACnet.{COV, COVRequest, Error, Value, ValueBoundary}
 

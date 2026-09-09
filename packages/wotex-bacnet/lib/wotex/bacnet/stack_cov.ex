@@ -1,5 +1,20 @@
 defmodule Wotex.BACnet.StackCOV do
-  @moduledoc false
+  @moduledoc """
+  Tracks COV filters, confirmations, and assemblies inside the SDK wrapper.
+
+  Registration binds a live listener to an explicit destination and validated
+  request. Up to 64 filters and 64 concurrent assemblies are retained, with
+  bounded pending confirmation contexts. Incoming reports must match source,
+  subscriber identifier, initiating device, monitored object, and confirmation
+  mode before they reach a listener.
+
+  Confirmed replies are bound to their listener and invoke ID. Reassembly keeps
+  COV source identity separate, rejects inconsistent headers, and applies the
+  pinned SDK's 32-segment ceiling with a one-second assembly lifetime. Listener
+  death removes its filters, reply contexts, and unshared assemblies. All state
+  belongs to `Wotex.BACnet.StackClient`, never to a borrowed raw SDK client's
+  private state.
+  """
 
   alias BACnet.Protocol.APDU
   alias BACnet.Stack.SegmentsStore

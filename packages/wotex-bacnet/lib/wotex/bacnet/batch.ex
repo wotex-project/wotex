@@ -1,5 +1,18 @@
 defmodule Wotex.BACnet.Batch do
-  @moduledoc false
+  @moduledoc """
+  Pure admission and sequential progress tracking for native Property batches.
+
+  The public `Wotex.BACnet.read_properties/4` helper uses this module to
+  normalize one through 64 distinct Property identifiers for a single object.
+  It preserves caller order for execution and produces a map keyed by normalized
+  Property identifier. This is a sequence of ReadProperty services, not a
+  ReadPropertyMultiple wire request.
+
+  Each step consumes the same absolute deadline. Returned values pass through
+  `Wotex.BACnet.Value`; a failure reports its zero-based batch index, Property,
+  and completed count without returning partial values. This module holds no
+  process or socket; `Wotex.BACnet.OperationOwner` performs each admitted step.
+  """
 
   alias Wotex.BACnet.{Address, Error, Value}
 

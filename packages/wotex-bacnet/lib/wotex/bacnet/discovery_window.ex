@@ -1,5 +1,18 @@
 defmodule Wotex.BACnet.DiscoveryWindow do
-  @moduledoc false
+  @moduledoc """
+  Pure state transitions for one bounded Who-Is collection window.
+
+  The window ends at the earlier of its configured duration and the caller's
+  absolute deadline. Admission reserves time for the send to complete. Reaching
+  the caller deadline is an error; completing the collection window can return
+  an empty list successfully.
+
+  Valid I-Am records are keyed by source and device instance and sorted by that
+  pair on success. Identical repeats are harmless, out-of-range or malformed
+  reports are ignored, and conflicting records or excess capacity fail the
+  entire collection. `Wotex.BACnet.DiscoveryOwner` supplies time and received
+  APDUs; this module starts no listener or timer.
+  """
 
   alias Wotex.BACnet.{Device, DiscoveryOptions, Error}
 

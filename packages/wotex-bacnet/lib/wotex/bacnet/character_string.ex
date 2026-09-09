@@ -10,9 +10,18 @@ defmodule Wotex.BACnet.CharacterString do
   `new/2` accepts character-set identifiers from 0 through 255 and byte strings
   up to 65,536 bytes. Character set zero denotes UTF-8 in this package and
   therefore requires valid UTF-8 bytes; other identifiers preserve their bytes
-  without claiming that the library can
-  transcode them. The value contains decoded protocol data and owns no client
+  without claiming that the library can transcode them. The value contains decoded protocol data and owns no client
   or transport resource.
+
+  ## Examples
+
+      iex> {:ok, text} = Wotex.BACnet.CharacterString.new(5, <<233>>)
+      iex> {text.character_set, text.bytes}
+      {5, <<233>>}
+      iex> {:error, error} = Wotex.BACnet.CharacterString.new(0, <<255>>)
+      iex> error.code
+      :invalid_character_string
+
   """
 
   alias Wotex.BACnet.Error

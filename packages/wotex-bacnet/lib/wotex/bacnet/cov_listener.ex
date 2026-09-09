@@ -1,5 +1,19 @@
 defmodule Wotex.BACnet.COVListener do
-  @moduledoc false
+  @moduledoc """
+  Owns SDK registration and acknowledgement for one native COV subscription.
+
+  The listener registers asynchronously with the verified wrapper and monitors
+  both its COV owner and client. Registration has an absolute deadline. Once
+  registered, it decodes matching reports, checks owner queue capacity,
+  acknowledges confirmed notifications, and forwards the validated report to
+  `Wotex.BACnet.COVOwner`.
+
+  The SDK wrapper supplies source and subscription correlation before this
+  boundary. Termination unregisters the listener; owner cleanup can terminate
+  a listener blocked in an SDK acknowledgement. The listener never owns or
+  stops a borrowed client, and its acknowledgement alone does not establish
+  that a consumer processed the value.
+  """
 
   use GenServer
   alias BACnet.Protocol.APDU

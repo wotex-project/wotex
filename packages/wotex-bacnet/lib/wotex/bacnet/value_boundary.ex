@@ -1,5 +1,17 @@
 defmodule Wotex.BACnet.ValueBoundary do
-  @moduledoc false
+  @moduledoc """
+  Bounds the structure and retained bytes of native BACnet values.
+
+  Traversal admits at most eight nesting levels, 4096 counted nodes, 1024
+  members per collection, and 65,536 binary bytes in aggregate. It understands
+  SDK tag and Encoding wrappers and the original bytes in
+  `Wotex.BACnet.CharacterString`. Unsupported terms or exhausted limits return
+  `:value_limit` without retaining the submitted value.
+
+  The traversal is a resource check, not BACnet type validation. Callers also
+  use `Wotex.BACnet.Value` to validate the semantic tag and payload before a
+  value crosses a request, response, or Runtime boundary.
+  """
 
   alias BACnet.Protocol.ApplicationTags.Encoding
   alias Wotex.BACnet.{CharacterString, Error}

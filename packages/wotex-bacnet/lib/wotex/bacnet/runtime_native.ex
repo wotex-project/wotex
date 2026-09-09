@@ -1,5 +1,19 @@
 defmodule Wotex.BACnet.RuntimeNative do
-  @moduledoc false
+  @moduledoc """
+  Owns the worker that establishes a native session for a Runtime relay.
+
+  The worker first transfers session information to
+  `Wotex.BACnet.RuntimeRelay`, then waits for an explicit subscription handoff.
+  Connect and subscribe share the relay's absolute deadline. The worker stays
+  alive after reporting establishment so the first-party session retains its
+  creating process until cleanup.
+
+  Normal close delegates to the native operation owner or the custom client's
+  unsubscribe and disconnect callbacks. Forced first-party cleanup targets only
+  the owned operation, subscription, and explicitly owned stack resources.
+  Borrowed SDK clients are preserved; arbitrary custom resources cannot be
+  forcefully reclaimed by this helper.
+  """
 
   alias Wotex.BACnet
   alias Wotex.BACnet.{BACstack, Error, IPv4, OperationOwner, Session, StackOwner, Subscription}

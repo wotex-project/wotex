@@ -1,5 +1,18 @@
 defmodule Wotex.BACnet.NativeHelpers do
-  @moduledoc false
+  @moduledoc """
+  Implements the facade's native read, write, and sequential Property helpers.
+
+  Each operation validates the session and address before invoking a client.
+  Writes require an explicit supported value and the exact `:written` reply;
+  reads validate the native returned value. A batch contains one through 64
+  distinct properties for one object and must return exactly those keys.
+
+  Validation, dispatch, and result admission share one absolute session
+  deadline. Batch errors include the failed position and completed count but
+  omit partial values. `Wotex.BACnet.Batch` owns sequential progress for the
+  first-party client; custom implementations remain responsible for honoring
+  the supplied timeout and equivalent result contract.
+  """
 
   alias Wotex.BACnet
   alias Wotex.BACnet.{Address, Batch, Error, NativeCall, Session, Value}

@@ -36,7 +36,7 @@ Elixir documentation is a public contract.
 
 A production `@moduledoc` must be substantive. A one-line restatement of the module name is not acceptable. Explain the module’s purpose, when a consumer uses it, the important value or execution semantics, relevant errors or limits, and its relationship to adjacent modules. Add examples when they clarify correct use. Do not lengthen a document with repetition.
 
-Internal production modules may use `@moduledoc false` when they are intentionally excluded from the public API. Every test and test-support module uses `@moduledoc false` followed by exactly one blank line.
+Internal production modules also require substantive `@moduledoc` text explaining their role and boundaries. Executable module examples require matching doctest declarations in test modules. Every test and test-support module uses `@moduledoc false` followed by exactly one blank line.
 
 ## Review
 

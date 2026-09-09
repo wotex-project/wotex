@@ -1,5 +1,18 @@
 defmodule Wotex.BACnet.NativeSubscription do
-  @moduledoc false
+  @moduledoc """
+  Admits native COV establishment under one absolute caller deadline.
+
+  The facade uses this helper to validate a session and `Wotex.BACnet.COVRequest`
+  before dispatch. First-party clients receive the original absolute deadline;
+  custom clients receive the smaller of their session timeout and the remaining
+  budget. A returned handle must have the native subscription shape and a live
+  owner process.
+
+  A valid handle returned after expiry is cancelled through the same client
+  before the call returns a deadline error. Cancellation receives at most a
+  one-second timeout, which custom clients must honor. The caller's session is
+  not disconnected by this helper.
+  """
 
   alias Wotex.BACnet.{BACstack, COVRequest, Error, IPv4, PortCall, Session, Subscription}
 

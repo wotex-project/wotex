@@ -1,5 +1,15 @@
 defmodule Wotex.BACnet.COVOptions do
-  @moduledoc false
+  @moduledoc """
+  Admits the finite COV option map used by Runtime Property observations.
+
+  Mapping supplies a Property COV message, an explicit receiver, and optional
+  confirmation, lifetime, renewal, queue-length, duplicate-window, and increment
+  fields. Unknown option keys fail before subscription establishment.
+
+  `Wotex.BACnet.COVRequest` validates the merged request and applies its defaults.
+  This helper does not infer a device instance from the first notification or
+  turn a general BACnet service into an observation.
+  """
 
   alias Wotex.BACnet.{COVRequest, Error}
   @keys [:confirmed, :lifetime, :renew, :max_queue_length, :duplicate_window_ms, :cov_increment]

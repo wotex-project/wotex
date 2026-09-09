@@ -14,14 +14,9 @@ defmodule Wotex.BACnet.Address do
 
   ## Examples
 
-      {:ok, address} =
-        Wotex.BACnet.Address.new(%{
-          object_type: :analog_output,
-          instance: 0,
-          property: :present_value,
-          array_index: 0,
-          priority: 8
-        })
+      iex> {:ok, address} = Wotex.BACnet.Address.new(%{object_type: :analog_output, instance: 0, property: :present_value, array_index: 0, priority: 8})
+      iex> {address.object_type, address.property, address.array_index, address.priority}
+      {1, 85, 0, 8}
   """
   alias Wotex.BACnet.{Error, Value}
 

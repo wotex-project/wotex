@@ -1,5 +1,16 @@
 defmodule Wotex.BACnet.SegmentsStore do
-  @moduledoc false
+  @moduledoc """
+  Owned reassembly process adapting BACstack 0.0.1 segment-store responses.
+
+  `Wotex.BACnet.StackOwner` starts this process explicitly with the configured
+  APDU timeout, a maximum of 32 segments, and zero APDU retries. Calls, casts,
+  and timer messages delegate to the pinned SDK implementation.
+
+  The adapter adds the cancellation flag omitted by the SDK's two-element
+  error reply so the client can clean up a refused assembly. This narrow
+  compatibility correction does not introduce a global segment store or change
+  ownership of an externally supplied SDK client.
+  """
 
   use GenServer
 

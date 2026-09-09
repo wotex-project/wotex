@@ -1,5 +1,24 @@
 defmodule Wotex.BACnet.Tags do
-  @moduledoc false
+  @moduledoc """
+  Decodes bounded BACnet application tags while retaining character-set bytes.
+
+  BACstack supplies scalar decoding, while this parser handles constructed
+  nesting and CharacterString values explicitly. Each CharacterString retains
+  its original selector and bytes through `Wotex.BACnet.CharacterString`,
+  avoiding the pinned SDK's loss of that selector during text conversion.
+
+  The decoder requires a complete tag sequence within 65,536 input bytes,
+  eight nesting levels, and 4096 tags. Mismatched closing tags, truncated lengths,
+  invalid character strings, or incomplete scalar values return an error.
+  Parsing is pure and does not establish the service-level meaning of the tags.
+
+  ## Examples
+
+      iex> {:ok, [{:character_string, value}]} = Wotex.BACnet.Tags.decode(<<0x72, 5, 233>>)
+      iex> {value.character_set, value.bytes}
+      {5, <<233>>}
+
+  """
 
   alias BACnet.Protocol.ApplicationTags
   alias Wotex.BACnet.{CharacterString, Error}

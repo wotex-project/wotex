@@ -1,5 +1,17 @@
 defmodule Wotex.BACnet.COVWire do
-  @moduledoc false
+  @moduledoc """
+  Performs one SubscribeCOV control exchange through the verified SDK wrapper.
+
+  `Wotex.BACnet.COVOwner` supplies the request, subscriber identifier, absolute
+  deadline, and whether this is cancellation. The pure COV codec constructs the
+  APDU, and `Wotex.BACnet.StackClient` checks admission before transmission.
+  Configured peer receive limits govern the exchange.
+
+  The response must acknowledge the requested control service; errors pass
+  through the typed BACstack response boundary. This function runs inside the
+  owner's cancellable worker and does not independently schedule renewal or
+  decide that a subscription is established.
+  """
 
   alias Wotex.BACnet.{BACstack, COV, COVRequest, Error, StackClient}
 

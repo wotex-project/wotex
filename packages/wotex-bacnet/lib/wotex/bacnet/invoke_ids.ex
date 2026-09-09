@@ -1,5 +1,16 @@
 defmodule Wotex.BACnet.InvokeIds do
-  @moduledoc false
+  @moduledoc """
+  Allocates and temporarily retires confirmed-service invoke identifiers.
+
+  The pinned SDK wrapper uses this pure state to choose among the 256 byte-sized
+  identifiers while excluding pending calls and retired identifiers. Exhaustion
+  returns `:busy` instead of reusing a live identifier. Retired identifiers
+  remain unavailable for 60,000 milliseconds of caller-supplied monotonic time.
+
+  State belongs to one `Wotex.BACnet.StackClient` process. This local quarantine
+  reduces late-response collisions; it does not replace source, service, or
+  session correlation and does not persist across a restarted client.
+  """
 
   @doc false
   @spec new() :: %{next: 0, retired: %{}}

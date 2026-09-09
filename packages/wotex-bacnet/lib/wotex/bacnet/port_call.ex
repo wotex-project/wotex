@@ -1,5 +1,17 @@
 defmodule Wotex.BACnet.PortCall do
-  @moduledoc false
+  @moduledoc """
+  Normalizes calls across the consumer-selected BACnet client boundary.
+
+  Tagged successes are preserved, and bare `:ok` is accepted only for disconnect
+  and unsubscribe. Typed errors are normalized through `Wotex.BACnet.Error`;
+  unknown return shapes, exceptions, exits, and throws become stable errors
+  without retaining their original terms. Optional callbacks return
+  `:not_supported` when absent.
+
+  Invocation is synchronous and starts no timeout worker. Custom clients must
+  honor their supplied budget and resource contract. Existing typed error
+  details are not a general-purpose redaction boundary.
+  """
 
   alias Wotex.BACnet.Error
 
