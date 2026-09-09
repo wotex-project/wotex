@@ -265,6 +265,11 @@ def build(path, manifest):
 
 def execute(path, manifest):
     identifier = verify(path, manifest)
+    return execute_image(path, identifier, manifest["inputs"])
+
+
+def execute_image(path, identifier, source_inputs, timeout=240):
+    """Run an already verified owned image; retain all native guest evidence."""
     result = path / ("run-" + uuid.uuid4().hex)
     result.mkdir()
     name = "wbl-vm-" + uuid.uuid4().hex[:16]
@@ -338,7 +343,7 @@ def execute(path, manifest):
                 "virtio-9p-pci,fsdev=fixture,mount_tag=fixture",
                 stdout=log,
                 stderr=subprocess.STDOUT,
-                timeout=240,
+                timeout=timeout,
             )
         completed = True
     except BaseException as error:
@@ -379,7 +384,7 @@ def execute(path, manifest):
         {
             "schema": SCHEMA,
             "image_id": identifier,
-            "inputs": manifest["inputs"],
+            "inputs": source_inputs,
             "artifacts": {
                 item.name: digest(item)
                 for item in result.iterdir()
@@ -388,6 +393,7 @@ def execute(path, manifest):
         },
     )
     print("Native virtual-controller assertions passed; evidence: " + str(result))
+    return result
 
 
 def main(arguments):

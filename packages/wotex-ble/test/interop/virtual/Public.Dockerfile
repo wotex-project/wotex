@@ -1,0 +1,17 @@
+ARG FIXTURE_IMAGE
+FROM ${FIXTURE_IMAGE}
+ENV MIX_HOME=/opt/wbl/mix/latest HEX_HOME=/opt/wbl/hex MIX_REBAR3=/opt/wbl/rebar-source/latest/rebar3 WOTEX_PATH_DEPS=1 ERL_FLAGS="+S 4:4"
+COPY hex-source.tar.gz rebar-source.tar.gz /opt/wbl/tools/
+RUN echo 'bdd6ef2015aa6e50a1c21212e098e8cbe7317da65f067955d154d890532742ae  /opt/wbl/tools/hex-source.tar.gz' | sha256sum -c - && echo '985cae6e957334cfa549190b9f5efb9185c184a18fc181c87b8dde096ba79f38  /opt/wbl/tools/rebar-source.tar.gz' | sha256sum -c -
+RUN for lane in latest lower; do mkdir -p /opt/wbl/hex-source/$lane /opt/wbl/rebar-source/$lane; tar -xf /opt/wbl/tools/hex-source.tar.gz -C /opt/wbl/hex-source/$lane --strip-components=1; tar -xf /opt/wbl/tools/rebar-source.tar.gz -C /opt/wbl/rebar-source/$lane --strip-components=1; done
+RUN cd /opt/wbl/hex-source/latest && MIX_ENV=prod mix archive.build -o hex.ez && mix archive.install hex.ez --force
+RUN cd /opt/wbl/hex-source/lower && export PATH=/opt/lower/elixir/bin:/opt/lower/erlang/bin:/usr/local/bin:/usr/bin:/bin MIX_HOME=/opt/wbl/mix/lower && MIX_ENV=prod mix archive.build -o hex.ez && mix archive.install hex.ez --force
+RUN cd /opt/wbl/rebar-source/latest && ./bootstrap
+RUN cd /opt/wbl/rebar-source/lower && PATH=/opt/lower/elixir/bin:/opt/lower/erlang/bin:/usr/local/bin:/usr/bin:/bin ./bootstrap
+COPY source /software/latest
+COPY source /software/lower
+WORKDIR /software/latest/wotex-ble
+RUN MIX_ENV=test mix deps.get && MIX_ENV=test mix deps.compile && MIX_ENV=test mix compile --warnings-as-errors
+WORKDIR /software/lower/wotex-ble
+RUN export MIX_HOME=/opt/wbl/mix/lower MIX_REBAR3=/opt/wbl/rebar-source/lower/rebar3 PATH=/opt/lower/elixir/bin:/opt/lower/erlang/bin:/usr/local/bin:/usr/bin:/bin && MIX_ENV=test mix deps.get && MIX_ENV=test mix deps.compile && MIX_ENV=test mix compile --warnings-as-errors
+WORKDIR /results
