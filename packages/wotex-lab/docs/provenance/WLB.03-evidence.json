@@ -33,7 +33,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 2,
+  "attempt": 3,
   "budgets": {
     "deadline_ms": 60000,
     "max_samples": 4096,
@@ -81,7 +81,7 @@
     }
   ],
   "durations": {
-    "run_ms": 31285
+    "run_ms": 32476
   },
   "fixtures": {
     "expected-output.json": "sha256:ae6f8b18388457d6f8b279ad8dfc0ee49dc7a9a142fe5ca235b5cca6886d56aa",
@@ -92,7 +92,7 @@
     "command:WOTEX_PATH_DEPS=1 mix test test/wotex/lab/backend_cohort_test.exs test/wotex/lab/cookbook_test.exs test/wotex/lab/room_model_test.exs test/wotex/lab/serving_test.exs test/wotex/lab/smart_room_test.exs test/wotex/lab/thermal_test.exs test/wotex/lab/window_anomaly_test.exs --seed 1",
     "backend:Nx.BinaryBackend-and-EXLA-CPU",
     "exclusions:three-real-broker-cases-owned-by-WLB.04",
-    "renewal:2026-09-09-documentation-and-runtime-opening;seed=1;manifest-integrity-checked-separately"
+    "renewal:2026-09-09-native-contract-alignment;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
   "outcomes": {
@@ -100,11 +100,11 @@
     "required_lanes": 6,
     "test_count": 52
   },
-  "revision": "761032ffc963b11979f638a087398647aea4dabc+documentation-review",
+  "revision": "8de712b66f261772e2cd78affe150df19984274f+documentation-review",
   "scenario_id": "WLB.03-nx-experiments",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:c0dd4057770940fa2e4ee1c3bb740d9b5421dad1a532c06413c0d885401350c3",
+  "source_tree_digest": "sha256:aaf94e91d3b5fd80b194af506f9937f190e4bd59e51d37d74c719f7d03335059",
   "toolchain": {
     "backend": "Nx.BinaryBackend-Evaluator-and-EXLA-CPU",
     "elixir": "1.20.2",

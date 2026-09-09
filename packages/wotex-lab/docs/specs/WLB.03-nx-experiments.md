@@ -50,7 +50,7 @@ EXLA CPU vector uses the same input identity and an absolute tolerance of
 source device value. A timed-out experiment kills its monitored worker and
 returns no prediction.
 
-The room experiment contract is now `2.0.0`. Malformed/out-of-budget counts
+The room experiment contract is `2.0.0`. Malformed/out-of-budget counts
 MUST return `invalid_experiment` before deriving a default split or starting
 training, including when an explicit split was supplied. Held-out predictions
 only determine held-out scores. The future decoded prediction MUST instead

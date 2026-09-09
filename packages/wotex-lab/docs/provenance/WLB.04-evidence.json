@@ -29,7 +29,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 6,
+  "attempt": 7,
   "budgets": {
     "deadline_ms": 60000,
     "max_inflight": 2,
@@ -118,7 +118,7 @@
     }
   ],
   "durations": {
-    "run_ms": 14566
+    "run_ms": 15339
   },
   "fixtures": {
     "tls/ca-cert.pem": "sha256:f8fa6c43f51909fd87f28bae9fd227ffd10df539261c26accf62bb09611457b6",
@@ -130,18 +130,18 @@
     "broker-image:eclipse-mosquitto:2",
     "profile:http-local-and-hosted",
     "profile:mqtt-local-and-mqtts",
-    "renewal:2026-09-09-documentation-and-runtime-opening;seed=1;manifest-integrity-checked-separately"
+    "renewal:2026-09-09-native-contract-alignment;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
   "outcomes": {
     "broker_enabled": true,
     "test_count": 56
   },
-  "revision": "761032ffc963b11979f638a087398647aea4dabc+documentation-review",
+  "revision": "8de712b66f261772e2cd78affe150df19984274f+documentation-review",
   "scenario_id": "WLB.04-runtime-and-network-adapters",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:437c06a88411849a5d5ae14c5ad7b3f7f193493038fe5e6851255da61a3a5e07",
+  "source_tree_digest": "sha256:d27954d9112c0a859d1814b3fcb128913b396039ef04109c22b453505ce06fd6",
   "toolchain": {
     "backend": "BEAM-network",
     "elixir": "1.20.2",

@@ -25,7 +25,7 @@
     {
       "package": "wotex_runtime",
       "files": 42,
-      "sha256": "461ba4c4ce8821d1fa5d0484c6a5108c1cbebdbdb42450572f78b28a9d46b0de"
+      "sha256": "53b22a9a512193d020ae20cffea78456e806f2982f9cb51226d57eb0543cc592"
     },
     {
       "package": "wotex_binding_http",

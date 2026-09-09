@@ -172,7 +172,7 @@ classes and no credential leakage, incremental SSE parsing with CRLF, split
 UTF-8, comments, ids and retries, undecodable frames, server-side stream end,
 explicit stop closing the connection, oversized events ending the session,
 and a mistyped handshake failing the open.
-The shared disposable HTTP fixture now has one ExUnit-owned supervisor:
+The shared disposable HTTP fixture has one ExUnit-owned supervisor:
 Bandit and its connections stop before the controller. Its single acceptor
 admits eight connections, with a 250-millisecond connection shutdown grace.
 The real-socket teardown regression checks the listener, live SSE handler and

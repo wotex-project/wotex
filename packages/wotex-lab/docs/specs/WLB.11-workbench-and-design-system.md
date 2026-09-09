@@ -4,7 +4,7 @@ Specification version: 0.5.4. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
-`hosts/workbench/` now contains the non-umbrella Phoenix LiveView reference
+`hosts/workbench/` contains the non-umbrella Phoenix LiveView reference
 host, all required HEEx components, a scoped semantic CSS layer,
 server-rendered native SVG charts, three executable experiments,
 session-owned disposable rooms, bounded live metrics and immutable exports,
@@ -40,7 +40,7 @@ downloads, reload/no-replay and session isolation. It is not part of the
 twelve-check `mix check` host gate and requires an operator-owned server plus an
 explicitly installed Playwright/Chromium toolchain. Its recorded cohort is
 source evidence, not the complete WLB.08 browser matrix or a WCAG certification.
-`Insights` and its HEEx controls now invoke the shared optional Lab Explorer
+`Insights` and its HEEx controls invoke the shared optional Lab Explorer
 profile only on explicit inspection. Unit and LiveView tests cover range/series/
 mark selection, scope substitution, empty results and unchanged run evidence.
 The browser gate also exercises updated charts after analysis. See the
@@ -114,7 +114,7 @@ not the public experiment workbench.
 The implemented trusted-local slice binds the LiveView owner and revalidated
 session room to one host-wide no-queue broker. It selects only the chosen run
 and the nearest older run of the same experiment. Current snapshot references
-link to the bounded evidence view. Admitted Explorer analysis now emits an exact
+link to the bounded evidence view. Admitted Explorer analysis emits an exact
 same-origin query link and one fragment link per server-rendered chart; opening
 one explicitly reruns only that bounded analysis against the already-owned run.
 Model-output source references still are not converted into caller-selected

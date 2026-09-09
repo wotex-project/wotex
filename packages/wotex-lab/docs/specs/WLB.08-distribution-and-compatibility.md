@@ -231,7 +231,7 @@ Build instructions accompany the image; no embedded compiler is required to
 try it. Real hardware availability is an evidence prerequisite, not a fabricated
 result or removal from scope.
 
-`hosts/nerves/` now names only the `rpi4` target and pins Nerves 1.15.0,
+`hosts/nerves/` names only the `rpi4` target and pins Nerves 1.15.0,
 `nerves_system_rpi4` 2.1.1 and its aarch64 15.3.1 toolchain closure. Firmware
 boot starts one eight-child Lab instance but no experiment, listener,
 discovery, model or effect. `WotexLabNerves.Smoke.run/0` is operator-invoked:

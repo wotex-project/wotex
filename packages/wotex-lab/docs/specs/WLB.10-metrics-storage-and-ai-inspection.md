@@ -5,7 +5,7 @@ catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
 are implemented in the base library;
-the Workbench now implements custom PromEx definitions, bounded collection,
+the Workbench implements custom PromEx definitions, bounded collection,
 catalogue panel selection, inert Grafana JSON exports and explicit PromEx-to-ETS
 history activation, a protected local scrape listener, bounded local and
 destination-pinned hosted/TLS GreptimeDB remote-write exporters and expiring
@@ -58,7 +58,7 @@ compose admitted descriptors, not arbitrary JavaScript, EEx or module names.
 a name, unit, bucket, dimension, scope, event or measurement mismatch and on
 duplicate ids, and `to_definitions/0` emits the plain maps a host turns into
 Telemetry.Metrics and PromEx definitions. The explicit Workbench's
-`Observability.Definitions`, `Plugin` and `Panels` now generate all 43 custom
+`Observability.Definitions`, `Plugin` and `Panels` generate all 43 custom
 definitions, UI descriptors and fixed PromQL templates from that catalogue.
 Panels retain exact units, buckets, dimensions and scope. Dashboard composition
 accepts 1–16 distinct known IDs, never caller code or expressions. Counters show
@@ -91,7 +91,7 @@ run evidence; only a finite configured backend class is a metric dimension.
 Training loss/held-out results are run data, not labels or proof of accuracy.
 Every group has catalogue metrics whose source events use the WLB.06
 vocabulary; the `formal` and `metrics` components and the `cleanup`, `export`,
-`query` and `investigation` operations were added for verification, exporter,
+`query` and `investigation` operations describe verification, exporter,
 query and investigation metrics. Scenario cleanup, subscription drops, mask,
 quality and queue-depth, formal verification and investigation metrics have no
 Lab emitter yet; the catalogue states them and nothing simulates them.
@@ -317,12 +317,12 @@ history queries return unsupported; ETS does not pretend to implement PromQL.
 `Wotex.Lab.Metrics.Query` is that descriptor with these defaults, its
 `estimate/1` admits the work before anything is read, and `History.query/2`
 answers gauges, counters with reset awareness and histogram quantiles from ETS
-or returns `unsupported_query`. `Metrics.Request` and `Metrics.Gateway` now
+or returns `unsupported_query`. `Metrics.Request` and `Metrics.Gateway`
 admit local inspection callers of this descriptor; the trusted-local BeamLens
 skill uses that gateway with tighter limits. Public HTTP/MCP query bindings,
 durable query templates and non-local/multi-tenant BeamLens callers remain planned.
 
-History query admission now binds the store's explicit `:instance` identifier
+History query admission binds the store's explicit `:instance` identifier
 and snapshot `:instance_slot` (default 0). Migration: hosts using `query/2`
 must configure `instance: "their-host-id"` when starting history and construct
 the descriptor's session scope from authenticated server context. Stores
@@ -527,7 +527,7 @@ source interval, snapshot/watermark, ordering, units, quality, masks, missing
 policy and split provenance. Freeze a consistent snapshot before windowing,
 splitting or normalization. Explain every downsampling transform. Resuming a
 run cannot silently read changing live metrics as the original dataset.
-`Metrics.History.freeze/2` now serializes capture with history writes and returns
+`Metrics.History.freeze/2` serializes capture with history writes and returns
 the exact storage sequence/count/byte/time watermark used by the query.
 `Metrics.Dataset.freeze/3` binds that capture to an explicit experiment and
 creates a deterministic content identity over the query, interval, watermark,

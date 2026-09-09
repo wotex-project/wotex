@@ -5,12 +5,12 @@ The external core conformance target and its host containment profile, the
 content-addressed evidence record, Lab telemetry, the versioned Continuum fault
 schedule, bounded benchmark records and the machine evidence overlay all have
 executable positive, negative, lifecycle and resource evidence for reviewed
-local targets. The native replacement review identified an unclosed hostile
+local targets. The native helper does not complete the accepted hostile
 whole-tree isolation obligation; sampled limits are not kernel enforcement.
 The repository gate runs the locked Rust unit and lifecycle cohort with its
-feature-gated probes in a private, cleaned OS-temporary Cargo target; listed
-native evidence can no longer drift behind a green Elixir-only check or pollute
-the later package archive.
+feature-gated probes in a private, cleaned OS-temporary Cargo target. A passing
+repository gate includes those native results. Generated binaries and probe
+artifacts remain outside the package archive.
 
 ## Evidence record and maturity
 

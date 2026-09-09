@@ -48,14 +48,14 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 
 ## Native containment source cohort
 
-Observation date: 2026-09-08. The external helper replaces the Python runtime
-and test probes. Production `cargo tree --no-default-features` contains only
-the original `wotex-contained-exec` 2.0.0 and libc 0.2.189. The locked
+Observation date: 2026-09-08. The external Rust helper and its lifecycle probes
+require no Python interpreter. Production `cargo tree --no-default-features`
+contains only `wotex-contained-exec` 2.0.0 and libc 0.2.189. The locked
 `test-probes` feature adds serde_json 1.0.151 and its test-only closure. Cargo
 Audit 0.22.2 reported no vulnerabilities for the 13 lock entries against
 RustSec database revision `8a1eb4f933fb5821add5b4e98601ebd90b8b3538`.
 The helper and libc use Apache-2.0 and MIT/Apache-2.0 respectively; no native
-third-party source is vendored and no NIF is added.
+third-party source is vendored and the helper exposes no NIF.
 
 The Darwin aarch64 cohort uses Rust/Cargo 1.97.1 with Elixir 1.20.2/OTP 29.
 After reproducing a transient `libproc` exec-accounting gap, the bounded retry
@@ -178,8 +178,7 @@ no-queue owner-bound broker in front. No dependency source is copied or patched.
 
 The Lab query gateway addresses the separate local data-access lifecycle using
 only its own public history contract. It does not close BeamLens admission.
-The Workbench provider boundary now adapts the local `../goatmire-2026`
-implementation: Codex App Server accepts only an existing ChatGPT-plan login
+The Workbench provider boundary uses Codex App Server with an existing ChatGPT-plan login
 with available reported quota, uses an ephemeral read-only/no-network turn with
 all tool and inherited MCP/plugin surfaces disabled, and retains no account
 identity. A disclosed fallback calls only the fixed, already-served local

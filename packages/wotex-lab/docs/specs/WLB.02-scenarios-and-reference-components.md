@@ -76,7 +76,7 @@ WLB.10 defines the trusted-host versus isolated-tenant boundary.
 
 ## Acceptance
 
-`scenario_test.exs` covers the descriptor now. Runner acceptance additionally
+`scenario_test.exs` covers the descriptor. Runner acceptance additionally
 requires identical CLI/Livebook/API descriptors; two concurrent runs; partial
 startup unwind; exhausted limits; deterministic replay; callback failures;
 duplicate stop; receiver death; and absence of leaked children/files/topics.

@@ -5,7 +5,7 @@ executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
 `bin/check_graph.exs` gate, and the MCP server core with stdio and Streamable
-HTTP transports are implemented. The optional Workbench now serves the four
+HTTP transports are implemented. The optional Workbench serves the four
 read-only operations in the generated OpenAPI document at `/api/v1`; static
 catalogue reads are inert and evidence lookup is bearer-bound to the caller's
 existing room. Fifteen notebooks have executable workspace source evidence,
