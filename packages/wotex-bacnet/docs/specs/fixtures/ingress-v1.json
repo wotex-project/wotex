@@ -1,0 +1,266 @@
+{
+  "format_version": "1.0.0",
+  "specification": "WBA.10@1.1.0",
+  "execution_status": "specified_unexecuted",
+  "normalization": {
+    "clock": "virtual monotonic milliseconds; deadline equality expires",
+    "receipt": "runner substitutes fresh reference for each symbolic receipt, preserves it for consume events",
+    "resources": "sum of owned socket/process/timer resources after the single1000ms cleanup grace",
+    "script_boundary": "events drive actual owned transport/credit code; only the runner receives expectation",
+    "software_projection": "max_admitted_packet_references is the asserted configured upper bound, verified against observed peak; exact kernel drops are not inferred when unavailable"
+  },
+  "cases": [
+    {
+      "id": "WBA-IG01",
+      "requirements": [
+        "WBA-S03a",
+        "WBA-C03"
+      ],
+      "tier": "deterministic_transport_trace",
+      "operation": "credit_window",
+      "input": {
+        "clock_ms": 0,
+        "credit_limit": 8,
+        "generation": 1,
+        "events": [
+          {
+            "event": "admit",
+            "receipt": "1"
+          },
+          {
+            "event": "admit",
+            "receipt": "2"
+          },
+          {
+            "event": "admit",
+            "receipt": "3"
+          },
+          {
+            "event": "admit",
+            "receipt": "4"
+          },
+          {
+            "event": "admit",
+            "receipt": "5"
+          },
+          {
+            "event": "admit",
+            "receipt": "6"
+          },
+          {
+            "event": "admit",
+            "receipt": "7"
+          },
+          {
+            "event": "admit",
+            "receipt": "8"
+          },
+          {
+            "event": "suspend_client"
+          },
+          {
+            "event": "tick",
+            "clock_ms": 100
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "max_outstanding": 8,
+          "rearms_after_credit_exhaustion": 0,
+          "terminal_errors": [
+            "slow_consumer"
+          ],
+          "owned_resources_after_grace": 0
+        }
+      }
+    },
+    {
+      "id": "WBA-IG02",
+      "requirements": [
+        "WBA-S03a",
+        "WBA-C03"
+      ],
+      "tier": "deterministic_transport_trace",
+      "operation": "consumption_ack",
+      "input": {
+        "clock_ms": 0,
+        "credit_limit": 8,
+        "generation": 1,
+        "events": [
+          {
+            "event": "admit",
+            "receipt": "r1"
+          },
+          {
+            "event": "forward_to_client",
+            "receipt": "r1"
+          },
+          {
+            "event": "consume",
+            "generation": 1,
+            "receipt": "r1"
+          },
+          {
+            "event": "consume",
+            "generation": 1,
+            "receipt": "r1"
+          },
+          {
+            "event": "consume",
+            "generation": 2,
+            "receipt": "r1"
+          },
+          {
+            "event": "consume",
+            "generation": 1,
+            "receipt": "unknown"
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "forward_credit_returned": 0,
+          "consumption_credit_returned": 1,
+          "ignored_ack_count": 3,
+          "outstanding": 0,
+          "terminal_errors": []
+        }
+      }
+    },
+    {
+      "id": "WBA-IG03",
+      "requirements": [
+        "WBA-S03a",
+        "WBA-C03"
+      ],
+      "tier": "deterministic_transport_trace",
+      "operation": "counter_saturation",
+      "input": {
+        "clock_ms": 0,
+        "counters": {
+          "oversize": 18446744073709551614
+        },
+        "events": [
+          {
+            "event": "datagram",
+            "byte_length": 1537
+          },
+          {
+            "event": "datagram",
+            "byte_length": 65507
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "counters": {
+            "oversize": 18446744073709551615
+          },
+          "decoded_datagrams": 0,
+          "delivered_messages": 0
+        }
+      }
+    },
+    {
+      "id": "WBA-IG04",
+      "requirements": [
+        "WBA-S03a",
+        "WBA-C03"
+      ],
+      "tier": "deterministic_transport_trace",
+      "operation": "borrowed_policy",
+      "input": {
+        "receive_policy": "wotex_bounded",
+        "stack_client_kind": "wotex",
+        "handshake": [
+          "wotex_client",
+          2,
+          [
+            "cov",
+            "discovery"
+          ]
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "unbounded_receive_policy",
+            "effect": "none"
+          },
+          "listener_registrations": 0,
+          "native_requests": 0,
+          "borrowed_client_alive": true
+        }
+      }
+    },
+    {
+      "id": "WBA-IG05",
+      "requirements": [
+        "WBA-S03a",
+        "WBA-C03"
+      ],
+      "tier": "deterministic_transport_trace",
+      "operation": "borrowed_policy",
+      "input": {
+        "receive_policy": "consumer_managed",
+        "stack_client_kind": "bacstack",
+        "operation": "read_property",
+        "peer_reply": {
+          "encoding": "primitive",
+          "type": "real",
+          "value": 2.5,
+          "extras": []
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "bounded_ingress_claim": false,
+          "borrowed_client_stopped": false,
+          "request_count": 1,
+          "typed_value": {
+            "encoding": "primitive",
+            "type": "real",
+            "value": 2.5,
+            "extras": []
+          },
+          "owned_operation_resources_after": 0
+        }
+      }
+    },
+    {
+      "id": "WBA-IG06",
+      "requirements": [
+        "WBA-S03a",
+        "WBA-V14"
+      ],
+      "tier": "software_udp",
+      "operation": "sustained_datagrams",
+      "input": {
+        "suspended_owner_each": [
+          "stack_owner",
+          "stack_client"
+        ],
+        "datagram_count": 10000,
+        "datagram_bytes": 1536,
+        "deadline_ms": 1000
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "max_admitted_packet_references": 8,
+          "terminal_errors_each": [
+            "slow_consumer"
+          ],
+          "owned_resources_after_grace": 0,
+          "kernel_drop_counter_required_when_available": true
+        }
+      }
+    }
+  ]
+}

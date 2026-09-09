@@ -3,7 +3,7 @@ spec:
   id: WBA.01
   title: "BACnet protocol and graduation contract"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-bacnet
   updated: 2026-09-09
 ---
@@ -21,8 +21,8 @@ wildcard use. Numeric proprietary object/property identifiers remain opaque;
 unknown tagged values are preserved. Array index zero means array length;
 nil means absent. Null is an explicit release value, not a missing response.
 
-The consumer supplies an explicitly supervised BACstack Client, transport,
-Segmentator and SegmentsStore. Borrowed processes are never stopped by this
+The consumer selects the owned IPv4 stack or supplies an explicitly supervised
+borrowed BACstack Client, transport, Segmentator and SegmentsStore. Borrowed processes are never stopped by this
 package. Owned startup must unwind every earlier resource on partial failure.
 Client.send manages Invoke IDs and retries; do not add wrapper retries.
 Only the expected ComplexACK ReadProperty result or matching SimpleACK write
@@ -52,5 +52,5 @@ address/value maps, no Application callback and no implicit runtime selection.
 Compatibility callbacks are capabilities/connect/send/receive/disconnect/health_check/
 subscribe/unsubscribe. A consumer port failure, malformed return or missing
 transport is an error; never select simulation. Telemetry event prefixes are
-[:wotex, :bacnet, ...] with bounded non-secret measurements. Consumer migration
-requires differential scenarios against both implementations before replacement.
+[:wotex, :bacnet, ...] with bounded non-secret measurements. Consumer integration
+requires its own differential and interoperability evidence.

@@ -3,7 +3,7 @@ spec:
   id: WBA.10
   title: "Complete BACnet/IP client software profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-bacnet
   updated: 2026-09-09
 ---
@@ -11,9 +11,10 @@ spec:
 # WBA.10 Complete BACnet/IP client software profile
 
 Read [WBA.00](WBA.00-library-contract.md), [WBA.11 standalone client and preservation](WBA.11-standalone-client-and-preservation.md), and the [implementation sequence](../plans/software-implementation.md).
-This is the target profile. Baseline `fbb9e67` implements typed read/write,
-strict ACK classification, an owned IPv4 stack and independent C-stack evidence.
-COV delivery, its lifecycle and the complete stress matrix remain build work.
+This is the target profile. Current code implements typed read/write, strict ACK
+classification, explicit stack ownership, COV lifecycle, discovery, sequential
+helpers and Runtime observations. Complete ingress bounds and independent
+discovery/batch/COV software evidence remain required by the implementation plan.
 Current evidence is in [executable evidence](../provenance/executable-evidence.md).
 
 ## Scope and source authority
@@ -118,10 +119,78 @@ across segments, and expire after 1000 ms. They are limited to 64 active assembl
 32 segments each. Confirmed receipt contexts expire after 1000 ms and never exceed
 1024 entries; a saturated or slow listener closes locally with `:slow_consumer`.
 
+## WBA-S03a — Bounded owned UDP ingress
+
+The owned stack uses a BEAM IPv4 transport with consumption-based rearming.
+The pinned SDK transport's active-ten socket setting is insufficient: its
+`handle_info/2` rearms before its downstream PID consumes forwarded messages.
+Final COV receiver queue sampling cannot bound that earlier mailbox. This cell
+is required implementation; current StackOwner forwarding does not satisfy it.
+
+The selected boundary is a narrow package transport implementing BACstack's
+public `TransportBehaviour`, using reviewed pinned packet codecs. It preserves
+explicit interface, portal and destination behavior. A source patch to the
+pinned transport is permitted only with exact source assertions and its own
+regression suite. Never invent an upstream consumption callback or mutate a
+borrowed Client's private state. Runtime remains BEAM-only.
+
+The transport exposes an explicit package consumption protocol. It forwards
+`{:wotex_bacnet_datagram, generation, receipt_ref, transport_message}` to its
+recorded StackOwner, which forwards the same identity to StackClient. The client
+returns `{:wotex_bacnet_consumed, generation, receipt_ref}` directly to the
+recorded transport only after the message handler finishes. Every outstanding
+reference occupies one credit; a consumed reference is removed once. A forged,
+unknown or duplicate acknowledgment is ignored with a bounded counter. No upstream
+private message shape is assumed for this acknowledgment.
+
+The owned socket uses active-once, a requested receive buffer of 262144 bytes
+(the actual OS value is recorded), and no per-packet Task. A datagram is at most
+1536 bytes before decoding; malformed/oversize input is discarded with saturated
+uint64 reason counters and no payload telemetry. At most eight datagrams are
+admitted across transport, StackOwner and StackClient forwarding. Each carries
+an owner-generated reference scoped to the transport generation. StackClient
+acknowledges consumption only after processing or discarding that message;
+StackOwner forwarding alone is not consumption. The transport rearms only while
+credit remains. Unknown, duplicate or foreign-generation acknowledgments cannot
+increase credit. Data and acknowledgment frames use explicit package-owned
+messages, not guessed BACstack internals. Control, expiry and shutdown messages
+must remain responsive while data credit is exhausted.
+
+Credit starvation lasting 100 ms closes the owned group with `:slow_consumer`
+under the one C03 cleanup grace. Consumed credit never implies successful APDU
+service handling. Invalid/oversize datagrams and application-level rejections
+have separate counters. Kernel UDP drops are reported only when an available OS
+counter supports them; an unavailable counter is recorded as unavailable, never
+as zero. UDP and unconfirmed COV provide no loss-free delivery guarantee. A
+confirmed service whose reply is lost retains the protocol retry/duplicate rules;
+an interrupted transmitted write remains unknown-effect and is never replayed.
+
+Borrowed `BACstack` accepts explicit `receive_policy: :consumer_managed |
+:wotex_bounded`, default `:consumer_managed`. Consumer-managed mode preserves
+native read/write and its documented listener APIs but makes no bound on the
+consumer's socket/forwarder mailbox. Selecting `:wotex_bounded` requires the
+wrapper's local version-three handshake with `[:cov, :discovery,
+:bounded_ingress]` and proof of an attached live credit-aware transport; a claimed
+option or arbitrary PID alone is insufficient. Incompatible/absent capability
+fails `:unbounded_receive_policy` before acquisition. Runtime `:ip_cov` with a
+borrowed stack requires the verified bounded mode for target acceptance. The
+existing version-one/two wrapper modes retain their locally tested native
+operations; their capability list does not imply bounded ingress. Raw
+borrowed SDK support remains read/write only and never owns the borrowed stack.
+
+[ingress-v1.json](fixtures/ingress-v1.json) defines the exact normalization and
+selected unexecuted traces. Software tests suspend StackOwner and StackClient separately, emit at least
+10000 maximum-size datagrams continuously, and assert at most eight admitted
+packet references across the pipeline, one terminal error, saturated-safe counters,
+and zero owned socket/process/timer resources after cleanup. Tests also resume a
+consumer before starvation, prove credit returns once, and reject replayed/foreign
+acknowledgments. Malformed traffic and confirmed COV retransmissions run in the
+same fault lane; a flat final-receiver queue is not ingress evidence.
+
 ## WBA-S04 — COV registration, correlation and cancellation
 
-Add native `subscribe(session, request)` and Client `subscribe/4`/`unsubscribe/3`
-from WBA-C01/C05. Request fields are `type: :cov | :cov_property`, concrete
+Native `subscribe(session, request)` and Client `subscribe/4`/`unsubscribe/3` follow
+WBA-C01/C05. Request fields are `type: :cov | :cov_property`, concrete
 address fields, required `device_instance` (integer 0..4194302), `receiver`, `confirmed` (Boolean, default true), `lifetime`
 (seconds, default 60, range 2..86400), `renew` (Boolean, default true),
 `max_queue_length`, `duplicate_window_ms` (default 60000, range 1..60000), and optional finite positive `cov_increment` only for
@@ -201,7 +270,7 @@ list order never chooses a winning value. This projection policy does not remove
 or reinterpret duplicates in an object-level native report.
 No report is an authorization decision or canonical consumer state.
 
-Add `health_check/2` with an explicit validated ReadProperty probe; retain
+`health_check/2` accepts an explicit validated ReadProperty probe;
 `health_check/1 -> {:error, :probe_required}` in its existing Error envelope.
 Only a matching successful read reports `{:ok, :healthy}`. The probe is a native
 `%{type: :read_property, object_type: ..., instance: ..., property: ...}` request;

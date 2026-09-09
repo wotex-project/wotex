@@ -1,192 +1,123 @@
-# WBA software implementation sequence
+# WBA BEAM client software implementation sequence
 
-This is the self-contained build handoff for the defined software profile, not
-a statement that these tasks have already passed. The verified starting point
-is commit `fbb9e67`; read [current executable evidence](../provenance/executable-evidence.md)
-for the tests and limitations at that baseline. Existing passing code is the
-starting implementation, not something to replace with fresh scaffolding.
+The production architecture is Elixir/OTP with pinned BACstack codecs and an
+explicitly owned or borrowed BACnet/IP stack. Independent native C peers belong
+to the software fixture. No Python process, C executable or NIF supplies the
+production client. WBA.02 inventories the implemented profile; the
+[executed evidence](../provenance/executable-evidence.md) identifies the tested
+source/cohorts. This sequence states acceptance obligations, not release status.
 
-## Read before changing code
+Read CLAUDE, matching rules/skills, WBA.00/.10/.11/.12, the source register and
+catalogue before selecting work. Existing asserting implementation remains the
+regression boundary. Do not reimplement a satisfied cell to create a commit.
+Package order below follows dependencies. A package may contain several logical
+commits, each with focused tests and a passing complete local gate.
 
-1. Read `CLAUDE.md` and matching repository rules/skills.
-2. Read [WBA.00 — shared software rules](../specs/WBA.00-library-contract.md).
-3. Read [WBA.10 — exact target profile](../specs/WBA.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
-4. Read [primary source pins and access limits](../provenance/primary-sources.md).
-5. Read [WBA.11 — standalone client and preservation](../specs/WBA.11-standalone-client-and-preservation.md), including the concrete fixture corpus.
-6. Select the first work package below whose acceptance evidence is absent.
+## Ordered packages and implementation boundary
 
-Read the [versioned catalogue](../specs/catalogue.yaml) and
-[WBA.12 — Wotex integration](../specs/WBA.12-wotex-integration.md) before choosing
-implementation work. The catalogue lists dependencies and distinguishes planned
-contracts from narrow implemented profiles. Source presence, fixture presence,
-passing baseline tests and accepted work packages are separate facts.
+| Package | Required behavior | Existing local evidence | Remaining acceptance |
+| --- | --- | --- | --- |
+| WBA-P01 | S01/S02; V01–V04: typed values, original CharacterString identity, exact ACK/error classification, segmentation limits | service_boundary_test.exs, character_string_test.exs | Retain full malformed/segmentation regression; execute it in final exact-source cohort |
+| WBA-P02 | S03; V05/V14: reverse acquisition cleanup, 64-operation admission, final caller/deadline check, borrowed stack retention | stack_lifecycle_test.exs, stack_cov_test.exs, invoke_ids_test.exs | S03a ingress extends this ownership boundary in P06; current downstream queue checks are insufficient |
+| WBA-P03 | S04; V06–V08: typed object/Property COV, initiator/selector correlation, exact confirmed receipt ACK and early report buffering | cov_test.exs, cov_boundary_test.exs, stack_cov_test.exs, native_subscription_test.exs | Independent confirmed/unconfirmed C peer evidence in P06 |
+| WBA-P04 | S04; V09–V11: finite leases, renewal, encoded cancellation, receiver death, overflow and terminal-once cleanup | cov_lifecycle_test.exs, cov_cache_test.exs, native_subscription_test.exs | Independent server subscriber-count/retry/lost-ACK evidence and 100 receiver-death cycles in P06 |
+| WBA-P05 | S05; V12: Runtime Property COV and explicit read probe | runtime_stream_test.exs, runtime_frame_test.exs, runtime_integration_test.exs | Re-run final-owner pending-open/worker-handoff boundary through public Runtime; P06 adds verified ingress admission |
+| WBA-P05a | N01–N05: native helpers, bounded Who-Is/I-Am, sequential 1..64 Property reads | F01–F11 corpus bindings listed in WBA-N05; standalone_contract_test.exs, discovery_lifecycle_test.exs | Independent complete discovery/route/batch/write/readback/release/COV workflow in P06 |
+| WBA-P05b | I01–I06: exact profiles, route/value/error/Retry and consumer ownership | runtime_integration_test.exs binds I-F01; error_class_test.exs and runtime_stream_test.exs assert additional local behavior | Bind I-F02–I-F07 to actual native Error -> Runtime cause -> Retry projections; assert all I06 security/media/context/stream cells, no fixture echo |
+| WBA-P06 | S01–S05/S03a/N01–N05/I01–I06/C09; V13/V14: bounded owned UDP ingress and full independent software acceptance | cstack_test.exs and lifecycle_stress_test.exs cover read/write, 1000 sequential reads, 32 concurrent reads and 100 owned stack cycles | Implement the ordered ingress/tooling/peer/final-cohort stages below; the read/write fixture does not accept COV/discovery or the full profile |
 
-The numbered sequence is dependency order: each package depends on all preceding
-packages. Each is one bounded behavior plus its tests/documentation. A large
-package may be split into consecutive local commits along its stated sub-behaviors;
-never commit knowingly failing tests. Do not reimplement a satisfied requirement
-merely to produce a commit. Every proposed module, API and test path below is a
-target addition unless it already exists; no placeholder file implies completion.
+Test filenames without a directory are under `test/wotex/bacnet/`; independent
+peer tests are under `test/interop/` and stress tests under `test/software/`.
+An existing test path is an implementation inventory, not a current pass result
+for every requirement family. Evidence includes its exact source and corpus SHA.
 
-For each requirement, record its ID in an ExUnit/native test name or a fixture
-manifest. The Vxx rows in .10 are scenario families; concrete .11 JSON cases
-fix selected inputs and expected outputs. Neither ID presence nor JSON parsing
-accepts a requirement without calling the library and asserting the outcome. The implementation chooses
-ordinary internal function names and data structures, while the public behavior,
-state transitions, limits, failure policy and transport choices are fixed there.
-If an upstream API cannot meet a requirement, add the smallest adapter needed
-or document a precise source-backed contract correction with regression evidence;
-do not silently skip, simulate or weaken the requirement.
+## WBA-P06 implementation order
 
-## Ordered work packages
+1. Implement S03a using BACstack's public TransportBehaviour and reviewed pinned
+   packet codecs. Preserve explicit destination/interface behavior and service
+   bytes. Add consumption credits across transport/StackOwner/StackClient,
+   starvation termination, bounded counters, and validated borrowed receive-policy
+   capability. Tests at `test/wotex/bacnet/ingress_lifecycle_test.exs` bind every
+   [ingress-v1.json](../specs/fixtures/ingress-v1.json) trace and sustained software-UDP observations.
+2. Implement `mix wotex.software.build --workspace ABS` and
+   `mix wotex.software.run --workspace ABS` with the exact workspace/manifest
+   contract below. Existing shell scripts remain read/write fixture entry points;
+   their existence does not satisfy the Mix task contract.
+3. Extend the pinned C peer with read/write/release, Who-Is/I-Am and confirmed/
+   unconfirmed object/Property COV controls. Expose actual active subscriber count,
+   ACK/renewal/cancel counters, object value and process identity. A second real
+   client changes a disposable Analog Output. The test checks every ACK/value,
+   requested selector plus Status_Flags companion, renewal, cancellation and
+   subscriber return to baseline. Lost registration/renewal/deletion ACK scenarios
+   distinguish local resource release from server lifetime expiry. Discovery uses
+   only explicit local destinations and never edits an existing route.
+4. Execute full typed/malformed/lifecycle/Runtime coverage and the independent
+   C workflow, C09 stress, minimum/current Elixir/OTP, native fixture sanitizers/
+   audit, archive-only package checks and final clean-source evidence. Every
+   required lane fails on unavailable setup or response. Hardware is separate.
 
-### WBA-P01: Harden typed services and segmented response bounds
-
-- Requirements: WBA-S01, WBA-S02; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WBA-V01, WBA-V02, WBA-V03, WBA-V04.
-- Change surface: Address, BACstack response adapter, SegmentsStore options and APDU ingress.
-- Test destinations: `test/wotex/bacnet/service_boundary_test.exs`.
-- Done when: Validate every ACK and numeric error; enforce the advertised 32-segment/1476-byte APDU profile and exact typed values.
-- Suggested local commit: `feat: harden typed services and segmented response bounds`.
-
-### WBA-P02: Enforce stack and borrowed client ownership
-
-- Requirements: WBA-S03; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WBA-V05, WBA-V14.
-- Change surface: StackOwner, IPv4 and borrowed BACstack operation owner.
-- Test destinations: `test/wotex/bacnet/stack_lifecycle_test.exs`.
-- Done when: Reverse acquisition cleanup, bounded admission and dead-caller cleanup work without stopping borrowed Client or daemon resources.
-- Suggested local commit: `feat: enforce stack and borrowed client ownership`.
-
-### WBA-P03: Establish typed cov subscriptions and confirm reports
-
-- Requirements: WBA-S04; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WBA-V06, WBA-V07, WBA-V08.
-- Change surface: new Subscription/COV owner, Client callbacks and service APDU construction.
-- Test destinations: `test/wotex/bacnet/cov_test.exs`.
-- Done when: Object/property COV bind exact source/process/object/index, return after matching ACK, and ACK confirmed duplicates without suppressing fresh values.
-- Suggested local commit: `feat: establish typed cov subscriptions and confirm reports`.
-
-### WBA-P04: Complete finite cov renewal and cancellation
-
-- Requirements: WBA-S04; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WBA-V09, WBA-V10, WBA-V11.
-- Change surface: COV timer and listener lifecycle.
-- Test destinations: `test/wotex/bacnet/cov_lifecycle_test.exs`.
-- Done when: Actual cancel encoding omits both optional fields; renewal/death/overflow release listeners and server state even after a lost registration ACK.
-- Suggested local commit: `feat: complete finite cov renewal and cancellation`.
-
-### WBA-P05: Map property observations and explicit probes
-
-- Requirements: WBA-S05; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WBA-V12.
-- Change surface: Mapping, Transport and BACnet.health_check/2.
-- Test destinations: `test/wotex/bacnet/runtime_stream_test.exs`.
-- Done when: Property COV produces identity-bound Runtime values; unsupported Event/security fails and original destination is retained for cancel.
-- Suggested local commit: `feat: map property observations and explicit probes`.
-
-### WBA-P05a: Restore standalone discovery and sequential helpers
-
-- Requirements: WBA-N01, WBA-N02, WBA-N03, WBA-N04, WBA-N05; all preceding packages are dependencies.
-- Acceptance cases: every `WBA-Fxx` case in `docs/specs/fixtures/contract-v1.json`, plus the full N03/N04 boundary matrix.
-- Change surface: root named helpers, new immutable Device, explicit discovery configuration and listener owner, sequential batch operation.
-- Test destinations: `test/wotex/bacnet/standalone_contract_test.exs`, `test/wotex/bacnet/discovery_lifecycle_test.exs`.
-- Done when: native APIs need no TD/Runtime, whole-batch validation and shared deadlines work, Who-Is uses only configured destinations, duplicate/conflicting/late I-Am behavior is asserted, and borrowed resources survive cleanup. Bind concrete fixtures to actual code; no production stub or fixture echo.
-- Suggested local commit: `feat: restore bounded discovery and native property helpers`.
-
-### WBA-P05b: Prove the Wotex consumer boundary
-
-- Requirements: WBA-I01, WBA-I02, WBA-I03, WBA-I04, WBA-I05, WBA-I06; all previous native/profile packages are dependencies.
-- Concrete cases: every `WBA-I-Fxx` case in `docs/specs/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
-- Change surface: root profile/0 and profile/1, Error.class, Mapping, Transport and their public core/Runtime integration; no sibling implementation changes.
-- Test destinations: `test/wotex/bacnet/runtime_integration_test.exs` and explicit test-only credential/client ports.
-- Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.
-- Suggested local commit: `feat: integrate explicit runtime profiles and failure classes`.
-
-### WBA-P06: Prove cov against an independent bacnet peer
-
-- Requirements: WBA-S01, WBA-S02, WBA-S03, WBA-S04, WBA-S05; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WBA-V13, WBA-V14.
-- Change surface: existing C-stack peer extended with COV controls/counters and bounded Who-Is/I-Am discovery.
-- Test destinations: `test/interop/bacnet_stack_test.exs`, `test/software/lifecycle_stress_test.exs`.
-- Done when: Actual discovery, ordered batch reads, read/write/release/readback and confirmed/unconfirmed COV pass, subscriber count returns to baseline, required matrix/archive gates pass.
-- Suggested local commit: `test: prove cov against an independent bacnet peer`.
+No implementation substitutes an injected response for an independent peer.
+Native C changes belong to fixtures, not production library transport.
 
 ## Reproducible software fixture contract
 
-Add or extend `test/interop/build_software.sh` and `test/interop/run_software.sh`
-as explicit maintainer-invoked entry points. They take exactly one absolute
-workspace argument. Build requires a disposable empty workspace or a matching
-manifest; refuses an unrelated nonempty directory; downloads upstream source
-archives at the .10 pins without configuring any Git remote. Record archive
-SHA-256, source commit, compiler/SDK/library versions, build flags, binary hashes
-and fixture configuration in that workspace. Check hashes on reuse. Keep SDKs,
-native builds, keys, certificates, sockets and logs out of the source package.
+Both Mix tasks require exactly one `--workspace ABS` option. ABS is absolute
+and either empty/disposable or contains a matching verified manifest. Unknown
+options, an unrelated nonempty directory and mismatched hashes fail without
+changing unrelated contents. Tasks configure no Git remote and execute tools
+as executable/argument vectors, never interpolated shell text.
 
-The run script owns only processes/containers created from that manifest, assigns
-disposable local ports/state, waits for explicit readiness with a finite timeout,
-exports the fixture configuration to tests, and traps all exits to release owned
-resources. It must return nonzero for missing tools, unavailable required kernel
-facilities, missing responses, failed assertions or cleanup failure. Do not
-convert a failed setup to an ExUnit skip. Existing hardware tests require separate
-explicit target configuration and are never selected by this runner.
+Build verifies BACstack's locked Hex source and the C-stack archive in the
+[software-sources-v1.json](../specs/fixtures/software-sources-v1.json) before extraction. Archive members cannot
+escape the workspace. Downloads have a 120-second/100-MiB per-archive ceiling.
+Reuse rechecks source and binary hashes. The manifest records source URL/commit/
+archive SHA-256, all fixture/patch source hashes, compiler/linker/libc/CMake/OS/CPU
+versions and executable hashes, exact build options, binary SHA-256, container
+base digest/package versions if used, and the project lockfile/source identity.
+Changed tools/options require a fresh build. A pinned source alone does not imply
+bit-identical container or compiler output.
 
-Use this command contract once the runner is implemented:
+The Linux native fault build uses `-fsanitize=address,undefined
+-fno-omit-frame-pointer` for C fixture and linked C-stack code. Sanitizer findings
+fail the lane. The manifest separates normal and sanitizer binaries/options;
+native audit records SDK/source/patch identities and reviewed advisories. No
+waiver silently suppresses an applicable finding.
 
-```sh
-./test/interop/build_software.sh /absolute/disposable/fixture-workspace
-./test/interop/run_software.sh /absolute/disposable/fixture-workspace
-```
+Run owns only manifest-created processes/containers/ports/state. It allocates
+disposable local ports, waits for explicit readiness within 10 seconds, and
+bounds captured stdout/stderr to 1 MiB each; overflow fails the lane. Every exit
+releases owned resources within 1000 ms locally. Remote subscriber expiry uses
+the requested finite lease and is recorded separately when cancellation cannot
+reach the peer. Missing tools, responses, counters or cleanup are failures.
 
-The runner executes `mix test --include interop --include software --exclude hardware`
-and all required native tests/audits from .10. Add `@tag :software` only to tests
-needing this software fixture/stress setup; normal deterministic contract tests
-remain in `mix check`. The explicit runner sets `WOTEX_REQUIRE_SOFTWARE=1` and
-the test helper must make missing fixture configuration fail under that setting.
-Label same-stack, independent-stack, malformed-peer and injected-contract evidence
-separately in the results. Hardware absence is not a software test result.
+The runner selects `mix test --include interop --include software --exclude
+hardware`, the C peer tests, ASan/UBSan and dependency audits. It sets
+`WOTEX_REQUIRE_SOFTWARE=1`; missing fixture configuration is then an assertion
+failure, never an ExUnit skip. Pure and injected-boundary tests stay in the local
+`mix check` gate. Required runtime cohorts are Elixir 1.18/OTP 27 and
+Elixir 1.20/OTP 29 with exact patch versions. The independent C/fault lane runs
+on Linux. No physical BACnet network, device or certification is required.
 
-## Verification and commit procedure
+Evidence records every command/exit status, source/archive/fixture/binary hashes,
+case IDs and corpus digests, actual service/callback/failure observations, and
+resource counters before and after cleanup. C09 requires at least 1000 sequential
+operations, 32 concurrent callers, 100 open/close cycles and 100 receiver-death
+cycles with forced deadline, malformed reply and peer-loss cases. Heap/RSS and
+owned process/port/timer/listener/Invoke-ID/subscriber counts are separate
+measurements. Zero local delivery is not proof of zero server subscriptions.
 
-Run focused tests while implementing a package, then run `mix check` before its
-local commit. The ordinary Hex dependency path is authoritative. For the existing
-explicit sibling-development setup, `WOTEX_PATH_DEPS=1 mix check` selects local
-dependency sources; record which mode was used. Do not lower coverage, disable
-warnings, waive audits or exclude newly failing code to make the gate pass.
-Native changes additionally run their required native tests and dependency audit;
-C/C++ adapters run ASan/UBSan in the Linux fault lane.
+## Verification and completion
 
-After each package, update the current-profile/README capability claims only for
-behavior that now passed, and refresh [executable evidence](../provenance/executable-evidence.md)
-with command, versions, vector paths/digests and result. Keep unexecuted requirements
-explicit. Use the author and committer required by `CLAUDE.md`; never configure
-remotes, push, tag, publish, change visibility or edit a consumer.
+Each logical implementation commit requires focused assertions and full
+`WOTEX_PATH_DEPS=1 mix check --no-retry`. The ordinary Hex identity remains the
+package contract; the path switch is explicit development evidence. Keep the
+95% coverage floor, warnings and dependency audits intact. Native fixture edits
+also require their sanitizer and source-audit lanes. Use configured Git identity;
+no remote, push, tag, publication, visibility or consumer changes are permitted.
 
-The final package also accepts every .11 standalone and .12 integration requirement,
-then runs the full .00 C09 matrix, all .10 scenario families, .11 concrete cases and software
-peers, then a clean committed-source archive with the lockfile through `mix check`
-and out-of-tree Hex package compilation. Confirm no Application callback or
-dependency-load I/O, no missing packaged bridge assets, no downloaded SDK/build/
-credential artifacts and no consumer-specific names/history. A passing coverage
-number or stub adapter cannot substitute for a required protocol assertion.
-
-## Completion checklist
-
-- Every .11 and .12 requirement is linked to a concrete asserting test/result;
-  no new target requirement is closed merely by an identifier or valid JSON.
-- Every S and N requirement has its scenario assertions and concrete corpus
-  bindings passing, with current digests. The fixture manifest alone is not proof.
-- C01 compatibility, C02 malformed boundaries, C03 ownership, C04 errors/effects,
-  applicable C05/C06 streams, C07 native framing, C08 redaction/telemetry and
-  C09 stress/matrix each have executable evidence or an explicit scope-based
-  inapplicable entry. No missing SDK/software facility is inapplicable.
-- All required software lanes actually ran, including negative security and
-  cancellation/resource assertions where the profile defines them.
-- Current capabilities/docs agree with the implementation; target requirements
-  have not been presented as baseline achievements.
-- The clean-source/package gates pass, intended commits are local and the
-  working tree contains no uncommitted tracked implementation change.
-
-Physical-device validation, certification, consumer migration and publication
-remain separate activities. They are not reasons to leave defined software
-requirements unimplemented or to claim unexecuted software tests passed.
+Completion requires every S/N/I/C requirement, exact corpus binding and required
+software lane, plus a clean committed-source `mix check` and out-of-tree archive
+consumer. Archive contents include declared runtime/test source assets and exclude
+SDK downloads, native fixture binaries, secrets, state, sockets, PLTs and logs.
+Documentation and capability claims name only executed cells. Independent peer
+acceptance, certification and consumer parity are distinct evidence scopes.

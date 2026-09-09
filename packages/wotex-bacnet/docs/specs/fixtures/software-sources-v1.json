@@ -1,0 +1,23 @@
+{
+  "format": "wotex.software.sources",
+  "version": "1.0.0",
+  "status": "specified_unexecuted",
+  "runtime": "BEAM BACstack; no production executable",
+  "sources": [
+    {
+      "name": "bacstack",
+      "role": "runtime_hex_dependency",
+      "version": "0.0.1",
+      "url": "https://repo.hex.pm/tarballs/bacstack-0.0.1.tar",
+      "hex_outer_sha256": "4961553b41a0a5045d2603026108b5800551a126ab1588d378724e561c54bc1f",
+      "hex_inner_checksum": "8ae88e0d565f880159ec324c7771e49d47685d4304a139f3ce7b9bf5a406c251"
+    },
+    {
+      "name": "bacnet-stack",
+      "role": "independent_software_peer",
+      "commit": "3603048350b8ba543ec76cf6aa8a232b3f4d442d",
+      "url": "https://codeload.github.com/bacnet-stack/bacnet-stack/tar.gz/3603048350b8ba543ec76cf6aa8a232b3f4d442d",
+      "sha256": "b5529b73551c7bea6fdd2e6e44c1e4682f1ccb017f5e3ce6d28cac87c0d26043"
+    }
+  ]
+}

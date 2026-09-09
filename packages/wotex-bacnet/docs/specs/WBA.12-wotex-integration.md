@@ -3,7 +3,7 @@ spec:
   id: WBA.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-bacnet
   updated: 2026-09-09
 ---
@@ -23,12 +23,12 @@ Description, Runtime Context or BindingProfile. Mapping and Transport are leaf
 adapters over those APIs. Compile dependencies remain the released `wotex` and
 `wotex_runtime` requirements in `mix.exs`; `WOTEX_PATH_DEPS=1` is only the explicit
 development override. No runtime sibling discovery, global registration or
-application callback is added.
+application callback is permitted.
 
 | Owner | Reused contract | This package's obligation |
 | --- | --- | --- |
 | Wotex core | WTX.01/02/03 version 1.1.0: ThingDescription, Form, DataSchema, security references, bounded JSON/extensions | Use public constructors/accessors; do not copy TD parsing, default-operation tables or JSON-LD fetching into the protocol |
-| Wotex Runtime | WRT.01 version 1.3.0: ConsumedThing, Context, BindingProfile, Request, Result, Credentials, Transport, Subscription, Retry | Implement existing ports; preserve identity, deadline and ownership semantics |
+| Wotex Runtime | WRT.01 version 1.3.1: ConsumedThing, Context, BindingProfile, Request, Result, Credentials, Transport, Subscription, Retry | Implement existing ports; preserve identity, deadline and ownership semantics |
 | This protocol | .00/.10/.11: native values, operation validation, backend, errors and cleanup | Revalidate inputs at I/O boundaries; SDK delegation does not transfer this obligation to consumer code |
 | Wotex Conformance | WCF.01 version 1.1.0: isolated artifact/vector/evidence contracts | Optional external report integration; no production dependency in either direction |
 | Wotex Lab | Explicit reference consumer and artifact adoption | May consume immutable public archives; a local protocol pass does not close Lab's claims |
@@ -36,7 +36,7 @@ application callback is added.
 
 The read-only reference review used the checked-in contracts and public APIs at
 [core `e03ea9733e30`](https://github.com/wotex-project/wotex/blob/e03ea9733e30fb05caa1749dff62e57b3670be28/CLAUDE.md),
-[Runtime `ba2706073ada`](https://github.com/wotex-project/wotex-runtime/blob/ba2706073adae037254ca187b5c8c78fc5708652/docs/specs/WRT.01-consumed-thing-runtime.md),
+[Runtime `6bf5c0db5024`](https://github.com/wotex-project/wotex-runtime/blob/6bf5c0db502499fb7ebc3705846039f9899e2b6b/docs/specs/WRT.01-consumed-thing-runtime.md),
 [HTTP `2513174d0784`](https://github.com/wotex-project/wotex-binding-http/blob/2513174d0784c635a99db1a950db0e6812f3aab7/CLAUDE.md) and
 [MQTT `ee1392412aa3`](https://github.com/wotex-project/wotex-binding-mqtt/blob/ee1392412aa37716dada585c8cede5efd6ccf0d3/docs/specs/catalogue.yaml).
 These commit references identify reviewed source, not a claim that it is published
@@ -45,21 +45,23 @@ bindings only; their no-client rule does not erase this package's native profile
 
 ## WBA-I02 — Explicit Runtime profile factory
 
-Add pure `profile/0` on `Wotex.BACnet`, returning a `Wotex.Runtime.BindingProfile` for
-`:ip`. Add `profile/1`, accepting only the atoms below and returning
+Pure `profile/0` on `Wotex.BACnet`, returning a `Wotex.Runtime.BindingProfile` for
+`:ip`. `profile/1` accepts only the atoms below and returning
 `{:ok, profile}` or `{:error, %Error{code: :unsupported_profile}}`.
 No constructor checks installed modules, opens a backend, reads environment or
 advertises a mode whose required implementation/evidence has not been admitted.
 Until a mode is implemented it returns unsupported. Mode availability is a static
 library-version decision; actual configured peer capabilities still fail explicitly.
-`profile/0` is added together with its baseline integration evidence, not as a stub.
+The current implementation exposes both modes with local Runtime evidence.
+Borrowed-stack ingress and the complete I04 retry corpus still require the
+additional acceptance cells in S03a and the plan.
 
 | Mode | BindingProfile id | URI schemes | Exact operations | Stream meaning |
 | --- | --- | --- | --- | --- |
 | `:ip` | `:bacnet` | `bacnet` | readproperty, writeproperty | none |
 | `:ip_cov` | `:bacnet_cov` | `bacnet` | readproperty, writeproperty, observeproperty, unobserveproperty | selected Property COV |
 
-The baseline profile has `media_types: []`. The baseline adapter exposes native protocol values, not a general content decoder. The empty media-type set is an explicit Runtime selection wildcard, not a claim that JSON/XML/CBOR serializers are implemented. The baseline preserves Forms that omit contentType; the reviewed core Form.to_map/1 preserves that omission. An explicitly supplied contentType fails with :unsupported_content_type before I/O until a separately named serialization profile defines it. This is an intentional target tightening of the baseline adapters, which currently ignore that selector. Do not interpret TD 1.1's application/json default as evidence of a JSON wire encoding for these native protocols. The .02/.10 conversion selectors are authoritative. A future negotiated serialization profile requires a separate named profile and exact codec fixtures. Do not advertise media-type conformance from this wildcard.
+The baseline profile has `media_types: []`. The baseline adapter exposes native protocol values, not a general content decoder. The empty media-type set is an explicit Runtime selection wildcard, not a claim that JSON/XML/CBOR serializers are implemented. The baseline preserves Forms that omit contentType; the reviewed core Form.to_map/1 preserves that omission. An explicitly supplied contentType fails with :unsupported_content_type before I/O until a separately named serialization profile defines it. Do not interpret TD 1.1's application/json default as evidence of a JSON wire encoding for these native protocols. The .02/.10 conversion selectors are authoritative. A future negotiated serialization profile requires a separate named profile and exact codec fixtures. Do not advertise media-type conformance from this wildcard.
 All modes inherit the same media policy unless .10 states a narrower supported
 cell. A profile declares possible operations, not backend presence, authorization
 or physical effect. The caller passes profiles in precedence order and routes
@@ -68,8 +70,8 @@ Every other TD operation, including Thing-level aggregate operations, is unsuppo
 
 WhoIs discovery and sequential batch reads are native APIs. They do not implement a Thing Description Directory or Runtime readmultipleproperties. COV is not BACnet alarm/Event service support.
 
-The integration test constructs the real consumer boundary as follows (target
-factory API; `td_map`, `transport_options` and credential port are explicit test
+The integration test constructs the real consumer boundary as follows (explicit
+configuration sketch; `td_map`, `transport_options` and credential port are explicit test
 inputs, not ambient configuration):
 
 ```elixir
@@ -87,10 +89,18 @@ Wotex.Runtime.ConsumedThing.read_property(consumed, "reading", context)
 `TestCredentials.resolve/4` admits only a selection whose names are `["none"]`
 and definitions are `%{"none" => %{"scheme" => "nosec"}}` for this synthetic
 fixture; return `{:ok, nil}` there and a structured failure otherwise. It is a
-test port, not a production credential default. Target-configured secure native
-backends retain all .10 security requirements even when this test selection
-supplies no immediate credential. The protocol peer adapter uses only the input's
+test port, not a production credential default. BACnet/IP in this profile supplies no channel security; unsupported credential
+objects and BACnet/SC selectors fail before stack acquisition. The protocol peer adapter uses only the input's
 `peer_reply` stimulus; expectations remain exclusively in the asserting test.
+
+The pid supplied to `Transport.subscribe/4` is the final Runtime subscription
+owner. A temporary worker may execute the callback. Native partial resources
+bind to the final owner before waiting; successful handoff survives callback
+worker exit. Final receiver/owner death during establishment interrupts native
+work within C03. A late reply cannot revive the dead generation. Unrelated
+receiver loss preserves a shared borrowed stack. S03a separately bounds ingress;
+relay queue checks alone do not prove the owned UDP pipeline is bounded.
+These cases use actual Runtime child specifications and native cleanup counters.
 
 ## WBA-I03 — Mapping, route and value boundary
 
@@ -218,24 +228,21 @@ No-stream modes return a structured unsupported error without creating a process
 ## WBA-I06 — Acceptance through public packages
 
 The concrete [integration corpus](fixtures/wotex-integration-v1.json) fixes a
-synthetic TD, selected route/command and public payload projection. It is labelled
-specified_unexecuted until its assertions run. JSON validity or an identifier
+synthetic TD, selected route/command and public payload projection. I-F01 has an
+actual Runtime binding; I-F02–I-F07 remain specified assertions requiring binding. JSON validity or an identifier
 in a fixture does not accept a work package. The driver receives only input,
 never expectation; the test process compares the returned projection. Atoms become
 finite documented strings and bytes use the envelope above. Exclude pids, refs,
 clocks, secrets and implementation-specific map keys from normalized observations.
 
-`runtime_read` projects Modbus function codes to the fixed public helper name,
-CoAP codes/options to method/path/Accept, and other native messages to the listed
-address fields; additional internal fields are excluded explicitly. Peer reply
+`runtime_read` projects the BACnet native message to its type, object type,
+instance, property and array index; other internal fields are excluded. Peer reply
 kinds select an exact protocol PDU or a tagged Client success as named by input.
 The finite `scripted_client` selector resolves to a test-only Client module; its
 explicit target/options come from input, never from expectation. Clock offsets
 are relative to the test-owned monotonic origin. A loopback peer may reserve an
 ephemeral port and substitute its one symbolic endpoint consistently in input
 and normalized observation; it cannot change addresses using expected output.
-The OPC UA one-shot stimulus deliberately uses the baseline scalar translation;
-persistent version 1 cases additionally require explicit array flags from .10.
 `error_retry_projection` injects the named failure stage into the native error
 classification boundary, obtains the library Error (the expected class is not
 supplied), and passes it through a test Runtime Transport's failure return and

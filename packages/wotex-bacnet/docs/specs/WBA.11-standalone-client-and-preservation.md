@@ -3,16 +3,17 @@ spec:
   id: WBA.11
   title: "Standalone BACnet client and feature preservation"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-bacnet
   updated: 2026-09-09
 ---
 
 # WBA.11 Standalone BACnet client and feature preservation
 
-Specification version: **1.0.0**. Status: **planned**. Requirements in this file
-extend [WBA.10](WBA.10-software-contract.md); they do not describe completed
-implementation. The [current profile](WBA.02-implemented-profile.md) and
+Specification version: **1.1.0**. Implementation status: **partial**. Requirements
+in this file extend [WBA.10](WBA.10-software-contract.md). Named helpers, discovery
+and their lifecycle bindings exist; complete independent software acceptance
+remains required. The [current profile](WBA.02-implemented-profile.md) and
 [executed evidence](../provenance/executable-evidence.md) remain the authority
 for existing behavior. Software limits below are library policy, not BACnet
 standard limits.
@@ -37,8 +38,8 @@ capabilities must reflect the selected adapter's validated operations.
 | --- | --- | --- |
 | Object/property addressing, aliases, array index zero, explicit priority | Preserve and validate again at operation entry | `Address`, WBA-S01/WBA-V01 |
 | ReadProperty and acknowledged WriteProperty | Retain native tagged values and named helpers | WBA-N02, WBA-S02; matching and wrong ACK cases |
-| Sequential reads of several properties | Restore as a bounded sequential helper, with no ReadPropertyMultiple claim | WBA-N03; request-order/fail-fast/deadline cases |
-| Who-Is device discovery | Restore using an explicit destination and finite listener owner | WBA-N04; actual Who-Is/I-Am peer proof |
+| Sequential reads of several properties | Retain a bounded sequential helper, with no ReadPropertyMultiple claim | WBA-N03; request-order/fail-fast/deadline cases |
+| Who-Is device discovery | Retain discovery using an explicit destination and finite listener owner | WBA-N04; actual Who-Is/I-Am peer proof |
 | Owned IPv4 transport and borrowed Client | Preserve separate ownership modes | WBA-S03; fail every acquisition and keep borrowed Client alive |
 | Scalar Form mapping and compatibility callbacks | Preserve success shape and unknown extensions | WBA.02 and the Wotex integration contract |
 | Existing C-stack read/write/release scenarios | Retain as independent evidence and extend to discovery/COV | Required software runner; no silent missing-response pass |
@@ -179,10 +180,10 @@ ownership contract without an adapter.
 
 ## WBA-N05 — Concrete fixture corpus and execution binding
 
-[contract-v1.json](fixtures/contract-v1.json) is a **specified, unexecuted**
-corpus, not a passing test result. The WBA-Vxx table in .10 lists scenario
+[contract-v1.json](fixtures/contract-v1.json) is a specified assertion
+corpus with current executable bindings, not an independent peer test result. The WBA-Vxx table in .10 lists scenario
 families. Each family still needs executable boundary and fault cases; these
-starter cases make selected exact expectations reviewable, not exhaustive.
+concrete cases fix selected exact expectations without exhausting each family.
 
 The local corpus format is version 1.0.0. `operation` names the public function
 or test-adapter action. `input` is the only material supplied to the system under
@@ -197,7 +198,7 @@ projection does not waive separate Error class/redaction assertions.
 
 The `upstream_encoding` tier constructs the named BACstack service and encodes
 its APDU, or just its service-parameter tags where expressly requested. It checks
-source-level wire examples separately from the future operation's ownership.
+source-level wire examples separately from the operation's ownership.
 Lifecycle cases use a virtual millisecond clock starting at zero and scripted
 transport events. A script supplies inputs and peer responses, never the expected
 public result. Normalize owned resources to counts, not PIDs. Compare sent
@@ -209,9 +210,11 @@ Every executable binding records its N/S/V requirement IDs, JSON case ID and
 SHA-256 of the corpus bytes. Merely parsing JSON or copying an ID into a fixture
 manifest does not accept a requirement. The runner must invoke the library and
 assert the expected result; independent software cases additionally assert
-actual peer observations and cleanup counters. Add normal ExUnit bindings at
-`test/wotex/bacnet/standalone_contract_test.exs`; source-driven APDU golden checks
-and lifecycle adapter checks are separate evidence classes.
+actual peer observations and cleanup counters. Current bindings are in `service_boundary_test.exs` (F01–F04),
+`discovery_values_test.exs` (F05–F06), `cov_test.exs` (F07), `batch_test.exs`
+(F08–F09), and `discovery_window_test.exs` (F10–F11), under
+`test/wotex/bacnet/`. Source-driven APDU golden checks and lifecycle adapter
+checks remain separate from independent peer evidence.
 
 ## Source basis and release acceptance
 

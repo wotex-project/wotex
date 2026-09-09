@@ -13,8 +13,11 @@ Implementation readiness does not mean implementation or conformance is complete
 [Source revisions](../provenance/primary-sources.md) and [executed evidence](../provenance/executable-evidence.md) are separate records.
 
 - [WBA.11 Standalone client and preservation](WBA.11-standalone-client-and-preservation.md)
-- [Concrete specified fixture corpus](fixtures/contract-v1.json) — unexecuted until bound to assertions
+- [Concrete specified fixture corpus](fixtures/contract-v1.json) — local binding inventory is in WBA-N05; independent peer acceptance remains required
 
 - [Versioned specification catalogue](catalogue.yaml) — owning contracts, dependencies, status and baseline evidence
 - [WBA.12 Wotex integration and evidence contract](WBA.12-wotex-integration.md)
 - [Concrete Wotex integration corpus](fixtures/wotex-integration-v1.json) — specified assertions, not a passed profile
+
+- [Owned UDP ingress cases](fixtures/ingress-v1.json) — specified, unexecuted credit/lifecycle traces
+- [Software peer source identities](fixtures/software-sources-v1.json) — pinned sources, not a passed build

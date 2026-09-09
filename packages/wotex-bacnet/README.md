@@ -38,7 +38,10 @@ should replace the path with the constraint of an available Hex release.
 
 ## Implemented profile
 
-ReadProperty and WriteProperty use pinned BACstack 0.0.1. `Value` provides
+The production client runs in Elixir/OTP using pinned BACstack 0.0.1. It requires
+no Python runtime, native executable or NIF. Independent C-stack processes belong
+only to explicit software fixtures. ReadProperty and WriteProperty use the same
+BEAM transport and codec ownership. `Value` provides
 explicit scalar conversion for declared Form types and retains native tags. The adapter accepts only
 matching acknowledgments and retains tagged values. Abort, Error, Reject,
 missing ACK and wrong object/property/index all fail. `Address` preserves array
@@ -76,7 +79,9 @@ to 64 distinct Properties, and bounded Who-Is discovery with an explicitly
 configured destination. Discovery results never replace the configured route.
 
 Object and Property Change of Value (COV) subscriptions support finite leases,
-renewal, confirmed and unconfirmed reports, bounded queues, and cancellation.
+renewal, confirmed and unconfirmed reports, finite receiver queues, and cancellation.
+The complete consumption-based UDP ingress bound in WBA-S03a remains required;
+the current transport can forward faster than a suspended stack owner consumes.
 They require the owned `IPv4` client or a verified Wotex stack wrapper; a raw
 borrowed BACstack Client supports read/write operations only. Native and real
 Runtime lifecycle tests exercise COV ownership. Independent C-peer COV and the
@@ -99,8 +104,7 @@ The compatibility callbacks are `capabilities/0`, `connect/1`, `send/2`,
 receive queue is fabricated; `receive/2` is unsupported. `health_check/1`
 requires a probe, while `health_check/2` performs an explicit validated read.
 Subscriptions return an opaque handle bound to the original native session. Callback names alone do not establish consumer behavioral parity.
-The consumer retains its implementation until differential scenarios and
-interoperability gates pass; migration is outside this repository.
+Consumer integration requires separate differential and interoperability evidence.
 
 `profile/0` returns the native read/write Runtime profile. `profile(:ip_cov)`
 adds Property observation through a consumer-owned Runtime subscription. Forms
@@ -123,6 +127,12 @@ checkout, tests/coverage, static checks, docs and dependency audit.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
 
+The accepted software fixture entry points are
+`mix wotex.software.build --workspace ABS` and
+`mix wotex.software.run --workspace ABS`. They are specified work; the existing
+shell scripts exercise only the current read/write fixture. No production
+native executable build task is required for this BEAM client.
+
 ## Software implementation contract
 
 The [ordered implementation sequence](docs/plans/software-implementation.md)
@@ -133,7 +143,8 @@ already exists. Required software peers are separate from physical-device tests.
 
 The [WBA.11 standalone client contract](docs/specs/WBA.11-standalone-client-and-preservation.md)
 records required native APIs, preserved protocol assets and concrete specified
-fixtures. These cases are not passing evidence until executable bindings run.
+fixtures. The concrete standalone corpus has local executable bindings; independent
+peer evidence and the full software acceptance matrix remain separate.
 
 The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
 profiles from planned contracts. The [Wotex integration contract](docs/specs/WBA.12-wotex-integration.md)

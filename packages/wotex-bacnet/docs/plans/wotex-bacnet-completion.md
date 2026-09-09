@@ -1,6 +1,6 @@
 # Wotex BACnet completion contract
 
-Graduate this library independently. Acceptance requires typed values and
+The independent BEAM library acceptance contract requires typed values and
 conversion, exact-revision protocol rules, Form mapping with extension
 preservation, structured errors, explicit OTP ownership and cleanup, neutral
 telemetry, unit/property/malformed-frame/lifecycle tests and an independent
@@ -12,10 +12,8 @@ A compatibility adapter exposes `capabilities/0`, `connect/1`, `send/2`,
 Wire acknowledgements never establish application truth. Unsupported operations
 return an explicit error or the documented optional `:not_supported` sentinel.
 
-The consumer keeps its implementation until differential scenarios and real
-interoperability prove the supported scope. Consumer changes, deployment and
-publication are outside this repository. Do not import consumer history or
-metadata into this neutral history.
+Consumer integration requires its own differential and interoperability evidence.
+Consumer changes, deployment and publication are outside this repository.
 
 ## Evidence rules
 
@@ -39,3 +37,9 @@ The [WBA.12 integration contract](../specs/WBA.12-wotex-integration.md) and
 [versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.
+
+The production runtime uses BACstack and owned BEAM transport. WBA-S03a fixes
+consumption-based UDP ingress and validated borrowed receive-policy limits.
+The native C stack is an independent software peer only. Required fixture tasks
+are `mix wotex.software.build --workspace ABS` and
+`mix wotex.software.run --workspace ABS`; they are specified implementation work.

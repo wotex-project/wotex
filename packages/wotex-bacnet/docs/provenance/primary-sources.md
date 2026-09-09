@@ -1,8 +1,8 @@
 # BACnet primary evidence
 
-Research date: 2026-09-08. Audience: maintainers. The protocol contract above
+Research date: 2026-09-08. Audience: maintainers. The protocol contract
 distinguishes normative standards, upstream implementation behavior, inferred
-integration choices and evidence still requiring hardware or SDK execution.
+integration choices and required independent software evidence.
 
 - [BACstack 0.0.1 Client](https://bacstack.hexdocs.pm/BACnet.Stack.Client.html).
 - [Pinned BACstack package](https://repo.hex.pm/tarballs/bacstack-0.0.1.tar).
@@ -11,10 +11,8 @@ integration choices and evidence still requiring hardware or SDK execution.
 - [ASHRAE COV interpretation 135-2012-18, 2015-11-04](https://bacnet.org/wp-content/uploads/sites/4/2022/08/IC135-2012-18.pdf).
 - [W3C BACnet binding draft](https://w3c.github.io/wot-binding-templates/bindings/protocols/bacnet/index.html).
 
-Research searched standards/revision availability, wire/address rules, transport
-ownership, security and interoperability gaps, then reviewed upstream APIs.
-Stop reason: consequential design claims have primary evidence or explicit
-access limits. No physical or secure-stack execution was performed by research.
+The reviewed evidence covers wire/address rules, transport ownership, security
+boundaries and upstream APIs. It is source analysis, not protocol execution.
 
 W3C [TD 1.1 Recommendation, 2023-12-05](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/)
 is the Thing Description baseline. [Binding Registry 2025-11-04 draft](https://www.w3.org/TR/2025/DRY-wot-binding-registry-20251104/)
@@ -58,4 +56,18 @@ Source encoding checks through BACstack 0.0.1 produced the exact Who-Is APDUs
 `1008` and `10080901190a`, and SubscribeCOV cancellation parameter bytes
 `09071c00400000`, as recorded in the specified WBA-F05/F06/F07 cases. These
 cross-checks validate the chosen upstream byte examples; they do not execute
-the future Wotex discovery/COV operations or accept those work packages.
+independent Wotex discovery/COV peer workflows or accept those work packages.
+
+## Runtime and fixture boundaries
+
+The production SDK is BEAM BACstack. C-stack builds and their compiler/container
+requirements belong to the independent software fixture; no Python or native
+executable supplies production BACnet transport.
+
+The pinned [IPv4Transport source](https://hex.pm/packages/bacstack/0.0.1/files/lib/bacnet/stack/transport/ipv4_transport.ex)
+uses active-ten UDP receive and rearms from its own handler before downstream
+consumption. Its PID callback forwards decoded messages without consumer credit.
+The [TransportBehaviour](https://hexdocs.pm/bacstack/0.0.1/BACnet.Stack.TransportBehaviour.html)
+is the public seam for the package's required bounded BEAM transport. S03a's
+credit count, starvation timeout and datagram bound are library policy, not an
+ASHRAE requirement or an existing BACstack callback.

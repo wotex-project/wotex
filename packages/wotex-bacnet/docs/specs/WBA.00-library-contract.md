@@ -3,7 +3,7 @@ spec:
   id: WBA.00
   title: "Software implementation rules"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-bacnet
   updated: 2026-09-09
 ---
@@ -183,43 +183,26 @@ types specified in WBA.10. A credential/profile mismatch fails before I/O.
 When an original route is bound to a handle, cancellation uses that route rather
 than allowing an unrelated stop Form to redirect the cancellation.
 
-## WBA-C07 — Optional native executable contract
+## WBA-C07 — BEAM runtime and independent native software peers
 
-Applies where a Python/C/native SDK bridge is specified. The executable is an
-absolute caller-selected path; arguments are separate values, never shell text.
-Owned bridges use a persistent process only when the profile requires sessions
-or signals. One-shot profiles retain their existing documented lifecycle.
-Use protocol version 1 JSON lines with UTF-8 encoding and a 128 KiB limit per
-line including the newline. Request IDs are opaque strings, unique within the
-bridge generation. A startup `ready` response identifies bridge protocol and
-backend revision; an unsupported version/revision fails before application I/O.
+The production runtime is Elixir/OTP with BACstack's BEAM codecs and an explicitly
+owned or borrowed BACnet/IP stack. No Python process, native executable, NIF or
+external service implements the production client. Protocol values and OTP
+ownership remain inside this package's public API. Native build tools belong
+only to the independent C-stack fixture. A production `mix wotex.native.build`
+task is inapplicable to this architecture; its absence is not an implementation gap.
 
-| Envelope | Required fields |
-| --- | --- |
-| Ready | `version: 1`, `event: "ready"`, `backend`, exact `revision` |
-| Request | `version: 1`, `id`, `operation`, `parameters`, finite `timeout_ms` |
-| Success | `version: 1`, matching `id`, `ok: true`, `result` (explicit null allowed) |
-| Failure | `version: 1`, matching `id`, `ok: false`, bounded library `error.code` and optional numeric `error.status` |
-| Stream report | `version: 1`, `subscription_id`, `generation`, `event`, `value`, bounded `metadata` |
+Software fixture tasks are explicit `mix wotex.software.build --workspace ABS`
+and `mix wotex.software.run --workspace ABS`. Their workspace, source pin,
+manifest, limits and cleanup contract is in the implementation plan. A shell
+script, compiler or container does not run on dependency load or native client
+connect. Fixture subprocesses use executable/argument vectors and bounded output;
+missing prerequisites, readiness failure and cleanup failure are failed software
+lanes. Test peers cannot become an automatic production fallback.
 
-Protocol-specific parameters and value envelopes are defined in WBA.10.
-Reject duplicate JSON keys, fields outside the selected envelope/operation
-allowlist, extra responses for one ID,
-malformed JSON, non-finite numbers, wrong IDs and incomplete lines at EOF.
-Depth is at most eight, each array/map at most 1024 entries, and total value nodes
-at most 4096 unless a narrower protocol limit applies. Base64 bytes use the
-literal envelope `{"type":"bytes","base64":"..."}`; decoding must enforce
-the decoded-byte limit before use. Do not confuse dictionaries with native bytes
-unless this exact envelope is selected by the typed schema.
-
-Reserve a dedicated output channel for framed messages; native stdout/stderr logs
-cannot share it or leak through error text. Startup, shutdown and descendants
-must be bounded. EOF from the owner cancels active operations, releases native
-subscriptions/sessions and exits. The BEAM owner escalates from graceful shutdown
-to termination after its 1000 ms cleanup grace. Test actual process EOF, killed
-children, truncated output, large logs and cleanup failures. A trusted arbitrary
-consumer callback cannot be made resource-safe by return-shape validation alone;
-first-party bridges must enforce these obligations themselves.
+The native `Encoding` corpus projection uses the explicit JSON bytes envelope
+`{"type":"bytes","base64":"..."}` only in asserting fixture data. It does not
+establish a runtime JSON IPC protocol, media serializer or bytes-to-text conversion.
 
 ## WBA-C08 — Telemetry and diagnostics
 

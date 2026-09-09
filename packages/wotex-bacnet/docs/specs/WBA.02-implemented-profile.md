@@ -65,7 +65,9 @@ conversion, and successful cleanup share one deadline. Native numeric error
 details remain available to direct callers; Runtime retains the finite class
 and code, and unknown-effect writes remain non-retryable.
 
-These native and Runtime behaviors have executable lifecycle tests. Independent
+These native and Runtime behaviors have executable lifecycle tests. The current
+SDK-to-StackOwner receive path lacks S03a consumption-based credit flow; final
+receiver checks do not establish that upstream mailbox bound. Independent
 C-peer COV, the full discovery/batch/COV workflow, and final WBA-P06 evidence are
 still required; this section does not accept the complete target profile.
 

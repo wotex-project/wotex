@@ -10,8 +10,8 @@ independent C-peer COV and the complete WBA-P06 software workflow remain open.
 The tested implementation tree was
 `9a8df0d569b8b50cf665de3f9011ba8e9618d3d6`. Both lanes produced archive SHA-256
 `6197f31dfad80afaa8041bff470f1026b691c33472b1fad4ca9061bc29eb15d0`.
-This identifies the implementation before the subsequent documentation review,
-not a published release. No consumer parity or certification is inferred.
+These hashes identify that tested implementation and archive, not a published
+release. No consumer parity or certification is inferred.
 
 ## Mandatory local gate
 
@@ -42,6 +42,22 @@ Container source commits are pinned. Base-image/package-manager inputs may move;
 these are reproducible source fixtures, not claims of bit-identical image builds.
 Interoperability tags are excluded by default. Explicit invocation requires the
 configured peer and must fail if that peer or expected response is missing.
+
+## Current software acceptance boundary
+
+The standalone F01–F11 corpus has local pure/adapter bindings listed in WBA-N05.
+Runtime I-F01 is bound to real ConsumedThing execution; I-F02–I-F07 still require
+the exact corpus projections in addition to existing Error/Retry unit tests.
+COV and Runtime lifecycle tests exercise the native BEAM wrapper over UDP fault
+peers. They do not establish independent C-stack COV or complete ingress bounds.
+
+The checked-in `build_software.sh` and `run_software.sh` exercise the read/write
+fixture. They accept environment configuration and do not implement the target
+absolute-workspace admission or complete source/toolchain/binary manifest.
+The required Mix build/run tasks, S03a consumption-based UDP ingress, independent
+C-peer discovery/batch/COV/resource counters, and final software matrix/archive
+cohort remain required. A COV listener or final receiver queue bound does not
+bound an earlier SDK-to-StackOwner mailbox.
 
 ## Evidence identities
 
