@@ -3,7 +3,7 @@ spec:
   id: WBL.10
   title: "Complete BlueZ GATT central software profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -11,11 +11,11 @@ spec:
 # WBL.10 Complete BlueZ GATT central software profile
 
 Read [WBL.00](WBL.00-library-contract.md) and the [implementation sequence](../plans/software-implementation.md).
-[WBL.11](WBL.11-standalone-client-and-preservation.md) fixes the native API, retained workflows and concrete fixture contract.
-Baseline `cb56121` provides UUID/address/value helpers, Forms and a bounded
-one-shot `busctl` ReadValue/acknowledged WriteValue adapter. Persistent central
-ownership, live target verification, notifications and software GATT peers remain
-requirements. A fake D-Bus response proves the parser, not a GATT exchange.
+[WBL.11](WBL.11-standalone-client-and-preservation.md) fixes the native API, protocol workflows and concrete fixture contract.
+The accepted native backend is [WBL.13](WBL.13-native-backend.md). Current
+pure APIs, persistent Python D-Bus ownership, Runtime mapping and scoped virtual
+BlueZ results are described separately in the implemented profile and provenance.
+A scripted D-Bus response proves a boundary, not a GATT exchange.
 
 ## Scope and implementation choice
 
@@ -31,13 +31,12 @@ without explicit filters, acquired-fd streaming and cross-platform transports ar
 outside this profile. BlueHeron is not an implicit fallback. Physical RF testing
 and Bluetooth qualification are separate from the required software GATT lane.
 
-Implement a persistent first-party `Wotex.BLE.BlueZ.Connection` and Python
-bridge using dbus-next 0.2.3. Select it explicitly with `lifecycle: :persistent`
-on the BlueZ adapter; keep baseline one-shot operation for its documented
-read/write compatibility cells. A new bridge version uses WBL-C07. The bridge
-owns one D-Bus MessageBus connection and asyncio loop for its entire lifetime.
-StartNotify and StopNotify must use that same unique D-Bus sender. Launching a
-new busctl process for each notification call cannot satisfy this contract.
+The first-party `Wotex.BLE.BlueZ.Connection` owns a persistent C++17 libdbus
+Port selected by `lifecycle: :persistent`. `executable` names that absolute native
+binary; baseline one-shot busctl read/write has its separate documented mode.
+The helper uses .13's pinned library, bounded event loop and C07 framing. One
+private D-Bus connection owns discovery, Agent pairing and all GATT procedures;
+StartNotify/StopNotify have the same unique sender throughout their lifetime.
 
 ## WBL-S01 — Identity and procedure validation
 
@@ -199,7 +198,8 @@ lane so an unrelated blocked read cannot postpone receiver cleanup. Data and
 control requests share the 64-request admission bound. Failed or stalled
 StopNotify closes this sender within C03's ownership cleanup grace.
 
-Stream envelopes have exactly `version: 1`, `subscription_id`, `generation: 1`,
+Stream envelopes have exactly .13's `session_generation` and `report_sequence`,
+plus `version: 1`, `subscription_id`, `generation: 1`,
 `event`, `value`, and `metadata`. A `value` event uses the C07 bytes envelope and
 metadata with exactly `source: "bluez_value_change"`, the established
 `characteristic`, `requested_mode`, and `effective_mode`. Validate all bound
@@ -320,8 +320,9 @@ Device1 state meanings use the pinned
 | WBL-V11 | Real BlueZ central against virtual-controller GATT peripheral | Read/write/readback, notifications and indications actually traverse GATT |
 | WBL-V12 | C09 stress/admission/matrix plus bridge EOF/log/corrupt-line faults | Bounded native/D-Bus/BEAM cleanup and no false success |
 
-Pin BlueZ to `2123ab772fbe97d1369fc9e179ea87c3469cf98f` and dbus-next 0.2.3
-(source `74dc9706e8d0ebb17f27818b8ef9e214172514ec`). Build BlueZ with its test and
+Pin BlueZ to `2123ab772fbe97d1369fc9e179ea87c3469cf98f` and production
+libdbus 1.16.2 as .13. The independent GATT provider may use dbus-next 0.2.3
+(source `74dc9706e8d0ebb17f27818b8ef9e214172514ec`), solely as a test peer. Build BlueZ with its test and
 emulator tools. Use an isolated Linux VM with `CONFIG_BT_HCIVHCI` support and two virtual
 LE controllers created by `btvirt -L -l2`; verify no physical HCI controller
 is present before selecting fixture devices. Run a disposable private D-Bus and

@@ -3,7 +3,7 @@ spec:
   id: WBL.01
   title: "BLE protocol and graduation contract"
   status: accepted
-  version: 1.0.0
+  version: 1.0.1
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -53,5 +53,4 @@ address/value maps, no Application callback and no implicit runtime selection.
 Compatibility callbacks are capabilities/connect/send/receive/disconnect/health_check/
 subscribe/unsubscribe. A consumer port failure, malformed return or missing
 transport is an error; never select simulation. Telemetry event prefixes are
-[:wotex, :ble, ...] with bounded non-secret measurements. Consumer migration
-requires differential scenarios against both implementations before replacement.
+[:wotex, :ble, ...] with bounded non-secret measurements. Compatibility claims require differential scenarios for the exact advertised API.

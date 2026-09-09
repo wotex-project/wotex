@@ -3,56 +3,65 @@ package: "wotex_ble"
 completion_plan: "docs/plans/wotex-ble-completion.md"
 specifications:
   - id: "WBL.00"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WBL.00-library-contract.md"
     implementation_status: "partial"
     standards: [{"name": "Bluetooth Core / BlueZ", "revision": "Core 6.3; BlueZ 2123ab772fbe97d1369fc9e179ea87c3469cf98f", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
     requires: []
     implementation_modules: []
     executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WBL.01"
-    version: "1.0.0"
+    version: "1.0.1"
     path: "docs/specs/WBL.01-protocol.md"
     implementation_status: "partial"
-    standards: [{"name": "Bluetooth Core / BlueZ", "revision": "Core 6.3; BlueZ 2123ab772fbe97d1369fc9e179ea87c3469cf98f", "claim": "UUID/address and command boundary; no current GATT interoperability claim"}]
+    standards: [{"name": "Bluetooth Core / BlueZ", "revision": "Core 6.3; BlueZ 2123ab772fbe97d1369fc9e179ea87c3469cf98f", "claim": "Typed values, persistent Python D-Bus/Runtime behavior and scoped virtual BlueZ evidence; C++ target remains planned"}]
     requires: []
     implementation_modules: ["Wotex.BLE.Address", "Wotex.BLE.BlueZ", "Wotex.BLE.Client", "Wotex.BLE.Error", "Wotex.BLE.PortCall", "Wotex.BLE.Session", "Wotex.BLE.UUID", "Wotex.BLE"]
     executable_evidence: ["test/wotex/ble/bluez_test.exs", "test/wotex/ble/contract_test.exs", "test/wotex/ble/dependency_security_test.exs", "test/wotex/ble/mapping_test.exs", "test/wotex/ble/port_test.exs"]
-    compatibility_classification: "UUID/address and command boundary; no current GATT interoperability claim; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+    compatibility_classification: "Typed values, persistent Python D-Bus/Runtime behavior and scoped virtual BlueZ evidence; C++ target remains planned; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
   - id: "WBL.02"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WBL.02-implemented-profile.md"
     implementation_status: "implemented"
-    standards: [{"name": "Bluetooth Core / BlueZ", "revision": "Core 6.3; BlueZ 2123ab772fbe97d1369fc9e179ea87c3469cf98f", "claim": "UUID/address and command boundary; no current GATT interoperability claim"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
+    standards: [{"name": "Bluetooth Core / BlueZ", "revision": "Core 6.3; BlueZ 2123ab772fbe97d1369fc9e179ea87c3469cf98f", "claim": "Typed values, persistent Python D-Bus/Runtime behavior and scoped virtual BlueZ evidence; C++ target remains planned"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
     requires: ["WBL.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
-    implementation_modules: ["Wotex.BLE.Error", "Wotex.BLE.Mapping", "Wotex.BLE.Transport"]
-    executable_evidence: ["test/wotex/ble/bluez_test.exs", "test/wotex/ble/contract_test.exs", "test/wotex/ble/dependency_security_test.exs", "test/wotex/ble/mapping_test.exs", "test/wotex/ble/port_test.exs"]
-    compatibility_classification: "UUID/address and command boundary; no current GATT interoperability claim; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+    implementation_modules: ["Wotex.BLE.Error", "Wotex.BLE.Mapping", "Wotex.BLE.Transport", "Wotex.BLE.BlueZ.Connection", "Wotex.BLE.Peer", "Wotex.BLE.Value", "Wotex.BLE.RuntimeRelay"]
+    executable_evidence: ["test/wotex/ble/bluez_test.exs", "test/wotex/ble/contract_test.exs", "test/wotex/ble/dependency_security_test.exs", "test/wotex/ble/mapping_test.exs", "test/wotex/ble/port_test.exs", "test/wotex/ble/contract_fixture_test.exs", "test/wotex/ble/dbus_bridge_test.exs", "test/wotex/ble/runtime_integration_test.exs", "test/wotex/ble/stream_bridge_test.exs"]
+    compatibility_classification: "Typed values, persistent Python D-Bus/Runtime behavior and scoped virtual BlueZ evidence; C++ target remains planned; native .13 and final software acceptance remain open"
   - id: "WBL.10"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WBL.10-software-contract.md"
     implementation_status: "partial"
     standards: [{"name": "Bluetooth Core / BlueZ", "revision": "Core 6.3; BlueZ 2123ab772fbe97d1369fc9e179ea87c3469cf98f", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
     requires: ["WBL.00", "WBL.01", "WBL.02"]
     implementation_modules: ["Wotex.BLE.Address", "Wotex.BLE.BlueZ", "Wotex.BLE.Client", "Wotex.BLE.Error", "Wotex.BLE.PortCall", "Wotex.BLE.Session", "Wotex.BLE.UUID", "Wotex.BLE"]
     executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WBL.11"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WBL.11-standalone-client-and-preservation.md"
     implementation_status: "planned"
     standards: [{"name": "Bluetooth Core / BlueZ", "revision": "Core 6.3; BlueZ 2123ab772fbe97d1369fc9e179ea87c3469cf98f", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
     requires: ["WBL.00", "WBL.10"]
     implementation_modules: []
     executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WBL.12"
-    version: "1.0.0"
+    version: "1.1.0"
     path: "docs/specs/WBL.12-wotex-integration.md"
     implementation_status: "planned"
     standards: [{"name": "Bluetooth Core / BlueZ", "revision": "Core 6.3; BlueZ 2123ab772fbe97d1369fc9e179ea87c3469cf98f", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
     requires: ["WBL.00", "WBL.10", "WBL.11", "wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03", "wotex_runtime:WRT.01"]
     implementation_modules: []
     executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
+  - id: "WBL.13"
+    version: "1.0.0"
+    path: "docs/specs/WBL.13-native-backend.md"
+    implementation_status: "planned"
+    standards: [{"name": "Native BlueZ GATT central", "revision": "Exact source hashes and build profile in .13", "claim": "Accepted native target; current baseline evidence is separate"}]
+    requires: ["WBL.00", "WBL.10", "WBL.11", "WBL.12"]
+    implementation_modules: []
+    executable_evidence: []
+    compatibility_classification: "Required native Port, typed IPC, resource ownership and Mix/ExUnit evidence; fixtures/native-port-v1.json cases are specified, unexecuted."

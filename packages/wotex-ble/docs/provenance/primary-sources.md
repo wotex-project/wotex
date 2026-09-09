@@ -1,49 +1,42 @@
-# BLE primary evidence
+# BLE primary sources
 
-Research date: 2026-09-08. Audience: maintainers. The protocol contract above
-distinguishes normative standards, upstream implementation behavior, inferred
-integration choices and evidence still requiring hardware or SDK execution.
+The selected software platform is BlueZ 5.85 commit
+`2123ab772fbe97d1369fc9e179ea87c3469cf98f`, with the libdbus 1.16.2 C API.
+[WBL.13](../specs/WBL.13-native-backend.md) records verified source archive hashes,
+compiler/runtime lanes and the separate permitted fixture dependencies.
 
-- [Bluetooth Core 6.3 version history](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core_v6.3/out/en/consolidated-table-of-contents%2C-acknowledgments%2C---core-configurations/version-history-and-acknowledgments.html).
-- [Core 6.3 ATT](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core_v6.3/out/en/host/attribute-protocol--att-.html).
-- [Core 6.3 GATT](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core_v6.3/out/en/host/generic-attribute-profile--gatt-.html).
-- [BlueHeron 0.5.4 API](https://hexdocs.pm/blue_heron/0.5.4/api-reference.html).
-- [BlueZ GATT API, source 2123ab772fbe97d1369fc9e179ea87c3469cf98f](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.GattCharacteristic.rst).
+- [Bluetooth Core 6.3 ATT](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core_v6.3/out/en/host/attribute-protocol--att-.html)
+  and [GATT](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core_v6.3/out/en/host/generic-attribute-profile--gatt-.html)
+  define the protocol; BlueZ owns their wire execution.
+- [GattCharacteristic1](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.GattCharacteristic.rst)
+  defines ReadValue/WriteValue and StartNotify/StopNotify. StartNotify has no
+  notify/indicate selector; Value changes also follow reads. The binding preserves
+  source uncertainty and cannot claim an ATT procedure from a D-Bus signal.
+- [Device1](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.Device.rst)
+  and [Agent1](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.Agent.rst)
+  define explicit connection/pairing and pending user decisions. The package never
+  removes bonds, requests default Agent authority or claims link security from a
+  paired flag.
+- [Device implementation](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/src/device.c)
+  owns Pair sender-loss behavior and the two-second disconnect timer. Local
+  one-second sender cleanup and later BlueZ link drain are separate observations.
+- [libdbus connections](https://dbus.freedesktop.org/doc/api/html/group__DBusConnection.html)
+  define private ownership, asynchronous pending calls and watch/timeout event-loop
+  integration. .13 selects this C boundary and pins its archive, not a Python
+  MessageBus in production.
+- [btvirt](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/emulator/main.c)
+  supplies virtual LE controllers; the mandatory fixture checks VHCI support.
+  Its independent GATT provider may use [dbus-next 0.2.3 source](https://github.com/altdesktop/python-dbus-next/tree/74dc9706e8d0ebb17f27818b8ef9e214172514ec),
+  with fixture package hashes. That exception does not permit a Python client or
+  generic Python orchestration in the accepted native build.
 
-Research searched standards/revision availability, wire/address rules, transport
-ownership, security and interoperability gaps, then reviewed upstream APIs.
-Stop reason: consequential design claims have primary evidence or explicit
-access limits. No physical or secure-stack execution was performed by research.
+BlueHeron's direct HCI stack is a different owner boundary; it is not a fallback
+for this explicitly BlueZ central profile. Physical RF and Bluetooth qualification
+remain outside the required software lane.
 
-W3C [TD 1.1 Recommendation, 2023-12-05](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/)
-is the Thing Description baseline. [Binding Registry 2025-11-04 draft](https://www.w3.org/TR/2025/DRY-wot-binding-registry-20251104/)
-does not turn a package-defined profile into a W3C Recommendation.
-
-## Software-contract review, 2026-09-08
-
-Pin BlueZ source and documentation to
-`2123ab772fbe97d1369fc9e179ea87c3469cf98f` (2026-02-03):
-[GattCharacteristic1](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.GattCharacteristic.rst),
-[Device1](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.Device.rst),
-[Agent1](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.Agent.rst)
-and [btvirt source](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/emulator/main.c).
-ReadValue/WriteValue and StartNotify/StopNotify are D-Bus operations. StartNotify
-has no notify-versus-indicate selection argument; .10 deliberately rejects an
-unfulfillable explicit selection on a characteristic advertising both procedures.
-One persistent D-Bus sender must own notification start/stop. A transient busctl
-process cannot retain that ownership.
-
-Use [dbus-next 0.2.3](https://pypi.org/project/dbus-next/0.2.3/), released
-2021-07-25, [source 74dc9706e8d0ebb17f27818b8ef9e214172514ec](https://github.com/altdesktop/python-dbus-next/tree/74dc9706e8d0ebb17f27818b8ef9e214172514ec).
-This is an exact selected dependency, not a claim that it is the newest release;
-native dependency audit remains mandatory. Its asyncio MessageBus is the chosen
-persistent bridge boundary. The isolated VM fixture uses the inspected btvirt
-`-L -l2` options and a required VHCI-enabled kernel. These are software GATT
-interoperability requirements; physical RF and qualification remain separate.
-
-## Standalone contract review, 2026-09-09
-
-[WBL.11](../specs/WBL.11-standalone-client-and-preservation.md) records
-additional source-pinned API and retained-workflow decisions. Its concrete
-fixtures are specified, unexecuted acceptance data. This review does not add
-an interoperability or standards-conformance result.
+W3C [TD 1.1 Recommendation](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/)
+owns Thing Description semantics. A package-defined protocol Form profile is
+not W3C certification. Source review supports API choices; execution evidence
+belongs to [executable-evidence.md](executable-evidence.md). Native .13 specifies
+library policy for limits, credits, error classes and ownership, not extra
+protocol-standard guarantees.

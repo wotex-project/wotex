@@ -3,7 +3,7 @@ spec:
   id: WBL.00
   title: "Software implementation rules"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -24,12 +24,12 @@ API choices labelled **library policy** are deliberate local constraints.
 
 Build the explicitly enumerated client profile in WBL.10. A protocol's
 entire standards family is not an implied implementation requirement. Physical
-radios/devices, certification, consumer migration and publication are outside
+radios/devices, certification and publication are outside
 this milestone. Native SDKs and operating-system services may own lower layers;
 the adapter still needs executable software evidence for its own obligations.
 
 Preserve existing valid inputs and documented successful return shapes unless a
-protocol-specific requirement explicitly describes a migration. Keep the public
+protocol-specific requirement explicitly defines a separate profile. Keep the public
 callbacks `capabilities/0`, `connect/1`, `send/2`, `receive/2`, `disconnect/1`,
 `health_check/1`, `subscribe/2`, and `unsubscribe/2`. Callback names alone do not
 prove compatibility. Add table-driven contract fixtures covering every accepted
@@ -180,9 +180,9 @@ types specified in WBL.10. A credential/profile mismatch fails before I/O.
 When an original route is bound to a handle, cancellation uses that route rather
 than allowing an unrelated stop Form to redirect the cancellation.
 
-## WBL-C07 — Optional native executable contract
+## WBL-C07 — Native executable contract
 
-Applies where a Python/C/native SDK bridge is specified. The executable is an
+Applies to the first-party native C/C++ Port specified in .13. The executable is an
 absolute caller-selected path; arguments are separate values, never shell text.
 Owned bridges use a persistent process only when the profile requires sessions
 or signals. One-shot profiles retain their existing documented lifecycle.
@@ -198,7 +198,7 @@ backend revision; an unsupported version/revision fails before application I/O.
 | Request | `version: 1`, `id`, `operation`, `parameters`, finite `timeout_ms` |
 | Success | `version: 1`, matching `id`, `ok: true`, `result` (explicit null allowed) |
 | Failure | `version: 1`, matching `id`, `ok: false`, bounded library `error.code` and optional numeric `error.status` |
-| Stream report | `version: 1`, `subscription_id`, `generation`, `event`, `value`, bounded `metadata` |
+| Stream report | `version: 1`, `subscription_id`, `generation`, `event`, `value`, bounded `metadata`, .13 session_generation/report_sequence |
 
 BLE reserves `open` for its sole initial open request and `close` for graceful
 closure. Every other dispatched request uses the canonical decimal representation
@@ -213,6 +213,10 @@ Exhaustion closes the generation with `:request_id_exhausted`, never rolls over,
 and never automatically reopens/replays work. `close` remains available after
 counter exhaustion. Stream `subscription_id` remains the ID assigned at its
 establishment, even when later control requests advance the dispatch counter.
+
+.13 additionally fixes flow_open/report_ack/stream_retired control frames, session/report
+generations and bounded frame/byte credit. Their exact allowlists are part of
+this version-1 protocol; all other unknown fields remain errors.
 
 Protocol-specific parameters and value envelopes are defined in WBL.10.
 Reject duplicate JSON keys, fields outside the selected envelope/operation
@@ -245,7 +249,7 @@ Avoid a global registry for sessions, receivers or protocol IDs.
 
 ## WBL-C09 — Mandatory software evidence
 
-Each requirement ID in WBL.10/.11/.12 requires concrete acceptance cases with
+Each requirement ID in WBL.10/.11/.12/.13 requires concrete acceptance cases with
 exact inputs and expected output. The V tables are scenario families, not
 executed vectors. Bind concrete fixture IDs to actual assertions before accepting
 a requirement; fixture presence alone is insufficient. Add valid, invalid, boundary, forged-struct,

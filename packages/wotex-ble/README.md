@@ -39,6 +39,20 @@ Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
 and Runtime dependencies resolve from sibling checkouts. Published consumers
 should replace the path with the constraint of an available Hex release.
 
+## Accepted native target
+
+The accepted backend is a first-party C++17 Port using libdbus and the real
+BlueZ service. It preserves the persistent peer/value/Agent/stream APIs below.
+The current persistent implementation uses Python/dbus-next; C++ execution and
+its complete public software-peer/stress evidence remain required.
+
+[WBL.13](docs/specs/WBL.13-native-backend.md) fixes source/build pins, typed IPC,
+flow control and native ownership. The target tooling is `mix wotex.native.build`,
+`mix wotex.software.build` and `mix wotex.software.run`, each with an explicit
+`--workspace` absolute directory. These tasks are specified implementation work,
+not commands claimed to exist in this checkout. Generic orchestration and
+assertions belong to Mix/ExUnit; upstream SDK Python is build-time only.
+
 ## Implemented profile
 
 The package provides typed peer, UUID, address, characteristic and value APIs,
@@ -103,8 +117,8 @@ The compatibility callbacks are `capabilities/0`, `connect/1`, `send/2`,
 `receive/2`, `disconnect/1`, `health_check/1`, `subscribe/2`, `unsubscribe/2`.
 `send/2` returns the correlated operation result synchronously. `receive/2` remains unsupported; persistent subscriptions deliver directly
 to their receiver. One-shot clients do not provide streaming or live health. Callback names alone do not establish consumer behavioral parity.
-The consumer retains its implementation until differential scenarios and
-interoperability gates pass; migration is outside this repository.
+Compatibility requires concrete differential scenarios and independently observed
+software interactions for each advertised operation.
 
 `profile/0` provides Runtime reads and writes under `:ble`; `profile(:gatt)`
 adds Property observation and Event subscriptions under `:ble_gatt` and requires
@@ -113,7 +127,7 @@ native value codec selectors. Every explicit contentType and Runtime credential
 is rejected before backend I/O. Runtime owns public stream identity; the relay
 releases its original session on owner loss or cancellation.
 
-See the original [one-shot baseline profile](docs/specs/WBL.02-implemented-profile.md),
+See the [implemented profile](docs/specs/WBL.02-implemented-profile.md),
 [primary sources](docs/provenance/primary-sources.md) and
 [executable evidence](docs/provenance/executable-evidence.md).
 
@@ -136,7 +150,7 @@ These target contracts are build instructions, not claims that every feature
 already exists. Required software peers are separate from physical-device tests.
 
 The [standalone client contract](docs/specs/WBL.11-standalone-client-and-preservation.md)
-defines the supplied backend, exact native APIs and retained end-to-end workflows.
+defines the supplied backend, exact native APIs and end-to-end workflows.
 Its [concrete corpus](docs/specs/fixtures/contract-v1.json) contains specified
 inputs and outcomes. Executable tests cite the cases they implement; the corpus
 file and scenario tables alone do not establish acceptance of the whole profile.

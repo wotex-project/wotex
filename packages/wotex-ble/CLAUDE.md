@@ -7,6 +7,11 @@ credentials, supervision, connection configuration and canonical Property truth.
 
 - Keep source, tests, docs, fixtures, metadata and history consumer-neutral.
   Say `consumer` or `consumer host`; never name a consumer or its local paths.
+- Production protocol execution uses the first-party C/C++ Port specified in .13.
+  Generic build/fixture orchestration and assertions use Mix/ExUnit. Python is
+  limited to required upstream build tools or justified independent test peers.
+- Specifications state contracts declaratively; implementation status and
+  evidence are separate. Do not write changelog or migration narratives.
 - No database, Repo, migration, Ash, Phoenix, Ecto, Oban, global registry,
   application callback, framework integration or automatic network activity.
 - Loading the dependency starts no process and performs no runtime filesystem

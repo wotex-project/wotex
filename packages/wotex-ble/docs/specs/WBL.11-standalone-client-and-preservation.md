@@ -1,16 +1,16 @@
 ---
 spec:
   id: WBL.11
-  title: "Standalone central and retained behavior"
+  title: "Standalone central and protocol workflows"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-ble
   updated: 2026-09-09
 ---
 
-# WBL.11 Standalone central and retained behavior
+# WBL.11 Standalone central and protocol workflows
 
-Specification version: `1.0.0`. Status: planned target, not implemented capability.
+Specification version: `1.1.0`. Status: planned target, not implemented capability.
 Requires [WBL.00](WBL.00-library-contract.md) and
 [WBL.10](WBL.10-software-contract.md). The baseline remains documented in
 [WBL.02](WBL.02-implemented-profile.md).
@@ -97,15 +97,15 @@ failure is `:none`; submitted write timeout/disconnect is `:unknown`, with no
 library retry. Pairing Agent cancellation uses `:pairing_rejected`; connection
 loss remains `:disconnected` even during pairing.
 
-## WBL-N02 — Preservation and corrected semantics
+## WBL-N02 — Protocol workflow semantics
 
-| Useful asset/behavior | Required disposition | Proof owner |
+| Behavior | Required contract | Proof owner |
 | --- | --- | --- |
-| Service/characteristic addressing, read and acknowledged write | Retain typed API; replace assumed target paths with live GATT association validation | P01/P02/P04, F01–F05, V03/V05 |
-| Notification and indication scenarios | Retain both scenarios on separate peer characteristics; implement one persistent sender and receiver lifetime | P05/P07, F06–F08, V07–V09/V11 |
-| Simulator fixtures | Retain deterministic scenarios as injected tests; replace simulator-only transport with real BlueZ virtual-controller GATT | P07; no simulator capability reported as production |
-| Slash-delimited topic convenience | Add pure `Address.from_topic/1` returning `{:ok, Address.t()}`; require exactly two valid UUIDs; malformed input fails `:invalid_address`, never defaults to zero UUIDs | P01, F05 |
-| Generic health, reliability and QoS claims | Replace with selected-backend capabilities and actual peer-state query; no exactly-once or application-effect claim | P06/P08 |
+| Service/characteristic addressing and acknowledged procedures | Typed API with live GATT association validation | P01/P02/P04, F01–F05, V03/V05 |
+| Notification and indication | Separate peer characteristics, one persistent sender and bounded receiver lifetime | P05/P07, F06–F08, V07–V09/V11 |
+| Deterministic fault fixtures | Injected boundary tests and a separate actual BlueZ virtual-controller GATT lane | P07 |
+| Slash-delimited topic | Pure `Address.from_topic/1` returning `{:ok, Address.t()}` for exactly two valid UUIDs; otherwise `:invalid_address` | P01, F05 |
+| Health/capabilities | Selected-backend operations and actual peer-state query; no exactly-once or application-effect claim | P06/P08 |
 
 BlueZ's cached Value can change after a read as well as a notification or
 indication. Therefore every delivered S04 value carries `source:
@@ -140,7 +140,8 @@ reject, timeout and wrong challenge ID. Inspect Agent registration count and
 native session count after owner death. Complete this workflow through the
 native API first, then the equivalent supported WoT cells. Neither a scripted
 D-Bus response nor an ExUnit fake replaces the virtual-controller lane. Pins
-remain BlueZ `2123ab772fbe97d1369fc9e179ea87c3469cf98f` and dbus-next 0.2.3.
+remain BlueZ `2123ab772fbe97d1369fc9e179ea87c3469cf98f` and libdbus 1.16.2 from .13. The independent fixture provider may use the
+explicitly pinned Python exception; it never supplies client IPC responses.
 
 ## WBL-N04 — Concrete corpus and executable acceptance
 

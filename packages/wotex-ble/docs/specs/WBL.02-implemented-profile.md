@@ -3,7 +3,7 @@ spec:
   id: WBL.02
   title: "Implemented BLE profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -27,10 +27,27 @@ its configured object path association, invokes `busctl` with separate arguments
 requests acknowledged writes, and validates exact `ay` response length/octets.
 Output is capped at 4096 bytes and calls have finite deadlines. The OS owns the
 connection and ATT transaction state. The package does not stop BlueZ, disconnect
-borrowed devices, or advertise notifications/discovery it does not implement.
+borrowed devices, or acquire notification/discovery ownership in one-shot mode.
 Adapter options are allowlisted and unique. Unknown or duplicate keys and
 unsupported security selectors fail before `busctl` is started; the adapter never
 interprets a caller's requested security level as proof of BlueZ link security.
+
+## Persistent implementation
+
+The current persistent backend is the packaged Python/dbus-next helper, selected
+explicitly with `lifecycle: :persistent` and an absolute Python executable.
+It owns a private D-Bus sender, bounded discovery generation, explicit Agent
+pairing, acknowledged procedures, health and notification/indication streams.
+Typed Peer/Characteristic/Value APIs and Property/Event Runtime relays are
+implemented. `connection: :borrowed` preserves ordinary borrowed links; pending
+Pair sender loss can separately cause BlueZ to disconnect the peer. Explicit
+pairing never authorizes removing bonds or registering a default Agent.
+
+Fifteen native adapter cases use real BlueZ and virtual controllers; they are
+Python adapter/shared-stack evidence. The C++ .13 backend, completed public
+BEAM/Runtime virtual-peer lane and complete stress acceptance are not established
+by those results. The accepted native target preserves the domain API and adds
+its exact backend identity and bounded credit protocol.
 
 ## Evidence and compatibility
 
@@ -38,7 +55,7 @@ See [executable evidence](../provenance/executable-evidence.md) for specific tes
 commands and remaining gates, and [source revisions](../provenance/primary-sources.md).
 Public callbacks provide a neutral compatibility surface, not drop-in semantic
 parity. `send/2` completes synchronously; no fictitious receive queue exists.
-The consumer must run differential scenarios before replacing its implementation.
+Compatibility claims require exact differential scenarios for the advertised API.
 
 Runtime adapters reject credential objects they cannot interpret. Native client
 credentials/options are supplied explicitly by the consumer. A custom Client

@@ -12,10 +12,8 @@ A compatibility adapter exposes `capabilities/0`, `connect/1`, `send/2`,
 Wire acknowledgements never establish application truth. Unsupported operations
 return an explicit error or the documented optional `:not_supported` sentinel.
 
-The consumer keeps its implementation until differential scenarios and real
-interoperability prove the supported scope. Consumer changes, deployment and
-publication are outside this repository. Do not import consumer history or
-metadata into this neutral history.
+Consumer policy, deployment and publication are outside this repository.
+The source, specifications and evidence contain no consumer-specific metadata.
 
 ## Evidence rules
 
@@ -43,3 +41,8 @@ The [WBL.12 integration contract](../specs/WBL.12-wotex-integration.md) and
 [versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.
+
+The [WBL.13 native backend contract](../specs/WBL.13-native-backend.md)
+requires a first-party compiled Port and Mix/ExUnit software tooling.
+Python is permitted only for required upstream build tools or an explicitly
+justified independent software peer. It is not part of production execution.

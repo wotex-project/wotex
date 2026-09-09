@@ -1,10 +1,9 @@
 # WBL software implementation sequence
 
-This is the self-contained build handoff for the defined software profile, not
-a statement that these tasks have already passed. The verified starting point
-is commit `cb56121`; read [current executable evidence](../provenance/executable-evidence.md)
-for the tests and limitations at that baseline. Existing passing code is the
-starting implementation, not something to replace with fresh scaffolding.
+This sequence defines acceptance of the native BlueZ GATT central profile.
+[Current implementation evidence](../provenance/executable-evidence.md) identifies
+implemented cells; [WBL.13](../specs/WBL.13-native-backend.md) owns native
+build, IPC and tooling requirements. Source presence alone is not acceptance.
 
 ## Read before changing code
 
@@ -39,6 +38,15 @@ do not silently skip, simulate or weaken the requirement.
 
 ## Ordered work packages
 
+### WBL-P00: Own the native BlueZ Port
+
+- Requirements: WBL-B01, WBL-B02, WBL-B03, WBL-B04; C01–C10 apply.
+- Concrete cases: every WBL-B-Fxx case in `native-port-v1.json`.
+- Change surface: first-party native build/host, BEAM Port and Mix/ExUnit fixture ownership.
+- Test destinations: `test/wotex/ble/native_contract_test.exs`, `test/native/flow_test.cpp`, `test/software/lifecycle_stress_test.exs`.
+- Done when: Implement the .13 C++17/libdbus helper and Mix native/software tasks, preserve domain APIs, run the shared production parser/credit corpus and D-Bus Agent/procedure/stream regressions under ASan/UBSan. All subsequent accepted SDK evidence identifies this exact C++ binary.
+- Suggested local commit: `feat: own native ble build and bounded IPC`.
+
 ### WBL-P01: Validate peer identity and explicit value codecs
 
 - Requirements: WBL-S01, WBL-N01, WBL-N02, WBL-N04; shared C01–C10 apply wherever relevant.
@@ -55,8 +63,8 @@ do not silently skip, simulate or weaken the requirement.
 
 - Requirements: WBL-S01, WBL-S02, WBL-N01; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WBL-V03, WBL-V04.
-- Change surface: BlueZ persistent mode, Connection and dbus-next bridge.
-- Test destinations: `test/wotex/ble/dbus_bridge_test.exs`, `test/native/test_bluez.py`.
+- Change surface: BlueZ persistent mode, Connection and native libdbus Port.
+- Test destinations: `test/wotex/ble/dbus_bridge_test.exs`, `test/native/dbus_test.cpp`.
 - Done when: Own one unique bus sender, reconcile listeners/snapshot and verify live Service/Device/UUID/Flags; bound paged discovery and preserve borrowed links.
 - Suggested local commit: `feat: add persistent dbus ownership and gatt discovery`.
 - Standalone closure: Implement the .11 typed Characteristic pages, exact peer association and generation-bound cursor errors.
@@ -66,7 +74,7 @@ do not silently skip, simulate or weaken the requirement.
 - Requirements: WBL-S02; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WBL-V06.
 - Change surface: Agent1 challenge/reply schema and pairing lifecycle.
-- Test destinations: `test/native/test_agent.py`, `test/wotex/ble/pairing_test.exs`.
+- Test destinations: `test/native/agent_test.cpp`, `test/wotex/ble/pairing_test.exs`.
 - Done when: Only an explicit exact-peer callback decision can accept; timeout/cancel/foreign reply reject and release Agent state without removing bonds.
 - Suggested local commit: `feat: implement explicit pairing agent decisions`.
 
@@ -85,7 +93,7 @@ do not silently skip, simulate or weaken the requirement.
 - Requirements: WBL-S04, WBL-N01, WBL-N02; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WBL-V07, WBL-V08, WBL-V09.
 - Change surface: Subscription owner and persistent StartNotify/StopNotify signals.
-- Test destinations: `test/wotex/ble/notification_test.exs`, `test/native/test_notify.py`.
+- Test destinations: `test/wotex/ble/notification_test.exs`, `test/native/notification_test.cpp`.
 - Done when: Same D-Bus sender owns start/stop; ambiguous explicit procedure fails; reports bind sender/path/generation and cleanup releases native sessions.
 - Suggested local commit: `feat: own notification and indication sessions`.
 
@@ -132,9 +140,12 @@ do not silently skip, simulate or weaken the requirement.
 
 ## Reproducible software fixture contract
 
-Add or extend `test/interop/build_software.sh` and `test/interop/run_software.sh`
-as explicit maintainer-invoked entry points. They take exactly one absolute
-workspace argument. Build requires a disposable empty workspace or a matching
+The entry points are `mix wotex.native.build --workspace ABS`,
+`mix wotex.software.build --workspace ABS` and
+`mix wotex.software.run --workspace ABS`. Each requires exactly one absolute
+workspace argument. Generic orchestration and assertions use Mix and ExUnit.
+The native build contract is .13; production binaries never require Python.
+Build requires a disposable empty workspace or a matching
 manifest; refuses an unrelated nonempty directory; downloads upstream source
 archives at the .10 pins without configuring any Git remote. Record archive
 SHA-256, source commit, compiler/SDK/library versions, build flags, binary hashes
@@ -152,8 +163,8 @@ explicit target configuration and are never selected by this runner.
 Use this command contract once the runner is implemented:
 
 ```sh
-./test/interop/build_software.sh /absolute/disposable/fixture-workspace
-./test/interop/run_software.sh /absolute/disposable/fixture-workspace
+mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
+mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
 The runner executes `mix test --include interop --include software --exclude hardware`
@@ -175,13 +186,13 @@ Native changes additionally run their required native tests and dependency audit
 C/C++ adapters run ASan/UBSan in the Linux fault lane.
 
 After each package, update the current-profile/README capability claims only for
-behavior that now passed, and refresh [executable evidence](../provenance/executable-evidence.md)
+behavior covered by passing evidence, and refresh [executable evidence](../provenance/executable-evidence.md)
 with command, versions, vector paths/digests and result. Keep unexecuted requirements
 explicit. Use the author and committer required by `CLAUDE.md`; never configure
 remotes, push, tag, publish, change visibility or edit a consumer.
 
-The final package also accepts every .11 standalone and .12 integration requirement,
-then runs the full .00 C09 matrix, all .10 scenarios, .11 concrete cases and software
+The final package accepts every .11 standalone, .12 integration and .13 native requirement,
+then runs the full .00 C09 matrix, all .10 scenarios, .11/.13 concrete cases and software
 peers, then a clean committed-source archive with the lockfile through `mix check`
 and out-of-tree Hex package compilation. Confirm no Application callback or
 dependency-load I/O, no missing packaged bridge assets, no downloaded SDK/build/
@@ -206,6 +217,6 @@ number or stub adapter cannot substitute for a required protocol assertion.
 - The clean-source/package gates pass, intended commits are local and the
   working tree contains no uncommitted tracked implementation change.
 
-Physical-device validation, certification, consumer migration and publication
+Physical-device validation, certification and publication
 remain separate activities. They are not reasons to leave defined software
 requirements unimplemented or to claim unexecuted software tests passed.

@@ -1,4 +1,4 @@
-# Native SDK virtual-controller fixture
+# Python adapter virtual-controller evidence
 
 `test/interop/virtual_machine.py` builds and runs a disposable ARM64 Linux guest
 with two virtual LE controllers. The first-party `priv/bluez` SDK connects to
@@ -7,10 +7,12 @@ BlueZ's GATT server API supplies private UUIDs and values; it does not implement
 or replace the SDK's client boundary. Both wire endpoints use BlueZ, so this is
 same-stack protocol evidence with an independent GATT application provider.
 
-This is the native SDK portion of WBL-P07. Public BEAM/Runtime interoperability,
+This is scoped Python adapter evidence for WBL-P07 scenarios. Public BEAM/Runtime interoperability,
 the complete software stress/version matrix and final package acceptance remain
 separate required proof. This entry point does not accept WBL-P07 or WBL-P08 as
-a whole and is not the final `run_software.sh` entry point.
+a whole. The accepted native/Mix entry points and source profile are in
+[WBL.13](../specs/WBL.13-native-backend.md); this current Python runner is not
+the target orchestration implementation.
 
 ## Explicit invocation
 
@@ -83,7 +85,7 @@ processes. It is a fixture configuration, not a production D-Bus policy example.
 The GATT values and pairing decisions are fixture-owned; no production credentials
 or persisted host bonds are used.
 
-## Executed SDK result, 2026-09-09
+## Executed Python adapter cohort
 
 The native runner passed all 15 listed cases on the selected ARM64 guest.
 Local sender cleanup took 833.2 ms; BlueZ link drain took 2342.3 ms. The result
@@ -95,5 +97,5 @@ notification sessions, guest processes, virtual controllers and host containers.
 - Ownership report SHA-256: `cfae775b6e8336e22ce47abc96cb6d7a5313d8337f6711b6cad3cd0cf06ab822`.
 - Packet capture SHA-256: `5915933ecd8ce8bc3c8f851aa391780d54fdc9afb2d3baf6c6a107c268f3331e`.
 
-These are native SDK results only; the pending public BEAM/Runtime software-peer
+These are Python adapter/shared-BlueZ results only; the pending public BEAM/Runtime software-peer
 and stress gates above remain required.
