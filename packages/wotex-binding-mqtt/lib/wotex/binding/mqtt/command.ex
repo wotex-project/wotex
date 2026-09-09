@@ -8,6 +8,13 @@ defmodule Wotex.Binding.MQTT.Command do
   Every command also carries the JSON payload byte limit that applies to it, so
   a client port can reject an oversized Application Message before it reaches
   the subscription owner.
+
+  Use `publish/5`, `subscribe/4`, or `unsubscribe/4` rather than constructing
+  the struct. Those constructors validate operation membership, Topic syntax,
+  retain semantics, content type, and payload limits. Publish and subscribe
+  commands additionally validate Quality of Service; publication encodes and
+  bounds the JSON body before a consumer-owned `Wotex.Binding.MQTT.Client`
+  receives the command.
   """
 
   alias Wotex.Binding.MQTT.{Broker, Error, JSON, QoS, Topic}

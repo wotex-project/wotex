@@ -4,6 +4,18 @@ defmodule Wotex.Binding.MQTT.Topic do
 
   Topic Names reject wildcards. Topic Filters accept `+` only as a complete
   level and `#` only as the final complete level.
+
+  `validate_name/1` and `validate_filter/1` also enforce non-empty UTF-8 input,
+  the MQTT encoded-string byte limit, and exclusion of the null character.
+  Shared-subscription filters require a non-empty group without wildcards and a
+  valid effective filter. `normalize_filters/1` admits one filter or a non-empty
+  list without changing their order.
+
+  `matches?/2` applies MQTT level matching to already valid values, including
+  the rule that a leading wildcard does not match a Topic Name beginning with
+  `$`. It is a deterministic local predicate. It does not subscribe, apply an
+  access-control list, or claim that a broker uses the same authorization or
+  shared-subscription policy.
   """
 
   alias Wotex.Binding.MQTT.Error

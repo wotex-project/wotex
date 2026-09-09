@@ -1,5 +1,20 @@
 defmodule Wotex.Binding.MQTT.Mapping do
-  @moduledoc "Maps W3C WoT MQTT Form terms to immutable MQTT commands."
+  @moduledoc """
+  Maps W3C Web of Things MQTT Form terms to immutable client commands.
+
+  `command/2` combines a `Wotex.Runtime.Request` with the dated MQTT vocabulary
+  profile documented by this package. It validates the broker-only href,
+  selects or verifies the Control Packet, requires the corresponding
+  `mqv:topic` or `mqv:filter`, normalizes Quality of Service (QoS), applies the
+  payload limit, and returns a `Wotex.Binding.MQTT.Command`.
+
+  `default_control_packet/1` maps reads, observations, and Event subscriptions
+  to subscribe; writes and Action invocations to publish; and stop operations to
+  unsubscribe. Property reads additionally require retained-message semantics.
+  Mapping performs no broker I/O and does not authorize an operation. The
+  vocabulary source is an editor's draft, so this module does not claim W3C
+  binding-registry or Profile conformance.
+  """
 
   alias Wotex.Binding.MQTT.{Broker, Command, Error, QoS}
   alias Wotex.Form

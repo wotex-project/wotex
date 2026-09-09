@@ -3,10 +3,10 @@
 **Process-free W3C WoT MQTT Form mapping for Elixir consumers.**
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_binding_mqtt.svg)](https://hex.pm/packages/wotex_binding_mqtt)
-[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_binding_mqtt)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_binding_mqtt)
 [![CI](https://github.com/wotex-project/wotex-binding-mqtt/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-binding-mqtt/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/wotex-project/wotex-binding-mqtt/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-binding-mqtt)
-[![License](https://img.shields.io/github/license/wotex-project/wotex-binding-mqtt.svg)](LICENSE)
+[![License](https://img.shields.io/hexpm/l/wotex_binding_mqtt.svg)](https://github.com/wotex-project/wotex-binding-mqtt/blob/main/LICENSE)
 
 [Installation](#installation) · [Quick Start](#quick-start) ·
 [Form Mapping](#form-mapping) · [Client Port](#client-port) ·
@@ -14,6 +14,9 @@
 [Development](#development)
 
 ---
+
+This is a development checkout. The public API remains unstable; no published
+release or W3C certification is implied.
 
 `wotex_binding_mqtt` maps W3C Web of Things MQTT Forms to immutable commands
 and implements `Wotex.Runtime.Transport`. It deliberately does not choose an
@@ -23,13 +26,17 @@ and credential authority in one place.
 
 ## Installation
 
+For a sibling-checkout consumer, select the package explicitly:
+
 ```elixir
 def deps do
-  [{:wotex_binding_mqtt, "~> 0.1.0"}]
+  [{:wotex_binding_mqtt, path: "../wotex-binding-mqtt"}]
 end
 ```
 
-Published builds resolve `wotex ~> 0.1` and `wotex_runtime ~> 0.1`. For
+Package builds resolve `wotex ~> 0.1` and `wotex_runtime ~> 0.1`. Once a suitable
+release is available, replace the consumer's path dependency with its version
+constraint. For
 coordinated source development, `WOTEX_PATH_DEPS=1 mix deps.get` selects the
 sibling checkouts explicitly; no adjacent path is discovered implicitly.
 
@@ -182,5 +189,6 @@ archive construction, out-of-tree archive compilation, and the application-free
 assertion.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
-[SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and
+[SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see
+[LICENSE](https://github.com/wotex-project/wotex-binding-mqtt/blob/main/LICENSE) and
 [NOTICE](https://github.com/wotex-project/wotex-binding-mqtt/blob/main/NOTICE).

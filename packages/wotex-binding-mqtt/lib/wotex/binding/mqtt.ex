@@ -5,6 +5,19 @@ defmodule Wotex.Binding.MQTT do
   The package maps MQTT Forms to immutable commands and implements the
   `Wotex.Runtime.Transport` callbacks through a consumer-supplied client port.
   Loading this module starts no process and opens no connection.
+
+  `profile/0` returns the binding profile used by Runtime Form selection. It
+  admits `mqtt` and `mqtts` schemes, JSON representations, and the Property,
+  Action, and Event operations implemented by the package. The profile records
+  mapping capability; it does not choose a broker connection, authenticate a
+  session, authorize an operation, or establish that a retained value is
+  current.
+
+  The consumer configures `Wotex.Binding.MQTT.Transport` with a
+  `Wotex.Binding.MQTT.TransportConfig` and owns the client session, supervision,
+  credentials, reconnect policy, and broker trust. The mapping vocabulary is a
+  dated editor's draft, so this package makes no W3C binding-registry or Profile
+  conformance claim.
   """
 
   alias Wotex.Runtime.BindingProfile

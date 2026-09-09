@@ -1,5 +1,20 @@
 defmodule Wotex.Binding.MQTT.TransportConfig do
-  @moduledoc "Immutable, credential-free configuration for the Runtime transport."
+  @moduledoc """
+  Configures the MQTT Runtime transport around a consumer-supplied client port.
+
+  `new/3` verifies that the client exports the required publish, read,
+  subscribe, and unsubscribe callbacks. It stores the client's opaque
+  configuration separately from a finite Property-read timeout and a positive
+  JSON payload limit. The defaults are 5000 milliseconds and 1 MiB.
+
+  A `t:t/0` is immutable and intentionally contains no credential. Credentials
+  arrive through `Wotex.Runtime.ExecutionContext` only for the immediate client
+  call and must not be retained in `client_config`. Inspection exposes the
+  client module and public limits while omitting the opaque client value.
+  Constructing this value loads no connection, starts no process, and performs
+  no broker I/O. `read_timeout/1` and `max_payload_bytes/1` expose the two bounds
+  used by `Wotex.Binding.MQTT.Transport`.
+  """
 
   alias Wotex.Binding.MQTT.Error
 

@@ -1,5 +1,24 @@
 defmodule Wotex.Binding.MQTT.QoS do
-  @moduledoc "MQTT Quality of Service normalization."
+  @moduledoc """
+  Normalizes MQTT Quality of Service values at Form and client boundaries.
+
+  `normalize/1` accepts integer levels `0`, `1`, and `2`, together with the
+  equivalent string forms used by the dated WoT MQTT vocabulary. The result is
+  the closed `t:t/0` type consumed by `Wotex.Binding.MQTT.Command` and
+  `Wotex.Binding.MQTT.Delivery`. Every other value returns a structured
+  `Wotex.Binding.MQTT.Error`.
+
+  Normalization changes representation only. It does not negotiate a broker
+  session, guarantee delivery, infer a subscription level, or authorize a
+  publish. The client implementation remains responsible for applying the
+  accepted level to its MQTT operation and reporting the level associated with
+  each received Application Message.
+
+  ## Examples
+
+      {:ok, 1} = Wotex.Binding.MQTT.QoS.normalize("1")
+      {:ok, 2} = Wotex.Binding.MQTT.QoS.normalize(2)
+  """
 
   alias Wotex.Binding.MQTT.Error
 

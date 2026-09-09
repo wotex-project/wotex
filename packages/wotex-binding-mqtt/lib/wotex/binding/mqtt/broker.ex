@@ -2,8 +2,19 @@ defmodule Wotex.Binding.MQTT.Broker do
   @moduledoc """
   Immutable, credential-free MQTT broker value.
 
-  The href contains only an `mqtt` or `mqtts` broker endpoint. Topic Names and
+  The href contains only a broker endpoint using `mqtt` or `mqtts`. Topic Names and
   Topic Filters belong to their dedicated Form terms and are rejected here.
+
+  `new/1` requires a non-empty, unpadded URI with an explicit host and an
+  optional port from 1 through 65535. User information, topic paths, queries,
+  fragments, and ambiguous authority rendering are rejected. The original href
+  is retained alongside the normalized scheme, host, and optional port.
+
+  Inspection exposes only endpoint metadata. A `t:t/0` contains no credential,
+  client handle, connection state, Topic Name, or Topic Filter. Construction
+  performs no Domain Name System lookup and opens no connection. The consumer
+  client remains responsible for default-port selection, transport security,
+  authentication, and broker authorization.
   """
 
   alias Wotex.Binding.MQTT.Error

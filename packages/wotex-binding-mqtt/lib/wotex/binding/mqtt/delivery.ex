@@ -1,5 +1,20 @@
 defmodule Wotex.Binding.MQTT.Delivery do
-  @moduledoc "Immutable, credential-free MQTT Application Message delivery."
+  @moduledoc """
+  Represents one immutable, credential-free MQTT Application Message delivery.
+
+  `new/2` combines an encoded payload with a validated Topic Name, Quality of
+  Service (QoS) level, and retained-message flag. `normalize/1` admits only an
+  existing `t:t/0` at the consumer client boundary, preventing arbitrary maps
+  from being treated as broker deliveries. Accessors expose the payload and
+  protocol metadata without exposing the opaque struct representation.
+
+  Inspection omits the payload and includes only Topic Name, QoS, and retained
+  status. This keeps application values out of routine logs while preserving
+  the metadata required by `Wotex.Binding.MQTT.Transport`. The value contains no
+  broker handle, connection state, execution context, or credentials. It records
+  what the client reported; it does not prove broker persistence, freshness, or
+  canonical Property state.
+  """
 
   alias Wotex.Binding.MQTT.{Error, QoS, Topic}
 
