@@ -59,6 +59,15 @@ C-peer discovery/batch/COV/resource counters, and final software matrix/archive
 cohort remain required. A COV listener or final receiver queue bound does not
 bound an earlier SDK-to-StackOwner mailbox.
 
+`IngressWindow` and `IPv4Packet` have executable unit/property coverage for
+the S03a accounting and packet boundary: eight outstanding receipts, exact
+starvation deadline, duplicate/foreign consumption, saturated uint64 counters,
+1536-byte admission and malformed BVLL/NPCI. `ingress_window_test.exs` binds
+the accounting projections of IG01–IG03; `ipv4_packet_test.exs` exercises the
+pinned public codecs. These tests cover the primitives. Complete IG01–IG06
+transport, process-ownership and sustained-UDP projections require the owned
+transport integration and remain unexecuted in `ingress-v1.json`.
+
 ## Evidence identities
 
 The hashes below identify test sources from implementation commit
