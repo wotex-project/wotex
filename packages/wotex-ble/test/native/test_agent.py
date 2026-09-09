@@ -197,6 +197,39 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
             self.cleaned(central, bus)
             self.assertTrue(central.closed)
 
+    async def test_WBL_C03_overlapping_close_detaches_agent_before_cancellation_wait(self):
+        central, bus, events = await self.central(None)
+        original = bus.call
+        cancelled, release = asyncio.Event(), asyncio.Event()
+
+        async def delayed_cancellation(*arguments):
+            try:
+                return await original(*arguments)
+            except asyncio.CancelledError:
+                if arguments[3] == "Pair":
+                    cancelled.set()
+                    await release.wait()
+                raise
+
+        bus.call = delayed_cancellation
+        task = asyncio.create_task(central.pair({"capability": "DisplayYesNo"}, 1000, "pair-close-race"))
+        try:
+            while not events:
+                await asyncio.sleep(0)
+            task.cancel()
+            await asyncio.wait_for(cancelled.wait(), 1)
+            # Pair cleanup is suspended in cancellation; Central close proceeds
+            # on the same sender and must already have no Agent handler.
+            await central.close()
+            self.assertEqual(bus.methods, [])
+            self.assertEqual(bus.handlers, [])
+            self.assertIsNone(bus.registered)
+            self.assertEqual(bus.bonds, {"existing-bond"})
+        finally:
+            release.set()
+            await asyncio.gather(task, return_exceptions=True)
+        self.cleaned(central, bus)
+
     async def test_WBL_V06_foreign_sender_and_overlapping_prompts_never_accept(self):
         central, bus, events = await self.central(None)
         task = asyncio.create_task(central.pair({"capability": "DisplayYesNo"}, 1000, "pair-overlap"))

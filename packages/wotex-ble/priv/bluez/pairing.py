@@ -188,6 +188,12 @@ class PairingAgent:
             return
         self.closed = True
         self.abort()
+        # Local handler ownership ends before cancellation can suspend cleanup.
+        # An overlapping Central close must not observe an exported Agent after
+        # this operation has already marked itself closed.
+        if self.listening:
+            self.central.bus.unlisten(self.receive)
+        self.listening = False
         if self.call_task is not None:
             was_done = self.call_task.done()
             if not was_done:
