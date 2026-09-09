@@ -24,8 +24,8 @@ waivers. See SECURITY.md and the dependency-security test.
 ## Acceptance boundary
 
 [WBL.13](../specs/WBL.13-native-backend.md) defines the required native binary,
-Mix/ExUnit tasks, exact version lanes and credit/resource tests. Its corpus is
-specified and unexecuted. A passing current gate, a listed test path or a source
+Mix/ExUnit tasks, exact version lanes and credit/resource tests. Its corpus records partial execution of the parser cases; all other native
+backend and process-flow cases remain unexecuted. A passing current gate, a listed test path or a source
 hash cannot establish execution of that target. Each completed software run must
 bind case, corpus, source, SDK/binary, toolchain and cleanup-result hashes.
 The mandatory runtime matrix is Elixir 1.18.4/OTP 27.3.4.15 and Elixir
@@ -44,3 +44,17 @@ excluded. Native software results require their own immutable manifest.
 | `test/wotex/ble/dbus_bridge_test.exs` | `7caf2b7d067ba761eeadc0d2b8886b8ccb3683012701a6d46c03b2c968c0b96d` |
 | `test/wotex/ble/stream_bridge_test.exs` | `5d6aa2bb8bc287acab7e1a83cac9c8f686767fa6a00ced315d87cf8b10e58246` |
 | `test/interop/virtual/native_gatt.py` | `e188f44614f59ad358658a461949d0346d1795d17062eb4c4ee86bf0ae72c83b` |
+
+## Native C++ request parsing
+
+`test/wotex/ble/native_frame_test.exs` compiles the shared production
+`priv/bluez/native/frame.hpp` parser and executes B-F01 through B-F05 with exact
+corpus inputs. `test/native/frame_test.cpp` also exercises uint64/int64 limits,
+overflow, duplicate/escaped keys, malformed UTF-8 and surrogate pairs, depth/node/
+collection/line bounds, every split point, coalesced frames, truncated EOF and
+100000 monotonic request IDs. The pinned nlohmann header hash is an assertion.
+
+The focused ExUnit lane and Linux ARM64 GCC ASan/UBSan executable pass. This is
+native parser evidence, not D-Bus ownership, complete .13 flow control or GATT
+interoperability. The required Linux x86_64 reference lane remains separate.
+No production connection selects an incomplete native helper.

@@ -1,0 +1,15 @@
+{
+  "schema": "wotex.native-sources",
+  "version": 1,
+  "sources": [
+    {
+      "name": "nlohmann/json",
+      "version": "3.11.3",
+      "path": "vendor/json.hpp",
+      "url": "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp",
+      "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6",
+      "license": "MIT",
+      "license_path": "vendor/LICENSE.MIT"
+    }
+  ]
+}

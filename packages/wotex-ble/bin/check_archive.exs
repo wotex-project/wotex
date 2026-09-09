@@ -14,7 +14,10 @@ defmodule Wotex.BLE.Check.Archive do
     "priv/bluez/pairing.py",
     "priv/bluez/procedures.py",
     "priv/bluez/notifications.py",
-    "priv/bluez/requirements.txt"
+    "priv/bluez/requirements.txt",
+    "priv/bluez/native/frame.hpp",
+    "priv/bluez/native/vendor/json.hpp",
+    "priv/bluez/native/vendor/LICENSE.MIT"
   ]
   @development [".git", "deps", "_build"]
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
@@ -43,7 +46,7 @@ defmodule Wotex.BLE.Check.Archive do
     report(result)
   end
 
-  defp unique, do: Integer.to_string(System.unique_integer([:positive]))
+  defp unique, do: "#{System.pid()}-#{System.unique_integer([:positive])}"
 
   defp verify(project_root, archive, temporary) do
     unless File.regular?(archive) do

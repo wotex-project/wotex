@@ -40,3 +40,8 @@ not W3C certification. Source review supports API choices; execution evidence
 belongs to [executable-evidence.md](executable-evidence.md). Native .13 specifies
 library policy for limits, credits, error classes and ownership, not extra
 protocol-standard guarantees.
+
+The packaged nlohmann/json 3.11.3 header uses its SAX interface to enforce
+C07 bounds during tree construction. The upstream [security advisory list](https://github.com/nlohmann/json/security/advisories)
+contains no published advisory at this source review; this observation is not
+a security guarantee. Only JSON input is admitted by this boundary.

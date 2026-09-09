@@ -1,4 +1,8 @@
-Wotex MQTT Binding
+Wotex BLE
 Copyright 2026 Wotex contributors
 
 Licensed under the Apache License, Version 2.0.
+
+The native backend includes nlohmann/json 3.11.3.
+Copyright 2013-2023 Niels Lohmann. Licensed under the MIT License; see
+priv/bluez/native/vendor/LICENSE.MIT.

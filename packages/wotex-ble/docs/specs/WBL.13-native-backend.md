@@ -75,7 +75,9 @@ aggregate nodes. Numbers retain signed/unsigned 64-bit precision. Non-finite
 numbers, duplicate keys, invalid UTF-8 and extra envelope fields fail. Parsing
 must enforce bounds during traversal, before an unbounded native allocation;
 nlohmann/json 3.11.3 SAX or equivalent bounded callbacks are the selected parser.
-The header source and SHA-256 are fixed below.
+The header source and SHA-256 are fixed below. The exact header and its MIT
+license are packaged under `priv/bluez/native/vendor`; this parser dependency
+does not require a runtime or test-time download.
 
 Request parameters and results have the exact operation-specific shapes in .10
 and .11. No native pointer, process address or foreign object name crosses IPC.
@@ -200,7 +202,8 @@ or pure flow test alone cannot satisfy these process tests.
 ## WBL-B03 — Concrete native acceptance
 
 [The native corpus](fixtures/native-port-v1.json) has format
-`wotex.native-contract`, version `1.0.0`, and `specified_unexecuted` status.
+`wotex.native-contract`, version `1.0.0`, and explicit execution status. Its executed_cases list
+identifies only cases bound to passing tests in executable-evidence.md.
 It supplements the .11 value/lifecycle and .12 Runtime corpora. Every case names
 an operation, exact input and exact normalized expectation. `line_utf8` includes
 the terminating newline when one is required. `parse_request` calls the shared

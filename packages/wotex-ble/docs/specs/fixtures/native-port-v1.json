@@ -2,7 +2,7 @@
   "format": "wotex.native-contract",
   "version": "1.0.0",
   "package": "wotex_ble",
-  "status": "specified_unexecuted",
+  "status": "partially_executed",
   "normalization_spec": "../WBL.13-native-backend.md",
   "cases": [
     {
@@ -413,5 +413,12 @@
         }
       }
     }
+  ],
+  "executed_cases": [
+    "WBL-B-F01",
+    "WBL-B-F02",
+    "WBL-B-F03",
+    "WBL-B-F04",
+    "WBL-B-F05"
   ]
 }

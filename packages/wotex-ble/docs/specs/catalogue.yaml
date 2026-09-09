@@ -59,9 +59,9 @@ specifications:
   - id: "WBL.13"
     version: "1.0.0"
     path: "docs/specs/WBL.13-native-backend.md"
-    implementation_status: "planned"
+    implementation_status: "partial"
     standards: [{"name": "Native BlueZ GATT central", "revision": "Exact source hashes and build profile in .13", "claim": "Accepted native target; current baseline evidence is separate"}]
     requires: ["WBL.00", "WBL.10", "WBL.11", "WBL.12"]
     implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: "Required native Port, typed IPC, resource ownership and Mix/ExUnit evidence; fixtures/native-port-v1.json cases are specified, unexecuted."
+    executable_evidence: ["test/wotex/ble/native_frame_test.exs", "test/native/frame_test.cpp"]
+    compatibility_classification: "Required native Port, typed IPC, resource ownership and Mix/ExUnit evidence; B-F01 through B-F05 execute the bounded C++ request parser; backend, flow and software-peer acceptance remain open."
