@@ -5,6 +5,8 @@ defmodule Wotex.Runtime.ValueTest do
 
   alias Wotex.Runtime.{BindingProfile, Context, Error, Limits, Result, Retry}
 
+  doctest BindingProfile
+
   test "context accepts caller identity, deadline, and metadata without generating values" do
     deadline = DateTime.from_unix!(1_700_000_000)
 

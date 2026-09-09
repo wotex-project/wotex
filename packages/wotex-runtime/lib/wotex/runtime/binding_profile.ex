@@ -10,16 +10,19 @@ defmodule Wotex.Runtime.BindingProfile do
   List position, not `id`, determines precedence during selection. Scheme and
   media-type matching is case-insensitive; media-type parameters are ignored.
 
-      {:ok, profile} =
-        Wotex.Runtime.BindingProfile.new(
-          id: :https,
-          schemes: ["https"],
-          operations: [:readproperty],
-          media_types: ["application/json"]
-        )
+  ## Examples
 
-      Wotex.Runtime.BindingProfile.supports_scheme?(profile, "HTTPS")
-      #=> true
+      iex> alias Wotex.Runtime.BindingProfile
+      iex> {:ok, profile} = BindingProfile.new(
+      ...>   id: :https,
+      ...>   schemes: ["https"],
+      ...>   operations: [:readproperty],
+      ...>   media_types: ["application/json"]
+      ...> )
+      iex> BindingProfile.supports_scheme?(profile, "HTTPS")
+      true
+      iex> BindingProfile.supports_media_type?(profile, "application/json; charset=utf-8")
+      true
   """
 
   alias Wotex.Runtime.Error
