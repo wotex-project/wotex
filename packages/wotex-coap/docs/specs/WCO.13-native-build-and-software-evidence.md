@@ -3,7 +3,7 @@ spec:
   id: WCO.13
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.0.1
+  version: 1.1.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -198,6 +198,47 @@ persisting raw secrets. Records contain the consumed-context marker and next
 reserved sequence boundary. Limit the registry to 4,096 contexts and 1 MiB;
 full capacity returns `context_store_full`, never deletes used identities.
 
+Full-input identity alone is insufficient: changing only a recipient ID leaves
+the sender's key/nonce space intact. In addition to the full-input fingerprint,
+retain two role-independent protection-space fingerprints. Each hashes a
+domain separator, the derived 16-byte key and the first eight bytes of the
+RFC 8613 zero-Partial-IV nonce for that directional ID. The remaining five
+nonce bytes range over the complete 40-bit sequence space. Reject overlap with
+either stored direction, including swapped roles and equivalent HKDF salt
+encodings. This is the library's strict single-generation admission policy.
+OpenSSL's public HKDF/SHA-256 API derives these identifiers; libcoap remains
+the only packet protection and exchange engine. Exact C.1–C.3 key/IV vectors
+and directional-overlap cases assert the derivation.
+
+The full fingerprint is SHA-256 of ASCII `wotex.oscore.context@1` followed by
+the shortest definite-length CBOR array `[master_secret, master_salt,
+sender_id, recipient_id, id_context, 10, -10]`; absent ID Context is CBOR null,
+distinct from an empty byte string. Each directional fingerprint is SHA-256
+of ASCII `wotex.oscore.space@1`, the 16 key bytes and the eight nonce-prefix
+bytes, concatenated in that order. Domains contain no trailing NUL byte.
+
+The concrete store requires an existing mode-0700 directory owned by the
+effective user, with no symlink path components or unrelated entries. The
+directory contains mode-0600 `context.lock`, `contexts.v1` and at most one
+`contexts.pending` file; regular files have exactly one hard link. A missing
+registry beside an existing lock, or an existing registry beside a missing
+lock, is corrupt state. Do not recreate either as an empty store. The lock is
+nonblocking `flock`, held by its open descriptor until native session release.
+macOS requires a filesystem marked local. The Linux local profile admits
+ext2/3/4, XFS, Btrfs, ZFS, overlayfs and tmpfs; unknown and network filesystems
+fail admission. Persistence follows the backing store: disposable tmpfs/test
+volumes do not preserve a registry after that storage is destroyed. The
+consumer's registry-preservation obligation below applies to every medium.
+
+The registry format is `WCOREG01` (eight ASCII bytes), a big-endian 32-bit
+record count, that many 104-byte records, and SHA-256 of all preceding bytes.
+Each record contains the full-input, sender-space and recipient-space hashes
+(32 bytes each), then an exclusive big-endian 64-bit reservation boundary in
+`1..2^40`. Its presence is the consumed marker. Exact length, checksum, count,
+file kind and permissions are validated before admission. The checksum detects
+corruption; it is not an authentication or rollback mechanism. No record is
+removed, and no caller label or raw key is persisted.
+
 Before inbound traffic or the first encryption, atomically record consumption
 and a future sequence reservation: write a mode-0600 sibling temporary file,
 fsync the file, rename over the registry, then fsync its directory. An exclusive
@@ -220,7 +261,8 @@ produce no second public value.
 
 Error codes include `unsupported_native_backend`, `native_protocol_error`,
 `native_unavailable`, `context_store_locked`, `context_store_corrupt`,
-`context_store_full`, `fresh_context_required` and `sequence_exhausted`.
+`context_store_full`, `context_store_unavailable`, `invalid_context_store`,
+`fresh_context_required` and `sequence_exhausted`.
 Map to the finite C04/I04 class table. Pre-transmission failures have effect
 `none`; an uncertain transmitted mutation has effect `unknown`, retryable false
 and class permanent. No automatic bridge restart or security downgrade occurs.

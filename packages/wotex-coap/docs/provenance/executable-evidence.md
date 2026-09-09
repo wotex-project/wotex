@@ -59,7 +59,13 @@ libcoap regression with two narrowly scoped source patches. Rejected sender
 reservations emit no UDP datagrams; accepted sends remain inside the reserved
 boundary. The test passes on macOS and Linux with ASan/UBSan and leak detection.
 It does not exercise a durable filesystem, a native Port or an independent peer.
-OSCORE known-answer/replay/store fault tests, native helper ownership and complete stress/matrix closure remain
+The [native store receipt](native-store-v1.json) identifies exact RFC 8613
+C.1–C.3 derivations, persisted directional-key reuse rejection, filesystem/lock
+faults, interrupted atomic replacements, SIGKILL, capacity and sequence bounds.
+Its real libcoap callback assertions cover durable-write failure before wire
+transmission. These primitives do not implement the production Port or accept
+end-to-end restart/replay behavior through that owner.
+OSCORE protected-message/replay/bridge restart tests, native helper ownership and complete stress/matrix closure remain
 required by [the ordered plan](../plans/software-implementation.md).
 
 ## Required verification

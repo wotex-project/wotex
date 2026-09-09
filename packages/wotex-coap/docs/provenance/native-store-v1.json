@@ -1,0 +1,252 @@
+{
+  "schema": "wotex.coap.native-store-evidence@1",
+  "scope": "Native identity, durable store and actual libcoap callback; production Port and complete OSCORE workflow remain unaccepted",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/identity.c": "955d94def94861e15fbe8ff9c7e14f26a8eec5979585eff21b295267e04a4565",
+      "native/oscore/identity.h": "048f2fc35e74fbf2a71f42625f2a1d3c592deb4a715efafd2ab2bb9894cb3b55",
+      "native/oscore/store.c": "a49ba6a278612e43c9e1872a9565abf541340aa12aa001f9f80e2c93f86969cd",
+      "native/oscore/store.h": "bbee9d6b56231d1a211de44736d44d30612c017de827ecf0fd30ee94aa8102ff",
+      "test/native/oscore_identity_test.c": "ec3a4705bbbbc0e490481a29deff4b5e8813d45a306019070c55397a8ced3355",
+      "test/native/oscore_store_test.c": "1353d42bbc54c75678a9398df889c31e6dee84c56e215b00c54eb95d0c3ca9c9",
+      "test/native/oscore_store_send_test.c": "2aad8c02112a2b4b842ff4bc09c228846b4f67f0b168bc5ef8327107e75c7191",
+      "test/native/Dockerfile": "f43dd3c7ee370cc4e3c37573b2f7469a1273f4e8bdd47e2e4e14918ec604c490"
+    }
+  },
+  "upstream": {
+    "schema": "wotex.coap.libcoap-source@1",
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "url": "https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28",
+    "sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "patches": [
+      {
+        "path": "patches/0001-reject-unsaved-sender-sequences.patch",
+        "sha256": "58ea9aa566e6306b811e3845c01931e7887d66e00923e285d7be779d58251350"
+      },
+      {
+        "path": "patches/0002-skip-empty-cbor-byte-copy.patch",
+        "sha256": "29d0e421a446b0ec347c71b8e3ac7421ff541254df6eced4f91c2bd6ff92f8a2"
+      }
+    ],
+    "patched_sources": {
+      "src/coap_oscore.c": "5c778ae3e899404ebba7f254b9fe7422eb06fb0811e61dfcc7e1bd8122c3d410",
+      "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c"
+    }
+  },
+  "requirements": [
+    "WCO-N04",
+    "WCO-S06",
+    "WCO-V13",
+    "WCO-V14"
+  ],
+  "assertions": {
+    "known_answers": [
+      "RFC 8613 C.1: sender/recipient key and Common IV",
+      "RFC 8613 C.2: omitted salt",
+      "RFC 8613 C.3: ID Context"
+    ],
+    "identity": [
+      "sender-only and recipient-only changes reject retained directional key space",
+      "role swaps reject cross-direction reuse",
+      "empty and zero-padded equivalent HKDF salts reject reuse",
+      "null and empty ID Context remain distinct",
+      "invalid bounds produce no partial key or fingerprint output"
+    ],
+    "store": [
+      "exclusive same-process and child-process lock",
+      "durable consumption rejects orderly reopen",
+      "new key context admitted",
+      "initial and subsequent failures at temp open/write/file fsync/rename/directory fsync",
+      "subsequent failure permanently poisons owner",
+      "abrupt process exit after each successful atomic-write stage",
+      "SIGKILL releases exact lock while identity remains consumed",
+      "missing registry or lock, truncated/checksum/permissive/oversize/zero-record state and FIFO rejected",
+      "symlink traversal and hardlinked registry rejected",
+      "4096 context capacity without eviction",
+      "exclusive 2^40 sequence boundary; overflow never wraps"
+    ],
+    "wire": {
+      "failed_storage_stages": 5,
+      "attempts_per_failed_stage": 3,
+      "received_datagrams_after_failure": 0,
+      "accepted_protected_datagrams": 3,
+      "durable_exclusive_boundary": 32,
+      "reopen": "fresh_context_required"
+    },
+    "cleanup": {
+      "owned_store_descriptors": 0,
+      "owned_store_locks": 0,
+      "unwaited_test_children": 0,
+      "normal_path_leak_detection": "Linux ASan passed; abrupt-exit children are intentionally reclaimed by the kernel"
+    }
+  },
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "native_cases": [
+        {
+          "executable": "oscore-identity",
+          "exit_code": 0,
+          "output_sha256": "12c08b7303db591d8d6b495347c7bff8b04981dfcd4e03ac4675b1892fb2437f",
+          "assertion_output": [
+            "WCO-N04 WCO-V13: RFC 8613 C.1/C.2/C.3 exact keys and Common IV",
+            "WCO-N04 WCO-V14: directional and equivalent-salt reuse cannot bypass identity",
+            "WCO-N04 WCO-V13: fixed-suite bounds fail without partial output"
+          ],
+          "executable_sha256": "286f6ff355dc53ba321e80c1a1576d1cee5bf6bdc740709d4eda8d8a1a8f57f5"
+        },
+        {
+          "executable": "oscore-store",
+          "exit_code": 0,
+          "output_sha256": "e893812362c4381d0627773e17a1dcc00fa3c14a4ed2f162662ceb5bbe201e44",
+          "assertion_output": [
+            "WCO-N04 WCO-V14: durable consumption, exclusive process lock and fresh-key admission",
+            "WCO-N04 WCO-V14: persisted directional key spaces reject tuple-only changes",
+            "WCO-N04 WCO-V14: open/write/file-sync/rename/directory-sync failures poison the owner",
+            "WCO-N04 WCO-V14: initial durable-write failure never returns an admitted store",
+            "WCO-N04 WCO-V14: process exit after every persistence stage preserves consumed context",
+            "WCO-N04 WCO-V14: SIGKILL releases lock without admitting context reuse",
+            "WCO-N04 WCO-V14: missing/truncated/changed/permissive/oversize registries fail closed",
+            "WCO-N04 WCO-V14: private paths, symlinks and hard links have strict admission",
+            "WCO-N04 WCO-V13: 4096-context capacity and 40-bit exhaustion never evict or wrap",
+            "WCO-N04: final store lock and descriptor counts are zero"
+          ],
+          "executable_sha256": "6a49289ccf5fa231e1804c43f5428eaa45b20926ea2cd60e1851d56d86b6701d"
+        },
+        {
+          "executable": "oscore-store-send",
+          "exit_code": 0,
+          "output_sha256": "7c5899c0505952c6a918eb56bbb0fb5a0e190c4cff16572be803545439ea9d3d",
+          "assertion_output": [
+            "WCO-N04 WCO-V14: five durable-write failures block actual libcoap sends and unsafe reopen",
+            "WCO-N04 WCO-S06: persisted allowance permits three protected datagrams"
+          ],
+          "executable_sha256": "74033e64d37f1da2bc1a3163bb2dd6182c43c8adc4a25e49cb01c1d4df2389c6"
+        }
+      ],
+      "compiler": "Apple clang 21.0.0 clang-2100.1.1.101",
+      "cmake": "4.4.3",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "native_cases": [
+        {
+          "executable": "oscore-identity",
+          "exit_code": 0,
+          "output_sha256": "12c08b7303db591d8d6b495347c7bff8b04981dfcd4e03ac4675b1892fb2437f",
+          "assertion_output": [
+            "WCO-N04 WCO-V13: RFC 8613 C.1/C.2/C.3 exact keys and Common IV",
+            "WCO-N04 WCO-V14: directional and equivalent-salt reuse cannot bypass identity",
+            "WCO-N04 WCO-V13: fixed-suite bounds fail without partial output"
+          ],
+          "executable_sha256": "fdd12d66deae8cff36879ecaa9d20c3e84c8bceafa694f4e4407fff67b69d176",
+          "argv": [
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "--read-only",
+            "--tmpfs",
+            "/tmp:rw,noexec,nosuid,size=16m",
+            "--pids-limit",
+            "64",
+            "--memory",
+            "512m",
+            "--entrypoint",
+            "/usr/local/bin/oscore-identity",
+            "sha256:43a3f55a27761b306f2f6dda34e71e4f39296c8f8d0ecea0168967f819ddf0b4"
+          ]
+        },
+        {
+          "executable": "oscore-store",
+          "exit_code": 0,
+          "output_sha256": "e893812362c4381d0627773e17a1dcc00fa3c14a4ed2f162662ceb5bbe201e44",
+          "assertion_output": [
+            "WCO-N04 WCO-V14: durable consumption, exclusive process lock and fresh-key admission",
+            "WCO-N04 WCO-V14: persisted directional key spaces reject tuple-only changes",
+            "WCO-N04 WCO-V14: open/write/file-sync/rename/directory-sync failures poison the owner",
+            "WCO-N04 WCO-V14: initial durable-write failure never returns an admitted store",
+            "WCO-N04 WCO-V14: process exit after every persistence stage preserves consumed context",
+            "WCO-N04 WCO-V14: SIGKILL releases lock without admitting context reuse",
+            "WCO-N04 WCO-V14: missing/truncated/changed/permissive/oversize registries fail closed",
+            "WCO-N04 WCO-V14: private paths, symlinks and hard links have strict admission",
+            "WCO-N04 WCO-V13: 4096-context capacity and 40-bit exhaustion never evict or wrap",
+            "WCO-N04: final store lock and descriptor counts are zero"
+          ],
+          "executable_sha256": "ae2d15469d7586fbfb627f93f0249058dd139ced795d7e914c433b5531aa5cbf",
+          "argv": [
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "--read-only",
+            "--tmpfs",
+            "/tmp:rw,noexec,nosuid,size=16m",
+            "--pids-limit",
+            "64",
+            "--memory",
+            "512m",
+            "--entrypoint",
+            "/usr/local/bin/oscore-store",
+            "sha256:43a3f55a27761b306f2f6dda34e71e4f39296c8f8d0ecea0168967f819ddf0b4"
+          ]
+        },
+        {
+          "executable": "oscore-store-send",
+          "exit_code": 0,
+          "output_sha256": "7c5899c0505952c6a918eb56bbb0fb5a0e190c4cff16572be803545439ea9d3d",
+          "assertion_output": [
+            "WCO-N04 WCO-V14: five durable-write failures block actual libcoap sends and unsafe reopen",
+            "WCO-N04 WCO-S06: persisted allowance permits three protected datagrams"
+          ],
+          "executable_sha256": "a9a7224c225ead098ef5f57fed88d1521fa39c3bb2d4d98aed56e93d86cbd3c9",
+          "argv": [
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "--read-only",
+            "--tmpfs",
+            "/tmp:rw,noexec,nosuid,size=16m",
+            "--pids-limit",
+            "64",
+            "--memory",
+            "512m",
+            "--entrypoint",
+            "/usr/local/bin/oscore-store-send",
+            "sha256:43a3f55a27761b306f2f6dda34e71e4f39296c8f8d0ecea0168967f819ddf0b4"
+          ]
+        }
+      ],
+      "image": "sha256:43a3f55a27761b306f2f6dda34e71e4f39296c8f8d0ecea0168967f819ddf0b4",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "3.0.20-1~deb12u2",
+      "sanitizers": [
+        "address",
+        "undefined"
+      ],
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1:abort_on_error=1",
+        "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1"
+      },
+      "toolchain_packages_recorded_not_locked": true,
+      "artifact_and_package_log_sha256": "9b051fbc5b1fb97231d652bcb6ab9b23f16619daf15055f1ccf64a14d5793151"
+    }
+  ],
+  "limits": [
+    "The sequence callbacks exercise intentional repeated sends without a responding peer; libcoap may wait five seconds on each later initial-exchange send. This is not a production-owner cleanup test.",
+    "Only process crash and syscall failures are exercised; no physical power-loss or hardware claim.",
+    "Filesystem preservation is a consumer obligation; deleting or rolling back an entire valid registry cannot be cryptographically detected.",
+    "Production Port owner, bounded IPC/credit, live replay, same-stack OSCORE exchanges, native Mix builds and complete software matrix remain unaccepted."
+  ]
+}

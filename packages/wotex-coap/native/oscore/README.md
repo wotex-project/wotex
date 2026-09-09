@@ -30,6 +30,30 @@ fixed by the image digest. [The receipt](../../docs/provenance/native-sequence-v
 records exact test/source/artifact digests and the executed macOS/Linux lanes.
 It does not accept the remaining OSCORE helper, store, framing or Mix tasks.
 
+`identity.c` derives the fixed suite's sender/recipient keys and Common IV
+through OpenSSL HKDF solely to identify storage namespaces. It hashes each
+direction's key and nonce prefix, in addition to the full input identity, so
+changing an unrelated peer ID or equivalent salt encoding cannot authorize
+reuse of consumed key material. The C.1–C.3 exact vectors and input boundaries
+execute in `oscore_identity_test.c`.
+
+`store.c` implements the explicit private-directory registry and exclusive
+lease described by WCO-N04. `wco_store_open` consumes an identity and reserves
+an exclusive sequence boundary before returning success. `wco_store_reserve`
+acknowledges only durable allowances; persistence failure permanently disables
+that owner. `wco_store_close` releases its two descriptors without deleting
+consumed records. The native header defines the finite status API and limits.
+No bridge operation can use this store until the caller has opened it explicitly.
+
+`oscore_store_test.c` exercises real filesystem writes, locks, child-process
+crashes, SIGKILL, malformed state, capacity and exhaustion. Test-only fault hooks
+interrupt the actual atomic-write stages; they are absent from the production
+object. `oscore_store_send_test.c` binds this store to the patched libcoap
+callback and asserts zero wire datagrams after every storage-failure stage.
+[The store receipt](../../docs/provenance/native-store-v1.json) identifies these
+assertions and their source bytes. The production Port, report credit, replay
+and full OSCORE workflow remain separate implementation obligations.
+
 The patches retain libcoap's source licensing; see
 [LICENSE.libcoap](LICENSE.libcoap) and the package [NOTICE](../../NOTICE).
 Generated SDK sources, build products and keys do not belong in the package.
