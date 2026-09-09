@@ -51,7 +51,7 @@ defmodule Wotex.Binding.MQTT.Broker do
     end
   end
 
-  def new(_href),
+  def new(_),
     do:
       {:error, Error.new(:invalid_broker_href, :broker, :protocol, "broker href must be a string")}
 
@@ -91,11 +91,11 @@ defmodule Wotex.Binding.MQTT.Broker do
     case String.downcase(scheme) do
       "mqtt" -> {:ok, :mqtt}
       "mqtts" -> {:ok, :mqtts}
-      _other -> invalid_scheme()
+      _ -> invalid_scheme()
     end
   end
 
-  defp validate_scheme(_scheme), do: invalid_scheme()
+  defp validate_scheme(_), do: invalid_scheme()
 
   defp invalid_scheme do
     {:error,
@@ -109,7 +109,7 @@ defmodule Wotex.Binding.MQTT.Broker do
 
   defp validate_host(host) when is_binary(host) and byte_size(host) > 0, do: :ok
 
-  defp validate_host(_host),
+  defp validate_host(_),
     do:
       {:error,
        Error.new(:missing_broker_host, :broker, :protocol, "broker href must include a host")}
@@ -117,12 +117,12 @@ defmodule Wotex.Binding.MQTT.Broker do
   defp validate_port(nil), do: :ok
   defp validate_port(port) when is_integer(port) and port in 1..65_535, do: :ok
 
-  defp validate_port(_port),
+  defp validate_port(_),
     do: {:error, Error.new(:invalid_broker_port, :broker, :protocol, "broker port is invalid")}
 
   defp validate_credential_free(nil), do: :ok
 
-  defp validate_credential_free(_userinfo) do
+  defp validate_credential_free(_) do
     {:error,
      Error.new(
        :broker_credentials_forbidden,
@@ -133,7 +133,7 @@ defmodule Wotex.Binding.MQTT.Broker do
   end
 
   defp validate_authority(href, host, port) do
-    [_scheme, authority_and_rest] = String.split(href, "://", parts: 2)
+    [_, authority_and_rest] = String.split(href, "://", parts: 2)
     authority_parts = String.split(authority_and_rest, ["/", "?", "#"], parts: 2)
     authority = hd(authority_parts)
     rendered_host = if String.contains?(host, ":"), do: "[#{host}]", else: host
@@ -150,7 +150,7 @@ defmodule Wotex.Binding.MQTT.Broker do
        when path in [nil, "", "/"] and is_nil(query) and is_nil(fragment),
        do: :ok
 
-  defp validate_broker_only(_path, _query, _fragment) do
+  defp validate_broker_only(_, _, _) do
     {:error,
      Error.new(
        :broker_href_not_endpoint_only,

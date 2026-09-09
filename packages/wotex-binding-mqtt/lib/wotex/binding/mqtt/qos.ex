@@ -34,7 +34,7 @@ defmodule Wotex.Binding.MQTT.QoS do
   def normalize("1"), do: {:ok, 1}
   def normalize("2"), do: {:ok, 2}
 
-  def normalize(_value) do
+  def normalize(_) do
     {:error,
      Error.new(
        :invalid_qos,

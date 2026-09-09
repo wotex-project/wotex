@@ -31,7 +31,7 @@ defmodule Wotex.Binding.MQTT.Transport do
     end
   end
 
-  def request(_request, _execution_context, _config),
+  def request(_, _, _),
     do: invalid_transport_input(:request)
 
   @impl Wotex.Runtime.Transport
@@ -52,7 +52,7 @@ defmodule Wotex.Binding.MQTT.Transport do
     end
   end
 
-  def subscribe(_request, _owner, _execution_context, _config),
+  def subscribe(_, _, _, _),
     do: invalid_transport_input(:subscribe)
 
   @impl Wotex.Runtime.Transport
@@ -86,7 +86,7 @@ defmodule Wotex.Binding.MQTT.Transport do
     end
   end
 
-  def unsubscribe(_handle, _request, _execution_context, _config),
+  def unsubscribe(_, _, _, _),
     do: invalid_transport_input(:unsubscribe)
 
   @impl Wotex.Runtime.Transport
@@ -96,7 +96,7 @@ defmodule Wotex.Binding.MQTT.Transport do
     end
   end
 
-  def decode_frame(_frame, _request, _config),
+  def decode_frame(_, _, _),
     do: invalid_transport_input(:decode_frame)
 
   defp decode_delivery(frame, command, request) do
@@ -133,7 +133,7 @@ defmodule Wotex.Binding.MQTT.Transport do
 
   defp execute_request(command, request, execution_context, config) do
     case {Command.packet(command), Command.operation(command)} do
-      {:publish, _operation} ->
+      {:publish, _} ->
         config.client
         |> safe_client_call(:publish, [command, execution_context, config.client_config])
         |> normalize_publish(command, request)
@@ -141,7 +141,7 @@ defmodule Wotex.Binding.MQTT.Transport do
       {:subscribe, :readproperty} ->
         read(command, request, execution_context, config)
 
-      _unsupported ->
+      _ ->
         {:error,
          Error.new(
            :unsupported_request_packet,
@@ -189,7 +189,7 @@ defmodule Wotex.Binding.MQTT.Transport do
   end
 
   defp clock_reading(%DateTime{}), do: DateTime.utc_now()
-  defp clock_reading(_deadline), do: System.monotonic_time(:millisecond)
+  defp clock_reading(_), do: System.monotonic_time(:millisecond)
 
   defp normalize_publish(:ok, command, request) do
     Result.new(request.request_id, request.operation, nil,
@@ -198,10 +198,10 @@ defmodule Wotex.Binding.MQTT.Transport do
     )
   end
 
-  defp normalize_publish({:error, _external}, _command, request),
+  defp normalize_publish({:error, _}, _, request),
     do: client_failure(:client_publish_failed, :publish, request.operation)
 
-  defp normalize_publish(_invalid, _command, request),
+  defp normalize_publish(_, _, request),
     do: invalid_client_return(:publish, request.operation)
 
   defp normalize_read({:ok, delivery_input}, command, request, max_payload_bytes) do
@@ -215,26 +215,26 @@ defmodule Wotex.Binding.MQTT.Transport do
     end
   end
 
-  defp normalize_read({:error, _external}, _command, request, _max_payload_bytes),
+  defp normalize_read({:error, _}, _, request, _),
     do: client_failure(:client_read_failed, :read, request.operation)
 
-  defp normalize_read(_invalid, _command, request, _max_payload_bytes),
+  defp normalize_read(_, _, request, _),
     do: invalid_client_return(:read, request.operation)
 
-  defp normalize_subscribe({:ok, handle}, _operation), do: {:ok, handle}
+  defp normalize_subscribe({:ok, handle}, _), do: {:ok, handle}
 
-  defp normalize_subscribe({:error, _external}, operation),
+  defp normalize_subscribe({:error, _}, operation),
     do: client_failure(:client_subscribe_failed, :subscribe, operation)
 
-  defp normalize_subscribe(_invalid, operation),
+  defp normalize_subscribe(_, operation),
     do: invalid_client_return(:subscribe, operation)
 
-  defp normalize_unsubscribe(:ok, _operation), do: :ok
+  defp normalize_unsubscribe(:ok, _), do: :ok
 
-  defp normalize_unsubscribe({:error, _external}, operation),
+  defp normalize_unsubscribe({:error, _}, operation),
     do: client_failure(:client_unsubscribe_failed, :unsubscribe, operation)
 
-  defp normalize_unsubscribe(_invalid, operation),
+  defp normalize_unsubscribe(_, operation),
     do: invalid_client_return(:unsubscribe, operation)
 
   defp validate_read_delivery(command, delivery) do
@@ -271,9 +271,9 @@ defmodule Wotex.Binding.MQTT.Transport do
   defp safe_client_call(client, function, arguments) do
     apply(client, function, arguments)
   rescue
-    _external -> {:error, :client_exception}
+    _ -> {:error, :client_exception}
   catch
-    _kind, _external -> {:error, :client_failure}
+    _, _ -> {:error, :client_failure}
   end
 
   defp client_failure(code, packet, operation) do

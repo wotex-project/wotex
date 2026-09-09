@@ -55,7 +55,7 @@ defmodule Wotex.Binding.MQTT.TransportConfig do
     end
   end
 
-  def new(_client, _client_config, _opts) do
+  def new(_, _, _) do
     {:error,
      Error.new(
        :invalid_transport_configuration,
@@ -109,7 +109,7 @@ defmodule Wotex.Binding.MQTT.TransportConfig do
       value when is_integer(value) and value > 0 ->
         {:ok, value}
 
-      _invalid ->
+      _ ->
         {:error,
          Error.new(
            :invalid_transport_option,

@@ -84,7 +84,7 @@ defmodule Wotex.Binding.MQTT.Topic do
     end
   end
 
-  def normalize_filters(_filters) do
+  def normalize_filters(_) do
     {:error,
      Error.new(
        :invalid_topic_filters,
@@ -107,7 +107,7 @@ defmodule Wotex.Binding.MQTT.Topic do
           String.split(name, "/", trim: false)
         )
     else
-      _invalid -> false
+      _ -> false
     end
   end
 
@@ -139,7 +139,7 @@ defmodule Wotex.Binding.MQTT.Topic do
     end
   end
 
-  defp validate_common(_value, code, label),
+  defp validate_common(_, code, label),
     do: {:error, Error.new(code, :topic, :protocol, "#{label} must be a string")}
 
   defp validate_shared_prefix("$share/" <> remainder) do
@@ -152,12 +152,12 @@ defmodule Wotex.Binding.MQTT.Topic do
           :ok
         end
 
-      _invalid ->
+      _ ->
         invalid_shared_filter()
     end
   end
 
-  defp validate_shared_prefix(_filter), do: :ok
+  defp validate_shared_prefix(_), do: :ok
 
   defp invalid_shared_filter do
     {:error,
@@ -170,7 +170,7 @@ defmodule Wotex.Binding.MQTT.Topic do
   end
 
   defp effective_filter("$share/" <> remainder) do
-    [_group, filter] = String.split(remainder, "/", parts: 2)
+    [_, filter] = String.split(remainder, "/", parts: 2)
     filter
   end
 
@@ -184,20 +184,20 @@ defmodule Wotex.Binding.MQTT.Topic do
     |> Enum.with_index()
     |> Enum.all?(fn
       {"#", index} -> index == last_index
-      {"+", _index} -> true
-      {level, _index} -> not String.contains?(level, ["+", "#"])
+      {"+", _} -> true
+      {level, _} -> not String.contains?(level, ["+", "#"])
     end)
   end
 
-  defp match_levels(["#"], _names), do: true
+  defp match_levels(["#"], _), do: true
   defp match_levels([], []), do: true
-  defp match_levels([], _names), do: false
-  defp match_levels(_filters, []), do: false
+  defp match_levels([], _), do: false
+  defp match_levels(_, []), do: false
 
-  defp match_levels(["+" | filters], [_name | names]),
+  defp match_levels(["+" | filters], [_ | names]),
     do: match_levels(filters, names)
 
   defp match_levels([level | filters], [level | names]), do: match_levels(filters, names)
 
-  defp match_levels(_filters, _names), do: false
+  defp match_levels(_, _), do: false
 end

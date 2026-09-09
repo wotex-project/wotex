@@ -88,7 +88,7 @@ defmodule Wotex.Binding.MQTT.Command do
     end
   end
 
-  def publish(_broker, _operation, _topic, _value, _opts),
+  def publish(_, _, _, _, _),
     do: invalid_command("publish command input is invalid")
 
   @doc "Builds a SUBSCRIBE command for one or more Topic Filters."
@@ -114,7 +114,7 @@ defmodule Wotex.Binding.MQTT.Command do
     end
   end
 
-  def subscribe(_broker, _operation, _filters, _opts),
+  def subscribe(_, _, _, _),
     do: invalid_command("subscribe command input is invalid")
 
   @doc "Builds an UNSUBSCRIBE command for one or more Topic Filters."
@@ -138,7 +138,7 @@ defmodule Wotex.Binding.MQTT.Command do
     end
   end
 
-  def unsubscribe(_broker, _operation, _filters, _opts),
+  def unsubscribe(_, _, _, _),
     do: invalid_command("unsubscribe command input is invalid")
 
   @doc "Returns the broker endpoint."
@@ -198,7 +198,7 @@ defmodule Wotex.Binding.MQTT.Command do
 
   defp validate_retain(value) when is_boolean(value), do: {:ok, value}
 
-  defp validate_retain(_value),
+  defp validate_retain(_),
     do: {:error, Error.new(:invalid_retain, :command, :protocol, "mqv:retain must be boolean")}
 
   defp payload_limit(opts) do
@@ -206,7 +206,7 @@ defmodule Wotex.Binding.MQTT.Command do
       value when is_integer(value) and value > 0 ->
         {:ok, value}
 
-      _invalid ->
+      _ ->
         {:error,
          Error.new(:invalid_payload_limit, :command, :permanent, "payload limit is invalid")}
     end
@@ -237,7 +237,7 @@ defmodule Wotex.Binding.MQTT.Command do
     |> Kernel.==("application/json")
   end
 
-  defp json_content_type?(_value), do: false
+  defp json_content_type?(_), do: false
 
   defp invalid_command(message),
     do: {:error, Error.new(:invalid_command, :command, :protocol, message)}

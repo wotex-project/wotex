@@ -42,7 +42,7 @@ defmodule Wotex.Binding.MQTT.Delivery do
     end
   end
 
-  def new(_payload, _opts) do
+  def new(_, _) do
     {:error,
      Error.new(
        :invalid_delivery,
@@ -56,7 +56,7 @@ defmodule Wotex.Binding.MQTT.Delivery do
   @spec normalize(term()) :: {:ok, t()} | {:error, Error.t()}
   def normalize(%__MODULE__{} = delivery), do: {:ok, delivery}
 
-  def normalize(_delivery) do
+  def normalize(_) do
     {:error,
      Error.new(
        :invalid_delivery,
@@ -84,7 +84,7 @@ defmodule Wotex.Binding.MQTT.Delivery do
 
   defp validate_retain(value) when is_boolean(value), do: :ok
 
-  defp validate_retain(_value),
+  defp validate_retain(_),
     do:
       {:error,
        Error.new(:invalid_delivery_retain, :client, :protocol, "delivery retain must be boolean")}

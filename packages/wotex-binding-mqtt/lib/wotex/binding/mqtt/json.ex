@@ -33,7 +33,7 @@ defmodule Wotex.Binding.MQTT.JSON do
     end
   end
 
-  def encode(_value, _max_bytes), do: invalid_limit()
+  def encode(_, _), do: invalid_limit()
 
   @doc "Decodes a JSON payload under the supplied byte limit and the core structural limits."
   @spec decode(binary(), pos_integer()) :: {:ok, json_value()} | {:error, Error.t()}
@@ -48,24 +48,24 @@ defmodule Wotex.Binding.MQTT.JSON do
     end
   end
 
-  def decode(payload, _max_bytes) when not is_binary(payload),
+  def decode(payload, _) when not is_binary(payload),
     do: codec_error(:invalid_json_payload, :protocol, "JSON payload must be a binary")
 
-  def decode(_payload, _max_bytes), do: invalid_limit()
+  def decode(_, _), do: invalid_limit()
 
-  defp translate(%Wotex.Error{code: :byte_limit_exceeded}, max_bytes, size_code, _codec_code) do
+  defp translate(%Wotex.Error{code: :byte_limit_exceeded}, max_bytes, size_code, _) do
     {:error,
      Error.new(size_code, :codec, :protocol, "JSON payload exceeds the configured byte limit", %{
        max_bytes: max_bytes
      })}
   end
 
-  defp translate(%Wotex.Error{code: code}, _max_bytes, _size_code, _codec_code)
+  defp translate(%Wotex.Error{code: code}, _, _, _)
        when code in @limit_codes do
     invalid_limit()
   end
 
-  defp translate(%Wotex.Error{code: code}, _max_bytes, _size_code, codec_code) do
+  defp translate(%Wotex.Error{code: code}, _, _, codec_code) do
     {:error,
      Error.new(codec_code, :codec, :protocol, "JSON admission rejected the Application Message", %{
        cause: code

@@ -44,7 +44,7 @@ defmodule Wotex.Binding.MQTT.Mapping do
     end
   end
 
-  def command(_request, _max_payload_bytes) do
+  def command(_, _) do
     {:error,
      Error.new(
        :invalid_mapping_input,
@@ -88,7 +88,7 @@ defmodule Wotex.Binding.MQTT.Mapping do
             control_packet_mismatch()
           end
 
-        {:ok, _invalid} ->
+        {:ok, _} ->
           control_packet_mismatch()
       end
     end
@@ -137,7 +137,7 @@ defmodule Wotex.Binding.MQTT.Mapping do
 
   defp validate_read_retain(:readproperty, %{"mqv:retain" => true}), do: :ok
 
-  defp validate_read_retain(:readproperty, _form) do
+  defp validate_read_retain(:readproperty, _) do
     {:error,
      Error.new(
        :retained_read_required,
@@ -147,7 +147,7 @@ defmodule Wotex.Binding.MQTT.Mapping do
      )}
   end
 
-  defp validate_read_retain(_operation, _form), do: :ok
+  defp validate_read_retain(_, _), do: :ok
 
   defp build_command(broker, :publish, request, form, max_payload_bytes) do
     Command.publish(broker, request.operation, form["mqv:topic"], request.input,
@@ -184,7 +184,7 @@ defmodule Wotex.Binding.MQTT.Mapping do
     end
   end
 
-  defp normalize_qos_validation({:ok, _qos}), do: :ok
+  defp normalize_qos_validation({:ok, _}), do: :ok
   defp normalize_qos_validation({:error, %Error{} = error}), do: {:error, error}
 
   defp content_type(form), do: Map.get(form, "contentType") || "application/json"

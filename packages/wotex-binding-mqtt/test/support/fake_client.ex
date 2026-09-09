@@ -50,7 +50,7 @@ defmodule Wotex.Binding.MQTT.Test.FakeClient do
     end)
   end
 
-  defp watch_owner(_owner, _config), do: :ok
+  defp watch_owner(_, _), do: :ok
 
   defp client_return(config, key, default) do
     case Map.get(config, key, default) do
