@@ -3,6 +3,8 @@ defmodule Wotex.Lab.WLB01EvidenceManifestTest do
 
   use ExUnit.Case, async: true
 
+  @moduletag :integration
+
   alias Wotex.Lab.Evidence.{Digest, Record}
 
   @record_keys ~w(children default_children_per_role instances max_children_per_role roles

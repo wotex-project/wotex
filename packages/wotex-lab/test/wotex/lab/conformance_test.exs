@@ -3,6 +3,8 @@ defmodule Wotex.Lab.ConformanceTest do
 
   use ExUnit.Case, async: true
 
+  @moduletag :integration
+
   alias Wotex.Conformance.{Corpus, Report, Runner, Subject}
   alias Wotex.Conformance.Target.External
   alias Wotex.Lab.Conformance.{Containment, Target}

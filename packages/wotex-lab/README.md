@@ -74,7 +74,8 @@ includes source, not platform binaries. See the
 for the sampled-limit, hostile-target and deprecated macOS sandbox limitations.
 
 `mix check` needs no container runtime: the MQTT broker lane is tagged
-`:broker` and excluded unless `WOTEX_LAB_BROKER=1` is set. Run it explicitly
+`:broker` and excluded unless `WOTEX_LAB_BROKER=1` is set. Integration evidence
+is likewise excluded unless `WOTEX_LAB_INTEGRATION=1` is set. Run broker tests explicitly
 with Docker available and the `eclipse-mosquitto:2` image pullable; each test
 starts a disposable broker on an ephemeral loopback port, uses its own topic
 prefix and removes the container when the suite ends.
@@ -88,7 +89,7 @@ package). `bin/provision_maude.exs` is the explicit way to get the pinned
 3.5.1 release: it downloads the archive for your platform, refuses any
 digest other than the recorded one, unpacks it under `tmp/maude` and prints
 the path. The tests tagged `:maude` run only when `WOTEX_LAB_MAUDE` names an
-executable, and the coverage gate needs them, so run `mix check` with it set.
+executable. Run `mix check` with it set only when verifying that integration.
 The library itself never downloads or starts an engine.
 
 ```sh
@@ -118,15 +119,11 @@ claim that package is published. That base requirement brings core,
 Wotex Nx, Nx and telemetry only. Runtime, the HTTP and MQTT bindings,
 Directory, Continuum, Exqlite, Axon, EXLA and Explorer are optional profile packages a
 host adds explicitly; the Lab modules behind each seam compile only when that
-package is present. `mix check` includes an archive-consumer gate that resolves
-the base profile from built archives through a local Hex registry with Git
-absent from the PATH. It also extracts a declared Workbench source artifact,
-resolves the complete host closure from admitted archives, records the three
-required native artifact digests, compiles in production and executes the
-resulting release without Git. This is local candidate evidence, not package
-publication or a runnable OCI claim. Production rejects `WOTEX_PATH_DEPS` and
-uses Hex requirements. Publication and repository visibility are
-maintainer-owned.
+package is present. The everyday `mix check` gate exercises library behavior
+against local sibling checkouts without binding them to commit hashes.
+Production rejects `WOTEX_PATH_DEPS` and uses Hex requirements. Archive-consumer
+and Workbench-release checks are explicit release-readiness work. Publication
+and repository visibility are maintainer-owned.
 
 The same gate checks the deterministic CycloneDX 1.7 production SBOM at
 `docs/provenance/workbench-bom.cdx.json`. A separate API-surface gate records
@@ -176,7 +173,7 @@ of the lane and the notebook's own evidence status, `:executable` when every
 cell runs and `:partial` where an accepted lane still leaves
 documentation-only cells (`formal-control` and `nerves-and-mcp`).
 `test/wotex/lab/cookbook_test.exs` evaluates every Elixir cell of every
-notebook against the workspace cohort during `mix check`; the MQTT lane runs
+notebook when `WOTEX_LAB_INTEGRATION=1`; the MQTT lane runs
 against the scripted in-BEAM peer and, with `WOTEX_LAB_BROKER=1`, against a
 disposable `eclipse-mosquitto:2` broker. The `Mix.install` cells name
 published artifact requirements such as `{:wotex_lab, "~> 0.1.0"}`; those
@@ -338,11 +335,11 @@ partial. No entry claims artifact verification. The
 materials inspected. Package publication, standards conformance, model
 accuracy and stable API admission are separate claims.
 
-`mix check` runs compilation, formatting, strict Credo, tests with 95% line
-coverage, Doctor, Dialyzer, dependency audits, ExDoc, metadata checks and package
-content inspection. Separate base-consumer and Workbench-release gates resolve
-from local candidate archives with Git unavailable; they do not claim registry
-publication, OCI runtime, hosted or hardware evidence. See
+`mix check` runs warnings-as-errors compilation, formatting, and the default
+contract test suite. Source-cohort snapshots, external services, native tools,
+and cookbook execution are opt-in integration checks; set
+`WOTEX_LAB_INTEGRATION=1` when intentionally refreshing that evidence. Separate
+release gates do not claim registry publication, OCI runtime, hosted or hardware evidence. See
 [WLB.08](docs/specs/WLB.08-distribution-and-compatibility.md) for the stronger
 release gates.
 

@@ -7,6 +7,7 @@ defmodule Wotex.Lab.CookbookTest do
   alias Wotex.Lab.Error
   alias Wotex.Lab.Test.{CookbookRunner, MqttBroker}
 
+  @moduletag :integration
   @moduletag capture_log: true
 
   @root Path.expand("../../..", __DIR__)

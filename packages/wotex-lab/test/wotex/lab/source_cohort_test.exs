@@ -3,6 +3,8 @@ defmodule Wotex.Lab.SourceCohortTest do
 
   use ExUnit.Case, async: false
 
+  @moduletag :integration
+
   @root Path.expand("../../..", __DIR__)
 
   test "workspace check configuration requires the source guard only in workspace mode" do

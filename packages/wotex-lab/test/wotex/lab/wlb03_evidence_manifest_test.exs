@@ -3,6 +3,8 @@ defmodule Wotex.Lab.WLB03EvidenceManifestTest do
 
   use ExUnit.Case, async: true
 
+  @moduletag :integration
+
   alias Wotex.Lab.Evidence.{Digest, Record}
 
   @record_keys ~w(deadline_ms device_tensors effects excluded_count max_samples

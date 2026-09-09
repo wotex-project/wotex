@@ -3,6 +3,8 @@ defmodule Wotex.Lab.WLB09EvidenceManifestTest do
 
   use ExUnit.Case, async: true
 
+  @moduletag :integration
+
   alias Wotex.Lab.Evidence.{Digest, Record}
   alias Wotex.Lab.Formal.Model
 
