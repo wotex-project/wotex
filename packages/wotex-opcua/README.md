@@ -53,11 +53,19 @@ owns typed values, deadlines, bounded IPC, cancellation and Runtime integration.
 asyncua is solely an independent software peer in this target.
 
 [WOP.13](docs/specs/WOP.13-native-executable.md) fixes source digests, security,
-credit flow control, process ownership and executable acceptance. Its task APIs
-are specified work: `mix wotex.native.build --workspace ABS`,
+credit flow control, process ownership and executable acceptance.
+`mix wotex.native.build --workspace ABS` builds the packaged native bootstrap
+from verified static SDK/OpenSSL sources and writes a content-bound receipt.
+The qualified task is `mix wotex.opcua.native.build`; the shorter name is this
+root project's alias. CMake 3.20+, a C11 compiler, make, Perl, Python 3, archive
+utilities and curl 8.4.0+ are explicit build prerequisites. Failed builds retain
+diagnostic files and require a fresh workspace.
+
 `mix wotex.software.build --workspace ABS` and
-`mix wotex.software.run --workspace ABS`. Task names do not imply implemented
-commands. The native profile is incomplete until every required lane passes.
+`mix wotex.software.run --workspace ABS` remain specified work. Bootstrap build
+success does not establish a native Session or accept the native protocol profile.
+The full `mix check` gate includes a fresh native build and receipt fault tests in
+an owned temporary workspace; ordinary `mix test` excludes that download/build lane.
 
 ## Quick start
 

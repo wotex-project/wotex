@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.0
+  version: 1.0.1
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -55,6 +55,22 @@ issuer CRL and a leaf directly issued by a trusted self-signed CA. It is a
 purposefully limited trust profile; intermediate chains and certificate renewal
 are unsupported. Basic256Sha256 SignAndEncrypt is mandatory. No additional
 security policy or complete OPC UA conformance/certification claim is made.
+
+## Explicit native build tooling
+
+`mix wotex.opcua.native.build --workspace ABS` and the owning root alias
+`mix wotex.native.build` build the native dependency/bootstrap executable.
+The build pins source digests, static SDK/OpenSSL options and tool identities;
+its completion receipt binds downloaded archives, static libraries, executable
+and command logs. Reuse verifies every artifact and current tool-version output.
+The build guardian bounds command output, time and ordinary owned process groups.
+Its trusted compiler bootstrap has explicitly unverified descendant cleanup on
+failure. Source, workspace and tool failures cannot produce a completion receipt.
+
+The current C executable emits versioned readiness, exits on owner EOF and runs
+explicit SHA-256/SDK DateTime dependency self-tests. Requests fail closed until
+the native service owner is implemented. These are WOP-P00 build/ownership cells,
+not acceptance of WOP.13 secure Session, subscription or interoperability cells.
 
 ## Evidence and compatibility
 

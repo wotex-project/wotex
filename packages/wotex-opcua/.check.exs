@@ -8,7 +8,13 @@
     {:unused_deps, "mix deps.unlock --check-unused"},
     {:credo, "mix credo --strict"},
     {:ex_unit, false},
-    {:test, command: "mix coveralls", env: %{"MIX_ENV" => "test"}},
+    {:test,
+     command: "mix coveralls",
+     env: %{
+       "MIX_ENV" => "test",
+       "WOTEX_REQUIRE_NATIVE_BUILD" => "1",
+       "WOTEX_NATIVE_BUILD_WORKSPACE" => Path.join(System.tmp_dir!(), "wotex-opcua-check")
+     }},
     {:hex_audit, "mix hex.audit"},
     {:mix_audit, "mix deps.audit"},
     {:doctor, "mix doctor --summary"},

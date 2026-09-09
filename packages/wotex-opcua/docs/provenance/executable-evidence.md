@@ -10,7 +10,12 @@ certification is inferred from unit coverage.
 `WOTEX_PATH_DEPS=1 mix check` runs compile warnings-as-errors, formatting, strict
 Credo, unit/property tests and minimum 95% coverage, Dialyzer, Doctor, ExDoc,
 dependency audit, Hex packaging, unpacked out-of-tree compilation and the
-Application-free structural check. Runtime path dependencies require the explicit
+Application-free structural check. The native build test is required by this
+gate: it downloads the pinned archives, executes the static build and CTest, and
+checks receipt reuse/tampering in an owned temporary workspace. The gate requires
+CMake 3.20+, a C11 compiler, make, Perl, Python 3, archive utilities and curl 8.4.0+.
+`mix test` excludes this lane; selecting `native_build` without its explicit
+`WOTEX_NATIVE_BUILD_WORKSPACE` fails. Runtime path dependencies require the explicit
 switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
@@ -42,11 +47,17 @@ configured peer and must fail if that peer or expected response is missing.
 
 ## Evidence identities
 
-The WOP.13 native helper, credit protocol, 100 ns metadata and independent
-asyncua/native workflow have no executed evidence in this record. Their
-`mix wotex.native.build`, `mix wotex.software.build` and
-`mix wotex.software.run` entry points are specified implementation work.
-The command above exercises the current Python runtime adapter, not that target.
+The native build tests under `test/wotex/opcua/native/` cover source admission,
+workspace ownership, guarded commands, static build, dependency self-test and
+receipt validation. Each completed build records separate source, build-code,
+tool, option and artifact hashes in `wotex-native-build.json`; its command logs
+are also hash-bound. The executable's one-tick SDK check is a dependency test,
+not complete DataValue metadata or wire interoperability evidence.
+
+The native secure Session, credit protocol, complete 100 ns metadata and
+independent asyncua/native workflow remain required implementation. Software
+build/run entry points remain specified work. The interoperability command above
+exercises the current Python runtime adapter.
 
 The hashes identify reviewed test sources, not an immutable release or a promise
 that all future test executions will pass. The mandatory gate and optional peer

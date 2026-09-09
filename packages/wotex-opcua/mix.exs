@@ -92,6 +92,7 @@ defmodule WotexOPCUA.MixProject do
   defp aliases do
     [
       setup: ["deps.get", "deps.compile"],
+      "wotex.native.build": "wotex.opcua.native.build",
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
       "test.cover": ["coveralls"],
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"

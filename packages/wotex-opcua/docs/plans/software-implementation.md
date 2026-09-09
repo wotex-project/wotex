@@ -15,7 +15,7 @@ binding implementation work, not a changelog.
 
 | Package | Implementation and acceptance | Executable destinations |
 | --- | --- | --- |
-| WOP-P00 | X01/X02: pinned SDK/OpenSSL source admission, native Mix build task, package assets, versioned ready and digest validation; Opex reuse obeys the reviewed metadata/security boundary | native_build_test.exs; test/native/build_test.c; X01/X02 manifest/failure cases |
+| WOP-P00 | X01/X02: pinned SDK/OpenSSL source admission, native Mix build task, package assets, versioned ready and digest validation; Opex reuse obeys the reviewed metadata/security boundary | native/build_test.exs, native/build_fault_test.exs, native/workspace_test.exs; native host ready/digest/EOF tests; X01/X02 manifest/failure cases |
 | WOP-P01 | S01/N02/N05: typed pure Variant/DataValue/ExpandedNodeId/QualifiedName/LocalizedText/reference codecs, exact signed ticks and array/null/opaque distinctions; lossless JSON integer/negative-zero IPC | typed_values_test.exs; test/native/value_test.c; WOP-F01..F13 and X-F01..F16 |
 | WOP-P02 | S02/X03/X04: persistent native Session activation, explicit one-shot native projection, server/local namespace mapping, complete framed IPC, credit control, bounded async requests and cancellation/EOF cleanup | persistent_bridge_test.exs; test/native/session_test.c; X-F10..F23/X-F49..F57 plus split/coalescing/malformed/partial-open matrix |
 | WOP-P03 | S03: all three SignAndEncrypt policies and all three user-token modes, pin/SAN/URI/CRL/key validation, immutable trust, no downgrade/reconnect/replay | test/native/security_test.c; test/interop/security_fault_test.exs; X-F30..F47 |

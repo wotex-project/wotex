@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.0.1
+  version: 1.0.2
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -86,7 +86,11 @@ manifest. Unknown options, relative paths, a nonempty unrelated directory and
 manifest/hash mismatch fail without changing that directory. No Git remote is
 configured. The source archives are the literal URLs/hashes in X01's manifest.
 Downloads use finite time and byte limits (120 seconds and 100 MiB per archive).
-Archive reuse requires a fresh digest check.
+Archive reuse requires a fresh digest check. The download tool is curl 8.4.0 or
+later: its [size limit](https://curl.se/docs/manpage.html#--max-filesize) also
+bounds transfers whose initial size is unknown. Curl configuration and inherited
+proxy/credential environment are disabled; explicit HTTPS verification remains
+required. Download options use HTTPS-only redirects and no automatic retry.
 
 OpenSSL is configured with `no-shared no-tests no-apps no-module` and an explicit
 workspace prefix. The build uses the default provider compiled into libcrypto;
