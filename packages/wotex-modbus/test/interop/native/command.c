@@ -75,6 +75,29 @@ static int nonblocking(int fd) {
     return flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0 ? -1 : 0;
 }
 
+static int kill_and_reap(pid_t child, int64_t cleanup_ms) {
+    int64_t deadline = monotonic_ms();
+    struct timespec delay = {0, 1000000};
+    if (kill(child, SIGKILL) && errno != ESRCH) return -1;
+    if (deadline < 0) return -1;
+    deadline += cleanup_ms;
+    for (;;) {
+        int64_t now;
+        pid_t result = waitpid(child, NULL, WNOHANG);
+        if (result == child) return 0;
+        if (result < 0 && errno != EINTR) return -1;
+        now = monotonic_ms();
+        if (now < 0 || now >= deadline) return -1;
+        (void)nanosleep(&delay, NULL);
+    }
+}
+
+static int release_group(int fd) {
+    ssize_t result;
+    do result = write(fd, "G", 1); while (result < 0 && errno == EINTR);
+    return result == 1 ? 0 : -1;
+}
+
 static void stop(struct state *state, int reason, int64_t now) {
     if (reason && !state->failure) state->failure = reason;
     if (state->stopping) return;
@@ -230,48 +253,78 @@ static int advisory_lock(const char *path) {
 int main(int argc, char **argv) {
     unsigned long long timeout, output, cleanup;
     if (argc == 3 && !strcmp(argv[1], "--lock")) return advisory_lock(argv[2]);
-    int pipes[2];
+    int pipes[2], group_ready[2];
     struct state state;
     struct sigaction action;
+    sigset_t signal_mask;
     int result;
     if (argc < 6 || number(argv[1], 600000, &timeout) ||
         number(argv[2], 16777216, &output) || number(argv[3], 5000, &cleanup) ||
         argv[4][0] != '/' || argv[5][0] != '/') return 126;
     memset(&action, 0, sizeof(action));
     sigemptyset(&action.sa_mask);
+    action.sa_handler = SIG_DFL;
+    if (sigaction(SIGCHLD, &action, NULL) || sigemptyset(&signal_mask) ||
+        sigprocmask(SIG_SETMASK, &signal_mask, NULL)) return 126;
     action.sa_handler = signal_owner;
     if (sigaction(SIGTERM, &action, NULL) || sigaction(SIGINT, &action, NULL) ||
         sigaction(SIGHUP, &action, NULL)) return 126;
     action.sa_handler = SIG_IGN;
     if (sigaction(SIGPIPE, &action, NULL) || pipe(pipes)) return 126;
+    if (pipe(group_ready)) {
+        close(pipes[0]);
+        close(pipes[1]);
+        return 126;
+    }
     memset(&state, 0, sizeof(state));
     state.child = fork();
-    if (state.child < 0) return 126;
+    if (state.child < 0) {
+        close(group_ready[0]);
+        close(group_ready[1]);
+        close(pipes[0]);
+        close(pipes[1]);
+        return 126;
+    }
     if (state.child == 0) {
+        unsigned char ready;
+        ssize_t ready_size;
         int null_input;
+        close(group_ready[1]);
         action.sa_handler = SIG_DFL;
         (void)sigaction(SIGTERM, &action, NULL);
         (void)sigaction(SIGINT, &action, NULL);
         (void)sigaction(SIGHUP, &action, NULL);
         (void)sigaction(SIGPIPE, &action, NULL);
-        if (setpgid(0, 0) || chdir(argv[4])) _exit(126);
+        do ready_size = read(group_ready[0], &ready, 1); while (ready_size < 0 && errno == EINTR);
+        close(group_ready[0]);
+        if (ready_size != 1 || ready != 'G' || getpgrp() != getpid()) _exit(126);
+        if (chdir(argv[4])) _exit(126);
         null_input = open("/dev/null", O_RDONLY);
-        if (null_input < 0 || dup2(null_input, STDIN_FILENO) < 0 ||
-            dup2(pipes[1], STDOUT_FILENO) < 0 || dup2(pipes[1], STDERR_FILENO) < 0) _exit(126);
+        if (null_input < 0) _exit(126);
+        if (dup2(null_input, STDIN_FILENO) < 0 || dup2(pipes[1], STDOUT_FILENO) < 0 ||
+            dup2(pipes[1], STDERR_FILENO) < 0) _exit(126);
         close(null_input);
         close(pipes[0]);
         close(pipes[1]);
         execv(argv[5], &argv[5]);
         _exit(126);
     }
+    close(group_ready[0]);
+    if ((setpgid(state.child, state.child) && getpgid(state.child) != state.child) ||
+        release_group(group_ready[1])) {
+        close(group_ready[1]);
+        close(pipes[0]);
+        close(pipes[1]);
+        return kill_and_reap(state.child, (int64_t)cleanup) ? 129 : 126;
+    }
+    close(group_ready[1]);
     close(pipes[1]);
     state.input = pipes[0];
     state.owner_live = 1;
     state.limit = (size_t)output;
     state.cleanup_ms = (int64_t)cleanup;
     state.deadline = monotonic_ms() + (int64_t)timeout;
-    /* Parent and child both establish the group; the child checks its own call. */
-    (void)setpgid(state.child, state.child);
+    /* The child cannot inspect resources or exec until the parent owns its group. */
     if (nonblocking(STDIN_FILENO) || nonblocking(STDOUT_FILENO) || nonblocking(state.input)) {
         (void)kill(-state.child, SIGKILL);
         result = 126;

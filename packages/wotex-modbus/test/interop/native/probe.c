@@ -14,6 +14,18 @@ static void forever(void) {
 }
 
 int main(int argc, char **argv) {
+    if (argc >= 3 && !strcmp(argv[1], "--inherited")) {
+        struct sigaction action;
+        sigset_t mask;
+        memset(&action, 0, sizeof(action));
+        sigemptyset(&action.sa_mask);
+        action.sa_handler = SIG_IGN;
+        action.sa_flags = SA_NOCLDWAIT;
+        sigfillset(&mask);
+        if (sigaction(SIGCHLD, &action, NULL) || sigprocmask(SIG_SETMASK, &mask, NULL)) return 3;
+        execv(argv[2], &argv[2]);
+        return 3;
+    }
     if (argc == 3 && !strcmp(argv[1], "--lock")) {
         struct timespec delay = {0, 50000000};
         char byte;
@@ -32,6 +44,17 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (argc != 2) return 2;
+    if (!strcmp(argv[1], "signals")) {
+        struct sigaction action;
+        sigset_t mask;
+        if (sigaction(SIGCHLD, NULL, &action) || action.sa_handler != SIG_DFL ||
+            (action.sa_flags & SA_NOCLDWAIT) || sigprocmask(SIG_SETMASK, NULL, &mask)) return 5;
+        if (sigismember(&mask, SIGCHLD) || sigismember(&mask, SIGTERM) ||
+            sigismember(&mask, SIGINT) || sigismember(&mask, SIGHUP) ||
+            sigismember(&mask, SIGPIPE) || getpgrp() != getpid()) return 5;
+        puts("signals-reset");
+        return 0;
+    }
     if (!strcmp(argv[1], "output")) {
         puts("stdout");
         fputs("stderr\n", stderr);

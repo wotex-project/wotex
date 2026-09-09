@@ -31,8 +31,16 @@ compiler during explicit helper build and native fixture unit tests. No native
 SDK or protocol peer is built by the ordinary unit suite.
 
 `probe.c` generates real output, exit, timeout and process-group faults.
-`check.c` runs eight standalone cases for native sanitizer execution, including
+`check.c` runs ten standalone cases plus 200 short commands for native sanitizer
+execution, including
 a stopped child whose actual exit remains owned until its command deadline.
+The parent establishes and verifies a child group before a one-byte barrier
+releases the child. Failed admission kills and reaps only the unreleased direct
+PID under the existing cleanup deadline. Inherited SIGCHLD auto-reaping and
+blocked signals are reset before fork. The fault-linkage binary built with
+`-Dsetpgid=wmb_fault_setpgid` and `group_fault.c` refuses parent admission; its
+child must never execute. Pass `check ABS_COMMAND ABS_PROBE ABS_FAULT_COMMAND`
+to run the native corpus. The normal executable contains no fault override.
 `test/software/command_test.exs` additionally checks actual BEAM-owner death,
 suspended output consumers, exact descendant termination and malformed input.
 The freshly compiled guardian and producer execute one bounded ten-second

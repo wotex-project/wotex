@@ -12,18 +12,26 @@ defmodule Wotex.Modbus.SoftwareCommandTest do
     on_exit(fn -> File.rm_rf!(directory) end)
     compiler = System.find_executable("cc") || flunk("native fixture tests require a C11 compiler")
 
-    for name <- ["command", "probe"] do
+    for name <- ["command", "probe", "command_fault"] do
       args = [
         "-std=c11",
         "-O1",
         "-g",
         "-Wall",
         "-Wextra",
-        "-Werror",
-        Path.join(@native, name <> ".c"),
-        "-o",
-        Path.join(directory, name)
+        "-Werror"
       ]
+
+      sources =
+        if name == "command_fault",
+          do: [
+            "-Dsetpgid=wmb_fault_setpgid",
+            Path.join(@native, "command.c"),
+            Path.join(@native, "group_fault.c")
+          ],
+          else: [Path.join(@native, name <> ".c")]
+
+      args = args ++ sources ++ ["-o", Path.join(directory, name)]
 
       port =
         Port.open({:spawn_executable, compiler}, [
@@ -53,6 +61,39 @@ defmodule Wotex.Modbus.SoftwareCommandTest do
     assert output =~ "stdout\n"
     assert output =~ "stderr\n"
     assert {"", 7} = execute(context, "exit")
+  end
+
+  test "WMB-N02 WMB-N03 inherited masks and child auto-reaping are reset before execution",
+       context do
+    assert {"signals-reset\n", 0} = execute(context, "signals", inherited: true)
+    port = launch(context, "hang", inherited: true)
+    assert_receive {^port, {:data, output}}, 1000
+    {:os_pid, guardian_pid} = Port.info(port, :os_pid)
+
+    assert {_, 0} =
+             System.cmd("/bin/kill", ["-TERM", Integer.to_string(guardian_pid)],
+               env: empty_environment()
+             )
+
+    assert {"", 127} = drain(port)
+    assert_dead(pids(output))
+  end
+
+  test "WMB-N02 WMB-N03 repeated short children retain output and their exact exit", context do
+    for iteration <- 1..100 do
+      assert {"signals-reset\n", 0} =
+               execute(context, "signals", inherited: rem(iteration, 2) == 0)
+
+      assert {"", 7} = execute(context, "exit", inherited: rem(iteration, 2) == 1)
+    end
+  end
+
+  test "WMB-N02 WMB-N03 failed parent group admission never executes the child", context do
+    denied = Map.put(context, :guardian, Path.join(context.directory, "command_fault"))
+
+    for _ <- 1..32 do
+      assert {"", 126} = execute(denied, "signals", inherited: true)
+    end
   end
 
   test "WMB-N02 WMB-N03 missing executable and invalid limits fail", context do
@@ -302,7 +343,12 @@ defmodule Wotex.Modbus.SoftwareCommandTest do
       mode
     ]
 
-    Port.open({:spawn_executable, context.guardian}, [
+    {executable, arguments} =
+      if Keyword.get(options, :inherited, false),
+        do: {context.probe, ["--inherited", context.guardian | arguments]},
+        else: {context.guardian, arguments}
+
+    Port.open({:spawn_executable, executable}, [
       :binary,
       :exit_status,
       :stderr_to_stdout,

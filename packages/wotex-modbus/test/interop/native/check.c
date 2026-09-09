@@ -13,7 +13,7 @@
 /* Standalone sanitizer lane for the real guardian and fault producer. */
 static void check(const char *guardian, const char *probe, const char *mode,
                   const char *timeout, const char *limit, int owner_eof,
-                  int expected, size_t expected_length) {
+                  int expected, size_t expected_length, int inherited) {
     int owner[2], output[2], status = 0;
     size_t length = 0;
     char bytes[8192];
@@ -25,7 +25,10 @@ static void check(const char *guardian, const char *probe, const char *mode,
         assert(dup2(owner[0], STDIN_FILENO) >= 0);
         assert(dup2(output[1], STDOUT_FILENO) >= 0);
         close(owner[0]); close(owner[1]); close(output[0]); close(output[1]);
-        execl(guardian, guardian, timeout, limit, "400", "/tmp", probe, mode, (char *)NULL);
+        if (inherited)
+            execl(probe, probe, "--inherited", guardian, timeout, limit, "400", "/tmp", probe, mode, (char *)NULL);
+        else
+            execl(guardian, guardian, timeout, limit, "400", "/tmp", probe, mode, (char *)NULL);
         _exit(126);
     }
     close(owner[0]); close(output[1]);
@@ -49,6 +52,7 @@ static void check(const char *guardian, const char *probe, const char *mode,
         abort();
     }
     if (expected_length) assert(length == expected_length);
+    if (expected == 126) assert(length == 0);
 }
 
 static pid_t lock_child(const char *guardian, const char *path, int *owner_fd, int *output_fd) {
@@ -90,15 +94,21 @@ static void locks(const char *guardian) {
 }
 
 int main(int argc, char **argv) {
-    assert(argc == 3);
-    check(argv[1], argv[2], "output", "1000", "65536", 0, 0, 14);
-    check(argv[1], argv[2], "exit", "1000", "65536", 0, 7, 0);
-    check(argv[1], argv[2], "hang", "80", "65536", 0, 124, 0);
-    check(argv[1], argv[2], "stopped", "100", "65536", 0, 124, 0);
-    check(argv[1], argv[2], "background", "1000", "65536", 0, 0, 0);
-    check(argv[1], argv[2], "flood", "1000", "4097", 0, 125, 4097);
-    check(argv[1], argv[2], "hang", "1000", "65536", 1, 127, 0);
+    assert(argc == 4);
+    check(argv[1], argv[2], "output", "1000", "65536", 0, 0, 14, 0);
+    check(argv[1], argv[2], "exit", "1000", "65536", 0, 7, 0, 0);
+    check(argv[1], argv[2], "hang", "80", "65536", 0, 124, 0, 0);
+    check(argv[1], argv[2], "stopped", "100", "65536", 0, 124, 0, 0);
+    check(argv[1], argv[2], "background", "1000", "65536", 0, 0, 0, 0);
+    check(argv[1], argv[2], "flood", "1000", "4097", 0, 125, 4097, 0);
+    check(argv[1], argv[2], "hang", "1000", "65536", 1, 127, 0, 0);
     locks(argv[1]);
-    puts("WMB-N01 WMB-N02 WMB-N03 native guardian: 8 cases passed");
+    check(argv[1], argv[2], "signals", "1000", "65536", 0, 0, 14, 1);
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        check(argv[1], argv[2], "signals", "1000", "65536", 0, 0, 14, iteration % 2);
+        check(argv[1], argv[2], "exit", "1000", "65536", 0, 7, 0, !(iteration % 2));
+    }
+    check(argv[3], argv[2], "signals", "1000", "65536", 0, 126, 0, 1);
+    puts("WMB-N01 WMB-N02 WMB-N03 native guardian: 10 cases and 200 short commands passed");
     return 0;
 }
