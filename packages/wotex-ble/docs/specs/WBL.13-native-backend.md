@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.15
+  version: 1.0.16
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -704,3 +704,54 @@ envelope, actual GetAll calls, observed unique-sender releases and Disconnect
 calls. The fixed missing-reply case uses a 100 ms operation deadline. These
 cases are private D-Bus component evidence; the complete BEAM/Port health route
 requires the first-party host and artifact admission.
+
+
+## Native discovery page ownership
+
+Discovery pages expose the validated, ordered snapshot of WBL-B04. A request has
+only optional `cursor` (null or 32 lowercase hexadecimal characters) and `limit`
+(integer 1..64, default 64). The host validates the cursor against its own bounded
+ledger before a D-Bus refresh. A continuation uses its immutable generation;
+metadata invalidation fails it before I/O. A request without a cursor obtains a
+stable current snapshot before constructing its first page.
+
+The owner retains at most 1,024 token records, each binding one generation and
+nonzero offset. Repeated requests for that position reuse the token. At capacity,
+it evicts the lowest generation and then the lowest offset. It never evicts a
+current-generation token; a snapshot contains at most 1,024 characteristics and
+therefore at most 1,023 continuation offsets. Known retired-generation tokens fail
+`stale_discovery`. Unknown, evicted or foreign tokens fail `invalid_cursor`, even
+when the current snapshot is stale. Both errors require the caller to restart
+without a cursor. Generation counters cannot roll over or decrease.
+
+The host explicitly supplies 16 bytes from the operating system random source for
+each token; tokens are opaque identifiers, not credentials. The pure paging
+component receives this source as a callback. Invalid source output or eight
+consecutive collisions fails `resource_limit` without evicting any token. No
+lifetime count or unbounded issued-token set is retained.
+
+A page contains `generation`, ordered `characteristics`, and a nullable next
+`cursor`. It admits at most the requested count. Each candidate is encoded in the
+complete C07 success envelope with the actual request ID, including its newline,
+so the 131,072-byte and JSON structure limits apply to the aggregate reply. A
+smaller page may be returned to fit these bounds. If one characteristic cannot
+fit, the result is `response_limit`; no token is issued for the failed page.
+A continuation offset outside the current immutable snapshot is an invalid
+response. Page construction does not perform D-Bus I/O or allocate a second full
+snapshot.
+
+The `discovery_page` vectors WBL-B-F56 through WBL-B-F58 supply exact
+characteristics and ordered request events. Each event names its result; a cursor
+object `{"result": "name"}` references that earlier result's cursor. All other
+parameters are passed unchanged to the pure request constructor. The result
+projection contains each page or fixed error, retained token count and random
+source call count. The deterministic fixture source emits increasing uint64
+integers as zero-padded, 32-character lowercase hexadecimal tokens.
+
+The `discovery_cursor_ledger` vectors WBL-B-F59 and WBL-B-F60 issue the first
+one-characteristic page of a supplied two-characteristic snapshot for each
+generation 1 through `generations`. Each snapshot's characteristic generation
+matches that iteration. The input then supplies exact cursor lookups and stale
+flags. The projection contains the lookup offset or error and the same ledger
+and random-source counters. These vectors execute production paging and token
+ownership; they do not imply complete native host or BEAM discovery routing.

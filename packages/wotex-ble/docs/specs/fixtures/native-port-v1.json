@@ -2464,6 +2464,459 @@
           "disconnect_calls": 0
         }
       }
+    },
+    {
+      "id": "WBL-B-F56",
+      "requirements": [
+        "WBL-B04",
+        "WBL-B02"
+      ],
+      "operation": "discovery_page",
+      "status": "executed",
+      "input": {
+        "characteristics": [
+          {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char0",
+            "handle": 1,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          },
+          {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char1",
+            "handle": 2,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          }
+        ],
+        "events": [
+          {
+            "name": "first",
+            "parameters": {
+              "limit": 1
+            },
+            "generation": 1,
+            "stale": false
+          },
+          {
+            "name": "same",
+            "parameters": {
+              "limit": 1
+            },
+            "generation": 1,
+            "stale": false
+          },
+          {
+            "name": "last",
+            "parameters": {
+              "cursor": {
+                "result": "first"
+              },
+              "limit": 1
+            },
+            "generation": 1,
+            "stale": false
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "results": [
+            {
+              "generation": 1,
+              "characteristics": [
+                {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char0",
+                  "handle": 1,
+                  "flags": [
+                    "read",
+                    "notify"
+                  ],
+                  "generation": 1
+                }
+              ],
+              "cursor": "00000000000000000000000000000001"
+            },
+            {
+              "generation": 1,
+              "characteristics": [
+                {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char0",
+                  "handle": 1,
+                  "flags": [
+                    "read",
+                    "notify"
+                  ],
+                  "generation": 1
+                }
+              ],
+              "cursor": "00000000000000000000000000000001"
+            },
+            {
+              "generation": 1,
+              "characteristics": [
+                {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char1",
+                  "handle": 2,
+                  "flags": [
+                    "read",
+                    "notify"
+                  ],
+                  "generation": 1
+                }
+              ],
+              "cursor": null
+            }
+          ],
+          "retained": 1,
+          "random_calls": 1
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F57",
+      "requirements": [
+        "WBL-B04",
+        "WBL-B02"
+      ],
+      "operation": "discovery_page",
+      "status": "executed",
+      "input": {
+        "characteristics": [
+          {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char0",
+            "handle": 1,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          },
+          {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char1",
+            "handle": 2,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          }
+        ],
+        "events": [
+          {
+            "name": "first",
+            "parameters": {
+              "limit": 1
+            },
+            "generation": 1,
+            "stale": false
+          },
+          {
+            "name": "dirty",
+            "parameters": {
+              "cursor": {
+                "result": "first"
+              }
+            },
+            "generation": 1,
+            "stale": true
+          },
+          {
+            "name": "retired",
+            "parameters": {
+              "cursor": {
+                "result": "first"
+              }
+            },
+            "generation": 2,
+            "stale": false
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "results": [
+            {
+              "generation": 1,
+              "characteristics": [
+                {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char0",
+                  "handle": 1,
+                  "flags": [
+                    "read",
+                    "notify"
+                  ],
+                  "generation": 1
+                }
+              ],
+              "cursor": "00000000000000000000000000000001"
+            },
+            {
+              "error": "stale_discovery"
+            },
+            {
+              "error": "stale_discovery"
+            }
+          ],
+          "retained": 1,
+          "random_calls": 1
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F58",
+      "requirements": [
+        "WBL-B04",
+        "WBL-B02"
+      ],
+      "operation": "discovery_page",
+      "status": "executed",
+      "input": {
+        "characteristics": [
+          {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char0",
+            "handle": 1,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          },
+          {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char1",
+            "handle": 2,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          }
+        ],
+        "events": [
+          {
+            "name": "foreign",
+            "parameters": {
+              "cursor": "ffffffffffffffffffffffffffffffff"
+            },
+            "generation": 1,
+            "stale": true
+          },
+          {
+            "name": "malformed",
+            "parameters": {
+              "cursor": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+            },
+            "generation": 1,
+            "stale": false
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "results": [
+            {
+              "error": "invalid_cursor"
+            },
+            {
+              "error": "invalid_cursor"
+            }
+          ],
+          "retained": 0,
+          "random_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F59",
+      "requirements": [
+        "WBL-B04",
+        "WBL-B02"
+      ],
+      "operation": "discovery_cursor_ledger",
+      "status": "executed",
+      "input": {
+        "characteristics": [
+          {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char0",
+            "handle": 1,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          },
+          {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char1",
+            "handle": 2,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          }
+        ],
+        "generations": 1026,
+        "queries": [
+          {
+            "cursor": "00000000000000000000000000000001",
+            "stale": false
+          },
+          {
+            "cursor": "00000000000000000000000000000002",
+            "stale": true
+          },
+          {
+            "cursor": "00000000000000000000000000000003",
+            "stale": false
+          },
+          {
+            "cursor": "00000000000000000000000000000402",
+            "stale": false
+          },
+          {
+            "cursor": "00000000000000000000000000000402",
+            "stale": true
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "results": [
+            {
+              "error": "invalid_cursor"
+            },
+            {
+              "error": "invalid_cursor"
+            },
+            {
+              "error": "stale_discovery"
+            },
+            {
+              "offset": 1
+            },
+            {
+              "error": "stale_discovery"
+            }
+          ],
+          "retained": 1024,
+          "random_calls": 1026
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F60",
+      "requirements": [
+        "WBL-B04",
+        "WBL-B02"
+      ],
+      "operation": "discovery_cursor_ledger",
+      "status": "executed",
+      "input": {
+        "characteristics": [
+          {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char0",
+            "handle": 1,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          },
+          {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char1",
+            "handle": 2,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          }
+        ],
+        "generations": 2000,
+        "queries": [
+          {
+            "cursor": "000000000000000000000000000003d0",
+            "stale": false
+          },
+          {
+            "cursor": "000000000000000000000000000003d1",
+            "stale": false
+          },
+          {
+            "cursor": "000000000000000000000000000007d0",
+            "stale": false
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "results": [
+            {
+              "error": "invalid_cursor"
+            },
+            {
+              "error": "stale_discovery"
+            },
+            {
+              "offset": 1
+            }
+          ],
+          "retained": 1024,
+          "random_calls": 2000
+        }
+      }
     }
   ],
   "executed_cases": [

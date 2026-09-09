@@ -3,14 +3,14 @@ spec:
   id: WBL.11
   title: "Standalone central and protocol workflows"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-ble
   updated: 2026-09-09
 ---
 
 # WBL.11 Standalone central and protocol workflows
 
-Specification version: `1.1.0`. Status: planned target, not implemented capability.
+Specification version: `1.1.1`. Status: planned target, not implemented capability.
 Requires [WBL.00](WBL.00-library-contract.md) and
 [WBL.10](WBL.10-software-contract.md). The baseline remains documented in
 [WBL.02](WBL.02-implemented-profile.md).
@@ -50,9 +50,16 @@ and `generation`. Sort the snapshot by service path then characteristic path;
 keep unknown flags as bounded strings, never create atoms. Address resolution
 requires UUID associations even when an object path is supplied. `Address.new/1`
 adds optional `object_path` and `generation`; a generation from discovery must
-match. An absent handle is not handle zero. Cursors are session/generation-bound,
-expire on any GATT topology change, and fail `:stale_discovery` rather than silently
-continuing against a new snapshot. A foreign cursor is `:invalid_cursor`.
+match. An absent handle is not handle zero. Cursors are 32 lowercase hexadecimal
+characters, bound to the session and discovery generation. The native owner retains
+at most 1,024 issued tokens. Requests for the same generation and offset reuse the
+same token. Admission at capacity evicts the lowest retained generation, then its
+lowest offset; current-generation tokens are never evicted. Known tokens from a
+retired or invalidated generation fail `:stale_discovery`. Unknown, evicted and
+foreign tokens fail `:invalid_cursor` before D-Bus I/O. Any GATT topology change
+invalidates the current generation immediately. After either terminal cursor error,
+the caller restarts discovery without a cursor. There is no automatic continuation
+against a different snapshot.
 
 Value codecs are the finite S01 set; `Value.encode(value, type, options)` and
 `Value.decode(bytes, type, options)` return `{:ok, result}` or Error. `:boolean`

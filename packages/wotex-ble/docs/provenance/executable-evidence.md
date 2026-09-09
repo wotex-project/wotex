@@ -405,3 +405,16 @@ skipping of unknown properties, permission errors, malformed replies, deadline e
 late replies and explicit cancellation. No borrowed case issues Disconnect.
 The cases use the actual libdbus operation/lifecycle code; they do not establish
 complete native-host routing or a BlueZ/ATT interoperability result.
+
+
+## Native bounded discovery pages
+
+`test/wotex/ble/native_pages_test.exs` compiles `test/native/pages_test.cpp` and
+executes the production `NativePages` component through the owned command
+fixture. WBL-B-F56 through WBL-B-F60 provide exact page, invalidation, foreign
+cursor, eviction and 2,000-generation ledger projections. Other native cases
+cover complete ordering across 1,024 characteristics, aggregate line and JSON
+node limits, forged options, generation regression and exhaustion boundaries,
+repeat-position token reuse, eight-collision rejection and random-source failure
+without ledger mutation. The page component performs no D-Bus I/O. Complete
+native host routing and the BEAM discovery API remain separate proof obligations.
