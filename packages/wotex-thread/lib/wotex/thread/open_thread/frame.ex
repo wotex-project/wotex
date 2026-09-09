@@ -21,6 +21,7 @@ defmodule Wotex.Thread.OpenThread.Frame do
     "dataset_required" => :dataset_required,
     "creation_not_allowed" => :creation_not_allowed,
     "dataset_exists" => :dataset_exists,
+    "management_timeout" => :management_timeout,
     "formation_timeout" => :formation_timeout,
     "busy" => :busy,
     "storage_unavailable" => :storage_unavailable,
@@ -151,6 +152,11 @@ defmodule Wotex.Thread.OpenThread.Frame do
       _ -> :invalid
     end
   end
+
+  defp value(%{"accepted" => true, "effective" => "not_verified"} = result, operation)
+       when map_size(result) == 2 and
+              operation in ["management_active_set", "management_pending_set"],
+       do: {:ok, %{accepted: true, effective: :not_verified}}
 
   defp value(nil, "validate_dataset"), do: {:ok, nil}
 

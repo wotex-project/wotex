@@ -54,6 +54,10 @@ for line in sys.stdin:
             else:
                 state.update(ipv6_enabled=True,thread_enabled=True,role='leader')
                 reply(request,state)
+        elif operation in ['management_active_set','management_pending_set']:
+            if mode=='error':write(dict(version=1,id=request['id'],ok=False,error=dict(code='remote_error',status=37)))
+            elif mode=='management_bad':reply(request,dict(accepted=True,effective='verified'))
+            else:reply(request,dict(accepted=True,effective='not_verified'))
         elif operation=='set_enabled':
             if mode=='error':write(dict(version=1,id=request['id'],ok=False,error=dict(code='remote_error',status=253)))
             else:

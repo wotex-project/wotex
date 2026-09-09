@@ -183,7 +183,13 @@ about all network participants. No implicit enable is caused by read/validate.
 
 `management_active_set/3` and `management_pending_set/3` accept the validated
 Dataset plus optional extra TLVs (combined 254-byte ceiling, no duplicates) and
-timeout. Use `otDatasetSendMgmtActiveSet` / `otDatasetSendMgmtPendingSet` with
+timeout. The update argument is exactly `%{dataset: Dataset.t()}` or
+`%{dataset: Dataset.t(), extra_tlvs: [{0..255, binary()}]}`. Validate and append
+extras in supplied order before encoding; duplicate types across both sources
+fail. C07 parameters contain exactly the resulting `dataset` typed bytes
+envelope, and its success contains exactly `accepted: true` and
+`effective: "not_verified"`. Both SDK paths validate the entire merged Dataset
+before submission. Use `otDatasetSendMgmtActiveSet` / `otDatasetSendMgmtPendingSet` with
 callback/context. An immediate `OT_ERROR_NONE` means submitted, not accepted.
 Complete only on callback acceptance/rejection/timeout. Callback acceptance means
 the management exchange was accepted; it does not prove network-wide adoption

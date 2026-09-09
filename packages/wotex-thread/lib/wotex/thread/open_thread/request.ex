@@ -33,10 +33,24 @@ defmodule Wotex.Thread.OpenThread.Request do
          do: {:ok, {"form_network", %{dataset: envelope}}}
   end
 
+  def encode(%{type: type, update: update} = request)
+      when map_size(request) == 2 and type in [:management_active_set, :management_pending_set] do
+    with {:ok, parameters} <- DatasetWire.management(update),
+         do: {:ok, {Atom.to_string(type), parameters}}
+  end
+
   def encode(_), do: {:error, Error.new(:invalid_message)}
 
   @doc false
   @spec mutation?(term()) :: boolean()
-  def mutation?(operation) when operation in ["set_enabled", "form_network"], do: true
+  def mutation?(operation)
+      when operation in [
+             "set_enabled",
+             "form_network",
+             "management_active_set",
+             "management_pending_set"
+           ],
+      do: true
+
   def mutation?(_), do: false
 end

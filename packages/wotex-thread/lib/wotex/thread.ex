@@ -121,6 +121,18 @@ defmodule Wotex.Thread do
   def form_network(session, dataset, timeout),
     do: native_request(session, %{type: :form_network, dataset: dataset}, timeout)
 
+  @doc "Submits an Active Dataset update and waits for acceptance, without asserting effectiveness."
+  @spec management_active_set(term(), term(), term()) ::
+          {:ok, %{accepted: true, effective: :not_verified}} | {:error, Error.t()}
+  def management_active_set(session, update, timeout),
+    do: native_request(session, %{type: :management_active_set, update: update}, timeout)
+
+  @doc "Submits a Pending Dataset update and waits for acceptance, without asserting activation."
+  @spec management_pending_set(term(), term(), term()) ::
+          {:ok, %{accepted: true, effective: :not_verified}} | {:error, Error.t()}
+  def management_pending_set(session, update, timeout),
+    do: native_request(session, %{type: :management_pending_set, update: update}, timeout)
+
   @doc "Runs work with guaranteed handle cleanup when the function returns or raises."
   @spec with_connection(keyword(), (Session.t() -> term())) :: term()
   def with_connection(opts, fun) when is_function(fun, 1) do

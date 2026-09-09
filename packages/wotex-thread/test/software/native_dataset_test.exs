@@ -136,6 +136,49 @@ defmodule Wotex.Thread.NativeDatasetTest do
     refute File.exists?("/sys/class/net/wthdataset")
   end
 
+  @tag requirements: ["WTH-S04", "WTH-C04"], vectors: ["WTH-V06"]
+  test "real management callbacks separate acceptance, rejection and pending effectiveness",
+       context do
+    assert {:ok, session} =
+             Thread.connect(Keyword.put(context.options, :allow_network_creation, true))
+
+    active = dataset(:active)
+    assert {:ok, %State{role: :leader}} = Thread.form_network(session, active, 30_000)
+    updated = timestamp(active, 2)
+
+    assert {:ok, %{accepted: true, effective: :not_verified}} =
+             Thread.management_active_set(session, %{dataset: updated}, 5000)
+
+    assert {:ok, ^updated} = Thread.get_dataset(session, :active, 1000)
+
+    assert {:error, %Error{code: :remote_error, effect: :unknown, details: %{status: 37}}} =
+             Thread.management_active_set(session, %{dataset: active}, 5000)
+
+    assert {:ok, %{accepted: true, effective: :not_verified}} =
+             Thread.management_pending_set(
+               session,
+               %{dataset: timestamp(dataset(:pending), 3)},
+               5000
+             )
+
+    assert {:ok, ^updated} = Thread.get_dataset(session, :active, 1000)
+    assert {:ok, pending} = Thread.get_dataset(session, :pending, 1000)
+    assert {14, <<3::48, 0::16>>} in pending.entries
+    assert :ok = Thread.disconnect(session)
+    refute File.exists?("/sys/class/net/wthdataset")
+  end
+
+  defp timestamp(dataset, seconds) do
+    entries =
+      Enum.map(dataset.entries, fn
+        {14, _} -> {14, <<seconds::48, 0::16>>}
+        entry -> entry
+      end)
+
+    {:ok, value} = Dataset.decode(encode_entries(entries))
+    value
+  end
+
   defp dataset(kind) do
     entries = [
       {0, <<0, 0, 15>>},

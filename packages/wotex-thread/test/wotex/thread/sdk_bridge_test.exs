@@ -523,6 +523,36 @@ defmodule Wotex.Thread.SdkBridgeTest do
     refute Process.alive?(session.handle.pid)
   end
 
+  test "WTH-S04 management acceptance and rejection preserve effect uncertainty", context do
+    {:ok, dataset} = Wotex.Thread.Dataset.decode(<<250, 1, 0>>)
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    for operation <- [:management_active_set, :management_pending_set] do
+      assert {:ok, %{accepted: true, effective: :not_verified}} =
+               apply(Wotex.Thread, operation, [session, %{dataset: dataset}, 1000])
+    end
+
+    assert :ok = Wotex.Thread.disconnect(session)
+    File.write!(Path.join(context.directory, "mode"), "error")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error, %Error{code: :remote_error, effect: :unknown, details: %{status: 37}}} =
+             Wotex.Thread.management_active_set(session, %{dataset: dataset}, 1000)
+
+    assert :ok = Wotex.Thread.disconnect(session)
+  end
+
+  test "WTH-C07 management must not assert verified effectiveness", context do
+    File.write!(Path.join(context.directory, "mode"), "management_bad")
+    {:ok, dataset} = Wotex.Thread.Dataset.decode(<<250, 1, 0>>)
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error, %Error{code: :invalid_response, effect: :unknown}} =
+             Wotex.Thread.management_pending_set(session, %{dataset: dataset}, 1000)
+
+    eventually(fn -> not Process.alive?(session.handle.pid) end)
+  end
+
   defp requests(context) do
     case File.read(Path.join(context.directory, "requests")) do
       {:ok, bytes} ->

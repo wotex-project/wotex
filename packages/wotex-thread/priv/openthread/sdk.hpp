@@ -15,6 +15,7 @@
 #include <mbedtls/build_info.h>
 #include <net/if.h>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace wotex::thread {
@@ -107,6 +108,28 @@ class Sdk final {
     check_status(otIp6SetEnabled(instance_, true));
     check_status(otThreadSetEnabled(instance_, true));
   }
+  bool management_busy() const { return management_pending_; }
+  void management_set(const std::string &operation, const Json &parameters) {
+    if (!exact_keys(parameters, {"dataset"})) throw ProtocolError();
+    DatasetValue value(parameters.at("dataset"));
+    const bool active = operation == "management_active_set";
+    if (!value.valid(active)) throw DatasetError();
+    if (management_pending_) throw SdkError("busy");
+    // A zero-component Dataset plus raw TLVs preserves unknown fields and order.
+    // The pinned SDK copies these bytes before returning; only this stable context remains borrowed.
+    otOperationalDataset empty {};
+    management_result_.reset();
+    management_pending_ = true;
+    const otError status = active
+        ? otDatasetSendMgmtActiveSet(instance_, &empty, value.tlvs.mTlvs, value.tlvs.mLength, managed, this)
+        : otDatasetSendMgmtPendingSet(instance_, &empty, value.tlvs.mTlvs, value.tlvs.mLength, managed, this);
+    if (status != OT_ERROR_NONE) { management_pending_ = false; check_status(status); }
+  }
+  std::optional<otError> management_result() {
+    auto result = management_result_;
+    management_result_.reset();
+    return result;
+  }
   Json set_enabled(const Json &parameters) {
     if (!exact_keys(parameters, {"ipv6", "thread"}) || !parameters.at("ipv6").is_boolean() ||
         !parameters.at("thread").is_boolean()) throw ProtocolError();
@@ -162,6 +185,11 @@ class Sdk final {
   static void check_status(otError error) {
     if (error != OT_ERROR_NONE) throw error;
   }
+  static void managed(otError status, void *context) {
+    auto *sdk = static_cast<Sdk *>(context);
+    sdk->management_pending_ = false;
+    sdk->management_result_ = status;
+  }
   static void changed(otChangedFlags flags, void *context) {
     static_cast<Sdk *>(context)->changed_flags_ |= flags;
   }
@@ -199,6 +227,8 @@ class Sdk final {
   otInstance *instance_ = nullptr;
   otChangedFlags changed_flags_ = 0;
   bool allow_creation_ = false;
+  bool management_pending_ = false;
+  std::optional<otError> management_result_;
 };
 }  // namespace wotex::thread
 #endif

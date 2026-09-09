@@ -62,6 +62,7 @@ class Worker final {
       if (result < 0) return 2;
       if (sdk_) sdk_->process(loop);
       finish_formation();
+      finish_management();
       if (FD_ISSET(output_, &loop.mWriteFdSet)) flush();
       if (!closing_ && FD_ISSET(STDIN_FILENO, &loop.mReadFdSet)) input();
     }
@@ -82,7 +83,7 @@ class Worker final {
     char bytes[4096]; const ssize_t count = ::read(STDIN_FILENO, bytes, sizeof bytes);
     if (count == 0) {
       if (!incoming_.empty()) throw ProtocolError();
-      forming_.reset(); sdk_.reset(); closing_ = true; return;
+      forming_.reset(); managing_.reset(); sdk_.reset(); closing_ = true; return;
     }
     if (count < 0) {
       if (errno == EAGAIN || errno == EINTR) return;
@@ -106,7 +107,7 @@ class Worker final {
         append(success(command, sdk_->snapshot()));
       } else if (command.operation == "close") {
         if (!command.parameters.empty()) throw ProtocolError();
-        forming_.reset(); sdk_.reset();
+        forming_.reset(); managing_.reset(); sdk_.reset();
 #ifdef WOTEX_NATIVE_SANITIZERS
         // Check explicit, fully torn-down sessions before acknowledging close.
         __lsan_do_leak_check();
@@ -119,12 +120,18 @@ class Worker final {
         append(success(command, sdk_->inspect(command.operation)));
       } else if (command.operation == "form_network") {
         if (!sdk_) throw SdkError("not_open");
-        if (forming_) throw SdkError("busy");
+        if (forming_ || (sdk_ && sdk_->management_busy())) throw SdkError("busy");
         const auto deadline = Clock::now() + std::chrono::milliseconds(command.timeout_ms);
         sdk_->form_network(command.parameters);
         forming_ = Formation{Request{command.id, command.operation, Json::object(), command.timeout_ms}, deadline};
+      } else if (command.operation == "management_active_set" || command.operation == "management_pending_set") {
+        if (!sdk_) throw SdkError("not_open");
+        if (forming_ || managing_ || sdk_->management_busy()) throw SdkError("busy");
+        const auto deadline = Clock::now() + std::chrono::milliseconds(command.timeout_ms);
+        sdk_->management_set(command.operation, command.parameters);
+        managing_ = Formation{Request{command.id, command.operation, Json::object(), command.timeout_ms}, deadline};
       } else if (command.operation == "set_enabled") {
-        if (forming_) throw SdkError("busy");
+        if (forming_ || (sdk_ && sdk_->management_busy())) throw SdkError("busy");
         if (!sdk_) throw SdkError("not_open");
         append(success(command, sdk_->set_enabled(command.parameters)));
       } else if (command.operation == "validate_dataset" || command.operation == "get_dataset") {
@@ -158,8 +165,24 @@ class Worker final {
       }
     }
   }
+  void finish_management() {
+    if (!sdk_) return;
+    const auto result = sdk_->management_result();
+    if (!managing_) return; // A retired request can never complete a newer exchange.
+    if (Clock::now() >= managing_->deadline) {
+      reject(managing_->command, "management_timeout");
+      managing_.reset(); // SDK context survives until callback or instance teardown.
+    } else if (result) {
+      if (*result == OT_ERROR_NONE) {
+        append(success(managing_->command, {{"accepted", true}, {"effective", "not_verified"}}));
+      } else {
+        reject(managing_->command, "remote_error", static_cast<unsigned>(*result));
+      }
+      managing_.reset();
+    }
+  }
   struct Formation { Request command; Clock::time_point deadline; };
-  std::optional<Formation> forming_;
+  std::optional<Formation> forming_, managing_;
   int output_ = -1;
   std::unique_ptr<Sdk> sdk_;
   std::string incoming_, outgoing_;
