@@ -201,10 +201,9 @@ WOTEX_PATH_DEPS=1 mix deps.get
 WOTEX_PATH_DEPS=1 mix check
 ```
 
-`mix check` is provided solely by ExCheck. It runs warnings-as-errors,
-formatting, unused-dependency checks, strict Credo, dependency audits, Doctor,
-Dialyzer, warning-free ExDoc, at least 95% line coverage, architectural boundary
-checks, and a clean unpacked-archive compile with a no-callback proof.
+`mix check` is provided solely by ExCheck. It runs warnings-as-errors
+compilation, formatting, and the test suite. Package, documentation, audit, and
+compatibility checks are explicit release-readiness work.
 
 Focused proofs remain available as `bin/check_boundary.exs` and
 `bin/check_archive.exs`.
