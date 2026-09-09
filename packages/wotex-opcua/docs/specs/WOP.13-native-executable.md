@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -211,6 +211,10 @@ integers, never through double. Finite Float/Double tokens preserve signed zero;
 the serializer emits `-0.0` for negative zero. Duplicate keys, exponent overflow,
 trailing JSON, unknown keys, malformed UTF-8/base64 and incomplete EOF fail closed.
 C parsing has bounded tokens/stack and no input-proportional unchecked VLA.
+The pinned parser, strict flags, exact integer conversion and fixed allocation
+pools are defined in the [native JSON codec contract](../../priv/native/json-codec.md).
+Its source and MIT notice identities are part of the native source manifest.
+Parser syntax acceptance alone does not admit an operation or allocate SDK values.
 
 Ready is exactly `{version: 1, event: "ready", backend: "open62541",
 revision: "d1173ccc31560ffc60c29e24ce8adb19f8c3c686", clock_ms: native_monotonic_ms}`.

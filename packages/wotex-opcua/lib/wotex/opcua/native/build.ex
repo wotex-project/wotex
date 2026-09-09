@@ -8,6 +8,8 @@ defmodule Wotex.OPCUA.Native.Build do
   logs. A completion receipt binds source, tool, recipe and artifact hashes.
   Existing receipts are read-only: changed inputs, output or tool version probes
   reject reuse. Failed builds retain diagnostic files and require a new workspace.
+  A failed version command retains its finite step, command code and exit status;
+  it is not reported as a content mismatch without that evidence.
 
   The executable currently supplies the native dependency/bootstrap boundary;
   build success does not admit a secure OPC UA Session or protocol service.
@@ -16,9 +18,19 @@ defmodule Wotex.OPCUA.Native.Build do
   during this explicit build, independently of the production process contract.
   """
 
-  alias Wotex.OPCUA.Native.{Archive, Bootstrap, Command, Recipe, Source, Toolchain, Workspace}
+  alias Wotex.OPCUA.Native.{
+    Archive,
+    Bootstrap,
+    Command,
+    Recipe,
+    Source,
+    Toolchain,
+    Vendor,
+    Workspace
+  }
 
-  @native_files ~w(CMakeLists.txt main.c build_command.c custody.c custody_check.c README.md runtime-guardian.md)
+  @native_files ~w(CMakeLists.txt main.c build_command.c custody.c custody_check.c README.md runtime-guardian.md
+    json_codec.c json_codec.h json_check.c json-codec.md vendor/yyjson/yyjson.c vendor/yyjson/yyjson.h vendor/yyjson/LICENSE)
   @build_sources [
     Path.expand("../../../mix/tasks/wotex.opcua.native.build.ex", __DIR__)
     | Path.wildcard(Path.join(__DIR__, "*.ex"))
@@ -31,7 +43,7 @@ defmodule Wotex.OPCUA.Native.Build do
                 end)
   @artifacts ~w(bin/build-command downloads/open62541.tar.gz downloads/openssl.tar.gz
     openssl-prefix/lib/libssl.a openssl-prefix/lib/libcrypto.a sdk-prefix/lib/libopen62541.a
-    output/bin/wotex_opcua_native output/bin/wotex_opcua_custody) ++
+    output/bin/wotex_opcua_native output/bin/wotex_opcua_custody output/share/licenses/yyjson/LICENSE) ++
                Enum.map(
                  ~w(openssl open62541 openssl_configure openssl_compile openssl_install
       sdk_configure sdk_compile sdk_install native_configure native_compile native_test native_install),
@@ -43,7 +55,8 @@ defmodule Wotex.OPCUA.Native.Build do
   def run(workspace) when is_binary(workspace) do
     native = Application.app_dir(:wotex_opcua, "priv/native")
 
-    with {:ok, tools} <- Toolchain.resolve(),
+    with :ok <- Vendor.verify(native),
+         {:ok, tools} <- Toolchain.resolve(),
          {:ok, recipe} <- Recipe.new(workspace, native, tools.recipe, tools.target),
          {:ok, identity} <- identity(native, tools, recipe),
          {:ok, result} <-
@@ -254,6 +267,7 @@ defmodule Wotex.OPCUA.Native.Build do
          true <- versions == result.receipt["evidence"]["tool_versions"] do
       {:ok, result}
     else
+      {:error, _} = error -> error
       _ -> {:error, :build_manifest_mismatch}
     end
   end

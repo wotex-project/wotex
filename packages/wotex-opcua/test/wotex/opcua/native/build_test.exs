@@ -80,6 +80,14 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert custody_hash == receipt["artifacts"]["output/bin/wotex_opcua_custody"]
     assert receipt["identity"]["native_sources"]["custody.c"] =~ ~r/\A[0-9a-f]{64}\z/
 
+    assert receipt["identity"]["native_sources"]["vendor/yyjson/yyjson.c"] ==
+             "ac2e9bbb2e2d9149d90878d40506a1d624fa0b33c979a11b61075c54782c6d6a"
+
+    assert receipt["artifacts"]["output/share/licenses/yyjson/LICENSE"] ==
+             "45e384d3d52c73cba3a64d6e6c25d47cd738cd8a55c30629e3201046eda62947"
+
+    assert File.read!(Path.join(workspace, "logs/native_test.log")) =~ "native_json_self_test"
+
     assert {:ok, host, %{ready: %Wotex.OPCUA.Native.Ready{}, received_at_ms: received}} =
              Wotex.OPCUA.Native.Host.start_link(
                executable: native,

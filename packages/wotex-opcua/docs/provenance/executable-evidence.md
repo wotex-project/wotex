@@ -105,3 +105,15 @@ The required native build test starts the installed SDK helper and guardian
 through `Native.Host` using their receipt digests. This is a real process-ready
 integration check without an OPC UA endpoint or service. It does not accept a
 secure Session, application data, subscription credit flow or remote cleanup.
+
+## Native JSON syntax and numbers
+
+`native/json_test.exs` compiles the reviewed parser and first-party adapter, then
+executes every case in `native-json-v1.json` through the bounded command guardian.
+The driver receives only the input frame and allocator size, and returns parsed
+node counts, exact integer projections and IEEE-754 bit patterns. The tests
+compare the complete declared output. Long frame boundaries use an exact prefix,
+space count and suffix instead of repeated literal whitespace in the fixture.
+The CTest self-test separately exercises strict flags and basic pool ownership.
+Vendor tests reject missing, altered and symbolic source/license files. These
+checks do not accept typed SDK construction, response serialization or services.

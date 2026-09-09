@@ -21,6 +21,17 @@ target_compile_options(wotex_opcua_native PRIVATE -Wall -Wextra -Werror)
 target_include_directories(wotex_opcua_native PRIVATE "${OPENSSL_INCLUDE_DIR}")
 target_link_libraries(wotex_opcua_native PRIVATE open62541::open62541)
 
+add_library(wotex_opcua_json STATIC json_codec.c vendor/yyjson/yyjson.c)
+target_compile_features(wotex_opcua_json PRIVATE c_std_11)
+target_compile_options(wotex_opcua_json PRIVATE -Wall -Wextra -Werror)
+target_compile_definitions(wotex_opcua_json PUBLIC
+  YYJSON_DISABLE_NON_STANDARD=1 YYJSON_DISABLE_UTILS=1 YYJSON_DISABLE_INCR_READER=1
+  YYJSON_DISABLE_FAST_FP_CONV=0 YYJSON_DISABLE_UTF8_VALIDATION=0)
+add_executable(wotex_opcua_json_check json_check.c)
+target_compile_features(wotex_opcua_json_check PRIVATE c_std_11)
+target_compile_options(wotex_opcua_json_check PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(wotex_opcua_json_check PRIVATE wotex_opcua_json)
+
 add_executable(wotex_opcua_custody custody.c)
 add_executable(wotex_opcua_custody_check custody_check.c)
 foreach(target wotex_opcua_custody wotex_opcua_custody_check)
@@ -30,13 +41,17 @@ endforeach()
 
 option(WOTEX_SANITIZERS "Instrument the native host with ASan and UBSan" OFF)
 if(WOTEX_SANITIZERS)
-  foreach(target wotex_opcua_native wotex_opcua_custody wotex_opcua_custody_check)
+  foreach(target wotex_opcua_native wotex_opcua_custody wotex_opcua_custody_check
+      wotex_opcua_json wotex_opcua_json_check)
     target_compile_options(${target} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
     target_link_options(${target} PRIVATE -fsanitize=address,undefined)
   endforeach()
 endif()
 
 enable_testing()
+add_test(NAME native_json_self_test COMMAND wotex_opcua_json_check --self-test)
+set_tests_properties(native_json_self_test PROPERTIES
+  TIMEOUT 10 PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 add_test(NAME native_dependency_self_test COMMAND wotex_opcua_native --self-test)
 set_tests_properties(native_dependency_self_test PROPERTIES
   TIMEOUT 10 PASS_REGULAR_EXPRESSION "\"self_test\":\"ok\"")
@@ -62,3 +77,4 @@ foreach(number 01 02 03 04 05 06 07 08 09)
   endif()
 endforeach()
 install(TARGETS wotex_opcua_native wotex_opcua_custody RUNTIME DESTINATION bin)
+install(FILES vendor/yyjson/LICENSE DESTINATION share/licenses/yyjson)

@@ -124,7 +124,13 @@ defmodule WotexOPCUA.MixProject do
     [
       main: "readme",
       extras:
-        ["README.md", "CHANGELOG.md", "SECURITY.md", "priv/native/runtime-guardian.md"] ++
+        [
+          "README.md",
+          "CHANGELOG.md",
+          "SECURITY.md",
+          "priv/native/runtime-guardian.md",
+          "priv/native/json-codec.md"
+        ] ++
           Path.wildcard("docs/{specs,plans,provenance}/*.md"),
       source_url: @source_url,
       formatters: ["html"]

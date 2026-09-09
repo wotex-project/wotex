@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.3
+  version: 1.0.4
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -86,6 +86,14 @@ and rejects duplicate keys, invalid UTF-8, extra frames and oversized control
 output. Actual built-SDK startup is exercised by the required native build test.
 SDK report credits, authenticated native Sessions and services remain required
 implementation; bootstrap readiness advertises none of those capabilities.
+
+The native JSON foundation parses strict, bounded frames into a fixed allocator
+pool, rejects duplicate decoded keys, and validates exact signed/unsigned
+integer and finite floating-point projections. Vendored parser and license
+digests are verified before native builds. The standalone corpus includes
+integer endpoints, adjacent 100 ns tick integers, negative zero, malformed
+Unicode and allocation/structural boundaries. This foundation does not yet
+convert SDK Variant/DataValue structures or serialize service responses.
 
 ## Evidence and compatibility
 

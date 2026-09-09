@@ -1,7 +1,7 @@
 {
   "format": "wotex.native.sources",
-  "version": "1.0.0",
-  "status": "specified_unexecuted",
+  "version": "1.1.0",
+  "status": "source_admission_implemented",
   "runtime": "open62541",
   "sources": [
     {
@@ -30,5 +30,32 @@
     "runtime_dependency": false,
     "current_fixture_lock": "priv/requirements.txt",
     "target_fixture_lock": "test/interop/asyncua/requirements.txt"
-  }
+  },
+  "vendored_sources": [
+    {
+      "name": "yyjson",
+      "version": "0.12.0",
+      "commit": "8b4a38dc994a110abaec8a400615567bd996105f",
+      "url": "https://codeload.github.com/ibireme/yyjson/tar.gz/refs/tags/0.12.0",
+      "sha256": "b16246f617b2a136c78d73e5e2647c6f1de1313e46678062985bdcf1f40bb75d",
+      "license": "MIT",
+      "files": [
+        {
+          "path": "vendor/yyjson/yyjson.c",
+          "bytes": 410813,
+          "sha256": "ac2e9bbb2e2d9149d90878d40506a1d624fa0b33c979a11b61075c54782c6d6a"
+        },
+        {
+          "path": "vendor/yyjson/yyjson.h",
+          "bytes": 322407,
+          "sha256": "175867c5493a5df648cec566717fa1c29aa2f6096f5f0cf1efad0b65e1f6d7b3"
+        },
+        {
+          "path": "vendor/yyjson/LICENSE",
+          "bytes": 1084,
+          "sha256": "45e384d3d52c73cba3a64d6e6c25d47cd738cd8a55c30629e3201046eda62947"
+        }
+      ]
+    }
+  ]
 }

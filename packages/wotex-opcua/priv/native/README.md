@@ -52,3 +52,14 @@ transfers and audits direct-child reaping. Linux builds with
 `WOTEX_SANITIZERS=ON` run both strict ASan/UBSan timing tests and the separately
 labeled LeakSanitizer tests described in the runtime contract. A successful
 custody test is independent of OPC UA Session or interoperability acceptance.
+
+`json_codec.c` applies the [strict native JSON contract](json-codec.md) to the
+unmodified, MIT-licensed yyjson source under `vendor/yyjson`. A fixed allocator
+pool, decoded-key duplicate validation and finite structural limits precede SDK
+value construction. Explicit signed/unsigned conversion preserves all 64 bits;
+floating conversion preserves negative zero and rejects overflow. The build
+checks the vendor source and license digests before compiling and installs the
+license beside its native artifacts. `json_check.c` supplies parser and numeric
+projections for executable corpus checks. It is not installed as a runtime
+program. Typed SDK value conversion, serialization and service admission remain
+required implementation.
