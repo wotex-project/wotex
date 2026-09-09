@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.0.0
+  version: 1.0.1
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -75,7 +75,12 @@ a separate BEAM secure-channel implementation.
 
 ## WOP-X02 — Reproducible build and package boundary
 
-The declared task is `mix wotex.native.build --workspace ABS`. `ABS` is one
+The declared root-project alias is `mix wotex.native.build --workspace ABS`.
+Its implementation task is `mix wotex.opcua.native.build --workspace ABS`
+(`Mix.Tasks.Wotex.Opcua.Native.Build`). Protocol archives use distinct task modules
+so a consumer can compile several protocol dependencies without module conflicts.
+An archive consumer invokes the qualified task or defines its own root alias.
+`ABS` is one
 absolute, empty disposable directory or a workspace with a matching verified
 manifest. Unknown options, relative paths, a nonempty unrelated directory and
 manifest/hash mismatch fail without changing that directory. No Git remote is
@@ -99,7 +104,9 @@ UA_ENABLE_ENCRYPTION=OPENSSL
 UA_ENABLE_SUBSCRIPTIONS=ON
 UA_ENABLE_SUBSCRIPTIONS_EVENTS=OFF
 UA_ENABLE_PUBSUB=OFF
-UA_ENABLE_DISCOVERY=OFF
+UA_ENABLE_DISCOVERY=ON
+UA_ENABLE_DISCOVERY_MULTICAST=OFF
+UA_ENABLE_METHODCALLS=ON
 UA_NAMESPACE_ZERO=REDUCED
 UA_ENABLE_JSON_ENCODING=ON
 UA_MULTITHREADING=0
@@ -108,6 +115,15 @@ UA_BUILD_UNIT_TESTS=OFF
 OPENSSL_USE_STATIC_LIBS=TRUE
 OPENSSL_ROOT_DIR=<workspace OpenSSL prefix>
 ```
+
+The pinned SDK gates its client source files on UA_ENABLE_DISCOVERY in
+[CMakeLists.txt](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/CMakeLists.txt#L944).
+That build option enables client symbols; multicast remains disabled and no
+automatic discovery operation is admitted. Explicit method-service support is
+required for Call. The build clears ambient compiler/linker/include/pkg-config
+flags and records its own flags and absolute OpenSSL include/static-library
+paths. A successful SDK archive build without linkable client symbols fails
+the native executable/self-test lane.
 
 The first-party native tests have their own CMake/CTest target. Upstream SDK
 unit/security tests run in a separately recorded audit build, not by silently

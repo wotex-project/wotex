@@ -1,6 +1,6 @@
 {
   "format_version": "1.0.0",
-  "specification": "WOP.13@1.0.0",
+  "specification": "WOP.13@1.0.1",
   "execution_status": "specified_unexecuted",
   "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. Scenario families require additional boundary and fault assertions.",
   "cases": [
