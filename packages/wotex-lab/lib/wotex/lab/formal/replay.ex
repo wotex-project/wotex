@@ -249,7 +249,8 @@ defmodule Wotex.Lab.Formal.Replay do
     do: [now: concrete.now, watermark: concrete.watermark, state_revision: concrete.state_revision]
 
   defp proposal(action, concrete) do
-    with {:ok, data_schema} <- DataSchema.new(%{"type" => "number", "minimum" => 0, "maximum" => 1}),
+    with {:ok, data_schema} <-
+           DataSchema.new(%{"type" => "number", "minimum" => 0, "maximum" => 1}),
          {:ok, schema} <-
            OutputSchema.new(
              kind: :action_proposal,

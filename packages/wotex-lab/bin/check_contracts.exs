@@ -19,7 +19,8 @@ defmodule Wotex.Lab.Check.Contracts do
     check!(cohort["kind"] == "workspace_content_cohort", "source cohort mislabeled")
 
     check!(
-      Enum.map(cohort["packages"], & &1["package"]) == Enum.map(source["packages"], & &1["package"]),
+      Enum.map(cohort["packages"], & &1["package"]) ==
+        Enum.map(source["packages"], & &1["package"]),
       "source cohort owner mismatch"
     )
 

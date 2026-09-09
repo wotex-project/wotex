@@ -192,7 +192,8 @@ defmodule Wotex.Lab.Metrics.Snapshot do
   end
 
   defp one_series(%{name: name, type: type, labels: labels, sample: sample}, path) do
-    with :ok <- check(is_binary(name) and Regex.match?(@name, name), :invalid_name, path <> "/name"),
+    with :ok <-
+           check(is_binary(name) and Regex.match?(@name, name), :invalid_name, path <> "/name"),
          :ok <- check(type in @types, :invalid_type, path <> "/type"),
          :ok <- labels(labels, path <> "/labels"),
          :ok <- sample(type, sample, path <> "/sample") do
