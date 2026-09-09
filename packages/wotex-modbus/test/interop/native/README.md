@@ -31,8 +31,19 @@ compiler during explicit helper build and native fixture unit tests. No native
 SDK or protocol peer is built by the ordinary unit suite.
 
 `probe.c` generates real output, exit, timeout and process-group faults.
-`check.c` runs six standalone cases for native sanitizer execution.
+`check.c` runs seven standalone cases for native sanitizer execution.
 `test/software/command_test.exs` additionally checks actual BEAM-owner death,
 suspended output consumers, exact descendant termination and malformed input.
 These assertions cover the command guardian; the Mix build/run tasks and full
 P06 acceptance remain separate until their tests execute.
+
+`command --lock ABSOLUTE_LOCK_FILE` obtains a nonblocking POSIX advisory write
+lock and emits `wotex_fixture_lock` followed by newline. Owner EOF, process exit
+or termination releases the kernel lock. Status 130 means an existing live
+lease; status 126 rejects malformed paths, symlinks, nonempty files or files
+with group/other permissions. The mode-0600 empty sidecar file remains reusable;
+its existence alone never means a live lease. The lock inode is not unlinked
+during release, which prevents concurrent callers from locking different inodes.
+The explicit one-byte `R` command closes the descriptor before emitting
+`wotex_fixture_unlocked` followed by newline and exiting zero. The Mix caller
+waits for this acknowledgment and exit before reporting normal task completion.

@@ -177,6 +177,80 @@ defmodule Wotex.Modbus.SoftwareCommandTest do
     assert_dead(pids(output))
   end
 
+  test "WMB-N01 WMB-N03 advisory lease rejects overlap and releases on owner death", context do
+    path = Path.join(context.directory, "workspace.lock")
+    parent = self()
+
+    owner =
+      spawn(fn ->
+        port = lock(context, path)
+
+        receive do
+          {^port, {:data, "wotex_fixture_lock\n"}} -> send(parent, {:lease_ready, port})
+        end
+
+        receive do: (:remain -> :ok)
+      end)
+
+    assert_receive {:lease_ready, first}, 1000
+    assert {"", 130} = drain(lock(context, path))
+    Process.exit(owner, :kill)
+    assert_dead_lease(context, path, System.monotonic_time(:millisecond) + 1000)
+    assert Port.info(first) == nil
+    assert File.read!(path) == ""
+  end
+
+  test "WMB-N01 WMB-N03 advisory lease refuses unrelated content and symlinks", context do
+    path = Path.join(context.directory, "unrelated.lock")
+    File.write!(path, "retain")
+    File.chmod!(path, 0o600)
+    assert {"", 126} = drain(lock(context, path))
+    link = Path.join(context.directory, "symlink.lock")
+    File.ln_s!(path, link)
+    assert {"", 126} = drain(lock(context, link))
+    assert File.read!(path) == "retain"
+  end
+
+  test "WMB-N01 WMB-N03 acknowledged lease release permits immediate reacquisition", context do
+    path = Path.join(context.directory, "acknowledged.lock")
+
+    for _ <- 1..10 do
+      port = lock(context, path)
+      assert_receive {^port, {:data, "wotex_fixture_lock\n"}}, 1000
+      assert Port.command(port, "R")
+      assert {"wotex_fixture_unlocked\n", 0} = drain(port)
+    end
+
+    assert File.read!(path) == ""
+  end
+
+  defp lock(context, path) do
+    Port.open({:spawn_executable, context.guardian}, [
+      :binary,
+      :exit_status,
+      :stderr_to_stdout,
+      args: ["--lock", path]
+    ])
+  end
+
+  defp assert_dead_lease(context, path, deadline) do
+    port = lock(context, path)
+
+    receive do
+      {^port, {:data, "wotex_fixture_lock\n"}} ->
+        Port.close(port)
+
+      {^port, {:exit_status, 130}} ->
+        if System.monotonic_time(:millisecond) >= deadline,
+          do: flunk("native advisory lease remains live")
+
+        Process.sleep(10)
+        assert_dead_lease(context, path, deadline)
+    after
+      1000 -> flunk("native lease command did not answer")
+    end
+  end
+
   defp execute(context, mode, options \\ []) do
     context
     |> launch(mode, options)

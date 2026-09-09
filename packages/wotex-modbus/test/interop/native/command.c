@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #define _POSIX_C_SOURCE 200809L
+#ifdef __APPLE__
+#define _DARWIN_C_SOURCE
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -10,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -172,8 +176,59 @@ static int supervise(struct state *state) {
     }
 }
 
+static int advisory_lock(const char *path) {
+    int fd;
+    struct stat info;
+    struct flock lock;
+    struct sigaction action;
+    const char ready[] = "wotex_fixture_lock\n";
+    if (path[0] != '/' || strlen(path) > 4096) return 126;
+    fd = open(path, O_RDWR | O_CREAT | O_NOFOLLOW, 0600);
+    if (fd < 0) return 126;
+    if (fstat(fd, &info) || !S_ISREG(info.st_mode) || info.st_size != 0 || (info.st_mode & 0077)) {
+        close(fd);
+        return 126;
+    }
+    memset(&lock, 0, sizeof(lock));
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    if (fcntl(fd, F_SETLK, &lock) < 0) {
+        int result = errno == EACCES || errno == EAGAIN ? 130 : 126;
+        close(fd);
+        return result;
+    }
+    memset(&action, 0, sizeof(action));
+    sigemptyset(&action.sa_mask);
+    action.sa_handler = signal_owner;
+    if (sigaction(SIGTERM, &action, NULL) || sigaction(SIGINT, &action, NULL) ||
+        sigaction(SIGHUP, &action, NULL)) { close(fd); return 126; }
+    action.sa_handler = SIG_IGN;
+    if (sigaction(SIGPIPE, &action, NULL) || write(STDOUT_FILENO, ready, sizeof(ready) - 1) != (ssize_t)(sizeof(ready) - 1)) {
+        close(fd);
+        return 127;
+    }
+    while (!interrupted) {
+        struct pollfd input = {STDIN_FILENO, POLLIN | POLLHUP, 0};
+        int status = poll(&input, 1, POLL_MS);
+        if (status < 0 && errno != EINTR) { close(fd); return 126; }
+        if (status > 0) {
+            unsigned char unexpected;
+            ssize_t size = read(STDIN_FILENO, &unexpected, 1);
+            close(fd);
+            if (size == 1 && unexpected == 'R') {
+                const char released[] = "wotex_fixture_unlocked\n";
+                return write(STDOUT_FILENO, released, sizeof(released) - 1) == (ssize_t)(sizeof(released) - 1) ? 0 : 127;
+            }
+            return size == 0 ? 0 : 126;
+        }
+    }
+    close(fd);
+    return 127;
+}
+
 int main(int argc, char **argv) {
     unsigned long long timeout, output, cleanup;
+    if (argc == 3 && !strcmp(argv[1], "--lock")) return advisory_lock(argv[2]);
     int pipes[2];
     struct state state;
     struct sigaction action;

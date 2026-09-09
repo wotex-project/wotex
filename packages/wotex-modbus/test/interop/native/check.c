@@ -51,6 +51,44 @@ static void check(const char *guardian, const char *probe, const char *mode,
     if (expected_length) assert(length == expected_length);
 }
 
+static pid_t lock_child(const char *guardian, const char *path, int *owner_fd, int *output_fd) {
+    int owner[2], output[2];
+    pid_t child;
+    assert(pipe(owner) == 0 && pipe(output) == 0);
+    child = fork();
+    assert(child >= 0);
+    if (child == 0) {
+        assert(dup2(owner[0], STDIN_FILENO) >= 0 && dup2(output[1], STDOUT_FILENO) >= 0);
+        close(owner[0]); close(owner[1]); close(output[0]); close(output[1]);
+        execl(guardian, guardian, "--lock", path, (char *)NULL);
+        _exit(126);
+    }
+    close(owner[0]); close(output[1]);
+    *owner_fd = owner[1]; *output_fd = output[0];
+    return child;
+}
+
+static void locks(const char *guardian) {
+    char path[128], output[128];
+    int owner, reader, other_owner, other_reader, status;
+    pid_t first, second;
+    snprintf(path, sizeof(path), "/tmp/wotex-command-lock-%ld", (long)getpid());
+    first = lock_child(guardian, path, &owner, &reader);
+    assert(read(reader, output, sizeof(output)) == 19);
+    second = lock_child(guardian, path, &other_owner, &other_reader);
+    assert(waitpid(second, &status, 0) == second && WIFEXITED(status) && WEXITSTATUS(status) == 130);
+    close(other_owner); close(other_reader);
+    close(owner); close(reader);
+    assert(waitpid(first, &status, 0) == first && WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    first = lock_child(guardian, path, &owner, &reader);
+    assert(read(reader, output, sizeof(output)) == 19);
+    assert(write(owner, "R", 1) == 1);
+    assert(read(reader, output, sizeof(output)) == 23);
+    assert(waitpid(first, &status, 0) == first && WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    close(owner); close(reader);
+    assert(unlink(path) == 0);
+}
+
 int main(int argc, char **argv) {
     assert(argc == 3);
     check(argv[1], argv[2], "output", "1000", "65536", 0, 0, 14);
@@ -59,6 +97,7 @@ int main(int argc, char **argv) {
     check(argv[1], argv[2], "background", "1000", "65536", 0, 0, 0);
     check(argv[1], argv[2], "flood", "1000", "4097", 0, 125, 4097);
     check(argv[1], argv[2], "hang", "1000", "65536", 1, 127, 0);
-    puts("WMB-N02 WMB-N03 native guardian: 6 cases passed");
+    locks(argv[1]);
+    puts("WMB-N01 WMB-N02 WMB-N03 native guardian: 7 cases passed");
     return 0;
 }
