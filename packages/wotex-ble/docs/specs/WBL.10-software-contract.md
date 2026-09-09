@@ -226,6 +226,8 @@ Retain the existing package-defined Form URI and extensions; it is not a W3C
 Bluetooth standard. Property read/write map to S03. Property observation and
 Event subscription map to S04, with explicit requested mode in the profile
 extension `wotex:bleMode`, with values `auto`, `notify`, `indicate`.
+This selector applies only to stream start/stop Forms; its presence on a Property
+read/write Form fails `:invalid_selector` before acquisition.
 For read/write conversion use `wotex:bleValueType` (`bytes` by default; otherwise
 the S01 type names `uint8`, `int8`, `uint16`, `int16`, `uint32`, `int32`,
 `uint64`, `int64`, `float32`, `float64`, `boolean`, `utf8`) and

@@ -614,4 +614,51 @@ defmodule Wotex.BLE.DBusBridgeTest do
 
     refute Enum.any?(calls(record), &(&1["method"] == "GetAll"))
   end
+
+  test "WBL-P06 WBL-S05 WBL-I03 real Runtime reaches persistent native procedures and closes each owner" do
+    {native_options, record} = options("procedure_runtime")
+
+    {:ok, td} =
+      Wotex.ThingDescription.from_map(%{
+        "@context" => "https://www.w3.org/2022/wot/td/v1.1",
+        "title" => "Native Runtime fixture",
+        "securityDefinitions" => %{"none" => %{"scheme" => "nosec"}},
+        "security" => ["none"],
+        "properties" => %{
+          "reading" => %{
+            "forms" => [
+              %{
+                "href" => "ble://peer/180f/2a19",
+                "wotex:bleValueType" => "uint16"
+              }
+            ]
+          }
+        }
+      })
+
+    {:ok, consumed} =
+      Wotex.Runtime.ConsumedThing.new(td,
+        profiles: [BLE.profile()],
+        credentials: {Wotex.BLE.RuntimeErrorPort, nil},
+        transports: %{
+          ble:
+            {Wotex.BLE.Transport,
+             [client: BlueZ, lifecycle: :persistent, target: "peer"] ++ native_options}
+        }
+      )
+
+    context = Wotex.Runtime.Context.new!(request_id: "native-runtime")
+
+    assert {:ok, %{payload: 42, status: :ok}} =
+             Wotex.Runtime.ConsumedThing.read_property(consumed, "reading", context)
+
+    assert {:ok, %{payload: :written, status: :ok}} =
+             Wotex.Runtime.ConsumedThing.write_property(consumed, "reading", 513, context)
+
+    trace = calls(record)
+    assert Enum.count(trace, &(&1["method"] == "ReadValue")) == 1
+    assert Enum.count(trace, &(&1["method"] == "WriteValue")) == 1
+    assert Enum.count(trace, &(&1 == %{"bus_closed" => true, "listeners" => 0})) == 2
+    for %{"pid" => pid} <- trace, do: eventually(fn -> process_gone?(pid) end)
+  end
 end

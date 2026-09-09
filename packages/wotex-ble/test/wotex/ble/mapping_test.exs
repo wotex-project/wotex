@@ -28,7 +28,7 @@ defmodule Wotex.BLE.MappingTest do
       assert {:error, _} = Mapping.command(form, :readproperty, nil, href)
     end
 
-    assert {:ok, %{message: %{value: nil}}} = Mapping.command(form, :writeproperty, nil)
+    assert {:error, %{code: :invalid_value}} = Mapping.command(form, :writeproperty, nil)
   end
 
   test "Runtime exact target matching, finite budgets and cleanup" do
@@ -42,19 +42,20 @@ defmodule Wotex.BLE.MappingTest do
       affordance_name: "value",
       form: form,
       resolved_href: @href,
-      profile: nil,
+      profile: Wotex.BLE.profile(),
       request_id: "test-1",
       deadline: nil,
       input: nil
     }
 
-    opts = [client: TestClient, target: @target]
+    opts = [client: TestClient, target: @target, mode: :bytes]
 
     for deadline <- [
           nil,
           System.monotonic_time(:millisecond) + 1000,
           DateTime.add(DateTime.utc_now(), 1)
         ] do
+      execution = ExecutionContext.new(%{context | deadline: deadline}, nil)
       assert {:ok, _} = Transport.request(%{request | deadline: deadline}, execution, opts)
       assert_receive :disconnected
     end
@@ -68,6 +69,19 @@ defmodule Wotex.BLE.MappingTest do
           assert(
             match?({:error, _}, Transport.request(%{request | deadline: deadline}, execution, opts))
           )
+
+    for invalid <- [
+          %{request | request_id: nil},
+          %{request | profile: nil},
+          %{request | affordance_type: :event},
+          %{request | request_id: "other"}
+        ] do
+      assert {:error, _} = Transport.request(invalid, execution, opts)
+      refute_received :disconnected
+    end
+
+    assert {:error, _} = Transport.request(request, %{execution | context: nil}, opts)
+    refute_received :disconnected
 
     assert {:error, _} = Transport.request(request, execution, Keyword.put(opts, :timeout, 0))
     assert {:error, _} = Transport.request(request, execution, Keyword.put(opts, :target, "wrong"))

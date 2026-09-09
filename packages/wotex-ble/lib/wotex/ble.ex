@@ -50,6 +50,29 @@ defmodule Wotex.BLE do
 
   def capabilities(_), do: {:error, Error.new(:unsupported_profile)}
 
+  @doc "Returns the native-value one-shot Runtime binding profile."
+  @spec profile() :: Wotex.Runtime.BindingProfile.t()
+  def profile do
+    {:ok, profile} = profile(:oneshot)
+    profile
+  end
+
+  @doc "Builds one admitted Runtime profile without starting a backend."
+  @spec profile(term()) :: {:ok, Wotex.Runtime.BindingProfile.t()} | {:error, Error.t()}
+  def profile(:oneshot) do
+    {:ok, profile} =
+      Wotex.Runtime.BindingProfile.new(
+        id: :ble,
+        schemes: ["ble"],
+        operations: [:readproperty, :writeproperty],
+        media_types: []
+      )
+
+    {:ok, profile}
+  end
+
+  def profile(_), do: {:error, Error.new(:unsupported_profile)}
+
   @doc "Opens the supplied client module; absent transport fails explicitly."
   @spec connect(term()) :: {:ok, Session.t()} | {:error, Error.t()}
   def connect(opts) when is_list(opts) do

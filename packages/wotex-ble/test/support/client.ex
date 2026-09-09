@@ -18,6 +18,7 @@ defmodule Wotex.BLE.TestClient do
       :throw -> throw(:private)
       :exit -> exit(:private)
       :error -> {:error, :private}
+      :bytes -> {:ok, <<42>>}
       :typed -> {:error, Wotex.BLE.Error.new(:remote_error)}
       :invalid -> :unexpected
       _ -> {:ok, message}

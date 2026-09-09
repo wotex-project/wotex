@@ -192,6 +192,8 @@ async def main():
             for item in bus.data.values():
                 if client.CHARACTERISTIC in item:
                     item[client.CHARACTERISTIC]["Flags"] = ["read", "indicate"]
+    if MODE == "procedure_runtime":
+        del bus.data["/another/characteristic1"]
     if MODE == "procedure_timeout":
         bus.block = True
     if MODE == "procedure_malformed":
