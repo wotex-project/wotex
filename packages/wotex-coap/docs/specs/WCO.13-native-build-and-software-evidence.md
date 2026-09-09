@@ -3,7 +3,7 @@ spec:
   id: WCO.13
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.4.0
+  version: 1.5.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -47,6 +47,18 @@ actual UDP fault-peer regressions and Linux public allocation-length probes.
 Its negative controls reproduce the unbounded estimate and new-application-request
 restart behavior before the two block patches. Protected OSCORE peer/owner
 coverage remains a separate requirement.
+
+The response-admission patch rejects nonempty unprotected responses on an
+OSCORE session before application dispatch and emits only
+`COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD`. Plaintext success values and error
+code/diagnostic payloads cannot trigger application behavior. This is the fixed
+library profile policy; [RFC 8613 Appendix D.5.3](https://www.rfc-editor.org/rfc/rfc8613.html#appendix-D.5.3)
+permits unauthenticated processing errors but forbids trusting their contents to
+trigger specific actions. Empty ACK/RST remain transport control and cannot
+become an authenticated result. The
+[native protection receipt](../provenance/native-protection-v1.json) identifies
+raw UDP fault responses and a real protected same-stack peer. It does not accept
+production owner, durable replay, independent-stack or complete secure workflows.
 
 The native JSON dependency is unmodified yyjson 0.12.0, commit
 `8b4a38dc994a110abaec8a400615567bd996105f`. Its

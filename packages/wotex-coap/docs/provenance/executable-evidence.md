@@ -77,8 +77,13 @@ public-API raw UDP fault-peer cases for advertised/actual body bounds and change
 ETag behavior. Linux probes assert requested SDK binary lengths before allocation;
 negative controls fail against the preceding SDK patch set. The peer exercises
 the shared block engine, not an independent OSCORE security implementation.
-OSCORE protected-message/replay/bridge restart tests, native helper ownership and complete stress/matrix closure remain
-required by [the ordered plan](../plans/software-implementation.md).
+The [native protection receipt](native-protection-v1.json) records 15 forged
+plaintext responses to protected GET/POST/PUT requests and three positive controls (ordinary UDP, empty RST and a protected exchange).
+Its protected client/server exchange uses the same SDK; the raw UDP fault peer
+is independent of the SDK response encoder. A negative control exposes plaintext application dispatch without the response-admission patch. These
+fixtures do not accept durable replay, production owner/bridge restart,
+independent secure interoperability or complete stress/matrix closure required
+by [the ordered plan](../plans/software-implementation.md).
 
 ## Required verification
 

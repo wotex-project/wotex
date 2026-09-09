@@ -1,0 +1,229 @@
+{
+  "schema": "wotex.coap.native-protection-evidence@1",
+  "specification": "WCO.13@1.5.0",
+  "scope": "Public native OSCORE response-admission rule; raw UDP faults and a protected same-stack peer, without production store or Port acceptance",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "966b477a0e2e17ca84e14a3a11089fd1d79a197b693f9788fc13189fa54f1f39",
+      "native/oscore/patches/0005-reject-unprotected-responses.patch": "483292e9eab1ee9c970698734901b89cb12ac846a74a2c225101c032e79635ad",
+      "test/native/oscore_protection_test.c": "f4f70bc0ef8fac67c36372b46b708ac137db97f335b3d5c50771e3495ccd5ecc",
+      "test/native/oscore_block_limit_test.c": "2f801d7758f840e18d1c4a19a3130230a72db58c4cb75b249ea840ed73e844f6",
+      "test/native/oscore_sequence_test.c": "087fb307600bfd3da6eb4e17e7d5048205d1f048875b72fcfcce993ee4be03c4",
+      "test/native/Dockerfile": "d2881b8ca42b89327688dcc87e16fb30dcc48f703e0eb7224e9020e998400170"
+    }
+  },
+  "upstream": {
+    "schema": "wotex.coap.libcoap-source@1",
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "url": "https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28",
+    "sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "patches": [
+      {
+        "path": "patches/0001-reject-unsaved-sender-sequences.patch",
+        "sha256": "58ea9aa566e6306b811e3845c01931e7887d66e00923e285d7be779d58251350"
+      },
+      {
+        "path": "patches/0002-skip-empty-cbor-byte-copy.patch",
+        "sha256": "29d0e421a446b0ec347c71b8e3ac7421ff541254df6eced4f91c2bd6ff92f8a2"
+      },
+      {
+        "path": "patches/0003-limit-whole-body-assembly.patch",
+        "sha256": "bc718f8ea44495f6dabee9c508b1820e6d802e571c3fe8b2e00746d3a9a6fec7"
+      },
+      {
+        "path": "patches/0004-reject-representation-restart.patch",
+        "sha256": "39fdf0f4e53b1c941983f317550f8ba72dcf5ba300c95904467127423fc08767"
+      },
+      {
+        "path": "patches/0005-reject-unprotected-responses.patch",
+        "sha256": "483292e9eab1ee9c970698734901b89cb12ac846a74a2c225101c032e79635ad"
+      }
+    ],
+    "patched_sources": {
+      "src/coap_oscore.c": "5c778ae3e899404ebba7f254b9fe7422eb06fb0811e61dfcc7e1bd8122c3d410",
+      "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c",
+      "src/coap_block.c": "3aed69a6bad7f63dad5998a0b7a402a78cc81da718985a61b964c5619a21d9af",
+      "src/coap_net.c": "838e16cffaa1c4b0d7d6d76ea293e51fab237f2ad1b3a7b9230846f1b66ef52d"
+    }
+  },
+  "requirements": [
+    "WCO-S06",
+    "WCO-N02"
+  ],
+  "policy": {
+    "nonempty_unprotected_response": "no application callback; COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD",
+    "empty_ack": "transport progress, no application value or protection failure",
+    "empty_rst": "COAP_NACK_RST, no application value or protection failure",
+    "unprotected_error_diagnostics": "never trusted as authenticated application status",
+    "source": "https://www.rfc-editor.org/rfc/rfc8613.html#appendix-D.5.3"
+  },
+  "fault_matrix": {
+    "methods": [
+      "GET",
+      "POST",
+      "PUT"
+    ],
+    "response_variants": [
+      "piggybacked ACK 2.05",
+      "separate NON 2.05",
+      "separate CON 2.05",
+      "piggybacked ACK 4.01",
+      "empty ACK followed by separate NON 2.05"
+    ],
+    "per_case_expected": {
+      "application_deliveries": 0,
+      "protection_failure_events": 1
+    }
+  },
+  "positive_controls": [
+    "ordinary UDP response remains deliverable",
+    "empty OSCORE-session RST is reported only as transport NACK",
+    "protected same-stack GET has one server request and one authenticated application delivery"
+  ],
+  "lanes": [
+    {
+      "result": "passed",
+      "exit_code": 0,
+      "public_api_scenarios": 18,
+      "platform": "macOS arm64",
+      "output_sha256": "a969e577af619286ee3aeaec2810908c62a718c301fdd59ee154f6e71b1454e0",
+      "assertion_output": [
+        "WCO-S06 WCO-N02: 15 plaintext ACK/NON/CON/error/separate responses yield no OSCORE application value",
+        "WCO-S06 WCO-N02: plain UDP, empty RST and actual protected OSCORE same-stack controls succeed"
+      ],
+      "executable_sha256": "00de8e9da0883817e44470d9245a075a3d0fb56d1f051a8f018c3ac73458dce4",
+      "static_library_sha256": "1c867461b8223a41e960dd987d475fed66ff275c89b61ceecdb0fae366d7876e",
+      "compiler": "Apple clang 21.0.0 clang-2100.1.1.101",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "result": "passed",
+      "exit_code": 0,
+      "public_api_scenarios": 18,
+      "platform": "Linux arm64",
+      "output_sha256": "a969e577af619286ee3aeaec2810908c62a718c301fdd59ee154f6e71b1454e0",
+      "assertion_output": [
+        "WCO-S06 WCO-N02: 15 plaintext ACK/NON/CON/error/separate responses yield no OSCORE application value",
+        "WCO-S06 WCO-N02: plain UDP, empty RST and actual protected OSCORE same-stack controls succeed"
+      ],
+      "image": "sha256:747d258e0cb367428b3ad21177c7bf66e035c1567797234f165cea7cd1c30133",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "executable_sha256": "8e53a49612cfcd5fd513b9d63984bbccd4084edc483037502fab23fd53e10be7",
+      "static_library_sha256": "3278bdfb88c2dda836183ce63ed7d4239fd5d4fe5a8762886a6168cea1e3b1ef",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": [
+        "address",
+        "undefined",
+        "leak"
+      ],
+      "artifact_and_package_log_sha256": "2ab0662a649cf28588e3ad01aade75b240d93af63920fee5a6206736503b18bc",
+      "build_log_sha256": "91fd8bdcdc0028929c55368a056657af8727f2f0ac3ca41d832e8a3a4be50244",
+      "toolchain_packages_recorded_not_locked": true,
+      "argv": [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--read-only",
+        "--pids-limit",
+        "32",
+        "--memory",
+        "512m",
+        "--entrypoint",
+        "/usr/local/bin/oscore-protection",
+        "sha256:747d258e0cb367428b3ad21177c7bf66e035c1567797234f165cea7cd1c30133"
+      ]
+    }
+  ],
+  "negative_controls": {
+    "platform": "macOS arm64",
+    "preceding_source": {
+      "schema": "wotex.coap.libcoap-source@1",
+      "version": "4.3.5",
+      "commit": "7cf7465b784baded4de183290c547d582becfd28",
+      "url": "https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28",
+      "sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+      "patches": [
+        {
+          "path": "patches/0001-reject-unsaved-sender-sequences.patch",
+          "sha256": "58ea9aa566e6306b811e3845c01931e7887d66e00923e285d7be779d58251350"
+        },
+        {
+          "path": "patches/0002-skip-empty-cbor-byte-copy.patch",
+          "sha256": "29d0e421a446b0ec347c71b8e3ac7421ff541254df6eced4f91c2bd6ff92f8a2"
+        },
+        {
+          "path": "patches/0003-limit-whole-body-assembly.patch",
+          "sha256": "bc718f8ea44495f6dabee9c508b1820e6d802e571c3fe8b2e00746d3a9a6fec7"
+        },
+        {
+          "path": "patches/0004-reject-representation-restart.patch",
+          "sha256": "39fdf0f4e53b1c941983f317550f8ba72dcf5ba300c95904467127423fc08767"
+        }
+      ],
+      "patched_sources": {
+        "src/coap_oscore.c": "5c778ae3e899404ebba7f254b9fe7422eb06fb0811e61dfcc7e1bd8122c3d410",
+        "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c",
+        "src/coap_block.c": "3aed69a6bad7f63dad5998a0b7a402a78cc81da718985a61b964c5619a21d9af"
+      }
+    },
+    "coap_net_sha256": "663b78b647bf5dcda84fcd567a488ad38a88c69cb0c257207bfb36ffbdaf2601",
+    "static_library_sha256": "78533f9a99fc8ca593338be001297af58870684554c5fce0fc307c6bb2dc924c",
+    "executable_sha256": "731b00f62825b76925a96e49bb5f4e9f92756c0a49914d892185f1f76d90137c",
+    "cases": [
+      {
+        "argument": "--positive-only",
+        "exit_code": 0,
+        "output_sha256": "fc49a4916c0c981a5bb3165bc172438b5881aa6e9d8e012b8c64543ba1d8bd45",
+        "assertion_output": [
+          "WCO-S06 WCO-N02: plain UDP, empty RST and actual protected OSCORE same-stack controls succeed"
+        ]
+      },
+      {
+        "argument": null,
+        "exit_code": -6,
+        "signal": "SIGABRT",
+        "first_failure": "first GET piggybacked plaintext ACK reaches the application callback",
+        "failed_assertion": "deliveries == 0 && failures == 1",
+        "output_sha256": "fe30cdcdb70c7c204bf2b822bbb87985ce2af6c3290c103e2a15100de7beab63",
+        "remaining_fault_cases": "not executed after the first failed assertion"
+      }
+    ]
+  },
+  "regression_runs": [
+    {
+      "executable": "oscore-block-limit",
+      "platform": "Linux arm64",
+      "image": "sha256:747d258e0cb367428b3ad21177c7bf66e035c1567797234f165cea7cd1c30133",
+      "exit_code": 0,
+      "output_sha256": "87233f3069b26403c2e8f18f6ceaceec87aa191ca0fb6a132e086b3f4b1721c3",
+      "assertion_output": [
+        "WCO-N03 WCO-S02: exact 1-MiB, oversized/absent/understated/changed Size2 and cumulative body bounds",
+        "WCO-N03 WCO-S02: changed ETag never restarts GET, dispatched POST or dispatched PUT",
+        "WCO-N03: actual public binary allocation requests never exceed 1 MiB"
+      ]
+    },
+    {
+      "executable": "oscore-sequence",
+      "platform": "Linux arm64",
+      "image": "sha256:747d258e0cb367428b3ad21177c7bf66e035c1567797234f165cea7cd1c30133",
+      "exit_code": 0,
+      "output_sha256": "105be8c0fe99b6d22c754f62629bbb691f74fe36552e27fd263aa7ee5f818b52",
+      "assertion_output": [
+        "WCO-N04 WCO-S06: rejected reservations send zero PDUs; durable allowance bounds three sends"
+      ]
+    }
+  ],
+  "unaccepted": [
+    "Production worker/BEAM Port ownership and finite error projection",
+    "Protected blockwise, Observe, replay and restart matrix",
+    "Independent-stack OSCORE interoperability",
+    "Durable context ownership in the public protected request path",
+    "Complete native Mix build/run and software stress matrix"
+  ]
+}

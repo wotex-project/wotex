@@ -1,0 +1,14 @@
+--- a/src/coap_net.c
++++ b/src/coap_net.c
+@@ -3903,2 +3903,11 @@
+ #if COAP_OSCORE_SUPPORT
++  /* This client profile admits only authenticated nonempty responses on an
++   * OSCORE session. Unprotected error diagnostics cannot drive application
++   * behavior (RFC 8613 Appendix D.5.3); empty ACK/RST remain transport control. */
++  if (session->oscore_encryption && COAP_PDU_IS_RESPONSE(pdu) &&
++      coap_check_option(pdu, COAP_OPTION_OSCORE, &opt_iter) == NULL) {
++    coap_handle_event_lkd(context, COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD, session);
++    goto cleanup;
++  }
++
+   if (!COAP_PDU_IS_SIGNALING(pdu) &&

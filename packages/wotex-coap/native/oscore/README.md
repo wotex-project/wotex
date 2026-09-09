@@ -14,6 +14,16 @@ cannot bypass persistence through a previously advanced cache. The empty-byte
 patch preserves the CBOR encoding of an empty byte string without calling
 `memcpy` on its null source.
 
+The response-admission patch prevents plaintext nonempty responses from reaching
+an OSCORE application's response callback. It reports a finite protection error,
+including for an unauthenticated error response; its diagnostic text is not
+trusted. Empty ACK/RST preserve their transport-only meaning. The
+[protection receipt](../../docs/provenance/native-protection-v1.json) covers
+15 real UDP fault responses and ordinary UDP, empty-RST and protected positive
+controls. The protected
+peer uses the same pinned SDK and is labelled same-stack. The fixture reservation
+callback is not the production durable store.
+
 The real native regression in `test/native/oscore_sequence_test.c` creates an
 OSCORE client through public libcoap APIs and a local UDP receiver. It asserts
 three failed reservations each produce `COAP_INVALID_MID` and zero received
@@ -24,7 +34,8 @@ The test's key material is a public RFC 8613 fixture.
 
 `test/native/Dockerfile` builds and runs the actual pinned SDK and regression
 with Linux ASan/UBSan, including leak detection. Its input context contains the
-verified archive as `source.tar.gz`, both patches and the C test. The base image
+verified archive as `source.tar.gz`, every ordered source patch and the native
+fixtures named by its COPY entries. The base image
 is pinned; package versions are recorded after installation, not claimed to be
 fixed by the image digest. [The receipt](../../docs/provenance/native-sequence-v1.json)
 records exact test/source/artifact digests and the executed macOS/Linux lanes.
