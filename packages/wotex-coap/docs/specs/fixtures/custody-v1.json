@@ -1,0 +1,215 @@
+{
+  "format_version": "1.0.0",
+  "specification": "WCO.13@1.4.0",
+  "description": "Pipe-level custody primitive cases. Exact byte, child-reap and cleanup assertions run in oscore_custody_test.c. These fixtures do not accept a libcoap worker, BEAM owner or report-credit integration.",
+  "cases": [
+    {
+      "id": "WCO-G01",
+      "requirements": [
+        "WCO-N02"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 513,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WCO-G02",
+      "requirements": [
+        "WCO-N02"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 4097
+        },
+        "received_bytes": 4097,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WCO-G03",
+      "requirements": [
+        "WCO-N02"
+      ],
+      "input_capacity": 3072,
+      "output_capacity": 4096,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 1048576
+        },
+        "received_bytes": 2097152,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WCO-G04",
+      "requirements": [
+        "WCO-N02"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "positive"
+        },
+        "received_bytes": 0,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WCO-G05",
+      "requirements": [
+        "WCO-N02"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 0,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WCO-G06",
+      "requirements": [
+        "WCO-N02"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 0,
+        "direct_reaped": 3,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WCO-G07",
+      "requirements": [
+        "WCO-N02"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 135168,
+        "direct_reaped": 5,
+        "background_stopped": 1,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WCO-G08",
+      "requirements": [
+        "WCO-N02"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 1024
+        },
+        "received_bytes": 1024,
+        "direct_reaped": 2,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WCO-G09",
+      "requirements": [
+        "WCO-N02"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 0,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WCO-G10",
+      "requirements": [
+        "WCO-N02"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 3400,
+        "direct_reaped": 200,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "WCO-G11",
+      "requirements": [
+        "WCO-N02"
+      ],
+      "input_capacity": 17,
+      "output_capacity": 23,
+      "cleanup_allowance_ms": 500,
+      "expectation": {
+        "sent_bytes": {
+          "operator": "exact",
+          "value": 0
+        },
+        "received_bytes": 0,
+        "direct_reaped": 1,
+        "background_stopped": 0,
+        "status": "passed"
+      }
+    }
+  ]
+}

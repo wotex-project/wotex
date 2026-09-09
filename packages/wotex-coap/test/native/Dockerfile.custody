@@ -1,0 +1,16 @@
+FROM debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
+COPY native/oscore/custody.c /build/native/oscore/
+COPY test/native/oscore_custody_entry.c test/native/oscore_custody_test.c /build/test/native/
+COPY test/native/oscore_custody_group_fault.c test/native/oscore_custody_startup_test.c /build/test/native/
+ENV CFLAGS="-std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
+RUN cc $CFLAGS native/oscore/custody.c test/native/oscore_custody_entry.c -o /usr/local/bin/custody
+RUN cc $CFLAGS test/native/oscore_custody_test.c -o /usr/local/bin/custody-check
+RUN cc $CFLAGS -Dsetpgid=wco_fault_setpgid native/oscore/custody.c test/native/oscore_custody_entry.c test/native/oscore_custody_group_fault.c -o /usr/local/bin/custody-fault
+RUN cc $CFLAGS test/native/oscore_custody_startup_test.c -o /usr/local/bin/custody-startup
+RUN sha256sum native/oscore/custody.c test/native/* /usr/local/bin/custody /usr/local/bin/custody-check /usr/local/bin/custody-fault /usr/local/bin/custody-startup > /build/artifacts.sha256 && dpkg-query -W > /build/toolchain.packages
+ENV ASAN_OPTIONS="detect_leaks=0:halt_on_error=1:abort_on_error=1"
+ENV UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1"
+USER 65534:65534
+ENTRYPOINT ["/usr/local/bin/custody-check"]

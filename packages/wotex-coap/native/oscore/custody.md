@@ -1,0 +1,69 @@
+# Native process custody
+
+This source implements the opaque process-custody primitive. The production
+worker and BEAM owner remain separate, unaccepted work under WCO-N02. Their
+executable contract requires a fixed `--custody ABS_DIRECTORY` entry and an
+internal `--worker` entry. The BEAM owner supplies an absolute executable
+path whose bytes match the native manifest. Custody executes that same path with
+only `--worker`; it never selects a second executable, consults PATH, or sends
+credentials through arguments. Loading the Elixir dependency starts neither mode.
+
+One guardian holds an unreaped direct worker PID while signalling its ordinary
+process group. The parent establishes that group before releasing a one-byte
+startup barrier. The child verifies the group before inspecting its working
+directory or executing the worker. An unsuccessful barrier uses only the
+unreleased direct PID and bounded reap polling; no unestablished group receives
+a signal. Ignored SIGCHLD, child auto-reaping and inherited blocked signals are
+cleared before fork. The production worker is responsible for the libcoap context/session and the
+durable store; the custody primitive does not invoke either API.
+The guardian owns two fixed 262144-byte byte queues and separate nonblocking
+pipes. It inspects owner liveness even when either queue is full; stdout has no
+banner and remains an opaque protocol stream. Worker stderr terminates custody
+with finite status 131 and is never copied into a library error.
+
+The guardian cleanup deadline is 500 ms from owner loss, child exit, child stdout
+EOF, or a containment failure. Termination and forced kill share this one
+absolute deadline. The BEAM owner's complete C03 shutdown budget remains 1000 ms
+including its graceful phase and observation of native exit; the two phases do
+not receive separate 1000-ms grace periods. Normal worker exit drains remaining
+stdout to EOF within the same native deadline. Incomplete cleanup reports
+status 129; it cannot be labelled successful.
+
+Queue capacity alone does not bound an Erlang Port mailbox. The worker's
+cumulative report-credit protocol supplies that bound across its own queue,
+these pipes/queues and the Port. Cancel/close control reservations are separate
+from report credit. No whole-VM crash, detached `setsid` descendant, kernel-stuck
+process or inaccessible external service cleanup guarantee is inferred from
+ordinary process-group ownership.
+
+`custody.c` derives from Wotex OPC UA commit
+`ca2c4afc2fe8d4afa42b7621363c567da89ce288`, source SHA-256
+`ba2e2cc2ef7d32ed5e9691fce34a58f1f04e8605b73f3257caee31d619c71e41`.
+Its group-identity retention derives from Wotex Modbus commit
+`018f419b0644cfecc83891551d10b5c8d771d7c6`. The first-party Apache-2.0 notice is
+retained. The adaptation renames its C entry point for fixed same-binary dispatch
+and requires a parent-owned startup barrier. The native test entry exposes the
+generic primitive solely to the pipe-level fault driver; it is not a production
+backend executable. Cross-repository evidence does not accept
+this package's final worker or BEAM ownership path; those require actual CoAP
+process, saturation and deadline tests.
+
+`docs/specs/fixtures/custody-v1.json` binds eleven exact pipe-level cases to
+`test/native/oscore_custody_test.c`. They cover byte-preserving duplex transfer,
+full input/output pipes, stopped workers, owner EOF/TERM, stderr failure, final
+output drain, failed drain, descriptor closure, unrelated group preservation and
+200 short child launches with alternating inherited signal state. The test
+producer is an actual independent process. It is not a protocol peer. Cleanup
+assertions use the fixed 500-ms native deadline without sanitizer allowances;
+`Dockerfile.custody` runs the same code with ASan/UBSan. A separate leak-audit
+lane enables leak detection and names its additional 1000-ms guardian-exit
+instrumentation allowance; direct SDK reap still requires 500 ms. Leak-audit
+results do not accept the production guardian-exit deadline.
+
+The startup driver separately executes 1000 short children and 32 forced parent
+admission failures. Test-only `-Dsetpgid=wco_fault_setpgid` linkage denies the
+parent's group operation while preserving the child's system call, so the old
+uncoordinated design executes the probe and fails the expected no-output check.
+The production primitive contains no fault override. The leak-audit driver's
+aggregate fixture allowance is 180 seconds for 200 independent process-exit
+scans; its per-child cleanup assertions retain the limits above.
