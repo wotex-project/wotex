@@ -30,7 +30,8 @@ defmodule Wotex.Thread.Dataset do
 
   @doc "Explicitly serializes raw dataset bytes; returned data may contain credentials."
   @spec encode(term()) :: {:ok, binary()} | {:error, Error.t()}
-  def encode(%__MODULE__{entries: entries, types: types}) when is_list(entries) do
+  def encode(%__MODULE__{entries: entries, types: types} = dataset)
+      when map_size(dataset) == 3 and is_list(entries) do
     if bounded_entries?(entries, 0) and types == Enum.map(entries, &elem(&1, 0)) do
       bytes =
         for {type, value} <- entries, into: <<>>, do: <<type, byte_size(value), value::binary>>
