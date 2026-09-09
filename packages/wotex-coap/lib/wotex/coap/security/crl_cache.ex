@@ -5,7 +5,9 @@ defmodule Wotex.CoAP.Security.CRLCache do
   The DTLS adapter installs this callback module with the immutable DER-encoded
   revocation lists admitted by `Wotex.CoAP.Security`. Lookup selects lists by
   normalized issuer name, including explicit directory-name issuers from a
-  distribution point. Missing or malformed material produces no matching list.
+  distribution point. Both decoded and ASN.1-encoded callback names are accepted;
+  conversion uses public OTP certificate APIs. Missing or malformed material
+  produces no matching list.
 
   Refresh returns the same supplied bytes. The module has no global cache,
   filesystem store, HTTP fetch, or automatic trust rotation. OTP's certificate
@@ -38,7 +40,9 @@ defmodule Wotex.CoAP.Security.CRLCache do
 
     Enum.filter(crls, fn bytes ->
       issuer = :public_key.pkix_crl_issuer(bytes)
-      :public_key.pkix_normalize_name(issuer) == normalized
+      encoded = :public_key.der_decode(:Name, :public_key.pkix_encode(:Name, issuer, :otp))
+
+      normalized in Enum.map([issuer, encoded], &:public_key.pkix_normalize_name/1)
     end)
   rescue
     _ -> []

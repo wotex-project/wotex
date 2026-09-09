@@ -78,6 +78,9 @@ defmodule Wotex.CoAP.SecurityCallbacksTest do
       )
 
     assert CRLCache.select(issuer, cache) == [crl]
+    encoded_issuer = :public_key.der_decode(:Name, :public_key.pkix_encode(:Name, issuer, :otp))
+    assert CRLCache.select(encoded_issuer, cache) == [crl]
+    assert CRLCache.lookup(point, encoded_issuer, cache) == [crl]
     assert CRLCache.select([{:directoryName, issuer}, {:directoryName, issuer}], cache) == [crl]
     assert CRLCache.lookup(point, issuer, cache) == [crl]
     alternate = distribution_point(cRLIssuer: [{:directoryName, issuer}])

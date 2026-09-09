@@ -48,6 +48,8 @@ defmodule Wotex.CoAP.Test.RuntimeDTLSPeer do
       Task.async(fn ->
         with {:ok, accepted} <- :ssl.transport_accept(listener, 1000),
              {:ok, socket} <- :ssl.handshake(accepted, 1000) do
+          {:ok, {_, remote_port}} = :ssl.peername(socket)
+          send(test, {:client_port, :peer, remote_port})
           :ok = :ssl.setopts(socket, active: true)
           peer_loop(socket, test)
         else

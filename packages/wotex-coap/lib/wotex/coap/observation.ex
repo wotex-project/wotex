@@ -270,7 +270,11 @@ defmodule Wotex.CoAP.Observation do
          previous.metadata.observe,
          report.metadata.observe,
          max(0, report.received_at - previous.received_at)
-       ), do: {:noreply, %{state | pending: report}}, else: {:noreply, state}
+       ) do
+      {:noreply, %{state | pending: report}}
+    else
+      {:noreply, state}
+    end
   end
 
   defp candidate(state, candidate) do
@@ -406,7 +410,11 @@ defmodule Wotex.CoAP.Observation do
          previous.metadata.observe,
          report.metadata.observe,
          max(0, report.received_at - previous.received_at)
-       ), do: candidate(state, report), else: pending(state)
+       ) do
+      candidate(state, report)
+    else
+      pending(state)
+    end
   end
 
   defp renew(state) do

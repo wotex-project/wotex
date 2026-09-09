@@ -175,8 +175,7 @@ defmodule Wotex.CoAP.RuntimeDTLSTest do
       handle = await(fn -> :sys.get_state(owner).handle end)
       relay = :sys.get_state(handle.pid)
       connection = :sys.get_state(relay.session.pid)
-      adapter = :sys.get_state(connection.handle.pid)
-      {:ok, {_, client_port}} = :ssl.sockname(adapter.socket)
+      assert_receive {:client_port, :peer, client_port}, 1000
 
       monitors =
         Enum.map([handle.pid, relay.session.pid, connection.handle.pid], &Process.monitor/1)
@@ -256,9 +255,8 @@ defmodule Wotex.CoAP.RuntimeDTLSTest do
       )
 
       handle = await(fn -> :sys.get_state(owner).handle end)
-      relay = :sys.get_state(handle.pid)
-      adapter = :sys.get_state(:sys.get_state(relay.session.pid).handle.pid)
-      {:ok, {_, client_port}} = :ssl.sockname(adapter.socket)
+      assert Process.alive?(handle.pid)
+      assert_receive {:client_port, :peer, client_port}, 1000
       monitor = Process.monitor(owner)
       Process.exit(receiver, :kill)
       assert_receive {:request, cancellation}, 1000

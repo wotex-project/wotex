@@ -26,7 +26,7 @@ defmodule Wotex.CoAP.DTLSTest do
     assert information[:protocol] == :"dtlsv1.2" and information[:selected_cipher_suite] == @cipher
     refute Map.has_key?(state.config, :options)
     refute inspect(:sys.get_status(adapter.pid)) =~ @key
-    {:ok, {_, client_port}} = :ssl.sockname(state.socket)
+    assert_receive {:client_port, :peer, client_port}, 1000
     task = Task.async(fn -> CoAP.get(session, "/secure") end)
     assert_receive {:request, request}
     assert Codec.option(request, 11) == ["secure"]
@@ -152,8 +152,7 @@ defmodule Wotex.CoAP.DTLSTest do
       }
 
       {:ok, adapter} = DTLS.open(config, owner, 1000)
-      state = :sys.get_state(adapter.pid)
-      {:ok, {_, client_port}} = :ssl.sockname(state.socket)
+      assert_receive {:client_port, :peer, client_port}, 1000
       assert {:error, %Error{code: :invalid_datagram_handle}} = GenServer.call(adapter.pid, :forged)
 
       assert {:error, %Error{code: :transport_error}} =
@@ -218,8 +217,7 @@ defmodule Wotex.CoAP.DTLSTest do
     {proxy, port} = proxy(peer_port)
     {:ok, security} = Security.new(mode: :dtls_psk, identity: "client", key: @key)
     {:ok, session} = CoAP.connect(host: "127.0.0.1", port: port, scheme: :coaps, security: security)
-    adapter = :sys.get_state(session.pid).handle
-    {:ok, {_, client_port}} = :ssl.sockname(:sys.get_state(adapter.pid).socket)
+    assert_receive {:client_port, :proxy, client_port}, 1000
     task = Task.async(fn -> CoAP.get(%{session | timeout: 200}, "/secure", confirmable: false) end)
     assert_receive {:request, request}
     send(peer.pid, {:reply, %{request | type: :non, code: 69, payload: "unauthenticated"}})
@@ -261,6 +259,7 @@ defmodule Wotex.CoAP.DTLSTest do
         proxy_loop(socket, peer_port, client_port, test)
 
       {:udp, ^socket, _, port, bytes} ->
+        if is_nil(client_port), do: send(test, {:client_port, :proxy, port})
         :ok = :gen_udp.send(socket, {127, 0, 0, 1}, peer_port, bytes)
         proxy_loop(socket, peer_port, port, test)
 
@@ -303,6 +302,8 @@ defmodule Wotex.CoAP.DTLSTest do
       Task.async(fn ->
         with {:ok, accepted} <- :ssl.transport_accept(listener, 1000),
              {:ok, socket} <- :ssl.handshake(accepted, 1000) do
+          {:ok, {_, remote_port}} = :ssl.peername(socket)
+          send(test, {:client_port, :peer, remote_port})
           :ok = :ssl.setopts(socket, active: true)
           peer_loop(socket, test)
         else
