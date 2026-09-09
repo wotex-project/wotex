@@ -69,7 +69,7 @@ defmodule Wotex.Conformance.Artifact do
       {:error, %Error{} = error} ->
         {:error, error}
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error, Error.new(:artifact_unreadable, :artifact, "subject artifact could not be opened")}
     end
   end
@@ -82,7 +82,7 @@ defmodule Wotex.Conformance.Artifact do
         digest = "sha256:" <> Base.encode16(:crypto.hash_final(context), case: :lower)
         {:ok, %{digest: digest, size_bytes: size_bytes}}
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error, Error.new(:artifact_unreadable, :artifact, "subject artifact could not be read")}
 
       bytes ->
@@ -96,7 +96,7 @@ defmodule Wotex.Conformance.Artifact do
 
   defp validate_path(path) when is_binary(path) and path != "", do: :ok
 
-  defp validate_path(_path),
+  defp validate_path(_),
     do:
       {:error,
        Error.new(:invalid_artifact_path, :artifact, "artifact path must be a non-empty string")}
@@ -111,7 +111,7 @@ defmodule Wotex.Conformance.Artifact do
 
   defp validate_max_bytes(value) when is_integer(value) and value > 0, do: :ok
 
-  defp validate_max_bytes(_value),
+  defp validate_max_bytes(_),
     do:
       {:error, Error.new(:invalid_limit, :limits, "artifact byte limit must be a positive integer")}
 
@@ -120,11 +120,11 @@ defmodule Wotex.Conformance.Artifact do
       {:ok, %File.Stat{type: :regular}} ->
         :ok
 
-      {:ok, _stat} ->
+      {:ok, _} ->
         {:error,
          Error.new(:invalid_artifact_type, :artifact, "subject artifact must be a regular file")}
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error,
          Error.new(:artifact_unreadable, :artifact, "subject artifact could not be inspected")}
     end
@@ -132,7 +132,7 @@ defmodule Wotex.Conformance.Artifact do
 
   defp within_limit(size, max_bytes) when size <= max_bytes, do: :ok
 
-  defp within_limit(_size, max_bytes) do
+  defp within_limit(_, max_bytes) do
     {:error,
      Error.new(:limit_exceeded, :limits, "subject artifact exceeds its byte limit",
        details: %{"max_bytes" => max_bytes}
@@ -160,5 +160,5 @@ defmodule Wotex.Conformance.Artifact do
     |> Kernel.==(0)
   end
 
-  defp secure_compare(_left, _right), do: false
+  defp secure_compare(_, _), do: false
 end

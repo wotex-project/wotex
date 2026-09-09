@@ -53,7 +53,7 @@ defmodule Wotex.Conformance.Target do
     end
   end
 
-  def normalize(_target),
+  def normalize(_),
     do:
       {:error,
        Error.new(:invalid_target, :target, "target must be an external target or callback tuple")}
@@ -68,7 +68,7 @@ defmodule Wotex.Conformance.Target do
       {:error, %Error{} = error} ->
         {:error, error}
 
-      _result ->
+      _ ->
         {:error,
          Error.new(
            :invalid_target_callback,
@@ -95,7 +95,7 @@ defmodule Wotex.Conformance.Target do
       {:error, %Error{} = error} ->
         {:error, error, 0}
 
-      _result ->
+      _ ->
         {:error,
          Error.new(:invalid_target_callback, :target, "target callback returned an invalid result"),
          0}
@@ -105,8 +105,8 @@ defmodule Wotex.Conformance.Target do
   defp safely(callback, code) do
     callback.()
   rescue
-    _exception -> {:error, Error.new(code, :target, "target callback failed")}
+    _ -> {:error, Error.new(code, :target, "target callback failed")}
   catch
-    _kind, _reason -> {:error, Error.new(code, :target, "target callback failed")}
+    _, _ -> {:error, Error.new(code, :target, "target callback failed")}
   end
 end

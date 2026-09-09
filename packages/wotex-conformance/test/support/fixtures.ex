@@ -84,6 +84,6 @@ defmodule Wotex.Conformance.TestFixtures do
     target
   end
 
-  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, to_string(value))
 end

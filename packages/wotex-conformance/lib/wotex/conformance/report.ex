@@ -84,7 +84,7 @@ defmodule Wotex.Conformance.Report do
     end
   end
 
-  def new(%Subject{}, _corpus_digest, _generated_at, _environment, _results) do
+  def new(%Subject{}, _, _, _, _) do
     {:error, Error.new(:invalid_report_input, :report, "report inputs are invalid")}
   end
 
@@ -126,7 +126,7 @@ defmodule Wotex.Conformance.Report do
       {:ok, utc} ->
         {:ok, DateTime.to_iso8601(utc)}
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error,
          Error.new(:invalid_generated_at, :report, "generated_at could not be normalized to UTC")}
     end

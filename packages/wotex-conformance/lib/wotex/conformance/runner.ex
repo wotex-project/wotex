@@ -51,7 +51,7 @@ defmodule Wotex.Conformance.Runner do
          {:ok, artifact_path} <- Target.artifact_path(target) do
       results =
         case Artifact.verify(artifact_path, subject.artifact_digest) do
-          {:ok, _verification} ->
+          {:ok, _} ->
             run_vectors(corpus, subject, target, selection, generated_at, environment)
 
           {:error, error} ->
@@ -69,7 +69,7 @@ defmodule Wotex.Conformance.Runner do
           {:ok, utc} ->
             {:ok, utc}
 
-          {:error, _reason} ->
+          {:error, _} ->
             {:error,
              Error.new(
                :invalid_generated_at,
@@ -78,7 +78,7 @@ defmodule Wotex.Conformance.Runner do
              )}
         end
 
-      {:ok, _value} ->
+      {:ok, _} ->
         {:error, Error.new(:invalid_generated_at, :runner, "generated_at must be a DateTime")}
 
       :error ->
@@ -109,7 +109,7 @@ defmodule Wotex.Conformance.Runner do
            Error.new(:invalid_selection, :runner, "selected vector IDs must exist in the corpus")}
         end
 
-      _value ->
+      _ ->
         {:error, Error.new(:invalid_selection, :runner, "select must be :all or {:ids, ids}")}
     end
   end
@@ -152,11 +152,11 @@ defmodule Wotex.Conformance.Runner do
   end
 
   defp evaluate_observation(vector, actual, duration_us) do
-    with {:ok, _normalized} <- Observation.validate(vector.claim.operation, actual),
+    with {:ok, _} <- Observation.validate(vector.claim.operation, actual),
          {:ok, digest} <- Canonical.digest(actual) do
       classify(vector, actual, digest, duration_us)
     else
-      {:error, _error} ->
+      {:error, _} ->
         result!(vector, :infrastructure_error,
           code: "invalid_target_observation",
           duration_us: duration_us

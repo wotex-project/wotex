@@ -320,7 +320,7 @@ defmodule Wotex.Conformance.ValidationMatrixTest do
     assert_error(Target.normalize(:invalid), :invalid_target)
     assert_error(Target.normalize({String, %{}}), :invalid_target)
 
-    assert {:ok, {FailingTarget, _state}} =
+    assert {:ok, {FailingTarget, _}} =
              Target.normalize({FailingTarget, %{artifact_path: context.archive}})
 
     assert Target.artifact_path({FailingTarget, %{artifact_path: context.archive}}) ==

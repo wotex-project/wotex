@@ -101,7 +101,7 @@ defmodule Wotex.Conformance.SchemaTest do
     assert :ok = validate(context, "target-response-1.0", observed)
     assert :ok = validate(context, "target-response-1.0", unsupported)
 
-    assert {:error, _messages} =
+    assert {:error, _} =
              validate(context, "target-response-1.0", Map.put(unsupported, "actual", %{}))
   end
 
@@ -125,7 +125,7 @@ defmodule Wotex.Conformance.SchemaTest do
     ]
 
     for {schema, value} <- invalid do
-      assert {:error, [_first | _rest]} = validate(context, schema, value),
+      assert {:error, [_ | _]} = validate(context, schema, value),
              "schema #{schema} accepted an invalid value: #{inspect(value)}"
     end
   end

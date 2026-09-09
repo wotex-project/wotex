@@ -65,7 +65,7 @@ defmodule Wotex.Conformance.Corpus do
     end
   end
 
-  def load(_directory),
+  def load(_),
     do: {:error, Error.new(:invalid_corpus_path, :corpus, "corpus path must be a non-empty string")}
 
   @doc "Constructs a content-addressed corpus from already decoded data."
@@ -82,7 +82,7 @@ defmodule Wotex.Conformance.Corpus do
     end
   end
 
-  def from_map(_input), do: {:error, Error.new(:invalid_type, :corpus, "corpus must be an object")}
+  def from_map(_), do: {:error, Error.new(:invalid_type, :corpus, "corpus must be an object")}
 
   @doc "Alias for `from_map/1`, the map-shaped corpus constructor."
   @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
@@ -149,7 +149,7 @@ defmodule Wotex.Conformance.Corpus do
             {:error, error} -> {:halt, {:error, error}}
           end
 
-        _value ->
+        _ ->
           {:halt, {:error, Error.new(:invalid_type, :corpus, "corpus vectors must be objects")}}
       end
     end)
@@ -159,12 +159,12 @@ defmodule Wotex.Conformance.Corpus do
     end)
   end
 
-  defp construct_vectors(_values),
+  defp construct_vectors(_),
     do: {:error, Error.new(:invalid_value, :corpus, "vectors must be a bounded list")}
 
   defp validate_schema_version(%{"schema_version" => @schema_version}), do: :ok
 
-  defp validate_schema_version(_manifest) do
+  defp validate_schema_version(_) do
     {:error,
      Error.new(:unsupported_schema_version, :corpus, "corpus schema_version is not supported")}
   end
@@ -198,7 +198,7 @@ defmodule Wotex.Conformance.Corpus do
     end)
   end
 
-  defp validate_entries(_entries),
+  defp validate_entries(_),
     do:
       {:error,
        Error.new(:invalid_manifest, :corpus, "manifest vectors must be a non-empty bounded list")}
@@ -215,7 +215,7 @@ defmodule Wotex.Conformance.Corpus do
     end
   end
 
-  defp validate_entry(_entry),
+  defp validate_entry(_),
     do: {:error, Error.new(:invalid_manifest_entry, :corpus, "vector manifest entry is invalid")}
 
   defp validate_filename(file) when is_binary(file) do
@@ -227,7 +227,7 @@ defmodule Wotex.Conformance.Corpus do
     end
   end
 
-  defp validate_filename(_file),
+  defp validate_filename(_),
     do: {:error, Error.new(:invalid_vector_filename, :corpus, "vector filename must be a string")}
 
   defp validate_digest(digest) do
@@ -255,7 +255,7 @@ defmodule Wotex.Conformance.Corpus do
            )}
         end
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error, Error.new(:corpus_unreadable, :corpus, "corpus directory could not be read")}
     end
   end
@@ -315,7 +315,7 @@ defmodule Wotex.Conformance.Corpus do
       ^actual_digest ->
         :ok
 
-      _digest ->
+      _ ->
         {:error,
          Error.new(:corpus_digest_mismatch, :corpus, "corpus digest does not match its manifest")}
     end
@@ -330,13 +330,13 @@ defmodule Wotex.Conformance.Corpus do
       {:ok, %File.Stat{type: :regular}} ->
         {:error, Error.new(:limit_exceeded, :limits, "corpus file exceeds its byte limit")}
 
-      {:ok, _stat} ->
+      {:ok, _} ->
         {:error, Error.new(:invalid_corpus_file, :corpus, "corpus entry must be a regular file")}
 
       {:error, %Jason.DecodeError{}} ->
         {:error, Error.new(:invalid_json, :corpus, "corpus file contains invalid JSON")}
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error, Error.new(:corpus_unreadable, :corpus, "corpus file could not be read")}
     end
   end

@@ -69,7 +69,7 @@ defmodule Wotex.Conformance.Claim do
     end
   end
 
-  def from_map(_input), do: {:error, Error.new(:invalid_type, :claim, "claim must be an object")}
+  def from_map(_), do: {:error, Error.new(:invalid_type, :claim, "claim must be an object")}
 
   @doc "Alias for `from_map/1`, the map-shaped claim constructor."
   @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
@@ -91,7 +91,7 @@ defmodule Wotex.Conformance.Claim do
 
   defp validate_profile(value) when value in @profiles, do: {:ok, value}
 
-  defp validate_profile(_value) do
+  defp validate_profile(_) do
     {:error,
      Error.new(:invalid_value, :claim, "evidence_profile is not supported",
        path: ["evidence_profile"],
@@ -132,7 +132,7 @@ defmodule Wotex.Conformance.Claim do
       %URI{scheme: "https", host: host} when is_binary(host) and host != "" ->
         {:ok, source}
 
-      _uri ->
+      _ ->
         {:error,
          Error.new(:invalid_value, :claim, "standard source must be an absolute HTTPS URI",
            path: ["standard", "source"]
@@ -140,18 +140,18 @@ defmodule Wotex.Conformance.Claim do
     end
   end
 
-  defp validate_source(_source) do
+  defp validate_source(_) do
     {:error,
      Error.new(:missing_field, :claim, "standard source is required", path: ["standard", "source"])}
   end
 
-  defp validate_optional_string(nil, _field), do: {:ok, nil}
+  defp validate_optional_string(nil, _), do: {:ok, nil}
 
-  defp validate_optional_string(value, _field) when is_binary(value) and byte_size(value) <= 255 do
+  defp validate_optional_string(value, _) when is_binary(value) and byte_size(value) <= 255 do
     {:ok, value}
   end
 
-  defp validate_optional_string(_value, field) do
+  defp validate_optional_string(_, field) do
     {:error,
      Error.new(:invalid_value, :claim, "#{field} must be a bounded string",
        path: ["standard", field]
@@ -172,7 +172,7 @@ defmodule Wotex.Conformance.Claim do
     end)
   end
 
-  defp validate_identifiers(_values, field) do
+  defp validate_identifiers(_, field) do
     {:error, Error.new(:invalid_value, :claim, "#{field} must be a bounded list", path: [field])}
   end
 end

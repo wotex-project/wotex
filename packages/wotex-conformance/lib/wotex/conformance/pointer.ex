@@ -43,11 +43,11 @@ defmodule Wotex.Conformance.Pointer do
   @spec valid?(term()) :: boolean()
   def valid?(""), do: true
 
-  def valid?("/" <> _rest = pointer) do
+  def valid?("/" <> _ = pointer) do
     String.valid?(pointer) and not Regex.match?(@escape, pointer)
   end
 
-  def valid?(_pointer), do: false
+  def valid?(_), do: false
 
   defp escape(segment) when is_integer(segment), do: Integer.to_string(segment)
 

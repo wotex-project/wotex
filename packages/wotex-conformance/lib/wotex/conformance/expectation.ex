@@ -44,7 +44,7 @@ defmodule Wotex.Conformance.Expectation do
     end
   end
 
-  def from_map(_input),
+  def from_map(_),
     do: {:error, Error.new(:invalid_type, :vector, "expectation must be an object")}
 
   @doc "Alias for `from_map/1`, the map-shaped expectation constructor."
@@ -63,7 +63,7 @@ defmodule Wotex.Conformance.Expectation do
   defp validate_operator("exact"), do: {:ok, :exact}
   defp validate_operator(:exact), do: {:ok, :exact}
 
-  defp validate_operator(_operator) do
+  defp validate_operator(_) do
     {:error,
      Error.new(:unsupported_operator, :vector, "expectation operator is not supported",
        path: ["operator"]

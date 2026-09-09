@@ -38,7 +38,7 @@ defmodule ExternalTargetFixture do
   end
 
   defp respond("chatter") do
-    Enum.each(1..5_000, fn _chunk -> IO.binwrite(String.duplicate("x", 4_096)) end)
+    Enum.each(1..5_000, fn _ -> IO.binwrite(String.duplicate("x", 4_096)) end)
     Process.sleep(5_000)
   end
 
@@ -83,17 +83,17 @@ defmodule ExternalTargetFixture do
   end
 
   defp archive_path(["--archive", path]), do: path
-  defp archive_path(_args), do: System.halt(11)
+  defp archive_path(_), do: System.halt(11)
 
   defp verify_archive(archive) do
     case :erl_tar.extract(String.to_charlist(archive), [:compressed, :memory]) do
       {:ok, [{~c"manifest.json", contents}]} ->
         case :json.decode(contents) do
           %{"interface_revision" => "1", "subject" => "synthetic"} -> :ok
-          _manifest -> System.halt(15)
+          _ -> System.halt(15)
         end
 
-      _result ->
+      _ ->
         System.halt(16)
     end
   end
@@ -102,7 +102,7 @@ defmodule ExternalTargetFixture do
   defp request do
     case IO.binread(:line) do
       :eof -> System.halt(13)
-      {:error, _reason} -> System.halt(14)
+      {:error, _} -> System.halt(14)
       line -> :json.decode(line)
     end
   end
@@ -129,7 +129,7 @@ defmodule ExternalTargetFixture do
     input =
       case request["vector"] do
         %{"input" => %{} = declared} -> declared
-        _other -> %{}
+        _ -> %{}
       end
 
     document = Map.get(input, "document")
@@ -157,22 +157,22 @@ defmodule ExternalTargetFixture do
       title_errors(document) ++ security_errors(document)
   end
 
-  defp document_errors(_operation, _document) do
+  defp document_errors(_, _) do
     [error("object_required", "parse", "/")]
   end
 
   defp context_errors(@context), do: []
-  defp context_errors([@context | _rest]), do: []
-  defp context_errors([@legacy_context, @context | _rest]), do: []
-  defp context_errors(_context), do: [error("unsupported_context", "semantic", "/@context")]
+  defp context_errors([@context | _]), do: []
+  defp context_errors([@legacy_context, @context | _]), do: []
+  defp context_errors(_), do: [error("unsupported_context", "semantic", "/@context")]
 
-  defp type_errors("thing_model." <> _operation, type) do
+  defp type_errors("thing_model." <> _, type) do
     if @model_type in List.wrap(type),
       do: [],
       else: [error("schema_violation", "schema", "/@type")]
   end
 
-  defp type_errors(_operation, type) do
+  defp type_errors(_, type) do
     if @model_type in List.wrap(type),
       do: [error("thing_model_not_accepted", "semantic", "/@type")],
       else: []
@@ -183,7 +183,7 @@ defmodule ExternalTargetFixture do
       title when is_binary(title) ->
         if String.trim(title) == "", do: [error("empty_title", "semantic", "/title")], else: []
 
-      _missing ->
+      _ ->
         [error("schema_violation", "schema", "/title")]
     end
   end
@@ -192,17 +192,17 @@ defmodule ExternalTargetFixture do
        when is_map(definitions) do
     document
     |> security_references()
-    |> Enum.reject(fn {_path, reference} -> Map.has_key?(definitions, reference) end)
-    |> Enum.map(fn {path, _reference} ->
+    |> Enum.reject(fn {_, reference} -> Map.has_key?(definitions, reference) end)
+    |> Enum.map(fn {path, _} ->
       error("undefined_security_reference", "semantic", path)
     end)
   end
 
-  defp security_errors(%{"security" => _security}) do
+  defp security_errors(%{"security" => _}) do
     [error("schema_violation", "schema", "/securityDefinitions")]
   end
 
-  defp security_errors(_document), do: []
+  defp security_errors(_), do: []
 
   defp security_references(document) do
     references(Map.get(document, "security"), "/security") ++
@@ -231,7 +231,7 @@ defmodule ExternalTargetFixture do
     end)
   end
 
-  defp form_references(_forms, _path), do: []
+  defp form_references(_, _), do: []
 
   defp combo_references(definitions) when is_map(definitions) do
     definitions
@@ -242,12 +242,12 @@ defmodule ExternalTargetFixture do
           references(Map.get(definition, member), "/securityDefinitions/#{segment(name)}/#{member}")
         end)
 
-      {_name, _definition} ->
+      {_, _} ->
         []
     end)
   end
 
-  defp combo_references(_definitions), do: []
+  defp combo_references(_), do: []
 
   defp references(reference, path) when is_binary(reference), do: [{path, reference}]
 
@@ -256,14 +256,14 @@ defmodule ExternalTargetFixture do
     |> Enum.with_index()
     |> Enum.flat_map(fn
       {reference, index} when is_binary(reference) -> [{"#{path}/#{index}", reference}]
-      {_reference, _index} -> []
+      {_, _} -> []
     end)
   end
 
-  defp references(_values, _path), do: []
+  defp references(_, _), do: []
 
   defp entries(value) when is_map(value), do: Enum.sort_by(value, &elem(&1, 0))
-  defp entries(_value), do: []
+  defp entries(_), do: []
 
   defp project(document, []), do: document
 
@@ -287,18 +287,18 @@ defmodule ExternalTargetFixture do
     end)
   end
 
-  defp resolve(_document, _pointer), do: :error
+  defp resolve(_, _), do: :error
 
   defp member(value, segment) when is_map(value), do: Map.fetch(value, segment)
 
   defp member(value, segment) when is_list(value) do
     case Integer.parse(segment) do
       {index, ""} -> Enum.fetch(value, index)
-      _other -> :error
+      _ -> :error
     end
   end
 
-  defp member(_value, _segment), do: :error
+  defp member(_, _), do: :error
 
   defp unescape(segment), do: segment |> String.replace("~1", "/") |> String.replace("~0", "~")
 
@@ -321,7 +321,7 @@ defmodule ExternalTargetFixture do
     Enum.any?(value, &contains_key?(&1, forbidden))
   end
 
-  defp contains_key?(_value, _forbidden), do: false
+  defp contains_key?(_, _), do: false
 
   defp base_response(outcome, actual, vector_id \\ "unused") do
     response = %{

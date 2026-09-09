@@ -48,7 +48,7 @@ defmodule Wotex.Conformance.Value do
   def validate(value, options \\ []) do
     with :ok <- Input.options(options, @limits),
          {:ok, limits} <- limits(options),
-         {:ok, _remaining} <- walk(value, [], 0, limits.max_nodes, limits) do
+         {:ok, _} <- walk(value, [], 0, limits.max_nodes, limits) do
       {:ok, value}
     end
   end
@@ -74,13 +74,13 @@ defmodule Wotex.Conformance.Value do
       nil ->
         {:ok, value}
 
-      _key ->
+      _ ->
         {:error,
          Error.new(:invalid_map_key, :value, "#{field} keys must be strings", path: [field])}
     end
   end
 
-  def string_key_map(_value, field) do
+  def string_key_map(_, field) do
     {:error, Error.new(:invalid_type, :value, "#{field} must be an object", path: [field])}
   end
 
@@ -93,7 +93,7 @@ defmodule Wotex.Conformance.Value do
         {:ok, value} when is_integer(value) and value > 0 ->
           {:cont, {:ok, Map.put(limits, key, value)}}
 
-        {:ok, _value} ->
+        {:ok, _} ->
           {:halt,
            {:error,
             Error.new(:invalid_limit, :limits, "JSON value limits must be positive integers",
@@ -136,7 +136,7 @@ defmodule Wotex.Conformance.Value do
     end
   end
 
-  defp walk(_value, path, depth, remaining, %{max_depth: max_depth}) when depth > max_depth do
+  defp walk(_, path, depth, remaining, %{max_depth: max_depth}) when depth > max_depth do
     {:error,
      Error.new(:limit_exceeded, :limits, "JSON value exceeds its nesting limit",
        path: path,
@@ -144,22 +144,22 @@ defmodule Wotex.Conformance.Value do
      )}
   end
 
-  defp walk(value, _path, _depth, remaining, _limits)
+  defp walk(value, _, _, remaining, _)
        when is_nil(value) or is_boolean(value) or is_integer(value) do
     consume(remaining)
   end
 
-  defp walk(value, path, _depth, remaining, _limits) when is_float(value) do
+  defp walk(value, path, _, remaining, _) when is_float(value) do
     case Jason.encode(value) do
-      {:ok, _encoded} ->
+      {:ok, _} ->
         consume(remaining)
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error, Error.new(:invalid_number, :value, "JSON numbers must be finite", path: path)}
     end
   end
 
-  defp walk(value, path, _depth, remaining, %{max_string_bytes: max_bytes})
+  defp walk(value, path, _, remaining, %{max_string_bytes: max_bytes})
        when is_binary(value) do
     cond do
       not String.valid?(value) ->
@@ -196,7 +196,7 @@ defmodule Wotex.Conformance.Value do
     with :ok <- within_collection(map_size(value), path, limits),
          {:ok, remaining} <- consume(remaining) do
       value
-      |> Enum.sort_by(fn {key, _entry} -> if is_binary(key), do: key, else: inspect(key) end)
+      |> Enum.sort_by(fn {key, _} -> if is_binary(key), do: key, else: inspect(key) end)
       |> Enum.reduce_while({:ok, remaining}, fn
         {key, entry}, {:ok, left} when is_binary(key) ->
           case walk(entry, path ++ [key], depth + 1, left, limits) do
@@ -204,7 +204,7 @@ defmodule Wotex.Conformance.Value do
             {:error, error} -> {:halt, {:error, error}}
           end
 
-        {_key, _entry}, _acc ->
+        {_, _}, _ ->
           {:halt,
            {:error,
             Error.new(:invalid_map_key, :value, "JSON object keys must be strings", path: path)}}
@@ -212,7 +212,7 @@ defmodule Wotex.Conformance.Value do
     end
   end
 
-  defp walk(_value, path, _depth, _remaining, _limits) do
+  defp walk(_, path, _, _, _) do
     {:error, Error.new(:invalid_type, :value, "value is not JSON-compatible", path: path)}
   end
 
@@ -224,7 +224,7 @@ defmodule Wotex.Conformance.Value do
      )}
   end
 
-  defp within_collection(_size, _path, _limits), do: :ok
+  defp within_collection(_, _, _), do: :ok
 
   defp consume(remaining) when remaining > 0, do: {:ok, remaining - 1}
 

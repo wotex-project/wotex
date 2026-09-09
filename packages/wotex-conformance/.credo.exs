@@ -8,6 +8,7 @@
       checks: %{
         enabled: [
           {Credo.Check.Consistency.ParameterPatternMatching, []},
+          {Credo.Check.Consistency.UnusedVariableNames, [force: :anonymous]},
           {Credo.Check.Design.SkipTestWithoutComment, []},
           {Credo.Check.Design.TagFIXME, []},
           {Credo.Check.Design.TagTODO, []},

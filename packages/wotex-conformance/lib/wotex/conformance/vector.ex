@@ -66,7 +66,7 @@ defmodule Wotex.Conformance.Vector do
          {:ok, validated_input} <- Observation.validate_input(claim.operation, validated),
          {:ok, expectation_input} <- Input.required(input, :expectation),
          {:ok, expectation} <- Expectation.from_map(expectation_input),
-         {:ok, _observation} <- Observation.validate(claim.operation, expectation.value),
+         {:ok, _} <- Observation.validate(claim.operation, expectation.value),
          {:ok, provenance_input} <- Input.required(input, :provenance),
          {:ok, provenance} <- validate_provenance(provenance_input),
          {:ok, tags} <- validate_tags(Input.optional(input, :tags, [])),
@@ -85,7 +85,7 @@ defmodule Wotex.Conformance.Vector do
     end
   end
 
-  def from_map(_input), do: {:error, Error.new(:invalid_type, :vector, "vector must be an object")}
+  def from_map(_), do: {:error, Error.new(:invalid_type, :vector, "vector must be an object")}
 
   @doc "Alias for `from_map/1`, the map-shaped vector constructor."
   @spec new(map()) :: {:ok, t()} | {:error, Error.t()}
@@ -134,7 +134,7 @@ defmodule Wotex.Conformance.Vector do
 
   defp validate_provenance(value) do
     with {:ok, provenance} <- Value.string_key_map(value, "provenance"),
-         {:ok, _validated} <-
+         {:ok, _} <-
            Value.validate(provenance, max_depth: 8, max_nodes: 64, max_string_bytes: 2_048),
          {:ok, source} <- required_https_source(provenance),
          {:ok, observed} <- required_observed_date(provenance) do
@@ -149,14 +149,14 @@ defmodule Wotex.Conformance.Vector do
           %URI{scheme: "https", host: host} when is_binary(host) and host != "" ->
             {:ok, source}
 
-          _uri ->
+          _ ->
             {:error,
              Error.new(:invalid_value, :vector, "provenance source must be an absolute HTTPS URI",
                path: ["provenance", "source"]
              )}
         end
 
-      _value ->
+      _ ->
         {:error,
          Error.new(:missing_field, :vector, "provenance source is required",
            path: ["provenance", "source"]
@@ -168,17 +168,17 @@ defmodule Wotex.Conformance.Vector do
     case Map.get(provenance, "observed") do
       observed when is_binary(observed) ->
         case Date.from_iso8601(observed) do
-          {:ok, _date} ->
+          {:ok, _} ->
             {:ok, observed}
 
-          {:error, _reason} ->
+          {:error, _} ->
             {:error,
              Error.new(:invalid_value, :vector, "provenance observed must be an ISO 8601 date",
                path: ["provenance", "observed"]
              )}
         end
 
-      _value ->
+      _ ->
         {:error,
          Error.new(:missing_field, :vector, "provenance observed is required",
            path: ["provenance", "observed"]
@@ -200,6 +200,6 @@ defmodule Wotex.Conformance.Vector do
     end)
   end
 
-  defp validate_tags(_tags),
+  defp validate_tags(_),
     do: {:error, Error.new(:invalid_value, :vector, "tags must be a bounded list", path: ["tags"])}
 end

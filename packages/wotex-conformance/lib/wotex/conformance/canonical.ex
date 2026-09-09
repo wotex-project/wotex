@@ -59,7 +59,7 @@ defmodule Wotex.Conformance.Canonical do
     String.match?(digest, ~r/^sha256:[0-9a-f]{64}$/)
   end
 
-  def valid_digest?(_digest), do: false
+  def valid_digest?(_), do: false
 
   defp encode_value(nil), do: "null"
   defp encode_value(true), do: "true"
@@ -77,7 +77,7 @@ defmodule Wotex.Conformance.Canonical do
   defp encode_value(value) when is_map(value) do
     entries =
       value
-      |> Enum.sort_by(fn {key, _entry} -> key end)
+      |> Enum.sort_by(fn {key, _} -> key end)
       |> Enum.map(fn {key, entry} -> [Jason.encode_to_iodata!(key), ":", encode_value(entry)] end)
       |> Enum.intersperse(",")
 

@@ -51,7 +51,7 @@ defmodule Wotex.Conformance.Subject do
     end
   end
 
-  def from_map(_input),
+  def from_map(_),
     do: {:error, Error.new(:invalid_type, :subject, "subject must be an object")}
 
   @doc "Alias for `from_map/1`, the map-shaped subject constructor."
@@ -82,7 +82,7 @@ defmodule Wotex.Conformance.Subject do
 
   defp validate_interface(value) do
     with {:ok, interface} <- Value.string_key_map(value, "interface"),
-         {:ok, _validated} <-
+         {:ok, _} <-
            Value.validate(interface, max_depth: 8, max_nodes: 64, max_string_bytes: 512),
          {:ok, kind} <- required_interface_identifier(interface, "kind"),
          {:ok, revision} <- required_interface_identifier(interface, "revision") do

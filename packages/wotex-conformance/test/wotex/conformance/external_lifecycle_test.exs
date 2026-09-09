@@ -45,14 +45,14 @@ defmodule Wotex.Conformance.ExternalLifecycleTest do
     request = %{"vector" => %{"id" => "td11.parse.minimal"}}
     send(self(), {:unrelated, :caller_message})
 
-    for _repetition <- 1..3 do
+    for _ <- 1..3 do
       timeout =
         TestFixtures.external_target!(context.archive, "chatter",
           timeout_ms: 100,
           max_output_bytes: 16_777_216
         )
 
-      assert {:error, %Error{code: :target_timeout}, _duration} =
+      assert {:error, %Error{code: :target_timeout}, _} =
                External.invoke(timeout, request)
 
       assert port_messages() == []
@@ -60,7 +60,7 @@ defmodule Wotex.Conformance.ExternalLifecycleTest do
       oversized =
         TestFixtures.external_target!(context.archive, "chatter", max_output_bytes: 1_024)
 
-      assert {:error, %Error{code: :target_output_limit}, _duration} =
+      assert {:error, %Error{code: :target_output_limit}, _} =
                External.invoke(oversized, request)
 
       assert port_messages() == []
@@ -98,9 +98,9 @@ defmodule Wotex.Conformance.ExternalLifecycleTest do
     {:messages, messages} = Process.info(self(), :messages)
 
     Enum.filter(messages, fn
-      {port, {:data, _bytes}} -> is_port(port)
-      {port, {:exit_status, _status}} -> is_port(port)
-      _message -> false
+      {port, {:data, _}} -> is_port(port)
+      {port, {:exit_status, _}} -> is_port(port)
+      _ -> false
     end)
   end
 end

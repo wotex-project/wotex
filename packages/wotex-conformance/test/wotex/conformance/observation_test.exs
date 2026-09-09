@@ -27,13 +27,13 @@ defmodule Wotex.Conformance.ObservationTest do
   end
 
   test "declared input requires one document and one bounded projection" do
-    assert {:ok, _input} =
+    assert {:ok, _} =
              Observation.validate_input(@operation, %{
                "document" => %{"title" => "Thing"},
                "projection" => ["/title", "/properties/a~1b/0"]
              })
 
-    assert {:ok, _input} =
+    assert {:ok, _} =
              Observation.validate_input(@operation, %{"document" => %{}, "projection" => []})
 
     invalid = [
@@ -61,7 +61,7 @@ defmodule Wotex.Conformance.ObservationTest do
   end
 
   test "an accepted observation reports exactly its projected document" do
-    assert {:ok, _value} =
+    assert {:ok, _} =
              Observation.validate(@operation, %{
                "accepted" => true,
                "document" => %{"/title" => "Thing"}
@@ -78,7 +78,7 @@ defmodule Wotex.Conformance.ObservationTest do
   end
 
   test "a rejected observation lists unique bounded errors sorted by path and code" do
-    assert {:ok, _value} =
+    assert {:ok, _} =
              Observation.validate(@operation, %{
                "accepted" => false,
                "errors" => [

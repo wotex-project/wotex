@@ -90,7 +90,7 @@ defmodule Wotex.Conformance.Target.External do
     end
   end
 
-  def from_map(_input),
+  def from_map(_),
     do: {:error, Error.new(:invalid_type, :target, "external target must be an object")}
 
   @doc "Alias for `from_map/1`, the map-shaped external target constructor."
@@ -139,14 +139,14 @@ defmodule Wotex.Conformance.Target.External do
           {:ok, %File.Stat{type: :regular}} ->
             {:ok, value}
 
-          _result ->
+          _ ->
             {:error,
              Error.new(:invalid_executable, :target, "target executable must be a regular file")}
         end
     end
   end
 
-  defp validate_executable(_value),
+  defp validate_executable(_),
     do: {:error, Error.new(:invalid_executable, :target, "target executable must be a string")}
 
   defp validate_args(args) when is_list(args) and length(args) <= @max_args do
@@ -199,7 +199,7 @@ defmodule Wotex.Conformance.Target.External do
     end)
   end
 
-  defp validate_args(_args),
+  defp validate_args(_),
     do: {:error, Error.new(:invalid_argument, :target, "target arguments must be a bounded list")}
 
   defp validate_artifact_path(path) when is_binary(path) and path != "" do
@@ -211,7 +211,7 @@ defmodule Wotex.Conformance.Target.External do
     end
   end
 
-  defp validate_artifact_path(_path),
+  defp validate_artifact_path(_),
     do: {:error, Error.new(:invalid_artifact_path, :target, "artifact path must be a string")}
 
   defp validate_environment(environment)
@@ -249,14 +249,14 @@ defmodule Wotex.Conformance.Target.External do
     end)
   end
 
-  defp validate_environment(_environment) do
+  defp validate_environment(_) do
     {:error,
      Error.new(:invalid_environment, :target, "target environment must be a bounded object")}
   end
 
-  defp validate_positive_limit(value, _field) when is_integer(value) and value > 0, do: {:ok, value}
+  defp validate_positive_limit(value, _) when is_integer(value) and value > 0, do: {:ok, value}
 
-  defp validate_positive_limit(_value, field) do
+  defp validate_positive_limit(_, field) do
     {:error, Error.new(:invalid_limit, :limits, "#{field} must be a positive integer")}
   end
 
@@ -286,7 +286,7 @@ defmodule Wotex.Conformance.Target.External do
       ArgumentError ->
         {:error, Error.new(:target_start_failed, :target, "external target could not be started")}
     catch
-      :error, _reason ->
+      :error, _ ->
         {:error, Error.new(:target_start_failed, :target, "external target could not be started")}
     end
   end
@@ -352,7 +352,7 @@ defmodule Wotex.Conformance.Target.External do
       {^port, {:exit_status, 0}} ->
         {:ok, chunks |> Enum.reverse() |> IO.iodata_to_binary()}
 
-      {^port, {:exit_status, _status}} ->
+      {^port, {:exit_status, _}} ->
         {:error, Error.new(:target_exit_nonzero, :target, "external target exited unsuccessfully")}
     after
       remaining ->
@@ -381,8 +381,8 @@ defmodule Wotex.Conformance.Target.External do
   # output of every timed-out or oversized exchange.
   defp flush(port) do
     receive do
-      {^port, {:data, _bytes}} -> flush(port)
-      {^port, {:exit_status, _status}} -> flush(port)
+      {^port, {:data, _}} -> flush(port)
+      {^port, {:exit_status, _}} -> flush(port)
     after
       0 -> :ok
     end
@@ -393,7 +393,7 @@ defmodule Wotex.Conformance.Target.External do
       {:ok, response} ->
         {:ok, response}
 
-      {:error, _reason} ->
+      {:error, _} ->
         {:error, Error.new(:invalid_target_json, :protocol, "target response is not valid JSON")}
     end
   end
@@ -402,7 +402,7 @@ defmodule Wotex.Conformance.Target.External do
     Value.validate_identifier(vector_id, "vector_id")
   end
 
-  defp request_vector_id(_request) do
+  defp request_vector_id(_) do
     {:error, Error.new(:invalid_target_request, :protocol, "target request has no vector ID")}
   end
 end

@@ -25,7 +25,7 @@ defmodule Wotex.Conformance.Environment do
   @spec validate(term()) :: {:ok, map()} | {:error, Error.t()}
   def validate(environment) do
     with {:ok, environment} <- Value.string_key_map(environment, "environment"),
-         {:ok, _validated} <-
+         {:ok, _} <-
            Value.validate(environment,
              max_depth: 8,
              max_nodes: 128,
@@ -69,5 +69,5 @@ defmodule Wotex.Conformance.Environment do
     end)
   end
 
-  defp reject_sensitive_keys(_value, _path), do: :ok
+  defp reject_sensitive_keys(_, _), do: :ok
 end

@@ -62,7 +62,7 @@ defmodule Wotex.Conformance.Input do
     end
   end
 
-  def options(_options, _allowed), do: invalid_options()
+  def options(_, _), do: invalid_options()
 
   @doc "Rejects unknown, invalid, or duplicated atom/string field representations."
   @spec only_keys(map(), [String.t()]) :: :ok | {:error, Error.t()}
@@ -88,7 +88,7 @@ defmodule Wotex.Conformance.Input do
 
   defp normalize_key(key) when is_binary(key), do: key
   defp normalize_key(key) when is_atom(key), do: Atom.to_string(key)
-  defp normalize_key(_key), do: :invalid
+  defp normalize_key(_), do: :invalid
 
   defp duplicate_option?(options) do
     keys = Keyword.keys(options)

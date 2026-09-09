@@ -30,8 +30,8 @@ defmodule Wotex.Conformance.JSONSchema do
   @spec registry([map()]) :: %{optional(String.t()) => schema()}
   def registry(schemas), do: Map.new(schemas, &{&1["$id"], &1})
 
-  defp errors(true, _value, _path, _registry), do: []
-  defp errors(false, _value, path, _registry), do: ["#{at(path)}: no value is valid"]
+  defp errors(true, _, _, _), do: []
+  defp errors(false, _, path, _), do: ["#{at(path)}: no value is valid"]
 
   defp errors(schema, value, path, registry) when is_map(schema) do
     conditional(schema, value, path, registry) ++
@@ -49,7 +49,7 @@ defmodule Wotex.Conformance.JSONSchema do
     end
   end
 
-  defp conditional(_schema, _value, _path, _registry), do: []
+  defp conditional(_, _, _, _), do: []
 
   # `additionalProperties` is evaluated with the sibling `properties` of the
   # same schema object, so it is applied here rather than keyword by keyword.
@@ -62,17 +62,17 @@ defmodule Wotex.Conformance.JSONSchema do
     |> Enum.flat_map(fn {name, member} -> errors(schema, member, "#{path}/#{name}", registry) end)
   end
 
-  defp additional(_schema, _value, _path, _registry), do: []
+  defp additional(_, _, _, _), do: []
 
-  defp keyword(annotation, _constraint, _value, _path, _registry)
+  defp keyword(annotation, _, _, _, _)
        when annotation in @annotations,
        do: []
 
-  defp keyword(conditional, _constraint, _value, _path, _registry)
+  defp keyword(conditional, _, _, _, _)
        when conditional in ~w(if then else),
        do: []
 
-  defp keyword(unsupported, _constraint, _value, path, _registry)
+  defp keyword(unsupported, _, _, path, _)
        when unsupported not in @supported do
     ["#{at(path)}: unsupported schema keyword #{unsupported}"]
   end
@@ -84,7 +84,7 @@ defmodule Wotex.Conformance.JSONSchema do
     end
   end
 
-  defp keyword("type", types, value, path, _registry) do
+  defp keyword("type", types, value, path, _) do
     if Enum.any?(List.wrap(types), &type?(&1, value)) do
       []
     else
@@ -92,15 +92,15 @@ defmodule Wotex.Conformance.JSONSchema do
     end
   end
 
-  defp keyword("const", expected, value, path, _registry) do
+  defp keyword("const", expected, value, path, _) do
     if value === expected, do: [], else: ["#{at(path)}: expected constant value"]
   end
 
-  defp keyword("enum", allowed, value, path, _registry) do
+  defp keyword("enum", allowed, value, path, _) do
     if value in allowed, do: [], else: ["#{at(path)}: value is not an allowed member"]
   end
 
-  defp keyword("pattern", pattern, value, path, _registry) when is_binary(value) do
+  defp keyword("pattern", pattern, value, path, _) when is_binary(value) do
     if Regex.match?(Regex.compile!(pattern), value) do
       []
     else
@@ -108,35 +108,35 @@ defmodule Wotex.Conformance.JSONSchema do
     end
   end
 
-  defp keyword("minLength", min, value, path, _registry) when is_binary(value) do
+  defp keyword("minLength", min, value, path, _) when is_binary(value) do
     if String.length(value) >= min, do: [], else: ["#{at(path)}: value is shorter than #{min}"]
   end
 
-  defp keyword("maxLength", max, value, path, _registry) when is_binary(value) do
+  defp keyword("maxLength", max, value, path, _) when is_binary(value) do
     if String.length(value) <= max, do: [], else: ["#{at(path)}: value is longer than #{max}"]
   end
 
-  defp keyword("minimum", min, value, path, _registry) when is_number(value) do
+  defp keyword("minimum", min, value, path, _) when is_number(value) do
     if value >= min, do: [], else: ["#{at(path)}: value is below #{min}"]
   end
 
-  defp keyword("maximum", max, value, path, _registry) when is_number(value) do
+  defp keyword("maximum", max, value, path, _) when is_number(value) do
     if value <= max, do: [], else: ["#{at(path)}: value is above #{max}"]
   end
 
-  defp keyword("minItems", min, value, path, _registry) when is_list(value) do
+  defp keyword("minItems", min, value, path, _) when is_list(value) do
     if length(value) >= min, do: [], else: ["#{at(path)}: fewer than #{min} members"]
   end
 
-  defp keyword("maxItems", max, value, path, _registry) when is_list(value) do
+  defp keyword("maxItems", max, value, path, _) when is_list(value) do
     if length(value) <= max, do: [], else: ["#{at(path)}: more than #{max} members"]
   end
 
-  defp keyword("uniqueItems", true, value, path, _registry) when is_list(value) do
+  defp keyword("uniqueItems", true, value, path, _) when is_list(value) do
     if length(Enum.uniq(value)) == length(value), do: [], else: ["#{at(path)}: members repeat"]
   end
 
-  defp keyword("required", names, value, path, _registry) when is_map(value) do
+  defp keyword("required", names, value, path, _) when is_map(value) do
     names
     |> Enum.reject(&Map.has_key?(value, &1))
     |> Enum.map(&"#{at(path)}: required member #{&1} is missing")
@@ -151,7 +151,7 @@ defmodule Wotex.Conformance.JSONSchema do
     end)
   end
 
-  defp keyword("additionalProperties", _schema, _value, _path, _registry), do: []
+  defp keyword("additionalProperties", _, _, _, _), do: []
 
   defp keyword("items", schema, value, path, registry) when is_list(value) do
     value
@@ -178,7 +178,7 @@ defmodule Wotex.Conformance.JSONSchema do
     Enum.flat_map(schemas, &errors(&1, value, path, registry))
   end
 
-  defp keyword(_keyword, _constraint, _value, _path, _registry), do: []
+  defp keyword(_, _, _, _, _), do: []
 
   defp type?("object", value), do: is_map(value)
   defp type?("array", value), do: is_list(value)
@@ -187,7 +187,7 @@ defmodule Wotex.Conformance.JSONSchema do
   defp type?("number", value), do: is_number(value)
   defp type?("boolean", value), do: is_boolean(value)
   defp type?("null", value), do: is_nil(value)
-  defp type?(_type, _value), do: false
+  defp type?(_, _), do: false
 
   defp at(""), do: "(root)"
   defp at(path), do: path

@@ -99,7 +99,7 @@ defmodule Wotex.Conformance.Observation do
     end
   end
 
-  defp accepted(_value) do
+  defp accepted(_) do
     {:error,
      Error.new(:invalid_observation, :protocol, "observation requires a boolean accepted member",
        path: ["observation", "accepted"]
@@ -118,13 +118,13 @@ defmodule Wotex.Conformance.Observation do
     end
   end
 
-  defp object(_value, _keys, path, code, phase) do
+  defp object(_, _, path, code, phase) do
     {:error, Error.new(code, phase, "value must be an object", path: path)}
   end
 
-  defp document(document, _path, _phase) when is_map(document) and not is_struct(document), do: :ok
+  defp document(document, _, _) when is_map(document) and not is_struct(document), do: :ok
 
-  defp document(_document, path, phase) do
+  defp document(_, path, phase) do
     {:error, Error.new(:invalid_document, phase, "document must be an object", path: path)}
   end
 
@@ -148,7 +148,7 @@ defmodule Wotex.Conformance.Observation do
     end
   end
 
-  defp projection(_pointers) do
+  defp projection(_) do
     {:error,
      Error.new(:invalid_projection, :vector, "projection must be a bounded list of pointers",
        path: ["input", "projection"],
@@ -160,7 +160,7 @@ defmodule Wotex.Conformance.Observation do
     pointer != "" and byte_size(pointer) <= @max_pointer_bytes and Pointer.valid?(pointer)
   end
 
-  defp valid_pointer?(_pointer), do: false
+  defp valid_pointer?(_), do: false
 
   defp observation_errors(errors)
        when is_list(errors) and errors != [] and length(errors) <= @max_errors do
@@ -181,7 +181,7 @@ defmodule Wotex.Conformance.Observation do
     end
   end
 
-  defp observation_errors(_errors) do
+  defp observation_errors(_) do
     {:error,
      Error.new(:invalid_observation, :protocol, "observation errors must be a bounded list",
        path: ["observation", "errors"],
@@ -223,7 +223,7 @@ defmodule Wotex.Conformance.Observation do
     end
   end
 
-  defp observation_error(_error) do
+  defp observation_error(_) do
     {:error,
      Error.new(:invalid_observation, :protocol, "observation error must be an object",
        path: ["observation", "errors"]
@@ -234,5 +234,5 @@ defmodule Wotex.Conformance.Observation do
     byte_size(value) <= @max_identifier_bytes and Regex.match?(@identifier, value)
   end
 
-  defp bounded_identifier?(_value), do: false
+  defp bounded_identifier?(_), do: false
 end
