@@ -22,8 +22,8 @@ defmodule Wotex.BACnet.PortTest do
     assert {:error, _} = BACnet.send(conn, %{})
     assert {:error, _} = BACnet.receive(conn, 100)
     assert {:error, _} = BACnet.health_check(conn)
-    assert :not_supported = BACnet.subscribe(conn, "value")
-    assert :not_supported = BACnet.unsubscribe(conn, :ref)
+    assert {:error, %Error{code: :invalid_subscription}} = BACnet.subscribe(conn, "value")
+    assert {:error, %Error{code: :invalid_subscription}} = BACnet.unsubscribe(conn, :ref)
     assert BACnet.capabilities().transport == :explicit_client
 
     assert BACnet.with_connection([client: TestClient], fn session ->

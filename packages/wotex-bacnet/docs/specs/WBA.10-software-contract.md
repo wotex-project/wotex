@@ -158,6 +158,13 @@ leak into it. Cancel also omits COV increment. Assert actual encoded tags in tes
 Remote cancellation errors cannot prevent local cleanup. A lost registration
 ACK still requires best-effort cancellation because the server may have accepted it.
 
+The local finite lease is anchored conservatively to the start of each control
+exchange, and only a matching positive ACK establishes or renews it. Report
+`time_remaining` is validated as an unsigned 32-bit wire value and retained as
+metadata; it never extends this locally owned lease. All subscription children
+and any owned stack share the session's one 1000 ms cleanup grace. Successful
+explicit cancellation returns after its subscription owner has exited.
+
 Deduplicate confirmed notifications by source, invoke ID and a bounded digest
 of the decoded service identity/content for the peer's configured APDU retry
 window (library maximum 60 seconds, 1024 entries). Invoke ID alone is insufficient

@@ -68,6 +68,18 @@ defmodule Wotex.BACnet.IPv4 do
   def request(handle, message, timeout), do: BACstack.request(handle.stack, message, timeout)
 
   @impl Wotex.BACnet.Client
+  def subscribe(%{stack: stack}, request, receiver, timeout),
+    do: BACstack.subscribe(stack, request, receiver, timeout)
+
+  def subscribe(_, _, _, _), do: {:error, Error.new(:invalid_subscription)}
+
+  @impl Wotex.BACnet.Client
+  def unsubscribe(%{stack: stack}, subscription, timeout),
+    do: BACstack.unsubscribe(stack, subscription, timeout)
+
+  def unsubscribe(_, _, _), do: {:error, Error.new(:invalid_subscription)}
+
+  @impl Wotex.BACnet.Client
   def disconnect(handle) do
     BACstack.disconnect(handle.stack)
     StackOwner.close(handle.owner)

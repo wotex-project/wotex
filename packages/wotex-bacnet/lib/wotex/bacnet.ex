@@ -2,7 +2,7 @@ defmodule Wotex.BACnet do
   @moduledoc "Consumer-neutral BACnet operations over an explicitly supplied real client port."
 
   import Kernel, except: [send: 2]
-  alias Wotex.BACnet.{Error, PortCall, Session}
+  alias Wotex.BACnet.{COVRequest, Error, PortCall, Session, Subscription}
   @operations [:read_property, :write_property]
 
   @doc "Reports the operations implemented by this library's validated client boundary."
@@ -105,13 +105,47 @@ defmodule Wotex.BACnet do
   @spec health_check(term()) :: {:error, Error.t()}
   def health_check(_), do: {:error, Error.new(:probe_required)}
 
-  @doc "Baseline client ports do not imply subscription support."
-  @spec subscribe(term(), term()) :: :not_supported
-  def subscribe(_, _), do: :not_supported
+  @doc "Establishes a finite native COV subscription through the selected client."
+  @spec subscribe(term(), term()) :: {:ok, Subscription.t()} | {:error, Error.t()}
+  def subscribe(%Session{client: client, timeout: timeout} = session, request)
+      when is_atom(client) and not is_nil(client) and is_integer(timeout) and
+             timeout in 1..60_000 do
+    with {:ok, request} <- COVRequest.new(request, self()),
+         {:ok, subscription} <-
+           PortCall.optional(client, :subscribe, [
+             session.handle,
+             request,
+             request.receiver,
+             timeout
+           ]) do
+      if Subscription.valid?(subscription),
+        do: {:ok, subscription},
+        else: {:error, Error.new(:invalid_transport_return)}
+    else
+      {:error, _} = error -> error
+      _ -> {:error, Error.new(:invalid_transport_return)}
+    end
+  end
 
-  @doc "No subscription is created by this baseline."
-  @spec unsubscribe(term(), term()) :: :not_supported
-  def unsubscribe(_, _), do: :not_supported
+  def subscribe(_, _), do: {:error, Error.new(:invalid_subscription)}
+
+  @doc "Cancels through the original client and validates the opaque subscription handle."
+  @spec unsubscribe(term(), term()) :: :ok | {:error, Error.t()}
+  def unsubscribe(%Session{client: client, timeout: timeout} = session, subscription)
+      when is_atom(client) and not is_nil(client) and is_integer(timeout) and
+             timeout in 1..60_000 do
+    if Subscription.valid?(subscription) do
+      case PortCall.optional(client, :unsubscribe, [session.handle, subscription, timeout]) do
+        :ok -> :ok
+        {:error, _} = error -> error
+        _ -> {:error, Error.new(:invalid_transport_return)}
+      end
+    else
+      {:error, Error.new(:invalid_subscription)}
+    end
+  end
+
+  def unsubscribe(_, _), do: {:error, Error.new(:invalid_subscription)}
 
   defp open(opts) do
     client = Keyword.get(opts, :client)

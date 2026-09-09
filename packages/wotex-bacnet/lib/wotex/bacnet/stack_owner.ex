@@ -32,10 +32,28 @@ defmodule Wotex.BACnet.StackOwner do
 
   @doc "Closes all group resources idempotently."
   @spec close(pid()) :: :ok
-  def close(pid) do
-    GenServer.stop(pid, :normal, 1100)
-  catch
-    :exit, _ -> :ok
+  def close(pid), do: close(pid, System.monotonic_time(:millisecond) + 1000)
+
+  @doc false
+  @spec close(pid(), integer()) :: :ok
+  def close(pid, deadline) do
+    monitor = Process.monitor(pid)
+
+    try do
+      GenServer.call(pid, {:close, deadline}, max(deadline - now(), 1) + 100)
+
+      receive do
+        {:DOWN, ^monitor, :process, ^pid, _} -> :ok
+      after
+        max(deadline - now(), 0) -> Process.exit(pid, :kill)
+      end
+    catch
+      :exit, _ -> Process.exit(pid, :kill)
+    after
+      Process.demonitor(monitor, [:flush])
+    end
+
+    :ok
   end
 
   @impl GenServer
@@ -82,6 +100,9 @@ defmodule Wotex.BACnet.StackOwner do
   @impl GenServer
   def handle_call(:client, _, state), do: {:reply, {:ok, state.client}, state}
 
+  def handle_call({:close, deadline}, _, state),
+    do: {:stop, :normal, :ok, Map.put(state, :cleanup_deadline, deadline)}
+
   @impl GenServer
   def handle_info(
         {:bacnet_transport, {_, IPv4Transport}, _, {:apdu, _, _, bytes}, portal} = message,
@@ -123,7 +144,7 @@ defmodule Wotex.BACnet.StackOwner do
   end
 
   defp cleanup(group) do
-    deadline = System.monotonic_time(:millisecond) + 1000
+    deadline = Map.get(group, :cleanup_deadline, now() + 1000)
 
     for key <- [:client, :segments_store, :segmentator, :transport],
         pid = Map.get(group, key),
@@ -132,6 +153,8 @@ defmodule Wotex.BACnet.StackOwner do
 
     :ok
   end
+
+  defp now, do: System.monotonic_time(:millisecond)
 
   defp close_child(pid, deadline, key) do
     started = System.monotonic_time()

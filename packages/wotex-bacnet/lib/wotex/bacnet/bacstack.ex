@@ -3,7 +3,18 @@ defmodule Wotex.BACnet.BACstack do
   @behaviour Wotex.BACnet.Client
   alias BACnet.Protocol.{APDU, Constants}
   alias BACnet.Protocol.ApplicationTags.Encoding
-  alias Wotex.BACnet.{Address, Error, OperationOwner, StackClient, StackOwner, Value, ValueBoundary}
+
+  alias Wotex.BACnet.{
+    Address,
+    COVRequest,
+    Error,
+    OperationOwner,
+    StackClient,
+    StackOwner,
+    Subscription,
+    Value,
+    ValueBoundary
+  }
 
   @impl Wotex.BACnet.Client
   def connect(opts) do
@@ -149,6 +160,39 @@ defmodule Wotex.BACnet.BACstack do
   end
 
   @impl Wotex.BACnet.Client
+  def subscribe(%{owner: owner, generation: generation}, request, receiver, timeout)
+      when is_pid(owner) and is_reference(generation) and is_pid(receiver) and
+             is_integer(timeout) and timeout in 1..60_000 do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    with :ok <- COVRequest.validate(request), true <- request.receiver == receiver do
+      OperationOwner.subscribe(owner, generation, request, deadline, timeout)
+    else
+      false -> {:error, Error.new(:invalid_subscription)}
+      error -> error
+    end
+  end
+
+  def subscribe(_, _, _, _), do: {:error, Error.new(:invalid_subscription)}
+
+  @impl Wotex.BACnet.Client
+  def unsubscribe(%{owner: owner, generation: generation}, subscription, timeout)
+      when is_pid(owner) and is_reference(generation) and is_integer(timeout) and
+             timeout in 1..60_000 do
+    if Subscription.valid?(subscription),
+      do:
+        OperationOwner.unsubscribe(
+          owner,
+          generation,
+          subscription,
+          System.monotonic_time(:millisecond) + timeout
+        ),
+      else: {:error, Error.new(:invalid_subscription)}
+  end
+
+  def unsubscribe(_, _, _), do: {:error, Error.new(:invalid_subscription)}
+
+  @impl Wotex.BACnet.Client
   def disconnect(%{owner: owner}), do: OperationOwner.close(owner)
   def disconnect(_), do: :ok
 
@@ -161,6 +205,15 @@ defmodule Wotex.BACnet.BACstack do
   @spec response(term(), Address.t(), atom()) :: {:ok, term()} | {:error, Error.t()}
   def response(result, address, operation) do
     classify(result, address, operation)
+  rescue
+    _ -> {:error, Error.new(:invalid_response)}
+  end
+
+  @doc false
+  @spec control_response(term(), :subscribe_cov | :subscribe_cov_property) ::
+          {:ok, :subscribed} | {:error, Error.t()}
+  def control_response(result, service) do
+    classify(result, nil, service)
   rescue
     _ -> {:error, Error.new(:invalid_response)}
   end

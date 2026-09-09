@@ -43,6 +43,23 @@ defmodule Wotex.BACnet.StackClient do
   def handle_call({:wotex_client, :capabilities}, _, state),
     do: {:reply, {:wotex_client, 1, :cov}, state}
 
+  def handle_call({:wotex_client, :register_cov, request, destination, deadline}, from, state)
+      when is_integer(deadline) do
+    if now() < deadline,
+      do: handle_call({:wotex_client, :register_cov, request, destination}, from, state),
+      else: {:reply, rejected(:deadline_exceeded), state}
+  end
+
+  def handle_call({:wotex_client, :settle, pids}, _, state)
+      when is_list(pids) and length(pids) <= 2 do
+    next =
+      Enum.reduce(pids, state, fn pid, current ->
+        if is_pid(pid) and not Process.alive?(pid), do: settle(current, pid), else: current
+      end)
+
+    {:reply, :ok, next}
+  end
+
   def handle_call({:wotex_client, :register_cov, request, destination}, {owner, _}, state) do
     {reply, cov} = StackCOV.register(state.cov, owner, request, destination, state.sdk)
     {:reply, reply, %{state | cov: cov}}
@@ -262,6 +279,16 @@ defmodule Wotex.BACnet.StackClient do
       end)
 
     %{state | calls: calls}
+  end
+
+  defp settle(state, pid) do
+    state = %{state | cov: StackCOV.remove(state.cov, pid, state.sdk)}
+
+    Enum.reduce(state.sdk.apdu_timers, state, fn {key, timer}, current ->
+      if elem(timer.call_ref, 0) == pid,
+        do: cancel_calls(current, current.calls[key]),
+        else: current
+    end)
   end
 
   defp cancel_calls(state, reference) do

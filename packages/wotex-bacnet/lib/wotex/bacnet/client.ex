@@ -9,4 +9,13 @@ defmodule Wotex.BACnet.Client do
 
   @doc "Releases only resources owned by this handle; must be idempotent."
   @callback disconnect(term()) :: :ok | {:error, term()}
+  @doc "Establishes a finite typed subscription within the supplied timeout."
+  @callback subscribe(term(), Wotex.BACnet.COVRequest.t(), pid(), pos_integer()) ::
+              {:ok, Wotex.BACnet.Subscription.t()} | {:error, term()}
+
+  @doc "Cancels the original subscription and releases its owned listener and timers."
+  @callback unsubscribe(term(), Wotex.BACnet.Subscription.t(), pos_integer()) ::
+              :ok | {:error, term()}
+
+  @optional_callbacks subscribe: 4, unsubscribe: 3
 end

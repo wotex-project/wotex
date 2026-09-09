@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "tier": "malformed-peer UDP plus native ownership",
+  "normalization": "Process identifiers and cancellation route are captured from actual registration; no fixture supplies an adapter response. Counts and values below are asserted against the public API and actual UDP APDUs.",
+  "cases": [
+    {
+      "id": "WBA-CL01",
+      "requirements": [
+        "WBA-S04",
+        "WBA-V07",
+        "WBA-V08"
+      ],
+      "input": {
+        "confirmed": true,
+        "invoke_id": 44,
+        "values": [
+          1.5,
+          1.5,
+          2.5
+        ]
+      },
+      "expected": {
+        "ack_count": 3,
+        "delivered_values": [
+          1.5,
+          2.5
+        ],
+        "live_subscriptions_after_cancel": 0
+      }
+    },
+    {
+      "id": "WBA-CL02",
+      "requirements": [
+        "WBA-S03",
+        "WBA-S04",
+        "WBA-V14"
+      ],
+      "input": {
+        "opening_controls": 64
+      },
+      "expected": {
+        "admitted_subscriptions": 64,
+        "overflow_code": "busy",
+        "read_overflow_code": "busy",
+        "live_subscriptions_after_cancel": 0,
+        "sdk_requests_after_cancel": 0,
+        "local_listeners_after_cancel": 0
+      }
+    },
+    {
+      "id": "WBA-CL03",
+      "requirements": [
+        "WBA-S04",
+        "WBA-V09"
+      ],
+      "input": {
+        "requested_lifetime_seconds": 2,
+        "server_time_remaining": [
+          0,
+          4294967295
+        ]
+      },
+      "expected": {
+        "local_expiry_changes": 0,
+        "terminal_error": "subscription_expired",
+        "terminal_count": 1
+      }
+    }
+  ]
+}
