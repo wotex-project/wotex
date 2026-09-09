@@ -24,7 +24,7 @@ defmodule Wotex.BLE.BlueZ.Frame do
   @spec decode(term()) :: {:ok, map()} | :error
   def decode(line) when is_binary(line) and byte_size(line) < 131_072 do
     with {:ok, value} <- Jason.decode(line, objects: :ordered_objects),
-         {result, _remaining} when is_map(result) <- normalize(value, 1, 4096) do
+         {result, _} when is_map(result) <- normalize(value, 1, 4096) do
       {:ok, result}
     else
       _ -> :error
@@ -52,5 +52,5 @@ defmodule Wotex.BLE.BlueZ.Frame do
     Enum.map_reduce(values, budget - 1, &normalize(&1, depth + 1, &2))
   end
 
-  defp normalize(value, _depth, budget), do: {value, budget - 1}
+  defp normalize(value, _, budget), do: {value, budget - 1}
 end

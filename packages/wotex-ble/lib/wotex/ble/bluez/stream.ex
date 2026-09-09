@@ -195,7 +195,7 @@ defmodule Wotex.BLE.BlueZ.Stream do
     end
   end
 
-  defp report_value("error", nil, %{"error" => error} = metadata, id, _binding)
+  defp report_value("error", nil, %{"error" => error} = metadata, id, _)
        when map_size(metadata) == 1 do
     case Response.parse(%{"version" => 1, "id" => id, "ok" => false, "error" => error}, "subscribe") do
       {:error, %Error{}} = error -> error

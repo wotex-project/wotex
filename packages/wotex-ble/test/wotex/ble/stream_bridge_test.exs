@@ -272,7 +272,7 @@ defmodule Wotex.BLE.StreamBridgeTest do
 
   test "WBL-C07 bound stream metadata and generations fail closed while unknown IDs never deliver" do
     for mode <- ["stream_wrong_generation", "stream_wrong_metadata", "stream_extra_report"] do
-      {session, _record} = connect(mode)
+      {session, _} = connect(mode)
       assert {:ok, handle} = BLE.subscribe(session, %{address: target()})
       ref = handle.reference
       assert_receive {:wotex_ble, ^ref, {:error, %Error{code: :invalid_response}}}, 1500
@@ -280,7 +280,7 @@ defmodule Wotex.BLE.StreamBridgeTest do
       eventually(fn -> not Process.alive?(handle.pid) end)
     end
 
-    {session, _record} = connect("stream_unknown_report")
+    {session, _} = connect("stream_unknown_report")
     assert {:ok, handle} = BLE.subscribe(session, %{address: target()})
     ref = handle.reference
     assert_receive {:wotex_ble, ^ref, {:ok, <<1, 0>>, _}}, 1000
@@ -366,7 +366,7 @@ defmodule Wotex.BLE.StreamBridgeTest do
   end
 
   test "WBL-C07 wrong establishment binding fails and a value codec error is terminal once" do
-    {session, _record} = connect("stream_wrong_binding")
+    {session, _} = connect("stream_wrong_binding")
     assert {:error, %Error{code: :invalid_response}} = BLE.subscribe(session, %{address: target()})
     {session, record} = connect("stream_notify")
     assert {:ok, handle} = BLE.subscribe(session, %{address: target(), value_type: :uint32})
@@ -394,7 +394,7 @@ defmodule Wotex.BLE.StreamBridgeTest do
              )
 
     on_exit(fn -> :telemetry.detach(token) end)
-    {session, _record} = connect("stream_canary")
+    {session, _} = connect("stream_canary")
     assert {:ok, handle} = BLE.subscribe(session, %{address: target()})
     ref = handle.reference
     assert_receive {:wotex_ble, ^ref, {:ok, "PRIVATE_STREAM_VALUE", _}}, 1000

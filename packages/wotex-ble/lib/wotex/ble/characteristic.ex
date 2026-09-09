@@ -90,7 +90,7 @@ defmodule Wotex.BLE.Characteristic do
     end
   end
 
-  defp valid_flags?([], _seen), do: true
+  defp valid_flags?([], _), do: true
 
   defp valid_flags?([flag | rest], seen) when is_binary(flag) and byte_size(flag) in 1..64 do
     map_size(seen) < 64 and String.valid?(flag) and not Map.has_key?(seen, flag) and

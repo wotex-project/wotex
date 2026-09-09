@@ -187,7 +187,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
-  def handle_call(:session, _from, %{status: :ready} = state) do
+  def handle_call(:session, _, %{status: :ready} = state) do
     {:reply,
      {:ok, %Session{client: Wotex.BLE.BlueZ, handle: state.handle, timeout: state.options.timeout}},
      state}
@@ -255,7 +255,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
-  def handle_call(_, _from, state), do: {:reply, {:error, Error.new(:invalid_handle)}, state}
+  def handle_call(_, _, state), do: {:reply, {:error, Error.new(:invalid_handle)}, state}
 
   @impl GenServer
   def handle_cast(
@@ -762,7 +762,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   defp caller_down(state, monitor) do
     case Enum.find(state.pending, fn {_, pending} -> pending.monitor == monitor end) do
-      {_id, %{operation: "unsubscribe"}} ->
+      {_, %{operation: "unsubscribe"}} ->
         close(%{state | cleanup_grace: 350}, :disconnected)
 
       {id, _} when id == state.active ->

@@ -12,7 +12,7 @@ defmodule Wotex.BLE.DBusBridgeTest do
   alias Wotex.BLE.BlueZ.Connection
 
   @impl Wotex.BLE.Agent
-  def decide(challenge, {receiver, action, _secret}) do
+  def decide(challenge, {receiver, action, _}) do
     send(receiver, {:challenge, challenge, self()})
 
     case action do

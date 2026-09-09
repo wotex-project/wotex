@@ -1,5 +1,6 @@
 defmodule Wotex.BLE.TestClient do
   @moduledoc false
+
   @behaviour Wotex.BLE.Client
 
   @impl Wotex.BLE.Client

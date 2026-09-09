@@ -67,7 +67,7 @@ defmodule Wotex.BLE.BlueZ.SubscriptionOwner do
       else: {:reply, {:error, Error.new(:busy)}, state}
   end
 
-  def handle_call(_, _from, state), do: {:reply, {:error, Error.new(:invalid_subscription)}, state}
+  def handle_call(_, _, state), do: {:reply, {:error, Error.new(:invalid_subscription)}, state}
 
   @impl GenServer
   def handle_info({token, {:ok, binding}}, %{token: token, status: :starting} = state) do

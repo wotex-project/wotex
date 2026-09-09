@@ -1,5 +1,6 @@
 defmodule Wotex.BLE.PortTest do
   @moduledoc false
+
   use ExUnit.Case, async: true
   alias Wotex.BLE
   alias Wotex.BLE.{Error, TestClient}
