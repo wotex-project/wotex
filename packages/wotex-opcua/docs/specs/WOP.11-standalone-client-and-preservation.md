@@ -3,7 +3,7 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -56,7 +56,11 @@ The pure API includes `Binary.encode_variant/1`, `decode_variant/1`, `encode_dat
 NodeId-specific errors remain `:invalid_node_id`. No decoder owns transport state.
 
 Native Variant/DataValue maps use the .10 version 1 JSON field names as atom
-keys, known type names as strings, and actual binaries for byte bodies. Version 1
+keys, known type names as strings, and actual binaries for byte bodies.
+NodeId-bearing fields decode to `Address.t()` and accept `Address.new/1` inputs
+on encode. GUID payloads use canonical lowercase text. Opaque ExtensionObject
+encoding names are the strings `none`, `binary` and `xml`; XML bodies retain
+their raw UTF-8 bytes without XML parsing. Version 1
 always carries `array: false | true`; no inference from nil, list, dimensions or
 type is allowed. Scalars omit dimensions; arrays use a flat list or nil. A null
 array has no dimensions; an empty array is an empty list, not nil. The pure
@@ -210,12 +214,13 @@ do not silently change them to the richer native helper shapes.
 ## WOP-N05 — Concrete fixtures and acceptance binding
 
 [contract-v1.json](fixtures/contract-v1.json) is a partially bound corpus.
-`standalone_contract_test.exs` executes F01, F02, F09 and F13 through the public
+`standalone_contract_test.exs` executes F01 through F13 through the public
 pure codecs and compares every declared output field. Its test tags bind the
 case, requirements and exact corpus SHA-256. Other corpus cases remain specified
 and unexecuted. Existing WOP-Vxx entries in .10 are scenario families, not
 implemented test vectors. Every family still requires its complete boundary,
-security and fault cases; these four bindings do not accept WOP-P01 or N02.
+security and fault cases; these pure bindings do not accept WOP-P01 or native
+SDK/service behavior.
 
 Corpus format version 1.0.0 separates `input` from `expectation`. The runner
 passes only `input` to the operation/test adapter and compares the complete

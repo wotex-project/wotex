@@ -38,7 +38,7 @@ should replace the path with the constraint of an available Hex release.
 
 ## Implemented profile
 
-The current code contains scalar, NodeId, expanded identity, name and reference
+The current code contains scalar, Variant, DataValue, NodeId, expanded identity, name and reference
 codecs, UA TCP framing, Property Form
 mapping and a limited per-request asyncua adapter. That Python runtime path does
 not satisfy the accepted native software profile. WOP.02 and executable evidence

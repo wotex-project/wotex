@@ -13,7 +13,7 @@ Implementation readiness does not mean implementation or conformance is complete
 [Source revisions](../provenance/primary-sources.md) and [executed evidence](../provenance/executable-evidence.md) are separate records.
 
 - [WOP.11 Standalone client and preservation](WOP.11-standalone-client-and-preservation.md)
-- [Concrete fixture corpus](fixtures/contract-v1.json) — four pure identity/reference cases are bound; remaining cases are specified and unexecuted
+- [Concrete fixture corpus](fixtures/contract-v1.json) — thirteen pure value/identity/reference cases are bound; remaining cases are specified and unexecuted
 
 - [Versioned specification catalogue](catalogue.yaml) — owning contracts, dependencies, status and baseline evidence
 - [WOP.12 Wotex integration and evidence contract](WOP.12-wotex-integration.md)

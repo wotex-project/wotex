@@ -120,7 +120,7 @@ checks do not accept typed SDK construction, response serialization or services.
 
 ## Pure identity and reference structures
 
-`standalone_contract_test.exs` executes WOP-F01, F02, F09 and F13 from
+`standalone_contract_test.exs` executes WOP-F01 through F13 from
 `contract-v1.json` through public `Binary` functions. The fixture input alone
 reaches each decoder; the complete actual projection is compared with the
 declared expectation. Test tags contain the fixture case, requirement IDs and
@@ -129,5 +129,10 @@ SHA-256 of the corpus bytes. `binary/names_test.exs` and
 kinds and NodeClasses, nullable/empty text, maximum string and URI lengths,
 numeric overflow, every truncated field, invalid masks, and arbitrary byte
 streams. Unconsumed tails remain byte-exact, including a tail larger than the
-consumed identity limit. These checks cover the pure identity/reference subset
-of N02; they do not accept Variant/DataValue, SDK construction or Browse services.
+consumed identity limit. `typed_values_test.exs` exercises every supported
+Variant type, null/empty arrays, dimensions, future numeric type preservation,
+opaque binary/XML bodies, mixed-endian GUIDs and exact adjacent timestamp ticks.
+DataValue assertions cover metadata masks, Bad/Uncertain status, present null
+versus absent data, clamped/orphan fractions and the complete 1 MiB byte budget.
+These checks cover the pure value and identity/reference structures of N02;
+they do not accept SDK construction or Browse services.

@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.5
+  version: 1.0.6
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -39,7 +39,13 @@ numeric namespace when a URI is present. QualifiedName and LocalizedText retain
 namespaces, locales and null-versus-empty text. Full ReferenceDescription codecs
 preserve both expanded identities, direction, names and the finite NodeClass.
 These pure structures do not resolve a namespace or follow a remote reference.
-Variant/DataValue codecs and native SDK value conversion remain required work.
+Variant codecs cover the finite built-in type table, explicit array/null/empty
+distinctions, checked dimensions, opaque ExtensionObjects and read-only future
+IDs 26..31. DataValue codecs retain value presence, full status and exact signed
+100 ns timestamps, normalize 10 ps fractions, and preserve unconsumed bytes.
+Arrays have a 1024-element ceiling; Variant/DataValue consumed bytes are limited
+to 1 MiB including metadata. Native SDK conversion and typed service projection
+remain required work; the existing `Value` adapter still has its scalar contract.
 UA chunk framing defaults to 1 MiB and validates message type, chunk kind and
 length before allocating/waiting. Chunk framing alone does not validate secure
 channels, sequence numbers, RequestId, RequestHandle or service status.

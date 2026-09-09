@@ -21,6 +21,13 @@ defmodule Wotex.OPCUA.Binary do
   without reducing references to display names or resolving remote identities.
   These structured encoders require their exact atom-keyed fields.
 
+  Variant codecs require an explicit type and array flag, bound arrays to 1024
+  elements, and retain dimensions and opaque extension identities. DataValue
+  codecs preserve value presence, full status and signed 100 ns timestamp ticks.
+  They normalize 10 ps fractions according to Part 6. Both complete values have
+  a 1 MiB byte budget; decoding a Bad StatusCode is distinct from accepting a
+  successful service response.
+
   ## Examples
 
       iex> Wotex.OPCUA.Binary.encode(:uint16, 513)
@@ -38,9 +45,14 @@ defmodule Wotex.OPCUA.Binary do
       iex> Wotex.OPCUA.Binary.decode_qualified_name(<<2, 0, 1, 0, 0, 0, ?x, 99>>)
       {:ok, %{namespace: 2, name: "x"}, <<99>>}
 
+      iex> Wotex.OPCUA.Binary.decode_variant(<<0x86, -1::32-little-signed>>)
+      {:ok, %{type: "Int32", array: true, value: nil}, <<>>}
+      iex> Wotex.OPCUA.Binary.decode_data_value(<<1, 0>>)
+      {:ok, %{has_value: true, value: %{type: "Null", array: false, value: nil}, status: 0}, <<>>}
+
   """
   alias Wotex.OPCUA.{Address, Error}
-  alias Wotex.OPCUA.Binary.{Names, Reference}
+  alias Wotex.OPCUA.Binary.{DataValue, Names, Reference, Variant}
 
   @type scalar ::
           :boolean
@@ -199,6 +211,22 @@ defmodule Wotex.OPCUA.Binary do
   @spec decode_reference_description(term()) ::
           {:ok, Reference.t(), binary()} | {:error, Error.t()}
   defdelegate decode_reference_description(bytes), to: Reference, as: :decode
+
+  @doc "Encodes an explicit Variant, preserving scalar, null-array, empty-array and dimension identity."
+  @spec encode_variant(term()) :: {:ok, binary()} | {:error, Error.t()}
+  defdelegate encode_variant(value), to: Variant, as: :encode
+
+  @doc "Decodes a Variant with a 1024-element, 1 MiB ceiling and read-only future-type preservation."
+  @spec decode_variant(term()) :: {:ok, Variant.t(), binary()} | {:error, Error.t()}
+  defdelegate decode_variant(bytes), to: Variant, as: :decode
+
+  @doc "Encodes DataValue presence, StatusCode and signed 100 ns tick metadata without calendar conversion."
+  @spec encode_data_value(term()) :: {:ok, binary()} | {:error, Error.t()}
+  defdelegate encode_data_value(value), to: DataValue, as: :encode
+
+  @doc "Decodes a complete DataValue and normalizes 10 ps fractions, retaining Bad or Uncertain statuses."
+  @spec decode_data_value(term()) :: {:ok, DataValue.t(), binary()} | {:error, Error.t()}
+  defdelegate decode_data_value(bytes), to: DataValue, as: :decode
 
   defp node(ns, kind, id, rest) do
     with {:ok, node} <- Address.new(%Address{namespace: ns, kind: kind, identifier: id}),
