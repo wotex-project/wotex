@@ -6,6 +6,9 @@
 #include "agent_test.hpp"
 #include "pairing_test.hpp"
 #include "procedures_test.hpp"
+#include "pending_test.hpp"
+#include "notify_value_test.hpp"
+#include "notifications_test.hpp"
 #include <csignal>
 #include <fcntl.h>
 #include <dirent.h>
@@ -634,22 +637,24 @@ int main(int argc, char **argv) {
   try {
     if (argc == 5) {
       const std::string operation = argv[1];
-      if (operation != "--pair-input" && operation != "--gatt-input") return 2;
+      if (operation != "--pair-input" && operation != "--gatt-input" && operation != "--notify-input") return 2;
       Json result;
       {
         Daemon daemon(argv[3], argv[4]);
         const auto input = parse_line(std::string(argv[2]) + "\n");
         result = operation == "--pair-input" ? pairing_test::projection(input, daemon.address) :
-          procedures_test::projection(input, daemon.address);
+          operation == "--gatt-input" ? procedures_test::projection(input, daemon.address) : notifications_test::projection(input, daemon.address);
       }
       dbus_shutdown(); std::cout << result.dump() << '\n'; return 0;
     }
-    if (std::string(argv[1]) == "--agent-input") {
-      const auto result = agent_test::projection(parse_line(std::string(argv[2]) + "\n"));
+    if (std::string(argv[1]) == "--agent-input" || std::string(argv[1]) == "--notify-mode-input") {
+      const auto input = parse_line(std::string(argv[2]) + "\n");
+      const auto result = std::string(argv[1]) == "--agent-input" ? agent_test::projection(input) : notify_value_test::projection(input);
       dbus_shutdown(); std::cout << result.dump() << '\n'; return 0;
     }
     object_test::invariants();
     agent_test::invariants();
+    notify_value_test::invariants();
     Daemon daemon(argv[1], argv[2]);
     invariants(daemon.address);
     signals(daemon.address);
@@ -659,6 +664,8 @@ int main(int argc, char **argv) {
     discovery_test::connection_invariants(daemon.address);
     pairing_test::invariants(daemon.address);
     procedures_test::invariants(daemon.address);
+    pending_test::invariants(daemon.address);
+    notifications_test::invariants(daemon.address);
     unix_fds(daemon.address, 1);
 #ifdef __linux__
     unix_fds(daemon.address, 2);

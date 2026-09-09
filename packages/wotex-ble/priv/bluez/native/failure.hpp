@@ -33,7 +33,7 @@ public:
          "snapshot_unstable", "timeout", "services_unresolved", "stale_discovery", "invalid_cursor",
          "transport_error", "pairing_rejected", "invalid_address", "invalid_value", "address_mismatch",
          "ambiguous_characteristic", "unsupported_procedure_selection", "already_subscribed", "invalid_subscription",
-         "response_limit", "subscription_lost", "cleanup_timeout", "resource_limit", "transport_unavailable",
+         "response_limit", "queue_overflow", "subscription_lost", "cleanup_timeout", "resource_limit", "transport_unavailable",
          "incompatible_backend"}) if (code == known) return NativeFailure(known);
     return NativeFailure("transport_error");
   }

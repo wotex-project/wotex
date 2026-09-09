@@ -94,14 +94,17 @@ defmodule Wotex.BLE.NativeBusTest do
              )
   end
 
-  for fixture <- @fixtures, fixture["operation"] == "agent_prompt" do
+  for fixture <- @fixtures, fixture["operation"] in ["agent_prompt", "notify_mode"] do
     @fixture fixture
-    test "#{fixture["id"]} executes the native Agent prompt and decision boundary", context do
+    test "#{fixture["id"]} executes the native typed policy boundary", context do
+      operation =
+        if @fixture["operation"] == "agent_prompt", do: "--agent-input", else: "--notify-mode-input"
+
       assert {:ok, output, 0} =
                NativeCommand.run(
                  context.guardian,
                  context.executable,
-                 ["--agent-input", Jason.encode!(@fixture["input"])],
+                 [operation, Jason.encode!(@fixture["input"])],
                  context.options
                )
 
@@ -109,11 +112,16 @@ defmodule Wotex.BLE.NativeBusTest do
     end
   end
 
-  for fixture <- @fixtures, fixture["operation"] in ["pair_lifecycle", "gatt_procedure"] do
+  for fixture <- @fixtures,
+      fixture["operation"] in ["pair_lifecycle", "gatt_procedure", "notify_lifecycle"] do
     @fixture fixture
     test "#{fixture["id"]} executes the actual native operation lifecycle", context do
       operation =
-        if @fixture["operation"] == "pair_lifecycle", do: "--pair-input", else: "--gatt-input"
+        case @fixture["operation"] do
+          "pair_lifecycle" -> "--pair-input"
+          "gatt_procedure" -> "--gatt-input"
+          "notify_lifecycle" -> "--notify-input"
+        end
 
       assert {:ok, output, 0} =
                NativeCommand.run(

@@ -43,7 +43,11 @@ inline void property(DBusMessageIter &iterator, const Property &property) {
   } else if (property.signature == "ay") {
     DBusMessageIter array;
     OBJECT_CHECK(dbus_message_iter_open_container(&variant, DBUS_TYPE_ARRAY, "y", &array));
-    unsigned char value = 1; append(array, DBUS_TYPE_BYTE, &value);
+    OBJECT_CHECK(property.value.is_array());
+    for (const auto &item : property.value) {
+      OBJECT_CHECK(integer(item, 0, 255));
+      const unsigned char value = item.get<unsigned char>(); append(array, DBUS_TYPE_BYTE, &value);
+    }
     OBJECT_CHECK(dbus_message_iter_close_container(&variant, &array));
   } else throw std::runtime_error("unimplemented test value");
   OBJECT_CHECK(dbus_message_iter_close_container(&pair, &variant));

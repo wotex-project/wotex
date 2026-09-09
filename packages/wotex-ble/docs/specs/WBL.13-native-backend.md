@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.10
+  version: 1.0.11
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -274,6 +274,19 @@ read or null for write. Failure is the bounded native error envelope. A held
 response uses a 100 ms operation deadline; expected output compares terminal
 state rather than elapsed scheduling time. These vectors establish actual D-Bus
 procedure ownership without claiming BlueZ or ATT interoperability.
+`notify_mode` executes the production mode selector with exact `flags` and
+`mode`. Success projects `requested_mode` and `effective_mode`; failure projects
+one stable `error` code. `notify_lifecycle` executes the actual private D-Bus
+notification owner. Inputs are `flags`, `mode`, `early_values` (at most two byte
+arrays), `values` (at most 64 byte arrays), and Boolean `output_capacity`. The
+independent method receiver checks original source/path and empty StartNotify/
+StopNotify signatures, and emits actual PropertiesChanged messages. Its report
+callback is a deterministic admission boundary; false capacity accepts no report.
+The projection records method order, exact establishment result, report attempts
+with full bound metadata, admitted report count, retirement/error/cancellation,
+active entry/path/pending/listener counters, observed remote subscriptions,
+connection state and actual sender releases. These component vectors do not
+represent Port transmission or replace the process-flow vectors above.
 `ready` starts the actual helper, captures its first frame and closes its input;
 the expectation is exact JSON-object equality plus zero surviving owned
 processes after the grace. Parser cases never count as SDK interoperability.
@@ -322,7 +335,15 @@ Use `dbus_connection_open_private`, register the connection with the selected
 bus, disable exit-on-disconnect, and integrate D-Bus watch/timeout functions with
 poll and stdin/output readiness. `dbus_connection_send_with_reply` creates
 bounded pending calls; callbacks unref each pending call and message exactly
-once. Never block the only event loop in send_with_reply_and_block. Configure
+once. Optional local pending-call tickets bind an opaque connection-generation
+reference and a strictly increasing uint64 counter. Canceling a ticket removes
+only that pending reply; stale, completed, foreign-generation and default tickets
+do not affect another call. Ticket cancellation cannot retract a transmitted
+method or attest its remote effect. Active records have the existing 64-call
+bound; there is no historical ticket registry or counter rollover. A cancelled
+post-establishment discovery refresh detaches its exact pending query and callback
+while preserving the established connection and existing subscriptions.
+Never block the only event loop in send_with_reply_and_block. Configure
 received message size at 4 MiB and the aggregate receive watermark at 8 MiB, then
 apply S01 object/catalogue bounds while decoding ObjectManager replies.
 The libdbus watermark pauses further reads after outstanding messages exceed
@@ -544,6 +565,37 @@ ordinary work or evicting a request. The one active Pair Agent response and clos
 remain available without ordinary admission. C07's shared monotonic dispatch
 counter and generation-bound subscription IDs are unchanged.
 
+One notification manager routes source-checked PropertiesChanged signals to
+at most 64 active characteristic records. It uses one local listener alongside
+discovery's listeners, independent of the number of subscriptions. Each record
+retains the original characteristic path, discovery metadata, requested/effective
+mode, pending-call ticket and one early byte value. Duplicate characteristic
+admission cannot remove or retarget an existing record. Initial establishment
+has no synthetic read; S04 governs acknowledgement-before-value ordering and
+the early-value overflow error.
+
+Value decoding requires an actual byte-array variant and copies at most 512
+octets after inspecting its fixed-array length. Notifying requires a Boolean
+variant. Invalidated Value, malformed admitted fields, identity metadata change
+and notification loss terminate the affected record under S04. Unknown
+properties remain bounded by the ObjectReader envelope and produce no value.
+A repeated equal Value is a distinct report. The report callback performs
+nonblocking admission into the host's credit/output layer; failure is
+`queue_overflow`, never silent loss. Component callbacks do not write stdout;
+only the enclosing host supplies the mandatory IPC generation, sequence and
+frame/byte reservation before transmission.
+
+Cancellation first disables report delivery and retires its pending StartNotify
+reply or owned discovery refresh. StopNotify uses the same original sender/path
+and an independent pending-call ticket, so it can complete while an unrelated
+ReadValue remains blocked. Verified StopNotify releases the entry/path/listener
+before local cancellation completion. Failed, malformed, capacity-blocked or
+stalled StopNotify closes the owned connection within the same cleanup deadline.
+An explicit remote StartNotify rejection creates no cleanup method; an unknown
+StartNotify outcome retains cleanup ownership. No terminal callback or late
+reply can revive a retired record. The enclosing host applies the stream-retired
+barrier and normal cumulative credit retirement specified above.
+
 The Linux virtual-controller peer is the existing isolated BlueZ/btvirt design
 in [virtual-controller.md](../provenance/virtual-controller.md). Its Python GATT
 server is an allowed independent peer: it exports server objects to real BlueZ,
@@ -551,8 +603,8 @@ sets test stimuli and observes indication Confirm calls. It never answers native
 client IPC. Its source/dbus-next hashes are fixture dependencies only; production
 ELF/runtime dependency inspection must contain no Python dependency. Generic VM,
 build, manifest, result and cleanup orchestration belongs to Mix/ExUnit.
-The existing native SDK results concern the Python adapter baseline; they define
-scenarios and do not establish execution of the accepted C++ helper.
+The existing virtual-controller results concern the Python adapter baseline;
+they define scenarios and do not establish execution of the accepted C++ helper.
 
 Required implementation package WBL-P00: native host, libdbus event loop, bounded
 parser/output, unchanged BEAM connection API, backend readiness, all corpus cases

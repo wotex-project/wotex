@@ -14,6 +14,7 @@
 #include <map>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <poll.h>
 #include <stdexcept>
 #include <string>
@@ -30,6 +31,18 @@ using BusCallback = std::function<void(BusReply)>;
 using SignalCallback = std::function<void(DBusMessage *)>;
 
 class Bus {
+  struct Generation {};
+public:
+  class Ticket {
+    friend class Bus;
+    std::weak_ptr<const Generation> generation_;
+    std::uint64_t identifier_ = 0;
+    Ticket(const std::shared_ptr<const Generation> &generation, std::uint64_t identifier)
+      : generation_(generation), identifier_(identifier) {}
+  public:
+    Ticket() = default;
+  };
+private:
   struct Export {
     std::string sender, path, interface;
     SignalCallback callback;
@@ -49,6 +62,7 @@ class Bus {
     std::string signature;
     Deadline deadline;
     BusCallback callback;
+    std::uint64_t identifier;
     ~Pending() {
       if (value) {
         dbus_pending_call_set_notify(value, nullptr, nullptr, nullptr);
@@ -61,6 +75,8 @@ class Bus {
   std::map<DBusWatch *, std::shared_ptr<Watch>> watches_;
   std::map<DBusTimeout *, std::shared_ptr<Timeout>> timeouts_;
   std::map<DBusPendingCall *, std::unique_ptr<Pending>> pending_;
+  std::shared_ptr<const Generation> generation_ = std::make_shared<const Generation>();
+  std::uint64_t call_sequence_ = 0;
   std::map<std::uint64_t, std::shared_ptr<Listener>> listeners_;
   std::uint64_t listener_sequence_ = 0;
   std::map<std::uint64_t, std::shared_ptr<Export>> exports_;
@@ -192,9 +208,9 @@ class Bus {
     try { pending->callback({error, std::move(reply)}); }
     catch (...) { failure_ = "callback_failed"; }
   }
-  bool enqueue(DBusMessage *message, const std::string &signature,
+  std::optional<Ticket> enqueue(DBusMessage *message, const std::string &signature,
                Deadline deadline, BusCallback callback) {
-    if (!connection_ || failure_ || pending_.size() >= 64) return false;
+    if (!connection_ || failure_ || !callback || pending_.size() >= 64 || call_sequence_ == UINT64_MAX) return std::nullopt;
     if (!message || dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_METHOD_CALL ||
         dbus_message_get_serial(message) != 0 || signature.size() > 255 ||
         signature.find('\0') != std::string::npos ||
@@ -206,13 +222,14 @@ class Bus {
     // libdbus synthesizes a senderless timeout reply. Its integer interval must
     // not expire before our absolute deadline, or that reply looks uncorrelated.
     auto remaining = std::chrono::ceil<std::chrono::milliseconds>(deadline - Clock::now()).count();
-    if (remaining < 1 || remaining > 60000) return false;
+    if (remaining < 1 || remaining > 60000) return std::nullopt;
+    const auto identifier = ++call_sequence_;
     auto state = std::make_unique<Pending>(Pending{this, nullptr, destination, signature,
-                                                 deadline, std::move(callback)});
+                                                 deadline, std::move(callback), identifier});
     DBusPendingCall *call = nullptr;
     if (!dbus_connection_send_with_reply(connection_, message, &call, static_cast<int>(remaining)) || !call) {
       failure_ = "transport_error";
-      return false;
+      return std::nullopt;
     }
     state->value = call;
     auto *data = state.get();
@@ -220,9 +237,9 @@ class Bus {
     if (!dbus_pending_call_set_notify(call, notified, data, nullptr)) {
       pending_.erase(call);
       failure_ = "resource_limit";
-      return false;
+      return std::nullopt;
     }
-    return true;
+    return Ticket(generation_, identifier);
   }
   void send_method_reply() {
     if (!connection_ || failure_ || method_replies_.empty() ||
@@ -308,12 +325,29 @@ public:
           else unique_name_ = name;
         }
         callback(std::move(reply));
-      });
+      }).has_value();
   }
   bool call(DBusMessage *message, const std::string &signature,
             Deadline deadline, BusCallback callback) {
     if (unique_name_.empty()) return false;
+    return enqueue(message, signature, deadline, std::move(callback)).has_value();
+  }
+
+  std::optional<Ticket> pending_call(DBusMessage *message, const std::string &signature,
+                                   Deadline deadline, BusCallback callback) {
+    if (unique_name_.empty()) return std::nullopt;
     return enqueue(message, signature, deadline, std::move(callback));
+  }
+  // Local cancellation removes only this pending reply. It does not retract a
+  // transmitted method or establish its remote effect; StopNotify owns cleanup.
+  bool cancel(const Ticket &ticket) noexcept {
+    if (ticket.generation_.lock() != generation_ || !ticket.identifier_) return false;
+    for (auto iterator = pending_.begin(); iterator != pending_.end(); ++iterator) {
+      if (iterator->second->identifier == ticket.identifier_) {
+        pending_.erase(iterator); return true;
+      }
+    }
+    return false;
   }
 
   // Registration is local and precedes the caller's asynchronous AddMatch and

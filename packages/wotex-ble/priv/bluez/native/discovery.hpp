@@ -13,6 +13,7 @@ class LiveDiscovery {
     BlueZService service;
     NativePeer peer;
     std::optional<Discovery> snapshot;
+    std::optional<Bus::Ticket> query_ticket;
     Callback pending, lost;
     Callback close_done;
     std::function<void()> changed;
@@ -27,7 +28,7 @@ class LiveDiscovery {
 
     State(const std::string &address, NativePeer peer) : service(address), peer(std::move(peer)) {}
     void force_close() {
-      active = false; pending = {}; lost = {}; changed = {}; snapshot.reset(); service.close();
+      active = false; pending = {}; lost = {}; changed = {}; snapshot.reset(); query_ticket.reset(); service.close();
       closing = false; link_owned = false; close_done = {};
     }
     void finish_close() {
@@ -149,9 +150,10 @@ class LiveDiscovery {
           "org.freedesktop.DBus.ObjectManager", "GetManagedObjects"));
       const auto observed = revision;
       std::weak_ptr<State> weak = shared_from_this();
-      if (!service.bus().call(request.get(), "a{oa{sa{sv}}}", deadline, [weak, observed](BusReply reply) {
+      query_ticket = service.bus().pending_call(request.get(), "a{oa{sa{sv}}}", deadline, [weak, observed](BusReply reply) {
         const auto state = weak.lock();
         if (!state || !state->active) return;
+        state->query_ticket.reset();
         if (reply.error) { state->fail(reply.error); return; }
         try {
           // Validate even a raced response; revision changes do not license
@@ -177,7 +179,8 @@ class LiveDiscovery {
           if (state->connecting && !state->delivered) state->advance_connection();
           else state->complete();
         } catch (const InvalidObjects &error) { state->fail(error.what()); }
-      })) fail(Clock::now() >= deadline ? "timeout" : "resource_limit");
+      });
+      if (!query_ticket) fail(Clock::now() >= deadline ? "timeout" : "resource_limit");
     }
     void match(unsigned index) {
       if (index == 2) { watched = true; query(); return; }
@@ -247,6 +250,13 @@ public:
     if (!state.active || state.dirty || state.pending || !state.snapshot ||
         !state.snapshot->connected || !state.snapshot->services_resolved) return false;
     state.linked = true; return true;
+  }
+  bool cancel_refresh() {
+    auto &state = *state_;
+    if (!state.active || !state.delivered || !state.pending || !state.query_ticket) return false;
+    const bool cancelled = state.service.bus().cancel(*state.query_ticket);
+    state.query_ticket.reset(); state.pending = {}; state.attempts = 0;
+    return cancelled;
   }
   void poll(std::vector<pollfd> &extra, int wait_ms) {
     auto &state = *state_;

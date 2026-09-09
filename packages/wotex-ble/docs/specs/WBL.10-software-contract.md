@@ -3,7 +3,7 @@ spec:
   id: WBL.10
   title: "Complete BlueZ GATT central software profile"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -186,8 +186,9 @@ second early Value fails establishment with `:response_limit` and cleans up;
 never silently discard an arbitrary number of early reports. Emit the subscribe
 acknowledgement before releasing the buffered value to the bridge output.
 
-The native subscribe parameters are exactly `address` (S03 shape) and `mode`
-(`auto`, `notify`, `indicate`). The success result has exactly `subscription_id`
+The native subscribe parameters are exactly `address` (S03 shape), `mode`
+(`auto`, `notify`, `indicate`) and `queue_limit` (integer 1..10000). The latter
+translates the public queue bound into .13 report-credit admission. The success result has exactly `subscription_id`
 (the establishment request ID), `generation: 1` (this bridge owner's generation),
 `characteristic` (S01's complete typed discovery record), `requested_mode` and
 `effective_mode` (`notify`, `indicate`, `bluez_selected`). The characteristic's

@@ -1089,6 +1089,484 @@
           "disconnect_calls": 0
         }
       }
+    },
+    {
+      "id": "WBL-B-F33",
+      "requirements": [
+        "WBL-B03",
+        "WBL-S04",
+        "WBL-V07"
+      ],
+      "operation": "notify_mode",
+      "input": {
+        "flags": [
+          "notify"
+        ],
+        "mode": "auto"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "requested_mode": "auto",
+          "effective_mode": "notify"
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F34",
+      "requirements": [
+        "WBL-B03",
+        "WBL-S04",
+        "WBL-V07"
+      ],
+      "operation": "notify_mode",
+      "input": {
+        "flags": [
+          "indicate"
+        ],
+        "mode": "auto"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "requested_mode": "auto",
+          "effective_mode": "indicate"
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F35",
+      "requirements": [
+        "WBL-B03",
+        "WBL-S04",
+        "WBL-V07"
+      ],
+      "operation": "notify_mode",
+      "input": {
+        "flags": [
+          "notify",
+          "indicate"
+        ],
+        "mode": "auto"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "requested_mode": "auto",
+          "effective_mode": "bluez_selected"
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F36",
+      "requirements": [
+        "WBL-B03",
+        "WBL-S04",
+        "WBL-V07"
+      ],
+      "operation": "notify_mode",
+      "input": {
+        "flags": [
+          "notify",
+          "indicate"
+        ],
+        "mode": "indicate"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": "unsupported_procedure_selection"
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F37",
+      "requirements": [
+        "WBL-B03",
+        "WBL-S04",
+        "WBL-V07"
+      ],
+      "operation": "notify_mode",
+      "input": {
+        "flags": [],
+        "mode": "auto"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": "not_supported"
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F38",
+      "requirements": [
+        "WBL-B03",
+        "WBL-S04",
+        "WBL-V07",
+        "WBL-V08",
+        "WBL-V09",
+        "WBL-V11"
+      ],
+      "operation": "notify_lifecycle",
+      "input": {
+        "flags": [
+          "notify"
+        ],
+        "mode": "auto",
+        "early_values": [
+          [
+            1
+          ]
+        ],
+        "values": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "output_capacity": true
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [
+            "StartNotify",
+            "StopNotify"
+          ],
+          "result": {
+            "subscription_id": "201",
+            "generation": 1,
+            "characteristic": {
+              "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+              "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+              "service_path": "/org/bluez/hci0/device/service",
+              "object_path": "/org/bluez/hci0/device/service/char",
+              "handle": 17,
+              "flags": [
+                "notify"
+              ],
+              "generation": 2
+            },
+            "requested_mode": "auto",
+            "effective_mode": "notify"
+          },
+          "report_attempts": [
+            {
+              "value": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "metadata": {
+                "source": "bluez_value_change",
+                "characteristic": {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char",
+                  "handle": 17,
+                  "flags": [
+                    "notify"
+                  ],
+                  "generation": 2
+                },
+                "requested_mode": "auto",
+                "effective_mode": "notify"
+              }
+            },
+            {
+              "value": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "metadata": {
+                "source": "bluez_value_change",
+                "characteristic": {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char",
+                  "handle": 17,
+                  "flags": [
+                    "notify"
+                  ],
+                  "generation": 2
+                },
+                "requested_mode": "auto",
+                "effective_mode": "notify"
+              }
+            },
+            {
+              "value": {
+                "type": "bytes",
+                "base64": "Ag=="
+              },
+              "metadata": {
+                "source": "bluez_value_change",
+                "characteristic": {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char",
+                  "handle": 17,
+                  "flags": [
+                    "notify"
+                  ],
+                  "generation": 2
+                },
+                "requested_mode": "auto",
+                "effective_mode": "notify"
+              }
+            }
+          ],
+          "admitted_reports": 3,
+          "retirements": 1,
+          "retirement_error": null,
+          "cancelled": true,
+          "active_subscriptions": 0,
+          "active_paths": 0,
+          "pending_calls": 0,
+          "signal_listeners": 4,
+          "remote_subscriptions": 0,
+          "owner_active": true,
+          "sender_releases": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F39",
+      "requirements": [
+        "WBL-B03",
+        "WBL-S04",
+        "WBL-V07",
+        "WBL-V08",
+        "WBL-V09",
+        "WBL-V11"
+      ],
+      "operation": "notify_lifecycle",
+      "input": {
+        "flags": [
+          "notify"
+        ],
+        "mode": "auto",
+        "early_values": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "values": [],
+        "output_capacity": true
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [
+            "StartNotify",
+            "StopNotify"
+          ],
+          "result": {
+            "code": "response_limit"
+          },
+          "report_attempts": [],
+          "admitted_reports": 0,
+          "retirements": 0,
+          "retirement_error": null,
+          "cancelled": false,
+          "active_subscriptions": 0,
+          "active_paths": 0,
+          "pending_calls": 0,
+          "signal_listeners": 4,
+          "remote_subscriptions": 0,
+          "owner_active": true,
+          "sender_releases": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F40",
+      "requirements": [
+        "WBL-B03",
+        "WBL-S04",
+        "WBL-V07",
+        "WBL-V08",
+        "WBL-V09",
+        "WBL-V11"
+      ],
+      "operation": "notify_lifecycle",
+      "input": {
+        "flags": [
+          "notify",
+          "indicate"
+        ],
+        "mode": "auto",
+        "early_values": [],
+        "values": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "output_capacity": false
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [
+            "StartNotify",
+            "StopNotify"
+          ],
+          "result": {
+            "subscription_id": "201",
+            "generation": 1,
+            "characteristic": {
+              "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+              "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+              "service_path": "/org/bluez/hci0/device/service",
+              "object_path": "/org/bluez/hci0/device/service/char",
+              "handle": 17,
+              "flags": [
+                "notify",
+                "indicate"
+              ],
+              "generation": 2
+            },
+            "requested_mode": "auto",
+            "effective_mode": "bluez_selected"
+          },
+          "report_attempts": [
+            {
+              "value": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "metadata": {
+                "source": "bluez_value_change",
+                "characteristic": {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char",
+                  "handle": 17,
+                  "flags": [
+                    "notify",
+                    "indicate"
+                  ],
+                  "generation": 2
+                },
+                "requested_mode": "auto",
+                "effective_mode": "bluez_selected"
+              }
+            }
+          ],
+          "admitted_reports": 0,
+          "retirements": 1,
+          "retirement_error": {
+            "code": "queue_overflow"
+          },
+          "cancelled": false,
+          "active_subscriptions": 0,
+          "active_paths": 0,
+          "pending_calls": 0,
+          "signal_listeners": 4,
+          "remote_subscriptions": 0,
+          "owner_active": true,
+          "sender_releases": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F41",
+      "requirements": [
+        "WBL-B03",
+        "WBL-S04",
+        "WBL-V07",
+        "WBL-V08",
+        "WBL-V09",
+        "WBL-V11"
+      ],
+      "operation": "notify_lifecycle",
+      "input": {
+        "flags": [
+          "indicate"
+        ],
+        "mode": "auto",
+        "early_values": [],
+        "values": [
+          [
+            0,
+            255
+          ]
+        ],
+        "output_capacity": true
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [
+            "StartNotify",
+            "StopNotify"
+          ],
+          "result": {
+            "subscription_id": "201",
+            "generation": 1,
+            "characteristic": {
+              "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+              "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+              "service_path": "/org/bluez/hci0/device/service",
+              "object_path": "/org/bluez/hci0/device/service/char",
+              "handle": 17,
+              "flags": [
+                "indicate"
+              ],
+              "generation": 2
+            },
+            "requested_mode": "auto",
+            "effective_mode": "indicate"
+          },
+          "report_attempts": [
+            {
+              "value": {
+                "type": "bytes",
+                "base64": "AP8="
+              },
+              "metadata": {
+                "source": "bluez_value_change",
+                "characteristic": {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char",
+                  "handle": 17,
+                  "flags": [
+                    "indicate"
+                  ],
+                  "generation": 2
+                },
+                "requested_mode": "auto",
+                "effective_mode": "indicate"
+              }
+            }
+          ],
+          "admitted_reports": 1,
+          "retirements": 1,
+          "retirement_error": null,
+          "cancelled": true,
+          "active_subscriptions": 0,
+          "active_paths": 0,
+          "pending_calls": 0,
+          "signal_listeners": 4,
+          "remote_subscriptions": 0,
+          "owner_active": true,
+          "sender_releases": 0
+        }
+      }
     }
   ],
   "executed_cases": [
@@ -1118,6 +1596,15 @@
     "WBL-B-F29",
     "WBL-B-F30",
     "WBL-B-F31",
-    "WBL-B-F32"
+    "WBL-B-F32",
+    "WBL-B-F33",
+    "WBL-B-F34",
+    "WBL-B-F35",
+    "WBL-B-F36",
+    "WBL-B-F37",
+    "WBL-B-F38",
+    "WBL-B-F39",
+    "WBL-B-F40",
+    "WBL-B-F41"
   ]
 }

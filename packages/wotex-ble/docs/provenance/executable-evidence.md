@@ -289,3 +289,38 @@ same connection leave no pending calls or extra listeners. No write is retried.
 These results establish native component behavior through actual D-Bus messages.
 Complete Port-host dispatch, BEAM native integration and independent BlueZ/ATT
 interoperability remain separate open requirements.
+
+## Native notification ownership
+
+`test/native/notify_value_test.hpp` checks the production mode selector and typed
+PropertiesChanged decoder. Exact byte-array and Boolean variants are required;
+empty through 512-byte values are retained independently of their D-Bus message.
+Repeated equal values remain distinct. WBL-B-F33 through WBL-B-F37 execute exact
+mode-selection inputs and outputs.
+
+`test/native/notifications_test.hpp` drives `NativeNotifications` against an
+independent private D-Bus characteristic receiver. WBL-B-F38 through WBL-B-F41
+execute concrete early-value, repeated-value, notification/indication mode and
+report-admission traces. Establishment results and report metadata are compared
+with exact corpus values. The receiver observes actual StartNotify/StopNotify
+calls and unique-sender release; local return values do not infer remote cleanup.
+
+The boundary matrix covers one versus two early reports, cancellation during
+establishment or its completion callback, remote/malformed/missing responses,
+foreign senders, wrong paths/interfaces, invalidated Value, Notifying loss,
+metadata changes and selected owner loss. One stream's failed report admission
+preserves another stream. Sixty-four simultaneous subscriptions use one manager
+listener, and 1,000 successive subscribe/cancel lifetimes leave no active entries,
+paths, pending calls or extra listeners. StopNotify completes while an unrelated
+ReadValue remains pending. Full native pending-call admission escalates cleanup
+by closing the owned sender within the supplied deadline.
+
+`test/native/pending_test.hpp` checks opaque generation-bound cancellation tickets:
+foreign, stale, completed and default tickets cannot cancel another call, and
+1,000 successive pending calls retain no tombstones. A cancelled discovery refresh
+can be followed by successful establishment on the same connection.
+
+These are actual libdbus component tests. The report callback represents bounded
+host admission; it is not a Port transport or proof of BEAM mailbox flow control.
+Complete host dispatch/output, cumulative credits across the BEAM boundary and
+independent BlueZ/ATT interoperability remain open requirements.
