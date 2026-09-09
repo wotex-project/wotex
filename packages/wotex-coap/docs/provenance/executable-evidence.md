@@ -35,8 +35,15 @@ chain-depth fault matrix.
 integration cases F02–F07 through real ConsumedThing calls. A separate loopback
 UDP test transmits read/write requests and proves that an uncertain mutation
 stays permanent through Runtime even with explicit idempotence. Native effect
-and diagnostic details are not retained in Runtime causes. These assertions do
-not accept the still-unexecuted F01 profile-factory case or secure Runtime modes.
+and diagnostic details are not retained in Runtime causes.
+
+`profile_test.exs` executes F01 over UDP through the public profile and real
+ConsumedThing route, including the preserved extension and zero remaining
+sockets. It covers all three unary operation/media cells, explicit null/false/
+zero/empty outcomes, rejected forged contexts/profiles and a complete response
+held past the callback deadline. `runtime_stream_test.exs` uses the public
+Observe profile for its Property/Event lifecycle assertions. These tests do not
+accept secure Runtime modes or the complete software/toolchain matrix.
 
 Independent PKI tests under development are not committed peer acceptance.
 Runtime DTLS credentials/profiles, OSCORE known-answer/replay/store

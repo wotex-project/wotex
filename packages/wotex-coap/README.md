@@ -72,6 +72,9 @@ spend one finite deadline across opening and exchange and close their socket.
 Runtime Property observations and Event subscriptions use an owned Observe relay
 with complete-body decoding and bounded cleanup. Runtime currently accepts only
 `coap` Forms and rejects immediate credentials.
+`Wotex.CoAP.profile/0` selects unary UDP operations;
+`Wotex.CoAP.profile(:udp_observe)` selects unary operations and Observe streams.
+Both admit JSON, UTF-8 text and opaque bytes. Secure Runtime modes remain unsupported.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
 See the [blockwise contract](docs/specs/WCO.03-blockwise.md) for configurable

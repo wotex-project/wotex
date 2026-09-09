@@ -29,6 +29,49 @@ defmodule Wotex.CoAP do
   @formats %{text: 0, link_format: 40, octet_stream: 42, json: 50, cbor: 60}
   @type session :: %{pid: pid(), timeout: pos_integer()}
 
+  @doc """
+  Returns the pure Runtime profile for unary UDP interactions.
+
+      iex> Wotex.Runtime.BindingProfile.id(Wotex.CoAP.profile())
+      :coap
+
+  Native DTLS support is separate from admission of a secure Runtime profile.
+  Profile construction starts no process and checks no installed backend.
+  """
+  @spec profile() :: Wotex.Runtime.BindingProfile.t()
+  def profile, do: runtime_profile(:coap, [:readproperty, :writeproperty, :invokeaction])
+
+  @doc "Selects implemented UDP unary or Observe Runtime operations without acquiring resources."
+  @spec profile(term()) :: {:ok, Wotex.Runtime.BindingProfile.t()} | {:error, Error.t()}
+  def profile(:udp), do: {:ok, profile()}
+
+  def profile(:udp_observe) do
+    {:ok,
+     runtime_profile(:coap_observe, [
+       :readproperty,
+       :writeproperty,
+       :invokeaction,
+       :observeproperty,
+       :unobserveproperty,
+       :subscribeevent,
+       :unsubscribeevent
+     ])}
+  end
+
+  def profile(_), do: {:error, Error.new(:unsupported_profile)}
+
+  defp runtime_profile(id, operations) do
+    {:ok, profile} =
+      Wotex.Runtime.BindingProfile.new(
+        id: id,
+        schemes: ["coap"],
+        operations: operations,
+        media_types: ["application/json", "application/octet-stream", "text/plain;charset=utf-8"]
+      )
+
+    profile
+  end
+
   @doc "Reports the implemented baseline exchange profile."
   @spec capabilities() :: %{
           bidirectional: true,

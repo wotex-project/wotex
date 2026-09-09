@@ -4,7 +4,7 @@ defmodule Wotex.CoAP.RuntimeStreamTest do
   use ExUnit.Case, async: true
   alias Wotex.CoAP.{Codec, Error, Message, RuntimeHandle, RuntimeRelay, Transport}
   alias Wotex.CoAP.Test.RuntimeCredentials
-  alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, ExecutionContext, Subscription}
+  alias Wotex.Runtime.{ConsumedThing, Context, ExecutionContext, Subscription}
   @moduletag :capture_log
 
   setup do
@@ -457,20 +457,14 @@ defmodule Wotex.CoAP.RuntimeStreamTest do
         if(kind == :property, do: "properties", else: "events") => %{"reading" => affordance}
       })
 
-    {:ok, profile} =
-      BindingProfile.new(
-        id: :coap_test,
-        schemes: ["coap"],
-        operations: [open, close],
-        media_types: ["application/json"]
-      )
+    {:ok, profile} = Wotex.CoAP.profile(:udp_observe)
 
     config = Keyword.get(options, :config, timeout: 1000)
 
     {:ok, consumed} =
       ConsumedThing.new(td,
         profiles: [profile],
-        transports: %{coap_test: {Transport, config}},
+        transports: %{coap_observe: {Transport, config}},
         credentials: {RuntimeCredentials, []}
       )
 

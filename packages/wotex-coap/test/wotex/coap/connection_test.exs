@@ -178,7 +178,7 @@ defmodule Wotex.CoAP.ConnectionTest do
       affordance_name: "value",
       form: form,
       resolved_href: href,
-      profile: nil,
+      profile: CoAP.profile(),
       request_id: "loopback",
       deadline: nil,
       input: nil

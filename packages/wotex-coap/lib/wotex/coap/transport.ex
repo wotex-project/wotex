@@ -26,7 +26,7 @@ defmodule Wotex.CoAP.Transport do
   @unary_operations [:readproperty, :writeproperty, :invokeaction]
 
   @impl Wotex.Runtime.Transport
-  def request(%Request{} = request, %ExecutionContext{credential: nil}, config)
+  def request(%Request{} = request, %ExecutionContext{credential: nil} = execution, config)
       when is_list(config) and request.operation in @unary_operations do
     now =
       if is_struct(request.deadline, DateTime),
@@ -34,6 +34,7 @@ defmodule Wotex.CoAP.Transport do
         else: System.monotonic_time(:millisecond)
 
     with :ok <- request_config(config),
+         :ok <- request_context(request, execution),
          {:ok, mapping} <-
            Mapping.command(request.form, request.operation, request.input, request.resolved_href),
          {:ok, timeout} <-
@@ -43,28 +44,60 @@ defmodule Wotex.CoAP.Transport do
            [host: mapping.host, port: mapping.port, timeout: timeout] ++
              Keyword.take(config, [:ack_timeout]),
          {:ok, pid} <- Connection.start_link(connection_options) do
-      try do
-        remaining = deadline - System.monotonic_time(:millisecond)
-
-        with {:ok, reply} <-
-               Connection.transfer(
-                 pid,
-                 mapping.message,
-                 remaining,
-                 Keyword.take(config, [:block_size, :max_body_size, :max_blocks])
-               ),
-             {:ok, value} <- Mapping.decode(mapping, reply),
-             do:
-               Result.new(request.request_id, request.operation, value,
-                 metadata: %{code: reply.code}
-               )
-      after
-        Connection.close(pid)
-      end
+      scoped_request(pid, request, mapping, deadline, config)
     end
   end
 
   def request(_, _, _), do: {:error, Error.new(:invalid_transport_context)}
+
+  defp scoped_request(pid, request, mapping, deadline, config) do
+    result = execute_request(pid, request, mapping, deadline, config)
+
+    case Connection.close(pid) do
+      :ok ->
+        with {:ok, _} <- result,
+             :ok <- completion_deadline(deadline, mapping.message),
+             do: result
+
+      {:error, error} ->
+        {:error, mutation_effect(error, mapping.message)}
+    end
+  catch
+    kind, reason ->
+      Connection.close(pid)
+      :erlang.raise(kind, reason, __STACKTRACE__)
+  end
+
+  defp execute_request(pid, request, mapping, deadline, config) do
+    with remaining when remaining > 0 <- deadline - System.monotonic_time(:millisecond),
+         {:ok, reply} <-
+           Connection.transfer(
+             pid,
+             mapping.message,
+             remaining,
+             Keyword.take(config, [:block_size, :max_body_size, :max_blocks])
+           ) do
+      case Mapping.decode(mapping, reply) do
+        {:ok, value} ->
+          Result.new(request.request_id, request.operation, value, metadata: %{code: reply.code})
+
+        {:error, error} ->
+          {:error, mutation_effect(error, mapping.message)}
+      end
+    else
+      {:error, _} = error -> error
+      _ -> {:error, Error.new(:deadline_exceeded)}
+    end
+  end
+
+  defp completion_deadline(deadline, message) do
+    if System.monotonic_time(:millisecond) < deadline,
+      do: :ok,
+      else: {:error, mutation_effect(Error.new(:deadline_exceeded), message)}
+  end
+
+  defp mutation_effect(error, message),
+    do: Error.with_effect(error, if(message.code in [2, 3, 4], do: :unknown, else: :none))
 
   @impl Wotex.Runtime.Transport
   def subscribe(%Request{} = request, owner, %ExecutionContext{credential: nil} = execution, config)
@@ -123,13 +156,31 @@ defmodule Wotex.CoAP.Transport do
   def decode_frame({:error, error}, _, _), do: {:error, RuntimeFrame.error(error)}
   def decode_frame(_, _, _), do: :ignore
 
-  defp stream_context(
-         %Request{input: nil} = request,
+  defp stream_context(request, execution) do
+    with :ok <- request_context(request, execution),
+         true <- is_nil(request.input),
+         do: :ok,
+         else: (_ -> {:error, Error.new(:invalid_transport_context)})
+  end
+
+  defp request_context(
+         %Request{} = request,
          %ExecutionContext{context: %Context{} = context} = execution
        )
        when map_size(request) == 10 and map_size(execution) == 3 and map_size(context) == 4 and
-              request.operation in [:observeproperty, :subscribeevent] do
-    expected_type = if request.operation == :observeproperty, do: :property, else: :event
+              request.operation in [
+                :readproperty,
+                :writeproperty,
+                :invokeaction,
+                :observeproperty,
+                :subscribeevent
+              ] do
+    expected_type =
+      case request.operation do
+        :invokeaction -> :action
+        :subscribeevent -> :event
+        _ -> :property
+      end
 
     with {:ok, ^context} <-
            Context.new(
@@ -140,11 +191,19 @@ defmodule Wotex.CoAP.Transport do
          true <- request.request_id == context.request_id and request.deadline == context.deadline,
          true <- request.affordance_type == expected_type,
          true <- is_binary(request.resolved_href) and is_binary(request.affordance_name),
+         true <- valid_profile?(request.profile, request.operation),
          do: :ok,
          else: (_ -> {:error, Error.new(:invalid_transport_context)})
   end
 
-  defp stream_context(_, _), do: {:error, Error.new(:invalid_transport_context)}
+  defp request_context(_, _), do: {:error, Error.new(:invalid_transport_context)}
+
+  defp valid_profile?(profile, operation) do
+    {:ok, observed} = Wotex.CoAP.profile(:udp_observe)
+
+    profile in [Wotex.CoAP.profile(), observed] and
+      BindingProfile.supports_operation?(profile, operation)
+  end
 
   defp stream_profile(%Request{profile: %BindingProfile{} = profile} = request, mapping) do
     valid =

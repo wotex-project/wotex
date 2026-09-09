@@ -3,7 +3,7 @@ spec:
   id: WCO.02
   title: "Implemented CoAP profile"
   status: accepted
-  version: 1.1.0
+  version: 1.2.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -42,8 +42,13 @@ Duplicate separate replies retain ACK behavior across completed exchanges.
 
 Native `coaps` uses DTLS 1.2 with explicit PSK or PKI credentials and no UDP
 fallback. Runtime currently exposes only credential-free UDP unary/stream cells.
-Runtime DTLS configuration, profile factories, Error.class and OSCORE remain
-planned under .10/.12/.13. OSCORE's C Port owns one libcoap engine; no native
+`profile/0` and `profile(:udp)` expose the unary `:coap` profile;
+`profile(:udp_observe)` exposes the seven-operation `:coap_observe` profile.
+Both use the three documented media types. Other profile modes are unsupported.
+Transport validates the exact profile and Runtime context before acquisition;
+decode and cleanup cannot turn an expired request into success. Error.class
+retains conservative retry decisions through Runtime. Runtime DTLS configuration
+and OSCORE remain planned under .10/.12/.13. OSCORE's C Port owns one libcoap engine; no native
 helper is needed for the existing UDP or OTP DTLS paths.
 
 ## Evidence and compatibility

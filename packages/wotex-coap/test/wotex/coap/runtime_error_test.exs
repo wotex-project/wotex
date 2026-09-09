@@ -154,18 +154,27 @@ defmodule Wotex.CoAP.RuntimeErrorTest do
         }
       })
 
-    {:ok, profile} =
-      BindingProfile.new(
-        id: :coap_failure,
-        schemes: ["coap"],
-        operations: [:readproperty, :writeproperty],
-        media_types: ["application/json"]
-      )
+    profile =
+      case transport do
+        {Transport, _} ->
+          Wotex.CoAP.profile()
+
+        _ ->
+          {:ok, profile} =
+            BindingProfile.new(
+              id: :coap_failure,
+              schemes: ["coap"],
+              operations: [:readproperty, :writeproperty],
+              media_types: ["application/json"]
+            )
+
+          profile
+      end
 
     {:ok, consumed} =
       ConsumedThing.new(td,
         profiles: [profile],
-        transports: %{coap_failure: transport},
+        transports: %{BindingProfile.id(profile) => transport},
         credentials: {RuntimeCredentials, []}
       )
 
