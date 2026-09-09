@@ -3,6 +3,7 @@ defmodule Wotex.BACnet.StackClient do
 
   use GenServer
   alias BACnet.Protocol.{APDU, NPCI}
+  alias BACnet.Protocol.APDU.UnconfirmedServiceRequest
   alias BACnet.Stack.{Client, SegmentsStore}
   alias Wotex.BACnet.{Error, InvokeIds, StackCOV, Tags}
 
@@ -19,8 +20,18 @@ defmodule Wotex.BACnet.StackClient do
   @doc false
   @spec verify(pid(), pos_integer()) :: :ok | {:error, Error.t()}
   def verify(client, timeout) do
+    case capabilities(client, timeout) do
+      {:ok, _} -> :ok
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc false
+  @spec capabilities(pid(), pos_integer()) :: {:ok, [:cov | :discovery]} | {:error, Error.t()}
+  def capabilities(client, timeout) do
     case GenServer.call(client, {:wotex_client, :capabilities}, timeout) do
-      {:wotex_client, 1, :cov} -> :ok
+      {:wotex_client, 1, :cov} -> {:ok, [:cov]}
+      {:wotex_client, 2, [:cov, :discovery]} -> {:ok, [:cov, :discovery]}
       _ -> {:error, Error.new(:unsupported_stack_client)}
     end
   catch
@@ -28,7 +39,13 @@ defmodule Wotex.BACnet.StackClient do
   end
 
   @doc false
-  @spec exchange(pid(), term(), APDU.ConfirmedServiceRequest.t(), keyword(), integer()) :: term()
+  @spec exchange(
+          pid(),
+          term(),
+          APDU.ConfirmedServiceRequest.t() | APDU.UnconfirmedServiceRequest.t(),
+          keyword(),
+          integer()
+        ) :: term()
   def exchange(client, destination, apdu, options, deadline) do
     GenServer.call(
       client,
@@ -39,9 +56,50 @@ defmodule Wotex.BACnet.StackClient do
     :exit, _ -> {:error, Error.new(:connection_closed)}
   end
 
+  @doc false
+  @spec discovery_send(pid(), term(), UnconfirmedServiceRequest.t(), integer(), pid(), pid()) ::
+          term()
+  def discovery_send(client, destination, apdu, deadline, caller, listener) do
+    GenServer.call(
+      client,
+      {:wotex_client, :discovery_send, destination, apdu, deadline, caller, listener},
+      :infinity
+    )
+  catch
+    :exit, _ -> {:error, Error.new(:connection_closed)}
+  end
+
   @impl GenServer
   def handle_call({:wotex_client, :capabilities}, _, state),
-    do: {:reply, {:wotex_client, 1, :cov}, state}
+    do: {:reply, {:wotex_client, 2, [:cov, :discovery]}, state}
+
+  def handle_call(
+        {:wotex_client, :discovery_send, destination,
+         %APDU.UnconfirmedServiceRequest{service: :who_is} = apdu, deadline, caller, listener},
+        from,
+        state
+      )
+      when is_integer(deadline) and is_pid(caller) and is_pid(listener) do
+    if Process.alive?(caller) and Process.alive?(listener) and
+         listener in state.sdk.notification_receiver,
+       do: handle_call({:wotex_client, :exchange, destination, apdu, [], deadline}, from, state),
+       else: {:reply, rejected(:connection_closed), state}
+  end
+
+  def handle_call({:wotex_client, :discovery_send, _, _, _, _, _}, _, state),
+    do: {:reply, rejected(:invalid_request), state}
+
+  def handle_call({:wotex_client, :register_discovery, deadline}, {owner, _} = from, state)
+      when is_integer(deadline) do
+    cond do
+      now() >= deadline -> {:reply, rejected(:deadline_exceeded), state}
+      not Process.alive?(owner) -> {:reply, rejected(:connection_closed), state}
+      true -> delegate(Client.handle_call({:subscribe, owner}, from, state.sdk), state)
+    end
+  end
+
+  def handle_call({:wotex_client, :unregister_discovery}, {owner, _} = from, state),
+    do: delegate(Client.handle_call({:unsubscribe, owner}, from, state.sdk), state)
 
   def handle_call({:wotex_client, :register_cov, request, destination, deadline}, from, state)
       when is_integer(deadline) do
@@ -79,10 +137,10 @@ defmodule Wotex.BACnet.StackClient do
 
   def handle_call({:wotex_client, :exchange, destination, apdu, opts, deadline}, from, state)
       when is_integer(deadline) do
-    if now() < deadline do
-      handle_call({:send, destination, apdu, opts}, from, state)
-    else
-      {:reply, rejected(:deadline_exceeded), state}
+    cond do
+      now() >= deadline -> {:reply, rejected(:deadline_exceeded), state}
+      not Process.alive?(elem(from, 0)) -> {:reply, rejected(:connection_closed), state}
+      true -> handle_call({:send, destination, apdu, opts}, from, state)
     end
   end
 

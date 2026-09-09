@@ -13,6 +13,9 @@ defmodule Wotex.BACnet.Test.NativeHelpersClient do
   def read_properties(options, requests, _), do: answer(options, requests)
 
   @impl Wotex.BACnet.Client
+  def who_is(options, low, high, _), do: answer(options, {:who_is, low, high})
+
+  @impl Wotex.BACnet.Client
   def disconnect(_), do: :ok
 
   defp answer(options, request) do

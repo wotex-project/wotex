@@ -3,7 +3,7 @@ defmodule Wotex.BACnet.OperationOwner do
 
   use GenServer
 
-  alias Wotex.BACnet.{BACstack, Batch, COVOwner, Error, StackOwner, Subscription}
+  alias Wotex.BACnet.{BACstack, Batch, COVOwner, DiscoveryOwner, Error, StackOwner, Subscription}
 
   @doc false
   @spec start_link(map()) :: GenServer.on_start()
@@ -24,6 +24,15 @@ defmodule Wotex.BACnet.OperationOwner do
     GenServer.call(pid, {:request, generation, message, deadline}, remaining(deadline) + 1100)
   catch
     :exit, _ -> failure(:connection_closed, message)
+  end
+
+  @doc false
+  @spec discover(pid(), reference(), map()) ::
+          {:ok, [Wotex.BACnet.Device.t()]} | {:error, Error.t()}
+  def discover(pid, generation, window) do
+    GenServer.call(pid, {:discover, generation, window}, remaining(window.deadline) + 1100)
+  catch
+    :exit, _ -> {:error, Error.new(:connection_closed)}
   end
 
   @doc false
@@ -98,6 +107,7 @@ defmodule Wotex.BACnet.OperationOwner do
        pending: %{},
        subscriptions: %{},
        controls: %{},
+       discovery: nil,
        cleanup_deadline: nil
      }}
   end
@@ -121,6 +131,32 @@ defmodule Wotex.BACnet.OperationOwner do
 
       true ->
         {:noreply, admit(state, from, message, deadline, remaining)}
+    end
+  end
+
+  def handle_call({:discover, generation, window}, from, state) do
+    cond do
+      generation != state.config.generation ->
+        {:reply, {:error, Error.new(:connection_closed)}, state}
+
+      state.config.stack_client_kind != :wotex or
+          :discovery not in Map.get(state.config, :stack_features, []) ->
+        {:reply, {:error, Error.new(:not_supported)}, state}
+
+      not valid_discovery_window?(window, state.config) ->
+        {:reply, {:error, Error.new(:invalid_discovery_options)}, state}
+
+      state.discovery != nil ->
+        {:reply, {:error, Error.new(:discovery_busy)}, state}
+
+      remaining(window.expires) < 10 ->
+        {:reply, {:error, Error.new(:deadline_exceeded)}, state}
+
+      pending_count(state) >= 64 ->
+        {:reply, {:error, Error.new(:busy)}, state}
+
+      true ->
+        start_discovery(state, from, window)
     end
   end
 
@@ -190,6 +226,33 @@ defmodule Wotex.BACnet.OperationOwner do
       {operation, pending} ->
         operation_result(state, operation, reference, pending, result)
     end
+  end
+
+  def handle_info({:discovery_watchdog, token}, %{discovery: %{token: token} = discovery} = state) do
+    force_close(discovery.pid)
+    result = {:error, Error.new(:deadline_exceeded)}
+    {:noreply, %{state | discovery: %{discovery | result: result}}}
+  end
+
+  def handle_info(
+        {:discovery_result, pid, token, result},
+        %{discovery: %{pid: pid, token: token} = discovery} = state
+      ),
+      do: {:noreply, %{state | discovery: %{discovery | result: result}}}
+
+  def handle_info(
+        {:DOWN, reference, :process, pid, _},
+        %{discovery: %{pid: pid, monitor: reference} = discovery} = state
+      ) do
+    Process.cancel_timer(discovery.timer)
+
+    result =
+      if match?({:ok, _}, discovery.result) and remaining(discovery.deadline) == 0,
+        do: {:error, Error.new(:deadline_exceeded)},
+        else: discovery.result
+
+    GenServer.reply(discovery.from, result)
+    {:noreply, %{state | discovery: nil}}
   end
 
   def handle_info({:cov_cancelled, pid, result}, state) do
@@ -317,6 +380,7 @@ defmodule Wotex.BACnet.OperationOwner do
         System.monotonic_time(:millisecond) + 1000
       )
 
+    close_discovery(state.discovery, deadline)
     close_subscriptions(state, deadline)
     if state.config.owned_stack, do: StackOwner.close(state.config.owned_stack, deadline)
     :ok
@@ -407,6 +471,62 @@ defmodule Wotex.BACnet.OperationOwner do
 
   defp operation_failure(code, operation), do: failure(code, operation.message)
 
+  defp start_discovery(state, from, window) do
+    token = make_ref()
+
+    case DiscoveryOwner.start_link(%{
+           client: state.config.client,
+           session: self(),
+           from: from,
+           token: token,
+           window: window
+         }) do
+      {:ok, pid} ->
+        discovery = %{
+          pid: pid,
+          token: token,
+          deadline: window.deadline,
+          timer:
+            Process.send_after(
+              self(),
+              {:discovery_watchdog, token},
+              remaining(window.expires + 1100)
+            ),
+          monitor: Process.monitor(pid),
+          from: from,
+          result: {:error, Error.new(:connection_closed)}
+        }
+
+        {:noreply, %{state | discovery: discovery}}
+
+      _ ->
+        {:reply, {:error, Error.new(:startup_failed)}, state}
+    end
+  end
+
+  defp valid_discovery_window?(
+         %{started: started, deadline: deadline, low: low, high: high} = window,
+         config
+       ) do
+    case Wotex.BACnet.DiscoveryWindow.new(Map.get(config, :discovery), low, high, started, deadline) do
+      {:ok, expected} -> expected === window
+      _ -> false
+    end
+  end
+
+  defp valid_discovery_window?(_, _), do: false
+
+  defp close_discovery(nil, _), do: :ok
+
+  defp close_discovery(discovery, deadline) do
+    Process.cancel_timer(discovery.timer)
+    send(discovery.pid, {:session_closing, self(), deadline})
+
+    await_child(discovery.pid, discovery.monitor, deadline)
+
+    GenServer.reply(discovery.from, {:error, Error.new(:connection_closed)})
+  end
+
   defp start_subscription(state, from, request, deadline, timeout) do
     lease = make_ref()
 
@@ -448,11 +568,7 @@ defmodule Wotex.BACnet.OperationOwner do
     end)
 
     Enum.each(state.subscriptions, fn {pid, subscription} ->
-      receive do
-        {:DOWN, ref, :process, ^pid, _} when ref == subscription.monitor -> :ok
-      after
-        remaining(deadline + 100) -> force_close(pid)
-      end
+      await_child(pid, subscription.monitor, deadline)
 
       if subscription.from,
         do: GenServer.reply(subscription.from, {:error, Error.new(:connection_closed)})
@@ -462,12 +578,29 @@ defmodule Wotex.BACnet.OperationOwner do
     end)
   end
 
+  defp await_child(pid, reference, deadline) do
+    receive do
+      {:DOWN, ^reference, :process, ^pid, _} -> :ok
+    after
+      remaining(deadline) ->
+        force_close(pid)
+
+        receive do
+          {:DOWN, ^reference, :process, ^pid, _} -> :ok
+        after
+          remaining(deadline + 100) -> :ok
+        end
+    end
+  end
+
   defp force_close(pid) do
     Process.unlink(pid)
     Process.exit(pid, :kill)
   end
 
-  defp pending_count(state), do: map_size(state.pending) + map_size(state.controls)
+  defp pending_count(state),
+    do: map_size(state.pending) + map_size(state.controls) + if(state.discovery, do: 1, else: 0)
+
   defp remaining(deadline), do: max(deadline - System.monotonic_time(:millisecond), 0)
 
   defp admission_failure(code, %{type: :read_properties} = message), do: failure(code, message)

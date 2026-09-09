@@ -120,12 +120,26 @@ makes `who_is` fail with `:discovery_not_configured` before any listener or I/O.
 Do not derive broadcast/interface from the default route or device instance.
 Foreign-network discovery, BBMD registration and routing remain outside scope.
 
+Native discovery requires the owned Wotex StackClient or a borrowed wrapper whose
+bounded capability handshake explicitly includes discovery. The version-2 response
+is `{:wotex_client, 2, [:cov, :discovery]}`; version 1's COV-only response continues
+to support its existing operations, but cannot authorize discovery. Retain the
+verified feature set in the session owner. Raw borrowed BACstack Clients retain
+read/write support and return `:not_supported` for discovery before registration;
+never probe an unknown raw SDK message or mutate its internals. The pinned
+`Client.handle_call/3` send path does not reject a dead queued caller; the Wotex
+wrapper must check both caller liveness and the absolute deadline at final send.
+
 Both limits may be nil to omit the two Who-Is range fields. Otherwise both must
 be integers in 0..4194302 with low <= high; a single limit is invalid. There is
 one outstanding discovery per session (`:discovery_busy` on a second) because
 Who-Is/I-Am has no request identifier. The operation window ends at the earlier
-of its configured timeout and the session interaction deadline. Remaining time
-below 10 ms fails before sending. Register the local listener first, send exactly
+of its configured timeout and the session interaction deadline. Only a configured
+window ending before the interaction deadline can return a complete observation
+list; a window cut by that deadline, including equality, fails with
+`:deadline_exceeded`. Cleanup and final delivery still consume the same interaction
+deadline. Discovery holds one of the 64 shared operation-admission slots. Remaining
+time below 10 ms fails before sending. Register the local listener first, send exactly
 one Who-Is, and collect validated I-Am reports until the window closes. Do not
 sleep and inspect an unrelated caller mailbox. A send failure is an error and
 releases the listener immediately.

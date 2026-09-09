@@ -130,6 +130,12 @@ defmodule Wotex.BACnet do
   def read_properties(session, object, instance, properties),
     do: Wotex.BACnet.NativeHelpers.read_properties(session, object, instance, properties)
 
+  @doc "Collects finite Who-Is observations without changing the configured route."
+  @spec who_is(Session.t(), non_neg_integer() | nil, non_neg_integer() | nil) ::
+          {:ok, [Wotex.BACnet.Device.t()]} | {:error, Error.t()}
+  def who_is(session, low_limit \\ nil, high_limit \\ nil),
+    do: Wotex.BACnet.NativeDiscovery.who_is(session, low_limit, high_limit)
+
   @doc "Unsolicited receive requires a separately graduated subscription transport."
   @spec receive(term(), term()) :: {:error, Error.t()}
   def receive(_, _), do: {:error, Error.new(:not_supported)}

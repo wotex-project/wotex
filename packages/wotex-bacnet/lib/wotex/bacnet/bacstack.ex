@@ -18,7 +18,9 @@ defmodule Wotex.BACnet.BACstack do
 
   @impl Wotex.BACnet.Client
   def connect(opts) do
-    with {:ok, config} <- configuration(opts), :ok <- verify_client(config), do: start_owner(config)
+    with {:ok, config} <- configuration(opts),
+         {:ok, config} <- verify_client(config),
+         do: start_owner(config)
   end
 
   @doc false
@@ -27,7 +29,7 @@ defmodule Wotex.BACnet.BACstack do
     result =
       with {:ok, config} <- configuration(opts),
            config <- %{config | stack_client_kind: :wotex},
-           :ok <- verify_client(config),
+           {:ok, config} <- verify_client(config),
            do: start_owner(%{config | owned_stack: stack})
 
     case result do
@@ -48,10 +50,12 @@ defmodule Wotex.BACnet.BACstack do
     end
   end
 
-  defp verify_client(%{stack_client_kind: :wotex, client: client}),
-    do: StackClient.verify(client, 100)
+  defp verify_client(%{stack_client_kind: :wotex, client: client} = config) do
+    with {:ok, features} <- StackClient.capabilities(client, 100),
+         do: {:ok, Map.put(config, :stack_features, features)}
+  end
 
-  defp verify_client(_), do: :ok
+  defp verify_client(config), do: {:ok, Map.put(config, :stack_features, [])}
 
   defp start_owner(config) do
     config = Map.put(config, :generation, make_ref())
@@ -108,9 +112,11 @@ defmodule Wotex.BACnet.BACstack do
       })
 
     receive_limits = Keyword.get(opts, :receive_limits)
+    discovery = Keyword.get(opts, :discovery)
 
     if is_pid(client) and Process.alive?(client) and kind in [:bacstack, :wotex] and
          valid_destination?(destination) and
+         Wotex.BACnet.DiscoveryOptions.validate(discovery) == :ok and
          is_boolean(writes) and
          is_integer(timeout) and timeout in 1..60_000 and valid_peer?(peer) and
          receive_limits in [nil, %{max_apdu: 1476, max_segments: 32, max_bytes: 65_536}],
@@ -123,6 +129,7 @@ defmodule Wotex.BACnet.BACstack do
             writes: writes,
             peer_receive: peer,
             receive_limits: receive_limits,
+            discovery: discovery,
             owned_stack: nil
           }},
        else: {:error, Error.new(:invalid_options)}
@@ -193,6 +200,40 @@ defmodule Wotex.BACnet.BACstack do
   catch
     :exit, _ -> effect({:error, Error.new(:connection_closed)}, message.type)
   end
+
+  @impl Wotex.BACnet.Client
+  def who_is(config, low, high, timeout) when is_integer(timeout) and timeout in 1..60_000 do
+    started = System.monotonic_time(:millisecond)
+    who_is_deadline(config, low, high, started, started + timeout)
+  end
+
+  def who_is(_, _, _, _), do: {:error, Error.new(:invalid_request)}
+
+  @doc false
+  @spec who_is_deadline(term(), term(), term(), integer(), integer()) ::
+          {:ok, [Wotex.BACnet.Device.t()]} | {:error, Error.t()}
+  def who_is_deadline(
+        %{owner: owner, generation: generation} = config,
+        low,
+        high,
+        started,
+        deadline
+      )
+      when is_pid(owner) and is_reference(generation) and is_integer(started) and
+             is_integer(deadline) do
+    with {:ok, window} <-
+           Wotex.BACnet.DiscoveryWindow.new(
+             Map.get(config, :discovery),
+             low,
+             high,
+             started,
+             deadline
+           ) do
+      OperationOwner.discover(owner, generation, window)
+    end
+  end
+
+  def who_is_deadline(_, _, _, _, _), do: {:error, Error.new(:invalid_request)}
 
   @impl Wotex.BACnet.Client
   def subscribe(%{owner: owner, generation: generation}, request, receiver, timeout)
@@ -409,7 +450,8 @@ defmodule Wotex.BACnet.BACstack do
         :writes,
         :timeout,
         :peer_receive,
-        :receive_limits
+        :receive_limits,
+        :discovery
       ]
 
       keys -- allowed == [] and

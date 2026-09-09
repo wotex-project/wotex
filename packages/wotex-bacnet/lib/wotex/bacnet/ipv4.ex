@@ -24,6 +24,7 @@ defmodule Wotex.BACnet.IPv4 do
            ),
          {:ok, _} <-
            BACstack.configuration(
+             discovery: Keyword.get(opts, :discovery),
              stack_client: self(),
              destination: Keyword.get(opts, :destination),
              peer_receive:
@@ -44,6 +45,7 @@ defmodule Wotex.BACnet.IPv4 do
          {:ok, stack} <-
            BACstack.connect_owned(
              [
+               discovery: Keyword.get(opts, :discovery),
                stack_client: client,
                destination: Keyword.get(opts, :destination),
                writes: true,
@@ -88,6 +90,18 @@ defmodule Wotex.BACnet.IPv4 do
   def read_properties_deadline(_, _, _), do: {:error, Error.new(:invalid_properties)}
 
   @impl Wotex.BACnet.Client
+  def who_is(%{stack: stack}, low, high, timeout), do: BACstack.who_is(stack, low, high, timeout)
+  def who_is(_, _, _, _), do: {:error, Error.new(:invalid_request)}
+
+  @doc false
+  @spec who_is_deadline(term(), term(), term(), integer(), integer()) ::
+          {:ok, [Wotex.BACnet.Device.t()]} | {:error, Error.t()}
+  def who_is_deadline(%{stack: stack}, low, high, started, deadline),
+    do: BACstack.who_is_deadline(stack, low, high, started, deadline)
+
+  def who_is_deadline(_, _, _, _, _), do: {:error, Error.new(:invalid_request)}
+
+  @impl Wotex.BACnet.Client
   def subscribe(%{stack: stack}, request, receiver, timeout),
     do: BACstack.subscribe(stack, request, receiver, timeout)
 
@@ -119,7 +133,7 @@ defmodule Wotex.BACnet.IPv4 do
     if Keyword.keyword?(opts) do
       keys = Keyword.keys(opts)
 
-      keys -- [:local_ip, :local_port, :destination, :timeout, :peer_receive] == [] and
+      keys -- [:local_ip, :local_port, :destination, :timeout, :peer_receive, :discovery] == [] and
         length(keys) == MapSet.size(MapSet.new(keys))
     else
       false

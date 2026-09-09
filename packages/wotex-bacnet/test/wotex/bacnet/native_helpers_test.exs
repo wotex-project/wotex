@@ -130,6 +130,55 @@ defmodule Wotex.BACnet.NativeHelpersTest do
     refute_receive {:native_helper_call, _}, 10
   end
 
+  test "WBA-N04 injected discovery results must be sorted unique typed observations and finish in time" do
+    alias Wotex.BACnet.Device
+
+    {:ok, device} =
+      Device.new(%{
+        source: {{192, 0, 2, 20}, 47_808},
+        instance: 10,
+        max_apdu: 1476,
+        segmentation: :no_segmentation,
+        vendor_id: 260
+      })
+
+    assert {:ok, [^device]} = BACnet.who_is(session({:ok, [device]}))
+    assert_receive {:native_helper_call, {:who_is, nil, nil}}
+    second = %{device | instance: 11}
+
+    for devices <- [
+          [device, device],
+          [second, device],
+          [Map.from_struct(device)],
+          [device | :improper],
+          [nil],
+          nil,
+          List.duplicate(device, 1025),
+          [%{device | max_apdu: 0}]
+        ] do
+      assert {:error, %Error{code: :invalid_transport_return}} =
+               BACnet.who_is(session({:ok, devices}))
+
+      assert_receive {:native_helper_call, {:who_is, nil, nil}}
+    end
+
+    {:ok, slow} =
+      BACnet.connect(
+        client: NativeHelpersClient,
+        owner: self(),
+        result: {:ok, [device]},
+        delay_ms: 75,
+        timeout: 50
+      )
+
+    assert {:error, %Error{code: :deadline_exceeded}} = BACnet.who_is(slow)
+    assert_receive {:native_helper_call, {:who_is, nil, nil}}
+    assert {:error, %Error{code: :deadline_exceeded}} = BACnet.who_is(%{slow | timeout: 9})
+    refute_receive {:native_helper_call, _}, 10
+    legacy = %Session{client: TestClient, handle: nil, timeout: 100}
+    assert {:error, %Error{code: :not_supported}} = BACnet.who_is(legacy)
+  end
+
   defp session(result) do
     {:ok, session} =
       BACnet.connect(client: NativeHelpersClient, owner: self(), result: result, timeout: 100)

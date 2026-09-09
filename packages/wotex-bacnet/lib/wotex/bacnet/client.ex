@@ -20,5 +20,9 @@ defmodule Wotex.BACnet.Client do
   @doc "Reads an already normalized batch sequentially in one bounded operation slot."
   @callback read_properties(term(), [map()], pos_integer()) :: {:ok, map()} | {:error, term()}
 
-  @optional_callbacks subscribe: 4, unsubscribe: 3, read_properties: 3
+  @doc "Collects a bounded observation window using an explicit configured Who-Is destination."
+  @callback who_is(term(), non_neg_integer() | nil, non_neg_integer() | nil, pos_integer()) ::
+              {:ok, [Wotex.BACnet.Device.t()]} | {:error, term()}
+
+  @optional_callbacks subscribe: 4, unsubscribe: 3, read_properties: 3, who_is: 4
 end
