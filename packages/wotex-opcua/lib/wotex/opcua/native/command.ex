@@ -8,7 +8,10 @@ defmodule Wotex.OPCUA.Native.Command do
   variables are cleared before spawn. The guardian owns the child process group,
   enforces time/output limits even while the BEAM caller is suspended, and closes descendants on owner EOF.
   The caller's exit closes its Port; a successful child cannot leave background
-  members of the owned group running.
+  members of the owned group running. The caller reserves a separate 500 ms
+  for guardian startup and final status delivery; the native command and cleanup
+  deadlines keep their explicit recipe limits. A nil status records unverified
+  native completion when the caller's total wait expires.
 
   Returned output is bounded build evidence, not an OPC UA result or diagnostic
   payload. This boundary covers ordinary compiler/build descendants that remain
@@ -101,7 +104,7 @@ defmodule Wotex.OPCUA.Native.Command do
       end)
 
     port = Port.open({:spawn_executable, guardian}, [:binary, :exit_status, args: args, env: env])
-    deadline = System.monotonic_time(:millisecond) + step.timeout_ms + step.cleanup_ms + 100
+    deadline = System.monotonic_time(:millisecond) + step.timeout_ms + step.cleanup_ms + 500
 
     try do
       collect(port, [], 0, step.output_bytes, deadline)

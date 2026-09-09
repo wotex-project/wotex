@@ -161,7 +161,9 @@ defmodule Wotex.OPCUA.Binary do
     do: {:ok, <<0, id>>}
 
   defp node_bytes(%Address{kind: :numeric, namespace: ns, identifier: id})
-       when ns <= 255 and id <= 65_535, do: {:ok, <<1, ns, id::16-little>>}
+       when ns <= 255 and id <= 65_535 do
+    {:ok, <<1, ns, id::16-little>>}
+  end
 
   defp node_bytes(%Address{kind: :numeric, namespace: ns, identifier: id}),
     do: {:ok, <<2, ns::16-little, id::32-little>>}

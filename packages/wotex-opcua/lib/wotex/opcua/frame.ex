@@ -24,7 +24,9 @@ defmodule Wotex.OPCUA.Frame do
   def decode(bytes, limit \\ 1_048_576)
 
   def decode(bytes, limit)
-      when is_binary(bytes) and is_integer(limit) and limit >= 8 and byte_size(bytes) < 8, do: :more
+      when is_binary(bytes) and is_integer(limit) and limit >= 8 and byte_size(bytes) < 8 do
+    :more
+  end
 
   def decode(<<type::binary-size(3), chunk, size::32-little, rest::binary>>, limit)
       when is_integer(limit) and limit >= 8 do
