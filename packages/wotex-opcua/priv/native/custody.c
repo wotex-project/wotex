@@ -351,14 +351,21 @@ static int install_signals(void) {
     return sigaction(SIGPIPE, &action, NULL);
 }
 
-static void child_exec(int input[2], int output[2], int diagnostic[2], char **argv) {
+static void child_exec(int input[2], int output[2], int diagnostic[2],
+                       int group_ready[2], char **argv) {
+    unsigned char ready;
+    ssize_t ready_size;
+    close(group_ready[1]);
     struct sigaction action;
     memset(&action, 0, sizeof(action));
     sigemptyset(&action.sa_mask);
     action.sa_handler = SIG_DFL;
     if (sigaction(SIGTERM, &action, NULL) < 0 || sigaction(SIGINT, &action, NULL) < 0 ||
-        sigaction(SIGHUP, &action, NULL) < 0 || sigaction(SIGPIPE, &action, NULL) < 0 ||
-        setpgid(0, 0) < 0 || chdir(argv[4]) < 0) _exit(126);
+        sigaction(SIGHUP, &action, NULL) < 0 || sigaction(SIGPIPE, &action, NULL) < 0) _exit(126);
+    do ready_size = read(group_ready[0], &ready, 1); while (ready_size < 0 && errno == EINTR);
+    close(group_ready[0]);
+    if (ready_size != 1 || ready != 'G' || getpgrp() != getpid()) _exit(126);
+    if (chdir(argv[4]) < 0) _exit(126);
     if (dup2(input[0], STDIN_FILENO) < 0 || dup2(output[1], STDOUT_FILENO) < 0 ||
         dup2(diagnostic[1], STDERR_FILENO) < 0) _exit(126);
     for (int index = 0; index < 2; ++index) {
@@ -368,9 +375,28 @@ static void child_exec(int input[2], int output[2], int diagnostic[2], char **ar
     _exit(126);
 }
 
+/* Before the release byte, this direct child cannot have executed or forked.
+ * Failure therefore signals only its unreaped PID, never a guessed group. */
+static int abort_startup(pid_t child, int64_t cleanup_ms) {
+    int64_t started = monotonic_ms();
+    (void)kill(child, SIGKILL);
+    if (started < 0) return 129;
+    int64_t deadline = started + cleanup_ms;
+    for (;;) {
+        pid_t result = waitpid(child, NULL, WNOHANG);
+        if (result == child) return 126;
+        if (result < 0 && errno != EINTR) return 129;
+        int64_t current = monotonic_ms();
+        if (current < 0 || current >= deadline) return 129;
+        struct timespec pause = {0, 1000000};
+        (void)nanosleep(&pause, NULL);
+    }
+}
+
 int main(int argc, char **argv) {
     unsigned long long cleanup, input_capacity, output_capacity;
     int input[2] = {-1, -1}, output[2] = {-1, -1}, diagnostic[2] = {-1, -1};
+    int group_ready[2] = {-1, -1};
     struct custody state;
     int outcome = 126;
     if (arguments(argc, argv) || positive(argv[1], 1000, &cleanup) ||
@@ -388,15 +414,25 @@ int main(int argc, char **argv) {
     if (!state.to_sdk.bytes || !state.to_owner.bytes || close_inherited() < 0 ||
         install_signals() < 0 ||
         nonblocking(STDIN_FILENO) < 0 || nonblocking(STDOUT_FILENO) < 0 ||
-        owned_pipe(input) < 0 || owned_pipe(output) < 0 || owned_pipe(diagnostic) < 0) goto done;
+        owned_pipe(input) < 0 || owned_pipe(output) < 0 || owned_pipe(diagnostic) < 0 ||
+        owned_pipe(group_ready) < 0) goto done;
     state.child = fork();
     if (state.child < 0) goto done;
-    if (state.child == 0) child_exec(input, output, diagnostic, argv);
+    if (state.child == 0) child_exec(input, output, diagnostic, group_ready, argv);
+    close_fd(&group_ready[0]);
+    if ((setpgid(state.child, state.child) < 0 && getpgid(state.child) != state.child) ||
+        write(group_ready[1], "G", 1) != 1) {
+        close_fd(&group_ready[1]);
+        state.custody_lost = 1;
+        outcome = abort_startup(state.child, state.cleanup_ms);
+        state.child = -1;
+        goto done;
+    }
+    close_fd(&group_ready[1]);
     close_fd(&input[0]); close_fd(&output[1]); close_fd(&diagnostic[1]);
     state.input = input[1]; input[1] = -1;
     state.output = output[0]; output[0] = -1;
     state.diagnostic = diagnostic[0]; diagnostic[0] = -1;
-    (void)setpgid(state.child, state.child);
     if (nonblocking(state.input) < 0 || nonblocking(state.output) < 0 ||
         nonblocking(state.diagnostic) < 0) {
         stop(&state, 126, monotonic_ms());
@@ -407,6 +443,7 @@ done:
     close_fd(&state.input); close_fd(&state.output); close_fd(&state.diagnostic);
     for (int index = 0; index < 2; ++index) {
         close_fd(&input[index]); close_fd(&output[index]); close_fd(&diagnostic[index]);
+        close_fd(&group_ready[index]);
     }
     free(state.to_sdk.bytes); free(state.to_owner.bytes);
     return outcome;

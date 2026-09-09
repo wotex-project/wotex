@@ -66,6 +66,13 @@ defmodule Wotex.OPCUA.Native.CommandTest do
     assert_dead(pids)
   end
 
+  test "WOP-X02 a stopped child cannot be mistaken for an exited child", c do
+    assert {:error, :command_deadline, %{exit_status: 124, output: pids}} =
+             Command.run(c.guardian, step(c, "stopped"))
+
+    assert_dead(pids)
+  end
+
   test "WOP-X02 invalid executable and working directory fail without an unbounded wait", c do
     assert {:error, :command_setup_failed, %{exit_status: nil}} =
              Command.run(c.guardian <> ".absent", step(c, "output"))

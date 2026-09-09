@@ -52,7 +52,13 @@ unavailable descriptor inventory fails before fork; a lowered descriptor limit
 cannot hide an inherited high descriptor. Every subsequently created pipe is
 close-on-exec, with only its intended standard-descriptor duplicates retained.
 The SDK runs in a process group whose
-ID is its direct child PID. Parent and child establish the group. The parent
+ID is its direct child PID. The parent establishes the group before releasing a
+one-byte startup barrier. The child verifies its group identity before changing
+directories, duplicating SDK descriptors or executing the SDK. Failed group
+admission closes the barrier and kills and reaps only the unreleased direct
+child within the cleanup allowance. It cannot authorize a group signal. The
+guardian clears inherited signal masks and restores SIGCHLD to its default
+disposition before fork. The parent
 retains the direct child with `waitid(..., WNOWAIT)` until final teardown, so it
 cannot signal a recycled process-group identity. Only CLD_EXITED, CLD_KILLED
 and CLD_DUMPED establish exit: a platform returning CLD_STOPPED despite WEXITED

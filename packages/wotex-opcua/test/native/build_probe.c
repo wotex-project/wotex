@@ -25,6 +25,12 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (!strcmp(argv[1], "exit")) return 7;
+    if (!strcmp(argv[1], "stopped")) {
+        printf("%ld\n", (long)getpid());
+        fflush(stdout);
+        raise(SIGSTOP);
+        forever();
+    }
     if (!strcmp(argv[1], "flood")) {
         char data[4096];
         memset(data, 'x', sizeof(data));
