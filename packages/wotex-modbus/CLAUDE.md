@@ -35,9 +35,22 @@ Keep durable specifications and acceptance criteria tracked. Mutable audit
 notes belong only in ignored `docs/tasks/local/`. No coordination daemon,
 worker assignments, shared-workspace state or tool-specific project metadata.
 
+## Release metadata
+
+`CHANGELOG.md` is reserved for GitOps release metadata; never edit it directly.
+Once GitOps tooling and configuration are installed, the human maintainer
+prepares the first release with `mix git_ops.release --override 0.1.0` because
+the initial changelog already exists. Later releases use `mix git_ops.release`.
+These are future human release steps, not a claim that tooling is configured
+or a release is ready. Automated agents must not invoke either release task.
+
 ## Git authority
 
 Never configure, add, change or remove a Git remote; push; create a tag; publish
 a package or release; or create equivalent remote state. Publication is manual.
-Never change repository visibility. Every local commit uses
-`Tobias Bohwalli <hi@futhr.io>` as both author and committer.
+Never change repository visibility.
+
+Local commits use the identity already configured by the contributor running
+Git. Automated agents must never set or override Git identity; record an agent,
+tool, or bot as an author, committer, or co-author; invent a contributor
+identity; or remove attribution supplied by a human contributor.
