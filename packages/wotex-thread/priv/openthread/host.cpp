@@ -115,13 +115,20 @@ class Worker final {
         if (!command.parameters.empty()) throw ProtocolError();
         if (!sdk_) throw SdkError("not_open");
         append(success(command, sdk_->inspect(command.operation)));
+      } else if (command.operation == "set_enabled") {
+        if (!sdk_) throw SdkError("not_open");
+        append(success(command, sdk_->set_enabled(command.parameters)));
       } else if (command.operation == "validate_dataset" || command.operation == "get_dataset") {
         if (!sdk_) throw SdkError("not_open");
         append(success(command, sdk_->dataset(command.operation, command.parameters)));
       } else {
         throw SdkError("not_supported");
       }
-    } catch (const DatasetError &) { append(failure(command, "invalid_dataset")); }
+    } catch (otError error) {
+        Json response = failure(command, "remote_error");
+        response["error"]["status"] = static_cast<unsigned>(error);
+        append(response);
+      } catch (const DatasetError &) { append(failure(command, "invalid_dataset")); }
       catch (const ProtocolError &) { append(failure(command, "invalid_request")); }
       catch (const StorageError &) { append(failure(command, "storage_unavailable")); }
       catch (const SdkError &error) { append(failure(command, error.what())); }

@@ -32,6 +32,9 @@ defmodule Wotex.Thread.SdkDatasetTest do
     session = %Session{client: TestClient, handle: :unavailable, timeout: 1000}
 
     assert {:error, %Error{code: :not_supported}} =
+             Thread.set_enabled(session, %{ipv6: true, thread: false}, 1000)
+
+    assert {:error, %Error{code: :not_supported}} =
              Thread.validate_dataset(session, dataset, :active, 1000)
 
     assert {:error, %Error{code: :not_supported}} = Thread.get_dataset(session, :pending, 1000)

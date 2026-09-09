@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import select
 import sys
 import time
 
@@ -11,12 +12,16 @@ root=Path(__file__).parent
 mode=(root/'mode').read_text().strip()
 (root/'pid').write_text(str(os.getpid()))
 state=dict(role='disabled',network_name=None,rloc16=None,ipv6_enabled=False,thread_enabled=False,generation=1)
+def await_release():
+    while not (root/'release').exists():
+        readable,_,_=select.select([sys.stdin.fileno()],[],[],0.002)
+        if readable and not os.read(sys.stdin.fileno(),4096):sys.exit(0)
 def write(value):
     sys.stdout.write(json.dumps(value,separators=(',',':'))+'\n');sys.stdout.flush()
 def reply(request,result):write(dict(version=1,id=request['id'],ok=True,result=result))
 if mode=='startup_stall':time.sleep(60)
 if mode=='startup_wait':
-    while not (root/'release').exists():time.sleep(0.002)
+    await_release()
 if mode=='bad_ready':write(dict(version=2,event='ready',backend='openthread',revision='bad'))
 else:write(dict(version=1,event='ready',backend='openthread',revision='5c8c318627954c99cd1a957a290bbd4b1027d04b'))
 for line in sys.stdin:
@@ -37,13 +42,20 @@ for line in sys.stdin:
         break
     else:
         if mode=='wait':
-            while not (root/'release').exists():time.sleep(0.002)
+            await_release()
         if mode=='wrong_id':request['id']='unmatched'
         if mode=='duplicate':reply(request,state if operation=='inspect' else 'disabled')
         if mode=='bad_json':sys.stdout.write('{bad}\n');sys.stdout.flush();break
         if mode=='truncated':sys.stdout.write('{');sys.stdout.flush();break
         if mode=='large':sys.stdout.write('x'*131072+'\n');sys.stdout.flush();break
-        if operation=='validate_dataset':
+        if operation=='set_enabled':
+            if mode=='error':write(dict(version=1,id=request['id'],ok=False,error=dict(code='remote_error',status=253)))
+            else:
+                state['ipv6_enabled']=request['parameters']['ipv6']
+                state['thread_enabled']=request['parameters']['thread']
+                state['role']='detached' if state['thread_enabled'] else 'disabled'
+                reply(request,state)
+        elif operation=='validate_dataset':
             if mode=='dataset_invalid':write(dict(version=1,id=request['id'],ok=False,error=dict(code='invalid_dataset')))
             else:reply(request,None)
         elif operation=='get_dataset':

@@ -50,6 +50,13 @@ class DatasetTests(Ownership):
                              dict(code='invalid_dataset'))
         self.assertEqual(settings.read_bytes(), before)
         self.assertEqual(host.call('inspect')['result'], state)
+        self.assertEqual(host.call('set_enabled', dict(ipv6=True, thread=True))['error'], dict(code='dataset_required'))
+        self.assertEqual(host.call('set_enabled', dict(ipv6=False, thread=True))['error'], dict(code='invalid_state'))
+        self.assertEqual(host.call('inspect')['result'], state)
+        self.assertEqual(host.call('set_enabled', dict(ipv6=True, thread=False))['result'],
+                         dict(state, ipv6_enabled=True))
+        self.assertEqual(host.call('set_enabled', dict(ipv6=False, thread=False))['result'], state)
+        self.assertEqual(settings.read_bytes(), before)
         for kind in ['active', 'pending']:
             self.assertEqual(host.call('get_dataset', dict(kind=kind))['error'], dict(code='dataset_not_found'))
         self.assertIsNone(host.call('close')['result'])
@@ -89,6 +96,14 @@ class DatasetTests(Ownership):
         self.assertIn(bytes((250, 7))+b'unknown', raw)
         self.assertIn(bytes((5, 16))+b'fedcba9876543210', raw)
         self.assertIsNone(host.call('validate_dataset', dict(kind='pending', dataset=result))['result'])
+        state = host.call('set_enabled', dict(ipv6=True, thread=True))['result']
+        self.assertTrue(state['ipv6_enabled'] and state['thread_enabled'])
+        self.assertIn(state['role'], ['detached', 'child', 'router', 'leader'])
+        self.assertEqual(host.call('set_enabled', dict(ipv6=True, thread=True))['result'], state)
+        state = host.call('set_enabled', dict(ipv6=False, thread=False))['result']
+        self.assertFalse(state['ipv6_enabled'] or state['thread_enabled'])
+        self.assertEqual(state['role'], 'disabled')
+        self.assertEqual(host.call('get_dataset', dict(kind='active'))['result'], encoded(fields()))
         self.assertIsNone(host.call('close')['result'])
         host.finish(0)
 

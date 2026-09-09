@@ -20,5 +20,18 @@ defmodule Wotex.Thread.OpenThread.Request do
     with {:ok, parameters} <- DatasetWire.selector(kind), do: {:ok, {"get_dataset", parameters}}
   end
 
+  def encode(%{type: :set_enabled, state: %{ipv6: ipv6, thread: thread} = state} = request)
+      when map_size(request) == 2 and map_size(state) == 2 and is_boolean(ipv6) and
+             is_boolean(thread) do
+    if thread and not ipv6,
+      do: {:error, Error.new(:invalid_state)},
+      else: {:ok, {"set_enabled", %{ipv6: ipv6, thread: thread}}}
+  end
+
   def encode(_), do: {:error, Error.new(:invalid_message)}
+
+  @doc false
+  @spec mutation?(term()) :: boolean()
+  def mutation?("set_enabled"), do: true
+  def mutation?(_), do: false
 end

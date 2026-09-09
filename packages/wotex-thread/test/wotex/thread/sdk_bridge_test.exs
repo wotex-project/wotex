@@ -340,12 +340,15 @@ defmodule Wotex.Thread.SdkBridgeTest do
     deadline = System.monotonic_time(:millisecond) + 1000
 
     assert {:error, %Error{code: :invalid_message}} =
-             GenServer.call(handle.pid, {handle.reference, :request, %{type: :unknown}, deadline})
+             GenServer.call(
+               handle.pid,
+               {handle.reference, :request, %{type: :unknown}, deadline, make_ref()}
+             )
 
     assert {:error, %Error{code: :timeout}} =
              GenServer.call(
                handle.pid,
-               {handle.reference, :request, %{type: :state}, deadline - 1000}
+               {handle.reference, :request, %{type: :state}, deadline - 1000, make_ref()}
              )
 
     assert {:error, %Error{code: :invalid_handle}} = GenServer.call(handle.pid, :forged)
@@ -414,6 +417,80 @@ defmodule Wotex.Thread.SdkBridgeTest do
              Wotex.Thread.get_dataset(session, :active, 1000)
 
     refute Process.alive?(session.handle.pid)
+  end
+
+  test "WTH-S04 WTH-C04 explicit state changes validate before dispatch and preserve failures",
+       context do
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    for invalid <- [
+          %{ipv6: false, thread: true},
+          %{ipv6: true},
+          %{ipv6: true, thread: false, extra: true},
+          %{ipv6: 1, thread: false},
+          nil
+        ] do
+      assert {:error, %Error{effect: :none}} = Wotex.Thread.set_enabled(session, invalid, 1000)
+    end
+
+    assert length(requests(context)) == 1
+
+    assert {:ok, %State{ipv6_enabled: true, thread_enabled: false}} =
+             Wotex.Thread.set_enabled(session, %{ipv6: true, thread: false}, 1000)
+
+    assert :ok = Wotex.Thread.disconnect(session)
+
+    File.write!(Path.join(context.directory, "mode"), "error")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error, %Error{effect: :unknown, retryable: false, details: %{status: 253}}} =
+             Wotex.Thread.set_enabled(session, %{ipv6: true, thread: false}, 1000)
+
+    assert :ok = Wotex.Thread.disconnect(session)
+    refute_received {:wotex_thread_submitted, _}
+  end
+
+  test "WTH-C04 queued mutations have no effect while active timeout and owner loss stay unknown",
+       context do
+    File.write!(Path.join(context.directory, "mode"), "wait")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    active =
+      Task.async(fn -> Wotex.Thread.set_enabled(session, %{ipv6: true, thread: false}, 150) end)
+
+    eventually(fn -> length(requests(context)) == 2 end)
+
+    assert {:error, %Error{code: :timeout, effect: :none}} =
+             Wotex.Thread.set_enabled(session, %{ipv6: false, thread: false}, 20)
+
+    assert {:error, %Error{code: :timeout, effect: :unknown}} = Task.await(active)
+    assert Enum.map(requests(context), & &1["operation"]) == ["open", "set_enabled"]
+    File.rm!(Path.join(context.directory, "requests"))
+
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    active =
+      Task.async(fn -> Wotex.Thread.set_enabled(session, %{ipv6: true, thread: false}, 1000) end)
+
+    eventually(fn -> length(requests(context)) == 2 end)
+    native_pid = File.read!(Path.join(context.directory, "pid")) |> String.to_integer()
+    Process.exit(session.handle.pid, :kill)
+    assert {:error, %Error{code: :connection_closed, effect: :unknown}} = Task.await(active)
+
+    eventually(fn ->
+      {_, status} =
+        System.cmd("/bin/kill", ["-0", Integer.to_string(native_pid)],
+          stderr_to_stdout: true,
+          env: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end)
+        )
+
+      status != 0
+    end)
+
+    assert {:error, %Error{code: :connection_closed, effect: :none}} =
+             Wotex.Thread.set_enabled(session, %{ipv6: false, thread: false}, 100)
+
+    refute_received {:wotex_thread_submitted, _}
   end
 
   defp requests(context) do

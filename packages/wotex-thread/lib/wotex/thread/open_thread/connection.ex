@@ -47,7 +47,13 @@ defmodule Wotex.Thread.OpenThread.Connection do
     with :ok <- validate(handle),
          true <- is_integer(timeout) and timeout in 1..60_000,
          {:ok, _} <- Request.encode(message) do
-      call(handle.pid, {handle.reference, :request, message, entered + timeout}, timeout + 1000)
+      receipt = make_ref()
+
+      call(
+        handle.pid,
+        {handle.reference, :request, message, entered + timeout, receipt},
+        timeout + 1000
+      )
     else
       false -> {:error, Error.new(:invalid_options)}
       {:error, _} = error -> error
@@ -135,10 +141,11 @@ defmodule Wotex.Thread.OpenThread.Connection do
   end
 
   def handle_call(
-        {reference, :request, message, deadline},
+        {reference, :request, message, deadline, receipt},
         from,
         %{handle: %{reference: reference}, status: :ready} = state
-      ) do
+      )
+      when is_reference(receipt) do
     case Request.encode(message) do
       {:ok, {operation, parameters}} ->
         cond do
@@ -149,7 +156,7 @@ defmodule Wotex.Thread.OpenThread.Connection do
             {:reply, {:error, Error.new(:busy)}, state}
 
           true ->
-            {:noreply, admit(state, from, operation, parameters, deadline)}
+            {:noreply, admit(state, from, operation, parameters, deadline, receipt)}
         end
 
       {:error, error} ->
@@ -346,11 +353,12 @@ defmodule Wotex.Thread.OpenThread.Connection do
       else: {:error, Error.new(:timeout)}
   end
 
-  defp admit(state, from, operation, parameters, deadline) do
+  defp admit(state, from, operation, parameters, deadline, receipt) do
     id = Integer.to_string(state.counter + 1)
 
     pending = %{
       from: from,
+      receipt: receipt,
       operation: operation,
       parameters: parameters,
       deadline: deadline,
@@ -382,7 +390,7 @@ defmodule Wotex.Thread.OpenThread.Connection do
           pending.deadline <= now() ->
             advance(complete(state, id, {:error, Error.new(:timeout)}))
 
-          send_frame(state.port, id, pending.operation, pending.parameters, pending.deadline) ->
+          submit(state.port, id, pending) ->
             %{state | active: id}
 
           true ->
@@ -396,10 +404,18 @@ defmodule Wotex.Thread.OpenThread.Connection do
 
   defp advance(state), do: state
 
+  defp submit(port, id, pending) do
+    if Request.mutation?(pending.operation),
+      do: send(elem(pending.from, 0), {:wotex_thread_submitted, pending.receipt})
+
+    send_frame(port, id, pending.operation, pending.parameters, pending.deadline)
+  end
+
   defp complete(state, id, result) do
     {pending, rest} = Map.pop(state.pending, id)
     Process.cancel_timer(pending.timer)
     Process.demonitor(pending.monitor, [:flush])
+    result = if state.active == id, do: mutation_result(result, pending.operation), else: result
     GenServer.reply(pending.from, result)
 
     %{
@@ -509,9 +525,34 @@ defmodule Wotex.Thread.OpenThread.Connection do
       :invalid -> {:error, Error.new(:invalid_handle)}
     end
   catch
-    :exit, {:timeout, _} -> {:error, Error.new(:cleanup_timeout)}
-    :exit, _ -> {:error, Error.new(:connection_closed)}
+    :exit, {:timeout, _} -> call_failure(message, :cleanup_timeout)
+    :exit, _ -> call_failure(message, :connection_closed)
+  after
+    drain_receipt(message)
   end
+
+  defp mutation_result({:error, %Error{} = error}, operation) do
+    if Request.mutation?(operation),
+      do: {:error, %{error | effect: :unknown, retryable: false}},
+      else: {:error, error}
+  end
+
+  defp mutation_result(result, _), do: result
+
+  defp call_failure(message, code) do
+    error = Error.new(code)
+    if drain_receipt(message), do: {:error, %{error | effect: :unknown}}, else: {:error, error}
+  end
+
+  defp drain_receipt({_, :request, _, _, receipt}) do
+    receive do
+      {:wotex_thread_submitted, ^receipt} -> true
+    after
+      0 -> false
+    end
+  end
+
+  defp drain_receipt(_), do: false
 
   defp owner_status(pid, message) when pid != self() do
     case :erlang.process_info(pid, {:dictionary, @owner_key}) do

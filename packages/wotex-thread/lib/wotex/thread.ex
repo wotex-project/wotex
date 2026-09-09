@@ -111,6 +111,11 @@ defmodule Wotex.Thread do
   def get_dataset(session, kind, timeout),
     do: native_request(session, %{type: :get_dataset, kind: kind}, timeout)
 
+  @doc "Sets explicit IPv6 and Thread enable states on the owned SDK instance."
+  @spec set_enabled(term(), term(), term()) :: {:ok, State.t()} | {:error, Error.t()}
+  def set_enabled(session, state, timeout),
+    do: native_request(session, %{type: :set_enabled, state: state}, timeout)
+
   @doc "Runs work with guaranteed handle cleanup when the function returns or raises."
   @spec with_connection(keyword(), (Session.t() -> term())) :: term()
   def with_connection(opts, fun) when is_function(fun, 1) do

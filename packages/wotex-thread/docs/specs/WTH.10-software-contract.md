@@ -154,7 +154,18 @@ unknown effect without erasing stored credentials or silently retrying formation
 
 Native `set_enabled/3` selects explicit Boolean IPv6 and Thread states. Thread
 enabled with IPv6 disabled is invalid. Disabling Thread does not erase Dataset
-or credentials. Restrict state mutation to the owned SDK mode; daemon mode fails
+or credentials. Enabling Thread requires an existing active Dataset that passes
+SDK and profile validation; otherwise return `dataset_required` before changing
+IPv6 or Thread. This prevents enable from bypassing the explicit formation
+permission: the pinned
+[Mle::Start implementation](https://github.com/openthread/openthread/blob/5c8c318627954c99cd1a957a290bbd4b1027d04b/src/core/thread/mle.cpp)
+can choose a PAN ID and start attachment without an installed Dataset.
+C07 `set_enabled` parameters are exactly `ipv6: boolean` and `thread: boolean`;
+the success result is the S02 typed State. Disable Thread before IPv6, and enable
+IPv6 before Thread; do not repeat a setter when its observed state already
+matches. SDK errors retain numeric status in `remote_error`. A transmitted
+mutation failure has unknown effect, including a partial two-setter failure;
+never infer rollback from the final status. Restrict state mutation to the owned SDK mode; daemon mode fails
 unsupported. Return the observed local state after SDK completion, not a claim
 about all network participants. No implicit enable is caused by read/validate.
 

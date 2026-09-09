@@ -93,6 +93,26 @@ class Sdk final {
     if (operation == "rloc16") return state.at("rloc16");
     throw SdkError("not_supported");
   }
+  Json set_enabled(const Json &parameters) {
+    if (!exact_keys(parameters, {"ipv6", "thread"}) || !parameters.at("ipv6").is_boolean() ||
+        !parameters.at("thread").is_boolean()) throw ProtocolError();
+    const bool ipv6 = parameters.at("ipv6").get<bool>(), thread = parameters.at("thread").get<bool>();
+    if (thread && !ipv6) throw SdkError("invalid_state");
+    if (thread) {
+      otOperationalDatasetTlvs active {};
+      if (otDatasetGetActiveTlvs(instance_, &active) != OT_ERROR_NONE ||
+          !DatasetValue(dataset_envelope(active)).valid(true)) throw SdkError("dataset_required");
+    }
+    // Disable Thread before its IP interface; enable IP before Thread.
+    if (!thread && otThreadGetDeviceRole(instance_) != OT_DEVICE_ROLE_DISABLED) {
+      check_status(otThreadSetEnabled(instance_, false));
+    }
+    if (otIp6IsEnabled(instance_) != ipv6) check_status(otIp6SetEnabled(instance_, ipv6));
+    if (thread && otThreadGetDeviceRole(instance_) == OT_DEVICE_ROLE_DISABLED) {
+      check_status(otThreadSetEnabled(instance_, true));
+    }
+    return snapshot();
+  }
   Json dataset(const std::string &operation, const Json &parameters) const {
     const bool active = dataset_kind(parameters, operation == "validate_dataset");
     if (operation == "validate_dataset") {
@@ -125,6 +145,9 @@ class Sdk final {
     storage_.reset();
   }
  private:
+  static void check_status(otError error) {
+    if (error != OT_ERROR_NONE) throw error;
+  }
   static void changed(otChangedFlags flags, void *context) {
     static_cast<Sdk *>(context)->changed_flags_ |= flags;
   }

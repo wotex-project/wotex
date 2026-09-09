@@ -66,6 +66,18 @@ defmodule Wotex.Thread.NativeDatasetTest do
     assert {:ok, %State{role: :disabled, ipv6_enabled: false, thread_enabled: false}} =
              Thread.inspect_state(session, [])
 
+    assert {:error, %Error{code: :dataset_required, effect: :unknown}} =
+             Thread.set_enabled(session, %{ipv6: true, thread: true}, 1000)
+
+    assert {:ok, %State{ipv6_enabled: false, thread_enabled: false}} =
+             Thread.inspect_state(session, [])
+
+    assert {:ok, %State{ipv6_enabled: true, thread_enabled: false}} =
+             Thread.set_enabled(session, %{ipv6: true, thread: false}, 1000)
+
+    assert {:ok, %State{ipv6_enabled: false, thread_enabled: false}} =
+             Thread.set_enabled(session, %{ipv6: false, thread: false}, 1000)
+
     assert :ok = Thread.disconnect(session)
     refute File.exists?("/sys/class/net/wthdataset")
   end
@@ -82,6 +94,17 @@ defmodule Wotex.Thread.NativeDatasetTest do
     assert :ok = Thread.validate_dataset(session, pending, :pending, 1000)
     refute inspect(pending) =~ "fedcba"
     refute inspect(:sys.get_status(session.handle.pid)) =~ "fedcba"
+
+    assert {:ok, %State{ipv6_enabled: true, thread_enabled: true}} =
+             Thread.set_enabled(session, %{ipv6: true, thread: true}, 1000)
+
+    assert {:ok, %State{ipv6_enabled: true, thread_enabled: true}} =
+             Thread.set_enabled(session, %{ipv6: true, thread: true}, 1000)
+
+    assert {:ok, %State{ipv6_enabled: false, thread_enabled: false}} =
+             Thread.set_enabled(session, %{ipv6: false, thread: false}, 1000)
+
+    assert {:ok, ^active} = Thread.get_dataset(session, :active, 1000)
     assert :ok = Thread.disconnect(session)
     refute File.exists?("/sys/class/net/wthdataset")
   end

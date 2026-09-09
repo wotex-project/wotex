@@ -17,6 +17,8 @@ defmodule Wotex.Thread.OpenThread.Frame do
     "invalid_request" => :invalid_message,
     "invalid_dataset" => :invalid_dataset,
     "dataset_not_found" => :dataset_not_found,
+    "invalid_state" => :invalid_state,
+    "dataset_required" => :dataset_required,
     "storage_unavailable" => :storage_unavailable,
     "interface_in_use" => :interface_in_use,
     "already_open" => :already_open,
@@ -110,7 +112,7 @@ defmodule Wotex.Thread.OpenThread.Frame do
 
   defp normalize(value, budget), do: {value, budget - 1}
 
-  defp value(value, operation) when operation in ["open", "inspect"] do
+  defp value(value, operation) when operation in ["open", "inspect", "set_enabled"] do
     with %{
            "role" => role,
            "network_name" => name,
