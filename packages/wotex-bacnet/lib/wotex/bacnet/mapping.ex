@@ -2,7 +2,12 @@ defmodule Wotex.BACnet.Mapping do
   @moduledoc "Pure Form mapping for the explicitly documented Wotex protocol profile."
   alias Wotex.BACnet.{Address, Error, Value}
   alias Wotex.Form
-  @operations %{readproperty: :read_property, writeproperty: :write_property}
+
+  @operations %{
+    readproperty: :read_property,
+    writeproperty: :write_property,
+    observeproperty: :cov_property
+  }
 
   @doc "Maps a selected Form, preserving extensions and requiring an explicit target identity."
   @spec command(Form.t(), atom(), term(), String.t() | nil) :: {:ok, map()} | {:error, Error.t()}
@@ -55,13 +60,22 @@ defmodule Wotex.BACnet.Mapping do
         |> Map.put(:type, type)
         |> input(type, input)
 
-      {:ok, %{target: Integer.to_string(device_id), message: message}}
+      {:ok,
+       %{target: Integer.to_string(device_id), message: subscription_identity(message, device_id)}}
     else
       _ -> {:error, Error.new(:invalid_form_address)}
     end
   end
 
   defp target(_, _, _), do: {:error, Error.new(:invalid_form_address)}
+
+  defp subscription_identity(%{type: :cov_property} = message, device_id) do
+    message
+    |> Map.delete(:priority)
+    |> Map.put(:device_instance, device_id)
+  end
+
+  defp subscription_identity(message, _), do: message
   defp property([]), do: {:ok, 85, nil}
   defp property([p]), do: {:ok, number(p), nil}
   defp property([p, i]), do: {:ok, number(p), number(i)}

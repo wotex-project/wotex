@@ -177,7 +177,14 @@ this adapter must not acknowledge them as successfully processed COV.
 ## WBA-S05 — Runtime and management meaning
 
 Map `observeproperty` to SubscribeCOVProperty and retain the original Form/routing
-association for cancellation. `subscribeevent` is unsupported in this profile:
+association for cancellation. The mapped native message uses `type: :cov_property`
+with the URI's object/property/index and initiating `device_instance`. `Transport`
+checks that device against its explicit decimal `target` before creating a relay.
+An optional Transport `cov` map accepts only `confirmed`, `lifetime`, `renew`,
+`max_queue_length`, `duplicate_window_ms` and `cov_increment` with the S04 native
+ranges/defaults. It cannot override receiver, device, object, property, index or
+service type. Those options are consumer configuration, not inferred Form
+extensions. `subscribeevent` is unsupported in this profile:
 COV Property reports are not BACnet alarm/Event service support. Runtime delivers
 the selected property value plus source/property/tag/time-remaining metadata.
 An object-level native COV report is an ordered list of property/index/typed-value
