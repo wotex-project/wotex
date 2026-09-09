@@ -1,0 +1,1491 @@
+{
+  "format_version": "1.0.0",
+  "specification": "WOP.13@1.0.0",
+  "execution_status": "specified_unexecuted",
+  "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. Scenario families require additional boundary and fault assertions.",
+  "cases": [
+    {
+      "id": "WOP-X-F01",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "typed_roundtrip",
+      "input": {
+        "variant": {
+          "type": "Int64",
+          "array": false,
+          "value": -9223372036854775808
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "variant": {
+            "type": "Int64",
+            "array": false,
+            "value": -9223372036854775808
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F02",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "typed_roundtrip",
+      "input": {
+        "variant": {
+          "type": "UInt64",
+          "array": false,
+          "value": 18446744073709551615
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "variant": {
+            "type": "UInt64",
+            "array": false,
+            "value": 18446744073709551615
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F03",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "typed_roundtrip",
+      "input": {
+        "variant": {
+          "type": "DateTime",
+          "array": false,
+          "value": 1
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "variant": {
+            "type": "DateTime",
+            "array": false,
+            "value": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F04",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "typed_roundtrip",
+      "input": {
+        "variant": {
+          "type": "DateTime",
+          "array": false,
+          "value": 9223372036854775807
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "variant": {
+            "type": "DateTime",
+            "array": false,
+            "value": 9223372036854775807
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F05",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "typed_roundtrip",
+      "input": {
+        "variant": {
+          "type": "DateTime",
+          "array": false,
+          "value": -9223372036854775808
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "variant": {
+            "type": "DateTime",
+            "array": false,
+            "value": -9223372036854775808
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F06",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "typed_roundtrip",
+      "input": {
+        "variant": {
+          "type": "Int32",
+          "array": true,
+          "value": null
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "variant": {
+            "type": "Int32",
+            "array": true,
+            "value": null
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F07",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "typed_roundtrip",
+      "input": {
+        "variant": {
+          "type": "Int32",
+          "array": true,
+          "value": []
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "variant": {
+            "type": "Int32",
+            "array": true,
+            "value": []
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F08",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "typed_roundtrip",
+      "input": {
+        "variant": {
+          "type": "Int32",
+          "array": true,
+          "value": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "dimensions": [
+            2,
+            2
+          ]
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "variant": {
+            "type": "Int32",
+            "array": true,
+            "value": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "dimensions": [
+              2,
+              2
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F09",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "typed_float_roundtrip",
+      "input": {
+        "type": "Double",
+        "ieee754_hex": "8000000000000000"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "type": "Double",
+          "ieee754_hex": "8000000000000000"
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F10",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "ipc_parse",
+      "input": {
+        "utf8": "{\"version\":1,\"version\":1}\n",
+        "eof": true
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": "invalid_request",
+          "network_requests": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F11",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "ipc_parse",
+      "input": {
+        "utf8": "{\"version\":1}\n{}\n",
+        "eof": true
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": "invalid_request",
+          "network_requests": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F12",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "ipc_parse",
+      "input": {
+        "utf8": "{\"version\":1",
+        "eof": true
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": "invalid_request",
+          "network_requests": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F13",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "ipc_parse",
+      "input": {
+        "utf8": "{\"value\":NaN}\n",
+        "eof": true
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": "invalid_request",
+          "network_requests": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F14",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "ipc_parse_generated",
+      "input": {
+        "fill_byte": 32,
+        "line_bytes": 131073,
+        "last_byte": 10
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": "response_limit",
+          "network_requests": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F15",
+      "requirements": [
+        "WOP-X04"
+      ],
+      "tier": "native_contract",
+      "operation": "namespace_translation",
+      "input": {
+        "server": [
+          "http://opcfoundation.org/UA/",
+          "urn:server",
+          "urn:temperature",
+          "urn:power"
+        ],
+        "sdk": [
+          "http://opcfoundation.org/UA/",
+          "urn:server",
+          "urn:power",
+          "urn:temperature"
+        ],
+        "node_id": "ns=2;i=42"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "sdk_node_id": "ns=3;i=42",
+          "public_node_id": "ns=2;i=42"
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F16",
+      "requirements": [
+        "WOP-X04"
+      ],
+      "tier": "native_contract",
+      "operation": "namespace_translation",
+      "input": {
+        "server": [
+          "http://opcfoundation.org/UA/",
+          "urn:server",
+          "urn:x",
+          "urn:x"
+        ],
+        "sdk": [
+          "http://opcfoundation.org/UA/",
+          "urn:server",
+          "urn:x"
+        ],
+        "node_id": "ns=2;i=42"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": "invalid_response",
+          "application_requests": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F17",
+      "requirements": [
+        "WOP-X04"
+      ],
+      "tier": "native_contract",
+      "operation": "native_deadline",
+      "input": {
+        "ready_native_ms": 50,
+        "ready_received_owner_ms": 100,
+        "owner_deadline_ms": 110,
+        "dispatch_native_ms": 60
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "native_deadline_ms": 60,
+          "error": "deadline_exceeded",
+          "network_requests": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F18",
+      "requirements": [
+        "WOP-X04"
+      ],
+      "tier": "native_contract",
+      "operation": "cancel_queued",
+      "input": {
+        "generation": 1,
+        "request_id": "w1",
+        "operation": "write",
+        "events": [
+          "enqueue",
+          "cancel",
+          "dispatch_tick"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "network_requests": 0,
+          "effect": "none",
+          "late_results": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F19",
+      "requirements": [
+        "WOP-X04"
+      ],
+      "tier": "native_contract",
+      "operation": "cancel_transmitted",
+      "input": {
+        "generation": 1,
+        "request_id": "w1",
+        "operation": "write",
+        "events": [
+          "dispatch",
+          "cancel",
+          "late_success"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "write_requests": 1,
+          "effect": "unknown",
+          "late_results": 0,
+          "class": "permanent"
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F20",
+      "requirements": [
+        "WOP-X04"
+      ],
+      "tier": "native_contract",
+      "operation": "admission",
+      "input": {
+        "requests": 65,
+        "capacity": 64,
+        "complete_requests": false,
+        "close_requested": true
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "admitted": 64,
+          "busy": 1,
+          "close_admitted": true,
+          "remaining_requests": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F21",
+      "requirements": [
+        "WOP-X04"
+      ],
+      "tier": "native_contract",
+      "operation": "credit_trace",
+      "input": {
+        "credits": {
+          "messages": 16,
+          "bytes": 262144
+        },
+        "report_bytes": 1024,
+        "reports": 100000,
+        "owner_suspended": true,
+        "native_buffer_messages": 64,
+        "native_buffer_bytes": 1048576
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "normal_messages_emitted": 16,
+          "normal_bytes_emitted": 16384,
+          "max_buffered_messages": 64,
+          "terminal": "receiver_overflow",
+          "active_native_resources_after_grace": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F22",
+      "requirements": [
+        "WOP-X04"
+      ],
+      "tier": "native_contract",
+      "operation": "open_owner_death",
+      "input": {
+        "phase": "activate_session",
+        "events": [
+          "owner_down",
+          "late_activate_ok"
+        ],
+        "grace_ms": 1000
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "connected_results": 0,
+          "active_local_resources": 0,
+          "max_cleanup_ms": 1000
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F23",
+      "requirements": [
+        "WOP-X04"
+      ],
+      "tier": "native_contract",
+      "operation": "runtime_handoff",
+      "input": {
+        "events": [
+          "partial_open_owned_by_final_pid",
+          "activate_ok",
+          "handoff_ok",
+          "callback_worker_down",
+          "notification",
+          "final_owner_down"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "deliveries": 1,
+          "closed_by_worker_exit": false,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F24",
+      "requirements": [
+        "WOP-X05"
+      ],
+      "tier": "native_contract",
+      "operation": "publish_trace",
+      "input": {
+        "sequences": [
+          1,
+          1,
+          3
+        ],
+        "republish": {
+          "2": "ok"
+        },
+        "same_payload": true
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "delivered_sequences": [
+            1,
+            2,
+            3
+          ],
+          "republish_requests": [
+            2
+          ],
+          "terminal": null
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F25",
+      "requirements": [
+        "WOP-X05"
+      ],
+      "tier": "native_contract",
+      "operation": "publish_trace",
+      "input": {
+        "sequences": [
+          1,
+          3
+        ],
+        "republish": {
+          "2": "BadMessageNotAvailable"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "delivered_sequences": [
+            1
+          ],
+          "republish_requests": [
+            2
+          ],
+          "terminal": "sequence_gap"
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F26",
+      "requirements": [
+        "WOP-X05"
+      ],
+      "tier": "native_contract",
+      "operation": "publish_trace",
+      "input": {
+        "sequences": [
+          4294967295,
+          1
+        ],
+        "previous_sequence": 4294967294
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "delivered_sequences": [
+            4294967295,
+            1
+          ],
+          "republish_requests": [],
+          "terminal": null
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F27",
+      "requirements": [
+        "WOP-X05"
+      ],
+      "tier": "native_contract",
+      "operation": "data_value_projection",
+      "input": {
+        "has_value": true,
+        "value": {
+          "type": "Boolean",
+          "array": false,
+          "value": false
+        },
+        "status": 1073741824,
+        "source_timestamp": 11,
+        "server_timestamp": 19,
+        "source_picoseconds": 4
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "has_value": true,
+          "value": {
+            "type": "Boolean",
+            "array": false,
+            "value": false
+          },
+          "status": 1073741824,
+          "source_timestamp": 11,
+          "server_timestamp": 19,
+          "source_picoseconds": 4,
+          "datetime_resolution_ns": 100,
+          "raw_datetime_ticks_available": true
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F28",
+      "requirements": [
+        "WOP-X05"
+      ],
+      "tier": "native_contract",
+      "operation": "subscription_revision",
+      "input": {
+        "requested": {
+          "publishing_interval_ms": 1000,
+          "sampling_interval_ms": 1000,
+          "queue_size": 100,
+          "lifetime_count": 30,
+          "keepalive_count": 10
+        },
+        "revised": {
+          "publishing_interval_ms": 500.5,
+          "sampling_interval_ms": 200.25,
+          "queue_size": 64,
+          "lifetime_count": 60,
+          "keepalive_count": 15
+        },
+        "status": 0
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": true,
+          "publishing_interval_ms": 500.5,
+          "sampling_interval_ms": 200.25,
+          "queue_size": 64,
+          "lifetime_count": 60,
+          "keepalive_count": 15
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F29",
+      "requirements": [
+        "WOP-X05"
+      ],
+      "tier": "native_contract",
+      "operation": "subscription_delete",
+      "input": {
+        "delete_ack": false,
+        "session_close_ack": false,
+        "grace_ms": 1000,
+        "session_timeout_ms": 60000
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "local_resources_after_grace": 0,
+          "error": "cleanup_failed",
+          "remote_deletion": "requires_session_expiry_evidence",
+          "effect": "none"
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F30",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_workflow",
+      "input": {
+        "policy": "Basic256Sha256",
+        "mode": "SignAndEncrypt",
+        "user_token": "anonymous",
+        "peer": "asyncua-2.0.1",
+        "operations": [
+          "read",
+          "write",
+          "readback",
+          "call",
+          "browse",
+          "subscribe",
+          "cancel",
+          "close"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "operations_succeeded": 8,
+          "active_peer_subscriptions": 0,
+          "active_peer_continuations": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F31",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_workflow",
+      "input": {
+        "policy": "Basic256Sha256",
+        "mode": "SignAndEncrypt",
+        "user_token": "username",
+        "peer": "asyncua-2.0.1",
+        "operations": [
+          "read",
+          "write",
+          "readback",
+          "call",
+          "browse",
+          "subscribe",
+          "cancel",
+          "close"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "operations_succeeded": 8,
+          "active_peer_subscriptions": 0,
+          "active_peer_continuations": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F32",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_workflow",
+      "input": {
+        "policy": "Basic256Sha256",
+        "mode": "SignAndEncrypt",
+        "user_token": "certificate",
+        "peer": "asyncua-2.0.1",
+        "operations": [
+          "read",
+          "write",
+          "readback",
+          "call",
+          "browse",
+          "subscribe",
+          "cancel",
+          "close"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "operations_succeeded": 8,
+          "active_peer_subscriptions": 0,
+          "active_peer_continuations": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F33",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_workflow",
+      "input": {
+        "policy": "Aes128_Sha256_RsaOaep",
+        "mode": "SignAndEncrypt",
+        "user_token": "anonymous",
+        "peer": "asyncua-2.0.1",
+        "operations": [
+          "read",
+          "write",
+          "readback",
+          "call",
+          "browse",
+          "subscribe",
+          "cancel",
+          "close"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "operations_succeeded": 8,
+          "active_peer_subscriptions": 0,
+          "active_peer_continuations": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F34",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_workflow",
+      "input": {
+        "policy": "Aes128_Sha256_RsaOaep",
+        "mode": "SignAndEncrypt",
+        "user_token": "username",
+        "peer": "asyncua-2.0.1",
+        "operations": [
+          "read",
+          "write",
+          "readback",
+          "call",
+          "browse",
+          "subscribe",
+          "cancel",
+          "close"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "operations_succeeded": 8,
+          "active_peer_subscriptions": 0,
+          "active_peer_continuations": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F35",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_workflow",
+      "input": {
+        "policy": "Aes128_Sha256_RsaOaep",
+        "mode": "SignAndEncrypt",
+        "user_token": "certificate",
+        "peer": "asyncua-2.0.1",
+        "operations": [
+          "read",
+          "write",
+          "readback",
+          "call",
+          "browse",
+          "subscribe",
+          "cancel",
+          "close"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "operations_succeeded": 8,
+          "active_peer_subscriptions": 0,
+          "active_peer_continuations": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F36",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_workflow",
+      "input": {
+        "policy": "Aes256_Sha256_RsaPss",
+        "mode": "SignAndEncrypt",
+        "user_token": "anonymous",
+        "peer": "asyncua-2.0.1",
+        "operations": [
+          "read",
+          "write",
+          "readback",
+          "call",
+          "browse",
+          "subscribe",
+          "cancel",
+          "close"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "operations_succeeded": 8,
+          "active_peer_subscriptions": 0,
+          "active_peer_continuations": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F37",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_workflow",
+      "input": {
+        "policy": "Aes256_Sha256_RsaPss",
+        "mode": "SignAndEncrypt",
+        "user_token": "username",
+        "peer": "asyncua-2.0.1",
+        "operations": [
+          "read",
+          "write",
+          "readback",
+          "call",
+          "browse",
+          "subscribe",
+          "cancel",
+          "close"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "operations_succeeded": 8,
+          "active_peer_subscriptions": 0,
+          "active_peer_continuations": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F38",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_workflow",
+      "input": {
+        "policy": "Aes256_Sha256_RsaPss",
+        "mode": "SignAndEncrypt",
+        "user_token": "certificate",
+        "peer": "asyncua-2.0.1",
+        "operations": [
+          "read",
+          "write",
+          "readback",
+          "call",
+          "browse",
+          "subscribe",
+          "cancel",
+          "close"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "operations_succeeded": 8,
+          "active_peer_subscriptions": 0,
+          "active_peer_continuations": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F39",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_rejection",
+      "input": {
+        "fault": "expired_leaf",
+        "peer": "asyncua-2.0.1"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "authenticated": false,
+          "application_requests": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F40",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_rejection",
+      "input": {
+        "fault": "wrong_host",
+        "peer": "asyncua-2.0.1"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "authenticated": false,
+          "application_requests": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F41",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_rejection",
+      "input": {
+        "fault": "wrong_application_uri",
+        "peer": "asyncua-2.0.1"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "authenticated": false,
+          "application_requests": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F42",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_rejection",
+      "input": {
+        "fault": "untrusted_ca",
+        "peer": "asyncua-2.0.1"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "authenticated": false,
+          "application_requests": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F43",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_rejection",
+      "input": {
+        "fault": "revoked_leaf",
+        "peer": "asyncua-2.0.1"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "authenticated": false,
+          "application_requests": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F44",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_rejection",
+      "input": {
+        "fault": "expired_crl",
+        "peer": "asyncua-2.0.1"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "authenticated": false,
+          "application_requests": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F45",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_rejection",
+      "input": {
+        "fault": "mismatched_private_key",
+        "peer": "asyncua-2.0.1"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "authenticated": false,
+          "application_requests": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F46",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_rejection",
+      "input": {
+        "fault": "none_downgrade",
+        "peer": "asyncua-2.0.1"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "authenticated": false,
+          "application_requests": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F47",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "independent_peer",
+      "operation": "secure_peer_rejection",
+      "input": {
+        "fault": "unsupported_user_token",
+        "peer": "asyncua-2.0.1"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "authenticated": false,
+          "application_requests": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F48",
+      "requirements": [
+        "WOP-X06"
+      ],
+      "tier": "archive_consumer",
+      "operation": "package_native_runtime",
+      "input": {
+        "python_on_runtime_path": false,
+        "source_checkout_visible": false,
+        "workflow": [
+          "open",
+          "read",
+          "write",
+          "subscribe",
+          "cancel",
+          "close"
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "operations_succeeded": 6,
+          "runtime_python_processes": 0,
+          "runtime_shell_processes": 0,
+          "active_local_resources": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F49",
+      "requirements": [
+        "WOP-X03",
+        "WOP-X04"
+      ],
+      "tier": "native_trace",
+      "operation": "credit_sequence",
+      "input": {
+        "generation": 1,
+        "events": [
+          {
+            "sequence": 1,
+            "messages": 16,
+            "bytes": 262144
+          },
+          {
+            "sequence": 1,
+            "messages": 1,
+            "bytes": 1024
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "grants_accepted": 1,
+          "terminal_error": "invalid_request",
+          "normal_output_after_failure": 0,
+          "owned_resources_after_grace": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F50",
+      "requirements": [
+        "WOP-X03",
+        "WOP-X04"
+      ],
+      "tier": "native_trace",
+      "operation": "credit_capacity",
+      "input": {
+        "generation": 1,
+        "events": [
+          {
+            "sequence": 1,
+            "messages": 16,
+            "bytes": 262144
+          },
+          {
+            "sequence": 2,
+            "messages": 1,
+            "bytes": 1
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "grants_accepted": 1,
+          "terminal_error": "invalid_request",
+          "owned_resources_after_grace": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F51",
+      "requirements": [
+        "WOP-X03",
+        "WOP-X04"
+      ],
+      "tier": "native_trace",
+      "operation": "generation_correlation",
+      "input": {
+        "owner_generation": 2,
+        "admitted_id": "read-1",
+        "response": {
+          "version": 1,
+          "generation": 1,
+          "id": "read-1",
+          "ok": true,
+          "result": null
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "delivered_successes": 0,
+          "terminal_error": "response_mismatch",
+          "owned_resources_after_grace": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F52",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "invalid_deadline",
+      "input": {
+        "envelope": {
+          "version": 1,
+          "generation": 1,
+          "id": "read-1",
+          "operation": "read",
+          "parameters": {
+            "node_id": "ns=0;i=2258",
+            "index_range": null
+          },
+          "timeout_ms": 5000
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "invalid_request",
+            "phase": "validation",
+            "effect": "none"
+          },
+          "native_requests": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F53",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "invalid_deadline",
+      "input": {
+        "envelope": {
+          "version": 1,
+          "generation": 1,
+          "id": "read-1",
+          "operation": "read",
+          "parameters": {
+            "node_id": "ns=0;i=2258",
+            "index_range": null
+          },
+          "timeout_ms": 5000,
+          "deadline_ms": -1
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "invalid_request",
+            "phase": "validation",
+            "effect": "none"
+          },
+          "native_requests": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F54",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "invalid_deadline",
+      "input": {
+        "envelope": {
+          "version": 1,
+          "generation": 1,
+          "id": "read-1",
+          "operation": "read",
+          "parameters": {
+            "node_id": "ns=0;i=2258",
+            "index_range": null
+          },
+          "timeout_ms": 5000,
+          "deadline_ms": 1.5
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "invalid_request",
+            "phase": "validation",
+            "effect": "none"
+          },
+          "native_requests": 0
+        }
+      }
+    },
+    {
+      "id": "WOP-X-F55",
+      "requirements": [
+        "WOP-X03"
+      ],
+      "tier": "native_contract",
+      "operation": "invalid_deadline",
+      "input": {
+        "envelope": {
+          "version": 1,
+          "generation": 1,
+          "id": "read-1",
+          "operation": "read",
+          "parameters": {
+            "node_id": "ns=0;i=2258",
+            "index_range": null
+          },
+          "timeout_ms": 5000,
+          "deadline_ms": 9223372036854775808
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "error": {
+            "code": "invalid_request",
+            "phase": "validation",
+            "effect": "none"
+          },
+          "native_requests": 0
+        }
+      }
+    }
+  ]
+}

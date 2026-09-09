@@ -3,15 +3,16 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-opcua
   updated: 2026-09-09
 ---
 
 # WOP.11 Standalone OPC UA client and feature preservation
 
-Specification version: **1.0.0**. Status: **planned**. This extends
-[WOP.10](WOP.10-software-contract.md) and corrects its former exclusion of Browse.
+Specification version: **1.1.0**. Implementation status: **planned**.
+[WOP.10](WOP.10-software-contract.md) and [WOP.13](WOP.13-native-executable.md)
+define the native backend and typed service contract.
 The [implemented profile](WOP.02-implemented-profile.md) and
 [executed evidence](../provenance/executable-evidence.md) describe current
 capabilities. None of the planned pure-codec, persistent-session or pagination
@@ -30,12 +31,12 @@ behavior around it. Mapping and Transport adapt the native operations.
 | Useful baseline asset | Required disposition | Owning surface and proof |
 | --- | --- | --- |
 | Four NodeId kinds and pure UA scalar/frame codecs | Preserve as independent bounded values | `Address`, `Binary`, `Frame`; WOP-S01/V01/V04 |
-| ExpandedNodeId, Variant, DataValue and reference-related parsing contracts | Rewrite into complete public pure codecs with explicit tails and limits | WOP-N02; exact bytes and malformed/allocation cases |
+| ExpandedNodeId, Variant, DataValue and reference-related parsing contracts | Complete public pure codecs with explicit tails and limits | WOP-N02; exact bytes and malformed/allocation cases |
 | Native read/write and method scenarios | Preserve typed operations and compatibility success shapes | WOP-S01/S02/S05; status and individual Call result tests |
 | Address-space browsing | Preserve current child-NodeId projection and add complete typed references with bounded continuation ownership | WOP-N03/N04; multi-page peer and release-failure tests |
 | Monitored-item/subscription scenarios | Implement complete Publish/Republish/loss behavior | WOP-S04; registration alone is not delivery support |
-| One-shot secure adapter | Retain explicit compatibility mode, including browse | WOP-N04; successful and negative same-stack tests remain labelled |
-| Insecure channel/session machinery and ignored cleanup failures | Replace with the pinned secure SDK and owned failure cleanup | WOP-S02/S03; no copied None-channel implementation in production |
+| One-shot secure result shapes | Explicit native compatibility mode, including browse | WOP-N04; temporary native-session lifecycle and independent-peer tests |
+| Protocol security and cleanup | Pinned native SDK and owned failure cleanup | WOP-S02/S03; no copied None-channel implementation in production |
 | WoT Forms and callback surface | Preserve exact target identity and extension terms | WOP.02 and Wotex integration contract |
 
 The release floor is an explicit secure connection, namespace-URI resolution,
@@ -45,7 +46,7 @@ requiring a Form or a Runtime Request.
 
 ## WOP-N02 — Public pure binary contracts
 
-Add `Binary.encode_variant/1`, `decode_variant/1`, `encode_data_value/1`,
+The pure API includes `Binary.encode_variant/1`, `decode_variant/1`, `encode_data_value/1`,
 `decode_data_value/1`, `encode_expanded_node_id/1`, `decode_expanded_node_id/1`,
 `encode_qualified_name/1`, `decode_qualified_name/1`, `encode_localized_text/1`,
 `decode_localized_text/1`, `encode_reference_description/1`, and
@@ -59,8 +60,9 @@ keys, known type names as strings, and actual binaries for byte bodies. Version 
 always carries `array: false | true`; no inference from nil, list, dimensions or
 type is allowed. Scalars omit dimensions; arrays use a flat list or nil. A null
 array has no dimensions; an empty array is an empty list, not nil. The pure
-DataValue decoder preserves exact DateTime ticks; SDK timestamp precision limits
-remain explicit metadata on service observations. Bad DataValue status is a
+DataValue decoder and native service adapter preserve exact DateTime ticks.
+Service metadata declares 100 ns resolution; the Python test peer has its own
+explicit precision limits. Bad DataValue status is a
 valid pure decoded value; the service result adapter classifies it as failure.
 Parsing a valid error response is distinct from treating an operation as success.
 
@@ -107,7 +109,7 @@ Preserve unconsumed tails exactly; do not silently consume trailing bytes.
 
 ## WOP-N03 — Bounded reference pages and continuation handles
 
-Add `Wotex.OPCUA.Browse.references(session, node, opts \\ [])`,
+The browse API includes `Wotex.OPCUA.Browse.references(session, node, opts \\ [])`,
 `Browse.next(session, continuation)`, `Browse.release(session, continuation)`,
 and `Browse.all(session, node, opts \\ [])`. These require persistent mode;
 otherwise return `:persistent_session_required` before I/O.
@@ -158,8 +160,9 @@ larger than the requested page size, over-bound totals or malformed result count
 fails with `:response_limit`/`:invalid_response` and starts cleanup. Exactly one
 BrowseResult is required for the one requested node or continuation.
 
-Call the pinned SDK's service-level `session.browse` and `browse_next`, not its
-unbounded convenience `get_references`/`get_children` loop. Version 1 bridge adds
+The native owner issues service-level Browse/BrowseNext through the pinned
+SDK with explicit requestedMaxReferencesPerNode. It never uses a convenience
+operation that accumulates all pages. Version 1 IPC operations include
 `browse`, `browse_next`, `browse_release`. `browse` carries concrete `node_id`,
 the validated options and remaining deadline; the native owner returns complete
 reference payloads and an opaque owner token. Elixir maps that token to its
@@ -184,7 +187,7 @@ Do not keep the Session alive and claim cleanup based only on local handle
 deletion. A known dead Session makes later release harmless; a live consumed or
 foreign handle is rejected, avoiding an unbounded tombstone registry.
 
-Add native convenience `read_node(session, node)`, `write_node(session, node,
+Native convenience operations are `read_node(session, node)`, `write_node(session, node,
 typed_value)` and `browse(session, node)`. Read returns `{:ok, typed_data_value}`;
 write returns `:ok` only for a matching successful result. Call remains the
 explicit object/method operation from .10. The root `browse/2` and existing
@@ -194,7 +197,7 @@ subtypes, matching the current child-list purpose. It has a total 256-child
 limit, preserves server order, and uses the bounded typed service path. An
 ExpandedNodeId referring to a nonlocal server or namespace URI without exact
 local resolution fails `:unsupported_remote_reference`; do not discard identity
-to fit the old string shape. Retain duplicate child identities if distinct
+to fit the compatibility string shape. Retain duplicate child identities if distinct
 references produced them.
 
 One-shot compatibility performs all pages on the same temporary Session and
@@ -228,10 +231,10 @@ counts; substitute stable fixture handle names for actual PIDs/references only
 in observations. Equality with a deadline is expired. A deterministic lifecycle
 test is ownership/correlation evidence, not independent security interoperability.
 
-Add normal ExUnit bindings at `test/wotex/opcua/standalone_contract_test.exs`,
-native bridge bindings at `test/native/test_browse.py`, and extend the independent
-open62541 fixture with enough children to force pages and expose live continuation
-counts. Each binding records N/S/V IDs, case ID and SHA-256 of corpus bytes.
+Required normal ExUnit bindings are at `test/wotex/opcua/standalone_contract_test.exs`,
+native executable bindings at `test/native/browse_test.c`, an independent
+asyncua fixture with enough children to force pages, and a same-stack C fixture
+with exact live-continuation counters. Each binding records N/S/V IDs, case ID and SHA-256 of corpus bytes.
 JSON validation or ID presence alone cannot accept a work package. Require actual
 results and counters, including cancellation after page one, deadline between
 pages, lost next response, and a response requiring Session closure.
@@ -245,9 +248,9 @@ Reference fields and same-Session continuation/release behavior derive from
 those service contracts. The numeric caps, consuming local handle, deadline
 policy and conservative Session-close fallback are library choices.
 
-The reviewed [asyncua 2.0.1 Node implementation](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/common/node.py)
-sets an unlimited requested reference count and accumulates pages in its
-convenience path. That is why the target uses its lower-level service calls.
+The pinned [open62541 client service API](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/include/open62541/client_highlevel_async.h)
+provides typed asynchronous service calls. WOP.13 specifies the bounded owner
+around those calls and the independent asyncua peer.
 Pure encoding follows OPC 10000-6 1.05.07
 [Variant](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.16),
 [ExpandedNodeId](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.10) and

@@ -15,7 +15,7 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
-## Interoperability
+## Implemented Python-adapter interoperability
 
 Real secure asyncua 2.0.1 peer: PASS for read, write/readback/restore, browse,
 unknown-node failure, expired certificate, wrong host/URI, untrusted CA and
@@ -41,6 +41,12 @@ Interoperability tags are excluded by default. Explicit invocation requires the
 configured peer and must fail if that peer or expected response is missing.
 
 ## Evidence identities
+
+The WOP.13 native helper, credit protocol, 100 ns metadata and independent
+asyncua/native workflow have no executed evidence in this record. Their
+`mix wotex.native.build`, `mix wotex.software.build` and
+`mix wotex.software.run` entry points are specified implementation work.
+The command above exercises the current Python runtime adapter, not that target.
 
 The hashes identify reviewed test sources, not an immutable release or a promise
 that all future test executions will pass. The mandatory gate and optional peer

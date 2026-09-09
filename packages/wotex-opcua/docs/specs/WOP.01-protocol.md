@@ -3,7 +3,7 @@ spec:
   id: WOP.01
   title: "OPC UA protocol and graduation contract"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -47,7 +47,7 @@ Read/write Properties and monitored observations map to actual OPC UA services.
 Acceptance: NodeId and scalar/array roundtrips, malformed lengths, frame splits,
 correlation and replay rejection, wrong service/status, owner cleanup, namespace
 remapping, expired/untrusted/wrong-host/wrong-URI/revoked certificates and a
-pinned independent open62541 or asyncua peer. A parser alone is not a secure
+pinned independent asyncua peer and same-stack open62541 precision/fault peer. A parser alone is not a secure
 client; a generic external port alone is not interoperability proof.
 
 ## Common library rules
@@ -57,5 +57,9 @@ address/value maps, no Application callback and no implicit runtime selection.
 Compatibility callbacks are capabilities/connect/send/receive/disconnect/health_check/
 subscribe/unsubscribe. A consumer port failure, malformed return or missing
 transport is an error; never select simulation. Telemetry event prefixes are
-[:wotex, :opcua, ...] with bounded non-secret measurements. Consumer migration
-requires differential scenarios against both implementations before replacement.
+[:wotex, :opcua, ...] with bounded non-secret measurements. Consumer behavioral
+parity requires explicit differential scenarios; it is a separate claim.
+
+The accepted runtime uses the first-party open62541 native executable in WOP.13.
+Python belongs only to the independent software fixture. WOP.02 records the
+current implementation boundary and cannot satisfy native-target acceptance.

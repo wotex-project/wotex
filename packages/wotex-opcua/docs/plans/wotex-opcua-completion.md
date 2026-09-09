@@ -1,6 +1,6 @@
 # Wotex OPCUA completion contract
 
-Graduate this library independently. Acceptance requires typed values and
+The independent library acceptance contract requires typed values and
 conversion, exact-revision protocol rules, Form mapping with extension
 preservation, structured errors, explicit OTP ownership and cleanup, neutral
 telemetry, unit/property/malformed-frame/lifecycle tests and an independent
@@ -12,10 +12,8 @@ A compatibility adapter exposes `capabilities/0`, `connect/1`, `send/2`,
 Wire acknowledgements never establish application truth. Unsupported operations
 return an explicit error or the documented optional `:not_supported` sentinel.
 
-The consumer keeps its implementation until differential scenarios and real
-interoperability prove the supported scope. Consumer changes, deployment and
-publication are outside this repository. Do not import consumer history or
-metadata into this neutral history.
+Consumer integration requires its own differential and interoperability evidence.
+Consumer changes, deployment and publication are outside this repository.
 
 ## Evidence rules
 
@@ -36,6 +34,10 @@ The concrete software scope, API and state-machine decisions are in
 software fixtures, vector traceability, validation and local commits.
 
 The [WOP.12 integration contract](../specs/WOP.12-wotex-integration.md) and
-[versioned catalogue](../specs/catalogue.yaml) are also mandatory. Acceptance
+[versioned catalogue](../specs/catalogue.yaml) are mandatory.
+[WOP.13](../specs/WOP.13-native-executable.md) fixes the open62541 executable,
+source digests, build tasks and native acceptance corpus. Python is an independent
+software peer and build-generator dependency only in the accepted target.
+The Python adapter in WOP.02 does not satisfy that target. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.

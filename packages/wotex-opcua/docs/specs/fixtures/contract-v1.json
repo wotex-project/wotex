@@ -1,6 +1,6 @@
 {
   "format_version": "1.0.0",
-  "specification": "WOP.11@1.0.0",
+  "specification": "WOP.11@1.1.0",
   "execution_status": "specified_unexecuted",
   "description": "Concrete selected cases; executable bindings and independent-peer evidence are still required.",
   "cases": [

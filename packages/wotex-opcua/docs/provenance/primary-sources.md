@@ -1,92 +1,66 @@
-# OPCUA primary evidence
+# OPC UA primary sources and backend authority
 
-Research date: 2026-09-08. Audience: maintainers. The protocol contract above
-distinguishes normative standards, upstream implementation behavior, inferred
-integration choices and evidence still requiring hardware or SDK execution.
+Review date: 2026-09-09. Standards, upstream API behavior and package policy are
+separate authorities. Source inspection is not execution or certification.
 
-- [Part 6 metadata, revision 1.05.07](https://reference.opcfoundation.org/specs/OPC-10000-6).
-- [Part 6 binary and transport clauses](https://reference.opcfoundation.org/specs/OPC-10000-6/full).
-- [Part 4 RequestHeader](https://reference.opcfoundation.org/specs/OPC-10000-4/7.32).
-- [Part 4 certificate validation](https://reference.opcfoundation.org/specs/OPC-10000-4/6.1.3).
-- [Part 2 Security None](https://reference.opcfoundation.org/specs/OPC-10000-2/4.8).
-- [OPC 10101 WoT URI format](https://reference.opcfoundation.org/specs/OPC-10101/6.2).
-- [OPC 10101 security](https://reference.opcfoundation.org/specs/OPC-10101/6.3).
+## Standards
 
-Research searched standards/revision availability, wire/address rules, transport
-ownership, security and interoperability gaps, then reviewed upstream APIs.
-Stop reason: consequential design claims have primary evidence or explicit
-access limits. No physical or secure-stack execution was performed by research.
+- [OPC 10000-4 1.05.07](https://reference.opcfoundation.org/specs/OPC-10000-4): Session/services, certificate validation, Browse 5.9.2 and BrowseNext 5.9.3.
+- [OPC 10000-6 1.05.07](https://reference.opcfoundation.org/specs/OPC-10000-6): binary values, DataValue, Variant, ExpandedNodeId and UA TCP.
+- [OPC 10000-2 1.05.06](https://reference.opcfoundation.org/specs/OPC-10000-2): security model.
+- [OPC 10000-7 1.05.02](https://reference.opcfoundation.org/specs/OPC-10000-7): profiles.
+- [OPC 10101 1.00](https://reference.opcfoundation.org/specs/OPC-10101): WoT URI and security binding.
+- [W3C TD 1.1 Recommendation 2023-12-05](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/): inherited core Form/Property semantics.
+- [Binding Registry draft 2025-11-04](https://www.w3.org/TR/2025/DRY-wot-binding-registry-20251104/): draft status; no package conformance inference.
 
-W3C [TD 1.1 Recommendation, 2023-12-05](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/)
-is the Thing Description baseline. [Binding Registry 2025-11-04 draft](https://www.w3.org/TR/2025/DRY-wot-binding-registry-20251104/)
-does not turn a package-defined profile into a W3C Recommendation.
+## Native backend
 
-Implementation-specific follow-up: [asyncua 2.0.1 package](https://pypi.org/project/asyncua/2.0.1/),
-[Client API](https://opcua-asyncio.readthedocs.io/en/latest/api/asyncua.client.html),
-[validator implementation](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/crypto/validator.py).
-The installed 2.0.1 source was inspected: hostname checks are not active in its
-validator. The bridge therefore adds exact SAN/endpoint checks, a server pin,
-chain verification and a signed/current issuer CRL check. The trust profile is
-restricted to direct CA issuance. A real same-stack secure peer proof is recorded
-separately in executable-evidence.md; it is not independent interoperability.
-Python dependency audit on 2026-09-08 reported no known vulnerabilities for the
-fully pinned requirements. That result is time-bound and must be rerun.
+The exact [source manifest](../specs/fixtures/native-sources-v1.json) records
+observed SHA-256 for downloaded source archives. Source hashes prove byte
+identity, not successful compilation. WOP.13 defines all required build lanes.
 
-## Software-contract review, 2026-09-08
+- [open62541 1.5.7 client](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/include/open62541/client.h): explicit lifecycle, noReconnect/noNewSession and client-local namespace mapping.
+- [Typed asynchronous service API](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/include/open62541/client_highlevel_async.h): request ID/response callbacks and cancellation primitives. WOP uses bounded asynchronous services; synchronous Cancel does not satisfy the event-loop budget.
+- [Native types](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/include/open62541/types.h): signed integer UA_DateTime and complete UA_DataValue/UA_Variant fields. Native IPC retains 100 ns ticks.
+- [Build options](https://github.com/open62541/open62541/blob/d1173ccc31560ffc60c29e24ce8adb19f8c3c686/CMakeLists.txt): explicit OpenSSL backend, subscriptions and reduced namespace generation.
+- [OpenSSL 3.5.8](https://github.com/openssl/openssl/tree/f4dc4d58b48d346a8270183f89acf826d459b0ca): pinned cryptographic implementation. Its [release notes](https://openssl-library.org/news/openssl-3.5-notes/) identify the security maintenance release; dependency audit remains mandatory for every evidence cohort.
+- [Erlang Ports](https://www.erlang.org/doc/system/c_port.html): external executable ownership. Correct native EOF handling is required for executable termination; a Port alone is not descendant containment.
 
-- [asyncua 2.0.1 policy classes](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/crypto/security_policies.py)
-  contain the three explicit SignAndEncrypt policy implementations selected in .10.
-- [Pinned Client](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/client/client.py)
-  owns Session/security/user-token operations and exposes automatic-reconnect
-  selection. The target explicitly disables it; loss is terminal.
-- [Pinned Subscription](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/common/subscription.py)
-  exposes PublishResult callback dispatch and Republish plumbing. Its ordinary
-  publish callback records the last sequence; it is not sufficient by itself
-  to prove strict duplicate/gap handling. The bridge supplies the bounded
-  sequence validation described in .10.
-- [open62541 v1.4.14](https://github.com/open62541/open62541/releases/tag/v1.4.14),
-  source `76e425ee963e8c16c0414f2f6bd0c7a5761a92c3`, supplies the independent peer.
-  The [encrypted server example](https://github.com/open62541/open62541/blob/76e425ee963e8c16c0414f2f6bd0c7a5761a92c3/examples/encryption/server_encryption.c)
-  is a starting point, not the final fixture policy: replace permissive/default
-  example setup with explicit test certificates, users and restricted endpoints.
+## Reuse assessment
 
-Session-loss policy, queue/body limits and the direct-CA-only trust restriction
-are library profile choices. New target policy/token/subscription cells still
-require executable evidence; the existing same-stack proof cannot satisfy the
-new independent-peer requirement.
+[Opex62541](https://opex62541.hexdocs.pm/introduction.html) already provides an
+Elixir/open62541 stdio Port architecture. At source
+[c45cb4d](https://github.com/valiot/opex62541/blob/c45cb4d532615078fd7e03039ccb8eef5e629f76/src/opc_ua_client.c),
+`dataChangeNotificationCallback` passes only `data->value`, and
+`handle_add_subscription` returns only `subscriptionId`. Neither exposes the
+full metadata/revisions required by S04. Its unchanged wrapper is not admitted;
+reviewed code reuse must preserve attribution and satisfy X01..X06. The selected
+runtime is a first-party bounded service adapter, not a dependency on an
+unverified wrapper fork.
 
-The [pinned DateTime conversion](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/ua/uatypes.py)
-and [binary DateTime codec](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/ua/ua_binary.py)
-were also inspected. SDK conversion divides wire ticks by ten to produce Python
-microseconds and clamps extreme dates; raw 100 ns timestamp precision is not
-available after that conversion. The target explicitly limits accepted SDK
-DateTime writes and marks normalized read resolution. Pure-codec exact ticks
-must not be confused with lossless service-level SDK observations.
+[stritzinger/opcua](https://github.com/stritzinger/opcua) implements native Erlang
+OPC UA. Its published services table does not claim BrowseNext, Call or
+subscriptions. It does not satisfy this complete client profile as documented.
 
-## Standalone-client and binary review, 2026-09-09
+## Independent peer and current evidence boundary
 
-OPC 10000-4 1.05.07 [Browse, 5.9.2](https://reference.opcfoundation.org/specs/OPC-10000-4/5.9.2)
-and [BrowseNext, 5.9.3](https://reference.opcfoundation.org/specs/OPC-10000-4/5.9.3)
-were reviewed for full reference fields, page limits, original-Session ownership
-and release. The [pinned asyncua Node source](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/common/node.py)
-uses requested reference count zero and accumulates continuation pages in its
-convenience path. WOP.11 therefore requires direct service calls with bounded
-pages, consuming local handles and an absolute deadline. The extra numeric caps
-and conservative Session-close fallback are library policies.
+[asyncua 2.0.1](https://github.com/FreeOpcUa/opcua-asyncio/tree/v2.0.1) supplies the
+independent Python software peer. Its
+[DateTime conversion](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/ua/uatypes.py)
+uses Python microsecond-resolution datetime and clamps extreme dates. Therefore
+its service observations do not prove exact native 100 ns timestamp handling.
+Pure byte vectors and the C peer carry that evidence. Its
+[Node convenience code](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/common/node.py)
+accumulates Browse pages; the native target uses explicit bounded service calls.
 
-OPC 10000-6 1.05.07 [Variant, 5.2.2.16](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.16)
-requires retaining future IDs 26..31 as ByteString-like values while prohibiting
-their use by encoders. [DataValue, 5.2.2.17](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.17)
-distinguishes write validation from decoded picosecond normalization. These
-clauses corrected the target's previous blanket unknown-type/range rejection.
-[ExpandedNodeId, 5.2.2.10](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.10)
-preserves URI/server identity; the target normalizes the ignored namespace index
-to zero when a URI is present.
+The current source still contains a per-request Python runtime adapter; WOP.02
+states that incomplete implementation honestly. Its recorded same-stack tests
+are bounded evidence for that source, not native runtime acceptance. The target
+package has no Python runtime asset or dependency; fixture requirements belong
+under test/interop. Existing pure fixture bytes verified with asyncua are source
+cross-checks, not proof of an implemented Wotex codec or native session.
 
-The exact WOP-F01..F07, F09, F10 and F13 byte examples were independently decoded
-through the installed pinned asyncua 2.0.1 scalar/structure codecs. Their NodeIds,
-array/null distinction, Boolean DataValue, future Variant type, full reference
-fields and unconsumed tails matched the specified values. F08 malformed handling,
-F11/F12 normalization and all lifecycle cases remain contract expectations rather
-than upstream execution claims. None is evidence that the new Wotex pure or
-stateful API has been implemented; executable acceptance bindings remain work.
+Direct-CA trust, exact certificate pins, terminal Session loss, deadlines,
+queue/credit ceilings, consuming continuation handles and conservative unknown
+mutation effects are explicit package policies. Independent wire, native audit,
+malformed-frame and resource-counter tests are required to accept them.

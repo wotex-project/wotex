@@ -1,0 +1,34 @@
+{
+  "format": "wotex.native.sources",
+  "version": "1.0.0",
+  "status": "specified_unexecuted",
+  "runtime": "open62541",
+  "sources": [
+    {
+      "name": "open62541",
+      "version": "1.5.7",
+      "commit": "d1173ccc31560ffc60c29e24ce8adb19f8c3c686",
+      "url": "https://codeload.github.com/open62541/open62541/tar.gz/refs/tags/v1.5.7",
+      "sha256": "a4018b052c93fedb55f00558a85869b86f3bb2293184d322e33f2666c497eaeb"
+    },
+    {
+      "name": "openssl",
+      "version": "3.5.8",
+      "commit": "f4dc4d58b48d346a8270183f89acf826d459b0ca",
+      "url": "https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/openssl-3.5.8",
+      "sha256": "59f86483992995df5a213df38d93f31eeafe3b34599309b3e088ba67ca0aad9c"
+    }
+  ],
+  "reviewed_reuse_candidate": {
+    "name": "opex62541",
+    "commit": "c45cb4d532615078fd7e03039ccb8eef5e629f76",
+    "runtime_dependency": false
+  },
+  "independent_peer": {
+    "name": "asyncua",
+    "version": "2.0.1",
+    "runtime_dependency": false,
+    "current_fixture_lock": "priv/requirements.txt",
+    "target_fixture_lock": "test/interop/asyncua/requirements.txt"
+  }
+}

@@ -38,20 +38,30 @@ should replace the path with the constraint of an available Hex release.
 
 ## Implemented profile
 
-The library contains all four NodeId kinds, strict scalar binary codecs, bounded
-UA TCP chunk framing, Form mapping and a real `Asyncua` adapter. The adapter uses
-asyncua 2.0.1 in an explicitly supplied Python environment. It performs
-native read/write/browse/call over Basic256Sha256 SignAndEncrypt, with no
-reconnect or write retry. Browse returns child NodeId strings; bounded
-BrowseNext ownership and typed ReferenceDescription results remain target work. Each request opens and closes its own secure channel and session.
-`connect/1` validates configuration; network authentication occurs on request.
+The current code contains NodeId/scalar codecs, UA TCP framing, Property Form
+mapping and a limited per-request asyncua adapter. That Python runtime path does
+not satisfy the accepted native software profile. WOP.02 and executable evidence
+bound its actual behavior; persistent native sessions, richer values and
+subscriptions require implementation.
+
+## Native software contract
+
+The accepted architecture is `Wotex.OPCUA.Open62541`: an Elixir API with an
+explicitly owned persistent open62541 C executable. Runtime requires no Python.
+The pinned SDK owns secure-channel cryptography and service codecs; the package
+owns typed values, deadlines, bounded IPC, cancellation and Runtime integration.
+asyncua is solely an independent software peer in this target.
+
+[WOP.13](docs/specs/WOP.13-native-executable.md) fixes source digests, security,
+credit flow control, process ownership and executable acceptance. Its task APIs
+are specified work: `mix wotex.native.build --workspace ABS`,
+`mix wotex.software.build --workspace ABS` and
+`mix wotex.software.run --workspace ABS`. Task names do not imply implemented
+commands. The native profile is incomplete until every required lane passes.
 
 ## Quick start
 
-Install the exact bridge environment explicitly with
-`python3 -m venv /chosen/environment` and
-`/chosen/environment/bin/pip install -r priv/requirements.txt`.
-There is no dependency download or Python startup at package load.
+This deterministic value example uses the current public API:
 
 ```elixir
 {:ok, node} = Wotex.OPCUA.Address.new("ns=2;s=temperature")
@@ -59,26 +69,14 @@ There is no dependency download or Python startup at package load.
 {:ok, ^node, <<>>} = Wotex.OPCUA.Binary.decode_node_id(bytes)
 ```
 
-Supply `client: Wotex.OPCUA.Asyncua`, `executable`, `endpoint`, `certificate`,
-`private_key`, `client_uri`, `server_uri`, `server_certificate`,
-`issuer_certificate`, `trust_certificates` and `crl` to `connect/1`.
-All certificate/key/CRL/executable paths are absolute and caller-owned.
-`trust_certificates` is a nonempty list of trusted CA certificate paths.
-The supported trust profile is a leaf issued directly by a trusted, self-signed
-CA: intermediate chains are rejected. The issuer's CRL must be signed, current,
-and not revoke the leaf. Server certificate pin, exact DNS/IP SAN, application
-URI, validity and key usages are checked; client certificate URI/time/usages
-are checked too. Missing checks never enable SecurityPolicy None.
-The adapter currently uses anonymous user identity over the authenticated
-application channel; the server must grant appropriate permissions.
-
-Native read results retain Variant type and StatusCode. Runtime separates the
-Property value from this metadata. Writes require explicit values
-such as `%{type: "Double", value: 42.5}`. Native bridge requests carry ByteString
-values as Base64; `Wotex.OPCUA.Value.encode/2` accepts a BEAM binary and creates
-that bridge representation.
-Subscriptions, persistent sessions, issuer-chain revocation beyond this profile,
-user credentials, additional security policies and certification remain gates.
+The native target accepts explicit executable identity, endpoint, application
+certificate/key, server certificate pin, direct-CA trust and current CRL.
+SignAndEncrypt with one of the three S03 policies and an explicit user-token mode
+is mandatory. Typed values retain array/null distinctions, DataValue status and
+100 ns timestamps. Native Browse owns bounded continuations; subscriptions
+retain revised parameters and complete report metadata. Unsupported security,
+malformed values and exhausted budgets fail with structured errors. Acknowledged
+writes and method calls do not establish canonical Property state.
 
 ## Wotex contract
 
@@ -95,8 +93,7 @@ The compatibility callbacks are `capabilities/0`, `connect/1`, `send/2`,
 `send/2` returns the correlated operation result synchronously. No separate
 receive queue is fabricated; unsupported receive/subscription calls fail
 explicitly. Callback names alone do not establish consumer behavioral parity.
-The consumer retains its implementation until differential scenarios and
-interoperability gates pass; migration is outside this repository.
+Consumer parity is a separate differential and interoperability claim.
 
 Runtime Form mapping currently supports Property reads and writes only. Native
 Browse and Call do not provide Runtime Action or aggregate operations. Explicit

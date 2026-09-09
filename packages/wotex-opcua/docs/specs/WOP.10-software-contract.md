@@ -3,7 +3,7 @@ spec:
   id: WOP.10
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -11,10 +11,10 @@ spec:
 # WOP.10 Complete secure OPC UA client software profile
 
 Read [WOP.00](WOP.00-library-contract.md), [WOP.11 standalone client and preservation](WOP.11-standalone-client-and-preservation.md), and the [implementation sequence](../plans/software-implementation.md).
-Baseline `35a9137` implements concrete NodeIds, scalar codecs, Forms and a
-one-shot asyncua bridge with secure same-stack negative tests. Persistent
-Sessions, richer values, subscriptions and independent secure interoperability
-are requirements below, not existing achievements.
+This accepted target defines the native software profile. The current implementation
+and its limited Python runtime adapter are described only in WOP.02. Target
+acceptance requires the first-party native executable and every required software
+lane; specification acceptance is not implementation evidence.
 
 ## Scope, references and implementation boundary
 
@@ -27,18 +27,22 @@ PubSub, redundant-server failover, event filters, reverse connect, discovery
 server hosting and a native BEAM security stack are separate profiles.
 No certification is claimed.
 
-Use pinned asyncua 2.0.1 behind the first-party persistent Python bridge.
-The SDK owns UA TCP framing, secure channel token renewal, Session activation,
-Publish/Republish and protocol security operations. Existing pure `Binary` and
-`Frame` modules remain independently tested values and grow the public pure
-contracts in WOP-N02; do not turn them into a
-second security implementation around SDK traffic. A consumer-selected custom
-Client remains an explicit port with its own trust/ownership obligations.
+The first-party `Wotex.OPCUA.Open62541` adapter owns an external C executable
+using open62541 1.5.7 and OpenSSL 3.5.8. WOP.13 fixes source digests, build flags,
+IPC, SDK integration and executable acceptance. Runtime operation requires no
+Python interpreter or Python packages. asyncua 2.0.1 is an independent test peer
+only in the accepted target.
+
+The SDK owns UA TCP framing, secure-channel cryptography, token renewal, Session
+activation and service codecs. The native executable owns bounded service
+requests, Publish/Republish ordering, correlation and cleanup through SDK APIs.
+Pure `Binary` and `Frame` contracts remain independent of the SDK transport.
+A custom Client is an explicit port with its own trust and ownership obligations.
 
 ## WOP-S01 — Node identity and typed values
 
-Keep `Address.new/1` for numeric/string/GUID/opaque NodeIds and add
-`Address.from_namespace_uri/3` with URI, kind and identifier. The new value
+`Address.new/1` accepts numeric/string/GUID/opaque NodeIds. The native API includes
+`Address.from_namespace_uri/3` with URI, kind and identifier. The value
 stores a URI identity without guessing its index. Before every new Session's
 first operation, read NamespaceArray and resolve the URI exactly; no match or
 duplicate match is an error. Never carry an old index into a new Session.
@@ -46,7 +50,7 @@ Concrete namespace is 0..65535; numeric ID 0..4294967295; string identifier at m
 4096 UTF-8 bytes and serialized NodeId text at most 8192 bytes. Opaque identity has the existing 4096-byte library ceiling.
 Percent-decoded Form identity must roundtrip reserved `;`, `=`, `&`, `?`, `%`.
 
-Preserve scalar `Value.encode/2`; add explicit array envelope
+`Value.encode/2` accepts scalars and an explicit array envelope
 `%{type: type_name, array: true, value: flat_list_or_nil}` with optional
 `dimensions: [positive_integer]`. Scalars explicitly carry `array: false`.
 Nil array, empty array and scalar null differ. Dimensions are positive integers,
@@ -57,23 +61,19 @@ serialized result with `:response_limit`, never truncate it. No type inference
 from a JSON number. Preserve all existing scalar widths, signed zero and finite
 float limits; non-finite numbers fail before JSON serialization.
 
-Add typed DateTime (UTC integer ticks of 100 ns since 1601-01-01, signed 64-bit),
+The typed value profile includes DateTime (UTC integer ticks of 100 ns since 1601-01-01, signed 64-bit),
 Guid (canonical text), NodeId, ExpandedNodeId, StatusCode (unsigned 32-bit), QualifiedName,
 LocalizedText and opaque ExtensionObject (encoding NodeId plus bytes/XML body).
 Unknown ExtensionObjects roundtrip as opaque tagged values; do not dynamically
 instantiate classes from names received over the bridge. Numeric field and array
 limits are validated before allocation. DateTime conversion never guesses a
-local timezone. The pure binary codec can retain signed 64-bit ticks, but asyncua
-2.0.1 converts service DateTime values to Python datetime with microsecond
-resolution and clamps values outside its date range. The SDK adapter accepts
-DateTime writes only at multiples of ten ticks in 0..2650467743989999990, or the
-explicit maximum-time sentinel 9223372036854775807. Other values fail with
-`:unsupported_datetime_precision` or `:unsupported_datetime_range` before I/O.
-SDK-decoded DateTime values and DataValue timestamps carry metadata
-`datetime_resolution_ns: 1000` and `raw_datetime_ticks_available: false`; they
-are normalized SDK observations, not lossless original wire ticks. Do not infer
-that the missing sub-microsecond digits were zero. Preserve picosecond fields
-separately without claiming they recover the discarded timestamp digits.
+local timezone. `UA_DateTime` and the native IPC preserve the full signed
+64-bit tick value, including sub-microsecond ticks and extreme values. Service
+observations carry `datetime_resolution_ns: 100` and
+`raw_datetime_ticks_available: true`. DateTime never passes through floating
+point or a calendar conversion. The independent Python peer cannot prove raw
+100 ns precision: exact-tick cases require the native codec/C peer lane.
+Picosecond fields remain separate from DateTime ticks.
 Wire signed length -1 means null; values below -1 are malformed.
 
 Version 1 typed payload shapes are fixed below. A Variant envelope always carries
@@ -104,9 +104,11 @@ future type IDs 26..31 must be retained as `{ "type": "Reserved", "type_id": n,
 "array": false, "value": bytes_or_null }`, or the corresponding byte-payload
 array with `array: true`; do not guess a known type. This read-only envelope
 retains the numeric type ID. Encoders and SDK writes reject Reserved with
-`:unsupported_type`; IDs 32..63 fail `:invalid_binary`. The pinned SDK exposes
-custom Variant type IDs: the bridge must preserve their numeric ID and bytes in
-the same read-only envelope. It must not infer a known type from their value.
+`:unsupported_type`; IDs 32..63 fail `:invalid_binary`. This future-ID
+preservation obligation belongs to the pure decoder. Native services fail
+`:unsupported_type` when the SDK cannot represent an incoming reserved type;
+they never fabricate its numeric identity from a decoded payload. Unknown
+ExtensionObjects with explicit encoding identity remain opaque native values.
 
 Reject unknown keys and malformed payload/type combinations. Keep existing
 one-shot result shapes through an explicit version translation, not permissive
@@ -131,27 +133,28 @@ cannot erase individual Write/Call result statuses.
 
 ## WOP-S02 — Persistent bridge and resource lifecycle
 
-Add explicit `lifecycle: :persistent` to `Asyncua.connect/1`; retain the baseline
-one-shot mode as a documented read/write/browse/Call compatibility adapter. Persistent
-mode is required for subscriptions. Its `connect/1` returns only after channel
+`Open62541.connect/1` accepts `lifecycle: :persistent` by default and the explicit
+`:oneshot` compatibility projection. Both use the same native executable and
+typed service path. Persistent mode is required for subscriptions. Its
+`connect/1` returns only after channel
 creation, CreateSession, ActivateSession and namespace initialization succeed.
 Use WOP-C07 versioned envelopes; fail an unsupported bridge version explicitly.
-Version 1 is an intentional new executable contract, not silent compatibility
-with arbitrary unversioned third-party programs.
+Version 1 admits only the pinned native backend and exact protocol schema.
+Unversioned external programs do not satisfy it.
 
 Bridge operations are `open`, `read`, `write`, `call`, `browse`, `browse_next`,
-`browse_release`, `subscribe`, `unsubscribe`, `health`, `close`. Browse payloads
+`browse_release`, `subscribe`, `unsubscribe`, `health`, `cancel`, `close`. Browse payloads
 and ownership follow WOP-N03/N04. Open contains validated endpoint/security/authentication and
 finite Session timeout (default 60000 ms, range 1000..3600000, server revision
 retained). Read/write accept one concrete node and optional index range; this
-profile rejects nonempty index ranges until an explicit range implementation is
-added. Call contains concrete object/method NodeIds and at most 64 typed inputs.
+profile rejects nonempty index ranges. Call contains concrete object/method NodeIds and at most 64 typed inputs.
 Return an ordered typed output list and individual input argument statuses.
 No output schema guessing. Other operation parameters follow S01/S04 exactly.
 
 Keep one SDK Client per persistent bridge and at most 64 admitted operations.
-Track native tasks by request ID; timeout cancels the task, but a transmitted
-Write/Call retains unknown effect. Shutdown deletes subscriptions, closes
+Native requests have generation, IPC ID and SDK request-ID correlation. A
+timeout suppresses the response and cancels owned work; a transmitted Write/Call
+retains unknown effect. WOP.13 defines cancellation without blocking the loop. Shutdown deletes subscriptions, closes
 Session with deletion enabled, closes channel/socket, then exits. Kill/EOF and
 partial initialization unwind these acquisitions. Native stdout/stderr must not
 pollute the framed channel. SDK internal logs never become Error details.
@@ -167,7 +170,15 @@ mutations. A future recovery profile would require its own gap contract.
 
 Required channel modes: SignAndEncrypt with Basic256Sha256,
 Aes128_Sha256_RsaOaep and Aes256_Sha256_RsaPss. Map only these exact names to the
-pinned SDK policy classes. No automatic best-policy selection, downgrade,
+pinned SDK security-policy URI values:
+
+| Elixir policy | Exact policy URI |
+| --- | --- |
+| `:basic256sha256` | `http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256` |
+| `:aes128_sha256_rsaoaep` | `http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_RsaOaep` |
+| `:aes256_sha256_rsapss` | `http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha256_RsaPss` |
+
+ No automatic best-policy selection, downgrade,
 Basic128Rsa15, Basic256 or Sign-only operation. Security None remains limited to
 an explicitly selected isolated fixture adapter and cannot satisfy secure gates.
 
@@ -179,8 +190,8 @@ URI, key usage/EKU, critical extensions and current correctly signed issuer CRL.
 Check client certificate identity/usage/time and match private key before open.
 Trust is immutable per generation. Require RSA key size at least 2048 bits,
 SHA-256-or-stronger certificate signatures and policy-specific nonce checks in
-the SDK. Chain validation alone does not replace SAN/URI checks: asyncua 2.0.1's
-validator does not implement the complete hostname requirement.
+the SDK. The certificate-verification adapter enforces exact SAN/URI/pin/CRL
+checks before accepting the endpoint, independently of SDK defaults.
 
 User-token mode is explicit `:anonymous`, `:username`, or `:certificate`.
 Username/password and user certificate/private key are distinct from the
@@ -207,15 +218,16 @@ reject nonpositive/invalid revisions and failed item status before returning a h
 
 The initial DataChange is delivered exactly once when received; server ACK alone
 does not invent an initial value. Preserve client handle, item status, DataValue
-timestamps, publish sequence and overflow status in metadata. Install a validated PublishResult callback around the SDK callback. The pinned
-ordinary callback records a sequence but does not enforce this profile's gap
-rules. Accept nonempty notification sequence numbers 1..2^32-1 with wrap to 1;
+timestamps, publish sequence and overflow status in metadata. The native
+owner uses complete service-level PublishResponse values, not a scalar-only
+monitored-item callback. WOP.13 defines the explicit Publish request/ACK loop. Accept nonempty notification sequence numbers 1..2^32-1 with wrap to 1;
 keepalives do not consume a notification sequence. Keep at most 1024 accepted
 sequence/digest entries. For a gap, request each missing sequence with SDK
 Republish, bounded to 100 messages and one interaction deadline, validating
 subscription and expected sequence before delivery. A conflicting duplicate,
 larger gap or BadMessageNotAvailable is terminal. Do not call the SDK's
-subscription recreate/reconnect helper. SDK Publish ACKs remain SDK-owned. The bridge detects an unrecoverable gap,
+subscription recreate/reconnect helper. Publish ACKs belong to the bounded native
+owner after successful validation. The owner detects an unrecoverable gap,
 unknown item, terminal status or missing keepalive beyond revised lifetime and
 terminates with `:subscription_lost`/`:sequence_gap`. No silent fresh subscription.
 Duplicate notifications recovered through Republish are not delivered twice.
@@ -238,7 +250,7 @@ Runtime credentials remain nil-only; the explicitly selected native adapter
 configuration owns security material for its session lifetime. Reject an
 uninterpreted ExecutionContext credential before I/O.
 Return typed arrays and metadata through Runtime only after complete validation.
-Add `health_check/2` with a concrete read probe; `health_check/1` keeps its
+The facade provides `health_check/2` with a concrete read probe; `health_check/1` keeps its
 probe-required error. A successful TCP connection alone is not healthy UA service.
 
 ## Acceptance scenario families
@@ -246,7 +258,7 @@ probe-required error. A successful TCP connection alone is not healthy UA servic
 | ID | Scenario | Required result |
 | --- | --- | --- |
 | WOP-V01 | Four NodeId encodings, URI reserved characters, namespace reordering | Exact identity; URI re-resolves on each new Session |
-| WOP-V02 | Scalar/array/null/empty, integer/float edges, DateTime precision/range/sentinel, mismatched dimensions, excessive allocation | Exact typed result or pre-I/O validation error; SDK timestamp resolution metadata is explicit |
+| WOP-V02 | Scalar/array/null/empty, integer/float edges, DateTime precision/range/sentinel, mismatched dimensions, excessive allocation | Exact typed result or pre-I/O validation error; native timestamp ticks and resolution metadata are exact |
 | WOP-V03 | DataValue missing/null, Good/Uncertain/Bad, timestamps and unknown ExtensionObject | Presence and full status retained; Bad fails |
 | WOP-V04 | Binary invalid signed lengths, every frame split/coalescing, chunk limit | Tail preserved; bounded failure without allocation amplification |
 | WOP-V05 | Kill bridge during each open phase, EOF, wrong ID/version, late response, log flood | No false success, protocol contamination or leaked child/socket |
@@ -258,13 +270,14 @@ probe-required error. A successful TCP connection alone is not healthy UA servic
 | WOP-V11 | Duplicate Publish/Republish, recoverable and unrecoverable gap, queue overflow | Dedup/recovery or explicit terminal/overflow evidence |
 | WOP-V12 | Receiver death, cancel failure, foreign/double cancel, server restart | Server subscription deletion or Session close; no silent reconnect |
 | WOP-V13 | Runtime Property observation, invalid Event/context/credential, extension | Correct mapping and original-route cleanup |
-| WOP-V14 | Independent open62541 secure read/write/Call/monitor, denial and security faults | Real asserted results for all secure profile cells |
+| WOP-V14 | Independent asyncua secure read/write/Call/monitor, plus exact-tick C peer and security faults | Real asserted results for all secure profile cells |
 | WOP-V15 | C09 stress, concurrent calls, admission overflow and version matrix | Correlation and owned/native resource baseline restored |
 
-Build an independent peer from open62541 v1.4.14, commit
-`76e425ee963e8c16c0414f2f6bd0c7a5761a92c3`, using its OpenSSL encryption backend
-and encrypted-server example as a starting point. Add disposable scalar/array
-variables, a typed method, explicit users/certificate identities and subscription
-counters. Restrict endpoints to the tested policies. Run the existing asyncua
-peer separately and label it same-stack. Software faults use fixture-controlled
-certificates, clock inputs and a byte proxy; no physical server is required.
+The independent wire peer is asyncua 2.0.1 with the complete pinned fixture
+environment from WOP.13. The native C peer uses the same open62541 pin as the
+client and is labelled same-stack. It supplies exact 100 ns values, controlled
+Publish/revision faults and resource counters that the Python peer cannot
+represent faithfully. Both peers expose disposable scalar/array variables,
+typed methods and explicit users/certificate identities. Security fault tests
+use controlled certificates, clock inputs and a bounded byte proxy. Both lanes
+are required; neither peer substitutes for the other. No physical server is required.

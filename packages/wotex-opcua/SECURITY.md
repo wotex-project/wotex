@@ -13,18 +13,15 @@ retry is allowed. Report security issues privately to hi@futhr.io.
 
 ## Decimal parser regression
 
-An earlier 2026-09-08 Hex registry snapshot reported `EEF-CVE-2026-32686` for
-Decimal 3.1.1, while
-the [maintainer advisory](https://github.com/ericmj/decimal/security/advisories/GHSA-rhv4-8758-jx7v)
-identifies versions before 3.0.0 as affected. The
+The [maintainer advisory](https://github.com/ericmj/decimal/security/advisories/GHSA-rhv4-8758-jx7v)
+identifies Decimal versions before 3.0.0 as affected by `EEF-CVE-2026-32686`. The
 [EEF/OSV record](https://osv.dev/vulnerability/EEF-CVE-2026-32686) has that same
 prose but an unbounded machine-readable affected range. The
 [3.1.1 implementation](https://github.com/ericmj/decimal/blob/v3.1.1/lib/decimal.ex)
 applies finite default parsing limits.
 
-The current Hex registry snapshot reports no matching advisory for the locked
-dependency graph. The stale acknowledgement was removed: this repository has
-no ignored advisories. Its dependency-security tests retain a regression bound
+This repository has no ignored advisories. Its dependency-security tests retain
+a regression bound
 to the exact 3.1.1 Hex lock tuple, including outer checksum
 `c5f25f2ced74a0587d03e6023f595db8e924c9d3922c8c8ffd9edfc4498cf1f6`,
 and loaded version. They require parse, cast and construction to reject the

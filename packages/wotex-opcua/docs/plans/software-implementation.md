@@ -1,210 +1,63 @@
-# WOP software implementation sequence
+# WOP native software implementation sequence
 
-This is the self-contained build handoff for the defined software profile, not
-a statement that these tasks have already passed. The verified starting point
-is commit `35a9137`; read [current executable evidence](../provenance/executable-evidence.md)
-for the tests and limitations at that baseline. Existing passing code is the
-starting implementation, not something to replace with fresh scaffolding.
-
-## Read before changing code
-
-1. Read `CLAUDE.md` and matching repository rules/skills.
-2. Read [WOP.00 — shared software rules](../specs/WOP.00-library-contract.md).
-3. Read [WOP.10 — exact target profile](../specs/WOP.10-software-contract.md), then the existing protocol/current-profile specifications linked there.
-4. Read [primary source pins and access limits](../provenance/primary-sources.md).
-5. Read [WOP.11 — standalone client and preservation](../specs/WOP.11-standalone-client-and-preservation.md), including the concrete fixture corpus.
-6. Select the first work package below whose acceptance evidence is absent.
-
-Read the [versioned catalogue](../specs/catalogue.yaml) and
-[WOP.12 — Wotex integration](../specs/WOP.12-wotex-integration.md) before choosing
-implementation work. The catalogue lists dependencies and distinguishes planned
-contracts from narrow implemented profiles. Source presence, fixture presence,
-passing baseline tests and accepted work packages are separate facts.
-
-The numbered sequence is dependency order: each package depends on all preceding
-packages. Each is one bounded behavior plus its tests/documentation. A large
-package may be split into consecutive local commits along its stated sub-behaviors;
-never commit knowingly failing tests. Do not reimplement a satisfied requirement
-merely to produce a commit. Every proposed module, API and test path below is a
-target addition unless it already exists; no placeholder file implies completion.
-
-For each requirement, record its ID in an ExUnit/native test name or a fixture
-manifest. The Vxx rows in .10 are scenario families; concrete .11 JSON cases
-fix selected inputs and expected outputs. Neither ID presence nor JSON parsing
-accepts a requirement without calling the library and asserting the outcome. The implementation chooses
-ordinary internal function names and data structures, while the public behavior,
-state transitions, limits, failure policy and transport choices are fixed there.
-If an upstream API cannot meet a requirement, add the smallest adapter needed
-or document a precise source-backed contract correction with regression evidence;
-do not silently skip, simulate or weaken the requirement.
+This acceptance sequence defines the complete WOP.00/.10/.11/.12/.13 native
+software profile. Current code/evidence is bounded by WOP.02 and
+[executable evidence](../provenance/executable-evidence.md). A planned API or
+fixture is not a completed implementation. Read CLAUDE, matching rules/skills,
+all five target specifications, the source manifest and catalogue before work.
 
 ## Ordered work packages
 
-### WOP-P01: Preserve typed arrays data values and namespace identity
+Each package depends on all preceding packages. Existing valid pure values and
+compatibility shapes remain part of its regression boundary. Package identifiers
+are stable; a package may have several logical tested commits. The matrix is
+binding implementation work, not a changelog.
 
-- Requirements: WOP-S01, WOP-N02, WOP-N05; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WOP-V01, WOP-V02, WOP-V03, WOP-V04.
-- Change surface: Address, Binary, Frame, Value and typed bridge schemas.
-- Test destinations: `test/wotex/opcua/typed_values_test.exs`.
-- Done when: Define all new envelope fields/types in code; roundtrip null/empty/arrays/opaque values, enforce the SDK DateTime precision/range policy, preserve future Variant IDs on pure decode, normalize picosecond fields correctly, and retain status/timestamp metadata with bounded allocation. Bind pure corpus cases to actual codecs, including ReferenceDescription and ExpandedNodeId.
-- Suggested local commit: `feat: preserve typed arrays data values and namespace identity`.
+| Package | Implementation and acceptance | Executable destinations |
+| --- | --- | --- |
+| WOP-P00 | X01/X02: pinned SDK/OpenSSL source admission, native Mix build task, package assets, versioned ready and digest validation; Opex reuse obeys the reviewed metadata/security boundary | native_build_test.exs; test/native/build_test.c; X01/X02 manifest/failure cases |
+| WOP-P01 | S01/N02/N05: typed pure Variant/DataValue/ExpandedNodeId/QualifiedName/LocalizedText/reference codecs, exact signed ticks and array/null/opaque distinctions; lossless JSON integer/negative-zero IPC | typed_values_test.exs; test/native/value_test.c; WOP-F01..F13 and X-F01..F16 |
+| WOP-P02 | S02/X03/X04: persistent native Session activation, explicit one-shot native projection, server/local namespace mapping, complete framed IPC, credit control, bounded async requests and cancellation/EOF cleanup | persistent_bridge_test.exs; test/native/session_test.c; X-F10..F23/X-F49..F55 plus split/coalescing/malformed/partial-open matrix |
+| WOP-P03 | S03: all three SignAndEncrypt policies and all three user-token modes, pin/SAN/URI/CRL/key validation, immutable trust, no downgrade/reconnect/replay | test/native/security_test.c; test/interop/security_fault_test.exs; X-F30..F47 |
+| WOP-P04 | S04/X05: raw service-level subscriptions, exact revised parameters, full DataValue/overflow metadata, bounded Publish ACK and Republish sequence state | subscription_test.exs; test/native/subscription_test.c; X-F24..F28 |
+| WOP-P05 | C03/C05/S02/S04/X04/X05: receiver/Session/owner loss, cancellation failure, saturated output, partial-open/final-owner handoff and terminal-once cleanup | subscription_lifecycle_test.exs; test/native/lifecycle_test.c; X-F18..F23/X-F29 and suspended-owner overproducer stress |
+| WOP-P06 | S05: typed Runtime Property observation and explicit health probe, native one-shot compatibility projection, unsupported Event/credential rejection | runtime_stream_test.exs; real Runtime child-spec lifecycle tests |
+| WOP-P06a | N01/N03/N04/N05: typed bounded Browse/BrowseNext/release, original Session/deadline, early-release/failure fallback and native root helpers | standalone_contract_test.exs; test/native/browse_test.c; WOP-F14..F16 and complete N boundary matrix |
+| WOP-P07 | X06/S01..S04: independent asyncua secure peer and same-stack exact-tick/fault C peer, typed methods/arrays/users, subscriptions and continuation counters; all policy/token/security cells execute | test/interop/asyncua_test.exs; test/interop/open62541_test.exs; full V01..V14 software assertions |
+| WOP-P07a | I01..I06: exact profiles and Form/context/media selection, Result identity/metadata, complete Error/Retry table, final-owner custody and cleanup through real ConsumedThing | runtime_integration_test.exs; all wotex-integration-v1.json cases and I06 matrix |
+| WOP-P08 | C09/C10/X06: complete software Mix tasks, audit/sanitizer/matrix/stress and isolated native archive consumer with no runtime Python; evidence contains every S/N/I/X assertion and current digest | test/software/lifecycle_stress_test.exs; X-F48; full software runner and out-of-tree package workflow |
 
-### WOP-P02: Add persistent secure sdk session ownership
+Paths without a directory prefix in the table are under `test/wotex/opcua/`.
+All referenced tests and Mix tasks are required implementation unless present
+and already asserting the exact contract. No success-shaped placeholder, skipped
+required facility, fixture echo or test identifier alone satisfies acceptance.
 
-- Requirements: WOP-S02; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WOP-V05, WOP-V06.
-- Change surface: Asyncua persistent mode, Connection owner and Python bridge loop.
-- Test destinations: `test/wotex/opcua/persistent_bridge_test.exs`, `test/native/test_session.py`.
-- Done when: Versioned open requires activated Session and namespace map; EOF/partial-open/timeout cleanup works and auto reconnect stays disabled.
-- Suggested local commit: `feat: add persistent secure sdk session ownership`.
+## Verification and evidence
 
-### WOP-P03: Add explicit security policies and user tokens
+Each package runs focused assertions, then the complete `WOTEX_PATH_DEPS=1 mix
+check --no-retry` gate before its local commit. Native changes also run CTest and
+the applicable audit/sanitizer lanes. Normal Hex dependency identity remains
+authoritative; the path switch is development evidence only. Coverage and audit
+thresholds remain intact. No knowingly failing package is committed.
 
-- Requirements: WOP-S03; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WOP-V07, WOP-V08.
-- Change surface: Security configuration and Python trust/token validation.
-- Test destinations: `test/native/test_security.py`, `test/interop/asyncua_test.exs`.
-- Done when: All three allowed policies and three explicit token modes work; exact pin/SAN/URI/CRL validation and no downgrade remain enforced.
-- Suggested local commit: `feat: add explicit security policies and user tokens`.
+`mix wotex.native.build --workspace ABS` supplies the production helper.
+`mix wotex.software.build --workspace ABS` builds pinned disposable peers.
+`mix wotex.software.run --workspace ABS` runs every required test, native audit
+and cleanup assertion under WOP-X06. Workspace source/toolchain/options/binary
+manifests reject unrelated contents and stale reuse. No task starts hardware,
+configures a remote, publishes, tags or pushes.
 
-### WOP-P04: Create monitored items and preserve report metadata
+A requirement record names its exact asserting test, case ID, corpus SHA-256,
+source/archive/fixture identities, runtime/native cohort, command, exit status
+and resource counters. Independent-peer, same-stack C, injected-contract and
+pure-codec evidence remain distinct. Native DateTime exact-tick assertions use
+the C lane; Python's normalized timestamps cannot discharge them. Required
+missing setup is a failure under WOTEX_REQUIRE_SOFTWARE=1.
 
-- Requirements: WOP-S04; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WOP-V10, WOP-V11.
-- Change surface: new Subscription owner, asyncua CreateSubscription/MonitoredItem adapter.
-- Test destinations: `test/wotex/opcua/subscription_test.exs`, `test/native/test_subscription.py`.
-- Done when: Validate server revisions/item status, expose DataValue and overflow metadata, suppress protocol duplicates and fail unrecoverable sequence gaps.
-- Suggested local commit: `feat: create monitored items and preserve report metadata`.
-
-### WOP-P05: Close subscriptions on receiver or session loss
-
-- Requirements: WOP-S02, WOP-S04; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WOP-V06, WOP-V12, WOP-V15.
-- Change surface: Subscription, bridge task cancellation and Session shutdown.
-- Test destinations: `test/wotex/opcua/subscription_lifecycle_test.exs`.
-- Done when: Cancel deletes server resources or closes Session; terminal once, no silent reconnect and no stale native callbacks.
-- Suggested local commit: `feat: close subscriptions on receiver or session loss`.
-
-### WOP-P06: Map persistent property observations and read probes
-
-- Requirements: WOP-S05; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WOP-V13.
-- Change surface: Mapping, Transport and OPCUA.health_check/2.
-- Test destinations: `test/wotex/opcua/runtime_stream_test.exs`.
-- Done when: Maintain one-shot successful return shapes; select persistent mode explicitly for Property observation and reject unsupported Event filters.
-- Suggested local commit: `feat: map persistent property observations and read probes`.
-
-### WOP-P06a: Restore typed browsing and continuation ownership
-
-- Requirements: WOP-N01, WOP-N03, WOP-N04, WOP-N05; all preceding packages are dependencies.
-- Acceptance cases: all browse/lifecycle `WOP-Fxx` cases in `docs/specs/fixtures/contract-v1.json`; typed pure cases already bind in P01.
-- Change surface: new Browse/Page/Continuation values and owner, first-party browse/browse_next/browse_release service adapter, native root helpers, bounded one-shot translation.
-- Test destinations: `test/wotex/opcua/standalone_contract_test.exs`, `test/native/test_browse.py`.
-- Done when: native workflow needs no TD/Runtime; all pages use the original Session/deadline; full references and uncertain status survive; early stop/timeout/lost next response releases server state or closes Session; legacy child-list shape is retained without unbounded SDK convenience calls.
-- Suggested local commit: `feat: preserve typed browsing and owned continuation cleanup`.
-
-### WOP-P07: Add an independent encrypted open62541 peer
-
-- Requirements: WOP-S03, WOP-S04; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WOP-V07, WOP-V08, WOP-V09, WOP-V14.
-- Change surface: new pinned OpenSSL open62541 fixture with typed method/users/variables, a paginated child tree, and continuation/subscription counters.
-- Test destinations: `test/interop/open62541_test.exs`, `test/interop/security_fault_test.exs`.
-- Done when: All secure policies/tokens, read/write/browse/Call/monitoring, denial and replay/correlation failures have actual peer evidence and server resource counters.
-- Suggested local commit: `test: add an independent encrypted open62541 peer`.
-
-### WOP-P07a: Prove the Wotex consumer boundary
-
-- Requirements: WOP-I01, WOP-I02, WOP-I03, WOP-I04, WOP-I05, WOP-I06; all previous native/profile packages are dependencies.
-- Concrete cases: every `WOP-I-Fxx` case in `docs/specs/fixtures/wotex-integration-v1.json`, expanded with the I06 negative/context/stream matrix.
-- Change surface: root profile/0 and profile/1, Error.class, Mapping, Transport and their public core/Runtime integration; no sibling implementation changes.
-- Test destinations: `test/wotex/opcua/runtime_integration_test.exs` and explicit test-only credential/client ports.
-- Done when: every admitted mode constructs the exact BindingProfile, real ConsumedThing calls preserve route/value/metadata/identity, unsupported cells acquire nothing, unknown-effect mutations remain non-retryable through Runtime, and every declared stream closes through the real Runtime owner. Native-only operations remain native; test fixtures are runner-owned assertions, never adapter answers.
-- Suggested local commit: `feat: integrate explicit runtime profiles and failure classes`.
-
-### WOP-P08: Prove the complete secure software profile
-
-- Requirements: WOP-S01, WOP-S02, WOP-S03, WOP-S04, WOP-S05; shared C01–C10 apply wherever relevant.
-- Acceptance scenario families: WOP-V15.
-- Change surface: native audit, concurrency/stress and reproducible fixture runner.
-- Test destinations: `test/software/lifecycle_stress_test.exs`.
-- Done when: Complete version matrix, native cleanup, current vector hashes, clean-source gate and package assets; label same-stack evidence accurately.
-- Suggested local commit: `test: prove the complete secure software profile`.
-
-## Reproducible software fixture contract
-
-Add or extend `test/interop/build_software.sh` and `test/interop/run_software.sh`
-as explicit maintainer-invoked entry points. They take exactly one absolute
-workspace argument. Build requires a disposable empty workspace or a matching
-manifest; refuses an unrelated nonempty directory; downloads upstream source
-archives at the .10 pins without configuring any Git remote. Record archive
-SHA-256, source commit, compiler/SDK/library versions, build flags, binary hashes
-and fixture configuration in that workspace. Check hashes on reuse. Keep SDKs,
-native builds, keys, certificates, sockets and logs out of the source package.
-
-The run script owns only processes/containers created from that manifest, assigns
-disposable local ports/state, waits for explicit readiness with a finite timeout,
-exports the fixture configuration to tests, and traps all exits to release owned
-resources. It must return nonzero for missing tools, unavailable required kernel
-facilities, missing responses, failed assertions or cleanup failure. Do not
-convert a failed setup to an ExUnit skip. Existing hardware tests require separate
-explicit target configuration and are never selected by this runner.
-
-Use this command contract once the runner is implemented:
-
-```sh
-./test/interop/build_software.sh /absolute/disposable/fixture-workspace
-./test/interop/run_software.sh /absolute/disposable/fixture-workspace
-```
-
-The runner executes `mix test --include interop --include software --exclude hardware`
-and all required native tests/audits from .10. Add `@tag :software` only to tests
-needing this software fixture/stress setup; normal deterministic contract tests
-remain in `mix check`. The explicit runner sets `WOTEX_REQUIRE_SOFTWARE=1` and
-the test helper must make missing fixture configuration fail under that setting.
-Label same-stack, independent-stack, malformed-peer and injected-contract evidence
-separately in the results. Hardware absence is not a software test result.
-
-## Verification and commit procedure
-
-Run focused tests while implementing a package, then run `mix check` before its
-local commit. The ordinary Hex dependency path is authoritative. For the existing
-explicit sibling-development setup, `WOTEX_PATH_DEPS=1 mix check` selects local
-dependency sources; record which mode was used. Do not lower coverage, disable
-warnings, waive audits or exclude newly failing code to make the gate pass.
-Native changes additionally run their required native tests and dependency audit;
-C/C++ adapters run ASan/UBSan in the Linux fault lane.
-
-After each package, update the current-profile/README capability claims only for
-behavior that now passed, and refresh [executable evidence](../provenance/executable-evidence.md)
-with command, versions, vector paths/digests and result. Keep unexecuted requirements
-explicit. Use the author and committer required by `CLAUDE.md`; never configure
-remotes, push, tag, publish, change visibility or edit a consumer.
-
-The final package also accepts every .11 standalone and .12 integration requirement,
-then runs the full .00 C09 matrix, all .10 scenario families, .11 concrete cases and software
-peers, then a clean committed-source archive with the lockfile through `mix check`
-and out-of-tree Hex package compilation. Confirm no Application callback or
-dependency-load I/O, no missing packaged bridge assets, no downloaded SDK/build/
-credential artifacts and no consumer-specific names/history. A passing coverage
-number or stub adapter cannot substitute for a required protocol assertion.
-
-## Completion checklist
-
-- Every .11 and .12 requirement is linked to a concrete asserting test/result;
-  no new target requirement is closed merely by an identifier or valid JSON.
-- Every S and N requirement has its scenario assertions and concrete corpus
-  bindings passing, with current digests. The fixture manifest alone is not proof.
-- C01 compatibility, C02 malformed boundaries, C03 ownership, C04 errors/effects,
-  applicable C05/C06 streams, C07 native framing, C08 redaction/telemetry and
-  C09 stress/matrix each have executable evidence or an explicit scope-based
-  inapplicable entry. No missing SDK/software facility is inapplicable.
-- All required software lanes actually ran, including negative security and
-  cancellation/resource assertions where the profile defines them.
-- Current capabilities/docs agree with the implementation; target requirements
-  have not been presented as baseline achievements.
-- The clean-source/package gates pass, intended commits are local and the
-  working tree contains no uncommitted tracked implementation change.
-
-Physical-device validation, certification, consumer migration and publication
-remain separate activities. They are not reasons to leave defined software
-requirements unimplemented or to claim unexecuted software tests passed.
+Final acceptance includes all C09 operation/concurrency/lifecycle counts, all
+supported native OS/CPU cohorts, minimum/current Elixir/OTP, native dependency
+audits, ASan/UBSan, remote cleanup/expiry counters and an isolated archive-only
+consumer. Its runtime starts no Python, shell or compiler. Hardware testing,
+certification, publication and consumer parity are separate claims and do not
+excuse unfinished software. The catalogue and current-profile documentation
+state only the cells with current executed evidence.

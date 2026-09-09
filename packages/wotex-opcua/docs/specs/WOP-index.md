@@ -1,7 +1,7 @@
 # WOP specification index
 
 Start with the [software implementation sequence](../plans/software-implementation.md).
-The .00/.10/.11/.12 contracts describe required target behavior; the existing protocol
+The .00/.10/.11/.12/.13 contracts describe required target behavior; the existing protocol
 and implemented-profile documents distinguish current tested behavior from it.
 Implementation readiness does not mean implementation or conformance is complete.
 
@@ -18,3 +18,7 @@ Implementation readiness does not mean implementation or conformance is complete
 - [Versioned specification catalogue](catalogue.yaml) — owning contracts, dependencies, status and baseline evidence
 - [WOP.12 Wotex integration and evidence contract](WOP.12-wotex-integration.md)
 - [Concrete Wotex integration corpus](fixtures/wotex-integration-v1.json) — specified assertions, not a passed profile
+
+- [WOP.13 Native executable and software acceptance](WOP.13-native-executable.md)
+- [Pinned native sources](fixtures/native-sources-v1.json) — archive identities, not build evidence
+- [Native acceptance corpus](fixtures/native-contract-v1.json) — specified, unexecuted cases

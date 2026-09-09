@@ -3,7 +3,7 @@ spec:
   id: WOP.00
   title: "Software implementation rules"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-opcua
   updated: 2026-09-09
 ---
@@ -180,12 +180,12 @@ types specified in WOP.10. A credential/profile mismatch fails before I/O.
 When an original route is bound to a handle, cancellation uses that route rather
 than allowing an unrelated stop Form to redirect the cancellation.
 
-## WOP-C07 — Optional native executable contract
+## WOP-C07 — Native executable contract
 
-Applies where a Python/C/native SDK bridge is specified. The executable is an
-absolute caller-selected path; arguments are separate values, never shell text.
-Owned bridges use a persistent process only when the profile requires sessions
-or signals. One-shot profiles retain their existing documented lifecycle.
+The first-party C executable uses the exact WOP.13 build. Its path is absolute
+and consumer-selected; arguments are separate values, never shell text. Runtime
+execution has no Python dependency. The native owner is persistent; the explicit
+one-shot compatibility mode owns one temporary native session per operation.
 Use protocol version 1 JSON lines with UTF-8 encoding and a 128 KiB limit per
 line including the newline. Request IDs are opaque strings, unique within the
 bridge generation. A startup `ready` response identifies bridge protocol and
@@ -193,13 +193,15 @@ backend revision; an unsupported version/revision fails before application I/O.
 
 | Envelope | Required fields |
 | --- | --- |
-| Ready | `version: 1`, `event: "ready"`, `backend`, exact `revision` |
-| Request | `version: 1`, `id`, `operation`, `parameters`, finite `timeout_ms` |
-| Success | `version: 1`, matching `id`, `ok: true`, `result` (explicit null allowed) |
-| Failure | `version: 1`, matching `id`, `ok: false`, bounded library `error.code` and optional numeric `error.status` |
+| Ready | `version: 1`, `event: "ready"`, `backend`, exact `revision`, `clock_ms` |
+| Request | `version: 1`, `generation`, `id`, `operation`, `parameters`, finite `timeout_ms`, `deadline_ms` |
+| Success | `version: 1`, matching `generation` and `id`, `ok: true`, `result` (explicit null allowed) |
+| Failure | `version: 1`, matching `generation` and `id`, `ok: false`, closed `error` map from WOP.13 |
 | Stream report | `version: 1`, `subscription_id`, `generation`, `event`, `value`, bounded `metadata` |
+| Credit | `version: 1`, `generation`, `event: "credit"`, monotonic `sequence`, bounded `messages` and `bytes`; no response |
 
-Protocol-specific parameters and value envelopes are defined in WOP.10.
+Protocol-specific parameters and value envelopes are defined in WOP.10 and
+WOP.13. Two dedicated control slots admit cancellation/close under full load.
 Reject duplicate JSON keys, fields outside the selected envelope/operation
 allowlist, extra responses for one ID,
 malformed JSON, non-finite numbers, wrong IDs and incomplete lines at EOF.
@@ -230,7 +232,7 @@ Avoid a global registry for sessions, receivers or protocol IDs.
 
 ## WOP-C09 — Mandatory software evidence
 
-Each requirement ID in WOP.10/.11/.12 requires concrete acceptance cases with
+Each requirement ID in WOP.10/.11/.12/.13 requires concrete acceptance cases with
 exact inputs and expected output. The V tables are scenario families, not
 executed vectors. Bind concrete fixture IDs to actual assertions before accepting
 a requirement; fixture presence alone is insufficient. Add valid, invalid, boundary, forged-struct,

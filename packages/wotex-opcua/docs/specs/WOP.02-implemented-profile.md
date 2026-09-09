@@ -10,6 +10,10 @@ spec:
 
 # WOP.02 Implemented OPC UA profile
 
+This document inventories the current Python-backed implementation. It does not
+accept the native target in WOP.10–WOP.13. Python is a runtime requirement of this
+existing adapter; the accepted native architecture has no runtime Python process.
+
 The OPC 10101 URI subset is
 `opc.tcp://host:port/path?id=percent-encoded-NodeId`. A single `id` query parameter
 is required; default port is 4840. Property read/write map to Value-attribute
@@ -46,7 +50,7 @@ bounded result channel and cannot count as success. Stdout is a single JSON
 result; failures expose no native exception text. Read scalars retain their
 Variant type and StatusCode. ByteStrings use an explicit base64 representation.
 
-The certificate profile is described in README. It requires a current, signed
+The implemented certificate profile requires a current, signed
 issuer CRL and a leaf directly issued by a trusted self-signed CA. It is a
 purposefully limited trust profile; intermediate chains and certificate renewal
 are unsupported. Basic256Sha256 SignAndEncrypt is mandatory. No additional
