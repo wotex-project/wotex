@@ -145,8 +145,8 @@ defmodule Wotex.CoAP.ConnectionTest do
 
     assert {:error, _} = Connection.request(nil, nil, 0)
     assert {:error, _} = CoAP.receive(nil, 1)
-    assert :not_supported = CoAP.subscribe(nil, "/")
-    assert :not_supported = CoAP.unsubscribe(nil, "/")
+    assert {:error, _} = CoAP.subscribe(nil, "/")
+    assert {:error, _} = CoAP.unsubscribe(nil, "/")
     assert CoAP.capabilities().max_payload_size == 1152
   end
 

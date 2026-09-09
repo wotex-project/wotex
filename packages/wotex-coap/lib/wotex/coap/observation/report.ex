@@ -18,12 +18,12 @@ defmodule Wotex.CoAP.Observation.Report do
           content_format: 0..65_535 | nil,
           max_age: 0..4_294_967_295
         }
-  @opaque t :: %__MODULE__{
-            first: Message.t(),
-            metadata: metadata(),
-            received_at: integer(),
-            message: Message.t() | nil
-          }
+  @type t :: %__MODULE__{
+          first: Message.t(),
+          metadata: metadata(),
+          received_at: integer(),
+          message: Message.t() | nil
+        }
 
   @doc "Validates one bounded wire report at an explicit monotonic arrival time."
   @spec new(term(), integer()) :: {:ok, t()} | {:error, Error.t()}

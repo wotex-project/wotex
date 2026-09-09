@@ -195,7 +195,12 @@ defmodule Wotex.CoAP.BlockwiseTest do
   end
 
   test "invalid settings and forged messages fail before the exchange callback" do
-    never = fn _, _ -> flunk("must not perform I/O") end
+    test = self()
+
+    never = fn _, _ ->
+      send(test, :unexpected_callback)
+      flunk("must not perform I/O")
+    end
 
     for opts <- [
           nil,
@@ -241,6 +246,7 @@ defmodule Wotex.CoAP.BlockwiseTest do
 
     assert :ok = Codec.validate_options(%{request() | options: [{12, <<0, 0>>}]})
     assert {:error, _} = CoAP.message(%{method: :get, path: "/", confirmable: :yes})
+    refute_received :unexpected_callback
   end
 
   property "WCO-S02 WCO-V04 WCO-V10 first-report continuation retains original identity" do
@@ -292,7 +298,12 @@ defmodule Wotex.CoAP.BlockwiseTest do
 
   test "WCO-S02 WCO-V04 WCO-V10 continuation rejects invalid first reports before callback" do
     first = report(:binary.copy("x", 17), 16)
-    never = fn _, _ -> flunk("invalid first report must not perform I/O") end
+    test = self()
+
+    never = fn _, _ ->
+      send(test, :unexpected_callback)
+      flunk("invalid first report must not perform I/O")
+    end
 
     for invalid <- [
           nil,
@@ -332,6 +343,7 @@ defmodule Wotex.CoAP.BlockwiseTest do
     assert {{:error, _}, :untouched} = Blockwise.continue(request(), first, [], :untouched, nil)
     assert {{:error, _}, :untouched} = Blockwise.run(request(), [], :untouched, nil)
     assert {:error, _} = Blockwise.config([{:block_size, 16} | nil])
+    refute_received :unexpected_callback
   end
 
   test "WCO-S02 WCO-V04 first-report continuation never returns an incomplete or changed prefix" do
@@ -389,13 +401,20 @@ defmodule Wotex.CoAP.BlockwiseTest do
 
   test "WCO-S02 WCO-V04 Size2 limits apply even to responses without a Block2 descriptor" do
     first = %{report("x", 16) | options: [{28, Codec.uint(100)}]}
-    never = fn _, _ -> flunk("oversized first response must not acquire another exchange") end
+    test = self()
+
+    never = fn _, _ ->
+      send(test, :unexpected_callback)
+      flunk("oversized first response must not acquire another exchange")
+    end
 
     assert {{:error, %{code: :body_limit}}, :untouched} =
              Blockwise.continue(request(), first, [max_body_size: 10], :untouched, never)
 
     assert {{:error, %{code: :body_limit}}, 1} =
              Blockwise.run(request(), [max_body_size: 10], 0, fn _, _ -> {{:ok, first}, 1} end)
+
+    refute_received :unexpected_callback
   end
 
   test "WCO-C02 WCO-S02 malformed callback results stay structured and preserve callback state" do

@@ -2,7 +2,7 @@ defmodule Wotex.CoAP.Connection do
   @moduledoc "Explicit UDP socket owner with bounded RFC 7252 request correlation and retransmission."
 
   use GenServer
-  alias Wotex.CoAP.{Blockwise, Codec, Error, Exchange, Message}
+  alias Wotex.CoAP.{Blockwise, Codec, Error, Exchange, Message, Observation, Subscription}
   alias Wotex.CoAP.Datagram.UDP
   @keys [:host, :port, :timeout, :ack_timeout, :owner, :scheme, :dtls_mode, :datagram]
 
@@ -30,6 +30,64 @@ defmodule Wotex.CoAP.Connection do
           {:ok, Message.t()} | {:error, Error.t()}
   def continue(pid, request, first, timeout, options \\ []),
     do: submit(pid, request, timeout, {:continue, first}, options)
+
+  @doc "Establishes one dedicated Observe relationship and returns only after its initial body."
+  @spec observe(pid(), binary(), pid(), keyword(), pos_integer()) ::
+          {:ok, Subscription.t()} | {:error, Error.t()}
+  def observe(pid, path, receiver, options, timeout)
+      when is_integer(timeout) and timeout in 1..60_000 do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    with {:ok, config} <- Observation.options(path, receiver, options),
+         :owned <- identity(pid),
+         do: safe_observe(pid, config, deadline, timeout),
+         else: (
+           {:error, _} = error -> error
+           _ -> failure(:invalid_session)
+         )
+  end
+
+  def observe(_, _, _, _, _), do: failure(:invalid_observation_options)
+
+  @doc "Cancels the recorded generation without allowing a foreign handle to redirect cleanup."
+  @spec unobserve(pid(), Subscription.t(), pos_integer()) :: :ok | {:error, Error.t()}
+  def unobserve(pid, handle, timeout) when is_integer(timeout) and timeout in 1..60_000 do
+    with :ok <- Subscription.validate(handle, pid) do
+      case identity(pid) do
+        :closed -> :ok
+        :invalid -> failure(:invalid_subscription)
+        :owned -> cancel_observation(pid, handle, timeout)
+      end
+    end
+  end
+
+  def unobserve(_, _, _), do: failure(:invalid_subscription)
+
+  @doc false
+  @spec observation_exchange(pid(), reference(), Message.t(), term(), pos_integer()) ::
+          {:ok, Message.t()} | {:ok, Message.t(), integer()} | {:error, Error.t()}
+  def observation_exchange(pid, capability, message, operation, timeout),
+    do: submit(pid, message, timeout, {:observation, capability, operation}, [])
+
+  @doc false
+  @spec observation_abort(pid(), reference()) :: :ok | {:error, Error.t()}
+  def observation_abort(pid, capability) do
+    if identity(pid) == :owned,
+      do: GenServer.call(pid, {:observation_abort, capability}, 1000),
+      else: failure(:invalid_session)
+  catch
+    :exit, _ -> failure(:connection_closed)
+  end
+
+  @doc false
+  @spec observation_terminal(pid(), reference(), Error.t()) :: :ok | {:error, Error.t()}
+  def observation_terminal(pid, capability, %Error{} = error) do
+    if identity(pid) == :owned,
+      do: GenServer.call(pid, {:observation_terminal, capability, error}, 1000),
+      else: failure(:connection_closed)
+  catch
+    :exit, _ -> failure(:connection_closed)
+  end
 
   @doc "Closes only a validated local connection owner, with bounded cleanup escalation."
   @spec close(pid()) :: :ok | {:error, Error.t()}
@@ -77,12 +135,14 @@ defmodule Wotex.CoAP.Connection do
        mid: mid,
        history: %{},
        responses: %{},
-       response_order: 0
+       response_order: 0,
+       observation: nil
      }}
   end
 
   @impl GenServer
   def handle_call(:close, _, state) do
+    best_effort_cancel(state)
     result = if state.handle, do: adapter_call(state, :close), else: :ok
     {:stop, :normal, result, %{state | handle: nil}}
   end
@@ -98,12 +158,50 @@ defmodule Wotex.CoAP.Connection do
   def handle_call(:ready, _, %{phase: {:failed, error}} = state),
     do: {:stop, :normal, {:error, error}, state}
 
+  def handle_call({:observe, config, deadline, timeout}, from, %{phase: :ready} = state) do
+    cond do
+      state.observation -> {:reply, failure(:observation_active), state}
+      not is_nil(state.active) or map_size(state.calls) > 0 -> {:reply, failure(:busy), state}
+      remaining(deadline) == 0 -> {:reply, failure(:timeout), state}
+      true -> start_observation(state, config, deadline, timeout, from)
+    end
+  end
+
+  def handle_call({:observation_owner, handle}, _, state) do
+    case state.observation do
+      %{handle: ^handle, pid: pid} -> {:reply, {:ok, pid}, state}
+      _ -> {:reply, failure(:invalid_subscription), state}
+    end
+  end
+
+  def handle_call({:observation_established, capability}, _, state) do
+    if state.observation && state.observation.capability == capability,
+      do: {:reply, :ok, %{state | observation: %{state.observation | from: nil}}},
+      else: {:reply, failure(:invalid_subscription), state}
+  end
+
+  def handle_call({:observation_terminal, capability, error}, _, state) do
+    if state.observation && state.observation.capability == capability,
+      do: {:reply, :ok, emit_terminal(state, error)},
+      else: {:reply, failure(:invalid_subscription), state}
+  end
+
+  def handle_call({:observation_abort, capability}, _, state) do
+    if state.observation && state.observation.capability == capability do
+      {:reply, :ok,
+       if(state.active, do: finish(state, state.active, failure(:canceled)), else: state)}
+    else
+      {:reply, failure(:invalid_subscription), state}
+    end
+  end
+
   def handle_call(
         {:submit, message, kind, options, deadline, receipt},
         from,
         %{phase: :ready} = state
       ) do
     cond do
+      not allowed?(state, kind) -> {:reply, failure(:observation_active), state}
       remaining(deadline) == 0 -> {:reply, failure(:timeout), state}
       map_size(state.calls) >= 64 -> {:reply, failure(:busy), state}
       true -> {:noreply, admit(state, from, message, kind, options, deadline, receipt)}
@@ -152,7 +250,7 @@ defmodule Wotex.CoAP.Connection do
     end
   end
 
-  def handle_info({:wotex_datagram, generation, _failure}, %{generation: generation} = state),
+  def handle_info({:wotex_datagram, generation, _}, %{generation: generation} = state),
     do: {:stop, :normal, state}
 
   def handle_info({:retry, ref, exchange_ref}, %{active: ref} = state) do
@@ -164,8 +262,11 @@ defmodule Wotex.CoAP.Connection do
     end
   end
 
-  def handle_info({:deadline, ref}, %{active: ref} = state),
-    do: {:stop, :normal, finish(state, ref, failure(:timeout))}
+  def handle_info({:deadline, ref}, %{active: ref} = state) do
+    observation = match?({:observation, _, _}, Map.fetch!(state.calls, ref).kind)
+    state = finish(state, ref, failure(:timeout))
+    if observation, do: {:noreply, state}, else: {:stop, :normal, state}
+  end
 
   def handle_info({:deadline, ref}, state), do: {:noreply, finish(state, ref, failure(:timeout))}
 
@@ -179,9 +280,14 @@ defmodule Wotex.CoAP.Connection do
   end
 
   def handle_info({:DOWN, monitor, :process, _, _}, state) do
-    if monitor in [state.owner_monitor, state.creator_monitor, state.adapter_monitor],
-      do: {:stop, :normal, state},
-      else: caller_down(state, monitor)
+    if monitor in [
+         state.owner_monitor,
+         state.creator_monitor,
+         state.adapter_monitor,
+         if(state.observation, do: state.observation.monitor)
+       ],
+       do: {:stop, :normal, state},
+       else: caller_down(state, monitor)
   end
 
   def handle_info({:EXIT, worker, reason}, %{open_worker: worker, phase: :opening} = state)
@@ -205,6 +311,16 @@ defmodule Wotex.CoAP.Connection do
     stop_worker(state.open_worker)
     Process.cancel_timer(state.startup_timer)
     if state.active, do: stop_worker(Map.fetch!(state.calls, state.active).worker)
+    best_effort_cancel(state)
+    emit_terminal(state, Error.new(:connection_closed))
+
+    if state.observation do
+      if state.observation.from,
+        do: GenServer.reply(state.observation.from, failure(:connection_closed))
+
+      Process.exit(state.observation.pid, :kill)
+    end
+
     if state.handle, do: adapter_call(state, :close)
     Enum.each(state.calls, fn {_, call} -> reply(call, failure(:connection_closed)) end)
   end
@@ -228,6 +344,14 @@ defmodule Wotex.CoAP.Connection do
 
   defp validate(message, {:continue, first}, options),
     do: Blockwise.validate_continuation(message, first, options)
+
+  defp validate(message, {:observation, capability, {:continue, first}}, [])
+       when is_reference(capability),
+       do: Blockwise.validate_continuation(message, first, [])
+
+  defp validate(message, {:observation, capability, operation}, [])
+       when is_reference(capability) and operation in [:register, :renew, :cancel],
+       do: validate(message, :request, [])
 
   defp validate(%Message{type: type, code: code} = message, :request, [])
        when type in [:con, :non] and code in 1..4 do
@@ -362,7 +486,7 @@ defmodule Wotex.CoAP.Connection do
       |> next()
     else
       owner = self()
-      token = unique_token(state.responses, 8, excluded_token(call.kind))
+      token = call_token(state, call)
 
       case token do
         {:ok, token} ->
@@ -388,8 +512,15 @@ defmodule Wotex.CoAP.Connection do
         :transfer ->
           elem(Blockwise.run(call.message, call.options, nil, exchange), 0)
 
-        {:continue, first} ->
+        {kind, first} when kind == :continue ->
           elem(Blockwise.continue(call.message, first, call.options, nil, exchange), 0)
+
+        {:observation, _, {:continue, first}} ->
+          elem(Blockwise.continue(call.message, first, [], nil, exchange), 0)
+
+        {:observation, _, _} ->
+          {result, _} = exchange.(call.message, nil)
+          terminal(result)
 
         :request ->
           {result, _} = exchange.(call.message, nil)
@@ -399,6 +530,7 @@ defmodule Wotex.CoAP.Connection do
     send(owner, {:completed, ref, result})
   end
 
+  defp terminal({:ok, %Message{code: 95}, _}), do: failure(:incomplete_response)
   defp terminal({:ok, %Message{code: 95}}), do: failure(:incomplete_response)
   defp terminal(result), do: result
 
@@ -414,6 +546,7 @@ defmodule Wotex.CoAP.Connection do
       state = %{state | mid: rem(state.mid + 1, 65_536), history: Map.put(history, state.mid, now)}
       call = %{call | sent: true, exchange: arm(record, ref)}
       state = put_call(state, ref, call)
+      state = cancellation_started(state, call.kind)
 
       case transmit(state, exchange.bytes) do
         :ok -> {:noreply, state}
@@ -467,6 +600,9 @@ defmodule Wotex.CoAP.Connection do
           control(state, :ack, reply.message_id)
           state
 
+        observation_report?(state, reply) ->
+          notify_observation(state, reply)
+
         is_nil(state.active) ->
           unknown(state, reply)
 
@@ -495,7 +631,7 @@ defmodule Wotex.CoAP.Connection do
 
           result ->
             case accept_con(state, reply) do
-              {:ok, state} -> exchange_reply(state, result)
+              {:ok, state} -> exchange_reply(cancellation_confirmed(state, result), result)
               {:error, error} -> exchange_reply(state, {:error, error})
             end
         end
@@ -561,9 +697,15 @@ defmodule Wotex.CoAP.Connection do
   defp exchange_reply(state, result) do
     call = Map.fetch!(state.calls, state.active)
     Process.cancel_timer(call.exchange.timer)
-    GenServer.reply(call.exchange.from, result)
+    GenServer.reply(call.exchange.from, received_at(call.kind, result))
     put_call(state, state.active, %{call | exchange: nil})
   end
+
+  defp received_at({:observation, _, operation}, {:ok, message})
+       when operation in [:register, :renew],
+       do: {:ok, message, System.monotonic_time(:millisecond)}
+
+  defp received_at(_, result), do: result
 
   defp finish(state, ref, result) do
     case Map.pop(state.calls, ref) do
@@ -618,6 +760,18 @@ defmodule Wotex.CoAP.Connection do
   defp remaining(deadline), do: max(0, deadline - System.monotonic_time(:millisecond))
   defp failure(code), do: {:error, Error.new(code)}
 
+  defp call_token(state, %{kind: {:observation, _, operation}, message: message})
+       when operation in [:register, :renew, :cancel],
+       do:
+         if(message.token == state.observation.handle_token,
+           do: {:ok, message.token},
+           else: failure(:invalid_subscription)
+         )
+
+  defp call_token(state, call),
+    do: unique_token(state.responses, 8, excluded_token(call.kind))
+
+  defp excluded_token({:observation, _, {:continue, first}}), do: first.token
   defp excluded_token({:continue, first}), do: first.token
   defp excluded_token(_), do: nil
 
@@ -629,6 +783,158 @@ defmodule Wotex.CoAP.Connection do
     if token == excluded or Enum.any?(responses, fn {{_, previous}, _} -> previous == token end),
       do: unique_token(responses, remaining - 1, excluded),
       else: {:ok, token}
+  end
+
+  defp allowed?(%{observation: nil}, {:observation, _, _}), do: false
+  defp allowed?(%{observation: nil}, _), do: true
+
+  defp allowed?(state, {:observation, capability, _}),
+    do: state.observation.capability == capability
+
+  defp allowed?(_, _), do: false
+
+  defp safe_observe(pid, config, deadline, timeout) do
+    GenServer.call(pid, {:observe, config, deadline, timeout}, timeout + 1000)
+  catch
+    :exit, _ -> failure(:connection_closed)
+  end
+
+  defp cancel_observation(pid, handle, timeout) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    with {:ok, owner} <- GenServer.call(pid, {:observation_owner, handle}, timeout) do
+      GenServer.call(owner, {:cancel, handle, deadline}, remaining(deadline) + 1000)
+    end
+  catch
+    :exit, {reason, _} when reason in [:normal, :noproc] ->
+      :ok
+
+    :exit, _ ->
+      close(pid)
+      failure(:cleanup_timeout)
+  end
+
+  defp start_observation(state, config, deadline, timeout, from) do
+    with {:ok, token} <- unique_token(state.responses, 8, nil),
+         {:ok, handle} <- Subscription.new(self(), make_ref(), state.generation) do
+      capability = make_ref()
+      request = %{config.request | token: token}
+
+      config =
+        Map.merge(config, %{
+          request: request,
+          handle: handle,
+          capability: capability,
+          from: from,
+          deadline: deadline,
+          timeout: timeout
+        })
+
+      {:ok, owner} = Observation.start(config)
+
+      observation = %{
+        pid: owner,
+        monitor: Process.monitor(owner),
+        handle: handle,
+        capability: capability,
+        handle_token: token,
+        request: request,
+        receiver: config.receiver,
+        terminal: false,
+        from: from,
+        cancellation_started: false,
+        cancellation_confirmed: false
+      }
+
+      {:noreply, %{state | observation: observation}}
+    else
+      error -> {:reply, error, state}
+    end
+  end
+
+  defp observation_report?(%{observation: nil}, _), do: false
+
+  defp observation_report?(state, reply) do
+    observation = state.observation
+    matching = reply.token == observation.handle_token and reply.type in [:con, :non]
+
+    if state.active do
+      call = Map.fetch!(state.calls, state.active)
+      exchange = call.exchange
+
+      cancellation_notification?(call, reply, observation.handle_token) or
+        (matching and (is_nil(exchange) or exchange.value.request.token != reply.token))
+    else
+      matching
+    end
+  end
+
+  defp cancellation_notification?(%{kind: {:observation, _, :cancel}}, reply, token),
+    do: reply.token == token and reply.type in [:con, :non, :ack] and Codec.option(reply, 6) != []
+
+  defp cancellation_notification?(_, _, _), do: false
+
+  defp notify_observation(state, reply) do
+    case accept_con(state, reply) do
+      {:ok, state} ->
+        send(
+          state.observation.pid,
+          {:report, state.generation, reply, System.monotonic_time(:millisecond)}
+        )
+
+        state
+
+      {:error, error} ->
+        send(state.observation.pid, {:transport_failed, state.generation, error})
+        state
+    end
+  end
+
+  defp cancellation_started(state, {:observation, _, :cancel}),
+    do: %{state | observation: %{state.observation | cancellation_started: true}}
+
+  defp cancellation_started(state, _), do: state
+
+  defp cancellation_confirmed(state, {:ok, reply}) do
+    call = Map.fetch!(state.calls, state.active)
+
+    if match?({:observation, _, :cancel}, call.kind) and reply.code in 64..94 and
+         Codec.option(reply, 6) == [],
+       do: %{state | observation: %{state.observation | cancellation_confirmed: true}},
+       else: state
+  end
+
+  defp cancellation_confirmed(state, _), do: state
+
+  defp emit_terminal(%{observation: nil} = state, _), do: state
+
+  defp emit_terminal(state, error) do
+    observation = state.observation
+
+    if not observation.terminal and not observation.cancellation_confirmed and
+         Process.alive?(observation.receiver),
+       do: send(observation.receiver, {:wotex_coap, observation.handle.reference, {:error, error}})
+
+    %{state | observation: %{observation | terminal: true, from: nil}}
+  end
+
+  defp best_effort_cancel(%{observation: nil}), do: :ok
+  defp best_effort_cancel(%{handle: nil}), do: :ok
+
+  defp best_effort_cancel(state) do
+    observation = state.observation
+    now = System.monotonic_time(:millisecond)
+    timestamp = Map.get(state.history, state.mid, now - 247_000)
+
+    if not observation.cancellation_started and now - timestamp >= 247_000 do
+      request = %{
+        observation.request
+        | message_id: state.mid,
+          options: [{6, <<1>>} | observation.request.options]
+      }
+
+      with {:ok, bytes} <- Codec.encode(request), do: transmit(state, bytes)
+    end
   end
 
   defp identity(pid) when is_pid(pid) and node(pid) == node() and pid != self() do

@@ -129,13 +129,38 @@ defmodule Wotex.CoAP do
     end
   end
 
-  @doc "Observe transport graduation is separate from pure freshness support."
-  @spec subscribe(term(), term()) :: :not_supported
-  def subscribe(_, _), do: :not_supported
+  @doc "Establishes one dedicated native observation after validating its initial representation."
+  @spec subscribe(session(), binary() | map()) ::
+          {:ok, Wotex.CoAP.Subscription.t()} | {:error, Error.t()}
+  def subscribe(session, path) when is_binary(path),
+    do: subscribe(session, %{path: path})
 
-  @doc "No observation is created by the baseline exchange profile."
-  @spec unsubscribe(term(), term()) :: :not_supported
-  def unsubscribe(_, _), do: :not_supported
+  def subscribe(session, %{path: path} = input) when map_size(input) <= 4 do
+    with :ok <- session(session),
+         true <- Map.keys(input) -- [:path, :receiver, :renew, :max_queue_length] == [] do
+      Connection.observe(
+        session.pid,
+        path,
+        Map.get(input, :receiver, self()),
+        [
+          renew: Map.get(input, :renew, true),
+          max_queue_length: Map.get(input, :max_queue_length, 1000)
+        ],
+        session.timeout
+      )
+    else
+      {:error, _} = error -> error
+      _ -> {:error, Error.new(:invalid_observation_options)}
+    end
+  end
+
+  def subscribe(_, _), do: {:error, Error.new(:invalid_observation_options)}
+
+  @doc "Cancels the exact original subscription and releases its dedicated session."
+  @spec unsubscribe(session(), Wotex.CoAP.Subscription.t()) :: :ok | {:error, Error.t()}
+  def unsubscribe(session, handle) do
+    with :ok <- session(session), do: Connection.unobserve(session.pid, handle, session.timeout)
+  end
 
   defp method(session, method, path, payload, options) do
     with {:ok, options} <- helper_options(options, %{}),
