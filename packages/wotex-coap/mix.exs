@@ -4,6 +4,10 @@ defmodule WotexCoAP.MixProject do
   @version "0.1.0-dev"
   @source_url "https://github.com/wotex-project/wotex-coap"
 
+  @ssl_paths Enum.map([:ssl, :public_key, :asn1, :inets, :runtime_tools], fn app ->
+               :code.lib_dir(app, :ebin) |> List.to_string()
+             end)
+
   def project do
     [
       app: :wotex_coap,
@@ -92,6 +96,7 @@ defmodule WotexCoAP.MixProject do
   defp aliases do
     [
       setup: ["deps.get", "deps.compile"],
+      dialyzer: ["compile", &load_ssl_types/1, "dialyzer"],
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
       "test.cover": ["coveralls"],
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
@@ -130,10 +135,15 @@ defmodule WotexCoAP.MixProject do
     ]
   end
 
+  defp load_ssl_types(_) do
+    # Make the optional OTP facility available to static analysis without starting it.
+    Enum.each(@ssl_paths, &Code.prepend_path/1)
+  end
+
   defp dialyzer do
     [
       plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
-      plt_add_apps: [:mix, :ex_unit],
+      plt_add_apps: [:mix, :ex_unit, :ssl],
       flags: [:error_handling, :missing_return, :underspecs, :extra_return]
     ]
   end

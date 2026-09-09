@@ -7,6 +7,21 @@ defmodule Wotex.CoAP.Check.ApplicationFree do
       System.halt(1)
     end
 
+    paths = Enum.flat_map(:code.get_path(), &["-pa", List.to_string(&1)])
+
+    script = """
+    nil = Process.whereis(:ssl_sup)
+    {:ok, _} = Application.ensure_all_started(:wotex_coap)
+    nil = Process.whereis(:ssl_sup)
+    {:ok, value} = Wotex.CoAP.Security.new(mode: :dtls_psk, identity: "client", key: <<0::128>>)
+    :ok = Wotex.CoAP.Security.validate(value)
+    nil = Process.whereis(:ssl_sup)
+    IO.puts("WCO-C01 explicit SSL startup passed")
+    """
+
+    {output, status} = System.cmd("elixir", paths ++ ["-e", script], stderr_to_stdout: true)
+    IO.write(output)
+    unless status == 0, do: System.halt(1)
     :ok
   end
 end

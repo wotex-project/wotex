@@ -12,10 +12,11 @@ defmodule Wotex.CoAP.Connection do
     Lifetime,
     Message,
     Observation,
+    Security,
     Subscription
   }
 
-  alias Wotex.CoAP.Datagram.UDP
+  alias Wotex.CoAP.Datagram.{DTLS, UDP}
 
   @keys [
     :host,
@@ -25,6 +26,7 @@ defmodule Wotex.CoAP.Connection do
     :owner,
     :scheme,
     :dtls_mode,
+    :security,
     :datagram,
     :execution,
     :observation_kind,
@@ -1176,12 +1178,17 @@ defmodule Wotex.CoAP.Connection do
   end
 
   defp configuration_values(values, host) do
-    datagram = Map.get(values, :datagram, {UDP, []})
+    scheme = Map.get(values, :scheme, :coap)
+
+    datagram =
+      if scheme == :coaps,
+        do: {DTLS, [security: Map.get(values, :security)]},
+        else: Map.get(values, :datagram, {UDP, []})
 
     {datagram,
      %{
        host: host,
-       port: Map.get(values, :port, 5683),
+       port: Map.get(values, :port, if(scheme == :coaps, do: 5684, else: 5683)),
        timeout: Map.get(values, :timeout, 5000),
        ack_timeout: Map.get(values, :ack_timeout),
        owner: Map.get(values, :owner, self()),
@@ -1191,9 +1198,20 @@ defmodule Wotex.CoAP.Connection do
   end
 
   defp valid_security_config?(values) do
-    if Map.get(values, :scheme, :coap) == :coap and Map.get(values, :dtls_mode, :none) == :none,
-      do: :ok,
-      else: failure(:unsupported_security)
+    case {Map.get(values, :scheme, :coap), Map.get(values, :dtls_mode, :none)} do
+      {:coap, :none} ->
+        if is_nil(Map.get(values, :security)) and not match?({DTLS, _}, Map.get(values, :datagram)),
+          do: :ok,
+          else: failure(:unsupported_security)
+
+      {:coaps, :none} ->
+        if Map.has_key?(values, :datagram),
+          do: failure(:unsupported_security),
+          else: Security.validate(Map.get(values, :security))
+
+      _ ->
+        failure(:unsupported_security)
+    end
   end
 
   defp valid_port_config?(port) when is_integer(port) and port in 1..65_535, do: :ok
@@ -1212,7 +1230,7 @@ defmodule Wotex.CoAP.Connection do
   defp valid_execution_config?(execution, observation_kind, datagram) do
     valid? =
       valid_execution?(execution) and observation_kind in [:property, :event] and
-        (execution == :system or not match?({UDP, _}, datagram))
+        (execution == :system or not match?({adapter, _} when adapter in [UDP, DTLS], datagram))
 
     if valid?, do: :ok, else: failure(:invalid_execution)
   end
