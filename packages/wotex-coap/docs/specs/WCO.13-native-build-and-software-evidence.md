@@ -3,7 +3,7 @@ spec:
   id: WCO.13
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.5.0
+  version: 1.6.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -168,6 +168,26 @@ The operation-specific parameter fields are:
 | cancel | `subscription_id`, `generation`; original route/token only |
 | close | empty object |
 
+Every request envelope contains exactly its five C07 fields. `timeout_ms` is an
+integer in 1..60000; no operation receives an infinite or renewed wire deadline.
+The native `open.security` object has all seven canonical fields: `mode` is
+`"oscore"`; `master_secret`, `master_salt`, `sender_id` and `recipient_id` use
+C07 bytes; `id_context` is explicit null or C07 bytes; `context_store` is a
+NUL-free absolute UTF-8 path of at most 4096 bytes. The BEAM sender normalizes an
+omitted public ID Context to null. Native host values are numeric IPv4/IPv6
+text, ports are 1..65535, and generations are nonzero unsigned 64-bit integers.
+Optional request `accept`, `content_format` and `body_id` fields are omitted
+when absent, never replaced by null. Observe requires its explicit kind.
+
+The [native command receipt](../provenance/native-command-v1.json) accepts only
+structural command admission: exact field allowlists, scalar/byte/path bounds
+and erased failed outputs. The decoder performs no file/socket/SDK acquisition.
+Its parameter object borrows the parser pool until reset; queued work must copy
+validated values into its own bounded storage before releasing that pool.
+Admission does not prove a valid body reference, remaining deadline, free queue
+slot, native session state or wire-size budget; the worker checks those before
+SDK dispatch. Live worker/Port tests remain separate.
+
 Paths and content-format numbers obey .10/.11. Body chunks decode to at most
 32,768 bytes; offsets must exactly equal the next expected offset. The byte
 envelope admits only its exact `type` and `base64` fields. Its base64 uses the
@@ -181,12 +201,29 @@ unfinished inbound body and one unfinished outbound body exist at a time.
 associated operation or freed at deadline/close. Uploading a body sends no CoAP
 traffic. Empty payload and absent payload remain distinct input choices.
 
-Responses and stream reports use the same `body_begin`/`body_chunk`/`body_end`
-events on stdout, with `id` naming their originating call or subscription and
+Responses and stream reports carry a complete payload inline when it decodes to
+at most 32,768 bytes, or use `body_begin`/`body_chunk`/`body_end` events for a larger
+body. The two choices are mutually exclusive. Body events on stdout use `id`
+naming their originating call or subscription and
 `generation` for subscriptions. The begin event carries `body_id`, `length`
 and `sha256`; chunk carries `body_id`, `offset`, `data`; end carries `body_id`.
-The final success/report envelope references `body_id` and carries the validated
-CoAP code/options/metadata. No partial chunk reaches the public API. A mismatched
+The success `result` or report `value` is an exact message object with `type`
+(`con`, `non`, `ack` or `rst`), `code` (0..255), `message_id` (0..65535), `token`
+(C07 bytes, 0..8 bytes), and `options` (at most 64 ordered objects with exact
+`number` and C07-byte `value` fields). Option numbers are 0..65535 and each value
+is at most 1152 bytes; the existing stricter known-option length, repeatability,
+critical-option and aggregate header limits apply. The message has exactly one
+of `payload` (C07 bytes, at most 32768 decoded bytes) or `body_id` (a previously
+completed body for this originating request/subscription). Empty payload is an
+explicit empty bytes envelope. Both fields, or neither field, fail admission.
+A failed body never permits a final success or public partial delivery. A body
+reference is resolved once before public construction; caller-visible Messages
+contain complete binary payloads, never native body IDs.
+
+An inline report consumes one report-frame credit. Each begin, chunk, end and
+final envelope of a streamed report consumes its own credit in order. A 32769-byte
+report using 32768-byte chunks consumes five credits. Frame/depth limits are
+checked independently of decoded body size. No partial chunk reaches the public API. A mismatched
 hash, missing chunk, interleaved body, extra bytes or late generation is a
 terminal protocol failure. Chunk framing changes no public .10 body limit.
 The body limit is enforced before allocation and before base64 decoding.
@@ -373,4 +410,9 @@ and distinct C07 request IDs. Each report fits one frame and
 the test owns a writable drained control channel while the BEAM owner is
 suspended; the ninth report occupies the single pending Event slot and the
 tenth triggers terminal loss. No production adapter receives expected values.
+`repeat_byte` objects in corpus byte values are runner directives: expand the
+specified octet/count to bytes and base64-encode before serializing the actual
+C07 envelope. The directive object itself never reaches the native decoder.
+Cases F10–F15 assert inline threshold/plus-one, ambiguous or missing payload
+fields, failed-body terminality and inline/streamed report credit accounting.
 These representative cases supplement, rather than replace, the N05 matrix.

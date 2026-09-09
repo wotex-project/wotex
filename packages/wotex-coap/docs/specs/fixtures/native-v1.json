@@ -198,6 +198,201 @@
         "terminal_frames": 0,
         "subscriptions_after": 1
       }
+    },
+    {
+      "id": "WCO-N-F10",
+      "operation": "decode_response",
+      "input": {
+        "version": 1,
+        "id": "r1",
+        "ok": true,
+        "result": {
+          "type": "ack",
+          "code": 69,
+          "message_id": 1,
+          "token": {
+            "type": "bytes",
+            "base64": "AQ=="
+          },
+          "options": [],
+          "payload": {
+            "type": "bytes",
+            "base64": {
+              "repeat_byte": 65,
+              "count": 32768
+            }
+          }
+        }
+      },
+      "expected": {
+        "decoded_payload_length": 32768,
+        "complete_values": 1,
+        "generation_closed": false
+      }
+    },
+    {
+      "id": "WCO-N-F11",
+      "operation": "decode_response",
+      "input": {
+        "version": 1,
+        "id": "r1",
+        "ok": true,
+        "result": {
+          "type": "ack",
+          "code": 69,
+          "message_id": 1,
+          "token": {
+            "type": "bytes",
+            "base64": "AQ=="
+          },
+          "options": [],
+          "payload": {
+            "type": "bytes",
+            "base64": {
+              "repeat_byte": 65,
+              "count": 32769
+            }
+          }
+        }
+      },
+      "expected": {
+        "error": "native_protocol_error",
+        "complete_values": 0,
+        "generation_closed": true
+      }
+    },
+    {
+      "id": "WCO-N-F12",
+      "operation": "decode_response",
+      "input": {
+        "version": 1,
+        "id": "r1",
+        "ok": true,
+        "result": {
+          "type": "ack",
+          "code": 69,
+          "message_id": 1,
+          "token": {
+            "type": "bytes",
+            "base64": "AQ=="
+          },
+          "options": [],
+          "payload": {
+            "type": "bytes",
+            "base64": ""
+          },
+          "body_id": "b1"
+        }
+      },
+      "expected": {
+        "error": "native_protocol_error",
+        "complete_values": 0,
+        "generation_closed": true
+      }
+    },
+    {
+      "id": "WCO-N-F13",
+      "operation": "decode_response",
+      "input": {
+        "version": 1,
+        "id": "r1",
+        "ok": true,
+        "result": {
+          "type": "ack",
+          "code": 69,
+          "message_id": 1,
+          "token": {
+            "type": "bytes",
+            "base64": "AQ=="
+          },
+          "options": []
+        }
+      },
+      "expected": {
+        "error": "native_protocol_error",
+        "complete_values": 0,
+        "generation_closed": true
+      }
+    },
+    {
+      "id": "WCO-N-F14",
+      "operation": "failed_body_then_success",
+      "input": [
+        {
+          "event": "body_begin",
+          "body_id": "b1",
+          "length": 3,
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "event": "body_chunk",
+          "body_id": "b1",
+          "offset": 0,
+          "data": {
+            "type": "bytes",
+            "base64": "QUJD"
+          }
+        },
+        {
+          "event": "body_end",
+          "body_id": "b1"
+        },
+        {
+          "version": 1,
+          "id": "r1",
+          "ok": true,
+          "result": {
+            "type": "ack",
+            "code": 69,
+            "message_id": 1,
+            "token": {
+              "type": "bytes",
+              "base64": "AQ=="
+            },
+            "options": [],
+            "body_id": "b1"
+          }
+        }
+      ],
+      "expected": {
+        "error": "native_protocol_error",
+        "complete_values": 0,
+        "generation_closed": true
+      }
+    },
+    {
+      "id": "WCO-N-F15",
+      "operation": "report_payload_credit_trace",
+      "input": {
+        "precondition": "open Property subscription; ready/control replies drained",
+        "steps": [
+          {
+            "request_id": "c1",
+            "ack_seq": 0
+          },
+          {
+            "produce_report_payload": {
+              "repeat_byte": 65,
+              "count": 32768
+            }
+          },
+          {
+            "produce_report_payload": {
+              "repeat_byte": 65,
+              "count": 32769
+            }
+          }
+        ]
+      },
+      "expected": {
+        "inline_report_frames": 1,
+        "streamed_report_frames": 5,
+        "highest_assigned_seq": 6,
+        "acknowledged_seq": 0,
+        "unused_report_credit": 2,
+        "complete_reports": 2,
+        "partial_deliveries": 0
+      }
     }
   ]
 }

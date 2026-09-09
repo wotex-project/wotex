@@ -1,0 +1,180 @@
+{
+  "schema": "wotex.coap.native-command-evidence@1",
+  "specification": "WCO.13@1.6.0",
+  "scope": "Structural admission of native C07 commands; no worker queue, body association, clock, filesystem, socket or SDK dispatch acceptance",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/command.c": "1bd59fe6bb184d5518030dd56a23be597005ca87a15617285d8240f86db633d3",
+      "native/oscore/command.h": "20429620e3e15326c121685be3b9f8c9186e1265fa78ef45eaef814eeb5966a9",
+      "native/oscore/json.c": "a50d46c2e518d5e3d932c6603306a54dd49abcf545cc5a97fbd2b7ec994d5d46",
+      "native/oscore/json.h": "46d614f17a8c51abbd656369558562a202937983fc46755fa541b33be2236c1c",
+      "native/oscore/body.c": "f6f2696eae9631f5e68c38a01df7ff69f1d2b7ab08d51b735cc600e50ec3e9d4",
+      "native/oscore/body.h": "0dc59fdbd252bf287b009bac5898cf7cbc3df72ae6af2dbc1639c2543dadd49b",
+      "native/oscore/vendor/yyjson/source.json": "34d79572c21e231f9257a59add2478d8e6473c2b43e676d946d6365ca7275457",
+      "native/oscore/vendor/yyjson/yyjson.c": "ac2e9bbb2e2d9149d90878d40506a1d624fa0b33c979a11b61075c54782c6d6a",
+      "native/oscore/vendor/yyjson/yyjson.h": "175867c5493a5df648cec566717fa1c29aa2f6096f5f0cf1efad0b65e1f6d7b3",
+      "test/native/oscore_command_test.c": "9a34c33963a828d4a84f39932780221dd3447a71ba7f9adc13ed590adc1765ac",
+      "test/native/Dockerfile.json": "55c64424bff51c06a1d8234e5931505dd18fe95eab7d3a02df74e3b31420347a"
+    }
+  },
+  "requirements": [
+    "WCO-C07",
+    "WCO-N03"
+  ],
+  "upstream_json": {
+    "schema": "wotex.coap.yyjson-source@1",
+    "version": "0.12.0",
+    "commit": "8b4a38dc994a110abaec8a400615567bd996105f",
+    "url": "https://codeload.github.com/ibireme/yyjson/tar.gz/refs/tags/0.12.0",
+    "sha256": "b16246f617b2a136c78d73e5e2647c6f1de1313e46678062985bdcf1f40bb75d",
+    "license": "MIT",
+    "modifications": [],
+    "files": {
+      "yyjson.c": "ac2e9bbb2e2d9149d90878d40506a1d624fa0b33c979a11b61075c54782c6d6a",
+      "yyjson.h": "175867c5493a5df648cec566717fa1c29aa2f6096f5f0cf1efad0b65e1f6d7b3",
+      "LICENSE": "45e384d3d52c73cba3a64d6e6c25d47cd738cd8a55c30629e3201046eda62947"
+    },
+    "compile_definitions": [
+      "YYJSON_DISABLE_NON_STANDARD=1",
+      "YYJSON_DISABLE_UTILS=1",
+      "YYJSON_DISABLE_INCR_READER=1"
+    ],
+    "read_flags": [
+      "YYJSON_READ_NUMBER_AS_RAW"
+    ]
+  },
+  "operations": [
+    "open",
+    "body_begin",
+    "body_chunk",
+    "body_end",
+    "request",
+    "observe",
+    "credit",
+    "cancel",
+    "close"
+  ],
+  "assertions": [
+    "Exact envelope and operation allowlists; unknown, duplicate and missing fields rejected",
+    "All four methods, explicit Property/Event observation kind and typed optional selectors",
+    "Canonical OSCORE bytes, distinct IDs, numeric destination and absolute store-path syntax without resource acquisition",
+    "Relative-reference path syntax, split-before-decode dot-segment admission and preserved encoded delimiters",
+    "Unsigned 64-bit generation/credit bounds, integer-only deadlines in 1..60000 and the 32-KiB decoded chunk boundary",
+    "Successful ID owns its bytes across parser reset; failed output is entirely zeroed"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "native_cases": 81,
+      "output_sha256": "cac80d0d3e8ce51191602bce709850a3c0d7295fafb87901e1eed0228439cbfe",
+      "assertion_output": [
+        "WCO-C07 WCO-N03: 81 exact operation, malformed, credential, path and integer-bound cases passed"
+      ],
+      "executable_sha256": "fff8b5ddbabdc07b98afb3bd0078ea57bba68ca1470034e33868a838ca79398f",
+      "compiler": "Apple clang 21.0.0 clang-2100.1.1.101",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "native_cases": 81,
+      "output_sha256": "cac80d0d3e8ce51191602bce709850a3c0d7295fafb87901e1eed0228439cbfe",
+      "assertion_output": [
+        "WCO-C07 WCO-N03: 81 exact operation, malformed, credential, path and integer-bound cases passed"
+      ],
+      "executable_sha256": "a29193b5dfa35b171d9392eaabf81413009710c3b237f5460cd65588dc1e645a",
+      "image": "sha256:fa0b47f5ddbd376a91af9bfd35c538b94764c61f972f9c3250d24362b929ee76",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": [
+        "address",
+        "undefined",
+        "leak"
+      ],
+      "build_log_sha256": "049c0b505861ce6b4c5820fb1dda4f094cea9d15c62490e472d45cb6b9f52cbb",
+      "artifact_and_package_log_sha256": "a921d5a2c40582438e575b87ffd8cacb82d0109d53e02aa84c4892281da52672",
+      "toolchain_packages_recorded_not_locked": true,
+      "argv": [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--read-only",
+        "--pids-limit",
+        "16",
+        "--memory",
+        "128m",
+        "--entrypoint",
+        "/usr/local/bin/oscore-command",
+        "sha256:fa0b47f5ddbd376a91af9bfd35c538b94764c61f972f9c3250d24362b929ee76"
+      ]
+    }
+  ],
+  "regression_runs": [
+    {
+      "binary": "oscore-json",
+      "platform": "Linux arm64",
+      "image": "sha256:fa0b47f5ddbd376a91af9bfd35c538b94764c61f972f9c3250d24362b929ee76",
+      "exit_code": 0,
+      "output_sha256": "5080554aa288c76f2202fc0241c0c906ec4932ad63c066e6c6db2de6bd4b0cee",
+      "assertion_output": [
+        "WCO-C07 WCO-N03: strict UTF-8, duplicate decoded keys and exact field lookup",
+        "WCO-C07 WCO-N03: exact uint64, Boolean/type rejection and finite number bounds",
+        "WCO-C07 WCO-N03: exact depth/node/container/frame boundaries and fixed pool",
+        "WCO-C07 WCO-N03: 1000 bounded parser resets release all document state"
+      ]
+    },
+    {
+      "binary": "oscore-frame",
+      "platform": "Linux arm64",
+      "image": "sha256:fa0b47f5ddbd376a91af9bfd35c538b94764c61f972f9c3250d24362b929ee76",
+      "exit_code": 0,
+      "output_sha256": "865895b03eceb9a49dcc176a6237173eb191dd2a2fc4842f0f722ec8d97d87ee",
+      "assertion_output": [
+        "WCO-C07 WCO-N03: every UTF-8 byte split and one-byte delivery preserve exact single frame",
+        "WCO-C07 WCO-N03: coalesced frames stay ordered; malformed middle frame permanently closes ingress",
+        "WCO-C07 WCO-N03: 128-KiB line accepted; plus-one contiguous/split ingress fails with bounded erased buffer",
+        "WCO-C07 WCO-N03: truncated/clean EOF and invalid callbacks cannot revive terminated generation"
+      ]
+    },
+    {
+      "binary": "oscore-body",
+      "platform": "Linux arm64",
+      "image": "sha256:fa0b47f5ddbd376a91af9bfd35c538b94764c61f972f9c3250d24362b929ee76",
+      "exit_code": 0,
+      "output_sha256": "a4af65d9d6d1e96c267f6e48033ab74cb177d28c4c4d19624f073605a26481c0",
+      "assertion_output": [
+        "WCO-C07 WCO-N03: canonical base64 rejects type/padding/alphabet/capacity failures without partial output",
+        "WCO-C07 WCO-N03: exact ABC and empty bodies stay hidden until SHA-256/length verification",
+        "WCO-C07 WCO-N03: wrong offset/id/hash, interleaving, incomplete/duplicate end and owner abort poison bounded body",
+        "WCO-C07 WCO-N03: 32-KiB chunks assemble exact 1-MiB body; oversized chunk writes no output"
+      ]
+    },
+    {
+      "binary": "oscore-credit",
+      "platform": "Linux arm64",
+      "image": "sha256:fa0b47f5ddbd376a91af9bfd35c538b94764c61f972f9c3250d24362b929ee76",
+      "exit_code": 0,
+      "output_sha256": "81c4a90f796da3c118e79a35348c2352529277bd143c60b396a6219361ff80ce",
+      "assertion_output": [
+        "WCO-N03: cumulative replay trace retains exactly eight outstanding frames after 1000 stale grants",
+        "WCO-N03: wrong generation, future/unwritten acknowledgment and unordered writes close credit generation",
+        "WCO-N03: final uint64 report sequence is exact; exhaustion poisons without wrap"
+      ]
+    }
+  ],
+  "unaccepted": [
+    "Production C07 owner and stateful admission/operation correlation",
+    "SDK path/options/wire-size validation through public requests",
+    "Output Message/inline-body schema and full native-v1 fixture runner",
+    "Port credit, cancellation, Observe and storage lifecycle integration",
+    "Complete native Mix build/run and software matrix"
+  ]
+}

@@ -11,7 +11,10 @@ COPY native/oscore/body.c native/oscore/body.h native/oscore/credit.c native/osc
 COPY test/native/oscore_body_test.c test/native/oscore_credit_test.c /build/test/native/
 RUN cc $CFLAGS -Inative/oscore native/oscore/json.c native/oscore/body.c native/oscore/vendor/yyjson/yyjson.c test/native/oscore_body_test.c -lcrypto -o /usr/local/bin/oscore-body
 RUN cc $CFLAGS -Inative/oscore native/oscore/credit.c test/native/oscore_credit_test.c -o /usr/local/bin/oscore-credit
-RUN sha256sum native/oscore/*.[ch] native/oscore/vendor/yyjson/* test/native/* /usr/local/bin/oscore-json /usr/local/bin/oscore-frame /usr/local/bin/oscore-body /usr/local/bin/oscore-credit > /build/artifacts.sha256 && dpkg-query -W > /build/toolchain.packages
+COPY native/oscore/command.c native/oscore/command.h /build/native/oscore/
+COPY test/native/oscore_command_test.c /build/test/native/
+RUN cc $CFLAGS -Inative/oscore native/oscore/command.c native/oscore/json.c native/oscore/body.c native/oscore/vendor/yyjson/yyjson.c test/native/oscore_command_test.c -lcrypto -o /usr/local/bin/oscore-command
+RUN sha256sum native/oscore/*.[ch] native/oscore/vendor/yyjson/* test/native/* /usr/local/bin/oscore-json /usr/local/bin/oscore-frame /usr/local/bin/oscore-body /usr/local/bin/oscore-credit /usr/local/bin/oscore-command > /build/artifacts.sha256 && dpkg-query -W > /build/toolchain.packages
 ENV ASAN_OPTIONS="detect_leaks=1:halt_on_error=1:abort_on_error=1"
 ENV UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1"
 USER 65534:65534
