@@ -85,6 +85,9 @@ as executable/argument vectors, never interpolated shell text.
 Build verifies BACstack's locked Hex source and the C-stack archive in the
 [software-sources-v1.json](../specs/fixtures/software-sources-v1.json) before extraction. Archive members cannot
 escape the workspace. Downloads have a 120-second/100-MiB per-archive ceiling.
+The source verifier applies the narrower 1-MiB compressed BACstack limit and
+4096-member/64-MiB expanded archive limits. It compares all installed BACstack
+package files to the verified Hex archive, including the archived metadata.
 Reuse rechecks source and binary hashes. The manifest records source URL/commit/
 archive SHA-256, all fixture/patch source hashes, compiler/linker/libc/CMake/OS/CPU
 versions and executable hashes, exact build options, binary SHA-256, container

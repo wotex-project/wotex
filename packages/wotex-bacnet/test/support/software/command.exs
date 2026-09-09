@@ -1,18 +1,5 @@
 defmodule Wotex.BACnet.SoftwareCommand do
-  @moduledoc """
-  Owns explicit fixture commands through the POSIX command guardian.
-
-  Commands use an executable and separate arguments, bounded combined output,
-  and a caller-owned stdin pipe. The guardian terminates and reaps its process
-  group when that pipe closes or a configured limit expires. A successful
-  command status does not establish cleanup of a separate Docker container;
-  the software runner must verify that resource independently.
-
-  Workspace leases use a persistent advisory-lock file. Callers retain the
-  returned Port and wait for the release acknowledgment before reporting that
-  the workspace is reusable. These helpers are loaded only by explicit test
-  tooling and do not participate in BACnet runtime transport.
-  """
+  @moduledoc false
 
   @limit 16_777_216
   @lease "wotex_fixture_lock\n"

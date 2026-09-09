@@ -90,3 +90,15 @@ increment below the object's default has independent semantics.
 The fixture's finite control interface and loss controls are first-party test
 code; they are not production SDK extensions or a certification claim. Their
 exact scope is in [the fixture contract](../../test/interop/cstack/README.md).
+
+## Hex source identity
+
+The [Hex package format at specification revision cd9e0004](https://github.com/hexpm/specifications/blob/cd9e0004c226d69be5897426f453ba1c967f5e70/package_tarball.md)
+defines the format-3 VERSION, metadata.config, contents.tar.gz and CHECKSUM
+members. CHECKSUM covers the concatenated version, metadata and compressed
+contents. The package's outer SHA-256 identifies the complete archive.
+The fixture verifier checks both pinned values against the Mix lock and checks
+every installed package file against the verified archive. Archive/file bounds
+and rejection of additional installed source are fixture policy, not Hex
+package-format requirements. The exact checks and executable evidence are
+described in [source verification](../../test/support/software/README.md).
