@@ -36,7 +36,7 @@ defmodule Wotex.CoAP do
       discovery_capable: true
     }
 
-  @doc "Explicitly opens a linked UDP owner; no simulator fallback or security downgrade."
+  @doc "Explicitly opens an owned UDP or DTLS session using validated scheme and security options."
   @spec connect(keyword()) :: {:ok, session()} | {:error, term()}
   def connect(opts) do
     with {:ok, config} <- Connection.config(opts),

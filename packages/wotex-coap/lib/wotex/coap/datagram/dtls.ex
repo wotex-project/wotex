@@ -4,8 +4,11 @@ defmodule Wotex.CoAP.Datagram.DTLS do
 
   The PSK adapter enables only TLS_PSK_WITH_AES_128_GCM_SHA256 after checking
   runtime support. The configured client identity and key remain fixed; a server
-  hint cannot select another credential. OTP owns record authentication, replay
-  protection and handshake retransmission. CoAP exchanges retain their own owner.
+  hint cannot select another credential. PKI permits only
+  TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 with supplied trust roots, an exact SAN
+  identity and immutable supplied CRLs. OTP owns record authentication, replay
+  protection, certificate paths and handshake retransmission. CoAP exchanges
+  retain their own owner.
   """
 
   # SSL is loaded only by explicit open/3; the SSL PLT checks every call statically.
@@ -14,7 +17,9 @@ defmodule Wotex.CoAP.Datagram.DTLS do
   use GenServer
   import Kernel, except: [send: 2]
   alias Wotex.CoAP.{Datagram, Error, Lifetime, Security}
-  @cipher %{key_exchange: :psk, cipher: :aes_128_gcm, mac: :aead, prf: :sha256}
+  alias Wotex.CoAP.Security.{CRLCache, Peer, PKI}
+  @psk_cipher %{key_exchange: :psk, cipher: :aes_128_gcm, mac: :aead, prf: :sha256}
+  @pki_cipher %{key_exchange: :ecdhe_rsa, cipher: :aes_128_gcm, mac: :aead, prf: :sha256}
 
   @impl Datagram
   @spec open(Datagram.config(), pid(), pos_integer()) ::
@@ -28,9 +33,8 @@ defmodule Wotex.CoAP.Datagram.DTLS do
              is_reference(generation) and is_pid(owner) and node(owner) == node() and
              timeout in 1..60_000 do
     with :ok <- Security.validate(security),
-         :ok <- supported_security(security),
          true <- valid_ip?(host),
-         :ok <- prepare_ssl(),
+         :ok <- prepare_ssl(security),
          {:ok, pid} <- GenServer.start(__MODULE__, {config, owner, timeout}, timeout: timeout + 100) do
       {:ok, %{pid: pid, generation: generation}}
     else
@@ -124,10 +128,12 @@ defmodule Wotex.CoAP.Datagram.DTLS do
   end
 
   defp authenticated(socket, config, owner, monitor, lifetime) do
+    cipher = cipher(Keyword.fetch!(config.options, :security))
+
     with {:ok, information} <-
            :ssl.connection_information(socket, [:protocol, :selected_cipher_suite]),
          true <- Keyword.get(information, :protocol) == :"dtlsv1.2",
-         true <- Keyword.get(information, :selected_cipher_suite) == @cipher,
+         true <- Keyword.get(information, :selected_cipher_suite) == cipher,
          {:ok, {host, port}} <- :ssl.peername(socket),
          true <- host == config.host and port == config.port do
       {:ok,
@@ -145,33 +151,63 @@ defmodule Wotex.CoAP.Datagram.DTLS do
     end
   end
 
-  defp supported_security(%Security{mode: :dtls_psk}), do: :ok
-  defp supported_security(_), do: failure(:unsupported_security)
+  defp prepare_ssl(security) do
+    cipher = cipher(security)
+    category = if security.mode == :dtls_psk, do: :anonymous, else: :all
 
-  defp prepare_ssl do
     with {:ok, _} <- Application.ensure_all_started(:ssl),
-         true <- @cipher in :ssl.cipher_suites(:anonymous, :"dtlsv1.2"),
-         [@cipher] <- :ssl.filter_cipher_suites([@cipher], []),
+         true <- cipher in :ssl.cipher_suites(category, :"dtlsv1.2"),
+         [^cipher] <- :ssl.filter_cipher_suites([cipher], []),
          do: :ok,
          else: (_ -> failure(:unsupported_security))
   catch
     _, _ -> failure(:unsupported_security)
   end
 
+  defp cipher(%Security{mode: :dtls_psk}), do: @psk_cipher
+  defp cipher(%Security{mode: :dtls_pki}), do: @pki_cipher
+
   defp ssl_options(security, host) do
     [
       if(tuple_size(host) == 8, do: :inet6, else: :inet),
       protocol: :dtls,
       versions: [:"dtlsv1.2"],
-      ciphers: [@cipher],
-      verify: :verify_none,
-      psk_identity: :binary.bin_to_list(security.identity),
-      user_lookup_fun: {&lookup/3, security},
+      ciphers: [cipher(security)],
       active: false,
       mode: :binary,
       log_level: :none,
       reuse_sessions: false,
       max_handshake_size: 1_048_576
+    ] ++ credential_options(security)
+  end
+
+  defp credential_options(%Security{mode: :dtls_psk} = security) do
+    [
+      verify: :verify_none,
+      psk_identity: :binary.bin_to_list(security.identity),
+      user_lookup_fun: {&lookup/3, security}
+    ]
+  end
+
+  defp credential_options(%Security{mode: :dtls_pki} = security) do
+    {:ok, type, _} = PKI.private_key(security.private_key)
+
+    server_name =
+      case security.server_identity do
+        {:dns, name} -> String.to_charlist(name)
+        {:ip, _} -> :disable
+      end
+
+    [
+      verify: :verify_peer,
+      cacerts: security.trust_roots,
+      cert: security.certificate,
+      key: {type, security.private_key},
+      depth: 8,
+      crl_check: true,
+      crl_cache: {CRLCache, {:supplied, security.crls}},
+      verify_fun: {&Peer.verify/3, security.server_identity},
+      server_name_indication: server_name
     ]
   end
 

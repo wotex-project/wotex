@@ -22,6 +22,11 @@ def generate(openssl, output):
         run("req", "-new", "-x509", "-key", "root.key", "-out", "root.pem", "-days", "36500",
             "-subj", "/CN=Wotex Public Test Root", "-addext", "basicConstraints=critical,CA:TRUE",
             "-addext", "keyUsage=critical,keyCertSign,cRLSign")
+        key("untrusted-root")
+        run("req", "-new", "-x509", "-key", "untrusted-root.key", "-out", "untrusted-root.pem", "-days", "36500",
+            "-subj", "/CN=Wotex Public Other Test Root", "-addext", "basicConstraints=critical,CA:TRUE",
+            "-addext", "keyUsage=critical,keyCertSign,cRLSign")
+        run("x509", "-in", "untrusted-root.pem", "-outform", "DER", "-out", output / "untrusted-root.der")
         (work / "index").write_text("")
         (work / "serial").write_text("1000\n")
         (work / "crlnumber").write_text("1000\n")
@@ -72,6 +77,8 @@ basicConstraints=critical,CA:FALSE
         run("x509", "-in", "root.pem", "-outform", "DER", "-out", output / "root.der")
         run("ca", "-gencrl", "-config", "ca.cnf", "-out", "valid.crl", "-crl_lastupdate", "20200101000000Z", "-crl_nextupdate", "20991231235959Z")
         run("crl", "-in", "valid.crl", "-outform", "DER", "-out", output / "valid-crl.der")
+        run("ca", "-gencrl", "-config", "ca.cnf", "-out", "expired.crl", "-crl_lastupdate", "20000101000000Z", "-crl_nextupdate", "20010101000000Z")
+        run("crl", "-in", "expired.crl", "-outform", "DER", "-out", output / "expired-crl.der")
         run("ca", "-revoke", "revoked.pem", "-config", "ca.cnf")
         run("ca", "-gencrl", "-config", "ca.cnf", "-out", "revoked.crl", "-crl_lastupdate", "20200101000000Z", "-crl_nextupdate", "20991231235959Z")
         run("crl", "-in", "revoked.crl", "-outform", "DER", "-out", output / "revoked-crl.der")

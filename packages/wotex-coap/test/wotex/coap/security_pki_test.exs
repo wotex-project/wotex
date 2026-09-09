@@ -111,17 +111,6 @@ defmodule Wotex.CoAP.SecurityPKITest do
     decoded = :public_key.pkix_decode_cert(fixture("client.der"), :otp)
     assert PKI.strong_certificate?(decoded)
     refute PKI.strong_certificate?(put_elem(decoded, 1, :invalid))
-    {:ok, security} = Security.new(input())
-
-    config = %{
-      host: {127, 0, 0, 1},
-      port: 5684,
-      generation: make_ref(),
-      options: [security: security]
-    }
-
-    assert {:error, %Error{code: :unsupported_security}} =
-             Wotex.CoAP.Datagram.DTLS.open(config, self(), 100)
   end
 
   test "WCO-S05 exact server names reject wildcards, controls, ambiguous address forms and invalid labels" do

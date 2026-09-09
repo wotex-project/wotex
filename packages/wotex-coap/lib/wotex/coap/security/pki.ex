@@ -79,11 +79,7 @@ defmodule Wotex.CoAP.Security.PKI do
   def strong_certificate?(bytes) when is_binary(bytes), do: match?({:ok, _}, certificate_key(bytes))
 
   def strong_certificate?(certificate(tbsCertificate: value)),
-    do:
-      match?(
-        rsa_public(modulus: modulus) when is_integer(modulus) and modulus >= @minimum_modulus,
-        public_key(value)
-      )
+    do: strong_public?(public_key(value))
 
   def strong_certificate?(_), do: false
 
@@ -109,15 +105,8 @@ defmodule Wotex.CoAP.Security.PKI do
     if der?(bytes) do
       certificate(tbsCertificate: value) = :public_key.pkix_decode_cert(bytes, :otp)
 
-      case public_key(value) do
-        rsa_public(modulus: modulus, publicExponent: exponent) = public
-        when is_integer(modulus) and modulus >= @minimum_modulus and is_integer(exponent) and
-               exponent >= 3 ->
-          {:ok, public}
-
-        _ ->
-          :error
-      end
+      public = public_key(value)
+      if strong_public?(public), do: {:ok, public}, else: :error
     else
       :error
     end
@@ -127,6 +116,12 @@ defmodule Wotex.CoAP.Security.PKI do
 
   defp public_key(tbs(subjectPublicKeyInfo: public_info(subjectPublicKey: key))), do: key
   defp public_key(_), do: nil
+
+  defp strong_public?(rsa_public(modulus: n, publicExponent: e))
+       when is_integer(n) and is_integer(e),
+       do: n >= @minimum_modulus and rem(n, 2) == 1 and e >= 3 and e < n and rem(e, 2) == 1
+
+  defp strong_public?(_), do: false
 
   defp strong_private?(
          rsa_private(
