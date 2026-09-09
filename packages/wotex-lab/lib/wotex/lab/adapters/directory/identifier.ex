@@ -8,6 +8,17 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
     State is an `Agent` counter started with `start_link/1`; each call yields
     `urn:wotex:lab:thing:<n>` for anonymous registrations. A host that needs
     globally unique identity supplies its own UUID-backed implementation.
+
+    The counter begins at zero and increments atomically for each successful
+    generation call. A caller may supply a different prefix, although the
+    resulting string must still satisfy `Wotex.Directory.Identifier.valid?/1`
+    when used by the directory.
+
+    Identity is local to the lifetime and ownership of the agent. Restarting
+    it resets the sequence, and two agents may issue the same value; repository
+    collision handling therefore remains authoritative. This adapter is
+    intended for deterministic simulations and fixtures, not distributed name
+    allocation.
     """
 
     @behaviour Wotex.Directory.Identifier

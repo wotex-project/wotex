@@ -29,6 +29,20 @@ libraries. Do not copy private package implementations or change WoT meaning.
   execution trackers. `docs/tasks/local/` is ignored and excluded from packages.
 
 Run `WOTEX_PATH_DEPS=1 mix check --no-retry` for local development. Publication
-is maintainer-owned: agents never push, tag, publish, configure Git remotes or
-change visibility. Any local commit uses the maintainer identity
-`Tobias Bohwalli <hi@futhr.io>` for author and committer.
+is maintainer-owned.
+
+## Release metadata
+
+`CHANGELOG.md` is maintained only by GitOps. Never edit it directly. Once GitOps is configured and
+release prerequisites pass, the human maintainer prepares the first release with `mix git_ops.release --override 0.1.0` and later releases with
+`mix git_ops.release`. Automated agents must not invoke either release task.
+
+## Git authority
+
+Automated agents never push, tag, publish, configure Git remotes or change
+repository visibility.
+
+Local commits use the identity already configured by the contributor running
+Git. Automated agents must never set or override Git identity; record an agent,
+tool, or bot as an author, committer, or co-author; invent a contributor
+identity; or remove attribution supplied by a human contributor.

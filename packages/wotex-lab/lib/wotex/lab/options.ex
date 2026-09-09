@@ -1,5 +1,27 @@
 defmodule Wotex.Lab.Options do
-  @moduledoc false
+  @moduledoc """
+  Validates small trusted configuration boundaries shared by Lab components.
+
+  Keyword admission requires a proper keyword list, unique keys and membership
+  in the caller's allowlist. It returns a structured construction error for an
+  invalid option list, duplicates or unknown keys. Each component separately
+  validates option values and relationships; this helper does not make arbitrary
+  nested configuration safe or choose modules from external input.
+
+  Identifiers use 1..128 ASCII bytes, beginning with a lowercase letter or
+  digit and continuing with lowercase letters, digits, dot, underscore, colon
+  or hyphen.
+  It does not allocate identifiers, enforce uniqueness, create atoms or consult
+  a registry. Scenario values and supervision configuration use this predicate
+  before applying their own ownership and resource limits.
+
+  ## Examples
+
+      iex> Wotex.Lab.Options.identifier?("lab:room-1")
+      true
+      iex> Wotex.Lab.Options.identifier?("Room")
+      false
+  """
 
   alias Wotex.Lab.Error
 

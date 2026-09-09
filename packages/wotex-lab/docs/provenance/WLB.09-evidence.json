@@ -1,19 +1,55 @@
 {
   "assertions": [
-    {"id": "WLB-C09:model-and-abstraction-digests", "status": "pass"},
-    {"id": "WLB-C09:closed-hostile-input-serializer", "status": "pass"},
-    {"id": "WLB-C09:complete-safe-searches", "status": "pass"},
-    {"id": "WLB-C09:broken-model-counterexamples", "status": "pass"},
-    {"id": "WLB-C09:counterexample-policy-replay", "status": "pass"},
-    {"id": "WLB-C09:bounded-failure-classification", "status": "pass"},
-    {"id": "WLB-C09:engine-process-reaping", "status": "pass"},
-    {"id": "WLB-C09:concurrent-pool-isolation", "status": "pass"},
-    {"id": "WLB-C09:inert-mcp-boundary", "status": "pass"},
-    {"id": "WLB-C09:executable-formal-cookbook", "status": "pass"},
-    {"id": "WLB-C09:binary-license-and-provenance", "status": "pass"},
-    {"id": "WLB-C09:manifest-integrity", "status": "pass"}
+    {
+      "id": "WLB-C09:model-and-abstraction-digests",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C09:closed-hostile-input-serializer",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C09:complete-safe-searches",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C09:broken-model-counterexamples",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C09:counterexample-policy-replay",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C09:bounded-failure-classification",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C09:engine-process-reaping",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C09:concurrent-pool-isolation",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C09:inert-mcp-boundary",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C09:executable-formal-cookbook",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C09:binary-license-and-provenance",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C09:manifest-integrity",
+      "status": "pass"
+    }
   ],
-  "attempt": 18,
+  "attempt": 19,
   "budgets": {
     "deadline_ms": 120000,
     "max_depth": 1000,
@@ -22,37 +58,78 @@
     "solutions": 1
   },
   "cleanup": {
-    "details": {"descendants": 0, "pools": 0, "ports": 0},
+    "details": {
+      "descendants": 0,
+      "pools": 0,
+      "ports": 0
+    },
     "status": "ok"
   },
   "dependencies": [
-    {"archive": "missing", "name": "wotex", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_nx", "version": "0.1.0-source"},
-    {"archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9", "name": "nx", "version": "0.13.1"},
-    {"archive": "sha256:3ebc3f84f6f9f829c31f107bc3c2cb484705163d9cb7c62ed2e0405913360595", "name": "explorer", "version": "0.12.0"},
-    {"archive": "sha256:ab5290be17c19a3bd61ffde1d54937d32f36f81f6d755f6c1f232b92f7a35266", "name": "ex_maude", "version": "0.4.1"},
-    {"archive": "sha256:928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1", "name": "telemetry", "version": "1.4.2"},
-    {"archive": "sha256:95851274f57b3853aab833674e2b770ed800f38fb1f3d03c97dcac56346c13dc", "name": "maude", "version": "3.5.1-macos-arm64"}
+    {
+      "archive": "missing",
+      "name": "wotex",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_nx",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9",
+      "name": "nx",
+      "version": "0.13.1"
+    },
+    {
+      "archive": "sha256:3ebc3f84f6f9f829c31f107bc3c2cb484705163d9cb7c62ed2e0405913360595",
+      "name": "explorer",
+      "version": "0.12.0"
+    },
+    {
+      "archive": "sha256:ab5290be17c19a3bd61ffde1d54937d32f36f81f6d755f6c1f232b92f7a35266",
+      "name": "ex_maude",
+      "version": "0.4.1"
+    },
+    {
+      "archive": "sha256:928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1",
+      "name": "telemetry",
+      "version": "1.4.2"
+    },
+    {
+      "archive": "sha256:95851274f57b3853aab833674e2b770ed800f38fb1f3d03c97dcac56346c13dc",
+      "name": "maude",
+      "version": "3.5.1-macos-arm64"
+    }
   ],
-  "durations": {"run_ms": 31300},
+  "durations": {
+    "run_ms": 32416
+  },
   "fixtures": {
     "model:thermal-control-v1": "sha256:04d49d3e2f8c80e4b1e1199bbc41a22f410c76bbb7606a378a5b0be3ae005b13"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_MAUDE=pinned-maude-3.5.1 mix test WLB.09-formal-files",
-    "renewal:2026-09-08-complete-reference-inputs;seed=1;manifest-integrity-checked-separately",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_MAUDE=pinned-maude-3.5.1 mix test test/wotex/lab/cookbook_test.exs test/wotex/lab/formal_maude_mcp_test.exs test/wotex/lab/formal_maude_test.exs test/wotex/lab/formal_search_test.exs test/wotex/lab/formal_test.exs test/wotex/lab/mcp_formal_tool_test.exs --seed 1",
     "catalogue-rebind:WLB.06-1.4.1",
     "engine-executable:sha256:266eed04679fde6029a18e5e2b1828223d4a7169ac55503aa15d67e126792fbf",
     "model:thermal-control-v1",
-    "cookbook:formal-control"
+    "cookbook:formal-control",
+    "renewal:2026-09-09-documentation-and-runtime-opening;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
-  "outcomes": {"broken_variants": 5, "cookbook_checks": 9, "excluded_count": 2, "reachable_states": 253, "safe_properties": 5, "test_count": 49},
-  "revision": "21da48b+workspace-reference-inputs",
+  "outcomes": {
+    "broken_variants": 5,
+    "cookbook_checks": 9,
+    "excluded_count": 2,
+    "reachable_states": 253,
+    "safe_properties": 5,
+    "test_count": 49
+  },
+  "revision": "761032ffc963b11979f638a087398647aea4dabc+documentation-review",
   "scenario_id": "WLB.09-formal-control-verification",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:b7794d3479516a8b74e7d875d694843e497fedf8d13a558248124106173331a8",
+  "source_tree_digest": "sha256:4d6eda3217b2be5ef428ea9c508d85a1b5568a8d41567dc71ef27232255f6a6a",
   "toolchain": {
     "backend": "Maude-3.5.1-port",
     "elixir": "1.20.2",

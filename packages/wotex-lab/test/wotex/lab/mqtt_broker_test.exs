@@ -20,6 +20,27 @@ defmodule Wotex.Lab.MqttBrokerTest do
   @password "broker-password-4c1a"
   @reference "vault://lab/mqtt"
 
+  setup do
+    handler = {__MODULE__, make_ref()}
+
+    :ok =
+      :telemetry.attach(
+        handler,
+        [:wotex, :runtime, :subscription, :open],
+        &__MODULE__.subscription_opened/4,
+        self()
+      )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+    :ok
+  end
+
+  @doc false
+  def subscription_opened(_event, _measurements, %{request_id: "mqtt-observe"}, receiver),
+    do: send(receiver, {:runtime_subscription_opened, self()})
+
+  def subscription_opened(_event, _measurements, _metadata, _receiver), do: :ok
+
   setup_all do
     %{server: MqttBroker.start()}
   end
@@ -396,9 +417,7 @@ defmodule Wotex.Lab.MqttBrokerTest do
       )
 
     {:ok, subscription} = Lab.start_child(lab, :sessions, spec)
-    # The Runtime opens the subscription in a continuation; reading the state
-    # returns only once the broker has answered the SUBSCRIBE.
-    assert :sys.get_state(subscription).active?
+    assert_receive {:runtime_subscription_opened, ^subscription}, 5_000
     {lab, subscription}
   end
 

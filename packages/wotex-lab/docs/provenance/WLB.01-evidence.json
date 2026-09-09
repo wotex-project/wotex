@@ -1,25 +1,54 @@
 {
   "assertions": [
-    {"id": "WLB-C01:passive-package", "status": "pass"},
-    {"id": "WLB-C01:isolated-instances", "status": "pass"},
-    {"id": "WLB-C01:bounded-role-supervisors", "status": "pass"},
-    {"id": "WLB-C01:failure-and-shutdown-lifecycle", "status": "pass"},
-    {"id": "WLB-C01:public-contract", "status": "pass"},
-    {"id": "WLB-C01:manifest-integrity", "status": "pass"}
+    {
+      "id": "WLB-C01:passive-package",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C01:isolated-instances",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C01:bounded-role-supervisors",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C01:failure-and-shutdown-lifecycle",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C01:public-contract",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C01:manifest-integrity",
+      "status": "pass"
+    }
   ],
-  "attempt": 1,
+  "attempt": 2,
   "budgets": {
     "default_children_per_role": 128,
     "max_children_per_role": 10000,
     "roles": 2
   },
   "cleanup": {
-    "details": {"children": 0, "instances": 0},
+    "details": {
+      "children": 0,
+      "instances": 0
+    },
     "status": "ok"
   },
   "dependencies": [
-    {"archive": "missing", "name": "wotex", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_nx", "version": "0.1.0-source"},
+    {
+      "archive": "missing",
+      "name": "wotex",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_nx",
+      "version": "0.1.0-source"
+    },
     {
       "archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9",
       "name": "nx",
@@ -31,19 +60,24 @@
       "version": "1.4.2"
     }
   ],
-  "durations": {"run_ms": 90},
+  "durations": {
+    "run_ms": 2781
+  },
   "fixtures": {},
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 mix test --seed 1 WLB.01-evidence-files",
-    "cohort:source-and-public-api-review"
+    "command:WOTEX_PATH_DEPS=1 mix test test/wotex/lab/library_contract_test.exs test/wotex/lab/supervisor_test.exs --seed 1",
+    "cohort:source-and-public-api-review",
+    "renewal:2026-09-09-documentation-and-runtime-opening;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
-  "outcomes": {"test_count": 12},
-  "revision": "d69c3d1+workspace-wlb01-source-evidence",
+  "outcomes": {
+    "test_count": 12
+  },
+  "revision": "761032ffc963b11979f638a087398647aea4dabc+documentation-review",
   "scenario_id": "WLB.01-library-foundation",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:2f2317f91ec442c1d2c9777a2395161a8bd3eba0d6a0360078e31cdc2e9da4a9",
+  "source_tree_digest": "sha256:a82864bf3ffbab4436fe98f3d88d4761a5e6a803ed6d793cf8e8c97536491182",
   "toolchain": {
     "backend": "BEAM-supervision",
     "elixir": "1.20.2",

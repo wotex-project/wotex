@@ -1,17 +1,47 @@
 {
   "assertions": [
-    {"id": "WLB-C05:directory-shared-contract", "status": "pass"},
-    {"id": "WLB-C05:directory-concurrency-lifecycle", "status": "pass"},
-    {"id": "WLB-C05:continuum-kinds-compatibility", "status": "pass"},
-    {"id": "WLB-C05:continuum-source-identity", "status": "pass"},
-    {"id": "WLB-C05:continuum-faults-replay", "status": "pass"},
-    {"id": "WLB-C06:smart-room-cycle", "status": "pass"},
-    {"id": "WLB-C06:policy-concurrency", "status": "pass"},
-    {"id": "WLB-C06:disposable-broker", "status": "pass"},
-    {"id": "WLB-C05:continuum-cookbook", "status": "pass"},
-    {"id": "WLB-C05:manifest-integrity", "status": "pass"}
+    {
+      "id": "WLB-C05:directory-shared-contract",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C05:directory-concurrency-lifecycle",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C05:continuum-kinds-compatibility",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C05:continuum-source-identity",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C05:continuum-faults-replay",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C06:smart-room-cycle",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C06:policy-concurrency",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C06:disposable-broker",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C05:continuum-cookbook",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C05:manifest-integrity",
+      "status": "pass"
+    }
   ],
-  "attempt": 7,
+  "attempt": 8,
   "budgets": {
     "capacity": 64,
     "deadline_ms": 60000,
@@ -20,42 +50,108 @@
     "max_rows": 1
   },
   "cleanup": {
-    "details": {"containers": 0, "sessions": 0, "sqlite_files": 0},
+    "details": {
+      "containers": 0,
+      "sessions": 0,
+      "sqlite_files": 0
+    },
     "status": "ok"
   },
   "dependencies": [
-    {"archive": "missing", "name": "wotex", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_runtime", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_directory", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_continuum", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_nx", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_binding_http", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_binding_mqtt", "version": "0.1.0-source"},
-    {"archive": "sha256:f83350f2d29a38be1fd38f39081dd36f41fc51bbacf0f4c2927d01308ae331d0", "name": "exqlite", "version": "0.40.0"},
-    {"archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9", "name": "nx", "version": "0.13.1"},
-    {"archive": "sha256:3ebc3f84f6f9f829c31f107bc3c2cb484705163d9cb7c62ed2e0405913360595", "name": "explorer", "version": "0.12.0"},
-    {"archive": "sha256:c5684ca062fa407cac115aec3256383f3e2ec9fdced7904d59cf5a7bb7ed6181", "name": "bandit", "version": "1.12.5"},
-    {"archive": "sha256:4b192d63253e8dcc6221ef992ea9ebef7d3555166e8423aa5b553e86bc3c69a2", "name": "req", "version": "0.7.4"},
-    {"archive": "sha256:9ae72f46d6afc5d95a1de2f5b190a6e24b668f7d3e17b74bbf2f499542b4ce0d", "name": "emqtt", "version": "1.16.0"},
-    {"archive": "sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797", "name": "eclipse-mosquitto", "version": "2.1.2"}
+    {
+      "archive": "missing",
+      "name": "wotex",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_runtime",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_directory",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_continuum",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_nx",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_binding_http",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_binding_mqtt",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "sha256:f83350f2d29a38be1fd38f39081dd36f41fc51bbacf0f4c2927d01308ae331d0",
+      "name": "exqlite",
+      "version": "0.40.0"
+    },
+    {
+      "archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9",
+      "name": "nx",
+      "version": "0.13.1"
+    },
+    {
+      "archive": "sha256:3ebc3f84f6f9f829c31f107bc3c2cb484705163d9cb7c62ed2e0405913360595",
+      "name": "explorer",
+      "version": "0.12.0"
+    },
+    {
+      "archive": "sha256:c5684ca062fa407cac115aec3256383f3e2ec9fdced7904d59cf5a7bb7ed6181",
+      "name": "bandit",
+      "version": "1.12.5"
+    },
+    {
+      "archive": "sha256:4b192d63253e8dcc6221ef992ea9ebef7d3555166e8423aa5b553e86bc3c69a2",
+      "name": "req",
+      "version": "0.7.4"
+    },
+    {
+      "archive": "sha256:9ae72f46d6afc5d95a1de2f5b190a6e24b668f7d3e17b74bbf2f499542b4ce0d",
+      "name": "emqtt",
+      "version": "1.16.0"
+    },
+    {
+      "archive": "sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797",
+      "name": "eclipse-mosquitto",
+      "version": "2.1.2"
+    }
   ],
-  "durations": {"run_ms": 32400},
+  "durations": {
+    "run_ms": 33123
+  },
   "fixtures": {
     "loopback/thing-description.json": "sha256:59da3c2a80403a794cbc38bb8a4a91d0d671df481fa2dd441004b4f3c99d90ec"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test test/wotex/lab/directory_test.exs test/wotex/lab/continuum_test.exs test/wotex/lab/smart_room_test.exs test/wotex/lab/cookbook_test.exs",
-    "renewal:2026-09-08-room-experiment-2;seed=1;manifest-integrity-checked-separately",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test test/wotex/lab/continuum_test.exs test/wotex/lab/cookbook_test.exs test/wotex/lab/directory_test.exs test/wotex/lab/smart_room_test.exs --seed 1",
     "broker-image:eclipse-mosquitto:2",
-    "fault-schedule:1.0.0"
+    "fault-schedule:1.0.0",
+    "renewal:2026-09-09-documentation-and-runtime-opening;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
-  "outcomes": {"broker_enabled": true, "excluded_count": 0, "test_count": 66},
-  "revision": "17abaf5+workspace-room-experiment-2",
+  "outcomes": {
+    "broker_enabled": true,
+    "excluded_count": 0,
+    "test_count": 66
+  },
+  "revision": "761032ffc963b11979f638a087398647aea4dabc+documentation-review",
   "scenario_id": "WLB.05-directory-continuum-and-smart-room",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:a2859721b6fed4d43e939369650e89ccfa97e9ce221c34599f80f4351ba1a1cb",
+  "source_tree_digest": "sha256:82db733d119ab36f87dd62ac6e643d442d53eb4c784e8f9d87b70b8d8b9f3ccf",
   "toolchain": {
     "backend": "Nx.BinaryBackend-and-BEAM-network",
     "elixir": "1.20.2",

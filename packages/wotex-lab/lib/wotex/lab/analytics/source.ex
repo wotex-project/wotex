@@ -5,6 +5,19 @@ defmodule Wotex.Lab.Analytics.Source do
   Values are finite numbers, nil or explicit Nx nonfinite atoms. Missing and
   nonfinite states are retained separately. This is not WoT observation
   admission, a full-tensor conversion, a durable dataset or training data.
+
+  A source contains at most eight uniquely named series and 2,000 points per
+  series, subject to a one-mebibyte canonical representation. Each series
+  carries its unit, source label, downsampling method, optional interval, and
+  dropped-point count. Integer values are limited to the exactly representable
+  binary64 range; floating-point values use the library's finite magnitude
+  bound.
+
+  `new/1` emits scalar rows that distinguish observed, missing, and explicit
+  nonfinite states, together with normalized metadata and a content digest.
+  Native dataframe filtering and aggregation occur only after this admission
+  step. The digest describes the bounded preview input; it does not make live
+  history immutable or authorize its use in an experiment.
   """
 
   alias Wotex.Lab.Error

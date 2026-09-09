@@ -1,15 +1,39 @@
 {
   "assertions": [
-    {"id": "WLB-C03:thermal-nx", "status": "pass"},
-    {"id": "WLB-C03:window-anomaly", "status": "pass"},
-    {"id": "WLB-C03:serving-batches", "status": "pass"},
-    {"id": "WLB-C03:axon-room-model", "status": "pass"},
-    {"id": "WLB-C03:backend-cohort", "status": "pass"},
-    {"id": "WLB-C03:proposal-policy", "status": "pass"},
-    {"id": "WLB-C03:livebook-contracts", "status": "pass"},
-    {"id": "WLB-C03:manifest-integrity", "status": "pass"}
+    {
+      "id": "WLB-C03:thermal-nx",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C03:window-anomaly",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C03:serving-batches",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C03:axon-room-model",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C03:backend-cohort",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C03:proposal-policy",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C03:livebook-contracts",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C03:manifest-integrity",
+      "status": "pass"
+    }
   ],
-  "attempt": 1,
+  "attempt": 2,
   "budgets": {
     "deadline_ms": 60000,
     "max_samples": 4096,
@@ -17,12 +41,24 @@
     "tolerance_ppm": 100
   },
   "cleanup": {
-    "details": {"device_tensors": 0, "effects": 0, "servings": 0},
+    "details": {
+      "device_tensors": 0,
+      "effects": 0,
+      "servings": 0
+    },
     "status": "ok"
   },
   "dependencies": [
-    {"archive": "missing", "name": "wotex", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_nx", "version": "0.1.0-source"},
+    {
+      "archive": "missing",
+      "name": "wotex",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_nx",
+      "version": "0.1.0-source"
+    },
     {
       "archive": "sha256:20556ea36c1e9732c1d87eebbf7c0773517e876e92af4ff592b974f80db0b9d9",
       "name": "nx",
@@ -44,24 +80,31 @@
       "version": "1.4.2"
     }
   ],
-  "durations": {"run_ms": 32600},
+  "durations": {
+    "run_ms": 31285
+  },
   "fixtures": {
     "expected-output.json": "sha256:ae6f8b18388457d6f8b279ad8dfc0ee49dc7a9a142fe5ca235b5cca6886d56aa",
     "manifest.json": "sha256:65d8c0fffe9870cae485b14ea072a983fc2cceb77ae40ddd11450316c182bbe2",
     "thing-description.json": "sha256:951b814403e00efc5e3a742cfce5c905e5f228db42978b3e59eaaee2e15d2c81"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 mix test --seed 1 WLB.03-evidence-files",
+    "command:WOTEX_PATH_DEPS=1 mix test test/wotex/lab/backend_cohort_test.exs test/wotex/lab/cookbook_test.exs test/wotex/lab/room_model_test.exs test/wotex/lab/serving_test.exs test/wotex/lab/smart_room_test.exs test/wotex/lab/thermal_test.exs test/wotex/lab/window_anomaly_test.exs --seed 1",
     "backend:Nx.BinaryBackend-and-EXLA-CPU",
-    "exclusions:three-real-broker-cases-owned-by-WLB.04"
+    "exclusions:three-real-broker-cases-owned-by-WLB.04",
+    "renewal:2026-09-09-documentation-and-runtime-opening;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
-  "outcomes": {"excluded_count": 3, "required_lanes": 6, "test_count": 52},
-  "revision": "d69c3d1+workspace-wlb03-source-evidence",
+  "outcomes": {
+    "excluded_count": 3,
+    "required_lanes": 6,
+    "test_count": 52
+  },
+  "revision": "761032ffc963b11979f638a087398647aea4dabc+documentation-review",
   "scenario_id": "WLB.03-nx-experiments",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:e46284305f78aa11aac98a999e09568e312a878c5e491563fe25738f34138041",
+  "source_tree_digest": "sha256:c0dd4057770940fa2e4ee1c3bb740d9b5421dad1a532c06413c0d885401350c3",
   "toolchain": {
     "backend": "Nx.BinaryBackend-Evaluator-and-EXLA-CPU",
     "elixir": "1.20.2",

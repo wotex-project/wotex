@@ -5,6 +5,18 @@ defmodule Wotex.Lab do
   Loading this library starts no Lab instance. Add `child_spec/1` to your own
   supervisor or call `start_link/1`. Each instance owns separate bounded Thing
   and session supervisors. The numerical example can also run without an instance.
+
+  Instances are consumer composition roots rather than framework-wide
+  registries. Their identifiers and capacities are supplied explicitly, and
+  independent trees can coexist without shared process names or application
+  configuration. Dependency applications retain their own documented startup
+  behavior.
+
+  `start_child/3` and `stop_child/3` address the two instance roles through a
+  live supervisor PID. They accept trusted in-process child specifications;
+  scenario data and network input must never select modules or executable child
+  terms. Restart, shutdown, and resource ownership otherwise follow the child
+  specification and ordinary OTP supervision semantics.
   """
 
   @doc "Returns an ordinary supervisor child specification with a caller-supplied ID."

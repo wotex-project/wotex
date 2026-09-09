@@ -8,6 +8,17 @@ if Code.ensure_loaded?(Wotex.Runtime.Transport) do
     It resolves to `nil` credential material when every selected security
     definition uses the `nosec` scheme and refuses anything else, so a Form that
     requires a real scheme can never run without an explicit credential provider.
+
+    Runtime passes the already selected security definitions to `resolve/4`.
+    This adapter checks each definition and returns a typed Lab error for a
+    non-`nosec` scheme or malformed selection. It does not infer security from
+    a URI, modify a Form, or downgrade an authenticated requirement.
+
+    Use this implementation for explicitly unsecured local simulations and
+    reference endpoints. Deployments that select bearer, basic, certificate,
+    or other credential schemes must provide a separate
+    `Wotex.Runtime.Credentials` implementation with appropriate secret
+    resolution and audience controls.
     """
 
     @behaviour Wotex.Runtime.Credentials

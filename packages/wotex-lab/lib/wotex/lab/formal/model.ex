@@ -7,6 +7,11 @@ defmodule Wotex.Lab.Formal.Model do
   known model id and `verify/1` compares the file on disk with the recorded
   digest, so a profile can only run a model whose bytes match what the
   catalogue describes. Nothing here starts a process or reads the network.
+
+  `ids/0` and `variants/0` expose closed catalogue vocabularies. Verification
+  establishes content identity only; engine availability, execution bounds,
+  model interpretation, and the resulting evidence remain responsibilities of
+  the formal profile and its consumer-owned port.
   """
 
   alias Wotex.JSON

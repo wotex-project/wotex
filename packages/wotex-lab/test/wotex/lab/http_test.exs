@@ -19,6 +19,27 @@ defmodule Wotex.Lab.HttpTest do
   @token "room-token-7f3a"
 
   setup do
+    handler = {__MODULE__, make_ref()}
+
+    :ok =
+      :telemetry.attach(
+        handler,
+        [:wotex, :runtime, :subscription, :open],
+        &__MODULE__.subscription_opened/4,
+        self()
+      )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+    :ok
+  end
+
+  @doc false
+  def subscription_opened(_event, _measurements, %{request_id: "http-stop"}, receiver),
+    do: send(receiver, {:runtime_subscription_opened, self()})
+
+  def subscription_opened(_event, _measurements, _metadata, _receiver), do: :ok
+
+  setup do
     {:ok, server} = HttpServer.start(self())
     lab = start_supervised!({Lab, id: "http", max_children: 8})
     td = thing_description(server.port)
@@ -214,6 +235,8 @@ defmodule Wotex.Lab.HttpTest do
     assert_receive {:stream_opened, _headers}, 2_000
     stream = HttpServer.stream_pid(server.controller)
     stream_monitor = Process.monitor(stream)
+
+    assert_receive {:runtime_subscription_opened, ^pid}, 2_000
 
     {ReqClient, session, _request_id, _operation} =
       HTTPSubscription.unwrap(:sys.get_state(pid).handle)

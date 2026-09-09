@@ -8,6 +8,11 @@ defmodule Wotex.Lab.MCP.Seams do
   redirects, reconnect, supervision, remote contexts, Directory storage, Nx
   effects, Continuum intent and formal verification. It is descriptive data,
   not a claim that any package is complete.
+
+  `all/0` returns the closed table in its declared order, and `fetch/1` resolves
+  one bounded identifier without dynamic discovery. Keeping the answers as data
+  lets the Model Context Protocol surface cite exact package and specification
+  ownership without granting access to the owned capability.
   """
 
   @seams [

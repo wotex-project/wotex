@@ -10,7 +10,13 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
     principal absent from the map, or an operation absent from its list, is
     denied before any repository access. A tenant may be bound by placing it in
     the request context's `authorization` value; when the policy carries a
-    `{:tenant, name}` requirement the context must match it.
+    `{:tenant, name, operations}` requirement the context must match it.
+
+    The adapter returns `:ok` or `:deny` for admitted policies and
+    `{:error, :invalid_policy}` for an unsupported top-level policy. It performs
+    no identity verification, tenant lookup, or repository access, which keeps
+    authentication and policy distribution under host
+    ownership.
     """
 
     @behaviour Wotex.Directory.Authorization

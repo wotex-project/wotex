@@ -7,6 +7,11 @@ defmodule Wotex.Lab.Adapters.Runtime.Loopback.Session do
   monitors the simulated Thing host and exits with `{:shutdown, :host_down}`
   when the host dies, which the owning subscription reports as
   `:transport_down`. Closing exits normally.
+
+  `start/1` links the helper to its caller and monitors the supplied host PID;
+  `close/1` sends the finite shutdown signal. The module carries no payload,
+  reconnection policy, credential, or registry name, so lifetime remains visible
+  in the consumer's supervision topology.
   """
 
   @doc "Starts a session linked to the calling subscription process."

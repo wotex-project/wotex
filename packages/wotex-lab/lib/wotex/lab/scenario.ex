@@ -4,6 +4,18 @@ defmodule Wotex.Lab.Scenario do
 
   IDs and capabilities are strings. Deserialization must never create atoms or
   select modules. An approved host maps capabilities to explicitly supplied code.
+
+  A descriptor records an identifier, a title, distinct capability IDs, a
+  deterministic seed, and a maximum step count. Construction enforces the
+  closed field set and the bounds defined by the Lab scenario contract.
+  `to_map/1` returns the versioned, string-keyed representation used by
+  frontends and evidence records.
+
+  The value expresses admitted intent only. It contains no callback, process,
+  credential, timeout implementation, or executable step. An execution host
+  must reconstruct and validate boundary input, match requested capabilities
+  to its reviewed configuration, and supply the revision-pinned scenario
+  definition and resource budgets separately.
   """
 
   alias Wotex.Lab.{Error, Options}

@@ -10,7 +10,7 @@ defmodule Wotex.Lab.Metrics.GreptimeBridge do
   written to the optional `:history`, and queued for export. Export goes
   through the `:sink` function `(request, credential) -> result` with the
   encoded remote-write request (`Wotex.Lab.Metrics.ReqSink.write/3` is the
-  Req-based port); the credential is resolved just in time from the
+  Req-based port); the credential is resolved for each export from the
   host-supplied `%{reference: term, lookup: (term -> {:ok, credential})}` in
   the export process and never enters the bridge state, stats or errors.
 

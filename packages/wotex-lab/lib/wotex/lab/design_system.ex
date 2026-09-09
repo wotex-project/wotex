@@ -6,6 +6,11 @@ defmodule Wotex.Lab.DesignSystem do
   local asset and applies that class to its root container. Set `data-theme`
   to `light` or `dark` to override system preference. Consumers may override
   semantic CSS variables; this module starts no UI or asset pipeline.
+
+  `tokens/0` returns inert, string-keyed data for hosts that render controls
+  themselves. `stylesheet/0` produces deterministic CSS from the same contract,
+  keeping color, typography, spacing, focus, and status semantics aligned across
+  the optional workbench frontends.
   """
 
   @version "0.1.0"

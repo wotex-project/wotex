@@ -9,6 +9,16 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) do
     `{:agent, pid}` reads the instant held by an `Agent` so a test or host can
     advance simulated time explicitly with `advance/2`. Use
     `Wotex.Directory.Clock.System` for host-provided wall-clock time.
+
+    The agent-backed variant isolates mutable simulated time within the
+    consumer-owned process. `advance/2` applies an integer number of seconds,
+    and the directory reads the resulting `DateTime` through the clock
+    behavior. Neither variant consults system time, schedules expiry, or
+    persists its state.
+
+    These clocks support repeatable directory scenarios. A production host
+    should select a clock whose lifecycle and time authority match its storage
+    and deployment model.
     """
 
     @behaviour Wotex.Directory.Clock

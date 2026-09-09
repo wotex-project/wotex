@@ -8,6 +8,11 @@ defmodule Wotex.Lab.Runner.Budgets do
   ceiling; preflight refuses anything else. Wall and cleanup budgets are
   enforced with monotonic deadlines; observation time supplied by a fixture
   is a separate coordinate the runner never mixes with them.
+
+  `defaults/0` and `ceilings/0` expose the contract as inert maps, while `new/1`
+  merges and validates consumer overrides. This module allocates no resource;
+  the runner applies each admitted limit at the process, queue, payload, or
+  cleanup boundary it governs.
   """
 
   alias Wotex.Lab.Error

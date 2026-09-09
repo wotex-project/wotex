@@ -19,6 +19,27 @@ defmodule Wotex.Lab.MqttTest do
 
   @moduletag capture_log: true
 
+  setup do
+    handler = {__MODULE__, make_ref()}
+
+    :ok =
+      :telemetry.attach(
+        handler,
+        [:wotex, :runtime, :subscription, :open],
+        &__MODULE__.subscription_opened/4,
+        self()
+      )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+    :ok
+  end
+
+  @doc false
+  def subscription_opened(_event, _measurements, %{request_id: "mqtt-scripted"}, receiver),
+    do: send(receiver, {:runtime_subscription_opened, self()})
+
+  def subscription_opened(_event, _measurements, _metadata, _receiver), do: :ok
+
   test "an unreachable broker refuses a publish, a retained read and a subscription" do
     context = execution_context(nil)
     config = %{connect_timeout: 1_000}
@@ -384,7 +405,7 @@ defmodule Wotex.Lab.MqttTest do
       )
 
     {:ok, subscription} = Lab.start_child(lab, :sessions, spec)
-    assert :sys.get_state(subscription).active?
+    assert_receive {:runtime_subscription_opened, ^subscription}, 2_000
     subscription
   end
 

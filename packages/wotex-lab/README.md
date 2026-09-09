@@ -1,12 +1,24 @@
 # Wotex Lab
 
-**A consumer laboratory for connected Things and numerical experiments in Elixir / OTP.**
+**A consumer laboratory for connected Things and numerical experiments in Elixir and OTP.**
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_lab.svg)](https://hex.pm/packages/wotex_lab)
-[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_lab)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_lab)
 [![CI](https://github.com/wotex-project/wotex-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-lab/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/wotex-project/wotex-lab/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-lab)
-[![License](https://img.shields.io/github/license/wotex-project/wotex-lab.svg)](https://github.com/wotex-project/wotex-lab/blob/main/LICENSE)
+[![License](https://img.shields.io/hexpm/l/wotex_lab.svg)](https://github.com/wotex-project/wotex-lab/blob/main/LICENSE)
+
+[Foundation](#run-the-foundation) ·
+[Cookbooks](#cookbooks) ·
+[Process ownership](#own-the-processes-explicitly) ·
+[Architecture](#architecture) ·
+[Evidence and adoption](#source-evidence-and-adoption) ·
+[License](#license)
+
+---
+
+This is a development checkout with an unstable public API. Package
+publication and release readiness require separate verification.
 
 WoTEx libraries describe, interact with, discover and exchange Thing values.
 Lab composes their public seams into inspectable experiments. For the Nx
@@ -322,8 +334,8 @@ milestone. The scenario runner is implemented with partial cross-frontend
 evidence. The small OTP foundation and all six required local Nx lanes have
 complete content-bound evidence; wider upstream and release programmes remain
 partial. No entry claims artifact verification. The
-[source baseline](docs/provenance/standards-and-dependencies.md) records what
-was actually inspected. Package publication, standards conformance, model
+[source baseline](docs/provenance/standards-and-dependencies.md) records the
+materials inspected. Package publication, standards conformance, model
 accuracy and stable API admission are separate claims.
 
 `mix check` runs compilation, formatting, strict Credo, tests with 95% line

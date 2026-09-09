@@ -8,6 +8,11 @@ defmodule Wotex.Lab.Metrics.Request do
   atoms, endpoints, SQL, modules or callbacks are created from input. Transport
   hosts must bound encoded input before JSON decoding; this boundary validates
   the resulting bounded field structure, not a raw HTTP body.
+
+  Accepted strings are mapped through the fixed metric, aggregation, and
+  dimension catalogues. The returned `Wotex.Lab.Metrics.Query` therefore carries
+  only server-known atoms, authenticated scope, finite time bounds, and
+  separately enforced execution limits.
   """
 
   alias Wotex.Lab.Error

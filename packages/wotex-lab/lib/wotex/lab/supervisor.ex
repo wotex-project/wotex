@@ -5,6 +5,17 @@ defmodule Wotex.Lab.Supervisor do
   Child supervisors are anonymous and resolved through the supplied instance
   PID. No Registry, generated atom, global environment or shared store is used.
   Trusted child specs retain their own shutdown and restart semantics.
+
+  The root uses `:one_for_one` supervision and owns distinct dynamic
+  supervisors for `:things` and `:sessions`. Failure or restart of one role
+  does not restart the other role's children; stopping the root terminates both
+  roles and their descendants. Capacity is enforced independently for each
+  role.
+
+  Startup requires a bounded string `:id` and accepts an optional OTP
+  registration `:name` and `:max_children`. The module validates configuration
+  before initialization, reports unavailable role supervisors explicitly, and
+  passes native `DynamicSupervisor` child results to the caller.
   """
 
   use Supervisor

@@ -4,7 +4,7 @@ defmodule Wotex.Lab.Metrics.Snapshot do
   series set at one point in time.
 
   The collector produces it from aggregated telemetry and the exposition parser
-  produces the very same shape from Prometheus text, so history, queries and
+  produces the same shape from Prometheus text, so history, queries and
   the remote-write encoder never care where a snapshot came from. Every series
   carries a Prometheus name, a `:counter`, `:gauge` or `:histogram` type,
   sorted unique string labels and one sample: a number (or `:stale`, `:nan`,

@@ -1,14 +1,35 @@
 {
   "assertions": [
-    {"id": "WLB-C04:loopback-runtime", "status": "pass"},
-    {"id": "WLB-C04:http-sse", "status": "pass"},
-    {"id": "WLB-C04:hosted-http", "status": "pass"},
-    {"id": "WLB-C04:mqtt-scripted", "status": "pass"},
-    {"id": "WLB-C04:mqtt-broker", "status": "pass"},
-    {"id": "WLB-C04:mqtt-sample-admission", "status": "pass"},
-    {"id": "WLB-C04:manifest-integrity", "status": "pass"}
+    {
+      "id": "WLB-C04:loopback-runtime",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C04:http-sse",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C04:hosted-http",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C04:mqtt-scripted",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C04:mqtt-broker",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C04:mqtt-sample-admission",
+      "status": "pass"
+    },
+    {
+      "id": "WLB-C04:manifest-integrity",
+      "status": "pass"
+    }
   ],
-  "attempt": 5,
+  "attempt": 6,
   "budgets": {
     "deadline_ms": 60000,
     "max_inflight": 2,
@@ -18,45 +39,109 @@
     "receive_maximum": 2
   },
   "cleanup": {
-    "details": {"containers": 0, "sessions": 0},
+    "details": {
+      "containers": 0,
+      "sessions": 0
+    },
     "status": "ok"
   },
   "dependencies": [
-    {"archive": "missing", "name": "wotex", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_runtime", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_binding_http", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_binding_mqtt", "version": "0.1.0-source"},
-    {"archive": "missing", "name": "wotex_nx", "version": "0.1.0-source"},
-    {"archive": "sha256:c5684ca062fa407cac115aec3256383f3e2ec9fdced7904d59cf5a7bb7ed6181", "name": "bandit", "version": "1.12.5"},
-    {"archive": "sha256:80e58d3f936f57e3fdf404f83a3642897ae6d9fb642934e46da4d8fe761b99d5", "name": "finch", "version": "0.23.0"},
-    {"archive": "sha256:8b16fb72aaa7531d206a1f05e4cc85509ba531ccec7a17a22736c9c95cbb24d1", "name": "mint", "version": "1.10.0"},
-    {"archive": "sha256:4b192d63253e8dcc6221ef992ea9ebef7d3555166e8423aa5b553e86bc3c69a2", "name": "req", "version": "0.7.4"},
-    {"archive": "sha256:be266aee1b8536ef6409d58cf39a3121319f0ec47cfa1b24024485aa0e76ad76", "name": "plug", "version": "1.20.3"},
-    {"archive": "sha256:928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1", "name": "telemetry", "version": "1.4.2"},
-    {"archive": "sha256:9ae72f46d6afc5d95a1de2f5b190a6e24b668f7d3e17b74bbf2f499542b4ce0d", "name": "emqtt", "version": "1.16.0"},
-    {"archive": "sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797", "name": "eclipse-mosquitto", "version": "2.1.2"},
-    {"archive": "missing", "name": "docker-engine", "version": "29.4.0"}
+    {
+      "archive": "missing",
+      "name": "wotex",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_runtime",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_binding_http",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_binding_mqtt",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "missing",
+      "name": "wotex_nx",
+      "version": "0.1.0-source"
+    },
+    {
+      "archive": "sha256:c5684ca062fa407cac115aec3256383f3e2ec9fdced7904d59cf5a7bb7ed6181",
+      "name": "bandit",
+      "version": "1.12.5"
+    },
+    {
+      "archive": "sha256:80e58d3f936f57e3fdf404f83a3642897ae6d9fb642934e46da4d8fe761b99d5",
+      "name": "finch",
+      "version": "0.23.0"
+    },
+    {
+      "archive": "sha256:8b16fb72aaa7531d206a1f05e4cc85509ba531ccec7a17a22736c9c95cbb24d1",
+      "name": "mint",
+      "version": "1.10.0"
+    },
+    {
+      "archive": "sha256:4b192d63253e8dcc6221ef992ea9ebef7d3555166e8423aa5b553e86bc3c69a2",
+      "name": "req",
+      "version": "0.7.4"
+    },
+    {
+      "archive": "sha256:be266aee1b8536ef6409d58cf39a3121319f0ec47cfa1b24024485aa0e76ad76",
+      "name": "plug",
+      "version": "1.20.3"
+    },
+    {
+      "archive": "sha256:928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1",
+      "name": "telemetry",
+      "version": "1.4.2"
+    },
+    {
+      "archive": "sha256:9ae72f46d6afc5d95a1de2f5b190a6e24b668f7d3e17b74bbf2f499542b4ce0d",
+      "name": "emqtt",
+      "version": "1.16.0"
+    },
+    {
+      "archive": "sha256:6f8d8a947c506f8a2290ec65cd4bd2bc7cb4d43fb5f6271f861cb013e2ef9797",
+      "name": "eclipse-mosquitto",
+      "version": "2.1.2"
+    },
+    {
+      "archive": "missing",
+      "name": "docker-engine",
+      "version": "29.4.0"
+    }
   ],
-  "durations": {"run_ms": 13700},
+  "durations": {
+    "run_ms": 14566
+  },
   "fixtures": {
     "tls/ca-cert.pem": "sha256:f8fa6c43f51909fd87f28bae9fd227ffd10df539261c26accf62bb09611457b6",
     "tls/localhost-cert.pem": "sha256:9b75c22360f6ebc90e04c564ee27c4ce36815fe3dd071a929cfd46b7350868b2",
     "tls/localhost-key.pem": "sha256:1c6bc80befe0d03160829900e58819eec13a2e3291b5194a5efd61bfd7ad309d"
   },
   "inputs": [
-    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test WLB.04-evidence-files",
-    "renewal:2026-09-08-all-owner-quality-cohort;seed=1;manifest-integrity-checked-separately",
+    "command:WOTEX_PATH_DEPS=1 WOTEX_LAB_BROKER=1 mix test test/wotex/lab/http_destination_test.exs test/wotex/lab/http_test.exs test/wotex/lab/loopback_test.exs test/wotex/lab/mqtt_broker_test.exs test/wotex/lab/mqtt_sample_admission_test.exs test/wotex/lab/mqtt_test.exs --seed 1",
     "broker-image:eclipse-mosquitto:2",
     "profile:http-local-and-hosted",
-    "profile:mqtt-local-and-mqtts"
+    "profile:mqtt-local-and-mqtts",
+    "renewal:2026-09-09-documentation-and-runtime-opening;seed=1;manifest-integrity-checked-separately"
   ],
   "lock_digest": "sha256:d835c929b5b0e0ee596f5d817ae805f19129d3830b8fed5588ee47bec74e4673",
-  "outcomes": {"broker_enabled": true, "test_count": 56},
-  "revision": "f706d3a+workspace-all-owner-quality-cohort",
+  "outcomes": {
+    "broker_enabled": true,
+    "test_count": 56
+  },
+  "revision": "761032ffc963b11979f638a087398647aea4dabc+documentation-review",
   "scenario_id": "WLB.04-runtime-and-network-adapters",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:06734f5bc970c881f90fe7998eb312421a7756a138b3f7270c57755602061e62",
+  "source_tree_digest": "sha256:437c06a88411849a5d5ae14c5ad7b3f7f193493038fe5e6851255da61a3a5e07",
   "toolchain": {
     "backend": "BEAM-network",
     "elixir": "1.20.2",

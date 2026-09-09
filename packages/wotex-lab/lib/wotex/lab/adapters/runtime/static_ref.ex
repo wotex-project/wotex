@@ -3,14 +3,21 @@
 if Code.ensure_loaded?(Wotex.Runtime.Transport) do
   defmodule Wotex.Lab.Adapters.Runtime.StaticRef do
     @moduledoc """
-    Credential port that resolves secret references just in time.
+    Credential port that resolves secret references at invocation time.
 
-    Configuration holds only references, never secrets: `references` maps a
+    Configuration must hold references instead of secrets: `references` maps a
     selected security-definition name to an opaque reference, and `lookup` is a
     consumer-owned one-arity function that turns a reference into the secret at
-    resolution time. The resolved map (`security name => secret`) exists only in
+    resolution time. The resolved map (`security name => secret`) is returned for
     the ephemeral execution context of one port call. `nosec` definitions need no
     reference. Errors never echo references or secrets.
+
+    `Wotex.Runtime` supplies the validated security selection. For each selected
+    name that is not `nosec`, this adapter requires a reference and a successful
+    lookup. Missing references and invalid configuration return errors before
+    transport invocation. The adapter does not validate a complete Thing
+    Description or sanitize opaque references; the host supplies those values
+    and owns the lookup function and secret store.
     """
 
     @behaviour Wotex.Runtime.Credentials

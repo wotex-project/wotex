@@ -7,6 +7,11 @@ defmodule Wotex.Lab.Formal.Output do
   `Warning:` line, no recognizable outcome, or unreadable numbers is
   malformed. `path/1` reads a `show path` reply into ordered steps of state
   number, rule label and state term. Both refuse output above `max_bytes`.
+
+  Parsing is intentionally narrower than general Maude syntax and never invokes
+  the engine. Missing expected output or a recognized warning produces a typed
+  failure. The parser does not validate every line as a complete Maude
+  transcript; callers retain raw output within their evidence boundary.
   """
 
   alias Wotex.Lab.Error

@@ -5,6 +5,11 @@ defmodule Wotex.Lab.Analytics.Query do
   This module performs no native work. A query selects one supplied series or
   all series, an inclusive numeric range, and a preview limit of at most 100.
   Scope is not a caller field: hosts supply only the current session's source.
+
+  `new/2` admits known keyword options against an explicit list of available
+  series names. It rejects unknown keys, reversed or non-finite bounds, unknown
+  series, and oversized previews before a native analytics port receives the
+  descriptor.
   """
 
   alias Wotex.Lab.Error

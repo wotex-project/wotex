@@ -5,10 +5,9 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
     @moduledoc """
     Instance-owned SQLite implementation of `Wotex.Directory.Repository`.
 
-    This is a second, genuinely separate repository algorithm. It uses Exqlite
-    directly, so every unit of work is a database transaction over conditional
-    SQL rather than an in-memory table walk. One `GenServer` owns the connection
-    and answers every callback, so the callbacks are serialized; SQLite supplies
+    Mutations use Exqlite transactions and conditional SQL. One `GenServer` owns
+    the connection and answers every callback, so the callbacks are serialized;
+    SQLite supplies
     the atomicity, and the process supplies the ordering.
 
     ## Instance data directory
@@ -18,7 +17,7 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
     is `directory.sqlite3` under that directory unless `:database` names another
     plain file name. `start_link/1` creates the directory and the schema, so
     there is no migration step. `retain: false` removes the database file and its
-    write-ahead siblings when the owner terminates; the default keeps them, which
+    write-ahead siblings during orderly owner shutdown; the default keeps them, which
     is what the reopen path needs.
 
     ## Schema
@@ -40,9 +39,9 @@ if Code.ensure_loaded?(Wotex.Directory.Repository) and Code.ensure_loaded?(Exqli
     create that reports the unique-constraint failure as `:already_exists`.
     `version` supports the conditional `UPDATE`/`DELETE` of `replace/4` and
     `delete/4`: the precondition is part of the `WHERE` clause, and `changes()`
-    separates a applied write from one that changed nothing. `expires_us` is the
+    separates an applied write from one that changed nothing. `expires_us` is the
     absolute expiry in microseconds since the epoch, which keeps activity and
-    due selection inside SQL. `document` is the canonical JSON envelope of the
+    due selection inside SQL. `document` is the JSON envelope of the
     Thing Description and its registration information.
 
     Ordering is `ORDER BY identifier`. The default `BINARY` collation compares

@@ -8,6 +8,11 @@ defmodule Wotex.Lab.Graph.Interfaces do
   interface, not a running deployment. Neither replaces a Thing Description,
   and both carry explicit deployment status. The dialect versions are pinned
   here and validated by `bin/check_graph.exs`.
+
+  `openapi/1` and `asyncapi/1` derive deterministic, string-keyed documents from
+  an admitted `Wotex.Lab.Graph`. They perform no routing, server startup, schema
+  publication, or network discovery; an optional host decides how and whether
+  to expose the resulting documents.
   """
 
   @openapi_version "3.2.0"

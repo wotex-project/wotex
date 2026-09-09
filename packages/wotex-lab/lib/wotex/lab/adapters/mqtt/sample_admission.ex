@@ -7,6 +7,11 @@ defmodule Wotex.Lab.Adapters.MQTT.SampleAdmission do
   boot identifier and sequence. The resulting observation identity changes on
   a device reset, and a stale retained value is refused before it can enter a
   `Wotex.Nx` row.
+
+  `admit/2` returns an inert `Wotex.Nx.Observation` after checking timestamp
+  ranges, clock uncertainty, retained-message age, textual identifiers, and
+  sequence bounds. It does not subscribe to MQTT, read a clock, or decide how a
+  downstream model uses the observation.
   """
 
   alias Wotex.Lab.{Error, Options}
