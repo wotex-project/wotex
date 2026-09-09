@@ -482,6 +482,204 @@
           "accepted": false
         }
       }
+    },
+    {
+      "id": "WBL-B-F19",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S02",
+        "WBL-V06"
+      ],
+      "operation": "agent_prompt",
+      "input": {
+        "member": "RequestConfirmation",
+        "signature": "ou",
+        "body": [
+          "/org/bluez/hci0/device",
+          123456
+        ],
+        "device_path": "/org/bluez/hci0/device",
+        "decision": {
+          "action": "accept"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": true,
+          "kind": "confirm_passkey",
+          "value": 123456,
+          "decision_accepted": true,
+          "reply": {
+            "signature": "",
+            "body": [],
+            "error": null,
+            "reply_serial": 31,
+            "destination": ":1.9"
+          }
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F20",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S02",
+        "WBL-V06"
+      ],
+      "operation": "agent_prompt",
+      "input": {
+        "member": "RequestConfirmation",
+        "signature": "ou",
+        "body": [
+          "/org/bluez/hci0/device",
+          123456
+        ],
+        "device_path": "/org/bluez/hci0/device_other",
+        "decision": {
+          "action": "accept"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F21",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S02",
+        "WBL-V06"
+      ],
+      "operation": "agent_prompt",
+      "input": {
+        "member": "RequestConfirmation",
+        "signature": "ou",
+        "body": [
+          "/org/bluez/hci0/device",
+          1000000
+        ],
+        "device_path": "/org/bluez/hci0/device",
+        "decision": {
+          "action": "accept"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F22",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S02",
+        "WBL-V06"
+      ],
+      "operation": "agent_prompt",
+      "input": {
+        "member": "RequestPasskey",
+        "signature": "o",
+        "body": [
+          "/org/bluez/hci0/device"
+        ],
+        "device_path": "/org/bluez/hci0/device",
+        "decision": {
+          "action": "accept"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F23",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S02",
+        "WBL-V06"
+      ],
+      "operation": "agent_prompt",
+      "input": {
+        "member": "RequestPasskey",
+        "signature": "o",
+        "body": [
+          "/org/bluez/hci0/device"
+        ],
+        "device_path": "/org/bluez/hci0/device",
+        "decision": {
+          "action": "passkey",
+          "value": 999999
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": true,
+          "kind": "request_passkey",
+          "value": null,
+          "decision_accepted": true,
+          "reply": {
+            "signature": "u",
+            "body": [
+              999999
+            ],
+            "error": null,
+            "reply_serial": 31,
+            "destination": ":1.9"
+          }
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F24",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S02",
+        "WBL-V06"
+      ],
+      "operation": "agent_prompt",
+      "input": {
+        "member": "RequestAuthorization",
+        "signature": "o",
+        "body": [
+          "/org/bluez/hci0/device"
+        ],
+        "device_path": "/org/bluez/hci0/device",
+        "decision": {
+          "action": "reject"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": true,
+          "kind": "authorize_pairing",
+          "value": null,
+          "decision_accepted": false,
+          "reply": {
+            "signature": "",
+            "body": [],
+            "error": "org.bluez.Error.Rejected",
+            "reply_serial": 31,
+            "destination": ":1.9"
+          }
+        }
+      }
     }
   ],
   "executed_cases": [
@@ -497,6 +695,12 @@
     "WBL-B-F15",
     "WBL-B-F16",
     "WBL-B-F17",
-    "WBL-B-F18"
+    "WBL-B-F18",
+    "WBL-B-F19",
+    "WBL-B-F20",
+    "WBL-B-F21",
+    "WBL-B-F22",
+    "WBL-B-F23",
+    "WBL-B-F24"
   ]
 }

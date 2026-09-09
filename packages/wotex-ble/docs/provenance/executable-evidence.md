@@ -221,3 +221,19 @@ fails closed; close releases queued responses and export records. The driver
 resumes only its owned daemon. This is method dispatch and allocation evidence,
 not acceptance of RegisterAgent, Device1.Pair, policy challenge forwarding or
 bond/connection cleanup through the complete native helper.
+
+## Native pairing prompt values
+
+`test/native/agent_test.hpp` exercises the production `agent.hpp` boundary for
+all seven Agent prompt kinds, exact peer association, PIN/passkey limits,
+display progress, UUID normalization and explicit compatible decisions. It
+checks original request retention after the caller releases its reference,
+one-answer ownership, exact reply serial/destination, wrong kinds, forged
+options, unknown members and fixed rejection without diagnostic text.
+
+WBL-B-F19 through WBL-B-F24 execute concrete prompt/decision inputs through
+`test/interop/native_bus_test.exs`. The native driver receives input only;
+ExUnit compares the independently encoded reply projection with the corpus.
+The pure cases construct actual typed libdbus messages and perform no bus or
+pairing operation. Registration, policy callback deadlines, late replies and
+native Pair/UnregisterAgent cleanup still require operation-level acceptance.

@@ -10,7 +10,13 @@ defmodule Wotex.BLE.NativeBusTest do
   @moduletag :interop
   @root Path.expand("../..", __DIR__)
 
-  test "WBL-B01/S02 typed snapshots, private ownership and exact replies" do
+  @fixtures @root
+            |> Path.join("docs/specs/fixtures/native-port-v1.json")
+            |> File.read!()
+            |> Jason.decode!()
+            |> Map.fetch!("cases")
+
+  setup_all do
     source = required_directory!("WOTEX_BLE_DBUS_SOURCE")
     build = required_directory!("WOTEX_BLE_DBUS_BUILD")
     compiler = System.find_executable("c++") || flunk("native bus fixture requires C++17")
@@ -74,8 +80,33 @@ defmodule Wotex.BLE.NativeBusTest do
     </busconfig>
     """)
 
+    {:ok,
+     guardian: guardian, executable: executable, daemon: daemon, config: config, options: options}
+  end
+
+  test "WBL-B01/S02 typed snapshots, private ownership and exact replies", context do
     assert {:ok, "native bus ownership invariants passed\n", 0} =
-             NativeCommand.run(guardian, executable, [daemon, config], options)
+             NativeCommand.run(
+               context.guardian,
+               context.executable,
+               [context.daemon, context.config],
+               context.options
+             )
+  end
+
+  for fixture <- @fixtures, fixture["operation"] == "agent_prompt" do
+    @fixture fixture
+    test "#{fixture["id"]} executes the native Agent prompt and decision boundary", context do
+      assert {:ok, output, 0} =
+               NativeCommand.run(
+                 context.guardian,
+                 context.executable,
+                 ["--agent-input", Jason.encode!(@fixture["input"])],
+                 context.options
+               )
+
+      assert Jason.decode!(output) == @fixture["expectation"]["value"]
+    end
   end
 
   defp required_directory!(name) do

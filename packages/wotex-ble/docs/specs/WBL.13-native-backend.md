@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.7
+  version: 1.0.8
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -238,6 +238,17 @@ expected projection and compares the independently observed result.
 `decode_bytes` calls the production bounded byte-envelope decoder, with exact
 input in `value`. Its projection is `{"accepted":true,"bytes":[0,255]}` with
 the actual ordered octets, or exactly `{"accepted":false}`. No SDK call occurs.
+`agent_prompt` constructs the exact typed D-Bus method in `member`, `signature`
+and ordered `body`, using fixture sender `:1.9`, destination `:1.8` and serial 31.
+Its input also names the selected `device_path` and explicit `decision`. The
+fixture builder admits only representable object-path/string/uint32/uint16
+arguments; invalid fixture shapes fail the harness. The production Agent prompt
+and decision validators produce the result. A valid result contains `accepted:
+true`, `kind`, `value`, `decision_accepted` and `reply`. The reply records exact
+`signature`, ordered `body`, `error` or null, `reply_serial` and `destination`.
+An invalid prompt or decision projects exactly `{"accepted":false}`. Explicit
+policy rejection is a valid decision with `decision_accepted: false` and the
+fixed rejection error; it is not successful pairing. No daemon or Pair call occurs.
 `ready` starts the actual helper, captures its first frame and closes its input;
 the expectation is exact JSON-object equality plus zero surviving owned
 processes after the grace. Parser cases never count as SDK interoperability.
@@ -416,6 +427,17 @@ session. The SDK's approximate outgoing byte counter is not an allocation bound.
 Closing releases queued replies and active export records. Pipe/guardian cleanup
 remains required when the native process or selected daemon stops making progress.
 The signatures follow the [pinned BlueZ Agent API](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.Agent.rst).
+
+Prompt decoding admits exactly S02/.11's seven request kinds and their D-Bus
+signatures. The first object path must equal the selected device path byte for
+byte. PIN/passkey/display progress and service UUID values are bounded before
+copying. A prompt retains its original method request until one explicit valid
+answer or rejection; no caller-supplied replacement request can redirect its
+reply. A valid decision consumes that request ownership, and a second answer
+fails `:pairing_rejected`. Invalid decisions cannot produce a method return;
+the pairing owner rejects and tears down according to S02. The pure prompt
+boundary does not read a clock or infer policy. The operation owner enforces
+the absolute deadline and challenge ID before invoking it.
  No default agent registration,
 trust change, bond removal or CancelPairing is permitted. S03's write_submitted
 event precedes WriteValue submission and has its exact active request ID;

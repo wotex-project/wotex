@@ -3,6 +3,7 @@
 #include "service.hpp"
 #include "objects_test.hpp"
 #include "discovery_test.hpp"
+#include "agent_test.hpp"
 #include <csignal>
 #include <fcntl.h>
 #include <dirent.h>
@@ -629,7 +630,12 @@ static void invariants(const std::string &address) {
 int main(int argc, char **argv) {
   if (argc != 3) return 2;
   try {
+    if (std::string(argv[1]) == "--agent-input") {
+      const auto result = agent_test::projection(parse_line(std::string(argv[2]) + "\n"));
+      dbus_shutdown(); std::cout << result.dump() << '\n'; return 0;
+    }
     object_test::invariants();
+    agent_test::invariants();
     Daemon daemon(argv[1], argv[2]);
     invariants(daemon.address);
     signals(daemon.address);
