@@ -69,6 +69,21 @@ defmodule Wotex.BLE.NativeBusTest do
     assert {:ok, output, 0} = NativeCommand.run(guardian, compiler, arguments, options)
     assert output == ""
 
+    host = Path.join(directory, "bluez-native")
+
+    host_arguments =
+      Enum.map(arguments, fn
+        ^executable ->
+          host
+
+        source_path ->
+          if source_path == Path.join(@root, "test/native/bus_test.cpp"),
+            do: Path.join(@root, "priv/bluez/native/main.cpp"),
+            else: source_path
+      end)
+
+    assert {:ok, "", 0} = NativeCommand.run(guardian, compiler, host_arguments, options)
+
     File.write!(config, """
     <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
       "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
@@ -81,7 +96,12 @@ defmodule Wotex.BLE.NativeBusTest do
     """)
 
     {:ok,
-     guardian: guardian, executable: executable, daemon: daemon, config: config, options: options}
+     guardian: guardian,
+     executable: executable,
+     host: host,
+     daemon: daemon,
+     config: config,
+     options: options}
   end
 
   test "WBL-B01/S02 typed snapshots, private ownership and exact replies", context do
@@ -92,6 +112,37 @@ defmodule Wotex.BLE.NativeBusTest do
                [context.daemon, context.config],
                context.options
              )
+  end
+
+  test "WBL-B02/B04 actual SDK executable, owned input and opening cancellation", context do
+    assert {:ok, "native host process invariants passed\n", 0} =
+             NativeCommand.run(
+               context.guardian,
+               context.executable,
+               ["--host-executable", context.host, context.daemon, context.config],
+               context.options
+             )
+  end
+
+  for fixture <- @fixtures, fixture["operation"] == "native_host" do
+    @fixture fixture
+    test "#{fixture["id"]} executes the actual native SDK host", context do
+      assert {:ok, output, 0} =
+               NativeCommand.run(
+                 context.guardian,
+                 context.executable,
+                 [
+                   "--host-input",
+                   Jason.encode!(@fixture["input"]),
+                   context.host,
+                   context.daemon,
+                   context.config
+                 ],
+                 context.options
+               )
+
+      assert Jason.decode!(output) == @fixture["expectation"]["value"]
+    end
   end
 
   for fixture <- @fixtures, fixture["operation"] in ["agent_prompt", "notify_mode"] do

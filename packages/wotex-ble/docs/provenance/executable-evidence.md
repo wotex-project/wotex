@@ -418,3 +418,24 @@ node limits, forged options, generation regression and exhaustion boundaries,
 repeat-position token reuse, eight-collision rejection and random-source failure
 without ledger mutation. The page component performs no D-Bus I/O. Complete
 native host routing and the BEAM discovery API remain separate proof obligations.
+
+
+## Native SDK host composition
+
+`test/native/host_test.hpp` drives the combined `NativeHost` against an independent
+private D-Bus service. Cases execute typed health, read/write, discovery,
+pairing challenges and policy replies, notification overflow and cumulative
+report ACKs. A held read does not postpone StopNotify or a different queued
+request's timeout. Close cancels a pending StartNotify and remains admitted
+with all 64 ordinary reply reservations held. Unknown characteristic flags
+remain present in discovery results.
+
+`test/native/host_process_test.hpp` executes `priv/bluez/native/main.cpp` as an
+owned child with actual stdin/stdout pipes. WBL-B-F61 through WBL-B-F63 project
+startup, complete discovery, explicit close, duplicate flow rejection and stdin
+loss during a withheld opening response. Independent NameHasOwner queries check
+client-sender release and service-sender isolation after process exit. The fixture
+owns and reaps this direct, non-forking SDK child; runtime guardian process-group
+custody has its separate fault corpus. This evidence does not establish native
+artifact admission, BEAM native selection, Runtime report flow or virtual ATT
+interoperability.

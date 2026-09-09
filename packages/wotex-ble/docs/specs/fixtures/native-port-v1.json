@@ -2917,6 +2917,137 @@
           "random_calls": 2000
         }
       }
+    },
+    {
+      "id": "WBL-B-F61",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B04"
+      ],
+      "operation": "native_host",
+      "status": "executed",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "parameters": {
+          "peer": {
+            "adapter": "/org/bluez/hci0",
+            "address": "AA:BB:CC:DD:EE:FF",
+            "address_type": "random"
+          },
+          "connection": "borrowed",
+          "bus_address": "$PRIVATE_BUS"
+        },
+        "mode": "normal"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ready": {
+            "version": 1,
+            "event": "ready",
+            "backend": "bluez-native",
+            "revision": "2123ab772fbe97d1369fc9e179ea87c3469cf98f"
+          },
+          "status": 0,
+          "disconnect_calls": 0,
+          "snapshot_calls": 2,
+          "owned_sender_released": true,
+          "unrelated_sender_retained": true,
+          "discovery": {
+            "generation": 1,
+            "characteristics": [
+              {
+                "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                "service_path": "/org/bluez/hci0/device/service",
+                "object_path": "/org/bluez/hci0/device/service/char",
+                "handle": 17,
+                "flags": [
+                  "read",
+                  "notify",
+                  "future-flag"
+                ],
+                "generation": 1
+              }
+            ],
+            "cursor": null
+          }
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F62",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B04"
+      ],
+      "operation": "native_host",
+      "status": "executed",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "parameters": {
+          "peer": {
+            "adapter": "/org/bluez/hci0",
+            "address": "AA:BB:CC:DD:EE:FF",
+            "address_type": "random"
+          },
+          "connection": "borrowed",
+          "bus_address": "$PRIVATE_BUS"
+        },
+        "mode": "open_eof"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ready": {
+            "version": 1,
+            "event": "ready",
+            "backend": "bluez-native",
+            "revision": "2123ab772fbe97d1369fc9e179ea87c3469cf98f"
+          },
+          "status": 1,
+          "disconnect_calls": 0,
+          "snapshot_calls": 1,
+          "owned_sender_released": true,
+          "unrelated_sender_retained": true
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F63",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B04"
+      ],
+      "operation": "native_host",
+      "status": "executed",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "parameters": {
+          "peer": {
+            "adapter": "/org/bluez/hci0",
+            "address": "AA:BB:CC:DD:EE:FF",
+            "address_type": "random"
+          },
+          "connection": "borrowed",
+          "bus_address": "$PRIVATE_BUS"
+        },
+        "mode": "duplicate_flow"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "ready": {
+            "version": 1,
+            "event": "ready",
+            "backend": "bluez-native",
+            "revision": "2123ab772fbe97d1369fc9e179ea87c3469cf98f"
+          },
+          "status": 1,
+          "disconnect_calls": 0,
+          "snapshot_calls": 0
+        }
+      }
     }
   ],
   "executed_cases": [

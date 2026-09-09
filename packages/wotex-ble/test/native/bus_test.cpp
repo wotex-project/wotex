@@ -3,6 +3,8 @@
 #include "service.hpp"
 #include "objects_test.hpp"
 #include "discovery_test.hpp"
+#include "host_test.hpp"
+#include "host_process_test.hpp"
 #include "agent_test.hpp"
 #include "pairing_test.hpp"
 #include "procedures_test.hpp"
@@ -634,10 +636,20 @@ static void invariants(const std::string &address) {
   check(callback_owner.pending_count() == 0 && callback_owner.watch_count() == 0 && callback_owner.timeout_count() == 0);
 }
 int main(int argc, char **argv) {
-  if (argc != 3 && argc != 5) return 2;
+  if (argc != 3 && argc != 5 && argc != 6) return 2;
   try {
+    if (argc == 6) {
+      if (std::string(argv[1]) != "--host-input") return 2;
+      Json result;
+      { Daemon daemon(argv[4], argv[5]); result = host_process_test::projection(parse_line(std::string(argv[2]) + "\n"), daemon.address, argv[3]); }
+      dbus_shutdown(); std::cout << result.dump() << '\n'; return 0;
+    }
     if (argc == 5) {
       const std::string operation = argv[1];
+      if (operation == "--host-executable") {
+        { Daemon daemon(argv[3], argv[4]); host_process_test::invariants(daemon.address, argv[2]); }
+        dbus_shutdown(); std::cout << "native host process invariants passed\n"; return 0;
+      }
       if (operation != "--pair-input" && operation != "--gatt-input" && operation != "--notify-input" && operation != "--health-input") return 2;
       Json result;
       {
@@ -667,6 +679,7 @@ int main(int argc, char **argv) {
     pairing_test::invariants(daemon.address);
     procedures_test::invariants(daemon.address);
     health_test::invariants(daemon.address);
+    host_test::invariants(daemon.address);
     pending_test::invariants(daemon.address);
     notifications_test::invariants(daemon.address);
     unix_fds(daemon.address, 1);

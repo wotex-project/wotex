@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.16
+  version: 1.0.17
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -755,3 +755,54 @@ matches that iteration. The input then supplies exact cursor lookups and stale
 flags. The projection contains the lookup offset or error and the same ledger
 and random-source counters. These vectors execute production paging and token
 ownership; they do not imply complete native host or BEAM discovery routing.
+
+
+## Native SDK host dispatch
+
+The SDK executable accepts no command-line arguments. Its configuration arrives
+through C07 after the exact ready and flow initialization exchange. The process
+owns stdin/stdout in nonblocking mode, one bounded partial line, and one explicit
+private BlueZ sender. The reference Linux token source is one 16-byte
+`getrandom(..., GRND_NONBLOCK)` call; a short result or error fails token admission.
+This choice follows [Linux man-pages 6.18, getrandom(2)](https://man7.org/linux/man-pages/man2/getrandom.2.html).
+The separately evidenced Darwin development lane uses `getentropy`.
+
+Requests reserve one of the 64 aggregate reply slots before entering SDK work;
+the slot remains occupied through complete stdout transmission. Ordinary
+operations dispatch serially in received order. Pair policy replies and
+unsubscribe controls use the same monotonic dispatch counter and aggregate
+admission bound, but do not wait behind an ordinary operation. Every queued
+request retains its own absolute deadline and expires independently of an
+active request. Exhausted admission or malformed/replayed protocol input closes
+the process channel. The close request uses its separate finite control
+reservation and remains admissible when all ordinary slots are held.
+
+The host composes discovery, GATT procedures, Device1 health, pairing and
+notifications with the bounded output and report-credit owners. A subscription's
+successful reply is queued before its first value report. Subscription cleanup
+retires report credit records through the defined cumulative ACK and FIFO
+barrier, including when another read is blocked. An explicit close cancels
+unfinished StartNotify work as well as established streams, rejects pending
+Agent prompts, unregisters owned Agents, and closes only the owned sender/link.
+All cooperative SDK cleanup shares one deadline of at most 500 ms. Remaining
+SDK or output work after that deadline yields a failing process status. The
+separate runtime guardian owns the remaining forced-cleanup budget; the SDK host
+does not claim to reap itself or recover a blocked native call.
+
+Each loop turn reads at most eight 8,192-byte input fragments. The bounded output
+writer independently limits its writes. Idle poll intervals are at most 5 ms;
+queued request and closing deadlines further shorten that wait. Malformed input,
+stdin loss, output loss, SIGTERM and SIGINT initiate bounded cleanup. Arbitrary
+exception text never enters stdout or stderr. Successful explicit close emits
+its final null result and exits zero after complete output transmission.
+
+The `native_host` vectors WBL-B-F61 through WBL-B-F63 execute the actual SDK
+binary and a separate private D-Bus service. `parameters.bus_address` contains
+exactly `$PRIVATE_BUS`, resolved to that fixture's private bus address; all other
+parameters are passed unchanged. The modes are `normal` (open, discover, close),
+`open_eof` (withhold ObjectManager's reply, then close stdin), and
+`duplicate_flow` (send the exact initialization twice). Results contain the
+actual ready frame, complete discovery page where applicable, process status,
+snapshot/Disconnect counters and independent NameHasOwner checks for the
+released client sender and retained service sender. No sender identity is
+fabricated or normalized into a success value.
