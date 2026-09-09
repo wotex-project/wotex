@@ -122,8 +122,15 @@ jobs:
           rustup toolchain install 1.85.1 --profile minimal --component clippy --component rustfmt
           sudo apt-get update
           sudo apt-get install -y bubblewrap
+          # The runner image restricts unprivileged user namespaces, which
+          # leaves bubblewrap without the capability to raise loopback inside
+          # the network namespace it unshares.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           echo "RUSTUP_TOOLCHAIN=1.85.1" >> "$GITHUB_ENV"
       - run: mix deps.get --check-locked
+      - name: Admit the workbench host archives
+        working-directory: wotex-lab/hosts/workbench
+        run: mix deps.get --check-locked
       - run: mix check --no-retry
       - name: graph
         run: mix run --no-start bin/check_graph.exs
@@ -219,6 +226,10 @@ jobs:
           rustup toolchain install 1.85.1 --profile minimal --component clippy --component rustfmt
           sudo apt-get update
           sudo apt-get install -y bubblewrap
+          # The runner image restricts unprivileged user namespaces, which
+          # leaves bubblewrap without the capability to raise loopback inside
+          # the network namespace it unshares.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           echo "RUSTUP_TOOLCHAIN=1.85.1" >> "$GITHUB_ENV"
       - run: mix deps.get --check-locked
       - run: mix run --no-start bin/check_reference_consumer.exs
