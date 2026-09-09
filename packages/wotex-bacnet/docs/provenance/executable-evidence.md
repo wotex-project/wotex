@@ -138,6 +138,22 @@ processes and UDP socket close. The receipt separates elapsed local cleanup,
 per-cycle client heap words/process bytes and native peak RSS. Those memory
 observations do not assert constant heap size or unchanged RSS.
 
+## Pending Runtime establishment
+
+WBA-CP22–CP24 in `test/interop/cstack_runtime_lifecycle_test.exs` use an actual
+accepted C-peer Property registration with its ACK deliberately lost. While
+the final Runtime child and native COV owner remain in opening state, each case
+kills either the final Runtime owner, final receiver or callback worker. The
+tests verify that the relay watches the final owner, then observe the original
+server record's cancellation, zero remaining server subscribers/Invoke IDs,
+all captured process exits, actual UDP port closure and cancellation of captured
+control/opening timers within one local cleanup budget.
+
+All three cases pass with Elixir 1.20.2 / OTP 29.0.4 and the independent Linux
+ARM64 sanitizer peer. The earlier CP17 case retains the successful handoff and
+public observation/stop boundary. Pending acquisition and admitted observation
+are separate lifecycle observations.
+
 ## Evidence identities
 
 The hashes below identify test sources from implementation commit

@@ -75,6 +75,51 @@ defmodule Wotex.BACnet.Test.CStackPeer do
   end
 
   @doc false
+  @spec runtime_spec(pid(), keyword()) :: Supervisor.child_spec()
+  def runtime_spec(receiver, options \\ []) do
+    {:ok, td} =
+      Wotex.ThingDescription.from_map(%{
+        "@context" => "https://www.w3.org/2022/wot/td/v1.1",
+        "title" => "C peer Property observation",
+        "securityDefinitions" => %{"none" => %{"scheme" => "nosec"}},
+        "security" => ["none"],
+        "properties" => %{
+          "reading" => %{
+            "type" => "number",
+            "observable" => true,
+            "forms" => [
+              %{"href" => "bacnet://123/1,1/85", "op" => "observeproperty"},
+              %{"href" => "bacnet://999/2,8/85", "op" => "unobserveproperty"}
+            ]
+          }
+        }
+      })
+
+    {:ok, profile} = BACnet.profile(:ip_cov)
+    config = options(Keyword.merge([target: "123", cov: %{lifetime: 4, renew: false}], options))
+
+    {:ok, consumed} =
+      Wotex.Runtime.ConsumedThing.new(td,
+        profiles: [profile],
+        transports: %{bacnet_cov: {BACnet.Transport, config}},
+        credentials: {Wotex.BACnet.Test.RuntimeCredentials, []}
+      )
+
+    {:ok, context} = Wotex.Runtime.Context.new(request_id: "c-property")
+
+    {:ok, spec} =
+      Wotex.Runtime.ConsumedThing.observation_child_spec(consumed, "reading", context,
+        id: :c_property,
+        receiver: receiver,
+        restart: :temporary,
+        max_queue_length: 1000,
+        overflow: :stop
+      )
+
+    spec
+  end
+
+  @doc false
   @spec resources(BACnet.Session.t()) :: %{processes: [pid()], socket: port()}
   def resources(session) do
     state = :sys.get_state(session.handle.owner)

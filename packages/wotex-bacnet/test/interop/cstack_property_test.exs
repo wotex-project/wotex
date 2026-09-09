@@ -4,8 +4,8 @@ defmodule Wotex.BACnet.CStackPropertyTest do
   use ExUnit.Case, async: false
   alias BACnet.Protocol.ApplicationTags.Encoding
   alias Wotex.BACnet
-  alias Wotex.BACnet.Test.{CStackPeer, RuntimeCredentials}
-  alias Wotex.Runtime.{ConsumedThing, Context, Subscription}
+  alias Wotex.BACnet.Test.CStackPeer
+  alias Wotex.Runtime.Subscription
   @moduletag interop: true, software: true, capture_log: true
   @moduletag requirements: ["WBA-S04", "WBA-V13"]
 
@@ -158,46 +158,7 @@ defmodule Wotex.BACnet.CStackPropertyTest do
 
   test "WBA-CP17 WBA-I05 WBA-V12 public Runtime observes and stops the original C-peer Property association",
        context do
-    {:ok, td} =
-      Wotex.ThingDescription.from_map(%{
-        "@context" => "https://www.w3.org/2022/wot/td/v1.1",
-        "title" => "C peer Property observation",
-        "securityDefinitions" => %{"none" => %{"scheme" => "nosec"}},
-        "security" => ["none"],
-        "properties" => %{
-          "reading" => %{
-            "type" => "number",
-            "observable" => true,
-            "forms" => [
-              %{"href" => "bacnet://123/1,1/85", "op" => "observeproperty"},
-              %{"href" => "bacnet://999/2,8/85", "op" => "unobserveproperty"}
-            ]
-          }
-        }
-      })
-
-    {:ok, profile} = BACnet.profile(:ip_cov)
-
-    options =
-      CStackPeer.options(target: "123", cov: %{lifetime: 4, renew: false, cov_increment: 0.25})
-
-    {:ok, consumed} =
-      ConsumedThing.new(td,
-        profiles: [profile],
-        transports: %{bacnet_cov: {BACnet.Transport, options}},
-        credentials: {RuntimeCredentials, []}
-      )
-
-    {:ok, execution} = Context.new(request_id: "c-property")
-
-    {:ok, spec} =
-      ConsumedThing.observation_child_spec(consumed, "reading", execution,
-        id: :c_property,
-        receiver: self(),
-        restart: :temporary,
-        max_queue_length: 1000,
-        overflow: :stop
-      )
+    spec = CStackPeer.runtime_spec(self(), cov: %{lifetime: 4, renew: false, cov_increment: 0.25})
 
     owner = start_supervised!(spec)
     assert_receive {:wotex_runtime, :c_property, {:ok, +0.0, initial}}, 1000

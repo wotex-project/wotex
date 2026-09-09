@@ -111,6 +111,18 @@ They do not select this instrumented fixture or implement the required Mix
 workspace/manifest contract. Final WBA-P06 acceptance also needs the complete
 fault workflow and supported source/archive cohorts.
 
+## Pending Runtime establishment
+
+WBA-CP22–CP24 require actual C-peer registration with its successful ACK
+discarded. The public Runtime child must remain in opening state while the
+server owns that record. Killing the final Runtime owner, final receiver or
+callback worker must cancel the exact record and release the captured opening,
+relay, native subscription, listener and stack processes within one local
+cleanup budget. The test observes actual socket release and cancellation of
+captured control/opening timers. A peer registration followed by local silence
+does not establish cleanup. Each case must observe a matching server
+cancellation and zero remaining subscribers and Invoke IDs.
+
 ## Property COV fixture
 
 The Property COV fixture uses the pinned SDK's SubscribeCOVProperty and COV
