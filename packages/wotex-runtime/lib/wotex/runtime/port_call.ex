@@ -1,5 +1,19 @@
 defmodule Wotex.Runtime.PortCall do
-  @moduledoc false
+  @moduledoc """
+  Isolates raised failures at trusted consumer callback boundaries.
+
+  `invoke/5` calls an explicitly selected module and function in the current
+  process. Ordinary return values pass through unchanged, so the caller still
+  validates the callback's result contract. Raised exceptions, exits and throws
+  become a `Wotex.Runtime.Error` with code `:port_exception` and the supplied phase.
+  The original reason and stacktrace are discarded.
+
+  An exception telemetry event contains the callback name and failure kind,
+  plus caller-supplied identity metadata. That metadata must already be bounded
+  and non-secret. This helper does not enforce a timeout, authorize a callback,
+  start a worker or sanitize normal return values. Runtime owns the surrounding
+  request and subscription lifecycle.
+  """
 
   alias Wotex.Runtime.{Error, Telemetry}
 

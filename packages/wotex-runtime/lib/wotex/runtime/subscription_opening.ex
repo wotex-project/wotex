@@ -1,5 +1,23 @@
 defmodule Wotex.Runtime.SubscriptionOpening do
-  @moduledoc false
+  @moduledoc """
+  Keeps subscription establishment interruptible while a consumer callback runs.
+
+  A Runtime subscription explicitly starts this guardian with its own PID and
+  a callback. The guardian monitors that owner and runs the callback in a linked,
+  monitored worker. Only the matching owner and reference may claim a completed
+  result or cancel the attempt. Cancellation returns an unclaimed result, when
+  available, so the subscription can clean up its original transport handle.
+
+  After the callback returns, the worker remains as a link endpoint for any
+  transport it started, without retaining the callback closure. Abnormal linked
+  transport exits are reported to the subscription. Owner death or cancellation
+  terminates the worker; the subscription owns transport-specific cleanup.
+  Status formatting omits callback state and result contents.
+
+  This is an implementation component of `Wotex.Runtime.Subscription`.
+  Consumers start subscriptions through the ConsumedThing child specification
+  rather than using guardian handles as an application API.
+  """
 
   use GenServer
 
