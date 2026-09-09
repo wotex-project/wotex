@@ -118,7 +118,11 @@ defmodule Wotex.BLE.DBusBridgeTest do
 
       assert {:error, %Error{code: ^code}} =
                Connection.connect(
-                 Keyword.put(options, :timeout, if(mode == "silent", do: 50, else: 2000))
+                 Keyword.put(
+                   options,
+                   :timeout,
+                   if(mode == "silent", do: 50, else: Keyword.fetch!(options, :timeout))
+                 )
                )
     end
   end

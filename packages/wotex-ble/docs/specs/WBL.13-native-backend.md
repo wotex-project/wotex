@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.5
+  version: 1.0.6
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -108,6 +108,17 @@ group. The BLE SDK host does not fork. This portable boundary does not claim
 containment of deliberate process-group/session escapes or uninterruptible kernel
 state. Repeated close, EOF or signals cannot restart either allowance. Neither
 graceful close nor timeout claims remote rollback.
+
+The runtime guardian contract in `priv/bluez/native/runtime-guardian.md`
+defines opaque bidirectional forwarding, bounded queue capacities, stable direct
+child/process-group custody, descriptor inheritance, fixed exit statuses and
+pipe-level fault cases WBL-G01 through WBL-G10. This profile fixes guardian
+input/output capacities at 131072/65536 bytes and its cleanup allowance at
+500 ms. Both guardian and SDK executable paths are absolute and both SHA-256
+identities are checked before spawn. Credentials and connection values travel
+through typed SDK IPC, never argv. The cleared environment contains only explicit
+reviewed SDK execution values. Transparent guardian buffers do not replace
+report credits or bound the BEAM mailbox.
 The admission record bounds, original-route cancellation and callback ownership
 below apply even when data work is blocked or the ordinary queue is full.
 
@@ -247,6 +258,16 @@ Results identify case ID, test path, corpus/source/binary hashes, runtime/native
 versions, command, result and cleanup counters. Missing software peers, optional
 kernel facilities required by the selected fixture, skipped required cases and
 zero-case runs fail. Evidence for a different backend does not accept this one.
+
+The separate [custody corpus](fixtures/custody-contract-v1.json) binds WBL-G01
+through WBL-G09 to the native `custody_check.c` driver and ExUnit assertions.
+The driver receives the case ID and its workspace, never expected results. It
+emits observed capacities, byte counts, direct reaping, background termination
+and cleanup durations. WBL-G10 requires the same cases on macOS and Linux,
+including the separately identified ordinary, ASan/UBSan and LeakSanitizer lanes.
+Its instrumentation-only post-main allowance does not extend SDK reaping or
+production cleanup deadlines. These cases establish transparent process custody;
+SDK credit-flow and full native GATT acceptance require their own execution.
 
 Parser header: [nlohmann/json 3.11.3](https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp),
 SHA-256 `9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6`.

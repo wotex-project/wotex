@@ -171,7 +171,7 @@ The fixture asserts the identical unique sender for Connect and Disconnect,
 suppression of late replies, and cancellation of pending calls. A blocked
 Disconnect reply releases local resources within the cooperative allowance.
 This is native D-Bus procedure/ownership evidence. BlueZ/controller execution
-and the independent production guardian remain separate acceptance requirements.
+and full guardian/SDK integration remain separate acceptance requirements.
 
 ## Native canonical byte envelopes
 
@@ -185,3 +185,22 @@ NULs, non-alphabet text, missing padding and every nonzero pad-bit value.
 The codec enforces decoded length before allocating output storage. It has no
 SDK or process side effects. ReadValue, WriteValue and stream delivery through
 the complete native backend remain separate procedure acceptance requirements.
+
+## Native process custody
+
+`test/wotex/ble/native_custody_test.exs` compiles the packaged runtime `custody.c`
+and the standalone pipe-level `test/native/custody_check.c` fault driver under
+the tooling command guardian. WBL-G01 through WBL-G09 bind the exact custody
+corpus to observed byte counts, resource reaping and timing. The shared runtime
+source is SHA-256
+`ba2e2cc2ef7d32ed5e9691fce34a58f1f04e8605b73f3257caee31d619c71e41`.
+
+Cases cover malformed startup, unintended inherited descriptors above a lowered
+descriptor limit, fragmented and simultaneous bidirectional streams, full pipes,
+stopped helpers, receiver loss, contained stderr, complete final output, ordinary
+background group cleanup, isolation and one unchanged cleanup deadline. The
+consumer is a native pipe reader independent of Erlang's Port driver. Its blocked
+reads establish kernel backpressure; they do not establish a suspended BEAM
+mailbox bound. The guardian implementation has no SDK or GATT behavior. Admission
+of both executable digests, actual host integration and report-credit acceptance
+remain separate requirements.
