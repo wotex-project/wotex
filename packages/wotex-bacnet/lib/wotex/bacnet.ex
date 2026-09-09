@@ -105,6 +105,25 @@ defmodule Wotex.BACnet do
   @spec health_check(term()) :: {:error, Error.t()}
   def health_check(_), do: {:error, Error.new(:probe_required)}
 
+  @doc "Reports healthy only after a validated explicit ReadProperty probe succeeds."
+  @spec health_check(term(), term()) :: {:ok, :healthy} | {:error, Error.t()}
+  def health_check(%Session{timeout: timeout} = session, %{type: :read_property} = probe)
+      when is_integer(timeout) and timeout in 1..60_000 do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    with :ok <- validate(probe),
+         {:ok, value} <- send(session, probe),
+         :ok <- Wotex.BACnet.Value.validate_read(value),
+         true <- System.monotonic_time(:millisecond) < deadline do
+      {:ok, :healthy}
+    else
+      false -> {:error, Error.new(:deadline_exceeded)}
+      {:error, _} = error -> error
+    end
+  end
+
+  def health_check(_, _), do: {:error, Error.new(:invalid_health_probe)}
+
   @doc "Establishes a finite native COV subscription through the selected client."
   @spec subscribe(term(), term()) :: {:ok, Subscription.t()} | {:error, Error.t()}
   def subscribe(%Session{client: client, timeout: timeout} = session, request)

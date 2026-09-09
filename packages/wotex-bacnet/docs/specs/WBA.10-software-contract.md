@@ -196,7 +196,12 @@ No report is an authorization decision or canonical consumer state.
 
 Add `health_check/2` with an explicit validated ReadProperty probe; retain
 `health_check/1 -> {:error, :probe_required}` in its existing Error envelope.
-Only a matching successful read reports healthy. Runtime credentials remain
+Only a matching successful read reports `{:ok, :healthy}`. The probe is a native
+`%{type: :read_property, object_type: ..., instance: ..., property: ...}` request;
+optional array index is retained and non-read probes fail before I/O. A successful
+custom-client return must also contain a bounded valid native value. False, zero,
+empty values and explicit BACnet Null remain valid probe responses; absent or
+malformed values do not prove health. Runtime credentials remain
 unsupported; an IP route is explicit configuration, not a security scheme.
 
 ## Acceptance scenario families
