@@ -1,5 +1,22 @@
 defmodule Wotex.Binding.HTTP.Form do
-  @moduledoc false
+  @moduledoc """
+  Builds an immutable HTTP request from an already selected Runtime Form.
+
+  This internal mapper applies the package's operation-to-method defaults or a
+  valid explicit method on a single-operation Form. It validates JSON media
+  types, composes configured and Form headers, encodes bounded request content,
+  and carries the interaction identity, deadline, and response limits into
+  `Wotex.Binding.HTTP.Request`. Stream operations require the explicit `sse`
+  subprotocol and select the event-stream Accept field.
+
+  Action status queries and cancellation resolve an explicit target or prior
+  result location against the selected href. `Wotex.Binding.HTTP.EmptyBody`
+  preserves absence separately from JSON null. Contradictory headers, unsupported
+  operations, missing targets, and invalid Form terms return structured binding
+  errors. Mapping performs no I/O or credential handling and does not authorize
+  either the selected Form or a resolved Action target. Draft-derived behavior
+  follows the package's dated baseline without claiming W3C Profile conformance.
+  """
 
   alias Wotex.Binding.HTTP.{Codec, Config, EmptyBody, Error, Headers}
   alias Wotex.Binding.HTTP.Request, as: HTTPRequest
