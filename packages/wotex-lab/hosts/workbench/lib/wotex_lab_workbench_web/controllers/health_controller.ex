@@ -1,5 +1,12 @@
 defmodule WotexLabWorkbenchWeb.HealthController do
-  @moduledoc "Public, data-free health endpoint for orchestration probes."
+  @moduledoc """
+  Answers orchestration probes with the required host supervision state.
+
+  `WotexLabWorkbench.Health` determines whether the required processes are
+  alive. The response contains only schema version and availability, uses
+  HTTP 200 or 503, and disables caching. It exposes no session data and makes
+  no claim about external services, protocol peers or experimental correctness.
+  """
 
   use WotexLabWorkbenchWeb, :controller
 

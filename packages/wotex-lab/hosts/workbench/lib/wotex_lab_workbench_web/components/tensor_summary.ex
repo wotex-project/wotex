@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.Components.TensorSummary do
-  @moduledoc "A bounded tensor summary that presents dtype, shape, units, masks and quality first."
+  @moduledoc """
+  Presents tensor metadata and an already bounded value preview.
+
+  The caller supplies layout, backend, feature order, shape, dtype, units and
+  quality alongside the preview's row, feature and element limits. Observed
+  and filled counts describe that preview rather than the full batch. This
+  component renders the summary without reading tensor storage or transferring
+  values from a numerical backend.
+  """
 
   use Phoenix.Component
 

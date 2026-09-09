@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.Components.MetricCatalogue do
-  @moduledoc "Read-only catalogue-derived panel selection; never reads host-wide measurements."
+  @moduledoc """
+  Presents the fixed metric panel catalogue and its export controls.
+
+  Definitions come from `WotexLabWorkbench.Observability.Panels` and include
+  query semantics, units and scope. The selected panel ids form the page and
+  download links; the receiving LiveView validates the selection and its
+  16-panel limit. Rendering or exporting definitions starts no collector,
+  database query or Grafana upload and reads no host measurements.
+  """
 
   use Phoenix.Component
 

@@ -1,5 +1,12 @@
 defmodule WotexLabWorkbenchWeb.Components.ContextHeader do
-  @moduledoc "The compact context line: run identity, source mode, backend and state as text."
+  @moduledoc """
+  Displays the caller's run context as a labelled description list.
+
+  Ordered label/value pairs usually identify the run, source mode, numerical
+  backend and state. Values are escaped text and retain the caller's order.
+  The component performs no lookup or status inference; the LiveView supplies
+  the context for its current admitted run.
+  """
 
   use Phoenix.Component
 

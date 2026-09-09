@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.Components.ActionApproval do
-  @moduledoc "The explicit approval form for one fresh, granted simulated Action decision."
+  @moduledoc """
+  Renders the approval form for a supplied simulated Action decision.
+
+  The form exposes the Thing, Action input, proposal digest, state revision
+  and expiry before submitting the `approve` event. Hidden fields identify
+  that decision; the LiveView must revalidate them against its owned run.
+  Rendering the form performs no authorization or Action dispatch. Cancellation
+  is a separate event tied to the same run.
+  """
 
   use Phoenix.Component
 

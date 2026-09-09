@@ -1,5 +1,12 @@
 defmodule WotexLabWorkbenchWeb.Components.StatusBadge do
-  @moduledoc "A quiet badge whose meaning is its text; colour only accompanies the word."
+  @moduledoc """
+  Displays a status label with an optional semantic colour.
+
+  `kind_for/1` maps the listed common status values to success, danger, warning
+  or information styling and uses neutral styling for every other value.
+  The label remains visible text. The mapping is presentation only; it does
+  not classify evidence, grant authority or change an underlying run state.
+  """
 
   use Phoenix.Component
 

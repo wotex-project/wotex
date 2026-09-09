@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.Components.AnswerBlock do
-  @moduledoc "A restrained structured investigation answer with explicit evidence links."
+  @moduledoc """
+  Presents an admitted investigation answer as facts, hypotheses and evidence gaps.
+
+  The supplied answer includes provider and model identity, a suggested next
+  check and optional source links. HEEx escapes the answer text; it is not
+  interpreted as Markdown or executable content. The caller admits source
+  destinations before rendering. This component neither calls a model nor
+  executes the suggested check.
+  """
 
   use Phoenix.Component
 

@@ -1,5 +1,14 @@
 defmodule WotexLabWorkbench.Investigation.Config do
-  @moduledoc "Validated configuration for the loopback-only BeamLens provider bridge."
+  @moduledoc """
+  Builds the explicit Workbench configuration for its local BeamLens provider bridge.
+
+  `client_registry/0` reads required reference-host settings, admits the listed
+  provider choices and validates a plain HTTP URL with a loopback host name.
+  Missing required settings raise; invalid supplied values return tagged
+  errors. Each successful call generates a private random capability for the
+  bridge registry. The caller owns its lifetime and must not publish the
+  returned capability or registry as diagnostics.
+  """
 
   @app :wotex_lab_workbench
 

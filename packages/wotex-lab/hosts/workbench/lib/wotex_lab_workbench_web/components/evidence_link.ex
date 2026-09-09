@@ -1,5 +1,12 @@
 defmodule WotexLabWorkbenchWeb.Components.EvidenceLink do
-  @moduledoc "A source/evidence link that keeps its digest visible in text."
+  @moduledoc """
+  Renders an evidence destination with its optional digest visible beside the label.
+
+  Labels and digests are escaped text, and the optional download attribute
+  requests browser download behavior. The caller owns destination admission and
+  digest verification. Displaying a digest neither fetches the target nor
+  establishes that its content matches the digest.
+  """
 
   use Phoenix.Component
 

@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbench.Investigation.Status do
-  @moduledoc "Owns the latest disclosed provider transition."
+  @moduledoc """
+  Retains the latest provider transition for the trusted local Workbench host.
+
+  The explicitly started GenServer uses a fixed host-local name and stores one
+  supplied status map. `reset/0` restores the idle value; no history or durable
+  record is kept. Callers supply normalized, public fields because `put/1` does
+  not redact or validate their contents. This process is not a per-tenant store
+  and belongs only to the admitted local investigation profile.
+  """
 
   use GenServer
 

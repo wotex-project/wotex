@@ -1,5 +1,12 @@
 defmodule WotexLabWorkbenchWeb.Components.MetricPanel do
-  @moduledoc "A compact metric panel with explicit availability and freshness text."
+  @moduledoc """
+  Displays one supplied metric value with its availability, unit and explanatory note.
+
+  A nil value renders as unavailable; numeric zero remains a value. Status and
+  freshness are supplied by the caller rather than inferred from the number.
+  An optional slot holds supporting content. This presentation component does
+  not read a collector or history store.
+  """
 
   use Phoenix.Component
 

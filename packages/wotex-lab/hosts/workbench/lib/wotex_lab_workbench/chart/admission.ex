@@ -1,5 +1,14 @@
 defmodule WotexLabWorkbench.Chart.Admission do
-  @moduledoc "Closed, bounded normalization for the workbench's native SVG charts."
+  @moduledoc """
+  Validates the value envelope used by the Workbench SVG renderer.
+
+  `build/1` accepts the closed chart option vocabulary, rejects duplicate
+  options and admits at most eight uniquely named series with 2,000 points
+  each. Text is valid UTF-8 with a 128-byte ceiling. Coordinates are numeric
+  within the declared magnitude bound; nil vertical values represent gaps.
+  Failures return `Wotex.Lab.Error` values. Consumers use
+  `WotexLabWorkbench.Chart` to construct charts and derive their geometry.
+  """
 
   alias Wotex.Lab.Error
 

@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.DashboardController do
-  @moduledoc "Downloads catalogue-only dashboard templates, never session or host measurements."
+  @moduledoc """
+  Downloads a selected set of inert dashboard definitions for a verified session.
+
+  The controller accepts only the panel and selection parameters, delegates
+  panel admission to `WotexLabWorkbench.Observability.Panels`, and returns a
+  JSON attachment with caching disabled. Invalid selections return HTTP 400;
+  failed session admission returns HTTP 403. The export contains catalogue
+  queries and presentation settings, with no session or host measurements.
+  """
 
   use WotexLabWorkbenchWeb, :controller
 

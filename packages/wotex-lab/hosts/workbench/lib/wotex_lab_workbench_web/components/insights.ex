@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.Components.Insights do
-  @moduledoc "Keyboard-accessible analysis controls and missing-aware Explorer summaries."
+  @moduledoc """
+  Renders explicit analysis controls and the supplied Explorer result for a run.
+
+  Submitting `inspect_run` requests a series, event-time range and chart mark.
+  The LiveView admits that request through `WotexLabWorkbench.Insights`.
+  Rendering performs no native analysis. Results expose source and query
+  digests, backend identity, preview truncation and separate observed, missing
+  and nonfinite counts; an empty selection is not presented as a measured zero.
+  """
 
   use Phoenix.Component
 

@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.Components.PromptComposer do
-  @moduledoc "An explicit, bounded investigation form; it never represents Action approval."
+  @moduledoc """
+  Renders the optional investigation prompt and cancellation controls.
+
+  The textarea advertises a 512-character browser limit and is disabled by
+  default. The caller supplies the availability reason and running state.
+  Submissions emit `ask`; cancellation emits `cancel_investigation`. The
+  receiving LiveView enforces its own admission and size limits. Neither
+  rendering nor submitting this form grants approval for an Action.
+  """
 
   use Phoenix.Component
 

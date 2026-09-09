@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.Components.DataTable do
-  @moduledoc "An accessible data table: caption, column headers and cell slots."
+  @moduledoc """
+  Displays supplied rows using a caption and labelled column slots.
+
+  Each column receives the current row and owns its cell rendering. An empty
+  collection produces one explanatory row spanning the declared columns.
+  Paging, sorting and row limits belong to the caller; this component renders
+  the supplied collection without fetching or truncating it. Table ids must be
+  unique within the surrounding page.
+  """
 
   use Phoenix.Component
 

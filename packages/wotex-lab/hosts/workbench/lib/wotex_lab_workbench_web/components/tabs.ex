@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.Components.Tabs do
-  @moduledoc "A tab list whose panels are plain slots; the active tab is server state."
+  @moduledoc """
+  Renders a server-selected tab list and the supplied panel slots.
+
+  Tab ids connect buttons and panels through ARIA attributes. The active tab
+  controls focus eligibility and panel visibility; clicking sends its id in
+  the configured LiveView event. The parent validates the id and updates state.
+  Hidden panels are still rendered, so their slots must not rely on visibility
+  to prevent work or restrict access.
+  """
 
   use Phoenix.Component
 

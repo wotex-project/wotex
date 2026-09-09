@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.Components.Field do
-  @moduledoc "Labelled form controls with help and error text linked through `aria-describedby`."
+  @moduledoc """
+  Renders labelled text, number, select and textarea controls.
+
+  The supplied id links the label, help and error text to the control through
+  standard HTML and ARIA attributes. Select options retain caller order and
+  compare their string representations with the selected value. Browser
+  constraints such as `maxlength` and `required` aid input; the receiving
+  server still validates submitted values and owns error classification.
+  """
 
   use Phoenix.Component
 

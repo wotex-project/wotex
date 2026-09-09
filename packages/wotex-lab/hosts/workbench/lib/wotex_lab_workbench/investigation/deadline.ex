@@ -1,5 +1,14 @@
 defmodule WotexLabWorkbench.Investigation.Deadline do
-  @moduledoc "Runs disposable provider work and kills it on timeout or caller death."
+  @moduledoc """
+  Runs one provider function in a disposable task with an owner-bound timeout.
+
+  A private supervisor process monitors the caller and the task, returns a
+  tagged result or exit reason, and shuts the task down before reporting.
+  Timeout and caller death also terminate that task. This boundary owns BEAM
+  processes only; provider adapters remain responsible for any external process
+  or connection they start. Callers normalize error reasons before exposing
+  them as investigation diagnostics.
+  """
 
   @doc "Returns the result, an exit reason or a timeout; no worker survives the boundary."
   @spec run((-> term()), non_neg_integer()) :: {:ok, term()} | {:error, term()}

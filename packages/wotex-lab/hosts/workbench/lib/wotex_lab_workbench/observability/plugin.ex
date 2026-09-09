@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbench.Observability.Plugin do
-  @moduledoc "Custom PromEx plugin generated exclusively from the Lab metric catalogue."
+  @moduledoc """
+  Supplies the Workbench's catalogue-defined event metrics to PromEx.
+
+  Event definitions come from `WotexLabWorkbench.Observability.Definitions` as
+  one named group. Polling and manual metric lists are empty, so this plugin
+  requests no periodic host inspection. The explicitly configured reference
+  host owns PromEx activation and storage; loading this module neither attaches
+  a collector nor opens an exporter.
+  """
 
   @behaviour PromEx.Plugin
 

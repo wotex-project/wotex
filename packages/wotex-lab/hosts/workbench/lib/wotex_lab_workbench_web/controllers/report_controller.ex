@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.ReportController do
-  @moduledoc "Exports the bounded JSON evidence report for the caller's own session."
+  @moduledoc """
+  Exports the evidence report from the room owned by a verified browser session.
+
+  The controller reads a room snapshot and delegates report admission and
+  encoding to `WotexLabWorkbench.Report`. A successful response is a JSON
+  attachment. A session without a room receives HTTP 404, an oversized report
+  receives HTTP 413, and other tagged refusals receive HTTP 403. The route does
+  not accept a room identifier from request parameters or rerun an experiment.
+  """
 
   use WotexLabWorkbenchWeb, :controller
 

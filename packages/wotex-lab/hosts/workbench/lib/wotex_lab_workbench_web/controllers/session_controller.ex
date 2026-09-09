@@ -1,5 +1,12 @@
 defmodule WotexLabWorkbenchWeb.SessionController do
-  @moduledoc "Drops the cookie session so the next request opens a fresh one."
+  @moduledoc """
+  Resets the browser cookie session and redirects to the Workbench entry point.
+
+  The following request passes through normal session admission. This action
+  drops browser session state; it does not directly revoke a server-side room
+  or stop a run. Server-owned session expiry and resource cleanup remain with
+  `WotexLabWorkbench.Sessions` and the owning room.
+  """
 
   use WotexLabWorkbenchWeb, :controller
 

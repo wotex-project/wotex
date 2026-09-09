@@ -300,6 +300,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
   test "real BeamLens/BAML reaches only the loopback provider bridge" do
     saved_enabled = Application.get_env(:wotex_lab_workbench, :beamlens_enabled)
     saved_provider = Application.get_env(:wotex_lab_workbench, :beamlens_provider)
+    saved_result = Application.get_env(:wotex_lab_workbench, :fake_codex_result)
 
     Application.put_env(:wotex_lab_workbench, :beamlens_enabled, true)
     Application.put_env(:wotex_lab_workbench, :beamlens_provider, :codex_then_ollama)
@@ -314,6 +315,7 @@ defmodule WotexLabWorkbench.BeamlensIntegrationTest do
     on_exit(fn ->
       restore_env(:beamlens_enabled, saved_enabled)
       restore_env(:beamlens_provider, saved_provider)
+      restore_env(:fake_codex_result, saved_result)
     end)
 
     bandit =

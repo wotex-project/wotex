@@ -1,5 +1,12 @@
 defmodule WotexLabWorkbenchWeb.Components.EmptyState do
-  @moduledoc "Empty and error states that explain one clear next action."
+  @moduledoc """
+  Renders explanatory states when a view has no result or an operation fails.
+
+  Empty states contain a title, optional description and an action slot.
+  Error states use an alert region and render the supplied code and message as
+  escaped text. The caller selects a useful next action and supplies bounded,
+  public diagnostics; this component does not inspect exceptions or retry work.
+  """
 
   use Phoenix.Component
 

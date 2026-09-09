@@ -1,5 +1,13 @@
 defmodule WotexLabWorkbenchWeb.Components.Chart do
-  @moduledoc "A bounded chart with server-rendered SVG and a keyboard-accessible data-table disclosure."
+  @moduledoc """
+  Renders an admitted chart as SVG with a text and table alternative.
+
+  Geometry comes from `WotexLabWorkbench.Chart`; this component does not admit
+  raw plotting instructions. Missing values break the series. The disclosure
+  shows at most 100 points and states when that preview is truncated, while
+  the SVG retains the admitted chart. The caller supplies a unique DOM id and
+  an optional permalink to the exact chart configuration.
+  """
 
   use Phoenix.Component
 
