@@ -113,7 +113,7 @@ defmodule Wotex.CoAP.Datagram.UDP do
     {:noreply, state}
   end
 
-  def handle_info({:udp_error, socket, _reason}, %{socket: socket} = state) do
+  def handle_info({:udp_error, socket, _}, %{socket: socket} = state) do
     deliver(state, {:error, :transport_error})
     {:stop, :normal, state}
   end
