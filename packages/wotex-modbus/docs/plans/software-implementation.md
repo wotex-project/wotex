@@ -118,8 +118,9 @@ WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixtur
 ```
 
 These commands execute the checked-in Mix implementation. Passing task fixtures
-do not close an unexecuted toolchain or whole-VM opening cell. Existing shell/Python harnesses are identified only by the executed
-provenance they support. The native peer and protocol assertions remain the
+do not close an unexecuted toolchain or whole-VM opening cell. Shell entry points
+execute the Mix tasks. Earlier Python cohorts retain their original source and
+command identities in provenance. The native peer and protocol assertions remain the
 same independent software obligations. No build or peer starts implicitly.
 
 ## Verification and commit procedure

@@ -14,8 +14,8 @@ The runtime is the existing BEAM TCP client. The independent peer is the C
 libmodbus server in `test/interop/libmodbus/server.c`. Neither a Python runtime,
 a C client wrapper nor a native runtime helper belongs to this profile.
 Build and test orchestration belongs to Mix and ExUnit. The explicit tasks and
-their native command guardian are implemented. Complete two-toolchain task
-acceptance remains separate from the shell/Python evidence in
+their native command guardian are implemented. The two-toolchain Mix task
+cohort is distinct from the earlier shell/Python cohort in
 [provenance](../provenance/executable-evidence.md).
 
 ## WMB-N01 — Explicit build task

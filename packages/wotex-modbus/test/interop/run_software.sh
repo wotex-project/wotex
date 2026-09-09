@@ -5,5 +5,5 @@ if [ "$#" -ne 1 ]; then
   exit 64
 fi
 script_directory=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
-python3 -B "$script_directory/software_fixture_test.py"
-exec python3 "$script_directory/software_fixture.py" run "$1"
+cd -- "$script_directory/../.."
+exec mix wotex.software.run --workspace "$1"

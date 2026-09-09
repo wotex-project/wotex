@@ -97,8 +97,8 @@ builds a pinned libmodbus peer and records commands, hashes, failures, cleanup,
 and the active toolchain. It requires Docker and runs once per selected toolchain:
 
 ```sh
-test/interop/build_software.sh /absolute/disposable/workspace
-WOTEX_PATH_DEPS=1 test/interop/run_software.sh /absolute/disposable/workspace
+mix wotex.software.build --workspace /absolute/disposable/workspace
+WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/workspace
 ```
 
 Required software peers are separate from physical-device tests. A specification
@@ -123,5 +123,5 @@ BEAM TCP with a C libmodbus test peer.
 The Mix tasks build and verify manifests, run the independent peer and record
 actual ExUnit outcomes and cleanup results. Full task acceptance requires fresh
 results on both supported toolchains; whole-VM loss during Docker opening is
-not yet accepted. Existing Python files retain their historical test/build
-entry points and evidence; they are unnecessary for the Mix commands.
+not yet accepted. Shell compatibility entry points execute the Mix tasks; no
+Python build/test orchestrator is required.

@@ -18,8 +18,8 @@ cycles each of timeout, peer close and malformed response. Final owned sockets,
 contexts, mappings and containers are zero. A separate malformed peer exercises
 invalid frames; the independent C peer is not presented as an injected simulator.
 
-The executed entry point is `test/interop/run_software.sh`, which invokes the
-checked-in Python harness and ExUnit. The native protocol peer is C; the
+That cohort executed the Python version of `test/interop/run_software.sh`
+and ExUnit. The current shell entry point executes the Mix task. The native protocol peer is C; the
 production client is BEAM TCP. These results do not validate the
 [WMB.13 Mix tasks](../specs/WMB.13-native-build-and-software-evidence.md).
 
@@ -47,7 +47,8 @@ different cohort from the explicit software run above. Relevant source changes
 require fresh software evidence; a prior receipt cannot validate new code or tools.
 
 The eight-function client, standalone and Runtime contracts are implemented.
-WMB.13 Mix orchestration has separate task assertions and incomplete acceptance.
+WMB.13 Mix orchestration has committed-source task results on both toolchains;
+whole-VM opening remains unaccepted.
 This evidence supplies neither a
 published release, stable API decision, hardware result nor certification.
 
@@ -56,8 +57,8 @@ published release, stable API decision, hardware result nor certification.
 `test/software/command_test.exs` asserts real process-group cleanup on timeout,
 owner death, TERM, output overflow and successful root exit, plus suspended
 consumer output bounds and preservation of a separate owned group. The native
-`test/interop/native/check.c` suite supplies seven standalone cases and runs with
-ASan/UBSan on macOS and Linux. The lease cohort `56ac074` passed the complete
+`test/interop/native/check.c` suite supplies eight standalone cases; the current
+source passes macOS native and Linux ASan/UBSan execution. The lease cohort `56ac074` passed the complete
 latest-toolchain gate with 145 checks. These first-party command fixtures are
 not a protocol peer.
 
@@ -69,3 +70,18 @@ test-finished names, requirement IDs and outcomes. Full P06 acceptance requires
 committed-source task results on both supported toolchains. Whole-VM loss during
 container opening and unavailable-daemon removal remain unverified; neither
 may be reported as successful cleanup or inferred from a passing active case.
+
+## Mix orchestration cohort
+
+The [Mix software receipt](software-mix-v1.json) binds commit `ab69680` and its
+exact tree/file hashes to actual Mix task runs on both supported toolchains.
+Each lane executes 169 checks including native command/lease ownership,
+independent libmodbus functions, 1,000 sequential requests, 100 connection
+cycles, 32 concurrent callers, malformed peers and nested failure/cleanup
+controls. Both test and peer processes exit zero; final native socket, context,
+mapping and owned-container counters are zero. The receipt retains exact
+per-case outcomes, fault log/result digests and dependency source digests.
+Source cohorts remain explicit: a receipt does not automatically validate a
+later source or wrapper change. Generic Python orchestration is absent from the
+current task workflow. Whole-VM opening and unavailable-daemon cleanup have no
+passing acceptance claim.

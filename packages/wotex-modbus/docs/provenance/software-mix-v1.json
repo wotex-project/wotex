@@ -1,0 +1,4311 @@
+{
+  "binary_hashes": {
+    "/opt/libmodbus/lib/libmodbus.a": "edbca2353083f0b8a45592e6d4a44524c8c380b73c827224b04f541e410c0ce6",
+    "/usr/local/bin/fixture": "66d343345975a6a6c7500df041c1fd0a8a51763ac4268654a5735d0166f55ad0"
+  },
+  "dependency_mode": "explicit path dependencies",
+  "dependency_source_sha256": {
+    "bunt": "25faffb982c929523b71cda4c46ba61ac1145dbe2231fc4be4a2919e5ffbc8a0",
+    "credo": "6a71ed2ccdcccab12fd790a779a4182591db05006c7f002a4e4bf4f4127a3040",
+    "decimal": "b6615ea26455a242bf44a2d96d2d52187cec673985f5509d142a7274c7b89638",
+    "dialyxir": "01c040e23640d5a694309d487fc44c662781b0d12dcc9daac2aabb94b306fabd",
+    "doctor": "ad8f960deba64c3694d6c407e84800a7b38d03f25d6bf740a1805475ffd40f42",
+    "earmark_parser": "dbdfcb7a51e1693e5e4ba3f13dc689eec3996f33d145566d8a199e263479492c",
+    "erlex": "14060680d43b787e5344cc451e9326d28beefaf5713ce95b615fd7ff736597de",
+    "ex_check": "20ff7e2d8f0fdf194b0c90045377e366f891c3f22cd5d5ddde675405311d72a9",
+    "ex_doc": "756ca56aa80c500766c30454e3197d55b33e4565fbe7bc3084e934915197210c",
+    "ex_json_schema": "2905d306687a3d477fcdc740caeb8e06a08154210b7bde6f50091a7b28e24dfb",
+    "file_system": "b56a0db950b08c53ea35f1f9ef383bff541410cb9603b2142523af2e7a87fd92",
+    "jason": "73a21829fb288a255e9a6f989d4de47e4497e8ed56879b44c623b1181930f0c2",
+    "makeup": "9afd7f2d5c1a556b8395f0a5c0c9f94cfa0ea43a1d6d0e19732a50edb9decc02",
+    "makeup_elixir": "b95f8174c892a15f57510c290402408737947996d450013df00533c5cf69b203",
+    "makeup_erlang": "74e17f860e70773016bb156d2020f0c622e70f57f52467d12095dda0e4b23f54",
+    "mix_audit": "aa8f07558b7cff5f4d33420d19413452aafc533d731548efb1c5e7b59316c54d",
+    "nimble_parsec": "db35a7368aa7d2befc7b283ee9fa7bda4e9e519ce15271c5805dcfaba7c28554",
+    "telemetry": "8c22d382f730ae53b24146d6eaf46c8fbc0c74d0822bb9c36196ef1468809917",
+    "wotex": "46f1cff6760e6e5da3e9f3314e7f68170bf98130f57878b36913ae26b8c12282",
+    "wotex_runtime": "ed85cf39aabd53d5087d5003257344337344ee75d77f99e5359bd83f3235c71a",
+    "yamerl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "yaml_elixir": "6bda1f02c256b648832ad1ab0d4bfec39c9b9d462150db36c9cc4428f2be8e99"
+  },
+  "fixture_image": "sha256:9665eb81261f1f75dc084230a290d062a96a02f6dd763413d29905dc6c89adb3",
+  "lanes": [
+    {
+      "concurrency": {
+        "operations": 64,
+        "owned_resources_after": 0,
+        "peer": "independent-libmodbus",
+        "requirements": [
+          "WMB-C09",
+          "WMB-S03",
+          "WMB-V07",
+          "WMB-V12"
+        ],
+        "simultaneous_callers": 32
+      },
+      "cycles": {
+        "cycles": 100,
+        "owned_resources_after_each_cycle": 0,
+        "peer": "independent-libmodbus",
+        "requirements": [
+          "WMB-C03",
+          "WMB-C09",
+          "WMB-S03",
+          "WMB-V08",
+          "WMB-V12"
+        ],
+        "samples": [
+          {
+            "beam_rss_kib": 120672,
+            "completed": 1,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 2,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 3,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 4,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 5,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 6,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 7,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 8,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 9,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 10,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 11,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 12,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 13,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 14,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 15,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 16,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 17,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 18,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 19,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 20,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 21,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 22,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 23,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 24,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 25,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 26,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 27,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 28,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 29,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 30,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 31,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 32,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 33,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 34,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 35,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 36,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 37,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 38,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 39,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 40,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 41,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 42,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 43,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 44,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 45,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 46,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 47,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 48,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 49,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 50,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 51,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 52,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 53,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 54,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 55,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 56,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 57,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 58,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 59,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 60,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 61,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 62,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 63,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 64,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 65,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 66,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 67,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 68,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 69,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 70,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 71,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 72,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 73,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 74,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 75,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 76,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 77,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 78,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 79,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 80,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 81,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 82,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 83,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 84,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 85,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 86,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 87,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 88,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 89,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 90,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 91,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 92,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 93,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 94,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 95,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 96,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 97,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 98,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 99,
+            "owner_heap_bytes": 9048
+          },
+          {
+            "beam_rss_kib": 120672,
+            "completed": 100,
+            "owner_heap_bytes": 9048
+          }
+        ]
+      },
+      "failures": {
+        "failures": {
+          "deadline": 10,
+          "malformed": 10,
+          "peer_close": 10
+        },
+        "owned_resources_after_each_cycle": 0,
+        "peer": "separate-malformed-peer",
+        "requirements": [
+          "WMB-C09",
+          "WMB-S02",
+          "WMB-S03",
+          "WMB-V04",
+          "WMB-V08",
+          "WMB-V12"
+        ]
+      },
+      "fault_artifacts_sha256": {
+        "faults/cleanup_failure/result.json": "2e4eab9dd207511c2cfee120ed72b55d9a8e319ce12841e4b21c8659b770b517",
+        "faults/cleanup_failure/tests.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "faults/exit/peer.log": "6727cd78c61461ace44afc6f65bf2b009874fc890397ec0f81bf75d055116c09",
+        "faults/exit/result.json": "d0b5897127f94e3e1d180c3dba27278e658497235a376ea443fe8f6a541511ef",
+        "faults/exit/stop.log": "e6ada532a3f3e627191a73d7a984a1f6793f10112c638a967dc171355df2f3b4",
+        "faults/exit/tests.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "faults/not_ready/peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "faults/not_ready/result.json": "edb7a3b78a28e289ff20c6ca34e81d87289549758fd6df73e8b017b4d9b99076",
+        "faults/not_ready/stop.log": "0b9ccac7672898f9b641ae919d01c600068c8ecc1092258bddbcee8535a090d4",
+        "faults/overflow/peer.log": "6727cd78c61461ace44afc6f65bf2b009874fc890397ec0f81bf75d055116c09",
+        "faults/overflow/result.json": "0f6c6eb40c01b63c44e6e6501b84f704fbf105d6ecce77c317e495e1316bc78a",
+        "faults/overflow/stop.log": "9590e303e91becd7c0a0c557313a793b007df1f223ddf1bfc00e210e996ce9c0",
+        "faults/overflow/tests.log": "3f3cedb32f7f10d6309b747b7173e64057d765fe4b1aa6fbbd6141b551204b06",
+        "faults/stop_acknowledgment/peer.log": "6727cd78c61461ace44afc6f65bf2b009874fc890397ec0f81bf75d055116c09",
+        "faults/stop_acknowledgment/result.json": "66d199fb04c240e243b7f92c503e01031d9803dac9765af780372a85ce9d891c",
+        "faults/stop_acknowledgment/stop.log": "4855db630415e5da3126170fa3f37dfc0a14fb27bfd308a2b7589ab1458d2782",
+        "faults/stop_acknowledgment/tests.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "faults/timeout/peer.log": "6727cd78c61461ace44afc6f65bf2b009874fc890397ec0f81bf75d055116c09",
+        "faults/timeout/result.json": "a6b2e20c8bb5db47ed810cca2d22e7fa67eee8ac1feb6279c1ff778d61c392af",
+        "faults/timeout/stop.log": "ca1d512bc35b950209f15a82707cc924c80eddeab131b542acb099a0eb94e4d6",
+        "faults/timeout/tests.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "logs_sha256": {
+        "peer.log": "92129c887bbdaf110d8d0703bbe5b8b234fabb49d4412c2e6602c3e97a9d51df",
+        "stop.log": "d80360ae4643d312e05c9e5f81d03267395d2bd8aeb2f7b19ab958c3efe1b494",
+        "tests.log": "390dbaa03e675f2398e495dc08c6f70ad36628c9668f57544e9ad6d433af62be"
+      },
+      "native_sanitizers": {
+        "address": true,
+        "leak": true,
+        "undefined": true
+      },
+      "owned_containers_after": 0,
+      "peer_cleanup": [
+        {
+          "connections": 108,
+          "contexts": 0,
+          "event": "cleanup",
+          "mappings": 0,
+          "open_sockets": 0,
+          "requests": 1187,
+          "result": 0
+        }
+      ],
+      "peer_exit_code": 0,
+      "result_sha256": "4de4653a1f86b55e889666ee2d680ba19597893d36c694e58e4d099bacbf561d",
+      "seed": 731942,
+      "sequential": {
+        "allocator_claim": "Heap/RSS observations; allocator caching is not classified as a leak.",
+        "operations": 1000,
+        "owned_resources_after": 0,
+        "peer": "independent-libmodbus",
+        "requirements": [
+          "WMB-C09",
+          "WMB-S01",
+          "WMB-S02",
+          "WMB-V11",
+          "WMB-V12"
+        ],
+        "samples": [
+          {
+            "beam_rss_kib": 120736,
+            "completed": 100,
+            "owner_heap_bytes": 29984
+          },
+          {
+            "beam_rss_kib": 120736,
+            "completed": 200,
+            "owner_heap_bytes": 29984
+          },
+          {
+            "beam_rss_kib": 120736,
+            "completed": 300,
+            "owner_heap_bytes": 29984
+          },
+          {
+            "beam_rss_kib": 120736,
+            "completed": 400,
+            "owner_heap_bytes": 29984
+          },
+          {
+            "beam_rss_kib": 120736,
+            "completed": 500,
+            "owner_heap_bytes": 17072
+          },
+          {
+            "beam_rss_kib": 120736,
+            "completed": 600,
+            "owner_heap_bytes": 17072
+          },
+          {
+            "beam_rss_kib": 120736,
+            "completed": 700,
+            "owner_heap_bytes": 17072
+          },
+          {
+            "beam_rss_kib": 120736,
+            "completed": 800,
+            "owner_heap_bytes": 17072
+          },
+          {
+            "beam_rss_kib": 120736,
+            "completed": 900,
+            "owner_heap_bytes": 17072
+          },
+          {
+            "beam_rss_kib": 120736,
+            "completed": 1000,
+            "owner_heap_bytes": 17072
+          }
+        ]
+      },
+      "test-results": {
+        "cases": [
+          {
+            "name": "test invalid or unsupported configuration fails without sockets",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test fragmented replies work and wrong transaction terminates session",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test WMB-D02 typed commands retain their unit while helpers use the session unit",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D02"
+            ],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test WMB-D01 WMB-D02 all helpers and compatibility operations use correlated TCP responses",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D01",
+              "WMB-D02"
+            ],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "property 32-bit integers roundtrip in every order",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/value_test.exs"
+          },
+          {
+            "name": "test all scalar widths, order conventions and boundaries",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/value_test.exs"
+          },
+          {
+            "name": "test write timeout has unknown effect and a late reply cannot be reused",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test remote exceptions do not destroy a usable session",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test WMB-I01 WMB-I02 profiles are explicit pure declarations with no native streaming cells",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I01",
+              "WMB-I02"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F02 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F02"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I03 direct Transport validates selected context, profile, identity and Form before I/O",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F03 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F03"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 expired Runtime budgets fail before acquisition and preserve mutation effect none",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I02 Action Forms require explicit valid mutation functions",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I02"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 complete finite class table and unclassified errors retain default mutation restrictions",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I05 no-stream profile rejects actual Runtime observation specs without native acquisition",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I05"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F01 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F01"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F04 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F07 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F07"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test expired queued requests issue no writes",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test owner normal termination closes the socket",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test WMB-I04 actual transmitted write timeout remains non-retryable through Runtime",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I03 conflicting Action entity and explicit function cannot choose a different mutation",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I03 native false is preserved and an absent representation cannot become null success",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I02 WMB-I03 all declared write and Action cells require correlated acknowledgments",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I02",
+              "WMB-I03"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I03 WMB-I04 selected security definitions are enforced by the credential port",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03",
+              "WMB-I04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-D01 WMB-D02 WMB-D03 standalone float write, raw readback and explicit probe workflow",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D01",
+              "WMB-D02",
+              "WMB-D03"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-S04 WMB-V10 capabilities distinguish PDU and TCP ADU limits",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S04",
+              "WMB-V10"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-S04 WMB-V09 explicit health probes retain all four read functions, units and ranges",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S04",
+              "WMB-V09"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-S04 WMB-V10 scalar Form widths fail during pure mapping, before any request",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S04",
+              "WMB-V10"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-S04 WMB-V10 numeric endpoints and exact path/query shape survive explicit base resolution",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S04",
+              "WMB-V10"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-S04 WMB-V10 descriptive extensions remain intact and cannot authorize writes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S04",
+              "WMB-V10"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-I03 WMB-I04 unsupported media, route, conversion, credentials and input acquire no socket",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03",
+              "WMB-I04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I02 WMB-I03 WMB-I06 Runtime chooses the compatible Form and resolves its exact relative route",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I02",
+              "WMB-I03",
+              "WMB-I06"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I03 WMB-I06 Runtime preserves explicit false/zero/null and rejects misattributed Results",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03",
+              "WMB-I06"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F05 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F05"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F06 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F06"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test default parser limits reject the reported payload and enforce exact thresholds",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/dependency_security_test.exs"
+          },
+          {
+            "name": "test the Decimal parser regression stays pinned without advisory waivers",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/dependency_security_test.exs"
+          },
+          {
+            "name": "test all supported entities and explicit function names select correct operations",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/mapping_test.exs"
+          },
+          {
+            "name": "test unsupported and ambiguous Forms fail before IO",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/mapping_test.exs"
+          },
+          {
+            "name": "test typed Forms preserve extensions and honor one-based and zero-based addresses",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/mapping_test.exs"
+          },
+          {
+            "name": "test Runtime transport returns identity-bound results and closes every session",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/mapping_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 coil padding failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V03 MBAP length is rejected before a missing body can block",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V03"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "property WMB-S02 WMB-V03 bounded arbitrary frames preserve the exact unread suffix",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V03"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 transaction failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 multiple register quantity failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test structured failures do not imply retries or effects",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/contract_test.exs"
+          },
+          {
+            "name": "test package does not register an application callback",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/contract_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 multiple coil address failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V05 truncated and extended exception PDUs cannot expose remote status",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V05"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-S02 response validation rejects forged commands and frame identities",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-S02"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V03 every fixture ADU split retains exactly one unconsumed tail",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V03"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 unit failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 extra read byte failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V05 known and unknown exception codes retain numeric status",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V05"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 multiple coil quantity failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 multiple register address failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 single coil value failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 single register value failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 single register address failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 single coil address failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V03 EOF at every incomplete frame prefix is never success",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V03"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 function failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 byte count failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC16",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC16"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC02",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC02"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-V06 float bit patterns preserve finite extremes and signed zero",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V06"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FORGED-FUNCTION",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC03",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC03"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FRAME-TAIL",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FLOAT-NAN",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-EXCEPTION-EXTRA",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-RANGE-LAST",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-WIDTH",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-INT16-NEGATIVE",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-INT16"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-ORDER-BIG-LITTLE",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-QUANTITY-126",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC01",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC01"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC04",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FLOAT32",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FLOAT32"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC15",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC15"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-MBAP-TOO-LARGE",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-BYTE-COUNT",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-ORDER-LITTLE-LITTLE",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FRAME-INCOMPLETE",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "property WMB-S01 WMB-V02 malformed register tails always fail without dispatch",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V02"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-V02 forged commands and sessions never reach dispatch",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V02"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-DUPLICATE-ORDER",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D02 compatibility maps require exactly one operation-appropriate input",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D02"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-ORDER-LITTLE-BIG",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-WRONG-UNIT",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-V06 proper bounded lists and unique conversion options",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V06"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-EXCEPTION-FF",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-ORDER-BIG-BIG",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-EXCEPTION-02",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-C02 WMB-D02 malformed numeric host bytes fail before socket acquisition",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C02",
+              "WMB-D02"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-WRONG-TID",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-V06 integer boundaries and four orders have exact independent words",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V06"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-RANGE-OVERFLOW",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC05",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC05"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-V01 every quantity and address edge is admitted exactly",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V01"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC06",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC06"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-V08 dead owner at startup never leaves a linked socket generation",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-V08"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test forged command structs never overflow or reach the wire",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "test golden request and every split boundary",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "doctest module Wotex.Modbus.Address (1)",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "test all function limits and range overflow fail before encoding",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "property arbitrary short and malformed frames never raise",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "test function-specific encodings and echoes",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "test malformed and mismatched responses are rejected including nonzero coil padding",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "test WMB-S03 WMB-V07 queued deadlines and canceled timers cannot affect the next request",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03",
+              "WMB-V07"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-S03 WMB-V08 owner death closes a blocked receive within cleanup bounds",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-S03",
+              "WMB-V08"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-V08 normal exit during the OTP system stop handshake is successful cleanup",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-V08"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 graceful cleanup timeout force-closes its owned socket without claiming success",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S03 a transmitted mutation closed normally stays unknown and is never retried",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S03 WMB-V07 capacity includes the active caller; canceled work consumes no wire IDs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03",
+              "WMB-V07"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S03 WMB-V07 active caller death closes the generation and rejects queued writes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03",
+              "WMB-V07"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 admission rejects elapsed deadlines before allocating a transaction",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 cleanup rechecks ownership after a failed stop handshake",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-V08 startup completion may precede its readiness caller without losing errors",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-V08"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S03 an ordered admission receipt distinguishes normal-close failure effects",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-S03 idle unsolicited bytes cannot seed the next transaction",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-S03 forged PIDs cannot receive calls or cleanup signals",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-C04 a killed owner leaves a transmitted mutation unknown and closes its socket",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-C04"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S03 an idle peer close releases the owner without a request",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-F-WRITE-UNCERTAINTY uses the virtual event clock and actual TCP observations",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-V08 acquisition failure is caller-safe and child policy remains consumer-owned",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-V08"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-S03 unsolicited trailing responses never seed a later wire request",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 suspended consumer and full pipe cannot block native deadline",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 missing executable and invalid limits fail",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 timeout kills TERM-resistant owned process group",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 advisory lease refuses unrelated content and symlinks",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 direct argv preserves combined output and child exit",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 successful root exit still kills background descendants",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 owner EOF releases a live process group",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 acknowledged lease release permits immediate reacquisition",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 lease readiness accumulates split bytes and rejects malformed output",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 guardian TERM preserves bounded child cleanup",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 advisory lease rejects overlap and releases on owner death",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 malformed owner input is terminal",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 terminating one command preserves another owned group",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 stopped children remain owned until the command deadline",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 output flood never emits beyond the exact bound",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-D01 WMB-D02 WMB-D03 WMB-I01 WMB-I03 WMB-I06 standalone and Runtime workflows use the independent peer",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D01",
+              "WMB-D02",
+              "WMB-D03",
+              "WMB-I01",
+              "WMB-I03",
+              "WMB-I06"
+            ],
+            "source": "test/interop/modbus_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-S02 WMB-S04 WMB-V11 independent libmodbus confirms every advertised function and exception",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-S02",
+              "WMB-S04",
+              "WMB-V11"
+            ],
+            "source": "test/interop/modbus_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-C09 WMB-S03 WMB-V08 WMB-V12 100 independent-peer open and close cycles",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-C09",
+              "WMB-S03",
+              "WMB-V08",
+              "WMB-V12"
+            ],
+            "source": "test/software/lifecycle_stress_test.exs"
+          },
+          {
+            "name": "test WMB-C09 WMB-S03 WMB-V07 WMB-V12 32 concurrent callers keep distinct register results correlated",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C09",
+              "WMB-S03",
+              "WMB-V07",
+              "WMB-V12"
+            ],
+            "source": "test/software/lifecycle_stress_test.exs"
+          },
+          {
+            "name": "test WMB-C09 WMB-S01 WMB-S02 WMB-V11 WMB-V12 1000 sequential independent-peer operations",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C09",
+              "WMB-S01",
+              "WMB-S02",
+              "WMB-V11",
+              "WMB-V12"
+            ],
+            "source": "test/software/lifecycle_stress_test.exs"
+          },
+          {
+            "name": "test WMB-C09 WMB-S02 WMB-S03 WMB-V04 WMB-V08 WMB-V12 repeated failure cleanup uses a separate malformed peer",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C09",
+              "WMB-S02",
+              "WMB-S03",
+              "WMB-V04",
+              "WMB-V08",
+              "WMB-V12"
+            ],
+            "source": "test/software/lifecycle_stress_test.exs"
+          },
+          {
+            "name": "test WMB-N03 source identities bind actual file bytes without Git",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 both tasks reject another project before acquisition",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 installed tasks without source fixtures fail explicitly",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 explicit zero-resource proof survives an unavailable stop acknowledgment",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 opening owner death removes a created but unstarted exact peer",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 Mix entry points reject every ambiguous argument shape",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 workspace roots reject source paths symlinks and files",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 archive paths types cardinality and expanded size are bounded",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 test failure timeout and overflow retain failed results and clean peers",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 readiness and cleanup faults retain unsuccessful evidence",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N03 atomic evidence writes are complete and preserve an occupied temporary path",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 real container ends when its native Port owner dies",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 built manifest reuses actual image and detects changed artifacts",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N03 clean-source Git metadata requires one complete successful commit and tree result",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 unrelated build workspace remains untouched",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 missing corrupt oversized and symlink manifests fail",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-C08 startup and credential rejection emit no fabricated completed request event",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C08"
+            ],
+            "source": "test/wotex/modbus/telemetry_test.exs"
+          },
+          {
+            "name": "test WMB-C08 WMB-V12 values and exceptional responses never enter telemetry metadata",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C08",
+              "WMB-V12"
+            ],
+            "source": "test/wotex/modbus/telemetry_test.exs"
+          }
+        ],
+        "schema": "wotex.modbus.exunit@1"
+      },
+      "test_exit_code": 0,
+      "toolchain": {
+        "elixir": "1.20.2",
+        "otp": "29.0.4"
+      }
+    },
+    {
+      "concurrency": {
+        "operations": 64,
+        "owned_resources_after": 0,
+        "peer": "independent-libmodbus",
+        "requirements": [
+          "WMB-C09",
+          "WMB-S03",
+          "WMB-V07",
+          "WMB-V12"
+        ],
+        "simultaneous_callers": 32
+      },
+      "cycles": {
+        "cycles": 100,
+        "owned_resources_after_each_cycle": 0,
+        "peer": "independent-libmodbus",
+        "requirements": [
+          "WMB-C03",
+          "WMB-C09",
+          "WMB-S03",
+          "WMB-V08",
+          "WMB-V12"
+        ],
+        "samples": [
+          {
+            "beam_rss_kib": 123568,
+            "completed": 1,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 2,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 3,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 4,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 5,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 6,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 7,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 8,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 9,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 10,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 11,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 12,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 13,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 14,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 15,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 16,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 17,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 18,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 19,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 20,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 21,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 22,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 23,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 24,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 25,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 26,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 27,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 28,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 29,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 30,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 31,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 32,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 33,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 34,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 35,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 36,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 37,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 38,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 39,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 40,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 41,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 42,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 43,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 44,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 123568,
+            "completed": 45,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 46,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 47,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 48,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 49,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 50,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 51,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 52,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 53,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 54,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 55,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 56,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 57,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 58,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 59,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 60,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 61,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 62,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 63,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 64,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 65,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 66,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 67,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 68,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 69,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 70,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 71,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 72,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 73,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 74,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 75,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 76,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 77,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 78,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 79,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 80,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 81,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 82,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 83,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 84,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 85,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 86,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 87,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 88,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 89,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 90,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 91,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 92,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 93,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 94,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 95,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 96,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 97,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 98,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 99,
+            "owner_heap_bytes": 9040
+          },
+          {
+            "beam_rss_kib": 118704,
+            "completed": 100,
+            "owner_heap_bytes": 9040
+          }
+        ]
+      },
+      "failures": {
+        "failures": {
+          "deadline": 10,
+          "malformed": 10,
+          "peer_close": 10
+        },
+        "owned_resources_after_each_cycle": 0,
+        "peer": "separate-malformed-peer",
+        "requirements": [
+          "WMB-C09",
+          "WMB-S02",
+          "WMB-S03",
+          "WMB-V04",
+          "WMB-V08",
+          "WMB-V12"
+        ]
+      },
+      "fault_artifacts_sha256": {
+        "faults/cleanup_failure/result.json": "e06f427b597f417b0d67e5ebfb5990cdaab79be2a62018b8b04922c2127bd60f",
+        "faults/cleanup_failure/tests.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "faults/exit/peer.log": "6727cd78c61461ace44afc6f65bf2b009874fc890397ec0f81bf75d055116c09",
+        "faults/exit/result.json": "ea970fdfec0dea9a5ccbdf91817547658ca3f252cebc2ee5e17148f3885d7bb3",
+        "faults/exit/stop.log": "347ded97773ec1be2e66c614abf4d7d26f526ee0a18a6c5c4bbc6b4b2362cc84",
+        "faults/exit/tests.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "faults/not_ready/peer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "faults/not_ready/result.json": "8dad06fb0744b67a01b60410897d215f54fbf6280feb85892c51cc7b9ff208ff",
+        "faults/not_ready/stop.log": "65769285df01cafac2fcaa8b4da646ec9b1f3fd3e8dfbcdceb361967b3c5a01c",
+        "faults/overflow/peer.log": "6727cd78c61461ace44afc6f65bf2b009874fc890397ec0f81bf75d055116c09",
+        "faults/overflow/result.json": "17237b984322940d9f11158af09550244b88e5b60ea49e6bc321b8d6d3dd18b0",
+        "faults/overflow/stop.log": "64261930fe6fdd71af3222426e7a5a69ffd9120eb704792c0c00742b51d078a8",
+        "faults/overflow/tests.log": "3f3cedb32f7f10d6309b747b7173e64057d765fe4b1aa6fbbd6141b551204b06",
+        "faults/stop_acknowledgment/peer.log": "6727cd78c61461ace44afc6f65bf2b009874fc890397ec0f81bf75d055116c09",
+        "faults/stop_acknowledgment/result.json": "52c5f1ce90fb228dd4f722eeeecc01112e7da79972aa5bcb44300b1c5ebcb0ff",
+        "faults/stop_acknowledgment/stop.log": "14f982355b24ca22dc65aa24a5994deb068cd671b33a5bcdbedb52e2fad3eba0",
+        "faults/stop_acknowledgment/tests.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "faults/timeout/peer.log": "6727cd78c61461ace44afc6f65bf2b009874fc890397ec0f81bf75d055116c09",
+        "faults/timeout/result.json": "aa5c21557ab97a0a81bb756f444fd4084a4dd44b0e504a29b6899a558de95f6b",
+        "faults/timeout/stop.log": "f2855f770ae5989df7c9dd32b885a1bce51a4c94fa983dd7f0496f89427a527d",
+        "faults/timeout/tests.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "logs_sha256": {
+        "peer.log": "92129c887bbdaf110d8d0703bbe5b8b234fabb49d4412c2e6602c3e97a9d51df",
+        "stop.log": "cc9452811308989647ef90b3e3a067515e943b42f7ac15099ffe268cc441b0e7",
+        "tests.log": "34de9e0d9340ae631b1b8c901d1d005e3909ccffac96cf5d73087a8f513a3ec7"
+      },
+      "native_sanitizers": {
+        "address": true,
+        "leak": true,
+        "undefined": true
+      },
+      "owned_containers_after": 0,
+      "peer_cleanup": [
+        {
+          "connections": 108,
+          "contexts": 0,
+          "event": "cleanup",
+          "mappings": 0,
+          "open_sockets": 0,
+          "requests": 1187,
+          "result": 0
+        }
+      ],
+      "peer_exit_code": 0,
+      "result_sha256": "9728d0b7c2ddf09385e75d2ff274f228530eadccad2c0c4b9dc609babad6f6bf",
+      "seed": 731942,
+      "sequential": {
+        "allocator_claim": "Heap/RSS observations; allocator caching is not classified as a leak.",
+        "operations": 1000,
+        "owned_resources_after": 0,
+        "peer": "independent-libmodbus",
+        "requirements": [
+          "WMB-C09",
+          "WMB-S01",
+          "WMB-S02",
+          "WMB-V11",
+          "WMB-V12"
+        ],
+        "samples": [
+          {
+            "beam_rss_kib": 118720,
+            "completed": 100,
+            "owner_heap_bytes": 25328
+          },
+          {
+            "beam_rss_kib": 118720,
+            "completed": 200,
+            "owner_heap_bytes": 26960
+          },
+          {
+            "beam_rss_kib": 118720,
+            "completed": 300,
+            "owner_heap_bytes": 26960
+          },
+          {
+            "beam_rss_kib": 118720,
+            "completed": 400,
+            "owner_heap_bytes": 26960
+          },
+          {
+            "beam_rss_kib": 118976,
+            "completed": 500,
+            "owner_heap_bytes": 26720
+          },
+          {
+            "beam_rss_kib": 118992,
+            "completed": 600,
+            "owner_heap_bytes": 26720
+          },
+          {
+            "beam_rss_kib": 118992,
+            "completed": 700,
+            "owner_heap_bytes": 18816
+          },
+          {
+            "beam_rss_kib": 118992,
+            "completed": 800,
+            "owner_heap_bytes": 18888
+          },
+          {
+            "beam_rss_kib": 118992,
+            "completed": 900,
+            "owner_heap_bytes": 18888
+          },
+          {
+            "beam_rss_kib": 118992,
+            "completed": 1000,
+            "owner_heap_bytes": 13968
+          }
+        ]
+      },
+      "test-results": {
+        "cases": [
+          {
+            "name": "test invalid or unsupported configuration fails without sockets",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test fragmented replies work and wrong transaction terminates session",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test WMB-D02 typed commands retain their unit while helpers use the session unit",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D02"
+            ],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test WMB-D01 WMB-D02 all helpers and compatibility operations use correlated TCP responses",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D01",
+              "WMB-D02"
+            ],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "property 32-bit integers roundtrip in every order",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/value_test.exs"
+          },
+          {
+            "name": "test all scalar widths, order conventions and boundaries",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/value_test.exs"
+          },
+          {
+            "name": "test write timeout has unknown effect and a late reply cannot be reused",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test remote exceptions do not destroy a usable session",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test WMB-I01 WMB-I02 profiles are explicit pure declarations with no native streaming cells",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I01",
+              "WMB-I02"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F02 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F02"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I03 direct Transport validates selected context, profile, identity and Form before I/O",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F03 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F03"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test expired queued requests issue no writes",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test owner normal termination closes the socket",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/connection_test.exs"
+          },
+          {
+            "name": "test WMB-I04 expired Runtime budgets fail before acquisition and preserve mutation effect none",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I02 Action Forms require explicit valid mutation functions",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I02"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 complete finite class table and unclassified errors retain default mutation restrictions",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I05 no-stream profile rejects actual Runtime observation specs without native acquisition",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I05"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F01 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F01"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F04 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F07 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F07"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 actual transmitted write timeout remains non-retryable through Runtime",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I03 conflicting Action entity and explicit function cannot choose a different mutation",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I03 native false is preserved and an absent representation cannot become null success",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-D01 WMB-D02 WMB-D03 standalone float write, raw readback and explicit probe workflow",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D01",
+              "WMB-D02",
+              "WMB-D03"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-S04 WMB-V10 capabilities distinguish PDU and TCP ADU limits",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S04",
+              "WMB-V10"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-S04 WMB-V09 explicit health probes retain all four read functions, units and ranges",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S04",
+              "WMB-V09"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-S04 WMB-V10 scalar Form widths fail during pure mapping, before any request",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S04",
+              "WMB-V10"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-S04 WMB-V10 numeric endpoints and exact path/query shape survive explicit base resolution",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S04",
+              "WMB-V10"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-S04 WMB-V10 descriptive extensions remain intact and cannot authorize writes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S04",
+              "WMB-V10"
+            ],
+            "source": "test/wotex/modbus/compatibility_test.exs"
+          },
+          {
+            "name": "test WMB-I02 WMB-I03 all declared write and Action cells require correlated acknowledgments",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I02",
+              "WMB-I03"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I03 WMB-I04 selected security definitions are enforced by the credential port",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03",
+              "WMB-I04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I03 WMB-I04 unsupported media, route, conversion, credentials and input acquire no socket",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03",
+              "WMB-I04"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I02 WMB-I03 WMB-I06 Runtime chooses the compatible Form and resolves its exact relative route",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I02",
+              "WMB-I03",
+              "WMB-I06"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I03 WMB-I06 Runtime preserves explicit false/zero/null and rejects misattributed Results",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I03",
+              "WMB-I06"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F05 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F05"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test WMB-I04 WMB-I06 WMB-I-F06 runs its input through actual core and Runtime APIs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-I04",
+              "WMB-I06",
+              "WMB-I-F06"
+            ],
+            "source": "test/wotex/modbus/runtime_integration_test.exs"
+          },
+          {
+            "name": "test default parser limits reject the reported payload and enforce exact thresholds",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/dependency_security_test.exs"
+          },
+          {
+            "name": "test the Decimal parser regression stays pinned without advisory waivers",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/dependency_security_test.exs"
+          },
+          {
+            "name": "test all supported entities and explicit function names select correct operations",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/mapping_test.exs"
+          },
+          {
+            "name": "test unsupported and ambiguous Forms fail before IO",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/mapping_test.exs"
+          },
+          {
+            "name": "test typed Forms preserve extensions and honor one-based and zero-based addresses",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/mapping_test.exs"
+          },
+          {
+            "name": "test Runtime transport returns identity-bound results and closes every session",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/mapping_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 coil padding failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V03 MBAP length is rejected before a missing body can block",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V03"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "property WMB-S02 WMB-V03 bounded arbitrary frames preserve the exact unread suffix",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V03"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 transaction failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test structured failures do not imply retries or effects",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/contract_test.exs"
+          },
+          {
+            "name": "test package does not register an application callback",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/contract_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 multiple register quantity failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 multiple coil address failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V05 truncated and extended exception PDUs cannot expose remote status",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V05"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-S02 response validation rejects forged commands and frame identities",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-S02"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V03 every fixture ADU split retains exactly one unconsumed tail",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V03"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 unit failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 extra read byte failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V05 known and unknown exception codes retain numeric status",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V05"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 multiple coil quantity failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 multiple register address failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 single coil value failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 single register value failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 single register address failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 single coil address failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V03 EOF at every incomplete frame prefix is never success",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V03"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 function failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-V04 byte count failure closes before a later command can use stream bytes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-V04"
+            ],
+            "source": "test/wotex/modbus/stream_fault_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC16",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC16"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC02",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC02"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-V06 float bit patterns preserve finite extremes and signed zero",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V06"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FORGED-FUNCTION",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC03",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC03"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FRAME-TAIL",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FLOAT-NAN",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-EXCEPTION-EXTRA",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-RANGE-LAST",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-WIDTH",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-INT16-NEGATIVE",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-INT16"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-ORDER-BIG-LITTLE",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-QUANTITY-126",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC01",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC01"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC04",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FLOAT32",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FLOAT32"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC15",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC15"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-MBAP-TOO-LARGE",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-BYTE-COUNT",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-ORDER-LITTLE-LITTLE",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FRAME-INCOMPLETE",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "property WMB-S01 WMB-V02 malformed register tails always fail without dispatch",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V02"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-V02 forged commands and sessions never reach dispatch",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V02"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-DUPLICATE-ORDER",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D02 compatibility maps require exactly one operation-appropriate input",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D02"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-ORDER-LITTLE-BIG",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-WRONG-UNIT",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-V06 proper bounded lists and unique conversion options",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V06"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-EXCEPTION-FF",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-ORDER-BIG-BIG",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-EXCEPTION-02",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-C02 WMB-D02 malformed numeric host bytes fail before socket acquisition",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C02",
+              "WMB-D02"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-WRONG-TID",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-V06 integer boundaries and four orders have exact independent words",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V06"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-RANGE-OVERFLOW",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC05",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC05"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-V01 every quantity and address edge is admitted exactly",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-V01"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-D04 exact fixture WMB-F-FC06",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D04",
+              "WMB-F-FC06"
+            ],
+            "source": "test/wotex/modbus/boundary_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-V08 dead owner at startup never leaves a linked socket generation",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-V08"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test forged command structs never overflow or reach the wire",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "test golden request and every split boundary",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "doctest module Wotex.Modbus.Address (1)",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "test all function limits and range overflow fail before encoding",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "test WMB-S03 WMB-V07 queued deadlines and canceled timers cannot affect the next request",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03",
+              "WMB-V07"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "property arbitrary short and malformed frames never raise",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "test function-specific encodings and echoes",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "test malformed and mismatched responses are rejected including nonzero coil padding",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/codec_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-S03 WMB-V08 owner death closes a blocked receive within cleanup bounds",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-S03",
+              "WMB-V08"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-V08 normal exit during the OTP system stop handshake is successful cleanup",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-V08"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 graceful cleanup timeout force-closes its owned socket without claiming success",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S03 a transmitted mutation closed normally stays unknown and is never retried",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S03 WMB-V07 capacity includes the active caller; canceled work consumes no wire IDs",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03",
+              "WMB-V07"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S03 WMB-V07 active caller death closes the generation and rejects queued writes",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03",
+              "WMB-V07"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 admission rejects elapsed deadlines before allocating a transaction",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 cleanup rechecks ownership after a failed stop handshake",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-V08 startup completion may precede its readiness caller without losing errors",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-V08"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S03 an ordered admission receipt distinguishes normal-close failure effects",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-S03 idle unsolicited bytes cannot seed the next transaction",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-S03 forged PIDs cannot receive calls or cleanup signals",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-C04 a killed owner leaves a transmitted mutation unknown and closes its socket",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-C04"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S03 an idle peer close releases the owner without a request",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-F-WRITE-UNCERTAINTY uses the virtual event clock and actual TCP observations",
+            "outcome": "passed",
+            "requirement_ids": [],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-V08 acquisition failure is caller-safe and child policy remains consumer-owned",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-V08"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-S02 WMB-S03 unsolicited trailing responses never seed a later wire request",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S02",
+              "WMB-S03"
+            ],
+            "source": "test/wotex/modbus/lifecycle_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 suspended consumer and full pipe cannot block native deadline",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 missing executable and invalid limits fail",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 timeout kills TERM-resistant owned process group",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 advisory lease refuses unrelated content and symlinks",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 direct argv preserves combined output and child exit",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 successful root exit still kills background descendants",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 owner EOF releases a live process group",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 acknowledged lease release permits immediate reacquisition",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 lease readiness accumulates split bytes and rejects malformed output",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 guardian TERM preserves bounded child cleanup",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 advisory lease rejects overlap and releases on owner death",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 malformed owner input is terminal",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 terminating one command preserves another owned group",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 stopped children remain owned until the command deadline",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 output flood never emits beyond the exact bound",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/command_test.exs"
+          },
+          {
+            "name": "test WMB-D01 WMB-D02 WMB-D03 WMB-I01 WMB-I03 WMB-I06 standalone and Runtime workflows use the independent peer",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-D01",
+              "WMB-D02",
+              "WMB-D03",
+              "WMB-I01",
+              "WMB-I03",
+              "WMB-I06"
+            ],
+            "source": "test/interop/modbus_test.exs"
+          },
+          {
+            "name": "test WMB-S01 WMB-S02 WMB-S04 WMB-V11 independent libmodbus confirms every advertised function and exception",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-S01",
+              "WMB-S02",
+              "WMB-S04",
+              "WMB-V11"
+            ],
+            "source": "test/interop/modbus_test.exs"
+          },
+          {
+            "name": "test WMB-C03 WMB-C09 WMB-S03 WMB-V08 WMB-V12 100 independent-peer open and close cycles",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C03",
+              "WMB-C09",
+              "WMB-S03",
+              "WMB-V08",
+              "WMB-V12"
+            ],
+            "source": "test/software/lifecycle_stress_test.exs"
+          },
+          {
+            "name": "test WMB-C09 WMB-S03 WMB-V07 WMB-V12 32 concurrent callers keep distinct register results correlated",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C09",
+              "WMB-S03",
+              "WMB-V07",
+              "WMB-V12"
+            ],
+            "source": "test/software/lifecycle_stress_test.exs"
+          },
+          {
+            "name": "test WMB-C09 WMB-S01 WMB-S02 WMB-V11 WMB-V12 1000 sequential independent-peer operations",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C09",
+              "WMB-S01",
+              "WMB-S02",
+              "WMB-V11",
+              "WMB-V12"
+            ],
+            "source": "test/software/lifecycle_stress_test.exs"
+          },
+          {
+            "name": "test WMB-C09 WMB-S02 WMB-S03 WMB-V04 WMB-V08 WMB-V12 repeated failure cleanup uses a separate malformed peer",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C09",
+              "WMB-S02",
+              "WMB-S03",
+              "WMB-V04",
+              "WMB-V08",
+              "WMB-V12"
+            ],
+            "source": "test/software/lifecycle_stress_test.exs"
+          },
+          {
+            "name": "test WMB-N03 source identities bind actual file bytes without Git",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 both tasks reject another project before acquisition",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 installed tasks without source fixtures fail explicitly",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 explicit zero-resource proof survives an unavailable stop acknowledgment",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 opening owner death removes a created but unstarted exact peer",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 Mix entry points reject every ambiguous argument shape",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 workspace roots reject source paths symlinks and files",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 archive paths types cardinality and expanded size are bounded",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 test failure timeout and overflow retain failed results and clean peers",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 readiness and cleanup faults retain unsuccessful evidence",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N03 atomic evidence writes are complete and preserve an occupied temporary path",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N02 WMB-N03 real container ends when its native Port owner dies",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N02",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 built manifest reuses actual image and detects changed artifacts",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N03 clean-source Git metadata requires one complete successful commit and tree result",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 unrelated build workspace remains untouched",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-N01 WMB-N03 missing corrupt oversized and symlink manifests fail",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-N01",
+              "WMB-N03"
+            ],
+            "source": "test/software/fixture_tasks_test.exs"
+          },
+          {
+            "name": "test WMB-C08 startup and credential rejection emit no fabricated completed request event",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C08"
+            ],
+            "source": "test/wotex/modbus/telemetry_test.exs"
+          },
+          {
+            "name": "test WMB-C08 WMB-V12 values and exceptional responses never enter telemetry metadata",
+            "outcome": "passed",
+            "requirement_ids": [
+              "WMB-C08",
+              "WMB-V12"
+            ],
+            "source": "test/wotex/modbus/telemetry_test.exs"
+          }
+        ],
+        "schema": "wotex.modbus.exunit@1"
+      },
+      "test_exit_code": 0,
+      "toolchain": {
+        "elixir": "1.18.4",
+        "otp": "27.3.4.15"
+      }
+    }
+  ],
+  "manifest_sha256": "29a7a8ee15a4650e90cbdedf8ba3a4427ac1eaa890152ca707c2e74c16381a95",
+  "runner": "mix wotex.software.run --workspace ABS",
+  "schema": "wotex.modbus.mix-software-receipt@1",
+  "scope": "Native C peer and BEAM client software evidence; hardware, publication and certification are separate.",
+  "subject": {
+    "source_commit": "ab69680b9fcf249809b29cfbd2ff41f4e0dfbe26",
+    "source_files_sha256": {
+      "bin/check_application_free.exs": "60801d8f850643367f9640dd5d7c526eb31b4e2d1b7dee65d9d5c9e107f0177b",
+      "bin/check_archive.exs": "441b117bfd7de651c6df5b06819ebe63cf60e8834b3bc35cb5c71d6289c07c47",
+      "docs/specs/fixtures/contract-v1.json": "6b63d8d6d2e16f8b63ac278d435fe70e521105760bc25b8e7544fd31356b5b62",
+      "docs/specs/fixtures/wotex-integration-v1.json": "9d368dc08a50b5055cf9d3beada7a031110de9cf609cb19026037135bdafdd39",
+      "lib/mix/tasks/wotex.modbus.software.build.ex": "a8985bd091692c2d13ffb259e80b33f20191a0d67d6e5ded590cf194f2e12aa9",
+      "lib/mix/tasks/wotex.modbus.software.run.ex": "4eb5b6c729b53cfa157e56f59d384959a0e6e4cc4f19b8b45b23e0b1f9534eec",
+      "lib/wotex/modbus.ex": "ef7ce21e5a58d67a4a3407b667c15ea852bc27f9bf151b9326b91cc8b6d11782",
+      "lib/wotex/modbus/address.ex": "ebbba6b6d1242d9772f16a0a06d0a0216bd2cdaa21dc60f52ff4706c5878bc8f",
+      "lib/wotex/modbus/codec.ex": "f56ee90d6fe81924f77a0052d7b2850a380020f5db3ca30a8fb7a0840f277dd7",
+      "lib/wotex/modbus/command.ex": "ca4ae0e1b5077c400cd66f79eda2bc30f4096075eff7bac1e62c506a9266fed9",
+      "lib/wotex/modbus/connection.ex": "49ed6f3aa9ac472914669afcf4d059dae1f086e286acabf2b24d62f4fa5c75d0",
+      "lib/wotex/modbus/error.ex": "ea881de0a51e03d4a1e6294d82710ebe5451f62c84012c91ae85c70fb46f2e52",
+      "lib/wotex/modbus/mapping.ex": "b5fbf28c3c1fc972b8c67f71a81a8dc0f903d984c8bf873ab4387b88500881e4",
+      "lib/wotex/modbus/session.ex": "2d24abef02d989cbc5cb74f5b397ae93162cc131d065fc81191ad0f41e3e5a29",
+      "lib/wotex/modbus/transport.ex": "da10825f30a5785e1d1d1928c1a5cb6975b56b80a9dd4d42b4a6527bd86053da",
+      "lib/wotex/modbus/value.ex": "5df6c909cbcc0fc9d8b19e69c4f62ec1369c5f281349f3386b69dd6491a41d0b",
+      "mix.exs": "7b378e90a00a2690b78f5c04921bbf96beceb04d855ca9b03283dde38f606718",
+      "mix.lock": "255bde7feadb9e0d18879fd452127bfff199f941335e81c0b4013b73e62c334c",
+      "test/interop/libmodbus/Dockerfile": "d079758f8a918a9b8be0d0e30105c27a754dfe74d98af1b7f8c9317264a5c76f",
+      "test/interop/libmodbus/server.c": "f5801850d843ed132ff8a117a4b04aa6d665a034bce4cc8b5aae9cbe8f97ca1a",
+      "test/interop/modbus_test.exs": "fe47364ef4ab80911efc86b102dffae967b8254c4ca65b0e789342f0a372ff5b",
+      "test/interop/native/check.c": "f9a2128ebc233da2b7fe3334d28272e13caa90a40fd81ffe858784bb3d349824",
+      "test/interop/native/command.c": "58728ee3f25c59a60265b40eb3094b11f90984adbf5255585089f0d09dd2883f",
+      "test/interop/native/probe.c": "470f693c6e6ab6096824820a08bab89d9282585a4b840e25dd4b48bcbdcf7652",
+      "test/software/command_test.exs": "7fd06a5ee8ef81a3ec3c75bd07b4639dfda20a886b3cd0570be4d453a305dfdb",
+      "test/software/fixture_tasks_test.exs": "75909bf19bf3a66fe359376739b28d8afcecbcb547de62ac62007195a00ab1c6",
+      "test/software/lifecycle_stress_test.exs": "5cdc32993d4ec8a261dd33a11270ad2f052e431520161bc846fd0f538d00546c",
+      "test/support/contract_fixture.ex": "1e823cfd7121c84594a83bfb0d0c42d4d959056f4696eded655d0bc7078701dc",
+      "test/support/peer.ex": "5d485262ec638c00ad4585e0bf10acbf42de3cd4ddb5e07aa8785cfe1138912b",
+      "test/support/runtime_credentials.ex": "7170be4a5f7f8a4d9795592b91c310e241e11973b0cbe676a1cb5d9240f1e1c1",
+      "test/support/runtime_fixture.ex": "bb0f823d4c1c58e882f185beb3e311d64e8250964f28d79172bafad34fa4c4a7",
+      "test/support/runtime_transport.ex": "6fcc80f4d3c8a4b4937316935a9b87d170372b001a8bf44bad0f2a90c6676f66",
+      "test/support/session_trace.ex": "92e5cbc6deb969ad3420d779e82e27a6f267417a6c71314b668077755c42f380",
+      "test/support/software/command.exs": "f198e73ddadd10f9b3c7315cf5f12f3a628996fe00c26acf5d164f7d1d56d0f3",
+      "test/support/software/fixture.exs": "cbaa920d33e9ffee110912fad5785799fde40cbadbdea3dea416d4b7ab9af742",
+      "test/support/software/manifest.exs": "a666ffcbea4360b8f26b49d43aa66ff04be5ace114453cf9f6894bfb9e59f6d5",
+      "test/support/software/run.exs": "2be3011a4321e35f0c3b672f8c233c5406e4177ca8d3da7c502de63d8bcee5dd",
+      "test/support/software_formatter.ex": "c76c648e83e9d54bf7774420a3fbca61c131f22bed6c77d17ecc4434e5bb73fc",
+      "test/support/software_other_project.ex": "785d7ed7a9f2292e886139848a9a88ec03ce8b9331c0db3688b776b2d611ddc0",
+      "test/test_helper.exs": "9cdf6aa3c27cfab1867a4587f911258f31f55f6d0e368d3076b11fe46229b547",
+      "test/wotex/modbus/boundary_test.exs": "aeb9dc3a7fe7fc37243c5243adf295c5902761952423728b3b34f44cbbf3a9f9",
+      "test/wotex/modbus/codec_test.exs": "c69bea1dd5efa6d1ba2a3baacc4dc9396873301d1ca331ac577ad6dc7295b98f",
+      "test/wotex/modbus/compatibility_test.exs": "c8ae217206f636ee99f51306e48db730ff8d2763fc2cc5c57a640e374f096a32",
+      "test/wotex/modbus/connection_test.exs": "1d549872580ab5a5b0fc40e2bffede093f8bf2c6d3bf05635988a959ef40f2b5",
+      "test/wotex/modbus/contract_test.exs": "c967cb1432a1682b8990c8a496da98b2e0d402a9a23fce88f461f99ea13b7f80",
+      "test/wotex/modbus/dependency_security_test.exs": "aed05db96411eaf7a8fbc030092387a556abbd9c7e7cdaef8ddfd145b91b91c3",
+      "test/wotex/modbus/lifecycle_test.exs": "b64705096d69c713655d71379fe5dceb637d1936f1f1ab7bf5936c5930877e1e",
+      "test/wotex/modbus/mapping_test.exs": "c06b334cb09771a9399f5008b0c3797d19d58ce47456b4791242062f07702617",
+      "test/wotex/modbus/runtime_integration_test.exs": "81b3b4ebc48b95f34b01da0408eb2e29be96b23ecc600c268778391cb0297533",
+      "test/wotex/modbus/stream_fault_test.exs": "e91ee0313eb1e5e87b21c01bb22d16bcb51b7647ae531e82bb507250a2505102",
+      "test/wotex/modbus/telemetry_test.exs": "75ae20ff469acabefa4b9932c5df2730adc6a8e728f3ecb939af4a621ac1662d",
+      "test/wotex/modbus/value_test.exs": "a94472085e36bd1c03f0b53e585e660182ff15d2e43024fb95bfce9b1a63fe3b"
+    },
+    "source_sha256": "85a908ee95e8c93fa26ce26931f0eafc17be874ea18ef8d77bebe62ec48fbdb0",
+    "source_tree": "d49811f108470741a2194200c3eab18f1ccbcda8"
+  },
+  "unaccepted": [
+    "whole-VM loss during Docker opening",
+    "daemon-unavailable removal confirmation"
+  ]
+}
