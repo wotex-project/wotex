@@ -1634,6 +1634,484 @@
           "accepted": false
         }
       }
+    },
+    {
+      "id": "WBL-B-F45",
+      "requirements": [
+        "WBL-B02",
+        "WBL-C07",
+        "WBL-S04"
+      ],
+      "operation": "report_lifecycle",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "metadata": {
+          "source": "bluez_value_change",
+          "requested_mode": "auto",
+          "effective_mode": "notify",
+          "characteristic": {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char",
+            "handle": 17,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          }
+        },
+        "queue_limit": 1,
+        "events": [
+          {
+            "open": 1
+          },
+          {
+            "publish": {
+              "id": 1,
+              "bytes": {
+                "type": "bytes",
+                "base64": "AQ=="
+              }
+            }
+          },
+          {
+            "publish": {
+              "id": 1,
+              "bytes": {
+                "type": "bytes",
+                "base64": "AQ=="
+              }
+            }
+          },
+          {
+            "publish": {
+              "id": 1,
+              "bytes": {
+                "type": "bytes",
+                "base64": "AQ=="
+              }
+            }
+          },
+          {
+            "retire": {
+              "id": 1,
+              "error": {
+                "code": "queue_overflow"
+              }
+            }
+          },
+          {
+            "flush": true
+          },
+          {
+            "ack": {
+              "version": 1,
+              "event": "report_ack",
+              "session_generation": "0123456789abcdef0123456789abcdef",
+              "report_sequence": 1,
+              "acknowledged_bytes": 564
+            }
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "results": [
+            true,
+            true,
+            true,
+            false,
+            true
+          ],
+          "frames": [
+            {
+              "version": 1,
+              "session_generation": "0123456789abcdef0123456789abcdef",
+              "subscription_id": "1",
+              "generation": 1,
+              "event": "value",
+              "value": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "metadata": {
+                "source": "bluez_value_change",
+                "requested_mode": "auto",
+                "effective_mode": "notify",
+                "characteristic": {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char",
+                  "handle": 17,
+                  "flags": [
+                    "read",
+                    "notify"
+                  ],
+                  "generation": 1
+                }
+              },
+              "report_sequence": 1
+            },
+            {
+              "version": 1,
+              "session_generation": "0123456789abcdef0123456789abcdef",
+              "subscription_id": "1",
+              "generation": 1,
+              "event": "error",
+              "value": null,
+              "metadata": {
+                "error": {
+                  "code": "queue_overflow"
+                }
+              }
+            },
+            {
+              "version": 1,
+              "session_generation": "0123456789abcdef0123456789abcdef",
+              "subscription_id": "1",
+              "generation": 1,
+              "event": "stream_retired",
+              "last_report_sequence": 1
+            }
+          ],
+          "failure": null,
+          "queued": 0,
+          "remaining_frames": 64,
+          "remaining_bytes": 1048576,
+          "credit_records": 0,
+          "active_streams": 0,
+          "output_frames": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F46",
+      "requirements": [
+        "WBL-B02",
+        "WBL-C07",
+        "WBL-S04"
+      ],
+      "operation": "report_lifecycle",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "metadata": {
+          "source": "bluez_value_change",
+          "requested_mode": "auto",
+          "effective_mode": "notify",
+          "characteristic": {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char",
+            "handle": 17,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          }
+        },
+        "queue_limit": 1,
+        "events": [
+          {
+            "open": 1
+          },
+          {
+            "publish": {
+              "id": 1,
+              "bytes": {
+                "type": "bytes",
+                "base64": "AQ=="
+              }
+            }
+          },
+          {
+            "ack": {
+              "version": 1,
+              "event": "report_ack",
+              "session_generation": "0123456789abcdef0123456789abcdef",
+              "report_sequence": 1,
+              "acknowledged_bytes": 564
+            }
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "results": [
+            true,
+            true
+          ],
+          "frames": [],
+          "failure": "invalid_frame",
+          "queued": 0,
+          "remaining_frames": 63,
+          "remaining_bytes": 1048012,
+          "credit_records": 1,
+          "active_streams": 1,
+          "output_frames": 1
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F47",
+      "requirements": [
+        "WBL-B02",
+        "WBL-C07",
+        "WBL-S04"
+      ],
+      "operation": "report_lifecycle",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "metadata": {
+          "source": "bluez_value_change",
+          "requested_mode": "auto",
+          "effective_mode": "notify",
+          "characteristic": {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char",
+            "handle": 17,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          }
+        },
+        "queue_limit": 1,
+        "events": [
+          {
+            "open": 1
+          },
+          {
+            "open": 2
+          },
+          {
+            "publish": {
+              "id": 1,
+              "bytes": {
+                "type": "bytes",
+                "base64": "AQ=="
+              }
+            }
+          },
+          {
+            "publish": {
+              "id": 2,
+              "bytes": {
+                "type": "bytes",
+                "base64": "AQ=="
+              }
+            }
+          },
+          {
+            "retire": {
+              "id": 1,
+              "error": null
+            }
+          },
+          {
+            "flush": true
+          },
+          {
+            "ack": {
+              "version": 1,
+              "event": "report_ack",
+              "session_generation": "0123456789abcdef0123456789abcdef",
+              "report_sequence": 1,
+              "acknowledged_bytes": 564
+            }
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "results": [
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "frames": [
+            {
+              "version": 1,
+              "session_generation": "0123456789abcdef0123456789abcdef",
+              "subscription_id": "1",
+              "generation": 1,
+              "event": "value",
+              "value": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "metadata": {
+                "source": "bluez_value_change",
+                "requested_mode": "auto",
+                "effective_mode": "notify",
+                "characteristic": {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char",
+                  "handle": 17,
+                  "flags": [
+                    "read",
+                    "notify"
+                  ],
+                  "generation": 1
+                }
+              },
+              "report_sequence": 1
+            },
+            {
+              "version": 1,
+              "session_generation": "0123456789abcdef0123456789abcdef",
+              "subscription_id": "2",
+              "generation": 1,
+              "event": "value",
+              "value": {
+                "type": "bytes",
+                "base64": "AQ=="
+              },
+              "metadata": {
+                "source": "bluez_value_change",
+                "requested_mode": "auto",
+                "effective_mode": "notify",
+                "characteristic": {
+                  "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+                  "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+                  "service_path": "/org/bluez/hci0/device/service",
+                  "object_path": "/org/bluez/hci0/device/service/char",
+                  "handle": 17,
+                  "flags": [
+                    "read",
+                    "notify"
+                  ],
+                  "generation": 1
+                }
+              },
+              "report_sequence": 2
+            },
+            {
+              "version": 1,
+              "session_generation": "0123456789abcdef0123456789abcdef",
+              "subscription_id": "1",
+              "generation": 1,
+              "event": "stream_retired",
+              "last_report_sequence": 1
+            }
+          ],
+          "failure": null,
+          "queued": 0,
+          "remaining_frames": 63,
+          "remaining_bytes": 1048012,
+          "credit_records": 1,
+          "active_streams": 1,
+          "output_frames": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F48",
+      "requirements": [
+        "WBL-B02",
+        "WBL-C07",
+        "WBL-S04"
+      ],
+      "operation": "report_lifecycle",
+      "input": {
+        "session_generation": "0123456789abcdef0123456789abcdef",
+        "metadata": {
+          "source": "bluez_value_change",
+          "requested_mode": "auto",
+          "effective_mode": "notify",
+          "characteristic": {
+            "service_uuid": "0000180f-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb",
+            "service_path": "/org/bluez/hci0/device/service",
+            "object_path": "/org/bluez/hci0/device/service/char",
+            "handle": 17,
+            "flags": [
+              "read",
+              "notify"
+            ],
+            "generation": 1
+          }
+        },
+        "queue_limit": 1,
+        "events": [
+          {
+            "open": 1
+          },
+          {
+            "retire": {
+              "id": 1,
+              "error": {
+                "code": "queue_overflow"
+              }
+            }
+          },
+          {
+            "retire": {
+              "id": 1,
+              "error": {
+                "code": "queue_overflow"
+              }
+            }
+          },
+          {
+            "flush": true
+          }
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "results": [
+            true,
+            true,
+            false
+          ],
+          "frames": [
+            {
+              "version": 1,
+              "session_generation": "0123456789abcdef0123456789abcdef",
+              "subscription_id": "1",
+              "generation": 1,
+              "event": "error",
+              "value": null,
+              "metadata": {
+                "error": {
+                  "code": "queue_overflow"
+                }
+              }
+            },
+            {
+              "version": 1,
+              "session_generation": "0123456789abcdef0123456789abcdef",
+              "subscription_id": "1",
+              "generation": 1,
+              "event": "stream_retired",
+              "last_report_sequence": 0
+            }
+          ],
+          "failure": null,
+          "queued": 0,
+          "remaining_frames": 64,
+          "remaining_bytes": 1048576,
+          "credit_records": 0,
+          "active_streams": 0,
+          "output_frames": 0
+        }
+      }
     }
   ],
   "executed_cases": [
@@ -1675,6 +2153,10 @@
     "WBL-B-F41",
     "WBL-B-F42",
     "WBL-B-F43",
-    "WBL-B-F44"
+    "WBL-B-F44",
+    "WBL-B-F45",
+    "WBL-B-F46",
+    "WBL-B-F47",
+    "WBL-B-F48"
   ]
 }

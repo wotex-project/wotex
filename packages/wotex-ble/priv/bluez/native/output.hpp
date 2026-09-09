@@ -78,7 +78,7 @@ private:
   std::shared_ptr<const Generation> generation_ = std::make_shared<const Generation>();
   std::map<std::uint64_t, bool> slots_;
   std::deque<Frame> frames_;
-  std::uint64_t sequence_ = 0;
+  std::uint64_t sequence_ = 0, admitted_report_ = 0, transmitted_report_ = 0;
   std::size_t offset_ = 0, control_count_ = 0, report_count_ = 0, report_bytes_ = 0, bytes_ = 0;
   auto slot(const ReplySlot &slot) {
     return slot.generation_.lock() == generation_ ? slots_.find(slot.identifier_) : slots_.end();
@@ -87,7 +87,10 @@ private:
     const auto &frame = frames_.front(); bytes_ -= frame.encoded.size();
     if (frame.lane == Lane::reply) slots_.erase(frame.slot);
     else if (frame.lane == Lane::control) --control_count_;
-    else { --report_count_; report_bytes_ -= frame.encoded.size(); }
+    else {
+      --report_count_; report_bytes_ -= frame.encoded.size();
+      if (frame.slot) transmitted_report_ = frame.slot;
+    }
     frames_.pop_front(); offset_ = 0;
   }
 public:
@@ -116,9 +119,11 @@ public:
     if (frame.size() > control_frame_limit || control_count_ == control_limit) return false;
     frames_.push_back({frame, Lane::control, 0}); bytes_ += frame.size(); ++control_count_; return true;
   }
-  bool report(const EncodedFrame &frame) {
-    if (report_count_ == report_limit || frame.size() > report_byte_limit - report_bytes_) return false;
-    frames_.push_back({frame, Lane::report, 0}); bytes_ += frame.size(); report_bytes_ += frame.size(); ++report_count_; return true;
+  bool report(const EncodedFrame &frame, std::uint64_t sequence = 0) {
+    if ((sequence && sequence <= admitted_report_) || report_count_ == report_limit || frame.size() > report_byte_limit - report_bytes_) return false;
+    frames_.push_back({frame, Lane::report, sequence});
+    if (sequence) admitted_report_ = sequence;
+    bytes_ += frame.size(); report_bytes_ += frame.size(); ++report_count_; return true;
   }
   // Each turn has at most 64 write attempts and 65536 bytes. A full pipe returns
   // immediately with all ownership/accounting intact, so control can still run.
@@ -145,5 +150,6 @@ public:
   std::size_t control_frames() const { return control_count_; }
   std::size_t report_frames() const { return report_count_; }
   std::size_t report_bytes() const { return report_bytes_; }
+  std::uint64_t transmitted_report_sequence() const { return transmitted_report_; }
 };
 } // namespace wotex::ble

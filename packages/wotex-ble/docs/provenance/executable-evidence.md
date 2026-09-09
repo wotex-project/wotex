@@ -347,3 +347,28 @@ only after complete transmission. Closed-reader and blocking-descriptor paths
 fail explicitly. Queue byte counts measure retained encoded bytes, not total
 allocator or process RSS. These tests do not execute the complete host or prove
 report credit acknowledgements across the BEAM Port boundary; those remain open.
+
+## Native value flow and terminal controls
+
+`test/wotex/ble/native_reports_test.exs` executes `reports.hpp`, `credit.hpp`
+and `output.hpp` together through actual nonblocking pipes. WBL-B-F45 through
+WBL-B-F48 compare exact native admission results, complete wire frames and
+remaining counters. Value reports carry cumulative sequence/byte credits;
+terminal errors use the separate control reservation and precede the single
+retirement barrier. A queued or partly written value cannot be acknowledged.
+
+The native matrix checks forged metadata, stale IDs, invalid error fields,
+partial writes, exact cumulative byte acknowledgements, per-stream windows,
+64 active streams, 64 queued reports and the 1 MiB queued/credited byte limits.
+A blocked stream preserves another stream's progress and its own report order.
+Retirement discards unsent values and retains only outstanding credit records;
+1,000 subscribe/report/retire/acknowledge lifetimes leave no historical records.
+Ten thousand callbacks after overflow cannot queue another value or terminal.
+Control exhaustion fails the shared channel rather than growing without bound.
+The byte-pressure cases use explicit test-only metadata padding to reach generic
+IPC bounds; they do not assert that BlueZ accepts that metadata as a characteristic.
+
+The error-code/name shape is shared with actual SDK failures. These are native
+component and wire-serialization tests. SDK notification callbacks, complete
+host dispatch and actual BEAM process suspension still require their integrated
+execution; this evidence does not complete the accepted Port backend.

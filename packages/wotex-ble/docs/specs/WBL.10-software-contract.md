@@ -3,7 +3,7 @@ spec:
   id: WBL.10
   title: "Complete BlueZ GATT central software profile"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -199,14 +199,19 @@ lane so an unrelated blocked read cannot postpone receiver cleanup. Data and
 control requests share the 64-request admission bound. Failed or stalled
 StopNotify closes this sender within C03's ownership cleanup grace.
 
-Stream envelopes have exactly .13's `session_generation` and `report_sequence`,
-plus `version: 1`, `subscription_id`, `generation: 1`,
-`event`, `value`, and `metadata`. A `value` event uses the C07 bytes envelope and
-metadata with exactly `source: "bluez_value_change"`, the established
-`characteristic`, `requested_mode`, and `effective_mode`. Validate all bound
-metadata, not only the subscription ID. An `error` event has null value and
-exactly `metadata.error`, using S03's bounded failure shape. Deliver at most one
-terminal error. Unknown or stale subscription IDs are never deliveries.
+Value envelopes have exactly .13's `session_generation` and `report_sequence`,
+plus `version: 1`, `subscription_id`, `generation: 1`, `event: "value"`,
+`value`, and `metadata`. The value uses the C07 bytes envelope and metadata with
+exactly `source: "bluez_value_change"`, the established `characteristic`,
+`requested_mode`, and `effective_mode`. Validate all bound metadata, not only the
+subscription ID. Only value envelopes consume cumulative report credits.
+
+A terminal error control has exactly `session_generation`, `version: 1`,
+`subscription_id`, `generation: 1`, `event: "error"`, `value: null`, and
+`metadata` with exactly `error`, using S03's bounded failure shape. It has no
+`report_sequence` and consumes .13's separate finite control reservation. Deliver
+at most one terminal error before that stream's retirement barrier in FIFO order.
+Unknown or stale subscription IDs are never deliveries.
 
 BlueZ StartNotify does not expose a procedure selector. If only notify or only
 indicate is advertised, the requested matching mode or auto succeeds. If both

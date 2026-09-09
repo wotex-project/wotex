@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.12
+  version: 1.0.13
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -134,13 +134,16 @@ not a credential. A duplicate initialization or wrong generation fails closed.
 The session has 64 report-frame credits and 1048576 encoded-byte credits;
 a stream has at most `min(16, queue_limit)` unacknowledged reports. `queue_limit`
 is an explicit validated native subscribe parameter translating the public
-`max_queue_length` option with C05's range. Every
+`max_queue_length` option with C05's range. Every value
 report includes the exact `session_generation` and a strictly increasing
 unsigned-64 `report_sequence`, starting at 1 for the session. Encoded bytes
 include the newline. The sender reserves frame and byte credit before stdout
 submission. It retains only bounded outstanding sequence/stream/byte records.
+An acknowledgement cannot cover a frame that is queued or only partly written.
 No report is transmitted without both credits, and sequence exhaustion closes
-the generation without rollover or replay.
+the generation without rollover or replay. Terminal error controls omit
+`report_sequence`, consume no report credit and participate only in the separate
+finite control reservation. Their exact shape is specified in WBL.10 S04.
 
 The only acknowledgement frame is
 `{"version":1,"event":"report_ack","session_generation":"0123456789abcdef0123456789abcdef","report_sequence":1,"acknowledged_bytes":128}`.
@@ -163,10 +166,17 @@ native flow control. Runtime opening-worker/final-owner identity follows WRT.01
 1.3.1; partial native resources are owned before any blocking establishment wait.
 
 Without credit, native callbacks enter a separately bounded queue of 64 reports
-and 1048576 encoded bytes. BLE preserves distinct reports and terminates only the affected stream with
+and 1048576 encoded bytes. Each queued value retains its stream ID and at most
+512 decoded bytes; immutable established metadata is stored once per active
+stream. Queue byte admission uses the encoded line length with a twenty-digit
+uint64 sequence, an upper bound on the eventual assigned sequence length. Report
+credits use the exact assigned and serialized length. BLE preserves distinct reports and terminates only the affected stream with
 `:queue_overflow` before accepting an excess report.
 SDK callbacks never wait for stdout. Per-stream queued reports also obey C05
-queue_limit; a shared byte/frame queue limit may terminate earlier. Termination retires that stream delivery generation, cancels
+queue_limit; a shared byte/frame queue limit may terminate earlier. A stream
+without available credit cannot prevent another stream with sufficient credit
+from progressing. Pending values preserve order within each stream, including
+when a later value is smaller than an earlier blocked value. Termination retires that stream delivery generation, cancels
 its SDK listener and discards its queued reports. Repeated callbacks cannot emit
 more terminal messages. Control frames and terminal errors have a separate reservation of 256 frames
 of at most 4096 bytes each. At most one error per admitted operation/stream, one
@@ -207,7 +217,8 @@ the shared channel itself is malformed, exhausted or unresponsive. Native
 retirement stops new reports, discards unsent reports and emits exactly one
 control barrier: `version: 1`, `event: "stream_retired"`, `session_generation`,
 `subscription_id`, stream `generation`, and `last_report_sequence` (zero if none).
-The barrier follows every transmitted frame for that stream in stdout order;
+A terminal error control, when present, follows the stream's preceding values
+and precedes the barrier. The barrier follows every transmitted frame for that stream in stdout order;
 no such frame is valid after it. Cancellation success follows this barrier.
 The native owner retains bounded outstanding credit records until the BEAM's
 normal cumulative acknowledgement; retirement cannot mint credits independently.
@@ -222,6 +233,16 @@ After the barrier and its cumulative acknowledgement, delete the retired record;
 no later frame may resurrect it. A false barrier sequence, second barrier or
 post-barrier report is an invalid channel, not a new subscription. Counter/ID
 ownership remains bounded by active and outstanding records.
+
+`report_lifecycle` cases execute `NativeReports`, `Credits`, `NativeOutput` and
+an actual nonblocking pipe. Inputs contain the explicit session generation,
+established metadata, queue limit and ordered `open`, `publish`, `retire`,
+`flush`, or exact `ack` events. Outputs compare native admission results, complete
+decoded wire frames and frame/byte/stream counters. A rejected acknowledgement
+stops the trace and records the last valid counters before teardown; it never
+flushes previously unwritten output as an implicit acceptance step. Error controls
+and barriers do not enter the cumulative report byte sum. These component traces
+do not substitute for the BEAM process-flow cases below.
 
 `flow_trace` corpus cases drive the shared production credit manager with exact
 encoded byte lengths. `transmit` means a frame reached stdout, `consume` means
