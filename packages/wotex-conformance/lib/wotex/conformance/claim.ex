@@ -4,6 +4,18 @@ defmodule Wotex.Conformance.Claim do
 
   A claim names the exact standards revision and operation it addresses. It is
   not a package-level conformance declaration.
+
+  `from_map/1` validates a stable identifier and revision, operation,
+  evidence-profile classification, exact standard identifier and revision,
+  absolute HTTPS source, optional section, assertions, and tags. The standard
+  locator distinguishes an external requirement from the project-defined claim
+  that exercises it. `to_map/1` returns the string-keyed interchange form.
+
+  Evidence profiles distinguish value, codec, Runtime, binding, directory,
+  simulator, live-transport, hardware, certification, and production evidence.
+  Selecting a stronger profile name does not create that evidence; the vector,
+  subject, target, and report must still record the corresponding observation.
+  Multiple claims may address different cells of the same specification.
   """
 
   alias Wotex.Conformance.{Error, Input, Value}

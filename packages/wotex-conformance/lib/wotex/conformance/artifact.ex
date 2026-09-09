@@ -4,9 +4,13 @@ defmodule Wotex.Conformance.Artifact do
 
   Symbolic links and non-regular files are rejected. Verification performs no
   extraction and starts no subject code. The byte budget is enforced while
-  reading, and the returned size counts the bytes actually hashed. Consumers
+  reading, and the returned size counts the hashed bytes. Consumers
   must keep the file unchanged through verification and subsequent execution;
   this check does not lock the path or provide filesystem isolation.
+
+  `verify/3` compares every byte of the lowercase SHA-256 digest without an
+  early mismatch exit after the streaming size check. `digest_file/1` exposes the same bounded reader for
+  tooling that must record a digest before constructing a conformance subject.
   """
 
   alias Wotex.Conformance.{Canonical, Error, Input}

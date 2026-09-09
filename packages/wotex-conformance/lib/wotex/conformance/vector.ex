@@ -8,6 +8,18 @@ defmodule Wotex.Conformance.Vector do
   projection, is the only vector material the target receives.
 
   `target_request/3` intentionally omits the expectation and provenance.
+
+  `from_map/1` validates the versioned claim, bounded input, operation-specific
+  observation projection, runner-owned expectation, provenance, tags, and
+  optional declared digest. The resulting digest covers the canonical vector
+  representation. `to_map/2` may omit that digest only while recomputing it.
+
+  `target_request/3` combines immutable subject identity, claim identity,
+  vector input, and runner context under target protocol version 1.0. It never
+  includes the expected value, expected digest, or provenance record. A vector
+  defines one observable case for one claim; its presence in a corpus does not
+  prove that the subject passes it or that adjacent standard behavior is
+  supported.
   """
 
   alias Wotex.Conformance.{

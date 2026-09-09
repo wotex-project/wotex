@@ -4,6 +4,17 @@ defmodule Wotex.Conformance.Report do
 
   The report digest covers all fields except itself. Given the same typed
   values, canonical bytes and digest are identical.
+
+  `new/5` validates the subject and corpus digest, normalizes the observation
+  time to UTC, validates non-sensitive environment metadata, sorts results by
+  vector identifier, and derives both a run identifier and report digest. The
+  summary preserves separate counts for every result classification.
+
+  `to_map/2` exposes the schema representation, while `encode/1` emits the
+  project canonical JSON form. A report is evidence only for the exact subject
+  artifact, corpus digest, environment, and results it contains. Its existence
+  does not imply W3C certification, complete conformance, or compatibility with
+  another artifact version.
   """
 
   alias Wotex.Conformance.{Canonical, Environment, Error, Result, Subject}

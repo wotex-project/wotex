@@ -1,5 +1,20 @@
 defmodule Wotex.Conformance.Input do
-  @moduledoc "Helpers for reading atom- or string-keyed constructor input safely."
+  @moduledoc """
+  Normalizes bounded constructor input without creating atoms from external data.
+
+  Public conformance values accept maps whose known fields may use their atom
+  or string representation. `required/2` fetches a required field,
+  `optional/3` applies an explicit default, and `only_keys/2` rejects unknown
+  names and duplicate atom/string representations. `options/2` performs the
+  corresponding validation for keyword options and rejects repeated keys.
+
+  The caller supplies atom keys from a closed, compile-time vocabulary; this
+  module converts those atoms to strings and never converts an input string to
+  an atom. Failures are returned as `Wotex.Conformance.Error` values with stable
+  codes and paths. The helpers validate field representation only. Semantic
+  bounds, standards claims, artifact identity, and cross-field constraints
+  remain with the constructor that calls them.
+  """
 
   alias Wotex.Conformance.Error
 

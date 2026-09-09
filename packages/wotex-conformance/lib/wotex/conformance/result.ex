@@ -4,6 +4,18 @@ defmodule Wotex.Conformance.Result do
 
   The reportable value retains expected and actual digests, never the raw
   observation returned by the target.
+
+  `new/3` binds the claim and vector revisions, standards revision, vector
+  digest, classified status, bounded code, measured duration, and observation
+  digests into one evidence digest. The supported statuses distinguish pass,
+  fail, unsupported behavior, work not run, and infrastructure failure; callers
+  must not collapse these categories.
+
+  Classification belongs to `Wotex.Conformance.Runner`, not the target adapter.
+  An actual value is canonicalized and discarded after its digest is derived.
+  `to_map/2` produces the stable report representation and may omit the evidence
+  digest only when computing that digest. A result proves only its named vector
+  under its recorded evidence coordinates.
   """
 
   alias Wotex.Conformance.{Canonical, Error, Input, Value, Vector}

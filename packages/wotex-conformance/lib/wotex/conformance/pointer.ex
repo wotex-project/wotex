@@ -5,6 +5,17 @@ defmodule Wotex.Conformance.Pointer do
   Structured errors, vector projections, and normalized observations address
   one member of a JSON document with a pointer string. `~` is escaped as `~0`
   and `/` as `~1`, so a member name can never be confused with a separator.
+
+  `encode/1` accepts string and integer path segments, preserves their order,
+  and returns the empty string for the whole document. `valid?/1` accepts that
+  root representation or an absolute pointer containing only the two defined
+  escape sequences. The module checks pointer syntax but does not traverse a
+  JSON value or verify that the addressed member exists.
+
+  Pointer strings are used as stable public locations rather than Elixir access
+  paths. This permits target observations and error reports to retain exact
+  field identity without creating atoms from input or exposing an entire source
+  document.
   """
 
   @escape ~r/~(?![01])/

@@ -1,13 +1,19 @@
 defmodule Wotex.Conformance.Runner do
   @moduledoc """
   Verifies a subject archive, invokes an external target for selected vectors,
-  evaluates observations, and emits one deterministic evidence report.
+  evaluates observations, and emits one content-addressed evidence report.
 
   Results are ordered by vector ID regardless of corpus file order. Archive
   verification failure is recorded as `infrastructure_error` for every selected
   vector; excluded vectors remain `not_run`. An observation that does not satisfy
   the normalized shape of its operation is a protocol failure recorded as
   `infrastructure_error`, never as `fail`.
+
+  The caller supplies `generated_at`, selection, and bounded environment
+  metadata. The runner reads no wall clock for that timestamp. Result ordering
+  and canonical encoding are deterministic for identical evidence values,
+  including measured target durations. Repeated live executions can therefore
+  produce different report digests even when their observations agree.
   """
 
   alias Wotex.Conformance.{

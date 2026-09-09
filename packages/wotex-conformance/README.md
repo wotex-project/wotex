@@ -3,16 +3,19 @@
 **Deterministic, subject-independent conformance evidence for W3C WoT libraries.**
 
 [![Hex.pm](https://img.shields.io/hexpm/v/wotex_conformance.svg)](https://hex.pm/packages/wotex_conformance)
-[![Docs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_conformance)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/wotex_conformance)
 [![CI](https://github.com/wotex-project/wotex-conformance/actions/workflows/ci.yml/badge.svg)](https://github.com/wotex-project/wotex-conformance/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/wotex-project/wotex-conformance/branch/main/graph/badge.svg)](https://codecov.io/gh/wotex-project/wotex-conformance)
-[![License](https://img.shields.io/github/license/wotex-project/wotex-conformance.svg)](LICENSE)
+[![License](https://img.shields.io/hexpm/l/wotex_conformance.svg)](https://github.com/wotex-project/wotex-conformance/blob/main/LICENSE)
 
 [Installation](#installation) · [Evidence Model](#evidence-model) ·
 [Quick Start](#quick-start) · [External Target Protocol](#external-target-protocol) ·
 [Security Boundary](#security-boundary) · [Development](#development)
 
 ---
+
+This development checkout has an unstable public API. Package publication
+requires a separately reviewed release.
 
 `wotex_conformance` owns versioned claims, immutable vectors, verified corpora,
 an external target protocol, result classification, and canonical evidence

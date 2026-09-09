@@ -4,6 +4,18 @@ defmodule Wotex.Conformance.Subject do
 
   Local artifact paths and endpoint credentials are execution configuration and
   are deliberately absent from this reportable value.
+
+  `from_map/1` validates the subject identifier and version, a lowercase
+  prefixed SHA-256 artifact digest, and a bounded string-keyed interface
+  description. The digest binds results to immutable bytes instead of a mutable
+  package name or local checkout. `to_map/1` produces the form included in
+  target requests and reports.
+
+  The interface describes how the external adapter addresses the subject; it
+  must not contain credentials, expected vector values, or a local artifact
+  path. A subject identity does not claim that the artifact loaded successfully
+  or supports any behavior. Those observations are recorded separately by the
+  runner and target outcome.
   """
 
   alias Wotex.Conformance.{Canonical, Error, Input, Value}

@@ -5,6 +5,18 @@ defmodule Wotex.Conformance.Corpus do
   The manifest fixes every vector file and digest. Symbolic links, path
   traversal, duplicate vector IDs, undeclared files, and digest mismatches are
   rejected before any target is invoked.
+
+  `load/1` bounds the manifest, individual vector files, and total vector count;
+  verifies the declared directory contents; constructs every
+  `Wotex.Conformance.Vector`; and checks the aggregate canonical digest. A
+  corpus may also be constructed from already decoded values with `from_map/1`.
+  Vectors are sorted by identifier before the corpus digest is computed.
+
+  Verification establishes content identity and local structural validity. It
+  does not establish that a target supports the claims or that each cited
+  standard interpretation is correct. Those questions require runner results
+  and provenance review. The filesystem is read only during an explicit
+  `load/1` call; loading the library performs no I/O.
   """
 
   alias Wotex.Conformance.{Canonical, Error, Input, Value, Vector}

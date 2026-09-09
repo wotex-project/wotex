@@ -4,6 +4,17 @@ defmodule Wotex.Conformance.Environment do
 
   Environment metadata is evidence included in a report. It is not the
   operating-system environment passed to an external target.
+
+  `validate/1` requires a string-keyed, bounded JSON object with at most eight
+  levels, 128 nodes, and 1024 bytes per string. It traverses nested objects and
+  arrays and rejects keys whose names indicate passwords, secrets, tokens,
+  credentials, application keys, or private keys.
+
+  The lexical screen is a fail-closed public-report boundary, not a general
+  secret detector. Consumers must still supply only non-sensitive evidence such
+  as runtime versions, operating-system identity, and declared capability
+  settings. Process environment variables and target launch configuration are
+  owned by the adapter and remain outside this reportable value.
   """
 
   alias Wotex.Conformance.{Error, Value}

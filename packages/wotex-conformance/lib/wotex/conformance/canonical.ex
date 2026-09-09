@@ -4,6 +4,24 @@ defmodule Wotex.Conformance.Canonical do
 
   Objects are ordered by UTF-8 key bytes and contain only string keys. The
   encoder is a project canonical form; it does not claim RFC 8785 equivalence.
+
+  `encode/1` first applies the bounded JSON-value contract, then emits arrays in
+  order and objects in sorted-key order without insignificant whitespace.
+  `digest/1` hashes those bytes and returns a lowercase, prefixed SHA-256 value.
+  `digest_bytes/1` is reserved for bytes that are already the authoritative
+  encoding, and `valid_digest?/1` checks the exact textual digest shape.
+
+  Canonicalization provides deterministic identity within this package. It does
+  not normalize Unicode, reinterpret numbers, accept non-JSON terms, or promise
+  byte equivalence with another canonicalization scheme. Callers must include
+  every semantically relevant field before deriving an artifact or evidence
+  digest.
+
+  ## Examples
+
+      iex> Wotex.Conformance.Canonical.encode(%{"b" => 2, "a" => [true, nil]})
+      {:ok, ~s({"a":[true,null],"b":2})}
+
   """
 
   alias Wotex.Conformance.{Error, Value}

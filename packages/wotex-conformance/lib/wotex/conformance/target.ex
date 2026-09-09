@@ -6,6 +6,18 @@ defmodule Wotex.Conformance.Target do
   which keeps subject code outside this application's dependency graph and VM.
   A custom adapter is represented as `{module, state}` and is owned by the
   consumer.
+
+  `c:artifact_path/1` identifies the immutable archive whose digest binds the
+  subject. `c:invoke/2` accepts one expectation-free vector request and returns
+  a validated `Wotex.Conformance.Target.Response` with measured microseconds or
+  a structured error. `normalize/1` verifies these callbacks before a run.
+
+  Callback invocation is contained: exceptions, throws, malformed returns, and
+  invalid durations become `Wotex.Conformance.Error` values. The behavior does
+  not load a tested subject into the conformance application or grant an
+  adapter authority to classify pass and fail. Adapter state owns execution
+  paths, process environment, deadlines, and cleanup and must keep them out of
+  reportable subject identity.
   """
 
   alias Wotex.Conformance.{Error, Target.Response}

@@ -4,6 +4,18 @@ defmodule Wotex.Conformance.Target.Response do
 
   This value cannot represent pass or fail; classification remains runner
   authority.
+
+  `from_map/2` validates protocol name and version, correlates the vector
+  identifier with the request, and accepts either an observed JSON value or an
+  explicit unsupported outcome. An unsupported response must omit `actual`.
+  Diagnostic codes are bounded, deduplicated, and sorted before the value is
+  returned.
+
+  The external target protocol never carries the runner-owned expectation.
+  This struct records only what the adapter observed or declined to implement.
+  `Wotex.Conformance.Runner` compares an observation with the expectation and
+  assigns pass or fail. A syntactically valid response is therefore not itself
+  evidence that the subject satisfies a claim.
   """
 
   alias Wotex.Conformance.{Error, Input, Value}
