@@ -1,0 +1,15 @@
+--- a/src/coap_block.c
++++ b/src/coap_block.c
+@@ -3630,6 +3630,12 @@
+ coap_binary_t *
+ coap_block_build_body(coap_binary_t *body_data, size_t length,
+                       const uint8_t *data, size_t offset, size_t total) {
++  /* Wotex's fixed whole-body profile bounds both the peer's estimate and the
++   * actual cumulative extent before allocation or growth. */
++  if (total > 1048576U || offset > 1048576U || length > 1048576U - offset) {
++    coap_delete_binary(body_data);
++    return NULL;
++  }
+   if (data == NULL)
+     return NULL;
+   if (body_data == NULL && total) {

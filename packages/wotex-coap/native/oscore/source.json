@@ -12,10 +12,19 @@
     {
       "path": "patches/0002-skip-empty-cbor-byte-copy.patch",
       "sha256": "29d0e421a446b0ec347c71b8e3ac7421ff541254df6eced4f91c2bd6ff92f8a2"
+    },
+    {
+      "path": "patches/0003-limit-whole-body-assembly.patch",
+      "sha256": "bc718f8ea44495f6dabee9c508b1820e6d802e571c3fe8b2e00746d3a9a6fec7"
+    },
+    {
+      "path": "patches/0004-reject-representation-restart.patch",
+      "sha256": "39fdf0f4e53b1c941983f317550f8ba72dcf5ba300c95904467127423fc08767"
     }
   ],
   "patched_sources": {
     "src/coap_oscore.c": "5c778ae3e899404ebba7f254b9fe7422eb06fb0811e61dfcc7e1bd8122c3d410",
-    "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c"
+    "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c",
+    "src/coap_block.c": "3aed69a6bad7f63dad5998a0b7a402a78cc81da718985a61b964c5619a21d9af"
   }
 }

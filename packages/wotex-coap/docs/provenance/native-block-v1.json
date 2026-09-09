@@ -1,0 +1,173 @@
+{
+  "schema": "wotex.coap.native-block-evidence@1",
+  "scope": "Shared libcoap block-engine regression through public client API and raw UDP fault peer; no protected-message or production-owner acceptance",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "73894a017481eeba7cf18fe2676fda4caaf2b181f7888a274cdac81f5b5a9342",
+      "native/oscore/patches/0003-limit-whole-body-assembly.patch": "bc718f8ea44495f6dabee9c508b1820e6d802e571c3fe8b2e00746d3a9a6fec7",
+      "native/oscore/patches/0004-reject-representation-restart.patch": "39fdf0f4e53b1c941983f317550f8ba72dcf5ba300c95904467127423fc08767",
+      "test/native/oscore_block_limit_test.c": "2f801d7758f840e18d1c4a19a3130230a72db58c4cb75b249ea840ed73e844f6",
+      "test/native/Dockerfile": "a88f292d801a3674fd592cca9b2090f9db3d7682f3863cbdc27bb4187bb620b4"
+    }
+  },
+  "upstream": {
+    "schema": "wotex.coap.libcoap-source@1",
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "url": "https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28",
+    "sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "patches": [
+      {
+        "path": "patches/0001-reject-unsaved-sender-sequences.patch",
+        "sha256": "58ea9aa566e6306b811e3845c01931e7887d66e00923e285d7be779d58251350"
+      },
+      {
+        "path": "patches/0002-skip-empty-cbor-byte-copy.patch",
+        "sha256": "29d0e421a446b0ec347c71b8e3ac7421ff541254df6eced4f91c2bd6ff92f8a2"
+      },
+      {
+        "path": "patches/0003-limit-whole-body-assembly.patch",
+        "sha256": "bc718f8ea44495f6dabee9c508b1820e6d802e571c3fe8b2e00746d3a9a6fec7"
+      },
+      {
+        "path": "patches/0004-reject-representation-restart.patch",
+        "sha256": "39fdf0f4e53b1c941983f317550f8ba72dcf5ba300c95904467127423fc08767"
+      }
+    ],
+    "patched_sources": {
+      "src/coap_oscore.c": "5c778ae3e899404ebba7f254b9fe7422eb06fb0811e61dfcc7e1bd8122c3d410",
+      "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c",
+      "src/coap_block.c": "3aed69a6bad7f63dad5998a0b7a402a78cc81da718985a61b964c5619a21d9af"
+    }
+  },
+  "requirements": [
+    "WCO-N03",
+    "WCO-S02"
+  ],
+  "assertions": [
+    "Exact 1-MiB complete body",
+    "Size2 1-MiB+1 rejects before continuation",
+    "Missing Size2 cannot bypass cumulative actual extent",
+    "Understated Size2 cannot bypass cumulative actual extent",
+    "Changed Size2 above limit rejects after second block",
+    "Understated Size2 with actual exact 1-MiB body succeeds",
+    "Changed ETag rejects GET/POST/PUT response without a fresh block-zero application request",
+    "Linux public binary allocation/resizing lengths never exceed 1 MiB; allocator metadata overhead is outside this payload-length counter"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "public_api_scenarios": 9,
+      "output_sha256": "5f589c34f5da88c1ee31a8b782e9f1cbf0365ba70dd03f5bda48c34f77324d81",
+      "assertion_output": [
+        "WCO-N03 WCO-S02: exact 1-MiB, oversized/absent/understated/changed Size2 and cumulative body bounds",
+        "WCO-N03 WCO-S02: changed ETag never restarts GET, dispatched POST or dispatched PUT"
+      ],
+      "executable_sha256": "384ad7ac3236ffc7b4b7e7957f6f8c041151fc38d3db5a6a9e04d9f6745e65db",
+      "static_library_sha256": "78533f9a99fc8ca593338be001297af58870684554c5fce0fc307c6bb2dc924c",
+      "compiler": "Apple clang 21.0.0 clang-2100.1.1.101",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "public_api_scenarios": 9,
+      "output_sha256": "87233f3069b26403c2e8f18f6ceaceec87aa191ca0fb6a132e086b3f4b1721c3",
+      "assertion_output": [
+        "WCO-N03 WCO-S02: exact 1-MiB, oversized/absent/understated/changed Size2 and cumulative body bounds",
+        "WCO-N03 WCO-S02: changed ETag never restarts GET, dispatched POST or dispatched PUT",
+        "WCO-N03: actual public binary allocation requests never exceed 1 MiB"
+      ],
+      "image": "sha256:3444fdc6658d8ffd7524f23132bc37b998ddb8b104eb4c6d1209fb72b38b1d61",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "executable_sha256": "eb728c42ed1a1080a43fe3bc208b6cf7f051fd1d55c96d06d3839f9e0462feda",
+      "static_library_sha256": "5fce6547224b6b2a11555bc758844a8f23258382d000e7b9667b0cd46bb64ee2",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "3.0.20-1~deb12u2",
+      "sanitizers": [
+        "address",
+        "undefined"
+      ],
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1:abort_on_error=1",
+        "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1"
+      },
+      "instrumentation": [
+        "-DWCO_ALLOCATION_WRAP",
+        "-Wl,--wrap=coap_new_binary,--wrap=coap_resize_binary"
+      ],
+      "artifact_and_package_log_sha256": "b087844cf1dc6ea390c3239c117d6cafac78754ffc1238dcde44ffbfe824bd20",
+      "build_log_sha256": "ac19b7420dc15ba9056c05c27bcc2d04f45fdfb3f3850b1f0693e9168cb9fbb3",
+      "toolchain_packages_recorded_not_locked": true,
+      "argv": [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--read-only",
+        "--pids-limit",
+        "32",
+        "--memory",
+        "512m",
+        "--entrypoint",
+        "/usr/local/bin/oscore-block-limit",
+        "sha256:3444fdc6658d8ffd7524f23132bc37b998ddb8b104eb4c6d1209fb72b38b1d61"
+      ]
+    }
+  ],
+  "negative_controls": {
+    "platform": "macOS arm64",
+    "preceding_source": {
+      "schema": "wotex.coap.libcoap-source@1",
+      "version": "4.3.5",
+      "commit": "7cf7465b784baded4de183290c547d582becfd28",
+      "url": "https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28",
+      "sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+      "patches": [
+        {
+          "path": "patches/0001-reject-unsaved-sender-sequences.patch",
+          "sha256": "58ea9aa566e6306b811e3845c01931e7887d66e00923e285d7be779d58251350"
+        },
+        {
+          "path": "patches/0002-skip-empty-cbor-byte-copy.patch",
+          "sha256": "29d0e421a446b0ec347c71b8e3ac7421ff541254df6eced4f91c2bd6ff92f8a2"
+        }
+      ],
+      "patched_sources": {
+        "src/coap_oscore.c": "5c778ae3e899404ebba7f254b9fe7422eb06fb0811e61dfcc7e1bd8122c3d410",
+        "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c"
+      }
+    },
+    "coap_block_sha256": "9876b0087efc2d2fba68fb08e52d8fb9a4f228cefb2b3110a9f268b344b500e9",
+    "static_library_sha256": "a79fbd4b7153e220373cbec208f1e629c7494595b1c600a673633d6f94a9ddf2",
+    "executable_sha256": "be18664792c03b981a586ed175cafaed3294e6dda74012892b83f7714a061ed7",
+    "cases": [
+      {
+        "argument": "--size-only",
+        "exit_code": -6,
+        "signal": "SIGABRT",
+        "output_sha256": "5aa084fe77c62bbdeb8418dbe41903ddcf13cf9e5c8aa32fc3a2c21f10206c9a",
+        "failed_assertion": "probe.requests == 1"
+      },
+      {
+        "argument": "--representation-only",
+        "exit_code": -6,
+        "signal": "SIGABRT",
+        "output_sha256": "2b5ebb26fb380d7cf27e226262606f286f5e12d964332ec033596e5d80a07e65",
+        "failed_assertion": "probe.restarts == 0"
+      }
+    ]
+  },
+  "unaccepted": [
+    "Protected OSCORE blockwise peers and authenticated malformed-frame matrix",
+    "Production Port owner and end-to-end unknown-effect mutation projection",
+    "Size1 server-role interoperability; the helper profile is a client",
+    "Complete native Mix build/run and software acceptance matrix"
+  ]
+}

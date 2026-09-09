@@ -3,7 +3,7 @@ spec:
   id: WCO.13
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.3.0
+  version: 1.4.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -31,12 +31,22 @@ Apply the ordered patches and verify their resulting source hashes from
 [`native/oscore/source.json`](../../native/oscore/source.json). The sequence
 patch requires a successful persistence callback before advancing the cached
 boundary or encrypting a PDU. The CBOR patch avoids a null-pointer copy for a
-valid empty byte string. The native manifest records base archive, patches and
+valid empty byte string. The whole-body patch bounds advertised Size1/Size2
+and cumulative byte extent at 1 MiB before SDK body allocation or resizing.
+The representation patch rejects a changed ETag instead of resending the original
+application request; a dispatched POST/PUT cannot be replayed to restart body
+assembly. These fixed profile policies preserve libcoap's exchange ownership.
+The native manifest records base archive, patches and
 resulting source hashes separately; it cannot describe this build as unmodified
 upstream. `test/native/oscore_sequence_test.c` asserts the actual public send
 path on macOS and under Linux ASan/UBSan. Its narrow
 [receipt](../provenance/native-sequence-v1.json) does not accept the remaining
 native owner or durable store.
+The [native block receipt](../provenance/native-block-v1.json) identifies the
+actual UDP fault-peer regressions and Linux public allocation-length probes.
+Its negative controls reproduce the unbounded estimate and new-application-request
+restart behavior before the two block patches. Protected OSCORE peer/owner
+coverage remains a separate requirement.
 
 The native JSON dependency is unmodified yyjson 0.12.0, commit
 `8b4a38dc994a110abaec8a400615567bd996105f`. Its

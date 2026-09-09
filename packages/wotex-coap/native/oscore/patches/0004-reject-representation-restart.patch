@@ -1,0 +1,51 @@
+--- a/src/coap_block.c
++++ b/src/coap_block.c
+@@ -3792,5 +3792,2 @@
+         if (lg_crcv->initial) {
+-#if COAP_Q_BLOCK_SUPPORT
+-reinit:
+-#endif /* COAP_Q_BLOCK_SUPPORT */
+           lg_crcv->initial = 0;
+@@ -3824,38 +3821,6 @@
+                           lg_crcv->etag, lg_crcv->etag_length)) {
+-            /* body of data has changed - need to restart request */
+-            coap_pdu_t *pdu;
+-            uint64_t token = STATE_TOKEN_FULL(lg_crcv->state_token,
+-                                              ++lg_crcv->retry_counter);
+-            size_t len = coap_encode_var_safe8(buf, sizeof(token), token);
+-            coap_opt_filter_t drop_options;
+-
+-#if COAP_Q_BLOCK_SUPPORT
+-            if (block_opt == COAP_OPTION_Q_BLOCK2)
+-              goto reinit;
+-#endif /* COAP_Q_BLOCK_SUPPORT */
+-
+-            coap_log_warn("Data body updated during receipt - new request started\n");
+-            if (!(session->block_mode & COAP_BLOCK_SINGLE_BODY))
+-              coap_handle_event_lkd(context, COAP_EVENT_PARTIAL_BLOCK, session);
+-
+-            lg_crcv->initial = 1;
+-            coap_free_type(COAP_STRING, lg_crcv->body_data);
+-            lg_crcv->body_data = NULL;
+-
+-            coap_session_new_token(session, &len, buf);
+-            memset(&drop_options, 0, sizeof(coap_opt_filter_t));
+-            coap_option_filter_set(&drop_options, COAP_OPTION_OBSERVE);
+-            pdu = coap_pdu_duplicate_lkd(&lg_crcv->pdu, session, len, buf, &drop_options);
+-            if (!pdu)
+-              goto fail_resp;
+-
+-            coap_update_option(pdu, block_opt,
+-                               coap_encode_var_safe(buf, sizeof(buf),
+-                                                    (0 << 4) | (0 << 3) | block.aszx),
+-                               buf);
+-
+-            if (coap_send_internal(session, pdu) == COAP_INVALID_MID)
+-              goto fail_resp;
+-
+-            goto skip_app_handler;
++            /* A changed representation cannot authorize another application
++             * request, especially a dispatched POST or PUT. */
++            coap_log_warn("Data body updated during receipt - transfer rejected\n");
++            goto fail_resp;
+           }

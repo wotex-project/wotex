@@ -72,7 +72,11 @@ primitives do not accept the complete helper protocol or its report-credit/body
 assembly behavior. The [native body/credit receipt](native-body-credit-v1.json)
 identifies bounded payload/hash validation and cumulative credit primitives.
 Actual process/Port saturation, cancellation deadlines and complete native-v1
-traces remain unaccepted.
+traces remain unaccepted. The [native block receipt](native-block-v1.json) records
+public-API raw UDP fault-peer cases for advertised/actual body bounds and changed
+ETag behavior. Linux probes assert requested SDK binary lengths before allocation;
+negative controls fail against the preceding SDK patch set. The peer exercises
+the shared block engine, not an independent OSCORE security implementation.
 OSCORE protected-message/replay/bridge restart tests, native helper ownership and complete stress/matrix closure remain
 required by [the ordered plan](../plans/software-implementation.md).
 
