@@ -15,7 +15,10 @@ defmodule Wotex.Thread.NativeOwnerTest do
     assert Path.type(rcp) == :absolute and File.regular?(rcp)
 
     directory =
-      Path.join(System.tmp_dir!(), "wotex-thread-sdk-#{System.unique_integer([:positive])}")
+      Path.join(
+        System.tmp_dir!(),
+        "wotex-thread-sdk-#{System.pid()}-#{System.unique_integer([:positive])}"
+      )
 
     File.mkdir_p!(directory)
     on_exit(fn -> File.rm_rf!(directory) end)

@@ -9,7 +9,10 @@ defmodule Wotex.Thread.SdkBridgeTest do
 
   setup do
     directory =
-      Path.join(System.tmp_dir!(), "wotex-thread-beam-#{System.unique_integer([:positive])}")
+      Path.join(
+        System.tmp_dir!(),
+        "wotex-thread-beam-#{System.pid()}-#{System.unique_integer([:positive])}"
+      )
 
     File.mkdir_p!(directory)
     executable = Path.join(directory, "bridge")

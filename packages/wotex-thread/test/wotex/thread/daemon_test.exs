@@ -110,7 +110,9 @@ defmodule Wotex.Thread.DaemonTest do
   end
 
   defp peer(fun) do
-    path = Path.join(System.tmp_dir!(), "wt-#{System.unique_integer([:positive])}.sock")
+    path =
+      Path.join(System.tmp_dir!(), "wt-#{System.pid()}-#{System.unique_integer([:positive])}.sock")
+
     parent = self()
 
     task =
