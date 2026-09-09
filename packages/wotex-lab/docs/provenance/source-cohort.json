@@ -20,42 +20,42 @@
     {
       "package": "wotex",
       "files": 39,
-      "sha256": "755ef5eb002cf6dd913f7fb44d7a579c906215e8fb81314f7ae31b9ae3626f9a"
+      "sha256": "9dd8e33fb9521ccb63b38e93b6a7f66fccb17f0f8f4c221b3c1b409943459fa3"
     },
     {
       "package": "wotex_runtime",
       "files": 42,
-      "sha256": "53b22a9a512193d020ae20cffea78456e806f2982f9cb51226d57eb0543cc592"
+      "sha256": "118d20abae7a24826f051f2fb319127acc7c288df0b264d45188b35593a08a64"
     },
     {
       "package": "wotex_binding_http",
       "files": 35,
-      "sha256": "261e6a3567717e897e0059caaca0b4365bae8cbf176a240ac7274bcb9f137d9b"
+      "sha256": "7b677aee4a44c6875d573f4973708b4aebef27ccce0aef031048431c1891ca75"
     },
     {
       "package": "wotex_binding_mqtt",
       "files": 38,
-      "sha256": "309a5c40c21ecab06c9642a62adf4efb19a87823d8063ac92a002c4c2b3f7e1d"
+      "sha256": "955a295af43e09760017520913b6cd1262516cf0a7c3f26af5b87759574aee67"
     },
     {
       "package": "wotex_directory",
       "files": 50,
-      "sha256": "5d5988efa843d24896da30803e065a2f1995f0af618ef31bc43284b0c6362015"
+      "sha256": "92cff137751abbf82f4527a705e081074322439933dba65cf2c19489707ffc4c"
     },
     {
       "package": "wotex_continuum",
       "files": 86,
-      "sha256": "c7ab71246613926c7b669f0bdde334a4d4668d508812a48297876ea9d839ca63"
+      "sha256": "b6804cd4fcc7aec17bf1a5e38aba8ec25dd1ab07db376c1b9686618c6dca8940"
     },
     {
       "package": "wotex_conformance",
       "files": 82,
-      "sha256": "fbd4ee2d9838d4cbc4b3fa4e094229e7017e53866f24e40bebea85afc5397fbd"
+      "sha256": "93d1e137796f30b38719bef2cf00c2b06b3059942ba71da842d6dda367b255dc"
     },
     {
       "package": "wotex_nx",
       "files": 40,
-      "sha256": "709ecf0ef29dccd45f749b65d74868b4509a13b279d8eb1713605392747dbf75"
+      "sha256": "81e849143280f8b3f9f416238e0cd4f9f4729b2e5988d9dfbba20a81bcbb454d"
     }
   ]
 }
