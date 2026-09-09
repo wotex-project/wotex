@@ -16,8 +16,11 @@ defmodule Wotex.Binding.MQTT.QoS do
 
   ## Examples
 
-      {:ok, 1} = Wotex.Binding.MQTT.QoS.normalize("1")
-      {:ok, 2} = Wotex.Binding.MQTT.QoS.normalize(2)
+      iex> Wotex.Binding.MQTT.QoS.normalize("1")
+      {:ok, 1}
+
+      iex> Wotex.Binding.MQTT.QoS.normalize(2)
+      {:ok, 2}
   """
 
   alias Wotex.Binding.MQTT.Error

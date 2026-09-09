@@ -2,6 +2,7 @@ defmodule Wotex.Binding.MQTT.QoSTest do
   @moduledoc false
 
   use ExUnit.Case, async: true
+  doctest Wotex.Binding.MQTT.QoS
 
   alias Wotex.Binding.MQTT.{Error, QoS}
 
