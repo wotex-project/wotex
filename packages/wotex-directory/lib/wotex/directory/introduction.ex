@@ -42,12 +42,12 @@ defmodule Wotex.Directory.Introduction do
            thing_description: validated
          }}
 
-      {:error, _errors} ->
+      {:error, _} ->
         invalid()
     end
   end
 
-  def new(_thing_description), do: invalid()
+  def new(_), do: invalid()
 
   defp invalid, do: {:error, Error.new(:invalid_service, :configuration, :introduction)}
 end

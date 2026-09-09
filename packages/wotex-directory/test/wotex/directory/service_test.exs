@@ -8,6 +8,8 @@ defmodule Wotex.Directory.ServiceTest do
 
   defmodule MissingRepositoryCallbacks do
     @moduledoc false
+
+    # Intentionally empty: the test verifies rejection of a missing callback set.
   end
 
   test "requires every explicit port and a valid Introduction Thing Description" do

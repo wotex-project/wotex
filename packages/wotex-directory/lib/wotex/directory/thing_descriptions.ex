@@ -48,11 +48,11 @@ defmodule Wotex.Directory.ThingDescriptions do
       {:ok, base, registration}
     else
       {:error, %Error{} = error} -> {:error, error}
-      _result -> invalid(operation, "/registration")
+      _ -> invalid(operation, "/registration")
     end
   end
 
-  def from_enriched_map(_map, _options, operation), do: invalid(operation, "/")
+  def from_enriched_map(_, _, operation), do: invalid(operation, "/")
 
   @doc "Returns the identifier of a validated Thing Description."
   @spec id(Wotex.ThingDescription.t()) :: String.t() | nil
@@ -93,7 +93,7 @@ defmodule Wotex.Directory.ThingDescriptions do
     end
   end
 
-  defp validate(_thing_description, _options, operation), do: invalid(operation)
+  defp validate(_, _, operation), do: invalid(operation)
 
   defp from_map(map, options, operation) do
     case Wotex.ThingDescription.from_map(map, options) do
@@ -105,9 +105,9 @@ defmodule Wotex.Directory.ThingDescriptions do
   defp registration_input(:absent), do: :absent
   defp registration_input(value), do: {:present, value}
 
-  defp registration_context(_map, :absent, _operation), do: :ok
+  defp registration_context(_, :absent, _), do: :ok
 
-  defp registration_context(map, _registration, operation) do
+  defp registration_context(map, _, operation) do
     contexts = Map.get(map, "@context")
 
     if context_present?(contexts), do: :ok, else: invalid(operation, "/@context")
@@ -115,7 +115,7 @@ defmodule Wotex.Directory.ThingDescriptions do
 
   defp context_present?(@discovery_context), do: true
   defp context_present?(contexts) when is_list(contexts), do: @discovery_context in contexts
-  defp context_present?(_contexts), do: false
+  defp context_present?(_), do: false
 
   defp put_discovery_context(map) do
     Map.update(map, "@context", [@discovery_context], &append_context/1)

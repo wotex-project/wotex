@@ -33,7 +33,7 @@ defmodule Wotex.Directory.Context do
   @doc "Builds a request context with opaque authorization and repository values."
   def new(principal, options \\ [])
 
-  def new(nil, _options), do: {:error, Error.new(:invalid_context, :validation, :service)}
+  def new(nil, _), do: {:error, Error.new(:invalid_context, :validation, :service)}
 
   def new(principal, options) when is_list(options) do
     allowed = [:authorization, :repository]
@@ -50,7 +50,7 @@ defmodule Wotex.Directory.Context do
     end
   end
 
-  def new(_principal, _options), do: {:error, Error.new(:invalid_context, :validation, :service)}
+  def new(_, _), do: {:error, Error.new(:invalid_context, :validation, :service)}
 
   @spec new!(term(), keyword()) :: t()
   @doc "Builds a request context or raises the returned typed error."
@@ -64,5 +64,5 @@ defmodule Wotex.Directory.Context do
   @spec valid?(term()) :: boolean()
   @doc "Reports whether a term is a request context with a non-nil principal."
   def valid?(%__MODULE__{principal: principal}), do: not is_nil(principal)
-  def valid?(_context), do: false
+  def valid?(_), do: false
 end

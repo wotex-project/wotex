@@ -14,6 +14,6 @@ defmodule Wotex.Directory.TestIdentifier do
     end)
   end
 
-  defp normalize({:error, _reason} = error), do: error
+  defp normalize({:error, _} = error), do: error
   defp normalize(value), do: {:ok, value}
 end

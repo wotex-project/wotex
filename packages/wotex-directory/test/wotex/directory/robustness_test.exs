@@ -194,11 +194,11 @@ defmodule Wotex.Directory.RobustnessTest do
   end
 
   defp result_code({:error, :conflict}), do: :conflict
-  defp result_code(_result), do: :repository_failure
+  defp result_code(_), do: :repository_failure
 
   defp replace_code({:error, :conflict}), do: :conflict
   defp replace_code({:error, :not_found}), do: :not_found
-  defp replace_code(_result), do: :repository_failure
+  defp replace_code(_), do: :repository_failure
 
   defp delete_code(result), do: replace_code(result)
 

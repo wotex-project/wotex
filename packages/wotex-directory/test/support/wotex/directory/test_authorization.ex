@@ -12,5 +12,5 @@ defmodule Wotex.Directory.TestAuthorization do
   end
 
   defp notify(%{test_pid: test_pid}, event) when is_pid(test_pid), do: send(test_pid, event)
-  defp notify(_state, _event), do: :ok
+  defp notify(_, _), do: :ok
 end

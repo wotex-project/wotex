@@ -4,20 +4,20 @@ defmodule Wotex.Directory.FailureRepository do
   @behaviour Wotex.Directory.Repository
 
   @impl true
-  def fetch(_state, _identifier, _context), do: {:error, :unavailable}
+  def fetch(_, _, _), do: {:error, :unavailable}
 
   @impl true
-  def insert(_state, _entry, _context), do: {:error, :unavailable}
+  def insert(_, _, _), do: {:error, :unavailable}
 
   @impl true
-  def replace(_state, _entry, _expected_version, _context), do: {:error, :unavailable}
+  def replace(_, _, _, _), do: {:error, :unavailable}
 
   @impl true
-  def delete(_state, _identifier, _expected_version, _context), do: {:error, :unavailable}
+  def delete(_, _, _, _), do: {:error, :unavailable}
 
   @impl true
-  def list(_state, _query, _cursor, _active_at, _context), do: {:error, :unavailable}
+  def list(_, _, _, _, _), do: {:error, :unavailable}
 
   @impl true
-  def expire_due(_state, _cutoff, _limit, _strategy, _context), do: {:error, :unavailable}
+  def expire_due(_, _, _, _, _), do: {:error, :unavailable}
 end

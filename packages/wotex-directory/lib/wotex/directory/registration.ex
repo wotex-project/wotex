@@ -55,7 +55,7 @@ defmodule Wotex.Directory.Registration do
     end
   end
 
-  def create(_now, _input, operation), do: invalid(operation)
+  def create(_, _, operation), do: invalid(operation)
 
   @spec refresh(t(), DateTime.t(), input(), atom()) :: {:ok, t()} | {:error, Error.t()}
   @doc "Refreshes registration information while preserving its creation time."
@@ -74,7 +74,7 @@ defmodule Wotex.Directory.Registration do
     end
   end
 
-  def refresh(_registration, _now, _input, operation), do: invalid(operation)
+  def refresh(_, _, _, operation), do: invalid(operation)
 
   @spec from_patch(t(), DateTime.t(), map(), atom()) :: {:ok, t()} | {:error, Error.t()}
   @doc "Rebuilds registration information after a validated merge patch."
@@ -94,7 +94,7 @@ defmodule Wotex.Directory.Registration do
     end
   end
 
-  def from_patch(_registration, _now, _raw, operation), do: invalid(operation)
+  def from_patch(_, _, _, operation), do: invalid(operation)
 
   @spec mark_retrieved(t(), DateTime.t()) :: t()
   @doc "Assigns the response-only retrieval time."
@@ -126,7 +126,7 @@ defmodule Wotex.Directory.Registration do
       match?({:ok, _validated}, MergePatch.apply(%{}, registration.extensions))
   end
 
-  def valid?(_registration), do: false
+  def valid?(_), do: false
 
   @spec to_map(t()) :: map()
   @doc "Returns JSON-compatible Discovery registration information."
@@ -149,14 +149,14 @@ defmodule Wotex.Directory.Registration do
       {:ok, registration} when is_map(registration) ->
         Enum.any?(@server_fields, &Map.has_key?(registration, &1))
 
-      {:ok, _registration} ->
+      {:ok, _} ->
         true
     end
   end
 
-  def server_field_patch?(_patch), do: false
+  def server_field_patch?(_), do: false
 
-  defp refresh_values(registration, :absent, _operation) do
+  defp refresh_values(registration, :absent, _) do
     {:ok,
      %{
        ttl: registration.ttl,
@@ -165,13 +165,13 @@ defmodule Wotex.Directory.Registration do
      }}
   end
 
-  defp refresh_values(_registration, {:present, _raw} = input, operation) do
+  defp refresh_values(_, {:present, _} = input, operation) do
     parse_input(input, operation, reject_server_fields?: true)
   end
 
-  defp refresh_values(_registration, _input, operation), do: invalid(operation)
+  defp refresh_values(_, _, operation), do: invalid(operation)
 
-  defp parse_input(:absent, _operation, _options) do
+  defp parse_input(:absent, _, _) do
     {:ok, %{ttl: nil, expires: nil, extensions: %{}}}
   end
 
@@ -179,7 +179,7 @@ defmodule Wotex.Directory.Registration do
     reject_server_fields? = Keyword.fetch!(options, :reject_server_fields?)
 
     with :ok <- validate_keys(raw, operation),
-         {:ok, _validated} <- validate_json(Map.drop(raw, @standard_fields), operation),
+         {:ok, _} <- validate_json(Map.drop(raw, @standard_fields), operation),
          :ok <- validate_server_fields(raw, reject_server_fields?, operation),
          {:ok, ttl} <- parse_ttl(Map.get(raw, "ttl"), operation),
          {:ok, expires} <- parse_datetime(Map.get(raw, "expires"), operation) do
@@ -192,7 +192,7 @@ defmodule Wotex.Directory.Registration do
     end
   end
 
-  defp parse_input(_input, operation, _options), do: invalid(operation)
+  defp parse_input(_, operation, _), do: invalid(operation)
 
   defp validate_keys(raw, operation) do
     if Enum.all?(Map.keys(raw), &is_binary/1), do: :ok, else: invalid(operation)
@@ -201,11 +201,11 @@ defmodule Wotex.Directory.Registration do
   defp validate_json(raw, operation) do
     case MergePatch.apply(%{}, raw) do
       {:ok, validated} -> {:ok, validated}
-      {:error, _reason} -> invalid(operation)
+      {:error, _} -> invalid(operation)
     end
   end
 
-  defp validate_server_fields(_raw, false, _operation), do: :ok
+  defp validate_server_fields(_, false, _), do: :ok
 
   defp validate_server_fields(raw, true, operation) do
     case Enum.find(@server_fields, &Map.has_key?(raw, &1)) do
@@ -214,38 +214,38 @@ defmodule Wotex.Directory.Registration do
     end
   end
 
-  defp parse_ttl(nil, _operation), do: {:ok, nil}
+  defp parse_ttl(nil, _), do: {:ok, nil}
 
-  defp parse_ttl(ttl, _operation)
+  defp parse_ttl(ttl, _)
        when is_integer(ttl) and ttl >= 0 and ttl <= @maximum_ttl,
        do: {:ok, ttl}
 
-  defp parse_ttl(_ttl, operation), do: invalid(operation, "/registration/ttl")
+  defp parse_ttl(_, operation), do: invalid(operation, "/registration/ttl")
 
-  defp parse_datetime(nil, _operation), do: {:ok, nil}
-  defp parse_datetime(%DateTime{} = value, _operation), do: {:ok, value}
+  defp parse_datetime(nil, _), do: {:ok, nil}
+  defp parse_datetime(%DateTime{} = value, _), do: {:ok, value}
 
   defp parse_datetime(value, operation) when is_binary(value) do
     case DateTime.from_iso8601(value) do
-      {:ok, datetime, _offset} -> {:ok, datetime}
-      {:error, _reason} -> invalid(operation, "/registration/expires")
+      {:ok, datetime, _} -> {:ok, datetime}
+      {:error, _} -> invalid(operation, "/registration/expires")
     end
   end
 
-  defp parse_datetime(_value, operation), do: invalid(operation, "/registration/expires")
+  defp parse_datetime(_, operation), do: invalid(operation, "/registration/expires")
 
-  defp expiry(now, ttl, _expires, operation) when is_integer(ttl) do
+  defp expiry(now, ttl, _, operation) when is_integer(ttl) do
     now
     |> DateTime.to_unix(:second)
     |> Kernel.+(ttl)
     |> DateTime.from_unix(:second)
     |> case do
       {:ok, expires} -> {:ok, expires}
-      {:error, _reason} -> invalid(operation)
+      {:error, _} -> invalid(operation)
     end
   end
 
-  defp expiry(_now, nil, expires, _operation), do: {:ok, expires}
+  defp expiry(_, nil, expires, _), do: {:ok, expires}
 
   defp ensure_clock(%__MODULE__{modified: modified}, now, operation) do
     if DateTime.compare(now, modified) == :lt do
@@ -256,7 +256,7 @@ defmodule Wotex.Directory.Registration do
   end
 
   defp valid_datetime?(%DateTime{}), do: true
-  defp valid_datetime?(_value), do: false
+  defp valid_datetime?(_), do: false
 
   defp valid_optional_datetime?(nil), do: true
   defp valid_optional_datetime?(value), do: valid_datetime?(value)
@@ -275,18 +275,18 @@ defmodule Wotex.Directory.Registration do
   defp valid_relative_expiry?(%__MODULE__{} = registration) do
     case expiry(registration.modified, registration.ttl, nil, :service) do
       {:ok, expected} -> registration.expires == expected
-      {:error, _error} -> false
+      {:error, _} -> false
     end
   end
 
   defp put_datetime(map, key, datetime), do: Map.put(map, key, DateTime.to_iso8601(datetime))
 
-  defp put_optional_datetime(map, _key, nil), do: map
+  defp put_optional_datetime(map, _, nil), do: map
 
   defp put_optional_datetime(map, key, datetime),
     do: Map.put(map, key, DateTime.to_iso8601(datetime))
 
-  defp put_optional_integer(map, _key, nil), do: map
+  defp put_optional_integer(map, _, nil), do: map
   defp put_optional_integer(map, key, value), do: Map.put(map, key, value)
 
   defp invalid(operation, path \\ nil) do

@@ -54,7 +54,7 @@ defmodule Wotex.Directory.Query do
     end
   end
 
-  def new(_options, _bounds), do: invalid()
+  def new(_, _), do: invalid()
 
   @doc "Validates a query against a maximum page limit."
   @spec validate(t(), pos_integer()) :: :ok | {:error, Error.t()}
@@ -78,7 +78,7 @@ defmodule Wotex.Directory.Query do
     end
   end
 
-  def validate(_query, _max_limit), do: invalid()
+  def validate(_, _), do: invalid()
 
   defp validate_keys(options) do
     allowed = [:profile, :limit, :format, :cursor]

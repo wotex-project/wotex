@@ -26,7 +26,7 @@ defmodule Wotex.Directory.Identifier do
       absolute?(identifier)
   end
 
-  def valid?(_identifier), do: false
+  def valid?(_), do: false
 
   defp no_space_or_control?(identifier) do
     not Regex.match?(~r/[\x00-\x20]/u, identifier)
@@ -37,7 +37,7 @@ defmodule Wotex.Directory.Identifier do
       %URI{scheme: scheme} when is_binary(scheme) ->
         Regex.match?(~r/\A[A-Za-z][A-Za-z0-9+.-]*\z/, scheme)
 
-      _uri ->
+      _ ->
         false
     end
   end

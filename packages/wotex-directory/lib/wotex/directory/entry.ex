@@ -62,7 +62,7 @@ defmodule Wotex.Directory.Entry do
     end
   end
 
-  def new(identifier, _thing_description, _registration, _options) do
+  def new(identifier, _, _, _) do
     invalid(identifier)
   end
 
@@ -77,11 +77,11 @@ defmodule Wotex.Directory.Entry do
            state: entry.state
          ) do
       {:ok, normalized} -> normalized == entry
-      {:error, _error} -> false
+      {:error, _} -> false
     end
   end
 
-  def valid?(_entry), do: false
+  def valid?(_), do: false
 
   @spec active?(t(), DateTime.t()) :: boolean()
   @doc "Reports whether an entry is active at the supplied time."
@@ -116,7 +116,7 @@ defmodule Wotex.Directory.Entry do
   end
 
   defp safe_identifier(identifier) when is_binary(identifier), do: identifier
-  defp safe_identifier(_identifier), do: nil
+  defp safe_identifier(_), do: nil
 
   defp invalid(identifier) do
     {:error,
@@ -129,14 +129,14 @@ defmodule Wotex.Directory.Entry do
 
   defp valid_thing_description?(%Wotex.ThingDescription{} = thing_description, identifier) do
     case Wotex.ThingDescription.validate(thing_description) do
-      {:ok, _validated} ->
+      {:ok, _} ->
         ThingDescriptions.id(thing_description) == identifier and
           not Map.has_key?(Wotex.ThingDescription.to_map(thing_description), "registration")
 
-      {:error, _errors} ->
+      {:error, _} ->
         false
     end
   end
 
-  defp valid_thing_description?(_thing_description, _identifier), do: false
+  defp valid_thing_description?(_, _), do: false
 end

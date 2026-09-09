@@ -19,5 +19,5 @@ defmodule Wotex.Directory.Clock.System do
   @behaviour Wotex.Directory.Clock
 
   @impl true
-  def now(_state), do: {:ok, DateTime.utc_now()}
+  def now(_), do: {:ok, DateTime.utc_now()}
 end

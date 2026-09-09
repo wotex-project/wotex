@@ -47,22 +47,22 @@ defmodule Wotex.Directory.MergePatch do
          max_nodes <- Keyword.get(options, :max_nodes, 100_000),
          :ok <- validate_limit(max_depth),
          :ok <- validate_limit(max_nodes),
-         {:ok, _nodes} <- validate_json(patch, "", 0, 0, max_depth, max_nodes),
+         {:ok, _} <- validate_json(patch, "", 0, 0, max_depth, max_nodes),
          {:ok, result} <- merge(target, patch, "", 0, max_depth) do
       {:ok, result}
     end
   end
 
-  def apply(_target, _patch, _options), do: invalid("/")
+  def apply(_, _, _), do: invalid("/")
 
-  defp merge(_target, _patch, path, depth, max_depth) when depth > max_depth,
+  defp merge(_, _, path, depth, max_depth) when depth > max_depth,
     do: refuse(path, :max_depth_exceeded)
 
   defp merge(target, patch, path, depth, max_depth) do
     initial = if is_map(target), do: target, else: %{}
 
     patch
-    |> Enum.sort_by(fn {key, _value} -> key end)
+    |> Enum.sort_by(fn {key, _} -> key end)
     |> Enum.reduce_while({:ok, initial}, fn
       {key, nil}, {:ok, result} ->
         {:cont, {:ok, Map.delete(result, key)}}
@@ -78,23 +78,23 @@ defmodule Wotex.Directory.MergePatch do
     end)
   end
 
-  defp validate_json(_value, path, depth, _nodes, max_depth, _max_nodes)
+  defp validate_json(_, path, depth, _, max_depth, _)
        when depth > max_depth,
        do: refuse(path, :max_depth_exceeded)
 
-  defp validate_json(_value, path, _depth, nodes, _max_depth, max_nodes)
+  defp validate_json(_, path, _, nodes, _, max_nodes)
        when nodes >= max_nodes,
        do: refuse(path, :max_nodes_exceeded)
 
-  defp validate_json(value, _path, _depth, nodes, _max_depth, _max_nodes)
+  defp validate_json(value, _, _, nodes, _, _)
        when is_nil(value) or is_boolean(value) or is_binary(value),
        do: {:ok, nodes + 1}
 
-  defp validate_json(value, _path, _depth, nodes, _max_depth, _max_nodes)
+  defp validate_json(value, _, _, nodes, _, _)
        when is_integer(value),
        do: {:ok, nodes + 1}
 
-  defp validate_json(value, _path, _depth, nodes, _max_depth, _max_nodes)
+  defp validate_json(value, _, _, nodes, _, _)
        when is_float(value) and value == value,
        do: {:ok, nodes + 1}
 
@@ -121,7 +121,7 @@ defmodule Wotex.Directory.MergePatch do
        when is_map(values) do
     if Enum.all?(Map.keys(values), &is_binary/1) do
       values
-      |> Enum.sort_by(fn {key, _value} -> key end)
+      |> Enum.sort_by(fn {key, _} -> key end)
       |> Enum.reduce_while({:ok, nodes + 1}, fn {key, value}, {:ok, count} ->
         case validate_json(
                value,
@@ -140,11 +140,11 @@ defmodule Wotex.Directory.MergePatch do
     end
   end
 
-  defp validate_json(_value, path, _depth, _nodes, _max_depth, _max_nodes),
+  defp validate_json(_, path, _, _, _, _),
     do: invalid(pointer(path, ""))
 
   defp validate_limit(value) when is_integer(value) and value > 0, do: :ok
-  defp validate_limit(_value), do: invalid("/")
+  defp validate_limit(_), do: invalid("/")
 
   defp validate_options(options) do
     allowed = [:max_depth, :max_nodes]

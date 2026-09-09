@@ -96,7 +96,7 @@ defmodule Wotex.Directory.Service do
     end
   end
 
-  def new(_options), do: invalid_service()
+  def new(_), do: invalid_service()
 
   defp validate_option_keys(options) do
     allowed = [
@@ -131,7 +131,7 @@ defmodule Wotex.Directory.Service do
           invalid_service(%{port: key})
         end
 
-      _other ->
+      _ ->
         invalid_service(%{port: key})
     end
   end
@@ -157,7 +157,7 @@ defmodule Wotex.Directory.Service do
       max_patch_nodes: Keyword.get(options, :max_patch_nodes, 100_000)
     }
 
-    if Enum.all?(bounds, fn {_key, value} -> is_integer(value) and value > 0 end) and
+    if Enum.all?(bounds, fn {_, value} -> is_integer(value) and value > 0 end) and
          bounds.default_page_limit <= bounds.max_page_limit and
          bounds.default_expiry_batch_limit <= bounds.max_expiry_batch_limit do
       {:ok, bounds}
@@ -169,7 +169,7 @@ defmodule Wotex.Directory.Service do
   defp validate_strategy(options) do
     case Keyword.get(options, :expiry_strategy, :purge) do
       strategy when strategy in [:purge, :retain] -> {:ok, strategy}
-      _strategy -> invalid_service(%{field: :expiry_strategy})
+      _ -> invalid_service(%{field: :expiry_strategy})
     end
   end
 
@@ -178,13 +178,13 @@ defmodule Wotex.Directory.Service do
       value when is_list(value) ->
         if Keyword.keyword?(value) and
              Enum.all?(Keyword.keys(value), &(&1 in @thing_description_limits)) and
-             Enum.all?(value, fn {_key, limit} -> is_integer(limit) and limit > 0 end) do
+             Enum.all?(value, fn {_, limit} -> is_integer(limit) and limit > 0 end) do
           {:ok, value}
         else
           invalid_service(%{field: :thing_description_options})
         end
 
-      _value ->
+      _ ->
         invalid_service(%{field: :thing_description_options})
     end
   end

@@ -59,11 +59,11 @@ defmodule Wotex.Directory.Cursor do
          last_identifier: last_identifier
        }}
     else
-      _invalid -> invalid()
+      _ -> invalid()
     end
   end
 
-  def decode(_cursor), do: invalid()
+  def decode(_), do: invalid()
 
   @doc "Reports whether a term is a decodable opaque cursor."
   @spec valid?(term()) :: boolean()

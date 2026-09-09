@@ -137,7 +137,7 @@ defmodule Wotex.DirectoryTest do
 
       first = TestService.build(identifiers: ["urn:example:collision"])
       existing = Fixtures.thing_description("urn:example:collision")
-      assert {:ok, _mutation} = Directory.register(first.service, existing, first.context)
+      assert {:ok, _} = Directory.register(first.service, existing, first.context)
 
       anonymous_service = %{
         first.service
@@ -399,7 +399,7 @@ defmodule Wotex.DirectoryTest do
       query = %Query{profile: :listing, limit: 1, format: :array}
       next_query = Page.next_query(first, query)
 
-      assert {:ok, _mutation} =
+      assert {:ok, _} =
                Directory.register(
                  setup.service,
                  Fixtures.thing_description("urn:example:c"),
@@ -584,6 +584,6 @@ defmodule Wotex.DirectoryTest do
     registration
   end
 
-  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end

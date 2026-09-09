@@ -44,7 +44,7 @@ defmodule Wotex.Directory.Page do
     end
   end
 
-  def new(_options), do: invalid()
+  def new(_), do: invalid()
 
   @doc "Builds a page value or raises the returned typed error."
   @spec new!(keyword()) :: t()
@@ -65,7 +65,7 @@ defmodule Wotex.Directory.Page do
     end
   end
 
-  def validate(_page, _query, _active_at), do: invalid()
+  def validate(_, _, _), do: invalid()
 
   @doc "Builds the cursor-bound next query, or returns nil for a terminal page."
   @spec next_query(t(), Query.t()) :: Query.t() | nil
@@ -88,11 +88,11 @@ defmodule Wotex.Directory.Page do
          {:ok, next_cursor} <- next_cursor(page, more?) do
       {:ok, %{page | next_cursor: next_cursor}}
     else
-      _invalid -> invalid()
+      _ -> invalid()
     end
   end
 
-  defp next_cursor(_page, false), do: {:ok, nil}
+  defp next_cursor(_, false), do: {:ok, nil}
   defp next_cursor(%__MODULE__{entries: []}, true), do: :error
 
   defp next_cursor(%__MODULE__{} = page, true) do
@@ -100,7 +100,7 @@ defmodule Wotex.Directory.Page do
 
     case Cursor.encode(page.collection_revision, last.identifier) do
       {:ok, cursor} -> {:ok, cursor}
-      {:error, _error} -> :error
+      {:error, _} -> :error
     end
   end
 
@@ -144,7 +144,7 @@ defmodule Wotex.Directory.Page do
       {:ok, %Cursor{last_identifier: last}} ->
         if Enum.all?(page.entries, &(&1.identifier > last)), do: :ok, else: invalid()
 
-      {:error, _error} ->
+      {:error, _} ->
         invalid()
     end
   end

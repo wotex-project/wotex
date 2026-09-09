@@ -4,21 +4,21 @@ defmodule Wotex.Directory.StubRepository do
   @behaviour Wotex.Directory.Repository
 
   @impl Wotex.Directory.Repository
-  def fetch(state, _identifier, _context), do: Map.fetch!(state, :fetch)
+  def fetch(state, _, _), do: Map.fetch!(state, :fetch)
 
   @impl Wotex.Directory.Repository
-  def insert(state, _entry, _context), do: Map.fetch!(state, :insert)
+  def insert(state, _, _), do: Map.fetch!(state, :insert)
 
   @impl Wotex.Directory.Repository
-  def replace(state, _entry, _expected_version, _context), do: Map.fetch!(state, :replace)
+  def replace(state, _, _, _), do: Map.fetch!(state, :replace)
 
   @impl Wotex.Directory.Repository
-  def delete(state, _identifier, _expected_version, _context), do: Map.fetch!(state, :delete)
+  def delete(state, _, _, _), do: Map.fetch!(state, :delete)
 
   @impl Wotex.Directory.Repository
-  def list(state, _query, _cursor, _active_at, _context), do: Map.fetch!(state, :list)
+  def list(state, _, _, _, _), do: Map.fetch!(state, :list)
 
   @impl Wotex.Directory.Repository
-  def expire_due(state, _cutoff, _limit, _strategy, _context),
+  def expire_due(state, _, _, _, _),
     do: Map.fetch!(state, :expire_due)
 end

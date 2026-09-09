@@ -65,7 +65,7 @@ defmodule Wotex.Directory.MemoryRepository do
           {{:error, :conflict},
            record(state, {:replace, entry.identifier, expected_version, context})}
 
-        {:ok, _existing} ->
+        {:ok, _} ->
           updated =
             state
             |> put_entry(entry)
@@ -87,7 +87,7 @@ defmodule Wotex.Directory.MemoryRepository do
         {:ok, %{version: version}} when version != expected_version ->
           {{:error, :conflict}, record(state, {:delete, identifier, expected_version, context})}
 
-        {:ok, _entry} ->
+        {:ok, _} ->
           updated =
             state
             |> Map.update!(:entries, &Map.delete(&1, identifier))
@@ -130,7 +130,7 @@ defmodule Wotex.Directory.MemoryRepository do
 
   defp expire_entries(entries, due, :purge) do
     identifiers = MapSet.new(due, & &1.identifier)
-    {due, Map.reject(entries, fn {identifier, _entry} -> identifier in identifiers end)}
+    {due, Map.reject(entries, fn {identifier, _} -> identifier in identifiers end)}
   end
 
   defp expire_entries(entries, due, :retain) do
@@ -144,7 +144,7 @@ defmodule Wotex.Directory.MemoryRepository do
   defp due?(%Entry{state: :active} = entry, cutoff, :retain),
     do: Registration.expired?(entry.registration, cutoff)
 
-  defp due?(%Entry{state: :expired}, _cutoff, :retain), do: false
+  defp due?(%Entry{state: :expired}, _, :retain), do: false
 
   defp page(state, query, nil, active_at) do
     {:ok, bounded_page(active_entries(state, active_at), query.limit, revision(state))}
@@ -187,6 +187,6 @@ defmodule Wotex.Directory.MemoryRepository do
 
   defp advance_revision(state), do: Map.update!(state, :revision, &(&1 + 1))
   defp maybe_advance_revision(state, []), do: state
-  defp maybe_advance_revision(state, _entries), do: advance_revision(state)
+  defp maybe_advance_revision(state, _), do: advance_revision(state)
   defp record(state, call), do: Map.update!(state, :calls, &[call | &1])
 end

@@ -41,11 +41,11 @@ defmodule Wotex.Directory.Event do
          {:ok, data} <- event_data(type, entry, Keyword.get(options, :payload, :full)) do
       {:ok, %__MODULE__{type: type, data: data}}
     else
-      _invalid -> invalid(entry.identifier)
+      _ -> invalid(entry.identifier)
     end
   end
 
-  def from_mutation(_mutation, _options), do: invalid(nil)
+  def from_mutation(_, _), do: invalid(nil)
 
   defp event_type(%Mutation{operation: :register, status: :created}),
     do: {:ok, :thing_created}
@@ -62,18 +62,18 @@ defmodule Wotex.Directory.Event do
   defp event_type(%Mutation{operation: :delete, status: :deleted}),
     do: {:ok, :thing_deleted}
 
-  defp event_type(_mutation), do: :error
+  defp event_type(_), do: :error
 
-  defp event_data(:thing_deleted, entry, _payload), do: {:ok, identifier_data(entry)}
-  defp event_data(_type, entry, :identifier), do: {:ok, identifier_data(entry)}
+  defp event_data(:thing_deleted, entry, _), do: {:ok, identifier_data(entry)}
+  defp event_data(_, entry, :identifier), do: {:ok, identifier_data(entry)}
 
-  defp event_data(_type, entry, :full) do
+  defp event_data(_, entry, :full) do
     with {:ok, thing_description} <- Entry.enriched_thing_description(entry) do
       {:ok, Wotex.ThingDescription.to_map(thing_description)}
     end
   end
 
-  defp event_data(_type, _entry, _payload), do: :error
+  defp event_data(_, _, _), do: :error
 
   defp identifier_data(entry), do: %{"id" => entry.identifier}
 
