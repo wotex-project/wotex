@@ -29,7 +29,7 @@ credentials, supervision, connection configuration and canonical Property truth.
   Normal package identity uses released Wotex dependencies.
 
 Run `WOTEX_PATH_DEPS=1 mix check` before every local commit. The gate includes
-formatting, compilation, tests, documentation and unpacked archive inspection.
+formatting, warnings-as-errors compilation, and the default test suite.
 Apply `.claude/skills/spec-delivery/SKILL.md` for public behavior and standards
 claims and `.claude/skills/release-readiness/SKILL.md` for compatibility claims.
 Consumer-neutrality is a review obligation; never add a consumer denylist.
