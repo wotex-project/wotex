@@ -191,6 +191,8 @@ class Bridge:
             return await execute(self.central, operation, request["parameters"], remaining, request["id"])
         if operation == "pair":
             return await self.central.pair(request["parameters"], remaining, request["id"])
+        if operation == "health":
+            return await self.central.health(request["parameters"], remaining)
         if operation == "discover":
             return await self.central.discover(request["parameters"], remaining)
         if operation == "close" and request["parameters"] == {}:

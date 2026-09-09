@@ -156,6 +156,7 @@ class DBusConnection:
             raise Failure(ERRORS.get(reply.error_name, "remote_error"), reply.error_name)
         expected = {
             (MANAGER, "GetManagedObjects"): "a{oa{sa{sv}}}",
+            (PROPERTIES, "GetAll"): "a{sv}",
             ("org.freedesktop.DBus", "GetNameOwner"): "s",
             ("org.freedesktop.DBus", "AddMatch"): "",
             (DEVICE, "Connect"): "", (DEVICE, "Disconnect"): "", (DEVICE, "Pair"): "",
@@ -441,6 +442,26 @@ class Central:
                 raise Failure("cursor_limit")
             self.cursors[next_cursor] = next_offset
         return {"generation": self.generation, "characteristics": page, "cursor": next_cursor}
+
+    async def health(self, parameters, timeout_ms):
+        if not self.ready or self.closed or self.terminal:
+            raise Failure(self.terminal or "disconnected")
+        if not isinstance(parameters, dict) or parameters:
+            raise Failure("invalid_options")
+        body = await self.call(self.device_path, PROPERTIES, "GetAll", time.monotonic() + timeout_ms / 1000, "s", [DEVICE])
+        if not isinstance(body, list) or len(body) != 1 or not isinstance(body[0], dict) or len(body[0]) > 1024:
+            raise Failure("invalid_response")
+        properties = {key: getattr(value, "value", value) for key, value in body[0].items()}
+        if type(properties.get("Connected")) is not bool or type(properties.get("ServicesResolved")) is not bool:
+            raise Failure("invalid_response")
+        address = properties.get("Address")
+        if not isinstance(address, str) or address.upper() != self.peer["address"] or properties.get("Adapter") != self.peer["adapter"] or properties.get("AddressType") != self.peer["address_type"]:
+            self.fail("peer_changed")
+            raise Failure("peer_changed")
+        if not properties["Connected"] or not properties["ServicesResolved"]:
+            self.fail("disconnected")
+            raise Failure("disconnected")
+        return {"connected": True, "services_resolved": True}
 
     async def pair(self, parameters, timeout_ms, request_id):
         if not self.ready or self.closed or self.terminal:

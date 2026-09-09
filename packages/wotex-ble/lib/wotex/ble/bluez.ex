@@ -103,6 +103,11 @@ defmodule Wotex.BLE.BlueZ do
   def pair(%Connection{} = handle, request, timeout), do: Connection.pair(handle, request, timeout)
   def pair(_, _, _), do: {:error, Error.new(:not_supported)}
 
+  @doc "Queries actual peer state through the persistent sender."
+  @spec health_check(term(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def health_check(%Connection{} = handle, timeout), do: Connection.health_check(handle, timeout)
+  def health_check(_, _), do: {:error, Error.new(:probe_required)}
+
   @doc "Starts a typed stream through the persistent sender."
   @spec subscribe(term(), term(), term()) :: {:ok, Wotex.BLE.Subscription.t()} | {:error, Error.t()}
   def subscribe(%Connection{} = handle, request, timeout),

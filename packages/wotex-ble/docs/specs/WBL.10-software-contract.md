@@ -262,9 +262,26 @@ challenge can invoke policy. Agent configuration never enters the bridge.
 success result. Dispatch this bounded control request while Pair is waiting;
 never put it behind Pair in the serial operation queue. Unknown/duplicate prompt
 IDs reject the pairing and cannot answer a later prompt.
-`health_check/1` in persistent mode checks current Device1 Connected and
-ServicesResolved; baseline mode retains its probe-required error. Health does
-not imply that a particular characteristic remains readable.
+`health_check/1` in persistent mode performs Properties.GetAll on the original
+Device1 path and unique BlueZ sender. Revalidate Adapter/Address/AddressType and
+the boolean Connected/ServicesResolved values; return exactly
+`{:ok, %{connected: true, services_resolved: true}}` only when both are true.
+The native `health` request has empty parameters and the same two string-keyed
+booleans in its success result. Missing/malformed state fails `:invalid_response`,
+changed identity fails `:peer_changed`, and false state fails `:disconnected`.
+Baseline mode retains its probe-required error. Health does not imply that a
+particular characteristic remains readable or attest encryption/MITM.
+
+The pure `capabilities/0` baseline map remains compatible. Add
+`capabilities(:oneshot | :gatt)`, returning `{:ok, map}` or
+`{:error, %Error{code: :unsupported_profile}}` for every other selector.
+`:oneshot` returns the baseline map. `:gatt` changes only `transport` to
+`:bluez_dbus`, `supports_streaming`/`discovery_capable` to true, and `operations`
+to `[:read, :write, :discover, :pair, :subscribe, :unsubscribe, :health_check]`.
+The 512-byte value bound and conservative reliability/order/QoS fields remain.
+This static backend declaration performs no probe and asserts no peer capability.
+Device1 state meanings use the pinned
+[BlueZ Device API](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.Device.rst).
 
 ## Acceptance scenarios and software fixture
 

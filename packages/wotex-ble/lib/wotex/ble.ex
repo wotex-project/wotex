@@ -34,6 +34,22 @@ defmodule Wotex.BLE do
       discovery_capable: false
     }
 
+  @doc "Describes one implemented backend profile without probing a device."
+  @spec capabilities(term()) :: {:ok, map()} | {:error, Error.t()}
+  def capabilities(:oneshot), do: {:ok, capabilities()}
+
+  def capabilities(:gatt) do
+    {:ok,
+     Map.merge(capabilities(), %{
+       operations: [:read, :write, :discover, :pair, :subscribe, :unsubscribe, :health_check],
+       transport: :bluez_dbus,
+       supports_streaming: true,
+       discovery_capable: true
+     })}
+  end
+
+  def capabilities(_), do: {:error, Error.new(:unsupported_profile)}
+
   @doc "Opens the supplied client module; absent transport fails explicitly."
   @spec connect(term()) :: {:ok, Session.t()} | {:error, Error.t()}
   def connect(opts) when is_list(opts) do
@@ -155,8 +171,11 @@ defmodule Wotex.BLE do
   @spec receive(term(), term()) :: {:error, Error.t()}
   def receive(_, _), do: {:error, Error.new(:not_supported)}
 
-  @doc "No fabricated liveness result is returned without a protocol probe."
-  @spec health_check(term()) :: {:error, Error.t()}
+  @doc "Queries live persistent peer state; one-shot clients require an explicit probe."
+  @spec health_check(term()) :: {:ok, map()} | {:error, Error.t()}
+  def health_check(%Session{client: Wotex.BLE.BlueZ} = session),
+    do: Wotex.BLE.BlueZ.health_check(session.handle, session.timeout)
+
   def health_check(_), do: {:error, Error.new(:probe_required)}
 
   @doc "Subscribes a receiver to validated persistent BlueZ value changes."

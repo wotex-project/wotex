@@ -69,6 +69,15 @@ bridge.decode = traced_decode
 class RecordedBus(Bus):
     async def call(self, *args):
         record({"method": args[3], "sender": self.unique_name})
+        if args[3] == "GetAll" and MODE.startswith("health_"):
+            if MODE == "health_timeout":
+                await asyncio.sleep(60)
+            if MODE == "health_missing":
+                return [{}]
+            if MODE == "health_wrong_peer":
+                self.data["/unrelated/device"][client.DEVICE]["AddressType"] = "public"
+            if MODE == "health_disconnected":
+                self.data["/unrelated/device"][client.DEVICE]["Connected"] = False
         if args[3] == "GetManagedObjects" and self.count("GetManagedObjects") >= 1:
             if MODE in ("blocked", "slow"):
                 await asyncio.sleep(60 if MODE == "blocked" else 0.05)

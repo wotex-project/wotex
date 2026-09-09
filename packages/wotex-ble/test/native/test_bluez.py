@@ -70,6 +70,9 @@ class Bus:
         self.calls.append((destination, object_path, interface, member, signature, body))
         if member == "GetNameOwner":
             return [":1.2"]
+        if member == "GetAll":
+            assert object_path == DEVICE_PATH and interface == client.PROPERTIES and signature == "s" and body == [client.DEVICE]
+            return [copy.deepcopy(self.data[DEVICE_PATH][client.DEVICE])]
         if member == "GetManagedObjects":
             self.assert_listener()
             data = copy.deepcopy(self.data)
@@ -119,6 +122,26 @@ class DiscoveryTest(unittest.IsolatedAsyncioTestCase):
         await central.close()
         self.assertEqual(bus.count("Disconnect"), 0)
         self.assertEqual(bus.handlers, [])
+
+    async def test_WBL_P06_S05_health_queries_original_peer_state_without_security_claims(self):
+        central, bus, _, _ = await self.open()
+        bus.data[DEVICE_PATH][client.DEVICE]["Paired"] = True
+        bus.data[DEVICE_PATH][client.DEVICE]["PrivateExtension"] = "PRIVATE_HEALTH_VALUE"
+        self.assertEqual(await central.health({}, 1000), {"connected": True, "services_resolved": True})
+        self.assertEqual(bus.count("GetAll"), 1)
+        self.assertEqual(bus.count("GetManagedObjects"), 1)
+        for parameters in [None, [], {"extra": True}]:
+            with self.assertRaisesRegex(client.Failure, "invalid_options"):
+                await central.health(parameters, 1000)
+        self.assertEqual(bus.count("GetAll"), 1)
+        for field, value, expected in [("Connected", False, "disconnected"), ("ServicesResolved", False, "disconnected"), ("Connected", 1, "invalid_response"), ("ServicesResolved", None, "invalid_response"), ("Address", "AA:00:00:00:00:00", "peer_changed"), ("Address", 1, "peer_changed"), ("AddressType", "public", "peer_changed"), ("Adapter", "/wrong", "peer_changed")]:
+            central, bus, _, _ = await self.open()
+            bus.data[DEVICE_PATH][client.DEVICE][field] = value
+            with self.assertRaisesRegex(client.Failure, expected):
+                await central.health({}, 1000)
+        await central.close()
+        with self.assertRaises(client.Failure):
+            await central.health({}, 1000)
 
     async def test_WBL_V03_snapshot_listener_race_reconciles(self):
         bus = Bus()

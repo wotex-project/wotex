@@ -60,6 +60,10 @@ defmodule Wotex.BLE.BlueZ.Response do
 
   defp named_failure(_, _), do: :invalid
 
+  defp result("health", %{"connected" => true, "services_resolved" => true} = value)
+       when map_size(value) == 2,
+       do: {:ok, %{connected: true, services_resolved: true}}
+
   defp result("subscribe", value), do: Stream.establishment(value)
   defp result("read", value), do: Procedure.decode_bytes(value)
   defp result("write", nil), do: {:ok, :written}

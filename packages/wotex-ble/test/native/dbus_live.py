@@ -148,6 +148,9 @@ class GattFixture:
             signature = self.procedure_signature if self.procedure_signature is not None else "ay" if message.member == "ReadValue" else ""
             body = [self.value] if signature == "ay" else [] if signature == "" else [True]
             return Message.new_method_return(message, signature, body)
+        if message.path == DEVICE_PATH and message.interface == PROPERTIES and message.member == "GetAll":
+            assert message.signature == "s" and message.body == [DEVICE]
+            return Message.new_method_return(message, "a{sv}", [self.objects()[DEVICE_PATH][DEVICE]])
         if message.interface == MANAGER and message.member == "GetManagedObjects":
             data = self.objects()
             if self.race:
@@ -175,6 +178,7 @@ async def lane(address):
         owners.append(central)
         fixture.race = True
         opened = await central.open(parameters, 2000)
+        assert await central.health({}, 1000) == {"connected": True, "services_resolved": True}
         page = await central.discover({}, 1000)
         assert page["characteristics"] == [{"service_uuid": "0000180f-0000-1000-8000-00805f9b34fb", "characteristic_uuid": "00002a19-0000-1000-8000-00805f9b34fb", "service_path": SERVICE_PATH, "object_path": CHAR_PATH, "handle": 8, "flags": ["read", "write", "fixture-extension"], "generation": 1}]
         assert len([call for call in fixture.calls if call[2] == "GetManagedObjects"]) == 3
@@ -410,7 +414,7 @@ async def lane(address):
             assert error.code == "owner_changed"
         else:
             raise AssertionError("old bus owner remained usable")
-        return {"requirements": ["WBL-C03", "WBL-C07", "WBL-S01", "WBL-S02", "WBL-V03", "WBL-V04", "WBL-S05", "WBL-V06", "WBL-S03", "WBL-V05", "WBL-P05", "WBL-S04", "WBL-V07", "WBL-V08", "WBL-V09"], "dbus_next": version("dbus-next"), "snapshots": sum(call[2] == "GetManagedObjects" for call in fixture.calls), "owned_connects": sum(call[2] == "Connect" for call in fixture.calls), "owned_disconnects": sum(call[2] == "Disconnect" for call in fixture.calls), "borrowed_disconnect_calls": 0, "pending_pair_sender_loss_disconnects": fixture.sender_loss_disconnects, "agents_remaining": len(fixture.agents), "pair_requests_remaining": len(fixture.pair_tasks), "pairing_callbacks": len(fixture.pair_responses), "acknowledged_writes": 3, "named_write_rejections": 9, "malformed_signatures_rejected": 4, "notification_mode_cases": notification_cases, "notification_clients_isolated": 2, "notification_sessions_remaining": len(fixture.notify_sessions), "notification_signal_sources": len(signal_sources), "bonds_preserved": len(fixture.bonds), "status": "passed", "evidence": "real_dbus_injected_gatt"}
+        return {"requirements": ["WBL-C03", "WBL-C07", "WBL-S01", "WBL-S02", "WBL-V03", "WBL-V04", "WBL-S05", "WBL-V06", "WBL-S03", "WBL-V05", "WBL-P05", "WBL-P06", "WBL-S04", "WBL-V07", "WBL-V08", "WBL-V09"], "dbus_next": version("dbus-next"), "snapshots": sum(call[2] == "GetManagedObjects" for call in fixture.calls), "owned_connects": sum(call[2] == "Connect" for call in fixture.calls), "owned_disconnects": sum(call[2] == "Disconnect" for call in fixture.calls), "borrowed_disconnect_calls": 0, "pending_pair_sender_loss_disconnects": fixture.sender_loss_disconnects, "agents_remaining": len(fixture.agents), "pair_requests_remaining": len(fixture.pair_tasks), "pairing_callbacks": len(fixture.pair_responses), "acknowledged_writes": 3, "named_write_rejections": 9, "malformed_signatures_rejected": 4, "health_peer_queries": sum(call[2] == "GetAll" for call in fixture.calls), "notification_mode_cases": notification_cases, "notification_clients_isolated": 2, "notification_sessions_remaining": len(fixture.notify_sessions), "notification_signal_sources": len(signal_sources), "bonds_preserved": len(fixture.bonds), "status": "passed", "evidence": "real_dbus_injected_gatt"}
     finally:
         for owner in owners:
             await owner.close()

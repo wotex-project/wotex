@@ -563,4 +563,52 @@ defmodule Wotex.BLE.DBusBridgeTest do
 
     assert Enum.find(calls(record), &(&1["bus_closed"] == true))["agents"] == 0
   end
+
+  test "WBL-P06 WBL-S05 health uses live original peer state with bounded failures" do
+    {session, record} = connect()
+    assert {:ok, %{connected: true, services_resolved: true} = health} = BLE.health_check(session)
+    assert map_size(health) == 2
+    assert Enum.count(calls(record), &(&1["method"] == "GetAll")) == 1
+    assert Enum.count(calls(record), &(&1["method"] == "GetManagedObjects")) == 1
+    refute Enum.any?(calls(record), &(&1["method"] in ["ReadValue", "Pair", "Connect"]))
+    assert :ok = BLE.disconnect(session)
+
+    for {mode, code} <- [
+          {"health_missing", :invalid_response},
+          {"health_wrong_peer", :peer_changed},
+          {"health_disconnected", :disconnected},
+          {"health_timeout", :timeout}
+        ] do
+      {session, record} = connect(mode)
+      monitor = Process.monitor(session.handle.pid)
+      timeout = if mode == "health_timeout", do: 50, else: session.timeout
+
+      assert {:error, %Error{code: ^code, effect: :none}} =
+               Connection.health_check(session.handle, timeout)
+
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1100
+      assert Enum.count(calls(record), &(&1["method"] == "GetAll")) == 1
+    end
+  end
+
+  test "WBL-P06 WBL-C02 unsupported health and forged handles perform no I/O" do
+    assert {:error, %Error{code: :probe_required}} = BLE.health_check(nil)
+
+    assert {:error, %Error{code: :probe_required}} =
+             BLE.health_check(%Session{client: __MODULE__, handle: nil, timeout: 1})
+
+    assert {:error, %Error{code: :probe_required}} = BlueZ.health_check(%{}, 1)
+    assert {:error, %Error{code: :invalid_handle}} = Connection.health_check(nil, 1)
+    {session, record} = connect()
+
+    assert {:error, %Error{code: :invalid_handle}} =
+             Connection.health_check(%{session.handle | reference: make_ref()}, 1000)
+
+    for timeout <- [0, 60_001, :infinity, nil] do
+      assert {:error, %Error{code: :invalid_handle}} =
+               Connection.health_check(session.handle, timeout)
+    end
+
+    refute Enum.any?(calls(record), &(&1["method"] == "GetAll"))
+  end
 end

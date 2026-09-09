@@ -82,6 +82,14 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   def pair(_, _, _), do: {:error, Error.new(:invalid_handle)}
 
+  @doc "Queries the bound peer's current Connected and ServicesResolved state."
+  @spec health_check(term(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def health_check(handle, timeout) do
+    if handle?(handle) and is_integer(timeout) and timeout in 1..60_000,
+      do: call(handle.pid, {handle.reference, "health", %{}, now() + timeout}),
+      else: {:error, Error.new(:invalid_handle)}
+  end
+
   @doc "Starts a receiver-owned stream through this persistent sender."
   @spec subscribe(term(), term(), term()) :: {:ok, Wotex.BLE.Subscription.t()} | {:error, Error.t()}
   def subscribe(handle, request, timeout) do
@@ -187,7 +195,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
         from,
         %{handle: %{reference: reference}, status: :ready} = state
       )
-      when operation in ["discover", "read", "write"] and is_map(parameters) and
+      when operation in ["discover", "read", "write", "health"] and is_map(parameters) and
              is_integer(deadline) do
     cond do
       deadline <= now() -> {:reply, {:error, Error.new(:timeout)}, state}
@@ -494,18 +502,25 @@ defmodule Wotex.BLE.BlueZ.Connection do
   end
 
   defp active_frame(frame, id, state) do
-    case timed_parse(frame, state.pending[id].operation, state.pending[id].deadline) do
+    pending = state.pending[id]
+
+    case timed_parse(frame, pending.operation, pending.deadline) do
       :expired ->
-        {:noreply, close(state, expiry_code(state.pending[id].operation))}
+        {:noreply, close(state, expiry_code(pending.operation))}
 
       :invalid ->
         {:noreply, close(state, :invalid_response)}
 
       {:error, %Error{code: code} = error}
-      when code in [:timeout, :disconnected, :owner_changed, :invalid_response, :transport_error] ->
-        error =
-          if state.pending[id].operation == "write", do: %{error | effect: :unknown}, else: error
-
+      when code in [
+             :timeout,
+             :disconnected,
+             :owner_changed,
+             :peer_changed,
+             :invalid_response,
+             :transport_error
+           ] ->
+        error = mark_unknown_write_effect(error, pending)
         {:noreply, close(complete(state, id, {:error, error}), code)}
 
       {:ok, %{subscription_id: _} = binding} ->
@@ -513,6 +528,9 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
       {:ok, %{paired: true}} ->
         accept_pair(state, id)
+
+      {:ok, %{connected: true, services_resolved: true} = health} ->
+        {:noreply, advance(complete(state, id, {:ok, health}))}
 
       {:ok, page} when is_map(page) ->
         accept_page(state, id, page)
@@ -524,10 +542,16 @@ defmodule Wotex.BLE.BlueZ.Connection do
         {:noreply, advance(complete(state, id, {:ok, value}))}
 
       {:error, error} ->
-        error = if state.pending[id].submitted, do: %{error | effect: :unknown}, else: error
+        error = mark_unknown_submitted_effect(error, pending)
         {:noreply, advance(complete(state, id, {:error, error}))}
     end
   end
+
+  defp mark_unknown_write_effect(error, %{operation: "write"}), do: %{error | effect: :unknown}
+  defp mark_unknown_write_effect(error, _), do: error
+
+  defp mark_unknown_submitted_effect(error, %{submitted: true}), do: %{error | effect: :unknown}
+  defp mark_unknown_submitted_effect(error, _), do: error
 
   defp accept_unsubscribe(state, id, frame) do
     case timed_parse(frame, "unsubscribe", state.pending[id].deadline) do
