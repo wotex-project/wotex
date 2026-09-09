@@ -62,6 +62,7 @@ defmodule WotexLab.MixProject do
       {:bandit, "~> 1.12", only: :test},
       {:plug, "~> 1.18", optional: true},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:git_ops, "~> 2.10", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.16", only: [:dev, :test], runtime: false},
@@ -106,13 +107,13 @@ defmodule WotexLab.MixProject do
           raise "WOTEX_PATH_DEPS is allowed only in development, test or docs"
         end
 
-      _value ->
+      _ ->
         raise "WOTEX_PATH_DEPS must be unset or equal to 1"
     end
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_environment), do: ["lib"]
+  defp elixirc_paths(_), do: ["lib"]
 
   defp aliases do
     [
