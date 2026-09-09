@@ -324,3 +324,26 @@ These are actual libdbus component tests. The report callback represents bounded
 host admission; it is not a Port transport or proof of BEAM mailbox flow control.
 Complete host dispatch/output, cumulative credits across the BEAM boundary and
 independent BlueZ/ATT interoperability remain open requirements.
+
+## Native output serialization and reservations
+
+`test/wotex/ble/native_output_test.exs` runs the production `EncodedFrame` and
+`NativeOutput` components through an owned native test executable. WBL-B-F42
+through WBL-B-F44 compare exact bounded serialization outputs. Independent BEAM
+JSON decoding checks native integers, Boolean/null values, UTF-8, escapes and
+structured values. Native cases exercise exact line size, newline/escape growth,
+invalid UTF-8, nonfinite/binary values, depth, collection and node limits.
+
+The reservation matrix fills all 64 ordinary reply reservations, 64 report
+frames and 256 control frames. Stale, foreign, default and already queued reply
+tickets cannot release or reuse a reservation. One hundred thousand reservation
+lifetimes leave no historical records. An eight-frame 1 MiB report backlog still
+admits separate ordinary replies and a terminal control frame.
+
+The pipe fixture fills an actual nonblocking pipe, checks retained counters under
+backpressure, drains partial frames and compares the complete ordered byte-stream
+hash with an independently accumulated expected hash. Reply capacity returns
+only after complete transmission. Closed-reader and blocking-descriptor paths
+fail explicitly. Queue byte counts measure retained encoded bytes, not total
+allocator or process RSS. These tests do not execute the complete host or prove
+report credit acknowledgements across the BEAM Port boundary; those remain open.

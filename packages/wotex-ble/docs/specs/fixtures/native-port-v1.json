@@ -1567,6 +1567,73 @@
           "sender_releases": 0
         }
       }
+    },
+    {
+      "id": "WBL-B-F42",
+      "requirements": [
+        "WBL-B02",
+        "WBL-C07"
+      ],
+      "operation": "serialize_frame",
+      "input": {
+        "value": {
+          "version": 1,
+          "id": "1",
+          "ok": true,
+          "result": null
+        },
+        "limit": 131072
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": true,
+          "line": "{\"id\":\"1\",\"ok\":true,\"result\":null,\"version\":1}\n",
+          "bytes": 47
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F43",
+      "requirements": [
+        "WBL-B02",
+        "WBL-C07"
+      ],
+      "operation": "serialize_frame",
+      "input": {
+        "value": {
+          "value": "a\nb\u00e5\u00e4\u00f6"
+        },
+        "limit": 64
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": true,
+          "line": "{\"value\":\"a\\nb\u00e5\u00e4\u00f6\"}\n",
+          "bytes": 23
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F44",
+      "requirements": [
+        "WBL-B02",
+        "WBL-C07"
+      ],
+      "operation": "serialize_frame",
+      "input": {
+        "value": {
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        },
+        "limit": 16
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false
+        }
+      }
     }
   ],
   "executed_cases": [
@@ -1605,6 +1672,9 @@
     "WBL-B-F38",
     "WBL-B-F39",
     "WBL-B-F40",
-    "WBL-B-F41"
+    "WBL-B-F41",
+    "WBL-B-F42",
+    "WBL-B-F43",
+    "WBL-B-F44"
   ]
 }

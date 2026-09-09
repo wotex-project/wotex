@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.11
+  version: 1.0.12
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -178,6 +178,29 @@ Native admission retains its reply reservation through transmission; it cannot
 admit new work indefinitely while replies are undrained. Exhausting this reservation terminates the owned process rather
 than blocking cancellation behind reports.
 
+Output serialization enforces C07's tree bounds before traversal and its encoded
+byte bound while writing into the serializer sink. The serializer reserves the
+newline within that bound. Invalid UTF-8, binary/discarded JSON values, nonfinite
+numbers and oversized output fail before queue insertion; an oversized temporary
+serialized string is not the implementation of this check.
+
+An ordinary reply reservation has an opaque owner-generation reference and a
+monotonic uint64 identifier. The host acquires it before admitting work. It can
+release an unused reservation or enqueue precisely one result, but cannot release
+or reuse a queued reservation before the entire frame is written. Stale and
+foreign-owner reservations do not change accounting. The reservation table has
+at most 64 records and no lifetime history. Report and control admission use
+separate counters and the byte bounds above. Report credits remain outstanding
+after local stdout completion until the valid BEAM acknowledgement.
+
+The output queue preserves whole-frame FIFO order across partial writes. Each
+loop turn attempts at most 64 writes and 65536 bytes on an explicitly nonblocking
+descriptor. EAGAIN retains the frame, offset and reservations without waiting;
+closed or invalid output fails the channel. The executable owns SIGPIPE policy
+and descriptor lifetime. Encoded-byte counters retain a partially written frame's
+full storage until completion. The independent reservations do not bypass
+retirement-barrier order or authorize uncredited report transmission.
+
 A stream delivery generation is distinct from the IPC session generation.
 Stream cancellation/overflow preserves other streams and the connection unless
 the shared channel itself is malformed, exhausted or unresponsive. Native
@@ -287,6 +310,12 @@ with full bound metadata, admitted report count, retirement/error/cancellation,
 active entry/path/pending/listener counters, observed remote subscriptions,
 connection state and actual sender releases. These component vectors do not
 represent Port transmission or replace the process-flow vectors above.
+`serialize_frame` runs the production bounded serializer with exact JSON `value`
+and integer `limit` in 1..131072. Success projects `accepted: true`, the complete
+UTF-8 `line` including its newline, and its encoded `bytes` count. Failure projects
+exactly `accepted: false`. Key order is lexicographic, output is compact, valid
+non-ASCII UTF-8 remains UTF-8, and required JSON escapes are included in the byte
+bound. This operation performs no SDK or descriptor I/O.
 `ready` starts the actual helper, captures its first frame and closes its input;
 the expectation is exact JSON-object equality plus zero surviving owned
 processes after the grace. Parser cases never count as SDK interoperability.

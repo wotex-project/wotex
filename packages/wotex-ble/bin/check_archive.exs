@@ -24,6 +24,7 @@ defmodule Wotex.BLE.Check.Archive do
     "priv/bluez/native/procedures.hpp",
     "priv/bluez/native/notify_value.hpp",
     "priv/bluez/native/notifications.hpp",
+    "priv/bluez/native/output.hpp",
     "priv/bluez/native/custody.c",
     "priv/bluez/native/runtime-guardian.md",
     "priv/bluez/native/credit.hpp",
