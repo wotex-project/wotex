@@ -43,6 +43,11 @@ for every requirement family. Evidence includes its exact source and corpus SHA.
    `mix wotex.software.run --workspace ABS` with the exact workspace/manifest
    contract below. Existing shell scripts remain read/write fixture entry points;
    their existence does not satisfy the Mix task contract.
+   `Dockerfile.software` is the instrumented normal/sanitizer build recipe.
+   The shared selection excludes `peer_shutdown`; a separate owned peer runs
+   `test/interop/cstack/shutdown_test.exs --include peer_shutdown` for CP25.
+   Native cleanup requires the actual final JSON counters and exit status as
+   well as verified owned-container removal.
 3. Extend the pinned C peer with read/write/release, Who-Is/I-Am and confirmed/
    unconfirmed object/Property COV controls. Expose actual active subscriber count,
    ACK/renewal/cancel counters, object value and process identity. A second real

@@ -1,4 +1,4 @@
-ExUnit.start(exclude: [:interop, :hardware, :software])
+ExUnit.start(exclude: [:interop, :hardware, :software, :peer_shutdown])
 Code.require_file("support/client.ex", __DIR__)
 Code.require_file("support/segment_transport.ex", __DIR__)
 Code.require_file("support/blocking_client.ex", __DIR__)

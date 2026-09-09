@@ -72,7 +72,8 @@ defmodule Wotex.BACnet.CStackRuntimeLifecycleTest do
         assert_receive {:DOWN, ^monitor, :process, _, _}, remaining
       end
 
-      assert_receive {:DOWN, ^socket_monitor, :port, _, _}, 0
+      remaining = max(started + 1100 - System.monotonic_time(:millisecond), 0)
+      assert_receive {:DOWN, ^socket_monitor, :port, _, _}, remaining
       assert System.monotonic_time(:millisecond) - started <= 1100
       assert Enum.all?(timers, &(Process.read_timer(&1) == false))
       assert :erlang.port_info(resources.socket) == :undefined

@@ -1,0 +1,26 @@
+FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake ca-certificates && rm -rf /var/lib/apt/lists/*
+LABEL org.opencontainers.image.source="https://github.com/bacnet-stack/bacnet-stack" \
+      org.opencontainers.image.revision="3603048350b8ba543ec76cf6aa8a232b3f4d442d"
+
+# The explicit Mix build verifies and supplies this archive before extraction.
+COPY source.tar.gz /tmp/source.tar.gz
+RUN echo 'b5529b73551c7bea6fdd2e6e44c1e4682f1ccb017f5e3ce6d28cac87c0d26043  /tmp/source.tar.gz' \
+      | sha256sum --check - && mkdir /sdk && \
+    tar --extract --gzip --file=/tmp/source.tar.gz --strip-components=1 --directory=/sdk && \
+    rm /tmp/source.tar.gz
+COPY CMakeLists.txt peer.c peer.h control.c property_peer.c property_peer.h /fixture/
+RUN cmake -S /fixture -B /normal -DWOTEX_BACNET_STACK_SOURCE=/sdk \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWOTEX_BACNET_SANITIZE=OFF && \
+    cmake --build /normal --target wotex-bacnet-peer -j2 && \
+    ctest --test-dir /normal --output-on-failure && \
+    cmake -S /fixture -B /sanitizer -DWOTEX_BACNET_STACK_SOURCE=/sdk \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWOTEX_BACNET_SANITIZE=ON && \
+    cmake --build /sanitizer --target wotex-bacnet-peer -j2 && \
+    ctest --test-dir /sanitizer --output-on-failure
+
+USER 65534:65534
+EXPOSE 47808/udp 47809/udp
+ENTRYPOINT ["/sanitizer/wotex-bacnet-peer"]
+CMD ["eth0", "47808", "47809", "600000"]

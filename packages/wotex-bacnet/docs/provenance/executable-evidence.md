@@ -154,6 +154,30 @@ ARM64 sanitizer peer. The earlier CP17 case retains the successful handoff and
 public observation/stop boundary. Pending acquisition and admitted observation
 are separate lifecycle observations.
 
+## Instrumented native build and terminal lane
+
+`test/interop/cstack/Dockerfile.software` builds separate normal and ASan/UBSan
+fixtures and their static SDK libraries from the verified C-stack archive.
+Both variants pass WBA-CP01 and WBA-CP10 in CTest. The compiled version command
+reports fixture protocol 1 and the pinned SDK header version `1.7.0-rc4`.
+SDK request diagnostics are disabled through its `PRINT_ENABLED=0` build
+definition. Sanitizer diagnostics remain observable and fail acceptance.
+
+The shared C-peer/software selection executes 26 cases, including ST01's 1000
+sequential reads and 32 concurrent callers, ST02's 100 stack lifecycles and
+ST03's 100 receiver deaths. It excludes `peer_shutdown`. The separate CP25
+terminal lane establishes object and Property subscriptions and observes two
+pending confirmed Invoke IDs while the target client is suspended. An explicit
+peer quit leaves those resources live at entry to native cleanup. A subsequent
+real read times out, and local stack cleanup remains bounded.
+
+The Linux ARM64 sanitizer peer reports actual zero socket descriptors,
+object/Property subscribers, Invoke IDs and Analog Output objects, then exits
+zero without sanitizer findings. The native event and ExUnit receipt prove
+different sides of cleanup. This Docker recipe and manual execution do not yet
+accept the required Mix workspace/manifest/fault workflow or final package
+consumer cohort.
+
 ## Evidence identities
 
 The hashes below identify test sources from implementation commit

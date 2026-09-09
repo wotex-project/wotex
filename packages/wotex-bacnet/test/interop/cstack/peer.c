@@ -17,6 +17,7 @@
 #include "bacnet/bacaddr.h"
 #include "bacnet/cov.h"
 #include "bacnet/npdu.h"
+#include "bacnet/version.h"
 #include "bacnet/basic/npdu/h_npdu.h"
 #include "bacnet/basic/object/ao.h"
 #include "bacnet/basic/object/device.h"
@@ -292,6 +293,10 @@ static int control_open(uint16_t port)
 int main(int argc, char **argv)
 {
     uint32_t protocol_port, control_port, duration;
+    if (argc == 2 && strcmp(argv[1], "--version") == 0) {
+        puts("wotex-bacnet-peer 1 bacnet-stack " BACNET_VERSION_TEXT);
+        return 0;
+    }
     if (argc == 2 && strcmp(argv[1], "--self-test") == 0) {
         return peer_parser_test();
     }
@@ -370,9 +375,29 @@ int main(int argc, char **argv)
     for (unsigned index = 1; index <= UINT8_MAX; index++) {
         tsm_free_invoke_id((uint8_t)index);
     }
+    int descriptors[] = {bip_get_socket(), bip_get_broadcast_socket(), control};
     bip_cleanup();
     close(control);
     Analog_Output_Cleanup();
-    puts("{\"closed\":true}");
+    unsigned open_sockets = 0;
+    for (unsigned index = 0; index < sizeof(descriptors) / sizeof(descriptors[0]); index++) {
+        if (descriptors[index] >= 0) {
+            errno = 0;
+            if (fcntl(descriptors[index], F_GETFD) != -1 || errno != EBADF) {
+                ++open_sockets;
+            }
+        }
+    }
+    int object_count = subscriptions(NULL, NULL, NULL);
+    unsigned property_count = property_peer_count();
+    unsigned invoke_count = MAX_TSM_TRANSACTIONS - tsm_transaction_idle_count();
+    unsigned objects = Analog_Output_Count();
+    int cleanup = open_sockets || object_count != 0 || property_count || invoke_count || objects;
+    printf("{\"event\":\"cleanup\",\"open_sockets\":%u,\"object_subscribers\":%d,"
+        "\"property_subscribers\":%u,\"active_invoke_ids\":%u,\"analog_outputs\":%u,\"result\":%d}\n",
+        open_sockets, object_count, property_count, invoke_count, objects, cleanup);
+    if (cleanup) {
+        return 79;
+    }
     return Stopping ? 0 : 75;
 }

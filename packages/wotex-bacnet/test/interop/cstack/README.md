@@ -29,6 +29,34 @@ CLOCK_MONOTONIC. Expiry exits with status 75. SIGINT, SIGTERM or the `quit`
 control command closes the sockets and SDK state and exits zero. Readiness is
 one JSON line emitted after both sockets are bound. No request payload is logged.
 
+The software runner requires `--version` to report the fixture protocol version
+and the SDK's compiled header version without opening a socket. Its final
+`cleanup` JSON event must report actual closed-descriptor checks, object and
+Property subscriber counts, active SDK Invoke IDs and remaining Analog Output
+objects. A successful signal or exit code alone cannot replace those counts.
+The SDK's `PRINT_ENABLED` build definition is zero for this fixture, so stdout
+contains fixture readiness and cleanup records. Sanitizer diagnostics remain
+visible on stderr and fail the lane.
+
+`Dockerfile.software` consumes an explicit build context containing the verified
+`source.tar.gz` and the six C/CMake fixture files. It builds separate `/normal`
+and `/sanitizer` binaries and static SDK libraries, runs both native CTest
+boundaries for each, and defaults to the sanitizer peer. The image retains the
+compiler, linker, libc and CMake metadata needed by the software manifest. Its
+package-manager inputs are recorded after build; a pinned base digest and SDK
+archive do not imply a bit-identical image.
+
+`shutdown_test.exs` is an explicit terminal fixture lane with only the
+`peer_shutdown` tag. Ordinary tests and the shared interop/software lane exclude
+that tag, because it closes its peer. The runner starts a separate owned peer,
+then selects this file with `--include peer_shutdown`. WBA-CP25 establishes both object
+and Property subscriptions, observes pending confirmed Invoke IDs while the
+target client is suspended, and quits the peer with those resources live.
+After client resume, a real read must time out and local close must release its
+owned processes/socket. The runner independently requires the peer's final
+zero-resource JSON event, exit zero and absent owned container. The ExUnit
+receipt alone cannot establish native process cleanup.
+
 The runner publishes both container ports only on its local loopback address.
 The fixture binds its control endpoint within that disposable container. COV
 storage is limited to 16 object subscriptions and 16 destination addresses,
