@@ -230,7 +230,9 @@ No-stream modes return a structured unsupported error without creating a process
 
 The concrete [integration corpus](fixtures/wotex-integration-v1.json) fixes a
 synthetic TD, selected route/command and public payload projection. I-F01 has an
-actual Runtime binding; I-F02–I-F07 remain specified assertions requiring binding. JSON validity or an identifier
+actual Runtime read binding in `runtime_integration_test.exs`. Each I-F02–I-F07
+case has a separately named native Error/ConsumedThing/Retry projection test in
+`error_class_test.exs`. JSON validity or an identifier
 in a fixture does not accept a work package. The driver receives only input,
 never expectation; the test process compares the returned projection. Atoms become
 finite documented strings and bytes use the envelope above. Exclude pids, refs,
@@ -251,8 +253,7 @@ ConsumedThing. It then calls Retry with the input options. `retained_native_effe
 asserts whether Runtime's cause includes that field; it must be false. This
 classification test does not advertise support for the input WoT operation in
 a production profile; its test profile explicitly admits that one operation.
-Thus Thread can prove conservative mutation error classification without gaining
-a production writeproperty binding. The native error fields shown are stimuli,
+The native error fields shown are stimuli,
 not a bypass of the production classifier or a consumer permission to set class.
 The full I04 table also needs malformed/unclassified and default mutation cases.
 
@@ -294,12 +295,11 @@ No external report integration is required to implement these protocol tests.
 
 ## Compatibility and evidence classification
 
-Profile factories and Error.class are additive target changes. Strict validation
-of formerly ignored known selectors and unknown-effect retry classification are
-intentional pre-release safety corrections requiring regression evidence.
-The current .02 profile remains the baseline authority until implementation lands.
-I01–I06 are open until their listed public-boundary assertions and required
-software lanes pass. A scenario family may need many concrete cases; merely
+Profile factories admit only the modes and operations listed in .02. Known
+selectors are validated before acquisition, and unknown-effect mutations have
+permanent error classification. Both rules require regression evidence.
+I01–I06 acceptance requires their listed public-boundary assertions and software
+lanes. A scenario family may need many concrete cases; merely
 attaching S/V/I/F identifiers to an unrelated passing test is not closure.
 
 W3C terminology and Form/default-operation ownership refer to

@@ -55,4 +55,4 @@ specifications:
     requires: ["WBA.00", "WBA.10", "WBA.11", "wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.BACnet", "Wotex.BACnet.Mapping", "Wotex.BACnet.Transport", "Wotex.BACnet.RuntimeRelay", "Wotex.BACnet.Error"]
     executable_evidence: ["test/wotex/bacnet/runtime_integration_test.exs", "test/wotex/bacnet/runtime_stream_test.exs", "test/wotex/bacnet/runtime_frame_test.exs", "test/wotex/bacnet/error_class_test.exs", "test/wotex/bacnet/ingress_lifecycle_test.exs"]
-    compatibility_classification: "ConsumedThing requests, observations, metadata and borrowed ingress admission have local integration evidence. Exact I-F02–I-F07 Retry projections and final consumer archive cohort remain required."
+    compatibility_classification: "ConsumedThing requests, observations, metadata, exact I-F01–I-F07 projections and borrowed ingress admission have local integration evidence. Independent software workflows and the final consumer archive cohort remain required."

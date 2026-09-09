@@ -15,8 +15,22 @@ defmodule Wotex.BACnet.ErrorClassTest do
   @moduletag corpus_sha256: Base.encode16(:crypto.hash(:sha256, File.read!(@corpus)), case: :lower)
   @codes [:deadline_exceeded, :connection_failed, :busy, :response_mismatch, :target_mismatch]
 
-  test "WBA-I04 WBA-I06 WBA-I-F02..F07 Runtime retains the exact class and never retries an unknown-effect write" do
-    for vector <- @cases, vector["operation"] == "error_retry_projection" do
+  test "WBA-I06 the integration corpus accounts for every declared local case" do
+    corpus = Jason.decode!(File.read!(@corpus))
+    expected_ids = Enum.map(1..7, &"WBA-I-F0#{&1}")
+    assert Enum.map(@cases, & &1["id"]) == expected_ids
+    assert corpus["binding_scope"]["local_case_ids"] == expected_ids
+    assert corpus["binding_scope"]["unexecuted_case_ids"] == []
+
+    assert @cases
+           |> Enum.filter(&(&1["operation"] == "error_retry_projection"))
+           |> Enum.map(& &1["id"]) == tl(expected_ids)
+  end
+
+  for vector <- @cases, vector["operation"] == "error_retry_projection" do
+    @tag corpus_case_id: vector["id"], requirements: ["WBA-I04", "WBA-I06"]
+    test "#{vector["id"]} WBA-I04 WBA-I06 native errors retain their Runtime class and retry decision" do
+      vector = unquote(Macro.escape(vector))
       input = vector["input"]
       code = Enum.find(@codes, &(Atom.to_string(&1) == input["native_error"]["code"]))
       effect = if input["native_error"]["effect"] == "unknown", do: :unknown, else: :none

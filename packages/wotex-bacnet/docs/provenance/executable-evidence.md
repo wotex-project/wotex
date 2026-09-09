@@ -46,8 +46,14 @@ configured peer and must fail if that peer or expected response is missing.
 ## Current software acceptance boundary
 
 The standalone F01–F11 corpus has local pure/adapter bindings listed in WBA-N05.
-Runtime I-F01 is bound to real ConsumedThing execution; I-F02–I-F07 still require
-the exact corpus projections in addition to existing Error/Retry unit tests.
+Runtime I-F01 is bound to real ConsumedThing execution. Each I-F02–I-F07 case
+has a separately named executable test in `error_class_test.exs`. It supplies
+the corpus native error code and effect to the library classifier, executes the
+real Transport and ConsumedThing path, then compares the complete Runtime error
+and Retry projection. The expected class never enters the protocol client.
+A corpus assertion requires all seven case IDs and their local bindings; an
+empty or incomplete case list fails. These injected native-error cases establish
+the Runtime boundary, not independent wire-fault behavior.
 COV and Runtime lifecycle tests exercise the native BEAM wrapper over UDP fault
 peers. They do not establish independent C-stack COV.
 

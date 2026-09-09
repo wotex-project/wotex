@@ -1,7 +1,7 @@
 {
   "format": "wotex.protocol.integration",
   "version": "1.0.0",
-  "status": "specified_with_partial_local_bindings",
+  "status": "specified_with_local_bindings",
   "requirements": [
     "WBA-I02",
     "WBA-I03",
@@ -294,9 +294,7 @@
   ],
   "binding_scope": {
     "local_case_ids": [
-      "WBA-I-F01"
-    ],
-    "unexecuted_case_ids": [
+      "WBA-I-F01",
       "WBA-I-F02",
       "WBA-I-F03",
       "WBA-I-F04",
@@ -304,6 +302,7 @@
       "WBA-I-F06",
       "WBA-I-F07"
     ],
+    "unexecuted_case_ids": [],
     "evidence": "docs/provenance/executable-evidence.md"
   }
 }
