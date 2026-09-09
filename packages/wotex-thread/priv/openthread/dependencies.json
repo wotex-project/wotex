@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "sources": {
+    "openthread": {
+      "repository": "openthread/openthread",
+      "commit": "5c8c318627954c99cd1a957a290bbd4b1027d04b",
+      "archive_sha256": "90b4ce8905d21e2901b930436ed8de3abfcee95b9dfadd78528c7026564572db"
+    },
+    "mbedtls": {
+      "repository": "Mbed-TLS/mbedtls",
+      "commit": "068ff080b369adfac81509f9b57b2afabaf82dc5",
+      "archive_sha256": "ca6bd316bbec49ef20088f39b8755fcaec0b7e45781506de55b17cd191ae6937"
+    },
+    "mbedtls-framework": {
+      "repository": "Mbed-TLS/mbedtls-framework",
+      "commit": "dde0c4a0e448a0552f18817dcea633bb851fd288",
+      "archive_sha256": "3b0d4864fa877dc9165b90ff3d5b68505c6176c0b22d317d99fe8c89a993e9fd"
+    }
+  },
+  "json": {
+    "version": "3.11.3",
+    "url": "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp",
+    "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"
+  }
+}

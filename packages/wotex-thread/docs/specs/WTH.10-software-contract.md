@@ -25,6 +25,14 @@ access limit and SDK-derived status from [primary sources](../provenance/primary
 No Thread certification is implied. Thread supplies IPv6 networking; application
 Property read/write semantics belong to a protocol such as CoAP or Matter.
 
+The host replaces that SDK's bundled Mbed TLS 3.6.5 with **Mbed TLS 3.6.7**,
+commit `068ff080b369adfac81509f9b57b2afabaf82dc5`, and its framework commit
+`dde0c4a0e448a0552f18817dcea633bb851fd288`. The upstream
+[3.6.7 security changelog](https://raw.githubusercontent.com/Mbed-TLS/mbedtls/v3.6.7/ChangeLog)
+fixes CVE-2026-50588 in the ECJPAKE ServerKeyExchange parser used by this profile.
+The native build must pin this override and record its archive hashes; using
+the unmodified SDK crypto submodule is not an accepted build.
+
 Keep `Daemon` read-only and explicitly connected to a consumer-supplied Unix
 socket. Add `Wotex.Thread.OpenThread`, a first-party C bridge that owns a host
 OpenThread instance and explicitly configured radio URL. The bridge links the
@@ -93,8 +101,10 @@ radio selection, root escalation, system service edits or unrelated host network
 changes. Explicit SDK enable/disable affects only the configured owned interface.
 Tests run within an isolated network namespace or VM with explicit privileges.
 
-Initialize the POSIX platform and one `otInstance`, register
-`otSetStateChangedCallback`, then signal ready with exact SDK/build features.
+The initial C07 ready envelope identifies the executable's pinned backend before
+configuration. `open` then initializes the POSIX platform and one `otInstance`
+and registers `otSetStateChangedCallback`; only its successful response admits
+a Session. The build manifest records exact SDK, crypto and build features.
 Run tasklets and platform mainloop with nonblocking request input so owner EOF,
 cancel and deadlines remain observable. At most 64 admitted requests, one active
 management update and one active joiner attempt. On EOF/close: stop owned joiner
