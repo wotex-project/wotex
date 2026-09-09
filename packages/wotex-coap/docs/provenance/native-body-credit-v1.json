@@ -1,0 +1,167 @@
+{
+  "schema": "wotex.coap.native-body-credit-evidence@1",
+  "scope": "Native bounded body and cumulative credit primitives; production process/Port and complete native-v1 helper traces remain unaccepted",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/body.c": "f6f2696eae9631f5e68c38a01df7ff69f1d2b7ab08d51b735cc600e50ec3e9d4",
+      "native/oscore/body.h": "0dc59fdbd252bf287b009bac5898cf7cbc3df72ae6af2dbc1639c2543dadd49b",
+      "native/oscore/credit.c": "f2566b99ae79f539d8c8c1bf0872b050bc62c3785d1758be1e1d7d3b2e624b7d",
+      "native/oscore/credit.h": "8df4af0c72cb75dcc70ced1303dadc1dd23c1054437722c76fd7039883baadce",
+      "native/oscore/json.c": "a50d46c2e518d5e3d932c6603306a54dd49abcf545cc5a97fbd2b7ec994d5d46",
+      "native/oscore/json.h": "46d614f17a8c51abbd656369558562a202937983fc46755fa541b33be2236c1c",
+      "native/oscore/vendor/yyjson/source.json": "34d79572c21e231f9257a59add2478d8e6473c2b43e676d946d6365ca7275457",
+      "native/oscore/vendor/yyjson/yyjson.c": "ac2e9bbb2e2d9149d90878d40506a1d624fa0b33c979a11b61075c54782c6d6a",
+      "native/oscore/vendor/yyjson/yyjson.h": "175867c5493a5df648cec566717fa1c29aa2f6096f5f0cf1efad0b65e1f6d7b3",
+      "test/native/oscore_body_test.c": "593404611ab9a833e95258546e2f5b075deb1b38e01439770567456a4cf0a832",
+      "test/native/oscore_credit_test.c": "949a92bd63005a37a76651857bb81feac127e683d918ffb8767fc3181270f694",
+      "test/native/Dockerfile.json": "026b4dd9713143ca0a6d73a6f218dd66ac18e44ffc11efd44174c0397e09d816"
+    }
+  },
+  "requirements": [
+    "WCO-C07",
+    "WCO-N03"
+  ],
+  "assertions": {
+    "payloads": [
+      "RFC 4648 section 10 base64 known answers",
+      "invalid byte envelope/alphabet/padding/pad bits preserve caller output",
+      "exact ABC and empty payload require successful end",
+      "all-byte 32768-byte chunks assemble and verify exact 1048576-byte body",
+      "32769-byte chunk and 1048577-byte body fail before decoded output",
+      "wrong offset/id/hash, interleaving, incomplete/duplicate end and owner abort release body and poison generation"
+    ],
+    "credit": [
+      "zero initial credit",
+      "initial zero acknowledgment opens eight-frame window once",
+      "assigned frames exceed acknowledged frames by at most eight",
+      "future/not-fully-written acknowledgment fails",
+      "wrong generation and unordered/duplicate written marker fail",
+      "1000 stale acknowledgments leave twelve assigned/four acknowledged/zero credit",
+      "exact uint64 final sequence and fail-before-wrap exhaustion"
+    ]
+  },
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "native_cases": [
+        {
+          "executable": "oscore-body",
+          "exit_code": 0,
+          "output_sha256": "a4af65d9d6d1e96c267f6e48033ab74cb177d28c4c4d19624f073605a26481c0",
+          "assertion_output": [
+            "WCO-C07 WCO-N03: canonical base64 rejects type/padding/alphabet/capacity failures without partial output",
+            "WCO-C07 WCO-N03: exact ABC and empty bodies stay hidden until SHA-256/length verification",
+            "WCO-C07 WCO-N03: wrong offset/id/hash, interleaving, incomplete/duplicate end and owner abort poison bounded body",
+            "WCO-C07 WCO-N03: 32-KiB chunks assemble exact 1-MiB body; oversized chunk writes no output"
+          ],
+          "executable_sha256": "546c087407ffad48318a1fe95fb7cba4963e5af16ae87f1fbc74cfc869066889"
+        },
+        {
+          "executable": "oscore-credit",
+          "exit_code": 0,
+          "output_sha256": "81c4a90f796da3c118e79a35348c2352529277bd143c60b396a6219361ff80ce",
+          "assertion_output": [
+            "WCO-N03: cumulative replay trace retains exactly eight outstanding frames after 1000 stale grants",
+            "WCO-N03: wrong generation, future/unwritten acknowledgment and unordered writes close credit generation",
+            "WCO-N03: final uint64 report sequence is exact; exhaustion poisons without wrap"
+          ],
+          "executable_sha256": "0e592d2090cc69de7ca044386f0107fcd510161aa98bd3ced4601921816a7e9a"
+        }
+      ],
+      "compiler": "Apple clang 21.0.0 clang-2100.1.1.101",
+      "openssl": "3.6.4",
+      "sanitizers": [],
+      "compile_options": [
+        "-std=c11",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-Werror"
+      ]
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "native_cases": [
+        {
+          "executable": "oscore-body",
+          "exit_code": 0,
+          "output_sha256": "a4af65d9d6d1e96c267f6e48033ab74cb177d28c4c4d19624f073605a26481c0",
+          "assertion_output": [
+            "WCO-C07 WCO-N03: canonical base64 rejects type/padding/alphabet/capacity failures without partial output",
+            "WCO-C07 WCO-N03: exact ABC and empty bodies stay hidden until SHA-256/length verification",
+            "WCO-C07 WCO-N03: wrong offset/id/hash, interleaving, incomplete/duplicate end and owner abort poison bounded body",
+            "WCO-C07 WCO-N03: 32-KiB chunks assemble exact 1-MiB body; oversized chunk writes no output"
+          ],
+          "executable_sha256": "cf1e69eb3499efa3b5afb8947aa957b855dfbf7f363b9003dbf8f701d80332bb",
+          "argv": [
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "--read-only",
+            "--pids-limit",
+            "16",
+            "--memory",
+            "128m",
+            "--entrypoint",
+            "/usr/local/bin/oscore-body",
+            "sha256:81369002fb7f7075ddf1cc6d064d3d3ed3fa4863e07cdfb10b28c1cbfee513b7"
+          ]
+        },
+        {
+          "executable": "oscore-credit",
+          "exit_code": 0,
+          "output_sha256": "81c4a90f796da3c118e79a35348c2352529277bd143c60b396a6219361ff80ce",
+          "assertion_output": [
+            "WCO-N03: cumulative replay trace retains exactly eight outstanding frames after 1000 stale grants",
+            "WCO-N03: wrong generation, future/unwritten acknowledgment and unordered writes close credit generation",
+            "WCO-N03: final uint64 report sequence is exact; exhaustion poisons without wrap"
+          ],
+          "executable_sha256": "96e368713f4402aa4ada5ff619ea0f14f84dea9f38a4c707b91dfcdc97132da5",
+          "argv": [
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            "none",
+            "--read-only",
+            "--pids-limit",
+            "16",
+            "--memory",
+            "128m",
+            "--entrypoint",
+            "/usr/local/bin/oscore-credit",
+            "sha256:81369002fb7f7075ddf1cc6d064d3d3ed3fa4863e07cdfb10b28c1cbfee513b7"
+          ]
+        }
+      ],
+      "image": "sha256:81369002fb7f7075ddf1cc6d064d3d3ed3fa4863e07cdfb10b28c1cbfee513b7",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "3.0.20-1~deb12u2",
+      "sanitizers": [
+        "address",
+        "undefined"
+      ],
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1:abort_on_error=1",
+        "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1"
+      },
+      "toolchain_packages_recorded_not_locked": true,
+      "artifact_and_package_log_sha256": "cab00f125c25797683f039216f4a2c0bd8adb03d99db5e3fcd2a7764c0f7e52d",
+      "build_log_sha256": "28ac0251bea654bc2a5dd15e4e05de1d7c7845517d896f4aec2238a2f2aead33"
+    }
+  ],
+  "unaccepted": [
+    "Real Port/native mailbox and output queue saturation",
+    "Property coalescing and Event terminal loss delivery",
+    "Actual deadline, cancel and owner-death cleanup across processes",
+    "Complete body/credit envelope correlation and native-v1 runner",
+    "Persistent libcoap owner and native Mix build/run software matrix"
+  ]
+}

@@ -69,7 +69,10 @@ The [native JSON receipt](native-json-v1.json) identifies exact-source parser an
 framer tests for UTF-8, decoded duplicate keys, exact 64-bit integers, finite
 allocation bounds, split/coalesced input and terminal EOF/failure. These native
 primitives do not accept the complete helper protocol or its report-credit/body
-assembly behavior.
+assembly behavior. The [native body/credit receipt](native-body-credit-v1.json)
+identifies bounded payload/hash validation and cumulative credit primitives.
+Actual process/Port saturation, cancellation deadlines and complete native-v1
+traces remain unaccepted.
 OSCORE protected-message/replay/bridge restart tests, native helper ownership and complete stress/matrix closure remain
 required by [the ordered plan](../plans/software-implementation.md).
 

@@ -3,7 +3,7 @@ spec:
   id: WCO.13
   title: "Native OSCORE owner, builds and software evidence"
   status: accepted
-  version: 1.2.0
+  version: 1.3.0
   owner: wotex-coap
   updated: 2026-09-09
 ---
@@ -147,7 +147,13 @@ The operation-specific parameter fields are:
 | close | empty object |
 
 Paths and content-format numbers obey .10/.11. Body chunks decode to at most
-32,768 bytes; offsets must exactly equal the next expected offset. Only one
+32,768 bytes; offsets must exactly equal the next expected offset. The byte
+envelope admits only its exact `type` and `base64` fields. Its base64 uses the
+standard alphabet, required final padding and zero unused pad bits; whitespace,
+URL-safe characters, embedded NUL and noncanonical encodings fail admission.
+This is the library's strict decoder policy using the standard alphabet and
+canonical encoding rules in [RFC 4648 §§3–4, October 2006](https://www.rfc-editor.org/rfc/rfc4648.html#section-3).
+Validate the entire encoded input and decoded length before writing output. Only one
 unfinished inbound body and one unfinished outbound body exist at a time.
 `body_end` verifies declared length/hash; a body is consumed once by the next
 associated operation or freed at deadline/close. Uploading a body sends no CoAP
@@ -178,8 +184,10 @@ line is parsed synchronously before the next line; malformed input, callback
 failure or truncated EOF permanently closes this generation. A clean EOF also
 closes input and cannot be followed by another request. Parser pools and consumed
 line bytes are erased after use or failure. Native parser/framer tests assert
-these primitives; base64/body and complete helper fault tests remain separate
-acceptance obligations.
+these primitives. Native body and credit tests assert complete length/hash
+admission, canonical byte decoding, cumulative acknowledgments and exhaustion.
+The complete helper process, deadlines and mailbox/queue fault tests remain
+separate acceptance obligations.
 
 Report flow begins with zero credit. The first `credit` with `ack_seq: 0`
 opens an eight-frame window exactly once per generation. Every body event or
