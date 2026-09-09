@@ -219,13 +219,20 @@ defmodule Wotex.Modbus.SoftwareRun do
       Path.wildcard(Path.join(context.lane, "*.log"))
       |> Map.new(&{Path.basename(&1), SoftwareManifest.digest(&1)})
 
-    Map.put(result, "logs_sha256", logs)
+    faults =
+      Path.wildcard(Path.join(context.lane, "faults/**/*.{json,log}"))
+      |> Map.new(&{Path.relative_to(&1, context.lane), SoftwareManifest.digest(&1)})
+
+    Map.merge(result, %{"logs_sha256" => logs, "fault_artifacts_sha256" => faults})
   end
 
   defp cleanup(context, peer, initial, evidence, deadline) do
     context = Map.put(context, :docker, Map.get(context, :cleanup_docker, context.docker))
     cid = container(context)
+    if before_stop = Map.get(context, :before_stop), do: before_stop.(cid)
     stop = command(context, ["stop", "--time", "1", cid], budget(deadline))
+    {stop_output, stop_code} = command_result(stop)
+    File.write!(Path.join(context.lane, "stop.log"), stop_output)
     {output, code} = command_result(SoftwareCommand.await(peer, budget(deadline), @limit, initial))
     File.write!(Path.join(context.lane, "peer.log"), output)
     cleanup = Enum.flat_map(String.split(output, "\n", trim: true), &cleanup_event/1)
@@ -245,11 +252,11 @@ defmodule Wotex.Modbus.SoftwareRun do
     end
 
     clean =
-      match?({:ok, _, 0}, stop) and code == 0 and valid_cleanup?(cleanup) and diagnostics and
-        removed
+      code == 0 and valid_cleanup?(cleanup) and diagnostics and removed
 
     Map.merge(evidence, %{
       "peer_exit_code" => code,
+      "stop_exit_code" => stop_code,
       "peer_cleanup" => cleanup,
       "native_sanitizers" => %{
         "address" => diagnostics,

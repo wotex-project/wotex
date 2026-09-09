@@ -263,6 +263,7 @@ defmodule Wotex.Modbus.FixtureTasksTest do
       assert_raise Mix.Error, "software_fixture_failed", fn -> SoftwareRun.run(native, manifest) end
       [path] = Path.wildcard(Path.join(result_directory, "run-*/result.json"))
       result = SoftwareManifest.read(path)
+      retain_fault(path, name)
       assert result["status"] == "failed"
       assert result["test_exit_code"] == status
       assert result["cleanup"] == "passed"
@@ -312,6 +313,7 @@ defmodule Wotex.Modbus.FixtureTasksTest do
       assert_raise Mix.Error, "software_fixture_failed", fn -> SoftwareRun.run(native, manifest) end
       [path] = Path.wildcard(Path.join(directory, "run-*/result.json"))
       result = SoftwareManifest.read(path)
+      retain_fault(path, name)
       assert result["status"] == "failed"
       assert result["cleanup"] == cleanup
       assert result["owned_containers_after"] == if(cleanup == "failed", do: 0, else: "unverified")
@@ -328,6 +330,60 @@ defmodule Wotex.Modbus.FixtureTasksTest do
         cid,
         System.monotonic_time(:millisecond) + 5000
       )
+    end
+  end
+
+  @tag :software
+  test "WMB-N02 WMB-N03 explicit zero-resource proof survives an unavailable stop acknowledgment",
+       context do
+    workspace = System.fetch_env!("WOTEX_MODBUS_SOFTWARE_WORKSPACE")
+    manifest = SoftwareManifest.read(Path.join(workspace, "peer-manifest.json"))
+    guardian = Path.join(workspace, "command")
+    docker = System.find_executable("docker")
+
+    File.cp!(
+      Path.join(workspace, "peer-manifest.json"),
+      Path.join(context.directory, "peer-manifest.json")
+    )
+
+    before_stop = fn cid ->
+      assert {:ok, _, 0} =
+               Wotex.Modbus.SoftwareCommand.run(guardian, docker, ["stop", "--time", "1", cid],
+                 cd: context.root,
+                 timeout: 2000
+               )
+    end
+
+    native = %{
+      root: context.root,
+      workspace: context.directory,
+      guardian: guardian,
+      test_command: {"/usr/bin/false", [], []},
+      before_stop: before_stop
+    }
+
+    assert_raise Mix.Error, "software_fixture_failed", fn -> SoftwareRun.run(native, manifest) end
+    [path] = Path.wildcard(Path.join(context.directory, "run-*/result.json"))
+    retain_fault(path, "stop_acknowledgment")
+    result = SoftwareManifest.read(path)
+    assert result["stop_exit_code"] != 0
+    assert result["test_exit_code"] == 1
+    assert result["status"] == "failed"
+    assert result["peer_exit_code"] == 0
+    assert result["cleanup"] == "passed"
+    assert result["owned_containers_after"] == 0
+
+    assert [%{"open_sockets" => 0, "contexts" => 0, "mappings" => 0, "result" => 0}] =
+             result["peer_cleanup"]
+  end
+
+  defp retain_fault(result, name) do
+    target = Path.join([System.fetch_env!("WOTEX_MODBUS_SOFTWARE_EVIDENCE"), "faults", name])
+    File.mkdir_p!(target)
+
+    for filename <- ["result.json", "tests.log", "peer.log", "stop.log"] do
+      source = Path.join(Path.dirname(result), filename)
+      if File.regular?(source), do: File.cp!(source, Path.join(target, filename))
     end
   end
 

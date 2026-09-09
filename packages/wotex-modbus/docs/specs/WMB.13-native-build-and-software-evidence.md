@@ -102,6 +102,12 @@ binary hashes, Elixir/OTP versions, exact argv, test seed, requirement/case IDs,
 test/peer exit codes, outcome, log hashes, stress measurements and owned-resource
 counts. No credentials, machine-specific source paths or raw process state enter
 publishable evidence. Failed setup and failed cleanup retain failure results.
+Stop-command exit status is recorded separately. A missing stop acknowledgment
+does not negate positive cleanup evidence: the peer must still exit zero,
+report its exact zero-resource counters and have its exact container confirmed
+absent. An unverified peer exit, counter or daemon query remains failure.
+Nested fault cases retain their result/log files under the owning run; the
+top-level result binds those artifacts by relative path and SHA-256.
 Results identify independent-stack, malformed-peer and injected-contract lanes
 separately. A passing result requires zero remaining owned sockets, contexts,
 mappings and containers, plus clean required ASan/UBSan/leak diagnostics.
