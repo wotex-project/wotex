@@ -19,6 +19,10 @@ defmodule Wotex.Thread.OpenThread.Frame do
     "dataset_not_found" => :dataset_not_found,
     "invalid_state" => :invalid_state,
     "dataset_required" => :dataset_required,
+    "creation_not_allowed" => :creation_not_allowed,
+    "dataset_exists" => :dataset_exists,
+    "formation_timeout" => :formation_timeout,
+    "busy" => :busy,
     "storage_unavailable" => :storage_unavailable,
     "interface_in_use" => :interface_in_use,
     "already_open" => :already_open,
@@ -70,9 +74,13 @@ defmodule Wotex.Thread.OpenThread.Frame do
       when map_size(frame) == 4,
       do: value(result, operation)
 
-  def response(%{"version" => 1, "id" => id, "ok" => false, "error" => error} = frame, id, _)
+  def response(
+        %{"version" => 1, "id" => id, "ok" => false, "error" => error} = frame,
+        id,
+        operation
+      )
       when map_size(frame) == 4,
-      do: failure(error)
+      do: failure(error, operation)
 
   def response(_, _, _), do: :invalid
 
@@ -137,6 +145,13 @@ defmodule Wotex.Thread.OpenThread.Frame do
     end
   end
 
+  defp value(value, "form_network") do
+    case value(value, "inspect") do
+      {:ok, %State{role: :leader, ipv6_enabled: true, thread_enabled: true}} = result -> result
+      _ -> :invalid
+    end
+  end
+
   defp value(nil, "validate_dataset"), do: {:ok, nil}
 
   defp value(value, "get_dataset") do
@@ -163,6 +178,17 @@ defmodule Wotex.Thread.OpenThread.Frame do
   end
 
   defp value(_, _), do: :invalid
+
+  defp failure(%{"state" => state} = error, "form_network") do
+    with {:ok, state} <- value(state, "inspect"),
+         {:error, error} <- failure(Map.delete(error, "state")) do
+      {:error, %{error | details: Map.put(error.details, :state, state)}}
+    else
+      _ -> :invalid
+    end
+  end
+
+  defp failure(error, _), do: failure(error)
 
   defp failure(%{"code" => code} = error) when map_size(error) == 1 do
     case Map.fetch(@errors, code) do

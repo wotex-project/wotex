@@ -493,6 +493,36 @@ defmodule Wotex.Thread.SdkBridgeTest do
     refute_received {:wotex_thread_submitted, _}
   end
 
+  test "WTH-S04 WTH-V05 formation only accepts leader success and bounded failure state", context do
+    {:ok, dataset} = Wotex.Thread.Dataset.decode(<<250, 1, 0>>)
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:ok, %State{role: :leader, ipv6_enabled: true, thread_enabled: true}} =
+             Wotex.Thread.form_network(session, dataset, 1000)
+
+    assert :ok = Wotex.Thread.disconnect(session)
+
+    File.write!(Path.join(context.directory, "mode"), "error")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error,
+            %Error{
+              code: :creation_not_allowed,
+              effect: :unknown,
+              details: %{state: %State{role: :disabled}}
+            }} = Wotex.Thread.form_network(session, dataset, 1000)
+
+    assert :ok = Wotex.Thread.disconnect(session)
+
+    File.write!(Path.join(context.directory, "mode"), "form_bad")
+    assert {:ok, session} = Wotex.Thread.connect([{:client, OpenThread} | context.options])
+
+    assert {:error, %Error{code: :invalid_response, effect: :unknown}} =
+             Wotex.Thread.form_network(session, dataset, 1000)
+
+    refute Process.alive?(session.handle.pid)
+  end
+
   defp requests(context) do
     case File.read(Path.join(context.directory, "requests")) do
       {:ok, bytes} ->

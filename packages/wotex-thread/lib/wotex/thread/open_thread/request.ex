@@ -28,10 +28,15 @@ defmodule Wotex.Thread.OpenThread.Request do
       else: {:ok, {"set_enabled", %{ipv6: ipv6, thread: thread}}}
   end
 
+  def encode(%{type: :form_network, dataset: dataset} = request) when map_size(request) == 2 do
+    with {:ok, %{dataset: envelope}} <- DatasetWire.parameters(dataset, :active),
+         do: {:ok, {"form_network", %{dataset: envelope}}}
+  end
+
   def encode(_), do: {:error, Error.new(:invalid_message)}
 
   @doc false
   @spec mutation?(term()) :: boolean()
-  def mutation?("set_enabled"), do: true
+  def mutation?(operation) when operation in ["set_enabled", "form_network"], do: true
   def mutation?(_), do: false
 end

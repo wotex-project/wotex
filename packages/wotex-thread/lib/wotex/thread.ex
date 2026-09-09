@@ -116,6 +116,11 @@ defmodule Wotex.Thread do
   def set_enabled(session, state, timeout),
     do: native_request(session, %{type: :set_enabled, state: state}, timeout)
 
+  @doc "Forms an explicitly authorized new network and waits for the observed leader role."
+  @spec form_network(term(), term(), term()) :: {:ok, State.t()} | {:error, Error.t()}
+  def form_network(session, dataset, timeout),
+    do: native_request(session, %{type: :form_network, dataset: dataset}, timeout)
+
   @doc "Runs work with guaranteed handle cleanup when the function returns or raises."
   @spec with_connection(keyword(), (Session.t() -> term())) :: term()
   def with_connection(opts, fun) when is_function(fun, 1) do

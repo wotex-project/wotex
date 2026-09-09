@@ -93,6 +93,20 @@ class Sdk final {
     if (operation == "rloc16") return state.at("rloc16");
     throw SdkError("not_supported");
   }
+  void form_network(const Json &parameters) {
+    if (!exact_keys(parameters, {"dataset"})) throw ProtocolError();
+    DatasetValue active(parameters.at("dataset"));
+    if (!active.valid(true)) throw DatasetError();
+    if (!allow_creation_) throw SdkError("creation_not_allowed");
+    if (otThreadGetDeviceRole(instance_) != OT_DEVICE_ROLE_DISABLED) throw SdkError("invalid_state");
+    otOperationalDatasetTlvs existing {};
+    const otError stored = otDatasetGetActiveTlvs(instance_, &existing);
+    if (stored == OT_ERROR_NONE) throw SdkError("dataset_exists");
+    if (stored != OT_ERROR_NOT_FOUND) check_status(stored);
+    check_status(otDatasetSetActiveTlvs(instance_, &active.tlvs));
+    check_status(otIp6SetEnabled(instance_, true));
+    check_status(otThreadSetEnabled(instance_, true));
+  }
   Json set_enabled(const Json &parameters) {
     if (!exact_keys(parameters, {"ipv6", "thread"}) || !parameters.at("ipv6").is_boolean() ||
         !parameters.at("thread").is_boolean()) throw ProtocolError();

@@ -152,6 +152,18 @@ requires role transition to leader within the deadline; local setter return
 alone is not network formation. Failure reports acquired state and conservative
 unknown effect without erasing stored credentials or silently retrying formation.
 
+C07 `form_network` parameters contain only `dataset`, the exact typed bytes
+envelope. A success result is S02 State with role `leader`, IPv6 enabled and
+Thread enabled. One formation may be pending; another formation or enable-state
+change returns `busy` until it ends. Inspection and owner cleanup remain
+responsive. Each unsuccessful formation reply from an acquired instance adds
+`error.state`, the exact non-secret S02 State; the only other error fields are
+`code` and optional numeric SDK `status`. Rejections use `creation_not_allowed`,
+`dataset_exists`, `invalid_state`, `invalid_dataset`, `busy` or `remote_error`;
+expiry uses `formation_timeout`. This operation-specific error field does not
+admit arbitrary metadata on other C07 replies. If the process disappears before
+a report, return the uncertain failure without inventing a state snapshot.
+
 Native `set_enabled/3` selects explicit Boolean IPv6 and Thread states. Thread
 enabled with IPv6 disabled is invalid. Disabling Thread does not erase Dataset
 or credentials. Enabling Thread requires an existing active Dataset that passes

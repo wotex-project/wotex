@@ -48,7 +48,13 @@ for line in sys.stdin:
         if mode=='bad_json':sys.stdout.write('{bad}\n');sys.stdout.flush();break
         if mode=='truncated':sys.stdout.write('{');sys.stdout.flush();break
         if mode=='large':sys.stdout.write('x'*131072+'\n');sys.stdout.flush();break
-        if operation=='set_enabled':
+        if operation=='form_network':
+            if mode=='error':write(dict(version=1,id=request['id'],ok=False,error=dict(code='creation_not_allowed',state=state)))
+            elif mode=='form_bad':reply(request,state)
+            else:
+                state.update(ipv6_enabled=True,thread_enabled=True,role='leader')
+                reply(request,state)
+        elif operation=='set_enabled':
             if mode=='error':write(dict(version=1,id=request['id'],ok=False,error=dict(code='remote_error',status=253)))
             else:
                 state['ipv6_enabled']=request['parameters']['ipv6']

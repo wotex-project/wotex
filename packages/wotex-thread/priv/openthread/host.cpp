@@ -11,6 +11,7 @@
 #include <chrono>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
 #ifdef WOTEX_NATIVE_SANITIZERS
@@ -60,6 +61,7 @@ class Worker final {
       if (result < 0 && errno == EINTR) continue;
       if (result < 0) return 2;
       if (sdk_) sdk_->process(loop);
+      finish_formation();
       if (FD_ISSET(output_, &loop.mWriteFdSet)) flush();
       if (!closing_ && FD_ISSET(STDIN_FILENO, &loop.mReadFdSet)) input();
     }
@@ -80,7 +82,7 @@ class Worker final {
     char bytes[4096]; const ssize_t count = ::read(STDIN_FILENO, bytes, sizeof bytes);
     if (count == 0) {
       if (!incoming_.empty()) throw ProtocolError();
-      sdk_.reset(); closing_ = true; return;
+      forming_.reset(); sdk_.reset(); closing_ = true; return;
     }
     if (count < 0) {
       if (errno == EAGAIN || errno == EINTR) return;
@@ -104,7 +106,7 @@ class Worker final {
         append(success(command, sdk_->snapshot()));
       } else if (command.operation == "close") {
         if (!command.parameters.empty()) throw ProtocolError();
-        sdk_.reset();
+        forming_.reset(); sdk_.reset();
 #ifdef WOTEX_NATIVE_SANITIZERS
         // Check explicit, fully torn-down sessions before acknowledging close.
         __lsan_do_leak_check();
@@ -115,7 +117,14 @@ class Worker final {
         if (!command.parameters.empty()) throw ProtocolError();
         if (!sdk_) throw SdkError("not_open");
         append(success(command, sdk_->inspect(command.operation)));
+      } else if (command.operation == "form_network") {
+        if (!sdk_) throw SdkError("not_open");
+        if (forming_) throw SdkError("busy");
+        const auto deadline = Clock::now() + std::chrono::milliseconds(command.timeout_ms);
+        sdk_->form_network(command.parameters);
+        forming_ = Formation{Request{command.id, command.operation, Json::object(), command.timeout_ms}, deadline};
       } else if (command.operation == "set_enabled") {
+        if (forming_) throw SdkError("busy");
         if (!sdk_) throw SdkError("not_open");
         append(success(command, sdk_->set_enabled(command.parameters)));
       } else if (command.operation == "validate_dataset" || command.operation == "get_dataset") {
@@ -124,15 +133,33 @@ class Worker final {
       } else {
         throw SdkError("not_supported");
       }
-    } catch (otError error) {
-        Json response = failure(command, "remote_error");
-        response["error"]["status"] = static_cast<unsigned>(error);
-        append(response);
-      } catch (const DatasetError &) { append(failure(command, "invalid_dataset")); }
-      catch (const ProtocolError &) { append(failure(command, "invalid_request")); }
-      catch (const StorageError &) { append(failure(command, "storage_unavailable")); }
-      catch (const SdkError &error) { append(failure(command, error.what())); }
+    } catch (otError error) { reject(command, "remote_error", static_cast<unsigned>(error)); }
+      catch (const DatasetError &) { reject(command, "invalid_dataset"); }
+      catch (const ProtocolError &) { reject(command, "invalid_request"); }
+      catch (const StorageError &) { reject(command, "storage_unavailable"); }
+      catch (const SdkError &error) { reject(command, error.what()); }
   }
+  void reject(const Request &command, std::string_view code, std::optional<unsigned> status = {}) {
+    Json response = failure(command, code);
+    if (status) response["error"]["status"] = *status;
+    if (command.operation == "form_network" && sdk_) response["error"]["state"] = sdk_->snapshot();
+    append(response);
+  }
+  void finish_formation() {
+    if (!forming_) return;
+    if (Clock::now() >= forming_->deadline) {
+      reject(forming_->command, "formation_timeout");
+      forming_.reset();
+    } else {
+      Json state = sdk_->snapshot();
+      if (state.at("role") == "leader") {
+        append(success(forming_->command, state));
+        forming_.reset();
+      }
+    }
+  }
+  struct Formation { Request command; Clock::time_point deadline; };
+  std::optional<Formation> forming_;
   int output_ = -1;
   std::unique_ptr<Sdk> sdk_;
   std::string incoming_, outgoing_;

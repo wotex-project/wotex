@@ -30,6 +30,8 @@ defmodule Wotex.Thread.SdkDatasetTest do
   test "native Dataset functions reject borrowed clients and forged requests before dispatch" do
     {:ok, dataset} = Dataset.decode(<<250, 1, 0>>)
     session = %Session{client: TestClient, handle: :unavailable, timeout: 1000}
+    assert {:error, %Error{code: :not_supported}} = Thread.form_network(session, dataset, 1000)
+    assert {:error, %Error{code: :invalid_dataset}} = Thread.form_network(session, nil, 1000)
 
     assert {:error, %Error{code: :not_supported}} =
              Thread.set_enabled(session, %{ipv6: true, thread: false}, 1000)
@@ -67,5 +69,34 @@ defmodule Wotex.Thread.SdkDatasetTest do
                "1",
                "get_dataset"
              )
+  end
+
+  test "WTH-V05 formation failure state is validated and never accepted on unrelated operations" do
+    state = %{
+      "role" => "disabled",
+      "network_name" => nil,
+      "rloc16" => nil,
+      "ipv6_enabled" => false,
+      "thread_enabled" => false,
+      "generation" => 1
+    }
+
+    frame = %{
+      "version" => 1,
+      "id" => "1",
+      "ok" => false,
+      "error" => %{"code" => "remote_error", "status" => 253, "state" => state}
+    }
+
+    assert {:error, %Error{details: %{status: 253, state: %Wotex.Thread.State{role: :disabled}}}} =
+             Frame.response(frame, "1", "form_network")
+
+    assert :invalid = Frame.response(frame, "1", "state")
+
+    assert :invalid =
+             Frame.response(put_in(frame, ["error", "state", "role"], "bad"), "1", "form_network")
+
+    assert :invalid =
+             Frame.response(put_in(frame, ["error", "extra"], "secret"), "1", "form_network")
   end
 end

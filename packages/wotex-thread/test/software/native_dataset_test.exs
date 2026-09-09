@@ -109,6 +109,33 @@ defmodule Wotex.Thread.NativeDatasetTest do
     refute File.exists?("/sys/class/net/wthdataset")
   end
 
+  @tag requirements: ["WTH-S04", "WTH-C03", "WTH-C04"], vectors: ["WTH-V05"]
+  test "explicit formation waits for a real SDK leader and refuses to overwrite its Dataset",
+       context do
+    options = Keyword.put(context.options, :allow_network_creation, true)
+    assert {:ok, session} = Thread.connect(options)
+    active = dataset(:active)
+
+    assert {:ok, %State{role: :leader, ipv6_enabled: true, thread_enabled: true}} =
+             Thread.form_network(session, active, 30_000)
+
+    assert {:ok, ^active} = Thread.get_dataset(session, :active, 1000)
+
+    assert {:ok, %State{role: :disabled}} =
+             Thread.set_enabled(session, %{ipv6: false, thread: false}, 1000)
+
+    assert {:error,
+            %Error{
+              code: :dataset_exists,
+              effect: :unknown,
+              details: %{state: %State{role: :disabled}}
+            }} = Thread.form_network(session, active, 1000)
+
+    assert {:ok, ^active} = Thread.get_dataset(session, :active, 1000)
+    assert :ok = Thread.disconnect(session)
+    refute File.exists?("/sys/class/net/wthdataset")
+  end
+
   defp dataset(kind) do
     entries = [
       {0, <<0, 0, 15>>},
