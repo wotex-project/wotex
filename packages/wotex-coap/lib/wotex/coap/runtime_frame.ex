@@ -40,15 +40,22 @@ defmodule Wotex.CoAP.RuntimeFrame do
   @doc false
   @spec error(term()) :: Error.t()
   def error(%Error{code: code, field: field, details: details} = error)
-      when map_size(error) == 6 and is_atom(code) and (is_nil(field) or is_atom(field)) and
+      when map_size(error) == 7 and is_atom(code) and (is_nil(field) or is_atom(field)) and
              is_map(details) and map_size(details) <= 8 and is_boolean(error.retryable) and
              error.effect in [:none, :unknown] do
-    if Enum.all?(details, fn {key, value} ->
-         key in [:code, :reason, :limit] and (is_atom(value) or is_integer(value))
-       end),
+    if valid_details?(details) and
+         error == Error.with_effect(Error.new(code, field, details), error.effect),
        do: error,
        else: Error.new(:invalid_runtime_frame)
   end
 
   def error(_), do: Error.new(:invalid_runtime_frame)
+
+  defp valid_details?(details) when not is_struct(details) do
+    Enum.all?(details, fn {key, value} ->
+      key in [:code, :reason, :limit] and (is_atom(value) or is_integer(value))
+    end)
+  end
+
+  defp valid_details?(_), do: false
 end

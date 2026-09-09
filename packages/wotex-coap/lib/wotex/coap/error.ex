@@ -8,6 +8,10 @@ defmodule Wotex.CoAP.Error do
   be `:unknown` when a transport or acknowledgment failure prevents that
   conclusion.
 
+  `class` is the finite retry category retained by Wotex Runtime. An uncertain
+  mutation is always permanent and non-retryable, including when a consumer
+  declares the operation idempotent. This value never schedules a retry.
+
   `new/3` is the common constructor for message validation, codecs, blockwise
   transfer, Form mapping, connection handling, and Runtime adaptation. It lets
   consumers branch on structured data instead of parsing exceptions or socket
@@ -16,11 +20,12 @@ defmodule Wotex.CoAP.Error do
   """
 
   @enforce_keys [:code]
-  defstruct [:code, :field, details: %{}, retryable: false, effect: :none]
+  defstruct [:code, :field, class: nil, details: %{}, retryable: false, effect: :none]
 
   @typedoc "A bounded failure; `:unknown` effect means a write may have reached its peer."
   @type t :: %__MODULE__{
           code: atom(),
+          class: :timeout | :unavailable | :rate_limited | :protocol | :permanent | nil,
           field: atom() | nil,
           details: map(),
           retryable: boolean(),
@@ -30,5 +35,85 @@ defmodule Wotex.CoAP.Error do
   @doc "Builds a failure from library-owned codes and non-secret details."
   @spec new(atom(), atom() | nil, map()) :: t()
   def new(code, field \\ nil, details \\ %{}),
-    do: %__MODULE__{code: code, field: field, details: details}
+    do: %__MODULE__{code: code, field: field, details: details, class: classify(code, details)}
+
+  @doc "Retains native effect evidence while preventing retries of uncertain mutations."
+  @spec with_effect(t(), :none | :unknown) :: t()
+  def with_effect(%__MODULE__{} = error, :unknown),
+    do: %{error | effect: :unknown, retryable: false, class: :permanent}
+
+  def with_effect(%__MODULE__{} = error, :none),
+    do: %{error | effect: :none, class: classify(error.code, error.details)}
+
+  defp classify(code, _) when code in [:timeout, :deadline_exceeded, :cleanup_timeout],
+    do: :timeout
+
+  defp classify(:transport_error, %{reason: :timeout}), do: :timeout
+
+  defp classify(code, _)
+       when code in [
+              :connection_closed,
+              :socket_failed,
+              :datagram_failed,
+              :transport_error,
+              :exchange_unavailable
+            ],
+       do: :unavailable
+
+  defp classify(code, _) when code in [:busy, :observation_active], do: :rate_limited
+
+  defp classify(code, _)
+       when code in [
+              :invalid_header,
+              :invalid_response,
+              :invalid_runtime_frame,
+              :invalid_transport_return,
+              :remote_response,
+              :reset,
+              :invalid_block,
+              :block_out_of_order,
+              :invalid_block_payload,
+              :incomplete_response,
+              :content_format_mismatch,
+              :unexpected_content_format,
+              :invalid_observation_response,
+              :invalid_cancellation_response,
+              :representation_changed,
+              :overlapping_event_report,
+              :unsupported_critical_option,
+              :duplicate_option,
+              :invalid_option_length,
+              :empty_payload_marker
+            ],
+       do: :protocol
+
+  defp classify(code, _)
+       when code in [
+              :invalid_form,
+              :invalid_options,
+              :invalid_request,
+              :invalid_session,
+              :invalid_security,
+              :unsupported_security,
+              :security_handshake_failed,
+              :invalid_transport_context,
+              :not_supported,
+              :unsupported_profile,
+              :invalid_host,
+              :invalid_port,
+              :invalid_timeout,
+              :invalid_ack_timeout,
+              :invalid_execution,
+              :invalid_observation_options,
+              :invalid_subscription,
+              :invalid_discovery_request,
+              :invalid_block_size,
+              :invalid_datagram_config,
+              :invalid_datagram_handle,
+              :invalid_datagram,
+              :ssl_not_started
+            ],
+       do: :permanent
+
+  defp classify(_, _), do: nil
 end

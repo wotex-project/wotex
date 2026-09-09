@@ -31,8 +31,15 @@ replayed and tampered-record outcomes and bounded cleanup. This does not claim
 continued service after every malformed DTLS record or a complete certificate
 chain-depth fault matrix.
 
+`runtime_error_test.exs` executes the I04 finite class/retry table and concrete
+integration cases F02–F07 through real ConsumedThing calls. A separate loopback
+UDP test transmits read/write requests and proves that an uncertain mutation
+stays permanent through Runtime even with explicit idempotence. Native effect
+and diagnostic details are not retained in Runtime causes. These assertions do
+not accept the still-unexecuted F01 profile-factory case or secure Runtime modes.
+
 Independent PKI tests under development are not committed peer acceptance.
-Runtime DTLS credentials/profiles, Error.class, OSCORE known-answer/replay/store
+Runtime DTLS credentials/profiles, OSCORE known-answer/replay/store
 fault tests, native helper ownership and complete stress/matrix closure remain
 required by [the ordered plan](../plans/software-implementation.md).
 

@@ -873,7 +873,8 @@ defmodule Wotex.CoAP.Connection do
 
   defp effect({:error, error}, message, sent),
     do:
-      {:error, %{error | effect: if(sent and message.code in [2, 3, 4], do: :unknown, else: :none)}}
+      {:error,
+       Error.with_effect(error, if(sent and message.code in [2, 3, 4], do: :unknown, else: :none))}
 
   defp effect(result, _, _), do: result
 

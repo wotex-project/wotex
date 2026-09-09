@@ -342,7 +342,7 @@ defmodule Wotex.CoAP.Blockwise do
   defp success(_), do: failure(:invalid_response)
 
   defp effect({:error, error}, code) when code in [2, 3, 4],
-    do: {:error, %{error | effect: :unknown}}
+    do: {:error, Error.with_effect(error, :unknown)}
 
   defp effect(result, _), do: result
   defp failure(code), do: {:error, Error.new(code)}
