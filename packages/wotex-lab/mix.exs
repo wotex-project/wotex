@@ -31,7 +31,10 @@ defmodule WotexLab.MixProject do
       docs: docs(),
       test_coverage: [tool: ExCoveralls],
       hex: [ignore_advisories: @acknowledged_advisories],
-      dialyzer: [plt_file: {:no_warn, "priv/plts/dialyxir.plt"}]
+      dialyzer: [
+        plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
+        plt_add_apps: [:mix, :ex_unit]
+      ]
     ]
   end
 

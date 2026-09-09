@@ -91,7 +91,8 @@ defmodule Wotex.Lab.Test.Greptime do
         raise "GreptimeDB expected #{count} rows for #{metric}, got #{inspect(fewer, limit: 10)}"
 
       _ ->
-        Process.sleep(100) && await_rows(greptime, metric, labels, count, attempts - 1)
+        Process.sleep(100)
+        await_rows(greptime, metric, labels, count, attempts - 1)
     end
   end
 

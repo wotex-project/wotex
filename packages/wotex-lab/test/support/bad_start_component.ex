@@ -10,6 +10,10 @@ defmodule Wotex.Lab.Test.BadStartComponent do
   @impl Wotex.Lab.Plugin
   def capabilities, do: ["bad.start"]
 
+  # The invalid return is the fixture under test, so the callback type mismatch
+  # is expected and not reported.
+  @dialyzer {:nowarn_function, child_specs: 1}
+
   @impl Wotex.Lab.Plugin
   def child_specs(config) do
     case Keyword.fetch!(config, :failure) do

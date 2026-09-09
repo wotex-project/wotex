@@ -19,7 +19,7 @@ defmodule Wotex.Lab.Test.RemoteWriteServer do
 
     {:ok, server} =
       Bandit.start_link(
-        plug: {__MODULE__, controller},
+        plug: {__MODULE__, {:controller, controller}},
         ip: {127, 0, 0, 1},
         port: 0,
         startup_log: false
@@ -36,17 +36,24 @@ defmodule Wotex.Lab.Test.RemoteWriteServer do
   @spec await_requests(pid(), pos_integer(), pos_integer()) :: [map()]
   def await_requests(controller, count, attempts \\ 200) do
     case requests(controller) do
-      requests when length(requests) >= count -> requests
-      _ when attempts == 0 -> raise "expected #{count} remote-write requests"
-      _ -> Process.sleep(10) && await_requests(controller, count, attempts - 1)
+      requests when length(requests) >= count ->
+        requests
+
+      _ when attempts == 0 ->
+        raise "expected #{count} remote-write requests"
+
+      _ ->
+        Process.sleep(10)
+        await_requests(controller, count, attempts - 1)
     end
   end
 
   @impl Plug
-  def init(controller), do: controller
+  def init(opts), do: opts
 
   @impl Plug
-  def call(conn, controller), do: conn |> assign(:controller, controller) |> super(controller)
+  def call(conn, {:controller, controller} = opts),
+    do: conn |> assign(:controller, controller) |> super(opts)
 
   post "/v1/prometheus/write" do
     controller = conn.assigns.controller

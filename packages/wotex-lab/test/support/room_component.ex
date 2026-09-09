@@ -105,7 +105,12 @@ defmodule Wotex.Lab.Test.RoomComponent do
   def execute("echo", input, _), do: {:ok, input}
   def execute("seed", _, context), do: {:ok, context.seed}
   def execute("sum", _, context), do: {:ok, context.results |> Map.values() |> Enum.sum()}
-  def execute("sleep", ms, _) when is_integer(ms), do: Process.sleep(ms) && {:ok, ms}
+
+  def execute("sleep", ms, _) when is_integer(ms) do
+    Process.sleep(ms)
+    {:ok, ms}
+  end
+
   def execute("big", bytes, _) when is_integer(bytes), do: {:ok, :binary.copy("x", bytes)}
 
   def execute("write", name, context) do
