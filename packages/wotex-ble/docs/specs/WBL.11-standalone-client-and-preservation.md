@@ -3,14 +3,14 @@ spec:
   id: WBL.11
   title: "Standalone central and protocol workflows"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-ble
   updated: 2026-09-09
 ---
 
 # WBL.11 Standalone central and protocol workflows
 
-Specification version: `1.1.1`. Status: planned target, not implemented capability.
+Specification version: `1.1.2`. Status: planned target, not implemented capability.
 Requires [WBL.00](WBL.00-library-contract.md) and
 [WBL.10](WBL.10-software-contract.md). The baseline remains documented in
 [WBL.02](WBL.02-implemented-profile.md).
@@ -35,7 +35,7 @@ from the pinned BlueZ daemon's delayed link drain, tested separately in N03.
 | API | Exact contract |
 | --- | --- |
 | `Peer.new(%{adapter: path, address: text, address_type: type})` | `{:ok, %Peer{}}` or Error; adapter is an absolute D-Bus object path, address is six colon-separated hex octets normalized uppercase, type is `:public` or `:random`; reject names and unspecified type |
-| `connect(client: BlueZ, lifecycle: :persistent, peer: peer, connection: mode, bus_address: address, owner: pid, timeout: ms)` | `{:ok, %Session{}}` only after S02 ownership and ServicesResolved; explicit private/system bus address, no environment fallback; `mode` is `:owned` or `:borrowed` |
+| `connect(client: BlueZ, lifecycle: :persistent, peer: peer, connection: mode, bus_address: address, owner: pid, timeout: ms, executable: sdk, executable_sha256: sdk_hash, guardian: custody, guardian_sha256: custody_hash)` | `{:ok, %Session{}}` only after S02 ownership and ServicesResolved; explicit private/system bus address, no environment fallback; `mode` is `:owned` or `:borrowed`; both absolute executable paths and their hashes are mandatory under WBL.13 |
 | `discover(session, options)` | `{:ok, %{generation: integer, characteristics: [Characteristic.t()], cursor: binary_or_nil}}`; options allow `cursor` and `limit` (default 64, 1..64) only; bounded connected-peer snapshot, no radio scan |
 | `read(session, address, options)` | `{:ok, value}` or Error; options `value_type` (default `:bytes`), `byte_order` (default `:little`), `timeout`; raw bytes preserved when no codec selected |
 | `write(session, address, value, options)` | `{:ok, :written}` only after acknowledged WriteValue; same codec/options; no readback or write-without-response fallback |

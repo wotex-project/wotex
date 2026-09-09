@@ -92,6 +92,7 @@ defmodule Wotex.BLE.Error do
               :invalid_message,
               :invalid_object_path,
               :invalid_options,
+              :incompatible_backend,
               :invalid_peer,
               :invalid_request,
               :invalid_session,

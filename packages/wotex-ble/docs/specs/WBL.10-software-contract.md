@@ -3,7 +3,7 @@ spec:
   id: WBL.10
   title: "Complete BlueZ GATT central software profile"
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -349,3 +349,14 @@ boundary; label each as service-policy or wire evidence. Missing VHCI, BlueZ,
 peer or required response fails the selected software lane. An ordinary container
 without kernel support is not an acceptable skipped pass. Physical radios are
 unnecessary; virtual-controller evidence does not claim RF qualification.
+
+
+## Native executable admission
+
+Persistent native startup requires all four selectors: `executable` and
+`executable_sha256` for the SDK host, and `guardian` and `guardian_sha256` for its
+independent process guardian. Paths are absolute valid UTF-8 strings of at most
+4096 bytes without NUL; hashes are exactly 64 lowercase hexadecimal characters.
+Pure option validation performs no filesystem access. Both executable identities
+must pass WBL.13 admission within the original startup deadline before either
+process starts. The consumer keeps deployment files immutable through execution.

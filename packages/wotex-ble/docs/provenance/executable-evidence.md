@@ -439,3 +439,17 @@ owns and reaps this direct, non-forking SDK child; runtime guardian process-grou
 custody has its separate fault corpus. This evidence does not establish native
 artifact admission, BEAM native selection, Runtime report flow or virtual ATT
 interoperability.
+
+
+## Native executable identity admission
+
+`test/wotex/ble/native_artifacts_test.exs` executes pure selector construction
+and bounded verification of temporary executable files. WBL-B-F64 through
+WBL-B-F67 cover the exact four selectors and missing, duplicate and malformed
+fields without file lookup. ExUnit cases cover independent SDK/guardian digests,
+field-specific missing and mismatched errors, descriptor-backed multi-chunk
+hashing, final symlink and permission rejection, empty and oversized sparse
+files, deadline equality and deployment replacement between explicit checks.
+The deterministic module example is a real doctest. Verification starts no
+process; integration with the BEAM native startup owner remains a separate
+acceptance obligation.

@@ -3048,6 +3048,148 @@
           "snapshot_calls": 0
         }
       }
+    },
+    {
+      "id": "WBL-B-F64",
+      "requirements": [
+        "WBL-B01"
+      ],
+      "operation": "native_artifact_selectors",
+      "status": "specified",
+      "input": {
+        "selectors": [
+          [
+            "executable",
+            "/missing/bluez-native"
+          ],
+          [
+            "executable_sha256",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "guardian",
+            "/missing/custody"
+          ],
+          [
+            "guardian_sha256",
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ]
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": true
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F65",
+      "requirements": [
+        "WBL-B01"
+      ],
+      "operation": "native_artifact_selectors",
+      "status": "specified",
+      "input": {
+        "selectors": [
+          [
+            "executable",
+            "/missing/bluez-native"
+          ],
+          [
+            "executable_sha256",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "guardian",
+            "/missing/custody"
+          ]
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false,
+          "code": "invalid_options",
+          "field": "native_artifacts"
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F66",
+      "requirements": [
+        "WBL-B01"
+      ],
+      "operation": "native_artifact_selectors",
+      "status": "specified",
+      "input": {
+        "selectors": [
+          [
+            "executable",
+            "/missing/bluez-native"
+          ],
+          [
+            "executable_sha256",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "guardian",
+            "/missing/custody"
+          ],
+          [
+            "guardian_sha256",
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          [
+            "executable",
+            "/missing/bluez-native"
+          ]
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false,
+          "code": "invalid_options",
+          "field": "native_artifacts"
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F67",
+      "requirements": [
+        "WBL-B01"
+      ],
+      "operation": "native_artifact_selectors",
+      "status": "specified",
+      "input": {
+        "selectors": [
+          [
+            "executable",
+            "/missing/bluez-native"
+          ],
+          [
+            "executable_sha256",
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          ],
+          [
+            "guardian",
+            "/missing/custody"
+          ],
+          [
+            "guardian_sha256",
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ]
+        ]
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "accepted": false,
+          "code": "invalid_options",
+          "field": "native_artifacts"
+        }
+      }
     }
   ],
   "executed_cases": [

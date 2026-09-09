@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.17
+  version: 1.0.18
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -806,3 +806,43 @@ actual ready frame, complete discovery page where applicable, process status,
 snapshot/Disconnect counters and independent NameHasOwner checks for the
 released client sender and retained service sender. No sender identity is
 fabricated or normalized into a success value.
+
+
+## Explicit native artifact selectors
+
+The persistent native selector set contains exactly `executable`,
+`executable_sha256`, `guardian` and `guardian_sha256`. Pure construction accepts
+keyword options or revalidates the corresponding typed selector value. Missing,
+extra, duplicate, malformed and forged fields return `invalid_options` with
+field `native_artifacts`; this phase performs no filesystem I/O. Paths and digest
+strings use WBL.10's exact bounds. Inspection exposes digests, never paths.
+
+Explicit verification reads the SDK and guardian sequentially under one supplied
+signed-64 BEAM monotonic millisecond deadline. Deadline equality is expired and
+returns `timeout`. Each file must be a nonempty executable regular file of at
+most 67,108,864 bytes; a final symlink is not admitted. Missing, unreadable,
+non-executable, oversized or non-regular files return `transport_unavailable`.
+SHA-256 hashing uses 65,536-byte chunks and checks the original deadline before
+each read and after final identity validation. No descriptor remains open after
+verification.
+
+Admission compares inode, device, size, mode, modification time and change time
+between the initial lstat, the opened descriptor before and after hashing, and
+final lstat. A digest or identity mismatch returns `incompatible_backend` with
+permanent classification. The error field is `executable` or `guardian`; no path,
+file content or operating-system diagnostic enters details. Both verifications
+must succeed before any native process is started. A monitored startup worker
+must retain the original owner and deadline while filesystem work is pending.
+
+These checks require immutable consumer deployment files. Later path-based
+execution is not atomic against adversarial replacement, including mutation by
+another process of the same operating-system user. System loader and dynamic
+library identity remain explicit deployment and build-manifest concerns.
+Verification does not provide a signature or independent build-provenance claim.
+
+`native_artifact_selectors` vectors WBL-B-F64 through WBL-B-F67 encode keyword
+options as ordered `[name, value]` pairs, preserving duplicates. The runner maps
+only the four declared names to their fixed atoms and invokes pure construction.
+The exact result is `accepted: true`, or `accepted: false` with the fixed code
+and field. The nonexistent fixture paths are intentional: accepted selector
+syntax proves no filesystem or executable availability.
