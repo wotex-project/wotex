@@ -41,9 +41,15 @@ defmodule Wotex.Lab.Check.ApiSurface do
       "package" => "wotex_lab",
       "version" => to_string(Application.spec(:wotex_lab, :vsn)),
       "compatibility_status" => "pre-1.0-review-baseline",
-      "modules" => modules |> Enum.sort() |> Enum.map(&module_surface/1)
+      "modules" =>
+        modules |> Enum.reject(&support_module?/1) |> Enum.sort() |> Enum.map(&module_surface/1)
     }
   end
+
+  # Test support is compiled into the application under MIX_ENV=test and is not
+  # part of the reviewed public API.
+  defp support_module?(module),
+    do: String.starts_with?(Atom.to_string(module), "Elixir.Wotex.Lab.Test.")
 
   defp module_surface(module) do
     Code.ensure_loaded!(module)
