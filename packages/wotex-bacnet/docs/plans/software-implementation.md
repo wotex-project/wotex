@@ -43,6 +43,10 @@ for every requirement family. Evidence includes its exact source and corpus SHA.
    `mix wotex.software.run --workspace ABS` with the exact workspace/manifest
    contract below. Existing shell scripts remain read/write fixture entry points;
    their existence does not satisfy the Mix task contract.
+   The [command guardian](../../test/interop/native/README.md) supplies bounded
+   process-group ownership and workspace leases. Its fifteen ExUnit cases and
+   eight standalone native cases cover local command faults; container ownership
+   and the complete Mix workflow require their own evidence.
    `Dockerfile.software` is the instrumented normal/sanitizer build recipe.
    The shared selection excludes `peer_shutdown`; a separate owned peer runs
    `test/interop/cstack/shutdown_test.exs --include peer_shutdown` for CP25.

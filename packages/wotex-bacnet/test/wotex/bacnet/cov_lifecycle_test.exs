@@ -10,7 +10,10 @@ defmodule Wotex.BACnet.COVLifecycleTest do
   @fixture Jason.decode!(File.read!(Path.expand("../../fixtures/cov_lifecycle_v1.json", __DIR__)))
 
   setup context do
-    {:ok, peer} = :gen_udp.open(55_828, [:binary, active: false, ip: {127, 0, 0, 1}])
+    # The admission case holds all 64 requests before responding. Reserve enough
+    # peer receive capacity for that burst, including the kernel's UDP accounting.
+    {:ok, peer} =
+      :gen_udp.open(55_828, [:binary, active: false, ip: {127, 0, 0, 1}, recbuf: 262_144])
 
     {:ok, session} =
       BACnet.connect(
