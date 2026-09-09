@@ -3,6 +3,8 @@ defmodule Wotex.ThingDescriptionTest do
 
   use ExUnit.Case, async: true
 
+  doctest Wotex.SecurityReferences
+
   alias Wotex.{Error, ThingDescription}
 
   test "schema violations retain the failing field path without copying its value" do

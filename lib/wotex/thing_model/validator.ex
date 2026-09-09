@@ -1,5 +1,19 @@
 defmodule Wotex.ThingModel.Validator do
-  @moduledoc false
+  @moduledoc """
+  Validates a Thing Model using the bundled schema and local semantic passes.
+
+  After the `Wotex.ThingModel` value boundary admits JSON data, this module
+  combines schema failures with context, security-reference and model-reference
+  errors. A successful result preserves the original model. Local references
+  are checked within that model; remote references are admitted syntactically
+  without fetching or composing their targets.
+
+  `schema_info/0` identifies the upstream TD 1.1 Thing Model schema and the
+  bundled adaptation separately. Both are informative validation artifacts,
+  not certificates of conformance. Schema resolution happens at compilation;
+  validation starts no process and performs no runtime network access. The
+  options argument is reserved and currently does not change validation.
+  """
 
   alias Wotex.{Error, JSON, ModelReferences, SecurityReferences, ThingModel}
 

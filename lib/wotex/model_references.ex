@@ -1,5 +1,23 @@
 defmodule Wotex.ModelReferences do
-  @moduledoc false
+  @moduledoc """
+  Checks local references within a structurally admitted Thing Model.
+
+  `tm:optional` entries must identify existing Property, Action or Event
+  Affordances. Local `tm:ref` fragments must resolve in the supplied document;
+  remote references must have an absolute URI and a fragment. Remote targets
+  are never fetched or verified. Reference failures return `Wotex.Error` values
+  with the location of the declaration that failed.
+
+  The Thing Model validator composes this pass with schema and context checks.
+  Calling it alone does not validate a Thing Model, expand referenced models or
+  establish that a remote fragment contains a compatible definition. Recursive
+  map traversal sorts keys, while arrays keep their declared order.
+
+  ## Examples
+
+      iex> Wotex.ModelReferences.errors(%{"properties" => %{"temperature" => %{}}, "tm:optional" => ["/properties/temperature"]})
+      []
+  """
 
   alias Wotex.{Error, JSON}
 

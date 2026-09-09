@@ -3,6 +3,8 @@ defmodule Wotex.ThingModelTest do
 
   use ExUnit.Case, async: true
 
+  doctest Wotex.ModelReferences
+
   alias Wotex.{Error, ThingModel}
 
   test "schema violations retain the failing field path without copying its value" do

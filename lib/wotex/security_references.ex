@@ -1,5 +1,23 @@
 defmodule Wotex.SecurityReferences do
-  @moduledoc false
+  @moduledoc """
+  Checks whether declared security references name definitions in the same document.
+
+  Thing Description and Thing Model validators use this pass after structural
+  validation. It visits document-level security, top-level and affordance Forms,
+  and the `oneOf` and `allOf` members of combined security schemes. Undefined
+  names become `Wotex.Error` values with escaped JSON Pointer paths; declaration
+  order is retained for lists and map entries are visited in sorted order.
+
+  This pass checks references, not authentication or the meaning of a scheme.
+  It does not resolve credentials, fetch definitions, detect every possible
+  policy conflict, or replace schema validation. A document without a definition
+  map produces no errors here; the enclosing validator checks that shape.
+
+  ## Examples
+
+      iex> Wotex.SecurityReferences.errors(%{"securityDefinitions" => %{"public" => %{"scheme" => "nosec"}}, "security" => "public"})
+      []
+  """
 
   alias Wotex.{Error, JSON}
 

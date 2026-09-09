@@ -1,5 +1,19 @@
 defmodule Wotex.ValueSchema do
-  @moduledoc false
+  @moduledoc """
+  Validates standalone values against fragments of the bundled TD 1.1 schema.
+
+  The schema is loaded and resolved at compilation from the checked-in W3C
+  informative schema. Known fragments cover DataSchema, security schemes,
+  affordances and Forms; Forms additionally select a Property, Action, Event,
+  Thing or generic context. No runtime download or remote context resolution
+  occurs.
+
+  On a schema failure the module converts required-member errors to their own
+  JSON Pointer paths, sorts normalized failures and returns the first one as a
+  `Wotex.Error`. This is the schema stage used by concrete value constructors;
+  it does not replace JSON admission, complete-document semantic validation or
+  instance validation against an application DataSchema.
+  """
 
   alias Wotex.{Error, JSON}
 

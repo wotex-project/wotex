@@ -1,5 +1,19 @@
 defmodule Wotex.ThingDescription.Validator do
-  @moduledoc false
+  @moduledoc """
+  Combines pinned schema validation with Thing Description semantic checks.
+
+  The pass accepts a `Wotex.ThingDescription` produced by the value boundary.
+  It checks the bundled informative TD 1.1 schema, supported context ordering,
+  non-empty titles, exclusion of Thing Models and resolution of local security
+  references. Success returns the original value; failure returns schema errors
+  followed by the package's semantic errors, with JSON Pointer locations.
+
+  `schema_info/0` reports the exact upstream revision and bundled schema digest.
+  The schema is resolved during compilation. Validation neither fetches contexts
+  nor executes Forms, and passing this implementation's checks is not a claim
+  of certification or complete verification of every normative requirement.
+  The options argument is reserved and currently does not alter this pass.
+  """
 
   alias Wotex.{Error, JSON, SecurityReferences, ThingDescription}
 

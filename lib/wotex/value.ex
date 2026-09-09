@@ -1,5 +1,19 @@
 defmodule Wotex.Value do
-  @moduledoc false
+  @moduledoc """
+  Shares construction and Form extraction among Wotex value modules.
+
+  Affordance and DataSchema constructors delegate JSON admission, required-member
+  predicates and the selected TD 1.1 schema fragment to this helper. The admitted
+  map is retained as the value of the requested struct, including unknown
+  JSON-compatible extensions. Failure returns the first error from that sequence.
+  Consumers normally call the concrete value module's constructor.
+
+  Form extraction validates each declaration in its interaction context,
+  preserves declaration order and prefixes an error path with the Form index.
+  This helper assumes its module, predicates and schema kind come from trusted
+  library code. It does not choose modules from external input, select a binding
+  or invoke an interaction.
+  """
 
   alias Wotex.{Error, JSON, ValueSchema}
 
