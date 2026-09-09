@@ -125,11 +125,14 @@ re-registration is an explicit idempotent control operation, not write replay.
 
 Applies only to subscriptions listed in WBA.10. Native `subscribe/2` takes a
 validated request map with `receiver: pid` (default caller) and returns
-`{:ok, %Wotex.BACnet.Subscription{pid: pid, reference: ref, generation: gen}}` only after
+`{:ok, %Wotex.BACnet.Subscription{pid: pid, reference: ref, generation: gen, session_generation: session_gen}}` only after
 the protocol-specific establishment condition succeeds (a wire acknowledgment
 or successful SDK/listener registration, as specified in .10). The handle is
 opaque, generation-bound and redacted by Inspect. Validate handle field types
 and session/generation identity before protocol I/O.
+`session_generation` is an additional redacted reference binding cancellation
+to the original session. `generation` belongs to the individual subscription
+owner and ends when that owner stops; cancellation needs no immortal tombstones.
 A live owner rejects unknown references and foreign handles. Repeated cancellation
 of its recorded closed handle returns `:ok`. Once the recorded owning generation
 has terminated, cancellation of a well-formed handle for that generation returns

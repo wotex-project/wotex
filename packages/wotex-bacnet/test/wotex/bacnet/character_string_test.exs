@@ -68,10 +68,10 @@ defmodule Wotex.BACnet.CharacterStringTest do
 
     assert {:error, %{code: :value_limit}} = Tags.decode(:bad)
     assert {:error, %{code: :value_limit}} = Tags.decode(:binary.copy(<<0>>, 65_537))
-    assert {:ok, values} = Tags.decode(:binary.copy(<<0>>, 1024))
-    assert length(values) == 1024
-    assert {:error, _} = Tags.decode(:binary.copy(<<0>>, 1025))
-    assert {:ok, _} = Tags.decode(<<0x3E>> <> :binary.copy(<<0>>, 1023) <> <<0x3F>>)
+    assert {:ok, values} = Tags.decode(:binary.copy(<<0>>, 4096))
+    assert length(values) == 4096
+    assert {:error, _} = Tags.decode(:binary.copy(<<0>>, 4097))
+    assert {:ok, _} = Tags.decode(<<0x3E>> <> :binary.copy(<<0>>, 4095) <> <<0x3F>>)
     assert {:error, _} = Tags.decode(:binary.copy(<<0x3E>>, 9) <> :binary.copy(<<0x3F>>, 9))
 
     assert {:ok, [{:constructed, {3, {:character_string, string}, 0}}]} =

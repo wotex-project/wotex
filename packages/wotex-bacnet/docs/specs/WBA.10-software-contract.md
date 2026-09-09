@@ -97,11 +97,17 @@ On a dead borrowed Client, fail promptly; never start a replacement stack.
 
 Add native `subscribe(session, request)` and Client `subscribe/4`/`unsubscribe/3`
 from WBA-C01/C05. Request fields are `type: :cov | :cov_property`, concrete
-address fields, `receiver`, `confirmed` (Boolean, default true), `lifetime`
+address fields, required `device_instance` (integer 0..4194302), `receiver`, `confirmed` (Boolean, default true), `lifetime`
 (seconds, default 60, range 2..86400), `renew` (Boolean, default true),
-`max_queue_length`, and optional finite positive `cov_increment` only for
+`max_queue_length`, `duplicate_window_ms` (default 60000, range 1..60000), and optional finite positive `cov_increment` only for
 `:cov_property`. An object COV request omits property/array index; a Property COV
 request includes them. Subscription validation is separate from read addressing.
+The caller supplies the expected initiating device before registration; the first
+notification cannot establish or change it. Runtime may derive it only from the
+validated target/configuration association in WBA-I02. The [pinned C-stack COV
+codec](https://github.com/bacnet-stack/bacnet-stack/blob/3603048350b8ba543ec76cf6aa8a232b3f4d442d/src/bacnet/cov.c)
+encodes the initiating device separately from the monitored object; this required
+input is library correlation policy, not an inferred network identity.
 
 Allocate a 32-bit subscriber process identifier explicitly, unique among live
 subscriptions on this session/destination. Do not derive it from a PID or reuse
