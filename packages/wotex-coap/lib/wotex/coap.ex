@@ -15,6 +15,8 @@ defmodule Wotex.CoAP do
           multicast: false,
           qos_levels: [:at_most_once, ...],
           max_payload_size: 1152,
+          max_datagram_size: 1152,
+          max_body_size: 1_048_576,
           connection_oriented: false,
           supports_streaming: false,
           discovery_capable: false
@@ -27,6 +29,8 @@ defmodule Wotex.CoAP do
       multicast: false,
       qos_levels: [:at_most_once],
       max_payload_size: 1152,
+      max_datagram_size: 1152,
+      max_body_size: 1_048_576,
       connection_oriented: false,
       supports_streaming: false,
       discovery_capable: false

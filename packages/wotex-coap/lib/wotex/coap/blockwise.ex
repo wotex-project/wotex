@@ -7,42 +7,102 @@ defmodule Wotex.CoAP.Blockwise do
 
   @doc "Validates the explicit body, block size and exchange-count budgets."
   @spec config(term()) :: {:ok, map()} | {:error, Error.t()}
-  def config(opts) when is_list(opts) do
-    if Keyword.keyword?(opts) do
-      keys = Keyword.keys(opts)
-      size = Keyword.get(opts, :block_size, 512)
-      limit = Keyword.get(opts, :max_body_size, 1_048_576)
-      blocks = Keyword.get(opts, :max_blocks, 4096)
+  def config(opts) do
+    with {:ok, values} <- options(opts, %{}) do
+      size = Map.get(values, :block_size, 512)
+      limit = Map.get(values, :max_body_size, 1_048_576)
+      blocks = Map.get(values, :max_blocks, 4096)
 
-      if keys -- [:block_size, :max_body_size, :max_blocks] == [] and
-           length(keys) == MapSet.size(MapSet.new(keys)) and size in @sizes and
-           is_integer(limit) and limit in 1..1_048_576 and
-           is_integer(blocks) and blocks in 1..4096 do
-        {:ok, %{size: size, limit: limit, blocks: blocks}}
-      else
-        failure(:invalid_transfer_options)
-      end
-    else
-      failure(:invalid_transfer_options)
+      if size in @sizes and is_integer(limit) and limit in 1..1_048_576 and
+           is_integer(blocks) and blocks in 1..4096,
+         do: {:ok, %{size: size, limit: limit, blocks: blocks}},
+         else: failure(:invalid_transfer_options)
     end
   end
 
-  def config(_), do: failure(:invalid_transfer_options)
+  defp options([], values), do: {:ok, values}
+
+  defp options([{key, value} | rest], values)
+       when key in [:block_size, :max_body_size, :max_blocks] and not is_map_key(values, key),
+       do: options(rest, Map.put(values, key, value))
+
+  defp options(_, _), do: failure(:invalid_transfer_options)
 
   @doc "Runs an entire transfer without interleaving; the callback enforces one absolute deadline."
   @spec run(Message.t(), keyword(), state, (Message.t(), state -> {result(), state})) ::
           {result(), state}
         when state: var
-  def run(message, opts, state, exchange) do
+  def run(message, opts, state, exchange) when is_function(exchange, 2) do
     with {:ok, config} <- config(opts),
          :ok <- validate_request(message, config) do
-      context = %{exchange: exchange, state: state, left: config.blocks, config: config}
+      context = context(config, state, exchange)
       {result, context} = start(message, context)
       {effect(result, message.code), context.state}
     else
       error -> {error, state}
     end
   end
+
+  def run(_, _, state, _), do: {failure(:invalid_exchange), state}
+
+  @doc "Continues a first report with a distinct GET token, retaining the first report metadata."
+  @spec continue(Message.t(), Message.t(), keyword(), state, (Message.t(), state ->
+                                                                {result(), state})) ::
+          {result(), state}
+        when state: var
+  def continue(request, first, opts, state, exchange) when is_function(exchange, 2) do
+    with {:ok, config} <- config(opts),
+         :ok <- validate_continuation_request(request, first, config),
+         true <- request.token != first.token do
+      context = %{context(config, state, exchange) | first: first, left: config.blocks - 1}
+      {result, context} = download({:ok, first}, request, nil, <<>>, context)
+      {result, context.state}
+    else
+      false -> {failure(:continuation_token_conflict), state}
+      error -> {error, state}
+    end
+  end
+
+  def continue(_, _, _, state, _), do: {failure(:invalid_exchange), state}
+
+  @doc "Validates a first response and continuation request before session admission."
+  @spec validate_continuation(term(), term(), keyword()) :: :ok | {:error, Error.t()}
+  def validate_continuation(request, first, opts) do
+    with {:ok, config} <- config(opts),
+         do: validate_continuation_request(request, first, config)
+  end
+
+  defp validate_continuation_request(request, first, config) do
+    with :ok <- validate_request(request, config),
+         true <- request.code == 1 and request.payload == <<>>,
+         :ok <- Codec.validate_options(first),
+         {:ok, _} <- Codec.encode(first),
+         :ok <- success(first),
+         true <- first.code != 95 do
+      first_body(first, config)
+    else
+      false -> failure(:invalid_continuation)
+      error -> error
+    end
+  end
+
+  defp first_body(first, config) do
+    case Codec.option(first, 23) do
+      [] ->
+        if byte_size(first.payload) <= config.limit and within_size_limit?(first, config.limit),
+          do: :ok,
+          else: failure(:body_limit)
+
+      [_] ->
+        with {:ok, block} <- block(first, 23),
+             :ok <- representation(first, block, nil, config),
+             {:ok, _, _} <- Block.append(<<>>, block, first.payload, config.limit),
+             do: :ok
+    end
+  end
+
+  defp context(config, state, exchange),
+    do: %{exchange: exchange, state: state, left: config.blocks, config: config, first: nil}
 
   @doc "Validates a complete-body request before allocating any transport resources."
   @spec validate(term(), keyword()) :: :ok | {:error, Error.t()}
@@ -175,7 +235,7 @@ defmodule Wotex.CoAP.Blockwise do
       block.size > maximum ->
         failure(:invalid_block_size)
 
-      Enum.any?(Codec.option(reply, 28), &(:binary.decode_unsigned(&1) > config.limit)) ->
+      not within_size_limit?(reply, config.limit) ->
         failure(:body_limit)
 
       previous && identity(reply) != identity(previous.reply) ->
@@ -186,6 +246,9 @@ defmodule Wotex.CoAP.Blockwise do
     end
   end
 
+  defp within_size_limit?(reply, limit),
+    do: Enum.all?(Codec.option(reply, 28), &(:binary.decode_unsigned(&1) <= limit))
+
   defp identity(reply),
     do:
       {reply.code, Codec.option(reply, 4),
@@ -194,8 +257,8 @@ defmodule Wotex.CoAP.Blockwise do
   defp finish(reply, body, context) do
     with :ok <- success(reply),
          true <- reply.code != 95 do
-      if byte_size(body) <= context.config.limit do
-        {{:ok, %{drop_options(reply, [23, 27]) | payload: body}}, context}
+      if byte_size(body) <= context.config.limit and within_size_limit?(reply, context.config.limit) do
+        {{:ok, %{drop_options(context.first || reply, [23, 27]) | payload: body}}, context}
       else
         {failure(:body_limit), context}
       end
@@ -208,8 +271,27 @@ defmodule Wotex.CoAP.Blockwise do
   defp exchange(_, %{left: 0} = context), do: {failure(:block_limit), context}
 
   defp exchange(message, context) do
-    {result, state} = context.exchange.(message, context.state)
+    {result, state} = invoke(context.exchange, message, context.state)
     {result, %{context | state: state, left: context.left - 1}}
+  end
+
+  defp invoke(callback, message, state) do
+    case callback.(message, state) do
+      {{:ok, reply}, next} ->
+        with :ok <- Codec.validate_options(reply), {:ok, _} <- Codec.encode(reply) do
+          {{:ok, reply}, next}
+        else
+          error -> {error, next}
+        end
+
+      {{:error, %Error{}} = error, next} ->
+        {error, next}
+
+      _ ->
+        {failure(:invalid_exchange_result), state}
+    end
+  catch
+    _, _ -> {failure(:exchange_failed), state}
   end
 
   defp block(message, number) do

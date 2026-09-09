@@ -32,7 +32,8 @@ defmodule Wotex.CoAP.Codec do
 
   @doc "Encodes a validated message with canonical option ordering, retaining repeats."
   @spec encode(term()) :: {:ok, binary()} | {:error, Error.t()}
-  def encode(%Message{} = message) do
+  def encode(%Message{type: _, code: _, message_id: _, token: _, options: _, payload: _} = message)
+      when map_size(message) == 7 do
     with :ok <- valid(message),
          {:ok, options} <- encode_options(Enum.sort_by(message.options, &elem(&1, 0)), 0, []) do
       payload = if message.payload == <<>>, do: <<>>, else: <<255, message.payload::binary>>
@@ -77,7 +78,10 @@ defmodule Wotex.CoAP.Codec do
 
   @doc "Rejects unsupported critical options and duplicate nonrepeatable options."
   @spec validate_options(term()) :: :ok | {:error, Error.t()}
-  def validate_options(%Message{} = message) do
+  def validate_options(
+        %Message{type: _, code: _, message_id: _, token: _, options: _, payload: _} = message
+      )
+      when map_size(message) == 7 do
     with :ok <- valid(message), do: semantics(message.options)
   end
 

@@ -25,6 +25,12 @@ defmodule Wotex.CoAP.Connection do
   def transfer(pid, message, timeout, options \\ []),
     do: submit(pid, message, timeout, :transfer, options)
 
+  @doc "Assembles an already received first report under one bounded continuation deadline."
+  @spec continue(pid(), Message.t(), Message.t(), pos_integer(), keyword()) ::
+          {:ok, Message.t()} | {:error, Error.t()}
+  def continue(pid, request, first, timeout, options \\ []),
+    do: submit(pid, request, timeout, {:continue, first}, options)
+
   @doc "Closes only a validated local connection owner, with bounded cleanup escalation."
   @spec close(pid()) :: :ok | {:error, Error.t()}
   def close(pid) do
@@ -220,6 +226,9 @@ defmodule Wotex.CoAP.Connection do
 
   defp validate(message, :transfer, options), do: Blockwise.validate(message, options)
 
+  defp validate(message, {:continue, first}, options),
+    do: Blockwise.validate_continuation(message, first, options)
+
   defp validate(%Message{type: type, code: code} = message, :request, [])
        when type in [:con, :non] and code in 1..4 do
     with :ok <- Codec.validate_options(message), {:ok, _} <- Codec.encode(message), do: :ok
@@ -353,7 +362,7 @@ defmodule Wotex.CoAP.Connection do
       |> next()
     else
       owner = self()
-      token = unique_token(state.responses, 8)
+      token = unique_token(state.responses, 8, excluded_token(call.kind))
 
       case token do
         {:ok, token} ->
@@ -378,6 +387,9 @@ defmodule Wotex.CoAP.Connection do
       case call.kind do
         :transfer ->
           elem(Blockwise.run(call.message, call.options, nil, exchange), 0)
+
+        {:continue, first} ->
+          elem(Blockwise.continue(call.message, first, call.options, nil, exchange), 0)
 
         :request ->
           {result, _} = exchange.(call.message, nil)
@@ -606,13 +618,16 @@ defmodule Wotex.CoAP.Connection do
   defp remaining(deadline), do: max(0, deadline - System.monotonic_time(:millisecond))
   defp failure(code), do: {:error, Error.new(code)}
 
-  defp unique_token(_, 0), do: failure(:exchange_unavailable)
+  defp excluded_token({:continue, first}), do: first.token
+  defp excluded_token(_), do: nil
 
-  defp unique_token(responses, remaining) do
+  defp unique_token(_, 0, _), do: failure(:exchange_unavailable)
+
+  defp unique_token(responses, remaining, excluded) do
     token = :crypto.strong_rand_bytes(8)
 
-    if Enum.any?(responses, fn {{_, previous}, _} -> previous == token end),
-      do: unique_token(responses, remaining - 1),
+    if token == excluded or Enum.any?(responses, fn {{_, previous}, _} -> previous == token end),
+      do: unique_token(responses, remaining - 1, excluded),
       else: {:ok, token}
   end
 
