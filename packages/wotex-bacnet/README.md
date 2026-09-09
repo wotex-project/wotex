@@ -48,6 +48,13 @@ missing ACK and wrong object/property/index all fail. `Address` preserves array
 index zero and explicit priorities. `IPv4` owns the complete stack with zero APDU
 retries; `BACstack` borrows an already supervised Client and never stops it.
 
+The owned UDP transport admits at most eight datagrams across its complete
+receive pipeline. Credits return after client consumption; 100 milliseconds of
+credit starvation closes the stack with `:slow_consumer`. Borrowed Runtime COV
+requires `receive_policy: :wotex_bounded` and a verified live Wotex ingress
+transport. Native borrowed read/write defaults to `:consumer_managed` and makes
+no claim about the consumer's receive queues.
+
 ## Quick start
 
 ```elixir
@@ -80,8 +87,8 @@ configured destination. Discovery results never replace the configured route.
 
 Object and Property Change of Value (COV) subscriptions support finite leases,
 renewal, confirmed and unconfirmed reports, finite receiver queues, and cancellation.
-The complete consumption-based UDP ingress bound in WBA-S03a remains required;
-the current transport can forward faster than a suspended stack owner consumes.
+The WBA-S03a owned ingress bound covers suspended stack owners and clients;
+the consumption window also bounds packets waiting before the COV receiver.
 They require the owned `IPv4` client or a verified Wotex stack wrapper; a raw
 borrowed BACstack Client supports read/write operations only. Native and real
 Runtime lifecycle tests exercise COV ownership. Independent C-peer COV and the

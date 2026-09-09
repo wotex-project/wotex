@@ -14,11 +14,16 @@ defmodule Wotex.BACnet.StackOwner do
   owner sits in a larger supervision tree. Failure of the BACstack client stops
   the isolated group instead of silently creating a replacement connection or
   retrying a write.
+
+  The owned ingress transport carries eight receipt credits through this owner
+  to StackClient. Forwarding preserves each receipt and grants no credit.
+  Terminal ingress failure uses one finite cleanup worker to request OTP system
+  shutdown, including when this owner is suspended. That worker has no socket
+  or protocol operation and shares the group's cleanup deadline.
   """
   use GenServer
   alias BACnet.Stack.Segmentator
-  alias BACnet.Stack.Transport.IPv4Transport
-  alias Wotex.BACnet.{Error, SegmentsStore, StackClient}
+  alias Wotex.BACnet.{Error, IngressTransport, SegmentsStore, StackClient}
 
   @doc "Starts the explicit process group and unwinds partial startup failures."
   @spec start_link(keyword()) :: {:ok, pid()} | {:error, term()}
@@ -79,6 +84,16 @@ defmodule Wotex.BACnet.StackOwner do
     :ok
   end
 
+  @doc false
+  @spec shutdown_group(pid(), integer()) :: :ok
+  def shutdown_group(pid, deadline) do
+    :sys.replace_state(pid, &Map.put(&1, :cleanup_deadline, deadline), max(deadline - now(), 1))
+    :sys.terminate(pid, :normal, max(deadline - now(), 1))
+    :ok
+  catch
+    :exit, _ -> :ok
+  end
+
   @impl GenServer
   def init({opts, acquire}) do
     Process.flag(:trap_exit, true)
@@ -87,7 +102,7 @@ defmodule Wotex.BACnet.StackOwner do
     steps = [
       {:transport,
        fn _ ->
-         IPv4Transport.open(owner, local_ip: opts[:local_ip], bacnet_port: opts[:local_port])
+         IngressTransport.open(owner, local_ip: opts[:local_ip], bacnet_port: opts[:local_port])
        end},
       {:segmentator,
        fn _ -> Segmentator.start_link(apdu_retries: 0, apdu_timeout: opts[:timeout]) end},
@@ -99,7 +114,7 @@ defmodule Wotex.BACnet.StackOwner do
       {:client,
        fn group ->
          StackClient.start_link(
-           transport: {IPv4Transport, group.transport},
+           transport: {IngressTransport, group.transport},
            segmentator: group.segmentator,
            segments_store: group.segments_store,
            apdu_retries: 0,
@@ -110,16 +125,32 @@ defmodule Wotex.BACnet.StackOwner do
 
     case start_group(steps, %{}, acquire) do
       {:ok, group} ->
+        attach_group(group, opts)
+
+      {:error, _} ->
+        {:stop, Error.new(:startup_failed)}
+    end
+  end
+
+  defp attach_group(group, opts) do
+    case IngressTransport.attach(group.transport, group.client) do
+      {:ok, generation} ->
         {:ok,
          group
          |> Map.put(:monitor, Process.monitor(opts[:owner]))
          |> Map.put(:owner_pid, opts[:owner])
          |> Map.put(:session_monitor, nil)
-         |> Map.put(:portal, IPv4Transport.get_portal(group.transport))}
+         |> Map.put(:generation, generation)
+         |> Map.put(:portal, IngressTransport.get_portal(group.transport))}
 
       {:error, _} ->
+        cleanup(group)
         {:stop, Error.new(:startup_failed)}
     end
+  catch
+    :exit, _ ->
+      cleanup(group)
+      {:stop, Error.new(:startup_failed)}
   end
 
   @impl GenServer
@@ -144,10 +175,11 @@ defmodule Wotex.BACnet.StackOwner do
 
   @impl GenServer
   def handle_info(
-        {:bacnet_transport, {_, IPv4Transport}, _, {:apdu, _, _, bytes}, portal} = message,
-        %{portal: portal} = state
+        {:wotex_bacnet_datagram, generation, receipt,
+         {:bacnet_transport, {:bacnet_ipv4, IngressTransport}, _, _, portal}} = message,
+        %{portal: portal, generation: generation} = state
       )
-      when is_binary(bytes) and byte_size(bytes) <= 1476 do
+      when is_reference(receipt) do
     send(state.client, message)
     {:noreply, state}
   end

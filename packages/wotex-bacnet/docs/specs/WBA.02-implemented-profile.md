@@ -3,7 +3,7 @@ spec:
   id: WBA.02
   title: "Implemented BACnet profile"
   status: accepted
-  version: 1.0.0
+  version: 1.1.0
   owner: wotex-bacnet
   updated: 2026-09-09
 ---
@@ -65,11 +65,20 @@ conversion, and successful cleanup share one deadline. Native numeric error
 details remain available to direct callers; Runtime retains the finite class
 and code, and unknown-effect writes remain non-retryable.
 
-These native and Runtime behaviors have executable lifecycle tests. The current
-SDK-to-StackOwner receive path lacks S03a consumption-based credit flow; final
-receiver checks do not establish that upstream mailbox bound. Independent
-C-peer COV, the full discovery/batch/COV workflow, and final WBA-P06 evidence are
-still required; this section does not accept the complete target profile.
+These native and Runtime behaviors have executable lifecycle tests. The owned
+`IngressTransport` uses active-once sockets and eight consumption credits across
+StackOwner and StackClient, a 1536-byte datagram ceiling, and a 100 millisecond
+starvation deadline. Its counters preserve malformed, oversize and pre-service
+rejection distinctions. Socket loss and starvation release the owned group;
+in-flight writes retain unknown effect.
+
+Borrowed native sessions default to `receive_policy: :consumer_managed`.
+`:wotex_bounded` requires the version-three wrapper plus verification of its
+actual live transport and generation. Borrowed Runtime COV requires that mode.
+Local tests exercise each ingress corpus case, including 10000 maximum-size
+datagrams with StackOwner and StackClient suspended separately. Independent
+C-peer COV, the full discovery/batch/COV workflow and final WBA-P06 evidence
+remain required; this section does not accept the complete target profile.
 
 ## Evidence and compatibility
 

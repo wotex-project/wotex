@@ -22,7 +22,7 @@ defmodule Wotex.BACnet.StackClient do
   alias BACnet.Protocol.{APDU, NPCI}
   alias BACnet.Protocol.APDU.UnconfirmedServiceRequest
   alias BACnet.Stack.{Client, SegmentsStore}
-  alias Wotex.BACnet.{Error, InvokeIds, StackCOV, Tags}
+  alias Wotex.BACnet.{Error, IngressTransport, InvokeIds, StackCOV, Tags}
 
   @doc false
   @spec start_link(keyword()) :: GenServer.on_start()
@@ -30,8 +30,14 @@ defmodule Wotex.BACnet.StackClient do
 
   @impl GenServer
   def init(opts) do
-    with {:ok, sdk} <- Client.init(Map.put(opts, :disable_invoke_id_management, true)),
-         do: {:ok, %{sdk: sdk, cov: StackCOV.new(), calls: %{}, invoke_ids: InvokeIds.new()}}
+    with {:ok, sdk} <- Client.init(Map.put(opts, :disable_invoke_id_management, true)) do
+      ingress =
+        if sdk.transport_mod == IngressTransport,
+          do: %{pid: sdk.transport_pid, generation: IngressTransport.generation(sdk.transport_pid)}
+
+      {:ok,
+       %{sdk: sdk, cov: StackCOV.new(), calls: %{}, invoke_ids: InvokeIds.new(), ingress: ingress}}
+    end
   end
 
   @doc false
@@ -44,15 +50,39 @@ defmodule Wotex.BACnet.StackClient do
   end
 
   @doc false
-  @spec capabilities(pid(), pos_integer()) :: {:ok, [:cov | :discovery]} | {:error, Error.t()}
+  @spec capabilities(pid(), pos_integer()) ::
+          {:ok, [:cov | :discovery | :bounded_ingress]} | {:error, Error.t()}
   def capabilities(client, timeout) do
     case GenServer.call(client, {:wotex_client, :capabilities}, timeout) do
-      {:wotex_client, 1, :cov} -> {:ok, [:cov]}
-      {:wotex_client, 2, [:cov, :discovery]} -> {:ok, [:cov, :discovery]}
-      _ -> {:error, Error.new(:unsupported_stack_client)}
+      {:wotex_client, 1, :cov} ->
+        {:ok, [:cov]}
+
+      {:wotex_client, 2, [:cov, :discovery]} ->
+        {:ok, [:cov, :discovery]}
+
+      {:wotex_client, 3, [:cov, :discovery, :bounded_ingress]} ->
+        {:ok, [:cov, :discovery, :bounded_ingress]}
+
+      _ ->
+        {:error, Error.new(:unsupported_stack_client)}
     end
   catch
     :exit, _ -> {:error, Error.new(:unsupported_stack_client)}
+  end
+
+  @doc false
+  @spec ingress(pid(), pos_integer()) :: {:ok, map()} | {:error, Error.t()}
+  def ingress(client, timeout) do
+    with {__MODULE__, :init, 1} <- :proc_lib.translate_initial_call(client),
+         %{pid: transport, generation: generation} = proof <-
+           GenServer.call(client, {:wotex_client, :ingress}, timeout),
+         :ok <- IngressTransport.verify(transport, client, generation, timeout) do
+      {:ok, proof}
+    else
+      _ -> {:error, Error.new(:unbounded_receive_policy)}
+    end
+  catch
+    :exit, _ -> {:error, Error.new(:unbounded_receive_policy)}
   end
 
   @doc false
@@ -87,8 +117,13 @@ defmodule Wotex.BACnet.StackClient do
   end
 
   @impl GenServer
+  def handle_call({:wotex_client, :capabilities}, _, %{ingress: %{}} = state),
+    do: {:reply, {:wotex_client, 3, [:cov, :discovery, :bounded_ingress]}, state}
+
   def handle_call({:wotex_client, :capabilities}, _, state),
     do: {:reply, {:wotex_client, 2, [:cov, :discovery]}, state}
+
+  def handle_call({:wotex_client, :ingress}, _, state), do: {:reply, state.ingress, state}
 
   def handle_call(
         {:wotex_client, :discovery_send, destination,
@@ -181,6 +216,28 @@ defmodule Wotex.BACnet.StackClient do
   def handle_cast(message, state), do: delegate(Client.handle_cast(message, state.sdk), state)
 
   @impl GenServer
+  def handle_info(
+        {:wotex_bacnet_datagram, generation, receipt,
+         {:bacnet_transport, {:bacnet_ipv4, IngressTransport}, _, frame, portal} = message},
+        %{ingress: %{pid: transport, generation: generation}, sdk: %{transport_portal: portal}} =
+          state
+      )
+      when is_reference(receipt) do
+    result =
+      case frame do
+        {:apdu, _, _, bytes} when is_binary(bytes) and byte_size(bytes) <= 1476 ->
+          handle_info(message, state)
+
+        _ ->
+          {:noreply, state}
+      end
+
+    send(transport, {:wotex_bacnet_consumed, generation, receipt})
+    result
+  end
+
+  def handle_info({:wotex_bacnet_datagram, _, _, _}, state), do: {:noreply, state}
+
   def handle_info({:wotex_cov_expire, kind, ref}, state),
     do: {:noreply, %{state | cov: StackCOV.expire(state.cov, kind, ref, state.sdk)}}
 

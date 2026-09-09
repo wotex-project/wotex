@@ -195,6 +195,12 @@ defmodule Wotex.BACnet.COVOwner do
     do: close(state, Error.new(:connection_closed), deadline)
 
   def handle_info(
+        {:session_closing, session, deadline, %Error{} = error},
+        %{session: session} = state
+      ),
+      do: close(state, error, deadline)
+
+  def handle_info(
         {:cleanup_deadline, generation},
         %{handle: %{generation: generation}, phase: :closing} = state
       ),

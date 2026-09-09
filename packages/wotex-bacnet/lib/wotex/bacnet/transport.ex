@@ -49,6 +49,7 @@ defmodule Wotex.BACnet.Transport do
       )
       when is_pid(owner) and is_list(config) do
     with true <- valid_options?(config) and Process.alive?(owner),
+         :ok <- receive_policy(config),
          {:ok, deadline} <- budget(request.deadline, Keyword.get(config, :timeout, 5000)),
          {:ok, mapping} <-
            Mapping.command(request.form, :observeproperty, nil, request.resolved_href),
@@ -97,6 +98,13 @@ defmodule Wotex.BACnet.Transport do
   defp valid_options?(config) do
     Keyword.keyword?(config) and
       length(Keyword.keys(config)) == length(Enum.uniq(Keyword.keys(config)))
+  end
+
+  defp receive_policy(config) do
+    if Keyword.get(config, :client) == Wotex.BACnet.BACstack and
+         Keyword.get(config, :receive_policy) != :wotex_bounded,
+       do: {:error, Error.new(:unbounded_receive_policy)},
+       else: :ok
   end
 
   defp budget(deadline, max) when is_integer(max) and max in 1..60_000 do

@@ -38,7 +38,7 @@ The [WBA.12 integration contract](../specs/WBA.12-wotex-integration.md) and
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.
 
-The production runtime uses BACstack and owned BEAM transport. WBA-S03a fixes
+The production runtime uses BACstack and owned BEAM transport. WBA-S03a defines
 consumption-based UDP ingress and validated borrowed receive-policy limits.
 The native C stack is an independent software peer only. Required fixture tasks
 are `mix wotex.software.build --workspace ABS` and

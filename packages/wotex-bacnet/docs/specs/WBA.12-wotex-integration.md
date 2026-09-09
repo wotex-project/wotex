@@ -53,8 +53,9 @@ advertises a mode whose required implementation/evidence has not been admitted.
 Until a mode is implemented it returns unsupported. Mode availability is a static
 library-version decision; actual configured peer capabilities still fail explicitly.
 The current implementation exposes both modes with local Runtime evidence.
-Borrowed-stack ingress and the complete I04 retry corpus still require the
-additional acceptance cells in S03a and the plan.
+Borrowed-stack ingress has the S03a local capability and lifecycle evidence.
+The complete I04 retry corpus still requires the additional acceptance cells
+in the plan.
 
 | Mode | BindingProfile id | URI schemes | Exact operations | Stream meaning |
 | --- | --- | --- | --- | --- |

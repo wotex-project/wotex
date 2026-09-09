@@ -20,6 +20,12 @@ defmodule Wotex.BACnet.BACstack do
   Object and Property Change of Value subscriptions require that wrapper; Who-Is
   discovery also requires its discovery capability and an explicit destination.
   A raw borrowed BACstack Client does not provide those listener contracts.
+
+  `receive_policy: :consumer_managed` is the default for native borrowed use;
+  it does not bound the consumer's transport queues. `:wotex_bounded` verifies
+  the wrapper's live, generation-bound ingress transport before opening a
+  session. The Runtime COV transport requires that verified mode. Disconnect
+  removes the borrowed session's watch while retaining the consumer's stack.
   """
   @behaviour Wotex.BACnet.Client
   alias BACnet.Protocol.{APDU, Constants}
@@ -49,7 +55,7 @@ defmodule Wotex.BACnet.BACstack do
   def connect_owned(opts, stack) when is_pid(stack) do
     result =
       with {:ok, config} <- configuration(opts),
-           config <- %{config | stack_client_kind: :wotex},
+           config <- %{config | stack_client_kind: :wotex, receive_policy: :wotex_bounded},
            {:ok, config} <- verify_client(config),
            do: start_owner(%{config | owned_stack: stack})
 
@@ -72,17 +78,28 @@ defmodule Wotex.BACnet.BACstack do
   end
 
   defp verify_client(%{stack_client_kind: :wotex, client: client} = config) do
-    with {:ok, features} <- StackClient.capabilities(client, 100),
-         do: {:ok, Map.put(config, :stack_features, features)}
+    with {:ok, features} <- StackClient.capabilities(client, 100) do
+      verify_ingress(Map.put(config, :stack_features, features))
+    end
   end
 
-  defp verify_client(config), do: {:ok, Map.put(config, :stack_features, [])}
+  defp verify_client(config), do: verify_ingress(Map.put(config, :stack_features, []))
+
+  defp verify_ingress(%{receive_policy: :consumer_managed} = config), do: {:ok, config}
+
+  defp verify_ingress(%{stack_client_kind: :wotex} = config) do
+    with {:ok, ingress} <- StackClient.ingress(config.client, 100),
+         do: {:ok, Map.put(config, :ingress, ingress)}
+  end
+
+  defp verify_ingress(_), do: {:error, Error.new(:unbounded_receive_policy)}
 
   defp start_owner(config) do
     config = Map.put(config, :generation, make_ref())
 
     case OperationOwner.start_link(config) do
       {:ok, owner} -> {:ok, Map.put(config, :owner, owner)}
+      {:error, %Error{}} = error -> error
       _ -> {:error, Error.new(:startup_failed)}
     end
   end
@@ -133,6 +150,7 @@ defmodule Wotex.BACnet.BACstack do
       })
 
     receive_limits = Keyword.get(opts, :receive_limits)
+    receive_policy = Keyword.get(opts, :receive_policy, :consumer_managed)
     discovery = Keyword.get(opts, :discovery)
 
     if is_pid(client) and Process.alive?(client) and kind in [:bacstack, :wotex] and
@@ -140,6 +158,7 @@ defmodule Wotex.BACnet.BACstack do
          Wotex.BACnet.DiscoveryOptions.validate(discovery) == :ok and
          is_boolean(writes) and
          is_integer(timeout) and timeout in 1..60_000 and valid_peer?(peer) and
+         receive_policy in [:consumer_managed, :wotex_bounded] and
          receive_limits in [nil, %{max_apdu: 1476, max_segments: 32, max_bytes: 65_536}],
        do:
          {:ok,
@@ -150,6 +169,7 @@ defmodule Wotex.BACnet.BACstack do
             writes: writes,
             peer_receive: peer,
             receive_limits: receive_limits,
+            receive_policy: receive_policy,
             discovery: discovery,
             owned_stack: nil
           }},
@@ -491,6 +511,7 @@ defmodule Wotex.BACnet.BACstack do
         :timeout,
         :peer_receive,
         :receive_limits,
+        :receive_policy,
         :discovery
       ]
 

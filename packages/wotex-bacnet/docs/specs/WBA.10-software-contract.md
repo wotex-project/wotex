@@ -13,8 +13,8 @@ spec:
 Read [WBA.00](WBA.00-library-contract.md), [WBA.11 standalone client and preservation](WBA.11-standalone-client-and-preservation.md), and the [implementation sequence](../plans/software-implementation.md).
 This is the target profile. Current code implements typed read/write, strict ACK
 classification, explicit stack ownership, COV lifecycle, discovery, sequential
-helpers and Runtime observations. Complete ingress bounds and independent
-discovery/batch/COV software evidence remain required by the implementation plan.
+helpers, Runtime observations and consumption-based owned UDP ingress.
+Independent discovery/batch/COV software evidence remains required by the implementation plan.
 Current evidence is in [executable evidence](../provenance/executable-evidence.md).
 
 ## Scope and source authority
@@ -125,7 +125,8 @@ The owned stack uses a BEAM IPv4 transport with consumption-based rearming.
 The pinned SDK transport's active-ten socket setting is insufficient: its
 `handle_info/2` rearms before its downstream PID consumes forwarded messages.
 Final COV receiver queue sampling cannot bound that earlier mailbox. This cell
-is required implementation; current StackOwner forwarding does not satisfy it.
+is implemented by `IngressTransport`, `IngressWindow`, `StackOwner` and
+`StackClient`, with explicit receipt consumption.
 
 The selected boundary is a narrow package transport implementing BACstack's
 public `TransportBehaviour`, using reviewed pinned packet codecs. It preserves
@@ -157,7 +158,13 @@ messages, not guessed BACstack internals. Control, expiry and shutdown messages
 must remain responsive while data credit is exhausted.
 
 Credit starvation lasting 100 ms closes the owned group with `:slow_consumer`
-under the one C03 cleanup grace. Consumed credit never implies successful APDU
+under the one C03 cleanup grace. A single terminal cleanup worker requests
+system shutdown of the owned StackOwner, permitting cleanup while that owner is
+suspended and avoiding a stop-call cycle with the transport. It owns no network
+operation and shares the same absolute cleanup deadline; it is never a packet
+worker. Session watchers receive the terminal reason before transport shutdown.
+Socket-port monitors also fail the group promptly on actual socket closure.
+Consumed credit never implies successful APDU
 service handling. Invalid/oversize datagrams and application-level rejections
 have separate counters. Kernel UDP drops are reported only when an available OS
 counter supports them; an unavailable counter is recorded as unavailable, never
@@ -179,7 +186,7 @@ operations; their capability list does not imply bounded ingress. Raw
 borrowed SDK support remains read/write only and never owns the borrowed stack.
 
 [ingress-v1.json](fixtures/ingress-v1.json) defines the exact normalization and
-selected unexecuted traces. Software tests suspend StackOwner and StackClient separately, emit at least
+locally bound traces. Software tests suspend StackOwner and StackClient separately, emit at least
 10000 maximum-size datagrams continuously, and assert at most eight admitted
 packet references across the pipeline, one terminal error, saturated-safe counters,
 and zero owned socket/process/timer resources after cleanup. Tests also resume a

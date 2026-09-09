@@ -49,24 +49,34 @@ The standalone F01–F11 corpus has local pure/adapter bindings listed in WBA-N0
 Runtime I-F01 is bound to real ConsumedThing execution; I-F02–I-F07 still require
 the exact corpus projections in addition to existing Error/Retry unit tests.
 COV and Runtime lifecycle tests exercise the native BEAM wrapper over UDP fault
-peers. They do not establish independent C-stack COV or complete ingress bounds.
+peers. They do not establish independent C-stack COV.
 
 The checked-in `build_software.sh` and `run_software.sh` exercise the read/write
 fixture. They accept environment configuration and do not implement the target
 absolute-workspace admission or complete source/toolchain/binary manifest.
-The required Mix build/run tasks, S03a consumption-based UDP ingress, independent
+The required Mix build/run tasks, independent
 C-peer discovery/batch/COV/resource counters, and final software matrix/archive
 cohort remain required. A COV listener or final receiver queue bound does not
 bound an earlier SDK-to-StackOwner mailbox.
 
-`IngressWindow` and `IPv4Packet` have executable unit/property coverage for
-the S03a accounting and packet boundary: eight outstanding receipts, exact
-starvation deadline, duplicate/foreign consumption, saturated uint64 counters,
-1536-byte admission and malformed BVLL/NPCI. `ingress_window_test.exs` binds
-the accounting projections of IG01–IG03; `ipv4_packet_test.exs` exercises the
-pinned public codecs. These tests cover the primitives. Complete IG01–IG06
-transport, process-ownership and sustained-UDP projections require the owned
-transport integration and remain unexecuted in `ingress-v1.json`.
+The S03a receive pipeline has executable unit/property and local UDP tests.
+`ingress_window_test.exs` binds accounting projections of IG01–IG03 and
+`ipv4_packet_test.exs` exercises the pinned codecs. `ingress_lifecycle_test.exs`
+binds IG01–IG06 to actual transport handlers, owned process cleanup, verified
+borrowed capabilities and sustained UDP. For each separately suspended
+StackOwner/StackClient, 10000 datagrams of 1536 bytes produce a peak of eight
+outstanding receipts, zero armed sockets at exhaustion, one terminal
+`:slow_consumer` and released owned processes/socket. Counter saturation uses
+the actual transport handler; the 65507-byte deterministic input does not claim
+the host OS accepted that UDP payload size.
+
+Additional fault cases cover timer cancellation, forged acknowledgments,
+malformed datagrams, actual socket closure and a 64-session watcher ceiling.
+`ipv4_interface_test.exs` covers explicit IPv4 selection among multiple interface
+addresses without changing any host interface. Actual receive buffer sizes are
+recorded; kernel packet loss is unavailable through the selected portable inet
+API and is never reported as zero. These local tests do not replace the required
+Linux independent C-peer workflow, final supported matrix or complete C09 stress.
 
 ## Evidence identities
 

@@ -19,5 +19,5 @@ Implementation readiness does not mean implementation or conformance is complete
 - [WBA.12 Wotex integration and evidence contract](WBA.12-wotex-integration.md)
 - [Concrete Wotex integration corpus](fixtures/wotex-integration-v1.json) — specified assertions, not a passed profile
 
-- [Owned UDP ingress cases](fixtures/ingress-v1.json) — specified, unexecuted credit/lifecycle traces
+- [Owned UDP ingress cases](fixtures/ingress-v1.json) — local credit, lifecycle and sustained UDP bindings
 - [Software peer source identities](fixtures/software-sources-v1.json) — pinned sources, not a passed build

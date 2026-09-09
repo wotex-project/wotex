@@ -1,7 +1,7 @@
 {
   "format_version": "1.0.0",
   "specification": "WBA.10@1.1.0",
-  "execution_status": "specified_unexecuted",
+  "execution_status": "specified_with_local_bindings",
   "normalization": {
     "clock": "virtual monotonic milliseconds; deadline equality expires",
     "receipt": "runner substitutes fresh reference for each symbolic receipt, preserves it for consume events",

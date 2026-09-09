@@ -114,7 +114,7 @@ defmodule Wotex.BACnet.LifecycleStressTest do
         state.segmentator,
         state.segments_store
       ],
-      socket: state.portal
+      socket: elem(state.portal, 0)
     }
   end
 

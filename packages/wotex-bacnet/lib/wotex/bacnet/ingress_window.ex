@@ -22,13 +22,13 @@ defmodule Wotex.BACnet.IngressWindow do
   defstruct [:generation, :starved_at, outstanding: MapSet.new(), peak: 0, counters: %{}]
 
   @type reason :: :oversize | :malformed | :ignored_ack | :rejected | :self_packet | :socket_error
-  @opaque t :: %__MODULE__{
-            generation: reference(),
-            outstanding: MapSet.t(reference()),
-            starved_at: integer() | nil,
-            peak: non_neg_integer(),
-            counters: %{reason() => non_neg_integer()}
-          }
+  @type t :: %__MODULE__{
+          generation: reference(),
+          outstanding: MapSet.t(reference()),
+          starved_at: integer() | nil,
+          peak: non_neg_integer(),
+          counters: %{reason() => non_neg_integer()}
+        }
 
   @doc "Creates a finite receipt window for the supplied transport generation."
   @spec new(reference()) :: t()

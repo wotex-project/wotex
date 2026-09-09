@@ -19,7 +19,16 @@ defmodule Wotex.BACnet.OperationOwner do
 
   use GenServer
 
-  alias Wotex.BACnet.{BACstack, Batch, COVOwner, DiscoveryOwner, Error, StackOwner, Subscription}
+  alias Wotex.BACnet.{
+    BACstack,
+    Batch,
+    COVOwner,
+    DiscoveryOwner,
+    Error,
+    IngressTransport,
+    StackOwner,
+    Subscription
+  }
 
   @doc false
   @spec start_link(map()) :: GenServer.on_start()
@@ -114,19 +123,31 @@ defmodule Wotex.BACnet.OperationOwner do
   def init({config, owner}) do
     Process.flag(:trap_exit, true)
 
-    {:ok,
-     %{
-       config: config,
-       owner: Process.monitor(owner),
-       owner_pid: owner,
-       client: Process.monitor(config.client),
-       pending: %{},
-       subscriptions: %{},
-       controls: %{},
-       discovery: nil,
-       cleanup_deadline: nil
-     }}
+    case watch_ingress(config) do
+      :ok ->
+        {:ok,
+         %{
+           config: config,
+           owner: Process.monitor(owner),
+           owner_pid: owner,
+           client: Process.monitor(config.client),
+           pending: %{},
+           subscriptions: %{},
+           controls: %{},
+           discovery: nil,
+           cleanup_deadline: nil,
+           failure: :connection_closed
+         }}
+
+      {:error, error} ->
+        {:stop, error}
+    end
   end
+
+  defp watch_ingress(%{ingress: %{pid: transport, generation: generation}, client: client}),
+    do: IngressTransport.watch(transport, client, generation)
+
+  defp watch_ingress(_), do: :ok
 
   @impl GenServer
   def handle_call({:close, deadline}, _, state),
@@ -329,6 +350,13 @@ defmodule Wotex.BACnet.OperationOwner do
     end
   end
 
+  def handle_info(
+        {:wotex_bacnet_transport_closed, transport, generation, reason, deadline},
+        %{config: %{ingress: %{pid: transport, generation: generation}}} = state
+      )
+      when reason in [:slow_consumer, :transport_exit] and is_integer(deadline),
+      do: {:stop, :normal, %{state | failure: reason, cleanup_deadline: deadline}}
+
   def handle_info({:DOWN, reference, :process, _, _}, %{owner: reference} = state),
     do: {:stop, :normal, state}
 
@@ -387,7 +415,7 @@ defmodule Wotex.BACnet.OperationOwner do
   def terminate(_, state) do
     Enum.each(state.pending, fn {_, operation} ->
       stop_worker(operation)
-      GenServer.reply(operation.from, operation_failure(:connection_closed, operation))
+      GenServer.reply(operation.from, operation_failure(state.failure, operation))
     end)
 
     deadline =
@@ -580,7 +608,7 @@ defmodule Wotex.BACnet.OperationOwner do
 
   defp close_subscriptions(state, deadline) do
     Enum.each(state.subscriptions, fn {pid, _} ->
-      send(pid, {:session_closing, self(), deadline})
+      send(pid, {:session_closing, self(), deadline, Error.new(state.failure)})
     end)
 
     Enum.each(state.subscriptions, fn {pid, subscription} ->

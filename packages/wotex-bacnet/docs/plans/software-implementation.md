@@ -18,13 +18,13 @@ commits, each with focused tests and a passing complete local gate.
 | Package | Required behavior | Existing local evidence | Remaining acceptance |
 | --- | --- | --- | --- |
 | WBA-P01 | S01/S02; V01–V04: typed values, original CharacterString identity, exact ACK/error classification, segmentation limits | service_boundary_test.exs, character_string_test.exs | Retain full malformed/segmentation regression; execute it in final exact-source cohort |
-| WBA-P02 | S03; V05/V14: reverse acquisition cleanup, 64-operation admission, final caller/deadline check, borrowed stack retention | stack_lifecycle_test.exs, stack_cov_test.exs, invoke_ids_test.exs | S03a ingress extends this ownership boundary in P06; current downstream queue checks are insufficient |
+| WBA-P02 | S03; V05/V14: reverse acquisition cleanup, 64-operation admission, final caller/deadline check, borrowed stack retention | stack_lifecycle_test.exs, stack_cov_test.exs, invoke_ids_test.exs | S03a ingress has IG01–IG06 local bindings; retain these in the final supported software cohort |
 | WBA-P03 | S04; V06–V08: typed object/Property COV, initiator/selector correlation, exact confirmed receipt ACK and early report buffering | cov_test.exs, cov_boundary_test.exs, stack_cov_test.exs, native_subscription_test.exs | Independent confirmed/unconfirmed C peer evidence in P06 |
 | WBA-P04 | S04; V09–V11: finite leases, renewal, encoded cancellation, receiver death, overflow and terminal-once cleanup | cov_lifecycle_test.exs, cov_cache_test.exs, native_subscription_test.exs | Independent server subscriber-count/retry/lost-ACK evidence and 100 receiver-death cycles in P06 |
-| WBA-P05 | S05; V12: Runtime Property COV and explicit read probe | runtime_stream_test.exs, runtime_frame_test.exs, runtime_integration_test.exs | Re-run final-owner pending-open/worker-handoff boundary through public Runtime; P06 adds verified ingress admission |
+| WBA-P05 | S05; V12: Runtime Property COV and explicit read probe | runtime_stream_test.exs, runtime_frame_test.exs, runtime_integration_test.exs | Re-run final-owner pending-open/worker-handoff boundary through public Runtime; verified ingress admission is exercised by ingress_lifecycle_test.exs |
 | WBA-P05a | N01–N05: native helpers, bounded Who-Is/I-Am, sequential 1..64 Property reads | F01–F11 corpus bindings listed in WBA-N05; standalone_contract_test.exs, discovery_lifecycle_test.exs | Independent complete discovery/route/batch/write/readback/release/COV workflow in P06 |
 | WBA-P05b | I01–I06: exact profiles, route/value/error/Retry and consumer ownership | runtime_integration_test.exs binds I-F01; error_class_test.exs and runtime_stream_test.exs assert additional local behavior | Bind I-F02–I-F07 to actual native Error -> Runtime cause -> Retry projections; assert all I06 security/media/context/stream cells, no fixture echo |
-| WBA-P06 | S01–S05/S03a/N01–N05/I01–I06/C09; V13/V14: bounded owned UDP ingress and full independent software acceptance | cstack_test.exs and lifecycle_stress_test.exs cover read/write, 1000 sequential reads, 32 concurrent reads and 100 owned stack cycles | Implement the ordered ingress/tooling/peer/final-cohort stages below; the read/write fixture does not accept COV/discovery or the full profile |
+| WBA-P06 | S01–S05/S03a/N01–N05/I01–I06/C09; V13/V14: bounded owned UDP ingress and full independent software acceptance | cstack_test.exs and lifecycle_stress_test.exs cover read/write, 1000 sequential reads, 32 concurrent reads and 100 owned stack cycles | Ingress has local unit/UDP evidence; implement the tooling/peer/final-cohort stages below; the read/write fixture does not accept COV/discovery or the full profile |
 
 Test filenames without a directory are under `test/wotex/bacnet/`; independent
 peer tests are under `test/interop/` and stress tests under `test/software/`.
@@ -33,11 +33,11 @@ for every requirement family. Evidence includes its exact source and corpus SHA.
 
 ## WBA-P06 implementation order
 
-1. Implement S03a using BACstack's public TransportBehaviour and reviewed pinned
-   packet codecs. Preserve explicit destination/interface behavior and service
-   bytes. Add consumption credits across transport/StackOwner/StackClient,
-   starvation termination, bounded counters, and validated borrowed receive-policy
-   capability. Tests at `test/wotex/bacnet/ingress_lifecycle_test.exs` bind every
+1. S03a uses BACstack's public TransportBehaviour and reviewed pinned packet
+   codecs. IngressTransport, StackOwner and StackClient preserve receipt identity
+   and grant credits only after consumption. Local tests cover starvation, socket
+   loss, saturated counters and verified borrowed receive policy. Retain these
+   assertions in the final supported cohort. Tests at `test/wotex/bacnet/ingress_lifecycle_test.exs` bind every
    [ingress-v1.json](../specs/fixtures/ingress-v1.json) trace and sustained software-UDP observations.
 2. Implement `mix wotex.software.build --workspace ABS` and
    `mix wotex.software.run --workspace ABS` with the exact workspace/manifest

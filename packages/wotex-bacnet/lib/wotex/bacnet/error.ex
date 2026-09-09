@@ -62,7 +62,7 @@ defmodule Wotex.BACnet.Error do
   defp classification(code) when code in [:connection_closed, :connection_failed, :transport_exit],
     do: :unavailable
 
-  defp classification(code) when code in [:busy, :discovery_busy], do: :rate_limited
+  defp classification(code) when code in [:busy, :discovery_busy, :slow_consumer], do: :rate_limited
 
   defp classification(code)
        when code in [
@@ -95,7 +95,8 @@ defmodule Wotex.BACnet.Error do
          :discovery_not_configured,
          :duplicate_property,
          :discovery_limit,
-         :segmentation_not_supported
+         :segmentation_not_supported,
+         :unbounded_receive_policy
        ] or
          String.starts_with?(Atom.to_string(code), ["invalid_", "unsupported_"]),
        do: :permanent,
