@@ -1,0 +1,59 @@
+defmodule Wotex.Thread.OpenThread do
+  @moduledoc """
+  Owns an explicitly configured Linux OpenThread host process.
+
+  Build the packaged native host with `priv/openthread/build.py` in an explicit
+  Linux workspace. Supply its absolute executable path, radio URL, interface,
+  storage path/mode and owner to `connect/1`. A successful connection has acquired
+  its SDK resources and supports non-secret inspection. Closing it releases its
+  owned SDK, radio descendants and interface while preserving durable settings.
+
+  `start_link/1` supports caller supervision. `session/1` waits for successful
+  SDK acquisition. Loading the library starts nothing. Dataset mutation and
+  commissioning operations require their separately implemented API contracts.
+  """
+
+  @behaviour Wotex.Thread.Client
+  alias Wotex.Thread.{Error, Session}
+  alias Wotex.Thread.OpenThread.Connection
+
+  @opaque handle :: %Connection{pid: pid(), reference: reference(), generation: 1}
+
+  @doc "Acquires the explicitly configured native SDK and returns its opaque handle."
+  @impl Wotex.Thread.Client
+  @spec connect(term()) :: {:ok, handle()} | {:error, Error.t()}
+  def connect(options) do
+    with {:ok, pid} <- Connection.start(options, :unlinked),
+         {:ok, session} <- Connection.session(pid),
+         do: {:ok, session.handle}
+  end
+
+  @doc "Starts a linked session owner; call session/1 to await SDK acquisition."
+  @spec start_link(term()) :: {:ok, pid()} | {:error, Error.t()}
+  def start_link(options), do: Connection.start(options, :link)
+
+  @doc "Returns a temporary worker specification; failed generations never restart automatically."
+  @spec child_spec(term()) :: Supervisor.child_spec()
+  def child_spec(options),
+    do: %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [options]},
+      restart: :temporary,
+      type: :worker,
+      shutdown: 1000
+    }
+
+  @doc "Returns the acquired Session from its explicitly supervised owner process."
+  @spec session(term()) :: {:ok, Session.t()} | {:error, Error.t()}
+  defdelegate session(pid), to: Connection
+
+  @doc "Executes one validated inspection under a single finite deadline."
+  @impl Wotex.Thread.Client
+  @spec request(term(), term(), term()) :: {:ok, term()} | {:error, Error.t()}
+  defdelegate request(handle, message, timeout), to: Connection
+
+  @doc "Closes an owned generation and waits for bounded native resource cleanup."
+  @impl Wotex.Thread.Client
+  @spec disconnect(term()) :: :ok | {:error, Error.t()}
+  defdelegate disconnect(handle), to: Connection
+end
