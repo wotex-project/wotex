@@ -1,9 +1,10 @@
 defmodule Wotex.BLE.BlueZ.Response do
   @moduledoc false
 
+  alias Wotex.BLE.BlueZ.Stream
   alias Wotex.BLE.{Characteristic, Error, ObjectPath, Procedure}
 
-  @codes ~w(invalid_options invalid_peer disconnected owner_changed not_permitted not_authorized not_supported busy invalid_value_length invalid_offset improperly_configured remote_error object_limit peer_not_found ambiguous_peer invalid_response invalid_characteristic peer_changed generation_exhausted snapshot_unstable timeout services_unresolved stale_discovery invalid_cursor cursor_limit transport_error pairing_rejected invalid_address invalid_value address_mismatch ambiguous_characteristic)a
+  @codes ~w(invalid_options invalid_peer disconnected owner_changed not_permitted not_authorized not_supported busy invalid_value_length invalid_offset improperly_configured remote_error object_limit peer_not_found ambiguous_peer invalid_response invalid_characteristic peer_changed generation_exhausted snapshot_unstable timeout services_unresolved stale_discovery invalid_cursor cursor_limit transport_error pairing_rejected invalid_address invalid_value address_mismatch ambiguous_characteristic unsupported_procedure_selection already_subscribed invalid_subscription response_limit subscription_lost cleanup_timeout)a
   @errors Map.new(@codes, &{Atom.to_string(&1), &1})
   @fields ~w(service_uuid characteristic_uuid service_path object_path flags generation handle)
 
@@ -59,6 +60,7 @@ defmodule Wotex.BLE.BlueZ.Response do
 
   defp named_failure(_, _), do: :invalid
 
+  defp result("subscribe", value), do: Stream.establishment(value)
   defp result("read", value), do: Procedure.decode_bytes(value)
   defp result("write", nil), do: {:ok, :written}
 
@@ -91,7 +93,9 @@ defmodule Wotex.BLE.BlueZ.Response do
   defp result("pair", %{"paired" => true} = result) when map_size(result) == 1,
     do: {:ok, %{paired: true}}
 
-  defp result(operation, nil) when operation in ["close", "agent_reply"], do: {:ok, nil}
+  defp result(operation, nil) when operation in ["close", "agent_reply", "unsubscribe"],
+    do: {:ok, nil}
+
   defp result(_, _), do: :invalid
 
   defp page(items, generation, cursor) do

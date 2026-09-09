@@ -159,13 +159,21 @@ defmodule Wotex.BLE do
   @spec health_check(term()) :: {:error, Error.t()}
   def health_check(_), do: {:error, Error.new(:probe_required)}
 
-  @doc "Baseline client ports do not imply subscription support."
-  @spec subscribe(term(), term()) :: :not_supported
-  def subscribe(_, _), do: :not_supported
+  @doc "Subscribes a receiver to validated persistent BlueZ value changes."
+  @spec subscribe(term(), term()) :: {:ok, Wotex.BLE.Subscription.t()} | {:error, Error.t()}
+  def subscribe(%Session{client: Wotex.BLE.BlueZ} = session, request),
+    do: Wotex.BLE.BlueZ.subscribe(session.handle, request, session.timeout)
 
-  @doc "No subscription is created by this baseline."
-  @spec unsubscribe(term(), term()) :: :not_supported
-  def unsubscribe(_, _), do: :not_supported
+  def subscribe(%Session{}, _), do: {:error, Error.new(:not_supported)}
+  def subscribe(_, _), do: {:error, Error.new(:invalid_session)}
+
+  @doc "Cancels a same-session subscription after releasing its native resources."
+  @spec unsubscribe(term(), term()) :: :ok | {:error, Error.t()}
+  def unsubscribe(%Session{client: Wotex.BLE.BlueZ} = session, subscription),
+    do: Wotex.BLE.BlueZ.unsubscribe(session.handle, subscription)
+
+  def unsubscribe(%Session{}, _), do: {:error, Error.new(:not_supported)}
+  def unsubscribe(_, _), do: {:error, Error.new(:invalid_session)}
 
   defp open(opts) do
     client = Keyword.get(opts, :client)

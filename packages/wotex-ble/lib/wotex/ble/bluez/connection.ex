@@ -15,7 +15,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
   """
 
   use GenServer
-  alias Wotex.BLE.BlueZ.{Frame, Options, Pairing, Response}
+  alias Wotex.BLE.BlueZ.{Frame, Options, Pairing, Response, Stream, SubscriptionOwner}
   alias Wotex.BLE.{Error, Procedure, Session}
 
   @derive {Inspect, only: [:pid, :generation]}
@@ -82,6 +82,32 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   def pair(_, _, _), do: {:error, Error.new(:invalid_handle)}
 
+  @doc "Starts a receiver-owned stream through this persistent sender."
+  @spec subscribe(term(), term(), term()) :: {:ok, Wotex.BLE.Subscription.t()} | {:error, Error.t()}
+  def subscribe(handle, request, timeout) do
+    with true <- handle?(handle),
+         {:ok, config} <- Stream.options(request, timeout, self()) do
+      call(handle.pid, {handle.reference, :subscribe, config, now() + config.timeout})
+    else
+      false -> {:error, Error.new(:invalid_handle)}
+      error -> error
+    end
+  end
+
+  @doc "Cancels a same-session subscription and waits for its native release."
+  @spec unsubscribe(term(), term()) :: :ok | {:error, Error.t()}
+  def unsubscribe(handle, subscription) do
+    if handle?(handle) and Stream.handle?(subscription) and
+         handle.reference == subscription.session_reference,
+       do: SubscriptionOwner.cancel(subscription),
+       else: {:error, Error.new(:invalid_subscription)}
+  end
+
+  defp handle?(%__MODULE__{pid: pid, reference: ref, generation: 1} = handle),
+    do: map_size(handle) == 4 and is_pid(pid) and is_reference(ref)
+
+  defp handle?(_), do: false
+
   @doc "Closes the generation and waits for bounded native cleanup; repeated close is safe."
   @spec disconnect(term()) :: :ok | {:error, Error.t()}
   def disconnect(%__MODULE__{pid: pid, reference: reference, generation: 1})
@@ -109,6 +135,8 @@ defmodule Wotex.BLE.BlueZ.Connection do
        start_ref: nil,
        startup_timer: nil,
        pending: %{},
+       subscriptions: %{},
+       cleanup_grace: 1000,
        active: nil,
        queue: :queue.new(),
        counter: 0,
@@ -186,7 +214,46 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
+  def handle_call(
+        {reference, :subscribe, config, deadline},
+        from,
+        %{handle: %{reference: reference}, status: :ready} = state
+      ) do
+    cond do
+      deadline <= now() ->
+        {:reply, {:error, Error.new(:timeout)}, state}
+
+      map_size(state.pending) >= 64 or subscription_count(state) >= 64 ->
+        {:reply, {:error, Error.new(:busy)}, state}
+
+      true ->
+        token = make_ref()
+
+        case SubscriptionOwner.start(state.handle, config, from, token, deadline) do
+          {:ok, pid} ->
+            {:noreply, admit(state, {pid, token}, config.parameters, deadline, "subscribe")}
+
+          _ ->
+            {:reply, {:error, Error.new(:transport_error)}, state}
+        end
+    end
+  end
+
   def handle_call(_, _from, state), do: {:reply, {:error, Error.new(:invalid_handle)}, state}
+
+  @impl GenServer
+  def handle_cast(
+        {reference, :unsubscribe, pid, from},
+        %{handle: %{reference: reference}, status: :ready} = state
+      ),
+      do: {:noreply, cancel_subscription(state, pid, from)}
+
+  def handle_cast({_, operation, _, from}, state) when operation == :unsubscribe do
+    GenServer.reply(from, {:error, Error.new(:disconnected)})
+    {:noreply, state}
+  end
+
+  def handle_cast(_, state), do: {:noreply, state}
 
   @impl GenServer
   def handle_info({port, {:data, {:eol, data}}}, %{port: port, buffer: buffer} = state) do
@@ -218,6 +285,9 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   def handle_info({:deadline, id}, state) do
     cond do
+      Map.has_key?(state.pending, id) and state.pending[id].operation == "unsubscribe" ->
+        {:noreply, close(%{state | cleanup_grace: 350}, :cleanup_timeout)}
+
       state.active == id ->
         {:noreply, close(state, expiry_code(state.pending[id].operation))}
 
@@ -379,6 +449,20 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
+  defp frame(%{"subscription_id" => id} = frame, %{status: :ready} = state) do
+    subscription = state.subscriptions[id]
+    binding = if subscription, do: subscription.binding, else: nil
+
+    case Stream.report(frame, binding) do
+      :invalid ->
+        {:noreply, close(state, :invalid_response)}
+
+      event ->
+        if subscription, do: send(subscription.pid, {:ble_stream, id, event})
+        {:noreply, state}
+    end
+  end
+
   defp frame(%{"id" => id} = frame, %{status: :ready, active: id} = state) when is_binary(id) do
     case timed_parse(frame, state.pending[id].operation, state.pending[id].deadline) do
       :expired ->
@@ -393,6 +477,9 @@ defmodule Wotex.BLE.BlueZ.Connection do
           if state.pending[id].operation == "write", do: %{error | effect: :unknown}, else: error
 
         {:noreply, close(complete(state, id, {:error, error}), code)}
+
+      {:ok, %{subscription_id: _} = binding} ->
+        accept_subscription(state, id, binding)
 
       {:ok, %{paired: true}} ->
         accept_pair(state, id)
@@ -412,6 +499,14 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
+  defp frame(%{"id" => id} = frame, %{status: :ready} = state)
+       when is_binary(id) do
+    case state.pending[id] do
+      %{operation: "unsubscribe"} -> accept_unsubscribe(state, id, frame)
+      _ -> {:noreply, close(state, :invalid_response)}
+    end
+  end
+
   defp frame(%{"id" => id} = frame, %{status: :closing, close_id: id} = state)
        when is_binary(id) do
     case Response.parse(frame, "close") do
@@ -423,6 +518,85 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   defp frame(_, %{status: :closing} = state), do: {:noreply, state}
   defp frame(_, state), do: {:noreply, close(state, :invalid_response)}
+
+  defp accept_unsubscribe(state, id, frame) do
+    case timed_parse(frame, "unsubscribe", state.pending[id].deadline) do
+      {:ok, nil} ->
+        native_id = state.pending[id].parameters["subscription_id"]
+        {:noreply, complete(retire_subscription(state, native_id), id, :ok)}
+
+      {:error, error} ->
+        {:noreply, close(complete(state, id, {:error, error}), error.code)}
+
+      _ ->
+        {:noreply, close(%{state | cleanup_grace: 350}, :cleanup_timeout)}
+    end
+  end
+
+  defp accept_subscription(state, id, binding) do
+    pending = state.pending[id]
+
+    if Stream.matches?(binding, id, pending.parameters) do
+      pid = elem(pending.from, 0)
+      record = %{pid: pid, monitor: Process.monitor(pid), binding: binding, closing: false}
+      state = %{state | subscriptions: Map.put(state.subscriptions, id, record)}
+      {:noreply, advance(complete(state, id, {:ok, binding}))}
+    else
+      {:noreply, close(state, :invalid_response)}
+    end
+  end
+
+  defp subscription_count(state),
+    do:
+      map_size(state.subscriptions) +
+        Enum.count(state.pending, fn {_, item} -> item.operation == "subscribe" end)
+
+  defp cancel_subscription(state, pid, from) do
+    case Enum.find(state.subscriptions, fn {_, item} -> item.pid == pid end) do
+      {id, %{closing: false}} ->
+        if map_size(state.pending) < 64 do
+          state = put_in(state.subscriptions[id].closing, true)
+          admit(state, from, %{"subscription_id" => id}, now() + 600, "unsubscribe")
+        else
+          close(state, :busy)
+        end
+
+      {_, _} ->
+        state
+
+      nil ->
+        cancel_starting(state, pid, from)
+    end
+  end
+
+  defp cancel_starting(state, pid, from) do
+    case Enum.find(state.pending, fn {_, item} ->
+           item.operation == "subscribe" and elem(item.from, 0) == pid
+         end) do
+      {id, _} when id == state.active ->
+        close(state, :disconnected)
+
+      {id, _} ->
+        state = complete(state, id, {:error, Error.new(:disconnected)})
+        GenServer.reply(from, :ok)
+        advance(state)
+
+      nil ->
+        GenServer.reply(from, :ok)
+        state
+    end
+  end
+
+  defp retire_subscription(state, id) do
+    case Map.pop(state.subscriptions, id) do
+      {nil, _} ->
+        state
+
+      {item, remaining} ->
+        Process.demonitor(item.monitor, [:flush])
+        %{state | subscriptions: remaining}
+    end
+  end
 
   defp accept_pair(state, id) do
     if is_nil(state.policy) and is_nil(state.policy_control),
@@ -468,13 +642,14 @@ defmodule Wotex.BLE.BlueZ.Connection do
       timer: Process.send_after(self(), {:deadline, id}, max(deadline - now(), 0))
     }
 
-    %{
+    state = %{state | counter: state.counter + 1, pending: Map.put(state.pending, id, pending)}
+
+    if operation == "unsubscribe" do
+      request(state.port, id, operation, parameters, max(deadline - now(), 1))
       state
-      | counter: state.counter + 1,
-        pending: Map.put(state.pending, id, pending),
-        queue: :queue.in(id, state.queue)
-    }
-    |> advance()
+    else
+      advance(%{state | queue: :queue.in(id, state.queue)})
+    end
   end
 
   defp advance(%{active: nil} = state) do
@@ -523,9 +698,20 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   defp caller_down(state, monitor) do
     case Enum.find(state.pending, fn {_, pending} -> pending.monitor == monitor end) do
-      {id, _} when id == state.active -> close(state, :disconnected)
-      {id, _} -> complete(state, id, {:error, Error.new(:disconnected)})
-      nil -> state
+      {_id, %{operation: "unsubscribe"}} ->
+        close(%{state | cleanup_grace: 350}, :disconnected)
+
+      {id, _} when id == state.active ->
+        close(state, :disconnected)
+
+      {id, _} ->
+        complete(state, id, {:error, Error.new(:disconnected)})
+
+      nil ->
+        case Enum.find(state.subscriptions, fn {_, item} -> item.monitor == monitor end) do
+          {_, item} -> cancel_subscription(state, item.pid, {self(), make_ref()})
+          nil -> state
+        end
     end
   end
 
@@ -543,6 +729,10 @@ defmodule Wotex.BLE.BlueZ.Connection do
   end
 
   defp close(state, code, from) do
+    Enum.each(state.subscriptions, fn {id, item} ->
+      send(item.pid, {:ble_stream, id, {:error, Error.new(code)}})
+    end)
+
     state = drop_policy(state)
     if state.waiter, do: GenServer.reply(state.waiter, {:error, Error.new(code)})
 
@@ -558,8 +748,8 @@ defmodule Wotex.BLE.BlueZ.Connection do
         complete(acc, id, {:error, error})
       end)
 
-    request(state.port, "close", "close", %{}, 800)
-    Process.send_after(self(), :terminate_bridge, 850)
+    request(state.port, "close", "close", %{}, max(state.cleanup_grace - 200, 1))
+    Process.send_after(self(), :terminate_bridge, max(state.cleanup_grace - 150, 0))
 
     %{
       state

@@ -15,6 +15,7 @@ import client
 from test_bluez import Bus, objects
 from test_agent import AgentBus
 from test_procedures import ProcedureBus
+from test_notifications import NotificationBus
 
 MODE, RECORD = sys.argv[1:]
 
@@ -25,6 +26,23 @@ def record(value):
 
 
 def emit(value):
+    if isinstance(value.get("result"), dict) and "subscription_id" in value["result"]:
+        if MODE == "stream_wrong_binding":
+            value = {**value, "result": {**value["result"], "subscription_id": "foreign"}}
+    if value.get("id") == "2" and value.get("ok") is True and value.get("result") is None:
+        if MODE == "stream_lost_stop_ack":
+            return
+        if MODE == "stream_bad_stop_ack":
+            value = {**value, "result": True}
+    if value.get("event") == "value":
+        if MODE == "stream_wrong_generation":
+            value = {**value, "generation": 2}
+        if MODE == "stream_wrong_metadata":
+            value = {**value, "metadata": {**value["metadata"], "effective_mode": "indicate"}}
+        if MODE == "stream_extra_report":
+            value = {**value, "extra": True}
+        if MODE == "stream_unknown_report":
+            print(json.dumps({**value, "subscription_id": "unknown"}), flush=True)
     if MODE == "procedure_missing_event" and value.get("event") == "write_submitted":
         return
     if MODE == "procedure_wrong_event" and value.get("event") == "write_submitted":
@@ -87,6 +105,25 @@ class RecordedProcedureBus(ProcedureBus):
         record({"bus_closed": True, "listeners": len(self.handlers)})
 
 
+class RecordedNotificationBus(NotificationBus):
+    async def call(self, *args):
+        record({"method": args[3], "sender": self.unique_name})
+        if args[3] == "StopNotify" and MODE == "stream_slow_stop":
+            await asyncio.sleep(0.05)
+        if args[3] == "ReadValue" and not self.read_blocked:
+            self.value(b"\x34\x12")
+            self.value(b"\x34\x12")
+            return [b"\x34\x12"]
+        result = await super().call(*args)
+        if args[3] == "StopNotify":
+            record({"sessions": len(self.sessions)})
+        return result
+
+    def disconnect(self):
+        super().disconnect()
+        record({"bus_closed": True, "listeners": len(self.handlers), "sessions": len(self.sessions)})
+
+
 async def main():
     ready = {"version": 1, "event": "ready", "backend": "dbus-next", "revision": "0.2.3"}
     if MODE == "wrong_ready":
@@ -111,7 +148,25 @@ async def main():
     reader = asyncio.StreamReader(limit=bridge.MAX_LINE)
     protocol = asyncio.StreamReaderProtocol(reader)
     transport, _ = await asyncio.get_running_loop().connect_read_pipe(lambda: protocol, sys.stdin.buffer)
-    bus = RecordedAgentBus() if MODE.startswith("pair") else RecordedProcedureBus() if MODE.startswith("procedure") else RecordedBus(objects())
+    bus = RecordedNotificationBus(count=65 if MODE == "stream_capacity" else 2) if MODE.startswith("stream") else RecordedAgentBus() if MODE.startswith("pair") else RecordedProcedureBus() if MODE.startswith("procedure") else RecordedBus(objects())
+    if MODE.startswith("stream"):
+        bus.early = [b"\x01\x00"]
+        if MODE == "stream_canary":
+            bus.early = [b"PRIVATE_STREAM_VALUE"]
+        if MODE == "stream_early_overflow":
+            bus.early *= 2
+        if MODE in ("stream_blocked_read", "stream_blocked_stop"):
+            bus.read_blocked = True
+        if MODE == "stream_blocked_stop":
+            bus.stop_blocked = True
+        if MODE == "stream_stop_error":
+            bus.stop_error = client.Failure("remote_error", "org.bluez.Error.Failed")
+        if MODE == "stream_pending_start":
+            bus.start_blocked = True
+        if MODE == "stream_indicate":
+            for item in bus.data.values():
+                if client.CHARACTERISTIC in item:
+                    item[client.CHARACTERISTIC]["Flags"] = ["read", "indicate"]
     if MODE == "procedure_timeout":
         bus.block = True
     if MODE == "procedure_malformed":
@@ -128,6 +183,8 @@ async def main():
     if MODE == "startup_error":
         bus.data = objects(False, False)
     owner = bridge.Bridge(emit, lambda signal: client.Central(signal, lambda _: bus))
+    if MODE.startswith("stream"):
+        bus.owner = owner.central
     try:
         await owner.run(reader)
     finally:

@@ -22,8 +22,8 @@ defmodule Wotex.BLE.PortTest do
     assert {:error, _} = BLE.send(conn, %{})
     assert {:error, _} = BLE.receive(conn, 100)
     assert {:error, _} = BLE.health_check(conn)
-    assert :not_supported = BLE.subscribe(conn, "value")
-    assert :not_supported = BLE.unsubscribe(conn, :ref)
+    assert {:error, %{code: :not_supported}} = BLE.subscribe(conn, "value")
+    assert {:error, %{code: :not_supported}} = BLE.unsubscribe(conn, :ref)
     assert BLE.capabilities().transport == :explicit_client
 
     assert BLE.with_connection([client: TestClient], fn session -> BLE.send(session, @read) end) ==

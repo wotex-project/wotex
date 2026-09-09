@@ -103,6 +103,20 @@ defmodule Wotex.BLE.BlueZ do
   def pair(%Connection{} = handle, request, timeout), do: Connection.pair(handle, request, timeout)
   def pair(_, _, _), do: {:error, Error.new(:not_supported)}
 
+  @doc "Starts a typed stream through the persistent sender."
+  @spec subscribe(term(), term(), term()) :: {:ok, Wotex.BLE.Subscription.t()} | {:error, Error.t()}
+  def subscribe(%Connection{} = handle, request, timeout),
+    do: Connection.subscribe(handle, request, timeout)
+
+  def subscribe(_, _, _), do: {:error, Error.new(:not_supported)}
+
+  @doc "Releases a subscription belonging to this persistent session."
+  @spec unsubscribe(term(), term()) :: :ok | {:error, Error.t()}
+  def unsubscribe(%Connection{} = handle, subscription),
+    do: Connection.unsubscribe(handle, subscription)
+
+  def unsubscribe(_, _), do: {:error, Error.new(:not_supported)}
+
   @doc "Parses busctl's exact byte-array response; bounds count and every byte."
   @spec decode(term()) :: {:ok, binary()} | {:error, Error.t()}
   def decode(text) when is_binary(text) and byte_size(text) <= 4096 do

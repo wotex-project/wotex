@@ -1,10 +1,18 @@
 defmodule Wotex.BLE.BlueZ.Stream do
   @moduledoc false
 
-  alias Wotex.BLE.{Address, Error, Procedure, Subscription}
+  alias Wotex.BLE.{Address, Characteristic, Error, Procedure, Subscription}
+  alias Wotex.BLE.BlueZ.Response
 
   @fields [:address, :receiver, :mode, :max_queue_length, :value_type, :byte_order, :timeout]
   @modes [:auto, :notify, :indicate]
+  @names %{
+    "auto" => :auto,
+    "notify" => :notify,
+    "indicate" => :indicate,
+    "bluez_selected" => :bluez_selected
+  }
+  @characteristic_fields ~w(service_uuid characteristic_uuid service_path object_path flags generation handle)a
 
   @doc false
   @spec options(term(), term(), pid()) :: {:ok, map()} | {:error, Error.t()}
@@ -69,6 +77,128 @@ defmodule Wotex.BLE.BlueZ.Stream do
           is_reference(session) and generation === 1
 
   def handle?(_), do: false
+
+  @type binding :: %{
+          subscription_id: String.t(),
+          generation: 1,
+          characteristic: Characteristic.t(),
+          requested_mode: :auto | :notify | :indicate,
+          effective_mode: :notify | :indicate | :bluez_selected
+        }
+
+  @doc false
+  @spec establishment(term()) :: {:ok, binding()} | :invalid
+  def establishment(
+        %{
+          "subscription_id" => id,
+          "generation" => 1,
+          "characteristic" => characteristic,
+          "requested_mode" => requested,
+          "effective_mode" => effective
+        } = value
+      )
+      when map_size(value) == 5 do
+    with true <- identifier?(id),
+         {:ok, characteristic} <- characteristic(characteristic),
+         {:ok, requested} <- Map.fetch(@names, requested),
+         {:ok, effective} <- Map.fetch(@names, effective),
+         {:ok, ^effective} <- mode(characteristic.flags, requested) do
+      {:ok,
+       %{
+         subscription_id: id,
+         generation: 1,
+         characteristic: characteristic,
+         requested_mode: requested,
+         effective_mode: effective
+       }}
+    else
+      _ -> :invalid
+    end
+  end
+
+  def establishment(_), do: :invalid
+
+  @doc false
+  @spec matches?(map(), String.t(), map()) :: boolean()
+  def matches?(binding, id, parameters) do
+    target = parameters["address"]
+    item = binding.characteristic
+
+    binding.subscription_id == id and
+      Atom.to_string(binding.requested_mode) == parameters["mode"] and
+      item.service_uuid == target["service"] and
+      item.characteristic_uuid == target["characteristic"] and
+      Enum.all?([:object_path, :handle, :generation], fn field ->
+        selected = target[Atom.to_string(field)]
+        is_nil(selected) or selected == Map.fetch!(item, field)
+      end)
+  end
+
+  @doc false
+  @spec report(term(), map() | nil) ::
+          {:ok, binary(), map()} | {:error, Error.t()} | :invalid
+  def report(
+        %{
+          "version" => 1,
+          "subscription_id" => id,
+          "generation" => 1,
+          "event" => event,
+          "value" => value,
+          "metadata" => metadata
+        } = frame,
+        binding
+      )
+      when map_size(frame) == 6 do
+    if identifier?(id) and (is_nil(binding) or binding.subscription_id == id) do
+      report_value(event, value, metadata, id, binding)
+    else
+      :invalid
+    end
+  end
+
+  def report(_, _), do: :invalid
+
+  defp report_value("value", value, %{"source" => "bluez_value_change"} = metadata, id, binding)
+       when map_size(metadata) == 4 do
+    encoded =
+      metadata
+      |> Map.delete("source")
+      |> Map.merge(%{"subscription_id" => id, "generation" => 1})
+
+    with {:ok, observed} <- establishment(encoded),
+         true <- is_nil(binding) or observed == binding,
+         {:ok, bytes} <- Procedure.decode_bytes(value) do
+      {:ok, bytes,
+       observed
+       |> Map.take([:characteristic, :requested_mode, :effective_mode])
+       |> Map.put(:source, :bluez_value_change)}
+    else
+      _ -> :invalid
+    end
+  end
+
+  defp report_value("error", nil, %{"error" => error} = metadata, id, _binding)
+       when map_size(metadata) == 1 do
+    case Response.parse(%{"version" => 1, "id" => id, "ok" => false, "error" => error}, "subscribe") do
+      {:error, %Error{}} = error -> error
+      _ -> :invalid
+    end
+  end
+
+  defp report_value(_, _, _, _, _), do: :invalid
+
+  defp characteristic(value) when is_map(value) and map_size(value) == 7 do
+    if Enum.sort(Map.keys(value)) == Enum.sort(Enum.map(@characteristic_fields, &Atom.to_string/1)) do
+      Characteristic.new(
+        Map.new(@characteristic_fields, &{&1, Map.fetch!(value, Atom.to_string(&1))})
+      )
+    else
+      :invalid
+    end
+  end
+
+  defp characteristic(_), do: :invalid
+  defp identifier?(id), do: is_binary(id) and byte_size(id) in 1..64 and String.valid?(id)
 
   defp flags?(flags) when is_list(flags) and length(flags) <= 64 do
     length(Enum.uniq(flags)) == length(flags) and
