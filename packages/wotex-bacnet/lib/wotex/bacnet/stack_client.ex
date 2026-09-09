@@ -27,6 +27,18 @@ defmodule Wotex.BACnet.StackClient do
     :exit, _ -> {:error, Error.new(:unsupported_stack_client)}
   end
 
+  @doc false
+  @spec exchange(pid(), term(), APDU.ConfirmedServiceRequest.t(), keyword(), integer()) :: term()
+  def exchange(client, destination, apdu, options, deadline) do
+    GenServer.call(
+      client,
+      {:wotex_client, :exchange, destination, apdu, options, deadline},
+      :infinity
+    )
+  catch
+    :exit, _ -> {:error, Error.new(:connection_closed)}
+  end
+
   @impl GenServer
   def handle_call({:wotex_client, :capabilities}, _, state),
     do: {:reply, {:wotex_client, 1, :cov}, state}
@@ -48,24 +60,25 @@ defmodule Wotex.BACnet.StackClient do
     end
   end
 
-  def handle_call({:send, destination, %APDU.ConfirmedServiceRequest{} = apdu, opts}, from, state) do
-    if map_size(state.sdk.apdu_timers) >= 64 do
-      {:reply, {:error, Error.new(:busy)}, state}
+  def handle_call({:wotex_client, :exchange, destination, apdu, opts, deadline}, from, state)
+      when is_integer(deadline) do
+    if now() < deadline do
+      handle_call({:send, destination, apdu, opts}, from, state)
     else
-      case InvokeIds.allocate(state.invoke_ids, state.sdk.apdu_timers, now()) do
-        {:ok, id, ids} ->
-          delegate(
-            Client.handle_call(
-              {:send, destination, %{apdu | invoke_id: id}, opts},
-              from,
-              state.sdk
-            ),
-            %{state | invoke_ids: ids}
-          )
+      {:reply, rejected(:deadline_exceeded), state}
+    end
+  end
 
-        :busy ->
-          {:reply, {:error, Error.new(:busy)}, state}
-      end
+  def handle_call({:send, destination, %APDU.ConfirmedServiceRequest{} = apdu, opts}, from, state) do
+    cond do
+      not Process.alive?(elem(from, 0)) ->
+        {:reply, rejected(:connection_closed), state}
+
+      map_size(state.sdk.apdu_timers) >= 64 ->
+        {:reply, rejected(:busy), state}
+
+      true ->
+        send_confirmed(destination, apdu, opts, from, state)
     end
   end
 
@@ -115,6 +128,23 @@ defmodule Wotex.BACnet.StackClient do
   end
 
   def handle_info(message, state), do: receive_apdu(message, state)
+
+  defp send_confirmed(destination, apdu, opts, from, state) do
+    case InvokeIds.allocate(state.invoke_ids, state.sdk.apdu_timers, now()) do
+      {:ok, id, ids} ->
+        delegate(
+          Client.handle_call(
+            {:send, destination, %{apdu | invoke_id: id}, opts},
+            from,
+            state.sdk
+          ),
+          %{state | invoke_ids: ids}
+        )
+
+      :busy ->
+        {:reply, rejected(:busy), state}
+    end
+  end
 
   defp receive_apdu(
          {:bacnet_transport, _protocol, source,
@@ -251,6 +281,8 @@ defmodule Wotex.BACnet.StackClient do
         })
     end
   end
+
+  defp rejected(code), do: {:error, Error.new(code, nil, %{dispatch: :not_started})}
 
   defp now, do: System.monotonic_time(:millisecond)
 end

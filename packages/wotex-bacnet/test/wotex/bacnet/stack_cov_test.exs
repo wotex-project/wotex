@@ -428,6 +428,146 @@ defmodule Wotex.BACnet.StackCOVTest do
     assert map_size(:sys.get_state(c.client).invoke_ids.retired) == 256
   end
 
+  test "WBA-S02 WBA-S03 WBA-V05 WBA-CT06 resuming a borrowed client cannot emit expired work", c do
+    row = Enum.find(@corpus["cases"], &(&1["id"] == "WBA-CT06"))
+
+    {:ok, borrowed} =
+      BACstack.connect(
+        stack_client: c.client,
+        stack_client_kind: :wotex,
+        destination: @destination,
+        writes: true
+      )
+
+    on_exit(fn -> BACstack.disconnect(borrowed) end)
+    :ok = :sys.suspend(c.client)
+
+    reading =
+      Task.async(fn ->
+        BACstack.request(
+          borrowed,
+          %{type: :read_property, object_type: 1, instance: 0, property: 85},
+          row["deadline_ms"]
+        )
+      end)
+
+    assert {:error, %{code: :deadline_exceeded}} = Task.await(reading)
+    :ok = :sys.resume(c.client)
+    state = :sys.get_state(c.client)
+    assert map_size(state.sdk.apdu_timers) == row["expected"]["pending_calls"]
+    assert state.calls == %{} and state.invoke_ids.next == 0
+    assert {:error, :timeout} = :gen_udp.recv(c.peer, 0, 20)
+
+    # The final serializer also rejects an expired call whose caller is still alive.
+    value = Encoding.create!({:real, 2.5})
+    message = %{type: :write_property, object_type: 1, instance: 0, property: 85, value: value}
+    :ok = :sys.suspend(c.client)
+    deadline = System.monotonic_time(:millisecond) + row["deadline_ms"]
+    writing = Task.async(fn -> BACstack.exchange(borrowed, message, deadline) end)
+    Process.sleep(row["pause_ms"])
+    :ok = :sys.resume(c.client)
+
+    assert {:error, %{code: :deadline_exceeded, effect: :none, details: details}} =
+             Task.await(writing)
+
+    assert Atom.to_string(details.dispatch) == row["expected"]["dispatch"]
+    assert {:error, :timeout} = :gen_udp.recv(c.peer, 0, 20)
+    assert Process.alive?(c.client) == row["expected"]["client_alive"]
+  end
+
+  test "WBA-S02 WBA-S03 WBA-V05 queued native SDK calls cannot outlive their caller", c do
+    {:ok, apdu} = Wotex.BACnet.COV.request(c.request, 1)
+    :ok = :sys.suspend(c.client)
+    worker = spawn(fn -> Client.send(c.client, @destination, apdu) end)
+    wait_until(fn -> queued_call?(c.client, worker) end)
+    monitor = Process.monitor(worker)
+    Process.exit(worker, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^worker, :killed}
+    :ok = :sys.resume(c.client)
+    state = :sys.get_state(c.client)
+    assert state.sdk.apdu_timers == %{} and state.invoke_ids.next == 0
+    assert {:error, :timeout} = :gen_udp.recv(c.peer, 0, 20)
+    :ok = :sys.suspend(c.client)
+    listener = spawn(fn -> register(c.client, c.request) end)
+    wait_until(fn -> queued_call?(c.client, listener) end)
+    monitor = Process.monitor(listener)
+    Process.exit(listener, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^listener, :killed}
+    :ok = :sys.resume(c.client)
+    assert :sys.get_state(c.client).cov.filters == %{}
+    assert :sys.get_state(c.client).cov.next_identifier == 1
+  end
+
+  test "WBA-S03 WBA-S04 queued ACKs cannot outlive the owned listener", c do
+    parent = self()
+
+    owner =
+      spawn(fn ->
+        {:ok, identifier} = register(c.client, c.request)
+        send(parent, {:identifier, self(), identifier})
+
+        receive do
+          {:bacnet_client, reference, _, _, _} ->
+            send(parent, {:receipt, self()})
+
+            receive do
+              :ack ->
+                Client.reply(c.client, reference, %APDU.SimpleACK{
+                  invoke_id: 7,
+                  service: :confirmed_cov_notification
+                })
+            end
+        end
+      end)
+
+    on_exit(fn -> Process.exit(owner, :kill) end)
+    assert_receive {:identifier, ^owner, identifier}
+    send_apdu(c.peer, notification(identifier, 7))
+    assert_receive {:receipt, ^owner}, 1000
+    :ok = :sys.suspend(c.client)
+    send(owner, :ack)
+    wait_until(fn -> queued_call?(c.client, owner) end)
+    monitor = Process.monitor(owner)
+    Process.exit(owner, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^owner, :killed}
+    :ok = :sys.resume(c.client)
+    wait_until(fn -> :sys.get_state(c.client).cov.filters == %{} end)
+    assert :sys.get_state(c.client).cov.replies == %{}
+    assert {:error, :timeout} = :gen_udp.recv(c.peer, 0, 20)
+  end
+
+  test "WBA-S04 a queued ACK checks absolute expiry before sending", c do
+    {:ok, identifier} = register(c.client, c.request)
+    send_apdu(c.peer, notification(identifier, 7))
+    assert_receive {:bacnet_client, reference, _, _, _}, 1000
+    :ok = :sys.suspend(c.client)
+
+    resumed =
+      Task.async(fn ->
+        Process.sleep(1050)
+        :sys.resume(c.client)
+      end)
+
+    assert {:error, :app_timeout} =
+             Client.reply(c.client, reference, %APDU.SimpleACK{
+               invoke_id: 7,
+               service: :confirmed_cov_notification
+             })
+
+    assert :ok = Task.await(resumed)
+    assert :sys.get_state(c.client).cov.replies == %{}
+    assert {:error, :timeout} = :gen_udp.recv(c.peer, 0, 20)
+  end
+
+  defp queued_call?(client, owner) do
+    {:messages, messages} = Process.info(client, :messages)
+
+    Enum.any?(messages, fn
+      {:"$gen_call", {^owner, _}, _} -> true
+      _ -> false
+    end)
+  end
+
   defp wait_until(fun, attempts \\ 100)
   defp wait_until(fun, 0), do: assert(fun.())
 

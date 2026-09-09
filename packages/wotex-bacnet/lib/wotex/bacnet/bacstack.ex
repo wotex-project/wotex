@@ -124,12 +124,16 @@ defmodule Wotex.BACnet.BACstack do
          true <- System.monotonic_time(:millisecond) < deadline do
       peer = config.peer_receive
 
+      options = [
+        max_apdu_length: peer.max_apdu,
+        max_segments: peer.max_segments,
+        segmentation_supported: peer.segmentation
+      ]
+
       result =
-        BACnet.Stack.Client.send(config.client, config.destination, apdu,
-          max_apdu_length: peer.max_apdu,
-          max_segments: peer.max_segments,
-          segmentation_supported: peer.segmentation
-        )
+        if config.stack_client_kind == :wotex,
+          do: StackClient.exchange(config.client, config.destination, apdu, options, deadline),
+          else: BACnet.Stack.Client.send(config.client, config.destination, apdu, options)
 
       result
       |> response(address, message.type)
@@ -147,6 +151,8 @@ defmodule Wotex.BACnet.BACstack do
   @impl Wotex.BACnet.Client
   def disconnect(%{owner: owner}), do: OperationOwner.close(owner)
   def disconnect(_), do: :ok
+
+  defp effect({:error, %Error{details: %{dispatch: :not_started}}} = error, _), do: error
 
   defp effect({:error, error}, :write_property), do: {:error, %{error | effect: :unknown}}
   defp effect(result, _), do: result

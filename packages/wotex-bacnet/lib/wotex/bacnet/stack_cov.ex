@@ -13,7 +13,8 @@ defmodule Wotex.BACnet.StackCOV do
   @spec register(map(), pid(), term(), term(), map()) :: {term(), map()}
   def register(state, owner, request, destination, sdk) do
     cond do
-      COVRequest.validate(request) != :ok or not valid_destination?(sdk, destination) ->
+      not is_pid(owner) or not Process.alive?(owner) or
+        COVRequest.validate(request) != :ok or not valid_destination?(sdk, destination) ->
         {{:error, Error.new(:invalid_subscription)}, state}
 
       Map.has_key?(state.filters, owner) ->
@@ -113,12 +114,17 @@ defmodule Wotex.BACnet.StackCOV do
   def reply(state, ref, %APDU.SimpleACK{} = ack, owner, [], sdk) do
     context = state.replies[ref]
 
-    if context.owner == owner and ack.invoke_id == context.invoke_id and
-         ack.service == :confirmed_cov_notification do
-      result = sdk.transport_mod.send(context.portal, context.source, ack, [])
-      {result, expire(state, :reply, ref, sdk)}
-    else
-      {{:error, Error.new(:invalid_cov_acknowledgment)}, state}
+    cond do
+      not Process.alive?(context.owner) or now() >= context.deadline ->
+        {{:error, :app_timeout}, expire(state, :reply, ref, sdk)}
+
+      context.owner == owner and ack.invoke_id == context.invoke_id and
+          ack.service == :confirmed_cov_notification ->
+        result = sdk.transport_mod.send(context.portal, context.source, ack, [])
+        {result, expire(state, :reply, ref, sdk)}
+
+      true ->
+        {{:error, Error.new(:invalid_cov_acknowledgment)}, state}
     end
   end
 
@@ -237,6 +243,7 @@ defmodule Wotex.BACnet.StackCOV do
           source: source,
           invoke_id: report.invoke_id,
           portal: portal,
+          deadline: now() + 1000,
           timer: Process.send_after(self(), {:wotex_cov_expire, :reply, ref}, 1000)
         }
 
@@ -262,6 +269,8 @@ defmodule Wotex.BACnet.StackCOV do
   rescue
     _ -> false
   end
+
+  defp now, do: System.monotonic_time(:millisecond)
 
   defp scoped_source(sdk, source), do: {:cov, sdk.transport_mod, source}
 end

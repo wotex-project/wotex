@@ -109,6 +109,28 @@
         2.0
       ],
       "expected_error": "conflicting_cov_values"
+    },
+    {
+      "id": "WBA-CT06",
+      "requirements": [
+        "WBA-S02",
+        "WBA-S03",
+        "WBA-V05"
+      ],
+      "trace": [
+        "pause_borrowed_client",
+        "queue_service",
+        "deadline_elapsed",
+        "resume_client"
+      ],
+      "deadline_ms": 20,
+      "pause_ms": 30,
+      "expected": {
+        "outbound_datagrams": 0,
+        "pending_calls": 0,
+        "client_alive": true,
+        "dispatch": "not_started"
+      }
     }
   ]
 }
