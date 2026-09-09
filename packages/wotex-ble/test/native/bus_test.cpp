@@ -5,6 +5,7 @@
 #include "discovery_test.hpp"
 #include "agent_test.hpp"
 #include "pairing_test.hpp"
+#include "procedures_test.hpp"
 #include <csignal>
 #include <fcntl.h>
 #include <dirent.h>
@@ -632,11 +633,14 @@ int main(int argc, char **argv) {
   if (argc != 3 && argc != 5) return 2;
   try {
     if (argc == 5) {
-      if (std::string(argv[1]) != "--pair-input") return 2;
+      const std::string operation = argv[1];
+      if (operation != "--pair-input" && operation != "--gatt-input") return 2;
       Json result;
       {
         Daemon daemon(argv[3], argv[4]);
-        result = pairing_test::projection(parse_line(std::string(argv[2]) + "\n"), daemon.address);
+        const auto input = parse_line(std::string(argv[2]) + "\n");
+        result = operation == "--pair-input" ? pairing_test::projection(input, daemon.address) :
+          procedures_test::projection(input, daemon.address);
       }
       dbus_shutdown(); std::cout << result.dump() << '\n'; return 0;
     }
@@ -654,6 +658,7 @@ int main(int argc, char **argv) {
     discovery_test::invariants(daemon.address);
     discovery_test::connection_invariants(daemon.address);
     pairing_test::invariants(daemon.address);
+    procedures_test::invariants(daemon.address);
     unix_fds(daemon.address, 1);
 #ifdef __linux__
     unix_fds(daemon.address, 2);

@@ -265,3 +265,27 @@ They do not execute the complete Port helper, BEAM native route, persistent Blue
 service or virtual Bluetooth controller. Those implementation and interoperability
 requirements remain open. Public Pair effect classification must satisfy C04
 when the native backend is connected to the BEAM owner.
+
+## Native acknowledged GATT procedures
+
+`test/native/procedures_test.hpp` executes the production typed address and
+`NativeProcedure` owner against an independent GATT receiver on the private
+libdbus daemon. WBL-B-F27 through WBL-B-F32 compare concrete read/write, malformed
+value, remote rejection and missing/malformed response projections. The native
+driver receives inputs only; expected values remain in ExUnit.
+
+The receiver checks exact source, object path, signatures, byte arrays and typed
+request-only write options. Read/write sizes 0, 1, 2, 255, 256 and 512 are exercised;
+513-byte read replies and noncanonical write envelopes fail. Admission tests cover
+unknown fields, invalid UUID/path/handle/generation types, stale snapshots,
+conflicting selectors, duplicate UUID matches and absent procedure flags.
+Malformed inputs cause no discovery or GATT request.
+
+Lifecycle tests cover cancellation before submission, during discovery and while
+an acknowledgement is pending; unavailable submission-event capacity; selected
+owner loss; late replies; borrowed and owned link cleanup; and a blocked owned
+Disconnect within the original deadline. One thousand successive reads on the
+same connection leave no pending calls or extra listeners. No write is retried.
+These results establish native component behavior through actual D-Bus messages.
+Complete Port-host dispatch, BEAM native integration and independent BlueZ/ATT
+interoperability remain separate open requirements.

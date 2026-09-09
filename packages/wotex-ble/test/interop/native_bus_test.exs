@@ -109,14 +109,17 @@ defmodule Wotex.BLE.NativeBusTest do
     end
   end
 
-  for fixture <- @fixtures, fixture["operation"] == "pair_lifecycle" do
+  for fixture <- @fixtures, fixture["operation"] in ["pair_lifecycle", "gatt_procedure"] do
     @fixture fixture
-    test "#{fixture["id"]} executes actual native Agent registration and Pair lifecycle", context do
+    test "#{fixture["id"]} executes the actual native operation lifecycle", context do
+      operation =
+        if @fixture["operation"] == "pair_lifecycle", do: "--pair-input", else: "--gatt-input"
+
       assert {:ok, output, 0} =
                NativeCommand.run(
                  context.guardian,
                  context.executable,
-                 ["--pair-input", Jason.encode!(@fixture["input"]), context.daemon, context.config],
+                 [operation, Jason.encode!(@fixture["input"]), context.daemon, context.config],
                  context.options
                )
 

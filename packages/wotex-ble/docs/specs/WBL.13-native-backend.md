@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.9
+  version: 1.0.10
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -261,6 +261,19 @@ Remote Agent count changes only on an observed registration/unregistration or
 the daemon's actual unique-sender release signal. Expected results remain in
 ExUnit and never enter the native process. This fixture establishes D-Bus
 procedure ownership; it does not establish BlueZ or controller interoperability.
+`gatt_procedure` starts the actual private D-Bus daemon and an independent GATT
+method receiver. Its exact input is `operation`, `parameters`, ordered octets in
+`peer_value` and `response` (`ok`, `remote`, `malformed` or `held`). The receiver
+validates the actual method signature, source and options; it accepts acknowledged
+writes only. It encodes read bytes independently from the production decoder.
+The result records observed method order, emitted events, final peer bytes,
+operation result, write-submission state, connection state, completion count,
+native pending calls, actual sender-release events and explicit Disconnect calls.
+A successful result has a `value` key containing the canonical byte envelope for
+read or null for write. Failure is the bounded native error envelope. A held
+response uses a 100 ms operation deadline; expected output compares terminal
+state rather than elapsed scheduling time. These vectors establish actual D-Bus
+procedure ownership without claiming BlueZ or ATT interoperability.
 `ready` starts the actual helper, captures its first frame and closes its input;
 the expectation is exact JSON-object equality plus zero surviving owned
 processes after the grace. Parser cases never count as SDK interoperability.
@@ -488,10 +501,40 @@ string supplied by the operating system or SDK. The operation signatures follow
 [AgentManager](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.AgentManager.rst)
 and [Device](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.Device.rst)
 at the pinned BlueZ revision.
- No default agent registration,
+No default agent registration,
 trust change, bond removal or CancelPairing is permitted. S03's write_submitted
 event precedes WriteValue submission and has its exact active request ID;
 loss without a received pre-submission rejection is conservatively unknown.
+
+A read or write resolves an immutable typed address against a refreshed snapshot
+before GATT submission. Its exact address fields are `service`, `characteristic`,
+`object_path`, `handle` and `generation`. UUIDs use .11 normalization; optional
+selectors are null or a valid D-Bus object path of at most 4096 bytes, uint16 handle
+in 1..65535 and uint64 discovery generation. Booleans and floating-point values
+are not integers. Every supplied selector must match the same characteristic;
+a stale generation, no match and multiple matches have distinct stable errors.
+Malformed address/value/parameter fields fail before discovery or GATT I/O.
+
+Read admits the `read` flag and sends ReadValue with an empty options dictionary.
+Write admits the `write` flag and sends WriteValue with precisely `type: "request"`
+as a string variant and `offset: 0` as a uint16 variant. A
+`write-without-response` flag does not authorize this procedure. Attribute bytes
+are bounded to 512 octets before native copying; empty and maximum-length values
+are valid. A successful read requires exactly `ay`; the fixed array length is
+checked before copying and encoding the canonical byte envelope. Write success
+requires an empty acknowledgement and returns null. There is no implicit readback,
+command-mode fallback, offset continuation or retry. Explicit readback is a
+separate read operation with a separate deadline.
+
+The write-submission event is admitted before WriteValue. Unavailable event
+capacity or cancellation during event delivery prevents the call. Once submitted,
+a lost or malformed acknowledgement remains an unknown-effect mutation under
+C04. Operation timeout, malformed reply, selected-owner loss or unusable transport
+closes this connection generation within the existing cooperative cleanup budget;
+late replies cannot deliver a second completion. Bounded explicit remote errors
+preserve their admitted name and require no automatic retry. Ordinary borrowed
+link teardown sends no Disconnect; owned-link cleanup retains the same absolute
+deadline even when a GATT reply and Disconnect are both withheld.
 
 Ordinary pending operations, including active work and asynchronous unsubscribe
 controls, have an aggregate bound of 64; live subscriptions have a separate bound

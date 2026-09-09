@@ -766,6 +766,329 @@
           "disconnect_calls": 0
         }
       }
+    },
+    {
+      "id": "WBL-B-F27",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S03",
+        "WBL-V05",
+        "WBL-V11"
+      ],
+      "operation": "gatt_procedure",
+      "input": {
+        "operation": "read",
+        "parameters": {
+          "address": {
+            "service": "180f",
+            "characteristic": "2a19",
+            "object_path": null,
+            "handle": null,
+            "generation": null
+          }
+        },
+        "peer_value": [
+          0,
+          255,
+          52,
+          18
+        ],
+        "response": "ok"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [
+            "ReadValue"
+          ],
+          "events": [],
+          "peer_value": [
+            0,
+            255,
+            52,
+            18
+          ],
+          "result": {
+            "value": {
+              "type": "bytes",
+              "base64": "AP80Eg=="
+            }
+          },
+          "write_submitted": false,
+          "owner_active": true,
+          "native_completions": 1,
+          "pending_calls": 0,
+          "sender_releases": 0,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F28",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S03",
+        "WBL-V05",
+        "WBL-V11"
+      ],
+      "operation": "gatt_procedure",
+      "input": {
+        "operation": "write",
+        "parameters": {
+          "address": {
+            "service": "180f",
+            "characteristic": "2a19",
+            "object_path": null,
+            "handle": null,
+            "generation": null
+          },
+          "value": {
+            "type": "bytes",
+            "base64": "AP80Eg=="
+          }
+        },
+        "peer_value": [],
+        "response": "ok"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [
+            "WriteValue"
+          ],
+          "events": [
+            {
+              "version": 1,
+              "id": "81",
+              "event": "write_submitted"
+            }
+          ],
+          "peer_value": [
+            0,
+            255,
+            52,
+            18
+          ],
+          "result": {
+            "value": null
+          },
+          "write_submitted": true,
+          "owner_active": true,
+          "native_completions": 1,
+          "pending_calls": 0,
+          "sender_releases": 0,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F29",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S03",
+        "WBL-V05",
+        "WBL-V11"
+      ],
+      "operation": "gatt_procedure",
+      "input": {
+        "operation": "write",
+        "parameters": {
+          "address": {
+            "service": "180f",
+            "characteristic": "2a19",
+            "object_path": null,
+            "handle": null,
+            "generation": null
+          },
+          "value": {
+            "type": "bytes",
+            "base64": "AR=="
+          }
+        },
+        "peer_value": [],
+        "response": "ok"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [],
+          "events": [],
+          "peer_value": [],
+          "result": {
+            "code": "invalid_value"
+          },
+          "write_submitted": false,
+          "owner_active": true,
+          "native_completions": 1,
+          "pending_calls": 0,
+          "sender_releases": 0,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F30",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S03",
+        "WBL-V05",
+        "WBL-V11"
+      ],
+      "operation": "gatt_procedure",
+      "input": {
+        "operation": "write",
+        "parameters": {
+          "address": {
+            "service": "180f",
+            "characteristic": "2a19",
+            "object_path": null,
+            "handle": null,
+            "generation": null
+          },
+          "value": {
+            "type": "bytes",
+            "base64": ""
+          }
+        },
+        "peer_value": [
+          1
+        ],
+        "response": "remote"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [
+            "WriteValue"
+          ],
+          "events": [
+            {
+              "version": 1,
+              "id": "81",
+              "event": "write_submitted"
+            }
+          ],
+          "peer_value": [],
+          "result": {
+            "code": "not_permitted",
+            "name": "org.bluez.Error.NotPermitted"
+          },
+          "write_submitted": true,
+          "owner_active": true,
+          "native_completions": 1,
+          "pending_calls": 0,
+          "sender_releases": 0,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F31",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S03",
+        "WBL-V05",
+        "WBL-V11"
+      ],
+      "operation": "gatt_procedure",
+      "input": {
+        "operation": "write",
+        "parameters": {
+          "address": {
+            "service": "180f",
+            "characteristic": "2a19",
+            "object_path": null,
+            "handle": null,
+            "generation": null
+          },
+          "value": {
+            "type": "bytes",
+            "base64": "AQ=="
+          }
+        },
+        "peer_value": [],
+        "response": "held"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [
+            "WriteValue"
+          ],
+          "events": [
+            {
+              "version": 1,
+              "id": "81",
+              "event": "write_submitted"
+            }
+          ],
+          "peer_value": [
+            1
+          ],
+          "result": {
+            "code": "timeout"
+          },
+          "write_submitted": true,
+          "owner_active": false,
+          "native_completions": 1,
+          "pending_calls": 0,
+          "sender_releases": 1,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F32",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S03",
+        "WBL-V05",
+        "WBL-V11"
+      ],
+      "operation": "gatt_procedure",
+      "input": {
+        "operation": "read",
+        "parameters": {
+          "address": {
+            "service": "180f",
+            "characteristic": "2a19",
+            "object_path": null,
+            "handle": null,
+            "generation": null
+          }
+        },
+        "peer_value": [
+          1
+        ],
+        "response": "malformed"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [
+            "ReadValue"
+          ],
+          "events": [],
+          "peer_value": [
+            1
+          ],
+          "result": {
+            "code": "invalid_response"
+          },
+          "write_submitted": false,
+          "owner_active": false,
+          "native_completions": 1,
+          "pending_calls": 0,
+          "sender_releases": 1,
+          "disconnect_calls": 0
+        }
+      }
     }
   ],
   "executed_cases": [
@@ -789,6 +1112,12 @@
     "WBL-B-F23",
     "WBL-B-F24",
     "WBL-B-F25",
-    "WBL-B-F26"
+    "WBL-B-F26",
+    "WBL-B-F27",
+    "WBL-B-F28",
+    "WBL-B-F29",
+    "WBL-B-F30",
+    "WBL-B-F31",
+    "WBL-B-F32"
   ]
 }
