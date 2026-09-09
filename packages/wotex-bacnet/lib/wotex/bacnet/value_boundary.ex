@@ -30,10 +30,10 @@ defmodule Wotex.BACnet.ValueBoundary do
 
   defp visit(%CharacterString{bytes: bytes}, depth, budget), do: visit(bytes, depth, budget)
 
-  defp visit({:constructed, {_tag, value, 0}}, depth, {nodes, bytes}),
+  defp visit({:constructed, {_, value, 0}}, depth, {nodes, bytes}),
     do: visit(value, depth + 1, {nodes + 1, bytes})
 
-  defp visit({:tagged, {_tag, value, _size}}, depth, {nodes, bytes}),
+  defp visit({:tagged, {_, value, _}}, depth, {nodes, bytes}),
     do: visit(value, depth, {nodes + 1, bytes})
 
   defp visit({tag, value}, depth, {nodes, bytes}) when is_atom(tag),

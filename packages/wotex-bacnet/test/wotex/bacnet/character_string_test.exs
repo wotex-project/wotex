@@ -181,7 +181,7 @@ defmodule Wotex.BACnet.CharacterStringTest do
   end
 
   defp request(peer) do
-    assert {:ok, {ip, port, <<0x81, 0x0A, _::16, 1, 4, _flags, _maxima, id, 12, _::binary>>}} =
+    assert {:ok, {ip, port, <<0x81, 0x0A, _::16, 1, 4, _, _, id, 12, _::binary>>}} =
              :gen_udp.recv(peer, 0, 1000)
 
     {ip, port, id}

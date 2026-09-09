@@ -1,5 +1,6 @@
 defmodule Wotex.BACnet.PortTest do
   @moduledoc false
+
   use ExUnit.Case, async: true
   alias Wotex.BACnet
   alias Wotex.BACnet.{Error, TestClient}

@@ -1,5 +1,6 @@
 defmodule Wotex.BACnet.TestClient do
   @moduledoc false
+
   @behaviour Wotex.BACnet.Client
 
   @impl Wotex.BACnet.Client

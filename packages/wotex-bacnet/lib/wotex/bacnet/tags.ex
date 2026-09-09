@@ -65,7 +65,7 @@ defmodule Wotex.BACnet.Tags do
     end
   end
 
-  defp scalar(_original, rest, {7, 0, length}, closing, depth, count, values) do
+  defp scalar(_, rest, {7, 0, length}, closing, depth, count, values) do
     with {:ok, length, rest} <- size(length, rest),
          true <- length >= 1 and byte_size(rest) >= length,
          <<character_set, bytes::binary-size(^length - 1), rest::binary>> <- rest,

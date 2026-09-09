@@ -91,7 +91,7 @@ defmodule Wotex.BACnet.SoftwareCommand do
   @spec await(port(), non_neg_integer(), pos_integer(), binary()) :: result()
   def await(port, timeout, limit \\ @limit, initial \\ "") do
     case observe(port, timeout, limit, initial) do
-      {:error, reason, :unverified, _output} -> {:error, reason, :unverified}
+      {:error, reason, :unverified, _} -> {:error, reason, :unverified}
       result -> result
     end
   end

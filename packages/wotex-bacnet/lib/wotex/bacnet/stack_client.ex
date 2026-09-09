@@ -296,8 +296,8 @@ defmodule Wotex.BACnet.StackClient do
   end
 
   defp receive_apdu(
-         {:bacnet_transport, _protocol, source,
-          {:apdu, _bvlc, %NPCI{source: nil}, <<48, id, 12, bytes::binary>>}, _portal},
+         {:bacnet_transport, _, source,
+          {:apdu, _, %NPCI{source: nil}, <<48, id, 12, bytes::binary>>}, _},
          state
        ) do
     result =

@@ -218,7 +218,7 @@ defmodule Wotex.BACnet.COVLifecycleTest do
   test "WBA-S04 WBA-V09 lost renewal ACK emits one terminal error and releases the lease", c do
     {subscription, _, _} = subscribe(%{c | request: %{c.request | renew: true}})
     ref = subscription.reference
-    {_invoke, 5, _tags} = service(c.peer)
+    {_, 5, _} = service(c.peer)
     assert_receive {:wotex_bacnet, ^ref, {:error, %Error{effect: :none}}}, 1000
     finish_automatic_cancel(c, subscription)
     refute_receive {:wotex_bacnet, ^ref, _}, 20
@@ -397,7 +397,7 @@ defmodule Wotex.BACnet.COVLifecycleTest do
 
   test "WBA-S04 WBA-V11 two distinct early reports close without exposing a subscription", c do
     task = Task.async(fn -> BACnet.subscribe(c.session, c.request) end)
-    {_invoke, 5, [{:tagged, {0, bytes, _}} | _]} = service(c.peer)
+    {_, 5, [{:tagged, {0, bytes, _}} | _]} = service(c.peer)
     identifier = :binary.decode_unsigned(bytes)
 
     for {invoke, value} <- [{44, 1.5}, {45, 2.5}] do
@@ -414,7 +414,7 @@ defmodule Wotex.BACnet.COVLifecycleTest do
 
   test "WBA-S04 WBA-V11 a killed opening caller closes listener and cancels original identity", c do
     caller = spawn(fn -> BACnet.subscribe(c.session, c.request) end)
-    {_invoke, 5, [identity, object | _]} = service(c.peer)
+    {_, 5, [identity, object | _]} = service(c.peer)
     [{pid, _}] = Map.to_list(:sys.get_state(c.session.handle.stack.owner).subscriptions)
     monitor = Process.monitor(pid)
     Process.exit(caller, :kill)
@@ -543,7 +543,7 @@ defmodule Wotex.BACnet.COVLifecycleTest do
 
   test "WBA-S04 WBA-V11 killed registration worker returns a finite error and cancels", c do
     task = Task.async(fn -> BACnet.subscribe(c.session, c.request) end)
-    {_invoke, 5, _} = service(c.peer)
+    {_, 5, _} = service(c.peer)
     [{pid, _}] = Map.to_list(:sys.get_state(c.session.handle.stack.owner).subscriptions)
     Process.exit(:sys.get_state(pid).control.worker, :kill)
     assert {:error, %Error{code: :connection_closed}} = Task.await(task)
@@ -637,7 +637,7 @@ defmodule Wotex.BACnet.COVLifecycleTest do
 
   test "WBA-S04 WBA-V11 session shutdown with an opening caller releases its waiter", c do
     task = Task.async(fn -> BACnet.subscribe(c.session, c.request) end)
-    {_invoke, 5, _} = service(c.peer)
+    {_, 5, _} = service(c.peer)
     closing = Task.async(fn -> BACnet.disconnect(c.session) end)
     {invoke, 5, _} = service(c.peer)
     send_apdu(c.peer, <<0x20, invoke, 5>>)
