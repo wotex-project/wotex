@@ -49,6 +49,13 @@ arbitrary CLI execution and application payload transport are separate profiles.
 Radio URL and interface choices are explicit; physical radios are excluded from
 the mandatory software lane, which uses OpenThread's simulated RCP/platform.
 
+The native build also applies three unsigned casts before 24-bit shifts in the
+pinned SDK's `src/lib/spinel/spinel.c`. Integer promotion otherwise shifts a
+high-bit byte into signed `int`, which UBSan rejects during RCP timestamp reads.
+`dependencies.json` pins exact before/after source hashes; unknown source fails
+before patching, and CMake rejects unpatched SDK input. The actual Spinel decoder
+is tested over all 256 high-byte values for signed/unsigned 32/64-bit fields.
+
 ## WTH-S01 — Dataset syntax and semantic validity
 
 Preserve `Dataset.decode/1`, `encode/1` and opaque unknown TLVs with their order.

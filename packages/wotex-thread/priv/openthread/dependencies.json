@@ -21,5 +21,10 @@
     "version": "3.11.3",
     "url": "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp",
     "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6"
+  },
+  "spinel_unsigned_shift_fix": {
+    "source": "src/lib/spinel/spinel.c",
+    "before_sha256": "93961a75cee933737206500462ece18805a13544781488ad982c5abfddeb2127",
+    "after_sha256": "28841f049ab1c95c8a0b6baa73d7f6579ff2f97f007ef1496751453dfe4ba57b"
   }
 }
