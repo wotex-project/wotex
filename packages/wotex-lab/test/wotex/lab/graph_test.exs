@@ -40,7 +40,7 @@ defmodule Wotex.Lab.GraphTest do
     assert length(graph["seams"]) == length(index["seams"]) + length(Descriptors.seams())
     assert length(graph["adapters"]) == length(Descriptors.adapters())
     assert length(graph["scenarios"]) == 16
-    assert length(graph["completions"]) == 13 + 47
+    assert length(graph["completions"]) == 14 + 47
     assert length(graph["evidence_overlays"]) == length(catalogue["specifications"]) + 16
 
     ids = Enum.map(graph["nodes"], & &1["id"])

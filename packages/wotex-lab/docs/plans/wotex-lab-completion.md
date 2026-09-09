@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.2.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.3.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not an execution
@@ -40,10 +40,11 @@ acceptance gate. Archived packages and advisory conflicts are not waived.
 | WLB-C11 | WLB-C10 | Explicit API and readiness decision | Every retained API/result/error/default and claim has evidence; incompatible changes have migration decisions; maintainer reviews candidate |
 | WLB-C12 | WLB-C07; WLB.10 | PromEx metrics/panels, bounded ETS history, GreptimeDB bridge/query port and BeamLens skill | Protocol/store equality, retention, cardinality, loss/reset/clock cases, isolation, secret/prompt injection, cancellation and evidence-grounded AI queries |
 | WLB-C13 | WLB-C03; WLB-C07; WLB-C12; WLB.11 | Neutral base design system and explicit Phoenix LiveView workbench host | Tokens and accessible HEEx components, bounded charts, dashboard exports, no-LLM flow, keyboard/theme/reconnect/security browser suite and clone-free host artifact |
+| WLB-C14 | WLB-C08; WLB-C10; WLB-C13; WLB.12; DSH.01; PHA.01 | Unified built-in and static ecosystem documentation | All allowlisted repositories emit isolated corpora; routes/links/search resolve; LiveView/static semantics match; offline archive, browser/accessibility and fail-closed rolling/release publication vectors pass |
 
 WLB-C01, descriptor/Nx example source and C13's base tokens form the foundation deliverable.
 The catalogue records their status; prose or a source-only test cannot imply
-C02–C13 completion. No placeholder module may claim to implement these items.
+C02–C14 completion. No placeholder module may claim to implement these items.
 
 ## Upstream closure map
 
@@ -74,8 +75,8 @@ repository's spec, regression-test and verification workflow.
 ## Independent acceptance
 
 The gates in WLB.08 are independent: foundation, package contents, base archive
-consumer, full-host Workbench archive, reference consumer, distribution, public
-candidate, stable API.
+consumer, full-host Workbench archive, reference consumer, documentation
+distribution, general distribution, public candidate, stable API.
 Record exact commands, source tree/lock/artifact/schema/model digests,
 toolchains, resource envelope and claim dimensions. Missing artifacts or hardware
 remain unsatisfied evidence prerequisites. They do not permit a fake pass,

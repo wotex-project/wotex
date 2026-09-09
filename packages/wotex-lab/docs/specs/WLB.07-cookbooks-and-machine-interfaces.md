@@ -1,6 +1,6 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.4.3. Contract: accepted. Source status: the sixteen
+Specification version: 0.4.4. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
@@ -15,8 +15,8 @@ firmware or on-device record. This does not promote notebook installation to
 artifact acceptance. The zero-runtime-dependency `@wotex/lab-client` source,
 declarations, schema-drift gate, Node tests and npm archive-content check are
 implemented under `clients/typescript/`; publication and installed-artifact
-adoption remain separate. Mutation control operations and the public site
-remain planned.
+adoption remain separate. Mutation control operations remain planned. WLB.12
+owns the generated ecosystem documentation and public static site.
 
 ## Cookbook catalogue
 

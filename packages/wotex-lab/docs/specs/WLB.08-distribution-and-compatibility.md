@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.0. Contract: accepted. Source status: the workspace
+Specification version: 0.9.1. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -60,8 +60,9 @@ independent artifact adoption. Dated follow-up decisions live in the seam review
 | `package_contents_green` | Exact built archive has public lib/spec/plan/decision/provenance/fixtures/license files; no trackers, credentials, deps, build output or private paths; production dependency metadata has no path/git refs |
 | `archive_consumer_green` | Fresh unrelated Mix application, exact archive-only dependency closure, read-only admitted archives, Git absent from executable PATH during resolution/build/run; TD and Nx positive/negative cases |
 | `workbench_archive_green` | Fresh extracted Workbench source artifact, complete host dependency closure from admitted local/public archives, exact cached native-artifact digests, Git absent during resolution/build/release smoke, production compilation and executable release |
-| `reference_consumer_green` | WLB.02–WLB.07/WLB.09–WLB.11 complete scenarios against the same cohort; real transport, dual-store, metric/AI and workbench tests; independent target; exact ownership/effect boundary |
-| `distribution_green` | Hex/Mix.install, all Livebooks, OCI, generated npm client, disposable hosted demo and declared Nerves target tested; installed-artifact smoke repeated for published cohort |
+| `reference_consumer_green` | WLB.02–WLB.07/WLB.09–WLB.12 complete scenarios against the same cohort; real transport, dual-store, metric/AI, workbench and documentation tests; independent target; exact ownership/effect boundary |
+| `documentation_distribution_green` | WLB.12 pinned cohort; isolated source collections; built-in Workbench docs; root/subpath static archive; semantic parity, link, search, browser, accessibility, offline, bundle and rollback evidence |
+| `distribution_green` | Hex/Mix.install, all Livebooks, OCI, generated npm client, unified static documentation, disposable hosted demo and declared Nerves target tested; installed-artifact smoke repeated for published cohort |
 | `public_release_candidate` | All above plus SBOM/provenance/license/security/API review, verified source/lock/archive/image/model digests and all documented links/commands |
 | `stable_api_candidate` | Explicit compatibility decision over every public result/error/default/schema and minimum/current supported cohort; no inference from version or coverage |
 

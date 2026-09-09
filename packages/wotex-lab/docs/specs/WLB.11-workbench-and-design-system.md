@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and shared design system
 
-Specification version: 0.5.4. Contract: accepted.
+Specification version: 0.5.5. Contract: accepted.
 
 ## Implemented source and evidence boundary
 
@@ -89,10 +89,11 @@ backgrounds or mandatory icon/font CDN. Dense data views are allowed where
 useful; empty screens explain one clear next action.
 
 The shell has a collapsible left sidebar, a compact top context line and a
-single main workspace. The sidebar contains Experiments, Things, Metrics and
-Evidence, with settings at the bottom. A run context includes its identity,
-source mode, backend and state. Conversation history is subordinate to the
-selected experiment, not a new global navigation system.
+single main workspace. The sidebar contains Experiments, Things, Metrics,
+Evidence and Documentation, with settings at the bottom. Documentation opens
+the public inert WLB.12 route and does not allocate a room. A run context
+includes its identity, source mode, backend and state. Conversation history is
+subordinate to the selected experiment, not a new global navigation system.
 
 | View | Main content | Primary action |
 | --- | --- | --- |
@@ -101,6 +102,7 @@ selected experiment, not a new global navigation system.
 | Things | Disposable TDs, affordances, transport and explicit ownership seam | Read a simulated Property |
 | Metrics | Small saved panels, range/filter controls, freshness/loss markers | Ask about the visible measurements |
 | Evidence | Dependency/spec/dataset/query digests, conformance outcomes and formal model scope | Inspect or export a bounded report |
+| Documentation | Generated ecosystem guides, protocols, API reference, specifications and source provenance | Search or follow the documented public seam |
 
 BeamLens appears as an “Ask about this run” composer and a collapsible answer
 thread, not a full-screen chatbot gate. Answers link to the exact charts,
