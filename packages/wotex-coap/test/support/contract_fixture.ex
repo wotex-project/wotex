@@ -2,7 +2,7 @@ defmodule Wotex.CoAP.ContractFixture do
   @moduledoc false
 
   alias Wotex.CoAP
-  alias Wotex.CoAP.{Codec, Error, Message, Observe}
+  alias Wotex.CoAP.{Codec, Error, LinkFormat, Message, Observe}
   @types %{"con" => :con, "non" => :non, "ack" => :ack, "rst" => :rst}
   @keys %{"method" => :method, "path" => :path, "accept" => :accept}
   @methods %{"get" => :get, "post" => :post, "put" => :put, "delete" => :delete}
@@ -33,6 +33,30 @@ defmodule Wotex.CoAP.ContractFixture do
 
   def run(%{"operation" => "observe.fresh", "input" => input}),
     do: Observe.fresh?(input["previous"], input["current"], input["elapsed_ms"])
+
+  def run(%{"operation" => "link_format.decode", "input" => input}) do
+    keys = %{
+      "max_body_bytes" => :max_body_bytes,
+      "max_links" => :max_links,
+      "max_attributes" => :max_attributes,
+      "max_token_bytes" => :max_token_bytes
+    }
+
+    options = Enum.map(input["options"], fn [key, value] -> {Map.fetch!(keys, key), value} end)
+
+    case LinkFormat.decode(input["body"], options) do
+      {:ok, links} ->
+        values =
+          Enum.map(links, fn link ->
+            %{"href" => link.href, "attributes" => Enum.map(link.attributes, &Tuple.to_list/1)}
+          end)
+
+        %{"status" => "ok", "value" => values}
+
+      error ->
+        project(error)
+    end
+  end
 
   defp message(input) do
     %Message{

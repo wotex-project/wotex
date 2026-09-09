@@ -7,7 +7,7 @@ defmodule Wotex.CoAP.NativeContractTest do
   @path Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
   @fixture Jason.decode!(File.read!(@path))
   @digest Base.encode16(:crypto.hash(:sha256, File.read!(@path)), case: :lower)
-  @operations ~w(codec.encode codec.decode codec.validate message.new observe.fresh)
+  @operations ~w(codec.encode codec.decode codec.validate message.new observe.fresh link_format.decode)
 
   for fixture <- @fixture["cases"], fixture["operation"] in @operations do
     @tag fixture_sha256: @digest
@@ -25,11 +25,11 @@ defmodule Wotex.CoAP.NativeContractTest do
     ids = Enum.map(@fixture["cases"], & &1["id"])
     assert length(ids) == 32
     assert MapSet.size(MapSet.new(ids)) == 32
-    assert Enum.count(@fixture["cases"], &(&1["operation"] in @operations)) == 22
+    assert Enum.count(@fixture["cases"], &(&1["operation"] in @operations)) == 31
 
     assert Enum.all?(
              @fixture["cases"],
-             &(&1["operation"] in (@operations ++ ~w(link_format.decode observation.trace)))
+             &(&1["operation"] in (@operations ++ ~w(observation.trace)))
            )
   end
 
