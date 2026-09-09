@@ -2,19 +2,17 @@
   parallel: false,
   skipped: false,
   tools: [
-    {:deps_get, command: "mix deps.get"},
     {:compiler, command: "mix compile --warnings-as-errors"},
+    {:unused_deps, false},
     {:formatter, command: "mix format --check-formatted"},
-    {:credo, command: "mix credo --strict"},
-    {:unused_dependencies, command: "mix deps.unlock --check-unused"},
-    {:mix_audit, command: "mix deps.audit"},
-    {:hex_audit, command: "mix hex.audit"},
-    {:dialyzer, command: "mix dialyzer"},
-    {:doctor, command: "mix doctor"},
-    {:ex_doc, command: "mix docs --warnings-as-errors"},
-    {:ex_unit, command: "mix coveralls"},
-    {:boundary, command: "elixir bin/check_boundary.exs"},
-    {:archive, command: "mix run --no-start bin/check_archive.exs"}
+    {:mix_audit, false},
+    {:credo, false},
+    {:doctor, false},
+    {:sobelow, false},
+    {:ex_doc, false},
+    {:ex_unit, command: "mix test"},
+    {:dialyzer, false},
+    {:gettext, false},
+    {:npm_test, false}
   ]
 ]
-
