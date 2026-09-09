@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.0
+version: 1.0.1
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -250,11 +250,53 @@ bus, disable exit-on-disconnect, and integrate D-Bus watch/timeout functions wit
 poll and stdin/output readiness. `dbus_connection_send_with_reply` creates
 bounded pending calls; callbacks unref each pending call and message exactly
 once. Never block the only event loop in send_with_reply_and_block. Configure
-received message size at 4 MiB and aggregate receive storage at 8 MiB, then apply
-S01 object/catalogue bounds while decoding ObjectManager replies. The single
+received message size at 4 MiB and the aggregate receive watermark at 8 MiB, then
+apply S01 object/catalogue bounds while decoding ObjectManager replies.
+The libdbus watermark pauses further reads after outstanding messages exceed
+the threshold; its documented overshoot includes one maximum-sized message and
+a read buffer. It is not an exact native allocation or RSS ceiling. The decoded
+snapshot has the independent entry bounds below. Unix file-descriptor transfer
+has a one-FD per-message receive slot and aggregate watermark of one. Reject
+every FD-bearing message before invoking an operation or signal callback and
+close the private connection, then terminate and reap the native host within
+C03's cleanup grace. The receive slot permits libdbus to own and close
+the received descriptor on rejection; it grants no admitted FD procedure. Zero
+for the aggregate watermark stalls all libdbus dispatch, including messages
+without FDs. This profile does not use Acquire* procedures. ObjectManager
+decoding independently rejects an FD-bearing message. Ancillary-data truncation
+can leave descriptors that the platform does not return to libdbus; graceful
+connection close alone does not establish zero native descriptors. Fatal
+channel teardown therefore ends the owned process rather than reusing it.
+The single
 private connection supplies the unique sender for open, discovery, Agent1,
 ReadValue, WriteValue, StartNotify and StopNotify. It closes and unreferences
 only its own connection.
+
+The ObjectManager decoder admits at most 64 interfaces per object, 256
+properties per interface and 65536 aggregate dictionary entries, including
+object, interface and property entries. These limits supplement S01's object
+and selected-catalogue bounds. Check every count before inserting its entry.
+Object paths retain the 4096-byte limit; interface and property names obey the
+D-Bus interface/member grammar and 255-byte limits. Reject duplicate object,
+interface and property keys, including keys in unselected interfaces.
+
+Validate known property variants before extracting their values: Device1
+Adapter, GattService1 Device and GattCharacteristic1 Service are object paths;
+UUID, Address and AddressType are strings; Connected and ServicesResolved are
+booleans; Handle is uint16 in 1..65535; Flags is an array of at most 64 distinct
+UTF-8 strings of 1..64 bytes. A uint32 Handle or string-encoded object path is
+an invalid response even when its apparent value fits. Unknown properties and
+interfaces are structurally traversed within the entry budget, then skipped
+without expanding their variant payloads. Only a successfully decoded snapshot
+and a validated peer value enter discovery association. Selected services must
+name the exact device path; selected characteristics must name a selected
+service path. Lexical path-prefix similarity establishes no association.
+
+The pinned libdbus 1.16.2 [connection API](https://dbus.freedesktop.org/doc/api/html/group__DBusConnection.html)
+defines the receive watermark. Its [transport dispatch condition](https://dbus.freedesktop.org/doc/api/html/dbus-transport_8c_source.html#l01129)
+defines the zero-FD-watermark behavior. The [Unix ancillary-data reader](https://dbus.freedesktop.org/doc/api/html/dbus-sysdeps-unix_8c_source.html#l00547)
+describes descriptor loss on truncation; the process-teardown requirement above
+is the package's ownership rule for that failure.
 
 S02 owns peer association and listener/snapshot reconciliation. The Agent1 object
 is exported only for the pending explicit Pair operation; exact-peer prompts

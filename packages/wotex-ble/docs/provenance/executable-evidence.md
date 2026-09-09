@@ -105,3 +105,28 @@ adopting the replacement. Cancelled establishment and late Hello also clean up.
 The service-name fixture is an identity/ownership test, not a BlueZ GATT peer.
 This evidence does not establish GATT, Agent1 procedures, the complete native
 Port helper or the planned SDK build task.
+
+## Native typed discovery snapshots
+
+`test/native/objects_test.hpp` constructs actual libdbus typed ObjectManager
+messages and exercises the production `objects.hpp` decoder through the explicit
+native fixture. Assertions cover exact peer/device/service associations,
+UUID normalization, optional uint16 handles, generation precision and bounded
+unknown flags. Wrong variant types, duplicate dictionary keys, FD-bearing
+messages and malformed peer values fail. A real one-descriptor signal on the
+private daemon produces no callback and releases its descriptor on connection
+close; a second connection remains usable. The over-capacity two-descriptor
+fault runs in an owned native child that exits and is reaped within 1000 ms.
+The parent retains no descriptors after that child fixture completes. On macOS,
+the observed ancillary-data truncation leaves a descriptor after connection
+close alone; process teardown supplies the required cleanup. Linux ARM64's
+connection-close path also passes the two-descriptor fault. Neither result
+substitutes for the final BEAM/native-host lifecycle fixture.
+Native peer and snapshot constructors
+restrict discovery to validated values.
+
+The fixture exercises 4096 objects, 64 interfaces, 256 properties, 65536 aggregate
+dictionary entries, 4096-byte paths and 1024 selected services/characteristics
+at their boundaries. Unknown variant payloads are skipped without copying them
+into the owned snapshot. These are typed native decoding tests; live BlueZ
+GetManagedObjects acquisition and listener/snapshot reconciliation remain open.

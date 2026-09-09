@@ -10,7 +10,7 @@ defmodule Wotex.BLE.NativeBusTest do
   @moduletag :interop
   @root Path.expand("../..", __DIR__)
 
-  test "WBL-B01 private libdbus ownership, bounded calls and exact replies" do
+  test "WBL-B01/S02 typed snapshots, private ownership and exact replies" do
     source = required_directory!("WOTEX_BLE_DBUS_SOURCE")
     build = required_directory!("WOTEX_BLE_DBUS_BUILD")
     compiler = System.find_executable("c++") || flunk("native bus fixture requires C++17")

@@ -63,6 +63,10 @@ class Bus {
 
   static DBusHandlerResult received(DBusConnection *, DBusMessage *message, void *data) noexcept {
     auto &owner = *static_cast<Bus *>(data);
+    if (dbus_message_contains_unix_fds(message)) {
+      owner.failure_ = "invalid_response";
+      return DBUS_HANDLER_RESULT_HANDLED;
+    }
     if (dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_SIGNAL)
       return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     const char *sender = dbus_message_get_sender(message);
@@ -146,6 +150,7 @@ class Bus {
     const char *error = nullptr;
     if (Clock::now() >= pending->deadline) error = "timeout";
     else if (!reply) error = "invalid_response";
+    else if (dbus_message_contains_unix_fds(reply.get())) error = failure_ = "invalid_response";
     else {
       const char *sender = dbus_message_get_sender(reply.get());
       if (!sender || pending->sender != sender) error = "invalid_response";
@@ -188,7 +193,7 @@ class Bus {
   }
   void dispatch() {
     std::size_t budget = 64;
-    while (connection_ && budget-- && dbus_connection_get_dispatch_status(connection_) == DBUS_DISPATCH_DATA_REMAINS) {
+    while (connection_ && !failure_ && budget-- && dbus_connection_get_dispatch_status(connection_) == DBUS_DISPATCH_DATA_REMAINS) {
       if (dbus_connection_dispatch(connection_) == DBUS_DISPATCH_NEED_MEMORY) {
         failure_ = "resource_limit";
         break;
@@ -231,6 +236,10 @@ public:
     dbus_connection_set_exit_on_disconnect(connection_, false);
     dbus_connection_set_max_message_size(connection_, 4194304);
     dbus_connection_set_max_received_size(connection_, 8388608);
+    // Reserve a bounded receive slot; reject any FD before a user callback.
+    dbus_connection_set_max_message_unix_fds(connection_, 1);
+    // A zero aggregate watermark also stalls messages containing no FDs.
+    dbus_connection_set_max_received_unix_fds(connection_, 1);
     if (!dbus_connection_set_watch_functions(connection_, add_watch, remove_watch, toggle_watch, this, nullptr) ||
         !dbus_connection_set_timeout_functions(connection_, add_timeout, remove_timeout, toggle_timeout, this, nullptr)) {
       close();

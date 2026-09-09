@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "bus.hpp"
 #include "service.hpp"
+#include "objects_test.hpp"
 #include <csignal>
 #include <fcntl.h>
+#include <dirent.h>
 #include <fstream>
 #include <iostream>
 #include <sys/wait.h>
 #include <unistd.h>
 
 using namespace wotex::ble;
-static void check(bool value) { if (!value) throw std::runtime_error("bus assertion failed"); }
+static void check_at(bool value, unsigned line) {
+  if (!value) throw std::runtime_error("bus assertion failed at line " + std::to_string(line));
+}
+#define check(value) check_at((value), __LINE__)
 struct Child {
   pid_t pid = -1;
   ~Child() {
@@ -180,6 +185,122 @@ static void service_identity(const std::string &address) {
   check(!expired.active() && expired.bus().pending_count() == 0);
   check(has_owner(replacement, "org.bluez"));
 }
+static unsigned descriptor_count() {
+  DIR *directory = opendir("/dev/fd"); check(directory != nullptr);
+  unsigned count = 0;
+  while (const auto *entry = readdir(directory)) {
+    if (entry->d_name[0] == '.') continue;
+    char *end = nullptr;
+    const long descriptor = std::strtol(entry->d_name, &end, 10);
+    if (end && !*end && descriptor >= 0 && descriptor <= std::numeric_limits<int>::max() &&
+        fcntl(static_cast<int>(descriptor), F_GETFD) >= 0) ++count;
+  }
+  check(closedir(directory) == 0);
+  return count;
+}
+static void unix_fds(const std::string &address, unsigned amount) {
+  // The fault producer uses libdbus directly; production Bus never exports an
+  // unbounded/raw send API. The enclosing command guardian bounds this fixture.
+  struct RawClose {
+    void operator()(DBusConnection *value) const {
+      if (value) { dbus_connection_close(value); dbus_connection_unref(value); }
+    }
+  };
+  std::unique_ptr<DBusConnection, RawClose> producer(dbus_connection_open_private(address.c_str(), nullptr));
+  check(producer != nullptr);
+  dbus_connection_set_exit_on_disconnect(producer.get(), false);
+  check(dbus_bus_register(producer.get(), nullptr));
+  Bus receiver(address), survivor(address); hello(receiver); hello(survivor);
+  unsigned delivered = 0;
+  receiver.listen(dbus_bus_get_unique_name(producer.get()), "/org/example", "org.example.Fault",
+    "Descriptor", std::string(amount, 'h'), [&](auto) { ++delivered; });
+  const auto before = descriptor_count();
+  {
+    Message signal(dbus_message_new_signal("/org/example", "org.example.Fault", "Descriptor"));
+    check(signal != nullptr);
+    check(dbus_message_set_destination(signal.get(), receiver.unique_name().c_str()));
+    Fd file{open("/dev/null", O_RDONLY)}; check(file.value >= 0);
+    for (unsigned i = 0; i < amount; ++i)
+      check(dbus_message_append_args(signal.get(), DBUS_TYPE_UNIX_FD, &file.value, DBUS_TYPE_INVALID));
+    check(dbus_connection_send(producer.get(), signal.get(), nullptr));
+    dbus_connection_flush(producer.get());
+  }
+  const auto sent = descriptor_count();
+  until(receiver, [&] { return receiver.failure() != nullptr; });
+  receiver.close();
+  const auto after = descriptor_count();
+  if (delivered != 0 || after >= before)
+    throw std::runtime_error("FD fault: deliveries=" + std::to_string(delivered) +
+      " before=" + std::to_string(before) + " sent=" + std::to_string(sent) + " after=" + std::to_string(after));
+  check(!id(survivor).empty());
+}
+static void descriptor_process(const std::string &address) {
+  int output_fds[2], owner_fds[2];
+  check(pipe(output_fds) == 0); Fd input{output_fds[0]}, output{output_fds[1]};
+  check(pipe(owner_fds) == 0); Fd owner_input{owner_fds[0]}, owner_output{owner_fds[1]};
+  Child child; child.pid = fork(); check(child.pid >= 0);
+  if (child.pid == 0) {
+    ::close(input.value); ::close(owner_output.value);
+    try {
+      Bus receiver(address); hello(receiver);
+      const auto name = receiver.unique_name() + "\n";
+      if (write(output.value, name.data(), name.size()) != static_cast<ssize_t>(name.size())) _exit(1);
+      const auto deadline = Clock::now() + std::chrono::seconds(3);
+      while (!receiver.failure() && Clock::now() < deadline) {
+        std::vector<pollfd> extra{{owner_input.value, POLLIN, 0}};
+        receiver.poll(extra, 10);
+        if (extra[0].revents & (POLLIN | POLLHUP | POLLERR)) { receiver.close(); _exit(1); }
+      }
+      const bool failed = receiver.failure() != nullptr;
+      receiver.close();
+      // A fatal native channel ends the process, including descriptors that a
+      // platform's ancillary-data truncation cannot return to libdbus.
+      _exit(failed ? 0 : 1);
+    } catch (...) { _exit(1); }
+  }
+  ::close(output.value); output.value = -1;
+  ::close(owner_input.value); owner_input.value = -1;
+  std::string destination;
+  const auto startup = Clock::now() + std::chrono::seconds(3);
+  while (Clock::now() < startup && destination.size() < 255) {
+    pollfd descriptor{input.value, POLLIN, 0};
+    check(::poll(&descriptor, 1, 10) >= 0);
+    if (!(descriptor.revents & (POLLIN | POLLHUP))) continue;
+    char byte; check(read(input.value, &byte, 1) == 1);
+    if (byte == '\n') break;
+    destination += byte;
+  }
+  check(!destination.empty() && destination[0] == ':' && dbus_validate_bus_name(destination.c_str(), nullptr));
+  struct RawClose {
+    void operator()(DBusConnection *value) const {
+      if (value) { dbus_connection_close(value); dbus_connection_unref(value); }
+    }
+  };
+  std::unique_ptr<DBusConnection, RawClose> producer(dbus_connection_open_private(address.c_str(), nullptr));
+  check(producer != nullptr);
+  dbus_connection_set_exit_on_disconnect(producer.get(), false);
+  check(dbus_bus_register(producer.get(), nullptr));
+  Message signal(dbus_message_new_signal("/org/example", "org.example.Fault", "Descriptor"));
+  check(signal != nullptr && dbus_message_set_destination(signal.get(), destination.c_str()));
+  Fd file{open("/dev/null", O_RDONLY)}; check(file.value >= 0);
+  for (unsigned i = 0; i < 2; ++i)
+    check(dbus_message_append_args(signal.get(), DBUS_TYPE_UNIX_FD, &file.value, DBUS_TYPE_INVALID));
+  const auto deadline = Clock::now() + std::chrono::milliseconds(1000);
+  check(dbus_connection_send(producer.get(), signal.get(), nullptr));
+  dbus_connection_flush(producer.get());
+  while (Clock::now() < deadline) {
+    int status = 0;
+    const auto result = waitpid(child.pid, &status, WNOHANG);
+    if (result == child.pid) {
+      child.pid = -1;
+      check(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+      return;
+    }
+    check(result == 0 || (result < 0 && errno == EINTR));
+    ::poll(nullptr, 0, 1);
+  }
+  throw std::runtime_error("native descriptor owner exceeded cleanup grace");
+}
 static void signals(const std::string &address) {
   Bus observer(address); hello(observer);
   unsigned created = 0, removed = 0, foreign = 0, once = 0;
@@ -320,10 +441,18 @@ static void invariants(const std::string &address) {
 int main(int argc, char **argv) {
   if (argc != 3) return 2;
   try {
+    object_test::invariants();
     Daemon daemon(argv[1], argv[2]);
     invariants(daemon.address);
     signals(daemon.address);
     service_identity(daemon.address);
+    unix_fds(daemon.address, 1);
+#ifdef __linux__
+    unix_fds(daemon.address, 2);
+#endif
+    const auto descriptors_before = descriptor_count();
+    descriptor_process(daemon.address);
+    check(descriptor_count() == descriptors_before);
     dbus_shutdown();
     std::cout << "native bus ownership invariants passed\n";
     return 0;
