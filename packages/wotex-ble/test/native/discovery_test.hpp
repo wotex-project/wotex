@@ -11,11 +11,23 @@ class Peer {
   DBusConnection *connection_;
   static DBusHandlerResult receive(DBusConnection *, DBusMessage *message, void *data) noexcept {
     auto &self = *static_cast<Peer *>(data);
+    if (dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_SIGNAL && self.on_signal) {
+      try { self.on_signal(message); }
+      catch (const std::exception &error) { self.failure = error.what(); }
+      catch (...) { self.failure = "unknown fixture error"; }
+      return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
     const bool metadata = dbus_message_is_method_call(message, "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
     const bool link = dbus_message_is_method_call(message, device_interface, "Connect") ||
                       dbus_message_is_method_call(message, device_interface, "Disconnect");
-    if (!metadata && !link)
-      return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    if (!metadata && !link) {
+      if (!self.on_other || dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_METHOD_CALL)
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+      try { self.on_other(message); }
+      catch (const std::exception &error) { self.failure = error.what(); }
+      catch (...) { self.failure = "unknown fixture error"; }
+      return DBUS_HANDLER_RESULT_HANDLED;
+    }
     try {
       if (link) {
         DISCOVERY_CHECK(dbus_message_has_path(message, "/org/bluez/hci0/device") && dbus_message_has_signature(message, ""));
@@ -38,6 +50,8 @@ public:
   std::string failure;
   std::function<void(DBusMessage *)> on_query;
   std::function<void(DBusMessage *)> on_method;
+  std::function<void(DBusMessage *)> on_other;
+  std::function<void(DBusMessage *)> on_signal;
   std::vector<std::pair<std::string, std::string>> methods;
   explicit Peer(const std::string &address, bool own = true) {
     connection_ = dbus_connection_open_private(address.c_str(), nullptr); DISCOVERY_CHECK(connection_);
@@ -58,6 +72,7 @@ public:
                     dbus_message_has_signature(reply.get(), "s"));
   }
   std::string sender() const { return dbus_bus_get_unique_name(connection_); }
+  DBusConnection *connection() { return connection_; }
   void send(Message message) {
     DISCOVERY_CHECK(dbus_connection_send(connection_, message.get(), nullptr));
     dbus_connection_flush(connection_);

@@ -680,6 +680,92 @@
           }
         }
       }
+    },
+    {
+      "id": "WBL-B-F25",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S02",
+        "WBL-V06",
+        "WBL-C03"
+      ],
+      "operation": "pair_lifecycle",
+      "input": {
+        "capability": "DisplayYesNo",
+        "decision": {
+          "action": "accept"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [
+            "RegisterAgent",
+            "Pair",
+            "UnregisterAgent"
+          ],
+          "challenge_kind": "confirm_passkey",
+          "challenge_value": 123456,
+          "agent_accepted": true,
+          "agent_reply_signature": "",
+          "result": {
+            "paired": true
+          },
+          "owner_active": true,
+          "native_completions": 1,
+          "pending_calls": 0,
+          "exports": 0,
+          "queued_replies": 0,
+          "pending_prompt": false,
+          "remote_agents": 0,
+          "sender_releases": 0,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F26",
+      "requirements": [
+        "WBL-B02",
+        "WBL-B03",
+        "WBL-S02",
+        "WBL-V06",
+        "WBL-C03"
+      ],
+      "operation": "pair_lifecycle",
+      "input": {
+        "capability": "DisplayYesNo",
+        "decision": {
+          "action": "reject"
+        }
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "methods": [
+            "RegisterAgent",
+            "Pair",
+            "UnregisterAgent"
+          ],
+          "challenge_kind": "confirm_passkey",
+          "challenge_value": 123456,
+          "agent_accepted": false,
+          "agent_reply_signature": "",
+          "result": {
+            "code": "pairing_rejected"
+          },
+          "owner_active": false,
+          "native_completions": 1,
+          "pending_calls": 0,
+          "exports": 0,
+          "queued_replies": 0,
+          "pending_prompt": false,
+          "remote_agents": 0,
+          "sender_releases": 1,
+          "disconnect_calls": 0
+        }
+      }
     }
   ],
   "executed_cases": [
@@ -701,6 +787,8 @@
     "WBL-B-F21",
     "WBL-B-F22",
     "WBL-B-F23",
-    "WBL-B-F24"
+    "WBL-B-F24",
+    "WBL-B-F25",
+    "WBL-B-F26"
   ]
 }

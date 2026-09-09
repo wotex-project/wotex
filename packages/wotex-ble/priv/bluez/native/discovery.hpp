@@ -35,14 +35,14 @@ class LiveDiscovery {
       force_close();
       if (callback) callback(nullptr);
     }
-    void close(Callback callback = {}) {
-      if (closing) return;
+    void close(Callback callback = {}, Deadline stop_by = Clock::now() + std::chrono::milliseconds(500)) {
+      if (closing) { cleanup_deadline = std::min(cleanup_deadline, stop_by); return; }
       if (!active) { if (callback) callback(nullptr); return; }
       active = false; closing = true; waiting_state = false;
       pending = {}; lost = {}; changed = {}; close_done = std::move(callback);
-      cleanup_deadline = Clock::now() + std::chrono::milliseconds(500);
+      cleanup_deadline = std::min(stop_by, Clock::now() + std::chrono::milliseconds(500));
       service.bus().cancel_calls();
-      if (!link_owned || !snapshot || service.owner().empty() || service.bus().failure()) {
+      if (Clock::now() >= cleanup_deadline || !link_owned || !snapshot || service.owner().empty() || service.bus().failure()) {
         finish_close(); return;
       }
       Message request(dbus_message_new_method_call(service.owner().c_str(), snapshot->device_path.c_str(),
@@ -260,6 +260,9 @@ public:
     else if (state.active && state.connecting && !state.delivered && Clock::now() >= state.deadline) state.fail("timeout");
   }
   void close() { state_->close(); }
+  void close(Deadline stop_by) { state_->close({}, stop_by); }
+  const std::string &failure() const { return state_->terminal; }
+  const NativePeer &peer() const { return state_->peer; }
   bool closing() const { return state_->closing; }
   bool link_owned() const { return state_->link_owned; }
   bool active() const { return state_->active; }

@@ -237,3 +237,31 @@ ExUnit compares the independently encoded reply projection with the corpus.
 The pure cases construct actual typed libdbus messages and perform no bus or
 pairing operation. Registration, policy callback deadlines, late replies and
 native Pair/UnregisterAgent cleanup still require operation-level acceptance.
+
+## Native Pair and Agent lifecycle
+
+`test/native/pairing_test.hpp` drives the production `NativePairing` owner against
+an independent private D-Bus Agent manager/device fixture. It checks registration,
+explicit policy, Pair completion and unregistration on the same actual unique
+sender for all three supported capabilities. WBL-B-F25 and WBL-B-F26 execute exact
+accept/reject lifecycle inputs and compare observed method/resource projections.
+The fixture observes the daemon's unique-sender release signal to clear remote
+Agent records when a sender closes; its counters do not infer remote release
+from a local function return.
+
+Fault cases cover missing/malformed acknowledgements, explicit remote errors,
+wrong peer/challenge/decision, overlapping prompts, premature Pair completion,
+foreign senders, Cancel/Release, event-capacity failure, owner replacement and
+cancellation while registration or discovery is pending. A full native pending
+queue escalates cleanup without silently evicting ordinary work to admit another
+method. One hundred successive Agent lifetimes leave no exports, pending calls,
+queued replies or retained prompts. A borrowed link receives no explicit
+Disconnect. A blocked UnregisterAgent and blocked owned-link Disconnect share
+the caller's original cleanup deadline; repeated cancellation cannot extend it.
+Native errors retain admitted names and exclude arbitrary diagnostic bodies.
+
+These tests exercise actual libdbus messages and native component ownership.
+They do not execute the complete Port helper, BEAM native route, persistent BlueZ
+service or virtual Bluetooth controller. Those implementation and interoperability
+requirements remain open. Public Pair effect classification must satisfy C04
+when the native backend is connected to the BEAM owner.

@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.8
+  version: 1.0.9
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -249,6 +249,18 @@ true`, `kind`, `value`, `decision_accepted` and `reply`. The reply records exact
 An invalid prompt or decision projects exactly `{"accepted":false}`. Explicit
 policy rejection is a valid decision with `decision_accepted: false` and the
 fixed rejection error; it is not successful pairing. No daemon or Pair call occurs.
+`pair_lifecycle` starts the actual private D-Bus daemon and its independent Agent
+manager/device fixture, then executes the production native pairing owner. Its
+input is exactly `capability` and `decision`. The fixture presents
+RequestConfirmation for passkey 123456 and the selected synthetic peer. It sends
+Pair completion only after the Agent reply. The result records observed method
+order, challenge kind/value, Agent reply signature/acceptance, operation result,
+connection state, completion count, native pending/export/reply/prompt counts,
+remote Agent count, unique-sender release events and explicit Disconnect calls.
+Remote Agent count changes only on an observed registration/unregistration or
+the daemon's actual unique-sender release signal. Expected results remain in
+ExUnit and never enter the native process. This fixture establishes D-Bus
+procedure ownership; it does not establish BlueZ or controller interoperability.
 `ready` starts the actual helper, captures its first frame and closes its input;
 the expectation is exact JSON-object equality plus zero surviving owned
 processes after the grace. Parser cases never count as SDK interoperability.
@@ -438,6 +450,44 @@ fails `:pairing_rejected`. Invalid decisions cannot produce a method return;
 the pairing owner rejects and tears down according to S02. The pure prompt
 boundary does not read a clock or infer policy. The operation owner enforces
 the absolute deadline and challenge ID before invoking it.
+
+The pairing owner derives its peer from the connection's immutable validated
+identity. A stale discovery snapshot is reconciled before Agent registration.
+Registration precedes Pair on the same unique sender, and its acknowledgement
+is required before Pair submission. The supported capability names are exactly
+`NoInputNoOutput`, `DisplayYesNo` and `KeyboardOnly`; there is no empty/default
+capability. Agent paths use the owning session's accepted positive uint64 request
+counter. Challenge IDs contain that counter, a colon and a positive uint64
+per-attempt prompt counter, at most 41 ASCII bytes. The shared C07 request counter
+prevents path/challenge reuse within a session; neither counter rolls over.
+
+At most one prompt awaits an explicit decision. Its response parameters contain
+exactly `challenge_id` and `decision`. A foreign sender reaches no policy callback;
+a wrong peer, overlapping prompt, expired or wrong challenge, unsupported method,
+invalid decision or unavailable event capacity rejects pairing. Cancel and Release
+acknowledge their empty method bodies, reject any owned prompt and finish the
+attempt. Release identifies an already removed registration. Pair success while
+a policy prompt is still pending is invalid. Success requires both Pair completion
+and verified Agent unregistration before the interaction deadline.
+
+Local exports and retained prompts are detached before cleanup waits. Unregistration
+uses at most half the remaining cooperative cleanup allowance, reserving the rest
+for connection closure. The same absolute deadline is passed into that closure;
+repeated cancellation and destruction cannot restart it. Unknown registration or
+Pair completion, failed unregistration and capacity exhaustion close this unique
+sender. Exact remote Pair/RegisterAgent errors complete the corresponding pending
+call; they do not attest that no remote state changed. Unknown-effect Pair errors
+follow C04, remain non-retryable and must receive permanent Runtime classification
+when projected through a public error boundary. Late replies never revive an attempt.
+
+Native failures preserve only fixed library codes and the S03-admitted BlueZ error
+name. Known BlueZ names map to the corresponding stable code; unknown admitted
+names use `remote_error`. Unadmitted names and diagnostic bodies are omitted.
+Unexpected local diagnostic text normalizes to `transport_error`, never to an IPC
+string supplied by the operating system or SDK. The operation signatures follow
+[AgentManager](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.AgentManager.rst)
+and [Device](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.Device.rst)
+at the pinned BlueZ revision.
  No default agent registration,
 trust change, bond removal or CancelPairing is permitted. S03's write_submitted
 event precedes WriteValue submission and has its exact active request ID;

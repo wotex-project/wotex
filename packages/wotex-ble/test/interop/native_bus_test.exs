@@ -109,6 +109,21 @@ defmodule Wotex.BLE.NativeBusTest do
     end
   end
 
+  for fixture <- @fixtures, fixture["operation"] == "pair_lifecycle" do
+    @fixture fixture
+    test "#{fixture["id"]} executes actual native Agent registration and Pair lifecycle", context do
+      assert {:ok, output, 0} =
+               NativeCommand.run(
+                 context.guardian,
+                 context.executable,
+                 ["--pair-input", Jason.encode!(@fixture["input"]), context.daemon, context.config],
+                 context.options
+               )
+
+      assert Jason.decode!(output) == @fixture["expectation"]["value"]
+    end
+  end
+
   defp required_directory!(name) do
     value = System.get_env(name)
 
