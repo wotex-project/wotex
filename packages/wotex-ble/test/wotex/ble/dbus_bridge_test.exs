@@ -545,4 +545,22 @@ defmodule Wotex.BLE.DBusBridgeTest do
 
     refute Enum.any?(calls(record), &(&1["method"] == "RegisterAgent"))
   end
+
+  test "WBL-C07 exhausted dispatch counter rejects pairing policy control without rollover" do
+    {session, record} = connect("pair")
+    :sys.replace_state(session.handle.pid, &%{&1 | counter: 0xFFFF_FFFF_FFFF_FFFE})
+
+    assert {:error, %Error{code: :request_id_exhausted}} =
+             BLE.pair(session, %{
+               capability: :display_yes_no,
+               agent: {__MODULE__, {self(), :accept, :canary}}
+             })
+
+    assert :ok = BLE.disconnect(session)
+
+    assert Enum.map(Enum.filter(calls(record), &Map.has_key?(&1, "wire_id")), & &1["wire_id"]) ==
+             ["open", "18446744073709551615", "close"]
+
+    assert Enum.find(calls(record), &(&1["bus_closed"] == true))["agents"] == 0
+  end
 end

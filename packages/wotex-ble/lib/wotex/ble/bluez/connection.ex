@@ -135,6 +135,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
        start_ref: nil,
        startup_timer: nil,
        pending: %{},
+       wires: %{},
        subscriptions: %{},
        cleanup_grace: 1000,
        active: nil,
@@ -406,41 +407,6 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
-  defp frame(
-         %{"version" => 1, "id" => id, "event" => "write_submitted"} = frame,
-         %{status: :ready, active: id} = state
-       )
-       when map_size(frame) == 3 and is_binary(id) do
-    case state.pending[id] do
-      %{operation: "write", submitted: false, deadline: deadline} when is_integer(deadline) ->
-        if now() < deadline do
-          {:noreply, put_in(state.pending[id].submitted, true)}
-        else
-          {:noreply, close(state, :timeout)}
-        end
-
-      _ ->
-        {:noreply, close(state, :invalid_response)}
-    end
-  end
-
-  defp frame(
-         %{"version" => 1, "id" => id, "event" => "agent_challenge", "challenge" => challenge} =
-           frame,
-         %{status: :ready, active: id, policy: nil, policy_control: nil} = state
-       )
-       when map_size(frame) == 4 and is_binary(id) do
-    pending = state.pending[id]
-
-    with "pair" <- pending.operation,
-         {:ok, challenge} <-
-           Pairing.challenge(challenge, state.options.parameters["peer"], pending.deadline, now()) do
-      {:noreply, start_policy(state, id, pending.policy, challenge)}
-    else
-      _ -> {:noreply, close(state, :invalid_response)}
-    end
-  end
-
   defp frame(%{"id" => id} = frame, %{status: :ready, policy_control: id} = state)
        when is_binary(id) do
     case Response.parse(frame, "agent_reply") do
@@ -463,7 +429,71 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
-  defp frame(%{"id" => id} = frame, %{status: :ready, active: id} = state) when is_binary(id) do
+  defp frame(%{"id" => wire} = frame, %{status: :ready} = state) when is_binary(wire) do
+    case Map.fetch(state.wires, wire) do
+      {:ok, id} when id == state.active ->
+        active_frame(frame, id, state)
+
+      {:ok, id} ->
+        if state.pending[id].operation == "unsubscribe",
+          do: accept_unsubscribe(state, id, frame),
+          else: {:noreply, close(state, :invalid_response)}
+
+      :error ->
+        {:noreply, close(state, :invalid_response)}
+    end
+  end
+
+  defp frame(%{"id" => id} = frame, %{status: :closing, close_id: id} = state)
+       when is_binary(id) do
+    case Response.parse(frame, "close") do
+      {:ok, nil} -> {:noreply, %{state | close_result: :ok}}
+      {:error, _} = error -> {:noreply, %{state | close_result: error}}
+      _ -> {:noreply, %{state | close_result: {:error, Error.new(:invalid_response)}}}
+    end
+  end
+
+  defp frame(_, %{status: :closing} = state), do: {:noreply, state}
+  defp frame(_, state), do: {:noreply, close(state, :invalid_response)}
+
+  defp active_frame(
+         %{"version" => 1, "id" => _, "event" => "write_submitted"} = frame,
+         id,
+         %{status: :ready, active: id} = state
+       )
+       when map_size(frame) == 3 and is_reference(id) do
+    case state.pending[id] do
+      %{operation: "write", submitted: false, deadline: deadline} when is_integer(deadline) ->
+        if now() < deadline do
+          {:noreply, put_in(state.pending[id].submitted, true)}
+        else
+          {:noreply, close(state, :timeout)}
+        end
+
+      _ ->
+        {:noreply, close(state, :invalid_response)}
+    end
+  end
+
+  defp active_frame(
+         %{"version" => 1, "id" => _, "event" => "agent_challenge", "challenge" => challenge} =
+           frame,
+         id,
+         %{status: :ready, active: id, policy: nil, policy_control: nil} = state
+       )
+       when map_size(frame) == 4 and is_reference(id) do
+    pending = state.pending[id]
+
+    with "pair" <- pending.operation,
+         {:ok, challenge} <-
+           Pairing.challenge(challenge, state.options.parameters["peer"], pending.deadline, now()) do
+      {:noreply, start_policy(state, id, pending.policy, challenge)}
+    else
+      _ -> {:noreply, close(state, :invalid_response)}
+    end
+  end
+
+  defp active_frame(frame, id, state) do
     case timed_parse(frame, state.pending[id].operation, state.pending[id].deadline) do
       :expired ->
         {:noreply, close(state, expiry_code(state.pending[id].operation))}
@@ -499,26 +529,6 @@ defmodule Wotex.BLE.BlueZ.Connection do
     end
   end
 
-  defp frame(%{"id" => id} = frame, %{status: :ready} = state)
-       when is_binary(id) do
-    case state.pending[id] do
-      %{operation: "unsubscribe"} -> accept_unsubscribe(state, id, frame)
-      _ -> {:noreply, close(state, :invalid_response)}
-    end
-  end
-
-  defp frame(%{"id" => id} = frame, %{status: :closing, close_id: id} = state)
-       when is_binary(id) do
-    case Response.parse(frame, "close") do
-      {:ok, nil} -> {:noreply, %{state | close_result: :ok}}
-      {:error, _} = error -> {:noreply, %{state | close_result: error}}
-      _ -> {:noreply, %{state | close_result: {:error, Error.new(:invalid_response)}}}
-    end
-  end
-
-  defp frame(_, %{status: :closing} = state), do: {:noreply, state}
-  defp frame(_, state), do: {:noreply, close(state, :invalid_response)}
-
   defp accept_unsubscribe(state, id, frame) do
     case timed_parse(frame, "unsubscribe", state.pending[id].deadline) do
       {:ok, nil} ->
@@ -536,10 +546,10 @@ defmodule Wotex.BLE.BlueZ.Connection do
   defp accept_subscription(state, id, binding) do
     pending = state.pending[id]
 
-    if Stream.matches?(binding, id, pending.parameters) do
+    if Stream.matches?(binding, pending.wire_id, pending.parameters) do
       pid = elem(pending.from, 0)
       record = %{pid: pid, monitor: Process.monitor(pid), binding: binding, closing: false}
-      state = %{state | subscriptions: Map.put(state.subscriptions, id, record)}
+      state = %{state | subscriptions: Map.put(state.subscriptions, pending.wire_id, record)}
       {:noreply, advance(complete(state, id, {:ok, binding}))}
     else
       {:noreply, close(state, :invalid_response)}
@@ -629,24 +639,24 @@ defmodule Wotex.BLE.BlueZ.Connection do
   end
 
   defp admit(state, from, parameters, deadline, operation, policy \\ nil) do
-    id = Integer.to_string(state.counter + 1)
+    id = make_ref()
 
     pending = %{
       from: from,
       operation: operation,
       policy: policy,
       submitted: false,
+      wire_id: nil,
       parameters: parameters,
       deadline: deadline,
       monitor: Process.monitor(elem(from, 0)),
       timer: Process.send_after(self(), {:deadline, id}, max(deadline - now(), 0))
     }
 
-    state = %{state | counter: state.counter + 1, pending: Map.put(state.pending, id, pending)}
+    state = %{state | pending: Map.put(state.pending, id, pending)}
 
     if operation == "unsubscribe" do
-      request(state.port, id, operation, parameters, max(deadline - now(), 1))
-      state
+      issue(state, id, pending)
     else
       advance(%{state | queue: :queue.in(id, state.queue)})
     end
@@ -676,9 +686,31 @@ defmodule Wotex.BLE.BlueZ.Connection do
       updated = complete(state, id, {:error, Error.new(:timeout)})
       advance(updated)
     else
-      request(state.port, id, pending.operation, pending.parameters, remaining)
-      %{state | active: id}
+      state = issue(state, id, pending)
+      if state.status == :ready, do: %{state | active: id}, else: state
     end
+  end
+
+  defp issue(%{counter: counter} = state, _, _) when counter == 0xFFFF_FFFF_FFFF_FFFF,
+    do: close(state, :request_id_exhausted)
+
+  defp issue(state, id, pending) do
+    wire = Integer.to_string(state.counter + 1)
+
+    request(
+      state.port,
+      wire,
+      pending.operation,
+      pending.parameters,
+      max(pending.deadline - now(), 1)
+    )
+
+    %{
+      state
+      | counter: state.counter + 1,
+        wires: Map.put(state.wires, wire, id),
+        pending: Map.put(state.pending, id, %{pending | wire_id: wire})
+    }
   end
 
   defp complete(state, id, result) do
@@ -691,6 +723,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
     %{
       state
       | pending: remaining,
+        wires: Map.delete(state.wires, pending.wire_id),
         queue: :queue.filter(&(&1 != id), state.queue),
         active: if(state.active == id, do: nil, else: state.active)
     }
@@ -824,6 +857,9 @@ defmodule Wotex.BLE.BlueZ.Connection do
         }
     }
   end
+
+  defp answer_policy(%{counter: counter} = state, _) when counter == 0xFFFF_FFFF_FFFF_FFFF,
+    do: close(state, :request_id_exhausted)
 
   defp answer_policy(state, result) do
     decision =

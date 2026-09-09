@@ -471,4 +471,59 @@ defmodule Wotex.BLE.StreamBridgeTest do
 
     assert Wotex.BLE.BlueZ.Connection.format_status(connection_status) == expected
   end
+
+  test "WBL-C07 controls overtake queued data without rekeying deadlines or wire IDs" do
+    {session, record} = connect("stream_dispatch_overtake")
+    assert {:ok, handle} = BLE.subscribe(session, %{address: target()})
+    first = Task.async(fn -> BLE.read(session, target()) end)
+    eventually(fn -> Enum.any?(calls(record), &(&1["method"] == "ReadValue")) end)
+    queued = Task.async(fn -> BLE.read(session, target()) end)
+    eventually(fn -> map_size(:sys.get_state(session.handle.pid).pending) == 2 end)
+    state = :sys.get_state(session.handle.pid)
+    assert Enum.all?(Map.keys(state.pending), &is_reference/1)
+    assert map_size(state.wires) == 1
+
+    queued_entry =
+      Enum.find_value(state.pending, fn {ref, pending} ->
+        if is_nil(pending.wire_id), do: {ref, pending.timer}
+      end)
+
+    assert {reference, timer} = queued_entry
+    assert is_reference(reference) and is_reference(timer)
+    assert :ok = BLE.unsubscribe(session, handle)
+    assert {:ok, <<0x34, 0x12>>} = Task.await(first, 1500)
+    assert {:ok, <<0x34, 0x12>>} = Task.await(queued, 1500)
+
+    assert Enum.map(
+             Enum.filter(calls(record), &Map.has_key?(&1, "wire_id")),
+             &{&1["wire_id"], &1["operation"]}
+           ) ==
+             [
+               {"open", "open"},
+               {"1", "subscribe"},
+               {"2", "read"},
+               {"3", "unsubscribe"},
+               {"4", "read"}
+             ]
+
+    assert :sys.get_state(session.handle.pid).pending == %{}
+    assert :sys.get_state(session.handle.pid).wires == %{}
+    assert :queue.is_empty(:sys.get_state(session.handle.pid).queue)
+  end
+
+  test "WBL-C07 dispatch counter exhaustion closes without wrapping or sending a mutation" do
+    {session, record} = connect("stream_notify")
+    :sys.replace_state(session.handle.pid, &%{&1 | counter: 0xFFFF_FFFF_FFFF_FFFF})
+
+    assert {:error, %Error{code: :request_id_exhausted, effect: :none}} =
+             BLE.write(session, target(), <<1>>)
+
+    assert :ok = BLE.disconnect(session)
+    refute Enum.any?(calls(record), &(&1["method"] == "WriteValue"))
+
+    assert Enum.map(Enum.filter(calls(record), &Map.has_key?(&1, "wire_id")), & &1["wire_id"]) == [
+             "open",
+             "close"
+           ]
+  end
 end

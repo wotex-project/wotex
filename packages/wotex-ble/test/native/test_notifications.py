@@ -322,7 +322,7 @@ class NotificationTest(unittest.IsolatedAsyncioTestCase):
             try:
                 def feed(identifier, operation, parameters, timeout=1000):
                     reader.feed_data(json.dumps({"version": 1, "id": identifier, "operation": operation, "parameters": parameters, "timeout_ms": timeout}).encode() + b"\n")
-                feed("1", "open", OPTIONS)
+                feed("open", "open", OPTIONS)
                 self.assertTrue((await asyncio.wait_for(outputs.get(), 1))["ok"])
                 feed("2", "subscribe", {"address": TARGET, "mode": "auto"})
                 self.assertTrue((await asyncio.wait_for(outputs.get(), 1))["ok"])
@@ -357,6 +357,7 @@ class NotificationTest(unittest.IsolatedAsyncioTestCase):
         await owner.central.open(OPTIONS, 1000)
         self.addAsyncCleanup(owner.central.close)
         owner.opened = True
+        owner.sequence.open_seen = True
         await self.subscribe(owner.central, "1")
         owner.active = {"id": "active"}
         for index in range(62):

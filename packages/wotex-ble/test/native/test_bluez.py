@@ -282,7 +282,57 @@ class ValuesTest(unittest.TestCase):
                     bridge.decode(value)
 
 
+class SequenceTest(unittest.TestCase):
+    def test_WBL_C07_sequence_is_canonical_shared_uint64_and_never_replays(self):
+        def request(identifier, operation="discover"):
+            return {"id": identifier, "operation": operation, "parameters": {}}
+        sequence = bridge.Sequence()
+        self.assertFalse(sequence.accept(request("1")))
+        self.assertFalse(sequence.accept(request("1", "open")))
+        self.assertTrue(sequence.accept(request("open", "open")))
+        self.assertFalse(sequence.accept(request("open", "open")))
+        for identifier in ("0", "01", "+1", "1.0", "١", "1e1", "-1", "agent-1", "18446744073709551616"):
+            self.assertFalse(sequence.accept(request(identifier)))
+        self.assertTrue(sequence.accept(request("1")))
+        self.assertFalse(sequence.accept(request("1")))
+        self.assertFalse(sequence.accept(request("1", "agent_reply")))
+        self.assertFalse(sequence.accept(request("agent-1", "agent_reply")))
+        self.assertTrue(sequence.accept(request("agent-3", "agent_reply")))
+        self.assertFalse(sequence.accept(request("2")))
+        self.assertTrue(sequence.accept(request("4")))
+        self.assertFalse(sequence.accept(request("open", "open")))
+        self.assertTrue(sequence.accept(request(str(2**64 - 1))))
+        self.assertFalse(sequence.accept(request(str(2**64))))
+        self.assertFalse(sequence.accept(request("1")))
+        self.assertFalse(sequence.accept(request("5", "close")))
+        self.assertTrue(sequence.accept(request("close", "close")))
+        self.assertEqual(vars(sequence), {"last": 2**64 - 1, "open_seen": True})
+
+
 class OwnerTest(unittest.IsolatedAsyncioTestCase):
+    async def test_WBL_C07_seventy_thousand_requests_keep_only_bounded_sequence_state(self):
+        responses = 0
+        def emit(value):
+            nonlocal responses
+            responses += 1
+            self.assertEqual(value["id"], "agent-" + str(responses))
+            self.assertEqual(value["error"], {"code": "pairing_rejected"})
+        owner = bridge.Bridge(emit)
+        owner.sequence.open_seen = True
+        class Reader:
+            counter = 0
+            async def readline(self):
+                if self.counter == 70000:
+                    return b""
+                self.counter += 1
+                return json.dumps({"version": 1, "id": "agent-" + str(self.counter), "operation": "agent_reply", "parameters": {}, "timeout_ms": 1000}).encode() + b"\n"
+        await owner.accept(Reader())
+        self.assertEqual(responses, 70000)
+        self.assertEqual(vars(owner.sequence), {"last": 70000, "open_seen": True})
+        self.assertEqual(owner.queue.qsize(), 0)
+        self.assertEqual(owner.controls, set())
+        self.assertFalse(hasattr(owner, "seen"))
+
     async def test_WBL_C03_EOF_cancels_blocked_connect_and_releases_bus(self):
         bus = Bus(objects(False, False)); bus.connect_block = True
         central = client.Central(lambda _: None, lambda _: bus)
@@ -304,12 +354,12 @@ class OwnerTest(unittest.IsolatedAsyncioTestCase):
         owner = bridge.Bridge(outputs.append, lambda signal: client.Central(signal, lambda _: bus))
         reader = asyncio.StreamReader()
         task = asyncio.create_task(owner.run(reader))
-        for index, (identifier, operation, parameters) in enumerate([("a", "open", OPTIONS), ("b", "discover", {"limit": 1}), ("c", "close", {})]):
+        for index, (identifier, operation, parameters) in enumerate([("open", "open", OPTIONS), ("1", "discover", {"limit": 1}), ("close", "close", {})]):
             reader.feed_data(json.dumps({"version": 1, "id": identifier, "operation": operation, "parameters": parameters, "timeout_ms": 1000}).encode() + b"\n")
             while len(outputs) <= index:
                 await asyncio.sleep(0)
         await asyncio.wait_for(task, 1)
-        self.assertEqual([output["id"] for output in outputs], ["a", "b", "c"])
+        self.assertEqual([output["id"] for output in outputs], ["open", "1", "close"])
         self.assertTrue(all(output["ok"] for output in outputs))
         self.assertEqual(outputs[-1]["result"], None)
         self.assertTrue(bus.closed.is_set())

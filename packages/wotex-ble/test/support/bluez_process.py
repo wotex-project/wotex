@@ -56,6 +56,16 @@ def emit(value):
         print(json.dumps(value), flush=True)
 
 
+original_decode = bridge.decode
+
+def traced_decode(line):
+    request = original_decode(line)
+    record({"wire_id": request["id"], "operation": request["operation"]})
+    return request
+
+bridge.decode = traced_decode
+
+
 class RecordedBus(Bus):
     async def call(self, *args):
         record({"method": args[3], "sender": self.unique_name})
@@ -111,11 +121,17 @@ class RecordedNotificationBus(NotificationBus):
         if args[3] == "StopNotify" and MODE == "stream_slow_stop":
             await asyncio.sleep(0.05)
         if args[3] == "ReadValue" and not self.read_blocked:
+            if MODE == "stream_dispatch_overtake" and not getattr(self, "overtaken", False):
+                self.overtaken = True
+                self.data_gate = asyncio.Event()
+                await self.data_gate.wait()
             self.value(b"\x34\x12")
             self.value(b"\x34\x12")
             return [b"\x34\x12"]
         result = await super().call(*args)
         if args[3] == "StopNotify":
+            if MODE == "stream_dispatch_overtake":
+                self.data_gate.set()
             record({"sessions": len(self.sessions)})
         return result
 

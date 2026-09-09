@@ -187,7 +187,8 @@ absolute caller-selected path; arguments are separate values, never shell text.
 Owned bridges use a persistent process only when the profile requires sessions
 or signals. One-shot profiles retain their existing documented lifecycle.
 Use protocol version 1 JSON lines with UTF-8 encoding and a 128 KiB limit per
-line including the newline. Request IDs are opaque strings, unique within the
+line including the newline. Request IDs use the protocol-specific bounded
+sequence below and remain opaque to callers, unique within the
 bridge generation. A startup `ready` response identifies bridge protocol and
 backend revision; an unsupported version/revision fails before application I/O.
 
@@ -198,6 +199,20 @@ backend revision; an unsupported version/revision fails before application I/O.
 | Success | `version: 1`, matching `id`, `ok: true`, `result` (explicit null allowed) |
 | Failure | `version: 1`, matching `id`, `ok: false`, bounded library `error.code` and optional numeric `error.status` |
 | Stream report | `version: 1`, `subscription_id`, `generation`, `event`, `value`, bounded `metadata` |
+
+BLE reserves `open` for its sole initial open request and `close` for graceful
+closure. Every other dispatched request uses the canonical decimal representation
+of a positive unsigned 64-bit counter; `agent_reply` prefixes that representation
+with `agent-`. Data and control requests share a strictly increasing counter in
+actual dispatch order. Admission/queue timers use separate internal references;
+a control request may overtake queued data without changing those references.
+Reject leading zeroes, non-decimal forms, wrong prefixes, replay, decreasing IDs
+and values exceeding 2^64−1 before execution. Record only the greatest accepted
+counter plus the open flag; no lifetime set or arbitrary churn limit is permitted.
+Exhaustion closes the generation with `:request_id_exhausted`, never rolls over,
+and never automatically reopens/replays work. `close` remains available after
+counter exhaustion. Stream `subscription_id` remains the ID assigned at its
+establishment, even when later control requests advance the dispatch counter.
 
 Protocol-specific parameters and value envelopes are defined in WBL.10.
 Reject duplicate JSON keys, fields outside the selected envelope/operation

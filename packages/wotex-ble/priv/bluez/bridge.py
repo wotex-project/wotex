@@ -4,6 +4,7 @@ import asyncio
 import json
 import math
 import os
+import re
 import sys
 import time
 
@@ -67,6 +68,34 @@ def decode(line):
     return value
 
 
+class Sequence:
+    """Tracks only the greatest accepted uint64 dispatch ID and reserved open."""
+
+    def __init__(self):
+        self.last = 0
+        self.open_seen = False
+
+    def accept(self, request):
+        identifier, operation = request["id"], request["operation"]
+        if operation == "open":
+            if identifier != "open" or self.open_seen or self.last:
+                return False
+            self.open_seen = True
+            return True
+        if operation == "close":
+            return identifier == "close" and request["parameters"] == {}
+        if not self.open_seen:
+            return False
+        prefix = "agent-" if operation == "agent_reply" else ""
+        if not re.fullmatch(prefix + r"[1-9][0-9]{0,19}", identifier):
+            return False
+        number = int(identifier[len(prefix):])
+        if number <= self.last or number > 2**64 - 1:
+            return False
+        self.last = number
+        return True
+
+
 class Bridge:
     """Serializes admitted requests while EOF independently cancels active work."""
 
@@ -76,7 +105,7 @@ class Bridge:
         self.central = central_factory(self.terminal)
         self.central.emit = emit
         self.queue = asyncio.Queue(maxsize=64)
-        self.seen = set()
+        self.sequence = Sequence()
         self.active = None
         self.opened = False
         self.close_request = None
@@ -97,9 +126,8 @@ class Bridge:
                 request = decode(line)
             except (ValueError, Failure):
                 return
-            if request["id"] in self.seen or len(self.seen) >= 65536:
+            if not self.sequence.accept(request):
                 return
-            self.seen.add(request["id"])
             if request["operation"] == "agent_reply":
                 try:
                     self.central.agent_reply(request["parameters"])
