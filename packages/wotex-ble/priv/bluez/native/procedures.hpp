@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// One bounded acknowledged GATT operation. The enclosing owner keeps discovery
+// One bounded acknowledged GATT operation or live Device1 health query. The enclosing owner keeps discovery
 // alive through callbacks and polls this operation until its terminal result.
 #pragma once
 #include "address.hpp"
@@ -61,9 +61,15 @@ private:
       append(dbus_message_iter_close_container(&dictionary, &entry));
     }
     Message request(const std::string &path) {
-      Message message(dbus_message_new_method_call(owner.owner().c_str(), path.c_str(), characteristic_interface,
-        operation == "write" ? "WriteValue" : "ReadValue"));
+      Message message(dbus_message_new_method_call(owner.owner().c_str(), path.c_str(),
+        operation == "health" ? "org.freedesktop.DBus.Properties" : characteristic_interface,
+        operation == "health" ? "GetAll" : operation == "write" ? "WriteValue" : "ReadValue"));
       if (!message) throw std::runtime_error("resource_limit");
+      if (operation == "health") {
+        const char *interface = device_interface;
+        append(dbus_message_append_args(message.get(), DBUS_TYPE_STRING, &interface, DBUS_TYPE_INVALID));
+        return message;
+      }
       DBusMessageIter root, array, options;
       dbus_message_iter_init_append(message.get(), &root);
       if (operation == "write") {
@@ -95,17 +101,35 @@ private:
       const auto view = count ? std::string_view(reinterpret_cast<const char *>(value), static_cast<std::size_t>(count)) : std::string_view{};
       return AttributeBytes::from_bytes(view).envelope();
     }
+    Json health(DBusMessage *message) const {
+      const auto values = ObjectReader().device_properties(message);
+      for (const char *key : {"Adapter", "Address", "AddressType", "Connected", "ServicesResolved"})
+        if (!values.contains(key)) throw InvalidObjects();
+      NativePeer reported = [&] {
+        try { return NativePeer::from(Json{{"adapter", values.at("Adapter")}, {"address", values.at("Address")}, {"address_type", values.at("AddressType")}}); }
+        catch (...) { throw InvalidObjects(); }
+      }();
+      const auto &peer = owner.peer();
+      if (reported.adapter != peer.adapter || reported.address != peer.address || reported.address_type != peer.address_type)
+        throw InvalidObjects("peer_changed");
+      if (values.at("Connected") != true || values.at("ServicesResolved") != true) throw InvalidObjects("disconnected");
+      return {{"connected", true}, {"services_resolved", true}};
+    }
     void dispatch() {
-      if (!owner.active() || !owner.snapshot() || !owner.accept_link()) {
+      if (!owner.active() || !owner.snapshot() || (operation != "health" && !owner.accept_link())) {
         fail(NativeFailure::local("disconnected"), true); return;
       }
       try {
-        const auto &item = address->select(*owner.snapshot(), owner.generation());
-        const auto &flags = item.at("flags");
-        if (std::find(flags.begin(), flags.end(), operation) == flags.end()) {
-          fail(NativeFailure::local("not_permitted"), false); return;
+        std::string path = owner.snapshot()->device_path;
+        if (operation != "health") {
+          const auto &item = address->select(*owner.snapshot(), owner.generation());
+          const auto &flags = item.at("flags");
+          if (std::find(flags.begin(), flags.end(), operation) == flags.end()) {
+            fail(NativeFailure::local("not_permitted"), false); return;
+          }
+          path = item.at("object_path").get<std::string>();
         }
-        auto message = request(item.at("object_path").get_ref<const std::string &>());
+        auto message = request(path);
         if (Clock::now() >= deadline) { fail(NativeFailure::local("timeout"), true); return; }
         phase = Phase::active;
         if (operation == "write") {
@@ -116,7 +140,7 @@ private:
           write_submitted = true;
         }
         std::weak_ptr<State> weak = shared_from_this();
-        if (!owner.bus().call(message.get(), operation == "write" ? "" : "ay", deadline, [weak](BusReply reply) {
+        if (!owner.bus().call(message.get(), operation == "health" ? "a{sv}" : operation == "write" ? "" : "ay", deadline, [weak](BusReply reply) {
           const auto state = weak.lock();
           if (!state || state->phase != Phase::active) return;
           if (Clock::now() >= state->deadline) { state->fail(NativeFailure::local("timeout"), true); return; }
@@ -129,23 +153,26 @@ private:
           }
           try {
             if (state->operation == "read") state->result = read(reply.message.get());
-          } catch (...) { state->fail(NativeFailure::local("invalid_response"), true); return; }
+            else if (state->operation == "health") state->result = state->health(reply.message.get());
+          } catch (const InvalidObjects &error) { state->fail(NativeFailure::local(error.what()), true); return; }
+          catch (...) { state->fail(NativeFailure::local("invalid_response"), true); return; }
           state->complete();
         })) fail(NativeFailure::local(Clock::now() >= deadline ? "timeout" : "resource_limit"), true);
       } catch (const InvalidAddress &error) { fail(NativeFailure::local(error.what()), false); }
       catch (...) { fail(NativeFailure::local("resource_limit"), true); }
     }
     void start(const Json &parameters) {
-      const bool valid = operation == "read" ? fields(parameters, {"address"}) :
+      const bool valid = operation == "health" ? fields(parameters, {}) : operation == "read" ? fields(parameters, {"address"}) :
         operation == "write" && fields(parameters, {"address", "value"});
       if (!valid) { fail(NativeFailure::local("invalid_options"), false); return; }
       try {
-        address.emplace(NativeAddress::from(parameters.at("address")));
+        if (operation != "health") address.emplace(NativeAddress::from(parameters.at("address")));
         if (operation == "write") bytes.emplace(AttributeBytes::from(parameters.at("value")));
       } catch (const InvalidAddress &) { fail(NativeFailure::local("invalid_address"), false); return; }
       catch (const InvalidValue &) { fail(NativeFailure::local("invalid_value"), false); return; }
       if (Clock::now() >= deadline) { fail(NativeFailure::local("timeout"), false); return; }
       if (!owner.active() || !owner.snapshot()) { fail(NativeFailure::local("disconnected"), false); return; }
+      if (operation == "health") { dispatch(); return; }
       phase = Phase::resolving;
       std::weak_ptr<State> weak = shared_from_this();
       if (!owner.refresh(deadline, [weak](const char *error) {

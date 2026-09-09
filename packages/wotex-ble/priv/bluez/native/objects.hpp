@@ -164,6 +164,16 @@ class ObjectReader {
     return result;
   }
 public:
+  Json device_properties(DBusMessage *message) {
+    entries_ = 0;
+    if (!message || dbus_message_contains_unix_fds(message) ||
+        dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_METHOD_RETURN ||
+        !dbus_message_has_signature(message, "a{sv}")) throw InvalidObjects();
+    DBusMessageIter root;
+    if (!dbus_message_iter_init(message, &root)) throw InvalidObjects();
+    auto result = properties(root, device_interface); end(root); return result;
+  }
+
   ObjectSnapshot read(DBusMessage *message) {
     entries_ = 0;
     if (!message || dbus_message_contains_unix_fds(message) ||

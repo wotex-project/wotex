@@ -8,6 +8,7 @@
 #include "procedures_test.hpp"
 #include "pending_test.hpp"
 #include "notify_value_test.hpp"
+#include "health_test.hpp"
 #include "notifications_test.hpp"
 #include <csignal>
 #include <fcntl.h>
@@ -637,13 +638,14 @@ int main(int argc, char **argv) {
   try {
     if (argc == 5) {
       const std::string operation = argv[1];
-      if (operation != "--pair-input" && operation != "--gatt-input" && operation != "--notify-input") return 2;
+      if (operation != "--pair-input" && operation != "--gatt-input" && operation != "--notify-input" && operation != "--health-input") return 2;
       Json result;
       {
         Daemon daemon(argv[3], argv[4]);
         const auto input = parse_line(std::string(argv[2]) + "\n");
         result = operation == "--pair-input" ? pairing_test::projection(input, daemon.address) :
-          operation == "--gatt-input" ? procedures_test::projection(input, daemon.address) : notifications_test::projection(input, daemon.address);
+          operation == "--gatt-input" ? procedures_test::projection(input, daemon.address) :
+          operation == "--health-input" ? health_test::projection(input, daemon.address) : notifications_test::projection(input, daemon.address);
       }
       dbus_shutdown(); std::cout << result.dump() << '\n'; return 0;
     }
@@ -664,6 +666,7 @@ int main(int argc, char **argv) {
     discovery_test::connection_invariants(daemon.address);
     pairing_test::invariants(daemon.address);
     procedures_test::invariants(daemon.address);
+    health_test::invariants(daemon.address);
     pending_test::invariants(daemon.address);
     notifications_test::invariants(daemon.address);
     unix_fds(daemon.address, 1);

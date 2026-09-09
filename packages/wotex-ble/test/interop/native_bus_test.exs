@@ -113,7 +113,12 @@ defmodule Wotex.BLE.NativeBusTest do
   end
 
   for fixture <- @fixtures,
-      fixture["operation"] in ["pair_lifecycle", "gatt_procedure", "notify_lifecycle"] do
+      fixture["operation"] in [
+        "pair_lifecycle",
+        "gatt_procedure",
+        "notify_lifecycle",
+        "peer_health"
+      ] do
     @fixture fixture
     test "#{fixture["id"]} executes the actual native operation lifecycle", context do
       operation =
@@ -121,6 +126,7 @@ defmodule Wotex.BLE.NativeBusTest do
           "pair_lifecycle" -> "--pair-input"
           "gatt_procedure" -> "--gatt-input"
           "notify_lifecycle" -> "--notify-input"
+          "peer_health" -> "--health-input"
         end
 
       assert {:ok, output, 0} =

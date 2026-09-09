@@ -3,7 +3,7 @@ spec:
   id: WBL.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.14
+  version: 1.0.15
   owner: wotex-ble
   updated: 2026-09-09
 ---
@@ -668,3 +668,39 @@ and Runtime behaviors need no duplicate implementation.
 
 Primary APIs: [libdbus connections](https://dbus.freedesktop.org/doc/api/html/group__DBusConnection.html),
 [pinned GATT API](https://github.com/bluez/bluez/blob/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.GattCharacteristic.rst).
+
+## Native live peer health
+
+The native `health` operation has empty parameters and uses the same bounded
+operation owner as acknowledged GATT procedures. It sends
+`org.freedesktop.DBus.Properties.GetAll("org.bluez.Device1")` to the original
+Device1 path and pinned BlueZ unique sender. It does not infer health from a
+cached discovery result or a successful characteristic read. No radio scan,
+reconnect, pairing or GATT rediscovery is required by this query.
+
+The reply is exactly `a{sv}`. Decode at most 256 unique property names, each a
+valid D-Bus member name. Required Adapter/Address/AddressType values have their
+native object-path/string types and pass the peer constructor's bounds;
+Connected/ServicesResolved are native booleans. Normalize the address before
+comparing all three identity fields with the original peer. Unknown property
+values stay inside the bounded libdbus message and are not copied into JSON.
+Duplicate names, missing fields and wrong types fail `invalid_response`; a valid
+changed identity fails `peer_changed`, false state fails `disconnected`, and the
+property-count ceiling fails `object_limit`. These failures close the owned
+sender through its existing cleanup path. A typed remote permission error
+preserves a usable sender. Borrowed cleanup emits no Device1.Disconnect.
+
+The success value is exactly `{"connected":true,"services_resolved":true}`.
+The request's original absolute deadline bounds reply validation and cancellation;
+a late response cannot complete it twice or turn a timeout into success. Health
+attests neither GATT permissions nor encryption/MITM protection. These fields
+follow the pinned [Device1 API](https://raw.githubusercontent.com/bluez/bluez/2123ab772fbe97d1369fc9e179ea87c3469cf98f/doc/org.bluez.Device.rst)
+and [D-Bus specification 0.43 Properties interface](https://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-properties).
+
+`peer_health` corpus cases construct independently typed D-Bus replies from the
+input name/signature/value list, or deliberately withhold/send a remote error.
+They execute the production native operation and compare its value, closed error
+envelope, actual GetAll calls, observed unique-sender releases and Disconnect
+calls. The fixed missing-reply case uses a 100 ms operation deadline. These
+cases are private D-Bus component evidence; the complete BEAM/Port health route
+requires the first-party host and artifact admission.

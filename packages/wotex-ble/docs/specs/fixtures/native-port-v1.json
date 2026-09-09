@@ -2112,6 +2112,358 @@
           "output_frames": 0
         }
       }
+    },
+    {
+      "id": "WBL-B-F49",
+      "requirements": [
+        "WBL-B02",
+        "WBL-S05"
+      ],
+      "operation": "peer_health",
+      "input": {
+        "properties": [
+          {
+            "name": "Adapter",
+            "signature": "o",
+            "value": "/org/bluez/hci0"
+          },
+          {
+            "name": "Address",
+            "signature": "s",
+            "value": "aa:bb:cc:dd:ee:ff"
+          },
+          {
+            "name": "AddressType",
+            "signature": "s",
+            "value": "random"
+          },
+          {
+            "name": "Connected",
+            "signature": "b",
+            "value": true
+          },
+          {
+            "name": "ServicesResolved",
+            "signature": "b",
+            "value": true
+          },
+          {
+            "name": "Future",
+            "signature": "s",
+            "value": "ignored"
+          }
+        ],
+        "mode": "reply"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "failure": null,
+          "value": {
+            "connected": true,
+            "services_resolved": true
+          },
+          "get_all_calls": 1,
+          "owned_sender_releases": 0,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F50",
+      "requirements": [
+        "WBL-B02",
+        "WBL-S05"
+      ],
+      "operation": "peer_health",
+      "input": {
+        "properties": [
+          {
+            "name": "Adapter",
+            "signature": "o",
+            "value": "/org/bluez/hci0"
+          },
+          {
+            "name": "Address",
+            "signature": "s",
+            "value": "aa:bb:cc:dd:ee:ff"
+          },
+          {
+            "name": "AddressType",
+            "signature": "s",
+            "value": "random"
+          },
+          {
+            "name": "Connected",
+            "signature": "u",
+            "value": 1
+          },
+          {
+            "name": "ServicesResolved",
+            "signature": "b",
+            "value": true
+          }
+        ],
+        "mode": "reply"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "failure": {
+            "code": "invalid_response"
+          },
+          "value": null,
+          "get_all_calls": 1,
+          "owned_sender_releases": 1,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F51",
+      "requirements": [
+        "WBL-B02",
+        "WBL-S05"
+      ],
+      "operation": "peer_health",
+      "input": {
+        "properties": [
+          {
+            "name": "Adapter",
+            "signature": "o",
+            "value": "/org/bluez/hci0"
+          },
+          {
+            "name": "Address",
+            "signature": "s",
+            "value": "02:00:00:00:00:01"
+          },
+          {
+            "name": "AddressType",
+            "signature": "s",
+            "value": "random"
+          },
+          {
+            "name": "Connected",
+            "signature": "b",
+            "value": true
+          },
+          {
+            "name": "ServicesResolved",
+            "signature": "b",
+            "value": true
+          }
+        ],
+        "mode": "reply"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "failure": {
+            "code": "peer_changed"
+          },
+          "value": null,
+          "get_all_calls": 1,
+          "owned_sender_releases": 1,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F52",
+      "requirements": [
+        "WBL-B02",
+        "WBL-S05"
+      ],
+      "operation": "peer_health",
+      "input": {
+        "properties": [
+          {
+            "name": "Adapter",
+            "signature": "o",
+            "value": "/org/bluez/hci0"
+          },
+          {
+            "name": "Address",
+            "signature": "s",
+            "value": "aa:bb:cc:dd:ee:ff"
+          },
+          {
+            "name": "AddressType",
+            "signature": "s",
+            "value": "random"
+          },
+          {
+            "name": "Connected",
+            "signature": "b",
+            "value": true
+          }
+        ],
+        "mode": "reply"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "failure": {
+            "code": "invalid_response"
+          },
+          "value": null,
+          "get_all_calls": 1,
+          "owned_sender_releases": 1,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F53",
+      "requirements": [
+        "WBL-B02",
+        "WBL-S05"
+      ],
+      "operation": "peer_health",
+      "input": {
+        "properties": [
+          {
+            "name": "Adapter",
+            "signature": "o",
+            "value": "/org/bluez/hci0"
+          },
+          {
+            "name": "Address",
+            "signature": "s",
+            "value": "aa:bb:cc:dd:ee:ff"
+          },
+          {
+            "name": "AddressType",
+            "signature": "s",
+            "value": "random"
+          },
+          {
+            "name": "Connected",
+            "signature": "b",
+            "value": false
+          },
+          {
+            "name": "ServicesResolved",
+            "signature": "b",
+            "value": true
+          }
+        ],
+        "mode": "reply"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "failure": {
+            "code": "disconnected"
+          },
+          "value": null,
+          "get_all_calls": 1,
+          "owned_sender_releases": 1,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F54",
+      "requirements": [
+        "WBL-B02",
+        "WBL-S05"
+      ],
+      "operation": "peer_health",
+      "input": {
+        "properties": [
+          {
+            "name": "Adapter",
+            "signature": "o",
+            "value": "/org/bluez/hci0"
+          },
+          {
+            "name": "Address",
+            "signature": "s",
+            "value": "aa:bb:cc:dd:ee:ff"
+          },
+          {
+            "name": "AddressType",
+            "signature": "s",
+            "value": "random"
+          },
+          {
+            "name": "Connected",
+            "signature": "b",
+            "value": true
+          },
+          {
+            "name": "ServicesResolved",
+            "signature": "b",
+            "value": true
+          }
+        ],
+        "mode": "held"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "failure": {
+            "code": "timeout"
+          },
+          "value": null,
+          "get_all_calls": 1,
+          "owned_sender_releases": 1,
+          "disconnect_calls": 0
+        }
+      }
+    },
+    {
+      "id": "WBL-B-F55",
+      "requirements": [
+        "WBL-B02",
+        "WBL-S05"
+      ],
+      "operation": "peer_health",
+      "input": {
+        "properties": [
+          {
+            "name": "Adapter",
+            "signature": "o",
+            "value": "/org/bluez/hci0"
+          },
+          {
+            "name": "Address",
+            "signature": "s",
+            "value": "aa:bb:cc:dd:ee:ff"
+          },
+          {
+            "name": "AddressType",
+            "signature": "s",
+            "value": "random"
+          },
+          {
+            "name": "Connected",
+            "signature": "b",
+            "value": true
+          },
+          {
+            "name": "ServicesResolved",
+            "signature": "b",
+            "value": true
+          }
+        ],
+        "mode": "remote"
+      },
+      "expectation": {
+        "operator": "exact",
+        "value": {
+          "failure": {
+            "code": "not_permitted",
+            "name": "org.bluez.Error.NotPermitted"
+          },
+          "value": null,
+          "get_all_calls": 1,
+          "owned_sender_releases": 0,
+          "disconnect_calls": 0
+        }
+      }
     }
   ],
   "executed_cases": [
@@ -2157,6 +2509,13 @@
     "WBL-B-F45",
     "WBL-B-F46",
     "WBL-B-F47",
-    "WBL-B-F48"
+    "WBL-B-F48",
+    "WBL-B-F49",
+    "WBL-B-F50",
+    "WBL-B-F51",
+    "WBL-B-F52",
+    "WBL-B-F53",
+    "WBL-B-F54",
+    "WBL-B-F55"
   ]
 }

@@ -388,3 +388,20 @@ admission failures. Both guardians establish the group before releasing their
 child. The native probe checks its own process-group identity and inherited
 signal state. The existing opaque-stream custody matrix remains applicable;
 startup serialization grants no additional time or report credits.
+
+## Native live Device1 query
+
+`test/native/health_test.hpp` executes the native `health` operation against an
+independent private D-Bus receiver. WBL-B-F49 through WBL-B-F55 supply exact typed
+reply fields and compare values, bounded error envelopes, GetAll calls and
+observed sender release. The fixture sees the original client sender, Device1
+path, Properties interface and exact `s` request argument. Successful health
+requires current Connected and ServicesResolved booleans plus the original
+adapter/address/address-type identity.
+
+The matrix checks missing fields, wrong variants, valid changed identities,
+malformed identities, false state, duplicate and excessive properties, bounded
+skipping of unknown properties, permission errors, malformed replies, deadline expiry,
+late replies and explicit cancellation. No borrowed case issues Disconnect.
+The cases use the actual libdbus operation/lifecycle code; they do not establish
+complete native-host routing or a BlueZ/ATT interoperability result.
