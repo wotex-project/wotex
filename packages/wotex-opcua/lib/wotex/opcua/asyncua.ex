@@ -100,6 +100,8 @@ defmodule Wotex.OPCUA.Asyncua do
         args: [script]
       ])
 
+    Process.unlink(port)
+
     try do
       true = Port.command(port, json)
       collect(port, <<>>, id, System.monotonic_time(:millisecond) + timeout)
