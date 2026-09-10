@@ -71,6 +71,14 @@ static int nonblocking(int fd) {
     return flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0 ? -1 : 0;
 }
 
+/* Keep fortified libc checks from treating the queue member as the whole state. */
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
+static ssize_t read_bytes(int fd, unsigned char *buffer, size_t capacity) {
+    return read(fd, buffer, capacity);
+}
+
 static void stop(struct state *state, int reason, int64_t now) {
     if (reason && !state->failure) state->failure = reason;
     if (state->stopping) return;
@@ -100,7 +108,7 @@ static void receive_output(struct state *state, int64_t now) {
     ssize_t size;
     size_t available = QUEUE_SIZE - state->queued;
     if (!available) return;
-    size = read(state->input, state->buffer + state->queued, available);
+    size = read_bytes(state->input, state->buffer + state->queued, available);
     if (size == 0) state->input_eof = 1;
     if (size < 0 && errno != EAGAIN && errno != EINTR) stop(state, 126, now);
     if (size <= 0) return;

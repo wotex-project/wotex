@@ -60,7 +60,15 @@ defmodule Wotex.OPCUA.AsyncuaTest do
     assert {:ok, 42} = request(success, 1000)
     assert {:error, _} = request(script("exit 1"), 1000)
     assert {:error, %{code: :timeout}} = request(script("sleep 1"), 10)
-    assert {:error, %{code: :response_limit}} = request(script("printf '%0140000d' 0"), 1000)
+
+    assert {:error, %{code: :response_limit}} =
+             request(
+               script(~S"""
+               IFS= read -r request
+               printf '%0140000d' 0
+               """),
+               1000
+             )
 
     assert {:error, _} =
              request(script("printf 'native diagnostic on stderr\\n' >&2; exit 1"), 1000)
