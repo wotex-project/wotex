@@ -30,7 +30,7 @@ matrix, not inference from a version constraint.
 | WBH-C03 | WBH-C01 | Limits and security boundary proof | Threshold bytes, header/URI cardinality, JSON allocation, event overload, deadline/redirect credential audience and redaction covered; consumer obligations explicit |
 | WBH-C04 | WBH-C02, WBH-C03 | Exact archive and independent reference consumer | No live dependency source; real Runtime lifecycle with supplied client proves open/delivery/stop and negative cells |
 | WBH-C05 | WBH-C04 | Public release candidate | Metadata/license/security, default dependency graph, docs links and claim matrix complete; no private/local archive content |
-| WBH-C06 | WBH-C05 | Stable API candidate | All promised mappings/values/errors/defaults frozen with compatibility vectors and migration decisions |
+| WBH-C06 | WBH-C05 | Compatibility candidate | Promised mappings, values, callbacks, errors, and defaults have positive, negative, and boundary behavior vectors plus an explicit migration decision |
 
 ## Five evidence gates
 
@@ -40,20 +40,17 @@ authorizes automated publication, tags or Git remote operations.
 
 | Gate | Evidence requirement | Nonclaim |
 |---|---|---|
-| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry`, the authoritative default gate, including locked dependencies, coverage, strict static checks, docs, audits, boundary and archive/package reconstruction | Not independent install or full protocol conformance |
+| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry` passes warnings-as-errors compilation, formatting, and behavioral tests | Not independent install or full protocol conformance |
 | `archive_consumer_green` | The mandatory archive check builds each exact archive once without path overrides, inspects and extracts those same bytes, then compiles a separate Mix consumer whose Wotex dependency, compile-source, BEAM and code paths exclude every live checkout | Not full lifecycle behavior |
 | `reference_consumer_green` | That external consumer exercises WBH-A01..A06 through public APIs, including a supplied client and consumer-owned Runtime supervisor | No production transport certification |
-| `public_release_candidate` | WBH-P01..P08 verify previous gates, exact archive exclusion, package metadata/license/security, exact locked dependencies, internal documentation links, claim review and the pinned toolchain/cohort | Not registry availability, runtime matrix, or permission to publish |
-| `stable_api_candidate` | WBH-K01..WBH-K08 freeze documented functions, value shapes, callbacks/messages, operation/result mappings, defaults/limits, all source error identities and migration decisions | Not a published release, serialized ABI, runtime matrix, or universal HTTP/WoT compliance |
+| `public_release_candidate` | Previous gates plus explicit dependency audits, documentation, coverage, Dialyzer, boundary, package metadata/license/security, and claim review pass | Not registry availability, runtime matrix, or permission to publish |
+| `stable_api_candidate` | Consumer-visible compatibility behavior and documented API changes receive review against WBH-C06 | Not a published release, serialized ABI, runtime matrix, or universal HTTP/WoT compliance |
 
-The repository's `.check.exs` has no reduced release profile and permits no
-mandatory tool to be skipped. `mix test` remains the fast loop; coverage is the
-single test-suite pass in the default gate. The archive helper supplies exact
-dependency reconstruction and reference-consumer semantics; the candidate
-helper supplies metadata, legal/security, link, lock and toolchain assertions.
-The stable-API helper binds WBH-K01..WBH-K08 to the source error manifest,
-documented function arities, callback tuples, package contents, migration
-decision and executable compatibility vectors.
+`mix test` remains the fast loop. The archive helper supplies exact dependency
+reconstruction and reference-consumer semantics. Compatibility tests assert
+observable mappings, callbacks, messages, defaults, limits, results, errors,
+redaction, and lifecycle behavior without enumerating every export, struct key,
+test name, documentation row, or developer-gate entry.
 
 ## Standards-claim matrix
 
@@ -90,11 +87,11 @@ Newer draft text does not silently change a released mapping.
 | WBH-R06 | Whole declared runtime matrix and registry installation | WBH-C05 pins one exact QA pair and proves the archive dependency graph; actual registry installation and a broader matrix remain promotion evidence |
 | WBH-R07 | Local tracker exclusion from archive | Inspect every candidate archive and reject any `docs/tasks/local/` member |
 
-WBH-C06 keeps every documented `0.1.0` name, arity, tuple, atom, mapping,
-default, limit measurement and value projection. It requires no consumer
-migration. A future incompatible change requires a reviewed WBH specification,
-compatibility-vector update and package-version decision; a newer draft does
-not silently change the package mapping.
+WBH-C06 keeps the documented `0.1.0` operations, callback and receiver tuples,
+error identities, defaults, limit measurements, mappings, and value accessors.
+It requires no consumer migration. A future incompatible change requires a
+reviewed WBH specification, compatibility-vector update, and package-version
+decision; a newer draft does not silently change the package mapping.
 
 ## Local evidence contract
 

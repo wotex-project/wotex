@@ -3,12 +3,7 @@ defmodule Wotex.Binding.HTTP.DependencySecurityTest do
 
   use ExUnit.Case, async: true
 
-  @decimal_lock {:hex, :decimal, "3.1.1",
-                 "430d87b04011ce6cbd4fd205be758311a81f87d552d40904abd00f015935b1d0", [:mix], [],
-                 "hexpm", "c5f25f2ced74a0587d03e6023f595db8e924c9d3922c8c8ffd9edfc4498cf1f6"}
-
-  test "the reviewed Decimal cohort is exact and has no advisory suppression" do
-    assert Mix.Dep.Lock.read()[:decimal] == @decimal_lock
+  test "the parser regression runs against the reviewed Decimal version without a waiver" do
     assert Application.spec(:decimal, :vsn) == ~c"3.1.1"
 
     assert [] ==

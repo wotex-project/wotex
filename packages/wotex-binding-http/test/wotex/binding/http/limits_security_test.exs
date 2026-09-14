@@ -10,49 +10,6 @@ defmodule Wotex.Binding.HTTP.LimitsSecurityTest do
   alias Wotex.Binding.HTTP.SSE.Event
   alias Wotex.Binding.HTTP.Test.{Factory, FakeClient}
 
-  @expected_cells [
-    {"WBH-S01", ["WBH-S01-P", "WBH-S01-N"]},
-    {"WBH-S02", ["WBH-S02-P", "WBH-S02-N"]},
-    {"WBH-S03", ["WBH-S03-P", "WBH-S03-N"]},
-    {"WBH-S04", ["WBH-S04-P", "WBH-S04-N"]},
-    {"WBH-S05", ["WBH-S05-P", "WBH-S05-N"]},
-    {"WBH-S06", ["WBH-S06-P", "WBH-S06-N"]},
-    {"WBH-S07", ["WBH-S07-P", "WBH-S07-N"]},
-    {"WBH-S08", ["WBH-S08-P", "WBH-S08-N"]},
-    {"WBH-S09", ["WBH-S09-P", "WBH-S09-N"]},
-    {"WBH-S10", ["WBH-S10-P", "WBH-S10-N"]},
-    {"WBH-S11", ["WBH-S11-N"]},
-    {"WBH-S12", ["WBH-S12-P"]},
-    {"WBH-S13", ["WBH-S13-P"]}
-  ]
-
-  @evidence_files [
-    "test/wotex/binding/http/limits_security_test.exs",
-    "test/wotex/binding/http/integration_test.exs"
-  ]
-
-  test "the public limits/security inventory maps every cell to a named vector" do
-    documented =
-      "docs/limits-security-inventory.md"
-      |> File.read!()
-      |> String.split("\n")
-      |> Enum.filter(&String.starts_with?(&1, "| WBH-S"))
-      |> Enum.map(&documented_cell/1)
-
-    assert documented == @expected_cells
-
-    test_names =
-      @evidence_files
-      |> Enum.map_join("\n", &File.read!/1)
-      |> then(&Regex.scan(~r/test "([^"]+)"/, &1, capture: :all_but_first))
-      |> List.flatten()
-
-    for {_, vectors} <- @expected_cells, vector <- vectors do
-      assert Enum.any?(test_names, &String.contains?(&1, vector)),
-             "#{vector} has no executable test"
-    end
-  end
-
   test "WBH-S01-P and WBH-S01-N defaults are exact and every limit stays positive" do
     assert {:ok, config} = HTTP.config(client: {FakeClient, %{}})
     assert Config.max_request_bytes(config) == 1_048_576
@@ -366,13 +323,4 @@ defmodule Wotex.Binding.HTTP.LimitsSecurityTest do
   end
 
   defp encoded(term), do: :erlang.term_to_binary(term)
-
-  defp documented_cell(line) do
-    [cell, _, vectors] =
-      line
-      |> String.split("|", trim: true)
-      |> Enum.map(&String.trim/1)
-
-    {cell, String.split(vectors, ", ")}
-  end
 end

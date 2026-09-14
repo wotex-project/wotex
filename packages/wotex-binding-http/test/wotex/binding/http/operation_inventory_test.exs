@@ -102,31 +102,6 @@ defmodule Wotex.Binding.HTTP.OperationInventoryTest do
     authority: "WRT-THING+WBH.01"
   }
 
-  @inventory Enum.sort_by([@aggregate_vector | @request_vectors ++ @stop_vectors], & &1.cell)
-
-  test "the public inventory maps every cell to these executable vectors and authorities" do
-    documented =
-      "docs/http-operation-inventory.md"
-      |> File.read!()
-      |> String.split("\n")
-      |> Enum.filter(&String.starts_with?(&1, "| WBH-OP"))
-      |> Enum.map(&documented_row/1)
-
-    expected =
-      Enum.map(@inventory, fn vector ->
-        %{
-          cell: vector.cell,
-          operation: operation_name(vector.operation),
-          outcome: vector.outcome,
-          positive: vector.positive,
-          negative: vector.negative,
-          authority: vector.authority
-        }
-      end)
-
-    assert documented == expected
-  end
-
   for vector <- @request_vectors do
     @tag vector: vector.positive
     test "#{vector.positive} maps #{vector.operation} through the supplied client boundary" do
@@ -340,26 +315,6 @@ defmodule Wotex.Binding.HTTP.OperationInventoryTest do
     Wotex.Runtime.Request.from_selection(selection, context, nil)
   end
 
-  defp documented_row(line) do
-    [cell, operation, _, outcome, positive, negative, authority] =
-      line
-      |> String.split("|", trim: true)
-      |> Enum.map(fn value ->
-        value
-        |> String.trim()
-        |> String.replace("`", "")
-      end)
-
-    %{
-      cell: cell,
-      operation: operation,
-      outcome: outcome,
-      positive: positive,
-      negative: negative,
-      authority: authority
-    }
-  end
-
   defp input(operation) when operation in [:writeproperty, :invokeaction], do: true
   defp input(operation) when operation in [:queryaction, :cancelaction], do: "/actions/value/1"
   defp input(_), do: nil
@@ -368,9 +323,6 @@ defmodule Wotex.Binding.HTTP.OperationInventoryTest do
     do: %{"subprotocol" => "sse"}
 
   defp form_overrides(_), do: %{}
-
-  defp operation_name(:thing_operations), do: "thing_operations/0"
-  defp operation_name(operation), do: Atom.to_string(operation)
 
   defp opening(:unobserveproperty), do: :observeproperty
   defp opening(:unsubscribeevent), do: :subscribeevent

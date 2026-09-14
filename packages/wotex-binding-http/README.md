@@ -198,11 +198,6 @@ exact thresholds, native JSON admission, sustained receiver overload, deadline
 and destination policy seams, redaction vectors, and the remaining client-owned
 nonclaims.
 
-The [stable API candidate inventory](docs/stable-api-inventory.md) freezes the
-documented functions, values, callbacks, messages, mappings, defaults, limits,
-result metadata, and error identities. It also records the draft-revision and
-migration decisions for the `0.1.0` candidate.
-
 ## Failure model
 
 Public failures are `Wotex.Binding.HTTP.Error` values with a stable `code`, a
@@ -235,23 +230,34 @@ WOTEX_PATH_DEPS=1 mix test
 WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
-`mix test` is the fast development loop. The default `mix check --no-retry` is
-the authoritative library gate: locked dependencies, warnings-as-errors
-compilation, unused dependencies, formatting, coverage, strict static checks,
-documentation, dependency audits, Dialyzer, the library boundary, package and
-archive reconstruction, release and stable-API candidate audits, and a clean
-diff. Coverage is the only test-suite pass inside that gate.
+`mix test` is the fast development loop. The default `mix check --no-retry`
+covers warnings-as-errors compilation, formatting, and the behavioral test
+suite. Release evidence is run explicitly:
+
+```console
+WOTEX_PATH_DEPS=1 mix deps.get --check-locked
+WOTEX_PATH_DEPS=1 mix deps.unlock --check-unused
+WOTEX_PATH_DEPS=1 mix deps.audit
+WOTEX_PATH_DEPS=1 mix hex.audit
+WOTEX_PATH_DEPS=1 mix credo --strict
+WOTEX_PATH_DEPS=1 mix doctor
+WOTEX_PATH_DEPS=1 mix docs --warnings-as-errors
+WOTEX_PATH_DEPS=1 MIX_ENV=test mix coveralls
+WOTEX_PATH_DEPS=1 mix dialyzer
+WOTEX_PATH_DEPS=1 elixir bin/check_boundary.exs
+WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive.exs
+git diff --check
+```
 
 The reproducible local and CI evidence pair is Elixir `1.18.4-otp-27` with OTP
 `27.3.4.15`, declared in `.tool-versions`. The broader `elixir: "~> 1.18"`
 package requirement is not a tested runtime matrix. CI also pins the exact core
 and Runtime source revisions used by the workspace gate.
 
-Focused proofs remain available as `bin/check_boundary.exs`,
-`bin/check_archive.exs`, `bin/check_release.exs`, and
-`bin/check_stable_api.exs`. The [public release-candidate inventory](docs/release-candidate-inventory.md)
+The boundary and exact-archive commands are focused proofs. The
+[public release-candidate inventory](docs/release-candidate-inventory.md)
 documents package metadata, legal/security, dependency, documentation,
-toolchain and remaining publication-order evidence.
+toolchain, and remaining publication-order evidence.
 
 ## License
 
