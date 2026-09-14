@@ -755,3 +755,27 @@ software-build receipt or complete expired-window acceptance.
 | ExUnit regression | `bc400911dc333d301d5783e3a04a197671fdbfe2121692fc442d40c74b8f8279` |
 | Current Linux log | `61c2eca6235c30d9fa4bbd96854adaa0fe59c41498c8e29b4d503ac383b3bba3` |
 | Minimum Linux sanitizer log | `cf59b0ee1dd8155b41eb7fcd0065a5d6f0a54e168c4d7354dd346e3ee588ce0b` |
+
+## Cooperative native exit
+
+Explicit disconnect requires a null close response and native exit status zero
+within its existing absolute deadline. A delayed successful exit completes
+before the caller returns. Malformed close results, nonzero exit statuses and
+stalled post-response shutdown produce structured failures. Failed cleanup still
+terminates the exact owned child. The regression cases expose both premature
+termination after a close response and a `CaseClauseError` for a non-null result
+before the correction. All 33 focused lifecycle tests pass on the current and
+minimum toolchains after the correction.
+
+The real native one-shot/ConsumedThing workflow passes on both Linux lanes with
+the timeout-cohort binaries above. The minimum lane uses ASan/UBSan with leak
+detection enabled and now observes each cooperative native process's successful
+exit, including sanitizer finalization. The default gate passes 138 checks with
+15 opt-in exclusions; ExDoc passes with warnings as errors.
+
+| Exit artifact | SHA-256 |
+| --- | --- |
+| Native connection | `aaf40e05deb757ce19ea41fda0a1ea3be27b1b56b90c199d65503a481f57724a` |
+| Connection regression tests | `40a417f22f9e875e4785291c7a0fdf3739f9951acaf691a228b1bf8d47c7ae48` |
+| Current Linux native log | `1a1356cb4ec370cee18302b067e2d6875ce45f39acc8dae63280e3afa08882b5` |
+| Minimum Linux sanitizer log | `315ee538c8598321530f0e61add040264f97433ad1b05db283093c69c6f9c18f` |

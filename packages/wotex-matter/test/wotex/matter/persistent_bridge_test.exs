@@ -151,6 +151,31 @@ defmodule Wotex.Matter.PersistentBridgeTest do
              Native.connect(Keyword.put(options(executable), :timeout, 1_100))
   end
 
+  test "WMA-C03 cooperative close waits for successful native process exit" do
+    audit = temporary_path("close-exit")
+    assert {:ok, handle} = Native.connect(options(fixture("delayed_close_exit", audit)))
+    assert :ok = Native.disconnect(handle)
+    assert File.read!(audit) =~ "native-exit-completed"
+  end
+
+  test "WMA-C03 close rejects malformed results, nonzero exits and stalled shutdown" do
+    for {mode, code} <- [
+          {"nonnull_close", :invalid_frame},
+          {"failed_close_exit", :invalid_transport_return},
+          {"stalled_close_exit", :timeout}
+        ] do
+      assert {:ok, handle} = Native.connect(options(fixture(mode)))
+      monitor = Process.monitor(handle.pid)
+      {:links, links} = Process.info(handle.pid, :links)
+      [port] = Enum.filter(links, &is_port/1)
+      {:os_pid, child} = Port.info(port, :os_pid)
+      assert {:error, %Error{code: ^code}} = Native.disconnect(handle)
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+      assert child_stopped?(child, 100)
+      assert :ok = Native.disconnect(handle)
+    end
+  end
+
   test "WMA-C03 a stalled child is reaped after its request deadline" do
     assert {:ok, handle} = Native.connect(options(fixture("ignore_eof")))
     monitor = Process.monitor(handle.pid)
@@ -658,7 +683,18 @@ defmodule Wotex.Matter.PersistentBridgeTest do
           loop.(loop)
 
         String.contains?(line, ~s("operation":"close")) ->
-          IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":null}))
+          result = if mode == "nonnull_close", do: "42", else: "null"
+          IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":\#{result}}))
+          case mode do
+            "delayed_close_exit" ->
+              Process.sleep(200)
+              File.write!(audit, "native-exit-completed", [:append])
+            "failed_close_exit" ->
+              System.halt(42)
+            "stalled_close_exit" ->
+              Process.sleep(:infinity)
+            _ -> :ok
+          end
 
         String.contains?(line, ~s("operation":"health")) ->
           count = Process.get(:health_count, 0) + 1

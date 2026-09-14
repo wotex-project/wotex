@@ -291,8 +291,17 @@ defmodule Wotex.Matter.Native.Connection do
   def handle_call({:disconnect, generation}, _, state) do
     if generation == state.generation do
       case request_frame(state, "close", %{}, @cleanup_timeout) do
-        {:ok, result, next_state} -> {:stop, :normal, {:ok, result}, next_state}
-        {:error, error, next_state} -> {:stop, :normal, {:error, error}, next_state}
+        {:ok, nil, next_state} ->
+          case await_close_exit(next_state) do
+            :ok -> {:stop, :normal, {:ok, nil}, %{next_state | port: nil}}
+            {:error, error} -> {:stop, :normal, {:error, error}, next_state}
+          end
+
+        {:ok, _, next_state} ->
+          {:stop, :normal, {:error, Error.new(:invalid_frame)}, next_state}
+
+        {:error, error, next_state} ->
+          {:stop, :normal, {:error, error}, next_state}
       end
     else
       {:reply, {:error, Error.new(:invalid_handle)}, state}
@@ -1290,6 +1299,32 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   defp close_port(_), do: :ok
+
+  defp await_close_exit(%{port: port, owner_monitor: monitor, call_deadline: deadline}) do
+    remaining = deadline - System.monotonic_time(:millisecond)
+
+    if remaining <= 0 do
+      {:error, Error.new(:timeout)}
+    else
+      receive do
+        {^port, {:exit_status, 0}} ->
+          if System.monotonic_time(:millisecond) <= deadline,
+            do: :ok,
+            else: {:error, Error.new(:timeout)}
+
+        {^port, {:exit_status, status}} ->
+          {:error, Error.new(:invalid_transport_return, nil, %{exit_status: status})}
+
+        {^port, {:data, _}} ->
+          {:error, Error.new(:invalid_frame)}
+
+        {:DOWN, ^monitor, :process, _, _} ->
+          {:error, Error.new(:owner_closed)}
+      after
+        remaining -> {:error, Error.new(:timeout)}
+      end
+    end
+  end
 
   defp emit_subscription(event, kind, result) do
     :telemetry.execute(

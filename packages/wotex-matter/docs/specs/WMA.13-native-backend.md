@@ -3,7 +3,7 @@ spec:
   id: WMA.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.3
+  version: 1.0.4
   owner: wotex-matter
   updated: 2026-09-15
 ---
@@ -24,8 +24,12 @@ The executable path is absolute, validated before startup, and executed directly
 with separate arguments. Native runtime libraries are declared in the build
 manifest; a missing or mismatched dependency fails startup.
 The POSIX process boundary requires executable `/bin/kill`, invoked directly with
-separate arguments for the owned child's positive PID. Teardown terminates that
-child before releasing its Port identity; closing stdin alone is insufficient.
+separate arguments for the owned child's positive PID. Cooperative close requires
+an exact null result followed by native exit status zero within the same cleanup
+deadline. A non-null result is `invalid_frame`; nonzero exit is
+`invalid_transport_return` with numeric `exit_status`; expiration is `timeout`.
+Failed or stalled teardown terminates the child before releasing its Port
+identity; closing stdin alone is insufficient.
 Missing process-termination support fails before native startup. Ready, flow
 negotiation and controller open share one absolute startup deadline, and open
 receives only its remaining budget.
