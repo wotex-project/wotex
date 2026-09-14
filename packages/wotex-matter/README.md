@@ -59,11 +59,17 @@ and tests the P07 host in a disposable pinned Linux environment.
 `mix wotex.native.build --workspace /absolute/empty/workspace` builds the normal
 and sanitizer controllers. `mix wotex.software.build` uses the same argument
 contract and adds the pinned lighting, all-clusters and bridge executables.
+The all-clusters and bridge peers include small test-only named-pipe controls
+for temperature/null and reachability inputs. The build verifies their exact
+upstream source hashes and records the extension and patched-source hashes.
 Both tasks run from this source project, verify downloads and advisories, run
 native unit tests, and record content-bound build manifests. Reuse requires
 matching source, artifacts and logs; a native-only workspace requires a fresh
 workspace for a software build. Docker, Git, curl, tar and the `kill` executable
 must be available.
+The explicit lighting, thermostat and bridge ExUnit workflows have passed in
+both Linux BEAM lanes; their exact cohorts are recorded in
+[executable evidence](docs/provenance/executable-evidence.md).
 `mix wotex.software.run` remains specified implementation work. Upstream SDK
 Python is used only while generating and building native SDK sources.
 

@@ -5,7 +5,7 @@ defmodule Wotex.Matter.SoftwareBuildTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.Matter.{SoftwareCommand, SoftwareFixture, SoftwareManifest}
+  alias Wotex.Matter.{SoftwareCommand, SoftwareFixture, SoftwareManifest, SoftwarePeerExtension}
 
   setup do
     {temporary, 0} = System.cmd("pwd", ["-P"], cd: System.tmp_dir!())
@@ -184,6 +184,35 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     after
       if previous, do: System.put_env(canary, previous), else: System.delete_env(canary)
     end
+  end
+
+  test "WMA-B01 source identity includes test helpers used by native peer assertions", %{root: root} do
+    before = SoftwareManifest.identity(root)
+    helper = Path.join(root, "test/support/credentials.ex")
+    File.mkdir_p!(Path.dirname(helper))
+    File.write!(helper, "fixture helper")
+    after_identity = SoftwareManifest.identity(root)
+    assert after_identity != before
+    assert Map.has_key?(after_identity["source_files_sha256"], "test/support/credentials.ex")
+  end
+
+  test "WMA-N03 peer controls reject unrecognized SDK source without modifying it", %{root: root} do
+    files = [
+      "examples/all-clusters-app/linux/AllClustersCommandDelegate.cpp",
+      "examples/bridge-app/linux/main.cpp"
+    ]
+
+    for file <- files do
+      path = Path.join(root, file)
+      File.mkdir_p!(Path.dirname(path))
+      File.write!(path, "unrecognized source")
+    end
+
+    assert_raise Mix.Error, "peer_extension_source_mismatch", fn ->
+      SoftwarePeerExtension.apply!(File.cwd!(), root)
+    end
+
+    for file <- files, do: assert(File.read!(Path.join(root, file)) == "unrecognized source")
   end
 
   test "WMA-B01 terminating the caller reaps its running command and retains bounded output", %{

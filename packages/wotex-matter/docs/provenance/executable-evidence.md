@@ -486,6 +486,63 @@ The developer gate passes 125 checks with eight interop cases excluded. This
 adds lighting workflow evidence; thermostat, bridge, remaining native process
 stress, the software-run task and final archive acceptance remain open.
 
+The WMA-N03 thermostat and bridge workflows execute in
+`test/interop/native_thermostat_test.exs` and
+`test/interop/native_bridge_test.exs`, whose SHA-256 values are respectively
+`8f819b1e4159a0e14629e2d9a071c2c88b3616b3aa37b56f3ca4b3b539e67437`
+and `ea3e42f383a4f4687760dda08775cf7d49849017a75587dabd6e6c6d7411b116`.
+Both pass against real Linux SDK peers on both required BEAM versions. Invoke
+each test with `--include interop --include software`, supplying respectively
+`WOTEX_MATTER_NATIVE_THERMOSTAT_FIXTURE` or
+`WOTEX_MATTER_NATIVE_BRIDGE_FIXTURE`. Their JSON configuration carries explicit
+controller identity/trust/storage, commissioning inputs, named-pipe control path
+and exclusive result path. Expected protocol results remain in ExUnit.
+
+The all-clusters control sets the peer's real SDK temperature attributes; the
+bridge control calls the SDK's existing reachability setter and event machinery.
+The production controller contains neither control. The Mix software builder
+requires exact original source hashes, applies these test-only extensions and
+records original, extension and patched-source hashes in `peer_extensions`.
+Its source identity includes all Elixir test helpers used by peer assertions.
+Extension admission rejects an unrecognized SDK source before modifying it.
+
+| Peer artifact | SHA-256 |
+| --- | --- |
+| All-clusters control source | `0862ea120d0162851191057eecedc434f7dc72fca0635ac0383d1044c45792b4` |
+| Patched all-clusters delegate | `ffb55dffc21e07f617a6ed8f569689f15068c766e45fc17befcc22622756893b` |
+| All-clusters executable | `b32c235943a96a30bcf7b220c66e783bb0a4b16a8a67bd1cff4d24c9c4a582d0` |
+| Bridge control source | `09b09ddeea86c5aff1c91d3716da3190c32ba055f950bf6f483ed77ed9c8df41` |
+| Patched bridge main | `362bd634411c669a0cb8315d22d2c151e5a98a138575216fd0973828851b8a0c` |
+| Bridge executable | `89333e487346ab1e256a9c6b91b9efa9ae6b3005dca30bad540df823a3f3963f` |
+
+These executables were rebuilt incrementally from the previously verified pinned
+SDK/toolchain workspace, with the exact extension records retained. This cohort
+does not replace a fresh complete build-task receipt for the final P09 source.
+The thermostat cohort uses host `f978e073...86f5f3`; the bridge cohort uses
+`b38ae768...74b3af`, with complete host digests above.
+
+Thermostat discovery retains the peer's `FFF1FC05` manufacturer cluster and
+locates endpoint 1. The test reads signed 2150 and explicit sensor null, writes
+heating 2000 then 2050 with expected DataVersion and a timed request, verifies
+new DataVersion, observes stale-write status `0x92`, and confirms 2050 remains.
+It writes/reads mode values 0, 1, 3 and 4. Further peer controls produce signed
+2200 and sensor zero, preserving zero separately from null.
+
+Bridge discovery locates the controlled sensor at endpoint 4. The test observes
+ReachableChanged false/true with distinct report and event numbers, checks
+attribute readback, and reads both historical events with their exact timestamps.
+A minimum above the newest event returns an empty success. After cancellation,
+a further reachability change and read yield no delivery during the asserted
+1100 ms window; the requested maximum report interval is one second. Both
+workflows observe normal owner exit and disappearance of its exact OS child
+before writing a passing result. Separate process queries find no native host
+in either Linux lane after the tests.
+
+| Test log | Current BEAM SHA-256 | Minimum BEAM SHA-256 |
+| --- | --- | --- |
+| Thermostat | `80e8ed183ebee68ed7344de6eac6a936c15c2039117fc84be09de45984baa28a` | `0e0e8e566842b36a6722570528cbf9acf161e00e1a4c70221a46e078bb2775ff` |
+| Bridge | `3cf5c9ab3329195031bb04e45783c30b64d064adad71edb5b3996d879aab2885` | `dbb29de848dfd41cb6eed0a145373e13157b8dc51a42525a4b48ae67182592cb` |
+
 [WMA.13](../specs/WMA.13-native-backend.md) defines the complete native binary,
 Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P08 are executed
 at their stated deterministic and native-compilation boundaries, and P08a is

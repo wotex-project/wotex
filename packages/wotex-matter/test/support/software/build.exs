@@ -1,9 +1,10 @@
 Code.require_file("command.exs", __DIR__)
+Code.require_file("peer_extension.exs", __DIR__)
 
 defmodule Wotex.Matter.SoftwareBuild do
   @moduledoc false
 
-  alias Wotex.Matter.{SoftwareCommand, SoftwareManifest}
+  alias Wotex.Matter.{SoftwareCommand, SoftwareManifest, SoftwarePeerExtension}
 
   @timeout 5_400_000
   @container_environment [
@@ -78,8 +79,8 @@ defmodule Wotex.Matter.SoftwareBuild do
         start_container(context)
         install_tools(context, sources)
         build_native(context)
-        if mode == :software, do: build_peers(context)
-        manifest(context, sources, mode)
+        extensions = if mode == :software, do: build_peers(context), else: []
+        manifest(context, sources, mode, extensions)
       after
         release_watcher(watcher)
       end
@@ -329,6 +330,7 @@ defmodule Wotex.Matter.SoftwareBuild do
 
   defp build_peers(context) do
     Mix.shell().info("Building the pinned lighting, all-clusters and bridge peers")
+    extensions = SoftwarePeerExtension.apply!(context.root, Path.join(context.workspace, "sdk"))
     File.mkdir!(Path.join(context.workspace, "build-peers"))
     File.write!(Path.join(context.workspace, "build-peers/args.gn"), @peer_arguments)
 
@@ -357,9 +359,11 @@ defmodule Wotex.Matter.SoftwareBuild do
 
       File.chmod!(Path.join(context.workspace, "bin/" <> name), 0o500)
     end
+
+    extensions
   end
 
-  defp manifest(context, sources, mode) do
+  defp manifest(context, sources, mode, extensions) do
     tools =
       for {name, executable, arguments} <- [
             {"compiler", "/usr/bin/g++", ["--version"]},
@@ -411,6 +415,7 @@ defmodule Wotex.Matter.SoftwareBuild do
       "package" => "wotex_matter",
       "source_revision" => revision(context, identity),
       "source_files" => identity["source_files_sha256"],
+      "peer_extensions" => extensions,
       "upstream_sources" =>
         archives(sources, mode) ++ sources["python"] ++ [sources["header"], sources["cipd"]],
       "sdk_gitlinks" =>
