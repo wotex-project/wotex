@@ -4,9 +4,10 @@ defmodule Wotex.Matter.Transport do
 
   The transport accepts Runtime request and execution-context structs, maps the
   selected Form through `Wotex.Matter.Mapping`, opens the configured client,
-  performs one read, write, or invoke, and closes the exact session.
-  Subscription callbacks return explicit unsupported errors because this
-  profile does not implement Matter subscription delivery.
+  performs one read, write, or invoke, and closes the exact session. Requests
+  selected through the controller profile use typed standalone services.
+  Controller observations and Event subscriptions use a private relay that owns
+  the native session and translates validated reports for Runtime.
 
   ## Runtime boundary
 
@@ -20,13 +21,14 @@ defmodule Wotex.Matter.Transport do
   """
   @behaviour Wotex.Runtime.Transport
   alias Wotex.Matter
-  alias Wotex.Matter.{Error, Mapping}
-  alias Wotex.Runtime.{Context, ExecutionContext, Request, Result}
+  alias Wotex.Matter.{Address, AttributeReport, Error, Mapping, RuntimeRelay}
+  alias Wotex.Runtime.{BindingProfile, Context, ExecutionContext, Request, Result}
 
   @impl Wotex.Runtime.Transport
   def request(%Request{} = request, %ExecutionContext{credential: nil}, config)
       when is_list(config) do
     with true <- Keyword.keyword?(config),
+         true <- request.operation in [:readproperty, :writeproperty, :invokeaction],
          {:ok, mapping} <-
            Mapping.command(request.form, request.operation, request.input, request.resolved_href),
          true <- Keyword.get(config, :target) == mapping.target,
@@ -35,12 +37,15 @@ defmodule Wotex.Matter.Transport do
 
       options =
         config
-        |> Keyword.delete(:target)
+        |> client_options()
         |> Keyword.put(:timeout, timeout)
 
       Matter.with_connection(options, fn session ->
         remaining = deadline - System.monotonic_time(:millisecond)
-        execute(session, mapping.message, request, remaining)
+
+        if controller?(request),
+          do: execute_controller(session, mapping, request, remaining),
+          else: execute(session, mapping.message, request, remaining)
       end)
     else
       {:error, %Error{}} = error -> error
@@ -51,9 +56,67 @@ defmodule Wotex.Matter.Transport do
   def request(_, _, _), do: {:error, Error.new(:invalid_transport_context)}
 
   @impl Wotex.Runtime.Transport
-  def subscribe(_, _, _, _), do: {:error, Error.new(:not_supported)}
+  def subscribe(
+        %Request{} = request,
+        owner,
+        %ExecutionContext{credential: nil},
+        config
+      )
+      when is_pid(owner) and is_list(config) do
+    with true <- Process.alive?(owner),
+         true <- Keyword.keyword?(config),
+         true <- controller?(request),
+         true <- request.operation in [:observeproperty, :subscribeevent],
+         {:ok, mapping} <-
+           Mapping.command(request.form, request.operation, request.input, request.resolved_href),
+         true <- Keyword.get(config, :target) == mapping.target,
+         {:ok, timeout} <- budget(request.deadline, Keyword.get(config, :timeout, 5000)),
+         {:ok, address} <- address(mapping.message),
+         {:ok, stream_options} <- stream_options(config) do
+      options =
+        config
+        |> client_options()
+        |> Keyword.put(:timeout, timeout)
+
+      RuntimeRelay.start(
+        owner,
+        request.request_id,
+        request.operation,
+        mapping.kind,
+        address,
+        options,
+        stream_options,
+        timeout
+      )
+    else
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:invalid_transport_context)}
+    end
+  end
+
+  def subscribe(_, _, _, _), do: {:error, Error.new(:invalid_transport_context)}
+
   @impl Wotex.Runtime.Transport
-  def unsubscribe(_, _, _, _), do: {:error, Error.new(:not_supported)}
+  def unsubscribe(handle, %Request{}, %ExecutionContext{}, _),
+    do: RuntimeRelay.close(handle)
+
+  def unsubscribe(handle, _, _, _), do: RuntimeRelay.close(handle)
+
+  @impl Wotex.Runtime.Transport
+  def decode_frame(frame, %Request{} = request, config) when is_list(config) do
+    with true <- Keyword.keyword?(config),
+         true <- request.operation in [:observeproperty, :subscribeevent],
+         {:ok, mapping} <-
+           Mapping.command(request.form, request.operation, request.input, request.resolved_href),
+         true <- Keyword.get(config, :target) == mapping.target,
+         {:ok, address} <- address(mapping.message) do
+      RuntimeRelay.decode(frame, request.request_id, request.operation, mapping.kind, address)
+    else
+      _ -> :ignore
+    end
+  end
+
+  def decode_frame(_, _, _), do: :ignore
 
   defp execute(session, message, request, remaining) when remaining > 0 do
     with {:ok, value} <- Matter.send(%{session | timeout: remaining}, message),
@@ -61,6 +124,95 @@ defmodule Wotex.Matter.Transport do
   end
 
   defp execute(_, _, _, _), do: {:error, Error.new(:deadline_exceeded)}
+
+  defp execute_controller(_, _, _, remaining) when remaining <= 0,
+    do: {:error, Error.new(:deadline_exceeded)}
+
+  defp execute_controller(session, %{message: message}, request, remaining) do
+    with {:ok, address} <- address(message) do
+      session = %{session | timeout: remaining}
+
+      case request.operation do
+        :readproperty -> controller_read(session, address, request)
+        :writeproperty -> controller_write(session, address, request.input, request)
+        :invokeaction -> controller_invoke(session, address, request.input, request)
+        _ -> {:error, Error.new(:unsupported_operation)}
+      end
+    end
+  end
+
+  defp controller_read(session, address, request) do
+    with {:ok, %AttributeReport{} = report} <- Matter.read_attribute(session, address),
+         do:
+           Result.new(request.request_id, request.operation, report.value,
+             metadata: %{
+               matter_kind: :attribute,
+               path: Map.from_struct(report.path),
+               status: 0,
+               data_version: report.data_version
+             }
+           )
+  end
+
+  defp controller_write(session, address, input, request) do
+    with {:ok, %{path: path, status: 0}} <- Matter.write_attribute(session, address, input),
+         {:ok, ^address} <- Address.new(path),
+         do:
+           Result.new(request.request_id, request.operation, :written,
+             metadata: %{
+               matter_kind: :attribute,
+               path: Map.from_struct(address),
+               status: 0
+             }
+           )
+  end
+
+  defp controller_invoke(session, address, input, request) do
+    with {:ok, %{path: response_path, value: value, status: 0}} <-
+           Matter.invoke_command(session, address, input),
+         {:ok, response_path} <- response_path(response_path) do
+      Result.new(request.request_id, request.operation, value,
+        metadata: %{
+          matter_kind: :command,
+          path: Map.from_struct(address),
+          response_path: response_path,
+          status: 0
+        }
+      )
+    end
+  end
+
+  defp response_path(nil), do: {:ok, nil}
+
+  defp response_path(path) do
+    with {:ok, path} <- Address.new(path), do: {:ok, Map.from_struct(path)}
+  end
+
+  defp address(message) do
+    message
+    |> Map.take([:fabric_id, :node_id, :endpoint, :cluster, :member])
+    |> Address.new()
+  end
+
+  defp controller?(%Request{profile: %BindingProfile{} = profile}),
+    do: BindingProfile.id(profile) == :matter_controller
+
+  defp controller?(_), do: false
+
+  defp client_options(config),
+    do: Keyword.drop(config, [:target, :subscription_options])
+
+  defp stream_options(config) do
+    case Keyword.get(config, :subscription_options, []) do
+      options when is_list(options) ->
+        if Keyword.keyword?(options),
+          do: {:ok, options},
+          else: {:error, Error.new(:invalid_subscription)}
+
+      _ ->
+        {:error, Error.new(:invalid_subscription)}
+    end
+  end
 
   defp budget(deadline, max) when is_integer(max) and max in 1..60_000 do
     now =

@@ -180,12 +180,27 @@ gate and has not yet been executed here because P09 owns construction and
 orchestration of those pinned peers. Its presence is not interoperability
 evidence.
 
+## P08 Runtime mapping and stream evidence
+
+`test/wotex/matter/runtime_stream_test.exs` executes WMA-V11 at the binding
+transport boundary. It proves typed controller Property/Action results,
+attribute DataVersion and Event identity, one-use frame decoding,
+unrelated-reference and forged-frame rejection, terminal session loss,
+Runtime-owner cleanup, original-subscription cancellation, and the concrete read
+health probe. The default suite also reruns the legacy one-shot mapping behavior,
+so P08 does not silently change that payload profile.
+
+P08 changes no C++ or SDK build input, so it has no new native lane. P08a remains
+responsible for the public BindingProfile factories and full ConsumedThing,
+credential, deadline and error/retry matrix. P09 remains responsible for the
+pinned SDK example peers.
+
 ## Acceptance boundary
 
 [WMA.13](../specs/WMA.13-native-backend.md) defines the complete native binary,
-Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P07 are executed
-at their stated deterministic and native-compilation boundaries. P08/P08a still
-require Runtime integration, and P09 still requires all pinned software-peer
+Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P08 are executed
+at their stated deterministic and native-compilation boundaries. P08a still
+requires public Runtime integration, and P09 still requires all pinned software-peer
 workflows, including WMA-V10. A passing P07 native lane does not establish an
 actual peer result, physical-device
 behavior, CSA certification or publication readiness.

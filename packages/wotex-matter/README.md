@@ -93,9 +93,13 @@ exact long-discriminator discovery, SDK pairing and final commissioning
 callbacks, then requires a CASE probe before success. Enhanced windows use
 SDK-generated PIN and salt; returned onboarding material has redacted Inspect.
 AccessControl ACL values are typed and exclude PASE as operational authority.
-Loading the library starts no process or native executable. P08 and P08a still
-own Runtime integration; P09 owns the pinned software-peer execution of P07's
-interop scenarios and the complete controller workflow.
+P08 maps controller-profile Property, Action and Event operations to those typed
+services. Runtime streams use an explicitly started private relay, retain
+DataVersion and Event identity, terminate on session loss, and cancel through
+the session and subscription that established the stream. Loading the library
+starts no process or native executable. P08a still owns the public profile
+factories and full ConsumedThing/error matrix; P09 owns the pinned software-peer
+execution of P07's interop scenarios and the complete controller workflow.
 
 ## Quick start
 
@@ -290,6 +294,10 @@ bounded opt-in subscription recovery and delivery-generation tests.
 commissioning, final CASE-probe, enhanced-window and typed ACL paths and runs
 their focused normal/sanitizer tests. The separately selected P07 interop test
 requires a real fixture file; P09 will build and execute that fixture.
+P08 is covered by `test/wotex/matter/runtime_stream_test.exs` in the BEAM matrix.
+It exercises typed controller results, capability-backed Runtime frames,
+terminal cleanup, original-route cancellation and the explicit read health
+probe; it adds no native build surface.
 `WOTEX_PATH_DEPS=1 mix run bin/check_p03_advisories.exs` performs the associated
 live OSV audit. None of these native commands belongs to routine `mix check`.
 Optional interoperability suites fail if invoked without their required peer.
@@ -313,8 +321,10 @@ the explicit recovery transition run with P06. P07 executes local admission,
 native protocol, generated-window and ACL schema behavior, and compiles the
 production SDK controller path. Its real good/bad PIN, failed-attestation,
 expired-window and ACL-denial fixture remains unexecuted; P09 owns that peer
-along with the independent subscription peer. Scenario tables and an unselected
-interop test alone are not executable acceptance evidence.
+along with the independent subscription peer. P08 executes the WMA-V11 typed
+transport and Runtime-stream ownership boundary directly; the public
+ConsumedThing profile and error/retry corpus remain P08a. Scenario tables and
+an unselected interop test alone are not executable acceptance evidence.
 
 The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
 profiles from planned contracts. The [Wotex integration contract](docs/specs/WMA.12-wotex-integration.md)

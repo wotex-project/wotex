@@ -84,6 +84,17 @@ PIN and salt, wait for final completion and return a secret
 `OnboardingMaterial` value whose Inspect output is redacted. AccessControl ACL
 values use the generated schema and reject PASE as operational ACL authority.
 
+P08 maps controller-profile Property reads and writes to typed attribute
+services and Action invocations to typed command services. Successful Runtime
+results preserve the concrete path, numeric status and DataVersion or command
+response path. Property observations and Event subscriptions create one private
+relay that owns the exact native session and subscription, forces native
+resubscription off, validates each native reference/path/value, and presents
+one-use frames to the Runtime owner. Event number, priority and timestamp survive
+that projection. Terminal loss and owner death release the original native route;
+a stop Form cannot redirect cleanup. `health_check/2` performs a caller-selected
+concrete attribute read, while `health_check/1` remains probe-required.
+
 `Client` is a consumer-implemented driver contract. It must use a pinned real SDK,
 keep fabric stores isolated, enforce attestation/ACLs, inspect all per-path status
 results, respect finite request budgets and clean up owned resources. Contract
@@ -97,8 +108,10 @@ initialized native controller supplied by its factory. It remains separate from
 the first-party persistent controller and does not implement the batch request
 shape. No Python runtime or SDK binary is bundled. The packaged first-party
 controller source is built explicitly outside the Hex archive. P07's production
-path compiles against the pinned SDK and its deterministic protocol/schema tests
-execute; the actual software-peer commissioning scenarios remain P09 evidence. See
+path compiles against the pinned SDK, and P08's Runtime mapping/ownership tests
+execute against the public transport callbacks. The full public ConsumedThing
+profile matrix remains P08a, and actual software-peer commissioning scenarios
+remain P09 evidence. See
 [SDK client contract](WMA.03-sdk-client.md).
 
 ## Evidence and compatibility

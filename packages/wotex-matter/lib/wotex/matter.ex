@@ -209,6 +209,13 @@ defmodule Wotex.Matter do
   @spec health_check(term()) :: {:error, Error.t()}
   def health_check(_), do: {:error, Error.new(:probe_required)}
 
+  @doc "Performs a concrete attribute read as an explicit peer health probe."
+  @spec health_check(Session.t(), term()) ::
+          {:ok, AttributeReport.t()} | {:error, Error.t()}
+  def health_check(%Session{} = session, address), do: read_attribute(session, address)
+
+  def health_check(_, _), do: {:error, Error.new(:invalid_message)}
+
   @doc "Establishes a bounded attribute or event subscription for an explicit receiver."
   @spec subscribe(Session.t(), map()) ::
           {:ok, Wotex.Matter.Subscription.t()} | {:error, Error.t()}
