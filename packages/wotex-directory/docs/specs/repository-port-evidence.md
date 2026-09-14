@@ -1,7 +1,7 @@
 # Repository port evidence contract
 
 This document maps the reusable repository tests to WTD.01 version 1.1.0 and
-completion work item WTD-C01. It adds executable evidence for the existing
+completion work items WTD-C01 and WTD-C02. It adds executable evidence for the existing
 contract without changing callback signatures, return values, public types,
 operation order, or the W3C baseline. Discovery and Thing Description 1.1
 remain the Recommendations dated 2023-12-05. Package choices are specified
@@ -72,6 +72,48 @@ same suite from the source distribution. The generation projection makes the
 exactly-once counter assertion explicit without prescribing a public revision
 encoding or inspecting adapter internals.
 
+## Public-operation interleaving evidence
+
+`Wotex.Directory.PublicOperationContract` uses the same fixture interface and
+both test consumers. Its 44 scenarios per consumer exercise public directory
+operations across repository callback boundaries. It does not call private
+directory functions or inspect adapter storage.
+
+| Owning requirement | Reusable scenario | Evidence |
+|---|---|---|
+| WTD.01 6.1, 7.1, 7.3–7.5, 9 | `{:competing, winner, loser}` | All 16 ordered pairs of named registration update, replacement, patch and deletion fetch the same committed version. Both reach their conditional write before the selected winner commits. The loser returns `conflict`, or `not_found` after deletion, without refetch, retry or a successful Mutation/Event value. The winner alone advances the generation. |
+| WTD.01 7.1 | `create_race` | Two named registrations observe absence before either insert. One creates; the other reports conflict. Only an explicit repeated call follows replacement semantics. |
+| WTD.01 7.4, 9 | `invalid_patch` | A patch resumes from an earlier fetched value after a competing patch commits. Core validation refuses the invalid merged Thing Description without a write callback or a successful Mutation/Event value. |
+| WTD.01 6.1, 7.1, 7.3–7.5, 7.7 | `{:interrupted, operation, phase}` | Each of create, named update, replacement, patch, deletion, retained expiry and purge is interrupted before delegation or after a successful callback has committed. No result reaches the interrupted consumer. Before delegation, state and generation remain unchanged; after commit, they retain exactly that one committed transition. Explicit repetition observes the documented version, absence, registration-update or no-op expiry outcome. |
+| WTD.01 6.1, 8 | `{:failed_reply, phase}` | An injected failure before replacement delegation leaves state unchanged. A fault that discards a committed replacement's acknowledgement yields a redacted repository error, not a successful Mutation/Event value, retry or compensation. A subsequent expected-version call detects the committed version. |
+| WTD.01 5.7, 6.1, 7.6 | `{:paging_mutation, operation}` | A saved continuation waits before its list callback while each of the seven mutation kinds commits. Resumption reports `collection_changed`; a new first page observes the new collection. |
+| WTD.01 5.7, 7.6, decision 0002 | `paging_expiry`, `paging_empty` | New callers resume the opaque query across exact expiry cutoffs without a sweep. Entries before and after the keyset position expire without skipped active entries or generation changes. The chain may end with an empty page. Query limit/format and returned retrieval timestamps remain correct; storage remains unchanged. |
+| WTD.01 6.1 `list/5` | `paging_snapshot` | A committed page snapshot is held while another caller mutates the collection. The first caller may return that original snapshot; continuation then rejects its old generation. A page is not silently upgraded to a newer snapshot. |
+
+`RepositoryBarrier` is a test-only port decorator. Explicit messages pause a
+caller before delegation or after the decorated callback returns. A fetch
+checkpoint exposes the committed value already read; a mutation-entry
+checkpoint occurs after library admission and before the adapter's atomic
+step. An after-callback checkpoint proves only that the configured adapter
+returned, not any internal database commit protocol. The adapter contract suite
+separately establishes atomic callback behavior for these consumers.
+
+Monitored callers and per-checkpoint references make each interleaving explicit.
+Tests wait for a checkpoint before permitting the competing operation, and
+confirm caller termination before checking results and callback counts. Test
+cleanup stops any caller left waiting after a failed assertion. The five-second
+timeouts fail stalled tests; they do not schedule races or emulate elapsed time.
+Expiry uses the explicitly injected clock without sleeps.
+
+An interrupted caller is not evidence that a repository transaction rolled
+back. A callback may commit before its caller receives the result. Likewise, a
+faulty consumer adapter can lose a successful acknowledgement after committing.
+The library cannot undo or safely retry that outcome. These tests establish
+that it produces no successful result from an error, performs no implicit
+retry or compensation, and permits a fresh caller to observe the committed
+state. Recovery, durable event delivery and any transaction spanning storage
+and publication remain consumer responsibilities.
+
 ## Verification and evidence boundary
 
 The focused command is:
@@ -86,11 +128,8 @@ callback-level behavior for the configured adapters; it is not Discovery
 certification, a production storage implementation, or archive-only consumer
 installation.
 
-WTD-C02 adds controlled interleavings between public fetch/validation/mutation
-stages and interrupted-consumer scenarios. Its acceptance must prove that
-public expected-version writes have one winner, failed/interrupted operations
-produce no successful mutation, and resumed pagination distinguishes a changed
-mutation generation from expiry-only membership changes. The basic callback
-contention scenarios here provide its prerequisite rather than claim those
-multi-stage scenarios complete. WTD-C03 and WTD-C04 retain archive and
-independent reference-consumer obligations.
+The callback and public-operation suites establish the configured consumers'
+behavior at the tested boundaries. They do not prove crash recovery inside an
+arbitrary storage transaction, durable event delivery, a global resource bound,
+or interoperability of a production adapter. WTD-C03 and WTD-C04 retain archive
+and independent reference-consumer obligations.

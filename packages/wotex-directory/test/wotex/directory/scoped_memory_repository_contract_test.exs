@@ -3,6 +3,7 @@ defmodule Wotex.Directory.ScopedMemoryRepositoryContractTest do
 
   use ExUnit.Case, async: true
   use Wotex.Directory.RepositoryContract
+  use Wotex.Directory.PublicOperationContract
 
   alias Wotex.Directory.{MemoryRepository, ScopedMemoryRepository, TestIdentifier}
 

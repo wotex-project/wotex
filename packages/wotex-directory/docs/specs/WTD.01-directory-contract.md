@@ -572,6 +572,8 @@ minor version change. Once 1.0 is released:
 | Deterministic redacted errors | error tests |
 | Six repository callbacks across independent test consumers | reusable repository contract suite; see the [repository port evidence contract](repository-port-evidence.md) |
 | Context separation, atomic callback contention, and revision transitions | the same suite against separate Agent maps and an ETS compare-and-swap implementation |
+| Public-operation interleavings, interrupted callers, and commit acknowledgement loss | reusable public-operation contract suite against both test consumers; see the [repository port evidence contract](repository-port-evidence.md#public-operation-interleaving-evidence) |
+| Resumed listing across committed mutations and expiry-only drift | public-operation mutation matrix, multi-page expiry, empty continuation, and held page-snapshot scenarios |
 | Public archive contents | `mix hex.build` and archive inspection |
 
 ## 12. Primary sources
