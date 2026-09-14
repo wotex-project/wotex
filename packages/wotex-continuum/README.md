@@ -131,7 +131,9 @@ verification from independent consumer, release and stable-API evidence.
 Normative WCT documents retain their single owners under `specs/`.
 The [WCT-C01 contract map](docs/specs/WCT-C01-contract-map.md) indexes every
 field, default, null rule, error family, and lifecycle edge to executable
-evidence.
+evidence. The [WCT-C02 admission map](docs/specs/WCT-C02-admission-map.md)
+records native UTF-8 parity and the intentional native-versus-decoder resource
+boundary.
 
 ```sh
 WOTEX_PATH_DEPS=1 mix deps.get

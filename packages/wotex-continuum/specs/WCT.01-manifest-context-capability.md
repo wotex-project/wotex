@@ -73,12 +73,14 @@ schema change: invalid UTF-8 was already outside the accepted JSON contract.
 
 Encoded input is admitted through the Wotex core JSON admission pipeline before
 any continuum rule runs. For iodata, the codec computes its byte length and
-rejects an over-limit source before flattening it into a binary. The core
-pipeline then checks byte size and UTF-8 validity first, bounds nesting depth
-and string size with a lexical scan before allocation-heavy decoding, copies
-decoded strings away from the source binary, and then rejects duplicate object
-members and oversized collections, node counts, and depth. One `max_depth`
-bound of 32 nested containers applies to
+rejects an over-limit source before flattening it into a binary. This does not
+bound caller-owned iodata already resident in memory. An admitted source can
+allocate one flattened binary of at most `max_bytes`; an over-limit source does
+not allocate that copy. The core pipeline then checks byte size and UTF-8
+validity first, bounds nesting depth and string size with a lexical scan before
+allocation-heavy decoding, copies decoded strings away from the source binary,
+and then rejects duplicate object members and oversized collections, node
+counts, and depth. One `max_depth` bound of 32 nested containers applies to
 encoded and native input alike; for a native value it is measured from the
 value handed to the constructor rather than from the envelope. Byte, node,
 collection, and string bounds are source-admission controls: a native value

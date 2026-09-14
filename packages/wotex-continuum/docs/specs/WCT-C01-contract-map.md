@@ -100,7 +100,7 @@ otherwise allowed edge with an earlier time returns `invalid_time_order` at
 
 This evidence constructs, validates, compares, transitions, and encodes inert
 values only. It adds no process, persistence, trusted clock, identity,
-authorization, provider selection, dispatch, retry, or effect claim. Native
-UTF-8 parity beyond the covered paths and native-versus-decoder resource-bound
-parity remain the explicit WCT-C02 work; full JSON Schema vocabulary agreement
-remains WCT-C03.
+authorization, provider selection, dispatch, retry, or effect claim. The
+[WCT-C02 admission map](WCT-C02-admission-map.md) records the UTF-8 and resource
+boundary evidence layered on this inventory. Full JSON Schema vocabulary
+agreement remains WCT-C03.

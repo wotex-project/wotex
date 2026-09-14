@@ -7,10 +7,11 @@ defmodule WotexContinuum.CanonicalJSON do
   not claim RFC 8785 conformance.
 
   `encode/1` accepts JSON null, booleans, finite numbers, valid UTF-8 strings,
-  proper lists, and maps with string keys. It traverses nested values with structured
-  paths and returns `WotexContinuum.Error` for unsupported terms, invalid
-  numbers, invalid text, or non-string object keys. Structs are not silently
-  converted to objects.
+  proper lists, and maps with string keys. It traverses nested values with
+  structured paths and returns `WotexContinuum.Error` for unsupported terms,
+  invalid numbers, invalid text, or non-string object keys. Invalid key bytes
+  are rejected at the containing object's safe path before sorting. Structs are
+  not silently converted to objects.
 
   The output provides stable package-local bytes for wire vectors and digests.
   It does not normalize Unicode, reinterpret numeric values, or promise
@@ -79,13 +80,18 @@ defmodule WotexContinuum.CanonicalJSON do
   end
 
   defp encode_map(map, path) do
-    if Enum.all?(map, fn {key, _} -> is_binary(key) end) do
-      map
-      |> Enum.sort_by(fn {key, _} -> key end)
-      |> Enum.reduce_while({:ok, []}, &encode_pair(&1, &2, path))
-      |> reverse_result()
-    else
-      Error.error(:invalid_key, :encode, path, "JSON object keys must be strings")
+    cond do
+      not Enum.all?(map, fn {key, _} -> is_binary(key) end) ->
+        Error.error(:invalid_key, :encode, path, "JSON object keys must be strings")
+
+      not Enum.all?(map, fn {key, _} -> String.valid?(key) end) ->
+        Error.error(:invalid_utf8, :encode, path, "expected valid UTF-8 object key")
+
+      true ->
+        map
+        |> Enum.sort_by(fn {key, _} -> key end)
+        |> Enum.reduce_while({:ok, []}, &encode_pair(&1, &2, path))
+        |> reverse_result()
     end
   end
 

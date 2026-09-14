@@ -32,12 +32,13 @@ authenticated, authorized, current, or true.
 
 ## Bounds this library does not claim
 
-Iodata is flattened into one binary before the byte check, so the flattened
-copy is not itself bounded by `max_bytes`; a consumer that accepts untrusted
-iodata bounds it before calling the codec. Byte, node, collection, and string
-limits apply to source admission; a native map handed straight to a constructor
-is bounded by depth, UTF-8 validity, and the finite-number rule only. No limit
-bounds consumer memory after an accepted value is returned.
+The byte check measures iodata before flattening. It therefore prevents an
+over-limit source from allocating an additional flattened binary, but it does
+not bound caller-owned iodata already resident in memory. An admitted source
+can allocate a flattened binary of at most `max_bytes`. Byte, node, collection,
+and string limits apply to source admission; a native map handed straight to a
+constructor is bounded by depth, UTF-8 validity, and the finite-number rule
+only. No limit bounds consumer memory after an accepted value is returned.
 
 ## Consumer-host obligations
 

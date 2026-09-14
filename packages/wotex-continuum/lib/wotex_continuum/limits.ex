@@ -21,7 +21,10 @@ defmodule WotexContinuum.Limits do
 
   `max_depth/0` is the single nesting bound. It applies to decoded source and,
   measured from the validated value, to native JSON values supplied to a
-  constructor.
+  constructor. Byte, node, collection, and string options govern encoded-source
+  admission only; module-specific native constructors do not accept limit
+  options. A consumer that accepts a native term applies any additional size or
+  collection policy before construction.
   """
 
   alias WotexContinuum.{Error, Validation}
