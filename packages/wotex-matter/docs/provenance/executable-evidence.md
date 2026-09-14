@@ -556,3 +556,57 @@ Each completed native run must bind source, SDK/binary, toolchain and cleanup
 result identities in its manifest. The mandatory BEAM matrix is
 Elixir 1.18.4/OTP 27.3.4.15 and Elixir 1.20.2/OTP 29.0.4. Only identified
 executed lanes count as passing evidence.
+
+## Fresh peer build and native lifecycle checks
+
+A clean-source `mix wotex.software.build --workspace ABS` run at local commit
+`5a2471d486768f9cb9b76859d17295e32018d089` completed with source SHA-256
+`1c936c9250466bb617a15edff0610f22f9591a4539c4c64cb9d052479ce2698c`.
+The emitted workspace passed `SoftwareManifest.verify_local/4`, including every
+artifact and log digest, before subsequent source edits. Its normal and
+ASan/UBSan controllers, lighting, all-clusters and bridge binaries match the
+complete hashes recorded above. Both six-test native CTest lanes and the build's
+advisory checks passed. The runner removed its owned build container. The native
+manifest SHA-256 is
+`f669af0936a87282f4aeeabe874332b1b6bca22692922bd736a6c93751cd41f5`.
+This is a build receipt for that source identity; later source changes require
+a new matching receipt before reuse by the software runner.
+
+`test/software/lifecycle_stress_test.exs` selects the lowest discovered endpoint
+advertising OnOff and runs read-only load against an explicitly supplied,
+previously commissioned SDK peer. Both Linux lanes pass: Elixir 1.20.2 /
+OTP 29.0.4 and Elixir 1.18.4 / OTP 27.3.4.15. The fixture is supplied through
+`WOTEX_MATTER_NATIVE_STRESS_FIXTURE`; select `--include interop --include software`.
+It contains controller identity/trust/storage, node ID and an exclusive result
+path. The test uses stored authority and never commissions or writes the peer.
+
+The native host is `b38ae768...74b3af` and the all-clusters peer is
+`b32c2359...82d0`, with full hashes above. Each lane executes 1000 sequential
+reads, 32 concurrent callers, 100 subscription receiver-death cycles and 100
+stored-controller open/read/close cycles. Native descriptor count remains 16;
+receiver monitors and the Connection's live subscription, generation, monitor,
+internal request and pending-report tables return to baseline. Every closed
+controller has a normal owner exit, no surviving exact OS child and no extra
+BEAM Port before the next cycle. The test records RSS separately: all ten
+100-read samples are 20900 KiB in each lane. Those samples do not measure the
+SDK's internal subscription/timer allocations.
+
+| Lifecycle artifact | SHA-256 |
+| --- | --- |
+| Test source | `80387262b4c80489270fff1fd9c104bc21d72747973317aaf99784b229aa56f6` |
+| Current Linux test log | `9e72cde7816723639a060b960313a27c91e48de3455f85840f4d2a9694e71593` |
+| Minimum Linux test log | `16d5d9188600bbcbe2c20492eade21dd1140d15429a65cdc4f9307a2a1826b61` |
+
+The default gate passes 130 checks with 11 opt-in exclusions. C09 remains open
+for forced deadline/peer-close/malformed-response stress, complete admission and
+native resource instrumentation, and the full process-flow corpus. The latest
+coverage run is 90.0%; the required 95% threshold is unchanged.
+
+The clean `5a2471d` archive has SHA-256
+`0a4961bbfbeba2add799dcaafb9db32bf99719781b99dca48aa78c63082f02e8`.
+Its existing out-of-tree compilation check passes with development dependencies.
+A separate production Mix consumer extracted that archive with
+`WOTEX_PATH_DEPS` unset and attempted `mix deps.get`; the Hex registry could not
+resolve `wotex` or `wotex_runtime`, ending with “No package with name wotex”.
+That released-dependency consumer gate is blocked on manual publication and is
+not replaced by the development compilation result.
