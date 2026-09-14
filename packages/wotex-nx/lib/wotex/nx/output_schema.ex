@@ -21,7 +21,7 @@ defmodule Wotex.Nx.OutputSchema do
   """
 
   alias Wotex.DataSchema
-  alias Wotex.Nx.{Error, NumericalSchema, Options}
+  alias Wotex.Nx.{DataSchemaContract, Error, NumericalSchema, Options}
 
   @kinds [:observation, :prediction, :anomaly, :action_proposal]
   @options [
@@ -105,6 +105,7 @@ defmodule Wotex.Nx.OutputSchema do
     data_schema = Keyword.get(opts, :data_schema)
 
     with %DataSchema{} <- data_schema,
+         true <- DataSchemaContract.valid?(data_schema),
          map <- DataSchema.to_map(data_schema),
          {:ok, inferred_shape, inferred_dtype} <- NumericalSchema.infer(map),
          shape <- Keyword.get(opts, :shape, inferred_shape),

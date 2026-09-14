@@ -81,16 +81,9 @@ or implementation explicitly before advancing its gate; do not hide the case.
 
 Each proof binds source commit, runtime, dependency/backend cohort, commands and
 exit codes. Archive consumers additionally bind archive digest. Changes affecting
-those identities invalidate the corresponding proof until rerun.
-
-## Local execution records
-
-Only `docs/tasks/local/wotex-nx-tracker.yaml` holds mutable progress. Package
-inputs allowlist publishable documentation and structurally exclude the ignored
-path; every candidate archive still proves WNX-C06 because `.gitignore` is not
-an archive boundary. Schema: `schema_version: "1.0.0"`,
-`plan_id: WNX-C`, `plan_revision: "1.0.0"`, `work_items` with `id`,
-`state` (`queued|active|blocked|verified`), `prerequisites`, `evidence`
-(source_commit, archive_sha256 when applicable, runtime, dependency_cohort,
-backend, command, exit_code), and `remaining_claims`. Missing evidence is null,
-not an assumed pass. Neither this plan nor the catalogue is an audit tracker.
+those identities invalidate the corresponding proof until rerun. Mutable agent
+state, task trackers, prompts, handoffs and execution receipts are consumer-owned
+operational data and MUST remain outside this source repository. This repository
+contains only the stable plan, contracts, implementation, tests and reproducible
+verification entry points; neither this plan nor the catalogue is an audit
+tracker.

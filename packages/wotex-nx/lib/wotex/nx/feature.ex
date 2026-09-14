@@ -20,7 +20,7 @@ defmodule Wotex.Nx.Feature do
   """
 
   alias Wotex.DataSchema
-  alias Wotex.Nx.{Error, NumericalSchema, Observation, Options}
+  alias Wotex.Nx.{DataSchemaContract, Error, NumericalSchema, Observation, Options}
 
   @normalizations [:none]
   @options [
@@ -94,6 +94,7 @@ defmodule Wotex.Nx.Feature do
     data_schema = Keyword.get(opts, :data_schema)
 
     with %DataSchema{} <- data_schema,
+         true <- DataSchemaContract.valid?(data_schema),
          map <- DataSchema.to_map(data_schema),
          {:ok, inferred_shape, inferred_dtype} <- NumericalSchema.infer(map),
          shape <- Keyword.get(opts, :shape, inferred_shape),

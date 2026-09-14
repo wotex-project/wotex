@@ -2,6 +2,7 @@
   # These modules are cross-module implementation details, not public API.
   ignore_paths: [
     ~r(^test/support/),
+    ~r(^lib/wotex/nx/data_schema_contract\.ex$),
     ~r(^lib/wotex/nx/data_schema_validator\.ex$),
     ~r(^lib/wotex/nx/numerical_schema\.ex$)
   ],

@@ -167,6 +167,7 @@ is the declared dependency cohort; broader backend/version claims require eviden
 
 | Contract | Owning executable evidence |
 | --- | --- |
+| Closed option lists, opaque-value reconstruction, exact identity/category joins and all six error phases | `test/wotex/nx/contract_matrix_test.exs` |
 | Observation/feature/schema construction, identity, bounds and closed options | `test/wotex/nx/observation_feature_schema_test.exs` |
 | Window order/ties/age, units, fill masks, quality, encoded batch, unknown row features, accessors, template and lazy container | `test/wotex/nx/window_encoder_test.exs` |
 | Binary-search latest/exact/nearest selection equivalence to an exhaustive reference, reversed input, empty windows and age boundaries | `test/wotex/nx/window_selection_property_test.exs` |
@@ -178,6 +179,24 @@ is the declared dependency cohort; broader backend/version claims require eviden
 Any change to the contracts above must add both accepted and rejected boundary
 examples to the owning tests. Archive and independent-consumer evidence follow
 `docs/plans/wotex-nx-completion.md`; repository tests alone do not discharge them.
+
+### Public error matrix
+
+The stable `code` and `phase` pair identifies a rejected public boundary. This
+matrix is exhaustive for the errors an operation may return directly or from a
+validation step it owns; messages and detail maps remain explanatory.
+
+| Public operation | Phase | Stable error codes |
+| --- | --- | --- |
+| `Observation.new/1` | construction | `invalid_observation_options`, `invalid_observation_field`, `invalid_affordance_type`, `invalid_observed_at`, `invalid_quality`, `invalid_metadata` |
+| `Feature.new/1` | construction | `invalid_feature_options`, `data_schema_required`, `unsupported_data_schema`, `invalid_shape`, `invalid_dtype`, `shape_schema_mismatch`, `dtype_schema_mismatch`, `invalid_feature_identity`, `invalid_accepted_quality`, `invalid_missing_policy`, `invalid_normalization`, `normalization_dtype_mismatch`, `invalid_unit`, `invalid_finite_policy` |
+| `Schema.new/1` | construction or limit | `invalid_schema_options`, `invalid_limit`, `invalid_features`, `feature_limit_exceeded`, `duplicate_feature_name`, `width_limit_exceeded` |
+| `Window.new/1` | construction | `invalid_window_options`, `invalid_window_start`, `invalid_window_step`, `invalid_window_count`, `invalid_window_strategy`, `invalid_max_age` |
+| `Row.new/2` | construction | `invalid_row`, `invalid_row_observations` |
+| `Window.resample/4` | window or limit | `invalid_window_input`, `invalid_window_limit`, `invalid_observations`, `observation_limit_exceeded`, `row_limit_exceeded`, `window_work_limit_exceeded` |
+| `Encoder.encode/3` | encoding, unit or limit | `invalid_encoder_input`, `empty_rows`, `invalid_rows`, `row_limit_exceeded`, `unknown_row_feature`, `observation_feature_mismatch`, `missing_feature_value`, `data_schema_type_mismatch`, `data_schema_shape_mismatch`, `data_schema_enum_mismatch`, `data_schema_const_mismatch`, `data_schema_bound_mismatch`, `non_finite_value`, `unit_conversion_required`, `invalid_unit_converter`, `unit_conversion_failed`, `invalid_unit_converter_return`, `normalization_overflow`, `dtype_value_out_of_range`, `tensor_construction_failed`, `tensor_shape_mismatch`, `batch_construction_failed` |
+| `OutputSchema.new/1` | construction or limit | `invalid_output_schema_options`, `data_schema_required`, `unsupported_data_schema`, `invalid_shape`, `invalid_dtype`, `shape_schema_mismatch`, `dtype_schema_mismatch`, `invalid_limit`, `width_limit_exceeded`, `invalid_output_identity`, `invalid_anomaly_schema`, `threshold_required`, `invalid_threshold`, `invalid_anomaly_rule`, `unexpected_threshold`, `unexpected_anomaly_rule`, `invalid_unit`, `invalid_metadata`, `invalid_finite_policy`, `non_finite_anomaly_unsupported` |
+| `Decoder.decode/3` | output | `invalid_decoder_input`, `invalid_output_options`, `vectorized_output_unsupported`, `output_shape_mismatch`, `output_dtype_mismatch`, `tensor_read_failed`, `invalid_boolean_encoding`, `data_schema_type_mismatch`, `data_schema_shape_mismatch`, `data_schema_enum_mismatch`, `data_schema_const_mismatch`, `data_schema_bound_mismatch`, `non_finite_value`, `invalid_observed_at`, `invalid_prediction_time`, `invalid_anomaly_time`, `invalid_action_proposal_time`, `invalid_metadata` |
 
 ## Evidence
 
