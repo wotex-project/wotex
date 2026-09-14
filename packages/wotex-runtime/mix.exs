@@ -106,6 +106,7 @@ defmodule WotexRuntime.MixProject do
         "docs/specs/RT-C03-exposed-thing-boundary.md": [
           title: "ExposedThing Boundary Contract"
         ],
+        "docs/specs/RT-C04-reference-consumer.md": [title: "Reference Consumer"],
         "docs/specs/WRT.01-consumed-thing-runtime.md": [title: "ConsumedThing Runtime"],
         "docs/specs/WRT.02-exposed-thing-runtime.md": [title: "ExposedThing Runtime"],
         "docs/specs/WRT.03-thing-level-interactions.md": [

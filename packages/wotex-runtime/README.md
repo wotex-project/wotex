@@ -280,6 +280,11 @@ WOTEX_PATH_DEPS=1 mix docs
 test suite. Package, documentation, audit, and compatibility checks are explicit
 release-readiness work.
 
+The exact-archive consumer lane is documented in
+[RT-C04](docs/specs/RT-C04-reference-consumer.md). It requires an explicitly
+supplied core archive and exercises Runtime under consumer-owned ports and
+supervision.
+
 ## Contributing
 
 Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before
