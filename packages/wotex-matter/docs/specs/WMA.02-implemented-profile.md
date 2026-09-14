@@ -28,8 +28,9 @@ keeping fabric and node concrete. `read_paths/3` accepts at most 64 selectors,
 retains at most 1024 unique concrete results, preserves every per-path success or
 error, orders concrete requests by caller position and sorts each wildcard
 expansion by path. `AttributeReport`, `EventReport`, `Descriptor` and
-`EndpointCatalogue` validate the P01 value layer without performing discovery or
-SDK I/O. The aggregate canonical compact JSON result budget is 98304 bytes.
+`EndpointCatalogue` validate the value layer. P04 adds named attribute, command
+and event operations plus bounded Descriptor-cluster discovery. The aggregate
+canonical compact JSON result budget is 98304 bytes.
 
 The native source implements the SDK `PersistentStorageDelegate` interface for
 a version-1 controller store. Creation and reopen require the exact fabric,
@@ -46,8 +47,15 @@ reopens the exact fabric/controller identity. Controller setup uses the SDK
 operational keystore, certificate store, generated controller data model,
 production device-attestation verifier and one `DeviceCommissioner`. Startup,
 failure, EOF and caller death release the controller and storage lock. P03
-provides controller health and fabric admission; Interaction Model operations,
-commissioning and subscriptions remain unavailable.
+provides controller health and fabric admission.
+
+P04 executes bounded reads, event reads, writes and command invokes through the
+pinned generated cluster descriptors and connectedhomeip Interaction Model
+clients. It carries finite request timeouts through CASE establishment and SDK
+timers, preserves DataVersion preconditions, returns every path status and event
+identity, and never replays a mutation whose result is uncertain. Descriptor
+discovery reads root endpoint zero first, then at most 64 endpoints in chunks of
+16. Commissioning and subscriptions remain unavailable.
 
 `Client` is a consumer-implemented driver contract. It must use a pinned real SDK,
 keep fabric stores isolated, enforce attestation/ACLs, inspect all per-path status
@@ -57,13 +65,12 @@ The optional controller fixture harness also requires an explicitly installed
 module. Selecting a module and passing the harness do not independently prove
 that the module is SDK-backed or that the fixture is a physical device; that
 provenance must be reviewed and recorded separately.
-The SDK adapter maps concrete read/write/invoke calls to an explicitly initialized native
-controller supplied by its factory. It does not implement CASE/PASE or the
-Interaction Model; those remain inside the caller-provisioned SDK/controller.
-It does not implement the new batch request shape; a selected client must
-implement that callback result explicitly. No Python runtime or SDK binary is
-bundled. The packaged first-party controller source is built explicitly outside
-the Hex archive; commissioning remains unfinished. See
+The injected SDK adapter maps concrete read/write/invoke calls to an explicitly
+initialized native controller supplied by its factory. It remains separate from
+the first-party persistent controller and does not implement the batch request
+shape. No Python runtime or SDK binary is bundled. The packaged first-party
+controller source is built explicitly outside the Hex archive; commissioning
+remains unfinished. See
 [SDK client contract](WMA.03-sdk-client.md).
 
 ## Evidence and compatibility

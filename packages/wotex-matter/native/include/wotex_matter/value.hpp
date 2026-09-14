@@ -99,6 +99,10 @@ std::optional<Descriptor> lookup_descriptor(MemberKind kind, std::uint32_t clust
 Conversion convert_value(MemberKind kind, std::uint32_t cluster, std::uint32_t member,
                          Operation operation, const NativeValue &value);
 
+ConversionError validate_element(MemberKind kind, std::uint32_t cluster,
+                                 std::uint32_t member, Operation operation,
+                                 const Element &element);
+
 } // namespace wotex::matter
 
 #endif

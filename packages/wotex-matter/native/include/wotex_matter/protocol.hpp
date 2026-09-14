@@ -1,6 +1,8 @@
 #ifndef WOTEX_MATTER_PROTOCOL_HPP
 #define WOTEX_MATTER_PROTOCOL_HPP
 
+#include "wotex_matter/interaction.hpp"
+
 #include <cstdint>
 #include <istream>
 #include <optional>
@@ -36,6 +38,7 @@ class ControllerBackend {
  public:
   virtual ~ControllerBackend() = default;
   virtual BackendResult Open(const NativeOpenOptions &options) = 0;
+  virtual InteractionResponse Interact(const InteractionRequest &request) = 0;
   virtual void Close() = 0;
   virtual bool IsOpen() const = 0;
 };

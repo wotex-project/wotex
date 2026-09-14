@@ -7,8 +7,8 @@ defmodule Wotex.Matter.Descriptor do
   nullability, and admitted operations. Unknown paths fail explicitly and are
   never converted as generic JSON objects.
 
-  The registry covers the P01 value recipes. Native SDK interaction and the
-  generated C++ bindings are introduced by their later ordered packets.
+  The registry covers the P01 value recipes. P04 uses the matching generated
+  C++ bindings for native SDK interactions.
   """
 
   alias Wotex.Matter.{Address, Error, TLV}
@@ -97,6 +97,20 @@ defmodule Wotex.Matter.Descriptor do
     end
   end
 
+  @doc "Converts one validated descriptor element to its schema value."
+  @spec from_element(member_kind(), Address.t() | map(), operation(), term()) ::
+          {:ok, term()} | {:error, Error.t()}
+  def from_element(kind, path, operation, element) do
+    with {:ok, descriptor} <- lookup(kind, path, operation),
+         {:ok, normalized} <- validate_element(kind, path, operation, element),
+         {:ok, value} <- extract(descriptor.schema, normalized) do
+      {:ok, value}
+    else
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:invalid_value)}
+    end
+  end
+
   defp find(kind, cluster, member) do
     case Enum.find(@entries, fn {k, c, m, _, _} -> {k, c, m} == {kind, cluster, member} end) do
       {^kind, ^cluster, ^member, schema, operations} ->
@@ -133,7 +147,9 @@ defmodule Wotex.Matter.Descriptor do
   defp convert(:empty_structure, value) when value == %{}, do: element(:structure, [])
 
   defp convert(:cluster_list, values) when is_list(values) do
-    array(values, fn value -> scalar(:u32, value, 0..0xFFFFFFFF) end)
+    array(values, fn value ->
+      if valid_cluster?(value), do: scalar(:u32, value, 0..0xFFFFFFFF), else: :error
+    end)
   end
 
   defp convert(:parts_list, values) when is_list(values) do
@@ -190,20 +206,32 @@ defmodule Wotex.Matter.Descriptor do
   defp tagged_scalar(_, _, _, _), do: :error
   defp element(type, value), do: {:ok, %{tag: :anonymous, type: type, value: value}}
 
-  defp schema_matches?(:nullable_i16, %{type: :null, value: nil}), do: true
+  defp schema_matches?(:nullable_i16, %{tag: :anonymous, type: :null, value: nil}), do: true
   defp schema_matches?(:nullable_i16, element), do: schema_matches?(:i16, element)
-  defp schema_matches?(:i16, %{type: :i16, value: value}), do: value in -32_768..32_767
-  defp schema_matches?(:u8, %{type: :u8, value: value}), do: value in 0..255
-  defp schema_matches?(:boolean, %{type: :boolean, value: value}), do: is_boolean(value)
-  defp schema_matches?(:empty_structure, %{type: :structure, value: []}), do: true
 
-  defp schema_matches?(:cluster_list, %{type: :array, value: values}),
-    do: Enum.all?(values, &match?(%{tag: :anonymous, type: :u32}, &1))
+  defp schema_matches?(:i16, %{tag: :anonymous, type: :i16, value: value}),
+    do: value in -32_768..32_767
 
-  defp schema_matches?(:parts_list, %{type: :array, value: values}),
+  defp schema_matches?(:u8, %{tag: :anonymous, type: :u8, value: value}),
+    do: value in 0..255
+
+  defp schema_matches?(:boolean, %{tag: :anonymous, type: :boolean, value: value}),
+    do: is_boolean(value)
+
+  defp schema_matches?(:empty_structure, %{tag: :anonymous, type: :structure, value: []}),
+    do: true
+
+  defp schema_matches?(:cluster_list, %{tag: :anonymous, type: :array, value: values}) do
+    Enum.all?(values, fn
+      %{tag: :anonymous, type: :u32, value: value} -> valid_cluster?(value)
+      _ -> false
+    end)
+  end
+
+  defp schema_matches?(:parts_list, %{tag: :anonymous, type: :array, value: values}),
     do: Enum.all?(values, &match?(%{tag: :anonymous, type: :u16}, &1))
 
-  defp schema_matches?(:device_type_list, %{type: :array, value: values}) do
+  defp schema_matches?(:device_type_list, %{tag: :anonymous, type: :array, value: values}) do
     Enum.all?(values, fn
       %{
         tag: :anonymous,
@@ -221,10 +249,41 @@ defmodule Wotex.Matter.Descriptor do
   end
 
   defp schema_matches?(:reachable_event, %{
+         tag: :anonymous,
          type: :structure,
          value: [%{tag: {:context, 0}, type: :boolean, value: value}]
        }),
        do: is_boolean(value)
 
   defp schema_matches?(_, _), do: false
+
+  defp valid_cluster?(value),
+    do:
+      value in 0..0x7FFF or
+        (value in 0x00010000..0xFFF47FFF and rem(value, 65_536) <= 0x7FFF)
+
+  defp extract(:nullable_i16, %{type: :null}), do: {:ok, nil}
+
+  defp extract(schema, %{value: value}) when schema in [:nullable_i16, :i16, :u8, :boolean],
+    do: {:ok, value}
+
+  defp extract(:empty_structure, %{type: :structure, value: []}), do: {:ok, %{}}
+
+  defp extract(:cluster_list, %{value: values}),
+    do: {:ok, Enum.map(values, & &1.value)}
+
+  defp extract(:parts_list, %{value: values}),
+    do: {:ok, Enum.map(values, & &1.value)}
+
+  defp extract(:device_type_list, %{value: values}) do
+    {:ok,
+     Enum.map(values, fn %{value: [device_type, revision]} ->
+       %{device_type: device_type.value, revision: revision.value}
+     end)}
+  end
+
+  defp extract(:reachable_event, %{value: [%{value: reachable}]}),
+    do: {:ok, %{reachable: reachable}}
+
+  defp extract(_, _), do: :error
 end

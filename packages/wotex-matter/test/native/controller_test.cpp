@@ -23,6 +23,11 @@ class RecordingBackend final : public wotex::matter::ControllerBackend {
 
   bool IsOpen() const override { return open; }
 
+  wotex::matter::InteractionResponse Interact(
+      const wotex::matter::InteractionRequest &) override {
+    return {false, wotex::matter::InteractionError{"not_supported"}};
+  }
+
   wotex::matter::BackendResult open_result{true, {}};
   wotex::matter::NativeOpenOptions identity;
   int opens{0};

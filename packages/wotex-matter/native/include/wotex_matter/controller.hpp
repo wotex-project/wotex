@@ -16,6 +16,7 @@ class SdkControllerBackend final : public ControllerBackend {
   SdkControllerBackend &operator=(const SdkControllerBackend &) = delete;
 
   BackendResult Open(const NativeOpenOptions &options) override;
+  InteractionResponse Interact(const InteractionRequest &request) override;
   void Close() override;
   bool IsOpen() const override;
 

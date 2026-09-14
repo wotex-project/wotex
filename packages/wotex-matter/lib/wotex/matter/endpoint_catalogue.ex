@@ -10,8 +10,8 @@ defmodule Wotex.Matter.EndpointCatalogue do
   to absent endpoints, and aggregate endpoint or cluster counts outside the
   WMA.11 profile.
 
-  Endpoint discovery is implemented by the later native interaction packet.
-  This value performs no network I/O and explicitly records that the separate
+  `Wotex.Matter.discover_endpoints/2` performs the P04 native discovery. This
+  value itself performs no network I/O and explicitly records that the separate
   Descriptor reads do not form an atomic snapshot.
   """
 

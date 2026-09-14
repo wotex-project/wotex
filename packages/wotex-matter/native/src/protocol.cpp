@@ -203,6 +203,337 @@ bool OpenOptions(const Json &parameters, NativeOpenOptions &options) {
   return true;
 }
 
+bool Unsigned(const Json &value, std::uint64_t maximum, std::uint64_t &result) {
+  if (!value.is_number_unsigned()) {
+    return false;
+  }
+  result = value.get<std::uint64_t>();
+  return result <= maximum;
+}
+
+bool PathComponent(const Json &value, std::uint64_t maximum,
+                   std::optional<std::uint64_t> &result) {
+  if (value.is_string() && value.get<std::string>() == "any") {
+    result.reset();
+    return true;
+  }
+  std::uint64_t parsed = 0;
+  if (!Unsigned(value, maximum, parsed)) {
+    return false;
+  }
+  result = parsed;
+  return true;
+}
+
+bool ValidCluster(std::uint32_t value) {
+  return value <= 0x7FFFU ||
+      (value >= 0x00010000U && value <= 0xFFF47FFFU &&
+       value % 65536U <= 0x7FFFU);
+}
+
+bool Selector(const Json &value, bool wildcards, PathSelector &result) {
+  if (!ExactKeys(value, {"fabric_id", "node_id", "endpoint", "cluster", "member"}) ||
+      !Unsigned(value["fabric_id"], std::numeric_limits<std::uint64_t>::max(),
+                result.fabric_id) ||
+      !Unsigned(value["node_id"], kMaximumOperationalNode, result.node_id) ||
+      result.fabric_id == 0 || result.node_id == 0) {
+    return false;
+  }
+  std::optional<std::uint64_t> endpoint;
+  std::optional<std::uint64_t> cluster;
+  std::optional<std::uint64_t> member;
+  if (!PathComponent(value["endpoint"], 0xFFFEU, endpoint) ||
+      !PathComponent(value["cluster"], 0xFFF47FFFU, cluster) ||
+      !PathComponent(value["member"], 0xFFFFFFFEU, member) ||
+      (!wildcards && (!endpoint || !cluster || !member)) ||
+      (cluster && !ValidCluster(static_cast<std::uint32_t>(*cluster)))) {
+    return false;
+  }
+  if (endpoint) {
+    result.endpoint = static_cast<std::uint16_t>(*endpoint);
+  }
+  if (cluster) {
+    result.cluster = static_cast<std::uint32_t>(*cluster);
+  }
+  if (member) {
+    result.member = static_cast<std::uint32_t>(*member);
+  }
+  return true;
+}
+
+bool TagValue(const Json &value, Tag &tag) {
+  if (value.is_string() && value.get<std::string>() == "anonymous") {
+    tag = Tag{TagKind::Anonymous, 0};
+    return true;
+  }
+  if (value.is_array() && value.size() == 2 && value[0].is_string() &&
+      value[0].get<std::string>() == "context" &&
+      value[1].is_number_unsigned() && value[1].get<std::uint64_t>() <= 255) {
+    tag = Tag{TagKind::Context,
+              static_cast<std::uint8_t>(value[1].get<std::uint64_t>())};
+    return true;
+  }
+  return false;
+}
+
+bool ElementValue(const Json &value, Element &result, std::size_t depth = 0,
+                  std::size_t *nodes = nullptr) {
+  std::size_t local_nodes = 0;
+  if (nodes == nullptr) {
+    nodes = &local_nodes;
+  }
+  if (++*nodes > 1024 || depth > 8 ||
+      !ExactKeys(value, {"tag", "type", "value"}) ||
+      !TagValue(value["tag"], result.tag) || !value["type"].is_string()) {
+    return false;
+  }
+  const std::string type = value["type"].get<std::string>();
+  const Json &body = value["value"];
+  if (type == "null" && body.is_null()) {
+    result.type = ElementType::Null;
+    return true;
+  }
+  if (type == "i16" && body.is_number_integer()) {
+    const auto integer = body.get<std::int64_t>();
+    if (integer < std::numeric_limits<std::int16_t>::min() ||
+        integer > std::numeric_limits<std::int16_t>::max()) {
+      return false;
+    }
+    result.type = ElementType::I16;
+    result.signed_value = integer;
+    return true;
+  }
+  if ((type == "u8" || type == "u16" || type == "u32") &&
+      body.is_number_unsigned()) {
+    const auto integer = body.get<std::uint64_t>();
+    const std::uint64_t maximum = type == "u8" ? 0xFFU :
+        (type == "u16" ? 0xFFFFU : 0xFFFFFFFFULL);
+    if (integer > maximum) {
+      return false;
+    }
+    result.type = type == "u8" ? ElementType::U8
+        : (type == "u16" ? ElementType::U16 : ElementType::U32);
+    result.unsigned_value = integer;
+    return true;
+  }
+  if (type == "boolean" && body.is_boolean()) {
+    result.type = ElementType::Boolean;
+    result.boolean_value = body.get<bool>();
+    return true;
+  }
+  if ((type == "structure" || type == "array") && body.is_array() &&
+      body.size() <= 1023) {
+    result.type = type == "structure" ? ElementType::Structure : ElementType::Array;
+    for (const Json &child : body) {
+      Element parsed;
+      if (!ElementValue(child, parsed, depth + 1, nodes)) {
+        return false;
+      }
+      result.children.push_back(std::move(parsed));
+    }
+    return true;
+  }
+  return false;
+}
+
+bool OptionalUint(const Json &parameters, std::string_view key,
+                  std::uint64_t maximum, std::optional<std::uint64_t> &result) {
+  const auto iterator = parameters.find(std::string(key));
+  if (iterator == parameters.end()) {
+    result.reset();
+    return true;
+  }
+  std::uint64_t parsed = 0;
+  if (!Unsigned(*iterator, maximum, parsed)) {
+    return false;
+  }
+  result = parsed;
+  return true;
+}
+
+bool InteractionParameters(const std::string &operation, const Json &parameters,
+                           std::uint32_t timeout_ms, InteractionRequest &result) {
+  const bool single = operation == "read" || operation == "write" ||
+      operation == "invoke";
+  const bool paths = operation == "read_paths" || operation == "read_events";
+  if (!single && !paths) {
+    return false;
+  }
+  result.timeout_ms = timeout_ms;
+  result.kind = operation == "read" ? InteractionKind::ReadAttribute
+      : operation == "read_paths" ? InteractionKind::ReadAttributes
+      : operation == "read_events" ? InteractionKind::ReadEvents
+      : operation == "write" ? InteractionKind::Write
+      : InteractionKind::Invoke;
+
+  if (single) {
+    Json path;
+    for (std::string_view key : {"fabric_id", "node_id", "endpoint", "cluster", "member"}) {
+      if (!parameters.contains(std::string(key))) {
+        return false;
+      }
+      path[std::string(key)] = parameters[std::string(key)];
+    }
+    PathSelector selector;
+    if (!Selector(path, false, selector)) {
+      return false;
+    }
+    result.paths.push_back(selector);
+  } else {
+    if (!parameters.contains("paths") || !parameters["paths"].is_array() ||
+        parameters["paths"].empty() ||
+        parameters["paths"].size() > kMaximumInteractionPaths) {
+      return false;
+    }
+    for (const Json &path : parameters["paths"]) {
+      PathSelector selector;
+      if (!Selector(path, operation == "read_paths", selector)) {
+        return false;
+      }
+      result.paths.push_back(std::move(selector));
+    }
+  }
+  result.fabric_id = result.paths.front().fabric_id;
+  result.node_id = result.paths.front().node_id;
+
+  std::optional<std::uint64_t> expected;
+  std::optional<std::uint64_t> timed;
+  std::optional<std::uint64_t> minimum_event;
+  if (!OptionalUint(parameters, "expected_data_version", 0xFFFFFFFFU, expected) ||
+      !OptionalUint(parameters, "timed_request_timeout_ms", 65535, timed) ||
+      !OptionalUint(parameters, "min_event_number",
+                    std::numeric_limits<std::uint64_t>::max(), minimum_event)) {
+    return false;
+  }
+  if (expected) {
+    result.expected_data_version = static_cast<std::uint32_t>(*expected);
+  }
+  if (timed && *timed > 0) {
+    result.timed_request_timeout_ms = static_cast<std::uint16_t>(*timed);
+  } else if (timed) {
+    return false;
+  }
+  result.minimum_event_number = minimum_event;
+  if (operation == "write" || operation == "invoke") {
+    if (!parameters.contains("value")) {
+      return false;
+    }
+    Element element;
+    if (!ElementValue(parameters["value"], element)) {
+      return false;
+    }
+    result.value = std::move(element);
+  }
+
+  const std::size_t expected_keys = single ? 5U : 1U;
+  const std::size_t option_keys = static_cast<std::size_t>(parameters.contains("value")) +
+      static_cast<std::size_t>(parameters.contains("expected_data_version")) +
+      static_cast<std::size_t>(parameters.contains("timed_request_timeout_ms")) +
+      static_cast<std::size_t>(parameters.contains("min_event_number"));
+  return parameters.size() == expected_keys + option_keys &&
+      valid_interaction_request(result);
+}
+
+Json PathJson(const ConcretePath &path) {
+  return {{"fabric_id", path.fabric_id}, {"node_id", path.node_id},
+          {"endpoint", path.endpoint}, {"cluster", path.cluster},
+          {"member", path.member}};
+}
+
+Json ElementJson(const Element &element) {
+  Json tag = element.tag.kind == TagKind::Anonymous
+      ? Json("anonymous")
+      : Json::array({"context", element.tag.id});
+  Json value;
+  std::string_view type;
+  switch (element.type) {
+  case ElementType::Null: type = "null"; value = nullptr; break;
+  case ElementType::I16: type = "i16"; value = element.signed_value; break;
+  case ElementType::U8: type = "u8"; value = element.unsigned_value; break;
+  case ElementType::U16: type = "u16"; value = element.unsigned_value; break;
+  case ElementType::U32: type = "u32"; value = element.unsigned_value; break;
+  case ElementType::Boolean: type = "boolean"; value = element.boolean_value; break;
+  case ElementType::Structure:
+  case ElementType::Array:
+    type = element.type == ElementType::Structure ? "structure" : "array";
+    value = Json::array();
+    for (const Element &child : element.children) {
+      value.push_back(ElementJson(child));
+    }
+    break;
+  }
+  return {{"tag", std::move(tag)}, {"type", type}, {"value", std::move(value)}};
+}
+
+Json ErrorJson(const InteractionError &error) {
+  Json result{{"code", error.code},
+              {"effect", error.effect == InteractionEffect::Unknown ? "unknown" : "none"}};
+  if (error.status) {
+    result["status"] = *error.status;
+  }
+  if (error.cluster_status) {
+    result["cluster_status"] = *error.cluster_status;
+  }
+  return result;
+}
+
+Json AttributeJson(const AttributeData &attribute) {
+  return {{"path", PathJson(attribute.path)},
+          {"value", ElementJson(attribute.value)},
+          {"data_version", attribute.data_version
+               ? Json(*attribute.data_version) : Json(nullptr)}};
+}
+
+Json EventJson(const EventData &event) {
+  return {{"path", PathJson(event.path)}, {"value", ElementJson(event.value)},
+          {"event_number", event.event_number}, {"priority", event.priority},
+          {"timestamp", {{"kind", event.timestamp_kind == EventData::TimestampKind::Epoch
+                                      ? "epoch" : "system"},
+                         {"value", event.timestamp_value}}},
+          {"status", 0}};
+}
+
+std::optional<Json> InteractionJson(const InteractionRequest &request,
+                                    const InteractionResponse &response) {
+  if (!valid_interaction_response(request, response)) {
+    return std::nullopt;
+  }
+  if (!response.ok) {
+    return std::nullopt;
+  }
+  if (request.kind == InteractionKind::ReadAttribute) {
+    if (response.results.size() != 1 || response.results[0].error) {
+      return std::nullopt;
+    }
+    return AttributeJson(*response.results[0].attribute);
+  }
+  if (request.kind == InteractionKind::ReadAttributes ||
+      request.kind == InteractionKind::ReadEvents) {
+    Json results = Json::array();
+    for (const PathResult &path : response.results) {
+      Json outcome;
+      if (path.error) {
+        outcome = {{"error", ErrorJson(*path.error)}};
+      } else if (path.attribute) {
+        outcome = {{"ok", AttributeJson(*path.attribute)}};
+      } else {
+        outcome = {{"ok", EventJson(*path.event)}};
+      }
+      results.push_back({{"path", PathJson(path.path)},
+                         {"result", std::move(outcome)}});
+    }
+    return results;
+  }
+  if (request.kind == InteractionKind::Write) {
+    return Json{{"path", PathJson(*response.response_path)}, {"status", 0}};
+  }
+  return Json{{"path", response.response_path ? PathJson(*response.response_path)
+                                                : Json(nullptr)},
+              {"value", response.response_value ? ElementJson(*response.response_value)
+                                                  : Json(nullptr)},
+              {"status", 0}};
+}
+
 std::string Success(const Json &request, Json result) {
   return Json{{"version", kProtocolVersion},
               {"id", request["id"]},
@@ -217,6 +548,11 @@ std::string Failure(const Json &request, std::string_view code) {
               {"ok", false},
               {"error", {{"code", code}}}}
       .dump();
+}
+
+std::string InteractionFailure(const Json &request, const InteractionError &error) {
+  return Json{{"version", kProtocolVersion}, {"id", request["id"]},
+              {"ok", false}, {"error", ErrorJson(error)}}.dump();
 }
 
 bool ReadLineBounded(std::istream &input, std::string &line) {
@@ -330,6 +666,42 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
       request["parameters"]["fabric_id"].is_number_unsigned() &&
       request["parameters"]["fabric_id"].get<std::uint64_t>() != fabric_id_) {
     return {true, Failure(request, "fabric_mismatch")};
+  }
+
+  InteractionRequest interaction;
+  if (InteractionParameters(
+          operation, request["parameters"],
+          static_cast<std::uint32_t>(request["timeout_ms"].get<std::uint64_t>()),
+          interaction)) {
+    if (interaction.fabric_id != fabric_id_) {
+      return {true, Failure(request, "fabric_mismatch")};
+    }
+    InteractionResponse response = backend_.Interact(interaction);
+    if (!response.ok) {
+      if (!response.error.has_value() || response.error->code.empty()) {
+        return {true, Failure(request, "invalid_backend_result")};
+      }
+      return {true, InteractionFailure(request, *response.error)};
+    }
+    if (interaction.kind == InteractionKind::ReadAttribute &&
+        response.results.size() == 1 && response.results[0].error.has_value()) {
+      return {true, InteractionFailure(request, *response.results[0].error)};
+    }
+    std::optional<Json> result = InteractionJson(interaction, response);
+    if (!result.has_value()) {
+      return {true, Failure(request, "invalid_backend_result")};
+    }
+    const std::string encoded = result->dump();
+    if (encoded.size() > kMaximumInteractionResultBytes) {
+      return {true, Failure(request, "response_limit")};
+    }
+    return {true, Success(request, std::move(*result))};
+  }
+
+  if (operation == "read" || operation == "read_paths" ||
+      operation == "read_events" || operation == "write" ||
+      operation == "invoke") {
+    return {true, Failure(request, "invalid_request")};
   }
 
   return {true, Failure(request, "not_supported")};

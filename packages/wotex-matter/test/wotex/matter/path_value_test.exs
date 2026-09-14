@@ -303,6 +303,14 @@ defmodule Wotex.Matter.PathValueTest do
     assert {:error, %Error{code: :invalid_tlv}} =
              Descriptor.validate_element(
                :attribute,
+               path(1, 0x0201, 0x0012),
+               :write,
+               %{tag: {:context, 0}, type: :i16, value: 2000}
+             )
+
+    assert {:error, %Error{code: :invalid_tlv}} =
+             Descriptor.validate_element(
+               :attribute,
                path(1, 0x0006, 0x0000),
                :read,
                %{tag: :anonymous, type: :boolean, value: true, extra: true}
@@ -314,6 +322,7 @@ defmodule Wotex.Matter.PathValueTest do
     for {member, value} <- [
           {0x0000, [%{device_type: 256}]},
           {0x0001, [:not_a_cluster]},
+          {0x0001, [0x8000]},
           {0x0003, List.duplicate(0, 1024)}
         ] do
       assert {:error, %Error{code: :invalid_value}} =

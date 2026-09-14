@@ -61,7 +61,8 @@ defmodule Wotex.Matter.Address do
     do: validate_path(message)
 
   def validate_message(%{type: type, value: _} = message) when type in [:write, :invoke] do
-    if mutation_keys?(message) and valid_timed_timeout?(message) do
+    if mutation_keys?(message, type) and valid_timed_timeout?(message) and
+         valid_expected_data_version?(message, type) do
       validate_path(message)
     else
       {:error, Error.new(:invalid_message)}
@@ -69,7 +70,8 @@ defmodule Wotex.Matter.Address do
   end
 
   def validate_message(%{type: type} = message) when type in [:write, :invoke] do
-    if mutation_keys?(message, include_value?: false) and valid_timed_timeout?(message) do
+    if mutation_keys?(message, type, include_value?: false) and valid_timed_timeout?(message) and
+         valid_expected_data_version?(message, type) do
       with :ok <- validate_path(message) do
         {:error, Error.new(:missing_value)}
       end
@@ -89,7 +91,7 @@ defmodule Wotex.Matter.Address do
     end
   end
 
-  defp mutation_keys?(message, options \\ []) do
+  defp mutation_keys?(message, type, options \\ []) do
     expected = [:cluster, :endpoint, :fabric_id, :member, :node_id, :type]
 
     expected =
@@ -100,6 +102,11 @@ defmodule Wotex.Matter.Address do
         do: [:timed_request_timeout_ms | expected],
         else: expected
 
+    expected =
+      if type == :write and Map.has_key?(message, :expected_data_version),
+        do: [:expected_data_version | expected],
+        else: expected
+
     Enum.sort(Map.keys(message)) == Enum.sort(expected)
   end
 
@@ -107,6 +114,14 @@ defmodule Wotex.Matter.Address do
     do: is_integer(timeout) and timeout in 1..65_535
 
   defp valid_timed_timeout?(_), do: true
+
+  defp valid_expected_data_version?(%{expected_data_version: version}, :write),
+    do: is_integer(version) and version in 0..0xFFFFFFFF
+
+  defp valid_expected_data_version?(message, :invoke),
+    do: not Map.has_key?(message, :expected_data_version)
+
+  defp valid_expected_data_version?(_, _), do: true
 
   defp qualified?(value),
     do:

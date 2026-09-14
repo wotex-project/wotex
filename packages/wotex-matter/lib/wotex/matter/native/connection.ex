@@ -5,18 +5,21 @@ defmodule Wotex.Matter.Native.Connection do
   `Wotex.Matter.Native` starts this process explicitly and monitors the caller
   that created it. The process validates the fixed startup identity, assigns
   increasing native request IDs, accepts one response for the expected ID, and
-  closes the Port when the caller or connection terminates. It is an
-  implementation module; consumers use `Wotex.Matter.Native` and its opaque
-  `Wotex.Matter.Native.Handle`.
+  closes the Port when the caller or connection terminates. A missed response
+  deadline expires the generation so a delayed frame cannot be correlated with
+  later work. It is an implementation module; consumers use
+  `Wotex.Matter.Native` and its opaque `Wotex.Matter.Native.Handle`.
   """
 
   use GenServer
 
   alias Wotex.Matter.Error
+  alias Wotex.Matter.Native.Wire
 
   @sdk_revision "250a9e6c50ee2068107f3c4808b680f5f2925415"
   @maximum_line_bytes 131_071
   @cleanup_timeout 1_000
+  @response_grace 50
 
   @spec start(pid(), map()) ::
           {:ok, pid(), String.t()} | {:error, Error.t()}
@@ -163,8 +166,14 @@ defmodule Wotex.Matter.Native.Connection do
 
   defp execute(state, operation, parameters, timeout) do
     case request_frame(state, operation, parameters, timeout) do
-      {:ok, result, next_state} -> {:reply, {:ok, result}, next_state}
-      {:error, error, next_state} -> {:reply, {:error, error}, next_state}
+      {:ok, result, next_state} ->
+        {:reply, {:ok, result}, next_state}
+
+      {:error, %Error{code: :timeout} = error, next_state} ->
+        {:stop, :normal, {:error, error}, next_state}
+
+      {:error, error, next_state} ->
+        {:reply, {:error, error}, next_state}
     end
   end
 
@@ -182,7 +191,7 @@ defmodule Wotex.Matter.Native.Connection do
     next_state = %{state | next_id: state.next_id + 1}
 
     if send_frame(state.port, frame) do
-      case await_response(state.port, state.owner_monitor, id, timeout) do
+      case await_response(state.port, state.owner_monitor, id, timeout + @response_grace) do
         {:ok, result} -> {:ok, result, next_state}
         {:error, error} -> {:error, error, next_state}
       end
@@ -286,29 +295,13 @@ defmodule Wotex.Matter.Native.Connection do
          id
        )
        when map_size(frame) == 4 do
-    case error do
-      %{"code" => code} = body when map_size(body) == 1 ->
-        {:error, Error.new(error_code(code))}
-
-      _ ->
-        {:error, Error.new(:invalid_frame)}
+    case Wire.error(error) do
+      {:ok, error} -> {:error, error}
+      :error -> {:error, Error.new(:invalid_frame)}
     end
   end
 
   defp decode_response(_, _), do: {:error, Error.new(:invalid_frame)}
-
-  defp error_code("authority_invalid"), do: :authority_invalid
-  defp error_code("controller_already_open"), do: :controller_already_open
-  defp error_code("controller_start_failed"), do: :controller_start_failed
-  defp error_code("controller_start_timeout"), do: :controller_start_timeout
-  defp error_code("fabric_mismatch"), do: :fabric_mismatch
-  defp error_code("invalid_controller_identity"), do: :invalid_controller_identity
-  defp error_code("invalid_request"), do: :invalid_request
-  defp error_code("not_supported"), do: :not_supported
-  defp error_code("paa_trust_store_invalid"), do: :paa_trust_store_invalid
-  defp error_code("sdk_storage_failed"), do: :sdk_storage_failed
-  defp error_code("storage_open_failed"), do: :storage_open_failed
-  defp error_code(_), do: :native_error
 
   defp send_frame(port, frame) do
     case Jason.encode(frame) do

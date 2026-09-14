@@ -256,7 +256,10 @@ defmodule Wotex.Matter.Check.P03Native do
   @spec main() :: :ok
   def main do
     source = File.cwd!()
-    workspace = Path.join(System.tmp_dir!(), "wotex-matter-p03-native-#{unique()}")
+
+    workspace =
+      Path.join(System.tmp_dir!(), "wotex-matter-#{String.downcase(packet())}-native-#{unique()}")
+
     File.mkdir_p!(workspace)
 
     try do
@@ -289,7 +292,7 @@ defmodule Wotex.Matter.Check.P03Native do
     {_output, status} =
       System.cmd("docker", arguments, into: IO.stream(), stderr_to_stdout: true)
 
-    assert!(status == 0, "P03 native build failed")
+    assert!(status == 0, "WMA-#{packet()} native build failed")
   end
 
   defp run_acceptance!(source, workspace) do
@@ -316,7 +319,7 @@ defmodule Wotex.Matter.Check.P03Native do
         success("1", identity()),
         success("2", %{"status" => "ready", "fabric_id" => 1}),
         failure("3", "fabric_mismatch"),
-        failure("4", "not_supported"),
+        failure("4", "invalid_request"),
         success("5", nil)
       ],
       "first-party create/health/fabric/close projection differed"
@@ -771,10 +774,11 @@ defmodule Wotex.Matter.Check.P03Native do
     files =
       [
         "bin/check_p03_native.exs",
-        "lib/wotex/matter/native.ex",
-        "lib/wotex/matter/native/*.ex",
+        "bin/check_p04_native.exs",
+        "lib/**/*.ex",
         "native/**/*",
         "test/native/*.cpp",
+        "test/wotex/matter/interaction_test.exs",
         "test/wotex/matter/persistent_bridge_test.exs"
       ]
       |> Enum.flat_map(&Path.wildcard(Path.join(source, &1)))
@@ -900,7 +904,7 @@ defmodule Wotex.Matter.Check.P03Native do
     normal = sha256(Path.join(workspace, "bin/wotex-matter-host"))
     sanitized = sha256(Path.join(workspace, "bin/wotex-matter-host-sanitized"))
     manifest = sha256(Path.join(workspace, "native-manifest.json"))
-    IO.puts("WMA-P03 first-party controller lane passed")
+    IO.puts("WMA-#{packet()} first-party controller lane passed")
     IO.puts("wotex-matter-host sha256 #{normal}")
     IO.puts("wotex-matter-host-sanitized sha256 #{sanitized}")
     IO.puts("native-manifest.json sha256 #{manifest}")
@@ -908,6 +912,8 @@ defmodule Wotex.Matter.Check.P03Native do
 
   defp read_trimmed(directory, name),
     do: directory |> Path.join(name) |> File.read!() |> String.trim()
+
+  defp packet, do: System.get_env("WOTEX_MATTER_NATIVE_PACKET", "P03")
 
   defp sha256(path) do
     path

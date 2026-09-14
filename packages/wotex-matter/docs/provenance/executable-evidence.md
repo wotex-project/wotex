@@ -2,10 +2,10 @@
 
 The implemented profile includes concrete and wildcard read paths, bounded
 TLV, the P01 descriptor/report/batch-result value layer, P02 durable SDK
-storage, and the P03 first-party persistent controller owner. The earlier
-one-shot Python factory adapter remains an injected baseline. P03 does not
-implement Interaction Model reads, writes, invokes, subscriptions or
-commissioning workflows.
+storage, the P03 first-party persistent controller owner, and P04 finite
+Interaction Model reads, event reads, writes, invokes and Descriptor discovery.
+The earlier one-shot Python factory adapter remains an injected baseline.
+Subscriptions and commissioning workflows remain unimplemented.
 
 ## Developer gate
 
@@ -66,12 +66,12 @@ DNS Service Discovery enabled, disables Bluetooth Low Energy, selects
 BoringSSL, and routes SDK logs away from stdout.
 
 The lane builds the complete SDK host both normally and with ASan/UBSan. Its
-three CMake executables also pass in normal and sanitizer modes. The actual host
+CMake executables also pass in normal and sanitizer modes. The actual host
 then exercises new authority generation, controller health, exact durable
 reopen, identity mismatch, invalid Product Attestation Authority trust,
 incomplete-start fail-closed behavior, authority corruption, an active storage
 lock, EOF cleanup within 1000 ms, and reopen after EOF. WMA-F07 rejects a wrong
-fabric before SDK entry and leaves the P04 request unsupported. The load lane
+fabric before SDK entry. The load lane
 runs 1000 sequential operations, 100 controller open/close cycles and 32
 concurrent process owners without shared `/tmp/chip_*` state. The sanitizer host
 also executes successful startup, failed startup and EOF cleanup with leak and
@@ -92,15 +92,34 @@ the source files, upstream contents, build arguments, tool executables, native
 binaries and measured cleanup result. The manifest and SDK build stay outside
 the source package.
 
+## P04 Interaction Model evidence
+
+`WOTEX_PATH_DEPS=1 mix run bin/check_p04_native.exs` extends the P03 pinned
+native reconstruction with the generated cluster bindings and direct
+connectedhomeip `ReadClient`, `WriteClient` and `CommandSender` integration.
+The lane builds the complete host normally and with ASan/UBSan, then runs all
+four CMake executables in both modes. `test/native/interaction_test.cpp` checks
+finite timing and DataVersion propagation, local read-only rejection without a
+backend call, partial path and cluster status preservation, event identity, and
+single mutation completion.
+
+`test/wotex/matter/interaction_test.exs` runs on both supported BEAM lanes. It
+checks the named read, write, invoke and event helpers, strict native wire
+decoding, WMA-F11 local rejection without client I/O, and bounded non-atomic
+Descriptor discovery.
+
+This is native compilation, protocol and lifecycle evidence. It does not record
+a successful interaction with an independent Matter device. P09 owns the pinned
+software-peer workflow; no physical-device result is inferred.
+
 ## Acceptance boundary
 
 [WMA.13](../specs/WMA.13-native-backend.md) defines the complete native binary,
-Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P03 are executed
-at their stated boundaries. P04–P09 still require native Interaction Model
-operations, subscriptions and recovery, commissioning, Runtime integration and
-pinned software-peer workflows. A passing P03 controller lane does not establish
-those later claims, physical-device behavior, CSA certification or publication
-readiness.
+Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P04 are executed
+at their stated boundaries. P05–P09 still require subscriptions and recovery,
+commissioning, Runtime integration and pinned software-peer workflows. A
+passing P04 native lane does not establish those later claims, physical-device
+behavior, CSA certification or publication readiness.
 
 Each completed native run must bind source, SDK/binary, toolchain and cleanup
 result identities in its manifest. The mandatory BEAM matrix is

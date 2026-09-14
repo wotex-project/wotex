@@ -44,13 +44,14 @@ should replace the path with the constraint of an available Hex release.
 The accepted backend is a first-party persistent C++17 connectedhomeip
 controller Port, with an owned durable authority/store, attestation, commissioning,
 CASE interactions and subscriptions. P03 implements the controller owner,
-durable authority, production attestation verifier and framed Port. Interaction
-Model requests, commissioning and subscriptions remain later work packages.
+durable authority, production attestation verifier and framed Port. P04 adds
+finite reads, event reads, writes and invokes through the generated SDK bindings.
+Commissioning and subscriptions remain later work packages.
 The current Python factory adapter remains a separate narrow baseline.
 
 [WMA.13](docs/specs/WMA.13-native-backend.md) fixes source/build pins, typed IPC,
-flow control and native ownership. `mix run bin/check_p03_native.exs` rebuilds
-and tests the P03 host in a disposable pinned Linux environment. The later
+flow control and native ownership. `mix run bin/check_p04_native.exs` rebuilds
+and tests the P04 host in a disposable pinned Linux environment. The later
 `mix wotex.native.build`, `mix wotex.software.build` and
 `mix wotex.software.run` commands remain specified implementation work. Upstream
 SDK Python is used only while generating and building native SDK sources.
@@ -77,9 +78,10 @@ same-directory fsynced rename. P03 connects that store to one first-party
 `DeviceCommissioner`, generates or reopens the controller root and Identity
 Protection Key with SDK crypto, loads an explicit Product Attestation Authority
 trust directory, and runs controller setup and shutdown through a direct BEAM
-Port. Loading the library starts no process or native executable. P04–P09 still
-own Interaction Model operations, subscriptions, commissioning workflows,
-Runtime integration and software-peer proof.
+Port. P04 uses that controller for bounded Interaction Model operations and
+Descriptor discovery. Loading the library starts no process or native
+executable. P05–P09 still own subscriptions, commissioning workflows, Runtime
+integration and software-peer proof.
 
 ## Quick start
 
@@ -136,8 +138,30 @@ native lane and pass its absolute path explicitly:
 ```
 
 Use `storage_mode: :create_new` with `authority: :generate_root` only for an
-explicitly authorized new controller directory. P03 health and lifecycle calls
-are implemented; data interactions currently return `:not_supported`.
+explicitly authorized new controller directory. P04 provides named operations
+on the persistent controller:
+
+```elixir
+address = %{
+  fabric_id: 1,
+  node_id: 3,
+  endpoint: 1,
+  cluster: 0x0201,
+  member: 0
+}
+
+{:ok, %Wotex.Matter.AttributeReport{}} =
+  Wotex.Matter.read_attribute(session, address)
+
+setpoint = %{address | member: 0x0012}
+value = %{tag: :anonymous, type: :i16, value: 2000}
+
+{:ok, %{status: 0}} =
+  Wotex.Matter.write_attribute(session, setpoint, value,
+    expected_data_version: 7,
+    timed_request_timeout_ms: 500
+  )
+```
 
 The SDK adapter forwards explicit `timed_request_timeout_ms` for writes/invokes.
 Subscription delivery and full device qualification need further integration.
@@ -185,8 +209,11 @@ than a substitute for the content-pinned native lane.
 `WOTEX_PATH_DEPS=1 mix run bin/check_p03_native.exs` separately rebuilds the
 first-party controller from the exact SDK, gitlink, generator and tool inputs,
 then runs normal and sanitizer lifecycle, failure, load and cleanup checks.
+`WOTEX_PATH_DEPS=1 mix run bin/check_p04_native.exs` extends that lane with the
+generated cluster bindings, Interaction Model implementation and focused
+normal/sanitizer interaction tests.
 `WOTEX_PATH_DEPS=1 mix run bin/check_p03_advisories.exs` performs the associated
-live OSV audit. Neither P03 command belongs to routine `mix check`.
+live OSV audit. None of these native commands belongs to routine `mix check`.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
 
@@ -201,10 +228,10 @@ already exists. Required software peers are separate from physical-device tests.
 The [standalone client contract](docs/specs/WMA.11-standalone-client-and-preservation.md)
 defines the supplied backend, exact native APIs and end-to-end workflows.
 Its [concrete corpus](docs/specs/fixtures/contract-v1.json) is partially executed:
-the P01 pure cases run in the default suite and the WMA-F07 controller lifecycle
-cases run in the separate P03 native lane. Later Interaction Model,
-commissioning and subscription cases remain unexecuted. The scenario tables
-alone are not executable acceptance evidence.
+the P01 pure cases run in the default suite, the WMA-F07 controller lifecycle
+cases run in the separate P03 native lane, and WMA-F11 runs with P04. A pinned
+software peer, commissioning and subscription cases remain unexecuted. The
+scenario tables alone are not executable acceptance evidence.
 
 The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
 profiles from planned contracts. The [Wotex integration contract](docs/specs/WMA.12-wotex-integration.md)

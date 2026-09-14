@@ -251,4 +251,94 @@ Conversion convert_value(MemberKind kind, std::uint32_t cluster, std::uint32_t m
   return convert(*descriptor, value);
 }
 
+ConversionError validate_element(MemberKind kind, std::uint32_t cluster,
+                                 std::uint32_t member, Operation operation,
+                                 const Element &element) {
+  const std::optional<Descriptor> descriptor =
+      lookup_descriptor(kind, cluster, member);
+  if (!descriptor.has_value()) {
+    return ConversionError::UnsupportedSchema;
+  }
+  if ((descriptor->operations & operation_flag(operation)) == 0U) {
+    return operation == Operation::Write ? ConversionError::NotWritable
+                                         : ConversionError::UnsupportedOperation;
+  }
+  if (element.tag.kind != TagKind::Anonymous) {
+    return ConversionError::InvalidValue;
+  }
+
+  switch (descriptor->schema) {
+  case Schema::NullableI16:
+    if (element.type == ElementType::Null) {
+      return ConversionError::None;
+    }
+    [[fallthrough]];
+  case Schema::I16:
+    return element.type == ElementType::I16 &&
+            element.signed_value >= std::numeric_limits<std::int16_t>::min() &&
+            element.signed_value <= std::numeric_limits<std::int16_t>::max()
+        ? ConversionError::None
+        : ConversionError::InvalidValue;
+  case Schema::U8:
+    return element.type == ElementType::U8 && element.unsigned_value <= 0xFFU
+        ? ConversionError::None
+        : ConversionError::InvalidValue;
+  case Schema::Boolean:
+    return element.type == ElementType::Boolean ? ConversionError::None
+                                                : ConversionError::InvalidValue;
+  case Schema::EmptyStructure:
+    return element.type == ElementType::Structure && element.children.empty()
+        ? ConversionError::None
+        : ConversionError::InvalidValue;
+  case Schema::DeviceTypeList:
+    if (element.type != ElementType::Array || element.children.size() > 1023U) {
+      return ConversionError::InvalidValue;
+    }
+    for (const Element &entry : element.children) {
+      if (entry.tag.kind != TagKind::Anonymous ||
+          entry.type != ElementType::Structure || entry.children.size() != 2U ||
+          entry.children[0].tag.kind != TagKind::Context ||
+          entry.children[0].tag.id != 0 ||
+          entry.children[0].type != ElementType::U32 ||
+          entry.children[1].tag.kind != TagKind::Context ||
+          entry.children[1].tag.id != 1 ||
+          entry.children[1].type != ElementType::U16) {
+        return ConversionError::InvalidValue;
+      }
+    }
+    return ConversionError::None;
+  case Schema::ClusterList:
+    if (element.type != ElementType::Array || element.children.size() > 1023U) {
+      return ConversionError::InvalidValue;
+    }
+    for (const Element &entry : element.children) {
+      if (entry.tag.kind != TagKind::Anonymous || entry.type != ElementType::U32 ||
+          !valid_cluster(static_cast<std::uint32_t>(entry.unsigned_value))) {
+        return ConversionError::InvalidValue;
+      }
+    }
+    return ConversionError::None;
+  case Schema::PartsList:
+    if (element.type != ElementType::Array || element.children.size() > 1023U) {
+      return ConversionError::InvalidValue;
+    }
+    for (const Element &entry : element.children) {
+      if (entry.tag.kind != TagKind::Anonymous || entry.type != ElementType::U16 ||
+          entry.unsigned_value > 0xFFFEU) {
+        return ConversionError::InvalidValue;
+      }
+    }
+    return ConversionError::None;
+  case Schema::ReachableEvent:
+    return element.type == ElementType::Structure &&
+            element.children.size() == 1 &&
+            element.children[0].tag.kind == TagKind::Context &&
+            element.children[0].tag.id == 0 &&
+            element.children[0].type == ElementType::Boolean
+        ? ConversionError::None
+        : ConversionError::InvalidValue;
+  }
+  return ConversionError::InvalidValue;
+}
+
 } // namespace wotex::matter

@@ -16,14 +16,14 @@ defmodule Wotex.Matter.Native do
   The returned handle is released with `disconnect/1`; the connection also
   closes when its creating process exits.
 
-  P03 establishes controller ownership and liveness. Read, write, invoke and
-  batch interactions remain unavailable until their later work packages.
+  P03 establishes controller ownership and liveness. P04 adds finite reads,
+  event reads, writes and invokes through the first-party SDK controller.
   """
 
   @behaviour Wotex.Matter.Client
 
   alias Wotex.Matter.Error
-  alias Wotex.Matter.Native.{Connection, Handle}
+  alias Wotex.Matter.Native.{Connection, Handle, Wire}
 
   @required_options [
     :authority,
@@ -53,25 +53,33 @@ defmodule Wotex.Matter.Native do
     end
   end
 
-  @doc "Submits one validated request; P03 admits only fabric checks."
+  @doc "Submits one validated native controller request."
   @impl Wotex.Matter.Client
   @spec request(Handle.t(), map(), pos_integer()) ::
           {:ok, term()} | {:error, Error.t()}
-  def request(%Handle{} = handle, %{fabric_id: fabric_id} = message, timeout)
-      when is_integer(timeout) and timeout in 1..60_000 do
+  def request(%Handle{} = handle, %{type: type} = message, timeout)
+      when is_atom(type) and is_integer(timeout) and timeout in 1..60_000 do
     cond do
-      fabric_id != handle.fabric_id ->
-        {:error, Error.new(:fabric_mismatch)}
-
       not is_pid(handle.pid) or not valid_generation?(handle.generation) ->
         {:error, Error.new(:invalid_handle)}
 
-      not Map.has_key?(message, :type) or not is_atom(message.type) or
-          not Enum.all?(Map.keys(message), &is_atom/1) ->
+      not Enum.all?(Map.keys(message), &is_atom/1) ->
         {:error, Error.new(:invalid_request)}
 
       true ->
-        Connection.request(handle.pid, handle.generation, message, timeout)
+        case request_fabric(message) do
+          {:ok, fabric_id} when fabric_id != handle.fabric_id ->
+            {:error, Error.new(:fabric_mismatch)}
+
+          {:ok, _} ->
+            case Connection.request(handle.pid, handle.generation, message, timeout) do
+              {:ok, result} -> Wire.decode(type, result)
+              {:error, _} = error -> error
+            end
+
+          _ ->
+            {:error, Error.new(:invalid_request)}
+        end
     end
   end
 
@@ -79,6 +87,21 @@ defmodule Wotex.Matter.Native do
     do: {:error, Error.new(:invalid_request)}
 
   def request(_, _, _), do: {:error, Error.new(:invalid_handle)}
+
+  defp request_fabric(%{fabric_id: fabric_id}) when is_integer(fabric_id),
+    do: {:ok, fabric_id}
+
+  defp request_fabric(%{type: type, paths: paths})
+       when type in [:read_paths, :read_events] and is_list(paths) and paths != [] do
+    fabrics = Enum.map(paths, fn path -> if is_map(path), do: Map.get(path, :fabric_id) end)
+
+    case Enum.uniq(fabrics) do
+      [fabric_id] when is_integer(fabric_id) -> {:ok, fabric_id}
+      _ -> :error
+    end
+  end
+
+  defp request_fabric(_), do: :error
 
   @doc "Performs a real local protocol probe against the owned native controller."
   @spec health(Handle.t(), pos_integer()) :: {:ok, map()} | {:error, Error.t()}

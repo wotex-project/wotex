@@ -128,7 +128,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
       fabric_id: 1,
       controller_node_id: 2,
       paa_trust_store: paa,
-      timeout: 1_000
+      timeout: 3_000
     ]
   end
 

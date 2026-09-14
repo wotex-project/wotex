@@ -21,12 +21,14 @@ defmodule Wotex.Matter do
   """
 
   import Kernel, except: [send: 2]
-  alias Wotex.Matter.{Error, PathResults, PortCall, ReadPath, Session}
-  @operations [:read, :write, :invoke, :read_paths]
+  alias Wotex.Matter.{AttributeReport, EndpointCatalogue, Error, EventReport}
+  alias Wotex.Matter.{PathResults, PortCall, ReadPath, Session, Standalone}
+  @operations [:read, :write, :invoke, :read_paths, :read_events]
+  @send_operations [:read, :write, :invoke, :read_paths]
 
   @doc "Reports the operations implemented by this library's validated client boundary."
   @spec capabilities() :: %{
-          operations: [:read | :write | :invoke | :read_paths, ...],
+          operations: [:read | :write | :invoke | :read_paths | :read_events, ...],
           transport: :explicit_client,
           bidirectional: true,
           reliable: false,
@@ -36,7 +38,7 @@ defmodule Wotex.Matter do
           max_payload_size: 65_536,
           connection_oriented: true,
           supports_streaming: false,
-          discovery_capable: false
+          discovery_capable: true
         }
   def capabilities,
     do: %{
@@ -50,7 +52,7 @@ defmodule Wotex.Matter do
       max_payload_size: 65_536,
       connection_oriented: true,
       supports_streaming: false,
-      discovery_capable: false
+      discovery_capable: true
     }
 
   @doc "Opens the supplied client module; absent transport fails explicitly."
@@ -63,7 +65,7 @@ defmodule Wotex.Matter do
 
   @doc "Validates and executes one operation without implicit retry."
   @spec send(Session.t(), map()) :: {:ok, term()} | {:error, Error.t()}
-  def send(%Session{} = session, %{type: type} = message) when type in @operations do
+  def send(%Session{} = session, %{type: type} = message) when type in @send_operations do
     with :ok <- validate(message) do
       started = System.monotonic_time()
       result = PortCall.invoke(session.client, :request, [session.handle, message, session.timeout])
@@ -123,6 +125,37 @@ defmodule Wotex.Matter do
   end
 
   def read_paths(_, _, _), do: {:error, Error.new(:invalid_message)}
+
+  @doc "Reads one admitted concrete attribute through its generated-schema descriptor."
+  @spec read_attribute(Session.t(), term(), keyword()) ::
+          {:ok, AttributeReport.t()} | {:error, Error.t()}
+  def read_attribute(session, address, options \\ []),
+    do: Standalone.read_attribute(session, address, options)
+
+  @doc "Writes one admitted concrete attribute without automatic retry or readback."
+  @spec write_attribute(Session.t(), term(), term(), keyword()) ::
+          {:ok, map()} | {:error, Error.t()}
+  def write_attribute(session, address, value, options \\ []),
+    do: Standalone.write_attribute(session, address, value, options)
+
+  @doc "Invokes one admitted concrete command without automatic replay."
+  @spec invoke_command(Session.t(), term(), term(), keyword()) ::
+          {:ok, map()} | {:error, Error.t()}
+  def invoke_command(session, address, value, options \\ []),
+    do: Standalone.invoke_command(session, address, value, options)
+
+  @doc "Reads concrete event paths while preserving native event identity and per-path status."
+  @spec read_events(Session.t(), list(), keyword()) ::
+          {:ok, [%{path: term(), result: {:ok, EventReport.t()} | {:error, Error.t()}}]}
+          | {:error, Error.t()}
+  def read_events(session, paths, options \\ []),
+    do: Standalone.read_events(session, paths, options)
+
+  @doc "Builds a bounded non-atomic endpoint catalogue from concrete Descriptor reads."
+  @spec discover_endpoints(Session.t(), term(), keyword()) ::
+          {:ok, EndpointCatalogue.t()} | {:error, Error.t()}
+  def discover_endpoints(session, node, options \\ []),
+    do: Standalone.discover_endpoints(session, node, options)
 
   @doc "Releases the explicit handle; the client owns idempotent transport cleanup."
   @spec disconnect(Session.t()) :: :ok | {:error, Error.t()}
