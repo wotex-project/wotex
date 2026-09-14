@@ -728,3 +728,30 @@ recorded above; no C++ or SDK input changed in this cohort.
 This is the native one-shot API/Runtime workflow cohort. It does not replace the
 remaining full stress/admission, flow corpus, software-run task, coverage or
 released-dependency archive gates for P09.
+
+## Native commissioning timeout
+
+`PendingCommissioning::Wait` reads its mutation flag while holding its existing
+mutex. Calling the locking accessor from that critical section deadlocks before
+the SDK timeout response can be published. The regression attempts on-network
+commissioning with a 1000 ms discovery budget and no matching advertisement.
+It requires `timeout`, effect `none` and SDK status `0x32`, then verifies the
+connection's timeout retirement policy and exact child cleanup. Before the
+correction, the BEAM deadline expires without an SDK status. Both rebuilt native
+hosts return the required SDK status after the correction.
+
+`test/interop/native_commissioning_timeout_test.exs` passes with the normal host
+on Linux Elixir 1.20.2 / OTP 29.0.4 and the ASan/UBSan host on Linux Elixir
+1.18.4 / OTP 27.3.4.15. Supply an explicit fresh-store controller and absent
+discriminator through `WOTEX_MATTER_NATIVE_TIMEOUT_FIXTURE`. Both six-test CTest
+lanes and all fifteen pinned-source advisory queries pass. The native source
+was rebuilt incrementally against the pinned SDK; this is not a fresh complete
+software-build receipt or complete expired-window acceptance.
+
+| Timeout artifact | SHA-256 |
+| --- | --- |
+| Normal native host | `03268cdbb3db87177154433dc54c6d5e9357f4ee06f503a00edf1051056fdc72` |
+| Sanitized native host | `0d313e14bae98f457f54400739a24ef483772a66a3e4690af337fa5f7558006c` |
+| ExUnit regression | `bc400911dc333d301d5783e3a04a197671fdbfe2121692fc442d40c74b8f8279` |
+| Current Linux log | `61c2eca6235c30d9fa4bbd96854adaa0fe59c41498c8e29b4d503ac383b3bba3` |
+| Minimum Linux sanitizer log | `cf59b0ee1dd8155b41eb7fcd0065a5d6f0a54e168c4d7354dd346e3ee588ce0b` |

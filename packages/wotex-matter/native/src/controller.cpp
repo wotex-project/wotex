@@ -603,8 +603,9 @@ class SdkControllerBackend::Impl final
       std::unique_lock<std::mutex> lock(mutex_);
       if (!condition_.wait_for(lock, std::chrono::milliseconds(Remaining()),
                                [this] { return published_; })) {
+        // Wait still owns mutex_; the accessor would lock it recursively.
         response_ = Failure("commissioning_timeout", CHIP_ERROR_TIMEOUT,
-                            FabricMutationMayHaveStarted());
+                            fabric_mutation_may_have_started_);
         published_ = true;
         lock.unlock();
         ScheduleAbort();
