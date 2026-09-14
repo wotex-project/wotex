@@ -144,8 +144,10 @@ The completion gate covers formatting, warnings-as-errors compilation, strict
 Credo, dependency audits, Dialyzer, public documentation, at least 95% line
 coverage, boundary checks, and an isolated roundtrip compiled from the exact
 unpacked Wotex Nx and core archives. Generated archive-consumer work stays in
-the operating-system temporary directory. The path switch is never valid in
-production and never changes package metadata.
+the operating-system temporary directory. The archive is built once from an
+external temporary mirror containing local/harness sentinels; source-byte
+identity and sentinel exclusion prove the package allowlist. The path switch
+is never valid in production and never changes package metadata.
 
 ## License
 

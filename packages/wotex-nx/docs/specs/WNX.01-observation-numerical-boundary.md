@@ -175,7 +175,7 @@ is the declared dependency cohort; broader backend/version claims require eviden
 | Fixed-shape generation and preservation | `test/wotex/nx/shape_property_test.exs` |
 | Exact decoder tensor admission, all inert kinds and anomaly comparisons | `test/wotex/nx/decoder_test.exs` |
 | No application callback and stable quality codes | `test/wotex/nx/library_contract_test.exs` |
-| Exact Nx/core archive metadata and contents, isolated compilation, minimal and independent reference roundtrips, explicit BinaryBackend/unit callback, layout/provenance/policy preservation and inert Action rejection | `bin/check_archive.exs` |
+| Exact Nx/core archive metadata and contents, source-byte identity, local/harness sentinel exclusion, isolated compilation, minimal and independent reference roundtrips, explicit BinaryBackend/unit callback, layout/provenance/policy preservation and inert Action rejection | `bin/check_archive.exs` |
 | Exact runtime/dependency/backend cohort and independently cast floating-rounding vectors with no cross-backend equivalence claim | `docs/provenance/runtime-backend-cohort.md` and `bin/check_archive.exs` |
 
 Any change to the contracts above must add both accepted and rejected boundary

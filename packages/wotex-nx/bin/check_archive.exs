@@ -5,6 +5,16 @@
 defmodule WotexNx.CheckArchive do
   @moduledoc false
 
+  @excluded_source_inputs [
+    ".check.exs",
+    ".claude",
+    ".tool-versions",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "bin",
+    "test"
+  ]
+
   @present [
     "mix.exs",
     "README.md",
@@ -13,7 +23,8 @@ defmodule WotexNx.CheckArchive do
     "lib/wotex/nx.ex",
     "lib/wotex/nx/encoder.ex",
     "lib/wotex/nx/decoder.ex",
-    "docs/specs/WNX.01-observation-numerical-boundary.md"
+    "docs/specs/WNX.01-observation-numerical-boundary.md",
+    "docs/provenance/runtime-backend-cohort.md"
   ]
 
   @absent [
@@ -21,6 +32,9 @@ defmodule WotexNx.CheckArchive do
     ".claude",
     ".git",
     ".github",
+    ".local-agent-harness",
+    ".tool-versions",
+    "AGENTS.md",
     "CLAUDE.md",
     "_build",
     "bin",
@@ -385,15 +399,18 @@ defmodule WotexNx.CheckArchive do
     core_outer = Path.join(work, "core-outer")
     core_unpacked = Path.join(work, "wotex")
     consumer = Path.join(work, "consumer")
+    package_source = Path.join(work, "package-source")
 
-    run!("mix", ["hex.build", "--output", nx_archive], source_root)
+    prepare_package_source!(source_root, package_source)
+    run!("mix", ["hex.build", "--output", nx_archive], package_source)
     run!("mix", ["hex.build", "--output", core_archive], dependency_source)
     unpack!(nx_archive, nx_outer, nx_unpacked)
     unpack!(core_archive, core_outer, core_unpacked)
 
     Enum.each(@present, &present!(nx_unpacked, &1))
     Enum.each(@absent, &absent!(nx_unpacked, &1))
-    verify_metadata!(Path.join(nx_outer, "metadata.config"))
+    metadata = verify_metadata!(Path.join(nx_outer, "metadata.config"))
+    verify_source_identity!(source_root, nx_unpacked, metadata)
 
     development = [{"WOTEX_PATH_DEPS", "1"}, {"MIX_ENV", "test"}]
     run!("mix", ["deps.get"], nx_unpacked, development)
@@ -444,6 +461,51 @@ defmodule WotexNx.CheckArchive do
 
     if Enum.any?(files, &String.starts_with?(&1, "priv")) do
       violation("archive unexpectedly declares runtime assets")
+    end
+
+    metadata
+  end
+
+  defp prepare_package_source!(source_root, package_source) do
+    File.mkdir_p!(package_source)
+
+    for entry <- package_inputs() ++ @excluded_source_inputs do
+      source = Path.join(source_root, entry)
+      destination = Path.join(package_source, entry)
+      File.mkdir_p!(Path.dirname(destination))
+      File.cp_r!(source, destination)
+    end
+
+    task_sentinel = Path.join(package_source, "docs/tasks/local-agent-harness-sentinel.md")
+    File.mkdir_p!(Path.dirname(task_sentinel))
+    File.write!(task_sentinel, "must remain outside the package\n")
+    File.write!(Path.join(package_source, ".local-agent-harness"), "must remain local\n")
+  end
+
+  defp package_inputs do
+    Mix.Project.config()
+    |> Keyword.fetch!(:package)
+    |> Keyword.fetch!(:files)
+  end
+
+  defp verify_source_identity!(source_root, unpacked, metadata) do
+    for encoded <- Map.fetch!(metadata, <<"files">>) do
+      entry = to_string(encoded)
+      packaged = Path.join(unpacked, entry)
+      source = Path.join(source_root, entry)
+
+      cond do
+        File.dir?(packaged) and File.dir?(source) ->
+          :ok
+
+        File.regular?(packaged) and File.regular?(source) ->
+          unless File.read!(packaged) == File.read!(source) do
+            violation("packaged source differs from repository input: #{entry}")
+          end
+
+        true ->
+          violation("packaged entry cannot be bound to repository input: #{entry}")
+      end
     end
   end
 
