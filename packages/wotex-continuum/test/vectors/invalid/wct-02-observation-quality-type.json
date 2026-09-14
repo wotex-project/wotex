@@ -1,0 +1,22 @@
+{
+  "description": "observation quality is an object",
+  "schema": "reject",
+  "expected": {"code": "invalid_type", "phase": "validation", "path": "/quality"},
+  "input": {
+    "kind": "observation_proposal",
+    "schema_version": "2.0.0",
+    "proposal_id": "proposal-example-bad",
+    "thing_id": "urn:example:thing:pump-7",
+    "affordance_type": "property",
+    "affordance_name": "level",
+    "value": 42,
+    "observed_at": "2026-09-02T10:00:00Z",
+    "quality": [],
+    "context": {
+      "execution_id": "exec-example-bad",
+      "node_id": "edge-example-a",
+      "mode": {"deployment": "saas", "connectivity": "connected"},
+      "observed_at": "2026-09-02T10:00:00Z"
+    }
+  }
+}

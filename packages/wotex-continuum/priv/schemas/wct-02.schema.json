@@ -3,11 +3,11 @@
   "$id": "https://wotex.io/schemas/continuum/wct-02/2.0.0",
   "title": "WCT.02 continuum exchange values",
   "oneOf": [
-    {"$ref": "#/$defs/observationProposal"},
-    {"$ref": "#/$defs/actionIntent"},
-    {"$ref": "#/$defs/actionResult"},
-    {"$ref": "#/$defs/evidenceReference"},
-    {"$ref": "#/$defs/delivery"}
+    {"$ref": "#/$defs/observationProposalEnvelope"},
+    {"$ref": "#/$defs/actionIntentEnvelope"},
+    {"$ref": "#/$defs/actionResultEnvelope"},
+    {"$ref": "#/$defs/evidenceReferenceEnvelope"},
+    {"$ref": "#/$defs/deliveryEnvelope"}
   ],
   "$defs": {
     "schemaVersion": {"const": "2.0.0"},
@@ -20,7 +20,7 @@
     },
     "failure": {
       "type": "object",
-      "required": ["code", "message", "details"],
+      "required": ["code", "message"],
       "properties": {
         "code": {"type": "string", "minLength": 1, "maxLength": 256},
         "message": {"type": "string", "minLength": 1, "maxLength": 4096},
@@ -28,9 +28,15 @@
       },
       "additionalProperties": false
     },
+    "evidenceReferenceEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/evidenceReference"},
+        {"required": ["kind", "schema_version"]}
+      ]
+    },
     "evidenceReference": {
       "type": "object",
-      "required": ["kind", "schema_version", "evidence_id", "uri", "digest", "media_type", "captured_at", "extensions"],
+      "required": ["evidence_id", "uri", "digest", "media_type", "captured_at"],
       "properties": {
         "kind": {"const": "evidence_reference"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
@@ -47,9 +53,15 @@
       "type": "array",
       "items": {"$ref": "#/$defs/evidenceReference"}
     },
+    "observationProposalEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/observationProposal"},
+        {"required": ["kind", "schema_version"]}
+      ]
+    },
     "observationProposal": {
       "type": "object",
-      "required": ["kind", "schema_version", "proposal_id", "thing_id", "affordance_type", "affordance_name", "value", "observed_at", "quality", "evidence", "context", "extensions"],
+      "required": ["proposal_id", "thing_id", "affordance_type", "affordance_name", "value", "observed_at", "context"],
       "properties": {
         "kind": {"const": "observation_proposal"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
@@ -62,14 +74,20 @@
         "sequence": {"type": "integer", "minimum": 0},
         "quality": {"type": "object"},
         "evidence": {"$ref": "#/$defs/evidence"},
-        "context": {"$ref": "wct-01.schema.json#/$defs/executionScope"},
+        "context": {"$ref": "https://wotex.io/schemas/continuum/wct-01/2.0.0#/$defs/executionScope"},
         "extensions": {"$ref": "#/$defs/extensions"}
       },
       "additionalProperties": false
     },
+    "actionIntentEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/actionIntent"},
+        {"required": ["kind", "schema_version"]}
+      ]
+    },
     "actionIntent": {
       "type": "object",
-      "required": ["kind", "schema_version", "intent_id", "thing_id", "action_name", "input", "requested_at", "idempotency_key", "evidence", "context", "extensions"],
+      "required": ["intent_id", "thing_id", "action_name", "input", "requested_at", "idempotency_key", "context"],
       "properties": {
         "kind": {"const": "action_intent"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
@@ -81,14 +99,20 @@
         "idempotency_key": {"$ref": "#/$defs/identifier"},
         "requested_by": {"$ref": "#/$defs/identifier"},
         "evidence": {"$ref": "#/$defs/evidence"},
-        "context": {"$ref": "wct-01.schema.json#/$defs/executionScope"},
+        "context": {"$ref": "https://wotex.io/schemas/continuum/wct-01/2.0.0#/$defs/executionScope"},
         "extensions": {"$ref": "#/$defs/extensions"}
       },
       "additionalProperties": false
     },
+    "actionResultEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/actionResult"},
+        {"required": ["kind", "schema_version"]}
+      ]
+    },
     "actionResult": {
       "type": "object",
-      "required": ["kind", "schema_version", "result_id", "intent_id", "status", "evidence", "context", "extensions"],
+      "required": ["result_id", "intent_id", "status", "context"],
       "properties": {
         "kind": {"const": "action_result"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
@@ -100,19 +124,54 @@
         "started_at": {"type": "string", "format": "date-time"},
         "completed_at": {"type": "string", "format": "date-time"},
         "evidence": {"$ref": "#/$defs/evidence"},
-        "context": {"$ref": "wct-01.schema.json#/$defs/executionScope"},
+        "context": {"$ref": "https://wotex.io/schemas/continuum/wct-01/2.0.0#/$defs/executionScope"},
         "extensions": {"$ref": "#/$defs/extensions"}
       },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "succeeded"}}},
+          "then": {
+            "required": ["output", "completed_at"],
+            "properties": {"error": false}
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "failed"}}},
+          "then": {
+            "required": ["error", "completed_at"],
+            "properties": {"output": false}
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "cancelled"}}},
+          "then": {
+            "required": ["completed_at"],
+            "properties": {"output": false, "error": false}
+          }
+        },
+        {
+          "if": {"properties": {"status": {"enum": ["accepted", "running", "unknown"]}}},
+          "then": {
+            "properties": {"output": false, "error": false, "completed_at": false}
+          }
+        }
+      ],
       "additionalProperties": false
+    },
+    "deliveryEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/delivery"},
+        {"required": ["kind", "schema_version"]}
+      ]
     },
     "delivery": {
       "type": "object",
-      "required": ["kind", "schema_version", "delivery_id", "item_kind", "item_id", "source", "destination", "status", "attempt", "emitted_at", "extensions"],
+      "required": ["delivery_id", "item_kind", "item_id", "source", "destination", "status", "attempt", "emitted_at"],
       "properties": {
         "kind": {"const": "delivery"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
         "delivery_id": {"$ref": "#/$defs/identifier"},
-        "item_kind": {"type": "string", "minLength": 1},
+        "item_kind": {"enum": ["action_intent", "action_result", "capability", "compatibility", "continuum_manifest", "degradation", "delivery", "evidence_reference", "execution_scope", "exit_receipt", "lifecycle", "mode", "observation_proposal"]},
         "item_id": {"$ref": "#/$defs/identifier"},
         "source": {"$ref": "#/$defs/identifier"},
         "destination": {"$ref": "#/$defs/identifier"},
@@ -124,6 +183,28 @@
         "error": {"$ref": "#/$defs/failure"},
         "extensions": {"$ref": "#/$defs/extensions"}
       },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "acknowledged"}}},
+          "then": {
+            "required": ["acknowledged_at"],
+            "properties": {"error": false}
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "failed"}}},
+          "then": {
+            "required": ["error"],
+            "properties": {"acknowledged_at": false}
+          }
+        },
+        {
+          "if": {"properties": {"status": {"enum": ["pending", "in_flight", "delivered", "unknown"]}}},
+          "then": {
+            "properties": {"acknowledged_at": false, "error": false}
+          }
+        }
+      ],
       "additionalProperties": false
     }
   }

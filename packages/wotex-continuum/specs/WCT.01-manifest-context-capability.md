@@ -52,6 +52,12 @@ Every top-level value MUST be a JSON object with:
 | `kind` | exact discriminator registered by this specification |
 | `schema_version` | exact semantic version of the encoded contract |
 
+The schema entry point requires both members. A registered value nested inside
+another WCT value MAY omit its own `kind` and `schema_version`; if present, they
+MUST have the registered values. Constructors apply the same rule to native
+nested maps. Wire projection and canonical encoding always emit the nested
+members, so decoding an omitted nested envelope produces the complete form.
+
 Object member names use lower snake case. Unknown top-level members MUST be
 rejected. Extension data belongs only in the explicit `extensions` object.
 Each extension key MUST be an absolute IRI and each value MUST be a JSON value.
@@ -216,6 +222,11 @@ renaming a member, changing canonical bytes, tightening previously accepted
 input, or changing a field's meaning is incompatible and requires a new schema
 major version.
 
+Correcting a bundled schema to admit an omission already declared optional, or
+to reject a value already rejected by the owning constructor and normative
+rule, is a compatible contract repair. Such a correction changes the embedded
+schema digest but does not change accepted values or canonical bytes.
+
 ## 10. Executable evidence
 
 Normative JSON Schema: `priv/schemas/wct-01.schema.json`. The bytes are
@@ -229,13 +240,25 @@ Canonical vectors: `test/vectors/canonical/wct-01-*.json`. Every registered kind
 has at least one canonical vector, and a test asserts that coverage. A vector
 carries the prefix of the specification that owns its kind.
 
-`test/wotex_continuum/schema_conformance_test.exs` validates every canonical and
-valid vector against the embedded schema with a dependency-free subset checker.
-The checker evaluates `$ref`, `oneOf`, `allOf`, `if`/`then`, `type`, `const`,
-`enum`, `required`, `properties`, `additionalProperties`, `items`, `minItems`,
-`uniqueItems`, `minLength`, `maxLength`, `pattern`, and `minimum`. It does not
-evaluate `format` or `propertyNames`, so absolute-IRI, media-type, and RFC 3339
-rules are proved by the constructors alone. The same test records which invalid
-vectors the schema rejects and which state semantic rules JSON Schema cannot
-express, so a "normative schema" claim never implies that the schema alone
-admits a value.
+`test/wotex_continuum/schema_conformance_test.exs` validates every canonical,
+valid, and invalid vector against the embedded schema with a dependency-free
+agreement checker. It evaluates every assertion keyword used by these three
+schemas: `$ref`, `oneOf`, `allOf`, `if`/`then`, `type`, `const`, `enum`,
+`required`, `properties`, `propertyNames`, `additionalProperties`, `items`,
+`minItems`, `maxItems`, `uniqueItems`, `minLength`, `maxLength`, `pattern`,
+`minimum`, and `format`. For WCT evidence, `uri` and `date-time` formats are
+assertions and use the same absolute-IRI and RFC 3339 rules as constructors.
+An external Draft 2020-12 validator must likewise enable format assertion when
+it is used for admission.
+
+`test/wotex_continuum/schema_agreement_test.exs` applies the schemas,
+constructors, struct reconstruction, canonical encoder, decoder, defaults,
+formats, extension property names, state combinations, and every nested owner
+route. Cross-document references use the embedded documents' absolute `$id`
+values rather than checkout-relative filenames. Invalid vectors label a rule
+`reject` when the schema expresses it and `semantic` when the constructor is
+deliberately stronger. Version-requirement parsing, byte-count bounds,
+uniqueness by a member inside an object array,
+relationships between two collections, timestamp ordering, and lifecycle
+transition history remain semantic constructor checks; JSON Schema does not
+express those relationships in these documents.

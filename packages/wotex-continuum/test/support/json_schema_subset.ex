@@ -3,11 +3,11 @@ defmodule WotexContinuum.JSONSchemaSubset do
 
   alias WotexContinuum.Error
 
-  @supported ~w($ref oneOf allOf if type const enum required properties
+  @supported ~w($ref oneOf allOf if then type const enum required properties
                 additionalProperties items minItems uniqueItems minLength
-                maxLength pattern minimum)
+                maxItems maxLength pattern minimum format propertyNames)
 
-  @unsupported ~w(format propertyNames)
+  @unsupported []
 
   @spec supported_keywords() :: [String.t()]
   def supported_keywords, do: @supported
@@ -114,6 +114,10 @@ defmodule WotexContinuum.JSONSchemaSubset do
     if length(value) >= minimum, do: [], else: ["#{state.path}: fewer than #{minimum} items"]
   end
 
+  defp check_keyword("maxItems", maximum, value, state) when is_list(value) do
+    if length(value) <= maximum, do: [], else: ["#{state.path}: more than #{maximum} items"]
+  end
+
   defp check_keyword("uniqueItems", true, value, state) when is_list(value) do
     if Enum.uniq(value) == value, do: [], else: ["#{state.path}: items are not unique"]
   end
@@ -134,6 +138,20 @@ defmodule WotexContinuum.JSONSchemaSubset do
 
   defp check_keyword("minimum", minimum, value, state) when is_number(value) do
     if value >= minimum, do: [], else: ["#{state.path}: below #{minimum}"]
+  end
+
+  defp check_keyword("format", format, value, state) when is_binary(value) do
+    if format?(format, value), do: [], else: ["#{state.path}: does not match format #{format}"]
+  end
+
+  defp check_keyword("propertyNames", property_schema, value, state) when is_map(value) do
+    Enum.flat_map(Map.keys(value), fn key ->
+      if is_binary(key) do
+        check(key, property_schema, descend(state, key))
+      else
+        ["#{state.path}: object member name is not a string"]
+      end
+    end)
   end
 
   defp check_keyword(_, _, _, _), do: []
@@ -164,4 +182,15 @@ defmodule WotexContinuum.JSONSchemaSubset do
   defp type?("number", value), do: is_number(value)
   defp type?("boolean", value), do: is_boolean(value)
   defp type?("null", value), do: is_nil(value)
+
+  defp format?("date-time", value) do
+    match?({:ok, %DateTime{}, _offset}, DateTime.from_iso8601(value))
+  end
+
+  defp format?("uri", value) do
+    String.valid?(value) and
+      match?(%URI{scheme: scheme} when scheme not in [nil, ""], URI.parse(value))
+  end
+
+  defp format?(_, _), do: true
 end

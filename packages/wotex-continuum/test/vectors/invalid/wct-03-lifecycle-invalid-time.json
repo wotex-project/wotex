@@ -1,0 +1,13 @@
+{
+  "description": "lifecycle change time is RFC 3339",
+  "schema": "reject",
+  "expected": {"code": "invalid_timestamp", "phase": "validation", "path": "/changed_at"},
+  "input": {
+    "kind": "lifecycle",
+    "schema_version": "2.0.0",
+    "subject_id": "worker-example-bad",
+    "state": "staged",
+    "generation": 0,
+    "changed_at": "not-a-time"
+  }
+}

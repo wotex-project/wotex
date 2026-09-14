@@ -1,0 +1,17 @@
+{
+  "description": "delivery item kind names a registered top-level value",
+  "schema": "reject",
+  "expected": {"code": "unknown_kind", "phase": "validation", "path": "/item_kind"},
+  "input": {
+    "kind": "delivery",
+    "schema_version": "2.0.0",
+    "delivery_id": "delivery-example-bad",
+    "item_kind": "unregistered_value",
+    "item_id": "item-example-bad",
+    "source": "edge-example-a",
+    "destination": "consumer-example-a",
+    "status": "pending",
+    "attempt": 1,
+    "emitted_at": "2026-09-02T10:00:00Z"
+  }
+}

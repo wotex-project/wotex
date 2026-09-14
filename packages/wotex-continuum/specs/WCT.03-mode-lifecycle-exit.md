@@ -115,4 +115,8 @@ evidence; the library never exports, deletes, or verifies state.
 
 Compatibility follows WCT.01 section 9. Normative JSON Schema is
 `priv/schemas/wct-03.schema.json`; executable vectors use the `wct-03-` prefix
-under `test/vectors/`.
+under `test/vectors/`. The schema expresses air-gap connectivity,
+degradation-list coherence, exit status/member coherence, RFC 3339 fields, and
+optional/defaulted members. Constructors additionally compare timestamps and
+the lifecycle transition function validates history-dependent graph edges and
+generation changes.

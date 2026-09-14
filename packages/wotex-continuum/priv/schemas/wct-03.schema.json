@@ -3,10 +3,10 @@
   "$id": "https://wotex.io/schemas/continuum/wct-03/2.0.0",
   "title": "WCT.03 continuum mode and lifecycle values",
   "oneOf": [
-    {"$ref": "#/$defs/mode"},
-    {"$ref": "#/$defs/lifecycle"},
-    {"$ref": "#/$defs/degradation"},
-    {"$ref": "#/$defs/exitReceipt"}
+    {"$ref": "#/$defs/modeEnvelope"},
+    {"$ref": "#/$defs/lifecycleEnvelope"},
+    {"$ref": "#/$defs/degradationEnvelope"},
+    {"$ref": "#/$defs/exitReceiptEnvelope"}
   ],
   "$defs": {
     "schemaVersion": {"const": "2.0.0"},
@@ -16,9 +16,15 @@
       "propertyNames": {"format": "uri"},
       "additionalProperties": true
     },
+    "modeEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/mode"},
+        {"required": ["kind", "schema_version"]}
+      ]
+    },
     "mode": {
       "type": "object",
-      "required": ["kind", "schema_version", "deployment", "connectivity", "extensions"],
+      "required": ["deployment", "connectivity"],
       "properties": {
         "kind": {"const": "mode"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
@@ -34,9 +40,15 @@
       ],
       "additionalProperties": false
     },
+    "lifecycleEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/lifecycle"},
+        {"required": ["kind", "schema_version"]}
+      ]
+    },
     "lifecycle": {
       "type": "object",
-      "required": ["kind", "schema_version", "subject_id", "state", "generation", "changed_at", "extensions"],
+      "required": ["subject_id", "state", "generation", "changed_at"],
       "properties": {
         "kind": {"const": "lifecycle"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
@@ -49,9 +61,15 @@
       },
       "additionalProperties": false
     },
+    "degradationEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/degradation"},
+        {"required": ["kind", "schema_version"]}
+      ]
+    },
     "degradation": {
       "type": "object",
-      "required": ["kind", "schema_version", "degradation_id", "subject_id", "level", "capabilities", "reason_codes", "since", "recoverable", "evidence", "extensions"],
+      "required": ["degradation_id", "subject_id", "level", "capabilities", "reason_codes", "since", "recoverable"],
       "properties": {
         "kind": {"const": "degradation"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
@@ -62,14 +80,40 @@
         "reason_codes": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
         "since": {"type": "string", "format": "date-time"},
         "recoverable": {"type": "boolean"},
-        "evidence": {"type": "array", "items": {"$ref": "wct-02.schema.json#/$defs/evidenceReference"}},
+        "evidence": {"type": "array", "items": {"$ref": "https://wotex.io/schemas/continuum/wct-02/2.0.0#/$defs/evidenceReference"}},
         "extensions": {"$ref": "#/$defs/extensions"}
       },
+      "allOf": [
+        {
+          "if": {"properties": {"level": {"const": "none"}}},
+          "then": {
+            "properties": {
+              "capabilities": {"maxItems": 0},
+              "reason_codes": {"maxItems": 0}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"level": {"enum": ["reduced", "unavailable"]}}},
+          "then": {
+            "properties": {
+              "capabilities": {"minItems": 1},
+              "reason_codes": {"minItems": 1}
+            }
+          }
+        }
+      ],
       "additionalProperties": false
+    },
+    "exitReceiptEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/exitReceipt"},
+        {"required": ["kind", "schema_version"]}
+      ]
     },
     "exitReceipt": {
       "type": "object",
-      "required": ["kind", "schema_version", "receipt_id", "subject_id", "operation", "status", "requested_at", "artifacts", "residuals", "extensions"],
+      "required": ["receipt_id", "subject_id", "operation", "status", "requested_at"],
       "properties": {
         "kind": {"const": "exit_receipt"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
@@ -79,11 +123,50 @@
         "status": {"enum": ["requested", "running", "completed", "failed", "partial"]},
         "requested_at": {"type": "string", "format": "date-time"},
         "completed_at": {"type": "string", "format": "date-time"},
-        "artifacts": {"type": "array", "items": {"$ref": "wct-02.schema.json#/$defs/evidenceReference"}},
+        "artifacts": {"type": "array", "items": {"$ref": "https://wotex.io/schemas/continuum/wct-02/2.0.0#/$defs/evidenceReference"}},
         "residuals": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
-        "error": {"$ref": "wct-02.schema.json#/$defs/failure"},
+        "error": {"$ref": "https://wotex.io/schemas/continuum/wct-02/2.0.0#/$defs/failure"},
         "extensions": {"$ref": "#/$defs/extensions"}
       },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"enum": ["requested", "running"]}}},
+          "then": {
+            "properties": {
+              "completed_at": false,
+              "error": false,
+              "residuals": {"maxItems": 0}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "completed"}}},
+          "then": {
+            "required": ["completed_at"],
+            "properties": {"error": false}
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "failed"}}},
+          "then": {"required": ["completed_at", "error"]}
+        },
+        {
+          "if": {"properties": {"status": {"const": "partial"}}},
+          "then": {
+            "required": ["completed_at", "residuals"],
+            "properties": {"residuals": {"minItems": 1}, "error": false}
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "operation": {"const": "remove"},
+              "status": {"const": "completed"}
+            }
+          },
+          "then": {"properties": {"residuals": {"maxItems": 0}}}
+        }
+      ],
       "additionalProperties": false
     }
   }

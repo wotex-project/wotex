@@ -58,8 +58,9 @@ Every registered kind has a valid vector and an exact canonical-byte vector.
 `contract_inventory_test.exs` supplies per-field invalid, default, null,
 unknown-field, and forged-struct evidence for all 13 kinds and the three nested
 values. `vector_test.exs` proves repeatable canonical round trips and exact
-invalid-vector errors. `schema_conformance_test.exs` separately records the
-documented JSON Schema subset; full schema agreement remains WCT-C03.
+invalid-vector errors. The
+[WCT-C03 schema agreement map](WCT-C03-schema-agreement.md) connects this field
+inventory to the embedded schemas and every owning-parent route.
 
 ## Error evidence index
 
@@ -102,5 +103,6 @@ This evidence constructs, validates, compares, transitions, and encodes inert
 values only. It adds no process, persistence, trusted clock, identity,
 authorization, provider selection, dispatch, retry, or effect claim. The
 [WCT-C02 admission map](WCT-C02-admission-map.md) records the UTF-8 and resource
-boundary evidence layered on this inventory. Full JSON Schema vocabulary
-agreement remains WCT-C03.
+boundary evidence layered on this inventory. The
+[WCT-C03 schema agreement map](WCT-C03-schema-agreement.md) records schema,
+constructor, codec, reconstruction, and vector agreement.

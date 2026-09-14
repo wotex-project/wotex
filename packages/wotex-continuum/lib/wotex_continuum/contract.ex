@@ -5,8 +5,9 @@ defmodule WotexContinuum.Contract do
   Value constructors use `envelope/2` to supply absent kind and schema-version
   fields, then `normalize/3` to admit only declared atom or string keys. An
   explicit wrong kind, duplicate key spelling, malformed semantic version, or
-  version outside `~> 2.0` returns `WotexContinuum.Error`. Existing envelope
-  fields are preserved for validation rather than silently replaced.
+  version unequal to the current contract returns `WotexContinuum.Error`.
+  Existing envelope fields are preserved for validation rather than silently
+  replaced.
 
   This implementation helper validates wire identity. The owning value module
   validates its payload and cross-field relationships. `base/1` constructs the
@@ -53,7 +54,7 @@ defmodule WotexContinuum.Contract do
     do: Error.error(code, :validation, path, "value does not match the contract")
 
   defp supported_schema(version) do
-    if Version.match?(version, "~> 2.0"),
+    if version == WotexContinuum.schema_version(),
       do: :ok,
       else:
         Error.error(

@@ -93,6 +93,7 @@ returned.
 
 Admission remains synchronous pure validation. No process, queue, storage,
 network client, credential, identity decision, authorization rule, retry, or
-reconciliation behavior is introduced. Bundled-schema full-vocabulary
-agreement is separate WCT-C03 work, and independent archive consumption is
+reconciliation behavior is introduced. The
+[WCT-C03 schema agreement map](WCT-C03-schema-agreement.md) layers schema and
+vector agreement on these admission rules. Independent archive consumption is
 separate WCT-C04 work.

@@ -1,0 +1,27 @@
+{
+  "description": "manifest capabilities stay within the manifest deployment set",
+  "schema": "semantic",
+  "expected": {"code": "unsupported_capability_mode", "phase": "validation", "path": "/capabilities"},
+  "input": {
+    "kind": "continuum_manifest",
+    "schema_version": "2.0.0",
+    "manifest_id": "manifest-example-bad",
+    "artifact": {
+      "name": "example",
+      "version": "1.0.0",
+      "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "compatibility": {"schema_requirement": "~> 2.0"},
+    "supported_modes": ["saas"],
+    "capabilities": [
+      {
+        "id": "example-capability",
+        "version": "1.0.0",
+        "operations": [],
+        "modes": ["air_gapped"],
+        "network": "none",
+        "degradation": "fail_closed"
+      }
+    ]
+  }
+}

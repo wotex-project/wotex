@@ -29,16 +29,6 @@ defmodule WotexContinuum.SchemaConformanceTest do
     "mode" => "wct-03.schema.json"
   }
 
-  @schema_rejects_invalid_vector %{
-    "wct-01-unknown-field.json" => true,
-    "wct-01-unsupported-schema.json" => true,
-    "wct-02-failed-result-without-error.json" => false,
-    "wct-02-invalid-thing-id.json" => false,
-    "wct-03-air-gap-connectivity.json" => true,
-    "wct-03-empty-degradation.json" => false,
-    "wct-03-remove-residuals.json" => false
-  }
-
   test "every registered kind has a canonical vector" do
     covered =
       [@vectors, "canonical", "*.json"]
@@ -89,10 +79,9 @@ defmodule WotexContinuum.SchemaConformanceTest do
       input = vector["input"]
       result = JSONSchemaSubset.validate(input, document_for(input), registry)
 
-      if Map.fetch!(@schema_rejects_invalid_vector, Path.basename(path)) do
-        assert {:error, [_ | _]} = result, path
-      else
-        assert :ok = result, path
+      case vector["schema"] do
+        "reject" -> assert {:error, [_ | _]} = result, path
+        "semantic" -> assert :ok = result, path
       end
 
       assert {:error, _} = Codec.decode(Jason.encode!(input)), path
@@ -131,26 +120,75 @@ defmodule WotexContinuum.SchemaConformanceTest do
              )
   end
 
-  test "the subset checker does not evaluate format or property names" do
+  test "the agreement checker evaluates every schema keyword used by WCT" do
     registry = registry()
 
-    unevaluated =
+    assertion_keywords =
+      @documents
+      |> Enum.flat_map(fn {_, file} -> schema_keywords(Map.fetch!(registry, file)) end)
+      |> Enum.uniq()
+      |> Enum.reject(&(&1 in ~w($schema $id $defs title)))
+      |> Enum.sort()
+
+    assert assertion_keywords == Enum.sort(JSONSchemaSubset.supported_keywords())
+
+    format_and_property_name_errors =
       valid_evidence()
       |> Map.put("uri", "relative-evidence")
       |> Map.put("extensions", %{"not-an-iri" => true})
 
-    assert JSONSchemaSubset.unsupported_keywords() == ["format", "propertyNames"]
-    assert :ok = JSONSchemaSubset.validate(unevaluated, "wct-02.schema.json", registry)
+    assert JSONSchemaSubset.unsupported_keywords() == []
 
-    assert {:error, %WotexContinuum.Error{code: :invalid_iri}} =
-             WotexContinuum.from_map(unevaluated)
+    assert {:error, [_ | _]} =
+             JSONSchemaSubset.validate(
+               format_and_property_name_errors,
+               "wct-02.schema.json",
+               registry
+             )
+
+    assert {:error, %WotexContinuum.Error{code: :invalid_iri, path: "/uri"}} =
+             WotexContinuum.from_map(format_and_property_name_errors)
+
+    semantic_only =
+      read_vector(Path.join(@vectors, "valid/wct-01-compatibility.json"))
+      |> Map.put("schema_requirement", "not a version requirement")
+
+    assert :ok = JSONSchemaSubset.validate(semantic_only, "wct-01.schema.json", registry)
+
+    assert {:error,
+            %WotexContinuum.Error{
+              code: :invalid_version_requirement,
+              path: "/schema_requirement"
+            }} = WotexContinuum.from_map(semantic_only)
+  end
+
+  test "cross-document references resolve through exact embedded schema IDs" do
+    registry = registry()
+
+    ids =
+      @documents
+      |> Map.values()
+      |> Map.new(fn file ->
+        schema = Map.fetch!(registry, file)
+        {schema["$id"], true}
+      end)
+
+    for {_, file} <- @documents,
+        reference <- schema_references(Map.fetch!(registry, file)),
+        not String.starts_with?(reference, "#") do
+      [target, _] = String.split(reference, "#", parts: 2)
+      assert Map.has_key?(ids, target), "#{file} has unresolved reference #{reference}"
+    end
   end
 
   defp registry do
-    Map.new(@documents, fn {id, file} ->
+    Enum.reduce(@documents, %{}, fn {id, file}, registry ->
       assert {:ok, source} = Schema.fetch(id)
+      schema = Jason.decode!(source)
 
-      {file, Jason.decode!(source)}
+      registry
+      |> Map.put(file, schema)
+      |> Map.put(schema["$id"], schema)
     end)
   end
 
@@ -167,4 +205,25 @@ defmodule WotexContinuum.SchemaConformanceTest do
   defp valid_lifecycle, do: read_vector(Path.join(@vectors, "valid/wct-03-lifecycle.json"))
 
   defp valid_evidence, do: read_vector(Path.join(@vectors, "valid/wct-02-evidence.json"))
+
+  defp schema_keywords(schema) when is_map(schema) do
+    Map.keys(schema) ++ Enum.flat_map(schema_children(schema), &schema_keywords/1)
+  end
+
+  defp schema_keywords(_), do: []
+
+  defp schema_references(schema) when is_map(schema) do
+    references = if is_binary(schema["$ref"]), do: [schema["$ref"]], else: []
+    references ++ Enum.flat_map(schema_children(schema), &schema_references/1)
+  end
+
+  defp schema_references(_), do: []
+
+  defp schema_children(schema) do
+    singular = Enum.map(~w(if then items propertyNames), &Map.get(schema, &1))
+    plural = Enum.flat_map(~w(oneOf allOf), &Map.get(schema, &1, []))
+    named = Enum.flat_map(~w($defs properties), &Map.values(Map.get(schema, &1, %{})))
+
+    Enum.reject(singular ++ plural ++ named, &is_nil/1)
+  end
 end

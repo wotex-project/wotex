@@ -1,0 +1,13 @@
+{
+  "description": "execution-scope observation time is RFC 3339",
+  "schema": "reject",
+  "expected": {"code": "invalid_timestamp", "phase": "validation", "path": "/observed_at"},
+  "input": {
+    "kind": "execution_scope",
+    "schema_version": "2.0.0",
+    "execution_id": "exec-example-bad",
+    "node_id": "edge-example-a",
+    "mode": {"deployment": "hybrid", "connectivity": "connected"},
+    "observed_at": "not-a-time"
+  }
+}

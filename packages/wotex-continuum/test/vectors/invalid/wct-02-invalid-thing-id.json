@@ -1,5 +1,6 @@
 {
   "description": "Thing references are absolute IRIs",
+  "schema": "reject",
   "expected": {"code": "invalid_iri", "phase": "validation", "path": "/thing_id"},
   "input": {
     "kind": "action_intent",

@@ -1,0 +1,14 @@
+{
+  "description": "evidence locations are absolute IRIs",
+  "schema": "reject",
+  "expected": {"code": "invalid_iri", "phase": "validation", "path": "/uri"},
+  "input": {
+    "kind": "evidence_reference",
+    "schema_version": "2.0.0",
+    "evidence_id": "evidence-example-bad",
+    "uri": "relative-evidence",
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "media_type": "application/json",
+    "captured_at": "2026-09-02T10:00:00Z"
+  }
+}

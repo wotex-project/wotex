@@ -133,7 +133,9 @@ The [WCT-C01 contract map](docs/specs/WCT-C01-contract-map.md) indexes every
 field, default, null rule, error family, and lifecycle edge to executable
 evidence. The [WCT-C02 admission map](docs/specs/WCT-C02-admission-map.md)
 records native UTF-8 parity and the intentional native-versus-decoder resource
-boundary.
+boundary. The [WCT-C03 schema agreement map](docs/specs/WCT-C03-schema-agreement.md)
+connects every registered kind and nested owner route to schemas,
+constructors, reconstruction, codecs, and published vectors.
 
 ```sh
 WOTEX_PATH_DEPS=1 mix deps.get

@@ -1,0 +1,15 @@
+{
+  "description": "exit completion cannot precede request",
+  "schema": "semantic",
+  "expected": {"code": "invalid_time_order", "phase": "validation", "path": "/completed_at"},
+  "input": {
+    "kind": "exit_receipt",
+    "schema_version": "2.0.0",
+    "receipt_id": "exit-example-bad",
+    "subject_id": "worker-example-bad",
+    "operation": "remove",
+    "status": "completed",
+    "requested_at": "2026-09-02T10:00:02Z",
+    "completed_at": "2026-09-02T10:00:01Z"
+  }
+}

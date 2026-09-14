@@ -3,17 +3,17 @@
   "$id": "https://wotex.io/schemas/continuum/wct-01/2.0.0",
   "title": "WCT.01 continuum values",
   "oneOf": [
-    {"$ref": "#/$defs/manifest"},
-    {"$ref": "#/$defs/compatibility"},
-    {"$ref": "#/$defs/executionScope"},
-    {"$ref": "#/$defs/capability"}
+    {"$ref": "#/$defs/manifestEnvelope"},
+    {"$ref": "#/$defs/compatibilityEnvelope"},
+    {"$ref": "#/$defs/executionScopeEnvelope"},
+    {"$ref": "#/$defs/capabilityEnvelope"}
   ],
   "$defs": {
     "schemaVersion": {"const": "2.0.0"},
     "identifier": {"type": "string", "minLength": 1, "maxLength": 512},
     "semver": {
       "type": "string",
-      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*)|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\\.((0|[1-9][0-9]*)|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
     },
     "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "extensions": {
@@ -40,9 +40,15 @@
       },
       "additionalProperties": false
     },
+    "compatibilityEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/compatibility"},
+        {"required": ["kind", "schema_version"]}
+      ]
+    },
     "compatibility": {
       "type": "object",
-      "required": ["kind", "schema_version", "schema_requirement", "required_capabilities", "extensions"],
+      "required": ["schema_requirement"],
       "properties": {
         "kind": {"const": "compatibility"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
@@ -56,9 +62,15 @@
       },
       "additionalProperties": false
     },
+    "capabilityEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/capability"},
+        {"required": ["kind", "schema_version"]}
+      ]
+    },
     "capability": {
       "type": "object",
-      "required": ["kind", "schema_version", "id", "version", "operations", "modes", "network", "degradation", "extensions"],
+      "required": ["id", "version", "operations", "modes", "network", "degradation"],
       "properties": {
         "kind": {"const": "capability"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
@@ -81,23 +93,35 @@
       },
       "additionalProperties": false
     },
+    "executionScopeEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/executionScope"},
+        {"required": ["kind", "schema_version"]}
+      ]
+    },
     "executionScope": {
       "type": "object",
-      "required": ["kind", "schema_version", "execution_id", "node_id", "mode", "observed_at", "extensions"],
+      "required": ["execution_id", "node_id", "mode", "observed_at"],
       "properties": {
         "kind": {"const": "execution_scope"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},
         "execution_id": {"$ref": "#/$defs/identifier"},
         "node_id": {"$ref": "#/$defs/identifier"},
-        "mode": {"$ref": "wct-03.schema.json#/$defs/mode"},
+        "mode": {"$ref": "https://wotex.io/schemas/continuum/wct-03/2.0.0#/$defs/mode"},
         "observed_at": {"type": "string", "format": "date-time"},
         "extensions": {"$ref": "#/$defs/extensions"}
       },
       "additionalProperties": false
     },
+    "manifestEnvelope": {
+      "allOf": [
+        {"$ref": "#/$defs/manifest"},
+        {"required": ["kind", "schema_version"]}
+      ]
+    },
     "manifest": {
       "type": "object",
-      "required": ["kind", "schema_version", "manifest_id", "artifact", "compatibility", "supported_modes", "capabilities", "extensions"],
+      "required": ["manifest_id", "artifact", "compatibility", "supported_modes", "capabilities"],
       "properties": {
         "kind": {"const": "continuum_manifest"},
         "schema_version": {"$ref": "#/$defs/schemaVersion"},

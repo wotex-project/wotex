@@ -1,0 +1,21 @@
+{
+  "description": "Action result completion cannot precede start",
+  "schema": "semantic",
+  "expected": {"code": "invalid_time_order", "phase": "validation", "path": "/completed_at"},
+  "input": {
+    "kind": "action_result",
+    "schema_version": "2.0.0",
+    "result_id": "result-example-bad",
+    "intent_id": "intent-example-bad",
+    "status": "succeeded",
+    "output": null,
+    "started_at": "2026-09-02T10:00:02Z",
+    "completed_at": "2026-09-02T10:00:01Z",
+    "context": {
+      "execution_id": "exec-example-bad",
+      "node_id": "edge-example-a",
+      "mode": {"deployment": "saas", "connectivity": "connected"},
+      "observed_at": "2026-09-02T10:00:01Z"
+    }
+  }
+}
