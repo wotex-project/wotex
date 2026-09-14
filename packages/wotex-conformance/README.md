@@ -159,7 +159,9 @@ mix check
 Package, documentation, audit, and compatibility checks are explicit
 release-readiness work. The
 [runtime compatibility evidence](docs/provenance/runtime-compatibility.md)
-records the tested Elixir and Erlang/OTP cohorts and their limits.
+records the tested Elixir and Erlang/OTP cohorts and their limits. The
+[package input boundary](docs/provenance/package-inputs.md) describes which
+documentation roots enter the Hex archive.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md),
 [SECURITY.md](SECURITY.md), and [GOVERNANCE.md](GOVERNANCE.md). Licensed under

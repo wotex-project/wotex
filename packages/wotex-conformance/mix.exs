@@ -130,6 +130,7 @@ defmodule WotexConformance.MixProject do
         "docs/provenance/assertion-inventory.md": [title: "Assertion inventory"],
         "docs/provenance/archive-consumer.md": [title: "Archive-only consumer"],
         "docs/provenance/external-lifecycle.md": [title: "External target lifecycle"],
+        "docs/provenance/package-inputs.md": [title: "Package inputs"],
         "docs/provenance/runtime-compatibility.md": [title: "Runtime compatibility"],
         "CHANGELOG.md": [title: "Changelog"],
         LICENSE: [title: "License"]
