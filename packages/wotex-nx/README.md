@@ -137,17 +137,32 @@ documentation environments:
 
 ```sh
 WOTEX_PATH_DEPS=1 mix deps.get
-WOTEX_PATH_DEPS=1 mix check
+WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
-The completion gate covers formatting, warnings-as-errors compilation, strict
-Credo, dependency audits, Dialyzer, public documentation, at least 95% line
-coverage, boundary checks, and an isolated roundtrip compiled from the exact
-unpacked Wotex Nx and core archives. Generated archive-consumer work stays in
-the operating-system temporary directory. The archive is built once from an
-external temporary mirror containing local/harness sentinels; source-byte
-identity and sentinel exclusion prove the package allowlist. The path switch
-is never valid in production and never changes package metadata.
+The developer gate covers warnings-as-errors compilation, formatting, and the
+behavioral test suite. Release evidence is run explicitly:
+
+```sh
+WOTEX_PATH_DEPS=1 mix deps.unlock --check-unused
+WOTEX_PATH_DEPS=1 mix deps.audit
+WOTEX_PATH_DEPS=1 mix hex.audit
+WOTEX_PATH_DEPS=1 mix credo --strict
+WOTEX_PATH_DEPS=1 mix doctor
+WOTEX_PATH_DEPS=1 mix docs --warnings-as-errors
+WOTEX_PATH_DEPS=1 MIX_ENV=test mix coveralls
+WOTEX_PATH_DEPS=1 mix dialyzer
+WOTEX_PATH_DEPS=1 elixir bin/check_boundary.exs
+WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive.exs
+git diff --check
+```
+
+The archive lane runs on the declared reference cohort. It compiles an isolated
+consumer from the exact unpacked Wotex Nx and core archives. Generated work
+stays in the operating-system temporary directory. The lane builds the archive
+once from an external temporary mirror containing local and harness sentinels;
+source-byte identity and sentinel exclusion prove the package allowlist. The
+path switch is never valid in production and never changes package metadata.
 
 ## License
 

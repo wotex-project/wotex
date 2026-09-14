@@ -63,18 +63,19 @@ or implementation explicitly before advancing its gate; do not hide the case.
 
 ## Gate definitions
 
-- `repository_green`: the repository's `WOTEX_PATH_DEPS=1 mix check --no-retry` quality
-  alias passes, plus docs and `git diff --check`; record actual constituent
-  commands, coverage and supported runtime. A smaller test command is partial
-  evidence, not the full gate.
+- `repository_green`: the repository's `WOTEX_PATH_DEPS=1 mix check --no-retry`
+  developer gate passes warnings-as-errors compilation, formatting, and
+  behavioral tests. Documentation and `git diff --check` run as explicit
+  evidence; record actual commands, coverage, and supported runtime.
 - `archive_consumer_green`: C03 passes using the exact inspected production
   archive and declared dependencies, with no development path fallback or
   application callback. Record archive SHA-256 and dependency cohort.
 - `reference_consumer_green`: C02/C04 pass through public functions with an
   independent consumer fixture and explicit backend/unit policy for that archive.
-- `public_release_candidate`: preceding gates, C01/C05, license/provenance and
-  bounded claim review pass. Reaching this state does not authorize publishing,
-  tagging or pushing.
+- `public_release_candidate`: preceding gates, C01/C05, dependency audits,
+  Dialyzer, documentation, coverage, boundary and application-callback checks,
+  license/provenance, and bounded claim review pass. Reaching this state does
+  not authorize publishing, tagging or pushing.
 - `stable_api_candidate`: release-candidate proof plus explicit review of all
   value fields, ports, tensor/batch layout, masks, quality codes, tie rules,
   errors and inert outputs; no unresolved advertised compatibility promise.
