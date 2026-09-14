@@ -5,8 +5,10 @@ TLV, the P01 descriptor/report/batch-result value layer, P02 durable SDK
 storage, the P03 first-party persistent controller owner, and P04 finite
 Interaction Model reads, event reads, writes, invokes and Descriptor discovery.
 P05 adds bounded native attribute/event subscription delivery and cancellation.
+P06 adds bounded, explicitly selected subscription recovery and delivery-generation
+retirement.
 The earlier one-shot Python factory adapter remains an injected baseline.
-Recovery and commissioning workflows remain unimplemented.
+Commissioning workflows remain unimplemented.
 
 ## Developer gate
 
@@ -132,13 +134,30 @@ executable peer supplies deterministic native frames; it proves the Port and
 BEAM ownership contract, while P09 still owns a successful independent Matter
 publisher interaction.
 
+## P06 recovery evidence
+
+`WOTEX_PATH_DEPS=1 mix run bin/check_p06_native.exs` extends the same pinned
+normal and ASan/UBSan reconstruction. The C++ subscription test checks that
+recovery is opt-in, attempts are strictly ordered and limited to five, the
+deadline is exactly 60000 ms, each recovery advances delivery generation, old
+generation reports are rejected, attribute snapshots restart, and event identity
+remains deduplicated across a continuity gap. The complete owner compiles against
+the pinned `SendAutoResubscribeRequest`, `OnResubscriptionNeeded` and retry APIs.
+
+`test/wotex/matter/subscription_recovery_test.exs` drives the production BEAM
+Port owner with deterministic native frames. It executes WMA-F09 terminal default
+loss, the opted-in continuity-loss/status transition, a fresh recovered snapshot,
+five-attempt exhaustion and cancellation of generation 2 through the original
+opaque handle. No mutation request is emitted during recovery. This lane does not
+claim gap-free event replay or an independent publisher interaction.
+
 ## Acceptance boundary
 
 [WMA.13](../specs/WMA.13-native-backend.md) defines the complete native binary,
-Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P05 are executed
-at their stated boundaries. P06–P09 still require recovery, commissioning,
-Runtime integration and pinned software-peer workflows. A passing P05 native
-lane does not establish those later claims, physical-device
+Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P06 are executed
+at their stated boundaries. P07–P09 still require commissioning, Runtime
+integration and pinned software-peer workflows. A passing P06 native lane does
+not establish those later claims, physical-device
 behavior, CSA certification or publication readiness.
 
 Each completed native run must bind source, SDK/binary, toolchain and cleanup

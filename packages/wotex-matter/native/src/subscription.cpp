@@ -173,6 +173,29 @@ bool SubscriptionBuffer::Establish(std::uint32_t sdk_subscription_id,
   return true;
 }
 
+bool SubscriptionBuffer::PrepareRecovery(std::uint64_t generation) {
+  if (!active_ || generation == 0 ||
+      generation_ == std::numeric_limits<std::uint64_t>::max() ||
+      generation != generation_ + 1) {
+    active_ = false;
+    return false;
+  }
+  generation_ = generation;
+  report_id_ = 0;
+  sdk_subscription_id_ = 0;
+  revised_min_interval_s_ = 0;
+  revised_max_interval_s_ = 0;
+  in_report_ = false;
+  established_ = false;
+  activated_ = false;
+  buffered_.clear();
+  ready_.clear();
+  current_attribute_paths_.clear();
+  current_event_ids_.clear();
+  initial_attribute_paths_.clear();
+  return true;
+}
+
 void SubscriptionBuffer::Activate() {
   if (!active_ || !established_ || activated_) {
     return;
@@ -192,6 +215,7 @@ void SubscriptionBuffer::Cancel() {
 
 bool SubscriptionBuffer::active() const { return active_; }
 bool SubscriptionBuffer::established() const { return established_; }
+std::uint64_t SubscriptionBuffer::generation() const { return generation_; }
 
 std::vector<SubscriptionReport> SubscriptionBuffer::TakeReady() {
   std::vector<SubscriptionReport> reports;
@@ -236,6 +260,44 @@ bool SubscriptionBuffer::SuppressedDuplicate(const PathResult &result) {
                      });
 }
 
+SubscriptionRecovery::SubscriptionRecovery(bool enabled) : enabled_(enabled) {}
+
+SubscriptionRecovery::Decision SubscriptionRecovery::Next(std::uint64_t now_ms) {
+  if (!enabled_) {
+    return {Action::Disabled, generation_, 0, 0};
+  }
+  if (!recovering_) {
+    if (generation_ == std::numeric_limits<std::uint64_t>::max()) {
+      return {Action::Exhausted, generation_, 0, 0};
+    }
+    recovering_ = true;
+    started_ms_ = now_ms;
+    attempts_ = 0;
+    ++generation_;
+  }
+  const std::uint64_t elapsed = now_ms >= started_ms_ ? now_ms - started_ms_ : 0;
+  if (elapsed >= kMaximumDurationMs || attempts_ >= kMaximumAttempts) {
+    return {Action::Exhausted, generation_, attempts_, 0};
+  }
+  ++attempts_;
+  return {Action::Retry, generation_, attempts_,
+          static_cast<std::uint32_t>(kMaximumDurationMs - elapsed)};
+}
+
+void SubscriptionRecovery::Established() {
+  recovering_ = false;
+  started_ms_ = 0;
+  attempts_ = 0;
+}
+
+void SubscriptionRecovery::Cancel() {
+  enabled_ = false;
+  Established();
+}
+
+bool SubscriptionRecovery::recovering() const { return recovering_; }
+std::uint64_t SubscriptionRecovery::generation() const { return generation_; }
+
 ReportCreditManager::ReportCreditManager(std::string session_generation,
                                          Transmit transmit)
     : session_generation_(std::move(session_generation)),
@@ -250,12 +312,32 @@ bool ReportCreditManager::AddStream(const std::string &subscription_id,
                                     std::uint64_t generation,
                                     std::size_t queue_limit) {
   const std::string key = Key(subscription_id, generation);
+  const std::size_t live_streams =
+      static_cast<std::size_t>(std::count_if(
+          streams_.begin(), streams_.end(),
+          [](const auto &entry) { return entry.second.live; }));
   if (subscription_id.empty() || generation == 0 || queue_limit == 0 ||
-      queue_limit > 10000 || streams_.size() >= 64 || streams_.count(key) != 0) {
+      queue_limit > 10000 || live_streams >= 64 || streams_.size() >= 128 ||
+      streams_.count(key) != 0) {
     return false;
   }
   streams_.emplace(key, Stream{generation, queue_limit});
   return true;
+}
+
+bool ReportCreditManager::BeginRecovery(const std::string &subscription_id,
+                                        std::uint64_t previous_generation,
+                                        std::uint64_t next_generation,
+                                        std::size_t queue_limit,
+                                        std::string barrier) {
+  if (next_generation == 0 || previous_generation == next_generation ||
+      streams_.count(Key(subscription_id, next_generation)) != 0) {
+    return false;
+  }
+  if (!Retire(subscription_id, previous_generation, std::move(barrier))) {
+    return false;
+  }
+  return AddStream(subscription_id, next_generation, queue_limit);
 }
 
 bool ReportCreditManager::CanTransmit(const Stream &stream,

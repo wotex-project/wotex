@@ -241,7 +241,7 @@ defmodule Wotex.Matter.SubscriptionTest do
     refute_receive {:subscription_telemetry, _, _, _}, 50
   end
 
-  test "subscription request boundaries are accepted and P06 recovery remains explicit" do
+  test "subscription request boundaries are accepted" do
     audit = temporary_path("boundaries")
     executable = native_fixture(audit, "quiet")
     assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
@@ -260,13 +260,6 @@ defmodule Wotex.Matter.SubscriptionTest do
              })
 
     assert :ok = Matter.unsubscribe(session, subscription)
-
-    assert {:error, %Error{code: :not_supported}} =
-             Matter.subscribe(session, %{
-               kind: :attribute,
-               paths: [@path],
-               resubscribe: true
-             })
 
     assert Enum.count(audit_frames(audit), &(&1["operation"] == "subscribe")) == 1
     assert :ok = Matter.disconnect(session)

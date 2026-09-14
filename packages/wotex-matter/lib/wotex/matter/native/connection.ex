@@ -182,13 +182,18 @@ defmodule Wotex.Matter.Native.Connection do
           reference: reference,
           native_id: native_id,
           generation: 1,
+          handle_generation: 1,
           receiver: receiver,
           monitor: monitor,
           queue_limit: request.queue_limit,
+          resubscribe: request.resubscribe,
           kind: request.kind,
           paths: request.paths,
           status: :establishing,
           close_result: :cancelled,
+          retiring_generation: nil,
+          retiring_last_report_sequence: nil,
+          recovery_attempt: 0,
           buffered: [],
           last_report_sequence: 0
         }
@@ -510,6 +515,63 @@ defmodule Wotex.Matter.Native.Connection do
   defp decode_async_frame(
          %{
            "version" => 1,
+           "event" => "subscription_status",
+           "session_generation" => session_generation,
+           "subscription_id" => native_id,
+           "generation" => generation,
+           "status" => "resubscribing",
+           "continuity" => "lost",
+           "attempt" => attempt
+         } = frame,
+         _encoded_bytes,
+         state
+       )
+       when map_size(frame) == 8 and is_binary(native_id) and is_integer(generation) and
+              generation > 1 and is_integer(attempt) and attempt in 1..5 do
+    with true <- session_generation == state.generation,
+         {:ok, reference} <- subscription_reference(state, native_id),
+         {:ok, next_state} <- begin_recovery(state, reference, generation, attempt) do
+      {:ok, next_state}
+    else
+      _ -> {:error, Error.new(:invalid_frame)}
+    end
+  end
+
+  defp decode_async_frame(
+         %{
+           "version" => 1,
+           "event" => "subscription_status",
+           "session_generation" => session_generation,
+           "subscription_id" => native_id,
+           "generation" => generation,
+           "status" => "resubscribed",
+           "continuity" => "unknown",
+           "attempt" => attempt,
+           "min_interval_s" => minimum,
+           "max_interval_s" => maximum,
+           "sdk_subscription_id" => sdk_id
+         } = frame,
+         _encoded_bytes,
+         state
+       )
+       when map_size(frame) == 11 and is_binary(native_id) and is_integer(generation) and
+              generation > 1 and is_integer(attempt) and attempt in 1..5 and
+              is_integer(minimum) and minimum in 0..65_535 and is_integer(maximum) and
+              maximum in 1..65_535 and minimum <= maximum and is_integer(sdk_id) and
+              sdk_id in 0..0xFFFFFFFF do
+    with true <- session_generation == state.generation,
+         {:ok, reference} <- Map.fetch(state.subscription_ids, {native_id, generation}),
+         {:ok, next_state} <-
+           finish_recovery(state, reference, generation, attempt, minimum, maximum, sdk_id) do
+      {:ok, next_state}
+    else
+      _ -> {:error, Error.new(:invalid_frame)}
+    end
+  end
+
+  defp decode_async_frame(
+         %{
+           "version" => 1,
            "event" => "subscription_report",
            "session_generation" => session_generation,
            "subscription_id" => native_id,
@@ -558,16 +620,8 @@ defmodule Wotex.Matter.Native.Connection do
     key = {native_id, generation}
 
     with true <- session_generation == state.generation,
-         {:ok, reference} <- Map.fetch(state.subscription_ids, key),
-         %{status: :closing, last_report_sequence: expected_last} <-
-           Map.fetch!(state.subscriptions, reference),
-         true <- last_sequence == expected_last do
-      retired =
-        state
-        |> consume_retired_reports(reference)
-        |> retire_subscription(reference)
-
-      {:ok, retired}
+         {:ok, reference} <- Map.fetch(state.subscription_ids, key) do
+      retire_stream_generation(state, reference, generation, last_sequence)
     else
       _ -> {:error, Error.new(:invalid_frame)}
     end
@@ -605,7 +659,7 @@ defmodule Wotex.Matter.Native.Connection do
          {:ok, reference} <- Map.fetch(state.subscription_ids, key),
          {:ok, error} <- Wire.error(raw_error),
          %{status: status} = subscription <- Map.fetch!(state.subscriptions, reference),
-         true <- status in [:active, :establishing] do
+         true <- status in [:active, :establishing, :recovering] do
       send(subscription.receiver, {:wotex_matter, reference, {:error, error}})
 
       closing =
@@ -685,7 +739,7 @@ defmodule Wotex.Matter.Native.Connection do
     handle = %Subscription{
       pid: self(),
       reference: subscription.reference,
-      generation: generation
+      generation: subscription.handle_generation
     }
 
     {:ok, handle, active}
@@ -706,6 +760,138 @@ defmodule Wotex.Matter.Native.Connection do
     }
   end
 
+  defp subscription_reference(state, native_id) do
+    references =
+      for {reference, %{native_id: ^native_id}} <- state.subscriptions,
+          do: reference
+
+    case references do
+      [reference] -> {:ok, reference}
+      _ -> :error
+    end
+  end
+
+  defp begin_recovery(state, reference, generation, attempt) do
+    subscription = Map.fetch!(state.subscriptions, reference)
+
+    cond do
+      subscription.resubscribe and subscription.status == :active and
+        generation == subscription.generation + 1 and
+        attempt == 1 and is_nil(subscription.retiring_generation) ->
+        recovering = %{
+          subscription
+          | status: :recovering,
+            retiring_generation: subscription.generation,
+            retiring_last_report_sequence: subscription.last_report_sequence,
+            generation: generation,
+            recovery_attempt: attempt,
+            last_report_sequence: 0
+        }
+
+        transitioned =
+          state
+          |> put_in([:subscriptions, reference], recovering)
+          |> put_in([:subscription_ids, {subscription.native_id, generation}], reference)
+
+        deliver_subscription_status(transitioned, reference, :resubscribing, %{
+          continuity: :lost,
+          generation: generation,
+          attempt: attempt
+        })
+
+      subscription.status == :recovering and generation == subscription.generation and
+          attempt == subscription.recovery_attempt + 1 ->
+        recovering = put_in(state.subscriptions[reference].recovery_attempt, attempt)
+
+        deliver_subscription_status(recovering, reference, :resubscribing, %{
+          continuity: :lost,
+          generation: generation,
+          attempt: attempt
+        })
+
+      true ->
+        :error
+    end
+  end
+
+  defp finish_recovery(state, reference, generation, attempt, minimum, maximum, sdk_id) do
+    subscription = Map.fetch!(state.subscriptions, reference)
+
+    if subscription.status == :recovering and generation == subscription.generation and
+         attempt == subscription.recovery_attempt and is_nil(subscription.retiring_generation) do
+      case deliver_subscription_status(state, reference, :resubscribed, %{
+             continuity: :unknown,
+             generation: generation,
+             attempt: attempt,
+             min_interval_s: minimum,
+             max_interval_s: maximum,
+             sdk_subscription_id: sdk_id
+           }) do
+        {:ok, delivered} ->
+          active =
+            delivered
+            |> put_in([:subscriptions, reference, :status], :active)
+            |> put_in([:subscriptions, reference, :min_interval_s], minimum)
+            |> put_in([:subscriptions, reference, :max_interval_s], maximum)
+            |> put_in([:subscriptions, reference, :sdk_subscription_id], sdk_id)
+
+          {:ok, active}
+
+        {:overflow, closing} ->
+          {:ok, closing}
+      end
+    else
+      :error
+    end
+  end
+
+  defp deliver_subscription_status(state, reference, status, metadata) do
+    subscription = Map.fetch!(state.subscriptions, reference)
+
+    case Process.info(subscription.receiver, :message_queue_len) do
+      {:message_queue_len, length} when length < subscription.queue_limit ->
+        send(subscription.receiver, {:wotex_matter, reference, {:status, status, metadata}})
+        emit_subscription(:deliver, subscription.kind, status)
+        {:ok, state}
+
+      _ ->
+        error = Error.new(:receiver_overflow)
+        send(subscription.receiver, {:wotex_matter, reference, {:error, error}})
+        {:overflow, cancel_subscription(state, reference, :receiver_overflow)}
+    end
+  end
+
+  defp retire_stream_generation(state, reference, generation, last_sequence) do
+    subscription = Map.fetch!(state.subscriptions, reference)
+
+    cond do
+      subscription.retiring_generation == generation and
+        subscription.retiring_last_report_sequence == last_sequence and
+          subscription.status in [:recovering, :closing] ->
+        transitioned =
+          state
+          |> consume_retired_reports(reference)
+          |> update_in([:subscription_ids], &Map.delete(&1, {subscription.native_id, generation}))
+          |> put_in([:subscriptions, reference, :retiring_generation], nil)
+          |> put_in([:subscriptions, reference, :retiring_last_report_sequence], nil)
+
+        {:ok, transitioned}
+
+      subscription.status == :closing and subscription.generation == generation and
+        subscription.last_report_sequence == last_sequence and
+          is_nil(subscription.retiring_generation) ->
+        retired =
+          state
+          |> consume_retired_reports(reference)
+          |> retire_subscription(reference)
+
+        {:ok, retired}
+
+      true ->
+        {:error, Error.new(:invalid_frame)}
+    end
+  end
+
   defp drop_subscription(state, reference) do
     case Map.pop(state.subscriptions, reference) do
       {nil, _} ->
@@ -713,12 +899,16 @@ defmodule Wotex.Matter.Native.Connection do
 
       {subscription, subscriptions} ->
         Process.demonitor(subscription.monitor, [:flush])
-        key = {subscription.native_id, subscription.generation}
+
+        subscription_ids =
+          state.subscription_ids
+          |> Enum.reject(fn {_key, owner} -> owner == reference end)
+          |> Map.new()
 
         %{
           state
           | subscriptions: subscriptions,
-            subscription_ids: Map.delete(state.subscription_ids, key),
+            subscription_ids: subscription_ids,
             subscription_monitors: Map.delete(state.subscription_monitors, subscription.monitor)
         }
     end
@@ -747,7 +937,7 @@ defmodule Wotex.Matter.Native.Connection do
 
       true ->
         case Map.fetch(state.subscriptions, subscription.reference) do
-          {:ok, current} when current.generation == subscription.generation -> :ok
+          {:ok, current} when current.handle_generation == subscription.generation -> :ok
           _ -> :error
         end
     end
@@ -777,6 +967,9 @@ defmodule Wotex.Matter.Native.Connection do
 
       subscription.status == :closing ->
         {:ok, acknowledge_report(state, sequence, encoded_bytes)}
+
+      true ->
+        {:error, Error.new(:invalid_frame)}
     end
   end
 
@@ -911,7 +1104,8 @@ defmodule Wotex.Matter.Native.Connection do
 
   defp cancel_subscription(state, reference, result) do
     case Map.fetch(state.subscriptions, reference) do
-      {:ok, %{status: status} = subscription} when status in [:active, :establishing] ->
+      {:ok, %{status: status} = subscription}
+      when status in [:active, :establishing, :recovering] ->
         id = Integer.to_string(state.next_id)
 
         frame = %{

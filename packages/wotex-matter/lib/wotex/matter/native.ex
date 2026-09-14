@@ -152,14 +152,12 @@ defmodule Wotex.Matter.Native do
          true <- is_integer(request.max_interval_s) and request.max_interval_s in 1..65_535,
          true <- request.min_interval_s <= request.max_interval_s,
          true <- is_boolean(request.resubscribe),
-         false <- request.resubscribe,
          true <- is_integer(request.queue_limit) and request.queue_limit in 1..10_000,
          {:ok, paths} <- validate_subscription_paths(request.paths, kind, fabric_id),
          true <- length(paths) == length(Enum.uniq(paths)) do
       {:ok, %{request | paths: paths}}
     else
       {:error, %Error{}} = error -> error
-      true -> {:error, Error.new(:not_supported)}
       _ -> {:error, Error.new(:invalid_subscription)}
     end
   end

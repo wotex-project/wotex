@@ -17,7 +17,8 @@ class SdkControllerBackend final : public ControllerBackend {
 
   BackendResult Open(const NativeOpenOptions &options) override;
   InteractionResponse Interact(const InteractionRequest &request) override;
-  void SetSubscriptionSinks(ReportSink report, FailureSink failure) override;
+  void SetSubscriptionSinks(ReportSink report, StatusSink status,
+                            FailureSink failure) override;
   SubscriptionResponse Subscribe(const SubscriptionRequest &request) override;
   bool ActivateSubscription(const std::string &subscription_id,
                             std::uint64_t generation) override;

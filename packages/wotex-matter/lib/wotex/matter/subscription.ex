@@ -2,9 +2,11 @@ defmodule Wotex.Matter.Subscription do
   @moduledoc """
   Opaque handle for one established Matter attribute or event subscription.
 
-  A handle is valid only for the owning connection process and delivery
-  generation. Its process identity and reference are intentionally omitted
-  from inspection output. Use `Wotex.Matter.unsubscribe/2` for cleanup.
+  A handle is valid only for the owning connection process and logical
+  subscription generation. An opted-in native recovery can advance the delivery
+  generation without invalidating this handle. Its process identity and
+  reference are intentionally omitted from inspection output. Use
+  `Wotex.Matter.unsubscribe/2` for cleanup.
   """
 
   @derive {Inspect, only: [:generation]}

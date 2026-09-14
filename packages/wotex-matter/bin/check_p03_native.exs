@@ -776,11 +776,13 @@ defmodule Wotex.Matter.Check.P03Native do
         "bin/check_p03_native.exs",
         "bin/check_p04_native.exs",
         "bin/check_p05_native.exs",
+        "bin/check_p06_native.exs",
         "lib/**/*.ex",
         "native/**/*",
         "test/native/*.cpp",
         "test/wotex/matter/interaction_test.exs",
         "test/wotex/matter/persistent_bridge_test.exs",
+        "test/wotex/matter/subscription_recovery_test.exs",
         "test/wotex/matter/subscription_test.exs"
       ]
       |> Enum.flat_map(&Path.wildcard(Path.join(source, &1)))

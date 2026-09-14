@@ -389,9 +389,11 @@ class SdkControllerBackend::Impl final {
 
   InteractionResponse Interact(const InteractionRequest &request);
   void SetSubscriptionSinks(ControllerBackend::ReportSink report,
+                            ControllerBackend::StatusSink status,
                             ControllerBackend::FailureSink failure) {
     std::lock_guard<std::mutex> lock(sink_mutex_);
     report_sink_ = std::move(report);
+    status_sink_ = std::move(status);
     failure_sink_ = std::move(failure);
   }
   SubscriptionResponse Subscribe(const SubscriptionRequest &request);
@@ -897,6 +899,7 @@ class SdkControllerBackend::Impl final {
 
     NativeSubscription(Impl &owner, SubscriptionRequest request)
         : owner_(owner), request_(std::move(request)), buffer_(request_),
+          recovery_(request_.resubscribe),
           started_(std::chrono::steady_clock::now()),
           connected_(&Connected, this), connection_failed_(&ConnectionFailed, this) {}
 
@@ -953,7 +956,10 @@ class SdkControllerBackend::Impl final {
     }
 
     const std::string &id() const { return request_.subscription_id; }
-    std::uint64_t generation() const { return generation_; }
+    std::uint64_t generation() const {
+      std::lock_guard<std::mutex> lock(mutex_);
+      return recovery_.generation();
+    }
 
     void CancelOnSdkThread() {
       connected_.Cancel();
@@ -961,8 +967,10 @@ class SdkControllerBackend::Impl final {
       {
         std::lock_guard<std::mutex> lock(mutex_);
         cancelled_ = true;
+        recovery_.Cancel();
         buffer_.Cancel();
       }
+      CancelRecoveryTimer();
       read_client_.reset();
       MarkDone();
     }
@@ -1018,7 +1026,10 @@ class SdkControllerBackend::Impl final {
         params.mEventPathParamsListSize = event_paths_.size();
       }
 
-      if (read_client_->SendRequest(params) != CHIP_NO_ERROR) {
+      const CHIP_ERROR error = request_.resubscribe
+          ? read_client_->SendAutoResubscribeRequest(std::move(params))
+          : read_client_->SendRequest(params);
+      if (error != CHIP_NO_ERROR) {
         read_client_.reset();
         PublishFailure("subscription_submit_failed");
         MarkDone();
@@ -1102,32 +1113,125 @@ class SdkControllerBackend::Impl final {
     void OnSubscriptionEstablished(chip::SubscriptionId id) override {
       std::uint16_t minimum = 0;
       std::uint16_t maximum = 0;
+      bool previously_established = false;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        previously_established = response_.ok;
+      }
       if (read_client_ == nullptr ||
           read_client_->GetReportingIntervals(minimum, maximum) != CHIP_NO_ERROR) {
-        PublishFailure("invalid_subscription_result");
-        ScheduleCancel();
+        if (previously_established) {
+          FailActive(InteractionError{"invalid_subscription_result"});
+        } else {
+          PublishFailure("invalid_subscription_result");
+          ScheduleCancel();
+        }
         return;
       }
 
+      bool recovering = false;
+      bool established = false;
+      std::uint8_t attempt = 0;
+      std::uint64_t generation = 0;
+      std::vector<SubscriptionReport> reports;
       {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (!buffer_.Establish(static_cast<std::uint32_t>(id), minimum, maximum)) {
+        recovering = recovery_.recovering();
+        established =
+            buffer_.Establish(static_cast<std::uint32_t>(id), minimum, maximum);
+        if (!established && !recovering) {
           response_.error_code = "invalid_subscription_result";
           published_ = true;
           condition_.notify_one();
           ScheduleCancelLocked();
           return;
         }
-        response_ = {true, {}, request_.subscription_id, generation_, minimum,
+        attempt = recovery_attempt_;
+        generation = recovery_.generation();
+        if (established && recovering) {
+          buffer_.Activate();
+          reports = buffer_.TakeReady();
+        }
+      }
+
+      if (!established) {
+        FailActive(InteractionError{"invalid_subscription_result"});
+        return;
+      }
+
+      if (recovering) {
+        CancelRecoveryTimer();
+        SubscriptionStatus status{request_.subscription_id,
+                                  generation,
+                                  SubscriptionStatusKind::Resubscribed,
+                                  SubscriptionContinuity::Unknown,
+                                  attempt,
+                                  minimum,
+                                  maximum,
+                                  static_cast<std::uint32_t>(id)};
+        if (!owner_.EmitStatus(status)) {
+          FailActive(InteractionError{"subscription_unavailable"});
+          return;
+        }
+        {
+          std::lock_guard<std::mutex> lock(mutex_);
+          recovery_.Established();
+        }
+        (void) Emit(std::move(reports));
+        return;
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        response_ = {true, {}, request_.subscription_id, buffer_.generation(), minimum,
                      maximum, static_cast<std::uint32_t>(id)};
         published_ = true;
       }
       condition_.notify_one();
     }
 
-    CHIP_ERROR OnResubscriptionNeeded(chip::app::ReadClient *,
-                                      CHIP_ERROR) override {
-      return CHIP_ERROR_CANCELLED;
+    CHIP_ERROR OnResubscriptionNeeded(chip::app::ReadClient *client,
+                                      CHIP_ERROR termination) override {
+      SubscriptionRecovery::Decision decision;
+      bool prepared = true;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!response_.ok || cancelled_ || done_) {
+          return CHIP_ERROR_CANCELLED;
+        }
+        decision = recovery_.Next(NowMs());
+        if (decision.action == SubscriptionRecovery::Action::Retry &&
+            decision.attempt == 1) {
+          prepared = buffer_.PrepareRecovery(decision.generation);
+        }
+        recovery_attempt_ = decision.attempt;
+      }
+      if (!prepared ||
+          decision.action != SubscriptionRecovery::Action::Retry) {
+        FailActive(InteractionError{"session_lost"});
+        return CHIP_ERROR_CANCELLED;
+      }
+      if (decision.attempt == 1 &&
+          chip::DeviceLayer::SystemLayer().StartTimer(
+              chip::System::Clock::Milliseconds32(decision.remaining_ms),
+              RecoveryDeadline, this) != CHIP_NO_ERROR) {
+        FailActive(InteractionError{"subscription_unavailable"});
+        return CHIP_ERROR_CANCELLED;
+      }
+      recovery_timer_active_ = true;
+      SubscriptionStatus status{request_.subscription_id,
+                                decision.generation,
+                                SubscriptionStatusKind::Resubscribing,
+                                SubscriptionContinuity::Lost,
+                                decision.attempt};
+      if (!owner_.EmitStatus(status)) {
+        FailActive(InteractionError{"subscription_unavailable"});
+        return CHIP_ERROR_CANCELLED;
+      }
+      const std::uint32_t delay = std::min(
+          client->ComputeTimeTillNextSubscription(), decision.remaining_ms - 1);
+      return client->ScheduleResubscription(
+          delay, chip::NullOptional, termination == CHIP_ERROR_TIMEOUT);
     }
 
     void OnError(CHIP_ERROR) override {
@@ -1135,6 +1239,7 @@ class SdkControllerBackend::Impl final {
     }
 
     void OnDone(chip::app::ReadClient *) override {
+      CancelRecoveryTimer();
       read_client_.reset();
       bool terminal = false;
       {
@@ -1170,6 +1275,7 @@ class SdkControllerBackend::Impl final {
 
     void FailActive(InteractionError error) {
       bool emit = false;
+      std::uint64_t generation = 0;
       {
         std::lock_guard<std::mutex> lock(mutex_);
         if (failure_emitted_) {
@@ -1179,6 +1285,7 @@ class SdkControllerBackend::Impl final {
         buffer_.Cancel();
         if (response_.ok) {
           emit = true;
+          generation = recovery_.generation();
         } else if (!published_) {
           response_.error_code = error.code;
           published_ = true;
@@ -1186,7 +1293,7 @@ class SdkControllerBackend::Impl final {
       }
       condition_.notify_one();
       if (emit) {
-        owner_.EmitFailure(request_.subscription_id, generation_, error);
+        owner_.EmitFailure(request_.subscription_id, generation, error);
       }
       ScheduleCancel();
     }
@@ -1234,6 +1341,26 @@ class SdkControllerBackend::Impl final {
           ReapSubscription, reinterpret_cast<intptr_t>(this));
     }
 
+    static void RecoveryDeadline(chip::System::Layer *, void *context) {
+      auto *self = static_cast<NativeSubscription *>(context);
+      self->recovery_timer_active_ = false;
+      self->FailActive(InteractionError{"session_lost"});
+    }
+
+    void CancelRecoveryTimer() {
+      if (recovery_timer_active_) {
+        chip::DeviceLayer::SystemLayer().CancelTimer(RecoveryDeadline, this);
+        recovery_timer_active_ = false;
+      }
+    }
+
+    static std::uint64_t NowMs() {
+      return static_cast<std::uint64_t>(
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::steady_clock::now().time_since_epoch())
+              .count());
+    }
+
     std::uint32_t Remaining() const {
       const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::steady_clock::now() - started_);
@@ -1244,16 +1371,18 @@ class SdkControllerBackend::Impl final {
     Impl &owner_;
     SubscriptionRequest request_;
     SubscriptionBuffer buffer_;
+    SubscriptionRecovery recovery_;
     std::chrono::steady_clock::time_point started_;
     mutable std::mutex mutex_;
     std::condition_variable condition_;
     SubscriptionResponse response_;
-    std::uint64_t generation_{1};
     bool published_{false};
     bool cancelled_{false};
     bool failure_emitted_{false};
     bool cancel_scheduled_{false};
     bool done_{false};
+    bool recovery_timer_active_{false};
+    std::uint8_t recovery_attempt_{0};
     chip::Callback::Callback<chip::OnDeviceConnected> connected_;
     chip::Callback::Callback<chip::OnDeviceConnectionFailure> connection_failed_;
     std::unique_ptr<chip::app::ReadClient> read_client_;
@@ -1311,6 +1440,15 @@ class SdkControllerBackend::Impl final {
       sink = report_sink_;
     }
     return sink && sink(report);
+  }
+
+  bool EmitStatus(const SubscriptionStatus &status) {
+    ControllerBackend::StatusSink sink;
+    {
+      std::lock_guard<std::mutex> lock(sink_mutex_);
+      sink = status_sink_;
+    }
+    return sink && sink(status);
   }
 
   void EmitFailure(const std::string &subscription_id,
@@ -1527,6 +1665,7 @@ class SdkControllerBackend::Impl final {
   std::vector<std::shared_ptr<NativeSubscription>> subscriptions_;
   std::mutex sink_mutex_;
   ControllerBackend::ReportSink report_sink_;
+  ControllerBackend::StatusSink status_sink_;
   ControllerBackend::FailureSink failure_sink_;
 };
 
@@ -1571,11 +1710,6 @@ SubscriptionResponse SdkControllerBackend::Impl::Subscribe(
     SubscriptionResponse invalid;
     invalid.error_code = "invalid_request";
     return invalid;
-  }
-  if (request.resubscribe) {
-    SubscriptionResponse unsupported;
-    unsupported.error_code = "not_supported";
-    return unsupported;
   }
 
   std::shared_ptr<NativeSubscription> subscription;
@@ -1662,8 +1796,10 @@ InteractionResponse SdkControllerBackend::Interact(
 }
 
 void SdkControllerBackend::SetSubscriptionSinks(ReportSink report,
+                                                StatusSink status,
                                                 FailureSink failure) {
-  impl_->SetSubscriptionSinks(std::move(report), std::move(failure));
+  impl_->SetSubscriptionSinks(std::move(report), std::move(status),
+                              std::move(failure));
 }
 
 SubscriptionResponse SdkControllerBackend::Subscribe(

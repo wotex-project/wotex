@@ -802,6 +802,7 @@ HostProtocol::HostProtocol(ControllerBackend &backend)
     : backend_(backend), output_sink_([](const std::string &) { return true; }) {
   backend_.SetSubscriptionSinks(
       [this](const SubscriptionReport &report) { return EmitReport(report); },
+      [this](const SubscriptionStatus &status) { return EmitStatus(status); },
       [this](const std::string &id, std::uint64_t generation,
              const InteractionError &error) {
         EmitFailure(id, generation, error);
@@ -963,6 +964,12 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
       admitted = report_flow_ &&
           report_flow_->AddStream(response.subscription_id, response.generation,
                                   subscription.queue_limit);
+      if (admitted) {
+        subscriptions_.emplace(
+            response.subscription_id,
+            ActiveSubscription{response.generation, subscription.queue_limit,
+                               subscription.resubscribe, false, 0});
+      }
     }
     if (!admitted) {
         backend_.CancelSubscription(response.subscription_id,
@@ -1014,6 +1021,10 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
     if (!retired) {
       Close();
       return {};
+    }
+    {
+      std::lock_guard<std::mutex> lock(subscription_mutex_);
+      subscriptions_.erase(subscription_id);
     }
     return {true, Success(request, nullptr)};
   }
@@ -1108,8 +1119,96 @@ bool HostProtocol::EmitReport(const SubscriptionReport &report) {
             .dump();
     (void) report_flow_->Retire(report.subscription_id, report.generation,
                                barrier);
+    subscriptions_.erase(report.subscription_id);
   }
   return false;
+}
+
+bool HostProtocol::EmitStatus(const SubscriptionStatus &status) {
+  std::lock_guard<std::mutex> lock(subscription_mutex_);
+  if (state_ != State::Open || !report_flow_ || status.subscription_id.empty() ||
+      status.generation == 0 || status.attempt == 0 || status.attempt > 5) {
+    return false;
+  }
+  auto active = subscriptions_.find(status.subscription_id);
+  if (active == subscriptions_.end() || !active->second.resubscribe) {
+    return false;
+  }
+
+  if (status.status == SubscriptionStatusKind::Resubscribing) {
+    const std::uint64_t previous = active->second.generation;
+    const bool first = !active->second.recovering;
+    if ((first && (previous == std::numeric_limits<std::uint64_t>::max() ||
+                   status.generation != previous + 1 || status.attempt != 1)) ||
+        (!first && (status.generation != previous ||
+                    status.attempt != active->second.recovery_attempt + 1)) ||
+        status.continuity != SubscriptionContinuity::Lost) {
+      return false;
+    }
+    const std::string frame =
+        Json{{"version", kProtocolVersion},
+             {"event", "subscription_status"},
+             {"session_generation", session_generation_},
+             {"subscription_id", status.subscription_id},
+             {"generation", status.generation},
+             {"status", "resubscribing"},
+             {"continuity", "lost"},
+             {"attempt", status.attempt}}
+            .dump();
+    if (!output_sink_(frame)) {
+      return false;
+    }
+    if (first) {
+      const std::uint64_t last = report_flow_->last_transmitted(
+          status.subscription_id, previous);
+      const std::string barrier =
+          Json{{"version", kProtocolVersion},
+               {"event", "stream_retired"},
+               {"session_generation", session_generation_},
+               {"subscription_id", status.subscription_id},
+               {"generation", previous},
+               {"last_report_sequence", last}}
+              .dump();
+      if (!report_flow_->BeginRecovery(status.subscription_id, previous,
+                                       status.generation,
+                                       active->second.queue_limit, barrier)) {
+        return false;
+      }
+      active->second.generation = status.generation;
+      active->second.recovering = true;
+    }
+    active->second.recovery_attempt = status.attempt;
+    return true;
+  }
+
+  if (status.status != SubscriptionStatusKind::Resubscribed ||
+      !active->second.recovering ||
+      active->second.generation != status.generation ||
+      active->second.recovery_attempt != status.attempt ||
+      status.continuity != SubscriptionContinuity::Unknown ||
+      status.max_interval_s == 0 ||
+      status.min_interval_s > status.max_interval_s) {
+    return false;
+  }
+  const std::string frame =
+      Json{{"version", kProtocolVersion},
+           {"event", "subscription_status"},
+           {"session_generation", session_generation_},
+           {"subscription_id", status.subscription_id},
+           {"generation", status.generation},
+           {"status", "resubscribed"},
+           {"continuity", "unknown"},
+           {"attempt", status.attempt},
+           {"min_interval_s", status.min_interval_s},
+           {"max_interval_s", status.max_interval_s},
+           {"sdk_subscription_id", status.sdk_subscription_id}}
+          .dump();
+  if (!output_sink_(frame)) {
+    return false;
+  }
+  active->second.recovering = false;
+  active->second.recovery_attempt = 0;
+  return true;
 }
 
 void HostProtocol::EmitFailure(const std::string &subscription_id,
@@ -1142,6 +1241,7 @@ void HostProtocol::EmitFailure(const std::string &subscription_id,
            {"last_report_sequence", last}}
           .dump();
   (void) report_flow_->Retire(subscription_id, generation, barrier);
+  subscriptions_.erase(subscription_id);
 }
 
 void HostProtocol::Close() {
@@ -1155,10 +1255,11 @@ void HostProtocol::Close() {
   if (backend_.IsOpen()) {
     backend_.Close();
   }
-  backend_.SetSubscriptionSinks({}, {});
+  backend_.SetSubscriptionSinks({}, {}, {});
   {
     std::lock_guard<std::mutex> lock(subscription_mutex_);
     report_flow_.reset();
+    subscriptions_.clear();
   }
 }
 

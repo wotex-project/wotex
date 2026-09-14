@@ -47,13 +47,14 @@ CASE interactions and subscriptions. P03 implements the controller owner,
 durable authority, production attestation verifier and framed Port. P04 adds
 finite reads, event reads, writes and invokes through the generated SDK bindings.
 P05 adds attribute/event subscriptions, bounded report credit, monitored
-receivers and callback-safe cancellation. Explicit recovery and commissioning
-remain later work packages.
+receivers and callback-safe cancellation. P06 adds explicitly selected,
+bounded recovery with observable continuity loss. Commissioning remains a later
+work package.
 The current Python factory adapter remains a separate narrow baseline.
 
 [WMA.13](docs/specs/WMA.13-native-backend.md) fixes source/build pins, typed IPC,
-flow control and native ownership. `mix run bin/check_p05_native.exs` rebuilds
-and tests the P05 host in a disposable pinned Linux environment. The later
+flow control and native ownership. `mix run bin/check_p06_native.exs` rebuilds
+and tests the P06 host in a disposable pinned Linux environment. The later
 `mix wotex.native.build`, `mix wotex.software.build` and
 `mix wotex.software.run` commands remain specified implementation work. Upstream
 SDK Python is used only while generating and building native SDK sources.
@@ -84,9 +85,11 @@ Port. P04 uses that controller for bounded Interaction Model operations and
 Descriptor discovery. P05 uses a subscription `ReadClient` for concrete
 attribute/event paths, retains revised intervals and report identity, bounds
 native/BEAM delivery, and retires callbacks on cancel, receiver death or
-overflow. Loading the library starts no process or native executable. P06–P09
-still own recovery, commissioning workflows, Runtime integration and
-software-peer proof.
+overflow. P06 uses SDK automatic resubscription only when requested, limits a
+recovery window to five attempts and 60 seconds, advances delivery generation,
+and reports that continuity was lost before a fresh initial snapshot. Loading
+the library starts no process or native executable. P07–P09 still own
+commissioning workflows, Runtime integration and software-peer proof.
 
 ## Quick start
 
@@ -190,8 +193,14 @@ end
 :ok = Wotex.Matter.unsubscribe(session, subscription)
 ```
 
+With `resubscribe: true`, the receiver first gets
+`{:status, :resubscribing, %{continuity: :lost, generation: generation, attempt: attempt}}`.
+A successful retry then sends `{:status, :resubscribed, %{continuity: :unknown, ...}}`
+before the new initial snapshot. The original opaque handle remains valid for
+cancellation. Recovery does not claim event replay or gap-free continuity.
+
 The SDK adapter forwards explicit `timed_request_timeout_ms` for writes/invokes.
-Opt-in subscription recovery and full device qualification need further integration.
+Full device qualification needs further integration.
 The current `member` field enforces
 width and excludes the wildcard; the driver must validate attribute/command
 semantics against its pinned data model. No CSA certification is claimed.
@@ -260,7 +269,8 @@ defines the supplied backend, exact native APIs and end-to-end workflows.
 Its [concrete corpus](docs/specs/fixtures/contract-v1.json) is partially executed:
 the P01 pure cases run in the default suite, the WMA-F07 controller lifecycle
 cases run in the separate P03 native lane, WMA-F11 runs with P04, and the WMA-F08
-delivery/cancellation projection runs with P05. A pinned software peer and
+delivery/cancellation projection runs with P05. WMA-F09 default terminal loss and
+the explicit recovery transition run with P06. A pinned software peer and
 commissioning remain unexecuted; P09 owns the independent subscription peer. The
 scenario tables alone are not executable acceptance evidence.
 

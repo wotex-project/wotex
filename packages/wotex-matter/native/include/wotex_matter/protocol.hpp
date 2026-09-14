@@ -12,6 +12,7 @@
 #include <optional>
 #include <ostream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 namespace wotex::matter {
@@ -42,6 +43,7 @@ struct BackendResult {
 class ControllerBackend {
  public:
   using ReportSink = std::function<bool(const SubscriptionReport &)>;
+  using StatusSink = std::function<bool(const SubscriptionStatus &)>;
   using FailureSink =
       std::function<void(const std::string &, std::uint64_t,
                          const InteractionError &)>;
@@ -49,7 +51,7 @@ class ControllerBackend {
   virtual ~ControllerBackend() = default;
   virtual BackendResult Open(const NativeOpenOptions &options) = 0;
   virtual InteractionResponse Interact(const InteractionRequest &request) = 0;
-  virtual void SetSubscriptionSinks(ReportSink, FailureSink) {}
+  virtual void SetSubscriptionSinks(ReportSink, StatusSink, FailureSink) {}
   virtual SubscriptionResponse Subscribe(const SubscriptionRequest &) {
     SubscriptionResponse result;
     result.error_code = "not_supported";
@@ -109,7 +111,17 @@ class HostProtocol final {
   std::uint64_t greatest_request_id_{0};
   std::uint64_t fabric_id_{0};
 
+  struct ActiveSubscription {
+    std::uint64_t generation{0};
+    std::size_t queue_limit{0};
+    bool resubscribe{false};
+    bool recovering{false};
+    std::uint8_t recovery_attempt{0};
+  };
+  std::unordered_map<std::string, ActiveSubscription> subscriptions_;
+
   bool EmitReport(const SubscriptionReport &report);
+  bool EmitStatus(const SubscriptionStatus &status);
   void EmitFailure(const std::string &subscription_id, std::uint64_t generation,
                    const InteractionError &error);
 };

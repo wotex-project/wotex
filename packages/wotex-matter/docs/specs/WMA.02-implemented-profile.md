@@ -64,7 +64,14 @@ identity. The native host applies global frame/byte credit and per-stream credit
 the BEAM owner monitors the receiver, checks its queue before delivery and
 cancels on receiver death or overflow. Cancellation retires the stream before
 success and old-generation callbacks cannot deliver. Automatic recovery remains
-disabled; P06 owns the bounded opt-in recovery policy. Commissioning remains
+disabled by default.
+
+P06 enables recovery only for `resubscribe: true`. It emits a continuity-loss
+status, retires the previous delivery generation, and permits at most five SDK
+attempts within 60 seconds. Success emits `:resubscribed` with unknown continuity
+before a fresh initial snapshot. The public handle remains valid across delivery
+generations, while cancellation, receiver death and overflow detach the live SDK
+retry state. Recovery never replays writes or invokes. Commissioning remains
 unavailable.
 
 `Client` is a consumer-implemented driver contract. It must use a pinned real SDK,

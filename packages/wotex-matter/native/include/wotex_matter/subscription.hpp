@@ -50,6 +50,20 @@ struct SubscriptionReport {
   std::uint32_t sdk_subscription_id{0};
 };
 
+enum class SubscriptionStatusKind { Resubscribing, Resubscribed };
+enum class SubscriptionContinuity { Lost, Unknown };
+
+struct SubscriptionStatus {
+  std::string subscription_id;
+  std::uint64_t generation{0};
+  SubscriptionStatusKind status{SubscriptionStatusKind::Resubscribing};
+  SubscriptionContinuity continuity{SubscriptionContinuity::Lost};
+  std::uint8_t attempt{0};
+  std::uint16_t min_interval_s{0};
+  std::uint16_t max_interval_s{0};
+  std::uint32_t sdk_subscription_id{0};
+};
+
 bool valid_subscription_request(const SubscriptionRequest &request);
 bool valid_subscription_report(const SubscriptionRequest &request,
                                const SubscriptionReport &report);
@@ -64,10 +78,12 @@ class SubscriptionBuffer final {
   bool Establish(std::uint32_t sdk_subscription_id,
                  std::uint16_t revised_min_interval_s,
                  std::uint16_t revised_max_interval_s);
+  bool PrepareRecovery(std::uint64_t generation);
   void Activate();
   void Cancel();
   bool active() const;
   bool established() const;
+  std::uint64_t generation() const;
   std::vector<SubscriptionReport> TakeReady();
 
  private:
@@ -92,6 +108,35 @@ class SubscriptionBuffer final {
   bool active_{true};
 };
 
+class SubscriptionRecovery final {
+ public:
+  enum class Action { Disabled, Retry, Exhausted };
+
+  struct Decision {
+    Action action{Action::Disabled};
+    std::uint64_t generation{1};
+    std::uint8_t attempt{0};
+    std::uint32_t remaining_ms{0};
+  };
+
+  explicit SubscriptionRecovery(bool enabled);
+  Decision Next(std::uint64_t now_ms);
+  void Established();
+  void Cancel();
+  bool recovering() const;
+  std::uint64_t generation() const;
+
+ private:
+  static constexpr std::uint8_t kMaximumAttempts = 5;
+  static constexpr std::uint32_t kMaximumDurationMs = 60000;
+
+  bool enabled_{false};
+  bool recovering_{false};
+  std::uint64_t started_ms_{0};
+  std::uint64_t generation_{1};
+  std::uint8_t attempts_{0};
+};
+
 class ReportCreditManager final {
  public:
   enum class SubmitResult { Transmitted, Queued, StreamOverflow, Invalid };
@@ -100,6 +145,10 @@ class ReportCreditManager final {
   ReportCreditManager(std::string session_generation, Transmit transmit);
   bool AddStream(const std::string &subscription_id, std::uint64_t generation,
                  std::size_t queue_limit);
+  bool BeginRecovery(const std::string &subscription_id,
+                     std::uint64_t previous_generation,
+                     std::uint64_t next_generation, std::size_t queue_limit,
+                     std::string barrier);
   SubmitResult Submit(const std::string &subscription_id,
                       std::uint64_t generation,
                       const std::function<std::string(std::uint64_t)> &encode);
