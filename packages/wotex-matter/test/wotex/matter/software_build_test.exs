@@ -266,6 +266,15 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     assert File.read!(failed) == "existing evidence"
   end
 
+  test "WMA-B01 an already closed command Port cannot replace its collected result" do
+    executable = System.find_executable("cat") |> String.to_charlist()
+    port = Port.open({:spawn_executable, executable}, [:binary, :exit_status, :use_stdio])
+    {:os_pid, child} = Port.info(port, :os_pid)
+    assert :ok = SoftwareCommand.close_port(port)
+    assert :ok = SoftwareCommand.close_port(port)
+    assert wait_reaped(child, 100)
+  end
+
   defp command_process(_, 0), do: flunk("command did not start within the bounded wait")
 
   defp command_process(caller, attempts) do

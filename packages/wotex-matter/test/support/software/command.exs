@@ -105,11 +105,21 @@ defmodule Wotex.Matter.SoftwareCommand do
         # Closing stdin alone does not terminate tools such as sleep or tar.
         # Docker owns container descendants; the build watcher removes them.
         System.cmd("kill", ["-KILL", Integer.to_string(pid)], stderr_to_stdout: true)
-        if Port.info(port), do: Port.close(port)
+        close_port(port)
 
       nil ->
         :ok
     end
+  end
+
+  @doc false
+  @spec close_port(port()) :: :ok
+  def close_port(port) when is_port(port) do
+    Port.close(port)
+    :ok
+  rescue
+    error in ArgumentError ->
+      if is_nil(Port.info(port)), do: :ok, else: reraise(error, __STACKTRACE__)
   end
 
   defp environment(overrides) do

@@ -807,3 +807,21 @@ the complete WMA-V10 family still require their own executed cases.
 | ExUnit regression | `adf0650a8af6450f5600d4b763e639cdc4738727ec6fee8b48a56423b8bcbcab` |
 | Current Linux log | `804632604b02764536b06fca9040c8b212dc3dab7c6a7a85a40c61749f87e762` |
 | Minimum Linux sanitizer log | `731c118baa023daa1ab4ff1283e0b966c308e51bf5aff15bbb3c1d18f862e7ac` |
+
+## Build-command Port close race
+
+The software command owner preserves its collected result when its native child
+exits between checking the Port identity and closing the Port. Closing an already
+closed owned Port is idempotent; unrelated argument errors remain failures.
+An instrumented 1000-timeout diagnostic reproduced one `Port.close/1` argument
+error that replaced `command_timeout` with `command_failed` before the correction.
+The same diagnostic returns 1000 `command_timeout` results after the correction.
+The direct closed-Port regression and all ten build tests pass on the minimum
+toolchain; the default 139-check gate and ExDoc also pass.
+
+| Command artifact | SHA-256 |
+| --- | --- |
+| Command owner | `0959f5c4f76eb4e1016e4d5e16c43a4e125d30ab25572507ad1d19c4814eb996` |
+| Build tests | `255185da36201d58cfac230c9c40ef3e95186460f647a3f05ebd490a06520366` |
+| Diagnostic before correction | `593af9f25d39a8925b3350341d54e3d5e9722a802393772c84715b60ccf9a5f0` |
+| Diagnostic after correction | `d8ccb63a9c40eaa6a91148326a5e5b107d97fcdcdfbbb8bc1f286fcf806756b3` |
