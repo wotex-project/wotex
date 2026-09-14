@@ -154,14 +154,15 @@ The focused command is:
 WOTEX_PATH_DEPS=1 mix test test/wotex/directory/scoped_memory_repository_contract_test.exs test/wotex/directory/table_repository_contract_test.exs
 ```
 
-`WOTEX_PATH_DEPS=1 mix check --no-retry` runs the full library gate. A path
-dependency test run identifies only that source cohort. The suites establish
-the configured adapters' tested behavior; they do not provide Discovery
-certification or production storage.
+`WOTEX_PATH_DEPS=1 mix check --no-retry` runs the developer gate. The explicit
+release runner adds the archive and other candidate evidence. A path dependency
+test run identifies only that source cohort. The suites establish the configured
+adapters' tested behavior; they do not provide Discovery certification or
+production storage.
 
 ### Archive-only consumer
 
-`WOTEX_PATH_DEPS=1 mix package` and the full gate's archive check execute
+`WOTEX_PATH_DEPS=1 mix package` and the explicit release runner execute
 `bin/check_archive.exs`. The check builds exactly one Directory archive in a
 new system temporary directory using the package mirror described below. It
 validates the Hex envelope checksum, package identity/version, declared files,
@@ -181,8 +182,8 @@ WOTEX_DIRECTORY_ARCHIVE=/absolute/directory.tar WOTEX_CORE_ARCHIVE=/absolute/cor
 
 The supplied-archive command repeats all archive inspection, compilation and
 consumer checks. It does not recreate a sentinel-bearing build and cannot
-produce the full gate's release-evidence manifest. The full authoritative gate
-requires a fresh Directory build; leave `WOTEX_DIRECTORY_ARCHIVE` unset.
+produce a release-evidence manifest. The explicit release runner requires a
+fresh Directory build; leave `WOTEX_DIRECTORY_ARCHIVE` unset.
 Missing or invalid archives fail; neither input has a checkout fallback.
 
 The core input is either the archive explicitly named by `WOTEX_CORE_ARCHIVE`
@@ -204,12 +205,11 @@ paths and loaded library modules belong to the isolated consumer, that neither
 library has an OTP application callback, and that loading the modules starts
 no library application. It also inspects Directory BEAM imports for direct
 process, storage and global-configuration authority and confirms that consumer
-operations leave the started application set unchanged. It runs the 15
-repository, 44 public-operation and five reference-consumer scenarios against
-each adapter, plus the original minimal public operation sequence and four
-compatibility tests: 133 tests in total. These include atomic contention and interrupted callers, not only
-sequential happy paths. No library source or
-compiled module is copied from a checkout. The explicitly copied test suite
+operations leave the started application set unchanged. It runs the repository,
+public-operation and reference-consumer scenarios against each adapter, plus
+the minimal public operation sequence and compatibility behavior. These include
+atomic contention and interrupted callers as well as sequential operations. No
+library source or compiled module is copied from a checkout. The explicitly copied test suite
 and test-only ports are verification inputs, not packaged storage products.
 
 The check prints Directory/core archive SHA-256 digests, the consumer lock
@@ -246,8 +246,8 @@ archive is built for consumption.
 
 The external `package_exclusion` evidence records all member hashes, sentinel
 paths and marker hashes, the single build and the successful comparisons.
-The full-gate finalizer requires the complete sentinel inventory and public
-hashes to match its original source inputs. Tests in
+The release-evidence finalizer requires the complete sentinel inventory and
+public hashes to match its original source inputs. Tests in
 `test/wotex/directory/package_mirror_test.exs` reject changed, missing and extra
 members, sentinel paths or contents, metadata leakage, altered mirrors,
 symlinks, repository-local destinations and incomplete evidence. These tests
@@ -263,4 +263,4 @@ subscription, replay or HTTP/SSE behavior. The import inspection concerns direct
 library dependencies, not a sandbox for arbitrary consumer code. Release and
 stable-API claims remain bounded by the
 [claim and compatibility matrix](claim-compatibility-matrix.md), which also
-defines the external release-evidence manifest emitted by the full gate.
+defines the external manifest emitted by the explicit release runner.

@@ -1,5 +1,4 @@
-# ExCheck executes its compiler outside the dependency pipeline. Record its
-# actual exit status in the same external evidence directory as the other checks.
+# Record warning-free compilation in the explicit release-evidence directory.
 root = System.fetch_env!("WOTEX_EVIDENCE_ROOT")
 
 {_output, status} =

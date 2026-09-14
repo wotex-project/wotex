@@ -103,6 +103,10 @@ evidence after a relevant change requires rerunning affected gates.
   port, error and temporal compatibility review; no unresolved advertised claim
   or undocumented breaking behavior. It is not W3C certification.
 
+The default `mix check --no-retry` is the repository developer gate. The
+release-candidate checks and external manifest run separately through
+`mix run --no-start bin/check_release_evidence.exs`.
+
 ## Local execution records
 
 Execution records, generated consumers, receipts and agent state remain outside

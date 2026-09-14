@@ -135,21 +135,30 @@ database, filesystem, endpoint, credential, or job.
 ```console
 WOTEX_PATH_DEPS=1 mix deps.get
 WOTEX_PATH_DEPS=1 mix test
-WOTEX_PATH_DEPS=1 mix check
+WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
-`mix test` is the focused development loop. `mix check` is the authoritative
-library gate: locked dependency resolution, warning-free compilation,
-formatting, strict Credo, Doctor, Dialyzer, dependency audits, documentation,
-the complete test suite with at least 95% coverage, boundary and application
-checks, package construction, archive inspection, and `git diff --check`.
-The library suite runs once through the coverage command. The archive check
-builds one Directory archive outside the repository, compiles an isolated
-consumer from that archive and an exact core archive, and runs the repository,
-interleaving and independent reference-port suites against two test consumers.
-It prints both archive SHA-256 digests and the consumer lock cohort. This
-establishes archive-only interoperability for those configured consumers, not
-production adapter compatibility, certification or publication to Hex.
+`mix test` is the focused development loop. The default `mix check --no-retry`
+compiles with warnings as errors, checks formatting, and runs the behavioral
+test suite.
+
+Release evidence uses an explicit runner:
+
+```console
+WOTEX_PATH_DEPS=1 mix run --no-start bin/check_release_evidence.exs
+```
+
+The runner resolves the locked dependency cohort and executes strict Credo,
+Doctor, Dialyzer, dependency audits, documentation, coverage, boundary and
+application checks, package construction, archive inspection, and
+`git diff --check`. It writes `release-evidence.json` only after every command
+succeeds. The archive check builds one Directory archive outside the
+repository, compiles an isolated consumer from that archive and an exact core
+archive, and runs the repository, interleaving and independent reference-port
+suites against two test consumers. It prints both archive SHA-256 digests and
+the consumer lock cohort. This establishes archive-only interoperability for
+those configured consumers, not production adapter compatibility,
+certification or publication to Hex.
 
 `WOTEX_PATH_DEPS=1 mix package` runs that archive check on its own. The explicit
 development switch selects the core source only for building its archive; it
@@ -161,9 +170,9 @@ No neighboring checkout or previously compiled module is a fallback.
 Generated consumer files are temporary. The printed artifact directory retains
 the archives and consumer lock outside the repository.
 
-The full gate also writes an external `release-evidence.json` manifest after
-all checks succeed. It binds source and dependency inputs, runtime, commands,
-the exact archives, consumer lock and test outcome. The
+The explicit release runner writes an external `release-evidence.json`
+manifest after all checks succeed. It binds source and dependency inputs,
+runtime, commands, the exact archives, consumer lock and test outcome. The
 [claim and compatibility matrix](docs/specs/claim-compatibility-matrix.md)
 defines its schema and the reviewed 0.1.0 compatibility baseline. A dirty-tree
 run is qualified explicitly; neither a manifest nor a passing gate authorizes

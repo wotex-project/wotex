@@ -439,8 +439,8 @@ cursor, the derived next cursor, and revision equality. Returned entries receive
 one shared `retrieved` timestamp without altering persisted values. Each
 repository-defined revision is opaque to the library and remains unchanged
 across its page chain. A mutation that advances the revision ends the chain with
-`collection_changed`; an entry that reaches expiry between calls is simply
-absent from the following page.
+`collection_changed`; an entry that reaches expiry between calls is absent from
+the following page.
 
 ### 7.7 Expire
 
@@ -576,7 +576,7 @@ minor version change. Once 1.0 is released:
 | Resumed listing across committed mutations and expiry-only drift | public-operation mutation matrix, multi-page expiry, empty continuation, and held page-snapshot scenarios |
 | Public archive contents and archive-only consumption | `mix package`: exact archives, locked isolated compilation, no application callback, public repository contract and positive/negative operation sequence |
 | Independent reference-consumer operations and explicit authority | five reference scenarios plus the repository and interleaving suites against both consumer implementations using the same exact archives; see the [repository port evidence contract](repository-port-evidence.md#independent-reference-consumer-evidence) |
-| Clause coverage, public compatibility and release-evidence inputs | [claim and compatibility matrix](claim-compatibility-matrix.md); compatibility tests in source and archive; default full-gate manifest with source, runtime, lock and artifact digests |
+| Clause coverage, public compatibility and release-evidence inputs | [claim and compatibility matrix](claim-compatibility-matrix.md); behavioral compatibility tests in source and archive; explicit release-evidence manifest with source, runtime, lock and artifact digests |
 | Public package bytes and excluded local state | [package-exclusion acceptance](repository-port-evidence.md#package-exclusion-acceptance): one build in an external sentinel-bearing mirror, exact member hashes, absent sentinel paths/content, then consumption of that archive |
 
 ## 12. Primary sources

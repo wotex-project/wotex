@@ -14,9 +14,9 @@ and Problem Details remain outside the library.
 
 ## Evidence index
 
-References below use `prefix:source marker`. Markers identify a named test or
-a reusable `verify/2` scenario. The evidence contract test checks that every
-reference resolves to its source; the full gate executes the tests. A source
+References below use `prefix:source marker`. Markers identify a behavioral test
+or a reusable `verify/2` scenario and support review traceability. The default
+gate and explicit release runner execute the referenced source suites. A source
 marker is not itself proof that an assertion passes.
 
 | Prefix | Source |
@@ -51,7 +51,7 @@ boundary assertion is the evidence; no invented successful operation applies.
 
 | Clauses | Bounded claim | Positive evidence | Refusal or boundary evidence |
 |---|---|---|---|
-| 2, 5.1, 6 | Explicit service ports, validated bounds and consumer state | `S:requires every explicit port and a valid Introduction Thing Description`; `F:verify(:authority` | `S:rejects inverted, zero, and unknown service configuration`; `C:default bounds and caller-selected time` |
+| 2, 5.1, 6 | Explicit service ports, validated bounds and consumer state | `S:requires every explicit port and a valid Introduction Thing Description`; `F:verify(:authority` | `S:rejects inverted, zero, and unknown service configuration` |
 | 5.1, 9 | Only the core limit vocabulary controls TD admission | `S:accepts the core limit vocabulary and rejects every invalid limit` | `E:core limits bound admission before any repository write` |
 | 5.2, 6.1, 6.2 | Opaque principal/auth/repository context separation | `S:constructs context values without interpreting opaque consumer state`; `R:verify(:isolation` | `F:verify(:isolation`; `B:every operation rejects malformed service, context, and options deterministically` |
 | 2, 4, 7.1, 9 | Core TD validation and extension preservation | `F:verify(:lifecycle`; `D:owns Discovery registration input and emits an enriched Thing Description` | `E:rejects invalid core values and bounded merge patches without repository writes`; `D:rejects registration metadata without the Discovery context` |
@@ -60,7 +60,7 @@ boundary assertion is the evidence; no invented successful operation applies.
 | 5.3, 7.2, 7.6 | Return-only retrieval enrichment | `G:retrieved is return-only and expiry is inclusive`; `R:verify(:public_order` | `F:verify(:lifecycle`; `P:verify(:paging_expiry` |
 | 5.4 | Entry identifier equality, positive version and valid state | `V:validates identifier equality, versions, registration type, and state` | `V:expired state is inactive independently of absolute expiry`; `B:constructors reject malformed values at each public seam` |
 | 5.5, 5.6 | Mutation outcomes and all three lifecycle Event projections | `N:derives full creation data from a created registration`; `N:maps every successful update outcome to thing_updated`; `N:supports minimum Partial TD event data` | `N:deletion never exposes a removed Thing Description`; `N:rejects impossible mutation outcomes, malformed entries, and options`; `F:verify(:authority` |
-| 5.7, 7.6 | Bounded listing, array/collection formats and opaque keyset | `V:constructs defaults and validates every public query bound`; `V:encodes and decodes opaque keyset cursors`; `V:validates ordered active pages and produces the next query` | `V:rejects malformed, inconsistent, stale, unordered, and inactive pages`; `R:verify(:invalid_pages`; `C:the accepted public value fields contain no offset or stream authority` |
+| 5.7, 7.6 | Bounded listing, array/collection formats and opaque keyset | `V:constructs defaults and validates every public query bound`; `V:encodes and decodes opaque keyset cursors`; `V:validates ordered active pages and produces the next query` | `V:rejects malformed, inconsistent, stale, unordered, and inactive pages`; `R:verify(:invalid_pages`; `C:listing defaults and the absence of offset retain the accepted query behavior` |
 | 5.7, 6.1 | Collection generation, Unicode ordering and committed page snapshots | `R:verify(:listing`; `R:verify(:revisions`; `P:verify(:paging_snapshot` | `P:verify({:paging_mutation`; `D:rejects a malformed cursor before any port is invoked` |
 | 5.7, 7.6 | Expiry-only membership drift does not invalidate continuation | `P:verify(:paging_expiry`; `P:verify(:paging_empty` | `F:verify(:time_and_pages`; `P:verify({:paging_mutation` |
 | 6.1 fetch/insert | Committed fetch and atomic conditional creation | `R:verify(:fetch_insert`; `R:verify(:insert_contention` | `P:verify(:create_race`; `R:verify(:failures` |
@@ -82,17 +82,17 @@ boundary assertion is the evidence; no invented successful operation applies.
 | 5.8, 7.8 | Introduction is only the configured directory TD and invokes no port | `D:Introduction bypasses all consumer ports and contains no entry`; `F:verify(:authority` | `V:Introduction requires a validated Thing Description with an absolute identifier`; `E:public operations reject invalid service and request shapes deterministically` |
 | 8, 9 | Stable error code/phase/message/path/details and redacted failures | `C:every accepted error code retains its deterministic message and value shape`; `E:every public failure carries the family error shape` | `B:repository result variants are normalized and never escape`; `F:verify(:failed_ports`; `R:verify(:failures` |
 | 2, 3, 9 | No library application, process/store/configuration authority or packaged development state | `A:inspect_directory!`; `L:Application.spec(app, :mod)` | `L:effect_modules`; `L:source is outside the archive consumer`; `F:verify(:authority` |
-| 3, 4 | Only listing is supported; search, offset and stream transport are not emulated | `C:the accepted directory facade and required callback arities remain explicit` | `F:verify(:time_and_pages`; `F:verify(:authority`; `C:default bounds and caller-selected time` |
+| 3, 4 | Only listing is supported; search, offset and stream transport are not emulated | `V:constructs defaults and validates every public query bound` | `F:verify(:time_and_pages`; `F:verify(:authority`; `C:listing defaults and the absence of offset retain the accepted query behavior` |
 
 ## Compatibility review
 
-`compatibility_test.exs` checks the 15 exported facade arities, nine required
-port callbacks, fields of all 12 public value structs, default service/query
-bounds, and all 17 stable error messages. It runs both in the library suite and
-against the exact archive. Constructors, malformed callback returns, operation
-order and temporal semantics remain covered by the matrix above. No production
-signature, field, return shape, error code, dependency requirement or operation
-ordering is changed by this evidence work.
+`compatibility_test.exs` checks the nine required port callbacks, listing
+defaults and offset rejection, and all 17 stable error messages. The operation,
+value, service and event suites exercise the documented facade calls, returned
+values and absence of transport authority. These suites run from source and
+against the exact archive. Malformed callback returns, operation order and
+temporal semantics remain covered by the matrix above. The tests do not assert
+a complete export inventory or implementation struct layout.
 
 The review boundaries are:
 
@@ -122,8 +122,7 @@ WTD.01 section 10 still governs changes. Public type changes in the 0.x line
 require a specification, tests and a minor version change. Removing an error,
 requiring another callback, changing callback results or operation order is a
 breaking change once the API reaches 1.0. Additive optional fields still require
-review even where that policy permits them. The exact-field tests intentionally
-force that review rather than silently accepting a changed value surface.
+review through their owning constructor, operation and serialization behavior.
 
 This is an unstable 0.1.0 compatibility baseline, not a stable-API designation,
 full Discovery conformance or external certification. Production adapters and
@@ -131,14 +130,17 @@ wire profiles require their own evidence. No publication is authorized.
 
 ## Release-evidence manifest
 
-Plain `WOTEX_PATH_DEPS=1 mix check --no-retry` is the complete authoritative
-gate. Its coverage command runs the library tests once. The archive check runs
-133 isolated tests: 64 contract scenarios for each repository consumer, the
-minimal operation sequence and four compatibility tests. There is no separate
-release profile or reduced default gate.
+`WOTEX_PATH_DEPS=1 mix check --no-retry` is the modest developer gate. It
+compiles with warnings as errors, checks formatting, and runs the behavioral
+suite. The explicit command
+`WOTEX_PATH_DEPS=1 mix run --no-start bin/check_release_evidence.exs` runs the
+quality, audit, documentation, coverage, application, boundary and archive
+lanes and emits the release-evidence manifest. The archive lane executes both
+repository consumers, the public-operation contract, the reference-port
+contract, the minimal operation sequence and the compatibility behavior.
 
-Each gate invocation allocates a system temporary artifact directory. The
-initial input record and compiler exit status, archives, consumer lock,
+Each explicit release-evidence invocation allocates a system temporary artifact
+directory. The initial input record and compiler exit status, archives, consumer lock,
 `archive-evidence.json` and `release-evidence.json` remain there. Generated
 consumer files, the sentinel-bearing package mirror and compiled modules are
 removed. None of these outputs is a source or package input.
@@ -154,19 +156,19 @@ The release manifest has schema version `1.0.0`:
 | `claims` | Bounded Directory mechanics and two test consumers; no transport conformance, certification or stable API. |
 | `publication_authorized` | Always false. |
 
-The finalizer runs only after every non-compiler check succeeds. ExCheck runs
-its compiler outside that dependency pipeline, so a wrapper runs the same
-warning-free compile once and records its actual exit status; the finalizer
-also requires that status to be zero. A skipped or failed prerequisite cannot
-produce a complete manifest. Source, dependency and runtime inputs must still
-match the initial record, and artifact checksums are revalidated before output.
+The release runner stops on the first failed command. Its compiler wrapper runs
+warning-free compilation and records the actual exit status; the finalizer
+requires that status to be zero. A failed prerequisite cannot produce a
+complete manifest. Source, dependency and runtime inputs must still match the
+initial record, and artifact checksums are revalidated before output.
 The finalizer requires the fresh sentinel-build proof described in the
 [package-exclusion acceptance](repository-port-evidence.md#package-exclusion-acceptance).
 A supplied Directory archive can be replayed with `mix package`, but cannot
 substitute for that build in the complete gate.
 
 The manifest is local execution evidence, not a signed attestation or release
-approval. Invoking the finalizer manually is not a substitute for the gate.
+approval. Invoking the finalizer manually is not a substitute for the explicit
+runner.
 Dirty-tree manifests describe working-tree inputs and cannot identify those
 bytes solely by their source commit. A candidate review requires a fresh gate
 from the intended clean commit and must retain the printed manifest and exact

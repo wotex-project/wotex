@@ -42,5 +42,5 @@ No arithmetic on the pathological value is executed.
 
 This is retained regression evidence, not a general Decimal safety or whole-VM
 memory guarantee. All advisories remain active. Any dependency or advisory
-change requires review, and a failed regression or changed lock blocks `mix check`.
-Never disable parsing limits for untrusted input.
+change requires review, and a failed regression or changed lock blocks release
+evidence. Never disable parsing limits for untrusted input.

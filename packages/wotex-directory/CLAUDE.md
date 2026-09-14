@@ -62,11 +62,11 @@ package archive build, and a boundary scan. Commits use conventional lowercase
 subjects without specification identifiers or automation attribution. Never
 perform a remote action from an agent session.
 
-`WOTEX_PATH_DEPS=1 mix check --no-retry` runs the full authoritative library
-gate, including static checks, audits, coverage, documentation and package
-inspection and archive-only repository, interleaving and reference-port suites
-against two test consumers. `mix test` is the fast development loop. This
-evidence covers the configured consumers, not arbitrary production adapters.
+`WOTEX_PATH_DEPS=1 mix check --no-retry` compiles with warnings as errors,
+checks formatting, and runs the behavioral test suite. Static analysis,
+audits, coverage, documentation, package inspection, and archive-only
+repository-port suites are explicit release-evidence checks. This evidence
+covers the configured consumers, not arbitrary production adapters.
 
 ## External automation boundary
 
