@@ -129,7 +129,7 @@ attempt, worker coordinator or cross-repository scheduler to implement these IDs
 | Gate | Required evidence; never inferred from a preceding gate |
 | --- | --- |
 | `repository_green` | `mix check` passes on the exact checkout: warnings-as-errors compilation, formatting, and behavioral tests. Record the source and toolchain used. |
-| `archive_consumer_green` | WTX-C03: exact archive builds and public API examples pass in an independent consumer. Existing `bin/check_package.exs` compiles the unpacked source and checks no callback; this alone does not exercise consumer examples. |
+| `archive_consumer_green` | WTX-C03: `mix run --no-start bin/check_package.exs` builds one archive, inspects and unpacks that artifact, compiles it without checkout BEAM files, and runs TD, TM, wrapper, helper, typed-error, and no-callback examples in an isolated minimal consumer. The command reports archive and resolved consumer-lock digests for the evidence receipt. |
 | `reference_consumer_green` | WTX-C04: consumer-neutral end-to-end value examples and explicitly scoped independent corpus evidence using the same archive. No unpublished local dependency assumed. |
 | `public_release_candidate` | All three preceding gates plus explicit documentation, dependency, static-analysis, archive, content, license, provenance, and security checks on an immutable candidate artifact. This is permission to evaluate, not to push, tag or publish. |
 | `stable_api_candidate` | WTX-C05 plus explicit review of every public function/result/error, compatibility policy and negative vectors. Version 0.1.0 and high coverage do not themselves promise stable API semantics. |

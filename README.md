@@ -226,6 +226,11 @@ errors, checks formatting, and runs the test suite. Package, documentation,
 audit, and compatibility checks are release-readiness work rather than blockers
 for every push.
 
+The explicit package check builds one archive, verifies its contents, and runs
+a temporary consumer against the unpacked artifact. The consumer exercises
+Thing Description, Thing Model, wrapper, helper, typed-error, and passive-load
+behavior and prints the archive and resolved consumer-lock digests.
+
 ## Contributing
 
 Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before
