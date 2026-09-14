@@ -31,6 +31,7 @@ defmodule WotexDirectory.MixProject do
   def cli do
     [
       preferred_envs: [
+        check: :test,
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.html": :test,
@@ -127,6 +128,7 @@ defmodule WotexDirectory.MixProject do
         "README.md": [title: "Overview"],
         "docs/plans/wotex-directory-completion.md": [title: "Completion Contract"],
         "docs/specs/WTD.01-directory-contract.md": [title: "Directory contract"],
+        "docs/specs/repository-port-evidence.md": [title: "Repository port evidence"],
         "docs/decisions/0001-consumer-owned-runtime.md": [title: "Consumer-owned runtime"],
         "docs/decisions/0002-listing-and-expiry.md": [title: "Listing and expiry"],
         "docs/provenance/w3c-sources.md": [title: "W3C sources"],

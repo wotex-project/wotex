@@ -106,4 +106,8 @@ defmodule CheckBoundary do
   end
 end
 
-CheckBoundary.run()
+case System.argv() do
+  [] -> CheckBoundary.run()
+  [root] -> File.cd!(root, &CheckBoundary.run/0)
+  _ -> raise ArgumentError, "expected at most one directory to inspect"
+end

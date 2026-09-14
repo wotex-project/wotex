@@ -570,6 +570,8 @@ minor version change. Once 1.0 is released:
 | Relative, absolute, retained, purged, and no-op expiry | registration and expiry tests |
 | Introduction isolation | Introduction test |
 | Deterministic redacted errors | error tests |
+| Six repository callbacks across independent test consumers | reusable repository contract suite; see the [repository port evidence contract](repository-port-evidence.md) |
+| Context separation, atomic callback contention, and revision transitions | the same suite against separate Agent maps and an ETS compare-and-swap implementation |
 | Public archive contents | `mix hex.build` and archive inspection |
 
 ## 12. Primary sources

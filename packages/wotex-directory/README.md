@@ -134,12 +134,24 @@ database, filesystem, endpoint, credential, or job.
 
 ```console
 WOTEX_PATH_DEPS=1 mix deps.get
+WOTEX_PATH_DEPS=1 mix test
 WOTEX_PATH_DEPS=1 mix check
 ```
 
-`mix check` is the everyday local gate: warnings-as-errors compilation,
-formatting, and the test suite. Package, documentation, audit, and compatibility
-checks are explicit release-readiness work.
+`mix test` is the focused development loop. `mix check` is the authoritative
+library gate: locked dependency resolution, warning-free compilation,
+formatting, strict Credo, Doctor, Dialyzer, dependency audits, documentation,
+the complete test suite with at least 95% coverage, boundary and application
+checks, package construction, archive inspection, and `git diff --check`.
+The suite runs once through the coverage command. Archive inspection uses
+compiled development dependencies and does not establish archive-only consumer
+installation or independent interoperability.
+
+The [repository port evidence contract](docs/specs/repository-port-evidence.md)
+defines the reusable adapter suite, its fixture interface, and the exact
+callback, authorization, isolation, pagination, expiry, and contention evidence.
+The adapters under `test/support/` are test consumers and are not packaged
+production storage implementations.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
 [SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and
