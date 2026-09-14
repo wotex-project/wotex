@@ -28,7 +28,7 @@ specifications:
     requires: ["WCO.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.CoAP.Error", "Wotex.CoAP.Mapping", "Wotex.CoAP.Transport"]
     executable_evidence: ["test/wotex/coap/blockwise_test.exs", "test/wotex/coap/codec_test.exs", "test/wotex/coap/connection_test.exs", "test/wotex/coap/contract_test.exs", "test/wotex/coap/dependency_security_test.exs", "test/wotex/coap/mapping_test.exs"]
-    compatibility_classification: "Implemented baseline profile: UDP/DTLS Form mapping and Runtime unary/stream operations, OTP DTLS PSK/PKI, Observe and discovery. Secure Runtime assertions use OTP peers; test/interop/dtls_pki_test.exs covers independent libcoap native PSK/PKI operations, Observe, authentication faults and record replay. OSCORE is outside this baseline."
+    compatibility_classification: "Implemented baseline profile: UDP/DTLS Form mapping and Runtime unary/stream operations, OTP DTLS PSK/PKI, Observe and discovery. test/interop/dtls_pki_test.exs covers independent libcoap native and Runtime PSK/PKI operations, Observe, authentication faults and record replay. OSCORE and the complete secure stress matrix are outside this evidence."
   - id: "WCO.03"
     version: "1.0.0"
     path: "docs/specs/WCO.03-blockwise.md"

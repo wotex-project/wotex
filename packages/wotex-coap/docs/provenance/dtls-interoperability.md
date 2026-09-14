@@ -3,7 +3,7 @@
 `test/interop/dtls_pki_test.exs` exercises the native WCO-S05 profile against
 libcoap 4.3.5 with its OpenSSL backend. OTP implements the client's DTLS record
 layer; libcoap/OpenSSL implements the peer. This is independent-stack DTLS
-evidence, not an OSCORE or complete secure Runtime acceptance claim.
+evidence. It does not accept OSCORE or the complete software stress matrix.
 
 The WCO-V12 assertions cover both exact DTLS 1.2 cipher suites, complete
 Block1/Block2 operations, DNS/IP SAN identities, PKCS#1/PKCS#8 client keys,
@@ -20,6 +20,16 @@ replayed without another plaintext delivery, and followed by a fresh authenticat
 response. Corrupt ciphertext produces an error within the native interaction
 budget, not a representation. Native Observe tests establish, change and cancel
 the original relationship through two explicit authenticated sessions.
+
+Real `Wotex.Runtime.ConsumedThing` calls exercise all three admitted media types
+over PSK and PKI with both immediate and configured credential custody. Reads,
+writes and Actions preserve request identity, the selected resolved Form and
+unknown extensions. JSON null, false, zero, empty arrays and nested values remain
+distinct; larger text and binary values traverse blockwise transfer. Authentication
+failures return typed Runtime errors without plaintext traffic. Property and
+Event subscriptions deliver initial and updated values, then release their
+authenticated sockets on explicit stop or receiver death. An unrelated stop
+Form cannot redirect cancellation.
 
 The fixture owns its selected executable, listener pair, proxy sockets and
 temporary PEM/identity files. Readiness is bounded to five seconds and captured
@@ -89,6 +99,6 @@ The source basis is RFC 6347 (January 2012), RFC 5280 (May 2008), RFC 7252
 fixed cipher, offline revocation and exact identity policies in WCO-S05.
 [The pinned libcoap server manual](https://libcoap.net/doc/reference/4.3.5/man_coap-server.html)
 defines the peer options. Complete chain-depth fault expansion, independent
-secure Runtime cells, Linux sanitizer/stress evidence, OSCORE and WCO.13's
+secure Runtime overload/deadline faults, Linux sanitizer/stress evidence, OSCORE and WCO.13's
 build/run task acceptance remain separate obligations. Historical receipts retain
 their original source, command and narrower claims.

@@ -87,8 +87,10 @@ See [executable evidence](../provenance/executable-evidence.md) for specific tes
 commands and remaining gates, and [source revisions](../provenance/primary-sources.md).
 The [independent DTLS suite](../provenance/dtls-interoperability.md) covers native
 PSK/PKI operations, blockwise bodies, Observe, authentication failures and record
-replay. Secure Runtime evidence still uses OTP peers; full secure software
-acceptance is not inferred from native interoperability.
+replay. Secure Runtime calls also exercise the independent peer for all admitted
+media types, immediate/configured credentials, Property/Event subscriptions and
+their cleanup. Full secure software acceptance requires the remaining fault and
+stress matrix.
 Public callbacks provide a neutral compatibility surface, not drop-in semantic
 parity. `send/2` completes synchronously; no fictitious receive queue exists.
 The consumer must run differential scenarios before replacing its implementation.

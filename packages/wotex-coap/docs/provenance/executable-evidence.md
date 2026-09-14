@@ -55,7 +55,9 @@ independent libcoap secure interoperability and the complete software matrix.
 
 `test/interop/dtls_pki_test.exs` adds independent libcoap PSK/PKI native
 operations, Observe/cancel, certificate/CRL faults and authenticated-record
-replay/corruption assertions. Its ExUnit-owned peers and record proxies check
+replay/corruption assertions. It also runs real ConsumedThing unary operations
+for all three media types, both credential custody modes and secure Property/Event
+subscriptions through explicit cancellation and receiver death. Its ExUnit-owned peers and record proxies check
 cleartext refusal and actual listener/client socket release. The
 [DTLS verification guide](dtls-interoperability.md) specifies source/build pins,
 reproduction and remaining limits. The historical UDP/PSK receipt above does not
