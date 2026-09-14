@@ -65,6 +65,7 @@ defmodule Wotex.Binding.MQTT.Test.FakeClient do
     case Map.get(config, key, default) do
       :raise -> raise "external client failure"
       :throw -> throw(:external_client_failure)
+      :exit -> exit(:external_client_failure)
       value -> value
     end
   end

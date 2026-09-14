@@ -100,9 +100,11 @@ The binding tracks no open-handle registry, receiver monitor or once-only close
 state. The consumer must define concurrency, duplicate close, session ownership
 and recovery. Handles/configuration must be credential-free. Explicit stop and
 session loss under real Runtime supervision are proven by
-`runtime_subscription_test.exs`; restart against a supplied client and a named
-broker cohort remains WBM-C04 work. No package-global connection manager closes
-these gaps.
+`runtime_subscription_test.exs`. The WBM-C02 lifecycle proof adds concurrent
+handles, complete callback-failure normalization, failed open/close behavior,
+and supervisor-driven restart against a supplied client. A real broker/client
+cohort remains WBM-C04 work. No package-global connection manager closes these
+gaps.
 
 ## Error classification
 
@@ -126,13 +128,17 @@ policy belong to the consumer's client.
 Mapping/client/codec failures return stable `Wotex.Binding.MQTT.Error` values.
 Rejection before callback has no MQTT effect; failure after possible PUBLISH
 does not establish no effect. `transport_test.exs`,
-`runtime_subscription_test.exs` and `library_contract_test.exs` under
+`runtime_subscription_test.exs`, `client_lifecycle_test.exs`, and
+`library_contract_test.exs` under
 `test/wotex/binding/mqtt/` are current adapter evidence;
 `runtime_subscription_test.exs` starts a real `Wotex.Runtime.ConsumedThing`
 observation child under a test supervisor and covers owner decoding, ignored
 topics, an oversized frame, session loss, and an explicit stop observed by a
-monitoring client. WBM-C02/03/04 add concurrent close, sustained delivery and
-archive/reference-consumer proof against a named broker/client cohort. Callback
+monitoring client. `client_lifecycle_test.exs` proves finite supplied-client
+reads, all invalid and exceptional callback paths, open/close failures,
+concurrent handles, and consumer-supervised restart. WBM-C03/04 add sustained
+delivery and archive/reference-consumer proof against a named broker/client
+cohort. Callback
 tuple, owner message contract, metadata keys, result status, error class,
 operation/default/limit changes require compatibility review; a newer draft
 cannot silently change behavior.

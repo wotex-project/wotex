@@ -169,6 +169,8 @@ The 0.1 series implements the bounded mapping recorded in the
 [MQTT contract](docs/specs/WBM.01-values-and-client-port.md) and
 [Runtime contract](docs/specs/WBM.03-runtime-transport.md). Draft provenance is dated
 in the [dated draft provenance](docs/provenance/mqtt-binding-draft-2026-07-01.md).
+The [client lifecycle proof](docs/specs/WBM-C02-client-lifecycle.md) records the
+consumer-owned timeout, handle, close-failure, concurrency, and restart boundary.
 This is not a W3C certification claim.
 
 The package defines no application callback, supervision tree, connection

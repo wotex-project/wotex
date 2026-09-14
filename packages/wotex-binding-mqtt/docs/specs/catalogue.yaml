@@ -32,5 +32,5 @@ specifications:
       - {name: "W3C WoT Binding Registry", revision: "Draft Registry 2025-11-04", claim: "provenance only; no registered-entry claim"}
     requires: ["WBM.01", "WBM.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.Binding.MQTT.Transport", "Wotex.Binding.MQTT.TransportConfig", "Wotex.Binding.MQTT.Client", "Wotex.Binding.MQTT.Error"]
-    executable_evidence: ["test/wotex/binding/mqtt/transport_test.exs", "test/wotex/binding/mqtt/runtime_subscription_test.exs", "test/wotex/binding/mqtt/library_contract_test.exs"]
-    compatibility_classification: "passive Runtime adapter; pre-release seam corrections moved delivery decoding into the subscription owner, added decode_frame/3, neutral result statuses, error classes and deadline bounding; reference-consumer evidence WBM-C04 remains"
+    executable_evidence: ["test/wotex/binding/mqtt/transport_test.exs", "test/wotex/binding/mqtt/runtime_subscription_test.exs", "test/wotex/binding/mqtt/client_lifecycle_test.exs", "test/wotex/binding/mqtt/library_contract_test.exs"]
+    compatibility_classification: "passive Runtime adapter; WBM-C02 proves finite supplied-client reads, complete callback-failure normalization, concurrent opaque handles, failed open/close behavior and consumer-supervised restart; exact archive/reference-consumer evidence WBM-C04 remains"
