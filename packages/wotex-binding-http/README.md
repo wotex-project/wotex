@@ -142,6 +142,10 @@ or fragments. It supports JSON representations and maps these WoT operations:
 | `observeproperty` | `GET` | SSE stream |
 | `subscribeevent` | `GET` | SSE stream |
 
+The [HTTP operation inventory](docs/http-operation-inventory.md) records the
+complete nine-operation open/close matrix, the unsupported aggregate cell,
+exact authorities, and named positive/negative vectors.
+
 A single-operation Form may declare `htv:methodName`. Static headers and
 `htv:headers` are normalized and composed deterministically. Credential,
 connection, host, and message-framing fields are rejected case-insensitively;
@@ -198,12 +202,16 @@ Adjacent source checkouts can be selected explicitly for local development:
 
 ```console
 WOTEX_PATH_DEPS=1 mix deps.get
-WOTEX_PATH_DEPS=1 mix check
+WOTEX_PATH_DEPS=1 mix test
+WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
-`mix check` is provided solely by ExCheck. It runs warnings-as-errors
-compilation, formatting, and the test suite. Package, documentation, audit, and
-compatibility checks are explicit release-readiness work.
+`mix test` is the fast development loop. The default `mix check --no-retry` is
+the authoritative library gate: locked dependencies, warnings-as-errors
+compilation, unused dependencies, formatting, coverage, strict static checks,
+documentation, dependency audits, Dialyzer, the library boundary, package and
+archive reconstruction, and a clean diff. Coverage is the only test-suite pass
+inside that gate.
 
 Focused proofs remain available as `bin/check_boundary.exs` and
 `bin/check_archive.exs`.

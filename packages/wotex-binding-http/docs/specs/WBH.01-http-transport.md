@@ -120,7 +120,10 @@ classify physical-effect certainty.
 
 `docs/standards-baseline.md` fixes TD 1.1 Recommendation 2023-12-05, HTTP
 Semantics RFC 9110, framing delegation RFC 9112, JSON RFC 8259, and explicitly
-draft-derived Profile mappings. `form_test.exs`, `transport_test.exs` and
+draft-derived Profile mappings. `docs/http-operation-inventory.md` maps each
+supported operation and the aggregate unsupported cell to its implementation
+source, exact authority, and named positive/negative vectors.
+`operation_inventory_test.exs`, `form_test.exs`, `transport_test.exs` and
 `integration_test.exs` under `test/wotex/binding/http/` prove the package subset.
 Each new claim requires source revision, exact operation, preconditions,
 negative cells and named tests. A draft-derived GET/DELETE/SSE mapping remains

@@ -40,23 +40,24 @@ authorizes automated publication, tags or Git remote operations.
 
 | Gate | Evidence requirement | Nonclaim |
 |---|---|---|
-| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry`, including skipped-tool handling, coverage, strict static checks, docs and boundary | Not independent install or full protocol conformance |
+| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry`, the authoritative default gate, including locked dependencies, coverage, strict static checks, docs, audits, boundary and archive/package reconstruction | Not independent install or full protocol conformance |
 | `archive_consumer_green` | Build without path overrides; a separate minimal Mix consumer installs exact archives and exercises one HTTP mapping success plus typed rejection through public API, with no live source | Not full lifecycle behavior |
 | `reference_consumer_green` | WBH-C04 against those archives with supplied client and Runtime supervisor | No production transport certification |
 | `public_release_candidate` | Previous gates, actual archive exclusion, package metadata/license/security, clean dependency installation, claim review | Not permission to publish |
 | `stable_api_candidate` | WBH-C06 compatibility/error/default/limit matrix, all promised cells proven | Not universal HTTP/WoT compliance |
 
-The repository's `.check.exs` enables skipped-tool handling. A successful
-invocation does not excuse a skipped mandatory tool: inspect every outcome.
-Existing archive helpers remain supporting evidence; independent dependency
-reconstruction and reference-consumer semantics need their own results.
+The repository's `.check.exs` has no reduced release profile and permits no
+mandatory tool to be skipped. `mix test` remains the fast loop; coverage is the
+single test-suite pass in the default gate. Existing archive helpers remain
+supporting evidence; independent dependency reconstruction and
+reference-consumer semantics need their own results.
 
 ## Standards-claim matrix
 
 | Claim | Baseline source | Evidence under `test/wotex/binding/http/` | Scope |
 |---|---|---|---|
-| HTTP defaults for read/write/invoke | TD 1.1 Recommendation 2023-12-05 | `form_test.exs` | Three TD defaults and explicit method handling |
-| Action status and SSE mappings | WoT Profiles Working Draft 2025-11-04 | `form_test.exs`, `transport_test.exs` | Package behavior, not Profile conformance |
+| HTTP defaults for read/write/invoke | TD 1.1 Recommendation 2023-12-05 | `operation_inventory_test.exs`, `form_test.exs` | Three TD defaults and explicit method handling |
+| Action status and SSE mappings | WoT Profiles Working Draft 2025-11-04 | `operation_inventory_test.exs`, `form_test.exs`, `transport_test.exs` | Package behavior, not Profile conformance |
 | Fields/status/representation | RFC 9110, RFC 8259 | `value_test.exs`, `form_test.exs`, `transport_test.exs` | Validated values/JSON; no HTTP client implementation |
 | Message framing | RFC 9112 | Client boundary tests | Client-owned, not implemented here |
 | SSE adaptation | HTML Living Standard, repository observation 2026-09-02 | `integration_test.exs`, `transport_test.exs` | Already-framed events; no parser/reconnect claim |

@@ -12,6 +12,7 @@ specifications:
     requires: ["WBH.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.Binding.HTTP", "Wotex.Binding.HTTP.Config", "Wotex.Binding.HTTP.EmptyBody", "Wotex.Binding.HTTP.Form", "Wotex.Binding.HTTP.Transport"]
     executable_evidence:
+      - "test/wotex/binding/http/operation_inventory_test.exs"
       - "test/wotex/binding/http/form_test.exs"
       - "test/wotex/binding/http/transport_test.exs"
       - "test/wotex/binding/http/integration_test.exs"
