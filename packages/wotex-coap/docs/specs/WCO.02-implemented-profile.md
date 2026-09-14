@@ -85,6 +85,10 @@ helper is needed for the existing UDP or OTP DTLS paths.
 
 See [executable evidence](../provenance/executable-evidence.md) for specific tests,
 commands and remaining gates, and [source revisions](../provenance/primary-sources.md).
+The [independent DTLS suite](../provenance/dtls-interoperability.md) covers native
+PSK/PKI operations, blockwise bodies, Observe, authentication failures and record
+replay. Secure Runtime evidence still uses OTP peers; full secure software
+acceptance is not inferred from native interoperability.
 Public callbacks provide a neutral compatibility surface, not drop-in semantic
 parity. `send/2` completes synchronously; no fictitious receive queue exists.
 The consumer must run differential scenarios before replacing its implementation.

@@ -53,7 +53,13 @@ and after establishment. It checks authenticated socket release and credential-
 free Runtime handles and diagnostics. These are OTP peer tests, separate from
 independent libcoap secure interoperability and the complete software matrix.
 
-Independent PKI tests under development are not committed peer acceptance.
+`test/interop/dtls_pki_test.exs` adds independent libcoap PSK/PKI native
+operations, Observe/cancel, certificate/CRL faults and authenticated-record
+replay/corruption assertions. Its ExUnit-owned peers and record proxies check
+cleartext refusal and actual listener/client socket release. The
+[DTLS verification guide](dtls-interoperability.md) specifies source/build pins,
+reproduction and remaining limits. The historical UDP/PSK receipt above does not
+acquire PKI coverage from these later tests.
 The [native sequence receipt](native-sequence-v1.json) identifies a real public-API
 libcoap regression with two narrowly scoped source patches. Rejected sender
 reservations emit no UDP datagrams; accepted sends remain inside the reserved
