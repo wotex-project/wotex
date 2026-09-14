@@ -65,6 +65,83 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     assert {:error, %Error{code: :invalid_request, effect: :none}} =
              Native.request(handle, :not_a_map, 1_000)
 
+    for message <- [
+          %{type: :read},
+          %{type: :read_paths, paths: []},
+          %{type: :read_paths, paths: [false]},
+          %{type: :read_paths, paths: [%{fabric_id: 1}, %{fabric_id: 2}]}
+        ] do
+      assert {:error, %Error{code: :invalid_request, effect: :none}} =
+               Native.request(handle, message, 1_000)
+    end
+
+    for timeout <- [0, 60_001, :infinity] do
+      assert {:error, %Error{code: :invalid_handle}} = Native.request(handle, @read, timeout)
+      assert {:error, %Error{code: :invalid_handle}} = Native.health(handle, timeout)
+    end
+
+    assert {:error, %Error{code: :invalid_handle}} = Native.unsubscribe(handle, nil, 1_000)
+    assert {:error, %Error{code: :invalid_handle}} = Native.subscribe(handle, %{}, nil, 1_000)
+
+    assert File.read!(audit) == initial
+    assert :ok = Native.disconnect(handle)
+  end
+
+  test "WMA-C03 a foreign generation cannot use or close the live controller" do
+    audit = temporary_path("generation-requests")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    foreign = %{handle | generation: String.duplicate("0", 32)}
+    initial = File.read!(audit)
+
+    assert {:error, %Error{code: :invalid_handle}} = Native.request(foreign, @read, 1_000)
+    assert {:error, %Error{code: :invalid_handle}} = Native.health(foreign)
+    assert {:error, %Error{code: :invalid_handle}} = Native.disconnect(foreign)
+    assert File.read!(audit) == initial
+    assert Process.alive?(handle.pid)
+    assert {:ok, %{"status" => "ready"}} = Native.health(handle)
+    assert :ok = Native.disconnect(handle)
+
+    for invalid <- [nil, false, %{}, %{handle | pid: nil}] do
+      assert {:error, %Error{code: :invalid_handle}} = Native.health(invalid)
+      assert {:error, %Error{code: :invalid_handle}} = Native.request(invalid, @read, 1_000)
+      assert :ok = Native.disconnect(invalid)
+    end
+  end
+
+  test "WMA-C05 native subscription admission rejects invalid fields without opening a stream" do
+    audit = temporary_path("subscription-admission")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+    path = Map.delete(@read, :type)
+
+    request = %{
+      kind: :attribute,
+      paths: [path],
+      min_interval_s: 0,
+      max_interval_s: 1,
+      resubscribe: false,
+      queue_limit: 1
+    }
+
+    for {key, value} <- [
+          {:kind, :unknown},
+          {:paths, []},
+          {:paths, [path, path]},
+          {:paths, [nil]},
+          {:paths, [%{path | node_id: 0}]},
+          {:paths, [%{path | fabric_id: 2}]},
+          {:paths, [%{path | cluster: 0x7FFF}]},
+          {:min_interval_s, -1},
+          {:max_interval_s, 0},
+          {:resubscribe, 0},
+          {:queue_limit, 0},
+          {:queue_limit, 10_001},
+          {:extra, true}
+        ] do
+      assert {:error, %Error{effect: :none}} =
+               Native.subscribe(handle, Map.put(request, key, value), self(), 1_000)
+    end
+
     assert File.read!(audit) == initial
     assert :ok = Native.disconnect(handle)
   end
@@ -77,6 +154,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
           [],
           Keyword.put(valid, :lifecycle, :oneshot),
           Keyword.put(valid, :storage_path, "relative"),
+          Keyword.put(valid, :storage_path, nil),
           Keyword.put(valid, :storage_mode, :unknown),
           Keyword.put(valid, :authority, :external),
           Keyword.put(valid, :vendor_id, 0),

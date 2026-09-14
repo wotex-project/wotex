@@ -300,6 +300,15 @@ empty subjects/targets, preserve optional read fields, reject fabric-index
 writes and prevent well-formed TLV from bypassing field validation. These are
 pure conversion assertions, separate from the executed SDK ACL peer cohort.
 
+The additional standalone and persistent-owner boundary tests assert that
+invalid sessions/options/versions, malformed mutation acknowledgments, ambiguous
+event batches, duplicate discovered endpoints, foreign handle generations and
+invalid native subscription fields return structured failures. Request audits
+prove rejected native input emits no request and leaves the original live
+controller usable. The default suite passes 114 checks with seven interop cases
+excluded. Coverage is 89.7% in this cohort; the required 95% release gate remains
+unsatisfied and its threshold and exclusions are unchanged.
+
 [WMA.13](../specs/WMA.13-native-backend.md) defines the complete native binary,
 Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P08 are executed
 at their stated deterministic and native-compilation boundaries, and P08a is
