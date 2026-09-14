@@ -122,6 +122,9 @@ defmodule WotexConformance.MixProject do
         "docs/decisions/0003-normalized-observations.md": [
           title: "Normalized observations"
         ],
+        "docs/decisions/0004-discovery-corpus-boundary.md": [
+          title: "Discovery corpus boundary"
+        ],
         "docs/provenance/source.md": [title: "Source provenance"],
         "docs/provenance/standards.md": [title: "Standards provenance"],
         "docs/provenance/assertion-inventory.md": [title: "Assertion inventory"],
