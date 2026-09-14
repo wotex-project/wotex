@@ -218,9 +218,10 @@ do not silently change them to the richer native helper shapes.
 pure codecs and compares every declared output field. Its test tags bind the
 case, requirements and exact corpus SHA-256. Other corpus cases remain specified
 and unexecuted. Existing WOP-Vxx entries in .10 are scenario families, not
-implemented test vectors. Every family still requires its complete boundary,
-security and fault cases; these pure bindings do not accept WOP-P01 or native
-SDK/service behavior.
+implemented test vectors. Together with the production native value-contract
+runner required by WOP.13, these pure bindings accept WOP-P01 only. Every later
+family still requires its complete boundary, security and fault cases; no
+native Session, service, Browse or lifecycle behavior is accepted here.
 
 Corpus format version 1.0.0 separates `input` from `expectation`. The runner
 passes only `input` to the operation/test adapter and compares the complete

@@ -31,12 +31,15 @@ defmodule Wotex.OPCUA.Native.Build do
 
   @native_files ~w(CMakeLists.txt main.c build_command.c custody.c custody_check.c README.md runtime-guardian.md
     json_codec.c json_codec.h json_check.c json-codec.md value_codec.c value_codec.h value_check.c value_fault_check.c
+    native_contract_check.c
     value-codec.md fixtures/value-v1.json vendor/yyjson/yyjson.c vendor/yyjson/yyjson.h vendor/yyjson/LICENSE)
+  @native_contract Path.expand("../../../../docs/specs/fixtures/native-contract-v1.json", __DIR__)
   @build_sources [
     Path.expand("../../../mix/tasks/wotex.opcua.native.build.ex", __DIR__)
     | Path.wildcard(Path.join(__DIR__, "*.ex"))
   ]
   for file <- @build_sources, do: @external_resource(file)
+  @external_resource @native_contract
 
   @build_hashes Map.new(@build_sources, fn file ->
                   {Path.basename(file),
@@ -94,12 +97,14 @@ defmodule Wotex.OPCUA.Native.Build do
         end
       end)
 
-    with {:ok, hashes} <- result do
+    with {:ok, hashes} <- result,
+         {:ok, native_contract_sha256} <- Workspace.digest(@native_contract) do
       {:ok,
        json(%{
          format_version: 1,
          build_sources: @build_hashes,
          source_manifest_sha256: Source.manifest_digest(),
+         native_contract_sha256: native_contract_sha256,
          native_sources: hashes,
          tool_paths: tools.paths,
          tool_hashes: tools.hashes,

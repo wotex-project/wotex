@@ -64,6 +64,12 @@ projections for executable corpus checks. It is not installed as a runtime
 program. Typed SDK value conversion, serialization and service admission remain
 required implementation.
 
+`native_contract_check.c` binds the first sixteen native contract vectors to
+the typed codec, strict parser and pure NamespaceArray translation helper. It is
+a build-time test driver and is not installed. These cases perform no protocol
+service or network operation; the persistent owner must exercise the overlapping
+parser and namespace cells again in WOP-P02.
+
 The build supplies explicit static OpenSSL paths and disables pkg-config
 executable discovery through an empty, typed CMake cache entry. FindPkgConfig's
 command definitions remain available to CMake versions whose FindOpenSSL module

@@ -502,6 +502,22 @@ static void rollback(WopValueArena *arena, size_t checkpoint) {
     arena->used = checkpoint;
 }
 
+WopValueStatus wop_value_read_node_id(yyjson_val *input, WopValueArena *arena,
+                                    UA_NodeId *output) {
+    if(!output)
+        return WOP_VALUE_INVALID;
+    memset(output, 0, sizeof(*output));
+    if(!valid_arena(arena))
+        return WOP_VALUE_INVALID;
+    size_t checkpoint = arena->used;
+    WopValueStatus status = read_node(input, arena, output);
+    if(status != WOP_VALUE_OK) {
+        rollback(arena, checkpoint);
+        memset(output, 0, sizeof(*output));
+    }
+    return status;
+}
+
 WopValueStatus wop_value_read_variant(yyjson_val *input, WopValueArena *arena, UA_Variant *output) {
     if(!output)
         return WOP_VALUE_INVALID;
@@ -619,6 +635,70 @@ static bool valid_string(const UA_String *value, size_t maximum) {
     return value && value->length <= maximum && (!value->length || value->data);
 }
 
+static bool namespace_string(const UA_String *value) {
+    return valid_string(value, WOP_VALUE_STRING_BYTES) && value->length && valid_utf8(value);
+}
+
+static bool same_string(const UA_String *left, const UA_String *right) {
+    return left->length == right->length &&
+           (!left->length || !memcmp(left->data, right->data, left->length));
+}
+
+static bool valid_node_id(const UA_NodeId *value) {
+    if(!value)
+        return false;
+    switch(value->identifierType) {
+    case UA_NODEIDTYPE_NUMERIC:
+    case UA_NODEIDTYPE_GUID:
+        return true;
+    case UA_NODEIDTYPE_STRING:
+        return valid_string(&value->identifier.string, 4096) &&
+               valid_utf8(&value->identifier.string);
+    case UA_NODEIDTYPE_BYTESTRING:
+        return valid_string(&value->identifier.byteString, 4096);
+    default:
+        return false;
+    }
+}
+
+WopValueStatus wop_value_translate_node_id(const UA_String *server_namespaces,
+                                         size_t server_count,
+                                         const UA_String *sdk_namespaces,
+                                         size_t sdk_count,
+                                         const UA_NodeId *public_id,
+                                         UA_NodeId *sdk_id) {
+    if(!server_namespaces || !sdk_namespaces || !public_id || !sdk_id ||
+       !server_count || server_count > (size_t)UINT16_MAX + 1U ||
+       !sdk_count || sdk_count > (size_t)UINT16_MAX + 1U ||
+       public_id->namespaceIndex >= server_count || !valid_node_id(public_id))
+        return WOP_VALUE_INVALID;
+    const UA_String *identity = &server_namespaces[public_id->namespaceIndex];
+    if(!namespace_string(identity))
+        return WOP_VALUE_INVALID;
+    size_t server_matches = 0;
+    for(size_t index = 0; index < server_count; index++) {
+        if(!namespace_string(&server_namespaces[index]))
+            return WOP_VALUE_INVALID;
+        if(same_string(&server_namespaces[index], identity))
+            server_matches++;
+    }
+    size_t sdk_matches = 0;
+    size_t translated = 0;
+    for(size_t index = 0; index < sdk_count; index++) {
+        if(!namespace_string(&sdk_namespaces[index]))
+            return WOP_VALUE_INVALID;
+        if(same_string(&sdk_namespaces[index], identity)) {
+            sdk_matches++;
+            translated = index;
+        }
+    }
+    if(server_matches != 1 || sdk_matches != 1)
+        return WOP_VALUE_INVALID;
+    *sdk_id = *public_id;
+    sdk_id->namespaceIndex = (UA_UInt16)translated;
+    return WOP_VALUE_OK;
+}
+
 static yyjson_mut_val *write_string(ValueWriter *writer, const UA_String *value, size_t maximum) {
     if(!valid_string(value, maximum))
         return writer_fail(writer, value && value->length > maximum ? WOP_VALUE_LIMIT : WOP_VALUE_INVALID);
@@ -727,6 +807,20 @@ static yyjson_mut_val *write_node(ValueWriter *writer, const UA_NodeId *value) {
         return writer_fail(writer, WOP_VALUE_INVALID);
     }
     return writer_checked(writer, yyjson_mut_strncpy(writer->document, text, used));
+}
+
+WopValueStatus wop_value_write_node_id(const UA_NodeId *input, yyjson_mut_doc *document,
+                                     yyjson_mut_val **output) {
+    if(!output)
+        return WOP_VALUE_INVALID;
+    *output = NULL;
+    if(!input || !document)
+        return WOP_VALUE_INVALID;
+    ValueWriter writer = {document, WOP_VALUE_OK};
+    yyjson_mut_val *result = write_node(&writer, input);
+    if(writer.status == WOP_VALUE_OK)
+        *output = result;
+    return writer.status;
 }
 
 static yyjson_mut_val *write_expanded(ValueWriter *writer, const UA_ExpandedNodeId *value) {

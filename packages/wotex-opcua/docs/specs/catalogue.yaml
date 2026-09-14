@@ -33,11 +33,11 @@ specifications:
     version: "1.1.0"
     path: "docs/specs/WOP.10-software-contract.md"
     implementation_status: "partial"
-    standards: [{"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Native target requirements; exact source digests are in WOP.13 and native-sources-v1.json; no native acceptance evidence"}]
+    standards: [{"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Pure typed-value and production SDK value-projection subset only; no native Session or service acceptance"}]
     requires: ["WOP.00", "WOP.01", "WOP.02"]
     implementation_modules: ["Wotex.OPCUA.Address", "Wotex.OPCUA.Asyncua", "Wotex.OPCUA.Binary", "Wotex.OPCUA.Client", "Wotex.OPCUA.Error", "Wotex.OPCUA.Frame", "Wotex.OPCUA.PortCall", "Wotex.OPCUA.Session", "Wotex.OPCUA.Value", "Wotex.OPCUA"]
-    executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+    executable_evidence: ["test/wotex/opcua/typed_values_test.exs", "test/wotex/opcua/standalone_contract_test.exs", "priv/native/value_check.c", "priv/native/value_fault_check.c", "priv/native/native_contract_check.c", "test/wotex/opcua/native/build_test.exs"]
+    compatibility_classification: "WOP-P01 accepts S01 typed values and the exact WOP-F01..F13/WOP-X-F01..F16 pure/native projections. Session-owned namespace acquisition, services, security and subscriptions remain required."
   - id: "WOP.11"
     version: "1.1.2"
     path: "docs/specs/WOP.11-standalone-client-and-preservation.md"
@@ -46,7 +46,7 @@ specifications:
     requires: ["WOP.00", "WOP.10"]
     implementation_modules: ["Wotex.OPCUA.Binary", "Wotex.OPCUA.Binary.Names", "Wotex.OPCUA.Binary.Reference", "Wotex.OPCUA.Binary.Variant", "Wotex.OPCUA.Binary.DataValue", "Wotex.OPCUA.Binary.Element"]
     executable_evidence: ["test/wotex/opcua/standalone_contract_test.exs", "test/wotex/opcua/binary/names_test.exs", "test/wotex/opcua/binary/reference_test.exs", "test/wotex/opcua/typed_values_test.exs"]
-    compatibility_classification: "F01 through F13 execute pure typed value/identity/reference codecs with boundary and malformed-input tests. SDK construction, Browse and lifecycle cases remain required; P01 is incomplete."
+    compatibility_classification: "WOP-P01 accepts F01 through F13 through pure typed value/identity/reference codecs with boundary and malformed-input tests. Browse, Session and lifecycle cases remain required."
   - id: "WOP.12"
     version: "1.1.0"
     path: "docs/specs/WOP.12-wotex-integration.md"
@@ -60,8 +60,8 @@ specifications:
     version: "1.1.2"
     path: "docs/specs/WOP.13-native-executable.md"
     implementation_status: "partial"
-    standards: [{"name": "OPC UA / open62541 / OpenSSL", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Pinned native target; actual static build, executable admission, bootstrap and opaque-stream custody subset only, no Session or interoperability acceptance"}]
+    standards: [{"name": "OPC UA / open62541 / OpenSSL", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Pinned static build, executable admission, bootstrap, opaque-stream custody and production SDK value-projection subset only; no Session or interoperability acceptance"}]
     requires: ["WOP.00", "WOP.10", "WOP.11", "WOP.12"]
     implementation_modules: ["Wotex.OPCUA.Native.Build", "Wotex.OPCUA.Native.Source", "Wotex.OPCUA.Native.Archive", "Wotex.OPCUA.Native.Workspace", "Wotex.OPCUA.Native.Host", "Wotex.OPCUA.Native.HostOptions", "Wotex.OPCUA.Native.Executable", "Wotex.OPCUA.Native.Ready", "Wotex.OPCUA.Native.Vendor"]
-    executable_evidence: ["test/wotex/opcua/native/build_test.exs", "test/wotex/opcua/native/build_fault_test.exs", "test/wotex/opcua/native/custody_test.exs", "bin/check_native_custody.exs", "priv/native/custody_check.c", "test/wotex/opcua/native/ready_test.exs", "test/wotex/opcua/native/executable_test.exs", "test/wotex/opcua/native/host_options_test.exs", "test/wotex/opcua/native/host_test.exs", "test/wotex/opcua/native/json_test.exs", "test/wotex/opcua/native/vendor_test.exs"]
-    compatibility_classification: "WOP-P00 accepts static native build, source/executable admission, bounded BEAM readiness and portable bidirectional custody for its exact evidence cohorts, including Linux sanitizer and leak lanes. Native Session, credits, exact service metadata and independent peers remain required implementation; P00 does not accept the complete native profile."
+    executable_evidence: ["test/wotex/opcua/native/build_test.exs", "test/wotex/opcua/native/build_fault_test.exs", "test/wotex/opcua/native/custody_test.exs", "bin/check_native_custody.exs", "priv/native/custody_check.c", "priv/native/value_check.c", "priv/native/value_fault_check.c", "priv/native/native_contract_check.c", "test/wotex/opcua/native/ready_test.exs", "test/wotex/opcua/native/executable_test.exs", "test/wotex/opcua/native/host_options_test.exs", "test/wotex/opcua/native/host_test.exs", "test/wotex/opcua/native/json_test.exs", "test/wotex/opcua/native/vendor_test.exs"]
+    compatibility_classification: "WOP-P00 accepts static native build, source/executable admission, bounded BEAM readiness and portable bidirectional custody for its exact evidence cohorts, including Linux sanitizer and leak lanes. WOP-P01 additionally accepts production parser/SDK value projection and a pure exact-match namespace translator for WOP-X-F01..F16. Native Session, credits, services and independent peers remain required implementation."

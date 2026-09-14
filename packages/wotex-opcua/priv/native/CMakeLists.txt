@@ -47,6 +47,10 @@ add_executable(wotex_opcua_value_fault_check value_fault_check.c)
 target_compile_features(wotex_opcua_value_fault_check PRIVATE c_std_11)
 target_compile_options(wotex_opcua_value_fault_check PRIVATE -Wall -Wextra -Werror)
 target_link_libraries(wotex_opcua_value_fault_check PRIVATE wotex_opcua_values)
+add_executable(wotex_opcua_native_contract_check native_contract_check.c)
+target_compile_features(wotex_opcua_native_contract_check PRIVATE c_std_11)
+target_compile_options(wotex_opcua_native_contract_check PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(wotex_opcua_native_contract_check PRIVATE wotex_opcua_values)
 
 add_executable(wotex_opcua_custody custody.c)
 add_executable(wotex_opcua_custody_check custody_check.c)
@@ -58,7 +62,8 @@ endforeach()
 option(WOTEX_SANITIZERS "Instrument the native host with ASan and UBSan" OFF)
 if(WOTEX_SANITIZERS)
   foreach(target wotex_opcua_native wotex_opcua_custody wotex_opcua_custody_check
-      wotex_opcua_json wotex_opcua_json_check wotex_opcua_values wotex_opcua_value_check wotex_opcua_value_fault_check)
+      wotex_opcua_json wotex_opcua_json_check wotex_opcua_values wotex_opcua_value_check
+      wotex_opcua_value_fault_check wotex_opcua_native_contract_check)
     target_compile_options(${target} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
     target_link_options(${target} PRIVATE -fsanitize=address,undefined)
   endforeach()
@@ -75,9 +80,20 @@ foreach(index RANGE 0 ${WOTEX_VALUE_LAST})
   set_tests_properties(native_value_${case_id} PROPERTIES TIMEOUT 10
     PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 endforeach()
-foreach(number 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16)
+foreach(number 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17)
   add_test(NAME native_value_fault_WOP-NF${number} COMMAND wotex_opcua_value_fault_check WOP-NF${number})
   set_tests_properties(native_value_fault_WOP-NF${number} PROPERTIES TIMEOUT 10
+    PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
+endforeach()
+set(WOTEX_NATIVE_CONTRACT
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../docs/specs/fixtures/native-contract-v1.json")
+if(NOT EXISTS "${WOTEX_NATIVE_CONTRACT}")
+  message(FATAL_ERROR "The native contract fixture is required")
+endif()
+foreach(number 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16)
+  add_test(NAME native_contract_WOP-X-F${number} COMMAND wotex_opcua_native_contract_check
+    "${WOTEX_NATIVE_CONTRACT}" WOP-X-F${number})
+  set_tests_properties(native_contract_WOP-X-F${number} PROPERTIES TIMEOUT 10
     PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 endforeach()
 add_test(NAME native_json_self_test COMMAND wotex_opcua_json_check --self-test)

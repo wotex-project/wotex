@@ -88,6 +88,15 @@ defmodule Wotex.OPCUA.Native.BuildTest do
 
     native_tests = File.read!(Path.join(workspace, "logs/native_test.log"))
     assert native_tests =~ "native_json_self_test"
+    native_contract = File.read!("docs/specs/fixtures/native-contract-v1.json")
+    native_contract_hash = :crypto.hash(:sha256, native_contract) |> Base.encode16(case: :lower)
+    assert receipt["identity"]["native_contract_sha256"] == native_contract_hash
+
+    for number <- 1..16 do
+      id = String.pad_leading(Integer.to_string(number), 2, "0")
+      assert native_tests =~ "native_contract_WOP-X-F#{id}"
+    end
+
     corpus_path = Application.app_dir(:wotex_opcua, "priv/native/fixtures/value-v1.json")
     corpus_bytes = File.read!(corpus_path)
     corpus_hash = :crypto.hash(:sha256, corpus_bytes) |> Base.encode16(case: :lower)
@@ -97,7 +106,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
       assert native_tests =~ "native_value_#{row["id"]}"
     end
 
-    for number <- 1..16 do
+    for number <- 1..17 do
       id = String.pad_leading(Integer.to_string(number), 2, "0")
       assert native_tests =~ "native_value_fault_WOP-NF#{id}"
     end

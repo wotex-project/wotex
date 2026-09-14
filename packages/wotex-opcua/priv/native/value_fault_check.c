@@ -70,6 +70,34 @@ static int faults(Fixture *fixture, const char *id) {
         CHECK(fixture->arena.used == 0 && all_zero(fixture->arena_pool, 32));
         return 0;
     }
+    if(!strcmp(id, "WOP-NF17")) {
+        UA_String server[] = {UA_STRING("http://opcfoundation.org/UA/"), UA_STRING("urn:server"),
+                              UA_STRING("urn:temperature"), UA_STRING("urn:power")};
+        UA_String sdk[] = {UA_STRING("http://opcfoundation.org/UA/"), UA_STRING("urn:server"),
+                           UA_STRING("urn:power"), UA_STRING("urn:temperature")};
+        UA_NodeId public_id = UA_NODEID_NUMERIC(2, 42);
+        UA_NodeId sdk_id = UA_NODEID_NUMERIC(9, 9);
+        CHECK(wop_value_translate_node_id(server, 4, sdk, 4, &public_id, &sdk_id) == WOP_VALUE_OK);
+        CHECK(sdk_id.namespaceIndex == 3 && sdk_id.identifier.numeric == 42);
+        CHECK(public_id.namespaceIndex == 2 && public_id.identifier.numeric == 42);
+        CHECK(wop_value_translate_node_id(NULL, 4, sdk, 4, &public_id, &sdk_id) == WOP_VALUE_INVALID);
+        CHECK(wop_value_translate_node_id(server, 0, sdk, 4, &public_id, &sdk_id) == WOP_VALUE_INVALID);
+        CHECK(wop_value_translate_node_id(server, 65537, sdk, 4, &public_id, &sdk_id) == WOP_VALUE_INVALID);
+        CHECK(wop_value_translate_node_id(server, 4, sdk, 4, NULL, &sdk_id) == WOP_VALUE_INVALID);
+        CHECK(wop_value_translate_node_id(server, 4, sdk, 4, &public_id, NULL) == WOP_VALUE_INVALID);
+        UA_String duplicate[] = {UA_STRING("urn:temperature"), UA_STRING("urn:temperature")};
+        CHECK(wop_value_translate_node_id(server, 4, duplicate, 2, &public_id, &sdk_id) == WOP_VALUE_INVALID);
+        UA_String absent[] = {UA_STRING("urn:other")};
+        CHECK(wop_value_translate_node_id(server, 4, absent, 1, &public_id, &sdk_id) == WOP_VALUE_INVALID);
+        UA_String invalid[] = {{1, NULL}};
+        CHECK(wop_value_translate_node_id(server, 4, invalid, 1, &public_id, &sdk_id) == WOP_VALUE_INVALID);
+        public_id.namespaceIndex = 4;
+        CHECK(wop_value_translate_node_id(server, 4, sdk, 4, &public_id, &sdk_id) == WOP_VALUE_INVALID);
+        public_id.namespaceIndex = 2;
+        public_id.identifierType = (enum UA_NodeIdType)255;
+        CHECK(wop_value_translate_node_id(server, 4, sdk, 4, &public_id, &sdk_id) == WOP_VALUE_INVALID);
+        return 0;
+    }
     CHECK(document(fixture, !strcmp(id, "WOP-NF12") ? 1024 : WOP_JSON_POOL_BYTES));
     if(!strcmp(id, "WOP-NF03")) {
         CHECK(wop_value_write_variant(&variant, fixture->document, NULL) == WOP_VALUE_INVALID);

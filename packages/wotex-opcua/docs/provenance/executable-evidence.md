@@ -59,6 +59,44 @@ bootstrap behavior, not a secure Session or application service. P01 and later
 packets, complete native service framing, independent peers, the full platform
 matrix and an archive-only native consumer remain required separately.
 
+## WOP-P01 typed value and namespace cohort
+
+The P01 gate uses Elixir 1.20.2 / OTP 29.0.4 on macOS arm64 with the locked
+development dependencies. `WOTEX_PATH_DEPS=1 mix check --no-retry` passes 254
+checks (10 doctests, 4 properties and 240 tests), with one interoperability test
+excluded and 96.3% coverage. The required fresh native build passes 178 CTest
+cases, including every WOP-X-F01 through WOP-X-F16 projection and WOP-NF17
+namespace fault case. Build receipts bind the native contract fixture separately
+from the first-party source files and upstream archives.
+
+A separate Debug build enables `WOTEX_SANITIZERS=ON` and runs
+`ctest --output-on-failure -R 'native_(value|contract|json)'` with
+`ASAN_OPTIONS=detect_leaks=0:halt_on_error=1` and
+`UBSAN_OPTIONS=halt_on_error=1`. All 167 selected tests pass on macOS arm64.
+The same 167 cases also pass on Linux x86_64 with leak detection enabled,
+using the pinned Debian image recorded for P00, GCC 12.2.0 and CMake 3.25.1.
+Both builds instrument the first-party native sources and parser with
+AddressSanitizer/UndefinedBehaviorSanitizer; their static SDK and OpenSSL inputs
+retain the pinned versions recorded for P00 and are not sanitizer-instrumented.
+
+An isolated Elixir 1.18.4 / OTP 27.3.4.15 run passes the default suite:
+10 doctests, 4 properties and 241 tests, zero failures and two exclusions
+(`interop` and `native_build`). That run does not repeat the SDK build.
+
+| P01 input | SHA-256 |
+| --- | --- |
+| native contract corpus | `b1505300b4bcb5d0fd596c67a6e027bcbef123b386c8f379f0bd0ecf5e995ec1` |
+| typed value corpus | `b38f6fc3b8ea23fd55a2c899146bb643376b6e4ace9af3b71d1221615b0db1ec` |
+| native contract runner | `748535edab646afbe7847f5e4af8d42c824fa05c72850ebea0033918465ac0f9` |
+| value codec implementation | `ef7a4b16e6485fec0f903e2f55aedadf3a982fa0c662ec0bb07cb5a781ba7593` |
+| value codec header | `1aeef02790f45be1071ec6a0063cb40d70b8e4e49880b60b876052187e658b16` |
+| direct SDK fault runner | `433783382e1b74dc6560440e5af2f14359af07c754819dd41f128b875c362c4f` |
+
+P01 accepts pure typed values, identity/reference preservation, SDK value
+projection and exact namespace translation. The namespace arrays are explicit
+inputs to a pure primitive. Their acquisition and lifetime, native Sessions,
+services, subscriptions and independent peers remain required by later packets.
+
 ## Implemented Python-adapter interoperability
 
 Real secure asyncua 2.0.1 peer: PASS for read, write/readback/restore, browse,
@@ -187,7 +225,7 @@ The checker clears and overwrites the parser storage before SDK encoding, then
 clears the SDK arena before serializing the projected result. Rejected inputs
 must leave no result and restore the arena checkpoint.
 
-`value_fault_check` adds 16 direct SDK structure cases. They cover invalid
+`value_fault_check` adds 17 direct SDK structure cases. They cover invalid
 parameters, unknown types, dimensions, finite floating values, UTF-8, namespace
 conflicts, DataValue flags, allocation exhaustion and size boundaries. Maximum
 1024-element arrays, 65536-byte strings and byte bodies, and an exactly 1 MiB

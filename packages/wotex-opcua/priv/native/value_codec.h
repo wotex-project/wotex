@@ -40,6 +40,8 @@ WopValueStatus wop_value_read_variant(yyjson_val *input, WopValueArena *arena,
                                     UA_Variant *output);
 WopValueStatus wop_value_read_data_value(yyjson_val *input, WopValueArena *arena,
                                        UA_DataValue *output);
+WopValueStatus wop_value_read_node_id(yyjson_val *input, WopValueArena *arena,
+                                    UA_NodeId *output);
 
 /* These writers borrow an SDK value for the duration of the call and copy all
  * retained strings into the caller's bounded yyjson mutable-document pool.
@@ -49,5 +51,17 @@ WopValueStatus wop_value_write_variant(const UA_Variant *input, yyjson_mut_doc *
                                      yyjson_mut_val **output);
 WopValueStatus wop_value_write_data_value(const UA_DataValue *input, yyjson_mut_doc *document,
                                         yyjson_mut_val **output);
+WopValueStatus wop_value_write_node_id(const UA_NodeId *input, yyjson_mut_doc *document,
+                                     yyjson_mut_val **output);
+
+/* Translate a concrete public NodeId between two views of one Session's
+ * NamespaceArray. The identifier storage remains borrowed from public_id.
+ * Missing or duplicate URI identities fail without producing an output. */
+WopValueStatus wop_value_translate_node_id(const UA_String *server_namespaces,
+                                         size_t server_count,
+                                         const UA_String *sdk_namespaces,
+                                         size_t sdk_count,
+                                         const UA_NodeId *public_id,
+                                         UA_NodeId *sdk_id);
 
 #endif

@@ -1,8 +1,28 @@
 {
   "format_version": "1.0.0",
   "specification": "WOP.13@1.1.0",
-  "execution_status": "specified_unexecuted",
-  "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. Scenario families require additional boundary and fault assertions.",
+  "execution_status": "partially_bound",
+  "executed_cases": {
+    "WOP-P01": [
+      "WOP-X-F01",
+      "WOP-X-F02",
+      "WOP-X-F03",
+      "WOP-X-F04",
+      "WOP-X-F05",
+      "WOP-X-F06",
+      "WOP-X-F07",
+      "WOP-X-F08",
+      "WOP-X-F09",
+      "WOP-X-F10",
+      "WOP-X-F11",
+      "WOP-X-F12",
+      "WOP-X-F13",
+      "WOP-X-F14",
+      "WOP-X-F15",
+      "WOP-X-F16"
+    ]
+  },
+  "description": "Exact native parser, SDK-owner and software-peer assertions; expectations remain runner-owned. WOP-P01 binds F01 through F16 to pure parser, typed SDK-value conversion and namespace translation. Persistent owner/service execution and later scenario families remain required.",
   "cases": [
     {
       "id": "WOP-X-F01",

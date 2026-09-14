@@ -21,4 +21,4 @@ Implementation readiness does not mean implementation or conformance is complete
 
 - [WOP.13 Native executable and software acceptance](WOP.13-native-executable.md)
 - [Pinned native sources](fixtures/native-sources-v1.json) — archive identities, not build evidence
-- [Native acceptance corpus](fixtures/native-contract-v1.json) — specified, unexecuted cases
+- [Native acceptance corpus](fixtures/native-contract-v1.json) — WOP-X-F01 through WOP-X-F16 are bound by WOP-P01; later cases remain specified and unexecuted

@@ -29,6 +29,13 @@ Serialized output, its LF delimiter, and the native owner's queued bytes require
 separate admission under WOP.13; a successful typed projection alone does not
 prove that a complete response fits the 131072-byte frame.
 
+`wop_value_translate_node_id` maps one concrete NodeId between two immutable
+views of the same Session's NamespaceArray. It requires exactly one occurrence
+of the public namespace URI in each view and borrows the original identifier
+storage. Missing, duplicate, malformed or excessive namespace tables fail
+without producing a translated NodeId. Acquiring, retaining and invalidating
+the two arrays belongs to the persistent Session owner in WOP-P02.
+
 The C status set is finite: `WOP_VALUE_OK`, `WOP_VALUE_INVALID`,
 `WOP_VALUE_LIMIT`, and `WOP_VALUE_UNSUPPORTED`. The operation owner assigns the
 public error phase and effect according to whether failure occurs before an
@@ -104,6 +111,12 @@ constructor to produce malformed data. Its finite case table is:
 | WOP-NF14 | A 65536-byte string passes both directions; 65537 bytes fail with complete arena rollback. |
 | WOP-NF15 | A 65536-byte body retains every byte through Base64 serialization, strict parsing and SDK construction. |
 | WOP-NF16 | An exactly 1 MiB SDK Variant projects successfully; one additional wire byte fails without changing borrowed values. |
+| WOP-NF17 | Namespace translation rejects invalid, missing and duplicate identities and retains the original NodeId. |
+
+`native_contract_check` additionally binds WOP-X-F01 through WOP-X-F16 to the
+authoritative native contract fixture. It routes value cases through this codec,
+parser cases through `wop_json_read`, and namespace cases through
+`wop_value_translate_node_id`. It creates no Client, Session or network request.
 
 The value definitions follow [OPC UA Part 6 1.05.07 Variant](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.16)
 and [DataValue](https://reference.opcfoundation.org/specs/OPC-10000-6/5.2.2.17).

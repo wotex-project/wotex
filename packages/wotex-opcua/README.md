@@ -68,6 +68,13 @@ guardian on macOS. Linux also runs strict AddressSanitizer/UndefinedBehaviorSani
 and separate LeakSanitizer executions of WOP-G01 through WOP-G09. P00 does not
 implement a native Session, service framing, security activation or subscription.
 
+WOP-P01 accepts the pure typed-value, DataValue, identity and reference codecs
+and their production open62541 value projection for the exact vectors and
+cohorts in executable evidence. The native contract runner binds WOP-X-F01
+through WOP-X-F16 without a Session or network peer. Namespace translation is a
+pure exact-match primitive; Session-owned NamespaceArray acquisition and all
+service, security and subscription behavior remain later packets.
+
 `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` remain specified work. Bootstrap build
 success does not establish a native Session or accept the native protocol profile.

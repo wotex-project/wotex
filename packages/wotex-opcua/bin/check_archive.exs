@@ -14,6 +14,7 @@ defmodule Wotex.OPCUA.Check.Archive do
     "priv/native/build_command.c",
     "priv/native/custody.c",
     "priv/native/custody_check.c",
+    "priv/native/native_contract_check.c",
     "priv/native/runtime-guardian.md",
     "priv/native/json_codec.c",
     "priv/native/json_codec.h",
@@ -27,7 +28,8 @@ defmodule Wotex.OPCUA.Check.Archive do
     "priv/native/vendor/yyjson/LICENSE",
     "docs/specs/fixtures/native-sources-v1.json",
     "docs/specs/fixtures/native-ready-v1.json",
-    "docs/specs/fixtures/custody-contract-v1.json"
+    "docs/specs/fixtures/custody-contract-v1.json",
+    "docs/specs/fixtures/native-contract-v1.json"
   ]
   @development ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|cover|deps|doc|docs/tasks|mix\.lock|priv/plts|test|_build)(/|$)}
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]

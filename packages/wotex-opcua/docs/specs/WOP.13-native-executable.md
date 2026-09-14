@@ -11,8 +11,9 @@ spec:
 # WOP.13 Native OPC UA executable and software acceptance
 
 This accepted target is **partially implemented**. WOP-P00 accepts the pinned
-source/build/bootstrap and portable process-custody boundary for the exact
-cohorts in executable evidence. Secure native services remain required implementation.
+source/build/bootstrap and portable process-custody boundary, and WOP-P01 accepts
+pure typed values plus production SDK value projection, for the exact cohorts
+in executable evidence. Secure native Sessions and services remain required implementation.
 The target runtime uses an Elixir API and an explicitly owned open62541 C executable.
 Python is confined to the independent test peer and upstream build generators.
 A native executable, a protocol service, a WoT binding and an interoperability
@@ -429,10 +430,13 @@ Public tests cover both native consumers and real Runtime supervision.
 ## WOP-X06 — Executable acceptance and evidence
 
 [native-contract-v1.json](fixtures/native-contract-v1.json) fixes independent
-inputs and exact observations. Its status is specified_unexecuted. Each case is
-bound to the actual IPC parser/owner/SDK adapter, or an explicitly labelled
-injected service boundary, before acceptance. The asserting runner owns the
-expectation. Pure framing cases run every split and coalescing of the given line;
+inputs and exact observations. Its status is partially_bound: WOP-X-F01 through
+WOP-X-F16 execute through the production bounded JSON parser, SDK value codec
+and pure namespace translator in `wotex_opcua_native_contract_check`. The runner
+does not create a Client or Session and records zero service requests. Remaining
+cases must be bound to the actual IPC parser/owner/SDK adapter, or an explicitly
+labelled injected service boundary, before acceptance. The asserting runner owns
+the expectation. Pure framing cases run every split and coalescing of the given line;
 semantic cases serialize through the production encoder, never a fixture echo.
 Native traces use a deterministic service/clock boundary; peer lanes separately
 prove real bytes, certificates and callbacks. The full S/N/I scenario matrices

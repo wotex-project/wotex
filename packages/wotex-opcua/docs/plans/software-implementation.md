@@ -16,7 +16,7 @@ binding implementation work, not a changelog.
 | Package | Implementation and acceptance | Executable destinations | Status |
 | --- | --- | --- | --- |
 | WOP-P00 | X01/X02/X07: pinned SDK/OpenSSL source admission, native Mix build task, separate bidirectional custody guardian, package assets, versioned ready and both executable digests; Opex reuse obeys the reviewed metadata/security boundary | native/build_test.exs, native/build_fault_test.exs, native/workspace_test.exs; native host ready/digest/EOF tests; X01/X02 manifest/failure cases and WOP-G01..G10 native custody cases | Accepted |
-| WOP-P01 | S01/N02/N05: typed pure Variant/DataValue/ExpandedNodeId/QualifiedName/LocalizedText/reference codecs, exact signed ticks and array/null/opaque distinctions; lossless JSON integer/negative-zero IPC | typed_values_test.exs; test/native/value_test.c; WOP-F01..F13 and X-F01..F16 | Open |
+| WOP-P01 | S01/N02/N05: typed pure Variant/DataValue/ExpandedNodeId/QualifiedName/LocalizedText/reference codecs, exact signed ticks and array/null/opaque distinctions; lossless JSON integer/negative-zero IPC | typed_values_test.exs; production native value/contract checks; WOP-F01..F13 and X-F01..F16 | Accepted |
 | WOP-P02 | S02/X03/X04: persistent native Session activation, explicit one-shot native projection, server/local namespace mapping, complete framed IPC, credit control, bounded async requests and cancellation/EOF cleanup | persistent_bridge_test.exs; test/native/session_test.c; X-F10..F23/X-F49..F57 plus split/coalescing/malformed/partial-open matrix | Open |
 | WOP-P03 | S03: all three SignAndEncrypt policies and all three user-token modes, pin/SAN/URI/CRL/key validation, immutable trust, no downgrade/reconnect/replay | test/native/security_test.c; test/interop/security_fault_test.exs; X-F30..F47 | Open |
 | WOP-P04 | S04/X05: raw service-level subscriptions, exact revised parameters, full DataValue/overflow metadata, bounded Publish ACK and Republish sequence state | subscription_test.exs; test/native/subscription_test.c; X-F24..F28 | Open |
@@ -34,8 +34,10 @@ required facility, fixture echo or test identifier alone satisfies acceptance.
 
 The status column applies to the exact sources, toolchains and executions in
 the evidence document. P00 acceptance establishes source/build/bootstrap and
-portable guardian custody only. It does not accept a secure native Session or
-any later service, subscription, Runtime, peer, stress or archive-consumer packet.
+portable guardian custody only. P01 adds pure typed values and native SDK value
+projection, including an exact-match namespace translation primitive; it does
+not acquire a server NamespaceArray or accept a secure native Session or any
+later service, subscription, Runtime, peer, stress or archive-consumer packet.
 
 ## Verification and evidence
 
