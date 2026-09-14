@@ -195,7 +195,8 @@ WOTEX_PATH_DEPS=1 mix check
 resolution, warnings-as-errors compilation, unused-dependency detection,
 formatting, dependency audits, strict Credo, Doctor, warning-free docs,
 Dialyzer, one coverage-backed test run, boundary/application checks, and exact
-archive construction/inspection. It does not invoke a release task.
+archive construction/inspection plus structural release-candidate verification.
+It does not invoke a release task, publish a package, or mutate a remote.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
 [SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see

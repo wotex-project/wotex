@@ -4,7 +4,7 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
   @prefix "wotex-binding-mqtt-archive."
   @version "0.1.0"
   @mutable_source ~r/{<<"repository">>,<<"(?:git|path)">>|{<<"path">>/
-  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|deps|doc|docs/tasks/local|mix\.lock|priv/plts|test|_build)(/|$)}
+  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.gitignore|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|coveralls\.json|deps|doc|docs/tasks|mix\.lock|priv/plts|test|_build)(/|$)}
   @required_content ~w(
     .formatter.exs
     CHANGELOG.md
@@ -143,6 +143,7 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
     end
 
     verify_binding_metadata!(metadata, package.app, archive)
+    verify_binding_content!(content_members, package.app, archive)
   end
 
   defp verify_binding_metadata!(metadata, :wotex_binding_mqtt, archive) do
@@ -158,6 +159,18 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
   end
 
   defp verify_binding_metadata!(_, _, _), do: :ok
+
+  defp verify_binding_content!(members, :wotex_binding_mqtt, archive) do
+    for file <- [
+          "docs/reference-consumer-inventory.md",
+          "docs/release-candidate-inventory.md",
+          "docs/runtime-baseline.md"
+        ] do
+      unless file in members, do: violation("#{archive} is missing #{file}")
+    end
+  end
+
+  defp verify_binding_content!(_, _, _), do: :ok
 
   defp outer_members!(archive) do
     case :erl_tar.extract(String.to_charlist(archive), [:memory]) do

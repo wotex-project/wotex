@@ -1,6 +1,6 @@
 # Security
 
-Report suspected vulnerabilities privately to the maintainers before public
+Report suspected vulnerabilities privately to `security@wotex.io` before public
 discussion. Do not include live credentials, broker addresses, payloads, or
 client state in a report. This package never owns a connection and never stores
 the execution context passed to a client port.
@@ -22,6 +22,9 @@ the exact reviewed 3.1.1 Hex lock tuple, including outer checksum
 and loaded version. They require parse, cast and construction to reject the
 reported pathological exponent and prove the default exponent/digit thresholds.
 No arithmetic on the pathological value is executed.
+
+The default repository gate runs `mix deps.audit` and `mix hex.audit`; either
+audit failure blocks the candidate and requires review rather than a waiver.
 
 This is retained regression evidence, not a general Decimal safety or whole-VM
 memory guarantee. All advisories remain active. Any dependency or advisory

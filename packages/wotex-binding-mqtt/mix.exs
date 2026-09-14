@@ -104,6 +104,7 @@ defmodule WotexBindingMQTT.MixProject do
 
   defp package do
     [
+      name: "wotex_binding_mqtt",
       licenses: ["Apache-2.0"],
       links: %{
         "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
@@ -115,7 +116,7 @@ defmodule WotexBindingMQTT.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib mix.exs)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/reference-consumer-inventory.md docs/release-candidate-inventory.md docs/runtime-baseline.md docs/specs lib mix.exs)
     ]
   end
 
@@ -132,13 +133,16 @@ defmodule WotexBindingMQTT.MixProject do
         "docs/specs/WBM-C02-client-lifecycle.md": [title: "Client lifecycle proof"],
         "docs/specs/WBM-C03-limits-security.md": [title: "Limits and security"],
         "docs/reference-consumer-inventory.md": [title: "Archive reference consumer"],
+        "docs/release-candidate-inventory.md": [title: "Release candidate"],
+        "docs/runtime-baseline.md": [title: "Runtime baseline"],
         "docs/provenance/mqtt-binding-draft-2026-07-01.md": [title: "MQTT binding draft"],
         "docs/provenance/mqtt-primary-sources.md": [title: "MQTT primary sources"],
         "docs/provenance/wot-binding-registry-2025-11-04.md": [title: "Binding Registry status"],
         "CHANGELOG.md": [title: "Changelog"],
         "SECURITY.md": [title: "Security"],
         "CONTRIBUTING.md": [title: "Contributing"],
-        LICENSE: [title: "License"]
+        LICENSE: [title: "License"],
+        NOTICE: [title: "Notices"]
       ],
       groups_for_extras: [
         "Completion plans": ~r/docs\/plans/,

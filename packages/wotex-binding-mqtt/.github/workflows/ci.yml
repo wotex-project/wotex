@@ -20,7 +20,6 @@ jobs:
       run:
         working-directory: wotex-binding-mqtt
     env:
-      MIX_ENV: test
       WOTEX_PATH_DEPS: "1"
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -30,16 +29,18 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex
+          ref: 58409779ae9515df2bf120a5f13813cffcb1c59c
           path: wotex
           persist-credentials: false
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: wotex-project/wotex-runtime
+          ref: 70f9511b8b691665b0c87d84f743891c70c93b9e
           path: wotex-runtime
           persist-credentials: false
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
-          elixir-version: "1.20"
-          otp-version: "29"
-      - run: mix deps.get --only test --check-locked
-      - run: mix check
+          elixir-version: "1.18.4-otp-27"
+          otp-version: "27.3.4.15"
+      - run: mix deps.get --check-locked
+      - run: mix check --no-retry
