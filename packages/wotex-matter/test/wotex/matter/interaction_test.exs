@@ -223,7 +223,7 @@ defmodule Wotex.Matter.InteractionTest do
       |> Enum.map(&Jason.decode!/1)
       |> Enum.find(&(&1["operation"] == "read_paths"))
 
-    assert request["timeout_ms"] == 800
+    assert request["timeout_ms"] in 1..800
     assert request["parameters"]["paths"] == [string_path(@thermostat)]
   end
 

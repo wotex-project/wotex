@@ -25,7 +25,7 @@ defmodule Wotex.Matter.Native do
   @behaviour Wotex.Matter.Client
 
   alias Wotex.Matter.{Address, Descriptor, Error, Subscription}
-  alias Wotex.Matter.Native.{Connection, Handle, Wire}
+  alias Wotex.Matter.Native.{Connection, Handle}
 
   @required_options [
     :authority,
@@ -74,10 +74,7 @@ defmodule Wotex.Matter.Native do
             {:error, Error.new(:fabric_mismatch)}
 
           {:ok, _} ->
-            case Connection.request(handle.pid, handle.generation, message, timeout) do
-              {:ok, result} -> decode_result(handle, type, result)
-              {:error, _} = error -> error
-            end
+            Connection.request(handle.pid, handle.generation, message, timeout)
 
           _ ->
             {:error, Error.new(:invalid_request)}
@@ -89,18 +86,6 @@ defmodule Wotex.Matter.Native do
     do: {:error, Error.new(:invalid_request)}
 
   def request(_, _, _), do: {:error, Error.new(:invalid_handle)}
-
-  defp decode_result(handle, type, result) do
-    case Wire.decode(type, result) do
-      {:ok, _} = success ->
-        success
-
-      {:error, error} ->
-        Connection.invalidate(handle.pid, handle.generation)
-        effect = if type in [:write, :invoke], do: :unknown, else: :none
-        {:error, Error.with_effect(error, effect)}
-    end
-  end
 
   @doc "Establishes one native subscription and binds delivery to the receiver process."
   @impl Wotex.Matter.Client

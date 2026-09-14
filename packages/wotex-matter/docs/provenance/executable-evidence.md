@@ -365,6 +365,20 @@ the 32-case persistent/interaction/subscription suite passes on both required
 BEAM versions, with separate temporary directories for the runtime lanes.
 The packet changes no native C++ build input.
 
+Further WMA-C03 regressions prove that a mutation whose deadline expires in the
+BEAM call queue emits no native request, successful read/write replies received
+after the original deadline cannot become success, and 32 concurrent disconnect
+calls return success while emitting one native close. The original deadline
+travels with each connection call; the owner debits queue and serialization
+time, checks before Port submission and after result validation, and performs
+typed result decoding before admitting another call. Native timeout fields
+carry the remaining positive budget instead of restarting the caller's timeout
+at dispatch. This closes the reproduced late-submission and late-success paths;
+it does not claim remote rollback of an already submitted mutation.
+The current gate passes 125 checks with seven interop cases excluded; the
+35-case persistent/interaction/subscription suite passes on both required BEAM
+versions. Native C++ sources and the pinned binary identities are unchanged.
+
 WMA.11 version 1.1.0 named reads now validate the returned path and descriptor
 against the requested attribute. WMA-C02 option validation rejects non-keyword
 lists before client entry, and event batch indexing validates each bounded

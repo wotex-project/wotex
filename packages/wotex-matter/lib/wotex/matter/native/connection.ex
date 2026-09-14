@@ -85,6 +85,7 @@ defmodule Wotex.Matter.Native.Connection do
     if Process.alive?(pid) do
       case call(pid, {:disconnect, generation}, @cleanup_timeout) do
         {:ok, nil} -> :ok
+        {:error, %Error{code: :transport_closed}} -> :ok
         {:error, _} = error -> error
       end
     else
@@ -131,6 +132,19 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   @impl GenServer
+  def handle_call({:bounded, message, deadline}, from, state) do
+    remaining = deadline - System.monotonic_time(:millisecond)
+
+    if remaining <= 0 do
+      {:reply, {:error, Error.new(:timeout)}, state}
+    else
+      message
+      |> remaining_budget(remaining)
+      |> handle_call(from, Map.put(state, :call_deadline, deadline))
+      |> clear_call_deadline()
+    end
+  end
+
   def handle_call(:identity, _, state),
     do: {:reply, {:ok, state.generation}, state}
 
@@ -160,7 +174,9 @@ defmodule Wotex.Matter.Native.Connection do
           |> Map.fetch!(:type)
           |> Atom.to_string()
 
-        execute(state, operation, parameters, timeout)
+        state
+        |> execute(operation, parameters, timeout)
+        |> decode_operation_reply(message.type)
     end
   end
 
@@ -350,6 +366,44 @@ defmodule Wotex.Matter.Native.Connection do
       else: {:reply, {:error, error}, state}
   end
 
+  defp decode_operation_reply({:reply, {:ok, result}, state}, type) do
+    case Wire.decode(type, result) do
+      {:ok, decoded} ->
+        if System.monotonic_time(:millisecond) <= state.call_deadline do
+          {:reply, {:ok, decoded}, state}
+        else
+          effect = if type in [:write, :invoke], do: :unknown, else: :none
+          {:stop, :normal, {:error, Error.new(:timeout) |> Error.with_effect(effect)}, state}
+        end
+
+      {:error, error} ->
+        effect = if type in [:write, :invoke], do: :unknown, else: :none
+        {:stop, :normal, {:error, Error.with_effect(error, effect)}, state}
+    end
+  end
+
+  defp decode_operation_reply(reply, _), do: reply
+
+  defp remaining_budget({:request, generation, message, timeout}, remaining),
+    do: {:request, generation, message, min(timeout, remaining)}
+
+  defp remaining_budget({:health, generation, timeout}, remaining),
+    do: {:health, generation, min(timeout, remaining)}
+
+  defp remaining_budget({:subscribe, generation, request, receiver, timeout}, remaining),
+    do: {:subscribe, generation, request, receiver, min(timeout, remaining)}
+
+  defp remaining_budget({:unsubscribe, generation, subscription, timeout}, remaining),
+    do: {:unsubscribe, generation, subscription, min(timeout, remaining)}
+
+  defp remaining_budget(message, _), do: message
+
+  defp clear_call_deadline({:reply, reply, state}),
+    do: {:reply, reply, Map.delete(state, :call_deadline)}
+
+  defp clear_call_deadline({:stop, reason, reply, state}),
+    do: {:stop, reason, reply, Map.delete(state, :call_deadline)}
+
   defp request_frame(state, operation, parameters, timeout) do
     id = Integer.to_string(state.next_id)
 
@@ -363,29 +417,45 @@ defmodule Wotex.Matter.Native.Connection do
 
     next_state = %{state | next_id: state.next_id + 1}
 
-    if send_frame(state.port, frame) do
-      case await_response(next_state, id, timeout + @response_grace) do
-        {:ok, result, response_state} ->
-          {:ok, result, response_state}
+    deadline = Map.get(state, :call_deadline, System.monotonic_time(:millisecond) + timeout)
 
-        {:error, error, response_state} ->
-          {:error, error, response_state}
+    case send_request_frame(state.port, frame, deadline) do
+      :ok ->
+        case await_response_until(next_state, id, deadline) do
+          {:ok, result, response_state} ->
+            {:ok, result, response_state}
 
-        {:channel_error, error, response_state} ->
-          effect = if operation in ["write", "invoke"], do: :unknown, else: :none
-          {:error, Error.with_effect(error, effect), Map.put(response_state, :channel_failed, true)}
-      end
-    else
-      {:error, Error.new(:transport_closed), Map.put(next_state, :channel_failed, true)}
+          {:error, error, response_state} ->
+            {:error, error, response_state}
+
+          {:channel_error, error, response_state} ->
+            effect = if operation in ["write", "invoke"], do: :unknown, else: :none
+
+            {:error, Error.with_effect(error, effect),
+             Map.put(response_state, :channel_failed, true)}
+        end
+
+      {:error, :transport_closed} ->
+        {:error, Error.new(:transport_closed), Map.put(next_state, :channel_failed, true)}
+
+      {:error, code} ->
+        {:error, Error.new(code), next_state}
     end
   end
 
   defp call(pid, message, timeout) do
-    GenServer.call(pid, message, timeout + 100)
+    deadline = System.monotonic_time(:millisecond) + timeout
+    GenServer.call(pid, {:bounded, message, deadline}, timeout + 100)
   catch
-    :exit, {:timeout, _} -> {:error, Error.new(:timeout)}
-    :exit, _ -> {:error, Error.new(:transport_closed)}
+    :exit, {:noproc, _} -> {:error, Error.new(:transport_closed)}
+    :exit, {:timeout, _} -> {:error, call_error(:timeout, message)}
+    :exit, _ -> {:error, call_error(:transport_closed, message)}
   end
+
+  defp call_error(code, {:request, _, %{type: type}, _}) when type in [:write, :invoke],
+    do: Error.new(code) |> Error.with_effect(:unknown)
+
+  defp call_error(code, _), do: Error.new(code)
 
   defp open_port(executable) do
     port =
@@ -460,20 +530,17 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  defp await_response(state, id, timeout) do
-    deadline = System.monotonic_time(:millisecond) + timeout
-    await_response_until(state, id, deadline)
-  end
-
   defp await_response_until(state, id, deadline) do
-    remaining = max(deadline - System.monotonic_time(:millisecond), 0)
+    remaining = max(deadline + @response_grace - System.monotonic_time(:millisecond), 0)
 
     with true <- remaining > 0,
          {:ok, line} <- await_line(state.port, state.owner_monitor, remaining),
          {:ok, frame} <- Wire.frame(line) do
       case decode_response(frame, id) do
         {:ok, result} ->
-          {:ok, result, state}
+          if System.monotonic_time(:millisecond) <= deadline,
+            do: {:ok, result, state},
+            else: {:channel_error, Error.new(:timeout), state}
 
         {:error, %Error{} = error} ->
           {:error, error, state}
@@ -713,6 +780,25 @@ defmodule Wotex.Matter.Native.Connection do
     end
   rescue
     _ -> false
+  end
+
+  defp send_request_frame(port, frame, deadline) do
+    remaining = max(0, deadline - System.monotonic_time(:millisecond))
+    frame = Map.put(frame, "timeout_ms", min(frame["timeout_ms"], remaining))
+
+    case Jason.encode(frame) do
+      {:ok, encoded} when byte_size(encoded) + 1 <= @maximum_line_bytes + 1 ->
+        cond do
+          System.monotonic_time(:millisecond) >= deadline -> {:error, :timeout}
+          Port.command(port, [encoded, ?\n]) -> :ok
+          true -> {:error, :transport_closed}
+        end
+
+      _ ->
+        {:error, :invalid_request}
+    end
+  rescue
+    _ -> {:error, :transport_closed}
   end
 
   defp flow_frame(generation),

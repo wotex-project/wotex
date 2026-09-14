@@ -284,6 +284,54 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     end
   end
 
+  test "WMA-C03 an expired queued mutation never reaches the native process" do
+    audit = temporary_path("queued-deadline")
+    assert {:ok, handle} = Native.connect(options(fixture("slow_first", audit)))
+    first = Task.async(fn -> Native.health(handle, 1_000) end)
+    assert request_recorded?(audit, 100)
+
+    mutation =
+      Map.merge(@read, %{
+        type: :write,
+        member: 18,
+        value: %{tag: :anonymous, type: :i16, value: 2000}
+      })
+
+    assert {:error, %Error{code: :timeout}} = Native.request(handle, mutation, 10)
+    assert {:ok, %{"status" => "ready"}} = Task.await(first)
+    assert {:ok, %{"status" => "ready"}} = Native.health(handle)
+    refute File.read!(audit) =~ ~s("operation":"write")
+    assert :ok = Native.disconnect(handle)
+  end
+
+  test "WMA-C03 successful replies after the request deadline cannot become success" do
+    for {mode, message, effect} <- [
+          {"late_read", @read, :none},
+          {"late_write",
+           Map.merge(@read, %{
+             type: :write,
+             member: 18,
+             value: %{tag: :anonymous, type: :i16, value: 2000}
+           }), :unknown}
+        ] do
+      assert {:ok, handle} = Native.connect(options(fixture(mode)))
+      assert {:error, %Error{code: :timeout, effect: ^effect}} = Native.request(handle, message, 10)
+      assert :ok = Native.disconnect(handle)
+    end
+  end
+
+  test "WMA-C03 concurrent disconnect is idempotent and emits one native close" do
+    audit = temporary_path("concurrent-close")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+
+    results =
+      Task.async_stream(1..32, fn _ -> Native.disconnect(handle) end, max_concurrency: 32)
+      |> Enum.to_list()
+
+    assert Enum.all?(results, &(&1 == {:ok, :ok}))
+    assert length(Regex.scan(~r/"operation":"close"/, File.read!(audit))) == 1
+  end
+
   defp options(executable) do
     paa = temporary_path("paa")
     File.mkdir_p!(paa)
@@ -380,10 +428,23 @@ defmodule Wotex.Matter.PersistentBridgeTest do
           IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":false}))
           loop.(loop)
 
+        mode in ["late_read", "late_write"] ->
+          Process.sleep(30)
+          result = if mode == "late_read" do
+            ~s({"path":{"fabric_id":1,"node_id":2,"endpoint":1,"cluster":513,"member":0},"value":{"tag":"anonymous","type":"i16","value":2150},"data_version":0})
+          else
+            ~s({"path":{"fabric_id":1,"node_id":2,"endpoint":1,"cluster":513,"member":18},"status":0})
+          end
+          IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":\#{result}}))
+          loop.(loop)
+
         String.contains?(line, ~s("operation":"close")) ->
           IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":null}))
 
         String.contains?(line, ~s("operation":"health")) ->
+          count = Process.get(:health_count, 0) + 1
+          Process.put(:health_count, count)
+          if mode == "slow_first" and count == 1, do: Process.sleep(200)
           IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":{"status":"ready","fabric_id":1}}))
           loop.(loop)
 
