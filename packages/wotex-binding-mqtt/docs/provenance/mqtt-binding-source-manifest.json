@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "observed_at": "2026-09-02",
+  "repository": "https://github.com/w3c/wot-binding-templates",
+  "revision": "715b40d756e25ef87bcef806e76e8db013b7343c",
+  "files": {
+    "bindings/protocols/mqtt/context.jsonld": "c70c318bd14b8d9522647a3b9371bac64befb84d90c59822a71ee080e3c730bd",
+    "bindings/protocols/mqtt/index.html": "c255b28dbdedb5d086c7002c64f11a9e7b77da0693e24be3d72341c4298242c0",
+    "bindings/protocols/mqtt/index.template.html": "bd3ba750aeb2ac620826adca983527d04784103610beb877d4c65e8201dc2447",
+    "bindings/protocols/mqtt/mapping.ttl": "635e1474e6b6e98c50a3fc0cdb909924ea1c4cb1c83eba231b144af692a3305e",
+    "bindings/protocols/mqtt/mqtt.schema.json": "b069496e47db0da971049c772ecfd624a235ea53b8cbcea6b4eae7aa0484e3b8",
+    "bindings/protocols/mqtt/ontology.ttl": "861b9bbb9755ae9f5cb105ab94387033c00fb551ebcafdd98c7ddab715345585",
+    "bindings/protocols/mqtt/template.sparql": "f6082577d9ba021d10f021fb124af403ab015df23bcd6d744d2dbaa0ffa8b0ce"
+  }
+}

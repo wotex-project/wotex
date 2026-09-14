@@ -183,9 +183,11 @@ WOTEX_PATH_DEPS=1 mix deps.get
 WOTEX_PATH_DEPS=1 mix check
 ```
 
-`mix check` runs warnings-as-errors compilation, formatting, and the test suite.
-Package, documentation, audit, and compatibility checks are explicit
-release-readiness work.
+`mix check --no-retry` is the complete library gate: locked dependency
+resolution, warnings-as-errors compilation, unused-dependency detection,
+formatting, dependency audits, strict Credo, Doctor, warning-free docs,
+Dialyzer, one coverage-backed test run, boundary/application checks, and exact
+archive construction/inspection. It does not invoke a release task.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
 [SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see

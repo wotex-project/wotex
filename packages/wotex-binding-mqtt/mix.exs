@@ -33,7 +33,8 @@ defmodule WotexBindingMQTT.MixProject do
         "coveralls.detail": :test,
         "coveralls.html": :test,
         "coveralls.lcov": :test,
-        "test.cover": :test
+        "test.cover": :test,
+        check: :test
       ]
     ]
   end
@@ -114,7 +115,7 @@ defmodule WotexBindingMQTT.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib mix.exs)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib mix.exs)
     ]
   end
 
@@ -127,6 +128,7 @@ defmodule WotexBindingMQTT.MixProject do
         "docs/specs/WBM.01-values-and-client-port.md": [title: "Values and client port"],
         "docs/specs/WBM.02-form-mapping.md": [title: "Form mapping"],
         "docs/specs/WBM.03-runtime-transport.md": [title: "Runtime transport"],
+        "docs/specs/WBM-C01-operation-inventory.md": [title: "Operation inventory"],
         "docs/provenance/mqtt-binding-draft-2026-07-01.md": [title: "MQTT binding draft"],
         "docs/provenance/mqtt-primary-sources.md": [title: "MQTT primary sources"],
         "docs/provenance/wot-binding-registry-2025-11-04.md": [title: "Binding Registry status"],

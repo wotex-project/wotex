@@ -49,8 +49,10 @@ Mapping is pure: no process, clock, generated identity, credential resolution
 or retry. WBM.01 owns value bounds; WBM-C03 owns missing cardinality/allocation
 evidence. `test/wotex/binding/mqtt/mapping_test.exs` tests explicit/default
 packets, target separation and rejected operations. Command/topic/QoS tests
-prove value boundaries. WBM-C01 requires positive and negative vectors for
-every table row, exact draft revision and tested source digest.
+prove value boundaries. `test/wotex/binding/mqtt/operation_inventory_test.exs`
+binds positive and negative vectors for every table row, the exact Runtime
+supported/unsupported cells, and the revision/digests in the checked-in source
+manifest.
 
 A newer draft changing terms/defaults/retain semantics requires reviewed spec,
 package compatibility and consumer vectors. Historical provenance must not be

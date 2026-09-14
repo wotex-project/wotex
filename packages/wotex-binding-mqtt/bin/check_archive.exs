@@ -3,7 +3,29 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
 
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
   @packaged ["mix.exs", "LICENSE", "NOTICE", "README.md", "lib", "docs"]
-  @development [".git", "deps", "_build"]
+  @development [
+    ".check.exs",
+    ".claude",
+    ".credo.exs",
+    ".doctor.exs",
+    ".git",
+    ".github",
+    ".gitignore",
+    ".tool-versions",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "_build",
+    "bin",
+    "config",
+    "cover",
+    "coveralls.json",
+    "deps",
+    "doc",
+    "docs/tasks",
+    "mix.lock",
+    "priv",
+    "test"
+  ]
   @dependencies ["wotex", "wotex_runtime", "jason"]
   @transport "Elixir.Wotex.Binding.MQTT.Transport.beam"
 
@@ -15,11 +37,12 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
   @spec main() :: :ok
   def main do
     project_root = File.cwd!()
-    archive = "wotex_binding_mqtt-#{Mix.Project.config()[:version]}.tar"
     temporary = Path.join(System.tmp_dir!(), "wotex-binding-mqtt-archive.#{unique()}")
+    archive = Path.join(temporary, "wotex_binding_mqtt-#{Mix.Project.config()[:version]}.tar")
 
     result =
       try do
+        File.mkdir_p!(temporary)
         verify(project_root, archive, temporary)
       catch
         :throw, {:violation, message} -> {:violation, message}
@@ -33,9 +56,10 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
   defp unique, do: Integer.to_string(System.unique_integer([:positive]))
 
   defp verify(project_root, archive, temporary) do
-    unless File.regular?(archive) do
-      violation("expected current wotex_binding_mqtt archive: #{archive}")
-    end
+    run!("mix", ["hex.build", "--output", archive], project_root, [
+      {"MIX_ENV", "dev"},
+      {"WOTEX_PATH_DEPS", nil}
+    ])
 
     package = Path.join(temporary, "package")
     ebin = Path.join(temporary, "ebin")
@@ -90,15 +114,11 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
   end
 
   defp development!(package) do
-    directories =
-      package
-      |> Path.join("**")
-      |> Path.wildcard(match_dot: true)
-      |> Enum.filter(&(File.dir?(&1) and Path.basename(&1) in @development))
-
-    unless directories == [] do
-      violation("archive contains development state")
-    end
+    Enum.each(@development, fn entry ->
+      if File.exists?(Path.join(package, entry)) do
+        violation("archive contains development input: #{entry}")
+      end
+    end)
   end
 
   defp identities!(package) do
@@ -146,8 +166,13 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
     |> Base.encode16(case: :lower)
   end
 
-  defp run!(command, arguments, directory) do
-    options = [cd: directory, into: IO.stream(), stderr_to_stdout: true]
+  defp run!(command, arguments, directory, overrides \\ []) do
+    environment =
+      %{"ERL_LIBS" => "", "MIX_PATH" => "", "WOTEX_PATH_DEPS" => nil}
+      |> Map.merge(Map.new(overrides))
+      |> Map.to_list()
+
+    options = [cd: directory, env: environment, into: IO.stream(), stderr_to_stdout: true]
     {_output, status} = System.cmd(command, arguments, options)
 
     unless status == 0 do

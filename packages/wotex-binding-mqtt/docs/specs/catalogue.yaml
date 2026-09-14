@@ -21,7 +21,7 @@ specifications:
       - {name: "W3C WoT MQTT Binding", revision: "Editors Draft 2026-07-01; repository observation 2026-09-02", claim: "seven-operation mapping subset; no conformance"}
     requires: ["WBM.01", "wotex:WTX.02"]
     implementation_modules: ["Wotex.Binding.MQTT.Mapping", "Wotex.Binding.MQTT"]
-    executable_evidence: ["test/wotex/binding/mqtt/mapping_test.exs", "test/wotex/binding/mqtt/command_test.exs"]
+    executable_evidence: ["test/wotex/binding/mqtt/mapping_test.exs", "test/wotex/binding/mqtt/command_test.exs", "test/wotex/binding/mqtt/operation_inventory_test.exs"]
     compatibility_classification: "dated draft-derived package mapping; pre-release seam correction carries the payload limit into every command; source revision changes require review"
   - id: "WBM.03"
     version: "1.1.0"
