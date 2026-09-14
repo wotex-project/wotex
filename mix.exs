@@ -99,6 +99,7 @@ defmodule Wotex.MixProject do
         "docs/provenance/w3c-td-schema-1.1.md": [title: "TD 1.1 Schema Provenance"],
         "docs/provenance/w3c-tm-schema-1.1.md": [title: "Thing Model Schema Provenance"],
         "docs/provenance/reference-corpus.md": [title: "Reference Corpus Evidence"],
+        "docs/provenance/release-evidence.md": [title: "Release Evidence Boundary"],
         "CHANGELOG.md": [title: "Changelog"],
         "SECURITY.md": [title: "Security"],
         "CONTRIBUTING.md": [title: "Contributing"],
@@ -134,7 +135,6 @@ defmodule Wotex.MixProject do
 
   defp dialyzer do
     [
-      plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
       plt_add_apps: [:mix, :ex_unit],
       flags: [:error_handling, :missing_return, :underspecs, :extra_return]
     ]

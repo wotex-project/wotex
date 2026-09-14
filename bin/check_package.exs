@@ -165,6 +165,15 @@ defmodule Wotex.Check.Package do
 
     IO.puts("archive sha256: #{digest(archive)}")
     IO.puts("consumer lock sha256: #{digest(Path.join(consumer, "mix.lock"))}")
+
+    IO.puts(
+      "TD schema sha256: #{digest(Path.join(unpacked, "priv/w3c/td-json-schema-validation-1.1.json"))}"
+    )
+
+    IO.puts(
+      "TM schema sha256: #{digest(Path.join(unpacked, "priv/w3c/tm-json-schema-validation-1.1.json"))}"
+    )
+
     IO.puts("independent archive consumer exercised TD, TM, six wrappers, helpers, and errors")
 
     :ok
