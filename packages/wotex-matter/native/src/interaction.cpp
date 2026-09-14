@@ -8,8 +8,8 @@ namespace {
 
 bool ValidCluster(std::uint32_t value) {
   return value <= 0x7FFFU ||
-      (value >= 0x00010000U && value <= 0xFFF47FFFU &&
-       value % 65536U <= 0x7FFFU);
+      (value >= 0x0001FC00U && value <= 0xFFF4FFFEU &&
+       value % 65536U >= 0xFC00U && value % 65536U <= 0xFFFEU);
 }
 
 bool ValidSelector(const PathSelector &path, bool concrete) {

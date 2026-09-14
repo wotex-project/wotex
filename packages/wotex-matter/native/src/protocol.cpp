@@ -236,8 +236,8 @@ bool PathComponent(const Json &value, std::uint64_t maximum,
 
 bool ValidCluster(std::uint32_t value) {
   return value <= 0x7FFFU ||
-      (value >= 0x00010000U && value <= 0xFFF47FFFU &&
-       value % 65536U <= 0x7FFFU);
+      (value >= 0x0001FC00U && value <= 0xFFF4FFFEU &&
+       value % 65536U >= 0xFC00U && value % 65536U <= 0xFFFEU);
 }
 
 bool Selector(const Json &value, bool wildcards, PathSelector &result) {
@@ -252,7 +252,7 @@ bool Selector(const Json &value, bool wildcards, PathSelector &result) {
   std::optional<std::uint64_t> cluster;
   std::optional<std::uint64_t> member;
   if (!PathComponent(value["endpoint"], 0xFFFEU, endpoint) ||
-      !PathComponent(value["cluster"], 0xFFF47FFFU, cluster) ||
+      !PathComponent(value["cluster"], 0xFFF4FFFEU, cluster) ||
       !PathComponent(value["member"], 0xFFFFFFFEU, member) ||
       (!wildcards && (!endpoint || !cluster || !member)) ||
       (cluster && !ValidCluster(static_cast<std::uint32_t>(*cluster)))) {

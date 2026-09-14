@@ -87,6 +87,35 @@ defmodule Wotex.Matter.PathValueTest do
     end
   end
 
+  test "WMA-S01 manufacturer cluster identifiers use the pinned SDK MEI suffix range" do
+    valid = [0, 0x7FFF, 0x0001FC00, 0x0001FFFE, 0xFFF1FC05, 0xFFF4FFFE]
+    descriptor = %{path(1) | cluster: 0x001D, member: 1}
+
+    for cluster <- valid do
+      assert {:ok, %Address{cluster: ^cluster}} = Address.new(%{path(1) | cluster: cluster})
+      assert {:ok, %ReadPath{cluster: ^cluster}} = ReadPath.new(%{path(1) | cluster: cluster})
+    end
+
+    assert {:ok, element} = Descriptor.to_element(:attribute, descriptor, :read, valid)
+    assert {:ok, ^valid} = Descriptor.from_element(:attribute, descriptor, :read, element)
+
+    for cluster <- [
+          0x8000,
+          0xFC00,
+          0xFFFF,
+          0x10000,
+          0x1FBFF,
+          0x1FFFF,
+          0xFFF50000,
+          0xFFF5FC00,
+          0xFFFFFFFF
+        ] do
+      assert {:error, %Error{code: :invalid_path}} = Address.new(%{path(1) | cluster: cluster})
+      assert {:error, %Error{code: :invalid_path}} = ReadPath.new(%{path(1) | cluster: cluster})
+      assert {:error, %Error{}} = Descriptor.to_element(:attribute, descriptor, :read, [cluster])
+    end
+  end
+
   test "WMA-S01 WMA-S03 WMA-V05 batch reads retain per-path status and deterministic order" do
     requested = [path(2), %{path(1) | endpoint: :any}]
     denied = Error.new(:unsupported_path, :member, %{status: 134})

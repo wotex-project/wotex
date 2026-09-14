@@ -10,6 +10,11 @@ certification or complete standard coverage.
 
 - [Controller factory](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/CHIPDeviceControllerFactory.h)
   initializes the owned SDK system state and controller.
+- [Data model identifiers](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/lib/core/DataModelTypes.h)
+  define `IsValidClusterId`: standard vendor zero with suffix `0000..7FFF`,
+  or vendor `0001..FFF4` with manufacturer-specific suffix `FC00..FFFE`.
+  Paths, Descriptor lists and ACL targets retain valid manufacturer identifiers
+  numerically; this does not admit their unknown interaction schemas.
 - [Device commissioner](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/CHIPDeviceController.h)
   owns filtered discovery, pairing and final commissioning callbacks.
 - [Production attestation verifier](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/credentials/attestation_verifier/DefaultDeviceAttestationVerifier.h)

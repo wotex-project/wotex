@@ -413,6 +413,26 @@ controller usable. The default suite passes 114 checks with seven interop cases
 excluded. Coverage is 89.7% in this cohort; the required 95% release gate remains
 unsatisfied and its threshold and exclusions are unchanged.
 
+WMA-S01 cluster validation follows the pinned SDK's `IsValidClusterId`, including
+manufacturer suffixes `FC00..FFFE` and vendor prefixes `0001..FFF4`. The
+all-clusters peer exposed the previous rejection of its valid `FFF1FC05` cluster
+in Descriptor ServerList. Concrete paths, read selectors, Descriptor conversion,
+ACL targets and native request validation now use the SDK ranges. Unknown valid
+cluster IDs remain numeric; their interaction schemas are still unsupported.
+The BEAM path/descriptor regression and native value/interaction regressions fail
+on the previous implementation, then pass with valid boundary IDs and reserved
+prefix/suffix rejection. The 19-case BEAM suite passes on both required versions;
+all six native tests pass normally and under ASan/UBSan with leak detection.
+The default gate passes 126 checks. The unchanged pinned native/Python
+dependencies pass all 15 P03 advisory queries.
+
+Both SDK host variants rebuild against the unchanged source pins. The normal
+host SHA-256 is
+`f978e073884abf966bfbc63ea2c2a11ca3525ed973488fbdcc2d97501886f5f3`;
+the ASan/UBSan host SHA-256 is
+`6fa2978d9d00cb040fc0bc526fca80457fb8f63820a0b86dc665029a01fc0e2c`.
+Earlier peer results below retain their originally executed binary identities.
+
 `test/interop/native_lighting_test.exs` executes the WMA-N03 lighting workflow
 against the pinned, unmodified `chip-lighting-app`, using the native host above.
 Its source SHA-256 is

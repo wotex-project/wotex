@@ -16,7 +16,7 @@ defmodule Wotex.Matter.DescriptorBoundaryTest do
           {:attribute, 6, 0, :read, [false, true]},
           {:command, 6, 1, :invoke, [%{}]},
           {:attribute, 0x001D, 0, :read, [[], [%{device_type: 0xFFFFFFFF, revision: 65_535}]]},
-          {:attribute, 0x001D, 1, :read, [[], [0, 0x7FFF, 0x10000, 0xFFF47FFF]]},
+          {:attribute, 0x001D, 1, :read, [[], [0, 0x7FFF, 0x1FC00, 0xFFF4FFFE]]},
           {:attribute, 0x001D, 3, :read, [[], [0, 0xFFFE]]},
           {:event, 0x0039, 3, :read, [%{reachable: false}, %{reachable: true}]},
           {:attribute, 0x003C, 0, :read, [0, 1, 2]},

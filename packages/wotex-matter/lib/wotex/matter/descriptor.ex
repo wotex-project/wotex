@@ -311,7 +311,7 @@ defmodule Wotex.Matter.Descriptor do
   defp valid_cluster?(value),
     do:
       value in 0..0x7FFF or
-        (value in 0x00010000..0xFFF47FFF and rem(value, 65_536) <= 0x7FFF)
+        (value in 0x0001FC00..0xFFF4FFFE and rem(value, 65_536) in 0xFC00..0xFFFE)
 
   defp extract(:nullable_i16, %{type: :null}), do: {:ok, nil}
 

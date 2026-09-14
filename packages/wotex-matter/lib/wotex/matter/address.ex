@@ -126,7 +126,7 @@ defmodule Wotex.Matter.Address do
   defp qualified?(value),
     do:
       integer?(value, 0, 0x7FFF) or
-        (integer?(value, 0x00010000, 0xFFF47FFF) and rem(value, 65_536) <= 0x7FFF)
+        (integer?(value, 0x0001FC00, 0xFFF4FFFE) and rem(value, 65_536) in 0xFC00..0xFFFE)
 
   defp integer?(value, min, max), do: is_integer(value) and value >= min and value <= max
 end

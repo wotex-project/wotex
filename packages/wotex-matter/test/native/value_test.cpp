@@ -135,6 +135,26 @@ void descriptor_recipes() {
 }
 
 void rejected_values() {
+  for (const std::uint32_t cluster : {0U, 0x7FFFU, 0x0001FC00U, 0x0001FFFEU,
+                                      0xFFF1FC05U, 0xFFF4FFFEU}) {
+    const auto value = successful(
+        convert_value(MemberKind::Attribute, 0x001D, 1, Operation::Read,
+                      NativeValue::identifier_list({cluster})),
+        "SDK cluster identifier");
+    require(value.children.size() == 1 && value.children[0].unsigned_value == cluster,
+            "SDK cluster identifier changed during conversion");
+    require(validate_element(MemberKind::Attribute, 0x001D, 1, Operation::Read, value) ==
+                ConversionError::None,
+            "valid SDK cluster element rejected");
+  }
+  for (const std::uint32_t cluster : {0x8000U, 0xFC00U, 0xFFFFU, 0x10000U,
+                                      0x1FBFFU, 0x1FFFFU, 0xFFF50000U,
+                                      0xFFF5FC00U, 0xFFFFFFFFU}) {
+    require(convert_value(MemberKind::Attribute, 0x001D, 1, Operation::Read,
+                          NativeValue::identifier_list({cluster})).error ==
+                ConversionError::InvalidValue,
+            "reserved SDK cluster identifier admitted");
+  }
   require(convert_value(MemberKind::Attribute, 0x0006, 0x0000, Operation::Write,
                         NativeValue::boolean(true))
               .error == ConversionError::NotWritable,

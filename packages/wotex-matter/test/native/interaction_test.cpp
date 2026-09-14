@@ -181,6 +181,48 @@ void AccessControlWriteCrossesProtocolBoundary() {
 } // namespace
 
 int main() {
+  for (const std::uint32_t cluster : {0U, 0x7FFFU, 0x0001FC00U, 0x0001FFFEU,
+                                      0xFFF1FC05U, 0xFFF4FFFEU}) {
+    InteractionRequest request;
+    request.kind = InteractionKind::ReadAttributes;
+    request.fabric_id = 1;
+    request.node_id = 3;
+    request.timeout_ms = 1000;
+    request.paths = {{1, 3, 1, cluster, 0}};
+    assert(valid_interaction_request(request));
+
+    RecordingBackend backend;
+    backend.response.ok = false;
+    backend.response.error = InteractionError{"unsupported_schema"};
+    HostProtocol protocol(backend);
+    Open(protocol);
+    const auto response = protocol.ProcessLine(
+        std::string(R"({"version":1,"id":"2","operation":"read_paths","parameters":{"paths":[{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":)") +
+        std::to_string(cluster) + R"(,"member":0}]},"timeout_ms":1000})");
+    assert(response.keep_running);
+    assert(backend.interactions == 1);
+    assert(backend.last->paths[0].cluster == cluster);
+  }
+  for (const std::uint32_t cluster : {0x8000U, 0xFC00U, 0xFFFFU, 0x10000U,
+                                      0x1FBFFU, 0x1FFFFU, 0xFFF50000U,
+                                      0xFFF5FC00U, 0xFFFFFFFFU}) {
+    InteractionRequest request;
+    request.kind = InteractionKind::ReadAttributes;
+    request.fabric_id = 1;
+    request.node_id = 3;
+    request.timeout_ms = 1000;
+    request.paths = {{1, 3, 1, cluster, 0}};
+    assert(!valid_interaction_request(request));
+    RecordingBackend backend;
+    HostProtocol protocol(backend);
+    Open(protocol);
+    const auto response = protocol.ProcessLine(
+        std::string(R"({"version":1,"id":"2","operation":"read_paths","parameters":{"paths":[{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":)") +
+        std::to_string(cluster) + R"(,"member":0}]},"timeout_ms":1000})");
+    assert(response.keep_running);
+    assert(response.frame->find("invalid_request") != std::string::npos);
+    assert(backend.interactions == 0);
+  }
   TimedWriteAndLocalRejection();
   AttributeStatusAndDataVersion();
   EventIdentityAndMinimumNumber();
