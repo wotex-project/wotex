@@ -146,6 +146,13 @@ do not silently skip, simulate or weaken the requirement.
 
 ## Reproducible software fixture contract
 
+The native and software build tasks are implemented with Mix-owned download,
+advisory, hash, compiler and cleanup operations. Workspace admission and reuse
+have deterministic tests; executed build identities are recorded in
+[executable evidence](../provenance/executable-evidence.md). The software run
+task and the remaining P09 peer, stress, matrix and archive acceptance work are
+still required. Building the peer executables does not execute their workflows.
+
 The entry points are `mix wotex.native.build --workspace ABS`,
 `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS`. Each requires exactly one absolute

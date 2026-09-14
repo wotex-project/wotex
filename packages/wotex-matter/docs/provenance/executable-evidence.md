@@ -25,6 +25,49 @@ separate release or packet evidence. The pinned Decimal parser regression
 remains active; there are no advisory waivers. See `SECURITY.md` and the
 dependency-security test.
 
+## P09 reproducible build tasks
+
+`mix wotex.native.build --workspace ABS` and `mix wotex.software.build
+--workspace ABS` use the checked-in Mix runner and
+`test/support/software/sources.json`. They require one absolute empty workspace
+or a verified matching receipt. Seven deterministic build tests exercise exact
+argument admission, symlink ancestors, unrelated/locked directories, artifact
+and log tampering, duplicate JSON members, bounded command output/timeouts,
+caller-death termination, environment isolation and project-root validation.
+Both build task modules are covered through their public task entry points.
+
+The complete software build passes on 2026-09-14 with the pinned Debian 12
+Linux x86_64 native lane: GCC 12.2.0, CMake 3.25.1, Ninja 1.11.1, GN
+2255 (97b68a0bb62b) and the recorded ZAP executable. It compiles normal and
+ASan/UBSan controllers, passes all six native CTest executables in both modes
+with leak detection, and builds lighting, all-clusters and bridge peers.
+Eight native source commit queries and eight build-only Python version queries
+return no OSV advisories. The runner checks ELF architecture and runtime
+linkage, records exact commands/tool hashes and removes its owned build
+container before writing a ready workspace receipt. No build container remains.
+
+Both tasks successfully reuse this software workspace by verifying all source,
+binary, manifest and log hashes. An earlier workspace with changed source
+identity fails with `manifest_mismatch`. Build results identify:
+
+| Build artifact | SHA-256 |
+| --- | --- |
+| source file set | `6d80d3429ddfa419038d2cf4148086d28cdbce16edc56a298504095aa774fbcd` |
+| native manifest | `9cd31b77d93f9a183fb49a8f827601918cb08ca4f193e940c9f65218673ba8a2` |
+| native controller | `2acc3532909f26c8bbe5c07a895c6bc0caba73abd6553ab5a1d76488a983dc97` |
+| sanitizer controller | `0558c07f1a96f4d4214555c0ff0aac648f7117aa9911f4db6aee64d806436699` |
+| lighting peer | `5d0c28f58af14c25569ef08c13bbea51b6dd853e5e46c684dc20fdbc3faa32c0` |
+| all-clusters peer | `3f1f898ed77d6d707483163d25586dbf9fe9eadf8d00b1795b815fa0fd62be7e` |
+| bridge peer | `402b58988806e04874cfd719e60932cc3734107700f658a9310a2df157801c11` |
+
+The manifest records the contemporaneous Git revision and the exact source
+file hashes, including the build task files. The source package includes the
+native unit sources and build assets and passes out-of-tree Elixir compilation.
+This is compilation, native-unit and build-ownership evidence. Its manifest
+explicitly records protocol interoperability as `not_executed`.
+`mix wotex.software.run`, complete peer workflows and the remaining P09 gates
+are still required.
+
 ## P09 ACL and framing cohort
 
 On 2026-09-14, `test/interop/native_acl_test.exs` passes against an owned

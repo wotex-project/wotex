@@ -2,7 +2,18 @@ defmodule Wotex.Matter.Check.Archive do
   @moduledoc false
 
   @outer ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
-  @packaged ["mix.exs", "LICENSE", "NOTICE", "README.md", "lib", "docs"]
+  @packaged [
+    "mix.exs",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "lib",
+    "docs",
+    "native/src/host.cpp",
+    "test/native/interaction_test.cpp",
+    "test/support/software/build.exs",
+    "test/support/software/sources.json"
+  ]
   @development [".git", "deps", "_build"]
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
   @transport "Elixir.Wotex.Matter.Error.beam"

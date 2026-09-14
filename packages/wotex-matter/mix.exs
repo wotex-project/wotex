@@ -95,7 +95,9 @@ defmodule WotexMatter.MixProject do
       setup: ["deps.get", "deps.compile"],
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
       "test.cover": ["coveralls"],
-      package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
+      package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build",
+      "wotex.native.build": "wotex.matter.native.build",
+      "wotex.software.build": "wotex.matter.software.build"
     ]
   end
 
@@ -116,7 +118,7 @@ defmodule WotexMatter.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib native priv/matter_bridge.py mix.exs)
+        ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib native priv/matter_bridge.py test/native test/support/software mix.exs)
     ]
   end
 

@@ -71,7 +71,7 @@ defmodule Wotex.Matter.SDKTest do
     assert {:error, _} = SDK.request(handle, @message, 1000)
     script(path, "sleep 1")
     assert {:error, %{code: :timeout}} = SDK.request(handle, @message, 10)
-    script(path, "printf '%0140000d' 0")
+    script(path, "IFS= read -r request\nprintf '%0140000d' 0")
     assert {:error, %{code: :response_limit}} = SDK.request(handle, @message, 1000)
   end
 
