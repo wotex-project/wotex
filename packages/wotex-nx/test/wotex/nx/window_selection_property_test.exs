@@ -110,4 +110,30 @@ defmodule Wotex.Nx.WindowSelectionPropertyTest do
       end)
     end
   end
+
+  test "timestamp and id ties survive every input permutation" do
+    observations = [
+      TestFactory.observation(id: "z", observed_at: 99),
+      TestFactory.observation(id: "a", observed_at: 99),
+      TestFactory.observation(id: "later", observed_at: 101)
+    ]
+
+    schema = TestFactory.schema()
+
+    for permutation <- permutations(observations),
+        {strategy, expected_id} <- [exact: nil, latest: "a", nearest: "a"] do
+      {:ok, window} = Window.new(start: 100, step: 1, count: 1, strategy: strategy)
+      assert {:ok, [row]} = Window.resample(permutation, schema, window)
+      selected = row.observations["temperature"]
+      assert if(expected_id, do: selected.id, else: selected) == expected_id
+    end
+  end
+
+  defp permutations([]), do: [[]]
+
+  defp permutations(values) do
+    for value <- values,
+        rest <- permutations(List.delete(values, value)),
+        do: [value | rest]
+  end
 end

@@ -170,8 +170,8 @@ is the declared dependency cohort; broader backend/version claims require eviden
 | Closed option lists, opaque-value reconstruction, exact identity/category joins and all six error phases | `test/wotex/nx/contract_matrix_test.exs` |
 | Observation/feature/schema construction, identity, bounds and closed options | `test/wotex/nx/observation_feature_schema_test.exs` |
 | Window order/ties/age, units, fill masks, quality, encoded batch, unknown row features, accessors, template and lazy container | `test/wotex/nx/window_encoder_test.exs` |
-| Binary-search latest/exact/nearest selection equivalence to an exhaustive reference, reversed input, empty windows and age boundaries | `test/wotex/nx/window_selection_property_test.exs` |
-| Conjunctive schema checks, revalidation, overflow and finite conversion | `test/wotex/nx/numerical_integrity_test.exs` |
+| Binary-search latest/exact/nearest selection equivalence to an exhaustive reference, all small tie permutations, reversed input, empty windows and age boundaries | `test/wotex/nx/window_selection_property_test.exs` |
+| Integer endpoints and one-beyond rejection, conjunctive schema checks, revalidation, normalization/dtype overflow, finite conversion and exact dtype-rounded anomaly comparisons | `test/wotex/nx/numerical_integrity_test.exs` |
 | Fixed-shape generation and preservation | `test/wotex/nx/shape_property_test.exs` |
 | Exact decoder tensor admission, all inert kinds and anomaly comparisons | `test/wotex/nx/decoder_test.exs` |
 | No application callback and stable quality codes | `test/wotex/nx/library_contract_test.exs` |

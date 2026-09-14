@@ -130,6 +130,35 @@ defmodule Wotex.Nx.NumericalIntegrityTest do
     assert prediction.value == 2
   end
 
+  test "anomaly comparisons use the threshold rounded into the declared dtype" do
+    for dtype <- [:f16, :bf16, :f32],
+        {rule, anomalous?} <- [{:above, false}, {:at_or_above, true}] do
+      assert {:ok, schema} =
+               OutputSchema.new(
+                 kind: :anomaly,
+                 thing_id: "urn:example:thing:1",
+                 affordance_type: :event,
+                 affordance_name: "vibration",
+                 data_schema: TestFactory.data_schema(%{"type" => "number"}),
+                 dtype: dtype,
+                 unit: nil,
+                 threshold: 0.1,
+                 anomaly_rule: rule
+               )
+
+      tensor = Nx.tensor(0.1, type: dtype)
+      rounded = Nx.to_number(tensor)
+      assert schema.threshold === rounded
+
+      assert {:ok, anomaly} =
+               Decoder.decode(tensor, schema, id: "anomaly-#{dtype}-#{rule}", produced_at: 100)
+
+      assert anomaly.score === rounded
+      assert anomaly.threshold === rounded
+      assert anomaly.anomalous? == anomalous?
+    end
+  end
+
   defp feature(schema, options \\ []) do
     TestFactory.feature(
       Keyword.merge([data_schema: TestFactory.data_schema(schema), unit: nil], options)
