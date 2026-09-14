@@ -2,7 +2,9 @@
 
 Specification: `WRT.01@1.3.1`. Package baseline: `wotex_runtime 0.1.0`.
 Implementation and evidence coverage are recorded in the catalogue and
-repository completion plan at `docs/plans/wotex-runtime-completion.md`; this document is not a gate result.
+repository completion plan at `docs/plans/wotex-runtime-completion.md`. The
+[RT-C02 hardening contract](RT-C02-runtime-hardening.md) records the admission,
+correlation, and lifecycle qualifications. Neither document is a gate result.
 
 ## Ownership
 

@@ -25,7 +25,7 @@ dependency range. Package, specification and evidence versions are separate.
 | ID | Prerequisites | Deliverable | Acceptance |
 |---|---|---|---|
 | RT-C01 | WRT.01–03, core value contracts | Operation, value, error and ownership behavior review | Supported and unsupported operation families, admitted values, port errors and passive loading verified through public behavior |
-| RT-C02 | RT-C01 | ConsumedThing/subscription hardening | Raised/exited/malformed callbacks, result identity mismatch, invalid receiver/options, receiver death, concurrent stop, restart, forced kill and cleanup failure tested |
+| RT-C02 | RT-C01 | [ConsumedThing/subscription hardening](../specs/RT-C02-runtime-hardening.md) | Raised/exited/malformed callbacks, result identity mismatch, invalid receiver/options, receiver death, concurrent stop, restart, forced kill and cleanup failure tested |
 | RT-C03 | RT-C01 | ExposedThing boundary proof | Inbound Form/policy/schema checks assigned to consumer; invalid routing invokes no handler; concurrent callbacks and exception propagation proven |
 | RT-C04 | RT-C02, RT-C03 | Independent reference consumer | Exact archives; zero/one/multiple subscriptions, shutdown budgets, explicit ports and aggregate negative cells |
 | RT-C05 | RT-C04 | Release evidence dossier | Package contents, dependency closure, docs, license/security and compatibility inputs are complete and internally consistent; gates evaluate the dossier separately |
@@ -95,8 +95,8 @@ Broader claims need revision-specific assertions and positive/negative vectors.
 | ID | Unsupported or unproven claim | Required closure / owner |
 |---|---|---|
 | RT-R01 | Hard bounds across nested terms, callback latency and all consumer/transport mailboxes | Consumer overload and binding contracts; Runtime only bounds its listed admissions and optional receiver-mailbox check |
-| RT-R02 | Credential-safe handling of every exception/crash | RT-C02; consumer callback code remains trusted |
-| RT-R03 | Request/result identity cannot be substituted | RT-C02 transport-return correlation matrix |
+| RT-R02 | Credential isolation outside Runtime-normalized errors and telemetry, including opaque configuration and trusted consumer callback code | Consumer custody and execution boundary; Runtime is not a sandbox or secret-memory erasure mechanism |
+| RT-R03 | Identity correlation inside a binding's native or remote exchange | Binding contract and RT-C04 integration; Runtime rejects substituted request id or operation on its public transport-result boundary |
 | RT-R04 | Full selected inbound Form/schema validation | RT-C03 consumer-server contract, not current route lookup |
 | RT-R05 | Exactly-once delivery, remote cleanup or physical effect | Explicit nonclaim; consumer durable semantics |
 | RT-R06 | Clean registry installation/full platform range | RT-C05 dependency and runtime compatibility proof |

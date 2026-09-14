@@ -23,7 +23,7 @@ defmodule Wotex.Runtime.FormSelector do
   @spec select(ThingDescription.t(), atom(), String.t(), atom(), [BindingProfile.t()]) ::
           {:ok, Selection.t()} | {:error, Error.t()}
   def select(%ThingDescription{} = td, type, name, operation, profiles)
-      when type in [:property, :action, :event] and is_binary(name) and is_list(profiles) do
+      when type in [:property, :action, :event] and is_binary(name) do
     document = ThingDescription.to_map(td)
     interaction = %{type: type, name: name, operation: operation}
 
@@ -41,7 +41,7 @@ defmodule Wotex.Runtime.FormSelector do
   @doc "Selects a top-level Thing Form and binding profile."
   @spec select_thing(ThingDescription.t(), atom(), [BindingProfile.t()]) ::
           {:ok, Selection.t()} | {:error, Error.t()}
-  def select_thing(%ThingDescription{} = td, operation, profiles) when is_list(profiles) do
+  def select_thing(%ThingDescription{} = td, operation, profiles) do
     document = ThingDescription.to_map(td)
     interaction = %{type: :thing, name: nil, operation: operation}
 
@@ -124,11 +124,14 @@ defmodule Wotex.Runtime.FormSelector do
   end
 
   defp validate_candidates(forms, profiles) do
+    form_admission = Limits.list_admission(forms, Limits.maximum(:forms_per_interaction))
+    profile_admission = Limits.list_admission(profiles, Limits.maximum(:binding_profiles))
+
     cond do
-      not is_list(forms) ->
+      form_admission == :invalid ->
         {:error, Error.new(:invalid_selection_input, :selection, "selection input is invalid")}
 
-      not Limits.list_within?(profiles, Limits.maximum(:binding_profiles)) ->
+      profile_admission == :over ->
         {:error,
          Error.new(
            :profile_limit_exceeded,
@@ -137,10 +140,11 @@ defmodule Wotex.Runtime.FormSelector do
            %{max_profiles: Limits.maximum(:binding_profiles)}
          )}
 
-      not Enum.all?(profiles, &match?(%BindingProfile{}, &1)) ->
+      profile_admission == :invalid or
+          not Enum.all?(profiles, &match?(%BindingProfile{}, &1)) ->
         {:error, Error.new(:invalid_selection_input, :selection, "selection input is invalid")}
 
-      not Limits.list_within?(forms, Limits.maximum(:forms_per_interaction)) ->
+      form_admission == :over ->
         {:error,
          Error.new(
            :form_limit_exceeded,

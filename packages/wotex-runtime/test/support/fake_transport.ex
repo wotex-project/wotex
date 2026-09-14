@@ -31,6 +31,41 @@ defmodule Wotex.Runtime.Test.FakeTransport do
   defp request_result(:mismatch, request, _),
     do: Result.new("another-request", request.operation, nil)
 
+  defp request_result(:mismatched_operation, request, _),
+    do: Result.new(request.request_id, :writeproperty, nil)
+
+  defp request_result(:maximum_result_metadata, request, _) do
+    metadata =
+      Map.new(1..Wotex.Runtime.Limits.maximum(:metadata_entries), &{&1, &1})
+
+    Result.new(request.request_id, request.operation, nil, metadata: metadata)
+  end
+
+  defp request_result(:oversized_forged_result_metadata, request, _) do
+    metadata =
+      Map.new(1..(Wotex.Runtime.Limits.maximum(:metadata_entries) + 1), &{&1, &1})
+
+    {:ok,
+     %Result{
+       request_id: request.request_id,
+       operation: request.operation,
+       status: :ok,
+       payload: nil,
+       metadata: metadata
+     }}
+  end
+
+  defp request_result(:forged_result_status, request, _) do
+    {:ok,
+     %Result{
+       request_id: request.request_id,
+       operation: request.operation,
+       status: :unknown,
+       payload: nil,
+       metadata: %{}
+     }}
+  end
+
   defp request_result(:forged_result, request, _) do
     {:ok,
      %Result{

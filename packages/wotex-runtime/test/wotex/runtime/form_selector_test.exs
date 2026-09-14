@@ -215,6 +215,24 @@ defmodule Wotex.Runtime.FormSelectorTest do
                profiles ++ [%{profile | id: :over}]
              )
 
+    assert {:error, %Error{code: :profile_limit_exceeded}} =
+             FormSelector.select(
+               td,
+               :property,
+               "temperature",
+               :readproperty,
+               profiles ++ [%{profile | id: :over} | :unread_tail]
+             )
+
+    assert {:error, %Error{code: :invalid_selection_input}} =
+             FormSelector.select(
+               td,
+               :property,
+               "temperature",
+               :readproperty,
+               [profile | :improper]
+             )
+
     form =
       td
       |> Wotex.ThingDescription.to_map()

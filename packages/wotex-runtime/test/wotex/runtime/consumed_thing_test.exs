@@ -87,6 +87,20 @@ defmodule Wotex.Runtime.ConsumedThingTest do
                transports: transports,
                credentials: credentials
              )
+
+    assert {:error, %Error{code: :profile_limit_exceeded}} =
+             ConsumedThing.new(td,
+               profiles: profiles ++ [%{profile | id: :over} | :unread_tail],
+               transports: transports,
+               credentials: credentials
+             )
+
+    assert {:error, %Error{code: :invalid_profiles}} =
+             ConsumedThing.new(td,
+               profiles: [profile | :improper],
+               transports: transports,
+               credentials: credentials
+             )
   end
 
   test "executes every short operation in the caller and resolves credentials first", %{
@@ -332,13 +346,16 @@ defmodule Wotex.Runtime.ConsumedThingTest do
     refute inspect(metadata) =~ secret
   end
 
-  test "normalizes invalid and mismatched port returns", %{profile: profile} do
+  test "rejects substituted result correlation and forged result fields", %{profile: profile} do
     context = Context.new!(request_id: "req-invalid")
     credentials = {FakeCredentials, %{test_pid: self(), secret: "x"}}
 
     failures = [
       mismatch: :mismatched_transport_result,
+      mismatched_operation: :mismatched_transport_result,
       forged_result: :invalid_result_metadata,
+      forged_result_status: :invalid_result_status,
+      oversized_forged_result_metadata: :result_metadata_limit_exceeded,
       invalid: :invalid_transport_return
     ]
 
@@ -353,6 +370,24 @@ defmodule Wotex.Runtime.ConsumedThingTest do
       assert {:error, %Error{code: ^code}} =
                ConsumedThing.read_property(consumed, "temperature", context)
     end
+
+    {:ok, maximum_metadata} =
+      ConsumedThing.new(TDFactory.thing_description(),
+        profiles: [profile],
+        transports: %{
+          profile.id => {FakeTransport, %{test_pid: self(), mode: :maximum_result_metadata}}
+        },
+        credentials: credentials
+      )
+
+    assert {:ok, %Result{metadata: metadata}} =
+             ConsumedThing.read_property(maximum_metadata, "temperature", context)
+
+    assert map_size(metadata) == Limits.maximum(:metadata_entries)
+  end
+
+  test "normalizes an invalid credential callback return", %{profile: profile} do
+    context = Context.new!(request_id: "req-invalid-credentials")
 
     {:ok, invalid_credentials} =
       ConsumedThing.new(TDFactory.thing_description(),

@@ -13,10 +13,9 @@ defmodule Wotex.Runtime.Limits do
   | binding profiles per ConsumedThing or selection | 32 |
   | Forms scanned for one interaction | 128 |
 
-  `all/0` exposes the fixed contract, `maximum/1` retrieves a named ceiling, and
-  `list_within?/2` checks list length without traversing beyond the permitted
-  count. Binding implementations retain responsibility for their protocol and
-  payload limits.
+  `all/0` exposes the fixed contract and `maximum/1` retrieves a named ceiling.
+  Binding implementations retain responsibility for their protocol and payload
+  limits.
   """
 
   @limits %{
@@ -43,11 +42,12 @@ defmodule Wotex.Runtime.Limits do
   def maximum(name), do: Map.fetch!(@limits, name)
 
   @doc false
-  @spec list_within?(list(), non_neg_integer()) :: boolean()
-  def list_within?(values, maximum) when is_list(values) and maximum >= 0,
-    do: within?(values, maximum)
+  @spec list_admission(term(), non_neg_integer()) :: :within | :over | :invalid
+  def list_admission(values, maximum) when maximum >= 0,
+    do: admit_list(values, maximum)
 
-  defp within?([], _), do: true
-  defp within?([_ | _], 0), do: false
-  defp within?([_ | rest], remaining), do: within?(rest, remaining - 1)
+  defp admit_list([], _), do: :within
+  defp admit_list([_ | _], 0), do: :over
+  defp admit_list([_ | rest], remaining), do: admit_list(rest, remaining - 1)
+  defp admit_list(_, _), do: :invalid
 end

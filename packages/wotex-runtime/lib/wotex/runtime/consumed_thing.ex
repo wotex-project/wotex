@@ -531,9 +531,9 @@ defmodule Wotex.Runtime.ConsumedThing do
 
   defp valid_property_map?(_), do: false
 
-  defp validate_profiles(profiles) when is_list(profiles) and profiles != [] do
-    cond do
-      not Limits.list_within?(profiles, Limits.maximum(:binding_profiles)) ->
+  defp validate_profiles(profiles) do
+    case Limits.list_admission(profiles, Limits.maximum(:binding_profiles)) do
+      :over ->
         {:error,
          Error.new(
            :profile_limit_exceeded,
@@ -542,23 +542,28 @@ defmodule Wotex.Runtime.ConsumedThing do
            %{max_profiles: Limits.maximum(:binding_profiles)}
          )}
 
-      Enum.all?(profiles, &match?(%BindingProfile{}, &1)) ->
-        ids = Enum.map(profiles, &BindingProfile.id/1)
+      :within when profiles != [] ->
+        validate_profile_values(profiles)
 
-        if length(ids) == MapSet.size(MapSet.new(ids)) do
-          :ok
-        else
-          {:error, Error.new(:duplicate_profile_id, :construction, "profile ids must be unique")}
-        end
-
-      true ->
+      _ ->
         {:error,
-         Error.new(:invalid_profiles, :construction, "profiles must contain BindingProfile values")}
+         Error.new(:invalid_profiles, :construction, "at least one BindingProfile is required")}
     end
   end
 
-  defp validate_profiles(_) do
-    {:error, Error.new(:invalid_profiles, :construction, "at least one BindingProfile is required")}
+  defp validate_profile_values(profiles) do
+    if Enum.all?(profiles, &match?(%BindingProfile{}, &1)) do
+      ids = Enum.map(profiles, &BindingProfile.id/1)
+
+      if length(ids) == MapSet.size(MapSet.new(ids)) do
+        :ok
+      else
+        {:error, Error.new(:duplicate_profile_id, :construction, "profile ids must be unique")}
+      end
+    else
+      {:error,
+       Error.new(:invalid_profiles, :construction, "profiles must contain BindingProfile values")}
+    end
   end
 
   defp validate_transports(profiles, transports) when is_map(transports) do

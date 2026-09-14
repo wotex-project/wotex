@@ -193,6 +193,48 @@ defmodule Wotex.Runtime.SubscriptionTest do
     refute_receive {:subscribe, _, _, _}, 20
   end
 
+  test "a registered-name receiver resolves once and an absent name prevents protocol open", %{
+    consumed: consumed
+  } do
+    context = Context.new!(request_id: "req-named-receiver")
+    parent = self()
+    registered_name = Wotex.Runtime.SubscriptionTest.RegisteredReceiver
+    absent_name = Wotex.Runtime.SubscriptionTest.AbsentReceiver
+    receiver = spawn(fn -> registered_receiver_loop(parent) end)
+
+    Process.register(receiver, registered_name)
+
+    on_exit(fn ->
+      if Process.alive?(receiver), do: Process.exit(receiver, :kill)
+    end)
+
+    {:ok, spec} =
+      ConsumedThing.observation_child_spec(consumed, "temperature", context,
+        id: :registered_receiver,
+        receiver: registered_name,
+        restart: :temporary
+      )
+
+    pid = start_supervised!(spec)
+    assert_receive {:subscribe, _, ^pid, _}
+    send(pid, {:wotex_transport, {:ok, 19.5, %{}}})
+    assert_receive {:registered_receiver, {:wotex_runtime, :registered_receiver, {:ok, 19.5, %{}}}}
+    assert :ok = Subscription.stop(pid)
+
+    assert Process.whereis(absent_name) == nil
+
+    {:ok, absent_spec} =
+      ConsumedThing.observation_child_spec(consumed, "temperature", context,
+        id: :absent_receiver,
+        receiver: absent_name,
+        restart: :temporary
+      )
+
+    absent_pid = start_watched(absent_spec)
+    assert_receive {:exited, ^absent_pid, {:shutdown, :receiver_down}}
+    refute_receive {:subscribe, _, ^absent_pid, _}, 20
+  end
+
   test "a linked transport process exit is reported and stops the subscription", %{profile: profile} do
     context = Context.new!(request_id: "req-linked")
 
@@ -365,7 +407,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
     on_exit(fn -> :telemetry.detach(id) end)
 
     slow = spawn(fn -> Process.sleep(:infinity) end)
-    Enum.each(1..5, &send(slow, {:backlog, &1}))
+    Enum.each(1..3, &send(slow, {:backlog, &1}))
 
     {:ok, drop_spec} =
       ConsumedThing.observation_child_spec(consumed, "temperature", context,
@@ -380,11 +422,19 @@ defmodule Wotex.Runtime.SubscriptionTest do
     assert_receive {:subscribe, _, ^drop_pid, _}
     send(drop_pid, {:wotex_transport, {:ok, 1, %{}}})
 
-    assert_receive {:telemetry, [:wotex, :runtime, :subscription, :drop], %{queue_length: 5},
+    assert_receive {:telemetry, [:wotex, :runtime, :subscription, :drop], %{queue_length: 3},
                     %{subscription_id: :dropping}}
 
     assert Process.alive?(drop_pid)
-    assert {:message_queue_len, 5} = Process.info(slow, :message_queue_len)
+    assert {:message_queue_len, 3} = Process.info(slow, :message_queue_len)
+
+    send(slow, {:backlog, 4})
+    send(drop_pid, {:wotex_transport, {:ok, 2, %{}}})
+
+    assert_receive {:telemetry, [:wotex, :runtime, :subscription, :drop], %{queue_length: 4},
+                    %{subscription_id: :dropping}}
+
+    assert {:message_queue_len, 4} = Process.info(slow, :message_queue_len)
 
     {:ok, stop_spec} =
       ConsumedThing.observation_child_spec(consumed, "temperature", context,
@@ -489,7 +539,8 @@ defmodule Wotex.Runtime.SubscriptionTest do
       assert_receive {:subscribe, _, ^pid, "credential-material"}
       handle = bound_handle(pid)
 
-      assert {:error, %Error{code: ^code}} = Subscription.stop(pid)
+      assert {:error, %Error{code: ^code} = error} = Subscription.stop(pid)
+      refute inspect(error) =~ "credential-material"
       assert_receive {:unsubscribe, ^handle, %{operation: :unsubscribeevent}, nil}
     end
   end
@@ -604,7 +655,7 @@ defmodule Wotex.Runtime.SubscriptionTest do
           transports: %{
             profile.id => {FakeTransport, %{test_pid: self(), unsubscribe_mode: mode}}
           },
-          credentials: {FakeCredentials, %{test_pid: self()}}
+          credentials: {FakeCredentials, %{test_pid: self(), secret: "credential-material"}}
         )
 
       {:ok, spec} =
@@ -617,7 +668,8 @@ defmodule Wotex.Runtime.SubscriptionTest do
       pid = start_supervised!(spec)
       send(pid, :unrelated)
       assert Process.alive?(pid)
-      assert {:error, %Error{code: ^code}} = Subscription.stop(pid)
+      assert {:error, %Error{code: ^code} = error} = Subscription.stop(pid)
+      refute inspect(error) =~ "credential-material"
     end
   end
 
@@ -692,6 +744,8 @@ defmodule Wotex.Runtime.SubscriptionTest do
 
   test "stop rejects invalid timeouts and a stopped server without exiting the caller" do
     assert {:error, %Error{code: :invalid_stop_timeout}} = Subscription.stop(self(), -1)
+
+    assert {:error, %Error{code: :subscription_stop_failed}} = Subscription.stop(self())
 
     blocked = spawn(fn -> Process.sleep(:infinity) end)
 
@@ -770,6 +824,14 @@ defmodule Wotex.Runtime.SubscriptionTest do
 
   defp unique_name(suffix),
     do: {:global, {:wotex_runtime_test, suffix, System.unique_integer([:positive])}}
+
+  defp registered_receiver_loop(parent) do
+    receive do
+      message ->
+        send(parent, {:registered_receiver, message})
+        registered_receiver_loop(parent)
+    end
+  end
 
   defp bound_handle(pid, remaining \\ 50) do
     case :sys.get_state(pid) do

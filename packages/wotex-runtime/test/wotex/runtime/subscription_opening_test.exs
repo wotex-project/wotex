@@ -131,6 +131,22 @@ defmodule Wotex.Runtime.SubscriptionOpeningTest do
     eventually(fn -> not Process.alive?(callback) and not Process.alive?(opening.pid) end)
   end
 
+  test "WRT.01-12 early frame admission accepts its exact threshold" do
+    values = Enum.to_list(1..64)
+    {owner, _} = start_opening(early: values)
+    assert_receive {:opening, callback, ^owner, resource}
+    send(callback, :release)
+
+    for value <- values do
+      assert_receive {:opening_decoded, ^owner, ^value}
+      assert_receive {:wotex_runtime, _, {:ok, ^value, %{source: :opening_fixture}}}
+    end
+
+    assert :ok = Subscription.stop(owner)
+    assert_receive {:opening_unsubscribe, ^resource}
+    eventually(fn -> not Process.alive?(callback) end)
+  end
+
   test "WRT.01-12 early frame admission is bounded and overflow cannot establish later" do
     {owner, _} = start_opening(early: Enum.to_list(1..65), monitor_owner: false)
     assert_receive {:opening, callback, ^owner, resource}
