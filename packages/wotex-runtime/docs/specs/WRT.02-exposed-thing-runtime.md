@@ -1,6 +1,6 @@
 # WRT.02: ExposedThing callback mechanics
 
-Specification: `WRT.02@1.1.0`. Requires `WRT.01@1.3.0`.
+Specification: `WRT.02@1.1.0`. Requires `WRT.01@1.3.1`.
 Package baseline: `wotex_runtime 0.1.0`; see the
 repository completion plan at `docs/plans/wotex-runtime-completion.md` for unproven claims.
 
@@ -58,8 +58,9 @@ The implementation validates named-affordance existence, not a selected
 inbound protocol Form for `dispatch/5`. Thus an available handler is not proof
 of a Form operation declaration or authorization. The consumer server MUST
 validate its selected binding, operation access, schema and policy before
-dispatch. RT-C03 must make this division explicit in negative vectors; do not
-claim full inbound TD validation from route existence alone.
+dispatch. The [RT-C03 boundary contract](RT-C03-exposed-thing-boundary.md)
+records this division and its negative vectors. Route existence is not full
+inbound Thing Description validation.
 
 ## Failure, concurrency and lifecycle
 

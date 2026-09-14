@@ -198,8 +198,11 @@ Wotex.Runtime.ExposedThing.dispatch(
 )
 ```
 
-The consumer remains responsible for authenticating and authorizing the caller
-before dispatch.
+The consumer remains responsible for selecting and validating the inbound
+binding/Form, validating interaction data against its schema, and authenticating
+and authorizing the caller before dispatch. Runtime validates the operation
+family and route described by its ExposedThing contract; it does not turn a
+handler lookup into protocol or policy admission.
 
 ## Subscriptions
 
