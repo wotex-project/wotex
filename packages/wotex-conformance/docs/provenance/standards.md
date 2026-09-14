@@ -1,6 +1,6 @@
 # Standards provenance
 
-Observed on 2026-09-05.
+Observed on 2026-09-14.
 
 | Identifier | Exact revision | Public source | Use |
 |---|---|---|---|
@@ -12,6 +12,11 @@ No standards schema, normative paragraph, implementation source, or official
 test-suite artifact is copied into this repository. The Thing Description and
 Thing Model vectors are project-authored synthetic values and cite the exact
 sections they interpret.
+
+The [bundled assertion inventory](assertion-inventory.md) maps every current
+vector to its claim, operation, cited section, assertion identifiers, and
+expected normalized observation. Corpus tests verify each vector's digest and
+revision-pinned standards provenance independently of this document's layout.
 
 A future imported test artifact requires its exact revision, digest, license,
 modification notice, and compatibility decision before admission.

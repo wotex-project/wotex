@@ -124,6 +124,7 @@ defmodule WotexConformance.MixProject do
         ],
         "docs/provenance/source.md": [title: "Source provenance"],
         "docs/provenance/standards.md": [title: "Standards provenance"],
+        "docs/provenance/assertion-inventory.md": [title: "Assertion inventory"],
         "CHANGELOG.md": [title: "Changelog"],
         LICENSE: [title: "License"]
       ],
