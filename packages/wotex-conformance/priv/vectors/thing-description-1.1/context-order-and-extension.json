@@ -1,0 +1,72 @@
+{
+  "id": "td11.parse.context-order-and-extension",
+  "revision": "1.0.0",
+  "claim": {
+    "id": "w3c.wot.td11.context-order",
+    "revision": "1.0.0",
+    "operation": "thing_description.parse",
+    "evidence_profile": "value",
+    "standard": {
+      "identifier": "w3c.wot.thing-description",
+      "revision": "2023-12-05",
+      "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+      "section": "5.3.1.1"
+    },
+    "assertions": [
+      "context_extension_preserved",
+      "td10_td11_context_order_recognized"
+    ],
+    "tags": [
+      "thing-description-1.1"
+    ]
+  },
+  "input": {
+    "document": {
+      "@context": [
+        "https://www.w3.org/2019/wot/td/v1",
+        "https://www.w3.org/2022/wot/td/v1.1",
+        {
+          "測定": "https://example.test/vocabulary#"
+        }
+      ],
+      "title": "Context Thing",
+      "securityDefinitions": {
+        "no_security": {
+          "scheme": "nosec"
+        }
+      },
+      "security": [
+        "no_security"
+      ]
+    },
+    "projection": [
+      "/@context"
+    ]
+  },
+  "expectation": {
+    "operator": "exact",
+    "value": {
+      "accepted": true,
+      "document": {
+        "/@context": [
+          "https://www.w3.org/2019/wot/td/v1",
+          "https://www.w3.org/2022/wot/td/v1.1",
+          {
+            "測定": "https://example.test/vocabulary#"
+          }
+        ]
+      }
+    }
+  },
+  "provenance": {
+    "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+    "observed": "2026-09-14",
+    "classification": "project_authored_synthetic_vector",
+    "standard_section": "5.3.1.1"
+  },
+  "tags": [
+    "positive",
+    "thing-description-1.1"
+  ],
+  "digest": "sha256:e9ca74a0c822f9ef206da9bd7c3db4082df62f30dbcc3d6f26de6e71133e8b21"
+}

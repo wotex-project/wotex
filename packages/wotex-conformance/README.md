@@ -23,7 +23,7 @@ reports. It never links the subject under test into its production dependency
 graph: the consumer supplies a content-addressed subject archive and an adapter
 executable.
 
-The bundled baselines contain fourteen Thing Description 1.1 vectors and six
+The bundled baselines contain sixteen Thing Description 1.1 vectors and eight
 Thing Model 1.1 vectors. Each is claim-scoped synthetic evidence; corpus size
 is not a whole-standard conformance or interoperability claim. Negative vectors
 expect the bounded rejection identifiers an implementation emits for the cited

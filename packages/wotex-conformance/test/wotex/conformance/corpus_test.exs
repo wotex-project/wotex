@@ -8,23 +8,26 @@ defmodule Wotex.Conformance.CorpusTest do
   test "loads the canonical corpus and fixes deterministic vector order" do
     corpus = TestFixtures.corpus!()
 
+    assert corpus.revision == "1.1.0"
+
     assert corpus.digest ==
-             "sha256:1dc979f8599bbcd0e441bc09c7266169f42bee40384fbacd4ad1e1c2b8caac07"
+             "sha256:b1f9c259c24c7edf9faf8979204bf3105efcdf49e9b3dc69330c9475c4903154"
 
     assert Enum.map(corpus.vectors, & &1.id) == Enum.sort(Enum.map(corpus.vectors, & &1.id))
-    assert length(corpus.vectors) == 14
+    assert length(corpus.vectors) == 16
   end
 
   test "loads the independent Thing Model corpus with stable identity" do
     corpus = TestFixtures.thing_model_corpus!()
 
     assert corpus.id == "w3c.wot.thing-model.1.1.baseline"
+    assert corpus.revision == "1.1.0"
 
     assert corpus.digest ==
-             "sha256:262e3369986eef648563b5693fdaadab3fa11fb3732cf4db9b7546e2a4af92a7"
+             "sha256:800bfc2ea61f6c14167898e64bcdb8c8aff0a1fe9857505ed65f2837d6bd10a5"
 
     assert Enum.map(corpus.vectors, & &1.id) == Enum.sort(Enum.map(corpus.vectors, & &1.id))
-    assert length(corpus.vectors) == 6
+    assert length(corpus.vectors) == 8
   end
 
   test "rejects a modified vector before target execution" do

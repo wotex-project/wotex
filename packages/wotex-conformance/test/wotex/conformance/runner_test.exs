@@ -7,6 +7,12 @@ defmodule Wotex.Conformance.RunnerTest do
 
   @generated_at ~U[2026-09-02 12:00:00Z]
   @environment %{"mode" => "air_gapped", "runtime" => "otp-28"}
+  @expanded_vector_ids [
+    "td11.parse.context-order-and-extension",
+    "td11.validate.misordered-context",
+    "tm11.parse.version-info",
+    "tm11.validate.instance-version"
+  ]
 
   setup do
     {root, archive, digest} = TestFixtures.subject_archive!()
@@ -84,6 +90,31 @@ defmodule Wotex.Conformance.RunnerTest do
     result = Enum.find(report.results, &(&1.vector_id == selected))
     assert result.code == "operation_not_implemented"
     assert is_nil(result.actual_digest)
+  end
+
+  test "expanded vectors classify wrong observations and unsupported operations independently",
+       context do
+    corpora = [context.corpus, TestFixtures.thing_model_corpus!()]
+
+    for corpus <- corpora,
+        vector_id <- @expanded_vector_ids,
+        Enum.any?(corpus.vectors, &(&1.id == vector_id)),
+        {mode, status, code} <- [
+          {"mismatch", :fail, "exact_mismatch"},
+          {"unsupported", :unsupported, "operation_not_implemented"}
+        ] do
+      target = TestFixtures.external_target!(context.archive, mode)
+
+      assert {:ok, report} =
+               Runner.run(corpus, context.subject, target,
+                 generated_at: @generated_at,
+                 environment: @environment,
+                 select: {:ids, [vector_id]}
+               )
+
+      assert report.summary == status_counts(corpus, [{status, 1}])
+      assert Enum.find(report.results, &(&1.vector_id == vector_id)).code == code
+    end
   end
 
   test "classifies malformed output, wrong vector, non-zero exit, timeout, and output limit",

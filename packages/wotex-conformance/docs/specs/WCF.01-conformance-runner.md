@@ -5,7 +5,7 @@ spec:
   status: accepted
   version: 1.1.0
   owner: wotex-conformance
-  updated: 2026-09-07
+  updated: 2026-09-14
 ---
 
 # WCF.01: Subject-independent conformance runner
@@ -486,19 +486,22 @@ one commit and package archive:
 - W3C Web of Things Discovery, Recommendation 5 December 2023:
   https://www.w3.org/TR/2023/REC-wot-discovery-20231205/
 
-The bundled Thing Description 1.1 corpus contains fourteen project-authored,
-claim-scoped vectors covering minimal structure, affordance categories,
-extension preservation, multilingual metadata, security definition selection,
-Property, Action, Event and Thing-level Forms, and five negative validation
-cases, including Thing-level, Form-level and `ComboSecurityScheme` reference
-integrity.
+The bundled Thing Description 1.1 corpus revision 1.1.0 contains sixteen
+project-authored, claim-scoped vectors covering minimal structure, ordered 1.0
+and 1.1 contexts plus a context extension, affordance categories, extension
+preservation, multilingual metadata, security definition selection, Property,
+Action, Event and Thing-level Forms, and six negative validation cases,
+including context order plus Thing-level, Form-level and
+`ComboSecurityScheme` reference integrity.
 
-The independent Thing Model 1.1 corpus contains six project-authored vectors:
-four positive parse observations for declaration, extension, optional and
-placeholder values, and composition references; plus negative declaration
-observations for the model type and TD 1.1 context. Its operations are
-`thing_model.parse` and `thing_model.validate`; passing it makes no claim about
-Thing Model derivation, remote reference resolution, or model registries.
+The independent Thing Model 1.1 corpus revision 1.1.0 contains eight
+project-authored vectors: five positive parse observations for declaration,
+extension, optional and placeholder values, composition references, and model
+version information; plus three negative declaration observations for the
+model type, TD 1.1 context, and forbidden instance version metadata. Its
+operations are `thing_model.parse` and `thing_model.validate`; passing it makes
+no claim about Thing Model derivation, remote reference resolution, or model
+registries.
 
 Every bundled vector declares a projection and expects one normalized
 observation. Negative vectors expect the bounded rejection identifiers a

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "w3c.wot.thing-model.1.1.baseline",
-  "revision": "1.0.0",
+  "revision": "1.1.0",
   "vectors": [
     {
       "id": "tm11.parse.extension-preservation",
@@ -24,6 +24,16 @@
       "digest": "sha256:0455ef4ccd15cc59b7eb1114f45cf1f3d330cf1feaf5d05616385f5601312cc6"
     },
     {
+      "id": "tm11.parse.version-info",
+      "file": "version-info.json",
+      "digest": "sha256:e50a352a6d4b5ccede40f03f7cb8d5248dfcd43271e4c5e695fc56498e4edb20"
+    },
+    {
+      "id": "tm11.validate.instance-version",
+      "file": "instance-version.json",
+      "digest": "sha256:832ff940f9a516d592688ebf47a1e256ded5bb1af6b816aaa98df4e1aab06885"
+    },
+    {
       "id": "tm11.validate.invalid-context",
       "file": "invalid-context.json",
       "digest": "sha256:8310e4dbd3a2529d297a6287c7122c1b161bb22c1c1dd9655990e1ae83e6029f"
@@ -34,5 +44,5 @@
       "digest": "sha256:5cc013ec738e610c342d6982769ee449e7fbf3950c12f1e3f2be4e35ef4892d4"
     }
   ],
-  "digest": "sha256:262e3369986eef648563b5693fdaadab3fa11fb3732cf4db9b7546e2a4af92a7"
+  "digest": "sha256:800bfc2ea61f6c14167898e64bcdb8c8aff0a1fe9857505ed65f2837d6bd10a5"
 }

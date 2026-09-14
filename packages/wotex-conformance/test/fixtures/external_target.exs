@@ -150,11 +150,13 @@ defmodule ExternalTargetFixture do
   #   * a Thing Model must declare `tm:ThingModel`, and a Thing Description
   #     must not;
   #   * a document must carry a non-empty `title`; and
-  #   * every security reference must name an entry of `securityDefinitions`.
+  #   * every security reference must name an entry of `securityDefinitions`;
+  #     and
+  #   * a Thing Model version must not contain instance-version metadata.
   defp document_errors(operation, document) when is_map(document) do
     context_errors(Map.get(document, "@context")) ++
       type_errors(operation, Map.get(document, "@type")) ++
-      title_errors(document) ++ security_errors(document)
+      title_errors(document) ++ security_errors(document) ++ version_errors(operation, document)
   end
 
   defp document_errors(_, _) do
@@ -248,6 +250,12 @@ defmodule ExternalTargetFixture do
   end
 
   defp combo_references(_), do: []
+
+  defp version_errors("thing_model." <> _, %{"version" => %{"instance" => _}}) do
+    [error("schema_violation", "schema", "/version")]
+  end
+
+  defp version_errors(_, _), do: []
 
   defp references(reference, path) when is_binary(reference), do: [{path, reference}]
 

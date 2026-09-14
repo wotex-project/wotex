@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "id": "w3c.wot.thing-description.1.1.baseline",
-  "revision": "1.0.0",
+  "revision": "1.1.0",
   "vectors": [
     {
       "id": "td11.parse.action-input-output",
@@ -12,6 +12,11 @@
       "id": "td11.parse.affordance-categories",
       "file": "affordance-categories.json",
       "digest": "sha256:ef27ea05d20f8410bcda900d1feba65fbc91d9fa2fe1b06e712c0804e3390bbc"
+    },
+    {
+      "id": "td11.parse.context-order-and-extension",
+      "file": "context-order-and-extension.json",
+      "digest": "sha256:e9ca74a0c822f9ef206da9bd7c3db4082df62f30dbcc3d6f26de6e71133e8b21"
     },
     {
       "id": "td11.parse.event-data",
@@ -49,6 +54,11 @@
       "digest": "sha256:ad4fcac134e021eaf99a1a677ec58ef495ae4e7ede46c09389cb4711af6cd936"
     },
     {
+      "id": "td11.validate.misordered-context",
+      "file": "misordered-context.json",
+      "digest": "sha256:614b578cd7f48305d6641838ccb836f61fe37063d8315fa3556df2f97fdc4a8e"
+    },
+    {
       "id": "td11.validate.missing-security-definitions",
       "file": "missing-security-definitions.json",
       "digest": "sha256:f5721e07a993b40e49210f6fc23e98b17cd0fe86d3308cbe251432442e1967f0"
@@ -74,5 +84,5 @@
       "digest": "sha256:9e987c11f72003db02f7a4dbe13e93713061536aad83667ff40feb07de66d721"
     }
   ],
-  "digest": "sha256:1dc979f8599bbcd0e441bc09c7266169f42bee40384fbacd4ad1e1c2b8caac07"
+  "digest": "sha256:b1f9c259c24c7edf9faf8979204bf3105efcdf49e9b3dc69330c9475c4903154"
 }

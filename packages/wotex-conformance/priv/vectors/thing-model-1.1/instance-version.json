@@ -1,0 +1,60 @@
+{
+  "id": "tm11.validate.instance-version",
+  "revision": "1.0.0",
+  "claim": {
+    "id": "w3c.wot.tm11.versioning",
+    "revision": "1.0.0",
+    "operation": "thing_model.validate",
+    "evidence_profile": "value",
+    "standard": {
+      "identifier": "w3c.wot.thing-description",
+      "revision": "2023-12-05",
+      "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+      "section": "9.3.1"
+    },
+    "assertions": [
+      "instance_version_rejected"
+    ],
+    "tags": [
+      "thing-model-1.1"
+    ]
+  },
+  "input": {
+    "document": {
+      "@context": "https://www.w3.org/2022/wot/td/v1.1",
+      "@type": "tm:ThingModel",
+      "title": "Instance version is invalid",
+      "version": {
+        "instance": "7",
+        "model": "1.2.0"
+      }
+    },
+    "projection": [
+      "/version"
+    ]
+  },
+  "expectation": {
+    "operator": "exact",
+    "value": {
+      "accepted": false,
+      "errors": [
+        {
+          "code": "schema_violation",
+          "phase": "schema",
+          "path": "/version"
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "source": "https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/",
+    "observed": "2026-09-14",
+    "classification": "project_authored_synthetic_vector",
+    "standard_section": "9.3.1"
+  },
+  "tags": [
+    "negative",
+    "thing-model-1.1"
+  ],
+  "digest": "sha256:832ff940f9a516d592688ebf47a1e256ded5bb1af6b816aaa98df4e1aab06885"
+}
