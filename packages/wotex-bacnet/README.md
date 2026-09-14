@@ -18,7 +18,7 @@ Consumer-neutral BACnet interactions for W3C Web of Things consumers.
 ---
 
 This is a development checkout with an unstable public API. The ordered plan
-tracks the remaining software verification and implementation work.
+records the accepted software profile and its exact evidence boundary.
 
 Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
 
@@ -95,9 +95,10 @@ Runtime lifecycle tests exercise COV ownership. The independent C fixture tests
 object and Property COV, discovery, batch reads, priority release and
 acknowledgment loss. Property tests include the public Runtime observation path.
 Receiver-death stress covers 100 cycles with another association retained.
-The complete fault workflow and final source/archive cohorts
-remain open in WBA-P06. Routing/BBMD, MS/TP and
-BACnet/SC are unsupported.
+The complete WBA-P06 software workflow is accepted for the source, peers and
+toolchains recorded in executable evidence. The default gate also rebuilds exact
+core, Runtime and BACnet archives and exercises an isolated reference consumer
+without live-source fallback. Routing/BBMD, MS/TP and BACnet/SC are unsupported.
 
 ## Wotex contract
 
@@ -132,9 +133,12 @@ See [implemented profile](docs/specs/WBA.02-implemented-profile.md),
 
 Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
 checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check`. Normal dependency resolution uses Hex versions.
-Run `mix check` before commits. It checks formatting, compiles with warnings as
-errors, and runs the default test suite. Wider checks belong to release readiness.
+`WOTEX_PATH_DEPS=1 mix check --no-retry`. Normal dependency resolution uses Hex
+versions. `mix test` is the fast loop. The default `mix check --no-retry` is the
+complete library gate: locked and unused dependencies, warnings-as-errors,
+formatting, strict static analysis, coverage as the only ExUnit pass, audits,
+documentation, Dialyzer, package/archive inspection, an archive-only reference
+consumer and the Application-free structural check.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
 
@@ -147,18 +151,19 @@ native executable build task is required for this BEAM client.
 ## Software implementation contract
 
 The [ordered implementation sequence](docs/plans/software-implementation.md)
-and [specification index](docs/specs/WBA-index.md) define the remaining software
-profile with exact behavior, limits, failure transitions and acceptance scenario families.
-These target contracts are build instructions, not claims that every feature
-already exists. Required software peers are separate from physical-device tests.
+and [specification index](docs/specs/WBA-index.md) define the accepted software
+profile with exact behavior, limits, failure transitions and acceptance scenario
+families. Acceptance is limited to the source, dependency, fixture and toolchain
+identities in executable evidence. Required software peers are separate from
+physical-device tests.
 
 The [WBA.11 standalone client contract](docs/specs/WBA.11-standalone-client-and-preservation.md)
 records required native APIs, preserved protocol assets and concrete specified
-fixtures. The concrete standalone corpus has local executable bindings; independent
-peer evidence and the full software acceptance matrix remain separate.
+fixtures. The concrete standalone corpus has local executable bindings and the
+independent peer matrix is recorded separately in executable evidence.
 
 The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
-profiles from planned contracts. The [Wotex integration contract](docs/specs/WBA.12-wotex-integration.md)
+software profiles from separately scoped nonclaims. The [Wotex integration contract](docs/specs/WBA.12-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
-ConsumedThing acceptance tests. These are target requirements; a passing baseline
-gate does not accept the unfinished software profile.
+ConsumedThing acceptance tests. It does not claim publication, hardware, BTL or
+full BACnet conformance, or downstream consumer parity.

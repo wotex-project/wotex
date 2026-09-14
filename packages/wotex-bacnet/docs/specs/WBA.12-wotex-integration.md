@@ -5,16 +5,17 @@ spec:
   status: accepted
   version: 1.1.0
   owner: wotex-bacnet
-  updated: 2026-09-09
+  updated: 2026-09-14
 ---
 
 # WBA.12 Wotex integration and evidence contract
 
-This is an accepted **target specification**, not implemented-profile evidence.
-It makes [.10](WBA.10-software-contract.md) and
+This is the accepted integration specification for the implemented software
+profile. It makes [.10](WBA.10-software-contract.md) and
 [.11](WBA.11-standalone-client-and-preservation.md) usable with the public Wotex
-packages. The [catalogue](catalogue.yaml) separates existing behavior from planned
-contracts. Every `I` requirement below is mandatory for software completion.
+packages. The [catalogue](catalogue.yaml) and executable evidence bound the claim
+to exact source and peer cohorts. Every `I` requirement below is mandatory for
+software completion.
 
 ## WBA-I01 — Dependency direction and owned values
 
@@ -54,8 +55,8 @@ Until a mode is implemented it returns unsupported. Mode availability is a stati
 library-version decision; actual configured peer capabilities still fail explicitly.
 The current implementation exposes both modes with local Runtime evidence.
 Borrowed-stack ingress has the S03a local capability and lifecycle evidence.
-The complete I04 retry corpus still requires the additional acceptance cells
-in the plan.
+The complete I04 retry corpus is bound in `error_class_test.exs`, including
+malformed, unclassified and default mutation cases.
 
 | Mode | BindingProfile id | URI schemes | Exact operations | Stream meaning |
 | --- | --- | --- | --- | --- |
@@ -255,7 +256,8 @@ classification test does not advertise support for the input WoT operation in
 a production profile; its test profile explicitly admits that one operation.
 The native error fields shown are stimuli,
 not a bypass of the production classifier or a consumer permission to set class.
-The full I04 table also needs malformed/unclassified and default mutation cases.
+Malformed, unclassified and default mutation cases supplement the I-F02–I-F07
+projection table in `error_class_test.exs`.
 
 Add `test/wotex/bacnet/runtime_integration_test.exs`, exercising real core and
 Runtime public APIs with an explicitly selected deterministic protocol peer/port.
@@ -277,12 +279,15 @@ construct forged Request structs as the only integration proof. Cover:
    the selected complete interaction with the required .10 software peer to
    establish protocol evidence. Injected-port success is labelled accordingly.
 
-For final acceptance, run from an immutable package archive and isolated consumer
-project with public core/Runtime dependency versions, not an accidental shared
-build. Record the subject, dependency, fixture and adapter SHA-256 identities,
-exact Elixir/OTP versions, command, result and cleanup counts. Repeat the minimum
-and current runtime matrix in .00. A path-dependency gate proves local integration;
-it does not prove released artifact adoption.
+For final acceptance, run from immutable package archives and an isolated consumer
+project with the packaged core, Runtime and BACnet dependency versions, not an
+accidental shared build. `bin/check_archive.exs` builds each exact archive once,
+inspects its metadata and contents, compiles the external project from extracted
+archives, rejects live-source compile/load paths, and exercises WBA-A01–WBA-A04
+through the native and actual Runtime public APIs. It reports archive, revision
+and consumer-lock SHA-256 identities. The source-bound peer matrix records the
+minimum and current runtime cohorts separately. Neither path-dependency development
+nor archive adoption proves a published release.
 
 [Wotex Conformance](https://github.com/wotex-project/wotex-conformance/blob/dd53f8052a5bb1bb358c70bfe3810e9aa631e9b3/docs/specs/WCF.01-conformance-runner.md)
 requires expectations to stay runner-side and subjects to stay outside its

@@ -5,18 +5,17 @@ spec:
   status: accepted
   version: 1.1.1
   owner: wotex-bacnet
-  updated: 2026-09-09
+  updated: 2026-09-14
 ---
 
 # WBA.11 Standalone BACnet client and feature preservation
 
-Specification version: **1.1.1**. Implementation status: **partial**. Requirements
-in this file extend [WBA.10](WBA.10-software-contract.md). Named helpers, discovery
-and their lifecycle bindings exist; complete independent software acceptance
-remains required. The [current profile](WBA.02-implemented-profile.md) and
-[executed evidence](../provenance/executable-evidence.md) remain the authority
-for existing behavior. Software limits below are library policy, not BACnet
-standard limits.
+Specification version: **1.1.1**. Implementation status: **implemented for the
+accepted software cohort**. Requirements in this file extend
+[WBA.10](WBA.10-software-contract.md). Named helpers, discovery, lifecycle
+bindings and independent software acceptance are recorded in
+[executed evidence](../provenance/executable-evidence.md). Software limits below
+are library policy, not BACnet standard limits.
 
 ## WBA-N01 — A usable protocol client independent of Thing Descriptions
 

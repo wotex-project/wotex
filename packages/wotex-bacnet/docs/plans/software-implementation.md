@@ -24,7 +24,7 @@ cohort.
 | WBA-P05 | S05 and V12: Runtime Property COV and explicit read probe | Runtime stream/frame/integration suites, CP17 and opening-state CP22–CP24 | Accepted |
 | WBA-P05a | N01–N05: native helpers, bounded Who-Is/I-Am and sequential Property reads | F01–F11 corpus, standalone/discovery lifecycle suites and CP02 | Accepted |
 | WBA-P05b | I01–I06: exact profiles, route/value/error/Retry projection and consumer ownership | I-F01 plus I-F02–I-F07 through the protocol and Runtime boundaries | Accepted |
-| WBA-P06 | S01–S05, S03a, N01–N05, I01–I06, C09 and V13/V14: complete independent software acceptance | source-bound normal/sanitizer shared and terminal cohorts on both supported runtimes | Accepted |
+| WBA-P06 | S01–S05, S03a, N01–N05, I01–I06, C09 and V13/V14: complete independent software acceptance | source-bound normal/sanitizer shared and terminal cohorts on both supported runtimes, plus WBA-A01–WBA-A04 through exact archives | Accepted |
 
 Test filenames without a directory are under `test/wotex/bacnet/`. Independent
 peer tests are under `test/interop/` and stress tests are under
@@ -132,10 +132,10 @@ and Elixir 1.20.2/OTP 29.0.4.
 
 Each logical implementation commit requires focused tests and
 `WOTEX_PATH_DEPS=1 mix check --no-retry`. The gate includes compilation,
-formatting, strict Credo, unit/property/doctest execution, at least 95% coverage,
-Dialyzer, Doctor, ExDoc, dependency checks, Hex packaging, clean archive
-contents, out-of-tree archive compilation and the Application-free structural
-check.
+formatting, strict Credo, unit/property/doctest execution once through the
+coverage pass, at least 95% coverage, Dialyzer, Doctor, ExDoc, dependency checks,
+Hex packaging, clean archive contents, an isolated archive-only reference
+consumer and the Application-free structural check.
 
 Native fixture changes also require CP01/CP10, ordinary and instrumented peer
 lanes, source identity checks and cleanup receipts. Evidence records commands,

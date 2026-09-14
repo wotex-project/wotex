@@ -5,17 +5,17 @@ spec:
   status: accepted
   version: 1.1.1
   owner: wotex-bacnet
-  updated: 2026-09-09
+  updated: 2026-09-14
 ---
 
 # WBA.10 Complete BACnet/IP client software profile
 
 Read [WBA.00](WBA.00-library-contract.md), [WBA.11 standalone client and preservation](WBA.11-standalone-client-and-preservation.md), and the [implementation sequence](../plans/software-implementation.md).
-This is the target profile. Current code implements typed read/write, strict ACK
+This is the implemented software profile. Current code implements typed read/write, strict ACK
 classification, explicit stack ownership, COV lifecycle, discovery, sequential
 helpers, Runtime observations and consumption-based owned UDP ingress.
-Independent discovery/batch/COV software evidence remains required by the implementation plan.
-Current evidence is in [executable evidence](../provenance/executable-evidence.md).
+Independent discovery, batch, COV, fault and stress evidence is accepted for the
+exact cohorts in [executable evidence](../provenance/executable-evidence.md).
 
 ## Scope and source authority
 

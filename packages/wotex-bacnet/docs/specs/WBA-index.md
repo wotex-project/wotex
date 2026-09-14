@@ -1,9 +1,10 @@
 # WBA specification index
 
 Start with the [software implementation sequence](../plans/software-implementation.md).
-The .00/.10/.11/.12 contracts describe required target behavior; the existing protocol
-and implemented-profile documents distinguish current tested behavior from it.
-Implementation readiness does not mean implementation or conformance is complete.
+The .00/.10/.11/.12 contracts describe the accepted software profile; the protocol,
+implemented-profile and evidence documents bound current tested behavior. Software
+acceptance does not mean publication, hardware validation, certification, full
+BACnet conformance or downstream consumer parity.
 
 - [WBA.00 Software implementation rules](WBA.00-library-contract.md)
 - [WBA.01 BACnet protocol and graduation contract](WBA.01-protocol.md)
@@ -13,11 +14,11 @@ Implementation readiness does not mean implementation or conformance is complete
 [Source revisions](../provenance/primary-sources.md) and [executed evidence](../provenance/executable-evidence.md) are separate records.
 
 - [WBA.11 Standalone client and preservation](WBA.11-standalone-client-and-preservation.md)
-- [Concrete specified fixture corpus](fixtures/contract-v1.json) — local binding inventory is in WBA-N05; independent peer acceptance remains required
+- [Concrete specified fixture corpus](fixtures/contract-v1.json) — local bindings are in WBA-N05 and independent peer receipts are recorded in executable evidence
 
 - [Versioned specification catalogue](catalogue.yaml) — owning contracts, dependencies, status and baseline evidence
 - [WBA.12 Wotex integration and evidence contract](WBA.12-wotex-integration.md)
-- [Concrete Wotex integration corpus](fixtures/wotex-integration-v1.json) — specified assertions, not a passed profile
+- [Concrete Wotex integration corpus](fixtures/wotex-integration-v1.json) — assertions bound through I-F01–I-F07 and supplemental Runtime cases
 
 - [Owned UDP ingress cases](fixtures/ingress-v1.json) — local credit, lifecycle and sustained UDP bindings
-- [Software peer source identities](fixtures/software-sources-v1.json) — pinned sources, not a passed build
+- [Software peer source identities](fixtures/software-sources-v1.json) — pinned inputs whose accepted build and run identities are recorded in executable evidence

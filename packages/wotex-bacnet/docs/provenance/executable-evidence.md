@@ -16,6 +16,15 @@ strict Credo, Dialyzer, Doctor, ExDoc, dependency checks, unit/property/doctest
 execution, coverage, Hex packaging, archive inspection, out-of-tree archive
 compilation and the Application-free structural check.
 
+The current default gate additionally rebuilds the exact Wotex core, Runtime and
+BACnet archives once in an external temporary workspace. WBA-A01 verifies that
+the isolated consumer compiles and loads no Wotex module from a live checkout;
+WBA-A02 executes and closes a native read; WBA-A03 executes a selected Property
+read through a real `ConsumedThing`; and WBA-A04 verifies bounded redaction of a
+nested external client failure. Archive inspection rejects mutable dependency
+sources, unsafe members, development state, local task state and agent machinery.
+This is packaged public-API adoption evidence, not publication evidence.
+
 | Elixir / OTP | Executed | Excluded peer/hardware tags | Coverage | Documentation/spec coverage | Archive SHA-256 |
 | --- | ---: | ---: | ---: | ---: | --- |
 | 1.20.2 / 29.0.4 | 285 | 35 | 95.1% | 100% | `93c6a13568b6aee868c1307b426accdd4351ae7c8f5fb680e74cbfd04e365c55` |

@@ -42,4 +42,5 @@ The production runtime uses BACstack and owned BEAM transport. WBA-S03a defines
 consumption-based UDP ingress and validated borrowed receive-policy limits.
 The native C stack is an independent software peer only. Required fixture tasks
 are `mix wotex.software.build --workspace ABS` and
-`mix wotex.software.run --workspace ABS`; they are specified implementation work.
+`mix wotex.software.run --workspace ABS`; their accepted source-bound cohorts are
+recorded in executable evidence and they remain outside production runtime work.

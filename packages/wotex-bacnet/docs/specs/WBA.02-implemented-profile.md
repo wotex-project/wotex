@@ -5,7 +5,7 @@ spec:
   status: accepted
   version: 1.1.0
   owner: wotex-bacnet
-  updated: 2026-09-09
+  updated: 2026-09-14
 ---
 
 # WBA.02 Implemented BACnet profile
@@ -80,13 +80,14 @@ datagrams with StackOwner and StackClient suspended separately. Independent C
 tests exercise object and Property COV, discovery, batch reads, priority release,
 lost ACKs and public Runtime Property observation/stop. Receiver-death stress
 executes 100 cycles with a second association retained. The complete fault
-workflow and final WBA-P06 evidence remain
-required; this section does not accept the complete target profile.
+workflow and WBA-P06 source-bound cohorts are accepted in the executable evidence.
+The archive gate separately proves packaged public-API adoption without using a
+live Wotex checkout as a compile or load source.
 
 ## Evidence and compatibility
 
 See [executable evidence](../provenance/executable-evidence.md) for specific tests,
-commands and remaining gates, and [source revisions](../provenance/primary-sources.md).
+commands and evidence boundaries, and [source revisions](../provenance/primary-sources.md).
 Public callbacks provide a neutral compatibility surface, not drop-in semantic
 parity. `send/2` completes synchronously; no fictitious receive queue exists.
 The consumer must run differential scenarios before replacing its implementation.

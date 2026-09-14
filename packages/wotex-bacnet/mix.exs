@@ -18,7 +18,7 @@ defmodule WotexBACnet.MixProject do
       docs: docs(),
       source_url: @source_url,
       homepage_url: "https://wotex.io",
-      test_ignore_filters: [~r{^test/support/}],
+      test_ignore_filters: [~r{^test/(fixtures|support)/}],
       test_coverage: [tool: ExCoveralls],
       dialyzer: dialyzer()
     ]
@@ -108,6 +108,7 @@ defmodule WotexBACnet.MixProject do
 
   defp package do
     [
+      name: "wotex_bacnet",
       licenses: ["Apache-2.0"],
       links: %{
         "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
@@ -119,7 +120,7 @@ defmodule WotexBACnet.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib mix.exs)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib mix.exs)
     ]
   end
 

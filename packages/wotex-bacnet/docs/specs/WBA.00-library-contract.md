@@ -5,13 +5,14 @@ spec:
   status: accepted
   version: 1.1.0
   owner: wotex-bacnet
-  updated: 2026-09-09
+  updated: 2026-09-14
 ---
 
 # WBA.00 Software implementation rules
 
-This is a target contract for the library's software completion milestone.
-Requirements below are not claims that the current code already implements them.
+This is the contract for the library's accepted software completion milestone.
+The implementation status applies only to the exact source, fixture and toolchain
+cohorts recorded in executable evidence; it is not a publication or conformance claim.
 Read this file with [WBA.10](WBA.10-software-contract.md),
 [standalone client preservation](WBA.11-standalone-client-and-preservation.md),
 [Wotex integration](WBA.12-wotex-integration.md), and the existing
