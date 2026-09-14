@@ -4,6 +4,8 @@
 #     WOTEX_CORE_ARCHIVE=/absolute/archive.tar mix package
 #     WOTEX_DIRECTORY_ARCHIVE=/absolute/directory.tar WOTEX_CORE_ARCHIVE=/absolute/core.tar mix package
 
+Code.require_file("evidence.exs", __DIR__)
+
 defmodule CheckArchive do
   @moduledoc false
 
@@ -13,7 +15,13 @@ defmodule CheckArchive do
 
   def run do
     source = File.cwd!()
-    root = temporary_directory()
+    root = System.get_env("WOTEX_EVIDENCE_ROOT") || temporary_directory()
+    DirectoryEvidence.external_root!(root)
+
+    unless Enum.all?(File.ls!(root), &(&1 in ["inputs.etf", "compiler.exit"])),
+      do: raise("archive verification requires a fresh external evidence directory")
+
+    unless File.regular?(Path.join(root, "inputs.etf")), do: DirectoryEvidence.inputs!(root)
     archive = Path.join(root, "wotex_directory-#{Mix.Project.config()[:version]}.tar")
 
     try do
@@ -48,6 +56,45 @@ defmodule CheckArchive do
       do: raise("consumer changed its dependency lock")
 
     File.cp!(Path.join(consumer, "mix.lock"), Path.join(root, "consumer.mix.lock"))
+
+    consumer_result =
+      consumer |> Path.join("consumer-results.json") |> File.read!() |> Jason.decode!()
+
+    DirectoryEvidence.archive!(root, %{
+      "directory_version" => metadata["version"],
+      "core_version" => core_metadata["version"],
+      "directory_input" =>
+        if(System.get_env("WOTEX_DIRECTORY_ARCHIVE"),
+          do: "supplied_archive",
+          else: "source_build"
+        ),
+      "core_input" =>
+        if(System.get_env("WOTEX_CORE_ARCHIVE"),
+          do: "supplied_archive",
+          else: "explicit_dependency_source"
+        ),
+      "files" => %{
+        Path.basename(archive) => digest(archive),
+        Path.basename(core_archive) => digest(core_archive),
+        "consumer.mix.lock" => digest(Path.join(root, "consumer.mix.lock"))
+      },
+      "hex_cohort" =>
+        for(
+          {name, {:hex, _, version, checksum, _, _, _, outer}} <- lock,
+          into: %{},
+          do:
+            {Atom.to_string(name),
+             %{"version" => version, "checksum" => checksum, "outer_checksum" => outer}}
+        ),
+      "consumer_result" => consumer_result,
+      "consumer_commands" => [
+        "mix deps.get --check-locked",
+        "mix run --no-start --no-compile --no-deps-check verify.exs"
+      ],
+      "warnings_as_errors" => true,
+      "source_checkout_fallback" => false
+    })
+
     IO.puts("directory archive sha256: #{digest(archive)}")
     IO.puts("core archive sha256: #{digest(core_archive)}")
     IO.puts("consumer lock sha256: #{digest(Path.join(root, "consumer.mix.lock"))}")
@@ -215,6 +262,11 @@ defmodule CheckArchive do
       Path.join(consumer, "table_repository_contract_test.exs")
     )
 
+    File.cp!(
+      Path.join(source, "test/wotex/directory/compatibility_test.exs"),
+      Path.join(consumer, "compatibility_test.exs")
+    )
+
     File.write!(
       Path.join(consumer, "mix.lock"),
       inspect(lock, limit: :infinity, printable_limit: :infinity) <> "\n"
@@ -238,6 +290,7 @@ defmodule CheckArchive do
   defp run!(command, arguments, directory) do
     environment = [
       {"WOTEX_PATH_DEPS", nil},
+      {"WOTEX_EVIDENCE_ROOT", nil},
       {"MIX_ENV", "prod"},
       {"MIX_PATH", ""},
       {"ERL_LIBS", ""},

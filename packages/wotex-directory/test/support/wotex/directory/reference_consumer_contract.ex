@@ -79,6 +79,13 @@ defmodule Wotex.Directory.ReferenceConsumerContract do
       assert fetch(fixture, @id) == replaced.entry
     end
 
+    for identifier <- [nil, "urn:example:changed"] do
+      assert {:error, %Error{code: :identifier_mismatch}} =
+               Directory.patch(later, @id, %{"id" => identifier}, context)
+
+      assert fetch(fixture, @id) == replaced.entry
+    end
+
     assert {:error, %Error{code: :identifier_mismatch}} =
              Directory.replace(later, @id, thing_description("urn:example:other"), context)
 

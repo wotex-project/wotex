@@ -43,6 +43,17 @@ defmodule Wotex.Directory.RegistrationTest do
     assert registration.expires == ~U[2026-09-02 11:00:00Z]
   end
 
+  test "accepts both exact unsigned 32-bit ttl endpoints" do
+    for ttl <- [0, 4_294_967_295] do
+      assert {:ok, registration} =
+               Registration.create(@now, {:present, %{"ttl" => ttl}}, :register)
+
+      assert registration.ttl == ttl
+      assert registration.expires == DateTime.add(@now, ttl)
+      assert Registration.valid?(registration)
+    end
+  end
+
   test "rejects client assignment to server fields and invalid ttl" do
     for field <- ~w(created modified retrieved) do
       path = "/registration/" <> field

@@ -38,7 +38,7 @@ def deps do
 end
 ```
 
-The only production dependency is `wotex ~> 0.1`, which owns Thing Description
+The only production dependency is `wotex ~> 0.1.0`, which owns Thing Description
 values and validation. For coordinated source development, set
 `WOTEX_PATH_DEPS=1` before fetching dependencies to select the sibling checkout
 explicitly. Normal builds always resolve the Hex package.
@@ -160,6 +160,14 @@ verification against an existing Directory artifact without rebuilding it.
 No neighboring checkout or previously compiled module is a fallback.
 Generated consumer files are temporary. The printed artifact directory retains
 the archives and consumer lock outside the repository.
+
+The full gate also writes an external `release-evidence.json` manifest after
+all checks succeed. It binds source and dependency inputs, runtime, commands,
+the exact archives, consumer lock and test outcome. The
+[claim and compatibility matrix](docs/specs/claim-compatibility-matrix.md)
+defines its schema and the reviewed 0.1.0 compatibility baseline. A dirty-tree
+run is qualified explicitly; neither a manifest nor a passing gate authorizes
+publication or establishes a stable API.
 
 The [repository port evidence contract](docs/specs/repository-port-evidence.md)
 defines the reusable adapter suite, its fixture interface, and the exact

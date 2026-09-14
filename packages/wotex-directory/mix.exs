@@ -107,6 +107,7 @@ defmodule WotexDirectory.MixProject do
         "docs/specs/WTD.01-directory-contract.md",
         "docs/specs/catalogue.yaml",
         "docs/specs/repository-port-evidence.md",
+        "docs/specs/claim-compatibility-matrix.md",
         "lib",
         "mix.exs"
       ],
@@ -129,6 +130,7 @@ defmodule WotexDirectory.MixProject do
         "docs/plans/wotex-directory-completion.md": [title: "Completion Contract"],
         "docs/specs/WTD.01-directory-contract.md": [title: "Directory contract"],
         "docs/specs/repository-port-evidence.md": [title: "Repository port evidence"],
+        "docs/specs/claim-compatibility-matrix.md": [title: "Claims and compatibility"],
         "docs/decisions/0001-consumer-owned-runtime.md": [title: "Consumer-owned runtime"],
         "docs/decisions/0002-listing-and-expiry.md": [title: "Listing and expiry"],
         "docs/provenance/w3c-sources.md": [title: "W3C sources"],

@@ -111,9 +111,12 @@ IO.puts(
 ExUnit.start(autorun: false)
 Code.require_file("archive_consumer_test.exs")
 Code.require_file("table_repository_contract_test.exs")
+Code.require_file("compatibility_test.exs")
 started = Application.started_applications()
 result = ExUnit.run()
 unless result.failures == 0, do: raise("archive consumer contract failures")
 
 unless Application.started_applications() == started,
   do: raise("public consumer operations changed the started application set")
+
+File.write!("consumer-results.json", Jason.encode!(result))

@@ -35,6 +35,16 @@ defmodule Wotex.Directory.MergePatchTest do
              MergePatch.apply(%{"value" => 1}, %{"value" => %{"nested" => true}})
   end
 
+  test "replaces whole arrays without retaining previous elements" do
+    assert {:ok, %{"items" => [3], "preserved" => true}} =
+             MergePatch.apply(%{"items" => [1, 2], "preserved" => true}, %{"items" => [3]})
+
+    assert {:ok, %{"items" => []}} =
+             MergePatch.apply(%{"items" => [%{"id" => 1}]}, %{"items" => []})
+
+    assert {:ok, %{}} = MergePatch.apply(%{"items" => [1, 2]}, %{"items" => nil})
+  end
+
   test "rejects non-object roots, non-string keys, and bounded-work violations" do
     assert {:error,
             %Error{

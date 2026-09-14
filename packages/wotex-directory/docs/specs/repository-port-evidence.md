@@ -1,7 +1,7 @@
 # Repository port evidence contract
 
 This document maps the reusable repository tests to WTD.01 version 1.1.0 and
-completion work items WTD-C01 through WTD-C04. It adds evidence for the existing
+completion work items WTD-C01 through WTD-C05. It adds evidence for the existing
 contract without changing callback signatures, return values, public types,
 operation order, or the W3C baseline. Discovery and Thing Description 1.1
 remain the Recommendations dated 2023-12-05. Package choices are specified
@@ -202,8 +202,8 @@ no library application. It also inspects Directory BEAM imports for direct
 process, storage and global-configuration authority and confirms that consumer
 operations leave the started application set unchanged. It runs the 15
 repository, 44 public-operation and five reference-consumer scenarios against
-each adapter, plus the original minimal public operation sequence: 129 tests
-in total. These include atomic contention and interrupted callers, not only
+each adapter, plus the original minimal public operation sequence and four
+compatibility tests: 133 tests in total. These include atomic contention and interrupted callers, not only
 sequential happy paths. No library source or
 compiled module is copied from a checkout. The explicitly copied test suite
 and test-only ports are verification inputs, not packaged storage products.
@@ -220,4 +220,6 @@ arbitrary storage transaction, durable event delivery, a global resource bound,
 or interoperability of a production adapter. Event values establish no watch,
 subscription, replay or HTTP/SSE behavior. The import inspection concerns direct
 library dependencies, not a sandbox for arbitrary consumer code. Release and
-stable-API claims require the separate compatibility and claim-to-test review.
+stable-API claims remain bounded by the
+[claim and compatibility matrix](claim-compatibility-matrix.md), which also
+defines the external release-evidence manifest emitted by the full gate.
