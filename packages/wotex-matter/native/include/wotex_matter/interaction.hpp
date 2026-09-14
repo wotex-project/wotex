@@ -14,6 +14,7 @@ namespace wotex::matter {
 inline constexpr std::size_t kMaximumInteractionPaths = 64;
 inline constexpr std::size_t kMaximumInteractionReports = 1024;
 inline constexpr std::size_t kMaximumInteractionResultBytes = 98304;
+inline constexpr std::size_t kMaximumEncodedTlvBytes = 65536;
 
 enum class InteractionKind { ReadAttribute, ReadAttributes, ReadEvents, Write, Invoke };
 enum class InteractionEffect { None, Unknown };

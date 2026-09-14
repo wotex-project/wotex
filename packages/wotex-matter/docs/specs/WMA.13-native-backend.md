@@ -3,9 +3,9 @@ spec:
   id: WMA.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.0
+  version: 1.0.1
   owner: wotex-matter
-  updated: 2026-09-09
+  updated: 2026-09-14
 ---
 
 # WMA.13 Native backend, build and IPC contract
@@ -70,12 +70,19 @@ C07 defines the production version-1 JSON-line envelopes. The native helper
 emits exactly one ready frame before `open`; its exact backend is `matter-native`
 and revision is `250a9e6c50ee2068107f3c4808b680f5f2925415`. The BEAM owner checks both. A different backend
 never triggers an implicit fallback. Framing remains UTF-8 with 131072 bytes
-including newline, depth eight, at most 1024 entries per collection and 4096
+including newline, JSON collection depth 24, at most 1024 entries per collection and 4096
 aggregate nodes. Numbers retain signed/unsigned 64-bit precision. Non-finite
 numbers, duplicate keys, invalid UTF-8 and extra envelope fields fail. Parsing
 must enforce bounds during traversal, before an unbounded native allocation;
 nlohmann/json 3.11.3 SAX or equivalent bounded callbacks are the selected parser.
 The header source and SHA-256 are fixed below.
+
+The TLV value depth remains eight. JSON element objects, child arrays,
+context-tag arrays and request/result envelopes have separate representation
+depth. The 24-level frame bound admits those wrappers around the bounded typed
+values, including AccessControl subjects and targets; it does not admit deeper
+TLV containers. Native parser tests assert acceptance at JSON depth 24 and
+rejection at 25 before operation dispatch.
 
 Request parameters and results have the exact operation-specific shapes in .10
 and .11. No native pointer, process address or foreign object name crosses IPC.
@@ -273,6 +280,13 @@ has SHA-256 `4d0310f2d8dc2bb19598ecc46907d44a93cc3bfbde97943c0e9e34ef4f0698b8`.
 Required transitive source/toolchain hashes and enabled features are mandatory
 manifest entries. A passing current native dependency audit is still required;
 a pinned hash alone is not a security acceptance. Python wheels are not built or packaged for production.
+
+The uriparser transitive source uses the reviewed 1.0.2 security override at
+`9b2bed92f5deecf740819f9bf27724bee2fe9c12`, archive SHA-256
+`879a0c62cd34216ad1076f3f1a6b4877078ac6cb55b5b38204eb94128a1eea2a`.
+The [source register](../provenance/primary-sources.md) identifies the original
+SDK gitlink and fixed advisories. Every controller and software-peer build uses
+this override; the manifest records its actual revision separately from the SDK.
 
 S02's store owns `chip::PersistentStorageDelegate`,
 `chip::PersistentStorageOperationalKeystore` and

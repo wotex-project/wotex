@@ -3,9 +3,9 @@ spec:
   id: WMA.00
   title: "Software implementation rules"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-matter
-  updated: 2026-09-09
+  updated: 2026-09-14
 ---
 
 # WMA.00 Software implementation rules
@@ -207,11 +207,17 @@ Protocol-specific parameters and value envelopes are defined in WMA.10.
 Reject duplicate JSON keys, fields outside the selected envelope/operation
 allowlist, extra responses for one ID,
 malformed JSON, non-finite numbers, wrong IDs and incomplete lines at EOF.
-Depth is at most eight, each array/map at most 1024 entries, and total value nodes
+JSON collection depth is at most 24, each array/map at most 1024 entries, and total value nodes
 at most 4096 unless a narrower protocol limit applies. Base64 bytes use the
 literal envelope `{"type":"bytes","base64":"..."}`; decoding must enforce
 the decoded-byte limit before use. Do not confuse dictionaries with native bytes
 unless this exact envelope is selected by the typed schema.
+
+TLV nesting remains limited to eight levels. Its JSON representation adds an
+element object and child array per container, plus request/result envelopes and
+context-tag arrays. These representation layers count toward the JSON limit,
+not the TLV limit. A nonempty AccessControl subjects list requires nine JSON
+collection levels in a write request.
 
 Reserve a dedicated output channel for framed messages; native stdout/stderr logs
 cannot share it or leak through error text. Startup, shutdown and descendants

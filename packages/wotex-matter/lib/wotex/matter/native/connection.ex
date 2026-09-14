@@ -399,7 +399,7 @@ defmodule Wotex.Matter.Native.Connection do
 
   defp handshake_response(port, owner_monitor, id, timeout) do
     with {:ok, line} <- await_line(port, owner_monitor, timeout),
-         {:ok, frame} <- Jason.decode(line) do
+         {:ok, frame} <- Wire.frame(line) do
       case decode_response(frame, id) do
         {:ok, _} = result -> result
         {:error, %Error{}} = error -> error
@@ -414,7 +414,7 @@ defmodule Wotex.Matter.Native.Connection do
   defp await_ready(port, owner_monitor, timeout) do
     case await_line(port, owner_monitor, timeout) do
       {:ok, line} ->
-        with {:ok, frame} <- Jason.decode(line),
+        with {:ok, frame} <- Wire.frame(line),
              true <-
                frame == %{
                  "version" => 1,
@@ -442,7 +442,7 @@ defmodule Wotex.Matter.Native.Connection do
 
     with true <- remaining > 0,
          {:ok, line} <- await_line(state.port, state.owner_monitor, remaining),
-         {:ok, frame} <- Jason.decode(line) do
+         {:ok, frame} <- Wire.frame(line) do
       case decode_response(frame, id) do
         {:ok, result} ->
           {:ok, result, state}
@@ -505,7 +505,7 @@ defmodule Wotex.Matter.Native.Connection do
   defp decode_response(_, _), do: :not_response
 
   defp decode_async_line(line, state) do
-    with {:ok, frame} <- Jason.decode(line) do
+    with {:ok, frame} <- Wire.frame(line) do
       decode_async_frame(frame, byte_size(line) + 1, state)
     else
       _ -> {:error, Error.new(:invalid_frame)}
@@ -709,8 +709,16 @@ defmodule Wotex.Matter.Native.Connection do
     }
   end
 
-  defp stringify_keys(map),
-    do: Map.new(map, fn {key, value} -> {Atom.to_string(key), value} end)
+  defp stringify_keys(map) when is_map(map) do
+    Map.new(map, fn {key, value} ->
+      key = if is_atom(key), do: Atom.to_string(key), else: key
+      {key, stringify_keys(value)}
+    end)
+  end
+
+  defp stringify_keys(values) when is_list(values), do: Enum.map(values, &stringify_keys/1)
+  defp stringify_keys({:context, id}) when is_integer(id), do: ["context", id]
+  defp stringify_keys(value), do: value
 
   defp establish_subscription(
          %{

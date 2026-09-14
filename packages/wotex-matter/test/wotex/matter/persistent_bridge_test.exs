@@ -89,7 +89,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
       assert {:error, %Error{}} = Native.connect(options)
     end
 
-    for mode <- ["bad_ready", "foreign_id", "stdout_log"] do
+    for mode <- ["bad_ready", "duplicate_ready", "foreign_id", "stdout_log"] do
       assert {:error, %Error{}} = Native.connect(options(fixture(mode)))
     end
 
@@ -157,10 +157,13 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     if mode == "noisy_stderr", do: IO.puts(:stderr, "native-log")
 
     ready =
-      if mode == "bad_ready" do
-        ~s({"version":1,"event":"ready","backend":"matter-native","revision":"wrong"})
-      else
-        ~s({"version":1,"event":"ready","backend":"matter-native","revision":"250a9e6c50ee2068107f3c4808b680f5f2925415"})
+      case mode do
+        "bad_ready" ->
+          ~s({"version":1,"event":"ready","backend":"matter-native","revision":"wrong"})
+        "duplicate_ready" ->
+          ~s({"version":99,"version":1,"event":"ready","backend":"matter-native","revision":"250a9e6c50ee2068107f3c4808b680f5f2925415"})
+        _ ->
+          ~s({"version":1,"event":"ready","backend":"matter-native","revision":"250a9e6c50ee2068107f3c4808b680f5f2925415"})
       end
 
     IO.puts(ready)

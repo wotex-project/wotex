@@ -1,9 +1,57 @@
 defmodule Wotex.Matter.Native.Wire do
-  @moduledoc false
+  @moduledoc """
+  Converts native controller results into typed Matter values and errors.
+
+  This internal module validates operation-specific result envelopes and maps
+  protocol strings through a fixed vocabulary. Context tags, integer widths,
+  explicit nulls and event timestamps retain their typed representation. Invalid
+  envelopes return `Wotex.Matter.Error`; decoding performs no protocol I/O.
+  Consumers use the named operations in `Wotex.Matter`.
+  """
 
   alias Wotex.Matter.{Address, Error}
 
   @path_keys ~w(fabric_id node_id endpoint cluster member)
+  @frame_limits [
+    max_bytes: 131_071,
+    max_depth: 24,
+    max_nodes: 4096,
+    max_collection_size: 1024,
+    max_string_bytes: 131_071
+  ]
+
+  @doc "Decodes one newline-free native frame under the shared IPC bounds."
+  @spec frame(term()) :: {:ok, term()} | {:error, Error.t()}
+  def frame(bytes) do
+    with {:ok, value} <- Wotex.JSON.decode(bytes, @frame_limits),
+         remaining when remaining >= 0 <- frame_budget(value, 4096) do
+      {:ok, value}
+    else
+      _ -> {:error, Error.new(:invalid_frame)}
+    end
+  end
+
+  defp frame_budget(_, budget) when budget <= 0, do: -1
+
+  defp frame_budget(value, budget) when is_map(value) do
+    Enum.reduce_while(value, budget - 1, fn {_key, child}, remaining ->
+      case frame_budget(child, remaining - 1) do
+        next when next >= 0 -> {:cont, next}
+        _ -> {:halt, -1}
+      end
+    end)
+  end
+
+  defp frame_budget(value, budget) when is_list(value) do
+    Enum.reduce_while(value, budget - 1, fn child, remaining ->
+      case frame_budget(child, remaining) do
+        next when next >= 0 -> {:cont, next}
+        _ -> {:halt, -1}
+      end
+    end)
+  end
+
+  defp frame_budget(_, budget), do: budget - 1
 
   @doc false
   @spec decode(atom(), term()) :: {:ok, term()} | {:error, Error.t()}
@@ -189,9 +237,11 @@ defmodule Wotex.Matter.Native.Wire do
   defp timestamp(%{"kind" => kind, "value" => value} = timestamp)
        when map_size(timestamp) == 2 and kind in ["epoch", "system"] and is_integer(value) and
               value in 0..0xFFFFFFFFFFFFFFFF,
-       do: {:ok, %{kind: String.to_existing_atom(kind), value: value}}
+       do: {:ok, %{kind: timestamp_kind(kind), value: value}}
 
   defp timestamp(_), do: :error
+  defp timestamp_kind("epoch"), do: :epoch
+  defp timestamp_kind("system"), do: :system
 
   defp attribute_metadata(
          %{
@@ -299,9 +349,15 @@ defmodule Wotex.Matter.Native.Wire do
   defp tag(["context", id]) when is_integer(id) and id in 0..255, do: {:ok, {:context, id}}
   defp tag(_), do: :error
 
-  defp type(type) when type in ~w(null i16 u8 u16 u32 u64 boolean structure array),
-    do: {:ok, String.to_existing_atom(type)}
-
+  defp type("null"), do: {:ok, :null}
+  defp type("i16"), do: {:ok, :i16}
+  defp type("u8"), do: {:ok, :u8}
+  defp type("u16"), do: {:ok, :u16}
+  defp type("u32"), do: {:ok, :u32}
+  defp type("u64"), do: {:ok, :u64}
+  defp type("boolean"), do: {:ok, :boolean}
+  defp type("structure"), do: {:ok, :structure}
+  defp type("array"), do: {:ok, :array}
   defp type(_), do: :error
   defp element_value(:null, nil), do: {:ok, nil}
 

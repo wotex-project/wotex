@@ -62,6 +62,17 @@ void TestParser() {
       "\"parameters\":[],\"timeout_ms\":1000}"));
 }
 
+void TestFrameDepthBoundary() {
+  const auto nested_request = [](unsigned arrays) {
+    return std::string(R"({"version":1,"id":"1","operation":"health","parameters":{"nested":)") +
+        std::string(arrays, '[') + "0" + std::string(arrays, ']') +
+        R"(},"timeout_ms":1000})";
+  };
+  // Root and parameters account for two collection levels.
+  assert(wotex::matter::HostProtocol::ParseRequestAccepted(nested_request(22)));
+  assert(!wotex::matter::HostProtocol::ParseRequestAccepted(nested_request(23)));
+}
+
 void TestLifecycleAndFabricAdmission() {
   RecordingBackend backend;
   wotex::matter::HostProtocol protocol(backend);
@@ -117,6 +128,7 @@ void TestStartupFailureAndEofCleanup() {
 
 int main() {
   TestParser();
+  TestFrameDepthBoundary();
   TestLifecycleAndFabricAdmission();
   TestStartupFailureAndEofCleanup();
   return 0;

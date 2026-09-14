@@ -52,7 +52,7 @@ defmodule Wotex.Matter.InteractionTest do
 
   alias Wotex.Matter
   alias Wotex.Matter.{Address, AttributeReport, EndpointCatalogue, Error, EventReport}
-  alias Wotex.Matter.{Native, TestClient}
+  alias Wotex.Matter.{Descriptor, Native, TestClient}
 
   @thermostat %{fabric_id: 1, node_id: 3, endpoint: 1, cluster: 0x0201, member: 0}
   @heating %{@thermostat | member: 0x0012}
@@ -288,6 +288,51 @@ defmodule Wotex.Matter.InteractionTest do
     assert :ok = Matter.disconnect(session)
   end
 
+  test "WMA-S05 native ACL writes preserve nested context tags and unsigned subjects" do
+    audit = temporary_path("acl-audit")
+    executable = native_fixture(audit)
+    address = %{@onoff | endpoint: 0, cluster: 0x001F}
+    entry = %{privilege: 5, auth_mode: 2, subjects: [0xFFFFFFEFFFFFFFFF], targets: nil}
+    assert {:ok, value} = Descriptor.to_element(:attribute, address, :write, [entry])
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+
+    try do
+      assert {:ok, %{path: ^address, status: 0}} = Matter.write_attribute(session, address, value)
+    after
+      assert :ok = Matter.disconnect(session)
+    end
+
+    request =
+      audit
+      |> File.read!()
+      |> String.split("\n", trim: true)
+      |> Enum.map(&Jason.decode!/1)
+      |> Enum.find(&(&1["operation"] == "write"))
+
+    assert request["parameters"]["value"] == %{
+             "tag" => "anonymous",
+             "type" => "array",
+             "value" => [
+               %{
+                 "tag" => "anonymous",
+                 "type" => "structure",
+                 "value" => [
+                   %{"tag" => ["context", 1], "type" => "u8", "value" => 5},
+                   %{"tag" => ["context", 2], "type" => "u8", "value" => 2},
+                   %{
+                     "tag" => ["context", 3],
+                     "type" => "array",
+                     "value" => [
+                       %{"tag" => "anonymous", "type" => "u64", "value" => 0xFFFFFFEFFFFFFFFF}
+                     ]
+                   },
+                   %{"tag" => ["context", 4], "type" => "null", "value" => nil}
+                 ]
+               }
+             ]
+           }
+  end
+
   defp session(response) do
     assert {:ok, session} = Matter.connect(client: TestClient, response: response)
     session
@@ -342,6 +387,11 @@ defmodule Wotex.Matter.InteractionTest do
       cond do
         String.contains?(line, ~s("operation":"close")) ->
           IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":null}))
+
+        String.contains?(line, ~s("operation":"write")) ->
+          result = ~s({"path":{"fabric_id":1,"node_id":3,"endpoint":0,"cluster":31,"member":0},"status":0})
+          IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":#{result}}))
+          loop.(loop)
 
         String.contains?(line, ~s("operation":"read_paths")) ->
           Process.sleep(delay_ms)

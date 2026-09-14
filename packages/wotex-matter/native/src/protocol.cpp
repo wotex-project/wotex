@@ -20,7 +20,8 @@ namespace {
 
 using Json = nlohmann::json;
 
-constexpr std::size_t kMaximumDepth = 8;
+// JSON wrappers and child arrays are distinct from the eight-level TLV bound.
+constexpr std::size_t kMaximumDepth = 24;
 constexpr std::size_t kMaximumCollectionEntries = 1024;
 constexpr std::size_t kMaximumNodes = 4096;
 constexpr std::uint64_t kMaximumOperationalNode = 0xFFFFFFEFFFFFFFFFULL;

@@ -160,6 +160,24 @@ void MutationTimeoutCompletesOnce() {
   assert(remaining_timeout_ms(1000, 2000) == 0);
 }
 
+void AccessControlWriteCrossesProtocolBoundary() {
+  RecordingBackend backend;
+  HostProtocol protocol(backend);
+  Open(protocol);
+
+  backend.response.ok = true;
+  backend.response.response_path = Path(0, 0x001F, 0);
+  auto written = protocol.ProcessLine(
+      R"({"version":1,"id":"2","operation":"write","parameters":{"fabric_id":1,"node_id":3,"endpoint":0,"cluster":31,"member":0,"value":{"tag":"anonymous","type":"array","value":[{"tag":"anonymous","type":"structure","value":[{"tag":["context",1],"type":"u8","value":5},{"tag":["context",2],"type":"u8","value":2},{"tag":["context",3],"type":"array","value":[{"tag":"anonymous","type":"u64","value":999999}]},{"tag":["context",4],"type":"null","value":null}]}]}},"timeout_ms":60000})");
+
+  assert(written.keep_running);
+  assert(written.frame->find(R"("status":0)") != std::string::npos);
+  assert(backend.interactions == 1);
+  assert(backend.last->kind == InteractionKind::Write);
+  assert(backend.last->value->type == ElementType::Array);
+  assert(backend.last->value->children.size() == 1U);
+}
+
 } // namespace
 
 int main() {
@@ -167,5 +185,6 @@ int main() {
   AttributeStatusAndDataVersion();
   EventIdentityAndMinimumNumber();
   MutationTimeoutCompletesOnce();
+  AccessControlWriteCrossesProtocolBoundary();
   return 0;
 }

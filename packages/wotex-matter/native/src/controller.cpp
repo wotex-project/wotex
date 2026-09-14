@@ -1177,7 +1177,7 @@ class SdkControllerBackend::Impl final
       chip::app::ConcreteDataAttributePath native(
           concrete.endpoint, concrete.cluster, concrete.member, version);
 
-      write_buffer_.fill(0);
+      write_buffer_.assign(kMaximumEncodedTlvBytes, 0);
       chip::TLV::TLVWriter writer;
       writer.Init(write_buffer_.data(), write_buffer_.size());
       ReturnErrorOnFailure(EncodeWriteValue(concrete, *request_.value, writer));
@@ -1486,7 +1486,7 @@ class SdkControllerBackend::Impl final
     std::unique_ptr<chip::app::CommandSender> command_sender_;
     std::vector<chip::app::AttributePathParams> attribute_paths_;
     std::vector<chip::app::EventPathParams> event_paths_;
-    std::array<std::uint8_t, 64> write_buffer_{};
+    std::vector<std::uint8_t> write_buffer_{};
   };
 
   class NativeSubscription final : public chip::app::ReadClient::Callback {

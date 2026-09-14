@@ -11,7 +11,8 @@ enhanced-window material and typed operational ACL values.
 P08 adds typed Runtime request and stream projection. P08a adds explicit Runtime
 profiles, classified failures and public ConsumedThing integration.
 The earlier one-shot Python factory adapter remains an injected baseline.
-Actual commissioning against the pinned software peers remains P09 evidence.
+The P09 ACL cohort below executes commissioning and typed ACL operations against
+a pinned SDK example peer. Remaining software workflows are separate P09 evidence.
 
 ## Developer gate
 
@@ -23,6 +24,76 @@ out-of-tree compilation, Application-free loading and native builds are
 separate release or packet evidence. The pinned Decimal parser regression
 remains active; there are no advisory waivers. See `SECURITY.md` and the
 dependency-security test.
+
+## P09 ACL and framing cohort
+
+On 2026-09-14, `test/interop/native_acl_test.exs` passes against an owned
+Linux x86_64 all-clusters example from connectedhomeip
+`250a9e6c50ee2068107f3c4808b680f5f2925415`. The controller commissions a fresh
+peer with explicit fixture PAA trust, requires final CASE establishment, writes
+three ACL entries whose typed TLV exceeds 64 bytes, and reads back the exact
+subjects, nullable fields and nested targets. A subsequent acknowledged ACL
+write removes the controller's access; the next read returns remote status
+`0x7e`. The test disconnects its BEAM owner. The owned peer container is removed
+after each run. This is shared-SDK software-peer evidence, not independent-stack
+interoperability or certification.
+
+The same ExUnit case passes under Elixir 1.20.2 / OTP 29.0.4 and Elixir 1.18.4 /
+OTP 27.3.4.15, with the native controller and peer running in Linux containers.
+The BEAM runs on macOS arm64 in these two executions. Each has fresh peer and
+controller state. The minimum-runtime default suite separately passes 85 checks
+(2 doctests, 1 property and 82 selected tests), with seven interoperability tests
+excluded. The current-runtime `WOTEX_PATH_DEPS=1 mix check --no-retry` also passes
+those 85 checks. An earlier concurrent run exceeded two fixture-start deadlines;
+the isolated gate passes without deadline or exclusion changes.
+
+The selected case command is:
+
+```sh
+WOTEX_PATH_DEPS=1 WOTEX_MATTER_NATIVE_ACL_FIXTURE=/absolute/fixture.json mix test test/interop/native_acl_test.exs --include interop --include software
+```
+
+The fixture supplies a caller-selected executable, fresh controller storage,
+vendor/fabric/controller identity and PAA directory under `controller`, plus
+the owned peer's `node_id`, `setup_pin` and `discriminator`. The runner owns and
+removes this disposable peer; the test intentionally removes its controller's
+ACL access and must not target an operational device.
+
+`test/native/interaction_test.cpp` reproduces the former native parser rejection
+of a nonempty ACL subjects list. Native framing now admits up to 24 JSON
+collection levels while retaining the eight-level TLV bound. The request
+envelope, element objects and child arrays require separate representation depth.
+`test/native/controller_test.cpp` asserts the 24/25 boundary.
+`test/wotex/matter/native_frame_test.exs` checks the corresponding BEAM boundary,
+aggregate keys/values, collection size, duplicate keys, UTF-8, integer precision
+and encoded byte limits. The persistent-owner test rejects duplicate ready
+fields before returning a handle. These are the executable basis for the
+WMA.00/WMA.13 representation-depth correction.
+
+`WOTEX_PATH_DEPS=1 mix run bin/check_p07_native.exs` rebuilds both complete native
+controller variants with the uriparser 1.0.2 security override and passes all six
+CMake executables normally and under ASan/UBSan with leak detection. The actual
+SDK lifecycle lane also passes its 1000 operations, 100 open/close cycles,
+32 concurrent owners, storage fault cases and EOF cleanup checks. These lifecycle
+operations do not replace the still-required peer interaction stress tests.
+Correct OSV commit queries for the seven native source pins and version queries
+for eight build-only Python artifacts return no advisories in this execution.
+
+| Cohort input or artifact | SHA-256 |
+| --- | --- |
+| native protocol source | `bc5314889c043459fd118fa0b62a35e9f8bd40bc6ae54cb3999d0b4618d19541` |
+| native controller source | `d75169bf54c373fd7e77926947f03b67533c98bcc61d4104fd0e85a69b532d5d` |
+| native interaction test | `a07662cbe366f8e2067de4363101d3a529af02b7d25f0abfd8ec00cb5739d415` |
+| BEAM frame test | `cbd4bde51ec6d94a4156e22dbd45c3bd732479d23252fd1d6fbdfad72b54d66c` |
+| ACL peer test | `8392494d28132706ce3132daba9de393f9ec2177aa784318fb565fbad07aa93a` |
+| native controller | `2acc3532909f26c8bbe5c07a895c6bc0caba73abd6553ab5a1d76488a983dc97` |
+| sanitizer controller | `0558c07f1a96f4d4214555c0ff0aac648f7117aa9911f4db6aee64d806436699` |
+| all-clusters peer | `3f1f898ed77d6d707483163d25586dbf9fe9eadf8d00b1795b815fa0fd62be7e` |
+
+This cohort does not accept all of P09. The complete reproducible software
+runner, lighting/thermostat/bridge workflows, negative commissioning matrix,
+peer interaction/subscription stress, Linux BEAM matrix and immutable archive
+consumer remain required.
 
 ## P01 native value evidence
 
