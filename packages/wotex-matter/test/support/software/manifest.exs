@@ -154,6 +154,8 @@ defmodule Wotex.Matter.SoftwareManifest do
     do: [
       "bin/wotex-matter-host",
       "bin/wotex-matter-host-sanitized",
+      "bin/wotex-matter-contract-driver",
+      "bin/wotex-matter-contract-driver-sanitized",
       "native-manifest.json"
     ]
 

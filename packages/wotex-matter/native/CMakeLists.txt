@@ -54,6 +54,12 @@ if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
     wotex_matter_protocol PRIVATE -Wall -Wextra -Wpedantic -Werror
   )
 
+  add_executable(wotex_matter_contract_driver ../test/native/contract_driver.cpp)
+  target_link_libraries(wotex_matter_contract_driver PRIVATE wotex_matter_protocol)
+  target_compile_options(
+    wotex_matter_contract_driver PRIVATE -Wall -Wextra -Wpedantic -Werror
+  )
+
   add_executable(wotex_matter_controller_test ../test/native/controller_test.cpp)
   target_link_libraries(wotex_matter_controller_test PRIVATE wotex_matter_protocol)
   target_compile_options(

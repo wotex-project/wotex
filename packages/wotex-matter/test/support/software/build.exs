@@ -325,6 +325,13 @@ defmodule Wotex.Matter.SoftwareBuild do
         ["ctest", "--test-dir", "/work/" <> directory, "--output-on-failure"],
         [{"ASAN_OPTIONS", "detect_leaks=1:halt_on_error=1"}, {"UBSAN_OPTIONS", "halt_on_error=1"}]
       )
+
+      suffix = if sanitizer == "ON", do: "-sanitized", else: ""
+
+      File.cp!(
+        Path.join(context.workspace, directory <> "/wotex_matter_contract_driver"),
+        Path.join(context.workspace, "bin/wotex-matter-contract-driver" <> suffix)
+      )
     end
   end
 
@@ -516,7 +523,9 @@ defmodule Wotex.Matter.SoftwareBuild do
   defp archives(sources, :native),
     do: Enum.reject(sources["archives"], &(&1["purpose"] == "software_peer_source"))
 
-  defp binaries(:native), do: ~w(wotex-matter-host wotex-matter-host-sanitized)
+  defp binaries(:native),
+    do: ~w(wotex-matter-host wotex-matter-host-sanitized
+           wotex-matter-contract-driver wotex-matter-contract-driver-sanitized)
 
   defp binaries(:software),
     do: binaries(:native) ++ ~w(chip-lighting-app chip-all-clusters-app chip-bridge-app)

@@ -122,6 +122,10 @@ defmodule Wotex.Matter.SoftwareBuildTest do
 
     SoftwareManifest.write(Path.join(workspace, "native-manifest.json"), native)
 
+    contract = Path.join(workspace, "bin/wotex-matter-contract-driver")
+    File.write!(contract, "fixture contract")
+    File.write!(contract <> "-sanitized", "fixture sanitized contract")
+
     receipt = %{
       "schema" => "wotex.matter.software-workspace@1",
       "status" => "ready",
@@ -139,6 +143,14 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     assert_raise Mix.Error, "software_fixture_required", fn ->
       SoftwareManifest.verify_local(source, workspace, receipt, :software)
     end
+
+    File.rm!(contract)
+
+    assert_raise Mix.Error, "artifact_hash_mismatch", fn ->
+      SoftwareManifest.verify_local(source, workspace, receipt, :native)
+    end
+
+    File.write!(contract, "fixture contract")
 
     File.write!(binary, "changed binary")
 

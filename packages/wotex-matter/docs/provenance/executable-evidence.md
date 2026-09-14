@@ -610,3 +610,40 @@ A separate production Mix consumer extracted that archive with
 resolve `wotex` or `wotex_runtime`, ending with “No package with name wotex”.
 That released-dependency consumer gate is blocked on manual publication and is
 not replaced by the development compilation result.
+
+## Native parser and ready corpus cohort
+
+`test/wotex/matter/native_contract_test.exs` executes WMA-B-F01–F06 from the
+unchanged native corpus. F01–F05 invoke the production `HostProtocol` request
+validator through `test/native/contract_driver.cpp`; the executable receives
+only the operation and input file. It bounds input, checks the final newline
+and rejects additional frames. ExUnit compares the returned JSON with the
+corpus expectation outside the implementation. F06 starts the actual SDK host,
+compares the exact ready object, closes stdin and observes zero surviving owned
+OS children within the cleanup grace.
+
+The software/native builders compile and retain separate normal and sanitized
+contract executables and bind them in their artifact manifests. Select the
+ExUnit cohort with `--include software`, supplying absolute
+`WOTEX_MATTER_CONTRACT_DRIVER` and `WOTEX_MATTER_NATIVE_EXECUTABLE` paths.
+Missing executables, malformed corpus identities and unknown operations fail.
+Each parser process has a 1000 ms deadline; the existing Mix command owner
+reaps it on failure. Both two-test Linux runs pass: normal with Elixir 1.20.2 /
+OTP 29.0.4, and ASan/UBSan with Elixir 1.18.4 / OTP 27.3.4.15 and leak detection
+on. Both six-test native CTest lanes also pass. Production host hashes remain
+`b38ae768...74b3af` and `e806d61d...0236b`, recorded in full above.
+
+| Corpus artifact | SHA-256 |
+| --- | --- |
+| Native test source | `d154fae0c108b4ea3cdd8612c4ddf1f99d2ff165739b21ee4cc28bdbc5c28f2d` |
+| ExUnit test source | `09dd5c1ca8c5afc7af43b40217e6a2cf9ac58ab0db5660006ed4c2fd5bebe58e` |
+| Native corpus | `a42e47c8d620cc9598996921cf44175d30f0a4c36ebf5b5ecf1233fe53c540ce` |
+| Normal contract executable | `c58bca9bf13107e780d9f5fae9dbf70006bd676f9aa378f08f4799e744cfca90` |
+| Sanitized contract executable | `7e212fa5629a98489f6c4e99f3ca24023ec71a0cfad3d169a3cd430ef22dc348` |
+| Current Linux test log | `b2581694a8f7d140d9fa1634181e59acd9610d6b9259373b6f11d3f48ffd363a` |
+| Minimum Linux sanitizer test log | `992b5ec919a45de90f18159112a2ef5f82f14169f111016507987a3cb42c6fb8` |
+
+This cohort accepts six parser/startup cases only. The eleven flow-trace,
+process-flow and result-budget cases remain required; the corpus as a whole
+retains its `specified_unexecuted` status. Parser execution does not establish
+SDK peer interoperability or complete WMA-B03 acceptance.
