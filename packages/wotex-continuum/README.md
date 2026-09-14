@@ -155,12 +155,26 @@ dependency under the `prod` dependency environment. Package construction
 unsets it and records the released `wotex` version requirement instead of a
 local path.
 
-`mix test` is the fast development loop. The default `mix check --no-retry` is
-the single authoritative repository gate; its coverage step runs the test suite
-once. The gate also covers formatting, warnings-as-errors compilation, strict
-Credo, dependency audits, Dialyzer, complete public documentation, at least 95%
-line coverage, the public-boundary scan, and compilation from the unpacked Hex
-archive. The archive check also installs the same artifact through a signed
+`mix test` is the fast development loop. The default `mix check --no-retry`
+compiles with warnings as errors, checks formatting, and runs the behavioral
+test suite.
+
+Release-candidate evidence uses explicit checks:
+
+```sh
+WOTEX_PATH_DEPS=1 mix credo --strict
+WOTEX_PATH_DEPS=1 mix deps.unlock --check-unused
+WOTEX_PATH_DEPS=1 mix deps.audit
+WOTEX_PATH_DEPS=1 mix hex.audit
+WOTEX_PATH_DEPS=1 mix dialyzer
+WOTEX_PATH_DEPS=1 mix doctor
+WOTEX_PATH_DEPS=1 mix docs --warnings-as-errors
+WOTEX_PATH_DEPS=1 mix coveralls
+elixir bin/check_boundary.exs
+WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive.exs
+```
+
+The archive check builds one exact artifact and installs it through a signed
 temporary Hex registry in independent contract and reference consumers plus a
 separately isolated direct Jason-floor consumer. It asserts Hex-only exact
 locks, isolated BEAM paths, public examples, lifecycle and failure recovery,

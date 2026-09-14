@@ -6,11 +6,12 @@ specification. The three documents under `specs/` remain the owners of field
 meaning and compatibility.
 
 The data matrix in
-`test/wotex_continuum/contract_inventory_test.exs` is checked against every
-registered struct. Adding a field without classifying it as required or
-optional therefore fails the test. The same test exercises `from_map/1`, its
-`new/1` alias, the `WotexContinuum` facade, forged-struct reconstruction, and
-encoding where each route applies.
+`test/wotex_continuum/contract_inventory_test.exs` indexes every registered
+wire kind and classifies each member as required or optional. The test
+exercises `from_map/1`, its `new/1` alias, the `WotexContinuum` facade,
+forged-value reconstruction, and encoding where each route applies. It checks
+wire projection and errors rather than the complete keys of an implementation
+struct.
 
 ## Envelope and null rules
 
@@ -56,7 +57,7 @@ Nested value coverage is part of the same executable matrix:
 
 Every registered kind has a valid vector and an exact canonical-byte vector.
 `contract_inventory_test.exs` supplies per-field invalid, default, null,
-unknown-field, and forged-struct evidence for all 13 kinds and the three nested
+unknown-field, and forged-value evidence for all 13 kinds and the three nested
 values. `vector_test.exs` proves repeatable canonical round trips and exact
 invalid-vector errors. The
 [WCT-C03 schema agreement map](WCT-C03-schema-agreement.md) connects this field

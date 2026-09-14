@@ -26,17 +26,18 @@ WOTEX_PATH_DEPS=1 mise exec erlang@27.3.4.15 elixir@1.18.4-otp-27 -- \
   mix check --no-retry
 ```
 
-The default gate resolves the repository lock with `--check-locked`, compiles
-with warnings as errors, checks formatting and strict Credo, audits
-dependencies, runs Dialyzer, Doctor and documentation checks, executes the
-test suite once with coverage, scans the public boundary, and runs the archive
-consumers. Release and publication commands are not part of the gate.
+The default gate compiles with warnings as errors, checks formatting, and runs
+the behavioral test suite. Candidate evidence also resolves the repository
+lock with `--check-locked` and runs strict Credo, dependency audits, Dialyzer,
+Doctor, documentation, coverage, public-boundary, and archive-consumer checks
+as explicit lanes. Release and publication commands are not part of these
+checks.
 
 ## Package and wire compatibility
 
 | Dimension | Candidate decision |
 | --- | --- |
-| Package API | Package 0.1.0 is pre-1.0 and unstable. The exported API is reviewed and regression-tested, but this dossier makes no stable package-API promise. |
+| Package API | Package 0.1.0 is pre-1.0 and unstable. Documented consumer operations are reviewed and regression-tested by behavior, but this dossier makes no stable package-API promise. |
 | Wire schema | Exactly 2.0.0 is admitted. Missing, 1.x, 3.x, and other non-current versions are rejected with `unsupported_schema_version` at `/schema_version`. |
 | Wire 1 to wire 2 | Incompatible. Wire 2 renamed `execution_context` to `execution_scope` and uses RFC 6901 error paths. No implicit migration occurs. |
 | Wire 2 extensions | Absolute-IRI extension members can be added without changing field meaning. Unknown ordinary members remain rejected. |
@@ -61,10 +62,11 @@ The supported entry surface consists of:
 `new/1` remains the 0.1 alias of each value module's `from_map/1`.
 `Lifecycle.transition/3` is the default-options form of `transition/4`.
 `WotexContinuum.Contract` and `WotexContinuum.Validation` are documented
-implementation helpers, not alternate admission surfaces. Their exports and
-the `@doc false` registry/error/limit helpers remain inventoried so an
-accidental export change cannot bypass review. The exact export snapshot is in
-`release_contract_test.exs`.
+implementation helpers, not alternate admission surfaces. The contract,
+vector, schema-agreement, lifecycle, Thing-reference, and archive-consumer
+tests exercise documented calls through returned values, wire bytes, and typed
+errors. They do not assert a complete export list, so an unrelated helper can
+change without altering a compatibility claim.
 
 Expected failures return `{:error, %WotexContinuum.Error{}}`. Consumers may
 match `code`, `phase`, and `path`; message prose and `details` membership may
