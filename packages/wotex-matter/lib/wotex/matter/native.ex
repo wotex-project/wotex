@@ -14,7 +14,10 @@ defmodule Wotex.Matter.Native do
   `lifecycle: :persistent`, an absolute storage path, operational vendor,
   fabric and controller node identifiers, and an absolute PAA trust directory.
   The returned handle is released with `disconnect/1`; the connection also
-  closes when its creating process exits.
+  closes when its creating process exits. Native execution requires the POSIX
+  `/bin/kill` utility: teardown terminates the exact owned child before releasing
+  its Port, including when the child stops reading stdin. Startup's ready and
+  controller-open phases share the configured timeout.
 
   P03 establishes controller ownership and liveness. P04 adds finite reads,
   event reads, writes and invokes. P05 adds monitored attribute and event

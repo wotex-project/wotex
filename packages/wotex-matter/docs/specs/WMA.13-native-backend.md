@@ -3,9 +3,9 @@ spec:
   id: WMA.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.1
+  version: 1.0.2
   owner: wotex-matter
-  updated: 2026-09-14
+  updated: 2026-09-15
 ---
 
 # WMA.13 Native backend, build and IPC contract
@@ -23,6 +23,12 @@ profile construction and pure values start no process and read no configuration.
 The executable path is absolute, validated before startup, and executed directly
 with separate arguments. Native runtime libraries are declared in the build
 manifest; a missing or mismatched dependency fails startup.
+The POSIX process boundary requires executable `/bin/kill`, invoked directly with
+separate arguments for the owned child's positive PID. Teardown terminates that
+child before releasing its Port identity; closing stdin alone is insufficient.
+Missing process-termination support fails before native startup. Ready, flow
+negotiation and controller open share one absolute startup deadline, and open
+receives only its remaining budget.
 
 The generic entry points are Mix tasks:
 

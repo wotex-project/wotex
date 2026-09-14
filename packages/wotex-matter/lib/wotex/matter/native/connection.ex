@@ -24,7 +24,9 @@ defmodule Wotex.Matter.Native.Connection do
   @spec start(pid(), map()) ::
           {:ok, pid(), String.t()} | {:error, Error.t()}
   def start(owner, options) do
-    case GenServer.start(__MODULE__, {owner, options}) do
+    deadline = System.monotonic_time(:millisecond) + options.timeout
+
+    case GenServer.start(__MODULE__, {owner, options, deadline}) do
       {:ok, pid} ->
         try do
           case GenServer.call(pid, :identity) do
@@ -94,14 +96,14 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   @impl GenServer
-  def init({owner, options}) do
+  def init({owner, options, deadline}) do
     Process.flag(:trap_exit, true)
     owner_monitor = Process.monitor(owner)
     generation = :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
 
     case open_port(options.executable) do
       {:ok, port} ->
-        case handshake(port, owner_monitor, generation, options) do
+        case handshake(port, owner_monitor, generation, options, deadline) do
           :ok ->
             {:ok,
              %{
@@ -458,6 +460,9 @@ defmodule Wotex.Matter.Native.Connection do
   defp call_error(code, _), do: Error.new(code)
 
   defp open_port(executable) do
+    {:ok, %{type: :regular, mode: mode}} = File.stat("/bin/kill")
+    true = Bitwise.band(mode, 0o111) != 0
+
     port =
       Port.open(
         {:spawn_executable, String.to_charlist(executable)},
@@ -469,15 +474,16 @@ defmodule Wotex.Matter.Native.Connection do
     _ -> {:error, Error.new(:controller_start_failed)}
   end
 
-  defp handshake(port, owner_monitor, generation, options) do
-    with :ok <- await_ready(port, owner_monitor, options.timeout),
+  defp handshake(port, owner_monitor, generation, options, deadline) do
+    with :ok <- await_ready(port, owner_monitor, deadline),
          true <- send_frame(port, flow_frame(generation)),
-         true <- send_frame(port, open_frame(options)),
-         {:ok, identity} <- handshake_response(port, owner_monitor, "1", options.timeout),
+         :ok <- send_request_frame(port, open_frame(options), deadline),
+         {:ok, identity} <- handshake_response(port, owner_monitor, "1", deadline),
          :ok <- controller_identity(identity, options) do
       :ok
     else
       {:error, %Error{} = error} -> {:error, error}
+      {:error, code} when is_atom(code) -> {:error, Error.new(code)}
       _ -> {:error, Error.new(:controller_start_failed)}
     end
   end
@@ -495,8 +501,8 @@ defmodule Wotex.Matter.Native.Connection do
       else: {:error, Error.new(:invalid_controller_identity)}
   end
 
-  defp handshake_response(port, owner_monitor, id, timeout) do
-    with {:ok, line} <- await_line(port, owner_monitor, timeout),
+  defp handshake_response(port, owner_monitor, id, deadline) do
+    with {:ok, line} <- await_line_until(port, owner_monitor, deadline),
          {:ok, frame} <- Wire.frame(line) do
       case decode_response(frame, id) do
         {:ok, _} = result -> result
@@ -509,8 +515,8 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  defp await_ready(port, owner_monitor, timeout) do
-    case await_line(port, owner_monitor, timeout) do
+  defp await_ready(port, owner_monitor, deadline) do
+    case await_line_until(port, owner_monitor, deadline) do
       {:ok, line} ->
         with {:ok, frame} <- Wire.frame(line),
              true <-
@@ -534,7 +540,8 @@ defmodule Wotex.Matter.Native.Connection do
     remaining = max(deadline + @response_grace - System.monotonic_time(:millisecond), 0)
 
     with true <- remaining > 0,
-         {:ok, line} <- await_line(state.port, state.owner_monitor, remaining),
+         {:ok, line} <-
+           await_line_until(state.port, state.owner_monitor, deadline + @response_grace),
          {:ok, frame} <- Wire.frame(line) do
       case decode_response(frame, id) do
         {:ok, result} ->
@@ -558,24 +565,35 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  defp await_line(port, owner_monitor, timeout) do
-    receive do
-      {^port, {:data, {:eol, line}}} when byte_size(line) <= @maximum_line_bytes ->
-        {:ok, line}
+  defp await_line_until(port, owner_monitor, deadline) do
+    remaining = deadline - System.monotonic_time(:millisecond)
 
-      {^port, {:data, {:noeol, _}}} ->
-        {:error, Error.new(:response_limit)}
+    if remaining <= 0 do
+      {:error, Error.new(:timeout)}
+    else
+      result =
+        receive do
+          {^port, {:data, {:eol, line}}} when byte_size(line) <= @maximum_line_bytes ->
+            {:ok, line}
 
-      {^port, {:exit_status, _}} ->
-        {:error, Error.new(:transport_closed)}
+          {^port, {:data, {:noeol, _}}} ->
+            {:error, Error.new(:response_limit)}
 
-      {:EXIT, ^port, _} ->
-        {:error, Error.new(:transport_closed)}
+          {^port, {:exit_status, _}} ->
+            {:error, Error.new(:transport_closed)}
 
-      {:DOWN, ^owner_monitor, :process, _, _} ->
-        {:error, Error.new(:owner_closed)}
-    after
-      timeout -> {:error, Error.new(:timeout)}
+          {:EXIT, ^port, _} ->
+            {:error, Error.new(:transport_closed)}
+
+          {:DOWN, ^owner_monitor, :process, _, _} ->
+            {:error, Error.new(:owner_closed)}
+        after
+          remaining -> {:error, Error.new(:timeout)}
+        end
+
+      if System.monotonic_time(:millisecond) < deadline,
+        do: result,
+        else: {:error, Error.new(:timeout)}
     end
   end
 
@@ -1257,7 +1275,16 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   defp close_port(port) when is_port(port) do
-    Port.close(port)
+    case Port.info(port, :os_pid) do
+      {:os_pid, pid} ->
+        # Reap the exact owned child before dropping its Port identity. A failed
+        # native operation may leave the child unable to observe closed stdin.
+        System.cmd("/bin/kill", ["-KILL", Integer.to_string(pid)], stderr_to_stdout: true)
+        if Port.info(port), do: Port.close(port)
+
+      nil ->
+        :ok
+    end
   rescue
     _ -> :ok
   end

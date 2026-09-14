@@ -15,6 +15,30 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     member: 0
   }
 
+  test "WMA-C03 native ready and controller open share one startup deadline" do
+    executable = startup_fixture()
+
+    assert {:error, %Error{code: :timeout}} =
+             Native.connect(Keyword.put(options(executable), :timeout, 1_100))
+  end
+
+  test "WMA-C03 a stalled child is reaped after its request deadline" do
+    assert {:ok, handle} = Native.connect(options(fixture("ignore_eof")))
+    monitor = Process.monitor(handle.pid)
+    {:links, links} = Process.info(handle.pid, :links)
+    [port] = Enum.filter(links, &is_port/1)
+    {:os_pid, child} = Port.info(port, :os_pid)
+
+    try do
+      assert {:error, %Error{code: :timeout}} = Native.health(handle, 20)
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+      assert child_stopped?(child, 100)
+    after
+      Native.disconnect(handle)
+      System.cmd("kill", ["-KILL", Integer.to_string(child)], stderr_to_stdout: true)
+    end
+  end
+
   test "persistent owner validates native identity, correlates calls and closes explicitly" do
     fixture = fixture("valid")
     options = options(fixture)
@@ -350,6 +374,25 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     ]
   end
 
+  defp startup_fixture do
+    path = temporary_path("startup-budget-host")
+
+    File.write!(path, """
+    #!/bin/sh
+    sleep 0.6
+    printf '%s\\n' '{"version":1,"event":"ready","backend":"matter-native","revision":"250a9e6c50ee2068107f3c4808b680f5f2925415"}'
+    IFS= read -r flow
+    IFS= read -r open
+    sleep 0.6
+    printf '%s\\n' '{"version":1,"id":"1","ok":true,"result":{"lifecycle":"persistent","fabric_id":1,"controller_node_id":2,"vendor_id":65521}}'
+    IFS= read -r close
+    """)
+
+    File.chmod!(path, 0o700)
+    on_exit(fn -> File.rm(path) end)
+    path
+  end
+
   defp fixture(mode, audit \\ nil) do
     path = temporary_path("#{mode}-host")
     audit = audit || temporary_path("#{mode}-audit")
@@ -406,6 +449,9 @@ defmodule Wotex.Matter.PersistentBridgeTest do
       [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
 
       cond do
+        mode == "ignore_eof" ->
+          Process.sleep(:infinity)
+
         mode == "malformed_reply" ->
           IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":null,"result":42}))
           loop.(loop)
@@ -476,6 +522,19 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     else
       Process.sleep(10)
       request_recorded?(audit, attempts - 1)
+    end
+  end
+
+  defp child_stopped?(_, 0), do: false
+
+  defp child_stopped?(pid, attempts) do
+    case System.cmd("kill", ["-0", Integer.to_string(pid)], stderr_to_stdout: true) do
+      {_, 0} ->
+        Process.sleep(10)
+        child_stopped?(pid, attempts - 1)
+
+      _ ->
+        true
     end
   end
 

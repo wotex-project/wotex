@@ -66,7 +66,7 @@ specifications:
     executable_evidence: ["docs/specs/fixtures/wotex-integration-v1.json", "test/wotex/matter/contract_test.exs", "test/wotex/matter/mapping_test.exs", "test/wotex/matter/runtime_integration_test.exs", "test/wotex/matter/runtime_stream_test.exs", "bin/check_archive.exs"]
     compatibility_classification: "P08 implements WMA-I03's typed controller result projection and WMA-I05's private Runtime stream relay. P08a executes WMA-I01–I06 locally through public core/Runtime APIs: exact one-shot/controller profiles, strict selection and credentials, deadlines, classified failures/retries, result identity/metadata bounds and Runtime-owned streams with original-route cleanup. The corpus is executed against deterministic injected ports. P09 still owns the pinned software peer and isolated immutable-package acceptance run, so WMA.12 remains partial."
   - id: "WMA.13"
-    version: "1.0.1"
+    version: "1.0.2"
     path: "docs/specs/WMA.13-native-backend.md"
     implementation_status: "partial"
     standards: [{"name": "Native Matter controller", "revision": "Exact source hashes and build profile in .13", "claim": "Accepted native target; current baseline evidence is separate"}]

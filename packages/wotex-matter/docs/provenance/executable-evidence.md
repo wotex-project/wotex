@@ -647,3 +647,35 @@ This cohort accepts six parser/startup cases only. The eleven flow-trace,
 process-flow and result-budget cases remain required; the corpus as a whole
 retains its `specified_unexecuted` status. Parser execution does not establish
 SDK peer interoperability or complete WMA-B03 acceptance.
+
+## Startup deadline and stalled-child cleanup
+
+Two C03 regression cases fail before the correction: a 600 ms ready delay plus
+a 600 ms open delay produces an accepted connection under a 1100 ms total
+budget, and an executable stalled after a request survives closed stdin beyond
+the 1000 ms cleanup grace. Both pass after the correction. The connection now
+starts its absolute deadline before process initialization, sends only the
+remaining open budget and rejects expired startup frames. Teardown invokes
+executable `/bin/kill` directly for the exact child PID obtained from the still
+owned Port, then releases the Port. A cooperative close still completes native
+controller/storage shutdown before its response; failed requests can terminate
+a noncooperative child. Missing termination support fails before host startup.
+
+The focused connection/subscription/recovery cohort passes all 27 tests on
+Elixir 1.20.2 / OTP 29.0.4 and Elixir 1.18.4 / OTP 27.3.4.15. The default gate
+passes 132 checks with 13 opt-in exclusions, and ExDoc passes with warnings as
+errors. Both Linux real-peer lifecycle lanes were repeated with this code and
+pass their full 1000-read, 32-caller, 100-receiver-death, 100-open/close counts,
+including durable-store reopening and exact child/Port cleanup. The unchanged
+native host and peer use the full binary hashes in the lifecycle cohort above.
+
+| Cleanup artifact | SHA-256 |
+| --- | --- |
+| Current Linux lifecycle log | `ac1db98d136ce8301ffa5507a39e072e3639535c465801c70f6edd3e193a1742` |
+| Minimum Linux lifecycle log | `9b8d9b5b98e0fa027d4eb8b509f25b90dc85ef0561e600c8557d45d4f9fdddd0` |
+| `lib/wotex/matter/native/connection.ex` | `9d65c469af8e511a7a46e2225fde7f3809d01e1287cd5072f7592e1d6d94497b` |
+| `test/wotex/matter/persistent_bridge_test.exs` | `4c8ff43407cea121567d004f1bdb9491a61fc739e40a05f3c63f1ae3915e4d4b` |
+
+This verifies total startup-budget ownership and stalled-child termination at
+the Port boundary. It does not close the remaining admission, control-channel,
+native resource instrumentation or process-flow corpus requirements.
