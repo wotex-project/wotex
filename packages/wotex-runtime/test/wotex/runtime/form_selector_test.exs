@@ -55,6 +55,26 @@ defmodule Wotex.Runtime.FormSelectorTest do
              FormSelector.select_thing(td, :readproperty, [TDFactory.http_profile()])
   end
 
+  test "WRT.01-2 and WRT.03-1 enforce the exact operation and interaction matrix" do
+    td = TDFactory.thing_description()
+    profile = TDFactory.http_profile()
+    names = %{property: "temperature", action: "calibrate", event: "alarm"}
+
+    for operation <- Wotex.Runtime.operations(), type <- [:property, :action, :event, :thing] do
+      result =
+        case type do
+          :thing -> FormSelector.select_thing(td, operation, [profile])
+          type -> FormSelector.select(td, type, names[type], operation, [profile])
+        end
+
+      if Wotex.Runtime.interaction_type(operation) == type do
+        assert {:ok, %{operation: ^operation, affordance_type: ^type}} = result
+      else
+        assert {:error, %Error{code: :unsupported_operation}} = result
+      end
+    end
+  end
+
   test "selects absolute mqtt Form when the operation is not present on the first Form" do
     map =
       TDFactory.thing_description()

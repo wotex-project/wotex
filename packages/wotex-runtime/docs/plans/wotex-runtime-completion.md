@@ -24,7 +24,7 @@ dependency range. Package, specification and evidence versions are separate.
 
 | ID | Prerequisites | Deliverable | Acceptance |
 |---|---|---|---|
-| RT-C01 | WRT.01–03, core value contracts | Exact operation/value/error/evidence inventory | Every public function and unsupported cell mapped to named tests |
+| RT-C01 | WRT.01–03, core value contracts | Operation, value, error and ownership behavior review | Supported and unsupported operation families, admitted values, port errors and passive loading verified through public behavior |
 | RT-C02 | RT-C01 | ConsumedThing/subscription hardening | Raised/exited/malformed callbacks, result identity mismatch, invalid receiver/options, receiver death, concurrent stop, restart, forced kill and cleanup failure tested |
 | RT-C03 | RT-C01 | ExposedThing boundary proof | Inbound Form/policy/schema checks assigned to consumer; invalid routing invokes no handler; concurrent callbacks and exception propagation proven |
 | RT-C04 | RT-C02, RT-C03 | Independent reference consumer | Exact archives; zero/one/multiple subscriptions, shutdown budgets, explicit ports and aggregate negative cells |
@@ -51,9 +51,14 @@ Each gate records exact source/dependency tree or archive digest, command,
 configuration, vector identities, result and limitations. No gate requires an
 automated push, tag, release or registry publication.
 
+`mix check` is the default developer gate. It compiles with warnings as errors,
+checks formatting and runs the behavioral test suite. Documentation, coverage,
+static analysis, dependency audits, boundary checks and package installation
+are explicit evidence lanes and are recorded separately.
+
 | Gate | Required evidence | Does not establish |
 |---|---|---|
-| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry`: formatter, strict Credo, types/docs, coverage, boundary checks; report skipped/unavailable tools | Default registry install or integration |
+| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry`: compiler warnings, formatter and behavioral tests; report failures | Documentation, static analysis, dependency audit, package installation or integration |
 | `archive_consumer_green` | Build without path overrides; a separate minimal Mix consumer installs the exact archive/dependency artifacts and exercises one supported success plus typed error through public API, with no live source | Full lifecycle behavior |
 | `reference_consumer_green` | RT-C04 tests against that archive, explicit ports and real supervision | External protocol certification or production acceptance |
 | `public_release_candidate` | Prior gates, metadata/license/security, docs links, dependency installation and standards audit; no tracker/secret in archive | Publication permission or stable API |
