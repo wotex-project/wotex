@@ -17,7 +17,8 @@ defmodule Wotex.Runtime.Check.Package do
     "docs/specs/RT-C02-runtime-hardening.md",
     "docs/specs/RT-C03-exposed-thing-boundary.md",
     "docs/specs/RT-C04-reference-consumer.md",
-    "docs/specs/RT-C05-release-evidence.md"
+    "docs/specs/RT-C05-release-evidence.md",
+    "docs/specs/RT-C06-stable-api.md"
   ]
 
   @absent [

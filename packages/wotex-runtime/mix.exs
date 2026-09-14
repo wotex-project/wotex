@@ -108,6 +108,7 @@ defmodule WotexRuntime.MixProject do
         ],
         "docs/specs/RT-C04-reference-consumer.md": [title: "Reference Consumer"],
         "docs/specs/RT-C05-release-evidence.md": [title: "Release Evidence"],
+        "docs/specs/RT-C06-stable-api.md": [title: "Stable API Candidate"],
         "docs/specs/WRT.01-consumed-thing-runtime.md": [title: "ConsumedThing Runtime"],
         "docs/specs/WRT.02-exposed-thing-runtime.md": [title: "ExposedThing Runtime"],
         "docs/specs/WRT.03-thing-level-interactions.md": [

@@ -22,7 +22,12 @@ defmodule Wotex.Runtime.SubscriptionTest do
   test "building zero child specifications starts zero processes", %{consumed: consumed} do
     context = Context.new!(request_id: "req-zero")
 
-    assert {:ok, %{start: {Subscription, :start_link, [_]}, restart: :transient}} =
+    assert {:ok,
+            %{
+              start: {Subscription, :start_link, [_]},
+              restart: :transient,
+              shutdown: 5_000
+            }} =
              ConsumedThing.observation_child_spec(consumed, "temperature", context,
                id: :observation_zero,
                receiver: self()

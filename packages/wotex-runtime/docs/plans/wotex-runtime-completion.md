@@ -29,7 +29,7 @@ dependency range. Package, specification and evidence versions are separate.
 | RT-C03 | RT-C01 | [ExposedThing boundary proof](../specs/RT-C03-exposed-thing-boundary.md) | Inbound Form/policy/schema checks assigned to consumer; invalid routing invokes no handler; concurrent callbacks and exception propagation proven |
 | RT-C04 | RT-C02, RT-C03 | [Independent reference consumer](../specs/RT-C04-reference-consumer.md) | Exact archives; zero/one/multiple subscriptions, shutdown budgets, explicit ports and aggregate negative cells |
 | RT-C05 | RT-C04 | [Release evidence dossier](../specs/RT-C05-release-evidence.md) | Package contents, dependency closure, docs, license/security and compatibility inputs are complete and internally consistent; gates evaluate the dossier separately |
-| RT-C06 | RT-C05 | Stable API decision | Retained public fields/errors/defaults, compatibility vectors and migration notes; all claimed cells proven |
+| RT-C06 | RT-C05 | [Stable API decision](../specs/RT-C06-stable-api.md) | Retained public fields/errors/defaults, compatibility vectors and migration notes; all claimed cells proven |
 
 RT-C02 must specify bounds before implementation: request/metadata cardinality,
 Form/profile selection cost, callback budgets, mailbox overload and receiver

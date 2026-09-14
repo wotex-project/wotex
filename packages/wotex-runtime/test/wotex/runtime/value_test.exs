@@ -17,6 +17,10 @@ defmodule Wotex.Runtime.ValueTest do
     assert Context.deadline(context) == deadline
     assert Context.metadata(context) == %{trace: "trace-1"}
     assert %Context{} = Context.new!(request_id: "req-2", deadline: 42)
+
+    assert {:ok, defaults} = Context.new(request_id: "req-defaults")
+    assert Context.deadline(defaults) == nil
+    assert Context.metadata(defaults) == %{}
   end
 
   test "context rejects invalid inputs and raising construction uses the same error" do

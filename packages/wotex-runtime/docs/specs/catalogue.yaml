@@ -1,6 +1,11 @@
 schema_version: "1.1.0"
 package: "wotex_runtime"
 completion_plan: "docs/plans/wotex-runtime-completion.md"
+compatibility_decision:
+  packet: "RT-C06"
+  status: "candidate"
+  contract: "docs/specs/RT-C06-stable-api.md"
+  qualification: "consumer-visible values, callbacks, deliveries, errors, limits and lifecycle defaults for 0.1.0; no exhaustive export or struct-layout freeze"
 specifications:
   - id: "WRT.01"
     version: "1.3.1"

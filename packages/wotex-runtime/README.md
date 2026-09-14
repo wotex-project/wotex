@@ -289,6 +289,10 @@ supervision.
 documentation, analysis, audit, and compatibility evidence used for release
 readiness.
 
+[RT-C06](docs/specs/RT-C06-stable-api.md) records the candidate compatibility
+contract for consumer-visible values, callback shapes, errors, limits, and
+lifecycle defaults.
+
 ## Contributing
 
 Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before
