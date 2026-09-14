@@ -63,7 +63,7 @@ defmodule WotexDirectory.MixProject do
       setup: ["deps.get", "deps.compile"],
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
       "test.cover": ["coveralls"],
-      package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
+      package: "run --no-start --no-compile --no-deps-check bin/check_archive.exs"
     ]
   end
 
@@ -91,10 +91,7 @@ defmodule WotexDirectory.MixProject do
   defp package do
     [
       files: [
-        ".claude",
         ".formatter.exs",
-        "AGENTS.md",
-        "CLAUDE.md",
         "CODE_OF_CONDUCT.md",
         "CONTRIBUTING.md",
         "GOVERNANCE.md",
@@ -103,10 +100,13 @@ defmodule WotexDirectory.MixProject do
         "README.md",
         "CHANGELOG.md",
         "SECURITY.md",
-        "docs/decisions",
-        "docs/plans",
-        "docs/provenance",
-        "docs/specs",
+        "docs/decisions/0001-consumer-owned-runtime.md",
+        "docs/decisions/0002-listing-and-expiry.md",
+        "docs/plans/wotex-directory-completion.md",
+        "docs/provenance/w3c-sources.md",
+        "docs/specs/WTD.01-directory-contract.md",
+        "docs/specs/catalogue.yaml",
+        "docs/specs/repository-port-evidence.md",
         "lib",
         "mix.exs"
       ],

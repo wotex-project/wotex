@@ -143,9 +143,20 @@ library gate: locked dependency resolution, warning-free compilation,
 formatting, strict Credo, Doctor, Dialyzer, dependency audits, documentation,
 the complete test suite with at least 95% coverage, boundary and application
 checks, package construction, archive inspection, and `git diff --check`.
-The suite runs once through the coverage command. Archive inspection uses
-compiled development dependencies and does not establish archive-only consumer
-installation or independent interoperability.
+The library suite runs once through the coverage command. The archive check
+builds one Directory archive outside the repository, compiles an isolated
+consumer from that archive and an exact core archive, and runs its public-port
+contract tests. It prints both archive SHA-256 digests and the consumer lock
+cohort. This establishes archive-only consumption, not independent
+interoperability or publication to Hex.
+
+`WOTEX_PATH_DEPS=1 mix package` runs that archive check on its own. The explicit
+development switch selects the core source only for building its archive; it
+is cleared before both archive construction and consumer execution. To supply
+an existing core archive instead, set `WOTEX_CORE_ARCHIVE` to its absolute
+path. No neighboring checkout or previously compiled module is a fallback.
+Generated consumer files are temporary. The printed artifact directory retains
+the archives and consumer lock outside the repository.
 
 The [repository port evidence contract](docs/specs/repository-port-evidence.md)
 defines the reusable adapter suite, its fixture interface, and the exact

@@ -1,7 +1,7 @@
 # Repository port evidence contract
 
 This document maps the reusable repository tests to WTD.01 version 1.1.0 and
-completion work items WTD-C01 and WTD-C02. It adds executable evidence for the existing
+completion work items WTD-C01, WTD-C02 and WTD-C03. It adds evidence for the existing
 contract without changing callback signatures, return values, public types,
 operation order, or the W3C baseline. Discovery and Thing Description 1.1
 remain the Recommendations dated 2023-12-05. Package choices are specified
@@ -123,13 +123,51 @@ WOTEX_PATH_DEPS=1 mix test test/wotex/directory/scoped_memory_repository_contrac
 ```
 
 `WOTEX_PATH_DEPS=1 mix check --no-retry` runs the full library gate. A path
-dependency run identifies only that source cohort. The suite establishes
-callback-level behavior for the configured adapters; it is not Discovery
-certification, a production storage implementation, or archive-only consumer
-installation.
+dependency test run identifies only that source cohort. The suites establish
+the configured adapters' tested behavior; they do not provide Discovery
+certification or production storage.
+
+### Archive-only consumer
+
+`WOTEX_PATH_DEPS=1 mix package` and the full gate's archive check execute
+`bin/check_archive.exs`. The check builds exactly one Directory archive in a
+new system temporary directory. It validates the Hex envelope checksum,
+package identity/version, declared files, the normal `wotex ~> 0.1.0`
+dependency and the public package boundary before compilation. Package inputs
+allowlist individual documents. Development instructions, test consumers,
+builds, dependencies and task state are absent from the archive.
+
+The core input is either the archive explicitly named by `WOTEX_CORE_ARCHIVE`
+or an archive built from the dependency source explicitly selected by
+`WOTEX_PATH_DEPS=1`. This is a build-input choice, not a consumer fallback.
+Archive construction clears that switch. The generated consumer clears it
+again, along with inherited dependency, build and BEAM code-path overrides.
+Its Directory and core dependencies point only to unpacked archives under its
+own temporary directory. The only remaining dependencies are the locked Hex
+cohort of `decimal`, `ex_json_schema` and `jason`. Their versions and Hex
+checksums are copied from the declared development lock and cannot change
+during the consumer run.
+
+`bin/archive_consumer.exs` compiles dependencies from scratch, then explicitly
+recompiles the Directory and core archives with warnings as errors. This
+second compile is necessary because Mix disables warnings-as-errors for its
+ordinary dependency compilation. The verifier checks that dependency source
+paths and loaded library modules belong to the isolated consumer, that neither
+library has an OTP application callback, and that loading the modules starts
+no library application. It then runs the 15 reusable repository scenarios plus
+a public registration/retrieval/patch/list/expiry sequence with invalid,
+conflict, expired, missing and repeated-expiry outcomes. No library source or
+compiled module is copied from a checkout. The explicitly copied test suite
+and test-only ports are verification inputs, not packaged storage products.
+
+The check prints Directory/core archive SHA-256 digests, the consumer lock
+digest, and the full Hex lock cohort. It retains both archives and the lock in
+the printed external artifact directory; the generated consumer and its build
+are removed. These files are evidence outputs, never package inputs or
+checked-in completion state.
 
 The callback and public-operation suites establish the configured consumers'
 behavior at the tested boundaries. They do not prove crash recovery inside an
 arbitrary storage transaction, durable event delivery, a global resource bound,
-or interoperability of a production adapter. WTD-C03 and WTD-C04 retain archive
-and independent reference-consumer obligations.
+or interoperability of a production adapter. WTD-C04 retains independent
+reference-consumer obligations against an exact archive.

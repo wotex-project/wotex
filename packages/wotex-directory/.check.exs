@@ -19,7 +19,6 @@
     {:hex_audit, command: "mix hex.audit"},
     {:boundary, command: "elixir bin/check_boundary.exs"},
     {:application, command: "mix run --no-start bin/check_application_free.exs"},
-    {:package, command: "mix package"},
     {:archive, command: "mix run --no-start bin/check_archive.exs"},
     {:diff, command: "git diff --check"}
   ]
