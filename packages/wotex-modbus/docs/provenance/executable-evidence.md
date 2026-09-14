@@ -40,7 +40,13 @@ outcomes with expected projections; a fixture ID alone is not acceptance.
 ## Package and ongoing validation
 
 The mandatory gate is `WOTEX_PATH_DEPS=1 mix check --no-retry`, including complete
-static checks, tests/coverage, docs and unpacked out-of-tree package compilation.
+static checks, one tests/coverage pass, docs and the candidate-archive consumer.
+`bin/check_archive.exs` builds exact core, Runtime and Modbus archives, installs
+them through an isolated signed Hex registry alongside the exact locked public
+dependencies, verifies an all-Hex lock and archive digests, and executes direct
+and Runtime protocol behavior without checkout BEAMs. Each execution prints the
+three archive digests and consumer-lock digest; those values remain bound to that
+run rather than being silently adopted by this document.
 The documentation cohort `b214e99` has 132 passing checks (1 doctest, 4 properties,
 127 tests), 95.3% coverage and a passing complete latest-toolchain gate. It is a
 different cohort from the explicit software run above. Relevant source changes
@@ -52,7 +58,8 @@ its recorded receipt revision. Current source additionally contains a hard
 whole-VM opening interruption assertion; a new run must retain its own later
 source identity.
 This evidence supplies neither a
-published release, stable API decision, hardware result nor certification.
+published or publicly available release, stable API decision, external consumer
+adoption, hardware result nor certification.
 
 ## Native command ownership
 

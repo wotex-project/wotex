@@ -35,6 +35,10 @@ end
 Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
 and Runtime dependencies resolve from sibling checkouts. Published consumers
 should replace the path with the constraint of an available Hex release.
+The default development gate separately builds exact core, Runtime and Modbus
+candidate archives and installs them into an isolated temporary consumer through
+a signed local Hex registry. That verifies package composition without claiming
+that any of those candidates has been published.
 
 ## Ownership
 

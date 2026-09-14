@@ -124,7 +124,8 @@ Elixir 1.20.2/OTP 29.0.4, with isolated build and PLT directories.
 
 Acceptance requires both toolchains, a clean committed-source
 `WOTEX_PATH_DEPS=1 mix check --no-retry`, and out-of-tree package compilation.
-Artifact adoption without path dependencies is a separate explicitly recorded
-consumer result. Existing Python-run results do not validate these Mix tasks.
+Candidate-archive adoption without path dependencies is the separate WMB-P07
+consumer result in `bin/check_archive.exs`. Public-registry availability and
+external adoption remain nonclaims. Existing Python-run results do not validate these Mix tasks.
 RTU, Modbus Security, hardware, publication and consumer migration remain outside
 this profile.

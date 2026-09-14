@@ -3,9 +3,9 @@ spec:
   id: WMB.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.0
+  version: 1.2.0
   owner: wotex-modbus
-  updated: 2026-09-09
+  updated: 2026-09-14
 ---
 
 # WMB.12 Wotex integration and evidence contract
@@ -270,6 +270,19 @@ build. Record the subject, dependency, fixture and adapter SHA-256 identities,
 exact Elixir/OTP versions, command, result and cleanup counts. Repeat the minimum
 and current runtime matrix in .00. A path-dependency gate proves local integration;
 it does not prove released artifact adoption.
+
+`bin/check_archive.exs` implements the candidate-archive cell without relying on
+published Wotex packages. It builds exact core, Runtime and Modbus archives,
+combines them with the exact locked public dependencies in an OS-temporary signed
+Hex registry, and installs Modbus by its normal `== 0.1.0` package identity. The
+consumer lock must contain only Hex entries and the downloaded candidate archive
+bytes must match the built artifacts. Its BEAM paths must remain under the clean
+consumer, outside all three source checkouts. The consumer executes direct
+encoding/Form mapping and real Runtime read, write and Action exchanges against
+consumer-owned loopback peers, plus invalid-route rejection and application-free
+loading. Run it on both required Elixir/OTP lanes. This proves local candidate
+archive composition; it does not claim that any package exists on the public Hex
+registry or has been adopted by an external consumer.
 
 [Wotex Conformance](https://github.com/wotex-project/wotex-conformance/blob/dd53f8052a5bb1bb358c70bfe3810e9aa631e9b3/docs/specs/WCF.01-conformance-runner.md)
 requires expectations to stay runner-side and subjects to stay outside its

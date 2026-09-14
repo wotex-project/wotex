@@ -106,6 +106,15 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Tests: `test/software/fixture_tasks_test.exs` plus the retained protocol/stress suites.
 - Commit scope: validated native fixture orchestration and its tests.
 
+### WMB-P07: Prove immutable candidate-archive adoption
+
+- Requirements: WMB-I01–I06, WMB-C09, WMB-C10 and WMB-N03; all earlier packages are prerequisites.
+- Change surface: package allowlist, the ordinary archive checker and release-candidate documentation; no production protocol behavior.
+- Acceptance: build exact Wotex core, Runtime and Modbus archives; install all three through a temporary signed Hex registry with the locked public dependencies; require an all-Hex lock and exact downloaded archive digests; compile in a clean OS-temporary consumer with no path dependency or checkout code path; execute native mapping plus Runtime read, write and Action exchanges against consumer-owned loopback peers; reject an invalid route before acquisition; and prove application-free loading.
+- Runtime matrix: execute the archive consumer on Elixir 1.18.4/OTP 27.3.4.15 and Elixir 1.20.2/OTP 29.0.4. A local candidate registry proves archive composition and dependency identity, not public-registry availability, publication or external adoption.
+- Verification: `mix run --no-start bin/check_archive.exs`, included in the complete default gate without starting another repository ExUnit pass.
+- Commit scope: reproducible candidate-archive installation and public-boundary evidence.
+
 ## Reproducible software fixture contract
 
 [WMB.13](../specs/WMB.13-native-build-and-software-evidence.md) is authoritative for the
@@ -144,7 +153,7 @@ remotes, push, tag, publish, change visibility or edit a consumer.
 The final package also accepts every .11 standalone and .12 integration requirement,
 then runs the full .00 C09 matrix, all .10 scenarios, .11
 fixture cases and software peers, then a clean committed-source archive with the lockfile through `mix check`
-and out-of-tree Hex package compilation. Confirm no Application callback or
+and an isolated candidate-archive consumer. Confirm no Application callback or
 dependency-load I/O, no missing packaged bridge assets, no downloaded SDK/build/
 credential artifacts and no consumer-specific names/history. A passing coverage
 number or stub adapter cannot substitute for a required protocol assertion.

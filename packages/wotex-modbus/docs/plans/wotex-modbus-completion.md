@@ -43,3 +43,8 @@ APIs. Dependency artifacts and local source evidence remain separately identifie
 [WMB.13](../specs/WMB.13-native-build-and-software-evidence.md) defines native build and software
 runner contracts. Mix/ExUnit owns orchestration; BEAM/OTP and the explicitly
 selected native SDK own protocol execution.
+
+The final WMB-P07 package cell installs exact core, Runtime and Modbus candidate
+archives through an isolated temporary Hex registry and exercises the public
+boundary from a clean consumer. This is local release-candidate verification,
+not publication or evidence of public-registry availability.
