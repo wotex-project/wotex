@@ -352,6 +352,19 @@ new native lane.
 
 ## Acceptance boundary
 
+The WMA-C03/C04/C07 persistent-owner regressions require the open reply to
+match the configured lifecycle, fabric, controller node and vendor exactly.
+Malformed or oversized replies, EOF during a request and owner death retire
+the connection generation. A malformed operation result also invalidates its
+original connection. Broken replies after write/invoke submission return
+unknown-effect permanent errors; an explicitly received native failure retains
+its reported effect. The tests assert both behaviors without retrying a
+mutation. Wrong handle generations cannot invalidate a live controller.
+The current developer gate passes 122 checks with seven interop cases excluded;
+the 32-case persistent/interaction/subscription suite passes on both required
+BEAM versions, with separate temporary directories for the runtime lanes.
+The packet changes no native C++ build input.
+
 WMA.11 version 1.1.0 named reads now validate the returned path and descriptor
 against the requested attribute. WMA-C02 option validation rejects non-keyword
 lists before client entry, and event batch indexing validates each bounded

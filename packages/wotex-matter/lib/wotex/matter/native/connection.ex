@@ -76,6 +76,10 @@ defmodule Wotex.Matter.Native.Connection do
   def health(pid, generation, timeout),
     do: call(pid, {:health, generation, timeout}, timeout)
 
+  @doc false
+  @spec invalidate(pid(), String.t()) :: {:ok, nil} | {:error, Error.t()}
+  def invalidate(pid, generation), do: call(pid, {:invalidate, generation}, @cleanup_timeout)
+
   @spec disconnect(pid(), String.t()) :: :ok | {:error, Error.t()}
   def disconnect(pid, generation) do
     if Process.alive?(pid) do
@@ -129,6 +133,12 @@ defmodule Wotex.Matter.Native.Connection do
   @impl GenServer
   def handle_call(:identity, _, state),
     do: {:reply, {:ok, state.generation}, state}
+
+  def handle_call({:invalidate, generation}, _, state) do
+    if generation == state.generation,
+      do: {:stop, :normal, {:ok, nil}, state},
+      else: {:reply, {:error, Error.new(:invalid_handle)}, state}
+  end
 
   def handle_call({:request, generation, message, timeout}, _, state) do
     cond do
@@ -216,11 +226,8 @@ defmodule Wotex.Matter.Native.Connection do
                 {:reply, {:error, error}, drop_subscription(failed, reference)}
             end
 
-          {:error, %Error{code: :timeout} = error, next_state} ->
-            {:stop, :normal, {:error, error}, drop_subscription(next_state, reference)}
-
           {:error, error, next_state} ->
-            {:reply, {:error, error}, drop_subscription(next_state, reference)}
+            error_reply(error, drop_subscription(next_state, reference))
         end
     end
   end
@@ -254,11 +261,8 @@ defmodule Wotex.Matter.Native.Connection do
           {:ok, _, next_state} ->
             {:stop, :normal, {:error, Error.new(:invalid_frame)}, next_state}
 
-          {:error, %Error{code: :timeout} = error, next_state} ->
-            {:stop, :normal, {:error, error}, next_state}
-
           {:error, error, next_state} ->
-            {:reply, {:error, error}, next_state}
+            error_reply(error, next_state)
         end
       end
     else
@@ -335,12 +339,15 @@ defmodule Wotex.Matter.Native.Connection do
       {:ok, result, next_state} ->
         {:reply, {:ok, result}, next_state}
 
-      {:error, %Error{code: :timeout} = error, next_state} ->
-        {:stop, :normal, {:error, error}, next_state}
-
       {:error, error, next_state} ->
-        {:reply, {:error, error}, next_state}
+        error_reply(error, next_state)
     end
+  end
+
+  defp error_reply(error, state) do
+    if error.code == :timeout or Map.get(state, :channel_failed, false),
+      do: {:stop, :normal, {:error, error}, state},
+      else: {:reply, {:error, error}, state}
   end
 
   defp request_frame(state, operation, parameters, timeout) do
@@ -358,11 +365,18 @@ defmodule Wotex.Matter.Native.Connection do
 
     if send_frame(state.port, frame) do
       case await_response(next_state, id, timeout + @response_grace) do
-        {:ok, result, response_state} -> {:ok, result, response_state}
-        {:error, error, response_state} -> {:error, error, response_state}
+        {:ok, result, response_state} ->
+          {:ok, result, response_state}
+
+        {:error, error, response_state} ->
+          {:error, error, response_state}
+
+        {:channel_error, error, response_state} ->
+          effect = if operation in ["write", "invoke"], do: :unknown, else: :none
+          {:error, Error.with_effect(error, effect), Map.put(response_state, :channel_failed, true)}
       end
     else
-      {:error, Error.new(:transport_closed), next_state}
+      {:error, Error.new(:transport_closed), Map.put(next_state, :channel_failed, true)}
     end
   end
 
@@ -389,12 +403,26 @@ defmodule Wotex.Matter.Native.Connection do
     with :ok <- await_ready(port, owner_monitor, options.timeout),
          true <- send_frame(port, flow_frame(generation)),
          true <- send_frame(port, open_frame(options)),
-         {:ok, _} <- handshake_response(port, owner_monitor, "1", options.timeout) do
+         {:ok, identity} <- handshake_response(port, owner_monitor, "1", options.timeout),
+         :ok <- controller_identity(identity, options) do
       :ok
     else
       {:error, %Error{} = error} -> {:error, error}
       _ -> {:error, Error.new(:controller_start_failed)}
     end
+  end
+
+  defp controller_identity(identity, options) do
+    expected = %{
+      "lifecycle" => "persistent",
+      "fabric_id" => options.fabric_id,
+      "controller_node_id" => options.controller_node_id,
+      "vendor_id" => options.vendor_id
+    }
+
+    if identity == expected,
+      do: :ok,
+      else: {:error, Error.new(:invalid_controller_identity)}
   end
 
   defp handshake_response(port, owner_monitor, id, timeout) do
@@ -453,13 +481,13 @@ defmodule Wotex.Matter.Native.Connection do
         :not_response ->
           case decode_async_frame(frame, byte_size(line) + 1, state) do
             {:ok, next_state} -> await_response_until(next_state, id, deadline)
-            {:error, error} -> {:error, error, state}
+            {:error, error} -> {:channel_error, error, state}
           end
       end
     else
-      false -> {:error, Error.new(:timeout), state}
-      {:error, %Error{} = error} -> {:error, error, state}
-      _ -> {:error, Error.new(:invalid_frame), state}
+      false -> {:channel_error, Error.new(:timeout), state}
+      {:error, %Error{} = error} -> {:channel_error, error, state}
+      _ -> {:channel_error, Error.new(:invalid_frame), state}
     end
   end
 

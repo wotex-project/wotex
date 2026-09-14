@@ -96,6 +96,10 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     assert {:error, %Error{code: :invalid_handle}} = Native.request(foreign, @read, 1_000)
     assert {:error, %Error{code: :invalid_handle}} = Native.health(foreign)
     assert {:error, %Error{code: :invalid_handle}} = Native.disconnect(foreign)
+
+    assert {:error, %Error{code: :invalid_handle}} =
+             Native.Connection.invalidate(foreign.pid, foreign.generation)
+
     assert File.read!(audit) == initial
     assert Process.alive?(handle.pid)
     assert {:ok, %{"status" => "ready"}} = Native.health(handle)
@@ -192,6 +196,94 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     assert_receive {:DOWN, ^monitor, :process, _pid, _reason}, 2_000
   end
 
+  test "WMA-C07 an open reply must match the explicitly requested controller identity" do
+    for mode <- [
+          "wrong_open_fabric",
+          "wrong_open_node",
+          "wrong_open_vendor",
+          "wrong_open_lifecycle",
+          "extra_open_field",
+          "null_open"
+        ] do
+      assert {:error, %Error{code: :invalid_controller_identity}} =
+               Native.connect(options(fixture(mode)))
+    end
+  end
+
+  test "WMA-C07 malformed replies retire the controller generation" do
+    for {mode, code} <- [
+          {"malformed_reply", :invalid_frame},
+          {"oversized_reply", :response_limit},
+          {"request_eof", :transport_closed}
+        ] do
+      assert {:ok, handle} = Native.connect(options(fixture(mode)))
+      monitor = Process.monitor(handle.pid)
+      assert {:error, %Error{code: ^code}} = Native.health(handle)
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+      assert {:error, %Error{code: :transport_closed}} = Native.health(handle)
+    end
+  end
+
+  test "WMA-C03 owner death interrupts an in-flight native request" do
+    audit = temporary_path("inflight-owner")
+    executable = fixture("silent_request", audit)
+    parent = self()
+
+    owner =
+      spawn(fn ->
+        {:ok, handle} = Native.connect(options(executable))
+        send(parent, {:handle, handle})
+        send(parent, {:late_response, Native.health(handle, 60_000)})
+      end)
+
+    assert_receive {:handle, handle}, 2_000
+    assert request_recorded?(audit, 100)
+    monitor = Process.monitor(handle.pid)
+    Process.exit(owner, :kill)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+    refute_receive {:late_response, _}
+  end
+
+  test "WMA-C04 a broken reply after mutation submission has unknown effect" do
+    for message <- [
+          Map.merge(@read, %{
+            type: :write,
+            member: 18,
+            value: %{tag: :anonymous, type: :i16, value: 2000}
+          }),
+          Map.merge(@read, %{
+            type: :invoke,
+            cluster: 6,
+            member: 1,
+            value: %{tag: :anonymous, type: :structure, value: []}
+          })
+        ] do
+      assert {:ok, handle} = Native.connect(options(fixture("malformed_reply")))
+
+      assert {:error,
+              %Error{code: :invalid_frame, effect: :unknown, class: :permanent, retryable: false}} =
+               Native.request(handle, message, 1_000)
+
+      assert :ok = Native.disconnect(handle)
+
+      assert {:ok, malformed} = Native.connect(options(fixture("malformed_result")))
+      monitor = Process.monitor(malformed.pid)
+
+      assert {:error,
+              %Error{code: :invalid_frame, effect: :unknown, class: :permanent, retryable: false}} =
+               Native.request(malformed, message, 1_000)
+
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+
+      assert {:ok, refused} = Native.connect(options(fixture("native_timeout")))
+
+      assert {:error, %Error{code: :timeout, effect: :none}} =
+               Native.request(refused, message, 1_000)
+
+      assert :ok = Native.disconnect(refused)
+    end
+  end
+
   defp options(executable) do
     paa = temporary_path("paa")
     File.mkdir_p!(paa)
@@ -249,13 +341,45 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     read.()
 
     open_id = if mode == "foreign_id", do: "99", else: "1"
-    IO.puts(~s({"version":1,"id":"\#{open_id}","ok":true,"result":{"lifecycle":"persistent","fabric_id":1,"controller_node_id":2,"vendor_id":65521}}))
+    open_result = ~s({"lifecycle":"persistent","fabric_id":1,"controller_node_id":2,"vendor_id":65521})
+    open_result = case mode do
+      "wrong_open_fabric" -> String.replace(open_result, ~s("fabric_id":1), ~s("fabric_id":2))
+      "wrong_open_node" -> String.replace(open_result, ~s("controller_node_id":2), ~s("controller_node_id":3))
+      "wrong_open_vendor" -> String.replace(open_result, ~s("vendor_id":65521), ~s("vendor_id":65522))
+      "wrong_open_lifecycle" -> String.replace(open_result, "persistent", "oneshot")
+      "extra_open_field" -> String.replace(open_result, "}", ~s(,"extra":true}))
+      "null_open" -> "null"
+      _ -> open_result
+    end
+    IO.puts(~s({"version":1,"id":"\#{open_id}","ok":true,"result":\#{open_result}}))
 
     loop = fn loop ->
       line = read.()
       [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
 
       cond do
+        mode == "malformed_reply" ->
+          IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":null,"result":42}))
+          loop.(loop)
+
+        mode == "oversized_reply" ->
+          IO.puts(String.duplicate("x", 131072))
+          loop.(loop)
+
+        mode == "request_eof" ->
+          System.halt(78)
+
+        mode == "silent_request" ->
+          loop.(loop)
+
+        mode == "native_timeout" ->
+          IO.puts(~s({"version":1,"id":"\#{id}","ok":false,"error":{"code":"interaction_timeout","effect":"none"}}))
+          loop.(loop)
+
+        mode == "malformed_result" ->
+          IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":false}))
+          loop.(loop)
+
         String.contains?(line, ~s("operation":"close")) ->
           IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":null}))
 
@@ -281,6 +405,17 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     end)
 
     path
+  end
+
+  defp request_recorded?(_, 0), do: false
+
+  defp request_recorded?(audit, attempts) do
+    if File.read!(audit) =~ ~s("operation":"health") do
+      true
+    else
+      Process.sleep(10)
+      request_recorded?(audit, attempts - 1)
+    end
   end
 
   defp temporary_path(suffix) do
