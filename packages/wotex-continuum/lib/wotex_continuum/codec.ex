@@ -10,10 +10,11 @@ defmodule WotexContinuum.Codec do
   `WotexContinuum.Error` values with the codes documented in WCT.01.
 
   `encode/2` accepts registered continuum values and can select canonical JSON
-  for digest-bearing workflows. `decode/2` requires a top-level object with a
-  registered kind. The owning constructor supplies the current schema version
-  when absent and rejects unsupported explicit versions. Member names never
-  cause module loading or construction of new atoms.
+  for digest-bearing workflows. `decode/2` requires a top-level object with an
+  explicit registered kind and schema version. Module-specific constructors
+  may supply those envelope defaults for native map input, while encoded input
+  must carry the complete wire identity. Member names never cause module
+  loading or construction of new atoms.
   """
 
   alias WotexContinuum.{CanonicalJSON, Error, Limits, Validation}
@@ -36,7 +37,8 @@ defmodule WotexContinuum.Codec do
     with {:ok, limits} <- Limits.new(limit_options),
          {:ok, binary} <- to_binary(source, limits.max_bytes),
          {:ok, decoded} <- admit(binary, limits),
-         :ok <- top_level_object(decoded) do
+         :ok <- top_level_object(decoded),
+         :ok <- encoded_envelope(decoded) do
       WotexContinuum.from_map(decoded)
     end
   end
@@ -89,4 +91,11 @@ defmodule WotexContinuum.Codec do
 
   defp top_level_object(_),
     do: Error.error(:invalid_type, :decode, "/", "expected a top-level object")
+
+  defp encoded_envelope(data) do
+    case Enum.find(["kind", "schema_version"], &(not Map.has_key?(data, &1))) do
+      nil -> :ok
+      field -> Error.error(:required, :validation, "/#{field}", "field is required")
+    end
+  end
 end

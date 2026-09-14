@@ -70,7 +70,7 @@ defmodule WotexContinuum.Lifecycle do
          {:ok, generation} <- Validation.non_negative_integer(generation, "/generation"),
          {:ok, changed_at} <- Validation.required(data, :changed_at),
          {:ok, changed_at} <- Validation.timestamp(changed_at, "/changed_at"),
-         {:ok, reason} <- Validation.optional_string(Map.get(data, :reason), "/reason", max: 2_048),
+         {:ok, reason} <- optional_reason(data),
          {:ok, extensions} <- Validation.extensions(Map.get(data, :extensions, %{}), "/extensions") do
       {:ok,
        %__MODULE__{
@@ -94,8 +94,7 @@ defmodule WotexContinuum.Lifecycle do
          :ok <- allowed_transition(lifecycle.state, next_state),
          {:ok, changed_at} <- Validation.timestamp(changed_at, "/changed_at"),
          :ok <- chronological(lifecycle.changed_at, changed_at),
-         {:ok, reason} <-
-           Validation.optional_string(Keyword.get(options, :reason), "/reason", max: 2_048) do
+         {:ok, reason} <- optional_reason_option(options) do
       {:ok,
        %__MODULE__{
          lifecycle
@@ -153,4 +152,18 @@ defmodule WotexContinuum.Lifecycle do
 
   defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp optional_reason(data) do
+    case Map.fetch(data, :reason) do
+      :error -> {:ok, nil}
+      {:ok, value} -> Validation.string(value, "/reason", max: 2_048)
+    end
+  end
+
+  defp optional_reason_option(options) do
+    case Keyword.fetch(options, :reason) do
+      :error -> {:ok, nil}
+      {:ok, value} -> Validation.string(value, "/reason", max: 2_048)
+    end
+  end
 end

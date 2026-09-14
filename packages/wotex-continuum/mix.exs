@@ -102,6 +102,7 @@ defmodule WotexContinuum.MixProject do
       extras: [
         "README.md",
         "docs/plans/wotex-continuum-completion.md",
+        "docs/specs/WCT-C01-contract-map.md",
         "specs/WCT.01-manifest-context-capability.md",
         "specs/WCT.02-exchange-values.md",
         "specs/WCT.03-mode-lifecycle-exit.md",
@@ -111,6 +112,7 @@ defmodule WotexContinuum.MixProject do
       ],
       groups_for_extras: [
         "Completion plans": ~r/docs\/plans/,
+        "Verification maps": ~r/docs\/specs/,
         Specifications: ~r/specs\//,
         Security: ~r/docs\//,
         Project: ~r/(SECURITY|GOVERNANCE)\.md/

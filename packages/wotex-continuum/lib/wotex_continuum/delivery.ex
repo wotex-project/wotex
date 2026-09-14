@@ -108,7 +108,7 @@ defmodule WotexContinuum.Delivery do
          {:ok, status} <- Validation.enum(status, "/status", @statuses),
          {:ok, attempt} <- Validation.required(data, :attempt),
          {:ok, attempt} <- Validation.positive_integer(attempt, "/attempt"),
-         {:ok, sequence} <- optional_sequence(Map.get(data, :sequence)),
+         {:ok, sequence} <- optional_sequence(data),
          {:ok, emitted_at} <- Validation.required(data, :emitted_at),
          {:ok, emitted_at} <- Validation.timestamp(emitted_at, "/emitted_at"),
          {:ok, acknowledged_at} <- optional_timestamp(data, :acknowledged_at),
@@ -155,8 +155,12 @@ defmodule WotexContinuum.Delivery do
     |> Map.put("extensions", value.extensions)
   end
 
-  defp optional_sequence(nil), do: {:ok, nil}
-  defp optional_sequence(value), do: Validation.non_negative_integer(value, "/sequence")
+  defp optional_sequence(data) do
+    case Map.fetch(data, :sequence) do
+      :error -> {:ok, nil}
+      {:ok, value} -> Validation.non_negative_integer(value, "/sequence")
+    end
+  end
 
   defp optional_timestamp(data, key) do
     case Map.fetch(data, key) do

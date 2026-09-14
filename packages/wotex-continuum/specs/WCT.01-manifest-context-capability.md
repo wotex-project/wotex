@@ -55,6 +55,10 @@ Every top-level value MUST be a JSON object with:
 Object member names use lower snake case. Unknown top-level members MUST be
 rejected. Extension data belongs only in the explicit `extensions` object.
 Each extension key MUST be an absolute IRI and each value MUST be a JSON value.
+`OPTIONAL` means that a member may be absent, in which case its documented
+default applies. JSON `null` is accepted only for a member whose type is a JSON
+value or whose rule explicitly permits `null`; it is not another spelling of
+absence for strings, integers, objects, or arrays.
 
 Implementations MUST accept only finite JSON numbers. Duplicate members, an
 atom/string key collision in native input, invalid UTF-8, or a configured

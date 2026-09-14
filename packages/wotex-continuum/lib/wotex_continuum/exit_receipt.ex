@@ -148,7 +148,8 @@ defmodule WotexContinuum.ExitReceipt do
     do: :ok
 
   defp validate_status(:export, :completed, completed_at, _, nil)
-       when is_binary(completed_at), do: :ok
+       when is_binary(completed_at),
+       do: :ok
 
   defp validate_status(_, :partial, completed_at, residuals, nil)
        when is_binary(completed_at) and residuals != [],

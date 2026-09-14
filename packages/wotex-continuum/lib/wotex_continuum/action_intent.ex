@@ -90,8 +90,7 @@ defmodule WotexContinuum.ActionIntent do
          {:ok, requested_at} <- Validation.timestamp(requested_at, "/requested_at"),
          {:ok, idempotency_key} <- Validation.required(data, :idempotency_key),
          {:ok, idempotency_key} <- Validation.string(idempotency_key, "/idempotency_key"),
-         {:ok, requested_by} <-
-           Validation.optional_string(Map.get(data, :requested_by), "/requested_by", max: 512),
+         {:ok, requested_by} <- optional_requested_by(data),
          {:ok, evidence} <-
            Validation.structs(Map.get(data, :evidence, []), "/evidence", EvidenceReference),
          {:ok, context} <- Validation.required(data, :context),
@@ -134,4 +133,11 @@ defmodule WotexContinuum.ActionIntent do
 
   defp maybe_put(map, _, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp optional_requested_by(data) do
+    case Map.fetch(data, :requested_by) do
+      :error -> {:ok, nil}
+      {:ok, value} -> Validation.string(value, "/requested_by", max: 512)
+    end
+  end
 end

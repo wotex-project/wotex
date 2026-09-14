@@ -96,7 +96,7 @@ defmodule WotexContinuum.ObservationProposal do
          {:ok, value} <- Validation.json_value(value, "/value"),
          {:ok, observed_at} <- Validation.required(data, :observed_at),
          {:ok, observed_at} <- Validation.timestamp(observed_at, "/observed_at"),
-         {:ok, sequence} <- optional_sequence(Map.get(data, :sequence)),
+         {:ok, sequence} <- optional_sequence(data),
          {:ok, quality} <- Validation.json_value(Map.get(data, :quality, %{}), "/quality"),
          :ok <- quality_object(quality),
          {:ok, evidence} <-
@@ -141,8 +141,12 @@ defmodule WotexContinuum.ObservationProposal do
     |> Map.put("extensions", value.extensions)
   end
 
-  defp optional_sequence(nil), do: {:ok, nil}
-  defp optional_sequence(value), do: Validation.non_negative_integer(value, "/sequence")
+  defp optional_sequence(data) do
+    case Map.fetch(data, :sequence) do
+      :error -> {:ok, nil}
+      {:ok, value} -> Validation.non_negative_integer(value, "/sequence")
+    end
+  end
 
   defp quality_object(value) when is_map(value), do: :ok
 
