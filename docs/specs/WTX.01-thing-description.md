@@ -71,7 +71,8 @@ mebibyte, 64 nested containers, 100,000 JSON nodes, 256 KiB per string, and
 10,000 members per container. A consumer may lower or explicitly raise these
 limits; a non-positive or non-integer limit fails with `invalid_limit`. For a
 native map, `:max_bytes` bounds the total string and key payload. Errors
-identify the phase, stable code, JSON path, and safe details.
+identify the phase, stable code, JSON path, and bounded diagnostic details.
+Details are untrusted and require review before logging.
 
 The documented `validate: false` staged-ingestion option bypasses the aggregate
 schema and semantic pass, not JSON-value or resource-limit admission. Such a
@@ -90,6 +91,8 @@ the package completion contract, `docs/plans/wotex-completion.md`.
   duplicate members, non-object roots, excessive bytes, depth, nodes, strings,
   and collections, and invalid limit options fail with typed codes;
 - hostile nesting is rejected before decoding with bounded work;
+- exact byte, depth, and node thresholds pass for both aggregate boundaries;
+- malformed option containers return `invalid_options` rather than raising;
 - a mutation invalidates source-byte encoding; and
 - bundled schema bytes match the recorded SHA-256 digest.
 

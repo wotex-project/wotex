@@ -15,9 +15,9 @@ defmodule Wotex.ThingDescription do
 
   Byte, depth, node, string, and collection limits are applied before or
   during construction; for a native map, `:max_bytes` bounds the total string
-  payload. All
-  expected input failures return `Wotex.Error` values (or a list of validation
-  errors); `parse!/2` is the opt-in raising variant.
+  payload. Malformed option containers return `invalid_options`. All expected
+  input failures return `Wotex.Error` values (or a list of validation errors);
+  `parse!/2` is the opt-in raising variant.
 
   Use the public functions instead of depending on struct fields. The
   representation may evolve in compatible releases.
@@ -52,7 +52,8 @@ defmodule Wotex.ThingDescription do
   Limit options are `:max_bytes`, `:max_depth`, `:max_nodes`,
   `:max_string_bytes`, and `:max_collection_size`; see `Wotex.JSON.Limits` for
   defaults. Invalid limit values are rejected with `invalid_limit`. Duplicate
-  object members are rejected during decoding.
+  object members are rejected during decoding. Malformed option containers are
+  rejected with `invalid_options`.
   `validate: false` skips the TD schema and semantic pass but never skips
   JSON-value or resource-limit checks.
   """
@@ -60,13 +61,11 @@ defmodule Wotex.ThingDescription do
   def parse(json, opts \\ [])
 
   def parse(json, opts) when is_binary(json) do
-    validate? = Keyword.get(opts, :validate, true)
-
     with {:ok, decoded} <- JSON.decode(json, opts),
          {:ok, document} <- require_object(decoded) do
       maybe_validate(
         %__MODULE__{document: document, source: json, changed?: false},
-        validate?,
+        Keyword.get(opts, :validate, true),
         opts
       )
     end
@@ -97,12 +96,14 @@ defmodule Wotex.ThingDescription do
   def from_map(document, opts \\ [])
 
   def from_map(document, opts) when is_map(document) do
-    source = Keyword.get(opts, :source)
-    validate? = Keyword.get(opts, :validate, true)
+    with :ok <- JSON.validate(document, opts) do
+      td = %__MODULE__{
+        document: document,
+        source: Keyword.get(opts, :source),
+        changed?: false
+      }
 
-    with :ok <- JSON.validate(document, opts),
-         %__MODULE__{} = td <- %__MODULE__{document: document, source: source, changed?: false} do
-      maybe_validate(td, validate?, opts)
+      maybe_validate(td, Keyword.get(opts, :validate, true), opts)
     end
   end
 
@@ -122,10 +123,12 @@ defmodule Wotex.ThingDescription do
 
   def put_id(%__MODULE__{document: document}, id, opts)
       when is_binary(id) and byte_size(id) > 0 do
-    document
-    |> Map.put("id", id)
-    |> from_map(Keyword.put(opts, :source, nil))
-    |> mark_changed()
+    with {:ok, _} <- Wotex.JSON.Limits.new(opts) do
+      document
+      |> Map.put("id", id)
+      |> from_map(Keyword.put(opts, :source, nil))
+      |> mark_changed()
+    end
   end
 
   def put_id(%__MODULE__{}, _, _) do
@@ -133,8 +136,10 @@ defmodule Wotex.ThingDescription do
   end
 
   @doc "Validates a Thing Description against the pinned TD 1.1 baseline."
-  @spec validate(t(), keyword()) :: {:ok, t()} | {:error, [Error.t()]}
-  def validate(%__MODULE__{} = td, opts \\ []), do: Validator.validate(td, opts)
+  @spec validate(t(), keyword()) :: {:ok, t()} | {:error, Error.t() | [Error.t()]}
+  def validate(%__MODULE__{} = td, opts \\ []) do
+    with {:ok, _} <- Wotex.JSON.Limits.new(opts), do: Validator.validate(td, opts)
+  end
 
   @doc """
   Encodes a Thing Description as source, compact, pretty, or canonical TD JSON.

@@ -5,7 +5,8 @@ defmodule Wotex.JSON.Limits do
   Every limit is a positive integer supplied by the caller through keyword
   options. Absent options use the documented defaults. An invalid value is
   rejected with `invalid_limit` instead of silently replaced, so a consumer
-  cannot believe a limit applies when it does not.
+  cannot believe a limit applies when it does not. A non-list, improper-list,
+  or non-keyword option container is rejected with `invalid_options`.
 
   | Option | Default | Bounds |
   | --- | --- | --- |
@@ -37,6 +38,12 @@ defmodule Wotex.JSON.Limits do
   @doc "Builds limits from keyword options, rejecting any non-positive or non-integer value."
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(opts) when is_list(opts) do
+    if Keyword.keyword?(opts), do: build(opts), else: invalid_options()
+  end
+
+  def new(_), do: invalid_options()
+
+  defp build(opts) do
     Enum.reduce_while(@keys, {:ok, %__MODULE__{}}, fn key, {:ok, limits} ->
       case Keyword.fetch(opts, key) do
         :error ->
@@ -56,7 +63,7 @@ defmodule Wotex.JSON.Limits do
     end)
   end
 
-  def new(_) do
+  defp invalid_options do
     {:error, Error.new(:invalid_options, :value, "options must be a keyword list")}
   end
 end

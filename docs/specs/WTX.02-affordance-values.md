@@ -62,5 +62,7 @@ Constructor tests cover required members, invalid JSON keys and values,
 round-trip preservation, exact DataSchema constraints, category-specific Form
 operations, default operations per context and `readOnly`/`writeOnly`,
 affordance Form extraction with failing-index paths, affordance requirements,
-security-scheme variants, and extension schemes. Thing Description fixtures
-cover their aggregate relationship and default operations end to end.
+security-scheme variants, and extension schemes. Cross-wrapper tests cover
+Unicode extensions, escaped invalid-string paths, exact byte/depth/node
+thresholds, malformed options, and non-JSON struct refusal. Thing Description
+fixtures cover their aggregate relationship and default operations end to end.

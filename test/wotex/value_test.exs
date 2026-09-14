@@ -191,6 +191,24 @@ defmodule Wotex.ValueTest do
     end
   end
 
+  test "all value constructors refuse invalid limit options" do
+    for constructor <- [
+          &DataSchema.new/2,
+          &Form.new/2,
+          &PropertyAffordance.new/2,
+          &ActionAffordance.new/2,
+          &EventAffordance.new/2,
+          &SecurityScheme.new/2
+        ] do
+      assert {:error,
+              %Error{
+                code: :invalid_limit,
+                phase: :value,
+                details: %{option: :max_nodes}
+              }} = constructor.(%{}, max_nodes: 0)
+    end
+  end
+
   test "JSON validation reports invalid values and escaped pointer paths" do
     assert JSON.pointer_segment("a/b~c") == "a~1b~0c"
     assert {:error, %Error{code: :invalid_json_value}} = JSON.validate({:not, :json})

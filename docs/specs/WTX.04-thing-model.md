@@ -89,6 +89,7 @@ shared `Wotex.Error` contract.
   values without a fragment;
 - context position rules;
 - invalid type, context, JSON, root value, and resource limits fail safely;
+- exact byte, depth, and node thresholds and malformed option containers;
 - mutation invalidates source-byte encoding; and
 - schema provenance exposes immutable upstream and bundled digests.
 

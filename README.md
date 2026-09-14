@@ -151,7 +151,9 @@ members per object or array. Depth and string size are bounded by a lexical
 scan before the decoder allocates, decoded strings never retain the source
 binary, and duplicate object members are rejected. Consumers handling
 constrained or untrusted inputs can set smaller positive limits; an invalid
-limit value is an `invalid_limit` error, never a silent default:
+limit value is an `invalid_limit` error, never a silent default. A non-list,
+improper-list, or non-keyword option container returns `invalid_options` from
+option-bearing admission operations:
 
 ```elixir
 Wotex.ThingDescription.parse(json,

@@ -1,6 +1,6 @@
 # Wotex completion contract
 
-Plan version: 1.1.1. Package baseline: 0.1.0. Normative owners:
+Plan version: 1.2.0. Package baseline: 0.1.0. Normative owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not a progress log.
@@ -14,10 +14,13 @@ The catalogue's `implementation_status` describes source coverage of a spec,
 not a passed release gate. No checkbox, green build or package version implies
 W3C certification, complete standards conformance or stable API admission.
 
-Revision 1.1.1 narrows WTX-C01 evidence to consumer-visible behavior. The WTX
-specifications state the supported operations and errors; tests exercise valid,
-invalid, and boundary cases without asserting a complete module or export set.
-This revision changes no public value behavior and admits no API stability.
+Revision 1.2.0 aligns this acceptance baseline with WTX.03 v1.2.0 and WTX-C02.
+Malformed option containers now return `invalid_options` from option-bearing
+admission, validation, and mutation operations. This is a pre-release safety
+correction to a previously excluded input surface. It does not make typed
+accessors total, admit manually forged structs, establish latency or peak-memory
+guarantees, or discharge independent-consumer work. WTX-C01 evidence remains
+limited to consumer-visible behavior and does not assert an exhaustive API.
 
 ## Package boundary
 
@@ -54,9 +57,10 @@ map admission enforces native JSON values, depth and node limits. Defaults are
 1,048,576 source bytes, 64 nested containers, 100,000 nodes, 262,144 bytes per
 string/key and 10,000 members per collection. Positive keyword limit values
 override defaults; invalid values return `invalid_limit` in the `value` phase,
-never silently fall back. Malformed option containers are not currently a documented total
-input surface. `validate: false` skips aggregate schema/semantic validation,
-not JSON admission, and is never a conformance result.
+never silently fall back. Non-list, improper-list, and non-keyword option
+containers return `invalid_options`. Non-fallible typed accessors still require
+their documented inputs. `validate: false` skips aggregate schema/semantic
+validation, not JSON admission, and is never a conformance result.
 
 Only untouched parsed values support source-byte return. `put_id/3` invalidates
 that representation. Canonical encoding sorts keys; it does not establish
@@ -76,8 +80,9 @@ No operation proves that an Action occurred.
 JSON input, Form URIs, security definitions and extensions are untrusted. Remote
 JSON-LD contexts are never fetched. The consumer must keep credentials out of
 public examples and logs; parsing preserves supplied values and is not a secret
-redactor. Review error details separately before claiming they are universally
-safe to log. Byte bounds do not constitute a CPU or peak-memory benchmark:
+redactor. Error details may include bounded representations of malformed input
+and are not universally safe to log. Byte bounds do not constitute a CPU or
+peak-memory benchmark:
 lexical depth and string-size checks precede decoding, while duplicate-member,
 collection-size and structural depth/node checks inspect the decoded value.
 Bounded source can still amplify memory; the lexical preflight is not an
@@ -110,7 +115,7 @@ Test additions belong beside the listed package tests, not in coordination hooks
 | ID | Prerequisites | Deliverable | Acceptance |
 | --- | --- | --- | --- |
 | WTX-C01 | WTX.01–WTX.04 | Review the documented public operations, errors, ownership boundaries, and standards scope against focused behavioral evidence | Every advertised behavior has representative valid, invalid, and boundary evidence where applicable; tests do not assert a complete module or export inventory, incidental struct layout, or documentation formatting. |
-| WTX-C02 | WTX-C01 | Admission and safety tests for both aggregates and every wrapper | Unicode keys/values, escaped paths, byte/depth/node boundaries, extension preservation, source invalidation and security references pass. Characterize duplicate JSON keys, manually forged structs, malformed option containers and error-detail disclosure; change any accepted behavior only with an explicit compatibility classification. |
+| WTX-C02 | WTX-C01 | Admission and safety tests for both aggregates and every wrapper | Unicode keys/values, escaped paths, byte/depth/node boundaries, extension preservation, source invalidation and security references pass. Characterize duplicate JSON keys, non-JSON structs, malformed option containers and error-detail disclosure; change any accepted behavior only with an explicit compatibility classification. |
 | WTX-C03 | WTX-C01 | Archive consumer evidence and package-content inspection | Unpacked package builds without source checkout dependencies; contains both pinned schemas, notices and specs; runs TD/TM parse, wrapper and typed-error examples in an independent minimal Mix consumer. Local trackers and generated audit artifacts are absent. |
 | WTX-C04 | WTX-C02, WTX-C03 | Consumer-neutral reference examples and independent standards corpus | Known valid/invalid TD and TM documents exchange with a named, revision-pinned independent implementation or published test corpus. Record exact operations and counterexamples; no transport or profile claims follow from value exchange. |
 | WTX-C05 | WTX-C02–WTX-C04 | Versioned compatibility and release dossier | Confirm minimum/current toolchains, exact locked and permitted dependency cohorts, schema/vector/archive digests, licenses, security review and API evolution decisions. Maintainer reviews a candidate; automated work never publishes it. |
