@@ -1,3 +1,5 @@
 ExUnit.start(exclude: [:interop, :hardware])
 Code.require_file("support/client.ex", __DIR__)
 Code.require_file("support/runtime_client.ex", __DIR__)
+Code.require_file("support/runtime_credentials.ex", __DIR__)
+Code.require_file("support/runtime_result_transport.ex", __DIR__)

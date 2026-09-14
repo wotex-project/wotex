@@ -234,17 +234,22 @@ defmodule Wotex.Matter.EndpointCatalogue do
   defp valid_error?(%Error{
          code: code,
          field: field,
+         class: class,
          details: details,
          retryable: retryable,
          effect: :none
        }) do
     is_atom(code) and not is_nil(code) and valid_field?(field) and is_map(details) and
-      map_size(details) <= 16 and is_boolean(retryable) and bounded_details?(details)
+      valid_class?(class) and map_size(details) <= 16 and is_boolean(retryable) and
+      bounded_details?(details)
   end
 
   defp valid_error?(_), do: false
   defp valid_field?(nil), do: true
   defp valid_field?(field), do: is_atom(field)
+
+  defp valid_class?(class),
+    do: class in [:timeout, :unavailable, :rate_limited, :protocol, :permanent, nil]
 
   defp bounded_details?(details) do
     if :erlang.external_size(details) <= 4096 do

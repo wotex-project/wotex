@@ -35,6 +35,7 @@ defmodule Wotex.Matter.Mapping do
   def command(%Form{} = form, operation, input, href) do
     with {:ok, {type, affordance, kind}} <- Map.fetch(@operations, operation),
          true <- Atom.to_string(operation) in Form.operations(form, for: affordance),
+         :ok <- content_type(form),
          {:ok, uri} <- uri(href || Form.href(form)),
          {:ok, mapping} <- target(uri, type, input) do
       {:ok,
@@ -50,6 +51,12 @@ defmodule Wotex.Matter.Mapping do
   end
 
   def command(_, _, _, _), do: {:error, Error.new(:invalid_form)}
+
+  defp content_type(form) do
+    if Map.has_key?(Form.to_map(form), "contentType"),
+      do: {:error, Error.new(:unsupported_content_type)},
+      else: :ok
+  end
 
   defp uri(href) when is_binary(href) and byte_size(href) <= 4096 do
     case URI.parse(href) do

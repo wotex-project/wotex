@@ -97,9 +97,12 @@ P08 maps controller-profile Property, Action and Event operations to those typed
 services. Runtime streams use an explicitly started private relay, retain
 DataVersion and Event identity, terminate on session loss, and cancel through
 the session and subscription that established the stream. Loading the library
-starts no process or native executable. P08a still owns the public profile
-factories and full ConsumedThing/error matrix; P09 owns the pinned software-peer
-execution of P07's interop scenarios and the complete controller workflow.
+starts no process or native executable. P08a adds pure one-shot and controller
+Runtime profile factories, classified failures, pre-acquisition selector/input
+validation, and public ConsumedThing coverage for values, deadlines, result
+identity, retries, credentials and stream cleanup. P09 owns the pinned
+software-peer execution of P07's interop scenarios and the complete controller
+workflow.
 
 ## Quick start
 
@@ -118,6 +121,9 @@ execution of P07's interop scenarios and the complete controller workflow.
     :read,
     2150
   )
+
+oneshot_profile = Wotex.Matter.profile()
+{:ok, controller_profile} = Wotex.Matter.profile(:controller)
 ```
 
 Use `client: Wotex.Matter.SDK` with an absolute Python executable,
@@ -298,6 +304,10 @@ P08 is covered by `test/wotex/matter/runtime_stream_test.exs` in the BEAM matrix
 It exercises typed controller results, capability-backed Runtime frames,
 terminal cleanup, original-route cancellation and the explicit read health
 probe; it adds no native build surface.
+P08a is covered by `test/wotex/matter/runtime_integration_test.exs`. It executes
+the checked-in Wotex integration corpus through public TD, ConsumedThing,
+Context, Result, Subscription and Retry APIs, plus negative selection and
+resource-ownership cases. It also adds no native build surface.
 `WOTEX_PATH_DEPS=1 mix run bin/check_p03_advisories.exs` performs the associated
 live OSV audit. None of these native commands belongs to routine `mix check`.
 Optional interoperability suites fail if invoked without their required peer.
@@ -322,12 +332,14 @@ native protocol, generated-window and ACL schema behavior, and compiles the
 production SDK controller path. Its real good/bad PIN, failed-attestation,
 expired-window and ACL-denial fixture remains unexecuted; P09 owns that peer
 along with the independent subscription peer. P08 executes the WMA-V11 typed
-transport and Runtime-stream ownership boundary directly; the public
-ConsumedThing profile and error/retry corpus remain P08a. Scenario tables and
-an unselected interop test alone are not executable acceptance evidence.
+transport and Runtime-stream ownership boundary directly. P08a executes the
+public ConsumedThing profiles, all WMA-I-F01–F08 cases, the error/retry table,
+deadline/credential rejection, malformed result handling and Runtime-owned
+stream cleanup. Scenario tables and an unselected interop test alone are not
+executable acceptance evidence.
 
 The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
 profiles from planned contracts. The [Wotex integration contract](docs/specs/WMA.12-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
-ConsumedThing acceptance tests. These are target requirements; a passing baseline
-gate does not accept the unfinished software profile.
+ConsumedThing acceptance tests. The local P08a boundary is executed; the
+software-peer and isolated-package requirements remain open.

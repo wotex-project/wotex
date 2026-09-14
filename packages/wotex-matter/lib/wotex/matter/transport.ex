@@ -21,8 +21,9 @@ defmodule Wotex.Matter.Transport do
   """
   @behaviour Wotex.Runtime.Transport
   alias Wotex.Matter
-  alias Wotex.Matter.{Address, AttributeReport, Error, Mapping, RuntimeRelay}
+  alias Wotex.Matter.{Address, AttributeReport, Descriptor, Error, Mapping, RuntimeRelay}
   alias Wotex.Runtime.{BindingProfile, Context, ExecutionContext, Request, Result}
+  @max_baseline_message_bytes 131_072
 
   @impl Wotex.Runtime.Transport
   def request(%Request{} = request, %ExecutionContext{credential: nil}, config)
@@ -32,6 +33,7 @@ defmodule Wotex.Matter.Transport do
          {:ok, mapping} <-
            Mapping.command(request.form, request.operation, request.input, request.resolved_href),
          true <- Keyword.get(config, :target) == mapping.target,
+         :ok <- preflight(request, mapping),
          {:ok, timeout} <- budget(request.deadline, Keyword.get(config, :timeout, 5000)) do
       deadline = System.monotonic_time(:millisecond) + timeout
 
@@ -72,6 +74,7 @@ defmodule Wotex.Matter.Transport do
          true <- Keyword.get(config, :target) == mapping.target,
          {:ok, timeout} <- budget(request.deadline, Keyword.get(config, :timeout, 5000)),
          {:ok, address} <- address(mapping.message),
+         :ok <- stream_preflight(mapping.kind, address),
          {:ok, stream_options} <- stream_options(config) do
       options =
         config
@@ -193,6 +196,42 @@ defmodule Wotex.Matter.Transport do
     |> Map.take([:fabric_id, :node_id, :endpoint, :cluster, :member])
     |> Address.new()
   end
+
+  defp preflight(%Request{} = request, %{message: message}) do
+    with :ok <- Address.validate_message(message),
+         {:ok, address} <- address(message) do
+      if controller?(request),
+        do: controller_input(request.operation, address, request.input),
+        else: baseline_input(request.operation, message)
+    end
+  end
+
+  defp controller_input(:readproperty, address, _),
+    do: descriptor(Descriptor.lookup(:attribute, address, :read))
+
+  defp controller_input(:writeproperty, address, input),
+    do: descriptor(Descriptor.validate_element(:attribute, address, :write, input))
+
+  defp controller_input(:invokeaction, address, input),
+    do: descriptor(Descriptor.validate_element(:command, address, :invoke, input))
+
+  defp descriptor({:ok, _}), do: :ok
+  defp descriptor({:error, %Error{}} = error), do: error
+
+  defp baseline_input(operation, message) when operation in [:writeproperty, :invokeaction] do
+    case Jason.encode(message) do
+      {:ok, encoded} when byte_size(encoded) < @max_baseline_message_bytes -> :ok
+      _ -> {:error, Error.new(:invalid_value)}
+    end
+  end
+
+  defp baseline_input(:readproperty, _), do: :ok
+
+  defp stream_preflight(:attribute, address),
+    do: descriptor(Descriptor.lookup(:attribute, address, :subscribe))
+
+  defp stream_preflight(:event, address),
+    do: descriptor(Descriptor.lookup(:event, address, :subscribe))
 
   defp controller?(%Request{profile: %BindingProfile{} = profile}),
     do: BindingProfile.id(profile) == :matter_controller

@@ -142,6 +142,7 @@ defmodule Wotex.Matter.PathValueTest do
       [Map.put(valid, :extra, true)],
       [ok_result(address(1), %{tag: {:context, 1}, type: :u8, value: 1}, nil)],
       [error_result(address(1), %Error{Error.new(:remote_error) | field: "member"})],
+      [error_result(address(1), %Error{Error.new(:remote_error) | class: :invalid})],
       [error_result(address(1), %Error{Error.new(:remote_error) | effect: :unknown})],
       [error_result(address(1), Error.new(:remote_error, nil, %{value: :binary.copy("x", 5000)}))]
     ]
@@ -433,6 +434,7 @@ defmodule Wotex.Matter.PathValueTest do
       [endpoint(0, server_clusters: versioned([0x8000], nil))],
       [Map.put(endpoint(0), :extra, true)],
       [endpoint(0, device_types: {:error, %Error{Error.new(:failed) | effect: :unknown}})],
+      [endpoint(0, device_types: {:error, %Error{Error.new(:failed) | class: :invalid}})],
       too_many_clusters,
       Enum.map(0..64, &endpoint/1)
     ]

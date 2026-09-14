@@ -95,6 +95,16 @@ that projection. Terminal loss and owner death release the original native route
 a stop Form cannot redirect cleanup. `health_check/2` performs a caller-selected
 concrete attribute read, while `health_check/1` remains probe-required.
 
+P08a supplies `Wotex.Matter.profile/0` for the one-shot profile and
+`profile/1` for the explicit `:oneshot` and `:controller` modes. Both profiles
+admit only their documented Matter operations and Forms without an explicit
+content type. `Error.class` projects bounded native failures into Runtime retry
+classes; a mutation with unknown effect is permanently non-retryable. The
+transport validates known controller descriptors and bounded one-shot mutation
+input before acquiring a client. Public ConsumedThing tests exercise both modes,
+form precedence, exact request identity, credentials, deadlines, write/Action
+acknowledgments and Runtime-owned Property/Event cleanup.
+
 `Client` is a consumer-implemented driver contract. It must use a pinned real SDK,
 keep fabric stores isolated, enforce attestation/ACLs, inspect all per-path status
 results, respect finite request budgets and clean up owned resources. Contract
@@ -109,9 +119,9 @@ the first-party persistent controller and does not implement the batch request
 shape. No Python runtime or SDK binary is bundled. The packaged first-party
 controller source is built explicitly outside the Hex archive. P07's production
 path compiles against the pinned SDK, and P08's Runtime mapping/ownership tests
-execute against the public transport callbacks. The full public ConsumedThing
-profile matrix remains P08a, and actual software-peer commissioning scenarios
-remain P09 evidence. See
+execute against the public transport callbacks. P08a executes the full public
+ConsumedThing profile and failure matrix against deterministic test ports;
+actual software-peer commissioning scenarios remain P09 evidence. See
 [SDK client contract](WMA.03-sdk-client.md).
 
 ## Evidence and compatibility

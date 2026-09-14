@@ -5,18 +5,31 @@ defmodule Wotex.Matter.RuntimeClient do
 
   @impl Wotex.Matter.Client
   def connect(options) do
-    {:ok,
-     %{
-       test_pid: Keyword.fetch!(options, :test_pid),
-       response: Keyword.get(options, :response, :unused),
-       opening_deliveries: Keyword.get(options, :opening_deliveries, [])
-     }}
+    test_pid = Keyword.fetch!(options, :test_pid)
+    send(test_pid, {:matter_connect, self()})
+
+    case Keyword.get(options, :connect_error) do
+      %Wotex.Matter.Error{} = error ->
+        {:error, error}
+
+      nil ->
+        {:ok,
+         %{
+           test_pid: test_pid,
+           response: Keyword.get(options, :response, :unused),
+           opening_deliveries: Keyword.get(options, :opening_deliveries, [])
+         }}
+    end
   end
 
   @impl Wotex.Matter.Client
   def request(handle, message, timeout) do
     send(handle.test_pid, {:matter_request, message, timeout})
-    {:ok, handle.response}
+
+    case handle.response do
+      {:error, %Wotex.Matter.Error{}} = error -> error
+      response -> {:ok, response}
+    end
   end
 
   @impl Wotex.Matter.Client

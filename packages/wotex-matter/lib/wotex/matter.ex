@@ -77,6 +77,52 @@ defmodule Wotex.Matter do
       discovery_capable: true
     }
 
+  @doc "Returns the baseline one-shot Wotex Runtime binding profile."
+  @spec profile() :: Wotex.Runtime.BindingProfile.t()
+  def profile do
+    {:ok, profile} = profile(:oneshot)
+    profile
+  end
+
+  @doc "Returns an explicitly selected implemented Wotex Runtime binding profile."
+  @spec profile(:oneshot | :controller) ::
+          {:ok, Wotex.Runtime.BindingProfile.t()} | {:error, Error.t()}
+  def profile(mode) when mode in [:oneshot, :controller] do
+    options =
+      case mode do
+        :oneshot ->
+          [
+            id: :matter,
+            schemes: ["matter"],
+            operations: [:readproperty, :writeproperty, :invokeaction],
+            media_types: []
+          ]
+
+        :controller ->
+          [
+            id: :matter_controller,
+            schemes: ["matter"],
+            operations: [
+              :readproperty,
+              :writeproperty,
+              :invokeaction,
+              :observeproperty,
+              :unobserveproperty,
+              :subscribeevent,
+              :unsubscribeevent
+            ],
+            media_types: []
+          ]
+      end
+
+    case Wotex.Runtime.BindingProfile.new(options) do
+      {:ok, profile} -> {:ok, profile}
+      {:error, _} -> {:error, Error.new(:unsupported_profile)}
+    end
+  end
+
+  def profile(_), do: {:error, Error.new(:unsupported_profile)}
+
   @doc "Opens the supplied client module; absent transport fails explicitly."
   @spec connect(term()) :: {:ok, Session.t()} | {:error, Error.t()}
   def connect(opts) when is_list(opts) do
@@ -100,7 +146,7 @@ defmodule Wotex.Matter do
 
       case result do
         {:error, error} when type in [:write, :write_property, :invoke, :call] ->
-          {:error, %{error | effect: :unknown}}
+          {:error, Error.with_effect(error, :unknown)}
 
         {:ok, _} = result ->
           result

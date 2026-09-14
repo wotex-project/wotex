@@ -101,7 +101,7 @@ defmodule Wotex.Matter.Native.Wire do
         |> optional_detail(:cluster_status, cluster_status)
         |> optional_detail(:sdk_status, sdk_status)
 
-      {:ok, %{Error.new(error_code(code), nil, details) | effect: effect}}
+      {:ok, Error.new(error_code(code), nil, details) |> Error.with_effect(effect)}
     else
       _ -> :error
     end

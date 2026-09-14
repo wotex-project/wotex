@@ -8,6 +8,8 @@ P05 adds bounded native attribute/event subscription delivery and cancellation.
 P06 adds bounded, explicitly selected subscription recovery and delivery-generation
 retirement. P07 adds filtered commissioning, final CASE confirmation, generated
 enhanced-window material and typed operational ACL values.
+P08 adds typed Runtime request and stream projection. P08a adds explicit Runtime
+profiles, classified failures and public ConsumedThing integration.
 The earlier one-shot Python factory adapter remains an injected baseline.
 Actual commissioning against the pinned software peers remains P09 evidence.
 
@@ -190,19 +192,36 @@ Runtime-owner cleanup, original-subscription cancellation, and the concrete read
 health probe. The default suite also reruns the legacy one-shot mapping behavior,
 so P08 does not silently change that payload profile.
 
-P08 changes no C++ or SDK build input, so it has no new native lane. P08a remains
-responsible for the public BindingProfile factories and full ConsumedThing,
-credential, deadline and error/retry matrix. P09 remains responsible for the
-pinned SDK example peers.
+P08 changes no C++ or SDK build input, so it has no new native lane. P09 remains
+responsible for the pinned SDK example peers.
+
+## P08a public Wotex integration evidence
+
+`test/wotex/matter/runtime_integration_test.exs` executes every case in
+`docs/specs/fixtures/wotex-integration-v1.json` through public core and Runtime
+APIs. The deterministic ports receive only fixture inputs. The test owns the
+expected projections and checks both Runtime profiles, two-Form precedence,
+read/write/Action values, exact result correlation, bounded metadata, strict
+nosec resolution, deadlines and the full failure/retry classification table.
+Unsupported selectors, descriptors and malformed inputs acquire no client.
+
+The same test starts real Runtime Property and Event child specifications. It
+checks equal fresh reports, stale and forged deliveries, changed stop routes,
+failed establishment, owner/receiver death, overflow and terminal session loss,
+including cleanup of the original native subscription. This is injected-port
+integration evidence; it does not claim an independent Matter peer or released
+archive adoption. P08a changes no C++ or SDK build input and therefore has no
+new native lane.
 
 ## Acceptance boundary
 
 [WMA.13](../specs/WMA.13-native-backend.md) defines the complete native binary,
 Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P08 are executed
-at their stated deterministic and native-compilation boundaries. P08a still
-requires public Runtime integration, and P09 still requires all pinned software-peer
-workflows, including WMA-V10. A passing P07 native lane does not establish an
-actual peer result, physical-device
+at their stated deterministic and native-compilation boundaries, and P08a is
+executed at its public Runtime/injected-port boundary. P09 still requires all
+pinned software-peer workflows, including WMA-V10, plus the isolated package
+archive consumer run. A passing P07 native lane does not establish an actual
+peer result, physical-device
 behavior, CSA certification or publication readiness.
 
 Each completed native run must bind source, SDK/binary, toolchain and cleanup
