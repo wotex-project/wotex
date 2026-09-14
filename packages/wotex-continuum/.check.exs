@@ -2,7 +2,7 @@
   parallel: false,
   skipped: false,
   tools: [
-    {:deps_get, command: "mix deps.get"},
+    {:deps_get, command: "mix deps.get --check-locked"},
     {:compiler, command: "mix compile --warnings-as-errors"},
     {:formatter, command: "mix format --check-formatted"},
     {:credo, command: "mix credo --strict"},

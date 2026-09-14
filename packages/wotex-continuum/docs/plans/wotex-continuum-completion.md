@@ -92,11 +92,11 @@ Recommendations dated 5 December 2023. All WCT fields are project-defined.
 
 | Claim | Value | Operation | Interoperability | Profile | Certification |
 | --- | --- | --- | --- | --- | --- |
-| WCT.01 manifest/context/capability | Project wire 2.0.0 | Construct, encode, compatibility compare | Local vectors; independent consumer proof requires WCT-C04 | Not a WoT Profile or admission standard | None |
+| WCT.01 manifest/context/capability | Project wire 2.0.0 | Construct, encode, compatibility compare | Local vectors and isolated candidate-archive consumers; no cross-vendor claim | Not a WoT Profile or admission standard | None |
 | WCT.02 observations/Actions/delivery | Project wire 2.0.0, W3C vocabulary | Data conversion and supplied TD identity check | No transport or cross-vendor execution claim | Not WoT Scripting API | None |
 | WCT.03 modes/lifecycle/exit | Project wire 2.0.0 | Pure graph transition only | Does not prove disconnected deployment or recovery | Not deployment-management conformance | None |
 | JSON canonicalization | Package-canonical bytes | Deterministic encoding | Exact encoder/version cohort; not signature portability | Not RFC 8785 JCS | None |
-| Bundled JSON Schemas | WCT schema documents | Fetch, digest and subset validation of every vector | Documented keyword subset only; `format` and `propertyNames` are not evaluated, so full-vocabulary agreement remains WCT-C03 | Not W3C conformance | None |
+| Bundled JSON Schemas | WCT schema documents | Fetch, digest and validation of every vector across every assertion keyword used by the schemas, including `format` and `propertyNames` | Agreement with constructors and canonical projections; external validators must enable format assertion | Not W3C conformance | None |
 
 ## Independent implementation work
 
@@ -118,7 +118,7 @@ remote-commit requirement to support parallel workers.
 | Gate | Required evidence |
 | --- | --- |
 | `repository_green` | Exact source/lock/toolchain plus all `mix check --no-retry` tools: warnings-as-errors, format, strict Credo, dependency audits, Doctor, Dialyzer, docs, >=95% coverage and existing boundary/archive checks. A run with explicit development dependency selection proves only that named cohort. |
-| `archive_consumer_green` | WCT-C04's `bin/check_archive.exs` builds one exact archive with released requirements, then installs it through a signed temporary Hex registry in two independently isolated OS-temporary consumers. Their lockfiles contain only Hex dependencies, downloaded continuum bytes match the candidate archive, no checkout BEAM is loaded, and the public examples pass. The core package is represented by an exact candidate archive until it is publicly released; this is not public-registry availability evidence. |
+| `archive_consumer_green` | WCT-C04's `bin/check_archive.exs` builds one exact archive with released requirements, then installs it through a signed temporary Hex registry in independently isolated OS-temporary consumers. Their lockfiles contain only exact Hex dependencies, downloaded continuum bytes match the candidate archive, no checkout BEAM is loaded, and the public examples pass. WCT-C05 adds a direct Jason-floor consumer. The core package is represented by an exact candidate archive until it is publicly released; this is not public-registry availability evidence. |
 | `reference_consumer_green` | The second WCT-C04 consumer uses the same archive to execute all packaged vectors across the three WCT contracts, plus supplied TD checking, failures, unknown effects, lifecycle generation and extension round trips. This is consumer proof, not cross-vendor certification. |
 | `public_release_candidate` | All preceding gates, WCT-C03 agreement, reviewed threat model, public content, licenses/provenance, accurate claims and immutable candidate evidence. The maintainer alone may later publish. |
 | `stable_api_candidate` | WCT-C05 compatibility review of API and wire contracts independently, exact error/result/null/default/canonical-byte rules and upgrade/rejection vectors. A stable wire version does not automatically make package 0.1 APIs stable. |
@@ -142,10 +142,10 @@ source, dependency or schema changes; a commit ID does not identify a dirty tree
 | --- | --- | --- |
 | Native UTF-8 admission equals JSON decoder admission | WCT-C02 | Native payload object keys are explicitly validated; malformed Unicode cannot enter accepted nested values or error paths. |
 | Uniform resource bounds | WCT-C02 | Source admission is delegated to the core bounded decoder, iodata length is checked before flattening, and one `max_depth` covers decoded and native values. The residual claim is native construction: byte, node, collection and string bounds do not apply to a native map handed straight to a constructor. |
-| Normative schema/implementation agreement | WCT-C03 | Canonical, valid and invalid vectors now execute against the embedded schemas through a documented keyword subset, and the invalid set separates schema-expressible from semantic rules. The residual claim is full-vocabulary agreement: `format` and `propertyNames` assertions are not evaluated, so absolute-IRI, media-type and RFC 3339 admission rests on the constructors. |
+| Normative schema/implementation agreement | WCT-C03 | Canonical, valid and invalid vectors execute against the embedded schemas through every assertion keyword used, including `format` and `propertyNames`; the invalid set separates schema-expressible rules from deliberate semantic constructor checks. |
 | Independent fresh consumer installation | WCT-C04 | The exact continuum archive is downloaded by two independently isolated temporary consumers from a signed candidate registry. Both use declared Hex requirements, Hex-only locks and consumer-local BEAMs; public Hex availability remains a separate release fact. |
 | Local execution files excluded from public archives | WCT-C04 | Package presence/absence checks retain published specs, schemas and vectors while rejecting local tasks, tooling, checkout, build, dependency and test-suite roots. Archive text is also checked for source-path leakage and symlinks are rejected. |
-| Stable API and canonical-byte compatibility | WCT-C05 | Explicit independent wire/package compatibility decisions and version-pinned vectors. |
+| Stable API and canonical-byte compatibility | WCT-C05 | The release dossier and executable export inventory separate unstable package 0.1 APIs from exact wire 2.0.0, error, null/default, schema-version and canonical-byte rules. Packaged compatibility/rejection vectors and isolated archive consumers retain the executable boundary. |
 | Authority, exactly-once delivery, actual air-gap execution or certified interoperability | Consumer-owned/non-claim | Remain non-claims; do not implement host authority to close a value-library checklist. |
 
 This is a fixed acceptance ledger, not a progress report. Record actual work

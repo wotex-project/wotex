@@ -33,8 +33,9 @@ execute an Action.
 
 ## Dependency audit and Decimal parser boundary
 
-On 2026-09-08, `mix hex.audit` reports no matching advisory for the exact locked
-dependency set. The project therefore carries no advisory suppression. The
+The default repository gate runs `mix deps.audit` and `mix hex.audit` against
+the exact locked dependency set. Any finding blocks the gate; the project
+carries no advisory suppression. The
 [Decimal maintainer advisory](https://github.com/ericmj/decimal/security/advisories/GHSA-rhv4-8758-jx7v)
 identifies versions before 3.0.0 as affected; this repository locks Decimal
 3.1.1.

@@ -38,7 +38,7 @@ defmodule WotexContinuum.MixProject do
   defp deps do
     [
       wotex_dependency(),
-      {:jason, "~> 1.4"},
+      {:jason, "~> 1.4.5"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:git_ops, "~> 2.10", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
@@ -106,6 +106,7 @@ defmodule WotexContinuum.MixProject do
         "docs/specs/WCT-C02-admission-map.md",
         "docs/specs/WCT-C03-schema-agreement.md",
         "docs/specs/WCT-C04-archive-consumer.md",
+        "docs/specs/WCT-C05-release-dossier.md",
         "specs/WCT.01-manifest-context-capability.md",
         "specs/WCT.02-exchange-values.md",
         "specs/WCT.03-mode-lifecycle-exit.md",

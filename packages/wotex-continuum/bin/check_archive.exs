@@ -6,6 +6,8 @@ defmodule WotexContinuum.CheckArchive do
   @moduledoc false
 
   @package_version "0.1.0"
+  @core_package_version "0.1.0"
+  @jason_floor "1.4.5"
   @released_packages [:decimal, :ex_json_schema, :jason]
 
   @present [
@@ -13,7 +15,15 @@ defmodule WotexContinuum.CheckArchive do
     "README.md",
     "LICENSE",
     "NOTICE",
+    "SECURITY.md",
+    "GOVERNANCE.md",
+    "provenance/DEPENDENCIES.md",
+    "provenance/SOURCES.md",
+    "docs/specs/WCT-C01-contract-map.md",
+    "docs/specs/WCT-C02-admission-map.md",
+    "docs/specs/WCT-C03-schema-agreement.md",
     "docs/specs/WCT-C04-archive-consumer.md",
+    "docs/specs/WCT-C05-release-dossier.md",
     "specs/WCT.01-manifest-context-capability.md",
     "specs/WCT.02-exchange-values.md",
     "specs/WCT.03-mode-lifecycle-exit.md",
@@ -134,6 +144,8 @@ defmodule WotexContinuum.CheckArchive do
              ]
 
       assert Application.spec(:wotex_continuum, :mod) in [nil, [], :undefined]
+      assert to_string(Application.spec(:jason, :vsn)) ==
+               System.fetch_env!("WOTEX_EXPECTED_JASON_VERSION")
     end
 
     defp assert_round_trip(value) do
@@ -159,6 +171,9 @@ defmodule WotexContinuum.CheckArchive do
         refute String.contains?(beam, source_root)
         refute String.contains?(beam, core_root)
       end
+
+      assert to_string(Application.spec(:jason, :vsn)) ==
+               System.fetch_env!("WOTEX_EXPECTED_JASON_VERSION")
     end
 
     defp valid_td do
@@ -436,6 +451,7 @@ defmodule WotexContinuum.CheckArchive do
     tarballs = Path.join(repository, "tarballs")
     unpacked = Path.join(work, "unpacked")
     private_key = Path.join(work, "registry-private.pem")
+    outer = Path.join(work, "outer")
 
     continuum_archive =
       Path.join(tarballs, "wotex_continuum-#{@package_version}.tar")
@@ -448,32 +464,39 @@ defmodule WotexContinuum.CheckArchive do
     build_archive!(core_root, core_archive)
     fetch_released_packages!(source_root, tarballs)
     unpack!(continuum_archive, unpacked)
+    verify_archive_metadata!(outer)
     verify_archive_contents!(unpacked, source_root, core_root)
     write_private_key!(private_key)
     build_registry!(source_root, repository, private_key)
 
     with_registry(repository, work, fn repository_url ->
       consumers = [
-        {"contract-consumer", @contract_consumer_test},
-        {"reference-consumer", @reference_consumer_test}
+        {"contract-consumer", @contract_consumer_test, [], locked_version!(source_root, :jason)},
+        {"reference-consumer", @reference_consumer_test, [], locked_version!(source_root, :jason)},
+        {"floor-consumer", @contract_consumer_test,
+         [{:jason, "== #{@jason_floor}", [override: true]}], @jason_floor}
       ]
 
-      Enum.each(consumers, fn {name, test_source} ->
+      Enum.map(consumers, fn {name, test_source, dependencies, expected_jason} ->
         consumer = Path.join(work, name)
-        write_consumer!(consumer, test_source)
+        write_consumer!(consumer, test_source, dependencies)
 
-        exercise_consumer!(
-          consumer,
-          repository_url,
-          Path.join(repository, "public_key"),
-          continuum_archive,
-          source_root,
-          core_root
-        )
+        lock_digest =
+          exercise_consumer!(
+            consumer,
+            repository_url,
+            Path.join(repository, "public_key"),
+            continuum_archive,
+            source_root,
+            core_root,
+            expected_jason
+          )
+
+        {name, lock_digest}
       end)
     end)
+    |> then(&print_evidence(source_root, core_root, unpacked, continuum_archive, core_archive, &1))
 
-    print_evidence(source_root, unpacked, continuum_archive, core_archive)
     :ok
   end
 
@@ -501,6 +524,22 @@ defmodule WotexContinuum.CheckArchive do
         package_environment()
       )
     end)
+
+    unless locked_version!(source_root, :jason) == @jason_floor do
+      run!(
+        "mix",
+        ["hex.package", "fetch", "jason", @jason_floor, "--output", tarballs],
+        source_root,
+        package_environment()
+      )
+    end
+  end
+
+  defp locked_version!(source_root, package) do
+    source_root
+    |> Path.join("mix.lock")
+    |> Mix.Dep.Lock.read()
+    |> locked_hex_version!(package)
   end
 
   defp locked_hex_version!(lock, package) do
@@ -532,6 +571,73 @@ defmodule WotexContinuum.CheckArchive do
       end
     end)
   end
+
+  defp verify_archive_metadata!(outer) do
+    metadata_path = Path.join(outer, "metadata.config")
+
+    metadata =
+      case :file.consult(String.to_charlist(metadata_path)) do
+        {:ok, terms} -> Map.new(terms)
+        {:error, reason} -> violation("could not read archive metadata: #{inspect(reason)}")
+      end
+
+    expected = %{
+      "app" => "wotex_continuum",
+      "build_tools" => ["mix"],
+      "description" =>
+        "Immutable continuum exchange contracts for Elixir and W3C Web of Things systems",
+      "elixir" => "~> 1.18",
+      "licenses" => ["Apache-2.0"],
+      "name" => "wotex_continuum",
+      "version" => @package_version
+    }
+
+    Enum.each(expected, fn {key, value} ->
+      unless decode_metadata(Map.get(metadata, key)) == value do
+        violation("archive metadata does not declare exact #{key}")
+      end
+    end)
+
+    links =
+      metadata
+      |> Map.fetch!("links")
+      |> Enum.map(fn {name, url} -> {decode_metadata(name), decode_metadata(url)} end)
+      |> Map.new()
+
+    unless links == %{
+             "Documentation" => "https://hexdocs.pm/wotex_continuum",
+             "GitHub" => "https://github.com/wotex-project/wotex-continuum",
+             "Project" => "https://wotex.io",
+             "W3C Web of Things" => "https://www.w3.org/WoT/"
+           } do
+      violation("archive metadata does not declare the reviewed public links")
+    end
+
+    requirements =
+      metadata
+      |> Map.fetch!("requirements")
+      |> Enum.map(fn requirement ->
+        requirement = Map.new(requirement)
+
+        {
+          decode_metadata(Map.fetch!(requirement, "name")),
+          decode_metadata(Map.fetch!(requirement, "requirement")),
+          decode_metadata(Map.fetch!(requirement, "repository")),
+          Map.fetch!(requirement, "optional")
+        }
+      end)
+      |> Enum.sort()
+
+    unless requirements == [
+             {"jason", "~> 1.4.5", "hexpm", false},
+             {"wotex", "~> 0.1", "hexpm", false}
+           ] do
+      violation("archive metadata does not declare the reviewed runtime requirements")
+    end
+  end
+
+  defp decode_metadata(value) when is_binary(value), do: value
+  defp decode_metadata(values) when is_list(values), do: Enum.map(values, &decode_metadata/1)
 
   defp write_private_key!(path) do
     private_key = :public_key.generate_key({:rsa, 2048, 65_537})
@@ -579,9 +685,13 @@ defmodule WotexContinuum.CheckArchive do
     end
   end
 
-  defp write_consumer!(consumer, test_source) do
+  defp write_consumer!(consumer, test_source, additional_dependencies) do
     test_root = Path.join(consumer, "test")
     File.mkdir_p!(test_root)
+
+    dependencies =
+      [{:wotex_continuum, "== #{@package_version}"} | additional_dependencies]
+      |> inspect(pretty: true, limit: :infinity)
 
     File.write!(
       Path.join(consumer, "mix.exs"),
@@ -594,7 +704,7 @@ defmodule WotexContinuum.CheckArchive do
             app: :wotex_continuum_archive_consumer,
             version: "0.0.0",
             elixir: "~> 1.18",
-            deps: [{:wotex_continuum, "== #{@package_version}"}]
+            deps: #{dependencies}
           ]
         end
 
@@ -613,7 +723,8 @@ defmodule WotexContinuum.CheckArchive do
          public_key,
          continuum_archive,
          source_root,
-         core_root
+         core_root,
+         expected_jason
        ) do
     hex_home = Path.join(consumer, ".hex")
     mix_home = Path.join(consumer, ".mix")
@@ -621,7 +732,14 @@ defmodule WotexContinuum.CheckArchive do
     File.mkdir_p!(mix_home)
 
     environment =
-      consumer_environment(consumer, hex_home, mix_home, source_root, core_root)
+      consumer_environment(
+        consumer,
+        hex_home,
+        mix_home,
+        source_root,
+        core_root,
+        expected_jason
+      )
 
     run!(
       "mix",
@@ -641,13 +759,21 @@ defmodule WotexContinuum.CheckArchive do
 
     run!("mix", ["deps.get"], consumer, environment)
     verify_downloaded_archive!(hex_home, continuum_archive)
-    verify_hex_lock!(consumer)
+    verify_hex_lock!(consumer, expected_jason)
     run!("mix", ["deps.get", "--check-locked"], consumer, environment)
     run!("mix", ["compile", "--warnings-as-errors"], consumer, environment)
     run!("mix", ["test", "--warnings-as-errors"], consumer, environment)
+    digest(Path.join(consumer, "mix.lock"))
   end
 
-  defp consumer_environment(consumer, hex_home, mix_home, source_root, core_root) do
+  defp consumer_environment(
+         consumer,
+         hex_home,
+         mix_home,
+         source_root,
+         core_root,
+         expected_jason
+       ) do
     [
       {"ERL_LIBS", ""},
       {"HEX_HOME", hex_home},
@@ -660,6 +786,7 @@ defmodule WotexContinuum.CheckArchive do
       {"WOTEX_ARCHIVE_CONSUMER_ROOT", consumer},
       {"WOTEX_CONTINUUM_SOURCE_ROOT", source_root},
       {"WOTEX_CORE_SOURCE_ROOT", core_root},
+      {"WOTEX_EXPECTED_JASON_VERSION", expected_jason},
       {"WOTEX_PATH_DEPS", nil}
     ]
   end
@@ -678,7 +805,7 @@ defmodule WotexContinuum.CheckArchive do
     end
   end
 
-  defp verify_hex_lock!(consumer) do
+  defp verify_hex_lock!(consumer, expected_jason) do
     lock = Mix.Dep.Lock.read(Path.join(consumer, "mix.lock"))
 
     Enum.each(lock, fn {package, entry} ->
@@ -693,6 +820,21 @@ defmodule WotexContinuum.CheckArchive do
         _other -> violation("consumer lock does not resolve #{package} through Hex")
       end
     end
+
+    expected_versions = %{
+      decimal: "3.1.1",
+      ex_json_schema: "0.11.5",
+      jason: expected_jason,
+      wotex: @core_package_version,
+      wotex_continuum: @package_version
+    }
+
+    Enum.each(expected_versions, fn {package, version} ->
+      case Map.fetch!(lock, package) do
+        {:hex, ^package, ^version, _, _, _, "hexpm", _} -> :ok
+        _other -> violation("consumer lock does not pin #{package} #{version}")
+      end
+    end)
   end
 
   defp unpack!(archive, unpacked) do
@@ -714,7 +856,16 @@ defmodule WotexContinuum.CheckArchive do
     end
   end
 
-  defp print_evidence(source_root, unpacked, continuum_archive, core_archive) do
+  defp print_evidence(
+         source_root,
+         core_root,
+         unpacked,
+         continuum_archive,
+         core_archive,
+         consumer_locks
+       ) do
+    IO.puts("source revision: #{source_identity(source_root)}")
+    IO.puts("core source revision: #{source_identity(core_root)}")
     IO.puts("continuum archive sha256: #{digest(continuum_archive)}")
     IO.puts("core candidate archive sha256: #{digest(core_archive)}")
     IO.puts("source lock sha256: #{digest(Path.join(source_root, "mix.lock"))}")
@@ -727,7 +878,18 @@ defmodule WotexContinuum.CheckArchive do
 
     IO.puts("toolchain: Elixir #{System.version()}; OTP #{:erlang.system_info(:otp_release)}")
 
-    IO.puts("two independent Hex consumers passed without path or git dependencies")
+    Enum.each(consumer_locks, fn {name, lock_digest} ->
+      IO.puts("#{name} lock sha256: #{lock_digest}")
+    end)
+
+    IO.puts("two independent behavior consumers and one direct-dependency floor consumer passed")
+  end
+
+  defp source_identity(root) do
+    {revision, 0} = System.cmd("git", ["rev-parse", "HEAD"], cd: root, stderr_to_stdout: true)
+    {status, 0} = System.cmd("git", ["status", "--porcelain"], cd: root, stderr_to_stdout: true)
+    suffix = if String.trim(status) == "", do: "", else: "+dirty"
+    String.trim(revision) <> suffix
   end
 
   defp tree_digest(root) do

@@ -137,13 +137,17 @@ boundary. The [WCT-C03 schema agreement map](docs/specs/WCT-C03-schema-agreement
 connects every registered kind and nested owner route to schemas,
 constructors, reconstruction, codecs, and published vectors.
 The [WCT-C04 archive-consumer proof](docs/specs/WCT-C04-archive-consumer.md)
-installs one exact candidate archive in two isolated temporary Hex consumers
-and exercises the three WCT contracts without path or Git dependencies.
+installs one exact candidate archive in two behavior-complete isolated Hex
+consumers and exercises the three WCT contracts without path or Git
+dependencies.
+The [WCT-C05 release-candidate dossier](docs/specs/WCT-C05-release-dossier.md)
+separates package API from wire compatibility and records metadata, dependency,
+toolchain, public-content, standards, and nonclaim boundaries.
 
 ```sh
-WOTEX_PATH_DEPS=1 mix deps.get
+WOTEX_PATH_DEPS=1 mix deps.get --check-locked
 WOTEX_PATH_DEPS=1 mix test
-WOTEX_PATH_DEPS=1 mix check
+WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
 The explicit switch also applies when Mix evaluates this library as a
@@ -157,9 +161,10 @@ once. The gate also covers formatting, warnings-as-errors compilation, strict
 Credo, dependency audits, Dialyzer, complete public documentation, at least 95%
 line coverage, the public-boundary scan, and compilation from the unpacked Hex
 archive. The archive check also installs the same artifact through a signed
-temporary Hex registry in independent contract and reference consumers. It
-asserts Hex-only locks, isolated BEAM paths, public examples, lifecycle and
-failure recovery, and every packaged vector.
+temporary Hex registry in independent contract and reference consumers plus a
+separately isolated direct Jason-floor consumer. It asserts Hex-only exact
+locks, isolated BEAM paths, public examples, lifecycle and failure recovery,
+and every packaged vector.
 
 The explicit path switch is a development mechanism, including when Mix
 evaluates dependencies in the `prod` environment. Without it, dependency
