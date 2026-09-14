@@ -127,6 +127,15 @@ defmodule Wotex.BLE.RuntimeFrameTest do
            }
   end
 
+  test "WBL-C02 WBL-C07 forged relay calls and unrelated messages change no state" do
+    state = %{identity: make_ref()}
+
+    assert {:reply, {:error, %Error{code: :invalid_subscription}}, ^state} =
+             RuntimeRelay.handle_call(:forged, {self(), make_ref()}, state)
+
+    assert {:noreply, ^state} = RuntimeRelay.handle_info({:foreign, "CANARY"}, state)
+  end
+
   defp fixture do
     {:ok, address} =
       Address.new(%{

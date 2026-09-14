@@ -2,11 +2,14 @@ defmodule Wotex.BLE.BlueZ.Connection do
   @moduledoc """
   Owns one explicitly started persistent BlueZ bridge and its D-Bus sender.
 
-  `connect/1` waits for the packaged bridge to resolve the selected peer before
-  returning an opaque handle. The absolute executable is a Python interpreter
-  with dbus-next installed. The caller supplies local `:bus_address` and peer
-  identity; `:owner` defaults to the caller. `start_link/1` supports consumer
-  supervision, and `session/1` retrieves the session.
+  `connect/1` waits for the selected bridge to resolve the peer before returning
+  an opaque handle. A complete native executable/digest/guardian/digest cohort
+  selects the first-party SDK host. Both files are verified under the original
+  startup deadline in a monitored worker before the guardian starts either
+  process. The prior explicit bridge shape remains available during migration.
+  The caller supplies local `:bus_address` and peer identity; `:owner` defaults
+  to the caller. `start_link/1` supports consumer supervision, and `session/1`
+  retrieves the session.
 
   The owner bounds ordinary pending work and concurrent subscriptions to 64
   each. Discovery, pairing and GATT procedures share serial data dispatch;
@@ -22,7 +25,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
   """
 
   use GenServer
-  alias Wotex.BLE.BlueZ.{Frame, Options, Pairing, Response, Stream, SubscriptionOwner}
+  alias Wotex.BLE.BlueZ.{Artifacts, Frame, Options, Pairing, Response, Stream, SubscriptionOwner}
   alias Wotex.BLE.{Error, Procedure, Session}
 
   @derive {Inspect, only: [:pid, :generation]}
@@ -149,6 +152,8 @@ defmodule Wotex.BLE.BlueZ.Connection do
        waiter: nil,
        start_ref: nil,
        startup_timer: nil,
+       verifier_pid: nil,
+       verifier_ref: nil,
        pending: %{},
        wires: %{},
        subscriptions: %{},
@@ -157,6 +162,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
        queue: :queue.new(),
        counter: 0,
        buffer: <<>>,
+       session_generation: nil,
        discovery_generation: 1,
        policy: nil,
        policy_control: nil,
@@ -168,22 +174,10 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   @impl GenServer
   def handle_call(:open, from, %{status: :new} = state) do
-    case open_port(state.options.executable) do
-      {:ok, port} ->
-        timer = Process.send_after(self(), :startup_timeout, max(state.options.deadline - now(), 0))
-
-        {:noreply,
-         %{
-           state
-           | port: port,
-             waiter: from,
-             start_ref: Process.monitor(elem(from, 0)),
-             startup_timer: timer,
-             status: :starting
-         }}
-
-      :error ->
-        {:stop, :normal, {:error, Error.new(:transport_unavailable)}, state}
+    if state.options.backend == :bluez_native do
+      {:noreply, verify_native(state, from)}
+    else
+      open_bridge(state, from, nil)
     end
   end
 
@@ -296,6 +290,38 @@ defmodule Wotex.BLE.BlueZ.Connection do
     finish(state)
   end
 
+  def handle_info(
+        {:native_artifacts, pid, result},
+        %{status: :verifying, verifier_pid: pid} = state
+      ) do
+    Process.demonitor(state.verifier_ref, [:flush])
+
+    case result do
+      {:ok, verified} -> open_bridge(state, state.waiter, verified)
+      {:error, %Error{} = error} -> startup_failure(state, error)
+    end
+  end
+
+  def handle_info(
+        {:DOWN, ref, :process, pid, _},
+        %{status: :verifying, verifier_ref: ref, verifier_pid: pid} = state
+      ),
+      do: startup_failure(state, Error.new(:transport_unavailable, :native_artifacts))
+
+  def handle_info(
+        {:DOWN, ref, :process, _, _},
+        %{status: :verifying, owner_ref: owner_ref, start_ref: start_ref} = state
+      )
+      when ref == owner_ref or ref == start_ref do
+    if state.verifier_pid, do: Process.exit(state.verifier_pid, :kill)
+    startup_failure(state, Error.new(:disconnected))
+  end
+
+  def handle_info(:startup_timeout, %{status: :verifying} = state) do
+    if state.verifier_pid, do: Process.exit(state.verifier_pid, :kill)
+    startup_failure(state, Error.new(:timeout, :native_artifacts))
+  end
+
   def handle_info(:startup_timeout, %{status: status} = state) when status in [:starting, :opening],
     do: {:noreply, close(state, :timeout)}
 
@@ -360,6 +386,10 @@ defmodule Wotex.BLE.BlueZ.Connection do
   @impl GenServer
   def terminate(_, state) do
     drop_policy(state)
+
+    if state.verifier_pid && Process.alive?(state.verifier_pid),
+      do: Process.exit(state.verifier_pid, :kill)
+
     if state.port && Port.info(state.port), do: Port.close(state.port)
     :ok
   end
@@ -370,19 +400,151 @@ defmodule Wotex.BLE.BlueZ.Connection do
     :exit, _ -> {:error, Error.new(:disconnected)}
   end
 
-  defp open_port(executable) do
-    script = Path.join(to_string(:code.priv_dir(:wotex_ble)), "bluez/bridge.py")
+  defp open_bridge(state, from, verified) do
+    case open_port(state.options, verified) do
+      {:ok, port} ->
+        timer =
+          state.startup_timer ||
+            Process.send_after(self(), :startup_timeout, max(state.options.deadline - now(), 0))
 
+        {:noreply,
+         %{
+           state
+           | port: port,
+             waiter: from,
+             start_ref: state.start_ref || Process.monitor(elem(from, 0)),
+             startup_timer: timer,
+             verifier_pid: nil,
+             verifier_ref: nil,
+             status: :starting
+         }}
+
+      :error when state.status == :new ->
+        {:stop, :normal, {:error, Error.new(:transport_unavailable)}, state}
+
+      :error ->
+        startup_failure(state, Error.new(:transport_unavailable))
+    end
+  end
+
+  defp open_port(%{backend: :dbus_next, executable: executable}, nil) do
+    if File.regular?(executable) do
+      script = Path.join(to_string(:code.priv_dir(:wotex_ble)), "bluez/bridge.py")
+
+      {:ok,
+       Port.open({:spawn_executable, executable}, [
+         :binary,
+         :exit_status,
+         {:line, 131_071},
+         args: ["-s", "-E", "-B", script],
+         env: Enum.map(System.get_env(), fn {key, _} -> {String.to_charlist(key), false} end)
+       ])}
+    else
+      :error
+    end
+  rescue
+    _ -> :error
+  end
+
+  defp open_port(%{backend: :bluez_native}, %{executable: executable, guardian: guardian}) do
     {:ok,
-     Port.open({:spawn_executable, executable}, [
+     Port.open({:spawn_executable, guardian.path}, [
        :binary,
        :exit_status,
        {:line, 131_071},
-       args: ["-s", "-E", "-B", script],
+       args: [
+         "500",
+         "131072",
+         "65536",
+         Path.dirname(executable.path),
+         executable.path
+       ],
        env: Enum.map(System.get_env(), fn {key, _} -> {String.to_charlist(key), false} end)
      ])}
   rescue
     _ -> :error
+  end
+
+  defp verify_native(state, from) do
+    parent = self()
+
+    {pid, ref} =
+      spawn_monitor(fn ->
+        send(
+          parent,
+          {:native_artifacts, self(),
+           Artifacts.verify(state.options.artifacts, state.options.deadline)}
+        )
+      end)
+
+    %{
+      state
+      | status: :verifying,
+        waiter: from,
+        start_ref: Process.monitor(elem(from, 0)),
+        startup_timer:
+          Process.send_after(self(), :startup_timeout, max(state.options.deadline - now(), 0)),
+        verifier_pid: pid,
+        verifier_ref: ref
+    }
+  end
+
+  defp startup_failure(state, error) do
+    if state.verifier_pid && Process.alive?(state.verifier_pid),
+      do: Process.exit(state.verifier_pid, :kill)
+
+    if state.startup_timer, do: Process.cancel_timer(state.startup_timer)
+    if state.start_ref, do: Process.demonitor(state.start_ref, [:flush])
+    if state.verifier_ref, do: Process.demonitor(state.verifier_ref, [:flush])
+    if state.waiter, do: GenServer.reply(state.waiter, {:error, error})
+
+    {:stop, :normal,
+     %{
+       state
+       | waiter: nil,
+         start_ref: nil,
+         startup_timer: nil,
+         verifier_pid: nil,
+         verifier_ref: nil
+     }}
+  end
+
+  defp frame(
+         %{
+           "version" => 1,
+           "event" => "ready",
+           "backend" => "bluez-native",
+           "revision" => "2123ab772fbe97d1369fc9e179ea87c3469cf98f"
+         } = frame,
+         %{status: :starting, options: %{backend: :bluez_native}} = state
+       )
+       when map_size(frame) == 4 do
+    remaining = state.options.deadline - now()
+
+    if remaining > 0 do
+      generation = Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)
+
+      initialized =
+        event(state.port, %{
+          "version" => 1,
+          "event" => "flow_open",
+          "session_generation" => generation
+        })
+
+      opened =
+        initialized &&
+          request(state.port, "open", "open", state.options.parameters, remaining)
+
+      if opened do
+        {:noreply, %{state | status: :opening, session_generation: generation}}
+      else
+        {:noreply, close(state, :transport_error)}
+      end
+    else
+      {:noreply, close(state, :timeout)}
+    end
+  rescue
+    _ -> {:noreply, close(state, :transport_error)}
   end
 
   defp frame(
@@ -843,6 +1005,12 @@ defmodule Wotex.BLE.BlueZ.Connection do
         timeout_ms: min(timeout, 60_000)
       }) <> "\n"
     )
+  rescue
+    _ -> false
+  end
+
+  defp event(port, frame) do
+    Port.command(port, Jason.encode!(frame) <> "\n")
   rescue
     _ -> false
   end

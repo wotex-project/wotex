@@ -1,9 +1,10 @@
 # Executable evidence
 
 Current implementation: typed domain APIs, persistent Python/dbus-next ownership,
-Agent/procedure/stream behavior and Runtime integration. The committed documentation
-cohort `60d1e3c` has a passing full local gate: 8 doctests, 16 properties and
-146 tests, one hardware exclusion; 51 Python contract tests; 95.0% coverage.
+native SDK components, verified guardian-owned native startup, Agent/procedure/
+stream behavior and Runtime integration. The current source has a passing full
+local gate: 9 doctests, 17 properties and 225 tests, 46 declared interoperability/
+hardware exclusions; 58 Python contract tests; 95.1% coverage.
 The [virtual-controller evidence](virtual-controller.md) identifies 15 real BlueZ
 cases with two software controllers. These exercise the Python adapter and a
 shared BlueZ wire stack. They do not execute the accepted C++ .13 backend.
@@ -13,7 +14,7 @@ not acceptance evidence.
 
 ## Mandatory local gate
 
-`WOTEX_PATH_DEPS=1 mix check` runs compile warnings-as-errors, formatting, strict
+`WOTEX_PATH_DEPS=1 mix check --no-retry` runs compile warnings-as-errors, formatting, strict
 Credo, unit/property tests and minimum 95% coverage, Dialyzer, Doctor, ExDoc,
 dependency audit, Hex packaging, unpacked out-of-tree compilation and the
 Application-free structural check. Runtime path dependencies require the explicit
@@ -24,9 +25,11 @@ waivers. See SECURITY.md and the dependency-security test.
 ## Acceptance boundary
 
 [WBL.13](../specs/WBL.13-native-backend.md) defines the required native binary,
-Mix/ExUnit tasks, exact version lanes and credit/resource tests. Its corpus records partial execution of the parser cases; all other native
-backend and process-flow cases remain unexecuted. A passing current gate, a listed test path or a source
-hash cannot establish execution of that target. Each completed software run must
+Mix/ExUnit tasks, exact version lanes and credit/resource tests. The executed
+component and startup cases are identified below; unlisted native build,
+BEAM-credit and software-flow requirements remain open. A passing current gate,
+a listed test path or a source hash cannot establish execution of that target.
+Each completed software run must
 bind case, corpus, source, SDK/binary, toolchain and cleanup-result hashes.
 The mandatory runtime matrix is Elixir 1.18.4/OTP 27.3.4.15 and Elixir
 1.20.2/OTP 29.0.4. Only identified executed lanes count as passing evidence.
@@ -57,7 +60,8 @@ collection/line bounds, every split point, coalesced frames, truncated EOF and
 The focused ExUnit lane and Linux ARM64 GCC ASan/UBSan executable pass. This is
 native parser evidence, not D-Bus ownership, complete .13 flow control or GATT
 interoperability. The required Linux x86_64 reference lane remains separate.
-No production connection selects an incomplete native helper.
+Production selection requires the complete verified SDK/guardian cohort described
+below; selection alone does not establish the remaining native flow obligations.
 
 ## Native report reservations
 
@@ -453,3 +457,21 @@ files, deadline equality and deployment replacement between explicit checks.
 The deterministic module example is a real doctest. Verification starts no
 process; integration with the BEAM native startup owner remains a separate
 acceptance obligation.
+
+## BEAM native artifact admission and startup
+
+`test/wotex/ble/native_startup_test.exs` compiles the production guardian and
+the deterministic `test/native/beam_startup_sdk.c` process fixture into an
+OS-temporary directory. WBL-B01/WBL-B02 assertions prove that a complete native
+selector cohort verifies both SHA-256 identities under the caller's original
+deadline, launches the SDK only through the guardian, accepts only the exact
+native ready identity, sends a fresh 128-bit lowercase session generation in
+`flow_open` before `open`, and completes bounded `close`. Incomplete selectors
+and an executable digest mismatch fail before either process starts. The
+fixture accepts no arguments or environment configuration; it is executable
+boundary evidence, not an adapter implementation or an agent harness.
+
+This closes only BEAM admission and startup for the already implemented native
+host. BEAM report acknowledgement/retirement, native build tasks, sanitizer
+matrix execution and complete virtual-ATT software acceptance remain open in
+WBL-P00 and later ordered packages.

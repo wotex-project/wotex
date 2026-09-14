@@ -146,9 +146,6 @@ defmodule Wotex.BLE do
 
         {:error, _} = error ->
           error
-
-        _ ->
-          {:error, Error.new(:invalid_transport_return)}
       end
     end
   end
@@ -265,7 +262,6 @@ defmodule Wotex.BLE do
       case PortCall.invoke(client, :connect, [Keyword.drop(opts, [:client])]) do
         {:ok, handle} -> {:ok, %Session{client: client, handle: handle, timeout: timeout}}
         {:error, _} = error -> error
-        _ -> {:error, Error.new(:invalid_transport_return)}
       end
     else
       {:error, Error.new(:transport_required)}

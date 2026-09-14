@@ -101,9 +101,17 @@ defmodule Wotex.BLE.ProcedureTest do
   end
 
   test "WBL-N01 explicit helpers reject incompatible custom-client success values" do
+    assert {:error, %Error{code: :invalid_transport_return}} =
+             BLE.connect(client: TestClient, mode: :connect_invalid)
+
     {:ok, session} = BLE.connect(client: TestClient)
     address = %{service: "180f", characteristic: "2a19"}
     assert {:error, %Error{code: :invalid_value}} = BLE.read(session, address)
+
+    {:ok, invalid} = BLE.connect(client: TestClient, mode: :invalid)
+
+    assert {:error, %Error{code: :invalid_transport_return}} =
+             BLE.send(invalid, %{type: :read, service: "180f", characteristic: "2a19"})
 
     assert {:error, %Error{code: :invalid_transport_return, effect: :unknown}} =
              BLE.write(session, address, <<1>>)

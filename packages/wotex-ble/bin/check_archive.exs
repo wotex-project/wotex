@@ -49,16 +49,23 @@ defmodule Wotex.BLE.Check.Archive do
   @spec main() :: :ok
   def main do
     project_root = File.cwd!()
-    archive = "wotex_ble-#{Mix.Project.config()[:version]}.tar"
     temporary = Path.join(System.tmp_dir!(), "wotex-ble-archive.#{unique()}")
+    archive = Path.join(temporary, "wotex_ble-#{Mix.Project.config()[:version]}.tar")
+
+    File.mkdir!(temporary)
 
     result =
       try do
+        run!("mix", ["hex.build", "--output", archive], project_root,
+          env: [{"WOTEX_PATH_DEPS", nil}, {"MIX_ENV", "prod"}]
+        )
+
         verify(project_root, archive, temporary)
       catch
         :throw, {:violation, message} -> {:violation, message}
       after
-        File.rm_rf!(temporary)
+        File.rm_rf!(Path.join(temporary, "package"))
+        File.rm_rf!(Path.join(temporary, "ebin"))
       end
 
     report(result)
@@ -99,6 +106,7 @@ defmodule Wotex.BLE.Check.Archive do
     IO.puts("archive contents passed")
     IO.puts("out-of-tree archive compilation passed")
     IO.puts("archive sha256: #{digest(archive)}")
+    IO.puts("archive artifacts: #{temporary}")
 
     :ok
   end
@@ -174,8 +182,8 @@ defmodule Wotex.BLE.Check.Archive do
     |> Base.encode16(case: :lower)
   end
 
-  defp run!(command, arguments, directory) do
-    options = [cd: directory, into: IO.stream(), stderr_to_stdout: true]
+  defp run!(command, arguments, directory, extra \\ []) do
+    options = [cd: directory, into: IO.stream(), stderr_to_stdout: true] ++ extra
     {_output, status} = System.cmd(command, arguments, options)
 
     unless status == 0 do

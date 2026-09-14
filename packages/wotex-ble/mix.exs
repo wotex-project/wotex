@@ -29,6 +29,7 @@ defmodule WotexBLE.MixProject do
   def cli do
     [
       preferred_envs: [
+        check: :test,
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.html": :test,
@@ -116,7 +117,7 @@ defmodule WotexBLE.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib priv/bluez/*.py priv/bluez/requirements.txt priv/bluez/native mix.exs)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib priv/bluez/*.py priv/bluez/requirements.txt priv/bluez/native mix.exs)
     ]
   end
 

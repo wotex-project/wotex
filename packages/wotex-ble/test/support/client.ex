@@ -7,9 +7,11 @@ defmodule Wotex.BLE.TestClient do
   def connect(opts) do
     mode = Keyword.get(opts, :mode, :ok)
 
-    if mode == :connect_error,
-      do: {:error, :failed},
-      else: {:ok, %{owner: self(), mode: mode, secret: "fixture-secret"}}
+    case mode do
+      :connect_error -> {:error, :failed}
+      :connect_invalid -> :unexpected
+      _ -> {:ok, %{owner: self(), mode: mode, secret: "fixture-secret"}}
+    end
   end
 
   @impl Wotex.BLE.Client

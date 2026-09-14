@@ -4,9 +4,11 @@ defmodule Wotex.BLE.BlueZ.Options do
 
   This implementation helper rejects unknown or duplicate options, validates
   an explicit `Wotex.BLE.Peer`, and admits only local Unix D-Bus addresses.
-  The Python executable must be an absolute path. The owner defaults to the
-  caller, connection mode to borrowed, and timeout to 5000 ms within the
-  accepted 1 to 60,000 ms range. Validation does not probe that executable or bus.
+  The owner defaults to the caller, connection mode to borrowed, and timeout to
+  5000 ms within the accepted 1 to 60,000 ms range. The native backend is
+  selected only by the complete executable/digest/guardian/digest cohort; its
+  pure selector validation performs no filesystem access. The legacy bridge
+  shape remains admitted without that cohort while its callers migrate.
 
   Discovery pages have a limit from 1 to 64 and an optional 32-byte cursor.
   The live bridge separately validates cursor identity and generation. No
@@ -18,13 +20,16 @@ defmodule Wotex.BLE.BlueZ.Options do
       {:ok, %{"limit" => 64, "cursor" => nil}}
   """
 
+  alias Wotex.BLE.BlueZ.Artifacts
   alias Wotex.BLE.{Error, Peer}
+
+  @base_fields [:peer, :connection, :bus_address, :owner, :executable, :timeout]
+  @native_fields [:executable_sha256, :guardian, :guardian_sha256]
 
   @doc false
   @spec new(term()) :: {:ok, map()} | {:error, Error.t()}
   def new(options) do
-    with true <-
-           keyword?(options, [:peer, :connection, :bus_address, :owner, :executable, :timeout]),
+    with true <- keyword?(options, @base_fields ++ @native_fields),
          {:ok, peer} <- Peer.new(Keyword.get(options, :peer)),
          mode when mode in [:owned, :borrowed] <- Keyword.get(options, :connection, :borrowed),
          owner when is_pid(owner) <- Keyword.get(options, :owner, self()),
@@ -33,11 +38,11 @@ defmodule Wotex.BLE.BlueZ.Options do
          timeout = Keyword.get(options, :timeout, 5000),
          true <- is_integer(timeout) and timeout in 1..60_000,
          address = Keyword.get(options, :bus_address),
-         true <- bus_address?(address) do
+         true <- bus_address?(address),
+         {:ok, backend} <- backend(options) do
       {:ok,
-       %{
+       Map.merge(backend, %{
          owner: owner,
-         executable: executable,
          timeout: timeout,
          parameters: %{
            "peer" => %{
@@ -48,7 +53,7 @@ defmodule Wotex.BLE.BlueZ.Options do
            "connection" => Atom.to_string(mode),
            "bus_address" => address
          }
-       }}
+       })}
     else
       _ -> {:error, Error.new(:invalid_options)}
     end
@@ -83,5 +88,27 @@ defmodule Wotex.BLE.BlueZ.Options do
   defp bus_address?(address) do
     is_binary(address) and byte_size(address) <= 4096 and
       Regex.match?(~r/\Aunix:(?:path|abstract)=[^;\x00-\x20]+\z/u, address)
+  end
+
+  defp backend(options) do
+    case Enum.filter(@native_fields, &Keyword.has_key?(options, &1)) do
+      [] ->
+        {:ok, %{backend: :dbus_next, executable: Keyword.fetch!(options, :executable)}}
+
+      fields when length(fields) == length(@native_fields) ->
+        selectors =
+          Keyword.take(
+            options,
+            [:executable, :executable_sha256, :guardian, :guardian_sha256]
+          )
+
+        case Artifacts.new(selectors) do
+          {:ok, artifacts} -> {:ok, %{backend: :bluez_native, artifacts: artifacts}}
+          {:error, %Error{} = error} -> {:error, error}
+        end
+
+      _ ->
+        {:error, Error.new(:invalid_options, :native_artifacts)}
+    end
   end
 end

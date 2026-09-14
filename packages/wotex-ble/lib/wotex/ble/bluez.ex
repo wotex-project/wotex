@@ -8,12 +8,15 @@ defmodule Wotex.BLE.BlueZ do
   WriteValue without a shell, and limits command output to 4096 bytes.
   Attribute values are limited to 512 bytes in both modes.
 
-  With `lifecycle: :persistent`, the executable is a Python interpreter with
-  dbus-next installed. `Wotex.BLE.BlueZ.Connection` owns the packaged bridge,
-  one unique D-Bus sender and the selected peer. This mode implements GATT
-  discovery, consumer-directed pairing, health probes, reads, acknowledged
-  writes and value-change streams. The consumer supplies the local bus address
-  and chooses borrowed or owned connection behavior.
+  With `lifecycle: :persistent`, `Wotex.BLE.BlueZ.Connection` owns the selected
+  peer and one unique D-Bus sender. A complete native SDK path/digest and
+  guardian path/digest cohort selects the first-party native host; both
+  executables are verified under the original startup deadline before the
+  guardian starts. The prior explicit Python/dbus-next executable shape remains
+  available during migration. Persistent mode implements GATT discovery,
+  consumer-directed pairing, health probes, reads, acknowledged writes and
+  value-change streams. The consumer supplies the local bus address and chooses
+  borrowed or owned connection behavior.
 
   Neither mode starts the BlueZ service, powers an adapter or installs native
   dependencies. Ordinary borrowed-session cleanup leaves the existing device
