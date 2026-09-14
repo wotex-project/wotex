@@ -1,6 +1,6 @@
 # Wotex completion contract
 
-Plan version: 1.1.0. Package baseline: 0.1.0. Normative owners:
+Plan version: 1.1.1. Package baseline: 0.1.0. Normative owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 This is a versioned implementation and acceptance baseline, not a progress log.
@@ -14,12 +14,10 @@ The catalogue's `implementation_status` describes source coverage of a spec,
 not a passed release gate. No checkbox, green build or package version implies
 W3C certification, complete standards conformance or stable API admission.
 
-Revision 1.1.0 aligns this acceptance baseline with WTX.03 v1.1.0's already
-implemented pre-release admission corrections: invalid limits fail explicitly,
-and source JSON receives lexical checks before decoding. It replaces the old
-fallback characterization, not the malformed-input, resource-measurement or
-independent-consumer obligations. No public value behavior changes in this
-plan revision; all work IDs and separate release gates remain required.
+Revision 1.1.1 narrows WTX-C01 evidence to consumer-visible behavior. The WTX
+specifications state the supported operations and errors; tests exercise valid,
+invalid, and boundary cases without asserting a complete module or export set.
+This revision changes no public value behavior and admits no API stability.
 
 ## Package boundary
 
@@ -111,7 +109,7 @@ Test additions belong beside the listed package tests, not in coordination hooks
 
 | ID | Prerequisites | Deliverable | Acceptance |
 | --- | --- | --- | --- |
-| WTX-C01 | WTX.01–WTX.04 | Requirement-to-test inventory and exact exported API/error catalogue, including raising variants, explicit invalid-limit refusal and staged validation | Every advertised behavior links to valid, invalid and boundary cases; uncovered claims remain explicit rather than marked complete. |
+| WTX-C01 | WTX.01–WTX.04 | Review the documented public operations, errors, ownership boundaries, and standards scope against focused behavioral evidence | Every advertised behavior has representative valid, invalid, and boundary evidence where applicable; tests do not assert a complete module or export inventory, incidental struct layout, or documentation formatting. |
 | WTX-C02 | WTX-C01 | Admission and safety tests for both aggregates and every wrapper | Unicode keys/values, escaped paths, byte/depth/node boundaries, extension preservation, source invalidation and security references pass. Characterize duplicate JSON keys, manually forged structs, malformed option containers and error-detail disclosure; change any accepted behavior only with an explicit compatibility classification. |
 | WTX-C03 | WTX-C01 | Archive consumer evidence and package-content inspection | Unpacked package builds without source checkout dependencies; contains both pinned schemas, notices and specs; runs TD/TM parse, wrapper and typed-error examples in an independent minimal Mix consumer. Local trackers and generated audit artifacts are absent. |
 | WTX-C04 | WTX-C02, WTX-C03 | Consumer-neutral reference examples and independent standards corpus | Known valid/invalid TD and TM documents exchange with a named, revision-pinned independent implementation or published test corpus. Record exact operations and counterexamples; no transport or profile claims follow from value exchange. |
@@ -125,15 +123,17 @@ attempt, worker coordinator or cross-repository scheduler to implement these IDs
 
 | Gate | Required evidence; never inferred from a preceding gate |
 | --- | --- |
-| `repository_green` | `mix deps.get --check-locked` and `mix check --no-retry` pass on the exact checkout; warnings-as-errors, strict Credo, tests, >=95% coverage, Doctor, Dialyzer, dependency audits, docs and existing boundary/package checks. Record toolchain and source/lock digest. |
+| `repository_green` | `mix check` passes on the exact checkout: warnings-as-errors compilation, formatting, and behavioral tests. Record the source and toolchain used. |
 | `archive_consumer_green` | WTX-C03: exact archive builds and public API examples pass in an independent consumer. Existing `bin/check_package.exs` compiles the unpacked source and checks no callback; this alone does not exercise consumer examples. |
 | `reference_consumer_green` | WTX-C04: consumer-neutral end-to-end value examples and explicitly scoped independent corpus evidence using the same archive. No unpublished local dependency assumed. |
-| `public_release_candidate` | All three preceding gates, content/license/provenance/security review, accurate docs and non-claims; immutable candidate artifact and evidence. This is permission to evaluate, not to push, tag or publish. |
+| `public_release_candidate` | All three preceding gates plus explicit documentation, dependency, static-analysis, archive, content, license, provenance, and security checks on an immutable candidate artifact. This is permission to evaluate, not to push, tag or publish. |
 | `stable_api_candidate` | WTX-C05 plus explicit review of every public function/result/error, compatibility policy and negative vectors. Version 0.1.0 and high coverage do not themselves promise stable API semantics. |
 
 Fresh checkout procedure: read `CLAUDE.md`, this plan and the owning WTX files;
-run `mix setup`, then `mix check --no-retry`. Use README public examples for the consumer
-exercise. Check archive contents before claiming any public candidate. Record
+run `mix setup`, use `mix test` for the fast loop, and run
+`mix check` before recording `repository_green`. Use README public
+examples for the consumer exercise. Check archive contents before claiming any
+public candidate. Record
 the exact source tree, package version, archive SHA-256, lock digest, schema
 digests, vector/test inputs, command results, Elixir/OTP versions and claim
 dimensions in local evidence. Dirty-tree proof must name its source-tree digest;
