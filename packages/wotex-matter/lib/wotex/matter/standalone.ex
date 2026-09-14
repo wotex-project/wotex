@@ -17,7 +17,8 @@ defmodule Wotex.Matter.Standalone do
          {:ok, _} <- Descriptor.lookup(:attribute, address, :read),
          {:ok, timeout} <- options(options, session.timeout, [:timeout]),
          {:ok, report} <- Matter.send(%{session | timeout: timeout}, message(:read, address)),
-         {:ok, report} <- AttributeReport.new(report) do
+         {:ok, report} <- AttributeReport.new(report),
+         :ok <- read_result(report, address) do
       {:ok, report}
     else
       {:error, %Error{}} = error -> error
@@ -334,6 +335,15 @@ defmodule Wotex.Matter.Standalone do
 
   defp message(type, address), do: Map.put(Map.from_struct(address), :type, type)
 
+  defp read_result(%AttributeReport{path: path, value: value}, address) do
+    with true <- path == address,
+         {:ok, _} <- Descriptor.validate_element(:attribute, address, :read, value) do
+      :ok
+    else
+      _ -> {:error, Error.new(:invalid_transport_return)}
+    end
+  end
+
   defp invoke_result(nil, nil), do: :ok
 
   defp invoke_result(path, value) when path != nil and value != nil do
@@ -345,13 +355,15 @@ defmodule Wotex.Matter.Standalone do
   defp invoke_result(_, _), do: :error
 
   defp options(options, default, allowed) when is_list(options) do
-    keys = if Keyword.keyword?(options), do: Keyword.keys(options), else: []
-    timeout = Keyword.get(options, :timeout, default)
-
-    if length(keys) == length(Enum.uniq(keys)) and keys -- allowed == [] and
-         is_integer(timeout) and timeout in 1..60_000,
-       do: {:ok, timeout},
-       else: {:error, Error.new(:invalid_options)}
+    with true <- Keyword.keyword?(options),
+         keys = Keyword.keys(options),
+         true <- length(keys) == length(Enum.uniq(keys)) and keys -- allowed == [],
+         timeout = Keyword.get(options, :timeout, default),
+         true <- is_integer(timeout) and timeout in 1..60_000 do
+      {:ok, timeout}
+    else
+      _ -> {:error, Error.new(:invalid_options)}
+    end
   end
 
   defp options(_, _, _), do: {:error, Error.new(:invalid_options)}
@@ -412,9 +424,7 @@ defmodule Wotex.Matter.Standalone do
 
   defp normalize_events(paths, results)
        when is_list(results) and length(results) == length(paths) do
-    by_path = Map.new(results, fn %{path: path} = result -> {path_key(path), result} end)
-
-    if map_size(by_path) == length(paths) do
+    with {:ok, by_path} <- event_result_index(results) do
       traverse(paths, fn path ->
         case Map.fetch(by_path, path_key(path)) do
           {:ok, result} ->
@@ -424,12 +434,26 @@ defmodule Wotex.Matter.Standalone do
             :error
         end
       end)
-    else
-      {:error, Error.new(:invalid_transport_return)}
     end
   end
 
   defp normalize_events(_, _), do: {:error, Error.new(:invalid_transport_return)}
+
+  defp event_result_index(results) do
+    Enum.reduce_while(results, {:ok, %{}}, fn
+      %{path: raw_path, result: _} = result, {:ok, index} when map_size(result) == 2 ->
+        with {:ok, path} <- Address.new(raw_path),
+             key = path_key(path),
+             false <- Map.has_key?(index, key) do
+          {:cont, {:ok, Map.put(index, key, %{result | path: path})}}
+        else
+          _ -> {:halt, {:error, Error.new(:invalid_transport_return)}}
+        end
+
+      _, _ ->
+        {:halt, {:error, Error.new(:invalid_transport_return)}}
+    end)
+  end
 
   defp normalize_event_result(path, %{path: raw_path, result: {:ok, report}}) do
     with {:ok, ^path} <- Address.new(raw_path),

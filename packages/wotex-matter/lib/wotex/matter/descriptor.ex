@@ -252,8 +252,12 @@ defmodule Wotex.Matter.Descriptor do
     end)
   end
 
-  defp schema_matches?(:parts_list, %{tag: :anonymous, type: :array, value: values}, _),
-    do: Enum.all?(values, &match?(%{tag: :anonymous, type: :u16}, &1))
+  defp schema_matches?(:parts_list, %{tag: :anonymous, type: :array, value: values}, _) do
+    Enum.all?(values, fn
+      %{tag: :anonymous, type: :u16, value: value} -> value in 0..0xFFFE
+      _ -> false
+    end)
+  end
 
   defp schema_matches?(:device_type_list, %{tag: :anonymous, type: :array, value: values}, _) do
     Enum.all?(values, fn

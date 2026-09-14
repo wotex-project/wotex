@@ -51,6 +51,26 @@ defmodule Wotex.Matter.DescriptorBoundaryTest do
     end
   end
 
+  test "WMA-S01 the reserved endpoint cannot enter a concrete Descriptor Parts List" do
+    path = Map.merge(@identity, %{cluster: 0x001D, member: 3})
+
+    assert {:ok, _} =
+             Descriptor.from_element(
+               :attribute,
+               path,
+               :read,
+               scalar(:array, [scalar(:u16, 0xFFFE)])
+             )
+
+    assert {:error, %Error{code: :invalid_value}} =
+             Descriptor.from_element(
+               :attribute,
+               path,
+               :read,
+               scalar(:array, [scalar(:u16, 0xFFFF)])
+             )
+  end
+
   test "WMA-S05 ACL round trips distinguish null selectors empty lists and optional fields" do
     for subjects <- [nil, [], [0, 0xFFFFFFFFFFFFFFFF]],
         targets <- [

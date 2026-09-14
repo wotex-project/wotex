@@ -86,6 +86,68 @@ defmodule Wotex.Matter.StandaloneBoundaryTest do
     refute_receive {:matter_request, _, _}
   end
 
+  test "WMA-C02 malformed keyword lists fail before any client request" do
+    session = session(:unexpected)
+
+    for options <- [[false], ["timeout"], [{:timeout, 100}, :untrusted]] do
+      assert {:error, %Error{code: :invalid_options}} =
+               Matter.read_attribute(session, @heating, options)
+
+      assert {:error, %Error{code: :invalid_options}} =
+               Matter.write_attribute(session, @heating, @value, options)
+
+      assert {:error, %Error{code: :invalid_options}} =
+               Matter.invoke_command(session, @on, @empty, options)
+
+      assert {:error, %Error{code: :invalid_options}} =
+               Matter.read_events(session, [@event], options)
+
+      assert {:error, %Error{code: :invalid_options}} =
+               Matter.discover_endpoints(session, %{fabric_id: 1, node_id: 3}, options)
+    end
+
+    refute_receive {:matter_request, _, _}
+  end
+
+  test "WMA-C02 malformed event entries return errors instead of raising" do
+    for entry <- [
+          nil,
+          false,
+          %{},
+          %{path: nil},
+          %{path: %{}, result: :untrusted},
+          %{path: @event, result: :untrusted, extra: true}
+        ] do
+      assert {:error, %Error{code: :invalid_transport_return}} =
+               Matter.read_events(session([entry]), [@event])
+    end
+
+    result = %{path: @event, result: {:error, Error.new(:interaction_status)}}
+    assert {:ok, typed_path} = Address.new(@event)
+
+    assert {:error, %Error{code: :invalid_transport_return}} =
+             Matter.read_events(session([result, %{result | path: typed_path}]), [
+               @event,
+               %{@event | node_id: 4}
+             ])
+  end
+
+  test "WMA-S01 a named read retains the requested path and descriptor" do
+    for report <- [
+          %{path: %{@heating | node_id: 4}, value: @value, data_version: 0},
+          %{
+            path: @heating,
+            value: %{tag: :anonymous, type: :boolean, value: false},
+            data_version: 0
+          }
+        ] do
+      assert {:error, %Error{code: :invalid_transport_return, effect: :none}} =
+               Matter.read_attribute(session(report), @heating)
+
+      assert_receive {:matter_request, %{type: :read}, _}
+    end
+  end
+
   test "WMA-C02 malformed mutation acknowledgments cannot become successful values" do
     for result <- [
           nil,

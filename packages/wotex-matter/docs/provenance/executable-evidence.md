@@ -96,6 +96,29 @@ The selected case command is:
 WOTEX_PATH_DEPS=1 WOTEX_MATTER_NATIVE_ACL_FIXTURE=/absolute/fixture.json mix test test/interop/native_acl_test.exs --include interop --include software
 ```
 
+The same selected case also passes with both BEAM and native processes running
+inside Linux x86_64 containers against source revision
+`3ae87ae` and the rebuilt binary hashes above. Each lane has fresh controller
+and peer state, exact runtime-version probes, one passing case and a native
+process absence check after disconnect. Both owned fixture containers are
+removed and absent after execution. The two content-pinned Hex project images
+are:
+
+| BEAM lane | Image index SHA-256 |
+| --- | --- |
+| Elixir 1.18.4 / OTP 27.3.4.15 | `473f77ee88977dc8cc5d05fb91080a308be86be3fc27d50aef9a837d07c8268b` |
+| Elixir 1.20.2 / OTP 29.0.4 | `5858ed10da646c8d82a049d2c8c23ccb29c4ecedeb04e96414be3253609689da` |
+
+Both use Debian bookworm `20260713` from the
+[Hex project image registry](https://hub.docker.com/r/hexpm/elixir), with
+`procps`, `libglib2.0-0`, `libasan8` and `libubsan1` installed for the test tools
+and declared native linkage. Docker executes the x86_64 lane under host
+emulation. The fixture explicitly sets `ERL_FLAGS="+JMsingle true +S 4:4"`;
+[Erlang documents single JIT mapping](https://www.erlang.org/doc/apps/erts/erl_cmd.html)
+for emulators that cannot handle dual mapping. This is an identified emulated
+Linux ACL lane; broader Linux peer/stress and immutable-package acceptance
+remain open.
+
 The fixture supplies a caller-selected executable, fresh controller storage,
 vendor/fabric/controller identity and PAA directory under `controller`, plus
 the owned peer's `node_id`, `setup_pin` and `discriminator`. The runner owns and
@@ -328,6 +351,17 @@ archive adoption. P08a changes no C++ or SDK build input and therefore has no
 new native lane.
 
 ## Acceptance boundary
+
+WMA.11 version 1.1.0 named reads now validate the returned path and descriptor
+against the requested attribute. WMA-C02 option validation rejects non-keyword
+lists before client entry, and event batch indexing validates each bounded
+entry/path without destructuring untrusted input. Duplicate normalized paths
+and extra result fields fail. Descriptor PartsList validation rejects reserved
+endpoint `65535`, matching the existing native conversion rules. Four new
+regressions fail on the preceding implementation and pass after these fixes.
+The focused standalone/descriptor/interaction/Runtime suite passes 44 cases on
+both required BEAM versions; the current developer gate passes 118 checks with
+seven interop cases excluded. This packet changes no native C++ build input.
 
 `test/wotex/matter/native_wire_test.exs` adds ten deterministic boundary tests
 for WMA-B02, C01, C02 and C04. They assert full-width integer and timestamp
