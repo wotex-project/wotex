@@ -4,8 +4,9 @@ The implemented profile includes concrete and wildcard read paths, bounded
 TLV, the P01 descriptor/report/batch-result value layer, P02 durable SDK
 storage, the P03 first-party persistent controller owner, and P04 finite
 Interaction Model reads, event reads, writes, invokes and Descriptor discovery.
+P05 adds bounded native attribute/event subscription delivery and cancellation.
 The earlier one-shot Python factory adapter remains an injected baseline.
-Subscriptions and commissioning workflows remain unimplemented.
+Recovery and commissioning workflows remain unimplemented.
 
 ## Developer gate
 
@@ -112,13 +113,32 @@ This is native compilation, protocol and lifecycle evidence. It does not record
 a successful interaction with an independent Matter device. P09 owns the pinned
 software-peer workflow; no physical-device result is inferred.
 
+## P05 subscription evidence
+
+`WOTEX_PATH_DEPS=1 mix run bin/check_p05_native.exs` rebuilds the complete pinned
+host normally and with ASan/UBSan. All five CMake executables pass in both modes.
+`test/native/subscription_test.cpp` exercises the production establishment
+buffer, revised intervals, attribute and event identity rules, bounded report
+credit, cumulative byte acknowledgements, queue retirement without sequence
+gaps, protocol frames and zero accepted reports after cancellation. The GN host
+build compiles the same owner against connectedhomeip `ReadClient` Subscribe
+callbacks and callback-safe SDK-thread destruction.
+
+`test/wotex/matter/subscription_test.exs` runs through the real BEAM Port owner.
+It covers WMA-F08 equal values with distinct report/DataVersion identity,
+explicit null, event number/priority/timestamp, receiver death, receiver queue
+overflow, foreign handles, exact ACKs and idempotent cancellation. Its small
+executable peer supplies deterministic native frames; it proves the Port and
+BEAM ownership contract, while P09 still owns a successful independent Matter
+publisher interaction.
+
 ## Acceptance boundary
 
 [WMA.13](../specs/WMA.13-native-backend.md) defines the complete native binary,
-Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P04 are executed
-at their stated boundaries. P05–P09 still require subscriptions and recovery,
-commissioning, Runtime integration and pinned software-peer workflows. A
-passing P04 native lane does not establish those later claims, physical-device
+Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P05 are executed
+at their stated boundaries. P06–P09 still require recovery, commissioning,
+Runtime integration and pinned software-peer workflows. A passing P05 native
+lane does not establish those later claims, physical-device
 behavior, CSA certification or publication readiness.
 
 Each completed native run must bind source, SDK/binary, toolchain and cleanup

@@ -46,12 +46,14 @@ controller Port, with an owned durable authority/store, attestation, commissioni
 CASE interactions and subscriptions. P03 implements the controller owner,
 durable authority, production attestation verifier and framed Port. P04 adds
 finite reads, event reads, writes and invokes through the generated SDK bindings.
-Commissioning and subscriptions remain later work packages.
+P05 adds attribute/event subscriptions, bounded report credit, monitored
+receivers and callback-safe cancellation. Explicit recovery and commissioning
+remain later work packages.
 The current Python factory adapter remains a separate narrow baseline.
 
 [WMA.13](docs/specs/WMA.13-native-backend.md) fixes source/build pins, typed IPC,
-flow control and native ownership. `mix run bin/check_p04_native.exs` rebuilds
-and tests the P04 host in a disposable pinned Linux environment. The later
+flow control and native ownership. `mix run bin/check_p05_native.exs` rebuilds
+and tests the P05 host in a disposable pinned Linux environment. The later
 `mix wotex.native.build`, `mix wotex.software.build` and
 `mix wotex.software.run` commands remain specified implementation work. Upstream
 SDK Python is used only while generating and building native SDK sources.
@@ -79,9 +81,12 @@ same-directory fsynced rename. P03 connects that store to one first-party
 Protection Key with SDK crypto, loads an explicit Product Attestation Authority
 trust directory, and runs controller setup and shutdown through a direct BEAM
 Port. P04 uses that controller for bounded Interaction Model operations and
-Descriptor discovery. Loading the library starts no process or native
-executable. P05–P09 still own subscriptions, commissioning workflows, Runtime
-integration and software-peer proof.
+Descriptor discovery. P05 uses a subscription `ReadClient` for concrete
+attribute/event paths, retains revised intervals and report identity, bounds
+native/BEAM delivery, and retires callbacks on cancel, receiver death or
+overflow. Loading the library starts no process or native executable. P06–P09
+still own recovery, commissioning workflows, Runtime integration and
+software-peer proof.
 
 ## Quick start
 
@@ -163,8 +168,30 @@ value = %{tag: :anonymous, type: :i16, value: 2000}
   )
 ```
 
+P05 subscriptions bind delivery to an explicit receiver and opaque handle:
+
+```elixir
+{:ok, subscription} = Wotex.Matter.subscribe(session, %{
+  kind: :attribute,
+  paths: [address],
+  receiver: self(),
+  min_interval_s: 1,
+  max_interval_s: 60,
+  max_queue_length: 1000,
+  resubscribe: false
+})
+
+receive do
+  {:wotex_matter, reference, {:ok, value, metadata}}
+      when reference == subscription.reference ->
+    {value, metadata}
+end
+
+:ok = Wotex.Matter.unsubscribe(session, subscription)
+```
+
 The SDK adapter forwards explicit `timed_request_timeout_ms` for writes/invokes.
-Subscription delivery and full device qualification need further integration.
+Opt-in subscription recovery and full device qualification need further integration.
 The current `member` field enforces
 width and excludes the wildcard; the driver must validate attribute/command
 semantics against its pinned data model. No CSA certification is claimed.
@@ -181,8 +208,8 @@ mapping. These development APIs are not yet stable or certified.
 The compatibility callbacks are `capabilities/0`, `connect/1`, `send/2`,
 `receive/2`, `disconnect/1`, `health_check/1`, `subscribe/2`, `unsubscribe/2`.
 `send/2` returns the correlated operation result synchronously. No separate
-receive queue is fabricated; unsupported receive/subscription calls fail
-explicitly. Callback names alone do not establish consumer behavioral parity.
+receive queue is fabricated. Clients without optional subscription callbacks
+fail explicitly. Callback names alone do not establish consumer behavioral parity.
 Compatibility requires concrete differential scenarios and independently observed
 software interactions for each advertised operation.
 
@@ -212,6 +239,9 @@ then runs normal and sanitizer lifecycle, failure, load and cleanup checks.
 `WOTEX_PATH_DEPS=1 mix run bin/check_p04_native.exs` extends that lane with the
 generated cluster bindings, Interaction Model implementation and focused
 normal/sanitizer interaction tests.
+`WOTEX_PATH_DEPS=1 mix run bin/check_p05_native.exs` additionally compiles the
+SDK subscription owner and runs focused normal/sanitizer lifecycle, credit,
+identity and retirement tests.
 `WOTEX_PATH_DEPS=1 mix run bin/check_p03_advisories.exs` performs the associated
 live OSV audit. None of these native commands belongs to routine `mix check`.
 Optional interoperability suites fail if invoked without their required peer.
@@ -229,8 +259,9 @@ The [standalone client contract](docs/specs/WMA.11-standalone-client-and-preserv
 defines the supplied backend, exact native APIs and end-to-end workflows.
 Its [concrete corpus](docs/specs/fixtures/contract-v1.json) is partially executed:
 the P01 pure cases run in the default suite, the WMA-F07 controller lifecycle
-cases run in the separate P03 native lane, and WMA-F11 runs with P04. A pinned
-software peer, commissioning and subscription cases remain unexecuted. The
+cases run in the separate P03 native lane, WMA-F11 runs with P04, and the WMA-F08
+delivery/cancellation projection runs with P05. A pinned software peer and
+commissioning remain unexecuted; P09 owns the independent subscription peer. The
 scenario tables alone are not executable acceptance evidence.
 
 The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented

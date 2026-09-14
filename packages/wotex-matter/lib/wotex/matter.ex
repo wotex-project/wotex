@@ -14,7 +14,7 @@ defmodule Wotex.Matter do
   The consumer selects a `Wotex.Matter.Client` and owns commissioning, fabric
   storage, attestation, secure sessions, credentials, authorization, routing,
   and supervision. Loading the module starts no controller or Python process.
-  Subscription delivery is unsupported and is not simulated. A successful
+  Native subscriptions are explicitly established and receiver-owned. A successful
   interaction is protocol evidence for the addressed path; it does not
   establish canonical Property state, authorization, or a certified physical
   effect.
@@ -23,12 +23,15 @@ defmodule Wotex.Matter do
   import Kernel, except: [send: 2]
   alias Wotex.Matter.{AttributeReport, EndpointCatalogue, Error, EventReport}
   alias Wotex.Matter.{PathResults, PortCall, ReadPath, Session, Standalone}
-  @operations [:read, :write, :invoke, :read_paths, :read_events]
+  @operations [:read, :write, :invoke, :read_paths, :read_events, :subscribe, :unsubscribe]
   @send_operations [:read, :write, :invoke, :read_paths]
 
   @doc "Reports the operations implemented by this library's validated client boundary."
   @spec capabilities() :: %{
-          operations: [:read | :write | :invoke | :read_paths | :read_events, ...],
+          operations: [
+            :read | :write | :invoke | :read_paths | :read_events | :subscribe | :unsubscribe,
+            ...
+          ],
           transport: :explicit_client,
           bidirectional: true,
           reliable: false,
@@ -37,7 +40,7 @@ defmodule Wotex.Matter do
           qos_levels: [],
           max_payload_size: 65_536,
           connection_oriented: true,
-          supports_streaming: false,
+          supports_streaming: true,
           discovery_capable: true
         }
   def capabilities,
@@ -51,7 +54,7 @@ defmodule Wotex.Matter do
       qos_levels: [],
       max_payload_size: 65_536,
       connection_oriented: true,
-      supports_streaming: false,
+      supports_streaming: true,
       discovery_capable: true
     }
 
@@ -187,13 +190,15 @@ defmodule Wotex.Matter do
   @spec health_check(term()) :: {:error, Error.t()}
   def health_check(_), do: {:error, Error.new(:probe_required)}
 
-  @doc "Baseline client ports do not imply subscription support."
-  @spec subscribe(term(), term()) :: :not_supported
-  def subscribe(_, _), do: :not_supported
+  @doc "Establishes a bounded attribute or event subscription for an explicit receiver."
+  @spec subscribe(Session.t(), map()) ::
+          {:ok, Wotex.Matter.Subscription.t()} | {:error, Error.t()}
+  def subscribe(session, request), do: Standalone.subscribe(session, request)
 
-  @doc "No subscription is created by this baseline."
-  @spec unsubscribe(term(), term()) :: :not_supported
-  def unsubscribe(_, _), do: :not_supported
+  @doc "Cancels a subscription through the session and client that created it."
+  @spec unsubscribe(Session.t(), Wotex.Matter.Subscription.t()) ::
+          :ok | {:error, Error.t()}
+  def unsubscribe(session, subscription), do: Standalone.unsubscribe(session, subscription)
 
   defp open(opts) do
     client = Keyword.get(opts, :client)

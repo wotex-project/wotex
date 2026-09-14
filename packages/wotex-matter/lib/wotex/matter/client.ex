@@ -26,4 +26,13 @@ defmodule Wotex.Matter.Client do
 
   @doc "Releases only resources owned by this handle; must be idempotent."
   @callback disconnect(term()) :: :ok | {:error, term()}
+
+  @doc "Establishes a validated subscription for the exact receiver."
+  @callback subscribe(term(), map(), pid(), pos_integer()) ::
+              {:ok, term()} | {:error, term()}
+
+  @doc "Cancels a subscription owned by this client handle."
+  @callback unsubscribe(term(), term(), pos_integer()) :: :ok | {:error, term()}
+
+  @optional_callbacks subscribe: 4, unsubscribe: 3
 end

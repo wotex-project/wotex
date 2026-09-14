@@ -23,9 +23,19 @@ defmodule Wotex.Matter.PortTest do
     assert {:error, _} = Matter.send(conn, %{})
     assert {:error, _} = Matter.receive(conn, 100)
     assert {:error, _} = Matter.health_check(conn)
-    assert :not_supported = Matter.subscribe(conn, "value")
-    assert :not_supported = Matter.unsubscribe(conn, :ref)
+    assert {:error, %Error{code: :invalid_message}} = Matter.subscribe(conn, "value")
+
+    assert {:error, %Error{code: :not_supported}} =
+             Matter.subscribe(conn, %{
+               kind: :attribute,
+               paths: [@read |> Map.delete(:type)]
+             })
+
+    assert {:error, %Error{code: :invalid_handle}} = Matter.unsubscribe(conn, :ref)
     assert Matter.capabilities().transport == :explicit_client
+    assert Matter.capabilities().supports_streaming
+    assert :subscribe in Matter.capabilities().operations
+    assert :unsubscribe in Matter.capabilities().operations
 
     assert Matter.with_connection([client: TestClient], fn session ->
              Matter.send(session, @read)

@@ -1,7 +1,7 @@
 defmodule Wotex.Matter.Native.Wire do
   @moduledoc false
 
-  alias Wotex.Matter.Error
+  alias Wotex.Matter.{Address, Error}
 
   @path_keys ~w(fabric_id node_id endpoint cluster member)
 
@@ -27,6 +27,29 @@ defmodule Wotex.Matter.Native.Wire do
   end
 
   def decode(_, _), do: {:error, Error.new(:invalid_frame)}
+
+  @doc false
+  @spec subscription(String.t(), term(), term()) ::
+          {:ok, {:ok, term(), map()}} | {:error, Error.t()}
+  def subscription("attribute", value, metadata) do
+    with {:ok, value} <- element(value),
+         {:ok, metadata} <- attribute_metadata(metadata) do
+      {:ok, {:ok, value, metadata}}
+    else
+      _ -> {:error, Error.new(:invalid_frame)}
+    end
+  end
+
+  def subscription("event", value, metadata) do
+    with {:ok, value} <- element(value),
+         {:ok, metadata} <- event_metadata(metadata) do
+      {:ok, {:ok, value, metadata}}
+    else
+      _ -> {:error, Error.new(:invalid_frame)}
+    end
+  end
+
+  def subscription(_, _, _), do: {:error, Error.new(:invalid_frame)}
 
   @doc false
   @spec error(term()) :: {:ok, Error.t()} | :error
@@ -134,6 +157,81 @@ defmodule Wotex.Matter.Native.Wire do
 
   defp timestamp(_), do: :error
 
+  defp attribute_metadata(
+         %{
+           "path" => raw_path,
+           "data_version" => version,
+           "initial" => initial,
+           "report_id" => report_id,
+           "min_interval_s" => minimum,
+           "max_interval_s" => maximum,
+           "sdk_subscription_id" => sdk_id
+         } = metadata
+       )
+       when map_size(metadata) == 7 and (is_nil(version) or is_integer(version)) and
+              is_boolean(initial) and is_integer(report_id) and report_id > 0 and
+              is_integer(minimum) and minimum in 0..65_535 and is_integer(maximum) and
+              maximum in 1..65_535 and minimum <= maximum and is_integer(sdk_id) and
+              sdk_id in 0..0xFFFFFFFF do
+    with true <- is_nil(version) or version in 0..0xFFFFFFFF,
+         {:ok, raw_path} <- path(raw_path),
+         {:ok, path} <- Address.new(raw_path) do
+      {:ok,
+       %{
+         kind: :attribute,
+         path: path,
+         data_version: version,
+         initial: initial,
+         report_id: report_id,
+         min_interval_s: minimum,
+         max_interval_s: maximum,
+         sdk_subscription_id: sdk_id
+       }}
+    end
+  end
+
+  defp attribute_metadata(_), do: :error
+
+  defp event_metadata(
+         %{
+           "path" => raw_path,
+           "event_number" => number,
+           "priority" => priority,
+           "timestamp" => raw_timestamp,
+           "initial" => initial,
+           "report_id" => report_id,
+           "min_interval_s" => minimum,
+           "max_interval_s" => maximum,
+           "sdk_subscription_id" => sdk_id
+         } = metadata
+       )
+       when map_size(metadata) == 9 and is_integer(number) and
+              number in 0..0xFFFFFFFFFFFFFFFF and is_integer(priority) and priority in 0..255 and
+              is_boolean(initial) and is_integer(report_id) and report_id > 0 and
+              is_integer(minimum) and minimum in 0..65_535 and is_integer(maximum) and
+              maximum in 1..65_535 and minimum <= maximum and is_integer(sdk_id) and
+              sdk_id in 0..0xFFFFFFFF do
+    with {:ok, raw_path} <- path(raw_path),
+         {:ok, path} <- Address.new(raw_path),
+         {:ok, timestamp} <- timestamp(raw_timestamp) do
+      {:ok,
+       %{
+         kind: :event,
+         path: path,
+         event_number: number,
+         priority: priority,
+         timestamp: timestamp,
+         initial: initial,
+         report_id: report_id,
+         min_interval_s: minimum,
+         max_interval_s: maximum,
+         sdk_subscription_id: sdk_id
+       }}
+    end
+  end
+
+  defp event_metadata(_), do: :error
+
   defp path(value) when is_map(value) and map_size(value) == 5 do
     if Enum.sort(Map.keys(value)) == Enum.sort(@path_keys) do
       {:ok,
@@ -235,9 +333,21 @@ defmodule Wotex.Matter.Native.Wire do
   defp error_code("not_supported"), do: :not_supported
   defp error_code("paa_trust_store_invalid"), do: :paa_trust_store_invalid
   defp error_code("response_limit"), do: :response_limit
+  defp error_code("queue_overflow"), do: :queue_overflow
+  defp error_code("receiver_closed"), do: :receiver_closed
   defp error_code("sdk_storage_failed"), do: :sdk_storage_failed
   defp error_code("session_establishment_failed"), do: :session_establishment_failed
+  defp error_code("session_lost"), do: :session_lost
   defp error_code("storage_open_failed"), do: :storage_open_failed
+  defp error_code("subscription_busy"), do: :busy
+  defp error_code("subscription_cancel_timeout"), do: :timeout
+  defp error_code("subscription_failed"), do: :subscription_failed
+  defp error_code("subscription_submit_failed"), do: :subscription_submit_failed
+  defp error_code("subscription_timeout"), do: :timeout
+  defp error_code("subscription_unavailable"), do: :subscription_unavailable
+  defp error_code("invalid_subscription"), do: :invalid_handle
+  defp error_code("invalid_subscription_report"), do: :invalid_subscription_report
+  defp error_code("invalid_subscription_result"), do: :invalid_subscription_result
   defp error_code("unsupported_schema"), do: :unsupported_schema
   defp error_code("unsupported_timestamp"), do: :unsupported_timestamp
   defp error_code(_), do: :native_error

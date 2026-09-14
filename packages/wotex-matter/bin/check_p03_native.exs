@@ -775,11 +775,13 @@ defmodule Wotex.Matter.Check.P03Native do
       [
         "bin/check_p03_native.exs",
         "bin/check_p04_native.exs",
+        "bin/check_p05_native.exs",
         "lib/**/*.ex",
         "native/**/*",
         "test/native/*.cpp",
         "test/wotex/matter/interaction_test.exs",
-        "test/wotex/matter/persistent_bridge_test.exs"
+        "test/wotex/matter/persistent_bridge_test.exs",
+        "test/wotex/matter/subscription_test.exs"
       ]
       |> Enum.flat_map(&Path.wildcard(Path.join(source, &1)))
       |> Enum.filter(&File.regular?/1)
@@ -840,8 +842,8 @@ defmodule Wotex.Matter.Check.P03Native do
         }
       ],
       "audit_results" => %{
-        "cmake_normal" => "3/3 passed",
-        "cmake_asan_ubsan" => "3/3 passed",
+        "cmake_normal" => "5/5 passed",
+        "cmake_asan_ubsan" => "5/5 passed",
         "actual_sdk_lifecycle" => "passed",
         "operations" => 1000,
         "open_close_cycles" => 100,

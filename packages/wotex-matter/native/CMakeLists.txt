@@ -6,7 +6,7 @@ option(WOTEX_MATTER_SANITIZERS "Enable address and undefined-behavior sanitizers
 set(WOTEX_MATTER_SDK_ROOT "" CACHE PATH "Path to the pinned connectedhomeip source tree")
 set(WOTEX_MATTER_JSON_INCLUDE "" CACHE PATH "Path containing nlohmann/json.hpp")
 
-add_library(wotex_matter_value STATIC src/value.cpp src/interaction.cpp)
+add_library(wotex_matter_value STATIC src/value.cpp src/interaction.cpp src/subscription.cpp)
 target_include_directories(wotex_matter_value PUBLIC include)
 target_compile_features(wotex_matter_value PUBLIC cxx_std_17)
 target_compile_options(wotex_matter_value PRIVATE -Wall -Wextra -Wpedantic -Werror)
@@ -67,6 +67,13 @@ if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
     wotex_matter_interaction_test PRIVATE -Wall -Wextra -Wpedantic -Werror
   )
   add_test(NAME wotex_matter_interaction_test COMMAND wotex_matter_interaction_test)
+
+  add_executable(wotex_matter_subscription_test ../test/native/subscription_test.cpp)
+  target_link_libraries(wotex_matter_subscription_test PRIVATE wotex_matter_protocol)
+  target_compile_options(
+    wotex_matter_subscription_test PRIVATE -Wall -Wextra -Wpedantic -Werror
+  )
+  add_test(NAME wotex_matter_subscription_test COMMAND wotex_matter_subscription_test)
 
   add_library(wotex_matter_sdk_storage_binding OBJECT src/sdk_storage.cpp)
   target_include_directories(wotex_matter_sdk_storage_binding PRIVATE include)

@@ -6,9 +6,13 @@
 #include <array>
 #include <charconv>
 #include <cctype>
+#include <condition_variable>
+#include <deque>
 #include <limits>
+#include <mutex>
 #include <set>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 namespace wotex::matter {
@@ -128,6 +132,10 @@ bool CanonicalGeneration(const Json &value, std::string &generation) {
       std::all_of(generation.begin(), generation.end(), [](unsigned char byte) {
         return std::isdigit(byte) != 0 || (byte >= 'a' && byte <= 'f');
       });
+}
+
+bool CanonicalSubscriptionId(const Json &value, std::string &identity) {
+  return CanonicalGeneration(value, identity);
 }
 
 bool CanonicalRequestId(const Json &value, std::uint64_t &request_id) {
@@ -434,6 +442,60 @@ bool InteractionParameters(const std::string &operation, const Json &parameters,
       valid_interaction_request(result);
 }
 
+bool SubscriptionParameters(const Json &parameters, std::uint32_t timeout_ms,
+                            SubscriptionRequest &result) {
+  if (!ExactKeys(parameters,
+                 {"subscription_id", "kind", "paths", "min_interval_s",
+                  "max_interval_s", "resubscribe", "queue_limit"}) ||
+      !CanonicalSubscriptionId(parameters["subscription_id"],
+                               result.subscription_id) ||
+      !parameters["kind"].is_string() || !parameters["paths"].is_array() ||
+      parameters["paths"].empty() || parameters["paths"].size() > 64 ||
+      !parameters["resubscribe"].is_boolean()) {
+    return false;
+  }
+  const std::string kind = parameters["kind"].get<std::string>();
+  if (kind == "attribute") {
+    result.kind = SubscriptionKind::Attribute;
+  } else if (kind == "event") {
+    result.kind = SubscriptionKind::Event;
+  } else {
+    return false;
+  }
+  std::uint64_t minimum = 0;
+  std::uint64_t maximum = 0;
+  std::uint64_t queue_limit = 0;
+  if (!Unsigned(parameters["min_interval_s"], 65535, minimum) ||
+      !Unsigned(parameters["max_interval_s"], 65535, maximum) || maximum == 0 ||
+      !Unsigned(parameters["queue_limit"], 10000, queue_limit) || queue_limit == 0) {
+    return false;
+  }
+  for (const Json &path : parameters["paths"]) {
+    PathSelector selector;
+    if (!Selector(path, false, selector)) {
+      return false;
+    }
+    result.paths.push_back(std::move(selector));
+  }
+  result.fabric_id = result.paths.front().fabric_id;
+  result.node_id = result.paths.front().node_id;
+  result.min_interval_s = static_cast<std::uint16_t>(minimum);
+  result.max_interval_s = static_cast<std::uint16_t>(maximum);
+  result.resubscribe = parameters["resubscribe"].get<bool>();
+  result.queue_limit = static_cast<std::uint16_t>(queue_limit);
+  result.timeout_ms = timeout_ms;
+  return valid_subscription_request(result);
+}
+
+bool UnsubscribeParameters(const Json &parameters, std::string &subscription_id,
+                           std::uint64_t &generation) {
+  return ExactKeys(parameters, {"subscription_id", "generation"}) &&
+      CanonicalSubscriptionId(parameters["subscription_id"], subscription_id) &&
+      Unsigned(parameters["generation"],
+               std::numeric_limits<std::uint64_t>::max(), generation) &&
+      generation > 0;
+}
+
 Json PathJson(const ConcretePath &path) {
   return {{"fabric_id", path.fabric_id}, {"node_id", path.node_id},
           {"endpoint", path.endpoint}, {"cluster", path.cluster},
@@ -491,6 +553,43 @@ Json EventJson(const EventData &event) {
                                       ? "epoch" : "system"},
                          {"value", event.timestamp_value}}},
           {"status", 0}};
+}
+
+Json SubscriptionFrame(const SubscriptionReport &report,
+                       const std::string &session_generation,
+                       std::uint64_t report_sequence) {
+  Json metadata{{"path", PathJson(report.result.path)},
+                {"initial", report.initial},
+                {"report_id", report.report_id},
+                {"min_interval_s", report.min_interval_s},
+                {"max_interval_s", report.max_interval_s},
+                {"sdk_subscription_id", report.sdk_subscription_id}};
+  Json value;
+  std::string_view kind;
+  if (report.kind == SubscriptionKind::Attribute) {
+    kind = "attribute";
+    value = ElementJson(report.result.attribute->value);
+    metadata["data_version"] = report.result.attribute->data_version
+        ? Json(*report.result.attribute->data_version) : Json(nullptr);
+  } else {
+    kind = "event";
+    value = ElementJson(report.result.event->value);
+    metadata["event_number"] = report.result.event->event_number;
+    metadata["priority"] = report.result.event->priority;
+    metadata["timestamp"] = {
+        {"kind", report.result.event->timestamp_kind == EventData::TimestampKind::Epoch
+                     ? "epoch" : "system"},
+        {"value", report.result.event->timestamp_value}};
+  }
+  return {{"version", kProtocolVersion},
+          {"event", "subscription_report"},
+          {"session_generation", session_generation},
+          {"subscription_id", report.subscription_id},
+          {"generation", report.generation},
+          {"report_sequence", report_sequence},
+          {"kind", kind},
+          {"value", std::move(value)},
+          {"metadata", std::move(metadata)}};
 }
 
 std::optional<Json> InteractionJson(const InteractionRequest &request,
@@ -570,9 +669,144 @@ bool ReadLineBounded(std::istream &input, std::string &line) {
   return line.empty();
 }
 
+class BoundedOutput final {
+ public:
+  explicit BoundedOutput(std::ostream &output)
+      : output_(output) {
+    worker_ = std::thread([this] { Write(); });
+  }
+
+  ~BoundedOutput() { Stop(); }
+
+  bool EnqueueReport(const std::string &frame) {
+    return Enqueue(frame, Class::Report, 64, 1048576, kMaximumFrameBytes);
+  }
+
+  bool EnqueueControl(const std::string &frame) {
+    return Enqueue(frame, Class::Control, 256, 256 * 4096, 4096);
+  }
+
+  bool EnqueueReply(const std::string &frame) {
+    return Enqueue(frame, Class::Reply, 64, 64 * kMaximumFrameBytes,
+                   kMaximumFrameBytes);
+  }
+
+  void Stop() {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (stopping_) {
+        return;
+      }
+      stopping_ = true;
+    }
+    condition_.notify_one();
+    if (worker_.joinable()) {
+      worker_.join();
+    }
+  }
+
+  bool healthy() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return healthy_;
+  }
+
+ private:
+  enum class Class { Report, Control, Reply };
+  struct PendingOutput {
+    std::string frame;
+    Class classification;
+  };
+
+  bool Enqueue(const std::string &frame, Class classification,
+               std::size_t maximum_frames, std::size_t maximum_bytes,
+               std::size_t maximum_frame_bytes) {
+    const std::size_t bytes = frame.size() + 1;
+    if (frame.empty() || bytes > maximum_frame_bytes) {
+      return false;
+    }
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::size_t *frames = classification == Class::Report ? &report_frames_
+        : classification == Class::Control ? &control_frames_ : &reply_frames_;
+    std::size_t *retained = classification == Class::Report ? &report_bytes_
+        : classification == Class::Control ? &control_bytes_ : &reply_bytes_;
+    if (!healthy_ || stopping_ || *frames >= maximum_frames ||
+        *retained > maximum_bytes || bytes > maximum_bytes - *retained) {
+      healthy_ = false;
+      return false;
+    }
+    ++*frames;
+    *retained += bytes;
+    pending_.push_back({frame, classification});
+    condition_.notify_one();
+    return true;
+  }
+
+  void Write() {
+    while (true) {
+      PendingOutput pending;
+      {
+        std::unique_lock<std::mutex> lock(mutex_);
+        condition_.wait(lock, [this] { return stopping_ || !pending_.empty(); });
+        if (pending_.empty()) {
+          if (stopping_) {
+            return;
+          }
+          continue;
+        }
+        pending = std::move(pending_.front());
+        pending_.pop_front();
+      }
+
+      output_ << pending.frame << '\n';
+      output_.flush();
+
+      std::lock_guard<std::mutex> lock(mutex_);
+      const std::size_t bytes = pending.frame.size() + 1;
+      if (pending.classification == Class::Report) {
+        --report_frames_;
+        report_bytes_ -= bytes;
+      } else if (pending.classification == Class::Control) {
+        --control_frames_;
+        control_bytes_ -= bytes;
+      } else {
+        --reply_frames_;
+        reply_bytes_ -= bytes;
+      }
+      if (!output_) {
+        healthy_ = false;
+        stopping_ = true;
+        pending_.clear();
+        return;
+      }
+    }
+  }
+
+  std::ostream &output_;
+  mutable std::mutex mutex_;
+  std::condition_variable condition_;
+  std::deque<PendingOutput> pending_;
+  std::size_t report_frames_{0};
+  std::size_t report_bytes_{0};
+  std::size_t control_frames_{0};
+  std::size_t control_bytes_{0};
+  std::size_t reply_frames_{0};
+  std::size_t reply_bytes_{0};
+  bool healthy_{true};
+  bool stopping_{false};
+  std::thread worker_;
+};
+
 } // namespace
 
-HostProtocol::HostProtocol(ControllerBackend &backend) : backend_(backend) {}
+HostProtocol::HostProtocol(ControllerBackend &backend)
+    : backend_(backend), output_sink_([](const std::string &) { return true; }) {
+  backend_.SetSubscriptionSinks(
+      [this](const SubscriptionReport &report) { return EmitReport(report); },
+      [this](const std::string &id, std::uint64_t generation,
+             const InteractionError &error) {
+        EmitFailure(id, generation, error);
+      });
+}
 
 HostProtocol::~HostProtocol() { Close(); }
 
@@ -588,6 +822,11 @@ bool HostProtocol::ParseRequestAccepted(const std::string &line) {
   Json request;
   std::uint64_t request_id = 0;
   return ParseBounded(line, request) && ValidRequestEnvelope(request, request_id);
+}
+
+void HostProtocol::SetOutputSink(std::function<bool(const std::string &)> sink) {
+  std::lock_guard<std::mutex> lock(subscription_mutex_);
+  output_sink_ = std::move(sink);
 }
 
 ProcessResult HostProtocol::ProcessLine(const std::string &line) {
@@ -609,7 +848,41 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
       return {};
     }
     session_generation_ = std::move(generation);
+    report_flow_ = std::make_unique<ReportCreditManager>(
+        session_generation_, [this](const std::string &frame) {
+          return output_sink_(frame);
+        });
     state_ = State::AwaitOpen;
+    return {true, std::nullopt};
+  }
+
+  if (state_ == State::Open &&
+      ExactKeys(request,
+                {"version", "event", "session_generation", "report_sequence",
+                 "acknowledged_bytes"})) {
+    std::string generation;
+    std::uint64_t sequence = 0;
+    std::uint64_t bytes = 0;
+    const bool valid = request["version"].is_number_unsigned() &&
+        request["version"].get<std::uint64_t>() == kProtocolVersion &&
+        request["event"].is_string() &&
+        request["event"].get<std::string>() == "report_ack" &&
+        CanonicalGeneration(request["session_generation"], generation) &&
+        generation == session_generation_ &&
+        Unsigned(request["report_sequence"],
+                 std::numeric_limits<std::uint64_t>::max(), sequence) &&
+        Unsigned(request["acknowledged_bytes"],
+                 std::numeric_limits<std::uint64_t>::max(), bytes);
+    bool accepted = false;
+    {
+      std::lock_guard<std::mutex> lock(subscription_mutex_);
+      accepted = valid && report_flow_ &&
+          report_flow_->Acknowledge(sequence, bytes);
+    }
+    if (!accepted) {
+      Close();
+      return {};
+    }
     return {true, std::nullopt};
   }
 
@@ -662,6 +935,89 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
                                     {"fabric_id", fabric_id_}})};
   }
 
+  if (operation == "subscribe") {
+    SubscriptionRequest subscription;
+    if (!SubscriptionParameters(
+            request["parameters"],
+            static_cast<std::uint32_t>(request["timeout_ms"].get<std::uint64_t>()),
+            subscription)) {
+      return {true, Failure(request, "invalid_request")};
+    }
+    if (subscription.fabric_id != fabric_id_) {
+      return {true, Failure(request, "fabric_mismatch")};
+    }
+    SubscriptionResponse response = backend_.Subscribe(subscription);
+    if (!response.ok) {
+      return {true, Failure(request, response.error_code.empty()
+                                        ? "subscription_failed"
+                                        : response.error_code)};
+    }
+    if (response.subscription_id != subscription.subscription_id ||
+        response.generation == 0 || response.max_interval_s == 0 ||
+        response.min_interval_s > response.max_interval_s) {
+      return {true, Failure(request, "invalid_backend_result")};
+    }
+    bool admitted = false;
+    {
+      std::lock_guard<std::mutex> lock(subscription_mutex_);
+      admitted = report_flow_ &&
+          report_flow_->AddStream(response.subscription_id, response.generation,
+                                  subscription.queue_limit);
+    }
+    if (!admitted) {
+        backend_.CancelSubscription(response.subscription_id,
+                                    response.generation, subscription.timeout_ms);
+      return {true, Failure(request, "subscription_busy")};
+    }
+    Json result{{"subscription_id", response.subscription_id},
+                {"generation", response.generation},
+                {"min_interval_s", response.min_interval_s},
+                {"max_interval_s", response.max_interval_s},
+                {"sdk_subscription_id", response.sdk_subscription_id}};
+    return {true, Success(request, std::move(result)),
+            std::make_pair(response.subscription_id, response.generation)};
+  }
+
+  if (operation == "unsubscribe") {
+    std::string subscription_id;
+    std::uint64_t generation = 0;
+    if (!UnsubscribeParameters(request["parameters"], subscription_id,
+                               generation)) {
+      return {true, Failure(request, "invalid_request")};
+    }
+    BackendResult cancelled =
+        backend_.CancelSubscription(
+            subscription_id, generation,
+            static_cast<std::uint32_t>(request["timeout_ms"].get<std::uint64_t>()));
+    if (!cancelled.ok) {
+      return {true, Failure(request, cancelled.error_code.empty()
+                                        ? "invalid_subscription"
+                                        : cancelled.error_code)};
+    }
+    bool retired = false;
+    {
+      std::lock_guard<std::mutex> lock(subscription_mutex_);
+      if (report_flow_ && report_flow_->IsLive(subscription_id, generation)) {
+        const std::uint64_t last =
+            report_flow_->last_transmitted(subscription_id, generation);
+        const std::string barrier =
+            Json{{"version", kProtocolVersion},
+                 {"event", "stream_retired"},
+                 {"session_generation", session_generation_},
+                 {"subscription_id", subscription_id},
+                 {"generation", generation},
+                 {"last_report_sequence", last}}
+                .dump();
+        retired = report_flow_->Retire(subscription_id, generation, barrier);
+      }
+    }
+    if (!retired) {
+      Close();
+      return {};
+    }
+    return {true, Success(request, nullptr)};
+  }
+
   if (request["parameters"].contains("fabric_id") &&
       request["parameters"]["fabric_id"].is_number_unsigned() &&
       request["parameters"]["fabric_id"].get<std::uint64_t>() != fabric_id_) {
@@ -707,21 +1063,118 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
   return {true, Failure(request, "not_supported")};
 }
 
-void HostProtocol::Close() {
-  if (state_ == State::Closed) {
+bool HostProtocol::ActivateSubscription(const std::string &subscription_id,
+                                        std::uint64_t generation) {
+  return backend_.ActivateSubscription(subscription_id, generation);
+}
+
+bool HostProtocol::EmitReport(const SubscriptionReport &report) {
+  std::lock_guard<std::mutex> lock(subscription_mutex_);
+  if (state_ != State::Open || !report_flow_ ||
+      !report_flow_->IsLive(report.subscription_id, report.generation)) {
+    return false;
+  }
+  const auto result = report_flow_->Submit(
+      report.subscription_id, report.generation,
+      [this, report](std::uint64_t sequence) {
+        return SubscriptionFrame(report, session_generation_, sequence).dump();
+      });
+  if (result == ReportCreditManager::SubmitResult::Transmitted ||
+      result == ReportCreditManager::SubmitResult::Queued) {
+    return true;
+  }
+  if (result == ReportCreditManager::SubmitResult::StreamOverflow) {
+    const InteractionError error{"queue_overflow"};
+    const std::string failure =
+        Json{{"version", kProtocolVersion},
+             {"event", "subscription_error"},
+             {"session_generation", session_generation_},
+             {"subscription_id", report.subscription_id},
+             {"generation", report.generation},
+             {"error", ErrorJson(error)}}
+            .dump();
+    if (!output_sink_(failure)) {
+      return false;
+    }
+    const std::uint64_t last = report_flow_->last_transmitted(
+        report.subscription_id, report.generation);
+    const std::string barrier =
+        Json{{"version", kProtocolVersion},
+             {"event", "stream_retired"},
+             {"session_generation", session_generation_},
+             {"subscription_id", report.subscription_id},
+             {"generation", report.generation},
+             {"last_report_sequence", last}}
+            .dump();
+    (void) report_flow_->Retire(report.subscription_id, report.generation,
+                               barrier);
+  }
+  return false;
+}
+
+void HostProtocol::EmitFailure(const std::string &subscription_id,
+                               std::uint64_t generation,
+                               const InteractionError &error) {
+  std::lock_guard<std::mutex> lock(subscription_mutex_);
+  if (state_ != State::Open || !report_flow_ ||
+      !report_flow_->IsLive(subscription_id, generation)) {
     return;
+  }
+  const std::string failure =
+      Json{{"version", kProtocolVersion},
+           {"event", "subscription_error"},
+           {"session_generation", session_generation_},
+           {"subscription_id", subscription_id},
+           {"generation", generation},
+           {"error", ErrorJson(error)}}
+          .dump();
+  if (!output_sink_(failure)) {
+    return;
+  }
+  const std::uint64_t last =
+      report_flow_->last_transmitted(subscription_id, generation);
+  const std::string barrier =
+      Json{{"version", kProtocolVersion},
+           {"event", "stream_retired"},
+           {"session_generation", session_generation_},
+           {"subscription_id", subscription_id},
+           {"generation", generation},
+           {"last_report_sequence", last}}
+          .dump();
+  (void) report_flow_->Retire(subscription_id, generation, barrier);
+}
+
+void HostProtocol::Close() {
+  {
+    std::lock_guard<std::mutex> lock(subscription_mutex_);
+    if (state_ == State::Closed) {
+      return;
+    }
+    state_ = State::Closed;
   }
   if (backend_.IsOpen()) {
     backend_.Close();
   }
-  state_ = State::Closed;
+  backend_.SetSubscriptionSinks({}, {});
+  {
+    std::lock_guard<std::mutex> lock(subscription_mutex_);
+    report_flow_.reset();
+  }
 }
 
 int RunHost(ControllerBackend &backend, std::istream &input,
             std::ostream &output) {
   HostProtocol protocol(backend);
-  output << HostProtocol::ReadyFrame() << '\n';
-  output.flush();
+  BoundedOutput writer(output);
+  protocol.SetOutputSink([&writer](const std::string &frame) {
+    return frame.find("\"event\":\"subscription_report\"") !=
+            std::string::npos
+        ? writer.EnqueueReport(frame)
+        : writer.EnqueueControl(frame);
+  });
+  if (!writer.EnqueueControl(HostProtocol::ReadyFrame())) {
+    return 1;
+  }
 
   std::string line;
   while (ReadLineBounded(input, line)) {
@@ -730,19 +1183,25 @@ int RunHost(ControllerBackend &backend, std::istream &input,
     }
     ProcessResult result = protocol.ProcessLine(line);
     if (result.frame.has_value()) {
-      output << *result.frame << '\n';
-      output.flush();
-      if (!output) {
+      if (!writer.EnqueueReply(*result.frame)) {
         protocol.Close();
         return 1;
       }
+    }
+    if (result.activate_subscription.has_value() &&
+        !protocol.ActivateSubscription(
+            result.activate_subscription->first,
+            result.activate_subscription->second)) {
+      protocol.Close();
+      return 1;
     }
     if (!result.keep_running) {
       break;
     }
   }
   protocol.Close();
-  return 0;
+  writer.Stop();
+  return writer.healthy() ? 0 : 1;
 }
 
 } // namespace wotex::matter

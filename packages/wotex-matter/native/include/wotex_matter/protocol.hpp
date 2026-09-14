@@ -2,12 +2,17 @@
 #define WOTEX_MATTER_PROTOCOL_HPP
 
 #include "wotex_matter/interaction.hpp"
+#include "wotex_matter/subscription.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <istream>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <ostream>
 #include <string>
+#include <utility>
 
 namespace wotex::matter {
 
@@ -36,9 +41,27 @@ struct BackendResult {
 
 class ControllerBackend {
  public:
+  using ReportSink = std::function<bool(const SubscriptionReport &)>;
+  using FailureSink =
+      std::function<void(const std::string &, std::uint64_t,
+                         const InteractionError &)>;
+
   virtual ~ControllerBackend() = default;
   virtual BackendResult Open(const NativeOpenOptions &options) = 0;
   virtual InteractionResponse Interact(const InteractionRequest &request) = 0;
+  virtual void SetSubscriptionSinks(ReportSink, FailureSink) {}
+  virtual SubscriptionResponse Subscribe(const SubscriptionRequest &) {
+    SubscriptionResponse result;
+    result.error_code = "not_supported";
+    return result;
+  }
+  virtual bool ActivateSubscription(const std::string &, std::uint64_t) {
+    return false;
+  }
+  virtual BackendResult CancelSubscription(const std::string &, std::uint64_t,
+                                            std::uint32_t) {
+    return {false, "not_supported"};
+  }
   virtual void Close() = 0;
   virtual bool IsOpen() const = 0;
 };
@@ -46,6 +69,15 @@ class ControllerBackend {
 struct ProcessResult {
   bool keep_running{false};
   std::optional<std::string> frame;
+  std::optional<std::pair<std::string, std::uint64_t>> activate_subscription;
+
+  ProcessResult() = default;
+  ProcessResult(
+      bool keep, std::optional<std::string> output,
+      std::optional<std::pair<std::string, std::uint64_t>> activation =
+          std::nullopt)
+      : keep_running(keep), frame(std::move(output)),
+        activate_subscription(std::move(activation)) {}
 };
 
 class HostProtocol final {
@@ -59,17 +91,27 @@ class HostProtocol final {
   static std::string ReadyFrame();
   static bool ParseRequestAccepted(const std::string &line);
 
+  void SetOutputSink(std::function<bool(const std::string &)> sink);
   ProcessResult ProcessLine(const std::string &line);
+  bool ActivateSubscription(const std::string &subscription_id,
+                            std::uint64_t generation);
   void Close();
 
  private:
   enum class State { AwaitFlow, AwaitOpen, Open, Closed };
 
   ControllerBackend &backend_;
+  std::function<bool(const std::string &)> output_sink_;
+  std::unique_ptr<ReportCreditManager> report_flow_;
+  std::mutex subscription_mutex_;
   State state_{State::AwaitFlow};
   std::string session_generation_;
   std::uint64_t greatest_request_id_{0};
   std::uint64_t fabric_id_{0};
+
+  bool EmitReport(const SubscriptionReport &report);
+  void EmitFailure(const std::string &subscription_id, std::uint64_t generation,
+                   const InteractionError &error);
 };
 
 int RunHost(ControllerBackend &backend, std::istream &input,

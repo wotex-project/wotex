@@ -55,7 +55,17 @@ clients. It carries finite request timeouts through CASE establishment and SDK
 timers, preserves DataVersion preconditions, returns every path status and event
 identity, and never replays a mutation whose result is uncertain. Descriptor
 discovery reads root endpoint zero first, then at most 64 endpoints in chunks of
-16. Commissioning and subscriptions remain unavailable.
+16.
+
+P05 establishes explicit attribute or event subscriptions only after the SDK
+reports `OnSubscriptionEstablished`. It retains revised reporting intervals,
+SDK subscription identity, DataVersion or event identity, and distinct report
+identity. The native host applies global frame/byte credit and per-stream credit;
+the BEAM owner monitors the receiver, checks its queue before delivery and
+cancels on receiver death or overflow. Cancellation retires the stream before
+success and old-generation callbacks cannot deliver. Automatic recovery remains
+disabled; P06 owns the bounded opt-in recovery policy. Commissioning remains
+unavailable.
 
 `Client` is a consumer-implemented driver contract. It must use a pinned real SDK,
 keep fabric stores isolated, enforce attestation/ACLs, inspect all per-path status

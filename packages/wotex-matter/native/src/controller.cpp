@@ -270,6 +270,7 @@ class ControllerConfigurationManager final
 
 class SdkControllerBackend::Impl final {
   class Pending;
+  class NativeSubscription;
 
  public:
   BackendResult Open(const NativeOpenOptions &options) {
@@ -387,6 +388,18 @@ class SdkControllerBackend::Impl final {
   bool IsOpen() const { return open_; }
 
   InteractionResponse Interact(const InteractionRequest &request);
+  void SetSubscriptionSinks(ControllerBackend::ReportSink report,
+                            ControllerBackend::FailureSink failure) {
+    std::lock_guard<std::mutex> lock(sink_mutex_);
+    report_sink_ = std::move(report);
+    failure_sink_ = std::move(failure);
+  }
+  SubscriptionResponse Subscribe(const SubscriptionRequest &request);
+  bool ActivateSubscription(const std::string &subscription_id,
+                            std::uint64_t generation);
+  BackendResult CancelSubscription(const std::string &subscription_id,
+                                   std::uint64_t generation,
+                                   std::uint32_t timeout_ms);
 
  private:
   class Pending final : public chip::app::ReadClient::Callback,
@@ -878,6 +891,376 @@ class SdkControllerBackend::Impl final {
     std::array<std::uint8_t, 64> write_buffer_{};
   };
 
+  class NativeSubscription final : public chip::app::ReadClient::Callback {
+   public:
+    friend class Impl;
+
+    NativeSubscription(Impl &owner, SubscriptionRequest request)
+        : owner_(owner), request_(std::move(request)), buffer_(request_),
+          started_(std::chrono::steady_clock::now()),
+          connected_(&Connected, this), connection_failed_(&ConnectionFailed, this) {}
+
+    SubscriptionResponse Wait() {
+      std::unique_lock<std::mutex> lock(mutex_);
+      if (!condition_.wait_for(lock, std::chrono::milliseconds(Remaining()),
+                               [this] { return published_; })) {
+        response_.error_code = "subscription_timeout";
+        published_ = true;
+        lock.unlock();
+        ScheduleCancel();
+        lock.lock();
+      }
+      return response_;
+    }
+
+    void Start() {
+      if (Remaining() == 0) {
+        PublishFailure("subscription_timeout");
+        MarkDone();
+        return;
+      }
+      CHIP_ERROR error = owner_.commissioner_.GetConnectedDevice(
+          request_.node_id, &connected_, &connection_failed_);
+      if (error != CHIP_NO_ERROR) {
+        PublishFailure("session_establishment_failed");
+        MarkDone();
+      }
+    }
+
+    bool Activate() {
+      std::vector<SubscriptionReport> reports;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!response_.ok || done_ || cancelled_) {
+          return false;
+        }
+        buffer_.Activate();
+        reports = buffer_.TakeReady();
+      }
+      return Emit(std::move(reports));
+    }
+
+    bool CancelAndWait(std::uint32_t timeout_ms) {
+      ScheduleCancel();
+      std::unique_lock<std::mutex> lock(mutex_);
+      return condition_.wait_for(lock, std::chrono::milliseconds(timeout_ms),
+                                 [this] { return done_; });
+    }
+
+    bool done() const {
+      std::lock_guard<std::mutex> lock(mutex_);
+      return done_;
+    }
+
+    const std::string &id() const { return request_.subscription_id; }
+    std::uint64_t generation() const { return generation_; }
+
+    void CancelOnSdkThread() {
+      connected_.Cancel();
+      connection_failed_.Cancel();
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        cancelled_ = true;
+        buffer_.Cancel();
+      }
+      read_client_.reset();
+      MarkDone();
+    }
+
+   private:
+    static void Connected(void *context,
+                          chip::Messaging::ExchangeManager &exchange_manager,
+                          const chip::SessionHandle &session) {
+      static_cast<NativeSubscription *>(context)->OnConnected(exchange_manager,
+                                                               session);
+    }
+
+    static void ConnectionFailed(void *context, const chip::ScopedNodeId &,
+                                 CHIP_ERROR) {
+      auto *self = static_cast<NativeSubscription *>(context);
+      self->PublishFailure("session_establishment_failed");
+      self->MarkDone();
+    }
+
+    void OnConnected(chip::Messaging::ExchangeManager &exchange_manager,
+                     const chip::SessionHandle &session) {
+      const std::uint32_t remaining = Remaining();
+      if (remaining == 0) {
+        PublishFailure("subscription_timeout");
+        MarkDone();
+        return;
+      }
+
+      read_client_ = std::make_unique<chip::app::ReadClient>(
+          chip::app::InteractionModelEngine::GetInstance(), &exchange_manager,
+          *this, chip::app::ReadClient::InteractionType::Subscribe);
+      chip::app::ReadPrepareParams params(session);
+      params.mTimeout = chip::System::Clock::Milliseconds32(remaining);
+      params.mKeepSubscriptions = true;
+      params.mIsFabricFiltered = true;
+      params.mMinIntervalFloorSeconds = request_.min_interval_s;
+      params.mMaxIntervalCeilingSeconds = request_.max_interval_s;
+
+      if (request_.kind == SubscriptionKind::Attribute) {
+        attribute_paths_.reserve(request_.paths.size());
+        for (const PathSelector &path : request_.paths) {
+          attribute_paths_.emplace_back(*path.endpoint, *path.cluster,
+                                        *path.member);
+        }
+        params.mpAttributePathParamsList = attribute_paths_.data();
+        params.mAttributePathParamsListSize = attribute_paths_.size();
+      } else {
+        event_paths_.reserve(request_.paths.size());
+        for (const PathSelector &path : request_.paths) {
+          event_paths_.emplace_back(*path.endpoint, *path.cluster, *path.member);
+        }
+        params.mpEventPathParamsList = event_paths_.data();
+        params.mEventPathParamsListSize = event_paths_.size();
+      }
+
+      if (read_client_->SendRequest(params) != CHIP_NO_ERROR) {
+        read_client_.reset();
+        PublishFailure("subscription_submit_failed");
+        MarkDone();
+      }
+    }
+
+    void OnReportBegin() override {
+      std::lock_guard<std::mutex> lock(mutex_);
+      buffer_.BeginReport();
+    }
+
+    void OnReportEnd() override {
+      std::vector<SubscriptionReport> reports;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        buffer_.EndReport();
+        reports = buffer_.TakeReady();
+      }
+      (void) Emit(std::move(reports));
+    }
+
+    void OnAttributeData(const chip::app::ConcreteDataAttributePath &path,
+                         chip::TLV::TLVReader *data,
+                         const chip::app::StatusIB &status) override {
+      PathResult result;
+      result.path = NativePath(request_.fabric_id, request_.node_id, path);
+      if (!status.IsSuccess()) {
+        FailActive(StatusError(status));
+        return;
+      }
+      if (data == nullptr) {
+        FailActive(InteractionError{"invalid_attribute_data"});
+        return;
+      }
+      Element value;
+      chip::TLV::TLVReader copy = *data;
+      if (DecodeAttribute(result.path, copy, value) != CHIP_NO_ERROR) {
+        FailActive(InteractionError{"unsupported_schema"});
+        return;
+      }
+      AttributeData attribute{result.path, std::move(value), std::nullopt};
+      if (path.mDataVersion.HasValue()) {
+        attribute.data_version = path.mDataVersion.Value();
+      }
+      result.attribute = std::move(attribute);
+      Add(std::move(result));
+    }
+
+    void OnEventData(const chip::app::EventHeader &header,
+                     chip::TLV::TLVReader *data,
+                     const chip::app::StatusIB *status) override {
+      PathResult result;
+      result.path = NativePath(request_.fabric_id, request_.node_id, header.mPath);
+      if (status != nullptr && !status->IsSuccess()) {
+        FailActive(StatusError(*status));
+        return;
+      }
+      if (data == nullptr) {
+        FailActive(InteractionError{"invalid_event_data"});
+        return;
+      }
+      Element value;
+      chip::TLV::TLVReader copy = *data;
+      if (DecodeEvent(result.path, copy, value) != CHIP_NO_ERROR) {
+        FailActive(InteractionError{"unsupported_schema"});
+        return;
+      }
+      if (!header.mTimestamp.IsSystem() && !header.mTimestamp.IsEpoch()) {
+        FailActive(InteractionError{"unsupported_timestamp"});
+        return;
+      }
+      result.event = EventData{
+          result.path, std::move(value), header.mEventNumber,
+          static_cast<std::uint8_t>(header.mPriorityLevel),
+          header.mTimestamp.IsEpoch() ? EventData::TimestampKind::Epoch
+                                      : EventData::TimestampKind::System,
+          header.mTimestamp.mValue};
+      Add(std::move(result));
+    }
+
+    void OnSubscriptionEstablished(chip::SubscriptionId id) override {
+      std::uint16_t minimum = 0;
+      std::uint16_t maximum = 0;
+      if (read_client_ == nullptr ||
+          read_client_->GetReportingIntervals(minimum, maximum) != CHIP_NO_ERROR) {
+        PublishFailure("invalid_subscription_result");
+        ScheduleCancel();
+        return;
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!buffer_.Establish(static_cast<std::uint32_t>(id), minimum, maximum)) {
+          response_.error_code = "invalid_subscription_result";
+          published_ = true;
+          condition_.notify_one();
+          ScheduleCancelLocked();
+          return;
+        }
+        response_ = {true, {}, request_.subscription_id, generation_, minimum,
+                     maximum, static_cast<std::uint32_t>(id)};
+        published_ = true;
+      }
+      condition_.notify_one();
+    }
+
+    CHIP_ERROR OnResubscriptionNeeded(chip::app::ReadClient *,
+                                      CHIP_ERROR) override {
+      return CHIP_ERROR_CANCELLED;
+    }
+
+    void OnError(CHIP_ERROR) override {
+      FailActive(InteractionError{"session_lost"});
+    }
+
+    void OnDone(chip::app::ReadClient *) override {
+      read_client_.reset();
+      bool terminal = false;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        terminal = response_.ok && !cancelled_ && !failure_emitted_;
+      }
+      if (terminal) {
+        FailActive(InteractionError{"session_lost"});
+      }
+      MarkDone();
+    }
+
+    void Add(PathResult result) {
+      bool accepted = false;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        accepted = buffer_.Add(std::move(result));
+      }
+      if (!accepted) {
+        FailActive(InteractionError{"invalid_subscription_report"});
+      }
+    }
+
+    bool Emit(std::vector<SubscriptionReport> reports) {
+      for (const SubscriptionReport &report : reports) {
+        if (!owner_.EmitReport(report)) {
+          ScheduleCancel();
+          return false;
+        }
+      }
+      return true;
+    }
+
+    void FailActive(InteractionError error) {
+      bool emit = false;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (failure_emitted_) {
+          return;
+        }
+        failure_emitted_ = true;
+        buffer_.Cancel();
+        if (response_.ok) {
+          emit = true;
+        } else if (!published_) {
+          response_.error_code = error.code;
+          published_ = true;
+        }
+      }
+      condition_.notify_one();
+      if (emit) {
+        owner_.EmitFailure(request_.subscription_id, generation_, error);
+      }
+      ScheduleCancel();
+    }
+
+    void PublishFailure(std::string code) {
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (published_) {
+          return;
+        }
+        response_.error_code = std::move(code);
+        published_ = true;
+      }
+      condition_.notify_one();
+    }
+
+    void ScheduleCancel() {
+      std::lock_guard<std::mutex> lock(mutex_);
+      ScheduleCancelLocked();
+    }
+
+    void ScheduleCancelLocked() {
+      if (cancel_scheduled_ || done_) {
+        return;
+      }
+      cancel_scheduled_ = true;
+      if (chip::DeviceLayer::PlatformMgr().ScheduleWork(
+              CancelSubscriptionWork, reinterpret_cast<intptr_t>(this)) !=
+          CHIP_NO_ERROR) {
+        done_ = true;
+        condition_.notify_all();
+      }
+    }
+
+    void MarkDone() {
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (done_) {
+          return;
+        }
+        done_ = true;
+      }
+      condition_.notify_all();
+      (void) chip::DeviceLayer::PlatformMgr().ScheduleWork(
+          ReapSubscription, reinterpret_cast<intptr_t>(this));
+    }
+
+    std::uint32_t Remaining() const {
+      const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now() - started_);
+      return remaining_timeout_ms(request_.timeout_ms,
+                                  static_cast<std::uint64_t>(elapsed.count()));
+    }
+
+    Impl &owner_;
+    SubscriptionRequest request_;
+    SubscriptionBuffer buffer_;
+    std::chrono::steady_clock::time_point started_;
+    mutable std::mutex mutex_;
+    std::condition_variable condition_;
+    SubscriptionResponse response_;
+    std::uint64_t generation_{1};
+    bool published_{false};
+    bool cancelled_{false};
+    bool failure_emitted_{false};
+    bool cancel_scheduled_{false};
+    bool done_{false};
+    chip::Callback::Callback<chip::OnDeviceConnected> connected_;
+    chip::Callback::Callback<chip::OnDeviceConnectionFailure> connection_failed_;
+    std::unique_ptr<chip::app::ReadClient> read_client_;
+    std::vector<chip::app::AttributePathParams> attribute_paths_;
+    std::vector<chip::app::EventPathParams> event_paths_;
+  };
+
   static void StartPending(intptr_t context) {
     reinterpret_cast<Pending *>(context)->Start();
   }
@@ -885,6 +1268,19 @@ class SdkControllerBackend::Impl final {
   static void ReapPending(intptr_t context) {
     auto *pending = reinterpret_cast<Pending *>(context);
     pending->owner_.Reap(pending);
+  }
+
+  static void StartSubscription(intptr_t context) {
+    reinterpret_cast<NativeSubscription *>(context)->Start();
+  }
+
+  static void CancelSubscriptionWork(intptr_t context) {
+    reinterpret_cast<NativeSubscription *>(context)->CancelOnSdkThread();
+  }
+
+  static void ReapSubscription(intptr_t context) {
+    auto *subscription = reinterpret_cast<NativeSubscription *>(context);
+    subscription->owner_.Reap(subscription);
   }
 
   void Reap(Pending *pending) {
@@ -897,6 +1293,39 @@ class SdkControllerBackend::Impl final {
         pending_.end());
   }
 
+  void Reap(NativeSubscription *subscription) {
+    std::lock_guard<std::mutex> lock(subscription_mutex_);
+    subscriptions_.erase(
+        std::remove_if(
+            subscriptions_.begin(), subscriptions_.end(),
+            [subscription](const std::shared_ptr<NativeSubscription> &candidate) {
+              return candidate.get() == subscription && candidate->done();
+            }),
+        subscriptions_.end());
+  }
+
+  bool EmitReport(const SubscriptionReport &report) {
+    ControllerBackend::ReportSink sink;
+    {
+      std::lock_guard<std::mutex> lock(sink_mutex_);
+      sink = report_sink_;
+    }
+    return sink && sink(report);
+  }
+
+  void EmitFailure(const std::string &subscription_id,
+                   std::uint64_t generation,
+                   const InteractionError &error) {
+    ControllerBackend::FailureSink sink;
+    {
+      std::lock_guard<std::mutex> lock(sink_mutex_);
+      sink = failure_sink_;
+    }
+    if (sink) {
+      sink(subscription_id, generation, error);
+    }
+  }
+
   enum class Action { None, Setup, Shutdown };
 
   static void Work(intptr_t context) {
@@ -907,9 +1336,17 @@ class SdkControllerBackend::Impl final {
       error = self->SetupOnSdkThread();
     } else if (action == Action::Shutdown) {
       std::vector<std::shared_ptr<Pending>> pending;
+      std::vector<std::shared_ptr<NativeSubscription>> subscriptions;
       {
         std::lock_guard<std::mutex> lock(self->pending_mutex_);
         pending = self->pending_;
+      }
+      {
+        std::lock_guard<std::mutex> lock(self->subscription_mutex_);
+        subscriptions = self->subscriptions_;
+      }
+      for (const auto &subscription : subscriptions) {
+        subscription->CancelOnSdkThread();
       }
       for (const auto &interaction : pending) {
         interaction->AbortOnSdkThread();
@@ -1024,6 +1461,10 @@ class SdkControllerBackend::Impl final {
       std::lock_guard<std::mutex> lock(pending_mutex_);
       pending_.clear();
     }
+    {
+      std::lock_guard<std::mutex> lock(subscription_mutex_);
+      subscriptions_.clear();
+    }
     if (system_state_retained_) {
       (void) chip::Controller::DeviceControllerFactory::GetInstance()
           .ReleaseSystemState();
@@ -1082,6 +1523,11 @@ class SdkControllerBackend::Impl final {
   bool accepting_interactions_{false};
   std::mutex pending_mutex_;
   std::vector<std::shared_ptr<Pending>> pending_;
+  std::mutex subscription_mutex_;
+  std::vector<std::shared_ptr<NativeSubscription>> subscriptions_;
+  std::mutex sink_mutex_;
+  ControllerBackend::ReportSink report_sink_;
+  ControllerBackend::FailureSink failure_sink_;
 };
 
 InteractionResponse SdkControllerBackend::Impl::Interact(
@@ -1119,6 +1565,89 @@ InteractionResponse SdkControllerBackend::Impl::Interact(
   return pending->Wait();
 }
 
+SubscriptionResponse SdkControllerBackend::Impl::Subscribe(
+    const SubscriptionRequest &request) {
+  if (!open_ || !valid_subscription_request(request)) {
+    SubscriptionResponse invalid;
+    invalid.error_code = "invalid_request";
+    return invalid;
+  }
+  if (request.resubscribe) {
+    SubscriptionResponse unsupported;
+    unsupported.error_code = "not_supported";
+    return unsupported;
+  }
+
+  std::shared_ptr<NativeSubscription> subscription;
+  {
+    std::lock_guard<std::mutex> lock(subscription_mutex_);
+    subscriptions_.erase(
+        std::remove_if(
+            subscriptions_.begin(), subscriptions_.end(),
+            [](const std::shared_ptr<NativeSubscription> &candidate) {
+              return candidate->done();
+            }),
+        subscriptions_.end());
+    if (!accepting_interactions_ || subscriptions_.size() >= 64U) {
+      SubscriptionResponse busy;
+      busy.error_code = "subscription_busy";
+      return busy;
+    }
+    subscription = std::make_shared<NativeSubscription>(*this, request);
+    subscriptions_.push_back(subscription);
+  }
+
+  if (chip::DeviceLayer::PlatformMgr().ScheduleWork(
+          StartSubscription,
+          reinterpret_cast<intptr_t>(subscription.get())) != CHIP_NO_ERROR) {
+    subscription->PublishFailure("subscription_unavailable");
+    subscription->MarkDone();
+  }
+  return subscription->Wait();
+}
+
+bool SdkControllerBackend::Impl::ActivateSubscription(
+    const std::string &subscription_id, std::uint64_t generation) {
+  std::shared_ptr<NativeSubscription> subscription;
+  {
+    std::lock_guard<std::mutex> lock(subscription_mutex_);
+    const auto found = std::find_if(
+        subscriptions_.begin(), subscriptions_.end(),
+        [&](const std::shared_ptr<NativeSubscription> &candidate) {
+          return candidate->id() == subscription_id &&
+              candidate->generation() == generation && !candidate->done();
+        });
+    if (found == subscriptions_.end()) {
+      return false;
+    }
+    subscription = *found;
+  }
+  return subscription->Activate();
+}
+
+BackendResult SdkControllerBackend::Impl::CancelSubscription(
+    const std::string &subscription_id, std::uint64_t generation,
+    std::uint32_t timeout_ms) {
+  std::shared_ptr<NativeSubscription> subscription;
+  {
+    std::lock_guard<std::mutex> lock(subscription_mutex_);
+    const auto found = std::find_if(
+        subscriptions_.begin(), subscriptions_.end(),
+        [&](const std::shared_ptr<NativeSubscription> &candidate) {
+          return candidate->id() == subscription_id &&
+              candidate->generation() == generation && !candidate->done();
+        });
+    if (found == subscriptions_.end()) {
+      return {false, "invalid_subscription"};
+    }
+    subscription = *found;
+  }
+  if (!subscription->CancelAndWait(timeout_ms)) {
+    return {false, "subscription_cancel_timeout"};
+  }
+  return {true, {}};
+}
+
 SdkControllerBackend::SdkControllerBackend() : impl_(std::make_unique<Impl>()) {}
 
 SdkControllerBackend::~SdkControllerBackend() = default;
@@ -1130,6 +1659,27 @@ BackendResult SdkControllerBackend::Open(const NativeOpenOptions &options) {
 InteractionResponse SdkControllerBackend::Interact(
     const InteractionRequest &request) {
   return impl_->Interact(request);
+}
+
+void SdkControllerBackend::SetSubscriptionSinks(ReportSink report,
+                                                FailureSink failure) {
+  impl_->SetSubscriptionSinks(std::move(report), std::move(failure));
+}
+
+SubscriptionResponse SdkControllerBackend::Subscribe(
+    const SubscriptionRequest &request) {
+  return impl_->Subscribe(request);
+}
+
+bool SdkControllerBackend::ActivateSubscription(
+    const std::string &subscription_id, std::uint64_t generation) {
+  return impl_->ActivateSubscription(subscription_id, generation);
+}
+
+BackendResult SdkControllerBackend::CancelSubscription(
+    const std::string &subscription_id, std::uint64_t generation,
+    std::uint32_t timeout_ms) {
+  return impl_->CancelSubscription(subscription_id, generation, timeout_ms);
 }
 
 void SdkControllerBackend::Close() { impl_->Close(); }

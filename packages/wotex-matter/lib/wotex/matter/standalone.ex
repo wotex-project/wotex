@@ -3,7 +3,7 @@ defmodule Wotex.Matter.Standalone do
 
   alias Wotex.Matter
   alias Wotex.Matter.{Address, AttributeReport, Descriptor, EndpointCatalogue, Error, EventReport}
-  alias Wotex.Matter.{PortCall, ReadPath, Session}
+  alias Wotex.Matter.{PortCall, ReadPath, Session, Subscription}
 
   @descriptor_cluster 0x001D
   @descriptor_members [0x0000, 0x0001, 0x0002, 0x0003]
@@ -108,6 +108,35 @@ defmodule Wotex.Matter.Standalone do
 
   def discover_endpoints(_, _, _), do: {:error, Error.new(:invalid_message)}
 
+  @doc false
+  @spec subscribe(Session.t(), term()) :: {:ok, Subscription.t()} | {:error, Error.t()}
+  def subscribe(%Session{} = session, request) when is_map(request) do
+    with {:ok, request, receiver, timeout} <- subscription_request(request, session.timeout),
+         true <- function_exported?(session.client, :subscribe, 4),
+         {:ok, %Subscription{} = subscription} <-
+           PortCall.invoke(session.client, :subscribe, [session.handle, request, receiver, timeout]) do
+      {:ok, subscription}
+    else
+      false -> {:error, Error.new(:not_supported)}
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:invalid_transport_return)}
+    end
+  end
+
+  def subscribe(_, _), do: {:error, Error.new(:invalid_message)}
+
+  @doc false
+  @spec unsubscribe(Session.t(), term()) :: :ok | {:error, Error.t()}
+  def unsubscribe(%Session{} = session, %Subscription{} = subscription) do
+    if function_exported?(session.client, :unsubscribe, 3) do
+      PortCall.invoke(session.client, :unsubscribe, [session.handle, subscription, session.timeout])
+    else
+      {:error, Error.new(:not_supported)}
+    end
+  end
+
+  def unsubscribe(_, _), do: {:error, Error.new(:invalid_handle)}
+
   defp request(session, message, timeout) do
     result = PortCall.invoke(session.client, :request, [session.handle, message, timeout])
 
@@ -117,6 +146,68 @@ defmodule Wotex.Matter.Standalone do
       _ -> {:error, Error.new(:invalid_transport_return)}
     end
   end
+
+  defp subscription_request(request, default_timeout) do
+    allowed = [
+      :kind,
+      :paths,
+      :receiver,
+      :min_interval_s,
+      :max_interval_s,
+      :resubscribe,
+      :max_queue_length,
+      :timeout
+    ]
+
+    keys = Map.keys(request)
+    receiver = Map.get(request, :receiver, self())
+    minimum = Map.get(request, :min_interval_s, 1)
+    maximum = Map.get(request, :max_interval_s, 60)
+    resubscribe = Map.get(request, :resubscribe, false)
+    queue_limit = Map.get(request, :max_queue_length, 1_000)
+    timeout = Map.get(request, :timeout, default_timeout)
+
+    with true <- Enum.all?(keys, &is_atom/1) and keys -- allowed == [],
+         kind when kind in [:attribute, :event] <- Map.get(request, :kind),
+         true <- is_pid(receiver) and Process.alive?(receiver),
+         true <- is_integer(minimum) and minimum in 0..65_535,
+         true <- is_integer(maximum) and maximum in 1..65_535 and minimum <= maximum,
+         true <- is_boolean(resubscribe),
+         true <- is_integer(queue_limit) and queue_limit in 1..10_000,
+         true <- is_integer(timeout) and timeout in 1..60_000,
+         {:ok, paths} <- subscription_paths(kind, Map.get(request, :paths)) do
+      native = %{
+        kind: kind,
+        paths: Enum.map(paths, &Map.from_struct/1),
+        min_interval_s: minimum,
+        max_interval_s: maximum,
+        resubscribe: resubscribe,
+        queue_limit: queue_limit
+      }
+
+      {:ok, native, receiver, timeout}
+    else
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:invalid_subscription)}
+    end
+  end
+
+  defp subscription_paths(kind, paths) when is_list(paths) and length(paths) in 1..64 do
+    with {:ok, addresses} <-
+           traverse(paths, fn path ->
+             with {:ok, address} <- Address.new(path),
+                  {:ok, _} <- Descriptor.lookup(kind, address, :subscribe),
+                  do: {:ok, address}
+           end),
+         true <- length(addresses) == length(Enum.uniq(addresses)) do
+      {:ok, addresses}
+    else
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:invalid_path_batch)}
+    end
+  end
+
+  defp subscription_paths(_, _), do: {:error, Error.new(:invalid_path_batch)}
 
   defp message(type, address), do: Map.put(Map.from_struct(address), :type, type)
 

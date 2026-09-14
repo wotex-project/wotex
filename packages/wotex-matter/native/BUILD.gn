@@ -11,6 +11,7 @@ executable("wotex-matter-host") {
     "src/protocol.cpp",
     "src/sdk_storage.cpp",
     "src/storage.cpp",
+    "src/subscription.cpp",
     "src/value.cpp",
   ]
   include_dirs = [
