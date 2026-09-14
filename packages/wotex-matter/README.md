@@ -67,6 +67,14 @@ controller factory owns SDK startup, credentials and shutdown. The batch API is
 not wired to that one-shot adapter. No Python runtime, native SDK binary,
 controller factory or commissioning workflow is bundled.
 
+The packaged native source includes the P02 `PersistentStorageDelegate`: it
+creates or opens an explicitly identified controller store, holds an exclusive
+lock, validates bounded versioned state, and commits each opaque SDK value by a
+same-directory fsynced rename. It also compiles the operational-keystore and
+certificate-store binding against the pinned SDK interfaces. This storage unit
+is not yet connected to a persistent controller; controller ownership and
+cryptographic authority generation belong to P03.
+
 ## Quick start
 
 ```elixir
@@ -134,6 +142,12 @@ errors, and runs the default test suite. Wider checks belong to release readines
 The separate `elixir bin/check_p01_native.exs` lane compiles and tests the P01
 descriptor/value unit on the pinned Linux x86_64 reference toolchain with and
 without AddressSanitizer and UndefinedBehaviorSanitizer.
+`elixir bin/check_p02_native.exs` separately verifies the pinned SDK source and
+gitlink inputs, then exercises the durable store under the same normal and
+sanitizer toolchains, including lock and crash-boundary behavior.
+`elixir bin/check_p02_advisories.exs` separately queries OSV for advisories
+against the four exact P02 source revisions; it is a live release check rather
+than a substitute for the content-pinned native lane.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
 

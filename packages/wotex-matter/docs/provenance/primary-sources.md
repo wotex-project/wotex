@@ -35,6 +35,15 @@ The SDK gitlink selects [BoringSSL 9cac8a6](https://github.com/google/boringssl/
 .13 fixes `chip_crypto="boringssl"` and the verified archive hash. Native dependency
 audit remains a required build gate.
 
+P02's SDK-header compile also resolves the pinned gitlinks for
+`nestlabs/nlassert` at `c5892c5ae43830f939ed660ff8ac5f1b91d336d3`
+(archive SHA-256 `392f0a7f1c35cc3520d5f71faf37bfe4518e00ba0dc704068f4fbf6eba5427a5`)
+and `nestlabs/nlio` at `0e725502c2b17bb0a0c22ddd4bcaee9090c8fb5c`
+(archive SHA-256 `f7ffbc6fd3e9029c6aa558aec8f80819d1e9a8daba67633d512de23560147f34`).
+The P02 runner also verifies nlohmann/json 3.11.3 at WMA.13's fixed
+`9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6`
+header hash. These are compile/parser inputs, not controller or crypto evidence.
+
 The finite registry and exact thermostat/light/bridge/temperature recipes are in
 [WMA.11](../specs/WMA.11-standalone-client-and-preservation.md), with pinned XML
 sources. Native SDK generation/bootstrap may use upstream Python at build time;

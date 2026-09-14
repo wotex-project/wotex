@@ -31,6 +31,16 @@ expansion by path. `AttributeReport`, `EventReport`, `Descriptor` and
 `EndpointCatalogue` validate the P01 value layer without performing discovery or
 SDK I/O. The aggregate canonical compact JSON result budget is 98304 bytes.
 
+The P02 native source implements the actual SDK `PersistentStorageDelegate`
+interface for a version-1 controller store. Creation and reopen require the
+exact fabric, controller node, vendor and authority mode. The store holds an
+exclusive process lock, preserves SDK key names and opaque bytes, rejects
+malformed or oversized state, and uses an intent marker plus fsynced atomic
+rename for each setter and deleter. Its operational-keystore and certificate-
+store binding compiles against the pinned SDK types. No BEAM client starts this
+unit yet, and no root key, certificate, controller, CASE session or
+commissioning result is claimed by P02.
+
 `Client` is a consumer-implemented driver contract. It must use a pinned real SDK,
 keep fabric stores isolated, enforce attestation/ACLs, inspect all per-path status
 results, respect finite request budgets and clean up owned resources. Contract
