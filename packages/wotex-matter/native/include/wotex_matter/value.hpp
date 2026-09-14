@@ -18,10 +18,14 @@ enum class Schema {
   DeviceTypeList,
   ClusterList,
   PartsList,
-  ReachableEvent
+  ReachableEvent,
+  AccessControlList,
+  WindowStatus,
+  NullableFabricIndex,
+  NullableVendorId
 };
 
-enum class ElementType { Null, I16, U8, U16, U32, Boolean, Structure, Array };
+enum class ElementType { Null, I16, U8, U16, U32, U64, Boolean, Structure, Array };
 enum class TagKind { Anonymous, Context };
 
 struct Tag {

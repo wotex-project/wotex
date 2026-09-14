@@ -1,5 +1,6 @@
 #include "wotex_matter/value.hpp"
 
+#include <algorithm>
 #include <array>
 #include <limits>
 #include <utility>
@@ -12,7 +13,7 @@ constexpr std::uint8_t kWrite = 1U << 1U;
 constexpr std::uint8_t kInvoke = 1U << 2U;
 constexpr std::uint8_t kSubscribe = 1U << 3U;
 
-constexpr std::array<Descriptor, 15> kDescriptors{{
+constexpr std::array<Descriptor, 19> kDescriptors{{
     {MemberKind::Attribute, 0x0201, 0x0000, Schema::NullableI16, kRead | kSubscribe},
     {MemberKind::Attribute, 0x0201, 0x0011, Schema::I16, kRead | kWrite},
     {MemberKind::Attribute, 0x0201, 0x0012, Schema::I16, kRead | kWrite},
@@ -28,6 +29,10 @@ constexpr std::array<Descriptor, 15> kDescriptors{{
     {MemberKind::Attribute, 0x0039, 0x0011, Schema::Boolean, kRead | kSubscribe},
     {MemberKind::Event, 0x0039, 0x0003, Schema::ReachableEvent, kRead | kSubscribe},
     {MemberKind::Attribute, 0x0402, 0x0000, Schema::NullableI16, kRead | kSubscribe},
+    {MemberKind::Attribute, 0x001F, 0x0000, Schema::AccessControlList, kRead | kWrite},
+    {MemberKind::Attribute, 0x003C, 0x0000, Schema::WindowStatus, kRead},
+    {MemberKind::Attribute, 0x003C, 0x0001, Schema::NullableFabricIndex, kRead},
+    {MemberKind::Attribute, 0x003C, 0x0002, Schema::NullableVendorId, kRead},
 }};
 
 constexpr std::uint8_t operation_flag(Operation operation) {
@@ -65,6 +70,119 @@ Conversion failure(ConversionError error) { return Conversion{error, std::nullop
 bool valid_cluster(std::uint32_t value) {
   return value <= 0x7FFFU ||
          (value >= 0x00010000U && value <= 0xFFF47FFFU && (value % 65536U) <= 0x7FFFU);
+}
+
+const Element *ContextField(const Element &structure, std::uint8_t id) {
+  const Element *result = nullptr;
+  for (const Element &field : structure.children) {
+    if (field.tag.kind != TagKind::Context) {
+      return nullptr;
+    }
+    if (field.tag.id == id) {
+      if (result != nullptr) {
+        return nullptr;
+      }
+      result = &field;
+    }
+  }
+  return result;
+}
+
+bool NullableTargetField(const Element *field, ElementType type,
+                         std::uint64_t maximum, bool cluster = false) {
+  return field != nullptr &&
+      (field->type == ElementType::Null ||
+       (field->type == type && field->unsigned_value <= maximum &&
+        (!cluster || valid_cluster(
+            static_cast<std::uint32_t>(field->unsigned_value)))));
+}
+
+bool ValidTarget(const Element &target) {
+  if (target.tag.kind != TagKind::Anonymous ||
+      target.type != ElementType::Structure || target.children.size() != 3U) {
+    return false;
+  }
+  const Element *cluster = ContextField(target, 0);
+  const Element *endpoint = ContextField(target, 1);
+  const Element *device_type = ContextField(target, 2);
+  return NullableTargetField(cluster, ElementType::U32, 0xFFFFFFFFU, true) &&
+      NullableTargetField(endpoint, ElementType::U16, 0xFFFEU) &&
+      NullableTargetField(device_type, ElementType::U32, 0xFFFFFFFFU) &&
+      (cluster->type != ElementType::Null ||
+       endpoint->type != ElementType::Null ||
+       device_type->type != ElementType::Null) &&
+      (endpoint->type == ElementType::Null ||
+       device_type->type == ElementType::Null);
+}
+
+bool ValidNullableSubjects(const Element *subjects) {
+  if (subjects == nullptr || subjects->tag.kind != TagKind::Context ||
+      subjects->tag.id != 3U) {
+    return false;
+  }
+  if (subjects->type == ElementType::Null) {
+    return true;
+  }
+  return subjects->type == ElementType::Array &&
+      subjects->children.size() <= 64U &&
+      std::all_of(subjects->children.begin(), subjects->children.end(),
+                  [](const Element &subject) {
+                    return subject.tag.kind == TagKind::Anonymous &&
+                        subject.type == ElementType::U64;
+                  });
+}
+
+bool ValidNullableTargets(const Element *targets) {
+  if (targets == nullptr || targets->tag.kind != TagKind::Context ||
+      targets->tag.id != 4U) {
+    return false;
+  }
+  return targets->type == ElementType::Null ||
+      (targets->type == ElementType::Array && targets->children.size() <= 64U &&
+       std::all_of(targets->children.begin(), targets->children.end(),
+                   ValidTarget));
+}
+
+bool valid_access_control_list(const Element &element, Operation operation) {
+  if (element.type != ElementType::Array ||
+      element.tag.kind != TagKind::Anonymous || element.children.size() > 64U) {
+    return false;
+  }
+  for (const Element &entry : element.children) {
+    if (entry.tag.kind != TagKind::Anonymous ||
+        entry.type != ElementType::Structure || entry.children.size() < 4U ||
+        entry.children.size() > 6U) {
+      return false;
+    }
+    const Element *privilege = ContextField(entry, 1);
+    const Element *auth_mode = ContextField(entry, 2);
+    const Element *subjects = ContextField(entry, 3);
+    const Element *targets = ContextField(entry, 4);
+    const Element *auxiliary = ContextField(entry, 5);
+    const Element *fabric = ContextField(entry, 254);
+    for (const Element &field : entry.children) {
+      if (field.tag.kind != TagKind::Context ||
+          (field.tag.id != 1U && field.tag.id != 2U && field.tag.id != 3U &&
+           field.tag.id != 4U && field.tag.id != 5U &&
+           field.tag.id != 254U)) {
+        return false;
+      }
+    }
+    if (privilege == nullptr || privilege->type != ElementType::U8 ||
+        privilege->unsigned_value < 1U || privilege->unsigned_value > 5U ||
+        auth_mode == nullptr || auth_mode->type != ElementType::U8 ||
+        auth_mode->unsigned_value < 2U || auth_mode->unsigned_value > 3U ||
+        !ValidNullableSubjects(subjects) || !ValidNullableTargets(targets) ||
+        (auxiliary != nullptr &&
+         (auxiliary->type != ElementType::U8 ||
+          auxiliary->unsigned_value > 1U)) ||
+        (fabric != nullptr &&
+         (operation != Operation::Read || fabric->type != ElementType::U8 ||
+          fabric->unsigned_value < 1U || fabric->unsigned_value > 254U))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 Conversion convert(const Descriptor &descriptor, const NativeValue &value) {
@@ -168,6 +286,35 @@ Conversion convert(const Descriptor &descriptor, const NativeValue &value) {
       result.children.push_back(std::move(child));
       return success(std::move(result));
     }
+    break;
+
+  case Schema::WindowStatus:
+    if (value.kind == NativeValueKind::Unsigned && value.unsigned_value <= 2U) {
+      Element result = element(ElementType::U8);
+      result.unsigned_value = value.unsigned_value;
+      return success(std::move(result));
+    }
+    break;
+
+  case Schema::NullableFabricIndex:
+  case Schema::NullableVendorId:
+    if (value.kind == NativeValueKind::Null) {
+      return success(element(ElementType::Null));
+    }
+    if (value.kind == NativeValueKind::Unsigned &&
+        ((descriptor.schema == Schema::NullableFabricIndex &&
+          value.unsigned_value >= 1U && value.unsigned_value <= 254U) ||
+         (descriptor.schema == Schema::NullableVendorId &&
+          value.unsigned_value >= 1U && value.unsigned_value <= 0xFFFEU))) {
+      Element result = element(descriptor.schema == Schema::NullableFabricIndex
+                                   ? ElementType::U8
+                                   : ElementType::U16);
+      result.unsigned_value = value.unsigned_value;
+      return success(std::move(result));
+    }
+    break;
+
+  case Schema::AccessControlList:
     break;
   }
 
@@ -335,6 +482,27 @@ ConversionError validate_element(MemberKind kind, std::uint32_t cluster,
             element.children[0].tag.kind == TagKind::Context &&
             element.children[0].tag.id == 0 &&
             element.children[0].type == ElementType::Boolean
+        ? ConversionError::None
+        : ConversionError::InvalidValue;
+  case Schema::WindowStatus:
+    return element.type == ElementType::U8 && element.unsigned_value <= 2U
+        ? ConversionError::None
+        : ConversionError::InvalidValue;
+  case Schema::NullableFabricIndex:
+    return element.type == ElementType::Null ||
+            (element.type == ElementType::U8 &&
+             element.unsigned_value >= 1U && element.unsigned_value <= 254U)
+        ? ConversionError::None
+        : ConversionError::InvalidValue;
+  case Schema::NullableVendorId:
+    return element.type == ElementType::Null ||
+            (element.type == ElementType::U16 &&
+             element.unsigned_value >= 1U &&
+             element.unsigned_value <= 0xFFFEU)
+        ? ConversionError::None
+        : ConversionError::InvalidValue;
+  case Schema::AccessControlList:
+    return valid_access_control_list(element, operation)
         ? ConversionError::None
         : ConversionError::InvalidValue;
   }

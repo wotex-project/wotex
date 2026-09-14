@@ -45,6 +45,11 @@ defmodule Wotex.Matter.TestClient do
 
   defp response(%{response: :echo}, message, _), do: {:ok, message}
 
+  defp response(%{response: {:error, _} = response}, message, timeout) do
+    send(self(), {:matter_request, message, timeout})
+    response
+  end
+
   defp response(handle, message, timeout) do
     send(handle.owner, {:matter_request, message, timeout})
     {:ok, handle.response}

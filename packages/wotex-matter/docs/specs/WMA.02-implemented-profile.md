@@ -71,8 +71,18 @@ status, retires the previous delivery generation, and permits at most five SDK
 attempts within 60 seconds. Success emits `:resubscribed` with unknown continuity
 before a fresh initial snapshot. The public handle remains valid across delivery
 generations, while cancellation, receiver death and overflow detach the live SDK
-retry state. Recovery never replays writes or invokes. Commissioning remains
-unavailable.
+retry state. Recovery never replays writes or invokes.
+
+P07 adds explicit on-network commissioning with a concrete node, valid setup
+PIN, exact long-discriminator filter and finite deadline. The native owner uses
+filtered discovery and SDK pairing with its production attestation verifier. It
+accepts success only after the final commissioning callback and a CASE probe;
+SDK failures retain their numeric status and report unknown effect after fabric
+mutation may have started. It does not reset the peer, remove a fabric or retry
+commissioning automatically. Enhanced commissioning windows use SDK-generated
+PIN and salt, wait for final completion and return a secret
+`OnboardingMaterial` value whose Inspect output is redacted. AccessControl ACL
+values use the generated schema and reject PASE as operational ACL authority.
 
 `Client` is a consumer-implemented driver contract. It must use a pinned real SDK,
 keep fabric stores isolated, enforce attestation/ACLs, inspect all per-path status
@@ -86,8 +96,9 @@ The injected SDK adapter maps concrete read/write/invoke calls to an explicitly
 initialized native controller supplied by its factory. It remains separate from
 the first-party persistent controller and does not implement the batch request
 shape. No Python runtime or SDK binary is bundled. The packaged first-party
-controller source is built explicitly outside the Hex archive; commissioning
-remains unfinished. See
+controller source is built explicitly outside the Hex archive. P07's production
+path compiles against the pinned SDK and its deterministic protocol/schema tests
+execute; the actual software-peer commissioning scenarios remain P09 evidence. See
 [SDK client contract](WMA.03-sdk-client.md).
 
 ## Evidence and compatibility

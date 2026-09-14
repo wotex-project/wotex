@@ -18,7 +18,8 @@ defmodule Wotex.Matter.Native do
 
   P03 establishes controller ownership and liveness. P04 adds finite reads,
   event reads, writes and invokes. P05 adds monitored attribute and event
-  subscriptions with native report credit and explicit cancellation.
+  subscriptions with native report credit and explicit cancellation. P07 adds
+  explicit on-network commissioning and enhanced commissioning windows.
   """
 
   @behaviour Wotex.Matter.Client
@@ -68,7 +69,7 @@ defmodule Wotex.Matter.Native do
         {:error, Error.new(:invalid_request)}
 
       true ->
-        case request_fabric(message) do
+        case request_fabric(message, handle.fabric_id) do
           {:ok, fabric_id} when fabric_id != handle.fabric_id ->
             {:error, Error.new(:fabric_mismatch)}
 
@@ -127,10 +128,10 @@ defmodule Wotex.Matter.Native do
 
   def unsubscribe(_, _, _), do: {:error, Error.new(:invalid_handle)}
 
-  defp request_fabric(%{fabric_id: fabric_id}) when is_integer(fabric_id),
+  defp request_fabric(%{fabric_id: fabric_id}, _) when is_integer(fabric_id),
     do: {:ok, fabric_id}
 
-  defp request_fabric(%{type: type, paths: paths})
+  defp request_fabric(%{type: type, paths: paths}, _)
        when type in [:read_paths, :read_events] and is_list(paths) and paths != [] do
     fabrics = Enum.map(paths, fn path -> if is_map(path), do: Map.get(path, :fabric_id) end)
 
@@ -140,7 +141,11 @@ defmodule Wotex.Matter.Native do
     end
   end
 
-  defp request_fabric(_), do: :error
+  defp request_fabric(%{type: type}, fabric_id)
+       when type in [:commission_on_network, :open_window],
+       do: {:ok, fabric_id}
+
+  defp request_fabric(_, _), do: :error
 
   defp validate_subscription_request(request, fabric_id) do
     keys = [:kind, :paths, :min_interval_s, :max_interval_s, :resubscribe, :queue_limit]

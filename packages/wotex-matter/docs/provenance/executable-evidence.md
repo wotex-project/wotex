@@ -6,9 +6,10 @@ storage, the P03 first-party persistent controller owner, and P04 finite
 Interaction Model reads, event reads, writes, invokes and Descriptor discovery.
 P05 adds bounded native attribute/event subscription delivery and cancellation.
 P06 adds bounded, explicitly selected subscription recovery and delivery-generation
-retirement.
+retirement. P07 adds filtered commissioning, final CASE confirmation, generated
+enhanced-window material and typed operational ACL values.
 The earlier one-shot Python factory adapter remains an injected baseline.
-Commissioning workflows remain unimplemented.
+Actual commissioning against the pinned software peers remains P09 evidence.
 
 ## Developer gate
 
@@ -151,13 +152,42 @@ five-attempt exhaustion and cancellation of generation 2 through the original
 opaque handle. No mutation request is emitted during recovery. This lane does not
 claim gap-free event replay or an independent publisher interaction.
 
+## P07 commissioning and authorization evidence
+
+`WOTEX_PATH_DEPS=1 mix run bin/check_p07_native.exs` extends the pinned normal
+and ASan/UBSan reconstruction with the production commissioning controller.
+The complete host compiles its exact long-discriminator
+`DiscoverCommissionableNodes` filter, network-only `PairDevice` path, final
+`DevicePairingDelegate` result, CASE probe and
+`CommissioningWindowOpener`. The enhanced-window request supplies no caller PIN
+or salt. The same build uses the production attestation verifier configured by
+the explicit PAA trust directory; it does not enable an attestation bypass or
+test commissioner mode.
+
+`test/native/commissioning_test.cpp` executes request bounds, final-result
+validation, numeric SDK failure status and effect, expired-window failure and
+operational ACL denial. `test/native/value_test.cpp` exercises the generated
+AccessControl and AdministratorCommissioning value schemas, including rejection
+of PASE as ACL authority. `test/wotex/matter/commissioning_test.exs` checks the
+public explicit operations, invalid and reserved setup PINs, secret/redacted
+onboarding material, strict wire results and pre-I/O ACL validation.
+
+`test/interop/commissioning_test.exs` is the executable WMA-V10 peer contract.
+It requires an explicit `WOTEX_MATTER_COMMISSIONING_FIXTURE` and covers trusted
+commissioning plus CASE, a valid wrong PIN, untrusted attestation, expired
+window material and peer-enforced ACL denial. It is excluded from the developer
+gate and has not yet been executed here because P09 owns construction and
+orchestration of those pinned peers. Its presence is not interoperability
+evidence.
+
 ## Acceptance boundary
 
 [WMA.13](../specs/WMA.13-native-backend.md) defines the complete native binary,
-Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P06 are executed
-at their stated boundaries. P07–P09 still require commissioning, Runtime
-integration and pinned software-peer workflows. A passing P06 native lane does
-not establish those later claims, physical-device
+Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P07 are executed
+at their stated deterministic and native-compilation boundaries. P08/P08a still
+require Runtime integration, and P09 still requires all pinned software-peer
+workflows, including WMA-V10. A passing P07 native lane does not establish an
+actual peer result, physical-device
 behavior, CSA certification or publication readiness.
 
 Each completed native run must bind source, SDK/binary, toolchain and cleanup

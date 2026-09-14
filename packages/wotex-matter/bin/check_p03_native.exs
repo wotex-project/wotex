@@ -68,6 +68,7 @@ defmodule Wotex.Matter.Check.P03Native do
 
   @build_script """
   set -eu
+  trap 'printf "native build failed at line %s\n" "$LINENO" >&2' ERR
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
   apt-get install -y -qq binutils build-essential ca-certificates cmake curl git \
@@ -777,6 +778,7 @@ defmodule Wotex.Matter.Check.P03Native do
         "bin/check_p04_native.exs",
         "bin/check_p05_native.exs",
         "bin/check_p06_native.exs",
+        "bin/check_p07_native.exs",
         "lib/**/*.ex",
         "native/**/*",
         "test/native/*.cpp",
@@ -844,8 +846,8 @@ defmodule Wotex.Matter.Check.P03Native do
         }
       ],
       "audit_results" => %{
-        "cmake_normal" => "5/5 passed",
-        "cmake_asan_ubsan" => "5/5 passed",
+        "cmake_normal" => "passed",
+        "cmake_asan_ubsan" => "passed",
         "actual_sdk_lifecycle" => "passed",
         "operations" => 1000,
         "open_close_cycles" => 100,

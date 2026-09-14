@@ -1,6 +1,7 @@
 #ifndef WOTEX_MATTER_PROTOCOL_HPP
 #define WOTEX_MATTER_PROTOCOL_HPP
 
+#include "wotex_matter/commissioning.hpp"
 #include "wotex_matter/interaction.hpp"
 #include "wotex_matter/subscription.hpp"
 
@@ -51,6 +52,17 @@ class ControllerBackend {
   virtual ~ControllerBackend() = default;
   virtual BackendResult Open(const NativeOpenOptions &options) = 0;
   virtual InteractionResponse Interact(const InteractionRequest &request) = 0;
+  virtual CommissioningResponse Commission(const CommissioningRequest &) {
+    return {false, CommissioningError{"not_supported", std::nullopt,
+                                      InteractionEffect::None},
+            0, 0, false};
+  }
+  virtual CommissioningWindowResponse OpenWindow(
+      const CommissioningWindowRequest &) {
+    return {false, CommissioningError{"not_supported", std::nullopt,
+                                      InteractionEffect::None},
+            0, 0, 0, 0, {}, {}};
+  }
   virtual void SetSubscriptionSinks(ReportSink, StatusSink, FailureSink) {}
   virtual SubscriptionResponse Subscribe(const SubscriptionRequest &) {
     SubscriptionResponse result;

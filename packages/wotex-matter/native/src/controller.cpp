@@ -14,12 +14,15 @@
 #include <app/MessageDef/StatusIB.h>
 #include <clusters/BridgedDeviceBasicInformation/Attributes.h>
 #include <clusters/BridgedDeviceBasicInformation/Events.h>
+#include <clusters/AdministratorCommissioning/Attributes.h>
+#include <clusters/AccessControl/Attributes.h>
 #include <clusters/Descriptor/Attributes.h>
 #include <clusters/OnOff/Attributes.h>
 #include <clusters/OnOff/Commands.h>
 #include <clusters/TemperatureMeasurement/Attributes.h>
 #include <clusters/Thermostat/Attributes.h>
 #include <controller/CHIPDeviceControllerFactory.h>
+#include <controller/CommissioningWindowOpener.h>
 #include <credentials/GroupDataProviderImpl.h>
 #include <credentials/attestation_verifier/DefaultDeviceAttestationVerifier.h>
 #include <credentials/attestation_verifier/FileAttestationTrustStore.h>
@@ -30,6 +33,8 @@
 #include <lib/support/CodeUtils.h>
 #include <platform/CHIPDeviceLayer.h>
 #include <platform/Linux/ConfigurationManagerImpl.h>
+#include <setup_payload/ManualSetupPayloadGenerator.h>
+#include <setup_payload/QRCodeSetupPayloadGenerator.h>
 
 #include <algorithm>
 #include <array>
@@ -37,6 +42,7 @@
 #include <condition_variable>
 #include <cstring>
 #include <mutex>
+#include <new>
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -104,6 +110,146 @@ CHIP_ERROR DecodeNullableI16(chip::TLV::TLVReader &reader,
   output = value.IsNull() ? NativeValue::null_value()
                           : NativeValue::signed_integer(value.Value());
   return CHIP_NO_ERROR;
+}
+
+template <typename T>
+CHIP_ERROR DecodeNullableUnsigned(chip::TLV::TLVReader &reader,
+                                  NativeValue &output) {
+  T value;
+  ReturnErrorOnFailure(chip::app::DataModel::Decode(reader, value));
+  output = value.IsNull()
+      ? NativeValue::null_value()
+      : NativeValue::unsigned_integer(
+            static_cast<std::uint64_t>(value.Value()));
+  return CHIP_NO_ERROR;
+}
+
+CHIP_ERROR DecodeTag(const chip::TLV::TLVReader &reader, Tag &tag) {
+  const chip::TLV::Tag native = reader.GetTag();
+  if (native == chip::TLV::AnonymousTag()) {
+    tag = Tag{};
+    return CHIP_NO_ERROR;
+  }
+  VerifyOrReturnError(chip::TLV::IsContextTag(native),
+                      CHIP_ERROR_INVALID_TLV_TAG);
+  tag = Tag{TagKind::Context,
+            static_cast<std::uint8_t>(chip::TLV::TagNumFromTag(native))};
+  return CHIP_NO_ERROR;
+}
+
+CHIP_ERROR DecodeRawElement(chip::TLV::TLVReader &reader, Element &output,
+                            std::size_t depth, std::size_t &nodes) {
+  VerifyOrReturnError(depth <= 8U && ++nodes <= 1024U,
+                      CHIP_ERROR_BUFFER_TOO_SMALL);
+  ReturnErrorOnFailure(DecodeTag(reader, output.tag));
+  switch (reader.GetType()) {
+  case chip::TLV::kTLVType_Null:
+    output.type = ElementType::Null;
+    return CHIP_NO_ERROR;
+  case chip::TLV::kTLVType_SignedInteger:
+    output.type = ElementType::I16;
+    return reader.Get(output.signed_value);
+  case chip::TLV::kTLVType_UnsignedInteger:
+    output.type = ElementType::U64;
+    return reader.Get(output.unsigned_value);
+  case chip::TLV::kTLVType_Boolean:
+    output.type = ElementType::Boolean;
+    return reader.Get(output.boolean_value);
+  case chip::TLV::kTLVType_Structure:
+  case chip::TLV::kTLVType_Array: {
+    output.type = reader.GetType() == chip::TLV::kTLVType_Structure
+        ? ElementType::Structure : ElementType::Array;
+    chip::TLV::TLVType outer;
+    ReturnErrorOnFailure(reader.EnterContainer(outer));
+    CHIP_ERROR error = CHIP_NO_ERROR;
+    while ((error = reader.Next()) == CHIP_NO_ERROR) {
+      Element child;
+      ReturnErrorOnFailure(DecodeRawElement(reader, child, depth + 1U, nodes));
+      output.children.push_back(std::move(child));
+    }
+    VerifyOrReturnError(error == CHIP_END_OF_TLV, error);
+    return reader.ExitContainer(outer);
+  }
+  default:
+    return CHIP_ERROR_UNSUPPORTED_CHIP_FEATURE;
+  }
+}
+
+CHIP_ERROR NormalizeAccessControl(Element &element) {
+  VerifyOrReturnError(element.tag.kind == TagKind::Anonymous &&
+                          element.type == ElementType::Array &&
+                          element.children.size() <= 64U,
+                      CHIP_ERROR_INVALID_ARGUMENT);
+  for (Element &entry : element.children) {
+    VerifyOrReturnError(entry.tag.kind == TagKind::Anonymous &&
+                            entry.type == ElementType::Structure,
+                        CHIP_ERROR_INVALID_ARGUMENT);
+    for (Element &field : entry.children) {
+      VerifyOrReturnError(field.tag.kind == TagKind::Context,
+                          CHIP_ERROR_INVALID_ARGUMENT);
+      if (field.type == ElementType::U64 &&
+          (field.tag.id == 1U || field.tag.id == 2U || field.tag.id == 5U ||
+           field.tag.id == 254U)) {
+        field.type = ElementType::U8;
+      } else if (field.tag.id == 4U && field.type == ElementType::Array) {
+        for (Element &target : field.children) {
+          VerifyOrReturnError(target.tag.kind == TagKind::Anonymous &&
+                                  target.type == ElementType::Structure,
+                              CHIP_ERROR_INVALID_ARGUMENT);
+          for (Element &target_field : target.children) {
+            VerifyOrReturnError(target_field.tag.kind == TagKind::Context,
+                                CHIP_ERROR_INVALID_ARGUMENT);
+            if (target_field.type == ElementType::U64) {
+              target_field.type = target_field.tag.id == 1U
+                  ? ElementType::U16 : ElementType::U32;
+            }
+          }
+        }
+      }
+    }
+  }
+  return validate_element(MemberKind::Attribute, 0x001FU, 0x0000U,
+                          Operation::Read, element) == ConversionError::None
+      ? CHIP_NO_ERROR : CHIP_ERROR_INVALID_ARGUMENT;
+}
+
+chip::TLV::Tag NativeTag(const Tag &tag) {
+  return tag.kind == TagKind::Anonymous
+      ? chip::TLV::AnonymousTag() : chip::TLV::ContextTag(tag.id);
+}
+
+CHIP_ERROR EncodeElement(chip::TLV::TLVWriter &writer,
+                         const Element &element) {
+  const chip::TLV::Tag tag = NativeTag(element.tag);
+  switch (element.type) {
+  case ElementType::Null:
+    return writer.PutNull(tag);
+  case ElementType::I16:
+    return writer.Put(tag, static_cast<std::int16_t>(element.signed_value));
+  case ElementType::U8:
+    return writer.Put(tag, static_cast<std::uint8_t>(element.unsigned_value));
+  case ElementType::U16:
+    return writer.Put(tag, static_cast<std::uint16_t>(element.unsigned_value));
+  case ElementType::U32:
+    return writer.Put(tag, static_cast<std::uint32_t>(element.unsigned_value));
+  case ElementType::U64:
+    return writer.Put(tag, element.unsigned_value);
+  case ElementType::Boolean:
+    return writer.Put(tag, element.boolean_value);
+  case ElementType::Structure:
+  case ElementType::Array: {
+    chip::TLV::TLVType outer;
+    ReturnErrorOnFailure(writer.StartContainer(
+        tag, element.type == ElementType::Structure
+                 ? chip::TLV::kTLVType_Structure : chip::TLV::kTLVType_Array,
+        outer));
+    for (const Element &child : element.children) {
+      ReturnErrorOnFailure(EncodeElement(writer, child));
+    }
+    return writer.EndContainer(outer);
+  }
+  }
+  return CHIP_ERROR_INVALID_ARGUMENT;
 }
 
 template <typename T>
@@ -195,6 +341,23 @@ CHIP_ERROR DecodeAttribute(const ConcretePath &path,
     using Type = TemperatureMeasurement::Attributes::MeasuredValue::TypeInfo::
         DecodableType;
     error = DecodeNullableI16<Type>(reader, value);
+  } else if (path.cluster == AccessControl::Id &&
+             path.member == AccessControl::Attributes::Acl::Id) {
+    std::size_t nodes = 0;
+    ReturnErrorOnFailure(DecodeRawElement(reader, output, 0U, nodes));
+    return NormalizeAccessControl(output);
+  } else if (path.cluster == AdministratorCommissioning::Id &&
+             path.member == AdministratorCommissioning::Attributes::WindowStatus::Id) {
+    using Type = AdministratorCommissioning::Attributes::WindowStatus::TypeInfo::DecodableType;
+    error = DecodeScalar<Type>(reader, value);
+  } else if (path.cluster == AdministratorCommissioning::Id &&
+             path.member == AdministratorCommissioning::Attributes::AdminFabricIndex::Id) {
+    using Type = AdministratorCommissioning::Attributes::AdminFabricIndex::TypeInfo::DecodableType;
+    error = DecodeNullableUnsigned<Type>(reader, value);
+  } else if (path.cluster == AdministratorCommissioning::Id &&
+             path.member == AdministratorCommissioning::Attributes::AdminVendorId::Id) {
+    using Type = AdministratorCommissioning::Attributes::AdminVendorId::TypeInfo::DecodableType;
+    error = DecodeNullableUnsigned<Type>(reader, value);
   }
   ReturnErrorOnFailure(error);
   Conversion conversion = convert_value(MemberKind::Attribute, path.cluster,
@@ -244,6 +407,14 @@ CHIP_ERROR EncodeWriteValue(const ConcretePath &path, const Element &element,
         writer, chip::TLV::AnonymousTag(),
         static_cast<Thermostat::SystemModeEnum>(element.unsigned_value));
   }
+  if (path.cluster == AccessControl::Id &&
+      path.member == AccessControl::Attributes::Acl::Id) {
+    VerifyOrReturnError(
+        validate_element(MemberKind::Attribute, path.cluster, path.member,
+                         Operation::Write, element) == ConversionError::None,
+        CHIP_ERROR_INVALID_ARGUMENT);
+    return EncodeElement(writer, element);
+  }
   return CHIP_ERROR_UNSUPPORTED_CHIP_FEATURE;
 }
 
@@ -268,9 +439,12 @@ class ControllerConfigurationManager final
 
 } // namespace
 
-class SdkControllerBackend::Impl final {
+class SdkControllerBackend::Impl final
+    : public chip::Controller::DevicePairingDelegate {
   class Pending;
   class NativeSubscription;
+  class PendingCommissioning;
+  class PendingWindow;
 
  public:
   BackendResult Open(const NativeOpenOptions &options) {
@@ -388,6 +562,9 @@ class SdkControllerBackend::Impl final {
   bool IsOpen() const { return open_; }
 
   InteractionResponse Interact(const InteractionRequest &request);
+  CommissioningResponse Commission(const CommissioningRequest &request);
+  CommissioningWindowResponse OpenWindow(
+      const CommissioningWindowRequest &request);
   void SetSubscriptionSinks(ControllerBackend::ReportSink report,
                             ControllerBackend::StatusSink status,
                             ControllerBackend::FailureSink failure) {
@@ -403,7 +580,426 @@ class SdkControllerBackend::Impl final {
                                    std::uint64_t generation,
                                    std::uint32_t timeout_ms);
 
+  void OnCommissioningComplete(chip::NodeId device_id,
+                               CHIP_ERROR error) override;
+  void OnCommissioningFailure(
+      chip::PeerId, const chip::Controller::CompletionStatus &status) override;
+  void OnCommissioningStageStart(
+      chip::PeerId, chip::Controller::CommissioningStage stage) override;
+
  private:
+  class PendingCommissioning final
+      : public std::enable_shared_from_this<PendingCommissioning> {
+   public:
+    friend class Impl;
+
+    PendingCommissioning(Impl &owner, CommissioningRequest request)
+        : owner_(owner), request_(request),
+          started_(std::chrono::steady_clock::now()),
+          connected_(&CaseConnected, this),
+          connection_failed_(&CaseConnectionFailed, this) {}
+
+    CommissioningResponse Wait() {
+      std::unique_lock<std::mutex> lock(mutex_);
+      if (!condition_.wait_for(lock, std::chrono::milliseconds(Remaining()),
+                               [this] { return published_; })) {
+        response_ = Failure("commissioning_timeout", CHIP_ERROR_TIMEOUT,
+                            FabricMutationMayHaveStarted());
+        published_ = true;
+        lock.unlock();
+        ScheduleAbort();
+      }
+      return response_;
+    }
+
+    void Start() {
+      if (Remaining() == 0U) {
+        Publish(Failure("commissioning_timeout", CHIP_ERROR_TIMEOUT, false));
+        MarkDone();
+        return;
+      }
+
+      chip::SetupPayload payload;
+      payload.version = 0;
+      payload.vendorID = 0;
+      payload.productID = 0;
+      payload.commissioningFlow = chip::CommissioningFlow::kStandard;
+      payload.rendezvousInformation.SetValue(
+          chip::RendezvousInformationFlags(
+              chip::RendezvousInformationFlag::kOnNetwork));
+      payload.discriminator.SetLongValue(request_.discriminator);
+      payload.setUpPINCode = request_.setup_pin;
+
+      std::string setup_code;
+      CHIP_ERROR error =
+          chip::QRCodeSetupPayloadGenerator(payload)
+              .payloadBase38Representation(setup_code);
+      if (error == CHIP_NO_ERROR) {
+        error = owner_.commissioner_.DiscoverCommissionableNodes(
+            chip::Dnssd::DiscoveryFilter(
+                chip::Dnssd::DiscoveryFilterType::kLongDiscriminator,
+                request_.discriminator));
+      }
+      if (error == CHIP_NO_ERROR) {
+        (void) owner_.commissioner_.StopCommissionableDiscovery();
+        submitted_ = true;
+        error = owner_.commissioner_.PairDevice(
+            request_.node_id, setup_code.c_str(),
+            chip::Controller::DiscoveryType::kDiscoveryNetworkOnly);
+      }
+      if (error != CHIP_NO_ERROR) {
+        Publish(Failure("commissioning_submit_failed", error, false));
+        MarkDone();
+      }
+    }
+
+    void StageStarted(chip::Controller::CommissioningStage stage) {
+      if (stage >= chip::Controller::CommissioningStage::kSendTrustedRootCert) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        fabric_mutation_may_have_started_ = true;
+      }
+    }
+
+    void RecordFailure(const chip::Controller::CompletionStatus &status) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      final_status_ = status.err;
+    }
+
+    void CommissioningComplete(chip::NodeId device_id, CHIP_ERROR error) {
+      (void) owner_.commissioner_.StopCommissionableDiscovery();
+      if (device_id != request_.node_id || error != CHIP_NO_ERROR) {
+        CHIP_ERROR status = error;
+        {
+          std::lock_guard<std::mutex> lock(mutex_);
+          if (status == CHIP_NO_ERROR && final_status_.has_value()) {
+            status = *final_status_;
+          }
+        }
+        if (status == CHIP_NO_ERROR) {
+          status = CHIP_ERROR_INVALID_ARGUMENT;
+        }
+        Publish(Failure("commissioning_failed", status,
+                        FabricMutationMayHaveStarted()));
+        MarkDone();
+        return;
+      }
+
+      CHIP_ERROR case_error = owner_.commissioner_.GetConnectedDevice(
+          request_.node_id, &connected_, &connection_failed_);
+      if (case_error != CHIP_NO_ERROR) {
+        Publish(Failure("commissioning_failed", case_error, true));
+        MarkDone();
+      }
+    }
+
+    void AbortOnSdkThread() {
+      connected_.Cancel();
+      connection_failed_.Cancel();
+      if (submitted_) {
+        (void) owner_.commissioner_.StopPairing(request_.node_id);
+      }
+      Publish(Failure("controller_closed", CHIP_ERROR_CANCELLED,
+                      FabricMutationMayHaveStarted()));
+      MarkDone();
+    }
+
+    bool done() const {
+      std::lock_guard<std::mutex> lock(mutex_);
+      return done_;
+    }
+
+   private:
+    static void CaseConnected(void *context,
+                              chip::Messaging::ExchangeManager &,
+                              const chip::SessionHandle &) {
+      auto *self = static_cast<PendingCommissioning *>(context);
+      self->Publish({true, std::nullopt, self->request_.node_id,
+                     self->owner_.identity_.fabric_id, true});
+      self->MarkDone();
+    }
+
+    static void CaseConnectionFailed(void *context, const chip::ScopedNodeId &,
+                                     CHIP_ERROR error) {
+      auto *self = static_cast<PendingCommissioning *>(context);
+      self->Publish(self->Failure("commissioning_failed", error, true));
+      self->MarkDone();
+    }
+
+    static void CancelWork(intptr_t context) {
+      std::unique_ptr<std::shared_ptr<PendingCommissioning>> holder(
+          reinterpret_cast<std::shared_ptr<PendingCommissioning> *>(context));
+      (*holder)->AbortOnSdkThread();
+    }
+
+    void ScheduleAbort() {
+      auto *holder = new (std::nothrow)
+          std::shared_ptr<PendingCommissioning>(shared_from_this());
+      if (holder == nullptr) {
+        return;
+      }
+      if (chip::DeviceLayer::PlatformMgr().ScheduleWork(
+              CancelWork, reinterpret_cast<intptr_t>(holder)) !=
+          CHIP_NO_ERROR) {
+        delete holder;
+      }
+    }
+
+    CommissioningResponse Failure(std::string code, CHIP_ERROR error,
+                                  bool mutation) const {
+      return {false,
+              CommissioningError{
+                  std::move(code),
+                  static_cast<std::uint32_t>(error.AsInteger()),
+                  mutation ? InteractionEffect::Unknown
+                           : InteractionEffect::None},
+              0, 0, false};
+    }
+
+    void Publish(CommissioningResponse response) {
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (published_) {
+          return;
+        }
+        response_ = std::move(response);
+        published_ = true;
+      }
+      condition_.notify_one();
+    }
+
+    void MarkDone() {
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (done_) {
+          return;
+        }
+        done_ = true;
+      }
+      (void) chip::DeviceLayer::PlatformMgr().ScheduleWork(
+          ReapCommissioning, reinterpret_cast<intptr_t>(this));
+    }
+
+    bool FabricMutationMayHaveStarted() const {
+      std::lock_guard<std::mutex> lock(mutex_);
+      return fabric_mutation_may_have_started_;
+    }
+
+    std::uint32_t Remaining() const {
+      const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now() - started_);
+      return remaining_timeout_ms(request_.timeout_ms,
+                                  static_cast<std::uint64_t>(elapsed.count()));
+    }
+
+    Impl &owner_;
+    CommissioningRequest request_;
+    std::chrono::steady_clock::time_point started_;
+    mutable std::mutex mutex_;
+    std::condition_variable condition_;
+    CommissioningResponse response_;
+    std::optional<CHIP_ERROR> final_status_;
+    bool submitted_{false};
+    bool fabric_mutation_may_have_started_{false};
+    bool published_{false};
+    bool done_{false};
+    chip::Callback::Callback<chip::OnDeviceConnected> connected_;
+    chip::Callback::Callback<chip::OnDeviceConnectionFailure>
+        connection_failed_;
+  };
+
+  class PendingWindow final
+      : public std::enable_shared_from_this<PendingWindow> {
+   public:
+    friend class Impl;
+
+    PendingWindow(Impl &owner, CommissioningWindowRequest request)
+        : owner_(owner), request_(request),
+          started_(std::chrono::steady_clock::now()),
+          callback_(&Opened, this) {}
+
+    CommissioningWindowResponse Wait() {
+      std::unique_lock<std::mutex> lock(mutex_);
+      if (!condition_.wait_for(lock, std::chrono::milliseconds(Remaining()),
+                               [this] { return published_; })) {
+        response_ = Failure("window_timeout", CHIP_ERROR_TIMEOUT, submitted_);
+        published_ = true;
+        lock.unlock();
+        ScheduleAbort();
+      }
+      return response_;
+    }
+
+    void Start() {
+      if (Remaining() == 0U) {
+        Publish(Failure("window_timeout", CHIP_ERROR_TIMEOUT, false));
+        MarkDone();
+        return;
+      }
+
+      opener_ = std::make_unique<chip::Controller::CommissioningWindowOpener>(
+          &owner_.commissioner_);
+      chip::Controller::CommissioningWindowPasscodeParams params;
+      params.SetNodeId(request_.node_id)
+          .SetTimeout(request_.timeout_s)
+          .SetIteration(request_.iteration_count)
+          .SetDiscriminator(request_.discriminator)
+          .SetSetupPIN(chip::NullOptional)
+          .SetSalt(chip::NullOptional)
+          .SetReadVIDPIDAttributes(false)
+          .SetCallback(&callback_);
+      chip::SetupPayload temporary_payload;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        submitted_ = true;
+      }
+      CHIP_ERROR error =
+          opener_->OpenCommissioningWindow(params, temporary_payload);
+      if (error != CHIP_NO_ERROR) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        submitted_ = false;
+      }
+      if (error != CHIP_NO_ERROR) {
+        Publish(Failure("window_submit_failed", error, false));
+        MarkDone();
+      }
+    }
+
+    void AbortOnSdkThread() {
+      callback_.Cancel();
+      opener_.reset();
+      Publish(Failure("controller_closed", CHIP_ERROR_CANCELLED, Submitted()));
+      MarkDone();
+    }
+
+    bool done() const {
+      std::lock_guard<std::mutex> lock(mutex_);
+      return done_;
+    }
+
+   private:
+    static void Opened(void *context, chip::NodeId device_id, CHIP_ERROR status,
+                       chip::SetupPayload payload) {
+      auto *self = static_cast<PendingWindow *>(context);
+      if (status != CHIP_NO_ERROR || device_id != self->request_.node_id ||
+          payload.discriminator.IsShortDiscriminator()) {
+        if (status == CHIP_NO_ERROR) {
+          status = CHIP_ERROR_INVALID_ARGUMENT;
+        }
+        self->Publish(self->Failure("window_failed", status, true));
+        self->MarkDone();
+        return;
+      }
+
+      std::string manual_code;
+      std::string qr_code;
+      CHIP_ERROR error =
+          chip::ManualSetupPayloadGenerator(payload)
+              .payloadDecimalStringRepresentation(manual_code);
+      if (error == CHIP_NO_ERROR) {
+        error = chip::QRCodeSetupPayloadGenerator(payload)
+                    .payloadBase38Representation(qr_code);
+      }
+      if (error != CHIP_NO_ERROR ||
+          !valid_setup_pin(payload.setUpPINCode) ||
+          payload.discriminator.GetLongValue() != self->request_.discriminator) {
+        self->Publish(self->Failure("window_failed",
+                                    error == CHIP_NO_ERROR
+                                        ? CHIP_ERROR_INVALID_ARGUMENT
+                                        : error,
+                                    true));
+      } else {
+        self->Publish({true,
+                       std::nullopt,
+                       device_id,
+                       payload.setUpPINCode,
+                       self->request_.discriminator,
+                       self->request_.timeout_s,
+                       std::move(manual_code),
+                       std::move(qr_code)});
+      }
+      self->MarkDone();
+    }
+
+    CommissioningWindowResponse Failure(std::string code, CHIP_ERROR error,
+                                        bool mutation) const {
+      return {false,
+              CommissioningError{
+                  std::move(code),
+                  static_cast<std::uint32_t>(error.AsInteger()),
+                  mutation ? InteractionEffect::Unknown
+                           : InteractionEffect::None},
+              0, 0, 0, 0, {}, {}};
+    }
+
+    static void CancelWork(intptr_t context) {
+      std::unique_ptr<std::shared_ptr<PendingWindow>> holder(
+          reinterpret_cast<std::shared_ptr<PendingWindow> *>(context));
+      (*holder)->AbortOnSdkThread();
+    }
+
+    void ScheduleAbort() {
+      auto *holder =
+          new (std::nothrow) std::shared_ptr<PendingWindow>(shared_from_this());
+      if (holder == nullptr) {
+        return;
+      }
+      if (chip::DeviceLayer::PlatformMgr().ScheduleWork(
+              CancelWork, reinterpret_cast<intptr_t>(holder)) !=
+          CHIP_NO_ERROR) {
+        delete holder;
+      }
+    }
+
+    bool Submitted() const {
+      std::lock_guard<std::mutex> lock(mutex_);
+      return submitted_;
+    }
+
+    void Publish(CommissioningWindowResponse response) {
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (published_) {
+          return;
+        }
+        response_ = std::move(response);
+        published_ = true;
+      }
+      condition_.notify_one();
+    }
+
+    void MarkDone() {
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (done_) {
+          return;
+        }
+        done_ = true;
+      }
+      (void) chip::DeviceLayer::PlatformMgr().ScheduleWork(
+          ReapWindow, reinterpret_cast<intptr_t>(this));
+    }
+
+    std::uint32_t Remaining() const {
+      const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now() - started_);
+      return remaining_timeout_ms(request_.timeout_ms,
+                                  static_cast<std::uint64_t>(elapsed.count()));
+    }
+
+    Impl &owner_;
+    CommissioningWindowRequest request_;
+    std::chrono::steady_clock::time_point started_;
+    mutable std::mutex mutex_;
+    std::condition_variable condition_;
+    CommissioningWindowResponse response_;
+    bool submitted_{false};
+    bool published_{false};
+    bool done_{false};
+    chip::Callback::Callback<chip::Controller::OnOpenCommissioningWindow>
+        callback_;
+    std::unique_ptr<chip::Controller::CommissioningWindowOpener> opener_;
+  };
+
   class Pending final : public chip::app::ReadClient::Callback,
                         public chip::app::WriteClient::Callback,
                         public chip::app::CommandSender::ExtendableCallback {
@@ -1394,8 +1990,26 @@ class SdkControllerBackend::Impl final {
     reinterpret_cast<Pending *>(context)->Start();
   }
 
+  static void StartCommissioning(intptr_t context) {
+    reinterpret_cast<PendingCommissioning *>(context)->Start();
+  }
+
+  static void StartWindow(intptr_t context) {
+    reinterpret_cast<PendingWindow *>(context)->Start();
+  }
+
   static void ReapPending(intptr_t context) {
     auto *pending = reinterpret_cast<Pending *>(context);
+    pending->owner_.Reap(pending);
+  }
+
+  static void ReapCommissioning(intptr_t context) {
+    auto *pending = reinterpret_cast<PendingCommissioning *>(context);
+    pending->owner_.Reap(pending);
+  }
+
+  static void ReapWindow(intptr_t context) {
+    auto *pending = reinterpret_cast<PendingWindow *>(context);
     pending->owner_.Reap(pending);
   }
 
@@ -1420,6 +2034,20 @@ class SdkControllerBackend::Impl final {
                          return candidate.get() == pending && candidate->done();
                        }),
         pending_.end());
+  }
+
+  void Reap(PendingCommissioning *pending) {
+    std::lock_guard<std::mutex> lock(control_mutex_);
+    if (commissioning_ && commissioning_.get() == pending && pending->done()) {
+      commissioning_.reset();
+    }
+  }
+
+  void Reap(PendingWindow *pending) {
+    std::lock_guard<std::mutex> lock(control_mutex_);
+    if (window_ && window_.get() == pending && pending->done()) {
+      window_.reset();
+    }
   }
 
   void Reap(NativeSubscription *subscription) {
@@ -1475,6 +2103,8 @@ class SdkControllerBackend::Impl final {
     } else if (action == Action::Shutdown) {
       std::vector<std::shared_ptr<Pending>> pending;
       std::vector<std::shared_ptr<NativeSubscription>> subscriptions;
+      std::shared_ptr<PendingCommissioning> commissioning;
+      std::shared_ptr<PendingWindow> window;
       {
         std::lock_guard<std::mutex> lock(self->pending_mutex_);
         pending = self->pending_;
@@ -1483,11 +2113,22 @@ class SdkControllerBackend::Impl final {
         std::lock_guard<std::mutex> lock(self->subscription_mutex_);
         subscriptions = self->subscriptions_;
       }
+      {
+        std::lock_guard<std::mutex> lock(self->control_mutex_);
+        commissioning = self->commissioning_;
+        window = self->window_;
+      }
       for (const auto &subscription : subscriptions) {
         subscription->CancelOnSdkThread();
       }
       for (const auto &interaction : pending) {
         interaction->AbortOnSdkThread();
+      }
+      if (commissioning) {
+        commissioning->AbortOnSdkThread();
+      }
+      if (window) {
+        window->AbortOnSdkThread();
       }
       self->commissioner_.Shutdown();
       error = CHIP_NO_ERROR;
@@ -1526,6 +2167,7 @@ class SdkControllerBackend::Impl final {
   CHIP_ERROR SetupOnSdkThread() {
     chip::Controller::SetupParams setup;
     setup.operationalCredentialsDelegate = &authority_;
+    setup.pairingDelegate = this;
     setup.controllerVendorId = static_cast<chip::VendorId>(identity_.vendor_id);
     setup.deviceAttestationVerifier = attestation_verifier_.get();
     setup.removeFromFabricTableOnShutdown = false;
@@ -1603,6 +2245,11 @@ class SdkControllerBackend::Impl final {
       std::lock_guard<std::mutex> lock(subscription_mutex_);
       subscriptions_.clear();
     }
+    {
+      std::lock_guard<std::mutex> lock(control_mutex_);
+      commissioning_.reset();
+      window_.reset();
+    }
     if (system_state_retained_) {
       (void) chip::Controller::DeviceControllerFactory::GetInstance()
           .ReleaseSystemState();
@@ -1661,6 +2308,9 @@ class SdkControllerBackend::Impl final {
   bool accepting_interactions_{false};
   std::mutex pending_mutex_;
   std::vector<std::shared_ptr<Pending>> pending_;
+  std::mutex control_mutex_;
+  std::shared_ptr<PendingCommissioning> commissioning_;
+  std::shared_ptr<PendingWindow> window_;
   std::mutex subscription_mutex_;
   std::vector<std::shared_ptr<NativeSubscription>> subscriptions_;
   std::mutex sink_mutex_;
@@ -1702,6 +2352,132 @@ InteractionResponse SdkControllerBackend::Impl::Interact(
     Reap(pending.get());
   }
   return pending->Wait();
+}
+
+CommissioningResponse SdkControllerBackend::Impl::Commission(
+    const CommissioningRequest &request) {
+  if (!open_ || !valid_commissioning_request(request)) {
+    return {false,
+            CommissioningError{"invalid_request", std::nullopt,
+                               InteractionEffect::None},
+            0, 0, false};
+  }
+
+  std::shared_ptr<PendingCommissioning> pending;
+  {
+    std::lock_guard<std::mutex> lock(control_mutex_);
+    if (!accepting_interactions_ || commissioning_ || window_) {
+      return {false,
+              CommissioningError{"commissioning_busy", std::nullopt,
+                                 InteractionEffect::None},
+              0, 0, false};
+    }
+    {
+      std::lock_guard<std::mutex> pending_lock(pending_mutex_);
+      if (pending_.size() >= 64U) {
+        return {false,
+                CommissioningError{"commissioning_busy", std::nullopt,
+                                   InteractionEffect::None},
+                0, 0, false};
+      }
+    }
+    pending = std::make_shared<PendingCommissioning>(*this, request);
+    commissioning_ = pending;
+  }
+
+  CHIP_ERROR error = chip::DeviceLayer::PlatformMgr().ScheduleWork(
+      StartCommissioning, reinterpret_cast<intptr_t>(pending.get()));
+  if (error != CHIP_NO_ERROR) {
+    pending->Publish({false,
+                      CommissioningError{
+                          "commissioning_unavailable",
+                          static_cast<std::uint32_t>(error.AsInteger()),
+                          InteractionEffect::None},
+                      0, 0, false});
+    pending->MarkDone();
+  }
+  return pending->Wait();
+}
+
+CommissioningWindowResponse SdkControllerBackend::Impl::OpenWindow(
+    const CommissioningWindowRequest &request) {
+  if (!open_ || !valid_commissioning_window_request(request)) {
+    return {false,
+            CommissioningError{"invalid_request", std::nullopt,
+                               InteractionEffect::None},
+            0, 0, 0, 0, {}, {}};
+  }
+
+  std::shared_ptr<PendingWindow> pending;
+  {
+    std::lock_guard<std::mutex> lock(control_mutex_);
+    if (!accepting_interactions_ || commissioning_ || window_) {
+      return {false,
+              CommissioningError{"window_busy", std::nullopt,
+                                 InteractionEffect::None},
+              0, 0, 0, 0, {}, {}};
+    }
+    {
+      std::lock_guard<std::mutex> pending_lock(pending_mutex_);
+      if (pending_.size() >= 64U) {
+        return {false,
+                CommissioningError{"window_busy", std::nullopt,
+                                   InteractionEffect::None},
+                0, 0, 0, 0, {}, {}};
+      }
+    }
+    pending = std::make_shared<PendingWindow>(*this, request);
+    window_ = pending;
+  }
+
+  CHIP_ERROR error = chip::DeviceLayer::PlatformMgr().ScheduleWork(
+      StartWindow, reinterpret_cast<intptr_t>(pending.get()));
+  if (error != CHIP_NO_ERROR) {
+    pending->Publish({false,
+                      CommissioningError{
+                          "window_unavailable",
+                          static_cast<std::uint32_t>(error.AsInteger()),
+                          InteractionEffect::None},
+                      0, 0, 0, 0, {}, {}});
+    pending->MarkDone();
+  }
+  return pending->Wait();
+}
+
+void SdkControllerBackend::Impl::OnCommissioningComplete(
+    chip::NodeId device_id, CHIP_ERROR error) {
+  std::shared_ptr<PendingCommissioning> pending;
+  {
+    std::lock_guard<std::mutex> lock(control_mutex_);
+    pending = commissioning_;
+  }
+  if (pending) {
+    pending->CommissioningComplete(device_id, error);
+  }
+}
+
+void SdkControllerBackend::Impl::OnCommissioningFailure(
+    chip::PeerId, const chip::Controller::CompletionStatus &status) {
+  std::shared_ptr<PendingCommissioning> pending;
+  {
+    std::lock_guard<std::mutex> lock(control_mutex_);
+    pending = commissioning_;
+  }
+  if (pending) {
+    pending->RecordFailure(status);
+  }
+}
+
+void SdkControllerBackend::Impl::OnCommissioningStageStart(
+    chip::PeerId, chip::Controller::CommissioningStage stage) {
+  std::shared_ptr<PendingCommissioning> pending;
+  {
+    std::lock_guard<std::mutex> lock(control_mutex_);
+    pending = commissioning_;
+  }
+  if (pending) {
+    pending->StageStarted(stage);
+  }
 }
 
 SubscriptionResponse SdkControllerBackend::Impl::Subscribe(
@@ -1793,6 +2569,16 @@ BackendResult SdkControllerBackend::Open(const NativeOpenOptions &options) {
 InteractionResponse SdkControllerBackend::Interact(
     const InteractionRequest &request) {
   return impl_->Interact(request);
+}
+
+CommissioningResponse SdkControllerBackend::Commission(
+    const CommissioningRequest &request) {
+  return impl_->Commission(request);
+}
+
+CommissioningWindowResponse SdkControllerBackend::OpenWindow(
+    const CommissioningWindowRequest &request) {
+  return impl_->OpenWindow(request);
 }
 
 void SdkControllerBackend::SetSubscriptionSinks(ReportSink report,

@@ -17,6 +17,9 @@ class SdkControllerBackend final : public ControllerBackend {
 
   BackendResult Open(const NativeOpenOptions &options) override;
   InteractionResponse Interact(const InteractionRequest &request) override;
+  CommissioningResponse Commission(const CommissioningRequest &request) override;
+  CommissioningWindowResponse OpenWindow(
+      const CommissioningWindowRequest &request) override;
   void SetSubscriptionSinks(ReportSink report, StatusSink status,
                             FailureSink failure) override;
   SubscriptionResponse Subscribe(const SubscriptionRequest &request) override;

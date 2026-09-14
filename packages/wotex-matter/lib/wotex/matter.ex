@@ -3,7 +3,7 @@ defmodule Wotex.Matter do
   Executes bounded Matter operations through an explicitly selected client.
 
   `Wotex.Matter` is the package facade for connection lifecycle and native
-  read, write, invoke, and batch-read requests. `connect/1` returns a
+  read, write, invoke, commissioning, and batch-read requests. `connect/1` returns a
   `Wotex.Matter.Session`, `send/2` validates and performs one concrete request,
   and `read_paths/3` preserves each concrete batch result. `disconnect/1`
   releases only the resources represented by that session. `with_connection/2`
@@ -11,8 +11,8 @@ defmodule Wotex.Matter do
 
   ## Execution boundary
 
-  The consumer selects a `Wotex.Matter.Client` and owns commissioning, fabric
-  storage, attestation, secure sessions, credentials, authorization, routing,
+  The consumer selects a `Wotex.Matter.Client` and owns commissioning policy,
+  fabric storage, trust configuration, credentials, authorization, routing,
   and supervision. Loading the module starts no controller or Python process.
   Native subscriptions are explicitly established and receiver-owned. A successful
   interaction is protocol evidence for the addressed path; it does not
@@ -21,15 +21,34 @@ defmodule Wotex.Matter do
   """
 
   import Kernel, except: [send: 2]
-  alias Wotex.Matter.{AttributeReport, EndpointCatalogue, Error, EventReport}
+  alias Wotex.Matter.{AttributeReport, EndpointCatalogue, Error, EventReport, OnboardingMaterial}
   alias Wotex.Matter.{PathResults, PortCall, ReadPath, Session, Standalone}
-  @operations [:read, :write, :invoke, :read_paths, :read_events, :subscribe, :unsubscribe]
+
+  @operations [
+    :read,
+    :write,
+    :invoke,
+    :read_paths,
+    :read_events,
+    :subscribe,
+    :unsubscribe,
+    :commission_on_network,
+    :open_commissioning_window
+  ]
   @send_operations [:read, :write, :invoke, :read_paths]
 
   @doc "Reports the operations implemented by this library's validated client boundary."
   @spec capabilities() :: %{
           operations: [
-            :read | :write | :invoke | :read_paths | :read_events | :subscribe | :unsubscribe,
+            :read
+            | :write
+            | :invoke
+            | :read_paths
+            | :read_events
+            | :subscribe
+            | :unsubscribe
+            | :commission_on_network
+            | :open_commissioning_window,
             ...
           ],
           transport: :explicit_client,
@@ -199,6 +218,19 @@ defmodule Wotex.Matter do
   @spec unsubscribe(Session.t(), Wotex.Matter.Subscription.t()) ::
           :ok | {:error, Error.t()}
   def unsubscribe(session, subscription), do: Standalone.unsubscribe(session, subscription)
+
+  @doc "Commissions one on-network node after SDK attestation and a confirming CASE probe."
+  @spec commission_on_network(Session.t(), map()) ::
+          {:ok, %{node_id: pos_integer(), fabric_id: pos_integer(), case: :established}}
+          | {:error, Error.t()}
+  def commission_on_network(session, request),
+    do: Standalone.commission_on_network(session, request)
+
+  @doc "Opens an enhanced commissioning window and returns redacted secret onboarding material."
+  @spec open_commissioning_window(Session.t(), map()) ::
+          {:ok, OnboardingMaterial.t()} | {:error, Error.t()}
+  def open_commissioning_window(session, request),
+    do: Standalone.open_commissioning_window(session, request)
 
   defp open(opts) do
     client = Keyword.get(opts, :client)

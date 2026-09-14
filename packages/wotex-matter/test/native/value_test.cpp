@@ -11,11 +11,13 @@ using wotex::matter::Conversion;
 using wotex::matter::ConversionError;
 using wotex::matter::DeviceType;
 using wotex::matter::ElementType;
+using wotex::matter::Element;
 using wotex::matter::MemberKind;
 using wotex::matter::NativeValue;
 using wotex::matter::Operation;
 using wotex::matter::TagKind;
 using wotex::matter::convert_value;
+using wotex::matter::validate_element;
 
 void require(bool condition, const std::string &message) {
   if (!condition) {
@@ -175,12 +177,91 @@ void rejected_values() {
           "1024 children exceeded the aggregate TLV node limit without failure");
 }
 
+Element field(std::uint8_t tag, ElementType type, std::uint64_t value = 0) {
+  Element element;
+  element.tag = {TagKind::Context, tag};
+  element.type = type;
+  element.unsigned_value = value;
+  return element;
+}
+
+void commissioning_descriptors() {
+  Element subject;
+  subject.type = ElementType::U64;
+  subject.unsigned_value = 2;
+
+  Element subjects = field(3, ElementType::Array);
+  subjects.children.push_back(subject);
+  Element targets = field(4, ElementType::Null);
+
+  Element entry;
+  entry.type = ElementType::Structure;
+  entry.children = {field(1, ElementType::U8, 5),
+                    field(2, ElementType::U8, 2), subjects, targets};
+  Element acl;
+  acl.type = ElementType::Array;
+  acl.children.push_back(entry);
+
+  require(validate_element(MemberKind::Attribute, 0x001F, 0x0000,
+                           Operation::Write, acl) == ConversionError::None,
+          "typed CASE ACL entry was rejected");
+
+  Element empty_target;
+  empty_target.type = ElementType::Structure;
+  empty_target.children = {field(0, ElementType::Null),
+                           field(1, ElementType::Null),
+                           field(2, ElementType::Null)};
+  acl.children[0].children[3].type = ElementType::Array;
+  acl.children[0].children[3].children = {empty_target};
+  require(validate_element(MemberKind::Attribute, 0x001F, 0x0000,
+                           Operation::Write, acl) ==
+              ConversionError::InvalidValue,
+          "an ACL target without a selector was admitted");
+
+  Element conflicting_target = empty_target;
+  conflicting_target.children[1] = field(1, ElementType::U16, 1);
+  conflicting_target.children[2] = field(2, ElementType::U32, 0x0100);
+  acl.children[0].children[3].children = {conflicting_target};
+  require(validate_element(MemberKind::Attribute, 0x001F, 0x0000,
+                           Operation::Write, acl) ==
+              ConversionError::InvalidValue,
+          "an ACL target combined endpoint and device type");
+
+  acl.children[0].children[3].type = ElementType::Null;
+  acl.children[0].children[3].children.clear();
+  acl.children[0].children[1].unsigned_value = 1;
+  require(validate_element(MemberKind::Attribute, 0x001F, 0x0000,
+                           Operation::Write, acl) ==
+              ConversionError::InvalidValue,
+          "PASE was admitted as operational ACL authority");
+
+  const auto window = successful(
+      convert_value(MemberKind::Attribute, 0x003C, 0x0000,
+                    Operation::Read, NativeValue::unsigned_integer(1)),
+      "commissioning window status");
+  require(window.type == ElementType::U8 && window.unsigned_value == 1,
+          "commissioning window status lost enum8 width");
+
+  const auto fabric = successful(
+      convert_value(MemberKind::Attribute, 0x003C, 0x0001,
+                    Operation::Read, NativeValue::unsigned_integer(254)),
+      "commissioning admin fabric");
+  require(fabric.type == ElementType::U8 && fabric.unsigned_value == 254,
+          "commissioning admin fabric lost fabric-index bounds");
+
+  require(convert_value(MemberKind::Attribute, 0x003C, 0x0002,
+                        Operation::Read, NativeValue::unsigned_integer(0xFFFF))
+              .error == ConversionError::InvalidValue,
+          "invalid commissioning admin vendor was admitted");
+}
+
 } // namespace
 
 int main() {
   scalar_recipes();
   descriptor_recipes();
   rejected_values();
+  commissioning_descriptors();
   std::cout << "WMA-P01 native descriptor and value conversion passed\n";
   return 0;
 }

@@ -10,9 +10,9 @@ defmodule Wotex.Matter.Client do
   ## Consumer responsibility
 
   The implementation owns integration with its selected Matter SDK or
-  controller. The consumer owns commissioning, fabric credentials, attestation,
-  trust policy, secure-session lifetime, data-model compatibility, and process
-  supervision. Client failures are normalized as `Wotex.Matter.Error`; raw SDK
+  controller. The consumer owns commissioning policy, fabric credentials,
+  trust configuration, secure-session lifetime, data-model compatibility, and
+  process supervision. Client failures are normalized as `Wotex.Matter.Error`; raw SDK
   exceptions, credentials, and unbounded peer output must not enter public
   values. Writes and invokes must not be retried silently because their effect
   may be unknown.

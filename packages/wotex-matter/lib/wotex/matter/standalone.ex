@@ -3,6 +3,7 @@ defmodule Wotex.Matter.Standalone do
 
   alias Wotex.Matter
   alias Wotex.Matter.{Address, AttributeReport, Descriptor, EndpointCatalogue, Error, EventReport}
+  alias Wotex.Matter.OnboardingMaterial
   alias Wotex.Matter.{PortCall, ReadPath, Session, Subscription}
 
   @descriptor_cluster 0x001D
@@ -137,6 +138,38 @@ defmodule Wotex.Matter.Standalone do
 
   def unsubscribe(_, _), do: {:error, Error.new(:invalid_handle)}
 
+  @doc false
+  @spec commission_on_network(Session.t(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def commission_on_network(%Session{} = session, request) when is_map(request) do
+    with {:ok, message, timeout} <- commissioning_request(request),
+         {:ok, result} <- request(session, message, timeout),
+         {:ok, result} <- commission_result(result, message.node_id) do
+      {:ok, result}
+    else
+      {:error, %Error{} = error} -> {:error, error}
+      _ -> {:error, Error.new(:invalid_transport_return)}
+    end
+  end
+
+  def commission_on_network(_, _), do: {:error, Error.new(:invalid_commissioning_request)}
+
+  @doc false
+  @spec open_commissioning_window(Session.t(), term()) ::
+          {:ok, OnboardingMaterial.t()} | {:error, Error.t()}
+  def open_commissioning_window(%Session{} = session, request) when is_map(request) do
+    with {:ok, message} <- window_request(request),
+         {:ok, result} <- request(session, message, session.timeout),
+         {:ok, material} <- onboarding_material(result, message) do
+      {:ok, material}
+    else
+      {:error, %Error{} = error} -> {:error, error}
+      _ -> {:error, Error.new(:invalid_transport_return)}
+    end
+  end
+
+  def open_commissioning_window(_, _),
+    do: {:error, Error.new(:invalid_commissioning_window)}
+
   defp request(session, message, timeout) do
     result = PortCall.invoke(session.client, :request, [session.handle, message, timeout])
 
@@ -146,6 +179,96 @@ defmodule Wotex.Matter.Standalone do
       _ -> {:error, Error.new(:invalid_transport_return)}
     end
   end
+
+  defp commissioning_request(request) do
+    with true <- exact_atom_keys?(request, [:node_id, :setup_pin, :discriminator, :timeout]),
+         node when is_integer(node) and node in 1..0xFFFFFFEFFFFFFFFF <- request.node_id,
+         pin when is_integer(pin) <- request.setup_pin,
+         true <- valid_setup_pin?(pin),
+         discriminator when is_integer(discriminator) and discriminator in 0..4095 <-
+           request.discriminator,
+         timeout when is_integer(timeout) and timeout in 1..60_000 <- request.timeout do
+      {:ok,
+       %{
+         type: :commission_on_network,
+         node_id: node,
+         setup_pin: pin,
+         discriminator: discriminator
+       }, timeout}
+    else
+      _ -> {:error, Error.new(:invalid_commissioning_request)}
+    end
+  end
+
+  defp window_request(request) do
+    with true <-
+           exact_atom_keys?(request, [:node_id, :timeout_s, :iteration_count, :discriminator]),
+         node when is_integer(node) and node in 1..0xFFFFFFEFFFFFFFFF <- request.node_id,
+         timeout when is_integer(timeout) and timeout in 180..900 <- request.timeout_s,
+         iterations when is_integer(iterations) and iterations in 1_000..100_000 <-
+           request.iteration_count,
+         discriminator when is_integer(discriminator) and discriminator in 0..4095 <-
+           request.discriminator do
+      {:ok,
+       %{
+         type: :open_window,
+         node_id: node,
+         timeout_s: timeout,
+         iteration_count: iterations,
+         discriminator: discriminator
+       }}
+    else
+      _ -> {:error, Error.new(:invalid_commissioning_window)}
+    end
+  end
+
+  defp commission_result(
+         %{node_id: node, fabric_id: fabric, case: :established} = result,
+         node
+       )
+       when map_size(result) == 3 and is_integer(fabric) and fabric > 0,
+       do: {:ok, result}
+
+  defp commission_result(_, _), do: :error
+
+  defp onboarding_material(
+         %{
+           node_id: node,
+           setup_pin: pin,
+           discriminator: discriminator,
+           manual_code: manual,
+           qr_code: qr,
+           expires_in_s: expiry
+         } = result,
+         %{node_id: node, discriminator: discriminator, timeout_s: expiry}
+       )
+       when map_size(result) == 6 and is_binary(manual) and byte_size(manual) in 10..21 and
+              is_binary(qr) and byte_size(qr) in 4..512 and is_integer(pin) do
+    if valid_setup_pin?(pin) and String.starts_with?(qr, "MT:") do
+      {:ok, struct!(OnboardingMaterial, result)}
+    else
+      :error
+    end
+  end
+
+  defp onboarding_material(_, _), do: :error
+
+  defp valid_setup_pin?(pin) do
+    pin in 1..99_999_998 and pin not in [12_345_678, 87_654_321] and
+      not repeated_digit?(pin)
+  end
+
+  defp repeated_digit?(pin) do
+    pin
+    |> Integer.to_string()
+    |> String.pad_leading(8, "0")
+    |> String.codepoints()
+    |> Enum.uniq()
+    |> length() == 1
+  end
+
+  defp exact_atom_keys?(value, keys),
+    do: Enum.all?(Map.keys(value), &is_atom/1) and Enum.sort(Map.keys(value)) == Enum.sort(keys)
 
   defp subscription_request(request, default_timeout) do
     allowed = [

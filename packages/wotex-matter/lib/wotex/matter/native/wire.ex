@@ -26,6 +26,40 @@ defmodule Wotex.Matter.Native.Wire do
     )
   end
 
+  def decode(
+        :commission_on_network,
+        %{"node_id" => node, "fabric_id" => fabric, "case" => "established"} = result
+      )
+      when map_size(result) == 3 and is_integer(node) and node in 1..0xFFFFFFEFFFFFFFFF and
+             is_integer(fabric) and fabric > 0 do
+    {:ok, %{node_id: node, fabric_id: fabric, case: :established}}
+  end
+
+  def decode(
+        :open_window,
+        %{
+          "node_id" => node,
+          "setup_pin" => pin,
+          "discriminator" => discriminator,
+          "manual_code" => manual,
+          "qr_code" => qr,
+          "expires_in_s" => expiry
+        } = result
+      )
+      when map_size(result) == 6 and is_integer(node) and is_integer(pin) and
+             is_integer(discriminator) and is_binary(manual) and is_binary(qr) and
+             is_integer(expiry) do
+    {:ok,
+     %{
+       node_id: node,
+       setup_pin: pin,
+       discriminator: discriminator,
+       manual_code: manual,
+       qr_code: qr,
+       expires_in_s: expiry
+     }}
+  end
+
   def decode(_, _), do: {:error, Error.new(:invalid_frame)}
 
   @doc false
@@ -54,16 +88,18 @@ defmodule Wotex.Matter.Native.Wire do
   @doc false
   @spec error(term()) :: {:ok, Error.t()} | :error
   def error(%{"code" => code} = value) when map_size(value) in 1..4 and is_binary(code) do
-    allowed = ["code", "effect", "status", "cluster_status"]
+    allowed = ["code", "effect", "status", "cluster_status", "sdk_status"]
 
     with true <- Map.keys(value) -- allowed == [],
          {:ok, effect} <- effect(Map.get(value, "effect", "none")),
          {:ok, status} <- status(Map.get(value, "status")),
-         {:ok, cluster_status} <- status(Map.get(value, "cluster_status")) do
+         {:ok, cluster_status} <- status(Map.get(value, "cluster_status")),
+         {:ok, sdk_status} <- sdk_status(Map.get(value, "sdk_status")) do
       details =
         %{}
         |> optional_detail(:status, status)
         |> optional_detail(:cluster_status, cluster_status)
+        |> optional_detail(:sdk_status, sdk_status)
 
       {:ok, %{Error.new(error_code(code), nil, details) | effect: effect}}
     else
@@ -263,7 +299,7 @@ defmodule Wotex.Matter.Native.Wire do
   defp tag(["context", id]) when is_integer(id) and id in 0..255, do: {:ok, {:context, id}}
   defp tag(_), do: :error
 
-  defp type(type) when type in ~w(null i16 u8 u16 u32 boolean structure array),
+  defp type(type) when type in ~w(null i16 u8 u16 u32 u64 boolean structure array),
     do: {:ok, String.to_existing_atom(type)}
 
   defp type(_), do: :error
@@ -276,6 +312,9 @@ defmodule Wotex.Matter.Native.Wire do
   defp element_value(:u16, value) when is_integer(value) and value in 0..0xFFFF, do: {:ok, value}
 
   defp element_value(:u32, value) when is_integer(value) and value in 0..0xFFFFFFFF,
+    do: {:ok, value}
+
+  defp element_value(:u64, value) when is_integer(value) and value in 0..0xFFFFFFFFFFFFFFFF,
     do: {:ok, value}
 
   defp element_value(:boolean, value) when is_boolean(value), do: {:ok, value}
@@ -304,6 +343,9 @@ defmodule Wotex.Matter.Native.Wire do
   defp status(nil), do: {:ok, nil}
   defp status(value) when is_integer(value) and value in 0..255, do: {:ok, value}
   defp status(_), do: :error
+  defp sdk_status(nil), do: {:ok, nil}
+  defp sdk_status(value) when is_integer(value) and value in 0..0xFFFFFFFF, do: {:ok, value}
+  defp sdk_status(_), do: :error
   defp optional_detail(details, _, nil), do: details
   defp optional_detail(details, key, value), do: Map.put(details, key, value)
   defp normalize({:ok, _} = result), do: result
@@ -315,6 +357,11 @@ defmodule Wotex.Matter.Native.Wire do
   defp error_code("controller_closed"), do: :controller_closed
   defp error_code("controller_start_failed"), do: :controller_start_failed
   defp error_code("controller_start_timeout"), do: :controller_start_timeout
+  defp error_code("commissioning_busy"), do: :busy
+  defp error_code("commissioning_failed"), do: :commissioning_failed
+  defp error_code("commissioning_submit_failed"), do: :commissioning_submit_failed
+  defp error_code("commissioning_timeout"), do: :timeout
+  defp error_code("commissioning_unavailable"), do: :commissioning_unavailable
   defp error_code("fabric_mismatch"), do: :fabric_mismatch
   defp error_code("interaction_busy"), do: :interaction_busy
   defp error_code("interaction_failed"), do: :interaction_failed
@@ -323,6 +370,11 @@ defmodule Wotex.Matter.Native.Wire do
   defp error_code("interaction_status"), do: :interaction_status
   defp error_code("interaction_timeout"), do: :timeout
   defp error_code("interaction_unavailable"), do: :interaction_unavailable
+  defp error_code("window_busy"), do: :busy
+  defp error_code("window_failed"), do: :commissioning_window_failed
+  defp error_code("window_submit_failed"), do: :commissioning_window_submit_failed
+  defp error_code("window_timeout"), do: :timeout
+  defp error_code("window_unavailable"), do: :commissioning_window_unavailable
   defp error_code("invalid_attribute_data"), do: :invalid_attribute_data
   defp error_code("invalid_backend_result"), do: :invalid_transport_return
   defp error_code("invalid_controller_identity"), do: :invalid_controller_identity

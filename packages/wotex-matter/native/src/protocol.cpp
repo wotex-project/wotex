@@ -311,16 +311,20 @@ bool ElementValue(const Json &value, Element &result, std::size_t depth = 0,
     result.signed_value = integer;
     return true;
   }
-  if ((type == "u8" || type == "u16" || type == "u32") &&
+  if ((type == "u8" || type == "u16" || type == "u32" || type == "u64") &&
       body.is_number_unsigned()) {
     const auto integer = body.get<std::uint64_t>();
     const std::uint64_t maximum = type == "u8" ? 0xFFU :
-        (type == "u16" ? 0xFFFFU : 0xFFFFFFFFULL);
+        (type == "u16" ? 0xFFFFU :
+         (type == "u32" ? 0xFFFFFFFFULL :
+          std::numeric_limits<std::uint64_t>::max()));
     if (integer > maximum) {
       return false;
     }
     result.type = type == "u8" ? ElementType::U8
-        : (type == "u16" ? ElementType::U16 : ElementType::U32);
+        : (type == "u16" ? ElementType::U16
+                         : (type == "u32" ? ElementType::U32
+                                          : ElementType::U64));
     result.unsigned_value = integer;
     return true;
   }
@@ -496,6 +500,45 @@ bool UnsubscribeParameters(const Json &parameters, std::string &subscription_id,
       generation > 0;
 }
 
+bool CommissioningParameters(const Json &parameters, std::uint32_t timeout_ms,
+                             CommissioningRequest &result) {
+  std::uint64_t setup_pin = 0;
+  std::uint64_t discriminator = 0;
+  if (!ExactKeys(parameters, {"node_id", "setup_pin", "discriminator"}) ||
+      !Unsigned(parameters["node_id"], kMaximumOperationalNode,
+                result.node_id) ||
+      !Unsigned(parameters["setup_pin"], 99999998U, setup_pin) ||
+      !Unsigned(parameters["discriminator"], 4095U, discriminator)) {
+    return false;
+  }
+  result.setup_pin = static_cast<std::uint32_t>(setup_pin);
+  result.discriminator = static_cast<std::uint16_t>(discriminator);
+  result.timeout_ms = timeout_ms;
+  return valid_commissioning_request(result);
+}
+
+bool CommissioningWindowParameters(const Json &parameters,
+                                   std::uint32_t timeout_ms,
+                                   CommissioningWindowRequest &result) {
+  std::uint64_t timeout_s = 0;
+  std::uint64_t iteration_count = 0;
+  std::uint64_t discriminator = 0;
+  if (!ExactKeys(parameters,
+                 {"node_id", "timeout_s", "iteration_count", "discriminator"}) ||
+      !Unsigned(parameters["node_id"], kMaximumOperationalNode,
+                result.node_id) ||
+      !Unsigned(parameters["timeout_s"], 900U, timeout_s) ||
+      !Unsigned(parameters["iteration_count"], 100000U, iteration_count) ||
+      !Unsigned(parameters["discriminator"], 4095U, discriminator)) {
+    return false;
+  }
+  result.timeout_s = static_cast<std::uint16_t>(timeout_s);
+  result.iteration_count = static_cast<std::uint32_t>(iteration_count);
+  result.discriminator = static_cast<std::uint16_t>(discriminator);
+  result.timeout_ms = timeout_ms;
+  return valid_commissioning_window_request(result);
+}
+
 Json PathJson(const ConcretePath &path) {
   return {{"fabric_id", path.fabric_id}, {"node_id", path.node_id},
           {"endpoint", path.endpoint}, {"cluster", path.cluster},
@@ -514,6 +557,7 @@ Json ElementJson(const Element &element) {
   case ElementType::U8: type = "u8"; value = element.unsigned_value; break;
   case ElementType::U16: type = "u16"; value = element.unsigned_value; break;
   case ElementType::U32: type = "u32"; value = element.unsigned_value; break;
+  case ElementType::U64: type = "u64"; value = element.unsigned_value; break;
   case ElementType::Boolean: type = "boolean"; value = element.boolean_value; break;
   case ElementType::Structure:
   case ElementType::Array:
@@ -652,6 +696,18 @@ std::string Failure(const Json &request, std::string_view code) {
 std::string InteractionFailure(const Json &request, const InteractionError &error) {
   return Json{{"version", kProtocolVersion}, {"id", request["id"]},
               {"ok", false}, {"error", ErrorJson(error)}}.dump();
+}
+
+std::string CommissioningFailure(const Json &request,
+                                 const CommissioningError &error) {
+  Json detail{{"code", error.code},
+              {"effect", error.effect == InteractionEffect::Unknown
+                   ? "unknown" : "none"}};
+  if (error.sdk_status) {
+    detail["sdk_status"] = *error.sdk_status;
+  }
+  return Json{{"version", kProtocolVersion}, {"id", request["id"]},
+              {"ok", false}, {"error", std::move(detail)}}.dump();
 }
 
 bool ReadLineBounded(std::istream &input, std::string &line) {
@@ -934,6 +990,53 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
   if (operation == "health" && request["parameters"].empty()) {
     return {true, Success(request, {{"status", "ready"},
                                     {"fabric_id", fabric_id_}})};
+  }
+
+  if (operation == "commission_on_network") {
+    CommissioningRequest commissioning;
+    if (!CommissioningParameters(
+            request["parameters"],
+            static_cast<std::uint32_t>(request["timeout_ms"].get<std::uint64_t>()),
+            commissioning)) {
+      return {true, Failure(request, "invalid_request")};
+    }
+    CommissioningResponse response = backend_.Commission(commissioning);
+    if (!valid_commissioning_response(commissioning, response)) {
+      return {true, Failure(request, "invalid_backend_result")};
+    }
+    if (!response.ok) {
+      return {true, CommissioningFailure(request, *response.error)};
+    }
+    return {true,
+            Success(request,
+                    {{"node_id", response.node_id},
+                     {"fabric_id", response.fabric_id},
+                     {"case", "established"}})};
+  }
+
+  if (operation == "open_window") {
+    CommissioningWindowRequest window;
+    if (!CommissioningWindowParameters(
+            request["parameters"],
+            static_cast<std::uint32_t>(request["timeout_ms"].get<std::uint64_t>()),
+            window)) {
+      return {true, Failure(request, "invalid_request")};
+    }
+    CommissioningWindowResponse response = backend_.OpenWindow(window);
+    if (!valid_commissioning_window_response(window, response)) {
+      return {true, Failure(request, "invalid_backend_result")};
+    }
+    if (!response.ok) {
+      return {true, CommissioningFailure(request, *response.error)};
+    }
+    return {true,
+            Success(request,
+                    {{"node_id", response.node_id},
+                     {"setup_pin", response.setup_pin},
+                     {"discriminator", response.discriminator},
+                     {"manual_code", response.manual_code},
+                     {"qr_code", response.qr_code},
+                     {"expires_in_s", response.expires_in_s}})};
   }
 
   if (operation == "subscribe") {

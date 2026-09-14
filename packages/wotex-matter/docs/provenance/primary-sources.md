@@ -12,6 +12,8 @@ certification or complete standard coverage.
   initializes the owned SDK system state and controller.
 - [Device commissioner](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/CHIPDeviceController.h)
   owns filtered discovery, pairing and final commissioning callbacks.
+- [Production attestation verifier](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/credentials/attestation_verifier/DefaultDeviceAttestationVerifier.h)
+  binds commissioning to the configured PAA trust store and attestation result.
 - [ReadClient](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/app/ReadClient.h)
   defines read/report/establishment/deallocation callback lifetime; Close is private and report callbacks cannot destroy their client.
 - [WriteClient](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/app/WriteClient.h)
@@ -20,6 +22,15 @@ certification or complete standard coverage.
   defines explicit timed invocation, path-specific response and terminal completion.
 - [Commissioning window](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/CommissioningWindowOpener.h)
   defines generated onboarding data and final asynchronous completion.
+- [Manual setup payload generator](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/setup_payload/ManualSetupPayloadGenerator.h)
+  and [QR setup payload generator](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/setup_payload/QRCodeSetupPayloadGenerator.h)
+  serialize SDK-generated enhanced-window onboarding material.
+- [Controller cluster selection](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/data_model/controller-clusters.zap)
+  includes AccessControl and AdministratorCommissioning in the generated client
+  data model.
+- [Access control guide](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/docs/guides/access-control-guide.md)
+  describes the fabric-scoped ACL attribute, CASE and Group auth modes, and
+  peer-enforced denial.
 - [Storage delegate](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/lib/core/CHIPPersistentStorageDelegate.h)
   defines synchronous keyed opaque-byte persistence.
 - [Operational keystore](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/crypto/PersistentStorageOperationalKeystore.h)

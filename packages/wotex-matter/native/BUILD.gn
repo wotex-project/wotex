@@ -4,6 +4,7 @@ executable("wotex-matter-host") {
   cflags_cc = [ "-std=c++17" ]
   sources = [
     "src/authority.cpp",
+    "src/commissioning.cpp",
     "src/controller.cpp",
     "src/host.cpp",
     "src/interaction.cpp",
