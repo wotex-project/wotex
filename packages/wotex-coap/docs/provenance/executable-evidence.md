@@ -159,6 +159,44 @@ the WCO-P09 software/stress matrix. The focused command is:
 WOTEX_PATH_DEPS=1 mix test test/wotex/coap/blockwise_test.exs test/wotex/coap/execution_test.exs test/wotex/coap/observation_test.exs
 ```
 
+### Observe registration and freshness assertions
+
+`observation_test.exs` exercises WCO-S03/WCO-V05–V07 over loopback UDP: a handle
+requires successful registration and a complete initial body; confirmed reports
+receive ACKs; repeated datagrams do not repeat delivery. Serial wraparound from
+FFFFFF to zero is fresh. Missing Observe, negative status, initial-body timeout,
+server termination and fresh Content-Format changes retain their terminal
+errors and owned cleanup. A successful response without Observe terminates an
+active relationship as well as failing initial registration.
+
+`execution_test.exs` applies the explicit clock to the live observation owner.
+Equal and older serials, and both directions of the half-range ambiguity, remain
+stale at 128000 ms and become fresh at 128001 ms. The stale inputs carry changed
+ETag, Content-Format, Max-Age and payload; they receive ACKs without changing the
+accepted report, expiry, timer identities or delivery count. Their arrival does
+not postpone the strictly-greater-than-128-second escape. Fresh reports still
+pass representation validation. Wrong-token CON/NON and wrong-host/port reports
+leave observation state unchanged; the matching report with the same MID remains
+deliverable.
+
+The registration fault cases send an error status, a truncated Observe option
+and an overlong Observe value through the Datagram port. Malformed datagrams are
+discarded and cannot complete registration; the unchanged finite deadline ends
+the attempt. Each failure returns no handle, emits one terminal error, sends
+best-effort cancellation on the original token/URI, and releases the connection,
+adapter and timers. Cancellation here does not claim remote confirmation.
+
+`observation_value_test.exs` retains pure report-validation and serial-boundary
+assertions. `native_contract_test.exs` and `observation_trace_test.exs` execute
+the fixed WCO-D05 oracle and cancellation trace. These assertions use RFC 7641
+(September 2015) freshness and RFC 7252 (June 2014) datagram rules. The terminal
+Content-Format policy is local; this evidence does not accept independent-peer
+interoperability or the WCO-P09 software/stress matrix. The focused command is:
+
+```sh
+WOTEX_PATH_DEPS=1 mix test test/wotex/coap/execution_test.exs test/wotex/coap/observation_test.exs test/wotex/coap/observation_value_test.exs test/wotex/coap/observation_trace_test.exs test/wotex/coap/native_contract_test.exs
+```
+
 ### Authoritative library gate
 
 `WOTEX_PATH_DEPS=1 mix check --no-retry` includes strict compilation/static checks,

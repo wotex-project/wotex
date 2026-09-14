@@ -250,6 +250,7 @@ defmodule Wotex.CoAP.ObservationTest do
   test "WCO-S03 WCO-V07 server termination and format changes each produce exactly one terminal error" do
     for {changes, code} <- [
           {%{code: 132, options: []}, :remote_response},
+          {%{options: []}, :invalid_observation_response},
           {%{options: [{6, <<11>>}, {12, <<42>>}]}, :representation_changed}
         ] do
       {peer, session, handle, request} = established(10, "initial")

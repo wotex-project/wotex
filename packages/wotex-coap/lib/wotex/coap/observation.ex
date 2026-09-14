@@ -281,15 +281,15 @@ defmodule Wotex.CoAP.Observation do
     previous = state.pending || state.report
 
     cond do
-      candidate.metadata.content_format != state.report.metadata.content_format ->
-        terminal(state, Error.new(:representation_changed))
-
       not Observe.fresh?(
         previous.metadata.observe,
         candidate.metadata.observe,
         max(0, candidate.received_at - previous.received_at)
       ) ->
         {:noreply, state}
+
+      candidate.metadata.content_format != state.report.metadata.content_format ->
+        terminal(state, Error.new(:representation_changed))
 
       state.phase in [:assembling, :renewing] and state.config.kind == :event ->
         terminal(state, Error.new(:overlapping_event_report))

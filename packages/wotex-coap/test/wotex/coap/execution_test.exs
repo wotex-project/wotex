@@ -5,6 +5,159 @@ defmodule Wotex.CoAP.ExecutionTest do
   alias Wotex.CoAP
   alias Wotex.CoAP.{Codec, Connection, Error, Execution, Message, TestDatagram, TestExecution}
 
+  test "WCO-S03 WCO-V05 live reports keep stale metadata inert at the exact freshness boundary" do
+    for {previous, candidate} <- [{10, 10}, {10, 9}, {0, 0x800000}, {0x800000, 0}] do
+      {clock, session, adapter, handle, request} =
+        observing(:property, observe: previous, max_age: 300)
+
+      owner = :sys.get_state(session.pid).observation.pid
+      before = :sys.get_state(owner)
+      timers = TestExecution.snapshot(clock).timers
+      reference = handle.reference
+
+      try do
+        assert before.report.received_at == 0 and before.expiry == 300_000
+        assert :ok = TestExecution.elapse(clock, 128_000)
+
+        stale = %{
+          request
+          | type: :con,
+            code: 69,
+            message_id: 20,
+            options: [{4, "stale"}, {6, Codec.uint(candidate)}, {12, <<42>>}, {14, <<255>>}],
+            payload: "stale"
+        }
+
+        emit(adapter, stale)
+        assert sent(adapter) == %Message{type: :ack, code: 0, message_id: 20}
+        assert synchronized_state(adapter, session, owner) == before
+        assert TestExecution.snapshot(clock).timers == timers
+        refute_received {:wotex_coap, ^reference, _}
+        refute_received {:sent_datagram, ^adapter, _}
+
+        assert :ok = TestExecution.elapse(clock, 128_001)
+
+        fresh = %{
+          stale
+          | message_id: 21,
+            options: [{4, "fresh"}, {6, Codec.uint(candidate)}, {14, Codec.uint(600)}],
+            payload: "fresh"
+        }
+
+        emit(adapter, fresh)
+        assert sent(adapter) == %Message{type: :ack, code: 0, message_id: 21}
+
+        assert_receive {:wotex_coap, ^reference,
+                        {:ok, ^fresh, %{observe: ^candidate, etag: "fresh", max_age: 600}}}
+
+        current = synchronized_state(adapter, session, owner)
+        assert current.report.received_at == 128_001 and current.expiry == 728_001
+        assert current.refresh_at == current.expiry and current.timer_ref != before.timer_ref
+        refute_received {:wotex_coap, ^reference, _}
+      after
+        stop_observing(clock, session, adapter, handle)
+      end
+    end
+  end
+
+  test "WCO-S03 WCO-V07 unrelated report tokens and endpoints cannot change active observation state" do
+    {clock, session, adapter, handle, request} = observing(:property)
+    owner = :sys.get_state(session.pid).observation.pid
+    before = :sys.get_state(owner)
+    reference = handle.reference
+
+    report = %{
+      request
+      | type: :con,
+        code: 69,
+        message_id: 20,
+        options: [{6, <<11>>}],
+        payload: "fresh"
+    }
+
+    try do
+      for type <- [:con, :non] do
+        emit(adapter, %{report | type: type, token: "foreign"})
+
+        if type == :con,
+          do: assert(sent(adapter) == %Message{type: :rst, code: 0, message_id: 20})
+
+        assert synchronized_state(adapter, session, owner) == before
+        refute_received {:sent_datagram, ^adapter, _}
+        refute_received {:wotex_coap, ^reference, _}
+      end
+
+      {:ok, bytes} = Codec.encode(report)
+
+      for {host, port} <- [{"127.0.0.2", 5683}, {"127.0.0.1", 5684}] do
+        send(adapter, {:emit, host, port, bytes})
+        assert synchronized_state(adapter, session, owner) == before
+        refute_received {:sent_datagram, ^adapter, _}
+        refute_received {:wotex_coap, ^reference, _}
+      end
+
+      emit(adapter, report)
+      assert sent(adapter) == %Message{type: :ack, code: 0, message_id: 20}
+      assert_receive {:wotex_coap, ^reference, {:ok, ^report, %{observe: 11}}}
+      refute_received {:wotex_coap, ^reference, _}
+    after
+      stop_observing(clock, session, adapter, handle)
+    end
+  end
+
+  test "WCO-S03 WCO-V06 negative and malformed registration responses never expose a handle" do
+    for input <- [:negative_status, :truncated_observe, :overlong_observe] do
+      {:ok, clock} = TestExecution.start(%{mids: [1, 2], tokens: ["observe"]})
+      {:ok, session} = connect(clock)
+      assert_receive {:adapter, adapter, _}
+      receiver = self()
+      task = Task.async(fn -> CoAP.subscribe(session, %{path: "/x", receiver: receiver}) end)
+      request = sent(adapter)
+      monitor = Process.monitor(session.pid)
+      adapter_monitor = Process.monitor(adapter)
+
+      response = %{request | type: :ack, code: 69, options: []}
+      assert :ok = TestExecution.elapse(clock, 50)
+
+      case input do
+        :negative_status ->
+          emit(adapter, %{response | code: 132})
+
+        :truncated_observe ->
+          {:ok, bytes} = Codec.encode(response)
+          send(adapter, {:emit, bytes <> <<0x62, 1>>})
+
+        :overlong_observe ->
+          emit(adapter, %{response | options: [{6, <<1, 2, 3, 4>>}]})
+      end
+
+      if input != :negative_status do
+        assert :ok = GenServer.call(adapter, :sync)
+        :sys.get_state(session.pid)
+        refute Task.yield(task, 0)
+        refute_received {:wotex_coap, _, _}
+        refute_received {:sent_datagram, ^adapter, _}
+        assert TestExecution.advance(clock, 100) > 0
+      end
+
+      expected = if input == :negative_status, do: :remote_response, else: :timeout
+      assert {:error, %Error{code: ^expected, effect: :none}} = Task.await(task)
+      assert_receive {:wotex_coap, reference, {:error, %Error{code: ^expected}}}
+      cancellation = sent(adapter)
+      assert cancellation.token == request.token and Codec.option(cancellation, 6) == [<<1>>]
+      assert cancellation.message_id != request.message_id
+      assert Codec.option(cancellation, 11) == Codec.option(request, 11)
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+      assert_receive {:DOWN, ^adapter_monitor, :process, _, :normal}, 1000
+      assert :ok = CoAP.disconnect(session)
+      assert TestExecution.snapshot(clock).timers == %{}
+      assert TestExecution.snapshot(clock).owners == %{}
+      GenServer.stop(clock)
+      refute_received {:wotex_coap, ^reference, _}
+      refute_received {:sent_datagram, ^adapter, _}
+    end
+  end
+
   test "WCO-S03 WCO-V08 zero Max-Age remains stale and renews at most once per virtual second" do
     {:ok, clock} = TestExecution.start(%{mids: [1, 2, 3], tokens: ["token"]})
     {:ok, session} = connect(clock)
@@ -248,19 +401,46 @@ defmodule Wotex.CoAP.ExecutionTest do
     end
   end
 
-  defp observing(kind) do
+  defp observing(kind, options \\ []) do
     {:ok, clock} = TestExecution.start(%{mids: [1, 2, 3], tokens: ["observe", "continue"]})
     {:ok, session} = connect(clock, kind)
     assert_receive {:adapter, adapter, _}
     receiver = self()
     task = Task.async(fn -> CoAP.subscribe(session, %{path: "/x", receiver: receiver}) end)
     request = sent(adapter)
-    emit(adapter, %{request | type: :ack, code: 69, options: [{6, <<10>>}, {14, <<1>>}]})
+    observe = Keyword.get(options, :observe, 10)
+    max_age = Keyword.get(options, :max_age, 1)
+
+    emit(adapter, %{
+      request
+      | type: :ack,
+        code: 69,
+        options: [{6, Codec.uint(observe)}, {14, Codec.uint(max_age)}]
+    })
+
     assert {:ok, handle} = Task.await(task)
-    assert_receive {:wotex_coap, _, {:ok, _, %{observe: 10}}}
+    assert_receive {:wotex_coap, _, {:ok, _, %{observe: ^observe}}}
     owner = :sys.get_state(session.pid).observation.pid
     assert :sys.get_state(owner).phase == :active
     {clock, session, adapter, handle, request}
+  end
+
+  defp synchronized_state(adapter, session, owner) do
+    assert :ok = GenServer.call(adapter, :sync)
+    :sys.get_state(session.pid)
+    :sys.get_state(owner)
+  end
+
+  defp stop_observing(clock, session, adapter, handle) do
+    task = Task.async(fn -> CoAP.unsubscribe(session, handle) end)
+    cancellation = sent(adapter)
+    assert Codec.option(cancellation, 6) == [<<1>>]
+    emit(adapter, %{cancellation | type: :ack, code: 69, options: [], payload: <<>>})
+    assert :ok = Task.await(task)
+    assert :ok = CoAP.disconnect(session)
+    assert TestExecution.snapshot(clock).timers == %{}
+    assert TestExecution.snapshot(clock).owners == %{}
+    GenServer.stop(clock)
   end
 
   defp connect(clock, kind \\ :property),

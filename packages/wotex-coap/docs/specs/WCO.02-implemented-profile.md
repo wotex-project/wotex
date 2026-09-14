@@ -43,6 +43,9 @@ transmitted mutations retain unknown effect without automatic replay.
 Whole-body Block1/Block2 exchanges follow [WCO.03](WCO.03-blockwise.md).
 Observe registration, initial complete representation, serial freshness, renewal,
 blockwise reports, cancellation and receiver-loss cleanup are implemented.
+Valid stale reports are ignored before applying the report Content-Format policy;
+their ETag, payload and Max-Age cannot change the accepted representation or its
+expiry. A fresh Content-Format change remains a terminal representation error.
 Duplicate separate replies retain ACK behavior across completed exchanges.
 `discover/2` validates status/Content-Format and parses bounded RFC 6690 links.
 
