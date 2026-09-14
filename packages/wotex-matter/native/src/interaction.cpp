@@ -146,7 +146,8 @@ bool valid_interaction_response(const InteractionRequest &request,
                       return !path.endpoint.has_value() || !path.cluster.has_value() ||
                           !path.member.has_value();
                     });
-    return (!response.results.empty() || all_wildcard) &&
+    return (!response.results.empty() || all_wildcard ||
+            request.kind == InteractionKind::ReadEvents) &&
         std::all_of(response.results.begin(), response.results.end(),
                     [&](const PathResult &result) {
                       return ValidPathResult(request, result);

@@ -4,7 +4,7 @@ defmodule Wotex.Matter.StandaloneBoundaryTest do
   use ExUnit.Case, async: true
 
   alias Wotex.Matter
-  alias Wotex.Matter.{Address, EndpointCatalogue, Error, TestClient}
+  alias Wotex.Matter.{Address, EndpointCatalogue, Error, EventReport, TestClient}
 
   @heating %{fabric_id: 1, node_id: 3, endpoint: 1, cluster: 0x0201, member: 0x12}
   @on %{fabric_id: 1, node_id: 3, endpoint: 1, cluster: 6, member: 1}
@@ -193,7 +193,6 @@ defmodule Wotex.Matter.StandaloneBoundaryTest do
 
     for response <- [
           nil,
-          [],
           [result, result],
           [%{result | path: %{@event | node_id: 4}}],
           [%{result | result: {:error, Error.with_effect(error, :unknown)}}],
@@ -204,6 +203,51 @@ defmodule Wotex.Matter.StandaloneBoundaryTest do
 
       assert_receive {:matter_request, %{type: :read_events}, _}
     end
+  end
+
+  test "WMA-S03 event history retains multiple identities per path and empty filtered history" do
+    first = event_entry(@event, 7, false)
+    second = event_entry(@event, 8, true)
+    other_path = %{@event | endpoint: 3}
+    error = %{path: other_path, result: {:error, Error.new(:interaction_status)}}
+
+    assert {:ok, [actual_error, actual_first, actual_second]} =
+             Matter.read_events(session([second, error, first]), [other_path, @event],
+               min_event_number: 7
+             )
+
+    assert {:error, %Error{code: :interaction_status}} = actual_error.result
+    assert {:ok, %EventReport{event_number: 7}} = actual_first.result
+    assert {:ok, %EventReport{event_number: 8}} = actual_second.result
+    assert actual_first.path == actual_second.path
+    assert {:ok, []} = Matter.read_events(session([]), [@event], min_event_number: 9)
+    assert {:ok, [_]} = Matter.read_events(session([first]), [other_path, @event])
+  end
+
+  test "WMA-C02 event history rejects duplicated identities conflicting status and foreign reports" do
+    first = event_entry(@event, 7, false)
+    other_path = %{@event | endpoint: 3}
+    error = %{path: @event, result: {:error, Error.new(:interaction_status)}}
+    {:ok, report} = first.result
+
+    for entries <- [
+          [first, first],
+          [first, event_entry(other_path, 7, false)],
+          [first, error],
+          [error, first],
+          [event_entry(%{@event | node_id: 4}, 7, false)],
+          [%{first | result: {:ok, %{report | value: @value}}}],
+          List.duplicate(first, 1025)
+        ] do
+      assert {:error, %Error{code: :invalid_transport_return}} =
+               Matter.read_events(session(entries), [@event, other_path])
+    end
+
+    assert {:error, %Error{code: :invalid_transport_return}} =
+             Matter.read_events(session([first]), [@event], min_event_number: 8)
+
+    assert {:error, %Error{code: :invalid_path_batch}} =
+             Matter.read_events(session(:unexpected), [@event, @event])
   end
 
   test "WMA-S03 root-only discovery does not invent endpoints or retry duplicated parts" do
@@ -238,5 +282,25 @@ defmodule Wotex.Matter.StandaloneBoundaryTest do
   defp session(response) do
     {:ok, session} = Matter.connect(client: TestClient, response: response)
     session
+  end
+
+  defp event_entry(path, number, value) do
+    %{
+      path: path,
+      result:
+        {:ok,
+         %{
+           path: path,
+           event_number: number,
+           priority: 1,
+           status: 0,
+           timestamp: %{kind: :system, value: number + 100},
+           value: %{
+             tag: :anonymous,
+             type: :structure,
+             value: [%{tag: {:context, 0}, type: :boolean, value: value}]
+           }
+         }}
+    }
   end
 end

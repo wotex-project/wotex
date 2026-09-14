@@ -3,9 +3,9 @@ spec:
   id: WMA.10
   title: "Complete SDK-backed Matter controller software profile"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-matter
-  updated: 2026-09-09
+  updated: 2026-09-15
 ---
 
 # WMA.10 Complete SDK-backed Matter controller software profile
@@ -44,7 +44,7 @@ must equal the active controller fabric before any lookup or I/O.
 Add `ReadPath.new/1` for explicit read-only wildcards. Fields endpoint/cluster/
 member may be `:any`; node and fabric stay concrete. Wildcards are never accepted
 by write/invoke or silently inferred from nil. At most 64 requested paths and
-1024 returned paths; duplicate concrete results are malformed. Keep caller path
+1024 returned paths; duplicate concrete attribute results are malformed. Keep caller path
 order for concrete multi-read results and sort wildcard expansion lexicographically
 by endpoint/cluster/member for deterministic output. Native `send/2` keeps the
 existing concrete-operation return shapes; add explicit `read_paths/3` for batches.
@@ -133,6 +133,13 @@ explicit node/path/generated descriptors.
 Add native `read_events/3` with concrete event paths and optional minimum event
 number; preserve event number (unsigned 64-bit), priority, timestamp kind/value
 and path. Unknown priority is numeric metadata, not atom creation.
+Event reads may return multiple historical events for one concrete path, or no
+events after the supplied minimum. Retain every distinct event, grouped in
+requested path order and ordered by event number within a path. Event identity
+is fabric/node/event number; duplicates are malformed. At most 1024 event/status
+records fit within the existing aggregate result budget. An empty successful
+event read is `{:ok, []}`, not an invented missing-path failure. A per-path error
+remains an error entry and cannot coexist with successful events for that path.
 
 Results retain fabric/node/path, native status and cluster-specific status where
 present. Multi-path success is an ordered list of per-path successes/errors,

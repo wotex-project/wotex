@@ -3,14 +3,14 @@ spec:
   id: WMA.11
   title: "Standalone controller and cluster workflows"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-matter
-  updated: 2026-09-09
+  updated: 2026-09-15
 ---
 
 # WMA.11 Standalone controller and cluster workflows
 
-Specification version: `1.1.0`. The catalogue and executable-evidence record
+Specification version: `1.1.1`. The catalogue and executable-evidence record
 track implementation separately from this accepted target.
 Requires [WMA.00](WMA.00-library-contract.md) and
 [WMA.10](WMA.10-software-contract.md). [WMA.02](WMA.02-implemented-profile.md)
@@ -55,6 +55,13 @@ non_neg_integer}`, and `status: 0`; unsuccessful paths carry Error instead of a 
 header. Timestamps remain the SDK-reported integer unit
 in milliseconds. Unknown native timestamp kinds fail `:unsupported_timestamp`
 with bounded numeric kind, rather than guessing an epoch.
+Concrete event paths are unique within a request. Event-read results preserve
+all historical reports for each requested path, ordered by event number, with
+path groups in request order. Paths with no matching history contribute no
+entry; an entirely empty history returns `{:ok, []}`. Returned event numbers
+must satisfy the requested minimum. Duplicate fabric/node/event identities,
+foreign paths and conflicting success/error entries for one path are malformed.
+Descriptor validation applies to every returned event value.
 
 `EndpointCatalogue` has fabric/node, root endpoint zero and sorted `endpoints`.
 Each endpoint entry has exactly `endpoint`, `device_types`, `server_clusters`,

@@ -144,6 +144,11 @@ void EventIdentityAndMinimumNumber() {
   assert(events.frame->find(R"("kind":"epoch")") != std::string::npos);
   assert(events.frame->find(R"("priority":2)") != std::string::npos);
   assert(backend.last->minimum_event_number == 0);
+  backend.response.results.clear();
+  auto empty = protocol.ProcessLine(
+      R"({"version":1,"id":"3","operation":"read_events","parameters":{"paths":[{"fabric_id":1,"node_id":3,"endpoint":2,"cluster":57,"member":3}],"min_event_number":9},"timeout_ms":1000})");
+  assert(empty.keep_running);
+  assert(empty.frame->find(R"("result":[])") != std::string::npos);
 }
 
 void MutationTimeoutCompletesOnce() {

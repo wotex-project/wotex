@@ -81,7 +81,7 @@ defmodule Wotex.Matter.Standalone do
          {:ok, timeout, minimum} <- event_options(options, session.timeout),
          message = event_message(paths, minimum),
          {:ok, results} <- request(session, message, timeout) do
-      normalize_events(paths, results)
+      normalize_events(paths, results, minimum)
     end
   end
 
@@ -397,11 +397,18 @@ defmodule Wotex.Matter.Standalone do
   defp data_version_option(_, []), do: :ok
 
   defp event_paths(paths) when is_list(paths) and length(paths) in 1..64 do
-    traverse(paths, fn path ->
-      with {:ok, address} <- Address.new(path),
-           {:ok, _} <- Descriptor.lookup(:event, address, :read),
-           do: {:ok, address}
-    end)
+    with {:ok, paths} <-
+           traverse(paths, fn path ->
+             with {:ok, address} <- Address.new(path),
+                  {:ok, _} <- Descriptor.lookup(:event, address, :read),
+                  do: {:ok, address}
+           end),
+         true <- length(Enum.uniq(paths)) == length(paths) do
+      {:ok, paths}
+    else
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:invalid_path_batch)}
+    end
   end
 
   defp event_paths(_), do: {:error, Error.new(:invalid_path_batch)}
@@ -422,42 +429,58 @@ defmodule Wotex.Matter.Standalone do
     if is_nil(minimum), do: message, else: Map.put(message, :min_event_number, minimum)
   end
 
-  defp normalize_events(paths, results)
-       when is_list(results) and length(results) == length(paths) do
-    with {:ok, by_path} <- event_result_index(results) do
-      traverse(paths, fn path ->
-        case Map.fetch(by_path, path_key(path)) do
-          {:ok, result} ->
-            normalize_event_result(path, result)
+  defp normalize_events(paths, results, minimum)
+       when is_list(results) and length(results) <= 1024 do
+    allowed = MapSet.new(paths, &path_key/1)
 
-          _ ->
-            :error
-        end
-      end)
+    with {:ok, results} <- traverse(results, &event_entry(&1, allowed)),
+         true <- unique_event_numbers?(results),
+         groups = Enum.group_by(results, &path_key(&1.path)),
+         {:ok, ordered} <-
+           traverse(paths, fn path ->
+             event_group(Map.get(groups, path_key(path), []), minimum)
+           end) do
+      {:ok, List.flatten(ordered)}
+    else
+      _ -> {:error, Error.new(:invalid_transport_return)}
     end
   end
 
-  defp normalize_events(_, _), do: {:error, Error.new(:invalid_transport_return)}
+  defp normalize_events(_, _, _), do: {:error, Error.new(:invalid_transport_return)}
 
-  defp event_result_index(results) do
-    Enum.reduce_while(results, {:ok, %{}}, fn
-      %{path: raw_path, result: _} = result, {:ok, index} when map_size(result) == 2 ->
-        with {:ok, path} <- Address.new(raw_path),
-             key = path_key(path),
-             false <- Map.has_key?(index, key) do
-          {:cont, {:ok, Map.put(index, key, %{result | path: path})}}
-        else
-          _ -> {:halt, {:error, Error.new(:invalid_transport_return)}}
-        end
+  defp event_entry(%{path: raw_path, result: _} = result, allowed) when map_size(result) == 2 do
+    with {:ok, path} <- Address.new(raw_path),
+         true <- MapSet.member?(allowed, path_key(path)),
+         do: normalize_event_result(path, result)
+  end
 
-      _, _ ->
-        {:halt, {:error, Error.new(:invalid_transport_return)}}
-    end)
+  defp event_entry(_, _), do: :error
+
+  defp unique_event_numbers?(results) do
+    identities =
+      for %{result: {:ok, report}} <- results,
+          do: {report.path.fabric_id, report.path.node_id, report.event_number}
+
+    length(identities) == length(Enum.uniq(identities))
+  end
+
+  defp event_group([%{result: {:error, %Error{}}}] = results, _), do: {:ok, results}
+
+  defp event_group(results, minimum) do
+    if Enum.all?(results, fn
+         %{result: {:ok, report}} -> is_nil(minimum) or report.event_number >= minimum
+         _ -> false
+       end) do
+      {:ok, Enum.sort_by(results, fn %{result: {:ok, report}} -> report.event_number end)}
+    else
+      :error
+    end
   end
 
   defp normalize_event_result(path, %{path: raw_path, result: {:ok, report}}) do
     with {:ok, ^path} <- Address.new(raw_path),
          {:ok, report} <- EventReport.new(report),
+         {:ok, _} <- Descriptor.validate_element(:event, path, :read, report.value),
          true <- report.path == path do
       {:ok, %{path: path, result: {:ok, report}}}
     else

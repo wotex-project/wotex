@@ -413,6 +413,24 @@ controller usable. The default suite passes 114 checks with seven interop cases
 excluded. Coverage is 89.7% in this cohort; the required 95% release gate remains
 unsatisfied and its threshold and exclusions are unchanged.
 
+WMA.10 and WMA.11 version 1.1.1 specify complete bounded event history.
+`StandaloneBoundaryTest` adds regressions for multiple reports on one event path,
+request-path grouping, ascending event numbers, explicit errors and empty filtered
+history. Duplicate fabric/node/event identities, conflicting per-path status,
+foreign paths, schema violations, below-minimum numbers and excessive counts fail
+with structured errors. Duplicate requested event paths fail before client entry.
+The real bridge peer exposed the previous one-result-per-path assumption; both
+new BEAM tests fail before the fix. Native `interaction_test.cpp` separately
+reproduces the rejection of a successful empty history. The native owner now
+preserves that empty success without inventing a missing attribute-style result.
+The focused standalone/interaction suite passes 20 cases on both BEAM versions;
+the default gate passes 128 checks. All six native tests pass normally and under
+ASan/UBSan with leak detection. Normal and sanitized SDK hosts rebuild with
+SHA-256 values respectively
+`b38ae7688b8136e26f1f02a07570d311a404fde9a4df49875056110b9274b3af`
+and `e806d61d4439604d2fe70e10030ca7ca6591e6809307e75bd8af236d29d0236b`.
+This changes no upstream dependency pin and makes no broader P09 acceptance claim.
+
 WMA-S01 cluster validation follows the pinned SDK's `IsValidClusterId`, including
 manufacturer suffixes `FC00..FFFE` and vendor prefixes `0001..FFF4`. The
 all-clusters peer exposed the previous rejection of its valid `FFF1FC05` cluster

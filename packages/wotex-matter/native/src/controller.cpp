@@ -1346,7 +1346,7 @@ class SdkControllerBackend::Impl final
     }
 
     void FinishRead() {
-      if (!overall_error_.has_value()) {
+      if (!overall_error_.has_value() && request_.kind != InteractionKind::ReadEvents) {
         AddMissingConcreteResults();
       }
       if (overall_error_) {
