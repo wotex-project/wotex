@@ -109,11 +109,12 @@ cursor persistence, event deduplication or bounded process mailbox; Runtime owns
 the optional receiver mailbox bound. The Living
 Standard is a client framing reference; draft WoT Profile use is not conformance.
 
-`transport_test.exs` and `integration_test.exs` under
-`test/wotex/binding/http/` cover the open/event/close boundary, including exact
-event-byte thresholds, malformed handshakes, cleanup callback failures,
-configuration transplant, duplicate raw close, concurrent Runtime stop,
-receiver death, session loss and linked-client failure. These vectors do not
-transfer connection ownership into the package. Sustained-delivery allocation
-and supplied-client overload remain consumer evidence prerequisites for any
-future bounded streaming memory or recovery guarantee.
+`docs/client-lifecycle-inventory.md`, `client_lifecycle_inventory_test.exs`,
+`transport_test.exs` and `integration_test.exs` cover the open/event/close
+boundary, including exact event-byte thresholds, malformed handshakes, cleanup
+callback failures, configuration transplant, duplicate raw close, concurrent
+Runtime stop, receiver death, session loss and linked-client failure. These
+vectors do not transfer connection ownership into the package.
+Sustained-delivery allocation, pending-establishment owner monitoring, and
+supplied-client overload remain consumer evidence prerequisites for any future
+bounded streaming memory or recovery guarantee.

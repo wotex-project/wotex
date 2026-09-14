@@ -5,7 +5,7 @@ defmodule Wotex.Binding.HTTP.LibraryContractTest do
 
   alias Wotex.Binding.HTTP.{Client, Transport}
 
-  test "loading the library starts no application callback" do
+  test "WBH-L11-N loading the library defines no application callback" do
     assert Application.spec(:wotex_binding_http, :mod) in [nil, [], :undefined]
   end
 

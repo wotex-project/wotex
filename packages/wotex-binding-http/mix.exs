@@ -101,7 +101,7 @@ defmodule WotexBindingHTTP.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/http-operation-inventory.md docs/plans docs/runtime-baseline.md docs/standards-baseline.md docs/specs lib mix.exs)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/client-lifecycle-inventory.md docs/http-operation-inventory.md docs/plans docs/runtime-baseline.md docs/standards-baseline.md docs/specs lib mix.exs)
     ]
   end
 
@@ -116,6 +116,7 @@ defmodule WotexBindingHTTP.MixProject do
         "CHANGELOG.md": [title: "Changelog"],
         LICENSE: [title: "License"],
         NOTICE: [title: "Notices"],
+        "docs/client-lifecycle-inventory.md": [title: "Client lifecycle inventory"],
         "docs/http-operation-inventory.md": [title: "HTTP operation inventory"],
         "docs/standards-baseline.md": [title: "Standards baseline"],
         "docs/runtime-baseline.md": [title: "Runtime baseline"],
@@ -127,8 +128,8 @@ defmodule WotexBindingHTTP.MixProject do
       groups_for_extras: [
         "Completion plans": ~r/docs\/plans/,
         "Normative package specifications": ~r/docs\/specs/,
-        "Standards and operation evidence":
-          ~r/docs\/(http-operation-inventory|(standards|runtime)-baseline)/
+        "Contract evidence":
+          ~r/docs\/((client-lifecycle|http-operation)-inventory|(standards|runtime)-baseline)/
       ],
       groups_for_modules: [
         "Public API": [Wotex.Binding.HTTP, Wotex.Binding.HTTP.Client],

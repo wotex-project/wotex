@@ -101,7 +101,7 @@ defmodule Wotex.Binding.HTTP.IntegrationTest do
     assert_receive {:owner_down, :normal}
   end
 
-  test "concurrent Runtime stops issue one client close" do
+  test "WBH-L07-P concurrent Runtime stops issue one client close" do
     parent = self()
 
     close_return = fn ->
@@ -131,7 +131,7 @@ defmodule Wotex.Binding.HTTP.IntegrationTest do
     refute_receive {:client_close, :integration_handle}
   end
 
-  test "receiver death closes the stream and terminates its Runtime owner" do
+  test "WBH-L09-P receiver death closes the stream and its Runtime owner" do
     receiver = spawn(fn -> receive do: (:stop -> :ok) end)
     pid = observation(%{monitor_owner: true}, :receiver_failure, receiver: receiver)
     monitor = Process.monitor(pid)
@@ -144,7 +144,7 @@ defmodule Wotex.Binding.HTTP.IntegrationTest do
     assert_receive {:DOWN, ^monitor, :process, ^pid, {:shutdown, :receiver_down}}
   end
 
-  test "a linked client connection failure closes and stops the Runtime owner" do
+  test "WBH-L10-P linked client loss closes and stops the Runtime owner" do
     pid = observation(%{link_owner: true}, :linked_client_failure)
     monitor = Process.monitor(pid)
 

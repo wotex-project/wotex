@@ -19,7 +19,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
   alias Wotex.Binding.HTTP.Test.{AlternateClient, Factory, FakeClient}
   alias Wotex.Runtime.Result
 
-  test "one-shot request delegates credentials separately and returns decoded Runtime result" do
+  test "WBH-L01-P request delegates credentials separately and returns a result" do
     response =
       Factory.response(
         201,
@@ -116,7 +116,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     refute inspect(error) =~ "name:value"
   end
 
-  test "HTTP status codes and client failures carry their retry classification" do
+  test "WBH-L01-N1 request errors, raises, exits, throws, and wrong returns are normalized" do
     statuses = [{408, :timeout}, {429, :rate_limited}, {503, :unavailable}, {404, :permanent}]
 
     for {status, class} <- statuses do
@@ -146,7 +146,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     end
   end
 
-  test "subscribe and close isolate client exits and throws without copying the reason" do
+  test "WBH-L02-N2 and WBH-L03-N2 subscribe and close isolate exits and throws" do
     request = Factory.request(:subscribeevent, nil, %{"subprotocol" => "sse"})
 
     for returned <- [{:exit, :private_exit}, {:throw, :private_throw}] do
@@ -169,7 +169,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     end
   end
 
-  test "client failures, exceptions, malformed returns, and bypassed response values are normalized" do
+  test "WBH-L01-N2 request failures and bypassed response values are redacted" do
     invalid_response = %Response{
       status: 200,
       headers: [{"set-cookie", "name=value"}],
@@ -211,7 +211,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
              Transport.request(Factory.request(:readproperty), Factory.context(), %{})
   end
 
-  test "SSE subscribe opens explicitly, decodes notifications, and returns an opaque handle" do
+  test "WBH-L02-P subscribe opens explicitly and returns an opaque handle" do
     handshake = Factory.response(200, "", [{"Content-Type", "text/event-stream; charset=utf-8"}])
     config = Factory.config(%{subscribe_return: {:ok, :client_handle, handshake}})
     request = Factory.request(:subscribeevent, nil, %{"subprotocol" => "sse"})
@@ -282,7 +282,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
              Transport.decode_frame(event, Factory.request(:readproperty), config)
   end
 
-  test "failed SSE handshakes close the newly opened handle" do
+  test "WBH-L04-N1 invalid SSE handshake fields close the returned handle" do
     cases = [
       {Factory.response(201, "", [{"Content-Type", "text/event-stream"}]), :sse_handshake_status},
       {Factory.response(200, "", [{"Content-Type", "application/json"}]),
@@ -303,7 +303,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     end
   end
 
-  test "handshake cleanup tolerates every close callback failure mode" do
+  test "WBH-L05-N handshake cleanup failure preserves the primary error" do
     handshake = Factory.response(201, "", [{"Content-Type", "text/event-stream"}])
 
     for close_return <- [
@@ -328,7 +328,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     end
   end
 
-  test "invalid client response during SSE open also closes the handle" do
+  test "WBH-L04-N2 a bypassed invalid handshake response closes the handle" do
     invalid_response = %Response{status: 200, headers: [{"set-cookie", "x"}], body: ""}
     config = Factory.config(%{subscribe_return: {:ok, :opened_handle, invalid_response}})
     request = Factory.request(:observeproperty, nil, %{"subprotocol" => "sse"})
@@ -339,7 +339,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     assert_receive {:client_close, :opened_handle}
   end
 
-  test "a malformed handshake response still closes the returned handle" do
+  test "WBH-L04-N3 a malformed handshake response closes the returned handle" do
     config = Factory.config(%{subscribe_return: {:ok, :opened_handle, :not_a_response}})
     request = Factory.request(:observeproperty, nil, %{"subprotocol" => "sse"})
 
@@ -350,7 +350,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     assert_receive {:client_close, :opened_handle}
   end
 
-  test "subscribe failures, exceptions, and malformed returns are normalized" do
+  test "WBH-L02-N1 subscribe errors, raises, and wrong returns are normalized" do
     cases = [
       {{:error, :private}, :client_subscribe_failed},
       {{:raise, RuntimeError.exception("private")}, :client_subscribe_exception},
@@ -390,7 +390,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
              )
   end
 
-  test "unsubscribe closes the exact handle without forwarding stop credentials" do
+  test "WBH-L03-P unsubscribe closes the exact handle without stop credentials" do
     stop_request = Factory.request(:unobserveproperty)
     config = Factory.config(%{close_return: :ok})
     subscription = Subscription.new(config, :client_handle, "request-1", :observeproperty)
@@ -406,7 +406,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     assert_receive {:client_close, :client_handle}
   end
 
-  test "duplicate raw closes remain explicit client calls" do
+  test "WBH-L06-P duplicate raw closes remain distinct client calls" do
     config = Factory.config(%{close_return: :ok})
     request = Factory.request(:unsubscribeevent)
     subscription = Subscription.new(config, :shared_handle, "request-1", :subscribeevent)
@@ -424,7 +424,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
     refute_receive {:client_close, :shared_handle}
   end
 
-  test "unsubscribe rejects another instance of the same client before calling close" do
+  test "WBH-L08-N equal-option configuration transplant fails before close" do
     handshake = Factory.response(200, "", [{"Content-Type", "text/event-stream"}])
     options = %{subscribe_return: {:ok, :owned_handle, handshake}}
     opening_config = Factory.config(options)
@@ -489,7 +489,7 @@ defmodule Wotex.Binding.HTTP.TransportTest do
              )
   end
 
-  test "unsubscribe normalizes close errors, exceptions, malformed returns, and arguments" do
+  test "WBH-L03-N1 close errors, raises, wrong returns, and arguments are normalized" do
     request = Factory.request(:unsubscribeevent)
 
     cases = [

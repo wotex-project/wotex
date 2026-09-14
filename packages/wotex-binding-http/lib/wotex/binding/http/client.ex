@@ -29,6 +29,12 @@ defmodule Wotex.Binding.HTTP.Client do
   `:shutdown` reason after `:session_lost` and `:transport_down`, leaving the
   restart decision to the consumer's supervisor.
 
+  Owner monitoring is also a supplied-client establishment obligation. Install
+  it before an in-progress connection can outlive `owner`, and abort or close
+  that connection if the owner exits before `subscribe/4` returns. While the
+  callback is pending, this package has neither the connection nor its handle
+  and cannot provide that cleanup or claim it as package behavior.
+
   Implementations should translate transport-library failures into their own
   reason terms. The binding normalizes those reasons before returning a public
   error, so neither credentials nor client-specific failure values escape the
@@ -78,6 +84,9 @@ defmodule Wotex.Binding.HTTP.Client do
 
   The credential has the same ephemeral rules as `request/3` and must never be
   captured by a connection process or stored with the returned handle.
+  Monitoring `owner` before a pending connection can outlive it, including
+  cleanup if `owner` exits before this callback returns, remains the client
+  implementation's responsibility.
   """
   @callback subscribe(Request.t(), credential(), owner(), config()) ::
               {:ok, handle(), Response.t()} | {:error, term()}

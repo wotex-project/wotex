@@ -60,7 +60,7 @@ reference-consumer semantics need their own results.
 | Action status and SSE mappings | WoT Profiles Working Draft 2025-11-04 | `operation_inventory_test.exs`, `form_test.exs`, `transport_test.exs` | Package behavior, not Profile conformance |
 | Fields/status/representation | RFC 9110, RFC 8259 | `value_test.exs`, `form_test.exs`, `transport_test.exs` | Validated values/JSON; no HTTP client implementation |
 | Message framing | RFC 9112 | Client boundary tests | Client-owned, not implemented here |
-| SSE adaptation | HTML Living Standard, repository observation 2026-09-02 | `integration_test.exs`, `transport_test.exs` | Already-framed events; no parser/reconnect claim |
+| SSE adaptation | HTML Living Standard, repository observation 2026-09-02 | `client_lifecycle_inventory_test.exs`, `integration_test.exs`, `transport_test.exs` | Already-framed events; no parser/reconnect claim |
 | Binding Registry membership | Draft Registry 2025-11-04 baseline | No registration evidence | No membership or W3C endorsement claim |
 
 Exact primary links and maturity labels are in `docs/standards-baseline.md`.

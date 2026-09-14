@@ -134,10 +134,13 @@ because its URI passes syntax checks. No global security policy is installed.
 
 ## Compatibility and proof
 
-`value_test.exs`, `error_test.exs`, `form_test.exs`, `transport_test.exs` and
+`docs/client-lifecycle-inventory.md` maps the complete callback and lifecycle
+review to named vectors. `value_test.exs`, `error_test.exs`, `form_test.exs`,
+`transport_test.exs`, `client_lifecycle_inventory_test.exs` and
 `library_contract_test.exs` under `test/wotex/binding/http/` are the current
 value/port evidence. Exact default limits, error code/phase/class, JSON-null
-behavior, header precedence and callback tuples are observable API contracts. Alterations
-need a specification/package compatibility decision and clean-consumer tests.
-Config instance identity is process-local and not serializable capability,
-cross-node admission or protection against forged internal structs.
+behavior, header precedence and callback tuples are observable API contracts.
+Alterations need a specification/package compatibility decision and
+clean-consumer tests. Config instance identity is process-local and not
+serializable capability, cross-node admission or protection against forged
+internal structs.

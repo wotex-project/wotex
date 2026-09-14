@@ -174,6 +174,11 @@ and a client session status becomes `{:status, :reconnected | :session_lost |
 :transport_down}`. `unobserveproperty` and `unsubscribeevent` call
 `Client.close/2`; they never issue a hidden HTTP request.
 
+The [client and SSE lifecycle inventory](docs/client-lifecycle-inventory.md)
+maps callback failures, handshake cleanup, close concurrency, configuration
+identity, and owner failure to named vectors. It also identifies
+pending-establishment owner monitoring as a supplied-client obligation.
+
 ## Failure model
 
 Public failures are `Wotex.Binding.HTTP.Error` values with a stable `code`, a
