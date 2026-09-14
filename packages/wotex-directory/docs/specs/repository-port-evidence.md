@@ -1,7 +1,7 @@
 # Repository port evidence contract
 
 This document maps the reusable repository tests to WTD.01 version 1.1.0 and
-completion work items WTD-C01 through WTD-C05. It adds evidence for the existing
+completion work items WTD-C01 through WTD-C06. It adds evidence for the existing
 contract without changing callback signatures, return values, public types,
 operation order, or the W3C baseline. Discovery and Thing Description 1.1
 remain the Recommendations dated 2023-12-05. Package choices are specified
@@ -163,8 +163,9 @@ certification or production storage.
 
 `WOTEX_PATH_DEPS=1 mix package` and the full gate's archive check execute
 `bin/check_archive.exs`. The check builds exactly one Directory archive in a
-new system temporary directory. It validates the Hex envelope checksum,
-package identity/version, declared files, the normal `wotex ~> 0.1.0`
+new system temporary directory using the package mirror described below. It
+validates the Hex envelope checksum, package identity/version, declared files,
+the normal `wotex ~> 0.1.0`
 dependency and the public package boundary before compilation. Package inputs
 allowlist individual documents. Development instructions, test consumers,
 builds, dependencies and task state are absent from the archive.
@@ -178,8 +179,11 @@ specified, `WOTEX_PATH_DEPS` is unnecessary:
 WOTEX_DIRECTORY_ARCHIVE=/absolute/directory.tar WOTEX_CORE_ARCHIVE=/absolute/core.tar mix package
 ```
 
-Archive selection changes only the explicit verification input, not the gate
-scope. Missing or invalid archives fail; neither input has a checkout fallback.
+The supplied-archive command repeats all archive inspection, compilation and
+consumer checks. It does not recreate a sentinel-bearing build and cannot
+produce the full gate's release-evidence manifest. The full authoritative gate
+requires a fresh Directory build; leave `WOTEX_DIRECTORY_ARCHIVE` unset.
+Missing or invalid archives fail; neither input has a checkout fallback.
 
 The core input is either the archive explicitly named by `WOTEX_CORE_ARCHIVE`
 or an archive built from the dependency source explicitly selected by
@@ -213,6 +217,43 @@ digest, and the full Hex lock cohort. It retains both archives and the lock in
 the printed external artifact directory; the generated consumer and its build
 are removed. These files are evidence outputs, never package inputs or
 checked-in completion state.
+
+### Package-exclusion acceptance
+
+`bin/package_mirror.exs` copies the declared public files into a new
+system-temporary mirror outside repositories. It copies bytes without changing
+`mix.exs`, so production metadata still declares the normal Hex dependency.
+The only recursive package input is `lib`, restricted to regular Elixir source
+files. Other inputs are individually allowlisted regular files. Symlinks are
+rejected. The mirror contains no actual local instructions or execution state.
+
+The verifier creates 28 synthetic files in that mirror: agent-instruction
+locations, local and nested task directories, non-allowlisted documentation,
+build/dependency/test directories, generated consumers, manifests, locks and
+archive output locations. Each file contains a fresh random marker. These
+sentinels are reproducible test cases, not copied user data. Their generated
+contents never enter the source checkout.
+
+One `mix hex.build` invocation builds the Directory archive from the mirror.
+Before and after this build, every public input and sentinel retains its
+expected bytes. Every unpacked public member must match its source SHA-256,
+with no missing or additional file. Sentinel paths must be absent. Sentinel
+markers must be absent from both member contents and package metadata, including
+when a marker is copied into an allowed filename. The existing Hex-envelope,
+allowlist, dependency and authority checks remain required. The two isolated
+consumers compile and execute that exact verified archive; no second Directory
+archive is built for consumption.
+
+The external `package_exclusion` evidence records all member hashes, sentinel
+paths and marker hashes, the single build and the successful comparisons.
+The full-gate finalizer requires the complete sentinel inventory and public
+hashes to match its original source inputs. Tests in
+`test/wotex/directory/package_mirror_test.exs` reject changed, missing and extra
+members, sentinel paths or contents, metadata leakage, altered mirrors,
+symlinks, repository-local destinations and incomplete evidence. These tests
+do not perform additional package builds. Both the mirror and generated
+consumer are removed, while the archive, lock and manifests remain outside
+the repository for review.
 
 The callback and public-operation suites establish the configured consumers'
 behavior at the tested boundaries. They do not prove crash recovery inside an

@@ -5,13 +5,14 @@
 #     WOTEX_DIRECTORY_ARCHIVE=/absolute/directory.tar WOTEX_CORE_ARCHIVE=/absolute/core.tar mix package
 
 Code.require_file("evidence.exs", __DIR__)
+Code.require_file("package_mirror.exs", __DIR__)
 
 defmodule CheckArchive do
   @moduledoc false
 
   @runtime_dependencies [:decimal, :ex_json_schema, :jason]
   @support ~w(fixtures memory_repository scoped_memory_repository table_repository repository_probe repository_contract repository_barrier public_operation_contract reference_consumer_contract reference_authorization reference_clock reference_identifier test_authorization test_clock test_identifier)
-  @forbidden ~w(.claude .git .github AGENTS.md CLAUDE.md _build deps doc cover test bin docs/tasks priv/plts)
+  @forbidden ~w(.claude .codex .agents .git .github AGENTS.md CLAUDE.md _build deps doc cover test bin docs/tasks priv/plts)
 
   def run do
     source = File.cwd!()
@@ -29,12 +30,13 @@ defmodule CheckArchive do
       IO.puts("archive artifacts: #{root}")
     after
       File.rm_rf!(Path.join(root, "consumer"))
+      File.rm_rf!(Path.join(root, "package-source"))
     end
   end
 
   defp verify(source, root, archive) do
     core_archive = core_archive(root)
-    directory_archive!(source, archive)
+    mirror = directory_archive!(source, root, archive)
     consumer = Path.join(root, "consumer")
     directory = Path.join(consumer, "packages/wotex_directory")
     core = Path.join(consumer, "packages/wotex")
@@ -43,6 +45,8 @@ defmodule CheckArchive do
     validate_metadata!(metadata, "wotex_directory")
     validate_metadata!(core_metadata, "wotex")
     inspect_directory!(directory, metadata)
+    metadata_bytes = File.read!(Path.join(consumer, "packages/wotex_directory.metadata"))
+    package_proof = package_proof!(mirror, directory, metadata_bytes)
     run!("elixir", [Path.join(source, "bin/check_boundary.exs"), directory], root)
 
     lock = Mix.Dep.Lock.read() |> Map.take(@runtime_dependencies)
@@ -92,6 +96,7 @@ defmodule CheckArchive do
         "mix run --no-start --no-compile --no-deps-check verify.exs"
       ],
       "warnings_as_errors" => true,
+      "package_exclusion" => package_proof,
       "source_checkout_fallback" => false
     })
 
@@ -105,11 +110,32 @@ defmodule CheckArchive do
     )
   end
 
-  defp directory_archive!(source, target) do
+  defp directory_archive!(source, root, target) do
     case System.get_env("WOTEX_DIRECTORY_ARCHIVE") do
-      nil -> run!("mix", ["hex.build", "--output", target], source)
-      supplied -> copy_archive!(supplied, target, "WOTEX_DIRECTORY_ARCHIVE")
+      nil ->
+        mirror =
+          DirectoryPackageMirror.prepare!(source, root, Mix.Project.config()[:package][:files])
+
+        run!("mix", ["hex.build", "--output", target], mirror.directory)
+        mirror
+
+      supplied ->
+        copy_archive!(supplied, target, "WOTEX_DIRECTORY_ARCHIVE")
+        nil
     end
+  end
+
+  defp package_proof!(nil, _directory, _metadata),
+    do: %{"sentinel_build" => false, "directory_build_count" => 0}
+
+  defp package_proof!(mirror, directory, metadata) do
+    proof = DirectoryPackageMirror.verify!(mirror, directory, metadata)
+
+    IO.puts(
+      "package mirror: #{map_size(mirror.inputs)} exact public files; #{map_size(mirror.sentinels)} excluded sentinels; one Directory build"
+    )
+
+    Map.merge(proof, %{"sentinel_build" => true, "directory_build_count" => 1})
   end
 
   defp core_archive(root) do

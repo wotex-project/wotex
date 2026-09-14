@@ -1,3 +1,5 @@
+Code.require_file("package_mirror.exs", __DIR__)
+
 defmodule DirectoryEvidence do
   @moduledoc false
 
@@ -108,6 +110,12 @@ defmodule DirectoryEvidence do
     same_inputs!(inputs, manifest["verification_source"])
     files!(root, manifest["archive"]["files"])
     consumer_result!(manifest["archive"]["consumer_result"])
+
+    DirectoryPackageMirror.evidence!(
+      manifest["archive"]["package_exclusion"],
+      inputs["inputs"],
+      Mix.Project.config()[:package][:files]
+    )
 
     unless File.read!(Path.join(root, "compiler.exit")) == "0\n",
       do: raise("compiler evidence is missing")

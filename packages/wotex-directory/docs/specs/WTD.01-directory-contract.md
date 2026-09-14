@@ -577,6 +577,7 @@ minor version change. Once 1.0 is released:
 | Public archive contents and archive-only consumption | `mix package`: exact archives, locked isolated compilation, no application callback, public repository contract and positive/negative operation sequence |
 | Independent reference-consumer operations and explicit authority | five reference scenarios plus the repository and interleaving suites against both consumer implementations using the same exact archives; see the [repository port evidence contract](repository-port-evidence.md#independent-reference-consumer-evidence) |
 | Clause coverage, public compatibility and release-evidence inputs | [claim and compatibility matrix](claim-compatibility-matrix.md); compatibility tests in source and archive; default full-gate manifest with source, runtime, lock and artifact digests |
+| Public package bytes and excluded local state | [package-exclusion acceptance](repository-port-evidence.md#package-exclusion-acceptance): one build in an external sentinel-bearing mirror, exact member hashes, absent sentinel paths/content, then consumption of that archive |
 
 ## 12. Primary sources
 

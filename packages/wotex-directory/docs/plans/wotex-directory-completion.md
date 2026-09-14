@@ -105,14 +105,15 @@ evidence after a relevant change requires rerunning affected gates.
 
 ## Local execution records
 
-The only mutable completion tracker path is
-`docs/tasks/local/wotex-directory-tracker.yaml`, ignored by Git. Package inputs
-allowlist publishable documentation and structurally exclude that path; every
-candidate archive must still prove WTD-C06 because `.gitignore` does not govern
-a Hex archive.
-Its schema is `schema_version: "1.0.0"`, `plan_id: WTD-C`, `plan_revision: "1.1.0"`,
-and `work_items`, each with `id`, `state` (`queued|active|blocked|verified`),
-`prerequisites`, `evidence` (source_commit, archive_sha256 when relevant,
-dependency_cohort, runtime, command, exit_code) and `remaining_claims`.
-Use explicit null for unavailable evidence; never equate a checked task with a
-release gate. Plans/catalogues contain no rolling completion state.
+Execution records, generated consumers, receipts and agent state remain outside
+repositories, including ignored directories. Plans and catalogues contain no
+rolling completion state. Package inputs allowlist public documents;
+`.gitignore` does not govern a Hex archive.
+
+The WTD-C06 acceptance creates synthetic excluded-state sentinels only in a
+system-temporary package mirror, including `docs/tasks/local` and nested files.
+It builds one Directory archive from unchanged public inputs, verifies exact
+public member bytes and sentinel absence, and consumes that same archive.
+The mirror and generated consumer are removed after verification. External
+manifests bind the retained archives to source inputs, runtime, dependency
+cohort and check outcomes. A manifest is evidence, not release authorization.

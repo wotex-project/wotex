@@ -6,7 +6,16 @@ defmodule Wotex.Directory.ArchiveContractTest do
   test "package inputs exclude development instructions and allowlist individual documents" do
     files = Mix.Project.config()[:package][:files]
 
-    for excluded <- [".claude", "AGENTS.md", "CLAUDE.md", "test", "bin", "docs/tasks"],
+    for excluded <- [
+          ".claude",
+          ".codex",
+          ".agents",
+          "AGENTS.md",
+          "CLAUDE.md",
+          "test",
+          "bin",
+          "docs/tasks"
+        ],
         do: refute(excluded in files)
 
     documents = Enum.filter(files, &String.starts_with?(&1, "docs/"))

@@ -140,15 +140,15 @@ release profile or reduced default gate.
 Each gate invocation allocates a system temporary artifact directory. The
 initial input record and compiler exit status, archives, consumer lock,
 `archive-evidence.json` and `release-evidence.json` remain there. Generated
-consumer files and compiled modules are removed. None of these outputs is a
-source or package input.
+consumer files, the sentinel-bearing package mirror and compiled modules are
+removed. None of these outputs is a source or package input.
 
 The release manifest has schema version `1.0.0`:
 
 | Field | Evidence |
 |---|---|
 | `verification_source` | Source commit and cleanliness, per-file SHA-256 for code/tests/specifications/gate configuration/lock/provenance, runtime versions, and the explicit path-dependency source commit/input hashes when selected. |
-| `archive` | Directory/core versions and input mode, archive and consumer-lock SHA-256, locked Hex versions/checksums, archive-consumer commands and actual test totals with zero failures/exclusions/skips. |
+| `archive` | Directory/core versions and input mode, archive and consumer-lock SHA-256, locked Hex versions/checksums, archive-consumer commands and actual test totals with zero failures/exclusions/skips. `package_exclusion` binds every public member hash and the complete excluded-sentinel inventory to one fresh Directory build. |
 | `checks` | Every preceding authoritative check's command, explicit environment override and successful exit code. |
 | `specification` | WTD.01 1.1.0 and its 2023-12-05 target revision. |
 | `claims` | Bounded Directory mechanics and two test consumers; no transport conformance, certification or stable API. |
@@ -160,11 +160,14 @@ warning-free compile once and records its actual exit status; the finalizer
 also requires that status to be zero. A skipped or failed prerequisite cannot
 produce a complete manifest. Source, dependency and runtime inputs must still
 match the initial record, and artifact checksums are revalidated before output.
+The finalizer requires the fresh sentinel-build proof described in the
+[package-exclusion acceptance](repository-port-evidence.md#package-exclusion-acceptance).
+A supplied Directory archive can be replayed with `mix package`, but cannot
+substitute for that build in the complete gate.
 
 The manifest is local execution evidence, not a signed attestation or release
 approval. Invoking the finalizer manually is not a substitute for the gate.
 Dirty-tree manifests describe working-tree inputs and cannot identify those
 bytes solely by their source commit. A candidate review requires a fresh gate
 from the intended clean commit and must retain the printed manifest and exact
-archives. The package-exclusion sentinel acceptance in WTD-C06 and human
-publication review remain separate obligations.
+archives. Human publication review remains a separate obligation.
