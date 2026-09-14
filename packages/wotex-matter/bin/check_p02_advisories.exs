@@ -17,11 +17,8 @@ defmodule Wotex.Matter.Check.P02Advisories do
   def main do
     request = %{
       "queries" =>
-        Enum.map(@sources, fn {_label, repository, revision} ->
-          %{
-            "package" => %{"ecosystem" => "GIT", "name" => repository},
-            "version" => revision
-          }
+        Enum.map(@sources, fn {_label, _repository, revision} ->
+          %{"commit" => revision}
         end)
     }
 
@@ -30,6 +27,12 @@ defmodule Wotex.Matter.Check.P02Advisories do
         "curl",
         [
           "-fsS",
+          "--connect-timeout",
+          "10",
+          "--max-time",
+          "60",
+          "--max-filesize",
+          "8388608",
           "-H",
           "Content-Type: application/json",
           "--data-binary",
@@ -42,7 +45,7 @@ defmodule Wotex.Matter.Check.P02Advisories do
     with 0 <- status,
          {:ok, %{"results" => results}} <- Jason.decode(response),
          true <- length(results) == length(@sources),
-         true <- Enum.all?(results, &(Map.get(&1, "vulns", []) == [])) do
+         true <- Enum.all?(results, &(&1 == %{} or &1 == %{"vulns" => []})) do
       Enum.each(@sources, fn {label, _repository, revision} ->
         IO.puts("OSV GIT query passed: #{label} #{revision}")
       end)

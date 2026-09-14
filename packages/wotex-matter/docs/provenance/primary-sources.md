@@ -43,14 +43,23 @@ certification or complete standard coverage.
   declares typed schema generation from the pinned controller model.
 
 The P03 build resolves these connectedhomeip gitlinks from verified source
-archives:
+archives, with the explicit uriparser security override below:
 
 - [Pigweed `c9687b52`](https://github.com/google/pigweed/tree/c9687b52fa704606d19952255c78142fdb2a131a),
   archive SHA-256 `2e8d3380080d2ae9cc56f69d05d6f008989b092d6c9f71dc0c0fa25d4a2c3651`;
 - [BoringSSL `9cac8a6`](https://github.com/google/boringssl/tree/9cac8a6b38c1cbd45c77aee108411d588da006fe),
   archive SHA-256 `4d0310f2d8dc2bb19598ecc46907d44a93cc3bfbde97943c0e9e34ef4f0698b8`;
-- [uriparser `04d8b8d`](https://github.com/uriparser/uriparser/tree/04d8b8df5e0c6bf6c06e472540c015943a613bd2),
-  archive SHA-256 `1577e0267263625dbfb53ca18a1530142b89e2762593a7c6cbcec2d730f83007`.
+- [uriparser 1.0.2 `9b2bed9`](https://github.com/uriparser/uriparser/tree/9b2bed92f5deecf740819f9bf27724bee2fe9c12),
+  archive SHA-256 `879a0c62cd34216ad1076f3f1a6b4877078ac6cb55b5b38204eb94128a1eea2a`.
+  This is a first-party build override of the SDK gitlink
+  `04d8b8df5e0c6bf6c06e472540c015943a613bd2`.
+  The [upstream security fixes](https://github.com/uriparser/uriparser/blob/uriparser-1.0.2/ChangeLog)
+  cover CVE-2026-42371, CVE-2026-44927 and CVE-2026-44928.
+
+Native advisory queries use the OSV `commit` field for source revisions and
+package/version fields for Python artifacts, as specified by the
+[OSV API](https://google.github.io/osv.dev/post-v1-query/).
+A Git tag query with a commit hash as its version is not commit evidence.
 
 WMA.13 fixes `chip_crypto="boringssl"`. Native dependency audit remains a
 required separate gate.

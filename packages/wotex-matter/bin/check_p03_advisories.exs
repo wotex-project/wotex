@@ -15,7 +15,7 @@ defmodule Wotex.Matter.Check.P03Advisories do
      "c5892c5ae43830f939ed660ff8ac5f1b91d336d3"},
     {"nlio", "GIT", "https://github.com/nestlabs/nlio", "0e725502c2b17bb0a0c22ddd4bcaee9090c8fb5c"},
     {"uriparser", "GIT", "https://github.com/uriparser/uriparser",
-     "04d8b8df5e0c6bf6c06e472540c015943a613bd2"},
+     "9b2bed92f5deecf740819f9bf27724bee2fe9c12"},
     {"click", "PyPI", "click", "8.3.3"},
     {"coloredlogs", "PyPI", "coloredlogs", "15.0.1"},
     {"humanfriendly", "PyPI", "humanfriendly", "10.0"},
@@ -30,8 +30,12 @@ defmodule Wotex.Matter.Check.P03Advisories do
   def main do
     request = %{
       "queries" =>
-        Enum.map(@sources, fn {_label, ecosystem, package, version} ->
-          %{"package" => %{"ecosystem" => ecosystem, "name" => package}, "version" => version}
+        Enum.map(@sources, fn
+          {_label, "GIT", _repository, revision} ->
+            %{"commit" => revision}
+
+          {_label, ecosystem, package, version} ->
+            %{"package" => %{"ecosystem" => ecosystem, "name" => package}, "version" => version}
         end)
     }
 
@@ -40,6 +44,12 @@ defmodule Wotex.Matter.Check.P03Advisories do
         "curl",
         [
           "-fsS",
+          "--connect-timeout",
+          "10",
+          "--max-time",
+          "60",
+          "--max-filesize",
+          "8388608",
           "-H",
           "Content-Type: application/json",
           "--data-binary",
@@ -52,7 +62,7 @@ defmodule Wotex.Matter.Check.P03Advisories do
     with 0 <- status,
          {:ok, %{"results" => results}} <- Jason.decode(response),
          true <- length(results) == length(@sources),
-         true <- Enum.all?(results, &(Map.get(&1, "vulns", []) == [])) do
+         true <- Enum.all?(results, &(&1 == %{} or &1 == %{"vulns" => []})) do
       Enum.each(@sources, fn {label, ecosystem, _package, version} ->
         IO.puts("OSV #{ecosystem} query passed: #{label} #{version}")
       end)
