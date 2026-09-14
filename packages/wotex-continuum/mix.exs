@@ -105,6 +105,7 @@ defmodule WotexContinuum.MixProject do
         "docs/specs/WCT-C01-contract-map.md",
         "docs/specs/WCT-C02-admission-map.md",
         "docs/specs/WCT-C03-schema-agreement.md",
+        "docs/specs/WCT-C04-archive-consumer.md",
         "specs/WCT.01-manifest-context-capability.md",
         "specs/WCT.02-exchange-values.md",
         "specs/WCT.03-mode-lifecycle-exit.md",

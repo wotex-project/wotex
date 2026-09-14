@@ -136,6 +136,9 @@ records native UTF-8 parity and the intentional native-versus-decoder resource
 boundary. The [WCT-C03 schema agreement map](docs/specs/WCT-C03-schema-agreement.md)
 connects every registered kind and nested owner route to schemas,
 constructors, reconstruction, codecs, and published vectors.
+The [WCT-C04 archive-consumer proof](docs/specs/WCT-C04-archive-consumer.md)
+installs one exact candidate archive in two isolated temporary Hex consumers
+and exercises the three WCT contracts without path or Git dependencies.
 
 ```sh
 WOTEX_PATH_DEPS=1 mix deps.get
@@ -153,7 +156,10 @@ the single authoritative repository gate; its coverage step runs the test suite
 once. The gate also covers formatting, warnings-as-errors compilation, strict
 Credo, dependency audits, Dialyzer, complete public documentation, at least 95%
 line coverage, the public-boundary scan, and compilation from the unpacked Hex
-archive.
+archive. The archive check also installs the same artifact through a signed
+temporary Hex registry in independent contract and reference consumers. It
+asserts Hex-only locks, isolated BEAM paths, public examples, lifecycle and
+failure recovery, and every packaged vector.
 
 The explicit path switch is a development mechanism, including when Mix
 evaluates dependencies in the `prod` environment. Without it, dependency
