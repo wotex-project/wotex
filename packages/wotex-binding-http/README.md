@@ -237,8 +237,15 @@ documentation, dependency audits, Dialyzer, the library boundary, package and
 archive reconstruction, and a clean diff. Coverage is the only test-suite pass
 inside that gate.
 
+The reproducible local and CI evidence pair is Elixir `1.18.4-otp-27` with OTP
+`27.3.4.15`, declared in `.tool-versions`. The broader `elixir: "~> 1.18"`
+package requirement is not a tested runtime matrix. CI also pins the exact core
+and Runtime source revisions used by the workspace gate.
+
 Focused proofs remain available as `bin/check_boundary.exs` and
-`bin/check_archive.exs`.
+`bin/check_archive.exs`. The [public release-candidate inventory](docs/release-candidate-inventory.md)
+documents package metadata, legal/security, dependency, documentation,
+toolchain and remaining publication-order evidence.
 
 ## License
 

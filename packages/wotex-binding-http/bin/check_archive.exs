@@ -4,7 +4,19 @@ defmodule WotexBindingHTTP.Check.Archive do
   @prefix "wotex-binding-http-archive."
   @version "0.1.0"
   @mutable_source ~r/{<<"repository">>,<<"(?:git|path)">>|{<<"path">>/
-  @machinery ~r{(^|/)(\.claude|AGENTS\.md|CLAUDE\.md|test|deps|_build|\.git|docs/tasks/local)(/|$)}
+  @machinery ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|bin|config|cover|deps|doc|docs/tasks/local|mix\.lock|priv/plts|test|_build)(/|$)}
+  @required_content ~w(
+    .formatter.exs
+    CHANGELOG.md
+    CODE_OF_CONDUCT.md
+    CONTRIBUTING.md
+    GOVERNANCE.md
+    LICENSE
+    NOTICE
+    README.md
+    SECURITY.md
+    mix.exs
+  )
 
   @packages [
     %{app: :wotex, directory: "wotex", archive: "wotex-0.1.0.tar", requires: []},
@@ -101,6 +113,9 @@ defmodule WotexBindingHTTP.Check.Archive do
 
     require_metadata!(metadata, ~s({<<"name">>,<<"#{package.app}">>}), archive)
     require_metadata!(metadata, ~s({<<"version">>,<<"#{@version}">>}), archive)
+    require_metadata!(metadata, ~s({<<"elixir">>,<<"~> 1.18">>}), archive)
+    require_metadata!(metadata, ~s({<<"licenses">>,[<<"Apache-2.0">>]}), archive)
+    require_metadata!(metadata, ~s({<<"build_tools">>,[<<"mix">>]}), archive)
 
     Enum.each(package.requires, fn dependency ->
       requirement =
@@ -122,11 +137,31 @@ defmodule WotexBindingHTTP.Check.Archive do
       violation("#{archive} contains development, local-task, or agent machinery")
     end
 
+    Enum.each(@required_content, fn file ->
+      unless file in content_members, do: violation("#{archive} is missing #{file}")
+    end)
+
     unless "mix.exs" in content_members and
              Enum.any?(content_members, &String.starts_with?(&1, "lib/")) do
       violation("#{archive} is missing its Mix project or library sources")
     end
+
+    verify_binding_metadata!(metadata, package.app, archive)
   end
+
+  defp verify_binding_metadata!(metadata, :wotex_binding_http, archive) do
+    for value <- [
+          "Caller-owned HTTP and Server-Sent Events binding for Wotex Runtime",
+          "https://hexdocs.pm/wotex_binding_http",
+          "https://github.com/wotex-project/wotex-binding-http",
+          "https://www.w3.org/WoT/",
+          "https://wotex.io"
+        ] do
+      require_metadata!(metadata, value, archive)
+    end
+  end
+
+  defp verify_binding_metadata!(_metadata, _app, _archive), do: :ok
 
   defp outer_members!(archive) do
     case :erl_tar.extract(String.to_charlist(archive), [:memory]) do

@@ -1,9 +1,9 @@
 # Runtime baseline
 
 Development verification for version 0.1 uses Wotex Runtime commit
-`7d81f0421f236f1373e132a9c41bad6e426e7aff` and its released dependency identity
+`70f9511b8b691665b0c87d84f743891c70c93b9e` and its released dependency identity
 `wotex_runtime ~> 0.1.0`. Bounded JSON admission comes from Wotex core commit
-`8cfda6a628b5a0efdcf489613301ec3d6eeb8c3f` and `wotex ~> 0.1.0`.
+`58409779ae9515df2bf120a5f13813cffcb1c59c` and `wotex ~> 0.1.0`.
 
 The implemented transport boundary is exactly:
 

@@ -43,14 +43,14 @@ authorizes automated publication, tags or Git remote operations.
 | `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry`, the authoritative default gate, including locked dependencies, coverage, strict static checks, docs, audits, boundary and archive/package reconstruction | Not independent install or full protocol conformance |
 | `archive_consumer_green` | The mandatory archive check builds each exact archive once without path overrides, inspects and extracts those same bytes, then compiles a separate Mix consumer whose Wotex dependency, compile-source, BEAM and code paths exclude every live checkout | Not full lifecycle behavior |
 | `reference_consumer_green` | That external consumer exercises WBH-A01..A06 through public APIs, including a supplied client and consumer-owned Runtime supervisor | No production transport certification |
-| `public_release_candidate` | Previous gates, actual archive exclusion, package metadata/license/security, clean dependency installation, claim review | Not permission to publish |
+| `public_release_candidate` | WBH-P01..P08 verify previous gates, exact archive exclusion, package metadata/license/security, exact locked dependencies, internal documentation links, claim review and the pinned toolchain/cohort | Not registry availability, runtime matrix, or permission to publish |
 | `stable_api_candidate` | WBH-C06 compatibility/error/default/limit matrix, all promised cells proven | Not universal HTTP/WoT compliance |
 
 The repository's `.check.exs` has no reduced release profile and permits no
 mandatory tool to be skipped. `mix test` remains the fast loop; coverage is the
-single test-suite pass in the default gate. Existing archive helpers remain
-supporting evidence; independent dependency reconstruction and
-reference-consumer semantics need their own results.
+single test-suite pass in the default gate. The archive helper supplies exact
+dependency reconstruction and reference-consumer semantics; the candidate
+helper supplies metadata, legal/security, link, lock and toolchain assertions.
 
 ## Standards-claim matrix
 
@@ -71,7 +71,7 @@ Newer draft text does not silently change a released mapping.
 |---|---|---|
 | Value support | HTTP request/response/header/SSE values have named repository evidence | WBH-C01/03 close all fields, limits and invalid cases |
 | Operation support | Three defaults and the catalogue's exact HTTP/SSE cells only | Per-operation positive/negative mapping and lifecycle vectors |
-| Independent interoperability | Not established | WBH-C04 independent consumer against exact archives |
+| Independent interoperability | Exact three-archive external consumer covers WBH-A01..A06 | Production-client interoperability remains external evidence |
 | Profile conformance | Not established; draft-derived mappings are package behavior | Revision-pinned WoT Profile assertion corpus |
 | External certification | None | External certification artifact; no internal gate substitutes for it |
 
@@ -84,7 +84,7 @@ Newer draft text does not silently change a released mapping.
 | WBH-R03 | SSRF protection or safe cross-origin credential forwarding | WBH-C03 proves the separate port seam only; consumer client/host owns destination and audience policy |
 | WBH-R04 | All TD operations or non-JSON content | Outside nine-operation profile; new reviewed mapping required |
 | WBH-R05 | Full WoT Profile/Registry/HTTP client conformance | Explicit nonclaim; no badge or label upgrade from test count |
-| WBH-R06 | Whole declared runtime matrix and registry installation | WBH-C05 exact artifact/dependency evidence |
+| WBH-R06 | Whole declared runtime matrix and registry installation | WBH-C05 pins one exact QA pair and proves the archive dependency graph; actual registry installation and a broader matrix remain promotion evidence |
 | WBH-R07 | Local tracker exclusion from archive | Inspect every candidate archive and reject any `docs/tasks/local/` member |
 
 ## Local evidence contract
