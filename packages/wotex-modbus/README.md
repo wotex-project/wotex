@@ -39,6 +39,9 @@ The default development gate separately builds exact core, Runtime and Modbus
 candidate archives and installs them into an isolated temporary consumer through
 a signed local Hex registry. That verifies package composition without claiming
 that any of those candidates has been published.
+The [release-candidate dossier](docs/specs/WMB.14-release-candidate-dossier.md)
+maps the reviewed API, dependencies, standards scope, legal/security boundary,
+verification commands and explicit nonclaims.
 
 ## Ownership
 

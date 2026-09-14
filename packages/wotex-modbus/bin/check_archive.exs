@@ -20,6 +20,7 @@ defmodule Wotex.Modbus.Check.Archive do
     "docs/specs/WMB.11-standalone-client-and-preservation.md",
     "docs/specs/WMB.12-wotex-integration.md",
     "docs/specs/WMB.13-native-build-and-software-evidence.md",
+    "docs/specs/WMB.14-release-candidate-dossier.md",
     "docs/specs/catalogue.yaml",
     "lib/wotex/modbus.ex",
     "lib/wotex/modbus/transport.ex"
@@ -342,6 +343,7 @@ defmodule Wotex.Modbus.Check.Archive do
     verify_outer!(outer)
     verify_metadata!(outer)
     verify_contents!(unpacked, Map.values(roots))
+    verify_notice!(unpacked)
     write_private_key!(private_key)
     build_registry!(Map.fetch!(roots, :wotex_modbus), repository, private_key)
 
@@ -443,6 +445,16 @@ defmodule Wotex.Modbus.Check.Archive do
         violation("package leaks a repository path through #{Path.relative_to(path, unpacked)}")
       end
     end)
+  end
+
+  defp verify_notice!(unpacked) do
+    expected =
+      "Wotex Modbus\nCopyright 2026 Wotex contributors\n\n" <>
+        "Licensed under the Apache License, Version 2.0.\n"
+
+    unless File.read!(Path.join(unpacked, "NOTICE")) == expected do
+      violation("package NOTICE does not identify Wotex Modbus exactly")
+    end
   end
 
   defp verify_metadata!(outer) do

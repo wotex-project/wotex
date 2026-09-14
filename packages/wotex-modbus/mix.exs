@@ -107,6 +107,7 @@ defmodule WotexModbus.MixProject do
 
   defp package do
     [
+      name: "wotex_modbus",
       licenses: ["Apache-2.0"],
       links: %{
         "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",

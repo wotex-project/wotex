@@ -47,16 +47,17 @@ dependencies, verifies an all-Hex lock and archive digests, and executes direct
 and Runtime protocol behavior without checkout BEAMs. Each execution prints the
 three archive digests and consumer-lock digest; those values remain bound to that
 run rather than being silently adopted by this document.
-The documentation cohort `b214e99` has 132 passing checks (1 doctest, 4 properties,
-127 tests), 95.3% coverage and a passing complete latest-toolchain gate. It is a
-different cohort from the explicit software run above. Relevant source changes
-require fresh software evidence; a prior receipt cannot validate new code or tools.
+At P07 commit `e016cac24b7891e732e97e25bc219b010137e678`, the complete
+latest-toolchain gate passed 160 checks (1 doctest, 4 properties, 155 tests),
+excluded the 13 explicit software/hardware cases and reported 95.3% coverage.
+Its archive consumer passed on both required toolchains with identical archive
+and lock digests. Relevant source changes require fresh software and archive
+evidence; a prior result cannot validate new code, package contents or tools.
 
 The eight-function client, standalone and Runtime contracts are implemented.
 WMB.13 Mix orchestration has committed-source task results on both toolchains at
-its recorded receipt revision. Current source additionally contains a hard
-whole-VM opening interruption assertion; a new run must retain its own later
-source identity.
+its checked-in receipt revision. Separately retained P07 results cover the later
+hard whole-VM opening interruption assertion on both toolchains at `e016cac`.
 This evidence supplies neither a
 published or publicly available release, stable API decision, external consumer
 adoption, hardware result nor certification.
@@ -92,6 +93,15 @@ mapping and owned-container counters are zero. The receipt retains exact
 per-case outcomes, fault log/result digests and dependency source digests.
 Source cohorts remain explicit: a receipt does not automatically validate a
 later source or wrapper change. Generic Python orchestration is absent from the
-current task workflow. The recorded receipt predates the current hard whole-VM
-opening assertion; unavailable-daemon cleanup remains an intentional
-failed/unverified result rather than a passing zero-resource claim.
+current task workflow. The checked-in receipt predates the hard whole-VM opening
+assertion. P07 reran the task at
+`e016cac24b7891e732e97e25bc219b010137e678` with source identity
+`f77b3a13752483b708225a76cfb70be21ffd17674c43d2e6da26e89640ad8fff`.
+Both Elixir 1.18.4/OTP 27.3.4.15 and Elixir 1.20.2/OTP 29.0.4 passed all 173
+recorded cases, peer/test exits, zero-resource cleanup and exact-container
+removal. The externally retained result SHA-256 values are respectively
+`409a3e26e5abe4dbdfea86ec9749be06144e7cedbe75f65ba959399b7ad6590f`
+and `1dd1d24aa480e2e5bb86335b9a2ca8b7af417a490d5e3f113ca3daaac6d5dd8f`.
+Later verification changes require a fresh result identity. Unavailable-daemon
+cleanup remains an intentional failed/unverified result rather than a passing
+zero-resource claim.

@@ -7,6 +7,10 @@ credentials, trust anchors, deadlines and deployment policy explicitly.
 Never infer an authenticated or encrypted channel from a URI scheme. Unsupported
 security modes fail before opening a connection. Do not log credentials,
 protocol payloads or private key material in errors or telemetry.
+The implemented classic Modbus TCP profile supplies neither confidentiality,
+integrity nor peer authentication. Consumers must place it inside their chosen
+network security boundary. A generic TLS tunnel is not a Modbus Security
+implementation; Modbus Security is not implemented by this package.
 
 A timeout after sending a write means the effect may be unknown. No silent write
 retry is allowed. Report security issues privately to hi@futhr.io.

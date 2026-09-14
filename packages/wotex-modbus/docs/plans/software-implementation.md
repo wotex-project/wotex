@@ -115,6 +115,14 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Verification: `mix run --no-start bin/check_archive.exs`, included in the complete default gate without starting another repository ExUnit pass.
 - Commit scope: reproducible candidate-archive installation and public-boundary evidence.
 
+### WMB-P08: Reconcile the release candidate
+
+- Requirements: WMB-C01, WMB-C09, WMB-C10 and WMB-N03; all earlier packages are prerequisites.
+- Change surface: package identity, legal/security boundary, public API inventory, CI/default-gate invocation and the release-candidate dossier; no production protocol behavior.
+- Acceptance: inventory the exact exported API and package metadata; inspect the packaged README, LICENSE, NOTICE, SECURITY, governance and specification dossier; require the NOTICE to identify this package; reconcile supported standards and dependency/toolchain claims with executable evidence; and keep publication, public-registry availability, stable-API, hardware, RTU, Modbus Security, certification and external-adoption claims explicit and absent.
+- Verification: focused release-contract tests, the complete `WOTEX_PATH_DEPS=1 mix check --no-retry`, both candidate-archive toolchains and both WMB.13 software lanes. Archive and result digests remain execution outputs because embedding an archive digest in its own contents is self-referential.
+- Commit scope: public release-candidate classification and regression evidence.
+
 ## Reproducible software fixture contract
 
 [WMB.13](../specs/WMB.13-native-build-and-software-evidence.md) is authoritative for the
