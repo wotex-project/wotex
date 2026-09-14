@@ -49,8 +49,71 @@ end
 unless Application.started_applications() == started,
   do: raise("loading archive modules started an application")
 
+# Consumer ports may own effects; Directory modules must not acquire that authority.
+effect_modules = [
+  Application,
+  Process,
+  Agent,
+  GenServer,
+  Supervisor,
+  DynamicSupervisor,
+  Task,
+  Registry,
+  File,
+  Port,
+  System,
+  :application,
+  :gen_server,
+  :supervisor,
+  :ets,
+  :dets,
+  :mnesia,
+  :persistent_term,
+  :global,
+  :timer,
+  :file,
+  :os
+]
+
+effect_functions = [
+  :spawn,
+  :spawn_link,
+  :spawn_monitor,
+  :spawn_opt,
+  :register,
+  :unregister,
+  :whereis,
+  :send,
+  :send_after,
+  :start_timer,
+  :put,
+  :get,
+  :erase,
+  :open_port
+]
+
+for module <- Application.spec(:wotex_directory, :modules) do
+  {:ok, {^module, [imports: imports]}} = :beam_lib.chunks(:code.which(module), [:imports])
+
+  if Enum.any?(imports, fn {owner, function, _arity} ->
+       owner in effect_modules or (owner == :erlang and function in effect_functions)
+     end),
+     do:
+       raise("Directory module imports direct process, storage or global configuration authority")
+end
+
 IO.puts("archive modules loaded only from the isolated build; no library application startup")
+
+IO.puts(
+  "Directory BEAM imports contain no direct process, storage or global configuration authority"
+)
+
 ExUnit.start(autorun: false)
 Code.require_file("archive_consumer_test.exs")
+Code.require_file("table_repository_contract_test.exs")
+started = Application.started_applications()
 result = ExUnit.run()
 unless result.failures == 0, do: raise("archive consumer contract failures")
+
+unless Application.started_applications() == started,
+  do: raise("public consumer operations changed the started application set")

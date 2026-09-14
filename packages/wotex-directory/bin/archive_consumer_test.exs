@@ -3,6 +3,8 @@ defmodule ArchiveConsumerTest do
 
   use ExUnit.Case, async: true
   use Wotex.Directory.RepositoryContract
+  use Wotex.Directory.PublicOperationContract
+  use Wotex.Directory.ReferenceConsumerContract
 
   alias Wotex.Directory
   alias Wotex.Directory.{Context, Error, Fixtures, MemoryRepository, ScopedMemoryRepository}

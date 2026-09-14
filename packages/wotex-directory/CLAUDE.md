@@ -64,9 +64,9 @@ perform a remote action from an agent session.
 
 `WOTEX_PATH_DEPS=1 mix check --no-retry` runs the full authoritative library
 gate, including static checks, audits, coverage, documentation and package
-inspection and an archive-only public-port consumer. `mix test` is the fast
-development loop. The library gate does not replace independent
-reference-consumer acceptance.
+inspection and archive-only repository, interleaving and reference-port suites
+against two test consumers. `mix test` is the fast development loop. This
+evidence covers the configured consumers, not arbitrary production adapters.
 
 ## External automation boundary
 

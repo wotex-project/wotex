@@ -1,7 +1,7 @@
 # Repository port evidence contract
 
 This document maps the reusable repository tests to WTD.01 version 1.1.0 and
-completion work items WTD-C01, WTD-C02 and WTD-C03. It adds evidence for the existing
+completion work items WTD-C01 through WTD-C04. It adds evidence for the existing
 contract without changing callback signatures, return values, public types,
 operation order, or the W3C baseline. Discovery and Thing Description 1.1
 remain the Recommendations dated 2023-12-05. Package choices are specified
@@ -114,6 +114,38 @@ retry or compensation, and permits a fresh caller to observe the committed
 state. Recovery, durable event delivery and any transaction spanning storage
 and publication remain consumer responsibilities.
 
+## Independent reference-consumer evidence
+
+`Wotex.Directory.ReferenceConsumerContract` runs five end-to-end scenarios
+against each of the two repository consumers. It constructs Thing Descriptions
+through the public core facade and uses independently implemented
+`ReferenceAuthorization`, `ReferenceClock` and `ReferenceIdentifier` ports,
+without delegating to the earlier `TestAuthorization`, `TestClock` or
+`TestIdentifier` implementations. The repository fixture interface is unchanged.
+
+Authorization state supplies a policy function that receives the exact
+principal, operation, target and authorization context. Clock state supplies
+one frozen result, including deliberately failing results. Identifier state
+supplies a generator function over a consumer-owned atomic sequence. Two
+independently constructed service values do not share that sequence. Each port
+reports its callback arguments and caller process to the test; the repository
+probe continues to observe only public callback boundaries.
+
+| Scenario | Public evidence |
+|---|---|
+| `lifecycle` | Anonymous creation, retrieval, complete replacement, merge patch, named registration update, listing and deletion preserve versions, creation history and extension terms. Relative expiry overrides supplied absolute expiry and refreshes from the injected clock. Retrieval metadata never reaches storage. Invalid merged TDs, writes to server-owned registration fields, mismatched identifiers and stale deletion preconditions leave storage unchanged. Successful mutations project all three lifecycle Event types. |
+| `isolation` | Two contexts hold different values under the same identifier. Deletion affects only its context. Authorization receives the explicit principal and policy context; denial of get/list/expire performs no storage or clock callback and does not disclose existence. |
+| `time_and_pages` | Unicode-ordered collection-format continuation retains its limit and revision across expiry-only drift. A retained-expiry mutation invalidates the cursor; repeated retention is a no-op; purge removes retained entries. Separate service values can read at different injected times without a hidden sweep. Clock regression, invalid limits/cursors and all three unsupported search profiles are rejected. |
+| `failed_ports` | Independent authorization, clock and identifier failures are redacted before storage access. Invalid generated identifiers cannot reach storage. An anonymous collision invokes its generator and insertion once, without retry or overwrite. A failed conditional replacement produces a redacted error and leaves the committed entry unchanged. |
+| `authority` | Service construction and Introduction invoke no port. Selected callbacks execute in the caller process. Event projection returns only type/data values and invokes no port; an unsupported stream payload is rejected. Independently configured services retain separate identifier and repository state. |
+
+The reference scenarios complement, rather than replace, the atomic contention
+and controlled interleaving suites. All three suites run against both consumer
+implementations in the source tests and against the same unpacked archives.
+Independence here means distinct storage algorithms and distinct explicit
+authorization/clock/identifier implementations within the test distribution.
+It does not mean separately certified or externally maintained consumers.
+
 ## Verification and evidence boundary
 
 The focused command is:
@@ -137,6 +169,18 @@ dependency and the public package boundary before compilation. Package inputs
 allowlist individual documents. Development instructions, test consumers,
 builds, dependencies and task state are absent from the archive.
 
+To repeat verification of an exact existing Directory archive, set
+`WOTEX_DIRECTORY_ARCHIVE` to its absolute path. The check copies that artifact
+without rebuilding or replacing it from source. With both archive inputs
+specified, `WOTEX_PATH_DEPS` is unnecessary:
+
+```sh
+WOTEX_DIRECTORY_ARCHIVE=/absolute/directory.tar WOTEX_CORE_ARCHIVE=/absolute/core.tar mix package
+```
+
+Archive selection changes only the explicit verification input, not the gate
+scope. Missing or invalid archives fail; neither input has a checkout fallback.
+
 The core input is either the archive explicitly named by `WOTEX_CORE_ARCHIVE`
 or an archive built from the dependency source explicitly selected by
 `WOTEX_PATH_DEPS=1`. This is a build-input choice, not a consumer fallback.
@@ -154,9 +198,13 @@ second compile is necessary because Mix disables warnings-as-errors for its
 ordinary dependency compilation. The verifier checks that dependency source
 paths and loaded library modules belong to the isolated consumer, that neither
 library has an OTP application callback, and that loading the modules starts
-no library application. It then runs the 15 reusable repository scenarios plus
-a public registration/retrieval/patch/list/expiry sequence with invalid,
-conflict, expired, missing and repeated-expiry outcomes. No library source or
+no library application. It also inspects Directory BEAM imports for direct
+process, storage and global-configuration authority and confirms that consumer
+operations leave the started application set unchanged. It runs the 15
+repository, 44 public-operation and five reference-consumer scenarios against
+each adapter, plus the original minimal public operation sequence: 129 tests
+in total. These include atomic contention and interrupted callers, not only
+sequential happy paths. No library source or
 compiled module is copied from a checkout. The explicitly copied test suite
 and test-only ports are verification inputs, not packaged storage products.
 
@@ -169,5 +217,7 @@ checked-in completion state.
 The callback and public-operation suites establish the configured consumers'
 behavior at the tested boundaries. They do not prove crash recovery inside an
 arbitrary storage transaction, durable event delivery, a global resource bound,
-or interoperability of a production adapter. WTD-C04 retains independent
-reference-consumer obligations against an exact archive.
+or interoperability of a production adapter. Event values establish no watch,
+subscription, replay or HTTP/SSE behavior. The import inspection concerns direct
+library dependencies, not a sandbox for arbitrary consumer code. Release and
+stable-API claims require the separate compatibility and claim-to-test review.

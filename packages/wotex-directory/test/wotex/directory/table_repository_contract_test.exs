@@ -4,6 +4,7 @@ defmodule Wotex.Directory.TableRepositoryContractTest do
   use ExUnit.Case, async: true
   use Wotex.Directory.RepositoryContract
   use Wotex.Directory.PublicOperationContract
+  use Wotex.Directory.ReferenceConsumerContract
 
   alias Wotex.Directory.{TableRepository, TestIdentifier}
 

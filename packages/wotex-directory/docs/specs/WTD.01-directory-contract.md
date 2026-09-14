@@ -575,6 +575,7 @@ minor version change. Once 1.0 is released:
 | Public-operation interleavings, interrupted callers, and commit acknowledgement loss | reusable public-operation contract suite against both test consumers; see the [repository port evidence contract](repository-port-evidence.md#public-operation-interleaving-evidence) |
 | Resumed listing across committed mutations and expiry-only drift | public-operation mutation matrix, multi-page expiry, empty continuation, and held page-snapshot scenarios |
 | Public archive contents and archive-only consumption | `mix package`: exact archives, locked isolated compilation, no application callback, public repository contract and positive/negative operation sequence |
+| Independent reference-consumer operations and explicit authority | five reference scenarios plus the repository and interleaving suites against both consumer implementations using the same exact archives; see the [repository port evidence contract](repository-port-evidence.md#independent-reference-consumer-evidence) |
 
 ## 12. Primary sources
 

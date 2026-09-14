@@ -2,12 +2,13 @@
 #
 #     WOTEX_PATH_DEPS=1 mix package
 #     WOTEX_CORE_ARCHIVE=/absolute/archive.tar mix package
+#     WOTEX_DIRECTORY_ARCHIVE=/absolute/directory.tar WOTEX_CORE_ARCHIVE=/absolute/core.tar mix package
 
 defmodule CheckArchive do
   @moduledoc false
 
   @runtime_dependencies [:decimal, :ex_json_schema, :jason]
-  @support ~w(fixtures memory_repository scoped_memory_repository repository_probe repository_contract test_authorization test_clock test_identifier)
+  @support ~w(fixtures memory_repository scoped_memory_repository table_repository repository_probe repository_contract repository_barrier public_operation_contract reference_consumer_contract reference_authorization reference_clock reference_identifier test_authorization test_clock test_identifier)
   @forbidden ~w(.claude .git .github AGENTS.md CLAUDE.md _build deps doc cover test bin docs/tasks priv/plts)
 
   def run do
@@ -25,7 +26,7 @@ defmodule CheckArchive do
 
   defp verify(source, root, archive) do
     core_archive = core_archive(root)
-    run!("mix", ["hex.build", "--output", archive], source)
+    directory_archive!(source, archive)
     consumer = Path.join(root, "consumer")
     directory = Path.join(consumer, "packages/wotex_directory")
     core = Path.join(consumer, "packages/wotex")
@@ -51,7 +52,17 @@ defmodule CheckArchive do
     IO.puts("core archive sha256: #{digest(core_archive)}")
     IO.puts("consumer lock sha256: #{digest(Path.join(root, "consumer.mix.lock"))}")
     IO.puts("consumer Hex cohort: #{inspect(lock, limit: :infinity, printable_limit: :infinity)}")
-    IO.puts("archive-only public repository and operation contracts passed")
+
+    IO.puts(
+      "archive-only repository, interleaving and reference contracts passed with both consumers"
+    )
+  end
+
+  defp directory_archive!(source, target) do
+    case System.get_env("WOTEX_DIRECTORY_ARCHIVE") do
+      nil -> run!("mix", ["hex.build", "--output", target], source)
+      supplied -> copy_archive!(supplied, target, "WOTEX_DIRECTORY_ARCHIVE")
+    end
   end
 
   defp core_archive(root) do
@@ -67,13 +78,15 @@ defmodule CheckArchive do
         run!("mix", ["hex.build", "--output", target], source)
 
       supplied ->
-        unless File.regular?(supplied),
-          do: raise("WOTEX_CORE_ARCHIVE must name a regular archive")
-
-        File.cp!(supplied, target)
+        copy_archive!(supplied, target, "WOTEX_CORE_ARCHIVE")
     end
 
     target
+  end
+
+  defp copy_archive!(supplied, target, variable) do
+    unless File.regular?(supplied), do: raise("#{variable} must name a regular archive")
+    File.cp!(supplied, target)
   end
 
   defp unpack!(archive, destination) do
@@ -195,6 +208,11 @@ defmodule CheckArchive do
     File.cp!(
       Path.join(source, "bin/archive_consumer_test.exs"),
       Path.join(consumer, "archive_consumer_test.exs")
+    )
+
+    File.cp!(
+      Path.join(source, "test/wotex/directory/table_repository_contract_test.exs"),
+      Path.join(consumer, "table_repository_contract_test.exs")
     )
 
     File.write!(
