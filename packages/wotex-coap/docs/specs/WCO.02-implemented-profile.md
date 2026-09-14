@@ -35,6 +35,11 @@ Runtime transport configuration admits the overall `timeout`, bounded
 `ack_timeout`, and the Blockwise size/body/exchange budgets; unknown, duplicate
 or malformed keys fail before a socket is opened. The admitted ACK timeout is propagated to the owned Connection.
 
+The owner checks the absolute interaction deadline before processing datagrams
+and accepting worker completion. A delayed timer cannot admit an overdue result.
+An expired unary interaction closes its generation and refuses queued work;
+transmitted mutations retain unknown effect without automatic replay.
+
 Whole-body Block1/Block2 exchanges follow [WCO.03](WCO.03-blockwise.md).
 Observe registration, initial complete representation, serial freshness, renewal,
 blockwise reports, cancellation and receiver-loss cleanup are implemented.

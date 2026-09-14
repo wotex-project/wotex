@@ -87,9 +87,54 @@ by [the ordered plan](../plans/software-implementation.md).
 
 ## Required verification
 
+### Datagram deadline assertions
+
+`exchange_lifecycle_test.exs` contains the event-driven WCO-P01 exchange
+assertions: bounded admission, owner/caller termination during I/O, exact
+retransmission bytes, empty ACK/separate response correlation, duplicate-CON
+ACKs, retained MID exhaustion and bounded response-cache eviction/expiry.
+`native_contract_test.exs` executes the pure contract corpus and all four
+native helpers' method/body/URI/Accept behavior. `blockwise_test.exs` preserves
+the complete-body regressions. These existing implementations are not replaced
+by deadline evidence.
+The cancellation trace awaits the unsubscribe result and normal owner/adapter
+termination after the final response; it does not race a process-state query
+against that expected shutdown.
+
+`exchange_deadline_test.exs` adds the missing WCO-C03/WCO-V02 delayed-timer
+boundary. The explicit test clock advances independently from timer delivery,
+so a correct correlated response at or after the absolute deadline cannot
+become success. A response received before expiry but held in its transfer
+worker until expiry also fails; queued writes have no transmission. The tests
+retain read effect `none`, transmitted-mutation effect `unknown`, and complete
+connection/adapter/timer cleanup. A response one millisecond before expiry is
+the positive boundary control.
+
+The stale-traffic cases inject 297 wrong-token NON, wrong-MID ACK and wrong-MID
+RST messages into each of a NON exchange and an empty-ACK-confirmed exchange.
+They assert unchanged timer identities/deadlines, no further transmission and
+bounded call/MID/response state before exact expiry. These deterministic
+Datagram-port assertions are not independent-stack interoperability or a
+resource bound against arbitrary mailbox flooding. RFC 7252 (June 2014) remains
+the protocol revision; the finite interaction budget is WCO-C03 library policy.
+
+The focused command is:
+
+```sh
+WOTEX_PATH_DEPS=1 mix test test/wotex/coap/exchange_deadline_test.exs test/wotex/coap/exchange_lifecycle_test.exs test/wotex/coap/native_contract_test.exs test/wotex/coap/blockwise_test.exs
+```
+
+### Authoritative library gate
+
 `WOTEX_PATH_DEPS=1 mix check --no-retry` includes strict compilation/static checks,
 unit/property/doctests, coverage, docs, dependency checks and unpacked out-of-tree
-package compilation. Interoperability requires explicit invocation and fails on
+package compilation. Coverage executes the default ExUnit suite exactly once;
+`mix test` remains the fast loop. Every invocation builds a fresh archive in a
+system-temporary directory and prints its SHA-256. The archive compiler uses
+the explicitly tested development dependency BEAM files; it does not establish
+independent dependency-archive adoption. Generated package sources and compiled
+outputs are removed; the exact archive remains outside the repository.
+Interoperability requires explicit invocation and fails on
 missing peers/responses. The mandatory final software matrix is Elixir 1.18.4 /
 OTP 27.3.4.15 and Elixir 1.20.2 / OTP 29.0.4; the complete secure/stress matrix is
 not accepted by the cohorts above. Hardware and certification are separate.

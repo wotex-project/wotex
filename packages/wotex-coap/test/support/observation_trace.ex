@@ -96,7 +96,10 @@ defmodule Wotex.CoAP.TestObservationTrace do
     {:ok, message} = Codec.decode(bytes)
     send(state.adapter, {:emit, event["host"], event["port"], bytes})
     :ok = GenServer.call(state.adapter, :sync)
-    if Process.alive?(state.session.pid), do: :sys.get_state(state.session.pid)
+
+    unless state.unsubscribe && Codec.option(message, 6) == [],
+      do: :sys.get_state(state.session.pid)
+
     %{state | last: message}
   end
 

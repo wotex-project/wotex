@@ -15,22 +15,29 @@ defmodule Wotex.CoAP.Check.Archive do
   @spec main() :: :ok
   def main do
     project_root = File.cwd!()
-    archive = "wotex_coap-#{Mix.Project.config()[:version]}.tar"
-    temporary = Path.join(System.tmp_dir!(), "wotex-coap-archive.#{unique()}")
+
+    {temporary, 0} =
+      System.cmd("mktemp", ["-d", Path.join(System.tmp_dir!(), "wotex-coap-archive.XXXXXX")])
+
+    temporary = String.trim(temporary)
+    archive = Path.join(temporary, "wotex_coap-#{Mix.Project.config()[:version]}.tar")
 
     result =
       try do
+        run!("mix", ["hex.build", "--output", archive], project_root,
+          env: [{"WOTEX_PATH_DEPS", nil}, {"MIX_ENV", "prod"}]
+        )
+
         verify(project_root, archive, temporary)
       catch
         :throw, {:violation, message} -> {:violation, message}
       after
-        File.rm_rf!(temporary)
+        File.rm_rf!(Path.join(temporary, "package"))
+        File.rm_rf!(Path.join(temporary, "ebin"))
       end
 
     report(result)
   end
-
-  defp unique, do: Integer.to_string(System.unique_integer([:positive]))
 
   defp verify(project_root, archive, temporary) do
     unless File.regular?(archive) do
@@ -65,6 +72,7 @@ defmodule Wotex.CoAP.Check.Archive do
     IO.puts("archive contents passed")
     IO.puts("out-of-tree archive compilation passed")
     IO.puts("archive sha256: #{digest(archive)}")
+    IO.puts("archive artifacts: #{temporary}")
 
     :ok
   end
@@ -140,8 +148,8 @@ defmodule Wotex.CoAP.Check.Archive do
     |> Base.encode16(case: :lower)
   end
 
-  defp run!(command, arguments, directory) do
-    options = [cd: directory, into: IO.stream(), stderr_to_stdout: true]
+  defp run!(command, arguments, directory, extra \\ []) do
+    options = [cd: directory, into: IO.stream(), stderr_to_stdout: true] ++ extra
     {_output, status} = System.cmd(command, arguments, options)
 
     unless status == 0 do

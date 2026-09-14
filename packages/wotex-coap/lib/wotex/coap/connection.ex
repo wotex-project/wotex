@@ -346,15 +346,9 @@ defmodule Wotex.CoAP.Connection do
         {:wotex_datagram, generation, {:data, host, port, bytes}},
         %{generation: generation, phase: :ready} = state
       ) do
-    state =
-      if host == state.config.host and port == state.config.port,
-        do: incoming(state, bytes),
-        else: state
-
-    case adapter_call(state, :set_active_once) do
-      :ok -> {:noreply, state}
-      {:error, _} -> {:stop, :normal, state}
-    end
+    if active_expired?(state),
+      do: deadline(state, state.active),
+      else: datagram(state, host, port, bytes)
   end
 
   def handle_info({:wotex_datagram, generation, _}, %{generation: generation} = state),
@@ -370,20 +364,22 @@ defmodule Wotex.CoAP.Connection do
   end
 
   def handle_info({:deadline, ref}, %{active: ref} = state) do
-    observation = match?({:observation, _, _}, Map.fetch!(state.calls, ref).kind)
-    state = finish(state, ref, failure(:timeout))
-    if observation, do: {:noreply, state}, else: {:stop, :normal, state}
+    deadline(state, ref)
   end
 
   def handle_info({:deadline, ref}, state), do: {:noreply, finish(state, ref, failure(:timeout))}
 
   def handle_info({:completed, ref, result}, %{active: ref} = state) do
-    next =
-      state
-      |> finish(ref, result)
-      |> next()
+    if active_expired?(state) do
+      deadline(state, ref)
+    else
+      next =
+        state
+        |> finish(ref, result)
+        |> next()
 
-    {:noreply, next}
+      {:noreply, next}
+    end
   end
 
   def handle_info(
@@ -742,6 +738,27 @@ defmodule Wotex.CoAP.Connection do
       end
     else
       _ -> state
+    end
+  end
+
+  defp active_expired?(%{active: nil}), do: false
+  defp active_expired?(state), do: remaining(Map.fetch!(state.calls, state.active).deadline) == 0
+
+  defp deadline(state, ref) do
+    observation = match?({:observation, _, _}, Map.fetch!(state.calls, ref).kind)
+    state = finish(state, ref, failure(:timeout))
+    if observation, do: {:noreply, state}, else: {:stop, :normal, state}
+  end
+
+  defp datagram(state, host, port, bytes) do
+    state =
+      if host == state.config.host and port == state.config.port,
+        do: incoming(state, bytes),
+        else: state
+
+    case adapter_call(state, :set_active_once) do
+      :ok -> {:noreply, state}
+      {:error, _} -> {:stop, :normal, state}
     end
   end
 

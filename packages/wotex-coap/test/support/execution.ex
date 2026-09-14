@@ -34,10 +34,16 @@ defmodule Wotex.CoAP.TestExecution do
   @spec advance(pid(), non_neg_integer()) :: non_neg_integer()
   def advance(pid, time), do: GenServer.call(pid, {:advance, time})
 
+  @spec elapse(pid(), non_neg_integer()) :: :ok
+  def elapse(pid, time), do: GenServer.call(pid, {:elapse, time})
+
   @impl GenServer
   def handle_call(:snapshot, _, state), do: {:reply, state, state}
   def handle_call(:now, _, state), do: {:reply, state.now, state}
   def handle_call(:initial_mid, _, state), do: {:reply, List.first(state.mids), state}
+
+  def handle_call({:elapse, time}, _, state) when time >= state.now,
+    do: {:reply, :ok, %{state | now: time}}
 
   def handle_call({:take, key}, _, state) do
     case Map.fetch!(state, key) do
