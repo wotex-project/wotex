@@ -175,7 +175,7 @@ is the declared dependency cohort; broader backend/version claims require eviden
 | Fixed-shape generation and preservation | `test/wotex/nx/shape_property_test.exs` |
 | Exact decoder tensor admission, all inert kinds and anomaly comparisons | `test/wotex/nx/decoder_test.exs` |
 | No application callback and stable quality codes | `test/wotex/nx/library_contract_test.exs` |
-| Exact Nx/core archive metadata and contents, isolated compilation, minimal observation-to-inert-output roundtrip and rejection paths | `bin/check_archive.exs` |
+| Exact Nx/core archive metadata and contents, isolated compilation, minimal and independent reference roundtrips, explicit BinaryBackend/unit callback, layout/provenance/policy preservation and inert Action rejection | `bin/check_archive.exs` |
 
 Any change to the contracts above must add both accepted and rejected boundary
 examples to the owning tests. The archive check builds its exact inputs once,

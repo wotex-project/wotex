@@ -45,6 +45,16 @@ defmodule WotexNx.CheckArchive do
   """
 
   @consumer_test ~S"""
+  defmodule WotexNxArchiveUnitConverter do
+    @behaviour Wotex.Nx.UnitConverter
+
+    @impl Wotex.Nx.UnitConverter
+    def convert(value, "degF", "Cel", _data_schema, :fahrenheit) when is_number(value),
+      do: {:ok, (value - 32) * 5 / 9}
+
+    def convert(_value, _source, _target, _data_schema, :invalid), do: :invalid
+  end
+
   defmodule WotexNxArchiveConsumerTest do
     use ExUnit.Case, async: true
 
@@ -135,6 +145,108 @@ defmodule WotexNx.CheckArchive do
                )
     end
 
+    test "the reference consumer preserves layout and applies only explicit numerical policy" do
+      Nx.with_default_backend(Nx.BinaryBackend, fn ->
+        assert Nx.default_backend() == {Nx.BinaryBackend, []}
+        number = data_schema(%{"type" => "number"})
+        vector = data_schema(%{"type" => "array", "minItems" => 2, "maxItems" => 2, "items" => %{"type" => "number"}})
+
+        features = [
+          feature("temperature", number, unit: "Cel"),
+          feature("vector", vector, accepted_quality: [:good, :uncertain], unit: nil),
+          feature("quality_fill", number, accepted_quality: [:good], missing: {:fill, -1}, unit: nil),
+          feature("missing_fill", number, missing: {:fill, 7}, unit: nil)
+        ]
+
+        {:ok, schema} = Schema.new(features: features, max_rows: 1, max_features: 4, max_width: 5)
+
+        observations = [
+          observation("temperature", 68, unit: "degF"),
+          observation("vector", [1, 2], quality: :uncertain, unit: nil),
+          observation("quality_fill", 99, quality: :bad, unit: nil)
+        ]
+
+        {:ok, window} = Window.new(start: 100, step: 1, count: 1, strategy: :exact)
+        assert {:ok, [row]} = Window.resample(observations, schema, window)
+
+        assert {:ok, encoded} =
+                 Encoder.encode([row], schema,
+                   unit_converter: {WotexNxArchiveUnitConverter, :fahrenheit}
+                 )
+
+        assert Encoded.schema(encoded) == schema
+        assert Encoded.feature_order(encoded) == ["temperature", "vector", "quality_fill", "missing_fill"]
+        assert Encoded.timestamps(encoded) == [100]
+
+        assert Encoded.provenance(encoded) == [
+                 %{
+                   "temperature" => "temperature-observation",
+                   "vector" => "vector-observation",
+                   "quality_fill" => "quality_fill-observation",
+                   "missing_fill" => nil
+                 }
+               ]
+
+        {{temperature, vector_value, quality_fill, missing_fill},
+         {temperature_mask, vector_mask, quality_fill_mask, missing_fill_mask}, quality} =
+          Nx.Defn.jit_apply(&Function.identity/1, [Encoded.batch(encoded)])
+
+        assert Nx.shape(temperature) == {1}
+        assert Nx.shape(vector_value) == {1, 2}
+        assert Nx.to_flat_list(temperature) == [20.0]
+        assert Nx.to_flat_list(vector_value) == [1.0, 2.0]
+        assert Nx.to_flat_list(quality_fill) == [-1.0]
+        assert Nx.to_flat_list(missing_fill) == [7.0]
+        assert Nx.to_flat_list(temperature_mask) == [1]
+        assert Nx.to_flat_list(vector_mask) == [1, 1]
+        assert Nx.to_flat_list(quality_fill_mask) == [0]
+        assert Nx.to_flat_list(missing_fill_mask) == [0]
+        assert Nx.to_flat_list(quality) == [0, 1, 2, 3]
+
+        assert {:error, %Error{code: :invalid_unit_converter_return}} =
+                 Encoder.encode([row], schema,
+                   unit_converter: {WotexNxArchiveUnitConverter, :invalid}
+                 )
+
+        strict = feature("strict", number, unit: nil)
+        {:ok, strict_schema} = Schema.new(features: [strict])
+        {:ok, strict_row} = Row.new(100, %{"strict" => nil})
+
+        assert {:error, %Error{code: :missing_feature_value}} =
+                 Encoder.encode([strict_row], strict_schema)
+
+        integer = data_schema(%{"type" => "integer"})
+
+        {:ok, action_schema} =
+          OutputSchema.new(
+            kind: :action_proposal,
+            thing_id: "urn:archive:thing",
+            affordance_type: :action,
+            affordance_name: "setLevel",
+            data_schema: integer,
+            unit: nil
+          )
+
+        assert {:ok, proposal} =
+                 Decoder.decode(Nx.tensor(4, type: :s64), action_schema,
+                   id: "proposal",
+                   proposed_at: 101
+                 )
+
+        assert proposal.action_name == "setLevel"
+        assert proposal.input == 4
+        refute_received {:action_dispatched, _}
+
+        assert {:error, %Error{code: :output_dtype_mismatch}} =
+                 Decoder.decode(Nx.tensor(4.0, type: :f32), action_schema,
+                   id: "rejected-proposal",
+                   proposed_at: 101
+                 )
+
+        refute_received {:action_dispatched, _}
+      end)
+    end
+
     test "the consumer loads both libraries only from its isolated build" do
       consumer_root = System.fetch_env!("WOTEX_NX_ARCHIVE_CONSUMER_ROOT")
 
@@ -151,6 +263,38 @@ defmodule WotexNx.CheckArchive do
         assert Application.load(app) in [:ok, {:error, {:already_loaded, app}}]
         assert Application.spec(app, :mod) in [nil, [], :undefined]
       end
+    end
+
+    defp data_schema(map) do
+      {:ok, schema} = Wotex.DataSchema.new(map)
+      schema
+    end
+
+    defp feature(name, data_schema, overrides) do
+      defaults = [
+        name: name,
+        thing_id: "urn:archive:thing",
+        affordance_type: :property,
+        affordance_name: name,
+        data_schema: data_schema
+      ]
+
+      {:ok, feature} = Feature.new(Keyword.merge(defaults, overrides))
+      feature
+    end
+
+    defp observation(name, value, overrides) do
+      defaults = [
+        id: "#{name}-observation",
+        thing_id: "urn:archive:thing",
+        affordance_type: :property,
+        affordance_name: name,
+        observed_at: 100,
+        value: value
+      ]
+
+      {:ok, observation} = Observation.new(Keyword.merge(defaults, overrides))
+      observation
     end
   end
   """
