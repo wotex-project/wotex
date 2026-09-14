@@ -20,6 +20,7 @@
     {:boundary, command: "elixir bin/check_boundary.exs"},
     {:archive, command: "mix run --no-start bin/check_archive.exs"},
     {:release_candidate, command: "mix run --no-start bin/check_release.exs"},
+    {:stable_api_candidate, command: "mix run --no-start bin/check_stable_api.exs"},
     {:diff, command: "git diff --check"}
   ]
 ]

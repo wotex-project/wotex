@@ -20,6 +20,7 @@ defmodule WotexBindingHTTP.Check.ReleaseCandidate do
     docs/limits-security-inventory.md
     docs/reference-consumer-inventory.md
     docs/release-candidate-inventory.md
+    docs/stable-api-inventory.md
     docs/plans
     docs/runtime-baseline.md
     docs/standards-baseline.md
@@ -63,6 +64,7 @@ defmodule WotexBindingHTTP.Check.ReleaseCandidate do
     boundary
     archive
     release_candidate
+    stable_api_candidate
     diff
   )a
 
@@ -148,6 +150,7 @@ defmodule WotexBindingHTTP.Check.ReleaseCandidate do
           "NOTICE",
           "docs/reference-consumer-inventory.md",
           "docs/release-candidate-inventory.md",
+          "docs/stable-api-inventory.md",
           "docs/plans/wotex-binding-http-completion.md"
         ] do
       unless extra in extras, do: violation("generated documentation omits #{extra}")

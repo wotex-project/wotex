@@ -15,7 +15,7 @@
 
 ---
 
-This is a development checkout. The public API remains unstable; no published
+This is the `0.1.0` stable API candidate in a development checkout. No published
 release or W3C certification is implied.
 
 `wotex_binding_http` maps selected W3C Web of Things Thing Description (TD)
@@ -198,6 +198,11 @@ exact thresholds, native JSON admission, sustained receiver overload, deadline
 and destination policy seams, redaction vectors, and the remaining client-owned
 nonclaims.
 
+The [stable API candidate inventory](docs/stable-api-inventory.md) freezes the
+documented functions, values, callbacks, messages, mappings, defaults, limits,
+result metadata, and error identities. It also records the draft-revision and
+migration decisions for the `0.1.0` candidate.
+
 ## Failure model
 
 Public failures are `Wotex.Binding.HTTP.Error` values with a stable `code`, a
@@ -234,16 +239,17 @@ WOTEX_PATH_DEPS=1 mix check --no-retry
 the authoritative library gate: locked dependencies, warnings-as-errors
 compilation, unused dependencies, formatting, coverage, strict static checks,
 documentation, dependency audits, Dialyzer, the library boundary, package and
-archive reconstruction, and a clean diff. Coverage is the only test-suite pass
-inside that gate.
+archive reconstruction, release and stable-API candidate audits, and a clean
+diff. Coverage is the only test-suite pass inside that gate.
 
 The reproducible local and CI evidence pair is Elixir `1.18.4-otp-27` with OTP
 `27.3.4.15`, declared in `.tool-versions`. The broader `elixir: "~> 1.18"`
 package requirement is not a tested runtime matrix. CI also pins the exact core
 and Runtime source revisions used by the workspace gate.
 
-Focused proofs remain available as `bin/check_boundary.exs` and
-`bin/check_archive.exs`. The [public release-candidate inventory](docs/release-candidate-inventory.md)
+Focused proofs remain available as `bin/check_boundary.exs`,
+`bin/check_archive.exs`, `bin/check_release.exs`, and
+`bin/check_stable_api.exs`. The [public release-candidate inventory](docs/release-candidate-inventory.md)
 documents package metadata, legal/security, dependency, documentation,
 toolchain and remaining publication-order evidence.
 
