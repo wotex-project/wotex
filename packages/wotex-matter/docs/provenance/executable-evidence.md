@@ -286,6 +286,20 @@ new native lane.
 
 ## Acceptance boundary
 
+`test/wotex/matter/native_wire_test.exs` adds ten deterministic boundary tests
+for WMA-B02, C01, C02 and C04. They assert full-width integer and timestamp
+preservation, null/false/empty values, nested context tags, per-path result
+identity, exact subscription metadata, bounded error status and non-retryable
+unknown mutation effects. Malformed envelopes, out-of-range values and unknown
+wire types fail with structured errors.
+
+`test/wotex/matter/descriptor_boundary_test.exs` adds five WMA-S01/S05 tests
+that round-trip each admitted scalar/structured recipe through actual TLV bytes
+and reject incompatible schema fields. ACL assertions distinguish null from
+empty subjects/targets, preserve optional read fields, reject fabric-index
+writes and prevent well-formed TLV from bypassing field validation. These are
+pure conversion assertions, separate from the executed SDK ACL peer cohort.
+
 [WMA.13](../specs/WMA.13-native-backend.md) defines the complete native binary,
 Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P08 are executed
 at their stated deterministic and native-compilation boundaries, and P08a is
