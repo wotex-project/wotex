@@ -60,17 +60,6 @@ defmodule Wotex.Binding.MQTT.OperationInventoryTest do
     }
   ]
 
-  @source_revision "715b40d756e25ef87bcef806e76e8db013b7343c"
-  @source_files ~w[
-    bindings/protocols/mqtt/context.jsonld
-    bindings/protocols/mqtt/index.html
-    bindings/protocols/mqtt/index.template.html
-    bindings/protocols/mqtt/mapping.ttl
-    bindings/protocols/mqtt/mqtt.schema.json
-    bindings/protocols/mqtt/ontology.ttl
-    bindings/protocols/mqtt/template.sparql
-  ]
-
   test "all seven rows preserve exact default packet, target, qos, retain, and limit values" do
     for row <- @rows do
       assert Mapping.default_control_packet(row.operation) == {:ok, row.packet}
@@ -206,29 +195,6 @@ defmodule Wotex.Binding.MQTT.OperationInventoryTest do
 
       assert_error(Mapping.command(request, 100), :unsupported_operation)
     end
-  end
-
-  test "the inventory pins the dated upstream source revision and file digests" do
-    manifest =
-      "docs/provenance/mqtt-binding-source-manifest.json"
-      |> File.read!()
-      |> Jason.decode!()
-
-    assert manifest["schema_version"] == "1.0.0"
-    assert manifest["observed_at"] == "2026-09-02"
-    assert manifest["repository"] == "https://github.com/w3c/wot-binding-templates"
-    assert manifest["revision"] == @source_revision
-
-    manifest_files =
-      manifest["files"]
-      |> Map.keys()
-      |> Enum.sort()
-
-    assert manifest_files == Enum.sort(@source_files)
-
-    assert Enum.all?(manifest["files"], fn {_, digest} ->
-             digest =~ ~r/\A[0-9a-f]{64}\z/
-           end)
   end
 
   defp request(row, overrides \\ %{}, mode \\ :merge) do

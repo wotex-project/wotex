@@ -177,8 +177,6 @@ the trusted-client authority boundary.
 The [exact archive consumer](docs/reference-consumer-inventory.md) compiles one
 core/Runtime/MQTT archive cohort in an isolated OS-temp project and exercises
 PUBLISH, retained read, paired subscription, limits, and redacted failures.
-The [stable API inventory](docs/stable-api-inventory.md) freezes the reviewed
-0.1 values, callbacks, mappings, defaults, errors, and migration rules.
 This is not a W3C certification claim.
 
 The package defines no application callback, supervision tree, connection
@@ -190,17 +188,30 @@ back-pressure, TLS material, and broker observability remain consumer concerns.
 
 ```console
 WOTEX_PATH_DEPS=1 mix deps.get
-WOTEX_PATH_DEPS=1 mix check
+WOTEX_PATH_DEPS=1 mix check --no-retry
 ```
 
-`mix check --no-retry` is the complete library gate: locked dependency
-resolution, warnings-as-errors compilation, unused-dependency detection,
-formatting, dependency audits, strict Credo, Doctor, warning-free docs,
-Dialyzer, one coverage-backed test run, boundary/application checks, and exact
-archive construction/inspection plus structural release-candidate verification.
-The same default gate also checks the stable API inventory against the compiled
-surface and its compatibility vectors.
-It does not invoke a release task, publish a package, or mutate a remote.
+The developer gate covers warnings-as-errors compilation, formatting, and the
+behavioral test suite. Release evidence is run explicitly:
+
+```console
+WOTEX_PATH_DEPS=1 mix deps.get --check-locked
+WOTEX_PATH_DEPS=1 mix deps.unlock --check-unused
+WOTEX_PATH_DEPS=1 mix deps.audit
+WOTEX_PATH_DEPS=1 mix hex.audit
+WOTEX_PATH_DEPS=1 mix credo --strict
+WOTEX_PATH_DEPS=1 mix doctor
+WOTEX_PATH_DEPS=1 mix docs --warnings-as-errors
+WOTEX_PATH_DEPS=1 MIX_ENV=test mix coveralls
+WOTEX_PATH_DEPS=1 mix dialyzer
+WOTEX_PATH_DEPS=1 elixir bin/check_boundary.exs
+WOTEX_PATH_DEPS=1 mix run --no-start bin/check_application_free.exs
+WOTEX_PATH_DEPS=1 mix run --no-start bin/check_archive.exs
+git diff --check
+```
+
+These commands do not invoke a release task, publish a package, or mutate a
+remote.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
 [SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see

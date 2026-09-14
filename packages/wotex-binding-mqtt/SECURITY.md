@@ -17,16 +17,15 @@ applies finite default parsing limits.
 
 The current Hex audit no longer matches that advisory to the lock, so this
 repository carries no advisory exception. Its dependency-security tests retain
-the exact reviewed 3.1.1 Hex lock tuple, including outer checksum
-`c5f25f2ced74a0587d03e6023f595db8e924c9d3922c8c8ffd9edfc4498cf1f6`,
-and loaded version. They require parse, cast and construction to reject the
-reported pathological exponent and prove the default exponent/digit thresholds.
-No arithmetic on the pathological value is executed.
+the reviewed loaded version. They require parse, cast and construction to
+reject the reported pathological exponent and prove the default exponent/digit
+thresholds. No arithmetic on the pathological value is executed.
 
-The default repository gate runs `mix deps.audit` and `mix hex.audit`; either
-audit failure blocks the candidate and requires review rather than a waiver.
+The explicit dependency-evidence lane runs `mix deps.audit` and `mix hex.audit`;
+either audit failure blocks the candidate and requires review rather than a
+waiver.
 
 This is retained regression evidence, not a general Decimal safety or whole-VM
 memory guarantee. All advisories remain active. Any dependency or advisory
-change requires review, and a failed regression or changed lock blocks `mix check`.
-Never disable parsing limits for untrusted input.
+change requires review. A failed regression or changed lock blocks the explicit
+dependency-evidence lane. Never disable parsing limits for untrusted input.

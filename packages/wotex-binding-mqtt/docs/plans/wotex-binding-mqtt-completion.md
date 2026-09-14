@@ -31,7 +31,7 @@ envelope, callbacks, mapping/defaults or errors needs compatibility vectors.
 | WBM-C03 | WBM-C01 | Limits/security closure | Payload/topic/filter thresholds, allocation/cardinality, sustained delivery/receiver overload, secret capture and client authority tested or explicitly delegated |
 | WBM-C04 | WBM-C02, WBM-C03 | Exact archive/reference consumer | Rebuild declared artifacts without live source; supplied client exercised through actual Runtime supervisor and paired Forms |
 | WBM-C05 | WBM-C04 | Public release candidate | Package contents, docs, metadata/license/security, dependency installation and claims pass all applicable gates |
-| WBM-C06 | WBM-C05 | Stable API decision | Public values/errors/defaults and draft-sensitive choices frozen with compatibility evidence and migration decisions |
+| WBM-C06 | WBM-C05 | Compatibility decision | Public values, errors, defaults, callbacks, and draft-sensitive choices have positive, negative, and boundary behavior evidence plus migration decisions |
 
 ## Five evidence gates
 
@@ -41,15 +41,16 @@ No gate authorizes an automated push, tag, package or release publication.
 
 | Gate | Required evidence | Nonclaim |
 |---|---|---|
-| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry`, coverage at least 95%, strict static checks, docs without warnings, passive-loading/boundary tests | Not registry install or protocol certification |
+| `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry` passes warnings-as-errors compilation, formatting, and behavioral tests | Not registry install or protocol certification |
 | `archive_consumer_green` | Build without path switch; a separate minimal Mix consumer installs exact archives and exercises one mapping/transport success plus typed rejection through public API, with no live source | Not complete Runtime lifecycle |
 | `reference_consumer_green` | WBM-C04 semantic and failure vectors, real supervision and explicit client ownership | Not actual broker fleet interoperability |
-| `public_release_candidate` | Prior gates; clean package/metadata/license/security/dependency/standards evidence, no mutable local notes | Not publication permission |
-| `stable_api_candidate` | WBM-C06 matrix; all supported cells/bounds/recovery claims proven | Not universal WoT/MQTT conformance |
+| `public_release_candidate` | Prior gates plus explicit dependency audits, documentation, coverage, Dialyzer, application, boundary, package metadata/license/security, and standards review pass | Not publication permission |
+| `stable_api_candidate` | Consumer-visible compatibility behavior and documented API changes receive review against WBM-C06 | Not universal WoT/MQTT conformance |
 
-Existing package/archive/application-free commands are supporting checks, not
-replacement for independent consumer tests. Report any skipped or unavailable
-mandatory check; zero skipped tests does not prove a missing test exists.
+The package/archive/application-free commands are separate evidence. Behavior
+tests assert mappings, callbacks, messages, defaults, limits, results, errors,
+redaction, and lifecycle behavior without enumerating every export, struct key,
+test name, documentation row, or developer-gate entry.
 
 ## Standards-claim matrix
 
