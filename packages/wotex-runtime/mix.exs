@@ -107,6 +107,7 @@ defmodule WotexRuntime.MixProject do
           title: "ExposedThing Boundary Contract"
         ],
         "docs/specs/RT-C04-reference-consumer.md": [title: "Reference Consumer"],
+        "docs/specs/RT-C05-release-evidence.md": [title: "Release Evidence"],
         "docs/specs/WRT.01-consumed-thing-runtime.md": [title: "ConsumedThing Runtime"],
         "docs/specs/WRT.02-exposed-thing-runtime.md": [title: "ExposedThing Runtime"],
         "docs/specs/WRT.03-thing-level-interactions.md": [
@@ -147,7 +148,6 @@ defmodule WotexRuntime.MixProject do
 
   defp dialyzer do
     [
-      plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
       plt_add_apps: [:mix, :ex_unit],
       flags: [:error_handling, :missing_return, :underspecs, :extra_return]
     ]

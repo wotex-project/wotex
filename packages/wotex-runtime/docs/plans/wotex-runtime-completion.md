@@ -28,7 +28,7 @@ dependency range. Package, specification and evidence versions are separate.
 | RT-C02 | RT-C01 | [ConsumedThing/subscription hardening](../specs/RT-C02-runtime-hardening.md) | Raised/exited/malformed callbacks, result identity mismatch, invalid receiver/options, receiver death, concurrent stop, restart, forced kill and cleanup failure tested |
 | RT-C03 | RT-C01 | [ExposedThing boundary proof](../specs/RT-C03-exposed-thing-boundary.md) | Inbound Form/policy/schema checks assigned to consumer; invalid routing invokes no handler; concurrent callbacks and exception propagation proven |
 | RT-C04 | RT-C02, RT-C03 | [Independent reference consumer](../specs/RT-C04-reference-consumer.md) | Exact archives; zero/one/multiple subscriptions, shutdown budgets, explicit ports and aggregate negative cells |
-| RT-C05 | RT-C04 | Release evidence dossier | Package contents, dependency closure, docs, license/security and compatibility inputs are complete and internally consistent; gates evaluate the dossier separately |
+| RT-C05 | RT-C04 | [Release evidence dossier](../specs/RT-C05-release-evidence.md) | Package contents, dependency closure, docs, license/security and compatibility inputs are complete and internally consistent; gates evaluate the dossier separately |
 | RT-C06 | RT-C05 | Stable API decision | Retained public fields/errors/defaults, compatibility vectors and migration notes; all claimed cells proven |
 
 RT-C02 must specify bounds before implementation: request/metadata cardinality,

@@ -285,6 +285,10 @@ The exact-archive consumer lane is documented in
 supplied core archive and exercises Runtime under consumer-owned ports and
 supervision.
 
+[RT-C05](docs/specs/RT-C05-release-evidence.md) defines the separate archive,
+documentation, analysis, audit, and compatibility evidence used for release
+readiness.
+
 ## Contributing
 
 Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before
