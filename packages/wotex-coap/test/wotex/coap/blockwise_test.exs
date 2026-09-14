@@ -195,6 +195,131 @@ defmodule Wotex.CoAP.BlockwiseTest do
     assert body == :binary.copy("z", 16) <> "last"
   end
 
+  test "WCO-S02 WCO-D01 WCO-V03 WCO-V04 failure after acknowledged upload blocks never restarts" do
+    message = %{request() | code: 2, payload: :binary.copy("x", 33), options: [{5, <<>>}]}
+
+    for {phase, remote, expected} <- [
+          {:upload, 136, :remote_response},
+          {:upload, 141, :remote_response},
+          {:download, 136, :remote_response},
+          {:download, 141, :remote_response},
+          {:download, 68, :representation_changed}
+        ] do
+      callback = fn wire, requests ->
+        index = length(requests)
+
+        reply =
+          cond do
+            phase == :upload and index == 1 ->
+              response(wire, remote)
+
+            index < 2 ->
+              %{response(wire, 95) | options: [{27, block(index, true, 16)}]}
+
+            index == 2 ->
+              %{
+                response(wire, 68)
+                | options: [{4, "original"}, {27, block(2, false, 16)}, {23, block(0, true, 16)}],
+                  payload: :binary.copy("y", 16)
+              }
+
+            true ->
+              %{
+                response(wire, remote)
+                | options: [{4, "changed"}, {23, block(1, false, 16)}],
+                  payload: "last"
+              }
+          end
+
+        {{:ok, reply}, [wire | requests]}
+      end
+
+      assert {{:error, error}, requests} = Blockwise.run(message, [block_size: 16], [], callback)
+      requests = Enum.reverse(requests)
+      assert error.code == expected
+      assert error.effect == :unknown and error.retryable == false and error.class == :permanent
+      if expected == :remote_response, do: assert(error.details == %{code: remote})
+      assert length(requests) == if(phase == :upload, do: 2, else: 4)
+
+      for {wire, index} <- Enum.with_index(requests) do
+        assert wire.code == 2 and wire.token == message.token
+        assert Codec.option(wire, 292) == [message.token]
+        assert Codec.option(wire, 5) == if(index == 0, do: [<<>>], else: [])
+
+        if index < 3 do
+          assert Codec.option(wire, 27) == [block(index, index < 2, 16)]
+
+          assert wire.payload ==
+                   binary_part(message.payload, index * 16, if(index < 2, do: 16, else: 1))
+        else
+          assert wire.payload == <<>> and Codec.option(wire, 27) == []
+          assert Codec.option(wire, 23) == [block(1, false, 16)]
+        end
+      end
+    end
+  end
+
+  test "WCO-S02 WCO-V04 continuation charges its first block at exact body and exchange ceilings" do
+    for {size, bytes, blocks, outcome, count} <- [
+          {1024, 1_048_576, 4096, :ok, 1024},
+          {1024, 1_048_577, 4096, :body_limit, 1025},
+          {16, 65_536, 4096, :ok, 4096},
+          {16, 65_536, 4095, :block_limit, 4095}
+        ] do
+      first = report(:binary.copy("x", size + 1), size)
+      first = %{first | options: [{100, <<255>>} | first.options]}
+
+      message = %{
+        request()
+        | options: [{6, <<>>}, {11, "x"}, {15, "a=b"}, {17, <<>>}, {100, "ext"}]
+      }
+
+      callback = fn wire, number ->
+        assert wire.code == 1 and wire.payload == <<>> and wire.token != first.token
+        assert Codec.option(wire, 23) == [block(number, false, size)]
+        assert Codec.option(wire, 6) == []
+        assert Codec.option(wire, 17) == [<<>>] and Codec.option(wire, 100) == ["ext"]
+        assert Codec.option(wire, 11) == ["x"] and Codec.option(wire, 15) == ["a=b"]
+        length = min(size, bytes - number * size)
+
+        reply = %{
+          response(wire, 69)
+          | options: [
+              {4, "tag"},
+              {12, <<0, 0>>},
+              {23, block(number, (number + 1) * size < bytes, size)}
+            ],
+            payload: :binary.copy("x", length)
+        }
+
+        {{:ok, reply}, number + 1}
+      end
+
+      assert {result, ^count} =
+               Blockwise.continue(
+                 message,
+                 first,
+                 [block_size: size, max_blocks: blocks],
+                 1,
+                 callback
+               )
+
+      case outcome do
+        :ok ->
+          assert {:ok, complete} = result
+
+          assert complete == %{
+                   first
+                   | payload: :binary.copy("x", bytes),
+                     options: Enum.reject(first.options, &(elem(&1, 0) == 23))
+                 }
+
+        code ->
+          assert {:error, %CoAP.Error{code: ^code, effect: :none, retryable: false}} = result
+      end
+    end
+  end
+
   test "invalid settings and forged messages fail before the exchange callback" do
     test = self()
 

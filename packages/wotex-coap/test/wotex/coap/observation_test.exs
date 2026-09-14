@@ -319,36 +319,55 @@ defmodule Wotex.CoAP.ObservationTest do
     refute_received {:wire, _, _, _, _}
   end
 
-  test "WCO-S03 WCO-V10 one latest Property report survives overlapping Block2 assembly" do
+  test "WCO-S02 WCO-S03 WCO-V10 one latest Property report preserves each overlapping Block2 identity" do
     {peer, session, handle, request} = established(10, "initial")
     owner = :sys.get_state(session.pid).observation.pid
 
     block = %{
       report(request, :con, 11, :binary.copy("x", 16))
       | message_id: 800,
-        options: [{6, <<11>>}, {23, <<8>>}]
+        options: [{4, "assembly"}, {6, <<11>>}, {23, <<8>>}, {100, "first"}]
     }
 
     send(peer.pid, {:reply, block})
     assert wire().message.type == :ack
     continuation = wire().message
+    assert continuation.token != request.token
+    assert Codec.option(continuation, 6) == [] and Codec.option(continuation, 23) == [<<16>>]
 
     for {sequence, mid} <- [{12, 801}, {13, 802}, {12, 803}] do
-      send(peer.pid, {:reply, %{report(request, :con, sequence, "latest") | message_id: mid}})
+      newer = report(request, :con, sequence, "latest")
+      newer = %{newer | message_id: mid, options: [{4, "next#{sequence}"} | newer.options]}
+      send(peer.pid, {:reply, newer})
       assert wire().message.type == :ack
     end
 
     state = await(owner, &(&1.pending && &1.pending.metadata.observe == 13))
     assert state.report.metadata.observe == 11
+    assert state.report.metadata.etag == "assembly" and state.pending.metadata.etag == "next13"
+    assert state.report.first == block
 
     send(
       peer.pid,
-      {:reply, %{continuation | type: :ack, code: 69, options: [{23, <<16>>}], payload: "end"}}
+      {:reply,
+       %{
+         continuation
+         | type: :ack,
+           code: 69,
+           options: [{4, "assembly"}, {23, <<16>>}],
+           payload: "end"
+       }}
     )
 
-    assert_receive {:wotex_coap, _, {:ok, %{payload: body}, %{observe: 11}}}
-    assert body == :binary.copy("x", 16) <> "end"
-    assert_receive {:wotex_coap, _, {:ok, %{payload: "latest"}, %{observe: 13}}}
+    assert_receive {:wotex_coap, _, {:ok, complete, %{observe: 11, etag: "assembly"}}}
+
+    assert complete == %{
+             block
+             | payload: :binary.copy("x", 16) <> "end",
+               options: Enum.reject(block.options, &(elem(&1, 0) == 23))
+           }
+
+    assert_receive {:wotex_coap, _, {:ok, %{payload: "latest"}, %{observe: 13, etag: "next13"}}}
     refute_received {:wotex_coap, _, _}
     cancel(peer, session, handle)
   end

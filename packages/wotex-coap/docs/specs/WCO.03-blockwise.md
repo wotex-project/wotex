@@ -47,6 +47,19 @@ transfer. A completed response removes Block1/Block2 descriptors and retains
 representation metadata. Combined upload/download continuations retain the
 method and Request-Tag, with no repeated request body or Block1 option.
 
+`Blockwise.continue/5` and `Connection.continue/5` accept an already received
+first response. The first block counts against the exchange budget. An
+empty-body GET continues at its next offset with a token distinct from the
+first response and without Observe; no block-zero request or upload is replayed.
+Completion retains the first response's token, MID, status, Observe and other
+representation options, removing only Block1/Block2 descriptors. A changed
+identity or failed continuation returns no accumulated prefix. Observe owns
+new-notification admission separately from this fixed representation.
+
+Capabilities distinguish the 1152-byte `max_datagram_size` from the 1 MiB
+`max_body_size`. The compatibility `max_payload_size` key aliases the datagram
+limit; it does not restrict complete-body assembly to a single datagram.
+
 `blockwise_test.exs` contains generated complete-body reassembly, real UDP
 size negotiation, combined transfers, malformed acknowledgments, changed ETags,
 bounded allocation and failure vectors. Independent-peer evidence is recorded

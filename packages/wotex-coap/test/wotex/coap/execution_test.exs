@@ -3,7 +3,7 @@ defmodule Wotex.CoAP.ExecutionTest do
 
   use ExUnit.Case, async: true
   alias Wotex.CoAP
-  alias Wotex.CoAP.{Codec, Connection, Error, Execution, TestDatagram, TestExecution}
+  alias Wotex.CoAP.{Codec, Connection, Error, Execution, Message, TestDatagram, TestExecution}
 
   test "WCO-S03 WCO-V08 zero Max-Age remains stale and renews at most once per virtual second" do
     {:ok, clock} = TestExecution.start(%{mids: [1, 2, 3], tokens: ["token"]})
@@ -196,6 +196,55 @@ defmodule Wotex.CoAP.ExecutionTest do
       refute_received {:sent_datagram, ^adapter, _}
       assert :ok = CoAP.disconnect(session)
       GenServer.stop(clock)
+    end
+  end
+
+  test "WCO-C02 WCO-S02 WCO-V10 continuation refuses its first token and bounds collision allocation" do
+    first = %Message{
+      type: :con,
+      code: 69,
+      message_id: 50,
+      token: "observed",
+      options: [{6, <<10>>}, {23, <<8>>}],
+      payload: :binary.copy("x", 16)
+    }
+
+    for tokens <- [["observed", "observed", "next"], List.duplicate("observed", 8)] do
+      {:ok, clock} = TestExecution.start(%{mids: [1], tokens: tokens})
+      {:ok, session} = connect(clock)
+      assert_receive {:adapter, adapter, _}
+      {:ok, request} = CoAP.message(%{method: :get, path: "/x"})
+
+      try do
+        assert {:error, %Error{code: :invalid_block_payload, effect: :none}} =
+                 Connection.continue(session.pid, request, %{first | payload: "short"}, 100)
+
+        assert TestExecution.snapshot(clock).tokens == tokens
+        assert :sys.get_state(session.pid).calls == %{}
+        refute_received {:sent_datagram, ^adapter, _}
+        task = Task.async(fn -> Connection.continue(session.pid, request, first, 100) end)
+
+        if List.last(tokens) == "next" do
+          wire = sent(adapter)
+          assert wire.token == "next" and wire.message_id == 1
+          assert Codec.option(wire, 6) == [] and Codec.option(wire, 23) == [<<16>>]
+          emit(adapter, %{wire | type: :ack, code: 69, options: [{23, <<16>>}], payload: "!"})
+          assert {:ok, complete} = Task.await(task)
+          assert complete.token == first.token and complete.payload == first.payload <> "!"
+          assert Codec.option(complete, 6) == [<<10>>]
+        else
+          assert {:error, %Error{code: :exchange_unavailable, effect: :none}} = Task.await(task)
+          assert TestExecution.snapshot(clock).mids == [1]
+        end
+
+        assert TestExecution.snapshot(clock).tokens == []
+        refute_received {:sent_datagram, ^adapter, _}
+      after
+        assert :ok = CoAP.disconnect(session)
+        assert TestExecution.snapshot(clock).timers == %{}
+        assert TestExecution.snapshot(clock).owners == %{}
+        GenServer.stop(clock)
+      end
     end
   end
 

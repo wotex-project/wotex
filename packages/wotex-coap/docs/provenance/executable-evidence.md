@@ -124,6 +124,41 @@ The focused command is:
 WOTEX_PATH_DEPS=1 mix test test/wotex/coap/exchange_deadline_test.exs test/wotex/coap/exchange_lifecycle_test.exs test/wotex/coap/native_contract_test.exs test/wotex/coap/blockwise_test.exs
 ```
 
+### Initial-report continuation assertions
+
+WCO-P02 preserves the existing WCO-S02/WCO-D01 implementation. In
+`blockwise_test.exs`, WCO-V03 checks negotiated upload numbering and exact
+atomic acknowledgments; WCO-V04 checks generated reassembly, first-report
+validation, identity changes, missing continuations and actual UDP dispatch.
+The continuation properties retain the first message and omit Observe from
+distinct-token GETs without fetching block zero.
+
+Additional boundary assertions exercise 4.08/4.13 after an acknowledged upload
+prefix and negative/changed-ETag download responses after the upload completes.
+They retain numeric remote status, unknown mutation effect and permanent,
+non-retryable classification, with no second application request. Exact 1 MiB
+and 4096-block continuations succeed; one additional byte or one fewer allowed
+exchange fails without returning a prefix. The first block is charged to the
+exchange budget. Equivalent unsigned Content-Format encodings compare equally,
+and first-response/request elective extensions survive their respective paths.
+
+`execution_test.exs` exercises the public Connection continuation with colliding
+token allocations. It skips the first-response token, stops after eight
+collisions without transmission, and rejects an invalid first body before
+allocating identities. `observation_test.exs` checks WCO-V10 over loopback UDP:
+a newer Property notification with a different ETag cannot replace the body
+being assembled; only the newest pending report survives. Its separate Event
+overlap assertions retain terminal failure and cleanup rather than coalescing.
+
+These are pure, injected-port and first-party UDP fault-peer assertions against
+RFC 7959 (August 2016), RFC 9175 section 3 (February 2022), and RFC 7641
+(September 2015). They do not add independent secure interoperability or accept
+the WCO-P09 software/stress matrix. The focused command is:
+
+```sh
+WOTEX_PATH_DEPS=1 mix test test/wotex/coap/blockwise_test.exs test/wotex/coap/execution_test.exs test/wotex/coap/observation_test.exs
+```
+
 ### Authoritative library gate
 
 `WOTEX_PATH_DEPS=1 mix check --no-retry` includes strict compilation/static checks,

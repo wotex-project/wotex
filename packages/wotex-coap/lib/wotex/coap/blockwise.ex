@@ -62,7 +62,19 @@ defmodule Wotex.CoAP.Blockwise do
 
   def run(_, _, state, _), do: {failure(:invalid_exchange), state}
 
-  @doc "Continues a first report with a distinct GET token, retaining the first report metadata."
+  @doc """
+  Continues a first report with a distinct GET token, retaining the first report metadata.
+
+  The request is an empty-body GET whose token differs from the first response.
+  Follow-up requests omit Observe and begin at the next Block2 offset; they do
+  not fetch block zero or repeat an upload. The first response counts against
+  `:max_blocks`, including when it already contains the complete body.
+
+  The completed message retains the first response's identity and options,
+  except Block1/Block2 descriptors. Changed status, ETag, Content-Format, block
+  size or offset, and exceeded body/exchange limits return an error without a
+  partial body. The exchange callback owns wire correlation and the deadline.
+  """
   @spec continue(Message.t(), Message.t(), keyword(), state, (Message.t(), state ->
                                                                 {result(), state})) ::
           {result(), state}

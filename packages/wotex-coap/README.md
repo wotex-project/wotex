@@ -79,6 +79,9 @@ security and a nil immediate credential. UDP routes reject credentials.
 All admit JSON, UTF-8 text and opaque bytes. OSCORE remains unsupported.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
+Capabilities expose these as `max_datagram_size` and `max_body_size`.
+The legacy `max_payload_size` key remains a 1152-byte datagram-limit alias,
+not the complete-body ceiling.
 See the [blockwise contract](docs/specs/WCO.03-blockwise.md) for configurable
 block sizes, aggregate budgets and the atomic upload profile.
 

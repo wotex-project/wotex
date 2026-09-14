@@ -73,7 +73,13 @@ defmodule Wotex.CoAP do
     profile
   end
 
-  @doc "Reports the implemented baseline exchange profile."
+  @doc """
+  Reports the implemented baseline exchange profile.
+
+  `:max_datagram_size` is the 1152-byte wire limit; `:max_body_size` is the
+  1 MiB complete-body limit. The legacy `:max_payload_size` key remains an
+  alias of the datagram limit, not the maximum reassembled body size.
+  """
   @spec capabilities() :: %{
           bidirectional: true,
           reliable: false,
