@@ -68,9 +68,10 @@ defmodule Wotex.Modbus.SoftwareRun do
 
     arguments =
       [
-        "create",
+        "run",
         "--rm",
         "--pull=never",
+        "--sig-proxy=true",
         "--label",
         "wotex.modbus.run=" <> context.run_id,
         "--cidfile",
@@ -85,22 +86,28 @@ defmodule Wotex.Modbus.SoftwareRun do
       ] ++ peer_options ++ Enum.concat([context.manifest["image_id"]], peer_arguments)
 
     try do
-      {:ok, _, 0} = command(context, arguments, 5000)
-      cid = container(context)
-      if before_start = Map.get(context, :before_start), do: before_start.(cid)
-
       port =
-        SoftwareCommand.open(context.guardian, context.docker, ["start", "--attach", cid],
+        SoftwareCommand.open(context.guardian, context.docker, arguments,
           cd: context.root,
           timeout: 240_000,
           cleanup: 2000
         )
 
+      Process.put({__MODULE__, :opening_port}, port)
       Process.put({__MODULE__, :watcher, port}, watcher)
       Process.put({__MODULE__, :ready_deadline, port}, deadline)
+      cid = await_container(context, port, deadline)
+      if after_open = Map.get(context, :after_open), do: after_open.(cid)
+      Process.delete({__MODULE__, :opening_port})
       port
     rescue
       error ->
+        if port = Process.delete({__MODULE__, :opening_port}) do
+          Process.delete({__MODULE__, :watcher, port})
+          Process.delete({__MODULE__, :ready_deadline, port})
+          if Port.info(port), do: Port.close(port)
+        end
+
         send(watcher, :cleanup)
         reraise error, __STACKTRACE__
     end
@@ -148,6 +155,49 @@ defmodule Wotex.Modbus.SoftwareRun do
 
     unless String.trim(label) == context.run_id, do: Mix.raise("invalid_owned_container")
     value
+  end
+
+  defp await_container(context, port, deadline) do
+    case File.read(cid_path(context)) do
+      {:ok, value} ->
+        value = String.trim(value)
+
+        if Regex.match?(~r/\A[0-9a-f]{64}\z/, value) do
+          await_container_identity(context, port, value, deadline)
+        else
+          await_container_again(context, port, deadline)
+        end
+
+      {:error, :enoent} ->
+        await_container_again(context, port, deadline)
+
+      {:error, _} ->
+        Mix.raise("invalid_owned_container")
+    end
+  end
+
+  defp await_container_identity(context, port, value, deadline) do
+    case command(
+           context,
+           ["inspect", value, "--format", "{{index .Config.Labels \"wotex.modbus.run\"}}"],
+           1000
+         ) do
+      {:ok, label, 0} ->
+        unless String.trim(label) == context.run_id, do: Mix.raise("invalid_owned_container")
+        value
+
+      _ ->
+        await_container_again(context, port, deadline)
+    end
+  end
+
+  defp await_container_again(context, port, deadline) do
+    if Port.info(port) && System.monotonic_time(:millisecond) < deadline do
+      Process.sleep(10)
+      await_container(context, port, deadline)
+    else
+      Mix.raise("invalid_owned_container")
+    end
   end
 
   defp execute(context, evidence) do

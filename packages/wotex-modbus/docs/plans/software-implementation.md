@@ -1,10 +1,10 @@
 # WMB software implementation sequence
 
-The eight-function BEAM TCP client, standalone helpers, Runtime integration and
-software peer assertions are implemented. Mix build/run orchestration is
-implemented with acceptance still incomplete. [Executable evidence](../provenance/executable-evidence.md) binds the
-accepted protocol assertions to exact source and toolchains; it does not validate
-later task revisions. The ordered packages define acceptance, not a mutable tracker.
+The eight-function BEAM TCP client, standalone helpers, Runtime integration,
+software peer assertions and Mix build/run orchestration are implemented.
+[Executable evidence](../provenance/executable-evidence.md) binds accepted runs to
+exact source and toolchains; it does not validate later task revisions. The
+ordered packages define acceptance, not a mutable tracker.
 
 ## Read before changing code
 
@@ -117,11 +117,13 @@ mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
 WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
-These commands execute the checked-in Mix implementation. Passing task fixtures
-do not close an unexecuted toolchain or whole-VM opening cell. Shell entry points
-execute the Mix tasks. Earlier Python cohorts retain their original source and
-command identities in provenance. The native peer and protocol assertions remain the
-same independent software obligations. No build or peer starts implicitly.
+These commands execute the checked-in Mix implementation. Acceptance still
+requires execution on each named toolchain. The task fixture hard-kills a child
+BEAM VM during Docker opening and asserts removal of its exact owned peer. Shell
+entry points execute the Mix tasks. Earlier Python cohorts retain their original
+source and command identities in provenance. The native peer and protocol
+assertions remain the same independent software obligations. No build or peer
+starts implicitly.
 
 ## Verification and commit procedure
 

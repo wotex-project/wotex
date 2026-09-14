@@ -3,9 +3,9 @@ spec:
   id: WMB.13
   title: "Native peer build and software evidence"
   status: accepted
-  version: 1.2.0
+  version: 1.3.0
   owner: wotex-modbus
-  updated: 2026-09-09
+  updated: 2026-09-14
 ---
 
 # WMB.13 Native peer build and software evidence
@@ -84,15 +84,16 @@ library's one-second resource cleanup contract. Other containers/processes are
 never selected by name patterns or killed. Output capture is bounded to 16 MiB
 per stream; overflow fails while cleanup remains active.
 
-The runner separates Docker create from attach/start and verifies the exact
-container ID and random ownership label. An independent BEAM monitor reconciles
-that label after invoking-process loss, including a created but unstarted peer.
-It removes only independently verified exact container IDs. An unavailable
+The runner starts one `docker run --rm --sig-proxy=true` command under the native
+owner-liveness guardian before Docker can create the container. It verifies the
+exact CID file and random ownership label. The guardian's stdin remains tied to
+the owning BEAM VM, so whole-VM loss terminates the Docker command group and the
+foreground peer; Docker's remove-on-exit policy then removes that peer. An
+independent BEAM monitor also reconciles the label after invoking-process loss.
+Both paths remove only independently verified exact container IDs. An unavailable
 daemon or unverified removal produces failed/unverified cleanup, never zero
-resource counts. Native command ownership survives BEAM VM loss, but the BEAM
-container monitor does not: whole-VM interruption during create/start remains
-an explicitly unaccepted opening case. Active foreground signal forwarding is
-not evidence for that case.
+resource counts. A hard-killed child BEAM assertion covers the opening interval;
+foreground signal forwarding alone is not its oracle.
 
 ## WMB-N03 — Results and acceptance
 
@@ -114,8 +115,10 @@ mappings and containers, plus clean required ASan/UBSan/leak diagnostics.
 
 ExUnit task tests cover valid reuse; missing/corrupt manifest; changed source or
 binary; traversal archive; missing executable; readiness timeout; absent peer
-response; test crash; excessive output; owner death; and cleanup failure. Each
-asserts both a non-success result where applicable and zero owned resources.
+response; test crash; excessive output; process-owner death; hard whole-VM loss
+during opening; and cleanup failure. Each asserts a non-success result where
+applicable and either verified zero owned resources or the required explicit
+unverified cleanup state.
 Run the software task on Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4, with isolated build and PLT directories.
 

@@ -47,8 +47,10 @@ different cohort from the explicit software run above. Relevant source changes
 require fresh software evidence; a prior receipt cannot validate new code or tools.
 
 The eight-function client, standalone and Runtime contracts are implemented.
-WMB.13 Mix orchestration has committed-source task results on both toolchains;
-whole-VM opening remains unaccepted.
+WMB.13 Mix orchestration has committed-source task results on both toolchains at
+its recorded receipt revision. Current source additionally contains a hard
+whole-VM opening interruption assertion; a new run must retain its own later
+source identity.
 This evidence supplies neither a
 published release, stable API decision, hardware result nor certification.
 
@@ -64,12 +66,12 @@ not a protocol peer.
 
 The Mix tasks use `test/support/software/` and assert source/manifests, real
 reuse, failed commands, bounded output, readiness failure, active owner death,
-created-before-start owner death and explicit failed cleanup in
+opening owner death, hard whole-VM opening interruption and explicit failed cleanup in
 `test/software/fixture_tasks_test.exs`. The software formatter records actual
 test-finished names, requirement IDs and outcomes. Full P06 acceptance requires
-committed-source task results on both supported toolchains. Whole-VM loss during
-container opening and unavailable-daemon removal remain unverified; neither
-may be reported as successful cleanup or inferred from a passing active case.
+committed-source task results on both supported toolchains. An unavailable daemon
+still requires an explicit failed/unverified cleanup result; it cannot be
+reported as successful removal or inferred from another passing case.
 
 ## Mix orchestration cohort
 
@@ -83,5 +85,6 @@ mapping and owned-container counters are zero. The receipt retains exact
 per-case outcomes, fault log/result digests and dependency source digests.
 Source cohorts remain explicit: a receipt does not automatically validate a
 later source or wrapper change. Generic Python orchestration is absent from the
-current task workflow. Whole-VM opening and unavailable-daemon cleanup have no
-passing acceptance claim.
+current task workflow. The recorded receipt predates the current hard whole-VM
+opening assertion; unavailable-daemon cleanup remains an intentional
+failed/unverified result rather than a passing zero-resource claim.

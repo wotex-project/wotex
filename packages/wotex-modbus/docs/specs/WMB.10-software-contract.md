@@ -13,7 +13,8 @@ spec:
 Read [WMB.00](WMB.00-library-contract.md) first. This contract defines the
 implemented eight-function BEAM TCP profile and its mandatory software evidence.
 Native peer build and Mix/ExUnit orchestration follow
-[WMB.13](WMB.13-native-build-and-software-evidence.md); those tasks remain planned.
+[WMB.13](WMB.13-native-build-and-software-evidence.md); those tasks are implemented
+and require source-bound execution evidence.
 [Executable evidence](../provenance/executable-evidence.md) identifies the
 verified protocol cohorts and both supported runtime lanes.
 

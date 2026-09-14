@@ -19,6 +19,7 @@ No Python executable is required.
 
 [WMB.13](../../docs/specs/WMB.13-native-build-and-software-evidence.md) specifies
 native ownership and acceptance. [Executable evidence](../../docs/provenance/executable-evidence.md)
-binds completed runs to exact source identities. Whole-VM loss during Docker
-opening remains outside the accepted task evidence. This is software
-interoperability, separate from physical-device certification.
+binds completed runs to exact source identities. The native guardian owns Docker
+through create/start, and the task suite hard-kills a child BEAM VM during that
+interval before asserting exact peer removal. This is software interoperability,
+separate from physical-device certification.

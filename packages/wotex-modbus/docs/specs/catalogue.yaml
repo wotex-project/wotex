@@ -5,12 +5,12 @@ specifications:
   - id: "WMB.00"
     version: "1.1.0"
     path: "docs/specs/WMB.00-library-contract.md"
-    implementation_status: "partial"
+    implementation_status: "implemented"
     standards: [{"name": "Modbus Application Protocol / TCP/IP guide", "revision": "1.1b3 2012-04-26 / 1.0b 2006-10-24", "claim": "Revision-pinned software contract; implementation and evidence scope are specified separately."}]
     requires: []
     implementation_modules: ["Wotex.Modbus", "Wotex.Modbus.Address", "Wotex.Modbus.Codec", "Wotex.Modbus.Command", "Wotex.Modbus.Connection", "Wotex.Modbus.Error", "Wotex.Modbus.Mapping", "Wotex.Modbus.Session", "Wotex.Modbus.Transport", "Wotex.Modbus.Value"]
     executable_evidence: ["test/interop/modbus_test.exs", "test/software/lifecycle_stress_test.exs", "test/wotex/modbus/boundary_test.exs", "test/wotex/modbus/codec_test.exs", "test/wotex/modbus/compatibility_test.exs", "test/wotex/modbus/connection_test.exs", "test/wotex/modbus/contract_test.exs", "test/wotex/modbus/dependency_security_test.exs", "test/wotex/modbus/lifecycle_test.exs", "test/wotex/modbus/mapping_test.exs", "test/wotex/modbus/runtime_integration_test.exs", "test/wotex/modbus/stream_fault_test.exs", "test/wotex/modbus/telemetry_test.exs", "test/wotex/modbus/value_test.exs"]
-    compatibility_classification: "Cross-cutting pure values, explicit socket ownership, lifecycle bounds and structured errors are implemented. Native C07 is inapplicable to this BEAM TCP client; C09 Mix orchestration has incomplete acceptance."
+    compatibility_classification: "Cross-cutting pure values, explicit socket ownership, lifecycle bounds and structured errors are implemented. Native C07 is inapplicable to this BEAM TCP client; C09 uses explicit source-bound Mix orchestration and software evidence."
   - id: "WMB.01"
     version: "1.0.0"
     path: "docs/specs/WMB.01-protocol.md"
@@ -32,12 +32,12 @@ specifications:
   - id: "WMB.10"
     version: "1.1.0"
     path: "docs/specs/WMB.10-software-contract.md"
-    implementation_status: "partial"
+    implementation_status: "implemented"
     standards: [{"name": "Modbus Application Protocol / TCP/IP guide", "revision": "1.1b3 2012-04-26 / 1.0b 2006-10-24", "claim": "Revision-pinned software contract; implementation and evidence scope are specified separately."}]
     requires: ["WMB.00", "WMB.01", "WMB.02"]
     implementation_modules: ["Wotex.Modbus", "Wotex.Modbus.Address", "Wotex.Modbus.Codec", "Wotex.Modbus.Command", "Wotex.Modbus.Connection", "Wotex.Modbus.Error", "Wotex.Modbus.Mapping", "Wotex.Modbus.Session", "Wotex.Modbus.Transport", "Wotex.Modbus.Value"]
     executable_evidence: ["test/interop/modbus_test.exs", "test/software/lifecycle_stress_test.exs", "test/wotex/modbus/boundary_test.exs", "test/wotex/modbus/codec_test.exs", "test/wotex/modbus/compatibility_test.exs", "test/wotex/modbus/connection_test.exs", "test/wotex/modbus/contract_test.exs", "test/wotex/modbus/dependency_security_test.exs", "test/wotex/modbus/lifecycle_test.exs", "test/wotex/modbus/mapping_test.exs", "test/wotex/modbus/runtime_integration_test.exs", "test/wotex/modbus/stream_fault_test.exs", "test/wotex/modbus/telemetry_test.exs", "test/wotex/modbus/value_test.exs"]
-    compatibility_classification: "S01-S04 behavior and the original C09 software matrix have exact assertions on both supported toolchains, including stress, cleanup and malformed-stream cases. The additive WMB.13 Mix entry points remain unimplemented and cannot inherit those results."
+    compatibility_classification: "S01-S04 behavior has exact assertions on both supported toolchains, including stress, cleanup and malformed-stream cases. WMB.13 supplies the additive explicit Mix entry points; every execution remains bound to its exact source identity."
   - id: "WMB.11"
     version: "1.1.0"
     path: "docs/specs/WMB.11-standalone-client-and-preservation.md"
@@ -57,11 +57,11 @@ specifications:
     executable_evidence: ["test/interop/modbus_test.exs", "test/software/lifecycle_stress_test.exs", "test/wotex/modbus/boundary_test.exs", "test/wotex/modbus/codec_test.exs", "test/wotex/modbus/compatibility_test.exs", "test/wotex/modbus/connection_test.exs", "test/wotex/modbus/contract_test.exs", "test/wotex/modbus/dependency_security_test.exs", "test/wotex/modbus/lifecycle_test.exs", "test/wotex/modbus/mapping_test.exs", "test/wotex/modbus/runtime_integration_test.exs", "test/wotex/modbus/stream_fault_test.exs", "test/wotex/modbus/telemetry_test.exs", "test/wotex/modbus/value_test.exs"]
     compatibility_classification: "Implemented pure BindingProfile factories, native Form selection, real ConsumedThing unary mapping, structured Error.class retry decisions and no-stream rejection. Local path-dependency evidence does not establish publication or independent released-artifact adoption."
   - id: "WMB.13"
-    version: "1.2.0"
+    version: "1.3.0"
     path: "docs/specs/WMB.13-native-build-and-software-evidence.md"
-    implementation_status: "partial"
-    standards: [{"name": "Native peer / SDK", "revision": "libmodbus 3.1.12", "claim": "Independent C peer with implemented explicit Mix tasks; complete task acceptance pending"}]
+    implementation_status: "implemented"
+    standards: [{"name": "Native peer / SDK", "revision": "libmodbus 3.1.12", "claim": "Independent C test peer with explicit source-bound Mix build and run tasks"}]
     requires: ["WMB.00", "WMB.10", "WMB.11", "WMB.12"]
     implementation_modules: ["Mix.Tasks.Wotex.Modbus.Software.Build", "Mix.Tasks.Wotex.Modbus.Software.Run"]
-    executable_evidence: ["test/software/command_test.exs", "test/interop/native/check.c", "test/software/fixture_tasks_test.exs"]
-    compatibility_classification: "Unique Modbus Mix build/run tasks, manifests, actual ExUnit outcomes and native command/advisory-lock ownership are implemented. Task assertions cover real reuse, command faults, active/opening BEAM-owner death and failed cleanup. The software-mix-v1 receipt binds 169 passing cases on both toolchains to commit ab69680. Whole-VM opening remains unaccepted. Earlier shell/Python evidence retains its source identity; production Modbus remains BEAM TCP."
+    executable_evidence: ["test/software/command_test.exs", "test/interop/native/check.c", "test/software/fixture_tasks_test.exs", "test/support/software/vm_owner.exs"]
+    compatibility_classification: "Unique Modbus Mix build/run tasks, manifests, actual ExUnit outcomes and native command/advisory-lock ownership are implemented. Task assertions cover reuse, command faults, process and whole-VM opening owner death, exact peer removal and explicit failed/unverified cleanup. The software-mix-v1 receipt remains bound to 169 passing cases on both toolchains at commit ab69680; later executions require their own source identity. Earlier shell/Python evidence retains its identity; production Modbus remains BEAM TCP."

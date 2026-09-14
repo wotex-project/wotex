@@ -122,6 +122,7 @@ the explicit `mix wotex.software.build --workspace ABS` and
 BEAM TCP with a C libmodbus test peer.
 The Mix tasks build and verify manifests, run the independent peer and record
 actual ExUnit outcomes and cleanup results. Full task acceptance requires fresh
-results on both supported toolchains; whole-VM loss during Docker opening is
-not yet accepted. Shell compatibility entry points execute the Mix tasks; no
-Python build/test orchestrator is required.
+results on both supported toolchains. A native owner-liveness guardian covers the
+whole Docker create/start interval, including whole-VM loss, while exact CID and
+random-label checks constrain cleanup to the owned peer. Shell compatibility
+entry points execute the Mix tasks; no Python build/test orchestrator is required.

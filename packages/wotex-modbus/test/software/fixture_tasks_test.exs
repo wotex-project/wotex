@@ -207,13 +207,13 @@ defmodule Wotex.Modbus.FixtureTasksTest do
   end
 
   @tag :software
-  test "WMB-N02 WMB-N03 opening owner death removes a created but unstarted exact peer", context do
+  test "WMB-N02 WMB-N03 opening owner death removes the exact peer", context do
     workspace = System.fetch_env!("WOTEX_MODBUS_SOFTWARE_WORKSPACE")
     native = native_context(context, workspace)
     parent = self()
 
     native =
-      Map.put(native, :before_start, fn cid ->
+      Map.put(native, :after_open, fn cid ->
         send(parent, {:created_container, cid})
         receive do: (:continue -> :ok)
       end)
@@ -221,7 +221,7 @@ defmodule Wotex.Modbus.FixtureTasksTest do
     owner = spawn(fn -> SoftwareRun.start_peer(native) end)
     assert_receive {:created_container, cid}, 15_000
 
-    assert {:ok, "created\n", 0} =
+    assert {:ok, "running\n", 0} =
              Wotex.Modbus.SoftwareCommand.run(
                native.guardian,
                native.docker,
@@ -231,6 +231,51 @@ defmodule Wotex.Modbus.FixtureTasksTest do
              )
 
     Process.exit(owner, :kill)
+    assert_removed(native, cid, System.monotonic_time(:millisecond) + 5000)
+  end
+
+  @tag :software
+  test "WMB-N02 WMB-N03 whole-VM loss during opening removes the exact peer", context do
+    workspace = System.fetch_env!("WOTEX_MODBUS_SOFTWARE_WORKSPACE")
+    native = native_context(context, workspace)
+    lane = Path.join(context.directory, "vm-owner")
+    ready_path = Path.join(context.directory, "vm-owner.ready")
+    script = Path.join(context.root, "test/support/software/vm_owner.exs")
+    mix = System.find_executable("mix") || flunk("Mix executable is required")
+
+    owner =
+      Port.open({:spawn_executable, mix}, [
+        :binary,
+        :exit_status,
+        :stderr_to_stdout,
+        cd: String.to_charlist(context.root),
+        args: ["run", "--no-start", script, "--", workspace, context.root, lane, ready_path]
+      ])
+
+    cid = await_ready_file(ready_path, System.monotonic_time(:millisecond) + 15_000)
+
+    assert {:ok, "running\n", 0} =
+             Wotex.Modbus.SoftwareCommand.run(
+               native.guardian,
+               native.docker,
+               ["inspect", cid, "--format", "{{.State.Status}}"],
+               cd: native.root,
+               timeout: 1000
+             )
+
+    {:os_pid, owner_pid} = Port.info(owner, :os_pid)
+
+    assert {:ok, "", 0} =
+             Wotex.Modbus.SoftwareCommand.run(
+               native.guardian,
+               "/bin/kill",
+               ["-KILL", Integer.to_string(owner_pid)],
+               cd: native.root,
+               timeout: 1000
+             )
+
+    assert_receive {^owner, {:exit_status, status}}, 5000
+    assert status != 0
     assert_removed(native, cid, System.monotonic_time(:millisecond) + 5000)
   end
 
@@ -440,6 +485,23 @@ defmodule Wotex.Modbus.FixtureTasksTest do
       true ->
         Process.sleep(20)
         assert_removed(context, cid, deadline)
+    end
+  end
+
+  defp await_ready_file(path, deadline) do
+    case File.read(path) do
+      {:ok, value} ->
+        cid = String.trim(value)
+        assert Regex.match?(~r/\A[0-9a-f]{64}\z/, cid)
+        cid
+
+      {:error, :enoent} ->
+        if System.monotonic_time(:millisecond) >= deadline do
+          flunk("child BEAM did not open its owned native peer")
+        else
+          Process.sleep(20)
+          await_ready_file(path, deadline)
+        end
     end
   end
 end

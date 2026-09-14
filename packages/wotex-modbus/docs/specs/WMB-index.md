@@ -1,9 +1,9 @@
 # WMB specification index
 
 Start with the [software implementation sequence](../plans/software-implementation.md).
-The native eight-function TCP and standalone/Runtime assertions are implemented.
-The .13 Mix orchestration contract remains planned. Exact executed cohorts are
-recorded in provenance; software evidence does not establish a stable release.
+The native eight-function TCP, standalone/Runtime assertions and .13 Mix
+orchestration contract are implemented. Exact executed cohorts are recorded in
+provenance; software evidence does not establish a stable release.
 
 - [WMB.00 Software implementation rules](WMB.00-library-contract.md)
 - [WMB.01 Modbus values and TCP exchanges](WMB.01-protocol.md)
