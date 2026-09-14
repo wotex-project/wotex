@@ -12,6 +12,17 @@ defmodule Wotex.Matter.SDKTest do
     assert {:error, _} = SDK.request(handle, %{node_id: nil}, 100)
     assert {:error, _} = SDK.request(%{}, @message, 100)
     assert {:error, _} = SDK.request(handle, @message, 0)
+
+    assert {:error, _} =
+             SDK.request(
+               handle,
+               @message
+               |> Map.put(:type, :write)
+               |> Map.put(:value, true)
+               |> Map.put(:timed_request_timeout_ms, 101),
+               100
+             )
+
     assert {:error, _} = SDK.request(handle, Map.put(@message, :value, self()), 100)
 
     assert {:error, _} =

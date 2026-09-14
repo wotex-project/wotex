@@ -3,10 +3,11 @@ defmodule Wotex.Matter do
   Executes bounded Matter operations through an explicitly selected client.
 
   `Wotex.Matter` is the package facade for connection lifecycle and native
-  read, write, and invoke requests. `connect/1` returns a
-  `Wotex.Matter.Session`, `send/2` validates and performs one request, and
-  `disconnect/1` releases only the resources represented by that session.
-  `with_connection/2` provides deterministic cleanup around the same API.
+  read, write, invoke, and batch-read requests. `connect/1` returns a
+  `Wotex.Matter.Session`, `send/2` validates and performs one concrete request,
+  and `read_paths/3` preserves each concrete batch result. `disconnect/1`
+  releases only the resources represented by that session. `with_connection/2`
+  provides deterministic cleanup around the same API.
 
   ## Execution boundary
 
@@ -20,12 +21,12 @@ defmodule Wotex.Matter do
   """
 
   import Kernel, except: [send: 2]
-  alias Wotex.Matter.{Error, PortCall, Session}
-  @operations [:read, :write, :invoke]
+  alias Wotex.Matter.{Error, PathResults, PortCall, ReadPath, Session}
+  @operations [:read, :write, :invoke, :read_paths]
 
   @doc "Reports the operations implemented by this library's validated client boundary."
   @spec capabilities() :: %{
-          operations: [:read | :write | :invoke, ...],
+          operations: [:read | :write | :invoke | :read_paths, ...],
           transport: :explicit_client,
           bidirectional: true,
           reliable: false,
@@ -91,6 +92,38 @@ defmodule Wotex.Matter do
 
   def send(_, _), do: {:error, Error.new(:invalid_message)}
 
+  @doc "Reads one bounded batch and preserves every concrete per-path result."
+  @spec read_paths(Session.t(), [ReadPath.t() | map()], keyword()) ::
+          {:ok, [map()]} | {:error, Error.t()}
+  def read_paths(session, paths, options \\ [])
+
+  def read_paths(%Session{} = session, paths, options) do
+    with {:ok, paths} <- read_path_list(paths),
+         {:ok, timeout} <- read_options(options, session.timeout) do
+      started = System.monotonic_time()
+      message = %{type: :read_paths, paths: Enum.map(paths, &Map.from_struct/1)}
+
+      result =
+        case PortCall.invoke(session.client, :request, [session.handle, message, timeout]) do
+          {:ok, results} -> PathResults.normalize(paths, results)
+          {:error, _} = error -> error
+        end
+
+      :telemetry.execute(
+        [:wotex, :matter, :request, :stop],
+        %{duration: System.monotonic_time() - started},
+        %{operation: :read_paths, result: if(match?({:ok, _}, result), do: :ok, else: :error)}
+      )
+
+      result
+    else
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:invalid_transport_return)}
+    end
+  end
+
+  def read_paths(_, _, _), do: {:error, Error.new(:invalid_message)}
+
   @doc "Releases the explicit handle; the client owns idempotent transport cleanup."
   @spec disconnect(Session.t()) :: :ok | {:error, Error.t()}
   def disconnect(%Session{} = session) do
@@ -145,4 +178,37 @@ defmodule Wotex.Matter do
   end
 
   defp validate(message), do: Wotex.Matter.Address.validate_message(message)
+
+  defp read_path_list(paths) when is_list(paths) and length(paths) in 1..64 do
+    result =
+      Enum.reduce_while(paths, {:ok, []}, fn path, {:ok, acc} ->
+        case ReadPath.new(path) do
+          {:ok, path} -> {:cont, {:ok, [path | acc]}}
+          {:error, _} = error -> {:halt, error}
+        end
+      end)
+
+    case result do
+      {:ok, paths} -> {:ok, Enum.reverse(paths)}
+      error -> error
+    end
+  end
+
+  defp read_path_list(_), do: {:error, Error.new(:invalid_path_batch)}
+
+  defp read_options(options, default) when is_list(options) do
+    if Keyword.keyword?(options) and
+         length(Keyword.keys(options)) == length(Enum.uniq(Keyword.keys(options))) and
+         Keyword.keys(options) -- [:timeout] == [] do
+      timeout = Keyword.get(options, :timeout, default)
+
+      if is_integer(timeout) and timeout in 1..60_000,
+        do: {:ok, timeout},
+        else: {:error, Error.new(:invalid_options)}
+    else
+      {:error, Error.new(:invalid_options)}
+    end
+  end
+
+  defp read_options(_, _), do: {:error, Error.new(:invalid_options)}
 end

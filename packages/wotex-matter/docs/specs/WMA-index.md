@@ -12,7 +12,7 @@ Implementation readiness does not mean implementation or conformance is complete
 - [WMA.10 Complete SDK-backed Matter controller software profile](WMA.10-software-contract.md)
 
 - [WMA.11 Standalone client and protocol workflows](WMA.11-standalone-client-and-preservation.md)
-- [Concrete contract cases, specified and unexecuted](fixtures/contract-v1.json)
+- [Concrete contract cases, partially executed](fixtures/contract-v1.json)
 
 [Source revisions](../provenance/primary-sources.md) and [executed evidence](../provenance/executable-evidence.md) are separate records.
 

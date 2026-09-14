@@ -60,7 +60,11 @@ defmodule Wotex.Matter.SDK do
       )
       when is_binary(executable) and is_integer(timeout) and timeout in 1..60_000 do
     with :ok <- Address.validate_message(message),
-         {:ok, address} <- Address.new(message),
+         true <- timed_timeout_within_request?(message, timeout),
+         {:ok, address} <-
+           message
+           |> Map.take([:fabric_id, :node_id, :endpoint, :cluster, :member])
+           |> Address.new(),
          true <- address.fabric_id == fabric,
          id = System.unique_integer([:positive]),
          wire = %{
@@ -144,4 +148,9 @@ defmodule Wotex.Matter.SDK do
     do: Regex.match?(~r/\A[a-zA-Z_][a-zA-Z0-9_.]*:[a-zA-Z_][a-zA-Z0-9_]*\z/, value)
 
   defp factory?(_), do: false
+
+  defp timed_timeout_within_request?(%{timed_request_timeout_ms: timed}, timeout),
+    do: timed <= min(timeout, 65_535)
+
+  defp timed_timeout_within_request?(_, _), do: true
 end

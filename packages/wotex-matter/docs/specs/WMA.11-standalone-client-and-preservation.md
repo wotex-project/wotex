@@ -10,7 +10,8 @@ spec:
 
 # WMA.11 Standalone controller and cluster workflows
 
-Specification version: `1.1.0`. Status: planned target, not implemented capability.
+Specification version: `1.1.0`. The catalogue and executable-evidence record
+track implementation separately from this accepted target.
 Requires [WMA.00](WMA.00-library-contract.md) and
 [WMA.10](WMA.10-software-contract.md). [WMA.02](WMA.02-implemented-profile.md)
 and [WMA.03](WMA.03-sdk-client.md) remain the narrower current baseline.
@@ -56,6 +57,11 @@ in milliseconds. Unknown native timestamp kinds fail `:unsupported_timestamp`
 with bounded numeric kind, rather than guessing an epoch.
 
 `EndpointCatalogue` has fabric/node, root endpoint zero and sorted `endpoints`.
+Each endpoint entry has exactly `endpoint`, `device_types`, `server_clusters`,
+`client_clusters` and `parts`. Each Descriptor member is either
+`{:ok, %{value: value, data_version: uint32_or_nil}}` or a bounded
+`{:error, Error.t()}` with effect `:none`. Device types retain numeric
+`device_type` and `revision`; cluster and PartsList values remain numeric.
 Read root Descriptor PartsList, then each reported endpoint's DeviceTypeList,
 ServerList, ClientList and PartsList through concrete batch reads. At most 64
 endpoints and 1024 cluster IDs in the whole catalogue. Every child ID must be a
@@ -130,9 +136,11 @@ accurately; factory contract tests alone cannot accept P09.
 ## WMA-N04 — Concrete corpus and executable acceptance
 
 [contract-v1.json](fixtures/contract-v1.json) is fixture format `1.0.0` with
-status `specified_unexecuted`. It contains concrete examples; the broader Vxx
-rows in .10 are scenario families. Neither a scenario row nor parseable JSON
-counts as an executed test. All Vxx alternatives and boundaries still need tests.
+status `partially_executed`. P01 binds WMA-F01–F06, WMA-F10 and WMA-F12 to
+public operations in `test/wotex/matter/path_value_test.exs`; later lifecycle
+cases remain unexecuted. The broader Vxx rows in .10 are scenario families.
+Neither a scenario row nor parseable JSON counts as an executed test. All Vxx
+alternatives and boundaries still need tests.
 
 Each case has a unique `id`, `requirements`, `kind`, `operation`, `input`, and
 `expectation`. The expectation uses `operator: "exact"` over a normalized

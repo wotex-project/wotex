@@ -9,11 +9,18 @@ defmodule Wotex.Matter.TestClient do
 
     if mode == :connect_error,
       do: {:error, :failed},
-      else: {:ok, %{owner: self(), mode: mode, secret: "fixture-secret"}}
+      else:
+        {:ok,
+         %{
+           owner: self(),
+           mode: mode,
+           response: Keyword.get(opts, :response, :echo),
+           secret: "fixture-secret"
+         }}
   end
 
   @impl Wotex.Matter.Client
-  def request(handle, message, _) do
+  def request(handle, message, timeout) do
     case handle.mode do
       :raise -> raise "private failure"
       :throw -> throw(:private)
@@ -21,7 +28,7 @@ defmodule Wotex.Matter.TestClient do
       :error -> {:error, :private}
       :typed -> {:error, Wotex.Matter.Error.new(:remote_error)}
       :invalid -> :unexpected
-      _ -> {:ok, message}
+      _ -> response(handle, message, timeout)
     end
   end
 
@@ -34,5 +41,12 @@ defmodule Wotex.Matter.TestClient do
       :close_invalid -> {:ok, :unexpected}
       _ -> :ok
     end
+  end
+
+  defp response(%{response: :echo}, message, _), do: {:ok, message}
+
+  defp response(handle, message, timeout) do
+    send(handle.owner, {:matter_request, message, timeout})
+    {:ok, handle.response}
   end
 end

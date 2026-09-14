@@ -27,6 +27,20 @@ defmodule Wotex.Matter.TLV do
   alias Wotex.Matter.Error
   @type element :: %{tag: term(), type: atom(), value: term()}
 
+  @doc "Reconstructs one explicit element and requires an anonymous outer tag."
+  @spec validate_element(term()) :: {:ok, element()} | {:error, Error.t()}
+  def validate_element(%{tag: :anonymous, type: _, value: _} = element)
+      when map_size(element) == 3 do
+    with {:ok, bytes} <- encode([element]),
+         {:ok, [normalized]} <- decode(bytes) do
+      {:ok, normalized}
+    else
+      _ -> {:error, Error.new(:invalid_tlv)}
+    end
+  end
+
+  def validate_element(_), do: {:error, Error.new(:invalid_tlv)}
+
   @doc "Decodes complete TLV elements, limited to 64 KiB, 1024 nodes and depth eight."
   @spec decode(term()) :: {:ok, [element()]} | {:error, Error.t()}
   def decode(bytes) when is_binary(bytes) and byte_size(bytes) <= 65_536 do
@@ -36,7 +50,8 @@ defmodule Wotex.Matter.TLV do
     end
   end
 
-  def decode(_), do: {:error, Error.new(:tlv_limit)}
+  def decode(bytes) when is_binary(bytes), do: {:error, Error.new(:tlv_limit)}
+  def decode(_), do: {:error, Error.new(:invalid_tlv)}
 
   @doc "Encodes explicit TLV elements without type inference or silently discarded tags."
   @spec encode(term()) :: {:ok, binary()} | {:error, Error.t()}
@@ -142,8 +157,8 @@ defmodule Wotex.Matter.TLV do
 
   defp encode_elements([], _, budget), do: {:ok, <<>>, budget}
 
-  defp encode_elements([%{tag: tag, type: type, value: value} | tail], depth, budget)
-       when depth <= 8 and budget > 0 do
+  defp encode_elements([%{tag: tag, type: type, value: value} = element | tail], depth, budget)
+       when map_size(element) == 3 and depth <= 8 and budget > 0 do
     with {:ok, tag_control, tag_bytes} <- encode_tag(tag),
          {:ok, type_control, body, budget} <- encode_value(type, value, depth, budget - 1),
          {:ok, tail, budget} <- encode_elements(tail, depth, budget),

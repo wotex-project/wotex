@@ -17,18 +17,18 @@ specifications:
     implementation_status: "partial"
     standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "TLV/path and injected SDK/controller boundary only; no completed controller claim"}]
     requires: []
-    implementation_modules: ["Wotex.Matter.Address", "Wotex.Matter.Client", "Wotex.Matter.Error", "Wotex.Matter.PortCall", "Wotex.Matter.SDK", "Wotex.Matter.Session", "Wotex.Matter.TLV", "Wotex.Matter"]
-    executable_evidence: ["test/wotex/matter/contract_test.exs", "test/wotex/matter/dependency_security_test.exs", "test/wotex/matter/mapping_test.exs", "test/wotex/matter/port_test.exs", "test/wotex/matter/sdk_test.exs", "test/wotex/matter/tlv_test.exs"]
-    compatibility_classification: "TLV/path and injected SDK/controller boundary only; no completed controller claim; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+    implementation_modules: ["Wotex.Matter.Address", "Wotex.Matter.AttributeReport", "Wotex.Matter.Client", "Wotex.Matter.Descriptor", "Wotex.Matter.EndpointCatalogue", "Wotex.Matter.Error", "Wotex.Matter.EventReport", "Wotex.Matter.PathResults", "Wotex.Matter.PortCall", "Wotex.Matter.ReadPath", "Wotex.Matter.SDK", "Wotex.Matter.Session", "Wotex.Matter.TLV", "Wotex.Matter"]
+    executable_evidence: ["test/wotex/matter/contract_test.exs", "test/wotex/matter/dependency_security_test.exs", "test/wotex/matter/mapping_test.exs", "test/wotex/matter/path_value_test.exs", "test/wotex/matter/port_test.exs", "test/wotex/matter/sdk_test.exs", "test/wotex/matter/tlv_test.exs", "test/native/value_test.cpp", "bin/check_p01_native.exs"]
+    compatibility_classification: "Concrete and wildcard read paths, bounded TLV, typed reports, the finite descriptor registry, deterministic per-path batch results and the one-shot injected SDK/controller boundary are implemented. The P01 native unit proves pure descriptor/value conversion only; no persistent controller, native SDK interaction or software completion claim."
   - id: "WMA.02"
     version: "1.1.0"
     path: "docs/specs/WMA.02-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "TLV/path and injected SDK/controller boundary only; no completed controller claim"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
     requires: ["WMA.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
-    implementation_modules: ["Wotex.Matter.Error", "Wotex.Matter.Mapping", "Wotex.Matter.Transport"]
-    executable_evidence: ["test/wotex/matter/contract_test.exs", "test/wotex/matter/dependency_security_test.exs", "test/wotex/matter/mapping_test.exs", "test/wotex/matter/port_test.exs", "test/wotex/matter/sdk_test.exs", "test/wotex/matter/tlv_test.exs"]
-    compatibility_classification: "TLV/path and injected SDK/controller boundary only; no completed controller claim; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
+    implementation_modules: ["Wotex.Matter.AttributeReport", "Wotex.Matter.Descriptor", "Wotex.Matter.EndpointCatalogue", "Wotex.Matter.Error", "Wotex.Matter.EventReport", "Wotex.Matter.Mapping", "Wotex.Matter.PathResults", "Wotex.Matter.ReadPath", "Wotex.Matter.Transport"]
+    executable_evidence: ["test/wotex/matter/contract_test.exs", "test/wotex/matter/dependency_security_test.exs", "test/wotex/matter/mapping_test.exs", "test/wotex/matter/path_value_test.exs", "test/wotex/matter/port_test.exs", "test/wotex/matter/sdk_test.exs", "test/wotex/matter/tlv_test.exs", "test/native/value_test.cpp", "bin/check_p01_native.exs"]
+    compatibility_classification: "The implemented profile includes P01 typed paths, reports, descriptor values and bounded per-path batch results plus the earlier injected SDK/controller boundary. The one-shot SDK adapter remains concrete read/write/invoke only. No persistent controller, native SDK interaction or software completion claim."
   - id: "WMA.03"
     version: "1.0.1"
     path: "docs/specs/WMA.03-sdk-client.md"
@@ -44,18 +44,18 @@ specifications:
     implementation_status: "partial"
     standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
     requires: ["WMA.00", "WMA.01", "WMA.02"]
-    implementation_modules: ["Wotex.Matter.Address", "Wotex.Matter.Client", "Wotex.Matter.Error", "Wotex.Matter.PortCall", "Wotex.Matter.SDK", "Wotex.Matter.Session", "Wotex.Matter.TLV", "Wotex.Matter"]
-    executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
+    implementation_modules: ["Wotex.Matter.Address", "Wotex.Matter.AttributeReport", "Wotex.Matter.Client", "Wotex.Matter.Descriptor", "Wotex.Matter.EndpointCatalogue", "Wotex.Matter.Error", "Wotex.Matter.EventReport", "Wotex.Matter.PathResults", "Wotex.Matter.PortCall", "Wotex.Matter.ReadPath", "Wotex.Matter.SDK", "Wotex.Matter.Session", "Wotex.Matter.TLV", "Wotex.Matter"]
+    executable_evidence: ["test/wotex/matter/path_value_test.exs", "test/native/value_test.cpp", "bin/check_p01_native.exs"]
+    compatibility_classification: "P01 implements and executes the pure path, TLV, descriptor, report, catalogue and batch-result layer, including WMA-F01–F06, WMA-F10 and WMA-F12. P02–P09 remain required; no persistent controller, SDK Interaction Model, commissioning, subscription, Runtime-stream or software-peer claim."
   - id: "WMA.11"
     version: "1.1.0"
     path: "docs/specs/WMA.11-standalone-client-and-preservation.md"
-    implementation_status: "planned"
+    implementation_status: "partial"
     standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "Requirements only; planned extensions and exact additional pins are in the specification and primary-sources.md"}]
     requires: ["WMA.00", "WMA.10"]
-    implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
+    implementation_modules: ["Wotex.Matter.AttributeReport", "Wotex.Matter.Descriptor", "Wotex.Matter.EndpointCatalogue", "Wotex.Matter.EventReport", "Wotex.Matter.PathResults", "Wotex.Matter.ReadPath", "Wotex.Matter.TLV", "Wotex.Matter"]
+    executable_evidence: ["docs/specs/fixtures/contract-v1.json", "test/wotex/matter/path_value_test.exs", "test/native/value_test.cpp", "bin/check_p01_native.exs"]
+    compatibility_classification: "P01 standalone value closure is implemented and the selected pure corpus cases execute. Native reads, writes, invokes, event reads, discovery, storage, commissioning, subscriptions and software-peer workflows remain planned."
   - id: "WMA.12"
     version: "1.1.0"
     path: "docs/specs/WMA.12-wotex-integration.md"
@@ -68,9 +68,9 @@ specifications:
   - id: "WMA.13"
     version: "1.0.0"
     path: "docs/specs/WMA.13-native-backend.md"
-    implementation_status: "planned"
+    implementation_status: "partial"
     standards: [{"name": "Native Matter controller", "revision": "Exact source hashes and build profile in .13", "claim": "Accepted native target; current baseline evidence is separate"}]
     requires: ["WMA.00", "WMA.10", "WMA.11", "WMA.12"]
     implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: "Required native Port, typed IPC, resource ownership and Mix/ExUnit evidence; fixtures/native-port-v1.json cases are specified, unexecuted."
+    executable_evidence: ["native/include/wotex_matter/value.hpp", "native/src/value.cpp", "test/native/value_test.cpp", "bin/check_p01_native.exs"]
+    compatibility_classification: "The P01 reusable C++ descriptor/value unit passes the scoped Linux x86_64 normal and sanitizer lane. The required native Port, SDK linkage, typed IPC, storage and resource ownership remain planned; fixtures/native-port-v1.json cases are specified, unexecuted."

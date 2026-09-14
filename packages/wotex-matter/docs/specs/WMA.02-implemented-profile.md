@@ -23,6 +23,14 @@ require anonymous children; structures require unique non-anonymous tags.
 Unknown context/profile tags are retained. The codec does not claim schema
 validation, secure transport or unknown-element policy for the Interaction Model.
 
+`ReadPath` admits explicit read-only endpoint, cluster and member wildcards while
+keeping fabric and node concrete. `read_paths/3` accepts at most 64 selectors,
+retains at most 1024 unique concrete results, preserves every per-path success or
+error, orders concrete requests by caller position and sorts each wildcard
+expansion by path. `AttributeReport`, `EventReport`, `Descriptor` and
+`EndpointCatalogue` validate the P01 value layer without performing discovery or
+SDK I/O. The aggregate canonical compact JSON result budget is 98304 bytes.
+
 `Client` is a consumer-implemented driver contract. It must use a pinned real SDK,
 keep fabric stores isolated, enforce attestation/ACLs, inspect all per-path status
 results, respect finite request budgets and clean up owned resources. Contract
@@ -31,9 +39,11 @@ The optional controller fixture harness also requires an explicitly installed
 module. Selecting a module and passing the harness do not independently prove
 that the module is SDK-backed or that the fixture is a physical device; that
 provenance must be reviewed and recorded separately.
-The SDK adapter maps read/write/invoke calls to an explicitly initialized native
+The SDK adapter maps concrete read/write/invoke calls to an explicitly initialized native
 controller supplied by its factory. It does not implement CASE/PASE or the
 Interaction Model; those remain inside the caller-provisioned SDK/controller.
+It does not implement the new batch request shape; a selected client must
+implement that callback result explicitly.
 No Python runtime, SDK binary, controller factory or commissioning workflow is
 bundled. See [SDK client contract](WMA.03-sdk-client.md).
 
