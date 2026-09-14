@@ -655,7 +655,8 @@ class SdkControllerBackend::Impl final
     }
 
     void StageStarted(chip::Controller::CommissioningStage stage) {
-      if (stage >= chip::Controller::CommissioningStage::kSendTrustedRootCert) {
+      if (stage == chip::Controller::CommissioningStage::kSendTrustedRootCert ||
+          stage == chip::Controller::CommissioningStage::kSendNOC) {
         std::lock_guard<std::mutex> lock(mutex_);
         fabric_mutation_may_have_started_ = true;
       }

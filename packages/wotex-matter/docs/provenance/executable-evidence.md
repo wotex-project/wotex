@@ -779,3 +779,31 @@ exit, including sanitizer finalization. The default gate passes 138 checks with
 | Connection regression tests | `40a417f22f9e875e4785291c7a0fdf3739f9951acaf691a228b1bf8d47c7ae48` |
 | Current Linux native log | `1a1356cb4ec370cee18302b067e2d6875ce45f39acc8dae63280e3afa08882b5` |
 | Minimum Linux sanitizer log | `315ee538c8598321530f0e61add040264f97433ad1b05db283093c69c6f9c18f` |
+
+## Attestation failure before fabric mutation
+
+The native commissioning delegate records possible fabric mutation only when
+`kSendTrustedRootCert` or `kSendNOC` starts. The numerically later `kCleanup`
+stage does not imply either credential command ran. With a valid PAA trust
+directory that excludes the peer's root, the pinned SDK returns
+`CHIP_ERROR_FAILED_DEVICE_ATTESTATION` (`0x20`) before those stages. The regression
+requires `commissioning_failed`, effect `none`, a usable controller afterward,
+successful cooperative disconnect and no surviving owned child. Before the
+correction the same test fails because cleanup incorrectly sets effect `unknown`.
+
+`test/interop/native_attestation_failure_test.exs` passes on both pinned Linux
+toolchains, with the sanitized host and leak detection on the minimum lane.
+Its explicit `WOTEX_MATTER_NATIVE_ATTESTATION_FIXTURE` provides a fresh controller
+store and a commissionable pinned lighting peer. No attestation bypass is used.
+Both six-test CTest lanes, fifteen advisory queries, the 138-check default gate
+and ExDoc pass. These hosts were incrementally rebuilt against the pinned SDK.
+This accepts the untrusted-root branch of WMA-S05; other attestation failures and
+the complete WMA-V10 family still require their own executed cases.
+
+| Attestation artifact | SHA-256 |
+| --- | --- |
+| Normal native host | `be453277536ab39f41cf8f3d0ced1d0d95c2cac09ee0b51c46541193d6c13c9e` |
+| Sanitized native host | `708fd3090ee031f486b37619bfede86003e3ec31de3ad232c31577805df0a672` |
+| ExUnit regression | `adf0650a8af6450f5600d4b763e639cdc4738727ec6fee8b48a56423b8bcbcab` |
+| Current Linux log | `804632604b02764536b06fca9040c8b212dc3dab7c6a7a85a40c61749f87e762` |
+| Minimum Linux sanitizer log | `731c118baa023daa1ab4ff1283e0b966c308e51bf5aff15bbb3c1d18f862e7ac` |

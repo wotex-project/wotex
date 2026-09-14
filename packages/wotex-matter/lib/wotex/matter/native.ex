@@ -19,8 +19,9 @@ defmodule Wotex.Matter.Native do
   commission, discover, subscribe or retain a live controller between calls.
   The returned handle is released with `disconnect/1`; the connection also
   closes when its creating process exits. Native execution requires the POSIX
-  `/bin/kill` utility: teardown terminates the exact owned child before releasing
-  its Port, including when the child stops reading stdin. Startup's ready and
+  `/bin/kill` utility: cooperative close waits for zero native exit status, and
+  failed teardown terminates the exact owned child before releasing its Port,
+  including when the child stops reading stdin. Startup's ready and
   controller-open phases share the configured timeout.
 
   P03 establishes controller ownership and liveness. P04 adds finite reads,
