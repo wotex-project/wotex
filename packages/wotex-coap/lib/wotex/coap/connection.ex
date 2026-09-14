@@ -96,7 +96,13 @@ defmodule Wotex.CoAP.Connection do
 
   def observe(_, _, _, _, _), do: failure(:invalid_observation_options)
 
-  @doc "Cancels the recorded generation without allowing a foreign handle to redirect cleanup."
+  @doc """
+  Cancels the recorded generation without allowing a foreign handle to redirect cleanup.
+
+  Concurrent callers share the wire exchange but retain their individual deadlines,
+  including local closure. A timeout can occur after peer confirmation when local
+  completion reaches the caller's deadline; it does not trigger another cancellation.
+  """
   @spec unobserve(pid(), Subscription.t(), pos_integer()) :: :ok | {:error, Error.t()}
   def unobserve(pid, handle, timeout) when is_integer(timeout) and timeout in 1..60_000 do
     with :ok <- Subscription.validate(handle, pid) do
@@ -977,8 +983,12 @@ defmodule Wotex.CoAP.Connection do
       left = min(timeout, max(0, deadline - Execution.now_ms(execution)))
 
       case GenServer.call(owner, {:cancel, handle, deadline}, left + 1000) do
-        :ok -> close(pid)
-        error -> error
+        :ok ->
+          result = close(pid)
+          if Execution.now_ms(execution) >= deadline, do: failure(:timeout), else: result
+
+        error ->
+          error
       end
     end
   catch

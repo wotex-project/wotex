@@ -197,6 +197,51 @@ interoperability or the WCO-P09 software/stress matrix. The focused command is:
 WOTEX_PATH_DEPS=1 mix test test/wotex/coap/execution_test.exs test/wotex/coap/observation_test.exs test/wotex/coap/observation_value_test.exs test/wotex/coap/observation_trace_test.exs test/wotex/coap/native_contract_test.exs
 ```
 
+### Observe renewal and cancellation lifecycle assertions
+
+`observation_lifecycle_test.exs` covers WCO-C03/C05 and WCO-V08–V10/V15 through
+the explicit Datagram and clock ports. Cancellation confirmed by the peer before
+expiry succeeds when local completion occurs one millisecond before the caller's
+deadline, but returns timeout at or after it. Concurrent cancellers share one
+exchange; the longer-budget caller can succeed while the expired caller returns
+timeout. Both cases close locally without repeating cancellation or inventing a
+second terminal stream event after peer confirmation.
+Negative cancellation status and a terminal 2.31 Continue remain errors, close
+locally and do not claim confirmation or send a second cancellation. Late replies
+to the aborted renewal or Block2 continuation cannot complete cancellation or
+deliver a value; the matching cancellation response is still required.
+
+The route test retains once-decoded percent escapes, empty path/query components,
+literal plus and explicit Accept zero across registration, renewal and cancellation.
+The full unsigned Max-Age value uses bounded 60000-ms timer slices against its
+absolute expiry. An unchanged serial is accepted by renewal. Replayed canceled
+expiry and phase-deadline references leave the renewed report and timers unchanged.
+
+Negative renewal status, missing Observe, changed Content-Format and deadline
+failure terminate once with original-token/URI cleanup and no automatic restart.
+A failed Block2 continuation cannot deliver its accumulated prefix or promote a
+complete pending Property report. Changed ETag, remote error, missing Block2 and
+deadline failures exercise that rule. Receiver death during blocked renewal or
+assembly releases the observation worker, connection, adapter and timers.
+
+Existing `execution_test.exs` assertions cover zero Max-Age and suspended work.
+`observation_test.exs` retains actual UDP socket release, foreign-handle rejection,
+concurrent cancellation, original wire defaults, latest-Property coalescing and
+terminal Event overlap. `observation_trace_test.exs` executes the fixed
+`WCO-F-OBSERVE-CANCEL-RACE` byte oracle twenty times per run, including repeated
+notification ACKs, no canceled deliveries and zero final owned resources.
+`blockwise_test.exs` retains pure and UDP representation/budget regressions.
+
+RFC 7641 (September 2015) supplies Observe lifecycle semantics; RFC 7252
+(June 2014) supplies URI processing and exchange correlation; RFC 7959
+(August 2016) supplies Block2 representation rules. Finite caller deadlines,
+coalescing and Event-overlap failure are local policy. These tests do not replace
+independent-peer or complete WCO-P09 software/stress acceptance. The focused command is:
+
+```sh
+WOTEX_PATH_DEPS=1 mix test test/wotex/coap/observation_lifecycle_test.exs test/wotex/coap/observation_test.exs test/wotex/coap/execution_test.exs test/wotex/coap/observation_trace_test.exs test/wotex/coap/blockwise_test.exs
+```
+
 ### Authoritative library gate
 
 `WOTEX_PATH_DEPS=1 mix check --no-retry` includes strict compilation/static checks,

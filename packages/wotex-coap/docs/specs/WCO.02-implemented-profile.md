@@ -46,6 +46,9 @@ blockwise reports, cancellation and receiver-loss cleanup are implemented.
 Valid stale reports are ignored before applying the report Content-Format policy;
 their ETag, payload and Max-Age cannot change the accepted representation or its
 expiry. A fresh Content-Format change remains a terminal representation error.
+Concurrent cancellation callers share one exchange but retain individual
+completion deadlines. A timely peer confirmation cannot make local completion
+at or after a caller's deadline succeed; local closure does not resend cancellation.
 Duplicate separate replies retain ACK behavior across completed exchanges.
 `discover/2` validates status/Content-Format and parses bounded RFC 6690 links.
 
