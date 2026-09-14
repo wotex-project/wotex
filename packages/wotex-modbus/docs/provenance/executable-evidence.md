@@ -39,8 +39,9 @@ outcomes with expected projections; a fixture ID alone is not acceptance.
 
 ## Package and ongoing validation
 
-The mandatory gate is `WOTEX_PATH_DEPS=1 mix check --no-retry`, including complete
-static checks, one tests/coverage pass, docs and the candidate-archive consumer.
+The developer gate is `WOTEX_PATH_DEPS=1 mix check --no-retry`, covering
+warnings-as-errors compilation, formatting and behavioral tests. Static checks,
+coverage, docs and the candidate-archive consumer run as explicit release lanes.
 `bin/check_archive.exs` builds exact core, Runtime and Modbus archives, installs
 them through an isolated signed Hex registry alongside the exact locked public
 dependencies, verifies an all-Hex lock and archive digests, and executes direct

@@ -49,7 +49,7 @@ archives through an isolated temporary Hex registry and exercises the public
 boundary from a clean consumer. This is local release-candidate verification,
 not publication or evidence of public-registry availability.
 
-WMB-P08 reconciles that candidate with its exact package/API inventory,
-dependency and toolchain lanes, legal/security boundary, standards scope and
-explicit nonclaims. The resulting dossier is a verification map, not release,
-publication or external-adoption evidence.
+WMB-P08 reconciles that candidate with its package metadata and consumer-visible
+API behavior, dependency and toolchain lanes, legal/security boundary, standards
+scope and explicit nonclaims. The resulting dossier is a verification map, not
+release, publication or external-adoption evidence.

@@ -113,7 +113,7 @@ defmodule Wotex.Modbus.RuntimeFixture do
         offset: offset,
         quantity: quantity
       },
-      result: Map.from_struct(result),
+      result: Map.take(result, [:request_id, :operation, :status, :payload, :metadata]),
       extension: Form.to_map(request.form)["example:extension"],
       request_count: 1,
       owned_resources_after: length(resources)

@@ -112,15 +112,15 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 - Change surface: package allowlist, the ordinary archive checker and release-candidate documentation; no production protocol behavior.
 - Acceptance: build exact Wotex core, Runtime and Modbus archives; install all three through a temporary signed Hex registry with the locked public dependencies; require an all-Hex lock and exact downloaded archive digests; compile in a clean OS-temporary consumer with no path dependency or checkout code path; execute native mapping plus Runtime read, write and Action exchanges against consumer-owned loopback peers; reject an invalid route before acquisition; and prove application-free loading.
 - Runtime matrix: execute the archive consumer on Elixir 1.18.4/OTP 27.3.4.15 and Elixir 1.20.2/OTP 29.0.4. A local candidate registry proves archive composition and dependency identity, not public-registry availability, publication or external adoption.
-- Verification: `mix run --no-start bin/check_archive.exs`, included in the complete default gate without starting another repository ExUnit pass.
+- Verification: `mix run --no-start bin/check_archive.exs` as a separate release-evidence lane.
 - Commit scope: reproducible candidate-archive installation and public-boundary evidence.
 
 ### WMB-P08: Reconcile the release candidate
 
 - Requirements: WMB-C01, WMB-C09, WMB-C10 and WMB-N03; all earlier packages are prerequisites.
-- Change surface: package identity, legal/security boundary, public API inventory, CI/default-gate invocation and the release-candidate dossier; no production protocol behavior.
-- Acceptance: inventory the exact exported API and package metadata; inspect the packaged README, LICENSE, NOTICE, SECURITY, governance and specification dossier; require the NOTICE to identify this package; reconcile supported standards and dependency/toolchain claims with executable evidence; and keep publication, public-registry availability, stable-API, hardware, RTU, Modbus Security, certification and external-adoption claims explicit and absent.
-- Verification: focused release-contract tests, the complete `WOTEX_PATH_DEPS=1 mix check --no-retry`, both candidate-archive toolchains and both WMB.13 software lanes. Archive and result digests remain execution outputs because embedding an archive digest in its own contents is self-referential.
+- Change surface: package identity, legal/security boundary, consumer-visible API behavior, CI/default-gate invocation and the release-candidate dossier; no production protocol behavior.
+- Acceptance: inspect declared package metadata and exercise documented public behavior; inspect the packaged README, LICENSE, NOTICE, SECURITY, governance and specification dossier; require the NOTICE to identify this package; reconcile supported standards and dependency/toolchain claims with executable evidence; and keep publication, public-registry availability, stable-API, hardware, RTU, Modbus Security, certification and external-adoption claims explicit and absent.
+- Verification: focused behavioral tests, the modest `WOTEX_PATH_DEPS=1 mix check --no-retry`, explicit release checks, both candidate-archive toolchains and both WMB.13 software lanes. Archive and result digests remain execution outputs because embedding an archive digest in its own contents is self-referential.
 - Commit scope: public release-candidate classification and regression evidence.
 
 ## Reproducible software fixture contract

@@ -23,28 +23,28 @@ outputs. Embedding a digest in a document contained by the same archive would be
 self-referential, so a maintainer retains command output beside any later
 immutable release record.
 
-The complete repository command is:
+The developer command is:
 
 ```sh
 WOTEX_PATH_DEPS=1 mise exec erlang@29.0.4 elixir@1.20.2-otp-29 -- \
   mix check --no-retry
 ```
 
-It resolves the checked-in lock, compiles with warnings as errors, checks
-formatting and strict Credo, audits dependencies, runs Dialyzer, Doctor and docs,
-executes ExUnit once through coverage, checks process-free loading, and runs the
-archive consumer. The minimum archive and native-software lanes use Elixir
-1.18.4/OTP 27.3.4.15; current lanes use Elixir 1.20.2/OTP 29.0.4. The explicit
-software command is the WMB.13 `mix wotex.software.run --workspace ABS` task.
-Release and publication commands are not verification steps.
+It compiles with warnings as errors, checks formatting and runs the behavioral
+test suite. Strict Credo, dependency audits, Dialyzer, Doctor, docs, coverage,
+process-free loading and the archive consumer run as explicit release evidence.
+The minimum archive and native-software lanes use Elixir 1.18.4/OTP 27.3.4.15;
+current lanes use Elixir 1.20.2/OTP 29.0.4. The explicit software command is the
+WMB.13 `mix wotex.software.run --workspace ABS` task. Release and publication
+commands are not verification steps.
 
 ## Package and API review
 
 The package application/name/version are `wotex_modbus`/`wotex_modbus`/`0.1.0`.
 It requires Elixir `~> 1.18`, uses Mix, and declares Apache-2.0. The package is
-pre-1.0 and its API remains unstable. The exact export inventory is executable
-in `test/wotex/modbus/release_contract_test.exs`; any addition, removal or arity
-change therefore requires deliberate compatibility review.
+pre-1.0 and its API remains unstable. Protocol, compatibility, Runtime and
+archive-consumer tests exercise the documented public behavior. Public API
+changes require deliberate compatibility review.
 
 The supported surface consists of:
 

@@ -136,7 +136,6 @@ defmodule WotexModbus.MixProject do
 
   defp dialyzer do
     [
-      plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
       plt_add_apps: [:mix, :ex_unit],
       flags: [:error_handling, :missing_return, :underspecs, :extra_return]
     ]

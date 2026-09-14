@@ -35,10 +35,10 @@ end
 Set `WOTEX_PATH_DEPS=1` while developing this package itself so its Wotex core
 and Runtime dependencies resolve from sibling checkouts. Published consumers
 should replace the path with the constraint of an available Hex release.
-The default development gate separately builds exact core, Runtime and Modbus
-candidate archives and installs them into an isolated temporary consumer through
-a signed local Hex registry. That verifies package composition without claiming
-that any of those candidates has been published.
+A separate release evidence lane builds exact core, Runtime and Modbus candidate
+archives and installs them into an isolated temporary consumer through a signed
+local Hex registry. That verifies package composition without claiming that any
+of those candidates has been published.
 The [release-candidate dossier](docs/specs/WMB.14-release-candidate-dossier.md)
 maps the reviewed API, dependencies, standards scope, legal/security boundary,
 verification commands and explicit nonclaims.
@@ -59,7 +59,11 @@ failure can therefore leave the physical effect unknown to the caller.
 
 Use Elixir 1.18 or newer and an appropriate OTP release. To use local Wotex core
 and Runtime checkouts, run `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check`. Normal dependency resolution uses Hex versions.
+`WOTEX_PATH_DEPS=1 mix check --no-retry`. The developer gate covers
+warnings-as-errors compilation, formatting and the behavioral test suite.
+Normal dependency resolution uses Hex versions. Dependency audits, strict
+Credo, Doctor, documentation, coverage, Dialyzer, the Application-free check,
+candidate archives and software peers run as explicit release evidence.
 Optional interoperability suites run only on explicit invocation and must fail
 when their configured peer is missing or returns no response.
 

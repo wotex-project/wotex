@@ -98,7 +98,11 @@ defmodule Wotex.Modbus.ContractFixture do
           {:ok,
            %{
              function: command.function,
-             address: Map.from_struct(command.address),
+             address: %{
+               offset: command.address.offset,
+               quantity: command.address.quantity,
+               unit_id: command.address.unit_id
+             },
              values: command.values
            }}
         )

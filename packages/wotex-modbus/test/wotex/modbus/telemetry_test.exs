@@ -27,9 +27,12 @@ defmodule Wotex.Modbus.TelemetryTest do
       assert if(expected == :ok, do: result == :ok, else: match?({:error, %Error{}}, result))
 
       assert_receive {:telemetry, @event, measurements, metadata}, 1000
-      assert Map.keys(measurements) == [:duration]
-      assert is_integer(measurements.duration) and measurements.duration >= 0
-      assert metadata == %{function: 6, result: expected}
+      assert %{duration: duration} = measurements
+      assert is_integer(duration) and duration >= 0
+      assert %{function: 6, result: ^expected} = metadata
+      assert Map.take(metadata, [:value, :payload, :response, :error, :exception]) == %{}
+      assert Map.take(measurements, [:value, :payload, :response, :error, :exception]) == %{}
+      refute inspect({measurements, metadata}) =~ "payload-and-exception-canary"
       assert :ok = Modbus.disconnect(session)
       assert :ok = Task.await(peer)
     end
