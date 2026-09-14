@@ -137,10 +137,13 @@ no callback ran on rejected input.
 ## Bounds, allocation and security
 
 Defaults are `read_timeout: 5_000` ms and `max_payload_bytes: 1_048_576`;
-overrides are positive integers. Topic/filter strings have a 65,535-byte limit.
-The payload bound applies to accepted encoded/received bytes, not allocations
-inside encoding or the client/broker. Filter-list cardinality, JSON nesting and
-sustained delivery require WBM-C03 evidence before a whole-process bound.
+overrides are positive integers. Topic/filter strings have a 65,535-byte limit,
+and one command admits at most 256 Topic Filters. JSON defaults bound depth at
+64, nodes at 100,000, a string at 262,144 bytes, and one collection at 10,000
+members. WBM-C03 exercises each exact threshold and sustained delivery plus the
+Runtime receiver-overflow path. The payload and cardinality bounds apply to
+admitted values and validation work, not allocations inside encoding, the BEAM,
+or the client/broker.
 
 Client code is trusted. TLS, broker identity, ACLs, authentication, credential
 refresh, session limits and negotiated protocol version belong to the consumer.
@@ -158,7 +161,8 @@ MQTT 5 shared-subscription grammar is not MQTT 3.1.1 interoperability proof;
 the client must admit negotiated broker capabilities.
 
 `broker_test.exs`, `command_test.exs`, `delivery_test.exs`, `qos_test.exs`,
-`topic_test.exs`, `json_test.exs`, `transport_config_test.exs` under
+`topic_test.exs`, `json_test.exs`, `transport_config_test.exs`, and
+`limits_security_test.exs` under
 `test/wotex/binding/mqtt/` are current value evidence. Changed fields, defaults,
 limits or errors require versioned compatibility vectors. Accepting QoS `2`
 does not claim exactly-once delivery or physical execution.

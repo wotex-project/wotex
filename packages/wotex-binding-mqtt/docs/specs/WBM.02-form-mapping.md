@@ -46,8 +46,8 @@ must match the operation. Query/cancel/aggregate operations fail explicitly.
 ## Limits, proof and compatibility
 
 Mapping is pure: no process, clock, generated identity, credential resolution
-or retry. WBM.01 owns value bounds; WBM-C03 owns missing cardinality/allocation
-evidence. `test/wotex/binding/mqtt/mapping_test.exs` tests explicit/default
+or retry. WBM.01 owns value bounds; WBM-C03 proves the filter-cardinality and
+allocation boundary. `test/wotex/binding/mqtt/mapping_test.exs` tests explicit/default
 packets, target separation and rejected operations. Command/topic/QoS tests
 prove value boundaries. `test/wotex/binding/mqtt/operation_inventory_test.exs`
 binds positive and negative vectors for every table row, the exact Runtime

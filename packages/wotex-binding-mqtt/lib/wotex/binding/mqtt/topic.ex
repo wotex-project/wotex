@@ -9,7 +9,9 @@ defmodule Wotex.Binding.MQTT.Topic do
   the MQTT encoded-string byte limit, and exclusion of the null character.
   Shared-subscription filters require a non-empty group without wildcards and a
   valid effective filter. `normalize_filters/1` admits one filter or a non-empty
-  list without changing their order.
+  list of at most 256 filters without changing their order. The fixed
+  cardinality bound limits validation and command construction work; a client
+  or broker may impose a lower negotiated limit.
 
   `matches?/2` applies MQTT level matching to already valid values, including
   the rule that a leading wildcard does not match a Topic Name beginning with
@@ -21,6 +23,7 @@ defmodule Wotex.Binding.MQTT.Topic do
   alias Wotex.Binding.MQTT.Error
 
   @max_bytes 65_535
+  @max_filters 256
 
   @doc "Validates an MQTT Topic Name."
   @spec validate_name(term()) :: :ok | {:error, Error.t()}
@@ -69,20 +72,8 @@ defmodule Wotex.Binding.MQTT.Topic do
   @spec normalize_filters(term()) :: {:ok, [String.t()]} | {:error, Error.t()}
   def normalize_filters(filter) when is_binary(filter), do: normalize_filters([filter])
 
-  def normalize_filters(filters) when is_list(filters) and filters != [] do
-    result =
-      Enum.reduce_while(filters, {:ok, []}, fn filter, {:ok, valid} ->
-        case validate_filter(filter) do
-          :ok -> {:cont, {:ok, [filter | valid]}}
-          {:error, %Error{} = error} -> {:halt, {:error, error}}
-        end
-      end)
-
-    case result do
-      {:ok, valid} -> {:ok, Enum.reverse(valid)}
-      {:error, %Error{} = error} -> {:error, error}
-    end
-  end
+  def normalize_filters(filters) when is_list(filters) and filters != [],
+    do: normalize_filter_list(filters, @max_filters, [])
 
   def normalize_filters(_) do
     {:error,
@@ -141,6 +132,26 @@ defmodule Wotex.Binding.MQTT.Topic do
 
   defp validate_common(_, code, label),
     do: {:error, Error.new(code, :topic, :protocol, "#{label} must be a string")}
+
+  defp normalize_filter_list([], _, valid), do: {:ok, Enum.reverse(valid)}
+
+  defp normalize_filter_list([_ | _], 0, _) do
+    {:error,
+     Error.new(
+       :too_many_topic_filters,
+       :topic,
+       :protocol,
+       "Topic Filter list exceeds the package cardinality limit",
+       %{max_filters: @max_filters}
+     )}
+  end
+
+  defp normalize_filter_list([filter | filters], remaining, valid) do
+    case validate_filter(filter) do
+      :ok -> normalize_filter_list(filters, remaining - 1, [filter | valid])
+      {:error, %Error{} = error} -> {:error, error}
+    end
+  end
 
   defp validate_shared_prefix("$share/" <> remainder) do
     case String.split(remainder, "/", parts: 2) do

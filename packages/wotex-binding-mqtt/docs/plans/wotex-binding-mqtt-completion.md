@@ -79,8 +79,8 @@ funding or product plans are not standards evidence.
 | ID | Unproven or unsupported claim | Closure / owner |
 |---|---|---|
 | WBM-R01 | Finite end-to-end network deadline/temporary read cleanup | WBM-C02 supplied-client evidence |
-| WBM-R02 | Hard-bounded encoding/matching/mailbox allocation | WBM-C03 threshold and overload proof |
-| WBM-R03 | Authenticated delivery, secure TLS/ACL and no credential retention by client | Consumer authority; WBM-C03 boundary tests cannot sandbox client code |
+| WBM-R02 | Whole-process encoding/matching/client allocation is not hard-bounded by admitted value limits | Explicit nonclaim and consumer BEAM/client budgets; WBM-C03 closes exact value, filter-cardinality and mailbox-overload thresholds |
+| WBM-R03 | Authenticated delivery, secure TLS/ACL and no credential retention by client | Consumer authority; WBM-C03 proves a selected client can capture credentials and injected valid deliveries have no source authority |
 | WBM-R04 | Once-only remote close/session recovery | WBM-C02/04 and consumer session contract |
 | WBM-R05 | Full MQTT client/QoS2 exactly-once physical effect | Explicit nonclaim; no wire/session engine in this package |
 | WBM-R06 | Action query/cancel, aggregate operations, binary codecs | Out of declared profile; new contract required |

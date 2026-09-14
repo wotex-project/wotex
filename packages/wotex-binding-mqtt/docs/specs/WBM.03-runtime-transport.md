@@ -85,7 +85,7 @@ package.
 | PUBLISH | Map/encode then call client once | QoS handshake, retry and physical-effect uncertainty |
 | Retained read | Finite timeout, topic match, retained flag, size/JSON admission | Network deadline and temporary subscription cleanup |
 | Subscribe | Owner pid and credential-free command; opaque handle | Session resources, owner supervision and receiver lifetime |
-| Delivery | Filter match before decode; decode in the owner; ignore unrelated topics | Duplicate/loss/ordering and mailbox overload |
+| Delivery | Filter match before decode; decode in the owner; ignore unrelated topics; WBM-C03 proves sustained delivery and Runtime overflow cleanup | Duplicate/loss/ordering, BEAM allocation and client/broker queues |
 | Bad delivery | Stable classified error; no Runtime payload | Drop/close/recovery policy |
 | Session change | Client-sent status; owner stops on `:session_lost` and `:transport_down` | Detecting Clean Start/expiry and deciding restart |
 | Unsubscribe | Pass handle and mapped command to client | Handle/session authority and resource release |
@@ -128,7 +128,8 @@ policy belong to the consumer's client.
 Mapping/client/codec failures return stable `Wotex.Binding.MQTT.Error` values.
 Rejection before callback has no MQTT effect; failure after possible PUBLISH
 does not establish no effect. `transport_test.exs`,
-`runtime_subscription_test.exs`, `client_lifecycle_test.exs`, and
+`runtime_subscription_test.exs`, `client_lifecycle_test.exs`,
+`limits_security_test.exs`, and
 `library_contract_test.exs` under
 `test/wotex/binding/mqtt/` are current adapter evidence;
 `runtime_subscription_test.exs` starts a real `Wotex.Runtime.ConsumedThing`
@@ -136,9 +137,11 @@ observation child under a test supervisor and covers owner decoding, ignored
 topics, an oversized frame, session loss, and an explicit stop observed by a
 monitoring client. `client_lifecycle_test.exs` proves finite supplied-client
 reads, all invalid and exceptional callback paths, open/close failures,
-concurrent handles, and consumer-supervised restart. WBM-C03/04 add sustained
-delivery and archive/reference-consumer proof against a named broker/client
-cohort. Callback
+concurrent handles, and consumer-supervised restart. `limits_security_test.exs`
+proves exact value/structural thresholds, bounded filter cardinality, sustained
+delivery, Runtime overflow cleanup, redaction, and the trusted-client authority
+boundary. WBM-C04 adds archive/reference-consumer proof against a named
+broker/client cohort. Callback
 tuple, owner message contract, metadata keys, result status, error class,
 operation/default/limit changes require compatibility review; a newer draft
 cannot silently change behavior.
