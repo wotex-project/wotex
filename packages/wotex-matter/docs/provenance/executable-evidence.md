@@ -413,6 +413,41 @@ controller usable. The default suite passes 114 checks with seven interop cases
 excluded. Coverage is 89.7% in this cohort; the required 95% release gate remains
 unsatisfied and its threshold and exclusions are unchanged.
 
+`test/interop/native_lighting_test.exs` executes the WMA-N03 lighting workflow
+against the pinned, unmodified `chip-lighting-app`, using the native host above.
+Its source SHA-256 is
+`c4bd52de2d8dc670c71c419593e5b9e493d679ff130a6cc47b63ba3c686f9659`.
+Both required Linux BEAM lanes pass with the same binaries: lighting SHA-256
+`5d0c28f58af14c25569ef08c13bbea51b6dd853e5e46c684dc20fdbc3faa32c0`
+and host SHA-256
+`2acc3532909f26c8bbe5c07a895c6bc0caba73abd6553ab5a1d76488a983dc97`.
+The command is `mix test test/interop/native_lighting_test.exs --include interop
+--include software`, with `WOTEX_MATTER_NATIVE_LIGHTING_FIXTURE` identifying a
+fresh controller/peer fixture. The fixture supplies explicit controller
+identity, executable, storage and PAA paths, onboarding inputs, and an exclusive
+result output path; it supplies no expected responses.
+
+Both peers complete commissioning and final CASE. Descriptor discovery locates
+endpoint 1 in these fixtures. The test reads false, rejects a local OnOff write,
+invokes On and separately reads true, then invokes Off and reads false. Native
+subscriptions preserve report IDs 1, 2 and 3, including equal first/third values
+with different DataVersions. After idempotent cancellation, a further On and
+read produce no delivery during the asserted 1100 ms observation window.
+The store reopens with the original identity and performs CASE reads without
+recommissioning. Real `ConsumedThing` reads and an Off Action use the controller
+profile, preserve typed values and metadata, and independently reopen that same
+fabric. Every explicitly opened owner exits normally, its exact OS child is
+observed absent, and the final owned Port count is zero. Separate OS process
+queries find no remaining native host in either lane. This is shared-SDK peer
+evidence with a finite post-cancellation observation window.
+
+The current and minimum lane test-log SHA-256 values are respectively
+`4f96820cfce410563380a34098a7802718415afc7273b8f8a02364215e6c6adc`
+and `463026995c9b01d9eaf2c9ace08d72a4797e9c00431152f22554f31f8156618f`.
+The developer gate passes 125 checks with eight interop cases excluded. This
+adds lighting workflow evidence; thermostat, bridge, remaining native process
+stress, the software-run task and final archive acceptance remain open.
+
 [WMA.13](../specs/WMA.13-native-backend.md) defines the complete native binary,
 Mix/ExUnit tasks, version lanes and credit/resource tests. P01–P08 are executed
 at their stated deterministic and native-compilation boundaries, and P08a is
