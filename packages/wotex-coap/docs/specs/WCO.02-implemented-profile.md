@@ -51,6 +51,11 @@ completion deadlines. A timely peer confirmation cannot make local completion
 at or after a caller's deadline succeed; local closure does not resend cancellation.
 Duplicate separate replies retain ACK behavior across completed exchanges.
 `discover/2` validates status/Content-Format and parses bounded RFC 6690 links.
+Parsing follows complete Block2 assembly, including UTF-8 split across datagrams.
+A malformed suffix fails the entire description; no parsed prefix is returned.
+Raw targets, anchors and ordered extension attributes remain data without
+resolution or network access. Parser limits count encoded bytes and scanned
+attributes, including first-occurrence duplicates that are not retained.
 
 Native `coaps` uses DTLS 1.2 with explicit PSK or PKI credentials and no UDP
 fallback. Runtime exposes credential-free UDP and authenticated DTLS cells.
@@ -58,6 +63,12 @@ fallback. Runtime exposes credential-free UDP and authenticated DTLS cells.
 `profile(:udp_observe)` exposes the seven-operation `:coap_observe` profile.
 `profile(:dtls)` exposes the seven-operation `:coaps` profile. All use the
 three documented media types. Other profile modes are unsupported.
+Property and Event streams decode complete representations through the same
+media policy. JSON null, false, zero and empty collections remain distinct;
+text requires UTF-8, while octet streams preserve arbitrary bytes. Stream metadata
+retains the first report's status, Observe serial, ETag, Content-Format and
+Max-Age across Block2 completion. Malformed representation payloads are decoding
+errors, not empty values or fabricated transport-loss events.
 Transport validates the exact profile and Runtime context before acquisition;
 decode and cleanup cannot turn an expired request into success. Error.class
 retains conservative retry decisions through Runtime. For DTLS unary requests,

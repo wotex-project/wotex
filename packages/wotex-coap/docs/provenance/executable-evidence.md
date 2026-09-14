@@ -242,6 +242,56 @@ independent-peer or complete WCO-P09 software/stress acceptance. The focused com
 WOTEX_PATH_DEPS=1 mix test test/wotex/coap/observation_lifecycle_test.exs test/wotex/coap/observation_test.exs test/wotex/coap/execution_test.exs test/wotex/coap/observation_trace_test.exs test/wotex/coap/blockwise_test.exs
 ```
 
+### Discovery and Runtime stream assertions
+
+`discovery_test.exs` exercises WCO-S04/D03/D04 and WCO-V11 through public native
+calls over loopback UDP. GET, Accept 40, response status and Content-Format precede
+parsing. The 65536-byte transfer ceiling accepts the exact limit and rejects the
+next byte during assembly. Absent and empty queries remain distinct. A 1024-byte
+encoded query succeeds with each decoded option inside its 255-byte limit;
+an additional encoded byte fails before transmission. Repeated and empty query
+components, once-decoded percent escapes and literal plus survive continuation.
+
+The Block2 parser cases split UTF-8 inside a code point. No link result precedes
+the final block. The assembled description retains raw anchors, relation strings,
+first-occurrence title spelling and ordered repeated language/extension values.
+A late malformed attribute, strict-singleton duplicate, control byte, incomplete
+UTF-8 sequence or excess discarded attribute rejects the entire description.
+The existing native workflow discovers, reads, observes, mutates through a second
+explicit session, delivers fresh equal values, acknowledges duplicates and cancels
+the original route. Advertised absolute targets initiate no connection.
+
+`link_format_test.exs` covers the WCO-D03 grammar and multiplicity rules. Exact
+1024-byte URI, name, unquoted, UTF-8 quoted, escaped and discarded duplicate tokens
+succeed; another encoded byte fails. Thirty-two occurrences of `title` are
+accepted even when only one is retained; the next fails. Generated valid
+Unicode strings preserve their exact bytes across quoting and escaping.
+
+`runtime_stream_test.exs` constructs real Property and Event contexts through
+ConsumedThing and the public Observe profile. Both stream kinds accept complete
+Block2 initial bodies with the first report's five-field metadata, without
+forwarding a prefix or replacing Max-Age with continuation metadata. Both contexts
+exercise JSON null/false/zero/empty values, UTF-8 text and arbitrary octet streams.
+Duplicate-key JSON, incomplete JSON and invalid UTF-8 text produce structured
+decoding errors without delivering a value or inventing transport loss. Explicit
+stop still cancels the established token/route and releases owned resources.
+Existing assertions retain fresh equal-value delivery, duplicate suppression,
+terminal native errors, bounded queues and owner/receiver-loss cleanup.
+
+`mapping_test.exs` retains WCO-I03 Form extension and zero-acquisition rejection
+assertions. `native_contract_test.exs` and `observation_trace_test.exs` execute the
+unchanged WCO-D05 corpus and exact cancellation oracle. The relevant sources are
+[RFC 6690 section 2](https://www.rfc-editor.org/rfc/rfc6690.html#section-2)
+(August 2012), RFC 5988 (October 2010), RFC 7252 (June 2014), RFC 7641
+(September 2015) and RFC 7959 (August 2016). Parser ceilings, strict-singleton
+rejection and Runtime ownership remain package policy. These pure and first-party
+UDP assertions do not establish independent secure interoperability or complete
+WCO-P09 software/stress acceptance. The focused command is:
+
+```sh
+WOTEX_PATH_DEPS=1 mix test test/wotex/coap/link_format_test.exs test/wotex/coap/discovery_test.exs test/wotex/coap/mapping_test.exs test/wotex/coap/runtime_stream_test.exs test/wotex/coap/native_contract_test.exs test/wotex/coap/observation_trace_test.exs
+```
+
 ### Authoritative library gate
 
 `WOTEX_PATH_DEPS=1 mix check --no-retry` includes strict compilation/static checks,

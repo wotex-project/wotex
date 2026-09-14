@@ -236,9 +236,35 @@ defmodule Wotex.CoAP.LinkFormatTest do
     assert {:error, %Error{field: :token}} = LinkFormat.decode(segment <> "a")
   end
 
-  property "WCO-D03 WCO-V11 quoted delimiters and escapes round-trip without creating links" do
-    check all(bytes <- list_of(integer(32..126), max_length: 128)) do
-      value = List.to_string(bytes)
+  test "WCO-D03 WCO-V11 every scanner charges encoded bytes at the hard token boundary" do
+    for make_body <- [
+          fn suffix -> "<" <> String.duplicate("a", 1024) <> suffix <> ">" end,
+          fn suffix -> "</>;" <> String.duplicate("x", 1024) <> suffix end,
+          fn suffix -> "</>;x=" <> String.duplicate("a", 1024) <> suffix end,
+          fn suffix -> "</>;title=\"" <> String.duplicate("é", 512) <> suffix <> "\"" end,
+          fn suffix -> "</>;x=\"" <> String.duplicate("\\\"", 512) <> suffix <> "\"" end,
+          fn suffix ->
+            "</>;title=\"first\";TITLE=\"" <> String.duplicate("a", 1024) <> suffix <> "\""
+          end
+        ] do
+      assert {:ok, [_]} = LinkFormat.decode(make_body.(""))
+
+      assert {:error, %Error{code: :link_limit, field: :token, details: %{limit: 1024}}} =
+               LinkFormat.decode(make_body.("a"))
+    end
+
+    body = "</>" <> String.duplicate(";title=\"first\"", 32)
+    assert {:ok, [%{attributes: [{"title", "first"}]}]} = LinkFormat.decode(body)
+
+    assert {:error, %Error{code: :link_limit, field: :attributes, details: %{limit: 32}}} =
+             LinkFormat.decode(body <> ";TITLE=\"ignored\"")
+  end
+
+  property "WCO-D03 WCO-V11 UTF-8, quoted delimiters and escapes retain exact bytes" do
+    codepoint = one_of([integer(32..126), integer(160..0xD7FF), integer(0xE000..0x10FFFF)])
+
+    check all(codepoints <- list_of(codepoint, max_length: 128)) do
+      value = List.to_string(codepoints)
 
       encoded =
         value

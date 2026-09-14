@@ -72,6 +72,44 @@ defmodule Wotex.CoAP.DiscoveryTest do
     :gen_udp.close(socket)
   end
 
+  test "WCO-D02 WCO-D03 absent, empty and exact-limit discovery queries remain distinct" do
+    segments = Enum.reverse(["" | List.duplicate(String.duplicate("x", 255), 4)])
+    query_at_limit = Enum.join(segments, "&")
+    assert byte_size(query_at_limit) == 1024
+
+    for {query, expected} <- [
+          {nil, []},
+          {"", [""]},
+          {query_at_limit, segments}
+        ] do
+      {socket, port} = peer()
+      {:ok, session} = CoAP.connect(host: "127.0.0.1", port: port, timeout: 500)
+      task = Task.async(fn -> CoAP.discover(session, %{query: query}) end)
+      {endpoint, request} = wire(socket)
+      assert request.code == 1
+      assert Codec.option(request, 11) == [".well-known", "core"]
+      assert Codec.option(request, 15) == expected
+      assert Codec.option(request, 17) == [<<40>>]
+
+      reply(socket, endpoint, %{
+        request
+        | type: :ack,
+          code: 69,
+          options: [{12, <<40>>}],
+          payload: ""
+      })
+
+      assert {:ok, []} = Task.await(task)
+
+      assert {:error, %Error{code: :invalid_discovery_request}} =
+               CoAP.discover(session, %{query: query_at_limit <> "x"})
+
+      assert {:error, :timeout} = :gen_udp.recv(socket, 0, 20)
+      assert :ok = CoAP.disconnect(session)
+      :gen_udp.close(socket)
+    end
+  end
+
   test "WCO-S02 WCO-D03 complete discovery body uses 64 KiB as a transfer ceiling" do
     for oversized <- [false, true] do
       {socket, port} = peer()
@@ -180,6 +218,79 @@ defmodule Wotex.CoAP.DiscoveryTest do
 
       assert {:error, :timeout} = :gen_udp.recv(socket, 0, 20)
       assert :ok = CoAP.disconnect(session)
+      :gen_udp.close(socket)
+    end
+  end
+
+  test "WCO-D03 WCO-V11 parsing waits for complete Block2 UTF-8 and rejects a malformed suffix" do
+    body =
+      ~s|</x>;title="aaaé,\\\"tail";TITLE="ignored";anchor="../a%252Fb?x=a,b#here";| <>
+        ~s|rel="alternate urn:example:link";hreflang=sv;hreflang=en;x=1;x=2;obs|
+
+    expected = [
+      %{
+        href: "/x",
+        attributes: [
+          {"title", "aaaé,\"tail"},
+          {"anchor", "../a%252Fb?x=a,b#here"},
+          {"rel", "alternate urn:example:link"},
+          {"hreflang", "sv"},
+          {"hreflang", "en"},
+          {"x", "1"},
+          {"x", "2"},
+          {"obs", true}
+        ]
+      }
+    ]
+
+    refute String.valid?(binary_part(body, 0, 16))
+
+    for {complete, result} <- [
+          {body, {:ok, expected}},
+          {body <> ",</bad>;title=unquoted", :invalid_link_format},
+          {body <> ",</bad>;rt=a;RT=b", :invalid_link_format},
+          {body <> ",</bad>;x=\"\n\"", :invalid_link_format},
+          {body <> ",</bad>;x=\"" <> <<195>> <> "\"", :invalid_link_format},
+          {body <> ",</bad>" <> String.duplicate(";title=\"a\"", 33), :link_limit}
+        ] do
+      {socket, port} = peer()
+      {:ok, session} = CoAP.connect(host: "127.0.0.1", port: port, timeout: 1000)
+      query = "x=%252F&x=+&&empty="
+      task = Task.async(fn -> CoAP.discover(session, %{query: query}) end)
+      count = div(byte_size(complete) + 15, 16)
+
+      for number <- 0..(count - 1) do
+        {endpoint, request} = wire(socket)
+        assert request.code == 1 and request.payload == <<>>
+        assert Codec.option(request, 11) == [".well-known", "core"]
+        assert Codec.option(request, 15) == ["x=%2F", "x=+", "", "empty="]
+        assert Codec.option(request, 17) == [<<40>>]
+        assert Codec.option(request, 6) == []
+
+        if number > 0,
+          do: assert(Codec.option(request, 23) == [Codec.uint(number * 16)])
+
+        assert Task.yield(task, 0) == nil
+        offset = number * 16
+        more = if number + 1 < count, do: 8, else: 0
+
+        reply(socket, endpoint, %{
+          request
+          | type: :ack,
+            code: 69,
+            options: [{4, "links"}, {12, <<40>>}, {23, Codec.uint(number * 16 + more)}],
+            payload: binary_part(complete, offset, min(16, byte_size(complete) - offset))
+        })
+      end
+
+      actual = Task.await(task)
+
+      if is_atom(result),
+        do: assert({:error, %Error{code: ^result}} = actual),
+        else: assert(actual == result)
+
+      assert :ok = CoAP.disconnect(session)
+      assert {:error, :timeout} = :gen_udp.recv(socket, 0, 20)
       :gen_udp.close(socket)
     end
   end

@@ -44,31 +44,95 @@ defmodule Wotex.CoAP.RuntimeStreamTest do
     end
   end
 
-  test "WCO-S02 WCO-S04 Runtime never delivers a partial initial representation", c do
-    {spec, _, _} = specification(c, :property)
-    owner = start_supervised!(spec)
-    initial = wire(c.peer)
-    body = "\"" <> String.duplicate("a", 20) <> "\""
-    <<first::binary-size(16), rest::binary>> = body
-    message = report(initial.message, 10, first)
-    reply(c.peer, initial, %{message | options: [{23, <<8>>} | message.options]})
-    continuation = wire(c.peer)
-    assert Codec.option(continuation.message, 6) == []
-    assert Codec.option(continuation.message, 23) == [<<16>>]
-    assert continuation.message.token != initial.message.token
-    refute_received {:wotex_runtime, :property, _}
+  test "WCO-S02 WCO-S04 both Runtime streams decode only the complete initial report metadata", c do
+    for kind <- [:property, :event] do
+      {spec, _, _} = specification(c, kind)
+      owner = start_supervised!(spec)
+      initial = wire(c.peer)
+      body = "\"" <> String.duplicate("a", 20) <> "\""
+      <<first::binary-size(16), rest::binary>> = body
+      message = report(initial.message, 10, first)
 
-    reply(c.peer, continuation, %{
-      continuation.message
-      | type: :ack,
-        code: 69,
-        options: [{4, "e"}, {12, <<50>>}, {23, <<16>>}],
-        payload: rest
-    })
+      reply(c.peer, initial, %{
+        message
+        | options: [{14, <<30>>}, {23, <<8>>}, {100, "first"} | message.options]
+      })
 
-    assert_receive {:wotex_runtime, :property, {:ok, value, %{observe: 10}}}, 1000
-    assert value == String.duplicate("a", 20)
-    stop(c.peer, owner, initial)
+      continuation = wire(c.peer)
+      assert Codec.option(continuation.message, 6) == []
+      assert Codec.option(continuation.message, 23) == [<<16>>]
+      assert continuation.message.token != initial.message.token
+      refute_received {:wotex_runtime, ^kind, _}
+
+      reply(c.peer, continuation, %{
+        continuation.message
+        | type: :ack,
+          code: 69,
+          options: [{4, "e"}, {12, <<0, 50>>}, {14, <<1>>}, {23, <<16>>}, {100, "last"}],
+          payload: rest
+      })
+
+      assert_receive {:wotex_runtime, ^kind, {:ok, value, metadata}}, 1000
+      assert value == String.duplicate("a", 20)
+      assert metadata == %{code: 69, observe: 10, etag: "e", content_format: 50, max_age: 30}
+      owned = resources(await_handle(owner).pid)
+      refute_receive {:wotex_runtime, ^kind, _}, 10
+      stop(c.peer, owner, initial)
+      released(owned)
+    end
+  end
+
+  test "WCO-S04 WCO-I03 both Runtime stream contexts preserve every supported representation", c do
+    for kind <- [:property, :event],
+        {media, format, values} <- [
+          {"application/json", 50,
+           [{"null", nil}, {"false", false}, {"0", 0}, {"[]", []}, {"{}", %{}}, {"\"\"", ""}]},
+          {"text/plain;charset=utf-8", 0, [{"", ""}, {"smörgås", "smörgås"}]},
+          {"application/octet-stream", 42, [{"", ""}, {<<0, 255, 128>>, <<0, 255, 128>>}]}
+        ] do
+      {spec, _, _} = specification(c, kind, media: media, format: format)
+      owner = start_supervised!(spec)
+      initial = wire(c.peer)
+      assert Codec.option(initial.message, 17) == [Codec.uint(format)]
+
+      for {{payload, expected}, sequence} <- Enum.with_index(values, 10) do
+        message = %{
+          initial.message
+          | type: if(sequence == 10, do: :ack, else: :con),
+            code: 69,
+            message_id: if(sequence == 10, do: initial.message.message_id, else: 900 + sequence),
+            options: [{4, "e"}, {6, Codec.uint(sequence)}, {12, Codec.uint(format)}],
+            payload: payload
+        }
+
+        reply(c.peer, initial, message)
+
+        if sequence > 10,
+          do:
+            assert(
+              wire(c.peer).message == %Message{
+                type: :ack,
+                code: 0,
+                message_id: message.message_id
+              }
+            )
+
+        assert_receive {:wotex_runtime, ^kind, {:ok, ^expected, metadata}}, 1000
+
+        assert metadata == %{
+                 code: 69,
+                 observe: sequence,
+                 etag: "e",
+                 content_format: format,
+                 max_age: 60
+               }
+      end
+
+      owned = resources(await_handle(owner).pid)
+      stop(c.peer, owner, initial)
+      released(owned)
+      refute_received {:wotex_runtime, ^kind, _}
+    end
   end
 
   test "WCO-S04 WCO-I05 terminal native failure reports one supported Runtime status", c do
@@ -90,6 +154,33 @@ defmodule Wotex.CoAP.RuntimeStreamTest do
     assert_receive {:DOWN, ^owner_monitor, :process, ^owner, {:shutdown, :transport_down}}, 1000
     released(owned)
     refute_receive {:wotex_runtime, :property, _}, 10
+  end
+
+  test "WCO-S04 WCO-I03 malformed stream payloads remain decoding errors in both contexts", c do
+    for kind <- [:property, :event],
+        {media, format, payload} <- [
+          {"application/json", 50, "{\"duplicate\":1,\"duplicate\":2}"},
+          {"application/json", 50, "["},
+          {"text/plain;charset=utf-8", 0, <<255>>}
+        ] do
+      {spec, _, _} = specification(c, kind, media: media, format: format)
+      owner = start_supervised!(spec)
+      initial = wire(c.peer)
+
+      reply(c.peer, initial, %{
+        report(initial.message, 10, payload)
+        | options: [{6, <<10>>}, {12, Codec.uint(format)}]
+      })
+
+      assert_receive {:wotex_runtime, ^kind,
+                      {:error, %Wotex.Runtime.Error{details: %{cause: %{code: :invalid_payload}}}}},
+                     1000
+
+      owned = resources(await_handle(owner).pid)
+      refute_receive {:wotex_runtime, ^kind, _}, 10
+      stop(c.peer, owner, initial)
+      released(owned)
+    end
   end
 
   test "WCO-C03 WCO-I05 Runtime owner death interrupts an unanswered native registration", c do
@@ -439,8 +530,8 @@ defmodule Wotex.CoAP.RuntimeStreamTest do
       %{
         "href" => "coap://127.0.0.1:#{c.port}/x%2Fy?a=x%26y",
         "op" => open,
-        "contentType" => "application/json",
-        "cov:accept" => 50
+        "contentType" => Keyword.get(options, :media, "application/json"),
+        "cov:accept" => Keyword.get(options, :format, 50)
       },
       %{"href" => "coap://127.0.0.1:1/different", "op" => close}
     ]
