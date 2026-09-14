@@ -41,8 +41,8 @@ authorizes automated publication, tags or Git remote operations.
 | Gate | Evidence requirement | Nonclaim |
 |---|---|---|
 | `repository_green` | `WOTEX_PATH_DEPS=1 mix check --no-retry`, the authoritative default gate, including locked dependencies, coverage, strict static checks, docs, audits, boundary and archive/package reconstruction | Not independent install or full protocol conformance |
-| `archive_consumer_green` | Build without path overrides; a separate minimal Mix consumer installs exact archives and exercises one HTTP mapping success plus typed rejection through public API, with no live source | Not full lifecycle behavior |
-| `reference_consumer_green` | WBH-C04 against those archives with supplied client and Runtime supervisor | No production transport certification |
+| `archive_consumer_green` | The mandatory archive check builds each exact archive once without path overrides, inspects and extracts those same bytes, then compiles a separate Mix consumer whose Wotex dependency, compile-source, BEAM and code paths exclude every live checkout | Not full lifecycle behavior |
+| `reference_consumer_green` | That external consumer exercises WBH-A01..A06 through public APIs, including a supplied client and consumer-owned Runtime supervisor | No production transport certification |
 | `public_release_candidate` | Previous gates, actual archive exclusion, package metadata/license/security, clean dependency installation, claim review | Not permission to publish |
 | `stable_api_candidate` | WBH-C06 compatibility/error/default/limit matrix, all promised cells proven | Not universal HTTP/WoT compliance |
 

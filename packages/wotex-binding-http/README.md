@@ -188,6 +188,11 @@ maps callback failures, handshake cleanup, close concurrency, configuration
 identity, and owner failure to named vectors. It also identifies
 pending-establishment owner monitoring as a supplied-client obligation.
 
+The [exact archive and reference-consumer inventory](docs/reference-consumer-inventory.md)
+maps the isolated three-archive installation, finite request, redirect/audience,
+limit, supervised SSE and failure-redaction vectors. The generated consumer and
+run artifacts remain outside this repository.
+
 The [limits and security inventory](docs/limits-security-inventory.md) records
 exact thresholds, native JSON admission, sustained receiver overload, deadline
 and destination policy seams, redaction vectors, and the remaining client-owned
