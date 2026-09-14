@@ -9,7 +9,8 @@ defmodule CheckArchive do
   @packaged ["mix.exs", "LICENSE", "NOTICE", "README.md", "CHANGELOG.md", "lib", "priv", "docs"]
   @development [".git", "deps", "_build"]
   @local_tasks "docs/tasks/local"
-  @dependency_root "_build/test/lib"
+  @consumer_fixture "test/fixtures/archive_consumer.exs"
+  @target_fixture "test/fixtures/external_target.exs"
 
   def run do
     version = Mix.Project.config()[:version]
@@ -61,26 +62,111 @@ defmodule CheckArchive do
 
     run!(temporary, "elixir", ["bin/check_boundary.exs", package])
 
-    dependency = Path.join(@dependency_root, "jason/ebin")
+    dependency = dependency_ebin()
 
     unless File.dir?(dependency) do
       fail(temporary, "compiled jason dependency is missing; run the test compile first")
     end
 
+    isolated_dependency = Path.join(temporary, "jason-ebin")
+
+    case File.cp_r(dependency, isolated_dependency) do
+      {:ok, _} -> :ok
+      {:error, reason, _} -> fail(temporary, "cannot isolate jason dependency: #{inspect(reason)}")
+    end
+
     ebin = Path.join(temporary, "ebin")
     File.mkdir!(ebin)
     sources = Enum.sort(Path.wildcard(Path.join(package, "lib/**/*.ex")))
-    run!(temporary, "elixirc", ["--warnings-as-errors", "-pa", dependency, "-o", ebin] ++ sources)
+
+    run!(
+      temporary,
+      "elixirc",
+      ["--warnings-as-errors", "-pa", isolated_dependency, "-o", ebin] ++ sources
+    )
 
     unless File.regular?(Path.join(ebin, "Elixir.Wotex.Conformance.beam")) do
       fail(temporary, "out-of-tree archive compilation did not produce Wotex.Conformance")
     end
 
+    run_archive_consumer!(temporary, package, ebin, isolated_dependency)
+
     digest = :sha256 |> :crypto.hash(File.read!(archive)) |> Base.encode16(case: :lower)
 
     IO.puts("archive contents passed")
     IO.puts("out-of-tree archive compilation passed")
+    IO.puts("archive-only consumer passed")
     IO.puts("archive sha256: #{digest}")
+  end
+
+  defp dependency_ebin do
+    Application.app_dir(:jason, "ebin")
+  end
+
+  defp run_archive_consumer!(temporary, package, ebin, dependency) do
+    consumer = isolated_fixture!(temporary, @consumer_fixture, "archive_consumer.exs")
+    target = isolated_fixture!(temporary, @target_fixture, "independent_target.exs")
+    subject = Path.join(temporary, "subject.tar.gz")
+
+    :ok =
+      :erl_tar.create(
+        to_charlist(subject),
+        [{~c"manifest.json", ~s({"interface_revision":"1","subject":"synthetic"})}],
+        [:compressed]
+      )
+
+    executable = System.find_executable("elixir") || fail(temporary, "elixir executable is missing")
+    erl = System.find_executable("erl") || fail(temporary, "erl executable is missing")
+
+    arguments = [
+      "-pa",
+      dependency,
+      "-pa",
+      ebin,
+      consumer,
+      "--package",
+      package,
+      "--target",
+      target,
+      "--subject",
+      subject,
+      "--elixir",
+      executable,
+      "--erl",
+      erl,
+      "--forbid",
+      File.cwd!()
+    ]
+
+    run!(temporary, executable, arguments,
+      cd: temporary,
+      env: isolated_environment(executable, erl)
+    )
+  end
+
+  defp isolated_fixture!(temporary, source, basename) do
+    source = Path.expand(source)
+    destination = Path.join(temporary, basename)
+
+    case File.cp(source, destination) do
+      :ok -> destination
+      {:error, reason} -> fail(temporary, "cannot isolate #{source}: #{inspect(reason)}")
+    end
+  end
+
+  defp isolated_environment(executable, erl) do
+    cleared =
+      System.get_env()
+      |> Map.drop(["ELIXIR_ERL_OPTIONS", "PATH"])
+      |> Map.keys()
+      |> Enum.map(&{&1, nil})
+
+    path =
+      [Path.dirname(executable), Path.dirname(erl), "/usr/bin", "/bin"]
+      |> Enum.uniq()
+      |> Enum.join(":")
+
+    [{"ELIXIR_ERL_OPTIONS", "+fnu"}, {"PATH", path} | cleared]
   end
 
   defp development_state(root) do
@@ -110,8 +196,9 @@ defmodule CheckArchive do
     end
   end
 
-  defp run!(temporary, command, arguments) do
-    {_output, status} = System.cmd(command, arguments, into: IO.stream(), stderr_to_stdout: true)
+  defp run!(temporary, command, arguments, options \\ []) do
+    options = Keyword.merge([into: IO.stream(), stderr_to_stdout: true], options)
+    {_output, status} = System.cmd(command, arguments, options)
 
     unless status == 0 do
       fail(temporary, "#{command} failed with status #{status}")

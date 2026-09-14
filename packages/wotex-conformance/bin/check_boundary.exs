@@ -14,7 +14,17 @@ defmodule CheckBoundary do
   @module_definition ~r/^defmodule /
   @documented_test ~r/^defmodule [^\n]+\n  @moduledoc false\n\n/m
 
-  def run do
+  def run(root \\ ".") when is_binary(root) do
+    root = Path.expand(root)
+
+    unless File.dir?(root) do
+      abort("boundary root must be an existing directory: #{root}")
+    end
+
+    File.cd!(root, &run_current_directory/0)
+  end
+
+  defp run_current_directory do
     refuse(
       ["lib", "test", "mix.exs"],
       @boundary,
@@ -131,4 +141,8 @@ defmodule CheckBoundary do
   end
 end
 
-CheckBoundary.run()
+case System.argv() do
+  [] -> CheckBoundary.run()
+  [root] -> CheckBoundary.run(root)
+  _other -> raise ArgumentError, "usage: elixir bin/check_boundary.exs [ROOT]"
+end
