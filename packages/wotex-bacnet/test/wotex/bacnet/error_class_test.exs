@@ -74,7 +74,18 @@ defmodule Wotex.BACnet.ErrorClassTest do
       }
 
       assert projection == vector["expectation"]["value"], vector["id"]
-      assert Map.keys(failure.details.cause) |> Enum.sort() == [:class, :code, :module, :phase]
+      expected_class = failure.class
+
+      assert %{
+               class: ^expected_class,
+               code: ^code,
+               module: Wotex.BACnet.Error,
+               phase: nil
+             } = failure.details.cause
+
+      refute Map.has_key?(failure.details.cause, :effect)
+      refute Map.has_key?(failure.details.cause, :details)
+      refute Map.has_key?(failure.details.cause, :retryable)
       refute inspect(failure) =~ "must-not-cross-runtime"
       assert Retry.decision(operation, failure) == :stop
     end

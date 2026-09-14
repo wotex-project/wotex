@@ -20,7 +20,15 @@ defmodule Wotex.BACnet.DiscoveryValuesTest do
 
   test "WBA-N04 Device validates every field and revalidates forged structs" do
     assert {:ok, device} = Device.new(@device)
-    assert Map.from_struct(device) == @device
+
+    assert %Device{
+             source: @source,
+             instance: 123,
+             max_apdu: 1476,
+             segmentation: :no_segmentation,
+             vendor_id: 260
+           } = device
+
     assert {:ok, ^device} = Device.new(device)
 
     for change <- [
@@ -67,7 +75,14 @@ defmodule Wotex.BACnet.DiscoveryValuesTest do
     }
 
     assert {:ok, device} = Device.from_apdu(@source, apdu)
-    assert Map.from_struct(device) == @device
+
+    assert %Device{
+             source: @source,
+             instance: 123,
+             max_apdu: 1476,
+             segmentation: :no_segmentation,
+             vendor_id: 260
+           } = device
 
     for parameters <- [
           [],

@@ -8,16 +8,16 @@ The subject is implementation commit
 These identities describe tested source. They do not identify a published
 release or establish hardware, certification or downstream consumer parity.
 
-## Local and package gate
+## Local and package evidence
 
 `WOTEX_PATH_DEPS=1 mix check --no-retry` passed on both supported toolchains.
-The gate includes warnings-as-errors for project compilation, formatting,
-strict Credo, Dialyzer, Doctor, ExDoc, dependency checks, unit/property/doctest
-execution, coverage, Hex packaging, archive inspection, out-of-tree archive
-compilation and the Application-free structural check.
+The recorded acceptance workflow also ran strict Credo, Dialyzer, Doctor, ExDoc,
+dependency checks, coverage, Hex packaging, archive inspection, out-of-tree
+archive compilation and the Application-free structural check as explicit
+lanes.
 
-The current default gate additionally rebuilds the exact Wotex core, Runtime and
-BACnet archives once in an external temporary workspace. WBA-A01 verifies that
+The archive lane rebuilds the exact Wotex core, Runtime and BACnet archives once
+in an external temporary workspace. WBA-A01 verifies that
 the isolated consumer compiles and loads no Wotex module from a live checkout;
 WBA-A02 executes and closes a native read; WBA-A03 executes a selected Property
 read through a real `ConsumedThing`; and WBA-A04 verifies bounded redaction of a

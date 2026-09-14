@@ -131,11 +131,12 @@ and Elixir 1.20.2/OTP 29.0.4.
 ## Verification contract
 
 Each logical implementation commit requires focused tests and
-`WOTEX_PATH_DEPS=1 mix check --no-retry`. The gate includes compilation,
-formatting, strict Credo, unit/property/doctest execution once through the
-coverage pass, at least 95% coverage, Dialyzer, Doctor, ExDoc, dependency checks,
-Hex packaging, clean archive contents, an isolated archive-only reference
-consumer and the Application-free structural check.
+`WOTEX_PATH_DEPS=1 mix check --no-retry`. The developer gate includes
+warnings-as-errors compilation, formatting and the behavioral test suite.
+Completion additionally requires explicit strict Credo, coverage of at least
+95%, Dialyzer, Doctor, ExDoc, dependency checks, Hex packaging, clean archive
+contents, an isolated archive-only reference consumer and the Application-free
+structural check.
 
 Native fixture changes also require CP01/CP10, ordinary and instrumented peer
 lanes, source identity checks and cleanup receipts. Evidence records commands,

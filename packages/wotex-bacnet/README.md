@@ -96,9 +96,10 @@ object and Property COV, discovery, batch reads, priority release and
 acknowledgment loss. Property tests include the public Runtime observation path.
 Receiver-death stress covers 100 cycles with another association retained.
 The complete WBA-P06 software workflow is accepted for the source, peers and
-toolchains recorded in executable evidence. The default gate also rebuilds exact
-core, Runtime and BACnet archives and exercises an isolated reference consumer
-without live-source fallback. Routing/BBMD, MS/TP and BACnet/SC are unsupported.
+toolchains recorded in executable evidence. A separate archive lane rebuilds
+exact core, Runtime and BACnet archives and exercises an isolated reference
+consumer without live-source fallback. Routing/BBMD, MS/TP and BACnet/SC are
+unsupported.
 
 ## Wotex contract
 
@@ -134,13 +135,16 @@ See [implemented profile](docs/specs/WBA.02-implemented-profile.md),
 Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
 checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
 `WOTEX_PATH_DEPS=1 mix check --no-retry`. Normal dependency resolution uses Hex
-versions. `mix test` is the fast loop. The default `mix check --no-retry` is the
-complete library gate: locked and unused dependencies, warnings-as-errors,
-formatting, strict static analysis, coverage as the only ExUnit pass, audits,
-documentation, Dialyzer, package/archive inspection, an archive-only reference
-consumer and the Application-free structural check.
+versions. `mix test` is the fast loop. The default `mix check --no-retry` covers
+warnings-as-errors compilation, formatting and the behavioral test suite.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
+
+Release evidence runs explicitly: locked and unused dependency checks,
+`mix deps.audit`, `mix hex.audit`, strict Credo, Doctor, documentation with
+warnings as errors, coverage, Dialyzer, `bin/check_application_free.exs` and
+`bin/check_archive.exs`. The software peer tasks below remain separate from both
+the developer gate and archive evidence.
 
 The accepted software fixture entry points are
 `mix wotex.software.build --workspace ABS` and
