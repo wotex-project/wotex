@@ -7,9 +7,11 @@ defmodule Wotex.Binding.HTTP.Response do
 
   `new/3` accepts status codes from 100 through 599, validates the response
   fields with `Wotex.Binding.HTTP.Headers`, and retains the body without
-  interpreting its media type. Accessors expose the three components to the
-  binding's response mapper. The value contains no request credential, client
-  handle, connection state, or redirect history.
+  interpreting its media type. The transport then applies the configured
+  header count and aggregate-byte limits before mapping a result. Accessors
+  expose the three components to the binding's response mapper. The value
+  contains no request credential, client handle, connection state, or redirect
+  history.
 
   The supplied client owns framing, decompression, redirect policy, and body
   collection. It must apply its own transport limits before construction; the

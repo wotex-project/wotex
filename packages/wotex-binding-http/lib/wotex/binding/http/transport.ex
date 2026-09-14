@@ -193,7 +193,7 @@ defmodule Wotex.Binding.HTTP.Transport do
       _, _ -> {:error, client_error(:client_request_exception, :client, :unavailable)}
     else
       {:ok, %Response{} = response} ->
-        revalidate_response(response)
+        revalidate_response(response, config)
 
       {:error, reason} ->
         {:error, client_error(:client_request_failed, :client, client_class(reason))}
@@ -214,7 +214,7 @@ defmodule Wotex.Binding.HTTP.Transport do
       _, _ -> {:error, client_error(:client_subscribe_exception, :subscription, :unavailable)}
     else
       {:ok, handle, response} ->
-        with {:ok, validated} <- revalidate_subscription_response(response),
+        with {:ok, validated} <- revalidate_subscription_response(response, config),
              :ok <- validate_handshake(validated) do
           {:ok,
            Subscription.new(
@@ -266,13 +266,26 @@ defmodule Wotex.Binding.HTTP.Transport do
     _, _ -> :ok
   end
 
-  defp revalidate_response(%Response{} = response) do
-    Response.new(Response.status(response), Response.headers(response), Response.body(response))
+  defp revalidate_response(%Response{} = response, config) do
+    with :ok <-
+           Headers.validate_limits(
+             Response.headers(response),
+             Config.max_header_count(config),
+             Config.max_header_bytes(config),
+             :response
+           ) do
+      Response.new(
+        Response.status(response),
+        Response.headers(response),
+        Response.body(response)
+      )
+    end
   end
 
-  defp revalidate_subscription_response(%Response{} = response), do: revalidate_response(response)
+  defp revalidate_subscription_response(%Response{} = response, config),
+    do: revalidate_response(response, config)
 
-  defp revalidate_subscription_response(_) do
+  defp revalidate_subscription_response(_, _) do
     {:error, client_error(:invalid_client_return, :subscription, :protocol)}
   end
 
@@ -393,7 +406,10 @@ defmodule Wotex.Binding.HTTP.Transport do
            media_type: "application/json",
            stream?: false,
            max_response_bytes: HTTPRequest.max_response_bytes(request),
-           max_event_bytes: HTTPRequest.max_event_bytes(request)
+           max_event_bytes: HTTPRequest.max_event_bytes(request),
+           max_header_count: HTTPRequest.max_header_count(request),
+           max_header_bytes: HTTPRequest.max_header_bytes(request),
+           max_uri_bytes: HTTPRequest.max_uri_bytes(request)
          ) do
       {:ok, _} -> {:ok, resolved}
       {:error, _} -> invalid_location()

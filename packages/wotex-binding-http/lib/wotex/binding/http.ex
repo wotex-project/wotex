@@ -10,7 +10,7 @@ defmodule Wotex.Binding.HTTP do
 
   * `profile/0` describes the supported schemes, operations, and media type to
     Wotex Runtime.
-  * `config/1` validates the client port, static fields, and encoded-byte limits.
+  * `config/1` validates the client port, static fields, and resource limits.
   * `transport/1` returns the Runtime transport tuple for that configuration.
   * `empty_body/0` distinguishes an absent Action body from JSON `null`.
 

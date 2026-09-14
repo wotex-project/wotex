@@ -15,10 +15,12 @@ defmodule Wotex.Binding.HTTP.Request do
 
   `max_response_bytes` and `max_event_bytes` travel with the request so a client
   can abort an oversized body or event while it is still reading. The binding
-  repeats both checks on the complete value it receives.
+  repeats both checks on the complete value it receives. Header count,
+  aggregate header-byte, and URI-byte limits are also carried so the client can
+  apply the same admission ceiling to response fields and redirect targets.
   """
 
-  alias Wotex.Binding.HTTP.{Error, Headers}
+  alias Wotex.Binding.HTTP.{Config, Error, Headers}
   alias Wotex.Runtime.Context
 
   @type t :: %__MODULE__{
@@ -32,7 +34,10 @@ defmodule Wotex.Binding.HTTP.Request do
           media_type: String.t(),
           stream?: boolean(),
           max_response_bytes: pos_integer(),
-          max_event_bytes: pos_integer()
+          max_event_bytes: pos_integer(),
+          max_header_count: pos_integer(),
+          max_header_bytes: pos_integer(),
+          max_uri_bytes: pos_integer()
         }
 
   @enforce_keys [
@@ -46,7 +51,10 @@ defmodule Wotex.Binding.HTTP.Request do
     :media_type,
     :stream?,
     :max_response_bytes,
-    :max_event_bytes
+    :max_event_bytes,
+    :max_header_count,
+    :max_header_bytes,
+    :max_uri_bytes
   ]
   defstruct @enforce_keys
 
@@ -71,16 +79,29 @@ defmodule Wotex.Binding.HTTP.Request do
     deadline = Keyword.get(opts, :deadline)
     max_response_bytes = Keyword.get(opts, :max_response_bytes)
     max_event_bytes = Keyword.get(opts, :max_event_bytes)
+    max_header_count = Keyword.get(opts, :max_header_count, Config.default_max_header_count())
+    max_header_bytes = Keyword.get(opts, :max_header_bytes, Config.default_max_header_bytes())
+    max_uri_bytes = Keyword.get(opts, :max_uri_bytes, Config.default_max_uri_bytes())
 
     with :ok <- validate_method(method),
-         :ok <- validate_uri(uri),
-         {:ok, normalized_headers} <- Headers.new(headers, :request),
-         :ok <- validate_body(body),
          :ok <- validate_identity(request_id, operation),
          :ok <- validate_deadline(deadline),
          :ok <- validate_media_type(media_type),
          :ok <- validate_limit(max_response_bytes, :max_response_bytes),
          :ok <- validate_limit(max_event_bytes, :max_event_bytes),
+         :ok <- validate_limit(max_header_count, :max_header_count),
+         :ok <- validate_limit(max_header_bytes, :max_header_bytes),
+         :ok <- validate_limit(max_uri_bytes, :max_uri_bytes),
+         :ok <- validate_uri(uri, max_uri_bytes),
+         :ok <-
+           Headers.validate_limits(
+             headers,
+             max_header_count,
+             max_header_bytes,
+             :request
+           ),
+         {:ok, normalized_headers} <- Headers.new(headers, :request),
+         :ok <- validate_body(body),
          true <- is_boolean(stream?) do
       {:ok,
        %__MODULE__{
@@ -94,7 +115,10 @@ defmodule Wotex.Binding.HTTP.Request do
          media_type: media_type,
          stream?: stream?,
          max_response_bytes: max_response_bytes,
-         max_event_bytes: max_event_bytes
+         max_event_bytes: max_event_bytes,
+         max_header_count: max_header_count,
+         max_header_bytes: max_header_bytes,
+         max_uri_bytes: max_uri_bytes
        }}
     else
       false -> {:error, Error.new(:invalid_stream_flag, :request, "stream flag must be boolean")}
@@ -150,6 +174,18 @@ defmodule Wotex.Binding.HTTP.Request do
   @spec max_event_bytes(t()) :: pos_integer()
   def max_event_bytes(%__MODULE__{max_event_bytes: limit}), do: limit
 
+  @doc "Returns the maximum response field count the client may admit."
+  @spec max_header_count(t()) :: pos_integer()
+  def max_header_count(%__MODULE__{max_header_count: limit}), do: limit
+
+  @doc "Returns the maximum aggregate response field bytes the client may admit."
+  @spec max_header_bytes(t()) :: pos_integer()
+  def max_header_bytes(%__MODULE__{max_header_bytes: limit}), do: limit
+
+  @doc "Returns the maximum size of this or a client-followed target URI."
+  @spec max_uri_bytes(t()) :: pos_integer()
+  def max_uri_bytes(%__MODULE__{max_uri_bytes: limit}), do: limit
+
   defp validate_method(method) do
     if Headers.token?(method) do
       :ok
@@ -158,18 +194,30 @@ defmodule Wotex.Binding.HTTP.Request do
     end
   end
 
-  defp validate_uri(uri) when is_binary(uri) do
-    case URI.new(uri) do
-      {:ok, parsed} ->
-        validate_parsed_uri(uri, parsed)
-
-      {:error, _} ->
-        {:error, Error.new(:invalid_uri, :request, "HTTP target URI is invalid")}
+  defp validate_uri(uri, max_bytes) when is_binary(uri) do
+    with :ok <- validate_uri_size(uri, max_bytes),
+         {:ok, parsed} <- URI.new(uri) do
+      validate_parsed_uri(uri, parsed)
+    else
+      {:error, %Error{} = error} -> {:error, error}
+      {:error, _} -> {:error, Error.new(:invalid_uri, :request, "HTTP target URI is invalid")}
     end
   end
 
-  defp validate_uri(_),
+  defp validate_uri(_, _),
     do: {:error, Error.new(:invalid_uri, :request, "HTTP target URI must be a string")}
+
+  defp validate_uri_size(uri, max_bytes) when byte_size(uri) <= max_bytes, do: :ok
+
+  defp validate_uri_size(_, max_bytes) do
+    {:error,
+     Error.new(
+       :uri_too_large,
+       :request,
+       "HTTP target URI exceeds the configured byte limit",
+       %{max_bytes: max_bytes}
+     )}
+  end
 
   defp validate_parsed_uri(uri, parsed) do
     cond do
@@ -239,10 +287,27 @@ defmodule Wotex.Binding.HTTP.Request do
 
   defp validate_limit(value, _) when is_integer(value) and value > 0, do: :ok
 
+  defp validate_limit(_, name) when name in [:max_response_bytes, :max_event_bytes] do
+    {:error,
+     Error.new(
+       :invalid_byte_limit,
+       :request,
+       "request byte limits must be positive integers",
+       %{
+         option: name
+       }
+     )}
+  end
+
   defp validate_limit(_, name) do
     {:error,
-     Error.new(:invalid_byte_limit, :request, "request byte limits must be positive integers", %{
-       option: name
-     })}
+     Error.new(
+       :invalid_admission_limit,
+       :request,
+       "request admission limits must be positive integers",
+       %{
+         option: name
+       }
+     )}
   end
 end

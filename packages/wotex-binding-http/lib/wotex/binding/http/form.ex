@@ -60,7 +60,10 @@ defmodule Wotex.Binding.HTTP.Form do
         media_type: media_type,
         stream?: stream?,
         max_response_bytes: Config.max_response_bytes(config),
-        max_event_bytes: Config.max_event_bytes(config)
+        max_event_bytes: Config.max_event_bytes(config),
+        max_header_count: Config.max_header_count(config),
+        max_header_bytes: Config.max_header_bytes(config),
+        max_uri_bytes: Config.max_uri_bytes(config)
       )
     end
   end

@@ -12,6 +12,11 @@ defmodule Wotex.Binding.HTTP.Headers do
   `put/3` compose already validated lists deterministically, and `get/2`
   performs a case-insensitive lookup against their normalized names.
 
+  The transport applies a configurable count limit and an aggregate byte limit
+  to complete request and response field lists. Aggregate bytes are the sum of
+  each normalized field name and field value; client-owned wire delimiters and
+  compression are deliberately outside that package admission measure.
+
   A `t:t/0` preserves field order and original values while representing names
   in lowercase. The module does not apply an execution credential, calculate
   Content-Length, or choose HTTP connection behavior. The supplied client owns
@@ -86,9 +91,71 @@ defmodule Wotex.Binding.HTTP.Headers do
     end)
   end
 
+  @doc false
+  @spec validate_limits(t(), pos_integer(), pos_integer(), Error.phase()) ::
+          :ok | {:error, Error.t()}
+  def validate_limits(fields, max_count, max_bytes, phase)
+      when is_list(fields) and is_integer(max_count) and max_count > 0 and
+             is_integer(max_bytes) and max_bytes > 0 do
+    validate_next(fields, {max_count, max_bytes}, phase, {0, 0})
+  end
+
+  def validate_limits(_, _, _, phase) do
+    {:error,
+     Error.new(
+       :invalid_header_limits,
+       phase,
+       "HTTP field limits must be positive integers",
+       %{},
+       limit_class(phase)
+     )}
+  end
+
   @doc "Returns whether a binary is a valid HTTP token."
   @spec token?(term()) :: boolean()
   def token?(value), do: is_binary(value) and value != "" and Regex.match?(@token, value)
+
+  defp validate_next([], _, _, _), do: :ok
+
+  defp validate_next([_ | _], {max_count, _}, phase, {count, _}) when count >= max_count do
+    {:error,
+     Error.new(
+       :header_count_exceeded,
+       phase,
+       "HTTP field count exceeds the configured limit",
+       %{max_count: max_count},
+       limit_class(phase)
+     )}
+  end
+
+  defp validate_next(
+         [{name, value} | rest],
+         {_, max_bytes} = limits,
+         phase,
+         {count, bytes}
+       )
+       when is_binary(name) and is_binary(value) do
+    next_bytes = bytes + byte_size(name) + byte_size(value)
+
+    if next_bytes > max_bytes do
+      {:error,
+       Error.new(
+         :header_bytes_exceeded,
+         phase,
+         "HTTP fields exceed the configured aggregate byte limit",
+         %{max_bytes: max_bytes},
+         limit_class(phase)
+       )}
+    else
+      validate_next(rest, limits, phase, {count + 1, next_bytes})
+    end
+  end
+
+  defp validate_next([_ | rest], limits, phase, {count, bytes}),
+    do: validate_next(rest, limits, phase, {count + 1, bytes})
+
+  defp limit_class(phase) when phase in [:response, :subscription], do: :protocol
+  defp limit_class(_), do: :permanent
 
   defp normalize_field({name, value}, kind) when is_binary(name) and is_binary(value) do
     normalized = String.downcase(name)

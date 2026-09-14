@@ -2,13 +2,15 @@ defmodule Wotex.Binding.HTTP.Codec do
   @moduledoc """
   Encodes and decodes complete JSON representations under explicit byte limits.
 
-  Decoding delegates to `Wotex.JSON.decode/2`, so the caller's byte limit is
-  enforced on the source bytes before materialization and the package's
-  structural limits on nesting depth, node count, string size, collection size,
-  and duplicate object members apply to every admitted body. The byte limit is
-  validated here, so an invalid limit never reaches the core admission limits.
+  Encoding delegates to `Wotex.JSON.encode/2` with the caller's byte limit, so
+  native string/key payload and the package's nesting, node, string, and
+  collection ceilings are checked before encoded output materialization. The
+  exact encoded size is checked again for JSON syntax and escaping overhead.
 
-  Size checks happen on encoded bytes. Codec failures are normalized into
+  Decoding delegates to `Wotex.JSON.decode/2`, so source bytes, nesting depth,
+  node count, string size, collection size, and duplicate object members are
+  bounded before use. The byte limit is validated here, so an invalid limit
+  never reaches core admission. Codec failures are normalized into
   credential-free binding errors rather than exposing JSON-library values.
   """
 
@@ -24,17 +26,23 @@ defmodule Wotex.Binding.HTTP.Codec do
   @doc "Encodes a Wotex JSON value within the supplied byte limit."
   @spec encode(term(), pos_integer()) :: {:ok, binary()} | {:error, Error.t()}
   def encode(value, max_bytes) when is_integer(max_bytes) and max_bytes > 0 do
-    case Wotex.JSON.encode(value) do
+    case Wotex.JSON.encode(value, max_bytes: max_bytes) do
       {:ok, encoded} when byte_size(encoded) <= max_bytes ->
         {:ok, encoded}
 
       {:ok, _} ->
+        request_too_large(max_bytes)
+
+      {:error, %Wotex.Error{code: :byte_limit_exceeded}} ->
+        request_too_large(max_bytes)
+
+      {:error, %Wotex.Error{code: code}} when code in @structural_limits ->
         {:error,
          Error.new(
-           :request_body_too_large,
+           :json_limit_exceeded,
            :codec,
-           "encoded JSON request exceeds byte limit",
-           %{max_bytes: max_bytes},
+           "JSON input exceeds a bounded admission limit",
+           %{limit: code},
            :protocol
          )}
 
@@ -52,6 +60,17 @@ defmodule Wotex.Binding.HTTP.Codec do
 
   def encode(_, _) do
     {:error, Error.new(:invalid_encode_limit, :codec, "JSON byte limit must be positive")}
+  end
+
+  defp request_too_large(max_bytes) do
+    {:error,
+     Error.new(
+       :request_body_too_large,
+       :codec,
+       "encoded JSON request exceeds byte limit",
+       %{max_bytes: max_bytes},
+       :protocol
+     )}
   end
 
   @doc "Decodes one complete JSON value within the supplied byte limit."

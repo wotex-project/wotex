@@ -47,7 +47,10 @@ defmodule Wotex.Binding.HTTP.ValueTest do
                headers: [{"User-Agent", "consumer-host"}],
                max_request_bytes: 10,
                max_response_bytes: 20,
-               max_event_bytes: 30
+               max_event_bytes: 30,
+               max_header_count: 4,
+               max_header_bytes: 80,
+               max_uri_bytes: 120
              )
 
     assert Config.client(config) == {FakeClient, %{token_like_value: "not-inspected"}}
@@ -55,6 +58,9 @@ defmodule Wotex.Binding.HTTP.ValueTest do
     assert Config.max_request_bytes(config) == 10
     assert Config.max_response_bytes(config) == 20
     assert Config.max_event_bytes(config) == 30
+    assert Config.max_header_count(config) == 4
+    assert Config.max_header_bytes(config) == 80
+    assert Config.max_uri_bytes(config) == 120
     refute inspect(config) =~ "not-inspected"
     assert HTTP.transport(config) == {Wotex.Binding.HTTP.Transport, config}
   end
@@ -65,7 +71,14 @@ defmodule Wotex.Binding.HTTP.ValueTest do
     assert {:error, %Error{code: :invalid_client}} = Config.new([])
     assert {:error, %Error{code: :invalid_client}} = Config.new(client: {String, %{}})
 
-    for option <- [:max_request_bytes, :max_response_bytes, :max_event_bytes] do
+    for option <- [
+          :max_request_bytes,
+          :max_response_bytes,
+          :max_event_bytes,
+          :max_header_count,
+          :max_header_bytes,
+          :max_uri_bytes
+        ] do
       assert {:error, %Error{code: :invalid_limit, details: %{option: ^option}}} =
                Config.new([client: {FakeClient, %{}}] ++ [{option, 0}])
     end
@@ -125,7 +138,10 @@ defmodule Wotex.Binding.HTTP.ValueTest do
                media_type: "application/json",
                stream?: false,
                max_response_bytes: 4_194_304,
-               max_event_bytes: 1_048_576
+               max_event_bytes: 1_048_576,
+               max_header_count: 64,
+               max_header_bytes: 65_536,
+               max_uri_bytes: 8_192
              )
 
     assert Request.method(request) == "GET"
@@ -138,6 +154,9 @@ defmodule Wotex.Binding.HTTP.ValueTest do
     assert Request.media_type(request) == "application/json"
     assert Request.max_response_bytes(request) == 4_194_304
     assert Request.max_event_bytes(request) == 1_048_576
+    assert Request.max_header_count(request) == 64
+    assert Request.max_header_bytes(request) == 65_536
+    assert Request.max_uri_bytes(request) == 8_192
     refute Request.stream?(request)
     refute Map.has_key?(Map.from_struct(request), :credential)
   end
@@ -179,6 +198,11 @@ defmodule Wotex.Binding.HTTP.ValueTest do
 
     for option <- [:max_response_bytes, :max_event_bytes] do
       assert {:error, %Error{code: :invalid_byte_limit, details: %{option: ^option}}} =
+               Request.new("GET", valid_uri(), [], nil, Keyword.put(opts, option, 0))
+    end
+
+    for option <- [:max_header_count, :max_header_bytes, :max_uri_bytes] do
+      assert {:error, %Error{code: :invalid_admission_limit, details: %{option: ^option}}} =
                Request.new("GET", valid_uri(), [], nil, Keyword.put(opts, option, 0))
     end
 

@@ -101,7 +101,7 @@ defmodule WotexBindingHTTP.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/client-lifecycle-inventory.md docs/http-operation-inventory.md docs/plans docs/runtime-baseline.md docs/standards-baseline.md docs/specs lib mix.exs)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/client-lifecycle-inventory.md docs/http-operation-inventory.md docs/limits-security-inventory.md docs/plans docs/runtime-baseline.md docs/standards-baseline.md docs/specs lib mix.exs)
     ]
   end
 
@@ -118,6 +118,7 @@ defmodule WotexBindingHTTP.MixProject do
         NOTICE: [title: "Notices"],
         "docs/client-lifecycle-inventory.md": [title: "Client lifecycle inventory"],
         "docs/http-operation-inventory.md": [title: "HTTP operation inventory"],
+        "docs/limits-security-inventory.md": [title: "Limits and security inventory"],
         "docs/standards-baseline.md": [title: "Standards baseline"],
         "docs/runtime-baseline.md": [title: "Runtime baseline"],
         "docs/plans/wotex-binding-http-completion.md": [title: "Completion Contract"],
@@ -129,7 +130,7 @@ defmodule WotexBindingHTTP.MixProject do
         "Completion plans": ~r/docs\/plans/,
         "Normative package specifications": ~r/docs\/specs/,
         "Contract evidence":
-          ~r/docs\/((client-lifecycle|http-operation)-inventory|(standards|runtime)-baseline)/
+          ~r/docs\/((client-lifecycle|http-operation|limits-security)-inventory|(standards|runtime)-baseline)/
       ],
       groups_for_modules: [
         "Public API": [Wotex.Binding.HTTP, Wotex.Binding.HTTP.Client],

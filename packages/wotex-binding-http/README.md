@@ -35,7 +35,7 @@ HTTP ownership is intentionally split at a narrow port:
 | --- | --- |
 | TD Form and WoT operation mapping | DNS, sockets, TLS, proxies, and redirects |
 | Immutable request and response values | Connection pools and supervision |
-| Header safety and JSON byte limits | Deadlines and transport cancellation |
+| Header, URI, and JSON admission limits | Deadlines and transport cancellation |
 | Runtime result and delivery mapping | SSE framing, reconnect, and backpressure |
 | Credential-free error normalization | Applying an ephemeral credential to a request |
 
@@ -96,13 +96,19 @@ retained, logged, included in the opaque handle, captured by a connection
 process, or returned in an error. Client configuration must contain no
 credentials.
 
-Each request carries `max_response_bytes` and `max_event_bytes` so the client
-can abort an oversized body or event while reading it, and an absolute
-`deadline` the client honors with its own clock reading. An integer deadline is
-a `System.monotonic_time(:millisecond)` point and a `DateTime` is UTC; use
-`Wotex.Runtime.Context.remaining_ms/2` for the remaining budget. A client that
-expires a call returns `{:error, :timeout}`, the single reason the binding
-interprets.
+Each request carries response/event byte, field-count, aggregate field-byte,
+and URI-byte ceilings so the client can abort oversized input while reading it,
+plus an absolute `deadline` the client honors with its own clock reading. An
+integer deadline is a `System.monotonic_time(:millisecond)` point and a
+`DateTime` is UTC; use `Wotex.Runtime.Context.remaining_ms/2` for the remaining
+budget. A client that expires a call returns `{:error, :timeout}`, the single
+reason the binding interprets.
+
+The client and consumer host authorize the final request target, each DNS/IP
+result, proxy route, and every redirect before I/O. Apply an ephemeral
+credential only while the exact target remains inside its audience. URI syntax
+and length checks in this package are not SSRF protection, redirect policy, or
+credential authorization.
 
 ## Configure the Runtime transport
 
@@ -115,7 +121,10 @@ interprets.
     headers: [{"user-agent", "consumer-host"}],
     max_request_bytes: 1_048_576,
     max_response_bytes: 4_194_304,
-    max_event_bytes: 1_048_576
+    max_event_bytes: 1_048_576,
+    max_header_count: 64,
+    max_header_bytes: 65_536,
+    max_uri_bytes: 8_192
   )
 
 transport = Wotex.Binding.HTTP.transport(config)
@@ -179,6 +188,11 @@ maps callback failures, handshake cleanup, close concurrency, configuration
 identity, and owner failure to named vectors. It also identifies
 pending-establishment owner monitoring as a supplied-client obligation.
 
+The [limits and security inventory](docs/limits-security-inventory.md) records
+exact thresholds, native JSON admission, sustained receiver overload, deadline
+and destination policy seams, redaction vectors, and the remaining client-owned
+nonclaims.
+
 ## Failure model
 
 Public failures are `Wotex.Binding.HTTP.Error` values with a stable `code`, a
@@ -197,7 +211,7 @@ admits as idempotent.
 The package also enforces these invariants:
 
 - Request, response, subscription, delivery, and error values contain no credentials.
-- Request, response, and event payload limits are measured in encoded bytes and JSON decoding runs through the bounded `Wotex.JSON` admission limits.
+- Request, response, and event payload limits are measured in encoded bytes; fields and URIs have separate explicit admission ceilings, and JSON uses bounded `Wotex.JSON` admission.
 - Loading the application starts no process and defines no application callback.
 - No database, web framework, endpoint, global registry, or built-in client is present.
 

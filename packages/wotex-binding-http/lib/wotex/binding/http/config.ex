@@ -17,10 +17,16 @@ defmodule Wotex.Binding.HTTP.Config do
   * `:headers` — static credential-free request fields, defaulting to `[]`;
   * `:max_request_bytes` — maximum encoded JSON request size;
   * `:max_response_bytes` — maximum complete finite response size;
-  * `:max_event_bytes` — maximum data size of one dispatched SSE event.
+  * `:max_event_bytes` — maximum data size of one dispatched SSE event;
+  * `:max_header_count` — maximum request or response field count;
+  * `:max_header_bytes` — maximum aggregate field-name and field-value bytes;
+  * `:max_uri_bytes` — maximum request-target bytes.
 
-  Each limit must be a positive integer. Defaults are conservative package
-  values and can be tightened by the consumer host.
+  Each limit must be a positive integer. Defaults are 1,048,576 request bytes,
+  4,194,304 response bytes, 1,048,576 event bytes, 64 fields, 65,536 aggregate
+  field-name/value bytes, and 8,192 URI bytes. They are package admission
+  values, not limits imposed by an HTTP standard, and can be tightened by the
+  consumer host.
 
   Each `new/1` call creates a distinct, non-secret instance reference. Reuse the
   returned configuration for the complete stream lifecycle; reconstructing even
@@ -33,6 +39,9 @@ defmodule Wotex.Binding.HTTP.Config do
   @default_max_request_bytes 1_048_576
   @default_max_response_bytes 4_194_304
   @default_max_event_bytes 1_048_576
+  @default_max_header_count 64
+  @default_max_header_bytes 65_536
+  @default_max_uri_bytes 8_192
 
   @derive {Inspect,
            only: [
@@ -40,7 +49,10 @@ defmodule Wotex.Binding.HTTP.Config do
              :headers,
              :max_request_bytes,
              :max_response_bytes,
-             :max_event_bytes
+             :max_event_bytes,
+             :max_header_count,
+             :max_header_bytes,
+             :max_uri_bytes
            ]}
   @type t :: %__MODULE__{
           client_module: module(),
@@ -49,7 +61,10 @@ defmodule Wotex.Binding.HTTP.Config do
           headers: Headers.t(),
           max_request_bytes: pos_integer(),
           max_response_bytes: pos_integer(),
-          max_event_bytes: pos_integer()
+          max_event_bytes: pos_integer(),
+          max_header_count: pos_integer(),
+          max_header_bytes: pos_integer(),
+          max_uri_bytes: pos_integer()
         }
 
   @enforce_keys [
@@ -59,7 +74,10 @@ defmodule Wotex.Binding.HTTP.Config do
     :headers,
     :max_request_bytes,
     :max_response_bytes,
-    :max_event_bytes
+    :max_event_bytes,
+    :max_header_count,
+    :max_header_bytes,
+    :max_uri_bytes
   ]
   defstruct @enforce_keys
 
@@ -77,12 +95,25 @@ defmodule Wotex.Binding.HTTP.Config do
     max_request_bytes = Keyword.get(opts, :max_request_bytes, @default_max_request_bytes)
     max_response_bytes = Keyword.get(opts, :max_response_bytes, @default_max_response_bytes)
     max_event_bytes = Keyword.get(opts, :max_event_bytes, @default_max_event_bytes)
+    max_header_count = Keyword.get(opts, :max_header_count, @default_max_header_count)
+    max_header_bytes = Keyword.get(opts, :max_header_bytes, @default_max_header_bytes)
+    max_uri_bytes = Keyword.get(opts, :max_uri_bytes, @default_max_uri_bytes)
 
     with {:ok, client_module, client_config} <- validate_client(client),
-         {:ok, normalized_headers} <- Headers.new(headers, :request),
          :ok <- positive_limit(max_request_bytes, :max_request_bytes),
          :ok <- positive_limit(max_response_bytes, :max_response_bytes),
-         :ok <- positive_limit(max_event_bytes, :max_event_bytes) do
+         :ok <- positive_limit(max_event_bytes, :max_event_bytes),
+         :ok <- positive_limit(max_header_count, :max_header_count),
+         :ok <- positive_limit(max_header_bytes, :max_header_bytes),
+         :ok <- positive_limit(max_uri_bytes, :max_uri_bytes),
+         :ok <-
+           Headers.validate_limits(
+             headers,
+             max_header_count,
+             max_header_bytes,
+             :configuration
+           ),
+         {:ok, normalized_headers} <- Headers.new(headers, :request) do
       {:ok,
        %__MODULE__{
          client_module: client_module,
@@ -91,7 +122,10 @@ defmodule Wotex.Binding.HTTP.Config do
          headers: normalized_headers,
          max_request_bytes: max_request_bytes,
          max_response_bytes: max_response_bytes,
-         max_event_bytes: max_event_bytes
+         max_event_bytes: max_event_bytes,
+         max_header_count: max_header_count,
+         max_header_bytes: max_header_bytes,
+         max_uri_bytes: max_uri_bytes
        }}
     end
   end
@@ -124,6 +158,30 @@ defmodule Wotex.Binding.HTTP.Config do
   @doc "Returns the maximum data size of one dispatched Server-Sent Event."
   @spec max_event_bytes(t()) :: pos_integer()
   def max_event_bytes(%__MODULE__{max_event_bytes: limit}), do: limit
+
+  @doc "Returns the maximum request or response field count."
+  @spec max_header_count(t()) :: pos_integer()
+  def max_header_count(%__MODULE__{max_header_count: limit}), do: limit
+
+  @doc "Returns the maximum aggregate field-name and field-value bytes."
+  @spec max_header_bytes(t()) :: pos_integer()
+  def max_header_bytes(%__MODULE__{max_header_bytes: limit}), do: limit
+
+  @doc "Returns the maximum request-target size in bytes."
+  @spec max_uri_bytes(t()) :: pos_integer()
+  def max_uri_bytes(%__MODULE__{max_uri_bytes: limit}), do: limit
+
+  @doc false
+  @spec default_max_header_count() :: pos_integer()
+  def default_max_header_count, do: @default_max_header_count
+
+  @doc false
+  @spec default_max_header_bytes() :: pos_integer()
+  def default_max_header_bytes, do: @default_max_header_bytes
+
+  @doc false
+  @spec default_max_uri_bytes() :: pos_integer()
+  def default_max_uri_bytes, do: @default_max_uri_bytes
 
   defp validate_client({module, config}) when is_atom(module) and not is_nil(module) do
     callbacks = [request: 3, subscribe: 4, close: 2]

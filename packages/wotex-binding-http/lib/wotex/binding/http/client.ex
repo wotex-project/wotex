@@ -11,9 +11,18 @@ defmodule Wotex.Binding.HTTP.Client do
   `Wotex.Binding.HTTP.SSE.Event` frames to the Runtime subscription process it
   receives as `owner`. Decoding happens in that owner process through
   `Wotex.Binding.HTTP.Transport.decode_frame/3`, so the client's connection
-  process never runs the JSON codec. Connection ownership, redirects, TLS
-  policy, pooling policy, deadlines, backpressure, and reconnection remain
-  explicit responsibilities of the client and consumer host.
+  process never runs the JSON codec. Connection ownership, destination and
+  credential-audience authorization, redirects, TLS policy, pooling policy,
+  deadlines, backpressure, and reconnection remain explicit responsibilities
+  of the client and consumer host.
+
+  Before I/O, the client and host authorize the exact `Request.uri/1`, every
+  DNS/IP result, and the proxy route. They repeat that admission for each
+  redirect and apply the callback credential only while the admitted target is
+  inside its audience. A syntactically valid initial or redirected URI is not
+  authorization. The request carries field and URI ceilings for incremental
+  response and redirect admission, but the binding cannot observe or enforce
+  how arbitrary client code uses them.
 
   ## Messages the client sends to the owner
 
@@ -60,14 +69,17 @@ defmodule Wotex.Binding.HTTP.Client do
   Executes one finite HTTP request.
 
   `request` contains the method, absolute target, validated fields, encoded
-  body, deadline, byte limits, and interaction identity. `credential` is
+  body, deadline, admission limits, and interaction identity. `credential` is
   intentionally not part of that value and may be used only while performing
   this call. `config` is the non-secret value supplied when the binding was
   configured.
 
-  Return a validated `Wotex.Binding.HTTP.Response` containing the complete body,
-  or an implementation-specific error reason. Do not return or retain the
-  credential in either branch.
+  Read the matching clock, derive the remaining budget with
+  `Wotex.Runtime.Context.remaining_ms/2`, and cancel transport work when that
+  budget expires. Return a validated `Wotex.Binding.HTTP.Response` containing
+  the complete body, or an implementation-specific error reason. Report
+  deadline expiry as `{:error, :timeout}`. Do not return or retain the credential
+  in either branch.
   """
   @callback request(Request.t(), credential(), config()) ::
               {:ok, Response.t()} | {:error, term()}

@@ -58,7 +58,7 @@ reference-consumer semantics need their own results.
 |---|---|---|---|
 | HTTP defaults for read/write/invoke | TD 1.1 Recommendation 2023-12-05 | `operation_inventory_test.exs`, `form_test.exs` | Three TD defaults and explicit method handling |
 | Action status and SSE mappings | WoT Profiles Working Draft 2025-11-04 | `operation_inventory_test.exs`, `form_test.exs`, `transport_test.exs` | Package behavior, not Profile conformance |
-| Fields/status/representation | RFC 9110, RFC 8259 | `value_test.exs`, `form_test.exs`, `transport_test.exs` | Validated values/JSON; no HTTP client implementation |
+| Fields/status/representation | RFC 9110, RFC 8259 | `value_test.exs`, `form_test.exs`, `transport_test.exs`, `limits_security_test.exs` | Validated and bounded values/JSON; no HTTP client implementation |
 | Message framing | RFC 9112 | Client boundary tests | Client-owned, not implemented here |
 | SSE adaptation | HTML Living Standard, repository observation 2026-09-02 | `client_lifecycle_inventory_test.exs`, `integration_test.exs`, `transport_test.exs` | Already-framed events; no parser/reconnect claim |
 | Binding Registry membership | Draft Registry 2025-11-04 baseline | No registration evidence | No membership or W3C endorsement claim |
@@ -80,8 +80,8 @@ Newer draft text does not silently change a released mapping.
 | ID | Unsupported/unproven claim | Disposition |
 |---|---|---|
 | WBH-R01 | Exactly-once remote close / reconnect durability | Consumer session contract; WBH-C02 documents failure cells |
-| WBH-R02 | Bounded total memory or stream mailbox | WBH-C03 allocation/overload proof; byte limits alone insufficient |
-| WBH-R03 | SSRF protection or safe cross-origin credential forwarding | Consumer destination/audience policy; syntax checks insufficient |
+| WBH-R02 | Bounded total memory or stream mailbox | WBH-C03 proves local admission and a configured Runtime receiver boundary; client/owner mailboxes and total heap remain nonclaims |
+| WBH-R03 | SSRF protection or safe cross-origin credential forwarding | WBH-C03 proves the separate port seam only; consumer client/host owns destination and audience policy |
 | WBH-R04 | All TD operations or non-JSON content | Outside nine-operation profile; new reviewed mapping required |
 | WBH-R05 | Full WoT Profile/Registry/HTTP client conformance | Explicit nonclaim; no badge or label upgrade from test count |
 | WBH-R06 | Whole declared runtime matrix and registry installation | WBH-C05 exact artifact/dependency evidence |

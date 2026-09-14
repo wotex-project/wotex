@@ -92,7 +92,7 @@ is local connection lifecycle, not a second authenticated request.
 | Configure | No stream or process; fresh nonsecret instance ref | Reuse exact configuration for open/close |
 | Open | Validate Form then pass callback to client | Client owns socket, TLS, framing and deadline |
 | Handshake invalid after handle returned | Attempt immediate close, return failure | Close failure cannot prove remote cleanup |
-| Active event | Client sends a raw frame to the owner; the owner decodes it under the event byte limit | Receiver and transport own overload/backpressure |
+| Active event | Client sends a raw frame to the owner; the owner decodes it under the event byte limit | Runtime can bound receiver delivery; client owns socket/parser and owner-send backpressure |
 | Keep-alive frame | Empty data is ignored without a delivery | Client decides what a heartbeat looks like on the wire |
 | Bad event | Classified `:protocol` error becomes an `:undecodable_frame` delivery; no invented payload | Consumer chooses whether stream continues |
 | Session status | `:reconnected` notifies only; `:session_lost` and `:transport_down` notify, close and stop with `:shutdown` | Consumer supervisor owns restart and resubscription |
@@ -109,12 +109,14 @@ cursor persistence, event deduplication or bounded process mailbox; Runtime owns
 the optional receiver mailbox bound. The Living
 Standard is a client framing reference; draft WoT Profile use is not conformance.
 
-`docs/client-lifecycle-inventory.md`, `client_lifecycle_inventory_test.exs`,
+`docs/client-lifecycle-inventory.md`, `docs/limits-security-inventory.md`,
+`client_lifecycle_inventory_test.exs`, `limits_security_test.exs`,
 `transport_test.exs` and `integration_test.exs` cover the open/event/close
 boundary, including exact event-byte thresholds, malformed handshakes, cleanup
 callback failures, configuration transplant, duplicate raw close, concurrent
-Runtime stop, receiver death, session loss and linked-client failure. These
-vectors do not transfer connection ownership into the package.
-Sustained-delivery allocation, pending-establishment owner monitoring, and
-supplied-client overload remain consumer evidence prerequisites for any future
-bounded streaming memory or recovery guarantee.
+Runtime stop, receiver death, session loss, linked-client failure, sustained
+delivery against a configured Runtime receiver bound, and connection-exit
+redaction. These vectors do not transfer connection ownership into the package.
+Pending-establishment owner monitoring, socket/parser backpressure, connection
+mailbox bounds, and hostile concurrent-send behavior remain consumer evidence
+prerequisites for any hard bounded-memory or recovery guarantee.

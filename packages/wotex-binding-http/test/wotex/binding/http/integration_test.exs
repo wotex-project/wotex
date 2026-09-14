@@ -144,17 +144,43 @@ defmodule Wotex.Binding.HTTP.IntegrationTest do
     assert_receive {:DOWN, ^monitor, :process, ^pid, {:shutdown, :receiver_down}}
   end
 
-  test "WBH-L10-P linked client loss closes and stops the Runtime owner" do
+  test "WBH-L10-P and WBH-S13-P linked client loss redacts its nested exit reason" do
     pid = observation(%{link_owner: true}, :linked_client_failure)
     monitor = Process.monitor(pid)
+    secret = "nested-connection-process-secret"
 
     assert_receive {:client_subscribe, %Request{}, :resolved_credential, ^pid}
     assert_receive {:client_connection, connection}
-    send(connection, {:fail, :connection_lost})
+    send(connection, {:fail, {:connection_lost, %{credential: secret}}})
 
-    assert_receive {:wotex_runtime, :linked_client_failure, {:status, :transport_down}}
+    assert_receive {:wotex_runtime, :linked_client_failure, {:status, :transport_down}} = delivery
+    refute inspect(delivery) =~ secret
+    refute :erlang.term_to_binary(delivery) =~ secret
     assert_receive {:client_close, :integration_handle}
     assert_receive {:DOWN, ^monitor, :process, ^pid, {:shutdown, :transport_down}}
+  end
+
+  test "WBH-S12-P sustained frames respect the Runtime receiver-mailbox drop boundary" do
+    slow_receiver = spawn(fn -> Process.sleep(:infinity) end)
+    Enum.each(1..3, &send(slow_receiver, {:backlog, &1}))
+
+    pid =
+      observation(%{}, :bounded_delivery,
+        receiver: slow_receiver,
+        max_queue_length: 3,
+        overflow: :drop
+      )
+
+    assert_receive {:client_subscribe, %Request{}, :resolved_credential, ^pid}
+    assert %{active?: true} = :sys.get_state(pid)
+    {:ok, event} = Event.new("1")
+
+    Enum.each(1..256, fn _ -> send(pid, {:wotex_transport_frame, event}) end)
+
+    assert :ok = Subscription.stop(pid)
+    assert_receive {:client_close, :integration_handle}
+    assert {:message_queue_len, 3} = Process.info(slow_receiver, :message_queue_len)
+    Process.exit(slow_receiver, :kill)
   end
 
   defp observation(client_overrides, id, opts \\ []) do
@@ -170,14 +196,23 @@ defmodule Wotex.Binding.HTTP.IntegrationTest do
 
     context = Context.new!(request_id: "stream-request")
 
-    {:ok, child_spec} =
-      ConsumedThing.observation_child_spec(consumed, "temperature", context,
+    child_opts =
+      [
         id: id,
         receiver: Keyword.get(opts, :receiver, self()),
         restart: :temporary
-      )
+      ]
+      |> maybe_put(opts, :max_queue_length)
+      |> maybe_put(opts, :overflow)
+
+    {:ok, child_spec} =
+      ConsumedThing.observation_child_spec(consumed, "temperature", context, child_opts)
 
     start_supervised!(child_spec)
+  end
+
+  defp maybe_put(target, source, key) do
+    if Keyword.has_key?(source, key), do: Keyword.put(target, key, source[key]), else: target
   end
 
   defp consumed_thing(client_overrides) do

@@ -33,7 +33,10 @@ defmodule Wotex.Binding.HTTP.FormTest do
       HTTP.config(
         client: {FakeClient, %{owner: self()}},
         max_response_bytes: 512,
-        max_event_bytes: 64
+        max_event_bytes: 64,
+        max_header_count: 12,
+        max_header_bytes: 256,
+        max_uri_bytes: 128
       )
 
     request = Factory.request(:observeproperty, nil, %{"subprotocol" => "sse"})
@@ -41,6 +44,9 @@ defmodule Wotex.Binding.HTTP.FormTest do
     assert {:ok, built} = Form.build(request, config)
     assert Request.max_response_bytes(built) == 512
     assert Request.max_event_bytes(built) == 64
+    assert Request.max_header_count(built) == 12
+    assert Request.max_header_bytes(built) == 256
+    assert Request.max_uri_bytes(built) == 128
     assert Request.deadline(built) == 50_000
   end
 

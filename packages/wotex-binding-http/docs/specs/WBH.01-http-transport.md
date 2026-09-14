@@ -67,7 +67,7 @@ establish canonical Property truth or prove a physical Action effect.
 
 ## Failure rules
 
-Invalid Form terms, fields, methods, URIs, representations, byte sizes,
+Invalid Form terms, fields, methods, URIs, representations, resource sizes,
 statuses, client returns, and JSON fail as structured
 `Wotex.Binding.HTTP.Error` values carrying a retry `class`. WBH.02 fixes the
 complete class mapping. External client reasons and exceptions are not retained
@@ -93,19 +93,22 @@ server route, global registry, framework, connection manager or task scheduler.
 
 | Phase | Required behavior | Negative evidence |
 |---|---|---|
-| Map | Validate method, URI, operation, representation and fields before calling client | Invalid multi-op method override, unsafe URI and unsupported operation invoke no client |
-| Encode | JSON or explicit absent body; bound output | Empty marker differs from JSON null; unsupported representation and oversize fail |
+| Map | Validate method, URI length/syntax, operation, representation and field count/bytes before calling client | Invalid multi-op method override, unsafe URI and unsupported operation invoke no client |
+| Encode | JSON or explicit absent body; bound native input and encoded output | Empty marker differs from JSON null; unsupported representation, structural excess and oversize fail |
 | Execute | One explicit client request in caller; credential passed separately | Invalid/raising client returns become redacted errors; no hidden retry |
 | Decode | Validate response type/status/headers/body before Runtime result; bounded JSON admission | Non-2xx, malformed JSON, unsupported content type and nonempty 204/205 fail |
 | Classify | Attach a retry class to every failure for `Wotex.Runtime.Retry` | A retryable class is not permission to repeat a non-idempotent Action |
 | Continue Action | Resolve safe Location/href locator against selected target | Locator is not Action completion, authority or an automatic follow-up request |
 | Recover | Return failure to consumer | No automatic redirect, reconnect, Action retry or compensation |
 
-The existing implementation collects complete binary bodies. A byte limit is
-not a guarantee that the client did not allocate the body beforehand. WBH-C03
-must prove allocation and redirect/deadline policy at the consumer boundary.
-Cross-origin Action locators need consumer authorization and credential
-audience checks; syntactically valid HTTP targets are not trusted destinations.
+The response value contains a complete binary body and fields. Local limits do
+not prove that the client avoided allocating them first; the request-borne
+ceilings are client obligations for incremental reading. Native request JSON is
+structurally checked before encoded output is built, but caller input already
+exists and punctuation/escaping overhead receives a second post-materialization
+check. Neither path is a total-heap bound. Cross-origin Action locators and
+redirect hops need consumer authorization and credential-audience checks;
+syntactically valid HTTP targets are not trusted destinations.
 
 ## Explicit unsupported cells
 
@@ -123,7 +126,8 @@ Semantics RFC 9110, framing delegation RFC 9112, JSON RFC 8259, and explicitly
 draft-derived Profile mappings. `docs/http-operation-inventory.md` maps each
 supported operation and the aggregate unsupported cell to its implementation
 source, exact authority, and named positive/negative vectors.
-`operation_inventory_test.exs`, `form_test.exs`, `transport_test.exs` and
+`docs/limits-security-inventory.md`, `operation_inventory_test.exs`,
+`form_test.exs`, `transport_test.exs`, `limits_security_test.exs` and
 `integration_test.exs` under `test/wotex/binding/http/` prove the package subset.
 Each new claim requires source revision, exact operation, preconditions,
 negative cells and named tests. A draft-derived GET/DELETE/SSE mapping remains
