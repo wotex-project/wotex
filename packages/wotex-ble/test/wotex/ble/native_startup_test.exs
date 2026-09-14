@@ -76,6 +76,210 @@ defmodule Wotex.BLE.NativeStartupTest do
     assert_receive {:DOWN, ^monitor, :process, _, :normal}, 100
   end
 
+  test "WBL-B02 native reports return exact owner-admitted cumulative credit", context do
+    assert {:ok, session} = BLE.connect(context.options)
+
+    assert {:ok, subscription} =
+             BLE.subscribe(session, %{address: target(), max_queue_length: 2})
+
+    reference = subscription.reference
+    assert_receive {:wotex_ble, ^reference, {:ok, <<1>>, metadata}}, 1000
+    assert_receive {:wotex_ble, ^reference, {:ok, <<2>>, ^metadata}}, 1000
+
+    eventually(fn ->
+      state = :sys.get_state(session.handle.pid)
+      state.report_flow.records == %{} and state.report_flow.acknowledged_sequence == 2
+    end)
+
+    assert :ok = BLE.unsubscribe(session, subscription)
+
+    state = :sys.get_state(session.handle.pid)
+    assert state.subscriptions == %{}
+    assert state.report_flow.streams == %{}
+    assert state.report_flow.records == %{}
+    assert :ok = BLE.disconnect(session)
+  end
+
+  test "WBL-B02 native terminal control retires one stream without closing the session", context do
+    assert {:ok, session} = BLE.connect(context.options)
+
+    assert {:ok, subscription} =
+             BLE.subscribe(session, %{address: target(), max_queue_length: 2})
+
+    reference = subscription.reference
+    assert_receive {:wotex_ble, ^reference, {:ok, <<1>>, _}}, 1000
+    assert_receive {:wotex_ble, ^reference, {:ok, <<2>>, _}}, 1000
+
+    eventually(fn ->
+      :sys.get_state(session.handle.pid).report_flow.records == %{}
+    end)
+
+    state = :sys.get_state(session.handle.pid)
+    monitor = Process.monitor(subscription.pid)
+
+    terminal = %{
+      "version" => 1,
+      "session_generation" => state.session_generation,
+      "subscription_id" => "1",
+      "generation" => 1,
+      "event" => "error",
+      "value" => nil,
+      "metadata" => %{"error" => %{"code" => "subscription_lost"}}
+    }
+
+    send(state.handle.pid, {state.port, {:data, {:eol, Jason.encode!(terminal)}}})
+    assert_receive {:wotex_ble, ^reference, {:error, %Error{code: :subscription_lost}}}, 1000
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+
+    eventually(fn -> :sys.get_state(session.handle.pid).subscriptions == %{} end)
+    assert Process.alive?(session.handle.pid)
+    assert :ok = BLE.disconnect(session)
+  end
+
+  test "WBL-B02 forged native flow frames close the exact generation", context do
+    for forged <- [
+          fn generation ->
+            %{"version" => 1, "session_generation" => generation, "event" => "unknown"}
+          end,
+          fn generation ->
+            %{
+              "version" => 1,
+              "session_generation" => generation,
+              "report_sequence" => 1,
+              "subscription_id" => "99"
+            }
+          end
+        ] do
+      assert {:ok, session} = BLE.connect(context.options)
+      state = :sys.get_state(session.handle.pid)
+      monitor = Process.monitor(session.handle.pid)
+      frame = forged.(state.session_generation)
+      send(state.handle.pid, {state.port, {:data, {:eol, Jason.encode!(frame)}}})
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+    end
+
+    assert {:ok, session} = BLE.connect(context.options)
+
+    assert {:ok, subscription} =
+             BLE.subscribe(session, %{address: target(), max_queue_length: 2})
+
+    reference = subscription.reference
+    assert_receive {:wotex_ble, ^reference, {:ok, <<1>>, metadata}}, 1000
+    assert_receive {:wotex_ble, ^reference, {:ok, <<2>>, ^metadata}}, 1000
+    state = :sys.get_state(session.handle.pid)
+    monitor = Process.monitor(session.handle.pid)
+
+    wrong_generation =
+      if state.session_generation == String.duplicate("a", 32),
+        do: String.duplicate("b", 32),
+        else: String.duplicate("a", 32)
+
+    forged = %{
+      "version" => 1,
+      "session_generation" => wrong_generation,
+      "report_sequence" => 3,
+      "subscription_id" => "1",
+      "generation" => 1,
+      "event" => "value",
+      "value" => %{"type" => "bytes", "base64" => "Aw=="},
+      "metadata" => %{
+        "source" => "bluez_value_change",
+        "characteristic" => %{
+          "service_uuid" => target().service,
+          "characteristic_uuid" => target().characteristic,
+          "service_path" => "/service",
+          "object_path" => target().object_path,
+          "handle" => 1,
+          "generation" => 1,
+          "flags" => ["notify"]
+        },
+        "requested_mode" => "auto",
+        "effective_mode" => "notify"
+      }
+    }
+
+    send(state.handle.pid, {state.port, {:data, {:eol, Jason.encode!(forged)}}})
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+  end
+
+  test "WBL-B02 malformed terminal and retirement controls fail closed", context do
+    for forged <- [
+          fn state ->
+            %{
+              "version" => 1,
+              "session_generation" => state.session_generation,
+              "subscription_id" => "1",
+              "generation" => 1,
+              "event" => "error",
+              "value" => nil,
+              "metadata" => %{"error" => %{"code" => "subscription_lost"}},
+              "extra" => true
+            }
+          end,
+          fn state ->
+            %{
+              "version" => 1,
+              "event" => "stream_retired",
+              "session_generation" => state.session_generation,
+              "subscription_id" => "1",
+              "generation" => 1,
+              "last_report_sequence" => 99
+            }
+          end
+        ] do
+      assert {:ok, session} = BLE.connect(context.options)
+
+      assert {:ok, subscription} =
+               BLE.subscribe(session, %{address: target(), max_queue_length: 2})
+
+      reference = subscription.reference
+      assert_receive {:wotex_ble, ^reference, {:ok, <<1>>, metadata}}, 1000
+      assert_receive {:wotex_ble, ^reference, {:ok, <<2>>, ^metadata}}, 1000
+      state = :sys.get_state(session.handle.pid)
+      monitor = Process.monitor(session.handle.pid)
+      send(state.handle.pid, {state.port, {:data, {:eol, Jason.encode!(forged.(state))}}})
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+      assert_receive {:wotex_ble, ^reference, {:error, %Error{code: :invalid_response}}}, 1000
+    end
+  end
+
+  test "WBL-B02 an observed retirement makes later owner cancellation local", context do
+    assert {:ok, session} = BLE.connect(context.options)
+
+    assert {:ok, subscription} =
+             BLE.subscribe(session, %{address: target(), max_queue_length: 2})
+
+    reference = subscription.reference
+    assert_receive {:wotex_ble, ^reference, {:ok, <<1>>, metadata}}, 1000
+    assert_receive {:wotex_ble, ^reference, {:ok, <<2>>, ^metadata}}, 1000
+
+    eventually(fn ->
+      :sys.get_state(session.handle.pid).report_flow.records == %{}
+    end)
+
+    state = :sys.get_state(session.handle.pid)
+
+    retirement = %{
+      "version" => 1,
+      "event" => "stream_retired",
+      "session_generation" => state.session_generation,
+      "subscription_id" => "1",
+      "generation" => 1,
+      "last_report_sequence" => 2
+    }
+
+    send(state.handle.pid, {state.port, {:data, {:eol, Jason.encode!(retirement)}}})
+    eventually(fn -> :sys.get_state(session.handle.pid).subscriptions["1"].retired end)
+    GenServer.cast(session.handle.pid, :untrusted_cast)
+    assert Process.alive?(session.handle.pid)
+
+    monitor = Process.monitor(subscription.pid)
+    assert :ok = BLE.unsubscribe(session, subscription)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1000
+    assert :sys.get_state(session.handle.pid).subscriptions == %{}
+    GenServer.stop(session.handle.pid)
+  end
+
   test "WBL-B01 incomplete or mismatched native identity starts no process", context do
     File.rm(context.marker)
 
@@ -178,6 +382,16 @@ defmodule Wotex.BLE.NativeStartupTest do
     |> Base.encode16(case: :lower)
   end
 
+  defp target do
+    %{
+      service: "0000180f-0000-1000-8000-00805f9b34fb",
+      characteristic: "00002a19-0000-1000-8000-00805f9b34fb",
+      object_path: "/characteristic",
+      handle: 1,
+      generation: 1
+    }
+  end
+
   defp start_verifying!(context, owner) do
     options =
       context.options
@@ -206,6 +420,16 @@ defmodule Wotex.BLE.NativeStartupTest do
 
       state ->
         flunk("connection did not enter native verification: #{inspect(state)}")
+    end
+  end
+
+  defp eventually(function, attempts \\ 100) do
+    if function.() do
+      :ok
+    else
+      assert attempts > 0
+      Process.sleep(5)
+      eventually(function, attempts - 1)
     end
   end
 

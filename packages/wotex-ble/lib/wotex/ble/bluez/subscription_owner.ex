@@ -99,6 +99,22 @@ defmodule Wotex.BLE.BlueZ.SubscriptionOwner do
     end
   end
 
+  def handle_info(
+        {:ble_stream, id, {sequence, token}, event},
+        %{native_id: id, status: :active} = state
+      ) do
+    updated = deliver(state, event)
+
+    if updated.status == :active do
+      send(
+        state.connection.pid,
+        {:ble_report_consumed, state.connection.reference, self(), sequence, token}
+      )
+    end
+
+    {:noreply, updated}
+  end
+
   def handle_info({:ble_stream, id, event}, %{native_id: id, status: :active} = state) do
     {:noreply, deliver(state, event)}
   end

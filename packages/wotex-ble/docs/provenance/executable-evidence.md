@@ -3,14 +3,14 @@
 Current implementation: typed domain APIs, persistent Python/dbus-next ownership,
 native SDK components, verified guardian-owned native startup, Agent/procedure/
 stream behavior and Runtime integration. The current source has a passing full
-local gate: 9 doctests, 17 properties and 225 tests, 46 declared interoperability/
+local gate: 9 doctests, 17 properties and 235 tests, 46 declared interoperability/
 hardware exclusions; 58 Python contract tests; 95.1% coverage.
 The [virtual-controller evidence](virtual-controller.md) identifies 15 real BlueZ
 cases with two software controllers. These exercise the Python adapter and a
 shared BlueZ wire stack. They do not execute the accepted C++ .13 backend.
-Public BEAM/Runtime virtual-peer acceptance, native credit-flow execution and
-complete stress/package evidence remain required. Uncommitted fixture work is
-not acceptance evidence.
+Public BEAM/Runtime virtual-peer acceptance, native build tasks and complete
+stress/package evidence remain required. Uncommitted fixture work is not
+acceptance evidence.
 
 ## Mandatory local gate
 
@@ -26,8 +26,8 @@ waivers. See SECURITY.md and the dependency-security test.
 
 [WBL.13](../specs/WBL.13-native-backend.md) defines the required native binary,
 Mix/ExUnit tasks, exact version lanes and credit/resource tests. The executed
-component and startup cases are identified below; unlisted native build,
-BEAM-credit and software-flow requirements remain open. A passing current gate,
+component, startup and BEAM credit cases are identified below; unlisted native
+build and software-flow requirements remain open. A passing current gate,
 a listed test path or a source hash cannot establish execution of that target.
 Each completed software run must
 bind case, corpus, source, SDK/binary, toolchain and cleanup-result hashes.
@@ -74,10 +74,28 @@ acknowledgements, a false retirement barrier and 100000 subscription lifetimes
 with no retained closed-stream records. The six focused ExUnit tests and Linux
 ARM64 GCC ASan/UBSan invariants pass.
 
-These cases exercise the native accounting component. The trace fixture supplies
-consumer acknowledgements from observed reservations; actual BEAM/Port credit
-flow, bounded unsent report storage and sustained-callback process cases remain
-unexecuted. No native SDK or software GATT claim follows from this unit evidence.
+`test/wotex/ble/report_flow_test.exs` exercises the production BEAM
+`ReportFlow` ledger and `SubscriptionOwner` admission boundary. Two live stream
+owners complete out of order without acknowledging a gap; a retirement barrier
+consumes only its stream, a later live-stream completion advances the exact
+contiguous prefix, and duplicate/post-retirement frames cannot resurrect the
+stream. Receiver overflow sends no internal acknowledgement. The ledger asserts
+the 64-frame, 1 MiB, per-stream window, uint64 and exact generation boundaries.
+
+`test/wotex/ble/native_startup_test.exs` compiles
+`test/native/beam_startup_sdk.c`, verifies its identity, and launches it through
+the packaged guardian. The real Port exchange sends the exact native
+`queue_limit`, accepts two sequenced value reports, and requires acknowledgements
+whose cumulative byte counts include each encoded newline. It then emits the
+retirement barrier before cancellation success. Separate cases inject wrong
+generation, unknown stream, malformed terminal and false retirement controls;
+the exact connection generation closes. A valid terminal control retires only
+that stream and preserves the session.
+
+This is actual guardian/Port/BEAM credit-flow evidence against a deterministic
+C process boundary. It does not execute the C++ SDK against BlueZ, sustained
+callback stress, the required sanitizer matrix or public Runtime virtual-peer
+acceptance.
 
 ## Native private D-Bus ownership
 

@@ -58,7 +58,10 @@ defmodule Wotex.BLE.BlueZ.Stream do
          timeout: config.timeout,
          type: config.type,
          codec: config.codec,
-         parameters: Map.put(parameters, "mode", Atom.to_string(requested))
+         parameters:
+           parameters
+           |> Map.put("mode", Atom.to_string(requested))
+           |> Map.put("queue_limit", queue)
        }}
     else
       {:error, %Error{}} = error -> error

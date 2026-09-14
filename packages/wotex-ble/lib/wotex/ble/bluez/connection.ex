@@ -15,7 +15,10 @@ defmodule Wotex.BLE.BlueZ.Connection do
   each. Discovery, pairing and GATT procedures share serial data dispatch;
   bounded cancellation controls can overtake an active procedure. Wire IDs
   are assigned at dispatch, preserving monotonic order without lifetime
-  tombstones. Each native subscription has its own monitored process.
+  tombstones. Each native subscription has its own monitored process. Native
+  value reports consume a bounded Port credit until that process admits final
+  receiver delivery; retirement consumes only that stream's remaining records
+  before the connection returns the contiguous cumulative prefix.
 
   Owner death, fatal bridge output, peer loss and expired active work close
   the connection generation. Cleanup has a one-second local grace and never
@@ -25,7 +28,18 @@ defmodule Wotex.BLE.BlueZ.Connection do
   """
 
   use GenServer
-  alias Wotex.BLE.BlueZ.{Artifacts, Frame, Options, Pairing, Response, Stream, SubscriptionOwner}
+
+  alias Wotex.BLE.BlueZ.{
+    Artifacts,
+    Frame,
+    Options,
+    Pairing,
+    ReportFlow,
+    Response,
+    Stream,
+    SubscriptionOwner
+  }
+
   alias Wotex.BLE.{Error, Procedure, Session}
 
   @derive {Inspect, only: [:pid, :generation]}
@@ -163,6 +177,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
        counter: 0,
        buffer: <<>>,
        session_generation: nil,
+       report_flow: nil,
        discovery_generation: 1,
        policy: nil,
        policy_control: nil,
@@ -274,7 +289,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
     case decoded do
       :limit -> {:noreply, close(state, :response_limit)}
-      {:ok, frame} -> frame(frame, %{state | buffer: <<>>})
+      {:ok, frame} -> frame(frame, %{state | buffer: <<>>}, byte_size(buffer) + byte_size(data) + 1)
       :error -> {:noreply, close(state, :invalid_response)}
     end
   end
@@ -346,6 +361,23 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   def handle_info({:agent_timeout, token}, %{policy: %{token: token}} = state),
     do: {:noreply, answer_policy(state, {:ok, %{"action" => "reject"}})}
+
+  def handle_info(
+        {:ble_report_consumed, reference, owner, sequence, token},
+        %{
+          handle: %{reference: reference},
+          status: :ready,
+          report_flow: %ReportFlow{} = flow
+        } = state
+      ) do
+    case ReportFlow.consume(flow, owner, sequence, token) do
+      {:ok, acknowledgement, updated} ->
+        acknowledge(%{state | report_flow: updated}, acknowledgement)
+
+      :invalid ->
+        {:noreply, close(state, :invalid_response)}
+    end
+  end
 
   def handle_info({:DOWN, monitor, :process, _, _}, %{policy: %{monitor: monitor}} = state),
     do: {:noreply, answer_policy(state, {:ok, %{"action" => "reject"}})}
@@ -510,6 +542,78 @@ defmodule Wotex.BLE.BlueZ.Connection do
   end
 
   defp frame(
+         %{"session_generation" => _, "report_sequence" => _, "subscription_id" => id} = frame,
+         %{status: :ready, report_flow: %ReportFlow{} = flow} = state,
+         encoded_bytes
+       ) do
+    case state.subscriptions[id] do
+      %{pid: owner, binding: binding, retired: false} ->
+        case ReportFlow.report(flow, frame, binding, encoded_bytes, owner) do
+          {:ok, event, token, updated} ->
+            send(owner, {:ble_stream, id, {frame["report_sequence"], token}, event})
+            {:noreply, %{state | report_flow: updated}}
+
+          :invalid ->
+            {:noreply, close(state, :invalid_response)}
+        end
+
+      _ ->
+        {:noreply, close(state, :invalid_response)}
+    end
+  end
+
+  defp frame(
+         %{"session_generation" => _, "event" => "error", "subscription_id" => id} = frame,
+         %{status: :ready, report_flow: %ReportFlow{} = flow} = state,
+         _
+       ) do
+    case state.subscriptions[id] do
+      %{pid: owner, binding: binding, retired: false} ->
+        case ReportFlow.terminal(flow, frame, binding, owner) do
+          {:ok, event} ->
+            send(owner, {:ble_stream, id, event})
+            {:noreply, state}
+
+          :invalid ->
+            {:noreply, close(state, :invalid_response)}
+        end
+
+      _ ->
+        {:noreply, close(state, :invalid_response)}
+    end
+  end
+
+  defp frame(
+         %{"session_generation" => _, "event" => "stream_retired"} = frame,
+         %{status: :ready, report_flow: %ReportFlow{} = flow} = state,
+         _
+       ) do
+    case ReportFlow.retire(flow, frame) do
+      {:ok, id, owner, acknowledgement, updated} ->
+        case state.subscriptions[id] do
+          %{pid: ^owner, retired: false} ->
+            state =
+              state
+              |> put_in([:subscriptions, id, :retired], true)
+              |> Map.put(:report_flow, updated)
+
+            acknowledge(state, acknowledgement)
+
+          _ ->
+            {:noreply, close(state, :invalid_response)}
+        end
+
+      :invalid ->
+        {:noreply, close(state, :invalid_response)}
+    end
+  end
+
+  defp frame(%{"session_generation" => _}, state, _),
+    do: {:noreply, close(state, :invalid_response)}
+
+  defp frame(frame, state, _), do: frame(frame, state)
+
+  defp frame(
          %{
            "version" => 1,
            "event" => "ready",
@@ -523,6 +627,7 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
     if remaining > 0 do
       generation = Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)
+      report_flow = ReportFlow.new(generation)
 
       initialized =
         event(state.port, %{
@@ -536,7 +641,13 @@ defmodule Wotex.BLE.BlueZ.Connection do
           request(state.port, "open", "open", state.options.parameters, remaining)
 
       if opened do
-        {:noreply, %{state | status: :opening, session_generation: generation}}
+        {:noreply,
+         %{
+           state
+           | status: :opening,
+             session_generation: generation,
+             report_flow: report_flow
+         }}
       else
         {:noreply, close(state, :transport_error)}
       end
@@ -726,7 +837,12 @@ defmodule Wotex.BLE.BlueZ.Connection do
     case timed_parse(frame, "unsubscribe", state.pending[id].deadline) do
       {:ok, nil} ->
         native_id = state.pending[id].parameters["subscription_id"]
-        {:noreply, complete(retire_subscription(state, native_id), id, :ok)}
+
+        if native_stream_retired?(state, native_id) do
+          {:noreply, complete(retire_subscription(state, native_id), id, :ok)}
+        else
+          {:noreply, close(state, :invalid_response)}
+        end
 
       {:error, error} ->
         {:noreply, close(complete(state, id, {:error, error}), error.code)}
@@ -741,9 +857,23 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
     if Stream.matches?(binding, pending.wire_id, pending.parameters) do
       pid = elem(pending.from, 0)
-      record = %{pid: pid, monitor: Process.monitor(pid), binding: binding, closing: false}
-      state = %{state | subscriptions: Map.put(state.subscriptions, pending.wire_id, record)}
-      {:noreply, advance(complete(state, id, {:ok, binding}))}
+
+      case open_report_flow(state, pending.wire_id, pid, pending.parameters["queue_limit"]) do
+        {:ok, state} ->
+          record = %{
+            pid: pid,
+            monitor: Process.monitor(pid),
+            binding: binding,
+            closing: false,
+            retired: false
+          }
+
+          state = %{state | subscriptions: Map.put(state.subscriptions, pending.wire_id, record)}
+          {:noreply, advance(complete(state, id, {:ok, binding}))}
+
+        :invalid ->
+          {:noreply, close(state, :invalid_response)}
+      end
     else
       {:noreply, close(state, :invalid_response)}
     end
@@ -756,6 +886,10 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   defp cancel_subscription(state, pid, from) do
     case Enum.find(state.subscriptions, fn {_, item} -> item.pid == pid end) do
+      {id, %{retired: true}} ->
+        GenServer.reply(from, :ok)
+        retire_subscription(state, id)
+
       {id, %{closing: false}} ->
         if map_size(state.pending) < 64 do
           state = put_in(state.subscriptions[id].closing, true)
@@ -889,12 +1023,13 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   defp issue(state, id, pending) do
     wire = Integer.to_string(state.counter + 1)
+    parameters = wire_parameters(state.options.backend, pending.operation, pending.parameters)
 
     request(
       state.port,
       wire,
       pending.operation,
-      pending.parameters,
+      parameters,
       max(pending.deadline - now(), 1)
     )
 
@@ -1096,6 +1231,31 @@ defmodule Wotex.BLE.BlueZ.Connection do
 
   defp expiry_code("pair"), do: :pairing_rejected
   defp expiry_code(_), do: :timeout
+
+  defp acknowledge(state, nil), do: {:noreply, state}
+
+  defp acknowledge(state, frame) do
+    if event(state.port, frame),
+      do: {:noreply, state},
+      else: {:noreply, close(state, :transport_error)}
+  end
+
+  defp open_report_flow(%{report_flow: nil} = state, _, _, _), do: {:ok, state}
+
+  defp open_report_flow(%{report_flow: flow} = state, id, owner, queue_limit) do
+    case ReportFlow.open(flow, id, owner, queue_limit) do
+      {:ok, updated} -> {:ok, %{state | report_flow: updated}}
+      :invalid -> :invalid
+    end
+  end
+
+  defp native_stream_retired?(%{report_flow: nil}, _), do: true
+  defp native_stream_retired?(%{report_flow: flow}, id), do: not ReportFlow.active?(flow, id)
+
+  defp wire_parameters(:dbus_next, "subscribe", parameters),
+    do: Map.delete(parameters, "queue_limit")
+
+  defp wire_parameters(_, _, parameters), do: parameters
 
   defp now, do: System.monotonic_time(:millisecond)
 end

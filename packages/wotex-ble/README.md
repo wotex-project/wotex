@@ -42,16 +42,22 @@ should replace the path with the constraint of an available Hex release.
 ## Accepted native target
 
 The accepted backend is a first-party C++17 Port using libdbus and the real
-BlueZ service. It preserves the persistent peer/value/Agent/stream APIs below.
-The current persistent implementation uses Python/dbus-next; C++ execution and
-its complete public software-peer/stress evidence remain required.
+BlueZ service. A complete explicit SDK/digest/guardian/digest selector cohort
+now verifies both native artifacts under the original connection deadline,
+launches the SDK only through the guardian, and opens a fresh report-credit
+generation before the peer. The Python/dbus-next bridge remains the explicit
+migration backend when no native cohort is supplied. Complete public
+software-peer/stress evidence remains required.
 
 [WBL.13](docs/specs/WBL.13-native-backend.md) fixes source/build pins, typed IPC,
-flow control and native ownership. The target tooling is `mix wotex.native.build`,
+flow control and native ownership. Native value reports are admitted through a
+64-frame/1 MiB BEAM ledger and receive cumulative byte-exact credit only after
+their stream owner admits final receiver delivery; retirement consumes only the
+retired stream's pending records. The target tooling is `mix wotex.native.build`,
 `mix wotex.software.build` and `mix wotex.software.run`, each with an explicit
 `--workspace` absolute directory. These tasks are specified implementation work,
-not commands claimed to exist in this checkout. Generic orchestration and
-assertions belong to Mix/ExUnit; upstream SDK Python is build-time only.
+not commands claimed to exist in this checkout. Upstream SDK Python is
+build-time only.
 
 ## Implemented profile
 
