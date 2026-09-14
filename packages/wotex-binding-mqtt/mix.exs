@@ -131,6 +131,7 @@ defmodule WotexBindingMQTT.MixProject do
         "docs/specs/WBM-C01-operation-inventory.md": [title: "Operation inventory"],
         "docs/specs/WBM-C02-client-lifecycle.md": [title: "Client lifecycle proof"],
         "docs/specs/WBM-C03-limits-security.md": [title: "Limits and security"],
+        "docs/reference-consumer-inventory.md": [title: "Archive reference consumer"],
         "docs/provenance/mqtt-binding-draft-2026-07-01.md": [title: "MQTT binding draft"],
         "docs/provenance/mqtt-primary-sources.md": [title: "MQTT primary sources"],
         "docs/provenance/wot-binding-registry-2025-11-04.md": [title: "Binding Registry status"],

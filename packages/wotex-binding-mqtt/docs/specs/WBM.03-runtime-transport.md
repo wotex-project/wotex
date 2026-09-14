@@ -140,8 +140,9 @@ reads, all invalid and exceptional callback paths, open/close failures,
 concurrent handles, and consumer-supervised restart. `limits_security_test.exs`
 proves exact value/structural thresholds, bounded filter cardinality, sustained
 delivery, Runtime overflow cleanup, redaction, and the trusted-client authority
-boundary. WBM-C04 adds archive/reference-consumer proof against a named
-broker/client cohort. Callback
+boundary. WBM-C04 proves the exact core/Runtime/binding archives through an
+isolated reference client and real consumer supervisor; a named production
+broker/client cohort remains a nonclaim. Callback
 tuple, owner message contract, metadata keys, result status, error class,
 operation/default/limit changes require compatibility review; a newer draft
 cannot silently change behavior.

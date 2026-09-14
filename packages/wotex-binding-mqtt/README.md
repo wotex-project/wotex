@@ -174,6 +174,9 @@ consumer-owned timeout, handle, close-failure, concurrency, and restart boundary
 The [limits and security proof](docs/specs/WBM-C03-limits-security.md) records
 exact value thresholds, filter cardinality, receiver overload, redaction, and
 the trusted-client authority boundary.
+The [exact archive consumer](docs/reference-consumer-inventory.md) compiles one
+core/Runtime/MQTT archive cohort in an isolated OS-temp project and exercises
+PUBLISH, retained read, paired subscription, limits, and redacted failures.
 This is not a W3C certification claim.
 
 The package defines no application callback, supervision tree, connection

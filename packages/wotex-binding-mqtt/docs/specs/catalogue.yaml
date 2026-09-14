@@ -33,4 +33,4 @@ specifications:
     requires: ["WBM.01", "WBM.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.Binding.MQTT.Transport", "Wotex.Binding.MQTT.TransportConfig", "Wotex.Binding.MQTT.Client", "Wotex.Binding.MQTT.Error"]
     executable_evidence: ["test/wotex/binding/mqtt/transport_test.exs", "test/wotex/binding/mqtt/runtime_subscription_test.exs", "test/wotex/binding/mqtt/client_lifecycle_test.exs", "test/wotex/binding/mqtt/limits_security_test.exs", "test/wotex/binding/mqtt/library_contract_test.exs"]
-    compatibility_classification: "passive Runtime adapter; WBM-C02 proves lifecycle/recovery and WBM-C03 proves exact limits, sustained delivery, receiver-overflow cleanup, redaction and consumer-client authority; exact archive/reference-consumer evidence WBM-C04 remains"
+    compatibility_classification: "passive Runtime adapter; WBM-C02 proves lifecycle/recovery, WBM-C03 proves limits/security boundaries, and WBM-C04 proves exact archives through an isolated supplied client and real Runtime supervisor; production broker interoperability remains external"
