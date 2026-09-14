@@ -157,7 +157,9 @@ mix check
 
 `mix check` runs warnings-as-errors compilation, formatting, and the test suite.
 Package, documentation, audit, and compatibility checks are explicit
-release-readiness work.
+release-readiness work. The
+[runtime compatibility evidence](docs/provenance/runtime-compatibility.md)
+records the tested Elixir and Erlang/OTP cohorts and their limits.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md),
 [SECURITY.md](SECURITY.md), and [GOVERNANCE.md](GOVERNANCE.md). Licensed under

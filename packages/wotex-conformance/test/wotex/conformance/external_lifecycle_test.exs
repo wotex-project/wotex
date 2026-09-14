@@ -68,7 +68,7 @@ defmodule Wotex.Conformance.ExternalLifecycleTest do
       Task.async_stream(
         requests,
         fn {expected_id, request} ->
-          {:ok, response, _duration} = External.invoke(target, request)
+          {:ok, response, _} = External.invoke(target, request)
           {expected_id, response.vector_id, response.actual}
         end,
         max_concurrency: 4,
