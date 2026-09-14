@@ -825,3 +825,37 @@ toolchain; the default 139-check gate and ExDoc also pass.
 | Build tests | `255185da36201d58cfac230c9c40ef3e95186460f647a3f05ebd490a06520366` |
 | Diagnostic before correction | `593af9f25d39a8925b3350341d54e3d5e9722a802393772c84715b60ccf9a5f0` |
 | Diagnostic after correction | `d8ccb63a9c40eaa6a91148326a5e5b107d97fcdcdfbbb8bc1f286fcf806756b3` |
+
+## Native one-shot lifecycle load
+
+`test/software/native_oneshot_stress_test.exs` executes 1000 sequential reads,
+100 additional connect/read/disconnect cycles and 32 concurrent callers against
+the pinned all-clusters peer. Every read acquires a fresh native controller from
+the explicit existing store. Sequential values remain equal; each cycle returns
+the matching owned Port and Linux process census to zero within 1000 ms.
+The concurrent cohort returns one correct value and 31 `storage_open_failed`
+results on each lane, reflecting exclusive controller-store ownership without
+implicit retries. One-shot subscriptions are unsupported and this cohort does
+not synthesize receiver cycles for them.
+
+Both Linux toolchains pass: the current normal run takes 412.9 seconds and the
+minimum ASan/UBSan run takes 727.2 seconds with leak detection enabled. Successful
+operations observe native exit status zero before returning. The normal host is
+`03268cdb...56fdc72` and the sanitized host is `0d313e14...58006c`, with full hashes
+in the timeout cohort; the later attestation change is not part of these binary
+identities. The all-clusters peer remains `b32c2359...82d0` as recorded above.
+Ten caller-heap samples are collected separately from native process ownership;
+they are not native RSS measurements or a heap-leak acceptance threshold.
+
+Select `--include interop --include software` and provide
+`WOTEX_MATTER_NATIVE_ONESHOT_STRESS_FIXTURE` with the controller, node, endpoint
+and exclusive result path. Linux procfs is required for the process census.
+This is the successful-operation/exclusive-store load cohort. The combined
+forced-failure, native instrumentation and full C09 admission requirements remain
+open. The default gate passes 139 checks with the software cases excluded.
+
+| One-shot load artifact | SHA-256 |
+| --- | --- |
+| ExUnit test | `f90f9c6d3acd378f79738c77f1002707afdbc0e3debd96226692e8ee2fd3b6cd` |
+| Current Linux log | `4f41aed021dffea4a3506d3fb38bca4746accc362b9550a2cb8d2a2028a58ddb` |
+| Minimum Linux sanitizer log | `0a4af09f395f99d978f50cc112fa3261f706fbfb1d74b28074c154683aec9bf0` |
