@@ -3,9 +3,9 @@ spec:
   id: WMA.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-matter
-  updated: 2026-09-09
+  updated: 2026-09-15
 ---
 
 # WMA.12 Wotex integration and evidence contract
@@ -133,6 +133,14 @@ Binary payloads remain BEAM binaries; JSON fixture normalization uses the explic
 ### Controller payload projection
 
 The `:oneshot` profile retains .02/.03 scalar/JSON-compatible bridge results.
+For `client: Native`, require `lifecycle: :oneshot` and .13's existing-store
+options. Convert inputs through the admitted descriptor schema before acquisition;
+convert successful typed read results through that same descriptor to scalar,
+null, array or schema-record values. A write acknowledgement is the string
+`"written"`; a status-only command result is nil. Other admitted command results
+use their response descriptor. One-shot metadata is empty. The controller profile
+requires `lifecycle: :persistent` and retains its distinct typed projection.
+Neither native mode admits the baseline Python factory option.
 The `:controller` profile uses the .11 report contract with one anonymous outer
 `TLV.element()` as Result.payload and as each stream value. Do not unwrap it to a
 scalar or silently change the oneshot profile. For example a Boolean false is

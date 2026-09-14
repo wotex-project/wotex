@@ -174,6 +174,16 @@ native lane and pass its absolute path explicitly:
 :ok = Wotex.Matter.disconnect(session)
 ```
 
+Set `lifecycle: :oneshot` with `storage_mode: :open_existing` and `authority: :stored`
+to obtain a passive native handle. Each concrete read, write or invoke opens
+and closes its own controller within the operation budget. The named API retains
+typed results. A Runtime `:oneshot` transport uses the same options and returns
+schema values, the string `"written"` for writes, and nil for status-only commands.
+Native `:controller` transports require `lifecycle: :persistent`. Both modes use
+an explicitly built first-party executable and POSIX `/bin/kill` for owned-child
+termination. The [one-shot evidence](docs/provenance/executable-evidence.md)
+records actual peer checks on both required Linux toolchains.
+
 Use `storage_mode: :create_new` with `authority: :generate_root` only for an
 explicitly authorized new controller directory. P04 provides named operations
 on the persistent controller:

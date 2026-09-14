@@ -679,3 +679,52 @@ native host and peer use the full binary hashes in the lifecycle cohort above.
 This verifies total startup-budget ownership and stalled-child termination at
 the Port boundary. It does not close the remaining admission, control-channel,
 native resource instrumentation or process-flow corpus requirements.
+
+## First-party native one-shot operations
+
+`Native.connect/1` admits `lifecycle: :oneshot` only with an existing store and
+stored authority. Its redacted options handle retains no process or lock. Every
+admitted concrete read/write/invoke validates its descriptor before acquiring a
+fresh native controller and flow generation, and closes that controller before
+returning. Startup, request and close use the remaining operation budget;
+startup expiry and malformed close replies cannot become successful operations.
+Unsupported discovery, event-history, commissioning, health and subscription
+operations acquire no native process. The wire controller still uses the
+persistent storage protocol for each individual operation.
+
+The named API preserves typed reports and values. `RuntimeOneshot` applies the
+existing descriptor conversion for the scalar Runtime profile, preserves zero
+and null, returns `"written"` for acknowledged writes and nil for status-only
+commands. Native Runtime routes require the lifecycle that matches their profile.
+The injected-boundary tests verify fresh generation per call, no retained owned
+Port, pre-acquisition rejection, scalar/null results, startup expiry and failed
+close handling. The complete default gate passes 136 checks with 14 opt-in
+exclusions; 33 focused connection/Runtime tests pass on the minimum toolchain.
+ExDoc passes with warnings as errors.
+
+`test/interop/native_oneshot_test.exs` passes on both Linux lanes: Elixir 1.20.2 /
+OTP 29.0.4 and Elixir 1.18.4 / OTP 27.3.4.15. Supply the explicit existing-store
+controller/node configuration and exclusive result path through
+`WOTEX_MATTER_NATIVE_ONESHOT_FIXTURE`, and select `--include interop --include software`.
+The test discovers its thermostat/OnOff endpoint, performs five typed native
+operations and six real ConsumedThing operations against the pinned all-clusters
+peer, verifies writes by readback, invokes On/Off and restores the heating value.
+Every operation returns the owned Port set and matching Linux native process
+set to baseline within the cleanup grace. The production host is
+`b38ae768...74b3af` and the all-clusters peer is `b32c2359...82d0`, with full hashes
+recorded above; no C++ or SDK input changed in this cohort.
+
+| One-shot artifact | SHA-256 |
+| --- | --- |
+| Native client | `dfdbb2ae3ecc90411e3a3f1076364c8c91c7e3ae781469e3d8ae0cc4207b3f54` |
+| Native connection | `399f6fdb983fafaec2c34b23d12261d5d242ccb14011e4c8a7c1a04aa7b3a26b` |
+| One-shot handle | `d515c52dddd8246008dbef3098fc0313ac24e2f5da9e6bdeb403a3cfba8695a5` |
+| Runtime one-shot projection | `faf6193943e9b9cf430fe5a6051684f707f88a6b339ec38c8f81b460ff21e99f` |
+| Runtime transport | `e2a498389ac91d77601d181475f53504fa38928887e3749878fe5a396ba46bf6` |
+| Peer test | `1b9ba27e110a8f4117e4327d3b8940f9dcbff8e53519a3dd4f84ecfbc4216225` |
+| Current Linux peer log | `94042afeed1d70d9e055c8b76862424cee1d5e350f222a3fbd3d7a192990d6f3` |
+| Minimum Linux peer log | `367e11c995b5f4e6846864e94d87f901256dc1a37ccf5c5d0c00d34372910683` |
+
+This is the native one-shot API/Runtime workflow cohort. It does not replace the
+remaining full stress/admission, flow corpus, software-run task, coverage or
+released-dependency archive gates for P09.

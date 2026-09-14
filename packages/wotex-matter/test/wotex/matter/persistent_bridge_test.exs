@@ -15,6 +15,135 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     member: 0
   }
 
+  test "native one-shot handles acquire one existing-store owner per concrete request" do
+    audit = temporary_path("oneshot-audit")
+    executable = fixture("typed_read", audit)
+
+    config =
+      options(executable)
+      |> Keyword.merge(lifecycle: :oneshot, storage_mode: :open_existing, authority: :stored)
+
+    assert owned_ports(executable) == []
+    assert {:ok, handle} = Native.connect(config)
+    assert owned_ports(executable) == []
+    refute File.exists?(audit)
+    refute inspect(handle) =~ executable
+
+    for _ <- 1..2 do
+      assert {:ok, %{value: %{type: :i16, value: 2150}}} = Native.request(handle, @read, 3_000)
+      assert owned_ports(executable) == []
+    end
+
+    frames = audit |> File.read!() |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!/1)
+
+    assert Enum.map(frames, & &1["operation"]) ==
+             [nil, "open", "read", "close", nil, "open", "read", "close"]
+
+    assert length(
+             Enum.uniq(
+               Enum.map(
+                 Enum.filter(frames, &(&1["event"] == "flow_open")),
+                 & &1["session_generation"]
+               )
+             )
+           ) == 2
+
+    for frame <- Enum.filter(frames, &(&1["operation"] == "open")) do
+      assert frame["parameters"]["storage_mode"] == "open_existing"
+      assert frame["parameters"]["authority"] == "stored"
+    end
+
+    assert :ok = Native.disconnect(handle)
+  end
+
+  test "native one-shot rejects unsupported operations and schemas before acquisition" do
+    audit = temporary_path("oneshot-rejections")
+
+    config =
+      options(fixture("valid", audit))
+      |> Keyword.merge(lifecycle: :oneshot, storage_mode: :open_existing, authority: :stored)
+
+    assert {:ok, handle} = Native.connect(config)
+
+    for operation <- [:read_paths, :read_events, :commission_on_network, :open_window] do
+      assert {:error, %Error{code: :not_supported}} =
+               Native.request(handle, %{type: operation}, 100)
+    end
+
+    assert {:error, %Error{code: :not_supported}} = Native.health(handle)
+    assert {:error, %Error{code: :not_supported}} = Native.subscribe(handle, %{}, self(), 100)
+
+    assert {:error, %Error{code: :unsupported_schema}} =
+             Native.request(handle, %{@read | cluster: 7}, 100)
+
+    assert {:error, %Error{code: :fabric_mismatch}} =
+             Native.request(handle, %{@read | fabric_id: 2}, 100)
+
+    assert {:error, %Error{code: :invalid_handle}} =
+             Native.request(%{handle | fabric_id: 2}, @read, 100)
+
+    assert {:error, %Error{}} = Native.request(handle, Map.put(@read, :type, :write), 100)
+    refute File.exists?(audit)
+  end
+
+  test "native one-shot Runtime keeps scalar zero and null and rejects a mismatched lifecycle" do
+    for {mode, expected} <- [{"typed_read", 2150}, {"typed_zero", 0}, {"typed_null", nil}] do
+      config =
+        options(fixture(mode))
+        |> Keyword.merge(
+          client: Native,
+          lifecycle: :oneshot,
+          storage_mode: :open_existing,
+          authority: :stored
+        )
+
+      consumed = oneshot_consumed(config)
+
+      assert {:ok, context} =
+               Wotex.Runtime.Context.new(
+                 request_id: "oneshot-scalar",
+                 deadline: System.monotonic_time(:millisecond) + 5_000
+               )
+
+      assert {:ok, %Wotex.Runtime.Result{payload: ^expected, metadata: metadata}} =
+               Wotex.Runtime.ConsumedThing.read_property(consumed, "temperature", context)
+
+      assert metadata == %{}
+    end
+
+    audit = temporary_path("oneshot-mode")
+    config = options(fixture("valid", audit)) |> Keyword.put(:client, Native)
+    assert {:ok, context} = Wotex.Runtime.Context.new(request_id: "wrong-lifecycle")
+
+    assert {:error, %Wotex.Runtime.Error{details: %{cause: %{code: :invalid_options}}}} =
+             Wotex.Runtime.ConsumedThing.read_property(
+               oneshot_consumed(config),
+               "temperature",
+               context
+             )
+
+    refute File.exists?(audit)
+  end
+
+  test "native one-shot startup expiry and close failures cannot return successful operations" do
+    config =
+      options(startup_fixture())
+      |> Keyword.merge(lifecycle: :oneshot, storage_mode: :open_existing, authority: :stored)
+
+    assert {:ok, handle} = Native.connect(config)
+    assert {:error, %Error{code: :timeout, effect: :none}} = Native.request(handle, @read, 1_100)
+
+    audit = temporary_path("oneshot-close")
+
+    config =
+      options(fixture("bad_close", audit))
+      |> Keyword.merge(lifecycle: :oneshot, storage_mode: :open_existing, authority: :stored)
+
+    assert {:ok, handle} = Native.connect(config)
+    assert {:error, %Error{code: :invalid_frame}} = Native.request(handle, @read, 3_000)
+    assert File.read!(audit) =~ ~s("operation":"close")
+  end
+
   test "WMA-C03 native ready and controller open share one startup deadline" do
     executable = startup_fixture()
 
@@ -356,6 +485,36 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     assert length(Regex.scan(~r/"operation":"close"/, File.read!(audit))) == 1
   end
 
+  defp owned_ports(executable) do
+    Enum.filter(Port.list(), &(Port.info(&1, :name) == {:name, String.to_charlist(executable)}))
+  end
+
+  defp oneshot_consumed(config) do
+    assert {:ok, td} =
+             Wotex.ThingDescription.from_map(%{
+               "@context" => "https://www.w3.org/2022/wot/td/v1.1",
+               "id" => "urn:example:matter:oneshot-boundary",
+               "title" => "Native one-shot boundary",
+               "securityDefinitions" => %{"none" => %{"scheme" => "nosec"}},
+               "security" => ["none"],
+               "properties" => %{
+                 "temperature" => %{
+                   "readOnly" => true,
+                   "forms" => [%{"href" => "matter://1/2/1/513/0", "op" => "readproperty"}]
+                 }
+               }
+             })
+
+    assert {:ok, consumed} =
+             Wotex.Runtime.ConsumedThing.new(td,
+               profiles: [Matter.profile()],
+               transports: %{matter: {Wotex.Matter.Transport, Keyword.put(config, :target, "1")}},
+               credentials: {Wotex.Matter.RuntimeCredentials, %{test_pid: self()}}
+             )
+
+    consumed
+  end
+
   defp options(executable) do
     paa = temporary_path("paa")
     File.mkdir_p!(paa)
@@ -482,6 +641,20 @@ defmodule Wotex.Matter.PersistentBridgeTest do
             ~s({"path":{"fabric_id":1,"node_id":2,"endpoint":1,"cluster":513,"member":18},"status":0})
           end
           IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":\#{result}}))
+          loop.(loop)
+
+        mode in ["typed_read", "typed_zero", "typed_null", "bad_close"] and String.contains?(line, ~s("operation":"read")) ->
+          result = ~s({"path":{"fabric_id":1,"node_id":2,"endpoint":1,"cluster":513,"member":0},"value":{"tag":"anonymous","type":"i16","value":2150},"data_version":0})
+          result = case mode do
+            "typed_zero" -> String.replace(result, "2150", "0")
+            "typed_null" -> result |> String.replace(~s("type":"i16"), ~s("type":"null")) |> String.replace("2150", "null")
+            _ -> result
+          end
+          IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":\#{result}}))
+          loop.(loop)
+
+        mode == "bad_close" and String.contains?(line, ~s("operation":"close")) ->
+          IO.puts(~s({"version":1,"id":"999","ok":true,"result":null}))
           loop.(loop)
 
         String.contains?(line, ~s("operation":"close")) ->

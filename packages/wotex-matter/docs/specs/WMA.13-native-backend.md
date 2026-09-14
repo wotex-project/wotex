@@ -3,7 +3,7 @@ spec:
   id: WMA.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.2
+  version: 1.0.3
   owner: wotex-matter
   updated: 2026-09-15
 ---
@@ -254,6 +254,13 @@ internal references; assigning a wire ID occurs at dispatch, including controls.
 No lifetime set, rollover or automatic replay is permitted.
 
 The target `:oneshot` Runtime profile also executes this first-party native host.
+`Native.connect/1` with `lifecycle: :oneshot` returns a passive, redacted options
+handle. Each admitted request owns a fresh controller process and flow generation;
+reusing the handle cannot reuse a live controller. The native wire owner opens
+with its persistent storage protocol and is closed before the operation returns.
+The native client and named API retain .11's typed results; Runtime applies the
+separate scalar projection in I03. Unsupported operations, paths, schemas and
+invalid inputs fail before native process acquisition.
 It opens an explicitly configured existing durable store, performs one concrete
 read/write/invoke within the same total deadline, and closes/reaps its owner.
 It requires `storage_mode: :open_existing`, `authority: :stored` and S02's

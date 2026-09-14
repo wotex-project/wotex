@@ -21,7 +21,18 @@ defmodule Wotex.Matter.Transport do
   """
   @behaviour Wotex.Runtime.Transport
   alias Wotex.Matter
-  alias Wotex.Matter.{Address, AttributeReport, Descriptor, Error, Mapping, RuntimeRelay}
+
+  alias Wotex.Matter.{
+    Address,
+    AttributeReport,
+    Descriptor,
+    Error,
+    Mapping,
+    Native,
+    RuntimeOneshot,
+    RuntimeRelay
+  }
+
   alias Wotex.Runtime.{BindingProfile, Context, ExecutionContext, Request, Result}
   @max_baseline_message_bytes 131_072
 
@@ -29,11 +40,12 @@ defmodule Wotex.Matter.Transport do
   def request(%Request{} = request, %ExecutionContext{credential: nil}, config)
       when is_list(config) do
     with true <- Keyword.keyword?(config),
+         :ok <- native_lifecycle(request, config),
          true <- request.operation in [:readproperty, :writeproperty, :invokeaction],
          {:ok, mapping} <-
            Mapping.command(request.form, request.operation, request.input, request.resolved_href),
          true <- Keyword.get(config, :target) == mapping.target,
-         :ok <- preflight(request, mapping),
+         :ok <- preflight(request, mapping, config),
          {:ok, timeout} <- budget(request.deadline, Keyword.get(config, :timeout, 5000)) do
       deadline = System.monotonic_time(:millisecond) + timeout
 
@@ -45,9 +57,16 @@ defmodule Wotex.Matter.Transport do
       Matter.with_connection(options, fn session ->
         remaining = deadline - System.monotonic_time(:millisecond)
 
-        if controller?(request),
-          do: execute_controller(session, mapping, request, remaining),
-          else: execute(session, mapping.message, request, remaining)
+        cond do
+          controller?(request) ->
+            execute_controller(session, mapping, request, remaining)
+
+          session.client == Native ->
+            RuntimeOneshot.execute(session, mapping.message, request, remaining)
+
+          true ->
+            execute(session, mapping.message, request, remaining)
+        end
       end)
     else
       {:error, %Error{}} = error -> error
@@ -68,6 +87,7 @@ defmodule Wotex.Matter.Transport do
     with true <- Process.alive?(owner),
          true <- Keyword.keyword?(config),
          true <- controller?(request),
+         :ok <- native_lifecycle(request, config),
          true <- request.operation in [:observeproperty, :subscribeevent],
          {:ok, mapping} <-
            Mapping.command(request.form, request.operation, request.input, request.resolved_href),
@@ -197,12 +217,19 @@ defmodule Wotex.Matter.Transport do
     |> Address.new()
   end
 
-  defp preflight(%Request{} = request, %{message: message}) do
+  defp preflight(%Request{} = request, %{message: message}, config) do
     with :ok <- Address.validate_message(message),
          {:ok, address} <- address(message) do
-      if controller?(request),
-        do: controller_input(request.operation, address, request.input),
-        else: baseline_input(request.operation, message)
+      cond do
+        controller?(request) ->
+          controller_input(request.operation, address, request.input)
+
+        Keyword.get(config, :client) == Native ->
+          RuntimeOneshot.preflight(request.operation, address, request.input)
+
+        true ->
+          baseline_input(request.operation, message)
+      end
     end
   end
 
@@ -237,6 +264,14 @@ defmodule Wotex.Matter.Transport do
     do: BindingProfile.id(profile) == :matter_controller
 
   defp controller?(_), do: false
+
+  defp native_lifecycle(request, config) do
+    expected = if controller?(request), do: :persistent, else: :oneshot
+
+    if Keyword.get(config, :client) != Native or Keyword.get(config, :lifecycle) == expected,
+      do: :ok,
+      else: {:error, Error.new(:invalid_options)}
+  end
 
   defp client_options(config),
     do: Keyword.drop(config, [:target, :subscription_options])

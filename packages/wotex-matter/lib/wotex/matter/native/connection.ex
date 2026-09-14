@@ -82,10 +82,10 @@ defmodule Wotex.Matter.Native.Connection do
   @spec invalidate(pid(), String.t()) :: {:ok, nil} | {:error, Error.t()}
   def invalidate(pid, generation), do: call(pid, {:invalidate, generation}, @cleanup_timeout)
 
-  @spec disconnect(pid(), String.t()) :: :ok | {:error, Error.t()}
-  def disconnect(pid, generation) do
+  @spec disconnect(pid(), String.t(), pos_integer()) :: :ok | {:error, Error.t()}
+  def disconnect(pid, generation, timeout \\ @cleanup_timeout) do
     if Process.alive?(pid) do
-      case call(pid, {:disconnect, generation}, @cleanup_timeout) do
+      case call(pid, {:disconnect, generation}, timeout) do
         {:ok, nil} -> :ok
         {:error, %Error{code: :transport_closed}} -> :ok
         {:error, _} = error -> error

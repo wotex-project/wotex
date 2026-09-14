@@ -1,6 +1,6 @@
 defmodule Wotex.Matter.Native do
   @moduledoc """
-  Starts and owns the first-party persistent Matter SDK controller.
+  Executes first-party Matter SDK controllers with explicit lifecycle ownership.
 
   This `Wotex.Matter.Client` implementation executes an absolute
   `wotex-matter-host` path directly through a caller-owned BEAM Port. It checks
@@ -11,8 +11,12 @@ defmodule Wotex.Matter.Native do
   Creation requires `storage_mode: :create_new` with
   `authority: :generate_root`. Reopening requires
   `storage_mode: :open_existing` with `authority: :stored`. Both modes require
-  `lifecycle: :persistent`, an absolute storage path, operational vendor,
-  fabric and controller node identifiers, and an absolute PAA trust directory.
+  an absolute storage path, operational vendor, fabric and controller node
+  identifiers, and an absolute PAA trust directory. `lifecycle: :persistent`
+  starts one controller at connection time. `lifecycle: :oneshot` permits only
+  an existing store and stored authority: its passive handle starts and closes
+  one native controller for each concrete read, write or invoke. It cannot
+  commission, discover, subscribe or retain a live controller between calls.
   The returned handle is released with `disconnect/1`; the connection also
   closes when its creating process exits. Native execution requires the POSIX
   `/bin/kill` utility: teardown terminates the exact owned child before releasing
@@ -28,7 +32,9 @@ defmodule Wotex.Matter.Native do
   @behaviour Wotex.Matter.Client
 
   alias Wotex.Matter.{Address, Descriptor, Error, Subscription}
-  alias Wotex.Matter.Native.{Connection, Handle}
+  alias Wotex.Matter.Native.{Connection, Handle, OneshotHandle}
+
+  @type handle :: Handle.t() | OneshotHandle.t()
 
   @required_options [
     :authority,
@@ -43,25 +49,34 @@ defmodule Wotex.Matter.Native do
   ]
   @allowed_options [:timeout | @required_options]
 
-  @doc "Starts one persistent native controller owned by the calling process."
+  @doc "Starts a persistent native owner or validates passive one-shot options."
   @impl Wotex.Matter.Client
-  @spec connect(keyword()) :: {:ok, Handle.t()} | {:error, Error.t()}
+  @spec connect(keyword()) :: {:ok, handle()} | {:error, Error.t()}
   def connect(options) do
-    with {:ok, validated} <- validate_options(options),
-         {:ok, pid, generation} <- Connection.start(self(), validated) do
-      {:ok,
-       %Handle{
-         pid: pid,
-         generation: generation,
-         fabric_id: validated.fabric_id
-       }}
+    with {:ok, validated} <- validate_options(options) do
+      if validated.lifecycle == "oneshot" do
+        {:ok, %OneshotHandle{options: options, fabric_id: validated.fabric_id}}
+      else
+        with {:ok, pid, generation} <- Connection.start(self(), validated) do
+          {:ok, %Handle{pid: pid, generation: generation, fabric_id: validated.fabric_id}}
+        end
+      end
     end
   end
 
   @doc "Submits one validated native controller request."
   @impl Wotex.Matter.Client
-  @spec request(Handle.t(), map(), pos_integer()) ::
+  @spec request(handle(), map(), pos_integer()) ::
           {:ok, term()} | {:error, Error.t()}
+  def request(%OneshotHandle{} = handle, %{type: type} = message, timeout)
+      when is_integer(timeout) and timeout in 1..60_000 do
+    if type in [:read, :write, :invoke] do
+      oneshot_request(handle, message, timeout)
+    else
+      {:error, Error.new(:not_supported)}
+    end
+  end
+
   def request(%Handle{} = handle, %{type: type} = message, timeout)
       when is_atom(type) and is_integer(timeout) and timeout in 1..60_000 do
     cond do
@@ -92,8 +107,10 @@ defmodule Wotex.Matter.Native do
 
   @doc "Establishes one native subscription and binds delivery to the receiver process."
   @impl Wotex.Matter.Client
-  @spec subscribe(Handle.t(), map(), pid(), pos_integer()) ::
+  @spec subscribe(handle(), map(), pid(), pos_integer()) ::
           {:ok, Subscription.t()} | {:error, Error.t()}
+  def subscribe(%OneshotHandle{}, _, _, _), do: {:error, Error.new(:not_supported)}
+
   def subscribe(%Handle{} = handle, request, receiver, timeout)
       when is_map(request) and is_pid(receiver) and is_integer(timeout) and
              timeout in 1..60_000 do
@@ -115,8 +132,10 @@ defmodule Wotex.Matter.Native do
 
   @doc "Cancels one subscription owned by this native controller."
   @impl Wotex.Matter.Client
-  @spec unsubscribe(Handle.t(), Subscription.t(), pos_integer()) ::
+  @spec unsubscribe(handle(), Subscription.t(), pos_integer()) ::
           :ok | {:error, Error.t()}
+  def unsubscribe(%OneshotHandle{}, _, _), do: {:error, Error.new(:not_supported)}
+
   def unsubscribe(%Handle{} = handle, %Subscription{} = subscription, timeout)
       when is_integer(timeout) and timeout in 1..60_000 do
     if is_pid(handle.pid) and valid_generation?(handle.generation) do
@@ -186,8 +205,10 @@ defmodule Wotex.Matter.Native do
   end
 
   @doc "Performs a real local protocol probe against the owned native controller."
-  @spec health(Handle.t(), pos_integer()) :: {:ok, map()} | {:error, Error.t()}
+  @spec health(handle(), pos_integer()) :: {:ok, map()} | {:error, Error.t()}
   def health(handle, timeout \\ 1_000)
+
+  def health(%OneshotHandle{}, _), do: {:error, Error.new(:not_supported)}
 
   def health(%Handle{} = handle, timeout)
       when is_integer(timeout) and timeout in 1..60_000 do
@@ -202,13 +223,90 @@ defmodule Wotex.Matter.Native do
 
   @doc "Closes the owned native controller; already closed handles are harmless."
   @impl Wotex.Matter.Client
-  @spec disconnect(Handle.t()) :: :ok | {:error, Error.t()}
+  @spec disconnect(handle()) :: :ok | {:error, Error.t()}
   def disconnect(%Handle{pid: pid, generation: generation})
       when is_pid(pid) and is_binary(generation) do
     Connection.disconnect(pid, generation)
   end
 
   def disconnect(_), do: :ok
+
+  defp oneshot_request(handle, message, timeout) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    with {:ok, validated} <- validate_options(handle.options),
+         :ok <- oneshot_identity(handle, validated),
+         :ok <- Address.validate_message(message),
+         {:ok, fabric_id} <- request_fabric(message, handle.fabric_id),
+         true <- fabric_id == handle.fabric_id,
+         :ok <- oneshot_schema(message),
+         remaining when remaining > 0 <- deadline - System.monotonic_time(:millisecond),
+         {:ok, pid, generation} <-
+           Connection.start(self(), %{validated | lifecycle: "persistent", timeout: remaining}) do
+      oneshot_operation(pid, generation, message, deadline)
+    else
+      false -> {:error, Error.new(:fabric_mismatch)}
+      remaining when is_integer(remaining) -> {:error, Error.new(:timeout)}
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:invalid_handle)}
+    end
+  end
+
+  defp oneshot_identity(handle, validated) do
+    if validated.lifecycle == "oneshot" and validated.fabric_id == handle.fabric_id,
+      do: :ok,
+      else: {:error, Error.new(:invalid_handle)}
+  end
+
+  defp oneshot_schema(%{type: type} = message) do
+    path = Map.take(message, [:fabric_id, :node_id, :endpoint, :cluster, :member])
+    kind = if type == :invoke, do: :command, else: :attribute
+
+    result =
+      if type == :read,
+        do: Descriptor.lookup(kind, path, type),
+        else: Descriptor.validate_element(kind, path, type, message.value)
+
+    case result do
+      {:ok, _} -> :ok
+      error -> error
+    end
+  end
+
+  defp oneshot_operation(pid, generation, message, deadline) do
+    try do
+      remaining = deadline - System.monotonic_time(:millisecond)
+
+      result =
+        if remaining > 0,
+          do: Connection.request(pid, generation, message, remaining),
+          else: {:error, Error.new(:timeout)}
+
+      remaining = deadline - System.monotonic_time(:millisecond)
+
+      closed =
+        if remaining > 0,
+          do: Connection.disconnect(pid, generation, min(remaining, 1_000)),
+          else: Connection.invalidate(pid, generation)
+
+      cond do
+        not match?({:ok, _}, result) -> result
+        System.monotonic_time(:millisecond) > deadline -> oneshot_failure(:timeout, message)
+        match?({:error, _}, closed) -> oneshot_close_failure(closed, message)
+        true -> result
+      end
+    after
+      Connection.invalidate(pid, generation)
+    end
+  end
+
+  defp oneshot_failure(code, message) do
+    effect = if message.type in [:write, :invoke], do: :unknown, else: :none
+    {:error, Error.new(code) |> Error.with_effect(effect)}
+  end
+
+  defp oneshot_close_failure({:error, %Error{code: code}}, message),
+    do: oneshot_failure(code, message)
 
   defp validate_options(options) when is_list(options) do
     keys = if Keyword.keyword?(options), do: Keyword.keys(options), else: []
@@ -228,8 +326,9 @@ defmodule Wotex.Matter.Native do
     timeout = Map.get(options, :timeout, 5_000)
     mode = {options.storage_mode, options.authority}
 
-    with true <- options.lifecycle == :persistent,
+    with true <- options.lifecycle in [:persistent, :oneshot],
          true <- mode in [{:create_new, :generate_root}, {:open_existing, :stored}],
+         true <- options.lifecycle == :persistent or mode == {:open_existing, :stored},
          true <- integer?(options.vendor_id, 1, 65_534),
          true <- integer?(options.fabric_id, 1, 0xFFFFFFFFFFFFFFFF),
          true <- integer?(options.controller_node_id, 1, 0xFFFFFFEFFFFFFFFF),
