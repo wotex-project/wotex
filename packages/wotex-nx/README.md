@@ -117,10 +117,13 @@ output bounds are rejected before a tensor or inert output is admitted.
 
 ## Compatibility
 
-Wotex Nx 0.1 accepts Wotex 0.1 Thing Description and DataSchema values and Nx
-0.13. Feature order, shape, dtype, missing-value behavior, and output
-interpretation are explicit public inputs. Changes to those meanings require a
-documented contract change; an Nx backend change alone does not.
+Wotex Nx 0.1 accepts Wotex 0.1 Thing Description and DataSchema values and
+declares Nx 0.13.1. Feature order, shape, dtype, missing-value behavior, and
+output interpretation are explicit public inputs. Changes to those meanings
+require a documented contract change. The executable reference cohort is
+Elixir 1.18.4, Erlang/OTP 27.3.4.15, Nx 0.13.1, `Nx.BinaryBackend`, and
+`Nx.Defn.Evaluator`; [its comparison policy](docs/provenance/runtime-backend-cohort.md)
+does not claim byte or numerical equivalence for untested backends or runtimes.
 
 The package implements
 [`WNX.01`](docs/specs/WNX.01-observation-numerical-boundary.md). It uses W3C

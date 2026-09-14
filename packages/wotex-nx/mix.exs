@@ -124,6 +124,7 @@ defmodule WotexNx.MixProject do
         "docs/decisions/0001-caller-owned-execution.md",
         "docs/decisions/0002-batch-and-output-contract.md",
         "docs/provenance/standards-and-dependencies.md",
+        "docs/provenance/runtime-backend-cohort.md",
         "SECURITY.md"
       ],
       groups_for_extras: [

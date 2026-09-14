@@ -265,6 +265,55 @@ defmodule WotexNx.CheckArchive do
       end
     end
 
+    test "the declared cohort permits only independently reproduced dtype rounding" do
+      assert System.version() == "1.18.4"
+      assert otp_version() == "27.3.4.15"
+      assert application_version(:wotex) == "0.1.0"
+      assert application_version(:wotex_nx) == "0.1.0"
+      assert application_version(:nx) == "0.13.1"
+
+      Nx.with_default_backend(Nx.BinaryBackend, fn ->
+        assert Nx.default_backend() == {Nx.BinaryBackend, []}
+        number = data_schema(%{"type" => "number"})
+
+        features =
+          for dtype <- [:bf16, :f16, :f32, :f64] do
+            feature(Atom.to_string(dtype), number,
+              dtype: dtype,
+              normalization: {:z_score, 0, 3},
+              unit: nil
+            )
+          end
+
+        {:ok, schema} = Schema.new(features: features, max_features: 4)
+
+        observations =
+          for dtype <- [:bf16, :f16, :f32, :f64] do
+            observation(Atom.to_string(dtype), 0.1, unit: nil)
+          end
+
+        {:ok, row} = Row.new(100, Map.new(observations, &{&1.affordance_name, &1}))
+        assert {:ok, encoded} = Encoder.encode([row], schema)
+
+        {values, _masks, _quality} =
+          Nx.Defn.jit_apply(&Function.identity/1, [Encoded.batch(encoded)],
+            compiler: Nx.Defn.Evaluator
+          )
+
+        mathematical_reference = 0.1 / 3
+
+        bounds = %{bf16: 0.00014, f16: 0.00001, f32: 0.000000002, f64: 0.0}
+
+        for {tensor, dtype} <- Enum.zip(Tuple.to_list(values), [:bf16, :f16, :f32, :f64]) do
+          actual = tensor |> Nx.to_flat_list() |> hd()
+          independently_cast = mathematical_reference |> Nx.tensor(type: dtype) |> Nx.to_number()
+
+          assert actual === independently_cast
+          assert abs(actual - mathematical_reference) <= Map.fetch!(bounds, dtype)
+        end
+      end)
+    end
+
     defp data_schema(map) do
       {:ok, schema} = Wotex.DataSchema.new(map)
       schema
@@ -295,6 +344,18 @@ defmodule WotexNx.CheckArchive do
 
       {:ok, observation} = Observation.new(Keyword.merge(defaults, overrides))
       observation
+    end
+
+    defp application_version(application) do
+      application
+      |> Application.spec(:vsn)
+      |> List.to_string()
+    end
+
+    defp otp_version do
+      otp_release = System.otp_release()
+      path = Path.join([to_string(:code.root_dir()), "releases", otp_release, "OTP_VERSION"])
+      path |> File.read!() |> String.trim()
     end
   end
   """
