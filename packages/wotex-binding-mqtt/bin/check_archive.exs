@@ -164,7 +164,8 @@ defmodule Wotex.Binding.MQTT.Check.Archive do
     for file <- [
           "docs/reference-consumer-inventory.md",
           "docs/release-candidate-inventory.md",
-          "docs/runtime-baseline.md"
+          "docs/runtime-baseline.md",
+          "docs/stable-api-inventory.md"
         ] do
       unless file in members, do: violation("#{archive} is missing #{file}")
     end

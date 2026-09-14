@@ -116,7 +116,7 @@ defmodule WotexBindingMQTT.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/reference-consumer-inventory.md docs/release-candidate-inventory.md docs/runtime-baseline.md docs/specs lib mix.exs)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/reference-consumer-inventory.md docs/release-candidate-inventory.md docs/runtime-baseline.md docs/stable-api-inventory.md docs/specs lib mix.exs)
     ]
   end
 
@@ -135,6 +135,7 @@ defmodule WotexBindingMQTT.MixProject do
         "docs/reference-consumer-inventory.md": [title: "Archive reference consumer"],
         "docs/release-candidate-inventory.md": [title: "Release candidate"],
         "docs/runtime-baseline.md": [title: "Runtime baseline"],
+        "docs/stable-api-inventory.md": [title: "Stable API candidate"],
         "docs/provenance/mqtt-binding-draft-2026-07-01.md": [title: "MQTT binding draft"],
         "docs/provenance/mqtt-primary-sources.md": [title: "MQTT primary sources"],
         "docs/provenance/wot-binding-registry-2025-11-04.md": [title: "Binding Registry status"],

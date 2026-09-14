@@ -20,6 +20,7 @@ defmodule Wotex.Binding.MQTT.Check.ReleaseCandidate do
     docs/reference-consumer-inventory.md
     docs/release-candidate-inventory.md
     docs/runtime-baseline.md
+    docs/stable-api-inventory.md
     docs/specs
     lib
     mix.exs
@@ -62,6 +63,7 @@ defmodule Wotex.Binding.MQTT.Check.ReleaseCandidate do
     application
     archive
     release_candidate
+    stable_api
     diff
   )a
 
@@ -146,6 +148,7 @@ defmodule Wotex.Binding.MQTT.Check.ReleaseCandidate do
           "docs/reference-consumer-inventory.md",
           "docs/release-candidate-inventory.md",
           "docs/runtime-baseline.md",
+          "docs/stable-api-inventory.md",
           "docs/plans/wotex-binding-mqtt-completion.md"
         ] do
       listed!(extras, extra, "generated documentation")

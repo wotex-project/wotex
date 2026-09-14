@@ -11,8 +11,8 @@ specifications:
       - {name: "JSON", revision: "RFC 8259, 2017-12", claim: "bounded codec adaptation only"}
     requires: ["wotex:WTX.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.Binding.MQTT.Broker", "Wotex.Binding.MQTT.Command", "Wotex.Binding.MQTT.Delivery", "Wotex.Binding.MQTT.QoS", "Wotex.Binding.MQTT.Topic", "Wotex.Binding.MQTT.JSON", "Wotex.Binding.MQTT.Client", "Wotex.Binding.MQTT.TransportConfig", "Wotex.Binding.MQTT.Error"]
-    executable_evidence: ["test/wotex/binding/mqtt/broker_test.exs", "test/wotex/binding/mqtt/command_test.exs", "test/wotex/binding/mqtt/delivery_test.exs", "test/wotex/binding/mqtt/qos_test.exs", "test/wotex/binding/mqtt/topic_test.exs", "test/wotex/binding/mqtt/json_test.exs", "test/wotex/binding/mqtt/transport_config_test.exs", "test/wotex/binding/mqtt/dependency_security_test.exs", "test/wotex/binding/mqtt/limits_security_test.exs"]
-    compatibility_classification: "versioned immutable values/client callbacks; WBM-C03 fixes command filter cardinality at 256 and proves exact value/JSON thresholds while leaving broker capability and whole-process allocation external"
+    executable_evidence: ["test/wotex/binding/mqtt/broker_test.exs", "test/wotex/binding/mqtt/command_test.exs", "test/wotex/binding/mqtt/delivery_test.exs", "test/wotex/binding/mqtt/qos_test.exs", "test/wotex/binding/mqtt/topic_test.exs", "test/wotex/binding/mqtt/json_test.exs", "test/wotex/binding/mqtt/transport_config_test.exs", "test/wotex/binding/mqtt/dependency_security_test.exs", "test/wotex/binding/mqtt/limits_security_test.exs", "test/wotex/binding/mqtt/stable_api_test.exs"]
+    compatibility_classification: "WBM-C06 stable 0.1 candidate: documented immutable values, callbacks, defaults, error tuples and inspection redaction are frozen; breaking changes require a versioned migration"
   - id: "WBM.02"
     version: "1.1.0"
     path: "docs/specs/WBM.02-form-mapping.md"
@@ -21,8 +21,8 @@ specifications:
       - {name: "W3C WoT MQTT Binding", revision: "Editors Draft 2026-07-01; repository observation 2026-09-02", claim: "seven-operation mapping subset; no conformance"}
     requires: ["WBM.01", "wotex:WTX.02"]
     implementation_modules: ["Wotex.Binding.MQTT.Mapping", "Wotex.Binding.MQTT"]
-    executable_evidence: ["test/wotex/binding/mqtt/mapping_test.exs", "test/wotex/binding/mqtt/command_test.exs", "test/wotex/binding/mqtt/operation_inventory_test.exs"]
-    compatibility_classification: "dated draft-derived package mapping; pre-release seam correction carries the payload limit into every command; source revision changes require review"
+    executable_evidence: ["test/wotex/binding/mqtt/mapping_test.exs", "test/wotex/binding/mqtt/command_test.exs", "test/wotex/binding/mqtt/operation_inventory_test.exs", "test/wotex/binding/mqtt/stable_api_test.exs"]
+    compatibility_classification: "WBM-C06 stable 0.1 candidate: the seven dated draft-derived rows and their exact defaults remain fixed until an explicit versioned migration; a newer editor draft cannot silently change behavior"
   - id: "WBM.03"
     version: "1.1.0"
     path: "docs/specs/WBM.03-runtime-transport.md"
@@ -32,5 +32,5 @@ specifications:
       - {name: "W3C WoT Binding Registry", revision: "Draft Registry 2025-11-04", claim: "provenance only; no registered-entry claim"}
     requires: ["WBM.01", "WBM.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.Binding.MQTT.Transport", "Wotex.Binding.MQTT.TransportConfig", "Wotex.Binding.MQTT.Client", "Wotex.Binding.MQTT.Error"]
-    executable_evidence: ["test/wotex/binding/mqtt/transport_test.exs", "test/wotex/binding/mqtt/runtime_subscription_test.exs", "test/wotex/binding/mqtt/client_lifecycle_test.exs", "test/wotex/binding/mqtt/limits_security_test.exs", "test/wotex/binding/mqtt/library_contract_test.exs"]
-    compatibility_classification: "passive Runtime adapter; WBM-C02 proves lifecycle/recovery, WBM-C03 proves limits/security boundaries, and WBM-C04 proves exact archives through an isolated supplied client and real Runtime supervisor; production broker interoperability remains external"
+    executable_evidence: ["test/wotex/binding/mqtt/transport_test.exs", "test/wotex/binding/mqtt/runtime_subscription_test.exs", "test/wotex/binding/mqtt/client_lifecycle_test.exs", "test/wotex/binding/mqtt/limits_security_test.exs", "test/wotex/binding/mqtt/library_contract_test.exs", "test/wotex/binding/mqtt/stable_api_test.exs"]
+    compatibility_classification: "WBM-C06 stable 0.1 candidate: passive Runtime callbacks, owner messages, result statuses/metadata and failure normalization are frozen; production broker interoperability remains external"

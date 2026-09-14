@@ -12,7 +12,7 @@ checks in the ordinary default `mix check --no-retry` gate.
 |---|---|
 | WBM-P01 | Mix project and Hex metadata have the exact application/package name, version, description, Elixir requirement, source/homepage links, maintainer, license, and public documentation links |
 | WBM-P02 | `LICENSE`, `NOTICE`, and `SECURITY.md` retain the Apache-2.0 identity, copyright, private disclosure address, secret-handling guidance, and dependency-audit policy |
-| WBM-P03 | The package allowlist contains public source, specifications, plans, provenance, archive evidence, and this candidate inventory; archive inspection rejects repository automation, QA configuration, tests, build products, local task state, and development instructions |
+| WBM-P03 | The package allowlist contains public source, specifications, plans, provenance, archive and stable-API evidence, and this candidate inventory; archive inspection rejects repository automation, QA configuration, tests, build products, local task state, and development instructions |
 | WBM-P04 | Exact archive metadata names `wotex ~> 0.1.0`, `wotex_runtime ~> 0.1.0`, and `jason ~> 1.4` as Hex requirements and rejects Git, path, or environment-selected release dependencies |
 | WBM-P05 | The repository lock contains only exact Hex tuples for registry dependencies; the default gate checks it without mutation, while the external archive consumer creates and rechecks an independent lock before one test pass |
 | WBM-P06 | Every relative Markdown link resolves, every catalogued specification/evidence file exists, ExDoc builds without warnings, and standards wording retains Profile/Registry/certification nonclaims |

@@ -21,6 +21,7 @@
     {:application, command: "mix run --no-start bin/check_application_free.exs"},
     {:archive, command: "mix run --no-start bin/check_archive.exs"},
     {:release_candidate, command: "mix run --no-start bin/check_release.exs"},
+    {:stable_api, command: "mix run --no-start bin/check_stable_api.exs"},
     {:diff, command: "git diff --check"}
   ]
 ]

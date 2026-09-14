@@ -15,8 +15,8 @@
 
 ---
 
-This is a development checkout. The public API remains unstable; no published
-release or W3C certification is implied.
+This is a development checkout with no published release. The reviewed 0.1 API
+is a stable candidate; no package availability or W3C certification is implied.
 
 `wotex_binding_mqtt` maps W3C Web of Things MQTT Forms to immutable commands
 and implements `Wotex.Runtime.Transport`. It deliberately does not choose an
@@ -177,6 +177,8 @@ the trusted-client authority boundary.
 The [exact archive consumer](docs/reference-consumer-inventory.md) compiles one
 core/Runtime/MQTT archive cohort in an isolated OS-temp project and exercises
 PUBLISH, retained read, paired subscription, limits, and redacted failures.
+The [stable API inventory](docs/stable-api-inventory.md) freezes the reviewed
+0.1 values, callbacks, mappings, defaults, errors, and migration rules.
 This is not a W3C certification claim.
 
 The package defines no application callback, supervision tree, connection
@@ -196,6 +198,8 @@ resolution, warnings-as-errors compilation, unused-dependency detection,
 formatting, dependency audits, strict Credo, Doctor, warning-free docs,
 Dialyzer, one coverage-backed test run, boundary/application checks, and exact
 archive construction/inspection plus structural release-candidate verification.
+The same default gate also checks the stable API inventory against the compiled
+surface and its compatibility vectors.
 It does not invoke a release task, publish a package, or mutate a remote.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
