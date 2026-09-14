@@ -106,6 +106,7 @@ defmodule WotexOPCUA.MixProject do
 
   defp package do
     [
+      name: "wotex_opcua",
       licenses: ["Apache-2.0"],
       links: %{
         "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
@@ -117,7 +118,7 @@ defmodule WotexOPCUA.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib priv/native priv/opcua_bridge.py priv/requirements.txt mix.exs)
+        ~w(.formatter.exs CHANGELOG.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib priv/native priv/opcua_bridge.py priv/requirements.txt mix.exs)
     ]
   end
 

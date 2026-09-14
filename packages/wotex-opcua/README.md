@@ -62,6 +62,12 @@ root project's alias. CMake 3.20+, a C11 compiler, make, Perl, Python 3, archive
 utilities and curl 8.4.0+ are explicit build prerequisites. Failed builds retain
 diagnostic files and require a fresh workspace.
 
+WOP-P00 accepts this source/build/bootstrap and process-custody boundary for the
+exact cohorts in executable evidence. The gate compiles and tests the portable
+guardian on macOS. Linux also runs strict AddressSanitizer/UndefinedBehaviorSanitizer
+and separate LeakSanitizer executions of WOP-G01 through WOP-G09. P00 does not
+implement a native Session, service framing, security activation or subscription.
+
 `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` remain specified work. Bootstrap build
 success does not establish a native Session or accept the native protocol profile.
@@ -121,9 +127,12 @@ See [protocol and graduation contract](docs/specs/WOP.01-protocol.md),
 
 Use Elixir 1.18 or newer with compatible OTP. Local Wotex core and Runtime
 checkouts require explicit `WOTEX_PATH_DEPS=1 mix deps.get` then
-`WOTEX_PATH_DEPS=1 mix check`. Normal dependency resolution uses Hex versions.
-Run `mix check` before commits. It checks formatting, compiles with warnings as
-errors, and runs the default test suite. Wider checks belong to release readiness.
+`WOTEX_PATH_DEPS=1 mix check --no-retry`. Normal dependency resolution uses Hex
+versions. `mix test` is the fast loop. The default `mix check --no-retry` is the
+complete library gate: locked and unused dependencies, warnings-as-errors,
+formatting, strict static analysis, coverage as the only ExUnit pass, audits,
+documentation, Dialyzer, a fresh pinned native build/CTest, platform-applicable
+custody sanitizer lanes, archive inspection and the Application-free check.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
 

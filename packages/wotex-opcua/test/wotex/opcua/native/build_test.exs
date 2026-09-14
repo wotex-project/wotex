@@ -163,5 +163,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert {:error, :build_manifest_mismatch} = Build.run(workspace)
     File.write!(receipt_path, original)
     assert {:ok, %{reused: true}} = Build.run(workspace)
+    assert {:ok, _} = File.rm_rf(workspace)
+    refute File.exists?(workspace)
   end
 end

@@ -10,8 +10,9 @@ spec:
 
 # WOP.13 Native OPC UA executable and software acceptance
 
-This accepted target is **partially implemented**. WOP.02 identifies the executable
-build and bootstrap subset; secure native services remain required implementation.
+This accepted target is **partially implemented**. WOP-P00 accepts the pinned
+source/build/bootstrap and portable process-custody boundary for the exact
+cohorts in executable evidence. Secure native services remain required implementation.
 The target runtime uses an Elixir API and an explicitly owned open62541 C executable.
 Python is confined to the independent test peer and upstream build generators.
 A native executable, a protocol service, a WoT binding and an interoperability
@@ -476,3 +477,11 @@ validation remain separate gates. Guardian exit fails unfinished operations;
 mutation effect remains unknown whenever service emission may have occurred.
 Guardian cleanup proves local process release only. Remote Session/subscription
 cleanup retains the separate acknowledgment or revised-expiry evidence in X04.
+
+`bin/check_native_custody.exs` executes both Linux sanitizer lanes from the
+default gate. It compiles the checked-in guardian and independent driver with
+`-fsanitize=address,undefined`, verifies the exact fixture projection for every
+WOP-G01 through WOP-G09 execution, and treats any sanitizer diagnostic, leak,
+status mismatch, count mismatch or deadline excess as failure. The macOS gate
+executes the same portable cases through native CTest without claiming a Linux
+sanitizer result.

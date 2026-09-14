@@ -20,6 +20,45 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## WOP-P00 source, build and custody cohort
+
+WOP-P00 passed on 2026-09-14 for the source/build/bootstrap and portable
+process-custody boundary. `WOTEX_PATH_DEPS=1 mix check --no-retry` used Elixir
+1.20.2 / OTP 29.0.4 on macOS 26.6.2 arm64. Coverage was the only ExUnit pass:
+254 tests passed, one interoperability tag was excluded, and coverage was 96.3%.
+The selected native build downloaded and verified the pinned source archives,
+built static OpenSSL/open62541 and both first-party executables, then passed all
+161 CTest cases. The native CTest output SHA-256 was
+`e79c866df4d8debb3cdba9e8b9126b46f3ccba07cf2e987680b091c52da7442e`.
+
+The build receipt bound these identities:
+
+| Subject | SHA-256 |
+| --- | --- |
+| native source manifest | `909bb2cca1eeb20e755af093cc24b896ba94b578b81ee25d4924cfc406ae73b9` |
+| open62541 1.5.7 source archive | `a4018b052c93fedb55f00558a85869b86f3bb2293184d322e33f2666c497eaeb` |
+| OpenSSL 3.5.8 source archive | `59f86483992995df5a213df38d93f31eeafe3b34599309b3e088ba67ca0aad9c` |
+| macOS arm64 `wotex_opcua_native` | `8c52d02d2ab66d95c36e9d5266ca8b5d15b24107837178f5656a2ebaeaeb3781` |
+| macOS arm64 `wotex_opcua_custody` | `c3cd34e996542c79fbc9031e8067bb41bbe7415a5132e981c7a72db1296e5197` |
+| custody fixture | `bd69b4c0bff4a43ae7318c95702d23e925ca93190c62bc88f52b508b4b306144` |
+| runtime guardian source | `d08b553ed0cd4ba9b166e8b01aae8eddd96f97a8accc418632d68e3c75ad37d2` |
+| independent custody driver | `ef8c45b3bea8727a8a9e6be0fe4985d8a798ff0d5bee1b870a6346f5ede498e5` |
+
+WOP-G10 additionally passed in Linux arm64 and x86_64 containers resolved from
+`debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171`.
+Each architecture executed WOP-G01 through WOP-G09 once with strict
+AddressSanitizer/UndefinedBehaviorSanitizer timing and once with LeakSanitizer:
+18 executions per architecture, zero failures. The independent Linux driver
+asserted exact byte/count/status projections, SDK reap within 500 ms, guardian
+exit within the applicable allowance, and absence of leaked direct children.
+`bin/check_native_custody.exs` makes those Linux sanitizer lanes part of the
+default gate; macOS runs the portable corpus through the native build and CTest.
+
+This evidence accepts P00 only. The native helper still exposes dependency and
+bootstrap behavior, not a secure Session or application service. P01 and later
+packets, complete native service framing, independent peers, the full platform
+matrix and an archive-only native consumer remain required separately.
+
 ## Implemented Python-adapter interoperability
 
 Real secure asyncua 2.0.1 peer: PASS for read, write/readback/restore, browse,

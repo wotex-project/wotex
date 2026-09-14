@@ -14,9 +14,22 @@ defmodule Wotex.OPCUA.Check.Archive do
     "priv/native/build_command.c",
     "priv/native/custody.c",
     "priv/native/custody_check.c",
-    "priv/native/runtime-guardian.md"
+    "priv/native/runtime-guardian.md",
+    "priv/native/json_codec.c",
+    "priv/native/json_codec.h",
+    "priv/native/json-codec.md",
+    "priv/native/value_codec.c",
+    "priv/native/value_codec.h",
+    "priv/native/value-codec.md",
+    "priv/native/fixtures/value-v1.json",
+    "priv/native/vendor/yyjson/yyjson.c",
+    "priv/native/vendor/yyjson/yyjson.h",
+    "priv/native/vendor/yyjson/LICENSE",
+    "docs/specs/fixtures/native-sources-v1.json",
+    "docs/specs/fixtures/native-ready-v1.json",
+    "docs/specs/fixtures/custody-contract-v1.json"
   ]
-  @development [".git", "deps", "_build"]
+  @development ~r{(^|/)(\.check\.exs|\.claude|\.credo\.exs|\.doctor\.exs|\.git|\.github|\.tool-versions|AGENTS\.md|CLAUDE\.md|cover|deps|doc|docs/tasks|mix\.lock|priv/plts|test|_build)(/|$)}
   @dependencies ["wotex", "wotex_runtime", "jason", "telemetry"]
   @transport "Elixir.Wotex.OPCUA.Error.beam"
 
@@ -102,14 +115,15 @@ defmodule Wotex.OPCUA.Check.Archive do
   end
 
   defp development!(package) do
-    directories =
+    entries =
       package
       |> Path.join("**")
       |> Path.wildcard(match_dot: true)
-      |> Enum.filter(&(File.dir?(&1) and Path.basename(&1) in @development))
+      |> Enum.map(&Path.relative_to(&1, package))
+      |> Enum.filter(&Regex.match?(@development, &1))
 
-    unless directories == [] do
-      violation("archive contains development state")
+    unless entries == [] do
+      violation("archive contains development or agent state")
     end
   end
 
