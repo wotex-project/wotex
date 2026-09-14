@@ -54,6 +54,7 @@ class DurableStorage final : public chip::PersistentStorageDelegate {
   CHIP_ERROR SyncDeleteKeyValue(const char *key) override;
 
   const ControllerIdentity &identity() const;
+  CHIP_ERROR EnterProcessDirectory() const;
   bool poisoned() const;
 
 #ifdef WOTEX_MATTER_STORAGE_TESTING

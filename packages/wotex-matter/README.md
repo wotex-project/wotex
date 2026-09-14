@@ -43,15 +43,17 @@ should replace the path with the constraint of an available Hex release.
 
 The accepted backend is a first-party persistent C++17 connectedhomeip
 controller Port, with an owned durable authority/store, attestation, commissioning,
-CASE interactions and subscriptions. The current Python factory adapter is a
-narrow executable baseline; it does not provide or accept that controller.
+CASE interactions and subscriptions. P03 implements the controller owner,
+durable authority, production attestation verifier and framed Port. Interaction
+Model requests, commissioning and subscriptions remain later work packages.
+The current Python factory adapter remains a separate narrow baseline.
 
 [WMA.13](docs/specs/WMA.13-native-backend.md) fixes source/build pins, typed IPC,
-flow control and native ownership. The target tooling is `mix wotex.native.build`,
-`mix wotex.software.build` and `mix wotex.software.run`, each with an explicit
-`--workspace` absolute directory. These tasks are specified implementation work,
-not commands claimed to exist in this checkout. Generic orchestration and
-assertions belong to Mix/ExUnit; upstream SDK Python is build-time only.
+flow control and native ownership. `mix run bin/check_p03_native.exs` rebuilds
+and tests the P03 host in a disposable pinned Linux environment. The later
+`mix wotex.native.build`, `mix wotex.software.build` and
+`mix wotex.software.run` commands remain specified implementation work. Upstream
+SDK Python is used only while generating and building native SDK sources.
 
 ## Implemented profile
 
@@ -64,16 +66,20 @@ bounding bytes, nodes and nesting. `read_paths/3` preserves ordered per-path
 successes and errors from a selected client. The `SDK` adapter targets concrete
 read/write/invoke calls in the pinned native SDK; an explicitly supplied
 controller factory owns SDK startup, credentials and shutdown. The batch API is
-not wired to that one-shot adapter. No Python runtime, native SDK binary,
-controller factory or commissioning workflow is bundled.
+not wired to that one-shot adapter. No Python runtime or native SDK binary is
+bundled. The packaged first-party controller source is built explicitly outside
+the Hex archive; commissioning remains unfinished.
 
 The packaged native source includes the P02 `PersistentStorageDelegate`: it
 creates or opens an explicitly identified controller store, holds an exclusive
 lock, validates bounded versioned state, and commits each opaque SDK value by a
-same-directory fsynced rename. It also compiles the operational-keystore and
-certificate-store binding against the pinned SDK interfaces. This storage unit
-is not yet connected to a persistent controller; controller ownership and
-cryptographic authority generation belong to P03.
+same-directory fsynced rename. P03 connects that store to one first-party
+`DeviceCommissioner`, generates or reopens the controller root and Identity
+Protection Key with SDK crypto, loads an explicit Product Attestation Authority
+trust directory, and runs controller setup and shutdown through a direct BEAM
+Port. Loading the library starts no process or native executable. P04–P09 still
+own Interaction Model operations, subscriptions, commissioning workflows,
+Runtime integration and software-peer proof.
 
 ## Quick start
 
@@ -104,6 +110,34 @@ commissioning, attestation, sessions and per-path status validation. Missing
 transport, crashed driver, invalid return and missing write input all fail.
 Failed writes/invokes have unknown effect; the library never retries them.
 No real SDK/device parity is claimed by the fake-port contract tests.
+
+To open the P03 controller owner, build `wotex-matter-host` with the separate
+native lane and pass its absolute path explicitly:
+
+```elixir
+{:ok, session} =
+  Wotex.Matter.connect(
+    client: Wotex.Matter.Native,
+    executable: "/opt/wotex/bin/wotex-matter-host",
+    lifecycle: :persistent,
+    storage_path: "/var/lib/example-matter/controller-1",
+    storage_mode: :open_existing,
+    authority: :stored,
+    vendor_id: 0xFFF1,
+    fabric_id: 1,
+    controller_node_id: 2,
+    paa_trust_store: "/etc/example-matter/paa"
+  )
+
+{:ok, %{"status" => "ready", "fabric_id" => 1}} =
+  Wotex.Matter.Native.health(session.handle)
+
+:ok = Wotex.Matter.disconnect(session)
+```
+
+Use `storage_mode: :create_new` with `authority: :generate_root` only for an
+explicitly authorized new controller directory. P03 health and lifecycle calls
+are implemented; data interactions currently return `:not_supported`.
 
 The SDK adapter forwards explicit `timed_request_timeout_ms` for writes/invokes.
 Subscription delivery and full device qualification need further integration.
@@ -148,6 +182,11 @@ sanitizer toolchains, including lock and crash-boundary behavior.
 `elixir bin/check_p02_advisories.exs` separately queries OSV for advisories
 against the four exact P02 source revisions; it is a live release check rather
 than a substitute for the content-pinned native lane.
+`WOTEX_PATH_DEPS=1 mix run bin/check_p03_native.exs` separately rebuilds the
+first-party controller from the exact SDK, gitlink, generator and tool inputs,
+then runs normal and sanitizer lifecycle, failure, load and cleanup checks.
+`WOTEX_PATH_DEPS=1 mix run bin/check_p03_advisories.exs` performs the associated
+live OSV audit. Neither P03 command belongs to routine `mix check`.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
 
@@ -162,9 +201,10 @@ already exists. Required software peers are separate from physical-device tests.
 The [standalone client contract](docs/specs/WMA.11-standalone-client-and-preservation.md)
 defines the supplied backend, exact native APIs and end-to-end workflows.
 Its [concrete corpus](docs/specs/fixtures/contract-v1.json) is partially executed:
-the P01 pure cases run in the default suite, while later controller and lifecycle
-cases remain unexecuted. The scenario tables alone are not executable acceptance
-evidence.
+the P01 pure cases run in the default suite and the WMA-F07 controller lifecycle
+cases run in the separate P03 native lane. Later Interaction Model,
+commissioning and subscription cases remain unexecuted. The scenario tables
+alone are not executable acceptance evidence.
 
 The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
 profiles from planned contracts. The [Wotex integration contract](docs/specs/WMA.12-wotex-integration.md)

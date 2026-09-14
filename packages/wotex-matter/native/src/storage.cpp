@@ -550,6 +550,12 @@ CHIP_ERROR DurableStorage::SyncDeleteKeyValue(const char *key) {
 
 const ControllerIdentity &DurableStorage::identity() const { return identity_; }
 
+CHIP_ERROR DurableStorage::EnterProcessDirectory() const {
+  return directory_fd_ >= 0 && fchdir(directory_fd_) == 0
+      ? CHIP_NO_ERROR
+      : CHIP_ERROR_OPEN_FAILED;
+}
+
 bool DurableStorage::poisoned() const { return poisoned_; }
 
 void DurableStorage::Poison() { poisoned_ = true; }

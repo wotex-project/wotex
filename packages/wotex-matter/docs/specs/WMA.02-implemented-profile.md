@@ -5,7 +5,7 @@ spec:
   status: accepted
   version: 1.1.0
   owner: wotex-matter
-  updated: 2026-09-09
+  updated: 2026-09-14
 ---
 
 # WMA.02 Implemented Matter profile
@@ -31,15 +31,23 @@ expansion by path. `AttributeReport`, `EventReport`, `Descriptor` and
 `EndpointCatalogue` validate the P01 value layer without performing discovery or
 SDK I/O. The aggregate canonical compact JSON result budget is 98304 bytes.
 
-The P02 native source implements the actual SDK `PersistentStorageDelegate`
-interface for a version-1 controller store. Creation and reopen require the
-exact fabric, controller node, vendor and authority mode. The store holds an
-exclusive process lock, preserves SDK key names and opaque bytes, rejects
-malformed or oversized state, and uses an intent marker plus fsynced atomic
-rename for each setter and deleter. Its operational-keystore and certificate-
-store binding compiles against the pinned SDK types. No BEAM client starts this
-unit yet, and no root key, certificate, controller, CASE session or
-commissioning result is claimed by P02.
+The native source implements the SDK `PersistentStorageDelegate` interface for
+a version-1 controller store. Creation and reopen require the exact fabric,
+controller node, vendor and authority mode. The store holds an exclusive
+process lock, preserves SDK key names and opaque bytes, rejects malformed or
+oversized state, and uses an intent marker plus fsynced atomic rename for each
+setter and deleter.
+
+P03 supplies a first-party C++17 `wotex-matter-host` and the
+`Wotex.Matter.Native` Port owner. Explicit `create_new` generates and stores a
+root key, root certificate and Identity Protection Key with the pinned SDK
+crypto provider. Explicit `open_existing` validates the stored authority and
+reopens the exact fabric/controller identity. Controller setup uses the SDK
+operational keystore, certificate store, generated controller data model,
+production device-attestation verifier and one `DeviceCommissioner`. Startup,
+failure, EOF and caller death release the controller and storage lock. P03
+provides controller health and fabric admission; Interaction Model operations,
+commissioning and subscriptions remain unavailable.
 
 `Client` is a consumer-implemented driver contract. It must use a pinned real SDK,
 keep fabric stores isolated, enforce attestation/ACLs, inspect all per-path status
@@ -53,9 +61,10 @@ The SDK adapter maps concrete read/write/invoke calls to an explicitly initializ
 controller supplied by its factory. It does not implement CASE/PASE or the
 Interaction Model; those remain inside the caller-provisioned SDK/controller.
 It does not implement the new batch request shape; a selected client must
-implement that callback result explicitly.
-No Python runtime, SDK binary, controller factory or commissioning workflow is
-bundled. See [SDK client contract](WMA.03-sdk-client.md).
+implement that callback result explicitly. No Python runtime or SDK binary is
+bundled. The packaged first-party controller source is built explicitly outside
+the Hex archive; commissioning remains unfinished. See
+[SDK client contract](WMA.03-sdk-client.md).
 
 ## Evidence and compatibility
 

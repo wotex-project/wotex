@@ -42,6 +42,24 @@ if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
   target_compile_definitions(wotex_matter_storage PUBLIC CHIP_SYSTEM_CONFIG_USE_SOCKETS=1)
   target_compile_options(wotex_matter_storage PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
+  add_library(wotex_matter_protocol STATIC src/protocol.cpp)
+  target_include_directories(wotex_matter_protocol PUBLIC include)
+  target_include_directories(
+    wotex_matter_protocol SYSTEM
+    PRIVATE "${WOTEX_MATTER_JSON_INCLUDE}"
+  )
+  target_compile_features(wotex_matter_protocol PUBLIC cxx_std_17)
+  target_compile_options(
+    wotex_matter_protocol PRIVATE -Wall -Wextra -Wpedantic -Werror
+  )
+
+  add_executable(wotex_matter_controller_test ../test/native/controller_test.cpp)
+  target_link_libraries(wotex_matter_controller_test PRIVATE wotex_matter_protocol)
+  target_compile_options(
+    wotex_matter_controller_test PRIVATE -Wall -Wextra -Wpedantic -Werror
+  )
+  add_test(NAME wotex_matter_controller_test COMMAND wotex_matter_controller_test)
+
   add_library(wotex_matter_sdk_storage_binding OBJECT src/sdk_storage.cpp)
   target_include_directories(wotex_matter_sdk_storage_binding PRIVATE include)
   target_include_directories(
@@ -88,7 +106,7 @@ if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
   add_test(NAME wotex_matter_storage_test COMMAND wotex_matter_storage_test)
 
   if(WOTEX_MATTER_SANITIZERS)
-    foreach(target wotex_matter_storage wotex_matter_storage_test_library)
+    foreach(target wotex_matter_storage wotex_matter_storage_test_library wotex_matter_protocol)
       target_compile_options(${target} PUBLIC -fno-omit-frame-pointer -fsanitize=address,undefined)
       target_link_options(${target} PUBLIC -fsanitize=address,undefined)
     endforeach()
