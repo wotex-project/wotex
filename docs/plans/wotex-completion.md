@@ -97,8 +97,8 @@ The informative schema revision and digests are owned by
 
 | Claim | Value | Operation | Interoperability | Profile | Certification |
 | --- | --- | --- | --- | --- | --- |
-| TD 1.1 JSON | WTX.01 documented schema and semantic subset | Parse, validate, encode | Local round trips proven by tests; independent implementation exchange requires WTX-C04 | No WoT Profile claim | None |
-| Thing Model 1.1 JSON | WTX.04 distinct model value | Parse, validate, encode; no instantiate/resolve | Local vectors only until WTX-C04 | No profile claim | None |
+| TD 1.1 JSON | WTX.01 documented schema and semantic subset | Parse, validate, encode | Local round trips and 16 content-addressed external-corpus vectors; no second-implementation claim | No WoT Profile claim | None |
+| Thing Model 1.1 JSON | WTX.04 distinct model value | Parse, validate, encode; no instantiate/resolve | Local round trips and 8 content-addressed external-corpus vectors; no second-implementation claim | No profile claim | None |
 | DataSchema, Forms and affordances | WTX.02 definitions and extension preservation | Constructor/accessor only; no DataSchema instance evaluator or transport | Metadata preservation does not prove binding compatibility | No binding/profile claim | None |
 | Package canonical JSON | Project-defined deterministic bytes | Key-sorted serialization | Exact supported encoder cohort only | Not RFC 8785 | None |
 

@@ -185,6 +185,9 @@ The Thing Description and Thing Model production baseline is the
 dated 5 December 2023. The bundled informative validation schema is pinned to
 the upstream `REC1.1` tag. Exact commits, digests, licenses, and local
 modifications are recorded in the TD and Thing Model provenance documents.
+The [reference corpus evidence](docs/provenance/reference-corpus.md) records the
+content-addressed positive and negative vectors exercised through the external
+value adapter.
 
 Only `application/td+json` and `application/tm+json` are claimed. Turtle,
 RDF/XML, remote JSON-LD context retrieval, Thing Description 2.0 drafts,

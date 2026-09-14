@@ -12,7 +12,7 @@ specifications:
         claim: "JSON value parsing, informative-schema validation and documented semantic checks only"
     requires: []
     implementation_modules: ["Wotex", "Wotex.ThingDescription", "Wotex.ThingDescription.Validator", "Wotex.SecurityReferences"]
-    executable_evidence: ["test/wotex/thing_description_test.exs", "test/wotex/admission_safety_test.exs", "test/wotex/library_contract_test.exs"]
+    executable_evidence: ["bin/wcf_target.exs", "test/wotex/thing_description_test.exs", "test/wotex/admission_safety_test.exs", "test/wotex/library_contract_test.exs"]
     compatibility_classification: "Existing 0.1 API with pre-release admission corrections (context position, duplicate members, invalid limits); standards scope is not full conformance; stable API admission remains separate"
   - id: "WTX.02"
     version: "1.1.0"
@@ -48,5 +48,5 @@ specifications:
         claim: "Thing Model JSON values; no instantiation or remote reference resolution"
     requires: ["WTX.01", "WTX.03"]
     implementation_modules: ["Wotex.ThingModel", "Wotex.ThingModel.Validator", "Wotex.ModelReferences"]
-    executable_evidence: ["test/wotex/thing_model_test.exs", "test/wotex/admission_safety_test.exs"]
+    executable_evidence: ["bin/wcf_target.exs", "test/wotex/thing_model_test.exs", "test/wotex/admission_safety_test.exs"]
     compatibility_classification: "Separate aggregate from Thing Description; model instantiation needs a separately admitted contract"

@@ -98,6 +98,7 @@ defmodule Wotex.MixProject do
         "docs/specs/WTX.04-thing-model.md": [title: "Thing Model"],
         "docs/provenance/w3c-td-schema-1.1.md": [title: "TD 1.1 Schema Provenance"],
         "docs/provenance/w3c-tm-schema-1.1.md": [title: "Thing Model Schema Provenance"],
+        "docs/provenance/reference-corpus.md": [title: "Reference Corpus Evidence"],
         "CHANGELOG.md": [title: "Changelog"],
         "SECURITY.md": [title: "Security"],
         "CONTRIBUTING.md": [title: "Contributing"],
