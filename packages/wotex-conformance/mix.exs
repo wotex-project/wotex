@@ -126,6 +126,7 @@ defmodule WotexConformance.MixProject do
         "docs/provenance/standards.md": [title: "Standards provenance"],
         "docs/provenance/assertion-inventory.md": [title: "Assertion inventory"],
         "docs/provenance/archive-consumer.md": [title: "Archive-only consumer"],
+        "docs/provenance/external-lifecycle.md": [title: "External target lifecycle"],
         "CHANGELOG.md": [title: "Changelog"],
         LICENSE: [title: "License"]
       ],

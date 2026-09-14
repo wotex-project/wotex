@@ -161,6 +161,22 @@ defmodule Wotex.Conformance.RunnerTest do
     refute File.exists?(marker)
   end
 
+  test "changed artifact bytes start no target", context do
+    marker = Path.join(context.root, "changed-artifact-target-invoked")
+    target = TestFixtures.external_target!(context.archive, "pass", marker_path: marker)
+    selected = hd(context.corpus.vectors).id
+
+    File.write!(context.archive, "changed after subject identity was recorded")
+
+    assert {:ok, report} = run(context, target, select: {:ids, [selected]})
+    assert report.summary == status_counts(context.corpus, infrastructure_error: 1)
+
+    assert Enum.find(report.results, &(&1.vector_id == selected)).code ==
+             "artifact_digest_mismatch"
+
+    refute File.exists?(marker)
+  end
+
   test "rejects unknown vector selections before invoking a target", context do
     marker = Path.join(context.root, "target-invoked")
     target = TestFixtures.external_target!(context.archive, "pass", marker_path: marker)

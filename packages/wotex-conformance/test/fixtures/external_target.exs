@@ -31,6 +31,15 @@ defmodule ExternalTargetFixture do
 
   defp respond("malformed"), do: IO.binwrite("not-json")
 
+  defp respond("partial") do
+    IO.binwrite(~s({"protocol":"wotex.conformance.target"))
+  end
+
+  defp respond("partial_sleep") do
+    IO.binwrite(~s({"protocol":))
+    "TARGET_SLEEP_MS" |> System.get_env("100") |> String.to_integer() |> Process.sleep()
+  end
+
   defp respond("oversized") do
     "observed"
     |> base_response(%{"bytes" => String.duplicate("x", 8_192)})
