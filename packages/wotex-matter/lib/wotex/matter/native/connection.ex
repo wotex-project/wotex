@@ -16,6 +16,9 @@ defmodule Wotex.Matter.Native.Connection do
   callers never submitted a message. It consumes an already queued message before
   releasing that slot and rejects a late submission after its deadline. The same
   timer terminates an abandoned close; no global reaper process is started.
+  Writes to native stdin never suspend this owner. A busy or failed pipe closes
+  the generation; a rejected report ACK cannot restore native credit or leave
+  the subscription waiting indefinitely.
   It is an implementation module; consumers use
   `Wotex.Matter.Native` and its opaque `Wotex.Matter.Native.Handle`.
   """
@@ -412,6 +415,12 @@ defmodule Wotex.Matter.Native.Connection do
         {:noreply, state}
     end
   end
+
+  def handle_info(
+        {:native_input_failed, generation},
+        %{generation: generation, channel_failed: true} = state
+      ),
+      do: {:stop, :normal, notify_session_failure(Error.new(:transport_closed), state)}
 
   def handle_info({:DOWN, monitor, :process, _, _}, %{owner_monitor: monitor} = state),
     do: {:stop, :normal, notify_session_failure(Error.new(:owner_closed), state)}
@@ -920,6 +929,9 @@ defmodule Wotex.Matter.Native.Connection do
           {:noreply, next_state} = handle_info(message, state)
           await_owner_line(next_state, deadline)
 
+        {:native_input_failed, generation} when generation == state.generation ->
+          {:error, Error.new(:transport_closed), state}
+
         {:flush_subscription, _} = message ->
           {:noreply, next_state} = handle_info(message, state)
           await_owner_line(next_state, deadline)
@@ -1154,7 +1166,7 @@ defmodule Wotex.Matter.Native.Connection do
   defp send_frame(port, frame) do
     case Jason.encode(frame) do
       {:ok, encoded} when byte_size(encoded) + 1 <= @maximum_line_bytes + 1 ->
-        Port.command(port, [encoded, ?\n])
+        Port.command(port, [encoded, ?\n], [:nosuspend])
 
       _ ->
         false
@@ -1171,7 +1183,7 @@ defmodule Wotex.Matter.Native.Connection do
       {:ok, encoded} when byte_size(encoded) + 1 <= @maximum_line_bytes + 1 ->
         cond do
           System.monotonic_time(:millisecond) >= deadline -> {:error, :timeout}
-          Port.command(port, [encoded, ?\n]) -> :ok
+          Port.command(port, [encoded, ?\n], [:nosuspend]) -> :ok
           true -> {:error, :transport_closed}
         end
 
@@ -1594,7 +1606,9 @@ defmodule Wotex.Matter.Native.Connection do
           "acknowledged_bytes" => ack.acknowledged_bytes
         }
 
-        if send_frame(state.port, frame), do: %{state | report_ledger: ledger}, else: state
+        if send_frame(state.port, frame),
+          do: %{state | report_ledger: ledger},
+          else: fail_native_input(state)
     end
   end
 
@@ -1631,11 +1645,20 @@ defmodule Wotex.Matter.Native.Connection do
           |> Map.put(:next_id, state.next_id + 1)
           |> Map.put(:internal_requests, Map.put(state.internal_requests, id, reference))
         else
-          retire_subscription(state, reference)
+          fail_native_input(state)
         end
 
       _ ->
         state
+    end
+  end
+
+  defp fail_native_input(state) do
+    if Map.get(state, :channel_failed, false) do
+      state
+    else
+      send(self(), {:native_input_failed, state.generation})
+      Map.put(state, :channel_failed, true)
     end
   end
 

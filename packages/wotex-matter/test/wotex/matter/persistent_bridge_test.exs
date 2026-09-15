@@ -296,6 +296,29 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     assert :ok = Native.disconnect(handle)
   end
 
+  @tag :native_input_pressure
+  test "WMA-C03 native stdin backpressure cannot suspend the owner past cleanup" do
+    assert {:ok, handle} = Native.connect(options(fixture("valid")))
+    monitor = Process.monitor(handle.pid)
+    port = :sys.get_state(handle.pid).port
+    {:os_pid, child} = Port.info(port, :os_pid)
+
+    try do
+      assert {_, 0} = System.cmd("/bin/kill", ["-STOP", to_string(child)])
+      assert fill_native_input(port, 128) == :busy
+      started = System.monotonic_time(:millisecond)
+      assert {:error, %Error{code: :transport_closed, effect: :none}} = Native.health(handle, 100)
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+      assert child_stopped?(child, 100)
+      assert System.monotonic_time(:millisecond) - started <= 1_000
+    after
+      if Port.info(port, :os_pid) == {:os_pid, child},
+        do: System.cmd("/bin/kill", ["-KILL", to_string(child)], stderr_to_stdout: true)
+
+      Native.disconnect(handle)
+    end
+  end
+
   test "native one-shot handles acquire one existing-store owner per concrete request" do
     audit = temporary_path("oneshot-audit")
     executable = fixture("typed_read", audit)
@@ -1002,6 +1025,16 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     end)
 
     path
+  end
+
+  defp fill_native_input(_, 0), do: :limit
+
+  defp fill_native_input(port, remaining) do
+    # Bounded transport fault injection into the stopped child's pipe, not an
+    # application request. Never resume it to parse these setup bytes.
+    if Port.command(port, String.duplicate(" ", 16_384), [:nosuspend]),
+      do: fill_native_input(port, remaining - 1),
+      else: :busy
   end
 
   defp mailbox_requests(pid) do

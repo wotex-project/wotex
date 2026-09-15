@@ -10,6 +10,74 @@ defmodule Wotex.Matter.SubscriptionTest do
   @event_path %{fabric_id: 1, node_id: 3, endpoint: 2, cluster: 0x0039, member: 3}
   @sensor_path %{fabric_id: 1, node_id: 3, endpoint: 4, cluster: 0x0402, member: 0}
 
+  @tag :native_input_pressure
+  test "WMA-C03 a blocked report ACK retires the native generation once" do
+    for pending_request <- [false, true] do
+      audit = temporary_path("blocked-credit")
+      executable = native_fixture(audit, "reports")
+      assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+
+      request = %{
+        kind: :attribute,
+        paths: [@path],
+        min_interval_s: 1,
+        max_interval_s: 60,
+        queue_limit: 64,
+        resubscribe: false
+      }
+
+      assert {:ok, subscription} =
+               Native.subscribe_acknowledged(session.handle, request, self(), 3_000)
+
+      assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 1} = first}, 1_000
+      assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 2}}, 1_000
+      owner = session.handle.pid
+      monitor = Process.monitor(owner)
+      port = :sys.get_state(owner).port
+      {:os_pid, child} = Port.info(port, :os_pid)
+      assert {_, 0} = System.cmd("/bin/kill", ["-STOP", to_string(child)])
+
+      health =
+        if pending_request do
+          task = Task.async(fn -> Native.health(session.handle, 5_000) end)
+          assert Task.yield(task, 20) == nil
+          task
+        end
+
+      try do
+        assert fill_native_input(port, 128) == :busy
+        started = System.monotonic_time(:millisecond)
+
+        send(
+          owner,
+          {:native_report_consumed, first.generation, first.reference, first.sequence, first.token}
+        )
+
+        reference = subscription.reference
+        assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :transport_closed}}}, 1_000
+        assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+
+        assert eventually(fn ->
+                 elem(System.cmd("/bin/kill", ["-0", to_string(child)], stderr_to_stdout: true), 1) !=
+                   0
+               end)
+
+        assert System.monotonic_time(:millisecond) - started <= 1_000
+        assert Port.info(port) == nil
+        refute_receive {:wotex_matter, ^reference, _}, 20
+
+        if health,
+          do: assert({:error, %Error{code: :transport_closed}} = Task.await(health, 1_000))
+      after
+        if Port.info(port, :os_pid) == {:os_pid, child},
+          do: System.cmd("/bin/kill", ["-KILL", to_string(child)], stderr_to_stdout: true)
+
+        if health, do: Task.shutdown(health, :brutal_kill)
+        Matter.disconnect(session)
+      end
+    end
+  end
+
   test "native report credit is consumed while another request waits for its response" do
     audit = temporary_path("credit-during-request")
     executable = native_fixture(audit, "blocked_health")
@@ -575,6 +643,14 @@ defmodule Wotex.Matter.SubscriptionTest do
     after
       0 -> Enum.reverse(messages)
     end
+  end
+
+  defp fill_native_input(_, 0), do: :limit
+
+  defp fill_native_input(port, remaining) do
+    if Port.command(port, String.duplicate(" ", 16_384), [:nosuspend]),
+      do: fill_native_input(port, remaining - 1),
+      else: :busy
   end
 
   defp eventually(function, attempts \\ 50)

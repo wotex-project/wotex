@@ -1374,3 +1374,50 @@ process-flow cases and full build/archive acceptance remain open.
 | Minimum focused log | `29cea15a0167fe77fc314de437c259c36ed9656ed9e881fff2fb87b14c92c022` |
 | Current Linux lifecycle/close log | `1a62b26902b30425d3bf4c71c34887fe9bbc7bbc99cd9476b10ed6e4cea50c90` |
 | Minimum Linux sanitizer lifecycle/close log | `13972ecc20ad23b415c15262b3deb75f15be5f1b41edc53c04dbdcb1aeac70b2` |
+
+## Native stdin backpressure
+
+Both request and control writes use non-suspending Port submission. A busy stdin
+pipe cannot suspend the connection inside the Port BIF and prevent deadline,
+caller-death or close handling. Failed report ACK and internal unsubscribe writes
+schedule one generation failure. The ledger retains its last acknowledged prefix
+until the ACK is accepted; failed submission cannot restore credit. The failure
+is handled both while idle and during another native response wait.
+
+The request regression fails before the change by returning caller timeout while
+the owner remains suspended in the write. A second regression fails when a busy
+ACK write leaves the subscription open. Both now pass, including ACK failure
+during a pending request, one terminal notification and cleanup within one second.
+The fixtures stop the exact owned child and fill its stdin with bounded transport
+fault bytes using non-suspending test writes; those bytes are not application
+requests, and the child is killed without resuming it to parse them.
+
+The real SDK case exercises request and report-ACK pressure separately. The ACK
+case first establishes a real lighting subscription and receives its SDK report.
+Both Linux lanes reach a busy pipe after 16384 injected bytes. Current Linux
+cleanup takes 13 ms for the request and 12 ms for the ACK; the minimum sanitizer
+lane takes 19 ms and 18 ms. Ports, children and admission tables are released,
+and each case reopens the durable controller and completes a health probe and
+cooperative close. The full cases pass in 1.0 and 2.0 seconds. Forced children do
+not execute leak finalization; sanitizers and leak detection remain enabled for
+the normally closed reopened controllers. Native binaries remain the unchanged
+byte-counter cohort.
+
+The default gate passes 161 checks with 24 excluded; minimum BEAM passes all 48
+persistent-connection and subscription tests. ExDoc passes without warnings.
+Full native instrumentation/fault matrices, the remaining process-flow corpus,
+full committed-source build/archive receipts and the 95% coverage gate remain
+open. The most recent coverage measurement, in the preceding cohort, is 88.6%.
+
+| Input-pressure artifact | SHA-256 |
+| --- | --- |
+| Connection | `0aa71e7ccc33ed3c1787048374e483f2d8bc28b0085212e566fabc9d2856013f` |
+| Persistent connection tests | `3c7022b1cb9254110bee291ee0a039b140f818eefd35c4a525940b75950aed4b` |
+| Subscription tests | `a5887f4f0809459c5b23d3d1675b1d7e234170e11329e12c584801f670f8d65a` |
+| SDK input-pressure test | `af631bec1a29780f6fe3454ef0bda442f20aa77486be6baec355d21ec4b63b27` |
+| Failing request-pressure log | `99ce76b9da2d6e04065bdfdfe22d801601bea0c6f1507ed490e5969c589c140c` |
+| Failing ACK-pressure log | `c9cdee22d72398efa9e5523bfa5616aa1c5440033c13f822e9afc0df70aaee4b` |
+| Current default gate log | `9ea774b3f1b6f53cf8bb296e43f6ddb7234ed099993ac7e2547a689881a52833` |
+| Minimum focused log | `ca6d55896255b58e44d2565ca9575fee3fa99f124e065ecc037c303e6809461a` |
+| Current Linux SDK pressure log | `27c6b47aa56b47e11e3f1791d49116ffa5e5772617a7e1cd5dd75b34982e51b3` |
+| Minimum Linux sanitizer SDK pressure log | `4dfcb171ed6defb826bcf5fbd2a3fb4ee30b3628183c15294fd7d2d1f820d37a` |
