@@ -10,6 +10,65 @@ defmodule Wotex.Matter.SubscriptionTest do
   @event_path %{fabric_id: 1, node_id: 3, endpoint: 2, cluster: 0x0039, member: 3}
   @sensor_path %{fabric_id: 1, node_id: 3, endpoint: 4, cluster: 0x0402, member: 0}
 
+  @tag :native_stream_owner
+  test "WMA-C02/C08 stream-owner diagnostics redact state and malformed deliveries fail closed" do
+    alias Wotex.Matter.Native.{Delivery, StreamOwner}
+
+    reference = make_ref()
+    token = make_ref()
+    canary = "stream-owner-private-canary"
+
+    assert {:ok, owner} =
+             StreamOwner.start_link(self(), "generation", reference, self(), %{
+               kind: :attribute,
+               paths: [%{@path | member: canary}],
+               queue_limit: 1
+             })
+
+    try do
+      refute inspect(:sys.get_status(owner)) =~ canary
+
+      status =
+        StreamOwner.format_status(%{
+          state: %{kind: :attribute, queue_limit: 1, paths: [canary]},
+          message: canary,
+          reason: canary,
+          log: [canary],
+          other: :kept
+        })
+
+      assert status == %{
+               state: %{kind: :attribute, queue_limit: 1},
+               message: :redacted,
+               reason: :redacted,
+               log: [],
+               other: :kept
+             }
+
+      refute inspect(status) =~ canary
+      send(owner, {:unknown, canary})
+      assert Process.alive?(owner)
+
+      send(
+        owner,
+        {:wotex_matter, reference,
+         %Delivery{
+           connection: self(),
+           generation: "generation",
+           reference: reference,
+           sequence: 1,
+           token: token,
+           value: :malformed
+         }}
+      )
+
+      assert_receive {:native_report_admitted, ^owner, "generation", ^reference, 1, ^token,
+                      {:error, :invalid_frame}}
+    after
+      if Process.alive?(owner), do: GenServer.stop(owner)
+    end
+  end
+
   @tag :cancel_terminal_race
   test "a native terminal racing local cancellation preserves one public terminal" do
     for mode <- ["cancel_race", "cancel_race_duplicate"] do

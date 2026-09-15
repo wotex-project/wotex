@@ -7,6 +7,7 @@ defmodule Wotex.Matter.RuntimeClient do
   def connect(options) do
     test_pid = Keyword.fetch!(options, :test_pid)
     send(test_pid, {:matter_connect, self()})
+    Process.sleep(Keyword.get(options, :connect_delay_ms, 0))
 
     case Keyword.get(options, :connect_error) do
       %Wotex.Matter.Error{} = error ->
@@ -17,7 +18,10 @@ defmodule Wotex.Matter.RuntimeClient do
          %{
            test_pid: test_pid,
            response: Keyword.get(options, :response, :unused),
-           opening_deliveries: Keyword.get(options, :opening_deliveries, [])
+           opening_deliveries: Keyword.get(options, :opening_deliveries, []),
+           subscribe_error: Keyword.get(options, :subscribe_error),
+           unsubscribe_error: Keyword.get(options, :unsubscribe_error),
+           disconnect_error: Keyword.get(options, :disconnect_error)
          }}
     end
   end
@@ -38,18 +42,30 @@ defmodule Wotex.Matter.RuntimeClient do
     subscription = %Wotex.Matter.Subscription{pid: self(), reference: reference, generation: 1}
     send(handle.test_pid, {:matter_subscribe, self(), receiver, request, timeout, reference})
     Enum.each(handle.opening_deliveries, &send(receiver, {:wotex_matter, reference, &1}))
-    {:ok, subscription}
+
+    case handle.subscribe_error do
+      %Wotex.Matter.Error{} = error -> {:error, error}
+      nil -> {:ok, subscription}
+    end
   end
 
   @impl Wotex.Matter.Client
   def unsubscribe(handle, subscription, timeout) do
     send(handle.test_pid, {:matter_unsubscribe, self(), subscription, timeout})
-    :ok
+
+    case handle.unsubscribe_error do
+      %Wotex.Matter.Error{} = error -> {:error, error}
+      nil -> :ok
+    end
   end
 
   @impl Wotex.Matter.Client
   def disconnect(handle) do
     send(handle.test_pid, :disconnected)
-    :ok
+
+    case handle.disconnect_error do
+      %Wotex.Matter.Error{} = error -> {:error, error}
+      nil -> :ok
+    end
   end
 end

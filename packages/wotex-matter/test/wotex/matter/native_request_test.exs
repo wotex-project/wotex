@@ -70,5 +70,7 @@ defmodule Wotex.Matter.NativeRequestTest do
       assert {:error, %Error{code: :invalid_request, effect: :none, details: %{}}} =
                Request.validate(value)
     end
+
+    assert {:error, %Error{code: :invalid_subscription}} = Request.subscription(nil, 1)
   end
 end

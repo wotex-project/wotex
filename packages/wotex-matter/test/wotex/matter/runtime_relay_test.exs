@@ -8,6 +8,7 @@ defmodule Wotex.Matter.RuntimeRelayTest do
   alias Wotex.Matter.RuntimeRelay.Frame
 
   @path %{fabric_id: 1, node_id: 1234, endpoint: 1, cluster: 6, member: 0}
+  @event_path %{fabric_id: 1, node_id: 1234, endpoint: 2, cluster: 0x0039, member: 3}
   @value %{tag: :anonymous, type: :boolean, value: false}
 
   test "malformed stream options fail before acquiring a client" do
@@ -152,6 +153,127 @@ defmodule Wotex.Matter.RuntimeRelayTest do
     refute_receive {:matter_subscribe, _, _, _, _, _}, 0
   end
 
+  test "subscription and cleanup failures remain exact structured errors" do
+    subscribe_error = Error.new(:subscription_failed)
+
+    assert {:error, ^subscribe_error} =
+             start([], 1_000, subscribe_error: subscribe_error)
+
+    assert_receive {:matter_connect, _}
+    assert_receive {:matter_subscribe, _, _, _, _, _}
+    assert_receive :disconnected
+
+    for {option, expected} <- [
+          {:unsubscribe_error, Error.new(:subscription_cancel_failed)},
+          {:disconnect_error, Error.new(:transport_closed)}
+        ] do
+      assert {:ok, handle} = start([], 1_000, [{option, expected}])
+      pid = handle.pid
+      assert_receive {:matter_connect, ^pid}
+      assert_receive {:matter_subscribe, ^pid, ^pid, _, _, _}
+      assert {:error, ^expected} = RuntimeRelay.close(handle)
+      assert_receive {:matter_unsubscribe, ^pid, _, _}
+      assert_receive :disconnected
+    end
+  end
+
+  test "opening and terminal stream failures close resources without publishing a frame" do
+    assert {:error, %Error{code: :subscription_failed}} =
+             start([], 1_000, opening_deliveries: [{:status, :resubscribed, %{}}])
+
+    assert_receive {:matter_connect, opening}
+    assert_receive {:matter_subscribe, ^opening, ^opening, _, _, _}
+    assert_receive {:matter_unsubscribe, ^opening, _, _}
+    assert_receive :disconnected
+    refute_receive {:wotex_transport_frame, _}, 0
+
+    for {terminal, status} <- [
+          {{:error, Error.new(:receiver_overflow)}, :transport_down},
+          {{:error, Error.new(:session_lost)}, :session_lost},
+          {{:status, :resubscribed, %{}}, :transport_down}
+        ] do
+      {handle, reference} = bound()
+      pid = handle.pid
+      monitor = Process.monitor(pid)
+      send(pid, {:wotex_matter, reference, terminal})
+      assert_receive {:wotex_transport, {:error, %Error{}}}
+      assert_receive {:wotex_transport_status, ^status}
+      assert_receive {:matter_unsubscribe, ^pid, _, _}
+      assert_receive :disconnected
+      assert_receive {:DOWN, ^monitor, :process, ^pid, :normal}
+      refute_receive {:wotex_transport_frame, _}, 0
+    end
+  end
+
+  test "a full final-owner mailbox terminates the route before frame admission" do
+    parent = self()
+
+    owner =
+      spawn(fn ->
+        send(parent, {:owner_ready, self()})
+
+        receive do
+          :release -> send(parent, {:owner_messages, Process.info(self(), :messages)})
+        end
+      end)
+
+    assert_receive {:owner_ready, ^owner}
+    send(owner, :occupied)
+    assert {:ok, handle} = start([owner_queue_limit: 1], 1_000, [], owner)
+    pid = handle.pid
+    monitor = Process.monitor(pid)
+    assert_receive {:matter_connect, ^pid}
+    assert_receive {:matter_subscribe, ^pid, ^pid, _, _, reference}
+    send(pid, {:wotex_matter, reference, {:ok, @value, metadata()}})
+    assert_receive {:matter_unsubscribe, ^pid, _, _}
+    assert_receive :disconnected
+    assert_receive {:DOWN, ^monitor, :process, ^pid, :normal}
+
+    assert {:messages, messages} = Process.info(owner, :messages)
+    assert :occupied in messages
+    assert {:wotex_transport_status, :transport_down} in messages
+    refute Enum.any?(messages, &match?({:wotex_transport_frame, _}, &1))
+    send(owner, :release)
+    assert_receive {:owner_messages, _}
+  end
+
+  test "event routes reject schema and timestamp ambiguity with bounded public failures" do
+    address = event_address()
+
+    event_value = %{
+      tag: :anonymous,
+      type: :structure,
+      value: [%{tag: {:context, 0}, type: :boolean, value: false}]
+    }
+
+    valid_metadata = %{
+      kind: :event,
+      path: @event_path,
+      event_number: 1,
+      priority: 1,
+      timestamp: %{kind: :epoch, value: 1}
+    }
+
+    for {value, metadata, code} <- [
+          {@value, valid_metadata, :invalid_value},
+          {event_value, %{valid_metadata | timestamp: %{kind: :unknown, value: 1}},
+           :invalid_transport_return}
+        ] do
+      assert {:ok, handle} = start_event(address)
+      pid = handle.pid
+      monitor = Process.monitor(pid)
+      assert_receive {:matter_connect, ^pid}
+      assert_receive {:matter_subscribe, ^pid, ^pid, _, _, reference}
+      send(pid, {:wotex_matter, reference, {:ok, value, metadata}})
+      assert_receive {:wotex_transport, {:error, %Error{code: ^code}}}
+      assert_receive {:wotex_transport_status, :transport_down}
+      assert_receive {:matter_unsubscribe, ^pid, _, _}
+      assert_receive :disconnected
+      assert_receive {:DOWN, ^monitor, :process, ^pid, :normal}
+      refute_receive {:wotex_transport_frame, _}, 0
+    end
+  end
+
   test "unknown calls return structured errors without leaking route diagnostics" do
     canary = "relay-private-canary"
     {:ok, handle} = start([], 1_000, [], self(), canary)
@@ -160,6 +282,21 @@ defmodule Wotex.Matter.RuntimeRelayTest do
     assert_receive {:matter_subscribe, ^pid, ^pid, _, _, _}
     monitor = Process.monitor(pid)
     refute inspect(:sys.get_status(pid)) =~ canary
+
+    status =
+      RuntimeRelay.format_status(%{
+        state: %{state: :bound, operation: :observeproperty, private: canary},
+        message: canary,
+        reason: canary,
+        log: [canary],
+        other: :kept
+      })
+
+    assert status.message == :redacted
+    assert status.reason == :redacted
+    assert status.log == []
+    assert status.other == :kept
+    refute inspect(status) =~ canary
 
     log =
       capture_log(fn ->
@@ -209,6 +346,24 @@ defmodule Wotex.Matter.RuntimeRelayTest do
   defp address do
     {:ok, address} = Address.new(@path)
     address
+  end
+
+  defp event_address do
+    {:ok, address} = Address.new(@event_path)
+    address
+  end
+
+  defp start_event(address) do
+    RuntimeRelay.start(
+      self(),
+      "event-request",
+      :subscribeevent,
+      :event,
+      address,
+      [client: RuntimeClient, test_pid: self()],
+      [],
+      1_000
+    )
   end
 
   defp metadata, do: %{kind: :attribute, path: @path, data_version: 1}

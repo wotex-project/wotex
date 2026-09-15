@@ -3391,3 +3391,46 @@ native source, executable or software-peer result.
 | Connection source | `73235b90c0f843625aed168827a02a3c8858eff0235f6ad318de2535d7a4d616` |
 | Request validator source | `8c8366da679c6346f08ae4e99ef65df06019f2e64c9a1cebfc34836029b0db2d` |
 | Boundary regression source | `7cdc531339cee650dee5d8d17b7b038b42cbb4cbcdbd0f6e9270b19f8ad9a039` |
+
+## Default coverage acceptance and defensive process transitions
+
+The default coverage gate now passes the unchanged 95% floor. It executes 242
+checks with 37 explicit software/hardware exclusions and reports 95.0% across
+2475 relevant lines. The immediately preceding complete measurement passed 239
+checks at 94.1%, so the accepted result comes from new executable assertions,
+with no threshold, ignore-list or production coverage configuration change.
+
+WMA-B02/C04 assertions enumerate every fixed native error identifier and verify
+its bounded public atom, default effect and empty diagnostics. WMA-C03 assertions
+exercise admission identity, close ownership, submission state and table death;
+an ordinary reservation racing with its reserved close is released without I/O.
+Exhausted uint64 request identity cannot wrap or dispatch. Forged stale monitor
+and maintenance messages leave the live owner usable. Synthetic terminal Port
+notifications exercise the same exact-child cleanup path as native no-EOL,
+exit-status and linked-exit events.
+
+WMA-C02/C05/C08 assertions verify direct stream-owner and Runtime-relay status
+redaction, malformed delivery rejection, subscription and teardown error
+propagation, bounded opening reports, terminal-status classification and a full
+final-owner mailbox. Attribute/event schema and timestamp failures publish no
+Runtime frame. The transport charges time spent connecting to both baseline and
+controller request deadlines. Public batch, SDK, TLV and one-shot fallbacks
+return their documented structured errors. These cases exercise existing
+production behavior; this packet changes only tests and their explicit fake
+client controls.
+
+The complete affected set passes 136 tests on Erlang/OTP 27 with Elixir 1.18.4.
+The accepted coverage run uses Erlang/OTP 29 with Elixir 1.20.2. No native source,
+binary, peer fixture or previous software receipt changes in this cohort.
+
+| Coverage acceptance artifact | SHA-256 |
+| --- | --- |
+| Enforcing 95.0% coverage gate | `6e2cc19f53091115961de3975b57f989416cbb043f4e822b7ed7d4c7fa06e84c` |
+| Minimum-toolchain affected gate | `ee81afb7dfaaad374de6224187a85186c9c9de6c443df270e2b8329894ca6671` |
+| Admission capability cases | `d67e6a1aa9d691fe7c4fb3e0e0012a5c3ef43ac43c901cb56ab80776d20ee31f` |
+| Native wire vocabulary cases | `6022944d1cf7e09f25556e4862e79c3f7c499d3efa57c42bee28bd0c4fb886db` |
+| Native owner transition cases | `72d2839e128fb88ca934d886b5c7266cbafca30829e022321198c24091ed6066` |
+| Stream owner cases | `2f34758b27c917e68bd7b66be8f6f5afdd1dd78756e383a809a5d5ab3e8ddb58` |
+| Runtime relay cases | `6dedf6085ae997b631b7d83bff436ef1ebbb981514d70085bbf1ffccfdcff016` |
+| Runtime transport cases | `e83601671f61b07f290b5267b4926983d44551e484f344c28b35d618dd90211f` |
+| Explicit fake-client controls | `89ad7e2d582d7911e2f22011053325aafa7b7832611fc7dc192f365518f78024` |

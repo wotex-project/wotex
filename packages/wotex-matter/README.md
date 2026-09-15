@@ -74,8 +74,10 @@ both Linux BEAM lanes; their exact cohorts are recorded in
 software build and executes the required suite in separate current and minimum
 BEAM containers with owned fixture state, networks and cleanup. Passing command
 implementation tests does not establish complete P09 acceptance; final-source
-software, resource, coverage and archive receipts remain required. Upstream SDK
-Python is used only while generating and building native SDK sources.
+software and archive receipts remain required. The default suite enforces the
+contract's 95% coverage floor; its passing receipt is recorded in executable
+evidence. Upstream SDK Python is used only while generating and building native
+SDK sources.
 
 ## Implemented profile
 

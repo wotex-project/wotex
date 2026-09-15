@@ -4,7 +4,7 @@ defmodule Wotex.Matter.RuntimeStreamTest do
   use ExUnit.Case, async: true
 
   alias Wotex.Matter
-  alias Wotex.Matter.{Error, RuntimeClient, Transport}
+  alias Wotex.Matter.{Error, RuntimeClient, RuntimeOneshot, Transport}
   alias Wotex.Runtime.{BindingProfile, Context, ExecutionContext, Request}
 
   @attribute_path %{fabric_id: 1, node_id: 1234, endpoint: 1, cluster: 6, member: 0}
@@ -76,6 +76,15 @@ defmodule Wotex.Matter.RuntimeStreamTest do
     assert_receive {:matter_request, %{type: :invoke, value: @command_value}, timeout}
                    when timeout > 0
 
+    assert_receive :disconnected
+
+    invoke_response = %{path: @attribute_path, value: @command_value, status: 0}
+
+    assert {:ok, result} =
+             Transport.request(invoke, execution("invoke-response-path"), options(invoke_response))
+
+    assert result.metadata.response_path == @attribute_path
+    assert_receive {:matter_request, %{type: :invoke}, timeout} when timeout > 0
     assert_receive :disconnected
   end
 
@@ -238,9 +247,49 @@ defmodule Wotex.Matter.RuntimeStreamTest do
     assert {:error, %Error{code: :invalid_subscription}} =
              Transport.subscribe(stream, self(), execution("invalid"), invalid_options)
 
+    invalid_options = Keyword.put(options(:unused), :subscription_options, :invalid)
+
+    assert {:error, %Error{code: :invalid_subscription}} =
+             Transport.subscribe(stream, self(), execution("invalid-term"), invalid_options)
+
+    assert {:error, %Error{code: :invalid_transport_context}} =
+             Transport.subscribe(nil, self(), nil, [])
+
+    assert :ignore = Transport.decode_frame(nil, nil, nil)
+
     refute_receive {:matter_request, _, _}
     refute_receive {:matter_subscribe, _, _, _, _, _}
     refute_receive :disconnected
+  end
+
+  test "request deadlines remain charged while the selected client connects" do
+    for profile <- [:controller, :baseline] do
+      request = request(:readproperty, :property, @attribute_path)
+      profile_value = if profile == :controller, do: request.profile, else: Matter.profile()
+
+      request = %{
+        request
+        | profile: profile_value,
+          deadline: System.monotonic_time(:millisecond) + 50
+      }
+
+      delayed = Keyword.put(options(:unused), :connect_delay_ms, 75)
+
+      assert {:error, %Error{code: :deadline_exceeded}} =
+               Transport.request(request, execution("connect-deadline-#{profile}"), delayed)
+
+      assert_receive {:matter_connect, _}
+      assert_receive :disconnected
+      refute_receive {:matter_request, _, _}
+    end
+  end
+
+  test "one-shot projection rejects unsupported operations and expired execution" do
+    assert {:error, %Error{code: :unsupported_operation}} =
+             RuntimeOneshot.preflight(:observeproperty, nil, nil)
+
+    assert {:error, %Error{code: :deadline_exceeded}} =
+             RuntimeOneshot.execute(nil, nil, nil, 0)
   end
 
   test "opening report overflow fails establishment and releases its native route" do

@@ -359,6 +359,51 @@ defmodule Wotex.Matter.NativeWireTest do
     refute inspect(unknown) =~ "canary"
   end
 
+  test "WMA-B02 every native failure identifier maps through the fixed public vocabulary" do
+    mappings = %{
+      "authority_invalid" => :authority_invalid,
+      "controller_already_open" => :controller_already_open,
+      "controller_closed" => :controller_closed,
+      "controller_start_failed" => :controller_start_failed,
+      "controller_start_timeout" => :controller_start_timeout,
+      "commissioning_failed" => :commissioning_failed,
+      "commissioning_submit_failed" => :commissioning_submit_failed,
+      "commissioning_unavailable" => :commissioning_unavailable,
+      "fabric_mismatch" => :fabric_mismatch,
+      "interaction_busy" => :interaction_busy,
+      "interaction_failed" => :interaction_failed,
+      "interaction_no_response" => :interaction_no_response,
+      "interaction_submit_failed" => :interaction_submit_failed,
+      "interaction_unavailable" => :interaction_unavailable,
+      "window_failed" => :commissioning_window_failed,
+      "window_submit_failed" => :commissioning_window_submit_failed,
+      "window_unavailable" => :commissioning_window_unavailable,
+      "invalid_attribute_data" => :invalid_attribute_data,
+      "invalid_controller_identity" => :invalid_controller_identity,
+      "invalid_event_data" => :invalid_event_data,
+      "invalid_request" => :invalid_request,
+      "invalid_response_path" => :invalid_response_path,
+      "missing_path_result" => :missing_path_result,
+      "paa_trust_store_invalid" => :paa_trust_store_invalid,
+      "response_limit" => :response_limit,
+      "receiver_closed" => :receiver_closed,
+      "sdk_storage_failed" => :sdk_storage_failed,
+      "session_establishment_failed" => :session_establishment_failed,
+      "storage_open_failed" => :storage_open_failed,
+      "subscription_submit_failed" => :subscription_submit_failed,
+      "subscription_unavailable" => :subscription_unavailable,
+      "invalid_subscription_report" => :invalid_subscription_report,
+      "invalid_subscription_result" => :invalid_subscription_result,
+      "unsupported_schema" => :unsupported_schema,
+      "unsupported_timestamp" => :unsupported_timestamp
+    }
+
+    for {wire, expected} <- mappings do
+      assert {:ok, %Error{code: ^expected, details: %{}, effect: :none}} =
+               Wire.error(%{"code" => wire})
+    end
+  end
+
   test "WMA-B02 native error envelopes reject unbounded diagnostics and ambiguous status" do
     for error <- [
           %{},

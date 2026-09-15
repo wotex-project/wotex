@@ -175,6 +175,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
             {{:health, generation, :invalid}, :invalid_request},
             {{:request, generation, %{type: "read"}, 1_000}, :invalid_request},
             {{:request, "foreign", @read, 1_000}, :invalid_handle},
+            {{:health, "foreign", 1_000}, :invalid_handle},
             {{:subscribe, "foreign", %{}, self(), 1_000, false}, :invalid_handle},
             {{:subscribe, generation, %{}, self(), 1_000, false}, :invalid_subscription},
             {{:subscribe, generation, %{subscription | paths: [path | :invalid]}, self(), 1_000,
@@ -241,6 +242,156 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     end
   end
 
+  @tag :owner_boundary
+  test "WMA-C03 invalidate and an expired submitted close both release their generation" do
+    alias Wotex.Matter.Native.Admission
+
+    assert {:ok, invalidated} = Native.connect(options(fixture("valid")))
+    invalidated_monitor = Process.monitor(invalidated.pid)
+    invalidated_admission = invalidated.admission
+
+    assert {:ok, nil} =
+             Native.Connection.invalidate(
+               invalidated.pid,
+               invalidated.generation,
+               invalidated.admission
+             )
+
+    assert_receive {:DOWN, ^invalidated_monitor, :process, _, :normal}, 1_000
+    assert :ets.info(invalidated_admission) == :undefined
+
+    audit = temporary_path("expired-submitted-close")
+    assert {:ok, expired} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+    expired_monitor = Process.monitor(expired.pid)
+    deadline = System.monotonic_time(:millisecond) - 1
+
+    assert {:first, token} =
+             Admission.begin_close(expired.admission, expired.pid, expired.generation, deadline)
+
+    assert {:error, %Error{code: :timeout}} =
+             GenServer.call(
+               expired.pid,
+               {:close_control, expired.generation, :disconnect, deadline, token}
+             )
+
+    assert_receive {:DOWN, ^expired_monitor, :process, _, :normal}, 1_000
+    assert :ets.info(expired.admission) == :undefined
+    assert File.read!(audit) == initial
+  end
+
+  @tag :owner_boundary
+  test "WMA-C03 receiver death after admission cannot create a native subscription" do
+    audit = temporary_path("receiver-admission-race")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+
+    receiver =
+      spawn(fn ->
+        receive do
+          :stop -> :ok
+        end
+      end)
+
+    request = %{
+      kind: :attribute,
+      paths: [Map.delete(@read, :type)],
+      min_interval_s: 0,
+      max_interval_s: 1,
+      resubscribe: false,
+      queue_limit: 1
+    }
+
+    :sys.suspend(handle.pid)
+    caller = Task.async(fn -> Native.subscribe(handle, request, receiver, 1_000) end)
+
+    try do
+      assert admission_reaches?(handle, 1, 100)
+      Process.exit(receiver, :kill)
+      :sys.resume(handle.pid)
+
+      assert {:error, %Error{code: :receiver_closed}} = Task.await(caller, 1_000)
+      assert File.read!(audit) == initial
+      assert :sys.get_state(handle.pid).subscriptions == %{}
+    after
+      if Process.alive?(handle.pid) do
+        try do
+          :sys.resume(handle.pid)
+        catch
+          :exit, _ -> :ok
+        end
+      end
+
+      Process.exit(receiver, :kill)
+      Task.shutdown(caller, :brutal_kill)
+      Native.disconnect(handle)
+    end
+  end
+
+  @tag :owner_boundary
+  test "WMA-C03 stale owner messages and the admission-close race preserve exact capabilities" do
+    alias Wotex.Matter.Native.Admission
+    audit = temporary_path("stale-owner-messages")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    on_exit(fn -> Native.disconnect(handle) end)
+    initial = File.read!(audit)
+    deadline = System.monotonic_time(:millisecond) + 5_000
+    message = {:health, handle.generation, 1_000}
+
+    send(handle.pid, {:DOWN, make_ref(), :process, self(), :normal})
+    send(handle.pid, {:reap_admission, make_ref()})
+
+    assert {:error, %Error{code: :invalid_handle}} =
+             boundary_call(handle.pid, {:bounded, message, deadline, {1, make_ref()}})
+
+    assert {:ok, lease} =
+             Admission.acquire(handle.admission, handle.pid, handle.generation, deadline)
+
+    assert {:first, close_token} =
+             Admission.begin_close(handle.admission, handle.pid, handle.generation, deadline)
+
+    assert {:error, %Error{code: :transport_closed}} =
+             boundary_call(handle.pid, {:bounded, message, deadline, lease})
+
+    assert :ets.info(handle.admission, :size) == 2
+    assert File.read!(audit) == initial
+    assert Process.alive?(handle.pid)
+
+    assert {:ok, nil} =
+             GenServer.call(
+               handle.pid,
+               {:close_control, handle.generation, :disconnect, deadline, close_token}
+             )
+
+    refute Process.alive?(handle.pid)
+  end
+
+  @tag :owner_boundary
+  test "WMA-C03 terminal Port notifications always reap the exact native child" do
+    for kind <- [:oversized_line, :exit_status, :port_exit] do
+      audit = temporary_path("terminal-port-message")
+      assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+      on_exit(fn -> Native.disconnect(handle) end)
+      initial = File.read!(audit)
+      monitor = Process.monitor(handle.pid)
+      port = :sys.get_state(handle.pid).port
+      {:os_pid, child} = Port.info(port, :os_pid)
+
+      message =
+        case kind do
+          :oversized_line -> {port, {:data, {:noeol, "untrusted-port-canary"}}}
+          :exit_status -> {port, {:exit_status, 42}}
+          :port_exit -> {:EXIT, port, :untrusted}
+        end
+
+      send(handle.pid, message)
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+      assert child_stopped?(child, 100)
+      assert :ets.info(handle.admission) == :undefined
+      assert File.read!(audit) == initial
+    end
+  end
+
   @tag :wire_identifiers
   test "reserved result identifiers retire the native generation with the submitted effect" do
     for {message, effect} <- [{@read, :none}, {@write, :unknown}] do
@@ -280,6 +431,29 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     assert Enum.map(frames, & &1["operation"]) == [nil, "open", "health", "close"]
     assert :ets.info(handle.admission) == :undefined
     assert :ok = Native.disconnect(handle)
+  end
+
+  @tag :request_id_exhaustion
+  test "WMA-B02 an exhausted request identity cannot dispatch or wrap" do
+    audit = temporary_path("request-id-exhausted")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+    monitor = Process.monitor(handle.pid)
+    :sys.replace_state(handle.pid, &%{&1 | next_id: :exhausted})
+
+    assert {:error, %Error{code: :transport_closed}} = Native.health(handle)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+    assert File.read!(audit) == initial
+    assert :ets.info(handle.admission) == :undefined
+  end
+
+  test "WMA-C02 connection startup normalizes an absent executable without linking the caller" do
+    missing = temporary_path("missing-native-executable")
+
+    assert {:error, %Error{code: :controller_start_failed}} =
+             Native.Connection.start(self(), %{executable: missing, timeout: 100})
+
+    assert Process.alive?(self())
   end
 
   test "WMA-C03 native request admission stops at 64 before the owner mailbox" do

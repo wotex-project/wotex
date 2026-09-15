@@ -29,7 +29,9 @@ defmodule Wotex.Matter.SDKTest do
              SDK.request(handle, Map.put(@message, :value, :binary.copy("x", 131_072)), 100)
 
     assert :ok = SDK.disconnect(handle)
+    assert {:error, _} = SDK.connect(nil)
     assert {:error, _} = SDK.connect([:not_a_keyword])
+    assert {:error, _} = SDK.connect(Keyword.put(opts, :factory, nil))
 
     for change <- [
           [executable: "relative"],

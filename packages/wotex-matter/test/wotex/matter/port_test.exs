@@ -21,8 +21,13 @@ defmodule Wotex.Matter.PortTest do
     assert_receive :disconnected
     assert_receive :disconnected
     assert {:error, _} = Matter.send(conn, %{})
+
+    assert {:error, %Error{code: :invalid_message}} =
+             Matter.read_paths(nil, [Map.delete(@read, :type)])
+
     assert {:error, _} = Matter.receive(conn, 100)
     assert {:error, _} = Matter.health_check(conn)
+    assert {:error, %Error{code: :invalid_message}} = Matter.health_check(nil, @read)
     assert {:error, %Error{code: :invalid_message}} = Matter.subscribe(conn, "value")
 
     assert {:error, %Error{code: :not_supported}} =

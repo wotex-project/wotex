@@ -12,6 +12,7 @@ defmodule Wotex.Matter.PathValueTest do
     EndpointCatalogue,
     Error,
     EventReport,
+    PathResults,
     ReadPath,
     TestClient,
     TLV
@@ -206,6 +207,8 @@ defmodule Wotex.Matter.PathValueTest do
                Matter.read_paths(session, invalid)
     end
 
+    assert {:error, %Error{}} = Matter.read_paths(session, [nil])
+
     for invalid <- [[timeout: 0], [timeout: 1, timeout: 2], [unknown: true], nil] do
       assert {:error, %Error{code: :invalid_options, effect: :none}} =
                Matter.read_paths(session, [path(1)], invalid)
@@ -213,6 +216,16 @@ defmodule Wotex.Matter.PathValueTest do
 
     refute_received {:matter_request, _, _}
     assert :ok = Matter.disconnect(session)
+  end
+
+  test "WMA-C02 batch normalization rejects malformed caller and result envelopes" do
+    assert {:error, %Error{code: :invalid_transport_return}} = PathResults.normalize(nil, nil)
+    assert {:ok, requested} = ReadPath.new(path(1))
+
+    assert {:error, %Error{code: :invalid_transport_return}} =
+             PathResults.normalize([requested], [%{path: address(1), result: :invalid}])
+
+    assert {:error, %Error{code: :invalid_tlv}} = TLV.decode(nil)
   end
 
   test "WMA-S01 WMA-N02 descriptors convert only admitted numeric recipes" do
