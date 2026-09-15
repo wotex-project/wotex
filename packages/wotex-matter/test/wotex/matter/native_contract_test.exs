@@ -6,6 +6,7 @@ defmodule Wotex.Matter.NativeContractTest do
   use ExUnit.Case, async: false
 
   alias Wotex.Matter.SoftwareCommand
+  alias Wotex.Matter.Native.ReportLedger
 
   @moduletag :software
   @fixture "docs/specs/fixtures/native-port-v1.json"
@@ -152,6 +153,164 @@ defmodule Wotex.Matter.NativeContractTest do
       end
     after
       File.rm_rf!(directory)
+    end
+  end
+
+  test "WMA-B-F14 and F15 couple native retirement to the production BEAM ledger" do
+    selected = Enum.filter(fixture!()["cases"], &(&1["id"] in ["WMA-B-F14", "WMA-B-F15"]))
+    assert length(selected) == 2
+    executable = System.fetch_env!("WOTEX_MATTER_CONTRACT_DRIVER")
+
+    directory =
+      Path.join(System.tmp_dir!(), "wotex-retire-trace-#{System.unique_integer([:positive])}")
+
+    File.mkdir!(directory)
+
+    try do
+      for item <- selected do
+        assert item["operation"] == "flow_trace"
+        assert item["expectation"]["operator"] == "exact"
+        configuration = Map.take(item["input"], ["session_generation", "queue_limit"])
+        path = Path.join(directory, item["id"])
+        File.write!(path, Jason.encode!(configuration) <> "\n", [:exclusive])
+
+        port =
+          Port.open({:spawn_executable, String.to_charlist(executable)}, [
+            :binary,
+            :exit_status,
+            :use_stdio,
+            {:line, 131_072},
+            {:args, [~c"flow_session", String.to_charlist(path)]},
+            {:env,
+             [
+               {~c"ASAN_OPTIONS", ~c"detect_leaks=1:halt_on_error=1"},
+               {~c"UBSAN_OPTIONS", ~c"halt_on_error=1"}
+             ]}
+          ])
+
+        {:os_pid, child} = Port.info(port, :os_pid)
+
+        try do
+          initial = %{
+            port: port,
+            ledger: ReportLedger.new(),
+            generation: configuration["session_generation"],
+            terminal: nil,
+            transmitted: 0,
+            snapshot: nil,
+            byte_sizes: %{},
+            barriers: []
+          }
+
+          state =
+            Enum.reduce_while(item["input"]["events"], initial, fn event, state ->
+              observed = trace_event(event, state)
+              if observed.terminal, do: {:halt, observed}, else: {:cont, observed}
+            end)
+
+          state = trace_exchange(state, %{"event" => "close"})
+          assert_receive {^port, {:exit_status, 0}}, 1_000
+          assert surviving_child(child, 100) == 0
+          assert state.snapshot["transmitted"] == state.transmitted
+          observed = Map.put(state.snapshot, "terminal", state.terminal)
+          assert observed == item["expectation"]["value"], item["id"]
+        after
+          if Port.info(port), do: Port.close(port)
+        end
+      end
+    after
+      File.rm_rf!(directory)
+    end
+  end
+
+  defp trace_event(%{"event" => "transmit", "stream" => stream, "bytes" => bytes} = event, state) do
+    ledger =
+      if Map.has_key?(state.ledger.streams, stream) do
+        state.ledger
+      else
+        assert {:ok, opened} = ReportLedger.open(state.ledger, stream)
+        opened
+      end
+
+    state = %{state | ledger: ledger, byte_sizes: Map.put(state.byte_sizes, stream, bytes)}
+    trace_exchange(state, event)
+  end
+
+  defp trace_event(%{"event" => "retire", "stream" => stream} = event, state) do
+    received = trace_exchange(state, event)
+    assert [%{"stream" => ^stream}] = received.barriers
+    flush_trace_ack(received)
+  end
+
+  defp trace_event(
+         %{"event" => "consume", "stream" => stream, "report_sequence" => sequence},
+         state
+       ) do
+    %{stream: ^stream, token: token} = Map.fetch!(state.ledger.pending, sequence)
+    assert {:ok, consumed} = ReportLedger.consume(state.ledger, stream, sequence, token)
+    flush_trace_ack(%{state | ledger: consumed})
+  end
+
+  defp flush_trace_ack(%{terminal: terminal} = state) when not is_nil(terminal), do: state
+
+  defp flush_trace_ack(state) do
+    case ReportLedger.advance(state.ledger) do
+      {nil, _} ->
+        state
+
+      {ack, ledger} ->
+        trace_exchange(%{state | ledger: ledger}, %{
+          "event" => "ack",
+          "session_generation" => state.generation,
+          "report_sequence" => ack.report_sequence,
+          "acknowledged_bytes" => ack.acknowledged_bytes
+        })
+    end
+  end
+
+  defp trace_exchange(state, event) do
+    assert Port.command(state.port, [Jason.encode!(event), ?\n])
+    trace_frames(%{state | barriers: []})
+  end
+
+  defp trace_frames(%{port: port} = state) do
+    assert_receive {^port, {:data, {:eol, bytes}}}, 1_000
+    frame = Jason.decode!(bytes)
+
+    case frame do
+      %{"event" => "trace_snapshot"} ->
+        snapshot = Map.delete(frame, "event")
+        assert snapshot["transmitted"] == state.transmitted
+        %{state | snapshot: snapshot, terminal: state.terminal || snapshot["terminal"]}
+
+      %{
+        "event" => "trace_report",
+        "stream" => stream,
+        "report_sequence" => sequence,
+        "body" => body
+      }
+      when map_size(frame) == 4 and is_binary(body) ->
+        assert byte_size(bytes) + 1 == Map.fetch!(state.byte_sizes, stream)
+
+        assert {:ok, ledger} =
+                 ReportLedger.register(
+                   state.ledger,
+                   stream,
+                   sequence,
+                   byte_size(bytes) + 1,
+                   make_ref()
+                 )
+
+        trace_frames(%{state | ledger: ledger, transmitted: state.transmitted + 1})
+
+      %{"event" => "trace_retired", "stream" => stream, "last_report_sequence" => last}
+      when map_size(frame) == 3 ->
+        state = %{state | barriers: [frame | state.barriers]}
+
+        case ReportLedger.retire(state.ledger, stream, last) do
+          {:ok, ledger} -> trace_frames(%{state | ledger: ledger})
+          :error -> trace_frames(%{state | terminal: "invalid_frame"})
+        end
     end
   end
 

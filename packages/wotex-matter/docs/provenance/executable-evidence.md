@@ -1129,3 +1129,39 @@ recorded in the reaper cohort above.
 | Coverage log | `afdbd45008fbd6fa693c59b2c925bd47a4ed2999746e38b74387fcd33b451687` |
 | Current Linux lifecycle log | `6d79a9814d38733aab56260e4ef52053329c6c11ab9eff30f01fa0972caf4d6b` |
 | Minimum Linux sanitizer lifecycle log | `e1df2fabee5ed92465867f5097b43115860f37c9297d58f0b7ff84d8a6575eae` |
+
+## Native retirement trace corpus
+
+WMA-B-F14 and F15 couple the native `ReportCreditManager` to the same BEAM
+`ReportLedger` used by the connection. The bounded interactive driver writes
+trace reports of the requested encoded byte length to stdout. ExUnit reads those
+bytes, checks their length including the newline, records their actual sequence
+and assigns consumption tokens. Native retirement emits its barrier through the
+credit manager's production retirement path. The BEAM ledger validates the
+observed barrier and supplies any resulting cumulative ACK back to the native
+manager. Final counters come from that manager and are checked against the
+number of report frames actually received.
+
+F14 retires the first stream and consumes the second stream's exact report,
+restoring all session credit. F15 supplies a false retirement sequence; the BEAM
+ledger rejects it and emits no ACK, preserving the last valid native counters.
+The driver receives inputs and generated ACKs, never expected counters or a
+terminal-result oracle. These are accounting traces with explicit test payloads,
+not SDK device reports or suspended Runtime-process proof.
+
+All five corpus tests pass on current Linux and minimum Linux with ASan/UBSan
+and leak detection enabled. The corpus now executes fourteen of seventeen cases;
+F11–F13 remain unexecuted and its status remains `specified_unexecuted`. Both
+six-test native CTest lanes, fifteen advisory queries, the 148-check default gate
+with 22 excluded and ExDoc pass. The SDK host source is unchanged; the ready case
+uses the corrected reaper hosts recorded above. Both contract executables are
+rebuilt from the final driver source.
+
+| Retirement trace artifact | SHA-256 |
+| --- | --- |
+| Native driver | `85482a229b539e08dfcedbc97d2f1e090027fb8ceadacfb80f939a4d85921206` |
+| ExUnit corpus tests | `d8e979c162f3d31187d9089707366048b289859e27d8a0190354bce41c21c330` |
+| Normal contract executable | `663e91e8a1bf17ac92e1dae376b826b4b5ae63bb6bec714c61a8da82b7ebb6d3` |
+| Sanitized contract executable | `e2cfa9b19c7ae6a137e843ef2eed277563b69cfa0ce287addb9c7a18d91482be` |
+| Current Linux corpus log | `c5bd838dd86633a7fc2c20ae0ddcfc84c25c7d0c83833b46950fd7cc64e4051d` |
+| Minimum Linux sanitizer corpus log | `30e2ef9d1d7bea8ec79ccb16b0d7847d2087251954282d0aad7d3d00e91391b6` |
