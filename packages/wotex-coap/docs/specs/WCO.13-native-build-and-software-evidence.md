@@ -100,6 +100,11 @@ dependencies, feature probe and sanitizer configuration. A ready manifest is
 atomic and follows successful probes of exact libcoap version and OSCORE support.
 The source package includes first-party C source, build tasks and license
 notices; generated helpers, SDK downloads, credentials and caches remain outside.
+Runtime content binding reads `schema`, `backend` and `executables` from this
+manifest. `schema` is exactly `wotex.coap.native@1`; `backend` names `libcoap`,
+version `4.3.5` and revision `7cf7465b784baded4de183290c547d582becfd28`;
+`executables.wotex-coap-oscore.sha256` is the lowercase SHA-256 of the selected
+file. Other manifest members retain the build evidence listed above.
 
 ## WCO-N02 — Persistent Port ownership
 
@@ -113,6 +118,12 @@ Validation checks an ordinary executable file and the exact manifest/binary
 hash, without changing permissions or discovering a helper from PATH. No
 application environment fallback exists. The native owner preserves the existing
 opaque session/Subscription API and .11 helper signatures.
+
+`Wotex.CoAP.NativeBackend.verify/1` implements this bounded manifest and file
+identity check. Its tests include links, directories, permission modes, size,
+strict JSON, source identity and post-manifest executable changes. The connection
+option and Port owner remain unimplemented; direct verifier success does not
+admit an OSCORE session.
 
 Arguments contain no secrets. `Port.open({:spawn_executable, path}, ...)` starts
 one helper for one native session. No shell, daemon discovery, global registry,

@@ -150,5 +150,8 @@ gate does not accept the unfinished software profile.
 the planned `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` interfaces. Protocol execution remains
 BEAM UDP, OTP DTLS and a planned explicit libcoap OSCORE Port.
+`Wotex.CoAP.NativeBackend.verify/1` can validate the content identity of an
+explicit native executable and manifest without starting it. Connection
+dispatch to that executable remains planned.
 Existing Python files perform test/build orchestration only. Their recorded
 results do not establish acceptance of the planned Mix tasks.

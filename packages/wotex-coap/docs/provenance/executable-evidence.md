@@ -107,6 +107,13 @@ null, numbers, strings and objects fail before filesystem, socket or SDK access.
 This structural decoder evidence does not accept the production worker, Port
 owner, request correlation, report credit or durable-session integration.
 
+`native_backend_test.exs` executes WCO-N01/N02 manifest and executable
+verification. It covers exact option keys and path bounds, ordinary-file and
+executable-mode checks, the 1 MiB manifest ceiling, strict bounded JSON, pinned
+libcoap version/revision, lowercase binary SHA-256 and changed-file rejection.
+The verifier starts no Port and changes no permissions. Connection dispatch and
+native process ownership remain unaccepted.
+
 ## Required verification
 
 ### Datagram deadline assertions

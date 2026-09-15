@@ -107,6 +107,7 @@ defmodule Wotex.CoAP.Error do
               :invalid_observation_options,
               :invalid_subscription,
               :invalid_discovery_request,
+              :unsupported_native_backend,
               :invalid_block_size,
               :invalid_datagram_config,
               :invalid_datagram_handle,
