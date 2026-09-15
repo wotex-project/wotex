@@ -158,7 +158,10 @@ owns the verified executable for its bounded ready/open/close lifecycle and
 monitors the caller without exposing credentials. `Wotex.CoAP.Native.Admission`
 atomically reserves exactly 64 ordinary call slots plus separate close-control
 capacity before messages enter an owner mailbox. The connection owns this table
-and consumes its close capability; ordinary call submission remains planned.
+and consumes its close capability. Normalized native requests use the 64-slot
+FIFO admission path, spend queue time from their deadline and return complete
+inline Messages. Body upload, streamed responses and public OSCORE dispatch
+remain planned.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic

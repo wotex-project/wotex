@@ -115,17 +115,22 @@ decimal uint64 request identity once before exhaustion. The immutable allocator
 retains no command or credential. These tests do not write a Port or prove that
 the production helper accepts the lines.
 
-`native_connection_test.exs` executes fifteen contract-injection tests for the
+`native_connection_test.exs` executes thirty-one contract-injection tests for the
 BEAM process boundary. The tests launch the manifest-verified executable through
 the exact `--custody ABS_DIRECTORY` entry, inspect the open and close envelopes,
 and assert the pinned ready identity, monotonic correlation, finite ready/close
 waits and credential-free retained/status state. The connection owns one
 generation-bound admission table; full ordinary capacity cannot block its
 separate close control, concurrent close callers join one termination, and an
-abandoned close initiator is reaped. Malformed, duplicate, truncated and
-oversized output closes the generation. Killing the configured owner releases
-the exact helper within 1,000 ms. The injected executable is a protocol fixture;
-these tests do not accept the production libcoap worker, unary/body execution,
+abandoned close initiator is reaped. Normalized requests execute in FIFO order,
+charge queue time to the deadline and correlate complete inline Messages. The
+tests distinguish cancelled queued mutations from submitted mutation
+uncertainty, reject forged capabilities before native I/O, reclaim caller loss,
+and close on active timeout, malformed response, ID exhaustion or failed Port
+write. Malformed, duplicate, truncated and oversized output closes the
+generation. Killing the configured owner releases the exact helper within
+1,000 ms. The injected executable is a protocol fixture; these tests do not
+accept the production libcoap worker, body streaming, public OSCORE dispatch,
 Observe delivery or report-credit integration.
 
 `native_admission_test.exs` executes four exact tests for the WCO-N02 pre-mailbox
@@ -136,8 +141,8 @@ and table ownership reject foreign capabilities, and table-owner termination
 removes all state. Submission markers preserve the queued-versus-cancelled
 effect boundary. These component tests do not write a Port or accept public
 unary/Observe dispatch. The separately tested `Native.Connection` now owns this
-table and consumes only its close-control record; ordinary lease submission
-remains unimplemented.
+table and consumes its ordinary and close-control records. The component-only
+tests do not establish the complete owner behavior described above.
 
 `native_backend_test.exs` executes WCO-N01/N02 manifest and executable
 verification. It covers exact option keys and path bounds, ordinary-file and

@@ -230,6 +230,430 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     assert_helper_stopped(context.store, 1_000)
   end
 
+  test "WCO-N02 WCO-N03 executes one admitted inline native request", context do
+    File.write!(Path.join(context.store, "mode"), "request")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    parameters = %{method: :get, path: "/value", confirmable: true, accept: 50}
+
+    assert {:ok,
+            %Wotex.CoAP.Message{
+              type: :ack,
+              code: 69,
+              message_id: 321,
+              token: <<1>>,
+              options: [{12, <<50>>}],
+              payload: "ok"
+            }} = Connection.request(pid, parameters, 1_000)
+
+    request =
+      context.store
+      |> Path.join("request-1.json")
+      |> File.read!()
+      |> Jason.decode!()
+
+    assert request["version"] == 1
+    assert request["id"] == "2"
+    assert request["operation"] == "request"
+    assert request["timeout_ms"] in 1..1_000
+
+    assert request["parameters"] == %{
+             "method" => "GET",
+             "path" => "/value",
+             "confirmable" => true,
+             "accept" => 50
+           }
+
+    assert :ok = Connection.close(pid)
+    assert %{"id" => "3", "operation" => "close"} = read_json(context.store, "close.json")
+  end
+
+  test "WCO-N02 serializes admitted calls and spends queue time from each deadline", context do
+    File.write!(Path.join(context.store, "mode"), "request_two")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    first =
+      Task.async(fn ->
+        Connection.request(pid, %{method: :get, path: "/first", confirmable: true}, 2_000)
+      end)
+
+    wait_for_file(
+      Path.join(context.store, "request-1.json"),
+      System.monotonic_time(:millisecond) + 1_000
+    )
+
+    second =
+      Task.async(fn ->
+        Connection.request(pid, %{method: :get, path: "/second", confirmable: false}, 2_000)
+      end)
+
+    assert eventually(fn -> map_size(:sys.get_state(pid).calls) == 2 end)
+    File.write!(Path.join(context.store, "release"), "ok")
+    assert {:ok, %Wotex.CoAP.Message{payload: "ok"}} = Task.await(first, 2_000)
+    assert {:ok, %Wotex.CoAP.Message{payload: "ok"}} = Task.await(second, 2_000)
+
+    assert %{"id" => "2", "parameters" => %{"path" => "/first"}} =
+             read_json(context.store, "request-1.json")
+
+    assert %{"id" => "3", "parameters" => %{"path" => "/second"}} =
+             read_json(context.store, "request-2.json")
+
+    assert :ok = Connection.close(pid)
+    assert %{"id" => "4", "operation" => "close"} = read_json(context.store, "close.json")
+  end
+
+  test "WCO-N02 queued timeout cancels before native submission", context do
+    File.write!(Path.join(context.store, "mode"), "request_hold")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    active =
+      Task.async(fn ->
+        Connection.request(pid, %{method: :get, path: "/active", confirmable: true}, 1_000)
+      end)
+
+    wait_for_file(
+      Path.join(context.store, "request-1.json"),
+      System.monotonic_time(:millisecond) + 1_000
+    )
+
+    assert {:error, %Error{code: :timeout, effect: :none}} =
+             Connection.request(
+               pid,
+               %{method: :post, path: "/queued", confirmable: true},
+               50
+             )
+
+    File.write!(Path.join(context.store, "release"), "ok")
+    assert {:ok, %Wotex.CoAP.Message{}} = Task.await(active, 1_000)
+    assert :ok = Connection.close(pid)
+    assert %{"id" => "3", "operation" => "close"} = read_json(context.store, "close.json")
+  end
+
+  test "WCO-N02 active mutation timeout closes with unknown effect", context do
+    File.write!(Path.join(context.store, "mode"), "request_silent")
+    assert {:ok, pid} = Connection.start(context.options)
+    monitor = Process.monitor(pid)
+
+    assert {:error, %Error{code: :timeout, effect: :unknown, retryable: false}} =
+             Connection.request(
+               pid,
+               %{method: :put, path: "/value", confirmable: true},
+               100
+             )
+
+    assert_receive {:DOWN, ^monitor, :process, ^pid, _}, 1_000
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-N02 invalid requests fail before ordinary admission", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    %{admission: admission} = :sys.get_state(pid)
+
+    assert {:error, %Error{code: :invalid_request}} =
+             Connection.request(
+               pid,
+               %{method: :get, path: "/value", confirmable: true, unknown: true},
+               1_000
+             )
+
+    assert Admission.reservations(admission) == []
+    refute File.exists?(Path.join(context.store, "request-1.json"))
+    assert :ok = Connection.close(pid)
+  end
+
+  test "WCO-N02 request entry rejects invalid and closed session values", context do
+    assert {:error, %Error{code: :invalid_timeout}} = Connection.request(self(), %{}, :infinity)
+    assert {:error, %Error{code: :invalid_request}} = Connection.request(self(), [], 1_000)
+    assert {:error, %Error{code: :invalid_session}} = Connection.request(self(), %{}, 1_000)
+
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    assert :ok = Connection.close(pid)
+
+    assert {:error, %Error{code: :connection_closed}} =
+             Connection.request(pid, %{method: :get, path: "/", confirmable: true}, 1_000)
+  end
+
+  test "WCO-N02 retains valid native errors and closes malformed response generations", context do
+    File.write!(Path.join(context.store, "mode"), "request_error")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    assert {:error, %Error{code: :busy, effect: :none}} =
+             Connection.request(pid, %{method: :get, path: "/value", confirmable: true}, 1_000)
+
+    assert Process.alive?(pid)
+    assert :ok = Connection.close(pid)
+
+    File.write!(Path.join(context.store, "mode"), "request_malformed")
+    File.rm(Path.join(context.store, "request-1.json"))
+    assert {:ok, pid} = Connection.start(context.options)
+    monitor = Process.monitor(pid)
+
+    assert {:error, %Error{code: :native_protocol_error}} =
+             Connection.request(pid, %{method: :get, path: "/value", confirmable: true}, 1_000)
+
+    assert_receive {:DOWN, ^monitor, :process, ^pid, _}, 1_000
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-N02 close interrupts an active mutation and releases queued reads", context do
+    File.write!(Path.join(context.store, "mode"), "request_silent")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    active =
+      Task.async(fn ->
+        Connection.request(pid, %{method: :post, path: "/active", confirmable: true}, 5_000)
+      end)
+
+    wait_for_file(
+      Path.join(context.store, "request-1.json"),
+      System.monotonic_time(:millisecond) + 1_000
+    )
+
+    queued =
+      Task.async(fn ->
+        Connection.request(pid, %{method: :get, path: "/queued", confirmable: true}, 5_000)
+      end)
+
+    assert eventually(fn -> map_size(:sys.get_state(pid).calls) == 2 end)
+    assert :ok = Connection.close(pid)
+
+    assert {:error, %Error{code: :connection_closed, effect: :unknown}} =
+             Task.await(active, 1_000)
+
+    assert {:error, %Error{code: :connection_closed, effect: :none}} =
+             Task.await(queued, 1_000)
+
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-N02 active caller death closes the native generation", context do
+    File.write!(Path.join(context.store, "mode"), "request_silent")
+    assert {:ok, pid} = Connection.start(context.options)
+    parent = self()
+
+    caller =
+      spawn(fn ->
+        send(parent, {:request_caller, self()})
+        Connection.request(pid, %{method: :get, path: "/active", confirmable: true}, 5_000)
+      end)
+
+    assert_receive {:request_caller, ^caller}
+
+    wait_for_file(
+      Path.join(context.store, "request-1.json"),
+      System.monotonic_time(:millisecond) + 1_000
+    )
+
+    monitor = Process.monitor(pid)
+    Process.exit(caller, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^pid, _}, 1_000
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-N02 queued caller death is removed before native submission", context do
+    File.write!(Path.join(context.store, "mode"), "request_hold")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    active =
+      Task.async(fn ->
+        Connection.request(pid, %{method: :get, path: "/active", confirmable: true}, 2_000)
+      end)
+
+    wait_for_file(
+      Path.join(context.store, "request-1.json"),
+      System.monotonic_time(:millisecond) + 1_000
+    )
+
+    caller =
+      spawn(fn ->
+        Connection.request(pid, %{method: :get, path: "/queued", confirmable: true}, 2_000)
+      end)
+
+    assert eventually(fn -> map_size(:sys.get_state(pid).calls) == 2 end)
+    Process.exit(caller, :kill)
+    assert eventually(fn -> map_size(:sys.get_state(pid).calls) == 1 end)
+    File.write!(Path.join(context.store, "release"), "ok")
+    assert {:ok, %Wotex.CoAP.Message{}} = Task.await(active, 2_000)
+    assert :ok = Connection.close(pid)
+    refute File.exists?(Path.join(context.store, "request-2.json"))
+  end
+
+  test "WCO-N02 rejects forged bounded calls and reaps abandoned leases", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    %{admission: admission, generation: generation} = :sys.get_state(pid)
+    deadline = System.monotonic_time(:millisecond) + 1_000
+
+    assert {:ok, lease} = Admission.acquire(admission, pid, generation, deadline)
+
+    assert {:error, %Error{code: :invalid_session}} =
+             GenServer.call(pid, {:bounded, generation + 1, %{}, deadline, lease})
+
+    assert {:ok, lease} = Admission.acquire(admission, pid, generation, deadline)
+
+    assert {:error, %Error{code: :invalid_request}} =
+             GenServer.call(pid, {:bounded, generation, :invalid, deadline, lease})
+
+    parent = self()
+
+    caller =
+      spawn(fn ->
+        result = Admission.acquire(admission, pid, generation, deadline)
+        send(parent, {:abandoned_lease, self(), result})
+      end)
+
+    assert_receive {:abandoned_lease, ^caller, {:ok, abandoned}}
+    assert eventually(fn -> not Admission.owned?(admission, abandoned, caller, deadline) end)
+    send(pid, {:reap_admission, make_ref()})
+    assert Process.alive?(pid)
+    assert :ok = Connection.close(pid)
+  end
+
+  test "WCO-N02 applies capacity before the mailbox and honors cancelled submission", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    %{admission: admission, generation: generation} = :sys.get_state(pid)
+    deadline = System.monotonic_time(:millisecond) + 5_000
+
+    leases =
+      for _ <- 1..64 do
+        assert {:ok, lease} = Admission.acquire(admission, pid, generation, deadline)
+        lease
+      end
+
+    assert {:error, %Error{code: :busy}} =
+             Connection.request(pid, %{method: :get, path: "/busy", confirmable: true}, 1_000)
+
+    Enum.each(leases, &Admission.release(admission, &1))
+    send(pid, :drain_calls)
+    assert eventually(fn -> :sys.get_state(pid).drain_scheduled == false end)
+    parent = self()
+
+    caller =
+      spawn(fn ->
+        {:ok, lease} = Admission.acquire(admission, pid, generation, deadline)
+        send(parent, {:cancel_lease, self(), lease})
+
+        receive do
+          :submit ->
+            parameters = %{method: :get, path: "/cancelled", confirmable: true}
+            result = GenServer.call(pid, {:bounded, generation, parameters, deadline, lease})
+            send(parent, {:cancelled_submission, self(), result})
+        end
+      end)
+
+    assert_receive {:cancel_lease, ^caller, lease}
+    assert :cancelled = Admission.cancel_unsubmitted(lease)
+    send(caller, :submit)
+    assert_receive {:cancelled_submission, ^caller, {:error, %Error{code: :timeout}}}
+    assert :ok = Connection.close(pid)
+  end
+
+  test "WCO-N02 rejects expired, released and malformed bounded capabilities", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    %{admission: admission, generation: generation} = :sys.get_state(pid)
+
+    expired = System.monotonic_time(:millisecond) - 1
+    assert {:ok, lease} = Admission.acquire(admission, pid, generation, expired)
+
+    assert {:error, %Error{code: :timeout}} =
+             GenServer.call(pid, {:bounded, generation, %{}, expired, lease})
+
+    assert {:ok, lease} = Admission.acquire(admission, pid, generation, expired)
+    Admission.release(admission, lease)
+
+    assert {:error, %Error{code: :timeout}} =
+             GenServer.call(pid, {:bounded, generation, %{}, expired, lease})
+
+    deadline = System.monotonic_time(:millisecond) + 1_000
+
+    assert {:error, %Error{code: :invalid_session}} =
+             GenServer.call(pid, {:bounded, generation, %{}, deadline, :invalid})
+
+    assert {:error, %Error{code: :invalid_session}} =
+             GenServer.call(pid, {:close_control, generation, :invalid, make_ref()})
+
+    assert {:ok, lease} = Admission.acquire(admission, pid, generation, deadline)
+    Admission.release(admission, lease)
+
+    assert {:error, %Error{code: :invalid_session}} =
+             GenServer.call(pid, {:bounded, generation, %{}, deadline, lease})
+
+    assert {:ok, lease} = Admission.acquire(admission, pid, generation, deadline)
+
+    assert {:error, %Error{code: :invalid_request}} =
+             GenServer.call(pid, {:bounded, generation, %{}, deadline, lease})
+
+    assert :ok = Connection.close(pid)
+  end
+
+  test "WCO-N02 request exhaustion and rejected Port writes close the generation", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    :sys.replace_state(pid, fn state ->
+      %{state | command: %{state.command | next_id: :exhausted}}
+    end)
+
+    assert {:error, %Error{code: :sequence_exhausted, effect: :none}} =
+             Connection.request(pid, %{method: :get, path: "/value", confirmable: true}, 1_000)
+
+    assert_helper_stopped(context.store, 1_000)
+
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    closed = Port.open({:spawn_executable, ~c"/bin/cat"}, [:binary, :use_stdio])
+    Port.close(closed)
+    :sys.replace_state(pid, fn state -> %{state | port: closed} end)
+
+    assert {:error, %Error{code: :native_unavailable, effect: :none}} =
+             Connection.request(pid, %{method: :get, path: "/value", confirmable: true}, 1_000)
+
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-N02 caller timeout cancels a call while the owner mailbox is suspended", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    %{admission: admission} = :sys.get_state(pid)
+    :sys.suspend(pid)
+
+    caller =
+      Task.async(fn ->
+        Connection.request(pid, %{method: :post, path: "/queued", confirmable: true}, 50)
+      end)
+
+    assert {:error, %Error{code: :timeout, effect: :none}} = Task.await(caller, 1_000)
+    :sys.resume(pid)
+    assert eventually(fn -> Admission.reservations(admission) == [] end)
+    assert :ok = Connection.close(pid)
+  end
+
+  test "WCO-N02 abrupt owner loss preserves submitted mutation uncertainty", context do
+    File.write!(Path.join(context.store, "mode"), "request_silent")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    caller =
+      Task.async(fn ->
+        Connection.request(pid, %{method: :delete, path: "/value", confirmable: true}, 5_000)
+      end)
+
+    wait_for_file(
+      Path.join(context.store, "request-1.json"),
+      System.monotonic_time(:millisecond) + 1_000
+    )
+
+    Process.exit(pid, :kill)
+
+    assert {:error, %Error{code: :connection_closed, effect: :unknown}} =
+             Task.await(caller, 1_000)
+
+    assert_helper_stopped(context.store, 1_000)
+  end
+
   test "WCO-C03 WCO-N02 forces an exact helper that ignores graceful termination", context do
     File.write!(context.executable, stubborn_helper_source())
     File.chmod!(context.executable, 0o700)
@@ -487,6 +911,25 @@ defmodule Wotex.CoAP.NativeConnectionTest do
   defp cleared_environment,
     do: Enum.map(System.get_env(), fn {name, _} -> {name, nil} end)
 
+  defp read_json(directory, name) do
+    directory
+    |> Path.join(name)
+    |> File.read!()
+    |> Jason.decode!()
+  end
+
+  defp eventually(function, attempts \\ 100)
+  defp eventually(_, 0), do: false
+
+  defp eventually(function, attempts) do
+    if function.() do
+      true
+    else
+      Process.sleep(5)
+      eventually(function, attempts - 1)
+    end
+  end
+
   defp digest(path) do
     :sha256
     |> :crypto.hash(File.read!(path))
@@ -546,6 +989,21 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
     reply = fn request_id -> IO.write(response.(request_id)) end
 
+    request_reply = fn request_id ->
+      IO.write(
+        ~s({"version":1,"id":"\#{request_id}","ok":true,"result":{"type":"ack","code":69,"message_id":321,"token":{"type":"bytes","base64":"AQ=="},"options":[{"number":12,"value":{"type":"bytes","base64":"Mg=="}}],"payload":{"type":"bytes","base64":"b2s="}}}\\n)
+      )
+    end
+
+    wait_release = fn wait_release ->
+      if File.exists?(Path.join(directory, "release")) do
+        :ok
+      else
+        Process.sleep(5)
+        wait_release.(wait_release)
+      end
+    end
+
     case mode do
       "silent" ->
         Process.sleep(:infinity)
@@ -598,7 +1056,52 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
           _ ->
             reply.(open_id)
-            close = IO.read(:stdio, :line)
+
+            close =
+              case mode do
+                "request" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  request_reply.(id.(request))
+                  IO.read(:stdio, :line)
+
+                "request_hold" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  wait_release.(wait_release)
+                  request_reply.(id.(request))
+                  IO.read(:stdio, :line)
+
+                "request_two" ->
+                  first = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), first)
+                  wait_release.(wait_release)
+                  request_reply.(id.(first))
+                  second = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-2.json"), second)
+                  request_reply.(id.(second))
+                  IO.read(:stdio, :line)
+
+                "request_silent" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  IO.read(:stdio, :line)
+
+                "request_error" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  IO.write(~s({"version":1,"id":"\#{id.(request)}","ok":false,"error":{"code":"busy"}}\\n))
+                  IO.read(:stdio, :line)
+
+                "request_malformed" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  IO.write("{}\\n")
+                  Process.sleep(:infinity)
+
+                _ ->
+                  IO.read(:stdio, :line)
+              end
 
             if is_binary(close) do
               File.write!(Path.join(directory, "close.json"), close)
