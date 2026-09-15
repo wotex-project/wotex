@@ -11,8 +11,10 @@ enhanced-window material and typed operational ACL values.
 P08 adds typed Runtime request and stream projection. P08a adds explicit Runtime
 profiles, classified failures and public ConsumedThing integration.
 The earlier one-shot Python factory adapter remains an injected baseline.
-The P09 ACL cohort below executes commissioning and typed ACL operations against
-a pinned SDK example peer. Remaining software workflows are separate P09 evidence.
+P09 executes the complete pinned SDK example-peer, negative-security,
+interaction, subscription, restart, stress and resource matrix in both required
+Linux BEAM lanes. The accepted public build/run and clean package receipts are
+recorded below.
 
 ## Developer gate
 
@@ -3486,3 +3488,56 @@ A fresh final-source two-lane public run remains required.
 | SDK adapter source | `cd81a365c1bb8237662a1509e7f203356ba08ca82dbc71bdddc95f08242b6cac` |
 | Scenario preparation source | `f2323a023f5bea79099a388bca082f06dfcf1899475046c79e724779e56efca7` |
 | Scenario ownership assertions | `1a9370c7cff6bb576298178159a95328c2bff6f6d35b742cbbcd8901a3274dab` |
+
+## Accepted software profile and clean package
+
+On 2026-09-15, frozen revision
+`90e8a479284f0df792feea71a695cc5e65dbc085` completes a fresh public software
+build and two-lane run. The build verifies connectedhomeip
+`250a9e6c50ee2068107f3c4808b680f5f2925415`, reproduces the accepted normal and
+sanitizer host/flow/resource binaries, passes all six CTest executables in both
+modes, passes 15 OSV queries and builds the lighting, all-clusters and bridge
+peers. The immutable source digest is
+`e1d5d0e634a44b05b5ebe8ed8ad0b67a3a824a49e75e3502936086cc23219839`
+before and after execution.
+
+The current lane uses Elixir 1.20.2/OTP 29.0.4 with seed 826333. All 278
+executed checks pass, all 36 required software cases execute, and the one
+hardware case remains explicitly excluded. The minimum sanitizer lane uses
+Elixir 1.18.4/OTP 27.3.4.15 with seed 239117 and has the same 278-pass,
+36-required, one-hardware-excluded result. Both lanes independently pass real
+commissioning/CASE, good and bad PIN, failed attestation, real window expiry,
+peer-enforced ACL denial, finite interactions, attribute/event subscriptions,
+persistent restart, 1,133-generation one-shot stress, forced failure and native
+resource-census cases. Each lane reports zero failed, duplicate, unexpected or
+hardware-executed cases. All owned peers, containers and networks are absent
+after the run.
+
+A separate clean checkout created only from Git archives passes locked
+dependency acquisition, the mandatory 242-check developer gate with 37 explicit
+exclusions, the 95.0% coverage floor, ExDoc with warnings as errors and
+dependency-load side-effect inspection. A normal Hex archive preserves released
+dependency declarations, passes content inspection and compiles out of tree
+with a fresh development build directory. These checks establish source and
+package readiness; they do not assert that this development version or its
+upstream package requirements have been published.
+
+| Accepted software artifact | SHA-256 |
+| --- | --- |
+| Workspace source manifest | `9b25a0730eb2280edd0d6de9325fb17ef3e1e45e71ad3cd8d3e1b1f46a143af6` |
+| Public software build log | `2a5bbb98251b51cee2a3c2c09629a044fc66bef34ccc408e2b4aa4f65f1da20a` |
+| Public two-lane run log | `5e5a2ba09ea795e9f05803f7c3bf6b595726b3c02dfbfec951889270cf13a09b` |
+| Outer software result | `52c5d2aa573bf990e32f2938054d4024bdc9a193bdf7baf110ccba43c55f5167` |
+| Current-lane receipt | `639bf3967ddc863a7914cb9ef72a8085b3a64d84b3c732f2ad27e1a4d24c5efa` |
+| Current-lane raw test log | `ff24c80bea6525583087e21db502475ea28b899c2434cd7ee28a2cdd22943912` |
+| Current-lane outer log | `737a14ba008a32f7e03d2fce83340a1102c148db51eec08545b2e50523e1585c` |
+| Minimum sanitizer-lane receipt | `28c21e8effd7f24a08943b214a51ee9f1c185c427c947dba967345102ff4b7fa` |
+| Minimum sanitizer-lane raw test log | `1c2c82f5175271810bb478a80ca26912e5f8cf96527d08e200be4e1c3bc3a15f` |
+| Minimum sanitizer-lane outer log | `a35f19cd33e861f4e9798e1e1015a7fec3ec944d75b90dbb29db1d8c211c81be` |
+| Clean developer gate | `e6e3036197192e11a0ede8984d26d32e6c8bd7f1074da076d7ada675e2b4e446` |
+| Clean coverage gate | `04a36b93cebde1c6fd4cb00070bb648c3fedf63bf88683c47a71cdd31973c6b4` |
+| Clean documentation gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+| Dependency-load output | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| Hex archive build log | `1759e7c5aaf6468e3cb3fc269c574298c06afb50fca2cf775545d00b2ba013ec` |
+| Final archive inspection log | `8dfb3f36f33f71bfb34f7f123e009f63aab3ea38178991b1c43ae86b0befcfbe` |
+| `wotex_matter-0.1.0.tar` | `6d1937c8ca4c8397eb030552e6f94edb336adbef17ecd71d517b555a71355ed0` |

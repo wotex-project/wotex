@@ -16,9 +16,9 @@ build, IPC and tooling requirements. Source presence alone is not acceptance.
 
 Read the [versioned catalogue](../specs/catalogue.yaml) and
 [WMA.12 — Wotex integration](../specs/WMA.12-wotex-integration.md) before choosing
-implementation work. The catalogue lists dependencies and distinguishes planned
-contracts from narrow implemented profiles. Source presence, fixture presence,
-passing baseline tests and accepted work packages are separate facts.
+implementation work. The catalogue lists dependencies and records implementation
+status. Source presence, fixture presence, passing baseline tests and accepted
+work packages are separate facts.
 
 The numbered sequence is dependency order: each package depends on all preceding
 packages. Each is one bounded behavior plus its tests/documentation. A large
@@ -26,6 +26,10 @@ package may be split into consecutive local commits along its stated sub-behavio
 never commit knowingly failing tests. Do not reimplement a satisfied requirement
 merely to produce a commit. Every proposed module, API and test path below is a
 target addition unless it already exists; no placeholder file implies completion.
+
+All P01-P09 work packages have accepted implementation evidence as of
+2026-09-15. Later changes must rerun the affected package gates and the complete
+source-bound software/package acceptance before retaining that status.
 
 For each requirement, record its ID in an ExUnit/native test name or a fixture
 manifest. Scenario families specify required outcomes in .10; concrete inputs and exact
@@ -151,9 +155,10 @@ advisory, hash, compiler and cleanup operations. Workspace admission and reuse
 have deterministic tests; executed build identities are recorded in
 [executable evidence](../provenance/executable-evidence.md). The software run
 task verifies that workspace and executes the required scenario inventory on
-the pinned current and minimum BEAM images. Complete P09 peer, stress, resource
-census, matrix and archive acceptance still requires passing receipts for the
-final source. Building the peer executables does not execute their workflows.
+the pinned current and minimum BEAM images. The accepted P09 candidate passes the
+complete peer, stress, resource-census and matrix gates in both images, plus the
+clean-source package and archive gates. Building the peer executables alone does
+not execute their workflows.
 The software build also produces normal and sanitizer `wotex-matter-flow-host`
 test executables. Their source and binary hashes belong to the software receipt;
 the native-only build does not require these process-flow fixtures.
@@ -239,10 +244,11 @@ loss and the absolute lifetime remain enforceable during continuous output.
 Other fixture commands fail at their output limit. Readiness notifications
 contain no output bytes.
 
-`SoftwareScenarios.with_fixtures/3` prepares thirteen peer configurations and
-controller stores for the required scenario inventory. Four peers start during
-preparation: the common interaction peer, one-shot peer, expired-window peer and
-ACL-denial peer. Each of the other nine peers starts through `with_peer/2` when
+`SoftwareScenarios.with_fixtures/3` prepares sixteen peer configurations and
+controller stores for the required scenario inventory. Five peers start during
+preparation: the common interaction peer, functional one-shot peer,
+one-shot-stress peer, expired-window peer and ACL-denial peer. Each of the other
+eleven peers starts through `with_peer/2` when
 its commissioning case begins and is reaped before that case returns. Its basic
 pairing window therefore starts with its own case. The helper assigns distinct
 ports and discriminators within its runner-owned network namespace, creates

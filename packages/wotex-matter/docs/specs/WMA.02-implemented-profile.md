@@ -5,7 +5,7 @@ spec:
   status: accepted
   version: 1.1.0
   owner: wotex-matter
-  updated: 2026-09-14
+  updated: 2026-09-15
 ---
 
 # WMA.02 Implemented Matter profile
@@ -124,13 +124,15 @@ controller source is built explicitly outside the Hex archive. P07's production
 path compiles against the pinned SDK, and P08's Runtime mapping/ownership tests
 execute against the public transport callbacks. P08a executes the full public
 ConsumedThing profile and failure matrix against deterministic test ports;
-actual software-peer commissioning scenarios remain P09 evidence. See
+P09 executes the actual pinned software-peer commissioning, interaction,
+subscription, restart, stress and negative-security scenarios in both required
+Linux BEAM lanes. See
 [SDK client contract](WMA.03-sdk-client.md).
 
 ## Evidence and compatibility
 
 See [executable evidence](../provenance/executable-evidence.md) for specific tests,
-commands and remaining gates, and [source revisions](../provenance/primary-sources.md).
+commands and accepted gates, and [source revisions](../provenance/primary-sources.md).
 Public callbacks provide a neutral compatibility surface, not drop-in semantic
 parity. `send/2` completes synchronously; no fictitious receive queue exists.
 Compatibility claims require exact differential scenarios for the advertised API.

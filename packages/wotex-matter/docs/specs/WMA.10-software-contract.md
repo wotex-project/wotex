@@ -13,9 +13,10 @@ spec:
 Read [WMA.00](WMA.00-library-contract.md) and the [implementation sequence](../plans/software-implementation.md).
 [WMA.11](WMA.11-standalone-client-and-preservation.md) fixes the native API, protocol workflows and concrete fixture contract.
 The accepted target is the persistent first-party C++ controller in
-[WMA.13](WMA.13-native-backend.md). The current one-shot Python factory adapter,
-path/TLV helpers and contract tests are scoped implementation evidence in
-[WMA.02](WMA.02-implemented-profile.md) and [WMA.03](WMA.03-sdk-client.md).
+[WMA.13](WMA.13-native-backend.md). The persistent controller profile and its
+accepted evidence are recorded in [WMA.02](WMA.02-implemented-profile.md). The
+one-shot Python factory adapter remains the narrow compatibility layer described
+in [WMA.03](WMA.03-sdk-client.md).
 
 ## Scope and source limitations
 

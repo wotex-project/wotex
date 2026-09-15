@@ -10,11 +10,11 @@ spec:
 
 # WMA.12 Wotex integration and evidence contract
 
-This is an accepted **target specification**, not implemented-profile evidence.
-It makes [.10](WMA.10-software-contract.md) and
+This accepted specification makes [.10](WMA.10-software-contract.md) and
 [.11](WMA.11-standalone-client-and-preservation.md) usable with the public Wotex
-packages. The [catalogue](catalogue.yaml) separates existing behavior from planned
-contracts. Every `I` requirement below is mandatory for software completion.
+packages. The [catalogue](catalogue.yaml) and executable-evidence record identify
+the accepted implementation. Every `I` requirement below is mandatory for
+software completion.
 
 ## WMA-I01 — Dependency direction and owned values
 

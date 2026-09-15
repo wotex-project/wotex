@@ -11,22 +11,23 @@ spec:
 # WMA.11 Standalone controller and cluster workflows
 
 Specification version: `1.1.1`. The catalogue and executable-evidence record
-track implementation separately from this accepted target.
+track the accepted implementation of this contract.
 Requires [WMA.00](WMA.00-library-contract.md) and
 [WMA.10](WMA.10-software-contract.md). [WMA.02](WMA.02-implemented-profile.md)
-and [WMA.03](WMA.03-sdk-client.md) remain the narrower current baseline.
+records the complete profile; [WMA.03](WMA.03-sdk-client.md) records the narrower
+injected-adapter compatibility layer.
 
 ## WMA-N01 — First-party native controller
 
 A release must include the first-party persistent SDK controller, durable fabric
 store and typed interactions specified in .10. A consumer can commission and
 interact with a real software peer with the compiled registry and without constructing a Thing Description. The
-first-party native backend is .13; current factory contract tests are baseline
-evidence only.
+first-party native backend is .13; injected-factory contract tests are baseline
+evidence for the separate injected adapter.
 Wotex Runtime maps operations to the same native session. It does not own a second
 controller or authorize commissioning as a side effect of Form execution.
 
-These target public functions belong to `Wotex.Matter`. Existing concrete
+These public functions belong to `Wotex.Matter`. Existing concrete
 `send/2` results remain compatible; richer operations have explicit new results.
 
 | API | Exact contract |

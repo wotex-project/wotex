@@ -17,9 +17,10 @@
 
 ---
 
-This checkout is a `0.1.0-dev` development baseline. The public API remains
-unstable, and the ordered software profile is unfinished. Package metadata
-does not establish publication or release readiness.
+This checkout is a `0.1.0-dev` development baseline. The ordered software
+profile is implemented and accepted against the pinned SDK example peers. The
+public API remains unstable, and package metadata does not establish publication
+or release readiness.
 
 Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
 
@@ -73,11 +74,12 @@ both Linux BEAM lanes; their exact cohorts are recorded in
 `mix wotex.software.run --workspace /absolute/disposable/workspace` verifies the
 software build and executes the required suite in separate current and minimum
 BEAM containers with owned fixture state, networks and cleanup. Passing command
-implementation tests does not establish complete P09 acceptance; final-source
-software and archive receipts remain required. The default suite enforces the
-contract's 95% coverage floor; its passing receipt is recorded in executable
-evidence. Upstream SDK Python is used only while generating and building native
-SDK sources.
+tests alone does not establish P09 acceptance. The accepted profile has complete
+two-lane peer, stress, resource-census and matrix receipts plus clean-source
+coverage, documentation, package-content and out-of-tree archive-compilation
+evidence. The default suite enforces the contract's 95% coverage floor. Exact
+receipts are recorded in executable evidence. Upstream SDK Python is used only
+while generating and building native SDK sources.
 
 ## Implemented profile
 
@@ -119,9 +121,10 @@ the session and subscription that established the stream. Loading the library
 starts no process or native executable. P08a adds pure one-shot and controller
 Runtime profile factories, classified failures, pre-acquisition selector/input
 validation, and public ConsumedThing coverage for values, deadlines, result
-identity, retries, credentials and stream cleanup. P09 owns the pinned
+identity, retries, credentials and stream cleanup. P09 executes the pinned
 software-peer execution of P07's interop scenarios and the complete controller
-workflow.
+workflow; both required Linux BEAM lanes pass with all 36 required software
+cases executed.
 
 ## Quick start
 
@@ -328,7 +331,7 @@ bounded opt-in subscription recovery and delivery-generation tests.
 `WOTEX_PATH_DEPS=1 mix run bin/check_p07_native.exs` compiles the filtered
 commissioning, final CASE-probe, enhanced-window and typed ACL paths and runs
 their focused normal/sanitizer tests. The separately selected P07 interop test
-requires a real fixture file; P09 will build and execute that fixture.
+requires a real fixture file; the P09 runner builds and executes that fixture.
 P08 is covered by `test/wotex/matter/runtime_stream_test.exs` in the BEAM matrix.
 It exercises typed controller results, capability-backed Runtime frames,
 terminal cleanup, original-route cancellation and the explicit read health
@@ -348,7 +351,7 @@ test executable sends 10000 callbacks derived from an SDK report through
 production report credits and delivery. The 128-byte input denotes the encoded JSON value;
 callback counts, queue reservations, terminal delivery and cleanup are measured.
 The ordinary native executable contains no process-flow instrumentation. Exact
-results and the remaining software-profile requirements are recorded in
+results and the software-profile acceptance receipts are recorded in
 [executable evidence](docs/provenance/executable-evidence.md).
 
 The native input owner services report acknowledgements, cancellation and health
@@ -361,22 +364,21 @@ subscriptions and commissioning windows.
 ## Software implementation contract
 
 The [ordered implementation sequence](docs/plans/software-implementation.md)
-and [specification index](docs/specs/WMA-index.md) define the remaining software
+and [specification index](docs/specs/WMA-index.md) define the implemented software
 profile with exact behavior, limits, failure transitions and acceptance scenarios.
-These target contracts are build instructions, not claims that every feature
-already exists. Required software peers are separate from physical-device tests.
+Required software peers are separate from physical-device tests.
 
 The [standalone client contract](docs/specs/WMA.11-standalone-client-and-preservation.md)
 defines the supplied backend, exact native APIs and end-to-end workflows.
-Its [concrete corpus](docs/specs/fixtures/contract-v1.json) is partially executed:
+Its [concrete corpus](docs/specs/fixtures/contract-v1.json) is fully executed:
 the P01 pure cases run in the default suite, the WMA-F07 controller lifecycle
-cases run in the separate P03 native lane, WMA-F11 runs with P04, and the WMA-F08
+cases run in the P03 native lane, WMA-F11 runs with P04, and the WMA-F08
 delivery/cancellation projection runs with P05. WMA-F09 default terminal loss and
 the explicit recovery transition run with P06. P07 executes local admission,
-native protocol, generated-window and ACL schema behavior, and compiles the
-production SDK controller path. P09 acceptance requires the complete two-lane
-run of real good/bad PIN, failed-attestation, expired-window and ACL-denial
-fixtures, together with subscription and resource evidence. P08 executes the WMA-V11 typed
+native protocol, generated-window and ACL schema behavior and compiles the
+production SDK controller path. P09 passes the complete two-lane run of real
+good/bad PIN, failed-attestation, expired-window and ACL-denial fixtures together
+with interaction, subscription, stress and resource evidence. P08 executes the WMA-V11 typed
 transport and Runtime-stream ownership boundary directly. P08a executes the
 public ConsumedThing profiles, all WMA-I-F01–F08 cases, the error/retry table,
 deadline/credential rejection, malformed result handling and Runtime-owned
@@ -384,7 +386,7 @@ stream cleanup. Scenario tables and an unselected interop test alone are not
 executable acceptance evidence.
 
 The [specification catalogue](docs/specs/catalogue.yaml) distinguishes implemented
-profiles from planned contracts. The [Wotex integration contract](docs/specs/WMA.12-wotex-integration.md)
+profiles and their evidence. The [Wotex integration contract](docs/specs/WMA.12-wotex-integration.md)
 defines explicit Runtime profiles, route/value/error boundaries and real
-ConsumedThing acceptance tests. The local P08a boundary is executed; the
-software-peer and isolated-package requirements remain open.
+ConsumedThing acceptance tests. The P08a boundary, pinned software-peer matrix
+and isolated immutable-source package checks are executed.

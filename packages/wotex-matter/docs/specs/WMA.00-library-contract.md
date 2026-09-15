@@ -5,13 +5,13 @@ spec:
   status: accepted
   version: 1.1.1
   owner: wotex-matter
-  updated: 2026-09-14
+  updated: 2026-09-15
 ---
 
 # WMA.00 Software implementation rules
 
-This is a target contract for the library's software completion milestone.
-Requirements below are not claims that the current code already implements them.
+This contract defines the library's accepted software completion milestone.
+The catalogue and executable-evidence record identify the implemented profile.
 Read this file with [WMA.10](WMA.10-software-contract.md),
 [standalone client preservation](WMA.11-standalone-client-and-preservation.md),
 [Wotex integration](WMA.12-wotex-integration.md), and the existing
