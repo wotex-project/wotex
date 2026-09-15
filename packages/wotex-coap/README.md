@@ -154,6 +154,7 @@ BEAM UDP, OTP DTLS and a planned explicit libcoap OSCORE Port.
 explicit native executable and manifest without starting it. Connection
 dispatch to that executable remains planned. `Wotex.CoAP.Native.Wire` validates
 bounded ready and response frames and constructs complete Messages without
-starting a process. Streamed-body assembly and Port ownership remain planned.
+starting a process. `Wotex.CoAP.Native.Body` withholds streamed bytes until exact
+length and hash verification. Event correlation and Port ownership remain planned.
 Existing Python files perform test/build orchestration only. Their recorded
 results do not establish acceptance of the planned Mix tasks.

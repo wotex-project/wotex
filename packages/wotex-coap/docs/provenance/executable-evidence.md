@@ -123,6 +123,14 @@ outcomes corresponding to native-v1 F01, F02, F08 and F10–F13. They do not run
 native helper or accept body assembly, process closure, report credit or Port
 ownership.
 
+`native_body_test.exs` executes nine exact tests and one generated property for
+the pure inbound body state. It covers native-v1 F03, F04 and F14, empty and 1
+MiB bodies, 32 KiB chunks, offsets, interleaving, exact event fields, identifiers,
+lowercase hashes, canonical bytes, poisoned-state reuse and complete-body
+consumption. Only the completed `take/2` result exposes payload bytes; Inspect
+redacts the assembly fields. Common event correlation, report sequences,
+deadlines and process cleanup remain owner obligations.
+
 ## Required verification
 
 ### Datagram deadline assertions

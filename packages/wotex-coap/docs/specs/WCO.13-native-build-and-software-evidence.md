@@ -209,8 +209,12 @@ bytes, inline threshold and Message option/header rules. A streamed-body result
 requires a previously completed binary from the owner, and the resulting
 Message contains that binary rather than its native body ID. Its ExUnit tests
 cover the receiver-side outcomes corresponding to F01, F02, F08 and F10–F13.
-They do not run the native helper, close a process generation, assemble body
-events or accept the complete native corpus.
+`Wotex.CoAP.Native.Body` admits exact begin/chunk/end event objects, retains at
+most the declared 1 MiB body, poisons and drops its body reference after failure,
+and releases bytes only after exact length and SHA-256 verification. Its tests
+execute F03, F04 and the failed-body sequence in F14. These pure components do
+not run the native helper, correlate common event envelopes, close a process
+generation or accept the complete native corpus.
 
 Paths and content-format numbers obey .10/.11. Body chunks decode to at most
 32,768 bytes; offsets must exactly equal the next expected offset. The byte

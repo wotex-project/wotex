@@ -12,8 +12,8 @@ defmodule Wotex.CoAP.Native.Wire do
   has authenticated and completely assembled it. The decoder never exposes a
   body identifier through a Message. These functions perform no filesystem,
   process, Port, clock or network operation. Process lifetime, identifier reuse,
-  deadlines, body assembly and report credit remain responsibilities of the
-  native session owner.
+  deadlines, body-event correlation and report credit remain responsibilities
+  of the native session owner.
   """
 
   alias Wotex.CoAP.{Codec, Error, Message}
@@ -172,7 +172,7 @@ defmodule Wotex.CoAP.Native.Wire do
        when map_size(value) == 6 and is_integer(code) and code in 0..255 and
               is_integer(message_id) and message_id in 0..65_535 do
     with {:ok, type} <- message_type(type),
-         {:ok, token} <- bytes(token, 8),
+         {:ok, token} <- decode_bytes(token, 8),
          {:ok, options} <- options(options, 0, []),
          {:ok, payload} <- payload(value, bodies),
          message = %Message{
@@ -196,7 +196,7 @@ defmodule Wotex.CoAP.Native.Wire do
   defp payload(value, bodies) do
     case {Map.fetch(value, "payload"), Map.fetch(value, "body_id")} do
       {{:ok, encoded}, :error} ->
-        bytes(encoded, @maximum_inline_bytes)
+        decode_bytes(encoded, @maximum_inline_bytes)
 
       {:error, {:ok, body_id}} ->
         with true <- identifier?(body_id),
@@ -217,14 +217,17 @@ defmodule Wotex.CoAP.Native.Wire do
   defp options([%{"number" => number, "value" => value} = option | rest], count, acc)
        when map_size(option) == 2 and count < 64 and is_integer(number) and
               number in 0..65_535 do
-    with {:ok, value} <- bytes(value, 1_152),
+    with {:ok, value} <- decode_bytes(value, 1_152),
          do: options(rest, count + 1, [{number, value} | acc])
   end
 
   defp options(_, _, _), do: :error
 
-  defp bytes(%{"type" => "bytes", "base64" => encoded} = value, maximum)
-       when map_size(value) == 2 and is_binary(encoded) do
+  @doc false
+  @spec decode_bytes(term(), non_neg_integer()) :: {:ok, binary()} | :error
+  def decode_bytes(%{"type" => "bytes", "base64" => encoded} = value, maximum)
+      when map_size(value) == 2 and is_binary(encoded) and is_integer(maximum) and
+             maximum in 0..@maximum_body_bytes do
     maximum_encoded = 4 * div(maximum + 2, 3)
 
     if byte_size(encoded) <= maximum_encoded do
@@ -240,7 +243,7 @@ defmodule Wotex.CoAP.Native.Wire do
     end
   end
 
-  defp bytes(_, _), do: :error
+  def decode_bytes(_, _), do: :error
 
   defp error(%{"code" => code} = value) when map_size(value) in 1..2 and is_binary(code) do
     with true <- Map.keys(value) -- ["code", "status"] == [],
