@@ -876,6 +876,11 @@ std::string HostProtocol::ReadyFrame() {
       .dump();
 }
 
+bool HostProtocol::ParseDocumentAccepted(const std::string &line) {
+  Json document;
+  return ParseBounded(line, document);
+}
+
 bool HostProtocol::ParseRequestAccepted(const std::string &line) {
   Json request;
   std::uint64_t request_id = 0;

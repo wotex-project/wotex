@@ -142,6 +142,14 @@ class ReportCreditManager final {
   enum class SubmitResult { Transmitted, Queued, StreamOverflow, Invalid };
   using Transmit = std::function<bool(const std::string &)>;
 
+  struct CreditSnapshot {
+    std::size_t queued{0};
+    std::size_t frame_credit{0};
+    std::size_t byte_credit{0};
+  };
+
+  CreditSnapshot snapshot() const;
+
   ReportCreditManager(std::string session_generation, Transmit transmit);
   bool AddStream(const std::string &subscription_id, std::uint64_t generation,
                  std::size_t queue_limit);

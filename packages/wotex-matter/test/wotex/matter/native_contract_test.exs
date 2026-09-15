@@ -102,6 +102,59 @@ defmodule Wotex.Matter.NativeContractTest do
     end
   end
 
+  test "WMA-B-F07 through F10 observe production report credit accounting" do
+    selected =
+      Enum.filter(
+        fixture!()["cases"],
+        &(&1["id"] in ["WMA-B-F07", "WMA-B-F08", "WMA-B-F09", "WMA-B-F10"])
+      )
+
+    assert length(selected) == 4
+    executable = System.fetch_env!("WOTEX_MATTER_CONTRACT_DRIVER")
+
+    directory =
+      Path.join(System.tmp_dir!(), "wotex-flow-trace-#{System.unique_integer([:positive])}")
+
+    File.mkdir!(directory)
+
+    try do
+      for item <- selected do
+        assert item["operation"] == "flow_trace"
+        assert item["expectation"]["operator"] == "exact"
+        path = Path.join(directory, item["id"])
+        File.write!(path, Jason.encode!(item["input"]) <> "\n", [:exclusive])
+
+        assert {:ok, output} =
+                 SoftwareCommand.run(executable, ["flow_trace", path],
+                   timeout: 1_000,
+                   env: [
+                     {"ASAN_OPTIONS", "detect_leaks=1:halt_on_error=1"},
+                     {"UBSAN_OPTIONS", "halt_on_error=1"}
+                   ]
+                 )
+
+        [result | reversed_frames] = output |> String.split("\n", trim: true) |> Enum.reverse()
+        observed = Jason.decode!(result)
+        frames = Enum.reverse(reversed_frames)
+        assert length(frames) == observed["transmitted"]
+
+        requested_bytes =
+          Enum.flat_map(item["input"]["events"], fn
+            %{"event" => "transmit", "bytes" => bytes} = event ->
+              List.duplicate(bytes, Map.get(event, "count", 1))
+
+            _ ->
+              []
+          end)
+
+        assert Enum.map(frames, &(byte_size(&1) + 1)) == Enum.take(requested_bytes, length(frames))
+        assert observed == item["expectation"]["value"], item["id"]
+      end
+    after
+      File.rm_rf!(directory)
+    end
+  end
+
   defp surviving_child(_, 0), do: 1
 
   defp surviving_child(pid, remaining) do

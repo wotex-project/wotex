@@ -927,3 +927,43 @@ fifteen advisory queries pass, and the default 139-check gate and ExDoc pass.
 | Sanitized contract executable | `15f9fe35622d70799c3db279cb027c9106dbc167cbd9633bac699c05d1f99b89` |
 | Current Linux corpus log | `dc3159c6c1bb1083b7585d6f83edfd8b61f121d81b94b3bcd920f7c2a35e0ba2` |
 | Minimum Linux sanitizer corpus log | `c6400e9660a3469c2772cab02dd9bd070abf7b8b2be00b1667d836608c62412b` |
+
+## Native report-credit trace corpus
+
+WMA-B-F07–F10 drive the shared production `ReportCreditManager`. A read-only
+snapshot exposes its queued frame count and remaining session frame/byte credit.
+The native driver writes each transmitted payload and its newline to stdout,
+counts only successful writes and emits the observed credit projection last.
+ExUnit verifies the actual stdout frame count and byte lengths independently of
+the manager snapshot, then compares the projection with the corpus expectation.
+Input JSON passes the same bounded document parser used by the production host.
+No expected counters or terminal outcomes are supplied to the native driver.
+
+These cases exercise an exact cumulative acknowledgement, an incorrect byte
+acknowledgement, a duplicate acknowledgement and seventeen sequential enqueues
+against the per-stream credit of sixteen. Failed acknowledgements preserve the
+last valid counters. The fixture payloads exercise byte accounting without
+claiming to be SDK subscription reports. Unsupported retire/consume events fail
+the driver; they are not projected as successful traces.
+
+All four corpus tests pass on both Linux toolchains, including ASan/UBSan and
+leak detection on the minimum lane. The suite now executes twelve of seventeen
+cases. F11–F15, including both retirement traces and all three suspended-process
+cases, remain unexecuted and the corpus status remains `specified_unexecuted`.
+Both SDK hosts were incrementally rebuilt; both six-test CTest lanes, fifteen
+advisory queries, the default 139-check gate and ExDoc pass.
+
+| Credit-trace artifact | SHA-256 |
+| --- | --- |
+| Credit manager header | `f8bb890e8bd55ad992e7e504f9b8b8b59bf1192aea3195320a7b38d733160de9` |
+| Credit manager implementation | `ec1c02b6c715740addd6221f0479b66e14d1edc5b96be3f013f77b7a353792e7` |
+| Protocol header | `dee32ce21e6ca41eb858207d60e30733e976ba35fad708845dc9d01f9bc3b0f9` |
+| Protocol implementation | `c5ff69dea33b356bf01023a91d4c91c15f6699838e3e8a65e66e64b721da6732` |
+| Native driver | `af6828cbd07bc5bfca50e24a0d0db4049eafc1357f9554a597abd7885eba7db0` |
+| ExUnit tests | `e1ac58d8a998621cec5a07580609de7d8e0b2383b0906d54080d7bd4b61d3a85` |
+| Normal contract executable | `9acd7f3774473df15a8428b86b0d56e25a6e5d588069328834c810abd0178f8f` |
+| Sanitized contract executable | `cc935f52ed6aff21eca5d45b907a1814f71d54c2de980460e31f337974dcf545` |
+| Normal host | `197bbd3a346e1459ce6bcc6323b84add221933344c89d0fa207ed0368f82c2d3` |
+| Sanitized host | `33c06a9aa816c17e761c6d788cf62db4e8f96b4b86ca92e4bdd00c7db4cbcaf0` |
+| Current Linux corpus log | `96a919215d1c8ba08919b0b1ec68b80c79a2bfa4776ad9b3f728452ef4c7fac5` |
+| Minimum Linux sanitizer corpus log | `5125b2775baba5b8511bfc3918ffb3b052f52092392bf108b03c1949c6dd94c1` |

@@ -303,6 +303,11 @@ ReportCreditManager::ReportCreditManager(std::string session_generation,
     : session_generation_(std::move(session_generation)),
       transmit_(std::move(transmit)) {}
 
+ReportCreditManager::CreditSnapshot ReportCreditManager::snapshot() const {
+  return {queued_.size(), kSessionReportCredit - outstanding_.size(),
+          kSessionByteCredit - outstanding_bytes_};
+}
+
 std::string ReportCreditManager::Key(const std::string &subscription_id,
                                      std::uint64_t generation) const {
   return subscription_id + ":" + std::to_string(generation);

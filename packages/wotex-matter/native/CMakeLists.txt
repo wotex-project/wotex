@@ -56,6 +56,7 @@ if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
 
   add_executable(wotex_matter_contract_driver ../test/native/contract_driver.cpp)
   target_link_libraries(wotex_matter_contract_driver PRIVATE wotex_matter_protocol)
+  target_include_directories(wotex_matter_contract_driver SYSTEM PRIVATE "${WOTEX_MATTER_JSON_INCLUDE}")
   target_compile_options(
     wotex_matter_contract_driver PRIVATE -Wall -Wextra -Wpedantic -Werror
   )

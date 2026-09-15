@@ -103,6 +103,7 @@ class HostProtocol final {
   HostProtocol &operator=(const HostProtocol &) = delete;
 
   static std::string ReadyFrame();
+  static bool ParseDocumentAccepted(const std::string &line);
   static bool ParseRequestAccepted(const std::string &line);
 
   void SetOutputSink(std::function<bool(const std::string &)> sink);
