@@ -1,5 +1,18 @@
 defmodule Wotex.Matter.RuntimeOneshot do
-  @moduledoc false
+  @moduledoc """
+  Projects native one-shot Matter operations into scalar Runtime results.
+
+  `Wotex.Matter.Transport` uses this internal helper after selecting the native
+  one-shot profile. Descriptor validation rejects unsupported paths and values
+  before controller acquisition. Reads preserve scalar zero, false and null;
+  writes return the `"written"` acknowledgement and commands preserve their
+  admitted response value. The named Matter API retains its typed TLV results.
+
+  Execution uses the remaining request deadline and the explicitly supplied
+  session. The helper starts no process on load and owns neither credentials
+  nor retry policy. Native one-shot requests release their controller before
+  returning, and rejected mutation acknowledgements retain unknown effect.
+  """
 
   alias Wotex.Matter
   alias Wotex.Matter.{Address, Descriptor, Error, Session}

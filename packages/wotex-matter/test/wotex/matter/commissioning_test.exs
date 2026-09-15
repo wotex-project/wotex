@@ -61,6 +61,61 @@ defmodule Wotex.Matter.CommissioningTest do
              })
   end
 
+  @tag :mutation_ack
+  test "malformed commissioning acknowledgements preserve unknown mutation effect" do
+    commissioning = %{node_id: 9, setup_pin: 20_202_021, discriminator: 3840, timeout: 5_000}
+    window = %{node_id: 9, timeout_s: 300, iteration_count: 1_000, discriminator: 1234}
+
+    for response <- [nil, false, %{}, %{node_id: 10, fabric_id: 1, case: :established}] do
+      assert {:error,
+              %Error{
+                code: :invalid_transport_return,
+                effect: :unknown,
+                class: :permanent,
+                retryable: false
+              }} =
+               Matter.commission_on_network(session(response), commissioning)
+
+      assert_receive {:matter_request, %{type: :commission_on_network}, 5_000}
+    end
+
+    for response <- [nil, false, %{}, %{node_id: 9, setup_pin: 20_202_021}] do
+      assert {:error,
+              %Error{
+                code: :invalid_transport_return,
+                effect: :unknown,
+                class: :permanent,
+                retryable: false
+              }} =
+               Matter.open_commissioning_window(session(response), window)
+
+      assert_receive {:matter_request, %{type: :open_window}, 5_000}
+    end
+
+    for mode <- [:raise, :exit, :throw, :error, :invalid],
+        {operation, request} <- [
+          {:commission_on_network, commissioning},
+          {:open_commissioning_window, window}
+        ] do
+      assert {:ok, selected} = Matter.connect(client: TestClient, mode: mode)
+
+      assert {:error, %Error{effect: :unknown, class: :permanent, retryable: false}} =
+               apply(Matter, operation, [selected, request])
+
+      assert :ok = Matter.disconnect(selected)
+    end
+
+    denied = Error.new(:commissioning_failed, nil, %{sdk_status: 0x32})
+
+    for {operation, request} <- [
+          {:commission_on_network, commissioning},
+          {:open_commissioning_window, window}
+        ] do
+      assert {:error, ^denied} = apply(Matter, operation, [session({:error, denied}), request])
+      assert_receive {:matter_request, _, 5_000}
+    end
+  end
+
   test "enhanced window validates bounds and redacts all onboarding values from Inspect" do
     result = %{
       node_id: 9,

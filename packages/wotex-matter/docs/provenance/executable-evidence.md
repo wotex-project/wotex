@@ -2190,3 +2190,70 @@ listed control and lifetime cases, not completion of P09.
 | Minimum WMA-B-F11 observation | `524aa45465318c6450d7fd352b8b6bee290cb2ed6eba1cb8fac73643ddb6aed9` |
 | Minimum WMA-B-F12 observation | `2ab881dcadb54d848a922e75ace8b113fd5d4ee015e39a2495f0f1c208dc74b1` |
 | Minimum WMA-B-F13 observation | `d31befea01fa360eccc998afe172ca34fbbe12659388a3d9626ee5b4784efc2e` |
+
+## Rejected mutation acknowledgements and one-shot Runtime values
+
+The named write, invoke, commissioning and commissioning-window operations
+classify rejected successful-return values with unknown mutation effect.
+Validation of inputs and operation options still precedes client dispatch.
+After dispatch, a malformed acknowledgement, mismatched write path, incomplete
+command response or invalid commissioning result cannot establish that no
+mutation occurred. These errors are permanent and non-retryable. Untyped client
+failures and callback exceptions during commissioning/window requests likewise
+retain unknown effect; structured SDK failures retain their explicit submission
+classification. Accepted acknowledgement shapes and scalar projections remain
+unchanged.
+
+The initial named-API regressions fail because rejected write and commissioning
+results carry `effect: :none` and protocol classification. The corrected cases
+cover malformed shapes, wrong identities, invalid status, command path/value
+pairing, untyped callback failures and explicit SDK errors. Input-boundary tests
+continue to reject invalid requests before the selected client is invoked.
+
+The native one-shot Runtime boundary tests use the existing controlled wire
+fixture. Signed-16 scalar boundaries and zero become anonymous i16 writes and
+return `"written"`; empty Action input becomes an empty TLV structure and
+preserves either status-only null or an admitted empty response structure.
+Read projections preserve zero, false and null. Invalid scalar inputs and an
+unsupported descriptor path acquire no bridge. Rejected mutation acknowledgements
+produce permanent Runtime errors; the recorded input contains one mutation and
+one close, and no owned Port remains after the result. These fixtures establish
+API/framing behavior, not SDK interoperability.
+
+The default `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes 183 checks with
+33 excluded on Elixir 1.20.2/OTP 29.0.4. All 59 focused standalone, commissioning
+and persistent-bridge tests pass on Elixir 1.18.4/OTP 27.3.4.15 in 45.3 seconds.
+ExDoc passes with warnings as errors. The internal standalone, one-shot and
+relay value modules now document their ownership and validation contracts;
+the remaining production `@moduledoc false` declarations are removed.
+
+Both fresh-peer SDK/corpus cohorts pass all 16 cases, including all 17 native
+corpus cases, in 15.6 seconds on current Linux and 23.6 seconds on minimum Linux.
+Their owned peers are reaped. Native binaries remain the preceding control-polling
+cohort. ASan/UBSan and leak detection remain enabled, with the preceding
+forced-exit limitation. The previous full lifecycle receipt remains the native
+resource measurement; this acknowledgement-validation change does not establish
+a resource plateau, complete C09 fault instrumentation, software-run orchestration
+or fresh complete build/archive receipts.
+
+The full coverage run passes all 183 checks with 33 excluded and reports 90.0%.
+The unchanged 95% coverage requirement remains unsatisfied.
+
+| Mutation-acknowledgement artifact | SHA-256 |
+| --- | --- |
+| Standalone operations | `c642a812ad767e997359449d6e5ceccf321af061990d660faf1969aeb312b624` |
+| One-shot Runtime projection | `6ef1261c6b5a272dfeef7e35e896e2478471f525b19efc2d489a97b314f742f9` |
+| Error contract | `ead50ab43317654a43c175df8b54384ce344d48970a31d60aef51e9e982e92c6` |
+| Relay frame contract | `744c3fd1ba3288728d446b0f4bc3ea21a2b96c54d6928fb8fe2322688850f4bc` |
+| Relay handle contract | `93548abb1ffd138532d1bfc9d62cbe11c57c7120c3897d9525b8fc80ea1cb1a4` |
+| Named mutation regressions | `4c26d380efd2d00d66eb9772e4a37c54bb7be9760e31128267dea357358e6c9a` |
+| Commissioning mutation regressions | `d9eb033837cfbdb8d11878f256a90685a34e4f9947e81136161fb2f53601671e` |
+| Native Runtime boundary tests | `b4b12449efec183b5f3943fff7e28674ff529e3a8b205950e070d1032a8b778a` |
+| Failing named acknowledgement log | `1297af27a8f3adb81cfef4cbfe94e598ff689a7750405d4ac9474ec43156285c` |
+| Focused Runtime boundary log | `f14c11495317df98d06b3005015dcc4848ffd4383a09f1c1c113c9f526403b27` |
+| Default gate log | `bb6048527e30299dc1ec9a0a312c2820c10b914041b13b070225454290b2e8ed` |
+| Minimum focused log | `3855ec806e4997650127948b8893bfb4685f44302becd65d21feff5bf4da203d` |
+| ExDoc log | `d4576f92450d1af2e790429235edd6139115f02c5e9e864018bfb82e9616710f` |
+| Full coverage log | `87b82d8cf91dd51f368cfdbf7369379aa82852657453a157b28e6ed601efaf13` |
+| Current sixteen-case SDK/corpus log | `3591c53056db14205ddf8d0e75ffd108911937b16d9ef10f7ecd84aea54da692` |
+| Minimum sixteen-case SDK/corpus log | `e08a7d709dedb240652c6d90b9a282ba7ff1a68b0f18336ab32c01dee484d7b0` |

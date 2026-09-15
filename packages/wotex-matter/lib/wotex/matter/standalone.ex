@@ -1,5 +1,19 @@
 defmodule Wotex.Matter.Standalone do
-  @moduledoc false
+  @moduledoc """
+  Implements the named Matter operations exposed by `Wotex.Matter`.
+
+  This internal module validates concrete paths, generated descriptor values,
+  operation options and returned reports around an explicitly selected client
+  session. It also assembles bounded endpoint catalogues and validates
+  commissioning results. Callers use the facade in `Wotex.Matter`; no process,
+  controller or network activity starts when this module loads.
+
+  Input validation precedes client dispatch. A rejected acknowledgement after
+  a mutation has been submitted retains unknown effect and cannot be retried
+  automatically. Client failures follow the facade's effect classification.
+  Successful results describe protocol completion, not physical effects or
+  canonical Property truth.
+  """
 
   alias Wotex.Matter
   alias Wotex.Matter.{Address, AttributeReport, Descriptor, EndpointCatalogue, Error, EventReport}
@@ -39,13 +53,8 @@ defmodule Wotex.Matter.Standalone do
            message(:write, address)
            |> Map.put(:value, value)
            |> Map.merge(request_options),
-         {:ok, %{path: path, status: 0} = result} <-
-           Matter.send(%{session | timeout: timeout}, request),
-         {:ok, ^address} <- Address.new(path) do
-      {:ok, result}
-    else
-      {:error, %Error{}} = error -> error
-      _ -> {:error, Error.new(:invalid_transport_return)}
+         {:ok, result} <- Matter.send(%{session | timeout: timeout}, request) do
+      mutation_result(result, &write_result(&1, address))
     end
   end
 
@@ -62,13 +71,8 @@ defmodule Wotex.Matter.Standalone do
            message(:invoke, address)
            |> Map.put(:value, value)
            |> Map.merge(request_options),
-         {:ok, %{path: path, value: result_value, status: 0} = result} <-
-           Matter.send(%{session | timeout: timeout}, request),
-         :ok <- invoke_result(path, result_value) do
-      {:ok, result}
-    else
-      {:error, %Error{}} = error -> error
-      _ -> {:error, Error.new(:invalid_transport_return)}
+         {:ok, result} <- Matter.send(%{session | timeout: timeout}, request) do
+      mutation_result(result, &invoke_response/1)
     end
   end
 
@@ -143,12 +147,8 @@ defmodule Wotex.Matter.Standalone do
   @spec commission_on_network(Session.t(), term()) :: {:ok, map()} | {:error, Error.t()}
   def commission_on_network(%Session{} = session, request) when is_map(request) do
     with {:ok, message, timeout} <- commissioning_request(request),
-         {:ok, result} <- request(session, message, timeout),
-         {:ok, result} <- commission_result(result, message.node_id) do
-      {:ok, result}
-    else
-      {:error, %Error{} = error} -> {:error, error}
-      _ -> {:error, Error.new(:invalid_transport_return)}
+         {:ok, result} <- request(session, message, timeout) do
+      mutation_result(result, &commission_result(&1, message.node_id))
     end
   end
 
@@ -159,12 +159,8 @@ defmodule Wotex.Matter.Standalone do
           {:ok, OnboardingMaterial.t()} | {:error, Error.t()}
   def open_commissioning_window(%Session{} = session, request) when is_map(request) do
     with {:ok, message} <- window_request(request),
-         {:ok, result} <- request(session, message, session.timeout),
-         {:ok, material} <- onboarding_material(result, message) do
-      {:ok, material}
-    else
-      {:error, %Error{} = error} -> {:error, error}
-      _ -> {:error, Error.new(:invalid_transport_return)}
+         {:ok, result} <- request(session, message, session.timeout) do
+      mutation_result(result, &onboarding_material(&1, message))
     end
   end
 
@@ -175,9 +171,24 @@ defmodule Wotex.Matter.Standalone do
     result = PortCall.invoke(session.client, :request, [session.handle, message, timeout])
 
     case result do
-      {:ok, _} = result -> result
-      {:error, %Error{}} = error -> error
-      _ -> {:error, Error.new(:invalid_transport_return)}
+      {:ok, _} = result ->
+        result
+
+      {:error, %Error{code: code} = error}
+      when code in [
+             :transport_error,
+             :transport_exception,
+             :transport_exit,
+             :transport_throw,
+             :invalid_transport_return
+           ] ->
+        {:error, Error.with_effect(error, :unknown)}
+
+      {:error, %Error{}} = error ->
+        error
+
+      _ ->
+        {:error, Error.new(:invalid_transport_return) |> Error.with_effect(:unknown)}
     end
   end
 
@@ -353,6 +364,29 @@ defmodule Wotex.Matter.Standalone do
   end
 
   defp invoke_result(_, _), do: :error
+
+  defp write_result(%{path: path, status: 0} = result, address) do
+    case Address.new(path) do
+      {:ok, ^address} -> {:ok, result}
+      _ -> :error
+    end
+  end
+
+  defp write_result(_, _), do: :error
+
+  defp invoke_response(%{path: path, value: value, status: 0} = result) do
+    with :ok <- invoke_result(path, value), do: {:ok, result}
+  end
+
+  defp invoke_response(_), do: :error
+
+  defp mutation_result(result, validate) do
+    case validate.(result) do
+      {:ok, _} = valid -> valid
+      {:error, %Error{} = error} -> {:error, Error.with_effect(error, :unknown)}
+      _ -> {:error, Error.new(:invalid_transport_return) |> Error.with_effect(:unknown)}
+    end
+  end
 
   defp options(options, default, allowed) when is_list(options) do
     with true <- Keyword.keyword?(options),

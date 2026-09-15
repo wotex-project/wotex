@@ -148,6 +148,7 @@ defmodule Wotex.Matter.StandaloneBoundaryTest do
     end
   end
 
+  @tag :mutation_ack
   test "WMA-C02 malformed mutation acknowledgments cannot become successful values" do
     for result <- [
           nil,
@@ -156,7 +157,13 @@ defmodule Wotex.Matter.StandaloneBoundaryTest do
           %{path: @heating, status: 1},
           %{path: %{@heating | node_id: 4}, status: 0}
         ] do
-      assert {:error, %Error{code: :invalid_transport_return}} =
+      assert {:error,
+              %Error{
+                code: :invalid_transport_return,
+                effect: :unknown,
+                class: :permanent,
+                retryable: false
+              }} =
                Matter.write_attribute(session(result), @heating, @value)
 
       assert_receive {:matter_request, %{type: :write}, _}
@@ -169,7 +176,13 @@ defmodule Wotex.Matter.StandaloneBoundaryTest do
           %{path: nil, value: @empty, status: 0},
           %{path: @on, value: nil, status: 0}
         ] do
-      assert {:error, %Error{code: :invalid_transport_return}} =
+      assert {:error,
+              %Error{
+                code: :invalid_transport_return,
+                effect: :unknown,
+                class: :permanent,
+                retryable: false
+              }} =
                Matter.invoke_command(session(result), @on, @empty)
 
       assert_receive {:matter_request, %{type: :invoke}, _}

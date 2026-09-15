@@ -4,9 +4,10 @@ defmodule Wotex.Matter.Error do
 
   A `t:t/0` contains a stable code, an optional field, diagnostic details, a
   native retry flag, a Runtime retry class, and an effect classification. The
-  effect is `:none` when no state-changing interaction reached the client and may be
-  `:unknown` when a transport failure prevents the package from determining
-  whether a write or invoke reached its target.
+  effect is `:none` when validation or the selected client's submission state
+  establishes that no mutation was submitted. It is `:unknown` when a transport
+  failure or rejected acknowledgement leaves the effect of a write, invoke,
+  commissioning operation or commissioning window uncertain.
 
   `new/3` is shared by path validation, TLV conversion, Form mapping, Runtime
   transport, and client adapters. Consumers can make policy decisions from
@@ -22,7 +23,7 @@ defmodule Wotex.Matter.Error do
 
   defstruct [:code, :field, :class, details: %{}, retryable: false, effect: :none]
 
-  @typedoc "A bounded failure; `:unknown` effect means a write may have reached its peer."
+  @typedoc "A bounded failure; `:unknown` effect means a mutation may have reached its peer."
   @type t :: %__MODULE__{
           code: atom(),
           field: atom() | nil,

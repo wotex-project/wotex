@@ -535,7 +535,12 @@ defmodule Wotex.Matter.PersistentBridgeTest do
   end
 
   test "native one-shot Runtime keeps scalar zero and null and rejects a mismatched lifecycle" do
-    for {mode, expected} <- [{"typed_read", 2150}, {"typed_zero", 0}, {"typed_null", nil}] do
+    for {mode, expected, property} <- [
+          {"typed_read", 2150, "temperature"},
+          {"typed_zero", 0, "temperature"},
+          {"typed_null", nil, "temperature"},
+          {"typed_false", false, "on"}
+        ] do
       config =
         options(fixture(mode))
         |> Keyword.merge(
@@ -554,7 +559,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
                )
 
       assert {:ok, %Wotex.Runtime.Result{payload: ^expected, metadata: metadata}} =
-               Wotex.Runtime.ConsumedThing.read_property(consumed, "temperature", context)
+               Wotex.Runtime.ConsumedThing.read_property(consumed, property, context)
 
       assert metadata == %{}
     end
@@ -571,6 +576,90 @@ defmodule Wotex.Matter.PersistentBridgeTest do
              )
 
     refute File.exists?(audit)
+  end
+
+  @tag :mutation_ack
+  test "native one-shot Runtime converts scalar mutations and releases each owned bridge" do
+    for {operation, name, input, mode, expected, wire_operation} <- [
+          {:write_property, "setpoint", -32_768, "typed_mutations", "written", "write"},
+          {:write_property, "setpoint", 0, "typed_mutations", "written", "write"},
+          {:write_property, "setpoint", 32_767, "typed_mutations", "written", "write"},
+          {:invoke_action, "toggle", %{}, "typed_mutations", nil, "invoke"},
+          {:invoke_action, "toggle", %{}, "typed_command_result", %{}, "invoke"}
+        ] do
+      audit = temporary_path("runtime-mutation")
+      executable = fixture(mode, audit)
+      consumed = oneshot_consumed(oneshot_options(executable))
+      assert {:ok, context} = Wotex.Runtime.Context.new(request_id: "runtime-mutation")
+
+      assert {:ok, %Wotex.Runtime.Result{payload: ^expected, metadata: metadata}} =
+               apply(Wotex.Runtime.ConsumedThing, operation, [consumed, name, input, context])
+
+      assert metadata == %{}
+      assert owned_ports(executable) == []
+      frames = audit |> File.read!() |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!/1)
+      assert Enum.map(frames, & &1["operation"]) == [nil, "open", wire_operation, "close"]
+      sent = Enum.at(frames, 2)["parameters"]["value"]
+
+      if wire_operation == "write" do
+        assert sent == %{"tag" => "anonymous", "type" => "i16", "value" => input}
+      else
+        assert sent == %{"tag" => "anonymous", "type" => "structure", "value" => []}
+      end
+    end
+  end
+
+  @tag :mutation_ack
+  test "native one-shot Runtime rejects invalid scalar inputs before bridge acquisition" do
+    audit = temporary_path("runtime-invalid-mutation")
+    executable = fixture("typed_mutations", audit)
+    consumed = oneshot_consumed(oneshot_options(executable))
+    assert {:ok, context} = Wotex.Runtime.Context.new(request_id: "runtime-invalid")
+
+    assert {:error, %Wotex.Runtime.Error{details: %{cause: %{code: :unsupported_schema}}}} =
+             Wotex.Runtime.ConsumedThing.read_property(consumed, "unknown", context)
+
+    refute File.exists?(audit)
+
+    for {operation, name, input} <- [
+          {:write_property, "setpoint", -32_769},
+          {:write_property, "setpoint", 32_768},
+          {:write_property, "setpoint", nil},
+          {:write_property, "setpoint", 1.5},
+          {:invoke_action, "toggle", %{"unexpected" => true}},
+          {:invoke_action, "toggle", nil}
+        ] do
+      assert {:error, %Wotex.Runtime.Error{details: %{cause: %{code: :invalid_value}}}} =
+               apply(Wotex.Runtime.ConsumedThing, operation, [consumed, name, input, context])
+
+      refute File.exists?(audit)
+      assert owned_ports(executable) == []
+    end
+  end
+
+  @tag :mutation_ack
+  test "native one-shot Runtime keeps rejected mutation acknowledgements permanently non-retryable" do
+    for {operation, name, input, mode, wire_operation} <- [
+          {:write_property, "setpoint", 2000, "mismatched_write", "write"},
+          {:invoke_action, "toggle", %{}, "malformed_invoke", "invoke"}
+        ] do
+      audit = temporary_path("runtime-untrusted-ack")
+      executable = fixture(mode, audit)
+      consumed = oneshot_consumed(oneshot_options(executable))
+      assert {:ok, context} = Wotex.Runtime.Context.new(request_id: "runtime-untrusted")
+
+      assert {:error,
+              %Wotex.Runtime.Error{
+                class: :permanent,
+                details: %{cause: %{code: :invalid_transport_return}}
+              }} =
+               apply(Wotex.Runtime.ConsumedThing, operation, [consumed, name, input, context])
+
+      frames = audit |> File.read!() |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!/1)
+      assert Enum.count(frames, &(&1["operation"] == wire_operation)) == 1
+      assert List.last(frames)["operation"] == "close"
+      assert owned_ports(executable) == []
+    end
   end
 
   test "native one-shot startup expiry and close failures cannot return successful operations" do
@@ -965,6 +1054,16 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     Enum.filter(Port.list(), &(Port.info(&1, :name) == {:name, String.to_charlist(executable)}))
   end
 
+  defp oneshot_options(executable) do
+    options(executable)
+    |> Keyword.merge(
+      client: Native,
+      lifecycle: :oneshot,
+      storage_mode: :open_existing,
+      authority: :stored
+    )
+  end
+
   defp oneshot_consumed(config) do
     assert {:ok, td} =
              Wotex.ThingDescription.from_map(%{
@@ -977,6 +1076,20 @@ defmodule Wotex.Matter.PersistentBridgeTest do
                  "temperature" => %{
                    "readOnly" => true,
                    "forms" => [%{"href" => "matter://1/2/1/513/0", "op" => "readproperty"}]
+                 },
+                 "setpoint" => %{
+                   "forms" => [%{"href" => "matter://1/2/1/513/18", "op" => "writeproperty"}]
+                 },
+                 "on" => %{
+                   "forms" => [%{"href" => "matter://1/2/1/6/0", "op" => "readproperty"}]
+                 },
+                 "unknown" => %{
+                   "forms" => [%{"href" => "matter://1/2/1/513/65534", "op" => "readproperty"}]
+                 }
+               },
+               "actions" => %{
+                 "toggle" => %{
+                   "forms" => [%{"href" => "matter://1/2/1/6/2", "op" => "invokeaction"}]
                  }
                }
              })
@@ -1129,12 +1242,28 @@ defmodule Wotex.Matter.PersistentBridgeTest do
           IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":\#{result}}))
           loop.(loop)
 
-        mode in ["typed_read", "typed_zero", "typed_null", "bad_close"] and String.contains?(line, ~s("operation":"read")) ->
+        mode in ["typed_read", "typed_zero", "typed_null", "typed_false", "bad_close"] and String.contains?(line, ~s("operation":"read")) ->
           result = ~s({"path":{"fabric_id":1,"node_id":2,"endpoint":1,"cluster":513,"member":0},"value":{"tag":"anonymous","type":"i16","value":2150},"data_version":0})
           result = case mode do
+            "typed_false" -> result |> String.replace("513", "6") |> String.replace(~s("type":"i16"), ~s("type":"boolean")) |> String.replace("2150", "false")
             "typed_zero" -> String.replace(result, "2150", "0")
             "typed_null" -> result |> String.replace(~s("type":"i16"), ~s("type":"null")) |> String.replace("2150", "null")
             _ -> result
+          end
+          IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":\#{result}}))
+          loop.(loop)
+
+        mode in ["typed_mutations", "mismatched_write"] and String.contains?(line, ~s("operation":"write")) ->
+          node = if mode == "mismatched_write", do: 3, else: 2
+          result = ~s({"path":{"fabric_id":1,"node_id":\#{node},"endpoint":1,"cluster":513,"member":18},"status":0})
+          IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":\#{result}}))
+          loop.(loop)
+
+        mode in ["typed_mutations", "typed_command_result", "malformed_invoke"] and String.contains?(line, ~s("operation":"invoke")) ->
+          result = case mode do
+            "typed_mutations" -> ~s({"path":null,"value":null,"status":0})
+            "malformed_invoke" -> ~s({"path":null,"value":{"tag":"anonymous","type":"structure","value":[]},"status":0})
+            "typed_command_result" -> ~s({"path":{"fabric_id":1,"node_id":2,"endpoint":1,"cluster":6,"member":2},"value":{"tag":"anonymous","type":"structure","value":[]},"status":0})
           end
           IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":\#{result}}))
           loop.(loop)
