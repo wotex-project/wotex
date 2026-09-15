@@ -678,7 +678,7 @@ defmodule Wotex.Matter.Native.Connection do
 
     deadline = Map.get(state, :call_deadline, System.monotonic_time(:millisecond) + timeout)
 
-    case send_request_frame(state.port, frame, deadline) do
+    case send_request_frame(state.port, frame, deadline, state.active_call) do
       :ok ->
         case await_response_until(next_state, id, deadline) do
           {:ok, result, response_state} ->
@@ -746,29 +746,37 @@ defmodule Wotex.Matter.Native.Connection do
 
   defp admitted_call(pid, generation, admission, message, deadline) do
     case Admission.acquire(admission, pid, generation, deadline) do
-      {:ok, lease} ->
-        remaining = deadline - System.monotonic_time(:millisecond)
-
-        if remaining > 0 do
-          GenServer.call(pid, {:bounded, message, deadline, lease}, remaining + 100)
-        else
-          Admission.release(admission, lease)
-          {:error, Error.new(:timeout)}
-        end
-
-      {:error, code} ->
-        {:error, Error.new(code)}
+      {:ok, lease} -> await_call(pid, admission, message, deadline, lease)
+      {:error, code} -> {:error, Error.new(code)}
     end
-  catch
-    :exit, {:noproc, _} -> {:error, Error.new(:transport_closed)}
-    :exit, {:timeout, _} -> {:error, call_error(:timeout, message)}
-    :exit, _ -> {:error, call_error(:transport_closed, message)}
   end
 
-  defp call_error(code, {:request, _, %{type: type}, _}) when type in [:write, :invoke],
-    do: Error.new(code) |> Error.with_effect(:unknown)
+  defp await_call(pid, admission, message, deadline, lease) do
+    remaining = deadline - System.monotonic_time(:millisecond)
 
-  defp call_error(code, _), do: Error.new(code)
+    if remaining > 0 do
+      GenServer.call(pid, {:bounded, message, deadline, lease}, remaining + 100)
+    else
+      Admission.release(admission, lease)
+      {:error, Error.new(:timeout)}
+    end
+  catch
+    :exit, {:timeout, _} -> {:error, call_error(:timeout, message, lease)}
+    :exit, _ -> {:error, call_error(:transport_closed, message, lease)}
+  end
+
+  defp call_error(code, message, lease) do
+    submitted = Admission.cancel_unsubmitted(lease) == :submitted
+
+    mutation =
+      case message do
+        {:request, _, %{type: type}, _} -> type in [:write, :invoke]
+        _ -> false
+      end
+
+    effect = if submitted and mutation, do: :unknown, else: :none
+    Error.new(code) |> Error.with_effect(effect)
+  end
 
   defp open_port(executable) do
     {:ok, %{type: :regular, mode: mode}} = File.stat("/bin/kill")
@@ -1185,23 +1193,40 @@ defmodule Wotex.Matter.Native.Connection do
     _ -> false
   end
 
-  defp send_request_frame(port, frame, deadline) do
+  defp send_request_frame(port, frame, deadline, lease \\ nil) do
     remaining = max(0, deadline - System.monotonic_time(:millisecond))
     frame = Map.put(frame, "timeout_ms", min(frame["timeout_ms"], remaining))
 
     case Request.encode(frame) do
       {:ok, encoded} when byte_size(encoded) + 1 <= @maximum_line_bytes + 1 ->
-        cond do
-          System.monotonic_time(:millisecond) >= deadline -> {:error, :timeout}
-          Port.command(port, [encoded, ?\n], [:nosuspend]) -> :ok
-          true -> {:error, :transport_closed}
-        end
+        if System.monotonic_time(:millisecond) >= deadline,
+          do: {:error, :timeout},
+          else: submit_request(port, encoded, lease)
 
       _ ->
         {:error, :invalid_request}
     end
   rescue
     _ -> {:error, :transport_closed}
+  end
+
+  defp submit_request(port, encoded, lease) do
+    case Admission.mark_submission(lease) do
+      :ok ->
+        if Port.command(port, [encoded, ?\n], [:nosuspend]) do
+          :ok
+        else
+          Admission.clear_submission(lease)
+          {:error, :transport_closed}
+        end
+
+      :cancelled ->
+        {:error, :timeout}
+    end
+  rescue
+    ArgumentError ->
+      Admission.clear_submission(lease)
+      {:error, :transport_closed}
   end
 
   defp flow_frame(generation),

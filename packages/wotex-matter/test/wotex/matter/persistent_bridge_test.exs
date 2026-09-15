@@ -353,6 +353,56 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     end
   end
 
+  @tag :submission_effect
+  test "WMA-C04 queued mutation timeout or owner loss cannot acquire unknown effect" do
+    for mode <- [:timeout, :owner_loss] do
+      audit = temporary_path("queued-effect")
+      assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+      initial = File.read!(audit)
+      :sys.suspend(handle.pid)
+      timeout = if mode == :timeout, do: 25, else: 5_000
+      caller = Task.async(fn -> Native.request(handle, @write, timeout) end)
+
+      try do
+        assert mailbox_reaches?(handle.pid, 1, 100)
+        [{lease, _, _}] = Native.Admission.reservations(handle.admission)
+        if mode == :owner_loss, do: Process.exit(handle.pid, :kill)
+        code = if mode == :timeout, do: :timeout, else: :transport_closed
+
+        assert {:error, %Error{code: ^code, effect: :none}} = Task.await(caller, 1_000)
+        assert Native.Admission.mark_submission(lease) == :cancelled
+        assert File.read!(audit) == initial
+      after
+        if Process.alive?(handle.pid), do: :sys.resume(handle.pid)
+        Task.shutdown(caller, :brutal_kill)
+        Native.disconnect(handle)
+      end
+    end
+  end
+
+  @tag :submission_effect
+  test "WMA-C04 owner loss after native mutation submission retains unknown effect" do
+    audit = temporary_path("submitted-effect")
+    assert {:ok, handle} = Native.connect(options(fixture("silent_request", audit)))
+    caller = Task.async(fn -> Native.request(handle, @write, 5_000) end)
+
+    try do
+      assert operation_recorded?(audit, "write", 100)
+      Process.exit(handle.pid, :kill)
+
+      assert {:error,
+              %Error{
+                code: :transport_closed,
+                effect: :unknown,
+                class: :permanent,
+                retryable: false
+              }} = Task.await(caller, 1_000)
+    after
+      Task.shutdown(caller, :brutal_kill)
+      Native.disconnect(handle)
+    end
+  end
+
   test "native one-shot handles acquire one existing-store owner per concrete request" do
     audit = temporary_path("oneshot-audit")
     executable = fixture("typed_read", audit)
@@ -1100,12 +1150,16 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
   defp request_recorded?(_, 0), do: false
 
-  defp request_recorded?(audit, attempts) do
-    if File.read!(audit) =~ ~s("operation":"health") do
+  defp request_recorded?(audit, attempts), do: operation_recorded?(audit, "health", attempts)
+
+  defp operation_recorded?(_, _, 0), do: false
+
+  defp operation_recorded?(audit, operation, attempts) do
+    if File.read!(audit) =~ ~s("operation":"#{operation}") do
       true
     else
       Process.sleep(10)
-      request_recorded?(audit, attempts - 1)
+      operation_recorded?(audit, operation, attempts - 1)
     end
   end
 

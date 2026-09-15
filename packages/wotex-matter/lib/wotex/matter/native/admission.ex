@@ -15,6 +15,11 @@ defmodule Wotex.Matter.Native.Admission do
   A reservation racing with closing is released before it submits its call.
   Reservations retain their caller and deadline before message submission so the
   connection can reclaim an abandoned slot or terminate an abandoned close.
+  Each token also holds an atomic submission marker. The caller retains that
+  marker after connection and table death, so it can distinguish queued work
+  from a mutation whose Port submission may already have reached native code.
+  Cancellation atomically prevents an unsubmitted token from being submitted
+  after its caller has returned a failure with no effect.
   """
 
   @type lease :: {1..64, reference()}
@@ -95,12 +100,52 @@ defmodule Wotex.Matter.Native.Admission do
   def release(table, {slot, token}) do
     :ets.select_delete(table, [{{slot, token, :_, :_}, [], [true]}])
     :ok
+  rescue
+    ArgumentError -> :ok
+  end
+
+  @doc false
+  @spec mark_submission(lease() | nil) :: :ok | :cancelled
+  def mark_submission(nil), do: :ok
+
+  def mark_submission({_, token}) do
+    case :atomics.compare_exchange(token, 1, 0, 1) do
+      :ok -> :ok
+      _ -> :cancelled
+    end
+  end
+
+  @doc false
+  @spec clear_submission(lease() | nil) :: :ok
+  def clear_submission(nil), do: :ok
+
+  def clear_submission({_, token}) do
+    :atomics.put(token, 1, 2)
+  rescue
+    ArgumentError -> :ok
+  end
+
+  @doc false
+  @spec cancel_unsubmitted(lease()) :: :submitted | :cancelled
+  def cancel_unsubmitted({_, token}) do
+    case :atomics.compare_exchange(token, 1, 0, 2) do
+      1 -> :submitted
+      _ -> :cancelled
+    end
+  rescue
+    ArgumentError -> :cancelled
   end
 
   defp reserve(_, _, 65), do: {:error, :busy}
 
   defp reserve(table, deadline, slot) do
-    token = make_ref()
+    if :ets.member(table, slot),
+      do: reserve(table, deadline, slot + 1),
+      else: reserve_empty(table, deadline, slot)
+  end
+
+  defp reserve_empty(table, deadline, slot) do
+    token = :atomics.new(1, signed: false)
 
     if :ets.insert_new(table, {slot, token, self(), deadline}) do
       if closing?(table) do

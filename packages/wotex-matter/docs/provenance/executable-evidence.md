@@ -1474,3 +1474,41 @@ cohort.
 | Minimum focused log | `5df82a3ed65e9752992d01f2fae0cd1c5b4a188833f0e1fb05f610ed47848cba` |
 | Current Linux SDK log | `c6282db7d933995a3b7fd966111acde793619d3cd757fe28731bf1afb5d9f05b` |
 | Minimum Linux sanitizer SDK log | `a7e32b5b7de94f574f33524fb284b633bac875899c41ca970f1f0552fd6102ec` |
+
+## Submission effect after caller timeout or connection loss
+
+Each admission token retains an atomic submission state after its connection
+and ETS table terminate. Caller failure atomically cancels an unsubmitted token;
+the owner cannot subsequently submit it. Port submission first claims the token,
+and a refused nonblocking write clears that claim. A write or invoke whose claim
+survives owner loss returns unknown effect and remains permanently non-retryable.
+The claim covers the last local step before the Port BIF, so owner death in that
+interval is conservatively unknown and does not assert that the peer received it.
+
+The queued-mutation regression failed before this change with unknown effect on
+caller timeout. It now passes for both timeout and abrupt owner death, verifies
+no native write, and rejects a later attempt to claim the cancelled token. A
+second case observes the actual mutation in the fixture input before killing
+the owner and verifies unknown effect without retry. Reservations remain bounded
+and are not released merely because a caller timed out.
+
+The default gate passes 168 checks with 24 excluded. Minimum BEAM passes all 36
+persistent-connection tests; ExDoc passes without warnings. Both real SDK lanes
+pass the one-shot native/Runtime workflow and full-admission close test, in 5.6
+seconds on current Linux and 9.8 seconds on minimum Linux. Native binaries are
+the unchanged byte-counter cohort; the prior forced-child leak-finalization
+limitation applies to the stopped-child test. This establishes write/invoke
+submission classification, not the remaining commissioning/window failure,
+native fault/counter, process-flow, full build/archive or 95% coverage acceptance.
+The latest measured coverage remains 88.6% from the orphan-admission cohort.
+
+| Submission-effect artifact | SHA-256 |
+| --- | --- |
+| Admission | `46e0aa419688b1c9b9e4be2e7b264aaed790a2c38fff8874874f6e5042f46946` |
+| Connection | `4f3dfe737218fba1dab27b91b744ed37e51aa96973232911009fe105da257f71` |
+| Persistent connection tests | `9a5e5de3738466f0c04dea208bf99fb36c5649318edfd7159d6e8b5279fed47a` |
+| Failing queued-effect log | `6980a1391373a27fe4b2912708fca618bba1a64c78d4f159ff500118edea8858` |
+| Current default gate log | `c56f50d89cc77bd2b06d6cb9cef85f624163eb547cd38952acf51cc700408195` |
+| Minimum focused log | `58138d75f7101dd30b456d427f7d7175b7749b9bc76a1faca450c106030fe17f` |
+| Current Linux SDK log | `185bf9977b4c414db678ca82fd4787a1a259cba07fa748f0e45a380526a7d361` |
+| Minimum Linux sanitizer SDK log | `593e6c66a70d4c2b4c64ca44600dd0f746384217c9bcb3e9fee128843aa33d8b` |
