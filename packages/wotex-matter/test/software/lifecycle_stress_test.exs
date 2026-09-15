@@ -191,7 +191,8 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
            :subscriptions,
            :subscription_ids,
            :subscription_monitors,
-           :internal_requests
+           :internal_requests,
+           :cancellation_deadlines
          ],
          &(Map.fetch!(state, &1) == %{})
        ) and state.report_ledger.pending == %{} and state.report_ledger.streams == %{} do

@@ -198,8 +198,14 @@ defmodule Wotex.Matter.SubscriptionTest do
 
   @tag :native_stream_owner
   test "joining a stalled native cancellation retains the caller deadline and closes its owner" do
-    audit = temporary_path("joined-cancellation-timeout")
-    executable = native_fixture(audit, "gated_cancel")
+    for mode <- ["gated_cancel", "cancel_ack_only", "cancel_retire_only"] do
+      assert_joined_cancellation_deadline(mode)
+    end
+  end
+
+  defp assert_joined_cancellation_deadline(mode) do
+    audit = temporary_path("joined-cancellation-" <> mode)
+    executable = native_fixture(audit, mode)
     assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
     assert {:ok, subscription} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
     reference = subscription.reference
@@ -217,6 +223,12 @@ defmodule Wotex.Matter.SubscriptionTest do
                Enum.any?(audit_frames(audit), &(&1["operation"] == "unsubscribe"))
              end)
 
+      if mode == "cancel_retire_only" do
+        assert eventually(fn ->
+                 MapSet.member?(:sys.get_state(connection).closed_references, reference)
+               end)
+      end
+
       started = System.monotonic_time(:millisecond)
 
       assert {:error, %Error{code: :timeout, effect: :none}} =
@@ -227,6 +239,69 @@ defmodule Wotex.Matter.SubscriptionTest do
       assert Port.info(port) == nil
       assert :ets.info(session.handle.admission) == :undefined
       assert Enum.count(audit_frames(audit), &(&1["operation"] == "unsubscribe")) == 1
+      refute_receive {:wotex_matter, ^reference, _}, 30
+    after
+      Matter.disconnect(session)
+    end
+  end
+
+  @tag :native_stream_owner
+  test "owner-loss cancellation reaps an unresponsive native child without a further API call" do
+    for mode <- ["gated_cancel", "cancel_ack_only", "cancel_retire_only"] do
+      assert_automatic_cancellation_deadline(mode)
+    end
+  end
+
+  defp assert_automatic_cancellation_deadline(mode) do
+    audit = temporary_path("automatic-cancellation-" <> mode)
+    executable = native_fixture(audit, mode)
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+    assert {:ok, subscription} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
+    reference = subscription.reference
+    state = :sys.get_state(session.handle.pid)
+    owner = state.subscriptions[reference].stream_owner
+    connection = session.handle.pid
+    monitor = Process.monitor(connection)
+    port = state.port
+
+    try do
+      started = System.monotonic_time(:millisecond)
+      Process.exit(owner, :kill)
+      assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :owner_closed}}}, 1_000
+      assert_receive {:DOWN, ^monitor, :process, ^connection, :normal}, 1_000
+      assert System.monotonic_time(:millisecond) - started <= 1_000
+      assert Port.info(port) == nil
+      assert :ets.info(session.handle.admission) == :undefined
+      assert Enum.count(audit_frames(audit), &(&1["operation"] == "unsubscribe")) == 1
+      refute_receive {:wotex_matter, ^reference, _}, 30
+    after
+      Matter.disconnect(session)
+    end
+  end
+
+  @tag :native_stream_owner
+  test "a native terminal without retirement cannot retain its subscription owner" do
+    audit = temporary_path("terminal-without-retirement")
+    executable = native_fixture(audit, "terminal_stalled")
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+    assert {:ok, subscription} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
+    reference = subscription.reference
+    connection = session.handle.pid
+    state = :sys.get_state(connection)
+    owner = state.subscriptions[reference].stream_owner
+    owner_monitor = Process.monitor(owner)
+    monitor = Process.monitor(connection)
+    port = state.port
+
+    try do
+      started = System.monotonic_time(:millisecond)
+      assert {:ok, %{"status" => "ready"}} = Native.health(session.handle)
+      assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :queue_overflow}}}, 1_000
+      assert_receive {:DOWN, ^monitor, :process, ^connection, :normal}, 1_000
+      assert_receive {:DOWN, ^owner_monitor, :process, ^owner, _}, 1_000
+      assert System.monotonic_time(:millisecond) - started <= 1_000
+      assert Port.info(port) == nil
+      assert :ets.info(session.handle.admission) == :undefined
       refute_receive {:wotex_matter, ^reference, _}, 30
     after
       Matter.disconnect(session)
@@ -1129,8 +1204,12 @@ defmodule Wotex.Matter.SubscriptionTest do
             if mode == "cancel_race_duplicate", do: IO.puts(terminal)
           end
           last = if mode in ["reports", "blocked_health", "owner_pause"], do: 2, else: if(mode in ["event", "null", "cancel_race", "cancel_race_duplicate"], do: 1, else: 0)
-          IO.puts(~s({"version":1,"event":"stream_retired","session_generation":"#{session_generation}","subscription_id":"#{subscription_id}","generation":1,"last_report_sequence":#{last}}))
-          IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":null}))
+          unless mode == "cancel_ack_only" do
+            IO.puts(~s({"version":1,"event":"stream_retired","session_generation":"#{session_generation}","subscription_id":"#{subscription_id}","generation":1,"last_report_sequence":#{last}}))
+          end
+          unless mode == "cancel_retire_only" do
+            IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":null}))
+          end
           loop.(loop, subscription_id)
 
         mode in ["blocked_health", "owner_pause"] and String.contains?(line, ~s("operation":"health")) ->
@@ -1151,6 +1230,9 @@ defmodule Wotex.Matter.SubscriptionTest do
         String.contains?(line, ~s("operation":"health")) ->
           [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
           IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":{"status":"ready"}}))
+          if mode == "terminal_stalled" do
+            IO.puts(~s({"version":1,"event":"subscription_error","session_generation":"#{session_generation}","subscription_id":"#{subscription_id}","generation":1,"error":{"code":"queue_overflow"}}))
+          end
           loop.(loop, subscription_id)
 
         true ->

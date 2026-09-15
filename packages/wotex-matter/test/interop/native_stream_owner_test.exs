@@ -46,7 +46,7 @@ defmodule Wotex.Matter.NativeStreamOwnerInteropTest do
       member: 0
     }
 
-    for mode <- [:resume, :stream_loss, :connection_loss] do
+    for mode <- [:resume, :stream_loss, :stalled_cancellation, :connection_loss] do
       assert {:ok, session} = Matter.connect(options)
       connection = session.handle.pid
       port = :sys.get_state(connection).port
@@ -136,6 +136,18 @@ defmodule Wotex.Matter.NativeStreamOwnerInteropTest do
             assert eventually(fn -> not File.exists?("/proc/#{child}") end, 1_000)
             assert Port.info(port) == nil
             assert System.monotonic_time(:millisecond) - started <= 1_000
+
+          :stalled_cancellation ->
+            connection_monitor = Process.monitor(connection)
+            assert {_, 0} = System.cmd("/bin/kill", ["-STOP", Integer.to_string(child)])
+            started = System.monotonic_time(:millisecond)
+            Process.exit(owner, :kill)
+            assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :owner_closed}}}, 1_000
+            assert_receive {:DOWN, ^monitor, :process, ^owner, _}, 1_000
+            assert_receive {:DOWN, ^connection_monitor, :process, ^connection, :normal}, 1_000
+            assert eventually(fn -> not File.exists?("/proc/#{child}") end, 1_000)
+            assert Port.info(port) == nil
+            assert System.monotonic_time(:millisecond) - started <= 1_000
         end
 
         refute Process.alive?(owner)
@@ -149,8 +161,9 @@ defmodule Wotex.Matter.NativeStreamOwnerInteropTest do
       Map.fetch!(fixture, "result_path"),
       Jason.encode!(%{
         status: "passed",
-        modes: ["resume", "stream_loss", "connection_loss"],
+        modes: ["resume", "stream_loss", "stalled_cancellation", "connection_loss"],
         joined_native_cancellation: true,
+        stalled_native_cancellation_reaped: true,
         owned_stream_owners_after_cleanup: 0
       }),
       [:exclusive]

@@ -2542,3 +2542,59 @@ this cancellation change and does not meet the unchanged 95% floor.
 | Default gate | `888cee6a1ef584c168e4788f2f5a3f8dd22c22135caabb087817454e47fc5547` |
 | Minimum focused gate | `4cedef5ef61ed81768e47fe914b00d3174b432b1653a5c514c4087aaf0e02a79` |
 | ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+
+## Automatic native cancellation deadlines
+
+WMA-C03/C05 automatic cancellation retains one absolute 750 ms deadline until
+both native retirement and cancellation acknowledgement arrive. Receiving only
+one frame cannot release the watch. The existing 50 ms admission-maintenance
+tick enforces expiry and leaves time to reap the native child within the
+1000 ms local cleanup grace. No additional timer or global process is created.
+A native terminal error also requires retirement within this bound. Late frames
+cannot reset an expired watch. Explicit unsubscribe uses the earlier of its
+caller deadline and the existing cancellation deadline, including when retirement
+has arrived but its acknowledgement is still missing.
+
+Before correction, the gated cancellation fixture retains the connection beyond
+1000 ms when no subsequent API call occurs. The 26 subscription tests now pass.
+The new cases withhold both replies, send only the acknowledgement, send only
+retirement, or emit a terminal error without retirement. They assert connection,
+Port, admission-table and stream-owner cleanup, as applicable, with no duplicate
+terminal delivery. Explicit 100 ms cancellation joins also cover both incomplete
+reply orders.
+
+The real SDK case stops the native child, kills the stream owner and makes no
+further API call. The connection and exact native process are reaped within
+1000 ms on both BEAM lanes. Full lifecycle stress also passes: 1000 sequential
+reads, 32 concurrent callers, 100 receiver-loss cycles and 100 open/close cycles.
+Every receiver-loss cycle clears the cancellation-watch map. Current normal
+stress takes 151.7 seconds; minimum ASan/UBSan stress takes 174.4 seconds with
+leak detection enabled. Both retain 16 native file descriptors. Current RSS is
+21124 KiB at every sample; sanitizer RSS increases from 166560 to 191612 KiB.
+The latter remains a separate resource investigation, not a flat-RSS claim.
+The following 16 SDK/corpus tests pass in 18.6 and 25.5 seconds, including all
+17 native corpus vectors. Both owned peers are reaped. Native C++ inputs and
+binaries remain `9a4d124`.
+
+The current `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes 198 checks with
+33 excluded in 63.4 seconds. The minimum toolchain passes all 31 subscription
+and acceptance-harness tests in 35.8 seconds. ExDoc passes with warnings as
+errors. These focused SDK results do not accept the complete software runner,
+the C09 resource census or the unchanged 95% coverage floor.
+
+| Automatic-cancellation artifact | SHA-256 |
+| --- | --- |
+| Native connection | `d5e529b7657a526da54ef4383ce97fe7d44ecc1ca855b06dc65c368375fbe80c` |
+| Subscription assertions | `1cbf0c9e04577822cc2e9b39b1089e70c97809160024b76c5b00ab041659adec` |
+| Real SDK stream-owner assertions | `69a8b2cb32550f02dbdbc5e0728285bc225d171aa10b057624c67e40649467a5` |
+| Lifecycle stress assertions | `0344b41d56f63bf1f4592433c20e7296d4e7a5ee9fb80cb44c8e52fca1b77188` |
+| Failure before correction | `2f670658210bf43aa938751fd9c0326a87d762b96385ddaff27a6d2bd5a6c13b` |
+| Current subscription gate | `a44ed7153a0cb8c21e87db2973406bf292f2e721c1c56555880b6e097d577b13` |
+| Current lifecycle stress | `060dc8ae1e87d1871ffd199ac61a94aa33c5f70a72ff197a5c99882d1559d705` |
+| Minimum lifecycle stress | `2bc19d79b848a0c0a1f346dab10a5d74094f006da5002bdc37861a0419092788` |
+| Current SDK/corpus log | `ae59776cccd6f8f5c7a6d4f541cf9409899cec317b4586dd8af963f9c934f895` |
+| Minimum SDK/corpus log | `75361269a6a7cfd948e17366d40309d83f8c3973652b2fdbea5ef8801d8583d7` |
+| Stream-owner result, each SDK lane | `38db5e2adb531b8c05dfc937af138314562bcf039ae71056ca1c9ac087666a66` |
+| Default gate | `45bf461d58010c3b2ab6e527c95486632f52cd1a7a7f1240fe2a24bfae8b2e19` |
+| Minimum focused gate | `08357707262a4e774e93b8b63732ca8f6abd7480220ef69d1d60c00c838b34e5` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |

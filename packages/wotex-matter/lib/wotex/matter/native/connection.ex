@@ -34,6 +34,9 @@ defmodule Wotex.Matter.Native.Connection do
   Explicit unsubscribe joins an already pending cancellation without sending
   another native request. It retains the caller's deadline while waiting for
   native retirement and the outstanding cancellation acknowledgement.
+  Automatic cancellation retains a 750 ms deadline until both frames arrive.
+  The existing maintenance tick terminates an unresponsive native process within
+  the separate local cleanup grace even when no further API call is made.
   Cleanup waits for native exit, the Port monitor and removal from Port.info.
   Exit notification can precede asynchronous release of the Port's driver state.
   It is an implementation module; consumers use
@@ -48,6 +51,7 @@ defmodule Wotex.Matter.Native.Connection do
   @sdk_revision "250a9e6c50ee2068107f3c4808b680f5f2925415"
   @maximum_line_bytes 131_071
   @cleanup_timeout 1_000
+  @cancellation_timeout 750
   @response_grace 50
   @maximum_request_id 0xFFFFFFFFFFFFFFFF
   @mutating_operations [:write, :invoke, :commission_on_network, :open_window]
@@ -172,7 +176,8 @@ defmodule Wotex.Matter.Native.Connection do
                subscription_monitors: %{},
                closed_references: MapSet.new(),
                report_ledger: ReportLedger.new(),
-               internal_requests: %{}
+               internal_requests: %{},
+               cancellation_deadlines: %{}
              }}
 
           {:error, %Error{} = error} ->
@@ -328,13 +333,14 @@ defmodule Wotex.Matter.Native.Connection do
     with true <- generation == state.generation,
          :ok <- validate_owned_subscription(subscription, state) do
       if MapSet.member?(state.closed_references, subscription.reference) do
-        {:reply, {:ok, nil}, state}
+        if Map.has_key?(state.cancellation_deadlines, subscription.reference),
+          do: join_cancellation(state, subscription.reference, timeout),
+          else: {:reply, {:ok, nil}, state}
       else
         current = Map.fetch!(state.subscriptions, subscription.reference)
 
         if current.status == :closing do
-          deadline = Map.get(state, :call_deadline, System.monotonic_time(:millisecond) + timeout)
-          await_retirement(state, subscription.reference, deadline)
+          join_cancellation(state, subscription.reference, timeout)
         else
           unsubscribe_active(state, subscription, current, timeout)
         end
@@ -582,9 +588,13 @@ defmodule Wotex.Matter.Native.Connection do
       Admission.release(state.admission, lease)
     end
 
-    case Admission.close_failure(state.admission, now) do
-      nil -> {:ok, %{state | admission_timer: schedule_admission_reap()}}
-      code -> {:error, Error.new(code), state}
+    cancellation_expired =
+      Enum.any?(state.cancellation_deadlines, fn {_, deadline} -> deadline <= now end)
+
+    case {Admission.close_failure(state.admission, now), cancellation_expired} do
+      {nil, false} -> {:ok, %{state | admission_timer: schedule_admission_reap()}}
+      {nil, true} -> {:error, Error.new(:timeout), state}
+      {code, _} -> {:error, Error.new(code), state}
     end
   end
 
@@ -699,23 +709,37 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  defp await_retirement(state, reference, deadline) do
-    if MapSet.member?(state.closed_references, reference) and
-         reference not in Map.values(state.internal_requests) do
-      {:reply, {:ok, nil}, state}
-    else
-      case await_owner_line(state, deadline) do
-        {:ok, line, received} ->
-          with {:ok, frame} <- Wire.frame(line),
-               {:ok, next_state} <- decode_async_frame(frame, byte_size(line) + 1, received) do
-            await_retirement(next_state, reference, deadline)
-          else
-            {:error, error} -> error_reply(error, Map.put(received, :channel_failed, true))
-          end
+  defp join_cancellation(state, reference, timeout) do
+    caller_deadline = Map.get(state, :call_deadline, System.monotonic_time(:millisecond) + timeout)
 
-        {:error, error, received} ->
-          error_reply(error, Map.put(received, :channel_failed, true))
-      end
+    deadline =
+      min(caller_deadline, Map.get(state.cancellation_deadlines, reference, caller_deadline))
+
+    await_retirement(state, reference, deadline)
+  end
+
+  defp await_retirement(state, reference, deadline) do
+    cond do
+      System.monotonic_time(:millisecond) >= deadline ->
+        error_reply(Error.new(:timeout), Map.put(state, :channel_failed, true))
+
+      MapSet.member?(state.closed_references, reference) and
+          reference not in Map.values(state.internal_requests) ->
+        {:reply, {:ok, nil}, state}
+
+      true ->
+        case await_owner_line(state, deadline) do
+          {:ok, line, received} ->
+            with {:ok, frame} <- Wire.frame(line),
+                 {:ok, next_state} <- decode_async_frame(frame, byte_size(line) + 1, received) do
+              await_retirement(next_state, reference, deadline)
+            else
+              {:error, error} -> error_reply(error, Map.put(received, :channel_failed, true))
+            end
+
+          {:error, error, received} ->
+            error_reply(error, Map.put(received, :channel_failed, true))
+        end
     end
   end
 
@@ -1288,8 +1312,11 @@ defmodule Wotex.Matter.Native.Connection do
        )
        when map_size(frame) == 4 and is_binary(id) do
     case Map.pop(state.internal_requests, id) do
-      {nil, _} -> {:error, Error.new(:invalid_frame)}
-      {_reference, requests} -> {:ok, %{state | internal_requests: requests}}
+      {nil, _} ->
+        {:error, Error.new(:invalid_frame)}
+
+      {reference, requests} ->
+        {:ok, complete_cancellation(%{state | internal_requests: requests}, reference)}
     end
   end
 
@@ -1327,6 +1354,7 @@ defmodule Wotex.Matter.Native.Connection do
           [:subscriptions, reference, :close_result],
           if(status == :closing, do: subscription.close_result, else: error.code)
         )
+        |> watch_cancellation(reference)
 
       {:ok, closing}
     else
@@ -1693,6 +1721,7 @@ defmodule Wotex.Matter.Native.Connection do
     state
     |> drop_subscription(reference)
     |> Map.put(:closed_references, closed)
+    |> complete_cancellation(reference)
   end
 
   defp validate_owned_subscription(%Subscription{} = subscription, state) do
@@ -1860,6 +1889,7 @@ defmodule Wotex.Matter.Native.Connection do
           state
           |> put_in([:subscriptions, reference, :status], :closing)
           |> put_in([:subscriptions, reference, :close_result], result)
+          |> watch_cancellation(reference)
 
         owners = stop_stream_owners([subscription])
         await_stream_owners(owners, System.monotonic_time(:millisecond) + @cleanup_timeout)
@@ -1903,6 +1933,29 @@ defmodule Wotex.Matter.Native.Connection do
       |> Map.put(:internal_requests, Map.put(state.internal_requests, id, reference))
     else
       fail_native_input(state)
+    end
+  end
+
+  defp watch_cancellation(state, reference) do
+    # The existing 50 ms maintenance tick leaves time to reap the native child
+    # within the separate 1000 ms local cleanup grace.
+    deadline = System.monotonic_time(:millisecond) + @cancellation_timeout
+    update_in(state.cancellation_deadlines, &Map.put_new(&1, reference, deadline))
+  end
+
+  defp complete_cancellation(state, reference) do
+    deadline = Map.get(state.cancellation_deadlines, reference)
+
+    cond do
+      is_integer(deadline) and System.monotonic_time(:millisecond) >= deadline ->
+        fail_native_input(state)
+
+      MapSet.member?(state.closed_references, reference) and
+          reference not in Map.values(state.internal_requests) ->
+        update_in(state.cancellation_deadlines, &Map.delete(&1, reference))
+
+      true ->
+        state
     end
   end
 
