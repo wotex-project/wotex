@@ -10,6 +10,49 @@ defmodule Wotex.Matter.SubscriptionTest do
   @event_path %{fabric_id: 1, node_id: 3, endpoint: 2, cluster: 0x0039, member: 3}
   @sensor_path %{fabric_id: 1, node_id: 3, endpoint: 4, cluster: 0x0402, member: 0}
 
+  test "native report credit is consumed while another request waits for its response" do
+    audit = temporary_path("credit-during-request")
+    executable = native_fixture(audit, "blocked_health")
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+
+    request = %{
+      kind: :attribute,
+      paths: [@path],
+      min_interval_s: 1,
+      max_interval_s: 60,
+      queue_limit: 64,
+      resubscribe: false
+    }
+
+    assert {:ok, subscription} =
+             Native.subscribe_acknowledged(session.handle, request, self(), 3_000)
+
+    assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 1} = first}, 1_000
+    assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 2} = second}, 1_000
+    health = Task.async(fn -> Native.health(session.handle, 1_000) end)
+
+    try do
+      assert eventually(fn -> Enum.any?(audit_frames(audit), &(&1["operation"] == "health")) end)
+
+      for delivery <- [second, first] do
+        send(
+          delivery.connection,
+          {:native_report_consumed, delivery.generation, delivery.reference, delivery.sequence,
+           delivery.token}
+        )
+      end
+
+      assert {:ok, %{"status" => "ready"}} = Task.await(health, 2_000)
+      assert :sys.get_state(session.handle.pid).report_ledger.pending == %{}
+      [ack] = Enum.filter(audit_frames(audit), &(&1["event"] == "report_ack"))
+      assert ack["report_sequence"] == 2
+      assert :ok = Matter.unsubscribe(session, subscription)
+    after
+      Task.shutdown(health, :brutal_kill)
+      Matter.disconnect(session)
+    end
+  end
+
   test "native Runtime credit waits for exact consumption tokens and advances only the contiguous prefix" do
     audit = temporary_path("acknowledged-reports")
     executable = native_fixture(audit, "reports")
@@ -627,7 +670,7 @@ defmodule Wotex.Matter.SubscriptionTest do
           [_, current] = Regex.run(~r/"subscription_id":"([0-9a-f]{32})"/, line)
           IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":{"subscription_id":"#{current}","generation":1,"min_interval_s":2,"max_interval_s":45,"sdk_subscription_id":73}}))
           case mode do
-            "reports" ->
+            mode when mode in ["reports", "blocked_health"] ->
               attribute_report.(current, 1, 1, 7)
               attribute_report.(current, 2, 2, 8)
             "credit_overflow" ->
@@ -643,9 +686,16 @@ defmodule Wotex.Matter.SubscriptionTest do
 
         String.contains?(line, ~s("operation":"unsubscribe")) ->
           [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
-          last = if mode == "reports", do: 2, else: if(mode in ["event", "null"], do: 1, else: 0)
+          last = if mode in ["reports", "blocked_health"], do: 2, else: if(mode in ["event", "null"], do: 1, else: 0)
           IO.puts(~s({"version":1,"event":"stream_retired","session_generation":"#{session_generation}","subscription_id":"#{subscription_id}","generation":1,"last_report_sequence":#{last}}))
           IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":null}))
+          loop.(loop, subscription_id)
+
+        mode == "blocked_health" and String.contains?(line, ~s("operation":"health")) ->
+          [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
+          acknowledgement = read.()
+          unless String.contains?(acknowledgement, ~s("event":"report_ack")), do: System.halt(1)
+          IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":{"status":"ready"}}))
           loop.(loop, subscription_id)
 
         String.contains?(line, ~s("operation":"close")) ->

@@ -15,6 +15,12 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     member: 0
   }
 
+  @write Map.merge(@read, %{
+           type: :write,
+           member: 18,
+           value: %{tag: :anonymous, type: :i16, value: 2000}
+         })
+
   test "WMA-C03 native request admission stops at 64 before the owner mailbox" do
     audit = temporary_path("admission")
     assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
@@ -84,6 +90,58 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     after
       assert :ok = Native.disconnect(handle)
       assert :ok = Native.disconnect(other)
+    end
+  end
+
+  @tag :caller_control
+  test "WMA-C03 dead queued callers release admission during blocked native I/O" do
+    audit = temporary_path("dead-queued-caller")
+    assert {:ok, handle} = Native.connect(options(fixture("silent_request", audit)))
+    active = spawn(fn -> Native.health(handle, 10_000) end)
+    assert request_recorded?(audit, 100)
+    queued = spawn(fn -> Native.request(handle, @write, 10_000) end)
+
+    try do
+      assert admission_reaches?(handle, 2, 100)
+      monitor = Process.monitor(queued)
+      Process.exit(queued, :kill)
+      assert_receive {:DOWN, ^monitor, :process, ^queued, :killed}, 100
+      assert admission_reaches?(handle, 1, 20)
+      assert {:error, %Error{code: :timeout, effect: :none}} = Native.request(handle, @write, 25)
+      assert admission_reaches?(handle, 1, 20)
+      refute File.read!(audit) =~ ~s("operation":"write")
+      assert Process.alive?(handle.pid)
+    after
+      Process.exit(active, :kill)
+      Process.exit(queued, :kill)
+      Native.disconnect(handle)
+    end
+  end
+
+  @tag :caller_control
+  test "WMA-C03 active caller death closes native I/O and fails queued mutations without effects" do
+    audit = temporary_path("dead-active-caller")
+    assert {:ok, handle} = Native.connect(options(fixture("silent_request", audit)))
+    owner_monitor = Process.monitor(handle.pid)
+    {:links, links} = Process.info(handle.pid, :links)
+    [port] = Enum.filter(links, &is_port/1)
+    {:os_pid, child} = Port.info(port, :os_pid)
+    active = spawn(fn -> Native.health(handle, 10_000) end)
+    assert request_recorded?(audit, 100)
+    queued = Task.async(fn -> Native.request(handle, @write, 5_000) end)
+
+    try do
+      assert admission_reaches?(handle, 2, 100)
+      Process.exit(active, :kill)
+      assert_receive {:DOWN, ^owner_monitor, :process, _, :normal}, 1_000
+      assert {:error, %Error{code: :transport_closed, effect: :none}} = Task.await(queued, 1_000)
+      assert child_stopped?(child, 100)
+      refute File.read!(audit) =~ ~s("operation":"write")
+      assert :ets.info(handle.admission) == :undefined
+    after
+      Process.exit(active, :kill)
+      Task.shutdown(queued, :brutal_kill)
+      Native.disconnect(handle)
     end
   end
 
@@ -547,7 +605,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
         value: %{tag: :anonymous, type: :i16, value: 2000}
       })
 
-    assert {:error, %Error{code: :timeout}} = Native.request(handle, mutation, 10)
+    assert {:error, %Error{code: :timeout, effect: :none}} = Native.request(handle, mutation, 10)
     assert {:ok, %{"status" => "ready"}} = Task.await(first)
     assert {:ok, %{"status" => "ready"}} = Native.health(handle)
     refute File.read!(audit) =~ ~s("operation":"write")
@@ -803,6 +861,17 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     else
       Process.sleep(5)
       mailbox_reaches?(pid, count, attempts - 1)
+    end
+  end
+
+  defp admission_reaches?(_, _, 0), do: false
+
+  defp admission_reaches?(handle, count, attempts) do
+    if :ets.info(handle.admission, :size) == count + 1 do
+      true
+    else
+      Process.sleep(5)
+      admission_reaches?(handle, count, attempts - 1)
     end
   end
 

@@ -7,7 +7,12 @@ defmodule Wotex.Matter.Native.Connection do
   increasing native request IDs, accepts one response for the expected ID, and
   closes the Port when the caller or connection terminates. A missed response
   deadline expires the generation so a delayed frame cannot be correlated with
-  later work. It is an implementation module; consumers use
+  later work. Admitted calls retain one caller monitor and deadline timer until
+  completion. The bounded FIFO queue removes dead or expired callers without
+  transmission. Native response waits also service queued call admission,
+  cancellation, report consumption and receiver death. Losing the active caller
+  closes its generation and fails queued requests before transmission.
+  It is an implementation module; consumers use
   `Wotex.Matter.Native` and its opaque `Wotex.Matter.Native.Handle`.
   """
 
@@ -125,6 +130,11 @@ defmodule Wotex.Matter.Native.Connection do
                owner_monitor: owner_monitor,
                generation: generation,
                admission: Admission.new(generation),
+               calls: %{},
+               call_order: :queue.new(),
+               caller_monitors: %{},
+               active_call: nil,
+               drain_scheduled: false,
                fabric_id: options.fabric_id,
                next_id: 2,
                subscriptions: %{},
@@ -146,26 +156,8 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   @impl GenServer
-  def handle_call({:bounded, message, deadline, lease}, {caller, _} = from, state) do
-    if Admission.owned?(state.admission, lease, caller, deadline) do
-      try do
-        remaining = deadline - System.monotonic_time(:millisecond)
-
-        if remaining <= 0 do
-          {:reply, {:error, Error.new(:timeout)}, state}
-        else
-          message
-          |> remaining_budget(remaining)
-          |> handle_call(from, Map.put(state, :call_deadline, deadline))
-          |> clear_call_deadline()
-        end
-      after
-        Admission.release(state.admission, lease)
-      end
-    else
-      {:reply, {:error, Error.new(:invalid_handle)}, state}
-    end
-  end
+  def handle_call({:bounded, message, deadline, lease}, from, state),
+    do: {:noreply, enqueue_call(state, message, deadline, lease, from)}
 
   def handle_call(:identity, _, state),
     do: {:reply, {:ok, state.generation, state.admission}, state}
@@ -333,6 +325,47 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   @impl GenServer
+  def handle_info(:drain_calls, state) do
+    case :queue.out(state.call_order) do
+      {:empty, _} ->
+        {:noreply, %{state | drain_scheduled: false}}
+
+      {{:value, lease}, order} ->
+        call = Map.fetch!(state.calls, lease)
+        active = %{state | call_order: order, active_call: lease, drain_scheduled: false}
+        remaining = call.deadline - System.monotonic_time(:millisecond)
+
+        result =
+          cond do
+            not Process.alive?(elem(call.from, 0)) ->
+              {:reply, {:error, Error.new(:owner_closed)}, active}
+
+            remaining <= 0 ->
+              {:reply, {:error, Error.new(:timeout)}, active}
+
+            true ->
+              call.message
+              |> remaining_budget(remaining)
+              |> handle_call(call.from, Map.put(active, :call_deadline, call.deadline))
+              |> clear_call_deadline()
+          end
+
+        case result do
+          {:reply, reply, next_state} ->
+            {:noreply, next_state |> finish_call(lease, reply) |> schedule_drain()}
+
+          {:stop, reason, reply, next_state} ->
+            {:stop, reason, finish_call(next_state, lease, reply)}
+        end
+    end
+  end
+
+  def handle_info({:expire_call, lease}, state) do
+    if lease == state.active_call,
+      do: {:noreply, state},
+      else: {:noreply, finish_call(state, lease, {:error, Error.new(:timeout)})}
+  end
+
   def handle_info({:native_report_consumed, generation, reference, sequence, token}, state) do
     case Map.fetch(state.report_ledger.pending, sequence) do
       {:ok, %{stream: {^reference, _}, token: ^token, bytes: bytes, consumed: false}}
@@ -350,12 +383,18 @@ defmodule Wotex.Matter.Native.Connection do
     do: {:stop, :normal, notify_session_failure(Error.new(:owner_closed), state)}
 
   def handle_info({:DOWN, monitor, :process, _, _}, state) do
-    case Map.fetch(state.subscription_monitors, monitor) do
-      {:ok, reference} ->
-        {:noreply, cancel_subscription(state, reference, :receiver_closed)}
+    case Map.fetch(state.caller_monitors, monitor) do
+      {:ok, lease} ->
+        {:noreply, finish_call(state, lease, {:error, Error.new(:owner_closed)})}
 
       :error ->
-        {:noreply, state}
+        case Map.fetch(state.subscription_monitors, monitor) do
+          {:ok, reference} ->
+            {:noreply, cancel_subscription(state, reference, :receiver_closed)}
+
+          :error ->
+            {:noreply, state}
+        end
     end
   end
 
@@ -383,6 +422,10 @@ defmodule Wotex.Matter.Native.Connection do
 
   @impl GenServer
   def terminate(_, state) when is_map(state) do
+    Enum.each(Map.get(state, :calls, %{}), fn {lease, _} ->
+      finish_call(state, lease, {:error, Error.new(:transport_closed)})
+    end)
+
     Enum.each(Map.get(state, :subscriptions, %{}), fn {_reference, subscription} ->
       result =
         if subscription.status == :closing,
@@ -397,6 +440,66 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   def terminate(_, _), do: :ok
+
+  defp enqueue_call(state, message, deadline, lease, {caller, _} = from) do
+    cond do
+      not Admission.owned?(state.admission, lease, caller, deadline) or
+          Map.has_key?(state.calls, lease) ->
+        GenServer.reply(from, {:error, Error.new(:invalid_handle)})
+        state
+
+      not Process.alive?(caller) or deadline <= System.monotonic_time(:millisecond) ->
+        Admission.release(state.admission, lease)
+        GenServer.reply(from, {:error, Error.new(:timeout)})
+        state
+
+      true ->
+        monitor = Process.monitor(caller)
+        remaining = max(deadline - System.monotonic_time(:millisecond), 0)
+        timer = Process.send_after(self(), {:expire_call, lease}, remaining)
+        call = %{message: message, deadline: deadline, from: from, monitor: monitor, timer: timer}
+
+        %{
+          state
+          | calls: Map.put(state.calls, lease, call),
+            call_order: :queue.in(lease, state.call_order),
+            caller_monitors: Map.put(state.caller_monitors, monitor, lease)
+        }
+        |> schedule_drain()
+    end
+  end
+
+  defp schedule_drain(%{active_call: nil, drain_scheduled: false} = state) do
+    if :queue.is_empty(state.call_order) do
+      state
+    else
+      send(self(), :drain_calls)
+      %{state | drain_scheduled: true}
+    end
+  end
+
+  defp schedule_drain(state), do: state
+
+  defp finish_call(state, lease, reply) do
+    case Map.pop(state.calls, lease) do
+      {nil, _} ->
+        state
+
+      {call, calls} ->
+        Process.cancel_timer(call.timer)
+        Process.demonitor(call.monitor, [:flush])
+        Admission.release(state.admission, lease)
+        GenServer.reply(call.from, reply)
+
+        %{
+          state
+          | calls: calls,
+            call_order: :queue.filter(&(&1 != lease), state.call_order),
+            caller_monitors: Map.delete(state.caller_monitors, call.monitor),
+            active_call: if(state.active_call == lease, do: nil, else: state.active_call)
+        }
+    end
+  end
 
   defp execute(state, operation, parameters, timeout) do
     case request_frame(state, operation, parameters, timeout) do
@@ -606,31 +709,89 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   defp await_response_until(state, id, deadline) do
-    remaining = max(deadline + @response_grace - System.monotonic_time(:millisecond), 0)
+    case await_owner_line(state, deadline + @response_grace) do
+      {:ok, line, received_state} ->
+        case Wire.frame(line) do
+          {:ok, frame} -> decode_received_response(frame, line, received_state, id, deadline)
+          _ -> {:channel_error, Error.new(:invalid_frame), received_state}
+        end
 
-    with true <- remaining > 0,
-         {:ok, line} <-
-           await_line_until(state.port, state.owner_monitor, deadline + @response_grace),
-         {:ok, frame} <- Wire.frame(line) do
-      case decode_response(frame, id) do
-        {:ok, result} ->
-          if System.monotonic_time(:millisecond) <= deadline,
-            do: {:ok, result, state},
-            else: {:channel_error, Error.new(:timeout), state}
+      {:error, error, received_state} ->
+        {:channel_error, error, received_state}
+    end
+  end
 
-        {:error, %Error{} = error} ->
-          {:error, error, state}
+  defp decode_received_response(frame, line, state, id, deadline) do
+    case decode_response(frame, id) do
+      {:ok, result} ->
+        if System.monotonic_time(:millisecond) <= deadline,
+          do: {:ok, result, state},
+          else: {:channel_error, Error.new(:timeout), state}
 
-        :not_response ->
-          case decode_async_frame(frame, byte_size(line) + 1, state) do
-            {:ok, next_state} -> await_response_until(next_state, id, deadline)
-            {:error, error} -> {:channel_error, error, state}
-          end
-      end
+      {:error, %Error{} = error} ->
+        {:error, error, state}
+
+      :not_response ->
+        case decode_async_frame(frame, byte_size(line) + 1, state) do
+          {:ok, next_state} -> await_response_until(next_state, id, deadline)
+          {:error, error} -> {:channel_error, error, state}
+        end
+    end
+  end
+
+  defp await_owner_line(state, deadline) do
+    remaining = deadline - System.monotonic_time(:millisecond)
+    port = state.port
+    owner_monitor = state.owner_monitor
+
+    if remaining <= 0 do
+      {:error, Error.new(:timeout), state}
     else
-      false -> {:channel_error, Error.new(:timeout), state}
-      {:error, %Error{} = error} -> {:channel_error, error, state}
-      _ -> {:channel_error, Error.new(:invalid_frame), state}
+      receive do
+        {^port, {:data, {:eol, line}}} when byte_size(line) <= @maximum_line_bytes ->
+          if System.monotonic_time(:millisecond) < deadline,
+            do: {:ok, line, state},
+            else: {:error, Error.new(:timeout), state}
+
+        {^port, {:data, {:noeol, _}}} ->
+          {:error, Error.new(:response_limit), state}
+
+        {^port, {:exit_status, _}} ->
+          {:error, Error.new(:transport_closed), state}
+
+        {:EXIT, ^port, _} ->
+          {:error, Error.new(:transport_closed), state}
+
+        {:DOWN, ^owner_monitor, :process, _, _} ->
+          {:error, Error.new(:owner_closed), state}
+
+        {:DOWN, monitor, :process, _, _} = message ->
+          if Map.get(state.caller_monitors, monitor, :unknown) == state.active_call do
+            {:error, Error.new(:owner_closed), state}
+          else
+            {:noreply, next_state} = handle_info(message, state)
+            await_owner_line(next_state, deadline)
+          end
+
+        {:"$gen_call", from, {:bounded, message, call_deadline, lease}} ->
+          state
+          |> enqueue_call(message, call_deadline, lease, from)
+          |> await_owner_line(deadline)
+
+        {:expire_call, _} = message ->
+          {:noreply, next_state} = handle_info(message, state)
+          await_owner_line(next_state, deadline)
+
+        {:native_report_consumed, _, _, _, _} = message ->
+          {:noreply, next_state} = handle_info(message, state)
+          await_owner_line(next_state, deadline)
+
+        {:flush_subscription, _} = message ->
+          {:noreply, next_state} = handle_info(message, state)
+          await_owner_line(next_state, deadline)
+      after
+        remaining -> {:error, Error.new(:timeout), state}
+      end
     end
   end
 

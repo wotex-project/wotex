@@ -1228,3 +1228,59 @@ complete WMA-C03/C09 evidence and the unchanged 95% coverage gate remain open.
 | Failing regression log | `f945f9c5b7bdbed67aea318d382c7d3a2db08e59cfee898c4f9607aa1360c951` |
 | Current default gate log | `56d4e5e9579a2ec07514a73856cd408a0e7f6ca8b76fcc5673c8a1bbcd6a957d` |
 | Minimum focused log | `047c0ebba8b1a6615f466772421a2799104ff1992934c3e14c1af75bf5dd9eb8` |
+
+## Caller cancellation during native response waits
+
+The connection receives admitted calls into a bounded FIFO queue and retains one
+caller monitor and deadline timer per call. Its native response wait also handles
+new calls, queue expiry, caller and receiver death, report consumption and initial
+report delivery. Dead or expired queued calls release their reservations without
+transmission. Active-caller death fails the generation, closes its native child
+and returns effect `:none` to queued mutations that were never transmitted.
+
+Two regressions fail on the preceding implementation and pass after the change:
+a dead queued caller releases its slot during a blocked ten-second native call,
+and active-caller death closes the connection within one second while rejecting
+the queued mutation without effects. The first case also requires an expired
+queued mutation to return effect `:none` while native I/O remains blocked. A
+separate Port fixture withholds a health response until it receives a real report
+ACK; the connection consumes its two existing report tokens and sends that ACK
+without waiting for the health response. This fixture proves BEAM scheduling and
+credit handling, not SDK device interoperability.
+
+The default gate passes 154 checks with 22 excluded. The minimum supported BEAM
+passes all 51 connection, subscription, recovery and Runtime stream tests. ExDoc
+passes without warnings. Both host test lanes use four scheduler threads with two
+dirty CPU and two dirty I/O threads. Earlier simultaneous runs with the default
+VM scheduler count missed fixture startup deadlines; no deadline or assertion is
+relaxed in the passing runs.
+
+Both real SDK peer lifecycle lanes pass: 149.8 seconds on current Linux and
+180.3 seconds on the minimum Linux sanitizer lane with leak detection enabled.
+Each executes 1000 reads, 32 concurrent callers, 100 receiver-death cycles and
+100 open/read/close cycles. The added assertions require empty request maps,
+FIFO, caller-monitor maps and admission slots after sequential and concurrent
+work, and deletion of the admission table after every connection closes. Owned
+Ports and children return to baseline. FD counts remain 16 in all ten samples.
+Current native RSS remains 21024 KiB; sanitizer RSS grows from 165000 to 189244
+KiB, so this cohort makes no sanitizer RSS plateau claim.
+
+These runs use the unchanged byte-counter native hosts recorded above. Both
+BEAM lanes compile into fresh build directories: incremental compilation against
+read-only source mounts failed while updating cached dependency timestamps before
+any lifecycle case ran. This cohort is not a fresh full native/software build
+receipt. Default-suite coverage is 89.2%, below the unchanged 95% gate. Explicit
+cancellation when ordinary admission is full, complete fault/instrumentation and
+C09 matrix evidence, and the remaining process-flow corpus remain open.
+
+| Caller-control artifact | SHA-256 |
+| --- | --- |
+| Connection | `e0d20c85e01e30d62908d552b9ac86914f32188a1eab656884e592b1506c623d` |
+| Persistent connection tests | `9010abfee0626a64c73d4a377a76c0df8e8f1a3a2a4bdd57bb5d91ee2beb1dde` |
+| Subscription tests | `c463e4de5c8a94f95624d7842aba95865dc4652fd333c9d478a2837b9fb83aac` |
+| Lifecycle test | `e87f0ae9111fa783d8ad659143c3f00c5aa4d413b8addca57a7ea2dbd8edd669` |
+| Failing caller-control log | `021c69411405000a4b7c1df64febc6548df95396f0c9d18f165daf7ed5f94a22` |
+| Current default gate log | `c42464ce4a1348d08f0d0d9a9a9bd93423fc7525a22ed114cf39afb2414256df` |
+| Minimum focused log | `fc584da32be84262e4a745f3231f1e1386685dea236af24dcf510e8bf8856500` |
+| Current Linux lifecycle log | `81e418ed5b4c82e2ee368347630aaf3a1a29513eb8f707ba8b52c9e5c1bcb667` |
+| Minimum Linux sanitizer lifecycle log | `6831c8893a42dd43aa589cfb9a778ff80af7a759d2a36fb7f68e156330599c77` |

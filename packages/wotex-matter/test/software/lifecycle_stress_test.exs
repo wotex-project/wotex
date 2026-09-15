@@ -65,6 +65,7 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
             for _ <- 1..100, do: assert(read(session, address) == value)
             assert fd_count(child) == baseline_fds
             assert monitors(session.handle.pid) == baseline_monitors
+            assert admission_drained?(session.handle)
             %{completed_reads: count * 100, rss_kib: rss(child), fds: fd_count(child)}
           end
 
@@ -80,6 +81,7 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
         assert length(results) == 32
         assert Enum.all?(results, &(&1 == {:ok, value}))
         assert fd_count(child) == baseline_fds
+        assert admission_drained?(session.handle)
 
         for _ <- 1..100 do
           parent = self()
@@ -161,6 +163,7 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
       assert :ok = Matter.disconnect(session)
       assert_receive {:DOWN, ^monitor, :process, ^owner, :normal}, 1000
       assert child_stopped?(child, 100)
+      assert :ets.info(session.handle.admission) == :undefined
     end
   end
 
@@ -208,6 +211,14 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
   defp monitors(owner) do
     {:monitors, values} = Process.info(owner, :monitors)
     MapSet.new(values)
+  end
+
+  defp admission_drained?(handle) do
+    state = :sys.get_state(handle.pid)
+
+    :ets.info(handle.admission, :size) == 1 and state.calls == %{} and
+      state.caller_monitors == %{} and :queue.is_empty(state.call_order) and
+      state.active_call == nil
   end
 
   defp fd_count(pid), do: "/proc/#{pid}/fd" |> File.ls!() |> length()
