@@ -156,6 +156,8 @@ dispatch to that executable remains planned. `Wotex.CoAP.Native.Wire` validates
 bounded ready and response frames and constructs complete Messages without
 starting a process. `Wotex.CoAP.Native.Body` withholds streamed bytes until exact
 length and hash verification. `Wotex.CoAP.Native.Report` correlates report/body
-envelopes and verifies Message metadata. Credit state and Port ownership remain planned.
+envelopes and verifies Message metadata. `Wotex.CoAP.Native.ReportLedger` bounds
+the eight-frame credit window and serializes cumulative acknowledgments. Port
+ownership and live credit integration remain planned.
 Existing Python files perform test/build orchestration only. Their recorded
 results do not establish acceptance of the planned Mix tasks.

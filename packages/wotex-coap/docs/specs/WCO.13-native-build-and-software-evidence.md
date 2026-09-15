@@ -224,6 +224,15 @@ terminal control shape without a report sequence. Its tests cover the
 inline/streamed threshold component of F15. Sequence continuity, acknowledgment
 and live helper execution remain owner obligations.
 
+`Wotex.CoAP.Native.ReportLedger` implements the BEAM-side immutable credit state
+for one established subscription generation. It admits only contiguous report
+sequences, retains at most eight frames and 1 MiB of newline-terminated wire
+data, holds one complete report behind an exact delivery token, and proposes
+only a consumed contiguous prefix. A proposal remains in flight until its exact
+successful credit response is recorded. Its tests execute the owner-side
+accounting component of F15; live native replay, Port mailbox saturation and
+receiver admission remain process-level obligations.
+
 Paths and content-format numbers obey .10/.11. Body chunks decode to at most
 32,768 bytes; offsets must exactly equal the next expected offset. The byte
 envelope admits only its exact `type` and `base64` fields. Its base64 uses the

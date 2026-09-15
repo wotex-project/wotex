@@ -139,6 +139,14 @@ canonical ETag bytes and the reserved no-credit terminal shape. These pure tests
 do not assert sequence continuity, cumulative acknowledgment, queues or process
 cleanup.
 
+`native_report_ledger_test.exs` executes eight exact tests for the BEAM-side
+credit state. It covers zero initial credit, a single in-flight credit command,
+strict uint64 sequence continuity, the eight-frame and 1 MiB outstanding wire
+bounds, exact delivery tokens, one retained complete report, contiguous
+cumulative acknowledgment and the six-frame F15 accounting trace. This immutable
+state does not run a helper, write a Port, prove native replay handling or admit a
+consumer queue by itself.
+
 ## Required verification
 
 ### Datagram deadline assertions
