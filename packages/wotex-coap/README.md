@@ -168,8 +168,9 @@ until exact body length/hash validation and one-time reference resolution.
 Explicit outbound payloads use correlated begin/chunk/end commands before the
 request; upload failures occur before mutation submission. The root API preserves
 its two-field session value while dispatching explicit OSCORE unary requests to
-this owner. Native discovery, Observe, Runtime and production-worker execution
-remain planned.
+this owner. Native discovery uses the same owner with its 64 KiB response ceiling
+checked before streamed-body assembly. Observe, Runtime and production-worker
+execution remain planned.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic

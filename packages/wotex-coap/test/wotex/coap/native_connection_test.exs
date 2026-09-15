@@ -174,6 +174,44 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     assert :ok = Wotex.CoAP.disconnect(session)
   end
 
+  test "WCO-D03 public native discovery preserves the query and parses bounded links", context do
+    File.write!(Path.join(context.store, "mode"), "request_discovery")
+    assert {:ok, session} = Wotex.CoAP.connect(context.options)
+
+    assert {:ok, links} =
+             Wotex.CoAP.discover(session, %{query: "rt=temperature%2Dc&empty="})
+
+    assert length(links) == 64
+    assert Enum.all?(links, &(&1.href == "/"))
+
+    assert %{
+             "id" => "2",
+             "operation" => "request",
+             "parameters" => %{
+               "method" => "GET",
+               "path" => "/.well-known/core?rt=temperature%2Dc&empty=",
+               "confirmable" => true,
+               "accept" => 40
+             }
+           } = read_json(context.store, "request-1.json")
+
+    refute File.exists?(Path.join(context.store, "body-begin.json"))
+    assert :ok = Wotex.CoAP.disconnect(session)
+  end
+
+  test "WCO-D03 native discovery refuses an oversized declared body before allocation", context do
+    File.write!(Path.join(context.store, "mode"), "request_discovery_oversize")
+    assert {:ok, session} = Wotex.CoAP.connect(context.options)
+    monitor = Process.monitor(session.pid)
+
+    assert {:error, %Error{code: :body_limit, effect: :none}} =
+             Wotex.CoAP.discover(session, %{})
+
+    assert_receive {:DOWN, ^monitor, :process, _, _}, 1_000
+    assert_helper_stopped(context.store, 1_000)
+    assert :ok = Wotex.CoAP.disconnect(session)
+  end
+
   test "WCO-N02 public selection rejects mismatched and incomplete native configuration",
        context do
     for {options, code} <- [
@@ -738,6 +776,22 @@ defmodule Wotex.CoAP.NativeConnectionTest do
           }
         ] do
       assert {:error, %Error{code: :invalid_request}} = Connection.request(pid, invalid, 1_000)
+    end
+
+    for invalid_options <- [
+          nil,
+          [max_body_size: 32_767],
+          [max_body_size: 1_048_577],
+          [max_body_size: 65_536, max_body_size: 65_536],
+          [unknown: 65_536]
+        ] do
+      assert {:error, %Error{code: :invalid_request}} =
+               Connection.request(
+                 pid,
+                 %{method: :get, path: "/value", confirmable: true},
+                 1_000,
+                 invalid_options
+               )
     end
 
     assert Admission.reservations(admission) == []
@@ -1419,6 +1473,24 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
     request_reply = fn request_id -> IO.write(request_line.(request_id)) end
 
+    discovery_reply = fn request_id ->
+      segment = "</>;x=" <> String.duplicate("a", 1024)
+      prefix = Enum.join(List.duplicate(segment, 63), ",") <> ",</>;x="
+      body = prefix <> String.duplicate("b", 65_536 - byte_size(prefix))
+      first = binary_part(body, 0, 32_768)
+      last = binary_part(body, 32_768, 32_768)
+      hash = Base.encode16(:crypto.hash(:sha256, body), case: :lower)
+
+      frames =
+        ~s({"version":1,"id":"\#{request_id}","event":"body_begin","body_id":"discovery","length":65536,"sha256":"\#{hash}"}\\n) <>
+          ~s({"version":1,"id":"\#{request_id}","event":"body_chunk","body_id":"discovery","offset":0,"data":{"type":"bytes","base64":"\#{Base.encode64(first)}"}}\\n) <>
+          ~s({"version":1,"id":"\#{request_id}","event":"body_chunk","body_id":"discovery","offset":32768,"data":{"type":"bytes","base64":"\#{Base.encode64(last)}"}}\\n) <>
+          ~s({"version":1,"id":"\#{request_id}","event":"body_end","body_id":"discovery"}\\n) <>
+          ~s({"version":1,"id":"\#{request_id}","ok":true,"result":{"type":"ack","code":69,"message_id":322,"token":{"type":"bytes","base64":"Ag=="},"options":[{"number":12,"value":{"type":"bytes","base64":"KA=="}}],"body_id":"discovery"}}\\n)
+
+      raw.(frames)
+    end
+
     stream_reply = fn request_id, event_id, expected_hash, result_kind ->
       body = :binary.copy("A", 32_769)
       first = binary_part(body, 0, 32_768)
@@ -1543,6 +1615,22 @@ defmodule Wotex.CoAP.NativeConnectionTest do
                   request_id = id.(request)
                   stream_reply.(request_id, request_id, :valid, :inline)
                   IO.read(:stdio, :line)
+
+                "request_discovery" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  discovery_reply.(id.(request))
+                  IO.read(:stdio, :line)
+
+                "request_discovery_oversize" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+
+                  IO.write(
+                    ~s({"version":1,"id":"\#{id.(request)}","event":"body_begin","body_id":"discovery","length":65537,"sha256":"\#{String.duplicate("0", 64)}"}\\n)
+                  )
+
+                  Process.sleep(:infinity)
 
                 "request_upload" ->
                   begin_command = read_command.("body-begin.json")

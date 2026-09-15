@@ -132,7 +132,7 @@ absolute context directory, accepts the pinned ready identity and correlates
 the monotonic `open` and `close` commands. Its bounded byte accumulator accepts
 arbitrary Port splits and rejects extra lines, incomplete EOF and frames beyond
 128 KiB. The retained process state contains no credential or command line.
-Forty-four contract-injection tests cover exact argv and envelopes, invalid options,
+Forty-six contract-injection tests cover exact argv and envelopes, invalid options,
 malformed/truncated/oversized input, wrong and duplicate response identities,
 finite waits, status redaction, admission-owned close control and owner-death
 cleanup within C03. The injected test executable is not the production OSCORE
@@ -145,8 +145,9 @@ exhaustion precede the native request submission marker and preserve effect
 `none`. The public root API selects this owner only for an explicit `coap`
 OSCORE credential plus verified backend, preserves the two-field session value,
 normalizes `send/2` and method-helper inputs, and dispatches unary requests and
-disconnect. Native discovery, Observe delivery and live report credit remain
-unimplemented.
+disconnect. Public `discover/2` applies its 64 KiB ceiling to the native request;
+an oversized streamed `body_begin` fails before body assembly and closes the
+generation. Observe delivery and live report credit remain unimplemented.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and
@@ -163,8 +164,9 @@ Queue time spends the original deadline; queued timeout or caller death prevents
 Port submission, while active mutation uncertainty is retained after submission.
 This request boundary accepts normalized parameters with an absent or explicit
 binary payload and inline or streamed responses. The root connection API exposes
-that boundary for explicitly selected OSCORE unary sessions; the fixture does
-not accept the production helper or an actual protected exchange.
+that boundary for explicitly selected OSCORE unary sessions and passes a bounded
+per-call response limit for discovery. The fixture does not accept the production
+helper or an actual protected exchange.
 
 Arguments contain no secrets. `Port.open({:spawn_executable, path}, ...)` starts
 one helper for one native session. No shell, daemon discovery, global registry,

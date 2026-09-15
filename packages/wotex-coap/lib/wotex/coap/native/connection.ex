@@ -20,9 +20,9 @@ defmodule Wotex.CoAP.Native.Connection do
   An explicit outbound payload is uploaded through correlated begin/chunk/end
   commands under the call deadline before request submission. Unary responses
   may carry an inline payload or one correlated, bounded body event stream.
-  The root API selects this owner for explicit OSCORE unary sessions. Observe
-  delivery, native discovery admission and Runtime dispatch remain separate
-  obligations.
+  The root API selects this owner for explicit OSCORE unary sessions and applies
+  discovery's smaller response-body limit before streamed-body allocation.
+  Observe delivery and Runtime dispatch remain separate obligations.
   """
 
   use GenServer
@@ -86,15 +86,29 @@ defmodule Wotex.CoAP.Native.Connection do
 
   @doc "Runs one admitted native request against an already opened generation."
   @spec request(pid(), map(), pos_integer()) :: {:ok, Wotex.CoAP.Message.t()} | {:error, Error.t()}
-  def request(pid, parameters, timeout)
+  def request(pid, parameters, timeout), do: request(pid, parameters, timeout, [])
+
+  @doc false
+  @spec request(pid(), map(), pos_integer(), keyword()) ::
+          {:ok, Wotex.CoAP.Message.t()} | {:error, Error.t()}
+  def request(pid, parameters, timeout, options)
       when is_map(parameters) and is_integer(timeout) and timeout in 1..60_000 do
     deadline = now() + timeout
 
     case identity(pid) do
       {:owned, generation, admission} ->
-        with :ok <- valid_request(parameters, generation, timeout),
+        with {:ok, maximum_body_bytes} <- request_options(options),
+             :ok <- valid_request(parameters, generation, timeout),
              {:ok, lease} <- admit(admission, pid, generation, deadline) do
-          await_request(pid, admission, generation, parameters, deadline, lease)
+          await_request(
+            pid,
+            admission,
+            generation,
+            parameters,
+            maximum_body_bytes,
+            deadline,
+            lease
+          )
         end
 
       :closed ->
@@ -105,10 +119,10 @@ defmodule Wotex.CoAP.Native.Connection do
     end
   end
 
-  def request(_, _, timeout) when not is_integer(timeout) or timeout not in 1..60_000,
+  def request(_, _, timeout, _) when not is_integer(timeout) or timeout not in 1..60_000,
     do: failure(:invalid_timeout)
 
-  def request(_, _, _), do: failure(:invalid_request)
+  def request(_, _, _, _), do: failure(:invalid_request)
 
   @doc "Validates native startup options and executable identity without starting a Port."
   @spec config(term()) :: {:ok, config()} | {:error, Error.t()}
@@ -583,8 +597,11 @@ defmodule Wotex.CoAP.Native.Connection do
     do: stop_request_protocol(state, failure(:native_protocol_error))
 
   defp handle_request_body(frame, rest, %{active: active} = state) do
+    maximum_body_bytes = Map.fetch!(state.calls, active.lease).maximum_body_bytes
+
     with true <- map_size(active.bodies) == 0,
          {:ok, event} <- Report.body_event(frame, active.id),
+         :ok <- body_limit(event, maximum_body_bytes),
          {:ok, body} <- Body.push(active.body, event),
          {:ok, active} <- complete_request_body(active, body, event) do
       state = %{state | active: active}
@@ -593,6 +610,7 @@ defmodule Wotex.CoAP.Native.Connection do
         do: {:noreply, state},
         else: handle_request_bytes(state, rest)
     else
+      {:error, %Error{code: :body_limit}} = result -> stop_request_protocol(state, result)
       _ -> stop_request_protocol(state, failure(:native_protocol_error))
     end
   end
@@ -713,13 +731,21 @@ defmodule Wotex.CoAP.Native.Connection do
     end
   end
 
-  defp await_request(pid, admission, generation, parameters, deadline, lease) do
+  defp await_request(
+         pid,
+         admission,
+         generation,
+         parameters,
+         maximum_body_bytes,
+         deadline,
+         lease
+       ) do
     remaining = deadline - now()
 
     if remaining > 0 do
       GenServer.call(
         pid,
-        {:bounded, generation, parameters, deadline, lease},
+        {:bounded, generation, {parameters, maximum_body_bytes}, deadline, lease},
         remaining + 100
       )
     else
@@ -785,17 +811,19 @@ defmodule Wotex.CoAP.Native.Connection do
     cond do
       Admission.closing?(state.admission) -> :connection_closed
       not Process.alive?(caller) or deadline <= now() -> :timeout
-      not is_map(parameters) -> :invalid_request
+      bounded_call(parameters) == :error -> :invalid_request
       true -> nil
     end
   end
 
   defp put_call(state, parameters, deadline, lease, caller, from) do
+    {:ok, parameters, maximum_body_bytes} = bounded_call(parameters)
     monitor = Process.monitor(caller)
     timer = Process.send_after(self(), {:expire_call, lease}, max(deadline - now(), 0))
 
     call = %{
       parameters: parameters,
+      maximum_body_bytes: maximum_body_bytes,
       deadline: deadline,
       from: from,
       monitor: monitor,
@@ -1034,6 +1062,32 @@ defmodule Wotex.CoAP.Native.Connection do
 
   defp mutating?(%{method: method}), do: method in @mutating_methods
   defp mutating?(_), do: false
+
+  defp request_options(options), do: request_options(options, @maximum_body_bytes)
+
+  defp request_options([], maximum), do: {:ok, maximum}
+
+  defp request_options([{:max_body_size, value}], @maximum_body_bytes)
+       when is_integer(value) and value in @maximum_body_chunk_bytes..@maximum_body_bytes,
+       do: {:ok, value}
+
+  defp request_options(_, _), do: failure(:invalid_request)
+
+  defp bounded_call({parameters, maximum_body_bytes})
+       when is_map(parameters) and is_integer(maximum_body_bytes) and
+              maximum_body_bytes in @maximum_body_chunk_bytes..@maximum_body_bytes,
+       do: {:ok, parameters, maximum_body_bytes}
+
+  defp bounded_call(parameters) when is_map(parameters),
+    do: {:ok, parameters, @maximum_body_bytes}
+
+  defp bounded_call(_), do: :error
+
+  defp body_limit(%{"event" => "body_begin", "length" => length}, maximum)
+       when is_integer(length) and length > maximum,
+       do: failure(:body_limit)
+
+  defp body_limit(_, _), do: :ok
 
   defp schedule_admission_reap do
     token = make_ref()

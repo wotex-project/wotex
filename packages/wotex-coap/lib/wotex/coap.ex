@@ -170,9 +170,8 @@ defmodule Wotex.CoAP do
   @spec discover(session(), map()) :: {:ok, [Wotex.CoAP.LinkFormat.link()]} | {:error, Error.t()}
   def discover(session, input) do
     with :ok <- session(session),
-         {:ok, request} <- discovery_request(input),
-         {:ok, reply} <-
-           Connection.transfer(session.pid, request, session.timeout, max_body_size: 65_536),
+         {:ok, request_input, request} <- discovery_request(input),
+         {:ok, reply} <- discovery_transfer(session, request_input, request),
          do: discovery_links(reply)
   end
 
@@ -295,7 +294,12 @@ defmodule Wotex.CoAP do
             (is_binary(query) and byte_size(query) <= 1024 and
                not String.starts_with?(query, "?"))) do
       path = "/.well-known/core" <> if(is_nil(query), do: "", else: "?" <> query)
-      message(%{method: :get, path: path, accept: 40})
+      request_input = %{method: :get, path: path, accept: 40}
+
+      case message(request_input) do
+        {:ok, request} -> {:ok, request_input, request}
+        {:error, %Error{}} = error -> error
+      end
     else
       {:error, Error.new(:invalid_discovery_request)}
     end
@@ -311,6 +315,21 @@ defmodule Wotex.CoAP do
   end
 
   defp discovery_links(_), do: {:error, Error.new(:invalid_discovery_response)}
+
+  defp discovery_transfer(session, input, request) do
+    case session_adapter(session.pid) do
+      :native ->
+        NativeConnection.request(
+          session.pid,
+          native_request(input, request),
+          session.timeout,
+          max_body_size: 65_536
+        )
+
+      :datagram ->
+        Connection.transfer(session.pid, request, session.timeout, max_body_size: 65_536)
+    end
+  end
 
   defp session(%{pid: pid, timeout: timeout} = value)
        when map_size(value) == 2 and is_pid(pid) and is_integer(timeout) and timeout in 1..60_000,
