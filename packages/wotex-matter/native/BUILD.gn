@@ -4,6 +4,7 @@ foreach(host,
         [
           "wotex-matter-host",
           "wotex-matter-flow-host",
+          "wotex-matter-resource-host",
         ]) {
   executable(host) {
     cflags_cc = [ "-std=c++17" ]
@@ -22,6 +23,9 @@ foreach(host,
     if (host == "wotex-matter-flow-host") {
       defines = [ "WOTEX_MATTER_FLOW_TESTING=1", "WOTEX_MATTER_RESOURCE_TESTING=1" ]
       sources += [ "testing/process_flow_host.cpp", "testing/resource_testing.cpp" ]
+    } else if (host == "wotex-matter-resource-host") {
+      defines = [ "WOTEX_MATTER_RESOURCE_TESTING=1" ]
+      sources += [ "testing/resource_host.cpp", "testing/resource_testing.cpp" ]
     } else {
       sources += [ "src/host.cpp" ]
     }

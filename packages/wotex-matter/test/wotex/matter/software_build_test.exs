@@ -149,7 +149,7 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
 
     harnesses =
-      for name <- ["flow-host", "controller-test"],
+      for name <- ["flow-host", "resource-host", "controller-test"],
           suffix <- ["", "-sanitized"],
           do: "bin/wotex-matter-" <> name <> suffix
 

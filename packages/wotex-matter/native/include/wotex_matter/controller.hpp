@@ -32,6 +32,10 @@ class SdkControllerBackend final : public ControllerBackend {
   void Close() override;
   bool IsOpen() const override;
 
+#ifdef WOTEX_MATTER_RESOURCE_TESTING
+  std::string ResourceSnapshotForTesting();
+#endif
+
  private:
   class Impl;
   std::unique_ptr<Impl> impl_;

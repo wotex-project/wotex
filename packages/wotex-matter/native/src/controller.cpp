@@ -51,6 +51,16 @@
 #include <utility>
 #include <vector>
 
+#ifdef WOTEX_MATTER_RESOURCE_TESTING
+#define WOTEX_STARTUP_STAGE(name) \
+  if (resource_testing::StartupStage(name)) { \
+    Cleanup(); \
+    return {false, "controller_start_failed"}; \
+  }
+#else
+#define WOTEX_STARTUP_STAGE(name)
+#endif
+
 namespace wotex::matter {
 namespace {
 
@@ -469,6 +479,7 @@ class SdkControllerBackend::Impl final
       return {false, "controller_start_failed"};
     }
     memory_initialized_ = true;
+    WOTEX_STARTUP_STAGE("memory")
 
     const StorageMode storage_mode = options.storage_mode == "create_new"
         ? StorageMode::CreateNew
@@ -483,17 +494,20 @@ class SdkControllerBackend::Impl final
       Cleanup();
       return {false, "storage_open_failed"};
     }
+    WOTEX_STARTUP_STAGE("storage")
     error = storage_->EnterProcessDirectory();
     if (error != CHIP_NO_ERROR) {
       Cleanup();
       return {false, "storage_open_failed"};
     }
+    WOTEX_STARTUP_STAGE("storage_directory")
     error = sdk_storage_.Init(*storage_);
     if (error != CHIP_NO_ERROR) {
       Cleanup();
       return {false, "sdk_storage_failed"};
     }
     sdk_storage_initialized_ = true;
+    WOTEX_STARTUP_STAGE("sdk_storage")
 
     error = authority_.Init(*storage_, authority_mode, identity_);
     if (error != CHIP_NO_ERROR) {
@@ -501,6 +515,7 @@ class SdkControllerBackend::Impl final
       return {false, "authority_invalid"};
     }
 
+    WOTEX_STARTUP_STAGE("authority")
     paa_store_ = std::make_unique<chip::Credentials::FileAttestationTrustStore>(
         options.paa_trust_store.c_str());
     if (!paa_store_->IsInitialized() || paa_store_->paaCount() == 0) {
@@ -510,6 +525,7 @@ class SdkControllerBackend::Impl final
     attestation_verifier_ =
         std::make_unique<chip::Credentials::DefaultDACVerifier>(paa_store_.get());
 
+    WOTEX_STARTUP_STAGE("attestation")
     group_provider_.SetStorageDelegate(storage_.get());
     group_provider_.SetSessionKeystore(&session_keystore_);
     error = group_provider_.Init();
@@ -519,6 +535,7 @@ class SdkControllerBackend::Impl final
     }
     group_initialized_ = true;
     chip::Credentials::SetGroupDataProvider(&group_provider_);
+    WOTEX_STARTUP_STAGE("groups")
 
     chip::Controller::FactoryInitParams factory_params;
     factory_params.fabricIndependentStorage = storage_.get();
@@ -537,8 +554,10 @@ class SdkControllerBackend::Impl final
       return {false, "controller_start_failed"};
     }
     factory_initialized_ = true;
+    WOTEX_STARTUP_STAGE("factory")
     factory.RetainSystemState();
     system_state_retained_ = true;
+    WOTEX_STARTUP_STAGE("system_state")
 
     error = factory.ServiceEvents();
     if (error != CHIP_NO_ERROR) {
@@ -546,6 +565,7 @@ class SdkControllerBackend::Impl final
       return {false, "controller_start_failed"};
     }
     event_loop_started_ = true;
+    WOTEX_STARTUP_STAGE("event_loop")
 
     error = Execute(Action::Setup, options.timeout_ms);
     if (error != CHIP_NO_ERROR) {
@@ -556,6 +576,7 @@ class SdkControllerBackend::Impl final
       return {false, code};
     }
 
+    WOTEX_STARTUP_STAGE("commissioner")
     open_ = true;
     accepting_interactions_ = true;
     return {true, {}};
@@ -607,6 +628,18 @@ class SdkControllerBackend::Impl final
 
   void Close() { Cleanup(); }
   bool IsOpen() const { return open_; }
+
+#ifdef WOTEX_MATTER_RESOURCE_TESTING
+  std::string ResourceSnapshotForTesting() {
+    if (!event_loop_started_) {
+      return resource_testing::SnapshotJson();
+    }
+    if (Execute(Action::ObserveResources, 1000) != CHIP_NO_ERROR) {
+      return {};
+    }
+    return resource_snapshot_;
+  }
+#endif
 
   InteractionResponse Interact(const InteractionRequest &request);
   CommissioningResponse Commission(const CommissioningRequest &request);
@@ -2191,7 +2224,14 @@ class SdkControllerBackend::Impl final
     }
   }
 
-  enum class Action { None, Setup, Shutdown };
+  enum class Action {
+    None,
+    Setup,
+    Shutdown,
+#ifdef WOTEX_MATTER_RESOURCE_TESTING
+    ObserveResources,
+#endif
+  };
 
   static void Work(intptr_t context) {
     auto *self = reinterpret_cast<Impl *>(context);
@@ -2199,6 +2239,11 @@ class SdkControllerBackend::Impl final
     CHIP_ERROR error = CHIP_ERROR_INCORRECT_STATE;
     if (action == Action::Setup) {
       error = self->SetupOnSdkThread();
+#ifdef WOTEX_MATTER_RESOURCE_TESTING
+    } else if (action == Action::ObserveResources) {
+      self->resource_snapshot_ = resource_testing::SnapshotJson();
+      error = CHIP_NO_ERROR;
+#endif
     } else if (action == Action::Shutdown) {
       std::vector<std::shared_ptr<Pending>> pending;
       std::vector<std::shared_ptr<NativeSubscription>> subscriptions;
@@ -2411,6 +2456,9 @@ class SdkControllerBackend::Impl final
   Action action_{Action::None};
   CHIP_ERROR work_error_{CHIP_ERROR_INCORRECT_STATE};
   bool work_done_{false};
+#ifdef WOTEX_MATTER_RESOURCE_TESTING
+  std::string resource_snapshot_;
+#endif
   bool memory_initialized_{false};
   bool sdk_storage_initialized_{false};
   bool group_initialized_{false};
@@ -2667,7 +2715,7 @@ BackendResult SdkControllerBackend::Impl::CancelSubscription(
 
 SdkControllerBackend::SdkControllerBackend() : impl_(std::make_unique<Impl>()) {}
 
-SdkControllerBackend::~SdkControllerBackend() = default;
+SdkControllerBackend::~SdkControllerBackend() { impl_->Close(); }
 
 BackendResult SdkControllerBackend::Open(const NativeOpenOptions &options) {
   return impl_->Open(options);
@@ -2718,5 +2766,11 @@ void SdkControllerBackend::SetControlPump(std::function<bool()> pump) {
 void SdkControllerBackend::Close() { impl_->Close(); }
 
 bool SdkControllerBackend::IsOpen() const { return impl_->IsOpen(); }
+
+#ifdef WOTEX_MATTER_RESOURCE_TESTING
+std::string SdkControllerBackend::ResourceSnapshotForTesting() {
+  return impl_->ResourceSnapshotForTesting();
+}
+#endif
 
 } // namespace wotex::matter

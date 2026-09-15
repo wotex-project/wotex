@@ -2,6 +2,7 @@
 #define WOTEX_MATTER_RESOURCE_TESTING_HPP
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -26,6 +27,11 @@ void Acquired(Object object);
 void Destroyed(Object object);
 void Event(const char *name);
 std::string SnapshotJson();
+std::optional<std::string> ReadBounded(const std::string &path, std::size_t maximum);
+bool WriteExclusive(const std::string &path, const std::string &contents);
+bool WriteAtomicExclusive(const std::string &path, const std::string &contents);
+void ConfigureStartup(std::string directory, std::string stage, std::string action);
+bool StartupStage(const char *stage);
 
 class Lifetime final {
  public:

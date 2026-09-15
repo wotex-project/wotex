@@ -2962,3 +2962,84 @@ two-lane software receipt and the remaining C09 gates are still required.
 | Default gate | `c0322039612c82f2ea491f9184e278a22d495cb3d0baf2187bf0beb7299b3e1e` |
 | Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 | ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+
+
+## Current full software cohort and native startup cleanup
+
+The frozen `f6bbfa0` source with the `0150337` native implementation passes
+245 checks in 900.0 seconds on Elixir 1.20.2 / OTP 29.0.4. All 32 required
+software cases pass; one physical-hardware case is excluded. The source and
+completed-source digests both equal
+`ac73d1a1ac4295a02b0178bcca174eb6e2a2a41c29fc524e8c5fbfd6411e2370`.
+Seed 450520 is retained. The outer runner verifies cleanup of all owned peers.
+This receipt covers its frozen inventory and source; the following startup
+case increases the required inventory to 33 cases.
+
+`test/software/startup_resources_test.exs` binds WMA-V04 to eleven actual SDK
+startup boundaries: memory, durable storage, process directory, SDK storage,
+authority, attestation, groups, factory, retained system state, event loop and
+commissioner. Each boundary exercises an injected failure return, an exception
+and a wait interrupted by SIGKILL. Each of the 33 trials reaps its exact native
+process and Port within 1000 ms, then reopens the same store and completes a
+real SDK attribute read. Forced kills use process reaping and successful store
+reopening as their cleanup evidence. Failure returns and exceptions additionally
+require all nine native object acquisition/destruction counts to balance and
+all seven SDK resource counters to return to zero. Every recovery read also
+records the actual interaction and ReadClient lifetimes before final cleanup.
+
+The test executable publishes bounded observations through private files. An
+observer serializes with host operations and schedules resource snapshots on
+the SDK thread while its event loop runs. Snapshot publication closes its file
+descriptor before making the complete observation visible. Configuration,
+startup faults and resource observation I/O are compiled only into explicitly
+selected test executables. The software build exports both normal and sanitizer
+resource executables and includes their hashes in artifact validation.
+
+Before the cleanup change, an injected exception after factory initialization
+aborts with exit status 134 instead of the required bounded exception exit.
+The backend destructor now invokes idempotent shutdown even when startup has
+not reached the open state. The production entry point catches standard
+exceptions after stack cleanup and exits with status 1. It emits no fabricated
+operation result. All 33 trials and their recovery reads pass in 16.0 seconds
+on the current Linux lane and 28.6 seconds on Elixir 1.18.4 / OTP 27.3.4.15 with
+ASan, UBSan and leak detection. Maximum observed cleanup is 41 ms and 84 ms.
+
+Both native CTest gates pass six tests in 2.52 and 3.19 seconds. All 15 pinned
+OSV queries pass. Fresh SDK/corpus cohorts pass 16 cases, including all 17 native
+corpus vectors, in 18.6 and 25.8 seconds, and reap both owned peers. The default
+gate passes 213 checks with 34 excluded in 71.9 seconds. Twenty build, fixture
+ownership and acceptance-runner tests pass on both BEAM versions, in 10.2 and
+9.0 seconds. Both formatters and ExDoc pass. Per-cycle stress resource checks,
+forced stress failures, final-source two-lane software execution, coverage and
+clean archive evidence remain required for complete P09/C09 acceptance.
+
+| Startup cleanup artifact | SHA-256 |
+| --- | --- |
+| Fourth full-cohort receipt | `fa01c792a3e3e0ffa6eacbbc083dafadf9ce5f68e5dd25198bf1c67d77f90f90` |
+| Fourth full-cohort test log | `d8309600ff3578f84f5166888dc487d870ce925e37c61015386c9eddb09f8e4f` |
+| Startup resource case | `bb48e297eb24d85002c473c5e830170b1ef824ab0733ca772fcdeb4a6a5a5c4d` |
+| Resource assertion helper | `5acaf5db6d1d97eccc5eeb4669483ef0d73a4faee760b55f648db620f1e94d59` |
+| Native controller | `28e30636cd2c1f1a166ac23590a79dd02353d7db89b930fd2fc861583c3a9475` |
+| Production exception boundary | `ea4a2f8d81fc86be7ac64c734013c18f8d626d92c931012993395f1dd9ccbd50` |
+| Native resource executable source | `ef946343b9be451020cbd27e2722aff3c7829c90731958e87f1404908285899f` |
+| Resource observation implementation | `fa9354605b2d7d22ecf9689c0d2f4f9e1be133e9df931392414a33c9b4e46dc3` |
+| Required case inventory | `5bfce7360120903122d6fdeac1aaa1a060f80ff446d30e74598928a1c350eb31` |
+| Regression before destructor cleanup | `7bc9863490e99d4be348f2990d08df35c448871e58594eb4e05180c13cf52ae3` |
+| Native build and CTest gates | `5a74da404134ff4c2ceb5cc968b4b93c05171e88687369694f98333e824a9225` |
+| Production entry-point rebuild | `58cb1fe3e81fef3b36b9541416e486266cee32ed808c4267e5d5b0f51fac9ffa` |
+| Advisory gate | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
+| Default gate | `72ab1b235a452222d19d85483efca003a8a9bae9fc17495fc766a887ffa7d47c` |
+| Minimum harness gate | `33d558fbf429ecd03b4348deade74e3c5fe93162ea02639d64ccb48673e8f18d` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+| Current startup observations | `4714aa68e14f2083788b9b475dee3d21d9df8f5ecdd574545e0aa90b8d775cf7` |
+| Current startup test log | `252bcfa48ac479c44afcd62336c0fb517f66d1387e7e3dc8b2e9a2a4d13570b9` |
+| Current SDK/corpus gate | `b29fae87f9910e5e298115e56297fd23264487f602fcc34aa8dedcca194bec7e` |
+| Current wotex-matter-host | `e9ea6b9353520f0569a92dbd9b62694398fa8a9c37ba6521a72b4db1176ea2e2` |
+| Current wotex-matter-flow-host | `89e488339028a76e2f20b8ff268ee3e8dd01e37f9b60bbe7ea00b0043e483098` |
+| Current wotex-matter-resource-host | `95dc325a31793e282e52fb247d5bf7234e2aa389aa351b21d6dffcf36a0e111e` |
+| Minimum startup observations | `375cc06a9a1d54f5518d4e4fdd8103756535d2fbf3f7d35cca7bce1c04da955f` |
+| Minimum startup test log | `74d9d33af9bed67928e36fea0d29488c92e190db041b8c2393e5f347a3346202` |
+| Minimum SDK/corpus gate | `c6e3005b88f8007e4c6ada19e071c31ae3e676540cd1a5e43a0b4e9b58c79776` |
+| Minimum wotex-matter-host | `2291e908db21b109ad171594a954830285f915ea7cdf8bb829d25ad6e5436c01` |
+| Minimum wotex-matter-flow-host | `4cdd9b65fb9be457b57f58b2183eabdb96abbaf846531cf3a721856ae11d3eff` |
+| Minimum wotex-matter-resource-host | `d1617104e4319806d44889737519c5d07b43d1293824c873d9eb45d047b1e82b` |

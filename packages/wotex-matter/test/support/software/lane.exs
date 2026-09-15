@@ -32,6 +32,7 @@ defmodule Wotex.Matter.SoftwareLane do
     artifacts = %{
       host: "/artifacts/bin/wotex-matter-host" <> suffix,
       flow_host: "/artifacts/bin/wotex-matter-flow-host" <> suffix,
+      resource_host: "/artifacts/bin/wotex-matter-resource-host" <> suffix,
       contract_driver: "/artifacts/bin/wotex-matter-contract-driver" <> suffix,
       controller_test: "/artifacts/bin/wotex-matter-controller-test" <> suffix,
       lighting: "/artifacts/bin/chip-lighting-app",

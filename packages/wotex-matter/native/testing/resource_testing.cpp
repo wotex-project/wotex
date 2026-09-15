@@ -11,6 +11,12 @@
 #include <cstdint>
 #include <map>
 #include <mutex>
+#include <chrono>
+#include <fcntl.h>
+#include <stdexcept>
+#include <sys/stat.h>
+#include <thread>
+#include <unistd.h>
 
 #if !CHIP_SYSTEM_CONFIG_PROVIDE_STATISTICS
 #error "Native resource acceptance requires SDK resource statistics"
@@ -27,6 +33,9 @@ std::mutex mutex;
 std::array<std::uint64_t, kCount> acquired{};
 std::array<std::uint64_t, kCount> destroyed{};
 std::map<std::string, std::uint64_t> events;
+std::string startup_directory;
+std::string startup_stage;
+std::string startup_action;
 
 } // namespace
 
@@ -43,6 +52,90 @@ void Destroyed(Object object) {
 void Event(const char *name) {
   std::lock_guard<std::mutex> lock(mutex);
   ++events[name];
+}
+
+std::optional<std::string> ReadBounded(const std::string &path, std::size_t maximum) {
+  const int fd = open(path.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+  if (fd < 0) {
+    return std::nullopt;
+  }
+  struct stat status{};
+  if (fstat(fd, &status) != 0 || !S_ISREG(status.st_mode) || status.st_size < 0 ||
+      static_cast<std::uint64_t>(status.st_size) > maximum) {
+    close(fd);
+    return std::nullopt;
+  }
+  std::string contents(maximum + 1, '\0');
+  std::size_t size = 0;
+  while (size < contents.size()) {
+    const ssize_t received = read(fd, contents.data() + size, contents.size() - size);
+    if (received < 0) {
+      close(fd);
+      return std::nullopt;
+    }
+    if (received == 0) {
+      break;
+    }
+    size += static_cast<std::size_t>(received);
+  }
+  close(fd);
+  if (size > maximum) {
+    return std::nullopt;
+  }
+  contents.resize(size);
+  return contents;
+}
+
+bool WriteExclusive(const std::string &path, const std::string &contents) {
+  const int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+  if (fd < 0) {
+    return false;
+  }
+  std::size_t offset = 0;
+  while (offset < contents.size()) {
+    const ssize_t written = write(fd, contents.data() + offset, contents.size() - offset);
+    if (written <= 0) {
+      close(fd);
+      return false;
+    }
+    offset += static_cast<std::size_t>(written);
+  }
+  const bool synced = fsync(fd) == 0;
+  return close(fd) == 0 && synced;
+}
+
+bool WriteAtomicExclusive(const std::string &path, const std::string &contents) {
+  const std::string temporary = path + ".partial";
+  if (!WriteExclusive(temporary, contents)) {
+    return false;
+  }
+  const bool published = link(temporary.c_str(), path.c_str()) == 0;
+  const bool removed = unlink(temporary.c_str()) == 0;
+  return published && removed;
+}
+
+void ConfigureStartup(std::string directory, std::string stage, std::string action) {
+  // Configuration precedes every SDK and observer thread and is then immutable.
+  startup_directory = std::move(directory);
+  startup_stage = std::move(stage);
+  startup_action = std::move(action);
+}
+
+bool StartupStage(const char *stage) {
+  if (startup_stage != stage) {
+    return false;
+  }
+  const nlohmann::json observation{{"stage", stage}, {"action", startup_action}};
+  if (!WriteAtomicExclusive(startup_directory + "/startup-stage.json", observation.dump())) {
+    throw std::runtime_error("startup observation failed");
+  }
+  if (startup_action == "throw") {
+    throw std::runtime_error("injected startup failure");
+  }
+  while (startup_action == "wait") {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  return true;
 }
 
 // The caller owns the SDK thread or has stopped the SDK event loop. Reading

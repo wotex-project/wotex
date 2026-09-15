@@ -171,6 +171,8 @@ defmodule Wotex.Matter.SoftwareManifest do
         [
           "bin/wotex-matter-flow-host",
           "bin/wotex-matter-flow-host-sanitized",
+          "bin/wotex-matter-resource-host",
+          "bin/wotex-matter-resource-host-sanitized",
           "bin/wotex-matter-controller-test",
           "bin/wotex-matter-controller-test-sanitized",
           "bin/chip-lighting-app",

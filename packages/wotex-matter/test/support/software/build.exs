@@ -278,7 +278,11 @@ defmodule Wotex.Matter.SoftwareBuild do
       targets =
         ["obj/examples/wotex-matter-host/bin/wotex-matter-host"] ++
           if(mode == :software,
-            do: ["obj/examples/wotex-matter-host/bin/wotex-matter-flow-host"],
+            do:
+              Enum.map(
+                ~w(flow resource),
+                &"obj/examples/wotex-matter-host/bin/wotex-matter-#{&1}-host"
+              ),
             else: []
           )
 
@@ -306,15 +310,16 @@ defmodule Wotex.Matter.SoftwareBuild do
 
       File.chmod!(Path.join(context.workspace, "bin/" <> output), 0o500)
 
-      if mode == :software do
+      for harness <- if(mode == :software, do: ~w(flow resource), else: []) do
         suffix = if flags == "", do: "", else: "-sanitized"
-        destination = Path.join(context.workspace, "bin/wotex-matter-flow-host" <> suffix)
+        name = "wotex-matter-#{harness}-host"
+        destination = Path.join(context.workspace, "bin/" <> name <> suffix)
 
         File.cp!(
           Path.join([
             context.workspace,
             directory,
-            "obj/examples/wotex-matter-host/bin/wotex-matter-flow-host"
+            "obj/examples/wotex-matter-host/bin/" <> name
           ]),
           destination
         )
@@ -582,6 +587,7 @@ defmodule Wotex.Matter.SoftwareBuild do
 
   defp binaries(:software),
     do: binaries(:native) ++ ~w(wotex-matter-flow-host wotex-matter-flow-host-sanitized
+                               wotex-matter-resource-host wotex-matter-resource-host-sanitized
                                wotex-matter-controller-test wotex-matter-controller-test-sanitized
                                chip-lighting-app chip-all-clusters-app chip-bridge-app)
 

@@ -23,7 +23,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
   ]
   @controller_keys ~w(executable storage_path vendor_id fabric_id controller_node_id paa_trust_store)a
   @common_cases ~w(CLOSE CONTROL_PUMP INPUT_PRESSURE PENDING_LOSS
-                   PENDING_SUBSCRIPTION_LOSS REQUEST_ID RUNTIME_LOSS STREAM_OWNER STRESS)
+                   PENDING_SUBSCRIPTION_LOSS REQUEST_ID RUNTIME_LOSS STARTUP_RESOURCES STREAM_OWNER STRESS)
 
   @spec with_fixtures(map(), String.t(), (map() -> term())) :: term()
   def with_fixtures(artifacts, directory, operation) do
@@ -139,6 +139,19 @@ defmodule Wotex.Matter.SoftwareScenarios do
     environment =
       Map.new(@common_cases, fn name ->
         fixture = Map.put(common, "unreachable_node_id", 0x123456789ABC)
+
+        fixture =
+          if name == "STARTUP_RESOURCES" do
+            directory = Path.join(context.directory, "startup-resources")
+            private_directory(directory)
+
+            fixture
+            |> put_in(["controller", "executable"], context.artifacts.resource_host)
+            |> Map.put("resource_directory", directory)
+          else
+            fixture
+          end
+
         fixture_file(context, "NATIVE_" <> name, fixture)
       end)
 

@@ -95,7 +95,7 @@ defmodule Wotex.Matter.SoftwareScenariosTest do
 
   defp artifacts(executable) do
     Map.new(
-      ~w(lighting all_clusters bridge host flow_host contract_driver controller_test paa untrusted_paa)a,
+      ~w(lighting all_clusters bridge host flow_host resource_host contract_driver controller_test paa untrusted_paa)a,
       &{&1, executable}
     )
   end
