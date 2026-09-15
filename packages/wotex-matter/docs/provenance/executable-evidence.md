@@ -2443,3 +2443,38 @@ requirements remain open; the last coverage measurement is still 90.0%.
 | Corrected current archive log | `67e0f258c45ec28c4b5ee7b393d43fd3b3bb3ab3b74cb4ca7b6aeac76980e3ef` |
 | Default gate log | `28db81cf7d94ba0f80845a231713263eb26e36073e47ed15b2e77e22652655f5` |
 | ExDoc log | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+
+
+## Packaged default-suite execution
+
+The clean `8d81e32` archive has SHA-256
+`66e8e9f374fbc863fa2a527497a0a8081d9fbab2598785c6d6b8673e294cde3c`.
+Its 46 ExUnit test source files execute outside the repository with the
+committed lockfile, whose SHA-256 is
+`3e07ae876d85087f0d539bec1bb2a3556e37f06b3b3360a322ea6131acfe73b5`.
+Dependency retrieval uses the existing offline cache and `--check-locked`;
+the explicit development switch selects Wotex dependency sources. Each BEAM
+lane compiles into its own build directory.
+
+The packaged current-version `mix check --no-retry` passes all 194 checks with
+33 excluded in 69.2 seconds. Minimum-version execution passes the same 194
+checks with 33 excluded in 66.8 seconds, but its formatter rejects one test
+comprehension that Elixir 1.20 formats differently. Binding the peer filename
+list separately preserves the test and satisfies both formatters. The corrected
+source passes the minimum formatter and the current full gate: 194 checks,
+33 excluded, in 70.7 seconds. The original packaged minimum gate remains a
+recorded failure, not a passing archive receipt.
+
+These default-suite results do not execute the 32 required SDK/software cases,
+prove released Hex dependency resolution or satisfy the 95% coverage floor.
+The native build, complete runner and C09 resource requirements remain separate.
+
+| Packaged-suite artifact | SHA-256 |
+| --- | --- |
+| Clean archive build log | `9b3497259c3fbef50065dc73b4302389220b87ca1c105006e60756302a5a170d` |
+| Offline locked dependency log | `09df673601945644491df1aba84b22d19d896f866199a7b70f63cbd763d1b0b9` |
+| Packaged current full gate | `202eb94e4a129041d6bb4a810e1ac9a6deab59480f128386e72add0b9f1d7528` |
+| Packaged minimum formatter failure and passing tests | `e57cc4f15ea6af24fc7e5ecfbaa021fac4c30685f765a9f80c4a768fa00ee436` |
+| Minimum corrected formatting | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| Corrected source full gate | `a8b778df757ec8e9ebf896a564706405d0636c8e057e23c35c3e0e688130cea3` |
+| Cross-version test formatting | `86c9c532d984dad5d36a645714696b56db45deb3182f2cdaacba191186ebae66` |

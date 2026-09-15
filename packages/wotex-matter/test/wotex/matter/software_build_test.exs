@@ -149,7 +149,9 @@ defmodule Wotex.Matter.SoftwareBuildTest do
           suffix <- ["", "-sanitized"],
           do: "bin/wotex-matter-" <> name <> suffix
 
-    for name <- harnesses ++ ~w(bin/chip-lighting-app bin/chip-all-clusters-app bin/chip-bridge-app),
+    peers = ~w(bin/chip-lighting-app bin/chip-all-clusters-app bin/chip-bridge-app)
+
+    for name <- harnesses ++ peers,
         do: File.write!(Path.join(workspace, name), "fixture software executable")
 
     software = %{
