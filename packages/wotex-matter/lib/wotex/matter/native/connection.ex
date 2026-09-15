@@ -27,7 +27,9 @@ defmodule Wotex.Matter.Native.Connection do
   neither ordinary dispatch nor internal cancellation can wrap the counter.
   Ordinary subscriptions own a separately linked report validator. Reports retain
   credit until that owner validates admission; this connection alone forwards
-  public deliveries and terminal messages, preserving their order. Retiring the
+  public deliveries and terminal messages, preserving their order. Losing a
+  receiver or stream owner during unconfirmed registration closes the generation;
+  a late successful reply cannot reopen it or return a live handle. Retiring the
   subscription kills and reaps its validator, including a suspended validator.
   Cleanup waits for native exit, the Port monitor and removal from Port.info.
   Exit notification can precede asynchronous release of the Port's driver state.
@@ -1375,7 +1377,20 @@ defmodule Wotex.Matter.Native.Connection do
   defp stringify_keys({:context, id}) when is_integer(id), do: ["context", id]
   defp stringify_keys(value), do: value
 
-  defp establish_subscription(
+  defp establish_subscription(result, subscription, state) do
+    current = Map.get(state.subscriptions, subscription.reference)
+    receiver_alive = Process.alive?(subscription.receiver)
+    owner_alive = is_nil(subscription.stream_owner) or Process.alive?(subscription.stream_owner)
+
+    if match?(%{status: :establishing}, current) and receiver_alive and owner_alive do
+      decode_subscription_result(result, subscription, state)
+    else
+      error = Error.new(if receiver_alive, do: :owner_closed, else: :receiver_closed)
+      {:error, error, drop_subscription(state, subscription.reference)}
+    end
+  end
+
+  defp decode_subscription_result(
          %{
            "subscription_id" => native_id,
            "generation" => generation,
@@ -1408,7 +1423,7 @@ defmodule Wotex.Matter.Native.Connection do
     {:ok, handle, active}
   end
 
-  defp establish_subscription(_, subscription, state),
+  defp decode_subscription_result(_, subscription, state),
     do: {:error, Error.new(:invalid_frame), drop_subscription(state, subscription.reference)}
 
   defp put_subscription(state, subscription) do
@@ -1809,12 +1824,19 @@ defmodule Wotex.Matter.Native.Connection do
         owners = stop_stream_owners([subscription])
         await_stream_owners(owners, System.monotonic_time(:millisecond) + @cleanup_timeout)
 
-        case take_request_id(state, "unsubscribe") do
-          {:ok, id, next_state} ->
-            submit_cancellation(next_state, subscription, reference, result, id)
+        if status == :establishing do
+          # Registration has no confirmed native handle, and its SDK wait may
+          # block control input. Termination bounds cleanup without assuming
+          # that registration succeeded.
+          fail_native_input(state)
+        else
+          case take_request_id(state, "unsubscribe") do
+            {:ok, id, next_state} ->
+              submit_cancellation(next_state, subscription, reference, result, id)
 
-          :exhausted ->
-            fail_native_input(state)
+            :exhausted ->
+              fail_native_input(state)
+          end
         end
 
       _ ->

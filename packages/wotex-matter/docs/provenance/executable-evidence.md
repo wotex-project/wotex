@@ -1853,3 +1853,51 @@ software-run orchestration or fresh complete build/archive receipts.
 
 The full coverage run passes all 172 checks with 28 excluded and reports
 89.0%. The unchanged 95% coverage gate remains unsatisfied.
+
+## Ownership loss during subscription establishment
+
+Receiver or stream-owner loss during unconfirmed subscription registration
+closes the native generation. The SDK wait may prevent control input from
+confirming cancellation, so the connection bounds teardown without assuming
+that registration succeeded. Established and recovering subscriptions retain
+their ordinary unsubscribe path. A successful registration reply can install
+a handle only while the subscription remains establishing and both receiver
+and stream owner remain alive.
+
+The bridge regression previously retained a pending API call beyond one second
+after receiver loss. The real SDK regression likewise retained its connection
+while registration for an unresolved operational node remained pending. Both
+receiver and stream-owner loss now terminate the pending call with a structured
+no-effect error and release the connection, stream owner, Port, child and
+admission table within one second. Focused current-Linux cleanup takes 13/11 ms
+and minimum-Linux cleanup 29/19 ms for receiver/stream-owner loss. Every case
+reopens the durable controller and checks health. A separate controlled bridge
+test queues receiver loss before a successful native registration reply; after
+resuming the connection, the call returns `:receiver_closed` without a live
+handle.
+
+The default gate passes 174 checks with 29 excluded. All 23 minimum-toolchain
+subscription/recovery tests and ExDoc pass. Both fresh-peer SDK/corpus cohorts
+pass all twelve cases in 10.8 and 17.1 seconds; their fixture-owned peers are
+reaped. Native binaries remain the counter-generation cohort. ASan/UBSan and
+leak detection stay enabled, but forced pending-child termination does not
+establish SDK callback destruction or leak finalization. Normal reopened
+controllers retain the sanitizer close checks. The preceding full lifecycle
+workload remains identified by the named-owner receipt. F11–F13, native command
+interruptibility, complete fault/resource instrumentation, software-run and
+fresh build/archive receipts remain open. Last full measured coverage is
+89.0%, below the unchanged 95% requirement.
+
+| Pending-subscription artifact | SHA-256 |
+| --- | --- |
+| Connection | `979ee60937dee312787bf1b06c98f60455735c6f985237c979b8ee46a1501933` |
+| Subscription tests | `53bf88862f384ed08bf03c7f03164cb3971d06121158869e198e4881eafb4ff0` |
+| SDK pending-subscription test | `7974b4421bbc330587f5d1d0f03c58d752630cace2ae985bcd5c5ba37daf665e` |
+| Failing pending bridge log | `f1e9d626db70fde33c4f9cd3c746a6f8b919d65eeec19e0b86f2b937e5d9eb10` |
+| Failing pending SDK log | `39509a83803c906cce7a7503b60275379faa46133b3f39d972bfc2b84d04a681` |
+| Current default gate log | `2f8f80a4e0f3c44420844d88ca1300d50c77a77b899678388fcc34bc7643c39f` |
+| Minimum focused log | `d7859501ce5c3049fe66f5cc171c2231b6b0fd6b58d82a426d4161fd005490be` |
+| Current focused SDK log | `1289843032fedba67f3a8ce8973229a8e33de93123d1264208feacfb518f7c01` |
+| Minimum focused SDK log | `ec58f3c8dc69dcccb7665be001dd21afe54eaef9f1d5b75ae9c485bb276b0cbc` |
+| Current twelve-case SDK/corpus log | `6e9f3fba3e1e4ac06c1f1fd220e7c9243f2b19587215d245a621f6cbf60db753` |
+| Minimum twelve-case SDK/corpus log | `d0342fd2c5804f4efa670747217088815a76959510a70abd1c15a3c82f11adbf` |

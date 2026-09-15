@@ -100,6 +100,114 @@ defmodule Wotex.Matter.SubscriptionTest do
     refute Enum.any?(audit_frames(audit), &(&1["event"] == "report_ack"))
   end
 
+  @tag :pending_subscription_loss
+  test "receiver loss during native establishment cannot return a live handle or retain its owner" do
+    for loss <- [:receiver, :stream_owner] do
+      audit = temporary_path("pending-subscription-loss")
+      executable = native_fixture(audit, "blocked_subscribe")
+      assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+      connection = session.handle.pid
+      port = :sys.get_state(connection).port
+      monitor = Process.monitor(connection)
+      receiver = spawn(fn -> Process.sleep(:infinity) end)
+      :erlang.trace(connection, true, [:procs])
+
+      opening =
+        Task.async(fn ->
+          Matter.subscribe(session, %{
+            kind: :attribute,
+            paths: [@path],
+            receiver: receiver,
+            timeout: 5_000
+          })
+        end)
+
+      try do
+        assert_receive {:trace, ^connection, :spawn, owner, _}, 1_000
+
+        assert eventually(fn ->
+                 Enum.any?(audit_frames(audit), &(&1["operation"] == "subscribe"))
+               end)
+
+        :sys.suspend(owner)
+        started = System.monotonic_time(:millisecond)
+        Process.exit(if(loss == :receiver, do: receiver, else: owner), :kill)
+        assert {:ok, {:error, %Error{effect: :none}}} = Task.yield(opening, 1_000)
+        assert_receive {:DOWN, ^monitor, :process, ^connection, _}, 1_000
+        refute Process.alive?(owner)
+        assert Port.info(port) == nil
+        assert :ets.info(session.handle.admission) == :undefined
+        assert System.monotonic_time(:millisecond) - started <= 1_000
+      after
+        Process.exit(receiver, :kill)
+        Task.shutdown(opening, :brutal_kill)
+        if Process.alive?(connection), do: :erlang.trace(connection, false, [:procs])
+        Matter.disconnect(session)
+      end
+    end
+  end
+
+  @tag :pending_subscription_loss
+  test "a successful registration reply queued after receiver loss cannot return a live handle" do
+    audit = temporary_path("late-subscription-reply")
+    executable = native_fixture(audit, "gated_subscribe")
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+    connection = session.handle.pid
+    port = :sys.get_state(connection).port
+    receiver = spawn(fn -> Process.sleep(:infinity) end)
+
+    opening =
+      Task.async(fn ->
+        Matter.subscribe(session, %{
+          kind: :attribute,
+          paths: [@path],
+          receiver: receiver,
+          timeout: 5_000
+        })
+      end)
+
+    try do
+      assert eventually(fn -> Enum.any?(audit_frames(audit), &(&1["operation"] == "subscribe")) end)
+      :erlang.suspend_process(connection)
+      Process.exit(receiver, :kill)
+
+      assert eventually(fn ->
+               {:messages, messages} = Process.info(connection, :messages)
+               Enum.any?(messages, &match?({:DOWN, _, :process, ^receiver, _}, &1))
+             end)
+
+      File.write!(audit <> ".release", "ready", [:exclusive])
+
+      assert eventually(fn ->
+               {:messages, messages} = Process.info(connection, :messages)
+
+               Enum.any?(messages, fn
+                 {^port, {:data, {:eol, line}}} ->
+                   match?(%{"id" => "2", "ok" => true}, Jason.decode!(line))
+
+                 _ ->
+                   false
+               end)
+             end)
+
+      :erlang.resume_process(connection)
+
+      assert {:ok, {:error, %Error{code: :receiver_closed, effect: :none}}} =
+               Task.yield(opening, 1_000)
+
+      assert eventually(fn -> not Process.alive?(connection) end)
+      assert Port.info(port) == nil
+    after
+      if Process.info(connection, :status) == {:status, :suspended},
+        do: :erlang.resume_process(connection)
+
+      Process.exit(receiver, :kill)
+      Task.shutdown(opening, :brutal_kill)
+      Matter.disconnect(session)
+      File.rm(audit <> ".release")
+    end
+  end
+
   @tag :native_input_pressure
   test "WMA-C03 a blocked report ACK retires the native generation once" do
     for pending_request <- [false, true] do
@@ -836,6 +944,13 @@ defmodule Wotex.Matter.SubscriptionTest do
         String.contains?(line, ~s("operation":"subscribe")) ->
           [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
           [_, current] = Regex.run(~r/"subscription_id":"([0-9a-f]{32})"/, line)
+          if mode == "blocked_subscribe", do: Process.sleep(2_000)
+          if mode == "gated_subscribe" do
+            wait = fn wait ->
+              if File.exists?(audit <> ".release"), do: :ok, else: (Process.sleep(1); wait.(wait))
+            end
+            wait.(wait)
+          end
           IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":{"subscription_id":"#{current}","generation":1,"min_interval_s":2,"max_interval_s":45,"sdk_subscription_id":73}}))
           case mode do
             mode when mode in ["reports", "blocked_health", "wrong_tlv"] ->
