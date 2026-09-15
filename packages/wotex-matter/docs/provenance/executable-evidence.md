@@ -2311,3 +2311,63 @@ receipt harness does not itself establish a successful 32-case SDK/software run.
 | Minimum focused log | `4154eb6d116c781874a045143697297d9cc897eae466d8b8e3def56abff31064` |
 | Missing-fixture CLI log | `c77d145b93af61772e9cc81a062dc97bca4117aceac3d2de220969fb0cb4e56d` |
 | ExDoc log | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+
+
+## Owned software peer readiness and cancellation
+
+The software command helper supports explicit asynchronous ownership and
+reference-bound cancellation. Its worker monitors the calling process, including
+normal caller exit. The synchronous build-command interface uses the same owner.
+Readiness emits at most one startup identity and one ready notification; neither
+contains peer output. A marker is at most 256 bytes, may span output chunks and
+retains only its bounded unmatched suffix. The existing 16 MiB output bound
+remains in force. Logs use exclusive owner-only files.
+
+The peer helper requires explicit startup and lifetime budgets. It retains the
+Port and child identity through startup cancellation, rejects early process exit
+and checks reaping at teardown. The pinned SDK's `src/app/server/Server.cpp`
+emits `Server Listening...` after successful server initialization and identifies
+that log as a test-harness marker. The fixture uses that marker without supplying
+Matter protocol responses.
+
+The late-readiness regression suspends the caller, observes the actual command
+worker sending ready after the 100 ms startup budget, then resumes the caller.
+The initial implementation incorrectly returns an active peer. The corrected
+helper checks the absolute deadline when consuming ready, cancels the command
+and confirms cleanup. Six peer tests additionally cover split output, missing
+readiness, successful and failed early exit, normal and abrupt caller exit,
+exclusive cancellation identity and owner-only logs. These controlled process
+fixtures establish orchestration behavior, not SDK protocol interoperability.
+
+The final `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes all 194 checks
+(two doctests, one property and 191 tests), with 33 excluded, in 69.5 seconds on
+Elixir 1.20.2/OTP 29.0.4. All 21 build-command, peer and acceptance-receipt tests
+pass in 10.0 seconds on Elixir 1.18.4/OTP 27.3.4.15. ExDoc passes with warnings
+as errors.
+
+Both fresh SDK cohorts start the pinned lighting peer through this helper,
+commission a new stored controller, execute all 16 selected SDK/corpus cases
+(including the 17 native corpus cases), and verify peer cleanup through the
+helper. Current Linux completes the cases in 16.3 seconds; minimum Linux
+completes them in 23.3 seconds. Both cohort processes exit successfully after
+cleanup. The production and sanitizer native binaries remain the preceding
+control-polling build; native code is unchanged. ASan/UBSan and leak detection
+remain enabled with the previously documented forced-exit limitation.
+
+The complete software-run command, full required-case execution, native C09
+fault/resource instrumentation and fresh build/archive receipts remain open.
+The preceding library coverage result remains 90.0%, below the unchanged 95%
+requirement. Peer ownership alone does not complete those requirements.
+
+| Software peer artifact | SHA-256 |
+| --- | --- |
+| Command owner | `86d45e6fc3f5ba65f2e77e5f03f564916b51ed545515b2165d18b860c4be0b82` |
+| Peer readiness and cleanup | `10b62231f00f7fb0f7c3e0a044bd78e07d155d793bfb1ee38bcaa7f85a5c1313` |
+| Peer lifecycle tests | `904c71cf72501ea2c8fd2c2b58b71e645803fbaca15338b05c63b4b409b9d0bf` |
+| Failing late-readiness regression | `304cfe2342f956a9c734f77e243329c6e52c22d880624150032946a43cf409bc` |
+| Passing late-readiness regression | `67efc8f2a9422a1abe012c9e77b40c18610385de1762a724fd4dba3baf8ab390` |
+| Default gate log | `831725d80cf2ea92a53fc6f854e8901725093cb0e54bbfb566fed11006910e32` |
+| Minimum focused log | `fd3b6d9c049227867122ee3fd67c31b268ca7feeeae652b201a46ffe9faea313` |
+| ExDoc log | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+| Current sixteen-case SDK/corpus log | `ed2f1842e46d7efc39606bac3bdba9a2ce2154f4895f6105d963797d23c98dc0` |
+| Minimum sixteen-case SDK/corpus log | `62270d291528a6dfa7352c478619ba4248fae83e154480f4b32387e9642736b0` |

@@ -203,6 +203,16 @@ Executing a hardware case also fails acceptance. Fixture and exception contents
 do not enter the structured receipt. This harness does not own peer startup or
 complete the software run task.
 
+`SoftwarePeer` starts an explicitly configured peer through an asynchronous
+`SoftwareCommand` owner. Readiness uses a bounded marker from the pinned peer's
+output; connectedhomeip emits `Server Listening...` after successful server
+initialization. The marker may span output chunks and produces one readiness
+notification. Startup and lifetime budgets are explicit. Cancellation preserves
+the child identity through delayed startup and checks that its Port and OS
+process have been reaped. Early exit fails setup or teardown. The command owner
+also observes normal and abnormal caller exit. Peer logs are owner-only files;
+readiness notifications contain no output bytes.
+
 ## Verification and commit procedure
 
 Run focused tests while implementing a package, then run `mix check` before its

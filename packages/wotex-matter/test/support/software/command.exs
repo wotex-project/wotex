@@ -14,34 +14,63 @@ defmodule Wotex.Matter.SoftwareCommand do
 
   @spec run(String.t(), [String.t()], keyword()) :: {:ok, binary()} | {:error, atom()}
   def run(executable, arguments, options \\ []) do
+    executable |> start(arguments, options) |> await()
+  end
+
+  @spec start(String.t(), [String.t()], keyword()) :: map()
+  def start(executable, arguments, options \\ []) do
     owner = self()
     reference = make_ref()
     timeout = Keyword.get(options, :timeout, 60_000)
+    deadline = System.monotonic_time(:millisecond) + timeout
 
     {worker, monitor} =
       spawn_monitor(fn ->
         owner_monitor = Process.monitor(owner)
-        result = execute(executable, arguments, options, owner_monitor, timeout)
+
+        result =
+          execute(executable, arguments, options, owner_monitor, {owner, reference}, deadline)
+
         send(owner, {reference, result})
       end)
 
+    %{owner: owner, pid: worker, monitor: monitor, reference: reference, deadline: deadline}
+  end
+
+  @spec await(map()) :: {:ok, binary()} | {:error, atom()}
+  def await(%{owner: owner, deadline: deadline} = command) when owner == self(),
+    do: await_result(command, deadline + 1_000)
+
+  @spec cancel(map()) :: {:ok, binary()} | {:error, atom()}
+  def cancel(%{owner: owner, pid: worker, reference: reference} = command) when owner == self() do
+    send(worker, {:cancel, reference})
+    await_result(command, System.monotonic_time(:millisecond) + 1_000)
+  end
+
+  defp await_result(%{pid: worker, reference: reference, monitor: monitor} = command, deadline) do
+    remaining = max(0, deadline - System.monotonic_time(:millisecond))
+
     receive do
-      {^reference, result} ->
+      {^reference, {kind, _} = result} when kind in [:ok, :error] ->
         Process.demonitor(monitor, [:flush])
         result
+
+      {^reference, _notification} ->
+        await_result(command, deadline)
 
       {:DOWN, ^monitor, :process, ^worker, _} ->
         {:error, :command_failed}
     after
-      timeout + 1_000 ->
+      remaining ->
         Process.exit(worker, :kill)
         Process.demonitor(monitor, [:flush])
         {:error, :command_timeout}
     end
   end
 
-  defp execute(executable, arguments, options, owner, timeout) do
+  defp execute(executable, arguments, options, owner, destination, deadline) do
     path = System.find_executable(executable)
+    readiness = readiness(options[:ready])
 
     if is_nil(path) do
       {:error, :required_tool_missing}
@@ -58,8 +87,12 @@ defmodule Wotex.Matter.SoftwareCommand do
         ])
 
       try do
-        deadline = System.monotonic_time(:millisecond) + timeout
-        collect(port, owner, deadline, [], 0, options)
+        if readiness do
+          {:os_pid, child} = Port.info(port, :os_pid)
+          notify(destination, {:started, port, child})
+        end
+
+        collect(port, owner, deadline, [], 0, options, destination, readiness)
       after
         terminate(port)
       end
@@ -68,12 +101,32 @@ defmodule Wotex.Matter.SoftwareCommand do
     _ -> {:error, :command_failed}
   end
 
-  defp collect(port, owner, deadline, chunks, size, options) do
+  defp collect(
+         port,
+         owner,
+         deadline,
+         chunks,
+         size,
+         options,
+         {_, reference} = destination,
+         readiness
+       ) do
     remaining = max(0, deadline - System.monotonic_time(:millisecond))
 
     receive do
       {^port, {:data, bytes}} when size + byte_size(bytes) <= @maximum_output ->
-        collect(port, owner, deadline, [bytes | chunks], size + byte_size(bytes), options)
+        readiness = signal_ready(readiness, bytes, destination)
+
+        collect(
+          port,
+          owner,
+          deadline,
+          [bytes | chunks],
+          size + byte_size(bytes),
+          options,
+          destination,
+          readiness
+        )
 
       {^port, {:data, _}} ->
         persist(chunks, options)
@@ -86,6 +139,10 @@ defmodule Wotex.Matter.SoftwareCommand do
       {:DOWN, ^owner, :process, _, _} ->
         persist(chunks, options)
         {:error, :command_owner_down}
+
+      {:cancel, ^reference} ->
+        persist(chunks, options)
+        {:error, :command_cancelled}
     after
       remaining ->
         persist(chunks, options)
@@ -95,9 +152,41 @@ defmodule Wotex.Matter.SoftwareCommand do
 
   defp persist(chunks, options) do
     output = chunks |> Enum.reverse() |> IO.iodata_to_binary()
-    if log = options[:log], do: File.write!(log, output, [:exclusive])
+
+    if log = options[:log] do
+      {:ok, file} = File.open(log, [:write, :exclusive])
+
+      try do
+        File.chmod!(log, 0o600)
+        :ok = IO.binwrite(file, output)
+      after
+        File.close(file)
+      end
+    end
+
     output
   end
+
+  defp readiness(nil), do: nil
+  defp readiness(marker) when is_binary(marker) and byte_size(marker) in 1..256, do: {marker, ""}
+
+  defp signal_ready(nil, _bytes, _destination), do: nil
+
+  defp signal_ready({marker, tail}, bytes, destination) do
+    buffer = tail <> bytes
+
+    case :binary.match(buffer, marker) do
+      :nomatch ->
+        keep = min(byte_size(buffer), byte_size(marker) - 1)
+        {marker, binary_part(buffer, byte_size(buffer) - keep, keep)}
+
+      _ ->
+        notify(destination, :ready)
+        nil
+    end
+  end
+
+  defp notify({owner, reference}, event), do: send(owner, {reference, event})
 
   defp terminate(port) do
     case Port.info(port, :os_pid) do
