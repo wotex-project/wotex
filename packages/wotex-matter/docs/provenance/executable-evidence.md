@@ -1006,3 +1006,39 @@ C09 gate remain open.
 | Minimum focused log | `aca6605df3af52dce154433774447ec4065699328d36cf238e292a06b002ce38` |
 | Current Linux lighting log | `ebcc541c0487a025540f40b848e7d43a43f242eef19299a0a10b90ee694cb59b` |
 | Minimum Linux sanitizer lighting log | `7be94d2ef772a0bcc8baa8688301e4dd4c3f01bb896ae6133ffefd8e4c469d74` |
+
+## Runtime route termination on native owner loss
+
+The Runtime relay monitors its bound native connection. If that connection exits
+without a terminal notification, the relay emits `transport_closed`, closes its
+original route and invalidates pending frames. Normal native errors and the
+subsequent monitor signal cannot produce duplicate terminal notifications.
+The regression fails before the monitor is added: killing the connection leaves
+the relay alive and the expected error absent after 1000 ms. The focused
+subscription and Runtime suites pass 33 tests on both supported BEAM versions.
+
+`test/interop/native_runtime_loss_test.exs` subscribes through the real native
+controller to the pinned lighting peer. It separately kills the BEAM connection
+and the native child, observes one error/status pair, rejects decoding of the
+retained frame and verifies zero surviving owned processes within 1000 ms.
+Current Linux cleanup takes 20/26 ms; minimum Linux takes 61/30 ms. Both lanes
+use the credit-trace host binaries recorded above. The minimum host is built
+with ASan/UBSan, but deliberately killed processes cannot establish successful
+sanitizer finalization. This is an established-subscription loss test, not an
+in-flight interaction cancellation or full C09 claim.
+
+Provide an existing lighting controller, node, endpoint and exclusive result
+path through `WOTEX_MATTER_NATIVE_RUNTIME_LOSS_FIXTURE` and select interop/software
+tags. The default gate passes 144 checks with 21 excluded; ExDoc passes without
+warnings.
+
+| Native loss artifact | SHA-256 |
+| --- | --- |
+| Runtime relay | `598c4584d3390f5fee9a18241f287f46e18fc07a2cf5a2384436ef857723dbe4` |
+| Subscription tests | `1d9149bc844d934a6492c202182a141be9fc909cb27591dad09b3d6cb176923e` |
+| Native peer test | `1d2e48c530527d33268240ca71a69b42739acc9220e50c51cff3c419eb84bcc7` |
+| Regression before fix | `4fe0d683fe89098d0b7f131f500a889188c923589a5b5741667ca8fb5c79de5a` |
+| Current focused log | `308e4f7ebda631423b12c9360e5b43da7a8c45e74d67faa28aa10da480bfa972` |
+| Minimum focused log | `38ff9ba414f21b9b86c5a7a0089e02a7f1e7a1a2467292e82bc30fa975cc1b7b` |
+| Current Linux native log | `6c42b6f94c69319fb145475f20abc8e96b9ce97af38ba6d20856b8668bced50f` |
+| Minimum Linux native log | `ba9c8e267a8fbde9f4d494af5a17125e475b792e4cc077ec4edf5b1e8d3d39d3` |

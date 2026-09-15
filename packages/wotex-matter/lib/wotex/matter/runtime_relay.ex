@@ -8,7 +8,9 @@ defmodule Wotex.Matter.RuntimeRelay do
   Native report credit is returned only when that owner consumes a validated
   frame. A suspended relay or Runtime owner therefore retains its native credit.
   Owner death, overflow and terminal errors close the original subscription and
-  controller; module loading starts no process or protocol activity.
+  controller. A monitored native connection that disappears terminates the route
+  even when it cannot send its own terminal notification. Module loading starts
+  no process or protocol activity.
   """
 
   use GenServer
@@ -225,6 +227,12 @@ defmodule Wotex.Matter.RuntimeRelay do
     {:stop, :normal, state}
   end
 
+  def handle_info(
+        {:DOWN, monitor, :process, _, _},
+        %{native_monitor: monitor, state: :bound} = state
+      ),
+      do: terminate_stream(Error.new(:transport_closed), :session_lost, state)
+
   def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
@@ -294,6 +302,7 @@ defmodule Wotex.Matter.RuntimeRelay do
           |> Map.merge(%{
             state: :bound,
             owner_monitor: owner_monitor,
+            native_monitor: monitor_native(session),
             session: session,
             subscription: subscription,
             reference: subscription.reference,
@@ -464,6 +473,9 @@ defmodule Wotex.Matter.RuntimeRelay do
   defp close_resources(%{closed?: true} = state), do: {:ok, state}
 
   defp close_resources(state) do
+    if is_reference(state.native_monitor),
+      do: Process.demonitor(state.native_monitor, [:flush])
+
     session = %{state.session | timeout: min(state.session.timeout, @cleanup_timeout)}
     unsubscribe = Matter.unsubscribe(session, state.subscription)
     disconnect = Matter.disconnect(session)
@@ -478,6 +490,11 @@ defmodule Wotex.Matter.RuntimeRelay do
     {result,
      %{state | state: :closed, session: nil, subscription: nil, pending: %{}, closed?: true}}
   end
+
+  defp monitor_native(%Session{client: Native, handle: %Native.Handle{pid: pid}}),
+    do: Process.monitor(pid)
+
+  defp monitor_native(_), do: nil
 
   defp valid_timestamp?(%{kind: kind, value: value} = timestamp)
        when map_size(timestamp) == 2 and kind in [:epoch, :system],

@@ -164,6 +164,52 @@ defmodule Wotex.Matter.SubscriptionTest do
     assert ack["report_sequence"] == 2
   end
 
+  test "WMA-B03 Runtime closes once when its native connection is killed" do
+    audit = temporary_path("runtime-connection-death")
+    assert {:ok, address} = Address.new(@path)
+    config = [client: Native] ++ native_options(native_fixture(audit, "reports"))
+
+    assert {:ok, relay} =
+             Wotex.Matter.RuntimeRelay.start(
+               self(),
+               "connection-death",
+               :observeproperty,
+               :attribute,
+               address,
+               config,
+               [max_queue_length: 64],
+               3_000
+             )
+
+    state = :sys.get_state(relay.pid)
+    connection = state.session.handle.pid
+    port = :sys.get_state(connection).port
+    monitor = Process.monitor(relay.pid)
+
+    try do
+      assert_receive {:wotex_transport_frame, frame}, 1_000
+      Process.exit(connection, :kill)
+      assert_receive {:wotex_transport, {:error, %Error{code: :transport_closed}}}, 1_000
+      assert_receive {:wotex_transport_status, :session_lost}, 1_000
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+      assert Port.info(port) == nil
+
+      assert :ignore =
+               Wotex.Matter.RuntimeRelay.decode(
+                 frame,
+                 "connection-death",
+                 :observeproperty,
+                 :attribute,
+                 address
+               )
+
+      refute_receive {:wotex_transport, {:error, _}}, 20
+      refute_receive {:wotex_transport_status, _}, 20
+    after
+      Wotex.Matter.RuntimeRelay.close(relay)
+    end
+  end
+
   test "a native producer exceeding unconsumed frame credit terminates once" do
     audit = temporary_path("unconsumed-overflow")
 
