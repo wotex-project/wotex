@@ -1,9 +1,12 @@
+Code.require_file("../support/software/scenarios.exs", __DIR__)
+
 defmodule Wotex.Matter.NativeLightingInteropTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
 
   alias Wotex.Matter
+  alias Wotex.Matter.SoftwareScenarios
   alias Wotex.Matter.{AttributeReport, Error, Native, RuntimeCredentials, TLV, Transport}
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Result}
 
@@ -20,95 +23,96 @@ defmodule Wotex.Matter.NativeLightingInteropTest do
       |> File.read!()
       |> Jason.decode!()
 
-    options = options(fixture)
-    assert native_ports(options[:executable]) == []
-    node = %{fabric_id: options[:fabric_id], node_id: Map.fetch!(fixture, "node_id")}
+    result =
+      SoftwareScenarios.with_peer(fixture, fn ->
+        options = options(fixture)
+        assert native_ports(options[:executable]) == []
+        node = %{fabric_id: options[:fabric_id], node_id: Map.fetch!(fixture, "node_id")}
 
-    {address, report_ids} =
-      with_session(options, fn session ->
-        assert {:ok, %{case: :established, node_id: commissioned}} =
-                 Matter.commission_on_network(session, %{
-                   node_id: node.node_id,
-                   setup_pin: Map.fetch!(fixture, "setup_pin"),
-                   discriminator: Map.fetch!(fixture, "discriminator"),
-                   timeout: 60_000
-                 })
+        {address, report_ids} =
+          with_session(options, fn session ->
+            assert {:ok, %{case: :established, node_id: commissioned}} =
+                     Matter.commission_on_network(session, %{
+                       node_id: node.node_id,
+                       setup_pin: Map.fetch!(fixture, "setup_pin"),
+                       discriminator: Map.fetch!(fixture, "discriminator"),
+                       timeout: 60_000
+                     })
 
-        assert commissioned == node.node_id
-        assert {:ok, catalogue} = Matter.discover_endpoints(session, node)
-        assert catalogue.consistency == :not_atomic
+            assert commissioned == node.node_id
+            assert {:ok, catalogue} = Matter.discover_endpoints(session, node)
+            assert catalogue.consistency == :not_atomic
 
-        endpoints =
-          Enum.filter(catalogue.endpoints, fn entry ->
-            match?({:ok, _}, entry.server_clusters) and
-              6 in elem(entry.server_clusters, 1).value
+            endpoints =
+              Enum.filter(catalogue.endpoints, fn entry ->
+                match?({:ok, _}, entry.server_clusters) and
+                  6 in elem(entry.server_clusters, 1).value
+              end)
+
+            assert length(endpoints) == 1
+            address = Map.merge(node, %{endpoint: hd(endpoints).endpoint, cluster: 6, member: 0})
+            assert_read(session, address, @off_value)
+            assert {:ok, <<0x15, 0x18>>} = TLV.encode([@empty])
+
+            assert {:error, %Error{code: :not_writable, effect: :none}} =
+                     Matter.write_attribute(session, address, @on_value)
+
+            assert {:ok, subscription} =
+                     Matter.subscribe(session, %{
+                       kind: :attribute,
+                       paths: [address],
+                       min_interval_s: 0,
+                       max_interval_s: 10,
+                       resubscribe: false
+                     })
+
+            first = report(subscription.reference, @off_value)
+            invoke(session, address, 1)
+            assert_read(session, address, @on_value)
+            second = report(subscription.reference, @on_value)
+            invoke(session, address, 0)
+            assert_read(session, address, @off_value)
+            third = report(subscription.reference, @off_value)
+
+            assert first.path == second.path and second.path == third.path
+            assert first.report_id < second.report_id and second.report_id < third.report_id
+            assert first.data_version != third.data_version
+            assert :ok = Matter.unsubscribe(session, subscription)
+            assert :ok = Matter.unsubscribe(session, subscription)
+            invoke(session, address, 1)
+            assert_read(session, address, @on_value)
+            reference = subscription.reference
+            refute_receive {:wotex_matter, ^reference, _}, 1_100
+            {address, Enum.map([first, second, third], & &1.report_id)}
           end)
 
-        assert length(endpoints) == 1
-        address = Map.merge(node, %{endpoint: hd(endpoints).endpoint, cluster: 6, member: 0})
-        assert_read(session, address, @off_value)
-        assert {:ok, <<0x15, 0x18>>} = TLV.encode([@empty])
+        stored = Keyword.merge(options, storage_mode: :open_existing, authority: :stored)
+        with_session(stored, &assert_read(&1, address, @on_value))
+        consumed = consumed(stored, address)
 
-        assert {:error, %Error{code: :not_writable, effect: :none}} =
-                 Matter.write_attribute(session, address, @on_value)
+        assert {:ok, %Result{payload: @on_value, metadata: metadata}} =
+                 ConsumedThing.read_property(consumed, "on", context("read-on"))
 
-        assert {:ok, subscription} =
-                 Matter.subscribe(session, %{
-                   kind: :attribute,
-                   paths: [address],
-                   min_interval_s: 0,
-                   max_interval_s: 10,
-                   resubscribe: false
-                 })
+        assert metadata.path == address
 
-        first = report(subscription.reference, @off_value)
-        invoke(session, address, 1)
-        assert_read(session, address, @on_value)
-        second = report(subscription.reference, @on_value)
-        invoke(session, address, 0)
-        assert_read(session, address, @off_value)
-        third = report(subscription.reference, @off_value)
+        assert {:ok, %Result{payload: nil, metadata: %{status: 0, response_path: nil}}} =
+                 ConsumedThing.invoke_action(consumed, "off", @empty, context("invoke-off"))
 
-        assert first.path == second.path and second.path == third.path
-        assert first.report_id < second.report_id and second.report_id < third.report_id
-        assert first.data_version != third.data_version
-        assert :ok = Matter.unsubscribe(session, subscription)
-        assert :ok = Matter.unsubscribe(session, subscription)
-        invoke(session, address, 1)
-        assert_read(session, address, @on_value)
-        reference = subscription.reference
-        refute_receive {:wotex_matter, ^reference, _}, 1_100
-        {address, Enum.map([first, second, third], & &1.report_id)}
+        assert {:ok, %Result{payload: @off_value}} =
+                 ConsumedThing.read_property(consumed, "on", context("read-off"))
+
+        with_session(stored, &assert_read(&1, address, @off_value))
+        assert native_ports(options[:executable]) == []
+
+        %{
+          status: "passed",
+          address: address,
+          report_ids: report_ids,
+          owned_ports_after_cleanup: 0
+        }
       end)
 
-    stored = Keyword.merge(options, storage_mode: :open_existing, authority: :stored)
-    with_session(stored, &assert_read(&1, address, @on_value))
-    consumed = consumed(stored, address)
-
-    assert {:ok, %Result{payload: @on_value, metadata: metadata}} =
-             ConsumedThing.read_property(consumed, "on", context("read-on"))
-
-    assert metadata.path == address
-
-    assert {:ok, %Result{payload: nil, metadata: %{status: 0, response_path: nil}}} =
-             ConsumedThing.invoke_action(consumed, "off", @empty, context("invoke-off"))
-
-    assert {:ok, %Result{payload: @off_value}} =
-             ConsumedThing.read_property(consumed, "on", context("read-off"))
-
-    with_session(stored, &assert_read(&1, address, @off_value))
-    assert native_ports(options[:executable]) == []
-
-    File.write!(
-      Map.fetch!(fixture, "result_path"),
-      Jason.encode!(%{
-        status: "passed",
-        address: address,
-        report_ids: report_ids,
-        owned_ports_after_cleanup: 0
-      }),
-      [:exclusive]
-    )
+    File.write!(Map.fetch!(fixture, "result_path"), Jason.encode!(result), [:exclusive])
   end
 
   defp options(fixture) do

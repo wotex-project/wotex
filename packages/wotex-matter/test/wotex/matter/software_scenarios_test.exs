@@ -21,7 +21,7 @@ defmodule Wotex.Matter.SoftwareScenariosTest do
     executable =
       script(
         directory,
-        "case \"$PWD\" in */lighting) exit 1 ;; esac\nprintf 'Server Listening...'; exec sleep 60"
+        "case \"$PWD\" in */expired_window) exit 1 ;; esac\nprintf 'Server Listening...'; exec sleep 60"
       )
 
     artifacts = artifacts(executable)
@@ -35,7 +35,7 @@ defmodule Wotex.Matter.SoftwareScenariosTest do
     assert Path.wildcard(Path.join(workspace, "*-fixture.json")) == []
   end
 
-  test "controller setup failure reaps all thirteen ready peers", %{directory: directory} do
+  test "controller setup starts and reaps only its four preparation peers", %{directory: directory} do
     executable = script(directory, "printf 'Server Listening...'; exec sleep 60")
     host = Path.join(directory, "host")
     File.write!(host, "#!/bin/sh\nexit 1\n")
@@ -47,8 +47,50 @@ defmodule Wotex.Matter.SoftwareScenariosTest do
       SoftwareScenarios.with_fixtures(artifacts, workspace, fn _ -> flunk("setup succeeded") end)
     end
 
-    assert_reaped(workspace, 13)
+    assert_reaped(workspace, 4)
+    assert length(Path.wildcard(Path.join(workspace, "*"))) == 13
     assert Path.wildcard(Path.join(workspace, "*-fixture.json")) == []
+  end
+
+  test "a deferred peer starts inside its case and is reaped on return or callback failure", %{
+    directory: directory
+  } do
+    executable = script(directory, "printf 'Server Listening...'; exec sleep 60")
+
+    for outcome <- [:return, :raise] do
+      workspace = Path.join(directory, Atom.to_string(outcome))
+      File.mkdir!(workspace)
+      File.chmod!(workspace, 0o700)
+      pid_file = Path.join(workspace, "peer.pid")
+
+      fixture = %{
+        "peer" => %{"executable" => executable, "arguments" => [], "directory" => workspace}
+      }
+
+      refute File.exists?(pid_file)
+
+      operation = fn ->
+        pid = pid_file |> File.read!() |> String.trim()
+        assert {_, 0} = System.cmd("/bin/kill", ["-0", pid], stderr_to_stdout: true)
+        if outcome == :raise, do: raise("case failure"), else: :case_completed
+      end
+
+      if outcome == :raise do
+        assert_raise RuntimeError, "case failure", fn ->
+          SoftwareScenarios.with_peer(fixture, operation)
+        end
+      else
+        assert SoftwareScenarios.with_peer(fixture, operation) == :case_completed
+      end
+    end
+
+    assert_reaped(directory, 2)
+  end
+
+  test "an externally supplied fixture retains caller-owned peer setup", %{directory: directory} do
+    fixture = %{"controller" => %{}, "node_id" => 1}
+    assert SoftwareScenarios.with_peer(fixture, fn -> :external_peer end) == :external_peer
+    assert File.ls!(directory) == []
   end
 
   defp artifacts(executable) do

@@ -1,9 +1,12 @@
+Code.require_file("../support/software/scenarios.exs", __DIR__)
+
 defmodule Wotex.Matter.CommissioningInteropTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
 
   alias Wotex.Matter
+  alias Wotex.Matter.SoftwareScenarios
   alias Wotex.Matter.{Error, Native, OnboardingMaterial}
 
   @moduletag :interop
@@ -87,13 +90,15 @@ defmodule Wotex.Matter.CommissioningInteropTest do
   end
 
   defp with_session(scenario, operation) do
-    assert {:ok, session} = Matter.connect(controller_options(Map.fetch!(scenario, "controller")))
+    SoftwareScenarios.with_peer(scenario, fn ->
+      assert {:ok, session} = Matter.connect(controller_options(Map.fetch!(scenario, "controller")))
 
-    try do
-      operation.(session)
-    after
-      assert :ok = Matter.disconnect(session)
-    end
+      try do
+        operation.(session)
+      after
+        assert :ok = Matter.disconnect(session)
+      end
+    end)
   end
 
   defp controller_options(controller) do

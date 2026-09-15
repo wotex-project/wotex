@@ -1,9 +1,12 @@
+Code.require_file("../support/software/scenarios.exs", __DIR__)
+
 defmodule Wotex.Matter.NativeBridgeInteropTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
 
   alias Wotex.Matter
+  alias Wotex.Matter.SoftwareScenarios
   alias Wotex.Matter.{AttributeReport, EventReport, Native}
 
   @moduletag :interop
@@ -16,114 +19,119 @@ defmodule Wotex.Matter.NativeBridgeInteropTest do
       |> File.read!()
       |> Jason.decode!()
 
-    controller = Map.fetch!(fixture, "controller")
+    result =
+      SoftwareScenarios.with_peer(fixture, fn ->
+        controller = Map.fetch!(fixture, "controller")
 
-    options =
-      [
-        client: Native,
-        lifecycle: :persistent,
-        storage_mode: :create_new,
-        authority: :generate_root,
-        timeout: 60_000
-      ] ++
-        Enum.map(
+        options =
           [
-            :executable,
-            :storage_path,
-            :vendor_id,
-            :fabric_id,
-            :controller_node_id,
-            :paa_trust_store
-          ],
-          &{&1, Map.fetch!(controller, Atom.to_string(&1))}
-        )
+            client: Native,
+            lifecycle: :persistent,
+            storage_mode: :create_new,
+            authority: :generate_root,
+            timeout: 60_000
+          ] ++
+            Enum.map(
+              [
+                :executable,
+                :storage_path,
+                :vendor_id,
+                :fabric_id,
+                :controller_node_id,
+                :paa_trust_store
+              ],
+              &{&1, Map.fetch!(controller, Atom.to_string(&1))}
+            )
 
-    node = %{fabric_id: options[:fabric_id], node_id: Map.fetch!(fixture, "node_id")}
-    assert {:ok, session} = Matter.connect(options)
-    owner = session.handle.pid
-    monitor = Process.monitor(owner)
-    {:links, links} = Process.info(owner, :links)
-    [port] = Enum.filter(links, &is_port/1)
-    {:os_pid, child} = Port.info(port, :os_pid)
+        node = %{fabric_id: options[:fabric_id], node_id: Map.fetch!(fixture, "node_id")}
+        assert {:ok, session} = Matter.connect(options)
+        owner = session.handle.pid
+        monitor = Process.monitor(owner)
+        {:links, links} = Process.info(owner, :links)
+        [port] = Enum.filter(links, &is_port/1)
+        {:os_pid, child} = Port.info(port, :os_pid)
 
-    observation =
-      try do
-        assert {:ok, %{case: :established, node_id: commissioned}} =
-                 Matter.commission_on_network(session, %{
-                   node_id: node.node_id,
-                   setup_pin: Map.fetch!(fixture, "setup_pin"),
-                   discriminator: Map.fetch!(fixture, "discriminator"),
-                   timeout: 60_000
-                 })
+        observation =
+          try do
+            assert {:ok, %{case: :established, node_id: commissioned}} =
+                     Matter.commission_on_network(session, %{
+                       node_id: node.node_id,
+                       setup_pin: Map.fetch!(fixture, "setup_pin"),
+                       discriminator: Map.fetch!(fixture, "discriminator"),
+                       timeout: 60_000
+                     })
 
-        assert commissioned == node.node_id
-        assert {:ok, catalogue} = Matter.discover_endpoints(session, node)
+            assert commissioned == node.node_id
+            assert {:ok, catalogue} = Matter.discover_endpoints(session, node)
 
-        candidates =
-          Enum.filter(catalogue.endpoints, fn entry ->
-            match?({:ok, _}, entry.server_clusters) and
-              Enum.all?([0x0039, 0x0402], &(&1 in elem(entry.server_clusters, 1).value))
-          end)
+            candidates =
+              Enum.filter(catalogue.endpoints, fn entry ->
+                match?({:ok, _}, entry.server_clusters) and
+                  Enum.all?([0x0039, 0x0402], &(&1 in elem(entry.server_clusters, 1).value))
+              end)
 
-        assert candidates != []
-        endpoint = Enum.min_by(candidates, & &1.endpoint).endpoint
-        attribute = Map.merge(node, %{endpoint: endpoint, cluster: 0x0039, member: 0x0011})
-        event = %{attribute | member: 3}
-        assert_value(session, attribute, true)
+            assert candidates != []
+            endpoint = Enum.min_by(candidates, & &1.endpoint).endpoint
+            attribute = Map.merge(node, %{endpoint: endpoint, cluster: 0x0039, member: 0x0011})
+            event = %{attribute | member: 3}
+            assert_value(session, attribute, true)
 
-        assert {:ok, subscription} =
-                 Matter.subscribe(session, %{
-                   kind: :event,
-                   paths: [event],
-                   min_interval_s: 0,
-                   max_interval_s: 1,
-                   resubscribe: false
-                 })
+            assert {:ok, subscription} =
+                     Matter.subscribe(session, %{
+                       kind: :event,
+                       paths: [event],
+                       min_interval_s: 0,
+                       max_interval_s: 1,
+                       resubscribe: false
+                     })
 
-        discard_initial(subscription.reference)
+            discard_initial(subscription.reference)
 
-        control(fixture, false)
-        first = report(subscription.reference, false, -1)
-        assert_value(session, attribute, false)
-        control(fixture, true)
-        second = report(subscription.reference, true, first.event_number)
-        assert_value(session, attribute, true)
-        assert second.report_id > first.report_id
-        assert first.path == second.path
-        assert first.timestamp.kind in [:epoch, :system]
-        assert second.timestamp.kind == first.timestamp.kind
-        assert second.timestamp.value >= first.timestamp.value
-        assert is_integer(first.priority)
+            control(fixture, false)
+            first = report(subscription.reference, false, -1)
+            assert_value(session, attribute, false)
+            control(fixture, true)
+            second = report(subscription.reference, true, first.event_number)
+            assert_value(session, attribute, true)
+            assert second.report_id > first.report_id
+            assert first.path == second.path
+            assert first.timestamp.kind in [:epoch, :system]
+            assert second.timestamp.kind == first.timestamp.kind
+            assert second.timestamp.value >= first.timestamp.value
+            assert is_integer(first.priority)
 
-        assert {:ok, history} =
-                 Matter.read_events(session, [event], min_event_number: first.event_number)
+            assert {:ok, history} =
+                     Matter.read_events(session, [event], min_event_number: first.event_number)
 
-        reports = Enum.map(history, fn %{result: {:ok, %EventReport{} = report}} -> report end)
-        assert Enum.map(reports, & &1.event_number) == [first.event_number, second.event_number]
-        assert Enum.map(reports, & &1.value) == [event_value(false), event_value(true)]
-        assert Enum.map(reports, & &1.timestamp) == [first.timestamp, second.timestamp]
+            reports = Enum.map(history, fn %{result: {:ok, %EventReport{} = report}} -> report end)
+            assert Enum.map(reports, & &1.event_number) == [first.event_number, second.event_number]
+            assert Enum.map(reports, & &1.value) == [event_value(false), event_value(true)]
+            assert Enum.map(reports, & &1.timestamp) == [first.timestamp, second.timestamp]
 
-        assert {:ok, []} =
-                 Matter.read_events(session, [event], min_event_number: second.event_number + 1)
+            assert {:ok, []} =
+                     Matter.read_events(session, [event], min_event_number: second.event_number + 1)
 
-        assert :ok = Matter.unsubscribe(session, subscription)
-        reference = subscription.reference
-        control(fixture, false)
-        assert eventually_value(session, attribute, false, 20)
-        refute_receive {:wotex_matter, ^reference, _}, 1_100
+            assert :ok = Matter.unsubscribe(session, subscription)
+            reference = subscription.reference
+            control(fixture, false)
+            assert eventually_value(session, attribute, false, 20)
+            refute_receive {:wotex_matter, ^reference, _}, 1_100
 
-        %{
-          status: "passed",
-          endpoint: endpoint,
-          event_numbers: [first.event_number, second.event_number]
-        }
-      after
-        assert :ok = Matter.disconnect(session)
-        assert_receive {:DOWN, ^monitor, :process, ^owner, :normal}, 1_000
-        assert child_stopped?(child, 100)
-      end
+            %{
+              status: "passed",
+              endpoint: endpoint,
+              event_numbers: [first.event_number, second.event_number]
+            }
+          after
+            assert :ok = Matter.disconnect(session)
+            assert_receive {:DOWN, ^monitor, :process, ^owner, :normal}, 1_000
+            assert child_stopped?(child, 100)
+          end
 
-    File.write!(Map.fetch!(fixture, "result_path"), Jason.encode!(observation), [:exclusive])
+        observation
+      end)
+
+    File.write!(Map.fetch!(fixture, "result_path"), Jason.encode!(result), [:exclusive])
   end
 
   defp event_value(value),

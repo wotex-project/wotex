@@ -63,7 +63,37 @@ defmodule Wotex.Matter.SoftwareScenarios do
         do: arguments ++ ["--app-pipe", control],
         else: arguments
 
-    case SoftwarePeer.start(Map.fetch!(context.artifacts, kind), arguments,
+    scenario = %{
+      "controller" => controller(context, directory, index),
+      "node_id" => 780_000 + index,
+      "setup_pin" => pin,
+      "discriminator" => discriminator,
+      "control_path" => control,
+      "endpoint" => 1,
+      "timeout" => 30_000,
+      "peer" => %{
+        "executable" => Map.fetch!(context.artifacts, kind),
+        "arguments" => arguments,
+        "directory" => directory
+      }
+    }
+
+    if name in [:common, :oneshot, :expired_window, :acl_denied] do
+      with_peer(scenario, fn ->
+        own_peers(remaining, context, Map.put(peers, name, Map.delete(scenario, "peer")), operation)
+      end)
+    else
+      own_peers(remaining, context, Map.put(peers, name, scenario), operation)
+    end
+  end
+
+  @spec with_peer(map(), (-> term())) :: term()
+  def with_peer(%{"peer" => descriptor}, operation) do
+    directory = Map.fetch!(descriptor, "directory")
+
+    case SoftwarePeer.start(
+           Map.fetch!(descriptor, "executable"),
+           Map.fetch!(descriptor, "arguments"),
            cd: directory,
            startup_timeout: 30_000,
            timeout: 3_600_000,
@@ -72,17 +102,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
          ) do
       {:ok, peer} ->
         try do
-          scenario = %{
-            "controller" => controller(context, directory, index),
-            "node_id" => 780_000 + index,
-            "setup_pin" => pin,
-            "discriminator" => discriminator,
-            "control_path" => control,
-            "endpoint" => 1,
-            "timeout" => 30_000
-          }
-
-          own_peers(remaining, context, Map.put(peers, name, scenario), operation)
+          operation.()
         after
           unless SoftwarePeer.stop(peer) == :ok, do: fail(:software_peer_cleanup_failed)
         end
@@ -91,6 +111,8 @@ defmodule Wotex.Matter.SoftwareScenarios do
         fail(:software_peer_start_failed)
     end
   end
+
+  def with_peer(%{}, operation), do: operation.()
 
   defp prepare(context, peers) do
     # Start the real expiry interval before preparing the other controller stores.

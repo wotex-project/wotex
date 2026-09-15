@@ -2811,3 +2811,36 @@ software run remain required.
 | Minimum focused gate | `09f8aabb74aa44a2db4fcfb310e468118aed3f3ba4b76d2c86a4f6825e4f1483` |
 | Default gate | `702bc2f9011d9096a36d8be4b4db028e328b1781dbd2ed7cf8ce54ea746b4b56` |
 | ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+
+## Commissioning-peer ownership within each case
+
+The required scenario helper starts only the four peers needed for preparatory
+commissioning, one-shot interactions, the real expired window and ACL denial.
+The other nine fixture descriptors retain their private executable arguments
+and directories. Their consuming cases start the peer, await readiness, execute
+the operation and verify peer cleanup before returning. Generated wrong-PIN
+requests do not replace the peer's original setup PIN. Externally configured
+fixtures without this descriptor retain their existing caller-owned lifecycle.
+Per-case recipe observations are written after successful peer cleanup.
+
+The preparation regression previously observes thirteen child processes where
+only four are required. Its partial-startup variant observes eleven attempts
+before the expired-window fixture fails. Both now observe the intended four
+and three children and verify that all owned children are reaped. Callback
+success and exception tests observe the deferred child alive only inside the
+case scope and reaped afterward. An externally owned fixture starts no process.
+All 12 scenario/peer tests pass in 5.0 seconds on the current toolchain and
+5.1 seconds on the minimum toolchain. The current default gate passes 210 checks
+with 33 excluded in 73.2 seconds. Both formatters and ExDoc pass. These ownership
+assertions do not replace the required fresh two-lane SDK acceptance run.
+
+| Case-owned peer artifact | SHA-256 |
+| --- | --- |
+| Scenario preparation and case ownership | `9487b257d73420c80980d3f6cc66811dd3e4a958d67d7a2096075bef8d8ff83e` |
+| Scenario ownership assertions | `32aa1f491f275a9f746e2f788dece1e9fef503d15e8a6e67b87a9dc849d9b944` |
+| Preparation regression before correction | `b14913e8b27c86e40dc735ee31b9fe72a9300dc4a10444e2784878772b46ce81` |
+| Current focused gate | `c38559f0886f21465d423f54b277094ee9597166b7a3972749a252c8be3b8132` |
+| Minimum focused gate | `bba1b925a5a08ab271d280ea9f86da323955f69c412355c434a39132b2fc70f2` |
+| Default gate | `a5d8fb844f6267ce46948fd12bb7478538cf373d48cb3dd305fcb673e674e8cf` |
+| Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |

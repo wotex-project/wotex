@@ -233,15 +233,20 @@ loss and the absolute lifetime remain enforceable during continuous output.
 Other fixture commands fail at their output limit. Readiness notifications
 contain no output bytes.
 
-`SoftwareScenarios.with_fixtures/3` owns thirteen peer processes and their
-controller stores for the required scenario inventory. It assigns distinct
+`SoftwareScenarios.with_fixtures/3` prepares thirteen peer configurations and
+controller stores for the required scenario inventory. Four peers start during
+preparation: the common interaction peer, one-shot peer, expired-window peer and
+ACL-denial peer. Each of the other nine peers starts through `with_peer/2` when
+its commissioning case begins and is reaped before that case returns. Its basic
+pairing window therefore starts with its own case. The helper assigns distinct
 ports and discriminators within its runner-owned network namespace, creates
 owner-only fixture files and invokes the suite only after commissioning and
 failure fixtures are ready. The expired-window fixture waits for the real
 180-second window and verifies its closed status. The untrusted-attestation
 fixture selects a different public SDK test root. ACL denial is established by
 an acknowledged typed ACL write. Any setup or callback failure unwinds the
-owned peers in reverse order. This helper requires the caller to supply the
+owned peers in reverse order. Fixtures without a peer descriptor retain external
+peer ownership. This helper requires the caller to supply the
 pinned executables, public test roots and an isolated network namespace; it
 does not implement workspace verification or the complete software run task.
 
