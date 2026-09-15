@@ -72,6 +72,10 @@ bool ValidPathResult(const InteractionRequest &request, const PathResult &result
 
 } // namespace
 
+bool valid_encoded_result_size(std::size_t bytes) {
+  return bytes <= kMaximumInteractionResultBytes;
+}
+
 bool valid_interaction_request(const InteractionRequest &request) {
   if (request.timeout_ms == 0 || request.timeout_ms > 60000 ||
       request.fabric_id == 0 || request.node_id == 0 ||

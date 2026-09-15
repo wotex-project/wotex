@@ -16,6 +16,9 @@ inline constexpr std::size_t kMaximumInteractionReports = 1024;
 inline constexpr std::size_t kMaximumInteractionResultBytes = 98304;
 inline constexpr std::size_t kMaximumEncodedTlvBytes = 65536;
 
+// The result JSON excludes the response envelope and terminating newline.
+bool valid_encoded_result_size(std::size_t bytes);
+
 enum class InteractionKind { ReadAttribute, ReadAttributes, ReadEvents, Write, Invoke };
 enum class InteractionEffect { None, Unknown };
 

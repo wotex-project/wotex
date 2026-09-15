@@ -1163,7 +1163,7 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
       return {true, Failure(request, "invalid_backend_result")};
     }
     const std::string encoded = result->dump();
-    if (encoded.size() > kMaximumInteractionResultBytes) {
+    if (!valid_encoded_result_size(encoded.size())) {
       return {true, Failure(request, "response_limit")};
     }
     return {true, Success(request, std::move(*result))};

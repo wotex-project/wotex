@@ -894,3 +894,36 @@ they do not replace the remaining commissioning, process-flow or full-run gates.
 | Generic commissioning test | `db1d6b3424bed816cc043abd8b6011c468d937854863aee835500527f5e7564c` |
 | Current Linux status log | `cb85b20c1df877d116de9e14caedaa190b79ef353978d0b6e08d1846f5c17528` |
 | Minimum Linux sanitizer status log | `2782b2a8f1cba8397e3b15ec0db8672af3dd81a176a52e1eb07de1f7b0ec832c` |
+
+## Encoded-result budget corpus
+
+WMA-B-F16 and F17 execute `valid_encoded_result_size`, the shared production
+predicate applied to serialized interaction results before the response envelope
+is emitted. The exact 98304-byte boundary is accepted; 98305 bytes returns the
+`response_limit` projection. ExUnit supplies only the decimal input byte count
+to the bounded native contract driver and compares its result with the unchanged
+corpus expectation. The previous driver rejects the unsupported operation.
+The native runtime retains the same limit and separate pre-serialization
+retention bounds.
+
+All three native-corpus tests pass on the current Linux toolchain and the minimum
+ASan/UBSan lane with leak detection enabled. They execute F01–F06 and F16–F17,
+eight of seventeen cases. The six flow traces and three process-flow cases remain
+unexecuted, so the corpus retains `specified_unexecuted` status. These pure size
+checks do not establish process-flow bounds or SDK peer interoperability.
+Both SDK hosts were incrementally rebuilt, both six-test CTest lanes pass,
+fifteen advisory queries pass, and the default 139-check gate and ExDoc pass.
+
+| Result-budget artifact | SHA-256 |
+| --- | --- |
+| Shared interaction header | `0b061fe2e9d18a9dc10512693771b17276125a755d938c9f6a2e34eb991a209f` |
+| Shared interaction implementation | `37d015a4d530ad507e549cc1a2b2f1031879c9bb5acec278dc038897ba3d7844` |
+| Production protocol | `e68cbe8ea05896b55043cbebce886c1e1b2197e90158253dae9874ece821b12c` |
+| Native contract driver | `84238017eaae065eb908dbb36ed64736e1574a8cb9d4737829164275ed23aca7` |
+| ExUnit corpus tests | `c62835669a58dedf1f4e04c311d50971379a081f376168a53a4300f815325d2a` |
+| Normal host | `bc7a3aeff0a607cb019c514a7fc928211c6afe0ff99a38278ae7aa69a32c83df` |
+| Sanitized host | `026ded05969e3044ca0de63b7a49b715e0b1f59c7e26c355658a4873e7e64abf` |
+| Normal contract executable | `69316fd21d18117c976d1c539c120e086488b8618b0a889df0e692e48788abea` |
+| Sanitized contract executable | `15f9fe35622d70799c3db279cb027c9106dbc167cbd9633bac699c05d1f99b89` |
+| Current Linux corpus log | `dc3159c6c1bb1083b7585d6f83edfd8b61f121d81b94b3bcd920f7c2a35e0ba2` |
+| Minimum Linux sanitizer corpus log | `c6400e9660a3469c2772cab02dd9bd070abf7b8b2be00b1667d836608c62412b` |

@@ -68,6 +68,40 @@ defmodule Wotex.Matter.NativeContractTest do
     end
   end
 
+  test "WMA-B-F16 and F17 execute the production encoded-result size guard" do
+    selected = Enum.filter(fixture!()["cases"], &(&1["operation"] == "result_budget"))
+    assert Enum.map(selected, & &1["id"]) == ["WMA-B-F16", "WMA-B-F17"]
+    executable = System.fetch_env!("WOTEX_MATTER_CONTRACT_DRIVER")
+
+    directory =
+      Path.join(System.tmp_dir!(), "wotex-result-budget-#{System.unique_integer([:positive])}")
+
+    File.mkdir!(directory)
+
+    try do
+      for item <- selected do
+        assert item["expectation"]["operator"] == "exact"
+        bytes = Map.fetch!(item["input"], "encoded_result_bytes")
+        assert is_integer(bytes) and bytes >= 0
+        path = Path.join(directory, item["id"])
+        File.write!(path, Integer.to_string(bytes) <> "\n", [:exclusive])
+
+        assert {:ok, output} =
+                 SoftwareCommand.run(executable, ["result_budget", path],
+                   timeout: 1_000,
+                   env: [
+                     {"ASAN_OPTIONS", "detect_leaks=1:halt_on_error=1"},
+                     {"UBSAN_OPTIONS", "halt_on_error=1"}
+                   ]
+                 )
+
+        assert Jason.decode!(output) == item["expectation"]["value"], item["id"]
+      end
+    after
+      File.rm_rf!(directory)
+    end
+  end
+
   defp surviving_child(_, 0), do: 1
 
   defp surviving_child(pid, remaining) do
