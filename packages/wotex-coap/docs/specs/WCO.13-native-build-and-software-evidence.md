@@ -138,6 +138,16 @@ finite waits, status redaction and owner-death cleanup within C03. The injected
 test executable is not the production OSCORE worker. Public connection dispatch,
 unary/body operations, Observe delivery and live report credit remain unimplemented.
 
+`Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
+this owner. One generation-bound ETS table admits exactly 64 ordinary calls and
+one separate close-control record. Atomic reservation and submission markers
+retain caller/deadline ownership across timeout races, reject foreign generation
+capabilities and make closing terminal for later admission. Four tests exercise
+the exact concurrent limit, singular close control, caller death, timeout and
+table-owner termination. The startup owner does not yet publish or consume this
+table, so this component alone does not accept unary dispatch or the connection
+integration required by this section.
+
 Arguments contain no secrets. `Port.open({:spawn_executable, path}, ...)` starts
 one helper for one native session. No shell, daemon discovery, global registry,
 NIF or second BEAM retransmission engine participates. Its stdout carries only

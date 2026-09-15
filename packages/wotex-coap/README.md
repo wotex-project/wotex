@@ -155,10 +155,13 @@ BEAM UDP, OTP DTLS and a planned explicit libcoap OSCORE Port.
 explicit native executable and manifest without starting it. Connection
 dispatch to that executable remains planned. `Wotex.CoAP.Native.Connection`
 owns the verified executable for its bounded ready/open/close lifecycle and
-monitors the caller without exposing credentials. `Wotex.CoAP.Native.Wire` validates
-bounded ready and response frames and constructs complete Messages without
-starting a process. `Wotex.CoAP.Native.Command` encodes exact bounded commands
-with monotonic identities scoped to a generation. `Wotex.CoAP.Native.Body`
+monitors the caller without exposing credentials. `Wotex.CoAP.Native.Admission`
+atomically reserves exactly 64 ordinary call slots plus separate close-control
+capacity before messages enter an owner mailbox. Connection integration remains
+planned. `Wotex.CoAP.Native.Wire` validates bounded ready and response frames
+and constructs complete Messages without starting a process.
+`Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic
+identities scoped to a generation. `Wotex.CoAP.Native.Body`
 withholds streamed bytes until exact length and hash verification.
 `Wotex.CoAP.Native.Report` correlates report/body
 envelopes and verifies Message metadata. `Wotex.CoAP.Native.ReportLedger` bounds

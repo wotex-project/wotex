@@ -125,6 +125,15 @@ owner releases the exact helper within 1,000 ms. The injected executable is a
 protocol fixture; these tests do not accept the production libcoap worker,
 unary/body execution, Observe delivery or report-credit integration.
 
+`native_admission_test.exs` executes four exact tests for the WCO-N02 pre-mailbox
+capacity primitive. Ninety-six concurrent callers produce exactly 64 ordinary
+leases and 32 busy results. Separate singular close control prevents later
+ordinary admission; owner death and deadline expiry are observable, generation
+and table ownership reject foreign capabilities, and table-owner termination
+removes all state. Submission markers preserve the queued-versus-cancelled
+effect boundary. These tests do not wire admission into `Native.Connection`,
+write a Port or accept public unary/Observe dispatch.
+
 `native_backend_test.exs` executes WCO-N01/N02 manifest and executable
 verification. It covers exact option keys and path bounds, ordinary-file and
 executable-mode checks, the 1 MiB manifest ceiling, strict bounded JSON, pinned
