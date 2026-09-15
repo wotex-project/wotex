@@ -81,6 +81,9 @@ defmodule Wotex.Matter.SoftwareRun do
   defp lane(context, lane) do
     directory = Path.join(context.directory, lane["name"])
     private_directory(directory)
+    dependency_directory = Path.join(directory, "dependency-bootstrap")
+    private_directory(dependency_directory)
+    File.cp!(Path.join(context.root, "mix.lock"), Path.join(dependency_directory, "mix.lock"))
 
     context =
       Map.merge(context, %{
@@ -177,12 +180,24 @@ defmodule Wotex.Matter.SoftwareRun do
     inside(context, "procfs", ["test", "-d", "/proc/self/fd"], 5_000)
     inside(context, "hex", ["mix", "local.hex", "--force"], 120_000)
     inside(context, "rebar", ["mix", "local.rebar", "--force"], 120_000)
-    inside(context, "dependencies", ["mix", "deps.get", "--check-locked"], 300_000)
+
+    inside(context, "dependencies", ["mix", "deps.get", "--check-locked"], 300_000,
+      workdir: "/run/dependency-bootstrap",
+      env: %{"MIX_EXS" => "/source/wotex-matter/mix.exs"}
+    )
+
+    inside(
+      context,
+      "dependency-lock",
+      ["cmp", "-s", "/source/wotex-matter/mix.lock", "/run/dependency-bootstrap/mix.lock"],
+      5_000
+    )
+
     inside(context, "dependencies-compile", ["mix", "deps.compile"], 600_000)
     inside(context, "compile", ["mix", "compile", "--warnings-as-errors"], 120_000)
   end
 
-  defp inside(context, id, arguments, timeout) do
+  defp inside(context, id, arguments, timeout, options \\ []) do
     environment = %{
       "MIX_ENV" => "test",
       "MIX_HOME" => "/run/mix",
@@ -202,10 +217,13 @@ defmodule Wotex.Matter.SoftwareRun do
         do: environment,
         else: Map.put(environment, "WOTEX_PATH_DEPS", "1")
 
+    environment = Map.merge(environment, Keyword.get(options, :env, %{}))
+    workdir = if options[:workdir], do: ["--workdir", options[:workdir]], else: []
+
     arguments =
       ["exec"] ++
         Enum.flat_map(Enum.sort(environment), fn {key, value} -> ["--env", key <> "=" <> value] end) ++
-        [context.name | arguments]
+        workdir ++ [context.name | arguments]
 
     command(context, id, arguments, timeout)
   end

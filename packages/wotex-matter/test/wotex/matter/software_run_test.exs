@@ -16,6 +16,7 @@ defmodule Wotex.Matter.SoftwareRunTest do
     source = Path.join(root, "source")
     workspace = Path.join(root, "workspace")
     File.mkdir!(source)
+    File.write!(Path.join(source, "mix.lock"), "exact locked dependencies\n")
     File.mkdir!(workspace)
     previous_path = System.get_env("PATH")
     previous_mode = System.get_env("WOTEX_PATH_DEPS")
@@ -108,6 +109,12 @@ defmodule Wotex.Matter.SoftwareRunTest do
     assert result["owned_networks_after_cleanup"] == 0
     assert Path.wildcard(Path.join(context.root, "wotex-matter-run-*")) == []
     assert Bitwise.band(File.stat!(Path.dirname(path)).mode, 0o777) == 0o700
+
+    for lane <- ~w(current minimum) do
+      bootstrap = Path.join([Path.dirname(path), lane, "dependency-bootstrap", "mix.lock"])
+      assert File.read!(bootstrap) == File.read!(Path.join(context.source, "mix.lock"))
+      assert Bitwise.band(File.stat!(Path.dirname(bootstrap)).mode, 0o777) == 0o700
+    end
   end
 
   test "successful command exit cannot replace a matching passing lane receipt", context do
@@ -184,13 +191,31 @@ defmodule Wotex.Matter.SoftwareRunTest do
     shift
     elixir=1.20.2
     otp=29.0.4
-    while test "$1" = "--env"; do
-      if test "$2" = "WOTEX_SOFTWARE_SANITIZED=true"; then elixir=1.18.4; otp=27.3.4.15; fi
-      shift 2
+    mix_exs=
+    workdir=
+    while true; do
+      case "$1" in
+        --env)
+          if test "$2" = "WOTEX_SOFTWARE_SANITIZED=true"; then elixir=1.18.4; otp=27.3.4.15; fi
+          if test "$2" = "MIX_EXS=/source/wotex-matter/mix.exs"; then mix_exs=exact; fi
+          shift 2
+          ;;
+        --workdir)
+          workdir="$2"
+          shift 2
+          ;;
+        *) break ;;
+      esac
     done
     name="$1"
     shift
+    directory=$(cat "$root/$name")
     case "$1:$2:$3" in
+      mix:deps.get:--check-locked)
+        test "$workdir" = "/run/dependency-bootstrap"
+        test "$mix_exs" = "exact"
+        test -f "$directory/dependency-bootstrap/mix.lock"
+        ;;
       uname:-m:) printf 'x86_64\\n' ;;
       mix:run:test/support/software/lane.exs) #{write} ;;
       *) : ;;
