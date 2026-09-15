@@ -222,6 +222,18 @@ process have been reaped. Early exit fails setup or teardown. The command owner
 also observes normal and abnormal caller exit. Peer logs are owner-only files;
 readiness notifications contain no output bytes.
 
+`SoftwareScenarios.with_fixtures/3` owns thirteen peer processes and their
+controller stores for the required scenario inventory. It assigns distinct
+ports and discriminators within its runner-owned network namespace, creates
+owner-only fixture files and invokes the suite only after commissioning and
+failure fixtures are ready. The expired-window fixture waits for the real
+180-second window and verifies its closed status. The untrusted-attestation
+fixture selects a different public SDK test root. ACL denial is established by
+an acknowledged typed ACL write. Any setup or callback failure unwinds the
+owned peers in reverse order. This helper requires the caller to supply the
+pinned executables, public test roots and an isolated network namespace; it
+does not implement workspace verification or the complete software run task.
+
 ## Verification and commit procedure
 
 Run focused tests while implementing a package, then run `mix check` before its

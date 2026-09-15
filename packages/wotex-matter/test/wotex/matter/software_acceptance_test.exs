@@ -254,7 +254,7 @@ defmodule Wotex.Matter.SoftwareAcceptanceTest do
       options ++
         [
           timeout: 15_000,
-          env: [{"ERL_FLAGS", "+S 2:2 +SDcpu 1 +SDio 1"}]
+          env: [{"ERL_FLAGS", "+JMsingle true +S 2:2 +SDcpu 1 +SDio 1"}, {"LANG", "C.UTF-8"}]
         ]
     )
   end

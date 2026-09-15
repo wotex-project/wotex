@@ -2598,3 +2598,60 @@ the C09 resource census or the unchanged 95% coverage floor.
 | Default gate | `45bf461d58010c3b2ab6e527c95486632f52cd1a7a7f1240fe2a24bfae8b2e19` |
 | Minimum focused gate | `08357707262a4e774e93b8b63732ca8f6abd7480220ef69d1d60c00c838b34e5` |
 | ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+
+## Owned software scenario preparation
+
+The P09 scenario helper owns thirteen pinned SDK peers with private controller
+stores, generated valid setup codes, distinct ports and discriminators. It
+prepares all 23 required fixture/executable inputs, including real commissioning,
+CASE, typed ACL denial and an observed 180-second commissioning-window expiry.
+A separate public SDK test root produces the untrusted-attestation scenario.
+The helper supplies fixture configuration and invokes the actual ExUnit suite;
+it does not supply protocol results.
+
+Two deterministic tests fail the third peer startup or controller setup after all
+thirteen peers become ready. Every acquired peer process is reaped, fixture
+execution is withheld and directories retain mode 0700. These injected lifecycle
+tests establish helper ownership only. Isolated acceptance-harness child VMs use
+single-map JIT and a UTF-8 locale; their five Linux tests pass in 18.2 seconds.
+Before that environment correction, three child-VM tests failed in the full
+software cohort. Raw control-pump opening projects only the admitted native wire
+keys from controller fixture configuration.
+
+The first complete current-toolchain fixture cohort is rejected: 220 of 226
+checks pass, six fail, one hardware case is excluded, and 30 of 32 required
+software cases pass. All thirteen peers are reaped. The receipt binds unchanged
+source before and after execution. The failures include the separately corrected
+pending-cancellation race, three child-VM environment failures, the raw opening
+fixture mismatch and a one-shot read timeout. The five commissioning/security
+scenarios and the lighting, thermostat and bridge recipes pass in that cohort.
+This partial result does not accept the complete software profile.
+
+The one-shot failure occurs during CASE establishment: the peer sends and
+retransmits Sigma2Resume, while the controller records no received response.
+A later diagnostic with the same peer/controller stores passes 1000 reads in
+393.722 seconds with the unchanged ten-second operation deadline. Every read
+records ready, open, read and close IPC frames; the longest takes 458 ms. The
+owned peer is reaped. This diagnostic does not establish the cause of the earlier
+failure or replace a complete required-mode cohort.
+
+The current `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes 200 checks with
+33 excluded in 64.2 seconds. The minimum toolchain passes all seven scenario
+ownership and acceptance-harness tests in 9.0 seconds. ExDoc passes with warnings
+as errors. Native inputs remain `9a4d124`. The complete run command, fresh native
+build receipt, C09 resource census and 95% coverage gate remain separate work.
+
+| Scenario-preparation artifact | SHA-256 |
+| --- | --- |
+| Scenario helper | `8f48bb334a2f642a2a8f47c161101b260950c37edec5be12f102f8224fba3b74` |
+| Scenario ownership assertions | `327ebc1a015eb51de2038fdf73e7f062a538623c479c0e8683350c8e482c5d29` |
+| Raw control-pump assertions | `ae1b679895db03b71b009f3ce3ae5bcbbae915ef494558b43220b833b9c51fa4` |
+| Acceptance-harness assertions | `bb47a134bc5404e94aa8d98ff8321a1ac26105d94da08ef7f11c9c90c3b29aae` |
+| Rejected required-mode receipt | `8e70d19ae5b9fe199746fddbcad867ddae82f1f526c87a514991b809aa442a12` |
+| Rejected cohort log | `76ce4997b999610740c31df6ffe244b8140de64f5714dc0b681b88b911ea81e6` |
+| Child-VM Linux failure before correction | `6a27f3912b54e1eb3704d59d317c8a661770c84d62f6f8b29ba689b15ea4f749` |
+| Child-VM Linux passing gate | `a2ececa8c12e82e1870371a97d54a2f3d63d89fb6e658ca6ae64c6387fa6f3d6` |
+| One-shot diagnostic frame receipts | `7dc2607a88834dc03e00323f14af2e54862cc72bcad3463fcec229b7562aa80a` |
+| Default gate | `e2e01f2964e2cd5888f2ef3ea7fa235cbcc49423d76869c44c580b13212556ed` |
+| Minimum focused gate | `4b4e58cd736abcd8bc7772cb0fa4affb5e07d754884024ac767be43c4fae201f` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |

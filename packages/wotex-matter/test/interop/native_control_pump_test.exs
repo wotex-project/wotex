@@ -32,7 +32,7 @@ defmodule Wotex.Matter.NativeControlPumpInteropTest do
 
           parameters =
             controller
-            |> Map.drop(["executable"])
+            |> Map.take(~w(storage_path vendor_id fabric_id controller_node_id paa_trust_store))
             |> Map.merge(%{
               "lifecycle" => "persistent",
               "storage_mode" => "open_existing",
