@@ -4,7 +4,7 @@ defmodule Wotex.CoAP.NativeConnectionTest do
   use ExUnit.Case, async: false
 
   alias Wotex.CoAP.{Error, Security}
-  alias Wotex.CoAP.Native.Connection
+  alias Wotex.CoAP.Native.{Admission, Connection}
 
   @revision "7cf7465b784baded4de183290c547d582becfd28"
 
@@ -58,11 +58,19 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     assert open["parameters"]["security"]["mode"] == "oscore"
     assert open["parameters"]["security"]["master_secret"] == bytes(<<0::128>>)
 
+    %{admission: admission, generation: generation} = :sys.get_state(pid)
+    assert generation == open["parameters"]["generation"]
+    assert :ets.info(admission, :owner) == pid
+
+    assert {{:dictionary, :wotex_coap_owner}, {Connection, ^generation, ^admission}} =
+             :erlang.process_info(pid, {:dictionary, :wotex_coap_owner})
+
     refute inspect(:sys.get_state(pid)) =~ Base.encode64(secret_canary())
     refute inspect(:sys.get_status(pid)) =~ Base.encode64(secret_canary())
 
     assert :ok = Connection.close(pid)
     refute Process.alive?(pid)
+    assert :ets.info(admission) == :undefined
     assert :ok = Connection.close(pid)
 
     close =
@@ -155,8 +163,18 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
     close_path = Path.join(context.store, "close.json")
     wait_for_file(close_path, System.monotonic_time(:millisecond) + 1_000)
-    assert {:error, %Error{code: :busy}} = GenServer.call(pid, :close)
+    %{generation: generation} = :sys.get_state(pid)
+
+    assert {:error, %Error{code: :invalid_session}} =
+             GenServer.call(
+               pid,
+               {:close_control, generation, System.monotonic_time(:millisecond) + 1_000, make_ref()}
+             )
+
+    assert {:error, %Error{code: :invalid_session}} = GenServer.call(pid, :close)
+    waiting = Task.async(fn -> Connection.close(pid) end)
     assert {:error, %Error{code: :timeout}} = Task.await(closing, 1_000)
+    assert :ok = Task.await(waiting, 1_000)
     assert :ok = Connection.close(pid)
 
     File.write!(Path.join(context.store, "mode"), "close_silent")
@@ -166,6 +184,50 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     wait_for_file(close_path, System.monotonic_time(:millisecond) + 1_000)
     assert :ok = GenServer.stop(pid, :shutdown, 1_000)
     assert {:error, %Error{code: :connection_closed}} = Task.await(closing, 1_000)
+  end
+
+  test "WCO-N02 owner consumes singular close control outside ordinary capacity", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    %{admission: admission, generation: generation} = :sys.get_state(pid)
+    deadline = System.monotonic_time(:millisecond) + 5_000
+
+    leases =
+      for _ <- 1..64 do
+        assert {:ok, lease} = Admission.acquire(admission, pid, generation, deadline)
+        lease
+      end
+
+    assert {:error, :busy} = Admission.acquire(admission, pid, generation, deadline)
+    assert :ok = Connection.close(pid)
+    assert :ets.info(admission) == :undefined
+    assert length(leases) == 64
+  end
+
+  test "WCO-N02 abandoned close control terminates its generation", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    %{admission: admission, generation: generation} = :sys.get_state(pid)
+    monitor = Process.monitor(pid)
+    parent = self()
+
+    caller =
+      spawn(fn ->
+        result =
+          Admission.begin_close(
+            admission,
+            pid,
+            generation,
+            System.monotonic_time(:millisecond) + 5_000
+          )
+
+        send(parent, {:abandoned_close, self(), result})
+      end)
+
+    assert_receive {:abandoned_close, ^caller, {:first, _}}
+    assert_receive {:DOWN, ^monitor, :process, ^pid, _}, 1_000
+    assert :ets.info(admission) == :undefined
+    assert_helper_stopped(context.store, 1_000)
   end
 
   test "WCO-C03 WCO-N02 forces an exact helper that ignores graceful termination", context do
@@ -273,6 +335,14 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     File.write!(Path.join(context.store, "mode"), "valid")
     assert {:ok, pid} = Connection.start(context.options)
     assert {:error, %Error{code: :invalid_session}} = GenServer.call(pid, :foreign)
+    %{generation: generation} = :sys.get_state(pid)
+
+    assert {:error, %Error{code: :invalid_session}} =
+             GenServer.call(
+               pid,
+               {:close_control, generation, System.monotonic_time(:millisecond) + 1_000, make_ref()}
+             )
+
     send(pid, :foreign)
     assert Process.alive?(pid)
 

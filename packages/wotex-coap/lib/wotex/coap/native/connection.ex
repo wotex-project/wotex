@@ -9,18 +9,20 @@ defmodule Wotex.CoAP.Native.Connection do
   retains neither the credential nor its encoded command after startup.
 
   The process monitors both its configured owner and the caller that created
-  it. Native writes use `Port.command/3` with `:nosuspend`. Malformed, oversized,
-  truncated, duplicate or otherwise unsolicited frames close the generation.
-  Local cleanup signals the exact Port process and remains within the WCO-C03
-  1,000 ms budget. This module implements startup and close control only;
-  unary exchange, body transfer, Observe delivery and public connection
+  it. It owns one generation-bound admission table and consumes its separate
+  close-control capability, so a full ordinary reservation set cannot prevent
+  cleanup. Native writes use `Port.command/3` with `:nosuspend`. Malformed,
+  oversized, truncated, duplicate or otherwise unsolicited frames close the
+  generation. Local cleanup signals the exact Port process and remains within
+  the WCO-C03 1,000 ms budget. This module implements startup and close control
+  only; unary exchange, body transfer, Observe delivery and public connection
   dispatch remain separate obligations.
   """
 
   use GenServer
 
   alias Wotex.CoAP.{Error, NativeBackend, Security}
-  alias Wotex.CoAP.Native.{Command, Wire}
+  alias Wotex.CoAP.Native.{Admission, Command, Wire}
 
   @keys [:host, :port, :timeout, :owner, :security, :native_backend]
   @maximum_frame_bytes 131_071
@@ -67,7 +69,7 @@ defmodule Wotex.CoAP.Native.Connection do
   @spec close(pid()) :: :ok | {:error, Error.t()}
   def close(pid) do
     case identity(pid) do
-      :owned -> stop(pid)
+      {:owned, generation, admission} -> stop(pid, generation, admission)
       :closed -> :ok
       :invalid -> failure(:invalid_session)
     end
@@ -120,13 +122,16 @@ defmodule Wotex.CoAP.Native.Connection do
                  deadline
                ) do
             {:ok, command} ->
-              Process.put(:wotex_coap_owner, {__MODULE__, generation})
+              admission = Admission.new(generation)
+              Process.put(:wotex_coap_owner, {__MODULE__, generation, admission})
 
               {:ok,
                %{
                  port: port,
                  os_pid: os_pid,
                  generation: generation,
+                 admission: admission,
+                 admission_timer: schedule_admission_reap(),
                  command: command,
                  owner_monitor: owner_monitor,
                  creator_monitor: creator_monitor,
@@ -150,34 +155,69 @@ defmodule Wotex.CoAP.Native.Connection do
   end
 
   @impl GenServer
-  def handle_call(:close, from, %{active: nil} = state) do
-    timeout = @close_timeout
+  def handle_call(
+        {:close_control, generation, deadline, token},
+        {caller, _} = from,
+        %{active: nil} = state
+      ) do
+    remaining = deadline - now()
 
-    case Command.encode(state.command, :close, %{}, timeout) do
-      {:ok, id, line, command} ->
-        if write(state.port, line) do
-          timer = Process.send_after(self(), {:native_timeout, state.generation, id}, timeout)
+    cond do
+      generation != state.generation or
+          not Admission.close_owned?(state.admission, token, caller, deadline) ->
+        {:reply, failure(:invalid_session), state}
 
-          {:noreply,
-           %{
-             state
-             | command: command,
-               active: %{from: from, id: id, operation: :close, timer: timer},
-               cleanup_deadline: now() + @cleanup_timeout
-           }}
-        else
-          stop_with(failure(:native_unavailable), from, state)
+      remaining <= 0 ->
+        stop_with(failure(:timeout), from, %{state | cleanup_deadline: deadline})
+
+      true ->
+        timeout = min(@close_timeout, remaining)
+
+        case Command.encode(state.command, :close, %{}, timeout) do
+          {:ok, id, line, command} ->
+            if write(state.port, line) do
+              timer = Process.send_after(self(), {:native_timeout, state.generation, id}, timeout)
+
+              {:noreply,
+               %{
+                 state
+                 | command: command,
+                   active: %{from: from, id: id, operation: :close, timer: timer},
+                   cleanup_deadline: deadline
+               }}
+            else
+              stop_with(failure(:native_unavailable), from, %{
+                state
+                | cleanup_deadline: deadline
+              })
+            end
+
+          :exhausted ->
+            stop_with(failure(:sequence_exhausted), from, %{
+              state
+              | cleanup_deadline: deadline
+            })
+
+          :error ->
+            stop_with(failure(:native_protocol_error), from, %{
+              state
+              | cleanup_deadline: deadline
+            })
         end
-
-      :exhausted ->
-        stop_with(failure(:sequence_exhausted), from, state)
-
-      :error ->
-        stop_with(failure(:native_protocol_error), from, state)
     end
   end
 
-  def handle_call(:close, _, state), do: {:reply, failure(:busy), state}
+  def handle_call(
+        {:close_control, generation, deadline, token},
+        {caller, _},
+        state
+      ) do
+    if generation == state.generation and
+         Admission.close_owned?(state.admission, token, caller, deadline),
+       do: {:reply, failure(:busy), state},
+       else: {:reply, failure(:invalid_session), state}
+  end
+
   def handle_call(_, _, state), do: {:reply, failure(:invalid_session), state}
 
   @impl GenServer
@@ -237,6 +277,13 @@ defmodule Wotex.CoAP.Native.Connection do
       ),
       do: stop_with(failure(:timeout), state)
 
+  def handle_info({:reap_admission, token}, state) do
+    case reap_admission(state, token) do
+      {:ok, state} -> {:noreply, state}
+      {:error, code, state} -> stop_with(failure(code), state)
+    end
+  end
+
   def handle_info(_, state), do: {:noreply, state}
 
   @impl GenServer
@@ -249,6 +296,8 @@ defmodule Wotex.CoAP.Native.Connection do
 
   @impl GenServer
   def terminate(_, state) when is_map(state) do
+    if timer = Map.get(state, :admission_timer), do: Process.cancel_timer(elem(timer, 0))
+
     if state.active do
       Process.cancel_timer(state.active.timer)
       GenServer.reply(state.active.from, failure(:connection_closed))
@@ -400,6 +449,21 @@ defmodule Wotex.CoAP.Native.Connection do
     :exit, _ -> false
   end
 
+  defp schedule_admission_reap do
+    token = make_ref()
+    {Process.send_after(self(), {:reap_admission, token}, 50), token}
+  end
+
+  defp reap_admission(%{admission_timer: {_, token}} = state, token) do
+    case Admission.close_failure(state.admission, now()) do
+      nil -> {:ok, %{state | admission_timer: schedule_admission_reap()}}
+      :owner_closed -> {:error, :connection_closed, state}
+      code -> {:error, code, state}
+    end
+  end
+
+  defp reap_admission(state, _), do: {:ok, state}
+
   defp stop_with({:error, %Error{}} = result, _, state) do
     {:stop, :normal, result, %{state | cleanup_deadline: now() + @cleanup_timeout}}
   end
@@ -469,9 +533,9 @@ defmodule Wotex.CoAP.Native.Connection do
       :undefined ->
         :closed
 
-      {{:dictionary, :wotex_coap_owner}, {__MODULE__, generation}}
+      {{:dictionary, :wotex_coap_owner}, {__MODULE__, generation, admission}}
       when is_integer(generation) and generation in 1..@maximum_counter ->
-        :owned
+        {:owned, generation, admission}
 
       _ ->
         :invalid
@@ -480,17 +544,41 @@ defmodule Wotex.CoAP.Native.Connection do
 
   defp identity(_), do: :invalid
 
-  defp stop(pid) do
+  defp stop(pid, generation, admission) do
     deadline = now() + @cleanup_timeout
-    monitor = Process.monitor(pid)
 
+    case Admission.begin_close(admission, pid, generation, deadline) do
+      {:first, token} ->
+        stop_first(pid, generation, deadline, token)
+
+      :waiting ->
+        await_stop(pid, deadline, :ok)
+
+      {:error, :transport_closed} ->
+        :ok
+
+      {:error, :invalid_handle} ->
+        failure(:invalid_session)
+    end
+  end
+
+  defp stop_first(pid, generation, deadline, token) do
     result =
       try do
-        GenServer.call(pid, :close, @cleanup_timeout - 100)
+        GenServer.call(
+          pid,
+          {:close_control, generation, deadline, token},
+          max(deadline - now() - 100, 1)
+        )
       catch
         :exit, _ -> if(Process.alive?(pid), do: failure(:cleanup_timeout), else: :ok)
       end
 
+    await_stop(pid, deadline, result)
+  end
+
+  defp await_stop(pid, deadline, result) do
+    monitor = Process.monitor(pid)
     remaining = max(deadline - now(), 0)
 
     receive do

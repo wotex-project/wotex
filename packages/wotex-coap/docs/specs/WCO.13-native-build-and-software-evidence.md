@@ -132,11 +132,12 @@ absolute context directory, accepts the pinned ready identity and correlates
 the monotonic `open` and `close` commands. Its bounded byte accumulator accepts
 arbitrary Port splits and rejects extra lines, incomplete EOF and frames beyond
 128 KiB. The retained process state contains no credential or command line.
-Thirteen contract-injection tests cover exact argv and envelopes, invalid options,
+Fifteen contract-injection tests cover exact argv and envelopes, invalid options,
 malformed/truncated/oversized input, wrong and duplicate response identities,
-finite waits, status redaction and owner-death cleanup within C03. The injected
-test executable is not the production OSCORE worker. Public connection dispatch,
-unary/body operations, Observe delivery and live report credit remain unimplemented.
+finite waits, status redaction, admission-owned close control and owner-death
+cleanup within C03. The injected test executable is not the production OSCORE
+worker. Public connection dispatch, unary/body operations, Observe delivery and
+live report credit remain unimplemented.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and
@@ -145,8 +146,11 @@ retain caller/deadline ownership across timeout races, reject foreign generation
 capabilities and make closing terminal for later admission. Four tests exercise
 the exact concurrent limit, singular close control, caller death, timeout and
 table-owner termination. The startup owner does not yet publish or consume this
-table, so this component alone does not accept unary dispatch or the connection
-integration required by this section.
+table for ordinary calls. It does own the table and consume the singular close
+record: a full 64-call reservation set cannot prevent close, concurrent close
+callers wait for the same process termination, and abandoned close control ends
+the generation. Ordinary lease submission and queue consumption remain pending,
+so these components do not yet accept unary dispatch.
 
 Arguments contain no secrets. `Port.open({:spawn_executable, path}, ...)` starts
 one helper for one native session. No shell, daemon discovery, global registry,
