@@ -216,6 +216,14 @@ execute F03, F04 and the failed-body sequence in F14. These pure components do
 not run the native helper, correlate common event envelopes, close a process
 generation or accept the complete native corpus.
 
+`Wotex.CoAP.Native.Report` implements exact common envelopes for unary body
+events, subscription body events, complete reports and reserved terminal errors.
+It binds subscription generation and report sequence, validates the five report
+metadata fields against the reconstructed Message options, and requires a
+terminal control shape without a report sequence. Its tests cover the
+inline/streamed threshold component of F15. Sequence continuity, acknowledgment
+and live helper execution remain owner obligations.
+
 Paths and content-format numbers obey .10/.11. Body chunks decode to at most
 32,768 bytes; offsets must exactly equal the next expected offset. The byte
 envelope admits only its exact `type` and `base64` fields. Its base64 uses the

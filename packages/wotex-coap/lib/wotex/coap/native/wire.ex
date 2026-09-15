@@ -137,7 +137,7 @@ defmodule Wotex.CoAP.Native.Wire do
       )
       when map_size(frame) == 4 and is_map(completed_bodies) do
     with true <- identifier?(id),
-         {:ok, error} <- error(error),
+         {:ok, error} <- decode_error(error),
          do: {:error, error},
          else: (_ -> failure())
   end
@@ -156,21 +156,23 @@ defmodule Wotex.CoAP.Native.Wire do
               generation in 1..0xFFFFFFFFFFFFFFFF,
        do: {:ok, %{subscription_id: id, generation: generation}}
 
-  defp result(:request, result, _, bodies), do: message(result, bodies)
+  defp result(:request, result, _, bodies), do: decode_message(result, bodies)
   defp result(_, _, _, _), do: failure()
 
-  defp message(
-         %{
-           "type" => type,
-           "code" => code,
-           "message_id" => message_id,
-           "token" => token,
-           "options" => options
-         } = value,
-         bodies
-       )
-       when map_size(value) == 6 and is_integer(code) and code in 0..255 and
-              is_integer(message_id) and message_id in 0..65_535 do
+  @doc false
+  @spec decode_message(term(), completed_bodies()) :: {:ok, Message.t()} | {:error, Error.t()}
+  def decode_message(
+        %{
+          "type" => type,
+          "code" => code,
+          "message_id" => message_id,
+          "token" => token,
+          "options" => options
+        } = value,
+        bodies
+      )
+      when map_size(value) == 6 and is_integer(code) and code in 0..255 and
+             is_integer(message_id) and message_id in 0..65_535 do
     with {:ok, type} <- message_type(type),
          {:ok, token} <- decode_bytes(token, 8),
          {:ok, options} <- options(options, 0, []),
@@ -191,7 +193,7 @@ defmodule Wotex.CoAP.Native.Wire do
     end
   end
 
-  defp message(_, _), do: failure()
+  def decode_message(_, _), do: failure()
 
   defp payload(value, bodies) do
     case {Map.fetch(value, "payload"), Map.fetch(value, "body_id")} do
@@ -245,7 +247,9 @@ defmodule Wotex.CoAP.Native.Wire do
 
   def decode_bytes(_, _), do: :error
 
-  defp error(%{"code" => code} = value) when map_size(value) in 1..2 and is_binary(code) do
+  @doc false
+  @spec decode_error(term()) :: {:ok, Error.t()} | :error
+  def decode_error(%{"code" => code} = value) when map_size(value) in 1..2 and is_binary(code) do
     with true <- Map.keys(value) -- ["code", "status"] == [],
          {:ok, code} <- Map.fetch(@error_codes, code),
          {:ok, details} <- status(value) do
@@ -255,7 +259,7 @@ defmodule Wotex.CoAP.Native.Wire do
     end
   end
 
-  defp error(_), do: :error
+  def decode_error(_), do: :error
 
   defp status(%{"status" => status})
        when is_integer(status) and status in -0x8000000000000000..0xFFFFFFFFFFFFFFFF,

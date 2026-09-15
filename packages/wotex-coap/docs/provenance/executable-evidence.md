@@ -131,6 +131,14 @@ consumption. Only the completed `take/2` result exposes payload bytes; Inspect
 redacts the assembly fields. Common event correlation, report sequences,
 deadlines and process cleanup remain owner obligations.
 
+`native_report_test.exs` executes ten exact tests for unary and subscription body
+envelopes, complete reports and established terminal failures. It covers exact
+subscription/generation/sequence correlation, inline and completed streamed
+bodies, the F15 payload threshold, Message-to-metadata equality, default Max-Age,
+canonical ETag bytes and the reserved no-credit terminal shape. These pure tests
+do not assert sequence continuity, cumulative acknowledgment, queues or process
+cleanup.
+
 ## Required verification
 
 ### Datagram deadline assertions
