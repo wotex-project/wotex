@@ -115,7 +115,7 @@ decimal uint64 request identity once before exhaustion. The immutable allocator
 retains no command or credential. These tests do not write a Port or prove that
 the production helper accepts the lines.
 
-`native_connection_test.exs` executes forty-six contract-injection tests for the
+`native_connection_test.exs` executes sixty-three contract-injection tests for the
 BEAM process boundary. The tests launch the manifest-verified executable through
 the exact `--custody ABS_DIRECTORY` entry, inspect the open and close envelopes,
 and assert the pinned ready identity, monotonic correlation, finite ready/close
@@ -144,9 +144,14 @@ or explicit empty body and formats, dispatch through `send/2` and method helpers
 reject mismatched or incomplete selection before process creation, and dispatch
 discovery with its exact 65,536-byte native response ceiling. The discovery
 cases accept an exact streamed limit and reject a 65,537-byte declaration before
-assembly. The injected executable is a protocol fixture; these tests do not
-accept the production libcoap worker, an actual protected exchange, Observe
-delivery or report-credit integration.
+assembly. Native Observe cases reject invalid admission before Port traffic,
+open initial zero credit, deliver correlated inline and 32,769-byte streamed
+reports, advance cumulative credit only after validation, and cancel the exact
+subscription while report credit is in flight. Concurrent cancellation callers
+join one close, receiver death releases the helper, and reports arriving during
+cancellation are validated without public delivery. The injected executable is
+a protocol fixture; these tests do not accept the production libcoap worker or
+an actual protected exchange.
 
 `native_admission_test.exs` executes four exact tests for the WCO-N02 pre-mailbox
 capacity primitive. Ninety-six concurrent callers produce exactly 64 ordinary

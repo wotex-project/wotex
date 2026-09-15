@@ -5,7 +5,7 @@ spec:
   status: accepted
   version: 1.7.0
   owner: wotex-coap
-  updated: 2026-09-15
+  updated: 2026-09-16
 ---
 
 # WCO.13 Native OSCORE owner, builds and software evidence
@@ -13,8 +13,8 @@ spec:
 UDP exchanges remain BEAM code; DTLS remains OTP `:ssl`. OSCORE uses one
 explicitly selected C executable through an Erlang Port and the pinned libcoap
 exchange engine. Mix owns build/test orchestration and ExUnit owns assertions.
-Python is not a runtime or target orchestration dependency. The OSCORE worker,
-complete Port execution and Mix tasks are planned contracts;
+Python is not a runtime or target orchestration dependency. The production
+OSCORE worker and Mix tasks are planned contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -132,7 +132,7 @@ absolute context directory, accepts the pinned ready identity and correlates
 the monotonic `open` and `close` commands. Its bounded byte accumulator accepts
 arbitrary Port splits and rejects extra lines, incomplete EOF and frames beyond
 128 KiB. The retained process state contains no credential or command line.
-Forty-six contract-injection tests cover exact argv and envelopes, invalid options,
+Sixty-three contract-injection tests cover exact argv and envelopes, invalid options,
 malformed/truncated/oversized input, wrong and duplicate response identities,
 finite waits, status redaction, admission-owned close control and owner-death
 cleanup within C03. The injected test executable is not the production OSCORE
@@ -147,7 +147,13 @@ OSCORE credential plus verified backend, preserves the two-field session value,
 normalizes `send/2` and method-helper inputs, and dispatches unary requests and
 disconnect. Public `discover/2` applies its 64 KiB ceiling to the native request;
 an oversized streamed `body_begin` fails before body assembly and closes the
-generation. Observe delivery and live report credit remain unimplemented.
+generation. Public native Observe validates admission before Port traffic,
+opens the initial zero-credit window, delivers a complete initial report before
+returning its handle and owns exact cancellation/cleanup. Inline and 32,769-byte
+streamed reports execute through contiguous frame accounting and cumulative
+credit. Cancellation takes over while credit is in flight, joins concurrent
+callers and validates intervening reports without delivering them. Receiver
+death releases the generation.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and
@@ -252,8 +258,9 @@ Its six tests cover every operation, input and line bounds, credential
 projection and fail-before-wrap exhaustion. The allocator retains no secret or
 command bytes. `Native.Connection` now writes admitted body/request commands
 through this boundary, resolves correlated inbound body streams before reply and
-does not mark a mutation submitted while its body alone is being uploaded. Report
-commands and live production helper admission remain owner obligations.
+does not mark a mutation submitted while its body alone is being uploaded. It
+also writes observe/credit/cancel commands for the dedicated native observation
+lifecycle. Live production helper admission remains an owner obligation.
 
 `Wotex.CoAP.Native.Wire` implements the pure BEAM receive boundary for complete
 lines, ready identity and request/control response envelopes. It enforces the
@@ -274,8 +281,9 @@ events, subscription body events, complete reports and reserved terminal errors.
 It binds subscription generation and report sequence, validates the five report
 metadata fields against the reconstructed Message options, and requires a
 terminal control shape without a report sequence. Its tests cover the
-inline/streamed threshold component of F15. Sequence continuity, acknowledgment
-and live helper execution remain owner obligations.
+inline/streamed threshold component of F15. `Native.Connection` supplies sequence
+continuity, acknowledgment and protocol-fixture execution; live production
+helper execution remains an acceptance obligation.
 
 `Wotex.CoAP.Native.ReportLedger` implements the BEAM-side immutable credit state
 for one established subscription generation. It admits only contiguous report
@@ -283,8 +291,9 @@ sequences, retains at most eight frames and 1 MiB of newline-terminated wire
 data, holds one complete report behind an exact delivery token, and proposes
 only a consumed contiguous prefix. A proposal remains in flight until its exact
 successful credit response is recorded. Its tests execute the owner-side
-accounting component of F15; live native replay, Port mailbox saturation and
-receiver admission remain process-level obligations.
+accounting component of F15. `Native.Connection` adds process-level receiver
+admission, inline/streamed report delivery and in-flight-credit cancellation;
+live native replay and Port mailbox saturation remain acceptance obligations.
 
 Paths and content-format numbers obey .10/.11. Body chunks decode to at most
 32,768 bytes; offsets must exactly equal the next expected offset. The byte

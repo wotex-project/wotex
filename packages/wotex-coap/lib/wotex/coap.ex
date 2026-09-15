@@ -249,16 +249,20 @@ defmodule Wotex.CoAP do
   def subscribe(session, %{path: path} = input) when map_size(input) <= 4 do
     with :ok <- session(session),
          true <- Map.keys(input) -- [:path, :receiver, :renew, :max_queue_length] == [] do
-      Connection.observe(
-        session.pid,
-        path,
-        Map.get(input, :receiver, self()),
-        [
-          renew: Map.get(input, :renew, true),
-          max_queue_length: Map.get(input, :max_queue_length, 1000)
-        ],
-        session.timeout
-      )
+      receiver = Map.get(input, :receiver, self())
+
+      options = [
+        renew: Map.get(input, :renew, true),
+        max_queue_length: Map.get(input, :max_queue_length, 1000)
+      ]
+
+      case session_adapter(session.pid) do
+        :native ->
+          NativeConnection.observe(session.pid, path, receiver, options, session.timeout)
+
+        :datagram ->
+          Connection.observe(session.pid, path, receiver, options, session.timeout)
+      end
     else
       {:error, _} = error -> error
       _ -> {:error, Error.new(:invalid_observation_options)}
@@ -270,7 +274,15 @@ defmodule Wotex.CoAP do
   @doc "Cancels the exact original subscription and releases its dedicated session."
   @spec unsubscribe(session(), Wotex.CoAP.Subscription.t()) :: :ok | {:error, Error.t()}
   def unsubscribe(session, handle) do
-    with :ok <- session(session), do: Connection.unobserve(session.pid, handle, session.timeout)
+    with :ok <- session(session) do
+      case NativeConnection.unobserve(session.pid, handle, session.timeout) do
+        {:error, %Error{code: :invalid_session}} ->
+          Connection.unobserve(session.pid, handle, session.timeout)
+
+        result ->
+          result
+      end
+    end
   end
 
   defp method(session, method, path, payload, options) do

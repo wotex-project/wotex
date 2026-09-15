@@ -22,13 +22,16 @@ defmodule Wotex.CoAP.Native.Connection do
   may carry an inline payload or one correlated, bounded body event stream.
   The root API selects this owner for explicit OSCORE unary sessions and applies
   discovery's smaller response-body limit before streamed-body allocation.
-  Observe delivery and Runtime dispatch remain separate obligations.
+  Dedicated native observations open report credit, validate inline or streamed
+  reports before delivery, serialize cumulative acknowledgments and cancel the
+  exact subscription without retaining credentials. Runtime dispatch remains a
+  separate obligation.
   """
 
   use GenServer
 
-  alias Wotex.CoAP.{Error, NativeBackend, Security}
-  alias Wotex.CoAP.Native.{Admission, Body, Command, Report, Wire}
+  alias Wotex.CoAP.{Error, NativeBackend, Security, Subscription}
+  alias Wotex.CoAP.Native.{Admission, Body, Command, Report, ReportLedger, Wire}
 
   @keys [:host, :port, :timeout, :owner, :security, :native_backend]
   @maximum_frame_bytes 131_071
@@ -124,6 +127,50 @@ defmodule Wotex.CoAP.Native.Connection do
 
   def request(_, _, _, _), do: failure(:invalid_request)
 
+  @doc "Establishes one native observation and returns after its first complete report."
+  @spec observe(pid(), binary(), pid(), keyword(), pos_integer()) ::
+          {:ok, Subscription.t()} | {:error, Error.t()}
+  def observe(pid, path, receiver, options, timeout)
+      when is_integer(timeout) and timeout in 1..60_000 do
+    deadline = now() + timeout
+
+    with {:ok, config} <- observation_options(path, receiver, options) do
+      case identity(pid) do
+        {:owned, generation, _} ->
+          safe_observe(pid, generation, config, deadline, timeout)
+
+        :closed ->
+          failure(:connection_closed)
+
+        :invalid ->
+          failure(:invalid_session)
+      end
+    end
+  end
+
+  def observe(_, _, _, _, timeout) when not is_integer(timeout) or timeout not in 1..60_000,
+    do: failure(:invalid_timeout)
+
+  @doc "Cancels the exact established native observation and closes its generation."
+  @spec unobserve(pid(), Subscription.t(), pos_integer()) :: :ok | {:error, Error.t()}
+  def unobserve(pid, handle, timeout) when is_integer(timeout) and timeout in 1..60_000 do
+    with :ok <- Subscription.validate(handle, pid) do
+      case identity(pid) do
+        {:owned, generation, _} ->
+          safe_unobserve(pid, generation, handle, now() + timeout, timeout)
+
+        :closed ->
+          :ok
+
+        :invalid ->
+          failure(:invalid_session)
+      end
+    end
+  end
+
+  def unobserve(_, _, timeout) when not is_integer(timeout) or timeout not in 1..60_000,
+    do: failure(:invalid_timeout)
+
   @doc "Validates native startup options and executable identity without starting a Port."
   @spec config(term()) :: {:ok, config()} | {:error, Error.t()}
   def config(options) do
@@ -190,6 +237,8 @@ defmodule Wotex.CoAP.Native.Connection do
                  call_order: :queue.new(),
                  caller_monitors: %{},
                  drain_scheduled: false,
+                 timeout: config.timeout,
+                 observation: nil,
                  buffer: <<>>,
                  cleanup_deadline: nil
                }}
@@ -211,6 +260,12 @@ defmodule Wotex.CoAP.Native.Connection do
   @impl GenServer
   def handle_call({:bounded, generation, parameters, deadline, lease}, from, state),
     do: {:noreply, enqueue_call(state, generation, parameters, deadline, lease, from)}
+
+  def handle_call({:observe, generation, config, deadline}, from, state),
+    do: begin_observation(state, generation, config, deadline, from)
+
+  def handle_call({:unobserve, generation, handle, deadline}, from, state),
+    do: begin_cancellation(state, generation, handle, deadline, from)
 
   def handle_call(
         {:close_control, generation, deadline, token},
@@ -276,7 +331,7 @@ defmodule Wotex.CoAP.Native.Connection do
           not Admission.close_owned?(state.admission, token, caller, deadline) ->
         {:reply, failure(:invalid_session), state}
 
-      active_operation == :request ->
+      active_operation in [:request, :observe, :credit, :cancel] ->
         state = fail_active(state, failure(:connection_closed))
         {:stop, :normal, :ok, %{state | cleanup_deadline: deadline}}
 
@@ -297,6 +352,20 @@ defmodule Wotex.CoAP.Native.Connection do
       )
       when is_binary(bytes),
       do: handle_request_bytes(state, bytes)
+
+  def handle_info(
+        {port, {:data, bytes}},
+        %{port: port, active: %{operation: operation}} = state
+      )
+      when operation in [:observe, :credit, :cancel] and is_binary(bytes),
+      do: handle_observation_bytes(state, bytes)
+
+  def handle_info(
+        {port, {:data, bytes}},
+        %{port: port, active: nil, observation: %{}} = state
+      )
+      when is_binary(bytes),
+      do: handle_observation_bytes(state, bytes)
 
   def handle_info({port, {:data, bytes}}, %{port: port, active: active} = state)
       when is_binary(bytes) and not is_nil(active) do
@@ -334,6 +403,19 @@ defmodule Wotex.CoAP.Native.Connection do
       when is_reference(monitor),
       do: stop_with(failure(:connection_closed), state)
 
+  def handle_info(
+        {:DOWN, monitor, :process, _, _},
+        %{observation: %{receiver_monitor: monitor}} = state
+      ),
+      do: stop_observation(state, Error.new(:connection_closed), false)
+
+  def handle_info(
+        {:DOWN, monitor, :process, _, _},
+        %{observation: %{caller_monitor: monitor}} = state
+      )
+      when is_reference(monitor),
+      do: stop_observation(state, Error.new(:connection_closed), false)
+
   def handle_info({:DOWN, monitor, :process, _, _}, state) do
     case Map.fetch(state.caller_monitors, monitor) do
       {:ok, lease} ->
@@ -356,6 +438,12 @@ defmodule Wotex.CoAP.Native.Connection do
         %{generation: generation, active: %{id: id}} = state
       ),
       do: stop_with(failure(:timeout), state)
+
+  def handle_info(
+        {:observation_deadline, reference},
+        %{observation: %{deadline_reference: reference}} = state
+      ),
+      do: stop_observation(state, Error.new(:timeout))
 
   def handle_info(:drain_calls, %{active: nil} = state), do: drain_calls(state)
   def handle_info(:drain_calls, state), do: {:noreply, %{state | drain_scheduled: false}}
@@ -393,6 +481,7 @@ defmodule Wotex.CoAP.Native.Connection do
     if timer = Map.get(state, :admission_timer), do: Process.cancel_timer(elem(timer, 0))
 
     state = fail_active(state, failure(:connection_closed))
+    state = finish_observation(state, Error.new(:connection_closed), true)
 
     state =
       Enum.reduce(Map.keys(state.calls), state, fn lease, acc ->
@@ -402,6 +491,165 @@ defmodule Wotex.CoAP.Native.Connection do
     deadline = state.cleanup_deadline || now() + @cleanup_timeout
     close_port(state.port, state.os_pid, deadline)
     :ok
+  end
+
+  defp begin_observation(state, generation, config, deadline, from) do
+    remaining = deadline - now()
+
+    cond do
+      generation != state.generation ->
+        {:reply, failure(:invalid_session), state}
+
+      not is_nil(state.observation) ->
+        {:reply, failure(:observation_active), state}
+
+      not is_nil(state.active) or map_size(state.calls) > 0 ->
+        {:reply, failure(:busy), state}
+
+      remaining <= 0 ->
+        {:reply, failure(:timeout), state}
+
+      true ->
+        dispatch_observe(state, config, deadline, from)
+    end
+  end
+
+  defp dispatch_observe(state, config, deadline, {caller, _} = from) do
+    remaining = deadline - now()
+
+    case Command.encode(state.command, :observe, config.parameters, remaining) do
+      {:ok, id, line, command} ->
+        if write(state.port, line) do
+          {:ok, handle} = Subscription.new(self(), make_ref(), make_ref())
+          timer = Process.send_after(self(), {:native_timeout, state.generation, id}, remaining)
+
+          observation = %{
+            phase: :opening,
+            from: from,
+            cancel_from: nil,
+            caller_monitor: Process.monitor(caller),
+            receiver: config.receiver,
+            receiver_monitor: Process.monitor(config.receiver),
+            max_queue_length: config.max_queue_length,
+            handle: handle,
+            subscription_id: nil,
+            wire_generation: nil,
+            ledger: nil,
+            body: Body.new(),
+            bodies: %{},
+            deadline: deadline,
+            deadline_timer: nil,
+            deadline_reference: nil
+          }
+
+          {:noreply,
+           %{
+             state
+             | command: command,
+               observation: observation,
+               active: %{operation: :observe, id: id, timer: timer}
+           }}
+        else
+          {:stop, :normal, failure(:native_unavailable),
+           %{
+             state
+             | cleanup_deadline: now() + @cleanup_timeout
+           }}
+        end
+
+      :exhausted ->
+        {:stop, :normal, failure(:sequence_exhausted),
+         %{
+           state
+           | cleanup_deadline: now() + @cleanup_timeout
+         }}
+
+      :error ->
+        {:reply, failure(:invalid_observation_options), state}
+    end
+  end
+
+  defp begin_cancellation(state, generation, handle, deadline, from) do
+    observation = state.observation
+
+    cond do
+      generation != state.generation ->
+        {:reply, failure(:invalid_session), state}
+
+      is_nil(observation) or observation.handle != handle ->
+        {:reply, failure(:invalid_subscription), state}
+
+      match?(%{operation: :cancel}, state.active) ->
+        join_cancellation(state, deadline, from)
+
+      match?(%{operation: :credit}, state.active) and observation.phase == :active and
+          deadline > now() ->
+        credit = state.active
+        Process.cancel_timer(credit.timer)
+
+        dispatch_cancel(
+          %{state | active: nil},
+          deadline,
+          [from],
+          Map.take(credit, [:id, :ack_seq])
+        )
+
+      not is_nil(state.active) ->
+        {:reply, failure(:busy), state}
+
+      observation.phase != :active ->
+        {:reply, failure(:observation_active), state}
+
+      deadline <= now() ->
+        {:reply, failure(:timeout), state}
+
+      true ->
+        dispatch_cancel(state, deadline, [from])
+    end
+  end
+
+  defp join_cancellation(%{observation: observation} = state, deadline, from) do
+    callers = observation.cancel_from || []
+
+    if deadline > now() and length(callers) < 64,
+      do: {:noreply, %{state | observation: %{observation | cancel_from: [from | callers]}}},
+      else: {:reply, failure(:busy), state}
+  end
+
+  defp dispatch_cancel(state, deadline, callers, ignored_credit \\ nil) do
+    observation = %{state.observation | phase: :canceling, cancel_from: callers}
+    state = %{state | observation: observation}
+
+    parameters = %{
+      subscription_id: observation.subscription_id,
+      generation: observation.wire_generation
+    }
+
+    remaining = deadline - now()
+
+    case Command.encode(state.command, :cancel, parameters, remaining) do
+      {:ok, id, line, command} ->
+        if write(state.port, line) do
+          timer = Process.send_after(self(), {:native_timeout, state.generation, id}, remaining)
+
+          active = %{
+            operation: :cancel,
+            id: id,
+            timer: timer,
+            ignored_credit: ignored_credit
+          }
+
+          {:noreply, %{state | command: command, observation: observation, active: active}}
+        else
+          stop_observation(state, Error.new(:native_unavailable))
+        end
+
+      :exhausted ->
+        stop_observation(state, Error.new(:sequence_exhausted))
+
+      :error ->
+        stop_observation(state, Error.new(:native_protocol_error))
+    end
   end
 
   defp open_parameters(config, generation) do
@@ -553,6 +801,411 @@ defmodule Wotex.CoAP.Native.Connection do
     Process.cancel_timer(active.timer)
     GenServer.reply(active.from, close_result(result))
     {:stop, :normal, %{state | active: nil}}
+  end
+
+  defp handle_observation_bytes(state, bytes) do
+    case receive_chunk(state.buffer, bytes) do
+      {:line, line, rest} ->
+        case handle_observation_line(line, %{state | buffer: <<>>}) do
+          {:noreply, state} when rest != <<>> -> handle_observation_bytes(state, rest)
+          result -> result
+        end
+
+      {:more, buffer} ->
+        {:noreply, %{state | buffer: buffer}}
+
+      :error ->
+        stop_observation(state, Error.new(:native_protocol_error))
+    end
+  end
+
+  defp handle_observation_line(line, state) do
+    case Wire.frame(line) do
+      {:ok, frame} ->
+        if observation_event?(frame),
+          do: handle_report_frame(frame, byte_size(line) + 1, state),
+          else: handle_observation_response(frame, state)
+
+      {:error, %Error{}} ->
+        stop_observation(state, Error.new(:native_protocol_error))
+    end
+  end
+
+  defp handle_observation_response(frame, %{active: %{operation: :observe} = active} = state) do
+    result = Wire.response(:observe, frame, active.id)
+    Process.cancel_timer(active.timer)
+
+    case result do
+      {:ok, %{subscription_id: subscription_id, generation: generation}} ->
+        {:ok, ledger} = ReportLedger.new(subscription_id, generation)
+
+        observation = %{
+          state.observation
+          | phase: :opening_credit,
+            subscription_id: subscription_id,
+            wire_generation: generation,
+            ledger: ledger
+        }
+
+        state = %{state | active: nil, observation: observation}
+        dispatch_next_credit(state, :initial, observation.deadline)
+
+      {:error, %Error{} = error} ->
+        stop_observation(%{state | active: nil}, error)
+    end
+  end
+
+  defp handle_observation_response(frame, %{active: %{operation: :credit} = active} = state) do
+    result = Wire.response(:credit, frame, active.id)
+    Process.cancel_timer(active.timer)
+
+    with {:ok, nil} <- result,
+         {:ok, ledger} <- ReportLedger.credit_accepted(state.observation.ledger, active.ack_seq) do
+      observation = %{state.observation | ledger: ledger}
+      state = %{state | active: nil, observation: observation}
+
+      if active.phase == :initial,
+        do: begin_report_delivery(state),
+        else: dispatch_next_credit(state, :reports, now() + state.timeout)
+    else
+      {:error, %Error{} = error} -> stop_observation(%{state | active: nil}, error)
+      _ -> stop_observation(%{state | active: nil}, Error.new(:native_protocol_error))
+    end
+  end
+
+  defp handle_observation_response(frame, %{active: %{operation: :cancel} = active} = state) do
+    ignored_credit = active.ignored_credit
+
+    if ignored_credit && Map.get(frame, "id") == ignored_credit.id do
+      active = %{active | ignored_credit: nil}
+      state = %{state | active: active}
+
+      case Wire.response(:credit, frame, ignored_credit.id) do
+        {:ok, nil} ->
+          case ReportLedger.credit_accepted(
+                 state.observation.ledger,
+                 ignored_credit.ack_seq
+               ) do
+            {:ok, ledger} ->
+              {:noreply, %{state | observation: %{state.observation | ledger: ledger}}}
+
+            :error ->
+              stop_observation(state, Error.new(:native_protocol_error))
+          end
+
+        {:error, %Error{code: :native_protocol_error} = error} ->
+          stop_observation(state, error)
+
+        {:error, %Error{}} ->
+          {:noreply, state}
+      end
+    else
+      result = Wire.response(:cancel, frame, active.id)
+      Process.cancel_timer(active.timer)
+
+      case result do
+        {:ok, nil} -> complete_cancellation(%{state | active: nil})
+        {:error, %Error{} = error} -> stop_observation(%{state | active: nil}, error)
+      end
+    end
+  end
+
+  defp handle_observation_response(_, state),
+    do: stop_observation(state, Error.new(:native_protocol_error))
+
+  defp handle_report_frame(_, _, %{observation: %{phase: phase}} = state)
+       when phase in [:opening, :opening_credit],
+       do: stop_observation(state, Error.new(:native_protocol_error))
+
+  defp handle_report_frame(frame, encoded_bytes, %{observation: %{phase: :canceling}} = state) do
+    cond do
+      body_event?(frame) ->
+        case account_report_body(state.observation, frame, encoded_bytes) do
+          {:ok, observation} -> {:noreply, %{state | observation: observation}}
+          :error -> stop_observation(state, Error.new(:native_protocol_error))
+        end
+
+      Map.get(frame, "event") == "report" ->
+        case consume_complete_report(state.observation, frame, encoded_bytes) do
+          {:ok, _, observation} -> {:noreply, %{state | observation: observation}}
+          :error -> stop_observation(state, Error.new(:native_protocol_error))
+        end
+
+      Map.get(frame, "event") == "error" ->
+        handle_terminal_report(frame, state)
+
+      true ->
+        stop_observation(state, Error.new(:native_protocol_error))
+    end
+  end
+
+  defp handle_report_frame(frame, encoded_bytes, state) do
+    cond do
+      body_event?(frame) -> handle_report_body(frame, encoded_bytes, state)
+      Map.get(frame, "event") == "report" -> handle_complete_report(frame, encoded_bytes, state)
+      Map.get(frame, "event") == "error" -> handle_terminal_report(frame, state)
+    end
+  end
+
+  defp handle_report_body(frame, encoded_bytes, state) do
+    case account_report_body(state.observation, frame, encoded_bytes) do
+      {:ok, observation} ->
+        dispatch_next_credit(%{state | observation: observation}, :reports, now() + state.timeout)
+
+      :error ->
+        stop_observation(state, Error.new(:native_protocol_error))
+    end
+  end
+
+  defp account_report_body(observation, frame, encoded_bytes) do
+    with true <- map_size(observation.bodies) == 0,
+         {:ok, sequence, event} <-
+           Report.body_event(frame, observation.subscription_id, observation.wire_generation),
+         {:ok, ledger} <-
+           ReportLedger.account_frame(
+             observation.ledger,
+             observation.subscription_id,
+             observation.wire_generation,
+             sequence,
+             encoded_bytes
+           ),
+         {:ok, body} <- Body.push(observation.body, event),
+         {:ok, body, bodies} <- complete_report_body(body, observation.bodies, event),
+         do: {:ok, %{observation | ledger: ledger, body: body, bodies: bodies}},
+         else: (_ -> :error)
+  end
+
+  defp complete_report_body(body, bodies, %{"event" => "body_end", "body_id" => id}) do
+    with {:ok, bytes, body} <- Body.take(body, id),
+         do: {:ok, body, Map.put(bodies, id, bytes)}
+  end
+
+  defp complete_report_body(body, bodies, _), do: {:ok, body, bodies}
+
+  defp handle_complete_report(frame, encoded_bytes, state) do
+    observation = state.observation
+
+    with :ok <- receiver_capacity(observation),
+         {:ok, report, observation} <-
+           consume_complete_report(observation, frame, encoded_bytes) do
+      send(
+        observation.receiver,
+        {:wotex_coap, observation.handle.reference, {:ok, report.message, report.metadata}}
+      )
+
+      observation = establish_observation(observation)
+
+      dispatch_next_credit(%{state | observation: observation}, :reports, now() + state.timeout)
+    else
+      {:error, %Error{code: :receiver_overflow}} ->
+        stop_observation(state, Error.new(:receiver_overflow))
+
+      {:error, %Error{} = error} ->
+        stop_observation(state, error)
+
+      _ ->
+        stop_observation(state, Error.new(:native_protocol_error))
+    end
+  end
+
+  defp consume_complete_report(observation, frame, encoded_bytes) do
+    token = make_ref()
+
+    with :ok <- report_body_reference(frame, observation.bodies),
+         {:ok, report} <-
+           Report.decode(
+             frame,
+             observation.subscription_id,
+             observation.wire_generation,
+             observation.bodies
+           ),
+         {:ok, ledger} <-
+           ReportLedger.retain_report(
+             observation.ledger,
+             observation.subscription_id,
+             observation.wire_generation,
+             report.report_seq,
+             encoded_bytes,
+             token
+           ),
+         {:ok, ledger} <-
+           ReportLedger.consume_report(
+             ledger,
+             observation.subscription_id,
+             observation.wire_generation,
+             report.report_seq,
+             token
+           ) do
+      {:ok, report, %{observation | ledger: ledger, body: Body.new(), bodies: %{}}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp handle_terminal_report(frame, state) do
+    case Report.terminal(
+           frame,
+           state.observation.subscription_id,
+           state.observation.wire_generation
+         ) do
+      {:error, %Error{code: :native_protocol_error}} ->
+        stop_observation(state, Error.new(:native_protocol_error))
+
+      {:error, %Error{} = error} ->
+        stop_observation(state, error)
+    end
+  end
+
+  defp report_body_reference(
+         %{"value" => %{"body_id" => id}},
+         bodies
+       )
+       when map_size(bodies) == 1 do
+    if Map.has_key?(bodies, id), do: :ok, else: failure(:native_protocol_error)
+  end
+
+  defp report_body_reference(%{"value" => value}, bodies)
+       when is_map(value) and map_size(bodies) == 0 do
+    if Map.has_key?(value, "body_id"), do: failure(:native_protocol_error), else: :ok
+  end
+
+  defp report_body_reference(_, _), do: failure(:native_protocol_error)
+
+  defp observation_event?(%{"event" => event})
+       when event in ["body_begin", "body_chunk", "body_end", "report", "error"],
+       do: true
+
+  defp observation_event?(_), do: false
+
+  defp dispatch_next_credit(state, phase, deadline) do
+    case ReportLedger.next_credit(state.observation.ledger) do
+      {:ok, nil, ledger} ->
+        {:noreply, %{state | observation: %{state.observation | ledger: ledger}}}
+
+      {:ok, parameters, ledger} ->
+        with remaining when remaining > 0 <- deadline - now(),
+             {:ok, id, line, command} <-
+               Command.encode(state.command, :credit, parameters, remaining),
+             true <- write(state.port, line) do
+          timer = Process.send_after(self(), {:native_timeout, state.generation, id}, remaining)
+
+          {:noreply,
+           %{
+             state
+             | command: command,
+               observation: %{state.observation | ledger: ledger},
+               active: %{
+                 operation: :credit,
+                 phase: phase,
+                 id: id,
+                 ack_seq: parameters.ack_seq,
+                 timer: timer
+               }
+           }}
+        else
+          remaining when is_integer(remaining) ->
+            stop_observation(state, Error.new(:timeout))
+
+          false ->
+            stop_observation(state, Error.new(:native_unavailable))
+
+          :exhausted ->
+            stop_observation(state, Error.new(:sequence_exhausted))
+
+          :error ->
+            stop_observation(state, Error.new(:native_protocol_error))
+        end
+
+      :error ->
+        stop_observation(state, Error.new(:native_protocol_error))
+    end
+  end
+
+  defp begin_report_delivery(state) do
+    remaining = state.observation.deadline - now()
+
+    if remaining > 0 do
+      reference = make_ref()
+      timer = Process.send_after(self(), {:observation_deadline, reference}, remaining)
+
+      observation = %{
+        state.observation
+        | phase: :registering,
+          deadline_timer: timer,
+          deadline_reference: reference
+      }
+
+      {:noreply, %{state | observation: observation}}
+    else
+      stop_observation(state, Error.new(:timeout))
+    end
+  end
+
+  defp establish_observation(%{phase: :registering} = observation) do
+    if observation.deadline_timer, do: Process.cancel_timer(observation.deadline_timer)
+    GenServer.reply(observation.from, {:ok, observation.handle})
+    Process.demonitor(observation.caller_monitor, [:flush])
+
+    %{
+      observation
+      | phase: :active,
+        from: nil,
+        caller_monitor: nil,
+        deadline_timer: nil,
+        deadline_reference: nil
+    }
+  end
+
+  defp establish_observation(observation), do: observation
+
+  defp receiver_capacity(observation) do
+    case Process.info(observation.receiver, :message_queue_len) do
+      {:message_queue_len, count} when count < observation.max_queue_length -> :ok
+      nil -> failure(:connection_closed)
+      _ -> failure(:receiver_overflow)
+    end
+  end
+
+  defp complete_cancellation(state) do
+    Enum.each(state.observation.cancel_from || [], &GenServer.reply(&1, :ok))
+    state = clear_observation(state)
+    {:stop, :normal, %{state | cleanup_deadline: now() + @cleanup_timeout}}
+  end
+
+  defp stop_observation(state, %Error{} = error, notify \\ true) do
+    state = finish_observation(state, error, notify)
+    {:stop, :normal, %{state | cleanup_deadline: now() + @cleanup_timeout}}
+  end
+
+  defp finish_observation(%{observation: nil} = state, _, _), do: state
+
+  defp finish_observation(%{observation: observation} = state, %Error{} = error, notify) do
+    if observation.from, do: GenServer.reply(observation.from, {:error, error})
+
+    if observation.cancel_from,
+      do: Enum.each(observation.cancel_from, &GenServer.reply(&1, {:error, error}))
+
+    if notify and is_nil(observation.from) and Process.alive?(observation.receiver) do
+      send(
+        observation.receiver,
+        {:wotex_coap, observation.handle.reference, {:error, error}}
+      )
+    end
+
+    clear_observation(state)
+  end
+
+  defp clear_observation(%{observation: observation} = state) do
+    if observation.deadline_timer, do: Process.cancel_timer(observation.deadline_timer)
+    if observation.caller_monitor, do: Process.demonitor(observation.caller_monitor, [:flush])
+    if observation.receiver_monitor, do: Process.demonitor(observation.receiver_monitor, [:flush])
+
+    case state.active do
+      %{timer: timer} when is_reference(timer) -> Process.cancel_timer(timer)
+      _ -> :ok
+    end
+
+    %{state | observation: nil, active: nil, buffer: <<>>}
   end
 
   defp handle_request_bytes(state, bytes) do
@@ -722,6 +1375,68 @@ defmodule Wotex.CoAP.Native.Connection do
     end
   end
 
+  defp observation_options(path, receiver, options) do
+    with {:ok, values} <- observation_values(options, %{}),
+         true <- is_pid(receiver) and node(receiver) == node() and Process.alive?(receiver),
+         {:ok, _} <- Wotex.CoAP.message(%{method: :get, path: path}),
+         true <- is_boolean(Map.get(values, :renew, true)),
+         true <- is_boolean(Map.get(values, :confirmable, true)),
+         true <- Map.get(values, :observation_kind, :property) in [:property, :event],
+         true <-
+           is_integer(Map.get(values, :max_queue_length, 1000)) and
+             Map.get(values, :max_queue_length, 1000) in 1..10_000,
+         true <-
+           is_nil(Map.get(values, :accept)) or
+             (is_integer(Map.get(values, :accept)) and Map.get(values, :accept) in 0..65_535) do
+      parameters = %{
+        path: path,
+        confirmable: Map.get(values, :confirmable, true),
+        observation_kind: Map.get(values, :observation_kind, :property),
+        renew: Map.get(values, :renew, true)
+      }
+
+      parameters =
+        if is_nil(Map.get(values, :accept)),
+          do: parameters,
+          else: Map.put(parameters, :accept, values.accept)
+
+      {:ok,
+       %{
+         parameters: parameters,
+         receiver: receiver,
+         max_queue_length: Map.get(values, :max_queue_length, 1000)
+       }}
+    else
+      _ -> failure(:invalid_observation_options)
+    end
+  end
+
+  defp observation_values([], values), do: {:ok, values}
+
+  defp observation_values([{key, value} | rest], values)
+       when key in [:renew, :max_queue_length, :confirmable, :accept, :observation_kind] and
+              not is_map_key(values, key),
+       do: observation_values(rest, Map.put(values, key, value))
+
+  defp observation_values(_, _), do: failure(:invalid_observation_options)
+
+  defp safe_observe(pid, generation, config, deadline, timeout) do
+    GenServer.call(pid, {:observe, generation, config, deadline}, timeout + 100)
+  catch
+    :exit, {:timeout, _} -> failure(:timeout)
+    :exit, _ -> failure(:connection_closed)
+  end
+
+  defp safe_unobserve(pid, generation, handle, deadline, timeout) do
+    case GenServer.call(pid, {:unobserve, generation, handle, deadline}, timeout + 100) do
+      :ok -> await_stop(pid, deadline, :ok)
+      result -> result
+    end
+  catch
+    :exit, {:timeout, _} -> failure(:timeout)
+    :exit, _ -> if(Process.alive?(pid), do: failure(:connection_closed), else: :ok)
+  end
+
   defp admit(admission, pid, generation, deadline) do
     case Admission.acquire(admission, pid, generation, deadline) do
       {:ok, lease} -> {:ok, lease}
@@ -811,6 +1526,7 @@ defmodule Wotex.CoAP.Native.Connection do
     cond do
       Admission.closing?(state.admission) -> :connection_closed
       not Process.alive?(caller) or deadline <= now() -> :timeout
+      not is_nil(state.observation) -> :observation_active
       bounded_call(parameters) == :error -> :invalid_request
       true -> nil
     end
@@ -1137,6 +1853,13 @@ defmodule Wotex.CoAP.Native.Connection do
 
   defp fail_active(%{active: %{operation: :request, lease: lease}} = state, result),
     do: finish_call(state, lease, result)
+
+  defp fail_active(
+         %{active: %{operation: operation}, observation: observation} = state,
+         {:error, %Error{} = error}
+       )
+       when operation in [:observe, :credit, :cancel] and not is_nil(observation),
+       do: finish_observation(state, error, true)
 
   defp fail_active(state, _), do: state
 

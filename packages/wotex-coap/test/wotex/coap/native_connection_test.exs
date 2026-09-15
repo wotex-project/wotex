@@ -3,7 +3,7 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.CoAP.{Error, Message, Security}
+  alias Wotex.CoAP.{Error, Message, Security, Subscription}
   alias Wotex.CoAP.Native.{Admission, Connection}
 
   @revision "7cf7465b784baded4de183290c547d582becfd28"
@@ -210,6 +210,612 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     assert_receive {:DOWN, ^monitor, :process, _, _}, 1_000
     assert_helper_stopped(context.store, 1_000)
     assert :ok = Wotex.CoAP.disconnect(session)
+  end
+
+  test "WCO-D04 public native Observe opens credit, delivers reports and cancels exactly",
+       context do
+    File.write!(Path.join(context.store, "mode"), "observe")
+    assert {:ok, session} = Wotex.CoAP.connect(context.options)
+
+    assert {:ok, handle} =
+             Wotex.CoAP.subscribe(session, %{
+               path: "/temperature",
+               receiver: self(),
+               renew: false,
+               max_queue_length: 1000
+             })
+
+    reference = handle.reference
+
+    assert_receive {:wotex_coap, ^reference,
+                    {:ok, %Message{payload: "20"}, %{observe: 10, content_format: 0}}},
+                   1_000
+
+    assert_receive {:wotex_coap, ^reference,
+                    {:ok, %Message{payload: "21"}, %{observe: 11, content_format: 0}}},
+                   1_000
+
+    assert %{
+             "id" => "2",
+             "operation" => "observe",
+             "parameters" => %{
+               "path" => "/temperature",
+               "confirmable" => true,
+               "observation_kind" => "property",
+               "renew" => false
+             }
+           } = read_json(context.store, "observe.json")
+
+    for {name, id, acknowledged} <- [
+          {"credit-0.json", "3", 0},
+          {"credit-1.json", "4", 1},
+          {"credit-2.json", "5", 2}
+        ] do
+      assert %{
+               "id" => ^id,
+               "operation" => "credit",
+               "parameters" => %{"ack_seq" => ^acknowledged, "generation" => generation}
+             } = read_json(context.store, name)
+
+      assert generation in 1..0xFFFFFFFFFFFFFFFF
+    end
+
+    assert {:error, %Error{code: :observation_active}} =
+             Wotex.CoAP.get(session, "/other")
+
+    assert {:error, %Error{code: :observation_active}} =
+             Wotex.CoAP.subscribe(session, "/other")
+
+    {:ok, foreign} = Subscription.new(session.pid, make_ref(), handle.generation)
+
+    assert {:error, %Error{code: :invalid_subscription}} =
+             Wotex.CoAP.unsubscribe(session, foreign)
+
+    assert eventually(fn ->
+             match?(%{operation: :credit, ack_seq: 2}, :sys.get_state(session.pid).active)
+           end)
+
+    first_cancel = Task.async(fn -> Wotex.CoAP.unsubscribe(session, handle) end)
+    second_cancel = Task.async(fn -> Wotex.CoAP.unsubscribe(session, handle) end)
+    assert :ok = Task.await(first_cancel, 1_000)
+    assert :ok = Task.await(second_cancel, 1_000)
+    refute Process.alive?(session.pid)
+
+    assert %{
+             "id" => "6",
+             "operation" => "cancel",
+             "parameters" => %{"subscription_id" => "2", "generation" => generation}
+           } = read_json(context.store, "cancel.json")
+
+    assert generation in 1..0xFFFFFFFFFFFFFFFF
+    assert :ok = Wotex.CoAP.unsubscribe(session, handle)
+    assert :ok = Wotex.CoAP.disconnect(session)
+    refute_received {:wotex_coap, ^reference, _}
+  end
+
+  test "WCO-D04 native Observe rejects invalid admission before Port traffic", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    receiver = spawn(fn -> :ok end)
+    monitor = Process.monitor(receiver)
+    assert_receive {:DOWN, ^monitor, :process, ^receiver, _}
+
+    for {path, target, options} <- [
+          {123, self(), []},
+          {"/value", receiver, []},
+          {"/value", self(), [renew: 1]},
+          {"/value", self(), [max_queue_length: 0]},
+          {"/value", self(), [renew: true, renew: false]},
+          {"/value", self(), [unknown: true]}
+        ] do
+      assert {:error, %Error{code: :invalid_observation_options}} =
+               Connection.observe(pid, path, target, options, 1_000)
+    end
+
+    refute File.exists?(Path.join(context.store, "observe.json"))
+    assert :sys.get_state(pid).observation == nil
+    assert :ok = Connection.close(pid)
+  end
+
+  test "WCO-D04 receiver death releases an established native generation", context do
+    File.write!(Path.join(context.store, "mode"), "observe")
+    assert {:ok, session} = Wotex.CoAP.connect(context.options)
+    receiver = spawn(fn -> Process.sleep(:infinity) end)
+
+    assert {:ok, _} =
+             Wotex.CoAP.subscribe(session, %{
+               path: "/temperature",
+               receiver: receiver,
+               renew: false
+             })
+
+    connection_monitor = Process.monitor(session.pid)
+    Process.exit(receiver, :kill)
+    assert_receive {:DOWN, ^connection_monitor, :process, _, _}, 1_000
+    assert_helper_stopped(context.store, 1_000)
+    assert :ok = Wotex.CoAP.disconnect(session)
+  end
+
+  test "WCO-D04 native Observe assembles one streamed report under cumulative credit",
+       context do
+    File.write!(Path.join(context.store, "mode"), "observe_stream")
+    assert {:ok, session} = Wotex.CoAP.connect(context.options)
+
+    assert {:ok, handle} =
+             Wotex.CoAP.subscribe(session, %{
+               path: "/stream",
+               receiver: self(),
+               renew: false
+             })
+
+    reference = handle.reference
+
+    assert_receive {:wotex_coap, ^reference,
+                    {:ok, %Message{payload: payload}, %{observe: 10, content_format: 0}}},
+                   1_000
+
+    assert payload == :binary.copy("S", 32_769)
+
+    for {name, id, acknowledged} <- [
+          {"credit-0.json", "3", 0},
+          {"credit-stream-1.json", "4", 1},
+          {"credit-stream-5.json", "5", 5}
+        ] do
+      assert %{
+               "id" => ^id,
+               "operation" => "credit",
+               "parameters" => %{"ack_seq" => ^acknowledged}
+             } = read_json(context.store, name)
+    end
+
+    assert eventually(fn ->
+             match?(%{operation: :credit, ack_seq: 5}, :sys.get_state(session.pid).active)
+           end)
+
+    assert :ok = Wotex.CoAP.unsubscribe(session, handle)
+    refute Process.alive?(session.pid)
+    refute_received {:wotex_coap, ^reference, _}
+  end
+
+  test "WCO-D04 native Observe returns bounded establishment failures", context do
+    for {mode, code} <- [
+          {"observe_open_error", :busy},
+          {"observe_credit_error", :busy},
+          {"observe_bad_establishment", :native_protocol_error},
+          {"observe_bad_frame", :native_protocol_error},
+          {"observe_invalid_wire", :native_protocol_error},
+          {"observe_invalid_json", :native_protocol_error},
+          {"observe_early_report", :native_protocol_error},
+          {"observe_body_bad", :native_protocol_error},
+          {"observe_terminal_bad", :native_protocol_error},
+          {"observe_report_error", :observation_failed},
+          {"observe_report_bad", :native_protocol_error}
+        ] do
+      File.write!(Path.join(context.store, "mode"), mode)
+      assert {:ok, session} = Wotex.CoAP.connect(context.options)
+
+      assert {:error, %Error{code: ^code}} =
+               Wotex.CoAP.subscribe(session, %{path: "/fault", renew: false})
+
+      assert eventually(fn -> not Process.alive?(session.pid) end)
+      assert_helper_stopped(context.store, 1_000)
+    end
+  end
+
+  test "WCO-D04 native Observe bounds initial report registration", context do
+    File.write!(Path.join(context.store, "mode"), "observe_register_timeout")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    assert {:error, %Error{code: :timeout}} =
+             Connection.observe(pid, "/slow", self(), [renew: false], 100)
+
+    assert eventually(fn -> not Process.alive?(pid) end)
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-D04 native cancellation returns the helper error and closes", context do
+    File.write!(Path.join(context.store, "mode"), "observe_cancel_error")
+    assert {:ok, session} = Wotex.CoAP.connect(context.options)
+    assert {:ok, handle} = Wotex.CoAP.subscribe(session, %{path: "/cancel", renew: false})
+    reference = handle.reference
+
+    assert_receive {:wotex_coap, ^reference, {:ok, %Message{payload: "20"}, _}}, 1_000
+    assert eventually(fn -> :sys.get_state(session.pid).active == nil end)
+
+    assert {:error, %Error{code: :invalid_cancellation_response}} =
+             Wotex.CoAP.unsubscribe(session, handle)
+
+    assert_receive {:wotex_coap, ^reference,
+                    {:error, %Error{code: :invalid_cancellation_response}}},
+                   1_000
+
+    assert eventually(fn -> not Process.alive?(session.pid) end)
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-D04 established native terminal reports exactly once", context do
+    File.write!(Path.join(context.store, "mode"), "observe_terminal")
+    assert {:ok, session} = Wotex.CoAP.connect(context.options)
+    assert {:ok, handle} = Wotex.CoAP.subscribe(session, %{path: "/terminal", renew: false})
+    reference = handle.reference
+
+    assert_receive {:wotex_coap, ^reference, {:ok, %Message{payload: "20"}, _}}, 1_000
+    assert_receive {:wotex_coap, ^reference, {:error, %Error{code: :observation_stale}}}, 1_000
+    refute_received {:wotex_coap, ^reference, _}
+    assert eventually(fn -> not Process.alive?(session.pid) end)
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-D04 native Observe enforces receiver capacity before first delivery", context do
+    File.write!(Path.join(context.store, "mode"), "observe")
+    assert {:ok, session} = Wotex.CoAP.connect(context.options)
+    receiver = spawn(fn -> receive do: (:release -> :ok) end)
+    send(receiver, :occupied)
+
+    assert {:error, %Error{code: :receiver_overflow}} =
+             Connection.observe(
+               session.pid,
+               "/overflow",
+               receiver,
+               [renew: false, max_queue_length: 1],
+               1_000
+             )
+
+    assert eventually(fn -> not Process.alive?(session.pid) end)
+    Process.exit(receiver, :kill)
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-D04 opening caller death releases the native generation", context do
+    File.write!(Path.join(context.store, "mode"), "observe_register_timeout")
+    assert {:ok, session} = Wotex.CoAP.connect(context.options)
+    parent = self()
+
+    caller =
+      spawn(fn ->
+        send(parent, :observe_started)
+        Wotex.CoAP.subscribe(session, %{path: "/abandoned", renew: false})
+      end)
+
+    assert_receive :observe_started
+    assert eventually(fn -> :sys.get_state(session.pid).observation != nil end)
+    connection_monitor = Process.monitor(session.pid)
+    Process.exit(caller, :kill)
+    assert_receive {:DOWN, ^connection_monitor, :process, _, _}, 1_000
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-D04 native Observe rejects invalid public call shapes without traffic", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    dead = spawn(fn -> :ok end)
+    dead_monitor = Process.monitor(dead)
+    assert_receive {:DOWN, ^dead_monitor, :process, ^dead, _}
+    {:ok, handle} = Subscription.new(pid, make_ref(), make_ref())
+
+    assert {:error, %Error{code: :invalid_timeout}} =
+             Connection.observe(pid, "/value", self(), [], 0)
+
+    assert {:error, %Error{code: :invalid_observation_options}} =
+             Connection.observe(pid, "/value", self(), :invalid, 100)
+
+    assert {:error, %Error{code: :invalid_session}} =
+             Connection.observe(:invalid, "/value", self(), [], 100)
+
+    assert {:error, %Error{code: :connection_closed}} =
+             Connection.observe(dead, "/value", self(), [], 100)
+
+    assert {:error, %Error{code: :invalid_timeout}} = Connection.unobserve(pid, handle, 0)
+    assert {:error, %Error{code: :invalid_subscription}} = Connection.unobserve(pid, :bad, 100)
+    {:ok, foreign_session} = Subscription.new(self(), make_ref(), make_ref())
+
+    assert {:error, %Error{code: :invalid_session}} =
+             Connection.unobserve(self(), foreign_session, 100)
+
+    refute File.exists?(Path.join(context.store, "observe.json"))
+    assert :ok = Connection.close(pid)
+
+    File.write!(Path.join(context.store, "mode"), "observe_open_error")
+    assert {:ok, options_pid} = Connection.start(context.options)
+
+    assert {:error, %Error{code: :busy}} =
+             Connection.observe(
+               options_pid,
+               "/event",
+               self(),
+               [
+                 renew: false,
+                 confirmable: false,
+                 observation_kind: :event,
+                 max_queue_length: 2,
+                 accept: 0
+               ],
+               1_000
+             )
+
+    assert eventually(fn -> not Process.alive?(options_pid) end)
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-D04 native Observe enforces generation, activity and deadline admission", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    state = :sys.get_state(pid)
+
+    config = %{
+      parameters: %{
+        path: "/value",
+        confirmable: true,
+        observation_kind: :property,
+        renew: false
+      },
+      receiver: self(),
+      max_queue_length: 1
+    }
+
+    assert {:error, %Error{code: :invalid_session}} =
+             GenServer.call(
+               pid,
+               {:observe, state.generation + 1, config, System.monotonic_time(:millisecond) + 100}
+             )
+
+    :sys.replace_state(pid, fn current -> %{current | active: %{operation: :close}} end)
+
+    assert {:error, %Error{code: :busy}} =
+             GenServer.call(
+               pid,
+               {:observe, state.generation, config, System.monotonic_time(:millisecond) + 100}
+             )
+
+    :sys.replace_state(pid, fn current -> %{current | active: nil} end)
+
+    assert {:error, %Error{code: :timeout}} =
+             GenServer.call(
+               pid,
+               {:observe, state.generation, config, System.monotonic_time(:millisecond) - 1}
+             )
+
+    assert {:error, %Error{code: :invalid_observation_options}} =
+             GenServer.call(
+               pid,
+               {:observe, state.generation, %{config | parameters: %{}},
+                System.monotonic_time(:millisecond) + 100}
+             )
+
+    assert :ok = Connection.close(pid)
+
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, exhausted} = Connection.start(context.options)
+    state = :sys.get_state(exhausted)
+
+    :sys.replace_state(exhausted, fn current ->
+      %{current | command: %{current.command | next_id: :exhausted}}
+    end)
+
+    assert {:error, %Error{code: :sequence_exhausted}} =
+             GenServer.call(
+               exhausted,
+               {:observe, state.generation, config, System.monotonic_time(:millisecond) + 100}
+             )
+
+    assert eventually(fn -> not Process.alive?(exhausted) end)
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-D04 native cancellation validates generation, phase and active control", context do
+    File.write!(Path.join(context.store, "mode"), "observe_wait_control")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    caller =
+      Task.async(fn -> Connection.observe(pid, "/pending", self(), [renew: false], 2_000) end)
+
+    assert eventually(fn ->
+             match?(%{phase: :registering}, :sys.get_state(pid).observation)
+           end)
+
+    state = :sys.get_state(pid)
+    handle = state.observation.handle
+
+    assert {:error, %Error{code: :invalid_session}} =
+             GenServer.call(
+               pid,
+               {:unobserve, state.generation + 1, handle, System.monotonic_time(:millisecond) + 100}
+             )
+
+    :sys.replace_state(pid, fn current -> %{current | active: %{operation: :close}} end)
+
+    assert {:error, %Error{code: :busy}} =
+             GenServer.call(
+               pid,
+               {:unobserve, state.generation, handle, System.monotonic_time(:millisecond) + 100}
+             )
+
+    :sys.replace_state(pid, fn current -> %{current | active: nil} end)
+
+    assert {:error, %Error{code: :observation_active}} =
+             GenServer.call(
+               pid,
+               {:unobserve, state.generation, handle, System.monotonic_time(:millisecond) + 100}
+             )
+
+    :sys.replace_state(pid, fn current ->
+      %{current | observation: %{current.observation | phase: :active}}
+    end)
+
+    assert {:error, %Error{code: :timeout}} =
+             GenServer.call(
+               pid,
+               {:unobserve, state.generation, handle, System.monotonic_time(:millisecond) - 1}
+             )
+
+    assert :ok = Connection.close(pid)
+    assert {:error, %Error{code: :connection_closed}} = Task.await(caller, 1_000)
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-D04 native cancellation fails closed on control exhaustion and Port loss", context do
+    for fault <- [:exhausted, :closed_port] do
+      File.write!(Path.join(context.store, "mode"), "observe_cancel_error")
+      assert {:ok, session} = Wotex.CoAP.connect(context.options)
+      assert {:ok, handle} = Wotex.CoAP.subscribe(session, %{path: "/cancel", renew: false})
+      assert eventually(fn -> :sys.get_state(session.pid).active == nil end)
+
+      case fault do
+        :exhausted ->
+          :sys.replace_state(session.pid, fn state ->
+            %{state | command: %{state.command | next_id: :exhausted}}
+          end)
+
+          assert {:error, %Error{code: :sequence_exhausted}} =
+                   Wotex.CoAP.unsubscribe(session, handle)
+
+        :closed_port ->
+          closed = Port.open({:spawn_executable, ~c"/usr/bin/true"}, [:exit_status])
+          Port.close(closed)
+          :sys.replace_state(session.pid, fn state -> %{state | port: closed} end)
+
+          assert {:error, %Error{code: :native_unavailable}} =
+                   Wotex.CoAP.unsubscribe(session, handle)
+      end
+
+      assert eventually(fn -> not Process.alive?(session.pid) end)
+      assert_helper_stopped(context.store, 1_000)
+    end
+  end
+
+  test "WCO-D04 canceling observations validate terminal and body frames", context do
+    for {mode, code} <- [
+          {"observe_cancel_terminal", :observation_stale},
+          {"observe_cancel_bad_body", :native_protocol_error}
+        ] do
+      File.write!(Path.join(context.store, "mode"), mode)
+      assert {:ok, session} = Wotex.CoAP.connect(context.options)
+      assert {:ok, handle} = Wotex.CoAP.subscribe(session, %{path: "/cancel", renew: false})
+      reference = handle.reference
+      assert_receive {:wotex_coap, ^reference, {:ok, %Message{}, _}}, 1_000
+      assert eventually(fn -> :sys.get_state(session.pid).active == nil end)
+
+      assert {:error, %Error{code: ^code}} = Wotex.CoAP.unsubscribe(session, handle)
+      assert_receive {:wotex_coap, ^reference, {:error, %Error{code: ^code}}}, 1_000
+      assert eventually(fn -> not Process.alive?(session.pid) end)
+      assert_helper_stopped(context.store, 1_000)
+    end
+  end
+
+  test "WCO-D04 report credit failures close after initial delivery", context do
+    for {fault, code} <- [
+          {:timeout, :timeout},
+          {:exhausted, :sequence_exhausted},
+          {:invalid_command, :native_protocol_error},
+          {:dead_receiver, :connection_closed}
+        ] do
+      File.rm(Path.join(context.store, "release"))
+      File.rm(Path.join(context.store, "waiting-release"))
+      File.rm(Path.join(context.store, "released-report"))
+      File.write!(Path.join(context.store, "mode"), "observe_release_report")
+      assert {:ok, pid} = Connection.start(context.options)
+      parent = self()
+
+      caller =
+        Task.async(fn -> Connection.observe(pid, "/credit", parent, [renew: false], 3_000) end)
+
+      assert eventually(fn ->
+               match?(%{phase: :registering}, :sys.get_state(pid).observation)
+             end)
+
+      wait_for_file(
+        Path.join(context.store, "waiting-release"),
+        System.monotonic_time(:millisecond) + 1_000
+      )
+
+      assert File.exists?(Path.join(context.store, "waiting-release"))
+
+      case fault do
+        :timeout ->
+          :sys.replace_state(pid, fn state -> %{state | timeout: -1} end)
+
+        :exhausted ->
+          :sys.replace_state(pid, fn state ->
+            %{state | command: %{state.command | next_id: :exhausted}}
+          end)
+
+        :invalid_command ->
+          :sys.replace_state(pid, fn state -> %{state | command: :invalid} end)
+
+        :dead_receiver ->
+          receiver = spawn(fn -> :ok end)
+          receiver_monitor = Process.monitor(receiver)
+          assert_receive {:DOWN, ^receiver_monitor, :process, ^receiver, _}
+
+          :sys.replace_state(pid, fn state ->
+            %{state | observation: %{state.observation | receiver: receiver}}
+          end)
+      end
+
+      File.write!(Path.join(context.store, "release"), "go")
+
+      wait_for_file(
+        Path.join(context.store, "released-report"),
+        System.monotonic_time(:millisecond) + 1_000
+      )
+
+      assert File.exists?(Path.join(context.store, "released-report"))
+
+      result = Task.await(caller, 3_500)
+
+      if fault == :dead_receiver do
+        assert {:error, %Error{code: ^code}} = result
+      else
+        assert {:ok, handle} = result
+        reference = handle.reference
+        assert_receive {:wotex_coap, ^reference, {:ok, %Message{payload: "20"}, _}}, 1_000
+        assert_receive {:wotex_coap, ^reference, {:error, %Error{code: ^code}}}, 1_000
+      end
+
+      assert eventually(fn -> not Process.alive?(pid) end)
+      assert_helper_stopped(context.store, 1_000)
+    end
+  end
+
+  test "WCO-D04 native Observe calls bound suspended and terminated owners", context do
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, opening} = Connection.start(context.options)
+    :sys.suspend(opening)
+
+    assert {:error, %Error{code: :timeout}} =
+             Connection.observe(opening, "/suspended", self(), [renew: false], 10)
+
+    :sys.resume(opening)
+    Process.exit(opening, :kill)
+    assert_helper_stopped(context.store, 1_000)
+
+    File.write!(Path.join(context.store, "mode"), "observe_idle_exit")
+    assert {:ok, canceling} = Connection.start(context.options)
+
+    assert {:ok, handle} =
+             Connection.observe(canceling, "/cancel", self(), [renew: false], 1_000)
+
+    assert_receive {:wotex_coap, _, {:ok, %Message{}, _}}, 1_000
+    assert eventually(fn -> :sys.get_state(canceling).active == nil end)
+    :sys.suspend(canceling)
+    assert {:error, %Error{code: :timeout}} = Connection.unobserve(canceling, handle, 10)
+    :sys.resume(canceling)
+    Process.exit(canceling, :kill)
+    assert_helper_stopped(context.store, 1_000)
+
+    File.write!(Path.join(context.store, "mode"), "observe_register_exit")
+    assert {:ok, terminated} = Connection.start(context.options)
+
+    caller =
+      Task.async(fn ->
+        Connection.observe(terminated, "/terminated", self(), [renew: false], 2_000)
+      end)
+
+    assert eventually(fn -> :sys.get_state(terminated).observation != nil end)
+    Process.exit(terminated, :kill)
+
+    assert {:error, %Error{code: :connection_closed}} = Task.await(caller, 1_000)
+    assert_helper_stopped(context.store, 1_000)
   end
 
   test "WCO-N02 public selection rejects mismatched and incomplete native configuration",
@@ -1491,6 +2097,55 @@ defmodule Wotex.CoAP.NativeConnectionTest do
       raw.(frames)
     end
 
+    observe_report = fn subscription_id, generation, sequence, observe, payload ->
+      observe_bytes = Base.encode64(:binary.encode_unsigned(observe))
+      payload_bytes = Base.encode64(payload)
+
+      ~s({"version":1,"subscription_id":"\#{subscription_id}","generation":\#{generation},"report_seq":\#{sequence},"event":"report","value":{"type":"ack","code":69,"message_id":\#{400 + sequence},"token":{"type":"bytes","base64":"Aw=="},"options":[{"number":6,"value":{"type":"bytes","base64":"\#{observe_bytes}"}},{"number":12,"value":{"type":"bytes","base64":""}}],"payload":{"type":"bytes","base64":"\#{payload_bytes}"}},"metadata":{"code":69,"observe":\#{observe},"etag":null,"content_format":0,"max_age":60}}\\n)
+    end
+
+    observe_stream = fn subscription_id, generation ->
+      body = :binary.copy("S", 32_769)
+      first = binary_part(body, 0, 32_768)
+      last = binary_part(body, 32_768, 1)
+      hash = Base.encode16(:crypto.hash(:sha256, body), case: :lower)
+      observe_bytes = Base.encode64(:binary.encode_unsigned(10))
+
+      ~s({"version":1,"id":"\#{subscription_id}","generation":\#{generation},"report_seq":1,"event":"body_begin","body_id":"report-body","length":32769,"sha256":"\#{hash}"}\\n) <>
+        ~s({"version":1,"id":"\#{subscription_id}","generation":\#{generation},"report_seq":2,"event":"body_chunk","body_id":"report-body","offset":0,"data":{"type":"bytes","base64":"\#{Base.encode64(first)}"}}\\n) <>
+        ~s({"version":1,"id":"\#{subscription_id}","generation":\#{generation},"report_seq":3,"event":"body_chunk","body_id":"report-body","offset":32768,"data":{"type":"bytes","base64":"\#{Base.encode64(last)}"}}\\n) <>
+        ~s({"version":1,"id":"\#{subscription_id}","generation":\#{generation},"report_seq":4,"event":"body_end","body_id":"report-body"}\\n) <>
+        ~s({"version":1,"subscription_id":"\#{subscription_id}","generation":\#{generation},"report_seq":5,"event":"report","value":{"type":"ack","code":69,"message_id":405,"token":{"type":"bytes","base64":"Aw=="},"options":[{"number":6,"value":{"type":"bytes","base64":"\#{observe_bytes}"}},{"number":12,"value":{"type":"bytes","base64":""}}],"body_id":"report-body"},"metadata":{"code":69,"observe":10,"etag":null,"content_format":0,"max_age":60}}\\n)
+    end
+
+    canceling_stream = fn subscription_id, generation ->
+      body = "Z"
+      hash = Base.encode16(:crypto.hash(:sha256, body), case: :lower)
+      observe_bytes = Base.encode64(:binary.encode_unsigned(11))
+
+      ~s({"version":1,"id":"\#{subscription_id}","generation":\#{generation},"report_seq":6,"event":"body_begin","body_id":"late-body","length":1,"sha256":"\#{hash}"}\\n) <>
+        ~s({"version":1,"id":"\#{subscription_id}","generation":\#{generation},"report_seq":7,"event":"body_chunk","body_id":"late-body","offset":0,"data":{"type":"bytes","base64":"Wg=="}}\\n) <>
+        ~s({"version":1,"id":"\#{subscription_id}","generation":\#{generation},"report_seq":8,"event":"body_end","body_id":"late-body"}\\n) <>
+        ~s({"version":1,"subscription_id":"\#{subscription_id}","generation":\#{generation},"report_seq":9,"event":"report","value":{"type":"ack","code":69,"message_id":409,"token":{"type":"bytes","base64":"Aw=="},"options":[{"number":6,"value":{"type":"bytes","base64":"\#{observe_bytes}"}},{"number":12,"value":{"type":"bytes","base64":""}}],"body_id":"late-body"},"metadata":{"code":69,"observe":11,"etag":null,"content_format":0,"max_age":60}}\\n)
+    end
+
+    establish_observe = fn open ->
+      [_, generation] = Regex.run(~r/"generation":([0-9]+)/, open)
+      generation = String.to_integer(generation)
+      observe = read_command.("observe.json")
+      subscription_id = id.(observe)
+
+      IO.write(
+        ~s({"version":1,"id":"\#{subscription_id}","ok":true,"result":{"subscription_id":"\#{subscription_id}","generation":\#{generation}}}\\n)
+      )
+
+      {subscription_id, generation}
+    end
+
+    terminal_report = fn subscription_id, generation, code ->
+      ~s({"version":1,"subscription_id":"\#{subscription_id}","generation":\#{generation},"event":"error","value":{"code":"\#{code}"},"metadata":{}}\\n)
+    end
+
     stream_reply = fn request_id, event_id, expected_hash, result_kind ->
       body = :binary.copy("A", 32_769)
       first = binary_part(body, 0, 32_768)
@@ -1629,6 +2284,224 @@ defmodule Wotex.CoAP.NativeConnectionTest do
                   IO.write(
                     ~s({"version":1,"id":"\#{id.(request)}","event":"body_begin","body_id":"discovery","length":65537,"sha256":"\#{String.duplicate("0", 64)}"}\\n)
                   )
+
+                  Process.sleep(:infinity)
+
+                "observe" ->
+                  [_, generation] = Regex.run(~r/"generation":([0-9]+)/, open)
+                  generation = String.to_integer(generation)
+                  observe = read_command.("observe.json")
+                  subscription_id = id.(observe)
+
+                  IO.write(
+                    ~s({"version":1,"id":"\#{subscription_id}","ok":true,"result":{"subscription_id":"\#{subscription_id}","generation":\#{generation}}}\\n)
+                  )
+
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write(observe_report.(subscription_id, generation, 1, 10, "20"))
+                  credit1 = read_command.("credit-1.json")
+                  reply.(id.(credit1))
+                  IO.write(observe_report.(subscription_id, generation, 2, 11, "21"))
+                  credit2 = read_command.("credit-2.json")
+                  cancel = read_command.("cancel.json")
+
+                  IO.write(
+                    ~s({"version":1,"id":"\#{id.(credit2)}","ok":false,"error":{"code":"busy"}}\\n)
+                  )
+
+                  IO.write(observe_report.(subscription_id, generation, 3, 12, "22"))
+                  reply.(id.(cancel))
+                  Process.sleep(:infinity)
+
+                "observe_stream" ->
+                  [_, generation] = Regex.run(~r/"generation":([0-9]+)/, open)
+                  generation = String.to_integer(generation)
+                  observe = read_command.("observe.json")
+                  subscription_id = id.(observe)
+
+                  IO.write(
+                    ~s({"version":1,"id":"\#{subscription_id}","ok":true,"result":{"subscription_id":"\#{subscription_id}","generation":\#{generation}}}\\n)
+                  )
+
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  raw.(observe_stream.(subscription_id, generation))
+                  credit1 = read_command.("credit-stream-1.json")
+                  reply.(id.(credit1))
+                  credit5 = read_command.("credit-stream-5.json")
+                  cancel = read_command.("cancel.json")
+                  raw.(canceling_stream.(subscription_id, generation))
+                  reply.(id.(credit5))
+                  reply.(id.(cancel))
+                  Process.sleep(:infinity)
+
+                "observe_open_error" ->
+                  observe = read_command.("observe.json")
+
+                  IO.write(
+                    ~s({"version":1,"id":"\#{id.(observe)}","ok":false,"error":{"code":"busy"}}\\n)
+                  )
+
+                  Process.sleep(:infinity)
+
+                "observe_credit_error" ->
+                  establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+
+                  IO.write(
+                    ~s({"version":1,"id":"\#{id.(credit0)}","ok":false,"error":{"code":"busy"}}\\n)
+                  )
+
+                  Process.sleep(:infinity)
+
+                "observe_bad_establishment" ->
+                  [_, generation] = Regex.run(~r/"generation":([0-9]+)/, open)
+                  observe = read_command.("observe.json")
+
+                  IO.write(
+                    ~s({"version":1,"id":"\#{id.(observe)}","ok":true,"result":{"subscription_id":"different","generation":\#{generation}}}\\n)
+                  )
+
+                  Process.sleep(:infinity)
+
+                "observe_bad_frame" ->
+                  establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write("{}\\n")
+                  Process.sleep(:infinity)
+
+                "observe_invalid_wire" ->
+                  establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write("\\r\\n")
+                  Process.sleep(:infinity)
+
+                "observe_invalid_json" ->
+                  establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write("{\\n")
+                  Process.sleep(:infinity)
+
+                "observe_early_report" ->
+                  {subscription_id, generation} = establish_observe.(open)
+                  IO.write(observe_report.(subscription_id, generation, 1, 10, "20"))
+                  Process.sleep(:infinity)
+
+                "observe_body_bad" ->
+                  establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write(~s({"version":1,"event":"body_begin"}\\n))
+                  Process.sleep(:infinity)
+
+                "observe_terminal_bad" ->
+                  establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write(~s({"version":1,"event":"error"}\\n))
+                  Process.sleep(:infinity)
+
+                "observe_report_error" ->
+                  {subscription_id, generation} = establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write(terminal_report.(subscription_id, generation, "observation_failed"))
+                  Process.sleep(:infinity)
+
+                "observe_report_bad" ->
+                  establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write(~s({"version":1,"event":"report"}\\n))
+                  Process.sleep(:infinity)
+
+                "observe_register_timeout" ->
+                  establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write("{")
+                  Process.sleep(:infinity)
+
+                "observe_register_exit" ->
+                  establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.read(:stdio, :line)
+
+                "observe_release_report" ->
+                  {subscription_id, generation} = establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  File.write!(Path.join(directory, "waiting-release"), "waiting")
+                  wait_release.(wait_release)
+                  IO.write(observe_report.(subscription_id, generation, 1, 10, "20"))
+                  File.write!(Path.join(directory, "released-report"), "released")
+                  Process.sleep(:infinity)
+
+                "observe_wait_control" ->
+                  establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  close = read_command.("close.json")
+                  reply.(id.(close))
+                  Process.sleep(:infinity)
+
+                "observe_cancel_error" ->
+                  {subscription_id, generation} = establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write(observe_report.(subscription_id, generation, 1, 10, "20"))
+                  credit1 = read_command.("credit-1.json")
+                  reply.(id.(credit1))
+                  cancel = read_command.("cancel.json")
+
+                  IO.write(
+                    ~s({"version":1,"id":"\#{id.(cancel)}","ok":false,"error":{"code":"invalid_cancellation_response"}}\\n)
+                  )
+
+                  Process.sleep(:infinity)
+
+                "observe_idle_exit" ->
+                  {subscription_id, generation} = establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write(observe_report.(subscription_id, generation, 1, 10, "20"))
+                  credit1 = read_command.("credit-1.json")
+                  reply.(id.(credit1))
+                  IO.read(:stdio, :line)
+
+                "observe_terminal" ->
+                  {subscription_id, generation} = establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write(observe_report.(subscription_id, generation, 1, 10, "20"))
+                  credit1 = read_command.("credit-1.json")
+                  reply.(id.(credit1))
+                  IO.write(terminal_report.(subscription_id, generation, "observation_stale"))
+                  Process.sleep(:infinity)
+
+                mode when mode in ["observe_cancel_terminal", "observe_cancel_bad_body"] ->
+                  {subscription_id, generation} = establish_observe.(open)
+                  credit0 = read_command.("credit-0.json")
+                  reply.(id.(credit0))
+                  IO.write(observe_report.(subscription_id, generation, 1, 10, "20"))
+                  credit1 = read_command.("credit-1.json")
+                  reply.(id.(credit1))
+                  read_command.("cancel.json")
+
+                  case mode do
+                    "observe_cancel_terminal" ->
+                      IO.write(
+                        terminal_report.(subscription_id, generation, "observation_stale")
+                      )
+
+                    "observe_cancel_bad_body" ->
+                      IO.write(~s({"version":1,"event":"body_begin"}\\n))
+                  end
 
                   Process.sleep(:infinity)
 

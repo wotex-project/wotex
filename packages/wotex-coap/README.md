@@ -169,8 +169,11 @@ Explicit outbound payloads use correlated begin/chunk/end commands before the
 request; upload failures occur before mutation submission. The root API preserves
 its two-field session value while dispatching explicit OSCORE unary requests to
 this owner. Native discovery uses the same owner with its 64 KiB response ceiling
-checked before streamed-body assembly. Observe, Runtime and production-worker
-execution remain planned.
+checked before streamed-body assembly. Dedicated native Observe sessions admit
+one receiver, open bounded report credit, validate inline or streamed reports,
+deliver the first complete representation before returning the handle and
+cancel the exact subscription even while credit is in flight. Runtime and
+production-worker execution remain planned.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic
@@ -178,8 +181,8 @@ identities scoped to a generation. `Wotex.CoAP.Native.Body`
 withholds streamed bytes until exact length and hash verification.
 `Wotex.CoAP.Native.Report` correlates report/body
 envelopes and verifies Message metadata. `Wotex.CoAP.Native.ReportLedger` bounds
-the eight-frame credit window and serializes cumulative acknowledgments. Port
-dispatch for unary body commands is implemented; Observe report-credit
-integration remains planned.
+the eight-frame credit window and serializes cumulative acknowledgments. The
+native owner dispatches unary body commands and the Observe/credit/cancel
+lifecycle through those boundaries.
 Existing Python files perform test/build orchestration only. Their recorded
 results do not establish acceptance of the planned Mix tasks.
