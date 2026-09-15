@@ -75,7 +75,7 @@ defmodule Wotex.Matter.Check.Archive do
     development!(package)
     identities!(package)
 
-    dependencies!(project_root)
+    dependencies!()
 
     File.mkdir_p!(ebin)
     compile!(project_root, package, ebin)
@@ -149,12 +149,12 @@ defmodule Wotex.Matter.Check.Archive do
     end
   end
 
-  defp dependencies!(project_root) do
+  defp dependencies! do
     Enum.each(@dependencies, fn dependency ->
-      path = Path.join([project_root, "_build/test/lib", dependency, "ebin"])
+      path = dependency_path(dependency)
 
       unless File.dir?(path) do
-        violation("compiled dependency is missing; run the test compile before the archive check")
+        violation("compiled dependency is missing from the selected Mix build")
       end
     end)
   end
@@ -169,11 +169,14 @@ defmodule Wotex.Matter.Check.Archive do
 
     load =
       Enum.flat_map(@dependencies, fn dependency ->
-        ["-pa", Path.join([project_root, "_build/test/lib", dependency, "ebin"])]
+        ["-pa", dependency_path(dependency)]
       end)
 
     run!("elixirc", ["--warnings-as-errors"] ++ load ++ ["-o", ebin] ++ sources, project_root)
   end
+
+  defp dependency_path(dependency),
+    do: Path.join([Mix.Project.build_path(), "lib", dependency, "ebin"])
 
   defp digest(archive) do
     :sha256

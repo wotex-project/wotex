@@ -2407,3 +2407,39 @@ or close the remaining software-run, native resource, coverage or archive gates.
 | Default gate log | `e3456faab009ee8b017824b7f3871182a74ab6c52da319487a6e9d6c70be0b73` |
 | Minimum focused log | `0ea904bf6404ce0ec74b55afc189a15f8b6dfa5b7366b469a58c42372e8c7c51` |
 | ExDoc log | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+
+
+## Archive verification across isolated Mix builds
+
+The archive verifier loads compiled dependencies from the active
+`Mix.Project.build_path/0`. A minimum-version check against the clean `0cf698e`
+archive exposes the preceding hardcoded test-cache path: OTP 27 attempts to
+load OTP 29 dependency beams and reports invalid atom tables. Selecting the
+active Mix build removes that cross-toolchain dependency reuse.
+
+The clean `0cf698e` source produces `wotex_matter-0.1.0.tar` with
+`WOTEX_PATH_DEPS` unset during `mix hex.build`. Its SHA-256 is
+`25cd4ff7b8f498776c665443bd99900ef51c95796d5f0cc5c019e9a9c2d76a6e`.
+Archive contents, the 32-case source inventory, the 95% coverage configuration
+and out-of-tree compilation pass on Elixir 1.20.2/OTP 29.0.4 and
+Elixir 1.18.4/OTP 27.3.4.15 with the corrected verifier. The library sources in
+the archive are unchanged by the verifier correction. Compilation uses the
+selected lane's compiled development dependencies; this does not establish
+released Hex dependency resolution or package publication.
+
+The corrected verifier passes `WOTEX_PATH_DEPS=1 mix check --no-retry`: 194
+checks, 33 excluded, in 70.9 seconds on the current toolchain. ExDoc passes
+with warnings as errors. The minimum
+archive failure and corrected execution are retained separately. Packaged-suite
+execution and the remaining software-run, complete native build and C09 resource
+requirements remain open; the last coverage measurement is still 90.0%.
+
+| Archive build-path artifact | SHA-256 |
+| --- | --- |
+| Archive verifier | `49d7f3b6ec019a8f2390ed05a4fb96fa0412ab0aea56e15d113103cfde76de76` |
+| Clean source Hex build log | `e769732768d733ef5b881f8eda5b7cc28504e61e2adb90e2476917056db06246` |
+| Minimum mismatched-cache failure | `a974d392b4796bebfddbe049da365c8eca4445a4e2bb5fe1332ce4e74d914054` |
+| Corrected minimum archive log | `2ccc4001f666d566301142c535d780bc3eae2fbbcc98ff7cee5e34371c446740` |
+| Corrected current archive log | `67e0f258c45ec28c4b5ee7b393d43fd3b3bb3ab3b74cb4ca7b6aeac76980e3ef` |
+| Default gate log | `28db81cf7d94ba0f80845a231713263eb26e36073e47ed15b2e77e22652655f5` |
+| ExDoc log | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
