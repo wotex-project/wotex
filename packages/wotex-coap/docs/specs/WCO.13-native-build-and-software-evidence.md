@@ -14,7 +14,7 @@ UDP exchanges remain BEAM code; DTLS remains OTP `:ssl`. OSCORE uses one
 explicitly selected C executable through an Erlang Port and the pinned libcoap
 exchange engine. Mix owns build/test orchestration and ExUnit owns assertions.
 Python is not a runtime or target orchestration dependency. The OSCORE worker,
-Port owner and Mix tasks are planned contracts;
+complete Port execution and Mix tasks are planned contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -122,9 +122,21 @@ opaque session/Subscription API and .11 helper signatures.
 
 `Wotex.CoAP.NativeBackend.verify/1` implements this bounded manifest and file
 identity check. Its tests include links, directories, permission modes, size,
-strict JSON, source identity and post-manifest executable changes. The connection
-option and Port owner remain unimplemented; direct verifier success does not
-admit an OSCORE session.
+strict JSON, source identity and post-manifest executable changes. Direct
+verifier success does not admit an OSCORE session.
+
+`Wotex.CoAP.Native.Connection` implements the BEAM startup and close-control
+slice. It validates the exact options and executable identity before process
+creation, launches the selected executable with only `--custody` and the
+absolute context directory, accepts the pinned ready identity and correlates
+the monotonic `open` and `close` commands. Its bounded byte accumulator accepts
+arbitrary Port splits and rejects extra lines, incomplete EOF and frames beyond
+128 KiB. The retained process state contains no credential or command line.
+Thirteen contract-injection tests cover exact argv and envelopes, invalid options,
+malformed/truncated/oversized input, wrong and duplicate response identities,
+finite waits, status redaction and owner-death cleanup within C03. The injected
+test executable is not the production OSCORE worker. Public connection dispatch,
+unary/body operations, Observe delivery and live report credit remain unimplemented.
 
 Arguments contain no secrets. `Port.open({:spawn_executable, path}, ...)` starts
 one helper for one native session. No shell, daemon discovery, global registry,
@@ -208,8 +220,8 @@ omits absent optional request values, encodes all byte fields canonically and
 allocates monotonically increasing decimal uint64 identities once per generation.
 Its six tests cover every operation, input and line bounds, credential
 projection and fail-before-wrap exhaustion. The allocator retains no secret or
-command bytes; Port writes, outstanding-call capacity and live helper admission
-remain owner obligations.
+command bytes; unary/report Port writes, outstanding-call capacity and live
+helper admission remain owner obligations.
 
 `Wotex.CoAP.Native.Wire` implements the pure BEAM receive boundary for complete
 lines, ready identity and request/control response envelopes. It enforces the

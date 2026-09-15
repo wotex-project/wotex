@@ -115,12 +115,22 @@ decimal uint64 request identity once before exhaustion. The immutable allocator
 retains no command or credential. These tests do not write a Port or prove that
 the production helper accepts the lines.
 
+`native_connection_test.exs` executes thirteen contract-injection tests for the
+BEAM process boundary. The tests launch the manifest-verified executable through
+the exact `--custody ABS_DIRECTORY` entry, inspect the open and close envelopes,
+and assert the pinned ready identity, monotonic correlation, finite ready/close
+waits and credential-free retained/status state. Malformed, duplicate,
+truncated and oversized output closes the generation. Killing the configured
+owner releases the exact helper within 1,000 ms. The injected executable is a
+protocol fixture; these tests do not accept the production libcoap worker,
+unary/body execution, Observe delivery or report-credit integration.
+
 `native_backend_test.exs` executes WCO-N01/N02 manifest and executable
 verification. It covers exact option keys and path bounds, ordinary-file and
 executable-mode checks, the 1 MiB manifest ceiling, strict bounded JSON, pinned
 libcoap version/revision, lowercase binary SHA-256 and changed-file rejection.
-The verifier starts no Port and changes no permissions. Connection dispatch and
-native process ownership remain unaccepted.
+The verifier starts no Port and changes no permissions. Public connection
+dispatch and the production native process remain unaccepted.
 
 `native_wire_test.exs` executes 13 exact tests and one generated property at the
 pure BEAM receive boundary. It covers the 128 KiB JSON-line ceiling, duplicate

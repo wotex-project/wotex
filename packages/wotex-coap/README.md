@@ -78,8 +78,9 @@ security and a nil immediate credential. UDP routes reject credentials.
 `Wotex.CoAP.profile(:dtls)` selects authenticated DTLS unary operations and streams.
 All admit JSON, UTF-8 text and opaque bytes. OSCORE remains unsupported.
 `Wotex.CoAP.Security.new/1` validates and redacts the fixed-suite OSCORE
-credential value without reading its durable store. The planned native owner
-must still validate and consume that store before an OSCORE session can open.
+credential value without reading its durable store. The internal native owner
+can complete the verified process ready/open/close handshake. The production
+worker must still validate and consume that store before an OSCORE session can open.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
 Capabilities expose these as `max_datagram_size` and `max_body_size`.
@@ -152,7 +153,9 @@ the planned `mix wotex.software.build --workspace ABS` and
 BEAM UDP, OTP DTLS and a planned explicit libcoap OSCORE Port.
 `Wotex.CoAP.NativeBackend.verify/1` can validate the content identity of an
 explicit native executable and manifest without starting it. Connection
-dispatch to that executable remains planned. `Wotex.CoAP.Native.Wire` validates
+dispatch to that executable remains planned. `Wotex.CoAP.Native.Connection`
+owns the verified executable for its bounded ready/open/close lifecycle and
+monitors the caller without exposing credentials. `Wotex.CoAP.Native.Wire` validates
 bounded ready and response frames and constructs complete Messages without
 starting a process. `Wotex.CoAP.Native.Command` encodes exact bounded commands
 with monotonic identities scoped to a generation. `Wotex.CoAP.Native.Body`
@@ -160,6 +163,6 @@ withholds streamed bytes until exact length and hash verification.
 `Wotex.CoAP.Native.Report` correlates report/body
 envelopes and verifies Message metadata. `Wotex.CoAP.Native.ReportLedger` bounds
 the eight-frame credit window and serializes cumulative acknowledgments. Port
-ownership and live credit integration remain planned.
+dispatch for unary calls and Observe report-credit integration remain planned.
 Existing Python files perform test/build orchestration only. Their recorded
 results do not establish acceptance of the planned Mix tasks.
