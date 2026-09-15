@@ -1,7 +1,11 @@
+Code.require_file("../support/software/control_pump.exs", __DIR__)
+
 defmodule Wotex.Matter.NativeControlPumpInteropTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
+
+  alias Wotex.Matter.SoftwareControlPump
 
   @moduletag :interop
   @moduletag :software
@@ -54,8 +58,13 @@ defmodule Wotex.Matter.NativeControlPumpInteropTest do
           request(port, "2", "subscribe", stream)
           assert {%{"id" => "2", "ok" => true, "result" => established}, _} = frame(port, 10_000)
 
-          assert {%{"event" => "subscription_report", "report_sequence" => 1}, bytes} =
+          assert {%{"event" => "subscription_report", "report_sequence" => 1} = initial, bytes} =
                    frame(port, 10_000)
+
+          probe =
+            @generation
+            |> SoftwareControlPump.new(established, path)
+            |> SoftwareControlPump.report!(initial, bytes)
 
           unreachable = Map.put(path, :node_id, fixture["unreachable_node_id"])
 
@@ -77,23 +86,17 @@ defmodule Wotex.Matter.NativeControlPumpInteropTest do
             end
 
           request(port, "3", operation, pending, 5_000)
-          refute_receive {^port, {:data, _}}, 250
+          probe = SoftwareControlPump.pending!(port, probe, 250)
           started = System.monotonic_time(:millisecond)
-
-          send_frame(port, %{
-            version: 1,
-            event: "report_ack",
-            session_generation: @generation,
-            report_sequence: 1,
-            acknowledged_bytes: bytes
-          })
+          probe = SoftwareControlPump.acknowledge!(port, probe)
 
           request(port, "4", "unsubscribe", %{
             subscription_id: established["subscription_id"],
             generation: established["generation"]
           })
 
-          assert {%{"event" => "stream_retired", "last_report_sequence" => 1}, _} = frame(port, 500)
+          probe = SoftwareControlPump.retired!(port, probe, 500)
+          if probe.pending_frames > 0, do: SoftwareControlPump.acknowledge!(port, probe)
           assert {%{"id" => "4", "ok" => true, "result" => nil}, _} = frame(port, 500)
           request(port, "5", "health", %{})
           assert {%{"id" => "5", "ok" => true}, _} = frame(port, 500)
@@ -113,6 +116,8 @@ defmodule Wotex.Matter.NativeControlPumpInteropTest do
             operation: operation,
             controls_ms: controls_ms,
             cleanup_ms: cleanup_ms,
+            observed_reports: probe.sequence,
+            acknowledged_report_bytes: probe.bytes,
             native_exit_status: 0,
             late_replies: 0
           }

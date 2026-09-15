@@ -2909,3 +2909,56 @@ and ExDoc pass. Complete P09/C09 and the unchanged 95% coverage floor remain ope
 | Minimum WMA-B-F11 native observation | `28dd49059226f95325f0767257d9f4fdb7152f66dc53d21615fcaeb6c4c33209` |
 | Minimum WMA-B-F12 native observation | `7fdb9c051d3998317eef4f182f2b196948f5ad95d6aba80c143904ca8aeb2cea` |
 | Minimum WMA-B-F13 native observation | `db84ff56e83fd21f73ac119575d3a95a72ee4b2a58dde52d7381e20a424eb46c` |
+
+## Reports during pending control-pump observations
+
+The third full current-toolchain cohort uses frozen `62c373e` source and the
+`f15bd16` native implementation. It completes 241 of 242 checks in 875.5 seconds,
+with one hardware case excluded and 31 of 32 required software cases passing.
+Its source digest remains unchanged. All thirteen peers are reaped. The
+one-shot case completes 1000 sequential reads, 100 open/close cycles and 32
+concurrent callers; the live peer's final log is exactly 16 MiB with a truncation
+marker. Lighting, ACL commissioning and all five generic commissioning cases
+pass. The sole failure is the control-pump oracle's unconditional rejection of
+Port data during its pending interval: it receives a valid second subscription
+report. The full receipt remains rejected.
+
+The control oracle accepts schema-valid reports for the original subscription,
+session generation, negotiated SDK subscription identity and concrete path.
+It tracks monotonic report identities and sequence numbers and acknowledges
+exact cumulative encoded bytes. Outstanding reports retain the 64-frame/1-MiB
+limits. Pending observation still rejects an operation reply; retirement requires
+an exact barrier matching the last observed sequence. Reports do not reset the
+250-ms pending interval or 500-ms control budget. Cleanup retains its 1000-ms
+budget and rejects late replies.
+
+Three deterministic channel tests cover multiple reports before and during
+retirement, exact cumulative acknowledgements, preservation of the following
+control reply, early replies, foreign identities, replay, schema failure,
+excess unacknowledged reports and a forged retirement cutoff. They pass on both
+BEAM toolchains in 0.1 seconds. Fresh SDK/corpus cohorts with the `0150337` native
+implementation pass 16 cases, including all 17 native corpus vectors, in
+18.5 seconds currently and 25.3 seconds on the minimum sanitizer lane. Both
+owned peers are reaped. These focused SDK cases observe one report each; the
+multiple-report condition is retained in the rejected full-cohort log and the
+deterministic channel test. The current default gate passes 213 checks with
+33 excluded in 72.4 seconds. Both formatters and ExDoc pass. A complete passing
+two-lane software receipt and the remaining C09 gates are still required.
+
+| Control/report artifact | SHA-256 |
+| --- | --- |
+| Control/report observation helper | `278fc4139a587c4ce359c96484307d4bae8e54ea59fb6932e27b214e5d889fad` |
+| Control/report assertions | `b9c28f0880c5d9d22d634bb610243fd093fbf4596136bb7807227da84d5e6044` |
+| SDK control-pump case | `e4471844bc68f6b751e9062e328d9988e8564ff8759da70ab7da3a73e83d1e1d` |
+| Third rejected full-cohort receipt | `3e97a5b9c0416455e26dae7b553dbfb6ca571185cf35af560c73d1ec42022482` |
+| Third rejected full-cohort test log | `3e4fd4dbcab9af51d9cd5cffd4a3c1f19641c803c98318bd1d2bfede9416b6b5` |
+| Completed one-shot stress observation | `6831c410f635f506586098c970a3adcfd356d2f742bca32c9b36b00bbb88a8fd` |
+| Current focused gate | `3d54b18ff37f3758a04ffc224db0593021fe5ef1a7a653533853489d87f8b732` |
+| Minimum focused gate | `d8a450140d2a836125db89fc66eb4670c246da79ed15c29a29e5dae80b4d6e20` |
+| Current SDK/corpus gate | `657de04c848c28373e4c9c9a6c5cbdf765a559eb9b434ec4b0ae888355950d93` |
+| Minimum SDK/corpus gate | `562dcfd6222af86c2db23ea36f11b8056e5ad48b555f0b5f355d5a1cc8db4934` |
+| Current control observation | `c3203972b8f7d897f20016abd117b09735c559d3872ab613f0eb3e5feebcf250` |
+| Minimum control observation | `323e0d4d6c7f81d7cf49e6ca97123b588f88877b740d13db80d1ebd09ed0f8ff` |
+| Default gate | `c0322039612c82f2ea491f9184e278a22d495cb3d0baf2187bf0beb7299b3e1e` |
+| Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |

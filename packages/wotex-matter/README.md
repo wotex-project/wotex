@@ -372,9 +372,9 @@ cases run in the separate P03 native lane, WMA-F11 runs with P04, and the WMA-F0
 delivery/cancellation projection runs with P05. WMA-F09 default terminal loss and
 the explicit recovery transition run with P06. P07 executes local admission,
 native protocol, generated-window and ACL schema behavior, and compiles the
-production SDK controller path. Its real good/bad PIN, failed-attestation,
-expired-window and ACL-denial fixture remains unexecuted; P09 owns that peer
-along with the independent subscription peer. P08 executes the WMA-V11 typed
+production SDK controller path. P09 acceptance requires the complete two-lane
+run of real good/bad PIN, failed-attestation, expired-window and ACL-denial
+fixtures, together with subscription and resource evidence. P08 executes the WMA-V11 typed
 transport and Runtime-stream ownership boundary directly. P08a executes the
 public ConsumedThing profiles, all WMA-I-F01–F08 cases, the error/retry table,
 deadline/credential rejection, malformed result handling and Runtime-owned
