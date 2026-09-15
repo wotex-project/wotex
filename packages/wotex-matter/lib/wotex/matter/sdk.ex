@@ -110,7 +110,7 @@ defmodule Wotex.Matter.SDK do
       true = Port.command(port, json)
       collect(port, <<>>, id, System.monotonic_time(:millisecond) + timeout)
     after
-      if Port.info(port), do: Port.close(port)
+      close_port(port)
     end
   rescue
     _ -> {:error, Error.new(:transport_unavailable)}
@@ -140,6 +140,14 @@ defmodule Wotex.Matter.SDK do
     after
       remaining -> {:error, Error.new(:timeout)}
     end
+  end
+
+  defp close_port(port) do
+    Port.close(port)
+    :ok
+  rescue
+    error in ArgumentError ->
+      if is_nil(Port.info(port)), do: :ok, else: reraise(error, __STACKTRACE__)
   end
 
   defp absolute?(value), do: is_binary(value) and Path.type(value) == :absolute

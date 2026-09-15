@@ -21,7 +21,8 @@ defmodule Wotex.Matter.SoftwareScenarios do
     {:acl_denied, :lighting},
     {:timeout, :lighting},
     {:operation_resources, :lighting},
-    {:subscription_resources, :lighting}
+    {:subscription_resources, :lighting},
+    {:oneshot_stress, :all_clusters}
   ]
   @controller_keys ~w(executable storage_path vendor_id fabric_id controller_node_id paa_trust_store)a
   @common_cases ~w(CLOSE CONTROL_PUMP INPUT_PRESSURE PENDING_LOSS
@@ -80,7 +81,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
       }
     }
 
-    if name in [:common, :oneshot, :expired_window, :acl_denied] do
+    if name in [:common, :oneshot, :expired_window, :acl_denied, :oneshot_stress] do
       with_peer(scenario, fn ->
         own_peers(remaining, context, Map.put(peers, name, Map.delete(scenario, "peer")), operation)
       end)
@@ -136,6 +137,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
     expiry = System.monotonic_time(:millisecond) + 180_200
     common = commission(peers.common)
     oneshot = commission(peers.oneshot)
+    oneshot_stress = commission(peers.oneshot_stress)
     denied = peers.acl_denied |> commission() |> deny_acl()
 
     environment =
@@ -165,7 +167,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
           {"NATIVE_BRIDGE", peers.bridge},
           {"NATIVE_ACL", peers.acl},
           {"NATIVE_ONESHOT", oneshot},
-          {"NATIVE_ONESHOT_STRESS", resource_fixture(context, oneshot, "oneshot-resources")},
+          {"NATIVE_ONESHOT_STRESS", resource_fixture(context, oneshot_stress, "oneshot-resources")},
           {"NATIVE_OPERATION_RESOURCES",
            resource_fixture(context, peers.operation_resources, "operation-resources")},
           {"NATIVE_SUBSCRIPTION_RESOURCES",

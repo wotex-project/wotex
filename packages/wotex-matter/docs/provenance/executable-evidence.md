@@ -3434,3 +3434,55 @@ binary, peer fixture or previous software receipt changes in this cohort.
 | Runtime relay cases | `6dedf6085ae997b631b7d83bff436ef1ebbb981514d70085bbf1ffccfdcff016` |
 | Runtime transport cases | `e83601671f61b07f290b5267b4926983d44551e484f344c28b35d618dd90211f` |
 | Explicit fake-client controls | `89ad7e2d582d7911e2f22011053325aafa7b7832611fc7dc192f365518f78024` |
+
+## Immutable dependency bootstrap and isolated one-shot responders
+
+The public software runner now resolves the exact checked-in lock from a private
+lane directory while loading the project through `MIX_EXS`. It compares the
+resulting lock byte for byte with the read-only source lock before compiling.
+Dependency, build and Mix/Hex state remain under `/run`; the mounted repository
+remains read-only. This removes Hex's attempt to create its temporary tarball
+directory in the source root without weakening the immutable-source check.
+
+A fresh public workspace from frozen `5f2bf0f` source builds successfully and
+reproduces the previously accepted normal and sanitizer native binaries. Its
+current-toolchain run completes dependency bootstrap, source compilation and
+953.7 seconds of the required suite. The receipt is rejected: 275 of 278
+executed checks pass, all 36 required software cases execute, three tests fail,
+one hardware case is excluded and the minimum lane is withheld. The source
+digest remains `a7384f8bbfea594bc450df364254e78a3df21a4dcee79ee4e2c9b1698d397473`
+before and after the run. All owned containers, peers and the private network
+are reaped.
+
+The first failure exposes a race in the baseline SDK adapter after it has
+already detected an oversized response. The child can close between
+`Port.info/1` and `Port.close/1`; the resulting `ArgumentError` was caught by
+the outer request rescue and replaced the precise `response_limit` result with
+`transport_unavailable`. Cleanup now tolerates only the already-closed exact
+Port and reraises an error for a still-live Port. The two SDK adapter cases pass
+200 consecutive randomized repetitions after the correction.
+
+The remaining failures share one all-clusters responder. The one-shot stress
+case completes 896 successful generations, then its initiator does not receive
+any of five Sigma2Resume transmissions. The responder retains that handshake
+until its own timeout and reports busy to the next controller. The unchanged
+10,000-ms operation budget therefore fails without retry, as required. The
+functional one-shot case subsequently reaches the same busy responder and also
+fails. Scenario preparation now commissions a separate all-clusters peer and
+controller store for the 1,133-generation stress case. Functional and load
+evidence can no longer contaminate each other's responder state; deadlines,
+operation counts and no-retry behavior are unchanged. Six focused SDK and
+scenario-ownership tests pass, including cleanup of all five preparation peers.
+A fresh final-source two-lane public run remains required.
+
+| Immutable-run correction artifact | SHA-256 |
+| --- | --- |
+| Successful public build log | `7bf9c3b20fc13672e0d1f438580c4ec558756ce9548dbc30435febd72ad1ba0d` |
+| Rejected public run log | `d659789d25974eeba54248113f9750e5c9c0291b03684b6925588ab1d34fc606` |
+| Rejected current-lane receipt | `0bb970e89389e906eeb5358ada78ce46a763b5d9d50c4bbb1e7dde6aa7cacba8` |
+| Rejected current-lane test log | `a94a87ae009041521363dc0268b36e23509317bc59e2dbb7228676be3d84452a` |
+| Stalled responder log | `f2cabeaf0f6d4719e1c0ddd789f7746e9267fb8b0120648ade120d4db136552d` |
+| Focused gate | `fcf3d7240052c9319a5fa4b1baab2f675e9cca992ffe9400c406a95bbe6ca19b` |
+| SDK adapter source | `cd81a365c1bb8237662a1509e7f203356ba08ca82dbc71bdddc95f08242b6cac` |
+| Scenario preparation source | `f2323a023f5bea79099a388bca082f06dfcf1899475046c79e724779e56efca7` |
+| Scenario ownership assertions | `1a9370c7cff6bb576298178159a95328c2bff6f6d35b742cbbcd8901a3274dab` |
