@@ -2844,3 +2844,68 @@ assertions do not replace the required fresh two-lane SDK acceptance run.
 | Default gate | `a5d8fb844f6267ce46948fd12bb7478538cf373d48cb3dd305fcb673e674e8cf` |
 | Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 | ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+
+## Secure-channel handler cleanup and measured callback resources
+
+The flow executable records actual acquisition and destruction of controller
+contexts, SDK interaction clients, subscriptions, window openers and recovery
+timers. Its SDK resource snapshots require `CHIP_SYSTEM_CONFIG_PROVIDE_STATISTICS`.
+Snapshots occur before startup and after the event loop and backend are stopped.
+The production target retains ordinary smart pointers and does not link the
+observation implementation. Publication and cancellation counters contain no
+request values or credentials.
+
+The first instrumented sanitizer cohort rejects all three callback cases:
+ReadClient and subscription acquisition/destruction balance at one each, but
+two unsolicited-message-handler registrations remain in the SDK census. The
+pinned factory's [system-state teardown](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/controller/CHIPDeviceControllerFactory.cpp)
+deletes the message-counter manager without calling its shutdown method and
+deletes the unsolicited status handler without unregistering it. The
+[exchange manager](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/messaging/ExchangeMgr.cpp)
+updates registration statistics on unregister, while its shutdown does not clear
+the handler slots. This observation establishes retained registrations in the
+census, not a heap-leak measurement.
+
+Controller cleanup now shuts down the message-counter manager and unregisters
+the unsolicited StatusReport handler after the event loop stops and before
+factory state is released. It uses SDK cleanup APIs without modifying the SDK
+source or resetting counters. WMA-B-F11/F12/F13 pass on both BEAM lanes: each
+actual SDK subscription and ReadClient is destroyed once, publication occurs
+once, cancellation occurs, and all seven SDK resource counters return to zero.
+The controlled callback producer remains distinct from the real SDK subscription.
+Per-cycle stress snapshots and startup-stage faults remain separate requirements.
+
+Both rebuilt native CMake gates pass six tests in 2.47 and 3.18 seconds; the latter
+uses ASan/UBSan with leak detection. All 15 pinned OSV queries pass. The current
+and minimum SDK/corpus cohorts pass 16 cases, including all 17 native corpus
+vectors, in 18.3 and 25.6 seconds. Both owned peers are reaped. The current
+default gate passes 210 checks with 33 excluded in 71.8 seconds. Both formatters
+and ExDoc pass. Complete P09/C09 and the unchanged 95% coverage floor remain open.
+
+| Native resource artifact | SHA-256 |
+| --- | --- |
+| Native controller cleanup and lifetime hooks | `454b9e21e3eb532996efec74806a8c1ddbc62f83ebd53739731082dd6c40d6b3` |
+| Conditional resource ownership | `3554dc93b516373b3e909f69cda096e28740ac08333859c5b017aa49da39935c` |
+| SDK resource observations | `091c266944268d5fd92fa73a71a5cc3843496be8e050460a595f0337a2e16f8a` |
+| Native flow observations | `f4bcf8c415a72c28131ecfd62a5216c487d7bddacfa1090a003ce61d03b2a971` |
+| Native build target definitions | `acd795328a9280d9bf659da3da142e0850e50dc17cadcb61ad3b5f9d24cc8448` |
+| Resource assertions | `1797fcc37fd085d033c2c648f662b827bdae50b8e34bccb9dcd69f3e2e0fab70` |
+| Legacy probe missing resource evidence | `08dc88bbb0de7207ef42324533ed316d461be154c70ee6a67cd47ee3e6625739` |
+| SDK census failure before cleanup | `87e20ea31950d989d677e15fa7448e8e91e2372e747d1973341fe2d71884f60a` |
+| Native build and both CTest gates | `e90033a36ab994dc13f33de721b5dde3db0b8f6a5b2a72d5e8fa3724db7b13de` |
+| Pinned advisory gate | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
+| Current SDK/corpus gate | `1402584e5e4421e05d7f9eef94c4b3c8476ff5a87f841ea03d709aca3edd4818` |
+| Minimum SDK/corpus gate | `c5d5e9240fd7d1e6d515b00580f5a3945fe5d60fa186d8fd512680aa86fc682f` |
+| Default gate | `e93adab6f4aac829f8e24f604fe18a6970a7236bcae12e32a0d999d063a5b822` |
+| Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+| Current wotex-matter-host | `ae7a3123ebb61adfaf0bbec4a84a7ec399cedff8fab219bfafa62cb492c44998` |
+| Current wotex-matter-flow-host | `74569d394e611c9eb6c64222794dd0370e403f3646891abb150fe4fa6f34af98` |
+| Current WMA-B-F11 native observation | `9e47acf6122ae4e91838bbc1604ec8253d68bbbfc1b322188cc20ea6ab12c58e` |
+| Current WMA-B-F12 native observation | `dd33086c4ce35974b5be945e865647676791151329ac81e804109ff345902445` |
+| Current WMA-B-F13 native observation | `6e4e4099d53d315ea4b00e9bf568bb5a16b17468d20b3790cb89ef9d76a3cd4b` |
+| Minimum wotex-matter-host | `36c5a653eee72e9925143a58f83c66b7765b66a65561100901e617c1f1e6e65a` |
+| Minimum wotex-matter-flow-host | `85b49b93105d29f7f134802c8772641e2b2111022c8300ccec44b31d0746f04e` |
+| Minimum WMA-B-F11 native observation | `28dd49059226f95325f0767257d9f4fdb7152f66dc53d21615fcaeb6c4c33209` |
+| Minimum WMA-B-F12 native observation | `7fdb9c051d3998317eef4f182f2b196948f5ad95d6aba80c143904ca8aeb2cea` |
+| Minimum WMA-B-F13 native observation | `db84ff56e83fd21f73ac119575d3a95a72ee4b2a58dde52d7381e20a424eb46c` |

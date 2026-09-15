@@ -20,8 +20,8 @@ foreach(host,
       "src/value.cpp",
     ]
     if (host == "wotex-matter-flow-host") {
-      defines = [ "WOTEX_MATTER_FLOW_TESTING=1" ]
-      sources += [ "testing/process_flow_host.cpp" ]
+      defines = [ "WOTEX_MATTER_FLOW_TESTING=1", "WOTEX_MATTER_RESOURCE_TESTING=1" ]
+      sources += [ "testing/process_flow_host.cpp", "testing/resource_testing.cpp" ]
     } else {
       sources += [ "src/host.cpp" ]
     }

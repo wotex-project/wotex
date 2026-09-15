@@ -1,5 +1,6 @@
 #include "wotex_matter/controller.hpp"
 #include "wotex_matter/flow_testing.hpp"
+#include "wotex_matter/resource_testing.hpp"
 #include "wotex_matter/input_lifetime.hpp"
 
 #include <nlohmann/json.hpp>
@@ -344,6 +345,7 @@ int main() {
     if (!Configure()) {
       return 2;
     }
+    const Json resources_before = Json::parse(resource_testing::SnapshotJson());
     InputLifetime lifetime(STDIN_FILENO);
     int result = 1;
     {
@@ -359,7 +361,9 @@ int main() {
     probe.counts["iterations"] = probe.iterations;
     probe.counts["source_elapsed_us"] = probe.source_elapsed_us;
     const Json observation{{"exit_status", result}, {"counts", probe.counts},
-                           {"maximum", probe.maximum}};
+                           {"maximum", probe.maximum},
+                           {"resources_before", resources_before},
+                           {"resources_after", Json::parse(resource_testing::SnapshotJson())}};
     return WriteExclusive(probe.result_path, observation.dump() + "\n") ? result : 3;
   } catch (const std::exception &) {
     std::cerr << "process-flow fixture failed\n";

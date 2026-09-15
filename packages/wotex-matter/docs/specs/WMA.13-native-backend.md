@@ -378,8 +378,10 @@ shutdown. A submitted timeout sends one unknown-effect failure, never replays,
 and retains bounded retired context until native completion. A delayed callback
 cannot touch a destroyed receiver or complete a different request. Full shutdown
 stops admission/delivery, cancels recovery timers, drains or terminates owned
-transactions on the SDK thread, shuts down the commissioner then factory/system
-state, flushes required storage and releases the lock. SDK hangs trigger owned
+transactions on the SDK thread and shuts down the commissioner. Once the event
+loop stops, the message-counter manager shuts down and the unsolicited status
+handler is unregistered before factory/system-state release. Cleanup flushes
+required storage and releases the lock. SDK hangs trigger owned
 process termination; no in-process NIF crash can take down the BEAM.
 
 Required packages are P01 typed registry/results, P02 native storage/authority,

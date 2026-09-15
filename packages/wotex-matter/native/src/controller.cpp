@@ -1,6 +1,7 @@
 #include "wotex_matter/controller.hpp"
 
 #include "wotex_matter/authority.hpp"
+#include "wotex_matter/resource_testing.hpp"
 #include "wotex_matter/sdk_storage.hpp"
 #include "wotex_matter/storage.hpp"
 
@@ -33,6 +34,7 @@
 #include <lib/support/CodeUtils.h>
 #include <platform/CHIPDeviceLayer.h>
 #include <platform/Linux/ConfigurationManagerImpl.h>
+#include <protocols/secure_channel/Constants.h>
 #include <setup_payload/ManualSetupPayloadGenerator.h>
 #include <setup_payload/QRCodeSetupPayloadGenerator.h>
 
@@ -652,6 +654,7 @@ class SdkControllerBackend::Impl final
         response_ = Failure("commissioning_timeout", CHIP_ERROR_TIMEOUT,
                             fabric_mutation_may_have_started_);
         published_ = true;
+        resource_testing::Event("commissioning_published");
         lock.unlock();
         ScheduleAbort();
       }
@@ -740,6 +743,7 @@ class SdkControllerBackend::Impl final
     }
 
     void AbortOnSdkThread() {
+      resource_testing::Event("commissioning_aborted");
       connected_.Cancel();
       connection_failed_.Cancel();
       if (submitted_) {
@@ -810,6 +814,7 @@ class SdkControllerBackend::Impl final
         }
         response_ = std::move(response);
         published_ = true;
+        resource_testing::Event("commissioning_published");
       }
       condition_.notify_one();
     }
@@ -838,6 +843,9 @@ class SdkControllerBackend::Impl final
                                   static_cast<std::uint64_t>(elapsed.count()));
     }
 
+#ifdef WOTEX_MATTER_RESOURCE_TESTING
+    resource_testing::Lifetime resource_lifetime_{resource_testing::Object::Commissioning};
+#endif
     Impl &owner_;
     CommissioningRequest request_;
     std::chrono::steady_clock::time_point started_;
@@ -870,6 +878,7 @@ class SdkControllerBackend::Impl final
                                   [this] { return published_; })) {
         response_ = Failure("window_timeout", CHIP_ERROR_TIMEOUT, submitted_);
         published_ = true;
+        resource_testing::Event("window_published");
         lock.unlock();
         ScheduleAbort();
       }
@@ -883,7 +892,8 @@ class SdkControllerBackend::Impl final
         return;
       }
 
-      opener_ = std::make_unique<chip::Controller::CommissioningWindowOpener>(
+      opener_ = resource_testing::Make<chip::Controller::CommissioningWindowOpener,
+          resource_testing::Object::WindowOpener>(
           &owner_.commissioner_);
       chip::Controller::CommissioningWindowPasscodeParams params;
       params.SetNodeId(request_.node_id)
@@ -912,6 +922,7 @@ class SdkControllerBackend::Impl final
     }
 
     void AbortOnSdkThread() {
+      resource_testing::Event("window_aborted");
       callback_.Cancel();
       opener_.reset();
       Publish(Failure("controller_closed", CHIP_ERROR_CANCELLED, Submitted()));
@@ -1010,6 +1021,7 @@ class SdkControllerBackend::Impl final
         }
         response_ = std::move(response);
         published_ = true;
+        resource_testing::Event("window_published");
       }
       condition_.notify_one();
     }
@@ -1033,6 +1045,9 @@ class SdkControllerBackend::Impl final
                                   static_cast<std::uint64_t>(elapsed.count()));
     }
 
+#ifdef WOTEX_MATTER_RESOURCE_TESTING
+    resource_testing::Lifetime resource_lifetime_{resource_testing::Object::Window};
+#endif
     Impl &owner_;
     CommissioningWindowRequest request_;
     std::chrono::steady_clock::time_point started_;
@@ -1044,7 +1059,8 @@ class SdkControllerBackend::Impl final
     bool done_{false};
     chip::Callback::Callback<chip::Controller::OnOpenCommissioningWindow>
         callback_;
-    std::unique_ptr<chip::Controller::CommissioningWindowOpener> opener_;
+    resource_testing::Pointer<chip::Controller::CommissioningWindowOpener,
+        resource_testing::Object::WindowOpener> opener_;
   };
 
   class Pending final : public chip::app::ReadClient::Callback,
@@ -1068,6 +1084,7 @@ class SdkControllerBackend::Impl final
                      InteractionError{"interaction_timeout", std::nullopt,
                                       std::nullopt, effect}};
         published_ = true;
+        resource_testing::Event("interaction_published");
       }
       return response_;
     }
@@ -1096,6 +1113,7 @@ class SdkControllerBackend::Impl final
     }
 
     void AbortOnSdkThread() {
+      resource_testing::Event("interaction_aborted");
       connected_.Cancel();
       connection_failed_.Cancel();
       read_client_.reset();
@@ -1158,7 +1176,8 @@ class SdkControllerBackend::Impl final
     CHIP_ERROR StartRead(chip::Messaging::ExchangeManager &exchange_manager,
                          const chip::SessionHandle &session,
                          std::uint32_t remaining) {
-      read_client_ = std::make_unique<chip::app::ReadClient>(
+      read_client_ = resource_testing::Make<chip::app::ReadClient,
+          resource_testing::Object::ReadClient>(
           chip::app::InteractionModelEngine::GetInstance(), &exchange_manager,
           buffered_read_, chip::app::ReadClient::InteractionType::Read);
 
@@ -1211,7 +1230,8 @@ class SdkControllerBackend::Impl final
       if (request_.timed_request_timeout_ms) {
         timed.SetValue(*request_.timed_request_timeout_ms);
       }
-      write_client_ = std::make_unique<chip::app::WriteClient>(
+      write_client_ = resource_testing::Make<chip::app::WriteClient,
+          resource_testing::Object::WriteClient>(
           &exchange_manager, this, timed, false);
 
       const PathSelector &path = request_.paths.front();
@@ -1242,7 +1262,8 @@ class SdkControllerBackend::Impl final
                            const chip::SessionHandle &session,
                            std::uint32_t remaining) {
       const bool timed = request_.timed_request_timeout_ms.has_value();
-      command_sender_ = std::make_unique<chip::app::CommandSender>(
+      command_sender_ = resource_testing::Make<chip::app::CommandSender,
+          resource_testing::Object::CommandSender>(
           this, &exchange_manager, timed, false, false);
       const PathSelector &path = request_.paths.front();
       chip::app::CommandPathParams native(
@@ -1378,16 +1399,19 @@ class SdkControllerBackend::Impl final
     }
 
     void OnDone(chip::app::ReadClient *) override {
+      resource_testing::Event("interaction_read_done");
       read_client_.reset();
       FinishRead();
     }
 
     void OnDone(chip::app::WriteClient *) override {
+      resource_testing::Event("write_done");
       write_client_.reset();
       FinishMutation();
     }
 
     void OnDone(chip::app::CommandSender *) override {
+      resource_testing::Event("command_done");
       command_sender_.reset();
       FinishMutation();
     }
@@ -1482,6 +1506,7 @@ class SdkControllerBackend::Impl final
         }
         response_ = std::move(response);
         published_ = true;
+        resource_testing::Event("interaction_published");
       }
       condition_.notify_one();
     }
@@ -1514,6 +1539,9 @@ class SdkControllerBackend::Impl final
           request_.kind == InteractionKind::Invoke;
     }
 
+#ifdef WOTEX_MATTER_RESOURCE_TESTING
+    resource_testing::Lifetime resource_lifetime_{resource_testing::Object::Interaction};
+#endif
     Impl &owner_;
     InteractionRequest request_;
     std::chrono::steady_clock::time_point started_;
@@ -1531,9 +1559,12 @@ class SdkControllerBackend::Impl final
     chip::app::BufferedReadCallback buffered_read_;
     chip::Callback::Callback<chip::OnDeviceConnected> connected_;
     chip::Callback::Callback<chip::OnDeviceConnectionFailure> connection_failed_;
-    std::unique_ptr<chip::app::ReadClient> read_client_;
-    std::unique_ptr<chip::app::WriteClient> write_client_;
-    std::unique_ptr<chip::app::CommandSender> command_sender_;
+    resource_testing::Pointer<chip::app::ReadClient,
+        resource_testing::Object::ReadClient> read_client_;
+    resource_testing::Pointer<chip::app::WriteClient,
+        resource_testing::Object::WriteClient> write_client_;
+    resource_testing::Pointer<chip::app::CommandSender,
+        resource_testing::Object::CommandSender> command_sender_;
     std::vector<chip::app::AttributePathParams> attribute_paths_;
     std::vector<chip::app::EventPathParams> event_paths_;
     std::vector<std::uint8_t> write_buffer_{};
@@ -1555,6 +1586,7 @@ class SdkControllerBackend::Impl final
                                   [this] { return published_; })) {
         response_.error_code = "subscription_timeout";
         published_ = true;
+        resource_testing::Event("subscription_published");
         lock.unlock();
         ScheduleCancel();
         lock.lock();
@@ -1608,6 +1640,7 @@ class SdkControllerBackend::Impl final
     }
 
     void CancelOnSdkThread() {
+      resource_testing::Event("subscription_cancelled");
       connected_.Cancel();
       connection_failed_.Cancel();
       {
@@ -1645,7 +1678,8 @@ class SdkControllerBackend::Impl final
         return;
       }
 
-      read_client_ = std::make_unique<chip::app::ReadClient>(
+      read_client_ = resource_testing::Make<chip::app::ReadClient,
+          resource_testing::Object::ReadClient>(
           chip::app::InteractionModelEngine::GetInstance(), &exchange_manager,
           *this, chip::app::ReadClient::InteractionType::Subscribe);
       chip::app::ReadPrepareParams params(session);
@@ -1788,6 +1822,7 @@ class SdkControllerBackend::Impl final
         if (!established && !recovering) {
           response_.error_code = "invalid_subscription_result";
           published_ = true;
+          resource_testing::Event("subscription_published");
           condition_.notify_one();
           ScheduleCancelLocked();
           return;
@@ -1832,6 +1867,7 @@ class SdkControllerBackend::Impl final
         response_ = {true, {}, request_.subscription_id, buffer_.generation(), minimum,
                      maximum, static_cast<std::uint32_t>(id)};
         published_ = true;
+        resource_testing::Event("subscription_published");
       }
       condition_.notify_one();
     }
@@ -1864,6 +1900,9 @@ class SdkControllerBackend::Impl final
         FailActive(InteractionError{"subscription_unavailable"});
         return CHIP_ERROR_CANCELLED;
       }
+      if (!recovery_timer_active_) {
+        resource_testing::Acquired(resource_testing::Object::RecoveryTimer);
+      }
       recovery_timer_active_ = true;
       SubscriptionStatus status{request_.subscription_id,
                                 decision.generation,
@@ -1885,6 +1924,7 @@ class SdkControllerBackend::Impl final
     }
 
     void OnDone(chip::app::ReadClient *) override {
+      resource_testing::Event("subscription_read_done");
       CancelRecoveryTimer();
       read_client_.reset();
       bool terminal = false;
@@ -1935,10 +1975,12 @@ class SdkControllerBackend::Impl final
         } else if (!published_) {
           response_.error_code = error.code;
           published_ = true;
+          resource_testing::Event("subscription_published");
         }
       }
       condition_.notify_one();
       if (emit) {
+        resource_testing::Event("subscription_terminal");
         owner_.EmitFailure(request_.subscription_id, generation, error);
       }
       ScheduleCancel();
@@ -1952,6 +1994,7 @@ class SdkControllerBackend::Impl final
         }
         response_.error_code = std::move(code);
         published_ = true;
+        resource_testing::Event("subscription_published");
       }
       condition_.notify_one();
     }
@@ -1990,6 +2033,7 @@ class SdkControllerBackend::Impl final
     static void RecoveryDeadline(chip::System::Layer *, void *context) {
       auto *self = static_cast<NativeSubscription *>(context);
       self->recovery_timer_active_ = false;
+      resource_testing::Destroyed(resource_testing::Object::RecoveryTimer);
       self->FailActive(InteractionError{"session_lost"});
     }
 
@@ -1997,6 +2041,7 @@ class SdkControllerBackend::Impl final
       if (recovery_timer_active_) {
         chip::DeviceLayer::SystemLayer().CancelTimer(RecoveryDeadline, this);
         recovery_timer_active_ = false;
+        resource_testing::Destroyed(resource_testing::Object::RecoveryTimer);
       }
     }
 
@@ -2014,6 +2059,9 @@ class SdkControllerBackend::Impl final
                                   static_cast<std::uint64_t>(elapsed.count()));
     }
 
+#ifdef WOTEX_MATTER_RESOURCE_TESTING
+    resource_testing::Lifetime resource_lifetime_{resource_testing::Object::Subscription};
+#endif
     Impl &owner_;
     SubscriptionRequest request_;
     SubscriptionBuffer buffer_;
@@ -2031,7 +2079,8 @@ class SdkControllerBackend::Impl final
     std::uint8_t recovery_attempt_{0};
     chip::Callback::Callback<chip::OnDeviceConnected> connected_;
     chip::Callback::Callback<chip::OnDeviceConnectionFailure> connection_failed_;
-    std::unique_ptr<chip::app::ReadClient> read_client_;
+    resource_testing::Pointer<chip::app::ReadClient,
+        resource_testing::Object::ReadClient> read_client_;
     std::vector<chip::app::AttributePathParams> attribute_paths_;
     std::vector<chip::app::EventPathParams> event_paths_;
   };
@@ -2286,6 +2335,21 @@ class SdkControllerBackend::Impl final
     if (event_loop_started_) {
       (void) chip::DeviceLayer::PlatformMgr().StopEventLoopTask();
       event_loop_started_ = false;
+    }
+    if (factory_initialized_) {
+      auto *system = chip::Controller::DeviceControllerFactory::GetInstance()
+                         .GetSystemState();
+      if (system != nullptr) {
+        // The pinned factory deletes these handlers without unregistering
+        // their exchange slots. No SDK callback can run after the loop stops.
+        if (system->MessageCounterManager() != nullptr) {
+          system->MessageCounterManager()->Shutdown();
+        }
+        if (system->ExchangeMgr() != nullptr) {
+          (void) system->ExchangeMgr()->UnregisterUnsolicitedMessageHandlerForType(
+              chip::Protocols::SecureChannel::MsgType::StatusReport);
+        }
+      }
     }
     {
       std::lock_guard<std::mutex> lock(pending_mutex_);

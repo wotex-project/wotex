@@ -85,6 +85,7 @@ defmodule Wotex.Matter.SoftwareProcessFlow do
       assert counts["retirement_barriers"] == 1
       assert counts["values_encoded"] > 0
       assert counts["reports_transmitted"] > 0
+      assert_resources_released(native)
 
       for key <-
             ~w(queued_reports queued_report_bytes outstanding_reports outstanding_report_bytes output_report_frames output_report_bytes output_control_frames output_control_bytes output_reply_frames output_reply_bytes),
@@ -159,6 +160,32 @@ defmodule Wotex.Matter.SoftwareProcessFlow do
           else: System.delete_env("WOTEX_MATTER_FLOW_CONFIG")
       end
     end
+  end
+
+  defp assert_resources_released(native) do
+    before = Map.fetch!(native, "resources_before")
+    after_cleanup = Map.fetch!(native, "resources_after")
+    objects = Map.fetch!(after_cleanup, "objects")
+
+    assert Enum.sort(Map.keys(objects)) ==
+             Enum.sort(~w(interaction commissioning window subscription read_client write_client
+                          command_sender window_opener recovery_timer))
+
+    for {name, counts} <- objects do
+      assert before["objects"][name] == %{"acquired" => 0, "destroyed" => 0}
+      assert is_integer(counts["acquired"]) and counts["acquired"] >= 0
+      assert counts["destroyed"] == counts["acquired"], name
+    end
+
+    assert objects["subscription"]["acquired"] == 1
+    assert objects["read_client"]["acquired"] == 1
+    assert after_cleanup["events"]["subscription_published"] == 1
+    assert after_cleanup["events"]["subscription_cancelled"] >= 1
+    sdk = Map.fetch!(after_cleanup, "sdk")
+    assert sdk == Map.fetch!(before, "sdk")
+
+    for name <- ["Packet Buffers", "Timers", "UDP endpoints", "Exchange contexts"],
+        do: assert(is_integer(Map.fetch!(sdk, name)) and Map.fetch!(sdk, name) >= 0)
   end
 
   defp receiver(parent, fixture, input) do

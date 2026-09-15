@@ -157,6 +157,12 @@ final source. Building the peer executables does not execute their workflows.
 The software build also produces normal and sanitizer `wotex-matter-flow-host`
 test executables. Their source and binary hashes belong to the software receipt;
 the native-only build does not require these process-flow fixtures.
+These test executables count actual controller-context and SDK-client acquisition
+and destruction, reply publication, cancellation and recovery-timer ownership.
+Their before/after SDK resource snapshots require compiled SDK statistics and
+run before startup and after event-loop shutdown. Callback cases reject retained
+objects or changed SDK resource counts. Production targets use ordinary pointer
+ownership and do not link the observation implementation.
 The software build also exports the normal and sanitizer controller-test
 executables used to exercise native output failure. Their executable hashes,
 architecture and runtime libraries belong to the software receipt. Reuse fails
