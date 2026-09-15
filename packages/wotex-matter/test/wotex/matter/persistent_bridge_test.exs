@@ -35,6 +35,26 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     discriminator: 3840
   }
 
+  @tag :request_id_exhaustion
+  test "WMA-B02 the final uint64 request ID retires through the reserved close ID" do
+    audit = temporary_path("request-id-limit")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    monitor = Process.monitor(handle.pid)
+    :sys.replace_state(handle.pid, &%{&1 | next_id: 0xFFFFFFFFFFFFFFFF})
+
+    assert {:ok, %{"status" => "ready"}} = Native.health(handle)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+
+    assert {:error, %Error{code: :transport_closed, effect: :none}} =
+             Native.request(handle, @write, 1_000)
+
+    frames = audit |> File.read!() |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!/1)
+    assert Enum.map(frames, & &1["id"]) == [nil, "1", "18446744073709551615", "close"]
+    assert Enum.map(frames, & &1["operation"]) == [nil, "open", "health", "close"]
+    assert :ets.info(handle.admission) == :undefined
+    assert :ok = Native.disconnect(handle)
+  end
+
   test "WMA-C03 native request admission stops at 64 before the owner mailbox" do
     audit = temporary_path("admission")
     assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
@@ -1040,7 +1060,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
     loop = fn loop ->
       line = read.()
-      [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
+      [_, id] = Regex.run(~r/"id":"([1-9][0-9]*|close)"/, line)
 
       cond do
         mode == "ignore_eof" ->

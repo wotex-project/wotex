@@ -1542,3 +1542,74 @@ archive receipts, and unchanged 95% coverage acceptance remain open.
 | Minimum focused log | `c30ef061355f02528357b16627804f75c099305d025927e59721d27b88f4ccac` |
 | Current Linux SDK timeout log | `15339df7a103af60ce8e39efa14dba8635fbfc2036ab96d646710b73c0d39fc9` |
 | Minimum Linux sanitizer SDK timeout log | `2ef7ba6abdffd4ff835984e9e7f214fef0857b444a82f7098cc05701e103d792` |
+
+## Request identity exhaustion and Port release
+
+The native parser admits the reserved `close` ID only for the exact close
+operation with empty parameters. It can close an opened controller after the
+ordinary uint64 counter is exhausted without advancing or resetting that counter.
+Native tests accept the maximum ID, reject overflow, leading-zero and signed
+forms, reject decreased IDs after the maximum, and reject the reserved ID on
+another operation or with extra parameters. The reserved-close parser assertion
+fails against the preceding implementation.
+
+The BEAM allocator handles ordinary dispatch and internal cancellation with one
+counter. The final uint64 value changes it to a fixed exhausted state and
+schedules generation cleanup after the outstanding response. Cleanup uses the
+reserved close ID; subsequent work cannot allocate another ordinary ID. The
+connection regression previously stayed open after the maximum. It now observes
+exactly open, the final health request and reserved close, followed by no further
+I/O and removal of the admission table.
+
+The minimum-BEAM blocked-ACK case also exposed a Port release race: connection
+termination and native child exit could precede removal of Port driver state.
+Waiting for the Port monitor alone reproduced the failure. Cleanup now waits
+for both the monitor and `Port.info` removal within its existing deadline. The
+final default gate passes 169 checks with 25 excluded, and all 52 minimum-BEAM
+connection/subscription tests pass. Host lanes run sequentially because
+simultaneous fixture VMs also caused unrelated startup-deadline failures; no
+test deadline or assertion was relaxed. ExDoc passes without warnings.
+
+Normal and sanitizer SDK host builds pass, as do six CTest executables in each
+configuration and all 15 pinned advisory queries. The SDK request-ID case
+exercises both a final ordinary health request and receiver-death cancellation
+of a real lighting subscription. Both must receive the actual reserved null
+close response, observe exit status zero and release their child, Port and
+admission table within one second. The same Linux cohort runs the one-shot
+native/Runtime workflow, native pipe pressure and five native corpus tests.
+All eight cases pass in 6.4 seconds on current Linux and 11.8 seconds on the
+minimum sanitizer lane. Final-ID cleanup takes 15/11 ms for ordinary/cancellation
+on current Linux and 56/57 ms on minimum Linux. These final runs use freshly
+commissioned, separately owned lighting peers, which are also reaped afterward.
+A preceding run against a long-lived fault-test peer timed out during subscription
+establishment after old subscription-resumption traffic; that run is not counted
+as passing evidence. A local orchestration attempt also failed before tests
+because its environment omitted the installed Mix/Hex homes; the final run
+supplies those paths and the UTF-8 locale explicitly.
+
+The corpus remains 14 of 17 executed cases; F11–F13 are still open. Native
+stdin interruptibility, callback/resource instrumentation, full fault matrices,
+committed-source build/archive receipts and the unchanged 95% coverage gate
+remain open. Forced pipe-pressure children still do not provide leak finalization.
+
+| Request-ID artifact | SHA-256 |
+| --- | --- |
+| Connection | `0c37003c005881c4e8669cd7ae80c35b1df8c1909287586aa36cd305492044b6` |
+| Native protocol | `65dd646b1d0cead661520a87ee91e8888d026d5615272980eeec2b0d81e55466` |
+| Native controller tests | `8450171444567227c25f072e29bac3c8013d935928e9007c7570c0a1adc0ab99` |
+| Persistent connection tests | `16344de4ad2ec4f4eb06a9a8990ead9b10634bd7a7b5311fc2561733b134d645` |
+| SDK request-ID test | `40f96a9365dc206f6d72788ff09abeac1e2b19e842a06db5d2ef5730f24e915f` |
+| Current native host | `504102f778c2dd0cfe861618fbfef3529da07b50aaf1881990a779f5ea9b6866` |
+| Minimum sanitizer native host | `bfa39ca5139dc4d28992b5a905ed0f4dda6a1bcf3a298b58dae1924ec5b15d7a` |
+| Current contract driver | `97f729b1a69442a2cbbe71e71b27efc083f90ca98739544d9c39beb5f8457048` |
+| Minimum sanitizer contract driver | `d8554972e5bbe5df98ddaeb5522a542c6b246579d92b7e72852c41a8538378c5` |
+| Failing maximum-ID connection log | `f4cc648014a9367781ff8212dcde4179411034fc8fe230069c0efce0245e19f9` |
+| Failing reserved-close native test | `67005468125832ec6253005ca6fd67ac7d13a3d016c05ecb22381bcb5fea5ade` |
+| Failing monitor-only release log | `62249eed1d4f95a0dce0d9531703aff5b9c52e4462c86476eaa845d6b4cc0ab5` |
+| Final current default gate log | `4ed38757fa146ce46fdf50b13fd514cc28b0c959045b4289115017c723cdee21` |
+| Final minimum focused log | `d485780897a86b040a74f327be66b502931c0417b7e7b0bb267801f09545a0d0` |
+| Native CTest log | `97a87b0eb728951f5e8ec3d13d0174690d9c5bb3e4342e367595d29932df5fc3` |
+| Native SDK build log | `75a52ce1a003c02b230240537508bed51afebe35b9b481bdf056470b5b2fd542` |
+| Advisory audit log | `947d36e4c60803d5242b03f9d04555a254b09399c2f8881ec39964b3c09c20a5` |
+| Final current Linux SDK/corpus log | `52242432779d891fb6b7fc5ed8772ddb0f3bfc443a54eb05923db6453f6291e3` |
+| Final minimum Linux sanitizer SDK/corpus log | `cd4aaca9df3dfb9d9375a289e0484b403789156af635d54740e05a0b669b40d3` |

@@ -22,6 +22,11 @@ defmodule Wotex.Matter.Native.Connection do
   Missing or malformed replies after a submitted write, invoke, commissioning
   operation or commissioning-window request retain unknown effect without retry.
   A validated native failure keeps the SDK's own submission classification.
+  Ordinary request IDs end at uint64 maximum. Consuming that final ID schedules
+  generation cleanup after its response, using the reserved `close` identity;
+  neither ordinary dispatch nor internal cancellation can wrap the counter.
+  Cleanup waits for native exit, the Port monitor and removal from Port.info.
+  Exit notification can precede asynchronous release of the Port's driver state.
   It is an implementation module; consumers use
   `Wotex.Matter.Native` and its opaque `Wotex.Matter.Native.Handle`.
   """
@@ -35,6 +40,7 @@ defmodule Wotex.Matter.Native.Connection do
   @maximum_line_bytes 131_071
   @cleanup_timeout 1_000
   @response_grace 50
+  @maximum_request_id 0xFFFFFFFFFFFFFFFF
   @mutating_operations [:write, :invoke, :commission_on_network, :open_window]
   @mutating_wire_operations Enum.map(@mutating_operations, &Atom.to_string/1)
 
@@ -359,6 +365,19 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   @impl GenServer
+  def handle_info(
+        {:request_ids_exhausted, generation},
+        %{generation: generation, next_id: :exhausted} = state
+      ) do
+    closing =
+      state
+      |> Map.put(:call_deadline, System.monotonic_time(:millisecond) + @cleanup_timeout)
+      |> then(&handle_call({:disconnect, generation}, nil, &1))
+
+    {:stop, reason, _, next_state} = closing
+    {:stop, reason, notify_session_failure(Error.new(:transport_closed), next_state)}
+  end
+
   def handle_info({:reap_admission, token}, state) do
     case reap_admission(state, token) do
       {:ok, next_state} -> {:noreply, next_state}
@@ -669,8 +688,35 @@ defmodule Wotex.Matter.Native.Connection do
     do: {:stop, reason, reply, Map.delete(state, :call_deadline)}
 
   defp request_frame(state, operation, parameters, timeout) do
+    case take_request_id(state, operation) do
+      {:ok, id, next_state} ->
+        dispatch_request_frame(next_state, id, operation, parameters, timeout)
+
+      :exhausted ->
+        {:error, Error.new(:transport_closed), Map.put(state, :channel_failed, true)}
+    end
+  end
+
+  defp take_request_id(%{next_id: :exhausted} = state, "close"),
+    do: {:ok, "close", state}
+
+  defp take_request_id(%{next_id: :exhausted}, _), do: :exhausted
+
+  defp take_request_id(state, _) do
     id = Integer.to_string(state.next_id)
 
+    next =
+      if state.next_id == @maximum_request_id do
+        send(self(), {:request_ids_exhausted, state.generation})
+        :exhausted
+      else
+        state.next_id + 1
+      end
+
+    {:ok, id, %{state | next_id: next}}
+  end
+
+  defp dispatch_request_frame(state, id, operation, parameters, timeout) do
     frame = %{
       "version" => 1,
       "id" => id,
@@ -679,13 +725,11 @@ defmodule Wotex.Matter.Native.Connection do
       "timeout_ms" => timeout
     }
 
-    next_state = %{state | next_id: state.next_id + 1}
-
     deadline = Map.get(state, :call_deadline, System.monotonic_time(:millisecond) + timeout)
 
     case send_request_frame(state.port, frame, deadline, state.active_call) do
       :ok ->
-        case await_response_until(next_state, id, deadline) do
+        case await_response_until(state, id, deadline) do
           {:ok, result, response_state} ->
             {:ok, result, response_state}
 
@@ -700,10 +744,10 @@ defmodule Wotex.Matter.Native.Connection do
         end
 
       {:error, :transport_closed} ->
-        {:error, Error.new(:transport_closed), Map.put(next_state, :channel_failed, true)}
+        {:error, Error.new(:transport_closed), Map.put(state, :channel_failed, true)}
 
       {:error, code} ->
-        {:error, Error.new(code), next_state}
+        {:error, Error.new(code), state}
     end
   end
 
@@ -1665,31 +1709,38 @@ defmodule Wotex.Matter.Native.Connection do
     case Map.fetch(state.subscriptions, reference) do
       {:ok, %{status: status} = subscription}
       when status in [:active, :establishing, :recovering] ->
-        id = Integer.to_string(state.next_id)
+        case take_request_id(state, "unsubscribe") do
+          {:ok, id, next_state} ->
+            submit_cancellation(next_state, subscription, reference, result, id)
 
-        frame = %{
-          "version" => 1,
-          "id" => id,
-          "operation" => "unsubscribe",
-          "parameters" => %{
-            "subscription_id" => subscription.native_id,
-            "generation" => subscription.generation
-          },
-          "timeout_ms" => @cleanup_timeout
-        }
-
-        if send_frame(state.port, frame) do
-          state
-          |> put_in([:subscriptions, reference, :status], :closing)
-          |> put_in([:subscriptions, reference, :close_result], result)
-          |> Map.put(:next_id, state.next_id + 1)
-          |> Map.put(:internal_requests, Map.put(state.internal_requests, id, reference))
-        else
-          fail_native_input(state)
+          :exhausted ->
+            fail_native_input(state)
         end
 
       _ ->
         state
+    end
+  end
+
+  defp submit_cancellation(state, subscription, reference, result, id) do
+    frame = %{
+      "version" => 1,
+      "id" => id,
+      "operation" => "unsubscribe",
+      "parameters" => %{
+        "subscription_id" => subscription.native_id,
+        "generation" => subscription.generation
+      },
+      "timeout_ms" => @cleanup_timeout
+    }
+
+    if send_frame(state.port, frame) do
+      state
+      |> put_in([:subscriptions, reference, :status], :closing)
+      |> put_in([:subscriptions, reference, :close_result], result)
+      |> Map.put(:internal_requests, Map.put(state.internal_requests, id, reference))
+    else
+      fail_native_input(state)
     end
   end
 
@@ -1703,12 +1754,15 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   defp close_port(port) when is_port(port) do
+    deadline = System.monotonic_time(:millisecond) + @cleanup_timeout
+
     case Port.info(port, :os_pid) do
       {:os_pid, pid} ->
         # Reap the exact owned child before dropping its Port identity. A failed
         # native operation may leave the child unable to observe closed stdin.
         System.cmd("/bin/kill", ["-KILL", Integer.to_string(pid)], stderr_to_stdout: true)
         if Port.info(port), do: Port.close(port)
+        await_port_closed(port, deadline)
 
       nil ->
         :ok
@@ -1728,7 +1782,7 @@ defmodule Wotex.Matter.Native.Connection do
       receive do
         {^port, {:exit_status, 0}} ->
           if System.monotonic_time(:millisecond) <= deadline,
-            do: :ok,
+            do: await_port_closed(port, deadline),
             else: {:error, Error.new(:timeout)}
 
         {^port, {:exit_status, status}} ->
@@ -1742,6 +1796,37 @@ defmodule Wotex.Matter.Native.Connection do
       after
         remaining -> {:error, Error.new(:timeout)}
       end
+    end
+  end
+
+  defp await_port_closed(port, deadline) do
+    monitor = :erlang.monitor(:port, port)
+
+    try do
+      receive do
+        {:DOWN, ^monitor, :port, ^port, _} -> await_port_release(port, deadline)
+      after
+        max(0, deadline - System.monotonic_time(:millisecond)) ->
+          {:error, Error.new(:timeout)}
+      end
+    after
+      Process.demonitor(monitor, [:flush])
+    end
+  end
+
+  defp await_port_release(port, deadline) do
+    cond do
+      Port.info(port) == nil ->
+        :ok
+
+      System.monotonic_time(:millisecond) >= deadline ->
+        {:error, Error.new(:timeout)}
+
+      true ->
+        receive do
+        after
+          1 -> await_port_release(port, deadline)
+        end
     end
   end
 

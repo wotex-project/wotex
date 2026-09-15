@@ -124,6 +124,42 @@ void TestStartupFailureAndEofCleanup() {
   assert(output.str().find("\"event\":\"ready\"") != std::string::npos);
 }
 
+void TestRequestCounterAndReservedClose() {
+  const auto request = [](const std::string &id,
+                          const std::string &operation = "health",
+                          const std::string &parameters = "{}") {
+    return std::string(R"({"version":1,"id":")") + id +
+        R"(","operation":")" + operation + R"(","parameters":)" +
+        parameters + R"(,"timeout_ms":1000})";
+  };
+  const std::string maximum = "18446744073709551615";
+  assert(wotex::matter::HostProtocol::ParseRequestAccepted(request(maximum)));
+  assert(wotex::matter::HostProtocol::ParseRequestAccepted(request("close", "close")));
+  for (const auto &invalid : {"0", "01", "+1", "-1", "18446744073709551616"}) {
+    assert(!wotex::matter::HostProtocol::ParseRequestAccepted(request(invalid)));
+  }
+  assert(!wotex::matter::HostProtocol::ParseRequestAccepted(request("close")));
+  assert(!wotex::matter::HostProtocol::ParseRequestAccepted(
+      request("close", "close", R"({"extra":true})")));
+
+  for (const auto &next : {"2", "1", "01", "18446744073709551616", "close"}) {
+    RecordingBackend backend;
+    wotex::matter::HostProtocol protocol(backend);
+    assert(protocol.ProcessLine(
+        R"({"version":1,"event":"flow_open","session_generation":"0123456789abcdef0123456789abcdef"})").keep_running);
+    assert(protocol.ProcessLine(OpenFrame()).keep_running);
+    assert(protocol.ProcessLine(request(maximum)).keep_running);
+    const bool closing = std::string(next) == "close";
+    const auto result = protocol.ProcessLine(request(next, closing ? "close" : "health"));
+    assert(!result.keep_running && backend.closes == 1 && !backend.open);
+    assert(result.frame.has_value() == closing);
+    if (closing) {
+      assert(result.frame->find(R"("id":"close")") != std::string::npos);
+      assert(result.frame->find(R"("result":null)") != std::string::npos);
+    }
+  }
+}
+
 } // namespace
 
 int main() {
@@ -131,5 +167,6 @@ int main() {
   TestFrameDepthBoundary();
   TestLifecycleAndFabricAdmission();
   TestStartupFailureAndEofCleanup();
+  TestRequestCounterAndReservedClose();
   return 0;
 }

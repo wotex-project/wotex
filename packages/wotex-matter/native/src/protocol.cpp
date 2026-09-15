@@ -158,8 +158,10 @@ bool ValidRequestEnvelope(const Json &request, std::uint64_t &request_id) {
                    {"version", "id", "operation", "parameters", "timeout_ms"}) &&
       request["version"].is_number_unsigned() &&
       request["version"].get<std::uint64_t>() == kProtocolVersion &&
-      CanonicalRequestId(request["id"], request_id) &&
       request["operation"].is_string() && request["parameters"].is_object() &&
+      (CanonicalRequestId(request["id"], request_id) ||
+       (request["id"] == "close" && request["operation"] == "close" &&
+        request["parameters"].empty())) &&
       request["timeout_ms"].is_number_unsigned() &&
       request["timeout_ms"].get<std::uint64_t>() >= 1 &&
       request["timeout_ms"].get<std::uint64_t>() <= 60000;
@@ -950,12 +952,19 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
   }
 
   std::uint64_t request_id = 0;
-  if (!ValidRequestEnvelope(request, request_id) ||
-      request_id <= greatest_request_id_) {
+  if (!ValidRequestEnvelope(request, request_id)) {
     Close();
     return {};
   }
-  greatest_request_id_ = request_id;
+  const bool reserved_close = request["id"] == "close";
+  if ((reserved_close && state_ != State::Open) ||
+      (!reserved_close && request_id <= greatest_request_id_)) {
+    Close();
+    return {};
+  }
+  if (!reserved_close) {
+    greatest_request_id_ = request_id;
+  }
   const std::string operation = request["operation"].get<std::string>();
 
   if (state_ == State::AwaitOpen) {
