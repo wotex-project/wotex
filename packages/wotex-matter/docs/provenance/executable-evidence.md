@@ -1783,3 +1783,73 @@ open. Last full measured coverage is 89.0%.
 | Default gate log | `f570d8c65a6d73c7561933ddfccfe1d4619706af64bf08b72b0aeaddf35476d0` |
 | Current Linux ten-case log | `dea02366ecb4fbfaff5036652da6cd05433c55d2f6ec21f3aa05173a1b0d9e69` |
 | Minimum Linux ten-case log | `79186d981d46e5709e73bc6812b5ff4165986cfbbce87528f3b13ff509122714` |
+
+## Ordinary native stream ownership
+
+Each admitted ordinary native subscription owns a linked and monitored report
+validator before waiting for SDK establishment. The validator checks the admitted
+path, descriptor value and receiver capacity, then returns the opaque report
+token to the connection. The connection verifies the owner, active subscription
+and outstanding token, checks receiver capacity again and sends the public
+tuple before acknowledging native credit. The connection alone sends public
+reports and terminal messages, so delayed validator replies cannot become
+post-terminal deliveries. Runtime acknowledged subscriptions retain their
+existing relay ownership.
+
+Cancellation marks the subscription closing before attempting native control
+output and reaps its validator. A failed unsubscribe write cannot cause a second
+terminal during channel cleanup. Retirement and session close also reap owned
+validators; an abnormal connection exit propagates through their links, including
+to suspended validators. Final receiver capacity remains the configured C05
+limit. The intermediate validator mailbox is bounded by the 64-report session
+credit ledger. A descriptor-mismatched value fails before public delivery or ACK.
+
+The initial regressions failed because ordinary subscriptions had no separate
+owner. The corrected tests suspend that owner while a fixture health request
+waits for report credit, then verify delivery and completion after resume.
+Stream-owner loss, owner loss with a blocked native pipe and connection loss
+with a suspended validator release ownership. The blocked-pipe regression also
+reproduced a duplicate terminal before the closing-state correction. Tests for
+Event identity, explicit null, recovery and receiver overflow remain passing.
+The default gate passes 172 checks with 28 excluded; all 21 minimum-toolchain
+subscription/recovery tests and ExDoc pass.
+
+Both real SDK lanes pass the full lifecycle workload: 1000 reads, 32 concurrent
+callers, 100 receiver-death cycles and 100 open/close cycles. Every receiver-death
+cycle now identifies and monitors its actual stream owner and proves that owner
+is gone. Current Linux passes in 149.4 seconds and minimum Linux in 174.5 seconds.
+All native FD samples remain 16. Current native RSS remains 21084 KiB; minimum
+sanitizer RSS grows from 166192 to 190496 KiB, without a plateau claim.
+
+The subsequent eleven-case SDK/corpus cohort passes in 9.9 and 15.5 seconds.
+The new SDK test pauses an ordinary stream owner, invokes Toggle on its owned
+lighting peer and verifies that the real report retains native credit until
+resume. It also kills the stream owner while preserving native health and
+kills the connection while its stream owner is suspended, checking both
+process lifetimes. The fresh fixture-owned peers are reaped. Native binaries
+are the preceding counter-generation cohort; ASan/UBSan and leak detection
+remain enabled, with the same exclusion of destructor/leak-finalization claims
+for forced exits. These tests do not discharge the 10000-callback F11–F13 corpus
+cases, native command interruptibility, full fault/resource instrumentation,
+software-run orchestration or fresh complete build/archive receipts.
+
+| Named-owner artifact | SHA-256 |
+| --- | --- |
+| Connection | `69f2975e68701391e1162669c6bba8518388c028a1c8ac675fe15f76ce106a8a` |
+| Named stream owner | `d07fd50e83259eb442bcbaee1a8e2248aeb966622d16a02961613e832358ed1f` |
+| Opaque delivery | `40f973344dd632895b38c256675637c8397c2f0895ce8ec870543e75a28c661d` |
+| Subscription tests | `56b853782b0c1acc068b76452e466dac83a6aaa1302dd6afdf6ffa9443383986` |
+| SDK stream-owner test | `3716633263edba925c3d527b7248c214443d1e40bfc69241e0ac6e2805a2343e` |
+| Lifecycle stress test | `3cc00ec15d0961cec1aa6958c99c230aab5ee8fd6d360cf93760ac750eccac5f` |
+| Missing-owner failing log | `1579b55a93fc71bbb5a35831b1ee2838c55026fe6075f30389c1b31ca8833b88` |
+| Duplicate-terminal failing log | `dabb3de7896f72323eae5024f6c7517c5d0006fff6a99c6e75845a9f564a5096` |
+| Current default gate log | `4452725020f4dcd6d14d3839ebe19ffd2b5b04b51468dd2589088c433245c978` |
+| Minimum focused log | `ecdab58c22609efa9568fac3747776669dbe21f907a1de57048c97d050f82279` |
+| Current Linux lifecycle log | `16337496fc50fc666bf5f44172c5fa16626bc71ce790f266d9820655ce07c1e9` |
+| Minimum Linux lifecycle log | `9799bbeff32870c2d5f382a4ba22d29e83111ef49c853d5af0a3cfccc9e2beb2` |
+| Current Linux eleven-case log | `61cf02a6dc7445ef4fc680c56d83f1b27aa17d01bdefcc7d084231c12da74dd0` |
+| Minimum Linux eleven-case log | `4f15599887f9b2393785182141cf215d5ae98ac7be10f3de00defa1075433e66` |
+| Full coverage log | `69353b9a0ec84d34b060b00e45df206bf35bffe6c8cb36b3d804a0132af398f9` |
+
+The full coverage run passes all 172 checks with 28 excluded and reports
+89.0%. The unchanged 95% coverage gate remains unsatisfied.

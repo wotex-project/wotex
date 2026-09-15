@@ -10,6 +10,96 @@ defmodule Wotex.Matter.SubscriptionTest do
   @event_path %{fabric_id: 1, node_id: 3, endpoint: 2, cluster: 0x0039, member: 3}
   @sensor_path %{fabric_id: 1, node_id: 3, endpoint: 4, cluster: 0x0402, member: 0}
 
+  @tag :native_stream_owner
+  test "named native credit waits for its distinct stream owner during pending I/O" do
+    audit = temporary_path("named-owner-credit")
+    executable = native_fixture(audit, "owner_pause")
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+    assert {:ok, subscription} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
+    reference = subscription.reference
+    owner = :sys.get_state(session.handle.pid).subscriptions[reference][:stream_owner]
+    assert is_pid(owner) and owner != session.handle.pid
+    :sys.suspend(owner)
+    health = Task.async(fn -> Native.health(session.handle, 2_000) end)
+
+    try do
+      assert eventually(fn -> Enum.any?(audit_frames(audit), &(&1["operation"] == "health")) end)
+      refute_receive {:wotex_matter, ^reference, _}, 50
+      refute Enum.any?(audit_frames(audit), &(&1["event"] == "report_ack"))
+      assert Task.yield(health, 0) == nil
+      :sys.resume(owner)
+      assert_receive {:wotex_matter, ^reference, {:ok, %{value: 2150}, %{report_id: 1}}}, 1_000
+      assert_receive {:wotex_matter, ^reference, {:ok, %{value: 2150}, %{report_id: 2}}}, 1_000
+      assert {:ok, %{"status" => "ready"}} = Task.await(health, 1_000)
+      assert eventually(fn -> :sys.get_state(session.handle.pid).report_ledger.pending == %{} end)
+      assert :ok = Matter.unsubscribe(session, subscription)
+      refute Process.alive?(owner)
+    after
+      Task.shutdown(health, :brutal_kill)
+      Matter.disconnect(session)
+    end
+  end
+
+  @tag :native_stream_owner
+  test "named stream ownership closes on stream or connection loss without late delivery" do
+    for lost <- [:stream, :blocked_stream, :connection] do
+      audit = temporary_path("named-owner-loss")
+      executable = native_fixture(audit, "quiet")
+      assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+      assert {:ok, subscription} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
+      reference = subscription.reference
+      owner = :sys.get_state(session.handle.pid).subscriptions[reference][:stream_owner]
+      assert is_pid(owner) and owner != session.handle.pid
+      monitor = Process.monitor(owner)
+
+      try do
+        if lost != :connection do
+          if lost == :blocked_stream do
+            port = :sys.get_state(session.handle.pid).port
+            {:os_pid, child} = Port.info(port, :os_pid)
+            assert {_, 0} = System.cmd("/bin/kill", ["-STOP", to_string(child)])
+            assert fill_native_input(port, 128) == :busy
+          end
+
+          Process.exit(owner, :kill)
+          assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :owner_closed}}}, 1_000
+
+          if lost == :stream do
+            assert eventually(fn ->
+                     Enum.any?(audit_frames(audit), &(&1["operation"] == "unsubscribe"))
+                   end)
+
+            assert :ok = Matter.unsubscribe(session, subscription)
+          else
+            assert eventually(fn -> not Process.alive?(session.handle.pid) end)
+          end
+        else
+          :sys.suspend(owner)
+          Process.exit(session.handle.pid, :kill)
+        end
+
+        assert_receive {:DOWN, ^monitor, :process, ^owner, _}, 1_000
+        refute Process.alive?(owner)
+        refute_receive {:wotex_matter, ^reference, _}, 30
+      after
+        Matter.disconnect(session)
+      end
+    end
+  end
+
+  @tag :native_stream_owner
+  test "the named owner rejects a typed value outside the admitted descriptor before delivery" do
+    audit = temporary_path("named-owner-schema")
+    executable = native_fixture(audit, "wrong_tlv")
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+    assert {:ok, subscription} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
+    reference = subscription.reference
+    assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :invalid_frame}}}, 1_000
+    refute_receive {:wotex_matter, ^reference, _}, 30
+    assert :ok = Matter.disconnect(session)
+    refute Enum.any?(audit_frames(audit), &(&1["event"] == "report_ack"))
+  end
+
   @tag :native_input_pressure
   test "WMA-C03 a blocked report ACK retires the native generation once" do
     for pending_request <- [false, true] do
@@ -720,7 +810,9 @@ defmodule Wotex.Matter.SubscriptionTest do
 
     attribute_report = fn subscription_id, sequence, report_id, version ->
       metadata = ~s({"path":{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":0},"data_version":#{version},"initial":#{report_id == 1},"report_id":#{report_id},"min_interval_s":2,"max_interval_s":45,"sdk_subscription_id":73})
-      IO.puts(~s({"version":1,"event":"subscription_report","session_generation":"#{session_generation}","subscription_id":"#{subscription_id}","generation":1,"report_sequence":#{sequence},"kind":"attribute","value":{"tag":"anonymous","type":"i16","value":2150},"metadata":#{metadata}}))
+      type = if mode == "wrong_tlv", do: "boolean", else: "i16"
+      value = if mode == "wrong_tlv", do: "true", else: "2150"
+      IO.puts(~s({"version":1,"event":"subscription_report","session_generation":"#{session_generation}","subscription_id":"#{subscription_id}","generation":1,"report_sequence":#{sequence},"kind":"attribute","value":{"tag":"anonymous","type":"#{type}","value":#{value}},"metadata":#{metadata}}))
     end
 
     event_report = fn subscription_id ->
@@ -746,7 +838,7 @@ defmodule Wotex.Matter.SubscriptionTest do
           [_, current] = Regex.run(~r/"subscription_id":"([0-9a-f]{32})"/, line)
           IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":{"subscription_id":"#{current}","generation":1,"min_interval_s":2,"max_interval_s":45,"sdk_subscription_id":73}}))
           case mode do
-            mode when mode in ["reports", "blocked_health"] ->
+            mode when mode in ["reports", "blocked_health", "wrong_tlv"] ->
               attribute_report.(current, 1, 1, 7)
               attribute_report.(current, 2, 2, 8)
             "credit_overflow" ->
@@ -762,13 +854,17 @@ defmodule Wotex.Matter.SubscriptionTest do
 
         String.contains?(line, ~s("operation":"unsubscribe")) ->
           [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
-          last = if mode in ["reports", "blocked_health"], do: 2, else: if(mode in ["event", "null"], do: 1, else: 0)
+          last = if mode in ["reports", "blocked_health", "owner_pause"], do: 2, else: if(mode in ["event", "null"], do: 1, else: 0)
           IO.puts(~s({"version":1,"event":"stream_retired","session_generation":"#{session_generation}","subscription_id":"#{subscription_id}","generation":1,"last_report_sequence":#{last}}))
           IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":null}))
           loop.(loop, subscription_id)
 
-        mode == "blocked_health" and String.contains?(line, ~s("operation":"health")) ->
+        mode in ["blocked_health", "owner_pause"] and String.contains?(line, ~s("operation":"health")) ->
           [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
+          if mode == "owner_pause" do
+            attribute_report.(subscription_id, 1, 1, 7)
+            attribute_report.(subscription_id, 2, 2, 8)
+          end
           acknowledgement = read.()
           unless String.contains?(acknowledgement, ~s("event":"report_ack")), do: System.halt(1)
           IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":{"status":"ready"}}))

@@ -25,6 +25,10 @@ defmodule Wotex.Matter.Native.Connection do
   Ordinary request IDs end at uint64 maximum. Consuming that final ID schedules
   generation cleanup after its response, using the reserved `close` identity;
   neither ordinary dispatch nor internal cancellation can wrap the counter.
+  Ordinary subscriptions own a separately linked report validator. Reports retain
+  credit until that owner validates admission; this connection alone forwards
+  public deliveries and terminal messages, preserving their order. Retiring the
+  subscription kills and reaps its validator, including a suspended validator.
   Cleanup waits for native exit, the Port monitor and removal from Port.info.
   Exit notification can precede asynchronous release of the Port's driver state.
   It is an implementation module; consumers use
@@ -34,7 +38,7 @@ defmodule Wotex.Matter.Native.Connection do
   use GenServer
 
   alias Wotex.Matter.{Error, Subscription}
-  alias Wotex.Matter.Native.{Admission, ReportLedger, Request, Wire}
+  alias Wotex.Matter.Native.{Admission, ReportLedger, Request, StreamOwner, Wire}
 
   @sdk_revision "250a9e6c50ee2068107f3c4808b680f5f2925415"
   @maximum_line_bytes 131_071
@@ -258,6 +262,14 @@ defmodule Wotex.Matter.Native.Connection do
         native_id = :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
         monitor = Process.monitor(receiver)
 
+        {stream_owner, stream_monitor} =
+          if acknowledged do
+            {nil, nil}
+          else
+            {:ok, owner} = StreamOwner.start_link(self(), generation, reference, receiver, request)
+            {owner, Process.monitor(owner)}
+          end
+
         subscription = %{
           reference: reference,
           native_id: native_id,
@@ -265,6 +277,8 @@ defmodule Wotex.Matter.Native.Connection do
           handle_generation: 1,
           receiver: receiver,
           acknowledged: acknowledged,
+          stream_owner: stream_owner,
+          stream_monitor: stream_monitor,
           monitor: monitor,
           queue_limit: request.queue_limit,
           resubscribe: request.resubscribe,
@@ -429,16 +443,47 @@ defmodule Wotex.Matter.Native.Connection do
       else: {:noreply, finish_call(state, lease, {:error, Error.new(:timeout)})}
   end
 
-  def handle_info({:native_report_consumed, generation, reference, sequence, token}, state) do
-    case Map.fetch(state.report_ledger.pending, sequence) do
-      {:ok, %{stream: {^reference, _}, token: ^token, bytes: bytes, consumed: false}}
-      when generation == state.generation ->
-        subscription = Map.fetch!(state.subscriptions, reference)
-        emit_subscription(:deliver, subscription.kind, :ok)
-        {:noreply, acknowledge_report(state, sequence, bytes)}
+  def handle_info(
+        {:native_report_admitted, owner, generation, reference, sequence, token, admission},
+        state
+      ) do
+    with true <- generation == state.generation,
+         {:ok, %{stream_owner: ^owner, acknowledged: false, status: :active} = subscription} <-
+           Map.fetch(state.subscriptions, reference),
+         {:ok, %{stream: {^reference, _}, token: ^token, bytes: bytes, consumed: false}} <-
+           Map.fetch(state.report_ledger.pending, sequence) do
+      case admission do
+        {:ok, delivery} ->
+          case Process.info(subscription.receiver, :message_queue_len) do
+            {:message_queue_len, length} when length < subscription.queue_limit ->
+              send(subscription.receiver, {:wotex_matter, reference, delivery})
+              emit_subscription(:deliver, subscription.kind, :ok)
+              {:noreply, acknowledge_report(state, sequence, bytes)}
 
-      _ ->
-        {:noreply, state}
+            _ ->
+              {:noreply, overflow_subscription(state, reference, sequence, bytes)}
+          end
+
+        {:error, :receiver_overflow} ->
+          {:noreply, overflow_subscription(state, reference, sequence, bytes)}
+
+        _ ->
+          {:noreply, notify_session_failure(Error.new(:invalid_frame), fail_native_input(state))}
+      end
+    else
+      _ -> {:noreply, state}
+    end
+  end
+
+  def handle_info({:native_report_consumed, generation, reference, sequence, token}, state) do
+    with true <- generation == state.generation,
+         {:ok, %{acknowledged: true} = subscription} <- Map.fetch(state.subscriptions, reference),
+         {:ok, %{stream: {^reference, _}, token: ^token, bytes: bytes, consumed: false}} <-
+           Map.fetch(state.report_ledger.pending, sequence) do
+      emit_subscription(:deliver, subscription.kind, :ok)
+      {:noreply, acknowledge_report(state, sequence, bytes)}
+    else
+      _ -> {:noreply, state}
     end
   end
 
@@ -459,7 +504,18 @@ defmodule Wotex.Matter.Native.Connection do
       :error ->
         case Map.fetch(state.subscription_monitors, monitor) do
           {:ok, reference} ->
-            {:noreply, cancel_subscription(state, reference, :receiver_closed)}
+            subscription = Map.fetch!(state.subscriptions, reference)
+
+            if monitor == subscription.stream_monitor and subscription.status != :closing do
+              send(
+                subscription.receiver,
+                {:wotex_matter, reference, {:error, Error.new(:owner_closed)}}
+              )
+
+              {:noreply, cancel_subscription(state, reference, :owner_closed)}
+            else
+              {:noreply, cancel_subscription(state, reference, :receiver_closed)}
+            end
 
           :error ->
             {:noreply, state}
@@ -497,6 +553,9 @@ defmodule Wotex.Matter.Native.Connection do
       finish_call(state, lease, {:error, Error.new(:transport_closed)})
     end)
 
+    cleanup_deadline = System.monotonic_time(:millisecond) + @cleanup_timeout
+    owners = stop_stream_owners(Map.values(Map.get(state, :subscriptions, %{})))
+
     Enum.each(Map.get(state, :subscriptions, %{}), fn {_reference, subscription} ->
       result =
         if subscription.status == :closing,
@@ -507,6 +566,7 @@ defmodule Wotex.Matter.Native.Connection do
     end)
 
     close_port(Map.get(state, :port))
+    await_stream_owners(owners, cleanup_deadline)
     if Map.get(state, :close_call), do: GenServer.reply(state.close_call, {:ok, nil})
     :ok
   end
@@ -992,6 +1052,10 @@ defmodule Wotex.Matter.Native.Connection do
           {:noreply, next_state} = handle_info(message, state)
           await_owner_line(next_state, deadline)
 
+        {:native_report_admitted, _, _, _, _, _, _} = message ->
+          {:noreply, next_state} = handle_info(message, state)
+          await_owner_line(next_state, deadline)
+
         {:native_report_consumed, _, _, _, _} = message ->
           {:noreply, next_state} = handle_info(message, state)
           await_owner_line(next_state, deadline)
@@ -1359,7 +1423,9 @@ defmodule Wotex.Matter.Native.Connection do
         subscriptions: Map.put(state.subscriptions, subscription.reference, subscription),
         subscription_ids: Map.put(state.subscription_ids, key, subscription.reference),
         subscription_monitors:
-          Map.put(state.subscription_monitors, subscription.monitor, subscription.reference)
+          state.subscription_monitors
+          |> Map.put(subscription.monitor, subscription.reference)
+          |> put_stream_monitor(subscription)
     }
   end
 
@@ -1505,6 +1571,9 @@ defmodule Wotex.Matter.Native.Connection do
 
       {subscription, subscriptions} ->
         Process.demonitor(subscription.monitor, [:flush])
+        if subscription.stream_monitor, do: Process.demonitor(subscription.stream_monitor, [:flush])
+        owners = stop_stream_owners([subscription])
+        await_stream_owners(owners, System.monotonic_time(:millisecond) + @cleanup_timeout)
 
         ledger =
           Enum.reduce(state.report_ledger.streams, state.report_ledger, fn
@@ -1526,9 +1595,36 @@ defmodule Wotex.Matter.Native.Connection do
           | report_ledger: ledger,
             subscriptions: subscriptions,
             subscription_ids: subscription_ids,
-            subscription_monitors: Map.delete(state.subscription_monitors, subscription.monitor)
+            subscription_monitors:
+              state.subscription_monitors
+              |> Map.delete(subscription.monitor)
+              |> Map.delete(subscription.stream_monitor)
         }
     end
+  end
+
+  defp put_stream_monitor(monitors, %{stream_monitor: nil}), do: monitors
+
+  defp put_stream_monitor(monitors, subscription),
+    do: Map.put(monitors, subscription.stream_monitor, subscription.reference)
+
+  defp stop_stream_owners(subscriptions) do
+    for %{stream_owner: owner} <- subscriptions, is_pid(owner) do
+      monitor = Process.monitor(owner)
+      Process.exit(owner, :kill)
+      {owner, monitor}
+    end
+  end
+
+  defp await_stream_owners(owners, deadline) do
+    Enum.each(owners, fn {owner, monitor} ->
+      receive do
+        {:DOWN, ^monitor, :process, ^owner, _} -> :ok
+      after
+        max(0, deadline - System.monotonic_time(:millisecond)) ->
+          Process.demonitor(monitor, [:flush])
+      end
+    end)
   end
 
   defp retire_subscription(state, reference) do
@@ -1608,28 +1704,24 @@ defmodule Wotex.Matter.Native.Connection do
 
   defp deliver_report(state, reference, delivery, sequence, encoded_bytes) do
     subscription = Map.fetch!(state.subscriptions, reference)
+    receiver = subscription.stream_owner || subscription.receiver
+    limit = if subscription.stream_owner, do: 64, else: subscription.queue_limit
 
-    case Process.info(subscription.receiver, :message_queue_len) do
-      {:message_queue_len, length} when length < subscription.queue_limit ->
-        if subscription.acknowledged do
-          pending = Map.fetch!(state.report_ledger.pending, sequence)
+    case Process.info(receiver, :message_queue_len) do
+      {:message_queue_len, length} when length < limit ->
+        pending = Map.fetch!(state.report_ledger.pending, sequence)
 
-          envelope = %Wotex.Matter.Native.Delivery{
-            connection: self(),
-            generation: state.generation,
-            reference: reference,
-            sequence: sequence,
-            token: pending.token,
-            value: delivery
-          }
+        envelope = %Wotex.Matter.Native.Delivery{
+          connection: self(),
+          generation: state.generation,
+          reference: reference,
+          sequence: sequence,
+          token: pending.token,
+          value: delivery
+        }
 
-          send(subscription.receiver, {:wotex_matter, reference, envelope})
-          state
-        else
-          send(subscription.receiver, {:wotex_matter, reference, delivery})
-          emit_subscription(:deliver, subscription.kind, :ok)
-          acknowledge_report(state, sequence, encoded_bytes)
-        end
+        send(receiver, {:wotex_matter, reference, envelope})
+        state
 
       _ ->
         overflow_subscription(state, reference, sequence, encoded_bytes)
@@ -1709,6 +1801,14 @@ defmodule Wotex.Matter.Native.Connection do
     case Map.fetch(state.subscriptions, reference) do
       {:ok, %{status: status} = subscription}
       when status in [:active, :establishing, :recovering] ->
+        state =
+          state
+          |> put_in([:subscriptions, reference, :status], :closing)
+          |> put_in([:subscriptions, reference, :close_result], result)
+
+        owners = stop_stream_owners([subscription])
+        await_stream_owners(owners, System.monotonic_time(:millisecond) + @cleanup_timeout)
+
         case take_request_id(state, "unsubscribe") do
           {:ok, id, next_state} ->
             submit_cancellation(next_state, subscription, reference, result, id)

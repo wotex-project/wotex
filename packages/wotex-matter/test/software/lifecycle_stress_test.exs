@@ -98,7 +98,7 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
           monitor = Process.monitor(receiver)
 
           try do
-            assert {:ok, _} =
+            assert {:ok, subscription} =
                      Matter.subscribe(session, %{
                        kind: :attribute,
                        paths: [address],
@@ -108,10 +108,17 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
                        resubscribe: false
                      })
 
+            stream_owner =
+              :sys.get_state(session.handle.pid).subscriptions[subscription.reference].stream_owner
+
+            assert is_pid(stream_owner) and stream_owner != session.handle.pid
+            stream_monitor = Process.monitor(stream_owner)
             assert_receive {:initial, ^receiver}, 3_000
             Process.exit(receiver, :kill)
             assert_receive {:DOWN, ^monitor, :process, ^receiver, :killed}, 1_000
             assert drained?(session.handle.pid, 100)
+            assert_receive {:DOWN, ^stream_monitor, :process, ^stream_owner, _}, 1_000
+            refute Process.alive?(stream_owner)
             assert monitors(session.handle.pid) == baseline_monitors
             assert read(session, address) == value
             assert fd_count(child) == baseline_fds
