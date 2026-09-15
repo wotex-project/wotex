@@ -1165,3 +1165,31 @@ rebuilt from the final driver source.
 | Sanitized contract executable | `e2cfa9b19c7ae6a137e843ef2eed277563b69cfa0ce287addb9c7a18d91482be` |
 | Current Linux corpus log | `c5bd838dd86633a7fc2c20ae0ddcfc84c25c7d0c83833b46950fd7cc64e4051d` |
 | Minimum Linux sanitizer corpus log | `30e2ef9d1d7bea8ec79ccb16b0d7847d2087251954282d0aad7d3d00e91391b6` |
+
+## Native cumulative report-byte overflow
+
+The shared `next_report_byte_count` guard rejects addition beyond uint64 before
+the report reaches the output sink. The credit manager installs the proposed
+cumulative count only after successful transmission. Its encoded-size check also
+precedes addition of the newline byte. Native boundary assertions cover an
+initial 128-byte report, an exact uint64 maximum, one-byte overflow and an already
+exhausted counter. This closes the unchecked native addition; generation-wide
+failure escalation remains part of the broader C03 work.
+
+Both SDK hosts and contract executables are incrementally rebuilt. Both six-test
+CTest lanes pass, as do all five corpus tests on both Linux toolchains, including
+ASan/UBSan and leak detection. Fifteen advisory queries, the default 148-check
+gate with 22 excluded and ExDoc pass. The corpus remains fourteen of seventeen
+executed cases, and the 95% coverage gate remains open.
+
+| Byte-counter artifact | SHA-256 |
+| --- | --- |
+| Subscription header | `d0ae47550f9fa705341d27f85c3df5482ea017ea9354f4544c7987e4bd58e299` |
+| Subscription implementation | `b9d7594a8991f33bf950b4066328976731ee632bf72ac556a50e8e8dff5bc205` |
+| Native subscription tests | `84b343039695be4646f041318cb808f99bd7edd7f76f9f56bf50fb5f374bf0a9` |
+| Normal host | `73ec6a7481a3d6ecf4c26f62112f6e6d1ef55ff7ffe8cecfb94d540f68dbfcd4` |
+| Sanitized host | `e54d56a80c47b013119124e6e462a9cafe2d90bd4c4a5286a89874eb9590597b` |
+| Normal contract executable | `cbf62b6fc4831fd3a5af8a80e0cf78ed36618afa32c0835d28f24420bd0b1799` |
+| Sanitized contract executable | `a6e94424754cda5eebdcc0d28f6cb193aa506424e05852bce34d98ec7d45d0f3` |
+| Current Linux corpus log | `dedd2a4b47be0bf63228f63bf75fb4128c8623c39ba0d24b0e3a1ad272a66617` |
+| Minimum Linux sanitizer corpus log | `09cfd96a0cc8e2f72c1651457b346754e3ccbd809bb58f5e0fada616bd2244f4` |

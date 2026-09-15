@@ -303,6 +303,14 @@ ReportCreditManager::ReportCreditManager(std::string session_generation,
     : session_generation_(std::move(session_generation)),
       transmit_(std::move(transmit)) {}
 
+std::optional<std::uint64_t> next_report_byte_count(std::uint64_t current,
+                                                   std::size_t encoded_bytes) {
+  if (encoded_bytes > std::numeric_limits<std::uint64_t>::max() - current) {
+    return std::nullopt;
+  }
+  return current + encoded_bytes;
+}
+
 ReportCreditManager::CreditSnapshot ReportCreditManager::snapshot() const {
   return {queued_.size(), kSessionReportCredit - outstanding_.size(),
           kSessionByteCredit - outstanding_bytes_};
@@ -396,13 +404,16 @@ bool ReportCreditManager::TransmitFrame(Frame frame) {
   }
   frame.sequence = next_sequence_;
   frame.encoded = frame.encode(frame.sequence);
-  if (frame.encoded.empty() || frame.encoded.size() + 1 > kSessionByteCredit ||
-      !transmit_(frame.encoded)) {
+  if (frame.encoded.empty() || frame.encoded.size() >= kSessionByteCredit) {
+    return false;
+  }
+  const std::size_t bytes = frame.encoded.size() + 1;
+  const auto cumulative = next_report_byte_count(cumulative_transmitted_bytes_, bytes);
+  if (!cumulative.has_value() || !transmit_(frame.encoded)) {
     return false;
   }
   ++next_sequence_;
-  const std::size_t bytes = frame.encoded.size() + 1;
-  cumulative_transmitted_bytes_ += bytes;
+  cumulative_transmitted_bytes_ = *cumulative;
   frame.cumulative_bytes = cumulative_transmitted_bytes_;
   outstanding_bytes_ += bytes;
   ++stream->second.outstanding;

@@ -68,6 +68,10 @@ bool valid_subscription_request(const SubscriptionRequest &request);
 bool valid_subscription_report(const SubscriptionRequest &request,
                                const SubscriptionReport &report);
 
+// Encoded report byte counters cannot wrap across a session generation.
+std::optional<std::uint64_t> next_report_byte_count(std::uint64_t current,
+                                                   std::size_t encoded_bytes);
+
 class SubscriptionBuffer final {
  public:
   explicit SubscriptionBuffer(SubscriptionRequest request);

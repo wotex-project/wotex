@@ -2,6 +2,7 @@
 #include "wotex_matter/subscription.hpp"
 
 #include <cassert>
+#include <limits>
 #include <optional>
 #include <string>
 #include <vector>
@@ -281,6 +282,14 @@ void CreditsBoundAndAcknowledgeExactBytes() {
   assert(!flow.Acknowledge(1, 128));
 }
 
+void CumulativeReportBytesDoNotWrap() {
+  const auto maximum = std::numeric_limits<std::uint64_t>::max();
+  assert(next_report_byte_count(0, 128) == 128);
+  assert(next_report_byte_count(maximum - 128, 128) == maximum);
+  assert(!next_report_byte_count(maximum - 127, 128).has_value());
+  assert(!next_report_byte_count(maximum, 1).has_value());
+}
+
 void RetiringQueuedReportsDoesNotCreateASequenceGap() {
   std::vector<std::string> transmitted;
   ReportCreditManager flow(kSessionGeneration, [&](const std::string &frame) {
@@ -434,6 +443,7 @@ int main() {
   RecoveryGenerationResetsSnapshotIdentityButRetainsEventIdentity();
   RecoveryBudgetIsOptInAndBounded();
   CreditsBoundAndAcknowledgeExactBytes();
+  CumulativeReportBytesDoNotWrap();
   RetiringQueuedReportsDoesNotCreateASequenceGap();
   ProtocolEstablishesBeforeDeliveryAndRetires();
   DefaultLossIsTerminalWithoutRecovery();
