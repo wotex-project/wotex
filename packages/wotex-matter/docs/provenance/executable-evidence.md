@@ -1666,3 +1666,62 @@ build/archive receipts and the unchanged 95% coverage gate remain open.
 | Minimum Linux sanitizer lifecycle log | `2651e791861d75df07b5094f91ca76aefe797d2faec2ea734ca5481b57ee5175` |
 | Current Linux nine-case log | `61e18de459e671a2dd3d28ed0575351b0c4a5c7bfb66e643863183666cf26013` |
 | Minimum Linux sanitizer nine-case log | `dd6c34b90b4160a7b2cc12a11653a9c3d00e3c04a9cdb5da346e7e27c841f048` |
+
+## Native output failure and writer ownership
+
+A failed native output write or exhausted output reservation marks the shared
+writer unhealthy, rejects later output and signals the input-lifetime owner.
+That owner retains one 750 ms cooperative grace even when stdin remains open
+or repeated failures arrive. Output failure never invokes concurrent SDK
+destruction. The writer joins its thread even when the thread has already
+marked itself stopped. Ordinary and exception-enabled stream failures use the
+same path; each writer signals channel failure at most once.
+
+The native regression reproduced an abort from destruction of an unjoined
+writer. Both stream modes now return failure normally. A separate owned-child
+test keeps stdin open and repeats failure signals; the child still exits and
+is reaped within one second. The SDK test redirects stdout to `/dev/full` and
+keeps its command input open. The preceding SDK host exceeded one second and
+required test cleanup. The corrected normal and sanitizer hosts exit with
+failure in 806 ms and 919 ms, including process startup. This test covers
+ready-frame output failure before controller initialization.
+
+Both Linux toolchain lanes pass ten real-SDK/native-corpus cases in 8.8 and
+14.7 seconds against fresh owned lighting peers, including this regression,
+pending-read owner loss, request-ID retirement, one-shot native/Runtime
+operations and pipe pressure. Fixture-owned peers are reaped. The default gate passes 169 checks with 27 excluded; ExDoc, both SDK builds,
+six CTest executables in each configuration and 15 advisory queries pass.
+ASan/UBSan and leak detection remain enabled; forced lifetime termination
+does not establish callback destruction or child leak finalization. Normal
+controller close retains the sanitizer checks. The preceding full lifecycle
+workload remains identified by its preceding binary digests.
+
+The last full coverage run passes its tests but reports 89.0%, below the
+unchanged 95% requirement. Native control interruptibility, report-counter
+exhaustion escalation, F11–F13, full callback/resource and fault matrices,
+complete software-run orchestration and fresh build/archive receipts remain
+open.
+
+| Output-failure artifact | SHA-256 |
+| --- | --- |
+| Input lifetime | `9c42537441f8b3afbd23a3e22899bb9c1cc92373882e5bc570e9b041b3e7a614` |
+| Native protocol header | `302a5d1fd30fba074caf50ab7493fa4e7b5f1e263c56f710427e5430b6ab8dc4` |
+| Native protocol | `416cf7a857e4734613df04decd19940b7d7897bd6edc8d7bc3bff368b994ca67` |
+| Native entry point | `b98da65e9cc751acb317e114b2cee5c11ed1ce40671ba4870785780096d00795` |
+| Native controller tests | `11938776366bd2206c5b939a25b7f38309599c32f5e5732f5c27431ad5565d0f` |
+| SDK output-failure test | `548776efd47e3f236771b03f64bbbe68e2475a03593a1b988460efa3fcd98482` |
+| Current native host | `d3d74b75c3fd55afda0954781045e66a45ea08c329a697923034a8a938c7e632` |
+| Minimum sanitizer native host | `7f8e2a16c007a00d5e9e4509d660acdfcb2f74f673eba289554b53dda232232e` |
+| Current contract driver | `96173bba653cd321424232e0c0c64a8171416dc85eaea29341391e8b062ffe3f` |
+| Minimum sanitizer contract driver | `3c267bcea35f6474440a6582f354d8cc0c116c8e0ef1747a8d054ce11b3d4aa0` |
+| Current output harness | `fefbf5b4a950d081b410ca83cdd4e6b62bc676ed19c74070c9eea8374750d2b7` |
+| Minimum sanitizer output harness | `05cd37b2761e6710f6ceb41c61d5a13028fbfcd3b9c75435b8d4dee1634989ce` |
+| Failing writer-destruction log | `2c72eacce15b9cf69d42dee11ebdc84385a6112b440eaccb76e45d149bb60ecf` |
+| Failing SDK output log | `1c18252900ac7460c2e08f6fabae94de4cfbba7d2469068e51051a465290d6e0` |
+| Native CTest and SDK output log | `f637ca081765d6d7270ec8547d8857199747ebb803d8357a8c4dd962f504c4ea` |
+| Native build log | `58cb1fe3e81fef3b36b9541416e486266cee32ed808c4267e5d5b0f51fac9ffa` |
+| Advisory audit log | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
+| Current Linux ten-case log | `a8d8935c2b00a655901f817c74dbc48b53ccbf0a3e4e900c7423f2f0ac154ad4` |
+| Minimum Linux ten-case log | `5b5a51780caa4b80a824dc3c71288dac174885fea8bd0de65895fd7993fc3ba1` |
+| Default gate log | `eb88afcb8a71329770b8897e3416feba83ffee2d98d14cfb5cc9ad3a9f461704` |
+| Last full coverage log | `689557793bf71675007004d7aea485a21f9a62be10285e4836cd1f25b1618500` |

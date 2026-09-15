@@ -140,7 +140,7 @@ class HostProtocol final {
 };
 
 int RunHost(ControllerBackend &backend, std::istream &input,
-            std::ostream &output);
+            std::ostream &output, std::function<void()> channel_failure = {});
 
 } // namespace wotex::matter
 

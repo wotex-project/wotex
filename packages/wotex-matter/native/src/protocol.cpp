@@ -730,8 +730,8 @@ bool ReadLineBounded(std::istream &input, std::string &line) {
 
 class BoundedOutput final {
  public:
-  explicit BoundedOutput(std::ostream &output)
-      : output_(output) {
+  BoundedOutput(std::ostream &output, std::function<void()> failure)
+      : output_(output), failure_(std::move(failure)) {
     worker_ = std::thread([this] { Write(); });
   }
 
@@ -753,9 +753,6 @@ class BoundedOutput final {
   void Stop() {
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (stopping_) {
-        return;
-      }
       stopping_ = true;
     }
     condition_.notify_one();
@@ -779,18 +776,22 @@ class BoundedOutput final {
   bool Enqueue(const std::string &frame, Class classification,
                std::size_t maximum_frames, std::size_t maximum_bytes,
                std::size_t maximum_frame_bytes) {
-    const std::size_t bytes = frame.size() + 1;
-    if (frame.empty() || bytes > maximum_frame_bytes) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!healthy_ || stopping_) {
       return false;
     }
-    std::lock_guard<std::mutex> lock(mutex_);
+    if (frame.empty() || frame.size() >= maximum_frame_bytes) {
+      Fail();
+      return false;
+    }
+    const std::size_t bytes = frame.size() + 1;
     std::size_t *frames = classification == Class::Report ? &report_frames_
         : classification == Class::Control ? &control_frames_ : &reply_frames_;
     std::size_t *retained = classification == Class::Report ? &report_bytes_
         : classification == Class::Control ? &control_bytes_ : &reply_bytes_;
-    if (!healthy_ || stopping_ || *frames >= maximum_frames ||
-        *retained > maximum_bytes || bytes > maximum_bytes - *retained) {
-      healthy_ = false;
+    if (*frames >= maximum_frames || *retained > maximum_bytes ||
+        bytes > maximum_bytes - *retained) {
+      Fail();
       return false;
     }
     ++*frames;
@@ -798,6 +799,21 @@ class BoundedOutput final {
     pending_.push_back({frame, classification});
     condition_.notify_one();
     return true;
+  }
+
+  // Called with mutex_ held. The callback only signals the lifetime owner;
+  // it must not wait for this writer or invoke controller destruction.
+  void Fail() {
+    if (!healthy_) {
+      return;
+    }
+    healthy_ = false;
+    stopping_ = true;
+    pending_.clear();
+    condition_.notify_one();
+    if (failure_) {
+      failure_();
+    }
   }
 
   void Write() {
@@ -816,8 +832,14 @@ class BoundedOutput final {
         pending_.pop_front();
       }
 
-      output_ << pending.frame << '\n';
-      output_.flush();
+      bool written = false;
+      try {
+        output_ << pending.frame << '\n';
+        output_.flush();
+        written = static_cast<bool>(output_);
+      } catch (const std::ios_base::failure &) {
+        // Exception-enabled streams share the ordinary failed-write path.
+      }
 
       std::lock_guard<std::mutex> lock(mutex_);
       const std::size_t bytes = pending.frame.size() + 1;
@@ -831,16 +853,15 @@ class BoundedOutput final {
         --reply_frames_;
         reply_bytes_ -= bytes;
       }
-      if (!output_) {
-        healthy_ = false;
-        stopping_ = true;
-        pending_.clear();
+      if (!written) {
+        Fail();
         return;
       }
     }
   }
 
   std::ostream &output_;
+  std::function<void()> failure_;
   mutable std::mutex mutex_;
   std::condition_variable condition_;
   std::deque<PendingOutput> pending_;
@@ -1382,9 +1403,9 @@ void HostProtocol::Close() {
 }
 
 int RunHost(ControllerBackend &backend, std::istream &input,
-            std::ostream &output) {
+            std::ostream &output, std::function<void()> channel_failure) {
   HostProtocol protocol(backend);
-  BoundedOutput writer(output);
+  BoundedOutput writer(output, std::move(channel_failure));
   protocol.SetOutputSink([&writer](const std::string &frame) {
     return frame.find("\"event\":\"subscription_report\"") !=
             std::string::npos
@@ -1397,7 +1418,7 @@ int RunHost(ControllerBackend &backend, std::istream &input,
 
   std::string line;
   while (ReadLineBounded(input, line)) {
-    if (!input && line.empty()) {
+    if (!writer.healthy() || (!input && line.empty())) {
       break;
     }
     ProcessResult result = protocol.ProcessLine(line);

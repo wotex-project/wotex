@@ -13,8 +13,8 @@ namespace wotex::matter {
 
 // Observes the non-owned stdin descriptor without consuming command bytes.
 // The monitor remains alive through controller destruction. EOF starts a
-// 750 ms cooperative cleanup grace; a blocked SDK or output writer then loses
-// its entire process. This fallback cannot claim callback destruction or leak
+// 750 ms cooperative cleanup grace, as does an explicit channel failure.
+// A blocked SDK or output writer then loses its entire process. This fallback cannot claim callback destruction or leak
 // finalization. Normal shutdown joins the one owned monitoring thread.
 class InputLifetime final {
  public:
@@ -28,6 +28,16 @@ class InputLifetime final {
     }
     condition_.notify_one();
     worker_.join();
+  }
+
+  // May be called from SDK or writer threads. The first failure starts one
+  // bounded grace; repeated failures cannot extend it or run SDK cleanup.
+  void Fail() {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      failed_ = true;
+    }
+    condition_.notify_one();
   }
 
   InputLifetime(const InputLifetime &) = delete;
@@ -44,6 +54,9 @@ class InputLifetime final {
         if (stopping_) {
           return;
         }
+        if (failed_) {
+          break;
+        }
       }
       const int result = poll(&descriptor, 1, 25);
       if ((result < 0 && errno == EINTR) || result == 0 ||
@@ -51,12 +64,12 @@ class InputLifetime final {
            (descriptor.revents & (POLLHUP | POLLERR | POLLNVAL)) == 0)) {
         continue;
       }
-      std::unique_lock<std::mutex> lock(mutex_);
-      if (!condition_.wait_for(lock, std::chrono::milliseconds(750),
-                                [this] { return stopping_; })) {
-        std::_Exit(EXIT_FAILURE);
-      }
-      return;
+      break;
+    }
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (!condition_.wait_for(lock, std::chrono::milliseconds(750),
+                              [this] { return stopping_; })) {
+      std::_Exit(EXIT_FAILURE);
     }
   }
 
@@ -64,6 +77,7 @@ class InputLifetime final {
   std::mutex mutex_;
   std::condition_variable condition_;
   bool stopping_{false};
+  bool failed_{false};
   std::thread worker_;
 };
 

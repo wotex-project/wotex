@@ -10,5 +10,6 @@ int main() {
   std::signal(SIGPIPE, SIG_IGN);
   wotex::matter::InputLifetime lifetime(STDIN_FILENO);
   wotex::matter::SdkControllerBackend controller;
-  return wotex::matter::RunHost(controller, std::cin, std::cout);
+  return wotex::matter::RunHost(controller, std::cin, std::cout,
+                                [&lifetime] { lifetime.Fail(); });
 }

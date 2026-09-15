@@ -1,8 +1,12 @@
 #include "wotex_matter/protocol.hpp"
 #include "wotex_matter/input_lifetime.hpp"
 
+#include <atomic>
 #include <cassert>
 #include <csignal>
+#include <fcntl.h>
+#include <iostream>
+#include <streambuf>
 #include <sstream>
 #include <string>
 #include <sys/wait.h>
@@ -164,6 +168,110 @@ void TestRequestCounterAndReservedClose() {
   }
 }
 
+class DelayedEof final : public std::streambuf {
+ protected:
+  int_type underflow() override {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    return traits_type::eof();
+  }
+};
+
+void TestFailedOutputCleanup() {
+  for (const bool exceptions : {false, true}) {
+    // Give the writer time to fail before RunHost reaches Stop. Exception-
+    // enabled streams must also join their writer and signal failure once.
+    const pid_t child = fork();
+    assert(child >= 0);
+    if (child == 0) {
+      RecordingBackend backend;
+      DelayedEof buffer;
+      std::istream input(&buffer);
+      std::ostringstream output;
+      if (exceptions) {
+        output.exceptions(std::ios_base::badbit | std::ios_base::failbit);
+      }
+      try {
+        output.setstate(std::ios_base::badbit);
+      } catch (const std::ios_base::failure &) {
+      }
+      std::atomic<unsigned> failures{0};
+      const int result = wotex::matter::RunHost(
+          backend, input, output, [&failures] { ++failures; });
+      assert(result == EXIT_FAILURE && failures == 1);
+      std::_Exit(result);
+    }
+    int status = 0;
+    assert(waitpid(child, &status, 0) == child);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == EXIT_FAILURE);
+  }
+}
+
+std::int64_t AssertReapedFailure(pid_t child) {
+  const auto started = std::chrono::steady_clock::now();
+  int status = 0;
+  bool reaped = false;
+  while (std::chrono::steady_clock::now() - started < std::chrono::seconds(1)) {
+    const pid_t result = waitpid(child, &status, WNOHANG);
+    if (result == child) {
+      reaped = true;
+      break;
+    }
+    assert(result == 0 || (result == -1 && errno == EINTR));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  if (!reaped) {
+    kill(child, SIGKILL);
+    waitpid(child, &status, 0);
+  }
+  assert(reaped && WIFEXITED(status) && WEXITSTATUS(status) == EXIT_FAILURE);
+  return std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now() - started).count();
+}
+
+void TestExplicitChannelFailure() {
+  int input[2];
+  assert(pipe(input) == 0);
+  const pid_t child = fork();
+  assert(child >= 0);
+  if (child == 0) {
+    wotex::matter::InputLifetime lifetime(input[0]);
+    // Keep both input ends open: only explicit failure can start termination.
+    // Repeated failure must not extend the first grace.
+    for (unsigned attempt = 0; attempt < 50; ++attempt) {
+      lifetime.Fail();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    std::_Exit(42);
+  }
+  AssertReapedFailure(child);
+  close(input[0]);
+  close(input[1]);
+}
+
+void TestSdkFailedOutput(const char *executable) {
+  int input[2];
+  assert(pipe(input) == 0);
+  const pid_t child = fork();
+  assert(child >= 0);
+  if (child == 0) {
+    const int full = open("/dev/full", O_WRONLY);
+    assert(full >= 0 && dup2(input[0], STDIN_FILENO) == STDIN_FILENO &&
+           dup2(full, STDOUT_FILENO) == STDOUT_FILENO);
+    close(full);
+    close(input[0]);
+    close(input[1]);
+    execl(executable, executable, static_cast<char *>(nullptr));
+    std::_Exit(42);
+  }
+  // The SDK host cannot consume another command or observe stdin EOF. Its
+  // ready-frame write fails, and the host must still release within one second.
+  close(input[0]);
+  const auto elapsed = AssertReapedFailure(child);
+  close(input[1]);
+  std::cout << "{\"status\":\"passed\",\"cleanup_ms\":" << elapsed
+            << ",\"owned_processes_after_grace\":0}\n";
+}
+
 void TestInputLifetime() {
   int input[2];
   assert(pipe(input) == 0);
@@ -217,12 +325,19 @@ void TestInputLifetime() {
 
 } // namespace
 
-int main() {
+int main(int argc, char **argv) {
+  if (argc == 2) {
+    TestSdkFailedOutput(argv[1]);
+    return 0;
+  }
+  assert(argc == 1);
   TestParser();
   TestFrameDepthBoundary();
   TestLifecycleAndFabricAdmission();
   TestStartupFailureAndEofCleanup();
   TestRequestCounterAndReservedClose();
   TestInputLifetime();
+  TestFailedOutputCleanup();
+  TestExplicitChannelFailure();
   return 0;
 }
