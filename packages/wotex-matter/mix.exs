@@ -97,7 +97,8 @@ defmodule WotexMatter.MixProject do
       "test.cover": ["coveralls"],
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build",
       "wotex.native.build": "wotex.matter.native.build",
-      "wotex.software.build": "wotex.matter.software.build"
+      "wotex.software.build": "wotex.matter.software.build",
+      "wotex.software.run": "wotex.matter.software.run"
     ]
   end
 

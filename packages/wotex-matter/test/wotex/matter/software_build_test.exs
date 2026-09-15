@@ -50,7 +50,11 @@ defmodule Wotex.Matter.SoftwareBuildTest do
   end
 
   test "WMA-B01 Mix entry points require their source project before any build", %{root: root} do
-    tasks = [Mix.Tasks.Wotex.Matter.Native.Build, Mix.Tasks.Wotex.Matter.Software.Build]
+    tasks = [
+      Mix.Tasks.Wotex.Matter.Native.Build,
+      Mix.Tasks.Wotex.Matter.Software.Build,
+      Mix.Tasks.Wotex.Matter.Software.Run
+    ]
 
     for task <- tasks do
       assert_raise Mix.Error, "invalid_arguments", fn -> task.run([]) end
@@ -151,7 +155,12 @@ defmodule Wotex.Matter.SoftwareBuildTest do
 
     peers = ~w(bin/chip-lighting-app bin/chip-all-clusters-app bin/chip-bridge-app)
 
-    for name <- harnesses ++ peers,
+    roots =
+      ~w(paa/Chip-Test-PAA-FFF1-Cert.der paa/Chip-Test-PAA-NoVID-Cert.der paa/Chip-Test-PAA-NoVID-ToResignPAIs-Cert.der)
+
+    File.mkdir!(Path.join(workspace, "paa"))
+
+    for name <- harnesses ++ peers ++ roots,
         do: File.write!(Path.join(workspace, name), "fixture software executable")
 
     software = %{
@@ -162,7 +171,7 @@ defmodule Wotex.Matter.SoftwareBuildTest do
 
     assert SoftwareManifest.verify_local(source, workspace, software, :software) == software
 
-    for name <- harnesses do
+    for name <- harnesses ++ roots do
       path = Path.join(workspace, name)
       File.rm!(path)
 
@@ -173,7 +182,7 @@ defmodule Wotex.Matter.SoftwareBuildTest do
       File.write!(path, "fixture software executable")
     end
 
-    incomplete = %{software | "files" => Map.drop(software["files"], harnesses)}
+    incomplete = %{software | "files" => Map.drop(software["files"], harnesses ++ roots)}
 
     assert_raise Mix.Error, "manifest_files", fn ->
       SoftwareManifest.verify_local(source, workspace, incomplete, :software)
@@ -204,9 +213,11 @@ defmodule Wotex.Matter.SoftwareBuildTest do
 
     for {name, value} <- [
           {"coveralls.json", ~s({"coverage_options":{"minimum_coverage":1}})},
-          {".check.exs", "[tools: [ex_unit: false]]"}
+          {".check.exs", "[tools: [ex_unit: false]]"},
+          {"priv/schema.json", ~s({"type":"string"})}
         ] do
       configuration = Path.join(source, name)
+      File.mkdir_p!(Path.dirname(configuration))
       File.write!(configuration, value)
 
       assert_raise Mix.Error, "manifest_mismatch", fn ->
@@ -225,6 +236,28 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     invalid = Path.join(root, "invalid.json")
     File.write!(invalid, ~s({"status":"failed","status":"ready"}))
     assert_raise Mix.Error, "invalid_manifest", fn -> SoftwareManifest.read(invalid) end
+  end
+
+  test "software execution rejects absent or mismatched build receipts before acquiring resources",
+       %{root: root} do
+    workspace = Path.join(root, "run-workspace")
+    File.mkdir!(workspace)
+    marker = Path.join(workspace, "keep")
+    File.write!(marker, "owned input")
+
+    assert_raise Mix.Error, "invalid_manifest", fn ->
+      SoftwareFixture.main(:run, ["--workspace", workspace])
+    end
+
+    SoftwareManifest.write(Path.join(workspace, "workspace-manifest.json"), %{"status" => "ready"})
+
+    assert_raise Mix.Error, "manifest_mismatch", fn ->
+      SoftwareFixture.main(:run, ["--workspace", workspace])
+    end
+
+    assert File.read!(marker) == "owned input"
+    refute File.exists?(workspace <> ".lock")
+    assert Path.wildcard(Path.join(workspace, "run-*")) == []
   end
 
   test "WMA-B01 commands bound output timeout and environment without a shell", %{root: root} do

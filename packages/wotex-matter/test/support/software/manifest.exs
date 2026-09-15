@@ -8,6 +8,7 @@ defmodule Wotex.Matter.SoftwareManifest do
     "lib/**/*.ex",
     "native/**/*",
     "priv/matter_bridge.py",
+    "priv/**/*.json",
     "test/**/*.ex",
     "test/**/*.exs",
     "test/support/software/**/*",
@@ -174,7 +175,10 @@ defmodule Wotex.Matter.SoftwareManifest do
           "bin/wotex-matter-controller-test-sanitized",
           "bin/chip-lighting-app",
           "bin/chip-all-clusters-app",
-          "bin/chip-bridge-app"
+          "bin/chip-bridge-app",
+          "paa/Chip-Test-PAA-FFF1-Cert.der",
+          "paa/Chip-Test-PAA-NoVID-Cert.der",
+          "paa/Chip-Test-PAA-NoVID-ToResignPAIs-Cert.der"
         ]
 
   @spec file_hashes(String.t(), String.t()) :: map()

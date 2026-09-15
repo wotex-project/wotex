@@ -406,6 +406,20 @@ defmodule Wotex.Matter.SoftwareBuild do
       File.chmod!(Path.join(context.workspace, "bin/" <> name), 0o500)
     end
 
+    File.mkdir!(Path.join(context.workspace, "paa"))
+
+    for name <-
+          ~w(Chip-Test-PAA-FFF1-Cert.der Chip-Test-PAA-NoVID-Cert.der Chip-Test-PAA-NoVID-ToResignPAIs-Cert.der) do
+      destination = Path.join(context.workspace, "paa/" <> name)
+
+      File.cp!(
+        Path.join(context.workspace, "sdk/credentials/test/attestation/" <> name),
+        destination
+      )
+
+      File.chmod!(destination, 0o400)
+    end
+
     extensions
   end
 

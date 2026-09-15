@@ -150,8 +150,10 @@ The native and software build tasks are implemented with Mix-owned download,
 advisory, hash, compiler and cleanup operations. Workspace admission and reuse
 have deterministic tests; executed build identities are recorded in
 [executable evidence](../provenance/executable-evidence.md). The software run
-task and the remaining P09 peer, stress, matrix and archive acceptance work are
-still required. Building the peer executables does not execute their workflows.
+task verifies that workspace and executes the required scenario inventory on
+the pinned current and minimum BEAM images. Complete P09 peer, stress, resource
+census, matrix and archive acceptance still requires passing receipts for the
+final source. Building the peer executables does not execute their workflows.
 The software build also produces normal and sanitizer `wotex-matter-flow-host`
 test executables. Their source and binary hashes belong to the software receipt;
 the native-only build does not require these process-flow fixtures.
@@ -164,6 +166,11 @@ sources and the named native verification scripts.
 The source identity also binds check, coverage, formatting and Mix configuration
 and the archive/application verification scripts. Changing acceptance criteria
 invalidates workspace reuse even when native source files remain unchanged.
+Three public attestation roots are exported from the pinned SDK test credentials
+and hashed in the software workspace receipt. Test-only trust directories are
+copied into the private run directory; production execution requires caller-supplied
+trust. Source identity includes embedded JSON schemas used by development
+dependencies.
 
 The entry points are `mix wotex.native.build --workspace ABS`,
 `mix wotex.software.build --workspace ABS` and
@@ -185,7 +192,7 @@ facilities, missing responses, failed assertions or cleanup failure. Do not
 convert a failed setup to an ExUnit skip. Existing hardware tests require separate
 explicit target configuration and are never selected by this runner.
 
-Use this command contract once the runner is implemented:
+Build and run the software fixture explicitly:
 
 ```sh
 mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
@@ -209,8 +216,8 @@ source and inventory digests, exact BEAM versions and the ExUnit seed. Changed
 source during execution fails acceptance. Missing,
 excluded, skipped, failed, duplicate or unexpected software cases fail acceptance.
 Executing a hardware case also fails acceptance. Fixture and exception contents
-do not enter the structured receipt. This harness does not own peer startup or
-complete the software run task.
+do not enter the structured receipt. This harness records case execution;
+the software run task owns peer setup and the enclosing container lifetime.
 
 `SoftwarePeer` starts an explicitly configured peer through an asynchronous
 `SoftwareCommand` owner. Readiness uses a bounded marker from the pinned peer's
@@ -233,6 +240,19 @@ an acknowledged typed ACL write. Any setup or callback failure unwinds the
 owned peers in reverse order. This helper requires the caller to supply the
 pinned executables, public test roots and an isolated network namespace; it
 does not implement workspace verification or the complete software run task.
+
+`SoftwareFixture` holds the workspace lock while `SoftwareRun` rechecks source,
+artifacts and development dependencies after execution. Each BEAM lane uses its own generated
+Docker container and bridge network, read-only source/artifact mounts, private
+state and a 90-minute absolute deadline. Command admission reserves 30 seconds
+for cleanup; individual command timeouts cannot extend the lane budget.
+A separate cleanup owner monitors the initiating process
+and removes only that lane's container and network, including after caller
+death. Cleanup verifies absence before the enclosing run can pass. Successful
+command exit alone is insufficient: the lane must produce a passing receipt
+with the expected source digest and exact BEAM versions. The final receipt
+records both lane results, hashes and the dependency mode. Explicit development
+path dependencies are identified separately from released Hex dependencies.
 
 ## Verification and commit procedure
 

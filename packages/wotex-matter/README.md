@@ -70,7 +70,11 @@ must be available.
 The explicit lighting, thermostat and bridge ExUnit workflows have passed in
 both Linux BEAM lanes; their exact cohorts are recorded in
 [executable evidence](docs/provenance/executable-evidence.md).
-`mix wotex.software.run` remains specified implementation work. Upstream SDK
+`mix wotex.software.run --workspace /absolute/disposable/workspace` verifies the
+software build and executes the required suite in separate current and minimum
+BEAM containers with owned fixture state, networks and cleanup. Passing command
+implementation tests does not establish complete P09 acceptance; final-source
+software, resource, coverage and archive receipts remain required. Upstream SDK
 Python is used only while generating and building native SDK sources.
 
 ## Implemented profile

@@ -2655,3 +2655,57 @@ build receipt, C09 resource census and 95% coverage gate remain separate work.
 | Default gate | `e2e01f2964e2cd5888f2ef3ea7fa235cbcc49423d76869c44c580b13212556ed` |
 | Minimum focused gate | `4b4e58cd736abcd8bc7772cb0fa4affb5e07d754884024ac767be43c4fae201f` |
 | ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+
+## Verified-workspace software run command
+
+`mix wotex.software.run --workspace ABS` admits a matching software build receipt
+under the workspace lock. It runs separate current Elixir 1.20.2/OTP 29.0.4 and
+minimum Elixir 1.18.4/OTP 27.3.4.15 Docker lanes. The minimum lane selects the
+ASan/UBSan native binaries with leak detection enabled. Each lane owns a private
+bridge network, container, run directory and peer cohort. Source and native
+artifacts are mounted read-only. Command budgets share a 90-minute absolute
+lane deadline with 30 seconds reserved for cleanup.
+
+The runner verifies architecture and procfs, resolves locked dependencies,
+compiles the source and executes the required-mode suite. Its final receipt
+requires matching source and BEAM-version fields, successful owned-resource
+cleanup and unchanged source, build artifacts and development dependencies.
+Development path dependencies retain their source identities and an explicit
+mode label. Their identity includes embedded JSON schemas. These labels record
+which resolution path runs; injected orchestration tests establish neither
+released Hex availability nor protocol interoperability.
+
+The software build exports and hashes three public SDK attestation roots with
+the native and peer executables. Reuse rejects missing or changed test roots.
+Runtime fixture trust is copied into private run directories; this introduces no
+production trust default. The public run command rejects the previous complete
+build workspace as `manifest_mismatch` before container startup and releases its
+workspace lock. A fresh native build and successful real two-lane run receipt
+for this source remain required.
+
+Four injected Docker-command tests establish cleanup after an ordinary failure
+and caller death, preservation of unrelated resources, both exact lane identities
+on success, and rejection of missing, failed, wrong-source or wrong-version
+receipts despite successful command exit. Workspace tests also reject absent or
+mismatched manifests before fixture execution. All 15 runner/build tests pass on
+the minimum toolchain in 2.2 seconds. The current
+`WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes 205 checks with 33 excluded
+in 69.7 seconds. Both formatters and ExDoc pass with warnings as errors where
+applicable. Native C++ sources remain `9a4d124`; complete P09/C09 acceptance and
+the unchanged 95% coverage floor are not established by this command package.
+
+| Software-run artifact | SHA-256 |
+| --- | --- |
+| Mix run entry point | `de7337d9c74abc3e3cc3aee9aa2903ab742e1d2a146018eef8c2be9ca07819c6` |
+| Container/network runner | `0db497f21790ff0bad295a556fd291c8dd68b13009899cb7f1e8dd545774a6b2` |
+| In-container scenario invocation | `97a0df8b6829dc7a4f704f253ac3ddefdbe72e7f35ae972aa8b4179d32088a0b` |
+| Workspace entry and locking | `346578d0b394842583fc4793f5a8fb17e374e6c810524ead7a88fc2478d0da9a` |
+| Build exports | `71c182bca6a73a77ad4ca1d5f404abb2beeaaa957fb6053becbf762937ef33bb` |
+| Build/source receipt validation | `b1fe253640214f381bfa2d7572e77045b46d6191ff6f6f9f3b20ac14621f30fd` |
+| Runner assertions | `46b2568a2f649fdd8f34c7c408244b5de2b3ee17429642f45914cac74cdc0e20` |
+| Workspace assertions | `15b14c5cede7c8acbc0e4b2eb2ac0ef90cc61e4cfde4f5987f77bb5d7ad53a8e` |
+| Default gate | `3e4c96795abc9205df9f6b0cd070bee688e843e7d71064c222a27766576eb063` |
+| Minimum focused gate | `c6affb0c20d1bd7be47bd49c33fabd3e6f89a5d3530c2122e6405a32ef43d770` |
+| Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+| Public command stale-workspace rejection | `cc475649d7905440fbfdaf00c6d5c19280f4bbc61701fb9cb9686544ebcefe9b` |

@@ -1,12 +1,13 @@
 Code.require_file("manifest.exs", __DIR__)
 Code.require_file("build.exs", __DIR__)
+Code.require_file("run.exs", __DIR__)
 
 defmodule Wotex.Matter.SoftwareFixture do
   @moduledoc false
 
-  alias Wotex.Matter.{SoftwareBuild, SoftwareManifest}
+  alias Wotex.Matter.{SoftwareBuild, SoftwareManifest, SoftwareRun}
 
-  @spec main(:native_build | :software_build, [String.t()]) :: :ok
+  @spec main(:native_build | :software_build | :run, [String.t()]) :: :ok
   def main(operation, arguments) when operation in [:native_build, :software_build] do
     root = File.cwd!()
     workspace = SoftwareManifest.arguments(arguments, root)
@@ -22,6 +23,20 @@ defmodule Wotex.Matter.SoftwareFixture do
 
     Mix.shell().info("Matter #{operation} completed: #{workspace}")
     :ok
+  end
+
+  def main(:run, arguments) do
+    root = File.cwd!()
+    workspace = SoftwareManifest.arguments(arguments, root)
+    manifest = SoftwareManifest.read(Path.join(workspace, "workspace-manifest.json"))
+    watcher = acquire(workspace)
+
+    try do
+      SoftwareManifest.verify_local(root, workspace, manifest, :software)
+      SoftwareRun.run(root, workspace)
+    after
+      release(watcher)
+    end
   end
 
   defp prepare(workspace) do
