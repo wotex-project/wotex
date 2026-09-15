@@ -1,6 +1,7 @@
 defmodule Wotex.CoAP do
   @moduledoc """
-  Executes bounded Constrained Application Protocol exchanges over UDP or DTLS.
+  Executes bounded Constrained Application Protocol exchanges over UDP, DTLS,
+  or an explicitly selected native OSCORE session.
 
   `Wotex.CoAP` is the package facade for connection lifecycle and native
   request construction. `connect/1` starts one caller-scoped
@@ -17,14 +18,16 @@ defmodule Wotex.CoAP do
   numeric IPv4 or IPv6 destination and owns routing, authorization,
   supervision, and credential policy. Explicit `coaps` sessions use Datagram
   Transport Layer Security (DTLS) 1.2 with validated PSK or PKI values from
-  `Wotex.CoAP.Security`. Object Security for Constrained RESTful Environments
-  (OSCORE), multicast, and extended tokens remain unsupported. The separate
-  compatibility `receive/2` callback is unsupported because `send/2` returns
-  its correlated response directly.
+  `Wotex.CoAP.Security`. Explicit `coap` sessions with an OSCORE credential and
+  verified `native_backend` use the pinned native owner for unary exchanges.
+  Multicast and extended tokens remain unsupported. The separate compatibility
+  `receive/2` callback is unsupported because `send/2` returns its correlated
+  response directly.
   """
 
   import Kernel, except: [send: 2]
-  alias Wotex.CoAP.{Codec, Connection, Error, Message}
+  alias Wotex.CoAP.{Codec, Connection, Error, Message, Security}
+  alias Wotex.CoAP.Native.Connection, as: NativeConnection
   @methods %{get: 1, post: 2, put: 3, delete: 4}
   @formats %{text: 0, link_format: 40, octet_stream: 42, json: 50, cbor: 60}
   @type session :: %{pid: pid(), timeout: pos_integer()}
@@ -108,20 +111,42 @@ defmodule Wotex.CoAP do
       discovery_capable: true
     }
 
-  @doc "Explicitly opens an owned UDP or DTLS session using validated scheme and security options."
+  @doc "Explicitly opens an owned UDP, DTLS, or native OSCORE session."
   @spec connect(keyword()) :: {:ok, session()} | {:error, term()}
   def connect(opts) do
-    with {:ok, config} <- Connection.config(opts),
-         {:ok, pid} <- Connection.start_link(opts),
-         do: {:ok, %{pid: pid, timeout: config.timeout}}
+    case connection_adapter(opts) do
+      {:ok, :datagram, options} ->
+        with {:ok, config} <- Connection.config(options),
+             {:ok, pid} <- Connection.start_link(options),
+             do: {:ok, %{pid: pid, timeout: config.timeout}}
+
+      {:ok, :native, options} ->
+        with {:ok, config} <- NativeConnection.config(options),
+             {:ok, pid} <- NativeConnection.start(options),
+             do: {:ok, %{pid: pid, timeout: config.timeout}}
+
+      {:error, %Error{}} = error ->
+        error
+    end
   end
 
   @doc "Performs a synchronous exchange from a legacy-shaped method/path/payload map."
   @spec send(session(), map()) :: {:ok, Message.t()} | {:error, Error.t()}
   def send(session, input) do
     with :ok <- session(session),
-         {:ok, message} <- message(input),
-         do: Connection.transfer(session.pid, message, session.timeout)
+         {:ok, message} <- message(input) do
+      case session_adapter(session.pid) do
+        :native ->
+          NativeConnection.request(
+            session.pid,
+            native_request(input, message),
+            session.timeout
+          )
+
+        :datagram ->
+          Connection.transfer(session.pid, message, session.timeout)
+      end
+    end
   end
 
   @doc "Gets a complete binary representation using explicit native request options."
@@ -194,7 +219,12 @@ defmodule Wotex.CoAP do
   @doc "Closes the owned socket idempotently."
   @spec disconnect(session()) :: :ok | {:error, Error.t()}
   def disconnect(value) do
-    with :ok <- session(value), do: Connection.close(value.pid)
+    with :ok <- session(value) do
+      case NativeConnection.close(value.pid) do
+        {:error, %Error{code: :invalid_session}} -> Connection.close(value.pid)
+        result -> result
+      end
+    end
   end
 
   @doc "Compatibility receive is unsupported because send returns the correlated response."
@@ -325,4 +355,68 @@ defmodule Wotex.CoAP do
   defp format(nil), do: {:ok, nil}
   defp format(value) when is_integer(value) and value in 0..65_535, do: {:ok, value}
   defp format(value), do: Map.fetch(@formats, value)
+
+  defp connection_adapter(options) do
+    with {:ok, values} <- connection_options(options, %{}) do
+      case Map.get(values, :security) do
+        %Security{mode: :oscore} -> native_connection_options(options, values)
+        _ -> {:ok, :datagram, options}
+      end
+    end
+  end
+
+  defp connection_options([], values), do: {:ok, values}
+
+  defp connection_options([{key, value} | rest], values) when is_atom(key) do
+    if Map.has_key?(values, key),
+      do: {:error, Error.new(:invalid_options)},
+      else: connection_options(rest, Map.put(values, key, value))
+  end
+
+  defp connection_options(_, _), do: {:error, Error.new(:invalid_options)}
+
+  defp native_connection_options(options, values) do
+    if Map.get(values, :scheme, :coap) == :coap do
+      {:ok, :native, Keyword.delete(options, :scheme)}
+    else
+      {:error, Error.new(:unsupported_security)}
+    end
+  end
+
+  defp session_adapter(pid) do
+    case :erlang.process_info(pid, {:dictionary, :wotex_coap_owner}) do
+      {{:dictionary, :wotex_coap_owner}, {NativeConnection, generation, admission}}
+      when is_integer(generation) and is_reference(admission) ->
+        :native
+
+      _ ->
+        :datagram
+    end
+  end
+
+  defp native_request(input, message) do
+    request = %{
+      method: input.method,
+      path: input.path,
+      confirmable: message.type == :con
+    }
+
+    request
+    |> put_format(:accept, Map.get(input, :accept))
+    |> put_format(:content_format, Map.get(input, :content_format))
+    |> put_payload(input)
+  end
+
+  defp put_format(request, _, nil), do: request
+
+  defp put_format(request, key, value) do
+    {:ok, value} = format(value)
+    Map.put(request, key, value)
+  end
+
+  defp put_payload(request, input) do
+    if Map.has_key?(input, :payload),
+      do: Map.put(request, :payload, Map.fetch!(input, :payload)),
+      else: request
+  end
 end

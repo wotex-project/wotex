@@ -3,7 +3,7 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.CoAP.{Error, Security}
+  alias Wotex.CoAP.{Error, Message, Security}
   alias Wotex.CoAP.Native.{Admission, Connection}
 
   @revision "7cf7465b784baded4de183290c547d582becfd28"
@@ -86,6 +86,106 @@ defmodule Wotex.CoAP.NativeConnectionTest do
              "timeout_ms" => 350,
              "version" => 1
            }
+  end
+
+  test "WCO-N02 public connect and send dispatch an absent body through the native owner",
+       context do
+    File.write!(Path.join(context.store, "mode"), "request")
+
+    assert {:ok, %{pid: pid, timeout: 3_000} = session} =
+             Wotex.CoAP.connect([scheme: :coap] ++ context.options)
+
+    assert map_size(session) == 2
+    assert Process.alive?(pid)
+
+    assert {:ok, %Message{code: 69, payload: "ok"}} =
+             Wotex.CoAP.send(session, %{
+               method: :get,
+               path: "/sensors/room%201?unit=c",
+               confirmable: false,
+               accept: :json
+             })
+
+    assert %{
+             "id" => "2",
+             "operation" => "request",
+             "parameters" => parameters,
+             "timeout_ms" => timeout,
+             "version" => 1
+           } = read_json(context.store, "request-1.json")
+
+    assert timeout in 1..3_000
+
+    assert parameters == %{
+             "method" => "GET",
+             "path" => "/sensors/room%201?unit=c",
+             "confirmable" => false,
+             "accept" => 50
+           }
+
+    refute File.exists?(Path.join(context.store, "body-begin.json"))
+    assert :ok = Wotex.CoAP.disconnect(session)
+    assert :ok = Wotex.CoAP.disconnect(session)
+  end
+
+  test "WCO-D02 public native helpers preserve an explicit empty body and normalized formats",
+       context do
+    File.write!(Path.join(context.store, "mode"), "request_upload_empty")
+    assert {:ok, session} = Wotex.CoAP.connect(context.options)
+
+    assert {:ok, %Message{code: 69, payload: "ok"}} =
+             Wotex.CoAP.post(session, "/write", <<>>,
+               confirmable: false,
+               content_format: :json,
+               accept: 0
+             )
+
+    assert %{
+             "id" => "2",
+             "operation" => "body_begin",
+             "parameters" => %{
+               "body_id" => "body-1",
+               "length" => 0,
+               "sha256" => hash
+             }
+           } = read_json(context.store, "body-begin.json")
+
+    assert hash == Base.encode16(:crypto.hash(:sha256, <<>>), case: :lower)
+
+    assert %{
+             "id" => "3",
+             "operation" => "body_end",
+             "parameters" => %{"body_id" => "body-1"}
+           } = read_json(context.store, "body-end.json")
+
+    assert %{
+             "id" => "4",
+             "operation" => "request",
+             "parameters" => %{
+               "method" => "POST",
+               "path" => "/write",
+               "confirmable" => false,
+               "content_format" => 50,
+               "accept" => 0,
+               "body_id" => "body-1"
+             }
+           } = read_json(context.store, "request-1.json")
+
+    assert :ok = Wotex.CoAP.disconnect(session)
+  end
+
+  test "WCO-N02 public selection rejects mismatched and incomplete native configuration",
+       context do
+    for {options, code} <- [
+          {[scheme: :coaps] ++ context.options, :unsupported_security},
+          {Keyword.delete(context.options, :native_backend), :unsupported_native_backend},
+          {Keyword.delete(context.options, :security), :invalid_options},
+          {[scheme: :coap, scheme: :coap] ++ context.options, :invalid_options}
+        ] do
+      assert {:error, %Error{code: ^code}} = Wotex.CoAP.connect(options)
+    end
+
+    refute File.exists?(Path.join(context.store, "helper.pid"))
   end
 
   test "WCO-N02 rejects malformed options and identity before acquiring a process", context do

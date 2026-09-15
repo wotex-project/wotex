@@ -20,7 +20,9 @@ defmodule Wotex.CoAP.Native.Connection do
   An explicit outbound payload is uploaded through correlated begin/chunk/end
   commands under the call deadline before request submission. Unary responses
   may carry an inline payload or one correlated, bounded body event stream.
-  Observe delivery and public connection dispatch remain separate obligations.
+  The root API selects this owner for explicit OSCORE unary sessions. Observe
+  delivery, native discovery admission and Runtime dispatch remain separate
+  obligations.
   """
 
   use GenServer

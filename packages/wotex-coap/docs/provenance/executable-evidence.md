@@ -115,7 +115,7 @@ decimal uint64 request identity once before exhaustion. The immutable allocator
 retains no command or credential. These tests do not write a Port or prove that
 the production helper accepts the lines.
 
-`native_connection_test.exs` executes forty-one contract-injection tests for the
+`native_connection_test.exs` executes forty-four contract-injection tests for the
 BEAM process boundary. The tests launch the manifest-verified executable through
 the exact `--custody ABS_DIRECTORY` entry, inspect the open and close envelopes,
 and assert the pinned ready identity, monotonic correlation, finite ready/close
@@ -138,9 +138,13 @@ uncertainty, reject forged capabilities before native I/O, reclaim caller loss,
 and close on active timeout, malformed response, ID exhaustion or failed Port
 write. Malformed, duplicate, truncated and oversized output closes the
 generation. Killing the configured owner releases the exact helper within
-1,000 ms. The injected executable is a protocol fixture; these tests do not
-accept the production libcoap worker, public OSCORE dispatch, Observe delivery
-or report-credit integration.
+1,000 ms. Three public-boundary tests select this owner only for explicit
+`coap` OSCORE configuration, preserve the two-field session, normalize an absent
+or explicit empty body and formats, dispatch through `send/2` and method helpers,
+and reject mismatched or incomplete selection before process creation. The
+injected executable is a protocol fixture; these tests do not accept the
+production libcoap worker, an actual protected exchange, native discovery,
+Observe delivery or report-credit integration.
 
 `native_admission_test.exs` executes four exact tests for the WCO-N02 pre-mailbox
 capacity primitive. Ninety-six concurrent callers produce exactly 64 ordinary
@@ -158,7 +162,8 @@ verification. It covers exact option keys and path bounds, ordinary-file and
 executable-mode checks, the 1 MiB manifest ceiling, strict bounded JSON, pinned
 libcoap version/revision, lowercase binary SHA-256 and changed-file rejection.
 The verifier starts no Port and changes no permissions. Public connection
-dispatch and the production native process remain unaccepted.
+selection is covered by the owner fixture above; the production native process
+remains unaccepted.
 
 `native_wire_test.exs` executes 13 exact tests and one generated property at the
 pure BEAM receive boundary. It covers the 128 KiB JSON-line ceiling, duplicate

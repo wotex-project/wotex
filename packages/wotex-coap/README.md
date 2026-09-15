@@ -76,11 +76,14 @@ security and a nil immediate credential. UDP routes reject credentials.
 `Wotex.CoAP.profile/0` selects unary UDP operations;
 `Wotex.CoAP.profile(:udp_observe)` selects unary operations and Observe streams.
 `Wotex.CoAP.profile(:dtls)` selects authenticated DTLS unary operations and streams.
-All admit JSON, UTF-8 text and opaque bytes. OSCORE remains unsupported.
+All admit JSON, UTF-8 text and opaque bytes. Runtime OSCORE remains unsupported.
 `Wotex.CoAP.Security.new/1` validates and redacts the fixed-suite OSCORE
 credential value without reading its durable store. The internal native owner
-can complete the verified process ready/open/close handshake. The production
-worker must still validate and consume that store before an OSCORE session can open.
+can complete the verified process ready/open/close handshake. The public
+`connect/1`, `send/2`, method-helper and `disconnect/1` boundaries select that
+owner for an explicit `coap` OSCORE credential and verified `native_backend`.
+The production worker must still validate and consume the durable store before
+this boundary provides a real OSCORE exchange.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
 Capabilities expose these as `max_datagram_size` and `max_body_size`.
@@ -152,8 +155,8 @@ the planned `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` interfaces. Protocol execution remains
 BEAM UDP, OTP DTLS and a planned explicit libcoap OSCORE Port.
 `Wotex.CoAP.NativeBackend.verify/1` can validate the content identity of an
-explicit native executable and manifest without starting it. Connection
-dispatch to that executable remains planned. `Wotex.CoAP.Native.Connection`
+explicit native executable and manifest without starting it.
+`Wotex.CoAP.Native.Connection`
 owns the verified executable for its bounded ready/open/close lifecycle and
 monitors the caller without exposing credentials. `Wotex.CoAP.Native.Admission`
 atomically reserves exactly 64 ordinary call slots plus separate close-control
@@ -163,8 +166,10 @@ FIFO admission path, spend queue time from their deadline and return complete
 inline or correlated streamed-body Messages. Streamed responses remain private
 until exact body length/hash validation and one-time reference resolution.
 Explicit outbound payloads use correlated begin/chunk/end commands before the
-request; upload failures occur before mutation submission. Public OSCORE dispatch
-remains planned.
+request; upload failures occur before mutation submission. The root API preserves
+its two-field session value while dispatching explicit OSCORE unary requests to
+this owner. Native discovery, Observe, Runtime and production-worker execution
+remain planned.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic
