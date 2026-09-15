@@ -1,5 +1,6 @@
 #include "wotex_matter/protocol.hpp"
 #include "wotex_matter/input_lifetime.hpp"
+#include "wotex_matter/input.hpp"
 
 #include <atomic>
 #include <cassert>
@@ -25,6 +26,7 @@ class RecordingBackend final : public wotex::matter::ControllerBackend {
   }
 
   void Close() override {
+    assert(!interacting);
     ++closes;
     open = false;
   }
@@ -33,11 +35,32 @@ class RecordingBackend final : public wotex::matter::ControllerBackend {
 
   wotex::matter::InteractionResponse Interact(
       const wotex::matter::InteractionRequest &) override {
+    assert(!interacting);
+    ++interactions;
+    if (wait_for_control) {
+      interacting = true;
+      const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
+      while (std::chrono::steady_clock::now() < deadline) {
+        if (pump && !pump()) {
+          interrupted = true;
+          break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+      interacting = false;
+    }
     return {false, wotex::matter::InteractionError{"not_supported"}};
   }
 
+  void SetControlPump(std::function<bool()> value) override { pump = std::move(value); }
+  std::function<bool()> pump;
+  bool wait_for_control{false};
+  bool interacting{false};
+  bool interrupted{false};
+
   wotex::matter::BackendResult open_result{true, {}};
   wotex::matter::NativeOpenOptions identity;
+  int interactions{0};
   int opens{0};
   int closes{0};
   bool open{false};
@@ -50,6 +73,103 @@ std::string OpenFrame(const std::string &id = "1") {
       "\"storage_mode\":\"create_new\",\"authority\":\"generate_root\","
       "\"vendor_id\":65521,\"fabric_id\":1,\"controller_node_id\":2,"
       "\"paa_trust_store\":\"/tmp/paa\"},\"timeout_ms\":1000}";
+}
+
+
+std::string PendingCommands() {
+  return R"({"version":1,"event":"flow_open","session_generation":"0123456789abcdef0123456789abcdef"})" "\n" +
+      OpenFrame() + "\n" +
+      R"({"version":1,"id":"2","operation":"read","parameters":{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":6,"member":0},"timeout_ms":1000})" "\n";
+}
+
+void TestControlsDuringPendingInteraction() {
+  const std::string health = R"({"version":1,"id":"3","operation":"health","parameters":{},"timeout_ms":1000})" "\n";
+  const std::string close_frame = R"({"version":1,"id":"4","operation":"close","parameters":{},"timeout_ms":1000})" "\n";
+  for (const std::string &ending : {
+           health + close_frame,
+           health,
+           health.substr(0, health.size() - 1),
+           std::string(R"({"version":1,"id":"2","operation":"health","parameters":{},"timeout_ms":1000})") + "\n",
+           std::string(R"({"version":1,"id":"3","operation":"invoke","parameters":{},"timeout_ms":1000})") + "\n" + close_frame}) {
+    const std::string commands = PendingCommands() + ending;
+    int input[2];
+    assert(pipe(input) == 0);
+    assert(write(input[1], commands.data(), commands.size()) == static_cast<ssize_t>(commands.size()));
+    close(input[1]);
+    RecordingBackend backend;
+    backend.wait_for_control = true;
+    std::istringstream stream(commands);
+    std::ostringstream output;
+    const int result = wotex::matter::RunHost(backend, stream, output, {}, input[0]);
+    close(input[0]);
+    assert(result == (ending.back() == '\n' ? 0 : 1));
+    assert(backend.interrupted && backend.closes == 1 && !backend.pump);
+    assert(backend.interactions == 1);
+    const auto frames = output.str();
+    assert(frames.find("\"id\":\"2\"") == std::string::npos);
+    if (ending == health + close_frame) {
+      const auto ready = frames.find("\"id\":\"3\"");
+      const auto closed = frames.find("\"id\":\"4\"");
+      assert(ready != std::string::npos && closed != std::string::npos && ready < closed);
+    }
+    if (ending.find("invoke") != std::string::npos) {
+      assert(frames.find("interaction_busy") != std::string::npos);
+    }
+  }
+
+  // A health request neither aborts nor restarts an otherwise pending wait.
+  int input[2];
+  assert(pipe(input) == 0);
+  const std::string commands = PendingCommands() + health;
+  assert(write(input[1], commands.data(), commands.size()) == static_cast<ssize_t>(commands.size()));
+  std::thread owner([&] {
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    close(input[1]);
+  });
+  RecordingBackend backend;
+  backend.wait_for_control = true;
+  std::istringstream stream(commands);
+  std::ostringstream output;
+  const int result = wotex::matter::RunHost(backend, stream, output, {}, input[0]);
+  owner.join();
+  close(input[0]);
+  assert(result == 0 && !backend.interrupted && backend.closes == 1 && !backend.pump);
+  assert(output.str().find("\"id\":\"3\"") < output.str().find("\"id\":\"2\""));
+}
+
+void TestBoundedDescriptorInput() {
+  using Input = wotex::matter::BoundedInput;
+  for (bool oversized : {false, true}) {
+    int descriptors[2];
+    assert(pipe(descriptors) == 0);
+    const int flags = fcntl(descriptors[0], F_GETFL);
+    {
+      Input input(descriptors[0]);
+      assert(fcntl(descriptors[0], F_GETFL) & O_NONBLOCK);
+      std::string line;
+      assert(input.Next(line, 0) == Input::Result::Waiting);
+      const std::string chunk(1024, 'x');
+      for (unsigned part = 0; part < 127; ++part) {
+        assert(write(descriptors[1], chunk.data(), chunk.size()) == 1024);
+        assert(input.Next(line, 0) == Input::Result::Waiting);
+      }
+      const std::string last(oversized ? 1024 : 1023, 'x');
+      assert(write(descriptors[1], last.data(), last.size()) == static_cast<ssize_t>(last.size()));
+      assert(input.Next(line, 0) == (oversized ? Input::Result::Invalid : Input::Result::Waiting));
+      if (!oversized) {
+        assert(write(descriptors[1], "\nnext\n", 6) == 6);
+        assert(input.Next(line, 0) == Input::Result::Line);
+        assert(line.size() == wotex::matter::kMaximumFrameBytes - 1);
+        assert(input.Next(line, 0) == Input::Result::Line && line == "next");
+        close(descriptors[1]);
+        assert(input.Next(line, 0) == Input::Result::End);
+      } else {
+        close(descriptors[1]);
+      }
+    }
+    assert(fcntl(descriptors[0], F_GETFL) == flags);
+    close(descriptors[0]);
+  }
 }
 
 void TestParser() {
@@ -331,6 +451,8 @@ int main(int argc, char **argv) {
     return 0;
   }
   assert(argc == 1);
+  TestBoundedDescriptorInput();
+  TestControlsDuringPendingInteraction();
   TestParser();
   TestFrameDepthBoundary();
   TestLifecycleAndFabricAdmission();

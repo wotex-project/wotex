@@ -1,4 +1,5 @@
 #include "wotex_matter/protocol.hpp"
+#include "wotex_matter/input.hpp"
 
 #ifdef WOTEX_MATTER_FLOW_TESTING
 #include "wotex_matter/flow_testing.hpp"
@@ -935,6 +936,23 @@ bool HostProtocol::SeedReportCountersForTesting(std::uint64_t sequence,
 #endif
 
 ProcessResult HostProtocol::ProcessLine(const std::string &line) {
+  ProcessResult result;
+  {
+    struct DepthOwner {
+      unsigned &depth;
+      explicit DepthOwner(unsigned &value) : depth(value) { ++depth; }
+      ~DepthOwner() { --depth; }
+    } depth_owner{processing_depth_};
+    result = ProcessLineImpl(line);
+  }
+  if (processing_depth_ == 0 && (close_requested_ || !healthy())) {
+    Close();
+    return {};
+  }
+  return result;
+}
+
+ProcessResult HostProtocol::ProcessLineImpl(const std::string &line) {
   if (!healthy()) {
     Close();
     return {};
@@ -1029,6 +1047,9 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
     options.timeout_ms =
         static_cast<std::uint32_t>(request["timeout_ms"].get<std::uint64_t>());
     const BackendResult result = backend_.Open(options);
+    if (close_requested_ || !healthy()) {
+      return {};
+    }
     if (!result.ok) {
       Close();
       return {false, Failure(request, result.error_code.empty()
@@ -1060,6 +1081,12 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
                                     {"fabric_id", fabric_id_}})};
   }
 
+  // The BEAM admission owner queues ordinary work. Native waits accept only
+  // bounded controls; a second data operation cannot recursively enter the SDK.
+  if (processing_depth_ > 1 && operation != "unsubscribe") {
+    return {true, Failure(request, "interaction_busy")};
+  }
+
   if (operation == "commission_on_network") {
     CommissioningRequest commissioning;
     if (!CommissioningParameters(
@@ -1069,6 +1096,9 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
       return {true, Failure(request, "invalid_request")};
     }
     CommissioningResponse response = backend_.Commission(commissioning);
+    if (close_requested_ || !healthy()) {
+      return {};
+    }
     if (!valid_commissioning_response(commissioning, response)) {
       return {true, Failure(request, "invalid_backend_result")};
     }
@@ -1091,6 +1121,9 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
       return {true, Failure(request, "invalid_request")};
     }
     CommissioningWindowResponse response = backend_.OpenWindow(window);
+    if (close_requested_ || !healthy()) {
+      return {};
+    }
     if (!valid_commissioning_window_response(window, response)) {
       return {true, Failure(request, "invalid_backend_result")};
     }
@@ -1119,6 +1152,9 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
       return {true, Failure(request, "fabric_mismatch")};
     }
     SubscriptionResponse response = backend_.Subscribe(subscription);
+    if (close_requested_ || !healthy()) {
+      return {};
+    }
     if (!response.ok) {
       return {true, Failure(request, response.error_code.empty()
                                         ? "subscription_failed"
@@ -1157,6 +1193,9 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
   }
 
   if (operation == "unsubscribe") {
+    if (cancellation_pending_) {
+      return {true, Failure(request, "subscription_busy")};
+    }
     std::string subscription_id;
     std::uint64_t generation = 0;
     if (!UnsubscribeParameters(request["parameters"], subscription_id,
@@ -1179,10 +1218,15 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
         return {true, Failure(request, "invalid_subscription")};
       }
     }
+    cancellation_pending_ = true;
     BackendResult cancelled =
         backend_.CancelSubscription(
             subscription_id, generation,
             static_cast<std::uint32_t>(request["timeout_ms"].get<std::uint64_t>()));
+    cancellation_pending_ = false;
+    if (close_requested_ || !healthy()) {
+      return {};
+    }
     {
       std::lock_guard<std::mutex> lock(subscription_mutex_);
       const auto active = subscriptions_.find(subscription_id);
@@ -1240,6 +1284,9 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
       return {true, Failure(request, "fabric_mismatch")};
     }
     InteractionResponse response = backend_.Interact(interaction);
+    if (close_requested_ || !healthy()) {
+      return {};
+    }
     if (!response.ok) {
       if (!response.error.has_value() || response.error->code.empty()) {
         return {true, Failure(request, "invalid_backend_result")};
@@ -1481,7 +1528,19 @@ void HostProtocol::EmitFailure(const std::string &subscription_id,
   subscriptions_.erase(subscription_id);
 }
 
+void HostProtocol::RequestClose() {
+  close_requested_ = true;
+  std::lock_guard<std::mutex> lock(subscription_mutex_);
+  if (state_ != State::Closed) {
+    state_ = State::Closing;
+  }
+}
+
 void HostProtocol::Close() {
+  if (processing_depth_ > 1) {
+    RequestClose();
+    return;
+  }
   {
     std::lock_guard<std::mutex> lock(subscription_mutex_);
     if (state_ == State::Closed) {
@@ -1501,9 +1560,10 @@ void HostProtocol::Close() {
 }
 
 int RunHost(ControllerBackend &backend, std::istream &input,
-            std::ostream &output, std::function<void()> channel_failure) {
-  HostProtocol protocol(backend, channel_failure);
-  BoundedOutput writer(output, std::move(channel_failure));
+            std::ostream &output, std::function<void()> channel_failure,
+            int input_fd) {
+  BoundedOutput writer(output, channel_failure);
+  HostProtocol protocol(backend, std::move(channel_failure));
   protocol.SetOutputSink([&writer](const std::string &frame) {
     return frame.find("\"event\":\"subscription_report\"") !=
             std::string::npos
@@ -1514,36 +1574,88 @@ int RunHost(ControllerBackend &backend, std::istream &input,
     return 1;
   }
 
-  std::string line;
-  while (ReadLineBounded(input, line)) {
-    if (!writer.healthy() || (!input && line.empty())) {
-      break;
-    }
+  std::unique_ptr<BoundedInput> descriptor;
+  if (input_fd >= 0) {
+    descriptor = std::make_unique<BoundedInput>(input_fd);
+  }
+  bool running = true;
+  bool invalid_input = false;
+  bool dispatch_failed = false;
+  const auto dispatch = [&](const std::string &line) {
     ProcessResult result = protocol.ProcessLine(line);
-    if (!protocol.healthy()) {
-      protocol.Close();
-      return 1;
+    if (!running) {
+      return;
     }
-    if (result.frame.has_value()) {
-      if (!writer.EnqueueReply(*result.frame)) {
-        protocol.Close();
-        return 1;
+    if (!protocol.healthy() || !writer.healthy()) {
+      dispatch_failed = true;
+      running = false;
+      return;
+    }
+    if (result.frame && !writer.EnqueueReply(*result.frame)) {
+      dispatch_failed = true;
+      running = false;
+      return;
+    }
+    if (result.activate_subscription &&
+        !protocol.ActivateSubscription(result.activate_subscription->first,
+                                        result.activate_subscription->second)) {
+      dispatch_failed = true;
+      running = false;
+      return;
+    }
+    running = result.keep_running;
+  };
+
+  // Clear the callback before its parser and protocol captures leave scope,
+  // including exceptional exits. SDK shutdown itself never invokes this pump.
+  struct PumpOwner {
+    ControllerBackend &backend;
+    ~PumpOwner() { backend.SetControlPump({}); }
+  } pump_owner{backend};
+  if (descriptor) {
+    backend.SetControlPump([&] {
+      // A finite batch lets the pending operation recheck its original deadline
+      // even if input remains readable throughout the wait.
+      for (unsigned count = 0; running && count < 16; ++count) {
+        std::string line;
+        const auto result = descriptor->Next(line, 0);
+        if (result == BoundedInput::Result::Waiting) {
+          break;
+        }
+        if (result != BoundedInput::Result::Line) {
+          invalid_input = result == BoundedInput::Result::Invalid;
+          running = false;
+          break;
+        }
+        dispatch(line);
       }
-    }
-    if (result.activate_subscription.has_value() &&
-        !protocol.ActivateSubscription(
-            result.activate_subscription->first,
-            result.activate_subscription->second)) {
-      protocol.Close();
-      return 1;
-    }
-    if (!result.keep_running) {
+      if (!running || !writer.healthy() || !protocol.healthy()) {
+        protocol.RequestClose();
+        return false;
+      }
+      return true;
+    });
+  }
+
+  while (running && writer.healthy() && protocol.healthy()) {
+    std::string line;
+    if (descriptor) {
+      const auto result = descriptor->Next(line, -1);
+      if (result == BoundedInput::Result::Waiting) {
+        continue;
+      }
+      if (result != BoundedInput::Result::Line) {
+        invalid_input = result == BoundedInput::Result::Invalid;
+        break;
+      }
+    } else if (!ReadLineBounded(input, line) || (!input && line.empty())) {
       break;
     }
+    dispatch(line);
   }
   protocol.Close();
   writer.Stop();
-  return writer.healthy() && protocol.healthy() ? 0 : 1;
+  return !invalid_input && !dispatch_failed && writer.healthy() && protocol.healthy() ? 0 : 1;
 }
 
 } // namespace wotex::matter

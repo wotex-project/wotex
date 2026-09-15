@@ -45,6 +45,7 @@
 #include <new>
 #include <optional>
 #include <type_traits>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -558,6 +559,50 @@ class SdkControllerBackend::Impl final
     return {true, {}};
   }
 
+  void SetControlPump(std::function<bool()> pump) {
+    control_pump_ = std::move(pump);
+    control_thread_ = std::this_thread::get_id();
+  }
+
+  template <typename Predicate>
+  bool WaitForControl(std::condition_variable &condition,
+                      std::unique_lock<std::mutex> &lock,
+                      std::uint32_t timeout_ms, Predicate complete) {
+    if (!control_pump_ || std::this_thread::get_id() != control_thread_) {
+      return condition.wait_for(lock, std::chrono::milliseconds(timeout_ms), complete);
+    }
+    auto deadline = std::chrono::steady_clock::now() +
+        std::chrono::milliseconds(timeout_ms);
+    if (control_deadline_) {
+      deadline = std::min(deadline, *control_deadline_);
+    }
+    struct DeadlineOwner {
+      std::optional<std::chrono::steady_clock::time_point> &slot;
+      std::optional<std::chrono::steady_clock::time_point> previous;
+      ~DeadlineOwner() { slot = previous; }
+    } deadline_owner{control_deadline_, control_deadline_};
+    control_deadline_ = deadline;
+    while (!complete()) {
+      const auto now = std::chrono::steady_clock::now();
+      if (now >= deadline) {
+        return false;
+      }
+      const auto next = std::min(deadline, now + std::chrono::milliseconds(5));
+      if (condition.wait_until(lock, next, complete)) {
+        return true;
+      }
+      // Controls may cancel another SDK context. No context mutex is retained
+      // while dispatching them, and each wait retains its original deadline.
+      lock.unlock();
+      const bool keep_waiting = control_pump_();
+      lock.lock();
+      if (!keep_waiting) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void Close() { Cleanup(); }
   bool IsOpen() const { return open_; }
 
@@ -601,8 +646,8 @@ class SdkControllerBackend::Impl final
 
     CommissioningResponse Wait() {
       std::unique_lock<std::mutex> lock(mutex_);
-      if (!condition_.wait_for(lock, std::chrono::milliseconds(Remaining()),
-                               [this] { return published_; })) {
+      if (!owner_.WaitForControl(condition_, lock, Remaining(),
+                                  [this] { return published_; })) {
         // Wait still owns mutex_; the accessor would lock it recursively.
         response_ = Failure("commissioning_timeout", CHIP_ERROR_TIMEOUT,
                             fabric_mutation_may_have_started_);
@@ -821,8 +866,8 @@ class SdkControllerBackend::Impl final
 
     CommissioningWindowResponse Wait() {
       std::unique_lock<std::mutex> lock(mutex_);
-      if (!condition_.wait_for(lock, std::chrono::milliseconds(Remaining()),
-                               [this] { return published_; })) {
+      if (!owner_.WaitForControl(condition_, lock, Remaining(),
+                                  [this] { return published_; })) {
         response_ = Failure("window_timeout", CHIP_ERROR_TIMEOUT, submitted_);
         published_ = true;
         lock.unlock();
@@ -1014,8 +1059,8 @@ class SdkControllerBackend::Impl final
 
     InteractionResponse Wait() {
       std::unique_lock<std::mutex> lock(mutex_);
-      if (!condition_.wait_for(lock, std::chrono::milliseconds(Remaining()),
-                               [this] { return published_; })) {
+      if (!owner_.WaitForControl(condition_, lock, Remaining(),
+                                  [this] { return published_; })) {
         InteractionEffect effect = mutation_.submitted() && IsMutation()
             ? InteractionEffect::Unknown
             : InteractionEffect::None;
@@ -1506,8 +1551,8 @@ class SdkControllerBackend::Impl final
 
     SubscriptionResponse Wait() {
       std::unique_lock<std::mutex> lock(mutex_);
-      if (!condition_.wait_for(lock, std::chrono::milliseconds(Remaining()),
-                               [this] { return published_; })) {
+      if (!owner_.WaitForControl(condition_, lock, Remaining(),
+                                  [this] { return published_; })) {
         response_.error_code = "subscription_timeout";
         published_ = true;
         lock.unlock();
@@ -1547,8 +1592,8 @@ class SdkControllerBackend::Impl final
     bool CancelAndWait(std::uint32_t timeout_ms) {
       ScheduleCancel();
       std::unique_lock<std::mutex> lock(mutex_);
-      return condition_.wait_for(lock, std::chrono::milliseconds(timeout_ms),
-                                 [this] { return done_; });
+      return owner_.WaitForControl(condition_, lock, timeout_ms,
+                                  [this] { return done_; });
     }
 
     bool done() const {
@@ -2319,6 +2364,9 @@ class SdkControllerBackend::Impl final
   std::mutex subscription_mutex_;
   std::vector<std::shared_ptr<NativeSubscription>> subscriptions_;
   std::mutex sink_mutex_;
+  std::function<bool()> control_pump_;
+  std::thread::id control_thread_;
+  std::optional<std::chrono::steady_clock::time_point> control_deadline_;
   ControllerBackend::ReportSink report_sink_;
   ControllerBackend::StatusSink status_sink_;
   ControllerBackend::FailureSink failure_sink_;
@@ -2597,6 +2645,10 @@ BackendResult SdkControllerBackend::CancelSubscription(
     const std::string &subscription_id, std::uint64_t generation,
     std::uint32_t timeout_ms) {
   return impl_->CancelSubscription(subscription_id, generation, timeout_ms);
+}
+
+void SdkControllerBackend::SetControlPump(std::function<bool()> pump) {
+  impl_->SetControlPump(std::move(pump));
 }
 
 void SdkControllerBackend::Close() { impl_->Close(); }

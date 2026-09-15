@@ -11,5 +11,5 @@ int main() {
   wotex::matter::InputLifetime lifetime(STDIN_FILENO);
   wotex::matter::SdkControllerBackend controller;
   return wotex::matter::RunHost(controller, std::cin, std::cout,
-                                [&lifetime] { lifetime.Fail(); });
+                                [&lifetime] { lifetime.Fail(); }, STDIN_FILENO);
 }

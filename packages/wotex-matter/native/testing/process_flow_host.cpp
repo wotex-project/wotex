@@ -135,6 +135,10 @@ class CallbackSource final : public ControllerBackend {
   }
   bool IsOpen() const override { return backend_.IsOpen(); }
 
+  void SetControlPump(std::function<bool()> pump) override {
+    backend_.SetControlPump(std::move(pump));
+  }
+
   void SetSubscriptionSinks(ReportSink report, StatusSink status, FailureSink failure) override {
     {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -344,7 +348,8 @@ int main() {
     int result = 1;
     {
       CallbackSource backend;
-      result = RunHost(backend, std::cin, std::cout, [&lifetime] { lifetime.Fail(); });
+      result = RunHost(backend, std::cin, std::cout, [&lifetime] { lifetime.Fail(); },
+                       STDIN_FILENO);
     }
     // Joining the producer precedes these reads of its actual loop counters.
     probe.counts["callbacks_acquired"] = probe.callbacks_acquired;

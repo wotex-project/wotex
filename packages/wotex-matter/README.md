@@ -345,6 +345,13 @@ The ordinary native executable contains no process-flow instrumentation. Exact
 results and the remaining software-profile requirements are recorded in
 [executable evidence](docs/provenance/executable-evidence.md).
 
+The native input owner services report acknowledgements, cancellation and health
+while an SDK interaction, subscription or commissioning operation waits. It uses
+one bounded nonblocking parser and retains the operation deadline across control dispatch. Close interrupts the wait,
+suppresses its late reply and releases SDK contexts before destroying the
+controller. The software tests exercise this behavior with pending reads,
+subscriptions and commissioning windows.
+
 ## Software implementation contract
 
 The [ordered implementation sequence](docs/plans/software-implementation.md)

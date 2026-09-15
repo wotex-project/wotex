@@ -65,6 +65,9 @@ class ControllerBackend {
             0, 0, 0, 0, {}, {}};
   }
   virtual void SetSubscriptionSinks(ReportSink, StatusSink, FailureSink) {}
+  // Invoked only by a waiting operation on the host input thread. False asks
+  // that operation to unwind; controller destruction follows on that thread.
+  virtual void SetControlPump(std::function<bool()>) {}
   virtual SubscriptionResponse Subscribe(const SubscriptionRequest &) {
     SubscriptionResponse result;
     result.error_code = "not_supported";
@@ -113,6 +116,7 @@ class HostProtocol final {
   bool ActivateSubscription(const std::string &subscription_id,
                             std::uint64_t generation);
   void Close();
+  void RequestClose();
   bool healthy() const;
 
 #ifdef WOTEX_MATTER_PROTOCOL_TESTING
@@ -120,7 +124,7 @@ class HostProtocol final {
 #endif
 
  private:
-  enum class State { AwaitFlow, AwaitOpen, Open, Closed };
+  enum class State { AwaitFlow, AwaitOpen, Open, Closing, Closed };
 
   ControllerBackend &backend_;
   std::function<void()> channel_failure_;
@@ -132,6 +136,9 @@ class HostProtocol final {
   std::string session_generation_;
   std::uint64_t greatest_request_id_{0};
   std::uint64_t fabric_id_{0};
+  unsigned processing_depth_{0};
+  bool close_requested_{false};
+  bool cancellation_pending_{false};
 
   struct ActiveSubscription {
     std::uint64_t generation{0};
@@ -143,6 +150,7 @@ class HostProtocol final {
   std::unordered_map<std::string, ActiveSubscription> subscriptions_;
 
   void FailChannel();
+  ProcessResult ProcessLineImpl(const std::string &line);
   bool WriteFrame(const std::string &frame);
   bool EmitReport(const SubscriptionReport &report);
   bool EmitStatus(const SubscriptionStatus &status);
@@ -151,7 +159,8 @@ class HostProtocol final {
 };
 
 int RunHost(ControllerBackend &backend, std::istream &input,
-            std::ostream &output, std::function<void()> channel_failure = {});
+            std::ostream &output, std::function<void()> channel_failure = {},
+            int input_fd = -1);
 
 } // namespace wotex::matter
 

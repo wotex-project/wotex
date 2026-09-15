@@ -2064,3 +2064,129 @@ remain open. Last full measured coverage is 89.0%.
 | Minimum WMA-B-F12 observation | `32f2831337b473d5590a3477041dd9e13a3dfdd960aa3c17819c7f15fd25c242` |
 | Minimum WMA-B-F13 observation | `3603c7649f8a1a1c899bf282f9441d8fd2696d04686a8128d128be4dce6c2c2f` |
 | Minimum focused log | `aae3413d20b74f2f592419890cbf299248b9a6038b5625ce0d240a6e9c418609` |
+
+## Native controls during SDK waits
+
+The native input owner uses one nonblocking descriptor parser for ordinary
+input and control polling during SDK waits. The parser retains at most one
+131071-byte partial line and one 4096-byte read buffer, distinguishes clean EOF
+from truncated input, and restores the descriptor flags when released. Each
+poll processes at most 16 frames before the active operation rechecks its
+deadline. Report acknowledgements, health, unsubscribe and close remain
+available while read, subscription, commissioning and window contexts wait.
+A second data command cannot recursively dispatch SDK work. At most one SDK
+cancellation waits at a time; another receives `subscription_busy` rather than
+creating an unbounded recursive wait.
+
+The SDK wait helper releases its context mutex before polling controls and
+uses the original remaining deadline. Nested cancellation also inherits the
+parent deadline. Only the recorded native input thread invokes this helper's
+control callback; the process-flow producer retains its separate SDK wait.
+Startup and shutdown SDK work retain their existing callback-ownership wait
+and bounded process-lifetime escalation.
+
+Close marks the protocol closing before the active operation unwinds. Reports
+cannot be admitted in that state, late operation replies cannot reactivate a
+subscription or reopen the controller, and SDK destruction occurs after the
+pending host call returns. Scoped ownership clears the input callback and
+restores protocol call depth on exceptional exits. Protocol destruction precedes
+output-writer destruction, keeping the callback sink alive through SDK cleanup.
+Output admission and subscription activation failures retain a failing native
+exit status.
+
+The native regression fails against the serial host because health and close
+are not consumed during its pending interaction. Corrected tests cover those
+controls, clean and truncated EOF, duplicate request IDs, rejection of recursive
+data dispatch, health without cancellation, exact frame-size boundaries,
+coalesced frames and restored descriptor flags. A separate real SDK regression
+against the previous binary fails to receive stream retirement within 500 ms
+while an unresolved five-second read is pending.
+
+The default `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes 179 checks with
+33 excluded on Elixir 1.20.2/OTP 29.0.4. The full default suite also passes on
+Elixir 1.18.4/OTP 27.3.4.15 in 46.6 seconds, with the same 179 executed checks
+and 33 excluded. ExDoc passes with warnings as errors. Normal and sanitizer
+SDK builds pass for both the ordinary host and separate process-flow host;
+all six CTest targets pass in each configuration. The production symbol audit
+excludes process-flow instrumentation and counter seeding. All 15 live OSV
+queries pass for the pinned dependency revisions.
+
+Both lifecycle workloads pass 1000 sequential reads, 32 concurrent callers,
+100 receiver-death cycles and 100 open/close cycles in 149.1 seconds on current
+Linux and 174.7 seconds on minimum Linux. Native FD samples remain 16. Current
+native RSS changes from 21120 to 21124 KiB and remains at the latter value from
+300 reads onward. Minimum sanitizer RSS increases from 166548 to 191612 KiB;
+this result does not establish the required resource plateau or full SDK
+callback/destructor census.
+
+The first minimum SDK cohort exposes an obsolete lower timing assertion in the
+failed-output test: it requires cleanup to take at least 750 ms, although C03
+sets a maximum grace. Failure observed before the input poll now exits directly;
+a separate sanitizer execution releases its child in 110 ms. The assertion now
+accepts prompt cleanup while retaining the unchanged 1000 ms maximum, failing
+exit status, sanitizer-diagnostic checks and zero surviving children. The native
+watchdog tests retain their blocked-input and repeated-failure assertions.
+
+The corrected fresh-peer SDK cohorts pass all 16 cases in 16.5 seconds on
+current Linux and 23.6 seconds on minimum Linux. Their owned peers are reaped.
+All 17 native corpus cases pass, including F11–F13's exact normalized results.
+For pending read/subscription/window operations, current-Linux control times are
+14/12/13 ms and close times are 25/35/33 ms. Minimum-Linux control times are
+29/20/20 ms and close times are 68/54/71 ms. Every pending case accepts the exact
+report acknowledgement and original-stream cancellation, retains health, emits
+no late operation reply and exits normally with its Port and child released.
+ASan/UBSan and leak detection remain enabled; stopped or forcibly terminated
+fault cases retain the preceding limitation on sanitizer finalization.
+
+The complete C09 fault/resource census, pending commissioning interruption
+matrix, startup/shutdown failure instrumentation, software-run orchestration
+and fresh complete build/archive receipts remain open. The last full measured
+coverage is 89.3%, below the unchanged 95% gate. These results establish the
+listed control and lifetime cases, not completion of P09.
+
+| Control-polling artifact | SHA-256 |
+| --- | --- |
+| Bounded descriptor input | `453a47241e0d60ddc7ec50b2b5f3231b981738b3b361790dc9e7564aff4a5b40` |
+| Native protocol header | `7634bc5d782605e8eb0f634808fd565af91a0f5d26aed2e90d64c49543e5f13b` |
+| SDK controller header | `b9b8e084c3bb18eeb81e096c172c314c7018505d697223180c56fb1407c59511` |
+| Native protocol | `ef1da868111a5bbdc3d5c04cdf130a0547748cda5de706f1412d38a73949dac5` |
+| SDK wait implementation | `4ad3625bc873674deaeb951003c77997a1e805a2552188aaadf0a9e27461ac84` |
+| Ordinary native entry point | `00b5d22d153cfdf891157c11c9229a509cff6cd95eccec10f7e7c340a686980a` |
+| Process-flow entry point | `b676ff3aa78dc3b6edab80a861d43f3b4738d414e546a980353c5f1abb764230` |
+| Native control/input tests | `fa4e089ae7c80fae35d85dec1aba7c5a62f08fb6bcd4754efb7be97dd89e53fd` |
+| SDK control-polling test | `ce38304acaa89e964e36fa03ce7da74ba9ca5cd4803de7dfbfa60a3b05852138` |
+| SDK failed-output test | `9569a7c3b855b6ec88835e45432fcb7336570a8f27a74cfcdc9f8f63bd28faaa` |
+| Native corpus | `a42e47c8d620cc9598996921cf44175d30f0a4c36ebf5b5ecf1233fe53c540ce` |
+| Native failing regression | `d0a24363b5ebebc94a6704e6325615cd04cf93db0316653f1737bd03eeee2361` |
+| Final native builds and CTest | `f3c171516c49099dbfa665f61dd463c586e74f9f4cbabfca0fe4ddef76518bdd` |
+| Production symbol audit | `6c26fa871b04bf5773b01f50dffc038a3f7c4a447e0e94b0ecb6e77ea899780c` |
+| Live advisory audit | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
+| Final default gate | `65f693d20444a30230273909e43a1cc81eec01f4bcd8e3cbd668f9b72085bc73` |
+| Minimum default suite | `6386bf0a9ebfd2dc58cf3684151488f4ec85f86cb0a84ae9dfe9145e4fe07704` |
+| ExDoc | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+| Prompt failed-output cleanup | `5d60610e05737b6e4eb6991a613b4650b110af566f103c5171d4ada952ceacaf` |
+| Previous SDK failing control log | `3016e16159554cf203849b19349a2abc9ee932cdc01b911502ca588b12cde241` |
+| Obsolete cleanup-floor failing log | `e0f6260e7e13478bc5a206c7cffa8c73536f4c86da3ef3e1e7ae068275f192bd` |
+| Last full coverage log | `06821d4d56a69331a7e2f8b07b65b6229b3ca6adff79932d3ccd67695336765e` |
+| Current native host | `8272c0a989bdd8da3be57947b788b661ff26ceede00e058d696a66aa50803cb0` |
+| Current process-flow host | `93f43b4074b0a5d6d5de367c0c0287d212b1016501f30f6512df7d688787d687` |
+| Current native controller test | `4815ad55dad869236f4efa1e5e057abab68cbc232d31de80469e21bfb0ff35f7` |
+| Current contract driver | `98ba15bbb146830a445dc269c07190efc1397c913f71b6f9e144be6c71d420c9` |
+| Current lifecycle log | `68d6680ed207193ed2c5178414a16e36d0e005809130f7f3e59da02c2625c8b1` |
+| Current lifecycle result | `4081dc030e5a77c1bbdef8e4c73eb9e56eef35fd7641b90ec6782f632ec9157a` |
+| Current sixteen-case SDK/corpus log | `e3f1d0ad3e433233480580f11f5298f5079ba91ada0fc3b255b190a598338662` |
+| Current pending-control result | `740c27ad74bf2b4c309b95f4abbbbd646bbc06d0ffc1a7b185d61d8f21e811eb` |
+| Current WMA-B-F11 observation | `a617ed6237231df8601e9b6322ece35589b2d0679bd94086faa751de01c46b5e` |
+| Current WMA-B-F12 observation | `0d4906062476d796224886daf4ba9d500bda2a4f874a2c78b11f1632531a77ad` |
+| Current WMA-B-F13 observation | `1a4e54e6767e8cfb6dcf33f995530444f626ebd1ea71a67bac9e860583698a39` |
+| Minimum native host | `54f7ee4b208a06dd769bcd8470675725ce57ca84d53d52734bc5924ca3f3cd2a` |
+| Minimum process-flow host | `8f66c332093ed7c17575ada2684fe8c3eb45aa72642264ab15cb12dde5415bc1` |
+| Minimum native controller test | `b92aa0e91833ea018f87a293ecb3320f8e5a5a0b8d9859cc8891335d5e4adef4` |
+| Minimum contract driver | `e89330a5f24d98a774ce3eff0a6a0b33921fa70e537aea071616f8b379556002` |
+| Minimum lifecycle log | `fdc453b61a00965f4c65ad3bbd28c0bf8a5eecf34cd06df3d70f4b9870b2302b` |
+| Minimum lifecycle result | `f33bb05d373f67cdaca93e1e99f113bb6d44e13b53a39bb212cff1dad86a812c` |
+| Minimum sixteen-case SDK/corpus log | `d594b0ac7a344f92d612183b8512e2530656d01baa07988ef40f75b659ebacb3` |
+| Minimum pending-control result | `1e462e4034b08001addd323b5946fd3e60f49d0846860c9ab04fac704bf2eda0` |
+| Minimum WMA-B-F11 observation | `524aa45465318c6450d7fd352b8b6bee290cb2ed6eba1cb8fac73643ddb6aed9` |
+| Minimum WMA-B-F12 observation | `2ab881dcadb54d848a922e75ace8b113fd5d4ee015e39a2495f0f1c208dc74b1` |
+| Minimum WMA-B-F13 observation | `d31befea01fa360eccc998afe172ca34fbbe12659388a3d9626ee5b4784efc2e` |

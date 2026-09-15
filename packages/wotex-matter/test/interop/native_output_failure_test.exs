@@ -32,6 +32,8 @@ defmodule Wotex.Matter.NativeOutputFailureInteropTest do
              "owned_processes_after_grace" => 0
            } = Jason.decode!(result)
 
-    assert is_integer(elapsed) and elapsed >= 750 and elapsed <= 1_000
+    # Failure observed before the input poll can close immediately. A blocked
+    # poll retains the watchdog path; both obey the same maximum cleanup grace.
+    assert is_integer(elapsed) and elapsed >= 0 and elapsed <= 1_000
   end
 end

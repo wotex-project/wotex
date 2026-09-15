@@ -22,6 +22,7 @@ class SdkControllerBackend final : public ControllerBackend {
       const CommissioningWindowRequest &request) override;
   void SetSubscriptionSinks(ReportSink report, StatusSink status,
                             FailureSink failure) override;
+  void SetControlPump(std::function<bool()> pump) override;
   SubscriptionResponse Subscribe(const SubscriptionRequest &request) override;
   bool ActivateSubscription(const std::string &subscription_id,
                             std::uint64_t generation) override;
