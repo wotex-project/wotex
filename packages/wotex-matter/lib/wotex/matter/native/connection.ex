@@ -31,6 +31,9 @@ defmodule Wotex.Matter.Native.Connection do
   receiver or stream owner during unconfirmed registration closes the generation;
   a late successful reply cannot reopen it or return a live handle. Retiring the
   subscription kills and reaps its validator, including a suspended validator.
+  Explicit unsubscribe joins an already pending cancellation without sending
+  another native request. It retains the caller's deadline while waiting for
+  native retirement and the outstanding cancellation acknowledgement.
   Cleanup waits for native exit, the Port monitor and removal from Port.info.
   Exit notification can precede asynchronous release of the Port's driver state.
   It is an implementation module; consumers use
@@ -329,31 +332,11 @@ defmodule Wotex.Matter.Native.Connection do
       else
         current = Map.fetch!(state.subscriptions, subscription.reference)
 
-        closing =
-          state
-          |> put_in([:subscriptions, subscription.reference, :status], :closing)
-          |> put_in([:subscriptions, subscription.reference, :close_result], :cancelled)
-
-        parameters = %{
-          "subscription_id" => current.native_id,
-          "generation" => current.generation
-        }
-
-        case request_frame(closing, "unsubscribe", parameters, timeout) do
-          {:ok, nil, next_state} ->
-            if Map.has_key?(next_state.subscriptions, subscription.reference) do
-              error = Error.new(:invalid_frame)
-              {:stop, :normal, {:error, error}, notify_session_failure(error, next_state)}
-            else
-              {:reply, {:ok, nil}, next_state}
-            end
-
-          {:ok, _, next_state} ->
-            error = Error.new(:invalid_frame)
-            {:stop, :normal, {:error, error}, notify_session_failure(error, next_state)}
-
-          {:error, error, next_state} ->
-            error_reply(error, next_state)
+        if current.status == :closing do
+          deadline = Map.get(state, :call_deadline, System.monotonic_time(:millisecond) + timeout)
+          await_retirement(state, subscription.reference, deadline)
+        else
+          unsubscribe_active(state, subscription, current, timeout)
         end
       end
     else
@@ -684,6 +667,55 @@ defmodule Wotex.Matter.Native.Connection do
 
       {:error, error, next_state} ->
         error_reply(error, next_state)
+    end
+  end
+
+  defp unsubscribe_active(state, subscription, current, timeout) do
+    closing =
+      state
+      |> put_in([:subscriptions, subscription.reference, :status], :closing)
+      |> put_in([:subscriptions, subscription.reference, :close_result], :cancelled)
+
+    parameters = %{
+      "subscription_id" => current.native_id,
+      "generation" => current.generation
+    }
+
+    case request_frame(closing, "unsubscribe", parameters, timeout) do
+      {:ok, nil, next_state} ->
+        if Map.has_key?(next_state.subscriptions, subscription.reference) do
+          error = Error.new(:invalid_frame)
+          {:stop, :normal, {:error, error}, notify_session_failure(error, next_state)}
+        else
+          {:reply, {:ok, nil}, next_state}
+        end
+
+      {:ok, _, next_state} ->
+        error = Error.new(:invalid_frame)
+        {:stop, :normal, {:error, error}, notify_session_failure(error, next_state)}
+
+      {:error, error, next_state} ->
+        error_reply(error, next_state)
+    end
+  end
+
+  defp await_retirement(state, reference, deadline) do
+    if MapSet.member?(state.closed_references, reference) and
+         reference not in Map.values(state.internal_requests) do
+      {:reply, {:ok, nil}, state}
+    else
+      case await_owner_line(state, deadline) do
+        {:ok, line, received} ->
+          with {:ok, frame} <- Wire.frame(line),
+               {:ok, next_state} <- decode_async_frame(frame, byte_size(line) + 1, received) do
+            await_retirement(next_state, reference, deadline)
+          else
+            {:error, error} -> error_reply(error, Map.put(received, :channel_failed, true))
+          end
+
+        {:error, error, received} ->
+          error_reply(error, Map.put(received, :channel_failed, true))
+      end
     end
   end
 

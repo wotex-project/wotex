@@ -108,9 +108,24 @@ defmodule Wotex.Matter.NativeStreamOwnerInteropTest do
             assert_receive {:DOWN, ^monitor, :process, ^owner, _}, 1_000
 
           :stream_loss ->
+            assert {_, 0} = System.cmd("/bin/kill", ["-STOP", Integer.to_string(child)])
             Process.exit(owner, :kill)
             assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :owner_closed}}}, 1_000
             assert_receive {:DOWN, ^monitor, :process, ^owner, _}, 1_000
+            pending = :sys.get_state(connection)
+            assert pending.subscriptions[reference].status == :closing
+            assert Map.values(pending.internal_requests) == [reference]
+            cancellation = Task.async(fn -> Matter.unsubscribe(session, subscription) end)
+
+            try do
+              assert Task.yield(cancellation, 50) == nil
+              assert {_, 0} = System.cmd("/bin/kill", ["-CONT", Integer.to_string(child)])
+              assert :ok = Task.await(cancellation, 1_000)
+              assert :sys.get_state(connection).next_id == pending.next_id
+            after
+              Task.shutdown(cancellation, :brutal_kill)
+            end
+
             assert eventually(fn -> :sys.get_state(connection).subscriptions == %{} end, 1_000)
             assert {:ok, %{"status" => "ready"}} = Native.health(session.handle)
 
@@ -135,6 +150,7 @@ defmodule Wotex.Matter.NativeStreamOwnerInteropTest do
       Jason.encode!(%{
         status: "passed",
         modes: ["resume", "stream_loss", "connection_loss"],
+        joined_native_cancellation: true,
         owned_stream_owners_after_cleanup: 0
       }),
       [:exclusive]

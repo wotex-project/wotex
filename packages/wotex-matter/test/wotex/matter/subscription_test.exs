@@ -158,6 +158,82 @@ defmodule Wotex.Matter.SubscriptionTest do
   end
 
   @tag :native_stream_owner
+  test "explicit unsubscribe joins an owner-loss cancellation already awaiting native retirement" do
+    audit = temporary_path("joined-cancellation")
+    executable = native_fixture(audit, "gated_cancel")
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+    assert {:ok, subscription} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
+    reference = subscription.reference
+    state = :sys.get_state(session.handle.pid)
+    owner = state.subscriptions[reference].stream_owner
+
+    try do
+      Process.exit(owner, :kill)
+      assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :owner_closed}}}, 1_000
+
+      assert eventually(fn ->
+               Enum.any?(audit_frames(audit), &(&1["operation"] == "unsubscribe"))
+             end)
+
+      state = :sys.get_state(session.handle.pid)
+      assert state.subscriptions[reference].status == :closing
+      assert Map.values(state.internal_requests) == [reference]
+      cancellation = Task.async(fn -> Matter.unsubscribe(session, subscription) end)
+
+      try do
+        assert Task.yield(cancellation, 50) == nil
+        File.write!(audit <> ".release", "ready")
+        assert :ok = Task.await(cancellation, 1_000)
+        assert :ok = Matter.unsubscribe(session, subscription)
+        assert {:ok, %{"status" => "ready"}} = Native.health(session.handle)
+        assert Enum.count(audit_frames(audit), &(&1["operation"] == "unsubscribe")) == 1
+        refute_receive {:wotex_matter, ^reference, _}, 30
+      after
+        Task.shutdown(cancellation, :brutal_kill)
+      end
+    after
+      Matter.disconnect(session)
+    end
+  end
+
+  @tag :native_stream_owner
+  test "joining a stalled native cancellation retains the caller deadline and closes its owner" do
+    audit = temporary_path("joined-cancellation-timeout")
+    executable = native_fixture(audit, "gated_cancel")
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+    assert {:ok, subscription} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
+    reference = subscription.reference
+    state = :sys.get_state(session.handle.pid)
+    owner = state.subscriptions[reference].stream_owner
+    connection = session.handle.pid
+    monitor = Process.monitor(connection)
+    port = state.port
+
+    try do
+      Process.exit(owner, :kill)
+      assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :owner_closed}}}, 1_000
+
+      assert eventually(fn ->
+               Enum.any?(audit_frames(audit), &(&1["operation"] == "unsubscribe"))
+             end)
+
+      started = System.monotonic_time(:millisecond)
+
+      assert {:error, %Error{code: :timeout, effect: :none}} =
+               Matter.unsubscribe(%{session | timeout: 100}, subscription)
+
+      assert System.monotonic_time(:millisecond) - started < 1_000
+      assert_receive {:DOWN, ^monitor, :process, ^connection, :normal}, 1_000
+      assert Port.info(port) == nil
+      assert :ets.info(session.handle.admission) == :undefined
+      assert Enum.count(audit_frames(audit), &(&1["operation"] == "unsubscribe")) == 1
+      refute_receive {:wotex_matter, ^reference, _}, 30
+    after
+      Matter.disconnect(session)
+    end
+  end
+
+  @tag :native_stream_owner
   test "the named owner rejects a typed value outside the admitted descriptor before delivery" do
     audit = temporary_path("named-owner-schema")
     executable = native_fixture(audit, "wrong_tlv")
@@ -1041,6 +1117,12 @@ defmodule Wotex.Matter.SubscriptionTest do
 
         String.contains?(line, ~s("operation":"unsubscribe")) ->
           [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
+          if mode == "gated_cancel" do
+            wait = fn wait ->
+              if File.exists?(audit <> ".release"), do: :ok, else: (Process.sleep(1); wait.(wait))
+            end
+            wait.(wait)
+          end
           if mode in ["cancel_race", "cancel_race_duplicate"] do
             terminal = ~s({"version":1,"event":"subscription_error","session_generation":"#{session_generation}","subscription_id":"#{subscription_id}","generation":1,"error":{"code":"queue_overflow"}})
             IO.puts(terminal)

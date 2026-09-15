@@ -2478,3 +2478,67 @@ The native build, complete runner and C09 resource requirements remain separate.
 | Minimum corrected formatting | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 | Corrected source full gate | `a8b778df757ec8e9ebf896a564706405d0636c8e057e23c35c3e0e688130cea3` |
 | Cross-version test formatting | `86c9c532d984dad5d36a645714696b56db45deb3182f2cdaacba191186ebae66` |
+
+The corrected clean `4e572d2` archive has SHA-256
+`ef6704fd010b6e6208444ca2db1629a21b294d83996c975d22cda87ef25ad94d`.
+Its packaged full gate passes on Elixir 1.20.2/OTP 29.0.4 in 71.0 seconds
+and Elixir 1.18.4/OTP 27.3.4.15 in 62.8 seconds. Each lane executes 194 checks
+with 33 excluded and passes formatting and compilation. Both lanes also pass
+`bin/check_archive.exs` and `bin/check_application_free.exs` against this archive.
+The same committed lockfile and explicit development dependency sources apply;
+the project is force-compiled from the extracted archive into each lane's build.
+This closes the recorded formatter failure for that archive without changing
+the dependency-publication, coverage or software-profile limitations above.
+
+| Corrected archive artifact | SHA-256 |
+| --- | --- |
+| Clean archive build log | `0dff60426d28c5e09eb23689a39bc587234685eb02aa2eb2aa1f827e234f22e7` |
+| Packaged current full gate | `cbb3c25aa926e89d1eb4cbb827eaeb69a9ecef69b47bb8038f9763c2ba039c17` |
+| Packaged minimum full gate | `876a9f0c5d410eaa2f3ffbbda4a27f0613308ecb5957ff48679d46323cc97b2b` |
+| Archive inspection and out-of-tree compilation, each lane | `645eca9ec7bba65da3642c3b0769dd7d0e6e0772805f4a8b8a648a4f80756b46` |
+
+## Joining a pending native cancellation
+
+WMA-C03/C05 explicit unsubscribe joins an owner-loss cancellation that is already
+waiting for native retirement. The connection preserves the original request ID,
+waits for retirement and the pending cancellation acknowledgement, and retains
+the explicit caller's deadline. It sends no second cancellation. Expiry or a
+malformed frame closes the generation and its owned native process.
+
+The deterministic `gated_cancel` fixture delays the first cancellation reply.
+Before correction, explicit unsubscribe sends a second cancellation and returns
+`invalid_frame` after duplicate retirement. The regression now returns `:ok`,
+observes exactly one native cancellation, and keeps health usable. A separate
+100 ms caller-deadline case closes the stalled connection, Port and admission
+table without a second terminal delivery. All 24 subscription tests pass on the
+current toolchain. Automatic cancellation without a waiting API caller remains
+a separate deadline case; this result does not establish that bound.
+
+The real SDK stream-owner case stops its exact native child before owner loss,
+observes the pending cancellation, starts explicit unsubscribe, then resumes
+the child. Unsubscribe completes without advancing the native request counter;
+health remains usable. Both fresh 16-case SDK/corpus cohorts pass, including all
+17 native corpus vectors: 17.2 seconds on the current normal lane and 23.7 seconds
+on the minimum ASan/UBSan lane with leak detection enabled. Their owned peers
+are reaped. The native C++ sources and binaries remain the `9a4d124` inputs.
+
+The current `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes 196 checks with
+33 excluded in 70.0 seconds. The minimum toolchain passes all 29 subscription
+and acceptance-harness tests in 29.4 seconds. ExDoc passes with warnings as errors.
+The full software runner and complete C09 resource
+census remain unaccepted. The last coverage measurement is 90.0%; it predates
+this cancellation change and does not meet the unchanged 95% floor.
+
+| Pending-cancellation artifact | SHA-256 |
+| --- | --- |
+| Native connection | `1b9c50bafa1462156a5c15fb526c5ec77465cea0c24391cfc00f754fef486081` |
+| Subscription assertions | `0cd9fa74d0ae007bbec82a7b33afeed81fafcc20bb6e833d97393fb95602d94d` |
+| Real SDK stream-owner assertions | `c9a9b70fd9f4df450b6462061af20b4e3a8697f6558f810af0e046f3b197bbc4` |
+| Deterministic failure before correction | `04b1b561692c27ccc8220adbd66f3e386666e2d2fe14080e9bae814035260ccd` |
+| Current subscription gate | `625d850fedd395f29a558776a19da6853e330de9c81c24baf7d925a45aa2ec43` |
+| Current SDK/corpus log | `79afe1f8a381cb2e082cf93c34de09528e1bff713f8d02aa80e1bd91fd227f7f` |
+| Minimum SDK/corpus log | `d278d50ddc1863c7abf260fb42bd1c0754a5e3fcc71560da2bef7978f6dd1bcd` |
+| Stream-owner result, each SDK lane | `43b360b5e7d3d6b272e95ac9c0ecfff237a3fbf723ed51c1d221063d30ff2ec4` |
+| Default gate | `888cee6a1ef584c168e4788f2f5a3f8dd22c22135caabb087817454e47fc5547` |
+| Minimum focused gate | `4cedef5ef61ed81768e47fe914b00d3174b432b1653a5c514c4087aaf0e02a79` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
