@@ -1,9 +1,11 @@
+Code.require_file("../support/software/resources.exs", __DIR__)
+
 defmodule Wotex.Matter.NativeLifecycleStressTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
   alias Wotex.Matter
-  alias Wotex.Matter.{AttributeReport, Native}
+  alias Wotex.Matter.{AttributeReport, Native, SoftwareResources}
 
   @moduletag :software
   @moduletag :interop
@@ -38,7 +40,7 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
     node = %{fabric_id: options[:fabric_id], node_id: Map.fetch!(fixture, "node_id")}
 
     address =
-      connected(options, fn session, _child ->
+      connected(fixture, options, fn session, _child, _probe ->
         assert {:ok, catalogue} = Matter.discover_endpoints(session, node)
 
         [endpoint | _] =
@@ -55,18 +57,26 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
     baseline_ports = MapSet.new(Port.list())
 
     samples =
-      connected(options, fn session, child ->
+      connected(fixture, options, fn session, child, probe ->
         value = read(session, address)
+        baseline_native = SoftwareResources.quiescent!(probe)
         baseline_fds = fd_count(child)
         baseline_monitors = monitors(session.handle.pid)
 
         samples =
           for count <- 1..10 do
             for _ <- 1..100, do: assert(read(session, address) == value)
+            native = SoftwareResources.quiescent!(probe, baseline_native)
             assert fd_count(child) == baseline_fds
             assert monitors(session.handle.pid) == baseline_monitors
             assert admission_drained?(session.handle)
-            %{completed_reads: count * 100, rss_kib: rss(child), fds: fd_count(child)}
+
+            %{
+              completed_reads: count * 100,
+              rss_kib: rss(child),
+              fds: fd_count(child),
+              native: native
+            }
           end
 
         results =
@@ -80,10 +90,11 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
 
         assert length(results) == 32
         assert Enum.all?(results, &(&1 == {:ok, value}))
+        SoftwareResources.quiescent!(probe, baseline_native)
         assert fd_count(child) == baseline_fds
         assert admission_drained?(session.handle)
 
-        for _ <- 1..100 do
+        for cycle <- 1..100 do
           parent = self()
 
           receiver =
@@ -121,6 +132,8 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
             refute Process.alive?(stream_owner)
             assert monitors(session.handle.pid) == baseline_monitors
             assert read(session, address) == value
+            native = SoftwareResources.quiescent!(probe, baseline_native)
+            assert native["objects"]["subscription"]["acquired"] == cycle
             assert fd_count(child) == baseline_fds
             # Allow the software server to observe cancellation of its old client.
             Process.sleep(1050)
@@ -136,7 +149,12 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
     assert MapSet.new(Port.list()) == baseline_ports
 
     for _ <- 1..100 do
-      connected(options, fn session, _ -> read(session, address) end)
+      connected(fixture, options, fn session, _, probe ->
+        value = read(session, address)
+        SoftwareResources.quiescent!(probe)
+        value
+      end)
+
       assert MapSet.new(Port.list()) == baseline_ports
     end
 
@@ -148,6 +166,7 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
         concurrent_callers: 32,
         receiver_death_cycles: 100,
         open_close_cycles: 100,
+        native_generations_observed: 102,
         rss_samples: samples,
         endpoint: address.endpoint,
         owned_ports_after_cleanup: 0
@@ -156,22 +175,25 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
     )
   end
 
-  defp connected(options, function) do
-    assert {:ok, session} = Matter.connect(options)
-    owner = session.handle.pid
-    monitor = Process.monitor(owner)
-    {:links, links} = Process.info(owner, :links)
-    [port] = Enum.filter(links, &is_port/1)
-    {:os_pid, child} = Port.info(port, :os_pid)
+  defp connected(fixture, options, function) do
+    SoftwareResources.with_probe(fixture["resource_directory"], fn probe ->
+      assert {:ok, session} = Matter.connect(options)
+      owner = session.handle.pid
+      monitor = Process.monitor(owner)
+      {:links, links} = Process.info(owner, :links)
+      [port] = Enum.filter(links, &is_port/1)
+      {:os_pid, child} = Port.info(port, :os_pid)
 
-    try do
-      function.(session, child)
-    after
-      assert :ok = Matter.disconnect(session)
-      assert_receive {:DOWN, ^monitor, :process, ^owner, :normal}, 1000
-      assert child_stopped?(child, 100)
-      assert :ets.info(session.handle.admission) == :undefined
-    end
+      try do
+        function.(session, child, probe)
+      after
+        assert :ok = Matter.disconnect(session)
+        assert_receive {:DOWN, ^monitor, :process, ^owner, :normal}, 1000
+        assert child_stopped?(child, 100)
+        assert :ets.info(session.handle.admission) == :undefined
+        SoftwareResources.final!(probe)
+      end
+    end)
   end
 
   defp read(session, address) do

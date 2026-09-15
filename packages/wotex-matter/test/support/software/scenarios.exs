@@ -141,8 +141,8 @@ defmodule Wotex.Matter.SoftwareScenarios do
         fixture = Map.put(common, "unreachable_node_id", 0x123456789ABC)
 
         fixture =
-          if name == "STARTUP_RESOURCES" do
-            directory = Path.join(context.directory, "startup-resources")
+          if name in ["STARTUP_RESOURCES", "STRESS"] do
+            directory = Path.join(context.directory, String.downcase(name) <> "-resources")
             private_directory(directory)
 
             fixture

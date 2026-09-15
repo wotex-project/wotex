@@ -3043,3 +3043,53 @@ clean archive evidence remain required for complete P09/C09 acceptance.
 | Minimum wotex-matter-host | `2291e908db21b109ad171594a954830285f915ea7cdf8bb829d25ad6e5436c01` |
 | Minimum wotex-matter-flow-host | `4cdd9b65fb9be457b57f58b2183eabdb96abbaf846531cf3a721856ae11d3eff` |
 | Minimum wotex-matter-resource-host | `d1617104e4319806d44889737519c5d07b43d1293824c873d9eb45d047b1e82b` |
+
+
+## Resource census throughout persistent stress
+
+The persistent software stress case selects the resource-observation executable.
+After a warm read, each 100-read batch and the completed group of 32 concurrent
+calls must return all nine tracked native object counts to balance and all seven
+SDK counters to the warm baseline. Each of 100 receiver-termination cycles also
+checks the completed subscription count against its cycle number. The existing
+BEAM admission, monitor, stream-owner, Port and file-descriptor checks remain.
+Snapshots retry only within one original 1000-ms cleanup deadline.
+
+Every completed native generation, including discovery, the main stress session
+and the 100 open/close cycles, must publish its final resource census. Both Linux
+lanes complete 102 generations with balanced object acquisition/destruction and
+zero SDK counters after shutdown, in 154.1 and 179.4 seconds. Each lane records
+1235 interaction contexts, 1335 ReadClients and 100 subscription contexts, with
+matching destruction counts. The actual live baseline on both lanes is
+2 TCP endpoints, 4 UDP endpoints, 4 unsolicited-message handlers and 1 timer;
+packet buffers, exchange contexts and platform events are zero. The stress
+session creates and destroys exactly 100 subscriptions. All assertions use the
+unchanged `61ba553` native implementation and its recorded binary hashes.
+
+Heap/RSS observations are separate from this resource census. The current lane
+records 21,688 KiB at each of its ten 100-read checkpoints. The sanitizer lane
+records the sequence below. RSS growth does not identify an allocation owner;
+these observations make no claim about its cause or a plateau. All native
+processes exit with status 0 under the selected ASan/UBSan leak-detection lane.
+
+Sanitizer RSS in KiB: 172944, 175752, 178664, 181460, 184284, 187048, 189880, 192744, 195572, 198420.
+
+The default gate passes 213 checks with 34 excluded in 72.6 seconds. Both
+formatters and ExDoc pass. The required software inventory remains 33 cases.
+The passing persistent-resource case does not close the remaining one-shot
+resource, forced-stress-failure, coverage, final software-build/run and clean
+archive requirements.
+
+| Persistent stress artifact | SHA-256 |
+| --- | --- |
+| Current stress results | `cd80433811a012dda1be0dc784c973922d283b17ad4e4928d0c1551ce7f734db` |
+| Current stress test log | `42d7cc7bc9f75fb7b15135c8bebd8c2fddeb1d636a4d310f7276e66e6c179988` |
+| Current resource-observation digests | `c19c79d1c328a7c39b8752a56a7ecbc4626a404d6bc81e22e0c8370367b31a22` |
+| Minimum stress results | `00879fe920f0c9a697186b8623a34ca003b9ddebe3d2e903aa407acc399693dc` |
+| Minimum stress test log | `a7f31b76b9211df9d710d0e14502498fc138d3dfedceab303b822dae37a4dd19` |
+| Minimum resource-observation digests | `1d3d47c750ef47c3cbb37d980fce9255ad645e3dedb08eb6ad3eb324827abcb5` |
+| Stress assertions | `a3c2b8b94ee07b66d726c533b8a40b71335a088fa2c8fec1661e6825ea77d9d2` |
+| Software fixture selection | `8187efb97063a24f764f9f99c07787fa95db54edf556bfc819688268a9a94364` |
+| Default gate | `e13311c14cd766ee8f54e7faccf933fc7d125c98e0c81f8eb9b4b438d32ed0dc` |
+| Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
