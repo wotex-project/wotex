@@ -3604,3 +3604,48 @@ open/close cycles, resource assertions and no-retry behavior.
 | Current-lane acceptance log | `f17c6320d3c8ed06e1d4fe82e792ad62da2658e63adada5936b1721ee1f4c77c` |
 | Current-lane raw test log | `672781dd51c8c6e85935fc929249502bebafbf8fcf600c6be6701afb4571181d` |
 | Zero-eviction one-shot peer log | `7db79191a4bd8380d2a09244bb375837da04c6b1f6776e92d297266c3587f378` |
+
+## Final separated-peer software acceptance
+
+A fresh build and unretried two-lane run from lifecycle-isolation revision
+`93e110004ed9cd8a56b28568b7e9f5fabc765ff3` pass. The build verifies the pinned
+connectedhomeip revision and all 15 advisory queries, passes both six-case CTest
+gates, and reproduces all 16 executable and certificate artifacts from the
+previous build byte for byte. Only the source-bound native manifest changes.
+The immutable software source digest is
+`7420c107e27e6a42db7631818714f8be6d0d87c5b57c735e4a9d09c71a8057e0`
+before and after both lanes.
+
+The current Elixir 1.20.2/OTP 29.0.4 lane passes 278 executed checks with seed
+961164 in 1,023.1 seconds. The minimum Elixir 1.18.4/OTP 27.3.4.15 sanitizer
+lane passes the same 278 executed checks with seed 66006 in 1,274.7 seconds.
+Each receipt passes all 36 required software cases, records one explicit hardware
+exclusion, and reports zero failed, duplicate, unexpected or hardware-executed
+cases. ASan/UBSan report no failure. Both lane records contain zero owned
+containers and networks after cleanup, and both acceptance logs confirm that all
+owned peers were reaped.
+
+Each one-shot stress peer receives 1,103 load CASE Sigma1 messages and performs
+zero secure-session evictions. The dedicated lifecycle read-only peers contain
+zero subscription requests and zero report-response timeouts while completing
+their 100 open/close generations. Subscription teardown remains confined to the
+separate lifecycle peers used for the receiver-death phase.
+
+| Final separated-peer artifact | SHA-256 |
+| --- | --- |
+| Build log | `58fc097264ccee1561276bc9d62e09d4f0e48ee207c9cac7316709f10be86970` |
+| Workspace manifest | `b47d27157d53574a23f704d568e8a6d0ae077dc7a7120f6a32b13f02ad955fa1` |
+| Public run log | `1b88f4a5d35a7b6358a2c0fd262f921624dc0a9652bf639a8ffbbac7b682f7cf` |
+| Outer software result | `27ecaf3332fc618a59f87b4a4b55f9542b8138dedee6b9f2c988ee123345c3cc` |
+| Current receipt | `4a537a14896fcd12a026520010f7441f8210efda8a47b2094e310ca34de53c51` |
+| Current acceptance log | `6560e56100a3669d6314b5fd165fb6cdfbc8fb2cfb8725540c0dc9fe585c6e48` |
+| Current raw test log | `ba6f04b33e7975e5876c2822d94d7cda49f7ef6d077668d856e0f7c767e47d34` |
+| Current one-shot stress peer | `86b9a91fbc082f932ba01118e4a09f4e578981aa5f22eb8e781e2fcd49fec800` |
+| Current lifecycle stress peer | `5e1e2f61a73a46f8decc4de82d4c6c7f59df1891ad36a12167cbbc0b8e5cd529` |
+| Current lifecycle open/close peer | `41e8d232cdc6823e59e1d92af343fa1c06abbe5f85d63b3be8ac4ac5afee981a` |
+| Minimum receipt | `4f8bfb9a1e7a5511dd04087922bccd71f35e1d97bdd6438631c71e449dd32fed` |
+| Minimum acceptance log | `891ef131f3576457a96e0eb918b4a63aa988ff5f51de6b560e0281001323932e` |
+| Minimum raw test log | `e99de3f4d39700a0ff237c49f3c87eb8f14a6a3c6190b6bf2f54f9098283e2a3` |
+| Minimum one-shot stress peer | `fa9edec379b2a83684f6cd1bc270403572e0a790478c5c877deea50321cea44d` |
+| Minimum lifecycle stress peer | `87bd14fdd8b36f7da4bc44fe0d1240fe642fb6729048be70de07de56386be3e6` |
+| Minimum lifecycle open/close peer | `b3f52dcaf541cd8af9e28cd522c9fb0d3a7dd4ae54be23774a942a6a44cff9ec` |
