@@ -3,14 +3,18 @@ defmodule Wotex.Matter.Native.Connection do
   Owns the Port and request correlation state for one native controller.
 
   `Wotex.Matter.Native` starts this process explicitly and monitors the caller
-  that created it. The process validates the fixed startup identity, assigns
-  increasing native request IDs, accepts one response for the expected ID, and
-  closes the Port when the caller or connection terminates. A missed response
-  deadline expires the generation so a delayed frame cannot be correlated with
-  later work. Admitted calls retain one caller monitor and deadline timer until
-  completion. The bounded FIFO queue removes dead or expired callers without
-  transmission. Native response waits also service queued call admission,
-  cancellation, report consumption and receiver death. Losing the active caller
+  that created it. Only that caller can retrieve the fixed startup identity.
+  After startup, the process accepts ordinary work through exact admission
+  capabilities and accepts close control through its separately reserved
+  capability. Unknown direct process calls are rejected without native I/O.
+  The process assigns increasing native request IDs, accepts one response for
+  the expected ID, and closes the Port when the caller or connection terminates.
+  A missed response deadline expires the generation so a delayed frame cannot
+  be correlated with later work. Admitted calls retain one caller monitor and
+  deadline timer through completion. The bounded FIFO queue removes dead or
+  expired callers without transmission. Native response waits also service
+  queued call admission, cancellation, report consumption and receiver death.
+  Losing the active caller
   closes its generation and fails queued requests before transmission.
   One owned 50 ms maintenance timer reclaims dead or expired reservations whose
   callers never submitted a message. It consumes an already queued message before
@@ -159,6 +163,7 @@ defmodule Wotex.Matter.Native.Connection do
             {:ok,
              %{
                port: port,
+               owner: owner,
                owner_monitor: owner_monitor,
                generation: generation,
                admission: Admission.new(generation),
@@ -194,9 +199,9 @@ defmodule Wotex.Matter.Native.Connection do
   def handle_call({:bounded, message, deadline, lease}, from, state),
     do: {:noreply, enqueue_call(state, message, deadline, lease, from)}
 
-  def handle_call({:close_control, generation, kind, deadline, token}, _from, state) do
+  def handle_call({:close_control, generation, kind, deadline, token}, from, state) do
     cond do
-      generation != state.generation or not Admission.close_owned?(state.admission, token) ->
+      not valid_close_control?(state, generation, kind, deadline, token, from) ->
         {:reply, {:error, Error.new(:invalid_handle)}, state}
 
       kind == :invalidate ->
@@ -207,21 +212,17 @@ defmodule Wotex.Matter.Native.Connection do
 
       true ->
         {:disconnect, generation}
-        |> handle_call(nil, Map.put(state, :call_deadline, deadline))
+        |> dispatch_call(nil, Map.put(state, :call_deadline, deadline))
         |> clear_call_deadline()
     end
   end
 
-  def handle_call(:identity, _, state),
+  def handle_call(:identity, {owner, _}, %{owner: owner} = state),
     do: {:reply, {:ok, state.generation, state.admission}, state}
 
-  def handle_call({:invalidate, generation}, _, state) do
-    if generation == state.generation,
-      do: {:stop, :normal, {:ok, nil}, state},
-      else: {:reply, {:error, Error.new(:invalid_handle)}, state}
-  end
+  def handle_call(_, _, state), do: {:reply, {:error, Error.new(:invalid_handle)}, state}
 
-  def handle_call({:request, generation, message, timeout}, _, state) do
+  defp dispatch_call({:request, generation, message, timeout}, _, state) do
     cond do
       generation != state.generation ->
         {:reply, {:error, Error.new(:invalid_handle)}, state}
@@ -248,7 +249,7 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  def handle_call({:health, generation, timeout}, _, state) do
+  defp dispatch_call({:health, generation, timeout}, _, state) do
     if generation == state.generation do
       execute(state, "health", %{}, timeout)
     else
@@ -256,11 +257,63 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  def handle_call({:subscribe, generation, request, receiver, timeout, acknowledged}, _, state) do
-    cond do
-      generation != state.generation ->
-        {:reply, {:error, Error.new(:invalid_handle)}, state}
+  defp dispatch_call({:subscribe, generation, request, receiver, timeout, acknowledged}, _, state) do
+    if generation == state.generation do
+      case Request.subscription(request, state.fabric_id) do
+        {:ok, normalized} ->
+          subscribe(state, normalized, receiver, timeout, acknowledged)
 
+        {:error, error} ->
+          {:reply, {:error, error}, state}
+      end
+    else
+      {:reply, {:error, Error.new(:invalid_handle)}, state}
+    end
+  end
+
+  defp dispatch_call({:unsubscribe, generation, subscription, timeout}, _, state) do
+    with true <- generation == state.generation,
+         :ok <- validate_owned_subscription(subscription, state) do
+      if MapSet.member?(state.closed_references, subscription.reference) do
+        if Map.has_key?(state.cancellation_deadlines, subscription.reference),
+          do: join_cancellation(state, subscription.reference, timeout),
+          else: {:reply, {:ok, nil}, state}
+      else
+        current = Map.fetch!(state.subscriptions, subscription.reference)
+
+        if current.status == :closing do
+          join_cancellation(state, subscription.reference, timeout)
+        else
+          unsubscribe_active(state, subscription, current, timeout)
+        end
+      end
+    else
+      _ -> {:reply, {:error, Error.new(:invalid_handle)}, state}
+    end
+  end
+
+  defp dispatch_call({:disconnect, generation}, _, state) do
+    if generation == state.generation do
+      case request_frame(state, "close", %{}, @cleanup_timeout) do
+        {:ok, nil, next_state} ->
+          case await_close_exit(next_state) do
+            :ok -> {:stop, :normal, {:ok, nil}, %{next_state | port: nil}}
+            {:error, error} -> {:stop, :normal, {:error, error}, next_state}
+          end
+
+        {:ok, _, next_state} ->
+          {:stop, :normal, {:error, Error.new(:invalid_frame)}, next_state}
+
+        {:error, error, next_state} ->
+          {:stop, :normal, {:error, error}, next_state}
+      end
+    else
+      {:reply, {:error, Error.new(:invalid_handle)}, state}
+    end
+  end
+
+  defp subscribe(state, request, receiver, timeout, acknowledged) do
+    cond do
       map_size(state.subscriptions) >= 64 or MapSet.size(state.closed_references) >= 1_024 ->
         {:reply, {:error, Error.new(:busy)}, state}
 
@@ -276,7 +329,9 @@ defmodule Wotex.Matter.Native.Connection do
           if acknowledged do
             {nil, nil}
           else
-            {:ok, owner} = StreamOwner.start_link(self(), generation, reference, receiver, request)
+            {:ok, owner} =
+              StreamOwner.start_link(self(), state.generation, reference, receiver, request)
+
             {owner, Process.monitor(owner)}
           end
 
@@ -329,47 +384,6 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  def handle_call({:unsubscribe, generation, subscription, timeout}, _, state) do
-    with true <- generation == state.generation,
-         :ok <- validate_owned_subscription(subscription, state) do
-      if MapSet.member?(state.closed_references, subscription.reference) do
-        if Map.has_key?(state.cancellation_deadlines, subscription.reference),
-          do: join_cancellation(state, subscription.reference, timeout),
-          else: {:reply, {:ok, nil}, state}
-      else
-        current = Map.fetch!(state.subscriptions, subscription.reference)
-
-        if current.status == :closing do
-          join_cancellation(state, subscription.reference, timeout)
-        else
-          unsubscribe_active(state, subscription, current, timeout)
-        end
-      end
-    else
-      _ -> {:reply, {:error, Error.new(:invalid_handle)}, state}
-    end
-  end
-
-  def handle_call({:disconnect, generation}, _, state) do
-    if generation == state.generation do
-      case request_frame(state, "close", %{}, @cleanup_timeout) do
-        {:ok, nil, next_state} ->
-          case await_close_exit(next_state) do
-            :ok -> {:stop, :normal, {:ok, nil}, %{next_state | port: nil}}
-            {:error, error} -> {:stop, :normal, {:error, error}, next_state}
-          end
-
-        {:ok, _, next_state} ->
-          {:stop, :normal, {:error, Error.new(:invalid_frame)}, next_state}
-
-        {:error, error, next_state} ->
-          {:stop, :normal, {:error, error}, next_state}
-      end
-    else
-      {:reply, {:error, Error.new(:invalid_handle)}, state}
-    end
-  end
-
   @impl GenServer
   def handle_info(
         {:request_ids_exhausted, generation},
@@ -378,7 +392,7 @@ defmodule Wotex.Matter.Native.Connection do
     closing =
       state
       |> Map.put(:call_deadline, System.monotonic_time(:millisecond) + @cleanup_timeout)
-      |> then(&handle_call({:disconnect, generation}, nil, &1))
+      |> then(&dispatch_call({:disconnect, generation}, nil, &1))
 
     {:stop, reason, _, next_state} = closing
     {:stop, reason, notify_session_failure(Error.new(:transport_closed), next_state)}
@@ -415,7 +429,7 @@ defmodule Wotex.Matter.Native.Connection do
             true ->
               call.message
               |> remaining_budget(remaining)
-              |> handle_call(call.from, Map.put(active, :call_deadline, call.deadline))
+              |> dispatch_call(call.from, Map.put(active, :call_deadline, call.deadline))
               |> clear_call_deadline()
           end
 
@@ -600,7 +614,8 @@ defmodule Wotex.Matter.Native.Connection do
 
   defp reap_admission(state, _), do: {:ok, state}
 
-  defp enqueue_call(state, message, deadline, lease, {caller, _} = from) do
+  defp enqueue_call(state, message, deadline, {slot, token} = lease, {caller, _} = from)
+       when is_integer(deadline) and slot in 1..64 and is_reference(token) do
     cond do
       deadline <= System.monotonic_time(:millisecond) and
           not Admission.owned?(state.admission, lease, caller, deadline) ->
@@ -622,6 +637,11 @@ defmodule Wotex.Matter.Native.Connection do
         GenServer.reply(from, {:error, Error.new(:timeout)})
         state
 
+      not ordinary_message?(message) ->
+        Admission.release(state.admission, lease)
+        GenServer.reply(from, {:error, Error.new(:invalid_request)})
+        state
+
       true ->
         monitor = Process.monitor(caller)
         remaining = max(deadline - System.monotonic_time(:millisecond), 0)
@@ -637,6 +657,37 @@ defmodule Wotex.Matter.Native.Connection do
         |> schedule_drain()
     end
   end
+
+  defp enqueue_call(state, _, _, _, from) do
+    GenServer.reply(from, {:error, Error.new(:invalid_handle)})
+    state
+  end
+
+  defp ordinary_message?({:request, generation, message, timeout})
+       when is_binary(generation) and is_map(message), do: valid_timeout?(timeout)
+
+  defp ordinary_message?({:health, generation, timeout}) when is_binary(generation),
+    do: valid_timeout?(timeout)
+
+  defp ordinary_message?({:subscribe, generation, request, receiver, timeout, acknowledged})
+       when is_binary(generation) and is_map(request) and is_pid(receiver) and
+              is_boolean(acknowledged),
+       do: valid_timeout?(timeout)
+
+  defp ordinary_message?({:unsubscribe, generation, subscription, timeout})
+       when is_binary(generation) and is_struct(subscription, Subscription),
+       do: valid_timeout?(timeout)
+
+  defp ordinary_message?(_), do: false
+  defp valid_timeout?(timeout), do: is_integer(timeout) and timeout in 1..60_000
+
+  defp valid_close_control?(state, generation, kind, deadline, token, {caller, _})
+       when kind in [:disconnect, :invalidate] and is_integer(deadline) and is_reference(token) do
+    generation == state.generation and
+      Admission.close_owned?(state.admission, token, caller, deadline)
+  end
+
+  defp valid_close_control?(_, _, _, _, _, _), do: false
 
   defp schedule_drain(%{active_call: nil, drain_scheduled: false} = state) do
     if :queue.is_empty(state.call_order) do
@@ -1088,8 +1139,8 @@ defmodule Wotex.Matter.Native.Connection do
             await_owner_line(next_state, deadline)
           end
 
-        {:"$gen_call", from, {:close_control, generation, _kind, _call_deadline, token}} ->
-          if generation == state.generation and Admission.close_owned?(state.admission, token) do
+        {:"$gen_call", from, {:close_control, generation, kind, call_deadline, token}} ->
+          if valid_close_control?(state, generation, kind, call_deadline, token, from) do
             {:error, Error.new(:transport_closed), %{state | close_call: from}}
           else
             GenServer.reply(from, {:error, Error.new(:invalid_handle)})
@@ -1100,6 +1151,10 @@ defmodule Wotex.Matter.Native.Connection do
           state
           |> enqueue_call(message, call_deadline, lease, from)
           |> await_owner_line(deadline)
+
+        {:"$gen_call", from, _} ->
+          GenServer.reply(from, {:error, Error.new(:invalid_handle)})
+          await_owner_line(state, deadline)
 
         {:reap_admission, token} ->
           case reap_admission(state, token) do

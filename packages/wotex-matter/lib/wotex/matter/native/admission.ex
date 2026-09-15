@@ -62,9 +62,9 @@ defmodule Wotex.Matter.Native.Admission do
   def closing?(table), do: :ets.member(table, :closing)
 
   @doc false
-  @spec close_owned?(:ets.tid(), reference()) :: boolean()
-  def close_owned?(table, token),
-    do: match?([{:closing, ^token, _, _}], :ets.lookup(table, :closing))
+  @spec close_owned?(:ets.tid(), reference(), pid(), integer()) :: boolean()
+  def close_owned?(table, token, caller, deadline),
+    do: :ets.lookup(table, :closing) == [{:closing, token, caller, deadline}]
 
   @doc false
   @spec close_failure(:ets.tid(), integer()) :: :owner_closed | :timeout | nil

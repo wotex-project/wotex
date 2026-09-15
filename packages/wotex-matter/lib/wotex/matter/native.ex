@@ -161,7 +161,7 @@ defmodule Wotex.Matter.Native do
         {:error, Error.new(:receiver_closed)}
 
       true ->
-        with {:ok, request} <- validate_subscription_request(request, handle.fabric_id) do
+        with {:ok, request} <- Request.subscription(request, handle.fabric_id) do
           Connection.subscribe(
             handle.pid,
             handle.generation,
@@ -212,44 +212,6 @@ defmodule Wotex.Matter.Native do
        do: {:ok, fabric_id}
 
   defp request_fabric(_, _), do: :error
-
-  defp validate_subscription_request(request, fabric_id) do
-    keys = [:kind, :paths, :min_interval_s, :max_interval_s, :resubscribe, :queue_limit]
-
-    with true <- Enum.sort(Map.keys(request)) == Enum.sort(keys),
-         kind when kind in [:attribute, :event] <- request.kind,
-         true <- is_list(request.paths) and length(request.paths) in 1..64,
-         true <- is_integer(request.min_interval_s) and request.min_interval_s in 0..65_535,
-         true <- is_integer(request.max_interval_s) and request.max_interval_s in 1..65_535,
-         true <- request.min_interval_s <= request.max_interval_s,
-         true <- is_boolean(request.resubscribe),
-         true <- is_integer(request.queue_limit) and request.queue_limit in 1..10_000,
-         {:ok, paths} <- validate_subscription_paths(request.paths, kind, fabric_id),
-         true <- length(paths) == length(Enum.uniq(paths)) do
-      {:ok, %{request | paths: paths}}
-    else
-      {:error, %Error{}} = error -> error
-      _ -> {:error, Error.new(:invalid_subscription)}
-    end
-  end
-
-  defp validate_subscription_paths(paths, kind, fabric_id) do
-    Enum.reduce_while(paths, {:ok, []}, fn path, {:ok, acc} ->
-      with {:ok, address} <- Address.new(path),
-           true <- address.fabric_id == fabric_id,
-           {:ok, _} <- Descriptor.lookup(kind, address, :subscribe) do
-        {:cont, {:ok, [Map.from_struct(address) | acc]}}
-      else
-        false -> {:halt, {:error, Error.new(:fabric_mismatch)}}
-        {:error, %Error{}} = error -> {:halt, error}
-        _ -> {:halt, {:error, Error.new(:invalid_subscription)}}
-      end
-    end)
-    |> case do
-      {:ok, paths} -> {:ok, Enum.reverse(paths)}
-      error -> error
-    end
-  end
 
   @doc "Performs a real local protocol probe against the owned native controller."
   @spec health(handle(), pos_integer()) :: {:ok, map()} | {:error, Error.t()}

@@ -11,11 +11,12 @@ defmodule Wotex.Matter.Native.Request do
 
   API admission checks the caller's term before sending it to the connection.
   The connection checks its final envelope again, including correlation and
-  timeout fields, before encoding. This module enforces representation bounds;
-  operation-specific schema validation remains with the owning API and backend.
+  timeout fields, before encoding. The native API and connection share the
+  subscription schema check here so malformed subscription terms cannot acquire
+  report owners. Other operation schemas remain with the API and backend.
   """
 
-  alias Wotex.Matter.Error
+  alias Wotex.Matter.{Address, Descriptor, Error}
 
   @maximum_bytes 131_071
   @maximum_nodes 4096
@@ -40,6 +41,52 @@ defmodule Wotex.Matter.Native.Request do
       {:ok, encoded}
     else
       _ -> {:error, Error.new(:invalid_request)}
+    end
+  end
+
+  @doc false
+  @spec subscription(term(), pos_integer()) :: {:ok, map()} | {:error, Error.t()}
+  def subscription(request, fabric_id) when is_map(request) do
+    keys = [:kind, :paths, :min_interval_s, :max_interval_s, :resubscribe, :queue_limit]
+
+    with true <- Enum.sort(Map.keys(request)) == Enum.sort(keys),
+         kind when kind in [:attribute, :event] <- request.kind,
+         true <- path_count(request.paths, 0) in 1..64,
+         true <- is_integer(request.min_interval_s) and request.min_interval_s in 0..65_535,
+         true <- is_integer(request.max_interval_s) and request.max_interval_s in 1..65_535,
+         true <- request.min_interval_s <= request.max_interval_s,
+         true <- is_boolean(request.resubscribe),
+         true <- is_integer(request.queue_limit) and request.queue_limit in 1..10_000,
+         {:ok, paths} <- validate_subscription_paths(request.paths, kind, fabric_id),
+         true <- length(paths) == length(Enum.uniq(paths)) do
+      {:ok, %{request | paths: paths}}
+    else
+      {:error, %Error{}} = error -> error
+      _ -> {:error, Error.new(:invalid_subscription)}
+    end
+  end
+
+  def subscription(_, _), do: {:error, Error.new(:invalid_subscription)}
+
+  defp path_count([], count), do: count
+  defp path_count([_ | rest], count) when count < 64, do: path_count(rest, count + 1)
+  defp path_count(_, _), do: :invalid
+
+  defp validate_subscription_paths(paths, kind, fabric_id) do
+    Enum.reduce_while(paths, {:ok, []}, fn path, {:ok, acc} ->
+      with {:ok, address} <- Address.new(path),
+           true <- address.fabric_id == fabric_id,
+           {:ok, _} <- Descriptor.lookup(kind, address, :subscribe) do
+        {:cont, {:ok, [Map.from_struct(address) | acc]}}
+      else
+        false -> {:halt, {:error, Error.new(:fabric_mismatch)}}
+        {:error, %Error{}} = error -> {:halt, error}
+        _ -> {:halt, {:error, Error.new(:invalid_subscription)}}
+      end
+    end)
+    |> case do
+      {:ok, paths} -> {:ok, Enum.reverse(paths)}
+      error -> error
     end
   end
 

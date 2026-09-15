@@ -47,7 +47,10 @@ reopens the exact fabric/controller identity. Controller setup uses the SDK
 operational keystore, certificate store, generated controller data model,
 production device-attestation verifier and one `DeviceCommissioner`. Startup,
 failure, EOF and caller death release the controller and storage lock. P03
-provides controller health and fabric admission.
+provides controller health and fabric admission. The BEAM connection accepts
+ordinary work only with an exact caller/deadline admission reservation, accepts
+close control only from the caller that owns its reserved close capability and
+returns `invalid_handle` for other direct process calls without native I/O.
 
 P04 executes bounded reads, event reads, writes and command invokes through the
 pinned generated cluster descriptors and connectedhomeip Interaction Model

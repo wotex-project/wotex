@@ -35,6 +35,212 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     discriminator: 3840
   }
 
+  @tag :owner_boundary
+  test "WMA-C03 raw process calls cannot bypass full native admission" do
+    alias Wotex.Matter.Native.Admission
+    audit = temporary_path("raw-admission")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+    deadline = System.monotonic_time(:millisecond) + 5_000
+
+    leases =
+      for _ <- 1..64 do
+        assert {:ok, lease} =
+                 Admission.acquire(handle.admission, handle.pid, handle.generation, deadline)
+
+        lease
+      end
+
+    try do
+      assert {:error, %Error{code: :busy}} = Native.health(handle, 100)
+      reply = boundary_call(handle.pid, {:request, handle.generation, @read, 1_000})
+      assert File.read!(audit) == initial
+      assert {:error, %Error{code: :invalid_handle}} = reply
+      assert Process.alive?(handle.pid)
+    after
+      Enum.each(leases, &Admission.release(handle.admission, &1))
+      Native.disconnect(handle)
+    end
+  end
+
+  @tag :owner_boundary
+  test "WMA-C02 malformed and unknown process calls preserve the live connection without logging input" do
+    audit = temporary_path("raw-input")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+    canary = "untrusted-native-call-canary"
+
+    try do
+      logs =
+        ExUnit.CaptureLog.capture_log(fn ->
+          for message <- [
+                {:unrecognized, canary},
+                {:bounded, canary, :invalid_deadline, :invalid_lease},
+                {:bounded, canary, 0, {65, make_ref()}},
+                {:request, handle.generation, @read, 1_000},
+                {:health, handle.generation, 1_000},
+                {:subscribe, handle.generation, %{}, self(), 1_000, false},
+                {:disconnect, handle.generation},
+                {:invalidate, handle.generation}
+              ] do
+            assert {:error, %Error{code: :invalid_handle}} = boundary_call(handle.pid, message)
+            assert Process.alive?(handle.pid)
+            assert File.read!(audit) == initial
+          end
+
+          foreign_identity = Task.async(fn -> boundary_call(handle.pid, :identity) end)
+
+          assert {:error, %Error{code: :invalid_handle}} =
+                   Task.await(foreign_identity)
+
+          assert Process.alive?(handle.pid)
+          assert File.read!(audit) == initial
+        end)
+
+      refute logs =~ canary
+      assert {:ok, %{"status" => "ready"}} = Native.health(handle)
+    after
+      Native.disconnect(handle)
+    end
+  end
+
+  @tag :owner_boundary
+  test "WMA-C03 a close capability binds its caller, deadline and allowed control kind" do
+    alias Wotex.Matter.Native.Admission
+    audit = temporary_path("close-capability")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+    deadline = System.monotonic_time(:millisecond) + 5_000
+
+    assert {:first, token} =
+             Admission.begin_close(handle.admission, handle.pid, handle.generation, deadline)
+
+    close = {:close_control, handle.generation, :disconnect, deadline, token}
+
+    try do
+      for message <- [
+            put_elem(close, 2, :unrecognized),
+            put_elem(close, 3, deadline + 1),
+            put_elem(close, 3, :invalid),
+            put_elem(close, 4, make_ref())
+          ] do
+        assert {:error, %Error{code: :invalid_handle}} = boundary_call(handle.pid, message)
+        assert Process.alive?(handle.pid)
+        assert File.read!(audit) == initial
+      end
+
+      foreign = Task.async(fn -> boundary_call(handle.pid, close) end)
+      assert {:error, %Error{code: :invalid_handle}} = Task.await(foreign)
+      assert File.read!(audit) == initial
+      assert {:ok, nil} = GenServer.call(handle.pid, close)
+      refute Process.alive?(handle.pid)
+    after
+      Native.disconnect(handle)
+    end
+  end
+
+  defp boundary_call(pid, message) do
+    GenServer.call(pid, message, 2_000)
+  catch
+    :exit, _ -> :owner_terminated
+  end
+
+  @tag :owner_boundary
+  test "WMA-C02 an admitted envelope still validates operation and subscription terms before I/O" do
+    alias Wotex.Matter.{Subscription, Native.Admission}
+    audit = temporary_path("admitted-input")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+    generation = handle.generation
+    path = Map.delete(@read, :type)
+
+    subscription = %{
+      kind: :attribute,
+      paths: [path],
+      min_interval_s: 0,
+      max_interval_s: 1,
+      resubscribe: false,
+      queue_limit: 1
+    }
+
+    forged = %Subscription{pid: self(), reference: make_ref(), generation: 1}
+
+    try do
+      for {message, code} <- [
+            {:unrecognized, :invalid_request},
+            {{:invalidate, generation}, :invalid_request},
+            {{:disconnect, generation}, :invalid_request},
+            {{:health, generation, 0}, :invalid_request},
+            {{:health, generation, 60_001}, :invalid_request},
+            {{:health, generation, :invalid}, :invalid_request},
+            {{:request, generation, %{type: "read"}, 1_000}, :invalid_request},
+            {{:request, "foreign", @read, 1_000}, :invalid_handle},
+            {{:subscribe, "foreign", %{}, self(), 1_000, false}, :invalid_handle},
+            {{:subscribe, generation, %{}, self(), 1_000, false}, :invalid_subscription},
+            {{:subscribe, generation, %{subscription | paths: [path | :invalid]}, self(), 1_000,
+              false}, :invalid_subscription},
+            {{:subscribe, generation, %{subscription | paths: [%{path | fabric_id: 2}]}, self(),
+              1_000, false}, :fabric_mismatch},
+            {{:subscribe, generation, subscription, :invalid_receiver, 1_000, false},
+             :invalid_request},
+            {{:unsubscribe, generation, forged, 1_000}, :invalid_handle}
+          ] do
+        deadline = System.monotonic_time(:millisecond) + 2_000
+        assert {:ok, lease} = Admission.acquire(handle.admission, handle.pid, generation, deadline)
+
+        assert {:error, %Error{code: ^code}} =
+                 boundary_call(handle.pid, {:bounded, message, deadline, lease})
+
+        assert :ets.info(handle.admission, :size) == 1
+        assert File.read!(audit) == initial
+        assert Process.alive?(handle.pid)
+      end
+
+      assert {:ok, %{"status" => "ready"}} = Native.health(handle)
+    after
+      Native.disconnect(handle)
+    end
+  end
+
+  @tag :owner_boundary
+  test "WMA-C03 malformed controls and unadmitted calls are rejected during pending native I/O" do
+    alias Wotex.Matter.Native.Admission
+    audit = temporary_path("pending-control-identity")
+    assert {:ok, handle} = Native.connect(options(fixture("silent_request", audit)))
+    active = Task.async(fn -> Native.health(handle, 10_000) end)
+    assert request_recorded?(audit, 100)
+    initial = File.read!(audit)
+    deadline = System.monotonic_time(:millisecond) + 5_000
+
+    assert {:first, token} =
+             Admission.begin_close(handle.admission, handle.pid, handle.generation, deadline)
+
+    close = {:close_control, handle.generation, :disconnect, deadline, token}
+
+    try do
+      for message <- [
+            put_elem(close, 2, :unrecognized),
+            put_elem(close, 3, deadline + 1),
+            {:unrecognized, "pending-call-canary"},
+            {:health, handle.generation, 1_000},
+            {:bounded, :unrecognized, :invalid, :invalid}
+          ] do
+        assert {:error, %Error{code: :invalid_handle}} = boundary_call(handle.pid, message)
+        assert Process.alive?(handle.pid)
+        assert File.read!(audit) == initial
+      end
+
+      foreign = Task.async(fn -> boundary_call(handle.pid, close) end)
+      assert {:error, %Error{code: :invalid_handle}} = Task.await(foreign)
+      assert {:ok, nil} = GenServer.call(handle.pid, close)
+      assert {:error, %Error{code: :transport_closed}} = Task.await(active)
+      refute Process.alive?(handle.pid)
+    after
+      Native.disconnect(handle)
+      Task.shutdown(active)
+    end
+  end
+
   @tag :wire_identifiers
   test "reserved result identifiers retire the native generation with the submitted effect" do
     for {message, effect} <- [{@read, :none}, {@write, :unknown}] do

@@ -3028,6 +3028,7 @@ clean archive evidence remain required for complete P09/C09 acceptance.
 | Native build and CTest gates | `5a74da404134ff4c2ceb5cc968b4b93c05171e88687369694f98333e824a9225` |
 | Production entry-point rebuild | `58cb1fe3e81fef3b36b9541416e486266cee32ed808c4267e5d5b0f51fac9ffa` |
 | Advisory gate | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
+
 | Default gate | `72ab1b235a452222d19d85483efca003a8a9bae9fc17495fc766a887ffa7d47c` |
 | Minimum harness gate | `33d558fbf429ecd03b4348deade74e3c5fe93162ea02639d64ccb48673e8f18d` |
 | ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
@@ -3344,3 +3345,49 @@ separate requirements.
 | Minimum harness | `055c1a928046bd34d7d840356ec810d6bf91bb734451c67c1462178c63e26af3` |
 | Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 | Advisory gate | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
+
+## Native owner process-call capability boundary
+
+The WMA-C02/C03 regression begins with all 64 ordinary admission slots reserved
+and sends a valid raw request directly to the connection process. Before this
+change, that call bypasses admission and writes a native read. An unknown direct
+call terminates the owner, and a close message with an unrecognized control kind
+is accepted. The three pre-change cases pass zero assertions and retain their
+observed native write and returned values.
+
+The connection callback now admits only an exact bounded-call envelope, an exact
+reserved close capability and the creating caller's startup identity
+request. Ordinary operations dispatch through a private path after the owner has
+matched the reservation's token, caller and absolute deadline. Close control
+also binds its token, caller, deadline, generation and finite control kind.
+Unknown, malformed and legacy raw calls return `invalid_handle`, keep the owner
+alive and do not log or transmit their payload. The receive loop applies the
+same rules while native I/O is pending.
+
+The final serialization boundary revalidates operations and subscriptions even
+inside an admitted envelope. Subscription path counting is a bounded proper-list
+traversal, so an improper or over-limit list returns `invalid_subscription`
+without enumerating unbounded input or terminating the owner. A foreign
+generation returns `invalid_handle` before subscription parsing. The shared
+validator keeps the public and owner-side paths aligned.
+
+All five focused cases pass in 3.5 seconds on Erlang/OTP 29 with Elixir 1.20.2
+and in 3.3 seconds on Erlang/OTP 27 with Elixir 1.18.4. The broader persistent,
+request, subscription and recovery set passes 79 cases on each toolchain. The
+default gate passes 226 checks with 37 excluded in 74.2 seconds. A serial full
+coverage run passes the same 226 checks and raises measured coverage from 90.7%
+to 91.1%; the unchanged 95% requirement remains open. This packet changes no
+native source, executable or software-peer result.
+
+| Native owner boundary artifact | SHA-256 |
+| --- | --- |
+| Pre-change regression | `d2a6bafb8ec723e5797386331c0929e7a695a89a37f5e82d02efb79ea339185c` |
+| Current focused gate | `7c5a6c81dfdfad2a6a797ba6ded986d8472cf62871a2f8736647bc66a23a99cf` |
+| Minimum focused gate | `705c86b63a0b130fd36ecc52bdce18c9d3c2c0da6aa3d61e013de2f52f10a688` |
+| Default gate | `a2770d3638d339d0370af4d5999ac09c5f9075454985c43af68b2df389077870` |
+| Coverage gate | `e0379fc367694381d6abcacbc5c04721347bcadabc7466988f580c007aed87b2` |
+| Native API source | `6b94962281f34b105a172590d79949ec19883de71068408a4130ffb9caf35d49` |
+| Admission source | `ac488cd87249e6a808b770dfb806124ac948ce55c737ad740b91b395d657ab85` |
+| Connection source | `73235b90c0f843625aed168827a02a3c8858eff0235f6ad318de2535d7a4d616` |
+| Request validator source | `8c8366da679c6346f08ae4e99ef65df06019f2e64c9a1cebfc34836029b0db2d` |
+| Boundary regression source | `7cdc531339cee650dee5d8d17b7b038b42cbb4cbcdbd0f6e9270b19f8ad9a039` |
