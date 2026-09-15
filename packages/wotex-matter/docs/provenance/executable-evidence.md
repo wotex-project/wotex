@@ -2257,3 +2257,57 @@ The unchanged 95% coverage requirement remains unsatisfied.
 | Full coverage log | `87b82d8cf91dd51f368cfdbf7369379aa82852657453a157b28e6ed601efaf13` |
 | Current sixteen-case SDK/corpus log | `3591c53056db14205ddf8d0e75ffd108911937b16d9ef10f7ecd84aea54da692` |
 | Minimum sixteen-case SDK/corpus log | `e08a7d709dedb240652c6d90b9a282ba7ff1a68b0f18336ab32c01dee484d7b0` |
+
+
+## Required software case receipts
+
+`WOTEX_REQUIRE_SOFTWARE=1` enables explicit fixture admission and required-case
+accounting in the ExUnit helper. The checked-in inventory identifies all 32
+registered software cases and their 23 fixture/executable variables. Fixture
+JSON is bounded, duplicate-free and owner-only. Source and fixture paths reject
+symlinks and traversal. Result creation is exclusive; an existing receipt is
+never replaced.
+
+The formatter records actual ExUnit completion states for each expected case.
+Missing, excluded, skipped, failed, invalid, duplicate and unexpected software
+cases fail acceptance. An executed hardware case or an ordinary test failure
+also prevents success. Source digests before and after execution must agree.
+The receipt retains the inventory digest, exact Elixir/OTP versions, seed and
+evidence categories. Shared-SDK cases and native contract cases remain distinct;
+fixture credentials, exception contents and skip reasons do not enter the
+structured result. ExUnit's after-suite callback rejects a failed or absent
+receipt, including an otherwise successful run with no selected required cases.
+
+Five deterministic acceptance tests execute real isolated ExUnit processes.
+They cover a successful receipt, existing-result refusal, missing and malformed
+fixtures, invalid inventories, skips, filters, omitted and zero-case runs,
+assertion and setup failures, unexpected software cases, hardware execution,
+ordinary test failures and changed source. Canary fixture/exception contents are
+absent from failure receipts. A separate compile-only inventory check compares
+registered software test identities with the manifest without starting peers.
+These are test-orchestration assertions, not additional SDK interoperability.
+
+The default `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes all 188 checks
+(two doctests, one property and 185 tests), with 33 excluded, in 67.8 seconds on
+Elixir 1.20.2/OTP 29.0.4. All five acceptance tests pass in 7.2 seconds on
+Elixir 1.18.4/OTP 27.3.4.15. ExDoc passes with warnings as errors. An actual
+`mix test --no-compile` invocation with required mode and missing fixtures exits
+nonzero before test execution. The preceding coverage measurement remains
+90.0%, below the unchanged 95% requirement.
+
+Peer startup, the complete `mix wotex.software.run` task, complete C09 native
+fault/resource evidence and fresh build/archive acceptance remain open. This
+receipt harness does not itself establish a successful 32-case SDK/software run.
+
+| Software acceptance artifact | SHA-256 |
+| --- | --- |
+| Case inventory | `04f0b813fd3feabf4a0a1e08953a9075f258ac1b37eac1954a4f094ffb2ccbc0` |
+| Fixture admission and result gate | `16ca32b70aa0da951295f28fc0c053b705440df0a39773fa33186159f5a37c3f` |
+| ExUnit case formatter | `b6be596cb1c0258affe9149fd9a5baabb847a94f8d7dced516dc956bdf0cd49c` |
+| Test helper | `fd3e4d21afc2a44686a256b77c4ffee51ae21eb52c63c36d0c9e703ec8ebc815` |
+| Executable acceptance tests | `3ac3cfe026e1a9c245aa0b10000db936b0ba4f10bc5fa7b9b974d417d5fb4ff2` |
+| Current focused log | `67f80d977f8f5ee005b52a1ee28032e2025583ca3d8aa1d8b5d26a7e48959caf` |
+| Default gate log | `7b9a60d29438603d1ebce267700e172206ab96dd16dd4194a283c4062a0612ae` |
+| Minimum focused log | `4154eb6d116c781874a045143697297d9cc897eae466d8b8e3def56abff31064` |
+| Missing-fixture CLI log | `c77d145b93af61772e9cc81a062dc97bca4117aceac3d2de220969fb0cb4e56d` |
+| ExDoc log | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |

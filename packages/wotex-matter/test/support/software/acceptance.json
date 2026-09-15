@@ -1,0 +1,222 @@
+{
+  "schema": "wotex.matter.software-cases@1",
+  "cases": [
+    {
+      "file": "test/interop/commissioning_test.exs",
+      "module": "Elixir.Wotex.Matter.CommissioningInteropTest",
+      "name": "test commissions a trusted peer, establishes CASE and opens an enhanced window",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/commissioning_test.exs",
+      "module": "Elixir.Wotex.Matter.CommissioningInteropTest",
+      "name": "test a valid but wrong setup PIN reaches a final SDK failure",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/commissioning_test.exs",
+      "module": "Elixir.Wotex.Matter.CommissioningInteropTest",
+      "name": "test an untrusted attestation chain reaches a final SDK failure",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/commissioning_test.exs",
+      "module": "Elixir.Wotex.Matter.CommissioningInteropTest",
+      "name": "test expired enhanced-window onboarding material reaches a final SDK failure",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/commissioning_test.exs",
+      "module": "Elixir.Wotex.Matter.CommissioningInteropTest",
+      "name": "test an operational peer enforces its AccessControl ACL",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_acl_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeAclInteropTest",
+      "name": "test WMA-S05 commissions a peer and preserves a nonempty ACL across write read and denial",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_attestation_failure_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeAttestationFailureTest",
+      "name": "test untrusted device attestation fails before fabric mutation",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_bridge_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeBridgeInteropTest",
+      "name": "test WMA-N03 discovers a bridge and preserves reachability event history and cancellation",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_close_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeCloseInteropTest",
+      "name": "test WMA-C03 full admission cannot prevent closing a stopped SDK child",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_commissioning_timeout_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeCommissioningTimeoutTest",
+      "name": "test the SDK commissioning timeout retains its status before the native owner retires",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_control_pump_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeControlPumpInteropTest",
+      "name": "test WMA-B02 controls remain live during SDK read, subscription and window waits",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_input_pressure_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeInputPressureInteropTest",
+      "name": "test WMA-C03 request and report ACK backpressure close the owned SDK process",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_lighting_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeLightingInteropTest",
+      "name": "test WMA-N03 discovers a light, preserves reports and reopens its commissioned fabric",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_oneshot_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeOneshotInteropTest",
+      "name": "test native one-shot operations preserve typed API and scalar Runtime results with no retained child",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_output_failure_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeOutputFailureInteropTest",
+      "name": "test WMA-C03 the SDK host reaps failed stdout while command input remains open",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_pending_owner_loss_test.exs",
+      "module": "Elixir.Wotex.Matter.NativePendingOwnerLossInteropTest",
+      "name": "test WMA-C03 abrupt owner loss reaps native code during an unresolved SDK read",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_pending_subscription_loss_test.exs",
+      "module": "Elixir.Wotex.Matter.NativePendingSubscriptionLossInteropTest",
+      "name": "test WMA-C03 receiver and stream-owner loss abandon pending SDK subscription registration",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_request_id_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeRequestIdInteropTest",
+      "name": "test WMA-B02 ordinary and cancellation ID exhaustion close the real SDK controller",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_runtime_loss_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeRuntimeLossInteropTest",
+      "name": "test WMA-B03 native connection and child loss close the real Runtime route once",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_stream_owner_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeStreamOwnerInteropTest",
+      "name": "test ordinary SDK reports retain credit across stream suspension and release owned processes",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_thermostat_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeThermostatInteropTest",
+      "name": "test WMA-N03 preserves thermostat values null and stale DataVersion status through the SDK",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/interop/native_window_expiry_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeWindowExpiryTest",
+      "name": "test an enhanced window expires and its material cannot commission a new fabric",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/software/lifecycle_stress_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeLifecycleStressTest",
+      "name": "test real peer reads, concurrent callers and repeated native ownership return resources",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/software/native_oneshot_stress_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeOneshotStressTest",
+      "name": "test read-only one-shot load releases its controller after each operation",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/wotex/matter/native_contract_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeContractTest",
+      "name": "test WMA-B-F01 through F05 execute the shared native request validator",
+      "evidence": "native-contract"
+    },
+    {
+      "file": "test/wotex/matter/native_contract_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeContractTest",
+      "name": "test WMA-B-F06 captures the real native ready frame and reaps its closed input",
+      "evidence": "native-contract"
+    },
+    {
+      "file": "test/wotex/matter/native_contract_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeContractTest",
+      "name": "test WMA-B-F16 and F17 execute the production encoded-result size guard",
+      "evidence": "native-contract"
+    },
+    {
+      "file": "test/wotex/matter/native_contract_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeContractTest",
+      "name": "test WMA-B-F07 through F10 observe production report credit accounting",
+      "evidence": "native-contract"
+    },
+    {
+      "file": "test/wotex/matter/native_contract_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeContractTest",
+      "name": "test WMA-B-F14 and F15 couple native retirement to the production BEAM ledger",
+      "evidence": "native-contract"
+    },
+    {
+      "file": "test/wotex/matter/native_contract_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeContractTest",
+      "name": "test WMA-B-F11 suspends the actual connection across native callbacks",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/wotex/matter/native_contract_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeContractTest",
+      "name": "test WMA-B-F12 suspends the actual stream_owner across native callbacks",
+      "evidence": "shared-sdk"
+    },
+    {
+      "file": "test/wotex/matter/native_contract_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeContractTest",
+      "name": "test WMA-B-F13 suspends the actual receiver across native callbacks",
+      "evidence": "shared-sdk"
+    }
+  ],
+  "environment": {
+    "WOTEX_MATTER_COMMISSIONING_FIXTURE": "fixture",
+    "WOTEX_MATTER_CONTRACT_DRIVER": "executable",
+    "WOTEX_MATTER_CONTROLLER_TEST": "executable",
+    "WOTEX_MATTER_NATIVE_ACL_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_ATTESTATION_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_BRIDGE_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_CLOSE_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_CONTROL_PUMP_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_EXECUTABLE": "executable",
+    "WOTEX_MATTER_NATIVE_INPUT_PRESSURE_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_LIGHTING_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_ONESHOT_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_ONESHOT_STRESS_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_PENDING_LOSS_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_PENDING_SUBSCRIPTION_LOSS_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_REQUEST_ID_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_RUNTIME_LOSS_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_STREAM_OWNER_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_STRESS_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_THERMOSTAT_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_TIMEOUT_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_WINDOW_FIXTURE": "fixture",
+    "WOTEX_MATTER_PROCESS_FLOW_FIXTURE": "fixture"
+  }
+}

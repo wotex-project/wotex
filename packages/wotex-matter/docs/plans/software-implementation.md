@@ -191,6 +191,18 @@ the test helper must make missing fixture configuration fail under that setting.
 Label same-stack, independent-stack, malformed-peer and injected-contract evidence
 separately in the results. Hardware absence is not a software test result.
 
+The required-mode ExUnit harness uses the explicit inventory in
+`test/support/software/acceptance.json`. With `WOTEX_REQUIRE_SOFTWARE=1`, every
+listed fixture and executable must pass preflight, and
+`WOTEX_SOFTWARE_RESULT_PATH` must name a new result file in an existing absolute
+directory. The harness records each required case, its evidence category, the
+source and inventory digests, exact BEAM versions and the ExUnit seed. Changed
+source during execution fails acceptance. Missing,
+excluded, skipped, failed, duplicate or unexpected software cases fail acceptance.
+Executing a hardware case also fails acceptance. Fixture and exception contents
+do not enter the structured receipt. This harness does not own peer startup or
+complete the software run task.
+
 ## Verification and commit procedure
 
 Run focused tests while implementing a package, then run `mix check` before its
