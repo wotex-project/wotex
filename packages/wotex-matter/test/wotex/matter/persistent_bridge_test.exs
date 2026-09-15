@@ -35,6 +35,27 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     discriminator: 3840
   }
 
+  @tag :wire_identifiers
+  test "reserved result identifiers retire the native generation with the submitted effect" do
+    for {message, effect} <- [{@read, :none}, {@write, :unknown}] do
+      class = if effect == :unknown, do: :permanent, else: :protocol
+      assert {:ok, handle} = Native.connect(options(fixture("reserved_result_path")))
+      monitor = Process.monitor(handle.pid)
+
+      try do
+        assert {:error,
+                %Error{code: :invalid_frame, effect: ^effect, class: ^class, retryable: false}} =
+                 Native.request(handle, message, 1_000)
+
+        assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+        assert :ets.info(handle.admission) == :undefined
+        assert {:error, %Error{code: :transport_closed}} = Native.health(handle)
+      after
+        Native.disconnect(handle)
+      end
+    end
+  end
+
   @tag :request_id_exhaustion
   test "WMA-B02 the final uint64 request ID retires through the reserved close ID" do
     audit = temporary_path("request-id-limit")
@@ -1086,6 +1107,16 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
         mode == "malformed_result" ->
           IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":false}))
+          loop.(loop)
+
+        mode == "reserved_result_path" and not String.contains?(line, ~s("operation":"close")) ->
+          path = ~s({"fabric_id":1,"node_id":2,"endpoint":65535,"cluster":513,"member":0})
+          result = if String.contains?(line, ~s("operation":"read")) do
+            ~s({"path":\#{path},"value":{"tag":"anonymous","type":"i16","value":2150},"data_version":0})
+          else
+            ~s({"path":\#{path},"status":0})
+          end
+          IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":\#{result}}))
           loop.(loop)
 
         mode in ["late_read", "late_write"] ->

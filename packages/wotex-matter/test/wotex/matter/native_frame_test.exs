@@ -40,5 +40,20 @@ defmodule Wotex.Matter.NativeFrameTest do
              Wire.frame(~s("#{String.duplicate("x", 131_070)}"))
   end
 
+  test "WMA-B02 integer scalars retain their signed and unsigned 64-bit domain" do
+    for value <- [-0x8000000000000000, -1, 0, 0x7FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF] do
+      document = %{"values" => [value, %{"nested" => value}]}
+      assert {:ok, ^document} = Wire.frame(Jason.encode!(document))
+    end
+
+    for value <- [-0x8000000000000001, 0x10000000000000000],
+        document <- [value, [value], %{"values" => [%{"nested" => value}]}] do
+      assert {:error, %Error{code: :invalid_frame}} = Wire.frame(Jason.encode!(document))
+    end
+
+    assert {:ok, floats} = Wire.frame("[0.0,-1.5,1e100]")
+    assert floats == [0.0, -1.5, 1.0e100]
+  end
+
   defp nested(depth), do: String.duplicate("[", depth) <> "0" <> String.duplicate("]", depth)
 end

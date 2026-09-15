@@ -3,9 +3,11 @@ defmodule Wotex.Matter.Native.Wire do
   Converts native controller results into typed Matter values and errors.
 
   This internal module validates operation-specific result envelopes and maps
-  protocol strings through a fixed vocabulary. Context tags, integer widths,
-  explicit nulls and event timestamps retain their typed representation. Invalid
-  envelopes return `Wotex.Matter.Error`; decoding performs no protocol I/O.
+  protocol strings through a fixed vocabulary. Concrete paths obey the identifier
+  widths and reserved ranges in `Wotex.Matter.Address`. Integer scalars remain
+  within the signed/unsigned 64-bit domain; report identities are positive uint64
+  values. Context tags, explicit nulls and event timestamps retain their typed
+  representation. Invalid envelopes return `Wotex.Matter.Error`; decoding performs no protocol I/O.
   Consumers use the named operations in `Wotex.Matter`.
   """
 
@@ -32,6 +34,10 @@ defmodule Wotex.Matter.Native.Wire do
   end
 
   defp frame_budget(_, budget) when budget <= 0, do: -1
+
+  defp frame_budget(value, _)
+       when is_integer(value) and (value < -0x8000000000000000 or value > 0xFFFFFFFFFFFFFFFF),
+       do: -1
 
   defp frame_budget(value, budget) when is_map(value) do
     Enum.reduce_while(value, budget - 1, fn {_key, child}, remaining ->
@@ -79,7 +85,7 @@ defmodule Wotex.Matter.Native.Wire do
         %{"node_id" => node, "fabric_id" => fabric, "case" => "established"} = result
       )
       when map_size(result) == 3 and is_integer(node) and node in 1..0xFFFFFFEFFFFFFFFF and
-             is_integer(fabric) and fabric > 0 do
+             is_integer(fabric) and fabric in 1..0xFFFFFFFFFFFFFFFF do
     {:ok, %{node_id: node, fabric_id: fabric, case: :established}}
   end
 
@@ -255,7 +261,7 @@ defmodule Wotex.Matter.Native.Wire do
          } = metadata
        )
        when map_size(metadata) == 7 and (is_nil(version) or is_integer(version)) and
-              is_boolean(initial) and is_integer(report_id) and report_id > 0 and
+              is_boolean(initial) and is_integer(report_id) and report_id in 1..0xFFFFFFFFFFFFFFFF and
               is_integer(minimum) and minimum in 0..65_535 and is_integer(maximum) and
               maximum in 1..65_535 and minimum <= maximum and is_integer(sdk_id) and
               sdk_id in 0..0xFFFFFFFF do
@@ -293,7 +299,7 @@ defmodule Wotex.Matter.Native.Wire do
        )
        when map_size(metadata) == 9 and is_integer(number) and
               number in 0..0xFFFFFFFFFFFFFFFF and is_integer(priority) and priority in 0..255 and
-              is_boolean(initial) and is_integer(report_id) and report_id > 0 and
+              is_boolean(initial) and is_integer(report_id) and report_id in 1..0xFFFFFFFFFFFFFFFF and
               is_integer(minimum) and minimum in 0..65_535 and is_integer(maximum) and
               maximum in 1..65_535 and minimum <= maximum and is_integer(sdk_id) and
               sdk_id in 0..0xFFFFFFFF do
@@ -319,17 +325,18 @@ defmodule Wotex.Matter.Native.Wire do
   defp event_metadata(_), do: :error
 
   defp path(value) when is_map(value) and map_size(value) == 5 do
-    if Enum.sort(Map.keys(value)) == Enum.sort(@path_keys) do
-      {:ok,
-       %{
-         fabric_id: value["fabric_id"],
-         node_id: value["node_id"],
-         endpoint: value["endpoint"],
-         cluster: value["cluster"],
-         member: value["member"]
-       }}
+    with true <- Enum.sort(Map.keys(value)) == Enum.sort(@path_keys),
+         {:ok, address} <-
+           Address.new(%{
+             fabric_id: value["fabric_id"],
+             node_id: value["node_id"],
+             endpoint: value["endpoint"],
+             cluster: value["cluster"],
+             member: value["member"]
+           }) do
+      {:ok, Map.from_struct(address)}
     else
-      :error
+      _ -> :error
     end
   end
 

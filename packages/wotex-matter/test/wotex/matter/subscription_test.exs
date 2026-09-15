@@ -10,6 +10,26 @@ defmodule Wotex.Matter.SubscriptionTest do
   @event_path %{fabric_id: 1, node_id: 3, endpoint: 2, cluster: 0x0039, member: 3}
   @sensor_path %{fabric_id: 1, node_id: 3, endpoint: 4, cluster: 0x0402, member: 0}
 
+  @tag :wire_identifiers
+  test "an overflowing native report ID closes before public delivery or acknowledgement" do
+    audit = temporary_path("report-id-overflow")
+    executable = native_fixture(audit, "report_id_overflow")
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+    monitor = Process.monitor(session.handle.pid)
+
+    try do
+      assert {:ok, subscription} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
+      reference = subscription.reference
+      assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :invalid_frame}}}, 1_000
+      assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+      refute_receive {:wotex_matter, ^reference, _}, 30
+      assert :ets.info(session.handle.admission) == :undefined
+      refute Enum.any?(audit_frames(audit), &(&1["event"] == "report_ack"))
+    after
+      Matter.disconnect(session)
+    end
+  end
+
   @tag :native_stream_owner
   test "named native credit waits for its distinct stream owner during pending I/O" do
     audit = temporary_path("named-owner-credit")
@@ -958,6 +978,7 @@ defmodule Wotex.Matter.SubscriptionTest do
               attribute_report.(current, 2, 2, 8)
             "credit_overflow" ->
               for sequence <- 1..65, do: attribute_report.(current, sequence, sequence, 7)
+            "report_id_overflow" -> attribute_report.(current, 1, 0x10000000000000000, 7)
             "event" -> event_report.(current)
             "null" -> null_report.(current)
             "terminal" ->

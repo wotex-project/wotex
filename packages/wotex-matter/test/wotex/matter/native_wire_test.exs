@@ -8,6 +8,48 @@ defmodule Wotex.Matter.NativeWireTest do
   @path %{"fabric_id" => 1, "node_id" => 2, "endpoint" => 1, "cluster" => 6, "member" => 0}
   @typed_path %{fabric_id: 1, node_id: 2, endpoint: 1, cluster: 6, member: 0}
 
+  test "WMA-S01 result paths enforce concrete identifier widths and reserved values" do
+    for {key, value} <- [
+          {"fabric_id", 0xFFFFFFFFFFFFFFFF},
+          {"node_id", 0xFFFFFFEFFFFFFFFF},
+          {"endpoint", 0},
+          {"endpoint", 0xFFFE},
+          {"cluster", 0},
+          {"cluster", 0x7FFF},
+          {"cluster", 0x0001FC00},
+          {"cluster", 0xFFF4FFFE},
+          {"member", 0xFFFFFFFE}
+        ] do
+      path = Map.put(@path, key, value)
+      expected = Map.put(@typed_path, String.to_existing_atom(key), value)
+
+      for {operation, result} <- path_envelopes(path) do
+        assert {:ok, decoded} = Wire.decode(operation, result)
+        actual = if is_list(decoded), do: hd(decoded).path, else: decoded.path
+        assert actual == expected
+      end
+    end
+
+    for {key, value} <- [
+          {"fabric_id", 0},
+          {"fabric_id", 0x10000000000000000},
+          {"node_id", 0},
+          {"node_id", 0xFFFFFFF000000000},
+          {"endpoint", -1},
+          {"endpoint", 0xFFFF},
+          {"cluster", 0x8000},
+          {"cluster", 0x0001FBFF},
+          {"cluster", 0xFFF4FFFF},
+          {"cluster", 0xFFF5FC00},
+          {"member", 0xFFFFFFFF},
+          {"member", "any"},
+          {"member", 0.0}
+        ],
+        {operation, result} <- path_envelopes(Map.put(@path, key, value)) do
+      assert_invalid(Wire.decode(operation, result))
+    end
+  end
+
   test "WMA-C02 retains typed integer boundaries, null, false and empty containers" do
     for {name, type, values} <- [
           {"null", :null, [nil]},
@@ -182,7 +224,9 @@ defmodule Wotex.Matter.NativeWireTest do
   end
 
   test "WMA-C04 subscription metadata retains equal values as distinct reports" do
-    for version <- [nil, 0, 0xFFFFFFFF], initial <- [false, true], id <- [1, 2] do
+    for version <- [nil, 0, 0xFFFFFFFF],
+        initial <- [false, true],
+        id <- [1, 2, 0xFFFFFFFFFFFFFFFF] do
       metadata =
         attribute_metadata()
         |> Map.merge(%{"data_version" => version, "initial" => initial, "report_id" => id})
@@ -200,8 +244,8 @@ defmodule Wotex.Matter.NativeWireTest do
       assert decoded.sdk_subscription_id == 0xFFFFFFFF
     end
 
-    for kind <- ["epoch", "system"] do
-      metadata = event_metadata() |> put_in(["timestamp", "kind"], kind)
+    for kind <- ["epoch", "system"], id <- [1, 0xFFFFFFFFFFFFFFFF] do
+      metadata = event_metadata() |> put_in(["timestamp", "kind"], kind) |> Map.put("report_id", id)
 
       assert {:ok, {:ok, %{value: []}, %{kind: :event} = decoded}} =
                Wire.subscription("event", element("structure", []), metadata)
@@ -209,6 +253,7 @@ defmodule Wotex.Matter.NativeWireTest do
       assert decoded.event_number == 0xFFFFFFFFFFFFFFFF
       assert decoded.timestamp.value == 0xFFFFFFFFFFFFFFFF
       assert decoded.path == struct!(Address, @typed_path)
+      assert decoded.report_id == id
     end
   end
 
@@ -217,6 +262,8 @@ defmodule Wotex.Matter.NativeWireTest do
         {key, value} <- [
           {"initial", 0},
           {"report_id", 0},
+          {"report_id", -1},
+          {"report_id", 0x10000000000000000},
           {"report_id", "1"},
           {"min_interval_s", -1},
           {"min_interval_s", 65_536},
@@ -339,10 +386,18 @@ defmodule Wotex.Matter.NativeWireTest do
 
     for result <- [
           %{"node_id" => 0, "fabric_id" => 1, "case" => "established"},
+          %{"node_id" => 2, "fabric_id" => 0x10000000000000000, "case" => "established"},
           %{"node_id" => 2, "fabric_id" => 1, "case" => "pending"}
         ] do
       assert_invalid(Wire.decode(:commission_on_network, result))
     end
+
+    assert {:ok, %{fabric_id: 0xFFFFFFFFFFFFFFFF}} =
+             Wire.decode(:commission_on_network, %{
+               "node_id" => 2,
+               "fabric_id" => 0xFFFFFFFFFFFFFFFF,
+               "case" => "established"
+             })
 
     window = %{
       "node_id" => 2,
@@ -361,6 +416,21 @@ defmodule Wotex.Matter.NativeWireTest do
 
   defp element(type, value, tag \\ "anonymous"),
     do: %{"tag" => tag, "type" => type, "value" => value}
+
+  defp path_envelopes(path) do
+    attribute = Map.put(attribute(element("boolean", false)), "path", path)
+    event = Map.put(event(), "path", path)
+
+    [
+      {:read, attribute},
+      {:write, %{"path" => path, "status" => 0}},
+      {:invoke, %{"path" => path, "value" => nil, "status" => 0}},
+      {:read_paths, [%{"path" => path, "result" => %{"ok" => attribute}}]},
+      {:read_events, [%{"path" => path, "result" => %{"ok" => event}}]},
+      {:read_paths,
+       [%{"path" => path, "result" => %{"error" => %{"code" => "interaction_status"}}}]}
+    ]
+  end
 
   defp attribute(value, version \\ 0),
     do: %{"path" => @path, "value" => value, "data_version" => version}

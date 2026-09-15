@@ -1901,3 +1901,48 @@ fresh build/archive receipts remain open. Last full measured coverage is
 | Minimum focused SDK log | `ec58f3c8dc69dcccb7665be001dd21afe54eaef9f1d5b75ae9c485bb276b0cbc` |
 | Current twelve-case SDK/corpus log | `6e9f3fba3e1e4ac06c1f1fd220e7c9243f2b19587215d245a621f6cbf60db753` |
 | Minimum twelve-case SDK/corpus log | `d0342fd2c5804f4efa670747217088815a76959510a70abd1c15a3c82f11adbf` |
+
+## Native result identifier bounds
+
+The BEAM decoder enforces WMA-B02's signed/unsigned 64-bit integer domain at
+every JSON value depth. Attribute and event report identities are positive
+uint64 values, and commissioning fabric IDs remain within that domain.
+WMA-S01 concrete result paths use `Address.new/1` for identifier widths and
+reserved ranges, including paths in batch success and failure entries. Valid
+boundary values retain their exact integers; finite JSON floats retain their
+representation and remain subject to operation-specific type checks.
+
+The failing run exposed six boundary failures, including a public subscription
+report with ID 18446744073709551616 and a successful native read with reserved
+endpoint 65535. The corrected process-boundary tests reject the report before
+public delivery or credit acknowledgement and retire the generation. Reserved
+read/write result paths likewise retire the generation; the submitted write
+retains unknown effect and permanent, non-retryable classification. These
+malformed bridge fixtures establish decoder behavior, not SDK interoperability.
+
+On Elixir 1.20.2/OTP 29.0.4, `WOTEX_PATH_DEPS=1 mix check --no-retry` passes
+178 checks with 29 excluded. On Elixir 1.18.4/OTP 27.3.4.15,
+`WOTEX_PATH_DEPS=1 mix test test/wotex/matter/native_frame_test.exs test/wotex/matter/native_wire_test.exs test/wotex/matter/persistent_bridge_test.exs test/wotex/matter/subscription_test.exs`
+passes all 74 tests. ExDoc passes with warnings treated as errors.
+
+Both fresh-peer SDK/corpus cohorts pass all twelve cases in 10.8 and 17.1
+seconds, and their owned peers are reaped. Native binaries remain the
+counter-generation cohort. The minimum lane retains ASan/UBSan and leak
+detection, with the preceding forced-exit limitation. These decoder changes do
+not establish the missing F11–F13 process-flow cases, native command
+interruptibility, full fault/resource instrumentation, software-run orchestration
+or fresh complete build/archive receipts. The last full measured coverage
+remains 89.0%, below the unchanged 95% requirement.
+
+| Identifier-bound artifact | SHA-256 |
+| --- | --- |
+| Native decoder | `f30be9ffaaa20bd5b36baa7b48e078ce70e824771bda6a93941d73338f85edc1` |
+| Frame vectors | `967b996f6a1f3fd2e742490fb12299e5fbd7a5add153236c5e001b554163c993` |
+| Result vectors | `6c908b7bb55964a8d8c3dacddf9554ef0ae15cc77cac70a3250da64ec70fbd0b` |
+| Persistent boundary tests | `852d00322c6fe230489f062fc24d1ac6db3e795747d26bf1e64be69a5b80bded` |
+| Subscription boundary tests | `a2226e2a545c702e7d6c124f8cafa26276204e7c43a62436dc86ccdeb7973aa5` |
+| Failing boundary log | `407f019ef4416915d6a9138bf37aedd5f395663fc6c0652604c907a31b5cea17` |
+| Current default gate log | `56b40033b465534bb0907f0b85d399f89e36e130186c3b54e946289de4d9bb86` |
+| Minimum focused log | `58e815df2f69393884b2e6a82c565f4ac84d759d96bcb574d206af807562a94e` |
+| Current twelve-case SDK/corpus log | `19a671ef2de79a11adf9671ea579c5441ddd21663384475c7769e5aba67f54e5` |
+| Minimum twelve-case SDK/corpus log | `c15e02659ce97ff9f17e752e551b6cdc84f64b22bc4fb3c37d7ab0c1993726d1` |
