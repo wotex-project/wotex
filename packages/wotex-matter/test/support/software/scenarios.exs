@@ -22,11 +22,13 @@ defmodule Wotex.Matter.SoftwareScenarios do
     {:timeout, :lighting},
     {:operation_resources, :lighting},
     {:subscription_resources, :lighting},
-    {:oneshot_stress, :all_clusters}
+    {:oneshot_stress, :all_clusters},
+    {:lifecycle_stress, :lighting},
+    {:lifecycle_open_close, :lighting}
   ]
   @controller_keys ~w(executable storage_path vendor_id fabric_id controller_node_id paa_trust_store)a
   @common_cases ~w(CLOSE CONTROL_PUMP INPUT_PRESSURE PENDING_LOSS
-                   PENDING_SUBSCRIPTION_LOSS REQUEST_ID RUNTIME_LOSS STARTUP_RESOURCES STREAM_OWNER STRESS STRESS_FAILURES)
+                   PENDING_SUBSCRIPTION_LOSS REQUEST_ID RUNTIME_LOSS STARTUP_RESOURCES STREAM_OWNER STRESS_FAILURES)
 
   @spec with_fixtures(map(), String.t(), (map() -> term())) :: term()
   def with_fixtures(artifacts, directory, operation) do
@@ -81,7 +83,15 @@ defmodule Wotex.Matter.SoftwareScenarios do
       }
     }
 
-    if name in [:common, :oneshot, :expired_window, :acl_denied, :oneshot_stress] do
+    if name in [
+         :common,
+         :oneshot,
+         :expired_window,
+         :acl_denied,
+         :oneshot_stress,
+         :lifecycle_stress,
+         :lifecycle_open_close
+       ] do
       with_peer(scenario, fn ->
         own_peers(remaining, context, Map.put(peers, name, Map.delete(scenario, "peer")), operation)
       end)
@@ -138,6 +148,8 @@ defmodule Wotex.Matter.SoftwareScenarios do
     common = commission(peers.common)
     oneshot = commission(peers.oneshot)
     oneshot_stress = commission(peers.oneshot_stress)
+    lifecycle_stress = commission(peers.lifecycle_stress)
+    lifecycle_open_close = commission(peers.lifecycle_open_close)
     denied = peers.acl_denied |> commission() |> deny_acl()
 
     environment =
@@ -145,7 +157,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
         fixture = Map.put(common, "unreachable_node_id", 0x123456789ABC)
 
         fixture =
-          if name in ["STARTUP_RESOURCES", "STRESS", "STRESS_FAILURES"] do
+          if name in ["STARTUP_RESOURCES", "STRESS_FAILURES"] do
             directory = Path.join(context.directory, String.downcase(name) <> "-resources")
             private_directory(directory)
 
@@ -168,6 +180,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
           {"NATIVE_ACL", peers.acl},
           {"NATIVE_ONESHOT", oneshot},
           {"NATIVE_ONESHOT_STRESS", resource_fixture(context, oneshot_stress, "oneshot-resources")},
+          {"NATIVE_STRESS", lifecycle_fixture(context, lifecycle_stress, lifecycle_open_close)},
           {"NATIVE_OPERATION_RESOURCES",
            resource_fixture(context, peers.operation_resources, "operation-resources")},
           {"NATIVE_SUBSCRIPTION_RESOURCES",
@@ -272,6 +285,12 @@ defmodule Wotex.Matter.SoftwareScenarios do
     fixture
     |> put_in(["controller", "executable"], context.artifacts.resource_host)
     |> Map.put("resource_directory", directory)
+  end
+
+  defp lifecycle_fixture(context, stress, open_close) do
+    stress = resource_fixture(context, stress, "stress-resources")
+    open_close = resource_fixture(context, open_close, "stress-open-close-resources")
+    Map.put(stress, "open_close", open_close)
   end
 
   defp commission(scenario) do

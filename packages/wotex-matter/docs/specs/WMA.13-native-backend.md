@@ -67,6 +67,11 @@ The test-only example peers compile with
 target and admits the 1,133 fresh one-shot controller generations without making
 the peer's unrelated LRU session eviction part of the controller-lifetime
 measurement. This setting does not apply to the production controller binary.
+The persistent lifecycle stress fixture also assigns separate commissioned
+lighting peers to its receiver-death and read-only open/close phases. Server-side
+subscription teardown can therefore finish on the first peer without occupying
+the report engine measured by the second phase. Counts, deadlines and controller
+resource assertions remain unchanged.
 
 `native-manifest.json` has schema `wotex.native-build`, version `1`, package,
 source_revision, source_files (relative path/SHA-256), upstream sources (URL,

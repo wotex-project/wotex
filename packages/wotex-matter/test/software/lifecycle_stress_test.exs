@@ -148,9 +148,40 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
 
     assert MapSet.new(Port.list()) == baseline_ports
 
+    open_close = Map.fetch!(fixture, "open_close")
+    open_close_controller = Map.fetch!(open_close, "controller")
+
+    open_close_options =
+      [
+        client: Native,
+        lifecycle: :persistent,
+        storage_mode: :open_existing,
+        authority: :stored,
+        timeout: 10_000
+      ] ++
+        Enum.map(
+          [
+            :executable,
+            :storage_path,
+            :vendor_id,
+            :fabric_id,
+            :controller_node_id,
+            :paa_trust_store
+          ],
+          &{&1, Map.fetch!(open_close_controller, Atom.to_string(&1))}
+        )
+
+    open_close_address = %{
+      fabric_id: open_close_options[:fabric_id],
+      node_id: Map.fetch!(open_close, "node_id"),
+      endpoint: 1,
+      cluster: 6,
+      member: 0
+    }
+
     for _ <- 1..100 do
-      connected(fixture, options, fn session, _, probe ->
-        value = read(session, address)
+      connected(open_close, open_close_options, fn session, _, probe ->
+        value = read(session, open_close_address)
         SoftwareResources.quiescent!(probe)
         value
       end)

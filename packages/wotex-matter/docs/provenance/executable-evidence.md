@@ -3574,3 +3574,33 @@ rather than filesystem state from an earlier run.
 | Rejected current-lane acceptance log | `b2c6726927f1328ea2012be869c93bbd51384da5165dc4f693bddf709c9fb36a` |
 | Rejected current-lane raw test log | `bff9eb702a32c8369983595e18138d55756522e1c1a0cf6f69b3afeda5337be8` |
 | Dedicated one-shot peer log | `5ae46208ddcd81030cf9a9e83d98ef565eda8dd0d8bc2d2daa1ecf98a64d20fc` |
+
+## Lifecycle stress peer separation
+
+The first run from correction revision
+`656b7194e3e5ea916e8baa25db838611c5b9f493` is rejected after 998.8 seconds on
+the current lane: 277 of 278 checks pass, one hardware case is excluded and the
+minimum lane is withheld. The one-shot stress peer performs 1,103 CASE Sigma1
+receives with zero secure-session evictions, confirming the session-capacity
+correction. The only failure instead occurs at the boundary between the
+lifecycle stress case's receiver-death and open/close phases.
+
+After the subscription-heavy controller closes, four server-side subscription
+reports remain in Matter retransmission teardown on its peer. A new controller's
+read request is acknowledged immediately, but the peer's report engine waits
+10.24 seconds for those reports to clear before sending the read result. That
+misses the unchanged 10,000-ms operation deadline. The stress fixture now uses
+separate commissioned lighting peers for the receiver-death and read-only
+open/close phases. This removes responder-state coupling while preserving 1,000
+sequential reads, 32 concurrent callers, 100 receiver-death cycles, 100
+open/close cycles, resource assertions and no-retry behavior.
+
+| Rejected lifecycle-boundary artifact | SHA-256 |
+| --- | --- |
+| Build log | `ac6890030ce4a9b49da849301972e12a8c6d2d8ff22d6f8a1d75994fe4d36aa4` |
+| Workspace manifest | `726b35e2e99dcece0f8922b6b845a78d5f30db1f3bfbdc64433dd3d4316bf21c` |
+| Outer software result | `53f3676b47ae97a5741bfac1034fb20afc8ccd03ca4598e2dec57dd570b40a0d` |
+| Current-lane receipt | `5f15e12dde25fd0f685c3e9eb8b3a8511ccb3a6158c0a0c1b9466ad1580a1567` |
+| Current-lane acceptance log | `f17c6320d3c8ed06e1d4fe82e792ad62da2658e63adada5936b1721ee1f4c77c` |
+| Current-lane raw test log | `672781dd51c8c6e85935fc929249502bebafbf8fcf600c6be6701afb4571181d` |
+| Zero-eviction one-shot peer log | `7db79191a4bd8380d2a09244bb375837da04c6b1f6776e92d297266c3587f378` |

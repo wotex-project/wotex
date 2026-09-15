@@ -35,7 +35,7 @@ defmodule Wotex.Matter.SoftwareScenariosTest do
     assert Path.wildcard(Path.join(workspace, "*-fixture.json")) == []
   end
 
-  test "controller setup starts and reaps only its five preparation peers", %{directory: directory} do
+  test "controller setup starts and reaps only its seven preparation peers", %{directory: directory} do
     executable = script(directory, "printf 'Server Listening...'; exec sleep 60")
     host = Path.join(directory, "host")
     File.write!(host, "#!/bin/sh\nexit 1\n")
@@ -47,8 +47,8 @@ defmodule Wotex.Matter.SoftwareScenariosTest do
       SoftwareScenarios.with_fixtures(artifacts, workspace, fn _ -> flunk("setup succeeded") end)
     end
 
-    assert_reaped(workspace, 5)
-    assert length(Path.wildcard(Path.join(workspace, "*"))) == 16
+    assert_reaped(workspace, 7)
+    assert length(Path.wildcard(Path.join(workspace, "*"))) == 18
     assert Path.wildcard(Path.join(workspace, "*-fixture.json")) == []
   end
 
