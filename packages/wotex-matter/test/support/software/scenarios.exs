@@ -20,7 +20,8 @@ defmodule Wotex.Matter.SoftwareScenarios do
     {:expired_window, :lighting},
     {:acl_denied, :lighting},
     {:timeout, :lighting},
-    {:operation_resources, :lighting}
+    {:operation_resources, :lighting},
+    {:subscription_resources, :lighting}
   ]
   @controller_keys ~w(executable storage_path vendor_id fabric_id controller_node_id paa_trust_store)a
   @common_cases ~w(CLOSE CONTROL_PUMP INPUT_PRESSURE PENDING_LOSS
@@ -167,6 +168,8 @@ defmodule Wotex.Matter.SoftwareScenarios do
           {"NATIVE_ONESHOT_STRESS", resource_fixture(context, oneshot, "oneshot-resources")},
           {"NATIVE_OPERATION_RESOURCES",
            resource_fixture(context, peers.operation_resources, "operation-resources")},
+          {"NATIVE_SUBSCRIPTION_RESOURCES",
+           resource_fixture(context, peers.subscription_resources, "subscription-resources")},
           {"NATIVE_ATTESTATION", untrusted(context, peers.native_attestation)},
           {"NATIVE_TIMEOUT", wrong_pin(peers.timeout)}
         ],

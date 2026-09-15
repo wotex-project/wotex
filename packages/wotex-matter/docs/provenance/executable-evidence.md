@@ -3273,3 +3273,74 @@ requirements retain their separate acceptance gates.
 | Minimum harness | `8f91fc361eab7243a2df5cb0bdf899997b6e1a8722e8a8e41390a5817df07749` |
 | Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 | Advisory gate | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
+
+## SDK subscription recovery and shared session setup
+
+The real recovery case commissions an owned lighting peer and stops and restarts
+that peer with the same persistent identity. It observes continuity loss,
+delivery generation 2, `resubscribed` with unknown continuity and a fresh initial
+snapshot. Cancellation during a second recovery releases the subscription and
+its timer. A separate lost subscription expires after 60,008 and 60,012 ms with
+two attempts on the current and minimum lanes, within the 60,000-ms retry budget
+plus 1000-ms cleanup allowance.
+Two simultaneous subscriptions then lose their peer; cancelling one preserves
+the other's recovery and initial snapshot. Each lane observes five actual
+recovery-timer acquisitions and destructions, four subscription lifetimes, six
+ReadClients, two interaction contexts and one commissioning context. All tracked
+lifetimes balance, SDK counts return to the warm baseline after completed
+cycles, and all seven SDK counters are zero after controller shutdown. The five
+owned peer processes are reaped. The final cases pass in 119.5 and
+120.1 seconds on the current and minimum ASan/UBSan lanes.
+
+The pre-fix cancellation releases the ReadClient and recovery timer but retains
+one extra SDK timer throughout the 1000-ms cleanup allowance. The pinned
+[ReadClient destructor](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/app/ReadClient.cpp)
+detaches callbacks without releasing the shared operational-session setup.
+The controller's SDK-thread reapers now release a peer's unused setup after its
+last local operation or subscription completes. This cancels its outstanding
+address resolution or retry through the SDK's
+[session-setup destructor](https://github.com/project-chip/connectedhomeip/blob/250a9e6c50ee2068107f3c4808b680f5f2925415/src/app/OperationalSessionSetup.cpp).
+The SDK operation releases setup state; it does not evict established secure
+sessions. A queued reaper checks for a live CASE manager because controller
+shutdown may already have released that manager. The sanitizer control-pump
+regression detects the missing guard before the final build.
+
+Both final, fully owned SDK cohorts pass all 16 cases and all 17 native corpus
+vectors in 18.4 and 25.4 seconds and reap their lighting and
+all-clusters peers. Earlier evidence remains rejected: a long-lived-peer run
+times out on a one-shot read, and both initial fully owned runs expose the
+shutdown guard defect. The read-timeout cause is not established by the fresh
+peer result. Operation budgets and cleanup allowances remain unchanged.
+Both six-case CTest gates and all 15 pinned advisory queries pass. The default
+gate passes 221 checks with 37 excluded in 69.1 seconds, and the minimum
+harness passes 20 cases in 9.2 seconds. Both formatters pass. The required
+inventory contains 36 software cases and adds a fifteenth peer that starts
+within its case. Full
+final-source software coverage, public build/run and archive acceptance remain
+separate requirements.
+
+| Subscription recovery artifact | SHA-256 |
+| --- | --- |
+| Current recovery observations | `cb2f88222bcce892e680bdcaca3c5d2fe2b11e05871595db54c39d00581bd50d` |
+| Current recovery test log | `17eefbe96fb77a2966f9a67e8d92f97e20bc93bf697a75481adbf0c972aed3d6` |
+| Current SDK regression log | `23b583f080f12c45f16ba41fde2a26ce0cadaf5172b0d47c43a46f8ce0d097e6` |
+| Current controller executable | `9405de31d6dd4df41f9c230c250459ad812e888c062640890df4287935521193` |
+| Current flow executable | `df9b6bc4b80f48745c98fc5af93850666576bfa9b1381d23e9f1622ec17613bc` |
+| Current resource executable | `6dd06ece470204e58ca297fbb6cb37a6c536497f21e7681776c02a85db98cf55` |
+| Minimum recovery observations | `9e8619b744a18609d99b6b5587d46bc0aeb22f6a99ec0f6fc6bcd292a2b454fa` |
+| Minimum recovery test log | `58654bfdccfa6f3fadd36fc3622908f4cb279a61472f18ce1c3491c9f5a45859` |
+| Minimum SDK regression log | `372d0e48a0bd963c4c3e9faafa5331523cfc0e9616eda77f5d1ecde34308994d` |
+| Minimum controller executable | `4888b7dc42ba19fe626a622543c9c8844df3b35953d08cd4ed2206d0b1e439b0` |
+| Minimum flow executable | `fb0cae6e4f9a076f3939cd145bc0f6e76feb41857cb047690223653e3dcf5f3d` |
+| Minimum resource executable | `2675700274c7e6966bc909a98c74c4a8b4672b9b74ae3abbf046ccbe60a32a05` |
+| Controller source | `243cbd174c38939af5c5971db97eed8c63b0ee83854671531b6710005f6011d9` |
+| Recovery resource case | `f7a9f66c8eeeaa19c3c4a3372f5bf7f1abef61648ea12206d889b9a3b44fea0e` |
+| Required inventory | `7dc6c1583a764323491d6af3456e8a94b462a39944a4618aadc63e01f99c499c` |
+| Retained-timer regression | `11015d41300535a0008bfbd796a4b798cea7c2951a12d26e406e5dd4250cdf02` |
+| Rejected long-lived-peer SDK run | `69899a643fb76c2102cc5863a7b337f04a107483be4a2a99cc3bb73a204fa527` |
+| SDK shutdown guard regression | `e7ee72acafd8cacecbed25c9bbdc3e8c8f4e3bcbd9ac18d8a2da7e88387f42b7` |
+| Native build and both CTest gates | `ea4cf59b3ce262d6cb7e3d31492bc832a492c963090103702fdf61b3ffa57d18` |
+| Default gate | `b5603b7e39e3b4acc778ecafcebecc2eb01f8c95f5e8aa442cce9e76a0741ef9` |
+| Minimum harness | `055c1a928046bd34d7d840356ec810d6bf91bb734451c67c1462178c63e26af3` |
+| Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| Advisory gate | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |

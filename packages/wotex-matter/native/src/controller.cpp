@@ -2132,7 +2132,10 @@ class SdkControllerBackend::Impl final
 
   static void ReapPending(intptr_t context) {
     auto *pending = reinterpret_cast<Pending *>(context);
-    pending->owner_.Reap(pending);
+    auto &owner = pending->owner_;
+    const auto node = pending->request_.node_id;
+    owner.Reap(pending);
+    owner.ReleaseUnusedSessionSetup(node);
   }
 
   static void ReapCommissioning(intptr_t context) {
@@ -2169,28 +2172,61 @@ class SdkControllerBackend::Impl final
   }
 
   void Reap(PendingCommissioning *pending) {
-    std::lock_guard<std::mutex> lock(control_mutex_);
-    if (commissioning_ && commissioning_.get() == pending && pending->done()) {
-      commissioning_.reset();
+    const auto node = pending->request_.node_id;
+    {
+      std::lock_guard<std::mutex> lock(control_mutex_);
+      if (commissioning_ && commissioning_.get() == pending && pending->done()) {
+        commissioning_.reset();
+      }
     }
+    ReleaseUnusedSessionSetup(node);
   }
 
   void Reap(PendingWindow *pending) {
-    std::lock_guard<std::mutex> lock(control_mutex_);
-    if (window_ && window_.get() == pending && pending->done()) {
-      window_.reset();
+    const auto node = pending->request_.node_id;
+    {
+      std::lock_guard<std::mutex> lock(control_mutex_);
+      if (window_ && window_.get() == pending && pending->done()) {
+        window_.reset();
+      }
     }
+    ReleaseUnusedSessionSetup(node);
   }
 
   void Reap(NativeSubscription *subscription) {
-    std::lock_guard<std::mutex> lock(subscription_mutex_);
-    subscriptions_.erase(
-        std::remove_if(
-            subscriptions_.begin(), subscriptions_.end(),
-            [subscription](const std::shared_ptr<NativeSubscription> &candidate) {
-              return candidate.get() == subscription && candidate->done();
-            }),
-        subscriptions_.end());
+    const auto node = subscription->request_.node_id;
+    {
+      std::lock_guard<std::mutex> lock(subscription_mutex_);
+      subscriptions_.erase(
+          std::remove_if(
+              subscriptions_.begin(), subscriptions_.end(),
+              [subscription](const std::shared_ptr<NativeSubscription> &candidate) {
+                return candidate.get() == subscription && candidate->done();
+              }),
+          subscriptions_.end());
+    }
+    ReleaseUnusedSessionSetup(node);
+  }
+
+  void ReleaseUnusedSessionSetup(chip::NodeId node) {
+    // ReadClient destruction detaches its callbacks but the shared CASE setup
+    // can retain address-resolution or retry timers. Release that setup only
+    // after every local operation and subscription for the peer has completed.
+    // This SDK-thread call does not evict established secure sessions.
+    {
+      std::scoped_lock lock(pending_mutex_, control_mutex_, subscription_mutex_);
+      const auto active = [node](const auto &context) {
+        return context && context->request_.node_id == node && !context->done();
+      };
+      if (std::any_of(pending_.begin(), pending_.end(), active) ||
+          active(commissioning_) || active(window_) ||
+          std::any_of(subscriptions_.begin(), subscriptions_.end(), active)) {
+        return;
+      }
+    }
+    if (auto *manager = commissioner_.CASESessionMgr(); manager != nullptr) {
+      manager->ReleaseSession(commissioner_.GetPeerScopedId(node));
+    }
   }
 
   bool EmitReport(const SubscriptionReport &report) {

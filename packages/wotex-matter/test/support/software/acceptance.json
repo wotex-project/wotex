@@ -2,6 +2,12 @@
   "schema": "wotex.matter.software-cases@1",
   "cases": [
     {
+      "file": "test/software/subscription_resources_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeSubscriptionResourcesTest",
+      "name": "test WMA-S04 SDK recovery restores a snapshot and releases timers on success, cancel and expiry",
+      "evidence": "shared-sdk"
+    },
+    {
       "file": "test/software/stress_failures_test.exs",
       "module": "Elixir.Wotex.Matter.NativeStressFailuresTest",
       "name": "test WMA-C09 read load retains bounded cleanup after deadline, EOF and malformed native responses",
@@ -233,6 +239,7 @@
     "WOTEX_MATTER_NATIVE_RUNTIME_LOSS_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_STREAM_OWNER_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_STARTUP_RESOURCES_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_SUBSCRIPTION_RESOURCES_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_STRESS_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_STRESS_FAILURES_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_THERMOSTAT_FIXTURE": "fixture",

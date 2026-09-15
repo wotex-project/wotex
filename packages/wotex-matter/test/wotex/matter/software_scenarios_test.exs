@@ -48,7 +48,7 @@ defmodule Wotex.Matter.SoftwareScenariosTest do
     end
 
     assert_reaped(workspace, 4)
-    assert length(Path.wildcard(Path.join(workspace, "*"))) == 14
+    assert length(Path.wildcard(Path.join(workspace, "*"))) == 15
     assert Path.wildcard(Path.join(workspace, "*-fixture.json")) == []
   end
 
