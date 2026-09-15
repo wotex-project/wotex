@@ -1284,3 +1284,48 @@ C09 matrix evidence, and the remaining process-flow corpus remain open.
 | Minimum focused log | `fc584da32be84262e4a745f3231f1e1386685dea236af24dcf510e8bf8856500` |
 | Current Linux lifecycle log | `81e418ed5b4c82e2ee368347630aaf3a1a29513eb8f707ba8b52c9e5c1bcb667` |
 | Minimum Linux sanitizer lifecycle log | `6831c8893a42dd43aa589cfb9a778ff80af7a759d2a36fb7f68e156330599c77` |
+
+## Disconnect with full ordinary admission
+
+Disconnect and invalidation reserve one separate closing record. Only its first
+caller sends a control message; concurrent close callers monitor the connection
+instead of extending an owner-side queue. Closing rejects new ordinary requests
+and queued requests cannot start another native operation. An idle controller
+closes cooperatively, including validation of its close reply and successful
+process exit. A close during a pending native response terminates that generation
+and reaps its owned child. It does not claim rollback of an active mutation.
+
+The full-admission Port regression fails before this change with `:busy` from
+disconnect. It now closes the blocked generation within one second and rejects
+all queued work without transmission. The default gate passes 155 checks with
+23 excluded; the minimum supported BEAM passes all 28 persistent-connection
+tests. Existing concurrent-disconnect, malformed-close, nonzero-exit and stalled
+shutdown cases remain passing. ExDoc passes without warnings.
+
+The real SDK case reads a lighting peer, stops its exact owned native child with
+SIGSTOP, admits 64 requests and runs 32 concurrent disconnect callers. Both
+Linux lanes close successfully in 25 ms, release the Port, child and admission
+table, and report effect `:none` for the queued toggle. Reopening the same durable
+controller and rereading the peer proves that toggle did not change its value.
+The final case passes in 1.0 seconds on current Linux and 1.6 seconds on minimum
+Linux using the unchanged byte-counter hosts. Sanitizers and leak detection are
+enabled for the minimum executable, but forced termination of the stopped child
+does not execute its leak finalization. The reopened controller closes normally.
+
+This cohort covers explicit connection cleanup under full ordinary admission.
+Reservation-to-message caller failure, full native control/instrumentation and
+fault matrices, remaining process-flow cases, full build/archive receipts and
+the unchanged 95% coverage requirement remain open.
+
+| Close-control artifact | SHA-256 |
+| --- | --- |
+| Native API | `b767b2d35e542e5b5a31cec205aa2a88ef881ee26910ecb4d602a97dfee4c837` |
+| Admission implementation | `07529ca98b741ff4ed83412fe52eb72e8f62e2268fdcced9b8d467ce191e8bf3` |
+| Connection | `0f865db064def982cf2e8ea007b38735c0e2c1ce682a25335c79a0b23aef97b8` |
+| Persistent connection tests | `652b40c2edab79529f087e7a30f165fce845743526d6503746992a650d889787` |
+| SDK close test | `8446468fdc472fba82dfa4d686418fd49931a00bae07f207e885932c923c8613` |
+| Failing close regression log | `6c1f3b1d71dd9daa0d2ddb8fd7db3f901f109d75fdb220d9bea41c8decd7a802` |
+| Current default gate log | `e4139d2e2269e7acfa1fa060ac96d4a6b0bc1fc038b3e731421358c946d0d82e` |
+| Minimum focused log | `15207d6e309b131dd09a82c9c3afa7a62720c42a16793ea288e357fa453f386d` |
+| Current Linux close log | `eb0fabd3d892e1b63b1368bd1bd95e2ed513d714fcb953268b14a5fb82f54d6f` |
+| Minimum Linux sanitizer close log | `4625e2cd43ea0f341779aec8611cecaf4e4b9ed8971028274a7b59c0fb494e33` |

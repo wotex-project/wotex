@@ -4,10 +4,15 @@ defmodule Wotex.Matter.Native.Admission do
 
   Each explicitly started connection owns one unnamed ETS table with 64 slots.
   Atomic insertion bounds concurrent callers without starting another process.
-  The connection releases a slot only after it has consumed the corresponding
-  call, so a caller timeout cannot free capacity while its message remains queued.
+  Once submitted, a call keeps its slot until the connection consumes it, so a
+  caller timeout cannot free capacity while its message remains queued.
   Table ownership and session generation bind this internal capability to one
   connection; process termination deletes the table and every reservation.
+
+  A separate atomic closing record reserves one control message and prevents new
+  ordinary requests. Concurrent close callers wait on the connection's lifetime
+  instead of sending more close messages or retaining another owner-side queue.
+  A reservation racing with closing is released before it submits its call.
   """
 
   @type lease :: {1..64, reference()}
@@ -22,24 +27,33 @@ defmodule Wotex.Matter.Native.Admission do
 
   @doc false
   @spec acquire(term(), pid(), String.t(), integer()) :: {:ok, lease()} | {:error, atom()}
-  def acquire(table, owner, generation, deadline) when is_reference(table) do
-    case :ets.info(table, :owner) do
-      ^owner ->
-        if :ets.lookup(table, :identity) == [{:identity, owner, generation}],
-          do: reserve(table, deadline, 1),
-          else: {:error, :invalid_handle}
-
-      :undefined ->
-        {:error, :transport_closed}
-
-      _ ->
-        {:error, :invalid_handle}
+  def acquire(table, owner, generation, deadline) do
+    with :ok <- validate_identity(table, owner, generation) do
+      if closing?(table), do: {:error, :transport_closed}, else: reserve(table, deadline, 1)
     end
   rescue
     ArgumentError -> {:error, :transport_closed}
   end
 
-  def acquire(_, _, _, _), do: {:error, :invalid_handle}
+  @doc false
+  @spec begin_close(term(), pid(), String.t()) ::
+          {:first, reference()} | :waiting | {:error, atom()}
+  def begin_close(table, owner, generation) do
+    with :ok <- validate_identity(table, owner, generation) do
+      token = make_ref()
+      if :ets.insert_new(table, {:closing, token}), do: {:first, token}, else: :waiting
+    end
+  rescue
+    ArgumentError -> {:error, :transport_closed}
+  end
+
+  @doc false
+  @spec closing?(:ets.tid()) :: boolean()
+  def closing?(table), do: :ets.member(table, :closing)
+
+  @doc false
+  @spec close_owned?(:ets.tid(), reference()) :: boolean()
+  def close_owned?(table, token), do: :ets.lookup(table, :closing) == [{:closing, token}]
 
   @doc false
   @spec owned?(term(), lease(), pid(), integer()) :: boolean()
@@ -58,8 +72,32 @@ defmodule Wotex.Matter.Native.Admission do
   defp reserve(table, deadline, slot) do
     token = make_ref()
 
-    if :ets.insert_new(table, {slot, token, self(), deadline}),
-      do: {:ok, {slot, token}},
-      else: reserve(table, deadline, slot + 1)
+    if :ets.insert_new(table, {slot, token, self(), deadline}) do
+      if closing?(table) do
+        release(table, {slot, token})
+        {:error, :transport_closed}
+      else
+        {:ok, {slot, token}}
+      end
+    else
+      reserve(table, deadline, slot + 1)
+    end
   end
+
+  defp validate_identity(table, owner, generation) when is_reference(table) do
+    case :ets.info(table, :owner) do
+      ^owner ->
+        if :ets.lookup(table, :identity) == [{:identity, owner, generation}],
+          do: :ok,
+          else: {:error, :invalid_handle}
+
+      :undefined ->
+        {:error, :transport_closed}
+
+      _ ->
+        {:error, :invalid_handle}
+    end
+  end
+
+  defp validate_identity(_, _, _), do: {:error, :invalid_handle}
 end

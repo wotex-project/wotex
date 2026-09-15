@@ -99,12 +99,12 @@ defmodule Wotex.Matter.Native.Connection do
   @doc false
   @spec invalidate(pid(), String.t(), :ets.tid()) :: {:ok, nil} | {:error, Error.t()}
   def invalidate(pid, generation, admission),
-    do: call(pid, generation, admission, {:invalidate, generation}, @cleanup_timeout)
+    do: control_call(pid, generation, admission, :invalidate, @cleanup_timeout)
 
   @spec disconnect(pid(), String.t(), :ets.tid(), pos_integer()) :: :ok | {:error, Error.t()}
   def disconnect(pid, generation, admission, timeout \\ @cleanup_timeout) do
     if Process.alive?(pid) do
-      case call(pid, generation, admission, {:disconnect, generation}, timeout) do
+      case control_call(pid, generation, admission, :disconnect, timeout) do
         {:ok, nil} -> :ok
         {:error, %Error{code: :transport_closed}} -> :ok
         {:error, _} = error -> error
@@ -134,6 +134,7 @@ defmodule Wotex.Matter.Native.Connection do
                call_order: :queue.new(),
                caller_monitors: %{},
                active_call: nil,
+               close_call: nil,
                drain_scheduled: false,
                fabric_id: options.fabric_id,
                next_id: 2,
@@ -158,6 +159,24 @@ defmodule Wotex.Matter.Native.Connection do
   @impl GenServer
   def handle_call({:bounded, message, deadline, lease}, from, state),
     do: {:noreply, enqueue_call(state, message, deadline, lease, from)}
+
+  def handle_call({:close_control, generation, kind, deadline, token}, _from, state) do
+    cond do
+      generation != state.generation or not Admission.close_owned?(state.admission, token) ->
+        {:reply, {:error, Error.new(:invalid_handle)}, state}
+
+      kind == :invalidate ->
+        {:stop, :normal, {:ok, nil}, state}
+
+      deadline <= System.monotonic_time(:millisecond) ->
+        {:stop, :normal, {:error, Error.new(:timeout)}, state}
+
+      true ->
+        {:disconnect, generation}
+        |> handle_call(nil, Map.put(state, :call_deadline, deadline))
+        |> clear_call_deadline()
+    end
+  end
 
   def handle_call(:identity, _, state),
     do: {:reply, {:ok, state.generation, state.admission}, state}
@@ -337,6 +356,9 @@ defmodule Wotex.Matter.Native.Connection do
 
         result =
           cond do
+            Admission.closing?(state.admission) ->
+              {:reply, {:error, Error.new(:transport_closed)}, active}
+
             not Process.alive?(elem(call.from, 0)) ->
               {:reply, {:error, Error.new(:owner_closed)}, active}
 
@@ -436,6 +458,7 @@ defmodule Wotex.Matter.Native.Connection do
     end)
 
     close_port(Map.get(state, :port))
+    if Map.get(state, :close_call), do: GenServer.reply(state.close_call, {:ok, nil})
     :ok
   end
 
@@ -446,6 +469,11 @@ defmodule Wotex.Matter.Native.Connection do
       not Admission.owned?(state.admission, lease, caller, deadline) or
           Map.has_key?(state.calls, lease) ->
         GenServer.reply(from, {:error, Error.new(:invalid_handle)})
+        state
+
+      Admission.closing?(state.admission) ->
+        Admission.release(state.admission, lease)
+        GenServer.reply(from, {:error, Error.new(:transport_closed)})
         state
 
       not Process.alive?(caller) or deadline <= System.monotonic_time(:millisecond) ->
@@ -613,6 +641,38 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
+  defp control_call(pid, generation, admission, kind, timeout) do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    case Admission.begin_close(admission, pid, generation) do
+      {:first, token} ->
+        GenServer.call(pid, {:close_control, generation, kind, deadline, token}, timeout + 100)
+
+      :waiting ->
+        await_connection_close(pid, deadline)
+
+      {:error, code} ->
+        {:error, Error.new(code)}
+    end
+  catch
+    :exit, {:timeout, _} -> {:error, Error.new(:timeout)}
+    :exit, _ -> {:error, Error.new(:transport_closed)}
+  end
+
+  defp await_connection_close(pid, deadline) do
+    monitor = Process.monitor(pid)
+
+    try do
+      receive do
+        {:DOWN, ^monitor, :process, ^pid, _} -> {:ok, nil}
+      after
+        max(deadline - System.monotonic_time(:millisecond), 0) -> {:error, Error.new(:timeout)}
+      end
+    after
+      Process.demonitor(monitor, [:flush])
+    end
+  end
+
   defp call(pid, generation, admission, message, timeout) do
     deadline = System.monotonic_time(:millisecond) + timeout
 
@@ -771,6 +831,14 @@ defmodule Wotex.Matter.Native.Connection do
           else
             {:noreply, next_state} = handle_info(message, state)
             await_owner_line(next_state, deadline)
+          end
+
+        {:"$gen_call", from, {:close_control, generation, _kind, _call_deadline, token}} ->
+          if generation == state.generation and Admission.close_owned?(state.admission, token) do
+            {:error, Error.new(:transport_closed), %{state | close_call: from}}
+          else
+            GenServer.reply(from, {:error, Error.new(:invalid_handle)})
+            await_owner_line(state, deadline)
           end
 
         {:"$gen_call", from, {:bounded, message, call_deadline, lease}} ->

@@ -28,6 +28,10 @@ defmodule Wotex.Matter.Native do
   active call. Excess calls return `:busy` without entering its mailbox or
   sending a native request. Reservations remain occupied until the connection
   consumes the call, including when a waiting caller has already timed out.
+  Disconnect has one separate control reservation, so a full request queue cannot
+  prevent cleanup. An idle connection closes cooperatively. Disconnect during a
+  pending native response terminates the owned native process and its generation;
+  this abandons the pending interaction without claiming remote rollback.
 
   P03 establishes controller ownership and liveness. P04 adds finite reads,
   event reads, writes and invokes. P05 adds monitored attribute and event

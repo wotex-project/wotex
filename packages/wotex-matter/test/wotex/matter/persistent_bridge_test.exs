@@ -145,6 +145,41 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     end
   end
 
+  @tag :close_control
+  test "WMA-C03 disconnect bypasses full ordinary admission and blocked native I/O" do
+    audit = temporary_path("close-full-admission")
+    assert {:ok, handle} = Native.connect(options(fixture("silent_request", audit)))
+    owner_monitor = Process.monitor(handle.pid)
+    {:links, links} = Process.info(handle.pid, :links)
+    [port] = Enum.filter(links, &is_port/1)
+    {:os_pid, child} = Port.info(port, :os_pid)
+    active = Task.async(fn -> Native.health(handle, 10_000) end)
+    assert request_recorded?(audit, 100)
+    mutation = Task.async(fn -> Native.request(handle, @write, 10_000) end)
+    queued = for _ <- 1..62, do: Task.async(fn -> Native.health(handle, 10_000) end)
+
+    try do
+      assert admission_reaches?(handle, 64, 100)
+      assert {:error, %Error{code: :busy}} = Native.health(handle, 25)
+      started = System.monotonic_time(:millisecond)
+      assert :ok = Native.disconnect(handle)
+      assert_receive {:DOWN, ^owner_monitor, :process, _, :normal}, 1_000
+      assert child_stopped?(child, 100)
+      assert System.monotonic_time(:millisecond) - started <= 1_000
+
+      for caller <- [active, mutation | queued] do
+        assert {:error, %Error{code: :transport_closed, effect: :none}} = Task.await(caller, 1_000)
+      end
+
+      refute File.read!(audit) =~ ~s("operation":"write")
+      assert :ets.info(handle.admission) == :undefined
+      assert :ok = Native.disconnect(handle)
+    after
+      for caller <- [active, mutation | queued], do: Task.shutdown(caller, :brutal_kill)
+      Native.disconnect(handle)
+    end
+  end
+
   test "native one-shot handles acquire one existing-store owner per concrete request" do
     audit = temporary_path("oneshot-audit")
     executable = fixture("typed_read", audit)
