@@ -143,7 +143,8 @@ do not silently skip, simulate or weaken the requirement.
 - Requirements: WMA-S01, WMA-S02, WMA-S03, WMA-S04, WMA-S05, WMA-S06, WMA-N01, WMA-N02, WMA-N03, WMA-N04; shared C01–C10 apply wherever relevant.
 - Acceptance scenarios: WMA-V12, WMA-V13.
 - Change surface: Linux no-BLE SDK controller/all-clusters/lighting fixture and native audit.
-- Test destinations: `test/interop/sdk_test.exs`, `test/software/lifecycle_stress_test.exs`.
+- Test destinations: `test/interop/controller_test.exs`, the `test/interop/native_*`
+  peers and `test/software/*stress*_test.exs`.
 - Done when: Actual on-network commissioning, CASE, ACL denial, reports, cancellation, persistent restart and required stress/matrix/archive gates all pass.
 - Suggested local commit: `test: prove the controller against pinned sdk example peers`.
 - Standalone closure: Execute .11 lighting/thermostat/bridge catalogue and event recipes, durable restart and native API workflow with no consumer factory.

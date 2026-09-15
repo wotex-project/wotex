@@ -62,6 +62,12 @@ separate evidenced lanes. BEAM matrix: Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4. The software runner executes the native client and real
 Runtime calls in both lanes, independently of physical hardware.
 
+The test-only example peers compile with
+`CHIP_CONFIG_SECURE_SESSION_POOL_SIZE=2048`. The pool is heap-backed on the Linux
+target and admits the 1,133 fresh one-shot controller generations without making
+the peer's unrelated LRU session eviction part of the controller-lifetime
+measurement. This setting does not apply to the production controller binary.
+
 `native-manifest.json` has schema `wotex.native-build`, version `1`, package,
 source_revision, source_files (relative path/SHA-256), upstream sources (URL,
 commit/version, archive SHA-256), recursive SDK gitlink commits where applicable,

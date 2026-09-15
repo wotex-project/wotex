@@ -219,6 +219,7 @@ defmodule Wotex.Matter.SubscriptionTest do
   @tag :native_stream_owner
   test "explicit unsubscribe joins an owner-loss cancellation already awaiting native retirement" do
     audit = temporary_path("joined-cancellation")
+    File.rm(audit <> ".release")
     executable = native_fixture(audit, "gated_cancel")
     assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
     assert {:ok, subscription} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
@@ -252,6 +253,7 @@ defmodule Wotex.Matter.SubscriptionTest do
       end
     after
       Matter.disconnect(session)
+      File.rm(audit <> ".release")
     end
   end
 

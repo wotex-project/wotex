@@ -3541,3 +3541,36 @@ upstream package requirements have been published.
 | Hex archive build log | `1759e7c5aaf6468e3cb3fc269c574298c06afb50fca2cf775545d00b2ba013ec` |
 | Final archive inspection log | `8dfb3f36f33f71bfb34f7f123e009f63aab3ea38178991b1c43ae86b0befcfbe` |
 | `wotex_matter-0.1.0.tar` | `6d1937c8ca4c8397eb030552e6f94edb336adbef17ecd71d517b555a71355ed0` |
+
+## One-shot peer session-capacity correction
+
+A fresh build from claim-recording revision
+`83c583f32c04bc2d698c4f2ca24720bc0862bfdc` passes, but its current-lane run is
+rejected after 950.2 seconds: 277 of 278 checks pass and the minimum lane is
+withheld. The only failure is the read-only one-shot stress case. Its dedicated
+peer accepts 881 CASE handshakes and performs 832 secure-session LRU evictions.
+On attempt 882 the peer receives Sigma1 and transmits Sigma2Resume, but the
+controller receives none of the bounded retransmissions and returns the required
+timeout. The fixed 10,000-ms deadline and lack of retry are correct.
+
+The stress peer now compiles with a test-only 2,048-entry heap-backed secure
+session pool. All 1,133 fresh controller generations fit without unrelated peer
+session eviction, so the case measures controller process/storage/resource
+cleanup directly. The production controller configuration, operation count,
+deadline, result assertions and native generation census are unchanged.
+
+The mandatory gate also exposed a stale test-only release marker when a later
+BEAM reused the same temporary filename. The joined-cancellation test now removes
+that marker before opening its native gate and again during teardown, so its
+intermediate `:closing` assertion is synchronized by the current test process
+rather than filesystem state from an earlier run.
+
+| Session-capacity correction artifact | SHA-256 |
+| --- | --- |
+| Successful exact-source build log | `58ccf4939491c8879e33b3994c102b2a43cafd2d895764dcd186ea774e5f483f` |
+| Exact-source workspace manifest | `f84b85c34f33584b54e1b93f7402a459b926ac11aad656d3a5eb7ecfc86ee344` |
+| Rejected outer software result | `bf1229a9f3367f4b8184104c22d7b793ea5acafef67f609ac76a8fca4828aff1` |
+| Rejected current-lane receipt | `af3d4ba98637af7fe301655e6f97530edc7f0b943b714d2bb6cb8487df74fd5e` |
+| Rejected current-lane acceptance log | `b2c6726927f1328ea2012be869c93bbd51384da5165dc4f693bddf709c9fb36a` |
+| Rejected current-lane raw test log | `bff9eb702a32c8369983595e18138d55756522e1c1a0cf6f69b3afeda5337be8` |
+| Dedicated one-shot peer log | `5ae46208ddcd81030cf9a9e83d98ef565eda8dd0d8bc2d2daa1ecf98a64d20fc` |

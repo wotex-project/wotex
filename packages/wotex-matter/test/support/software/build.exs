@@ -36,6 +36,7 @@ defmodule Wotex.Matter.SoftwareBuild do
   chip_build_libshell = false
   chip_examples_enable_imgui_ui = false
   treat_warnings_as_errors = false
+  target_defines = [ "CHIP_CONFIG_SECURE_SESSION_POOL_SIZE=2048" ]
   """
   @groups """
 

@@ -9,7 +9,7 @@ specifications:
     standards: [{"name": "connectedhomeip", "revision": "v1.6.0.0", "claim": "C01-C10 are implemented for the finite software profile defined by WMA.10-WMA.13; physical-device validation and certification are separate"}]
     requires: []
     implementation_modules: []
-    executable_evidence: ["test/support/software/acceptance.json", "test/wotex/matter/software_acceptance_test.exs", "test/software/lifecycle_stress_test.exs", "test/interop/sdk_test.exs", "bin/check_archive.exs"]
+    executable_evidence: ["test/support/software/acceptance.json", "test/wotex/matter/software_acceptance_test.exs", "test/software/lifecycle_stress_test.exs", "test/software/native_oneshot_stress_test.exs", "test/interop/controller_test.exs", "bin/check_archive.exs"]
     compatibility_classification: "The finite WMA.10-WMA.13 software profile passes all 36 required cases in the pinned current and minimum Linux BEAM lanes, including negative responses, timeouts, ownership, stress, resource census and immutable-source checks. The 95% coverage floor, clean package, documentation, dependency-load and out-of-tree archive gates pass. Physical-device validation, CSA certification and publication are outside this milestone."
   - id: "WMA.01"
     version: "1.0.1"
