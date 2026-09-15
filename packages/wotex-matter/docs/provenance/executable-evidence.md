@@ -1421,3 +1421,56 @@ open. The most recent coverage measurement, in the preceding cohort, is 88.6%.
 | Minimum focused log | `ca6d55896255b58e44d2565ca9575fee3fa99f124e065ecc037c303e6809461a` |
 | Current Linux SDK pressure log | `27c6b47aa56b47e11e3f1791d49116ffa5e5772617a7e1cd5dd75b34982e51b3` |
 | Minimum Linux sanitizer SDK pressure log | `4dfcb171ed6defb826bcf5fbd2a3fb4ee30b3628183c15294fd7d2d1f820d37a` |
+
+## Request representation bounds before admission
+
+The native request validator walks caller terms before mailbox submission or
+recursive key conversion. It counts escaped JSON bytes, collection depth, entries
+and aggregate nodes including keys. It bounds integer conversion to the signed
+and unsigned 64-bit domain and rejects invalid UTF-8, improper lists, structs,
+unsupported terms and atom/string key collisions. Context tags account for their
+array representation. Final request and control envelopes are validated again
+before JSON encoding, including correlation fields and the newline reservation.
+Operation-specific schemas remain owned by their API and backend validators.
+
+Persistent requests compute their absolute deadline before this validation and
+pass it unchanged through admission and native I/O. One-shot requests validate
+their representation before controller acquisition and retain their original
+deadline through the same path.
+
+The suspended-owner regression previously returned timeout with unknown effect
+for an oversized mutation term. It now rejects ten malformed or excessive values
+with `:invalid_request`, effect `:none`, zero request messages, no admission slot
+and no native I/O. Pure boundary cases verify exactly 131071 JSON bytes plus one
+newline, escaped control bytes, depth 24 versus 25, 1024 versus 1025 collection
+entries, 4096 versus 4097 aggregate nodes including keys, and both integer
+endpoints. Accepted encoded values also pass the bounded wire decoder.
+
+The default gate passes 166 checks with 24 excluded. Minimum BEAM passes all 38
+request-boundary and persistent-connection tests; ExDoc passes without warnings.
+Both real SDK lanes pass the existing one-shot native/Runtime workflow and input
+pressure cases in 5.6 seconds on current Linux and 9.9 seconds on minimum Linux.
+The one-shot case performs five native operations and six Runtime operations,
+including reads, writes, invokes, scalar preservation and resource cleanup.
+Pressure cleanup and durable reopen also remain passing. These runs use the
+unchanged byte-counter native binaries and enabled sanitizer/leak checks; the
+previous forced-child finalization limitation still applies.
+
+This cohort establishes representation bounds and deadline propagation. It does
+not replace operation-specific schema evidence, remaining native fault/counter
+and process-flow work, full build/archive receipts, or the unchanged 95% coverage
+gate. The most recent coverage measurement remains 88.6% from the orphan-admission
+cohort.
+
+| Request-bound artifact | SHA-256 |
+| --- | --- |
+| Native API | `e838d63e6f1cffdb7c7e1a0a35763adb5313b2328e54e54b9f5d16c66c94a5a7` |
+| Connection | `dcabccfcb42a604fb8994fe2c67cec12f8b2ebe467b427124ea1a83090b4f892` |
+| Request validator | `580d19c69e754430ea1ca4d14b801b6a1b0f6b68f69134655639e8fb977a9135` |
+| Pure request tests | `b0ba45a44c505dc9f2e44633b866f827c306c85aedc9d78ad254b729e02245f5` |
+| Persistent connection tests | `4f3a8598a58102a596b6a7f069d6da8b614a678fe00ec72445ccb8379da6a2f9` |
+| Failing request-bound log | `ec603cdb9ac24d8460dc10577b9562d120a4cfa9a74835f6c5c25903e0c30fbc` |
+| Current default gate log | `27a8aaeb32f1e4df1b428e1fccf930d07b0830100b5ed6e6873b03a302830306` |
+| Minimum focused log | `5df82a3ed65e9752992d01f2fae0cd1c5b4a188833f0e1fb05f610ed47848cba` |
+| Current Linux SDK log | `c6282db7d933995a3b7fd966111acde793619d3cd757fe28731bf1afb5d9f05b` |
+| Minimum Linux sanitizer SDK log | `a7e32b5b7de94f574f33524fb284b633bac875899c41ca970f1f0552fd6102ec` |

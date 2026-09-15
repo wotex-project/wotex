@@ -26,7 +26,7 @@ defmodule Wotex.Matter.Native.Connection do
   use GenServer
 
   alias Wotex.Matter.{Error, Subscription}
-  alias Wotex.Matter.Native.{Admission, ReportLedger, Wire}
+  alias Wotex.Matter.Native.{Admission, ReportLedger, Request, Wire}
 
   @sdk_revision "250a9e6c50ee2068107f3c4808b680f5f2925415"
   @maximum_line_bytes 131_071
@@ -60,10 +60,11 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  @spec request(pid(), String.t(), :ets.tid(), map(), pos_integer()) ::
+  @spec request(pid(), String.t(), :ets.tid(), map(), pos_integer(), integer()) ::
           {:ok, term()} | {:error, Error.t()}
-  def request(pid, generation, admission, message, timeout),
-    do: call(pid, generation, admission, {:request, generation, message, timeout}, timeout)
+  def request(pid, generation, admission, message, timeout, deadline),
+    do:
+      call(pid, generation, admission, {:request, generation, message, timeout}, timeout, deadline)
 
   @spec subscribe(pid(), String.t(), :ets.tid(), map(), pid(), pos_integer(), boolean()) ::
           {:ok, Subscription.t()} | {:error, Error.t()}
@@ -200,8 +201,9 @@ defmodule Wotex.Matter.Native.Connection do
       generation != state.generation ->
         {:reply, {:error, Error.new(:invalid_handle)}, state}
 
-      not Map.has_key?(message, :type) or not is_atom(message.type) or
-          not Enum.all?(Map.keys(message), &is_atom/1) ->
+      not is_map(message) or map_size(message) > 1024 or
+        not Map.has_key?(message, :type) or not is_atom(message.type) or
+        not Enum.all?(Map.keys(message), &is_atom/1) or Request.validate(message) != :ok ->
         {:reply, {:error, Error.new(:invalid_request)}, state}
 
       true ->
@@ -732,9 +734,17 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  defp call(pid, generation, admission, message, timeout) do
-    deadline = System.monotonic_time(:millisecond) + timeout
+  defp call(pid, generation, admission, message, timeout, deadline \\ nil) do
+    deadline = deadline || System.monotonic_time(:millisecond) + timeout
 
+    if deadline <= System.monotonic_time(:millisecond) do
+      {:error, Error.new(:timeout)}
+    else
+      admitted_call(pid, generation, admission, message, deadline)
+    end
+  end
+
+  defp admitted_call(pid, generation, admission, message, deadline) do
     case Admission.acquire(admission, pid, generation, deadline) do
       {:ok, lease} ->
         remaining = deadline - System.monotonic_time(:millisecond)
@@ -1164,7 +1174,7 @@ defmodule Wotex.Matter.Native.Connection do
   defp decode_async_frame(_, _, _), do: {:error, Error.new(:invalid_frame)}
 
   defp send_frame(port, frame) do
-    case Jason.encode(frame) do
+    case Request.encode(frame) do
       {:ok, encoded} when byte_size(encoded) + 1 <= @maximum_line_bytes + 1 ->
         Port.command(port, [encoded, ?\n], [:nosuspend])
 
@@ -1179,7 +1189,7 @@ defmodule Wotex.Matter.Native.Connection do
     remaining = max(0, deadline - System.monotonic_time(:millisecond))
     frame = Map.put(frame, "timeout_ms", min(frame["timeout_ms"], remaining))
 
-    case Jason.encode(frame) do
+    case Request.encode(frame) do
       {:ok, encoded} when byte_size(encoded) + 1 <= @maximum_line_bytes + 1 ->
         cond do
           System.monotonic_time(:millisecond) >= deadline -> {:error, :timeout}

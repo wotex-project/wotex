@@ -42,7 +42,7 @@ defmodule Wotex.Matter.Native do
   @behaviour Wotex.Matter.Client
 
   alias Wotex.Matter.{Address, Descriptor, Error, Subscription}
-  alias Wotex.Matter.Native.{Connection, Handle, OneshotHandle}
+  alias Wotex.Matter.Native.{Connection, Handle, OneshotHandle, Request}
 
   @type handle :: Handle.t() | OneshotHandle.t()
 
@@ -95,23 +95,34 @@ defmodule Wotex.Matter.Native do
 
   def request(%Handle{} = handle, %{type: type} = message, timeout)
       when is_atom(type) and is_integer(timeout) and timeout in 1..60_000 do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
     cond do
       not is_pid(handle.pid) or not valid_generation?(handle.generation) ->
         {:error, Error.new(:invalid_handle)}
 
-      not Enum.all?(Map.keys(message), &is_atom/1) ->
+      map_size(message) > 1024 or not Enum.all?(Map.keys(message), &is_atom/1) ->
         {:error, Error.new(:invalid_request)}
 
       true ->
-        case request_fabric(message, handle.fabric_id) do
-          {:ok, fabric_id} when fabric_id != handle.fabric_id ->
-            {:error, Error.new(:fabric_mismatch)}
+        with :ok <- Request.validate(message) do
+          case request_fabric(message, handle.fabric_id) do
+            {:ok, fabric_id} when fabric_id != handle.fabric_id ->
+              {:error, Error.new(:fabric_mismatch)}
 
-          {:ok, _} ->
-            Connection.request(handle.pid, handle.generation, handle.admission, message, timeout)
+            {:ok, _} ->
+              Connection.request(
+                handle.pid,
+                handle.generation,
+                handle.admission,
+                message,
+                timeout,
+                deadline
+              )
 
-          _ ->
-            {:error, Error.new(:invalid_request)}
+            _ ->
+              {:error, Error.new(:invalid_request)}
+          end
         end
     end
   end
@@ -270,7 +281,8 @@ defmodule Wotex.Matter.Native do
   defp oneshot_request(handle, message, timeout) do
     deadline = System.monotonic_time(:millisecond) + timeout
 
-    with {:ok, validated} <- validate_options(handle.options),
+    with :ok <- Request.validate(message),
+         {:ok, validated} <- validate_options(handle.options),
          :ok <- oneshot_identity(handle, validated),
          :ok <- Address.validate_message(message),
          {:ok, fabric_id} <- request_fabric(message, handle.fabric_id),
@@ -315,7 +327,7 @@ defmodule Wotex.Matter.Native do
 
       result =
         if remaining > 0,
-          do: Connection.request(pid, generation, admission, message, remaining),
+          do: Connection.request(pid, generation, admission, message, remaining, deadline),
           else: {:error, Error.new(:timeout)}
 
       remaining = deadline - System.monotonic_time(:millisecond)

@@ -319,6 +319,40 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     end
   end
 
+  @tag :request_bounds
+  test "WMA-C02 malformed and oversized terms fail before entering the native owner mailbox" do
+    audit = temporary_path("request-bounds")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+    nested = Enum.reduce(1..24, nil, fn _, child -> %{value: child} end)
+    :sys.suspend(handle.pid)
+
+    try do
+      for value <- [
+            String.duplicate("x", 131_072),
+            String.duplicate(<<0>>, 22_000),
+            List.duplicate(nil, 1025),
+            List.duplicate(List.duplicate(nil, 1024), 4),
+            nested,
+            0x1_0000000000000000,
+            <<255>>,
+            %{"value" => 1, value: 2},
+            %Wotex.Matter.Address{fabric_id: 1, node_id: 2, endpoint: 1, cluster: 6, member: 0},
+            fn -> :invalid end
+          ] do
+        assert {:error, %Error{code: :invalid_request, effect: :none}} =
+                 Native.request(handle, %{@write | value: value}, 25)
+      end
+
+      assert mailbox_requests(handle.pid) == 0
+      assert :ets.info(handle.admission, :size) == 1
+      assert File.read!(audit) == initial
+    after
+      :sys.resume(handle.pid)
+      Native.disconnect(handle)
+    end
+  end
+
   test "native one-shot handles acquire one existing-store owner per concrete request" do
     audit = temporary_path("oneshot-audit")
     executable = fixture("typed_read", audit)
