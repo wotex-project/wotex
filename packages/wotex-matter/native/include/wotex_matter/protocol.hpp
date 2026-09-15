@@ -5,6 +5,7 @@
 #include "wotex_matter/interaction.hpp"
 #include "wotex_matter/subscription.hpp"
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <istream>
@@ -96,7 +97,8 @@ struct ProcessResult {
 
 class HostProtocol final {
  public:
-  explicit HostProtocol(ControllerBackend &backend);
+  explicit HostProtocol(ControllerBackend &backend,
+                        std::function<void()> channel_failure = {});
   ~HostProtocol();
 
   HostProtocol(const HostProtocol &) = delete;
@@ -111,11 +113,18 @@ class HostProtocol final {
   bool ActivateSubscription(const std::string &subscription_id,
                             std::uint64_t generation);
   void Close();
+  bool healthy() const;
+
+#ifdef WOTEX_MATTER_PROTOCOL_TESTING
+  bool SeedReportCountersForTesting(std::uint64_t sequence, std::uint64_t bytes);
+#endif
 
  private:
   enum class State { AwaitFlow, AwaitOpen, Open, Closed };
 
   ControllerBackend &backend_;
+  std::function<void()> channel_failure_;
+  std::atomic<bool> channel_failed_{false};
   std::function<bool(const std::string &)> output_sink_;
   std::unique_ptr<ReportCreditManager> report_flow_;
   std::mutex subscription_mutex_;
@@ -133,6 +142,8 @@ class HostProtocol final {
   };
   std::unordered_map<std::string, ActiveSubscription> subscriptions_;
 
+  void FailChannel();
+  bool WriteFrame(const std::string &frame);
   bool EmitReport(const SubscriptionReport &report);
   bool EmitStatus(const SubscriptionStatus &status);
   void EmitFailure(const std::string &subscription_id, std::uint64_t generation,

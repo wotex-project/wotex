@@ -75,8 +75,22 @@ if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
   )
   add_test(NAME wotex_matter_interaction_test COMMAND wotex_matter_interaction_test)
 
+  # Counter cutpoints exist only in this unit-test library. Neither the native
+  # host nor the shared contract driver admits counter seeding.
+  add_library(wotex_matter_protocol_test_library STATIC
+    src/value.cpp src/interaction.cpp src/subscription.cpp src/commissioning.cpp
+    src/protocol.cpp)
+  target_include_directories(wotex_matter_protocol_test_library PUBLIC include)
+  target_include_directories(wotex_matter_protocol_test_library SYSTEM
+    PRIVATE "${WOTEX_MATTER_JSON_INCLUDE}")
+  target_compile_features(wotex_matter_protocol_test_library PUBLIC cxx_std_17)
+  target_compile_definitions(wotex_matter_protocol_test_library
+    PUBLIC WOTEX_MATTER_PROTOCOL_TESTING=1)
+  target_compile_options(wotex_matter_protocol_test_library
+    PRIVATE -Wall -Wextra -Wpedantic -Werror)
+
   add_executable(wotex_matter_subscription_test ../test/native/subscription_test.cpp)
-  target_link_libraries(wotex_matter_subscription_test PRIVATE wotex_matter_protocol)
+  target_link_libraries(wotex_matter_subscription_test PRIVATE wotex_matter_protocol_test_library)
   target_compile_options(
     wotex_matter_subscription_test PRIVATE -Wall -Wextra -Wpedantic -Werror
   )
@@ -135,7 +149,7 @@ if(WOTEX_MATTER_SDK_ROOT AND WOTEX_MATTER_JSON_INCLUDE)
   add_test(NAME wotex_matter_storage_test COMMAND wotex_matter_storage_test)
 
   if(WOTEX_MATTER_SANITIZERS)
-    foreach(target wotex_matter_storage wotex_matter_storage_test_library wotex_matter_protocol)
+    foreach(target wotex_matter_storage wotex_matter_storage_test_library wotex_matter_protocol wotex_matter_protocol_test_library)
       target_compile_options(${target} PUBLIC -fno-omit-frame-pointer -fsanitize=address,undefined)
       target_link_options(${target} PUBLIC -fsanitize=address,undefined)
     endforeach()

@@ -1725,3 +1725,61 @@ open.
 | Minimum Linux ten-case log | `5b5a51780caa4b80a824dc3c71288dac174885fea8bd0de65895fd7993fc3ba1` |
 | Default gate log | `eb88afcb8a71329770b8897e3416feba83ffee2d98d14cfb5cc9ad3a9f461704` |
 | Last full coverage log | `689557793bf71675007004d7aea485a21f9a62be10285e4836cd1f25b1618500` |
+
+## Native report-counter generation failure
+
+Exhausting the shared report sequence or cumulative byte counter fails the
+IPC generation. The protocol latches failure, rejects subsequent reports and
+operations, and signals the lifetime owner once. SDK callback paths do not
+invoke controller destruction. Reports, subscription errors, recovery status
+and retirement barriers share this output-failure path. Failure while draining
+acknowledged or retired credit also closes the generation. A stream queue
+overflow with functioning control output retains the connection and emits one
+stream terminal and retirement barrier.
+
+The boundary regression seeds sequence and byte counters separately in a
+dedicated native unit-test library. Before correction, a health request still
+succeeded after exhaustion. Both exhausted states now reject reports, signal
+failure once and close on the next command without a healthy response. Adjacent
+last-valid counter tests retain exactly one accepted frame and its exact credit,
+reject excess output and acknowledge the retained record without rollover.
+Report, error, barrier and status sink failures suppress repeated output and
+never run teardown inside the callback. The stream-overflow test preserves a
+healthy response and does not signal generation failure.
+
+`WOTEX_MATTER_PROTOCOL_TESTING` is defined only for the separate subscription
+unit-test library. Its counter-seeding methods are absent from both production
+SDK hosts and both shared contract drivers, verified with their symbol tables.
+No wire command or production host option can seed these counters. The seeded
+cutpoints establish protocol/accounting behavior, not an SDK workload containing
+2^64 reports. Real SDK resource-release evidence remains separately identified.
+
+The default gate passes 169 checks with 27 excluded. ExDoc, both SDK builds,
+six CTest executables in each configuration and 15 advisory queries pass. Both
+Linux lanes pass the ten SDK/corpus cases in 8.3 and 13.3 seconds against fresh
+owned lighting peers, which are reaped. The minimum lane retains ASan/UBSan
+and leak detection; forced lifetime exits still do not establish callback
+destruction or leak finalization. F11–F13, native command interruptibility,
+full callback/resource and fault matrices, software-run orchestration, fresh
+complete build/archive receipts and the unchanged 95% coverage floor remain
+open. Last full measured coverage is 89.0%.
+
+| Counter-generation artifact | SHA-256 |
+| --- | --- |
+| Native CMake targets | `622dacdf72730071bfc3f1050cc59be815adbfe47c4eca204dbc3b7f5e7c8e3a` |
+| Native protocol header | `f2b7ef21a17545d1225671a800e1e01fa8e400da860369b187c98915ec220b02` |
+| Native protocol | `d5c65c8f1aa15fff19904d69e34fc7687aa02d2e928d31e0a2177ef99a16aead` |
+| Native report-credit header | `ac193433104b2c1e4f985c1dc8d1fd1fb192fe18bfee7a04b2094f2389afa6e4` |
+| Native report-credit implementation | `6a74b6c3ee362982a5c6483757b935c7cef67bafb9cf39fb3b31214fa8f1c8aa` |
+| Native subscription tests | `6d52bfbb3903741e7cc94d685b7277280d2675751bbfe85ce10b44570f2f7d93` |
+| Current native host | `c0e7377ed8ba943355f740c51169006b9e834c3ff59177cfff9f6e305493c720` |
+| Minimum sanitizer native host | `8f15e5f371f4b19e8065854d1ccc2a4257a5fa2c4e6f3970168a3a8ca0033a6f` |
+| Current contract driver | `984dda63f141d5102bfd680403677067a068536835e26dfccd1cf8fb9189bc09` |
+| Minimum sanitizer contract driver | `0e47ddf12c01567962fac73366e3ccbb4e6e27ac6532ea594a3f55f9ad361784` |
+| Counter-exhaustion failing log | `2bfc16fa3b8c494a2e2b7cf9ee3f781908f83eee1e4148a0938ebebee0dba060` |
+| Native CTest log | `806bfc718d8c245731849b6cd488e38a3e106217b45c6dc49b8ace0093c050f5` |
+| Native SDK build log | `cd72e80c42169268074173399ff10d4c9e873d45bc605749952810a9d2d083c7` |
+| Advisory audit log | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
+| Default gate log | `f570d8c65a6d73c7561933ddfccfe1d4619706af64bf08b72b0aeaddf35476d0` |
+| Current Linux ten-case log | `dea02366ecb4fbfaff5036652da6cd05433c55d2f6ec21f3aa05173a1b0d9e69` |
+| Minimum Linux ten-case log | `79186d981d46e5709e73bc6812b5ff4165986cfbbce87528f3b13ff509122714` |

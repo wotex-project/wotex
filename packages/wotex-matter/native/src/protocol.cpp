@@ -878,8 +878,10 @@ class BoundedOutput final {
 
 } // namespace
 
-HostProtocol::HostProtocol(ControllerBackend &backend)
-    : backend_(backend), output_sink_([](const std::string &) { return true; }) {
+HostProtocol::HostProtocol(ControllerBackend &backend,
+                           std::function<void()> channel_failure)
+    : backend_(backend), channel_failure_(std::move(channel_failure)),
+      output_sink_([](const std::string &) { return true; }) {
   backend_.SetSubscriptionSinks(
       [this](const SubscriptionReport &report) { return EmitReport(report); },
       [this](const SubscriptionStatus &status) { return EmitStatus(status); },
@@ -915,7 +917,19 @@ void HostProtocol::SetOutputSink(std::function<bool(const std::string &)> sink) 
   output_sink_ = std::move(sink);
 }
 
+#ifdef WOTEX_MATTER_PROTOCOL_TESTING
+bool HostProtocol::SeedReportCountersForTesting(std::uint64_t sequence,
+                                               std::uint64_t bytes) {
+  std::lock_guard<std::mutex> lock(subscription_mutex_);
+  return report_flow_ && report_flow_->SeedCountersForTesting(sequence, bytes);
+}
+#endif
+
 ProcessResult HostProtocol::ProcessLine(const std::string &line) {
+  if (!healthy()) {
+    Close();
+    return {};
+  }
   Json request;
   if (!ParseBounded(line, request)) {
     Close();
@@ -936,7 +950,7 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
     session_generation_ = std::move(generation);
     report_flow_ = std::make_unique<ReportCreditManager>(
         session_generation_, [this](const std::string &frame) {
-          return output_sink_(frame);
+          return WriteFrame(frame);
         });
     state_ = State::AwaitOpen;
     return {true, std::nullopt};
@@ -966,6 +980,7 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
           report_flow_->Acknowledge(sequence, bytes);
     }
     if (!accepted) {
+      FailChannel();
       Close();
       return {};
     }
@@ -1215,12 +1230,33 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
 
 bool HostProtocol::ActivateSubscription(const std::string &subscription_id,
                                         std::uint64_t generation) {
-  return backend_.ActivateSubscription(subscription_id, generation);
+  return healthy() && backend_.ActivateSubscription(subscription_id, generation);
+}
+
+bool HostProtocol::healthy() const { return !channel_failed_.load(); }
+
+void HostProtocol::FailChannel() {
+  // SDK callbacks signal the lifetime owner; they never tear down their own
+  // controller stack. Repeated failures cannot restart the cleanup grace.
+  if (!channel_failed_.exchange(true) && channel_failure_) {
+    channel_failure_();
+  }
+}
+
+bool HostProtocol::WriteFrame(const std::string &frame) {
+  if (!healthy()) {
+    return false;
+  }
+  if (!output_sink_(frame)) {
+    FailChannel();
+    return false;
+  }
+  return true;
 }
 
 bool HostProtocol::EmitReport(const SubscriptionReport &report) {
   std::lock_guard<std::mutex> lock(subscription_mutex_);
-  if (state_ != State::Open || !report_flow_ ||
+  if (!healthy() || state_ != State::Open || !report_flow_ ||
       !report_flow_->IsLive(report.subscription_id, report.generation)) {
     return false;
   }
@@ -1243,7 +1279,7 @@ bool HostProtocol::EmitReport(const SubscriptionReport &report) {
              {"generation", report.generation},
              {"error", ErrorJson(error)}}
             .dump();
-    if (!output_sink_(failure)) {
+    if (!WriteFrame(failure)) {
       return false;
     }
     const std::uint64_t last = report_flow_->last_transmitted(
@@ -1256,17 +1292,22 @@ bool HostProtocol::EmitReport(const SubscriptionReport &report) {
              {"generation", report.generation},
              {"last_report_sequence", last}}
             .dump();
-    (void) report_flow_->Retire(report.subscription_id, report.generation,
-                               barrier);
+    if (!report_flow_->Retire(report.subscription_id, report.generation, barrier)) {
+      FailChannel();
+    }
     subscriptions_.erase(report.subscription_id);
+  } else {
+    // The stream is live, so Invalid is a generation-wide accounting or
+    // transmission failure. No subsequent callback can reuse its counters.
+    FailChannel();
   }
   return false;
 }
 
 bool HostProtocol::EmitStatus(const SubscriptionStatus &status) {
   std::lock_guard<std::mutex> lock(subscription_mutex_);
-  if (state_ != State::Open || !report_flow_ || status.subscription_id.empty() ||
-      status.generation == 0 || status.attempt == 0 || status.attempt > 5) {
+  if (!healthy() || state_ != State::Open || !report_flow_ ||
+      status.subscription_id.empty() || status.generation == 0 || status.attempt == 0 || status.attempt > 5) {
     return false;
   }
   auto active = subscriptions_.find(status.subscription_id);
@@ -1294,7 +1335,7 @@ bool HostProtocol::EmitStatus(const SubscriptionStatus &status) {
              {"continuity", "lost"},
              {"attempt", status.attempt}}
             .dump();
-    if (!output_sink_(frame)) {
+    if (!WriteFrame(frame)) {
       return false;
     }
     if (first) {
@@ -1311,6 +1352,7 @@ bool HostProtocol::EmitStatus(const SubscriptionStatus &status) {
       if (!report_flow_->BeginRecovery(status.subscription_id, previous,
                                        status.generation,
                                        active->second.queue_limit, barrier)) {
+        FailChannel();
         return false;
       }
       active->second.generation = status.generation;
@@ -1342,7 +1384,7 @@ bool HostProtocol::EmitStatus(const SubscriptionStatus &status) {
            {"max_interval_s", status.max_interval_s},
            {"sdk_subscription_id", status.sdk_subscription_id}}
           .dump();
-  if (!output_sink_(frame)) {
+  if (!WriteFrame(frame)) {
     return false;
   }
   active->second.recovering = false;
@@ -1354,7 +1396,7 @@ void HostProtocol::EmitFailure(const std::string &subscription_id,
                                std::uint64_t generation,
                                const InteractionError &error) {
   std::lock_guard<std::mutex> lock(subscription_mutex_);
-  if (state_ != State::Open || !report_flow_ ||
+  if (!healthy() || state_ != State::Open || !report_flow_ ||
       !report_flow_->IsLive(subscription_id, generation)) {
     return;
   }
@@ -1366,7 +1408,7 @@ void HostProtocol::EmitFailure(const std::string &subscription_id,
            {"generation", generation},
            {"error", ErrorJson(error)}}
           .dump();
-  if (!output_sink_(failure)) {
+  if (!WriteFrame(failure)) {
     return;
   }
   const std::uint64_t last =
@@ -1379,7 +1421,9 @@ void HostProtocol::EmitFailure(const std::string &subscription_id,
            {"generation", generation},
            {"last_report_sequence", last}}
           .dump();
-  (void) report_flow_->Retire(subscription_id, generation, barrier);
+  if (!report_flow_->Retire(subscription_id, generation, barrier)) {
+    FailChannel();
+  }
   subscriptions_.erase(subscription_id);
 }
 
@@ -1404,7 +1448,7 @@ void HostProtocol::Close() {
 
 int RunHost(ControllerBackend &backend, std::istream &input,
             std::ostream &output, std::function<void()> channel_failure) {
-  HostProtocol protocol(backend);
+  HostProtocol protocol(backend, channel_failure);
   BoundedOutput writer(output, std::move(channel_failure));
   protocol.SetOutputSink([&writer](const std::string &frame) {
     return frame.find("\"event\":\"subscription_report\"") !=
@@ -1422,6 +1466,10 @@ int RunHost(ControllerBackend &backend, std::istream &input,
       break;
     }
     ProcessResult result = protocol.ProcessLine(line);
+    if (!protocol.healthy()) {
+      protocol.Close();
+      return 1;
+    }
     if (result.frame.has_value()) {
       if (!writer.EnqueueReply(*result.frame)) {
         protocol.Close();
@@ -1441,7 +1489,7 @@ int RunHost(ControllerBackend &backend, std::istream &input,
   }
   protocol.Close();
   writer.Stop();
-  return writer.healthy() ? 0 : 1;
+  return writer.healthy() && protocol.healthy() ? 0 : 1;
 }
 
 } // namespace wotex::matter

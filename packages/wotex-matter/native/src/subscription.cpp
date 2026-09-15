@@ -311,6 +311,18 @@ std::optional<std::uint64_t> next_report_byte_count(std::uint64_t current,
   return current + encoded_bytes;
 }
 
+#ifdef WOTEX_MATTER_PROTOCOL_TESTING
+bool ReportCreditManager::SeedCountersForTesting(std::uint64_t sequence,
+                                                 std::uint64_t bytes) {
+  if (sequence == 0 || !outstanding_.empty() || !queued_.empty()) {
+    return false;
+  }
+  next_sequence_ = sequence;
+  cumulative_transmitted_bytes_ = bytes;
+  return true;
+}
+#endif
+
 ReportCreditManager::CreditSnapshot ReportCreditManager::snapshot() const {
   return {queued_.size(), kSessionReportCredit - outstanding_.size(),
           kSessionByteCredit - outstanding_bytes_};

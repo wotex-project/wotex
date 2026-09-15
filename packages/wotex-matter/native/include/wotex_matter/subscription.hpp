@@ -154,6 +154,10 @@ class ReportCreditManager final {
 
   CreditSnapshot snapshot() const;
 
+#ifdef WOTEX_MATTER_PROTOCOL_TESTING
+  bool SeedCountersForTesting(std::uint64_t sequence, std::uint64_t bytes);
+#endif
+
   ReportCreditManager(std::string session_generation, Transmit transmit);
   bool AddStream(const std::string &subscription_id, std::uint64_t generation,
                  std::size_t queue_limit);

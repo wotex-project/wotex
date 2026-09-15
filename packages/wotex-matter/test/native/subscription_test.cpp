@@ -425,6 +425,133 @@ void DefaultLossIsTerminalWithoutRecovery() {
   assert(!backend.report_sink(late));
 }
 
+void ReportCounterExhaustionClosesGeneration() {
+  const auto maximum = std::numeric_limits<std::uint64_t>::max();
+  for (const bool sequence : {false, true}) {
+    RecordingBackend backend;
+    unsigned failures = 0;
+    HostProtocol protocol(backend, [&] { ++failures; });
+    unsigned transmitted = 0;
+    protocol.SetOutputSink([&](const std::string &) {
+      ++transmitted;
+      return true;
+    });
+    Open(protocol);
+    auto subscribed = protocol.ProcessLine(
+        R"({"version":1,"id":"2","operation":"subscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","kind":"attribute","paths":[{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":0}],"min_interval_s":1,"max_interval_s":60,"resubscribe":false,"queue_limit":64},"timeout_ms":1000})");
+    assert(subscribed.keep_running && subscribed.activate_subscription.has_value());
+    assert(protocol.SeedReportCountersForTesting(sequence ? maximum : 1,
+                                                sequence ? 0 : maximum));
+    SubscriptionReport report{kSubscriptionId, 1, SubscriptionKind::Attribute,
+                              Attribute(7), true, 1, 2, 45, 73};
+    assert(!backend.report_sink(report));
+    assert(transmitted == 0 && failures == 1 && !protocol.healthy());
+    assert(backend.open); // The callback never runs SDK teardown inline.
+    assert(!backend.report_sink(report));
+    assert(failures == 1 && transmitted == 0);
+    const auto health = protocol.ProcessLine(
+        R"({"version":1,"id":"3","operation":"health","parameters":{},"timeout_ms":1000})");
+    assert(!health.keep_running && !health.frame.has_value() && !backend.open);
+  }
+}
+
+void LastReportCountersRetainAcceptedOutput() {
+  const auto maximum = std::numeric_limits<std::uint64_t>::max();
+  for (const bool sequence : {false, true}) {
+    std::vector<std::string> frames;
+    ReportCreditManager flow(kSessionGeneration, [&](const std::string &frame) {
+      frames.push_back(frame);
+      return true;
+    });
+    assert(flow.AddStream("s1", 1, 64));
+    assert(flow.SeedCountersForTesting(sequence ? maximum - 1 : 1,
+                                       sequence ? 0 : maximum - 128));
+    auto encode = [](std::uint64_t id) {
+      const std::string value = std::to_string(id);
+      return value + std::string(127 - value.size(), 'x');
+    };
+    assert(flow.Submit("s1", 1, encode) ==
+           ReportCreditManager::SubmitResult::Transmitted);
+    assert(frames.size() == 1 && frames[0].size() == 127);
+    assert(flow.last_transmitted("s1", 1) == (sequence ? maximum - 1 : 1));
+    assert(flow.Submit("s1", 1, encode) ==
+           ReportCreditManager::SubmitResult::Invalid);
+    assert(frames.size() == 1);
+    const auto credit = flow.snapshot();
+    assert(credit.frame_credit == 63 && credit.byte_credit == 1048576 - 128);
+    assert(flow.Acknowledge(sequence ? maximum - 1 : 1,
+                            sequence ? 128 : maximum));
+    assert(flow.snapshot().frame_credit == 64);
+  }
+}
+
+void CallbackOutputFailureClosesGeneration() {
+  for (const std::string event : {"subscription_report", "subscription_error",
+                                  "stream_retired", "subscription_status"}) {
+    RecordingBackend backend;
+    unsigned failures = 0;
+    unsigned rejected = 0;
+    HostProtocol protocol(backend, [&] { ++failures; });
+    protocol.SetOutputSink([&](const std::string &frame) {
+      if (frame.find("\"event\":\"" + event + "\"") != std::string::npos) {
+        ++rejected;
+        return false;
+      }
+      return true;
+    });
+    Open(protocol);
+    const auto subscribed = protocol.ProcessLine(
+        R"({"version":1,"id":"2","operation":"subscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","kind":"attribute","paths":[{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":0}],"min_interval_s":1,"max_interval_s":60,"resubscribe":true,"queue_limit":64},"timeout_ms":1000})");
+    assert(subscribed.keep_running);
+    SubscriptionReport report{kSubscriptionId, 1, SubscriptionKind::Attribute,
+                              Attribute(7), true, 1, 2, 45, 73};
+    if (event == "subscription_report") {
+      assert(!backend.report_sink(report));
+    } else if (event == "subscription_status") {
+      assert(!backend.status_sink(
+          {kSubscriptionId, 2, SubscriptionStatusKind::Resubscribing,
+           SubscriptionContinuity::Lost, 1}));
+    } else {
+      backend.failure_sink(kSubscriptionId, 1, InteractionError{"session_lost"});
+    }
+    assert(failures == 1 && rejected == 1 && !protocol.healthy());
+    assert(backend.open);
+    backend.failure_sink(kSubscriptionId, 1, InteractionError{"session_lost"});
+    assert(!backend.report_sink(report));
+    assert(failures == 1 && rejected == 1);
+    assert(!protocol.ProcessLine(
+        R"({"version":1,"id":"3","operation":"health","parameters":{},"timeout_ms":1000})").keep_running);
+    assert(!backend.open);
+  }
+}
+
+void StreamOverflowPreservesHealthyGeneration() {
+  RecordingBackend backend;
+  unsigned failures = 0;
+  HostProtocol protocol(backend, [&] { ++failures; });
+  std::vector<std::string> frames;
+  protocol.SetOutputSink([&](const std::string &frame) {
+    frames.push_back(frame);
+    return true;
+  });
+  Open(protocol);
+  assert(protocol.ProcessLine(
+      R"({"version":1,"id":"2","operation":"subscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","kind":"attribute","paths":[{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":0}],"min_interval_s":1,"max_interval_s":60,"resubscribe":false,"queue_limit":1},"timeout_ms":1000})").keep_running);
+  SubscriptionReport report{kSubscriptionId, 1, SubscriptionKind::Attribute,
+                            Attribute(7), true, 1, 2, 45, 73};
+  assert(backend.report_sink(report)); // One in flight.
+  assert(backend.report_sink(report)); // One queued.
+  assert(!backend.report_sink(report)); // Retires this stream only.
+  assert(!backend.report_sink(report));
+  assert(frames.size() == 3);
+  assert(frames[1].find("queue_overflow") != std::string::npos);
+  assert(frames[2].find("stream_retired") != std::string::npos);
+  assert(failures == 0 && protocol.healthy());
+  const auto health = protocol.ProcessLine(
+      R"({"version":1,"id":"3","operation":"health","parameters":{},"timeout_ms":1000})");
+  assert(health.keep_running && health.frame->find(R"("ok":true)") != std::string::npos);
+}
+
 void InvalidSubscriptionNeverEntersBackend() {
   RecordingBackend backend;
   HostProtocol protocol(backend);
@@ -448,5 +575,9 @@ int main() {
   ProtocolEstablishesBeforeDeliveryAndRetires();
   DefaultLossIsTerminalWithoutRecovery();
   InvalidSubscriptionNeverEntersBackend();
+  ReportCounterExhaustionClosesGeneration();
+  LastReportCountersRetainAcceptedOutput();
+  CallbackOutputFailureClosesGeneration();
+  StreamOverflowPreservesHealthyGeneration();
   return 0;
 }
