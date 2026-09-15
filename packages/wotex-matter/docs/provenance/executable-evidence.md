@@ -859,3 +859,38 @@ open. The default gate passes 139 checks with the software cases excluded.
 | ExUnit test | `f90f9c6d3acd378f79738c77f1002707afdbc0e3debd96226692e8ee2fd3b6cd` |
 | Current Linux log | `4f41aed021dffea4a3506d3fb38bca4746accc362b9550a2cb8d2a2028a58ddb` |
 | Minimum Linux sanitizer log | `0a4af09f395f99d978f50cc112fa3261f706fbfb1d74b28074c154683aec9bf0` |
+
+## Enhanced commissioning window expiry
+
+`test/interop/native_window_expiry_test.exs` starts from an operational pinned
+bridge peer and reads AdministratorCommissioning WindowStatus `0`. It opens a
+180-second enhanced window, verifies WindowStatus `1`, waits at least 180200 ms
+and verifies WindowStatus `0`. A separate fresh controller then attempts
+commissioning with the returned, now expired material and receives SDK timeout
+`0x32` with effect `none`. Both controller owners and exact native children are
+released before the test writes its result. Onboarding material remains in memory
+and is not included in the result artifact.
+
+The final test passes in 182.0 seconds on the current Linux toolchain and 182.7
+seconds on the minimum sanitizer lane. The measured intervals before the failed
+attempt are 180206 ms and 180203 ms. These lanes use the attestation-cohort hosts
+`be453277...c13c9e` and `708fd309...f0a672`, with full hashes above, and the pinned
+bridge binary `89333e48...3963f` recorded in the bridge cohort. Provide an existing
+controller, a fresh controller and an exclusive result path through
+`WOTEX_MATTER_NATIVE_WINDOW_FIXTURE` and select the software/interop tags.
+
+The generic commissioning fixture also requires an explicit `expected_code` for
+each negative scenario, limited to `commissioning_failed` or `timeout`. Its
+attestation and expired-material cases pass on both Linux lanes with exact SDK
+statuses and effects. The other three generic cases are excluded from that
+focused run. These results establish the expired-window branch of WMA-S05/V10;
+they do not replace the remaining commissioning, process-flow or full-run gates.
+
+| Window artifact | SHA-256 |
+| --- | --- |
+| Expiry test | `40fc5dea2a4a05a13827899eb7d166dd71409be3b0f4580d545dedff3218f015` |
+| Current Linux expiry log | `9836bb5e6ceedc8adb913a1b96ecf065d1032866fe637cdedc404166f189c5e8` |
+| Minimum Linux sanitizer expiry log | `3800f4c8163596cb44efda4713e82025591b969ccade394159b1b90b84f70e18` |
+| Generic commissioning test | `db1d6b3424bed816cc043abd8b6011c468d937854863aee835500527f5e7564c` |
+| Current Linux status log | `cb85b20c1df877d116de9e14caedaa190b79ef353978d0b6e08d1846f5c17528` |
+| Minimum Linux sanitizer status log | `2782b2a8f1cba8397e3b15ec0db8672af3dd81a176a52e1eb07de1f7b0ec832c` |

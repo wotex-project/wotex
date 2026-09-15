@@ -147,9 +147,11 @@ defmodule Wotex.Matter.CommissioningInteropTest do
   end
 
   defp assert_sdk_failure(result, scenario) do
+    expected_code = enum(scenario, "expected_code", [:commissioning_failed, :timeout])
+
     assert {:error,
             %Error{
-              code: :commissioning_failed,
+              code: ^expected_code,
               details: %{sdk_status: sdk_status},
               effect: effect
             }} = result
