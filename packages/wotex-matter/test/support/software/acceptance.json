@@ -2,6 +2,12 @@
   "schema": "wotex.matter.software-cases@1",
   "cases": [
     {
+      "file": "test/software/operation_resources_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeOperationResourcesTest",
+      "name": "test WMA-V13 commissioning, writes, commands and windows release their actual native owners",
+      "evidence": "shared-sdk"
+    },
+    {
       "file": "test/software/startup_resources_test.exs",
       "module": "Elixir.Wotex.Matter.NativeStartupResourcesTest",
       "name": "test WMA-V04 startup failures, exceptions and kills release each SDK stage and storage lock",
@@ -214,6 +220,7 @@
     "WOTEX_MATTER_NATIVE_LIGHTING_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_ONESHOT_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_ONESHOT_STRESS_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_OPERATION_RESOURCES_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_PENDING_LOSS_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_PENDING_SUBSCRIPTION_LOSS_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_REQUEST_ID_FIXTURE": "fixture",

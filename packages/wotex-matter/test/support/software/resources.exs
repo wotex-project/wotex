@@ -73,15 +73,42 @@ defmodule Wotex.Matter.SoftwareResources do
     assert value["observer_failed"] == false
 
     for phase <- ~w(before after) do
-      native = value[phase]
-      validate!(native)
-      assert balanced?(native), "native objects remain after cleanup: #{inspect(native)}"
-
-      assert Enum.all?(native["sdk"], fn {_, count} -> count == 0 end),
-             "SDK resources remain after cleanup: #{inspect(native)}"
+      released!(value[phase])
     end
 
     value
+  end
+
+  @spec closed_generations!(String.t(), MapSet.t(), pos_integer()) :: {MapSet.t(), map()}
+  def closed_generations!(root, previous, expected) do
+    directories =
+      root |> File.ls!() |> Enum.filter(&String.starts_with?(&1, "process-")) |> MapSet.new()
+
+    added = MapSet.difference(directories, previous)
+    assert MapSet.size(added) == expected
+
+    outcomes =
+      for name <- added do
+        assert [_, child] = Regex.run(~r/^process-([1-9][0-9]*)$/, name)
+        refute File.exists?("/proc/" <> child), "a completed native generation is still alive"
+        directory = Path.join(root, name)
+
+        if File.exists?(Path.join(directory, "startup-failure.json")) do
+          failure = document!(directory, "startup-failure.json", now() + 1_000)
+          assert Enum.sort(Map.keys(failure)) == ~w(code native)
+          assert failure["code"] == "storage_open_failed"
+          released!(failure["native"])
+          if File.exists?(Path.join(directory, "native-result.json")), do: final!(directory)
+          :storage_open_failed
+        else
+          final = final!(directory)
+          assert final["after"]["objects"]["interaction"]["acquired"] == 1
+          assert final["after"]["objects"]["read_client"]["acquired"] == 1
+          :success
+        end
+      end
+
+    {directories, Enum.frequencies(outcomes)}
   end
 
   @spec document!(String.t(), String.t(), integer()) :: map()
@@ -126,6 +153,14 @@ defmodule Wotex.Matter.SoftwareResources do
 
   defp balanced?(native),
     do: Enum.all?(native["objects"], fn {_, value} -> value["acquired"] == value["destroyed"] end)
+
+  defp released!(native) do
+    validate!(native)
+    assert balanced?(native), "native objects remain after cleanup: #{inspect(native)}"
+
+    assert Enum.all?(native["sdk"], fn {_, count} -> count == 0 end),
+           "SDK resources remain after cleanup: #{inspect(native)}"
+  end
 
   defp private_write!(path, bytes) do
     {:ok, file} = File.open(path, [:write, :exclusive])

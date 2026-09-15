@@ -19,7 +19,8 @@ defmodule Wotex.Matter.SoftwareScenarios do
     {:attestation_failure, :lighting},
     {:expired_window, :lighting},
     {:acl_denied, :lighting},
-    {:timeout, :lighting}
+    {:timeout, :lighting},
+    {:operation_resources, :lighting}
   ]
   @controller_keys ~w(executable storage_path vendor_id fabric_id controller_node_id paa_trust_store)a
   @common_cases ~w(CLOSE CONTROL_PUMP INPUT_PRESSURE PENDING_LOSS
@@ -163,7 +164,9 @@ defmodule Wotex.Matter.SoftwareScenarios do
           {"NATIVE_BRIDGE", peers.bridge},
           {"NATIVE_ACL", peers.acl},
           {"NATIVE_ONESHOT", oneshot},
-          {"NATIVE_ONESHOT_STRESS", oneshot},
+          {"NATIVE_ONESHOT_STRESS", resource_fixture(context, oneshot, "oneshot-resources")},
+          {"NATIVE_OPERATION_RESOURCES",
+           resource_fixture(context, peers.operation_resources, "operation-resources")},
           {"NATIVE_ATTESTATION", untrusted(context, peers.native_attestation)},
           {"NATIVE_TIMEOUT", wrong_pin(peers.timeout)}
         ],
@@ -255,6 +258,15 @@ defmodule Wotex.Matter.SoftwareScenarios do
       "paa_trust_store" => context.artifacts.paa,
       "timeout" => 60_000
     }
+  end
+
+  defp resource_fixture(context, fixture, name) do
+    directory = Path.join(context.directory, name)
+    private_directory(directory)
+
+    fixture
+    |> put_in(["controller", "executable"], context.artifacts.resource_host)
+    |> Map.put("resource_directory", directory)
   end
 
   defp commission(scenario) do

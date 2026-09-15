@@ -36,7 +36,15 @@ std::optional<Json> Configuration() {
   if (!bytes || !HostProtocol::ParseDocumentAccepted(*bytes)) {
     return std::nullopt;
   }
-  const Json value = Json::parse(*bytes, nullptr, false);
+  Json value = Json::parse(*bytes, nullptr, false);
+  bool process_directory = false;
+  if (value.is_object() && value.contains("process_directory")) {
+    if (value["process_directory"] != true) {
+      return std::nullopt;
+    }
+    process_directory = true;
+    value.erase("process_directory");
+  }
   if (!value.is_object() || (value.size() != 1 && value.size() != 3) ||
       !value.contains("directory") || !value["directory"].is_string()) {
     return std::nullopt;
@@ -64,6 +72,9 @@ std::optional<Json> Configuration() {
       return std::nullopt;
     }
   }
+  if (process_directory) {
+    value["process_directory"] = true;
+  }
   return value;
 }
 
@@ -86,7 +97,17 @@ class ObservedBackend final : public ControllerBackend {
 
   BackendResult Open(const NativeOpenOptions &options) override {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return backend_.Open(options);
+    const auto result = backend_.Open(options);
+    if (!result.ok) {
+      // A BEAM caller may kill a failed startup as soon as it receives the
+      // error. Record the completed SDK cleanup before publishing that reply.
+      const Json observation{{"code", result.error_code},
+                             {"native", Json::parse(backend_.ResourceSnapshotForTesting())}};
+      if (!WriteAtomicExclusive(directory_ + "/startup-failure.json", observation.dump())) {
+        failed_ = true;
+      }
+    }
+    return result;
   }
 
   InteractionResponse Interact(const InteractionRequest &request) override {
@@ -209,7 +230,13 @@ int main() {
     if (!configuration) {
       return 2;
     }
-    const std::string directory = (*configuration)["directory"].get<std::string>();
+    std::string directory = (*configuration)["directory"].get<std::string>();
+    if (configuration->value("process_directory", false)) {
+      directory += "/process-" + std::to_string(getpid());
+      if (mkdir(directory.c_str(), 0700) != 0) {
+        return 2;
+      }
+    }
     ConfigureStartup(directory, configuration->value("startup_stage", std::string{}),
                       configuration->value("startup_action", std::string{}));
     const auto before = nlohmann::json::parse(SnapshotJson());

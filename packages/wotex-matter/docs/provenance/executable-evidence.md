@@ -3140,3 +3140,87 @@ not accept the remaining C09 software, coverage or archive requirements.
 | Current native loss observations | `4dea3cb88c029f6e37aefe6fa69936199d126cf1548907a4fc5ede812a442073` |
 | Minimum relay and SDK tests | `c10c670b7ff5aaebd8cf93a0110ead760e7c477b6bdda44d0619567b05b187be` |
 | Minimum native loss observations | `ce4dfb3e0037e1435628597a5d43e7863df6c7b4a09bdf17ee5ee5ace038a324` |
+
+
+## One-shot and mutating-operation resource ownership
+
+The resource test executable optionally creates a private directory for each
+native PID. Each successful one-shot read must leave a complete final census:
+its interaction and ReadClient are each acquired and destroyed once, all nine
+tracked object lifetimes balance, and all seven SDK resource counters are zero.
+A failed controller open records its completed SDK cleanup before the error
+reply. This preserves that observation if BEAM subsequently kills the failed
+startup before the executable publishes its final exit record.
+
+Both Linux lanes pass 1000 sequential reads, 100 open/close cycles and 32
+concurrent calls, plus one warm read. All 1133 native generations are observed
+and their exact PIDs are reaped. Each lane records 1102 successful reads and
+31 failed lock acquisitions; the concurrent outcomes are one success and
+31 `storage_open_failed` results. Native failure observations match the public
+API counts. The current lane publishes 1133 final records; the sanitizer lane
+publishes 1130 final records and retains the pre-reply zero-resource census for
+all 31 failed starts, including the three killed before their final record.
+The cases complete in 421.8 and 696.7 seconds. Both owned all-clusters peers are
+reaped. The minimum lane selects ASan, UBSan and leak detection. Caller heap
+samples are recorded separately from the native resource census.
+
+The first resource runs are rejected after 260 and 146 generations because their
+executable-wide process census overlaps separate startup tests using the same
+binary in another BEAM instance. The failure times fall inside both startup
+case intervals. Every completed one-shot generation has a zero final SDK census,
+and both owned peers are reaped. The accepted census is scoped to the current
+probe's recorded PIDs. It preserves the 1000-ms cleanup allowance and the
+10,000-ms read budget. No failed operation is retried. Both accepted frozen
+cohorts contain byte-identical resource-executable source, resource assertions
+and one-shot case source to this packet; the complete software profile still
+requires a final-source run of its full inventory.
+
+`test/software/operation_resources_test.exs` additionally binds WMA-V13 to a
+case-owned lighting peer. It commissions that peer, reads its OnOff value,
+invokes On, verifies the changed value, writes an administrative ACL, verifies
+its decoded contents and opens an enhanced commissioning window. Resource
+snapshots follow the actual SDK callbacks. Each lane records five interaction
+contexts, three ReadClients and one each of commissioning context, CommandSender,
+WriteClient, window context and WindowOpener, with matching destruction counts.
+SDK counters return to the warm baseline after operations and zero after close.
+The cases pass in 1.1 and 1.8 seconds and reap both peers. The fixture builder
+prepares fourteen isolated peers and starts four during preparation; the
+operation-resource peer starts inside its case. The required inventory contains
+34 software cases.
+
+Both rebuilt resource executables pass the existing 33 startup-boundary trials
+and recovery reads. Both six-case CTest gates, all 15 pinned advisory queries,
+20 minimum-toolchain build/fixture/acceptance cases, both formatters and ExDoc
+pass. The default gate passes 221 checks with 35 excluded in 73.2 seconds.
+Actual SDK resubscription/recovery-timer evidence, forced failures during stress,
+the unchanged 95% coverage floor, the final public build/run and clean archive
+evidence remain required for complete P09/C09 acceptance.
+
+| One-shot and operation resource artifact | SHA-256 |
+| --- | --- |
+| Current one-shot results | `179ea3ba1b40ac288c936645e82c5a435e725d2ec4ce8b6796be4a52c5b2db2d` |
+| Current one-shot test log | `5acb6199477f689d58eb95afbae01809d99c0d67526b5bc4f9c1c80747e87ee0` |
+| Current one-shot resource digests | `8ed43565ed1600af90f03b7a0f66d68d1476670d9805ce0d8eea6577eeabf2d6` |
+| Current owned peer cleanup | `53498677cb1ae4b8596fabc02a28acf4f02f710fb6da01e03fe0dc1e60d5826a` |
+| Current resource executable | `c3544e7d50b6d11ef35b5b4004e5848e40df6fc19bc672530645815e5e4f410e` |
+| Current operation resource results | `6c5abca3a0ad64472e085cea92626044d8131f83743d29fb2b3fbeac76aeacb7` |
+| Current operation resource test log | `5213282bff51389d8d3409d14efbbe7ed9f5405c83e85b745d8522c3c07592fb` |
+| Current startup resource test log | `dfd41fda768da08b730f617db75d25f36a4555b7fbd23f781417e2b07ab8efc0` |
+| Minimum one-shot results | `cf66f3946aef4d0a878149f7d0cb23fb2c53f0f73d622cc28f4d611e0fa29739` |
+| Minimum one-shot test log | `104a54c171c21902413d78b0038edad1b1df657a71c5cf645b42b7bde48fe94c` |
+| Minimum one-shot resource digests | `07b98eb53b2ba94a70ff7af9ef2432b8929bee1495fd5c60b203edd146d63b20` |
+| Minimum owned peer cleanup | `64278ded6f68f62500375e62bc2eed4244658338197821b029840cf3b9d4455d` |
+| Minimum resource executable | `43b24b852164ec07fc85a8629a8ab528a920dc44602642b65c288e5c9bf47ef1` |
+| Minimum operation resource results | `6c5abca3a0ad64472e085cea92626044d8131f83743d29fb2b3fbeac76aeacb7` |
+| Minimum operation resource test log | `90d6d77716b2001f5691b1eb3bb5f2a50c39735ce4f1cd663e62457479042a04` |
+| Minimum startup resource test log | `289b093d58c7153af5450bfda71efd33cba0e86faaf963949f71ca65f2f6e4fb` |
+| Resource executable source | `c8cd9003afcf0000bf7f568834fcdcbb85c3ea602a325bac305a184f571434dd` |
+| Resource assertions | `6bab41c8a411fe24798227dd619fac12897d3c2d0626f733fd0ac0d29b4a5c87` |
+| One-shot resource case | `48c7521bf04ebee7bd34c9e50f62508bc89ffdcca8c09eb35b2837dd516a528b` |
+| Operation resource case | `b543de2c5526dd12b7eba8435d0a89011edaae060b00c531257b83345b130586` |
+| Required case inventory | `da67711ff6e18b1158429225c0ff1226932862644fd88d7822598cd98638d3a2` |
+| Build and both CTest gates | `c00092b3ff7542e27b002ba6c32367a8fad7a5965939577d83ac65a94647538b` |
+| Default gate | `cf809f14955b2b80b4ef6f88e6bed35d8dbea11337be150ffd5324e8297d0f4c` |
+| Minimum harness gate | `8d5c79e2d803ba8a729e9808c7f559952fd926cbfd58141474fa937f6b78c2c0` |
+| Advisory gate | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |

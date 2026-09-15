@@ -1,9 +1,11 @@
+Code.require_file("../support/software/resources.exs", __DIR__)
+
 defmodule Wotex.Matter.NativeOneshotStressTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
   alias Wotex.Matter
-  alias Wotex.Matter.{AttributeReport, Error, Native}
+  alias Wotex.Matter.{AttributeReport, Error, Native, SoftwareResources}
   @moduletag :interop
   @moduletag :software
   @moduletag timeout: 900_000
@@ -16,6 +18,16 @@ defmodule Wotex.Matter.NativeOneshotStressTest do
       |> File.read!()
       |> Jason.decode!()
 
+    SoftwareResources.with_probe(
+      fixture["resource_directory"],
+      %{"process_directory" => true},
+      fn probe ->
+        stress(fixture, probe)
+      end
+    )
+  end
+
+  defp stress(fixture, probe) do
     controller = Map.fetch!(fixture, "controller")
 
     config =
@@ -50,25 +62,32 @@ defmodule Wotex.Matter.NativeOneshotStressTest do
     ports = owned_ports(config[:executable])
     assert ports == []
     assert {:ok, %AttributeReport{value: value}} = Matter.read_attribute(session, address)
-    assert cleaned?(config[:executable], 100)
+    assert cleaned?(config[:executable], probe, 100)
+    {generations, %{success: 1}} = SoftwareResources.closed_generations!(probe, MapSet.new(), 1)
 
-    samples =
-      for batch <- 1..10 do
-        for _ <- 1..100 do
-          assert {:ok, %AttributeReport{value: ^value}} = Matter.read_attribute(session, address)
-          assert cleaned?(config[:executable], 100)
-        end
+    {samples, generations} =
+      Enum.map_reduce(1..10, generations, fn batch, generations ->
+        generations =
+          Enum.reduce(1..100, generations, fn _, previous ->
+            assert {:ok, %AttributeReport{value: ^value}} = Matter.read_attribute(session, address)
+            assert cleaned?(config[:executable], probe, 100)
+            {next, %{success: 1}} = SoftwareResources.closed_generations!(probe, previous, 1)
+            next
+          end)
 
         {:memory, bytes} = Process.info(self(), :memory)
-        %{completed: batch * 100, caller_heap_bytes: bytes}
-      end
+        {%{completed: batch * 100, caller_heap_bytes: bytes}, generations}
+      end)
 
-    for _ <- 1..100 do
-      assert {:ok, one} = Matter.connect(config)
-      assert {:ok, %AttributeReport{value: ^value}} = Matter.read_attribute(one, address)
-      assert :ok = Matter.disconnect(one)
-      assert cleaned?(config[:executable], 100)
-    end
+    generations =
+      Enum.reduce(1..100, generations, fn _, previous ->
+        assert {:ok, one} = Matter.connect(config)
+        assert {:ok, %AttributeReport{value: ^value}} = Matter.read_attribute(one, address)
+        assert :ok = Matter.disconnect(one)
+        assert cleaned?(config[:executable], probe, 100)
+        {next, %{success: 1}} = SoftwareResources.closed_generations!(probe, previous, 1)
+        next
+      end)
 
     results =
       1..32
@@ -90,7 +109,10 @@ defmodule Wotex.Matter.NativeOneshotStressTest do
     assert Enum.sum(Map.values(counts)) == 32
     assert Map.get(counts, :success, 0) > 0
     assert Map.keys(counts) -- [:success, :storage_open_failed] == []
-    assert cleaned?(config[:executable], 100)
+    assert cleaned?(config[:executable], probe, 100)
+    {generations, native_outcomes} = SoftwareResources.closed_generations!(probe, generations, 32)
+    assert native_outcomes == counts
+    assert MapSet.size(generations) == 1133
     assert :ok = Matter.disconnect(session)
 
     File.write!(
@@ -100,6 +122,7 @@ defmodule Wotex.Matter.NativeOneshotStressTest do
         sequential_operations: 1000,
         open_close_cycles: 100,
         concurrent_callers: 32,
+        native_generations_observed: MapSet.size(generations),
         outcomes: counts,
         samples: samples,
         owned_ports_after_cleanup: 0,
@@ -113,21 +136,21 @@ defmodule Wotex.Matter.NativeOneshotStressTest do
     Enum.filter(Port.list(), &(Port.info(&1, :name) == {:name, String.to_charlist(executable)}))
   end
 
-  defp cleaned?(_, 0), do: false
+  defp cleaned?(_, _, 0), do: false
 
-  defp cleaned?(executable, remaining) do
-    if owned_ports(executable) == [] and children(executable) == [] do
+  defp cleaned?(executable, probe, remaining) do
+    if owned_ports(executable) == [] and children(probe) == [] do
       true
     else
       Process.sleep(10)
-      cleaned?(executable, remaining - 1)
+      cleaned?(executable, probe, remaining - 1)
     end
   end
 
-  defp children(executable) do
-    for path <- Path.wildcard("/proc/[0-9]*/cmdline"),
-        {:ok, bytes} <- [File.read(path)],
-        [^executable | _] <- [String.split(bytes, <<0>>, trim: true)],
-        do: path
+  defp children(probe) do
+    for name <- File.ls!(probe),
+        [_, child] <- [Regex.run(~r/^process-([1-9][0-9]*)$/, name)],
+        File.exists?("/proc/" <> child),
+        do: child
   end
 end
