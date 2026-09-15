@@ -325,7 +325,7 @@ bool ReportCreditManager::SeedCountersForTesting(std::uint64_t sequence,
 
 ReportCreditManager::CreditSnapshot ReportCreditManager::snapshot() const {
   return {queued_.size(), kSessionReportCredit - outstanding_.size(),
-          kSessionByteCredit - outstanding_bytes_};
+          kSessionByteCredit - outstanding_bytes_, queued_bytes_};
 }
 
 std::string ReportCreditManager::Key(const std::string &subscription_id,
@@ -467,17 +467,19 @@ bool ReportCreditManager::Acknowledge(std::uint64_t report_sequence,
 
 bool ReportCreditManager::Drain() {
   while (!queued_.empty()) {
-    Frame frame = std::move(queued_.front());
-    auto stream = streams_.find(Key(frame.subscription_id, frame.generation));
+    const Frame &pending = queued_.front();
+    auto stream = streams_.find(Key(pending.subscription_id, pending.generation));
     if (stream == streams_.end() || !stream->second.live) {
-      queued_bytes_ -= frame.encoded.size() + 1;
+      queued_bytes_ -= pending.encoded.size() + 1;
       queued_.pop_front();
       continue;
     }
-    const std::string encoded = frame.encode(next_sequence_);
+    const std::string encoded = pending.encode(next_sequence_);
     if (!CanTransmit(stream->second, encoded.size() + 1)) {
       break;
     }
+    // The queue retains the complete value and its reservation while blocked.
+    Frame frame = std::move(queued_.front());
     queued_bytes_ -= frame.encoded.size() + 1;
     --stream->second.queued;
     queued_.pop_front();
@@ -519,6 +521,12 @@ bool ReportCreditManager::IsLive(const std::string &subscription_id,
                                  std::uint64_t generation) const {
   const auto stream = streams_.find(Key(subscription_id, generation));
   return stream != streams_.end() && stream->second.live;
+}
+
+bool ReportCreditManager::IsRetired(const std::string &subscription_id,
+                                    std::uint64_t generation) const {
+  const auto stream = streams_.find(Key(subscription_id, generation));
+  return stream != streams_.end() && !stream->second.live;
 }
 
 std::uint64_t ReportCreditManager::last_transmitted(

@@ -1,4 +1,5 @@
 Code.require_file("../../support/software/command.exs", __DIR__)
+Code.require_file("../../support/software/process_flow.exs", __DIR__)
 
 defmodule Wotex.Matter.NativeContractTest do
   @moduledoc false
@@ -10,6 +11,25 @@ defmodule Wotex.Matter.NativeContractTest do
 
   @moduletag :software
   @fixture "docs/specs/fixtures/native-port-v1.json"
+
+  for {id, suspended} <- [
+        {"WMA-B-F11", "connection"},
+        {"WMA-B-F12", "stream_owner"},
+        {"WMA-B-F13", "receiver"}
+      ] do
+    @tag :process_flow
+    test "#{id} suspends the actual #{suspended} across native callbacks" do
+      item = Enum.find(fixture!()["cases"], &(&1["id"] == unquote(id)))
+      assert item["input"]["suspend"] == unquote(suspended)
+      assert item["expectation"]["operator"] == "exact"
+
+      fixture =
+        System.fetch_env!("WOTEX_MATTER_PROCESS_FLOW_FIXTURE") |> File.read!() |> Jason.decode!()
+
+      observed = Wotex.Matter.SoftwareProcessFlow.run!(item, fixture)
+      assert observed == item["expectation"]["value"], item["id"]
+    end
+  end
 
   test "WMA-B-F01 through F05 execute the shared native request validator" do
     fixture = fixture!()

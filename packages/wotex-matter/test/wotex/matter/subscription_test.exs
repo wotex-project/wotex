@@ -10,6 +10,56 @@ defmodule Wotex.Matter.SubscriptionTest do
   @event_path %{fabric_id: 1, node_id: 3, endpoint: 2, cluster: 0x0039, member: 3}
   @sensor_path %{fabric_id: 1, node_id: 3, endpoint: 4, cluster: 0x0402, member: 0}
 
+  @tag :cancel_terminal_race
+  test "a native terminal racing local cancellation preserves one public terminal" do
+    for mode <- ["cancel_race", "cancel_race_duplicate"] do
+      audit = temporary_path("cancel-terminal-race")
+      executable = native_fixture(audit, mode)
+
+      receiver =
+        spawn(fn ->
+          receive do
+            :release -> :ok
+          end
+        end)
+
+      send(receiver, :occupied)
+      assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+      monitor = Process.monitor(session.handle.pid)
+
+      try do
+        assert {:ok, subscription} =
+                 Matter.subscribe(session, %{
+                   kind: :attribute,
+                   paths: [@path],
+                   receiver: receiver,
+                   max_queue_length: 1
+                 })
+
+        reference = subscription.reference
+
+        assert eventually(fn ->
+                 Enum.any?(audit_frames(audit), &(&1["operation"] == "unsubscribe"))
+               end)
+
+        if mode == "cancel_race" do
+          assert {:ok, %{"status" => "ready"}} = Native.health(session.handle)
+          assert :sys.get_state(session.handle.pid).subscriptions == %{}
+        else
+          assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+        end
+
+        assert {:messages,
+                [:occupied, {:wotex_matter, ^reference, {:error, %Error{code: :receiver_overflow}}}]} =
+                 Process.info(receiver, :messages)
+      after
+        Process.exit(receiver, :kill)
+        Process.demonitor(monitor, [:flush])
+        Matter.disconnect(session)
+      end
+    end
+  end
+
   @tag :wire_identifiers
   test "an overflowing native report ID closes before public delivery or acknowledgement" do
     audit = temporary_path("report-id-overflow")
@@ -979,6 +1029,7 @@ defmodule Wotex.Matter.SubscriptionTest do
             "credit_overflow" ->
               for sequence <- 1..65, do: attribute_report.(current, sequence, sequence, 7)
             "report_id_overflow" -> attribute_report.(current, 1, 0x10000000000000000, 7)
+            mode when mode in ["cancel_race", "cancel_race_duplicate"] -> attribute_report.(current, 1, 1, 7)
             "event" -> event_report.(current)
             "null" -> null_report.(current)
             "terminal" ->
@@ -990,7 +1041,12 @@ defmodule Wotex.Matter.SubscriptionTest do
 
         String.contains?(line, ~s("operation":"unsubscribe")) ->
           [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
-          last = if mode in ["reports", "blocked_health", "owner_pause"], do: 2, else: if(mode in ["event", "null"], do: 1, else: 0)
+          if mode in ["cancel_race", "cancel_race_duplicate"] do
+            terminal = ~s({"version":1,"event":"subscription_error","session_generation":"#{session_generation}","subscription_id":"#{subscription_id}","generation":1,"error":{"code":"queue_overflow"}})
+            IO.puts(terminal)
+            if mode == "cancel_race_duplicate", do: IO.puts(terminal)
+          end
+          last = if mode in ["reports", "blocked_health", "owner_pause"], do: 2, else: if(mode in ["event", "null", "cancel_race", "cancel_race_duplicate"], do: 1, else: 0)
           IO.puts(~s({"version":1,"event":"stream_retired","session_generation":"#{session_generation}","subscription_id":"#{subscription_id}","generation":1,"last_report_sequence":#{last}}))
           IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":null}))
           loop.(loop, subscription_id)
@@ -1009,6 +1065,11 @@ defmodule Wotex.Matter.SubscriptionTest do
         String.contains?(line, ~s("operation":"close")) ->
           [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
           IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":null}))
+
+        String.contains?(line, ~s("operation":"health")) ->
+          [_, id] = Regex.run(~r/"id":"([1-9][0-9]*)"/, line)
+          IO.puts(~s({"version":1,"id":"#{id}","ok":true,"result":{"status":"ready"}}))
+          loop.(loop, subscription_id)
 
         true ->
           System.halt(1)

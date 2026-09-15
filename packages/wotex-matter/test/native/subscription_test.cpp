@@ -1,6 +1,7 @@
 #include "wotex_matter/protocol.hpp"
 #include "wotex_matter/subscription.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <limits>
 #include <optional>
@@ -101,8 +102,11 @@ class RecordingBackend final : public ControllerBackend {
                                    std::uint64_t generation,
                                    std::uint32_t) override {
     ++cancel_calls;
-    return {id == kSubscriptionId && generation > 0,
-            id == kSubscriptionId && generation > 0 ? "" : "invalid_subscription"};
+    if (cancel_hook) {
+      cancel_hook();
+    }
+    const bool valid = cancel_ok && id == kSubscriptionId && generation > 0;
+    return {valid, valid ? "" : "invalid_subscription"};
   }
 
   void Close() override { open = false; }
@@ -111,6 +115,8 @@ class RecordingBackend final : public ControllerBackend {
   ReportSink report_sink;
   StatusSink status_sink;
   FailureSink failure_sink;
+  std::function<void()> cancel_hook;
+  bool cancel_ok{true};
   SubscriptionRequest last;
   unsigned subscribe_calls{0};
   unsigned activate_calls{0};
@@ -288,6 +294,111 @@ void CumulativeReportBytesDoNotWrap() {
   assert(next_report_byte_count(maximum - 128, 128) == maximum);
   assert(!next_report_byte_count(maximum - 127, 128).has_value());
   assert(!next_report_byte_count(maximum, 1).has_value());
+}
+
+void PartialAcknowledgementsPreserveBlockedQueuedFrames() {
+  std::vector<std::string> transmitted;
+  ReportCreditManager flow(kSessionGeneration, [&](const std::string &frame) {
+    transmitted.push_back(frame);
+    return true;
+  });
+  assert(flow.AddStream("stream", 1, 64));
+  for (unsigned report = 1; report <= 20; ++report) {
+    const auto result = flow.Submit("stream", 1, [report](std::uint64_t sequence) {
+      std::string encoded = std::to_string(report) + ":" + std::to_string(sequence) + ":";
+      encoded.resize(127, 'x');
+      return encoded;
+    });
+    assert(result == (report <= 16 ? ReportCreditManager::SubmitResult::Transmitted
+                                   : ReportCreditManager::SubmitResult::Queued));
+  }
+  for (unsigned sequence = 1; sequence <= 20; ++sequence) {
+    assert(flow.Acknowledge(sequence, sequence * 128));
+    const auto expected = std::min(16U + sequence, 20U);
+    assert(transmitted.size() == expected);
+    assert(flow.snapshot().queued == 20 - expected);
+    assert(flow.snapshot().queued_bytes == (20 - expected) * 128);
+    assert(flow.snapshot().frame_credit == 64 - (expected - sequence));
+    for (unsigned report = 1; report <= expected; ++report) {
+      const std::string identity = std::to_string(report) + ":" + std::to_string(report) + ":";
+      assert(transmitted[report - 1].find(identity) == 0);
+    }
+  }
+  assert(flow.snapshot().byte_credit == 1048576);
+}
+
+void AnotherStreamsCreditCannotConsumeTheBlockedQueueHead() {
+  std::vector<std::string> transmitted;
+  ReportCreditManager flow(kSessionGeneration, [&](const std::string &frame) {
+    transmitted.push_back(frame);
+    return true;
+  });
+  assert(flow.AddStream("first", 1, 1));
+  assert(flow.AddStream("second", 1, 1));
+  const auto encode = [](std::uint64_t sequence) { return std::to_string(sequence); };
+  assert(flow.Submit("first", 1, encode) == ReportCreditManager::SubmitResult::Transmitted);
+  assert(flow.Submit("second", 1, encode) == ReportCreditManager::SubmitResult::Transmitted);
+  assert(flow.Submit("second", 1, encode) == ReportCreditManager::SubmitResult::Queued);
+  assert(flow.Submit("first", 1, encode) == ReportCreditManager::SubmitResult::Queued);
+  assert(flow.Acknowledge(1, 2));
+  assert(transmitted == std::vector<std::string>({"1", "2"}));
+  assert(flow.snapshot().queued == 2 && flow.snapshot().queued_bytes == 42);
+  assert(flow.Acknowledge(2, 4));
+  assert(transmitted == std::vector<std::string>({"1", "2", "3", "4"}));
+  assert(flow.snapshot().queued == 0 && flow.snapshot().queued_bytes == 0);
+  assert(flow.Acknowledge(4, 8));
+  assert(flow.snapshot().frame_credit == 64 && flow.snapshot().byte_credit == 1048576);
+}
+
+void CancellationRacingRetirementUsesTheExistingBarrier() {
+  for (unsigned timing = 0; timing < 3; ++timing) {
+    RecordingBackend backend;
+    HostProtocol protocol(backend);
+    std::vector<std::string> frames;
+    protocol.SetOutputSink([&](const std::string &frame) {
+      frames.push_back(frame);
+      return true;
+    });
+    Open(protocol);
+    const auto subscribed = protocol.ProcessLine(
+        R"({"version":1,"id":"2","operation":"subscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","kind":"attribute","paths":[{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":0}],"min_interval_s":1,"max_interval_s":60,"resubscribe":false,"queue_limit":64},"timeout_ms":1000})");
+    assert(subscribed.keep_running && subscribed.frame.has_value());
+    SubscriptionReport report{kSubscriptionId, 1, SubscriptionKind::Attribute,
+                              Attribute(7), true, 1, 2, 45, 73};
+    assert(backend.report_sink(report));
+    auto retire = [&] { backend.failure_sink(kSubscriptionId, 1, InteractionError{"queue_overflow"}); };
+    if (timing == 0) {
+      retire();
+    } else {
+      backend.cancel_hook = retire;
+      backend.cancel_ok = timing == 1;
+    }
+    const auto wrong_generation = protocol.ProcessLine(
+        R"({"version":1,"id":"3","operation":"unsubscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","generation":2},"timeout_ms":1000})");
+    assert(wrong_generation.keep_running && wrong_generation.frame.has_value());
+    assert(wrong_generation.frame->find("invalid_subscription") != std::string::npos);
+    assert(backend.cancel_calls == 0);
+    const auto cancelled = protocol.ProcessLine(
+        R"({"version":1,"id":"4","operation":"unsubscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","generation":1},"timeout_ms":1000})");
+    assert(cancelled.keep_running && cancelled.frame.has_value());
+    assert(cancelled.frame->find(R"("result":null)") != std::string::npos);
+    assert(frames.size() == 3);
+    assert(frames[1].find("subscription_error") != std::string::npos);
+    assert(frames[2].find("stream_retired") != std::string::npos);
+    assert(backend.cancel_calls == (timing == 0 ? 0U : 1U));
+    const std::string ack =
+        std::string(R"({"version":1,"event":"report_ack","session_generation":")") +
+        kSessionGeneration + R"(","report_sequence":1,"acknowledged_bytes":)" +
+        std::to_string(frames[0].size() + 1) + "}";
+    assert(protocol.ProcessLine(ack).keep_running);
+    const auto forgotten = protocol.ProcessLine(
+        R"({"version":1,"id":"5","operation":"unsubscribe","parameters":{"subscription_id":"abcdef0123456789abcdef0123456789","generation":1},"timeout_ms":1000})");
+    assert(forgotten.keep_running && forgotten.frame.has_value());
+    assert(forgotten.frame->find("invalid_subscription") != std::string::npos);
+    assert(frames.size() == 3);
+    assert(backend.cancel_calls == (timing == 0 ? 0U : 1U));
+    assert(protocol.healthy() && backend.open);
+  }
 }
 
 void RetiringQueuedReportsDoesNotCreateASequenceGap() {
@@ -570,6 +681,9 @@ int main() {
   RecoveryGenerationResetsSnapshotIdentityButRetainsEventIdentity();
   RecoveryBudgetIsOptInAndBounded();
   CreditsBoundAndAcknowledgeExactBytes();
+  PartialAcknowledgementsPreserveBlockedQueuedFrames();
+  AnotherStreamsCreditCannotConsumeTheBlockedQueueHead();
+  CancellationRacingRetirementUsesTheExistingBarrier();
   CumulativeReportBytesDoNotWrap();
   RetiringQueuedReportsDoesNotCreateASequenceGap();
   ProtocolEstablishesBeforeDeliveryAndRetires();

@@ -203,7 +203,11 @@ A consume event acknowledges its exact live report before advancing the prefix. 
 the projection captures the last valid counters before teardown. `process_flow` cases use a test-only native callback source feeding the same
 production delivery/credit code, not a fabricated SDK response. They suspend
 the selected actual BEAM process at zero, enqueue the input callback count, one per event-loop iteration,
-resume at 50 ms, then observe through 1050 ms. Exact normalized output contains
+resume at 50 ms, then observe through 1050 ms. `value_bytes` measures the encoded
+JSON TLV element, including whitespace inside its object, separately from report
+metadata and newline framing. It does not denote Matter application payload
+size. The value must pass the production descriptor and delivery checks before
+credit returns. Exact normalized output contains
 Boolean frame_bound/byte_bound (within the specified report/control reservations),
 terminal_count, deliveries_after_terminal and owned_processes_after_grace.
 The runner measures actual mailbox, frame-byte and ownership counters; an absent

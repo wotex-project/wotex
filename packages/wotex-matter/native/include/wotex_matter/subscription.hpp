@@ -150,6 +150,7 @@ class ReportCreditManager final {
     std::size_t queued{0};
     std::size_t frame_credit{0};
     std::size_t byte_credit{0};
+    std::size_t queued_bytes{0};
   };
 
   CreditSnapshot snapshot() const;
@@ -173,6 +174,7 @@ class ReportCreditManager final {
   bool Retire(const std::string &subscription_id, std::uint64_t generation,
               std::string barrier);
   bool IsLive(const std::string &subscription_id, std::uint64_t generation) const;
+  bool IsRetired(const std::string &subscription_id, std::uint64_t generation) const;
   std::uint64_t last_transmitted(const std::string &subscription_id,
                                  std::uint64_t generation) const;
 

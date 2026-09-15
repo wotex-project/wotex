@@ -1,5 +1,9 @@
 #include "wotex_matter/protocol.hpp"
 
+#ifdef WOTEX_MATTER_FLOW_TESTING
+#include "wotex_matter/flow_testing.hpp"
+#endif
+
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -797,6 +801,11 @@ class BoundedOutput final {
     ++*frames;
     *retained += bytes;
     pending_.push_back({frame, classification});
+#ifdef WOTEX_MATTER_FLOW_TESTING
+    flow_testing::ObserveOutput(frame, report_frames_, report_bytes_,
+                                control_frames_, control_bytes_, reply_frames_,
+                                reply_bytes_);
+#endif
     condition_.notify_one();
     return true;
   }
@@ -978,6 +987,14 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
       std::lock_guard<std::mutex> lock(subscription_mutex_);
       accepted = valid && report_flow_ &&
           report_flow_->Acknowledge(sequence, bytes);
+#ifdef WOTEX_MATTER_FLOW_TESTING
+      if (report_flow_) {
+        const auto credit = report_flow_->snapshot();
+        flow_testing::ObserveCredit(credit.queued, credit.queued_bytes,
+                                    64 - credit.frame_credit,
+                                    1048576 - credit.byte_credit);
+      }
+#endif
     }
     if (!accepted) {
       FailChannel();
@@ -1146,10 +1163,35 @@ ProcessResult HostProtocol::ProcessLine(const std::string &line) {
                                generation)) {
       return {true, Failure(request, "invalid_request")};
     }
+    {
+      std::lock_guard<std::mutex> lock(subscription_mutex_);
+      const auto active = subscriptions_.find(subscription_id);
+      if (active != subscriptions_.end() && active->second.generation != generation) {
+        return {true, Failure(request, "invalid_subscription")};
+      }
+      // A retirement barrier can cross an already submitted cancellation.
+      // Its bounded outstanding-credit record identifies that exact stream;
+      // acknowledging cancellation neither repeats the barrier nor mints credit.
+      if (report_flow_ && report_flow_->IsRetired(subscription_id, generation)) {
+        return {true, Success(request, nullptr)};
+      }
+      if (!report_flow_ || !report_flow_->IsLive(subscription_id, generation)) {
+        return {true, Failure(request, "invalid_subscription")};
+      }
+    }
     BackendResult cancelled =
         backend_.CancelSubscription(
             subscription_id, generation,
             static_cast<std::uint32_t>(request["timeout_ms"].get<std::uint64_t>()));
+    {
+      std::lock_guard<std::mutex> lock(subscription_mutex_);
+      const auto active = subscriptions_.find(subscription_id);
+      if (active == subscriptions_.end() ||
+          (active->second.generation == generation && report_flow_ &&
+           report_flow_->IsRetired(subscription_id, generation))) {
+        return {true, Success(request, nullptr)};
+      }
+    }
     if (!cancelled.ok) {
       return {true, Failure(request, cancelled.error_code.empty()
                                         ? "invalid_subscription"
@@ -1263,8 +1305,20 @@ bool HostProtocol::EmitReport(const SubscriptionReport &report) {
   const auto result = report_flow_->Submit(
       report.subscription_id, report.generation,
       [this, report](std::uint64_t sequence) {
-        return SubscriptionFrame(report, session_generation_, sequence).dump();
+        const std::string encoded =
+            SubscriptionFrame(report, session_generation_, sequence).dump();
+#ifdef WOTEX_MATTER_FLOW_TESTING
+        return flow_testing::EncodeReport(encoded);
+#else
+        return encoded;
+#endif
       });
+#ifdef WOTEX_MATTER_FLOW_TESTING
+  const auto credit = report_flow_->snapshot();
+  flow_testing::ObserveCredit(credit.queued, credit.queued_bytes,
+                              64 - credit.frame_credit,
+                              1048576 - credit.byte_credit);
+#endif
   if (result == ReportCreditManager::SubmitResult::Transmitted ||
       result == ReportCreditManager::SubmitResult::Queued) {
     return true;

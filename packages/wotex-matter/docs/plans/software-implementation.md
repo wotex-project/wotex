@@ -152,6 +152,9 @@ have deterministic tests; executed build identities are recorded in
 [executable evidence](../provenance/executable-evidence.md). The software run
 task and the remaining P09 peer, stress, matrix and archive acceptance work are
 still required. Building the peer executables does not execute their workflows.
+The software build also produces normal and sanitizer `wotex-matter-flow-host`
+test executables. Their source and binary hashes belong to the software receipt;
+the native-only build does not require these process-flow fixtures.
 
 The entry points are `mix wotex.native.build --workspace ABS`,
 `mix wotex.software.build --workspace ABS` and

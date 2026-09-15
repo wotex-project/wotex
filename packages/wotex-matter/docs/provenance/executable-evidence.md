@@ -1946,3 +1946,121 @@ remains 89.0%, below the unchanged 95% requirement.
 | Minimum focused log | `58e815df2f69393884b2e6a82c565f4ac84d759d96bcb574d206af807562a94e` |
 | Current twelve-case SDK/corpus log | `19a671ef2de79a11adf9671ea579c5441ddd21663384475c7769e5aba67f54e5` |
 | Minimum twelve-case SDK/corpus log | `c15e02659ce97ff9f17e752e551b6cdc84f64b22bc4fb3c37d7ab0c1993726d1` |
+
+## Native process-flow backpressure and cancellation
+
+The WMA-B-F11–F13 process-flow cases execute against a separate SDK-linked test
+host. One owned producer derives 10000 distinct report identities from an
+actual lighting subscription report, retains one callback value per iteration
+and feeds the production report-credit path. Each callback value is destroyed
+after its attempt, including callbacks refused after retirement. The encoded
+JSON TLV value occupies 128 bytes, including internal whitespace; its Boolean
+value still passes the production descriptor and delivery checks. The BEAM
+observer suspends the actual connection, stream owner or receiver, observes
+native reservations and actual mailbox contents, checks native health after
+retirement, then closes and reaps the connection, owners, admission table,
+Port and native child. Expected corpus outputs are never passed to the host.
+
+The report queue retains its complete head value until both stream and session
+credit permit transmission. The previous drain moved from the head before that
+check, losing report identity and byte accounting on a later acknowledgement.
+The failing C++ regression reproduces that loss. Partial-credit and other-stream
+acknowledgements now preserve FIFO values and exact reservations.
+
+A local cancellation may cross a native terminal and retirement barrier. The
+BEAM connection accepts one matching native terminal while closing, preserving
+the already selected public terminal and rejecting duplicates. Native
+cancellation recognizes an exact retired stream through its bounded outstanding
+credit record, or through the ownership established before its in-flight SDK
+cancellation. It does not repeat the SDK cancellation or retirement barrier.
+Unknown and mismatched generations fail before SDK dispatch. Tests exercise
+retirement before and during SDK cancellation, including SDK cancellation
+failure, and reject the identity again after its retirement record is released.
+The failing BEAM regression closes a healthy connection before this correction;
+the corrected regression preserves health and emits one public terminal.
+
+The software build requires normal and sanitizer process-flow binaries and
+includes their hashes in its receipt. Native-only receipts do not require them.
+Both ordinary production binaries pass a symbol audit excluding process-flow
+instrumentation and counter seeding. Both SDK builds and all six CTest targets
+in each normal/sanitizer configuration pass. The live OSV audit passes all 15
+queries for the pinned dependencies. The default gate passes 179 checks with
+32 excluded on Elixir 1.20.2/OTP 29.0.4; ExDoc passes with warnings as errors.
+All 35 focused subscription, recovery and build-receipt tests pass on the
+minimum toolchain in 21.4 seconds.
+
+Both fresh-peer cohorts pass all 15 SDK/corpus tests, including all 17 native
+corpus cases, in 15.1 seconds on current Linux and 22.5 seconds on minimum Linux
+(Elixir 1.18.4/OTP 27.3.4.15). The owned peer tasks finish and their processes
+are reaped. Each process-flow case records 10000 callback acquisitions,
+destructions and iterations, one completed SDK cancellation, one retirement
+barrier, one public terminal, no post-terminal delivery and normal native exit.
+Queues reach 64 reports while outstanding native credit reaches 16 reports.
+The source runs take 25.5–28.4 ms on current Linux and 65.2–68.3 ms on minimum
+Linux. Resume observations occur at 50–52 ms; a stream owner already retired
+before resume is recorded as closed. All owned resources are gone at
+83/56/76 ms for F11/F12/F13 on current Linux and 124/126/119 ms on minimum
+Linux, within the unchanged 1050 ms limit. Every normalized five-field result
+matches the immutable corpus oracle.
+
+The separate lifecycle workloads pass 1000 sequential reads, 32 concurrent
+callers, 100 receiver-death cycles and 100 open/close cycles in 149.1 and
+174.6 seconds. Every receiver-death cycle reaps its actual stream owner.
+Native FD samples remain 16. Current native RSS remains 20980 KiB; minimum
+sanitizer RSS increases from 166064 to 190364 KiB, so it does not establish a
+plateau. ASan/UBSan and leak detection remain enabled. Normal process-flow
+exits complete sanitizer finalization; forced-exit fault cases retain their
+previous limitation. Producer callback-value counters and SDK cancellation
+completion do not establish the full SDK callback/destructor census.
+
+These results discharge the concrete F11–F13 cases. Native command
+interruptibility, the full C09 fault/resource matrix, software-run orchestration,
+fresh complete build/archive receipts and the unchanged 95% coverage gate
+remain open. Last full measured coverage is 89.0%.
+
+| Process-flow artifact | SHA-256 |
+| --- | --- |
+| Connection | `0c16199f037bd0fa0234ab27a357bc9c8183ec80f6db508e526962ad117899d1` |
+| Native GN targets | `fc5e1301dadb0219512e8fbad821604ff366040f72b9c768abbc27af77f62b9d` |
+| Native protocol | `dc894f60cb76bee8f0d45fd1c832ecac42755ea25b3781c50fdf444ac43dd706` |
+| Native report-credit header | `4c7de2f77568bb0bacde062dad0e1c300636d67b98ea62dc491169915335727f` |
+| Native report-credit implementation | `954d50ba0a17bf1c31a42f579c3d69f4e7c77261589442c68e40c27ba0017e49` |
+| Native subscription regressions | `d6281fbad34c968b5ee8bcdf194515426a7c667fa28f6b51b599b382d0aa5547` |
+| Process-flow instrumentation header | `1271714ed00bb5c79fef08a41e52d8db803b7d493b04fd065a6de94761d71fbd` |
+| Process-flow native source | `e00399d128ffbd4c8c17ea060d4bf721beabdf8d3d58f4e5a4dd445bb4b435f6` |
+| Process-flow BEAM observer | `94bf94c9adfadb661a05c6ebf237fc3956e90d7667edbb92d573ace5201ca73d` |
+| Native corpus runner | `ed5bc8b1e9761c6067af4fff84c19c58195145003ddf0e28abd91f3902a174cc` |
+| Native corpus | `a42e47c8d620cc9598996921cf44175d30f0a4c36ebf5b5ecf1233fe53c540ce` |
+| Subscription regressions | `4459f9e19bc5b9487f4cc2e955271f2c9f9db7c92779efdaad3e944e431582c5` |
+| Software build helper | `5b9e1dcdaf36611d3b6d69312cc11bebf3930ae565169cf41057ab510bb8bf38` |
+| Software manifest helper | `c5e302d62a1c464f6c019e15a8fe2f54538f1a73cf0d592e0b03c0c0fcd7169e` |
+| Software receipt tests | `6c6cbff2fea730294b558652d0def48e59b0c27b3400248d32273819bb25862d` |
+| Lifecycle stress test | `3cc00ec15d0961cec1aa6958c99c230aab5ee8fd6d360cf93760ac750eccac5f` |
+| Blocked-drain failing log | `f95520136fe9e5e83f9ffaa19594e35261442e0a45bb6b38cbabb657f42f3de8` |
+| Native cancellation failing log | `49233aafdf6f0e64a7f1edc17e56adfaba8478153991c2bebed8cc04a31f38f1` |
+| BEAM cancellation failing log | `2739f96928808926fd5bea503204d252b76c20095ebfc7d3db8fc2ec226c1758` |
+| Native CTest log | `70686f7a18beba3530804e798baf31e7f52743ec38f36644ac0d8a04cf896858` |
+| SDK build log | `91bf5bd6ebc4cebfd889446ded451861b59336a8a46eb49a6a6fc3a08930b2ed` |
+| Production symbol audit | `4a3f5f18ee06a947fd0d8b7de694c4f7dd254e54f5fde2cf8fa2ac1580bbcc7f` |
+| Live advisory audit | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
+| Default gate log | `5a042111871574c6b06fd81f974b90178b65a64a428127328b686a840b51f892` |
+| ExDoc log | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+| Current native host | `30a2bc25d1582586bde0a6e041df4b30b8e77b89283e79ffc6d5ddfd16f6bbba` |
+| Current process-flow host | `89097bf45ecdd174a84ed1b42c56fddb34bf1478e6d58c8f3f3060f7c55bc73b` |
+| Current contract driver | `bdbd392fe8f3a3d2cc92bc34bf57c4bb9ee9c6cb34cdf91b5a7e58c3136dc1d1` |
+| Current lifecycle log | `bb61d1af0d9faeb595d0feb6683f22a0437aa3965785c3ee8f9aa2900f2397e5` |
+| Current lifecycle result | `d06f076d859956df717030c4d3b6f9cfd0002ac5aebd182f32bd9be2c35672d9` |
+| Current fifteen-case SDK/corpus log | `3eaee4c82947ff0059dbc55ae2ba2988eecf633e6d9fb952cd5041839ef68bd2` |
+| Current WMA-B-F11 observation | `e6f928eb2c489f4632104bf3db440f4a95e1475ddc4954e89d1c70d9b37fae66` |
+| Current WMA-B-F12 observation | `b475ca4ec7973155321f907c7fcc4332f01b8c1fa25da4cb11d77d01b7ce6891` |
+| Current WMA-B-F13 observation | `92aaa7af36bbde8eddadd2a38f8c9fe646ad9d3c79bba4d5fd9a7ee5132e9291` |
+| Minimum native host | `db8ca4b6a659b1ffa023d486e471908ea2df21cf8515b867581659831a3c0862` |
+| Minimum process-flow host | `2107db1cf0242016a998312125f4ce66dee9b5d97e7d3263c340ef076371cb42` |
+| Minimum contract driver | `3152ba3efaa1318d54982df591a87c4030cb84f437e767925ecb0259c23cdde5` |
+| Minimum lifecycle log | `f732feda2e2214f2665d77b28b058e4e09acd96452399396523a146cee1b584e` |
+| Minimum lifecycle result | `800f1612616f77366a1a7e7ab743dad62af1cdee0af7f27de5992bb76df1dfe6` |
+| Minimum fifteen-case SDK/corpus log | `fc7d5eac98b360907d852cdb591d4c414a345c3f8fde6c8da000318322a3bece` |
+| Minimum WMA-B-F11 observation | `2636a9562e533378b7a9a73e8087e2b4939a9344ecd3b863e51dcec35ed225fb` |
+| Minimum WMA-B-F12 observation | `32f2831337b473d5590a3477041dd9e13a3dfdd960aa3c17819c7f15fd25c242` |
+| Minimum WMA-B-F13 observation | `3603c7649f8a1a1c899bf282f9441d8fd2696d04686a8128d128be4dce6c2c2f` |
+| Minimum focused log | `aae3413d20b74f2f592419890cbf299248b9a6038b5625ce0d240a6e9c418609` |

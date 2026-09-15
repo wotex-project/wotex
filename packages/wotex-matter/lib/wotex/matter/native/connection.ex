@@ -288,6 +288,7 @@ defmodule Wotex.Matter.Native.Connection do
           paths: request.paths,
           status: :establishing,
           close_result: :cancelled,
+          native_terminal_received: false,
           retiring_generation: nil,
           retiring_last_report_sequence: nil,
           recovery_attempt: 0,
@@ -1280,13 +1281,20 @@ defmodule Wotex.Matter.Native.Connection do
          {:ok, reference} <- Map.fetch(state.subscription_ids, key),
          {:ok, error} <- Wire.error(raw_error),
          %{status: status} = subscription <- Map.fetch!(state.subscriptions, reference),
-         true <- status in [:active, :establishing, :recovering] do
-      send(subscription.receiver, {:wotex_matter, reference, {:error, error}})
+         true <- status in [:active, :establishing, :recovering, :closing],
+         false <- subscription.native_terminal_received do
+      if status != :closing do
+        send(subscription.receiver, {:wotex_matter, reference, {:error, error}})
+      end
 
       closing =
         state
         |> put_in([:subscriptions, reference, :status], :closing)
-        |> put_in([:subscriptions, reference, :close_result], error.code)
+        |> put_in([:subscriptions, reference, :native_terminal_received], true)
+        |> put_in(
+          [:subscriptions, reference, :close_result],
+          if(status == :closing, do: subscription.close_result, else: error.code)
+        )
 
       {:ok, closing}
     else

@@ -144,6 +144,36 @@ defmodule Wotex.Matter.SoftwareBuildTest do
       SoftwareManifest.verify_local(source, workspace, receipt, :software)
     end
 
+    flow = ["bin/wotex-matter-flow-host", "bin/wotex-matter-flow-host-sanitized"]
+
+    for name <- flow ++ ~w(bin/chip-lighting-app bin/chip-all-clusters-app bin/chip-bridge-app),
+        do: File.write!(Path.join(workspace, name), "fixture software executable")
+
+    software = %{
+      receipt
+      | "mode" => "software",
+        "files" => SoftwareManifest.file_hashes(workspace, "software")
+    }
+
+    assert SoftwareManifest.verify_local(source, workspace, software, :software) == software
+
+    for name <- flow do
+      path = Path.join(workspace, name)
+      File.rm!(path)
+
+      assert_raise Mix.Error, "artifact_hash_mismatch", fn ->
+        SoftwareManifest.verify_local(source, workspace, software, :software)
+      end
+
+      File.write!(path, "fixture software executable")
+    end
+
+    incomplete = %{software | "files" => Map.drop(software["files"], flow)}
+
+    assert_raise Mix.Error, "manifest_files", fn ->
+      SoftwareManifest.verify_local(source, workspace, incomplete, :software)
+    end
+
     File.rm!(contract)
 
     assert_raise Mix.Error, "artifact_hash_mismatch", fn ->

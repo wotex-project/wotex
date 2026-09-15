@@ -78,7 +78,7 @@ defmodule Wotex.Matter.SoftwareBuild do
       try do
         start_container(context)
         install_tools(context, sources)
-        build_native(context)
+        build_native(context, mode)
         extensions = if mode == :software, do: build_peers(context), else: []
         manifest(context, sources, mode, extensions)
       after
@@ -258,7 +258,7 @@ defmodule Wotex.Matter.SoftwareBuild do
     unless String.contains?(zap, "Version: 2026.5.12"), do: fail(:toolchain_mismatch)
   end
 
-  defp build_native(context) do
+  defp build_native(context, mode) do
     Mix.shell().info("Building normal and sanitizer Matter controllers")
 
     for {directory, flags, output} <- [
@@ -275,15 +275,25 @@ defmodule Wotex.Matter.SoftwareBuild do
         "/work/" <> directory
       ])
 
-      inside(context, directory <> "-compile", [
-        "ninja",
-        "--quiet",
-        "-C",
-        "/work/" <> directory,
-        "-j",
-        "4",
-        "wotex-matter-host"
-      ])
+      targets =
+        ["obj/examples/wotex-matter-host/bin/wotex-matter-host"] ++
+          if(mode == :software,
+            do: ["obj/examples/wotex-matter-host/bin/wotex-matter-flow-host"],
+            else: []
+          )
+
+      inside(
+        context,
+        directory <> "-compile",
+        [
+          "ninja",
+          "--quiet",
+          "-C",
+          "/work/" <> directory,
+          "-j",
+          "4"
+        ] ++ targets
+      )
 
       File.cp!(
         Path.join([
@@ -295,6 +305,22 @@ defmodule Wotex.Matter.SoftwareBuild do
       )
 
       File.chmod!(Path.join(context.workspace, "bin/" <> output), 0o500)
+
+      if mode == :software do
+        suffix = if flags == "", do: "", else: "-sanitized"
+        destination = Path.join(context.workspace, "bin/wotex-matter-flow-host" <> suffix)
+
+        File.cp!(
+          Path.join([
+            context.workspace,
+            directory,
+            "obj/examples/wotex-matter-host/bin/wotex-matter-flow-host"
+          ]),
+          destination
+        )
+
+        File.chmod!(destination, 0o500)
+      end
     end
 
     for {directory, sanitizer} <- [{"cmake-normal", "OFF"}, {"cmake-sanitized", "ON"}] do
@@ -528,7 +554,8 @@ defmodule Wotex.Matter.SoftwareBuild do
            wotex-matter-contract-driver wotex-matter-contract-driver-sanitized)
 
   defp binaries(:software),
-    do: binaries(:native) ++ ~w(chip-lighting-app chip-all-clusters-app chip-bridge-app)
+    do: binaries(:native) ++ ~w(wotex-matter-flow-host wotex-matter-flow-host-sanitized
+                               chip-lighting-app chip-all-clusters-app chip-bridge-app)
 
   defp require_output(actual, expected), do: if(actual != expected, do: fail(:toolchain_mismatch))
 

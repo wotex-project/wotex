@@ -163,6 +163,8 @@ defmodule Wotex.Matter.SoftwareManifest do
     do:
       required_files("native") ++
         [
+          "bin/wotex-matter-flow-host",
+          "bin/wotex-matter-flow-host-sanitized",
           "bin/chip-lighting-app",
           "bin/chip-all-clusters-app",
           "bin/chip-bridge-app"

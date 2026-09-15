@@ -336,6 +336,15 @@ live OSV audit. None of these native commands belongs to routine `mix check`.
 Optional interoperability suites fail if invoked without their required peer.
 No remote repository, published package or publication action is implied.
 
+The native corpus runs all 17 cases in both BEAM toolchains. Its process-flow
+cases suspend the actual connection, stream owner or receiver while a separate
+test executable sends 10000 callbacks derived from an SDK report through
+production report credits and delivery. The 128-byte input denotes the encoded JSON value;
+callback counts, queue reservations, terminal delivery and cleanup are measured.
+The ordinary native executable contains no process-flow instrumentation. Exact
+results and the remaining software-profile requirements are recorded in
+[executable evidence](docs/provenance/executable-evidence.md).
+
 ## Software implementation contract
 
 The [ordered implementation sequence](docs/plans/software-implementation.md)
