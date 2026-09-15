@@ -14,7 +14,7 @@ defmodule Wotex.Matter.Native.Connection do
   use GenServer
 
   alias Wotex.Matter.{Error, Subscription}
-  alias Wotex.Matter.Native.{ReportLedger, Wire}
+  alias Wotex.Matter.Native.{Admission, ReportLedger, Wire}
 
   @sdk_revision "250a9e6c50ee2068107f3c4808b680f5f2925415"
   @maximum_line_bytes 131_071
@@ -22,7 +22,7 @@ defmodule Wotex.Matter.Native.Connection do
   @response_grace 50
 
   @spec start(pid(), map()) ::
-          {:ok, pid(), String.t()} | {:error, Error.t()}
+          {:ok, pid(), String.t(), :ets.tid()} | {:error, Error.t()}
   def start(owner, options) do
     deadline = System.monotonic_time(:millisecond) + options.timeout
 
@@ -30,7 +30,7 @@ defmodule Wotex.Matter.Native.Connection do
       {:ok, pid} ->
         try do
           case GenServer.call(pid, :identity) do
-            {:ok, generation} -> {:ok, pid, generation}
+            {:ok, generation, admission} -> {:ok, pid, generation, admission}
             {:error, _} = error -> error
           end
         catch
@@ -48,21 +48,34 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  @spec request(pid(), String.t(), map(), pos_integer()) ::
+  @spec request(pid(), String.t(), :ets.tid(), map(), pos_integer()) ::
           {:ok, term()} | {:error, Error.t()}
-  def request(pid, generation, message, timeout),
-    do: call(pid, {:request, generation, message, timeout}, timeout)
+  def request(pid, generation, admission, message, timeout),
+    do: call(pid, generation, admission, {:request, generation, message, timeout}, timeout)
 
-  @spec subscribe(pid(), String.t(), map(), pid(), pos_integer(), boolean()) ::
+  @spec subscribe(pid(), String.t(), :ets.tid(), map(), pid(), pos_integer(), boolean()) ::
           {:ok, Subscription.t()} | {:error, Error.t()}
-  def subscribe(pid, generation, request, receiver, timeout, acknowledged \\ false),
-    do: call(pid, {:subscribe, generation, request, receiver, timeout, acknowledged}, timeout)
+  def subscribe(pid, generation, admission, request, receiver, timeout, acknowledged) do
+    call(
+      pid,
+      generation,
+      admission,
+      {:subscribe, generation, request, receiver, timeout, acknowledged},
+      timeout
+    )
+  end
 
-  @spec unsubscribe(pid(), String.t(), Subscription.t(), pos_integer()) ::
+  @spec unsubscribe(pid(), String.t(), :ets.tid(), Subscription.t(), pos_integer()) ::
           :ok | {:error, Error.t()}
-  def unsubscribe(pid, generation, subscription, timeout) do
+  def unsubscribe(pid, generation, admission, subscription, timeout) do
     if Process.alive?(pid) do
-      case call(pid, {:unsubscribe, generation, subscription, timeout}, timeout) do
+      case call(
+             pid,
+             generation,
+             admission,
+             {:unsubscribe, generation, subscription, timeout},
+             timeout
+           ) do
         {:ok, nil} -> :ok
         {:error, _} = error -> error
       end
@@ -73,19 +86,20 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  @spec health(pid(), String.t(), pos_integer()) ::
+  @spec health(pid(), String.t(), :ets.tid(), pos_integer()) ::
           {:ok, map()} | {:error, Error.t()}
-  def health(pid, generation, timeout),
-    do: call(pid, {:health, generation, timeout}, timeout)
+  def health(pid, generation, admission, timeout),
+    do: call(pid, generation, admission, {:health, generation, timeout}, timeout)
 
   @doc false
-  @spec invalidate(pid(), String.t()) :: {:ok, nil} | {:error, Error.t()}
-  def invalidate(pid, generation), do: call(pid, {:invalidate, generation}, @cleanup_timeout)
+  @spec invalidate(pid(), String.t(), :ets.tid()) :: {:ok, nil} | {:error, Error.t()}
+  def invalidate(pid, generation, admission),
+    do: call(pid, generation, admission, {:invalidate, generation}, @cleanup_timeout)
 
-  @spec disconnect(pid(), String.t(), pos_integer()) :: :ok | {:error, Error.t()}
-  def disconnect(pid, generation, timeout \\ @cleanup_timeout) do
+  @spec disconnect(pid(), String.t(), :ets.tid(), pos_integer()) :: :ok | {:error, Error.t()}
+  def disconnect(pid, generation, admission, timeout \\ @cleanup_timeout) do
     if Process.alive?(pid) do
-      case call(pid, {:disconnect, generation}, timeout) do
+      case call(pid, generation, admission, {:disconnect, generation}, timeout) do
         {:ok, nil} -> :ok
         {:error, %Error{code: :transport_closed}} -> :ok
         {:error, _} = error -> error
@@ -110,6 +124,7 @@ defmodule Wotex.Matter.Native.Connection do
                port: port,
                owner_monitor: owner_monitor,
                generation: generation,
+               admission: Admission.new(generation),
                fabric_id: options.fabric_id,
                next_id: 2,
                subscriptions: %{},
@@ -131,21 +146,29 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   @impl GenServer
-  def handle_call({:bounded, message, deadline}, from, state) do
-    remaining = deadline - System.monotonic_time(:millisecond)
+  def handle_call({:bounded, message, deadline, lease}, {caller, _} = from, state) do
+    if Admission.owned?(state.admission, lease, caller, deadline) do
+      try do
+        remaining = deadline - System.monotonic_time(:millisecond)
 
-    if remaining <= 0 do
-      {:reply, {:error, Error.new(:timeout)}, state}
+        if remaining <= 0 do
+          {:reply, {:error, Error.new(:timeout)}, state}
+        else
+          message
+          |> remaining_budget(remaining)
+          |> handle_call(from, Map.put(state, :call_deadline, deadline))
+          |> clear_call_deadline()
+        end
+      after
+        Admission.release(state.admission, lease)
+      end
     else
-      message
-      |> remaining_budget(remaining)
-      |> handle_call(from, Map.put(state, :call_deadline, deadline))
-      |> clear_call_deadline()
+      {:reply, {:error, Error.new(:invalid_handle)}, state}
     end
   end
 
   def handle_call(:identity, _, state),
-    do: {:reply, {:ok, state.generation}, state}
+    do: {:reply, {:ok, state.generation, state.admission}, state}
 
   def handle_call({:invalidate, generation}, _, state) do
     if generation == state.generation,
@@ -487,9 +510,13 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  defp call(pid, message, timeout) do
+  defp call(pid, generation, admission, message, timeout) do
     deadline = System.monotonic_time(:millisecond) + timeout
-    GenServer.call(pid, {:bounded, message, deadline}, timeout + 100)
+
+    case Admission.acquire(admission, pid, generation, deadline) do
+      {:ok, lease} -> GenServer.call(pid, {:bounded, message, deadline, lease}, timeout + 100)
+      {:error, code} -> {:error, Error.new(code)}
+    end
   catch
     :exit, {:noproc, _} -> {:error, Error.new(:transport_closed)}
     :exit, {:timeout, _} -> {:error, call_error(:timeout, message)}

@@ -24,6 +24,11 @@ defmodule Wotex.Matter.Native do
   including when the child stops reading stdin. Startup's ready and
   controller-open phases share the configured timeout.
 
+  A persistent connection admits at most 64 pending API calls, including the
+  active call. Excess calls return `:busy` without entering its mailbox or
+  sending a native request. Reservations remain occupied until the connection
+  consumes the call, including when a waiting caller has already timed out.
+
   P03 establishes controller ownership and liveness. P04 adds finite reads,
   event reads, writes and invokes. P05 adds monitored attribute and event
   subscriptions with native report credit and explicit cancellation. P07 adds
@@ -58,8 +63,14 @@ defmodule Wotex.Matter.Native do
       if validated.lifecycle == "oneshot" do
         {:ok, %OneshotHandle{options: options, fabric_id: validated.fabric_id}}
       else
-        with {:ok, pid, generation} <- Connection.start(self(), validated) do
-          {:ok, %Handle{pid: pid, generation: generation, fabric_id: validated.fabric_id}}
+        with {:ok, pid, generation, admission} <- Connection.start(self(), validated) do
+          {:ok,
+           %Handle{
+             pid: pid,
+             generation: generation,
+             fabric_id: validated.fabric_id,
+             admission: admission
+           }}
         end
       end
     end
@@ -93,7 +104,7 @@ defmodule Wotex.Matter.Native do
             {:error, Error.new(:fabric_mismatch)}
 
           {:ok, _} ->
-            Connection.request(handle.pid, handle.generation, message, timeout)
+            Connection.request(handle.pid, handle.generation, handle.admission, message, timeout)
 
           _ ->
             {:error, Error.new(:invalid_request)}
@@ -139,6 +150,7 @@ defmodule Wotex.Matter.Native do
           Connection.subscribe(
             handle.pid,
             handle.generation,
+            handle.admission,
             request,
             receiver,
             timeout,
@@ -159,7 +171,7 @@ defmodule Wotex.Matter.Native do
   def unsubscribe(%Handle{} = handle, %Subscription{} = subscription, timeout)
       when is_integer(timeout) and timeout in 1..60_000 do
     if is_pid(handle.pid) and valid_generation?(handle.generation) do
-      Connection.unsubscribe(handle.pid, handle.generation, subscription, timeout)
+      Connection.unsubscribe(handle.pid, handle.generation, handle.admission, subscription, timeout)
     else
       {:error, Error.new(:invalid_handle)}
     end
@@ -233,7 +245,7 @@ defmodule Wotex.Matter.Native do
   def health(%Handle{} = handle, timeout)
       when is_integer(timeout) and timeout in 1..60_000 do
     if is_pid(handle.pid) and valid_generation?(handle.generation) do
-      Connection.health(handle.pid, handle.generation, timeout)
+      Connection.health(handle.pid, handle.generation, handle.admission, timeout)
     else
       {:error, Error.new(:invalid_handle)}
     end
@@ -244,9 +256,9 @@ defmodule Wotex.Matter.Native do
   @doc "Closes the owned native controller; already closed handles are harmless."
   @impl Wotex.Matter.Client
   @spec disconnect(handle()) :: :ok | {:error, Error.t()}
-  def disconnect(%Handle{pid: pid, generation: generation})
+  def disconnect(%Handle{pid: pid, generation: generation, admission: admission})
       when is_pid(pid) and is_binary(generation) do
-    Connection.disconnect(pid, generation)
+    Connection.disconnect(pid, generation, admission)
   end
 
   def disconnect(_), do: :ok
@@ -261,9 +273,9 @@ defmodule Wotex.Matter.Native do
          true <- fabric_id == handle.fabric_id,
          :ok <- oneshot_schema(message),
          remaining when remaining > 0 <- deadline - System.monotonic_time(:millisecond),
-         {:ok, pid, generation} <-
+         {:ok, pid, generation, admission} <-
            Connection.start(self(), %{validated | lifecycle: "persistent", timeout: remaining}) do
-      oneshot_operation(pid, generation, message, deadline)
+      oneshot_operation(pid, generation, admission, message, deadline)
     else
       false -> {:error, Error.new(:fabric_mismatch)}
       remaining when is_integer(remaining) -> {:error, Error.new(:timeout)}
@@ -293,21 +305,21 @@ defmodule Wotex.Matter.Native do
     end
   end
 
-  defp oneshot_operation(pid, generation, message, deadline) do
+  defp oneshot_operation(pid, generation, admission, message, deadline) do
     try do
       remaining = deadline - System.monotonic_time(:millisecond)
 
       result =
         if remaining > 0,
-          do: Connection.request(pid, generation, message, remaining),
+          do: Connection.request(pid, generation, admission, message, remaining),
           else: {:error, Error.new(:timeout)}
 
       remaining = deadline - System.monotonic_time(:millisecond)
 
       closed =
         if remaining > 0,
-          do: Connection.disconnect(pid, generation, min(remaining, 1_000)),
-          else: Connection.invalidate(pid, generation)
+          do: Connection.disconnect(pid, generation, admission, min(remaining, 1_000)),
+          else: Connection.invalidate(pid, generation, admission)
 
       cond do
         not match?({:ok, _}, result) -> result
@@ -316,7 +328,7 @@ defmodule Wotex.Matter.Native do
         true -> result
       end
     after
-      Connection.invalidate(pid, generation)
+      Connection.invalidate(pid, generation, admission)
     end
   end
 

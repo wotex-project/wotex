@@ -15,6 +15,78 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     member: 0
   }
 
+  test "WMA-C03 native request admission stops at 64 before the owner mailbox" do
+    audit = temporary_path("admission")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+    :sys.suspend(handle.pid)
+    callers = for _ <- 1..64, do: Task.async(fn -> Native.health(handle, 5_000) end)
+
+    try do
+      assert mailbox_reaches?(handle.pid, 64, 100)
+      assert File.read!(audit) == initial
+      assert {:error, %Error{code: :busy, effect: :none}} = Native.health(handle, 25)
+      assert Process.info(handle.pid, :message_queue_len) == {:message_queue_len, 64}
+    after
+      :sys.resume(handle.pid)
+      for caller <- callers, do: assert({:ok, %{"status" => "ready"}} = Task.await(caller, 6_000))
+      assert :ok = Native.disconnect(handle)
+    end
+  end
+
+  test "WMA-C03 timed-out queued callers retain admission until the owner consumes them" do
+    audit = temporary_path("admission-expiry")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+    :sys.suspend(handle.pid)
+    callers = for _ <- 1..64, do: Task.async(fn -> Native.health(handle, 25) end)
+
+    try do
+      for caller <- callers do
+        assert {:error, %Error{code: :timeout}} = Task.await(caller, 1_000)
+      end
+
+      assert Process.info(handle.pid, :message_queue_len) == {:message_queue_len, 64}
+      assert {:error, %Error{code: :busy, effect: :none}} = Native.health(handle, 25)
+      assert File.read!(audit) == initial
+    after
+      :sys.resume(handle.pid)
+    end
+
+    :sys.get_state(handle.pid)
+    assert :ets.info(handle.admission, :size) == 1
+    assert File.read!(audit) == initial
+    assert {:ok, %{"status" => "ready"}} = Native.health(handle)
+    assert :ok = Native.disconnect(handle)
+    assert :ets.info(handle.admission) == :undefined
+    assert {:error, %Error{code: :transport_closed}} = Native.health(handle)
+  end
+
+  test "WMA-C03 admission capabilities are bound to the connection and generation" do
+    audit = temporary_path("admission-identity")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    assert {:ok, other} = Native.connect(options(fixture("valid")))
+    initial = File.read!(audit)
+
+    try do
+      for invalid <- [
+            %{handle | admission: nil},
+            %{handle | admission: other.admission},
+            %{handle | generation: String.duplicate("f", 32)}
+          ] do
+        assert {:error, %Error{code: :invalid_handle, effect: :none}} = Native.health(invalid)
+      end
+
+      assert :ets.info(handle.admission, :size) == 1
+      assert :ets.info(other.admission, :size) == 1
+      assert File.read!(audit) == initial
+      refute inspect(handle) =~ inspect(handle.admission)
+    after
+      assert :ok = Native.disconnect(handle)
+      assert :ok = Native.disconnect(other)
+    end
+  end
+
   test "native one-shot handles acquire one existing-store owner per concrete request" do
     audit = temporary_path("oneshot-audit")
     executable = fixture("typed_read", audit)
@@ -276,7 +348,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     assert {:error, %Error{code: :invalid_handle}} = Native.disconnect(foreign)
 
     assert {:error, %Error{code: :invalid_handle}} =
-             Native.Connection.invalidate(foreign.pid, foreign.generation)
+             Native.Connection.invalidate(foreign.pid, foreign.generation, foreign.admission)
 
     assert File.read!(audit) == initial
     assert Process.alive?(handle.pid)
@@ -721,6 +793,17 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     end)
 
     path
+  end
+
+  defp mailbox_reaches?(_, _, 0), do: false
+
+  defp mailbox_reaches?(pid, count, attempts) do
+    if Process.info(pid, :message_queue_len) == {:message_queue_len, count} do
+      true
+    else
+      Process.sleep(5)
+      mailbox_reaches?(pid, count, attempts - 1)
+    end
   end
 
   defp request_recorded?(_, 0), do: false

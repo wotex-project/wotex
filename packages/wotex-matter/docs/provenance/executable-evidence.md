@@ -1193,3 +1193,38 @@ executed cases, and the 95% coverage gate remains open.
 | Sanitized contract executable | `a6e94424754cda5eebdcc0d28f6cb193aa506424e05852bce34d98ec7d45d0f3` |
 | Current Linux corpus log | `dedd2a4b47be0bf63228f63bf75fb4128c8623c39ba0d24b0e3a1ad272a66617` |
 | Minimum Linux sanitizer corpus log | `09cfd96a0cc8e2f72c1651457b346754e3ccbd809bb58f5e0fada616bd2244f4` |
+
+## BEAM request admission bound
+
+The native handle carries an unnamed ETS admission table owned by its connection.
+Atomic reservations limit pending API calls, including the active call, to 64
+before messages enter the connection mailbox. Each reservation binds its caller,
+deadline and unique token; the table binds its process owner and session
+generation. The connection releases reservations after consuming their calls.
+Caller timeout alone cannot release a slot while the message remains queued.
+Connection termination deletes the table with all remaining reservations.
+
+The suspended-owner regression fails before this change: call 65 enters the
+mailbox and returns `:timeout`. It now returns `:busy` with effect `:none`, leaves
+the mailbox at 64 messages and performs no native I/O. Two further cases prove
+that 64 expired callers retain their reservations until consumption, that expired
+queued work performs no I/O, that capacity is reusable afterward, and that foreign
+table or generation capabilities fail without reserving or transmitting work.
+The table disappears after disconnect and its capability is excluded from Inspect.
+
+The default gate passes 151 checks with 22 excluded; all 25 persistent-connection
+tests pass on Elixir 1.18.4/OTP 27.3.4.15. ExDoc passes without warnings. These are
+Port-boundary tests, not a new SDK peer or sanitizer cohort. Native source and
+binaries are unchanged. Caller monitoring, interruptible control during I/O,
+complete WMA-C03/C09 evidence and the unchanged 95% coverage gate remain open.
+
+| Admission artifact | SHA-256 |
+| --- | --- |
+| Native API | `6ac8162330768f5175d8cc10827e7776feb49444a0c856e86a48bc7f0c97dc2c` |
+| Admission implementation | `50a922001f3f039d213d961ebb3121f0bc5ca1a2633a7e424fc765e4a5901f6d` |
+| Connection | `e274a0e68a65de4af8d1ebb5b43783964601861157f06162f1873daabc13894f` |
+| Handle | `a1811a13b8a140c35939bf9c2740972bde61e03a0a1b434c1b4e51d5ef6dbf56` |
+| Persistent connection tests | `49e9405dce072fbd0610497342b8cd76363bc6b7512edc1dfa01f6c6bf96085d` |
+| Failing regression log | `f945f9c5b7bdbed67aea318d382c7d3a2db08e59cfee898c4f9607aa1360c951` |
+| Current default gate log | `56d4e5e9579a2ec07514a73856cd408a0e7f6ca8b76fcc5673c8a1bbcd6a957d` |
+| Minimum focused log | `047c0ebba8b1a6615f466772421a2799104ff1992934c3e14c1af75bf5dd9eb8` |
