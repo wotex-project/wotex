@@ -120,13 +120,14 @@ static int body_parameters(enum wco_operation operation, yyjson_val *parameters)
 }
 static int request_parameters(enum wco_operation operation, yyjson_val *parameters) {
     static const char *const request[] = {"method", "path", "confirmable", "accept", "content_format", "body_id"};
-    static const char *const observe[] = {"path", "confirmable", "observation_kind", "accept"};
+    static const char *const observe[] = {"path", "confirmable", "observation_kind", "renew", "accept"};
     if (!path(field(parameters, "path")) || !yyjson_is_bool(field(parameters, "confirmable")) ||
         !optional_uint(parameters, "accept", 65535)) return 0;
     if (operation == WCO_OBSERVE)
-        return wco_json_keys(parameters, observe, 4) &&
+        return wco_json_keys(parameters, observe, 5) &&
             (wco_json_string(field(parameters, "observation_kind"), "property") ||
-             wco_json_string(field(parameters, "observation_kind"), "event"));
+             wco_json_string(field(parameters, "observation_kind"), "event")) &&
+            yyjson_is_bool(field(parameters, "renew"));
     yyjson_val *method = field(parameters, "method"), *body = field(parameters, "body_id");
     return wco_json_keys(parameters, request, 6) &&
         (wco_json_string(method, "GET") || wco_json_string(method, "POST") ||

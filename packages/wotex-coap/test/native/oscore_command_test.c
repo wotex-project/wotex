@@ -122,10 +122,15 @@ static void requests(void) {
     parameters("request", "{\"method\":\"PUT\",\"path\":\"/value\",\"confirmable\":1}", 0, WCO_REQUEST);
     parameters("request", "{\"method\":\"GET\",\"path\":\"/value\",\"confirmable\":true,\"accept\":null}", 0, WCO_REQUEST);
     parameters("request", "{\"method\":\"GET\",\"path\":\"/value\",\"confirmable\":true,\"payload\":\"unexpected\"}", 0, WCO_REQUEST);
-    parameters("observe", "{\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":\"property\"}", 1, WCO_OBSERVE);
-    parameters("observe", "{\"path\":\"/value\",\"confirmable\":false,\"observation_kind\":\"event\",\"accept\":65535}", 1, WCO_OBSERVE);
+    parameters("observe", "{\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":\"property\",\"renew\":false}", 1, WCO_OBSERVE);
+    parameters("observe", "{\"path\":\"/value\",\"confirmable\":false,\"observation_kind\":\"event\",\"renew\":true,\"accept\":65535}", 1, WCO_OBSERVE);
+    parameters("observe", "{\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":\"property\"}", 0, WCO_OBSERVE);
+    parameters("observe", "{\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":\"property\",\"renew\":null}", 0, WCO_OBSERVE);
+    parameters("observe", "{\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":\"property\",\"renew\":0}", 0, WCO_OBSERVE);
+    parameters("observe", "{\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":\"property\",\"renew\":\"true\"}", 0, WCO_OBSERVE);
+    parameters("observe", "{\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":\"property\",\"renew\":{}}", 0, WCO_OBSERVE);
     parameters("observe", "{\"path\":\"/value\",\"confirmable\":true}", 0, WCO_OBSERVE);
-    parameters("observe", "{\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":\"event\",\"method\":\"GET\"}", 0, WCO_OBSERVE);
+    parameters("observe", "{\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":\"event\",\"renew\":false,\"method\":\"GET\"}", 0, WCO_OBSERVE);
 }
 static void bodies_and_control(void) {
     parameters("body_begin", "{\"body_id\":\"b1\",\"length\":1048576,\"sha256\":\"b5d4045c3f466fa91fe2cc6abe79232a1a57cdf104f7a26e716e0a1e2789df78\"}", 1, WCO_BODY_BEGIN);

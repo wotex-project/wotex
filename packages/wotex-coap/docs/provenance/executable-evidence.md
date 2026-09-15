@@ -93,6 +93,13 @@ fixtures do not accept durable replay, production owner/bridge restart,
 independent secure interoperability or complete stress/matrix closure required
 by [the ordered plan](../plans/software-implementation.md).
 
+The [native command receipt](native-command-v1.json) records 86 C11 admission
+cases on macOS and Linux with the Linux AddressSanitizer and UndefinedBehaviorSanitizer
+lane enabled. Observe commands require an explicit Boolean `renew`; omission,
+null, numbers, strings and objects fail before filesystem, socket or SDK access.
+This structural decoder evidence does not accept the production worker, Port
+owner, request correlation, report credit or durable-session integration.
+
 ## Required verification
 
 ### Datagram deadline assertions
