@@ -107,6 +107,14 @@ null, numbers, strings and objects fail before filesystem, socket or SDK access.
 This structural decoder evidence does not accept the production worker, Port
 owner, request correlation, report credit or durable-session integration.
 
+`native_command_encoder_test.exs` executes six exact tests for the matching
+BEAM transmit boundary. It encodes all nine operations, canonical byte values,
+explicit OSCORE credentials and exact five-field lines; omits absent optionals;
+checks path, scalar, body-chunk and 128 KiB line bounds; and allocates each
+decimal uint64 request identity once before exhaustion. The immutable allocator
+retains no command or credential. These tests do not write a Port or prove that
+the production helper accepts the lines.
+
 `native_backend_test.exs` executes WCO-N01/N02 manifest and executable
 verification. It covers exact option keys and path bounds, ordinary-file and
 executable-mode checks, the 1 MiB manifest ceiling, strict bounded JSON, pinned

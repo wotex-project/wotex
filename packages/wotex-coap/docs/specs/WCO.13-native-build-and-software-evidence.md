@@ -202,6 +202,15 @@ Admission does not prove a valid body reference, remaining deadline, free queue
 slot, native session state or wire-size budget; the worker checks those before
 SDK dispatch. Live worker/Port tests remain separate.
 
+`Wotex.CoAP.Native.Command` implements the matching BEAM transmit boundary. It
+validates normalized atom-keyed parameters, emits exact five-field JSON lines,
+omits absent optional request values, encodes all byte fields canonically and
+allocates monotonically increasing decimal uint64 identities once per generation.
+Its six tests cover every operation, input and line bounds, credential
+projection and fail-before-wrap exhaustion. The allocator retains no secret or
+command bytes; Port writes, outstanding-call capacity and live helper admission
+remain owner obligations.
+
 `Wotex.CoAP.Native.Wire` implements the pure BEAM receive boundary for complete
 lines, ready identity and request/control response envelopes. It enforces the
 same frame limits, native integer domain, printable correlation IDs, canonical
