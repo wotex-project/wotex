@@ -2371,3 +2371,39 @@ requirement. Peer ownership alone does not complete those requirements.
 | ExDoc log | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
 | Current sixteen-case SDK/corpus log | `ed2f1842e46d7efc39606bac3bdba9a2ce2154f4895f6105d963797d23c98dc0` |
 | Minimum sixteen-case SDK/corpus log | `62270d291528a6dfa7352c478619ba4248fae83e154480f4b32387e9642736b0` |
+
+
+## Software harness distribution and verification inputs
+
+Software builds export the normal and sanitizer controller-test executables
+alongside the process-flow hosts. The controller tests already execute in the
+native CMake lane and provide the failed-output harness used by the SDK suite.
+The exported files are owner-executable artifacts, with hashes, architecture
+and runtime-library records in the software manifest. Native-only builds retain
+their narrower required file set. Workspace validation rejects a missing or
+changed software harness.
+
+Source identity includes the check, coverage, formatting and Mix configuration
+and all named verification scripts. Regression cases reject reuse after changing
+the coverage floor or disabling the test command. The package allowlist includes
+acceptance tests, their helpers and corpus, native verification scripts and the
+check/coverage configuration. The archive checker requires every inventory case
+source and the 95% coverage floor and rejects generated documentation, coverage
+and Python cache directories as development state.
+
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passes all 194 checks with 33 excluded
+in 66.4 seconds on Elixir 1.20.2/OTP 29.0.4. All 15 focused build/acceptance tests
+pass in 7.7 seconds on Elixir 1.18.4/OTP 27.3.4.15. ExDoc passes with warnings
+as errors. This change does not provide a fresh complete software-build receipt
+or close the remaining software-run, native resource, coverage or archive gates.
+
+| Software distribution artifact | SHA-256 |
+| --- | --- |
+| Build orchestration | `0d1f68c378d5f009a07922440f136d703c62535617dc59810a4ac08770a588cd` |
+| Workspace and source identity | `9713c196aa4c448626af23773f48835f1819de8ca460419cac3d64b808854502` |
+| Build-reuse regressions | `3845a1fda198a834a9f649d07eaeb729f10e99b5171135df7f2d440f56e9b216` |
+| Package definition | `a324f5c617f51d546c299667e7d39bb0478b1942ebc870b97c5948c90be92fd6` |
+| Archive verification | `443143718dd636a3b01ae6403d6a06f040938277461eac67df677d7be97f4e28` |
+| Default gate log | `e3456faab009ee8b017824b7f3871182a74ab6c52da319487a6e9d6c70be0b73` |
+| Minimum focused log | `0ea904bf6404ce0ec74b55afc189a15f8b6dfa5b7366b469a58c42372e8c7c51` |
+| ExDoc log | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |

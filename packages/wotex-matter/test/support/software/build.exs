@@ -354,10 +354,23 @@ defmodule Wotex.Matter.SoftwareBuild do
 
       suffix = if sanitizer == "ON", do: "-sanitized", else: ""
 
-      File.cp!(
-        Path.join(context.workspace, directory <> "/wotex_matter_contract_driver"),
-        Path.join(context.workspace, "bin/wotex-matter-contract-driver" <> suffix)
-      )
+      targets =
+        ["contract_driver"] ++ if(mode == :software, do: ["controller_test"], else: [])
+
+      for target <- targets do
+        destination =
+          Path.join(
+            context.workspace,
+            "bin/wotex-matter-" <> String.replace(target, "_", "-") <> suffix
+          )
+
+        File.cp!(
+          Path.join(context.workspace, directory <> "/wotex_matter_" <> target),
+          destination
+        )
+
+        File.chmod!(destination, 0o500)
+      end
     end
   end
 
@@ -555,6 +568,7 @@ defmodule Wotex.Matter.SoftwareBuild do
 
   defp binaries(:software),
     do: binaries(:native) ++ ~w(wotex-matter-flow-host wotex-matter-flow-host-sanitized
+                               wotex-matter-controller-test wotex-matter-controller-test-sanitized
                                chip-lighting-app chip-all-clusters-app chip-bridge-app)
 
   defp require_output(actual, expected), do: if(actual != expected, do: fail(:toolchain_mismatch))

@@ -12,7 +12,12 @@ defmodule Wotex.Matter.SoftwareManifest do
     "test/**/*.exs",
     "test/support/software/**/*",
     "test/native/*.cpp",
-    "bin/check_p*.exs",
+    "bin/check_*.exs",
+    "config/**/*.exs",
+    ".check.exs",
+    ".credo.exs",
+    ".formatter.exs",
+    "coveralls.json",
     "docs/specs/fixtures/*.json",
     "mix.exs",
     "mix.lock"
@@ -165,6 +170,8 @@ defmodule Wotex.Matter.SoftwareManifest do
         [
           "bin/wotex-matter-flow-host",
           "bin/wotex-matter-flow-host-sanitized",
+          "bin/wotex-matter-controller-test",
+          "bin/wotex-matter-controller-test-sanitized",
           "bin/chip-lighting-app",
           "bin/chip-all-clusters-app",
           "bin/chip-bridge-app"

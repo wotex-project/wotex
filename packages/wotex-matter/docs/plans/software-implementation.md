@@ -155,6 +155,15 @@ still required. Building the peer executables does not execute their workflows.
 The software build also produces normal and sanitizer `wotex-matter-flow-host`
 test executables. Their source and binary hashes belong to the software receipt;
 the native-only build does not require these process-flow fixtures.
+The software build also exports the normal and sanitizer controller-test
+executables used to exercise native output failure. Their executable hashes,
+architecture and runtime libraries belong to the software receipt. Reuse fails
+when either required harness is absent or changed. The source package includes
+the ExUnit helper, all acceptance tests and their support files, native test
+sources and the named native verification scripts.
+The source identity also binds check, coverage, formatting and Mix configuration
+and the archive/application verification scripts. Changing acceptance criteria
+invalidates workspace reuse even when native source files remain unchanged.
 
 The entry points are `mix wotex.native.build --workspace ABS`,
 `mix wotex.software.build --workspace ABS` and

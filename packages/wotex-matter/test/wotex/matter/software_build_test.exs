@@ -144,9 +144,12 @@ defmodule Wotex.Matter.SoftwareBuildTest do
       SoftwareManifest.verify_local(source, workspace, receipt, :software)
     end
 
-    flow = ["bin/wotex-matter-flow-host", "bin/wotex-matter-flow-host-sanitized"]
+    harnesses =
+      for name <- ["flow-host", "controller-test"],
+          suffix <- ["", "-sanitized"],
+          do: "bin/wotex-matter-" <> name <> suffix
 
-    for name <- flow ++ ~w(bin/chip-lighting-app bin/chip-all-clusters-app bin/chip-bridge-app),
+    for name <- harnesses ++ ~w(bin/chip-lighting-app bin/chip-all-clusters-app bin/chip-bridge-app),
         do: File.write!(Path.join(workspace, name), "fixture software executable")
 
     software = %{
@@ -157,7 +160,7 @@ defmodule Wotex.Matter.SoftwareBuildTest do
 
     assert SoftwareManifest.verify_local(source, workspace, software, :software) == software
 
-    for name <- flow do
+    for name <- harnesses do
       path = Path.join(workspace, name)
       File.rm!(path)
 
@@ -168,7 +171,7 @@ defmodule Wotex.Matter.SoftwareBuildTest do
       File.write!(path, "fixture software executable")
     end
 
-    incomplete = %{software | "files" => Map.drop(software["files"], flow)}
+    incomplete = %{software | "files" => Map.drop(software["files"], harnesses)}
 
     assert_raise Mix.Error, "manifest_files", fn ->
       SoftwareManifest.verify_local(source, workspace, incomplete, :software)
@@ -196,6 +199,21 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
 
     File.write!(log, "fixture execution")
+
+    for {name, value} <- [
+          {"coveralls.json", ~s({"coverage_options":{"minimum_coverage":1}})},
+          {".check.exs", "[tools: [ex_unit: false]]"}
+        ] do
+      configuration = Path.join(source, name)
+      File.write!(configuration, value)
+
+      assert_raise Mix.Error, "manifest_mismatch", fn ->
+        SoftwareManifest.verify_local(source, workspace, receipt, :native)
+      end
+
+      File.rm!(configuration)
+    end
+
     File.write!(Path.join(source, "mix.exs"), "changed source")
 
     assert_raise Mix.Error, "manifest_mismatch", fn ->
