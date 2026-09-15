@@ -2,6 +2,12 @@
   "schema": "wotex.matter.software-cases@1",
   "cases": [
     {
+      "file": "test/software/stress_failures_test.exs",
+      "module": "Elixir.Wotex.Matter.NativeStressFailuresTest",
+      "name": "test WMA-C09 read load retains bounded cleanup after deadline, EOF and malformed native responses",
+      "evidence": "shared-sdk"
+    },
+    {
       "file": "test/software/operation_resources_test.exs",
       "module": "Elixir.Wotex.Matter.NativeOperationResourcesTest",
       "name": "test WMA-V13 commissioning, writes, commands and windows release their actual native owners",
@@ -228,6 +234,7 @@
     "WOTEX_MATTER_NATIVE_STREAM_OWNER_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_STARTUP_RESOURCES_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_STRESS_FIXTURE": "fixture",
+    "WOTEX_MATTER_NATIVE_STRESS_FAILURES_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_THERMOSTAT_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_TIMEOUT_FIXTURE": "fixture",
     "WOTEX_MATTER_NATIVE_WINDOW_FIXTURE": "fixture",

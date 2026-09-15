@@ -3224,3 +3224,52 @@ evidence remain required for complete P09/C09 acceptance.
 | Minimum harness gate | `8d5c79e2d803ba8a729e9808c7f559952fd926cbfd58141474fa937f6b78c2c0` |
 | Advisory gate | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
 | ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+
+## Native channel failures after read load
+
+The selected resource executable injects a deadline, EOF or malformed native
+response after 101 successful SDK reads. Each mode first closes the SDK and
+records its actual resource census before withholding or corrupting the native
+response. The case observes 100 successful public reads and the corresponding
+`timeout`, `transport_closed` or `invalid_frame` error on the next read, with
+`effect: :none`. This is controlled native IPC failure evidence; it does not
+represent a malformed Matter peer message or SDK resubscription.
+
+Both Linux lanes pass all three modes. Request durations are 554/28/12 ms on the
+current lane and 553/79/23 ms on the minimum ASan/UBSan lane. Cleanup after return
+is 15/0/9 ms and 49/1/17 ms, respectively. Each exact connection process, Port,
+native PID and admission table is gone within the original 1000-ms allowance.
+Every pre-failure census balances 101 interaction contexts and 101 ReadClients,
+all other tracked object lifetimes and all seven zero SDK counters. Each mode
+then reopens the same controller store and completes another real read.
+
+The required inventory contains 35 software cases. Both rebuilt resource
+executables also pass the 33 startup trials with recovery reads and a separate
+33-generation one-shot pilot: one warm read followed by one successful concurrent
+read and 31 bounded storage-lock failures. Both six-case CTest gates and all
+15 pinned advisory queries pass. The default gate passes 221 checks with
+36 excluded in 76.8 seconds; the minimum harness passes 20 cases in 9.5 seconds.
+Both formatters pass. The final full software profile and remaining P09/C09
+requirements retain their separate acceptance gates.
+
+| Native channel failure artifact | SHA-256 |
+| --- | --- |
+| Current stress failures | `b6df51ef08e40a731c2118aa9c6e7f4e7e6899eea9d459592c98fbf737ad7751` |
+| Current stress test log | `604273a8f05507af9c338892fa91f97c61bf32c58b92cab4e7b846883ac2297e` |
+| Current startup test log | `4d6127fde774f0089efb9f7d643138696665937ad23a31d04ee6e5d08b3929d6` |
+| Current one-shot pilot | `61144734f22a3bee336e562d27cd17d5ecb13872126c35965d0e42b263073bb3` |
+| Current resource executable | `dc456c9f08e5af1844055c482075309ceb21942c6dda27d0b02080d3960c158d` |
+| Minimum stress failures | `70a5ee08ddd03e48d59fda88122f4c356d3ef284fc771763fa48df71a3423faa` |
+| Minimum stress test log | `5a51e9af5930765cdd349658dd7d7a15f7c45ebd4231705ca7f8ad1b4d5c31d6` |
+| Minimum startup test log | `78ffea2f1a1cec89a3dcbd229fb53bce83e97db6cdf94bf90eba57359ce13af1` |
+| Minimum one-shot pilot | `61144734f22a3bee336e562d27cd17d5ecb13872126c35965d0e42b263073bb3` |
+| Minimum resource executable | `ce5f25275679944134f9868ddf75ee0c1bfdaa095d957856b098bfaa33fb4af1` |
+| Resource executable source | `8be57153b3d6f0811f4d58f6720c6341ebe66b039addc86010467a12956a57c9` |
+| Stress failure case | `6710d7676a17b7c14b2b0ad964817095db33933777fa0d919df98101ebdf1f76` |
+| Resource assertions | `02e9e15f21846c868e7f0a8698c76dd575372c14a11f51621741f56f92ee80f1` |
+| Required inventory | `97e5d2651cba4508814f4040c437028b52208a9d6c995d0d85bbe7c8216b7a9d` |
+| Native build and both CTest gates | `0e57f0707fa994a09fc656733df64f5a442e7d0cd90376170628a7e0f6861188` |
+| Default gate | `6a2e590949eb6825b7457347b9fab2a088986c92810eaa50ff4ce39c78390bcc` |
+| Minimum harness | `8f91fc361eab7243a2df5cb0bdf899997b6e1a8722e8a8e41390a5817df07749` |
+| Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| Advisory gate | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |

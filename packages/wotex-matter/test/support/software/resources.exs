@@ -131,6 +131,15 @@ defmodule Wotex.Matter.SoftwareResources do
     end
   end
 
+  @spec fault!(String.t(), String.t(), pos_integer(), pos_integer()) :: map()
+  def fault!(directory, kind, interactions, child) do
+    value = document!(directory, "interaction-fault.json", now() + 1_000)
+    assert Enum.sort(Map.keys(value)) == ~w(interactions kind native pid)
+    assert value["kind"] == kind and value["interactions"] == interactions and value["pid"] == child
+    released!(value["native"])
+    value
+  end
+
   @spec now() :: integer()
   def now, do: System.monotonic_time(:millisecond)
 

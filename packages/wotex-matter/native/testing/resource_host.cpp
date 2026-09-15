@@ -57,7 +57,18 @@ std::optional<Json> Configuration() {
       (status.st_mode & 0777) != 0700) {
     return std::nullopt;
   }
-  if (value.size() == 3) {
+  if (value.size() == 3 && value.contains("interaction_fault")) {
+    if (!value["interaction_fault"].is_string() || !value.contains("fault_after") ||
+        !value["fault_after"].is_number_unsigned()) {
+      return std::nullopt;
+    }
+    const auto fault = value["interaction_fault"].get<std::string>();
+    const auto after = value["fault_after"].get<std::uint64_t>();
+    if ((fault != "deadline" && fault != "eof" && fault != "malformed_response") ||
+        after == 0 || after > 2000) {
+      return std::nullopt;
+    }
+  } else if (value.size() == 3) {
     if (!value.contains("startup_stage") || !value["startup_stage"].is_string() ||
         !value.contains("startup_action") || !value["startup_action"].is_string()) {
       return std::nullopt;
@@ -80,7 +91,8 @@ std::optional<Json> Configuration() {
 
 class ObservedBackend final : public ControllerBackend {
  public:
-  explicit ObservedBackend(std::string directory) : directory_(std::move(directory)) {
+  ObservedBackend(std::string directory, std::string fault, std::uint64_t fault_after)
+      : directory_(std::move(directory)), fault_(std::move(fault)), fault_after_(fault_after) {
     observer_ = std::thread([this] { Observe(); });
   }
 
@@ -112,7 +124,26 @@ class ObservedBackend final : public ControllerBackend {
 
   InteractionResponse Interact(const InteractionRequest &request) override {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return backend_.Interact(request);
+    const auto response = backend_.Interact(request);
+    if (!fault_.empty() && ++interactions_ == fault_after_ && response.ok) {
+      backend_.Close();
+      const Json observation{{"kind", fault_}, {"interactions", interactions_}, {"pid", getpid()},
+                             {"native", Json::parse(backend_.ResourceSnapshotForTesting())}};
+      if (!WriteAtomicExclusive(directory_ + "/interaction-fault.json", observation.dump())) {
+        throw std::runtime_error("interaction observation failed");
+      }
+      while (fault_ == "deadline") {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+      if (fault_ == "malformed_response") {
+        // Deliberate IPC corruption follows a real SDK read and complete SDK
+        // cleanup. This output is confined to the selected resource fixture.
+        const char malformed[] = "{\n";
+        (void) write(STDOUT_FILENO, malformed, sizeof(malformed) - 1);
+      }
+      throw std::runtime_error("injected interaction channel failure");
+    }
+    return response;
   }
 
   CommissioningResponse Commission(const CommissioningRequest &request) override {
@@ -212,6 +243,9 @@ class ObservedBackend final : public ControllerBackend {
 
   SdkControllerBackend backend_;
   const std::string directory_;
+  const std::string fault_;
+  const std::uint64_t fault_after_;
+  std::uint64_t interactions_{0};
   mutable std::recursive_mutex mutex_;
   std::atomic<bool> stopping_{false};
   std::atomic<bool> failed_{false};
@@ -244,7 +278,8 @@ int main() {
     int result = 1;
     bool failed = false;
     {
-      ObservedBackend backend(directory);
+      ObservedBackend backend(directory, configuration->value("interaction_fault", std::string{}),
+                              configuration->value("fault_after", std::uint64_t{0}));
       try {
         result = RunHost(backend, std::cin, std::cout, [&lifetime] { lifetime.Fail(); }, STDIN_FILENO);
       } catch (const std::exception &) {
