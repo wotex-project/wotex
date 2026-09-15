@@ -11,6 +11,8 @@ defmodule Wotex.Matter.Standalone do
   Input validation precedes client dispatch. A rejected acknowledgement after
   a mutation has been submitted retains unknown effect and cannot be retried
   automatically. Client failures follow the facade's effect classification.
+  Command data responses retain the invoked fabric, node, endpoint and cluster;
+  their returned command identifier selects the response's typed schema.
   Successful results describe protocol completion, not physical effects or
   canonical Property truth.
   """
@@ -72,7 +74,7 @@ defmodule Wotex.Matter.Standalone do
            |> Map.put(:value, value)
            |> Map.merge(request_options),
          {:ok, result} <- Matter.send(%{session | timeout: timeout}, request) do
-      mutation_result(result, &invoke_response/1)
+      mutation_result(result, &invoke_response(&1, address))
     end
   end
 
@@ -374,11 +376,22 @@ defmodule Wotex.Matter.Standalone do
 
   defp write_result(_, _), do: :error
 
-  defp invoke_response(%{path: path, value: value, status: 0} = result) do
-    with :ok <- invoke_result(path, value), do: {:ok, result}
+  defp invoke_response(%{path: path, value: value, status: 0} = result, address) do
+    with :ok <- invoke_result(path, value),
+         true <- same_command_target?(path, address),
+         do: {:ok, result}
   end
 
-  defp invoke_response(_), do: :error
+  defp invoke_response(_, _), do: :error
+
+  defp same_command_target?(nil, _), do: true
+
+  defp same_command_target?(path, address) do
+    {:ok, response} = Address.new(path)
+
+    Map.take(response, [:fabric_id, :node_id, :endpoint, :cluster]) ==
+      Map.take(address, [:fabric_id, :node_id, :endpoint, :cluster])
+  end
 
   defp mutation_result(result, validate) do
     case validate.(result) do

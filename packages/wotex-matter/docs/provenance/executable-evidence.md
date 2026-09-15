@@ -2709,3 +2709,67 @@ the unchanged 95% coverage floor are not established by this command package.
 | Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 | ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
 | Public command stale-workspace rejection | `cc475649d7905440fbfdaf00c6d5c19280f4bbc61701fb9cb9686544ebcefe9b` |
+
+## Mutation response identity and rejected backend effects
+
+WMA-C04/S03 command data responses retain the invoked fabric, node, endpoint and
+cluster. Their returned command identifier remains independently schema-checked.
+Write acknowledgements retain the complete requested attribute path. Native
+response validation also rejects unpaired command path/value fields and values
+outside the returned descriptor. Status-only command replies remain distinct
+from present empty structures.
+
+The standalone regression previously accepts a response for fabric 2 after
+invocation on fabric 1. The native protocol regression also accepts a mismatched
+write acknowledgement. Both now reject these responses. A second native
+regression demonstrates that backend-result rejection omitted unknown mutation
+effect. The protocol now retains that effect for rejected write, invoke,
+commissioning and window results and oversized mutation responses. Validation
+before backend invocation retains its existing effect classification.
+
+The native interaction assertions vary every write path component and every
+command target component. They reject unpaired fields, unknown response schemas
+and an incompatible scalar while retaining the supported status-only and typed
+empty-structure replies. Commissioning/window assertions reject a different
+returned node with unknown effect. The standalone assertions reject changed
+fabric, node and endpoint without replay; a schema-valid response command
+identifier may differ from the requested identifier on the same target.
+
+Both native CMake gates pass all six tests: 2.55 seconds normally and 3.16 seconds
+with ASan/UBSan and leak detection. All 15 pinned OSV queries pass. Fresh normal
+and sanitizer SDK builds pass the 16-case SDK/corpus cohort, including all 17
+native corpus vectors, in 18.1 and 25.7 seconds. Both owned peers are reaped.
+The current `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes 206 checks with
+33 excluded in 68.8 seconds. The minimum toolchain passes 21 standalone and
+interaction tests in 2.6 seconds; ExDoc passes with warnings as errors.
+
+The latest coverage measurement is 90.1% at `c8f7496`, before this response
+change. It has 2447 executable lines and 241 uncovered lines and does not meet
+the unchanged 95% floor. Complete software-run and C09 resource acceptance
+remain separate from these focused native results.
+
+| Mutation-response artifact | SHA-256 |
+| --- | --- |
+| Standalone implementation | `cf0eb18aa1dcf095fb44e9e7939ef83059d64e2d003ef9a45a8cdc8ae931d527` |
+| Native interaction validation | `378d1384700bbd28a064aa7079b6dbb6afe1d1550513c1b54cb193fc66d25996` |
+| Native protocol effects | `9b6d270a1b4fec1bc5b34cda62ed18363c457796e0fde19f84d3f62c16d528d5` |
+| Standalone assertions | `8affb7a2ba4173d6661fa10e5608cc395684d6d902b17989bb200fbb62e89db1` |
+| Native interaction assertions | `b1d8b1d7417490a82f58a98dc13fb2f3e2e4f4a31adba13567aae321cc7122aa` |
+| Native commissioning assertions | `14eecaa02b8001f6d8cc46da7ed3e5168a7589e571c05a263203c36195d2bac3` |
+| Standalone identity failure before correction | `8423b7413757a1ee35794ca1c2b1fb033d891786f344af4facefbbbc279be2d3` |
+| Native identity failure before correction | `6dcf8e9b6182433d7845bf26a766c1da87309e60c082495a2bffa918572d2c4e` |
+| Native effect failure before correction | `61bfda9b7388906e4011689812630edca5c1f09d1f6c08d803a30da833919a1f` |
+| Normal CTest gate | `7e9822865d8a8ff67dce77591d2c493edbfa7d9f80cbb0ceacc4d93c27034027` |
+| ASan/UBSan CTest gate | `a5f1dd81acfc4ea2c67a9a7bd9cb788e6affbcf01f08f76382ce639c98e91db8` |
+| Pinned advisory gate | `947d36e4c60803d5242b03f9d04555a254b09399c2f8881ec39964b3c09c20a5` |
+| Current SDK/corpus gate | `9f16174220b91e58afef00decb333c95adc00dd859de3af5cfe4b252bbfcba1b` |
+| Minimum SDK/corpus gate | `289ff0399d1b4ba6765ce4cdf2ce0f2c616e622d339a234c60d0deb043cce586` |
+| Current native host | `c0aec70fe1137a33729031cf03a5dd110b6b22f19281764c9d96e45591bd4001` |
+| Minimum sanitizer native host | `e667f5d4b5fdc03cc4d769d9b133ca247d4319e5c397ae3ef7866f602a0a9eb8` |
+| Current native flow host | `8d10b0c873d79452dc670a40e35a1694865ecd4b7efcf52c0fd5c6a848ee4eac` |
+| Minimum sanitizer flow host | `2e8d170227e462b0f058d7192135e234751b57bda98f6df53d47ccff2070d7f7` |
+| Default gate | `7b6983b993fd6e306d170f1b85b7f4c7c03699457dd93a50e084832184d6c375` |
+| Minimum focused gate | `3f8ace98270fe51d6761d5db5f5acf14893a72929bf240dfc0ccc616a1bf4b5c` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+| Pre-change coverage log | `e314440b7a6abe76981ff5bbc50970129f6663023b917645a3ef8476b5f13cad` |
+| Pre-change coverage JSON | `4b3fc36a1d938f929c3159569522da82353eecce427bd3558846bdb46a023bc2` |

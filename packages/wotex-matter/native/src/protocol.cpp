@@ -706,6 +706,18 @@ std::string InteractionFailure(const Json &request, const InteractionError &erro
               {"ok", false}, {"error", ErrorJson(error)}}.dump();
 }
 
+std::string BackendFailure(const Json &request, std::string code) {
+  const bool mutation = request["operation"] == "write" ||
+      request["operation"] == "invoke" ||
+      request["operation"] == "commission_on_network" ||
+      request["operation"] == "open_window";
+  if (mutation) {
+    return InteractionFailure(request, InteractionError{
+        std::move(code), std::nullopt, std::nullopt, InteractionEffect::Unknown});
+  }
+  return Failure(request, code);
+}
+
 std::string CommissioningFailure(const Json &request,
                                  const CommissioningError &error) {
   Json detail{{"code", error.code},
@@ -1100,7 +1112,7 @@ ProcessResult HostProtocol::ProcessLineImpl(const std::string &line) {
       return {};
     }
     if (!valid_commissioning_response(commissioning, response)) {
-      return {true, Failure(request, "invalid_backend_result")};
+      return {true, BackendFailure(request, "invalid_backend_result")};
     }
     if (!response.ok) {
       return {true, CommissioningFailure(request, *response.error)};
@@ -1125,7 +1137,7 @@ ProcessResult HostProtocol::ProcessLineImpl(const std::string &line) {
       return {};
     }
     if (!valid_commissioning_window_response(window, response)) {
-      return {true, Failure(request, "invalid_backend_result")};
+      return {true, BackendFailure(request, "invalid_backend_result")};
     }
     if (!response.ok) {
       return {true, CommissioningFailure(request, *response.error)};
@@ -1163,7 +1175,7 @@ ProcessResult HostProtocol::ProcessLineImpl(const std::string &line) {
     if (response.subscription_id != subscription.subscription_id ||
         response.generation == 0 || response.max_interval_s == 0 ||
         response.min_interval_s > response.max_interval_s) {
-      return {true, Failure(request, "invalid_backend_result")};
+      return {true, BackendFailure(request, "invalid_backend_result")};
     }
     bool admitted = false;
     {
@@ -1289,7 +1301,7 @@ ProcessResult HostProtocol::ProcessLineImpl(const std::string &line) {
     }
     if (!response.ok) {
       if (!response.error.has_value() || response.error->code.empty()) {
-        return {true, Failure(request, "invalid_backend_result")};
+        return {true, BackendFailure(request, "invalid_backend_result")};
       }
       return {true, InteractionFailure(request, *response.error)};
     }
@@ -1299,11 +1311,11 @@ ProcessResult HostProtocol::ProcessLineImpl(const std::string &line) {
     }
     std::optional<Json> result = InteractionJson(interaction, response);
     if (!result.has_value()) {
-      return {true, Failure(request, "invalid_backend_result")};
+      return {true, BackendFailure(request, "invalid_backend_result")};
     }
     const std::string encoded = result->dump();
     if (!valid_encoded_result_size(encoded.size())) {
-      return {true, Failure(request, "response_limit")};
+      return {true, BackendFailure(request, "response_limit")};
     }
     return {true, Success(request, std::move(*result))};
   }

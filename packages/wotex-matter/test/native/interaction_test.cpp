@@ -183,6 +183,65 @@ void AccessControlWriteCrossesProtocolBoundary() {
   assert(backend.last->value->children.size() == 1U);
 }
 
+void MutationResponseIdentity() {
+  for (const bool invoke : {false, true}) {
+    for (unsigned field = 0; field < (invoke ? 4U : 5U); ++field) {
+      RecordingBackend backend;
+      HostProtocol protocol(backend);
+      Open(protocol);
+      ConcretePath path = invoke ? Path(1, 6, 1) : Path(1, 0x0201, 0x12);
+      if (field == 0) { path.fabric_id = 2; }
+      if (field == 1) { path.node_id = 4; }
+      if (field == 2) { path.endpoint = 2; }
+      if (field == 3) { path.cluster = 8; }
+      if (field == 4) { path.member = 0x11; }
+      backend.response.ok = true;
+      backend.response.response_path = path;
+      if (invoke) {
+        Element value;
+        value.type = ElementType::Structure;
+        backend.response.response_value = value;
+      }
+      const std::string frame = invoke
+          ? R"({"version":1,"id":"2","operation":"invoke","parameters":{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":6,"member":1,"value":{"tag":"anonymous","type":"structure","value":[]}},"timeout_ms":1000})"
+          : R"({"version":1,"id":"2","operation":"write","parameters":{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":513,"member":18,"value":{"tag":"anonymous","type":"i16","value":2000}},"timeout_ms":1000})";
+      const auto result = protocol.ProcessLine(frame);
+      assert(backend.interactions == 1U);
+      assert(result.keep_running);
+      assert(result.frame->find("invalid_backend_result") != std::string::npos);
+      assert(result.frame->find(R"("effect":"unknown")") != std::string::npos);
+    }
+  }
+
+  for (unsigned mode = 0; mode < 6U; ++mode) {
+    RecordingBackend backend;
+    HostProtocol protocol(backend);
+    Open(protocol);
+    backend.response.ok = true;
+    backend.response.response_path = Path(1, 6, 2);
+    Element value;
+    value.type = ElementType::Structure;
+    backend.response.response_value = value;
+    if (mode == 0) { backend.response.response_path.reset(); }
+    if (mode == 1) { backend.response.response_value.reset(); }
+    if (mode == 2) { backend.response.response_value = I16(0); }
+    if (mode == 3) { backend.response.response_path->member = 0xFFFFU; }
+    if (mode == 5) {
+      backend.response.response_path.reset();
+      backend.response.response_value.reset();
+    }
+    const auto result = protocol.ProcessLine(
+        R"({"version":1,"id":"2","operation":"invoke","parameters":{"fabric_id":1,"node_id":3,"endpoint":1,"cluster":6,"member":1,"value":{"tag":"anonymous","type":"structure","value":[]}},"timeout_ms":1000})");
+    assert(result.keep_running && backend.interactions == 1U);
+    if (mode >= 4) {
+      assert(result.frame->find(R"("ok":true)") != std::string::npos);
+    } else {
+      assert(result.frame->find("invalid_backend_result") != std::string::npos);
+      assert(result.frame->find(R"("effect":"unknown")") != std::string::npos);
+    }
+  }
+}
+
 } // namespace
 
 int main() {
@@ -233,5 +292,6 @@ int main() {
   EventIdentityAndMinimumNumber();
   MutationTimeoutCompletesOnce();
   AccessControlWriteCrossesProtocolBoundary();
+  MutationResponseIdentity();
   return 0;
 }

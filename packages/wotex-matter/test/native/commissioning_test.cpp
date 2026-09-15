@@ -24,6 +24,9 @@ class CommissioningBackend final : public wotex::matter::ControllerBackend {
   wotex::matter::CommissioningResponse Commission(
       const wotex::matter::CommissioningRequest &request) override {
     commissioning = request;
+    if (malformed_result) {
+      return {true, std::nullopt, request.node_id + 1, fabric_id, true};
+    }
     if (commissioning_failure) {
       return {false,
               wotex::matter::CommissioningError{
@@ -37,6 +40,11 @@ class CommissioningBackend final : public wotex::matter::ControllerBackend {
   wotex::matter::CommissioningWindowResponse OpenWindow(
       const wotex::matter::CommissioningWindowRequest &request) override {
     window = request;
+    if (malformed_result) {
+      return {true, std::nullopt, request.node_id + 1, 20202021U,
+              request.discriminator, request.timeout_s, "34970112332",
+              "MT:Y.K9042C00KA0648G00"};
+    }
     if (window_failure) {
       return {false,
               wotex::matter::CommissioningError{
@@ -62,6 +70,7 @@ class CommissioningBackend final : public wotex::matter::ControllerBackend {
   wotex::matter::CommissioningWindowRequest window;
   bool commissioning_failure{false};
   bool window_failure{false};
+  bool malformed_result{false};
   bool open{false};
 };
 
@@ -184,6 +193,23 @@ void TestExpiredWindowAndOperationalAclDenial() {
   assert(denied.frame->find("\"status\":126") != std::string::npos);
 }
 
+void TestMalformedAcknowledgementEffect() {
+  CommissioningBackend backend;
+  backend.malformed_result = true;
+  wotex::matter::HostProtocol protocol(backend);
+  Open(protocol);
+
+  const auto commission = protocol.ProcessLine(
+      R"({"version":1,"id":"2","operation":"commission_on_network","parameters":{"node_id":9,"setup_pin":20202021,"discriminator":1},"timeout_ms":5000})");
+  const auto window = protocol.ProcessLine(
+      R"({"version":1,"id":"3","operation":"open_window","parameters":{"node_id":9,"timeout_s":180,"iteration_count":1000,"discriminator":1},"timeout_ms":5000})");
+  for (const auto &result : {commission, window}) {
+    assert(result.keep_running);
+    assert(result.frame->find("invalid_backend_result") != std::string::npos);
+    assert(result.frame->find(R"("effect":"unknown")") != std::string::npos);
+  }
+}
+
 } // namespace
 
 int main() {
@@ -191,5 +217,6 @@ int main() {
   TestFinalCommissionAndWindowResults();
   TestInvalidInputsAndSdkFailures();
   TestExpiredWindowAndOperationalAclDenial();
+  TestMalformedAcknowledgementEffect();
   return 0;
 }

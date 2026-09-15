@@ -157,13 +157,30 @@ bool valid_interaction_response(const InteractionRequest &request,
                       return ValidPathResult(request, result);
                     });
   }
+  if (request.paths.size() != 1U) {
+    return false;
+  }
   if (request.kind == InteractionKind::Write) {
     return response.results.empty() && response.status == 0 &&
         response.response_path.has_value() &&
+        Selected(request.paths.front(), *response.response_path) &&
         !response.response_value.has_value();
   }
-  return response.results.empty() && response.status == 0 &&
-      (!response.response_value.has_value() || response.response_path.has_value());
+  if (request.kind != InteractionKind::Invoke || !response.results.empty() ||
+      response.status != 0 ||
+      response.response_path.has_value() != response.response_value.has_value()) {
+    return false;
+  }
+  if (!response.response_path.has_value()) {
+    return true;
+  }
+  const ConcretePath &path = *response.response_path;
+  const PathSelector &target = request.paths.front();
+  return path.fabric_id == target.fabric_id && path.node_id == target.node_id &&
+      target.endpoint == path.endpoint && target.cluster == path.cluster &&
+      validate_element(MemberKind::Command, path.cluster, path.member,
+                       Operation::Invoke, *response.response_value) ==
+          ConversionError::None;
 }
 
 std::uint32_t remaining_timeout_ms(std::uint32_t timeout_ms,

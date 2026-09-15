@@ -218,6 +218,29 @@ defmodule Wotex.Matter.StandaloneBoundaryTest do
     end
   end
 
+  test "WMA-C04 command response identity stays bound to the invoked target" do
+    for {key, value} <- [fabric_id: 2, node_id: 4, endpoint: 2] do
+      result = %{path: Map.put(@on, key, value), value: @empty, status: 0}
+
+      assert {:error,
+              %Error{
+                code: :invalid_transport_return,
+                effect: :unknown,
+                retryable: false,
+                class: :permanent
+              }} =
+               Matter.invoke_command(session(result), @on, @empty)
+
+      assert_receive {:matter_request, %{type: :invoke, node_id: 3, endpoint: 1, cluster: 6}, _}
+      refute_receive {:matter_request, _, _}
+    end
+
+    # Response command IDs may differ from request IDs; the target stays fixed.
+    result = %{path: %{@on | member: 2}, value: @empty, status: 0}
+    assert {:ok, ^result} = Matter.invoke_command(session(result), @on, @empty)
+    assert_receive {:matter_request, %{type: :invoke, member: 1}, _}
+  end
+
   test "WMA-S03 event history retains multiple identities per path and empty filtered history" do
     first = event_entry(@event, 7, false)
     second = event_entry(@event, 8, true)

@@ -149,6 +149,14 @@ may require an explicit expected DataVersion (unsigned 32-bit); pass it through
 to the SDK, and preserve mismatch status. A successful write ACK does not imply
 a readback value or completion of a consumer workflow.
 
+Successful mutation replies remain bound to the admitted target. Write
+acknowledgements match fabric, node, endpoint, cluster and attribute. Command
+data replies match fabric, node, endpoint and cluster, with a typed value valid
+for the returned command identifier. A command status-only reply has neither
+a response path nor a value; an empty structure remains a present value with
+a response path. Mismatched identities and unpaired path/value fields are
+malformed acknowledgements with unknown mutation effect.
+
 Timed write/invoke uses `timed_request_timeout_ms` in 1..65535, explicitly supplied
 where the descriptor requires it and bounded by the remaining interaction deadline.
 Missing required timed parameters fail before SDK submission. Invoke timeout
