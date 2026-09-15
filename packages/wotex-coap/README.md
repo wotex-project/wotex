@@ -77,6 +77,9 @@ security and a nil immediate credential. UDP routes reject credentials.
 `Wotex.CoAP.profile(:udp_observe)` selects unary operations and Observe streams.
 `Wotex.CoAP.profile(:dtls)` selects authenticated DTLS unary operations and streams.
 All admit JSON, UTF-8 text and opaque bytes. OSCORE remains unsupported.
+`Wotex.CoAP.Security.new/1` validates and redacts the fixed-suite OSCORE
+credential value without reading its durable store. The planned native owner
+must still validate and consume that store before an OSCORE session can open.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
 Capabilities expose these as `max_datagram_size` and `max_body_size`.

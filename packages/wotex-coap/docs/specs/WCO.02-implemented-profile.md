@@ -3,9 +3,9 @@ spec:
   id: WCO.02
   title: "Implemented CoAP profile"
   status: accepted
-  version: 1.3.0
+  version: 1.4.0
   owner: wotex-coap
-  updated: 2026-09-09
+  updated: 2026-09-15
 ---
 
 # WCO.02 Implemented CoAP profile
@@ -78,8 +78,11 @@ and immediate credentials together fail as ambiguous. Subscriptions require
 configured `security:` and a nil immediate credential; the handle contains no
 secret or execution context. UDP rejects either credential source. Security
 validation and matching the Form scheme to the selected profile precede socket
-acquisition. OSCORE remains planned under .10/.12/.13. OSCORE's C Port owns one libcoap engine; no native
-helper is needed for the existing UDP or OTP DTLS paths.
+acquisition. `Security.new/1` implements the pure fixed-suite OSCORE credential
+shape and limits, including redaction and optional ID Context normalization.
+It performs no filesystem access and does not make OSCORE an admitted transport.
+OSCORE sessions remain planned under .10/.12/.13. OSCORE's C Port owns one
+libcoap engine; no native helper is needed for the existing UDP or OTP DTLS paths.
 
 ## Evidence and compatibility
 

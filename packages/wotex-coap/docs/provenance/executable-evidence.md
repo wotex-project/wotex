@@ -53,6 +53,13 @@ and after establishment. It checks authenticated socket release and credential-
 free Runtime handles and diagnostics. These are OTP peer tests, separate from
 independent libcoap secure interoperability and the complete software matrix.
 
+`security_oscore_test.exs` executes S06's pure credential boundary. Exact and
+generated cases cover secret, salt, sender, recipient and ID Context byte limits;
+distinct endpoint IDs; absolute UTF-8 store paths; omitted ID Context
+normalization; forged structs; cross-mode fields; and redacted inspection. The
+constructor performs no store or network access. These assertions do not admit
+an OSCORE connection or accept the planned native owner.
+
 `test/interop/dtls_pki_test.exs` adds independent libcoap PSK/PKI native
 operations, Observe/cancel, certificate/CRL faults and authenticated-record
 replay/corruption assertions. It also runs real ConsumedThing unary operations
