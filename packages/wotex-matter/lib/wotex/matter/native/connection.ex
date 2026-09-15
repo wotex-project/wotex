@@ -19,6 +19,9 @@ defmodule Wotex.Matter.Native.Connection do
   Writes to native stdin never suspend this owner. A busy or failed pipe closes
   the generation; a rejected report ACK cannot restore native credit or leave
   the subscription waiting indefinitely.
+  Missing or malformed replies after a submitted write, invoke, commissioning
+  operation or commissioning-window request retain unknown effect without retry.
+  A validated native failure keeps the SDK's own submission classification.
   It is an implementation module; consumers use
   `Wotex.Matter.Native` and its opaque `Wotex.Matter.Native.Handle`.
   """
@@ -32,6 +35,8 @@ defmodule Wotex.Matter.Native.Connection do
   @maximum_line_bytes 131_071
   @cleanup_timeout 1_000
   @response_grace 50
+  @mutating_operations [:write, :invoke, :commission_on_network, :open_window]
+  @mutating_wire_operations Enum.map(@mutating_operations, &Atom.to_string/1)
 
   @spec start(pid(), map()) ::
           {:ok, pid(), String.t(), :ets.tid()} | {:error, Error.t()}
@@ -626,13 +631,13 @@ defmodule Wotex.Matter.Native.Connection do
         if System.monotonic_time(:millisecond) <= state.call_deadline do
           {:reply, {:ok, decoded}, state}
         else
-          effect = if type in [:write, :invoke], do: :unknown, else: :none
+          effect = if type in @mutating_operations, do: :unknown, else: :none
           error = Error.new(:timeout) |> Error.with_effect(effect)
           {:stop, :normal, {:error, error}, notify_session_failure(error, state)}
         end
 
       {:error, error} ->
-        effect = if type in [:write, :invoke], do: :unknown, else: :none
+        effect = if type in @mutating_operations, do: :unknown, else: :none
         error = Error.with_effect(error, effect)
         {:stop, :normal, {:error, error}, notify_session_failure(error, state)}
     end
@@ -688,7 +693,7 @@ defmodule Wotex.Matter.Native.Connection do
             {:error, error, response_state}
 
           {:channel_error, error, response_state} ->
-            effect = if operation in ["write", "invoke"], do: :unknown, else: :none
+            effect = if operation in @mutating_wire_operations, do: :unknown, else: :none
 
             {:error, Error.with_effect(error, effect),
              Map.put(response_state, :channel_failed, true)}
@@ -770,7 +775,7 @@ defmodule Wotex.Matter.Native.Connection do
 
     mutation =
       case message do
-        {:request, _, %{type: type}, _} -> type in [:write, :invoke]
+        {:request, _, %{type: type}, _} -> type in @mutating_operations
         _ -> false
       end
 

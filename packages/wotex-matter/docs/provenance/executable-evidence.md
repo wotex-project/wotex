@@ -1512,3 +1512,33 @@ The latest measured coverage remains 88.6% from the orphan-admission cohort.
 | Minimum focused log | `58138d75f7101dd30b456d427f7d7175b7749b9bc76a1faca450c106030fe17f` |
 | Current Linux SDK log | `185bf9977b4c414db678ca82fd4787a1a259cba07fa748f0e45a380526a7d361` |
 | Minimum Linux sanitizer SDK log | `593e6c66a70d4c2b4c64ca44600dd0f746384217c9bcb3e9fee128843aa33d8b` |
+
+## Commissioning mutation effect at the IPC boundary
+
+Commissioning and commissioning-window operations use the same submitted-mutation
+classification as write and invoke when the owner disappears or a reply is
+missing, malformed or decoded after the deadline. The expanded regressions
+previously returned no effect after a malformed commissioning reply, and even
+marked abrupt owner loss retryable. They now return unknown effect, permanent
+classification and no retry. Both queued commissioning operations still return
+no effect after timeout or owner loss, and cannot be submitted afterward.
+
+Validated native failures retain their SDK submission evidence. The real SDK
+commissioning-timeout case passes on both Linux lanes, preserving numeric status
+0x32 and no effect for expired discovery before fabric mutation, and releasing
+the controller. Current Linux passes in 1.2 seconds; the minimum sanitizer lane
+passes in 1.7 seconds. Both use the unchanged byte-counter native binaries.
+The default gate passes 168 checks with 24 excluded; minimum BEAM passes all 43
+persistent-connection and commissioning tests. ExDoc passes without warnings.
+The remaining native control/fault/counter and process-flow work, full build and
+archive receipts, and unchanged 95% coverage acceptance remain open.
+
+| Commissioning-effect artifact | SHA-256 |
+| --- | --- |
+| Connection | `d7c285ffe5912cf4c61d41f4fa1375fc1b90d89a19dcd1c5f09e426a113dcb50` |
+| Persistent connection tests | `a252deb92a16141d239903582eeee77bf2003a2a2fadcd7b662a9109a555851b` |
+| Failing valid-request log | `4d2a0e915fa9f81a9c2e20987e52ce6691d5c78ebcf1b28cf21178eb8afb505f` |
+| Current default gate log | `6bb61f7f78d79affc2744f691dff4bbc5b3168d3a6482b8a6c6abef1c1008681` |
+| Minimum focused log | `c30ef061355f02528357b16627804f75c099305d025927e59721d27b88f4ccac` |
+| Current Linux SDK timeout log | `15339df7a103af60ce8e39efa14dba8635fbfc2036ab96d646710b73c0d39fc9` |
+| Minimum Linux sanitizer SDK timeout log | `2ef7ba6abdffd4ff835984e9e7f214fef0857b444a82f7098cc05701e103d792` |

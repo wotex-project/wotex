@@ -21,6 +21,20 @@ defmodule Wotex.Matter.PersistentBridgeTest do
            value: %{tag: :anonymous, type: :i16, value: 2000}
          })
 
+  @commission %{
+    type: :commission_on_network,
+    node_id: 3,
+    setup_pin: 20_202_021,
+    discriminator: 3840
+  }
+  @window %{
+    type: :open_window,
+    node_id: 3,
+    timeout_s: 180,
+    iteration_count: 1000,
+    discriminator: 3840
+  }
+
   test "WMA-C03 native request admission stops at 64 before the owner mailbox" do
     audit = temporary_path("admission")
     assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
@@ -355,13 +369,13 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
   @tag :submission_effect
   test "WMA-C04 queued mutation timeout or owner loss cannot acquire unknown effect" do
-    for mode <- [:timeout, :owner_loss] do
+    for mode <- [:timeout, :owner_loss], message <- [@write, @commission, @window] do
       audit = temporary_path("queued-effect")
       assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
       initial = File.read!(audit)
       :sys.suspend(handle.pid)
       timeout = if mode == :timeout, do: 25, else: 5_000
-      caller = Task.async(fn -> Native.request(handle, @write, timeout) end)
+      caller = Task.async(fn -> Native.request(handle, message, timeout) end)
 
       try do
         assert mailbox_reaches?(handle.pid, 1, 100)
@@ -382,12 +396,17 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
   @tag :submission_effect
   test "WMA-C04 owner loss after native mutation submission retains unknown effect" do
+    for message <- [@write, @commission, @window],
+        do: assert_submitted_effect_after_owner_loss(message)
+  end
+
+  defp assert_submitted_effect_after_owner_loss(message) do
     audit = temporary_path("submitted-effect")
     assert {:ok, handle} = Native.connect(options(fixture("silent_request", audit)))
-    caller = Task.async(fn -> Native.request(handle, @write, 5_000) end)
+    caller = Task.async(fn -> Native.request(handle, message, 5_000) end)
 
     try do
-      assert operation_recorded?(audit, "write", 100)
+      assert operation_recorded?(audit, Atom.to_string(message.type), 100)
       Process.exit(handle.pid, :kill)
 
       assert {:error,
@@ -810,6 +829,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     refute_receive {:late_response, _}
   end
 
+  @tag :submission_effect
   test "WMA-C04 a broken reply after mutation submission has unknown effect" do
     for message <- [
           Map.merge(@read, %{
@@ -822,7 +842,9 @@ defmodule Wotex.Matter.PersistentBridgeTest do
             cluster: 6,
             member: 1,
             value: %{tag: :anonymous, type: :structure, value: []}
-          })
+          }),
+          @commission,
+          @window
         ] do
       assert {:ok, handle} = Native.connect(options(fixture("malformed_reply")))
 
