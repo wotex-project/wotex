@@ -1084,3 +1084,48 @@ fix does not complete the remaining C09 fault, admission or full matrix gates.
 | Earlier normal log | `fa2082322e222a993b9aa8f3519f939436f9bb8e2ecfdfa39cdccec3f95c5662` |
 | Corrected current Linux log | `6232b5aa1d74d3478b845f6e5102fc622080df93999f1be479fce12aaf86f695` |
 | Corrected minimum sanitizer log | `f6654ddc48a65a33897f0f7031b1c18e441b55fe3ed418318a6842dab3b9b3bf` |
+
+## Shared BEAM report ledger
+
+`Wotex.Matter.Native.ReportLedger` now owns the connection's immutable report
+accounting. Its stream identities include the delivery generation. Registering
+validated frames enforces sequential uint64 counters, 64 outstanding frames,
+1048576 retained encoded bytes and 128 stream identities. Supplied consumption
+tokens bind the exact stream and sequence. An exact retirement barrier marks
+only that stream's validated reports consumed, removes its active identity and
+leaves another stream's unconsumed reports holding credit.
+
+Advancement returns a proposed cumulative ACK and replacement ledger. The
+connection installs the replacement only after its Port accepts the ACK. Tests
+exercise false and repeated barriers, reports after retirement, two generations
+sharing an identity, out-of-order consumption, replay, exact byte/frame bounds
+and exhausted counters. The ledger supplies the shared production bookkeeping
+needed by retirement corpus traces; those traces are not accepted by these
+unit tests alone.
+
+The focused subscription/recovery/Runtime and ledger suites pass 27 tests on
+both supported BEAM versions. The default gate passes 148 checks with 21
+excluded, and ExDoc passes without warnings. Default-suite coverage is 89.6%,
+below the unchanged 95% gate; release acceptance remains open.
+
+The real lifecycle workload also passes with this ledger and the corrected
+reaper binaries: 149.7 seconds on current Linux and 180.5 seconds on the minimum
+sanitizer lane with leak detection enabled. Each repeats the 1000-read,
+32-caller, 100-receiver-death and 100-open/close workload. The drain assertions
+now include both pending reports and retained stream identities; each returns
+to zero. Both lanes use the `cc9a45e3...976a` and `db5d30cb...9469` native hosts
+recorded in the reaper cohort above.
+
+| BEAM ledger artifact | SHA-256 |
+| --- | --- |
+| Report ledger | `f149431ee6513e98f15f48acec23dd0ef5ccf84271fc303cb3e67c4dac614cc6` |
+| Native connection | `f9f05010d0d401bddd947557e84fef22e03d6cf5b9d397df6c05daaaf87edb20` |
+| Ledger tests | `aece8b1745f41f59bbb5d4eb689e8cb84764897f50542f8a866c26911330baa0` |
+| Subscription tests | `0e6428ddd265a57e5c3d4f364b816857fa454dad842eac98487b07b825810b36` |
+| Lifecycle test | `faa2a63a705ef63c4baad067c196e070ac7702184dbea093db88beb01701269a` |
+| Runtime loss test | `b57a972e3fd34fc2f77c959338db76c11e16f660e3a47401cd114401acf61b93` |
+| Current focused log | `56885c45fcac0e394d25074fa3cd9543ff6fd956ecf368b58854dee03fa9db38` |
+| Minimum focused log | `e225e8beed926673d5179ca0a0ca887184b5aa5d9c35f1a9b9e4ff6455cfa272` |
+| Coverage log | `afdbd45008fbd6fa693c59b2c925bd47a4ed2999746e38b74387fcd33b451687` |
+| Current Linux lifecycle log | `6d79a9814d38733aab56260e4ef52053329c6c11ab9eff30f01fa0972caf4d6b` |
+| Minimum Linux sanitizer lifecycle log | `e1df2fabee5ed92465867f5097b43115860f37c9297d58f0b7ff84d8a6575eae` |

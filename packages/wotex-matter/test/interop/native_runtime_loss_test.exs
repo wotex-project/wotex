@@ -71,7 +71,7 @@ defmodule Wotex.Matter.NativeRuntimeLossInteropTest do
 
         try do
           assert_receive {:wotex_transport_frame, frame}, 10_000
-          assert :sys.get_state(connection).acknowledged_sequence == 0
+          assert :sys.get_state(connection).report_ledger.acknowledged_sequence == 0
           started = System.monotonic_time(:millisecond)
 
           case mode do

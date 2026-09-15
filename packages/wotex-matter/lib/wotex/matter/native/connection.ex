@@ -14,7 +14,7 @@ defmodule Wotex.Matter.Native.Connection do
   use GenServer
 
   alias Wotex.Matter.{Error, Subscription}
-  alias Wotex.Matter.Native.Wire
+  alias Wotex.Matter.Native.{ReportLedger, Wire}
 
   @sdk_revision "250a9e6c50ee2068107f3c4808b680f5f2925415"
   @maximum_line_bytes 131_071
@@ -116,10 +116,7 @@ defmodule Wotex.Matter.Native.Connection do
                subscription_ids: %{},
                subscription_monitors: %{},
                closed_references: MapSet.new(),
-               next_report_sequence: 1,
-               acknowledged_sequence: 0,
-               acknowledged_bytes: 0,
-               pending_reports: %{},
+               report_ledger: ReportLedger.new(),
                internal_requests: %{}
              }}
 
@@ -314,8 +311,8 @@ defmodule Wotex.Matter.Native.Connection do
 
   @impl GenServer
   def handle_info({:native_report_consumed, generation, reference, sequence, token}, state) do
-    case Map.fetch(state.pending_reports, sequence) do
-      {:ok, %{reference: ^reference, token: ^token, bytes: bytes, consumed: false}}
+    case Map.fetch(state.report_ledger.pending, sequence) do
+      {:ok, %{stream: {^reference, _}, token: ^token, bytes: bytes, consumed: false}}
       when generation == state.generation ->
         subscription = Map.fetch!(state.subscriptions, reference)
         emit_subscription(:deliver, subscription.kind, :ok)
@@ -748,16 +745,10 @@ defmodule Wotex.Matter.Native.Connection do
     key = {native_id, generation}
 
     with true <- session_generation == state.generation,
-         true <- sequence == state.next_report_sequence,
          {:ok, reference} <- Map.fetch(state.subscription_ids, key),
          {:ok, delivery} <- Wire.subscription(kind, value, metadata),
          true <- delivery_path_matches?(delivery, Map.fetch!(state.subscriptions, reference)),
-         true <- map_size(state.pending_reports) < 64,
-         true <-
-           Enum.reduce(state.pending_reports, encoded_bytes, fn {_, report}, bytes ->
-             bytes + report.bytes
-           end) <= 1_048_576,
-         registered <- register_report(state, reference, sequence, encoded_bytes),
+         {:ok, registered} <- register_report(state, reference, sequence, encoded_bytes),
          {:ok, next_state} <-
            admit_report(registered, reference, delivery, sequence, encoded_bytes) do
       {:ok, next_state}
@@ -941,9 +932,13 @@ defmodule Wotex.Matter.Native.Connection do
   defp put_subscription(state, subscription) do
     key = {subscription.native_id, subscription.generation}
 
+    {:ok, ledger} =
+      ReportLedger.open(state.report_ledger, {subscription.reference, subscription.generation})
+
     %{
       state
-      | subscriptions: Map.put(state.subscriptions, subscription.reference, subscription),
+      | report_ledger: ledger,
+        subscriptions: Map.put(state.subscriptions, subscription.reference, subscription),
         subscription_ids: Map.put(state.subscription_ids, key, subscription.reference),
         subscription_monitors:
           Map.put(state.subscription_monitors, subscription.monitor, subscription.reference)
@@ -982,6 +977,9 @@ defmodule Wotex.Matter.Native.Connection do
           state
           |> put_in([:subscriptions, reference], recovering)
           |> put_in([:subscription_ids, {subscription.native_id, generation}], reference)
+
+        {:ok, ledger} = ReportLedger.open(transitioned.report_ledger, {reference, generation})
+        transitioned = %{transitioned | report_ledger: ledger}
 
         deliver_subscription_status(transitioned, reference, :resubscribing, %{
           continuity: :lost,
@@ -1060,7 +1058,7 @@ defmodule Wotex.Matter.Native.Connection do
           subscription.status in [:recovering, :closing] ->
         transitioned =
           state
-          |> consume_retired_reports(reference)
+          |> consume_retired_reports(reference, generation, last_sequence)
           |> update_in([:subscription_ids], &Map.delete(&1, {subscription.native_id, generation}))
           |> put_in([:subscriptions, reference, :retiring_generation], nil)
           |> put_in([:subscriptions, reference, :retiring_last_report_sequence], nil)
@@ -1072,7 +1070,7 @@ defmodule Wotex.Matter.Native.Connection do
           is_nil(subscription.retiring_generation) ->
         retired =
           state
-          |> consume_retired_reports(reference)
+          |> consume_retired_reports(reference, generation, last_sequence)
           |> retire_subscription(reference)
 
         {:ok, retired}
@@ -1090,6 +1088,16 @@ defmodule Wotex.Matter.Native.Connection do
       {subscription, subscriptions} ->
         Process.demonitor(subscription.monitor, [:flush])
 
+        ledger =
+          Enum.reduce(state.report_ledger.streams, state.report_ledger, fn
+            {{^reference, _} = stream, last}, current ->
+              {:ok, retired} = ReportLedger.retire(current, stream, last)
+              retired
+
+            _, current ->
+              current
+          end)
+
         subscription_ids =
           state.subscription_ids
           |> Enum.reject(fn {_key, owner} -> owner == reference end)
@@ -1097,7 +1105,8 @@ defmodule Wotex.Matter.Native.Connection do
 
         %{
           state
-          | subscriptions: subscriptions,
+          | report_ledger: ledger,
+            subscriptions: subscriptions,
             subscription_ids: subscription_ids,
             subscription_monitors: Map.delete(state.subscription_monitors, subscription.monitor)
         }
@@ -1185,7 +1194,7 @@ defmodule Wotex.Matter.Native.Connection do
     case Process.info(subscription.receiver, :message_queue_len) do
       {:message_queue_len, length} when length < subscription.queue_limit ->
         if subscription.acknowledged do
-          pending = Map.fetch!(state.pending_reports, sequence)
+          pending = Map.fetch!(state.report_ledger.pending, sequence)
 
           envelope = %Wotex.Matter.Native.Delivery{
             connection: self(),
@@ -1220,11 +1229,12 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   defp acknowledge_report(state, sequence, encoded_bytes) do
-    case Map.fetch(state.pending_reports, sequence) do
-      {:ok, %{bytes: ^encoded_bytes}} ->
-        state
-        |> put_in([:pending_reports, sequence, :consumed], true)
-        |> advance_acknowledgement()
+    case Map.fetch(state.report_ledger.pending, sequence) do
+      {:ok, %{bytes: ^encoded_bytes, stream: stream, token: token}} ->
+        case ReportLedger.consume(state.report_ledger, stream, sequence, token) do
+          {:ok, ledger} -> advance_acknowledgement(%{state | report_ledger: ledger})
+          :ignore -> state
+        end
 
       _ ->
         state
@@ -1232,71 +1242,37 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   defp register_report(state, reference, sequence, encoded_bytes) do
-    pending = %{
-      reference: reference,
-      bytes: encoded_bytes,
-      token: make_ref(),
-      consumed: false
-    }
+    stream = {reference, Map.fetch!(state.subscriptions, reference).generation}
 
-    state
-    |> Map.put(:next_report_sequence, sequence + 1)
-    |> put_in([:subscriptions, reference, :last_report_sequence], sequence)
-    |> Map.put(:pending_reports, Map.put(state.pending_reports, sequence, pending))
-  end
-
-  defp consume_retired_reports(state, reference) do
-    pending =
-      Map.new(state.pending_reports, fn {sequence, report} ->
-        if report.reference == reference,
-          do: {sequence, %{report | consumed: true}},
-          else: {sequence, report}
-      end)
-
-    state
-    |> Map.put(:pending_reports, pending)
-    |> advance_acknowledgement()
-  end
-
-  defp advance_acknowledgement(state) do
-    {sequence, bytes, pending} =
-      consume_prefix(
-        state.acknowledged_sequence + 1,
-        state.acknowledged_bytes,
-        state.pending_reports
-      )
-
-    if sequence == state.acknowledged_sequence do
-      state
-    else
-      frame = %{
-        "version" => 1,
-        "event" => "report_ack",
-        "session_generation" => state.generation,
-        "report_sequence" => sequence,
-        "acknowledged_bytes" => bytes
-      }
-
-      if send_frame(state.port, frame) do
-        %{
-          state
-          | acknowledged_sequence: sequence,
-            acknowledged_bytes: bytes,
-            pending_reports: pending
-        }
-      else
-        state
-      end
+    with {:ok, ledger} <-
+           ReportLedger.register(state.report_ledger, stream, sequence, encoded_bytes, make_ref()) do
+      {:ok,
+       state
+       |> Map.put(:report_ledger, ledger)
+       |> put_in([:subscriptions, reference, :last_report_sequence], sequence)}
     end
   end
 
-  defp consume_prefix(sequence, bytes, pending) do
-    case Map.fetch(pending, sequence) do
-      {:ok, %{bytes: report_bytes, consumed: true}} ->
-        consume_prefix(sequence + 1, bytes + report_bytes, Map.delete(pending, sequence))
+  defp consume_retired_reports(state, reference, generation, last_sequence) do
+    {:ok, ledger} = ReportLedger.retire(state.report_ledger, {reference, generation}, last_sequence)
+    advance_acknowledgement(%{state | report_ledger: ledger})
+  end
 
-      _ ->
-        {sequence - 1, bytes, pending}
+  defp advance_acknowledgement(state) do
+    case ReportLedger.advance(state.report_ledger) do
+      {nil, _} ->
+        state
+
+      {ack, ledger} ->
+        frame = %{
+          "version" => 1,
+          "event" => "report_ack",
+          "session_generation" => state.generation,
+          "report_sequence" => ack.report_sequence,
+          "acknowledged_bytes" => ack.acknowledged_bytes
+        }
+
+        if send_frame(state.port, frame), do: %{state | report_ledger: ledger}, else: state
     end
   end
 

@@ -30,7 +30,7 @@ defmodule Wotex.Matter.SubscriptionTest do
     assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 1} = first}, 1_000
     assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 2} = second}, 1_000
     refute inspect(first) =~ inspect(first.token)
-    assert :sys.get_state(session.handle.pid).acknowledged_sequence == 0
+    assert :sys.get_state(session.handle.pid).report_ledger.acknowledged_sequence == 0
     refute Enum.any?(audit_frames(audit), &(&1["event"] == "report_ack"))
 
     acknowledge = fn delivery, token ->
@@ -46,18 +46,18 @@ defmodule Wotex.Matter.SubscriptionTest do
     acknowledge.(second, second.token)
     acknowledge.(second, second.token)
     state = :sys.get_state(session.handle.pid)
-    assert state.acknowledged_sequence == 0
-    assert state.pending_reports[2].consumed
-    refute state.pending_reports[1].consumed
+    assert state.report_ledger.acknowledged_sequence == 0
+    assert state.report_ledger.pending[2].consumed
+    refute state.report_ledger.pending[1].consumed
     acknowledge.(first, first.token)
     assert eventually(fn -> Enum.any?(audit_frames(audit), &(&1["event"] == "report_ack")) end)
     [ack] = Enum.filter(audit_frames(audit), &(&1["event"] == "report_ack"))
     assert ack["report_sequence"] == 2
 
     assert ack["acknowledged_bytes"] ==
-             state.pending_reports[1].bytes + state.pending_reports[2].bytes
+             state.report_ledger.pending[1].bytes + state.report_ledger.pending[2].bytes
 
-    assert :sys.get_state(session.handle.pid).pending_reports == %{}
+    assert :sys.get_state(session.handle.pid).report_ledger.pending == %{}
     assert :ok = Matter.unsubscribe(session, subscription)
     acknowledge.(first, first.token)
     assert :ok = Matter.disconnect(session)
@@ -89,7 +89,7 @@ defmodule Wotex.Matter.SubscriptionTest do
       assert_receive {:wotex_transport_frame, first}, 1_000
       assert_receive {:wotex_transport_frame, second}, 1_000
       :sys.suspend(relay.pid)
-      assert :sys.get_state(connection).acknowledged_sequence == 0
+      assert :sys.get_state(connection).report_ledger.acknowledged_sequence == 0
       refute Enum.any?(audit_frames(audit), &(&1["event"] == "report_ack"))
       :sys.resume(relay.pid)
 
@@ -102,8 +102,8 @@ defmodule Wotex.Matter.SubscriptionTest do
                  address
                )
 
-      assert eventually(fn -> :sys.get_state(connection).pending_reports[2].consumed end)
-      assert :sys.get_state(connection).acknowledged_sequence == 0
+      assert eventually(fn -> :sys.get_state(connection).report_ledger.pending[2].consumed end)
+      assert :sys.get_state(connection).report_ledger.acknowledged_sequence == 0
 
       assert :ignore =
                Wotex.Matter.RuntimeRelay.decode(
@@ -123,7 +123,7 @@ defmodule Wotex.Matter.SubscriptionTest do
                  address
                )
 
-      assert eventually(fn -> :sys.get_state(connection).pending_reports == %{} end)
+      assert eventually(fn -> :sys.get_state(connection).report_ledger.pending == %{} end)
 
       assert eventually(fn ->
                Enum.count(audit_frames(audit), &(&1["event"] == "report_ack")) == 1
@@ -154,11 +154,11 @@ defmodule Wotex.Matter.SubscriptionTest do
 
     assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 1}}, 1_000
     assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 2}}, 1_000
-    assert :sys.get_state(session.handle.pid).acknowledged_sequence == 0
+    assert :sys.get_state(session.handle.pid).report_ledger.acknowledged_sequence == 0
     assert :ok = Matter.unsubscribe(session, subscription)
     state = :sys.get_state(session.handle.pid)
-    assert state.pending_reports == %{}
-    assert state.acknowledged_sequence == 2
+    assert state.report_ledger.pending == %{}
+    assert state.report_ledger.acknowledged_sequence == 2
     assert :ok = Matter.disconnect(session)
     [ack] = Enum.filter(audit_frames(audit), &(&1["event"] == "report_ack"))
     assert ack["report_sequence"] == 2
