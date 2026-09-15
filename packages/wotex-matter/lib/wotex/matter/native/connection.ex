@@ -12,6 +12,10 @@ defmodule Wotex.Matter.Native.Connection do
   transmission. Native response waits also service queued call admission,
   cancellation, report consumption and receiver death. Losing the active caller
   closes its generation and fails queued requests before transmission.
+  One owned 50 ms maintenance timer reclaims dead or expired reservations whose
+  callers never submitted a message. It consumes an already queued message before
+  releasing that slot and rejects a late submission after its deadline. The same
+  timer terminates an abandoned close; no global reaper process is started.
   It is an implementation module; consumers use
   `Wotex.Matter.Native` and its opaque `Wotex.Matter.Native.Handle`.
   """
@@ -130,6 +134,7 @@ defmodule Wotex.Matter.Native.Connection do
                owner_monitor: owner_monitor,
                generation: generation,
                admission: Admission.new(generation),
+               admission_timer: schedule_admission_reap(),
                calls: %{},
                call_order: :queue.new(),
                caller_monitors: %{},
@@ -344,6 +349,13 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   @impl GenServer
+  def handle_info({:reap_admission, token}, state) do
+    case reap_admission(state, token) do
+      {:ok, next_state} -> {:noreply, next_state}
+      {:error, error, next_state} -> {:stop, :normal, notify_session_failure(error, next_state)}
+    end
+  end
+
   def handle_info(:drain_calls, state) do
     case :queue.out(state.call_order) do
       {:empty, _} ->
@@ -444,6 +456,8 @@ defmodule Wotex.Matter.Native.Connection do
 
   @impl GenServer
   def terminate(_, state) when is_map(state) do
+    if timer = Map.get(state, :admission_timer), do: Process.cancel_timer(elem(timer, 0))
+
     Enum.each(Map.get(state, :calls, %{}), fn {lease, _} ->
       finish_call(state, lease, {:error, Error.new(:transport_closed)})
     end)
@@ -464,8 +478,44 @@ defmodule Wotex.Matter.Native.Connection do
 
   def terminate(_, _), do: :ok
 
+  defp schedule_admission_reap do
+    token = make_ref()
+    {Process.send_after(self(), {:reap_admission, token}, 50), token}
+  end
+
+  defp reap_admission(%{admission_timer: {_, token}} = state, token) do
+    now = System.monotonic_time(:millisecond)
+
+    for {lease, caller, deadline} <- Admission.reservations(state.admission),
+        not Map.has_key?(state.calls, lease),
+        deadline <= now or not Process.alive?(caller) do
+      # Consume an already submitted call before releasing its reservation.
+      # A caller lost before submission has no corresponding mailbox message.
+      receive do
+        {:"$gen_call", from, {:bounded, _, ^deadline, ^lease}} ->
+          GenServer.reply(from, {:error, Error.new(:timeout)})
+      after
+        0 -> :ok
+      end
+
+      Admission.release(state.admission, lease)
+    end
+
+    case Admission.close_failure(state.admission, now) do
+      nil -> {:ok, %{state | admission_timer: schedule_admission_reap()}}
+      code -> {:error, Error.new(code), state}
+    end
+  end
+
+  defp reap_admission(state, _), do: {:ok, state}
+
   defp enqueue_call(state, message, deadline, lease, {caller, _} = from) do
     cond do
+      deadline <= System.monotonic_time(:millisecond) and
+          not Admission.owned?(state.admission, lease, caller, deadline) ->
+        GenServer.reply(from, {:error, Error.new(:timeout)})
+        state
+
       not Admission.owned?(state.admission, lease, caller, deadline) or
           Map.has_key?(state.calls, lease) ->
         GenServer.reply(from, {:error, Error.new(:invalid_handle)})
@@ -644,7 +694,7 @@ defmodule Wotex.Matter.Native.Connection do
   defp control_call(pid, generation, admission, kind, timeout) do
     deadline = System.monotonic_time(:millisecond) + timeout
 
-    case Admission.begin_close(admission, pid, generation) do
+    case Admission.begin_close(admission, pid, generation, deadline) do
       {:first, token} ->
         GenServer.call(pid, {:close_control, generation, kind, deadline, token}, timeout + 100)
 
@@ -677,8 +727,18 @@ defmodule Wotex.Matter.Native.Connection do
     deadline = System.monotonic_time(:millisecond) + timeout
 
     case Admission.acquire(admission, pid, generation, deadline) do
-      {:ok, lease} -> GenServer.call(pid, {:bounded, message, deadline, lease}, timeout + 100)
-      {:error, code} -> {:error, Error.new(code)}
+      {:ok, lease} ->
+        remaining = deadline - System.monotonic_time(:millisecond)
+
+        if remaining > 0 do
+          GenServer.call(pid, {:bounded, message, deadline, lease}, remaining + 100)
+        else
+          Admission.release(admission, lease)
+          {:error, Error.new(:timeout)}
+        end
+
+      {:error, code} ->
+        {:error, Error.new(code)}
     end
   catch
     :exit, {:noproc, _} -> {:error, Error.new(:transport_closed)}
@@ -845,6 +905,12 @@ defmodule Wotex.Matter.Native.Connection do
           state
           |> enqueue_call(message, call_deadline, lease, from)
           |> await_owner_line(deadline)
+
+        {:reap_admission, token} ->
+          case reap_admission(state, token) do
+            {:ok, next_state} -> await_owner_line(next_state, deadline)
+            {:error, error, next_state} -> {:error, error, next_state}
+          end
 
         {:expire_call, _} = message ->
           {:noreply, next_state} = handle_info(message, state)

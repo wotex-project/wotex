@@ -13,6 +13,8 @@ defmodule Wotex.Matter.Native.Admission do
   ordinary requests. Concurrent close callers wait on the connection's lifetime
   instead of sending more close messages or retaining another owner-side queue.
   A reservation racing with closing is released before it submits its call.
+  Reservations retain their caller and deadline before message submission so the
+  connection can reclaim an abandoned slot or terminate an abandoned close.
   """
 
   @type lease :: {1..64, reference()}
@@ -36,12 +38,15 @@ defmodule Wotex.Matter.Native.Admission do
   end
 
   @doc false
-  @spec begin_close(term(), pid(), String.t()) ::
+  @spec begin_close(term(), pid(), String.t(), integer()) ::
           {:first, reference()} | :waiting | {:error, atom()}
-  def begin_close(table, owner, generation) do
+  def begin_close(table, owner, generation, deadline) do
     with :ok <- validate_identity(table, owner, generation) do
       token = make_ref()
-      if :ets.insert_new(table, {:closing, token}), do: {:first, token}, else: :waiting
+
+      if :ets.insert_new(table, {:closing, token, self(), deadline}),
+        do: {:first, token},
+        else: :waiting
     end
   rescue
     ArgumentError -> {:error, :transport_closed}
@@ -53,7 +58,32 @@ defmodule Wotex.Matter.Native.Admission do
 
   @doc false
   @spec close_owned?(:ets.tid(), reference()) :: boolean()
-  def close_owned?(table, token), do: :ets.lookup(table, :closing) == [{:closing, token}]
+  def close_owned?(table, token),
+    do: match?([{:closing, ^token, _, _}], :ets.lookup(table, :closing))
+
+  @doc false
+  @spec close_failure(:ets.tid(), integer()) :: :owner_closed | :timeout | nil
+  def close_failure(table, now) do
+    case :ets.lookup(table, :closing) do
+      [{:closing, _, caller, deadline}] ->
+        cond do
+          not Process.alive?(caller) -> :owner_closed
+          deadline <= now -> :timeout
+          true -> nil
+        end
+
+      [] ->
+        nil
+    end
+  end
+
+  @doc false
+  @spec reservations(:ets.tid()) :: [{lease(), pid(), integer()}]
+  def reservations(table) do
+    for {slot, token, caller, deadline} <- :ets.tab2list(table),
+        slot in 1..64,
+        do: {{slot, token}, caller, deadline}
+  end
 
   @doc false
   @spec owned?(term(), lease(), pid(), integer()) :: boolean()

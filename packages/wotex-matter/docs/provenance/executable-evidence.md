@@ -1329,3 +1329,48 @@ the unchanged 95% coverage requirement remain open.
 | Minimum focused log | `15207d6e309b131dd09a82c9c3afa7a62720c42a16793ea288e357fa453f386d` |
 | Current Linux close log | `eb0fabd3d892e1b63b1368bd1bd95e2ed513d714fcb953268b14a5fb82f54d6f` |
 | Minimum Linux sanitizer close log | `4625e2cd43ea0f341779aec8611cecaf4e4b9ed8971028274a7b59c0fb494e33` |
+
+## Abandoned admission reservations
+
+The connection owns one 50 ms maintenance timer for reservations whose callers
+have not yet submitted their messages. It reclaims a reservation when its caller
+dies or its deadline expires, consuming an already queued matching call before
+releasing the slot. Requests already in the FIFO retain their caller monitors
+and individual timers. Late messages for expired reservations return `:timeout`
+with effect `:none` and cause no I/O. Closing records also retain their caller
+and deadline; an abandoned close terminates its generation. Maintenance runs
+during native response waits and stops with the connection. A suspended owner
+retains at most its 64 ordinary call messages plus one maintenance message.
+
+Two cut-point regressions fail before this change: a caller dies after acquiring
+a request reservation but before sending the GenServer call, and a caller dies
+after reserving close but before submitting its control message. The corrected
+cases reclaim the unused request slot during blocked native I/O and close the
+abandoned generation within one second. Two further cases cover an expired
+unsubmitted request followed by a late mutation message, and an unsubmitted close
+whose caller remains alive after its deadline.
+
+The default gate passes 159 checks with 23 excluded, minimum BEAM passes all 32
+persistent-connection tests, and ExDoc passes without warnings. The real SDK
+lifecycle and stopped-child close cases both pass on current Linux in 150.4
+seconds and minimum Linux in 181.5 seconds, with the unchanged byte-counter
+hosts. Request queues, caller monitors and reservations drain to baseline;
+admission tables, owned Ports and children disappear after close. All ten FD
+samples remain 16. Current native RSS remains 21016 KiB; sanitizer RSS grows from
+164992 to 189252 KiB, so no sanitizer plateau is claimed. The stopped child is
+forcibly terminated; its leak finalization is not claimed.
+
+Default-suite coverage is 88.6%, below the unchanged 95% gate. Native pipe
+backpressure, full native control/instrumentation and fault matrices, remaining
+process-flow cases and full build/archive acceptance remain open.
+
+| Orphan-admission artifact | SHA-256 |
+| --- | --- |
+| Admission implementation | `6dd6f4983da8043ca230988b076688740f91807f8c825ad4bc8c65efc7d95d59` |
+| Connection | `c642ec93665717bf0604115f6768f0b515af3961106be1e01b266181e26efd55` |
+| Persistent connection tests | `25209bd459cc58bf5a3151ed43121bdab926172f0992b4f1d7bf102c43375cd9` |
+| Failing cut-point log | `839ff353e9ae7687f93419872f610f30b4d6728c1dc5d4e5aeb9dad8ba39b2e5` |
+| Current default gate log | `8a67499cb1b0df0ef1c804f58f34fac916a2c7666bc6e1f4e9e9ccc8e082e2aa` |
+| Minimum focused log | `29cea15a0167fe77fc314de437c259c36ed9656ed9e881fff2fb87b14c92c022` |
+| Current Linux lifecycle/close log | `1a62b26902b30425d3bf4c71c34887fe9bbc7bbc99cd9476b10ed6e4cea50c90` |
+| Minimum Linux sanitizer lifecycle/close log | `13972ecc20ad23b415c15262b3deb75f15be5f1b41edc53c04dbdcb1aeac70b2` |

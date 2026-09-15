@@ -32,7 +32,9 @@ defmodule Wotex.Matter.PersistentBridgeTest do
       assert mailbox_reaches?(handle.pid, 64, 100)
       assert File.read!(audit) == initial
       assert {:error, %Error{code: :busy, effect: :none}} = Native.health(handle, 25)
-      assert Process.info(handle.pid, :message_queue_len) == {:message_queue_len, 64}
+      assert mailbox_requests(handle.pid) == 64
+      assert {:message_queue_len, total} = Process.info(handle.pid, :message_queue_len)
+      assert total <= 65
     after
       :sys.resume(handle.pid)
       for caller <- callers, do: assert({:ok, %{"status" => "ready"}} = Task.await(caller, 6_000))
@@ -52,7 +54,9 @@ defmodule Wotex.Matter.PersistentBridgeTest do
         assert {:error, %Error{code: :timeout}} = Task.await(caller, 1_000)
       end
 
-      assert Process.info(handle.pid, :message_queue_len) == {:message_queue_len, 64}
+      assert mailbox_requests(handle.pid) == 64
+      assert {:message_queue_len, total} = Process.info(handle.pid, :message_queue_len)
+      assert total <= 65
       assert {:error, %Error{code: :busy, effect: :none}} = Native.health(handle, 25)
       assert File.read!(audit) == initial
     after
@@ -178,6 +182,118 @@ defmodule Wotex.Matter.PersistentBridgeTest do
       for caller <- [active, mutation | queued], do: Task.shutdown(caller, :brutal_kill)
       Native.disconnect(handle)
     end
+  end
+
+  @tag :orphan_admission
+  test "WMA-C03 reservations abandoned before message submission are reclaimed during I/O" do
+    audit = temporary_path("orphan-admission")
+    assert {:ok, handle} = Native.connect(options(fixture("silent_request", audit)))
+    active = spawn(fn -> Native.health(handle, 10_000) end)
+    assert request_recorded?(audit, 100)
+    parent = self()
+
+    orphan =
+      spawn(fn ->
+        result =
+          Native.Admission.acquire(
+            handle.admission,
+            handle.pid,
+            handle.generation,
+            System.monotonic_time(:millisecond) + 5_000
+          )
+
+        send(parent, {:reserved, result})
+        Process.sleep(:infinity)
+      end)
+
+    try do
+      assert_receive {:reserved, {:ok, _}}, 1_000
+      assert admission_reaches?(handle, 2, 100)
+      Process.exit(orphan, :kill)
+      assert admission_reaches?(handle, 1, 20)
+      assert Process.alive?(handle.pid)
+    after
+      Process.exit(orphan, :kill)
+      Process.exit(active, :kill)
+      Native.disconnect(handle)
+    end
+  end
+
+  @tag :orphan_admission
+  test "WMA-C03 a caller lost before submitting its reserved close cannot strand the generation" do
+    assert {:ok, handle} = Native.connect(options(fixture("valid")))
+    owner_monitor = Process.monitor(handle.pid)
+    parent = self()
+
+    orphan =
+      spawn(fn ->
+        send(
+          parent,
+          {:closing,
+           Native.Admission.begin_close(
+             handle.admission,
+             handle.pid,
+             handle.generation,
+             System.monotonic_time(:millisecond) + 5_000
+           )}
+        )
+
+        Process.sleep(:infinity)
+      end)
+
+    try do
+      assert_receive {:closing, {:first, _}}, 1_000
+      Process.exit(orphan, :kill)
+      assert_receive {:DOWN, ^owner_monitor, :process, _, :normal}, 1_000
+      assert :ets.info(handle.admission) == :undefined
+    after
+      Process.exit(orphan, :kill)
+      Native.disconnect(handle)
+    end
+  end
+
+  @tag :orphan_admission
+  test "WMA-C03 an expired unsubmitted reservation rejects late messages without native I/O" do
+    audit = temporary_path("orphan-expiry")
+    assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
+    initial = File.read!(audit)
+    deadline = System.monotonic_time(:millisecond) + 25
+
+    assert {:ok, lease} =
+             Native.Admission.acquire(handle.admission, handle.pid, handle.generation, deadline)
+
+    try do
+      assert admission_reaches?(handle, 0, 20)
+
+      assert {:error, %Error{code: :timeout, effect: :none}} =
+               GenServer.call(
+                 handle.pid,
+                 {:bounded, {:request, handle.generation, @write, 25}, deadline, lease}
+               )
+
+      assert File.read!(audit) == initial
+      assert {:ok, %{"status" => "ready"}} = Native.health(handle)
+    after
+      Native.disconnect(handle)
+    end
+  end
+
+  @tag :orphan_admission
+  test "WMA-C03 an unsubmitted close cannot outlive its deadline even with a live caller" do
+    assert {:ok, handle} = Native.connect(options(fixture("valid")))
+    monitor = Process.monitor(handle.pid)
+
+    assert {:first, _} =
+             Native.Admission.begin_close(
+               handle.admission,
+               handle.pid,
+               handle.generation,
+               System.monotonic_time(:millisecond) + 25
+             )
+
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+    assert :ets.info(handle.admission) == :undefined
+    assert :ok = Native.disconnect(handle)
   end
 
   test "native one-shot handles acquire one existing-store owner per concrete request" do
@@ -888,10 +1004,15 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     path
   end
 
+  defp mailbox_requests(pid) do
+    {:messages, messages} = Process.info(pid, :messages)
+    Enum.count(messages, &match?({:"$gen_call", _, {:bounded, _, _, _}}, &1))
+  end
+
   defp mailbox_reaches?(_, _, 0), do: false
 
   defp mailbox_reaches?(pid, count, attempts) do
-    if Process.info(pid, :message_queue_len) == {:message_queue_len, count} do
+    if mailbox_requests(pid) == count do
       true
     else
       Process.sleep(5)
