@@ -114,6 +114,15 @@ libcoap version/revision, lowercase binary SHA-256 and changed-file rejection.
 The verifier starts no Port and changes no permissions. Connection dispatch and
 native process ownership remain unaccepted.
 
+`native_wire_test.exs` executes 13 exact tests and one generated property at the
+pure BEAM receive boundary. It covers the 128 KiB JSON-line ceiling, duplicate
+members, integer bounds, exact ready identity and response correlation, canonical
+base64, the 32,768-byte inline threshold, resolved 1 MiB bodies, Message option
+rules and the finite native error vocabulary. These tests exercise receiver-side
+outcomes corresponding to native-v1 F01, F02, F08 and F10–F13. They do not run a
+native helper or accept body assembly, process closure, report credit or Port
+ownership.
+
 ## Required verification
 
 ### Datagram deadline assertions

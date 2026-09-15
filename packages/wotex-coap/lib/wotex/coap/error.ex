@@ -56,11 +56,14 @@ defmodule Wotex.CoAP.Error do
               :socket_failed,
               :datagram_failed,
               :transport_error,
-              :exchange_unavailable
+              :exchange_unavailable,
+              :native_unavailable,
+              :context_store_unavailable
             ],
        do: :unavailable
 
-  defp classify(code, _) when code in [:busy, :observation_active], do: :rate_limited
+  defp classify(code, _) when code in [:busy, :observation_active, :context_store_locked],
+    do: :rate_limited
 
   defp classify(code, _)
        when code in [
@@ -83,7 +86,8 @@ defmodule Wotex.CoAP.Error do
               :unsupported_critical_option,
               :duplicate_option,
               :invalid_option_length,
-              :empty_payload_marker
+              :empty_payload_marker,
+              :native_protocol_error
             ],
        do: :protocol
 
@@ -112,6 +116,11 @@ defmodule Wotex.CoAP.Error do
               :invalid_datagram_config,
               :invalid_datagram_handle,
               :invalid_datagram,
+              :context_store_corrupt,
+              :context_store_full,
+              :invalid_context_store,
+              :fresh_context_required,
+              :sequence_exhausted,
               :ssl_not_started
             ],
        do: :permanent

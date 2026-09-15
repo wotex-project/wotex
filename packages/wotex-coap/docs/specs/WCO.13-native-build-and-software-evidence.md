@@ -5,7 +5,7 @@ spec:
   status: accepted
   version: 1.7.0
   owner: wotex-coap
-  updated: 2026-09-09
+  updated: 2026-09-15
 ---
 
 # WCO.13 Native OSCORE owner, builds and software evidence
@@ -13,9 +13,10 @@ spec:
 UDP exchanges remain BEAM code; DTLS remains OTP `:ssl`. OSCORE uses one
 explicitly selected C executable through an Erlang Port and the pinned libcoap
 exchange engine. Mix owns build/test orchestration and ExUnit owns assertions.
-Python is not a runtime or target orchestration dependency. The OSCORE helper
-and Mix tasks are planned contracts; [provenance](../provenance/executable-evidence.md)
-identifies executed BEAM/OTP and native peer evidence separately.
+Python is not a runtime or target orchestration dependency. The OSCORE worker,
+Port owner and Mix tasks are planned contracts;
+[provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
+and native peer evidence separately.
 
 ## WCO-N01 — Reproducible native builds
 
@@ -200,6 +201,16 @@ validated values into its own bounded storage before releasing that pool.
 Admission does not prove a valid body reference, remaining deadline, free queue
 slot, native session state or wire-size budget; the worker checks those before
 SDK dispatch. Live worker/Port tests remain separate.
+
+`Wotex.CoAP.Native.Wire` implements the pure BEAM receive boundary for complete
+lines, ready identity and request/control response envelopes. It enforces the
+same frame limits, native integer domain, printable correlation IDs, canonical
+bytes, inline threshold and Message option/header rules. A streamed-body result
+requires a previously completed binary from the owner, and the resulting
+Message contains that binary rather than its native body ID. Its ExUnit tests
+cover the receiver-side outcomes corresponding to F01, F02, F08 and F10–F13.
+They do not run the native helper, close a process generation, assemble body
+events or accept the complete native corpus.
 
 Paths and content-format numbers obey .10/.11. Body chunks decode to at most
 32,768 bytes; offsets must exactly equal the next expected offset. The byte
