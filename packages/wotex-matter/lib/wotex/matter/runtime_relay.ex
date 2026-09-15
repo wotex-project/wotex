@@ -11,6 +11,10 @@ defmodule Wotex.Matter.RuntimeRelay do
   controller. A monitored native connection that disappears terminates the route
   even when it cannot send its own terminal notification. Module loading starts
   no process or protocol activity.
+
+  Startup accepts keyword option lists and a budget from 1 to 60,000 ms before
+  acquiring a client. Unrecognized process calls return a structured error
+  without terminating the route or exposing callback arguments in crash logs.
   """
 
   use GenServer
@@ -48,24 +52,28 @@ defmodule Wotex.Matter.RuntimeRelay do
       when is_pid(owner) and is_binary(request_id) and request_id != "" and
              operation in [:observeproperty, :subscribeevent] and
              kind in [:attribute, :event] and is_list(client_options) and
-             is_list(stream_options) and is_integer(timeout) do
-    init = %{
-      state: :opening,
-      owner: owner,
-      request_id: request_id,
-      operation: operation,
-      kind: kind,
-      address: address,
-      client_options: client_options,
-      stream_options: stream_options,
-      timeout: timeout
-    }
+             is_list(stream_options) and is_integer(timeout) and timeout in 1..60_000 do
+    if Keyword.keyword?(client_options) and Keyword.keyword?(stream_options) do
+      init = %{
+        state: :opening,
+        owner: owner,
+        request_id: request_id,
+        operation: operation,
+        kind: kind,
+        address: address,
+        client_options: client_options,
+        stream_options: stream_options,
+        timeout: timeout
+      }
 
-    case GenServer.start(__MODULE__, init, timeout: timeout + 250) do
-      {:ok, pid} -> GenServer.call(pid, :handle)
-      {:error, %Error{}} = error -> error
-      {:error, {:shutdown, %Error{} = error}} -> {:error, error}
-      {:error, _} -> {:error, Error.new(:subscription_failed)}
+      case GenServer.start(__MODULE__, init, timeout: timeout + 250) do
+        {:ok, pid} -> GenServer.call(pid, :handle)
+        {:error, %Error{}} = error -> error
+        {:error, {:shutdown, %Error{} = error}} -> {:error, error}
+        {:error, _} -> {:error, Error.new(:subscription_failed)}
+      end
+    else
+      {:error, Error.new(:invalid_subscription)}
     end
   catch
     :exit, _ -> {:error, Error.new(:subscription_failed)}
@@ -157,6 +165,9 @@ defmodule Wotex.Matter.RuntimeRelay do
   end
 
   def handle_call({:close, _}, _, state),
+    do: {:reply, {:error, Error.new(:invalid_handle)}, state}
+
+  def handle_call(_, _, state),
     do: {:reply, {:error, Error.new(:invalid_handle)}, state}
 
   @impl GenServer

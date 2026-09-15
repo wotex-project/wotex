@@ -3093,3 +3093,50 @@ archive requirements.
 | Default gate | `e13311c14cd766ee8f54e7faccf933fc7d125c98e0c81f8eb9b4b438d32ed0dc` |
 | Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 | ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+
+
+## Runtime relay admission and unknown calls
+
+The direct relay boundary rejects malformed client/stream keyword lists and
+startup budgets outside 1–60,000 ms before client acquisition. Duplicate or
+unsupported stream options and invalid interval/queue limits also fail before
+connection setup. Finite upper boundaries preserve the normalized native request.
+Unrecognized process calls return `invalid_handle` and preserve the live route.
+
+The pre-change probes accept malformed option lists and budgets of -1 and 0.
+An unknown call also crashes the relay with a function-clause exception. Its
+OTP 29.0.4 crash report includes synthetic request data in callback arguments,
+although `format_status/1` redacts the last message and displayed state.
+The unknown-call fallback prevents that untrusted input from reaching the
+exception path. This is a bounded input-handling result, not a claim that the
+relay controls every external OTP crash-report mechanism.
+
+Eight relay tests cover invalid startup input, valid limits, owner/request/path
+binding, forged capabilities, single-use frame tokens, 64 pending opening
+reports followed by overflow, invalid metadata, dead owners, connection failure
+and unknown-call diagnostics. Together with the existing Runtime stream cases,
+they pass 15 focused tests. The initial upper-bound oracle used the public option
+name instead of the normalized client field; the corrected assertion checks
+`queue_limit` and the final gates below pass.
+
+Both Linux lanes pass those 15 cases and the real SDK Runtime-loss case:
+16 cases in 1.6 and 2.1 seconds. Native connection/child loss emits one terminal
+notification and reaps each generation within 1000 ms. Observed cleanup is
+14/21 ms currently and 72/25 ms on the minimum ASan/UBSan lane. The native
+implementation remains `61ba553`. The default gate passes 221 checks with
+34 excluded in 70.3 seconds. Both formatters and ExDoc pass. This packet does
+not accept the remaining C09 software, coverage or archive requirements.
+
+| Relay boundary artifact | SHA-256 |
+| --- | --- |
+| Relay implementation | `c1d68dd6c206bc2cac388e92256794efe60f0c37bee5773beb34635e5c852e2d` |
+| Relay boundary cases | `950ce0bcef8c38ea61698dc88b8905ab76d92c59c1c79c0a8b9f6988500ac3a3` |
+| Before-fix regression log | `1d139402d3d2aabaa83402b5197e181013a37b51f50328c9ca2495555bf171c5` |
+| Default gate | `4ca1f2b5bfe73644515d7c25be98f1f5adc5d5b2605ecddbe917231520770dac` |
+| Focused gate | `3d5ce4b45521271ee90bc8b72d0fa26bc41d5d59072d283e2546abefc0546012` |
+| Minimum formatter | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
+| Current relay and SDK tests | `4f7fe6ffbe841d18b3e8b3e4dcc3cfa3790ac8b775c22af104cf8bf5bde3d36e` |
+| Current native loss observations | `4dea3cb88c029f6e37aefe6fa69936199d126cf1548907a4fc5ede812a442073` |
+| Minimum relay and SDK tests | `c10c670b7ff5aaebd8cf93a0110ead760e7c477b6bdda44d0619567b05b187be` |
+| Minimum native loss observations | `ce4dfb3e0037e1435628597a5d43e7863df6c7b4a09bdf17ee5ee5ace038a324` |
