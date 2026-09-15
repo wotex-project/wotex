@@ -1613,3 +1613,56 @@ remain open. Forced pipe-pressure children still do not provide leak finalizatio
 | Advisory audit log | `947d36e4c60803d5242b03f9d04555a254b09399c2f8881ec39964b3c09c20a5` |
 | Final current Linux SDK/corpus log | `52242432779d891fb6b7fc5ed8772ddb0f3bfc443a54eb05923db6453f6291e3` |
 | Final minimum Linux sanitizer SDK/corpus log | `cd4aaca9df3dfb9d9375a289e0484b403789156af635d54740e05a0b669b40d3` |
+
+## Native input lifetime during pending work
+
+The native host owns one input-lifetime thread through controller destruction.
+It polls stdin hangup/error state without reading command bytes. Loss of stdin
+starts a 750 ms cooperative grace; if native execution or destruction remains
+blocked, the monitor terminates the process. Normal return joins the thread.
+The monitor never invokes SDK cleanup concurrently with an interaction.
+
+The real SDK regression submits a read for an unresolved operational node and
+kills its BEAM connection while that request remains pending. The preceding
+host survived the one-second limit and returned only with its five-second request
+deadline. The corrected host releases the child in 760 ms on current Linux and
+767 ms on minimum Linux. Both cases release the Port and admission table and
+reopen the durable controller successfully. Native unit tests also exercise
+ordinary monitor destruction and hangup during a blocked child, including reaping.
+
+Both newly built SDK hosts pass the full lifecycle workload against freshly
+commissioned lighting peers: 1000 sequential reads, 32 concurrent callers,
+100 receiver-death cycles and 100 open/close cycles. Current Linux passes in
+149.4 seconds and minimum Linux in 179.4 seconds. Admission, caller-monitor and
+Port counts return to baseline, and every native FD sample remains 16. Current
+native RSS remains 20988 KiB; sanitizer RSS grows from 165756 to 190080 KiB, so
+no sanitizer plateau is claimed. All nine subsequent owner-loss, request-ID,
+one-shot, pressure and native-corpus tests pass in 7.9 and 13.7 seconds. The
+fixture-owned peers are also reaped.
+
+The default gate passes 169 checks with 26 excluded; ExDoc, both SDK builds,
+six CTest executables in each native configuration and 15 advisory queries pass.
+ASan/UBSan and leak detection remain enabled. The hangup fallback and deliberately
+killed pressure children do not execute callback destructors or leak finalization;
+their evidence establishes process/resource release only. Normally closed
+controllers retain the sanitizer cleanup checks. Native control interruptibility,
+full callback/resource instrumentation and fault matrices, F11–F13, complete
+build/archive receipts and the unchanged 95% coverage gate remain open.
+
+| Pending-owner artifact | SHA-256 |
+| --- | --- |
+| Input lifetime | `ec4f9066a4a2c65ca68b9b3eaa6f4826b37a192ef30698c3807e0be88653ae55` |
+| Native entry point | `911d66c61b30a6c4693df3d174ee241ad8ab94198f8d1705e0f006d31373c4cc` |
+| Native controller tests | `633abbe0d13f03e82fb375916312d36b9b8c15180c1b51a4d9a0c55bfb8e2c1d` |
+| SDK pending-owner test | `ffb56588d141a92f505f312a8571ab9101691563429e9236e7905361fb1e4609` |
+| Current native host | `85ad7deadd3198c7a03cd05bad7c61ca2e7870fab45ecf1f1c2e67fdb0b3ad36` |
+| Minimum sanitizer native host | `a915362353c5d0bd9fd6f4cd194993fab8f7ad0ff94c3805e154978aa4eadba3` |
+| Failing SDK pending-owner log | `9ebbefd9143acfb8da1cfa7cc551031b3a90e61b972deeb7c97c8a24893a4b55` |
+| Default gate log | `988fff4c065ea61245503ad66e819f9fbd7f8e13da01be1b684a6464a6966116` |
+| Native build log | `58cb1fe3e81fef3b36b9541416e486266cee32ed808c4267e5d5b0f51fac9ffa` |
+| Native CTest log | `6dff125ed425183961a2b2b6c77917028eaedac892a9eaf3179eb751339ebc96` |
+| Advisory audit log | `cc75ced8da953cb5668bd93328c38861095e87c8c491bd8e683902a67a76e2fc` |
+| Current Linux lifecycle log | `7dbafc18161996cedb961a8a227eaf4295875f04dc137ff4222462b3c4c935de` |
+| Minimum Linux sanitizer lifecycle log | `2651e791861d75df07b5094f91ca76aefe797d2faec2ea734ca5481b57ee5175` |
+| Current Linux nine-case log | `61e18de459e671a2dd3d28ed0575351b0c4a5c7bfb66e643863183666cf26013` |
+| Minimum Linux sanitizer nine-case log | `dd6c34b90b4160a7b2cc12a11653a9c3d00e3c04a9cdb5da346e7e27c841f048` |

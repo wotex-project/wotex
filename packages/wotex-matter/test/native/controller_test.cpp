@@ -1,8 +1,12 @@
 #include "wotex_matter/protocol.hpp"
+#include "wotex_matter/input_lifetime.hpp"
 
 #include <cassert>
+#include <csignal>
 #include <sstream>
 #include <string>
+#include <sys/wait.h>
+#include <unistd.h>
 
 namespace {
 
@@ -160,6 +164,57 @@ void TestRequestCounterAndReservedClose() {
   }
 }
 
+void TestInputLifetime() {
+  int input[2];
+  assert(pipe(input) == 0);
+  const auto normal_start = std::chrono::steady_clock::now();
+  {
+    wotex::matter::InputLifetime lifetime(input[0]);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  assert(std::chrono::steady_clock::now() - normal_start <
+         std::chrono::seconds(1));
+
+  int ready[2];
+  assert(pipe(ready) == 0);
+  const pid_t child = fork();
+  assert(child >= 0);
+  if (child == 0) {
+    close(input[1]);
+    close(ready[0]);
+    wotex::matter::InputLifetime lifetime(input[0]);
+    const char byte = 'r';
+    assert(write(ready[1], &byte, 1) == 1);
+    close(ready[1]);
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::_Exit(42);
+  }
+
+  close(input[0]);
+  close(ready[1]);
+  char byte = 0;
+  assert(read(ready[0], &byte, 1) == 1 && byte == 'r');
+  close(ready[0]);
+  const auto started = std::chrono::steady_clock::now();
+  close(input[1]);
+  int status = 0;
+  bool reaped = false;
+  while (std::chrono::steady_clock::now() - started < std::chrono::seconds(1)) {
+    const pid_t result = waitpid(child, &status, WNOHANG);
+    if (result == child) {
+      reaped = true;
+      break;
+    }
+    assert(result == 0 || (result == -1 && errno == EINTR));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  if (!reaped) {
+    kill(child, SIGKILL);
+    waitpid(child, &status, 0);
+  }
+  assert(reaped && WIFEXITED(status) && WEXITSTATUS(status) == EXIT_FAILURE);
+}
+
 } // namespace
 
 int main() {
@@ -168,5 +223,6 @@ int main() {
   TestLifecycleAndFabricAdmission();
   TestStartupFailureAndEofCleanup();
   TestRequestCounterAndReservedClose();
+  TestInputLifetime();
   return 0;
 }
