@@ -1042,3 +1042,45 @@ warnings.
 | Minimum focused log | `38ff9ba414f21b9b86c5a7a0089e02a7f1e7a1a2467292e82bc30fa975cc1b7b` |
 | Current Linux native log | `6c42b6f94c69319fb145475f20abc8e96b9ce97af38ba6d20856b8668bced50f` |
 | Minimum Linux native log | `ba9c8e267a8fbde9f4d494af5a17125e475b792e4cc077ec4edf5b1e8d3d39d3` |
+
+## SDK reaper callback lifetime
+
+An additional lifecycle run detects an AddressSanitizer heap-use-after-free in
+`SdkControllerBackend::Impl::ReapPending`. The API thread removes a completed
+interaction from its ownership vector while the SDK event loop still has a
+queued reaper holding that interaction's raw pointer. The next read can trigger
+the invalid access. Subscription admission contains the same premature removal.
+
+Interaction and subscription admission now retain completed contexts until their
+scheduled SDK reaper removes them. Pending completion schedules at most one
+reaper. Shutdown retains its separate cleanup after the event loop stops. The
+existing 64-entry admission limits include contexts awaiting their reaper;
+completion does not release ownership early.
+
+The failing minimum Linux run takes 2.0 seconds on the earlier sanitized host
+`33c06a9a...caf0`. Its normal counterpart passes in 149.5 seconds, so a normal
+pass alone does not expose this race. Those discovery runs include a pending
+BEAM ledger refactor. The corrective runs use the preceding committed BEAM
+implementation and the new native binaries below. The same tracked lifecycle
+test passes in 148.8 seconds on current Linux and 179.4 seconds on minimum Linux
+with ASan/UBSan and leak detection enabled. Each executes 1000 sequential reads,
+32 concurrent callers, 100 receiver-death cycles and 100 open/read/close cycles.
+Native children, Ports, monitors and retained subscription maps return to their
+asserted baselines. Ten native FD samples remain 16. Normal RSS remains 21036 KiB;
+sanitizer RSS increases from 164756 to 189016 KiB and is not a plateau claim.
+Cooperative native exits complete without sanitizer errors.
+
+Both SDK binaries are incrementally rebuilt. Both six-test CTest lanes, fifteen
+advisory queries, the default 144-check gate and ExDoc pass. This callback-lifetime
+fix does not complete the remaining C09 fault, admission or full matrix gates.
+
+| Reaper lifetime artifact | SHA-256 |
+| --- | --- |
+| Native controller source | `3631d75125532f936fdcc6bb33eec4c8d38776b02acafabd7e63a91f50a95c99` |
+| Lifecycle test | `80387262b4c80489270fff1fd9c104bc21d72747973317aaf99784b229aa56f6` |
+| Normal host | `cc9a45e39c698fc60136c080e6bcdbbbb48c0f6aa9e6603c04edbc0add3e976a` |
+| Sanitized host | `db5d30cbd377a28bf51c049fe14788fdc781e28565316ed8794418c586e99469` |
+| Failing minimum sanitizer log | `42b484c8e385d62d7e6f39122175b938c45d73f77306d88275a7508cc1c16f00` |
+| Earlier normal log | `fa2082322e222a993b9aa8f3519f939436f9bb8e2ecfdfa39cdccec3f95c5662` |
+| Corrected current Linux log | `6232b5aa1d74d3478b845f6e5102fc622080df93999f1be479fce12aaf86f695` |
+| Corrected minimum sanitizer log | `f6654ddc48a65a33897f0f7031b1c18e441b55fe3ed418318a6842dab3b9b3bf` |

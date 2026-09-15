@@ -1448,6 +1448,9 @@ class SdkControllerBackend::Impl final
     void MarkDone() {
       {
         std::lock_guard<std::mutex> lock(mutex_);
+        if (done_) {
+          return;
+        }
         done_ = true;
       }
       (void) chip::DeviceLayer::PlatformMgr().ScheduleWork(
@@ -2330,12 +2333,8 @@ InteractionResponse SdkControllerBackend::Impl::Interact(
   std::shared_ptr<Pending> pending;
   {
     std::lock_guard<std::mutex> lock(pending_mutex_);
-    pending_.erase(
-        std::remove_if(pending_.begin(), pending_.end(),
-                       [](const std::shared_ptr<Pending> &candidate) {
-                         return candidate->done();
-                       }),
-        pending_.end());
+    // A completed context still owns a queued SDK reaper callback. Only that
+    // callback may release its entry before the event loop has stopped.
     if (!accepting_interactions_ || pending_.size() >= 64U) {
       return {false, InteractionError{"interaction_busy"}};
     }
@@ -2493,13 +2492,7 @@ SubscriptionResponse SdkControllerBackend::Impl::Subscribe(
   std::shared_ptr<NativeSubscription> subscription;
   {
     std::lock_guard<std::mutex> lock(subscription_mutex_);
-    subscriptions_.erase(
-        std::remove_if(
-            subscriptions_.begin(), subscriptions_.end(),
-            [](const std::shared_ptr<NativeSubscription> &candidate) {
-              return candidate->done();
-            }),
-        subscriptions_.end());
+    // ReapSubscription retains ownership through its scheduled SDK callback.
     if (!accepting_interactions_ || subscriptions_.size() >= 64U) {
       SubscriptionResponse busy;
       busy.error_code = "subscription_busy";
