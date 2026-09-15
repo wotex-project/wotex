@@ -2773,3 +2773,41 @@ remain separate from these focused native results.
 | ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |
 | Pre-change coverage log | `e314440b7a6abe76981ff5bbc50970129f6663023b917645a3ef8476b5f13cad` |
 | Pre-change coverage JSON | `4b3fc36a1d938f929c3159569522da82353eecce427bd3558846bdb46a023bc2` |
+
+## Peer log retention and lifetime under continuous output
+
+The second complete current-toolchain cohort, from frozen `9be7331` source,
+rejects acceptance: 229 of 232 executed checks pass in 966.8 seconds, with one
+hardware case excluded and 29 of 32 required software cases passing. The
+one-shot stress case completes 1000 sequential reads before failing during its
+100 open/close cycles. Its peer reaches the fixture command's 16 MiB output
+limit and is terminated. Lighting and ACL commissioning fail after their
+previously started peers' basic pairing windows close. All thirteen owned
+peers are reaped. These results do not establish complete P09 acceptance.
+
+The verbose-peer regression confirms that the output cap terminates a live
+fixture. `SoftwarePeer` now explicitly selects bounded log truncation while
+other fixture commands retain failure at the output limit. The retained prefix
+and truncation marker occupy at most 16 MiB. Continuous output cannot postpone
+cancellation, owner-loss cleanup or the original absolute lifetime. Assertions
+write more than twice the limit, verify a later peer checkpoint, cancel the
+still-live peer, and check exact log size, marker, permissions and child cleanup.
+A separate continuously writing peer expires within its lifetime and cleanup
+budget. All 23 peer/build/runner tests pass in 8.0 seconds on the current
+toolchain and 6.5 seconds on the minimum toolchain. The current default gate
+passes 208 checks with 33 excluded in 71.5 seconds; ExDoc passes. Native sources
+are unchanged. Case-time startup of uncommissioned peers and a fresh complete
+software run remain required.
+
+| Peer-lifetime artifact | SHA-256 |
+| --- | --- |
+| Rejected second cohort receipt | `a1d2cdea5421de869a1a27aaea3248f450e7673361ce86c6550e907dc223895a` |
+| Rejected second cohort test log | `65d37d27a7ece827f272a3a9adc98cd0d22f2b04ca1d19fd2d54292d23880c28` |
+| Peer command owner | `757270c195265b9f1831e2ad57fcad8e7db127b34c852a49556199360f9e67fb` |
+| Peer lifetime | `b2b4d4f72a9c0bb994ffbd2429b676449955f6a78e89aee67f4fbc9b99d8dcca` |
+| Peer assertions | `d8199f9eedc1853f100003519cf6aa2e013627ac431dfe60f3ef2d13bc6820c7` |
+| Verbose-peer failure before correction | `a02b26348589d6d5e52b91ddc97a8163fbaf824663d739d9be1f0b26946c25cc` |
+| Current focused gate | `87cfcb9e1a0001528756bb95be5ca750f0fb8afc11ba00844d41d32fe5c1783e` |
+| Minimum focused gate | `09f8aabb74aa44a2db4fcfb310e468118aed3f3ba4b76d2c86a4f6825e4f1483` |
+| Default gate | `702bc2f9011d9096a36d8be4b4db028e328b1781dbd2ed7cf8ce54ea746b4b56` |
+| ExDoc gate | `c52984c1b5255318f6bb82d5f6ba6e4273631b6ccc12c6587db2e3754e151ccb` |

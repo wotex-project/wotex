@@ -226,8 +226,12 @@ initialization. The marker may span output chunks and produces one readiness
 notification. Startup and lifetime budgets are explicit. Cancellation preserves
 the child identity through delayed startup and checks that its Port and OS
 process have been reaped. Early exit fails setup or teardown. The command owner
-also observes normal and abnormal caller exit. Peer logs are owner-only files;
-readiness notifications contain no output bytes.
+also observes normal and abnormal caller exit. Peer logs are owner-only files
+bounded to 16 MiB, including an explicit truncation marker. Further peer output
+is consumed without retaining it or terminating the peer. Cancellation, caller
+loss and the absolute lifetime remain enforceable during continuous output.
+Other fixture commands fail at their output limit. Readiness notifications
+contain no output bytes.
 
 `SoftwareScenarios.with_fixtures/3` owns thirteen peer processes and their
 controller stores for the required scenario inventory. It assigns distinct

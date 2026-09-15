@@ -147,6 +147,71 @@ defmodule Wotex.Matter.SoftwarePeerTest do
     assert reaped?(child)
   end
 
+  test "a verbose peer remains usable after its log fills and can still be cancelled", %{root: root} do
+    executable =
+      script(
+        root,
+        "printf 'Server Listening...'; head -c 33554432 /dev/zero; printf done > \"$1\"; exec cat /dev/zero"
+      )
+
+    checkpoint = Path.join(root, "checkpoint")
+    assert {:ok, peer} = SoftwarePeer.start(executable, [checkpoint], options(root))
+
+    try do
+      assert await_file(checkpoint, System.monotonic_time(:millisecond) + 2_000)
+      assert Process.alive?(peer.command.pid)
+      started = System.monotonic_time(:millisecond)
+      assert :ok = SoftwarePeer.stop(peer)
+      assert System.monotonic_time(:millisecond) - started <= 1_000
+      assert reaped?(peer.os_pid)
+      log = File.read!(Path.join(root, "peer.log"))
+      assert byte_size(log) == 16_777_216
+      assert String.ends_with?(log, "\n[software peer log truncated]\n")
+      assert Bitwise.band(File.stat!(Path.join(root, "peer.log")).mode, 0o777) == 0o600
+    after
+      SoftwarePeer.stop(peer)
+    end
+  end
+
+  defp await_file(path, deadline) do
+    cond do
+      File.regular?(path) ->
+        true
+
+      System.monotonic_time(:millisecond) >= deadline ->
+        false
+
+      true ->
+        Process.sleep(5)
+        await_file(path, deadline)
+    end
+  end
+
+  test "continuous peer output cannot extend its absolute lifetime", %{root: root} do
+    executable =
+      script(
+        root,
+        "printf 'Server Listening...'; while [ ! -f \"$1\" ]; do sleep 0.01; done; exec cat /dev/zero"
+      )
+
+    gate = Path.join(root, "release-output")
+    options = Keyword.put(options(root), :timeout, 1_500)
+    started = System.monotonic_time(:millisecond)
+    assert {:ok, peer} = SoftwarePeer.start(executable, [gate], options)
+    reference = peer.command.reference
+
+    try do
+      File.write!(gate, "ready")
+      assert_receive {^reference, {:error, :command_timeout}}, 2_500
+      assert System.monotonic_time(:millisecond) - started <= 2_500
+      assert reaped?(peer.os_pid)
+      assert Port.info(peer.port) == nil
+      assert File.stat!(Path.join(root, "peer.log")).size <= 16_777_216
+    after
+      SoftwarePeer.stop(peer)
+    end
+  end
+
   defp options(root),
     do: [
       startup_timeout: 1_000,

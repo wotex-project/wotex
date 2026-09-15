@@ -16,8 +16,12 @@ defmodule Wotex.Matter.SoftwarePeer do
          is_binary(marker) and byte_size(marker) in 1..256 do
       deadline = System.monotonic_time(:millisecond) + startup_timeout
 
-      command =
-        SoftwareCommand.start(executable, arguments, Keyword.delete(options, :startup_timeout))
+      command_options =
+        options
+        |> Keyword.delete(:startup_timeout)
+        |> Keyword.put(:output_overflow, :truncate)
+
+      command = SoftwareCommand.start(executable, arguments, command_options)
 
       await_ready(command, nil, deadline)
     else

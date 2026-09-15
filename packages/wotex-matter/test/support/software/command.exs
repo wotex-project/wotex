@@ -2,6 +2,7 @@ defmodule Wotex.Matter.SoftwareCommand do
   @moduledoc false
 
   @maximum_output 16_777_216
+  @truncated_log "\n[software peer log truncated]\n"
   @inherited ~w(HOME PATH DOCKER_CONFIG DOCKER_HOST DOCKER_CONTEXT DOCKER_TLS_VERIFY DOCKER_CERT_PATH WOTEX_PATH_DEPS MIX_ENV MIX_BUILD_PATH MIX_DEPS_PATH)
 
   @spec run!(String.t(), [String.t()], keyword()) :: binary()
@@ -111,10 +112,32 @@ defmodule Wotex.Matter.SoftwareCommand do
          {_, reference} = destination,
          readiness
        ) do
+    case halt_reason(owner, reference, deadline) do
+      nil ->
+        collect_output(port, owner, deadline, chunks, size, options, destination, readiness)
+
+      reason ->
+        persist(chunks, options)
+        {:error, reason}
+    end
+  end
+
+  defp collect_output(
+         port,
+         owner,
+         deadline,
+         chunks,
+         size,
+         options,
+         {_, reference} = destination,
+         readiness
+       ) do
     remaining = max(0, deadline - System.monotonic_time(:millisecond))
+    truncate? = options[:output_overflow] == :truncate
+    limit = if truncate?, do: @maximum_output - byte_size(@truncated_log), else: @maximum_output
 
     receive do
-      {^port, {:data, bytes}} when size + byte_size(bytes) <= @maximum_output ->
+      {^port, {:data, bytes}} when size + byte_size(bytes) <= limit ->
         readiness = signal_ready(readiness, bytes, destination)
 
         collect(
@@ -128,9 +151,27 @@ defmodule Wotex.Matter.SoftwareCommand do
           readiness
         )
 
-      {^port, {:data, _}} ->
-        persist(chunks, options)
-        {:error, :command_output_limit}
+      {^port, {:data, bytes}} ->
+        if truncate? do
+          retained =
+            if size == @maximum_output,
+              do: chunks,
+              else: [@truncated_log, binary_part(bytes, 0, limit - size) | chunks]
+
+          collect(
+            port,
+            owner,
+            deadline,
+            retained,
+            @maximum_output,
+            options,
+            destination,
+            signal_ready(readiness, bytes, destination)
+          )
+        else
+          persist(chunks, options)
+          {:error, :command_output_limit}
+        end
 
       {^port, {:exit_status, status}} ->
         output = persist(chunks, options)
@@ -147,6 +188,15 @@ defmodule Wotex.Matter.SoftwareCommand do
       remaining ->
         persist(chunks, options)
         {:error, :command_timeout}
+    end
+  end
+
+  defp halt_reason(owner, reference, deadline) do
+    receive do
+      {:DOWN, ^owner, :process, _, _} -> :command_owner_down
+      {:cancel, ^reference} -> :command_cancelled
+    after
+      0 -> if System.monotonic_time(:millisecond) >= deadline, do: :command_timeout
     end
   end
 
