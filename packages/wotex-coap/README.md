@@ -160,8 +160,9 @@ atomically reserves exactly 64 ordinary call slots plus separate close-control
 capacity before messages enter an owner mailbox. The connection owns this table
 and consumes its close capability. Normalized native requests use the 64-slot
 FIFO admission path, spend queue time from their deadline and return complete
-inline Messages. Body upload, streamed responses and public OSCORE dispatch
-remain planned.
+inline or correlated streamed-body Messages. Streamed responses remain private
+until exact body length/hash validation and one-time reference resolution. Body
+upload and public OSCORE dispatch remain planned.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic
@@ -170,6 +171,7 @@ withholds streamed bytes until exact length and hash verification.
 `Wotex.CoAP.Native.Report` correlates report/body
 envelopes and verifies Message metadata. `Wotex.CoAP.Native.ReportLedger` bounds
 the eight-frame credit window and serializes cumulative acknowledgments. Port
-dispatch for unary calls and Observe report-credit integration remain planned.
+dispatch for outbound body commands and Observe report-credit integration remain
+planned.
 Existing Python files perform test/build orchestration only. Their recorded
 results do not establish acceptance of the planned Mix tasks.

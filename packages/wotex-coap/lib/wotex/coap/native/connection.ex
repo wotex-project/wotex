@@ -17,14 +17,15 @@ defmodule Wotex.CoAP.Native.Connection do
   use `Port.command/3` with `:nosuspend`. Malformed, oversized, truncated,
   duplicate or otherwise unsolicited frames close the generation. Local cleanup
   signals the exact Port process and remains within the WCO-C03 1,000 ms budget.
-  Inline unary responses are supported; outbound and inbound body streaming,
-  Observe delivery and public connection dispatch remain separate obligations.
+  Unary responses may carry an inline payload or one correlated, bounded body
+  event stream. Outbound body upload, Observe delivery and public connection
+  dispatch remain separate obligations.
   """
 
   use GenServer
 
   alias Wotex.CoAP.{Error, NativeBackend, Security}
-  alias Wotex.CoAP.Native.{Admission, Command, Wire}
+  alias Wotex.CoAP.Native.{Admission, Body, Command, Report, Wire}
 
   @keys [:host, :port, :timeout, :owner, :security, :native_backend]
   @maximum_frame_bytes 131_071
@@ -270,6 +271,13 @@ defmodule Wotex.CoAP.Native.Connection do
   def handle_call(_, _, state), do: {:reply, failure(:invalid_session), state}
 
   @impl GenServer
+  def handle_info(
+        {port, {:data, bytes}},
+        %{port: port, active: %{operation: :request}} = state
+      )
+      when is_binary(bytes),
+      do: handle_request_bytes(state, bytes)
+
   def handle_info({port, {:data, bytes}}, %{port: port, active: active} = state)
       when is_binary(bytes) and not is_nil(active) do
     case receive_chunk(state.buffer, bytes) do
@@ -527,33 +535,100 @@ defmodule Wotex.CoAP.Native.Connection do
     {:stop, :normal, %{state | active: nil}}
   end
 
-  defp handle_active_line(
-         line,
-         %{active: %{operation: :request, lease: lease} = active} = state
-       ) do
-    call = Map.fetch!(state.calls, lease)
+  defp handle_request_bytes(state, bytes) do
+    case receive_chunk(state.buffer, bytes) do
+      {:line, line, rest} ->
+        handle_request_line(line, rest, %{state | buffer: <<>>})
 
-    if now() >= call.deadline do
-      state = finish_call(state, lease, failure(:timeout))
+      {:more, buffer} ->
+        {:noreply, %{state | buffer: buffer}}
+
+      :error ->
+        stop_with(failure(:native_protocol_error), state)
+    end
+  end
+
+  defp handle_request_line(line, rest, %{active: active} = state) do
+    if now() >= Map.fetch!(state.calls, active.lease).deadline do
+      state = finish_call(state, active.lease, failure(:timeout))
       {:stop, :normal, %{state | cleanup_deadline: now() + @cleanup_timeout}}
     else
-      result =
-        with {:ok, frame} <- Wire.frame(line),
-             do: Wire.response(:request, frame, active.id)
-
-      case result do
-        {:ok, _} = result ->
-          {:noreply, continue_after_call(state, lease, result)}
-
-        {:error, %Error{code: :native_protocol_error}} = result ->
-          state = finish_call(state, lease, result)
-          {:stop, :normal, %{state | cleanup_deadline: now() + @cleanup_timeout}}
+      case Wire.frame(line) do
+        {:ok, frame} ->
+          if body_event?(frame) do
+            handle_request_body(frame, rest, state)
+          else
+            handle_request_response(frame, rest, state)
+          end
 
         {:error, %Error{}} = result ->
-          {:noreply, continue_after_call(state, lease, result)}
+          stop_request_protocol(state, result)
       end
     end
   end
+
+  defp handle_request_body(frame, rest, %{active: active} = state) do
+    with true <- map_size(active.bodies) == 0,
+         {:ok, event} <- Report.body_event(frame, active.id),
+         {:ok, body} <- Body.push(active.body, event),
+         {:ok, active} <- complete_request_body(active, body, event) do
+      state = %{state | active: active}
+
+      if rest == <<>>,
+        do: {:noreply, state},
+        else: handle_request_bytes(state, rest)
+    else
+      _ -> stop_request_protocol(state, failure(:native_protocol_error))
+    end
+  end
+
+  defp complete_request_body(active, body, %{"event" => "body_end", "body_id" => id}) do
+    with {:ok, bytes, body} <- Body.take(body, id) do
+      {:ok, %{active | body: body, bodies: %{id => bytes}}}
+    end
+  end
+
+  defp complete_request_body(active, body, _), do: {:ok, %{active | body: body}}
+
+  defp handle_request_response(frame, <<>>, %{active: %{lease: lease} = active} = state) do
+    result =
+      with :ok <- response_body_reference(frame, active.bodies),
+           do: Wire.response(:request, frame, active.id, active.bodies)
+
+    case result do
+      {:ok, _} = result ->
+        {:noreply, continue_after_call(state, lease, result)}
+
+      {:error, %Error{code: :native_protocol_error}} = result ->
+        stop_request_protocol(state, result)
+
+      {:error, %Error{}} = result ->
+        {:noreply, continue_after_call(state, lease, result)}
+    end
+  end
+
+  defp handle_request_response(_, _, state),
+    do: stop_request_protocol(state, failure(:native_protocol_error))
+
+  defp response_body_reference(%{"ok" => true, "result" => result}, bodies)
+       when map_size(bodies) == 1 and is_map(result) do
+    [{id, _}] = Map.to_list(bodies)
+    if Map.get(result, "body_id") == id, do: :ok, else: failure(:native_protocol_error)
+  end
+
+  defp response_body_reference(%{"ok" => false}, bodies) when map_size(bodies) == 0, do: :ok
+  defp response_body_reference(%{"ok" => true}, bodies) when map_size(bodies) == 0, do: :ok
+  defp response_body_reference(_, _), do: failure(:native_protocol_error)
+
+  defp stop_request_protocol(%{active: %{lease: lease}} = state, result) do
+    state = finish_call(state, lease, result)
+    {:stop, :normal, %{state | cleanup_deadline: now() + @cleanup_timeout}}
+  end
+
+  defp body_event?(%{"event" => event}) when event in ["body_begin", "body_chunk", "body_end"],
+    do: true
+
+  defp body_event?(_), do: false
 
   defp close_result({:ok, nil}), do: :ok
   defp close_result({:error, %Error{}} = result), do: result
@@ -731,7 +806,13 @@ defmodule Wotex.CoAP.Native.Connection do
           {:noreply,
            %{
              state
-             | active: %{operation: :request, id: id, lease: lease},
+             | active: %{
+                 operation: :request,
+                 id: id,
+                 lease: lease,
+                 body: Body.new(),
+                 bodies: %{}
+               },
                command: command
            }}
         else

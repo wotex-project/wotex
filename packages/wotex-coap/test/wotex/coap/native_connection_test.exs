@@ -268,6 +268,57 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     assert %{"id" => "3", "operation" => "close"} = read_json(context.store, "close.json")
   end
 
+  test "WCO-N02 WCO-N03 assembles one correlated streamed response body", context do
+    File.write!(Path.join(context.store, "mode"), "request_stream")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    assert {:ok, %Wotex.CoAP.Message{payload: payload}} =
+             Connection.request(
+               pid,
+               %{method: :get, path: "/large", confirmable: true},
+               1_000
+             )
+
+    assert payload == :binary.copy("A", 32_769)
+    assert :ok = Connection.close(pid)
+    assert %{"id" => "3", "operation" => "close"} = read_json(context.store, "close.json")
+  end
+
+  test "WCO-N02 WCO-N03 closes failed or wrongly correlated body streams", context do
+    for mode <- ["request_stream_bad_hash", "request_stream_wrong_id"] do
+      File.write!(Path.join(context.store, "mode"), mode)
+      assert {:ok, pid} = Connection.start(context.options)
+      monitor = Process.monitor(pid)
+
+      assert {:error, %Error{code: :native_protocol_error}} =
+               Connection.request(
+                 pid,
+                 %{method: :get, path: "/large", confirmable: true},
+                 1_000
+               )
+
+      assert_receive {:DOWN, ^monitor, :process, ^pid, _}, 1_000
+      assert_helper_stopped(context.store, 1_000)
+      File.rm(Path.join(context.store, "request-1.json"))
+    end
+  end
+
+  test "WCO-N02 WCO-N03 rejects an unconsumed completed response body", context do
+    File.write!(Path.join(context.store, "mode"), "request_stream_inline")
+    assert {:ok, pid} = Connection.start(context.options)
+    monitor = Process.monitor(pid)
+
+    assert {:error, %Error{code: :native_protocol_error}} =
+             Connection.request(
+               pid,
+               %{method: :get, path: "/large", confirmable: true},
+               1_000
+             )
+
+    assert_receive {:DOWN, ^monitor, :process, ^pid, _}, 1_000
+    assert_helper_stopped(context.store, 1_000)
+  end
+
   test "WCO-N02 serializes admitted calls and spends queue time from each deadline", context do
     File.write!(Path.join(context.store, "mode"), "request_two")
     assert {:ok, pid} = Connection.start(context.options)
@@ -387,6 +438,18 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
     File.write!(Path.join(context.store, "mode"), "request_malformed")
     File.rm(Path.join(context.store, "request-1.json"))
+    assert {:ok, pid} = Connection.start(context.options)
+    monitor = Process.monitor(pid)
+
+    assert {:error, %Error{code: :native_protocol_error}} =
+             Connection.request(pid, %{method: :get, path: "/value", confirmable: true}, 1_000)
+
+    assert_receive {:DOWN, ^monitor, :process, ^pid, _}, 1_000
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-N02 rejects coalesced output after a unary response", context do
+    File.write!(Path.join(context.store, "mode"), "request_extra")
     assert {:ok, pid} = Connection.start(context.options)
     monitor = Process.monitor(pid)
 
@@ -808,7 +871,7 @@ defmodule Wotex.CoAP.NativeConnectionTest do
              Connection.start(Keyword.put(context.options, :timeout, 500))
 
     assert System.monotonic_time(:millisecond) - started < 1_500
-    assert_helper_stopped(context.store, 1_000)
+    assert_started_helper_stopped(context.store, 1_000)
 
     File.rm(Path.join(context.store, "helper.pid"))
 
@@ -882,6 +945,12 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
     wait_for_exit(os_pid, deadline)
     refute process_alive?(os_pid)
+  end
+
+  defp assert_started_helper_stopped(store, timeout) do
+    path = Path.join(store, "helper.pid")
+    wait_for_file(path, System.monotonic_time(:millisecond) + 100)
+    if File.exists?(path), do: assert_helper_stopped(store, timeout)
   end
 
   defp wait_for_file(path, deadline) do
@@ -989,10 +1058,38 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
     reply = fn request_id -> IO.write(response.(request_id)) end
 
-    request_reply = fn request_id ->
-      IO.write(
-        ~s({"version":1,"id":"\#{request_id}","ok":true,"result":{"type":"ack","code":69,"message_id":321,"token":{"type":"bytes","base64":"AQ=="},"options":[{"number":12,"value":{"type":"bytes","base64":"Mg=="}}],"payload":{"type":"bytes","base64":"b2s="}}}\\n)
-      )
+    request_line = fn request_id ->
+      ~s({"version":1,"id":"\#{request_id}","ok":true,"result":{"type":"ack","code":69,"message_id":321,"token":{"type":"bytes","base64":"AQ=="},"options":[{"number":12,"value":{"type":"bytes","base64":"Mg=="}}],"payload":{"type":"bytes","base64":"b2s="}}}\\n)
+    end
+
+    request_reply = fn request_id -> IO.write(request_line.(request_id)) end
+
+    stream_reply = fn request_id, event_id, expected_hash, result_kind ->
+      body = :binary.copy("A", 32_769)
+      first = binary_part(body, 0, 32_768)
+      last = binary_part(body, 32_768, 1)
+
+      hash =
+        if expected_hash == :valid,
+          do: Base.encode16(:crypto.hash(:sha256, body), case: :lower),
+          else: expected_hash
+
+      frames =
+        ~s({"version":1,"id":"\#{event_id}","event":"body_begin","body_id":"b1","length":32769,"sha256":"\#{hash}"}\\n) <>
+          ~s({"version":1,"id":"\#{event_id}","event":"body_chunk","body_id":"b1","offset":0,"data":{"type":"bytes","base64":"\#{Base.encode64(first)}"}}\\n) <>
+          ~s({"version":1,"id":"\#{event_id}","event":"body_chunk","body_id":"b1","offset":32768,"data":{"type":"bytes","base64":"\#{Base.encode64(last)}"}}\\n) <>
+          ~s({"version":1,"id":"\#{event_id}","event":"body_end","body_id":"b1"}\\n)
+
+      result =
+        case result_kind do
+          :body ->
+            ~s({"version":1,"id":"\#{request_id}","ok":true,"result":{"type":"ack","code":69,"message_id":321,"token":{"type":"bytes","base64":"AQ=="},"options":[],"body_id":"b1"}}\\n)
+
+          :inline ->
+            ~s({"version":1,"id":"\#{request_id}","ok":true,"result":{"type":"ack","code":69,"message_id":321,"token":{"type":"bytes","base64":"AQ=="},"options":[],"payload":{"type":"bytes","base64":"b2s="}}}\\n)
+        end
+
+      raw.(frames <> result)
     end
 
     wait_release = fn wait_release ->
@@ -1065,6 +1162,33 @@ defmodule Wotex.CoAP.NativeConnectionTest do
                   request_reply.(id.(request))
                   IO.read(:stdio, :line)
 
+                "request_stream" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  request_id = id.(request)
+                  stream_reply.(request_id, request_id, :valid, :body)
+                  IO.read(:stdio, :line)
+
+                "request_stream_bad_hash" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  request_id = id.(request)
+                  stream_reply.(request_id, request_id, String.duplicate("0", 64), :body)
+                  IO.read(:stdio, :line)
+
+                "request_stream_wrong_id" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  stream_reply.(id.(request), "wrong", :valid, :body)
+                  IO.read(:stdio, :line)
+
+                "request_stream_inline" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  request_id = id.(request)
+                  stream_reply.(request_id, request_id, :valid, :inline)
+                  IO.read(:stdio, :line)
+
                 "request_hold" ->
                   request = IO.read(:stdio, :line)
                   File.write!(Path.join(directory, "request-1.json"), request)
@@ -1096,7 +1220,14 @@ defmodule Wotex.CoAP.NativeConnectionTest do
                 "request_malformed" ->
                   request = IO.read(:stdio, :line)
                   File.write!(Path.join(directory, "request-1.json"), request)
-                  IO.write("{}\\n")
+                  IO.write("not-json\\n")
+                  Process.sleep(:infinity)
+
+                "request_extra" ->
+                  request = IO.read(:stdio, :line)
+                  File.write!(Path.join(directory, "request-1.json"), request)
+                  line = request_line.(id.(request))
+                  raw.(line <> line)
                   Process.sleep(:infinity)
 
                 _ ->
