@@ -17,9 +17,10 @@ defmodule Wotex.CoAP.Native.Connection do
   use `Port.command/3` with `:nosuspend`. Malformed, oversized, truncated,
   duplicate or otherwise unsolicited frames close the generation. Local cleanup
   signals the exact Port process and remains within the WCO-C03 1,000 ms budget.
-  Unary responses may carry an inline payload or one correlated, bounded body
-  event stream. Outbound body upload, Observe delivery and public connection
-  dispatch remain separate obligations.
+  An explicit outbound payload is uploaded through correlated begin/chunk/end
+  commands under the call deadline before request submission. Unary responses
+  may carry an inline payload or one correlated, bounded body event stream.
+  Observe delivery and public connection dispatch remain separate obligations.
   """
 
   use GenServer
@@ -34,6 +35,8 @@ defmodule Wotex.CoAP.Native.Connection do
   @close_timeout 350
   @cleanup_timeout 1_000
   @native_cleanup_timeout 550
+  @maximum_body_bytes 1_048_576
+  @maximum_body_chunk_bytes 32_768
   @mutating_methods [:post, :put, :delete]
 
   @typedoc "Validated startup values for one native generation."
@@ -166,6 +169,7 @@ defmodule Wotex.CoAP.Native.Connection do
                  owner_monitor: owner_monitor,
                  creator_monitor: creator_monitor,
                  active: nil,
+                 next_body_id: 1,
                  calls: %{},
                  call_order: :queue.new(),
                  caller_monitors: %{},
@@ -555,17 +559,26 @@ defmodule Wotex.CoAP.Native.Connection do
     else
       case Wire.frame(line) do
         {:ok, frame} ->
-          if body_event?(frame) do
-            handle_request_body(frame, rest, state)
-          else
-            handle_request_response(frame, rest, state)
-          end
+          handle_request_frame(frame, rest, state)
 
         {:error, %Error{}} = result ->
           stop_request_protocol(state, result)
       end
     end
   end
+
+  defp handle_request_frame(frame, rest, %{active: %{phase: :response}} = state) do
+    if body_event?(frame),
+      do: handle_request_body(frame, rest, state),
+      else: handle_request_response(frame, rest, state)
+  end
+
+  defp handle_request_frame(frame, rest, %{active: %{phase: phase}} = state)
+       when phase in [:body_begin, :body_chunk, :body_end],
+       do: handle_upload_response(frame, rest, state)
+
+  defp handle_request_frame(_, _, state),
+    do: stop_request_protocol(state, failure(:native_protocol_error))
 
   defp handle_request_body(frame, rest, %{active: active} = state) do
     with true <- map_size(active.bodies) == 0,
@@ -610,6 +623,31 @@ defmodule Wotex.CoAP.Native.Connection do
   defp handle_request_response(_, _, state),
     do: stop_request_protocol(state, failure(:native_protocol_error))
 
+  defp handle_upload_response(frame, <<>>, %{active: active} = state) do
+    case Wire.response(active.phase, frame, active.id) do
+      {:ok, nil} -> continue_upload(state)
+      {:error, %Error{}} = result -> stop_request_protocol(state, result)
+    end
+  end
+
+  defp handle_upload_response(_, _, state),
+    do: stop_request_protocol(state, failure(:native_protocol_error))
+
+  defp continue_upload(%{active: %{phase: :body_begin, payload: <<>>} = active} = state),
+    do: dispatch_body_end(state, active)
+
+  defp continue_upload(%{active: %{phase: :body_begin} = active} = state),
+    do: dispatch_body_chunk(state, active)
+
+  defp continue_upload(%{active: %{phase: :body_chunk} = active} = state) do
+    if active.offset == byte_size(active.payload),
+      do: dispatch_body_end(state, active),
+      else: dispatch_body_chunk(state, active)
+  end
+
+  defp continue_upload(%{active: %{phase: :body_end} = active} = state),
+    do: dispatch_uploaded_request(state, active)
+
   defp response_body_reference(%{"ok" => true, "result" => result}, bodies)
        when map_size(bodies) == 1 and is_map(result) do
     [{id, _}] = Map.to_list(bodies)
@@ -634,10 +672,34 @@ defmodule Wotex.CoAP.Native.Connection do
   defp close_result({:error, %Error{}} = result), do: result
 
   defp valid_request(parameters, generation, timeout) do
-    with {:ok, command} <- Command.new(generation),
-         {:ok, _, _, _} <- Command.encode(command, :request, parameters, timeout),
+    with {:ok, request} <- request_parameters(parameters, "body"),
+         {:ok, command} <- Command.new(generation),
+         {:ok, _, _, _} <- Command.encode(command, :request, request, timeout),
          do: :ok,
          else: (_ -> failure(:invalid_request))
+  end
+
+  defp request_parameters(parameters, body_id) do
+    allowed = [:method, :path, :confirmable, :accept, :content_format, :payload]
+
+    with true <- Map.keys(parameters) -- allowed == [],
+         :ok <- valid_payload(parameters) do
+      request = Map.delete(parameters, :payload)
+
+      if Map.has_key?(parameters, :payload),
+        do: {:ok, Map.put(request, :body_id, body_id)},
+        else: {:ok, request}
+    else
+      _ -> :error
+    end
+  end
+
+  defp valid_payload(parameters) do
+    case Map.fetch(parameters, :payload) do
+      :error -> :ok
+      {:ok, payload} when is_binary(payload) and byte_size(payload) <= @maximum_body_bytes -> :ok
+      _ -> :error
+    end
   end
 
   defp admit(admission, pid, generation, deadline) do
@@ -784,22 +846,103 @@ defmodule Wotex.CoAP.Native.Connection do
   end
 
   defp dispatch_request(state, lease, call) do
-    remaining = call.deadline - now()
-
-    case Command.encode(state.command, :request, call.parameters, remaining) do
-      {:ok, id, line, command} ->
-        submit_request(state, lease, id, line, command)
-
-      :exhausted ->
-        state = finish_call(state, lease, failure(:sequence_exhausted))
-        {:stop, :normal, %{state | cleanup_deadline: now() + @cleanup_timeout}}
-
-      :error ->
-        {:noreply, continue_after_call(state, lease, failure(:invalid_request))}
+    case Map.fetch(call.parameters, :payload) do
+      :error -> dispatch_request_command(state, lease, call.parameters, false)
+      {:ok, payload} -> dispatch_body_begin(state, lease, call.parameters, payload)
     end
   end
 
-  defp submit_request(state, lease, id, line, command) do
+  defp dispatch_request_command(state, lease, parameters, uploaded?) do
+    remaining = Map.fetch!(state.calls, lease).deadline - now()
+
+    if remaining > 0 do
+      case Command.encode(state.command, :request, parameters, remaining) do
+        {:ok, id, line, command} ->
+          submit_request(state, lease, id, line, command, uploaded?)
+
+        :exhausted ->
+          stop_dispatched_call(state, lease, failure(:sequence_exhausted))
+
+        :error ->
+          stop_dispatched_call(state, lease, failure(:invalid_request))
+      end
+    else
+      stop_dispatched_call(state, lease, failure(:timeout))
+    end
+  end
+
+  defp dispatch_body_begin(state, lease, parameters, payload) do
+    case allocate_body(state) do
+      {:ok, body_id, state} ->
+        {:ok, request} = request_parameters(parameters, body_id)
+
+        active = %{
+          operation: :request,
+          phase: :body_begin,
+          id: nil,
+          lease: lease,
+          body_id: body_id,
+          payload: payload,
+          offset: 0,
+          parameters: request
+        }
+
+        upload_parameters = %{
+          body_id: body_id,
+          length: byte_size(payload),
+          sha256: payload_hash(payload)
+        }
+
+        dispatch_upload_command(state, active, :body_begin, upload_parameters)
+
+      :exhausted ->
+        stop_dispatched_call(state, lease, failure(:sequence_exhausted))
+    end
+  end
+
+  defp dispatch_body_chunk(state, active) do
+    remaining = byte_size(active.payload) - active.offset
+    size = min(remaining, @maximum_body_chunk_bytes)
+    chunk = binary_part(active.payload, active.offset, size)
+
+    parameters = %{body_id: active.body_id, offset: active.offset, data: chunk}
+    active = %{active | offset: active.offset + size}
+    dispatch_upload_command(state, active, :body_chunk, parameters)
+  end
+
+  defp dispatch_body_end(state, active) do
+    parameters = %{body_id: active.body_id}
+    dispatch_upload_command(state, active, :body_end, parameters)
+  end
+
+  defp dispatch_upload_command(state, active, operation, parameters) do
+    remaining = Map.fetch!(state.calls, active.lease).deadline - now()
+
+    if remaining > 0 do
+      case Command.encode(state.command, operation, parameters, remaining) do
+        {:ok, id, line, command} -> submit_upload(state, active, operation, id, line, command)
+        :exhausted -> stop_dispatched_call(state, active.lease, failure(:sequence_exhausted))
+        :error -> stop_dispatched_call(state, active.lease, failure(:native_protocol_error))
+      end
+    else
+      stop_dispatched_call(state, active.lease, failure(:timeout))
+    end
+  end
+
+  defp submit_upload(state, active, operation, id, line, command) do
+    if write(state.port, line) do
+      {:noreply, %{state | active: %{active | phase: operation, id: id}, command: command}}
+    else
+      stop_dispatched_call(state, active.lease, failure(:native_unavailable))
+    end
+  end
+
+  defp dispatch_uploaded_request(state, active) do
+    state = %{state | active: nil}
+    dispatch_request_command(state, active.lease, active.parameters, true)
+  end
+
+  defp submit_request(state, lease, id, line, command, uploaded?) do
     case Admission.mark_submission(lease) do
       :ok ->
         if write(state.port, line) do
@@ -808,6 +951,7 @@ defmodule Wotex.CoAP.Native.Connection do
              state
              | active: %{
                  operation: :request,
+                 phase: :response,
                  id: id,
                  lease: lease,
                  body: Body.new(),
@@ -822,8 +966,29 @@ defmodule Wotex.CoAP.Native.Connection do
         end
 
       :cancelled ->
-        {:noreply, continue_after_call(state, lease, failure(:timeout))}
+        if uploaded?,
+          do: stop_dispatched_call(state, lease, failure(:timeout)),
+          else: {:noreply, continue_after_call(state, lease, failure(:timeout))}
     end
+  end
+
+  defp stop_dispatched_call(state, lease, result) do
+    state = finish_call(state, lease, result)
+    {:stop, :normal, %{state | cleanup_deadline: now() + @cleanup_timeout}}
+  end
+
+  defp allocate_body(%{next_body_id: next} = state)
+       when is_integer(next) and next in 1..@maximum_counter do
+    body_id = "body-" <> Integer.to_string(next)
+    next = if next == @maximum_counter, do: :exhausted, else: next + 1
+    {:ok, body_id, %{state | next_body_id: next}}
+  end
+
+  defp allocate_body(%{next_body_id: :exhausted}), do: :exhausted
+
+  defp payload_hash(payload) do
+    digest = :crypto.hash(:sha256, payload)
+    Base.encode16(digest, case: :lower)
   end
 
   defp finish_call(state, lease, result) do

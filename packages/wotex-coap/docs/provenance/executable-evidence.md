@@ -115,7 +115,7 @@ decimal uint64 request identity once before exhaustion. The immutable allocator
 retains no command or credential. These tests do not write a Port or prove that
 the production helper accepts the lines.
 
-`native_connection_test.exs` executes thirty-five contract-injection tests for the
+`native_connection_test.exs` executes forty-one contract-injection tests for the
 BEAM process boundary. The tests launch the manifest-verified executable through
 the exact `--custody ABS_DIRECTORY` entry, inspect the open and close envelopes,
 and assert the pinned ready identity, monotonic correlation, finite ready/close
@@ -128,14 +128,19 @@ Messages. Stream events tolerate arbitrary Port splits and coalescing, bind to
 the active request ID, verify the complete 32,769-byte body and consume its
 reference exactly once before delivery. Failed hashes, foreign IDs and an
 unreferenced completed body close without partial delivery. The tests distinguish
-cancelled queued mutations from submitted mutation
+absent and explicit empty outbound bodies, verify exact 32,768-byte upload chunks,
+hash, offsets, monotonic command IDs and final body reference, and preserve
+effect `none` for upload error, timeout, close and body-ID exhaustion before the
+native request is submitted. Upload command exhaustion, rejected Port writes and
+a cancelled submission marker also close before mutation dispatch. The tests
+distinguish cancelled queued mutations from submitted mutation
 uncertainty, reject forged capabilities before native I/O, reclaim caller loss,
 and close on active timeout, malformed response, ID exhaustion or failed Port
 write. Malformed, duplicate, truncated and oversized output closes the
 generation. Killing the configured owner releases the exact helper within
 1,000 ms. The injected executable is a protocol fixture; these tests do not
-accept the production libcoap worker, outbound body upload, public OSCORE
-dispatch, Observe delivery or report-credit integration.
+accept the production libcoap worker, public OSCORE dispatch, Observe delivery
+or report-credit integration.
 
 `native_admission_test.exs` executes four exact tests for the WCO-N02 pre-mailbox
 capacity primitive. Ninety-six concurrent callers produce exactly 64 ordinary

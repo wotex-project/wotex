@@ -319,6 +319,223 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     assert_helper_stopped(context.store, 1_000)
   end
 
+  test "WCO-N02 WCO-N03 uploads a bounded body before native request submission", context do
+    File.write!(Path.join(context.store, "mode"), "request_upload")
+    assert {:ok, pid} = Connection.start(context.options)
+    payload = :binary.copy("B", 32_769)
+
+    assert {:ok, %Wotex.CoAP.Message{payload: "ok"}} =
+             Connection.request(
+               pid,
+               %{
+                 method: :post,
+                 path: "/large",
+                 confirmable: true,
+                 content_format: 42,
+                 payload: payload
+               },
+               2_000
+             )
+
+    begin_command = read_json(context.store, "body-begin.json")
+    first_chunk = read_json(context.store, "body-chunk-1.json")
+    last_chunk = read_json(context.store, "body-chunk-2.json")
+    end_command = read_json(context.store, "body-end.json")
+    request = read_json(context.store, "request-1.json")
+
+    assert %{
+             "id" => "2",
+             "operation" => "body_begin",
+             "parameters" => %{
+               "body_id" => "body-1",
+               "length" => 32_769,
+               "sha256" => hash
+             }
+           } = begin_command
+
+    assert hash == Base.encode16(:crypto.hash(:sha256, payload), case: :lower)
+    assert command_bytes(first_chunk) == binary_part(payload, 0, 32_768)
+    assert command_bytes(last_chunk) == binary_part(payload, 32_768, 1)
+
+    assert %{
+             "id" => "3",
+             "operation" => "body_chunk",
+             "parameters" => %{"body_id" => "body-1", "offset" => 0}
+           } = first_chunk
+
+    assert %{
+             "id" => "4",
+             "operation" => "body_chunk",
+             "parameters" => %{"body_id" => "body-1", "offset" => 32_768}
+           } = last_chunk
+
+    assert %{
+             "id" => "5",
+             "operation" => "body_end",
+             "parameters" => %{"body_id" => "body-1"}
+           } = end_command
+
+    assert %{
+             "id" => "6",
+             "operation" => "request",
+             "parameters" => %{
+               "method" => "POST",
+               "path" => "/large",
+               "confirmable" => true,
+               "content_format" => 42,
+               "body_id" => "body-1"
+             }
+           } = request
+
+    assert Enum.all?(
+             [begin_command, first_chunk, last_chunk, end_command, request],
+             &(&1["timeout_ms"] in 1..2_000)
+           )
+
+    assert :ok = Connection.close(pid)
+    assert %{"id" => "7", "operation" => "close"} = read_json(context.store, "close.json")
+  end
+
+  test "WCO-N03 preserves explicit empty and absent outbound bodies", context do
+    File.write!(Path.join(context.store, "mode"), "request_upload_empty")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    assert {:ok, %Wotex.CoAP.Message{}} =
+             Connection.request(
+               pid,
+               %{method: :post, path: "/empty", confirmable: true, payload: <<>>},
+               1_000
+             )
+
+    assert %{
+             "id" => "2",
+             "parameters" => %{"length" => 0, "body_id" => "body-1"}
+           } = read_json(context.store, "body-begin.json")
+
+    refute File.exists?(Path.join(context.store, "body-chunk-1.json"))
+    assert %{"id" => "3", "operation" => "body_end"} = read_json(context.store, "body-end.json")
+
+    assert %{"id" => "4", "parameters" => %{"body_id" => "body-1"}} =
+             read_json(context.store, "request-1.json")
+
+    assert :ok = Connection.close(pid)
+    assert %{"id" => "5", "operation" => "close"} = read_json(context.store, "close.json")
+  end
+
+  test "WCO-N02 WCO-N03 upload failure closes before mutation submission", context do
+    for {mode, timeout, code} <- [
+          {"request_upload_error", 1_000, :busy},
+          {"request_upload_silent", 100, :timeout}
+        ] do
+      File.write!(Path.join(context.store, "mode"), mode)
+      assert {:ok, pid} = Connection.start(context.options)
+      monitor = Process.monitor(pid)
+
+      assert {:error, %Error{code: ^code, effect: :none}} =
+               Connection.request(
+                 pid,
+                 %{method: :put, path: "/value", confirmable: true, payload: "value"},
+                 timeout
+               )
+
+      assert_receive {:DOWN, ^monitor, :process, ^pid, _}, 1_000
+      assert_helper_stopped(context.store, 1_000)
+      File.rm(Path.join(context.store, "helper.pid"))
+      File.rm(Path.join(context.store, "body-begin.json"))
+    end
+  end
+
+  test "WCO-N02 closes on upload command exhaustion and rejected Port writes", context do
+    for {command, code} <- [
+          {:invalid, :native_protocol_error},
+          {%{next_id: :exhausted}, :sequence_exhausted}
+        ] do
+      File.write!(Path.join(context.store, "mode"), "valid")
+      assert {:ok, pid} = Connection.start(context.options)
+
+      :sys.replace_state(pid, fn state ->
+        command = if is_map(command), do: Map.merge(state.command, command), else: command
+        %{state | command: command}
+      end)
+
+      assert {:error, %Error{code: ^code, effect: :none}} =
+               Connection.request(
+                 pid,
+                 %{method: :put, path: "/value", confirmable: true, payload: "value"},
+                 1_000
+               )
+
+      assert_helper_stopped(context.store, 1_000)
+      File.rm(Path.join(context.store, "helper.pid"))
+    end
+
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    closed = Port.open({:spawn_executable, ~c"/bin/cat"}, [:binary, :use_stdio])
+    Port.close(closed)
+    :sys.replace_state(pid, fn state -> %{state | port: closed} end)
+
+    assert {:error, %Error{code: :native_unavailable, effect: :none}} =
+             Connection.request(
+               pid,
+               %{method: :put, path: "/value", confirmable: true, payload: "value"},
+               1_000
+             )
+
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-N02 cancelled upload does not submit its mutation", context do
+    File.write!(Path.join(context.store, "mode"), "request_upload_cancelled")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    request =
+      Task.async(fn ->
+        Connection.request(
+          pid,
+          %{method: :post, path: "/value", confirmable: true, payload: "value"},
+          5_000
+        )
+      end)
+
+    wait_for_file(
+      Path.join(context.store, "upload-held"),
+      System.monotonic_time(:millisecond) + 1_000
+    )
+
+    %{calls: calls} = :sys.get_state(pid)
+    [lease] = Map.keys(calls)
+    assert :cancelled = Admission.cancel_unsubmitted(lease)
+    File.write!(Path.join(context.store, "release"), "ok")
+
+    assert {:error, %Error{code: :timeout, effect: :none}} = Task.await(request, 1_000)
+    refute File.exists?(Path.join(context.store, "request-1.json"))
+    assert_helper_stopped(context.store, 1_000)
+  end
+
+  test "WCO-N02 close interrupts body upload before mutation submission", context do
+    File.write!(Path.join(context.store, "mode"), "request_upload_silent")
+    assert {:ok, pid} = Connection.start(context.options)
+
+    request =
+      Task.async(fn ->
+        Connection.request(
+          pid,
+          %{method: :post, path: "/value", confirmable: true, payload: "value"},
+          5_000
+        )
+      end)
+
+    wait_for_file(
+      Path.join(context.store, "body-begin.json"),
+      System.monotonic_time(:millisecond) + 1_000
+    )
+
+    assert :ok = Connection.close(pid)
+    assert {:error, %Error{code: :connection_closed, effect: :none}} = Task.await(request, 1_000)
+    assert_helper_stopped(context.store, 1_000)
+  end
+
   test "WCO-N02 serializes admitted calls and spends queue time from each deadline", context do
     File.write!(Path.join(context.store, "mode"), "request_two")
     assert {:ok, pid} = Connection.start(context.options)
@@ -410,6 +627,20 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
     assert Admission.reservations(admission) == []
     refute File.exists?(Path.join(context.store, "request-1.json"))
+
+    for invalid <- [
+          %{method: :post, path: "/value", confirmable: true, body_id: "foreign"},
+          %{
+            method: :post,
+            path: "/value",
+            confirmable: true,
+            payload: :binary.copy("x", 1_048_577)
+          }
+        ] do
+      assert {:error, %Error{code: :invalid_request}} = Connection.request(pid, invalid, 1_000)
+    end
+
+    assert Admission.reservations(admission) == []
     assert :ok = Connection.close(pid)
   end
 
@@ -674,6 +905,19 @@ defmodule Wotex.CoAP.NativeConnectionTest do
 
     assert {:error, %Error{code: :native_unavailable, effect: :none}} =
              Connection.request(pid, %{method: :get, path: "/value", confirmable: true}, 1_000)
+
+    assert_helper_stopped(context.store, 1_000)
+
+    File.write!(Path.join(context.store, "mode"), "valid")
+    assert {:ok, pid} = Connection.start(context.options)
+    :sys.replace_state(pid, fn state -> %{state | next_body_id: :exhausted} end)
+
+    assert {:error, %Error{code: :sequence_exhausted, effect: :none}} =
+             Connection.request(
+               pid,
+               %{method: :put, path: "/value", confirmable: true, payload: "value"},
+               1_000
+             )
 
     assert_helper_stopped(context.store, 1_000)
   end
@@ -987,6 +1231,11 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     |> Jason.decode!()
   end
 
+  defp command_bytes(%{
+         "parameters" => %{"data" => %{"type" => "bytes", "base64" => encoded}}
+       }),
+       do: Base.decode64!(encoded)
+
   defp eventually(function, attempts \\ 100)
   defp eventually(_, 0), do: false
 
@@ -1050,6 +1299,12 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     id = fn line ->
       [_, value] = Regex.run(~r/"id":"([^"]+)"/, line)
       value
+    end
+
+    read_command = fn name ->
+      line = IO.read(:stdio, :line)
+      File.write!(Path.join(directory, name), line)
+      line
     end
 
     response = fn request_id ->
@@ -1187,6 +1442,52 @@ defmodule Wotex.CoAP.NativeConnectionTest do
                   File.write!(Path.join(directory, "request-1.json"), request)
                   request_id = id.(request)
                   stream_reply.(request_id, request_id, :valid, :inline)
+                  IO.read(:stdio, :line)
+
+                "request_upload" ->
+                  begin_command = read_command.("body-begin.json")
+                  reply.(id.(begin_command))
+                  first_chunk = read_command.("body-chunk-1.json")
+                  reply.(id.(first_chunk))
+                  last_chunk = read_command.("body-chunk-2.json")
+                  reply.(id.(last_chunk))
+                  end_command = read_command.("body-end.json")
+                  reply.(id.(end_command))
+                  request = read_command.("request-1.json")
+                  request_reply.(id.(request))
+                  IO.read(:stdio, :line)
+
+                "request_upload_empty" ->
+                  begin_command = read_command.("body-begin.json")
+                  reply.(id.(begin_command))
+                  end_command = read_command.("body-end.json")
+                  reply.(id.(end_command))
+                  request = read_command.("request-1.json")
+                  request_reply.(id.(request))
+                  IO.read(:stdio, :line)
+
+                "request_upload_error" ->
+                  begin_command = read_command.("body-begin.json")
+
+                  IO.write(
+                    ~s({"version":1,"id":"\#{id.(begin_command)}","ok":false,"error":{"code":"busy"}}\\n)
+                  )
+
+                  IO.read(:stdio, :line)
+
+                "request_upload_silent" ->
+                  read_command.("body-begin.json")
+                  IO.read(:stdio, :line)
+
+                "request_upload_cancelled" ->
+                  begin_command = read_command.("body-begin.json")
+                  File.write!(Path.join(directory, "upload-held"), "ok")
+                  wait_release.(wait_release)
+                  reply.(id.(begin_command))
+                  chunk = read_command.("body-chunk-1.json")
+                  reply.(id.(chunk))
+                  end_command = read_command.("body-end.json")
+                  reply.(id.(end_command))
                   IO.read(:stdio, :line)
 
                 "request_hold" ->

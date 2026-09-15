@@ -132,15 +132,18 @@ absolute context directory, accepts the pinned ready identity and correlates
 the monotonic `open` and `close` commands. Its bounded byte accumulator accepts
 arbitrary Port splits and rejects extra lines, incomplete EOF and frames beyond
 128 KiB. The retained process state contains no credential or command line.
-Thirty-five contract-injection tests cover exact argv and envelopes, invalid options,
+Forty-one contract-injection tests cover exact argv and envelopes, invalid options,
 malformed/truncated/oversized input, wrong and duplicate response identities,
 finite waits, status redaction, admission-owned close control and owner-death
 cleanup within C03. The injected test executable is not the production OSCORE
 worker. Its unary fixture covers owner-side inline responses and a correlated
 32,769-byte body stream across split/coalesced Port data. Exact hash, request ID,
-single-body and one-time body-reference rules prevent partial delivery. Public
-connection dispatch, outbound body upload, Observe delivery and live report
-credit remain unimplemented.
+single-body and one-time body-reference rules prevent partial delivery. Outbound
+explicit payloads execute begin, 32,768-byte chunks and end before the request,
+all under the original deadline. Upload error, timeout, close and identity
+exhaustion precede the native request submission marker and preserve effect
+`none`. Public connection dispatch, Observe delivery and live report credit
+remain unimplemented.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and
@@ -155,8 +158,9 @@ ordinary leases in FIFO order and consumes the singular close record: a full
 the same process termination, and abandoned close control ends the generation.
 Queue time spends the original deadline; queued timeout or caller death prevents
 Port submission, while active mutation uncertainty is retained after submission.
-This request boundary accepts only normalized parameters and inline or streamed
-responses; it does not yet expose OSCORE through the root connection API.
+This request boundary accepts normalized parameters with an absent or explicit
+binary payload and inline or streamed responses; it does not yet expose OSCORE
+through the root connection API.
 
 Arguments contain no secrets. `Port.open({:spawn_executable, path}, ...)` starts
 one helper for one native session. No shell, daemon discovery, global registry,
@@ -240,10 +244,10 @@ omits absent optional request values, encodes all byte fields canonically and
 allocates monotonically increasing decimal uint64 identities once per generation.
 Its six tests cover every operation, input and line bounds, credential
 projection and fail-before-wrap exhaustion. The allocator retains no secret or
-command bytes. `Native.Connection` now writes admitted request commands through
-this boundary and resolves correlated inbound body streams before reply; outbound
-body upload, report commands and live production helper admission remain owner
-obligations.
+command bytes. `Native.Connection` now writes admitted body/request commands
+through this boundary, resolves correlated inbound body streams before reply and
+does not mark a mutation submitted while its body alone is being uploaded. Report
+commands and live production helper admission remain owner obligations.
 
 `Wotex.CoAP.Native.Wire` implements the pure BEAM receive boundary for complete
 lines, ready identity and request/control response envelopes. It enforces the
