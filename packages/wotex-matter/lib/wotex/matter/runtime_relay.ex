@@ -1,16 +1,28 @@
 defmodule Wotex.Matter.RuntimeRelay do
-  @moduledoc false
+  @moduledoc """
+  Owns a Matter subscription route for one Runtime stream.
+
+  This internal relay starts explicitly with a consumer-owned Runtime process,
+  validates report paths and typed values, and retains at most 64 pending frames.
+  Frame tokens bind decoding to the original owner, request and generation.
+  Native report credit is returned only when that owner consumes a validated
+  frame. A suspended relay or Runtime owner therefore retains its native credit.
+  Owner death, overflow and terminal errors close the original subscription and
+  controller; module loading starts no process or protocol activity.
+  """
 
   use GenServer
 
   alias Wotex.Matter
-  alias Wotex.Matter.{Address, Descriptor, Error, Subscription}
+  alias Wotex.Matter.{Address, Descriptor, Error, Native, Session, Subscription}
+  alias Wotex.Matter.Native.Delivery
   alias Wotex.Matter.RuntimeRelay.{Frame, Handle}
 
   @opening_limit 64
   @default_owner_queue_limit 1_000
   @cleanup_timeout 1_000
 
+  @doc false
   @spec start(
           pid(),
           String.t(),
@@ -59,6 +71,7 @@ defmodule Wotex.Matter.RuntimeRelay do
 
   def start(_, _, _, _, _, _, _, _), do: {:error, Error.new(:invalid_subscription)}
 
+  @doc false
   @spec close(term()) :: :ok | {:error, Error.t()}
   def close(%Handle{pid: pid, generation: generation})
       when is_pid(pid) and is_binary(generation) do
@@ -69,6 +82,7 @@ defmodule Wotex.Matter.RuntimeRelay do
 
   def close(_), do: {:error, Error.new(:invalid_handle)}
 
+  @doc false
   @spec decode(term(), String.t(), atom(), atom(), Address.t()) ::
           {:ok, term(), map()} | {:error, Error.t()} | :ignore
   def decode(
@@ -124,7 +138,8 @@ defmodule Wotex.Matter.RuntimeRelay do
     identity = {request_id, operation, kind, address}
 
     case Map.fetch(state.pending, token) do
-      {:ok, {^identity, ^value}} ->
+      {:ok, {^identity, ^value, native_delivery}} ->
+        acknowledge_native(native_delivery)
         {:reply, decode_delivery(value), %{state | pending: Map.delete(state.pending, token)}}
 
       _ ->
@@ -156,6 +171,30 @@ defmodule Wotex.Matter.RuntimeRelay do
   end
 
   @impl GenServer
+  def handle_info(
+        {:wotex_matter, reference,
+         %Delivery{connection: connection, generation: generation, reference: reference} = delivery},
+        %{
+          reference: reference,
+          state: :bound,
+          session: %Session{
+            client: Native,
+            handle: %Native.Handle{pid: connection, generation: generation}
+          }
+        } = state
+      ) do
+    case delivery.value do
+      {:ok, value, metadata} ->
+        case project(value, metadata, state) do
+          {:ok, payload, projected} -> enqueue({:ok, payload, projected}, state, delivery)
+          {:error, %Error{} = error} -> terminate_stream(error, :transport_down, state)
+        end
+
+      other ->
+        handle_info({:wotex_matter, reference, other}, state)
+    end
+  end
+
   def handle_info(
         {:wotex_matter, reference, {:ok, value, metadata}},
         %{reference: reference, state: :bound} = state
@@ -218,7 +257,21 @@ defmodule Wotex.Matter.RuntimeRelay do
   end
 
   defp subscribe(session, request) do
-    case Matter.subscribe(session, request) do
+    result =
+      case session do
+        %Session{client: Native, handle: handle, timeout: timeout} ->
+          normalized =
+            request
+            |> Map.drop([:receiver, :max_queue_length])
+            |> Map.put(:queue_limit, request.max_queue_length)
+
+          Native.subscribe_acknowledged(handle, normalized, self(), timeout)
+
+        _ ->
+          Matter.subscribe(session, request)
+      end
+
+    case result do
       {:ok, %Subscription{} = subscription} ->
         {:ok, subscription}
 
@@ -358,10 +411,12 @@ defmodule Wotex.Matter.RuntimeRelay do
 
   defp project(_, _, _), do: {:error, Error.new(:invalid_transport_return)}
 
-  defp enqueue(_, %{pending: pending} = state) when map_size(pending) >= @opening_limit,
+  defp enqueue(delivery, state, native_delivery \\ nil)
+
+  defp enqueue(_, %{pending: pending} = state, _) when map_size(pending) >= @opening_limit,
     do: terminate_stream(Error.new(:receiver_overflow), :transport_down, state)
 
-  defp enqueue(delivery, state) do
+  defp enqueue(delivery, state, native_delivery) do
     case Process.info(state.owner, :message_queue_len) do
       {:message_queue_len, length} when length < state.owner_queue_limit ->
         token = make_ref()
@@ -369,12 +424,26 @@ defmodule Wotex.Matter.RuntimeRelay do
         frame = %Frame{pid: self(), generation: state.generation, token: token, value: value}
         identity = {state.request_id, state.operation, state.kind, state.address}
         send(state.owner, {:wotex_transport_frame, frame})
-        {:noreply, %{state | pending: Map.put(state.pending, token, {identity, value})}}
+
+        {:noreply,
+         %{state | pending: Map.put(state.pending, token, {identity, value, native_delivery})}}
 
       _ ->
         terminate_stream(Error.new(:receiver_overflow), :transport_down, state)
     end
   end
+
+  defp acknowledge_native(%Delivery{} = delivery) do
+    send(
+      delivery.connection,
+      {:native_report_consumed, delivery.generation, delivery.reference, delivery.sequence,
+       delivery.token}
+    )
+
+    :ok
+  end
+
+  defp acknowledge_native(nil), do: :ok
 
   defp terminate_stream(error, status, state) do
     send(state.owner, {:wotex_transport, {:error, error}})

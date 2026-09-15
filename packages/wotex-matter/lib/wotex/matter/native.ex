@@ -112,9 +112,21 @@ defmodule Wotex.Matter.Native do
           {:ok, Subscription.t()} | {:error, Error.t()}
   def subscribe(%OneshotHandle{}, _, _, _), do: {:error, Error.new(:not_supported)}
 
-  def subscribe(%Handle{} = handle, request, receiver, timeout)
-      when is_map(request) and is_pid(receiver) and is_integer(timeout) and
-             timeout in 1..60_000 do
+  def subscribe(handle, request, receiver, timeout),
+    do: subscribe_with_credit(handle, request, receiver, timeout, false)
+
+  @doc false
+  @spec subscribe_acknowledged(handle(), map(), pid(), pos_integer()) ::
+          {:ok, Subscription.t()} | {:error, Error.t()}
+  def subscribe_acknowledged(handle, request, receiver, timeout),
+    do: subscribe_with_credit(handle, request, receiver, timeout, true)
+
+  defp subscribe_with_credit(%OneshotHandle{}, _, _, _, _),
+    do: {:error, Error.new(:not_supported)}
+
+  defp subscribe_with_credit(%Handle{} = handle, request, receiver, timeout, acknowledged)
+       when is_map(request) and is_pid(receiver) and is_integer(timeout) and
+              timeout in 1..60_000 do
     cond do
       not is_pid(handle.pid) or not valid_generation?(handle.generation) ->
         {:error, Error.new(:invalid_handle)}
@@ -124,12 +136,19 @@ defmodule Wotex.Matter.Native do
 
       true ->
         with {:ok, request} <- validate_subscription_request(request, handle.fabric_id) do
-          Connection.subscribe(handle.pid, handle.generation, request, receiver, timeout)
+          Connection.subscribe(
+            handle.pid,
+            handle.generation,
+            request,
+            receiver,
+            timeout,
+            acknowledged
+          )
         end
     end
   end
 
-  def subscribe(_, _, _, _), do: {:error, Error.new(:invalid_handle)}
+  defp subscribe_with_credit(_, _, _, _, _), do: {:error, Error.new(:invalid_handle)}
 
   @doc "Cancels one subscription owned by this native controller."
   @impl Wotex.Matter.Client

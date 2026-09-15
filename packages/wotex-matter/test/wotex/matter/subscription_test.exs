@@ -10,6 +10,194 @@ defmodule Wotex.Matter.SubscriptionTest do
   @event_path %{fabric_id: 1, node_id: 3, endpoint: 2, cluster: 0x0039, member: 3}
   @sensor_path %{fabric_id: 1, node_id: 3, endpoint: 4, cluster: 0x0402, member: 0}
 
+  test "native Runtime credit waits for exact consumption tokens and advances only the contiguous prefix" do
+    audit = temporary_path("acknowledged-reports")
+    executable = native_fixture(audit, "reports")
+    assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
+
+    request = %{
+      kind: :attribute,
+      paths: [@path],
+      min_interval_s: 1,
+      max_interval_s: 60,
+      queue_limit: 64,
+      resubscribe: false
+    }
+
+    assert {:ok, subscription} =
+             Native.subscribe_acknowledged(session.handle, request, self(), 3_000)
+
+    assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 1} = first}, 1_000
+    assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 2} = second}, 1_000
+    refute inspect(first) =~ inspect(first.token)
+    assert :sys.get_state(session.handle.pid).acknowledged_sequence == 0
+    refute Enum.any?(audit_frames(audit), &(&1["event"] == "report_ack"))
+
+    acknowledge = fn delivery, token ->
+      send(
+        delivery.connection,
+        {:native_report_consumed, delivery.generation, delivery.reference, delivery.sequence, token}
+      )
+    end
+
+    acknowledge.(first, make_ref())
+    acknowledge.(%{first | reference: make_ref()}, first.token)
+    acknowledge.(%{first | generation: "wrong-generation"}, first.token)
+    acknowledge.(second, second.token)
+    acknowledge.(second, second.token)
+    state = :sys.get_state(session.handle.pid)
+    assert state.acknowledged_sequence == 0
+    assert state.pending_reports[2].consumed
+    refute state.pending_reports[1].consumed
+    acknowledge.(first, first.token)
+    assert eventually(fn -> Enum.any?(audit_frames(audit), &(&1["event"] == "report_ack")) end)
+    [ack] = Enum.filter(audit_frames(audit), &(&1["event"] == "report_ack"))
+    assert ack["report_sequence"] == 2
+
+    assert ack["acknowledged_bytes"] ==
+             state.pending_reports[1].bytes + state.pending_reports[2].bytes
+
+    assert :sys.get_state(session.handle.pid).pending_reports == %{}
+    assert :ok = Matter.unsubscribe(session, subscription)
+    acknowledge.(first, first.token)
+    assert :ok = Matter.disconnect(session)
+    assert Enum.count(audit_frames(audit), &(&1["event"] == "report_ack")) == 1
+  end
+
+  test "the actual Runtime relay retains native credit until its owner decodes the bound frame" do
+    audit = temporary_path("runtime-acknowledged-reports")
+    executable = native_fixture(audit, "reports")
+    assert {:ok, address} = Address.new(@path)
+    config = [client: Native] ++ native_options(executable)
+
+    assert {:ok, relay} =
+             Wotex.Matter.RuntimeRelay.start(
+               self(),
+               "native-credit",
+               :observeproperty,
+               :attribute,
+               address,
+               config,
+               [max_queue_length: 64],
+               3_000
+             )
+
+    state = :sys.get_state(relay.pid)
+    connection = state.session.handle.pid
+
+    try do
+      assert_receive {:wotex_transport_frame, first}, 1_000
+      assert_receive {:wotex_transport_frame, second}, 1_000
+      :sys.suspend(relay.pid)
+      assert :sys.get_state(connection).acknowledged_sequence == 0
+      refute Enum.any?(audit_frames(audit), &(&1["event"] == "report_ack"))
+      :sys.resume(relay.pid)
+
+      assert {:ok, %{value: 2150}, _} =
+               Wotex.Matter.RuntimeRelay.decode(
+                 second,
+                 "native-credit",
+                 :observeproperty,
+                 :attribute,
+                 address
+               )
+
+      assert eventually(fn -> :sys.get_state(connection).pending_reports[2].consumed end)
+      assert :sys.get_state(connection).acknowledged_sequence == 0
+
+      assert :ignore =
+               Wotex.Matter.RuntimeRelay.decode(
+                 second,
+                 "native-credit",
+                 :observeproperty,
+                 :attribute,
+                 address
+               )
+
+      assert {:ok, %{value: 2150}, _} =
+               Wotex.Matter.RuntimeRelay.decode(
+                 first,
+                 "native-credit",
+                 :observeproperty,
+                 :attribute,
+                 address
+               )
+
+      assert eventually(fn -> :sys.get_state(connection).pending_reports == %{} end)
+
+      assert eventually(fn ->
+               Enum.count(audit_frames(audit), &(&1["event"] == "report_ack")) == 1
+             end)
+    after
+      if Process.alive?(relay.pid), do: :sys.resume(relay.pid)
+      assert :ok = Wotex.Matter.RuntimeRelay.close(relay)
+    end
+  end
+
+  test "retirement releases validated reports that the Runtime owner has not consumed" do
+    audit = temporary_path("retired-acknowledged-reports")
+
+    assert {:ok, session} =
+             Matter.connect([client: Native] ++ native_options(native_fixture(audit, "reports")))
+
+    request = %{
+      kind: :attribute,
+      paths: [@path],
+      min_interval_s: 1,
+      max_interval_s: 60,
+      queue_limit: 64,
+      resubscribe: false
+    }
+
+    assert {:ok, subscription} =
+             Native.subscribe_acknowledged(session.handle, request, self(), 3_000)
+
+    assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 1}}, 1_000
+    assert_receive {:wotex_matter, _, %Native.Delivery{sequence: 2}}, 1_000
+    assert :sys.get_state(session.handle.pid).acknowledged_sequence == 0
+    assert :ok = Matter.unsubscribe(session, subscription)
+    state = :sys.get_state(session.handle.pid)
+    assert state.pending_reports == %{}
+    assert state.acknowledged_sequence == 2
+    assert :ok = Matter.disconnect(session)
+    [ack] = Enum.filter(audit_frames(audit), &(&1["event"] == "report_ack"))
+    assert ack["report_sequence"] == 2
+  end
+
+  test "a native producer exceeding unconsumed frame credit terminates once" do
+    audit = temporary_path("unconsumed-overflow")
+
+    assert {:ok, session} =
+             Matter.connect(
+               [client: Native] ++ native_options(native_fixture(audit, "credit_overflow"))
+             )
+
+    monitor = Process.monitor(session.handle.pid)
+
+    request = %{
+      kind: :attribute,
+      paths: [@path],
+      min_interval_s: 1,
+      max_interval_s: 60,
+      queue_limit: 1000,
+      resubscribe: false
+    }
+
+    assert {:ok, subscription} =
+             Native.subscribe_acknowledged(session.handle, request, self(), 3_000)
+
+    reference = subscription.reference
+    assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :invalid_frame}}}, 1_000
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
+    deliveries = drain([])
+
+    assert Enum.count(deliveries, &match?({:wotex_matter, ^reference, %Native.Delivery{}}, &1)) ==
+             64
+
+    refute Enum.any?(deliveries, &match?({:wotex_matter, ^reference, {:error, _}}, &1))
+    assert :ok = Matter.disconnect(session)
+  end
+
   test "WMA-F08 distinct equal reports retain identity and cancellation is idempotent" do
     handler = {__MODULE__, make_ref()}
     test_pid = self()
@@ -396,6 +584,8 @@ defmodule Wotex.Matter.SubscriptionTest do
             "reports" ->
               attribute_report.(current, 1, 1, 7)
               attribute_report.(current, 2, 2, 8)
+            "credit_overflow" ->
+              for sequence <- 1..65, do: attribute_report.(current, sequence, sequence, 7)
             "event" -> event_report.(current)
             "null" -> null_report.(current)
             "terminal" ->

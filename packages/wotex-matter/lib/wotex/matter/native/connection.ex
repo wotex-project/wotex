@@ -53,10 +53,10 @@ defmodule Wotex.Matter.Native.Connection do
   def request(pid, generation, message, timeout),
     do: call(pid, {:request, generation, message, timeout}, timeout)
 
-  @spec subscribe(pid(), String.t(), map(), pid(), pos_integer()) ::
+  @spec subscribe(pid(), String.t(), map(), pid(), pos_integer(), boolean()) ::
           {:ok, Subscription.t()} | {:error, Error.t()}
-  def subscribe(pid, generation, request, receiver, timeout),
-    do: call(pid, {:subscribe, generation, request, receiver, timeout}, timeout)
+  def subscribe(pid, generation, request, receiver, timeout, acknowledged \\ false),
+    do: call(pid, {:subscribe, generation, request, receiver, timeout, acknowledged}, timeout)
 
   @spec unsubscribe(pid(), String.t(), Subscription.t(), pos_integer()) ::
           :ok | {:error, Error.t()}
@@ -190,7 +190,7 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  def handle_call({:subscribe, generation, request, receiver, timeout}, _, state) do
+  def handle_call({:subscribe, generation, request, receiver, timeout, acknowledged}, _, state) do
     cond do
       generation != state.generation ->
         {:reply, {:error, Error.new(:invalid_handle)}, state}
@@ -212,6 +212,7 @@ defmodule Wotex.Matter.Native.Connection do
           generation: 1,
           handle_generation: 1,
           receiver: receiver,
+          acknowledged: acknowledged,
           monitor: monitor,
           queue_limit: request.queue_limit,
           resubscribe: request.resubscribe,
@@ -241,7 +242,8 @@ defmodule Wotex.Matter.Native.Connection do
                 {:reply, {:ok, handle}, established}
 
               {:error, error, failed} ->
-                {:reply, {:error, error}, drop_subscription(failed, reference)}
+                {:stop, :normal, {:error, error},
+                 notify_session_failure(error, drop_subscription(failed, reference))}
             end
 
           {:error, error, next_state} ->
@@ -271,13 +273,15 @@ defmodule Wotex.Matter.Native.Connection do
         case request_frame(closing, "unsubscribe", parameters, timeout) do
           {:ok, nil, next_state} ->
             if Map.has_key?(next_state.subscriptions, subscription.reference) do
-              {:stop, :normal, {:error, Error.new(:invalid_frame)}, next_state}
+              error = Error.new(:invalid_frame)
+              {:stop, :normal, {:error, error}, notify_session_failure(error, next_state)}
             else
               {:reply, {:ok, nil}, next_state}
             end
 
           {:ok, _, next_state} ->
-            {:stop, :normal, {:error, Error.new(:invalid_frame)}, next_state}
+            error = Error.new(:invalid_frame)
+            {:stop, :normal, {:error, error}, notify_session_failure(error, next_state)}
 
           {:error, error, next_state} ->
             error_reply(error, next_state)
@@ -309,8 +313,21 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   @impl GenServer
+  def handle_info({:native_report_consumed, generation, reference, sequence, token}, state) do
+    case Map.fetch(state.pending_reports, sequence) do
+      {:ok, %{reference: ^reference, token: ^token, bytes: bytes, consumed: false}}
+      when generation == state.generation ->
+        subscription = Map.fetch!(state.subscriptions, reference)
+        emit_subscription(:deliver, subscription.kind, :ok)
+        {:noreply, acknowledge_report(state, sequence, bytes)}
+
+      _ ->
+        {:noreply, state}
+    end
+  end
+
   def handle_info({:DOWN, monitor, :process, _, _}, %{owner_monitor: monitor} = state),
-    do: {:stop, :normal, state}
+    do: {:stop, :normal, notify_session_failure(Error.new(:owner_closed), state)}
 
   def handle_info({:DOWN, monitor, :process, _, _}, state) do
     case Map.fetch(state.subscription_monitors, monitor) do
@@ -329,18 +346,18 @@ defmodule Wotex.Matter.Native.Connection do
       when byte_size(line) <= @maximum_line_bytes do
     case decode_async_line(line, state) do
       {:ok, next_state} -> {:noreply, next_state}
-      {:error, _} -> {:stop, :normal, state}
+      {:error, error} -> {:stop, :normal, notify_session_failure(error, state)}
     end
   end
 
   def handle_info({port, {:data, {:noeol, _}}}, %{port: port} = state),
-    do: {:stop, :normal, state}
+    do: {:stop, :normal, notify_session_failure(Error.new(:response_limit), state)}
 
   def handle_info({port, {:exit_status, _}}, %{port: port} = state),
-    do: {:stop, :normal, state}
+    do: {:stop, :normal, notify_session_failure(Error.new(:transport_closed), state)}
 
   def handle_info({:EXIT, port, _}, %{port: port} = state),
-    do: {:stop, :normal, state}
+    do: {:stop, :normal, notify_session_failure(Error.new(:transport_closed), state)}
 
   def handle_info(_, state), do: {:noreply, state}
 
@@ -373,8 +390,22 @@ defmodule Wotex.Matter.Native.Connection do
 
   defp error_reply(error, state) do
     if error.code == :timeout or Map.get(state, :channel_failed, false),
-      do: {:stop, :normal, {:error, error}, state},
+      do: {:stop, :normal, {:error, error}, notify_session_failure(error, state)},
       else: {:reply, {:error, error}, state}
+  end
+
+  defp notify_session_failure(error, state) do
+    subscriptions =
+      Map.new(state.subscriptions, fn {reference, subscription} ->
+        if subscription.status == :closing do
+          {reference, subscription}
+        else
+          send(subscription.receiver, {:wotex_matter, reference, {:error, error}})
+          {reference, %{subscription | status: :closing, close_result: error.code}}
+        end
+      end)
+
+    %{state | subscriptions: subscriptions}
   end
 
   defp decode_operation_reply({:reply, {:ok, result}, state}, type) do
@@ -384,12 +415,14 @@ defmodule Wotex.Matter.Native.Connection do
           {:reply, {:ok, decoded}, state}
         else
           effect = if type in [:write, :invoke], do: :unknown, else: :none
-          {:stop, :normal, {:error, Error.new(:timeout) |> Error.with_effect(effect)}, state}
+          error = Error.new(:timeout) |> Error.with_effect(effect)
+          {:stop, :normal, {:error, error}, notify_session_failure(error, state)}
         end
 
       {:error, error} ->
         effect = if type in [:write, :invoke], do: :unknown, else: :none
-        {:stop, :normal, {:error, Error.with_effect(error, effect)}, state}
+        error = Error.with_effect(error, effect)
+        {:stop, :normal, {:error, error}, notify_session_failure(error, state)}
     end
   end
 
@@ -401,8 +434,11 @@ defmodule Wotex.Matter.Native.Connection do
   defp remaining_budget({:health, generation, timeout}, remaining),
     do: {:health, generation, min(timeout, remaining)}
 
-  defp remaining_budget({:subscribe, generation, request, receiver, timeout}, remaining),
-    do: {:subscribe, generation, request, receiver, min(timeout, remaining)}
+  defp remaining_budget(
+         {:subscribe, generation, request, receiver, timeout, acknowledged},
+         remaining
+       ),
+       do: {:subscribe, generation, request, receiver, min(timeout, remaining), acknowledged}
 
   defp remaining_budget({:unsubscribe, generation, subscription, timeout}, remaining),
     do: {:unsubscribe, generation, subscription, min(timeout, remaining)}
@@ -716,6 +752,11 @@ defmodule Wotex.Matter.Native.Connection do
          {:ok, reference} <- Map.fetch(state.subscription_ids, key),
          {:ok, delivery} <- Wire.subscription(kind, value, metadata),
          true <- delivery_path_matches?(delivery, Map.fetch!(state.subscriptions, reference)),
+         true <- map_size(state.pending_reports) < 64,
+         true <-
+           Enum.reduce(state.pending_reports, encoded_bytes, fn {_, report}, bytes ->
+             bytes + report.bytes
+           end) <= 1_048_576,
          registered <- register_report(state, reference, sequence, encoded_bytes),
          {:ok, next_state} <-
            admit_report(registered, reference, delivery, sequence, encoded_bytes) do
@@ -1143,9 +1184,25 @@ defmodule Wotex.Matter.Native.Connection do
 
     case Process.info(subscription.receiver, :message_queue_len) do
       {:message_queue_len, length} when length < subscription.queue_limit ->
-        send(subscription.receiver, {:wotex_matter, reference, delivery})
-        emit_subscription(:deliver, subscription.kind, :ok)
-        acknowledge_report(state, sequence, encoded_bytes)
+        if subscription.acknowledged do
+          pending = Map.fetch!(state.pending_reports, sequence)
+
+          envelope = %Wotex.Matter.Native.Delivery{
+            connection: self(),
+            generation: state.generation,
+            reference: reference,
+            sequence: sequence,
+            token: pending.token,
+            value: delivery
+          }
+
+          send(subscription.receiver, {:wotex_matter, reference, envelope})
+          state
+        else
+          send(subscription.receiver, {:wotex_matter, reference, delivery})
+          emit_subscription(:deliver, subscription.kind, :ok)
+          acknowledge_report(state, sequence, encoded_bytes)
+        end
 
       _ ->
         overflow_subscription(state, reference, sequence, encoded_bytes)
@@ -1178,6 +1235,7 @@ defmodule Wotex.Matter.Native.Connection do
     pending = %{
       reference: reference,
       bytes: encoded_bytes,
+      token: make_ref(),
       consumed: false
     }
 

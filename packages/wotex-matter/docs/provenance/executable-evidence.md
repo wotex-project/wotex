@@ -967,3 +967,42 @@ advisory queries, the default 139-check gate and ExDoc pass.
 | Sanitized host | `33c06a9aa816c17e761c6d788cf62db4e8f96b4b86ca92e4bdd00c7db4cbcaf0` |
 | Current Linux corpus log | `96a919215d1c8ba08919b0b1ec68b80c79a2bfa4776ad9b3f728452ef4c7fac5` |
 | Minimum Linux sanitizer corpus log | `5125b2775baba5b8511bfc3918ffb3b052f52092392bf108b03c1949c6dd94c1` |
+
+## Runtime consumption and native report credit
+
+The native Runtime route retains report credit until its bound Runtime owner
+decodes the validated frame. An internal delivery token binds consumption to the
+connection generation, subscription reference and exact report sequence. Invalid
+tokens and replayed consumption do not advance credit. Out-of-order consumption
+remains pending until the contiguous prefix is complete. Retirement consumes
+only the validated reports belonging to that subscription. Named direct
+subscriptions retain their public delivery tuples and queue-admission behavior.
+
+The connection also bounds retained reports to 64 frames and 1048576 encoded
+bytes, including newlines. A producer exceeding that bound terminates the
+connection and sends one error to each active subscription. Channel failures,
+invalid replies and expired operations notify active streams before controller
+cleanup. These notifications cover normal connection error handling; abrupt
+external termination of the BEAM connection remains a separate ownership case.
+
+Four regressions exercise token validation and replay, deferred Runtime decoding,
+retirement with unconsumed reports, and an excessive producer. The focused
+22-test suite passes on both supported toolchains. The complete default gate
+passes 143 checks with 20 excluded, and ExDoc passes without warnings. The real
+lighting/ConsumedThing workflow passes on both pinned Linux toolchains, including
+ASan/UBSan and leak detection on the minimum lane, using the credit-trace hosts
+`197bbd3a...c2d3` and `33c06a9a...caf0` recorded above. That peer run precedes the
+final error-notification review; the final default and minimum focused suites
+include those error-path changes. The suspended-process corpus cases and full
+C09 gate remain open.
+
+| Runtime credit artifact | SHA-256 |
+| --- | --- |
+| Native API | `2bae8c562a7f39a74f0a90cb35acaf077f218a3f3e1f190682a8921dbe9d7e9d` |
+| Native connection | `822a4ee59be13178866bb1531c2b63c54e18976a32ce689f49c03319ea8f041b` |
+| Internal delivery | `b3b29bddad5f2207b9e48573bfcbcece1dd765f56e7ba59f55e9954beba8a8ef` |
+| Runtime relay | `4636aa35274cbd0fdab6f86ca10f86a054f88337b6296a759d0e3f7f6948d775` |
+| Subscription tests | `82c9104d66ab0cef7d7b7a7575319103ac19804a384e12d01bbf5341049ca9ed` |
+| Minimum focused log | `aca6605df3af52dce154433774447ec4065699328d36cf238e292a06b002ce38` |
+| Current Linux lighting log | `ebcc541c0487a025540f40b848e7d43a43f242eef19299a0a10b90ee694cb59b` |
+| Minimum Linux sanitizer lighting log | `7be94d2ef772a0bcc8baa8688301e4dd4c3f01bb896ae6133ffefd8e4c469d74` |
