@@ -3,14 +3,14 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.6
+  version: 1.1.7
   owner: wotex-opcua
   updated: 2026-09-16
 ---
 
 # WOP.11 Standalone OPC UA client and feature preservation
 
-Specification version: **1.1.6**. Implementation status: **partial**.
+Specification version: **1.1.7**. Implementation status: **partial**.
 [WOP.10](WOP.10-software-contract.md) and [WOP.13](WOP.13-native-executable.md)
 define the native backend and typed service contract.
 The [implemented profile](WOP.02-implemented-profile.md) and
@@ -25,6 +25,9 @@ handles, original-deadline pagination and peer-level BrowseNext/release still
 have no implementation or N03/N04 acceptance. The native one-shot client now
 projects successful Read, Write and Call results into the older adapter's
 success shapes; error and full lifecycle compatibility remain open.
+The BEAM frame accepts only canonical native `c` plus uint64 local tokens and
+an exact null release result. Its host terminates the Session on a returned
+token until a bound handle owner exists.
 
 ## WOP-N01 — First-party client and preserved protocol assets
 

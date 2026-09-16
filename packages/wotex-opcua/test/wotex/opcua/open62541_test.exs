@@ -297,6 +297,18 @@ defmodule Wotex.OPCUA.Open62541Test do
     assert first == second
     assert :ok = Wotex.OPCUA.disconnect(duplicate_session)
 
+    continuation_options = fixture(context, "typed-continuation", "session_continuation")
+
+    assert {:ok, continuation_session} =
+             Wotex.OPCUA.connect(Keyword.put(continuation_options, :client, Open62541))
+
+    continuation_monitor = Process.monitor(continuation_session.handle.host)
+
+    assert {:error, %Error{code: :response_limit}} =
+             Browse.references(continuation_session, "ns=0;i=85")
+
+    assert_receive {:DOWN, ^continuation_monitor, :process, _, _}, 1000
+
     assert {:error, %Error{code: :unsupported_protocol}} =
              Browse.references(
                %Wotex.OPCUA.Session{client: Wotex.OPCUA.Asyncua, handle: %{}, timeout: 1000},

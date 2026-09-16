@@ -28,8 +28,15 @@ a fresh local token even if opaque bytes repeat, and has asynchronous
 `browse_next` and `browse_release` service paths. It caps each page at the
 requested size and cumulative pages/references/binary results at 64/4096/1 MiB;
 failure closes the Session. Existing public Browse calls do not opt in and
-still close on any continuation. The BEAM frame rejects non-null continuation
-results, so no public pagination or token ownership is claimed.
+still close on any continuation. The BEAM host rejects returned continuation
+tokens, so no public pagination or token ownership is claimed.
+
+The BEAM response frame now admits only canonical native `c` plus uint64
+continuation tokens and exact null release responses. The host still closes
+on a returned token, which a deterministic C response peer verifies before
+any token can escape. Malformed or forged token strings fail frame validation.
+Focused frame and host tests pass 30/30. These tests do not establish a
+server-side BrowseNext wire exchange or public handle ownership.
 
 The native token-state CTest passes reused bytes, foreign token and opt-out
 cases. The full native CTest passes 182/182; the existing independent secure

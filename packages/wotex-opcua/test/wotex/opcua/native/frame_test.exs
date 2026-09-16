@@ -400,9 +400,27 @@ defmodule Wotex.OPCUA.Native.FrameTest do
     page = %{"status" => 0, "references" => [reference], "continuation" => nil}
     assert {:ok, ^page} = Frame.response(frame.(page), 7, "browse-1", "browse", nil)
 
+    for operation <- ["browse", "browse_next"], token <- ["c1", "c18446744073709551615"] do
+      continued = %{page | "continuation" => token}
+      assert {:ok, ^continued} = Frame.response(frame.(continued), 7, "browse-1", operation, nil)
+    end
+
+    assert {:ok, nil} = Frame.response(frame.(nil), 7, "browse-1", "browse_release", nil)
+
+    for invalid <- ["server-secret", "c0", "c01", "c-1", "c18446744073709551616", "c"],
+        operation <- ["browse", "browse_next"] do
+      assert {:error, %Error{code: :invalid_native_frame}} =
+               Frame.response(
+                 frame.(%{page | "continuation" => invalid}),
+                 7,
+                 "browse-1",
+                 operation,
+                 nil
+               )
+    end
+
     for invalid <- [
           %{page | "status" => 0x8000_0000},
-          %{page | "continuation" => "server-secret"},
           %{page | "references" => ["not a reference"]},
           %{page | "references" => [Map.put(reference, "extra", true)]},
           %{page | "references" => [Map.put(reference, "node_id", %{})]},
@@ -414,5 +432,8 @@ defmodule Wotex.OPCUA.Native.FrameTest do
       assert {:error, %Error{code: :invalid_native_frame}} =
                Frame.response(frame.(invalid), 7, "browse-1", "browse", nil)
     end
+
+    assert {:error, %Error{code: :invalid_native_frame}} =
+             Frame.response(frame.(page), 7, "browse-1", "browse_release", nil)
   end
 end

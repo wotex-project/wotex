@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.31
+  version: 1.0.32
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -150,6 +150,9 @@ public calls do not opt in and retain fail-closed behavior. A native state test
 covers token reuse and foreign-token rejection; the independent secure peer
 does not implement server-side BrowseNext, so wire pagination, cleanup failure,
 original-deadline propagation and public handles have no acceptance evidence.
+The BEAM frame now validates native local-token syntax and an exact null
+release response. Until it owns public continuation handles, the BEAM host
+closes its Session on any returned token, including an opt-in raw request.
 The native configuration helper validates explicit policy, token and credential
 paths and snapshots bounded files for the native `open` request.
 `Open62541.connect/1` now uses that helper and the owned C host for a persistent

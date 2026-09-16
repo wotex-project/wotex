@@ -21,7 +21,7 @@ specifications:
     executable_evidence: ["test/wotex/opcua/asyncua_test.exs", "test/wotex/opcua/binary_test.exs", "test/wotex/opcua/contract_test.exs", "test/wotex/opcua/dependency_security_test.exs", "test/wotex/opcua/mapping_test.exs", "test/wotex/opcua/port_test.exs", "test/wotex/opcua/value_test.exs"]
     compatibility_classification: "listed typed scalar, URI and secure one-shot adapter subset only; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
   - id: "WOP.02"
-    version: "1.0.31"
+    version: "1.0.32"
     path: "docs/specs/WOP.02-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "OPC UA / asyncua", "revision": "OPC 10000 Parts 4/6 1.05.07; asyncua 2.0.1", "claim": "listed typed scalar, URI and secure one-shot adapter subset only"}, {"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7", "claim": "explicitly selected partial native persistent/one-shot read, Write, Call and bounded child Browse client; full native profile unaccepted"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
@@ -39,7 +39,7 @@ specifications:
     executable_evidence: ["test/wotex/opcua/typed_values_test.exs", "test/wotex/opcua/standalone_contract_test.exs", "priv/native/value_check.c", "priv/native/value_fault_check.c", "priv/native/native_contract_check.c", "test/wotex/opcua/native/build_test.exs"]
     compatibility_classification: "WOP-P01 accepts S01 typed values and the exact WOP-F01..F13/WOP-X-F01..F16 pure/native projections. P02 slices activate one secure peer Session, acquire NamespaceArray and perform one-at-a-time typed Value Read/Write/Call and bounded one-page child Browse with concrete input namespace translation and no mutation retry; no complete S02 or additional fixture family is accepted. Other services, lifecycle, security matrix and subscriptions remain required."
   - id: "WOP.11"
-    version: "1.1.6"
+    version: "1.1.7"
     path: "docs/specs/WOP.11-standalone-client-and-preservation.md"
     implementation_status: "partial"
     standards: [{"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Pure typed value/identity/reference subset; no native SDK or service acceptance"}]
@@ -57,7 +57,7 @@ specifications:
     executable_evidence: ["test/wotex/opcua/open62541_test.exs", "test/interop/native_secure_test.exs"]
     compatibility_classification: "One explicitly selected native one-shot Runtime ByteString Form path preserves raw scalar bytes and supports typed flat-array Write/readback/restore with ordered bounded binary elements. The complete I01..I06 integration, profile factory, lifecycle, error/retry and subscription cells remain unaccepted."
   - id: "WOP.13"
-    version: "1.1.15"
+    version: "1.1.16"
     path: "docs/specs/WOP.13-native-executable.md"
     implementation_status: "partial"
     standards: [{"name": "OPC UA / open62541 / OpenSSL", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Pinned static build, executable admission, custody, SDK value projection and one secure native open/read/write/call/browse/close path; full Session/service interoperability remains unaccepted"}]

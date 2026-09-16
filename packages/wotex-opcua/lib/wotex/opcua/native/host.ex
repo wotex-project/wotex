@@ -369,6 +369,9 @@ defmodule Wotex.OPCUA.Native.Host do
            pending.operation,
            pending.requested_timeout
          ) do
+      {:ok, %{"continuation" => continuation}} when is_binary(continuation) ->
+        failed(state, Error.new(:response_limit))
+
       {:ok, result} ->
         deliver_native_result(state, pending, input, result)
 

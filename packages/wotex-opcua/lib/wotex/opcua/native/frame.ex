@@ -188,18 +188,22 @@ defmodule Wotex.OPCUA.Native.Frame do
   end
 
   defp response_result(
-         "browse",
-         %{"status" => status, "references" => references, "continuation" => nil} = result,
+         operation,
+         %{"status" => status, "references" => references, "continuation" => continuation} = result,
          _,
          _
        )
-       when map_size(result) == 3 and is_integer(status) and status in 0..4_294_967_295 and
+       when operation in ["browse", "browse_next"] and map_size(result) == 3 and
+              is_integer(status) and status in 0..4_294_967_295 and
               is_list(references) and length(references) <= 256 do
     if Bitwise.band(status, 0x80000000) == 0 and
+         valid_continuation?(continuation) and
          Enum.all?(references, &valid_reference?/1),
        do: {:ok, result},
        else: {:error, Error.new(:invalid_native_frame, :response)}
   end
+
+  defp response_result("browse_release", nil, _, _), do: {:ok, nil}
 
   defp response_result("read", result, _, _) when is_map(result) do
     with {:ok, value} <- native_data_value(result),
@@ -231,6 +235,20 @@ defmodule Wotex.OPCUA.Native.Frame do
   end
 
   defp response_result(_, _, _, _), do: {:error, Error.new(:invalid_native_frame, :response)}
+
+  defp valid_continuation?(nil), do: true
+
+  defp valid_continuation?("c" <> digits) when byte_size(digits) in 1..20 do
+    case Integer.parse(digits) do
+      {number, ""} when number in 1..18_446_744_073_709_551_615 ->
+        Integer.to_string(number) == digits
+
+      _ ->
+        false
+    end
+  end
+
+  defp valid_continuation?(_), do: false
 
   defp valid_call_result?(
          %{

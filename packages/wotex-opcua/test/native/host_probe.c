@@ -124,7 +124,9 @@ static int session_services(int remote_browse) {
                 "{\"status\":0,\"input_argument_statuses\":[],"
                      "\"outputs\":[{\"type\":\"Double\",\"array\":false,\"value\":4.5}]}";
         else if(strstr(frame, "\"operation\":\"browse\""))
-            result = remote_browse == 13 ?
+            result = remote_browse == 14 ?
+                "{\"status\":0,\"continuation\":\"c1\",\"references\":[]}" :
+                remote_browse == 13 ?
                 "{\"status\":0,\"continuation\":null,\"references\":[{"
                 "\"reference_type_id\":\"ns=0;i=35\",\"is_forward\":true,"
                 "\"node_id\":{\"node_id\":\"ns=1;s=value\",\"namespace_uri\":null,\"server_index\":0},"
@@ -234,6 +236,7 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "session_runtime_bytes")) return session_services(11);
     if (!strcmp(mode, "session_runtime_byte_array")) return session_services(12);
     if (!strcmp(mode, "session_two_browse")) return session_services(13);
+    if (!strcmp(mode, "session_continuation")) return session_services(14);
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

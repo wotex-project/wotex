@@ -122,7 +122,8 @@ The next native-only N03 slice adds an internal opt-in for one C-owned
 continuation point. BrowseNext consumes its local token and can return a fresh
 token even when the server bytes repeat; Browse release expects an empty result.
 Cumulative 64-page, 4096-reference and 1 MiB binary-result ceilings fail closed.
-The public BEAM frame still rejects non-null continuations and closes its host.
+The BEAM frame now validates local token syntax, but the public host closes on
+every returned continuation until it can bind a handle to that native Session.
 The existing independent asyncua peer ignores the requested page size and does
 not implement BrowseNext, so no wire pagination or release acceptance is claimed.
 The following N04 compatibility slice maps one-shot native Read to the older

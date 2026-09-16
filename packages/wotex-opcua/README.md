@@ -48,9 +48,8 @@ its actual behavior. One-shot Read/Write/Call successes preserve the older
 adapter's result shapes. A persistent native Session can also return one
 complete page of seven-field typed references. The C owner now has a single
 local-token BrowseNext/release path behind an internal opt-in; public typed
-handles and pagination, complete compatibility
-projection, subscriptions and lifecycle work
-remain.
+handles and pagination remain closed at the BEAM host. Complete compatibility
+projection, subscriptions and lifecycle work remain.
 The Runtime Form mapper preserves raw ByteString bytes for the explicitly
 selected native one-shot client. Runtime reads also decode validated flat
 ByteString arrays to BEAM binaries, and explicitly typed flat ByteString arrays
