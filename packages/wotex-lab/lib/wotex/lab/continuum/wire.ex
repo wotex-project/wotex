@@ -23,7 +23,7 @@ if Code.ensure_loaded?(WotexContinuum.Codec) and Code.ensure_loaded?(Wotex.Runti
     @quality_iri "urn:wotex:lab:continuum:quality"
     @operation_iri "urn:wotex:lab:continuum:operation"
 
-    @doc "Converts an Nx observation to a proposal; `epoch` anchors the integer coordinate in milliseconds."
+    @doc "Converts an Nx observation to a proposal; `epoch` anchors milliseconds and `sequence:` is required."
     @spec proposal_from_observation(Observation.t(), ExecutionScope.t(), DateTime.t(), keyword()) ::
             {:ok, ObservationProposal.t()} | {:error, WotexContinuum.Error.t()}
     def proposal_from_observation(

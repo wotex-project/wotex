@@ -407,9 +407,17 @@ defmodule Wotex.Lab.ContinuumTest do
         quality: :uncertain
       )
 
-    {:ok, wire_proposal} = Wire.proposal_from_observation(observation, Fixtures.scope(), @epoch)
+    assert {:error, %WotexContinuum.Error{code: :invalid_integer, path: "/sequence"}} =
+             Wire.proposal_from_observation(observation, Fixtures.scope(), @epoch)
 
-    assert %ObservationProposal{proposal_id: "obs-9", observed_at: "2026-09-08T10:00:00.250Z"} =
+    {:ok, wire_proposal} =
+      Wire.proposal_from_observation(observation, Fixtures.scope(), @epoch, sequence: 9)
+
+    assert %ObservationProposal{
+             proposal_id: "obs-9",
+             sequence: 9,
+             observed_at: "2026-09-08T10:00:00.250Z"
+           } =
              wire_proposal
 
     assert wire_proposal.extensions["urn:wotex:lab:continuum:unit"] == "Cel"

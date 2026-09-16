@@ -97,7 +97,9 @@ idempotency key through a runtime `ConsumedThing` over the loopback lane,
 returns an `action_result`, refuses intents without an accepted manifest or
 while draining, and keeps a lifecycle value. `Wotex.Lab.Continuum.Wire`
 implements the documented wire mapping from Nx observations and proposals
-and runtime results. Manifest/context/
+and runtime results. The observation conversion requires an explicit
+non-negative `sequence`; an omitted sequence is rejected by the public
+`WotexContinuum` constructor. Manifest/context/
 capability compatibility, TD references, all registered value kinds, observation
 and Action roundtrips and lifecycle transitions need positive/negative vectors.
 Transport is a bounded, instance-owned in-memory channel with explicit delay,
