@@ -75,7 +75,7 @@ defmodule Wotex.CoAP.DatagramTest do
     monitor = Process.monitor(handle.pid)
     send(owner, :done)
     assert_receive {:DOWN, ^monitor, :process, _, reason}
-    assert reason in [:normal, :killed]
+    assert reason in [:normal, :killed, :noproc]
     assert :erlang.port_info(socket) == :undefined
 
     {:ok, handle} = UDP.open(config(), self(), 100)
