@@ -3,9 +3,9 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.19
+  version: 1.1.20
   owner: wotex-opcua
-  updated: 2026-09-16
+  updated: 2026-09-17
 ---
 
 # WOP.13 Native OPC UA executable and software acceptance
@@ -68,10 +68,9 @@ Later invalid identity and Uncertain status release a live cursor; fixture
 tests pass for both lifecycle modes. The secure same-stack C peer confirms
 multi-page child collection over the wire in both modes. No independent
 BrowseNext peer exchange or release-counter evidence exists yet.
-The target native runtime uses an Elixir API and an explicitly owned open62541 C
-executable. In that path, Python is confined to the independent test peer and
-upstream build generators; the current public compatibility adapter still
-requires Python.
+The native runtime uses an Elixir API and an explicitly owned open62541 C
+executable. Python is confined to the independent test peer and upstream build
+generators; the former public Python compatibility adapter has been removed.
 `Native.Config.new/1` now validates the exact public native option shape without
 file I/O; `open_parameters/2` snapshots explicitly named regular credential
 files under one caller deadline, bounds each to 64 KiB, and projects the closed
@@ -79,11 +78,10 @@ bytes-envelope `open` map. Anonymous, binary username/password and certificate
 token shapes are covered. The explicitly selected public `Open62541` client now
 uses this layer to open a caller-owned persistent Session or to defer all file
 and process I/O until a one-shot request. Persistent Read, Write and Call retain
-typed native maps; one-shot success preserves the older adapter's Read envelope,
+typed native maps; one-shot success preserves the recorded Read envelope,
 `"written"` Write acknowledgment and zero/one/many Call output shapes, including
 ByteString envelopes. Bounded child Browse works in both modes. These paths pass
-against one independent secure peer. The older `Asyncua` adapter remains
-Python-backed. Complete compatibility projection, typed Browse
+against one independent secure peer. Complete compatibility projection, typed Browse
 pagination/release, cancellation, concurrency and the policy/token matrix remain open;
 this does not accept P02/P03.
 The independent peer also confirms typed ByteString array Write/readback through

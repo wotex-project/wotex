@@ -23,7 +23,7 @@ binding implementation work, not a changelog.
 | WOP-P05 | C03/C05/S02/S04/X04/X05: receiver/Session/owner loss, cancellation failure, saturated output, partial-open/final-owner handoff and terminal-once cleanup | subscription_lifecycle_test.exs; test/native/lifecycle_test.c; X-F18..F23/X-F29 and suspended-owner overproducer stress | Open |
 | WOP-P06 | S05: typed Runtime Property observation and explicit health probe, native one-shot compatibility projection, unsupported Event/credential rejection | runtime_stream_test.exs; real Runtime child-spec lifecycle tests | Open |
 | WOP-P06a | N01/N03/N04/N05: typed bounded Browse/BrowseNext/release, original Session/deadline, early-release/failure fallback and native root helpers | standalone_contract_test.exs; test/native/browse_test.c; WOP-F14..F16 and complete N boundary matrix | Open; persistent typed handles, next/release/all, original-deadline/cumulative bounds and persistent/one-shot child-list pagination pass C response fixtures and a secure same-stack multi-page wire peer; native C owns one token; multiple live continuations, independent-peer BrowseNext and release counters remain |
-| WOP-P07 | X06/S01..S04: independent asyncua secure peer and same-stack exact-tick/fault C peer, typed methods/arrays/users, subscriptions and continuation counters; all policy/token/security cells execute | test/interop/asyncua_test.exs; test/interop/open62541_test.exs; full V01..V14 software assertions | Open |
+| WOP-P07 | X06/S01..S04: independent asyncua secure peer and same-stack exact-tick/fault C peer, typed methods/arrays/users, subscriptions and continuation counters; all policy/token/security cells execute | test/interop/native_secure_test.exs; test/interop/native_paged_test.exs; full V01..V14 software assertions | Open |
 | WOP-P07a | I01..I06: exact profiles and Form/context/media selection, Result identity/metadata, complete Error/Retry table, final-owner custody and cleanup through real ConsumedThing | runtime_integration_test.exs; all wotex-integration-v1.json cases and I06 matrix | Open; one native one-shot Runtime ByteString Form Write/readback path is proven, but the profile factory and full matrix remain |
 | WOP-P08 | C09/C10/X06: complete software Mix tasks, audit/sanitizer/matrix/stress and isolated native archive consumer with no runtime Python; evidence contains every S/N/I/X assertion and current digest | test/software/lifecycle_stress_test.exs; X-F48; full software runner and out-of-tree package workflow | Open |
 
@@ -93,8 +93,8 @@ files under the caller's deadline into the closed native `open` map. A separate
 independent-peer check opens and closes a secure Session using that projection.
 The explicitly selected public `Open62541` client now uses this projection for
 persistent and one-shot Session ownership. An independent secure peer passes
-public read, Write/readback, Method Call and one-shot read. The older `Asyncua`
-adapter remains Python-backed; complete error/lifecycle compatibility and typed Browse pagination,
+public read, Write/readback, Method Call and one-shot read. The Python runtime
+adapter has been removed; complete error/lifecycle compatibility and typed Browse pagination,
 subscriptions, cancellation and the remaining security/lifecycle matrix remain
 open.
 The facade now keeps a native client's finite local Write/Call validation and
@@ -158,8 +158,7 @@ An additional I03 partial slice admits explicit ByteString flat-array inputs
 through the Form mapper, checks the pure Variant limits, decodes the validated
 base64 elements only at the selected native transport boundary, and sends the
 typed array through native Write. A C frame fixture and independent secure
-peer check Write/readback. The older Python adapter rejects this array shape
-before process startup. Other typed array types and full I03 acceptance remain
+peer check Write/readback. Other typed array types and full I03 acceptance remain
 open.
 
 ## Verification and evidence

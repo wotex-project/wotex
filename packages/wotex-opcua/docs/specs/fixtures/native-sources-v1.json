@@ -54,8 +54,8 @@
     "name": "asyncua",
     "version": "2.0.1",
     "runtime_dependency": false,
-    "current_fixture_lock": "priv/requirements.txt",
-    "target_fixture_lock": "test/interop/asyncua/requirements.txt"
+    "current_fixture_lock": "test/interop/requirements.txt",
+    "target_fixture_lock": "test/interop/requirements.txt"
   },
   "vendored_sources": [
     {

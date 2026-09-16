@@ -3,18 +3,18 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.35
+  version: 2.0.0
   owner: wotex-opcua
-  updated: 2026-09-16
+  updated: 2026-09-17
 ---
 
 # WOP.02 Implemented OPC UA profile
 
-This document inventories the existing Python-backed protocol adapter and the
-partial public native Session client. It does not accept the complete native
-target in WOP.10–WOP.13. Python remains a runtime requirement when selecting the
-older `Asyncua` adapter; the explicitly selected `Open62541` client uses no
-runtime Python process.
+This document inventories the partial public native Session client. The former
+Python-backed `Asyncua` runtime adapter has been removed from the development
+package. `Open62541` uses no runtime Python process. This does not accept the
+complete native target in WOP.10–WOP.13; callers still select the native client
+explicitly and provide its pinned executable and credentials.
 
 The OPC 10101 URI subset is
 `opc.tcp://host:port/path?id=percent-encoded-NodeId`. A single `id` query parameter
@@ -56,19 +56,6 @@ existing `Value` adapter still has its scalar contract.
 UA chunk framing defaults to 1 MiB and validates message type, chunk kind and
 length before allocating/waiting. Chunk framing alone does not validate secure
 channels, sequence numbers, RequestId, RequestHandle or service status.
-
-The real adapter delegates those channel/session checks to pinned asyncua 2.0.1.
-Its externally provisioned Python environment is an explicit implementation
-dependency; the package neither hides nor installs it. Malformed handles,
-requests, timeouts, unknown options
-and duplicate security options fail before the bridge starts.
-Its HEL negotiation caps messages at 1 MiB and chunks at 16. The JSON process
-boundary caps request/response bytes at 128 KiB and correlates a request ID.
-The caller owns the process; closure of its input cancels the exchange. No
-credentials are placed in command-line arguments. Native stderr joins the same
-bounded result channel and cannot count as success. Stdout is a single JSON
-result; failures expose no native exception text. Read scalars retain their
-Variant type and StatusCode. ByteStrings use an explicit base64 representation.
 
 The implemented certificate profile requires a current, signed
 issuer CRL and a leaf directly issued by a trusted self-signed CA. It is a
@@ -147,8 +134,7 @@ through the same persistent or temporary one-shot Session, retains duplicates
 and caps the complete result at 256 local children. It releases a cursor after
 a later invalid identity or Uncertain page. Subscriptions,
 complete output buffering, cancellation, full namespace translation and other
-policy/token interoperability remain open P02/P03 work. The older explicit
-`Asyncua` adapter remains Python-backed.
+policy/token interoperability remain open P02/P03 work.
 The C owner keeps one server token in native memory, returns a fresh local
 token for each page, and sends service-level BrowseNext or release on the same
 Session. A native state test covers reused bytes and foreign-token rejection.
@@ -170,7 +156,7 @@ paths and snapshots bounded files for the native `open` request.
 secure Session, or defers file and process I/O in one-shot mode. Its current
 public request path exposes typed native DataValue, Write status and Call result
 maps in persistent mode plus bounded child-NodeId Browse through the facade.
-One-shot Read, Write and Call project the existing adapter's successful result
+One-shot Read, Write and Call project the recorded successful result
 shapes: `{type, value, status}`, `"written"`, and zero/one/many method outputs.
 The independent Basic256Sha256 anonymous peer passes read, write/readback,
 Call, Browse and one-shot result projection. This is an explicitly selected
@@ -184,8 +170,7 @@ flat-array elements to BEAM binaries, preserving null elements and array order.
 The independent secure peer confirms one native one-shot Form array read after
 a typed Write. The Form mapper now admits an explicit typed ByteString array
 envelope, validates its finite size/dimensions with the pure Variant codec,
-and transmits raw bytes through the selected native client. The older Python
-adapter rejects typed array Writes before process startup. A deterministic C
+and transmits raw bytes through the selected native client. A deterministic C
 fixture and the independent peer check the native Runtime array Write/readback.
 General typed-array validation, array metadata and the complete
 Runtime profile remain open.

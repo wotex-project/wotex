@@ -3,16 +3,16 @@ spec:
   id: WOP.10
   title: "Complete secure OPC UA client software profile"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-opcua
-  updated: 2026-09-09
+  updated: 2026-09-17
 ---
 
 # WOP.10 Complete secure OPC UA client software profile
 
 Read [WOP.00](WOP.00-library-contract.md), [WOP.11 standalone client and preservation](WOP.11-standalone-client-and-preservation.md), and the [implementation sequence](../plans/software-implementation.md).
-This accepted target defines the native software profile. The current implementation
-and its limited Python runtime adapter are described only in WOP.02. Target
+This accepted target defines the native software profile. The current partial
+native implementation is described in WOP.02. Target
 acceptance requires the first-party native executable and every required software
 lane; specification acceptance is not implementation evidence.
 
@@ -30,8 +30,8 @@ No certification is claimed.
 The first-party `Wotex.OPCUA.Open62541` adapter owns an external C executable
 using open62541 1.5.7 and OpenSSL 3.5.8. WOP.13 fixes source digests, build flags,
 IPC, SDK integration and executable acceptance. Runtime operation requires no
-Python interpreter or Python packages. asyncua 2.0.1 is an independent test peer
-only in the accepted target.
+Python interpreter or Python packages. asyncua 2.0.1 remains an independent
+test peer for cross-stack interoperability.
 
 The SDK owns UA TCP framing, secure-channel cryptography, token renewal, Session
 activation and service codecs. The native executable owns bounded service

@@ -3,9 +3,9 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.10
+  version: 1.1.11
   owner: wotex-opcua
-  updated: 2026-09-16
+  updated: 2026-09-17
 ---
 
 # WOP.11 Standalone OPC UA client and feature preservation
@@ -27,7 +27,7 @@ same-stack C peer that forces one reference per wire page. That peer confirms
 BrowseNext, release and child-list collection in persistent and one-shot mode.
 Multiple live continuations and independent-peer BrowseNext/release remain open;
 N03/N04 are not accepted. The native one-shot client now
-projects successful Read, Write and Call results into the older adapter's
+projects successful Read, Write and Call results into the recorded
 success shapes; error and full lifecycle compatibility remain open.
 The BEAM frame accepts only canonical native `c` plus uint64 local tokens and
 an exact null release result. Its host binds tokens only for its own typed

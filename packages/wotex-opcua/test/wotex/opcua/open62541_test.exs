@@ -5,6 +5,22 @@ defmodule Wotex.OPCUA.Open62541Test do
 
   alias Wotex.OPCUA.{Browse, Error, Open62541}
 
+  defmodule CloseProbe do
+    @moduledoc false
+
+    use GenServer
+
+    @spec start_link(term()) :: GenServer.on_start()
+    def start_link(reply), do: GenServer.start_link(__MODULE__, reply)
+
+    @impl GenServer
+    def init(reply), do: {:ok, reply}
+
+    @impl GenServer
+    def handle_call({Wotex.OPCUA.Native.Host, :request, "close", %{}, _, _}, _, reply),
+      do: {:reply, reply, reply}
+  end
+
   @options [
     executable: "/missing/native",
     executable_digest: String.duplicate("a", 64),
@@ -67,6 +83,21 @@ defmodule Wotex.OPCUA.Open62541Test do
              Open62541.connect([{:security_mode, :none} | @options])
 
     assert {:error, %Error{code: :invalid_native_configuration}} = Open62541.connect(%{})
+  end
+
+  test "WOP-X01 persistent cleanup preserves native errors and rejects malformed acknowledgments" do
+    assert {:ok, config} = Wotex.OPCUA.Native.Config.new(@options)
+
+    for {reply, expected} <- [
+          {{:error, Error.new(:native_process_terminated)}, :native_process_terminated},
+          {{:ok, :unexpected}, :cleanup_failed}
+        ] do
+      assert {:ok, host} = CloseProbe.start_link(reply)
+      handle = %{owner: self(), config: config, host: host}
+
+      assert {:error, %Error{code: ^expected}} = Open62541.disconnect(handle)
+      refute Process.alive?(host)
+    end
   end
 
   test "WOP-X01 invalid operations fail before one-shot file or process I/O" do
@@ -316,7 +347,7 @@ defmodule Wotex.OPCUA.Open62541Test do
 
     assert {:error, %Error{code: :unsupported_protocol}} =
              Browse.references(
-               %Wotex.OPCUA.Session{client: Wotex.OPCUA.Asyncua, handle: %{}, timeout: 1000},
+               %Wotex.OPCUA.Session{client: Wotex.OPCUA.TestClient, handle: %{}, timeout: 1000},
                "i=1"
              )
   end

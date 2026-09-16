@@ -66,6 +66,7 @@ defmodule Wotex.OPCUA.Native.ConfigTest do
       [{:unreviewed, true} | context.options],
       Keyword.put(context.options, :security_mode, :none),
       Keyword.put(context.options, :security_policy, :unknown),
+      Keyword.put(context.options, :authentication, %{type: :unsupported}),
       Keyword.put(context.options, :authentication, %{
         type: :username,
         username: "a",

@@ -61,11 +61,10 @@ Pure byte vectors and the C peer carry that evidence. Its
 [Node convenience code](https://github.com/FreeOpcUa/opcua-asyncio/blob/v2.0.1/asyncua/common/node.py)
 accumulates Browse pages; the native target uses explicit bounded service calls.
 
-The current source still contains a per-request Python runtime adapter; WOP.02
-states that incomplete implementation honestly. Its recorded same-stack tests
-are bounded evidence for that source, not native runtime acceptance. The target
-package has no Python runtime asset or dependency; fixture requirements belong
-under test/interop. Existing pure fixture bytes verified with asyncua are source
+The former per-request Python runtime adapter has been removed. Its recorded
+same-stack tests are bounded historical evidence, not native runtime acceptance.
+The package has no Python runtime asset or dependency; pinned independent peer
+requirements now belong under `test/interop`. Existing pure fixture bytes verified with asyncua are source
 cross-checks, not proof of an implemented Wotex codec or native session.
 
 Direct-CA trust, exact certificate pins, terminal Session loss, deadlines,

@@ -40,12 +40,12 @@ should replace the path with the constraint of an available Hex release.
 
 The current code contains scalar, Variant, DataValue, NodeId, expanded identity, name and reference
 codecs, UA TCP framing, Property Form
-mapping, a limited per-request asyncua adapter and an explicitly selected
-partial `Open62541` client. The latter opens persistent or one-shot secure
+mapping and an explicitly selected partial `Open62541` client. It opens persistent or one-shot secure
 Sessions and performs typed Value Read/Write, Method Call and bounded child
-Browse through C without runtime Python. WOP.02 and executable evidence bound
-its actual behavior. One-shot Read/Write/Call successes preserve the older
-adapter's result shapes. A persistent native Session can also return one
+Browse through C without runtime Python. The former Python runtime adapter is
+removed; asyncua remains an independent test peer. WOP.02 and executable evidence bound
+its actual behavior. One-shot Read/Write/Call successes preserve the recorded
+result shapes. A persistent native Session can also return one
 complete page of seven-field typed references. The C owner now has a single
 local-token BrowseNext/release path. Persistent typed Browse exposes bound
 handles, `next`, `release` and bounded `all`; deterministic fixtures and a

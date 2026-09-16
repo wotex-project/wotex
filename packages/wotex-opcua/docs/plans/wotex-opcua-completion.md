@@ -38,6 +38,6 @@ The [WOP.12 integration contract](../specs/WOP.12-wotex-integration.md) and
 [WOP.13](../specs/WOP.13-native-executable.md) fixes the open62541 executable,
 source digests, build tasks and native acceptance corpus. Python is an independent
 software peer and build-generator dependency only in the accepted target.
-The Python adapter in WOP.02 does not satisfy that target. Acceptance
+The removed Python adapter did not satisfy that target. Acceptance
 requires both native protocol workflows and supported cells through public core/Runtime
 APIs. Dependency artifacts and local source evidence remain separately identified.

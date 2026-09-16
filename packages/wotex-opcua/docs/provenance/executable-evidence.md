@@ -20,6 +20,24 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native-only runtime boundary, 2026-09-17
+
+The first-party `Wotex.OPCUA.Asyncua` client, `priv/opcua_bridge.py` and their
+adapter-specific tests are removed. `Wotex.OPCUA.Open62541` is the remaining
+first-party runtime client; callers still select it explicitly and provide the
+native executable, guardian and security configuration. The independent
+asyncua peer remains under `test/interop` with a test-only requirements lock.
+Upstream open62541 generation still uses Python at build time. No Python source
+is included in the runtime package.
+
+`WOTEX_PATH_DEPS=1 mix check` passed 301 checks (10 doctests, 4 properties,
+287 tests), with 12 excluded, and met the 95.0% coverage floor. Strict Credo
+reported zero findings. The new close-response regression confirms that native
+cleanup preserves typed errors and rejects malformed acknowledgments; the
+configuration regression rejects an unsupported authentication selector.
+The older native build, software peer and Linux matrix receipts below are
+source-bound and do not automatically attest this changed tree.
+
 ## Secure same-stack BrowseNext and release, 2026-09-16
 
 `priv/native/paged_peer.c` is an uninstalled C-only secure test peer built from
@@ -214,8 +232,7 @@ with Elixir 1.20.2 / OTP 29.0.4: 290 passed (10 doctests, 4 properties,
 dependency audits, native build and package/archive checks pass.
 
 This is successful-result compatibility only. Error/status, full lifecycle,
-typed Browse pagination, subscriptions, policy/token interoperability and
-removal of the Python-backed `Asyncua` adapter remain open.
+typed Browse pagination, subscriptions and policy/token interoperability remain open.
 
 ## Native single-page Browse and child projection, 2026-09-16
 
@@ -237,8 +254,7 @@ macOS arm64 with Elixir 1.20.2 /
 OTP 29.0.4: 285 passed (10 doctests, 4 properties, 271 tests), 11 optional
 tests excluded and 95.0% coverage. Typed Browse handles, BrowseNext, explicit
 release, page-to-page deadline/aggregate limits, subscriptions, cancellation,
-complete policy/token interoperability and removal of the Python-backed
-`Asyncua` adapter remain unaccepted.
+complete policy/token interoperability remain unaccepted.
 
 ## Independent-peer native ByteString array round-trip, 2026-09-16
 
@@ -295,9 +311,8 @@ concrete NodeIds and typed Variant inputs before dispatch, with no automatic
 mutation retry. It currently returns the validated native DataValue, Write
 status and Call result maps through the public facade. Browse, subscriptions,
 complete one-shot compatibility projection, full lifecycle/cancellation and
-the security policy/token matrix remain open. The older `Asyncua` adapter and
-its production Python bridge still exist, so the repository is not yet
-Python-free; selecting `Open62541` invokes no Python runtime code.
+the security policy/token matrix remain open. Selecting `Open62541` invokes no
+Python runtime code.
 
 Six default public-client tests pass. A C response peer injects deterministic
 open/read/write/call/close frames to test owner, credit and cleanup wiring;
@@ -333,7 +348,7 @@ anonymous, binary username and certificate token projection, the file and
 aggregate limits, and invalid options. An eighth optional independent-peer
 test opens and closes a real Basic256Sha256 anonymous Session using this
 projection. The helper is preparatory: no public `Open62541` client or one-shot
-projection exists, the public adapter remains Python-backed, and P02/P03 and
+projection existed at that source revision, the public adapter was Python-backed, and P02/P03 and
 the full policy/token matrix remain open.
 
 The focused configuration suite passes five default tests. Eight optional
@@ -361,8 +376,8 @@ status or post-submission failure has unknown effect and is not retried. The
 owner also preserves unknown effect after an unacknowledged Call timeout or
 Port loss. NodeId-bearing inputs and outputs remain unsupported pending complete
 namespace translation. This does not accept full P02/S02/X04, concurrent
-operations, cancellation, subscriptions or the public native client; the
-default public adapter remains Python-backed.
+operations, cancellation, subscriptions or the public native client at that
+source revision; its default public adapter was Python-backed.
 
 The focused Frame/Host suite passes 30 default tests, including the Call owner
 timeout and 64-element result boundaries. Seven optional tests pass against the
@@ -400,7 +415,7 @@ classifies an unacknowledged Write after Port loss or local timeout as unknown.
 There is no automatic replay or retry. NodeId-bearing Variant values remain
 unsupported until namespace translation is complete. This partial slice does
 not accept complete P02/S02/X04, concurrent operations, cancellation or the
-public native client; the default public adapter remains Python-backed.
+public native client at that source revision; its default adapter was Python-backed.
 
 The focused Frame/Host suite passes 29 default tests, including an unacknowledged
 Write owner-timeout case. Six optional tests pass against the independent
@@ -738,7 +753,8 @@ not establish Linux sanitizer coverage for the new slice.
 This is a process-input and terminal-rejection slice, not acceptance of P02.
 Per-operation parameter validation, persistent Session activation, namespace
 acquisition, credits, responses, cancellation and all X-F17..F23/X-F49..F57
-remain required. The current Python adapter still owns public network operations.
+remained required at that source revision. Its Python adapter then owned public
+network operations; that adapter has since been removed.
 
 ## P02 owner-side frame and clock projection
 
@@ -859,7 +875,7 @@ exclusion and 95.8% BEAM coverage, including the fresh pinned build, package
 checks, docs and out-of-tree archive. P02 is still open: normal
 credit consumption/replenishment, output queues and every service remain absent.
 
-## Implemented Python-adapter interoperability
+## Historical Python-adapter interoperability
 
 Real secure asyncua 2.0.1 peer: PASS for read, write/readback/restore, browse,
 unknown-node failure, expired certificate, wrong host/URI, untrusted CA and
@@ -867,19 +883,12 @@ revoked certificate. Both sides use asyncua; this is a real wire/security proof,
 not independent-stack interoperability or OPC Foundation certification.
 Intermediate trust chains are outside the implemented security profile.
 
-```sh
-python3 -m venv /tmp/wotex-ua-test
-/tmp/wotex-ua-test/bin/pip install -r priv/requirements.txt
-/tmp/wotex-ua-test/bin/python test/interop/secure_peer.py /tmp/wotex-ua-fixture
-# In a second terminal, after config.json exists:
-WOTEX_PATH_DEPS=1 WOTEX_OPCUA_INTEROP_CONFIG=/tmp/wotex-ua-fixture/config.json mix test --include interop test/interop/asyncua_test.exs
-```
-
-Stop the explicitly started peer afterward. The fixture generates disposable
-keys/certificates outside the repository; do not use them as operational trust.
-The Python requirements are fully version-pinned. The Elixir gate does not
-install Python dependencies; audit the optional environment separately with
-`pip-audit --disable-pip --no-deps -r priv/requirements.txt`.
+The first-party Python adapter and its interop test have since been removed.
+The independent peer remains in `test/interop/secure_peer.py`, with its pinned
+test-only dependencies in `test/interop/requirements.txt`. The fixture generates
+disposable credentials outside the repository. The Elixir gate does not install
+Python dependencies; audit the optional peer environment separately with
+`pip-audit --disable-pip --no-deps -r test/interop/requirements.txt`.
 
 Interoperability tags are excluded by default. Explicit invocation requires the
 configured peer and must fail if that peer or expected response is missing.
@@ -895,8 +904,8 @@ not complete DataValue metadata or wire interoperability evidence.
 
 The native secure Session, credit protocol, end-to-end 100 ns metadata and
 independent asyncua/native workflow remain required implementation. Software
-build/run entry points remain specified work. The interoperability command above
-exercises the current Python runtime adapter.
+build/run entry points remain specified work. The historical adapter result
+above does not attest the current native source tree.
 
 The hashes identify reviewed test sources, not an immutable release or a promise
 that all future test executions will pass. The mandatory gate and optional peer
@@ -904,8 +913,6 @@ commands above must be rerun after relevant changes.
 
 | Test source | SHA-256 |
 | --- | --- |
-| `test/interop/asyncua_test.exs` | `d1eb6dae68bc989ccb5b1df7778d80c9512781cdcc2fb248d4c43b1a09567740` |
-| `test/wotex/opcua/asyncua_test.exs` | `d36277d2fd7ec90e6fb393f19ee6730c600e6e83713190e83146dfce67182e6e` |
 | `test/wotex/opcua/binary_test.exs` | `a173b9a4687c7965e4b45eab7809b066a428c0de26fe254f230e2fb7a8f23a9b` |
 | `test/wotex/opcua/contract_test.exs` | `e9d677fe79d5d8b4fdb88d1d597b0d6bb3cb2bdbe2889a9cc4003432cb5e5f33` |
 | `test/wotex/opcua/dependency_security_test.exs` | `3c45b778a241b2a577f9481c6a7ec08f4f8ec747f72a6d5e7deaf3265510e072` |
