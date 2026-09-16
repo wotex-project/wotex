@@ -504,9 +504,15 @@ const char *wco_exchange_renew(struct wco_exchange *exchange,
     return send_observe(exchange, path, confirmable, accept_present, accept, 1);
 }
 
-const char *wco_exchange_cancel(struct wco_exchange *exchange) {
-    coap_binary_t *token;
-    int sent;
+const char *wco_exchange_cancel(struct wco_exchange *exchange,
+                                const char *path, int accept_present,
+                                uint16_t accept) {
+    coap_binary_t *token = NULL;
+    coap_pdu_t *pdu = NULL;
+    coap_optlist_t *options = NULL;
+    uint8_t observe[1];
+    coap_mid_t mid;
+    size_t observe_length;
     if (!exchange || exchange->failed) return "connection_closed";
     if (exchange->active && exchange->pending != WCO_PENDING_RENEW) return "busy";
     if (!exchange->observing) return "invalid_request";
@@ -515,23 +521,49 @@ const char *wco_exchange_cancel(struct wco_exchange *exchange) {
         exchange->pending = WCO_PENDING_NONE;
     }
     token = coap_new_binary(exchange->token_length);
-    if (!token) return "native_unavailable";
-    if (exchange->token_length)
+    if (token && exchange->token_length)
         memcpy(token->s, exchange->token, exchange->token_length);
     exchange->store_status = WCO_STORE_OK;
-    exchange->active = 1;
-    exchange->pending = WCO_PENDING_CANCEL;
-    sent = coap_cancel_observe(exchange->session, token, exchange->observe_type);
+    if (token && coap_cancel_observe(exchange->session, token,
+                                     exchange->observe_type)) {
+        coap_delete_binary(token);
+        exchange->active = 1;
+        exchange->pending = WCO_PENDING_CANCEL;
+        return NULL;
+    }
     coap_delete_binary(token);
-    if (!sent) {
+    if (exchange->store_status != WCO_STORE_OK) {
+        exchange->failed = 1;
+        return wco_store_code(exchange->store_status);
+    }
+    observe_length = coap_encode_var_safe(observe, sizeof(observe),
+                                          COAP_OBSERVE_CANCEL);
+    if (!request_options(path, accept_present, accept, 0, 0, &options) ||
+        !option(&options, COAP_OPTION_OBSERVE, observe, observe_length))
+        goto invalid;
+    pdu = coap_new_pdu(exchange->observe_type, COAP_REQUEST_CODE_GET,
+                       exchange->session);
+    if (!pdu ||
+        !coap_add_token(pdu, exchange->token_length, exchange->token) ||
+        !coap_add_optlist_pdu(pdu, &options)) goto unavailable;
+    coap_delete_optlist(options); options = NULL;
+    mid = coap_send(exchange->session, pdu); pdu = NULL;
+    if (mid == COAP_INVALID_MID) {
         const char *error = exchange->store_status == WCO_STORE_OK ?
             "native_unavailable" : wco_store_code(exchange->store_status);
-        exchange->active = 0;
-        exchange->pending = WCO_PENDING_NONE;
         if (exchange->store_status != WCO_STORE_OK) exchange->failed = 1;
         return error;
     }
+    exchange->active = 1;
+    exchange->pending = WCO_PENDING_CANCEL;
     return NULL;
+invalid:
+    coap_delete_optlist(options);
+    return "invalid_request";
+unavailable:
+    coap_delete_optlist(options);
+    if (pdu) coap_delete_pdu(pdu);
+    return "native_unavailable";
 }
 
 int wco_exchange_io(struct wco_exchange *exchange) {
@@ -590,8 +622,10 @@ const char *wco_exchange_renew(struct wco_exchange *exchange,
     (void)exchange; (void)path; (void)confirmable; (void)accept_present; (void)accept;
     return "native_unavailable";
 }
-const char *wco_exchange_cancel(struct wco_exchange *exchange) {
-    (void)exchange;
+const char *wco_exchange_cancel(struct wco_exchange *exchange,
+                                const char *path, int accept_present,
+                                uint16_t accept) {
+    (void)exchange; (void)path; (void)accept_present; (void)accept;
     return "native_unavailable";
 }
 int wco_exchange_io(struct wco_exchange *exchange) { (void)exchange; return 1; }

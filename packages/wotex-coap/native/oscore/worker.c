@@ -679,7 +679,9 @@ static int terminal_observation_status(struct worker *worker, const char *code,
         memcpy(line + used, number, (size_t)length); used += (size_t)length;
     }
     if (!raw(line, sizeof(line), &used, "},\"metadata\":{}}\n")) return 0;
-    (void)wco_exchange_cancel(worker->exchange);
+    (void)wco_exchange_cancel(worker->exchange, worker->observation.path,
+                              worker->observation.accept_present,
+                              worker->observation.accept);
     clear_report(&worker->observation.report);
     clear_report(&worker->observation.next);
     worker->observation.established = 0;
@@ -1167,7 +1169,9 @@ static int cancel_command(struct worker *worker,
     worker->observation.renewing = 0;
     clear_report(&worker->observation.report);
     clear_report(&worker->observation.next);
-    error = wco_exchange_cancel(worker->exchange);
+    error = wco_exchange_cancel(worker->exchange, worker->observation.path,
+                                worker->observation.accept_present,
+                                worker->observation.accept);
     if (!error) return 1;
     worker->request.active = 0;
     worker->observation.cancelling = 0;

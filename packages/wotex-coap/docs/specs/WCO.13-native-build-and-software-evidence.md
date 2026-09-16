@@ -18,7 +18,7 @@ implements same-binary startup, durable open, upload-body state, close and one
 active unary libcoap exchange with inline or streamed results. It also executes
 one protected Observe registration with inline or streamed reports, cumulative
 credit, Max-Age renewal, stale cleanup and token-matched cancellation. The
-remaining freshness/cancellation fault matrix and Mix tasks remain planned contracts;
+remaining protected fault matrix and Mix tasks remain planned contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -200,9 +200,13 @@ then exhausts report credit to prove latest-Property coalescing and terminal
 Event overlap. The native freshness primitive executes equal, older, half-range,
 128-second escape and representation-identity ordering cases, while a protected
 peer starts at Observe FFFFFF and delivers zero next. It does not accept
-authenticated duplicate/stale injection through the complete worker, an in-flight
-renewal/cancel race, replay, independent OSCORE interoperability or the final
-Mix-built helper.
+authenticated duplicate/stale injection through the complete worker. A further
+protected run cancels while renewal is in flight: when tracked cancellation is
+unavailable, the exchange submits an original-route/token public-API fallback,
+the peer receives it once with a new Message ID, and the command closes cleanly
+with `timeout` when no usable confirmation arrives. Successful race confirmation,
+an intervening Observe response before confirmation, replay, independent OSCORE
+interoperability and the final Mix-built helper remain unaccepted.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and

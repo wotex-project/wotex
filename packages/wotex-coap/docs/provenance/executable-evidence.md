@@ -201,6 +201,20 @@ injection through the complete protected exchange, the renewal/cancel race,
 actual output-pipe saturation, replay, independent interoperability and Mix
 orchestration remain unaccepted.
 
+The [native worker renewal/cancel receipt](native-worker-renewal-cancel-v1.json)
+binds the next production source cohort. A protected zero-Max-Age subscription
+starts renewal with its original token and a new Message ID, then receives an
+empty acknowledgment so renewal remains in flight. The cancel command first
+uses libcoap's tracked path; when that cannot submit, the exchange builds a
+public-API GET Observe=1 fallback with the original route, token and Accept.
+The peer receives exactly one cancellation with another Message ID. Because no
+application-usable confirmation follows, the command returns exact `timeout`,
+closes the worker cleanly and permits no further server report. macOS and Linux
+sanitizer lanes execute the same trace. Successful race confirmation, an
+intervening Observe response before confirmation, authenticated duplicate/stale
+injection, actual output saturation, replay, independent interoperability and
+Mix orchestration remain unaccepted.
+
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,
 explicit OSCORE credentials and exact five-field lines; omits absent optionals;

@@ -56,15 +56,22 @@ stale cleanup. The following
 [observation-fault receipt](../../docs/provenance/native-worker-observation-faults-v1.json)
 binds negative, missing-Observe, changed-Content-Format and timeout renewal
 outcomes plus one latest Property report and terminal Event overlap at exhausted
-credit. These receipts do not accept notification freshness injection, an
-in-flight renewal/cancel race, live replay behavior, independent OSCORE
-interoperability or the final Mix-built executable.
+credit. These receipts do not accept notification freshness injection, live
+replay behavior, independent OSCORE interoperability or the final Mix-built
+executable.
 
 The [freshness receipt](../../docs/provenance/native-worker-freshness-v1.json)
 binds the worker's native equal/older/half-range/128-second admission primitive,
 including stale metadata ordering, and a protected same-stack FFFFFF-to-zero
 Observe wrap. Authenticated duplicate/stale injection through the complete
 protected exchange remains separate from that primitive evidence.
+
+The [renewal/cancel receipt](../../docs/provenance/native-worker-renewal-cancel-v1.json)
+binds a protected cancellation admitted while renewal remains in flight. It
+executes the public-API original-route/token fallback, one distinct cancellation
+Message ID and exact deadline-driven local cleanup when no usable confirmation
+arrives. Successful confirmation and intervening-Observe ordering remain
+separate work.
 
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the

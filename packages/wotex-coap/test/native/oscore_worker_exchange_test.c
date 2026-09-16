@@ -25,7 +25,7 @@ static unsigned get_count, post_count, large_count, observe_count, cancel_count;
 static uint8_t large_body[32769];
 static uint8_t observe_token[8];
 static size_t observe_token_length;
-static coap_mid_t observe_mid;
+static coap_mid_t observe_mid, renewal_mid;
 static int64_t zero_max_age_at;
 static int renewal_fault;
 static uint64_t server_start_sequence;
@@ -126,6 +126,9 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
             if (value == COAP_OBSERVE_CANCEL) {
                 assert(token.length == observe_token_length &&
                        !memcmp(token.s, observe_token, token.length));
+                if (renewal_fault == 5) {
+                    assert(renewal_mid != 0 && mid != renewal_mid);
+                }
                 cancel_count++;
             } else {
                 if (notification && observe_count == 1)
@@ -140,6 +143,7 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
                            !memcmp(token.s, observe_token, token.length));
                     if ((!notification && observe_count == 2) || fault_renewal) {
                         assert(mid != observe_mid);
+                        if (renewal_fault == 5) renewal_mid = mid;
                         if (!renewal_fault)
                             assert(now_ms() - zero_max_age_at >= 1000);
                     }
@@ -155,7 +159,7 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
                     coap_resource_set_get_observable(resource, 0);
                     assert(coap_remove_option(response, COAP_OPTION_OBSERVE));
                 }
-                if (renewal_fault == 4) {
+                if (renewal_fault == 4 || renewal_fault == 5) {
                     coap_pdu_set_code(response, COAP_EMPTY_CODE);
                     return;
                 }
@@ -262,7 +266,7 @@ static void line(coap_context_t *context, int descriptor,
                  char *output, size_t capacity) {
     static char pending[262144];
     static size_t used;
-    int64_t deadline = now_ms() + 7000;
+    int64_t deadline = now_ms() + 12000;
     output[0] = '\0';
     while (now_ms() < deadline) {
         char *newline = memchr(pending, '\n', used);
@@ -539,6 +543,105 @@ static void renewal_fault_observation(const char *executable, int mode,
     assert(rmdir(directory) == 0);
     initial_max_age_zero = 0;
     renewal_fault = 0;
+}
+
+static void renewal_cancel_observation(const char *executable) {
+    char directory[192], command[8192], output[131072];
+    int input[2], result[2], status;
+    int64_t deadline;
+    pid_t child;
+    unsigned port;
+    coap_context_t *context;
+#if defined(__APPLE__)
+    assert(snprintf(directory, sizeof(directory),
+                    "/private/tmp/wotex-coap-exchange-%ld-renew-cancel",
+#else
+    assert(snprintf(directory, sizeof(directory),
+                    "/tmp/wotex-coap-exchange-%ld-renew-cancel",
+#endif
+                    (long)getpid()) > 0);
+    assert(mkdir(directory, 0700) == 0);
+    assert(pipe(input) == 0 && pipe(result) == 0);
+    child = fork();
+    assert(child >= 0);
+    worker_child = child;
+    if (child == 0) {
+        assert(dup2(input[0], STDIN_FILENO) == STDIN_FILENO);
+        assert(dup2(result[1], STDOUT_FILENO) == STDOUT_FILENO);
+        close(input[0]); close(input[1]); close(result[0]); close(result[1]);
+        execl(executable, executable, "--custody", directory, (char *)NULL);
+        _exit(127);
+    }
+    close(input[0]); close(result[1]);
+    assert(fcntl(result[0], F_SETFL, O_NONBLOCK) == 0);
+    get_count = post_count = large_count = observe_count = cancel_count = 0;
+    observe_token_length = 0;
+    renewal_mid = 0;
+    zero_max_age_at = 0;
+    notification = notification_streamed = notification_value = 0;
+    initial_max_age_zero = 1;
+    renewal_fault = 5;
+    context = server(&port);
+    stage = "renew cancel ready";
+    exact(context, result[0],
+          "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
+          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+    assert(snprintf(command, sizeof(command),
+        "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
+        "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":7,\"security\":{"
+        "\"mode\":\"oscore\",\"master_secret\":{\"type\":\"bytes\","
+        "\"base64\":\"AQIDBAUGBwgJCgsMDQ4PEA==\"},\"master_salt\":{"
+        "\"type\":\"bytes\",\"base64\":\"\"},\"sender_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AA==\"},\"recipient_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AQ==\"},\"id_context\":null,\"context_store\":\"%s\"}},"
+        "\"timeout_ms\":5000}\n", port, directory) > 0);
+    write_all(input[1], command);
+    stage = "renew cancel open";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"1\",\"ok\":true,\"result\":null}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"2\",\"operation\":\"observe\",\"parameters\":{"
+        "\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":"
+        "\"property\",\"renew\":true,\"accept\":0},\"timeout_ms\":5000}\n");
+    stage = "renew cancel establish";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"2\",\"ok\":true,\"result\":{"
+          "\"subscription_id\":\"2\",\"generation\":7}}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"3\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":7,\"ack_seq\":0},\"timeout_ms\":5000}\n");
+    stage = "renew cancel credit";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"3\",\"ok\":true,\"result\":null}\n");
+    stage = "renew cancel initial";
+    line(context, result[0], output, sizeof(output));
+    assert(strstr(output, "\"report_seq\":1,\"event\":\"report\""));
+    assert(strstr(output, "\"max_age\":0}"));
+    deadline = now_ms() + 3000;
+    while (observe_count < 2 && now_ms() < deadline)
+        assert(coap_io_process(context, 1) >= 0);
+    assert(observe_count == 2 && renewal_mid != 0 && cancel_count == 0);
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"4\",\"operation\":\"cancel\",\"parameters\":{"
+        "\"subscription_id\":\"2\",\"generation\":7},\"timeout_ms\":1000}\n");
+    stage = "renew cancel result";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"4\",\"ok\":false,\"error\":{"
+          "\"code\":\"timeout\"}}\n");
+    assert(cancel_count == 1);
+    assert(!coap_resource_notify_observers(observed_resource, NULL));
+    assert(waitpid(child, &status, 0) == child);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    close(input[1]); close(result[0]);
+    coap_free_context(context);
+    snprintf(command, sizeof(command), "%s/contexts.v1", directory);
+    assert(unlink(command) == 0);
+    snprintf(command, sizeof(command), "%s/context.lock", directory);
+    assert(unlink(command) == 0);
+    assert(rmdir(directory) == 0);
+    initial_max_age_zero = 0;
+    renewal_fault = 0;
+    renewal_mid = 0;
 }
 
 static void overloaded_observation(const char *executable, int event_kind) {
@@ -1066,6 +1169,7 @@ int main(int argc, char **argv) {
     renewal_fault_observation(argv[1], 3,
                               "{\"code\":\"representation_changed\"}");
     renewal_fault_observation(argv[1], 4, "{\"code\":\"timeout\"}");
+    renewal_cancel_observation(argv[1]);
     overloaded_observation(argv[1], 0);
     overloaded_observation(argv[1], 1);
     wraparound_observation(argv[1]);

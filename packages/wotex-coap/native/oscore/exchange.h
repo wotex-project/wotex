@@ -70,7 +70,9 @@ const char *wco_exchange_observe(struct wco_exchange *exchange,
 const char *wco_exchange_renew(struct wco_exchange *exchange,
                                const char *path, int confirmable,
                                int accept_present, uint16_t accept);
-const char *wco_exchange_cancel(struct wco_exchange *exchange);
+const char *wco_exchange_cancel(struct wco_exchange *exchange,
+                                const char *path, int accept_present,
+                                uint16_t accept);
 int wco_exchange_io(struct wco_exchange *exchange);
 int wco_exchange_active(const struct wco_exchange *exchange);
 void wco_exchange_close(struct wco_exchange *exchange);

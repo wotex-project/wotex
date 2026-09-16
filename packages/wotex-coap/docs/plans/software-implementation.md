@@ -7,9 +7,10 @@ worker now owns durable open, bounded upload state and close. Its libcoap engine
 executes unary requests and protected Observe registration, inline or streamed
 reports, report credit, Max-Age renewal, stale cleanup and cancellation. The
 production path also executes renewal failures and bounded Property/Event
-overload. Native serial admission and protected wraparound execute; authenticated
-duplicate/stale injection and renewal/cancel races, the independent secure matrix,
-Mix orchestration and complete software closure remain targets.
+overload. Native serial admission, protected wraparound and the in-flight
+renewal/cancel deadline path execute; authenticated duplicate/stale injection,
+successful race confirmation and intervening-response ordering, the independent
+secure matrix, Mix orchestration and complete software closure remain targets.
 [Executable evidence](../provenance/executable-evidence.md) identifies each
 executed cohort and its limits. The ordered packages define acceptance.
 
