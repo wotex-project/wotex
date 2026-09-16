@@ -312,7 +312,11 @@ defmodule Wotex.CoAP.Native.WorkspaceTest do
     |> Path.wildcard(match_dot: true)
     |> Enum.map(fn file ->
       stat = File.lstat!(file)
-      {Path.relative_to(file, path), stat, if(stat.type == :regular, do: File.read!(file))}
+
+      attributes =
+        Map.take(stat, [:size, :type, :mode, :links, :inode, :uid, :gid, :mtime, :ctime])
+
+      {Path.relative_to(file, path), attributes, if(stat.type == :regular, do: File.read!(file))}
     end)
   end
 end

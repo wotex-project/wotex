@@ -577,7 +577,10 @@ Mix builds/runs, native manifests, bounded Port framing and durable context
 rules. The [native build receipt](native-build-v1.json) records the implemented
 `mix wotex.native.build` path on macOS arm64: bounded pinned download, ordered
 patch verification, static libcoap compilation, exact version/OSCORE and worker
-probes, runtime manifest verification and read-only reuse all pass. The Linux
-task invocation, `wotex.software.build`, `wotex.software.run` and the remaining
-software/stress matrix are not yet accepted. No Python-based result transfers to
-an unbuilt tool.
+probes, runtime manifest verification and read-only reuse all pass. The
+[software build receipt](software-build-v1.json) records the macOS arm64
+`mix wotex.software.build` path: the upstream peer and 12 manifest-bound native
+fault/vector executables compile and execute under bounded guardians, all 63
+artifacts publish atomically, and read-only reuse passes. The Linux sanitizer
+invocation, `wotex.software.run` and the remaining software/stress matrix are not
+yet accepted. No Python-based result transfers to an unbuilt tool.

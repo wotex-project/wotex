@@ -19,8 +19,8 @@ active unary libcoap exchange with inline or streamed results. It also executes
 one protected Observe registration with inline or streamed reports, cumulative
 credit, Max-Age renewal, stale cleanup, token-matched cancellation and
 best-effort established-observation cancellation on owner EOF. The remaining
-protected fault matrix, Port-mailbox measurement and Mix tasks remain planned
-contracts;
+protected fault matrix, Port-mailbox measurement, software-run task and full
+matrix remain planned contracts; the native and software build tasks execute;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -598,8 +598,9 @@ Property/Event overload. Run Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. Earlier Python-run results validate their
-recorded cohort only; Mix tasks and OSCORE retain planned status until these
-assertions execute. Hardware and publication are separate.
+recorded cohort only; the software-run task and independent OSCORE acceptance
+retain planned status until these assertions execute. Hardware and publication
+are separate.
 
 The [native corpus](fixtures/native-v1.json) contains exact decoder/body/control
 inputs and deterministic lifecycle traces. It is specified and unexecuted. The

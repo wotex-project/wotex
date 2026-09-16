@@ -1,0 +1,257 @@
+{
+  "schema": "wotex.coap.software-build-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Explicit bounded macOS software build, peer and native-vector probes, manifest publication and read-only reuse",
+  "source_identity": {
+    "kind": "exact source-file SHA-256 in the manifest workspace identity; no source commit association asserted",
+    "build_input_count": 68,
+    "build_inputs_sha256": "d5795fb4fb6c9f90c924d697818d45613ed0e5171e16a8f1c75cdf90057aa2fe",
+    "selected_files": {
+      "lib/mix/tasks/wotex.coap.software.build.ex": "e4d5bb447636c447ba6d1e52593d32458091b0872a1b86f1e458254add38cf07",
+      "lib/wotex/coap/native/build.ex": "f7cf3ee594510b66f82c31af264ecb845fa4e873785173c19747e4519c1c02b2",
+      "lib/wotex/coap/software/build.ex": "5755d24ddc5db10fbc96891bd2f8f270d7fbf5131bd3ae22af9a89435cc3e545",
+      "mix.exs": "aa7f97a70ffb17d893c77c4650370dad5b5ca24dcba2faebde8a97be923c47b4",
+      "test/native/oscore_block_limit_test.c": "2f801d7758f840e18d1c4a19a3130230a72db58c4cb75b249ea840ed73e844f6",
+      "test/native/oscore_body_test.c": "593404611ab9a833e95258546e2f5b075deb1b38e01439770567456a4cf0a832",
+      "test/native/oscore_command_test.c": "4444c8a430764a83c2e8c441d988273a9e107f86d4a246869b77787981e149cb",
+      "test/native/oscore_credit_test.c": "949a92bd63005a37a76651857bb81feac127e683d918ffb8767fc3181270f694",
+      "test/native/oscore_frame_test.c": "1b953de8bcf96c012b8fe603bd0e16abe9a6bcb7314a14a0245f7fcfd1be495b",
+      "test/native/oscore_identity_test.c": "ec3a4705bbbbc0e490481a29deff4b5e8813d45a306019070c55397a8ced3355",
+      "test/native/oscore_json_test.c": "d8aff1b171b7972d39a5aaf8e015eaa841b1970989d2e5d9f943a985f29f29ca",
+      "test/native/oscore_protection_test.c": "f4f70bc0ef8fac67c36372b46b708ac137db97f335b3d5c50771e3495ccd5ecc",
+      "test/native/oscore_sequence_test.c": "087fb307600bfd3da6eb4e17e7d5048205d1f048875b72fcfcce993ee4be03c4",
+      "test/native/oscore_store_send_test.c": "2aad8c02112a2b4b842ff4bc09c228846b4f67f0b168bc5ef8327107e75c7191",
+      "test/native/oscore_store_test.c": "1353d42bbc54c75678a9398df889c31e6dee84c56e215b00c54eb95d0c3ca9c9",
+      "test/native/oscore_worker_exchange_test.c": "d2390813f87777157bbbb87ce5496a29176d3cd892a984dcd4611e2f7d86192e"
+    },
+    "test/wotex/coap/software_build_test.exs": "4e00daa7aa39a1350968e6110a41122adb8c2381180ec119d1509ca26c696454"
+  },
+  "upstream": {
+    "backend": "libcoap",
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "peer_cmake_options": [
+      "ENABLE_OSCORE=ON",
+      "ENABLE_DTLS=ON",
+      "DTLS_BACKEND=openssl",
+      "BUILD_SHARED_LIBS=OFF",
+      "ENABLE_DOCS=OFF",
+      "ENABLE_TESTS=OFF",
+      "ENABLE_EXAMPLES=ON",
+      "CMAKE_BUILD_TYPE=Release"
+    ]
+  },
+  "command": "WOTEX_PATH_DEPS=1 mix wotex.software.build --workspace \"$ABSOLUTE_EMPTY_WORKSPACE\"",
+  "platform": {
+    "os_version": [
+      25,
+      6,
+      0
+    ],
+    "target": [
+      "darwin",
+      "aarch64"
+    ]
+  },
+  "toolchain": {
+    "versions": {
+      "cc": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin",
+      "cmake": "cmake version 4.4.3\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake).",
+      "curl": "curl 8.7.1 (x86_64-apple-darwin25.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.68.1\nRelease-Date: 2024-03-27\nProtocols: dict file ftp ftps gopher gophers http https imap imaps ipfs ipns ldap ldaps mqtt pop3 pop3s rtsp smb smbs smtp smtps telnet tftp\nFeatures: alt-svc AsynchDNS GSS-API HSTS HTTP2 HTTPS-proxy IPv6 Kerberos Largefile libz MultiSSL NTLM SPNEGO SSL threadsafe UnixSockets",
+      "openssl": "OpenSSL 3.6.4 25 Aug 2026 (Library: OpenSSL 3.6.4 25 Aug 2026)\nbuilt on: Tue Aug 25 11:48:34 2026 UTC\nplatform: darwin64-arm64-cc\noptions:  bn(64,64)\ncompiler: clang -fPIC -arch arm64 -O3 -Wall -DL_ENDIAN -DOPENSSL_PIC -D_REENTRANT -DOPENSSL_BUILDING_OPENSSL -DNDEBUG\nOPENSSLDIR: \"/opt/homebrew/etc/openssl@3\"\nENGINESDIR: \"/opt/homebrew/Cellar/openssl@3/3.6.4/lib/engines-3\"\nMODULESDIR: \"/opt/homebrew/Cellar/openssl@3/3.6.4/lib/ossl-modules\"\nSeeding source: os-specific\nCPUINFO: OPENSSL_armcap=0x87d",
+      "patch": "patch 2.0-12u11-Apple",
+      "pkg_config": "3.0.7",
+      "system": "llvm-otool(1): Apple Inc. version cctools-1040\notool(1): Apple Inc. version cctools-1040\ndisassembler: LLVM version 21.0.0"
+    },
+    "sha256": {
+      "cc": "b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "cmake": "01bb5214684f5390e96e0d6aef7aafd7415b77ecbcfd59f6b55b018d8de0d9a2",
+      "curl": "b636262803922ee1dd0fbf614818473ffa53c811e44fd3278c2270d3af4759d3",
+      "openssl": "67a83dd6d6d747d50c5d296dffb23e32bae9a2c588c93ae2d77e4c607b455c72",
+      "patch": "2640347ef1b20a680c22e0b55c3d1be5a1842b25d18112f626f377781d8e3421",
+      "pkg_config": "39b6b8b701470ebf31a24972bc1fafc7da54a5c32215d972fdadaf21c7cfa91b",
+      "system": "b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9"
+    }
+  },
+  "result": {
+    "status": "passed",
+    "exit_code": 0,
+    "manifest_schema": "wotex.coap.native@1",
+    "manifest_sha256": "604cbca49ce7cd1979b48b7e2c595c09e39006a35d74364be2b9480107096eee",
+    "nested_native_manifest_sha256": "b66eb9fad1db361524b9f6a4319c7e742d88c209a8a418f97e48ad5c22891a1d",
+    "native_executable_sha256": "81c0c2951d012a819a4ed24cc1b92a6bd5ce25353e5e4ffa37022139fc47f1f4",
+    "peer_executable_sha256": "bc7ecbbabc01ecb1ff60540584cf2a13050e1fb83e1099a6b3fec21ba620ffb1",
+    "artifact_count": 63,
+    "fault_executable_count": 12,
+    "runtime_manifest_verification": "passed",
+    "read_only_reuse": "passed",
+    "reuse_manifest_sha256": "604cbca49ce7cd1979b48b7e2c595c09e39006a35d74364be2b9480107096eee"
+  },
+  "peer": {
+    "backend": "libcoap",
+    "features": {
+      "dtls": true,
+      "oscore": true,
+      "version": true
+    },
+    "name": "coap-server",
+    "revision": "7cf7465b784baded4de183290c547d582becfd28",
+    "version": "4.3.5",
+    "steps": [
+      {
+        "id": "peer-configure",
+        "exit_status": 0,
+        "output_bytes": 6333,
+        "output_sha256": "2e29b2ae4688c9935f523f65b18df8dd08c706593ae23e2f8f0edd0b9e3f76f9"
+      },
+      {
+        "id": "peer-build",
+        "exit_status": 0,
+        "output_bytes": 3444,
+        "output_sha256": "930b7b4e50ccb2cd3c078b602505b20ffd99f7f0b98d4efc5943ccccf57ce9ec"
+      },
+      {
+        "id": "peer-probe",
+        "exit_status": 1,
+        "output_bytes": 9996,
+        "output_sha256": "cdda8e5c8e4364477070d6e06f190001cd667959a7a5cbb5abbfd95fb3c82d66"
+      }
+    ],
+    "usage_exit_status": 1
+  },
+  "fault_executables": {
+    "oscore-block-limit": {
+      "sha256": "dab7b7829f9532b6b39ce340172ae1ea66a7218d4c3834c46ba552b2398369e7",
+      "definitions": [],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "5f589c34f5da88c1ee31a8b782e9f1cbf0365ba70dd03f5bda48c34f77324d81"
+    },
+    "oscore-body": {
+      "sha256": "a35ee63ed3c9ae2a67d4da46c9b79486a8c9bf5d1642b12d25f97d754203d5a6",
+      "definitions": [
+        "YYJSON_DISABLE_NON_STANDARD=1",
+        "YYJSON_DISABLE_UTILS=1",
+        "YYJSON_DISABLE_INCR_READER=1"
+      ],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "a4af65d9d6d1e96c267f6e48033ab74cb177d28c4c4d19624f073605a26481c0"
+    },
+    "oscore-command": {
+      "sha256": "e703456a825f1b3cf96dab0a2903ac647404177a02bc5e33ae021c69c24863cd",
+      "definitions": [
+        "YYJSON_DISABLE_NON_STANDARD=1",
+        "YYJSON_DISABLE_UTILS=1",
+        "YYJSON_DISABLE_INCR_READER=1"
+      ],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "c476b58d90475d55ca404b5cd76e802a2747107855e530295bc73239bb3abbec"
+    },
+    "oscore-credit": {
+      "sha256": "37cf437428daa96d42ac5c1f04e60d7da45472738f99cc8297c0cd197f291a8b",
+      "definitions": [],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "81c4a90f796da3c118e79a35348c2352529277bd143c60b396a6219361ff80ce"
+    },
+    "oscore-frame": {
+      "sha256": "79d70fc4e9a2d0e8a272a51e8ddedeefea8ffe7148ec6eb9af61df6a3cfeea1e",
+      "definitions": [
+        "YYJSON_DISABLE_NON_STANDARD=1",
+        "YYJSON_DISABLE_UTILS=1",
+        "YYJSON_DISABLE_INCR_READER=1"
+      ],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "865895b03eceb9a49dcc176a6237173eb191dd2a2fc4842f0f722ec8d97d87ee"
+    },
+    "oscore-identity": {
+      "sha256": "735b2dbde4d551fc818b033f415ff923c21ca7691f28fc6f816dbc66eca66733",
+      "definitions": [],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "12c08b7303db591d8d6b495347c7bff8b04981dfcd4e03ac4675b1892fb2437f"
+    },
+    "oscore-json": {
+      "sha256": "824f99cdc32375808b97242d7e0b76634659f3c95bb7f465bff0ad580754fd71",
+      "definitions": [
+        "YYJSON_DISABLE_NON_STANDARD=1",
+        "YYJSON_DISABLE_UTILS=1",
+        "YYJSON_DISABLE_INCR_READER=1"
+      ],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "5080554aa288c76f2202fc0241c0c906ec4932ad63c066e6c6db2de6bd4b0cee"
+    },
+    "oscore-protection": {
+      "sha256": "56ee53756f63d341de5084dfca83c3f359e6f6d0ba6445f747fb91b0b1a974b0",
+      "definitions": [],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "a969e577af619286ee3aeaec2810908c62a718c301fdd59ee154f6e71b1454e0"
+    },
+    "oscore-sequence": {
+      "sha256": "e98cdaeaaed271488b75cdc2039dc41d1afc2e6ee6a6e84747c07f517d8ae22e",
+      "definitions": [],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "105be8c0fe99b6d22c754f62629bbb691f74fe36552e27fd263aa7ee5f818b52"
+    },
+    "oscore-store": {
+      "sha256": "f19f1050a54b1e25ec7e940096d7a259fea2689364872bff7f82a5c72fcf8a9d",
+      "definitions": [
+        "WCO_STORE_TEST"
+      ],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "e893812362c4381d0627773e17a1dcc00fa3c14a4ed2f162662ceb5bbe201e44"
+    },
+    "oscore-store-send": {
+      "sha256": "dabab0ad2b87aee2f80be42d81538d2603722b6849032f63bf9de6b68f6c1ce2",
+      "definitions": [
+        "WCO_STORE_TEST"
+      ],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "7c5899c0505952c6a918eb56bbb0fb5a0e190c4cff16572be803545439ea9d3d"
+    },
+    "oscore-worker-exchange": {
+      "sha256": "d06025a6f907c314a9db151a19c2ffeb83ff413115333387d5d85a754cf154d5",
+      "definitions": [],
+      "compile_exit_status": 0,
+      "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_exit_status": 0,
+      "probe_log_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b"
+    }
+  },
+  "sanitizers": [],
+  "assertions": [
+    "The task accepts exactly one absolute workspace and uses the native-build workspace owner for root and nested manifests",
+    "One resolved and fingerprinted toolchain builds the native helper, peer and every native vector",
+    "The peer reports exact libcoap 4.3.5, DTLS/TLS and OSCORE features before publication",
+    "Twelve native parser, frame, body, credit, command, identity, store, sequence, block, protection and production-worker vectors compile and execute under bounded guardians",
+    "The outer manifest binds all 63 files, including the nested manifest, executables and separate build/probe logs",
+    "A second task invocation verifies the complete workspace without rebuilding or changing its manifest",
+    "The package includes the first-party native vector sources needed by the explicit task"
+  ],
+  "unaccepted": [
+    "A real Linux software-build invocation with AddressSanitizer and UndefinedBehaviorSanitizer",
+    "mix wotex.software.run protocol and stress orchestration",
+    "Independent-stack OSCORE interoperability and the complete WCO-N05 matrix",
+    "Hardware and publication"
+  ]
+}

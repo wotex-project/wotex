@@ -43,12 +43,17 @@ defmodule Wotex.CoAP.NativeBuildTest do
       executable = System.find_executable("true")
       paths = Map.new(~w(cc cmake curl openssl patch pkg_config system)a, &{&1, executable})
 
+      target =
+        if Process.get({__MODULE__, :failure}) == :linux,
+          do: {:linux, :x86_64},
+          else: {:darwin, :aarch64}
+
       {:ok,
        %{
          paths: paths,
          hashes: hashes(paths),
          openssl_root: System.tmp_dir!(),
-         target: {:darwin, :aarch64}
+         target: target
        }}
     end
 
@@ -82,6 +87,8 @@ defmodule Wotex.CoAP.NativeBuildTest do
         :version_failure -> version_failure()
         :feature -> feature(mode)
         :worker_probe -> worker(mode)
+        :peer_probe -> peer(mode)
+        :fault_probe -> fault(mode)
         :download -> download(arguments, mode)
         :build -> build(arguments)
         :compile -> compile(arguments)
@@ -114,6 +121,10 @@ defmodule Wotex.CoAP.NativeBuildTest do
         end)
 
       cond do
+        Process.get({__MODULE__, :failure}) == :software_digest and
+            String.ends_with?(path, "/lib/wotex/coap/software/build.ex") ->
+          {:error, :fixture_digest_failed}
+
         suffix && Process.get({__MODULE__, :failure}) == :patched ->
           {:ok, String.duplicate("0", 64)}
 
@@ -158,6 +169,8 @@ defmodule Wotex.CoAP.NativeBuildTest do
       cond do
         String.ends_with?(executable, "native-feature-probe") -> :feature
         String.ends_with?(executable, "native-worker-probe") -> :worker_probe
+        String.ends_with?(executable, "coap-server") -> :peer_probe
+        String.contains?(executable, "/bin/faults/") -> :fault_probe
         download?(arguments) -> :download
         match?(["--build" | _], arguments) -> :build
         "-o" in arguments -> :compile
@@ -183,6 +196,21 @@ defmodule Wotex.CoAP.NativeBuildTest do
     defp worker(_),
       do: success(~s({"version":1,"event":"ready","backend":"libcoap","revision":"#{@revision}"}\n))
 
+    defp peer(:peer), do: success("unexpected software peer\n")
+
+    defp peer(_) do
+      {:error, :build_command_failed,
+       %{
+         output: "coap-server v4.3.5\nDTLS and TLS support\n(Have OSCORE)\n",
+         exit_status: 1
+       }}
+    end
+
+    defp fault(:fault),
+      do: {:error, :build_command_failed, %{output: "fault probe failed", exit_status: 9}}
+
+    defp fault(_), do: success("software vector passed\n")
+
     defp download(_, :download),
       do: {:error, :build_command_failed, %{output: "download failed", exit_status: 22}}
 
@@ -194,8 +222,16 @@ defmodule Wotex.CoAP.NativeBuildTest do
     defp build(arguments) do
       build = Enum.at(arguments, 1)
       File.mkdir_p!(build)
-      File.write!(Path.join(build, "libcoap-3.a"), "fixture static libcoap")
-      success("built libcoap\n")
+
+      if Path.basename(build) == "peer-build" do
+        File.mkdir_p!(Path.join(build, "include"))
+        File.write!(Path.join(build, "coap-server"), "fixture coap server")
+        File.chmod!(Path.join(build, "coap-server"), 0o700)
+        success("built software peer\n")
+      else
+        File.write!(Path.join(build, "libcoap-3.a"), "fixture static libcoap")
+        success("built libcoap\n")
+      end
     end
 
     defp compile(arguments) do
@@ -245,6 +281,8 @@ defmodule Wotex.CoAP.NativeBuildTest do
     end
 
     assert {:error, :invalid_build_workspace} = Build.run(nil, Operations)
+    assert {:error, :invalid_build_workspace} = Build.run_resolved(nil, %{}, Operations)
+    assert length(Build.artifacts()) == 22
     assert_raise Mix.Error, ~r/usage:/, fn -> BuildTask.run(["--workspace", "relative"]) end
     assert Mix.Project.config()[:aliases][:"wotex.native.build"] == "wotex.coap.native.build"
   end

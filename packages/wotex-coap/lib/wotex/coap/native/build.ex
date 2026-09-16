@@ -70,11 +70,29 @@ defmodule Wotex.CoAP.Native.Build do
   def run(workspace), do: run(workspace, BuildOperations)
 
   @doc false
+  @spec artifacts() :: [String.t()]
+  def artifacts, do: @artifacts
+
+  @doc false
   @spec run(term(), module()) :: {:ok, Workspace.result()} | {:error, term()}
   def run(workspace, operations) when is_binary(workspace) and is_atom(operations) do
+    with {:ok, tools} <- operations.resolve() do
+      run_resolved(workspace, tools, operations)
+    end
+  rescue
+    error in [ArgumentError, File.Error, UndefinedFunctionError] ->
+      {:error, {:native_build_setup, Exception.message(error)}}
+  end
+
+  def run(_, _), do: {:error, :invalid_build_workspace}
+
+  @doc false
+  @spec run_resolved(term(), Toolchain.t(), module()) ::
+          {:ok, Workspace.result()} | {:error, term()}
+  def run_resolved(workspace, tools, operations)
+      when is_binary(workspace) and is_map(tools) and is_atom(operations) do
     with {:ok, source} <- source(),
          {:ok, yyjson} <- yyjson(),
-         {:ok, tools} <- operations.resolve(),
          :ok <- verify_inputs(source, yyjson, operations),
          {:ok, identity} <- identity(source, yyjson, tools, operations),
          {:ok, result} <-
@@ -88,7 +106,7 @@ defmodule Wotex.CoAP.Native.Build do
       {:error, {:native_build_setup, Exception.message(error)}}
   end
 
-  def run(_, _), do: {:error, :invalid_build_workspace}
+  def run_resolved(_, _, _), do: {:error, :invalid_build_workspace}
 
   @doc "Validates the exact root-task argument shape before build I/O."
   @spec arguments(term()) :: {:ok, String.t()} | {:error, :invalid_native_build_arguments}

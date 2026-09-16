@@ -13,7 +13,9 @@ execute. The protected worker also progresses under an actually full owner
 output pipe and tears down within C03; BEAM Port-mailbox sampling remains.
 Pending-registration owner loss, authenticated duplicate/stale injection,
 successful race confirmation and intervening-response ordering, the independent
-secure matrix, Mix orchestration and complete software closure remain targets.
+secure matrix, software-run orchestration and complete software closure remain
+targets. Native and software build orchestration is implemented with bounded,
+manifest-bound workspaces and native-vector probes.
 [Executable evidence](../provenance/executable-evidence.md) identifies each
 executed cohort and its limits. The ordered packages define acceptance.
 
@@ -155,8 +157,9 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 
 ## Reproducible software fixture contract
 
-[WCO.13](../specs/WCO.13-native-build-and-software-evidence.md) is authoritative for the planned
-Mix tasks, native source pins, manifests, deadlines, cleanup and result schemas.
+[WCO.13](../specs/WCO.13-native-build-and-software-evidence.md) is authoritative
+for the implemented build tasks, planned software-run task, native source pins,
+manifests, deadlines, cleanup and result schemas.
 The command contract is:
 
 ```sh
@@ -164,10 +167,11 @@ mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
 WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
-These commands are target interfaces until their implementation and task tests
-pass. Existing shell/Python harnesses are identified only by the executed
-provenance they support. The native peer and protocol assertions remain the
-same independent software obligations. No build or peer starts implicitly.
+The build command and its task tests pass on macOS arm64; the run command remains
+a target interface until its implementation and task tests pass. Existing
+shell/Python harnesses are identified only by the executed provenance they
+support. The native peer and protocol assertions remain the same independent
+software obligations. No build or peer starts implicitly.
 
 ## Verification and commit procedure
 

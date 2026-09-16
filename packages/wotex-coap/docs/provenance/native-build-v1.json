@@ -7,7 +7,7 @@
     "files": {
       "lib/mix/tasks/wotex.coap.native.build.ex": "6400d6c46079d5124245a4bd953bfb7da4a009371e7784b68c566ed25f0e66e2",
       "lib/wotex/coap/native/archive.ex": "77cdf08ad3f7d3018060bafbd195207b209c60e5338d87ca72d7a9bf0350e146",
-      "lib/wotex/coap/native/build.ex": "3a6bd07200c268e90b5d537fcbfecada21446d00484af0244a798b1d2f745169",
+      "lib/wotex/coap/native/build.ex": "f7cf3ee594510b66f82c31af264ecb845fa4e873785173c19747e4519c1c02b2",
       "lib/wotex/coap/native/build_command.ex": "5f60ab76388eae5cf2e410c5f7ba5d5bab6671bb7b31489c704c672b44ef8b9f",
       "lib/wotex/coap/native/build_operations.ex": "355a9d4e12a4ee8d3c7890693663d56272e9317104cd4158e8b1af14ebd26c8f",
       "lib/wotex/coap/native/toolchain.ex": "1a8f7974eb3752f40cf8003e7d8913ab0726c09cd8c712a0394575045fbac28b",
@@ -17,7 +17,7 @@
       "native/oscore/build_worker_probe.c": "ba851c1388658ba9d535f0709a8e7450f3f559f5674b066cc533567852100859",
       "native/oscore/source.json": "cd2eece99adcfdc881e21029ecd84f5063dec5e37f28d70e344c7a9bf2dae786",
       "native/oscore/vendor/yyjson/source.json": "34d79572c21e231f9257a59add2478d8e6473c2b43e676d946d6365ca7275457",
-      "test/wotex/coap/native_build_test.exs": "e8a35f16d60405ca741af9787da6d2ced323b9865f1470cc6d7c084b81013993",
+      "test/wotex/coap/native_build_test.exs": "7682b138d0086a5e2327e9d0e25bff72f5af82bc8ed8bedfedb3843aa3422072",
       "test/wotex/coap/native_archive_test.exs": "7e8183b9fdedc2999e697c2facd3d4bb9ab005454322b97e74f89b62d94fc1ea",
       "test/wotex/coap/native_toolchain_test.exs": "be3e06fdcc9a2f58cd19cceef81a82b092fd9ff8638a7b63a0d17fc264f131b6"
     }
@@ -76,10 +76,10 @@
     "status": "passed",
     "exit_code": 0,
     "manifest_schema": "wotex.coap.native@1",
-    "manifest_sha256": "a6010ffb9bc2d7d2af898155c64f161d66f99a4c3936c6a257acbca296fc93a7",
+    "manifest_sha256": "356515bffd1251ca7f9333b2017b239b4d6c6bd144fc22306dd9dd7631cdfbd8",
     "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
-    "static_library_sha256": "b6839df4f91ba610d0f8e3df7d245621ea70561c5553ebf7c4a5febc9c94ddfa",
-    "executable_sha256": "3809ea281b5c3d9380a411c93ec0cb6c7eafcaf603e2d1735466d91888f91f34",
+    "static_library_sha256": "57dbc91a6e4886767495fd386641d760a249b546453cdd1bec8df27179dbd160",
+    "executable_sha256": "e19995bfac075c30650ac7f534da79bb4b867e9ef9a8eb58435e2ebe53d6c5bf",
     "guardian_sha256": "2e999f0813d1949c246ee213f7a9255563c15575ba11507d3f2ebcd824298cbe",
     "artifact_count": 22,
     "bounded_step_count": 17,
@@ -88,7 +88,7 @@
     ],
     "runtime_manifest_verification": "passed",
     "read_only_reuse": "passed",
-    "reuse_manifest_sha256": "a6010ffb9bc2d7d2af898155c64f161d66f99a4c3936c6a257acbca296fc93a7"
+    "reuse_manifest_sha256": "356515bffd1251ca7f9333b2017b239b4d6c6bd144fc22306dd9dd7631cdfbd8"
   },
   "probes": {
     "feature": {
@@ -103,9 +103,10 @@
       "version": 1
     },
     "dynamic_libraries": [
-      "libssl.3.dylib",
-      "libcrypto.3.dylib",
-      "libSystem.B.dylib"
+      "/private/tmp/wotex-coap-native-build-20260916-08/bin/wotex-coap-oscore:",
+      "/opt/homebrew/opt/openssl@3/lib/libssl.3.dylib (compatibility version 3.0.0, current version 3.0.0)",
+      "/opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib (compatibility version 3.0.0, current version 3.0.0)",
+      "/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.0.0)"
     ]
   },
   "assertions": [
@@ -119,8 +120,7 @@
     "A second task invocation verifies artifacts and tool versions without changing the manifest"
   ],
   "unaccepted": [
-    "A real Linux invocation of the new Mix native-build task",
-    "mix wotex.software.build peer and fault executable orchestration",
+    "A real Linux invocation of the Mix native-build and software-build tasks",
     "mix wotex.software.run protocol and stress orchestration",
     "Independent-stack OSCORE interoperability and the remaining WCO-N03 through WCO-N05 matrix"
   ]

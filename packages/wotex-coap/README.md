@@ -177,9 +177,10 @@ gate does not accept the unfinished software profile.
 ## Native build and software orchestration
 
 [WCO.13](docs/specs/WCO.13-native-build-and-software-evidence.md) defines
-the planned `mix wotex.software.build --workspace ABS` and
-`mix wotex.software.run --workspace ABS` interfaces. Protocol execution remains
-BEAM UDP, OTP DTLS and a planned explicit libcoap OSCORE Port.
+the implemented `mix wotex.native.build --workspace ABS` and
+`mix wotex.software.build --workspace ABS` interfaces plus the planned
+`mix wotex.software.run --workspace ABS` interface. Protocol execution uses
+BEAM UDP, OTP DTLS and an explicit libcoap OSCORE Port.
 `Wotex.CoAP.NativeBackend.verify/1` can validate the content identity of an
 explicit native executable and manifest without starting it.
 `Wotex.CoAP.Native.Connection`
@@ -216,5 +217,6 @@ envelopes and verifies Message metadata. `Wotex.CoAP.Native.ReportLedger` bounds
 the eight-frame credit window and serializes cumulative acknowledgments. The
 native owner dispatches unary body commands and the Observe/credit/cancel
 lifecycle through those boundaries.
-Existing Python files perform test/build orchestration only. Their recorded
-results do not establish acceptance of the planned Mix tasks.
+The Mix build tasks replace the legacy Python build harness. Remaining Python
+test orchestration is migration input only; its recorded results do not
+establish acceptance of the planned software-run task.
