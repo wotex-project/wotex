@@ -18,6 +18,7 @@ defmodule Wotex.OPCUA.Native.Frame do
   @phases ~w(validation opening admission exchange decode cleanup)a
   @effects ~w(none unknown)a
   @terminal_keys ~w(error event generation version)
+  @response_keys ~w(generation id ok result version)
   @limits [
     max_bytes: 131_071,
     max_depth: 8,
@@ -129,6 +130,78 @@ defmodule Wotex.OPCUA.Native.Frame do
   end
 
   def terminal(_, _), do: {:error, Error.new(:invalid_native_frame, :terminal)}
+
+  @doc "Decodes a correlated native service response and validates the open metadata."
+  @spec response(term(), term(), term(), term(), term()) ::
+          {:ok, term()} | {:native_error, Error.t()} | {:error, Error.t()}
+  def response(frame, generation, id, operation, requested_timeout)
+      when is_binary(frame) and byte_size(frame) in 1..@maximum_frame and
+             is_integer(generation) and generation in 1..@maximum_generation and
+             is_binary(id) and is_binary(operation) do
+    size = byte_size(frame)
+
+    with {offset, 1} when offset == size - 1 <- :binary.match(frame, "\n"),
+         {:ok, decoded} <-
+           Wotex.JSON.decode(binary_part(frame, 0, offset),
+             max_bytes: @maximum_frame - 1,
+             max_depth: 8,
+             max_nodes: 4096,
+             max_collection_size: 1024,
+             max_string_bytes: 65_536
+           ),
+         %{"version" => 1, "generation" => ^generation, "id" => ^id, "ok" => ok} <-
+           decoded do
+      case {ok, Enum.sort(Map.keys(decoded))} do
+        {true, @response_keys} ->
+          response_result(operation, decoded["result"], requested_timeout, generation)
+
+        {false, ["error", "generation", "id", "ok", "version"]} ->
+          case terminal_error(decoded["error"]) do
+            {:ok, error} -> {:native_error, error}
+            _ -> {:error, Error.new(:invalid_native_frame, :response)}
+          end
+
+        _ ->
+          {:error, Error.new(:invalid_native_frame, :response)}
+      end
+    else
+      _ -> {:error, Error.new(:invalid_native_frame, :response)}
+    end
+  end
+
+  def response(_, _, _, _, _), do: {:error, Error.new(:invalid_native_frame, :response)}
+
+  defp response_result("close", nil, _, _), do: {:ok, nil}
+
+  defp response_result("open", result, requested, expected_generation)
+       when is_map(result) and is_integer(requested) and requested in 1000..3_600_000 do
+    with %{
+           "session_timeout_ms" => timeout,
+           "namespace_array" => namespaces,
+           "session_generation" => generation
+         } <- result,
+         true <-
+           Enum.sort(Map.keys(result)) ==
+             ~w(namespace_array session_generation session_timeout_ms),
+         true <- is_number(timeout) and timeout > 0 and timeout <= requested,
+         true <- generation == expected_generation,
+         true <- namespace_array?(namespaces) do
+      {:ok, result}
+    else
+      _ -> {:error, Error.new(:invalid_native_frame, :response)}
+    end
+  end
+
+  defp response_result(_, _, _, _), do: {:error, Error.new(:invalid_native_frame, :response)}
+
+  defp namespace_array?(["http://opcfoundation.org/UA/" | _] = entries)
+       when length(entries) in 2..1024 do
+    Enum.all?(entries, &(is_binary(&1) and byte_size(&1) in 1..4096)) and
+      Enum.reduce(entries, 0, &(byte_size(&1) + &2)) <= 131_072 and
+      length(Enum.uniq(entries)) == length(entries)
+  end
+
+  defp namespace_array?(_), do: false
 
   defp terminal_error(%{"code" => code, "phase" => phase, "effect" => effect} = error)
        when is_binary(code) and is_binary(phase) and is_binary(effect) do

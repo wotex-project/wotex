@@ -24,6 +24,7 @@ static int request_case(const char *frame, bool expected) {
     CHECK(admitted == expected);
     if (admitted) {
         CHECK(request.generation == UINT64_MAX);
+        CHECK(strcmp(request.id, "a") == 0);
         CHECK(request.timeout_ms == 60000);
         CHECK(request.deadline_ms == INT64_MAX);
     }

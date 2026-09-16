@@ -11,12 +11,14 @@ reviewed Session revision and secure discovery patch to the isolated SDK source.
 upstream MPL-2.0 notices. `sdk_revision_check.c` opens three loopback-only SDK
 Sessions to verify the actual server revision, fractional milliseconds, copy
 lifetime and cleanup. Its Security None endpoint is a test fixture only; the
-production executable still rejects service requests without opening a Session.
+production executable now opens and closes one pinned secure Session; general
+services remain unimplemented.
 `session_config.c` configures only the requested secure policy and user token,
 installs the exact peer verifier and rejects interactive private-key prompts.
 The uninstalled `session_probe.c` exercises that configuration against an
 independent asyncua secure peer, including its revised timeout and explicit
-NamespaceArray. This is a test-only Session, not production owner admission.
+NamespaceArray. The production owner independently exercises that open/close
+path through the same SDK configuration.
 `security.c` adds explicit credential preflight before any network attempt.
 It owns bounded DER/PKCS#8 inputs, validates key pairs, direct-CA trust,
 certificate identities/usages/validity and the issuer CRL, and provides a
@@ -26,19 +28,19 @@ for the exact boundary and remaining SDK/Session work.
 
 `ipc.c` assembles input lines within the 131072-byte ceiling and checks the
 closed outer request envelope after `json_codec.c` parses the complete line.
-The executable rejects malformed or expired input with one terminal frame and
-rejects every otherwise admitted request as `unsupported_protocol`. It does not
-issue an SDK service. `ipc_check.c` covers
+The executable rejects malformed or expired input with one terminal frame,
+admits a secure `open` and `close`, and rejects other service requests as
+`unsupported_protocol`. `ipc_check.c` covers
 every split of a request line, coalescing, bounds and malformed envelopes;
 the pinned build test also exercises the real process input and terminal output.
 The `open` parameter map is now checked for its exact keys, policy/mode literals,
 bounded identity strings, canonical base64 envelopes, user-token form and
 session timeout. This shape gate precedes the `security.c` credential checks;
-SDK Session activation remains separate work.
+Session activation uses `session_open.c` after this shape gate.
 `ipc.c` also validates a closed initial credit frame. `main.c` binds it to the
 process generation and requires it before a request. Terminal output uses its
-control allowance; normal output, consumed-credit replenishment and queued
-notifications are not implemented.
+control allowance; open/close responses spend credit and the BEAM owner
+replenishes validated consumption. Queued notifications are not implemented.
 
 `build_command.c` is the reviewed POSIX command guardian from the Wotex Modbus
 source at commit `018f419b0644cfecc83891551d10b5c8d771d7c6`,

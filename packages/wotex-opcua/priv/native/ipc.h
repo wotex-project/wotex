@@ -22,6 +22,7 @@ WopIpcFrameStatus wop_ipc_feed(WopIpcInput *input, const char *bytes, size_t len
 
 typedef struct {
     uint64_t generation;
+    char id[65];
     int64_t deadline_ms;
     uint64_t timeout_ms;
     bool open;

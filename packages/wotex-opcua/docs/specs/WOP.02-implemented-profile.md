@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.16
+  version: 1.0.17
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -11,7 +11,7 @@ spec:
 # WOP.02 Implemented OPC UA profile
 
 This document inventories the current Python-backed protocol adapter and the
-native build/bootstrap subset. It does not accept the complete native target in
+partial native Session owner. It does not accept the complete native target in
 WOP.10–WOP.13. Python is a runtime requirement of the existing protocol adapter;
 the accepted native architecture has no runtime Python process.
 
@@ -103,25 +103,27 @@ binary; this is SDK metadata evidence, not secure production Session acceptance.
 The separate C-only Session probe uses the native configuration and verifier
 adapter against an independent asyncua peer. It proves Basic256Sha256 anonymous
 activation, the revised timeout and an explicit NamespaceArray read in that
-test binary. The production executable still does not admit a Session.
+test binary. The production executable now admits this one secure open/close
+path, with bounded asynchronous NamespaceArray acquisition and revision checks.
 
 The current C executable emits versioned readiness, exits on owner EOF and runs
 explicit SHA-256/SDK DateTime dependency self-tests. It now assembles a bounded
 input line and applies the strict JSON reader and closed outer request envelope
 to that process input. Malformed frames terminate with `invalid_request`; an
-expired native deadline yields `deadline_exceeded`. An admitted request yields
-`unsupported_protocol` without service I/O. Normal output credits, native
-Session activation and service responses remain unimplemented. This
-partial P02 boundary does not accept WOP.13 services or interoperability.
+expired native deadline yields `deadline_exceeded`. A validated Basic256Sha256
+anonymous `open` now activates the pinned SDK Session, reads and validates the
+server NamespaceArray, checks the server-revised timeout and emits a correlated,
+credit-spending success. `close` cooperatively deletes the Session and acknowledges
+cleanup; EOF also releases it. The internal BEAM owner validates those responses
+and replenishes consumed credit. Read/write/call/browse/subscriptions, complete
+output buffering, namespace translation and other policy/token interoperability
+remain open P02/P03 work. The default public adapter is still Python-backed.
 `Native.Frame` encodes exact outer request fields and maps the owner deadline
 from the separately captured ready clock sample. The native build test uses
-that production encoder to drive the real process. No public native client or
-response relay is exposed yet.
-The internal `Native.Host.request/4` now sends one owner-correlated frame
-through the custody guardian, validates a bounded generation-matched terminal
-control and releases the native process. Unsolicited output remains a bootstrap
-failure; only the finite terminal error is decoded for an explicit request.
-The process still cannot report a successful OPC UA service.
+that production encoder to drive the real process. No public native client is
+exposed yet. The internal `Native.Host.request/4` sends correlated frames through
+the custody guardian, validates terminal controls and open/close responses, and
+replenishes delivered response credit. Unsolicited output ends the generation.
 An `open` request now has additional native-side shape checks: exact keys,
 three allowed security-policy URI strings, `SignAndEncrypt`, bounded text and
 session timeout, closed user-token maps, and canonical base64 byte envelopes.
@@ -132,15 +134,15 @@ current signed issuer CRL. Exact DNS/IP SAN and application URI checks precede
 network access. Unknown noncritical certificate extensions remain admissible;
 unknown critical and duplicate extensions fail. Invalid credentials return the
 bounded `certificate_invalid` opening error. Validity starts are inclusive and
-expiry is exclusive, tested with explicit wall-clock samples. The standalone
-peer verifier additionally checks a complete DER pin and refreshed trust; SDK
-callback integration remains open. See the [native security boundary](../../priv/native/security.md).
-This preflight does not authenticate a network peer, activate a Session or send packets.
+expiry is exclusive, tested with explicit wall-clock samples. The peer verifier
+additionally checks a complete DER pin and refreshed trust during SDK network
+verification. See the [native security boundary](../../priv/native/security.md).
 The owner now sends one bounded initial credit control before its request. The
 C process binds that credit to the generation, rejects a request without it,
 and rejects further credit before any output has been consumed. Terminal output
-uses the separate control allowance. Normal response/report credit accounting,
-replenishment and subscriptions remain unimplemented.
+uses the separate control allowance. Open/close responses consume credit and
+the owner replenishes validated consumption. Report queues and subscriptions
+remain unimplemented.
 `Native.Host` admits both explicit executable digests before process creation,
 receives strict versioned readiness, and links to the original caller only after
 successful initialization and a one-use ownership claim. Hashing, spawn,

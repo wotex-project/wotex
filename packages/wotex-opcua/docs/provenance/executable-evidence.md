@@ -20,15 +20,54 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Production secure open/close slice, 2026-09-16
+
+The production `wotex_opcua_native` now runs the strict open-parameter and
+credential gates, starts an asynchronous pinned SignAndEncrypt SDK Session,
+reads the server NamespaceArray independently, rejects malformed/duplicate or
+oversized namespace entries and an invalid/excessive revised timeout, then emits
+one generation/ID-correlated success under the initial output credit. The
+process retains the Session until explicit close or EOF. Close attempts an
+asynchronous CloseSession with subscription deletion and bounded cooperative
+teardown before its success response. The internal BEAM `Native.Host` decodes
+only the closed open/close result shapes, maps the owner deadline and replenishes
+validated response credit. `Native.Frame` rejects mismatched generation, ID,
+timeout and namespace metadata.
+
+The independent asyncua 2.0.1 peer passes three optional interop checks: the
+C-only secure probe, the production executable's direct framed open/close, and
+the BEAM owner through the separate custody guardian. The focused Frame/Host
+unit suite passes 24 tests, including a default owner success/credit fixture;
+the three optional peer checks passed separately. The RelWithDebInfo native
+suite passes 181/181 CTest cases. The complete
+`WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64 with
+Elixir 1.20.2 / OTP 29.0.4: 263 passed (10 doctests, 4 properties, 249 tests),
+four optional interoperability tests excluded and 95.2% coverage. Its fresh
+native build, CTest, documentation, dependency audits and package/archive
+checks pass. This is one Basic256Sha256 anonymous peer lane;
+it does not accept P02/P03, bind X-F17..F23, expose a public native client,
+implement Read/Write/Call/Browse/subscriptions or remove the existing Python
+runtime adapter.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/main.c` | `1b624910dd28bc07f359f21dff1a376fe6b8d07fb030bddc07a30839156b3f3b` |
+| `priv/native/session_open.c` | `6cc1de2505fb77d6f0c2cb3ac7d2420a0a48b0fe8dc7af7d68e6f7d9b5702f67` |
+| `priv/native/session_open.h` | `e121325623b89da1e569432d280e8913736c6e240e2d3b2ddeb91042b937f314` |
+| `lib/wotex/opcua/native/frame.ex` | `500c7cc2dd5b2bf642843ffd58090c863bf712bbfd8cdcbca42a012b2ae7538e` |
+| `lib/wotex/opcua/native/host.ex` | `e0d27f1441d66bb39a31cb9029101177b0a3c5f8ee483327f624012a9e252a4d` |
+| native CTest log | `3f2627eb8e22f488279950b6de4f00403eb054de67552854548fb23b3f06f99d` |
+| full gate log | `7992337aaaae807ae5f931cb08d56a90e6306904b8e51a197e845166315bb7b2` |
+
 ## Secure SDK configuration prerequisite, 2026-09-16
 
-`open62541-secure-discovery-v2` extends the reviewed, exact-hash SDK patch:
+At that prerequisite stage, `open62541-secure-discovery-v2` extended the reviewed, exact-hash SDK patch:
 when a caller supplies the pinned leaf and SignAndEncrypt policy, GetEndpoints
 runs over that first secure channel. Endpoint URL and certificate substitution
 and ambiguous matching user-token policies fail before CreateSession. The
 existing revised Session timeout preservation remains. The source manifest
-binds all pristine and patched file digests and the patch script. The production
-executable still rejects an otherwise valid `open` as `unsupported_protocol`.
+binds all pristine and patched file digests and the patch script. At this stage,
+the production executable still rejected a valid `open` as `unsupported_protocol`.
 
 `session_config.c` now configures the requested policy and explicit anonymous,
 username or certificate token, installs the whole-DER pin/CRL/SAN/URI verifier

@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.4
+  version: 1.1.5
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -13,24 +13,25 @@ spec:
 This accepted target is **partially implemented**. WOP-P00 accepts the pinned
 source/build/bootstrap and portable process-custody boundary, and WOP-P01 accepts
 pure typed values plus production SDK value projection, for the exact cohorts
-in executable evidence. The first P02 slice connects bounded input framing and
-outer-envelope validation to the actual executable; no service is admitted.
+in executable evidence. P02 now connects bounded input framing and
+outer-envelope validation to the executable and admits one secure open/close path.
 The pure owner-side encoder now maps the ready clock sample and emits closed
 outer request frames. The internal owner handles one bounded terminal control
-for an explicit request. It does not yet relay service responses or replenish credits.
+for an explicit request and now validates correlated open/close successes and
+replenishes consumed output credit.
 The C ingress checks the `open` parameter shape and rejects malformed or
 downgraded values before a network attempt. Native credential preflight now
 verifies DER/PKCS#8 inputs, keys, direct-CA trust, exact SAN/URI, usage, validity,
 signatures and the current issuer CRL. Invalid credentials end with
-`certificate_invalid`; an admitted credential set still ends as
-`unsupported_protocol`. The complete-DER pin verifier is installed by the
-native configuration adapter, but that adapter is exercised by a separate
-test-only C probe. The probe activates one secure independent-peer Session and
-reads its NamespaceArray. No production Session is yet activated.
+`certificate_invalid`. The complete-DER pin verifier is installed by the
+native configuration adapter and exercised by the production executable and
+the separate C probe against an independent Basic256Sha256 peer. The executable
+checks the server's timeout revision and NamespaceArray before reporting open.
 The owner and C ingress now exchange one initial credit control before the
 request. It binds the process generation; requests without it and later credit
-before consumption fail. No normal output spends credit yet.
-Secure native Sessions and services remain required implementation.
+before consumption fail. Open/close responses spend credit; the BEAM owner
+replenishes validated consumption. Complete output buffering, operations,
+namespace translation and the full secure policy/token matrix remain required.
 The target runtime uses an Elixir API and an explicitly owned open62541 C executable.
 Python is confined to the independent test peer and upstream build generators.
 A native executable, a protocol service, a WoT binding and an interoperability
@@ -60,7 +61,8 @@ Its caller owns the linked host; a supervising native Session starts this child
 itself before waiting for protocol activation. It is a temporary child, with no
 automatic restart or reconnect. The return is `{:ok, pid, %{ready: ready,
 received_at_ms: integer}}` after exact process readiness, or a library Error.
-It does not implement `Client.connect/1`, send credentials or activate a Session.
+Bootstrap itself does not implement `Client.connect/1` or send credentials;
+its explicit internal request path can activate the currently supported Session.
 An invalid or failed startup must leave its caller alive and no owned Port.
 Initialization is unlinked while the caller is monitored. Only its original
 caller can claim a one-use readiness token; the host establishes the link after

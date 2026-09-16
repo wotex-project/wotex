@@ -86,6 +86,18 @@ defmodule Wotex.OPCUA.Native.HostTest do
     assert_native_reaped(directory)
   end
 
+  test "WOP-X04 owner correlates open/close and replenishes only consumed output", context do
+    {options, directory} = fixture(context, "session_reply")
+    assert {:ok, host, _} = Host.start_link(options)
+
+    assert {:ok, %{"session_timeout_ms" => 60_000.0, "namespace_array" => namespaces}} =
+             Host.request(host, "open", %{"session_timeout_ms" => 60_000}, 1000)
+
+    assert namespaces == ["http://opcfoundation.org/UA/", "urn:fixture"]
+    assert {:ok, nil} = Host.request(host, "close", %{}, 1000)
+    assert_native_reaped(directory)
+  end
+
   test "WOP-X03 fragmented readiness is accumulated without changing its deadline", context do
     {options, directory} = fixture(context, "fragmented")
     assert {:ok, host, %{ready: %Ready{}}} = Host.start_link(options)

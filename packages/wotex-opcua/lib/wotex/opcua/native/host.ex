@@ -9,12 +9,11 @@ defmodule Wotex.OPCUA.Native.Host do
   hashing, spawn and readiness share the deadline captured at API entry.
 
   The successful return includes the decoded process readiness and the BEAM
-  monotonic receive sample. It establishes neither an authenticated OPC UA
-  Session nor a service capability. This bootstrap does not send credentials or
-  protocol requests at startup. Its bounded internal `request/4` path can send
-  one validated outer frame and receive a matching terminal control, but no
-  service response or authenticated Session is accepted. Unsolicited output
-  ends the generation and sends one
+  monotonic receive sample. This bootstrap does not send credentials or
+  protocol requests at startup. Its internal `request/4` path can correlate
+  an explicit secure open and close response with credit replenishment. Other
+  native service operations remain unimplemented. Unsolicited output ends the
+  generation and sends one
   `{:wotex_opcua_native, pid, {:error, error}}` to its owner.
 
   Fallible initialization is unlinked; successful readiness requires a one-use
@@ -63,8 +62,8 @@ defmodule Wotex.OPCUA.Native.Host do
     :exit, _ -> {:error, Error.new(:native_startup_failed)}
   end
 
-  @doc "Sends one bounded outer request; currently only a native terminal rejection can return."
-  @spec request(pid(), String.t(), map(), pos_integer()) :: {:error, Error.t()}
+  @doc "Sends one bounded owner request to the native generation."
+  @spec request(pid(), String.t(), map(), pos_integer()) :: {:ok, term()} | {:error, Error.t()}
   def request(host, operation, parameters, timeout)
       when is_pid(host) and is_integer(timeout) and timeout in 1..60_000 do
     deadline = System.monotonic_time(:millisecond) + timeout
@@ -114,6 +113,8 @@ defmodule Wotex.OPCUA.Native.Host do
              generation: generation,
              pending: nil,
              input: <<>>,
+             next_id: 1,
+             credit_sequence: 0,
              claim_timer: :erlang.start_timer(remaining(deadline), self(), :claim_expired),
              claimed: false
            }}
@@ -150,22 +151,37 @@ defmodule Wotex.OPCUA.Native.Host do
       ) do
     now = System.monotonic_time(:millisecond)
 
+    id = Integer.to_string(state.next_id)
+
     with {:ok, admission} <-
            Frame.admission(state.sample.ready, state.sample.received_at_ms, deadline, now, timeout),
          {:ok, frame} <-
            Frame.request(
              state.generation,
-             "1",
+             id,
              operation,
              parameters,
              admission.timeout_ms,
              admission.deadline_ms
            ),
-         {:ok, credit} <- Frame.credit(state.generation, 1, 16, 262_144),
-         :ok <- send_frame(state.port, credit),
+         {:ok, credit} <- initial_credit(state),
+         :ok <- send_optional(state.port, credit),
          :ok <- send_frame(state.port, frame) do
       timer = Process.send_after(self(), :request_expired, max(deadline - now, 0))
-      {:noreply, %{state | pending: %{from: from, timer: timer}}}
+
+      {:noreply,
+       %{
+         state
+         | pending: %{
+             from: from,
+             timer: timer,
+             id: id,
+             operation: operation,
+             requested_timeout: parameters["session_timeout_ms"]
+           },
+           next_id: state.next_id + 1,
+           credit_sequence: max(state.credit_sequence, 1)
+       }}
     else
       {:error, %Error{} = error} -> {:reply, {:error, error}, state}
     end
@@ -188,21 +204,13 @@ defmodule Wotex.OPCUA.Native.Host do
   end
 
   def handle_info({port, {:data, bytes}}, %{port: port, pending: %{from: _} = pending} = state)
-      when byte_size(state.input) + byte_size(bytes) <= 4096 do
+      when byte_size(state.input) + byte_size(bytes) <= 131_072 do
     input = state.input <> bytes
 
     if :binary.match(input, "\n") == :nomatch do
       {:noreply, %{state | input: input}}
     else
-      case Frame.terminal(input, state.generation) do
-        {:ok, error} ->
-          Process.cancel_timer(pending.timer)
-          GenServer.reply(pending.from, {:error, error})
-          {:stop, :normal, %{state | pending: nil}}
-
-        {:error, error} ->
-          failed(state, error)
-      end
+      handle_native_frame(state, pending, input)
     end
   end
 
@@ -325,6 +333,65 @@ defmodule Wotex.OPCUA.Native.Host do
     if Port.command(port, frame), do: :ok, else: {:error, Error.new(:native_process_terminated)}
   rescue
     ArgumentError -> {:error, Error.new(:native_process_terminated)}
+  end
+
+  defp initial_credit(%{credit_sequence: 0, generation: generation}),
+    do: Frame.credit(generation, 1, 16, 262_144)
+
+  defp initial_credit(_), do: {:ok, nil}
+
+  defp send_optional(_, nil), do: :ok
+  defp send_optional(port, frame), do: send_frame(port, frame)
+
+  defp handle_native_frame(state, pending, input) do
+    case Frame.terminal(input, state.generation) do
+      {:ok, error} ->
+        Process.cancel_timer(pending.timer)
+        GenServer.reply(pending.from, {:error, error})
+        {:stop, :normal, %{state | pending: nil}}
+
+      {:error, _} ->
+        handle_native_response(state, pending, input)
+    end
+  end
+
+  defp handle_native_response(state, pending, input) do
+    case Frame.response(
+           input,
+           state.generation,
+           pending.id,
+           pending.operation,
+           pending.requested_timeout
+         ) do
+      {:ok, result} ->
+        deliver_native_result(state, pending, input, result)
+
+      {:native_error, error} ->
+        Process.cancel_timer(pending.timer)
+        GenServer.reply(pending.from, {:error, error})
+        {:stop, :normal, %{state | pending: nil}}
+
+      {:error, error} ->
+        failed(state, error)
+    end
+  end
+
+  defp deliver_native_result(state, pending, input, result) do
+    Process.cancel_timer(pending.timer)
+
+    if pending.operation == "close" do
+      GenServer.reply(pending.from, {:ok, result})
+      {:stop, :normal, %{state | pending: nil}}
+    else
+      with {:ok, credit} <-
+             Frame.credit(state.generation, state.credit_sequence + 1, 1, byte_size(input)),
+           :ok <- send_frame(state.port, credit) do
+        GenServer.reply(pending.from, {:ok, result})
+        {:noreply, %{state | pending: nil, input: <<>>, credit_sequence: state.credit_sequence + 1}}
+      else
+        {:error, error} -> failed(state, error)
+      end
+    end
   end
 
   defp owner_generation do

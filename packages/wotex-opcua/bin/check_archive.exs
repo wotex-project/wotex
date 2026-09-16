@@ -23,6 +23,8 @@ defmodule Wotex.OPCUA.Check.Archive do
     "priv/native/session_config.c",
     "priv/native/session_config.h",
     "priv/native/session_probe.c",
+    "priv/native/session_open.c",
+    "priv/native/session_open.h",
     "priv/native/security.md",
     "priv/native/runtime-guardian.md",
     "priv/native/json_codec.c",

@@ -25,6 +25,51 @@ static void sleep_ms(long milliseconds) {
     struct timespec duration = {0, milliseconds * 1000000L};
     while (nanosleep(&duration, &duration) < 0 && errno == EINTR) {}
 }
+
+static int read_line(char *output, size_t capacity) {
+    size_t used = 0;
+    while(used + 1 < capacity) {
+        ssize_t count = read(STDIN_FILENO, output + used, 1);
+        if(count < 0 && errno == EINTR) continue;
+        if(count != 1) return -1;
+        if(output[used++] == '\n') {
+            output[used] = '\0';
+            return 0;
+        }
+    }
+    return -1;
+}
+
+static int session_reply(void) {
+    char frame[4096], id[65];
+    unsigned long long generation = 0;
+    if(read_line(frame, sizeof(frame)) || !strstr(frame, "\"event\":\"credit\"") ||
+       !strstr(frame, "\"sequence\":1")) return 50;
+    if(read_line(frame, sizeof(frame)) || !strstr(frame, "\"operation\":\"open\"") ||
+       !strstr(frame, "\"session_timeout_ms\":60000")) return 51;
+    char *key = strstr(frame, "\"generation\":");
+    char *request_id = strstr(frame, "\"id\":\"");
+    if(!key || !request_id || sscanf(key, "\"generation\":%llu", &generation) != 1 ||
+       sscanf(request_id, "\"id\":\"%64[0-9]\"", id) != 1) return 52;
+    int count = snprintf(frame, sizeof(frame),
+        "{\"version\":1,\"generation\":%llu,\"id\":\"%s\",\"ok\":true,"
+        "\"result\":{\"session_timeout_ms\":60000.0,\"session_generation\":%llu,"
+        "\"namespace_array\":[\"http://opcfoundation.org/UA/\",\"urn:fixture\"]}}\n",
+        generation, id, generation);
+    if(count <= 0 || (size_t)count >= sizeof(frame) ||
+       write_all(STDOUT_FILENO, frame, (size_t)count)) return 53;
+    if(read_line(frame, sizeof(frame)) || !strstr(frame, "\"event\":\"credit\"") ||
+       !strstr(frame, "\"sequence\":2")) return 54;
+    if(read_line(frame, sizeof(frame)) || !strstr(frame, "\"operation\":\"close\"")) return 55;
+    request_id = strstr(frame, "\"id\":\"");
+    if(!request_id || sscanf(request_id, "\"id\":\"%64[0-9]\"", id) != 1) return 56;
+    count = snprintf(frame, sizeof(frame),
+        "{\"version\":1,\"generation\":%llu,\"id\":\"%s\",\"ok\":true,\"result\":null}\n",
+        generation, id);
+    if(count <= 0 || (size_t)count >= sizeof(frame) ||
+       write_all(STDOUT_FILENO, frame, (size_t)count)) return 57;
+    return 0;
+}
 int main(int argc, char **argv) {
     if (argc != 1) return 40;
     const char *mode = strrchr(argv[0], '/');
@@ -68,6 +113,7 @@ int main(int argc, char **argv) {
             sleep_ms(1);
         }
     } else if (write_all(STDOUT_FILENO, ready, (size_t)count)) return 47;
+    if (!strcmp(mode, "session_reply")) return session_reply();
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

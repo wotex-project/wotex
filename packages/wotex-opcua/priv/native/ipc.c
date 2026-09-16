@@ -70,6 +70,7 @@ bool wop_ipc_request(yyjson_val *root, WopIpcRequest *request) {
         } else if (key_is(key, "id")) {
             bit = 4U;
             if (!ascii_id(value)) return false;
+            memcpy(parsed.id, yyjson_get_str(value), yyjson_get_len(value));
         } else if (key_is(key, "operation")) {
             bit = 8U;
             if (!operation(value)) return false;

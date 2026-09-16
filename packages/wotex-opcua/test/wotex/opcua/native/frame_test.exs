@@ -132,4 +132,40 @@ defmodule Wotex.OPCUA.Native.FrameTest do
                apply(Frame, :credit, invalid)
     end
   end
+
+  test "WOP-X03 open response requires the matching generation and bounded server metadata" do
+    result = %{
+      "session_generation" => 7,
+      "session_timeout_ms" => 3210.5,
+      "namespace_array" => ["http://opcfoundation.org/UA/", "urn:wotex:fixture"]
+    }
+
+    frame = fn payload ->
+      Jason.encode!(%{
+        "version" => 1,
+        "generation" => 7,
+        "id" => "open-1",
+        "ok" => true,
+        "result" => payload
+      }) <>
+        "\n"
+    end
+
+    assert {:ok, ^result} = Frame.response(frame.(result), 7, "open-1", "open", 5000)
+
+    for invalid <- [
+          %{result | "session_generation" => 8},
+          %{result | "session_timeout_ms" => 5000.1},
+          %{result | "session_timeout_ms" => 0},
+          %{result | "namespace_array" => ["http://opcfoundation.org/UA/", "urn:x", "urn:x"]},
+          %{result | "namespace_array" => ["urn:wrong", "urn:x"]},
+          Map.put(result, "unexpected", true)
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame}} =
+               Frame.response(frame.(invalid), 7, "open-1", "open", 5000)
+    end
+
+    assert {:error, %Error{code: :invalid_native_frame}} =
+             Frame.response(frame.(result), 7, "other", "open", 5000)
+  end
 end
