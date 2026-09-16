@@ -16,12 +16,11 @@ defmodule Wotex.Thread.SdkBridgeTest do
 
     File.mkdir_p!(directory)
     executable = Path.join(directory, "bridge")
-    source = File.read!(Path.expand("../../fixtures/sdk_bridge.py", __DIR__))
+    source = File.read!(Path.expand("../../fixtures/sdk_bridge.escript", __DIR__))
 
-    python =
-      System.find_executable("python3") || raise "Python3 is required for the injected native peer"
+    escript = System.find_executable("escript") || raise "Escript is required for the injected peer"
 
-    File.write!(executable, String.replace(source, "#!/usr/bin/env python3", "#!" <> python))
+    File.write!(executable, String.replace(source, "#!/usr/bin/env escript", "#!" <> escript))
     File.chmod!(executable, 0o700)
     File.write!(Path.join(directory, "mode"), "normal")
     on_exit(fn -> File.rm_rf!(directory) end)

@@ -3,7 +3,7 @@ spec:
   id: WTH.02
   title: "Implemented Thread profile"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-thread
   updated: 2026-09-09
 ---
@@ -41,8 +41,10 @@ Management acceptance is distinct from pending Dataset activation. Typed Joiner
 configuration validates admission; joiner execution and native state streams
 remain target work. The default Runtime profile is still daemon inspection.
 
-The production helper has no Python runtime. Its current Python build and native
-test utilities are scoped tooling; .13 requires Mix/ExUnit orchestration and
+The production helper has no Python runtime. BEAM ownership tests now use an
+injected Erlang escript with the same no-environment process boundary. The
+current Python native build and separate native test utilities are scoped
+tooling; .13 requires Mix/ExUnit orchestration and
 native production-code test executables. Existing SDK simulation cases do not
 establish the complete multi-node application workflow or final stress profile.
 

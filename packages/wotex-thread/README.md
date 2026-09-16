@@ -43,7 +43,8 @@ should replace the path with the constraint of an available Hex release.
 The accepted backend retains the existing first-party C++17 OpenThread
 Port. Joiner execution, native state subscriptions, complete simulated-network
 workflows and full lifecycle proof remain required. Python is not a production
-runtime dependency; current Python build/test utilities are tooling baselines.
+runtime dependency. The injected BEAM ownership peer is an Erlang escript;
+Python remains in the current native build and separate native test utilities.
 
 [WTH.13](docs/specs/WTH.13-native-backend.md) fixes source/build pins, typed IPC,
 flow control and native ownership. The target tooling is `mix wotex.native.build`,

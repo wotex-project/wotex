@@ -21,6 +21,19 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Python-free injected ownership peer, 2026-09-16
+
+The BEAM ownership fixture is now `test/fixtures/sdk_bridge.escript`. ExUnit
+copies it with an absolute `escript` interpreter path before opening the Port.
+It reads and writes the same C07 frames, mode files and request log as the
+previous injected fixture. The production Port still clears the child
+environment; a direct empty-environment smoke test opens and replies, and
+`test/wotex/thread/sdk_bridge_test.exs` passes 31/31, including malformed
+frames, forged handles, deadlines, ignored SIGTERM cleanup, Dataset,
+management and commissioner cases. This is an injected peer, not SDK or radio
+interoperability evidence. Python remains in the separate native build and
+native test utilities pending WTH-B01 Mix/ExUnit migration.
+
 ## Acceptance boundary
 
 [WTH.13](../specs/WTH.13-native-backend.md) defines the required native binary,
