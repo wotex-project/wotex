@@ -97,8 +97,14 @@ defmodule Wotex.OPCUA.Open62541Test do
       assert {:error, %Error{}} = Open62541.request(handle, message, 100)
     end
 
+    assert {:error, %Error{code: :invalid_node_id}} =
+             Open62541.request(handle, %{type: :browse, node_id: "bad"}, 100)
+
+    assert {:error, %Error{code: :invalid_value}} =
+             Open62541.request(handle, %{type: :browse, node_id: "i=85", extra: true}, 100)
+
     assert {:error, %Error{code: :unsupported_protocol}} =
-             Open62541.request(handle, %{type: :browse, node_id: "i=85"}, 100)
+             Open62541.request(handle, %{type: :browse_next, node_id: "i=85"}, 100)
 
     assert {:error, %Error{code: :invalid_native_handle}} =
              Open62541.request(handle, %{type: :read, node_id: "i=1"}, 0)
@@ -198,6 +204,9 @@ defmodule Wotex.OPCUA.Open62541Test do
                1000
              )
 
+    assert {:ok, ["ns=1;s=value"]} =
+             Open62541.request(handle, %{type: :browse, node_id: "ns=0;i=85"}, 1000)
+
     assert :ok = Open62541.disconnect(handle)
     assert :ok = Open62541.disconnect(handle)
   end
@@ -208,6 +217,36 @@ defmodule Wotex.OPCUA.Open62541Test do
 
     assert {:ok, %{"value" => %{"value" => 21.5}}} =
              Open62541.request(handle, %{type: :read, node_id: "ns=2;s=value"}, 2000)
+
+    assert :ok = Open62541.disconnect(handle)
+  end
+
+  test "WOP-N04 one-shot native Browse uses one temporary Session", context do
+    options = fixture(context, "oneshot-browse")
+    assert {:ok, handle} = Open62541.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+    assert {:ok, ["ns=1;s=value"]} =
+             Open62541.request(handle, %{type: :browse, node_id: "ns=0;i=85"}, 2000)
+
+    assert :ok = Open62541.disconnect(handle)
+  end
+
+  test "WOP-N04 child projection refuses a remote ExpandedNodeId", context do
+    options = fixture(context, "remote-browse", "session_remote_browse")
+    assert {:ok, handle} = Open62541.connect(options)
+
+    assert {:error, %Error{code: :unsupported_remote_reference}} =
+             Open62541.request(handle, %{type: :browse, node_id: "ns=0;i=85"}, 1000)
+
+    assert :ok = Open62541.disconnect(handle)
+  end
+
+  test "WOP-N04 child projection refuses an unknown local namespace", context do
+    options = fixture(context, "unknown-browse", "session_unknown_browse")
+    assert {:ok, handle} = Open62541.connect(options)
+
+    assert {:error, %Error{code: :unsupported_remote_reference}} =
+             Open62541.request(handle, %{type: :browse, node_id: "ns=0;i=85"}, 1000)
 
     assert :ok = Open62541.disconnect(handle)
   end

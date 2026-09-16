@@ -850,6 +850,42 @@ static yyjson_mut_val *write_localized(ValueWriter *writer, const UA_LocalizedTe
     return object;
 }
 
+WopValueStatus wop_value_write_references(const UA_ReferenceDescription *input, size_t count,
+                                       yyjson_mut_doc *document, yyjson_mut_val **output) {
+    if(!output) return WOP_VALUE_INVALID;
+    *output = NULL;
+    if(!document || count > 256 || (count && !input)) return WOP_VALUE_INVALID;
+    ValueWriter writer = {document, WOP_VALUE_OK};
+    yyjson_mut_val *array = yyjson_mut_arr(document);
+    if(!array) return WOP_VALUE_LIMIT;
+    for(size_t i = 0; i < count; i++) {
+        const UA_ReferenceDescription *reference = &input[i];
+        UA_UInt32 node_class = reference->nodeClass;
+        if(node_class > 128 || (node_class && (node_class & (node_class - 1))))
+            return WOP_VALUE_INVALID;
+        yyjson_mut_val *item = yyjson_mut_obj(document);
+        if(!item ||
+           !writer_field(&writer, item, "reference_type_id",
+                         write_node(&writer, &reference->referenceTypeId)) ||
+           !writer_field(&writer, item, "is_forward",
+                         yyjson_mut_bool(document, reference->isForward)) ||
+           !writer_field(&writer, item, "node_id",
+                         write_expanded(&writer, &reference->nodeId)) ||
+           !writer_field(&writer, item, "browse_name",
+                         write_qualified(&writer, &reference->browseName)) ||
+           !writer_field(&writer, item, "display_name",
+                         write_localized(&writer, &reference->displayName)) ||
+           !writer_field(&writer, item, "node_class",
+                         yyjson_mut_uint(document, node_class)) ||
+           !writer_field(&writer, item, "type_definition",
+                         write_expanded(&writer, &reference->typeDefinition)) ||
+           !yyjson_mut_arr_append(array, item))
+            return writer.status == WOP_VALUE_OK ? WOP_VALUE_LIMIT : writer.status;
+    }
+    *output = array;
+    return WOP_VALUE_OK;
+}
+
 static yyjson_mut_val *write_extension(ValueWriter *writer, const UA_ExtensionObject *value) {
     const char *encoding;
     switch(value->encoding) {

@@ -24,6 +24,12 @@ typedef struct {
     UA_StatusCode call_status;
     UA_UInt32 call_request_id;
     bool call_pending, call_completed, call_valid, call_remote_error;
+    UA_BrowseDescription browse_description;
+    UA_BrowseResult browse_result;
+    UA_StatusCode browse_status;
+    UA_UInt32 browse_request_id;
+    UA_UInt32 browse_page_size;
+    bool browse_pending, browse_completed, browse_valid, browse_remote_error, browse_limit;
 } WopSession;
 
 /* Only call after closed open-shape and deadline admission. The caller owns
@@ -43,6 +49,9 @@ bool wop_session_write(WopSession *session, yyjson_val *parameters,
 bool wop_session_call(WopSession *session, yyjson_val *parameters,
                       bool *sdk_attempted);
 bool wop_session_call_supported(const WopSession *session);
+/* One service-level bounded Browse page. A continuation is not exposed until
+ * owner-bound pagination exists; the caller closes the Session on that path. */
+bool wop_session_browse(WopSession *session, yyjson_val *parameters);
 /* True only when the CloseSession/channel teardown completed cooperatively. */
 bool wop_session_close(WopSession *session);
 

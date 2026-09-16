@@ -187,6 +187,20 @@ defmodule Wotex.OPCUA.Native.Frame do
       else: {:error, Error.new(:invalid_native_frame, :response)}
   end
 
+  defp response_result(
+         "browse",
+         %{"status" => status, "references" => references, "continuation" => nil} = result,
+         _,
+         _
+       )
+       when map_size(result) == 3 and is_integer(status) and status in 0..4_294_967_295 and
+              is_list(references) and length(references) <= 256 do
+    if Bitwise.band(status, 0x80000000) == 0 and
+         Enum.all?(references, &valid_reference?/1),
+       do: {:ok, result},
+       else: {:error, Error.new(:invalid_native_frame, :response)}
+  end
+
   defp response_result("read", result, _, _) when is_map(result) do
     with {:ok, value} <- native_data_value(result),
          {:ok, _} <- Binary.encode_data_value(value),
@@ -234,6 +248,50 @@ defmodule Wotex.OPCUA.Native.Frame do
   end
 
   defp valid_call_result?(_), do: false
+
+  defp valid_reference?(
+         %{
+           "reference_type_id" => reference_type_id,
+           "is_forward" => forward,
+           "node_id" => node_id,
+           "browse_name" => browse_name,
+           "display_name" => display_name,
+           "node_class" => node_class,
+           "type_definition" => type_definition
+         } = reference
+       )
+       when map_size(reference) == 7 do
+    with {:ok, node_id} <- native_expanded(node_id),
+         {:ok, type_definition} <- native_expanded(type_definition),
+         %{"namespace" => namespace, "name" => name} <- browse_name,
+         true <- map_size(browse_name) == 2,
+         %{"locale" => locale, "text" => text} <- display_name,
+         true <- map_size(display_name) == 2,
+         {:ok, _} <-
+           Binary.encode_reference_description(%{
+             reference_type_id: reference_type_id,
+             is_forward: forward,
+             node_id: node_id,
+             browse_name: %{namespace: namespace, name: name},
+             display_name: %{locale: locale, text: text},
+             node_class: node_class,
+             type_definition: type_definition
+           }) do
+      true
+    else
+      _ -> false
+    end
+  end
+
+  defp valid_reference?(_), do: false
+
+  defp native_expanded(
+         %{"node_id" => node_id, "namespace_uri" => uri, "server_index" => server} = value
+       )
+       when map_size(value) == 3,
+       do: {:ok, %{node_id: node_id, namespace_uri: uri, server_index: server}}
+
+  defp native_expanded(_), do: :error
 
   defp valid_call_output?(output) do
     case native_variant(output, true) do

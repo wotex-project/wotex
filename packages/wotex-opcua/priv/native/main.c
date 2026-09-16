@@ -127,12 +127,13 @@ static bool result_frame(const WopIpcRequest *request, const WopSession *session
                          const UA_DataValue *read_value,
                          const UA_StatusCode *write_status,
                          const UA_CallMethodResult *call_result,
+                         const UA_BrowseResult *browse_result,
                          uint64_t *messages, uint64_t *bytes) {
     yyjson_mut_doc *doc = yyjson_mut_doc_new(NULL);
     if(!doc) return false;
     yyjson_mut_val *root = yyjson_mut_obj(doc);
     yyjson_mut_doc_set_root(doc, root);
-    yyjson_mut_val *result = session || write_status || call_result ?
+    yyjson_mut_val *result = session || write_status || call_result || browse_result ?
                              yyjson_mut_obj(doc) : yyjson_mut_null(doc);
     if(read_value && wop_value_write_data_value(read_value, doc, &result) != WOP_VALUE_OK)
         result = NULL;
@@ -154,6 +155,16 @@ static bool result_frame(const WopIpcRequest *request, const WopSession *session
                          value && yyjson_mut_arr_append(outputs, value);
         }
         if(!valid_call) result = NULL;
+    }
+    if(browse_result && result) {
+        yyjson_mut_val *references = NULL;
+        if(wop_value_write_references(browse_result->references,
+                                     browse_result->referencesSize, doc,
+                                     &references) != WOP_VALUE_OK || !references ||
+           !yyjson_mut_obj_add_uint(doc, result, "status", browse_result->statusCode) ||
+           !yyjson_mut_obj_add_val(doc, result, "references", references) ||
+           !yyjson_mut_obj_add_null(doc, result, "continuation"))
+            result = NULL;
     }
     bool valid = root && result &&
         yyjson_mut_obj_add_uint(doc, root, "version", 1) &&
@@ -196,9 +207,12 @@ static int bootstrap(void) {
     WopIpcRequest read_request = {0};
     WopIpcRequest write_request = {0};
     WopIpcRequest call_request = {0};
+    WopIpcRequest browse_request = {0};
     uint64_t requested_session_timeout = 0;
     int64_t open_deadline = 0, read_deadline = 0, write_deadline = 0, call_deadline = 0;
+    int64_t browse_deadline = 0;
     bool opening = false, opened = false, reading = false, writing = false, calling = false;
+    bool browsing = false;
 
     char ready[256];
     int64_t clock_ms = monotonic_ms();
@@ -216,7 +230,8 @@ static int bootstrap(void) {
             if(now < 0 || (opening && now >= open_deadline) ||
                (reading && now >= read_deadline) ||
                (writing && now >= write_deadline) ||
-               (calling && now >= call_deadline)) {
+               (calling && now >= call_deadline) ||
+               (browsing && now >= browse_deadline)) {
                 if(writing || calling)
                     (void)terminal_mutation(admitted_generation, "deadline_exceeded",
                                          "exchange", 0, false);
@@ -237,7 +252,7 @@ static int bootstrap(void) {
             }
             if(opening && session.ready) {
                 uint64_t before = credit_bytes;
-                if(!result_frame(&open_request, &session, NULL, NULL, NULL,
+                if(!result_frame(&open_request, &session, NULL, NULL, NULL, NULL,
                                  &credit_messages, &credit_bytes))
                     break;
                 used_messages++;
@@ -262,7 +277,7 @@ static int bootstrap(void) {
                     break;
                 }
                 uint64_t before = credit_bytes;
-                if(!result_frame(&read_request, NULL, &session.read_value, NULL, NULL,
+                if(!result_frame(&read_request, NULL, &session.read_value, NULL, NULL, NULL,
                                  &credit_messages, &credit_bytes)) {
                     (void)terminal(admitted_generation, "response_limit", "decode");
                     break;
@@ -284,7 +299,7 @@ static int bootstrap(void) {
                     break;
                 }
                 uint64_t before = credit_bytes;
-                if(!result_frame(&write_request, NULL, NULL, &session.write_status, NULL,
+                if(!result_frame(&write_request, NULL, NULL, &session.write_status, NULL, NULL,
                                  &credit_messages, &credit_bytes)) {
                     (void)terminal_mutation(admitted_generation, "response_limit",
                                          "decode", 0, false);
@@ -312,7 +327,7 @@ static int bootstrap(void) {
                     break;
                 }
                 uint64_t before = credit_bytes;
-                if(!result_frame(&call_request, NULL, NULL, NULL, &session.call_result,
+                if(!result_frame(&call_request, NULL, NULL, NULL, &session.call_result, NULL,
                                  &credit_messages, &credit_bytes)) {
                     (void)terminal_mutation(admitted_generation, "response_limit",
                                          "decode", 0, false);
@@ -323,6 +338,38 @@ static int bootstrap(void) {
                 UA_CallMethodRequest_clear(&session.call_method);
                 UA_CallMethodResult_clear(&session.call_result);
                 calling = false;
+            }
+            if(browsing && session.browse_completed) {
+                if(session.browse_limit) {
+                    (void)terminal(admitted_generation, "response_limit", "decode");
+                    break;
+                }
+                if(!session.browse_valid && !session.browse_remote_error) {
+                    (void)terminal(admitted_generation, "invalid_response", "decode");
+                    break;
+                }
+                if(session.browse_status & 0x80000000U) {
+                    (void)terminal_status(admitted_generation, "remote_error",
+                                          "exchange", session.browse_status);
+                    break;
+                }
+                /* Until owner-bound BrowseNext exists, never return an incomplete page
+                 * while leaving a server continuation live. CloseSession deletes it. */
+                if(session.browse_result.continuationPoint.length) {
+                    (void)terminal(admitted_generation, "response_limit", "decode");
+                    break;
+                }
+                uint64_t before = credit_bytes;
+                if(!result_frame(&browse_request, NULL, NULL, NULL, NULL,
+                                 &session.browse_result, &credit_messages, &credit_bytes)) {
+                    (void)terminal(admitted_generation, "response_limit", "decode");
+                    break;
+                }
+                used_messages++;
+                used_bytes += before - credit_bytes;
+                UA_BrowseDescription_clear(&session.browse_description);
+                UA_BrowseResult_clear(&session.browse_result);
+                browsing = false;
             }
         }
         struct pollfd descriptor = {STDIN_FILENO, POLLIN, 0};
@@ -430,7 +477,7 @@ static int bootstrap(void) {
                             continue;
                         }
                     }
-                } else if(opened && !reading && !writing && !calling &&
+                } else if(opened && !reading && !writing && !calling && !browsing &&
                           strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "read") == 0) {
                     if(!wop_session_read(&session, yyjson_obj_get(root, "parameters"))) {
                         (void)terminal_active(writing || calling, request.generation,
@@ -445,7 +492,7 @@ static int bootstrap(void) {
                         input.used = 0;
                         continue;
                     }
-                } else if(opened && !reading && !writing && !calling &&
+                } else if(opened && !reading && !writing && !calling && !browsing &&
                           strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "write") == 0) {
                     bool attempted = false;
                     if(!wop_session_write(&session, yyjson_obj_get(root, "parameters"),
@@ -466,7 +513,7 @@ static int bootstrap(void) {
                         input.used = 0;
                         continue;
                     }
-                } else if(opened && !reading && !writing && !calling &&
+                } else if(opened && !reading && !writing && !calling && !browsing &&
                           strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "call") == 0) {
                     bool attempted = false;
                     if(!wop_session_call(&session, yyjson_obj_get(root, "parameters"),
@@ -486,11 +533,25 @@ static int bootstrap(void) {
                         input.used = 0;
                         continue;
                     }
-                } else if(opened && !reading && !writing && !calling &&
+                } else if(opened && !reading && !writing && !calling && !browsing &&
+                          strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "browse") == 0) {
+                    if(!wop_session_browse(&session, yyjson_obj_get(root, "parameters"))) {
+                        (void)terminal(request.generation, "invalid_value", "validation");
+                    } else {
+                        browse_request = request;
+                        browse_deadline = request.deadline_ms;
+                        if((uint64_t)(request.deadline_ms - clock_ms) > request.timeout_ms)
+                            browse_deadline = clock_ms + (int64_t)request.timeout_ms;
+                        browsing = true;
+                        wop_json_clear(&parsed);
+                        input.used = 0;
+                        continue;
+                    }
+                } else if(opened && !reading && !writing && !calling && !browsing &&
                           strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "close") == 0 &&
                           yyjson_obj_size(yyjson_obj_get(root, "parameters")) == 0) {
                     bool released = wop_session_close(&session);
-                    if(released && result_frame(&request, NULL, NULL, NULL, NULL,
+                    if(released && result_frame(&request, NULL, NULL, NULL, NULL, NULL,
                                                 &credit_messages, &credit_bytes))
                         status = 0;
                     else if(!released)

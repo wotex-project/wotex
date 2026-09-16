@@ -71,10 +71,10 @@ static int session_reply(void) {
     return 0;
 }
 
-static int session_services(void) {
+static int session_services(int remote_browse) {
     char frame[4096], id[65];
     unsigned long long generation = 0;
-    for(unsigned sequence = 1; sequence <= 8; sequence++) {
+    for(unsigned sequence = 1; sequence <= 16; sequence++) {
         if(read_line(frame, sizeof(frame)) || !strstr(frame, "\"event\":\"credit\"")) return 58;
         if(read_line(frame, sizeof(frame))) return 59;
         char *key = strstr(frame, "\"generation\":");
@@ -93,6 +93,27 @@ static int session_services(void) {
         else if(strstr(frame, "\"operation\":\"call\""))
             result = "{\"status\":0,\"input_argument_statuses\":[],"
                      "\"outputs\":[{\"type\":\"Double\",\"array\":false,\"value\":4.5}]}";
+        else if(strstr(frame, "\"operation\":\"browse\""))
+            result = remote_browse == 1 ?
+                "{\"status\":0,\"continuation\":null,\"references\":[{"
+                "\"reference_type_id\":\"ns=0;i=35\",\"is_forward\":true,"
+                "\"node_id\":{\"node_id\":\"ns=1;s=value\",\"namespace_uri\":null,\"server_index\":1},"
+                "\"browse_name\":{\"namespace\":1,\"name\":\"Value\"},"
+                "\"display_name\":{\"locale\":null,\"text\":\"Value\"},\"node_class\":2,"
+                "\"type_definition\":{\"node_id\":\"ns=0;i=0\",\"namespace_uri\":null,\"server_index\":0}}]}" :
+                remote_browse == 2 ?
+                "{\"status\":0,\"continuation\":null,\"references\":[{"
+                "\"reference_type_id\":\"ns=0;i=35\",\"is_forward\":true,"
+                "\"node_id\":{\"node_id\":\"ns=2;s=value\",\"namespace_uri\":null,\"server_index\":0},"
+                "\"browse_name\":{\"namespace\":1,\"name\":\"Value\"},"
+                "\"display_name\":{\"locale\":null,\"text\":\"Value\"},\"node_class\":2,"
+                "\"type_definition\":{\"node_id\":\"ns=0;i=0\",\"namespace_uri\":null,\"server_index\":0}}]}" :
+                "{\"status\":0,\"continuation\":null,\"references\":[{"
+                "\"reference_type_id\":\"ns=0;i=35\",\"is_forward\":true,"
+                "\"node_id\":{\"node_id\":\"ns=1;s=value\",\"namespace_uri\":null,\"server_index\":0},"
+                "\"browse_name\":{\"namespace\":1,\"name\":\"Value\"},"
+                "\"display_name\":{\"locale\":null,\"text\":\"Value\"},\"node_class\":2,"
+                "\"type_definition\":{\"node_id\":\"ns=0;i=0\",\"namespace_uri\":null,\"server_index\":0}}]}";
         else if(strstr(frame, "\"operation\":\"close\""))
             result = "null";
         else return 61;
@@ -156,7 +177,9 @@ int main(int argc, char **argv) {
         }
     } else if (write_all(STDOUT_FILENO, ready, (size_t)count)) return 47;
     if (!strcmp(mode, "session_reply")) return session_reply();
-    if (!strcmp(mode, "session_services")) return session_services();
+    if (!strcmp(mode, "session_services")) return session_services(0);
+    if (!strcmp(mode, "session_remote_browse")) return session_services(1);
+    if (!strcmp(mode, "session_unknown_browse")) return session_services(2);
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

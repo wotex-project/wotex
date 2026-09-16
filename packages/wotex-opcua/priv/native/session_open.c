@@ -376,6 +376,93 @@ bool wop_session_call_supported(const WopSession *session) {
     return true;
 }
 
+static void receive_browse(UA_Client *client, void *userdata, UA_UInt32 request_id,
+                           UA_BrowseResponse *response) {
+    (void)client;
+    WopSession *session = userdata;
+    if(!session->browse_pending) return;
+    session->browse_pending = false;
+    session->browse_completed = true;
+    session->browse_status = UA_STATUSCODE_BADUNEXPECTEDERROR;
+    if(!response || request_id != session->browse_request_id) return;
+    if(response->responseHeader.serviceResult != UA_STATUSCODE_GOOD) {
+        session->browse_status = response->responseHeader.serviceResult;
+        session->browse_remote_error = true;
+        return;
+    }
+    if(response->resultsSize != 1 || !response->results ||
+       response->diagnosticInfosSize != 0) return;
+    const UA_BrowseResult *result = &response->results[0];
+    session->browse_status = result->statusCode;
+    size_t size = UA_calcSizeBinary(result, &UA_TYPES[UA_TYPES_BROWSERESULT], NULL);
+    if(result->referencesSize > session->browse_page_size ||
+       result->continuationPoint.length > 4096 || size > 1048576) {
+        session->browse_limit = true;
+        return;
+    }
+    if(size == 0) return;
+    if(UA_BrowseResult_copy(result, &session->browse_result) != UA_STATUSCODE_GOOD)
+        return;
+    session->browse_valid = true;
+}
+
+bool wop_session_browse(WopSession *session, yyjson_val *parameters) {
+    if(!session || !session->ready || session->browse_pending ||
+       !yyjson_is_obj(parameters) || yyjson_obj_size(parameters) != 6)
+        return false;
+    yyjson_val *direction = yyjson_obj_get(parameters, "direction");
+    yyjson_val *subtypes = yyjson_obj_get(parameters, "include_subtypes");
+    uint64_t mask = 0, page_size = 0;
+    if(!yyjson_is_str(direction) || !yyjson_is_bool(subtypes) ||
+       !wop_json_uint64(yyjson_obj_get(parameters, "node_class_mask"), &mask) ||
+       !wop_json_uint64(yyjson_obj_get(parameters, "page_size"), &page_size) ||
+       mask > 255 || page_size < 1 || page_size > 256) return false;
+    UA_BrowseDirection sdk_direction;
+    const char *name = yyjson_get_str(direction);
+    if(strcmp(name, "forward") == 0) sdk_direction = UA_BROWSEDIRECTION_FORWARD;
+    else if(strcmp(name, "inverse") == 0) sdk_direction = UA_BROWSEDIRECTION_INVERSE;
+    else if(strcmp(name, "both") == 0) sdk_direction = UA_BROWSEDIRECTION_BOTH;
+    else return false;
+
+    _Alignas(max_align_t) unsigned char storage[16384];
+    WopValueArena arena;
+    UA_NodeId node = UA_NODEID_NULL, reference_type = UA_NODEID_NULL;
+    if(!wop_value_arena_init(&arena, storage, sizeof(storage)) ||
+       !translate_node(session, yyjson_obj_get(parameters, "node_id"), &arena, &node) ||
+       !translate_node(session, yyjson_obj_get(parameters, "reference_type_id"),
+                       &arena, &reference_type)) return false;
+
+    UA_BrowseDescription_clear(&session->browse_description);
+    UA_BrowseResult_clear(&session->browse_result);
+    UA_BrowseDescription *description = &session->browse_description;
+    if(UA_NodeId_copy(&node, &description->nodeId) != UA_STATUSCODE_GOOD ||
+       UA_NodeId_copy(&reference_type, &description->referenceTypeId) != UA_STATUSCODE_GOOD) {
+        UA_BrowseDescription_clear(description);
+        return false;
+    }
+    description->browseDirection = sdk_direction;
+    description->includeSubtypes = yyjson_get_bool(subtypes);
+    description->nodeClassMask = (UA_UInt32)mask;
+    description->resultMask = UA_BROWSERESULTMASK_ALL;
+    UA_BrowseRequest request = {0};
+    request.nodesToBrowse = description;
+    request.nodesToBrowseSize = 1;
+    request.requestedMaxReferencesPerNode = (UA_UInt32)page_size;
+    session->browse_page_size = (UA_UInt32)page_size;
+    session->browse_pending = true;
+    session->browse_completed = false;
+    session->browse_valid = false;
+    session->browse_remote_error = false;
+    session->browse_limit = false;
+    UA_StatusCode status = UA_Client_sendAsyncBrowseRequest(session->client, &request,
+        receive_browse, session, &session->browse_request_id);
+    if(status != UA_STATUSCODE_GOOD) {
+        session->browse_pending = false;
+        UA_BrowseDescription_clear(description);
+    }
+    return status == UA_STATUSCODE_GOOD;
+}
+
 bool wop_session_close(WopSession *session) {
     if(!session) return false;
     bool closed = true;
@@ -407,6 +494,8 @@ bool wop_session_close(WopSession *session) {
     UA_WriteValue_clear(&session->write_value);
     UA_CallMethodRequest_clear(&session->call_method);
     UA_CallMethodResult_clear(&session->call_result);
+    UA_BrowseDescription_clear(&session->browse_description);
+    UA_BrowseResult_clear(&session->browse_result);
     wop_security_clear(&session->security);
     memset(session, 0, sizeof(*session));
     return closed;

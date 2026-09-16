@@ -53,6 +53,8 @@ WopValueStatus wop_value_write_data_value(const UA_DataValue *input, yyjson_mut_
                                         yyjson_mut_val **output);
 WopValueStatus wop_value_write_node_id(const UA_NodeId *input, yyjson_mut_doc *document,
                                      yyjson_mut_val **output);
+WopValueStatus wop_value_write_references(const UA_ReferenceDescription *input, size_t count,
+                                       yyjson_mut_doc *document, yyjson_mut_val **output);
 
 /* Translate a concrete public NodeId between two views of one Session's
  * NamespaceArray. The identifier storage remains borrowed from public_id.

@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.12
+  version: 1.1.13
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -14,10 +14,10 @@ This accepted target is **partially implemented**. WOP-P00 accepts the pinned
 source/build/bootstrap and portable process-custody boundary, and WOP-P01 accepts
 pure typed values plus production SDK value projection, for the exact cohorts
 in executable evidence. P02 now connects bounded input framing and
-outer-envelope validation to the executable and admits one secure open/read/write/call/close path.
+outer-envelope validation to the executable and admits one secure open/read/write/call/browse/close path.
 The pure owner-side encoder now maps the ready clock sample and emits closed
 outer request frames. The internal owner handles one bounded terminal control
-for an explicit request and now validates correlated open/read/write/call/close successes and
+for an explicit request and now validates correlated open/read/write/call/browse/close successes and
 replenishes consumed output credit.
 The C ingress checks the `open` parameter shape and rejects malformed or
 downgraded values before a network attempt. Native credential preflight now
@@ -29,7 +29,7 @@ the separate C probe against an independent Basic256Sha256 peer. The executable
 checks the server's timeout revision and NamespaceArray before reporting open.
 The owner and C ingress now exchange one initial credit control before the
 request. It binds the process generation; requests without it and later credit
-before consumption fail. Open/read/write/call/close responses spend credit; the BEAM owner
+before consumption fail. Open/read/write/call/browse/close responses spend credit; the BEAM owner
 replenishes validated consumption. The read path translates one concrete input
 NodeId through the server URI and SDK-local namespace map and returns a typed
 DataValue, retaining a Bad result's numeric StatusCode. NodeId-bearing result
@@ -40,8 +40,12 @@ effect without retry. The Call path translates concrete object/method NodeIds,
 copies up to 64 typed input Variants into SDK-owned memory, and returns the
 method status, ordered input argument statuses and typed outputs. Bad method
 status or uncertain post-submission failure retains unknown effect without
-retry. NodeId-bearing arguments and outputs remain unsupported until full
-namespace translation exists. Output buffering, other operations, cancellation,
+retry. The first service-level Browse slice requests one bounded page, copies
+complete ReferenceDescriptions, and validates them at the BEAM frame boundary.
+The public native client projects a complete page of local child NodeIds. An
+oversized page or continuation closes the Session; typed pagination and explicit
+BrowseNext release are still open. NodeId-bearing arguments and outputs remain
+unsupported until full namespace translation exists. Output buffering, other operations, cancellation,
 full namespace translation and the secure policy/token matrix remain required.
 The target native runtime uses an Elixir API and an explicitly owned open62541 C
 executable. In that path, Python is confined to the independent test peer and
@@ -54,9 +58,10 @@ bytes-envelope `open` map. Anonymous, binary username/password and certificate
 token shapes are covered. The explicitly selected public `Open62541` client now
 uses this layer to open a caller-owned persistent Session or to defer all file
 and process I/O until a one-shot request. It projects read, Write and Call maps
-through the Wotex facade against one independent secure peer. The older
-`Asyncua` adapter remains Python-backed. Complete compatibility projection,
-Browse, cancellation, concurrency and the policy/token matrix remain open;
+through the Wotex facade against one independent secure peer; bounded child
+Browse also works in persistent and one-shot mode. The older `Asyncua` adapter
+remains Python-backed. Complete compatibility projection, typed Browse
+pagination/release, cancellation, concurrency and the policy/token matrix remain open;
 this does not accept P02/P03.
 The independent peer also confirms typed ByteString array Write/readback through
 the public native client, preserving binary elements. This adds no full S01/S02

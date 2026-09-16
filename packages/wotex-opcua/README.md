@@ -42,9 +42,10 @@ The current code contains scalar, Variant, DataValue, NodeId, expanded identity,
 codecs, UA TCP framing, Property Form
 mapping, a limited per-request asyncua adapter and an explicitly selected
 partial `Open62541` client. The latter opens persistent or one-shot secure
-Sessions and performs typed Value Read/Write and Method Call through C without
-runtime Python. WOP.02 and executable evidence bound its actual behavior;
-complete compatibility projection, Browse, subscriptions and lifecycle work
+Sessions and performs typed Value Read/Write, Method Call and bounded child
+Browse through C without runtime Python. WOP.02 and executable evidence bound
+its actual behavior; typed Browse pagination/release, complete compatibility
+projection, subscriptions and lifecycle work
 remain.
 
 ## Native software contract

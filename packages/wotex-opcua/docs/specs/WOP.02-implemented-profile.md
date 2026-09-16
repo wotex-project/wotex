@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.24
+  version: 1.0.25
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -129,7 +129,13 @@ memory and returns the method status, ordered input argument statuses and typed
 outputs. Bad method status and uncertain post-submission failures retain unknown
 effect without retry. NodeId-bearing arguments and outputs remain unsupported
 until full namespace translation exists. The internal BEAM owner validates
-these responses and replenishes consumed credit. Browse/subscriptions,
+these responses and replenishes consumed credit. One service-level forward
+HierarchicalReferences Browse page now returns complete typed references in
+server order through the internal native owner. The explicitly selected public
+client projects a complete page of at most 256 local child NodeIds in persistent
+or one-shot mode; it rejects remote ExpandedNodeIds. A server page larger than
+requested or a continuation closes the Session instead of claiming a complete
+child list. Typed page handles, BrowseNext/release, subscriptions,
 complete output buffering, cancellation, full namespace translation and other
 policy/token interoperability remain open P02/P03 work. The older explicit
 `Asyncua` adapter remains Python-backed.
@@ -138,8 +144,9 @@ paths and snapshots bounded files for the native `open` request.
 `Open62541.connect/1` now uses that helper and the owned C host for a persistent
 secure Session, or defers file and process I/O in one-shot mode. Its current
 public request path exposes typed native DataValue, Write status and Call result
-maps through the facade; the independent Basic256Sha256 anonymous peer passes
-read, write/readback, Call and one-shot read. This is an explicitly selected
+maps plus bounded child-NodeId Browse through the facade; the independent
+Basic256Sha256 anonymous peer passes read, write/readback, Call, Browse and
+one-shot read. This is an explicitly selected
 partial native client, not a complete compatibility or Runtime projection.
 The same independent peer also accepts a public typed ByteString array Write
 and returns the exact binary array elements on Read, including embedded zero

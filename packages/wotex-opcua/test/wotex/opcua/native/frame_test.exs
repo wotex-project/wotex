@@ -367,4 +367,52 @@ defmodule Wotex.OPCUA.Native.FrameTest do
                Frame.response(frame.(invalid), 7, "call-1", "call", nil)
     end
   end
+
+  test "WOP-N03 complete Browse pages retain exact references and reject malformed identities" do
+    reference = %{
+      "reference_type_id" => "ns=0;i=35",
+      "is_forward" => true,
+      "node_id" => %{
+        "node_id" => "ns=2;s=value",
+        "namespace_uri" => nil,
+        "server_index" => 0
+      },
+      "browse_name" => %{"namespace" => 2, "name" => "Value"},
+      "display_name" => %{"locale" => nil, "text" => "Value"},
+      "node_class" => 2,
+      "type_definition" => %{
+        "node_id" => "ns=0;i=0",
+        "namespace_uri" => nil,
+        "server_index" => 0
+      }
+    }
+
+    frame = fn result ->
+      Jason.encode!(%{
+        "version" => 1,
+        "generation" => 7,
+        "id" => "browse-1",
+        "ok" => true,
+        "result" => result
+      }) <> "\n"
+    end
+
+    page = %{"status" => 0, "references" => [reference], "continuation" => nil}
+    assert {:ok, ^page} = Frame.response(frame.(page), 7, "browse-1", "browse", nil)
+
+    for invalid <- [
+          %{page | "status" => 0x8000_0000},
+          %{page | "continuation" => "server-secret"},
+          %{page | "references" => ["not a reference"]},
+          %{page | "references" => [Map.put(reference, "extra", true)]},
+          %{page | "references" => [Map.put(reference, "node_id", %{})]},
+          %{page | "references" => [Map.put(reference, "display_name", %{})]},
+          %{page | "references" => [put_in(reference, ["node_id", "server_index"], -1)]},
+          %{page | "references" => [put_in(reference, ["browse_name", "namespace"], 65_536)]},
+          %{page | "references" => [Map.put(reference, "node_class", 3)]}
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame}} =
+               Frame.response(frame.(invalid), 7, "browse-1", "browse", nil)
+    end
+  end
 end

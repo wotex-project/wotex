@@ -17,12 +17,12 @@ binding implementation work, not a changelog.
 | --- | --- | --- | --- |
 | WOP-P00 | X01/X02/X07: pinned SDK/OpenSSL source admission, native Mix build task, separate bidirectional custody guardian, package assets, versioned ready and both executable digests; Opex reuse obeys the reviewed metadata/security boundary | native/build_test.exs, native/build_fault_test.exs, native/workspace_test.exs; native host ready/digest/EOF tests; X01/X02 manifest/failure cases and WOP-G01..G10 native custody cases | Accepted |
 | WOP-P01 | S01/N02/N05: typed pure Variant/DataValue/ExpandedNodeId/QualifiedName/LocalizedText/reference codecs, exact signed ticks and array/null/opaque distinctions; lossless JSON integer/negative-zero IPC | typed_values_test.exs; production native value/contract checks; WOP-F01..F13 and X-F01..F16 | Accepted |
-| WOP-P02 | S02/X03/X04: persistent native Session activation, explicit one-shot native projection, server/local namespace mapping, complete framed IPC, credit control, bounded async requests and cancellation/EOF cleanup | persistent_bridge_test.exs; test/native/session_test.c; X-F10..F23/X-F49..F57 plus split/coalescing/malformed/partial-open matrix | Open; explicitly selected public native client now owns persistent and one-shot secure Sessions and projects typed Value Read/Write/Call maps through the facade; complete compatibility projection, remaining services and full lifecycle remain |
+| WOP-P02 | S02/X03/X04: persistent native Session activation, explicit one-shot native projection, server/local namespace mapping, complete framed IPC, credit control, bounded async requests and cancellation/EOF cleanup | persistent_bridge_test.exs; test/native/session_test.c; X-F10..F23/X-F49..F57 plus split/coalescing/malformed/partial-open matrix | Open; explicitly selected public native client now owns persistent and one-shot secure Sessions and projects typed Value Read/Write/Call maps plus bounded child Browse through the facade; complete compatibility projection, remaining services and full lifecycle remain |
 | WOP-P03 | S03: all three SignAndEncrypt policies and all three user-token modes, pin/SAN/URI/CRL/key validation, immutable trust, no downgrade/reconnect/replay | priv/native/security_check.c; test/native/security_test.c; test/interop/security_fault_test.exs; X-F30..F47 | Open; native credential preflight and SDK verifier/configuration implemented; independent-peer matrix and production integration remain |
 | WOP-P04 | S04/X05: raw service-level subscriptions, exact revised parameters, full DataValue/overflow metadata, bounded Publish ACK and Republish sequence state | subscription_test.exs; test/native/subscription_test.c; X-F24..F28 | Open |
 | WOP-P05 | C03/C05/S02/S04/X04/X05: receiver/Session/owner loss, cancellation failure, saturated output, partial-open/final-owner handoff and terminal-once cleanup | subscription_lifecycle_test.exs; test/native/lifecycle_test.c; X-F18..F23/X-F29 and suspended-owner overproducer stress | Open |
 | WOP-P06 | S05: typed Runtime Property observation and explicit health probe, native one-shot compatibility projection, unsupported Event/credential rejection | runtime_stream_test.exs; real Runtime child-spec lifecycle tests | Open |
-| WOP-P06a | N01/N03/N04/N05: typed bounded Browse/BrowseNext/release, original Session/deadline, early-release/failure fallback and native root helpers | standalone_contract_test.exs; test/native/browse_test.c; WOP-F14..F16 and complete N boundary matrix | Open |
+| WOP-P06a | N01/N03/N04/N05: typed bounded Browse/BrowseNext/release, original Session/deadline, early-release/failure fallback and native root helpers | standalone_contract_test.exs; test/native/browse_test.c; WOP-F14..F16 and complete N boundary matrix | Open; single-page child Browse only, with fail-closed limits and no typed continuation handles |
 | WOP-P07 | X06/S01..S04: independent asyncua secure peer and same-stack exact-tick/fault C peer, typed methods/arrays/users, subscriptions and continuation counters; all policy/token/security cells execute | test/interop/asyncua_test.exs; test/interop/open62541_test.exs; full V01..V14 software assertions | Open |
 | WOP-P07a | I01..I06: exact profiles and Form/context/media selection, Result identity/metadata, complete Error/Retry table, final-owner custody and cleanup through real ConsumedThing | runtime_integration_test.exs; all wotex-integration-v1.json cases and I06 matrix | Open |
 | WOP-P08 | C09/C10/X06: complete software Mix tasks, audit/sanitizer/matrix/stress and isolated native archive consumer with no runtime Python; evidence contains every S/N/I/X assertion and current digest | test/software/lifecycle_stress_test.exs; X-F48; full software runner and out-of-tree package workflow | Open |
@@ -94,7 +94,7 @@ independent-peer check opens and closes a secure Session using that projection.
 The explicitly selected public `Open62541` client now uses this projection for
 persistent and one-shot Session ownership. An independent secure peer passes
 public read, Write/readback, Method Call and one-shot read. The older `Asyncua`
-adapter remains Python-backed; complete compatibility output shapes, Browse,
+adapter remains Python-backed; complete compatibility output shapes, typed Browse pagination,
 subscriptions, cancellation and the remaining security/lifecycle matrix remain
 open.
 The facade now keeps a native client's finite local Write/Call validation and
@@ -105,6 +105,13 @@ One additional independent-peer case writes and reads back a typed ByteString
 array through the public native client, preserving embedded zero and binary
 octets. It extends the partial P02 service evidence without accepting the full
 typed-value or lifecycle matrix.
+The next P02/N03 slice uses service-level Browse with an explicit 1..256 page
+size. It retains all seven ReferenceDescription fields and projects only a
+complete page of local child NodeIds through the selected public native client.
+Oversized server pages and continuations close the native Session; explicit
+BrowseNext, release, typed page handles, original-deadline pagination and N03/N04
+acceptance remain open. Independent-peer tests exercise complete-page results,
+server page-limit failure and public persistent/one-shot projection.
 
 ## Verification and evidence
 

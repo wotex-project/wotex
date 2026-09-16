@@ -201,6 +201,65 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
   end
 
+  test "a secure native Browse retains complete references and closes on unhandled continuation" do
+    config_path = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
+    guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    parameters = Jason.decode!(File.read!(Path.join(Path.dirname(config_path), "native-open.json")))
+    peer = Jason.decode!(File.read!(config_path))
+    digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+
+    start = fn ->
+      {:ok, host, _} =
+        Host.start_link(
+          executable: executable,
+          executable_digest: digest.(executable),
+          guardian: guardian,
+          guardian_digest: digest.(guardian),
+          timeout: 5000
+        )
+
+      assert {:ok, _} = Host.request(host, "open", parameters, 5000)
+      host
+    end
+
+    browse = %{
+      "node_id" => peer["object_id"],
+      "reference_type_id" => "ns=0;i=33",
+      "direction" => "forward",
+      "include_subtypes" => true,
+      "node_class_mask" => 0,
+      "page_size" => 256
+    }
+
+    host = start.()
+
+    assert {:ok,
+            %{
+              "status" => 0,
+              "continuation" => nil,
+              "references" => references
+            }} = Host.request(host, "browse", browse, 5000)
+
+    assert Enum.any?(references, &(&1["node_id"]["node_id"] == peer["node_id"]))
+    assert Enum.any?(references, &(&1["node_id"]["node_id"] == peer["method_id"]))
+
+    assert Enum.all?(references, fn reference ->
+             Map.keys(reference) |> Enum.sort() ==
+               ~w(browse_name display_name is_forward node_class node_id reference_type_id type_definition)
+           end)
+
+    assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
+
+    host = start.()
+    monitor = Process.monitor(host)
+
+    assert {:error, %Wotex.OPCUA.Error{code: :response_limit}} =
+             Host.request(host, "browse", %{browse | "page_size" => 1}, 5000)
+
+    assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
+  end
+
   test "a rejected native Write preserves the unknown effect classification" do
     config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
     executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
@@ -377,6 +436,12 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     }
 
     assert {:ok, %{"outputs" => [%{"value" => 4.5}]}} = Wotex.OPCUA.send(session, call)
+
+    assert {:ok, children} =
+             Wotex.OPCUA.send(session, %{type: :browse, node_id: peer["object_id"]})
+
+    assert peer["node_id"] in children
+    assert peer["method_id"] in children
 
     bytes = %{
       type: :write,

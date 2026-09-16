@@ -5,8 +5,9 @@ defmodule Wotex.OPCUA.Open62541 do
   `connect/1` validates the WOP.13 native configuration. Persistent mode opens
   one secure Session and binds its temporary native host to the calling process.
   One-shot mode defers credential reads and process startup until `request/3`.
-  This client currently projects Value Read, typed Write and Method Call results
-  as validated native maps. Browse, subscriptions and the complete compatibility
+  This client projects Value Read, typed Write and Method Call results as
+  validated native maps and complete, bounded child Browse pages as canonical
+  NodeIds. Typed pagination, subscriptions and the complete compatibility
   projection remain separate work. No operation invokes Python or retries a
   transmitted mutation.
   """
@@ -31,13 +32,19 @@ defmodule Wotex.OPCUA.Open62541 do
 
   @impl Wotex.OPCUA.Client
   @doc "Runs one validated native service request within the supplied timeout."
-  def request(%{owner: owner, config: %Config{} = config, host: host}, message, timeout)
+  def request(%{owner: owner, config: %Config{} = config, host: host} = handle, message, timeout)
       when owner == self() and is_integer(timeout) and timeout in 1..60_000 do
     with {:ok, operation, parameters} <- service(message) do
       case config.lifecycle do
-        :persistent when is_pid(host) -> Host.request(host, operation, parameters, timeout)
-        :oneshot when is_nil(host) -> oneshot_request(config, operation, parameters, timeout)
-        _ -> {:error, Error.new(:invalid_native_handle)}
+        :persistent when is_pid(host) ->
+          with {:ok, result} <- Host.request(host, operation, parameters, timeout),
+               do: project_result(operation, result, handle.namespace_array)
+
+        :oneshot when is_nil(host) ->
+          oneshot_request(config, operation, parameters, timeout)
+
+        _ ->
+          {:error, Error.new(:invalid_native_handle)}
       end
     end
   end
@@ -73,8 +80,8 @@ defmodule Wotex.OPCUA.Open62541 do
     with {:ok, parameters} <- Config.open_parameters(config, deadline),
          {:ok, host, _} <- start_host(config, deadline) do
       case request_before(host, "open", parameters, deadline) do
-        {:ok, _} ->
-          {:ok, %{owner: self(), config: config, host: host}}
+        {:ok, %{"namespace_array" => namespaces}} ->
+          {:ok, %{owner: self(), config: config, host: host, namespace_array: namespaces}}
 
         {:error, _} = error ->
           stop_host(host)
@@ -89,11 +96,11 @@ defmodule Wotex.OPCUA.Open62541 do
     with {:ok, open} <- Config.open_parameters(config, deadline),
          {:ok, host, _} <- start_host(config, deadline) do
       try do
-        with {:ok, _} <- request_before(host, "open", open, deadline),
+        with {:ok, %{"namespace_array" => namespaces}} <-
+               request_before(host, "open", open, deadline),
              {:ok, result} <- request_before(host, operation, parameters, deadline),
-             {:ok, nil} <- Host.request(host, "close", %{}, min(config.timeout, 5000)) do
-          {:ok, result}
-        end
+             {:ok, nil} <- Host.request(host, "close", %{}, min(config.timeout, 5000)),
+             do: project_result(operation, result, namespaces)
       after
         stop_host(host)
       end
@@ -172,7 +179,21 @@ defmodule Wotex.OPCUA.Open62541 do
     end
   end
 
-  defp service(%{type: type}) when type in [:browse, :browse_next, :browse_release],
+  defp service(%{type: :browse, node_id: node} = message) when map_size(message) == 2 do
+    with {:ok, id} <- node_id(node) do
+      {:ok, "browse",
+       %{
+         "node_id" => id,
+         "reference_type_id" => "ns=0;i=33",
+         "direction" => "forward",
+         "include_subtypes" => true,
+         "node_class_mask" => 0,
+         "page_size" => 256
+       }}
+    end
+  end
+
+  defp service(%{type: type}) when type in [:browse_next, :browse_release],
     do: {:error, Error.new(:unsupported_protocol)}
 
   defp service(_), do: invalid_request()
@@ -232,6 +253,34 @@ defmodule Wotex.OPCUA.Open62541 do
     do: %{"type" => "bytes", "base64" => Base.encode64(bytes)}
 
   defp byte_element(nil), do: nil
+
+  defp project_result("browse", %{"references" => references, "continuation" => nil}, namespaces)
+       when is_list(references) and is_list(namespaces) do
+    projected =
+      Enum.reduce_while(references, {:ok, []}, fn reference, {:ok, nodes} ->
+        case reference do
+          %{"node_id" => %{"node_id" => text, "namespace_uri" => nil, "server_index" => 0}} ->
+            case Address.new(text) do
+              {:ok, %Address{namespace: index} = node} when index < length(namespaces) ->
+                {:cont, {:ok, [Address.to_string(node) | nodes]}}
+
+              _ ->
+                {:halt, {:error, Error.new(:unsupported_remote_reference)}}
+            end
+
+          _ ->
+            {:halt, {:error, Error.new(:unsupported_remote_reference)}}
+        end
+      end)
+
+    case projected do
+      {:ok, nodes} -> {:ok, Enum.reverse(nodes)}
+      error -> error
+    end
+  end
+
+  defp project_result("browse", _, _), do: {:error, Error.new(:invalid_native_frame)}
+  defp project_result(_, result, _), do: {:ok, result}
 
   defp invalid_request, do: {:error, Error.new(:invalid_value)}
 end

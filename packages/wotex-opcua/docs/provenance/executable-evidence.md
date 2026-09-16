@@ -20,6 +20,29 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native single-page Browse and child projection, 2026-09-16
+
+The production open62541 executable now sends one asynchronous service-level
+Browse with an explicit 1..256 page size and full result mask. It retains the
+server-order ReferenceDescriptions and returns all seven typed fields through a
+strict BEAM frame validator. A page above the requested size or a server
+continuation closes the Session and returns an error, so the public client never
+claims an incomplete child list as complete. The explicitly selected public
+`Open62541` client projects local child NodeIds in persistent and one-shot
+Sessions; remote ExpandedNodeIds and unknown local namespaces fail explicitly.
+
+The independent Basic256Sha256 peer passes complete-page Browse, Value
+Read/Write/readback, Call, ByteString array readback and fail-closed server page
+limit checks: ten optional secure-peer tests pass. A deterministic C response
+peer separately covers one-shot projection and remote-reference rejection.
+RelWithDebInfo native CTest passes 181/181. The complete package gate passes on
+macOS arm64 with Elixir 1.20.2 /
+OTP 29.0.4: 285 passed (10 doctests, 4 properties, 271 tests), 11 optional
+tests excluded and 95.0% coverage. Typed Browse handles, BrowseNext, explicit
+release, page-to-page deadline/aggregate limits, subscriptions, cancellation,
+complete policy/token interoperability and removal of the Python-backed
+`Asyncua` adapter remain unaccepted.
+
 ## Independent-peer native ByteString array round-trip, 2026-09-16
 
 The independent Basic256Sha256 anonymous peer now exposes a writable
