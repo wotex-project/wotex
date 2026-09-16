@@ -13,11 +13,13 @@ is absent. Physical-radio testing is a separate optional lane.
 
 ## Mandatory local gate
 
-`WOTEX_PATH_DEPS=1 mix check` runs compile warnings-as-errors, formatting, strict
-Credo, unit/property tests and minimum 95% coverage, Dialyzer, Doctor, ExDoc,
-dependency audit, Hex packaging, unpacked out-of-tree compilation and the
-Application-free structural check. Runtime path dependencies require the explicit
-switch; the archive preserves ordinary Hex dependency declarations.
+`WOTEX_PATH_DEPS=1 mix check` runs compile warnings-as-errors, formatting and
+the default unit/property/ExUnit suite. Strict Credo is run separately for the
+native source/workspace slices. Dialyzer, Doctor, ExDoc, dependency audit, Hex
+packaging, unpacked out-of-tree compilation and the Application-free structural
+check are release checks and have not been run for these slices. Runtime path
+dependencies require the explicit switch; the archive preserves ordinary Hex
+dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
@@ -32,6 +34,13 @@ regular files, executable permissions, wrong roots, links, symlinked output,
 bad patch hashes, second application and unknown source. These functions are
 not yet called by a Mix native build task; the Python build utility remains the
 current build entry point, and WTH-B01 is not accepted.
+
+`Wotex.Thread.Native.Workspace` now rejects invalid and duplicate task arguments,
+symlink paths, unrelated nonempty directories and incomplete builds. Its manifest
+owner hashes required regular-file artifacts and verifies identity and hashes
+without invoking the builder on reuse. A failed build retains an exclusive
+marker and requires disposal. `native_workspace_test.exs` executes those cases.
+The module is not yet attached to a Mix native build task.
 
 ## Python-free injected ownership peer, 2026-09-16
 
