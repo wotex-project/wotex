@@ -14,7 +14,11 @@ RUN cc $CFLAGS -Inative/oscore native/oscore/credit.c test/native/oscore_credit_
 COPY native/oscore/command.c native/oscore/command.h /build/native/oscore/
 COPY test/native/oscore_command_test.c /build/test/native/
 RUN cc $CFLAGS -Inative/oscore native/oscore/command.c native/oscore/json.c native/oscore/body.c native/oscore/vendor/yyjson/yyjson.c test/native/oscore_command_test.c -lcrypto -o /usr/local/bin/oscore-command
-RUN sha256sum native/oscore/*.[ch] native/oscore/vendor/yyjson/* test/native/* /usr/local/bin/oscore-json /usr/local/bin/oscore-frame /usr/local/bin/oscore-body /usr/local/bin/oscore-credit /usr/local/bin/oscore-command > /build/artifacts.sha256 && dpkg-query -W > /build/toolchain.packages
+COPY native/oscore/main.c native/oscore/worker.c native/oscore/worker.h native/oscore/custody.c native/oscore/identity.c native/oscore/identity.h native/oscore/store.c native/oscore/store.h /build/native/oscore/
+COPY test/native/oscore_worker_input.jsonl test/native/oscore_worker_expected.jsonl /build/test/native/
+RUN cc $CFLAGS -Inative/oscore native/oscore/main.c native/oscore/worker.c native/oscore/custody.c native/oscore/command.c native/oscore/json.c native/oscore/frame.c native/oscore/body.c native/oscore/credit.c native/oscore/identity.c native/oscore/store.c native/oscore/vendor/yyjson/yyjson.c -lcrypto -o /usr/local/bin/wotex-coap-oscore
+RUN mkdir /tmp/wotex-coap-worker-store && chmod 700 /tmp/wotex-coap-worker-store && cd /tmp/wotex-coap-worker-store && ASAN_OPTIONS=detect_leaks=1:halt_on_error=1:abort_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 /usr/local/bin/wotex-coap-oscore --worker < /build/test/native/oscore_worker_input.jsonl > /tmp/worker-output.jsonl && cmp /build/test/native/oscore_worker_expected.jsonl /tmp/worker-output.jsonl && test -f context.lock && test -f contexts.v1
+RUN sha256sum native/oscore/*.[ch] native/oscore/vendor/yyjson/* test/native/* /usr/local/bin/oscore-json /usr/local/bin/oscore-frame /usr/local/bin/oscore-body /usr/local/bin/oscore-credit /usr/local/bin/oscore-command /usr/local/bin/wotex-coap-oscore > /build/artifacts.sha256 && dpkg-query -W > /build/toolchain.packages
 ENV ASAN_OPTIONS="detect_leaks=1:halt_on_error=1:abort_on_error=1"
 ENV UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1"
 USER 65534:65534

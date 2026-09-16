@@ -107,6 +107,17 @@ null, numbers, strings and objects fail before filesystem, socket or SDK access.
 This structural decoder evidence does not accept the production worker, Port
 owner, request correlation, report credit or durable-session integration.
 
+The [native lifecycle receipt](native-worker-lifecycle-v1.json) binds the first
+same-binary worker cohort. Three macOS ExUnit cases execute the public custody
+entry and assert ready/open/body/request/close output, escaped correlation IDs,
+exclusive lock contention, consumed-identity rejection and malformed-input
+teardown. A Linux ASan/UBSan build feeds the internal worker a coalesced trace
+and compares every output byte. The worker decodes and erases credentials,
+durably consumes boundary 32, holds the store through close and returns
+`native_unavailable` for request before network I/O. It does not link libcoap;
+protected requests, Observe, credit, cancellation, response encoding, replay,
+saturation and the final production executable remain unaccepted.
+
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,
 explicit OSCORE credentials and exact five-field lines; omits absent optionals;

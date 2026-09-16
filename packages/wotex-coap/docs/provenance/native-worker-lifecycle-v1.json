@@ -1,0 +1,69 @@
+{
+  "schema": "wotex.coap.native-worker-lifecycle-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Same-binary native lifecycle through custody, durable open, bounded upload body, finite pre-network request failure and close; no libcoap exchange acceptance",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/main.c": "6e6c2a8deb2aeac8e527a922467bf89ab0f45f2aa2e669e988fa1e84f690e8eb",
+      "native/oscore/worker.c": "2af09fae2f0887836e09398811971289c2947faa6de2702ef11515d953b6c518",
+      "native/oscore/worker.h": "07c7e440f74fb6efbfabaf4a44a8eccf5a31b82f53c89951a26706354009b11e",
+      "native/oscore/custody.c": "887904afa9be4ec1e40145a6e69aac081eda9096a0fc2a0320751f2a16d082b5",
+      "native/oscore/command.c": "9dba7b283ea818d92e01db04483e3782ee401793272ec23e768829a45807c22d",
+      "native/oscore/json.c": "a50d46c2e518d5e3d932c6603306a54dd49abcf545cc5a97fbd2b7ec994d5d46",
+      "native/oscore/frame.c": "d122c2d763e967472d00a79eb4a01cebdbcd9c1b747578a43346141448349906",
+      "native/oscore/body.c": "f6f2696eae9631f5e68c38a01df7ff69f1d2b7ab08d51b735cc600e50ec3e9d4",
+      "native/oscore/credit.c": "f2566b99ae79f539d8c8c1bf0872b050bc62c3785d1758be1e1d7d3b2e624b7d",
+      "native/oscore/identity.c": "955d94def94861e15fbe8ff9c7e14f26a8eec5979585eff21b295267e04a4565",
+      "native/oscore/store.c": "a49ba6a278612e43c9e1872a9565abf541340aa12aa001f9f80e2c93f86969cd",
+      "test/wotex/coap/native_worker_test.exs": "04d7cc7fe4982cfbe9d25015a0f84e88b505336e99e882952c84d35431f4c99e",
+      "test/native/oscore_worker_input.jsonl": "15117f10b6d10220a61c2bdccead2b9394613a65170985c96411668c0bc92402",
+      "test/native/oscore_worker_expected.jsonl": "902bae03909050da0f67ae34da9c74ac0a968fd652cb92752a3eaaaf35816c40",
+      "test/native/Dockerfile.json": "841d4212283fd8c5d43d7e27462abd4744735b32afc02b0305705a1b20f63a56"
+    }
+  },
+  "requirements": ["WCO-N02", "WCO-N03", "WCO-N04"],
+  "assertions": [
+    "Public --custody ABS_DIRECTORY dispatch execs the same absolute binary with only --worker",
+    "Pinned ready identity and correlated JSON responses survive printable quote/backslash request identities",
+    "Canonical credential bytes are decoded into bounded storage, erased after identity derivation and never placed in argv",
+    "Successful open durably consumes boundary 32 and holds the exclusive store lock until close",
+    "A concurrent process receives context_store_locked and orderly reopen receives fresh_context_required",
+    "Begin/chunk/end admits one exact SHA-256-verified body; unsupported request returns native_unavailable before network I/O",
+    "Nonblocking output is bounded to 512 KiB and retains an original deadline for each queued frame",
+    "Malformed framing terminates without creating store state"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "command": "WOTEX_PATH_DEPS=1 mix test test/wotex/coap/native_worker_test.exs",
+      "result": "passed",
+      "exit_code": 0,
+      "tests": 3,
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "executable_sha256": "eb672e23fefceade6ddf19a731211968450ca00550d50b5ad30ff5c94d993135",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "command": "docker build -f test/native/Dockerfile.json -t wotex-coap-oscore-command:worker .",
+      "result": "passed",
+      "exit_code": 0,
+      "trace": "test/native/oscore_worker_input.jsonl",
+      "expected_output_sha256": "902bae03909050da0f67ae34da9c74ac0a968fd652cb92752a3eaaaf35816c40",
+      "executable_sha256": "23ab0e10a26d395e3d8ace8391d4e006eacc6b6a4f52d16b1c49084644917e8c",
+      "image": "sha256:bc0128fdd98d36a497df4120c6559c85810ab961d72e523b9c8f6d78419361c1",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": ["address", "undefined", "leak"]
+    }
+  ],
+  "unaccepted": [
+    "libcoap context/session ownership and request, Observe, cancellation or report-credit dispatch",
+    "Protected exchange, response Message encoding, blockwise result streaming and live replay",
+    "Port mailbox/output saturation, production cleanup stress and complete native-v1 corpus",
+    "Reproducible native Mix build/run orchestration and final software matrix"
+  ]
+}

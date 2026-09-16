@@ -13,8 +13,9 @@ spec:
 UDP exchanges remain BEAM code; DTLS remains OTP `:ssl`. OSCORE uses one
 explicitly selected C executable through an Erlang Port and the pinned libcoap
 exchange engine. Mix owns build/test orchestration and ExUnit owns assertions.
-Python is not a runtime or target orchestration dependency. The production
-OSCORE worker and Mix tasks are planned contracts;
+Python is not a runtime or target orchestration dependency. The native lifecycle
+worker implements same-binary startup, durable open, upload-body state and close.
+The production libcoap exchange worker and Mix tasks remain planned contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -159,6 +160,20 @@ non-secret route and subscription-generation markers before accepting either
 resource, preserves the one interaction deadline and aborts only the exact
 owned adapter during bounded cleanup. The injected Runtime fixture proves this
 dispatch contract; it is not the production worker or a protected exchange.
+
+`native/oscore/main.c` and `worker.c` implement the corresponding same-binary
+lifecycle slice. The public entry accepts only `--custody ABS_DIRECTORY`; the
+guardian executes that same absolute file with only `--worker`. The internal
+worker emits the pinned ready frame, accepts split or coalesced C07 commands,
+decodes and erases credentials, derives the fixed-suite identity, consumes and
+locks the exact working-directory store at boundary 32, assembles one outbound
+body, and writes correlated close before releasing its store. Its nonblocking
+512 KiB queue tracks each frame's original deadline. A macOS Port test covers
+the full custody entry, lock contention, consumed identity, escaped IDs and
+malformed teardown; a Linux ASan/UBSan build executes a coalesced trace. Request,
+Observe, credit and cancel return `native_unavailable` before network I/O until
+the libcoap exchange package is implemented. This lifecycle evidence does not
+accept a protected exchange, observation, report credit or production helper.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and

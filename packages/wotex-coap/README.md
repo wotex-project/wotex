@@ -52,9 +52,10 @@ Discovery parses bounded CoRE Link Format results without following the links.
 Native `coaps` sessions support explicit DTLS 1.2 PSK and PKI credentials through
 OTP SSL. PSK exchanges and Observe have independent pinned libcoap evidence;
 PKI currently has real OTP peer tests. The explicit OSCORE Runtime profile
-dispatches through the manifest-verified native owner. Independent OSCORE
-interoperability, the production worker, and the final software matrix remain
-ordered work.
+dispatches through the manifest-verified native owner. The native lifecycle
+worker consumes the durable context, assembles uploads and closes through that
+same-binary custody path. Its libcoap request/Observe exchange loop, independent
+OSCORE interoperability and the final software matrix remain ordered work.
 Multicast and extended tokens are outside the implemented profile.
 
 ## Quick start
@@ -87,8 +88,9 @@ credential value without reading its durable store. The internal native owner
 can complete the verified process ready/open/close handshake. The public
 `connect/1`, `send/2`, method-helper and `disconnect/1` boundaries select that
 owner for an explicit `coap` OSCORE credential and verified `native_backend`.
-The production worker must still validate and consume the durable store before
-this boundary provides a real OSCORE exchange.
+The lifecycle worker validates and consumes the durable store before reporting a
+successful open. Request and Observe currently return `native_unavailable`
+without network transmission until the libcoap exchange engine is connected.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
 Capabilities expose these as `max_datagram_size` and `max_body_size`.

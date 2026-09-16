@@ -1,0 +1,7 @@
+{"version":1,"event":"ready","backend":"libcoap","revision":"7cf7465b784baded4de183290c547d582becfd28"}
+{"version":1,"id":"1","ok":true,"result":null}
+{"version":1,"id":"2","ok":true,"result":null}
+{"version":1,"id":"3","ok":true,"result":null}
+{"version":1,"id":"4","ok":true,"result":null}
+{"version":1,"id":"5","ok":false,"error":{"code":"native_unavailable"}}
+{"version":1,"id":"6","ok":true,"result":null}

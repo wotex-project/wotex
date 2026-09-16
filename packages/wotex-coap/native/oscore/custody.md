@@ -1,7 +1,7 @@
 # Native process custody
 
-This source implements the opaque process-custody primitive. The production
-worker and BEAM owner remain separate, unaccepted work under WCO-N02. Their
+This source implements the opaque process-custody primitive. The lifecycle
+worker and BEAM owner now use its fixed same-binary entry under WCO-N02. The
 executable contract requires a fixed `--custody ABS_DIRECTORY` entry and an
 internal `--worker` entry. The BEAM owner supplies an absolute executable
 path whose bytes match the native manifest. Custody executes that same path with
@@ -14,8 +14,9 @@ startup barrier. The child verifies the group before inspecting its working
 directory or executing the worker. An unsuccessful barrier uses only the
 unreleased direct PID and bounded reap polling; no unestablished group receives
 a signal. Ignored SIGCHLD, child auto-reaping and inherited blocked signals are
-cleared before fork. The production worker is responsible for the libcoap context/session and the
-durable store; the custody primitive does not invoke either API.
+cleared before fork. The lifecycle worker owns the durable store. Its pending
+exchange package will own the libcoap context/session; the custody primitive
+invokes neither API.
 The guardian owns two fixed 262144-byte byte queues and separate nonblocking
 pipes. It inspects owner liveness even when either queue is full; stdout has no
 banner and remains an opaque protocol stream. Worker stderr terminates custody
@@ -44,9 +45,10 @@ Its group-identity retention derives from Wotex Modbus commit
 retained. The adaptation renames its C entry point for fixed same-binary dispatch
 and requires a parent-owned startup barrier. The native test entry exposes the
 generic primitive solely to the pipe-level fault driver; it is not a production
-backend executable. Cross-repository evidence does not accept
-this package's final worker or BEAM ownership path; those require actual CoAP
-process, saturation and deadline tests.
+backend executable. Cross-repository evidence does not accept this package's
+exchange worker. The local lifecycle tests accept same-binary BEAM ownership and
+durable open/close, while actual CoAP traffic, saturation and exchange deadlines
+remain required.
 
 `docs/specs/fixtures/custody-v1.json` binds eleven exact pipe-level cases to
 `test/native/oscore_custody_test.c`. They cover byte-preserving duplex transfer,

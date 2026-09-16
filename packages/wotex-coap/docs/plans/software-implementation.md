@@ -2,9 +2,10 @@
 
 The BEAM UDP exchange, complete blockwise transfer, owned Observe, discovery,
 Runtime UDP streams, OTP PSK/PKI DTLS native/Runtime operations and the injected
-native OSCORE Runtime boundary are implemented. The production OSCORE worker,
-independent secure matrix acceptance, Mix orchestration and complete software
-closure remain targets.
+native OSCORE Runtime boundary are implemented. The native same-binary lifecycle
+worker now owns durable open, bounded upload state and close. Its libcoap
+request/Observe engine, independent secure matrix acceptance, Mix orchestration
+and complete software closure remain targets.
 [Executable evidence](../provenance/executable-evidence.md) identifies each
 executed cohort and its limits. The ordered packages define acceptance.
 
