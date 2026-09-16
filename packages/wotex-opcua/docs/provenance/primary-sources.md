@@ -28,6 +28,14 @@ identity, not successful compilation. WOP.13 defines all required build lanes.
 
 ## Reuse assessment
 
+The 2026-09-16 pinned-source review of open62541's `createSessionCallback` found
+that it discards `revisedSessionTimeout`; its connection-attribute API has no
+revision value. The source manifest now records one narrow, reproducible patch
+to retain that Double, expose it for an active Session and reset it on cleanup.
+The patch preserves upstream notices and changes neither signature verification
+nor policy selection. The real loopback SDK regression and remaining secure
+owner requirements are recorded in executable evidence and WOP.13.
+
 [Opex62541](https://opex62541.hexdocs.pm/introduction.html) already provides an
 Elixir/open62541 stdio Port architecture. At source
 [c45cb4d](https://github.com/valiot/opex62541/blob/c45cb4d532615078fd7e03039ccb8eef5e629f76/src/opc_ua_client.c),

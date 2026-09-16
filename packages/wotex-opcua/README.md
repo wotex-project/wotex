@@ -92,6 +92,10 @@ credentials return `certificate_invalid` without network access. Valid credentia
 still fail closed pending SDK verification integration and Session ownership.
 The owner also sends a generation-bound initial credit before the request; normal
 output and replenishment are still part of the unfinished native service path.
+The SDK build also applies a digest-checked patch to preserve the server's
+revised Session timeout. A separate C loopback test verifies fractional and
+integer revisions and their lifetime through real SDK Sessions. That isolated
+test uses Security None and does not accept the secure production Session path.
 
 `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` remain specified work. Bootstrap build

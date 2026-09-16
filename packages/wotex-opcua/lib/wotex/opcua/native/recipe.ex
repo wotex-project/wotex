@@ -103,6 +103,13 @@ defmodule Wotex.OPCUA.Native.Recipe do
       step(:openssl_configure, tools.perl, configure, ssl_source, env),
       step(:openssl_compile, tools.make, ["-j4"], ssl_source, env),
       step(:openssl_install, tools.make, ["install_sw"], ssl_source, env),
+      step(
+        :sdk_patch,
+        tools.cmake,
+        ["-DWOTEX_SDK_SOURCE=" <> sdk_source, "-P", Path.join(native, "patch-sdk.cmake")],
+        workspace,
+        env
+      ),
       step(:sdk_configure, tools.cmake, cmake(sdk_source, sdk_build, sdk_flags), workspace, env),
       step(:sdk_compile, tools.cmake, ["--build", sdk_build, "--parallel", "4"], workspace, env),
       step(:sdk_install, tools.cmake, ["--install", sdk_build], workspace, env),

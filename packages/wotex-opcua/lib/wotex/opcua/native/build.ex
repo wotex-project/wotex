@@ -31,7 +31,7 @@ defmodule Wotex.OPCUA.Native.Build do
 
   @native_files ~w(CMakeLists.txt main.c build_command.c custody.c custody_check.c README.md runtime-guardian.md
     json_codec.c json_codec.h json_check.c json-codec.md ipc.c ipc.h ipc_check.c
-    security.c security.h security_check.c security.md
+    security.c security.h security_check.c security.md patch-sdk.cmake sdk_revision_check.c
     value_codec.c value_codec.h value_check.c value_fault_check.c
     native_contract_check.c
     value-codec.md fixtures/value-v1.json vendor/yyjson/yyjson.c vendor/yyjson/yyjson.h vendor/yyjson/LICENSE)
@@ -51,8 +51,12 @@ defmodule Wotex.OPCUA.Native.Build do
     openssl-prefix/lib/libssl.a openssl-prefix/lib/libcrypto.a sdk-prefix/lib/libopen62541.a
     output/bin/wotex_opcua_native output/bin/wotex_opcua_custody output/share/licenses/yyjson/LICENSE) ++
                Enum.map(
+                 ~w(ua_client.c ua_client_connect.c ua_client_internal.h),
+                 &("sources/open62541/open62541-1.5.7/src/client/" <> &1)
+               ) ++
+               Enum.map(
                  ~w(openssl open62541 openssl_configure openssl_compile openssl_install
-      sdk_configure sdk_compile sdk_install native_configure native_compile native_test native_install),
+      sdk_patch sdk_configure sdk_compile sdk_install native_configure native_compile native_test native_install),
                  &("logs/" <> &1 <> ".log")
                )
 

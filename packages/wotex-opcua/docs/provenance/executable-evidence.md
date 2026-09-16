@@ -20,6 +20,52 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## SDK Session revision preservation, 2026-09-16
+
+The pinned open62541 build now applies `open62541-session-revision-v1` before
+SDK configuration. Its CMake script checks all three pristine file hashes and
+all three transformed file hashes before writing anything. The source manifest
+records those identities and the script digest. All modified files and the
+patch log are receipt artifacts; tampering rejects build reuse. The required
+build test independently extracts pristine upstream source, corrupts each of the
+three inputs in turn, and checks that a rejected patch changes none of them.
+It then checks the exact successful outputs and rejects reapplying the patch.
+
+`native_sdk_session_revision` uses an actual SDK server bound only to loopback
+and drives three asynchronous SDK client Sessions. It compares server-revised
+`3210.5` ms against a 60000 ms request, equal 60000 ms limits, and a 1000 ms request
+below the server maximum. It asserts the scalar and copied Double, rejects the
+attribute before activation and after disconnect, and checks that the copied
+value survives Session cleanup. This separate test binary uses Security None;
+it proves SDK metadata preservation, not secure native owner acceptance. The
+production executable still cannot open a Session. The adapter must still reject
+invalid or excessive revisions before delivering an open result.
+
+The complete `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64
+with Elixir 1.20.2 / OTP 29.0.4: 261 checks (10 doctests, 4 properties, 247 tests),
+one interoperability test excluded and 95.8% coverage. It includes a fresh
+patched static SDK build, the patch corruption/reapplication/reuse assertions,
+docs, dependency audits, package inspection and out-of-tree archive compilation.
+The RelWithDebInfo native suite passes 181 CTest cases. A Debug
+`WOTEX_SANITIZERS=ON` build passes all 170 cases selected by
+`ctest --output-on-failure -R 'native_(security|sdk|ipc|json|value|contract)'`,
+using `ASAN_OPTIONS=detect_leaks=0:halt_on_error=1` and
+`UBSAN_OPTIONS=halt_on_error=1`. The first-party driver/parser sources are
+instrumented; the pinned static SDK/OpenSSL inputs are not. Linux security,
+full native Session admission, secure peers and the Python-runtime replacement
+remain required. No additional X-F case or P02/P03 acceptance is inferred.
+
+| Subject | SHA-256 |
+| --- | --- |
+| source manifest | `4f9525afe5c6856e1421ad8524825163d27428bbc7e02b44bfca5674d53a0964` |
+| `priv/native/patch-sdk.cmake` | `658028a4d97114cf98144bea0881bd0bbed4a174c29096e2f96b43d239e257cc` |
+| `priv/native/sdk_revision_check.c` | `ce6658f299ab424d3fb2b0770d28771e819ac27c55c476a13384faf30d59e994` |
+| `lib/wotex/opcua/native/recipe.ex` | `91c6d5821766abb21b84fc350d93bb3aa127a241cad6fe4947c49bf929d75c37` |
+| `lib/wotex/opcua/native/build.ex` | `e83d653a2d053e5d6ed4062551946ca563960b1b1aea4cd1b7206988fe51ce37` |
+| `test/wotex/opcua/native/build_test.exs` | `90b3073ce0928fe665a6958c8a61de5461c8516ae0f5b52e0bbd172a99187b2d` |
+| native CTest log | `9a6351becd985aaa60bfbec793c4ae55affdcf2ae52c97ed5b5f2b0ce204cbb5` |
+| native ASan/UBSan log | `279e0a6c141a72aa40905a63a756ce55a34e671a2ebef337ee2316de1ce5b11d` |
+
 ## Native credential preflight, 2026-09-16
 
 The pre-network S03/X03 slice adds `priv/native/security.c` to the production

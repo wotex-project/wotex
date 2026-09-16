@@ -28,4 +28,17 @@ defmodule Wotex.OPCUA.Native.SourceTest do
       assert Source.fetch(value) == {:error, :unsupported_native_source}
     end
   end
+
+  test "WOP-X01 reviewed SDK patch script binds every original and modified file digest" do
+    [patch] = Jason.decode!(File.read!(@manifest))["sdk_patches"]
+    script = File.read!(Application.app_dir(:wotex_opcua, "priv/native/" <> patch["path"]))
+    assert patch["sha256"] == Base.encode16(:crypto.hash(:sha256, script), case: :lower)
+    assert patch["modified_source_license"] == "MPL-2.0"
+
+    for file <- patch["files"] do
+      assert script =~ file["path"]
+      assert script =~ file["before_sha256"]
+      assert script =~ file["after_sha256"]
+    end
+  end
 end

@@ -6,6 +6,12 @@ binary conversion without a network request. `--self-test` is an explicit build
 check, not an OPC UA service or interoperability result. Executable ready is a
 process protocol event; successful Session activation requires the complete
 native service owner.
+`patch-sdk.cmake` checks original and modified file SHA-256 before applying the
+reviewed Session revision patch to the isolated SDK source. The patch preserves
+upstream MPL-2.0 notices. `sdk_revision_check.c` opens three loopback-only SDK
+Sessions to verify the actual server revision, fractional milliseconds, copy
+lifetime and cleanup. Its Security None endpoint is a test fixture only; the
+production executable still rejects service requests without opening a Session.
 `security.c` adds explicit credential preflight before any network attempt.
 It owns bounded DER/PKCS#8 inputs, validates key pairs, direct-CA trust,
 certificate identities/usages/validity and the issuer CRL, and provides a

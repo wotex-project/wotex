@@ -59,6 +59,12 @@ generation. Normal output credit consumption, replenishment and bounded
 service/report queues remain required.
 Every request still ends without service I/O. It accepts neither P02 nor
 X-F17..F23.
+The SDK build now preserves the server's actual revised Session timeout through
+one digest-checked patch. Three real SDK Sessions against an isolated C loopback
+peer verify fractional and integer values, copy lifetime and cleanup. This
+test-only Security None lane is a prerequisite for accurate native open metadata;
+it does not implement the production Session, its revision-bound admission or
+the secure peer matrix.
 
 ## Verification and evidence
 

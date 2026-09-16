@@ -4,7 +4,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
   use ExUnit.Case, async: false
   import ExUnit.CaptureIO
   alias Mix.Tasks.Wotex.Opcua.Native.Build, as: BuildTask
-  alias Wotex.OPCUA.Native.{Build, Command, Frame, Source, Workspace}
+  alias Wotex.OPCUA.Native.{Archive, Build, Command, Frame, Source, Workspace}
 
   test "WOP-X02 task accepts one absolute workspace and rejects every extra option before build I/O" do
     assert {:ok, "/absolute/workspace"} = Build.arguments(["--workspace", "/absolute/workspace"])
@@ -64,7 +64,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     receipt = Jason.decode!(File.read!(receipt_path))
     assert receipt["identity"]["source_manifest_sha256"] == Source.manifest_digest()
     assert receipt["evidence"]["native_service_acceptance"] == false
-    assert length(receipt["evidence"]["steps"]) == 10
+    assert length(receipt["evidence"]["steps"]) == 11
     assert Enum.all?(receipt["evidence"]["steps"], &(&1["exit_status"] == 0))
 
     for source_name <- [:openssl, :open62541] do
@@ -113,6 +113,8 @@ defmodule Wotex.OPCUA.Native.BuildTest do
 
     assert native_tests =~ "native_ipc_admission"
     assert native_tests =~ "native_security_preflight"
+    assert native_tests =~ "native_sdk_session_revision"
+    assert_sdk_patch(workspace, guardian, receipt)
 
     assert {:ok, request} =
              Frame.request(7, "r1", "read", %{}, 1000, 9_223_372_036_854_775_807)
@@ -234,6 +236,11 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert {:error, :build_manifest_mismatch} = Build.run(workspace)
     assert File.read!(log) == "tampered-evidence"
     File.write!(log, bytes)
+    patched = Path.join(workspace, "sources/open62541/open62541-1.5.7/src/client/ua_client.c")
+    patched_bytes = File.read!(patched)
+    File.write!(patched, "altered-patched-source")
+    assert {:error, :build_manifest_mismatch} = Build.run(workspace)
+    File.write!(patched, patched_bytes)
     native_bytes = File.read!(native)
     File.write!(native, "tampered-native-executable")
     assert {:error, :build_manifest_mismatch} = Build.run(workspace)
@@ -251,6 +258,57 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert {:ok, %{reused: true}} = Build.run(workspace)
     assert {:ok, _} = File.rm_rf(workspace)
     refute File.exists?(workspace)
+  end
+
+  defp assert_sdk_patch(workspace, guardian, receipt) do
+    {:ok, source} = Source.fetch(:open62541)
+    destination = Path.join(workspace, "patch-fault")
+
+    assert :ok =
+             Archive.extract(
+               Path.join(workspace, "downloads/open62541.tar.gz"),
+               destination,
+               source
+             )
+
+    root = Path.join(destination, source.root)
+    names = ~w(ua_client_internal.h ua_client_connect.c ua_client.c)
+    files = Enum.map(names, &Path.join([root, "src/client", &1]))
+    originals = Map.new(files, &{&1, File.read!(&1)})
+
+    step = %{
+      id: :sdk_patch_fault,
+      executable: receipt["identity"]["tool_paths"]["cmake"],
+      args: [
+        "-DWOTEX_SDK_SOURCE=" <> root,
+        "-P",
+        Application.app_dir(:wotex_opcua, "priv/native/patch-sdk.cmake")
+      ],
+      cwd: workspace,
+      env: [{"LC_ALL", "C"}],
+      timeout_ms: 5000,
+      output_bytes: 4096,
+      cleanup_ms: 1000
+    }
+
+    for selected <- files do
+      File.write!(selected, "changed-upstream-source")
+      before = Map.new(files, &{&1, File.read!(&1)})
+      assert {:error, :command_failed, %{exit_status: 1}} = Command.run(guardian, step)
+      assert Map.new(files, &{&1, File.read!(&1)}) == before
+      File.write!(selected, Map.fetch!(originals, selected))
+    end
+
+    assert {:ok, _} = Command.run(guardian, step)
+
+    for name <- names do
+      path = "sources/open62541/open62541-1.5.7/src/client/" <> name
+      assert {:ok, hash} = Workspace.digest(Path.join([root, "src/client", name]))
+      assert hash == receipt["artifacts"][path]
+    end
+
+    assert {:error, :command_failed, %{exit_status: 1}} = Command.run(guardian, step)
+    File.rm_rf!(destination)
   end
 
   defp assert_native_terminal(executable, fragments, generation, code, phase) do

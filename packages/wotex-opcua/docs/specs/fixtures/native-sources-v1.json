@@ -1,6 +1,6 @@
 {
   "format": "wotex.native.sources",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "status": "source_admission_implemented",
   "runtime": "open62541",
   "sources": [
@@ -17,6 +17,32 @@
       "commit": "f4dc4d58b48d346a8270183f89acf826d459b0ca",
       "url": "https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/openssl-3.5.8",
       "sha256": "59f86483992995df5a213df38d93f31eeafe3b34599309b3e088ba67ca0aad9c"
+    }
+  ],
+  "sdk_patches": [
+    {
+      "id": "open62541-session-revision-v1",
+      "path": "patch-sdk.cmake",
+      "sha256": "658028a4d97114cf98144bea0881bd0bbed4a174c29096e2f96b43d239e257cc",
+      "purpose": "Preserve the received revisedSessionTimeout and expose it through the existing connection-attribute API while a Session is active; reset it on cleanup.",
+      "modified_source_license": "MPL-2.0",
+      "files": [
+        {
+          "path": "src/client/ua_client_internal.h",
+          "before_sha256": "b41edefd4e90dc2ae4c8265d95202be46f9a9affa8188e69d89035153a855ce4",
+          "after_sha256": "360760149f43bf24707faea6f2f9afe1e247071cafc31c9608073246b85e80db"
+        },
+        {
+          "path": "src/client/ua_client_connect.c",
+          "before_sha256": "c31c533e0fce8bfdde514aef8312a3fea4b20a01cd08f72a2596dc9abc170b7f",
+          "after_sha256": "4ff349a111615f2aba18e9d7b72703e4419d8f0aace9330254d3d03357f44aea"
+        },
+        {
+          "path": "src/client/ua_client.c",
+          "before_sha256": "0e7b362d2b99a153704ed96127414cffc17f5a9fdce21b92edead01a5d597202",
+          "after_sha256": "9962d2c60ec5e4df050e6b068db54e759d88b32de9feefb5b6d66a207922aa05"
+        }
+      ]
     }
   ],
   "reviewed_reuse_candidate": {

@@ -8,7 +8,7 @@ defmodule Wotex.OPCUA.Native.RecipeTest do
 
   test "WOP-X02 recipe pins crypto/client flags and explicit host tools without executing them" do
     {:ok, steps} = Recipe.new("/isolated/workspace", "/package/native", @tools, {:linux, :x86_64})
-    assert length(steps) == 10
+    assert length(steps) == 11
     assert hd(steps).executable == "/tools/perl"
     assert Enum.at(hd(steps).args, 1) == "linux-x86_64"
     assert "no-apps" in hd(steps).args
@@ -17,6 +17,13 @@ defmodule Wotex.OPCUA.Native.RecipeTest do
     assert List.last(steps).args == ["--install", "/isolated/workspace/native-build"]
 
     sdk = Enum.find(steps, &(&1.id == :sdk_configure))
+    assert Enum.at(steps, 3).id == :sdk_patch
+
+    assert Enum.at(steps, 3).args == [
+             "-DWOTEX_SDK_SOURCE=/isolated/workspace/sources/open62541/open62541-1.5.7",
+             "-P",
+             "/package/native/patch-sdk.cmake"
+           ]
 
     for flag <- [
           "-DUA_ENABLE_DISCOVERY=ON",

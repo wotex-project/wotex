@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -119,6 +119,19 @@ Source archive hashes are checked before extraction; tar traversal, symlinks
 outside the workspace and unexpected roots fail. Native assets have separate
 source, toolchain/options and executable digests. Build identity includes any
 reviewed SDK patch; patches require exact source assertions and regression tests.
+
+The source manifest admits `open62541-session-revision-v1`, implemented by
+`priv/native/patch-sdk.cmake`. Upstream 1.5.7 discards `revisedSessionTimeout`
+after CreateSession. This patch retains that exact Double and exposes the
+`0:revisedSessionTimeout` connection attribute only while the Session is active;
+cleanup clears it. It does not validate the revision, activate a native owner
+or alter security policy selection. The adapter still must enforce X03's finite
+positive configured bound before reporting successful open. Every original and
+patched file SHA-256 is fixed before any mutation. The build receipt includes
+all three modified SDK files and the bounded patch log. A C-only isolated
+loopback regression verifies actual revised values and cleanup using Security
+None; it cannot establish any S03 secure channel claim. The upstream MPL-2.0
+notices remain intact and apply to the modified SDK files.
 
 The [Opex62541 source](https://github.com/valiot/opex62541/tree/c45cb4d532615078fd7e03039ccb8eef5e629f76)
 is a reviewed reuse candidate, not an admitted runtime dependency. Its native
