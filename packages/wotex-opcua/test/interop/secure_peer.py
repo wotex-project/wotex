@@ -1,5 +1,6 @@
 """Generate disposable certificates and run an asyncua 2.0.1 secure loopback peer."""
 import asyncio
+import base64
 import json
 import logging
 import socket
@@ -45,6 +46,9 @@ def fixtures(directory):
         key_path = directory / (role+".pem")
         key_path.write_bytes(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
         key_path.chmod(0o600)
+        der_key_path = directory / (role + ".key.der")
+        der_key_path.write_bytes(key.private_bytes(serialization.Encoding.DER, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
+        der_key_path.chmod(0o600)
         issued[role] = cert
     crl_builder = x509.CertificateRevocationListBuilder().issuer_name(name).last_update(now-timedelta(hours=1)).next_update(now+timedelta(days=1))
     (directory / "clean.crl").write_bytes(crl_builder.sign(ca_key, hashes.SHA256()).public_bytes(serialization.Encoding.DER))
@@ -73,8 +77,18 @@ async def main(directory):
               "server_uri": "urn:wotex:fixture:server", "server_certificate": str(directory / "server.der"),
               "issuer_certificate": str(directory / "ca.der"), "trust_certificates": [str(directory / "ca.der")],
               "crl": str(directory / "clean.crl"), "node_id": variable.nodeid.to_string()}
+    def envelope(path):
+        return {"type": "bytes", "base64": base64.b64encode((directory / path).read_bytes()).decode("ascii")}
+    native_open = {"endpoint": endpoint,
+                   "security_policy": "http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256",
+                   "security_mode": "SignAndEncrypt", "client_uri": "urn:wotex:fixture:client",
+                   "server_uri": "urn:wotex:fixture:server", "certificate": envelope("client.der"),
+                   "private_key": envelope("client.key.der"), "server_certificate": envelope("server.der"),
+                   "trust_certificate": envelope("ca.der"), "crl": envelope("clean.crl"),
+                   "authentication": {"type": "anonymous"}, "session_timeout_ms": 60000}
     async with server:
         (directory / "config.json").write_text(json.dumps(config))
+        (directory / "native-open.json").write_text(json.dumps(native_open) + "\n")
         print("secure peer ready", flush=True)
         await asyncio.Event().wait()
 

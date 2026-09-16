@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.15
+  version: 1.0.16
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -91,13 +91,19 @@ Its trusted compiler bootstrap has explicitly unverified descendant cleanup on
 failure. Source, workspace and tool failures cannot produce a completion receipt.
 The build applies one reviewed open62541 patch: it retains the received
 `revisedSessionTimeout`, exposes it as a Double connection attribute while the
-Session is active, and resets it on cleanup. Every original and modified source
+Session is active, and resets it on cleanup. It also discovers the exact
+pinned endpoint and user-token policy over a SignAndEncrypt channel, rejecting
+certificate/URL substitution and ambiguous matching token policies. Every original and modified source
 digest is fixed; all inputs are checked before any file changes. Patched source
 files and the patch log are receipt artifacts. An altered input or already
 patched source is rejected. The same-stack C regression opens three loopback
 SDK Sessions and verifies fractional, equal and lower requested revisions plus
 copy lifetime and post-close rejection. Security None is confined to that test
 binary; this is SDK metadata evidence, not secure production Session acceptance.
+The separate C-only Session probe uses the native configuration and verifier
+adapter against an independent asyncua peer. It proves Basic256Sha256 anonymous
+activation, the revised timeout and an explicit NamespaceArray read in that
+test binary. The production executable still does not admit a Session.
 
 The current C executable emits versioned readiness, exits on owner EOF and runs
 explicit SHA-256/SDK DateTime dependency self-tests. It now assembles a bounded

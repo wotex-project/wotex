@@ -34,6 +34,29 @@ string(REPLACE "    /* Activate the new Session */\n    client->sessionState = U
 string(REPLACE "    client->requestHandle = 0;"
   "    client->requestHandle = 0;\n    client->revisedSessionTimeout = 0;"
   source_1 "${source_1}")
+# A caller-pinned secure endpoint starts its first channel using its exact
+# certificate/policy/mode. Discover the real endpoint/token policy over that
+# channel, without a None-channel FindServers hop or URL substitution.
+string(REPLACE
+  "    if(client->discoveryUrl.length == 0) {\n        setConnectStatus(client, requestFindServers(client));\n        return;\n    }"
+  "    if(client->discoveryUrl.length == 0) {\n        if(client->config.endpoint.serverCertificate.length > 0) {\n            UA_StatusCode copied = UA_String_copy(&client->config.endpointUrl,\n                                                  &client->discoveryUrl);\n            if(copied != UA_STATUSCODE_GOOD) {\n                setConnectStatus(client, copied);\n                return;\n            }\n        } else {\n            setConnectStatus(client, requestFindServers(client));\n            return;\n        }\n    }"
+  source_1 "${source_1}")
+string(REPLACE
+  "    if(endpointUnconfigured(&client->endpoint)) {\n        setConnectStatus(client, requestGetEndpoints(client));"
+  "    if(endpointUnconfigured(&client->endpoint) ||\n       (client->config.endpoint.serverCertificate.length > 0 &&\n        client->endpoint.userIdentityTokensSize == 0)) {\n        setConnectStatus(client, requestGetEndpoints(client));"
+  source_1 "${source_1}")
+string(REPLACE
+  "    /* Matching ApplicationUri if defined */\n    if(client->config.applicationUri.length > 0 &&"
+  "    /* A pinned secure caller never follows a server-supplied URL or leaf. */\n    if(client->config.endpoint.serverCertificate.length > 0 &&\n       (!UA_String_equal(&client->config.endpointUrl, &endpoint->endpointUrl) ||\n        client->config.certificateVerification.verifyCertificate(\n            &client->config.certificateVerification,\n            &endpoint->serverCertificate) != UA_STATUSCODE_GOOD))\n        return false;\n\n    /* Matching ApplicationUri if defined */\n    if(client->config.applicationUri.length > 0 &&"
+  source_1 "${source_1}")
+string(REPLACE
+  "    /* Return the first UserTokenPolicy matching the config */\n    for(size_t j = 0; j < endpoint->userIdentityTokensSize; ++j) {"
+  "    /* Ambiguous token selection fails before CreateSession. */\n    UA_UserTokenPolicy *selectedTokenPolicy = NULL;\n    for(size_t j = 0; j < endpoint->userIdentityTokensSize; ++j) {"
+  source_1 "${source_1}")
+string(REPLACE
+  "        if(matchUserTokenPolicy(client, endpoint, tokenPolicy, logPrefix))\n            return tokenPolicy;\n    }\n\n    return NULL;"
+  "        if(matchUserTokenPolicy(client, endpoint, tokenPolicy, logPrefix)) {\n            if(selectedTokenPolicy) return NULL;\n            selectedTokenPolicy = tokenPolicy;\n        }\n    }\n\n    return selectedTokenPolicy;"
+  source_1 "${source_1}")
 string(REPLACE "#define UA_CONNECTIONATTRIBUTESSIZE 3" "#define UA_CONNECTIONATTRIBUTESSIZE 4"
   source_2 "${source_2}")
 string(REPLACE "    {0, UA_STRING_STATIC(\"securityMode\")}"
@@ -48,7 +71,7 @@ string(REPLACE
 # get a completion receipt; build reuse verifies all three patched artifacts.
 set(patched
   360760149f43bf24707faea6f2f9afe1e247071cafc31c9608073246b85e80db
-  4ff349a111615f2aba18e9d7b72703e4419d8f0aace9330254d3d03357f44aea
+  c3cac74ba63c067c193a3379add50638cdedb149924f2c930eb8177ddd5d1172
   9962d2c60ec5e4df050e6b068db54e759d88b32de9feefb5b6d66a207922aa05)
 foreach(index RANGE 0 2)
   list(GET patched ${index} expected_output)
@@ -61,5 +84,5 @@ foreach(index RANGE 0 2)
   list(GET files ${index} name)
   file(WRITE "${WOTEX_SDK_SOURCE}/${name}" "${source_${index}}")
   string(SHA256 digest "${source_${index}}")
-  message(STATUS "Session revision patch: ${name} ${digest}")
+  message(STATUS "Session revision and secure discovery patch: ${name} ${digest}")
 endforeach()

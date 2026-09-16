@@ -20,6 +20,43 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Secure SDK configuration prerequisite, 2026-09-16
+
+`open62541-secure-discovery-v2` extends the reviewed, exact-hash SDK patch:
+when a caller supplies the pinned leaf and SignAndEncrypt policy, GetEndpoints
+runs over that first secure channel. Endpoint URL and certificate substitution
+and ambiguous matching user-token policies fail before CreateSession. The
+existing revised Session timeout preservation remains. The source manifest
+binds all pristine and patched file digests and the patch script. The production
+executable still rejects an otherwise valid `open` as `unsupported_protocol`.
+
+`session_config.c` now configures the requested policy and explicit anonymous,
+username or certificate token, installs the whole-DER pin/CRL/SAN/URI verifier
+as the SDK callback, preserves a binary username password and forbids key
+prompts or automatic reconnect. The C credential test passes 60 generated
+cases and 145 assertions without network I/O. The uninstalled C Session probe
+then connects to an independent asyncua 2.0.1 loopback peer using
+Basic256Sha256 SignAndEncrypt, reads the actual server NamespaceArray (three
+entries) and checks the server's positive, bounded 60000 ms revision. The
+both optional ExUnit interop tests pass against that live peer. The RelWithDebInfo
+native suite passes 181/181 CTest cases. The complete
+`WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64 with
+Elixir 1.20.2 / OTP 29.0.4: 261 passed (10 doctests, 4 properties, 247 tests),
+two optional interoperability tests excluded and 95.8% coverage. Its fresh
+native build, static SDK patch, CTest, documentation, dependency audits and
+package/archive checks pass. These checks establish a prerequisite,
+not the production owner, all policy/token combinations, services or P02/P03
+acceptance. The normal runtime adapter still requires Python.
+
+| Subject | SHA-256 |
+| --- | --- |
+| source manifest | `6cc2163a1ce9dca4c237a0b7a8da8af5f52c1869ae45b90464ab13e09e3523d1` |
+| `priv/native/patch-sdk.cmake` | `df1acabefca781711a34b546e4a3ded85af95a46110cf9b0978685fd340fad2a` |
+| `priv/native/session_config.c` | `4dcc0045f599a3b56e10de777a6fa5cecbaa624277bb0e35bbc508851257dce3` |
+| `priv/native/session_config.h` | `35969525091fce3fd4ec0f19ba683ce804e92ea8286467392b1141e1a7205ee3` |
+| `priv/native/session_probe.c` | `fc0fb3b41b718efe5340c313e1cf24b8e8b258e7acacc24cc7a5d0f0920449a5` |
+| native CTest log | `54709fa7a0c742b1a0b4d15c543ced1ed9fa4e18f432110af77d4353241201c7` |
+
 ## SDK Session revision preservation, 2026-09-16
 
 The pinned open62541 build now applies `open62541-session-revision-v1` before

@@ -8,8 +8,9 @@ and is provided under the MIT License. Its complete notice is retained in
 priv/native/vendor/yyjson/LICENSE and accompanies native build output.
 
 The explicit native build uses open62541 1.5.7 under MPL-2.0. The reviewed
-priv/native/patch-sdk.cmake changes three upstream client files only to retain
-the server's Session timeout revision. Their upstream copyright and MPL-2.0
+priv/native/patch-sdk.cmake changes three upstream client files to retain
+the server's Session timeout revision and to discover a pinned endpoint and
+its user-token policy over the requested secure channel. Their upstream copyright and MPL-2.0
 notices remain intact; the modified files remain MPL-2.0. Exact archive,
 original-file and patched-file identities are recorded in
 docs/specs/fixtures/native-sources-v1.json and the native build receipt.

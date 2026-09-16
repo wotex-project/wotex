@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.3
+  version: 1.1.4
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -23,8 +23,10 @@ downgraded values before a network attempt. Native credential preflight now
 verifies DER/PKCS#8 inputs, keys, direct-CA trust, exact SAN/URI, usage, validity,
 signatures and the current issuer CRL. Invalid credentials end with
 `certificate_invalid`; an admitted credential set still ends as
-`unsupported_protocol`. The complete-DER pin verifier is not yet attached to
-SDK network verification, and no Session is activated.
+`unsupported_protocol`. The complete-DER pin verifier is installed by the
+native configuration adapter, but that adapter is exercised by a separate
+test-only C probe. The probe activates one secure independent-peer Session and
+reads its NamespaceArray. No production Session is yet activated.
 The owner and C ingress now exchange one initial credit control before the
 request. It binds the process generation; requests without it and later credit
 before consumption fail. No normal output spends credit yet.
@@ -120,12 +122,14 @@ outside the workspace and unexpected roots fail. Native assets have separate
 source, toolchain/options and executable digests. Build identity includes any
 reviewed SDK patch; patches require exact source assertions and regression tests.
 
-The source manifest admits `open62541-session-revision-v1`, implemented by
+The source manifest admits `open62541-secure-discovery-v2`, implemented by
 `priv/native/patch-sdk.cmake`. Upstream 1.5.7 discards `revisedSessionTimeout`
 after CreateSession. This patch retains that exact Double and exposes the
 `0:revisedSessionTimeout` connection attribute only while the Session is active;
-cleanup clears it. It does not validate the revision, activate a native owner
-or alter security policy selection. The adapter still must enforce X03's finite
+cleanup clears it. The patch also keeps initial discovery on a caller-pinned
+SignAndEncrypt channel and rejects URL/certificate substitution and ambiguous
+matching token policies before CreateSession. It does not validate the revision
+or activate a native owner. The adapter still must enforce X03's finite
 positive configured bound before reporting successful open. Every original and
 patched file SHA-256 is fixed before any mutation. The build receipt includes
 all three modified SDK files and the bounded patch log. A C-only isolated

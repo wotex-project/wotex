@@ -1,14 +1,21 @@
 /* SPDX-License-Identifier: Apache-2.0 */
-#include "security.h"
+#include "session_config.h"
 #include <openssl/pkcs12.h>
 #include <openssl/x509v3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-/* Fixed caller time, ephemeral in-memory keys, no files or Python generator. */
-static const time_t now = 1800000000;
+/* Explicit caller time, ephemeral in-memory keys, no files or Python generator. */
+static time_t now;
 #define REQUIRE(x) do { if (!(x)) { fprintf(stderr, "security check line %d\n", __LINE__); exit(1); } } while (0)
+
+static void quiet(void *context, UA_LogLevel level, UA_LogCategory category,
+                  const char *format, va_list args) {
+    (void)context; (void)level; (void)category; (void)format; (void)args;
+}
+
+static void logger_clear(UA_Logger *logger) { UA_free(logger); }
 
 typedef enum {
     VALID, USER_CERT, USER_PASSWORD, DNS_HOST, IPV6_HOST, POLICY_AES128, POLICY_AES256,
@@ -242,6 +249,8 @@ static bool accepted(Case mode) {
 
 int main(void) {
     REQUIRE(OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CONFIG, NULL));
+    now = time(NULL);
+    REQUIRE(now != (time_t)-1);
     Fixture f = {0};
     f.root_key = EVP_PKEY_Q_keygen(NULL, NULL, "RSA", (size_t)2048);
     f.server_key = EVP_PKEY_Q_keygen(NULL, NULL, "RSA", (size_t)2048);
@@ -277,6 +286,35 @@ int main(void) {
             REQUIRE(!wop_security_peer(&security, &security.certificate, now));
             REQUIRE(!wop_security_peer(&security, &security.server_certificate, now + 60));
             assertions += 3;
+            UA_ClientConfig config = {0};
+            config.logging = UA_calloc(1, sizeof(*config.logging));
+            REQUIRE(config.logging);
+            config.logging->log = quiet;
+            config.logging->clear = logger_clear;
+            REQUIRE(wop_session_configure(&config, yyjson_doc_get_root(parsed.document), &security));
+            REQUIRE(config.noReconnect && config.noNewSession &&
+                    config.securityMode == UA_MESSAGESECURITYMODE_SIGNANDENCRYPT &&
+                    config.endpoint.securityMode == UA_MESSAGESECURITYMODE_SIGNANDENCRYPT &&
+                    !config.allowNonePolicyPassword && config.requestedSessionTimeout == 60000);
+            REQUIRE(config.certificateVerification.verifyCertificate(&config.certificateVerification,
+                    &security.server_certificate) == UA_STATUSCODE_GOOD);
+            REQUIRE(config.certificateVerification.verifyCertificate(&config.certificateVerification,
+                    &security.certificate) == UA_STATUSCODE_BADCERTIFICATEINVALID);
+            if(mode == USER_PASSWORD) {
+                REQUIRE(config.userIdentityToken.content.decoded.type ==
+                        &UA_TYPES[UA_TYPES_USERNAMEIDENTITYTOKEN]);
+                UA_UserNameIdentityToken *token = config.userIdentityToken.content.decoded.data;
+                REQUIRE(token && token->password.length == 3 &&
+                        memcmp(token->password.data, "a\0b", 3) == 0);
+                assertions++;
+            } else if(mode == USER_CERT) {
+                REQUIRE(config.userIdentityToken.content.decoded.type ==
+                        &UA_TYPES[UA_TYPES_X509IDENTITYTOKEN]);
+            } else {
+                REQUIRE(config.userIdentityToken.content.decoded.type == NULL);
+            }
+            assertions += 4;
+            UA_ClientConfig_clear(&config);
         } else { WopSecurity empty = {0}; REQUIRE(memcmp(&security, &empty, sizeof(empty)) == 0); }
         wop_security_clear(&security);
         wop_security_clear(&security);

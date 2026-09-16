@@ -7,11 +7,16 @@ check, not an OPC UA service or interoperability result. Executable ready is a
 process protocol event; successful Session activation requires the complete
 native service owner.
 `patch-sdk.cmake` checks original and modified file SHA-256 before applying the
-reviewed Session revision patch to the isolated SDK source. The patch preserves
+reviewed Session revision and secure discovery patch to the isolated SDK source. The patch preserves
 upstream MPL-2.0 notices. `sdk_revision_check.c` opens three loopback-only SDK
 Sessions to verify the actual server revision, fractional milliseconds, copy
 lifetime and cleanup. Its Security None endpoint is a test fixture only; the
 production executable still rejects service requests without opening a Session.
+`session_config.c` configures only the requested secure policy and user token,
+installs the exact peer verifier and rejects interactive private-key prompts.
+The uninstalled `session_probe.c` exercises that configuration against an
+independent asyncua secure peer, including its revised timeout and explicit
+NamespaceArray. This is a test-only Session, not production owner admission.
 `security.c` adds explicit credential preflight before any network attempt.
 It owns bounded DER/PKCS#8 inputs, validates key pairs, direct-CA trust,
 certificate identities/usages/validity and the issuer CRL, and provides a

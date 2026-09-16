@@ -1,6 +1,6 @@
 {
   "format": "wotex.native.sources",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "status": "source_admission_implemented",
   "runtime": "open62541",
   "sources": [
@@ -21,10 +21,10 @@
   ],
   "sdk_patches": [
     {
-      "id": "open62541-session-revision-v1",
+      "id": "open62541-secure-discovery-v2",
       "path": "patch-sdk.cmake",
-      "sha256": "658028a4d97114cf98144bea0881bd0bbed4a174c29096e2f96b43d239e257cc",
-      "purpose": "Preserve the received revisedSessionTimeout and expose it through the existing connection-attribute API while a Session is active; reset it on cleanup.",
+      "sha256": "df1acabefca781711a34b546e4a3ded85af95a46110cf9b0978685fd340fad2a",
+      "purpose": "Preserve the received revisedSessionTimeout and expose it while a Session is active; start pinned endpoint discovery on the requested secure channel, reject endpoint URL/certificate substitution and ambiguous user-token policies.",
       "modified_source_license": "MPL-2.0",
       "files": [
         {
@@ -35,7 +35,7 @@
         {
           "path": "src/client/ua_client_connect.c",
           "before_sha256": "c31c533e0fce8bfdde514aef8312a3fea4b20a01cd08f72a2596dc9abc170b7f",
-          "after_sha256": "4ff349a111615f2aba18e9d7b72703e4419d8f0aace9330254d3d03357f44aea"
+          "after_sha256": "c3cac74ba63c067c193a3379add50638cdedb149924f2c930eb8177ddd5d1172"
         },
         {
           "path": "src/client/ua_client.c",

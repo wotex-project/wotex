@@ -32,11 +32,16 @@ The endpoint authority is checked without DNS resolution. IP literals match IP
 SAN bytes; DNS names use exact SAN matching without wildcards or common-name
 fallback. Application URIs match byte-for-byte. The reusable peer verifier checks
 the complete DER pin and refreshes validity/revocation checks against caller
-time. This primitive is not yet installed as the SDK connection callback.
+time. `session_config.c` installs it as the SDK connection callback, selects
+the exact secure policy and token, preserves binary username passwords,
+disables reconnect and rejects interactive private-key prompts. The caller
+retains credentials until SDK config deletion.
 
 `security_check.c` generates disposable RSA credentials entirely in C and tests
-valid, invalid and boundary cases at a fixed supplied time. The real executable
+valid, invalid and boundary cases at an explicit supplied time. The real executable
 also invokes preflight: shape-valid invalid DER returns `certificate_invalid`
 in the opening phase, before any network call. Preflight success still returns
-`unsupported_protocol`; this slice does not activate a Session, select a user
-token, exercise secure-channel policy cryptography or accept WOP-P02/P03.
+`unsupported_protocol` there. The separate `session_probe.c` activates a
+Basic256Sha256 anonymous Session and reads the NamespaceArray against the
+independent asyncua fixture. This is test evidence, not production P02/P03
+acceptance or the full policy/token matrix.
