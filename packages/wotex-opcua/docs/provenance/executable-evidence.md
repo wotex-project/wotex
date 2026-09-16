@@ -20,6 +20,34 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native credential configuration projection, 2026-09-16
+
+`Native.Config.new/1` now rejects unknown or duplicate option keys, malformed
+native executable identities, insecure policy/mode shapes, invalid token forms,
+non-absolute credential paths and out-of-range timeouts before file I/O.
+`open_parameters/2` snapshots only named regular files under one monotonic
+deadline, caps each at 64 KiB, rejects an excessive aggregate frame, and emits
+the closed DER/bytes-envelope map for the existing C `open` request. The config
+inspect form omits credential paths and binary passwords. Unit tests cover
+anonymous, binary username and certificate token projection, the file and
+aggregate limits, and invalid options. An eighth optional independent-peer
+test opens and closes a real Basic256Sha256 anonymous Session using this
+projection. The helper is preparatory: no public `Open62541` client or one-shot
+projection exists, the public adapter remains Python-backed, and P02/P03 and
+the full policy/token matrix remain open.
+
+The focused configuration suite passes five default tests. Eight optional
+secure-peer tests pass. The complete `WOTEX_PATH_DEPS=1 mix check --no-retry`
+gate passes on macOS arm64 with Elixir 1.20.2 / OTP 29.0.4: 274 passed
+(10 doctests, 4 properties, 260 tests), nine optional tests excluded and 95.1%
+coverage. Documentation, audits, native build and package/archive checks pass.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/native/config.ex` | `83b7b168170e9afdc60b24ee46d9610dfcf86c2b4c9d9eb847b7363aacc63181` |
+| `test/wotex/opcua/native/config_test.exs` | `ad7e3c3685fc00981ef1369949fdea6b2506cb996acd9486e4aa50cd6cc049bd` |
+| `test/interop/native_secure_test.exs` | `aacb17ab1b8e8b85ba84adc48373a1d9a0198d4cf5c782728729f8fdb9806611` |
+
 ## Asynchronous native Method Call slice, 2026-09-16
 
 The production C process now admits one Method Call after secure activation.

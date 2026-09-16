@@ -1,7 +1,7 @@
 defmodule Wotex.OPCUA.NativeSecureInteropTest do
   @moduledoc false
   use ExUnit.Case, async: false
-  alias Wotex.OPCUA.Native.{Frame, Host, Ready}
+  alias Wotex.OPCUA.Native.{Config, Frame, Host, Ready}
   @moduletag :interop
 
   test "a pinned native SDK channel activates and reads the server NamespaceArray" do
@@ -281,6 +281,49 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
              Host.request(host, "call", bad, 5000)
 
     assert Bitwise.band(status, 0x8000_0000) != 0
+  end
+
+  test "the public native configuration snapshots files for a secure Session" do
+    config_path = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    peer = Jason.decode!(File.read!(config_path))
+    directory = Path.dirname(config_path)
+    executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
+    guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+
+    assert {:ok, config} =
+             Config.new(
+               executable: executable,
+               executable_digest: digest.(executable),
+               guardian: guardian,
+               guardian_digest: digest.(guardian),
+               endpoint: peer["endpoint"],
+               security_policy: :basic256sha256,
+               security_mode: :sign_and_encrypt,
+               client_uri: peer["client_uri"],
+               server_uri: peer["server_uri"],
+               certificate: peer["certificate"],
+               private_key: Path.join(directory, "client.key.der"),
+               server_certificate: peer["server_certificate"],
+               trust_certificate: Path.join(directory, "ca.der"),
+               crl: peer["crl"],
+               authentication: %{type: :anonymous}
+             )
+
+    assert {:ok, parameters} =
+             Config.open_parameters(config, System.monotonic_time(:millisecond) + 5000)
+
+    assert {:ok, host, _} =
+             Host.start_link(
+               executable: executable,
+               executable_digest: digest.(executable),
+               guardian: guardian,
+               guardian_digest: digest.(guardian),
+               timeout: 5000
+             )
+
+    assert {:ok, %{"namespace_array" => [_ | _]}} = Host.request(host, "open", parameters, 5000)
+    assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
   end
 
   defp line(port, buffered) do

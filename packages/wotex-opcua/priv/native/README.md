@@ -26,6 +26,9 @@ certificate identities/usages/validity and the issuer CRL, and provides a
 complete-DER peer-pin verifier. `security_check.c` generates disposable C-only
 credentials and tests valid, invalid and boundary cases. See [security.md](security.md)
 for the exact boundary and remaining SDK/Session work.
+The Elixir `Native.Config` helper validates explicit public-native option shape
+without I/O and snapshots bounded credential files as C07 bytes envelopes under
+one deadline. It is not yet wired into a public Session client.
 
 `ipc.c` assembles input lines within the 131072-byte ceiling and checks the
 closed outer request envelope after `json_codec.c` parses the complete line.

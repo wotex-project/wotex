@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.8
+  version: 1.1.9
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -47,6 +47,13 @@ The target native runtime uses an Elixir API and an explicitly owned open62541 C
 executable. In that path, Python is confined to the independent test peer and
 upstream build generators; the current public compatibility adapter still
 requires Python.
+`Native.Config.new/1` now validates the exact public native option shape without
+file I/O; `open_parameters/2` snapshots explicitly named regular credential
+files under one caller deadline, bounds each to 64 KiB, and projects the closed
+bytes-envelope `open` map. Anonymous, binary username/password and certificate
+token shapes are covered. The public `Open62541.connect/1` Session and one-shot
+client remain unimplemented; this configuration layer does not replace the
+Python-backed public adapter or accept P02/P03.
 A native executable, a protocol service, a WoT binding and an interoperability
 result are distinct deliverables. All requirements below are mandatory.
 
@@ -127,6 +134,10 @@ Policy atoms are `:basic256sha256`, `:aes128_sha256_rsaoaep` and
 file bytes are converted to X03's closed DER/bytes IPC schema. One-shot
 configuration validates names/types at connect but reads credentials and creates
 its temporary native owner only when an operation uses its one deadline.
+The current `Native.Config` layer performs the option and bounded file projection
+and is exercised against one independent Basic256Sha256 anonymous peer; it has
+not yet been wired into the public native client or the complete token/policy
+matrix.
 
 The source authority is [native-sources-v1.json](fixtures/native-sources-v1.json).
 open62541 1.5.7 is commit `d1173ccc31560ffc60c29e24ce8adb19f8c3c686`;

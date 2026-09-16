@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.20
+  version: 1.0.21
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -132,6 +132,10 @@ these responses and replenishes consumed credit. Browse/subscriptions,
 complete output buffering, cancellation, full namespace translation and other
 policy/token interoperability remain open P02/P03 work. The default public
 adapter is still Python-backed.
+The native configuration helper validates explicit policy, token and credential
+paths and snapshots bounded files for the native `open` request. It has no public
+Session/client connection yet, so the Python-backed adapter remains the current
+public transport.
 `Native.Frame` encodes exact outer request fields and maps the owner deadline
 from the separately captured ready clock sample. The native build test uses
 that production encoder to drive the real process. No public native client is
