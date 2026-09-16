@@ -24,9 +24,13 @@ typedef struct {
     uint64_t generation;
     int64_t deadline_ms;
     uint64_t timeout_ms;
+    bool open;
 } WopIpcRequest;
 
 /* Outer request shape only. Parameter admission belongs to each service. */
 bool wop_ipc_request(yyjson_val *root, WopIpcRequest *request);
+
+/* Closed open-parameter shape, before any certificate or SDK admission. */
+bool wop_ipc_open(yyjson_val *parameters);
 
 #endif

@@ -10,9 +10,13 @@ native service owner.
 closed outer request envelope after `json_codec.c` parses the complete line.
 The executable rejects malformed or expired input with one terminal frame and
 rejects every otherwise valid request as `unsupported_protocol`. It does not
-validate operation parameters or issue an SDK service. `ipc_check.c` covers
+validate service parameters or issue an SDK service. `ipc_check.c` covers
 every split of a request line, coalescing, bounds and malformed envelopes;
 the pinned build test also exercises the real process input and terminal output.
+The `open` parameter map is now checked for its exact keys, policy/mode literals,
+bounded identity strings, canonical base64 envelopes, user-token form and
+session timeout. This is a shape gate only; certificate parsing/trust and SDK
+Session activation remain separate work.
 
 `build_command.c` is the reviewed POSIX command guardian from the Wotex Modbus
 source at commit `018f419b0644cfecc83891551d10b5c8d771d7c6`,

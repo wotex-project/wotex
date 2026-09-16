@@ -166,6 +166,9 @@ static int bootstrap(void) {
                     (void)wop_json_uint64(yyjson_obj_get(root, "generation"), &generation);
                 if(!wop_ipc_request(root, &request)) {
                     (void)terminal(generation, "invalid_request", "validation");
+                } else if(request.open &&
+                          !wop_ipc_open(yyjson_obj_get(root, "parameters"))) {
+                    (void)terminal(request.generation, "invalid_request", "validation");
                 } else if((clock_ms = monotonic_ms()) < 0 || clock_ms >= request.deadline_ms) {
                     (void)terminal(request.generation, "deadline_exceeded", "admission");
                 } else {

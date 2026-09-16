@@ -187,6 +187,39 @@ build. P02 remains open: no persistent
 Session, normal response relay, credits, services or independent native peer
 interoperability is accepted.
 
+## P02 native open shape rejection
+
+The next C ingress slice validates the closed `open` parameter map before any
+SDK network call. It recognizes exactly the three specified policy URIs and
+`SignAndEncrypt`, bounds endpoint/ApplicationUri strings and session timeout,
+checks all five certificate/key/trust/CRL fields as canonical base64 envelopes,
+and checks anonymous, username or certificate user-token shapes. The C runner
+tests all three allowed policy literals, downgrade/unknown fields, noncanonical
+base64, token forms and timeout boundaries. The required native build test sends
+a shape-valid and a downgraded `open` through the production BEAM encoder to
+the actual executable. The former terminates `unsupported_protocol`; the
+latter terminates `invalid_request`. The tiny test byte envelopes are not
+certificates and no cryptographic or Session success is inferred.
+
+| Open-shape source/evidence | SHA-256 |
+| --- | --- |
+| `priv/native/ipc.c` | `ba85da703e92b6291216d725cf228bec8dd1562bab7ad7cf031dc2713800bd0a` |
+| `priv/native/ipc.h` | `a6aaccc565dfdf08d5301b5b89b77e772fd4144b3d53e05d13fd0a1869df9280` |
+| `priv/native/ipc_check.c` | `8411cdc3610a137c54e79ce2672d63a2f7f6efb5fe55c00e771b5420d18a96f7` |
+| `priv/native/main.c` | `af1f9df48859b97a71cf4b855fb8e133e739df6619e0f60991f0c073bfcc2cea` |
+| `test/wotex/opcua/native/build_test.exs` | `f15b549e11d6b15741b84b497ac8370c4cc274812cd7930264e22d8358b812a1` |
+| local normal CTest log | `e5e1d81009b01d4eb41d985c374c8d0f53754a22a58c47e3f14b1f3e2ae0eb88` |
+| local sanitizer CTest log | `9f1a83e592e3d68bfcabf0f09ca7cc6540a86fc6563161b3a00715be9aa51745` |
+
+The local static-prefix build passes 179/179 CTest cases; the macOS arm64
+ASan/UBSan selected lane passes 168/168. The full
+`WOTEX_PATH_DEPS=1 mix check --no-retry` gate passed 259 checks (10 doctests,
+four properties, 245 tests), one interoperability exclusion and 95.9% BEAM
+coverage, including the fresh pinned build, docs and archive. P02 remains open,
+and server identity,
+certificate chain, CRL, private key and token security must be validated before
+any native Session attempt.
+
 ## Implemented Python-adapter interoperability
 
 Real secure asyncua 2.0.1 peer: PASS for read, write/readback/restore, browse,

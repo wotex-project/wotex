@@ -84,6 +84,9 @@ deadline and builds the exact request line used by the real-process build test.
 The internal native host now performs one generation-matched terminal-only
 exchange through custody. It reports finite errors; no native Session or
 successful service response is exposed.
+The C ingress also rejects malformed `open` configuration, including insecure
+policy or mode selection, before it touches the SDK network stack. Shape-valid
+opens still fail closed pending certificate verification and Session ownership.
 
 `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` remain specified work. Bootstrap build

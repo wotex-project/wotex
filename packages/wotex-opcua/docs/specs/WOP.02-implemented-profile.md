@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.11
+  version: 1.0.12
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -107,6 +107,11 @@ through the custody guardian, validates a bounded generation-matched terminal
 control and releases the native process. Unsolicited output remains a bootstrap
 failure; only the finite terminal error is decoded for an explicit request.
 The process still cannot report a successful OPC UA service.
+An `open` request now has additional native-side shape checks: exact keys,
+three allowed security-policy URI strings, `SignAndEncrypt`, bounded text and
+session timeout, closed user-token maps, and canonical base64 byte envelopes.
+The test certificate bytes are deliberately not valid certificates; this layer
+does not parse trust, authenticate a server, activate a Session or send packets.
 `Native.Host` admits both explicit executable digests before process creation,
 receives strict versioned readiness, and links to the original caller only after
 successful initialization and a one-use ownership claim. Hashing, spawn,

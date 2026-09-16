@@ -133,6 +133,40 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     duplicate = String.replace(request, "\"id\":\"r1\"", "\"id\":\"r1\",\"id\":\"r2\"")
     assert_native_terminal(native, [duplicate], nil, "invalid_request", "validation")
 
+    bytes = %{"type" => "bytes", "base64" => "AQ=="}
+
+    open = %{
+      "endpoint" => "opc.tcp://localhost:4840",
+      "security_policy" => "http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256",
+      "security_mode" => "SignAndEncrypt",
+      "client_uri" => "urn:client",
+      "server_uri" => "urn:server",
+      "certificate" => bytes,
+      "private_key" => bytes,
+      "server_certificate" => bytes,
+      "trust_certificate" => bytes,
+      "crl" => bytes,
+      "authentication" => %{"type" => "anonymous"},
+      "session_timeout_ms" => 60_000
+    }
+
+    assert {:ok, secure_open} =
+             Frame.request(7, "o1", "open", open, 1000, 9_223_372_036_854_775_807)
+
+    assert_native_terminal(native, [secure_open], 7, "unsupported_protocol", "validation")
+
+    assert {:ok, downgraded_open} =
+             Frame.request(
+               7,
+               "o1",
+               "open",
+               %{open | "security_mode" => "None"},
+               1000,
+               9_223_372_036_854_775_807
+             )
+
+    assert_native_terminal(native, [downgraded_open], 7, "invalid_request", "validation")
+
     assert {:ok, host, %{ready: %Wotex.OPCUA.Native.Ready{}, received_at_ms: received}} =
              Wotex.OPCUA.Native.Host.start_link(
                executable: native,

@@ -81,6 +81,69 @@ static int bounds(void) {
     return 0;
 }
 
+static int open_case(const char *policy, const char *mode, const char *certificate,
+                     const char *authentication, const char *timeout, const char *extra,
+                     bool expected) {
+    char frame[4096];
+    int length = snprintf(frame, sizeof(frame),
+        "{\"endpoint\":\"opc.tcp://localhost:4840\",\"security_policy\":\"%s\","
+        "\"security_mode\":\"%s\",\"client_uri\":\"urn:client\","
+        "\"server_uri\":\"urn:server\",\"certificate\":%s,"
+        "\"private_key\":{\"type\":\"bytes\",\"base64\":\"AQ==\"},"
+        "\"server_certificate\":{\"type\":\"bytes\",\"base64\":\"AQ==\"},"
+        "\"trust_certificate\":{\"type\":\"bytes\",\"base64\":\"AQ==\"},"
+        "\"crl\":{\"type\":\"bytes\",\"base64\":\"AQ==\"},"
+        "\"authentication\":%s,\"session_timeout_ms\":%s%s}\n",
+        policy, mode, certificate, authentication, timeout, extra);
+    CHECK(length > 0 && (size_t)length < sizeof(frame));
+    void *pool = malloc(WOP_JSON_POOL_BYTES);
+    CHECK(pool);
+    WopJson json = {0};
+    bool valid = wop_json_read(frame, (size_t)length, pool, WOP_JSON_POOL_BYTES, &json) == WOP_JSON_OK &&
+                 wop_ipc_open(yyjson_doc_get_root(json.document));
+    CHECK(valid == expected);
+    wop_json_clear(&json);
+    free(pool);
+    return 0;
+}
+
+static int open_cases(void) {
+    static const char *policies[] = {
+        "http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256",
+        "http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_RsaOaep",
+        "http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha256_RsaPss"
+    };
+    static const char *bytes = "{\"type\":\"bytes\",\"base64\":\"AQ==\"}";
+    static const char *anonymous = "{\"type\":\"anonymous\"}";
+    int result;
+    for (size_t i = 0; i < sizeof(policies) / sizeof(policies[0]); i++) {
+        result = open_case(policies[i], "SignAndEncrypt", bytes, anonymous, "60000", "", true);
+        if (result) return result;
+    }
+    const struct {
+        const char *policy, *mode, *certificate, *auth, *timeout, *extra;
+        bool valid;
+    } cases[] = {
+        {"None", "SignAndEncrypt", bytes, anonymous, "60000", "", false},
+        {policies[0], "None", bytes, anonymous, "60000", "", false},
+        {policies[0], "SignAndEncrypt", "{\"type\":\"bytes\",\"base64\":\"AR==\"}", anonymous, "60000", "", false},
+        {policies[0], "SignAndEncrypt", bytes, "{\"type\":\"anonymous\",\"username\":\"x\"}", "60000", "", false},
+        {policies[0], "SignAndEncrypt", bytes, "{\"type\":\"username\",\"username\":\"alice\",\"password\":{\"type\":\"bytes\",\"base64\":\"\"}}", "60000", "", true},
+        {policies[0], "SignAndEncrypt", bytes, "{\"type\":\"certificate\",\"certificate\":{\"type\":\"bytes\",\"base64\":\"AQ==\"},\"private_key\":{\"type\":\"bytes\",\"base64\":\"AQ==\"}}", "60000", "", true},
+        {policies[0], "SignAndEncrypt", bytes, "{\"type\":\"username\",\"username\":\"\",\"password\":{\"type\":\"bytes\",\"base64\":\"\"}}", "60000", "", false},
+        {policies[0], "SignAndEncrypt", bytes, anonymous, "999", "", false},
+        {policies[0], "SignAndEncrypt", bytes, anonymous, "3600001", "", false},
+        {policies[0], "SignAndEncrypt", bytes, anonymous, "1000.0", "", false},
+        {policies[0], "SignAndEncrypt", bytes, anonymous, "60000", ",\"extra\":1", false}
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        result = open_case(cases[i].policy, cases[i].mode, cases[i].certificate,
+                           cases[i].auth, cases[i].timeout, cases[i].extra, cases[i].valid);
+        if (result) return result;
+    }
+    return 0;
+}
+
 int main(void) {
     static const char *invalid[] = {
         "{\"version\":1,\"generation\":1}\n",
@@ -100,6 +163,7 @@ int main(void) {
     };
     int status = split_lines();
     if (!status) status = bounds();
+    if (!status) status = open_cases();
     if (!status) status = request_case(valid, true);
     for (size_t i = 0; !status && i < sizeof(invalid) / sizeof(invalid[0]); i++)
         status = request_case(invalid[i], false);

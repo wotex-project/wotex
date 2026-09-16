@@ -18,6 +18,9 @@ outer-envelope validation to the actual executable; no service is admitted.
 The pure owner-side encoder now maps the ready clock sample and emits closed
 outer request frames. The internal owner handles one bounded terminal control
 for an explicit request. It does not yet relay service responses or grant credits.
+The C ingress checks the `open` parameter shape and rejects malformed or
+downgraded values before a network attempt. It has no certificate trust or
+Session activation yet; a shape-valid open still ends as `unsupported_protocol`.
 Secure native Sessions and services remain required implementation.
 The target runtime uses an Elixir API and an explicitly owned open62541 C executable.
 Python is confined to the independent test peer and upstream build generators.
@@ -445,9 +448,10 @@ the expectation. Pure framing cases run every split and coalescing of the given 
 semantic cases serialize through the production encoder, never a fixture echo.
 The separate initial P02 input tests exercise the real executable's strict
 line parser, closed outer request keys, expired-deadline rejection and one
-generation-matched terminal-only owner exchange. They do not bind any
-additional `native-contract-v1.json` case, validate per-operation parameters,
-activate a Session or send a service request.
+generation-matched terminal-only owner exchange and the `open` parameter
+shape. They do not bind any additional `native-contract-v1.json` case, validate
+service parameters or credentials cryptographically, activate a Session or send
+a service request.
 Native traces use a deterministic service/clock boundary; peer lanes separately
 prove real bytes, certificates and callbacks. The full S/N/I scenario matrices
 remain required in addition to the concrete corpus.
