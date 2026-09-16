@@ -22,7 +22,9 @@ a time. libcoap owns tokens, retransmission and whole-body Block1/Block2
 assembly. Complete protected responses up to the 32 KiB inline boundary become
 exact C07 Message results. Larger legal results emit correlated begin/chunk/end
 frames followed by a Message body reference, all under the original request
-deadline. Observe, credit and cancel retain the same finite pre-network error.
+deadline. One protected Observe registration retains its initial inline report
+until cumulative credit opens, admits fresh subsequent reports, and cancels with
+the original token. Streamed reports and renewal remain incomplete.
 
 `native_worker_test.exs` runs the same executable through custody on macOS. It
 asserts exact ready/open/body/request/close envelopes, printable-ID escaping,
@@ -37,8 +39,11 @@ macOS and Linux. The subsequent
 [stream receipt](../../docs/provenance/native-worker-stream-v1.json) binds a
 32,769-byte Block2 result and the immediately following Block1 POST. The Linux
 lane builds the patched static SDK plus the production adapter with ASan/UBSan
-and leak detection. It does not accept Observe, report credit, replay behavior,
-independent OSCORE interoperability or the final Mix-built executable.
+and leak detection. The subsequent
+[Observe receipt](../../docs/provenance/native-worker-observe-v1.json) binds
+protected registration, zero-credit retention, two inline reports, cumulative
+acknowledgment and token-matched cancellation. It does not accept streamed reports, renewal, live
+replay behavior, independent OSCORE interoperability or the final Mix-built executable.
 
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the
@@ -46,6 +51,11 @@ cached reservation only after callback success. Repeated failures therefore
 cannot bypass persistence through a previously advanced cache. The empty-byte
 patch preserves the CBOR encoding of an empty byte string without calling
 `memcpy` on its null source.
+
+The OSCORE Observe patch preserves the authenticated response Partial IV before
+libcoap substitutes the request Partial IV for AAD construction. Decrypted
+Observe values therefore retain the response's low 24 bits for RFC 7641 serial
+freshness instead of repeating the registration request sequence.
 
 The response-admission patch prevents plaintext nonempty responses from reaching
 an OSCORE application's response callback. It reports a finite protection error,
@@ -97,7 +107,7 @@ callback and asserts zero wire datagrams after every storage-failure stage.
 [The store receipt](../../docs/provenance/native-store-v1.json) identifies these
 assertions and their source bytes. The production exchange adapter now binds
 this store to libcoap's sequence callback before protected transmission. Report
-credit, live replay and the full OSCORE workflow remain separate implementation
+streaming, live replay and the full OSCORE workflow remain separate implementation
 obligations.
 
 The patches retain libcoap's source licensing; see

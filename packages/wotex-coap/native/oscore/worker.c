@@ -35,6 +35,7 @@
 struct output_frame {
     size_t end;
     int64_t deadline;
+    uint64_t report_sequence;
 };
 
 struct output {
@@ -60,6 +61,27 @@ struct response_stream {
     enum stream_phase phase;
 };
 
+struct pending_report {
+    char value[WCO_JSON_FRAME_MAX];
+    size_t value_length;
+    uint32_t observe, max_age;
+    uint16_t content_format;
+    uint8_t etag[8];
+    size_t etag_length;
+    uint8_t code;
+    int content_format_present, etag_present, pending;
+};
+
+struct observation {
+    char id[65];
+    struct pending_report report;
+    int64_t last_received_at;
+    uint32_t last_observe;
+    uint16_t content_format;
+    int freshness_set, content_format_present;
+    int established, cancelling, event_kind, used;
+};
+
 struct worker {
     struct wco_frame frame;
     struct wco_json *json;
@@ -69,6 +91,7 @@ struct worker {
     struct wco_exchange *exchange;
     struct output output;
     struct response_stream stream;
+    struct observation observation;
     struct {
         char id[65];
         int64_t deadline;
@@ -107,7 +130,8 @@ static int append(struct output *output, const char *bytes, size_t length, int64
         output->count == WCO_OUTPUT_FRAMES) return 0;
     memcpy(output->bytes + output->used, bytes, length);
     output->used += length;
-    output->frames[output->count++] = (struct output_frame){output->used, deadline};
+    output->frames[output->count++] =
+        (struct output_frame){output->used, deadline, 0};
     return 1;
 }
 
@@ -188,6 +212,18 @@ static int error_status_response(struct worker *worker, const char *id,
     return append(&worker->output, line, used, deadline);
 }
 
+static int result_deadline_response(struct worker *worker, const char *id,
+                                    const char *result, int64_t deadline) {
+    char line[WCO_CONTROL_MAX];
+    size_t used = 0;
+    if (!raw(line, sizeof(line), &used, "{\"version\":1,\"id\":" ) ||
+        !quoted(line, sizeof(line), &used, id) ||
+        !raw(line, sizeof(line), &used, ",\"ok\":true,\"result\":" ) ||
+        !raw(line, sizeof(line), &used, result) ||
+        !raw(line, sizeof(line), &used, "}\n")) return 0;
+    return append(&worker->output, line, used, deadline);
+}
+
 static int encoded_bytes(char *line, size_t capacity, size_t *used,
                          const uint8_t *bytes, size_t length) {
     size_t encoded = 4 * ((length + 2) / 3);
@@ -202,45 +238,52 @@ static int encoded_bytes(char *line, size_t capacity, size_t *used,
     return raw(line, capacity, used, "\"}");
 }
 
+static int message_value(const struct wco_exchange_message *message,
+                         const char *body_id, char *line, size_t capacity,
+                         size_t *used) {
+    char number[64];
+    static const char *const types[] = {"con", "non", "ack", "rst"};
+    int length;
+    if (!raw(line, capacity, used, "{\"type\":" ) ||
+        !quoted(line, capacity, used, types[message->type])) return 0;
+    length = snprintf(number, sizeof(number),
+                      ",\"code\":%u,\"message_id\":%u,\"token\":" ,
+                      message->code, message->message_id);
+    if (length <= 0 || (size_t)length >= sizeof(number) ||
+        (size_t)length > capacity - *used) return 0;
+    memcpy(line + *used, number, (size_t)length); *used += (size_t)length;
+    if (!encoded_bytes(line, capacity, used, message->token,
+                       message->token_length) ||
+        !raw(line, capacity, used, ",\"options\":[")) return 0;
+    for (size_t index = 0; index < message->option_count; index++) {
+        length = snprintf(number, sizeof(number), "%s{\"number\":%u,\"value\":" ,
+                          index ? "," : "", message->options[index].number);
+        if (length <= 0 || (size_t)length >= sizeof(number) ||
+            (size_t)length > capacity - *used) return 0;
+        memcpy(line + *used, number, (size_t)length); *used += (size_t)length;
+        if (!encoded_bytes(line, capacity, used,
+                           message->options[index].value,
+                           message->options[index].length) ||
+            !raw(line, capacity, used, "}")) return 0;
+    }
+    if (!raw(line, capacity, used,
+             body_id ? "],\"body_id\":" : "],\"payload\":")) return 0;
+    if (body_id) {
+        if (!quoted(line, capacity, used, body_id)) return 0;
+    } else if (!encoded_bytes(line, capacity, used, message->payload,
+                              message->payload_length)) return 0;
+    return raw(line, capacity, used, "}");
+}
+
 static int message_line(struct worker *worker,
                         const struct wco_exchange_message *message,
                         const char *body_id, char *line, size_t *result_length) {
-    char number[64];
-    static const char *const types[] = {"con", "non", "ack", "rst"};
     size_t used = 0;
-    int length;
     if (!raw(line, WCO_JSON_FRAME_MAX, &used, "{\"version\":1,\"id\":" ) ||
         !quoted(line, WCO_JSON_FRAME_MAX, &used, worker->request.id) ||
-        !raw(line, WCO_JSON_FRAME_MAX, &used,
-             ",\"ok\":true,\"result\":{\"type\":" ) ||
-        !quoted(line, WCO_JSON_FRAME_MAX, &used, types[message->type])) return 0;
-    length = snprintf(number, sizeof(number),
-                      ",\"code\":%u,\"message_id\":%u,\"token\":",
-                      message->code, message->message_id);
-    if (length <= 0 || (size_t)length >= sizeof(number) ||
-        (size_t)length > WCO_JSON_FRAME_MAX - used) return 0;
-    memcpy(line + used, number, (size_t)length); used += (size_t)length;
-    if (!encoded_bytes(line, WCO_JSON_FRAME_MAX, &used, message->token,
-                       message->token_length) ||
-        !raw(line, WCO_JSON_FRAME_MAX, &used, ",\"options\":[")) return 0;
-    for (size_t index = 0; index < message->option_count; index++) {
-        length = snprintf(number, sizeof(number), "%s{\"number\":%u,\"value\":",
-                          index ? "," : "", message->options[index].number);
-        if (length <= 0 || (size_t)length >= sizeof(number) ||
-            (size_t)length > WCO_JSON_FRAME_MAX - used) return 0;
-        memcpy(line + used, number, (size_t)length); used += (size_t)length;
-        if (!encoded_bytes(line, WCO_JSON_FRAME_MAX, &used,
-                           message->options[index].value,
-                           message->options[index].length) ||
-            !raw(line, WCO_JSON_FRAME_MAX, &used, "}")) return 0;
-    }
-    if (!raw(line, WCO_JSON_FRAME_MAX, &used,
-             body_id ? "],\"body_id\":" : "],\"payload\":")) return 0;
-    if (body_id) {
-        if (!quoted(line, WCO_JSON_FRAME_MAX, &used, body_id)) return 0;
-    } else if (!encoded_bytes(line, WCO_JSON_FRAME_MAX, &used, message->payload,
-                              message->payload_length)) return 0;
-    if (!raw(line, WCO_JSON_FRAME_MAX, &used, "}}\n")) return 0;
+        !raw(line, WCO_JSON_FRAME_MAX, &used, ",\"ok\":true,\"result\":" ) ||
+        !message_value(message, body_id, line, WCO_JSON_FRAME_MAX, &used) ||
+        !raw(line, WCO_JSON_FRAME_MAX, &used, "}\n")) return 0;
     *result_length = used;
     return 1;
 }
@@ -272,6 +315,172 @@ static int message_response(struct worker *worker,
     if (!message_line(worker, message, NULL, line, &used)) return 0;
     worker->request.active = 0;
     return append(&worker->output, line, used, worker->request.deadline);
+}
+
+static uint32_t option_uint(const uint8_t *bytes, size_t length) {
+    uint32_t value = 0;
+    for (size_t index = 0; index < length; index++) value = value << 8 | bytes[index];
+    return value;
+}
+
+static void clear_report(struct pending_report *report) {
+    OPENSSL_cleanse(report, sizeof(*report));
+}
+
+static int prepare_report(const struct wco_exchange_message *message,
+                          struct pending_report *report) {
+    size_t used = 0;
+    unsigned observe_count = 0, etag_count = 0, format_count = 0, age_count = 0;
+    if (message->type > 2 || message->code < 64 || message->code > 94 ||
+        message->payload_length > WCO_BODY_CHUNK_MAX) return 0;
+    clear_report(report);
+    for (size_t index = 0; index < message->option_count; index++) {
+        const struct wco_exchange_option *option = &message->options[index];
+        switch (option->number) {
+            case 4:
+                if (++etag_count != 1 || option->length < 1 || option->length > 8)
+                    return 0;
+                memcpy(report->etag, option->value, option->length);
+                report->etag_length = option->length;
+                report->etag_present = 1;
+                break;
+            case 6:
+                if (++observe_count != 1 || option->length > 3) return 0;
+                report->observe = option_uint(option->value, option->length);
+                break;
+            case 12:
+                if (++format_count != 1 || option->length > 2) return 0;
+                report->content_format = (uint16_t)option_uint(option->value,
+                                                              option->length);
+                report->content_format_present = 1;
+                break;
+            case 14:
+                if (++age_count != 1 || option->length > 4) return 0;
+                report->max_age = option_uint(option->value, option->length);
+                break;
+            default:
+                break;
+        }
+    }
+    if (observe_count != 1) return 0;
+    report->code = message->code;
+    if (!age_count) report->max_age = 60;
+    if (!message_value(message, NULL, report->value, sizeof(report->value), &used)) {
+        clear_report(report);
+        return 0;
+    }
+    report->value_length = used;
+    report->pending = 1;
+    return 1;
+}
+
+static int admit_report(struct observation *observation,
+                        const struct pending_report *report, int64_t received_at) {
+    uint32_t difference;
+    int64_t elapsed;
+    if (received_at < 0) return -1;
+    if (!observation->freshness_set) {
+        observation->last_observe = report->observe;
+        observation->last_received_at = received_at;
+        observation->content_format = report->content_format;
+        observation->content_format_present = report->content_format_present;
+        observation->freshness_set = 1;
+        return 1;
+    }
+    elapsed = received_at >= observation->last_received_at ?
+        received_at - observation->last_received_at : 0;
+    difference = (report->observe - observation->last_observe) & 0xffffffu;
+    if (elapsed <= 128000 &&
+        (report->observe == observation->last_observe || difference >= 0x800000u))
+        return 0;
+    observation->last_observe = report->observe;
+    observation->last_received_at = received_at;
+    if (report->content_format_present != observation->content_format_present ||
+        (report->content_format_present &&
+         report->content_format != observation->content_format)) return -2;
+    return 1;
+}
+
+static int observation_open_response(struct worker *worker) {
+    char result[256], escaped[256];
+    size_t used = 0;
+    int length;
+    if (!raw(escaped, sizeof(escaped), &used, "{\"subscription_id\":" ) ||
+        !quoted(escaped, sizeof(escaped), &used, worker->request.id)) return 0;
+    length = snprintf(result, sizeof(result), ",\"generation\":%" PRIu64 "}",
+                      worker->generation);
+    if (length <= 0 || (size_t)length >= sizeof(result) ||
+        (size_t)length > sizeof(escaped) - used) return 0;
+    memcpy(escaped + used, result, (size_t)length); used += (size_t)length;
+    escaped[used] = '\0';
+    return result_deadline_response(worker, worker->request.id, escaped,
+                                    worker->request.deadline);
+}
+
+static int report_line(struct worker *worker, uint64_t sequence,
+                       char *line, size_t *result_length) {
+    struct pending_report *report = &worker->observation.report;
+    char number[192];
+    size_t used = 0;
+    int length;
+    if (!raw(line, WCO_JSON_FRAME_MAX, &used,
+             "{\"version\":1,\"subscription_id\":" ) ||
+        !quoted(line, WCO_JSON_FRAME_MAX, &used, worker->observation.id)) return 0;
+    length = snprintf(number, sizeof(number),
+                      ",\"generation\":%" PRIu64 ",\"report_seq\":%" PRIu64
+                      ",\"event\":\"report\",\"value\":" ,
+                      worker->generation, sequence);
+    if (length <= 0 || (size_t)length >= sizeof(number) ||
+        (size_t)length > WCO_JSON_FRAME_MAX - used) return 0;
+    memcpy(line + used, number, (size_t)length); used += (size_t)length;
+    if (report->value_length > WCO_JSON_FRAME_MAX - used) return 0;
+    memcpy(line + used, report->value, report->value_length);
+    used += report->value_length;
+    length = snprintf(number, sizeof(number),
+                      ",\"metadata\":{\"code\":%u,\"observe\":%u,\"etag\":" ,
+                      report->code, report->observe);
+    if (length <= 0 || (size_t)length >= sizeof(number) ||
+        (size_t)length > WCO_JSON_FRAME_MAX - used) return 0;
+    memcpy(line + used, number, (size_t)length); used += (size_t)length;
+    if (report->etag_present) {
+        if (!encoded_bytes(line, WCO_JSON_FRAME_MAX, &used, report->etag,
+                           report->etag_length)) return 0;
+    } else if (!raw(line, WCO_JSON_FRAME_MAX, &used, "null")) return 0;
+    if (!raw(line, WCO_JSON_FRAME_MAX, &used, ",\"content_format\":")) return 0;
+    if (report->content_format_present) {
+        length = snprintf(number, sizeof(number), "%u", report->content_format);
+        if (length <= 0 || (size_t)length >= sizeof(number) ||
+            (size_t)length > WCO_JSON_FRAME_MAX - used) return 0;
+        memcpy(line + used, number, (size_t)length); used += (size_t)length;
+    } else if (!raw(line, WCO_JSON_FRAME_MAX, &used, "null")) return 0;
+    length = snprintf(number, sizeof(number), ",\"max_age\":%u}}\n",
+                      report->max_age);
+    if (length <= 0 || (size_t)length >= sizeof(number) ||
+        (size_t)length > WCO_JSON_FRAME_MAX - used) return 0;
+    memcpy(line + used, number, (size_t)length); used += (size_t)length;
+    *result_length = used;
+    return 1;
+}
+
+static int pump_report(struct worker *worker) {
+    char line[WCO_JSON_FRAME_MAX];
+    struct pending_report *report = &worker->observation.report;
+    uint64_t expected, sequence;
+    size_t used;
+    int64_t now;
+    if (!report->pending || !wco_credit_available(&worker->credit)) return 1;
+    if (worker->credit.assigned == UINT64_MAX) return 0;
+    expected = worker->credit.assigned + 1;
+    if (!report_line(worker, expected, line, &used)) return 0;
+    if (used > WCO_OUTPUT_MAX - worker->output.used ||
+        worker->output.count == WCO_OUTPUT_FRAMES) return 1;
+    if ((now = now_ms()) < 0 ||
+        wco_credit_assign(&worker->credit, &sequence) != WCO_CREDIT_OK ||
+        sequence != expected ||
+        !append(&worker->output, line, used, now + 5000)) return 0;
+    worker->output.frames[worker->output.count - 1].report_sequence = sequence;
+    clear_report(report);
+    return 1;
 }
 
 static void clear_stream(struct response_stream *stream) {
@@ -311,11 +520,135 @@ static int start_stream(struct worker *worker,
     return 1;
 }
 
+static int terminal_observation(struct worker *worker, const char *code) {
+    char line[WCO_CONTROL_MAX];
+    size_t used = 0;
+    int64_t now = now_ms();
+    if (now < 0 || !raw(line, sizeof(line), &used,
+                        "{\"version\":1,\"subscription_id\":" ) ||
+        !quoted(line, sizeof(line), &used, worker->observation.id) ||
+        !raw(line, sizeof(line), &used, ",\"generation\":")) return 0;
+    char number[32];
+    int length = snprintf(number, sizeof(number), "%" PRIu64, worker->generation);
+    if (length <= 0 || (size_t)length >= sizeof(number) ||
+        (size_t)length > sizeof(line) - used) return 0;
+    memcpy(line + used, number, (size_t)length); used += (size_t)length;
+    if (!raw(line, sizeof(line), &used,
+             ",\"event\":\"error\",\"value\":{\"code\":" ) ||
+        !quoted(line, sizeof(line), &used, code) ||
+        !raw(line, sizeof(line), &used, "},\"metadata\":{}}\n")) return 0;
+    clear_report(&worker->observation.report);
+    worker->observation.established = 0;
+    worker->observation.cancelling = 0;
+    worker->closing = 1;
+    return append(&worker->output, line, used, now + 5000);
+}
+
+static int observation_response(struct worker *worker,
+                                const struct wco_exchange_message *message) {
+    struct pending_report pending;
+    int admission, status;
+    memset(&pending, 0, sizeof(pending));
+    if (message->delivery == WCO_EXCHANGE_OBSERVE_INITIAL) {
+        if (!worker->request.active) return 0;
+        status = message_error(worker, message);
+        if (status >= 0) {
+            worker->closing = 1;
+            return status;
+        }
+        if (message->payload_length > WCO_BODY_CHUNK_MAX) {
+            int valid = error_deadline_response(worker, worker->request.id,
+                                                "native_unavailable",
+                                                worker->request.deadline);
+            worker->request.active = 0;
+            worker->closing = 1;
+            return valid;
+        }
+        if (!prepare_report(message, &worker->observation.report)) {
+            int valid = error_deadline_response(worker, worker->request.id,
+                                                "invalid_observation_response",
+                                                worker->request.deadline);
+            worker->request.active = 0;
+            worker->closing = 1;
+            return valid;
+        }
+        admission = admit_report(&worker->observation,
+                                 &worker->observation.report, now_ms());
+        if (admission != 1) return 0;
+        if (!observation_open_response(worker)) return 0;
+        memcpy(worker->observation.id, worker->request.id,
+               strlen(worker->request.id) + 1);
+        worker->observation.established = 1;
+        worker->observation.used = 1;
+        worker->request.active = 0;
+        return 1;
+    }
+    if (message->delivery == WCO_EXCHANGE_OBSERVE_REPORT) {
+        if (!worker->observation.established || worker->observation.cancelling)
+            return 0;
+        if (!prepare_report(message, &pending)) {
+            clear_report(&pending);
+            return terminal_observation(worker, "observation_failed");
+        }
+        admission = admit_report(&worker->observation, &pending, now_ms());
+        if (admission == 0) {
+            clear_report(&pending);
+            return 1;
+        }
+        if (admission == -2) {
+            clear_report(&pending);
+            return terminal_observation(worker, "representation_changed");
+        }
+        if (admission < 0) {
+            clear_report(&pending);
+            return 0;
+        }
+        if (worker->observation.report.pending) {
+            if (worker->observation.event_kind) {
+                clear_report(&pending);
+                return terminal_observation(worker, "overlapping_event_report");
+            }
+            clear_report(&worker->observation.report);
+        }
+        memcpy(&worker->observation.report, &pending, sizeof(pending));
+        OPENSSL_cleanse(&pending, sizeof(pending));
+        return 1;
+    }
+    if (message->delivery == WCO_EXCHANGE_OBSERVE_INTERVENING) {
+        int valid = worker->observation.established && worker->observation.cancelling &&
+            prepare_report(message, &pending);
+        clear_report(&pending);
+        return valid;
+    }
+    if (message->delivery == WCO_EXCHANGE_CANCELLED) {
+        int valid;
+        if (!worker->request.active || !worker->observation.established ||
+            !worker->observation.cancelling) return 0;
+        status = message_error(worker, message);
+        if (status >= 0) {
+            worker->closing = 1;
+            return status;
+        }
+        valid = result_deadline_response(worker, worker->request.id, "null",
+                                         worker->request.deadline);
+        worker->request.active = 0;
+        clear_report(&worker->observation.report);
+        OPENSSL_cleanse(worker->observation.id, sizeof(worker->observation.id));
+        worker->observation.established = 0;
+        worker->observation.cancelling = 0;
+        worker->observation.event_kind = 0;
+        return valid;
+    }
+    return 0;
+}
+
 static int exchange_response(void *argument,
                              const struct wco_exchange_message *message) {
     struct worker *worker = argument;
     int valid, status;
-    if (!worker->request.active) valid = 0;
+    if (message->delivery != WCO_EXCHANGE_UNARY)
+        valid = observation_response(worker, message);
+    else if (!worker->request.active) valid = 0;
     else if (message->payload_length <= WCO_BODY_CHUNK_MAX)
         valid = message_response(worker, message);
     else if ((status = message_error(worker, message)) >= 0) valid = status;
@@ -332,6 +665,10 @@ static int exchange_response(void *argument,
 
 static void exchange_failure(void *argument, const char *code) {
     struct worker *worker = argument;
+    if (worker->observation.established && !worker->request.active) {
+        if (!terminal_observation(worker, "observation_failed")) worker->failed = 1;
+        return;
+    }
     if (!worker->request.active) {
         worker->failed = 1;
         return;
@@ -340,6 +677,9 @@ static void exchange_failure(void *argument, const char *code) {
                                  worker->request.deadline))
         worker->failed = 1;
     worker->request.active = 0;
+    clear_report(&worker->observation.report);
+    worker->observation.established = 0;
+    worker->observation.cancelling = 0;
     worker->closing = 1;
 }
 
@@ -581,6 +921,84 @@ static int request_command(struct worker *worker,
     return valid;
 }
 
+static int observe_command(struct worker *worker,
+                           const struct wco_command *command) {
+    yyjson_val *parameters = command->parameters;
+    yyjson_val *accept_value = field(parameters, "accept");
+    const char *path, *kind;
+    size_t path_length, kind_length;
+    uint64_t accept = 0;
+    const char *error;
+    int64_t now = now_ms();
+    if (worker->observation.used)
+        return error_response(worker, command, "invalid_request");
+    if (worker->body.active || worker->body.complete)
+        return error_response(worker, command, "invalid_request");
+    if (now < 0 || !string_value(parameters, "path", &path, &path_length) ||
+        !string_value(parameters, "observation_kind", &kind, &kind_length) ||
+        (accept_value && !uint_value(parameters, "accept", UINT16_MAX, &accept)))
+        return 0;
+    memcpy(worker->request.id, command->id, strlen(command->id) + 1);
+    worker->request.deadline = now + command->timeout_ms;
+    worker->request.active = 1;
+    worker->observation.event_kind = kind_length == 5 && !memcmp(kind, "event", 5);
+    error = wco_exchange_observe(worker->exchange, path,
+                                 yyjson_get_bool(field(parameters, "confirmable")),
+                                 accept_value != NULL, (uint16_t)accept);
+    if (!error) return 1;
+    worker->request.active = 0;
+    worker->observation.event_kind = 0;
+    int valid = error_response(worker, command, error);
+    if (!strcmp(error, "connection_closed") ||
+        !strcmp(error, "context_store_corrupt") ||
+        !strcmp(error, "context_store_full") ||
+        !strcmp(error, "context_store_unavailable") ||
+        !strcmp(error, "fresh_context_required") ||
+        !strcmp(error, "sequence_exhausted"))
+        worker->closing = 1;
+    return valid;
+}
+
+static int credit_command(struct worker *worker,
+                          const struct wco_command *command) {
+    uint64_t generation, sequence;
+    if (!worker->observation.established || worker->observation.cancelling)
+        return error_response(worker, command, "invalid_request");
+    if (!uint_value(command->parameters, "generation", UINT64_MAX, &generation) ||
+        !uint_value(command->parameters, "ack_seq", UINT64_MAX, &sequence) ||
+        wco_credit_ack(&worker->credit, generation, sequence) != WCO_CREDIT_OK)
+        return 0;
+    return null_response(worker, command);
+}
+
+static int cancel_command(struct worker *worker,
+                          const struct wco_command *command) {
+    const char *subscription_id, *error;
+    size_t subscription_length;
+    uint64_t generation;
+    int64_t now = now_ms();
+    if (!worker->observation.established || worker->observation.cancelling ||
+        now < 0 ||
+        !string_value(command->parameters, "subscription_id", &subscription_id,
+                      &subscription_length) ||
+        !uint_value(command->parameters, "generation", UINT64_MAX, &generation) ||
+        generation != worker->generation ||
+        strlen(worker->observation.id) != subscription_length ||
+        memcmp(worker->observation.id, subscription_id, subscription_length))
+        return error_response(worker, command, "invalid_request");
+    memcpy(worker->request.id, command->id, strlen(command->id) + 1);
+    worker->request.deadline = now + command->timeout_ms;
+    worker->request.active = 1;
+    worker->observation.cancelling = 1;
+    clear_report(&worker->observation.report);
+    error = wco_exchange_cancel(worker->exchange);
+    if (!error) return 1;
+    worker->request.active = 0;
+    worker->observation.cancelling = 0;
+    worker->closing = 1;
+    return error_response(worker, command, error);
+}
+
 static int execute(struct worker *worker, const struct wco_command *command) {
     if (!worker->opened) {
         const char *error;
@@ -590,17 +1008,23 @@ static int execute(struct worker *worker, const struct wco_command *command) {
     }
     if (command->operation == WCO_OPEN) return 0;
     if (worker->request.active) return error_response(worker, command, "busy");
+    if (worker->observation.established) {
+        if (command->operation == WCO_CREDIT) return credit_command(worker, command);
+        if (command->operation == WCO_CANCEL) return cancel_command(worker, command);
+        if (command->operation != WCO_CLOSE)
+            return error_response(worker, command, "observation_active");
+    }
     if (command->operation >= WCO_BODY_BEGIN && command->operation <= WCO_BODY_END)
         return body_command(worker, command);
     if (command->operation == WCO_CLOSE) {
+        clear_report(&worker->observation.report);
         if (!null_response(worker, command)) return 0;
         worker->closing = 1;
         return 1;
     }
     if (command->operation == WCO_REQUEST) return request_command(worker, command);
-    /* Observe, credit and cancel gain their owned implementation after unary
-     * exchange and stdout body streaming are complete. */
-    return error_response(worker, command, "native_unavailable");
+    if (command->operation == WCO_OBSERVE) return observe_command(worker, command);
+    return error_response(worker, command, "invalid_request");
 }
 
 static int consume(const char *line, size_t length, void *argument) {
@@ -622,6 +1046,11 @@ static int flush_output(struct worker *worker) {
         size_t consumed = 0;
         while (consumed < worker->output.count &&
                worker->output.frames[consumed].end <= (size_t)written) consumed++;
+        for (size_t index = 0; index < consumed; index++) {
+            uint64_t sequence = worker->output.frames[index].report_sequence;
+            if (sequence && wco_credit_written(&worker->credit, sequence) != WCO_CREDIT_OK)
+                return 0;
+        }
         for (size_t index = consumed; index < worker->output.count; index++) {
             worker->output.frames[index - consumed] = worker->output.frames[index];
             worker->output.frames[index - consumed].end -= (size_t)written;
@@ -657,6 +1086,7 @@ static int run(struct worker *worker) {
             worker->closing = 1;
         }
         if (!pump_stream(worker)) return 70;
+        if (!pump_report(worker)) return 70;
         descriptors[0] = (struct pollfd){worker->closing ? -1 : STDIN_FILENO,
                                          POLLIN, 0};
         descriptors[1] = (struct pollfd){worker->output.used ? STDOUT_FILENO : -1,
@@ -701,6 +1131,7 @@ int wco_worker_main(void) {
     wco_exchange_close(worker.exchange);
     wco_store_close(worker.store);
     clear_stream(&worker.stream);
+    clear_report(&worker.observation.report);
     wco_body_clear(&worker.body);
     wco_json_free(worker.json);
     OPENSSL_cleanse(&worker.credit, sizeof(worker.credit));

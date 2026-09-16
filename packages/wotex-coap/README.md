@@ -55,8 +55,10 @@ PKI currently has real OTP peer tests. The explicit OSCORE Runtime profile
 dispatches through the manifest-verified native owner. The native worker
 consumes the durable context, assembles uploads, executes protected unary
 exchanges with inline or streamed results and closes through that same-binary
-custody path. Its libcoap Observe exchange loop, independent OSCORE
-interoperability and the final software matrix remain ordered work.
+custody path. Its libcoap exchange loop also registers one protected Observe,
+holds inline reports behind cumulative credit, applies 24-bit serial freshness
+and cancels with the original token. Streamed native reports, renewal,
+independent OSCORE interoperability and the final software matrix remain ordered work.
 Multicast and extended tokens are outside the implemented profile.
 
 ## Quick start
@@ -92,8 +94,10 @@ owner for an explicit `coap` OSCORE credential and verified `native_backend`.
 The native worker validates and consumes the durable store before reporting a
 successful open. Its production adapter completes one protected unary request
 at a time, returning responses up to 32 KiB inline and larger responses through
-correlated begin/chunk/end frames up to the 1 MiB body ceiling. Observe currently
-returns a finite `native_unavailable` result.
+correlated begin/chunk/end frames up to the 1 MiB body ceiling. The adapter also
+completes protected Observe registration, inline initial and subsequent reports,
+cumulative report credit and token-matched cancellation. Streamed reports and
+renewal remain incomplete.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
 Capabilities expose these as `max_datagram_size` and `max_body_size`.
@@ -186,7 +190,8 @@ cancel the exact subscription even while credit is in flight. The Runtime
 adapter verifies the native route and subscription generation, maps unary calls
 and Observe through the same owner, and releases exact handles on cancellation.
 Production unary execution uses these same response-body envelopes; production
-Observe execution remains planned.
+Observe execution now covers protected registration, inline reports, credit and
+cancellation. Streamed native reports and renewal remain planned.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic

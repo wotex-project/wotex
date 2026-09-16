@@ -28,10 +28,14 @@
     {
       "path": "patches/0006-release-whole-body-first-response.patch",
       "sha256": "d3e20f9cbb199639634cd0ddc2a90f4d6efeebd14fa9fd9010471065f3d5e2ec"
+    },
+    {
+      "path": "patches/0007-preserve-oscore-observe-sequence.patch",
+      "sha256": "6e28ffa3b1892c1bb3b6ede3f77b899d29909993f4dcff82483f61ea748afda9"
     }
   ],
   "patched_sources": {
-    "src/coap_oscore.c": "5c778ae3e899404ebba7f254b9fe7422eb06fb0811e61dfcc7e1bd8122c3d410",
+    "src/coap_oscore.c": "601eb687f33794297c4571aa3481da0e480ec4165493d5081b52aa6511623ca6",
     "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c",
     "src/coap_block.c": "a4aebab153fc94b5f8c3fb9c067f2768e840b0f73bc4326c1d08c64098f4fad6",
     "src/coap_net.c": "838e16cffaa1c4b0d7d6d76ea293e51fab237f2ad1b3a7b9230846f1b66ef52d"

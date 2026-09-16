@@ -1,0 +1,87 @@
+{
+  "schema": "wotex.coap.native-worker-observe-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Production worker protected inline Observe registration, report credit, notification and cancellation through public custody",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "cd2eece99adcfdc881e21029ecd84f5063dec5e37f28d70e344c7a9bf2dae786",
+      "native/oscore/main.c": "6e6c2a8deb2aeac8e527a922467bf89ab0f45f2aa2e669e988fa1e84f690e8eb",
+      "native/oscore/worker.c": "8868dfcb56bdca5969538c30759a5802b8280c41c3969f20dc2d48740d99fe81",
+      "native/oscore/worker.h": "07c7e440f74fb6efbfabaf4a44a8eccf5a31b82f53c89951a26706354009b11e",
+      "native/oscore/exchange.c": "50075ea61148ba3c139a15ca9c9bfe651a566ddf8c8b5c4aa08b6951cb922e23",
+      "native/oscore/exchange.h": "dee75426112dc19c1efc61809711197c21a664c3ba564e8fa9081d73ce9344ba",
+      "native/oscore/custody.c": "887904afa9be4ec1e40145a6e69aac081eda9096a0fc2a0320751f2a16d082b5",
+      "native/oscore/command.c": "9dba7b283ea818d92e01db04483e3782ee401793272ec23e768829a45807c22d",
+      "native/oscore/json.c": "a50d46c2e518d5e3d932c6603306a54dd49abcf545cc5a97fbd2b7ec994d5d46",
+      "native/oscore/frame.c": "d122c2d763e967472d00a79eb4a01cebdbcd9c1b747578a43346141448349906",
+      "native/oscore/body.c": "f6f2696eae9631f5e68c38a01df7ff69f1d2b7ab08d51b735cc600e50ec3e9d4",
+      "native/oscore/credit.c": "f2566b99ae79f539d8c8c1bf0872b050bc62c3785d1758be1e1d7d3b2e624b7d",
+      "native/oscore/identity.c": "955d94def94861e15fbe8ff9c7e14f26a8eec5979585eff21b295267e04a4565",
+      "native/oscore/store.c": "a49ba6a278612e43c9e1872a9565abf541340aa12aa001f9f80e2c93f86969cd",
+      "native/oscore/patches/0007-preserve-oscore-observe-sequence.patch": "6e28ffa3b1892c1bb3b6ede3f77b899d29909993f4dcff82483f61ea748afda9",
+      "test/native/oscore_worker_exchange_test.c": "6498eb9454b8969130e1ffc2378a8dcc30917f421272d3b611d718fa1729ad1d",
+      "test/native/Dockerfile": "5cbf43c0d07876d084d526792a7cccbbd878e882bf9973131d7ae27c563eac60"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "package_version": "libcoap 4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 7,
+    "patched_coap_oscore_sha256": "601eb687f33794297c4571aa3481da0e480ec4165493d5081b52aa6511623ca6"
+  },
+  "requirements": ["WCO-S03", "WCO-S06", "WCO-N02", "WCO-N03", "WCO-N04"],
+  "assertions": [
+    "Public --custody registers one protected GET Observe=0 with the requested Accept option and returns the exact subscription identity",
+    "The establishment control result precedes the initial report, and zero report credit emits no report frame",
+    "Cumulative acknowledgment zero opens credit for report sequence one; acknowledgment one succeeds only after that complete frame is written",
+    "A protected notification emits report sequence two and advances the authenticated OSCORE Observe value by one modulo 2^24",
+    "Inline reports carry the exact Message value and five-field metadata projection with the absent Max-Age default of 60",
+    "Cancellation sends Observe=1 with the original token, returns null only after the response without Observe and removes the server observer",
+    "The seventh ordered SDK patch preserves the response Partial IV used to reconstruct decrypted OSCORE Observe values"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "worker_sha256": "9528b9e953f41fa281b5c6d823d2d6b406a71a0cc25fce12d0c5c2b87beb6b84",
+      "peer_sha256": "7888793396075fa2bbf6ec95c67dfc65c2a904557d16fdedf1ce4664730bb9bb",
+      "static_library_sha256": "4645502fd5709d041c1146ff1a9675b051649467913c8f4390a671e6a42918da",
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "image": "sha256:f99871f764e9370d376b39c6d13744ee439081f8b4efcf8c774f6e4b87c750b4",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "worker_sha256": "56aa771477dd17e7b89613fd04b658363e13a2b73287c0da53d3b670e00ec8d7",
+      "peer_sha256": "2750cf309d2d697b8f80e4030eb4ff385ef6945d22a62f783dffb1cc3fda416e",
+      "static_library_sha256": "82932fb3fcde7bae297c093bb7878a20ea81676319b092a4bd8f43ace6eb0d72",
+      "artifact_log_sha256": "e73b79d56b98e5ef2802f3a3bb8855b54d355bac9f2d5cbfa35b451428972645",
+      "package_log_sha256": "b8c513532a688cc321c09f5e022b7ff72dedc3ade4438786d3f8f5961ff54879",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": ["address", "undefined", "leak"],
+      "toolchain_packages_recorded_not_locked": true
+    }
+  ],
+  "unaccepted": [
+    "Streamed native report frames and their per-frame credit accounting",
+    "Duplicate/stale and wraparound fault injection, Property coalescing and Event overlap execution",
+    "Max-Age expiry, renewal and abrupt owner/receiver cleanup through the production worker",
+    "Live replay/duplicate and restart fault matrix through the complete worker",
+    "Independent-stack OSCORE interoperability",
+    "Port mailbox saturation, 1000-operation stress and native-v1 corpus completion",
+    "Reproducible Mix build/run orchestration and final manifest-bound executable"
+  ]
+}

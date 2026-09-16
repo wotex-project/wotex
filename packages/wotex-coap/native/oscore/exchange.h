@@ -17,7 +17,16 @@ struct wco_exchange_option {
     size_t length;
 };
 
+enum wco_exchange_delivery {
+    WCO_EXCHANGE_UNARY = 0,
+    WCO_EXCHANGE_OBSERVE_INITIAL,
+    WCO_EXCHANGE_OBSERVE_REPORT,
+    WCO_EXCHANGE_OBSERVE_INTERVENING,
+    WCO_EXCHANGE_CANCELLED
+};
+
 struct wco_exchange_message {
+    enum wco_exchange_delivery delivery;
     uint8_t type, code;
     uint16_t message_id;
     const uint8_t *token, *payload;
@@ -54,6 +63,10 @@ const char *wco_exchange_request(struct wco_exchange *exchange,
                                  uint16_t accept, int format_present,
                                  uint16_t format, int body_present,
                                  const uint8_t *body, size_t body_length);
+const char *wco_exchange_observe(struct wco_exchange *exchange,
+                                 const char *path, int confirmable,
+                                 int accept_present, uint16_t accept);
+const char *wco_exchange_cancel(struct wco_exchange *exchange);
 int wco_exchange_io(struct wco_exchange *exchange);
 int wco_exchange_active(const struct wco_exchange *exchange);
 void wco_exchange_close(struct wco_exchange *exchange);

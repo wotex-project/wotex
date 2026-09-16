@@ -139,6 +139,18 @@ first-response hold. Both public-custody macOS and Linux ASan/UBSan/leak lanes
 verify the complete sequence. Observe, credit, cancellation, replay, independent
 secure interoperability and Mix build/run orchestration remain unaccepted.
 
+The [native worker Observe receipt](native-worker-observe-v1.json) binds the
+next production source cohort and its seventh ordered SDK patch. The patch
+preserves the authenticated response Partial IV used as the 24-bit OSCORE
+Observe value. Through public custody, the same-stack peer proves that
+registration emits its control result before the retained initial report,
+zero credit emits no report, cumulative credit advances only after complete
+stdout writes, a fresh notification advances both Observe and report sequence,
+and cancellation uses the original token with no later report. Both macOS and
+Linux ASan/UBSan/leak lanes execute the sequence. Streamed reports, renewal, the
+observation fault matrix, replay, independent secure interoperability and Mix
+build/run orchestration remain unaccepted.
+
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,
 explicit OSCORE credentials and exact five-field lines; omits absent optionals;

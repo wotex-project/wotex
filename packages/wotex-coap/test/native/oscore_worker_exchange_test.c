@@ -18,10 +18,12 @@
 #include <time.h>
 #include <unistd.h>
 
-static unsigned get_count, post_count, large_count;
+static unsigned get_count, post_count, large_count, observe_count, cancel_count;
 static uint8_t large_body[32769];
 static pid_t worker_child = -1;
 static const char *stage = "startup";
+static coap_resource_t *observed_resource;
+static int notification;
 static const char server_conf[] =
     "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
     "master_salt,hex,\"\"\n"
@@ -51,6 +53,26 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
     uint8_t format[] = {50}, etag[] = {0xaa};
     (void)resource; (void)session;
     if (code == COAP_REQUEST_CODE_GET) {
+        coap_opt_iterator_t iterator;
+        coap_opt_t *observe = coap_check_option(request, COAP_OPTION_OBSERVE,
+                                                &iterator);
+        if (observe) {
+            coap_opt_iterator_t accept_iterator;
+            coap_opt_t *accept = coap_check_option(request, COAP_OPTION_ACCEPT,
+                                                   &accept_iterator);
+            uint32_t value = coap_decode_var_bytes(coap_opt_value(observe),
+                                                   coap_opt_length(observe));
+            const char *payload = notification ? "21" : "20";
+            assert(query == NULL && value <= 1 && accept &&
+                   coap_decode_var_bytes(coap_opt_value(accept),
+                                         coap_opt_length(accept)) == 0);
+            if (value == COAP_OBSERVE_CANCEL) cancel_count++;
+            else observe_count++;
+            coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+            assert(coap_add_option(response, COAP_OPTION_CONTENT_FORMAT, 0, NULL));
+            assert(coap_add_data(response, 2, (const uint8_t *)payload));
+            return;
+        }
         assert(query && query->length == 3 && !memcmp(query->s, "x=1", 3));
         get_count++;
         coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
@@ -108,7 +130,9 @@ static coap_context_t *server(unsigned *port) {
     assert(value);
     coap_register_handler(value, COAP_REQUEST_GET, resource);
     coap_register_handler(value, COAP_REQUEST_POST, resource);
+    coap_resource_set_get_observable(value, 1);
     coap_add_resource(context, value);
+    observed_resource = value;
     large = coap_resource_init(coap_make_str_const("large"),
                                COAP_RESOURCE_FLAGS_OSCORE_ONLY);
     assert(large);
@@ -175,6 +199,18 @@ static void exact(coap_context_t *context, int descriptor, const char *expected)
     assert(!strcmp(output, expected));
 }
 
+static uint32_t report_observe(const char *line) {
+    static const char prefix[] = "\"metadata\":{\"code\":69,\"observe\":";
+    const char *value = strstr(line, prefix);
+    char *end;
+    unsigned long sequence;
+    assert(value);
+    errno = 0;
+    sequence = strtoul(value + sizeof(prefix) - 1, &end, 10);
+    assert(errno == 0 && sequence <= 0xfffffful && *end == ',');
+    return (uint32_t)sequence;
+}
+
 int main(int argc, char **argv) {
     char directory[128];
     char command[131072], output[131072], encoded[2733], large_encoded[43693];
@@ -182,6 +218,7 @@ int main(int argc, char **argv) {
     int input[2], result[2], status;
     pid_t child;
     unsigned port;
+    uint32_t initial_observe;
     coap_context_t *context;
     assert(argc == 2 && argv[1][0] == '/');
 #if defined(__APPLE__)
@@ -317,11 +354,61 @@ int main(int argc, char **argv) {
     assert(post_count == 1);
 
     write_all(input[1],
-        "{\"version\":1,\"id\":\"8\",\"operation\":\"close\",\"parameters\":{},"
+        "{\"version\":1,\"id\":\"8\",\"operation\":\"observe\",\"parameters\":{"
+        "\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":"
+        "\"property\",\"renew\":false,\"accept\":0},\"timeout_ms\":5000}\n");
+    stage = "observe establish";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"8\",\"ok\":true,\"result\":{"
+          "\"subscription_id\":\"8\",\"generation\":1}}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"9\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":1,\"ack_seq\":0},\"timeout_ms\":5000}\n");
+    stage = "observe credit";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"9\",\"ok\":true,\"result\":null}\n");
+    stage = "initial report";
+    line(context, result[0], output, sizeof(output));
+    assert(strstr(output, "\"subscription_id\":\"8\",\"generation\":1,"));
+    assert(strstr(output, "\"report_seq\":1,\"event\":\"report\""));
+    assert(strstr(output, "\"payload\":{\"type\":\"bytes\",\"base64\":\"MjA=\"}"));
+    assert(strstr(output, "\"metadata\":{\"code\":69,\"observe\":"));
+    assert(strstr(output, "\"etag\":null,\"content_format\":0,\"max_age\":60}"));
+    initial_observe = report_observe(output);
+    assert(observe_count == 1);
+
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"10\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":1,\"ack_seq\":1},\"timeout_ms\":5000}\n");
+    stage = "observe acknowledgment";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"10\",\"ok\":true,\"result\":null}\n");
+
+    notification = 1;
+    assert(coap_resource_notify_observers(observed_resource, NULL));
+    stage = "notification";
+    line(context, result[0], output, sizeof(output));
+    assert(strstr(output, "\"subscription_id\":\"8\",\"generation\":1,"));
+    assert(strstr(output, "\"report_seq\":2,\"event\":\"report\""));
+    assert(strstr(output, "\"payload\":{\"type\":\"bytes\",\"base64\":\"MjE=\"}"));
+    assert(report_observe(output) == ((initial_observe + 1) & 0xffffffu));
+    assert(observe_count == 2);
+
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"11\",\"operation\":\"cancel\",\"parameters\":{"
+        "\"subscription_id\":\"8\",\"generation\":1},\"timeout_ms\":5000}\n");
+    stage = "cancel";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"11\",\"ok\":true,\"result\":null}\n");
+    assert(cancel_count == 1);
+    assert(!coap_resource_notify_observers(observed_resource, NULL));
+
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"12\",\"operation\":\"close\",\"parameters\":{},"
         "\"timeout_ms\":5000}\n");
     stage = "close";
     exact(context, result[0],
-          "{\"version\":1,\"id\":\"8\",\"ok\":true,\"result\":null}\n");
+          "{\"version\":1,\"id\":\"12\",\"ok\":true,\"result\":null}\n");
     assert(waitpid(child, &status, 0) == child);
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
         fprintf(stderr, "custody status=%d exited=%d code=%d\n", status,
@@ -335,6 +422,6 @@ int main(int argc, char **argv) {
     snprintf(command, sizeof(command), "%s/context.lock", directory);
     assert(unlink(command) == 0);
     assert(rmdir(directory) == 0);
-    puts("WCO-N02/N04: production worker completes GET, Block2 stream and Block1 POST");
+    puts("WCO-N02/N04: production worker completes unary, streamed and Observe exchanges");
     return 0;
 }

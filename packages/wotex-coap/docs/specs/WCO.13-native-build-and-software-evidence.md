@@ -15,8 +15,10 @@ explicitly selected C executable through an Erlang Port and the pinned libcoap
 exchange engine. Mix owns build/test orchestration and ExUnit owns assertions.
 Python is not a runtime or target orchestration dependency. The native worker
 implements same-binary startup, durable open, upload-body state, close and one
-active unary libcoap exchange with inline or streamed results. Observe and the
-Mix tasks remain planned contracts;
+active unary libcoap exchange with inline or streamed results. It also executes
+one protected Observe registration with inline reports, cumulative credit and
+token-matched cancellation. Streamed reports, renewal and the Mix tasks remain
+planned contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -40,8 +42,10 @@ The representation patch rejects a changed ETag instead of resending the origina
 application request; a dispatched POST/PUT cannot be replayed to restart body
 assembly. The completed-whole-body patch releases libcoap's first-response hold
 after authenticated Block2 assembly so a following request is not delayed by
-the internal five-second guard. These fixed profile policies preserve libcoap's
-exchange ownership.
+the internal five-second guard. The OSCORE Observe patch preserves the response
+Partial IV before libcoap temporarily substitutes the request Partial IV for AAD
+calculation, so the decrypted 24-bit Observe value advances with authenticated
+notifications. These fixed profile policies preserve libcoap's exchange ownership.
 The native manifest records base archive, patches and
 resulting source hashes separately; it cannot describe this build as unmodified
 upstream. `test/native/oscore_sequence_test.c` asserts the actual public send
@@ -166,7 +170,7 @@ owned adapter during bounded cleanup. The injected Runtime fixture proves this
 dispatch contract; it is not the production worker or a protected exchange.
 
 `native/oscore/main.c`, `worker.c` and `exchange.c` implement the corresponding
-same-binary lifecycle and first unary exchange slice. The public entry accepts
+same-binary lifecycle plus unary and inline Observe exchange slices. The public entry accepts
 only `--custody ABS_DIRECTORY`; the
 guardian executes that same absolute file with only `--worker`. The internal
 worker emits the pinned ready frame, accepts split or coalesced C07 commands,
@@ -182,10 +186,13 @@ Block1/Block2. Its nonblocking 512 KiB queue tracks each frame's original
 deadline. The macOS lifecycle test retains lock, consumed-identity, escaped-ID
 and malformed teardown coverage. A same-stack peer additionally executes
 protected GET, a 32,769-byte Block2 stream and Block1 POST through public custody
-on macOS and Linux; the Linux static build uses ASan/UBSan and leak detection.
-Observe, credit and cancel return finite `native_unavailable` until their
-lifecycle package is implemented. This evidence does not accept observation,
-replay, independent OSCORE interoperability or the final Mix-built helper.
+on macOS and Linux. The same peer then registers a protected Observe, proves the
+initial report stays silent at zero credit, acknowledges each completely written
+report, receives a fresh notification and cancels the original token before close.
+The Linux static build uses ASan/UBSan and leak detection. This evidence accepts
+only inline reports; it does not accept streamed reports, renewal, the full
+observation fault matrix, replay, independent OSCORE interoperability or the
+final Mix-built helper.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and
