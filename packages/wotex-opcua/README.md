@@ -87,6 +87,8 @@ successful service response is exposed.
 The C ingress also rejects malformed `open` configuration, including insecure
 policy or mode selection, before it touches the SDK network stack. Shape-valid
 opens still fail closed pending certificate verification and Session ownership.
+The owner also sends a generation-bound initial credit before the request; normal
+output and replenishment are still part of the unfinished native service path.
 
 `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` remain specified work. Bootstrap build

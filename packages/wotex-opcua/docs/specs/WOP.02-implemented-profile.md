@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.12
+  version: 1.0.13
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -112,6 +112,11 @@ three allowed security-policy URI strings, `SignAndEncrypt`, bounded text and
 session timeout, closed user-token maps, and canonical base64 byte envelopes.
 The test certificate bytes are deliberately not valid certificates; this layer
 does not parse trust, authenticate a server, activate a Session or send packets.
+The owner now sends one bounded initial credit control before its request. The
+C process binds that credit to the generation, rejects a request without it,
+and rejects further credit before any output has been consumed. Terminal output
+uses the separate control allowance. Normal response/report credit accounting,
+replenishment and subscriptions remain unimplemented.
 `Native.Host` admits both explicit executable digests before process creation,
 receives strict versioned readiness, and links to the original caller only after
 successful initialization and a one-use ownership claim. Hashing, spawn,

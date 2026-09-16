@@ -220,6 +220,38 @@ and server identity,
 certificate chain, CRL, private key and token security must be validated before
 any native Session attempt.
 
+## P02 initial credit and generation admission
+
+The BEAM owner now emits the version-1 initial credit control with sequence one,
+16 messages and 262144 bytes before its first request. Native ingress checks the
+closed credit map and exact integer bounds, binds the first valid generation,
+then rejects requests without the credit, mismatched generations and further
+grants before output is consumed. It does not yet emit a normal response or
+replenish consumed credits. The C driver exercises exact uint64 generation,
+positive quantity ceilings, fractional/extra/duplicate fields and invalid
+event kinds. The selected native build test sends the production credit and
+request to the real C process and separately proves missing-credit rejection.
+
+| Initial-credit source/evidence | SHA-256 |
+| --- | --- |
+| `priv/native/ipc.c` | `30287e937c00c2efac518128700d7ec8d67c2bd45f772275da5c5f8fcef90129` |
+| `priv/native/ipc.h` | `cb4f64c492ff8fa8559ba6325d403e77a28ff489bd96912db22c9303ba50b5d6` |
+| `priv/native/ipc_check.c` | `a7cf8af8dd73a642ac6f498f1e46c12f11d8e3c516370b264ab8cf9001f4a275` |
+| `priv/native/main.c` | `9fb005cff6c2f7f75130a43db4fc0f2adc080e929adead5c46c8e9a7ea51821e` |
+| `lib/wotex/opcua/native/frame.ex` | `a670f5dec7261e586e505228e8e6bb00ac154296914bcff456b148edacc9bb9b` |
+| `lib/wotex/opcua/native/host.ex` | `5473b070b452a00b0af3ead77778641fa9fbfed926e29b86d0b8e4c31719cc74` |
+| `test/wotex/opcua/native/frame_test.exs` | `d7d6907c311a1514aeec00a8b2e9157a199e93dd5345a29e7a72c0f5f421922e` |
+| `test/wotex/opcua/native/build_test.exs` | `865ec93810607588238f5c81b4b18936017c1a8057dd6f614aa977cb8033b315` |
+| local normal CTest log | `25735c8461c630f6ec668e10c8d76643d452bed92eb2e15e7ebf80d61b0c1d0d` |
+| local sanitizer CTest log | `667665b1a6152c9691b077d0438f0b3ceac79c2788bedbc801ae1a6384d97f01` |
+
+The local static-prefix build passes 179/179 CTest cases; the selected macOS
+ASan/UBSan lane passes 168/168. `WOTEX_PATH_DEPS=1 mix check --no-retry` passed
+260 checks (10 doctests, four properties, 246 tests), one interoperability
+exclusion and 95.8% BEAM coverage, including the fresh pinned build, package
+checks, docs and out-of-tree archive. P02 is still open: normal
+credit consumption/replenishment, output queues and every service remain absent.
+
 ## Implemented Python-adapter interoperability
 
 Real secure asyncua 2.0.1 peer: PASS for read, write/readback/restore, browse,

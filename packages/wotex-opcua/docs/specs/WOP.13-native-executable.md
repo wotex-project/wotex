@@ -21,6 +21,9 @@ for an explicit request. It does not yet relay service responses or grant credit
 The C ingress checks the `open` parameter shape and rejects malformed or
 downgraded values before a network attempt. It has no certificate trust or
 Session activation yet; a shape-valid open still ends as `unsupported_protocol`.
+The owner and C ingress now exchange one initial credit control before the
+request. It binds the process generation; requests without it and later credit
+before consumption fail. No normal output spends credit yet.
 Secure native Sessions and services remain required implementation.
 The target runtime uses an Elixir API and an explicitly owned open62541 C executable.
 Python is confined to the independent test peer and upstream build generators.
@@ -448,7 +451,7 @@ the expectation. Pure framing cases run every split and coalescing of the given 
 semantic cases serialize through the production encoder, never a fixture echo.
 The separate initial P02 input tests exercise the real executable's strict
 line parser, closed outer request keys, expired-deadline rejection and one
-generation-matched terminal-only owner exchange and the `open` parameter
+generation-matched initial credit, terminal-only owner exchange and the `open` parameter
 shape. They do not bind any additional `native-contract-v1.json` case, validate
 service parameters or credentials cryptographically, activate a Session or send
 a service request.

@@ -78,6 +78,30 @@ defmodule Wotex.OPCUA.Native.Frame do
 
   def request(_, _, _, _, _, _), do: {:error, Error.new(:invalid_native_frame, :request)}
 
+  @doc "Encodes an initial or bounded replenishment credit control."
+  @spec credit(term(), term(), term(), term()) :: {:ok, binary()} | {:error, Error.t()}
+  def credit(generation, sequence, messages, bytes)
+      when is_integer(generation) and generation in 1..@maximum_generation and
+             is_integer(sequence) and sequence in 1..@maximum_generation and
+             is_integer(messages) and messages in 1..16 and
+             is_integer(bytes) and bytes in 1..262_144 do
+    control = %{
+      "version" => 1,
+      "generation" => generation,
+      "event" => "credit",
+      "sequence" => sequence,
+      "messages" => messages,
+      "bytes" => bytes
+    }
+
+    case Wotex.JSON.encode(control, max_bytes: 4095, max_depth: 1, max_nodes: 7) do
+      {:ok, encoded} when byte_size(encoded) < 4096 -> {:ok, encoded <> "\n"}
+      _ -> {:error, Error.new(:invalid_native_frame, :credit)}
+    end
+  end
+
+  def credit(_, _, _, _), do: {:error, Error.new(:invalid_native_frame, :credit)}
+
   @doc "Decodes one terminal control for the expected generation without exposing native text."
   @spec terminal(term(), term()) :: {:ok, Error.t()} | {:error, Error.t()}
   def terminal(frame, generation)

@@ -161,6 +161,8 @@ defmodule Wotex.OPCUA.Native.Host do
              admission.timeout_ms,
              admission.deadline_ms
            ),
+         {:ok, credit} <- Frame.credit(state.generation, 1, 16, 262_144),
+         :ok <- send_frame(state.port, credit),
          :ok <- send_frame(state.port, frame) do
       timer = Process.send_after(self(), :request_expired, max(deadline - now, 0))
       {:noreply, %{state | pending: %{from: from, timer: timer}}}

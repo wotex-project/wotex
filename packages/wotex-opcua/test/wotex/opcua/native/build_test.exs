@@ -116,6 +116,8 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert {:ok, request} =
              Frame.request(7, "r1", "read", %{}, 1000, 9_223_372_036_854_775_807)
 
+    assert_native_terminal(native, [request], nil, "invalid_request", "validation")
+
     assert_native_terminal(
       native,
       [binary_part(request, 0, 23), binary_part(request, 23, byte_size(request) - 23)],
@@ -131,7 +133,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert_native_terminal(native, [invalid], 7, "invalid_request", "validation")
 
     duplicate = String.replace(request, "\"id\":\"r1\"", "\"id\":\"r1\",\"id\":\"r2\"")
-    assert_native_terminal(native, [duplicate], nil, "invalid_request", "validation")
+    assert_native_terminal(native, [duplicate], 7, "invalid_request", "validation")
 
     bytes = %{"type" => "bytes", "base64" => "AQ=="}
 
@@ -258,6 +260,11 @@ defmodule Wotex.OPCUA.Native.BuildTest do
 
       assert %{"version" => 1, "event" => "ready", "backend" => "open62541"} =
                Jason.decode!(ready)
+
+      if generation do
+        assert {:ok, credit} = Frame.credit(generation, 1, 16, 262_144)
+        assert Port.command(port, credit)
+      end
 
       Enum.each(fragments, fn fragment -> assert Port.command(port, fragment) end)
       assert_receive {^port, {:data, terminal}}, 5_000

@@ -107,6 +107,7 @@ static int bootstrap(void) {
         return 70;
     }
     WopIpcInput input = {0};
+    uint64_t admitted_generation = 0;
     UA_ClientConfig *config = UA_Client_getConfig(client);
     if(config->logging)
         config->logging->log = silent_log;
@@ -136,7 +137,7 @@ static int bootstrap(void) {
         ssize_t count = read(STDIN_FILENO, buffer, sizeof(buffer));
         if(count == 0) {
             if(input.used)
-                (void)terminal(0, "invalid_request", "validation");
+                (void)terminal(admitted_generation, "invalid_request", "validation");
             else
                 status = 0;
             break;
@@ -153,7 +154,7 @@ static int bootstrap(void) {
             if(framed == WOP_IPC_MORE)
                 break;
             if(framed != WOP_IPC_FRAME) {
-                (void)terminal(0, "invalid_request", "validation");
+                (void)terminal(admitted_generation, "invalid_request", "validation");
                 goto done;
             }
             WopJson parsed = {0};
@@ -164,8 +165,20 @@ static int bootstrap(void) {
                 yyjson_val *root = yyjson_doc_get_root(parsed.document);
                 if(yyjson_is_obj(root))
                     (void)wop_json_uint64(yyjson_obj_get(root, "generation"), &generation);
-                if(!wop_ipc_request(root, &request)) {
-                    (void)terminal(generation, "invalid_request", "validation");
+                if(yyjson_is_obj(root) && yyjson_obj_get(root, "event")) {
+                    WopIpcCredit credit;
+                    if(admitted_generation || !wop_ipc_credit(root, &credit) ||
+                       credit.sequence != 1) {
+                        (void)terminal(admitted_generation, "invalid_request", "validation");
+                    } else {
+                        admitted_generation = credit.generation;
+                        wop_json_clear(&parsed);
+                        input.used = 0;
+                        continue;
+                    }
+                } else if(!wop_ipc_request(root, &request) || !admitted_generation ||
+                          request.generation != admitted_generation) {
+                    (void)terminal(admitted_generation, "invalid_request", "validation");
                 } else if(request.open &&
                           !wop_ipc_open(yyjson_obj_get(root, "parameters"))) {
                     (void)terminal(request.generation, "invalid_request", "validation");
@@ -177,7 +190,7 @@ static int bootstrap(void) {
                 }
                 wop_json_clear(&parsed);
             } else {
-                (void)terminal(0, "invalid_request", "validation");
+                (void)terminal(admitted_generation, "invalid_request", "validation");
             }
             goto done;
         }

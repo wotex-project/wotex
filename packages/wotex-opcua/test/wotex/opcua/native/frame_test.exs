@@ -104,4 +104,32 @@ defmodule Wotex.OPCUA.Native.FrameTest do
       assert {:error, %Error{code: :invalid_native_frame}} = Frame.terminal(invalid, 7)
     end
   end
+
+  test "WOP-X04 initial credit is exact, bounded and generation-scoped" do
+    assert {:ok, frame} = Frame.credit(18_446_744_073_709_551_615, 1, 16, 262_144)
+    assert String.ends_with?(frame, "\n")
+    assert byte_size(frame) <= 4096
+    assert {:ok, value} = Wotex.JSON.decode(binary_part(frame, 0, byte_size(frame) - 1))
+
+    assert value == %{
+             "version" => 1,
+             "generation" => 18_446_744_073_709_551_615,
+             "event" => "credit",
+             "sequence" => 1,
+             "messages" => 16,
+             "bytes" => 262_144
+           }
+
+    for invalid <- [
+          [0, 1, 16, 262_144],
+          [1, 0, 16, 262_144],
+          [1, 1, 0, 262_144],
+          [1, 1, 17, 262_144],
+          [1, 1, 16, 0],
+          [1, 1, 16, 262_145]
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame, field: :credit}} =
+               apply(Frame, :credit, invalid)
+    end
+  end
 end

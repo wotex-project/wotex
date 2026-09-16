@@ -104,6 +104,28 @@ static bool closed(yyjson_val *object, const char *const *keys, size_t count) {
     return true;
 }
 
+bool wop_ipc_credit(yyjson_val *root, WopIpcCredit *credit) {
+    static const char *const fields[] = {
+        "version", "generation", "event", "sequence", "messages", "bytes"
+    };
+    if (!credit || !closed(root, fields, 6)) return false;
+    int64_t version;
+    WopIpcCredit parsed = {0};
+    yyjson_val *event = yyjson_obj_get(root, "event");
+    if (!wop_json_int64(yyjson_obj_get(root, "version"), &version) || version != 1 ||
+        !yyjson_is_str(event) || !key_is(event, "credit") ||
+        !wop_json_uint64(yyjson_obj_get(root, "generation"), &parsed.generation) ||
+        parsed.generation == 0 ||
+        !wop_json_uint64(yyjson_obj_get(root, "sequence"), &parsed.sequence) ||
+        parsed.sequence == 0 ||
+        !wop_json_uint64(yyjson_obj_get(root, "messages"), &parsed.messages) ||
+        parsed.messages == 0 || parsed.messages > 16 ||
+        !wop_json_uint64(yyjson_obj_get(root, "bytes"), &parsed.bytes) ||
+        parsed.bytes == 0 || parsed.bytes > 262144) return false;
+    *credit = parsed;
+    return true;
+}
+
 static bool bounded_text(yyjson_val *value, size_t maximum) {
     return yyjson_is_str(value) && yyjson_get_len(value) > 0 &&
            yyjson_get_len(value) <= maximum &&

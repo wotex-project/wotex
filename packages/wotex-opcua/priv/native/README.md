@@ -17,6 +17,10 @@ The `open` parameter map is now checked for its exact keys, policy/mode literals
 bounded identity strings, canonical base64 envelopes, user-token form and
 session timeout. This is a shape gate only; certificate parsing/trust and SDK
 Session activation remain separate work.
+`ipc.c` also validates a closed initial credit frame. `main.c` binds it to the
+process generation and requires it before a request. Terminal output uses its
+control allowance; normal output, consumed-credit replenishment and queued
+notifications are not implemented.
 
 `build_command.c` is the reviewed POSIX command guardian from the Wotex Modbus
 source at commit `018f419b0644cfecc83891551d10b5c8d771d7c6`,

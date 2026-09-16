@@ -144,6 +144,42 @@ static int open_cases(void) {
     return 0;
 }
 
+static int credit_case(const char *frame, bool expected) {
+    void *pool = malloc(WOP_JSON_POOL_BYTES);
+    CHECK(pool);
+    WopJson json = {0};
+    WopIpcCredit credit;
+    bool valid = wop_json_read(frame, strlen(frame), pool, WOP_JSON_POOL_BYTES, &json) == WOP_JSON_OK &&
+                 wop_ipc_credit(yyjson_doc_get_root(json.document), &credit);
+    CHECK(valid == expected);
+    if (valid) {
+        CHECK(credit.generation == UINT64_MAX);
+        CHECK(credit.sequence == 1 && credit.messages == 16 && credit.bytes == 262144);
+    }
+    wop_json_clear(&json);
+    free(pool);
+    return 0;
+}
+
+static int credit_cases(void) {
+    static const char *valid =
+        "{\"version\":1,\"generation\":18446744073709551615,\"event\":\"credit\","
+        "\"sequence\":1,\"messages\":16,\"bytes\":262144}\n";
+    int status = credit_case(valid, true);
+    static const char *invalid[] = {
+        "{\"version\":1,\"generation\":1,\"event\":\"credit\",\"sequence\":0,\"messages\":16,\"bytes\":262144}\n",
+        "{\"version\":1,\"generation\":1,\"event\":\"credit\",\"sequence\":1,\"messages\":17,\"bytes\":262144}\n",
+        "{\"version\":1,\"generation\":1,\"event\":\"credit\",\"sequence\":1,\"messages\":16,\"bytes\":262145}\n",
+        "{\"version\":1,\"generation\":1,\"event\":\"credit\",\"sequence\":1.0,\"messages\":16,\"bytes\":262144}\n",
+        "{\"version\":1,\"generation\":1,\"event\":\"ready\",\"sequence\":1,\"messages\":16,\"bytes\":262144}\n",
+        "{\"version\":1,\"generation\":1,\"event\":\"credit\",\"sequence\":1,\"messages\":16,\"bytes\":262144,\"extra\":1}\n",
+        "{\"version\":1,\"generation\":1,\"event\":\"credit\",\"sequence\":1,\"messages\":16,\"bytes\":262144,\"bytes\":1}\n"
+    };
+    for (size_t i = 0; !status && i < sizeof(invalid) / sizeof(invalid[0]); i++)
+        status = credit_case(invalid[i], false);
+    return status;
+}
+
 int main(void) {
     static const char *invalid[] = {
         "{\"version\":1,\"generation\":1}\n",
@@ -164,6 +200,7 @@ int main(void) {
     int status = split_lines();
     if (!status) status = bounds();
     if (!status) status = open_cases();
+    if (!status) status = credit_cases();
     if (!status) status = request_case(valid, true);
     for (size_t i = 0; !status && i < sizeof(invalid) / sizeof(invalid[0]); i++)
         status = request_case(invalid[i], false);

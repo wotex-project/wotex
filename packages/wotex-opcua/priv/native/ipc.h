@@ -33,4 +33,14 @@ bool wop_ipc_request(yyjson_val *root, WopIpcRequest *request);
 /* Closed open-parameter shape, before any certificate or SDK admission. */
 bool wop_ipc_open(yyjson_val *parameters);
 
+typedef struct {
+    uint64_t generation;
+    uint64_t sequence;
+    uint64_t messages;
+    uint64_t bytes;
+} WopIpcCredit;
+
+/* Closed initial credit; subsequent replenishment requires delivered output. */
+bool wop_ipc_credit(yyjson_val *root, WopIpcCredit *credit);
+
 #endif
