@@ -6,6 +6,13 @@ binary conversion without a network request. `--self-test` is an explicit build
 check, not an OPC UA service or interoperability result. Executable ready is a
 process protocol event; successful Session activation requires the complete
 native service owner.
+`ipc.c` assembles input lines within the 131072-byte ceiling and checks the
+closed outer request envelope after `json_codec.c` parses the complete line.
+The executable rejects malformed or expired input with one terminal frame and
+rejects every otherwise valid request as `unsupported_protocol`. It does not
+validate operation parameters or issue an SDK service. `ipc_check.c` covers
+every split of a request line, coalescing, bounds and malformed envelopes;
+the pinned build test also exercises the real process input and terminal output.
 
 `build_command.c` is the reviewed POSIX command guardian from the Wotex Modbus
 source at commit `018f419b0644cfecc83891551d10b5c8d771d7c6`,
@@ -61,8 +68,8 @@ floating conversion preserves negative zero and rejects overflow. The build
 checks the vendor source and license digests before compiling and installs the
 license beside its native artifacts. `json_check.c` supplies parser and numeric
 projections for executable corpus checks. It is not installed as a runtime
-program. Typed SDK value conversion, serialization and service admission remain
-required implementation.
+program. Typed SDK value conversion exists separately; complete service
+serialization and admission remain required implementation.
 
 `native_contract_check.c` binds the first sixteen native contract vectors to
 the typed codec, strict parser and pure NamespaceArray translation helper. It is

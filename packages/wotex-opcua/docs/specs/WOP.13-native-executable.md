@@ -5,7 +5,7 @@ spec:
   status: accepted
   version: 1.1.2
   owner: wotex-opcua
-  updated: 2026-09-09
+  updated: 2026-09-16
 ---
 
 # WOP.13 Native OPC UA executable and software acceptance
@@ -13,7 +13,9 @@ spec:
 This accepted target is **partially implemented**. WOP-P00 accepts the pinned
 source/build/bootstrap and portable process-custody boundary, and WOP-P01 accepts
 pure typed values plus production SDK value projection, for the exact cohorts
-in executable evidence. Secure native Sessions and services remain required implementation.
+in executable evidence. The first P02 slice connects bounded input framing and
+outer-envelope validation to the actual executable; no service is admitted.
+Secure native Sessions and services remain required implementation.
 The target runtime uses an Elixir API and an explicitly owned open62541 C executable.
 Python is confined to the independent test peer and upstream build generators.
 A native executable, a protocol service, a WoT binding and an interoperability
@@ -438,6 +440,10 @@ cases must be bound to the actual IPC parser/owner/SDK adapter, or an explicitly
 labelled injected service boundary, before acceptance. The asserting runner owns
 the expectation. Pure framing cases run every split and coalescing of the given line;
 semantic cases serialize through the production encoder, never a fixture echo.
+The separate initial P02 input test exercises the real executable's strict
+line parser, closed outer request keys and expired-deadline rejection. It does
+not bind any additional `native-contract-v1.json` case, validate per-operation
+parameters, activate a Session or send a service request.
 Native traces use a deterministic service/clock boundary; peer lanes separately
 prove real bytes, certificates and callbacks. The full S/N/I scenario matrices
 remain required in addition to the concrete corpus.

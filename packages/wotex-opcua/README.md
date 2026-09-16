@@ -75,6 +75,11 @@ through WOP-X-F16 without a Session or network peer. Namespace translation is a
 pure exact-match primitive; Session-owned NamespaceArray acquisition and all
 service, security and subscription behavior remain later packets.
 
+The first P02 slice connects bounded JSON-line framing and outer request
+validation to the actual C executable. Its tests exercise split lines, closed
+fields, integer limits and expired deadlines. Valid requests still terminate
+with `unsupported_protocol`; native Session, credits and services remain open.
+
 `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` remain specified work. Bootstrap build
 success does not establish a native Session or accept the native protocol profile.

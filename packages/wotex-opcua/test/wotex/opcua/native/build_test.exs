@@ -111,6 +111,28 @@ defmodule Wotex.OPCUA.Native.BuildTest do
       assert native_tests =~ "native_value_fault_WOP-NF#{id}"
     end
 
+    assert native_tests =~ "native_ipc_admission"
+
+    request =
+      ~s({"version":1,"generation":7,"id":"r1","operation":"read","parameters":{},"timeout_ms":1000,"deadline_ms":9223372036854775807}\n)
+
+    assert_native_terminal(
+      native,
+      [binary_part(request, 0, 23), binary_part(request, 23, byte_size(request) - 23)],
+      7,
+      "unsupported_protocol",
+      "validation"
+    )
+
+    expired = String.replace(request, "9223372036854775807", "0")
+    assert_native_terminal(native, [expired], 7, "deadline_exceeded", "admission")
+
+    invalid = String.replace(request, "\"timeout_ms\":1000", "\"timeout_ms\":1.5")
+    assert_native_terminal(native, [invalid], 7, "invalid_request", "validation")
+
+    duplicate = String.replace(request, "\"id\":\"r1\"", "\"id\":\"r1\",\"id\":\"r2\"")
+    assert_native_terminal(native, [duplicate], nil, "invalid_request", "validation")
+
     assert {:ok, host, %{ready: %Wotex.OPCUA.Native.Ready{}, received_at_ms: received}} =
              Wotex.OPCUA.Native.Host.start_link(
                executable: native,
@@ -174,5 +196,31 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert {:ok, %{reused: true}} = Build.run(workspace)
     assert {:ok, _} = File.rm_rf(workspace)
     refute File.exists?(workspace)
+  end
+
+  defp assert_native_terminal(executable, fragments, generation, code, phase) do
+    port = Port.open({:spawn_executable, executable}, [:binary, :exit_status])
+
+    try do
+      assert_receive {^port, {:data, ready}}, 5_000
+
+      assert %{"version" => 1, "event" => "ready", "backend" => "open62541"} =
+               Jason.decode!(ready)
+
+      Enum.each(fragments, fn fragment -> assert Port.command(port, fragment) end)
+      assert_receive {^port, {:data, terminal}}, 5_000
+
+      assert Jason.decode!(terminal) == %{
+               "version" => 1,
+               "generation" => generation,
+               "event" => "terminal",
+               "error" => %{"code" => code, "phase" => phase, "effect" => "none"}
+             }
+
+      assert_receive {^port, {:exit_status, 70}}, 5_000
+      refute_receive {^port, {:data, _}}, 50
+    after
+      if Port.info(port), do: Port.close(port)
+    end
   end
 end

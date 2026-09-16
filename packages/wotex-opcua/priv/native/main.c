@@ -3,12 +3,14 @@
  * The first-party source is licensed under the repository's Apache-2.0 license. */
 #include <open62541/client.h>
 #include <open62541/client_config_default.h>
+#include "ipc.h"
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/opensslv.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <stdlib.h>
 #include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -78,10 +80,33 @@ static int self_test(void) {
     return result == UA_STATUSCODE_GOOD && decoded == ticks;
 }
 
+static int terminal(uint64_t generation, const char *code, const char *phase) {
+    char output[256];
+    int size;
+    if(generation) {
+        size = snprintf(output, sizeof(output),
+            "{\"version\":1,\"generation\":%" PRIu64 ",\"event\":\"terminal\","
+            "\"error\":{\"code\":\"%s\",\"phase\":\"%s\",\"effect\":\"none\"}}\n",
+            generation, code, phase);
+    } else {
+        size = snprintf(output, sizeof(output),
+            "{\"version\":1,\"generation\":null,\"event\":\"terminal\","
+            "\"error\":{\"code\":\"%s\",\"phase\":\"%s\",\"effect\":\"none\"}}\n",
+            code, phase);
+    }
+    return size > 0 && (size_t)size < sizeof(output) && write_control(output, (size_t)size);
+}
+
 static int bootstrap(void) {
     UA_Client *client = UA_Client_new();
     if(!client)
         return 70;
+    void *json_pool = malloc(WOP_JSON_POOL_BYTES);
+    if(!json_pool) {
+        UA_Client_delete(client);
+        return 70;
+    }
+    WopIpcInput input = {0};
     UA_ClientConfig *config = UA_Client_getConfig(client);
     if(config->logging)
         config->logging->log = silent_log;
@@ -99,8 +124,8 @@ static int bootstrap(void) {
         goto done;
 
     for(;;) {
-        struct pollfd input = {STDIN_FILENO, POLLIN, 0};
-        int polled = poll(&input, 1, 1000);
+        struct pollfd descriptor = {STDIN_FILENO, POLLIN, 0};
+        int polled = poll(&descriptor, 1, 10);
         if(polled < 0 && errno == EINTR)
             continue;
         if(polled < 0)
@@ -110,23 +135,52 @@ static int bootstrap(void) {
         char buffer[4096];
         ssize_t count = read(STDIN_FILENO, buffer, sizeof(buffer));
         if(count == 0) {
-            status = 0;
+            if(input.used)
+                (void)terminal(0, "invalid_request", "validation");
+            else
+                status = 0;
             break;
         }
         if(count < 0 && (errno == EINTR || errno == EAGAIN))
             continue;
         if(count < 0)
             break;
-        /* No service succeeds until its complete typed admission is present.
-         * Bootstrap readiness alone never reports an activated UA Session. */
-        static const char terminal[] =
-            "{\"version\":1,\"generation\":null,\"event\":\"terminal\","
-            "\"error\":{\"code\":\"unsupported_protocol\","
-            "\"phase\":\"validation\",\"effect\":\"none\"}}\n";
-        (void)write_control(terminal, sizeof(terminal) - 1);
-        break;
+        for(size_t offset = 0; offset < (size_t)count;) {
+            size_t consumed = 0;
+            WopIpcFrameStatus framed = wop_ipc_feed(&input, buffer + offset,
+                                                      (size_t)count - offset, &consumed);
+            offset += consumed;
+            if(framed == WOP_IPC_MORE)
+                break;
+            if(framed != WOP_IPC_FRAME) {
+                (void)terminal(0, "invalid_request", "validation");
+                goto done;
+            }
+            WopJson parsed = {0};
+            WopIpcRequest request;
+            uint64_t generation = 0;
+            if(wop_json_read(input.bytes, input.used, json_pool, WOP_JSON_POOL_BYTES,
+                             &parsed) == WOP_JSON_OK) {
+                yyjson_val *root = yyjson_doc_get_root(parsed.document);
+                if(yyjson_is_obj(root))
+                    (void)wop_json_uint64(yyjson_obj_get(root, "generation"), &generation);
+                if(!wop_ipc_request(root, &request)) {
+                    (void)terminal(generation, "invalid_request", "validation");
+                } else if((clock_ms = monotonic_ms()) < 0 || clock_ms >= request.deadline_ms) {
+                    (void)terminal(request.generation, "deadline_exceeded", "admission");
+                } else {
+                    /* Framing is connected; no SDK service is admitted yet. */
+                    (void)terminal(request.generation, "unsupported_protocol", "validation");
+                }
+                wop_json_clear(&parsed);
+            } else {
+                (void)terminal(0, "invalid_request", "validation");
+            }
+            goto done;
+        }
     }
 done:
+    free(json_pool);
     UA_Client_delete(client);
     return status;
 }

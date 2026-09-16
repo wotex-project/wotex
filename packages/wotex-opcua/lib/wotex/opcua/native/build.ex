@@ -30,7 +30,8 @@ defmodule Wotex.OPCUA.Native.Build do
   }
 
   @native_files ~w(CMakeLists.txt main.c build_command.c custody.c custody_check.c README.md runtime-guardian.md
-    json_codec.c json_codec.h json_check.c json-codec.md value_codec.c value_codec.h value_check.c value_fault_check.c
+    json_codec.c json_codec.h json_check.c json-codec.md ipc.c ipc.h ipc_check.c
+    value_codec.c value_codec.h value_check.c value_fault_check.c
     native_contract_check.c
     value-codec.md fixtures/value-v1.json vendor/yyjson/yyjson.c vendor/yyjson/yyjson.h vendor/yyjson/LICENSE)
   @native_contract Path.expand("../../../../docs/specs/fixtures/native-contract-v1.json", __DIR__)

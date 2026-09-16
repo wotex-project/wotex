@@ -97,6 +97,42 @@ projection and exact namespace translation. The namespace arrays are explicit
 inputs to a pure primitive. Their acquisition and lifetime, native Sessions,
 services, subscriptions and independent peers remain required by later packets.
 
+## Initial WOP-P02 input boundary (package remains open)
+
+On 2026-09-16, the actual `wotex_opcua_native` process used `ipc.c` and the
+strict production JSON reader to assemble and validate an outer request line.
+`native_ipc_admission` exercises every split of its valid line, two coalesced
+lines, the exact frame ceiling, NUL rejection, closed keys, duplicate keys,
+exact integer endpoints and malformed envelope fields. The required native
+build test speaks to the installed executable through a real Port and asserts
+ready followed by exactly one terminal for split valid input, expired deadline,
+fractional timeout and duplicate ID. No SDK service request is sent.
+
+`WOTEX_PATH_DEPS=1 mix check --no-retry` passed 254 checks (10 doctests, four
+properties, 240 tests), one excluded interoperability test and 96.3% BEAM
+coverage. Its selected native build rebuilt the pinned sources, ran CTest and
+checked receipt tampering. A separate CMake build against the already verified
+pinned static prefixes passed 179/179 CTest cases. A Debug
+`WOTEX_SANITIZERS=ON` build with `ASAN_OPTIONS=detect_leaks=0:halt_on_error=1`
+and `UBSAN_OPTIONS=halt_on_error=1` passed 168/168 selected
+`native_(ipc|json|value|contract)` cases on macOS arm64. These local runs do
+not establish Linux sanitizer coverage for the new slice.
+
+| P02 input source/evidence | SHA-256 |
+| --- | --- |
+| `priv/native/ipc.c` | `39a10286f82841f74b323f98c5d225ccb1f5d6297d5b85538f19a8a27aa2be1f` |
+| `priv/native/ipc.h` | `cd603dc0ad185f52cd23210e89107bebb2420dad40d4fb26faac22926e035e3a` |
+| `priv/native/main.c` | `c388e31dbcee974bb032a9221aca73c76f5aecd1eaca9eceeab41e9461baabeb` |
+| `priv/native/ipc_check.c` | `731617b3cc25db22036d557e54633e5eb99477b4592d940e58d908f26b61f55c` |
+| `test/wotex/opcua/native/build_test.exs` | `a2a4d40235b7f6e5ea858634bba5baa8a59658f41deff14fcb94da9e7dbfefcb` |
+| local normal CTest log | `30b15182ed0c19767c2ee50327aca1d67256c449413beef94db8ee47af4f8ebe` |
+| local sanitizer CTest log | `dd8819b7bc7f05582a58c8fb804739d531bd009e44399d003f857d24e8a49932` |
+
+This is a process-input and terminal-rejection slice, not acceptance of P02.
+Per-operation parameter validation, persistent Session activation, namespace
+acquisition, credits, responses, cancellation and all X-F17..F23/X-F49..F57
+remain required. The current Python adapter still owns public network operations.
+
 ## Implemented Python-adapter interoperability
 
 Real secure asyncua 2.0.1 peer: PASS for read, write/readback/restore, browse,

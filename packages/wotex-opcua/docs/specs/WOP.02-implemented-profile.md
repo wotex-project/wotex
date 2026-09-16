@@ -3,9 +3,9 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.8
+  version: 1.0.9
   owner: wotex-opcua
-  updated: 2026-09-09
+  updated: 2026-09-16
 ---
 
 # WOP.02 Implemented OPC UA profile
@@ -91,9 +91,13 @@ Its trusted compiler bootstrap has explicitly unverified descendant cleanup on
 failure. Source, workspace and tool failures cannot produce a completion receipt.
 
 The current C executable emits versioned readiness, exits on owner EOF and runs
-explicit SHA-256/SDK DateTime dependency self-tests. Requests fail closed until
-the native service owner is implemented. These are WOP-P00 build/ownership cells,
-not acceptance of WOP.13 secure Session, subscription or interoperability cells.
+explicit SHA-256/SDK DateTime dependency self-tests. It now assembles a bounded
+input line and applies the strict JSON reader and closed outer request envelope
+to that process input. Malformed frames terminate with `invalid_request`; an
+expired native deadline yields `deadline_exceeded`. A well-formed request yields
+`unsupported_protocol` without service I/O. Parameter-specific validation,
+credits, native Session activation and responses remain unimplemented. This
+partial P02 boundary does not accept WOP.13 services or interoperability.
 `Native.Host` admits both explicit executable digests before process creation,
 receives strict versioned readiness, and links to the original caller only after
 successful initialization and a one-use ownership claim. Hashing, spawn,
