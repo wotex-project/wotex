@@ -8,7 +8,8 @@ defmodule Wotex.OPCUA.Open62541 do
   This client projects Value Read, typed Write and Method Call results as
   validated native maps and complete, bounded child Browse pages as canonical
   NodeIds. One-shot Read, Write and Call preserve the existing adapter's result
-  shapes. Typed pagination, subscriptions and other compatibility cells remain
+  shapes. Persistent typed pagination and bounded child-list pagination use the
+  same native Session; subscriptions and other compatibility cells remain
   separate work. No operation invokes Python or retries a
   transmitted mutation.
   """
@@ -38,8 +39,7 @@ defmodule Wotex.OPCUA.Open62541 do
     with {:ok, operation, parameters} <- service(message) do
       case config.lifecycle do
         :persistent when is_pid(host) ->
-          with {:ok, result} <- Host.request(host, operation, parameters, timeout),
-               do: project_result(operation, result, handle.namespace_array)
+          persistent_request(host, operation, parameters, handle.namespace_array, timeout)
 
         :oneshot when is_nil(host) ->
           oneshot_request(config, operation, parameters, timeout)
@@ -51,6 +51,20 @@ defmodule Wotex.OPCUA.Open62541 do
   end
 
   def request(_, _, _), do: {:error, Error.new(:invalid_native_handle)}
+
+  defp persistent_request(host, "browse", parameters, namespaces, timeout),
+    do:
+      browse_children(
+        host,
+        parameters,
+        namespaces,
+        System.monotonic_time(:millisecond) + timeout
+      )
+
+  defp persistent_request(host, operation, parameters, namespaces, timeout) do
+    with {:ok, result} <- Host.request(host, operation, parameters, timeout),
+         do: project_result(operation, result, namespaces)
+  end
 
   @impl Wotex.OPCUA.Client
   @doc "Closes an owned persistent Session; repeated cleanup is safe."
@@ -99,9 +113,10 @@ defmodule Wotex.OPCUA.Open62541 do
       try do
         with {:ok, %{"namespace_array" => namespaces}} <-
                request_before(host, "open", open, deadline),
-             {:ok, result} <- request_before(host, operation, parameters, deadline),
+             {:ok, projected} <-
+               request_project_before(host, operation, parameters, namespaces, deadline),
              {:ok, nil} <- Host.request(host, "close", %{}, min(config.timeout, 5000)),
-             {:ok, projected} <- project_result(operation, result, namespaces) do
+             :ok <- ensure_deadline(deadline) do
           oneshot_result(operation, projected)
         end
       after
@@ -129,12 +144,79 @@ defmodule Wotex.OPCUA.Open62541 do
   defp remaining(deadline),
     do: max(0, min(60_000, deadline - System.monotonic_time(:millisecond)))
 
+  defp ensure_deadline(deadline) do
+    if remaining(deadline) > 0,
+      do: :ok,
+      else: {:error, Error.new(:deadline_exceeded, :deadline)}
+  end
+
   defp request_before(host, operation, parameters, deadline) do
     case remaining(deadline) do
       0 -> {:error, Error.new(:deadline_exceeded, :deadline)}
       timeout -> Host.request(host, operation, parameters, timeout)
     end
   end
+
+  defp request_project_before(host, "browse", parameters, namespaces, deadline),
+    do: browse_children(host, parameters, namespaces, deadline)
+
+  defp request_project_before(host, operation, parameters, namespaces, deadline) do
+    with {:ok, result} <- request_before(host, operation, parameters, deadline),
+         do: project_result(operation, result, namespaces)
+  end
+
+  defp browse_children(host, parameters, namespaces, deadline) do
+    case remaining(deadline) do
+      0 ->
+        {:error, Error.new(:deadline_exceeded, :deadline)}
+
+      timeout ->
+        with {:ok, page} <-
+               Host.browse_page(host, parameters, %{max_pages: 64, max_references: 256}, timeout) do
+          collect_children(host, page, namespaces, deadline, [])
+        end
+    end
+  end
+
+  defp collect_children(
+         host,
+         %{"status" => status, "continuation" => continuation} = page,
+         namespaces,
+         deadline,
+         prior
+       ) do
+    result =
+      if Bitwise.band(status, 0xC000_0000) == 0,
+        do: project_result("browse", %{page | "continuation" => nil}, namespaces),
+        else: {:error, Error.new(:incomplete_browse)}
+
+    case result do
+      {:ok, nodes} ->
+        children = prior ++ nodes
+        budget = remaining(deadline)
+
+        cond do
+          is_nil(continuation) ->
+            {:ok, children}
+
+          budget == 0 ->
+            release_child_cursor(host, continuation)
+            {:error, Error.new(:deadline_exceeded, :deadline)}
+
+          true ->
+            with {:ok, following} <- Host.browse_next(host, continuation, budget) do
+              collect_children(host, following, namespaces, deadline, children)
+            end
+        end
+
+      {:error, _} = error ->
+        release_child_cursor(host, continuation)
+        error
+    end
+  end
+
+  defp release_child_cursor(_, nil), do: :ok
+  defp release_child_cursor(host, continuation), do: Host.browse_release(host, continuation, 1000)
 
   defp stop_host(host) do
     if Process.alive?(host) do

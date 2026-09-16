@@ -309,18 +309,64 @@ defmodule Wotex.OPCUA.Open62541Test do
     assert {:ok, continuation_session} =
              Wotex.OPCUA.connect(Keyword.put(continuation_options, :client, Open62541))
 
-    continuation_monitor = Process.monitor(continuation_session.handle.host)
-
-    assert {:error, %Error{code: :response_limit}} =
+    assert {:ok, ["ns=1;s=value", "ns=1;s=value"]} =
              Wotex.OPCUA.send(continuation_session, %{type: :browse, node_id: "ns=0;i=85"})
 
-    assert_receive {:DOWN, ^continuation_monitor, :process, _, _}, 1000
+    assert :ok = Wotex.OPCUA.disconnect(continuation_session)
 
     assert {:error, %Error{code: :unsupported_protocol}} =
              Browse.references(
                %Wotex.OPCUA.Session{client: Wotex.OPCUA.Asyncua, handle: %{}, timeout: 1000},
                "i=1"
              )
+  end
+
+  test "WOP-N04 one-shot child Browse collects all pages on its temporary Session", context do
+    options = fixture(context, "oneshot-paginated-browse", "session_continuation")
+
+    assert {:ok, session} =
+             Wotex.OPCUA.connect(
+               options
+               |> Keyword.put(:client, Open62541)
+               |> Keyword.put(:lifecycle, :oneshot)
+             )
+
+    assert {:ok, ["ns=1;s=value", "ns=1;s=value"]} =
+             Wotex.OPCUA.send(session, %{type: :browse, node_id: "ns=0;i=85"})
+
+    assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
+  test "WOP-N04 child Browse releases a cursor after a later invalid or Uncertain page", context do
+    for {suffix, mode, expected} <- [
+          {"child-invalid-next", "session_invalid_next_reference", :unsupported_remote_reference},
+          {"child-uncertain", "session_uncertain_browse", :incomplete_browse}
+        ] do
+      options = fixture(context, suffix, mode)
+      assert {:ok, session} = Wotex.OPCUA.connect(Keyword.put(options, :client, Open62541))
+
+      assert {:error, %Error{code: ^expected}} =
+               Wotex.OPCUA.send(session, %{type: :browse, node_id: "ns=0;i=85"})
+
+      assert Process.alive?(session.handle.host)
+      assert :ok = Wotex.OPCUA.disconnect(session)
+    end
+  end
+
+  test "WOP-N04 one-shot child Browse closes after a later invalid page", context do
+    options = fixture(context, "oneshot-invalid-next", "session_invalid_next_reference")
+
+    assert {:ok, session} =
+             Wotex.OPCUA.connect(
+               options
+               |> Keyword.put(:client, Open62541)
+               |> Keyword.put(:lifecycle, :oneshot)
+             )
+
+    assert {:error, %Error{code: :unsupported_remote_reference}} =
+             Wotex.OPCUA.send(session, %{type: :browse, node_id: "ns=0;i=85"})
+
+    assert :ok = Wotex.OPCUA.disconnect(session)
   end
 
   test "WOP-N03 persistent Browse handles consume pages and release on their original owner",

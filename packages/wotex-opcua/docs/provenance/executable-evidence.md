@@ -20,6 +20,27 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Multi-page child-list compatibility, 2026-09-16
+
+The selected native client now accumulates bounded forward
+HierarchicalReferences pages into its existing ordered NodeId-list result.
+Persistent requests use the caller's Session. One-shot requests open one
+temporary Session, collect all pages there and close it before returning.
+The total child limit is 256; duplicate references retain duplicate NodeIds.
+An Uncertain page or an invalid later-page ExpandedNodeId fails without
+returning an incomplete list and releases a live cursor or closes the owner.
+The original request deadline applies across opening, pages and completion.
+
+Deterministic C response fixtures pass a three-page sequence in persistent and
+one-shot modes, plus later-page invalid identity and Uncertain status cleanup.
+The focused public client suite passes 27/27. The independent asyncua peer
+does not implement server-side BrowseNext, so this is not multi-page wire
+interoperability or full WOP-N04 acceptance.
+The final local `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes with
+302 tests, 12 optional tests excluded and 95.0% coverage. Compiler, format,
+Credo, Dialyzer, docs, audits, native CTest and isolated package/archive
+checks pass. No production Python path was added.
+
 ## Persistent typed Browse handles and bounded collection, 2026-09-16
 
 `Browse.references/3` now opts into a native continuation only for an owned

@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.17
+  version: 1.1.18
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -43,7 +43,8 @@ status or uncertain post-submission failure retains unknown effect without
 retry. The first service-level Browse slice requests one bounded page, copies
 complete ReferenceDescriptions, and validates them at the BEAM frame boundary.
 The public native client projects a complete page of local child NodeIds. An
-oversized page or continuation closes the Session for child-list compatibility calls.
+oversized page closes the Session; child-list compatibility now follows bounded
+continuations on that same Session.
 The C owner now also admits an internal `allow_continuation: true` Browse shape:
 it retains one server continuation in C memory, gives it a fresh local token,
 and sends service-level BrowseNext or release on that Session. This is native
@@ -59,6 +60,11 @@ preserves the original absolute deadline and cumulative limits, and consumes
 the old reference on next or release. Generic raw Browse still closes on a
 returned token. Independent-peer wire pagination and the target 64 live
 continuations remain unaccepted.
+The child-list compatibility call now uses the same owner-bound page path to
+collect at most 256 local NodeIds on one persistent or temporary Session.
+Later invalid identity and Uncertain status release a live cursor; fixture
+tests pass for both lifecycle modes. No independent BrowseNext peer exchange
+or release-counter evidence exists yet.
 The target native runtime uses an Elixir API and an explicitly owned open62541 C
 executable. In that path, Python is confined to the independent test peer and
 upstream build generators; the current public compatibility adapter still

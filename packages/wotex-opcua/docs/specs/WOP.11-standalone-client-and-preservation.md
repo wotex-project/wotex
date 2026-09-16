@@ -3,14 +3,14 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.8
+  version: 1.1.9
   owner: wotex-opcua
   updated: 2026-09-16
 ---
 
 # WOP.11 Standalone OPC UA client and feature preservation
 
-Specification version: **1.1.8**. Implementation status: **partial**.
+Specification version: **1.1.9**. Implementation status: **partial**.
 [WOP.10](WOP.10-software-contract.md) and [WOP.13](WOP.13-native-executable.md)
 define the native backend and typed service contract.
 The [implemented profile](WOP.02-implemented-profile.md) and
@@ -23,8 +23,10 @@ evidence. The C process has a single-live-token BrowseNext/release path.
 Persistent typed Browse now maps that token to a generation-bound handle,
 retains the original deadline and cumulative bounds, and offers `next/2`,
 `release/2` and `all/3` against deterministic response fixtures. Multiple
-live continuations, one-shot child-list pagination and independent-peer
-BrowseNext/release remain open; N03/N04 are not accepted. The native one-shot client now
+live continuations and independent-peer BrowseNext/release remain open;
+N03/N04 are not accepted. Child-list Browse now collects repeated local
+NodeIds across pages on one persistent or temporary one-shot Session in a
+deterministic response fixture. The native one-shot client now
 projects successful Read, Write and Call results into the older adapter's
 success shapes; error and full lifecycle compatibility remain open.
 The BEAM frame accepts only canonical native `c` plus uint64 local tokens and
