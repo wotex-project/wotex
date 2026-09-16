@@ -253,6 +253,7 @@ defmodule Wotex.CoAP.NativeWireTest do
       {"context_store_locked", :context_store_locked, :rate_limited},
       {"context_store_corrupt", :context_store_corrupt, :permanent},
       {"fresh_context_required", :fresh_context_required, :permanent},
+      {"invalid_observation_response", :invalid_observation_response, :protocol},
       {"sequence_exhausted", :sequence_exhausted, :permanent},
       {"timeout", :timeout, :timeout}
     ]

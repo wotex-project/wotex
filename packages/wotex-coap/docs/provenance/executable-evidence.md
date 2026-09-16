@@ -174,6 +174,20 @@ execute both policies. Negative renewal responses, renewal deadline and explicit
 cancel races, Property/Event overload faults, replay, independent secure
 interoperability and Mix orchestration remain unaccepted.
 
+The [native worker observation-fault receipt](native-worker-observation-faults-v1.json)
+binds the next production source cohort. Separate protected renewals return a
+negative status, omit Observe, change Content-Format or remain silent through
+the finite deadline; the worker emits `remote_response` with status,
+`invalid_observation_response`, `representation_changed` or `timeout`
+respectively. The finite BEAM wire vocabulary admits the newly executed invalid
+renewal code. In two further public-custody runs, eight unacknowledged reports
+exhaust credit. Two later Property reports coalesce to the latest complete value,
+while one pending Event report followed by another emits
+`overlapping_event_report` and token-matched cancellation. Both macOS and Linux
+ASan/UBSan/leak lanes execute this matrix. Duplicate/stale/wraparound injection,
+an in-flight renewal/cancel race, actual output-pipe saturation, replay,
+independent secure interoperability and Mix orchestration remain unaccepted.
+
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,
 explicit OSCORE credentials and exact five-field lines; omits absent optionals;

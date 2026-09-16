@@ -60,7 +60,9 @@ holds inline or streamed reports behind cumulative credit, applies 24-bit serial
 and renews or cancels with the original token. Max-Age expiry renews at no less
 than one-second intervals when enabled; otherwise it sends best-effort
 cancellation and reports stale state. Independent OSCORE interoperability and
-the final software matrix remain ordered work.
+the final software matrix remain ordered work. Renewal faults retain their
+finite status/code, Property overload keeps one latest complete report and Event
+overlap terminates with owned cleanup.
 Multicast and extended tokens are outside the implemented profile.
 
 ## Quick start
@@ -193,7 +195,8 @@ adapter verifies the native route and subscription generation, maps unary calls
 and Observe through the same owner, and releases exact handles on cancellation.
 Production unary execution uses these same response-body envelopes; production
 Observe execution now covers protected registration, inline or streamed reports,
-credit, Max-Age renewal, stale cleanup and cancellation.
+credit, Max-Age renewal, stale cleanup, bounded Property/Event overload,
+renewal faults and cancellation.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic

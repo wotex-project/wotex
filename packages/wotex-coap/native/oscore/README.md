@@ -52,9 +52,13 @@ five credited frames of a 32,769-byte notification and
 cancellation with all five credits outstanding. The subsequent
 [renewal receipt](../../docs/provenance/native-worker-renewal-v1.json) binds
 same-token/new-MID renewal, the zero-Max-Age minimum interval and disabled-renewal
-stale cleanup. These receipts do not accept the remaining observation fault
-matrix, live replay behavior, independent OSCORE interoperability or the final
-Mix-built executable.
+stale cleanup. The following
+[observation-fault receipt](../../docs/provenance/native-worker-observation-faults-v1.json)
+binds negative, missing-Observe, changed-Content-Format and timeout renewal
+outcomes plus one latest Property report and terminal Event overlap at exhausted
+credit. These receipts do not accept notification freshness injection, an
+in-flight renewal/cancel race, live replay behavior, independent OSCORE
+interoperability or the final Mix-built executable.
 
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the

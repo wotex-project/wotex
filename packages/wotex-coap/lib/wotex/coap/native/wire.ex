@@ -44,6 +44,7 @@ defmodule Wotex.CoAP.Native.Wire do
     "fresh_context_required" => :fresh_context_required,
     "invalid_cancellation_response" => :invalid_cancellation_response,
     "invalid_context_store" => :invalid_context_store,
+    "invalid_observation_response" => :invalid_observation_response,
     "invalid_request" => :invalid_request,
     "invalid_response" => :invalid_response,
     "message_too_large" => :message_too_large,

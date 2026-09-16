@@ -681,7 +681,8 @@ static int start_stream(struct worker *worker,
     return 1;
 }
 
-static int terminal_observation(struct worker *worker, const char *code) {
+static int terminal_observation_status(struct worker *worker, const char *code,
+                                       int status_present, uint64_t status) {
     char line[WCO_CONTROL_MAX];
     size_t used = 0;
     int64_t now = now_ms();
@@ -696,8 +697,15 @@ static int terminal_observation(struct worker *worker, const char *code) {
     memcpy(line + used, number, (size_t)length); used += (size_t)length;
     if (!raw(line, sizeof(line), &used,
              ",\"event\":\"error\",\"value\":{\"code\":" ) ||
-        !quoted(line, sizeof(line), &used, code) ||
-        !raw(line, sizeof(line), &used, "},\"metadata\":{}}\n")) return 0;
+        !quoted(line, sizeof(line), &used, code)) return 0;
+    if (status_present) {
+        length = snprintf(number, sizeof(number), ",\"status\":%" PRIu64, status);
+        if (length <= 0 || (size_t)length >= sizeof(number) ||
+            (size_t)length > sizeof(line) - used) return 0;
+        memcpy(line + used, number, (size_t)length); used += (size_t)length;
+    }
+    if (!raw(line, sizeof(line), &used, "},\"metadata\":{}}\n")) return 0;
+    (void)wco_exchange_cancel(worker->exchange);
     clear_report(&worker->observation.report);
     clear_report(&worker->observation.next);
     worker->observation.established = 0;
@@ -705,6 +713,10 @@ static int terminal_observation(struct worker *worker, const char *code) {
     worker->observation.renewing = 0;
     worker->closing = 1;
     return append(&worker->output, line, used, now + 5000);
+}
+
+static int terminal_observation(struct worker *worker, const char *code) {
+    return terminal_observation_status(worker, code, 0, 0);
 }
 
 static int observation_response(struct worker *worker,
@@ -748,9 +760,14 @@ static int observation_response(struct worker *worker,
         if (!worker->observation.established || worker->observation.cancelling ||
             (renewal && !worker->observation.renewing))
             return 0;
+        if (renewal && (message->code < 64 || message->code > 94))
+            return terminal_observation_status(worker, "remote_response", 1,
+                                               message->code);
         if (!prepare_report(message, &pending)) {
             clear_report(&pending);
-            return terminal_observation(worker, "observation_failed");
+            return terminal_observation(worker,
+                                        renewal ? "invalid_observation_response" :
+                                        "observation_failed");
         }
         received_at = now_ms();
         admission = admit_report(&worker->observation, &pending, received_at,
@@ -1258,12 +1275,10 @@ static int maintain_observation(struct worker *worker, int64_t now) {
         !observation->initial_written) return 1;
     if (observation->renewing) {
         if (now < observation->renewal_deadline) return 1;
-        (void)wco_exchange_cancel(worker->exchange);
         return terminal_observation(worker, "timeout");
     }
     if (now < observation->refresh_at) return 1;
     if (!observation->renew) {
-        (void)wco_exchange_cancel(worker->exchange);
         return terminal_observation(worker, "observation_stale");
     }
     error = wco_exchange_renew(worker->exchange, observation->path,

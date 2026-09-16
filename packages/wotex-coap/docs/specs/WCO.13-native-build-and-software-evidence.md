@@ -18,7 +18,7 @@ implements same-binary startup, durable open, upload-body state, close and one
 active unary libcoap exchange with inline or streamed results. It also executes
 one protected Observe registration with inline or streamed reports, cumulative
 credit, Max-Age renewal, stale cleanup and token-matched cancellation. The
-remaining observation fault matrix and Mix tasks remain planned contracts;
+remaining freshness/cancellation fault matrix and Mix tasks remain planned contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -194,8 +194,12 @@ second worker emits its initial zero-Max-Age report before disabled-renewal stal
 cleanup and best-effort cancellation. Cancellation of the renewed observation
 also uses the original token. The Linux static build uses ASan/UBSan and leak
 detection. This evidence accepts inline and streamed reports plus the two
-Max-Age expiry policies; it does not accept the remaining observation fault
-matrix, replay, independent OSCORE interoperability or the final Mix-built helper.
+Max-Age expiry policies. The peer also executes negative status, missing Observe,
+changed Content-Format and deadline renewal faults with exact terminal codes,
+then exhausts report credit to prove latest-Property coalescing and terminal
+Event overlap. It does not accept duplicate/stale/wraparound injection, an
+in-flight renewal/cancel race, replay, independent OSCORE interoperability or
+the final Mix-built helper.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and
