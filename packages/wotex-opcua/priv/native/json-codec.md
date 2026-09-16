@@ -3,7 +3,7 @@
 This WOP-X03 implementation contract admits yyjson 0.12.0 for the C process
 boundary. The syntax and number reader has executable corpus tests. Typed SDK
 construction and serialization are implemented for the admitted typed subset;
-the executable now admits secure open, one-at-a-time Value read and close.
+the executable now admits secure open, one-at-a-time Value read/Write and close.
 Other services and complete output buffering remain required. This format is the
 package's typed interprocess protocol, not OPC UA JSON wire encoding.
 

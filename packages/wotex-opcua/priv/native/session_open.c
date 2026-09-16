@@ -154,16 +154,10 @@ static void receive_read(UA_Client *client, void *userdata, UA_UInt32 request_id
     session->read_valid = true;
 }
 
-bool wop_session_read(WopSession *session, yyjson_val *parameters) {
-    if(!session || !session->ready || session->read_pending ||
-       !yyjson_is_obj(parameters) || yyjson_obj_size(parameters) != 2 ||
-       !yyjson_is_null(yyjson_obj_get(parameters, "index_range"))) return false;
-    yyjson_val *node_input = yyjson_obj_get(parameters, "node_id");
-    _Alignas(max_align_t) unsigned char storage[8192];
-    WopValueArena arena;
+static bool translate_node(WopSession *session, yyjson_val *node_input,
+                           WopValueArena *arena, UA_NodeId *sdk_id) {
     UA_NodeId public_id = UA_NODEID_NULL;
-    if(!wop_value_arena_init(&arena, storage, sizeof(storage)) ||
-       wop_value_read_node_id(node_input, &arena, &public_id) != WOP_VALUE_OK ||
+    if(wop_value_read_node_id(node_input, arena, &public_id) != WOP_VALUE_OK ||
        public_id.namespaceIndex >= session->namespace_count) return false;
     UA_String identity = session->namespace_array[public_id.namespaceIndex];
     UA_UInt16 local_index = 0;
@@ -173,8 +167,21 @@ bool wop_session_read(WopSession *session, yyjson_val *parameters) {
                   UA_String_equal(&identity, &reversed);
     UA_String_clear(&reversed);
     if(!mapped) return false;
-    UA_NodeId sdk_id = public_id;
-    sdk_id.namespaceIndex = local_index;
+    *sdk_id = public_id;
+    sdk_id->namespaceIndex = local_index;
+    return true;
+}
+
+bool wop_session_read(WopSession *session, yyjson_val *parameters) {
+    if(!session || !session->ready || session->read_pending ||
+       !yyjson_is_obj(parameters) || yyjson_obj_size(parameters) != 2 ||
+       !yyjson_is_null(yyjson_obj_get(parameters, "index_range"))) return false;
+    _Alignas(max_align_t) unsigned char storage[8192];
+    WopValueArena arena;
+    UA_NodeId sdk_id = UA_NODEID_NULL;
+    if(!wop_value_arena_init(&arena, storage, sizeof(storage)) ||
+       !translate_node(session, yyjson_obj_get(parameters, "node_id"),
+                       &arena, &sdk_id)) return false;
     UA_ReadValueId target = {0};
     target.nodeId = sdk_id;
     target.attributeId = UA_ATTRIBUTEID_VALUE;
@@ -194,10 +201,7 @@ bool wop_session_read(WopSession *session, yyjson_val *parameters) {
     return status == UA_STATUSCODE_GOOD;
 }
 
-bool wop_session_read_supported(const WopSession *session) {
-    if(!session || !session->read_valid) return false;
-    if(!session->read_value.hasValue) return true;
-    const UA_DataType *type = session->read_value.value.type;
+static bool supported_value_type(const UA_DataType *type) {
     if(!type) return true;
     static const unsigned admitted[] = {
         UA_TYPES_BOOLEAN, UA_TYPES_SBYTE, UA_TYPES_BYTE, UA_TYPES_INT16,
@@ -209,6 +213,77 @@ bool wop_session_read_supported(const WopSession *session) {
     for(size_t i = 0; i < sizeof(admitted) / sizeof(admitted[0]); i++)
         if(type == &UA_TYPES[admitted[i]]) return true;
     return false;
+}
+
+bool wop_session_read_supported(const WopSession *session) {
+    if(!session || !session->read_valid) return false;
+    if(!session->read_value.hasValue) return true;
+    return supported_value_type(session->read_value.value.type);
+}
+
+static void receive_write(UA_Client *client, void *userdata, UA_UInt32 request_id,
+                          UA_WriteResponse *response) {
+    (void)client;
+    WopSession *session = userdata;
+    if(!session->write_pending) return;
+    session->write_pending = false;
+    session->write_completed = true;
+    session->write_status = UA_STATUSCODE_BADUNEXPECTEDERROR;
+    if(!response || request_id != session->write_request_id) return;
+    if(response->responseHeader.serviceResult != UA_STATUSCODE_GOOD) {
+        session->write_status = response->responseHeader.serviceResult;
+        session->write_remote_error = true;
+        return;
+    }
+    if(response->resultsSize != 1 || !response->results) return;
+    session->write_status = response->results[0];
+    session->write_valid = true;
+}
+
+bool wop_session_write(WopSession *session, yyjson_val *parameters,
+                       bool *sdk_attempted) {
+    if(!sdk_attempted) return false;
+    *sdk_attempted = false;
+    if(!session || !session->ready || session->write_pending ||
+       !yyjson_is_obj(parameters) || yyjson_obj_size(parameters) != 3 ||
+       !yyjson_is_null(yyjson_obj_get(parameters, "index_range"))) return false;
+    void *storage = malloc(WOP_VALUE_POOL_BYTES);
+    if(!storage) return false;
+    WopValueArena arena;
+    UA_NodeId sdk_id = UA_NODEID_NULL;
+    UA_Variant value = {0};
+    bool valid = wop_value_arena_init(&arena, storage, WOP_VALUE_POOL_BYTES) &&
+        translate_node(session, yyjson_obj_get(parameters, "node_id"), &arena, &sdk_id) &&
+        wop_value_read_variant(yyjson_obj_get(parameters, "value"), &arena, &value) == WOP_VALUE_OK &&
+        supported_value_type(value.type);
+    UA_WriteValue_clear(&session->write_value);
+    if(valid) {
+        valid = UA_NodeId_copy(&sdk_id, &session->write_value.nodeId) == UA_STATUSCODE_GOOD &&
+            UA_Variant_copy(&value, &session->write_value.value.value) == UA_STATUSCODE_GOOD;
+        session->write_value.attributeId = UA_ATTRIBUTEID_VALUE;
+        session->write_value.value.hasValue = true;
+    }
+    wop_value_arena_reset(&arena);
+    free(storage);
+    if(!valid) {
+        UA_WriteValue_clear(&session->write_value);
+        return false;
+    }
+    UA_WriteRequest request = {0};
+    request.nodesToWrite = &session->write_value;
+    request.nodesToWriteSize = 1;
+    session->write_pending = true;
+    session->write_completed = false;
+    session->write_valid = false;
+    session->write_remote_error = false;
+    *sdk_attempted = true;
+    UA_StatusCode status = UA_Client_sendAsyncWriteRequest(session->client, &request,
+        receive_write, session, &session->write_request_id);
+    if(status != UA_STATUSCODE_GOOD) {
+        session->write_pending = false;
+        UA_WriteValue_clear(&session->write_value);
+    }
+    return status == UA_STATUSCODE_GOOD;
 }
 
 bool wop_session_close(WopSession *session) {
@@ -239,6 +314,7 @@ bool wop_session_close(WopSession *session) {
         UA_Array_delete(session->namespace_array, session->namespace_count,
                         &UA_TYPES[UA_TYPES_STRING]);
     UA_DataValue_clear(&session->read_value);
+    UA_WriteValue_clear(&session->write_value);
     wop_security_clear(&session->security);
     memset(session, 0, sizeof(*session));
     return closed;

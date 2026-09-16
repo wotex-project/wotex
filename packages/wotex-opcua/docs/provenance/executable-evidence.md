@@ -20,6 +20,41 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Asynchronous native Value Write slice, 2026-09-16
+
+The production C process now admits one typed Value Write after secure
+activation. It validates the closed node/index-range/Variant map, resolves the
+input namespace URI to the SDK-local index, copies the Variant into SDK-owned
+memory, and retains that copy until asynchronous completion or client cleanup.
+One individual numeric Write status is returned. A Bad result or post-submission
+timeout/connection failure reports unknown effect, and the BEAM owner also
+classifies an unacknowledged Write after Port loss or local timeout as unknown.
+There is no automatic replay or retry. NodeId-bearing Variant values remain
+unsupported until namespace translation is complete. This partial slice does
+not accept complete P02/S02/X04, concurrent operations, cancellation or the
+public native client; the default public adapter remains Python-backed.
+
+The focused Frame/Host suite passes 29 default tests, including an unacknowledged
+Write owner-timeout case. Six optional tests pass against the independent
+Basic256Sha256 anonymous asyncua 2.0.1 peer: a typed Double Write is read back
+and restored, and a rejected Write retains its numeric Bad status and unknown
+effect. The RelWithDebInfo native CTest suite passes 181/181 cases.
+The complete `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64
+with Elixir 1.20.2 / OTP 29.0.4: 268 passed (10 doctests, 4 properties,
+254 tests), seven optional interoperability tests excluded and 95.2% coverage.
+Its fresh native build, CTest, documentation, dependency audits and
+package/archive checks pass.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/main.c` | `46fd01fb27c230dcd137641f4b721319e6c65ded38630077591a2a127300935d` |
+| `priv/native/session_open.c` | `b9cad696a853719b5b3af737e2f40a66654c6518b9f18903c3eab05f41eb7ff2` |
+| `priv/native/session_open.h` | `7fbf7e6e5d5aec4be78f26bd8610d8c26101d746e6e0b251d065d701616c623d` |
+| `lib/wotex/opcua/native/frame.ex` | `49b0e24a10ea05026bb9b5703c44d8fe1a92b244e42cdecb3bcc9b673a1eb383` |
+| `lib/wotex/opcua/native/host.ex` | `5131a51e2dae3300fea89c19f196b03cb90aa85cb2a0966faaa3ac779388e8ae` |
+| `test/interop/native_secure_test.exs` | `6b3f03e5419912f7aee9a18265bb5e600b30f0392b8d260b59d95f4f91497fb4` |
+| native CTest log | `a8e5b0e0935b302629ecda5a9e92c5897ba5d2e652dee83201ec9315fe097582` |
+
 ## Asynchronous native Value Read slice, 2026-09-16
 
 The production C process now admits one concrete Value Read after secure

@@ -15,6 +15,10 @@ typedef struct {
     UA_StatusCode read_status;
     UA_UInt32 read_request_id;
     bool read_pending, read_completed, read_valid, read_remote_error;
+    UA_WriteValue write_value;
+    UA_StatusCode write_status;
+    UA_UInt32 write_request_id;
+    bool write_pending, write_completed, write_valid, write_remote_error;
 } WopSession;
 
 /* Only call after closed open-shape and deadline admission. The caller owns
@@ -26,6 +30,10 @@ bool wop_session_step(WopSession *session, uint64_t requested_timeout_ms);
  * deadline; callback storage remains in WopSession until close or completion. */
 bool wop_session_read(WopSession *session, yyjson_val *parameters);
 bool wop_session_read_supported(const WopSession *session);
+/* Write owns copied SDK values until callback or client destruction. A
+ * transmitted write may have an unknown effect on every failure path. */
+bool wop_session_write(WopSession *session, yyjson_val *parameters,
+                       bool *sdk_attempted);
 /* True only when the CloseSession/channel teardown completed cooperatively. */
 bool wop_session_close(WopSession *session);
 

@@ -37,6 +37,10 @@ without producing a translated NodeId. The current Session owner acquires and
 retains the server array and resolves a read input NodeId through the SDK-local
 namespace API. General inverse translation of NodeId-bearing results remains
 P02 work.
+The current owner copies a validated typed Variant into SDK-owned memory before
+an asynchronous Write, retaining it until the callback or client cleanup.
+NodeId-bearing Write Variants are rejected until their namespace translation
+is implemented. A transmitted Write's effect remains unknown on failure.
 
 The C status set is finite: `WOP_VALUE_OK`, `WOP_VALUE_INVALID`,
 `WOP_VALUE_LIMIT`, and `WOP_VALUE_UNSUPPORTED`. The operation owner assigns the

@@ -17,7 +17,7 @@ binding implementation work, not a changelog.
 | --- | --- | --- | --- |
 | WOP-P00 | X01/X02/X07: pinned SDK/OpenSSL source admission, native Mix build task, separate bidirectional custody guardian, package assets, versioned ready and both executable digests; Opex reuse obeys the reviewed metadata/security boundary | native/build_test.exs, native/build_fault_test.exs, native/workspace_test.exs; native host ready/digest/EOF tests; X01/X02 manifest/failure cases and WOP-G01..G10 native custody cases | Accepted |
 | WOP-P01 | S01/N02/N05: typed pure Variant/DataValue/ExpandedNodeId/QualifiedName/LocalizedText/reference codecs, exact signed ticks and array/null/opaque distinctions; lossless JSON integer/negative-zero IPC | typed_values_test.exs; production native value/contract checks; WOP-F01..F13 and X-F01..F16 | Accepted |
-| WOP-P02 | S02/X03/X04: persistent native Session activation, explicit one-shot native projection, server/local namespace mapping, complete framed IPC, credit control, bounded async requests and cancellation/EOF cleanup | persistent_bridge_test.exs; test/native/session_test.c; X-F10..F23/X-F49..F57 plus split/coalescing/malformed/partial-open matrix | Open; native process and BEAM owner activate/close one secure peer Session and perform one-at-a-time typed Value reads with input namespace translation; other services and full lifecycle remain |
+| WOP-P02 | S02/X03/X04: persistent native Session activation, explicit one-shot native projection, server/local namespace mapping, complete framed IPC, credit control, bounded async requests and cancellation/EOF cleanup | persistent_bridge_test.exs; test/native/session_test.c; X-F10..F23/X-F49..F57 plus split/coalescing/malformed/partial-open matrix | Open; native process and BEAM owner activate/close one secure peer Session and perform one-at-a-time typed Value Read/Write with input namespace translation and unknown Write failure effect; other services and full lifecycle remain |
 | WOP-P03 | S03: all three SignAndEncrypt policies and all three user-token modes, pin/SAN/URI/CRL/key validation, immutable trust, no downgrade/reconnect/replay | priv/native/security_check.c; test/native/security_test.c; test/interop/security_fault_test.exs; X-F30..F47 | Open; native credential preflight and SDK verifier/configuration implemented; independent-peer matrix and production integration remain |
 | WOP-P04 | S04/X05: raw service-level subscriptions, exact revised parameters, full DataValue/overflow metadata, bounded Publish ACK and Republish sequence state | subscription_test.exs; test/native/subscription_test.c; X-F24..F28 | Open |
 | WOP-P05 | C03/C05/S02/S04/X04/X05: receiver/Session/owner loss, cancellation failure, saturated output, partial-open/final-owner handoff and terminal-once cleanup | subscription_lifecycle_test.exs; test/native/lifecycle_test.c; X-F18..F23/X-F29 and suspended-owner overproducer stress | Open |
@@ -45,7 +45,7 @@ the separately sampled owner clock onto the native clock. The native build
 test passes that encoded frame to the actual executable.
 The internal host now sends a single owner-bound frame through custody and
 decodes one generation-matched terminal error; invalid or unsolicited output
-ends that process. Correlated secure open/read/close responses are now admitted and
+ends that process. Correlated secure open/read/write/close responses are now admitted and
 replenishes consumed credit.
 Native `open` parameters now reject unknown keys, insecure modes/policies,
 noncanonical bytes and invalid user-token/timeout shapes before any SDK I/O.
@@ -58,7 +58,7 @@ the independent peer proves one Basic256Sha256 anonymous Session and explicit
 NamespaceArray read in both the C probe and production owner. This is a
 security prerequisite of P02, not acceptance or reordering of P03.
 The owner and C ingress now share an explicit first credit control and fixed
-generation. Open/read/close output consumes credit and the BEAM owner replenishes it;
+generation. Open/read/write/close output consumes credit and the BEAM owner replenishes it;
 bounded service/report queues remain required. The production service slice
 does not accept P02 or X-F17..F23 as a complete family.
 The SDK build now preserves the server's actual revised Session timeout through
@@ -74,6 +74,11 @@ index and returns a bounded typed DataValue. It rejects NodeId-bearing results
 until inverse translation exists. A Bad attribute StatusCode is retained in a
 finite `remote_error`. Independent-peer read/read-failure checks do not accept
 the complete S02/X04 operation, concurrency or cancellation contracts.
+The next P02 slice sends one asynchronous typed Write with an SDK-owned value
+copy, preserves the individual numeric result status and never retries. A Bad
+status or timeout after submission retains unknown effect. Independent-peer
+Write/readback and Bad Write checks are a partial service slice, not complete
+S02/X04 or P02 acceptance.
 
 ## Verification and evidence
 

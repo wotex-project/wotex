@@ -308,4 +308,31 @@ defmodule Wotex.OPCUA.Native.FrameTest do
                Frame.response(frame.(invalid), 7, "close-1", "close", nil)
     end
   end
+
+  test "WOP-X04 Write returns only a non-Bad numeric status" do
+    frame = fn result ->
+      Jason.encode!(%{
+        "version" => 1,
+        "generation" => 7,
+        "id" => "write-1",
+        "ok" => true,
+        "result" => result
+      }) <> "\n"
+    end
+
+    for status <- [0, 0x4000_0000] do
+      assert {:ok, %{"status" => ^status}} =
+               Frame.response(frame.(%{"status" => status}), 7, "write-1", "write", nil)
+    end
+
+    for invalid <- [
+          %{"status" => 0x8000_0000},
+          %{"status" => -1},
+          %{"status" => 0, "unexpected" => true},
+          %{}
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame}} =
+               Frame.response(frame.(invalid), 7, "write-1", "write", nil)
+    end
+  end
 end

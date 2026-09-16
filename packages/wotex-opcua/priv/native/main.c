@@ -100,15 +100,41 @@ static int terminal_status(uint64_t generation, const char *code,
     return size > 0 && (size_t)size < sizeof(output) && write_control(output, (size_t)size);
 }
 
+static int terminal_write(uint64_t generation, const char *code,
+                          const char *phase, UA_StatusCode status, bool with_status) {
+    char output[288];
+    int size;
+    if(with_status)
+        size = snprintf(output, sizeof(output),
+            "{\"version\":1,\"generation\":%" PRIu64 ",\"event\":\"terminal\","
+            "\"error\":{\"code\":\"%s\",\"phase\":\"%s\",\"effect\":\"unknown\","
+            "\"status\":%" PRIu32 "}}\n", generation, code, phase, status);
+    else
+        size = snprintf(output, sizeof(output),
+            "{\"version\":1,\"generation\":%" PRIu64 ",\"event\":\"terminal\","
+            "\"error\":{\"code\":\"%s\",\"phase\":\"%s\",\"effect\":\"unknown\"}}\n",
+            generation, code, phase);
+    return size > 0 && (size_t)size < sizeof(output) && write_control(output, (size_t)size);
+}
+
+static int terminal_active(bool writing, uint64_t generation,
+                           const char *code, const char *phase) {
+    return writing ? terminal_write(generation, code, phase, 0, false) :
+                     terminal(generation, code, phase);
+}
+
 static bool result_frame(const WopIpcRequest *request, const WopSession *session,
                          const UA_DataValue *read_value,
+                         const UA_StatusCode *write_status,
                          uint64_t *messages, uint64_t *bytes) {
     yyjson_mut_doc *doc = yyjson_mut_doc_new(NULL);
     if(!doc) return false;
     yyjson_mut_val *root = yyjson_mut_obj(doc);
     yyjson_mut_doc_set_root(doc, root);
-    yyjson_mut_val *result = session ? yyjson_mut_obj(doc) : yyjson_mut_null(doc);
+    yyjson_mut_val *result = session || write_status ? yyjson_mut_obj(doc) : yyjson_mut_null(doc);
     if(read_value && wop_value_write_data_value(read_value, doc, &result) != WOP_VALUE_OK)
+        result = NULL;
+    if(write_status && (!result || !yyjson_mut_obj_add_uint(doc, result, "status", *write_status)))
         result = NULL;
     bool valid = root && result &&
         yyjson_mut_obj_add_uint(doc, root, "version", 1) &&
@@ -149,9 +175,10 @@ static int bootstrap(void) {
     WopSession session = {0};
     WopIpcRequest open_request = {0};
     WopIpcRequest read_request = {0};
+    WopIpcRequest write_request = {0};
     uint64_t requested_session_timeout = 0;
-    int64_t open_deadline = 0, read_deadline = 0;
-    bool opening = false, opened = false, reading = false;
+    int64_t open_deadline = 0, read_deadline = 0, write_deadline = 0;
+    bool opening = false, opened = false, reading = false, writing = false;
 
     char ready[256];
     int64_t clock_ms = monotonic_ms();
@@ -167,20 +194,29 @@ static int bootstrap(void) {
         if(opening || opened) {
             int64_t now = monotonic_ms();
             if(now < 0 || (opening && now >= open_deadline) ||
-               (reading && now >= read_deadline)) {
-                (void)terminal(admitted_generation, "deadline_exceeded",
-                               opening ? "opening" : "exchange");
+               (reading && now >= read_deadline) ||
+               (writing && now >= write_deadline)) {
+                if(writing)
+                    (void)terminal_write(admitted_generation, "deadline_exceeded",
+                                         "exchange", 0, false);
+                else
+                    (void)terminal(admitted_generation, "deadline_exceeded",
+                                   opening ? "opening" : "exchange");
                 break;
             }
             if(!wop_session_step(&session, requested_session_timeout)) {
-                (void)terminal(admitted_generation,
-                               opening ? "invalid_response" : "connection_failed",
-                               opening ? "opening" : "exchange");
+                if(writing)
+                    (void)terminal_write(admitted_generation, "connection_failed",
+                                         "exchange", 0, false);
+                else
+                    (void)terminal(admitted_generation,
+                                   opening ? "invalid_response" : "connection_failed",
+                                   opening ? "opening" : "exchange");
                 break;
             }
             if(opening && session.ready) {
                 uint64_t before = credit_bytes;
-                if(!result_frame(&open_request, &session, NULL,
+                if(!result_frame(&open_request, &session, NULL, NULL,
                                  &credit_messages, &credit_bytes))
                     break;
                 used_messages++;
@@ -205,7 +241,7 @@ static int bootstrap(void) {
                     break;
                 }
                 uint64_t before = credit_bytes;
-                if(!result_frame(&read_request, NULL, &session.read_value,
+                if(!result_frame(&read_request, NULL, &session.read_value, NULL,
                                  &credit_messages, &credit_bytes)) {
                     (void)terminal(admitted_generation, "response_limit", "decode");
                     break;
@@ -214,6 +250,29 @@ static int bootstrap(void) {
                 used_bytes += before - credit_bytes;
                 UA_DataValue_clear(&session.read_value);
                 reading = false;
+            }
+            if(writing && session.write_completed) {
+                if(!session.write_valid && !session.write_remote_error) {
+                    (void)terminal_write(admitted_generation, "invalid_response",
+                                         "decode", 0, false);
+                    break;
+                }
+                if(session.write_status & 0x80000000U) {
+                    (void)terminal_write(admitted_generation, "remote_error",
+                                         "exchange", session.write_status, true);
+                    break;
+                }
+                uint64_t before = credit_bytes;
+                if(!result_frame(&write_request, NULL, NULL, &session.write_status,
+                                 &credit_messages, &credit_bytes)) {
+                    (void)terminal_write(admitted_generation, "response_limit",
+                                         "decode", 0, false);
+                    break;
+                }
+                used_messages++;
+                used_bytes += before - credit_bytes;
+                UA_WriteValue_clear(&session.write_value);
+                writing = false;
             }
         }
         struct pollfd descriptor = {STDIN_FILENO, POLLIN, 0};
@@ -228,7 +287,8 @@ static int bootstrap(void) {
         ssize_t count = read(STDIN_FILENO, buffer, sizeof(buffer));
         if(count == 0) {
             if(input.used)
-                (void)terminal(admitted_generation, "invalid_request", "validation");
+                (void)terminal_active(writing, admitted_generation,
+                                      "invalid_request", "validation");
             else
                 status = 0;
             break;
@@ -245,7 +305,8 @@ static int bootstrap(void) {
             if(framed == WOP_IPC_MORE)
                 break;
             if(framed != WOP_IPC_FRAME) {
-                (void)terminal(admitted_generation, "invalid_request", "validation");
+                (void)terminal_active(writing, admitted_generation,
+                                      "invalid_request", "validation");
                 goto done;
             }
             WopJson parsed = {0};
@@ -266,7 +327,8 @@ static int bootstrap(void) {
                          credit.messages > used_messages || credit.bytes > used_bytes ||
                          credit_messages + credit.messages > 16 ||
                          credit_bytes + credit.bytes > 262144))) {
-                        (void)terminal(admitted_generation, "invalid_request", "validation");
+                        (void)terminal_active(writing, admitted_generation,
+                                              "invalid_request", "validation");
                     } else {
                         admitted_generation = credit.generation;
                         credit_sequence = credit.sequence;
@@ -282,15 +344,19 @@ static int bootstrap(void) {
                     }
                 } else if(!wop_ipc_request(root, &request) || !admitted_generation ||
                           request.generation != admitted_generation) {
-                    (void)terminal(admitted_generation, "invalid_request", "validation");
+                    (void)terminal_active(writing, admitted_generation,
+                                          "invalid_request", "validation");
                 } else if(request.open &&
                           !wop_ipc_open(yyjson_obj_get(root, "parameters"))) {
-                    (void)terminal(request.generation, "invalid_request", "validation");
+                    (void)terminal_active(writing, request.generation,
+                                          "invalid_request", "validation");
                 } else if((clock_ms = monotonic_ms()) < 0 || clock_ms >= request.deadline_ms) {
-                    (void)terminal(request.generation, "deadline_exceeded", "admission");
+                    (void)terminal_active(writing, request.generation,
+                                          "deadline_exceeded", "admission");
                 } else if(request.open) {
                     if(opening || opened) {
-                        (void)terminal(request.generation, "invalid_request", "validation");
+                        (void)terminal_active(writing, request.generation,
+                                              "invalid_request", "validation");
                     } else {
                         time_t now = time(NULL);
                         open_deadline = request.deadline_ms;
@@ -300,7 +366,7 @@ static int bootstrap(void) {
                             wop_session_start(&session, yyjson_obj_get(root, "parameters"),
                                               now, open_deadline);
                         if(!admitted)
-                            (void)terminal(request.generation,
+                            (void)terminal_active(writing, request.generation,
                                 monotonic_ms() >= open_deadline ? "deadline_exceeded" : "certificate_invalid",
                                 "opening");
                         else {
@@ -314,10 +380,11 @@ static int bootstrap(void) {
                             continue;
                         }
                     }
-                } else if(opened && !reading &&
+                } else if(opened && !reading && !writing &&
                           strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "read") == 0) {
                     if(!wop_session_read(&session, yyjson_obj_get(root, "parameters"))) {
-                        (void)terminal(request.generation, "invalid_value", "validation");
+                        (void)terminal_active(writing, request.generation,
+                                              "invalid_value", "validation");
                     } else {
                         read_request = request;
                         read_deadline = request.deadline_ms;
@@ -328,24 +395,50 @@ static int bootstrap(void) {
                         input.used = 0;
                         continue;
                     }
-                } else if(opened && !reading &&
+                } else if(opened && !reading && !writing &&
+                          strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "write") == 0) {
+                    bool attempted = false;
+                    if(!wop_session_write(&session, yyjson_obj_get(root, "parameters"),
+                                          &attempted)) {
+                        if(attempted)
+                            (void)terminal_write(request.generation, "connection_failed",
+                                                 "admission", 0, false);
+                        else
+                            (void)terminal_active(writing, request.generation,
+                                                  "invalid_value", "validation");
+                    } else {
+                        write_request = request;
+                        write_deadline = request.deadline_ms;
+                        if((uint64_t)(request.deadline_ms - clock_ms) > request.timeout_ms)
+                            write_deadline = clock_ms + (int64_t)request.timeout_ms;
+                        writing = true;
+                        wop_json_clear(&parsed);
+                        input.used = 0;
+                        continue;
+                    }
+                } else if(opened && !reading && !writing &&
                           strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "close") == 0 &&
                           yyjson_obj_size(yyjson_obj_get(root, "parameters")) == 0) {
                     bool released = wop_session_close(&session);
                     if(released && result_frame(&request, NULL, NULL,
+                                                NULL,
                                                 &credit_messages, &credit_bytes))
                         status = 0;
                     else if(!released)
-                        (void)terminal(request.generation, "cleanup_failed", "cleanup");
+                        (void)terminal_active(writing, request.generation,
+                                              "cleanup_failed", "cleanup");
                     wop_json_clear(&parsed);
                     goto done;
                 } else {
-                    /* Framing is connected; no SDK service is admitted yet. */
-                    (void)terminal(request.generation, "unsupported_protocol", "validation");
+                    /* The other service operations are not admitted yet. */
+                    (void)terminal_active(writing, request.generation,
+                                          writing ? "busy" : "unsupported_protocol",
+                                          writing ? "admission" : "validation");
                 }
                 wop_json_clear(&parsed);
             } else {
-                (void)terminal(admitted_generation, "invalid_request", "validation");
+                (void)terminal_active(writing, admitted_generation,
+                                      "invalid_request", "validation");
             }
             goto done;
         }

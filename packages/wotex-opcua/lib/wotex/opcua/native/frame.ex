@@ -173,6 +173,14 @@ defmodule Wotex.OPCUA.Native.Frame do
 
   defp response_result("close", nil, _, _), do: {:ok, nil}
 
+  defp response_result("write", %{"status" => status} = result, _, _)
+       when map_size(result) == 1 and is_integer(status) and
+              status in 0..4_294_967_295 do
+    if Bitwise.band(status, 0x80000000) == 0,
+      do: {:ok, result},
+      else: {:error, Error.new(:invalid_native_frame, :response)}
+  end
+
   defp response_result("read", result, _, _) when is_map(result) do
     with {:ok, value} <- native_data_value(result),
          {:ok, _} <- Binary.encode_data_value(value),

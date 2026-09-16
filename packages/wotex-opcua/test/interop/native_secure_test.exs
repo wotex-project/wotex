@@ -160,6 +160,80 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
   end
 
+  test "a secure typed native Write is read back without retry" do
+    config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
+    guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    parameters = Jason.decode!(File.read!(Path.join(Path.dirname(config), "native-open.json")))
+    node_id = Jason.decode!(File.read!(config))["node_id"]
+    digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+
+    assert {:ok, host, _} =
+             Host.start_link(
+               executable: executable,
+               executable_digest: digest.(executable),
+               guardian: guardian,
+               guardian_digest: digest.(guardian),
+               timeout: 5000
+             )
+
+    assert {:ok, _} = Host.request(host, "open", parameters, 5000)
+    read = %{"node_id" => node_id, "index_range" => nil}
+
+    assert {:ok, %{"value" => %{"type" => "Double", "value" => original}}} =
+             Host.request(host, "read", read, 5000)
+
+    write = fn value ->
+      Host.request(
+        host,
+        "write",
+        Map.put(read, "value", %{"type" => "Double", "array" => false, "value" => value}),
+        5000
+      )
+    end
+
+    assert {:ok, %{"status" => 0}} = write.(22.25)
+
+    assert {:ok, %{"value" => %{"type" => "Double", "value" => 22.25}}} =
+             Host.request(host, "read", read, 5000)
+
+    assert {:ok, %{"status" => 0}} = write.(original)
+    assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
+  end
+
+  test "a rejected native Write preserves the unknown effect classification" do
+    config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
+    guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    parameters = Jason.decode!(File.read!(Path.join(Path.dirname(config), "native-open.json")))
+    digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+
+    assert {:ok, host, _} =
+             Host.start_link(
+               executable: executable,
+               executable_digest: digest.(executable),
+               guardian: guardian,
+               guardian_digest: digest.(guardian),
+               timeout: 5000
+             )
+
+    assert {:ok, _} = Host.request(host, "open", parameters, 5000)
+
+    write = %{
+      "node_id" => "ns=0;i=85",
+      "index_range" => nil,
+      "value" => %{"type" => "Double", "array" => false, "value" => 5.0}
+    }
+
+    assert {:error,
+            %Wotex.OPCUA.Error{code: :remote_error, effect: :unknown, details: %{status: status}}} =
+             Host.request(host, "write", write, 5000)
+
+    assert Bitwise.band(status, 0x8000_0000) != 0
+    monitor = Process.monitor(host)
+    assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
+  end
+
   defp line(port, buffered) do
     case :binary.match(buffered, "\n") do
       {index, 1} ->
