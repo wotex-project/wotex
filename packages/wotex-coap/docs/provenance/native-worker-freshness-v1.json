@@ -1,0 +1,92 @@
+{
+  "schema": "wotex.coap.native-worker-freshness-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Native Observe freshness admission and protected 24-bit wraparound through the production worker",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "cd2eece99adcfdc881e21029ecd84f5063dec5e37f28d70e344c7a9bf2dae786",
+      "native/oscore/main.c": "6e6c2a8deb2aeac8e527a922467bf89ab0f45f2aa2e669e988fa1e84f690e8eb",
+      "native/oscore/worker.c": "739350fa31847f45fb9f4ac13f6d63f56c216bf15c9de18a6a762df8ba33dd47",
+      "native/oscore/worker.h": "07c7e440f74fb6efbfabaf4a44a8eccf5a31b82f53c89951a26706354009b11e",
+      "native/oscore/exchange.c": "1844997741b84fc0f7f162e3ccb3f05b27d9f4f21d0a05f9c6eff1f58e83e8f6",
+      "native/oscore/exchange.h": "6c49c53a522018ff518b30268ca69306cc7ca6bc789b95e9bb417febf1dff7f6",
+      "native/oscore/observation.c": "f09c27e0f61b770bd95803fc9cd9fc5f4a8303786f31b699cb22b088bce4215b",
+      "native/oscore/observation.h": "734f13203346323ffff1966dc24f51afb7cd7644d9a694bc13289dd874af2ef1",
+      "native/oscore/custody.c": "887904afa9be4ec1e40145a6e69aac081eda9096a0fc2a0320751f2a16d082b5",
+      "native/oscore/command.c": "9dba7b283ea818d92e01db04483e3782ee401793272ec23e768829a45807c22d",
+      "native/oscore/json.c": "a50d46c2e518d5e3d932c6603306a54dd49abcf545cc5a97fbd2b7ec994d5d46",
+      "native/oscore/frame.c": "d122c2d763e967472d00a79eb4a01cebdbcd9c1b747578a43346141448349906",
+      "native/oscore/body.c": "f6f2696eae9631f5e68c38a01df7ff69f1d2b7ab08d51b735cc600e50ec3e9d4",
+      "native/oscore/credit.c": "f2566b99ae79f539d8c8c1bf0872b050bc62c3785d1758be1e1d7d3b2e624b7d",
+      "native/oscore/identity.c": "955d94def94861e15fbe8ff9c7e14f26a8eec5979585eff21b295267e04a4565",
+      "native/oscore/store.c": "a49ba6a278612e43c9e1872a9565abf541340aa12aa001f9f80e2c93f86969cd",
+      "native/oscore/patches/0007-preserve-oscore-observe-sequence.patch": "6e28ffa3b1892c1bb3b6ede3f77b899d29909993f4dcff82483f61ea748afda9",
+      "test/native/oscore_worker_exchange_test.c": "dc71de5e2fb232f225a1bf3f4c7630efb47a8d5a90c57b30e96e253d7cafbed7",
+      "test/native/Dockerfile": "6e63cf37fff755fa2fde403c1cff60eb9ce322772aea700e66834c32d2f60038",
+      "test/native/Dockerfile.json": "03b0735897a19e7d71e98ad254bb956f27120ee88d9afa16576648e778a947b8",
+      "test/wotex/coap/native_worker_test.exs": "9aa600b6ac0d0403215a74b0d65dd672e1a7064d123f622c61d8d513d2259bdb"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "package_version": "libcoap 4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 7,
+    "patched_coap_oscore_sha256": "601eb687f33794297c4571aa3481da0e480ec4165493d5081b52aa6511623ca6"
+  },
+  "requirements": ["WCO-S03", "WCO-V05", "WCO-V08", "WCO-N02", "WCO-N03"],
+  "assertions": [
+    "The production worker calls one bounded native freshness primitive before representation-identity admission",
+    "Equal, older and exact half-range serials inside 128 seconds are stale and leave serial, receive time and Content-Format identity unchanged",
+    "A stale report carrying changed Content-Format is ignored instead of terminating the observation",
+    "A fresh changed-Content-Format report returns representation changed without advancing freshness state",
+    "The strictly-greater-than-128-second escape accepts an otherwise equal serial and renewal accepts an unchanged serial",
+    "A same-stack protected observation starts at authenticated Observe FFFFFF and delivers the next notification as zero",
+    "The macOS and Linux sanitizer lanes execute the same production worker, admission primitive and protected wraparound"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "worker_sha256": "4a93f9ca504a9c9bfc26b80f71b355e1246a31227413e1cf54c5e2cee7f391da",
+      "peer_sha256": "fa3c7b0785099b541ceedba4f7f0483dd23869b48e0703712ee428ca50458a98",
+      "static_library_sha256": "4645502fd5709d041c1146ff1a9675b051649467913c8f4390a671e6a42918da",
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "image": "sha256:331c97ade078314ca8e03129549df042a2fee1b803e83aba39a3d09c1f8550e3",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "worker_sha256": "16e04ae0864d0fbd84ae7d326a3f4aee949f6a3a9312783c019092e6c5e038c0",
+      "peer_sha256": "df15cf2bc599ee7de0d37067c7257db2be4e57d378ca5bc90c094577eea125bb",
+      "static_library_sha256": "82932fb3fcde7bae297c093bb7878a20ea81676319b092a4bd8f43ace6eb0d72",
+      "artifact_log_sha256": "fb43401a719a2b4faf6380811bf080ea2f7095b2eefbc3cb648b402d4874fb0b",
+      "package_log_sha256": "b8c513532a688cc321c09f5e022b7ff72dedc3ade4438786d3f8f5961ff54879",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": ["address", "undefined", "leak"],
+      "toolchain_packages_recorded_not_locked": true
+    }
+  ],
+  "unaccepted": [
+    "Authenticated duplicate/stale notification injection through the complete protected worker",
+    "Explicit cancellation while renewal is in flight",
+    "Abrupt owner/receiver cleanup through the production worker",
+    "Actual blocked stdout and Port-mailbox saturation with reserved control-slot measurement",
+    "Live OSCORE replay/duplicate and restart fault matrix through the complete worker",
+    "Independent-stack OSCORE interoperability",
+    "1000-operation stress and native-v1 corpus completion",
+    "Reproducible Mix build/run orchestration and final manifest-bound executable"
+  ]
+}

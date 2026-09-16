@@ -11,6 +11,7 @@
 #include "exchange.h"
 #include "frame.h"
 #include "identity.h"
+#include "observation.h"
 #include "store.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -90,12 +91,11 @@ struct observation {
     char id[65];
     char path[4097];
     struct pending_report report, next;
-    int64_t last_received_at, refresh_at, renewal_deadline;
-    uint32_t last_observe;
+    struct wco_observation_freshness freshness;
+    int64_t refresh_at, renewal_deadline;
     uint32_t timeout_ms;
-    uint16_t content_format;
     uint16_t accept;
-    int freshness_set, content_format_present, confirmable, accept_present;
+    int confirmable, accept_present;
     int renew, renewing, initial_written;
     int established, cancelling, event_kind, used;
 };
@@ -432,35 +432,9 @@ static int prepare_report(const struct wco_exchange_message *message,
 static int admit_report(struct observation *observation,
                         const struct pending_report *report, int64_t received_at,
                         int renewal) {
-    uint32_t difference;
-    int64_t elapsed;
-    if (received_at < 0) return -1;
-    if (observation->freshness_set &&
-        (report->content_format_present != observation->content_format_present ||
-         (report->content_format_present &&
-          report->content_format != observation->content_format))) return -2;
-    if (!observation->freshness_set) {
-        observation->last_observe = report->observe;
-        observation->last_received_at = received_at;
-        observation->content_format = report->content_format;
-        observation->content_format_present = report->content_format_present;
-        observation->freshness_set = 1;
-        return 1;
-    }
-    if (renewal) {
-        observation->last_observe = report->observe;
-        observation->last_received_at = received_at;
-        return 1;
-    }
-    elapsed = received_at >= observation->last_received_at ?
-        received_at - observation->last_received_at : 0;
-    difference = (report->observe - observation->last_observe) & 0xffffffu;
-    if (elapsed <= 128000 &&
-        (report->observe == observation->last_observe || difference >= 0x800000u))
-        return 0;
-    observation->last_observe = report->observe;
-    observation->last_received_at = received_at;
-    return 1;
+    return wco_observation_admit(&observation->freshness, report->observe,
+                                 received_at, report->content_format_present,
+                                 report->content_format, renewal);
 }
 
 static int arm_observation(struct observation *observation,

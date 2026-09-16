@@ -3,6 +3,7 @@
  */
 #define _POSIX_C_SOURCE 200809L
 #include <coap3/coap.h>
+#include "observation.h"
 #include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
@@ -27,6 +28,7 @@ static size_t observe_token_length;
 static coap_mid_t observe_mid;
 static int64_t zero_max_age_at;
 static int renewal_fault;
+static uint64_t server_start_sequence;
 static pid_t worker_child = -1;
 static const char *stage = "startup";
 static coap_resource_t *observed_resource;
@@ -50,6 +52,44 @@ static int64_t now_ms(void) {
 static int saved(uint64_t boundary, void *argument) {
     (void)boundary; (void)argument;
     return 1;
+}
+
+static void freshness_primitives(void) {
+    struct wco_observation_freshness freshness, retained;
+    memset(&freshness, 0, sizeof(freshness));
+    assert(wco_observation_admit(&freshness, 10, 1000, 1, 0, 0) ==
+           WCO_OBSERVATION_FRESH);
+    retained = freshness;
+    assert(wco_observation_admit(&freshness, 10, 1001, 1, 42, 0) ==
+           WCO_OBSERVATION_STALE);
+    assert(!memcmp(&freshness, &retained, sizeof(freshness)));
+    assert(wco_observation_admit(&freshness, 9, 1002, 0, 0, 0) ==
+           WCO_OBSERVATION_STALE);
+    assert(!memcmp(&freshness, &retained, sizeof(freshness)));
+    assert(wco_observation_admit(&freshness, 10 + 0x800000u, 1003, 1, 0, 0) ==
+           WCO_OBSERVATION_STALE);
+    assert(!memcmp(&freshness, &retained, sizeof(freshness)));
+    assert(wco_observation_admit(&freshness, 11, 1004, 1, 0, 0) ==
+           WCO_OBSERVATION_FRESH);
+    retained = freshness;
+    assert(wco_observation_admit(&freshness, 12, 1005, 1, 42, 0) ==
+           WCO_OBSERVATION_CHANGED);
+    assert(!memcmp(&freshness, &retained, sizeof(freshness)));
+    assert(wco_observation_admit(&freshness, 11, 2000, 1, 0, 1) ==
+           WCO_OBSERVATION_FRESH);
+    retained = freshness;
+    assert(wco_observation_admit(&freshness, 11, 2001, 1, 42, 1) ==
+           WCO_OBSERVATION_CHANGED);
+    assert(!memcmp(&freshness, &retained, sizeof(freshness)));
+    assert(wco_observation_admit(&freshness, 11, 130002, 1, 0, 0) ==
+           WCO_OBSERVATION_FRESH);
+    memset(&freshness, 0, sizeof(freshness));
+    assert(wco_observation_admit(&freshness, 0xffffffu, 1, 1, 0, 0) ==
+           WCO_OBSERVATION_FRESH);
+    assert(wco_observation_admit(&freshness, 0, 2, 1, 0, 0) ==
+           WCO_OBSERVATION_FRESH);
+    assert(wco_observation_admit(&freshness, 0x1000000u, 3, 1, 0, 0) ==
+           WCO_OBSERVATION_INVALID);
 }
 
 static void resource(coap_resource_t *resource, coap_session_t *session,
@@ -180,7 +220,8 @@ static coap_context_t *server(unsigned *port) {
     coap_resource_t *value, *large;
     coap_oscore_conf_t *config = coap_new_oscore_conf(
         (coap_str_const_t){sizeof(server_conf) - 1,
-                           (const uint8_t *)server_conf}, saved, NULL, 0);
+                           (const uint8_t *)server_conf}, saved, NULL,
+        server_start_sequence);
     assert(context && config && coap_context_oscore_server(context, config));
     coap_context_set_block_mode(context,
                                 COAP_BLOCK_USE_LIBCOAP | COAP_BLOCK_SINGLE_BODY);
@@ -296,10 +337,18 @@ static void assert_report_payload(const char *line, int value) {
 static void pending_notification(coap_context_t *context, int value,
                                  unsigned expected_count) {
     int64_t deadline = now_ms() + 3000;
+    int scheduled = 0;
     notification = 1;
     notification_streamed = 0;
     notification_value = value;
-    assert(coap_resource_notify_observers(observed_resource, NULL));
+    while (!scheduled && now_ms() < deadline) {
+        scheduled = coap_resource_notify_observers(observed_resource, NULL);
+        if (!scheduled) assert(coap_io_process(context, 1) >= 0);
+    }
+    if (!scheduled)
+        fprintf(stderr, "notification schedule failed at %s value=%d count=%u\n",
+                stage, value, observe_count);
+    assert(scheduled);
     while (observe_count < expected_count && now_ms() < deadline)
         assert(coap_io_process(context, 1) >= 0);
     assert(observe_count == expected_count);
@@ -639,6 +688,115 @@ static void overloaded_observation(const char *executable, int event_kind) {
     notification = notification_streamed = notification_value = 0;
 }
 
+static void wraparound_observation(const char *executable) {
+    char directory[192], command[8192], output[131072];
+    int input[2], result[2], status;
+    pid_t child;
+    unsigned port;
+    coap_context_t *context;
+#if defined(__APPLE__)
+    assert(snprintf(directory, sizeof(directory),
+                    "/private/tmp/wotex-coap-exchange-%ld-wrap",
+#else
+    assert(snprintf(directory, sizeof(directory),
+                    "/tmp/wotex-coap-exchange-%ld-wrap",
+#endif
+                    (long)getpid()) > 0);
+    assert(mkdir(directory, 0700) == 0);
+    assert(pipe(input) == 0 && pipe(result) == 0);
+    child = fork();
+    assert(child >= 0);
+    worker_child = child;
+    if (child == 0) {
+        assert(dup2(input[0], STDIN_FILENO) == STDIN_FILENO);
+        assert(dup2(result[1], STDOUT_FILENO) == STDOUT_FILENO);
+        close(input[0]); close(input[1]); close(result[0]); close(result[1]);
+        execl(executable, executable, "--custody", directory, (char *)NULL);
+        _exit(127);
+    }
+    close(input[0]); close(result[1]);
+    assert(fcntl(result[0], F_SETFL, O_NONBLOCK) == 0);
+    get_count = post_count = large_count = observe_count = cancel_count = 0;
+    observe_token_length = 0;
+    zero_max_age_at = 0;
+    notification = notification_streamed = notification_value = 0;
+    initial_max_age_zero = renewal_fault = 0;
+    server_start_sequence = 0xffffffu;
+    context = server(&port);
+    stage = "wrap ready";
+    exact(context, result[0],
+          "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
+          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+    assert(snprintf(command, sizeof(command),
+        "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
+        "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":6,\"security\":{"
+        "\"mode\":\"oscore\",\"master_secret\":{\"type\":\"bytes\","
+        "\"base64\":\"AQIDBAUGBwgJCgsMDQ4PEA==\"},\"master_salt\":{"
+        "\"type\":\"bytes\",\"base64\":\"\"},\"sender_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AA==\"},\"recipient_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AQ==\"},\"id_context\":null,\"context_store\":\"%s\"}},"
+        "\"timeout_ms\":5000}\n", port, directory) > 0);
+    write_all(input[1], command);
+    stage = "wrap open";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"1\",\"ok\":true,\"result\":null}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"2\",\"operation\":\"observe\",\"parameters\":{"
+        "\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":"
+        "\"property\",\"renew\":false,\"accept\":0},\"timeout_ms\":5000}\n");
+    stage = "wrap establish";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"2\",\"ok\":true,\"result\":{"
+          "\"subscription_id\":\"2\",\"generation\":6}}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"3\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":6,\"ack_seq\":0},\"timeout_ms\":5000}\n");
+    stage = "wrap credit";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"3\",\"ok\":true,\"result\":null}\n");
+    stage = "wrap initial";
+    line(context, result[0], output, sizeof(output));
+    assert(report_observe(output) == 0xffffffu);
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"4\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":6,\"ack_seq\":1},\"timeout_ms\":5000}\n");
+    stage = "wrap initial acknowledgment";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"4\",\"ok\":true,\"result\":null}\n");
+    notification = 1;
+    notification_value = 21;
+    assert(coap_resource_notify_observers(observed_resource, NULL));
+    stage = "wrap report";
+    line(context, result[0], output, sizeof(output));
+    assert(strstr(output, "\"report_seq\":2,\"event\":\"report\""));
+    assert(report_observe(output) == 0);
+    assert_report_payload(output, 21);
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"5\",\"operation\":\"cancel\",\"parameters\":{"
+        "\"subscription_id\":\"2\",\"generation\":6},\"timeout_ms\":5000}\n");
+    stage = "wrap cancel";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"5\",\"ok\":true,\"result\":null}\n");
+    assert(cancel_count == 1);
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"6\",\"operation\":\"close\",\"parameters\":{},"
+        "\"timeout_ms\":5000}\n");
+    stage = "wrap close";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"6\",\"ok\":true,\"result\":null}\n");
+    assert(waitpid(child, &status, 0) == child);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    close(input[1]); close(result[0]);
+    coap_free_context(context);
+    snprintf(command, sizeof(command), "%s/contexts.v1", directory);
+    assert(unlink(command) == 0);
+    snprintf(command, sizeof(command), "%s/context.lock", directory);
+    assert(unlink(command) == 0);
+    assert(rmdir(directory) == 0);
+    notification = notification_value = 0;
+    server_start_sequence = 0;
+}
+
 int main(int argc, char **argv) {
     char directory[128];
     char command[131072], output[131072], encoded[2733], large_encoded[43693];
@@ -649,6 +807,7 @@ int main(int argc, char **argv) {
     uint32_t initial_observe, streamed_observe, renewed_observe;
     coap_context_t *context;
     assert(argc == 2 && argv[1][0] == '/');
+    freshness_primitives();
 #if defined(__APPLE__)
     assert(snprintf(directory, sizeof(directory), "/private/tmp/wotex-coap-exchange-%ld",
 #else
@@ -909,6 +1068,7 @@ int main(int argc, char **argv) {
     renewal_fault_observation(argv[1], 4, "{\"code\":\"timeout\"}");
     overloaded_observation(argv[1], 0);
     overloaded_observation(argv[1], 1);
+    wraparound_observation(argv[1]);
     coap_cleanup();
     puts("WCO-N02/N04: production worker completes unary, streamed and Observe exchanges");
     return 0;

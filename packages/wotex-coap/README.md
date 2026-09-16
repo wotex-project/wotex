@@ -62,7 +62,9 @@ than one-second intervals when enabled; otherwise it sends best-effort
 cancellation and reports stale state. Independent OSCORE interoperability and
 the final software matrix remain ordered work. Renewal faults retain their
 finite status/code, Property overload keeps one latest complete report and Event
-overlap terminates with owned cleanup.
+overlap terminates with owned cleanup. Native freshness checks ignore stale
+metadata before representation identity and accept the protected FFFFFF-to-zero
+serial wrap.
 Multicast and extended tokens are outside the implemented profile.
 
 ## Quick start
@@ -196,7 +198,7 @@ and Observe through the same owner, and releases exact handles on cancellation.
 Production unary execution uses these same response-body envelopes; production
 Observe execution now covers protected registration, inline or streamed reports,
 credit, Max-Age renewal, stale cleanup, bounded Property/Event overload,
-renewal faults and cancellation.
+renewal faults, 24-bit freshness and cancellation.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic

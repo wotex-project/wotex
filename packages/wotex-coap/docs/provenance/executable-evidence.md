@@ -188,6 +188,19 @@ ASan/UBSan/leak lanes execute this matrix. Duplicate/stale/wraparound injection,
 an in-flight renewal/cancel race, actual output-pipe saturation, replay,
 independent secure interoperability and Mix orchestration remain unaccepted.
 
+The [native worker freshness receipt](native-worker-freshness-v1.json) binds the
+next production source cohort. The worker uses a standalone native admission
+primitive that executes equal, older and exact half-range rejection, the
+strictly-greater-than-128-second escape, same-serial renewal and fresh
+representation-change ordering. Stale inputs carry a changed Content-Format and
+leave all accepted freshness/identity state unchanged. A further public-custody
+run starts the protected peer's sender sequence at FFFFFF and delivers the next
+authenticated notification with Observe zero. Both macOS and Linux sanitizer
+lanes execute the primitive and protected wrap. Authenticated duplicate/stale
+injection through the complete protected exchange, the renewal/cancel race,
+actual output-pipe saturation, replay, independent interoperability and Mix
+orchestration remain unaccepted.
+
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,
 explicit OSCORE credentials and exact five-field lines; omits absent optionals;

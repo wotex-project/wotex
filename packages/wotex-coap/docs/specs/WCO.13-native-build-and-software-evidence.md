@@ -197,9 +197,12 @@ detection. This evidence accepts inline and streamed reports plus the two
 Max-Age expiry policies. The peer also executes negative status, missing Observe,
 changed Content-Format and deadline renewal faults with exact terminal codes,
 then exhausts report credit to prove latest-Property coalescing and terminal
-Event overlap. It does not accept duplicate/stale/wraparound injection, an
-in-flight renewal/cancel race, replay, independent OSCORE interoperability or
-the final Mix-built helper.
+Event overlap. The native freshness primitive executes equal, older, half-range,
+128-second escape and representation-identity ordering cases, while a protected
+peer starts at Observe FFFFFF and delivers zero next. It does not accept
+authenticated duplicate/stale injection through the complete worker, an in-flight
+renewal/cancel race, replay, independent OSCORE interoperability or the final
+Mix-built helper.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and

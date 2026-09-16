@@ -14,6 +14,7 @@ defmodule Wotex.CoAP.NativeWorkerTest do
     native/oscore/frame.c
     native/oscore/body.c
     native/oscore/credit.c
+    native/oscore/observation.c
     native/oscore/identity.c
     native/oscore/store.c
     native/oscore/vendor/yyjson/yyjson.c
