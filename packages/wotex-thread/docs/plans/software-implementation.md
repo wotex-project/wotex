@@ -47,6 +47,10 @@ do not silently skip, simulate or weaken the requirement.
 - Done when: Implement the .13 Mix native/software tasks around the existing C++ host, pinned fixes and SDK build. ExUnit owns generic fixture assertions; native C++ tests share production parser/storage/credit code. Preserve existing host behavior and complete flow credits before accepting state streams.
 - Suggested local commit: `feat: own native thread build and bounded IPC`.
 
+The archive admission and exact SDK fix functions now have Elixir unit evidence.
+The Mix build task, receipt and Linux SDK build are still open, so P00 remains
+unaccepted.
+
 ### WTH-P01: Harden dataset syntax and daemon parsing
 
 - Requirements: WTH-S01, WTH-S02, WTH-N01, WTH-N02, WTH-N04; shared C01–C10 apply wherever relevant.

@@ -21,6 +21,18 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native source admission groundwork, 2026-09-17
+
+`Wotex.Thread.Native.Source` validates gzip tar member type, root, path and
+finite count/aggregate size before extraction to an empty absolute directory.
+It strips special file mode bits and rejects links. The reviewed Spinel and
+discerner edits require the exact pinned source hash, exact replacement counts
+and exact patched hash before writing. `native_source_test.exs` checks accepted
+regular files, executable permissions, wrong roots, links, symlinked output,
+bad patch hashes, second application and unknown source. These functions are
+not yet called by a Mix native build task; the Python build utility remains the
+current build entry point, and WTH-B01 is not accepted.
+
 ## Python-free injected ownership peer, 2026-09-16
 
 The BEAM ownership fixture is now `test/fixtures/sdk_bridge.escript`. ExUnit

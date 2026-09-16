@@ -57,11 +57,11 @@ specifications:
     executable_evidence: []
     compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WTH.13"
-    version: "1.0.0"
+    version: "1.0.1"
     path: "docs/specs/WTH.13-native-backend.md"
-    implementation_status: "planned"
+    implementation_status: "partial"
     standards: [{"name": "Native OpenThread host", "revision": "Exact source hashes and build profile in .13", "claim": "Accepted native target; current baseline evidence is separate"}]
     requires: ["WTH.00", "WTH.10", "WTH.11", "WTH.12"]
-    implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: "Required native Port, typed IPC, resource ownership and Mix/ExUnit evidence; fixtures/native-port-v1.json cases are specified, unexecuted."
+    implementation_modules: ["Wotex.Thread.Native.Source"]
+    executable_evidence: ["test/wotex/thread/native_source_test.exs"]
+    compatibility_classification: "Elixir archive admission and two exact pinned SDK patch functions have unit evidence, but no Mix build task uses them yet. Required native Port, typed IPC, resource ownership and full Mix/ExUnit evidence remain open; fixtures/native-port-v1.json cases are specified, unexecuted."

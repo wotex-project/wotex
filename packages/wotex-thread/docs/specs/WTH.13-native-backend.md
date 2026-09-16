@@ -3,7 +3,7 @@ spec:
   id: WTH.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.0
+  version: 1.0.1
   owner: wotex-thread
   updated: 2026-09-09
 ---
@@ -13,6 +13,10 @@ spec:
 This is the accepted native OpenThread target. [Current implementation and evidence](../provenance/executable-evidence.md)
 are separate. This contract and the .00/.10/.11/.12 requirements jointly define
 acceptance; documentation or a source archive alone is not completed software.
+An Elixir source-admission helper now validates finite regular-file archives
+and the exact before/after hashes of the two pinned SDK fixes. Its unit tests
+do not accept B01 or replace the current Python build utility: the Mix task,
+workspace manifest and Linux build remain required.
 
 ## WTH-B01 — Production and build boundary
 
