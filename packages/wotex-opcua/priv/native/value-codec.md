@@ -45,6 +45,9 @@ The current owner also copies up to 64 Call input Variants into SDK-owned memory
 retains them through the asynchronous callback, then copies and serializes the
 bounded method result. NodeId-bearing Call arguments and outputs remain
 unsupported until namespace translation in both directions is complete.
+The public native client now has independent-peer Write/readback evidence for a
+ByteString array with embedded zero and non-UTF-8 bytes; the complete typed
+matrix and multi-page service profile remain open.
 
 The C status set is finite: `WOP_VALUE_OK`, `WOP_VALUE_INVALID`,
 `WOP_VALUE_LIMIT`, and `WOP_VALUE_UNSUPPORTED`. The operation owner assigns the

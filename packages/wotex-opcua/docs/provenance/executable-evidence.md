@@ -20,6 +20,27 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Independent-peer native ByteString array round-trip, 2026-09-16
+
+The independent Basic256Sha256 anonymous peer now exposes a writable
+ByteString-array Value. Through the explicitly selected public `Open62541`
+client, one typed Write sends two binary elements containing embedded zero and
+non-UTF-8 bytes; a subsequent Value Read asserts the exact ordered base64
+envelopes. All nine optional secure-peer tests pass. The Python peer is
+test-only; this public client does not launch Python. This extends the partial
+P02 typed service evidence but does not accept the full S01/S02, policy/token,
+pagination or lifecycle matrices.
+
+The complete `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64
+with Elixir 1.20.2 / OTP 29.0.4: 281 passed (10 doctests, 4 properties,
+267 tests), ten optional tests excluded and 95.0% coverage. Native build,
+documentation, audits and package/archive checks pass.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `test/interop/secure_peer.py` | `4c1155a51e48c68b710d568adb402bf1a3e692859fbe483d9b59e7f544466bd8` |
+| `test/interop/native_secure_test.exs` | `c13b361574a5a6cbc1676e6015905ebe90dd2b2eb833503b596c56f88b8dafea` |
+
 ## Public native mutation preflight effect, 2026-09-16
 
 The facade now preserves `effect: :none` for the explicitly selected native

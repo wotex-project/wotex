@@ -101,6 +101,10 @@ The facade now keeps a native client's finite local Write/Call validation and
 configuration rejections at `effect: :none`, while uncertain mutation failures
 remain unknown. This is partial X04 effect classification, not full cancellation
 or lifecycle acceptance.
+One additional independent-peer case writes and reads back a typed ByteString
+array through the public native client, preserving embedded zero and binary
+octets. It extends the partial P02 service evidence without accepting the full
+typed-value or lifecycle matrix.
 
 ## Verification and evidence
 

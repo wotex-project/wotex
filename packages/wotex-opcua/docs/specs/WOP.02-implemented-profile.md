@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.23
+  version: 1.0.24
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -141,6 +141,9 @@ public request path exposes typed native DataValue, Write status and Call result
 maps through the facade; the independent Basic256Sha256 anonymous peer passes
 read, write/readback, Call and one-shot read. This is an explicitly selected
 partial native client, not a complete compatibility or Runtime projection.
+The same independent peer also accepts a public typed ByteString array Write
+and returns the exact binary array elements on Read, including embedded zero
+and non-UTF-8 bytes. Other typed value and lifecycle cells remain open.
 For this client, the facade preserves `effect: :none` on its finite local
 Write/Call input and configuration rejections. Transmitted or otherwise
 uncertain mutation failures remain conservatively `effect: :unknown`; the

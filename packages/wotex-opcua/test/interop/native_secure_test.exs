@@ -377,6 +377,27 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     }
 
     assert {:ok, %{"outputs" => [%{"value" => 4.5}]}} = Wotex.OPCUA.send(session, call)
+
+    bytes = %{
+      type: :write,
+      node_id: peer["byte_array_node_id"],
+      value: %{type: "ByteString", array: true, value: [<<0, 255>>, <<1>>]}
+    }
+
+    assert {:ok, %{"status" => 0}} = Wotex.OPCUA.send(session, bytes)
+
+    assert {:ok,
+            %{
+              "value" => %{
+                "type" => "ByteString",
+                "array" => true,
+                "value" => [
+                  %{"type" => "bytes", "base64" => "AP8="},
+                  %{"type" => "bytes", "base64" => "AQ=="}
+                ]
+              }
+            }} = Wotex.OPCUA.send(session, %{type: :read, node_id: peer["byte_array_node_id"]})
+
     assert :ok = Wotex.OPCUA.disconnect(session)
 
     assert {:ok, oneshot} =

@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.11
+  version: 1.1.12
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -58,6 +58,9 @@ through the Wotex facade against one independent secure peer. The older
 `Asyncua` adapter remains Python-backed. Complete compatibility projection,
 Browse, cancellation, concurrency and the policy/token matrix remain open;
 this does not accept P02/P03.
+The independent peer also confirms typed ByteString array Write/readback through
+the public native client, preserving binary elements. This adds no full S01/S02
+or P02 acceptance claim.
 The facade now preserves the native client's finite pre-I/O Write/Call rejection
 codes as no-effect errors; other mutation failures retain unknown effect. This
 does not yet discharge the full cancellation and effect matrix.

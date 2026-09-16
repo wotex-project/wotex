@@ -73,6 +73,10 @@ async def main(directory):
     namespace = await server.register_namespace("urn:wotex:fixture")
     variable = await server.nodes.objects.add_variable(ua.NodeId("value", namespace), "Value", 21.5)
     await variable.set_writable()
+    byte_values = await server.nodes.objects.add_variable(ua.NodeId("byte_values", namespace),
+                                                          "ByteValues", [b"a", b"b"],
+                                                          ua.VariantType.ByteString)
+    await byte_values.set_writable()
 
     @uamethod
     def add_values(parent, left, right):
@@ -87,6 +91,7 @@ async def main(directory):
               "server_uri": "urn:wotex:fixture:server", "server_certificate": str(directory / "server.der"),
               "issuer_certificate": str(directory / "ca.der"), "trust_certificates": [str(directory / "ca.der")],
               "crl": str(directory / "clean.crl"), "node_id": variable.nodeid.to_string(),
+              "byte_array_node_id": byte_values.nodeid.to_string(),
               "object_id": "ns=0;i=85", "method_id": method.nodeid.to_string()}
     def envelope(path):
         return {"type": "bytes", "base64": base64.b64encode((directory / path).read_bytes()).decode("ascii")}
