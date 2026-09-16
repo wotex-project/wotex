@@ -22,7 +22,7 @@ binding implementation work, not a changelog.
 | WOP-P04 | S04/X05: raw service-level subscriptions, exact revised parameters, full DataValue/overflow metadata, bounded Publish ACK and Republish sequence state | subscription_test.exs; test/native/subscription_test.c; X-F24..F28 | Open |
 | WOP-P05 | C03/C05/S02/S04/X04/X05: receiver/Session/owner loss, cancellation failure, saturated output, partial-open/final-owner handoff and terminal-once cleanup | subscription_lifecycle_test.exs; test/native/lifecycle_test.c; X-F18..F23/X-F29 and suspended-owner overproducer stress | Open |
 | WOP-P06 | S05: typed Runtime Property observation and explicit health probe, native one-shot compatibility projection, unsupported Event/credential rejection | runtime_stream_test.exs; real Runtime child-spec lifecycle tests | Open |
-| WOP-P06a | N01/N03/N04/N05: typed bounded Browse/BrowseNext/release, original Session/deadline, early-release/failure fallback and native root helpers | standalone_contract_test.exs; test/native/browse_test.c; WOP-F14..F16 and complete N boundary matrix | Open; complete single-page typed references and child Browse have fail-closed limits; internal C opt-in owns one continuation and admits BrowseNext/release, without public typed handles or peer pagination evidence |
+| WOP-P06a | N01/N03/N04/N05: typed bounded Browse/BrowseNext/release, original Session/deadline, early-release/failure fallback and native root helpers | standalone_contract_test.exs; test/native/browse_test.c; WOP-F14..F16 and complete N boundary matrix | Open; persistent typed handles, next/release/all and original-deadline/cumulative bounds pass C response fixtures; native C owns one token; multiple live continuations, one-shot child pagination and peer wire/release evidence remain |
 | WOP-P07 | X06/S01..S04: independent asyncua secure peer and same-stack exact-tick/fault C peer, typed methods/arrays/users, subscriptions and continuation counters; all policy/token/security cells execute | test/interop/asyncua_test.exs; test/interop/open62541_test.exs; full V01..V14 software assertions | Open |
 | WOP-P07a | I01..I06: exact profiles and Form/context/media selection, Result identity/metadata, complete Error/Retry table, final-owner custody and cleanup through real ConsumedThing | runtime_integration_test.exs; all wotex-integration-v1.json cases and I06 matrix | Open; one native one-shot Runtime ByteString Form Write/readback path is proven, but the profile factory and full matrix remain |
 | WOP-P08 | C09/C10/X06: complete software Mix tasks, audit/sanitizer/matrix/stress and isolated native archive consumer with no runtime Python; evidence contains every S/N/I/X assertion and current digest | test/software/lifecycle_stress_test.exs; X-F48; full software runner and out-of-tree package workflow | Open |
@@ -108,22 +108,29 @@ typed-value or lifecycle matrix.
 The next P02/N03 slice uses service-level Browse with an explicit 1..256 page
 size. It retains all seven ReferenceDescription fields and projects only a
 complete page of local child NodeIds through the selected public native client.
-Oversized server pages and continuations close the native Session; explicit
-BrowseNext, release, typed page handles, original-deadline pagination and N03/N04
-acceptance remain open. Independent-peer tests exercise complete-page results,
+At that stage, oversized server pages and continuations closed the native
+Session; BrowseNext, release, typed page handles and original-deadline
+pagination were still open. Independent-peer tests exercised complete-page results,
 server page-limit failure and public persistent/one-shot projection.
 The subsequent N03 partial slice exposes complete seven-field reference pages
 through persistent-only `Browse.references/3`. Strict finite option validation
 precedes I/O; native frame validation and pure reference codecs retain typed
 identities and server order. Remote ExpandedNodeIds remain data, unknown local
-namespace indices fail, and excess references fail. Continuations still close
-the native Session; this is not N03/N04 pagination acceptance.
+namespace indices fail, and excess references fail. At that stage a
+continuation still closed the native Session.
 The next native-only N03 slice adds an internal opt-in for one C-owned
 continuation point. BrowseNext consumes its local token and can return a fresh
 token even when the server bytes repeat; Browse release expects an empty result.
 Cumulative 64-page, 4096-reference and 1 MiB binary-result ceilings fail closed.
-The BEAM frame now validates local token syntax, but the public host closes on
-every returned continuation until it can bind a handle to that native Session.
+The BEAM frame validates local token syntax. At that stage the public host
+closed on every returned continuation pending handle ownership.
+The next persistent typed slice binds a native local token to a BEAM reference
+and generation. `Browse.next/2` consumes it, `release/2` sends bounded cleanup,
+and `all/3` collects ordered pages without refreshing the original deadline.
+Deterministic response fixtures cover reuse/foreign references, empty first
+page, cap exhaustion, Uncertain status and release failure. The native owner
+still has only one live continuation and the independent asyncua peer cannot
+exercise BrowseNext; compatibility child-list pagination remains separate.
 The existing independent asyncua peer ignores the requested page size and does
 not implement BrowseNext, so no wire pagination or release acceptance is claimed.
 The following N04 compatibility slice maps one-shot native Read to the older

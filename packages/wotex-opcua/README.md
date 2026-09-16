@@ -47,8 +47,9 @@ Browse through C without runtime Python. WOP.02 and executable evidence bound
 its actual behavior. One-shot Read/Write/Call successes preserve the older
 adapter's result shapes. A persistent native Session can also return one
 complete page of seven-field typed references. The C owner now has a single
-local-token BrowseNext/release path behind an internal opt-in; public typed
-handles and pagination remain closed at the BEAM host. Complete compatibility
+local-token BrowseNext/release path. Persistent typed Browse exposes bound
+handles, `next`, `release` and bounded `all`; deterministic fixtures exercise
+pagination, while independent-peer BrowseNext proof remains open. Complete compatibility
 projection, subscriptions and lifecycle work remain.
 The Runtime Form mapper preserves raw ByteString bytes for the explicitly
 selected native one-shot client. Runtime reads also decode validated flat

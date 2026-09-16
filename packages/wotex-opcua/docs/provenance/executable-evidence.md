@@ -20,6 +20,29 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Persistent typed Browse handles and bounded collection, 2026-09-16
+
+`Browse.references/3` now opts into a native continuation only for an owned
+persistent Session. The BEAM host replaces each local C token with an opaque
+`Browse.Continuation` reference bound to that host and generation. `next/2`
+consumes the old reference, `release/2` sends bounded release, and `all/3`
+collects complete pages in server order. The original absolute deadline and
+cumulative page/reference/encoded-byte limits survive each hop; expired or
+over-bound work closes the Session. An Uncertain page fails `:incomplete_browse`
+and releases its live cursor. A release protocol failure closes the host.
+
+The deterministic C response peer exercises an empty first page, two later
+pages, reused/foreign handles, early release, `all/3`, Uncertain status,
+page/reference caps, original-deadline expiry and release failure. The focused
+public client suite passes 22/22. The native C owner still holds only one live
+continuation per Session, and the independent asyncua peer does not implement
+BrowseNext. These fixtures do not prove a peer wire exchange, multiple live
+continuations, one-shot child pagination or full WOP-N03/N04 acceptance.
+The final local `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes with
+299 tests, 12 optional tests excluded and 95.0% coverage. Compiler, format,
+Credo, Dialyzer, docs, dependency audits, native CTest and the isolated
+package/archive checks pass. No production Python path was added.
+
 ## Native Browse continuation owner groundwork, 2026-09-16
 
 The C Session owner now has an internal opt-in for one live Browse

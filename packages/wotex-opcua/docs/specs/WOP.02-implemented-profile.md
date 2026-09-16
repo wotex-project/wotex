@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.32
+  version: 1.0.33
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -134,25 +134,29 @@ HierarchicalReferences Browse page now returns complete typed references in
 server order through the internal native owner. The explicitly selected public
 client projects a complete page of at most 256 local child NodeIds in persistent
 or one-shot mode; it rejects remote ExpandedNodeIds. The persistent-only
-`Browse.references/3` path now exposes that same complete single page as typed
-ReferenceDescriptions, preserving remote ExpandedNodeId identities without
-following them. It validates strict finite filters before service I/O and
-rejects unknown local namespace indices. A server page larger than
-requested or a continuation closes the Session instead of claiming a complete
-child list. Typed page handles, BrowseNext/release, subscriptions,
+`Browse.references/3` exposes seven-field typed ReferenceDescriptions,
+preserving remote ExpandedNodeId identities without following them. It
+validates strict finite filters before service I/O and rejects unknown local
+namespace indices. A server page larger than requested closes the Session.
+Persistent typed Browse can return a generation-bound handle; `next/2`,
+`release/2` and `all/3` preserve the original deadline, server order and
+cumulative page/reference/byte ceilings. The C owner currently retains only
+one live server continuation per Session, and a second Browse while it is live
+returns `:busy`. The older child-list and one-shot compatibility paths still
+close on a continuation rather than claim an incomplete list. Subscriptions,
 complete output buffering, cancellation, full namespace translation and other
 policy/token interoperability remain open P02/P03 work. The older explicit
 `Asyncua` adapter remains Python-backed.
-The C owner now has an internal opt-in Browse continuation path: it keeps one
-server token in native memory, returns a fresh local token for each page, and
-sends service-level BrowseNext or release on the same Session. The existing
-public calls do not opt in and retain fail-closed behavior. A native state test
-covers token reuse and foreign-token rejection; the independent secure peer
-does not implement server-side BrowseNext, so wire pagination, cleanup failure,
-original-deadline propagation and public handles have no acceptance evidence.
-The BEAM frame now validates native local-token syntax and an exact null
-release response. Until it owns public continuation handles, the BEAM host
-closes its Session on any returned token, including an opt-in raw request.
+The C owner keeps one server token in native memory, returns a fresh local
+token for each page, and sends service-level BrowseNext or release on the same
+Session. A native state test covers reused bytes and foreign-token rejection.
+The BEAM frame validates native local-token syntax and an exact null release
+response. The BEAM host maps tokens only from its own opt-in Browse request to
+caller-held references; a generic raw Browse token still closes the Session.
+Deterministic C response fixtures exercise handle consumption, explicit
+release, `all/3`, Uncertain status, caps, deadline expiry and release failure.
+The independent secure peer does not implement BrowseNext, so these are not
+wire-pagination or WOP-N03/N04 acceptance evidence.
 The native configuration helper validates explicit policy, token and credential
 paths and snapshots bounded files for the native `open` request.
 `Open62541.connect/1` now uses that helper and the owned C host for a persistent

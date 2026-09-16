@@ -291,6 +291,13 @@ defmodule Wotex.OPCUA.Open62541Test do
     assert {:error, %Error{code: :response_limit}} =
              Browse.references(duplicate_session, "ns=0;i=85", max_references: 1)
 
+    assert :ok = Wotex.OPCUA.disconnect(duplicate_session)
+
+    duplicate_options = fixture(context, "typed-duplicate-browse-again", "session_two_browse")
+
+    assert {:ok, duplicate_session} =
+             Wotex.OPCUA.connect(Keyword.put(duplicate_options, :client, Open62541))
+
     assert {:ok, %Browse.Page{references: [first, second]}} =
              Browse.references(duplicate_session, "ns=0;i=85", max_references: 2)
 
@@ -305,7 +312,7 @@ defmodule Wotex.OPCUA.Open62541Test do
     continuation_monitor = Process.monitor(continuation_session.handle.host)
 
     assert {:error, %Error{code: :response_limit}} =
-             Browse.references(continuation_session, "ns=0;i=85")
+             Wotex.OPCUA.send(continuation_session, %{type: :browse, node_id: "ns=0;i=85"})
 
     assert_receive {:DOWN, ^continuation_monitor, :process, _, _}, 1000
 
@@ -314,6 +321,152 @@ defmodule Wotex.OPCUA.Open62541Test do
                %Wotex.OPCUA.Session{client: Wotex.OPCUA.Asyncua, handle: %{}, timeout: 1000},
                "i=1"
              )
+  end
+
+  test "WOP-N03 persistent Browse handles consume pages and release on their original owner",
+       context do
+    options = fixture(context, "paginated-browse", "session_continuation")
+    assert {:ok, session} = Wotex.OPCUA.connect(Keyword.put(options, :client, Open62541))
+
+    assert {:ok, %Browse.Page{references: [], continuation: first}} =
+             Browse.references(session, "ns=0;i=85", page_size: 1)
+
+    assert %Browse.Continuation{pid: host} = first
+    refute inspect(first) =~ inspect(first.reference)
+
+    assert {:error, %Error{code: :invalid_continuation}} =
+             Browse.next(session, %{first | reference: make_ref()})
+
+    assert {:error, %Error{code: :busy}} = Browse.references(session, "ns=0;i=85")
+
+    assert {:ok, %Browse.Page{references: [reference], continuation: second}} =
+             Browse.next(session, first)
+
+    assert reference.node_id.node_id.identifier == "value"
+    assert first.reference != second.reference
+    assert {:error, %Error{code: :invalid_continuation}} = Browse.next(session, first)
+    assert :ok = Browse.release(session, second)
+    assert {:error, %Error{code: :invalid_continuation}} = Browse.release(session, second)
+    assert Process.alive?(host)
+
+    assert {:ok, %{references: [left, right], status: 0}} =
+             Browse.all(session, "ns=0;i=85", page_size: 1)
+
+    assert left == right
+    assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
+  test "WOP-N03 page, reference and original deadline limits close the owner", context do
+    for {suffix, opts, steps} <- [
+          {"page-limit", [max_pages: 1], 0},
+          {"reference-limit", [max_references: 1], 2},
+          {"deadline-limit", [timeout_ms: 100], :expire}
+        ] do
+      options = fixture(context, suffix, "session_continuation")
+      assert {:ok, session} = Wotex.OPCUA.connect(Keyword.put(options, :client, Open62541))
+      monitor = Process.monitor(session.handle.host)
+
+      case steps do
+        0 ->
+          assert {:error, %Error{code: :response_limit}} =
+                   Browse.references(session, "ns=0;i=85", opts)
+
+        2 ->
+          assert {:ok, %Browse.Page{continuation: first}} =
+                   Browse.references(session, "ns=0;i=85", opts)
+
+          assert {:ok, %Browse.Page{continuation: second}} = Browse.next(session, first)
+          assert {:error, %Error{code: :response_limit}} = Browse.next(session, second)
+
+        :expire ->
+          assert {:ok, %Browse.Page{continuation: first}} =
+                   Browse.references(session, "ns=0;i=85", opts)
+
+          Process.sleep(150)
+          assert {:error, %Error{code: :deadline_exceeded}} = Browse.next(session, first)
+          assert :ok = Browse.release(session, first)
+      end
+
+      assert_receive {:DOWN, ^monitor, :process, _, _}, 1000
+      assert :ok = Wotex.OPCUA.disconnect(session)
+    end
+  end
+
+  test "WOP-N04 release failure closes the owner", context do
+    options = fixture(context, "failed-release", "session_release_failure")
+    assert {:ok, session} = Wotex.OPCUA.connect(Keyword.put(options, :client, Open62541))
+    monitor = Process.monitor(session.handle.host)
+    assert {:ok, %Browse.Page{continuation: handle}} = Browse.references(session, "ns=0;i=85")
+    assert {:error, %Error{code: :invalid_native_frame}} = Browse.release(session, handle)
+    assert_receive {:DOWN, ^monitor, :process, _, _}, 1000
+    assert :ok = Browse.release(session, handle)
+  end
+
+  test "WOP-N03 all rejects Uncertain pages and releases the live cursor", context do
+    options = fixture(context, "uncertain-browse", "session_uncertain_browse")
+    assert {:ok, session} = Wotex.OPCUA.connect(Keyword.put(options, :client, Open62541))
+    assert {:error, %Error{code: :incomplete_browse}} = Browse.all(session, "ns=0;i=85")
+    assert Process.alive?(session.handle.host)
+    assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
+  test "WOP-N03 invalid next-page identity releases its successor cursor", context do
+    options = fixture(context, "invalid-next-reference", "session_invalid_next_reference")
+    assert {:ok, session} = Wotex.OPCUA.connect(Keyword.put(options, :client, Open62541))
+    assert {:ok, %Browse.Page{continuation: first}} = Browse.references(session, "ns=0;i=85")
+    assert {:error, %Error{code: :unsupported_remote_reference}} = Browse.next(session, first)
+    assert Process.alive?(session.handle.host)
+    assert :ok = Wotex.OPCUA.disconnect(session)
+  end
+
+  test "WOP-N03 invalid and one-shot continuation calls fail before service I/O", context do
+    options = fixture(context, "invalid-continuation", "session_continuation")
+    assert {:ok, session} = Wotex.OPCUA.connect(Keyword.put(options, :client, Open62541))
+    assert {:ok, %Browse.Page{continuation: handle}} = Browse.references(session, "ns=0;i=85")
+    assert {:error, %Error{code: :invalid_continuation}} = Browse.next(session, :not_a_handle)
+    assert {:error, %Error{code: :invalid_continuation}} = Browse.release(session, :not_a_handle)
+
+    assert {:error, %Error{code: :invalid_continuation}} =
+             Wotex.OPCUA.Native.Host.request(
+               session.handle.host,
+               "browse_next",
+               %{"continuation" => "c1"},
+               1000
+             )
+
+    assert {:error, %Error{code: :busy}} =
+             Wotex.OPCUA.Native.Host.browse_page(
+               session.handle.host,
+               %{},
+               %{max_pages: 0, max_references: 0},
+               1000
+             )
+
+    assert :ok = Browse.release(session, handle)
+
+    assert {:error, %Error{code: :busy}} =
+             Wotex.OPCUA.Native.Host.browse_page(
+               session.handle.host,
+               %{},
+               %{max_pages: 0, max_references: 0},
+               1000
+             )
+
+    assert {:error, %Error{code: :invalid_native_handle}} =
+             Wotex.OPCUA.Native.Host.browse_page(:not_a_host, %{}, %{}, 1000)
+
+    assert :ok = Wotex.OPCUA.disconnect(session)
+
+    assert {:ok, oneshot} =
+             Wotex.OPCUA.connect(
+               @options
+               |> Keyword.put(:client, Open62541)
+               |> Keyword.put(:lifecycle, :oneshot)
+             )
+
+    assert {:error, %Error{code: :persistent_session_required}} = Browse.next(oneshot, handle)
+    assert {:error, %Error{code: :persistent_session_required}} = Browse.release(oneshot, handle)
+    assert :ok = Wotex.OPCUA.disconnect(oneshot)
   end
 
   test "WOP-X01 one-shot native client opens and closes within each read", context do

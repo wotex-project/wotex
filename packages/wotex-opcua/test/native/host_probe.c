@@ -81,6 +81,7 @@ static int session_services(int remote_browse) {
         char *request_id = strstr(frame, "\"id\":\"");
         if(!key || !request_id || sscanf(key, "\"generation\":%llu", &generation) != 1 ||
            sscanf(request_id, "\"id\":\"%64[0-9]\"", id) != 1) return 60;
+        int closing = strstr(frame, "\"operation\":\"close\"") != NULL;
         const char *result;
         if(strstr(frame, "\"operation\":\"open\""))
             result = "{\"session_timeout_ms\":60000.0,\"session_generation\":%llu,"
@@ -123,8 +124,34 @@ static int session_services(int remote_browse) {
                 "\"value\":[1.0,2.0],\"dimensions\":[1,2]}]}" :
                 "{\"status\":0,\"input_argument_statuses\":[],"
                      "\"outputs\":[{\"type\":\"Double\",\"array\":false,\"value\":4.5}]}";
+        else if(strstr(frame, "\"operation\":\"browse_next\""))
+            result = remote_browse == 17 ?
+                "{\"status\":0,\"continuation\":\"c2\",\"references\":[{"
+                "\"reference_type_id\":\"ns=0;i=35\",\"is_forward\":true,"
+                "\"node_id\":{\"node_id\":\"ns=2;s=value\",\"namespace_uri\":null,\"server_index\":0},"
+                "\"browse_name\":{\"namespace\":1,\"name\":\"Value\"},"
+                "\"display_name\":{\"locale\":null,\"text\":\"Value\"},\"node_class\":2,"
+                "\"type_definition\":{\"node_id\":\"ns=0;i=0\",\"namespace_uri\":null,\"server_index\":0}}]}" :
+                (remote_browse == 14 || remote_browse == 15) &&
+                     strstr(frame, "\"continuation\":\"c1\"") ?
+                "{\"status\":0,\"continuation\":\"c2\",\"references\":[{"
+                "\"reference_type_id\":\"ns=0;i=35\",\"is_forward\":true,"
+                "\"node_id\":{\"node_id\":\"ns=1;s=value\",\"namespace_uri\":null,\"server_index\":0},"
+                "\"browse_name\":{\"namespace\":1,\"name\":\"Value\"},"
+                "\"display_name\":{\"locale\":null,\"text\":\"Value\"},\"node_class\":2,"
+                "\"type_definition\":{\"node_id\":\"ns=0;i=0\",\"namespace_uri\":null,\"server_index\":0}}]}" :
+                "{\"status\":0,\"continuation\":null,\"references\":[{"
+                "\"reference_type_id\":\"ns=0;i=35\",\"is_forward\":true,"
+                "\"node_id\":{\"node_id\":\"ns=1;s=value\",\"namespace_uri\":null,\"server_index\":0},"
+                "\"browse_name\":{\"namespace\":1,\"name\":\"Value\"},"
+                "\"display_name\":{\"locale\":null,\"text\":\"Value\"},\"node_class\":2,"
+                "\"type_definition\":{\"node_id\":\"ns=0;i=0\",\"namespace_uri\":null,\"server_index\":0}}]}";
+        else if(strstr(frame, "\"operation\":\"browse_release\""))
+            result = remote_browse == 15 ? "{\"status\":0}" : "null";
         else if(strstr(frame, "\"operation\":\"browse\""))
-            result = remote_browse == 14 ?
+            result = remote_browse == 16 ?
+                "{\"status\":1073741824,\"continuation\":\"c1\",\"references\":[]}" :
+                (remote_browse == 14 || remote_browse == 15 || remote_browse == 17) ?
                 "{\"status\":0,\"continuation\":\"c1\",\"references\":[]}" :
                 remote_browse == 13 ?
                 "{\"status\":0,\"continuation\":null,\"references\":[{"
@@ -174,7 +201,7 @@ static int session_services(int remote_browse) {
             generation, id, body);
         if(count <= 0 || (size_t)count >= sizeof(frame) ||
            write_all(STDOUT_FILENO, frame, (size_t)count)) return 63;
-        if(!strcmp(body, "null")) return 0;
+        if(closing) return 0;
     }
     return 64;
 }
@@ -237,6 +264,9 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "session_runtime_byte_array")) return session_services(12);
     if (!strcmp(mode, "session_two_browse")) return session_services(13);
     if (!strcmp(mode, "session_continuation")) return session_services(14);
+    if (!strcmp(mode, "session_release_failure")) return session_services(15);
+    if (!strcmp(mode, "session_uncertain_browse")) return session_services(16);
+    if (!strcmp(mode, "session_invalid_next_reference")) return session_services(17);
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

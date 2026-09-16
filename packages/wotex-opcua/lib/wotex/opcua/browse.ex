@@ -1,17 +1,16 @@
 defmodule Wotex.OPCUA.Browse do
   @moduledoc """
-  Returns a bounded, complete native Browse page with typed references.
+  Returns bounded native Browse pages with typed references.
 
   `references/3` requires an explicitly selected persistent `Open62541`
   Session. It validates the node and strict finite options before service I/O,
   retains all seven ReferenceDescription fields in server order and never
-  follows a remote ExpandedNodeId. The current native executable closes its
-  Session if the server returns a continuation, so this function does not yet
-  offer BrowseNext, release or `all/3`.
+  follows a remote ExpandedNodeId. A continuation belongs to the original
+  persistent native Session and must be consumed or released.
   """
 
   alias Wotex.OPCUA.{Address, Binary, Error, Open62541, Session}
-  alias Wotex.OPCUA.Browse.Page
+  alias Wotex.OPCUA.Browse.{Continuation, Page}
   alias Wotex.OPCUA.Native.{Config, Host}
 
   @defaults [
@@ -25,7 +24,7 @@ defmodule Wotex.OPCUA.Browse do
   ]
   @keys [:timeout_ms | Keyword.keys(@defaults)]
 
-  @doc "Browses one complete service-level page on the caller-owned persistent native Session."
+  @doc "Browses one bounded service-level page on the caller-owned persistent native Session."
   @spec references(Session.t(), term(), keyword()) :: {:ok, Page.t()} | {:error, Error.t()}
   def references(session, node, opts \\ [])
 
@@ -44,14 +43,18 @@ defmodule Wotex.OPCUA.Browse do
         opts
       )
       when owner == self() and is_pid(host) and is_list(namespaces) do
-    with {:ok, parameters, timeout, max_references} <- options(node, opts, session_timeout),
-         {:ok, %{"references" => raw, "status" => status, "continuation" => nil}} <-
-           Host.request(host, "browse", parameters, timeout),
-         true <- length(raw) <= max_references,
-         {:ok, references} <- typed_references(raw, namespaces) do
-      {:ok, %Page{references: references, status: status, continuation: nil}}
+    with {:ok, parameters, timeout, limits} <- options(node, opts, session_timeout),
+         {:ok, %{"references" => raw, "status" => status, "continuation" => continuation}} <-
+           Host.browse_page(host, parameters, limits, timeout) do
+      case typed_references(raw, namespaces) do
+        {:ok, references} ->
+          {:ok, %Page{references: references, status: status, continuation: continuation}}
+
+        {:error, _} = error ->
+          cleanup(host, continuation, session_timeout)
+          error
+      end
     else
-      false -> {:error, Error.new(:response_limit)}
       {:error, _} = error -> error
       _ -> {:error, Error.new(:invalid_native_frame)}
     end
@@ -65,6 +68,98 @@ defmodule Wotex.OPCUA.Browse do
       do: {:error, Error.new(:persistent_session_required)}
 
   def references(_, _, _), do: {:error, Error.new(:unsupported_protocol)}
+
+  @doc "Consumes one live continuation on the original persistent native Session."
+  @spec next(Session.t(), Continuation.t()) :: {:ok, Page.t()} | {:error, Error.t()}
+  def next(
+        %Session{
+          client: Open62541,
+          handle: %{
+            owner: owner,
+            host: host,
+            config: %Config{lifecycle: :persistent},
+            namespace_array: namespaces
+          },
+          timeout: timeout
+        },
+        %Continuation{} = continuation
+      )
+      when owner == self() and is_pid(host) and is_list(namespaces) do
+    with {:ok, %{"references" => raw, "status" => status, "continuation" => following}} <-
+           Host.browse_next(host, continuation, timeout) do
+      case typed_references(raw, namespaces) do
+        {:ok, references} ->
+          {:ok, %Page{references: references, status: status, continuation: following}}
+
+        {:error, _} = error ->
+          cleanup(host, following, timeout)
+          error
+      end
+    end
+  end
+
+  def next(%Session{client: Open62541, handle: %{config: %Config{lifecycle: :oneshot}}}, _),
+    do: {:error, Error.new(:persistent_session_required)}
+
+  def next(_, _), do: {:error, Error.new(:invalid_continuation)}
+
+  @doc "Releases one live continuation on the original persistent native Session."
+  @spec release(Session.t(), Continuation.t()) :: :ok | {:error, Error.t()}
+  def release(
+        %Session{
+          client: Open62541,
+          handle: %{owner: owner, host: host, config: %Config{lifecycle: :persistent}},
+          timeout: timeout
+        },
+        %Continuation{pid: host} = continuation
+      )
+      when owner == self() and is_pid(host) do
+    if Process.alive?(host),
+      do: Host.browse_release(host, continuation, timeout),
+      else: :ok
+  end
+
+  def release(%Session{client: Open62541, handle: %{config: %Config{lifecycle: :oneshot}}}, _),
+    do: {:error, Error.new(:persistent_session_required)}
+
+  def release(_, _), do: {:error, Error.new(:invalid_continuation)}
+
+  @doc "Collects complete pages in server order within one original browse deadline."
+  @spec all(Session.t(), term(), keyword()) ::
+          {:ok, %{references: [Binary.Reference.t()], status: non_neg_integer()}}
+          | {:error, Error.t()}
+  def all(session, node, opts \\ []) do
+    with {:ok, page} <- references(session, node, opts) do
+      collect(session, page, [])
+    end
+  end
+
+  defp collect(session, %Page{status: status, continuation: continuation} = page, prior) do
+    if Bitwise.band(status, 0xC000_0000) != 0 do
+      cleanup(session.handle.host, continuation, session.timeout)
+      {:error, Error.new(:incomplete_browse)}
+    else
+      accumulated = [page.references | prior]
+
+      case continuation do
+        nil ->
+          references =
+            accumulated
+            |> Enum.reverse()
+            |> List.flatten()
+
+          {:ok, %{references: references, status: status}}
+
+        handle ->
+          with {:ok, following} <- next(session, handle) do
+            collect(session, following, accumulated)
+          end
+      end
+    end
+  end
+
+  defp cleanup(_, nil, _), do: :ok
+  defp cleanup(host, handle, timeout), do: Host.browse_release(host, handle, timeout)
 
   defp options(node, opts, session_timeout) do
     if Keyword.keyword?(opts) and length(opts) == MapSet.size(MapSet.new(Keyword.keys(opts))) and
@@ -91,7 +186,8 @@ defmodule Wotex.OPCUA.Browse do
           "page_size" => opts[:page_size]
         }
 
-        {:ok, parameters, min(timeout, session_timeout), opts[:max_references]}
+        {:ok, parameters, min(timeout, session_timeout),
+         %{max_pages: opts[:max_pages], max_references: opts[:max_references]}}
       else
         {:error, _} = error -> error
         _ -> {:error, Error.new(:invalid_value)}

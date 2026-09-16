@@ -11,8 +11,10 @@ defmodule Wotex.OPCUA.Native.Host do
   The successful return includes the decoded process readiness and the BEAM
   monotonic receive sample. This bootstrap does not send credentials or
   protocol requests at startup. Its internal `request/4` path can correlate
-  explicit secure open, Value read, typed Write, Method Call and close responses with credit
-  replenishment. Other native service operations remain unimplemented.
+  explicit secure open, Value read, typed Write, Method Call, bounded Browse
+  pages and close responses with credit replenishment. A Browse continuation is
+  mapped to an owner-bound reference; only one is live per native Session.
+  Other native service operations remain unimplemented.
   Unsolicited output ends the
   generation and sends one
   `{:wotex_opcua_native, pid, {:error, error}}` to its owner.
@@ -29,6 +31,7 @@ defmodule Wotex.OPCUA.Native.Host do
 
   use GenServer
 
+  alias Wotex.OPCUA.Browse.Continuation
   alias Wotex.OPCUA.Error
   alias Wotex.OPCUA.Native.{Executable, Frame, HostOptions, Ready}
 
@@ -80,6 +83,50 @@ defmodule Wotex.OPCUA.Native.Host do
 
   def request(_, _, _, _), do: {:error, Error.new(:invalid_native_frame, :request)}
 
+  @doc "Starts one bounded Browse page and binds any native token to this owner."
+  @spec browse_page(pid(), map(), map(), pos_integer()) ::
+          {:ok, map()} | {:error, Error.t()}
+  def browse_page(host, parameters, limits, timeout)
+      when is_pid(host) and is_map(parameters) and is_map(limits) and
+             is_integer(timeout) and timeout in 1..60_000 do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    GenServer.call(
+      host,
+      {__MODULE__, :browse_page, parameters, limits, timeout, deadline},
+      timeout + 100
+    )
+  catch
+    :exit, _ -> {:error, Error.new(:native_process_terminated)}
+  end
+
+  def browse_page(_, _, _, _), do: {:error, Error.new(:invalid_native_handle)}
+
+  @doc "Consumes one owner-bound handle for the next native Browse page."
+  @spec browse_next(pid(), Continuation.t(), pos_integer()) ::
+          {:ok, map()} | {:error, Error.t()}
+  def browse_next(host, handle, timeout), do: continue(host, handle, timeout, :next)
+
+  @doc "Releases one owner-bound native server continuation."
+  @spec browse_release(pid(), Continuation.t(), pos_integer()) :: :ok | {:error, Error.t()}
+  def browse_release(host, handle, timeout) do
+    case continue(host, handle, timeout, :release) do
+      {:ok, nil} -> :ok
+      error -> error
+    end
+  end
+
+  defp continue(host, %Continuation{} = handle, timeout, operation)
+       when is_pid(host) and is_integer(timeout) and timeout in 1..60_000 do
+    call_timeout = if operation == :release, do: min(timeout, 1000) + 1100, else: timeout + 1100
+
+    GenServer.call(host, {__MODULE__, :browse_continue, handle, timeout, operation}, call_timeout)
+  catch
+    :exit, _ -> {:error, Error.new(:native_process_terminated)}
+  end
+
+  defp continue(_, _, _, _), do: {:error, Error.new(:invalid_continuation)}
+
   @doc "Returns a temporary OTP child specification with a bounded local shutdown."
   @spec child_spec(term()) :: Supervisor.child_spec()
   def child_spec(options) do
@@ -115,6 +162,7 @@ defmodule Wotex.OPCUA.Native.Host do
              pending: nil,
              input: <<>>,
              next_id: 1,
+             continuations: %{},
              credit_sequence: 0,
              claim_timer: :erlang.start_timer(remaining(deadline), self(), :claim_expired),
              claimed: false
@@ -150,6 +198,80 @@ defmodule Wotex.OPCUA.Native.Host do
         {owner, _} = from,
         %{owner: owner, claimed: true, pending: nil} = state
       ) do
+    if operation in ["browse_next", "browse_release"] do
+      {:reply, {:error, Error.new(:invalid_continuation)}, state}
+    else
+      start_request(state, from, operation, parameters, timeout, deadline, nil)
+    end
+  end
+
+  def handle_call(
+        {__MODULE__, :browse_page, parameters, limits, timeout, deadline},
+        {owner, _} = from,
+        %{owner: owner, claimed: true, pending: nil} = state
+      ) do
+    if map_size(state.continuations) == 0 and valid_browse_limits?(limits) do
+      start_request(
+        state,
+        from,
+        "browse",
+        Map.put(parameters, "allow_continuation", true),
+        timeout,
+        deadline,
+        %{kind: :browse_page, pages: 0, references: 0, bytes: 0, limits: limits}
+      )
+    else
+      {:reply, {:error, Error.new(:busy)}, state}
+    end
+  end
+
+  def handle_call(
+        {__MODULE__, :browse_continue, %Continuation{} = handle, timeout, operation},
+        {owner, _} = from,
+        %{owner: owner, claimed: true, pending: nil} = state
+      ) do
+    case Map.fetch(state.continuations, handle.reference) do
+      {:ok, cursor}
+      when handle.pid == self() and handle.generation == state.generation and
+             operation in [:next, :release] ->
+        now = System.monotonic_time(:millisecond)
+
+        if operation == :next and now >= cursor.deadline do
+          {:stop, :normal, {:error, Error.new(:deadline_exceeded)}, state}
+        else
+          budget =
+            if operation == :release,
+              do: min(timeout, 1000),
+              else: min(timeout, cursor.deadline - now)
+
+          deadline = if operation == :release, do: now + budget, else: cursor.deadline
+          name = if operation == :release, do: "browse_release", else: "browse_next"
+
+          start_request(
+            state,
+            from,
+            name,
+            %{"continuation" => cursor.token},
+            budget,
+            deadline,
+            Map.merge(cursor, %{kind: operation, previous: handle.reference})
+          )
+        end
+
+      _ ->
+        {:reply, {:error, Error.new(:invalid_continuation)}, state}
+    end
+  end
+
+  def handle_call(_, _, state), do: {:reply, {:error, Error.new(:invalid_native_handle)}, state}
+
+  defp valid_browse_limits?(%{max_pages: pages, max_references: references})
+       when pages in 1..64 and references in 1..4096,
+       do: true
+
+  defp valid_browse_limits?(_), do: false
+
+  defp start_request(state, from, operation, parameters, timeout, deadline, cursor) do
     now = System.monotonic_time(:millisecond)
 
     id = Integer.to_string(state.next_id)
@@ -168,7 +290,7 @@ defmodule Wotex.OPCUA.Native.Host do
          {:ok, credit} <- initial_credit(state),
          :ok <- send_optional(state.port, credit),
          :ok <- send_frame(state.port, frame) do
-      timer = Process.send_after(self(), :request_expired, max(deadline - now, 0))
+      timer = Process.send_after(self(), :request_expired, max(min(deadline - now, timeout), 0))
 
       {:noreply,
        %{
@@ -178,17 +300,20 @@ defmodule Wotex.OPCUA.Native.Host do
              timer: timer,
              id: id,
              operation: operation,
+             cursor: cursor,
+             deadline: deadline,
              requested_timeout: parameters["session_timeout_ms"]
            },
            next_id: state.next_id + 1,
            credit_sequence: max(state.credit_sequence, 1)
        }}
     else
-      {:error, %Error{} = error} -> {:reply, {:error, error}, state}
+      {:error, %Error{} = error} ->
+        if cursor && cursor.kind in [:next, :release],
+          do: {:stop, :normal, {:error, error}, state},
+          else: {:reply, {:error, error}, state}
     end
   end
-
-  def handle_call(_, _, state), do: {:reply, {:error, Error.new(:invalid_native_handle)}, state}
 
   @impl GenServer
   def handle_info({:DOWN, monitor, :process, owner, _}, %{monitor: monitor, owner: owner} = state),
@@ -369,8 +494,10 @@ defmodule Wotex.OPCUA.Native.Host do
            pending.operation,
            pending.requested_timeout
          ) do
-      {:ok, %{"continuation" => continuation}} when is_binary(continuation) ->
-        failed(state, Error.new(:response_limit))
+      {:ok, %{"continuation" => continuation} = result} when is_binary(continuation) ->
+        if pending.cursor,
+          do: deliver_native_result(state, pending, input, result),
+          else: failed(state, Error.new(:response_limit))
 
       {:ok, result} ->
         deliver_native_result(state, pending, input, result)
@@ -388,18 +515,87 @@ defmodule Wotex.OPCUA.Native.Host do
   defp deliver_native_result(state, pending, input, result) do
     Process.cancel_timer(pending.timer)
 
-    if pending.operation == "close" do
-      GenServer.reply(pending.from, {:ok, result})
-      {:stop, :normal, %{state | pending: nil}}
-    else
-      with {:ok, credit} <-
-             Frame.credit(state.generation, state.credit_sequence + 1, 1, byte_size(input)),
-           :ok <- send_frame(state.port, credit) do
+    cond do
+      pending.operation == "close" ->
         GenServer.reply(pending.from, {:ok, result})
-        {:noreply, %{state | pending: nil, input: <<>>, credit_sequence: state.credit_sequence + 1}}
+        {:stop, :normal, %{state | pending: nil}}
+
+      pending.cursor ->
+        deliver_browse_result(state, pending, input, result)
+
+      true ->
+        reply_with_credit(state, pending, input, {:ok, result}, state.continuations)
+    end
+  end
+
+  defp deliver_browse_result(state, pending, input, nil) when pending.cursor.kind == :release do
+    continuations = Map.delete(state.continuations, pending.cursor.previous)
+    reply_with_credit(state, pending, input, {:ok, nil}, continuations)
+  end
+
+  defp deliver_browse_result(
+         state,
+         pending,
+         input,
+         %{"references" => references, "continuation" => token} = result
+       )
+       when pending.cursor.kind in [:browse_page, :next] do
+    old = pending.cursor
+    pages = old.pages + 1
+    count = old.references + length(references)
+    bytes = old.bytes + byte_size(input)
+
+    if pages > old.limits.max_pages or count > old.limits.max_references or bytes > 1_048_576 or
+         (is_binary(token) and pages == old.limits.max_pages) do
+      failed(state, Error.new(:response_limit))
+    else
+      continuations = Map.delete(state.continuations, Map.get(old, :previous))
+
+      if is_binary(token) do
+        reference = make_ref()
+        handle = %Continuation{pid: self(), reference: reference, generation: state.generation}
+
+        cursor = %{
+          token: token,
+          deadline: pending.deadline,
+          pages: pages,
+          references: count,
+          bytes: bytes,
+          limits: old.limits
+        }
+
+        reply_with_credit(
+          state,
+          pending,
+          input,
+          {:ok, %{result | "continuation" => handle}},
+          Map.put(continuations, reference, cursor)
+        )
       else
-        {:error, error} -> failed(state, error)
+        reply_with_credit(state, pending, input, {:ok, result}, continuations)
       end
+    end
+  end
+
+  defp deliver_browse_result(state, _, _, _),
+    do: failed(state, Error.new(:invalid_native_frame))
+
+  defp reply_with_credit(state, pending, input, reply, continuations) do
+    with {:ok, credit} <-
+           Frame.credit(state.generation, state.credit_sequence + 1, 1, byte_size(input)),
+         :ok <- send_frame(state.port, credit) do
+      GenServer.reply(pending.from, reply)
+
+      {:noreply,
+       %{
+         state
+         | pending: nil,
+           input: <<>>,
+           continuations: continuations,
+           credit_sequence: state.credit_sequence + 1
+       }}
+    else
+      {:error, error} -> failed(state, error)
     end
   end
 

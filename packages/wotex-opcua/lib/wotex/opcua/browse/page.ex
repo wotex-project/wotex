@@ -1,11 +1,9 @@
 defmodule Wotex.OPCUA.Browse.Page do
   @moduledoc """
-  Holds one complete typed native Browse page in server order.
+  Holds one typed native Browse page in server order.
 
-  The current native client returns this value only when the server supplies no
-  continuation. A future owner-bound continuation handle will occupy the
-  `continuation` field; callers must not infer multi-page support from its
-  presence in this structure.
+  A continuation identifies the next page on the original persistent Session.
+  Releasing that handle or closing the Session bounds remote cursor state.
   """
 
   @enforce_keys [:references, :status, :continuation]
@@ -14,6 +12,6 @@ defmodule Wotex.OPCUA.Browse.Page do
   @type t :: %__MODULE__{
           references: [Wotex.OPCUA.Binary.Reference.t()],
           status: 0..4_294_967_295,
-          continuation: nil
+          continuation: nil | Wotex.OPCUA.Browse.Continuation.t()
         }
 end

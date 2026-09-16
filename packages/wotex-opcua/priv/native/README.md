@@ -53,9 +53,11 @@ returns all seven reference fields in server order. Existing public callers
 close the Session if a result exceeds the requested size or has a continuation.
 An internal `allow_continuation: true` request can retain one server point in C
 memory and return a local token. `browse_next` consumes that token and
-`browse_release` sends service-level release on the same Session. Public typed
-handles, original-deadline pagination and independent-peer BrowseNext/release
-evidence remain open.
+`browse_release` sends service-level release on the same Session. The BEAM
+host now binds that token to a caller-held reference, retains the original
+deadline and cumulative bounds, and exposes persistent typed pagination.
+Independent-peer BrowseNext/release, multiple concurrent continuations and
+one-shot child-list pagination remain open.
 `ipc_check.c` covers
 every split of a request line, coalescing, bounds and malformed envelopes;
 the pinned build test also exercises the real process input and terminal output.
