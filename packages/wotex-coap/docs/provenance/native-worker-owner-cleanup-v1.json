@@ -1,0 +1,110 @@
+{
+  "schema": "wotex.coap.native-worker-owner-cleanup-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Best-effort protected Observe cancellation and bounded production-custody cleanup after abrupt owner EOF",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "cd2eece99adcfdc881e21029ecd84f5063dec5e37f28d70e344c7a9bf2dae786",
+      "native/oscore/main.c": "6e6c2a8deb2aeac8e527a922467bf89ab0f45f2aa2e669e988fa1e84f690e8eb",
+      "native/oscore/worker.c": "b62d04b7c7a7429bee16c2468e030de85f77d6c8c924c8d3e7a105fea690c6fb",
+      "native/oscore/worker.h": "07c7e440f74fb6efbfabaf4a44a8eccf5a31b82f53c89951a26706354009b11e",
+      "native/oscore/exchange.c": "b8ada4d73a57d15fcdc0c9a8eb9adc4d7942869a0d155b36d3780301b04c62f3",
+      "native/oscore/exchange.h": "09422c7b4aa749d0896e4fdcce1ad3d7a6795a37dec54ef6c2149648975c0801",
+      "native/oscore/observation.c": "f09c27e0f61b770bd95803fc9cd9fc5f4a8303786f31b699cb22b088bce4215b",
+      "native/oscore/observation.h": "734f13203346323ffff1966dc24f51afb7cd7644d9a694bc13289dd874af2ef1",
+      "native/oscore/custody.c": "887904afa9be4ec1e40145a6e69aac081eda9096a0fc2a0320751f2a16d082b5",
+      "native/oscore/command.c": "9dba7b283ea818d92e01db04483e3782ee401793272ec23e768829a45807c22d",
+      "native/oscore/json.c": "a50d46c2e518d5e3d932c6603306a54dd49abcf545cc5a97fbd2b7ec994d5d46",
+      "native/oscore/frame.c": "d122c2d763e967472d00a79eb4a01cebdbcd9c1b747578a43346141448349906",
+      "native/oscore/body.c": "f6f2696eae9631f5e68c38a01df7ff69f1d2b7ab08d51b735cc600e50ec3e9d4",
+      "native/oscore/credit.c": "f2566b99ae79f539d8c8c1bf0872b050bc62c3785d1758be1e1d7d3b2e624b7d",
+      "native/oscore/identity.c": "955d94def94861e15fbe8ff9c7e14f26a8eec5979585eff21b295267e04a4565",
+      "native/oscore/store.c": "a49ba6a278612e43c9e1872a9565abf541340aa12aa001f9f80e2c93f86969cd",
+      "native/oscore/patches/0007-preserve-oscore-observe-sequence.patch": "6e28ffa3b1892c1bb3b6ede3f77b899d29909993f4dcff82483f61ea748afda9",
+      "test/native/oscore_worker_exchange_test.c": "de986fb5b90281565beb7cc19eb639a405e1ff37d6543c2fb1641710580aa6aa",
+      "test/native/Dockerfile": "6e63cf37fff755fa2fde403c1cff60eb9ce322772aea700e66834c32d2f60038",
+      "test/native/Dockerfile.json": "03b0735897a19e7d71e98ad254bb956f27120ee88d9afa16576648e778a947b8",
+      "test/wotex/coap/native_worker_test.exs": "9aa600b6ac0d0403215a74b0d65dd672e1a7064d123f622c61d8d513d2259bdb"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "package_version": "libcoap 4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 7,
+    "patched_coap_oscore_sha256": "601eb687f33794297c4571aa3481da0e480ec4165493d5081b52aa6511623ca6"
+  },
+  "requirements": [
+    "WCO-C03",
+    "WCO-S03",
+    "WCO-V09",
+    "WCO-V15",
+    "WCO-N02",
+    "WCO-N04"
+  ],
+  "assertions": [
+    "A protected observation establishes through the production worker and public custody entry before owner loss",
+    "Closing the owner input causes public custody to propagate EOF to the worker and begin its finite teardown",
+    "Worker exit cleanup submits best-effort Observe=1 with the original route and token before releasing the libcoap session",
+    "The peer receives exactly one cancellation and removes the server observer",
+    "Public custody reaps the helper and exits with its exact owner-loss status within 1000 ms",
+    "The durable context lock and all local process, session and context ownership are released",
+    "macOS and Linux sanitizer lanes execute the same production worker, custody and protected owner-EOF trace"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "worker_sha256": "83c6fc0fe58176bea3bb2468887f7104b3b0c85b6428274e9b738ce89decf8f5",
+      "peer_sha256": "84c6c65318a31323ac0aba8390bea71f43aab9b621af31492a1b5d9bc1d77cfe",
+      "static_library_sha256": "23fb62eeb9d961a1ce4519f43f1db0bff8416a1bca2305f8aade85b74be0a435",
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "sanitizers": [
+        "address",
+        "undefined"
+      ],
+      "leak_detection_unavailable": true
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "image": "sha256:76abb8163e4382e84c76b1b04a3167e99818b54fb8094dd7bc20e25d6817ea58",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "worker_sha256": "bca66536f19c3a4067183ccec716758b232d80fe7bc8056d8104a34f5137f596",
+      "peer_sha256": "ac969c92d502d291212e68f02b1c3a0a8eb1ada66ecf6e1654d332f0ca251a23",
+      "static_library_sha256": "82932fb3fcde7bae297c093bb7878a20ea81676319b092a4bd8f43ace6eb0d72",
+      "artifact_log_sha256": "8c5af7de137c50602e3513e9b0d0bb92e15d3f4f594fa0fffebb712365695e7d",
+      "package_log_sha256": "b8c513532a688cc321c09f5e022b7ff72dedc3ade4438786d3f8f5961ff54879",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": [
+        "address",
+        "undefined",
+        "leak"
+      ],
+      "toolchain_packages_recorded_not_locked": true
+    }
+  ],
+  "unaccepted": [
+    "Abrupt owner loss while Observe registration is still pending",
+    "Abrupt owner loss while renewal or explicit cancellation is still pending",
+    "Receiver death through a BEAM owner connected to this production helper",
+    "Successful cancellation confirmation while renewal is in flight",
+    "An authenticated intervening Observe response followed by cancellation confirmation",
+    "Authenticated duplicate/stale notification injection through the complete protected worker",
+    "Actual blocked stdout and Port-mailbox saturation with reserved control-slot measurement",
+    "Live OSCORE replay/duplicate and restart fault matrix through the complete worker",
+    "Independent-stack OSCORE interoperability",
+    "1000-operation stress and native-v1 corpus completion",
+    "Reproducible Mix build/run orchestration and final manifest-bound executable"
+  ]
+}

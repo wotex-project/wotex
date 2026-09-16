@@ -66,7 +66,9 @@ overlap terminates with owned cleanup. Native freshness checks ignore stale
 metadata before representation identity and accept the protected FFFFFF-to-zero
 serial wrap. If libcoap cannot submit tracked cancellation during renewal, the
 worker sends an explicit original-route/token Observe=1 request and still closes
-at the caller's finite deadline when no usable confirmation arrives.
+at the caller's finite deadline when no usable confirmation arrives. Abrupt owner
+EOF after establishment sends one best-effort cancellation before the worker
+releases its protected session and custody reaps the process.
 Multicast and extended tokens are outside the implemented profile.
 
 ## Quick start
@@ -200,7 +202,8 @@ and Observe through the same owner, and releases exact handles on cancellation.
 Production unary execution uses these same response-body envelopes; production
 Observe execution now covers protected registration, inline or streamed reports,
 credit, Max-Age renewal, stale cleanup, bounded Property/Event overload,
-renewal faults, 24-bit freshness and in-flight cancellation deadline cleanup.
+renewal faults, 24-bit freshness, in-flight cancellation deadline cleanup and
+established-observation owner-EOF cleanup.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic

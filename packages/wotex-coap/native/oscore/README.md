@@ -73,6 +73,12 @@ Message ID and exact deadline-driven local cleanup when no usable confirmation
 arrives. Successful confirmation and intervening-Observe ordering remain
 separate work.
 
+The [owner-cleanup receipt](../../docs/provenance/native-worker-owner-cleanup-v1.json)
+binds abrupt public-custody owner EOF after a protected observation is
+established. Worker exit cleanup sends one original-route/token cancellation,
+the peer removes its observer and custody reaps the helper within C03. Owner EOF
+during pending registration, renewal or cancellation remains separate work.
+
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the
 cached reservation only after callback success. Repeated failures therefore

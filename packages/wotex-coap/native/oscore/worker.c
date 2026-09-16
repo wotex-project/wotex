@@ -1326,6 +1326,15 @@ static int run(struct worker *worker) {
     }
 }
 
+static void cancel_observation_on_exit(struct worker *worker) {
+    const char *error;
+    if (!worker->exchange || !worker->observation.path[0]) return;
+    error = wco_exchange_cancel(worker->exchange, worker->observation.path,
+                                worker->observation.accept_present,
+                                worker->observation.accept);
+    if (!error) (void)wco_exchange_io(worker->exchange);
+}
+
 int wco_worker_main(void) {
     struct worker worker;
     int status = 70;
@@ -1335,6 +1344,7 @@ int wco_worker_main(void) {
     worker.json = wco_json_new();
     if (worker.json && nonblocking(STDIN_FILENO) && nonblocking(STDOUT_FILENO) &&
         OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CONFIG, NULL)) status = run(&worker);
+    cancel_observation_on_exit(&worker);
     wco_exchange_close(worker.exchange);
     wco_store_close(worker.store);
     clear_stream(&worker.stream);

@@ -451,6 +451,100 @@ static void stale_observation(const char *executable) {
     initial_max_age_zero = 0;
 }
 
+static void owner_eof_observation(const char *executable) {
+    char directory[192], command[8192], output[131072];
+    int input[2], result[2], status = 0;
+    int64_t began, deadline;
+    pid_t child, waited = 0;
+    unsigned port;
+    coap_context_t *context;
+#if defined(__APPLE__)
+    assert(snprintf(directory, sizeof(directory),
+                    "/private/tmp/wotex-coap-exchange-%ld-owner-eof",
+#else
+    assert(snprintf(directory, sizeof(directory),
+                    "/tmp/wotex-coap-exchange-%ld-owner-eof",
+#endif
+                    (long)getpid()) > 0);
+    assert(mkdir(directory, 0700) == 0);
+    assert(pipe(input) == 0 && pipe(result) == 0);
+    child = fork();
+    assert(child >= 0);
+    worker_child = child;
+    if (child == 0) {
+        assert(dup2(input[0], STDIN_FILENO) == STDIN_FILENO);
+        assert(dup2(result[1], STDOUT_FILENO) == STDOUT_FILENO);
+        close(input[0]); close(input[1]); close(result[0]); close(result[1]);
+        execl(executable, executable, "--custody", directory, (char *)NULL);
+        _exit(127);
+    }
+    close(input[0]); close(result[1]);
+    assert(fcntl(result[0], F_SETFL, O_NONBLOCK) == 0);
+    get_count = post_count = large_count = observe_count = cancel_count = 0;
+    observe_token_length = 0;
+    zero_max_age_at = 0;
+    notification = notification_streamed = notification_value = 0;
+    initial_max_age_zero = renewal_fault = 0;
+    context = server(&port);
+    stage = "owner eof ready";
+    exact(context, result[0],
+          "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
+          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+    assert(snprintf(command, sizeof(command),
+        "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
+        "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":8,\"security\":{"
+        "\"mode\":\"oscore\",\"master_secret\":{\"type\":\"bytes\","
+        "\"base64\":\"AQIDBAUGBwgJCgsMDQ4PEA==\"},\"master_salt\":{"
+        "\"type\":\"bytes\",\"base64\":\"\"},\"sender_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AA==\"},\"recipient_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AQ==\"},\"id_context\":null,\"context_store\":\"%s\"}},"
+        "\"timeout_ms\":5000}\n", port, directory) > 0);
+    write_all(input[1], command);
+    stage = "owner eof open";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"1\",\"ok\":true,\"result\":null}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"2\",\"operation\":\"observe\",\"parameters\":{"
+        "\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":"
+        "\"property\",\"renew\":true,\"accept\":0},\"timeout_ms\":5000}\n");
+    stage = "owner eof establish";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"2\",\"ok\":true,\"result\":{"
+          "\"subscription_id\":\"2\",\"generation\":8}}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"3\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":8,\"ack_seq\":0},\"timeout_ms\":5000}\n");
+    stage = "owner eof credit";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"3\",\"ok\":true,\"result\":null}\n");
+    stage = "owner eof initial";
+    line(context, result[0], output, sizeof(output));
+    assert(strstr(output, "\"report_seq\":1,\"event\":\"report\""));
+    began = now_ms();
+    assert(close(input[1]) == 0);
+    input[1] = -1;
+    deadline = began + 1000;
+    while (now_ms() < deadline && (cancel_count == 0 || waited == 0)) {
+        assert(coap_io_process(context, 1) >= 0);
+        if (!waited) {
+            waited = waitpid(child, &status, WNOHANG);
+            assert(waited >= 0);
+        }
+    }
+    assert(cancel_count == 1);
+    assert(waited == child);
+    assert(now_ms() - began <= 1000);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 127);
+    assert(!coap_resource_notify_observers(observed_resource, NULL));
+    close(result[0]);
+    coap_free_context(context);
+    snprintf(command, sizeof(command), "%s/contexts.v1", directory);
+    assert(unlink(command) == 0);
+    snprintf(command, sizeof(command), "%s/context.lock", directory);
+    assert(unlink(command) == 0);
+    assert(rmdir(directory) == 0);
+}
+
 static void renewal_fault_observation(const char *executable, int mode,
                                       const char *value) {
     char directory[192], command[8192], output[131072], expected[512];
@@ -1162,6 +1256,7 @@ int main(int argc, char **argv) {
     assert(unlink(command) == 0);
     assert(rmdir(directory) == 0);
     stale_observation(argv[1]);
+    owner_eof_observation(argv[1]);
     renewal_fault_observation(argv[1], 1,
                               "{\"code\":\"remote_response\",\"status\":128}");
     renewal_fault_observation(argv[1], 2,

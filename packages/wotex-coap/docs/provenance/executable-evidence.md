@@ -215,6 +215,19 @@ intervening Observe response before confirmation, authenticated duplicate/stale
 injection, actual output saturation, replay, independent interoperability and
 Mix orchestration remain unaccepted.
 
+The [native worker owner-cleanup receipt](native-worker-owner-cleanup-v1.json)
+binds the next production source cohort. After a protected observation is
+established and its first credited report is written, the harness closes the
+public custody owner's input without a close or cancel command. Custody
+propagates EOF and starts its finite teardown; worker exit cleanup sends one
+best-effort Observe=1 request with the original route and token before releasing
+the libcoap session. The peer removes its observer, custody reaps the helper and
+returns exact owner-loss status within 1,000 ms, and the context lock is released.
+macOS and Linux sanitizer lanes execute the same trace. Owner loss during pending
+registration, renewal or cancellation, receiver death through a production
+BEAM owner, actual output saturation, replay, independent interoperability and
+Mix orchestration remain unaccepted.
+
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,
 explicit OSCORE credentials and exact five-field lines; omits absent optionals;

@@ -17,8 +17,9 @@ Python is not a runtime or target orchestration dependency. The native worker
 implements same-binary startup, durable open, upload-body state, close and one
 active unary libcoap exchange with inline or streamed results. It also executes
 one protected Observe registration with inline or streamed reports, cumulative
-credit, Max-Age renewal, stale cleanup and token-matched cancellation. The
-remaining protected fault matrix and Mix tasks remain planned contracts;
+credit, Max-Age renewal, stale cleanup, token-matched cancellation and
+best-effort established-observation cancellation on owner EOF. The remaining
+protected fault matrix and Mix tasks remain planned contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -206,7 +207,12 @@ unavailable, the exchange submits an original-route/token public-API fallback,
 the peer receives it once with a new Message ID, and the command closes cleanly
 with `timeout` when no usable confirmation arrives. Successful race confirmation,
 an intervening Observe response before confirmation, replay, independent OSCORE
-interoperability and the final Mix-built helper remain unaccepted.
+interoperability and the final Mix-built helper remain unaccepted. Another
+protected run closes the public custody owner's input after establishment. The
+worker sends one original-route/token cancellation during exit cleanup, the peer
+removes its observer, and custody reaps the worker with exact owner-loss status
+within C03. Owner loss during pending registration, renewal or cancellation and
+receiver death through the production BEAM owner remain unaccepted.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and
