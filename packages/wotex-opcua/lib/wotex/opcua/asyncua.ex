@@ -8,6 +8,8 @@ defmodule Wotex.OPCUA.Asyncua do
   fields, and one to sixteen trust-anchor paths. It does not read certificates
   or authenticate the server. `request/3` invokes the packaged bridge and bounds
   each correlated JSON request and response to 131,072 bytes.
+  Typed array Writes are rejected before process startup; this older adapter
+  supports scalar Variant Writes only.
 
   ## Security and lifecycle
 
@@ -57,7 +59,8 @@ defmodule Wotex.OPCUA.Asyncua do
       )
       when is_binary(executable) and is_map(config) and is_integer(timeout) and
              timeout in 1..60_000 do
-    with {:ok, node} <- Address.new(node_id),
+    with false <- native_array?(message),
+         {:ok, node} <- Address.new(node_id),
          id = System.unique_integer([:positive]),
          wire = %{
            id: id,
@@ -69,6 +72,7 @@ defmodule Wotex.OPCUA.Asyncua do
          true <- byte_size(json) < 131_072 do
       run(executable, json <> "\n", id, timeout)
     else
+      true -> {:error, Error.new(:unsupported_type)}
       _ -> {:error, Error.new(:invalid_request)}
     end
   end
@@ -145,6 +149,8 @@ defmodule Wotex.OPCUA.Asyncua do
   end
 
   defp absolute?(value), do: is_binary(value) and Path.type(value) == :absolute
+  defp native_array?(%{type: :write, value: %{array: true}}), do: true
+  defp native_array?(_), do: false
   defp text?(value), do: is_binary(value) and byte_size(value) in 1..4096
 
   defp valid_trust?(values) when is_list(values) and length(values) in 1..16,

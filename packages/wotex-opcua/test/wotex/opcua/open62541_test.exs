@@ -343,6 +343,38 @@ defmodule Wotex.OPCUA.Open62541Test do
              )
   end
 
+  test "WOP-I03 Runtime typed ByteString arrays write raw bytes through the native client",
+       context do
+    alias Wotex.Runtime.{Context, ExecutionContext, Request, Result}
+
+    options = fixture(context, "runtime-byte-array", "session_runtime_byte_array")
+    endpoint = Keyword.fetch!(options, :endpoint)
+    href = endpoint <> "?id=" <> URI.encode_www_form("ns=2;s=value")
+    assert {:ok, form} = Wotex.Form.new(%{"href" => href})
+    assert {:ok, runtime_context} = Context.new(request_id: "native-byte-array")
+
+    request = %Request{
+      operation: :writeproperty,
+      affordance_type: :property,
+      affordance_name: "value",
+      form: form,
+      resolved_href: href,
+      profile: nil,
+      request_id: "native-byte-array",
+      deadline: nil,
+      input: %{type: "ByteString", array: true, value: [<<0, 255>>, nil, <<>>]}
+    }
+
+    config = options ++ [client: Open62541, lifecycle: :oneshot, target: endpoint]
+
+    assert {:ok, %Result{payload: "written", status: :ok}} =
+             Wotex.OPCUA.Transport.request(
+               request,
+               ExecutionContext.new(runtime_context, nil),
+               config
+             )
+  end
+
   test "WOP-N04 one-shot native Browse uses one temporary Session", context do
     options = fixture(context, "oneshot-browse")
     assert {:ok, handle} = Open62541.connect(Keyword.put(options, :lifecycle, :oneshot))

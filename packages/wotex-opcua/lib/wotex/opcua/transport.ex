@@ -8,7 +8,8 @@ defmodule Wotex.OPCUA.Transport do
   session. Subscription callbacks return explicit unsupported errors because
   the current transport does not maintain OPC UA subscriptions.
   For an explicitly selected native client, it converts the Form mapper's
-  validated ByteString base64 back to raw bytes before a typed Value Write.
+  validated scalar or flat-array ByteString base64 back to raw bytes before
+  a typed Value Write.
 
   ## Runtime boundary
 
@@ -67,16 +68,44 @@ defmodule Wotex.OPCUA.Transport do
 
   defp native_message(
          %OPCUA.Session{client: Wotex.OPCUA.Open62541},
+         %{type: :write, value: %{type: "ByteString", array: true, value: encoded}} = message
+       )
+       when is_list(encoded) do
+    result =
+      Enum.reduce_while(encoded, {:ok, []}, fn item, {:ok, bytes} ->
+        case decode_byte(item) do
+          {:ok, value} -> {:cont, {:ok, [value | bytes]}}
+          error -> {:halt, error}
+        end
+      end)
+
+    case result do
+      {:ok, bytes} -> {:ok, put_in(message.value.value, Enum.reverse(bytes))}
+      error -> error
+    end
+  end
+
+  defp native_message(
+         %OPCUA.Session{client: Wotex.OPCUA.Open62541},
          %{type: :write, value: %{type: "ByteString", value: encoded}} = message
        )
        when is_binary(encoded) do
-    case Base.decode64(encoded) do
+    case decode_byte(encoded) do
       {:ok, bytes} -> {:ok, put_in(message.value.value, bytes)}
-      :error -> {:error, Error.new(:invalid_bytestring)}
+      error -> error
     end
   end
 
   defp native_message(_, message), do: {:ok, message}
+
+  defp decode_byte(nil), do: {:ok, nil}
+
+  defp decode_byte(encoded) when is_binary(encoded) do
+    case Base.decode64(encoded) do
+      {:ok, bytes} -> {:ok, bytes}
+      :error -> {:error, Error.new(:invalid_bytestring)}
+    end
+  end
 
   defp budget(deadline, max) when is_integer(max) and max in 1..60_000 do
     now =

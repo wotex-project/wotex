@@ -50,7 +50,8 @@ projection, subscriptions and lifecycle work
 remain.
 The Runtime Form mapper preserves raw ByteString bytes for the explicitly
 selected native one-shot client. Runtime reads also decode validated flat
-ByteString arrays to BEAM binaries; the full Runtime profile remains open.
+ByteString arrays to BEAM binaries, and explicitly typed flat ByteString arrays
+can be written through the same native Form path. The full Runtime profile remains open.
 
 ## Native software contract
 

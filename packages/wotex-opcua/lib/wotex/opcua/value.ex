@@ -1,10 +1,12 @@
 defmodule Wotex.OPCUA.Value do
   @moduledoc """
-  Converts explicitly typed OPC UA Variant scalars at the WoT boundary.
+  Converts explicitly typed OPC UA Variants at the WoT boundary.
 
   `encode/2` accepts a value with a supported OPC UA built-in type name. With
   a nil type argument, the value must be a map containing `type` and `value`.
-  The scalar is validated through
+  The current flat-array Write path accepts an explicit typed ByteString
+  envelope with `array: true` and optional dimensions.
+  The value is validated through
   `Wotex.OPCUA.Binary`; byte strings are represented as Base64 for the JSON
   bridge. The module never infers a Variant type from an arbitrary Elixir value.
 
@@ -45,8 +47,37 @@ defmodule Wotex.OPCUA.Value do
     "ByteString" => :bytestring
   }
 
-  @doc "Wraps a value in an explicitly named and validated scalar Variant."
+  @doc "Wraps a value in an explicitly named and validated Variant."
   @spec encode(term(), term()) :: {:ok, map()} | {:error, Error.t()}
+  def encode(%{type: name, array: true, value: values} = typed, nil) do
+    with true <- name == "ByteString",
+         {:ok, _} <- Binary.encode_variant(typed) do
+      payload =
+        if name == "ByteString" and is_list(values),
+          do: Enum.map(values, &encode_byte/1),
+          else: values
+
+      {:ok, %{typed | value: payload}}
+    else
+      _ -> {:error, Error.new(:variant_type_required)}
+    end
+  end
+
+  def encode(%{"type" => name, "array" => true, "value" => values} = typed, nil) do
+    if Enum.all?(Map.keys(typed), &(&1 in ~w(type array value dimensions))) do
+      array = %{type: name, array: true, value: values}
+
+      array =
+        if Map.has_key?(typed, "dimensions"),
+          do: Map.put(array, :dimensions, typed["dimensions"]),
+          else: array
+
+      encode(array, nil)
+    else
+      {:error, Error.new(:variant_type_required)}
+    end
+  end
+
   def encode(%{type: name, value: value}, nil), do: encode(value, name)
   def encode(%{"type" => name, "value" => value}, nil), do: encode(value, name)
 
@@ -118,6 +149,9 @@ defmodule Wotex.OPCUA.Value do
   end
 
   defp byte_payload(_), do: {:error, Error.new(:invalid_bytestring)}
+
+  defp encode_byte(nil), do: nil
+  defp encode_byte(bytes), do: Base.encode64(bytes)
 
   defp byte_length(nil), do: 0
   defp byte_length(bytes), do: byte_size(bytes)

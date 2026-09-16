@@ -3,7 +3,7 @@ spec:
   id: WOP.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -21,7 +21,10 @@ deterministic C fixture checks the transmitted byte envelope, and an
 independent secure peer confirms Write/readback/restore through Transport.
 The same peer now confirms a one-shot Form read of a flat ByteString array:
 validated byte envelopes become ordered BEAM binaries with bounded element
-and aggregate sizes. This is partial I03 result conversion.
+and aggregate sizes. An explicit typed array input also passes Form mapping,
+pure Variant validation and raw-byte native Write before readback; the older
+Python adapter rejects that shape before launching its process. This is partial
+I03 value conversion.
 This slice does not accept the complete I01 profile, profile factory, metadata,
 error/retry, subscription or final-owner requirements.
 

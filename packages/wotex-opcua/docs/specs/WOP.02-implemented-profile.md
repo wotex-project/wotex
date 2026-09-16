@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.28
+  version: 1.0.29
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -157,7 +157,12 @@ the complete WOP-I01..I06 integration and profile factory remain open.
 For ByteString reads, the Runtime value adapter now decodes scalar and bounded
 flat-array elements to BEAM binaries, preserving null elements and array order.
 The independent secure peer confirms one native one-shot Form array read after
-a typed Write. General typed-array validation, array metadata and the complete
+a typed Write. The Form mapper now admits an explicit typed ByteString array
+envelope, validates its finite size/dimensions with the pure Variant codec,
+and transmits raw bytes through the selected native client. The older Python
+adapter rejects typed array Writes before process startup. A deterministic C
+fixture and the independent peer check the native Runtime array Write/readback.
+General typed-array validation, array metadata and the complete
 Runtime profile remain open.
 The same independent peer also accepts a public typed ByteString array Write
 and returns the exact binary array elements on Read, including embedded zero

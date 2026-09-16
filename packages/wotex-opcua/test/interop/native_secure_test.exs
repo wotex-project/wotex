@@ -466,15 +466,15 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     original_bytes = Enum.map(original, fn %{"base64" => encoded} -> Base.decode64!(encoded) end)
 
     try do
-      assert {:ok, "written"} =
-               Wotex.OPCUA.Open62541.request(
-                 native,
+      assert {:ok, %Result{payload: "written"}} =
+               Wotex.OPCUA.Transport.request(
                  %{
-                   type: :write,
-                   node_id: peer["byte_array_node_id"],
-                   value: %{type: "ByteString", array: true, value: [<<0, 255>>, <<>>]}
+                   array_request
+                   | operation: :writeproperty,
+                     input: %{type: "ByteString", array: true, value: [<<0, 255>>, <<>>]}
                  },
-                 5000
+                 execution,
+                 options
                )
 
       assert {:ok,

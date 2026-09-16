@@ -128,6 +128,13 @@ one-shot native Read through Runtime Form selection. The independent peer
 confirms ordered binary elements after typed Write; the value adapter rejects
 malformed envelopes, excess elements and aggregate byte overflow. General
 typed arrays and Runtime result metadata remain open.
+An additional I03 partial slice admits explicit ByteString flat-array inputs
+through the Form mapper, checks the pure Variant limits, decodes the validated
+base64 elements only at the selected native transport boundary, and sends the
+typed array through native Write. A C frame fixture and independent secure
+peer check Write/readback. The older Python adapter rejects this array shape
+before process startup. Other typed array types and full I03 acceptance remain
+open.
 
 ## Verification and evidence
 

@@ -101,6 +101,10 @@ static int session_services(int remote_browse) {
                      "\"array\":false,\"value\":21.5},\"status\":0}";
         else if(strstr(frame, "\"operation\":\"write\""))
             result = remote_browse == 11 && !strstr(frame, "\"base64\":\"AP8=\"") ?
+                NULL : remote_browse == 12 &&
+                (!strstr(frame, "\"array\":true") ||
+                 !strstr(frame, "\"base64\":\"AP8=\"") ||
+                 !strstr(frame, "\"base64\":\"\"")) ?
                 NULL : "{\"status\":0}";
         else if(strstr(frame, "\"operation\":\"call\""))
             result = remote_browse == 3 ?
@@ -216,6 +220,7 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "session_localized_call")) return session_services(9);
     if (!strcmp(mode, "session_matrix_call")) return session_services(10);
     if (!strcmp(mode, "session_runtime_bytes")) return session_services(11);
+    if (!strcmp(mode, "session_runtime_byte_array")) return session_services(12);
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

@@ -13,6 +13,18 @@ defmodule Wotex.OPCUA.AsyncuaTest do
     assert {:error, _} = Asyncua.request(handle, %{node_id: nil}, 100)
     assert {:error, _} = Asyncua.request(handle, @message, 0)
     assert {:error, _} = Asyncua.request(%{}, @message, 100)
+
+    assert {:error, %{code: :unsupported_type}} =
+             Asyncua.request(
+               handle,
+               %{
+                 type: :write,
+                 node_id: "i=42",
+                 value: %{type: "ByteString", array: true, value: ["AP8="]}
+               },
+               100
+             )
+
     assert {:error, _} = Asyncua.request(handle, Map.put(@message, :value, self()), 100)
 
     assert {:error, _} =

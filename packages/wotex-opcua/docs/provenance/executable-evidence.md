@@ -20,6 +20,26 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native Runtime ByteString array Write, 2026-09-16
+
+The Form mapper accepts an explicit typed ByteString array with no inferred
+type, validates it through the bounded pure Variant codec and emits base64 for
+the older JSON boundary. Only the selected native Transport decodes those
+elements back to bytes before a typed Write. A C fixture checks both an
+embedded-zero/non-UTF-8 element and an empty element in the native request.
+The independent Basic256Sha256 peer accepts the Runtime Form Write, then the
+Runtime Form Read returns the same ordered BEAM binaries. The prior array value
+is restored. Eleven optional secure-peer tests passed. The older Python
+adapter rejects typed array Writes before process startup; no production
+Python path was added. General array types and full Runtime integration remain
+open.
+The final local `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passed with
+292 tests, 12 optional tests excluded and 95.0% coverage. Compiler, Credo,
+Dialyzer, documentation, audits, native custody, package and isolated archive
+checks passed. Two earlier runs exposed coverage below the 95% floor; explicit
+dimension, malformed/oversized bytes and null-array boundary assertions were
+added before the passing gate.
+
 ## Native Runtime ByteString array read, 2026-09-16
 
 The Runtime value adapter decodes flat ByteString array elements from the
