@@ -178,8 +178,10 @@ gate does not accept the unfinished software profile.
 
 [WCO.13](docs/specs/WCO.13-native-build-and-software-evidence.md) defines
 the implemented `mix wotex.native.build --workspace ABS` and
-`mix wotex.software.build --workspace ABS` interfaces plus the planned
-`mix wotex.software.run --workspace ABS` interface. Protocol execution uses
+`mix wotex.software.build --workspace ABS` interfaces plus the implemented
+`mix wotex.software.run --workspace ABS` interface. The run task verifies an
+existing build and executes the current independent libcoap UDP, PSK and PKI
+interop suite with ExUnit-owned peers and bounded cleanup. Protocol execution uses
 BEAM UDP, OTP DTLS and an explicit libcoap OSCORE Port.
 `Wotex.CoAP.NativeBackend.verify/1` can validate the content identity of an
 explicit native executable and manifest without starting it.
@@ -217,6 +219,8 @@ envelopes and verifies Message metadata. `Wotex.CoAP.Native.ReportLedger` bounds
 the eight-frame credit window and serializes cumulative acknowledgments. The
 native owner dispatches unary body commands and the Observe/credit/cancel
 lifecycle through those boundaries.
-The Mix build tasks replace the removed Python build harness. The remaining
-Python test runner is migration input only; its recorded results do not establish
-acceptance of the planned software-run task.
+Mix and ExUnit own first-party build and test orchestration; the tracked source
+and package contain no Python. The current run receipt covers 15 UDP, PSK and
+PKI tests. Independent OSCORE interoperability, the complete native fault and
+stress matrix, Linux sanitizers and the second required Elixir/OTP lane remain
+open acceptance work.

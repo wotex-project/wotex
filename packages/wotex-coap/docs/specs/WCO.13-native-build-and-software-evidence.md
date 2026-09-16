@@ -19,8 +19,9 @@ active unary libcoap exchange with inline or streamed results. It also executes
 one protected Observe registration with inline or streamed reports, cumulative
 credit, Max-Age renewal, stale cleanup, token-matched cancellation and
 best-effort established-observation cancellation on owner EOF. The remaining
-protected fault matrix, Port-mailbox measurement, software-run task and full
-matrix remain planned contracts; the native and software build tasks execute;
+protected fault matrix, Port-mailbox measurement and full matrix remain planned
+contracts. The native build, software build and current independent UDP/DTLS
+software-run cohort execute;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -570,9 +571,15 @@ and class permanent. No automatic bridge restart or security downgrade occurs.
 `mix wotex.software.run --workspace ABS` verifies the manifest, owns disposable
 native peers/ports/stores and runs ExUnit with `--include interop --include software
 --exclude hardware`. Required setup cannot become an ExUnit skip. Ready timeout
-is 15 seconds, suite timeout 300 seconds, log bound 16 MiB per stream and total
+is 15 seconds, suite timeout 300 seconds, combined log bound 16 MiB and total
 harness cleanup five seconds. These harness limits do not extend C03 library
 deadlines. EOF, owner death and test failure stop only manifest-owned processes.
+The implemented cohort runs `test/interop/libcoap_test.exs`,
+`test/interop/dtls_test.exs` and `test/interop/dtls_pki_test.exs` with seed zero.
+Those 15 tests cover independent libcoap UDP, PSK and PKI unary, Block1/Block2,
+Observe, Runtime and certificate/record-fault paths. The run retains its result
+directory on success or failure, so another run requires a fresh disposable
+software-build workspace.
 
 `result.json`, schema `wotex.coap.software@1`, records subject/dependency/fixture/
 native hashes, exact commands, seed, toolchain, native features, all scenario
@@ -597,10 +604,11 @@ open/close cycles, 100 Observe/cancel cycles, 100 receiver-termination cycles,
 Property/Event overload. Run Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
-committed-source/package gates. Earlier Python-run results validate their
-recorded cohort only; the software-run task and independent OSCORE acceptance
-retain planned status until these assertions execute. Hardware and publication
-are separate.
+committed-source/package gates. The current software-run receipt accepts only its
+15-test UDP/PSK/PKI cohort. The remaining OSCORE, fault, stress, Linux sanitizer,
+second-toolchain and clean-package matrix retains planned status until those
+assertions execute. Earlier Python-run results validate their historical cohort
+only. Hardware and publication are separate.
 
 The [native corpus](fixtures/native-v1.json) contains exact decoder/body/control
 inputs and deterministic lifecycle traces. It is specified and unexecuted. The

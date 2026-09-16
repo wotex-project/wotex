@@ -3,7 +3,10 @@
 Start with the [software implementation sequence](../plans/software-implementation.md).
 The implemented profile contains BEAM UDP/Observe/discovery, Runtime UDP
 streams and OTP DTLS. Secure Runtime profiles, OSCORE and complete Mix software
-closure remain planned. The catalogue and provenance distinguish these scopes.
+closure remain partial. Native/software build tasks and the current independent
+UDP/DTLS software-run cohort execute; OSCORE independence and the complete fault,
+stress, sanitizer and toolchain matrix remain planned. The catalogue and
+provenance distinguish these scopes.
 
 - [WCO.00 Software implementation rules](WCO.00-library-contract.md)
 - [WCO.01 CoAP protocol contract](WCO.01-protocol.md)

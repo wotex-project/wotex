@@ -13,9 +13,11 @@ execute. The protected worker also progresses under an actually full owner
 output pipe and tears down within C03; BEAM Port-mailbox sampling remains.
 Pending-registration owner loss, authenticated duplicate/stale injection,
 successful race confirmation and intervening-response ordering, the independent
-secure matrix, software-run orchestration and complete software closure remain
-targets. Native and software build orchestration is implemented with bounded,
-manifest-bound workspaces and native-vector probes.
+secure matrix and complete software closure remain targets. Native and software
+build orchestration is implemented with bounded, manifest-bound workspaces and
+native-vector probes. The software-run task now verifies that build and executes
+the owned independent libcoap UDP, PSK and PKI cohort; the full OSCORE, fault,
+stress, sanitizer and toolchain matrix remains WCO-P09 work.
 [Executable evidence](../provenance/executable-evidence.md) identifies each
 executed cohort and its limits. The ordered packages define acceptance.
 
@@ -158,7 +160,7 @@ accept an identifier-presence or JSON-load assertion as requirement closure.
 ## Reproducible software fixture contract
 
 [WCO.13](../specs/WCO.13-native-build-and-software-evidence.md) is authoritative
-for the implemented build tasks, planned software-run task, native source pins,
+for the implemented build and software-run tasks, native source pins,
 manifests, deadlines, cleanup and result schemas.
 The command contract is:
 
@@ -167,11 +169,14 @@ mix wotex.software.build --workspace /absolute/disposable/fixture-workspace
 WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixture-workspace
 ```
 
-The build command and its task tests pass on macOS arm64; the run command remains
-a target interface until its implementation and task tests pass. The remaining
-Python runner is identified only by the executed provenance it supports. The
-native peer and protocol assertions remain the same independent software
-obligations. No build or peer starts implicitly.
+The build and run commands and their task tests pass on macOS arm64. The current
+run owns independent libcoap UDP, PSK and PKI peers and records 15 passing tests;
+the complete P09 transport, fault, stress, sanitizer and dual-toolchain matrix
+remains an independent software obligation. The historical Python-run receipt
+retains its original source and command identity only. No build or peer starts
+implicitly. A run is terminal for its disposable workspace because retained
+`software-run` evidence prevents an accidental overwrite; use a fresh build for
+another run.
 
 ## Verification and commit procedure
 

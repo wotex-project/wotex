@@ -15,9 +15,10 @@ result/log digests and zero retained peer/UDP resources. This receipt identifies
 the executed source digest and does not assert an independently verified Git
 commit association. Native peer builds use libcoap 4.3.5 at
 `7cf7465b784baded4de183290c547d582becfd28`. The executed orchestration is Python;
-protocol traffic is exchanged with native `coap-server`. The result does not
-validate the planned .13 Mix tasks. The sanitizer lane is macOS; the required
-Linux full-software lane is a separate acceptance obligation.
+protocol traffic is exchanged with native `coap-server`. This is a historical
+receipt and does not transfer acceptance to the later .13 Mix tasks. The tracked
+CoAP source and package no longer contain Python. The sanitizer lane is macOS;
+the required Linux full-software lane is a separate acceptance obligation.
 
 ## Implemented assertions
 
@@ -581,6 +582,11 @@ probes, runtime manifest verification and read-only reuse all pass. The
 [software build receipt](software-build-v1.json) records the macOS arm64
 `mix wotex.software.build` path: the upstream peer and 12 manifest-bound native
 fault/vector executables compile and execute under bounded guardians, all 63
-artifacts publish atomically, and read-only reuse passes. The Linux sanitizer
-invocation, `wotex.software.run` and the remaining software/stress matrix are not
-yet accepted. No Python-based result transfers to an unbuilt tool.
+artifacts publish atomically, and read-only reuse passes. The
+[software run receipt](software-run-v1.json) records the manifest-verified macOS
+arm64 run: 15 independent libcoap UDP, PSK and PKI tests pass on Elixir 1.20.2 /
+OTP 29.0.4, with owned peers and zero retained processes, ports or library-state
+resources. The Linux sanitizer lane, independent OSCORE interoperability,
+remaining fault/stress scenarios, second required toolchain and complete package
+matrix are not yet accepted. The historical Python result retains only its own
+recorded cohort.

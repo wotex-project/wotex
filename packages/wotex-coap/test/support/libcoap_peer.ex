@@ -22,7 +22,10 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
   def start_link(options), do: GenServer.start_link(__MODULE__, options)
 
   @spec endpoint(pid()) :: :inet.port_number()
-  def endpoint(pid), do: GenServer.call(pid, :endpoint, 5500)
+  def endpoint(pid), do: GenServer.call(pid, :endpoint, 15_500)
+
+  @spec plain_endpoint(pid()) :: :inet.port_number()
+  def plain_endpoint(pid), do: GenServer.call(pid, :plain_endpoint, 15_500)
 
   @spec close(pid()) :: :ok
   def close(pid), do: GenServer.call(pid, :close, 3000)
@@ -105,7 +108,7 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
        ready: false,
        waiter: nil,
        output: "",
-       timer: Process.send_after(self(), :ready_timeout, 5000)
+       timer: Process.send_after(self(), :ready_timeout, 15_000)
      }}
   end
 
@@ -114,6 +117,12 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
     if state.ready,
       do: {:reply, state.port + 1, state},
       else: {:noreply, %{state | waiter: from}}
+  end
+
+  def handle_call(:plain_endpoint, from, state) do
+    if state.ready,
+      do: {:reply, state.port, state},
+      else: {:noreply, %{state | waiter: {from, :plain}}}
   end
 
   def handle_call(:close, _, state) do
@@ -129,7 +138,12 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
 
     if ready and not state.ready do
       Process.cancel_timer(state.timer)
-      if state.waiter, do: GenServer.reply(state.waiter, state.port + 1)
+
+      case state.waiter do
+        {from, :plain} -> GenServer.reply(from, state.port)
+        from when is_tuple(from) -> GenServer.reply(from, state.port + 1)
+        nil -> :ok
+      end
     end
 
     {:noreply, %{state | ready: ready, output: output}}
@@ -200,21 +214,47 @@ defmodule Wotex.CoAP.Test.LibcoapPeer do
     path
   end
 
-  defp available_pair do
+  defp available_pair(attempts \\ 128)
+
+  defp available_pair(0), do: raise("no adjacent UDP/TCP peer ports available")
+
+  defp available_pair(attempts) do
     {:ok, socket} = :gen_udp.open(0, [:binary, ip: {127, 0, 0, 1}])
     {:ok, {_, port}} = :inet.sockname(socket)
     :gen_udp.close(socket)
-    assert port < 65_535
-    assert_ports_free(port)
-    port
+
+    if port < 65_535 and ports_free?(port) do
+      port
+    else
+      available_pair(attempts - 1)
+    end
   end
 
   defp assert_ports_free(port) do
-    for number <- [port, port + 1] do
-      assert {:ok, udp} = :gen_udp.open(number, [:binary, ip: {127, 0, 0, 1}])
-      :gen_udp.close(udp)
-      assert {:ok, tcp} = :gen_tcp.listen(number, [:binary, ip: {127, 0, 0, 1}, reuseaddr: true])
-      :gen_tcp.close(tcp)
+    assert ports_free?(port)
+  end
+
+  defp ports_free?(port), do: Enum.all?([port, port + 1], &port_free?/1)
+
+  defp port_free?(port) do
+    case :gen_udp.open(port, [:binary, ip: {127, 0, 0, 1}]) do
+      {:ok, udp} ->
+        :gen_udp.close(udp)
+        tcp_port_free?(port)
+
+      _ ->
+        false
+    end
+  end
+
+  defp tcp_port_free?(port) do
+    case :gen_tcp.listen(port, [:binary, ip: {127, 0, 0, 1}, reuseaddr: true]) do
+      {:ok, tcp} ->
+        :gen_tcp.close(tcp)
+        true
+
+      _ ->
+        false
     end
   end
 end

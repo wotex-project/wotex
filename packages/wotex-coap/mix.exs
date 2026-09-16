@@ -102,6 +102,7 @@ defmodule WotexCoAP.MixProject do
       "test.cover": ["coveralls"],
       "wotex.native.build": "wotex.coap.native.build",
       "wotex.software.build": "wotex.coap.software.build",
+      "wotex.software.run": "wotex.coap.software.run",
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
     ]
   end
@@ -123,7 +124,7 @@ defmodule WotexCoAP.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib native test/native mix.exs)
+        ~w(.claude .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md docs/plans docs/provenance docs/specs lib native test/fixtures/dtls_pki test/interop test/native test/support test/test_helper.exs mix.exs mix.lock)
     ]
   end
 

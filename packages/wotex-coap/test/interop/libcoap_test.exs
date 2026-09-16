@@ -1,13 +1,27 @@
+Code.require_file("../support/libcoap_peer.ex", __DIR__)
+
 defmodule Wotex.CoAP.LibcoapTest do
   @moduledoc false
 
   use ExUnit.Case, async: false
   alias Wotex.CoAP
   alias Wotex.CoAP.Error
+  alias Wotex.CoAP.Test.LibcoapPeer
   @moduletag :interop
 
-  test "independent libcoap server replies over UDP with content and not-found status" do
-    port = System.fetch_env!("WOTEX_COAP_INTEROP_PORT") |> String.to_integer()
+  setup_all do
+    %{executable: LibcoapPeer.verify!()}
+  end
+
+  setup context do
+    peer = start_peer(context.executable)
+    on_exit(fn -> close_peer(peer) end)
+    %{port: LibcoapPeer.plain_endpoint(peer)}
+  end
+
+  test "independent libcoap server replies over UDP with content and not-found status", %{
+    port: port
+  } do
     {:ok, session} = CoAP.connect(host: "127.0.0.1", port: port, timeout: 3000)
 
     try do
@@ -23,8 +37,7 @@ defmodule Wotex.CoAP.LibcoapTest do
     end
   end
 
-  test "independent libcoap negotiates complete Block1 and Block2 bodies" do
-    port = System.fetch_env!("WOTEX_COAP_INTEROP_PORT") |> String.to_integer()
+  test "independent libcoap negotiates complete Block1 and Block2 bodies", %{port: port} do
     {:ok, session} = CoAP.connect(host: "127.0.0.1", port: port, timeout: 5000)
     path = "/wotex-blockwise-#{System.unique_integer([:positive])}"
     body = :binary.copy("independent-block-transfer", 200)
@@ -45,5 +58,19 @@ defmodule Wotex.CoAP.LibcoapTest do
     after
       CoAP.disconnect(session)
     end
+  end
+
+  defp start_peer(executable) do
+    spec =
+      Supervisor.child_spec({LibcoapPeer, {executable, :psk, "server"}},
+        id: make_ref(),
+        restart: :temporary
+      )
+
+    start_supervised!(spec)
+  end
+
+  defp close_peer(peer) do
+    if Process.alive?(peer), do: assert(:ok = LibcoapPeer.close(peer))
   end
 end

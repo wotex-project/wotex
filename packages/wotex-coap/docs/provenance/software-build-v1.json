@@ -5,26 +5,26 @@
   "source_identity": {
     "kind": "exact source-file SHA-256 in the manifest workspace identity; no source commit association asserted",
     "build_input_count": 68,
-    "build_inputs_sha256": "d5795fb4fb6c9f90c924d697818d45613ed0e5171e16a8f1c75cdf90057aa2fe",
+    "build_inputs_sha256": "4879ab0d2c01c8701c83d3c065c92028dc184ff0cd5131e9a3e3855b02059d28",
     "selected_files": {
-      "lib/mix/tasks/wotex.coap.software.build.ex": "e4d5bb447636c447ba6d1e52593d32458091b0872a1b86f1e458254add38cf07",
-      "lib/wotex/coap/native/build.ex": "f7cf3ee594510b66f82c31af264ecb845fa4e873785173c19747e4519c1c02b2",
-      "lib/wotex/coap/software/build.ex": "5755d24ddc5db10fbc96891bd2f8f270d7fbf5131bd3ae22af9a89435cc3e545",
-      "mix.exs": "aa7f97a70ffb17d893c77c4650370dad5b5ca24dcba2faebde8a97be923c47b4",
-      "test/native/oscore_block_limit_test.c": "2f801d7758f840e18d1c4a19a3130230a72db58c4cb75b249ea840ed73e844f6",
-      "test/native/oscore_body_test.c": "593404611ab9a833e95258546e2f5b075deb1b38e01439770567456a4cf0a832",
-      "test/native/oscore_command_test.c": "4444c8a430764a83c2e8c441d988273a9e107f86d4a246869b77787981e149cb",
-      "test/native/oscore_credit_test.c": "949a92bd63005a37a76651857bb81feac127e683d918ffb8767fc3181270f694",
-      "test/native/oscore_frame_test.c": "1b953de8bcf96c012b8fe603bd0e16abe9a6bcb7314a14a0245f7fcfd1be495b",
-      "test/native/oscore_identity_test.c": "ec3a4705bbbbc0e490481a29deff4b5e8813d45a306019070c55397a8ced3355",
       "test/native/oscore_json_test.c": "d8aff1b171b7972d39a5aaf8e015eaa841b1970989d2e5d9f943a985f29f29ca",
       "test/native/oscore_protection_test.c": "f4f70bc0ef8fac67c36372b46b708ac137db97f335b3d5c50771e3495ccd5ecc",
+      "lib/mix/tasks/wotex.coap.software.build.ex": "e4d5bb447636c447ba6d1e52593d32458091b0872a1b86f1e458254add38cf07",
+      "lib/wotex/coap/native/build.ex": "f7cf3ee594510b66f82c31af264ecb845fa4e873785173c19747e4519c1c02b2",
       "test/native/oscore_sequence_test.c": "087fb307600bfd3da6eb4e17e7d5048205d1f048875b72fcfcce993ee4be03c4",
-      "test/native/oscore_store_send_test.c": "2aad8c02112a2b4b842ff4bc09c228846b4f67f0b168bc5ef8327107e75c7191",
+      "test/native/oscore_identity_test.c": "ec3a4705bbbbc0e490481a29deff4b5e8813d45a306019070c55397a8ced3355",
+      "mix.exs": "bf8e1cab6c097fde6f57bba0c0ee05b713910528b024cd04b10a752a3478f41b",
+      "test/native/oscore_command_test.c": "4444c8a430764a83c2e8c441d988273a9e107f86d4a246869b77787981e149cb",
+      "lib/wotex/coap/software/build.ex": "68bfec3ae3487596dd04aaf3cf917a24cbd64e7313359bf4e7a4ebcda79da423",
       "test/native/oscore_store_test.c": "1353d42bbc54c75678a9398df889c31e6dee84c56e215b00c54eb95d0c3ca9c9",
-      "test/native/oscore_worker_exchange_test.c": "d2390813f87777157bbbb87ce5496a29176d3cd892a984dcd4611e2f7d86192e"
-    },
-    "test/wotex/coap/software_build_test.exs": "4e00daa7aa39a1350968e6110a41122adb8c2381180ec119d1509ca26c696454"
+      "test/native/oscore_store_send_test.c": "2aad8c02112a2b4b842ff4bc09c228846b4f67f0b168bc5ef8327107e75c7191",
+      "test/native/oscore_frame_test.c": "1b953de8bcf96c012b8fe603bd0e16abe9a6bcb7314a14a0245f7fcfd1be495b",
+      "test/native/oscore_block_limit_test.c": "2f801d7758f840e18d1c4a19a3130230a72db58c4cb75b249ea840ed73e844f6",
+      "test/native/oscore_worker_exchange_test.c": "d2390813f87777157bbbb87ce5496a29176d3cd892a984dcd4611e2f7d86192e",
+      "test/native/oscore_body_test.c": "593404611ab9a833e95258546e2f5b075deb1b38e01439770567456a4cf0a832",
+      "test/native/oscore_credit_test.c": "949a92bd63005a37a76651857bb81feac127e683d918ffb8767fc3181270f694",
+      "test/wotex/coap/software_build_test.exs": "4e00daa7aa39a1350968e6110a41122adb8c2381180ec119d1509ca26c696454"
+    }
   },
   "upstream": {
     "backend": "libcoap",
@@ -78,15 +78,15 @@
     "status": "passed",
     "exit_code": 0,
     "manifest_schema": "wotex.coap.native@1",
-    "manifest_sha256": "604cbca49ce7cd1979b48b7e2c595c09e39006a35d74364be2b9480107096eee",
-    "nested_native_manifest_sha256": "b66eb9fad1db361524b9f6a4319c7e742d88c209a8a418f97e48ad5c22891a1d",
-    "native_executable_sha256": "81c0c2951d012a819a4ed24cc1b92a6bd5ce25353e5e4ffa37022139fc47f1f4",
-    "peer_executable_sha256": "bc7ecbbabc01ecb1ff60540584cf2a13050e1fb83e1099a6b3fec21ba620ffb1",
+    "manifest_sha256": "398dffbcb17426845375dc2e060cac5dfd841da93724800e8979934e85d9640d",
+    "nested_native_manifest_sha256": "cf9196cfb20052e053ded2d565989a55047d2ebb4922096c67efa0873ec80f99",
+    "native_executable_sha256": "88496bc9ffa850c60056804c4c07f76d1336d01a38745b6bbce3e0c98ab452ef",
+    "peer_executable_sha256": "d7366ce29e9f8efb2789863998258bd633679610ec64eb539e876fe0c346604e",
     "artifact_count": 63,
     "fault_executable_count": 12,
     "runtime_manifest_verification": "passed",
     "read_only_reuse": "passed",
-    "reuse_manifest_sha256": "604cbca49ce7cd1979b48b7e2c595c09e39006a35d74364be2b9480107096eee"
+    "reuse_manifest_sha256": "398dffbcb17426845375dc2e060cac5dfd841da93724800e8979934e85d9640d"
   },
   "peer": {
     "backend": "libcoap",
@@ -103,26 +103,26 @@
         "id": "peer-configure",
         "exit_status": 0,
         "output_bytes": 6333,
-        "output_sha256": "2e29b2ae4688c9935f523f65b18df8dd08c706593ae23e2f8f0edd0b9e3f76f9"
+        "output_sha256": "cfdf1a09a74f3c180c6beed078014bffe331d0961dca579311d0783dfccf9d33"
       },
       {
         "id": "peer-build",
         "exit_status": 0,
         "output_bytes": 3444,
-        "output_sha256": "930b7b4e50ccb2cd3c078b602505b20ffd99f7f0b98d4efc5943ccccf57ce9ec"
+        "output_sha256": "2dc317a7f016c091898e22cdc01b841cdbe2e266e1d127d5ce4b2bfc1c197dfa"
       },
       {
         "id": "peer-probe",
         "exit_status": 1,
         "output_bytes": 9996,
-        "output_sha256": "cdda8e5c8e4364477070d6e06f190001cd667959a7a5cbb5abbfd95fb3c82d66"
+        "output_sha256": "3d66a88314dea8e3365ae0e49aad1122a8707122e96269f321b66be68602a38a"
       }
     ],
     "usage_exit_status": 1
   },
   "fault_executables": {
     "oscore-block-limit": {
-      "sha256": "dab7b7829f9532b6b39ce340172ae1ea66a7218d4c3834c46ba552b2398369e7",
+      "sha256": "312cace0ac316d01f90612339959a1a0166c24a5df54bf0c6b34d18b62dff008",
       "definitions": [],
       "compile_exit_status": 0,
       "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -194,7 +194,7 @@
       "probe_log_sha256": "5080554aa288c76f2202fc0241c0c906ec4932ad63c066e6c6db2de6bd4b0cee"
     },
     "oscore-protection": {
-      "sha256": "56ee53756f63d341de5084dfca83c3f359e6f6d0ba6445f747fb91b0b1a974b0",
+      "sha256": "cddd80f73058921808cdf46d4422069acea729c6fe55d4526affe8c9eb5346a1",
       "definitions": [],
       "compile_exit_status": 0,
       "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -202,7 +202,7 @@
       "probe_log_sha256": "a969e577af619286ee3aeaec2810908c62a718c301fdd59ee154f6e71b1454e0"
     },
     "oscore-sequence": {
-      "sha256": "e98cdaeaaed271488b75cdc2039dc41d1afc2e6ee6a6e84747c07f517d8ae22e",
+      "sha256": "3f5fa270398450d4d3a44455f7fb72a13482ab36562b59689ddbc474bdd035bf",
       "definitions": [],
       "compile_exit_status": 0,
       "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -220,7 +220,7 @@
       "probe_log_sha256": "e893812362c4381d0627773e17a1dcc00fa3c14a4ed2f162662ceb5bbe201e44"
     },
     "oscore-store-send": {
-      "sha256": "dabab0ad2b87aee2f80be42d81538d2603722b6849032f63bf9de6b68f6c1ce2",
+      "sha256": "0260695452e82044ab3d2cfb877335db05df0330c569d5505f1260d96034f9db",
       "definitions": [
         "WCO_STORE_TEST"
       ],
@@ -230,7 +230,7 @@
       "probe_log_sha256": "7c5899c0505952c6a918eb56bbb0fb5a0e190c4cff16572be803545439ea9d3d"
     },
     "oscore-worker-exchange": {
-      "sha256": "d06025a6f907c314a9db151a19c2ffeb83ff413115333387d5d85a754cf154d5",
+      "sha256": "dfa424c19a796fa6d81de974c2c91112d16f5a8a44867e3f01a4d372db66a7ea",
       "definitions": [],
       "compile_exit_status": 0,
       "compile_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -250,8 +250,8 @@
   ],
   "unaccepted": [
     "A real Linux software-build invocation with AddressSanitizer and UndefinedBehaviorSanitizer",
-    "mix wotex.software.run protocol and stress orchestration",
-    "Independent-stack OSCORE interoperability and the complete WCO-N05 matrix",
+    "Independent-stack OSCORE interoperability and the complete WCO-N05 fault/stress matrix beyond software-run-v1.json",
+    "The Elixir 1.18.4 / OTP 27.3.4.15 software-run lane",
     "Hardware and publication"
   ]
 }

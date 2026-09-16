@@ -121,7 +121,6 @@
   ],
   "unaccepted": [
     "A real Linux invocation of the Mix native-build and software-build tasks",
-    "mix wotex.software.run protocol and stress orchestration",
-    "Independent-stack OSCORE interoperability and the remaining WCO-N03 through WCO-N05 matrix"
+    "Independent-stack OSCORE interoperability and the WCO-N03 through WCO-N05 matrix beyond the current software-run-v1.json UDP/DTLS cohort"
   ]
 }

@@ -177,6 +177,25 @@ defmodule Wotex.CoAP.Software.Build do
 
   def run(_, _, _), do: {:error, :invalid_build_workspace}
 
+  @doc "Verifies an existing completed software-build workspace without building it."
+  @spec verify(term()) :: {:ok, Workspace.result()} | {:error, term()}
+  def verify(workspace), do: verify(workspace, BuildOperations, Build)
+
+  @doc false
+  @spec verify(term(), module(), module()) :: {:ok, Workspace.result()} | {:error, term()}
+  def verify(workspace, operations, native_build)
+      when is_binary(workspace) and is_atom(operations) and is_atom(native_build) do
+    case File.lstat(Path.join(workspace, "native-manifest.json")) do
+      {:ok, %{type: :regular}} -> verify_reuse(workspace, operations, native_build)
+      _ -> {:error, :software_build_required}
+    end
+  rescue
+    error in [ArgumentError, File.Error, UndefinedFunctionError] ->
+      {:error, {:software_build_setup, Exception.message(error)}}
+  end
+
+  def verify(_, _, _), do: {:error, :invalid_build_workspace}
+
   @doc false
   @spec artifacts(module()) :: [String.t()]
   def artifacts(native_build) do
@@ -185,6 +204,14 @@ defmodule Wotex.CoAP.Software.Build do
     ]
 
     nested ++ @own_artifacts
+  end
+
+  defp verify_reuse(workspace, operations, native_build) do
+    case run(workspace, operations, native_build) do
+      {:ok, %{reused: true}} = result -> result
+      {:ok, _} -> {:error, :software_build_required}
+      {:error, _} = error -> error
+    end
   end
 
   defp build_hashes(operations) do

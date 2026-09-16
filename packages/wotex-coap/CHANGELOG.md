@@ -16,3 +16,6 @@
 
 - Define the target software contract and ordered implementation packages with
   pinned sources, explicit APIs/limits and required software acceptance vectors.
+- Add manifest-verified Mix software-build and software-run orchestration, with
+  ExUnit-owned independent libcoap UDP/DTLS peers, retained evidence and bounded
+  cleanup. Remove the superseded first-party Python build/test harnesses.
