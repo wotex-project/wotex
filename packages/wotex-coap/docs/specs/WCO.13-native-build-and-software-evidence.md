@@ -19,7 +19,8 @@ active unary libcoap exchange with inline or streamed results. It also executes
 one protected Observe registration with inline or streamed reports, cumulative
 credit, Max-Age renewal, stale cleanup, token-matched cancellation and
 best-effort established-observation cancellation on owner EOF. The remaining
-protected fault matrix and Mix tasks remain planned contracts;
+protected fault matrix, Port-mailbox measurement and Mix tasks remain planned
+contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -212,7 +213,13 @@ protected run closes the public custody owner's input after establishment. The
 worker sends one original-route/token cancellation during exit cleanup, the peer
 removes its observer, and custody reaps the worker with exact owner-loss status
 within C03. Owner loss during pending registration, renewal or cancellation and
-receiver death through the production BEAM owner remain unaccepted.
+receiver death through the production BEAM owner remain unaccepted. A saturated
+variant fills the actual owner output pipe to `EAGAIN`, stops owner reads and
+dispatches fourteen protected 16 KiB notifications across two credit intervals.
+Their base64 payload bytes exceed custody's 262,144-byte output capacity. Network
+progress and the same cancellation/cleanup bound hold under that backpressure.
+Actual BEAM Port-mailbox sampling and reserved-control delivery with both
+channels saturated remain unaccepted.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and

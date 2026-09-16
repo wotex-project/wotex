@@ -9,10 +9,11 @@ reports, report credit, Max-Age renewal, stale cleanup and cancellation. The
 production path also executes renewal failures and bounded Property/Event
 overload. Native serial admission, protected wraparound, the in-flight
 renewal/cancel deadline path and established-observation owner-EOF cleanup
-execute; pending-registration owner loss, authenticated duplicate/stale
-injection, successful race confirmation and intervening-response ordering, the
-independent secure matrix, Mix orchestration and complete software closure remain
-targets.
+execute. The protected worker also progresses under an actually full owner
+output pipe and tears down within C03; BEAM Port-mailbox sampling remains.
+Pending-registration owner loss, authenticated duplicate/stale injection,
+successful race confirmation and intervening-response ordering, the independent
+secure matrix, Mix orchestration and complete software closure remain targets.
 [Executable evidence](../provenance/executable-evidence.md) identifies each
 executed cohort and its limits. The ordered packages define acceptance.
 

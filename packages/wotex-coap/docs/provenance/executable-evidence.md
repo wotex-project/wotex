@@ -228,6 +228,19 @@ registration, renewal or cancellation, receiver death through a production
 BEAM owner, actual output saturation, replay, independent interoperability and
 Mix orchestration remain unaccepted.
 
+The [native worker output-saturation receipt](native-worker-output-saturation-v1.json)
+binds the next production source cohort. After establishment and initial credit,
+the harness fills the actual owner output pipe until a nonblocking write returns
+`EAGAIN` and performs no further owner reads. Two bounded credit intervals then
+dispatch fourteen protected 16 KiB notifications whose base64 payload bytes
+alone exceed custody's 262,144-byte output capacity. The worker continues
+protected network progress while report output is backpressured. Owner EOF still
+causes one original-route/token cancellation, peer-observer removal, exact
+owner-loss status and resource cleanup within 1,000 ms. macOS and Linux sanitizer
+lanes execute the same trace. Actual BEAM Port-mailbox sampling, reserved-control
+delivery with both channels saturated, pending-operation owner loss, replay,
+independent interoperability and Mix orchestration remain unaccepted.
+
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,
 explicit OSCORE credentials and exact five-field lines; omits absent optionals;

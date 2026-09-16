@@ -32,7 +32,8 @@ static uint64_t server_start_sequence;
 static pid_t worker_child = -1;
 static const char *stage = "startup";
 static coap_resource_t *observed_resource;
-static int notification, notification_streamed, notification_value;
+static int notification, notification_streamed, notification_inline_large;
+static int notification_value;
 static int initial_max_age_zero;
 static const char server_conf[] =
     "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
@@ -165,11 +166,15 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
                 }
             }
             coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
-            if (notification && notification_streamed &&
+            if (notification &&
+                (notification_streamed || notification_inline_large) &&
                 value != COAP_OBSERVE_CANCEL) {
                 assert(coap_add_data_large_response(
-                    resource, session, request, response, query, 0, 0, 0,
-                    sizeof(large_body), large_body, NULL, NULL));
+                    resource, session, request, response, query, 0,
+                    notification_streamed ? 0 : 60, 0,
+                    notification_streamed ? sizeof(large_body) :
+                    (size_t)notification_inline_large,
+                    large_body, NULL, NULL));
                 return;
             }
             if (fault_renewal && renewal_fault == 3) {
@@ -262,6 +267,23 @@ static void write_all(int descriptor, const char *bytes) {
     }
 }
 
+static size_t fill_pipe(int descriptor) {
+    uint8_t bytes[4096] = {0};
+    size_t total = 0;
+    for (;;) {
+        ssize_t count = write(descriptor, bytes, sizeof(bytes));
+        if (count > 0) {
+            total += (size_t)count;
+        } else if (count < 0 && errno == EINTR) {
+            continue;
+        } else {
+            assert(count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK));
+            assert(total > 0);
+            return total;
+        }
+    }
+}
+
 static void line(coap_context_t *context, int descriptor,
                  char *output, size_t capacity) {
     static char pending[262144];
@@ -340,7 +362,7 @@ static void assert_report_payload(const char *line, int value) {
 
 static void pending_notification(coap_context_t *context, int value,
                                  unsigned expected_count) {
-    int64_t deadline = now_ms() + 3000;
+    int64_t deadline = now_ms() + (notification_inline_large ? 12000 : 3000);
     int scheduled = 0;
     notification = 1;
     notification_streamed = 0;
@@ -543,6 +565,132 @@ static void owner_eof_observation(const char *executable) {
     snprintf(command, sizeof(command), "%s/context.lock", directory);
     assert(unlink(command) == 0);
     assert(rmdir(directory) == 0);
+}
+
+static void saturated_owner_eof_observation(const char *executable) {
+    char directory[192], command[8192], output[131072];
+    int input[2], result[2], status = 0;
+    int64_t began, deadline;
+    pid_t child, waited = 0;
+    unsigned port;
+    size_t pipe_bytes;
+    coap_context_t *context;
+#if defined(__APPLE__)
+    assert(snprintf(directory, sizeof(directory),
+                    "/private/tmp/wotex-coap-exchange-%ld-saturated-owner",
+#else
+    assert(snprintf(directory, sizeof(directory),
+                    "/tmp/wotex-coap-exchange-%ld-saturated-owner",
+#endif
+                    (long)getpid()) > 0);
+    assert(mkdir(directory, 0700) == 0);
+    assert(pipe(input) == 0 && pipe(result) == 0);
+    child = fork();
+    assert(child >= 0);
+    worker_child = child;
+    if (child == 0) {
+        assert(dup2(input[0], STDIN_FILENO) == STDIN_FILENO);
+        assert(dup2(result[1], STDOUT_FILENO) == STDOUT_FILENO);
+        close(input[0]); close(input[1]); close(result[0]); close(result[1]);
+        execl(executable, executable, "--custody", directory, (char *)NULL);
+        _exit(127);
+    }
+    close(input[0]);
+    assert(fcntl(result[0], F_SETFL, O_NONBLOCK) == 0);
+    get_count = post_count = large_count = observe_count = cancel_count = 0;
+    observe_token_length = 0;
+    zero_max_age_at = 0;
+    notification = notification_streamed = notification_inline_large = 0;
+    notification_value = 0;
+    initial_max_age_zero = renewal_fault = 0;
+    context = server(&port);
+    stage = "saturated owner ready";
+    exact(context, result[0],
+          "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
+          "\"revision\":\"7cf7465b784baded4de183290c547d582becfd28\"}\n");
+    assert(snprintf(command, sizeof(command),
+        "{\"version\":1,\"id\":\"1\",\"operation\":\"open\",\"parameters\":{"
+        "\"host\":\"127.0.0.1\",\"port\":%u,\"generation\":10,\"security\":{"
+        "\"mode\":\"oscore\",\"master_secret\":{\"type\":\"bytes\","
+        "\"base64\":\"AQIDBAUGBwgJCgsMDQ4PEA==\"},\"master_salt\":{"
+        "\"type\":\"bytes\",\"base64\":\"\"},\"sender_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AA==\"},\"recipient_id\":{\"type\":\"bytes\","
+        "\"base64\":\"AQ==\"},\"id_context\":null,\"context_store\":\"%s\"}},"
+        "\"timeout_ms\":5000}\n", port, directory) > 0);
+    write_all(input[1], command);
+    stage = "saturated owner open";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"1\",\"ok\":true,\"result\":null}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"2\",\"operation\":\"observe\",\"parameters\":{"
+        "\"path\":\"/value\",\"confirmable\":true,\"observation_kind\":"
+        "\"property\",\"renew\":true,\"accept\":0},\"timeout_ms\":5000}\n");
+    stage = "saturated owner establish";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"2\",\"ok\":true,\"result\":{"
+          "\"subscription_id\":\"2\",\"generation\":10}}\n");
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"3\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":10,\"ack_seq\":0},\"timeout_ms\":5000}\n");
+    stage = "saturated owner credit";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"3\",\"ok\":true,\"result\":null}\n");
+    stage = "saturated owner initial";
+    line(context, result[0], output, sizeof(output));
+    assert(strstr(output, "\"report_seq\":1,\"event\":\"report\""));
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"4\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":10,\"ack_seq\":1},\"timeout_ms\":5000}\n");
+    stage = "saturated owner acknowledgment";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"4\",\"ok\":true,\"result\":null}\n");
+    assert(fcntl(result[1], F_SETFL, O_NONBLOCK) == 0);
+    pipe_bytes = fill_pipe(result[1]);
+    assert(pipe_bytes >= 4096);
+    assert(14u * (4u * ((16384u + 2u) / 3u)) > 262144u);
+    notification_inline_large = 16384;
+    for (unsigned index = 0; index < 7; index++)
+        pending_notification(context, 100 + (int)index, index + 2);
+    for (unsigned attempt = 0; attempt < 3000; attempt++)
+        assert(coap_io_process(context, 1) >= 0);
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"5\",\"operation\":\"credit\",\"parameters\":{"
+        "\"generation\":10,\"ack_seq\":7},\"timeout_ms\":5000}\n");
+    for (unsigned attempt = 0; attempt < 500; attempt++)
+        assert(coap_io_process(context, 1) >= 0);
+    for (unsigned index = 0; index < 7; index++)
+        pending_notification(context, 107 + (int)index, index + 9);
+    assert(observe_count == 15);
+    errno = 0;
+    assert(write(result[1], "x", 1) < 0 &&
+           (errno == EAGAIN || errno == EWOULDBLOCK));
+    began = now_ms();
+    assert(close(input[1]) == 0);
+    input[1] = -1;
+    assert(close(result[1]) == 0);
+    result[1] = -1;
+    deadline = began + 1000;
+    while (now_ms() < deadline && (cancel_count == 0 || waited == 0)) {
+        assert(coap_io_process(context, 1) >= 0);
+        if (!waited) {
+            waited = waitpid(child, &status, WNOHANG);
+            assert(waited >= 0);
+        }
+    }
+    assert(cancel_count == 1);
+    assert(waited == child);
+    assert(now_ms() - began <= 1000);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 127);
+    assert(!coap_resource_notify_observers(observed_resource, NULL));
+    close(result[0]);
+    coap_free_context(context);
+    snprintf(command, sizeof(command), "%s/contexts.v1", directory);
+    assert(unlink(command) == 0);
+    snprintf(command, sizeof(command), "%s/context.lock", directory);
+    assert(unlink(command) == 0);
+    assert(rmdir(directory) == 0);
+    notification = notification_streamed = notification_inline_large = 0;
+    notification_value = 0;
 }
 
 static void renewal_fault_observation(const char *executable, int mode,
@@ -1257,6 +1405,7 @@ int main(int argc, char **argv) {
     assert(rmdir(directory) == 0);
     stale_observation(argv[1]);
     owner_eof_observation(argv[1]);
+    saturated_owner_eof_observation(argv[1]);
     renewal_fault_observation(argv[1], 1,
                               "{\"code\":\"remote_response\",\"status\":128}");
     renewal_fault_observation(argv[1], 2,

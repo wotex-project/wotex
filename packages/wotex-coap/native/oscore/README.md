@@ -79,6 +79,13 @@ established. Worker exit cleanup sends one original-route/token cancellation,
 the peer removes its observer and custody reaps the helper within C03. Owner EOF
 during pending registration, renewal or cancellation remains separate work.
 
+The [output-saturation receipt](../../docs/provenance/native-worker-output-saturation-v1.json)
+binds an actual owner pipe filled to `EAGAIN`, fourteen protected 16 KiB
+notifications across two credit intervals, continued network progress and the
+same bounded owner-loss cleanup while report output is backpressured. Actual
+BEAM Port-mailbox sampling and dual-channel reserved-control delivery remain
+separate work.
+
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the
 cached reservation only after callback success. Repeated failures therefore
