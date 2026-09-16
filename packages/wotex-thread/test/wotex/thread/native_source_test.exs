@@ -72,6 +72,30 @@ defmodule Wotex.Thread.NativeSourceTest do
              Source.extract(archive, Path.join(root, "output-link"), "root")
   end
 
+  test "WTH-B01 cached downloads require a pinned HTTPS URL and exact digest", %{root: root} do
+    target = Path.join(root, "source.tar.gz")
+
+    url =
+      "https://codeload.github.com/Mbed-TLS/mbedtls-framework/tar.gz/dde0c4a0e448a0552f18817dcea633bb851fd288"
+
+    File.write!(target, "cached archive")
+    assert :ok = Source.fetch(url, target, hash("cached archive"))
+
+    assert {:error, :invalid_source_download} =
+             Source.fetch("http://example.com/a", target, hash("cached archive"))
+
+    assert {:error, :invalid_source_download} =
+             Source.fetch(url, "relative", hash("cached archive"))
+
+    assert {:error, :invalid_source_download} = Source.fetch(url, target, "wrong hash")
+    assert {:error, :source_hash_mismatch} = Source.fetch(url, target, hash("other"))
+    assert File.read!(target) == "cached archive"
+
+    linked = Path.join(root, "linked.tar.gz")
+    File.ln_s!(target, linked)
+    assert {:error, :invalid_source_download} = Source.fetch(url, linked, hash("cached archive"))
+  end
+
   defp pin(source, before, expected) do
     %{
       "source" => source,

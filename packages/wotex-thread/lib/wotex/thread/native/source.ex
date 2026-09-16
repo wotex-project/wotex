@@ -10,6 +10,25 @@ defmodule Wotex.Thread.Native.Source do
 
   @archive_files 100_000
   @archive_bytes 512 * 1024 * 1024
+  @download_bytes 128 * 1024 * 1024
+  @download_ms 120_000
+
+  @doc "Fetches one HTTPS source archive within the byte limit, or verifies its cached SHA-256."
+  @spec fetch(String.t(), Path.t(), String.t()) :: :ok | {:error, atom()}
+  def fetch(url, target, expected)
+      when is_binary(url) and is_binary(target) and is_binary(expected) do
+    with true <-
+           pinned_url?(url) and Path.type(target) == :absolute and
+             String.match?(expected, ~r/\A[0-9a-f]{64}\z/),
+         :ok <- cached_or_absent(target, expected) do
+      if File.exists?(target), do: :ok, else: download(url, target, expected)
+    else
+      {:error, _} = error -> error
+      _ -> {:error, :invalid_source_download}
+    end
+  end
+
+  def fetch(_, _, _), do: {:error, :invalid_source_download}
 
   @doc "Returns the lowercase SHA-256 digest of one regular file."
   @spec digest(Path.t()) :: {:ok, String.t()} | {:error, atom()}
@@ -90,6 +109,128 @@ defmodule Wotex.Thread.Native.Source do
     case IO.binread(file, 1_048_576) do
       :eof -> hash
       bytes -> hash_file(file, :crypto.hash_update(hash, bytes))
+    end
+  end
+
+  defp pinned_url?(url) do
+    String.match?(
+      url,
+      ~r|\Ahttps://codeload\.github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/tar\.gz/[0-9a-f]{40}\z|
+    )
+  end
+
+  defp cached_or_absent(target, expected) do
+    case File.lstat(target) do
+      {:error, :enoent} ->
+        :ok
+
+      {:ok, %File.Stat{type: :regular, size: size}} when size <= @download_bytes ->
+        if digest(target) == {:ok, expected}, do: :ok, else: {:error, :source_hash_mismatch}
+
+      _ ->
+        {:error, :invalid_source_download}
+    end
+  end
+
+  defp download(url, target, expected) do
+    temporary = target <> ".download"
+
+    with {:ok, _} <- Application.ensure_all_started(:ssl),
+         {:ok, _} <- Application.ensure_all_started(:inets),
+         {:ok, file} <- File.open(temporary, [:write, :exclusive, :binary]) do
+      result =
+        try do
+          request(url, file)
+        after
+          File.close(file)
+        end
+
+      case result do
+        :ok ->
+          finish_download(temporary, target, expected)
+
+        error ->
+          File.rm(temporary)
+          error
+      end
+    else
+      _ -> {:error, :invalid_source_download}
+    end
+  end
+
+  defp request(url, file) do
+    ssl = [
+      verify: :verify_peer,
+      cacerts: :public_key.cacerts_get(),
+      customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]
+    ]
+
+    options = [timeout: @download_ms, connect_timeout: 15_000, ssl: ssl, autoredirect: false]
+
+    case :httpc.request(:get, {String.to_charlist(url), []}, options,
+           sync: false,
+           stream: {:self, :once}
+         ) do
+      {:ok, request_id} ->
+        try do
+          receive_stream(
+            request_id,
+            file,
+            0,
+            System.monotonic_time(:millisecond) + @download_ms,
+            nil
+          )
+        after
+          :httpc.cancel_request(request_id)
+        end
+
+      _ ->
+        {:error, :invalid_source_download}
+    end
+  end
+
+  defp receive_stream(request_id, file, count, deadline, handler) do
+    remaining = max(deadline - System.monotonic_time(:millisecond), 0)
+
+    receive do
+      {:http, {^request_id, :stream_start, _, next_handler}} when is_nil(handler) ->
+        case :httpc.stream_next(next_handler) do
+          :ok -> receive_stream(request_id, file, count, deadline, next_handler)
+          _ -> {:error, :invalid_source_download}
+        end
+
+      {:http, {^request_id, :stream, bytes}}
+      when is_pid(handler) and count + byte_size(bytes) <= @download_bytes ->
+        with :ok <- IO.binwrite(file, bytes),
+             :ok <- :httpc.stream_next(handler) do
+          receive_stream(request_id, file, count + byte_size(bytes), deadline, handler)
+        else
+          _ -> {:error, :invalid_source_download}
+        end
+
+      {:http, {^request_id, :stream_end, _}} when is_pid(handler) ->
+        :ok
+
+      {:http, {^request_id, _}} ->
+        {:error, :invalid_source_download}
+    after
+      remaining -> {:error, :source_download_timeout}
+    end
+  end
+
+  defp finish_download(temporary, target, expected) do
+    if digest(temporary) == {:ok, expected} do
+      case File.ln(temporary, target) do
+        :ok ->
+          File.rm(temporary)
+
+        _ ->
+          File.rm(temporary)
+          {:error, :invalid_source_download}
+      end
+    else
+      File.rm(temporary)
+      {:error, :source_hash_mismatch}
     end
   end
 

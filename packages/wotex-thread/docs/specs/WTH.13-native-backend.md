@@ -3,7 +3,7 @@ spec:
   id: WTH.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.2
+  version: 1.0.3
   owner: wotex-thread
   updated: 2026-09-17
 ---
@@ -18,7 +18,9 @@ and the exact before/after hashes of the two pinned SDK fixes. Its unit tests
 do not accept B01 or replace the current Python build utility. An Elixir
 workspace owner now enforces exact task arguments, empty-directory admission,
 an exclusive build marker and content-hash verification of completed manifests.
-The Mix task, full manifest fields and Linux build remain required.
+The source helper streams pinned HTTPS archives through OTP with a finite byte
+limit and verifies SHA-256 before publishing them. The Mix task, full manifest
+fields and Linux build remain required.
 
 ## WTH-B01 — Production and build boundary
 

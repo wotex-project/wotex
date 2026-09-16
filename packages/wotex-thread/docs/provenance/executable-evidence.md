@@ -27,6 +27,11 @@ waivers. See SECURITY.md and the dependency-security test.
 
 `Wotex.Thread.Native.Source` validates gzip tar member type, root, path and
 finite count/aggregate size before extraction to an empty absolute directory.
+It now streams pinned codeload HTTPS archives with TLS peer/hostname validation,
+120-second deadline, 128 MiB body limit and exact SHA-256 before atomic
+publication. Cached regular files are rehashed. The pinned Mbed TLS framework
+archive was fetched and matched its checked-in SHA-256 in a manual native-source
+smoke run; this is source-transfer evidence, not a Linux SDK build.
 It strips special file mode bits and rejects links. The reviewed Spinel and
 discerner edits require the exact pinned source hash, exact replacement counts
 and exact patched hash before writing. `native_source_test.exs` checks accepted
