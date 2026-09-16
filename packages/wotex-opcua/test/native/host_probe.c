@@ -70,6 +70,48 @@ static int session_reply(void) {
        write_all(STDOUT_FILENO, frame, (size_t)count)) return 57;
     return 0;
 }
+
+static int session_services(void) {
+    char frame[4096], id[65];
+    unsigned long long generation = 0;
+    for(unsigned sequence = 1; sequence <= 8; sequence++) {
+        if(read_line(frame, sizeof(frame)) || !strstr(frame, "\"event\":\"credit\"")) return 58;
+        if(read_line(frame, sizeof(frame))) return 59;
+        char *key = strstr(frame, "\"generation\":");
+        char *request_id = strstr(frame, "\"id\":\"");
+        if(!key || !request_id || sscanf(key, "\"generation\":%llu", &generation) != 1 ||
+           sscanf(request_id, "\"id\":\"%64[0-9]\"", id) != 1) return 60;
+        const char *result;
+        if(strstr(frame, "\"operation\":\"open\""))
+            result = "{\"session_timeout_ms\":60000.0,\"session_generation\":%llu,"
+                     "\"namespace_array\":[\"http://opcfoundation.org/UA/\",\"urn:fixture\"]}";
+        else if(strstr(frame, "\"operation\":\"read\""))
+            result = "{\"has_value\":true,\"value\":{\"type\":\"Double\","
+                     "\"array\":false,\"value\":21.5},\"status\":0}";
+        else if(strstr(frame, "\"operation\":\"write\""))
+            result = "{\"status\":0}";
+        else if(strstr(frame, "\"operation\":\"call\""))
+            result = "{\"status\":0,\"input_argument_statuses\":[],"
+                     "\"outputs\":[{\"type\":\"Double\",\"array\":false,\"value\":4.5}]}";
+        else if(strstr(frame, "\"operation\":\"close\""))
+            result = "null";
+        else return 61;
+        char body[1024];
+        int size;
+        if(strstr(frame, "\"operation\":\"open\""))
+            size = snprintf(body, sizeof(body), result, generation);
+        else
+            size = snprintf(body, sizeof(body), "%s", result);
+        if(size <= 0 || (size_t)size >= sizeof(body)) return 62;
+        int count = snprintf(frame, sizeof(frame),
+            "{\"version\":1,\"generation\":%llu,\"id\":\"%s\",\"ok\":true,\"result\":%s}\n",
+            generation, id, body);
+        if(count <= 0 || (size_t)count >= sizeof(frame) ||
+           write_all(STDOUT_FILENO, frame, (size_t)count)) return 63;
+        if(!strcmp(body, "null")) return 0;
+    }
+    return 64;
+}
 int main(int argc, char **argv) {
     if (argc != 1) return 40;
     const char *mode = strrchr(argv[0], '/');
@@ -114,6 +156,7 @@ int main(int argc, char **argv) {
         }
     } else if (write_all(STDOUT_FILENO, ready, (size_t)count)) return 47;
     if (!strcmp(mode, "session_reply")) return session_reply();
+    if (!strcmp(mode, "session_services")) return session_services();
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

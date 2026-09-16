@@ -40,10 +40,12 @@ should replace the path with the constraint of an available Hex release.
 
 The current code contains scalar, Variant, DataValue, NodeId, expanded identity, name and reference
 codecs, UA TCP framing, Property Form
-mapping and a limited per-request asyncua adapter. That Python runtime path does
-not satisfy the accepted native software profile. WOP.02 and executable evidence
-bound its actual behavior; persistent native sessions, richer values and
-subscriptions require implementation.
+mapping, a limited per-request asyncua adapter and an explicitly selected
+partial `Open62541` client. The latter opens persistent or one-shot secure
+Sessions and performs typed Value Read/Write and Method Call through C without
+runtime Python. WOP.02 and executable evidence bound its actual behavior;
+complete compatibility projection, Browse, subscriptions and lifecycle work
+remain.
 
 ## Native software contract
 

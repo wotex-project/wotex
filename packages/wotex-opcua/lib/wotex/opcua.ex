@@ -15,7 +15,8 @@ defmodule Wotex.OPCUA do
   The consumer selects a `Wotex.OPCUA.Client` and owns endpoint policy,
   credentials, certificates, trust configuration, authorization, and
   supervision. Loading this module opens no channel or Python process.
-  Subscriptions and persistent sessions are unsupported and are not simulated.
+  The explicitly selected native client can own a persistent Session;
+  subscriptions remain unsupported and are not simulated.
   A successful service result is protocol evidence only; it does not establish
   canonical Property state, authorization, or a physical Action effect.
   """

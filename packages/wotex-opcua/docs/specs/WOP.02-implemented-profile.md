@@ -3,17 +3,18 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.21
+  version: 1.0.22
   owner: wotex-opcua
   updated: 2026-09-16
 ---
 
 # WOP.02 Implemented OPC UA profile
 
-This document inventories the current Python-backed protocol adapter and the
-partial native Session owner. It does not accept the complete native target in
-WOP.10–WOP.13. Python is a runtime requirement of the existing protocol adapter;
-the accepted native architecture has no runtime Python process.
+This document inventories the existing Python-backed protocol adapter and the
+partial public native Session client. It does not accept the complete native
+target in WOP.10–WOP.13. Python remains a runtime requirement when selecting the
+older `Asyncua` adapter; the explicitly selected `Open62541` client uses no
+runtime Python process.
 
 The OPC 10101 URI subset is
 `opc.tcp://host:port/path?id=percent-encoded-NodeId`. A single `id` query parameter
@@ -50,7 +51,7 @@ IDs 26..31. DataValue codecs retain value presence, full status and exact signed
 Arrays have a 1024-element ceiling; Variant/DataValue consumed bytes are limited
 to 1 MiB including metadata. The native C value library constructs bounded SDK
 Variants/DataValues and projects their finite typed fields. Native request/service
-integration and SDK receive-side preallocation limits remain required work; the
+integration is partial; SDK receive-side preallocation limits remain work. The
 existing `Value` adapter still has its scalar contract.
 UA chunk framing defaults to 1 MiB and validates message type, chunk kind and
 length before allocating/waiting. Chunk framing alone does not validate secure
@@ -58,8 +59,8 @@ channels, sequence numbers, RequestId, RequestHandle or service status.
 
 The real adapter delegates those channel/session checks to pinned asyncua 2.0.1.
 Its externally provisioned Python environment is an explicit implementation
-dependency; the package neither hides nor installs it, and no native Elixir OPC
-UA transport is claimed. Malformed handles, requests, timeouts, unknown options
+dependency; the package neither hides nor installs it. Malformed handles,
+requests, timeouts, unknown options
 and duplicate security options fail before the bridge starts.
 Its HEL negotiation caps messages at 1 MiB and chunks at 16. The JSON process
 boundary caps request/response bytes at 128 KiB and correlates a request ID.
@@ -130,16 +131,20 @@ effect without retry. NodeId-bearing arguments and outputs remain unsupported
 until full namespace translation exists. The internal BEAM owner validates
 these responses and replenishes consumed credit. Browse/subscriptions,
 complete output buffering, cancellation, full namespace translation and other
-policy/token interoperability remain open P02/P03 work. The default public
-adapter is still Python-backed.
+policy/token interoperability remain open P02/P03 work. The older explicit
+`Asyncua` adapter remains Python-backed.
 The native configuration helper validates explicit policy, token and credential
-paths and snapshots bounded files for the native `open` request. It has no public
-Session/client connection yet, so the Python-backed adapter remains the current
-public transport.
+paths and snapshots bounded files for the native `open` request.
+`Open62541.connect/1` now uses that helper and the owned C host for a persistent
+secure Session, or defers file and process I/O in one-shot mode. Its current
+public request path exposes typed native DataValue, Write status and Call result
+maps through the facade; the independent Basic256Sha256 anonymous peer passes
+read, write/readback, Call and one-shot read. This is an explicitly selected
+partial native client, not a complete compatibility or Runtime projection.
 `Native.Frame` encodes exact outer request fields and maps the owner deadline
 from the separately captured ready clock sample. The native build test uses
-that production encoder to drive the real process. No public native client is
-exposed yet. The internal `Native.Host.request/4` sends correlated frames through
+that production encoder to drive the real process. The internal
+`Native.Host.request/4` sends correlated frames through
 the custody guardian, validates terminal controls and open/read/write/call/close responses, and
 replenishes delivered response credit. Unsolicited output ends the generation.
 An `open` request now has additional native-side shape checks: exact keys,
@@ -169,8 +174,8 @@ unclaimed-host deadline or failed readiness closes the Port; independent custody
 handles stopped SDKs. The readiness corpus preserves integer clock boundaries
 and rejects duplicate keys, invalid UTF-8, extra frames and oversized control
 output. Actual built-SDK startup is exercised by the required native build test.
-SDK report credits, authenticated native Sessions and services remain required
-implementation; bootstrap readiness advertises none of those capabilities.
+SDK report credits and the remaining Session/service matrix remain required
+implementation; bootstrap readiness itself advertises none of those capabilities.
 
 The native JSON foundation parses strict, bounded frames into a fixed allocator
 pool, rejects duplicate decoded keys, and validates exact signed/unsigned

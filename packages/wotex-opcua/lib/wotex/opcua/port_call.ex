@@ -8,8 +8,9 @@ defmodule Wotex.OPCUA.PortCall do
   exceptions, exits, and throws into stable errors without their original terms.
 
   This helper does not start a worker or enforce a callback deadline. The
-  selected client must honor the supplied timeout and own its resources;
-  `Wotex.OPCUA.Asyncua` provides the bounded native bridge implementation.
+  selected client must honor the supplied timeout and own its resources.
+  `Wotex.OPCUA.Open62541` uses an owned C executable; the older
+  `Wotex.OPCUA.Asyncua` implementation uses a Python bridge.
   """
 
   alias Wotex.OPCUA.Error

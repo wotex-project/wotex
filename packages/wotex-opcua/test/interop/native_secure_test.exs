@@ -326,6 +326,72 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
   end
 
+  test "the public native client reads, writes and calls through secure Sessions without Python" do
+    peer_path = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    peer = Jason.decode!(File.read!(peer_path))
+    directory = Path.dirname(peer_path)
+    executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
+    guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+
+    options = [
+      executable: executable,
+      executable_digest: digest.(executable),
+      guardian: guardian,
+      guardian_digest: digest.(guardian),
+      endpoint: peer["endpoint"],
+      security_policy: :basic256sha256,
+      security_mode: :sign_and_encrypt,
+      client_uri: peer["client_uri"],
+      server_uri: peer["server_uri"],
+      certificate: peer["certificate"],
+      private_key: Path.join(directory, "client.key.der"),
+      server_certificate: peer["server_certificate"],
+      trust_certificate: Path.join(directory, "ca.der"),
+      crl: peer["crl"],
+      authentication: %{type: :anonymous}
+    ]
+
+    assert {:ok, session} =
+             Wotex.OPCUA.connect(Keyword.put(options, :client, Wotex.OPCUA.Open62541))
+
+    assert {:ok, %{"value" => %{"value" => 21.5}}} =
+             Wotex.OPCUA.send(session, %{type: :read, node_id: peer["node_id"]})
+
+    write = %{type: :write, node_id: peer["node_id"], value: %{type: "Double", value: 32.5}}
+    assert {:ok, %{"status" => 0}} = Wotex.OPCUA.send(session, write)
+
+    assert {:ok, %{"value" => %{"value" => 32.5}}} =
+             Wotex.OPCUA.send(session, %{type: :read, node_id: peer["node_id"]})
+
+    assert {:ok, %{"status" => 0}} =
+             Wotex.OPCUA.send(session, %{write | value: %{type: "Double", value: 21.5}})
+
+    call = %{
+      type: :call,
+      node_id: peer["method_id"],
+      value: %{
+        object_id: peer["object_id"],
+        arguments: [%{type: "Double", value: 1.25}, %{type: "Double", value: 3.25}]
+      }
+    }
+
+    assert {:ok, %{"outputs" => [%{"value" => 4.5}]}} = Wotex.OPCUA.send(session, call)
+    assert :ok = Wotex.OPCUA.disconnect(session)
+
+    assert {:ok, oneshot} =
+             Wotex.OPCUA.Open62541.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+    assert {:ok, %{"value" => %{"value" => 21.5}}} =
+             Wotex.OPCUA.Open62541.request(
+               oneshot,
+               %{type: :read, node_id: peer["node_id"]},
+               5000
+             )
+
+    assert :ok = Wotex.OPCUA.Open62541.disconnect(oneshot)
+  end
+
   defp line(port, buffered) do
     case :binary.match(buffered, "\n") do
       {index, 1} ->

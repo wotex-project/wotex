@@ -28,7 +28,9 @@ credentials and tests valid, invalid and boundary cases. See [security.md](secur
 for the exact boundary and remaining SDK/Session work.
 The Elixir `Native.Config` helper validates explicit public-native option shape
 without I/O and snapshots bounded credential files as C07 bytes envelopes under
-one deadline. It is not yet wired into a public Session client.
+one deadline. The explicitly selected public `Open62541` client now uses it for
+persistent and one-shot secure Sessions; service and compatibility coverage is
+still partial.
 
 `ipc.c` assembles input lines within the 131072-byte ceiling and checks the
 closed outer request envelope after `json_codec.c` parses the complete line.

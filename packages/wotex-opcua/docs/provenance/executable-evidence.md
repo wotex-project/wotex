@@ -20,6 +20,44 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Explicit public native Session client slice, 2026-09-16
+
+The explicitly selected `Wotex.OPCUA.Open62541` client now implements the
+existing client port with caller-owned persistent and one-shot secure Sessions.
+Persistent connect snapshots bounded credential files, verifies the executable
+identities, activates the native Session and retains its temporary host until
+explicit disconnect or owner loss. One-shot connect validates shape without
+file or process I/O; each request snapshots credentials, opens a temporary
+Session, performs one service operation and closes it. The client validates
+concrete NodeIds and typed Variant inputs before dispatch, with no automatic
+mutation retry. It currently returns the validated native DataValue, Write
+status and Call result maps through the public facade. Browse, subscriptions,
+complete one-shot compatibility projection, full lifecycle/cancellation and
+the security policy/token matrix remain open. The older `Asyncua` adapter and
+its production Python bridge still exist, so the repository is not yet
+Python-free; selecting `Open62541` invokes no Python runtime code.
+
+Six default public-client tests pass. A C response peer injects deterministic
+open/read/write/call/close frames to test owner, credit and cleanup wiring;
+it does not establish OPC UA interoperability. Nine optional tests pass against
+the independent Basic256Sha256 anonymous asyncua 2.0.1 peer. The public facade
+there reads, writes/reads back/restores a Double and calls a typed Method in a
+persistent Session; a one-shot read independently opens and closes another
+secure Session. The complete `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes
+on macOS arm64 with Elixir 1.20.2 / OTP 29.0.4: 280 passed (10 doctests,
+4 properties, 266 tests), ten optional tests excluded and 95.0% coverage.
+Its native build, documentation, dependency audits and package/archive checks
+pass. This is partial P02/S02/X04 evidence, not package acceptance.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/open62541.ex` | `fa9e0578462c801687a19c008b9eab1225454bc4fad4d1703d6903672d7c0382` |
+| `lib/wotex/opcua.ex` | `6a322c21d190a2e236e08553f4305fa7910a1ed6426e120fdef77179fab7c5b4` |
+| `lib/wotex/opcua/port_call.ex` | `fd5aac1a7814c22d11641dc6905bb190c54ebe0e2d5040eee4bb2030a3ea2312` |
+| `test/wotex/opcua/open62541_test.exs` | `7ae6e55d997325055912a1b59f0413b2ca30d052a161199434203454ac89e2b8` |
+| `test/interop/native_secure_test.exs` | `6729cff2cc49ee60e4a8123bee0ee12a09202744ad6ca205e36c1a75dc96e04d` |
+| `test/native/host_probe.c` | `b6c799b743dc365e3462aac8c309164882b943519c78c3ad231c3737fc872ef9` |
+
 ## Native credential configuration projection, 2026-09-16
 
 `Native.Config.new/1` now rejects unknown or duplicate option keys, malformed
