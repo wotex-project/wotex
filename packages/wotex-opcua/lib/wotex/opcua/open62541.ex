@@ -7,8 +7,9 @@ defmodule Wotex.OPCUA.Open62541 do
   One-shot mode defers credential reads and process startup until `request/3`.
   This client projects Value Read, typed Write and Method Call results as
   validated native maps and complete, bounded child Browse pages as canonical
-  NodeIds. Typed pagination, subscriptions and the complete compatibility
-  projection remain separate work. No operation invokes Python or retries a
+  NodeIds. One-shot Read, Write and Call preserve the existing adapter's result
+  shapes. Typed pagination, subscriptions and other compatibility cells remain
+  separate work. No operation invokes Python or retries a
   transmitted mutation.
   """
 
@@ -100,7 +101,9 @@ defmodule Wotex.OPCUA.Open62541 do
                request_before(host, "open", open, deadline),
              {:ok, result} <- request_before(host, operation, parameters, deadline),
              {:ok, nil} <- Host.request(host, "close", %{}, min(config.timeout, 5000)),
-             do: project_result(operation, result, namespaces)
+             {:ok, projected} <- project_result(operation, result, namespaces) do
+          oneshot_result(operation, projected)
+        end
       after
         stop_host(host)
       end
@@ -281,6 +284,70 @@ defmodule Wotex.OPCUA.Open62541 do
 
   defp project_result("browse", _, _), do: {:error, Error.new(:invalid_native_frame)}
   defp project_result(_, result, _), do: {:ok, result}
+
+  defp oneshot_result(
+         "read",
+         %{"has_value" => true, "status" => status, "value" => variant}
+       )
+       when is_map(variant) do
+    with false <- Map.has_key?(variant, "dimensions"),
+         {:ok, value} <- legacy_payload(variant["value"]) do
+      {:ok, %{"type" => variant["type"], "value" => value, "status" => status}}
+    else
+      _ -> {:error, Error.new(:unsupported_type)}
+    end
+  end
+
+  defp oneshot_result("read", _), do: {:error, Error.new(:unsupported_type)}
+  defp oneshot_result("write", %{"status" => _}), do: {:ok, "written"}
+
+  defp oneshot_result("call", %{"outputs" => outputs}) when is_list(outputs) do
+    values =
+      Enum.reduce_while(outputs, {:ok, []}, fn output, {:ok, values} ->
+        if Map.has_key?(output, "dimensions") do
+          {:halt, {:error, Error.new(:unsupported_type)}}
+        else
+          case legacy_payload(output["value"]) do
+            {:ok, value} -> {:cont, {:ok, [value | values]}}
+            error -> {:halt, error}
+          end
+        end
+      end)
+
+    case values do
+      {:ok, []} -> {:ok, nil}
+      {:ok, [value]} -> {:ok, value}
+      {:ok, many} -> {:ok, Enum.reverse(many)}
+      error -> error
+    end
+  end
+
+  defp oneshot_result("browse", nodes) when is_list(nodes), do: {:ok, nodes}
+  defp oneshot_result(_, _), do: {:error, Error.new(:invalid_native_frame)}
+
+  defp legacy_payload(%{"type" => "bytes", "base64" => base64}) when is_binary(base64),
+    do: {:ok, %{"type" => "ByteString", "base64" => base64}}
+
+  defp legacy_payload(values) when is_list(values) do
+    result =
+      Enum.reduce_while(values, {:ok, []}, fn value, {:ok, converted} ->
+        case legacy_payload(value) do
+          {:ok, item} -> {:cont, {:ok, [item | converted]}}
+          error -> {:halt, error}
+        end
+      end)
+
+    case result do
+      {:ok, converted} -> {:ok, Enum.reverse(converted)}
+      error -> error
+    end
+  end
+
+  defp legacy_payload(value)
+       when is_nil(value) or is_boolean(value) or is_number(value) or is_binary(value),
+       do: {:ok, value}
+
+  defp legacy_payload(_), do: {:error, Error.new(:unsupported_type)}
 
   defp invalid_request, do: {:error, Error.new(:invalid_value)}
 end

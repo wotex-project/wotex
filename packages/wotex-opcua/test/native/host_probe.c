@@ -86,12 +86,37 @@ static int session_services(int remote_browse) {
             result = "{\"session_timeout_ms\":60000.0,\"session_generation\":%llu,"
                      "\"namespace_array\":[\"http://opcfoundation.org/UA/\",\"urn:fixture\"]}";
         else if(strstr(frame, "\"operation\":\"read\""))
-            result = "{\"has_value\":true,\"value\":{\"type\":\"Double\","
+            result = remote_browse == 5 ?
+                "{\"has_value\":true,\"value\":{\"type\":\"ByteString\","
+                "\"array\":true,\"value\":[{\"type\":\"bytes\",\"base64\":\"AP8=\"},"
+                "{\"type\":\"bytes\",\"base64\":\"AQ==\"}]},\"status\":0}" :
+                remote_browse == 6 ? "{\"has_value\":false,\"status\":0}" :
+                remote_browse == 7 ?
+                "{\"has_value\":true,\"value\":{\"type\":\"LocalizedText\","
+                "\"array\":false,\"value\":{\"locale\":\"en\",\"text\":\"Value\"}},\"status\":0}" :
+                remote_browse == 8 ?
+                "{\"has_value\":true,\"value\":{\"type\":\"LocalizedText\","
+                "\"array\":true,\"value\":[{\"locale\":\"en\",\"text\":\"Value\"}]},\"status\":0}" :
+                "{\"has_value\":true,\"value\":{\"type\":\"Double\","
                      "\"array\":false,\"value\":21.5},\"status\":0}";
         else if(strstr(frame, "\"operation\":\"write\""))
             result = "{\"status\":0}";
         else if(strstr(frame, "\"operation\":\"call\""))
-            result = "{\"status\":0,\"input_argument_statuses\":[],"
+            result = remote_browse == 3 ?
+                "{\"status\":0,\"input_argument_statuses\":[],\"outputs\":[]}" :
+                remote_browse == 4 ?
+                "{\"status\":0,\"input_argument_statuses\":[],"
+                "\"outputs\":[{\"type\":\"Double\",\"array\":false,\"value\":4.5},"
+                "{\"type\":\"Boolean\",\"array\":false,\"value\":true}]}" :
+                remote_browse == 9 ?
+                "{\"status\":0,\"input_argument_statuses\":[],"
+                "\"outputs\":[{\"type\":\"LocalizedText\",\"array\":false,"
+                "\"value\":{\"locale\":\"en\",\"text\":\"Value\"}}]}" :
+                remote_browse == 10 ?
+                "{\"status\":0,\"input_argument_statuses\":[],"
+                "\"outputs\":[{\"type\":\"Double\",\"array\":true,"
+                "\"value\":[1.0,2.0],\"dimensions\":[1,2]}]}" :
+                "{\"status\":0,\"input_argument_statuses\":[],"
                      "\"outputs\":[{\"type\":\"Double\",\"array\":false,\"value\":4.5}]}";
         else if(strstr(frame, "\"operation\":\"browse\""))
             result = remote_browse == 1 ?
@@ -180,6 +205,14 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "session_services")) return session_services(0);
     if (!strcmp(mode, "session_remote_browse")) return session_services(1);
     if (!strcmp(mode, "session_unknown_browse")) return session_services(2);
+    if (!strcmp(mode, "session_empty_call")) return session_services(3);
+    if (!strcmp(mode, "session_many_call")) return session_services(4);
+    if (!strcmp(mode, "session_bytes_read")) return session_services(5);
+    if (!strcmp(mode, "session_empty_read")) return session_services(6);
+    if (!strcmp(mode, "session_localized_read")) return session_services(7);
+    if (!strcmp(mode, "session_localized_array_read")) return session_services(8);
+    if (!strcmp(mode, "session_localized_call")) return session_services(9);
+    if (!strcmp(mode, "session_matrix_call")) return session_services(10);
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

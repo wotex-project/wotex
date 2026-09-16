@@ -468,10 +468,33 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     assert {:ok, oneshot} =
              Wotex.OPCUA.Open62541.connect(Keyword.put(options, :lifecycle, :oneshot))
 
-    assert {:ok, %{"value" => %{"value" => 21.5}}} =
+    assert {:ok, %{"type" => "Double", "value" => 21.5, "status" => 0}} =
              Wotex.OPCUA.Open62541.request(
                oneshot,
                %{type: :read, node_id: peer["node_id"]},
+               5000
+             )
+
+    assert {:ok, "written"} =
+             Wotex.OPCUA.Open62541.request(
+               oneshot,
+               %{write | value: %{type: "Double", value: 21.5}},
+               5000
+             )
+
+    assert {:ok, 4.5} = Wotex.OPCUA.Open62541.request(oneshot, call, 5000)
+
+    assert {:ok,
+            %{
+              "type" => "ByteString",
+              "value" => [
+                %{"type" => "ByteString", "base64" => "AP8="},
+                %{"type" => "ByteString", "base64" => "AQ=="}
+              ]
+            }} =
+             Wotex.OPCUA.Open62541.request(
+               oneshot,
+               %{type: :read, node_id: peer["byte_array_node_id"]},
                5000
              )
 

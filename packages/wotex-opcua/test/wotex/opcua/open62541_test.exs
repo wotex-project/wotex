@@ -215,10 +215,100 @@ defmodule Wotex.OPCUA.Open62541Test do
     options = fixture(context, "oneshot")
     assert {:ok, handle} = Open62541.connect(Keyword.put(options, :lifecycle, :oneshot))
 
-    assert {:ok, %{"value" => %{"value" => 21.5}}} =
+    assert {:ok, %{"type" => "Double", "value" => 21.5, "status" => 0} = read} =
              Open62541.request(handle, %{type: :read, node_id: "ns=2;s=value"}, 2000)
 
+    assert {:ok, 21.5, %{opcua_type: "Double", status: 0}} = Wotex.OPCUA.Value.result(read)
+
     assert :ok = Open62541.disconnect(handle)
+  end
+
+  test "WOP-N04 one-shot Write and Call preserve compatibility result shapes", context do
+    write_options = fixture(context, "oneshot-write")
+
+    assert {:ok, write_handle} =
+             Open62541.connect(Keyword.put(write_options, :lifecycle, :oneshot))
+
+    assert {:ok, "written"} =
+             Open62541.request(
+               write_handle,
+               %{type: :write, node_id: "ns=2;s=value", value: %{type: "Double", value: 4.5}},
+               2000
+             )
+
+    call_options = fixture(context, "oneshot-call")
+    assert {:ok, call_handle} = Open62541.connect(Keyword.put(call_options, :lifecycle, :oneshot))
+
+    assert {:ok, 4.5} =
+             Open62541.request(
+               call_handle,
+               %{
+                 type: :call,
+                 node_id: "ns=2;s=method",
+                 value: %{
+                   object_id: "ns=0;i=85",
+                   arguments: [%{type: "Double", value: 1.25}, %{type: "Double", value: 3.25}]
+                 }
+               },
+               2000
+             )
+  end
+
+  test "WOP-N04 one-shot Call preserves zero and multiple output shapes", context do
+    call = %{
+      type: :call,
+      node_id: "ns=2;s=method",
+      value: %{object_id: "ns=0;i=85", arguments: []}
+    }
+
+    for {mode, expected} <- [{"session_empty_call", nil}, {"session_many_call", [4.5, true]}] do
+      options = fixture(context, mode, mode)
+      assert {:ok, handle} = Open62541.connect(Keyword.put(options, :lifecycle, :oneshot))
+      assert {:ok, ^expected} = Open62541.request(handle, call, 2000)
+    end
+  end
+
+  test "WOP-N04 one-shot ByteString arrays retain legacy binary envelopes", context do
+    options = fixture(context, "bytes-read", "session_bytes_read")
+    assert {:ok, handle} = Open62541.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+    assert {:ok,
+            %{
+              "type" => "ByteString",
+              "status" => 0,
+              "value" => [
+                %{"type" => "ByteString", "base64" => "AP8="},
+                %{"type" => "ByteString", "base64" => "AQ=="}
+              ]
+            }} = Open62541.request(handle, %{type: :read, node_id: "ns=2;s=value"}, 2000)
+  end
+
+  test "WOP-N04 one-shot Read rejects absent or legacy-unrepresentable values", context do
+    for mode <- ["session_empty_read", "session_localized_read", "session_localized_array_read"] do
+      options = fixture(context, mode, mode)
+      assert {:ok, handle} = Open62541.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+      assert {:error, %Error{code: :unsupported_type}} =
+               Open62541.request(handle, %{type: :read, node_id: "ns=2;s=value"}, 2000)
+    end
+  end
+
+  test "WOP-N04 one-shot Call rejects an output without a legacy JSON shape", context do
+    for mode <- ["session_localized_call", "session_matrix_call"] do
+      options = fixture(context, mode, mode)
+      assert {:ok, handle} = Open62541.connect(Keyword.put(options, :lifecycle, :oneshot))
+
+      assert {:error, %Error{code: :unsupported_type}} =
+               Open62541.request(
+                 handle,
+                 %{
+                   type: :call,
+                   node_id: "ns=2;s=method",
+                   value: %{object_id: "ns=0;i=85", arguments: []}
+                 },
+                 2000
+               )
+    end
   end
 
   test "WOP-N04 one-shot native Browse uses one temporary Session", context do

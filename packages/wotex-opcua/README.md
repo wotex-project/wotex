@@ -44,7 +44,8 @@ mapping, a limited per-request asyncua adapter and an explicitly selected
 partial `Open62541` client. The latter opens persistent or one-shot secure
 Sessions and performs typed Value Read/Write, Method Call and bounded child
 Browse through C without runtime Python. WOP.02 and executable evidence bound
-its actual behavior; typed Browse pagination/release, complete compatibility
+its actual behavior. One-shot Read/Write/Call successes preserve the older
+adapter's result shapes; typed Browse pagination/release, complete compatibility
 projection, subscriptions and lifecycle work
 remain.
 

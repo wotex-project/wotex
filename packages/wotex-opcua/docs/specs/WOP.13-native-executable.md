@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.13
+  version: 1.1.14
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -57,10 +57,12 @@ files under one caller deadline, bounds each to 64 KiB, and projects the closed
 bytes-envelope `open` map. Anonymous, binary username/password and certificate
 token shapes are covered. The explicitly selected public `Open62541` client now
 uses this layer to open a caller-owned persistent Session or to defer all file
-and process I/O until a one-shot request. It projects read, Write and Call maps
-through the Wotex facade against one independent secure peer; bounded child
-Browse also works in persistent and one-shot mode. The older `Asyncua` adapter
-remains Python-backed. Complete compatibility projection, typed Browse
+and process I/O until a one-shot request. Persistent Read, Write and Call retain
+typed native maps; one-shot success preserves the older adapter's Read envelope,
+`"written"` Write acknowledgment and zero/one/many Call output shapes, including
+ByteString envelopes. Bounded child Browse works in both modes. These paths pass
+against one independent secure peer. The older `Asyncua` adapter remains
+Python-backed. Complete compatibility projection, typed Browse
 pagination/release, cancellation, concurrency and the policy/token matrix remain open;
 this does not accept P02/P03.
 The independent peer also confirms typed ByteString array Write/readback through

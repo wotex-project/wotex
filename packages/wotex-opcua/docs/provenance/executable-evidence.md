@@ -20,6 +20,30 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native one-shot compatibility success shapes, 2026-09-16
+
+The explicitly selected native client now maps successful one-shot Value Read
+to the older `{type, value, status}` envelope, Write to `"written"`, and Method
+Call to nil, a single value or an ordered value list for zero, one or multiple
+outputs. ByteString values retain the older `{type: "ByteString", base64}`
+envelope, including array elements. Persistent mode still returns validated
+native DataValue, Write status and Call result maps. The independent secure peer
+exercises one-shot Read, Write, Call and ByteString array projection without
+launching the packaged Python adapter; a deterministic C response peer tests
+all three Call arities. The one-shot Read envelope also passes the Runtime
+`Value.result/1` mapper. Absent, LocalizedText and multidimensional values
+without an older JSON shape fail as `unsupported_type`. Ten optional secure-peer
+tests pass.
+
+The complete `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64
+with Elixir 1.20.2 / OTP 29.0.4: 290 passed (10 doctests, 4 properties,
+276 tests), 11 optional tests excluded and 95.1% coverage. Documentation,
+dependency audits, native build and package/archive checks pass.
+
+This is successful-result compatibility only. Error/status, full lifecycle,
+typed Browse pagination, subscriptions, policy/token interoperability and
+removal of the Python-backed `Asyncua` adapter remain open.
+
 ## Native single-page Browse and child projection, 2026-09-16
 
 The production open62541 executable now sends one asynchronous service-level

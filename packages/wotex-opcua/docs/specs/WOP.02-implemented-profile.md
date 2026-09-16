@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.25
+  version: 1.0.26
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -144,9 +144,11 @@ paths and snapshots bounded files for the native `open` request.
 `Open62541.connect/1` now uses that helper and the owned C host for a persistent
 secure Session, or defers file and process I/O in one-shot mode. Its current
 public request path exposes typed native DataValue, Write status and Call result
-maps plus bounded child-NodeId Browse through the facade; the independent
-Basic256Sha256 anonymous peer passes read, write/readback, Call, Browse and
-one-shot read. This is an explicitly selected
+maps in persistent mode plus bounded child-NodeId Browse through the facade.
+One-shot Read, Write and Call project the existing adapter's successful result
+shapes: `{type, value, status}`, `"written"`, and zero/one/many method outputs.
+The independent Basic256Sha256 anonymous peer passes read, write/readback,
+Call, Browse and one-shot result projection. This is an explicitly selected
 partial native client, not a complete compatibility or Runtime projection.
 The same independent peer also accepts a public typed ByteString array Write
 and returns the exact binary array elements on Read, including embedded zero
