@@ -47,9 +47,11 @@ do not silently skip, simulate or weaken the requirement.
 - Done when: Implement the .13 Mix native/software tasks around the existing C++ host, pinned fixes and SDK build. ExUnit owns generic fixture assertions; native C++ tests share production parser/storage/credit code. Preserve existing host behavior and complete flow credits before accepting state streams.
 - Suggested local commit: `feat: own native thread build and bounded IPC`.
 
-The bounded source download, archive admission, exact SDK fix and content-bound
-workspace functions now have scoped Elixir evidence. The Mix build task,
-complete manifest and Linux SDK build are still open, so P00 remains unaccepted.
+The bounded source download, archive admission, exact SDK fixes and content-bound
+workspace now feed `mix wotex.native.build`. A Debian 12 arm64 SDK host build and
+ready-frame smoke passed without Python. The required x86_64 lane, software
+build/run tasks, fixture assertions and native contract remain open, so P00 is
+unaccepted.
 
 ### WTH-P01: Harden dataset syntax and daemon parsing
 

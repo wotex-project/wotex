@@ -94,6 +94,7 @@ defmodule WotexThread.MixProject do
     [
       setup: ["deps.get", "deps.compile"],
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
+      "wotex.native.build": "wotex.thread.native.build",
       "test.cover": ["coveralls"],
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
     ]
@@ -134,7 +135,7 @@ defmodule WotexThread.MixProject do
   defp dialyzer do
     [
       plt_file: {:no_warn, "priv/plts/dialyxir.plt"},
-      plt_add_apps: [:mix, :ex_unit],
+      plt_add_apps: [:mix, :ex_unit, :inets, :public_key, :ssl],
       flags: [:error_handling, :missing_return, :underspecs, :extra_return]
     ]
   end

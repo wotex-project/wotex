@@ -34,33 +34,46 @@ defmodule Wotex.Thread.NativeWorkspaceTest do
     root: root
   } do
     workspace = Path.join(root, "build")
-    identity = %{"source" => "first"}
+
+    identity = %{
+      "source" => "first",
+      "toolchain" => %{"cc" => %{path: "/usr/bin/cc", sha256: "digest"}}
+    }
+
     output = Path.join(workspace, "build/wotex-thread-host")
+    source = Path.join(workspace, "sources/sdk/file.c")
+    artifacts = ["build/wotex-thread-host", "sources"]
 
     build = fn ->
       File.mkdir_p!(Path.dirname(output))
+      File.mkdir_p!(Path.dirname(source))
       File.write!(output, "binary")
+      File.write!(source, "source")
       {:ok, %{"tool" => "test"}}
     end
 
     assert {:ok, %{reused: false, manifest: manifest}} =
-             Workspace.run(workspace, identity, ["build/wotex-thread-host"], build)
+             Workspace.run(workspace, identity, artifacts, build)
 
     assert manifest["schema"] == "wotex.native-build"
-    assert manifest["binaries"]["build/wotex-thread-host"] == sha256("binary")
+    assert manifest["artifacts"]["build/wotex-thread-host"] == sha256("binary")
 
     assert {:ok, %{reused: true}} =
-             Workspace.run(workspace, identity, ["build/wotex-thread-host"], fn ->
+             Workspace.run(workspace, identity, artifacts, fn ->
                flunk("completed workspace must not build again")
              end)
 
     assert {:error, :build_manifest_mismatch} =
-             Workspace.run(workspace, %{"source" => "changed"}, ["build/wotex-thread-host"], build)
+             Workspace.run(workspace, %{"source" => "changed"}, artifacts, build)
 
+    File.write!(source, "changed")
+
+    assert {:error, :build_manifest_mismatch} = Workspace.run(workspace, identity, artifacts, build)
+    File.write!(source, "source")
     File.write!(output, "changed")
 
     assert {:error, :build_manifest_mismatch} =
-             Workspace.run(workspace, identity, ["build/wotex-thread-host"], build)
+             Workspace.run(workspace, identity, artifacts, build)
   end
 
   test "WTH-B01 unrelated, incomplete and linked workspaces do not run a builder", %{

@@ -96,6 +96,50 @@ defmodule Wotex.Thread.NativeSourceTest do
     assert {:error, :invalid_source_download} = Source.fetch(url, linked, hash("cached archive"))
   end
 
+  test "WTH-B01 source-tree hash and SDK merge preserve bytes and executable mode", %{root: root} do
+    source = Path.join(root, "framework")
+    destination = Path.join(root, "mbedtls/framework")
+    File.mkdir_p!(Path.join(source, "scripts"))
+    File.mkdir_p!(destination)
+    File.write!(Path.join(source, "scripts/generate"), "run")
+    File.chmod!(Path.join(source, "scripts/generate"), 0o755)
+    File.write!(Path.join(destination, "keep"), "existing")
+    assert {:ok, original} = Source.tree_digest(source)
+    assert :ok = Source.copy_tree(source, destination)
+    assert File.read!(Path.join(destination, "keep")) == "existing"
+    assert File.read!(Path.join(destination, "scripts/generate")) == "run"
+    assert Bitwise.band(File.stat!(Path.join(destination, "scripts/generate")).mode, 0o777) == 0o755
+
+    File.write!(Path.join(source, "scripts/generate"), "changed")
+    assert {:ok, changed} = Source.tree_digest(source)
+    refute changed == original
+    File.ln_s!("generate", Path.join(source, "scripts/link"))
+    assert {:error, :invalid_source_tree} = Source.tree_digest(source)
+    assert {:error, :invalid_source_tree} = Source.copy_tree(source, destination)
+  end
+
+  test "WTH-B01 archive rejects traversal, absolute names and unsupported entry types", %{
+    root: root
+  } do
+    for {name, type} <- [
+          {"../escape", "0"},
+          {"/absolute", "0"},
+          {"root/../escape", "0"},
+          {"different/file", "0"},
+          {"root/link", "1"},
+          {"root/link", "2"},
+          {"root/device", "3"},
+          {"root/fifo", "6"}
+        ] do
+      archive = Path.join(root, "crafted-#{System.unique_integer([:positive])}.tar.gz")
+      File.write!(archive, crafted_archive(name, type))
+      assert {:error, :invalid_source_archive} = Source.validate_archive(archive, "root")
+      destination = Path.join(root, "destination")
+      assert {:error, :invalid_source_archive} = Source.extract(archive, destination, "root")
+      refute File.exists?(destination)
+    end
+  end
+
   defp pin(source, before, expected) do
     %{
       "source" => source,
@@ -109,4 +153,39 @@ defmodule Wotex.Thread.NativeSourceTest do
   defp tar(args) do
     System.cmd("tar", args, env: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end))
   end
+
+  defp crafted_archive(name, type) do
+    size = if type == "0", do: 4, else: 0
+
+    header =
+      field(name, 100) <>
+        octal(0o7777, 8) <>
+        octal(0, 8) <>
+        octal(0, 8) <>
+        octal(size, 12) <>
+        octal(0, 12) <>
+        String.duplicate(" ", 8) <>
+        type <>
+        field("/outside", 100) <>
+        "ustar" <>
+        <<0>> <>
+        "00" <>
+        field("", 32) <>
+        field("", 32) <> octal(0, 8) <> octal(0, 8) <> field("", 155) <> field("", 12)
+
+    checksum =
+      header
+      |> :binary.bin_to_list()
+      |> Enum.sum()
+
+    check = String.pad_leading(Integer.to_string(checksum, 8), 6, "0") <> <<0, 32>>
+    header = binary_part(header, 0, 148) <> check <> binary_part(header, 156, 356)
+    data = if size == 4, do: "data" <> :binary.copy(<<0>>, 508), else: ""
+    :zlib.gzip(header <> data <> :binary.copy(<<0>>, 1024))
+  end
+
+  defp field(value, width), do: value <> :binary.copy(<<0>>, width - byte_size(value))
+
+  defp octal(value, width),
+    do: String.pad_leading(Integer.to_string(value, 8), width - 1, "0") <> <<0>>
 end

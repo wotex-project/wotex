@@ -7,23 +7,25 @@ ExUnit and C++/process fixtures exercise real SDK/RCP software boundaries; their
 presence is scoped evidence, not a complete Thread profile. Joiner execution,
 state subscriptions, complete simulated-network/application workflows, Mix fixture
 orchestration and final stress/native/package closure remain required.
-The production runtime requires no Python; existing Python build/test utilities
-are current tooling. Selected native lanes must fail if their SDK/peer/configuration
+The production runtime and explicit native build require no Python; separate
+native test drivers still need migration. Selected native lanes must fail if their SDK/peer/configuration
 is absent. Physical-radio testing is a separate optional lane.
 
 ## Mandatory local gate
 
 `WOTEX_PATH_DEPS=1 mix check` runs compile warnings-as-errors, formatting and
-the default unit/property/ExUnit suite. Strict Credo is run separately for the
-native source/workspace slices. Dialyzer, Doctor, ExDoc, dependency audit, Hex
-packaging, unpacked out-of-tree compilation and the Application-free structural
-check are release checks and have not been run for these slices. Runtime path
-dependencies require the explicit switch; the archive preserves ordinary Hex
-dependency declarations.
+the default unit/property/ExUnit suite. For the native build change, `mix lint`
+(strict Credo and Dialyzer), `mix doctor`, `mix docs`, `mix hex.audit` and
+`mix deps.audit` also passed. `mix hex.build` passed with `WOTEX_PATH_DEPS`
+unset and included the Mix task, native C guardian and no generic Python
+builder. An unpacked out-of-tree package compile and the Application-free
+structural check remain separate release checks. Runtime path dependencies
+require the explicit switch; the archive preserves ordinary Hex dependency
+declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
-## Native source admission groundwork, 2026-09-17
+## Mix native build, 2026-09-17
 
 `Wotex.Thread.Native.Source` validates gzip tar member type, root, path and
 finite count/aggregate size before extraction to an empty absolute directory.
@@ -31,21 +33,37 @@ It now streams pinned codeload HTTPS archives with TLS peer/hostname validation,
 120-second deadline, 128 MiB body limit and exact SHA-256 before atomic
 publication. Cached regular files are rehashed. The pinned Mbed TLS framework
 archive was fetched and matched its checked-in SHA-256 in a manual native-source
-smoke run; this is source-transfer evidence, not a Linux SDK build.
+smoke run. GitHub codeload's one PAX global metadata entry is admitted before
+regular-file path validation; other special entries remain rejected.
 It strips special file mode bits and rejects links. The reviewed Spinel and
 discerner edits require the exact pinned source hash, exact replacement counts
 and exact patched hash before writing. `native_source_test.exs` checks accepted
 regular files, executable permissions, wrong roots, links, symlinked output,
-bad patch hashes, second application and unknown source. These functions are
-not yet called by a Mix native build task; the Python build utility remains the
-current build entry point, and WTH-B01 is not accepted.
+bad patch hashes, second application, unknown source, traversal, absolute
+names, links, device entries and FIFOs. The generic Python build utility and
+its Python unit driver have been replaced by the Mix task and ExUnit checks.
 
 `Wotex.Thread.Native.Workspace` now rejects invalid and duplicate task arguments,
 symlink paths, unrelated nonempty directories and incomplete builds. Its manifest
 owner hashes required regular-file artifacts and verifies identity and hashes
 without invoking the builder on reuse. A failed build retains an exclusive
 marker and requires disposal. `native_workspace_test.exs` executes those cases.
-The module is not yet attached to a Mix native build task.
+`native_command_test.exs` compiles the C build guardian and tests exact argument
+execution, output limits and deadline cleanup. The Mix task uses that guardian
+for tool probes, CMake configure/compile and ELF inspection.
+
+In a disposable Debian 12 arm64 container, Elixir 1.18.4/OTP 27, GCC/G++
+12.2.0, CMake 3.25.1 and Ninja 1.11.1 built the pinned OpenThread host through
+`mix wotex.native.build --workspace /output/native6`. A second invocation
+verified and reused the completed workspace without rebuilding. The manifest bound the
+three archive SHA-256 values, source tree, tool executables, build logs, JSON
+header and host ELF. The resulting host SHA-256 was
+`41badd90f953149a1dc808aa6e02c708632f72035d95a5dd30223962dacb70f2`;
+with networking disabled it emitted exactly one `openthread` ready frame for
+revision `5c8c318627954c99cd1a957a290bbd4b1027d04b`. The same lane's CMake
+probe did not find Python and its successful build did not invoke Python.
+This is an additional architecture build smoke, not the required x86_64 lane,
+SDK interoperability, native corpus or full WTH-B01 acceptance.
 
 ## Python-free injected ownership peer, 2026-09-16
 
@@ -57,8 +75,8 @@ environment; a direct empty-environment smoke test opens and replies, and
 `test/wotex/thread/sdk_bridge_test.exs` passes 31/31, including malformed
 frames, forged handles, deadlines, ignored SIGTERM cleanup, Dataset,
 management and commissioner cases. This is an injected peer, not SDK or radio
-interoperability evidence. Python remains in the separate native build and
-native test utilities pending WTH-B01 Mix/ExUnit migration.
+interoperability evidence. Python remains in separate native test utilities
+pending WTH-B01 Mix/ExUnit migration.
 
 ## Acceptance boundary
 

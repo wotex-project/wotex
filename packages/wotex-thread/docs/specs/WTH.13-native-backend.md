@@ -3,7 +3,7 @@ spec:
   id: WTH.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.3
+  version: 1.0.4
   owner: wotex-thread
   updated: 2026-09-17
 ---
@@ -13,14 +13,12 @@ spec:
 This is the accepted native OpenThread target. [Current implementation and evidence](../provenance/executable-evidence.md)
 are separate. This contract and the .00/.10/.11/.12 requirements jointly define
 acceptance; documentation or a source archive alone is not completed software.
-An Elixir source-admission helper now validates finite regular-file archives
-and the exact before/after hashes of the two pinned SDK fixes. Its unit tests
-do not accept B01 or replace the current Python build utility. An Elixir
-workspace owner now enforces exact task arguments, empty-directory admission,
-an exclusive build marker and content-hash verification of completed manifests.
-The source helper streams pinned HTTPS archives through OTP with a finite byte
-limit and verifies SHA-256 before publishing them. The Mix task, full manifest
-fields and Linux build remain required.
+The explicit Mix native build now owns finite HTTPS downloads, regular-file
+archive admission, exact before/after SDK fixes, a C process guardian, empty
+workspace admission and content-bound manifest reuse. It replaces the generic
+Python build utility. A Debian 12 arm64 build emitted the expected native ready
+frame; the required x86_64 lane, software tasks and remaining native acceptance
+cases still need evidence, so B01 is not accepted.
 
 ## WTH-B01 — Production and build boundary
 
@@ -254,9 +252,8 @@ The exact before/after hashes for the unsigned Spinel shift and full-width
 Joiner discerner fixes in that manifest are mandatory. Patching a different
 source or silently accepting an unpatched build is prohibited.
 
-The Mix native build task owns the manifest/download/build work represented by
-the current build.py utility; that Python utility is a current build baseline,
-not a required production runtime. Generic Python protocol/process test drivers
+The Mix native build task owns the manifest/download/build work formerly held
+by the generic Python utility. Generic Python protocol/process test drivers
 are outside target tooling: ExUnit sends frames to the real C++ helper, and
 C++ tests exercise parser/storage/SDK boundaries. OpenThread's upstream build
 or generation tools may use Python with explicit manifest attribution. The

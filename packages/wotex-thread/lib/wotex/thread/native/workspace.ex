@@ -13,6 +13,8 @@ defmodule Wotex.Thread.Native.Workspace do
   @manifest "native-manifest.json"
   @lock ".wotex-thread-build.lock"
   @maximum_manifest 1_048_576
+  @identity_fields ~w(source_revision source_files upstream_sources json_header
+    build_modules build_features arguments environment_allowlist)
 
   @typedoc "A verified build manifest and whether the builder was invoked."
   @type result :: %{manifest: map(), reused: boolean()}
@@ -164,14 +166,20 @@ defmodule Wotex.Thread.Native.Workspace do
 
   defp save(path, identity, hashes, evidence) do
     if json?(evidence) do
-      write_manifest(path, %{
-        "schema" => "wotex.native-build",
-        "version" => 1,
-        "package" => "wotex_thread",
-        "identity" => Jason.decode!(Jason.encode!(identity)),
-        "binaries" => hashes,
-        "audit" => Jason.decode!(Jason.encode!(evidence))
-      })
+      manifest =
+        %{
+          "schema" => "wotex.native-build",
+          "version" => 1,
+          "package" => "wotex_thread",
+          "identity" => Jason.decode!(Jason.encode!(identity)),
+          "artifacts" => hashes,
+          "audit" => Jason.decode!(Jason.encode!(evidence)),
+          "binaries" => binaries(evidence),
+          "toolchain" => toolchain(identity, evidence)
+        }
+        |> Map.merge(Map.take(identity, @identity_fields))
+
+      write_manifest(path, manifest)
     else
       {:error, :invalid_build_manifest}
     end
@@ -188,29 +196,56 @@ defmodule Wotex.Thread.Native.Workspace do
   end
 
   defp reuse(path, identity, artifacts, manifest) do
+    expected_keys =
+      MapSet.union(
+        MapSet.new(~w(schema version package identity artifacts audit binaries toolchain)),
+        MapSet.new(Map.keys(Map.take(identity, @identity_fields)))
+      )
+
     with true <-
-           MapSet.new(Map.keys(manifest)) ==
-             MapSet.new(~w(schema version package identity binaries audit)),
+           MapSet.new(Map.keys(manifest)) == expected_keys,
          true <- manifest["schema"] == "wotex.native-build" and manifest["version"] == 1,
          true <- manifest["package"] == "wotex_thread" and is_map(manifest["audit"]),
          true <- manifest["identity"] == Jason.decode!(Jason.encode!(identity)),
+         true <- Map.take(manifest, @identity_fields) == Map.take(identity, @identity_fields),
+         true <- manifest["binaries"] == binaries(manifest["audit"]),
+         true <- manifest["toolchain"] == toolchain(identity, manifest["audit"]),
          {:ok, hashes} <- artifact_hashes(path, artifacts),
-         true <- manifest["binaries"] == hashes do
+         true <- manifest["artifacts"] == hashes do
       {:ok, %{manifest: manifest, reused: true}}
     else
       _ -> {:error, :build_manifest_mismatch}
     end
   end
 
+  defp binaries(%{"binary" => binary}) when is_map(binary), do: [binary]
+  defp binaries(_), do: []
+
+  defp toolchain(identity, evidence) do
+    %{
+      "executables" => Jason.decode!(Jason.encode!(identity["toolchain"])),
+      "versions" => evidence["toolchain_versions"],
+      "target_triple" => evidence["target_triple"]
+    }
+  end
+
   defp artifact_hashes(root, paths) do
     Enum.reduce_while(paths, {:ok, %{}}, fn relative, {:ok, result} ->
       with :ok <- no_links(root, relative),
-           {:ok, digest} <- Source.digest(Path.join(root, relative)) do
+           {:ok, digest} <- artifact_digest(Path.join(root, relative)) do
         {:cont, {:ok, Map.put(result, relative, digest)}}
       else
         _ -> {:halt, {:error, :invalid_build_artifact}}
       end
     end)
+  end
+
+  defp artifact_digest(path) do
+    case File.lstat(path) do
+      {:ok, %File.Stat{type: :directory}} -> Source.tree_digest(path)
+      {:ok, %File.Stat{type: :regular}} -> Source.digest(path)
+      _ -> {:error, :invalid_build_artifact}
+    end
   end
 
   defp no_links(root, relative) do

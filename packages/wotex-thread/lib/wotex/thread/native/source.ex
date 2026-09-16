@@ -48,12 +48,63 @@ defmodule Wotex.Thread.Native.Source do
 
   def digest(_), do: {:error, :invalid_source_file}
 
+  @doc "Hashes a regular-file tree in deterministic relative-path order and rejects links."
+  @spec tree_digest(Path.t()) :: {:ok, String.t()} | {:error, atom()}
+  def tree_digest(path) when is_binary(path) do
+    with {:ok, %File.Stat{type: :directory}} <- File.lstat(path),
+         {:ok, files} <- tree_files(path, ""),
+         {:ok, hash} <- hash_tree(path, Enum.sort(files), :crypto.hash_init(:sha256)) do
+      {:ok, Base.encode16(:crypto.hash_final(hash), case: :lower)}
+    else
+      _ -> {:error, :invalid_source_tree}
+    end
+  end
+
+  def tree_digest(_), do: {:error, :invalid_source_tree}
+
+  @doc "Returns the reviewed relative file names and SHA-256 digests of a source tree."
+  @spec file_hashes(Path.t()) :: {:ok, map()} | {:error, atom()}
+  def file_hashes(path) when is_binary(path) do
+    with {:ok, %File.Stat{type: :directory}} <- File.lstat(path),
+         {:ok, files} <- tree_files(path, "") do
+      Enum.reduce_while(files, {:ok, %{}}, fn relative, {:ok, hashes} ->
+        case digest(Path.join(path, relative)) do
+          {:ok, hash} -> {:cont, {:ok, Map.put(hashes, relative, hash)}}
+          _ -> {:halt, {:error, :invalid_source_tree}}
+        end
+      end)
+    else
+      _ -> {:error, :invalid_source_tree}
+    end
+  end
+
+  def file_hashes(_), do: {:error, :invalid_source_tree}
+
+  @doc "Copies only regular files and directories into an owned SDK source tree."
+  @spec copy_tree(Path.t(), Path.t()) :: :ok | {:error, atom()}
+  def copy_tree(source, destination) when is_binary(source) and is_binary(destination) do
+    with {:ok, %File.Stat{type: :directory}} <- File.lstat(source),
+         :ok <- ensure_directory(destination),
+         {:ok, names} <- File.ls(source) do
+      Enum.reduce_while(names, :ok, fn name, :ok ->
+        case copy_entry(Path.join(source, name), Path.join(destination, name)) do
+          :ok -> {:cont, :ok}
+          _ -> {:halt, {:error, :invalid_source_tree}}
+        end
+      end)
+    else
+      _ -> {:error, :invalid_source_tree}
+    end
+  end
+
+  def copy_tree(_, _), do: {:error, :invalid_source_tree}
+
   @doc "Checks a gzip tar archive's finite regular-file tree before extraction."
   @spec validate_archive(Path.t(), String.t()) :: {:ok, list()} | {:error, atom()}
   def validate_archive(path, root) when is_binary(path) and is_binary(root) do
     case :erl_tar.table(String.to_charlist(path), [:compressed, :verbose]) do
       {:ok, entries} when length(entries) <= @archive_files ->
-        validate_entries(entries, root, 0)
+        validate_entries(skip_global_header(entries), root, 0)
 
       _ ->
         {:error, :invalid_source_archive}
@@ -112,11 +163,83 @@ defmodule Wotex.Thread.Native.Source do
     end
   end
 
+  defp tree_files(root, relative) do
+    case File.ls(Path.join(root, relative)) do
+      {:ok, names} ->
+        Enum.reduce_while(names, {:ok, []}, fn name, {:ok, files} ->
+          path = Path.join(relative, name)
+
+          case tree_entry(root, path) do
+            {:ok, children} -> {:cont, {:ok, children ++ files}}
+            error -> {:halt, error}
+          end
+        end)
+
+      _ ->
+        {:error, :invalid_source_tree}
+    end
+  end
+
+  defp tree_entry(root, relative) do
+    case File.lstat(Path.join(root, relative)) do
+      {:ok, %File.Stat{type: :directory}} -> tree_files(root, relative)
+      {:ok, %File.Stat{type: :regular}} -> {:ok, [relative]}
+      _ -> {:error, :invalid_source_tree}
+    end
+  end
+
+  defp hash_tree(_, [], hash), do: {:ok, hash}
+
+  defp hash_tree(root, [relative | rest], hash) do
+    case digest(Path.join(root, relative)) do
+      {:ok, file_hash} ->
+        next = :crypto.hash_update(hash, ["file", <<0>>, relative, <<0>>, file_hash, <<0>>])
+        hash_tree(root, rest, next)
+
+      _ ->
+        {:error, :invalid_source_tree}
+    end
+  end
+
+  defp copy_entry(source, destination) do
+    case File.lstat(source) do
+      {:ok, %File.Stat{type: :directory}} ->
+        copy_tree(source, destination)
+
+      {:ok, %File.Stat{type: :regular, mode: mode}} ->
+        with :ok <- regular_or_absent(destination),
+             :ok <- File.cp(source, destination) do
+          File.chmod(destination, Bitwise.band(mode, 0o777))
+        end
+
+      _ ->
+        {:error, :invalid_source_tree}
+    end
+  end
+
+  defp ensure_directory(path) do
+    case File.lstat(path) do
+      {:ok, %File.Stat{type: :directory}} -> :ok
+      {:error, :enoent} -> File.mkdir_p(path)
+      _ -> {:error, :invalid_source_tree}
+    end
+  end
+
+  defp regular_or_absent(path) do
+    case File.lstat(path) do
+      {:ok, %File.Stat{type: :regular}} -> :ok
+      {:error, :enoent} -> :ok
+      _ -> {:error, :invalid_source_tree}
+    end
+  end
+
   defp pinned_url?(url) do
-    String.match?(
-      url,
-      ~r|\Ahttps://codeload\.github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/tar\.gz/[0-9a-f]{40}\z|
-    )
+    url ==
+      "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp" or
+      String.match?(
+        url,
+        ~r|\Ahttps://codeload\.github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/tar\.gz/[0-9a-f]{40}\z|
+      )
   end
 
   defp cached_or_absent(target, expected) do
@@ -141,6 +264,8 @@ defmodule Wotex.Thread.Native.Source do
       result =
         try do
           request(url, file)
+        rescue
+          _ -> {:error, :invalid_source_download}
         after
           File.close(file)
         end
@@ -194,19 +319,14 @@ defmodule Wotex.Thread.Native.Source do
 
     receive do
       {:http, {^request_id, :stream_start, _, next_handler}} when is_nil(handler) ->
-        case :httpc.stream_next(next_handler) do
-          :ok -> receive_stream(request_id, file, count, deadline, next_handler)
-          _ -> {:error, :invalid_source_download}
-        end
+        :ok = :httpc.stream_next(next_handler)
+        receive_stream(request_id, file, count, deadline, next_handler)
 
       {:http, {^request_id, :stream, bytes}}
       when is_pid(handler) and count + byte_size(bytes) <= @download_bytes ->
-        with :ok <- IO.binwrite(file, bytes),
-             :ok <- :httpc.stream_next(handler) do
-          receive_stream(request_id, file, count + byte_size(bytes), deadline, handler)
-        else
-          _ -> {:error, :invalid_source_download}
-        end
+        :ok = IO.binwrite(file, bytes)
+        :ok = :httpc.stream_next(handler)
+        receive_stream(request_id, file, count + byte_size(bytes), deadline, handler)
 
       {:http, {^request_id, :stream_end, _}} when is_pid(handler) ->
         :ok
@@ -233,6 +353,14 @@ defmodule Wotex.Thread.Native.Source do
       {:error, :source_hash_mismatch}
     end
   end
+
+  # GitHub codeload emits one PAX global metadata record. erl_tar applies it
+  # before listing/extraction but still exposes the record as :unknown in table/2.
+  defp skip_global_header([{~c"pax_global_header", :unknown, size, _, _, _, _} | rest])
+       when size in 0..4096,
+       do: rest
+
+  defp skip_global_header(entries), do: entries
 
   defp validate_entries([], _, _), do: {:ok, []}
 

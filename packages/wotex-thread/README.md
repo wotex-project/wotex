@@ -43,14 +43,13 @@ should replace the path with the constraint of an available Hex release.
 The accepted backend retains the existing first-party C++17 OpenThread
 Port. Joiner execution, native state subscriptions, complete simulated-network
 workflows and full lifecycle proof remain required. Python is not a production
-runtime dependency. The injected BEAM ownership peer is an Erlang escript;
-Python remains in the current native build and separate native test utilities.
+runtime dependency. The injected BEAM ownership peer is an Erlang escript; the
+native build is a Mix task. Separate native test utilities still use Python.
 
 [WTH.13](docs/specs/WTH.13-native-backend.md) fixes source/build pins, typed IPC,
-flow control and native ownership. The target tooling is `mix wotex.native.build`,
-`mix wotex.software.build` and `mix wotex.software.run`, each with an explicit
-`--workspace` absolute directory. These tasks are specified implementation work,
-not commands claimed to exist in this checkout. Generic orchestration and
+flow control and native ownership. `mix wotex.native.build --workspace ABS` now
+builds the pinned Linux host; `mix wotex.software.build` and
+`mix wotex.software.run` remain specified work. Generic orchestration and
 assertions belong to Mix/ExUnit; upstream SDK Python is build-time only.
 
 ## Implemented profile

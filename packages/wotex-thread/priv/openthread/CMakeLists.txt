@@ -8,11 +8,20 @@ set(WOTEX_NATIVE_TEST_SOURCE "" CACHE PATH "Explicit source directory containing
 
 set(json_header "${CMAKE_BINARY_DIR}/include/nlohmann/json.hpp")
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include/nlohmann")
-file(DOWNLOAD
-  "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp"
-  "${json_header}"
-  EXPECTED_HASH SHA256=9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6
-  TLS_VERIFY ON TIMEOUT 120)
+set(WOTEX_JSON_HEADER "" CACHE FILEPATH "Explicit pinned JSON header for the Mix native build")
+if(WOTEX_JSON_HEADER)
+  file(SHA256 "${WOTEX_JSON_HEADER}" supplied_json_sha256)
+  if(NOT supplied_json_sha256 STREQUAL "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6")
+    message(FATAL_ERROR "Pinned JSON header digest mismatch")
+  endif()
+  configure_file("${WOTEX_JSON_HEADER}" "${json_header}" COPYONLY)
+else()
+  file(DOWNLOAD
+    "https://raw.githubusercontent.com/nlohmann/json/v3.11.3/single_include/nlohmann/json.hpp"
+    "${json_header}"
+    EXPECTED_HASH SHA256=9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6
+    TLS_VERIFY ON TIMEOUT 120)
+endif()
 
 add_library(wotex-thread-protocol INTERFACE)
 target_include_directories(wotex-thread-protocol INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -42,11 +51,11 @@ if(WOTEX_OPENTHREAD_SOURCE)
   endif()
   file(SHA256 "${WOTEX_OPENTHREAD_SOURCE}/src/lib/spinel/spinel.c" spinel_sha256)
   if(NOT spinel_sha256 STREQUAL "28841f049ab1c95c8a0b6baa73d7f6579ff2f97f007ef1496751453dfe4ba57b")
-    message(FATAL_ERROR "The pinned SDK requires the audited unsigned Spinel shift fix; use build.py")
+    message(FATAL_ERROR "The pinned SDK requires the audited unsigned Spinel shift fix; use mix wotex.native.build")
   endif()
   file(SHA256 "${WOTEX_OPENTHREAD_SOURCE}/src/core/meshcop/meshcop.hpp" discerner_sha256)
   if(NOT discerner_sha256 STREQUAL "4dd6b16b20b3df58756fdfe1519404e9520fcef16d916c9848e983bdf97edfa6")
-    message(FATAL_ERROR "The pinned SDK requires the full-width discerner fix; use build.py")
+    message(FATAL_ERROR "The pinned SDK requires the full-width discerner fix; use mix wotex.native.build")
   endif()
   set(OT_PLATFORM posix CACHE STRING "" FORCE)
   set(OT_APP_CLI OFF CACHE BOOL "" FORCE)

@@ -21,7 +21,7 @@ specifications:
     executable_evidence: ["test/wotex/thread/contract_test.exs", "test/wotex/thread/daemon_test.exs", "test/wotex/thread/dataset_test.exs", "test/wotex/thread/dependency_security_test.exs", "test/wotex/thread/mapping_test.exs", "test/wotex/thread/port_test.exs"]
     compatibility_classification: "Dataset syntax and local daemon inspection only; full Thread standard access limited; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
   - id: "WTH.02"
-    version: "1.1.1"
+    version: "1.1.2"
     path: "docs/specs/WTH.02-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "OpenThread", "revision": "v2026.09.0; 5c8c318627954c99cd1a957a290bbd4b1027d04b", "claim": "Dataset/daemon inspection and scoped C++ SDK management; complete software network remains planned"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
@@ -57,11 +57,11 @@ specifications:
     executable_evidence: []
     compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; the corpus contains specified inputs; only identified executed cases establish evidence."
   - id: "WTH.13"
-    version: "1.0.3"
+    version: "1.0.4"
     path: "docs/specs/WTH.13-native-backend.md"
     implementation_status: "partial"
     standards: [{"name": "Native OpenThread host", "revision": "Exact source hashes and build profile in .13", "claim": "Accepted native target; current baseline evidence is separate"}]
     requires: ["WTH.00", "WTH.10", "WTH.11", "WTH.12"]
-    implementation_modules: ["Wotex.Thread.Native.Source", "Wotex.Thread.Native.Workspace"]
-    executable_evidence: ["test/wotex/thread/native_source_test.exs", "test/wotex/thread/native_workspace_test.exs"]
-    compatibility_classification: "Elixir HTTPS archive download, archive admission, exact SDK patch functions and content-bound workspace admission have scoped evidence, but no Mix build task uses them yet. Required native Port, typed IPC, resource ownership and full Mix/ExUnit evidence remain open; fixtures/native-port-v1.json cases are specified, unexecuted."
+    implementation_modules: ["Mix.Tasks.Wotex.Thread.Native.Build", "Wotex.Thread.Native.Build", "Wotex.Thread.Native.Bootstrap", "Wotex.Thread.Native.Command", "Wotex.Thread.Native.Source", "Wotex.Thread.Native.Workspace"]
+    executable_evidence: ["test/wotex/thread/native_source_test.exs", "test/wotex/thread/native_workspace_test.exs", "test/wotex/thread/native_command_test.exs", "docs/provenance/executable-evidence.md"]
+    compatibility_classification: "Python-free first-party Mix native build completed and emitted a ready frame on Debian 12 arm64; pinned downloads, SDK fixes, guardian and content-bound manifest have scoped evidence. Required x86_64 lane, software tasks, typed IPC, resource ownership and full Mix/ExUnit evidence remain open; fixtures/native-port-v1.json cases are specified, unexecuted."

@@ -2,8 +2,8 @@ defmodule Wotex.Thread.OpenThread do
   @moduledoc """
   Owns an explicitly configured Linux OpenThread host process.
 
-  Build the packaged native host with `priv/openthread/build.py` in an explicit
-  Linux workspace. Supply its absolute executable path, radio URL, interface,
+  Build the packaged native host with `mix wotex.native.build --workspace ABS`
+  in an explicit Linux workspace. Supply its absolute executable path, radio URL, interface,
   storage path/mode and owner to `connect/1`. A successful connection has acquired
   its SDK resources and supports non-secret inspection. Closing it releases its
   owned SDK, radio descendants and interface while preserving durable settings.
