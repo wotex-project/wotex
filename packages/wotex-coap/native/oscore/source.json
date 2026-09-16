@@ -24,12 +24,16 @@
     {
       "path": "patches/0005-reject-unprotected-responses.patch",
       "sha256": "483292e9eab1ee9c970698734901b89cb12ac846a74a2c225101c032e79635ad"
+    },
+    {
+      "path": "patches/0006-release-whole-body-first-response.patch",
+      "sha256": "d3e20f9cbb199639634cd0ddc2a90f4d6efeebd14fa9fd9010471065f3d5e2ec"
     }
   ],
   "patched_sources": {
     "src/coap_oscore.c": "5c778ae3e899404ebba7f254b9fe7422eb06fb0811e61dfcc7e1bd8122c3d410",
     "src/oscore/oscore_cbor.c": "d42ccc47c16a043a22d55a44d36802141a53c671def0fdcee37e6b6ccf53586c",
-    "src/coap_block.c": "3aed69a6bad7f63dad5998a0b7a402a78cc81da718985a61b964c5619a21d9af",
+    "src/coap_block.c": "a4aebab153fc94b5f8c3fb9c067f2768e840b0f73bc4326c1d08c64098f4fad6",
     "src/coap_net.c": "838e16cffaa1c4b0d7d6d76ea293e51fab237f2ad1b3a7b9230846f1b66ef52d"
   }
 }

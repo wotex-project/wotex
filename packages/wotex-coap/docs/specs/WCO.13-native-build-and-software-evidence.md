@@ -15,7 +15,7 @@ explicitly selected C executable through an Erlang Port and the pinned libcoap
 exchange engine. Mix owns build/test orchestration and ExUnit owns assertions.
 Python is not a runtime or target orchestration dependency. The native worker
 implements same-binary startup, durable open, upload-body state, close and one
-active inline-result unary libcoap exchange. Streamed results, Observe and the
+active unary libcoap exchange with inline or streamed results. Observe and the
 Mix tasks remain planned contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
@@ -38,7 +38,10 @@ valid empty byte string. The whole-body patch bounds advertised Size1/Size2
 and cumulative byte extent at 1 MiB before SDK body allocation or resizing.
 The representation patch rejects a changed ETag instead of resending the original
 application request; a dispatched POST/PUT cannot be replayed to restart body
-assembly. These fixed profile policies preserve libcoap's exchange ownership.
+assembly. The completed-whole-body patch releases libcoap's first-response hold
+after authenticated Block2 assembly so a following request is not delayed by
+the internal five-second guard. These fixed profile policies preserve libcoap's
+exchange ownership.
 The native manifest records base archive, patches and
 resulting source hashes separately; it cannot describe this build as unmodified
 upstream. `test/native/oscore_sequence_test.c` asserts the actual public send
@@ -172,17 +175,17 @@ locks the exact working-directory store at boundary 32, assembles one outbound
 body, and writes correlated close before releasing its store. A production
 `WCO_WITH_LIBCOAP` build verifies the exact SDK package version, creates one
 OSCORE context/session, binds sequence reservation to that store, dispatches one
-active unary request and emits complete authenticated responses at or below the
-inline threshold. libcoap owns tokens, retransmission and whole-body
+active unary request and emits complete authenticated responses inline at or
+below the threshold or as correlated begin/chunk/end frames above it. libcoap owns
+tokens, retransmission and whole-body
 Block1/Block2. Its nonblocking 512 KiB queue tracks each frame's original
 deadline. The macOS lifecycle test retains lock, consumed-identity, escaped-ID
 and malformed teardown coverage. A same-stack peer additionally executes
-protected GET and POST through public custody on macOS and Linux; the Linux
-static build uses ASan/UBSan and leak detection. Larger response bodies,
+protected GET, a 32,769-byte Block2 stream and Block1 POST through public custody
+on macOS and Linux; the Linux static build uses ASan/UBSan and leak detection.
 Observe, credit and cancel return finite `native_unavailable` until their
-streaming/lifecycle packages are implemented. This evidence does not accept
-observation, replay, independent OSCORE interoperability or the final
-Mix-built helper.
+lifecycle package is implemented. This evidence does not accept observation,
+replay, independent OSCORE interoperability or the final Mix-built helper.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and

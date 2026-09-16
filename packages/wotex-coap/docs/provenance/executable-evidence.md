@@ -126,9 +126,18 @@ unary request. A same-stack protected peer executes GET with query/Accept and
 Block1 POST with an associated verified body through the public custody entry. It
 asserts exact response option/payload projection, explicit empty payload and
 credential-free stdout on macOS and Linux; the Linux build runs with
-ASan/UBSan and leak detection. Streamed response output, Observe, credit,
-cancellation, replay, independent secure interoperability and Mix build/run
-orchestration remain unaccepted.
+ASan/UBSan and leak detection. That receipt does not accept streamed response
+output, Observe, credit, cancellation, replay, independent secure
+interoperability or Mix build/run orchestration.
+
+The [native worker stream receipt](native-worker-stream-v1.json) binds the next
+production source cohort and its sixth ordered SDK patch. A same-stack protected
+peer receives a 32,769-byte Block2 body through exact begin/chunk/end frames and
+a final Message body reference, then completes a Block1 POST on the same session.
+This sequence asserts that completed whole-body delivery releases libcoap's
+first-response hold. Both public-custody macOS and Linux ASan/UBSan/leak lanes
+verify the complete sequence. Observe, credit, cancellation, replay, independent
+secure interoperability and Mix build/run orchestration remain unaccepted.
 
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,

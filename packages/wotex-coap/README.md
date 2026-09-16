@@ -52,10 +52,11 @@ Discovery parses bounded CoRE Link Format results without following the links.
 Native `coaps` sessions support explicit DTLS 1.2 PSK and PKI credentials through
 OTP SSL. PSK exchanges and Observe have independent pinned libcoap evidence;
 PKI currently has real OTP peer tests. The explicit OSCORE Runtime profile
-dispatches through the manifest-verified native owner. The native lifecycle
-worker consumes the durable context, assembles uploads and closes through that
-same-binary custody path. Its libcoap request/Observe exchange loop, independent
-OSCORE interoperability and the final software matrix remain ordered work.
+dispatches through the manifest-verified native owner. The native worker
+consumes the durable context, assembles uploads, executes protected unary
+exchanges with inline or streamed results and closes through that same-binary
+custody path. Its libcoap Observe exchange loop, independent OSCORE
+interoperability and the final software matrix remain ordered work.
 Multicast and extended tokens are outside the implemented profile.
 
 ## Quick start
@@ -90,8 +91,9 @@ can complete the verified process ready/open/close handshake. The public
 owner for an explicit `coap` OSCORE credential and verified `native_backend`.
 The native worker validates and consumes the durable store before reporting a
 successful open. Its production adapter completes one protected unary request
-at a time and returns inline responses up to 32 KiB. Larger responses and
-Observe currently return finite `native_unavailable` results.
+at a time, returning responses up to 32 KiB inline and larger responses through
+correlated begin/chunk/end frames up to the 1 MiB body ceiling. Observe currently
+returns a finite `native_unavailable` result.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
 Capabilities expose these as `max_datagram_size` and `max_body_size`.
@@ -183,7 +185,8 @@ deliver the first complete representation before returning the handle and
 cancel the exact subscription even while credit is in flight. The Runtime
 adapter verifies the native route and subscription generation, maps unary calls
 and Observe through the same owner, and releases exact handles on cancellation.
-Production-worker execution remains planned.
+Production unary execution uses these same response-body envelopes; production
+Observe execution remains planned.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic

@@ -1,0 +1,84 @@
+{
+  "schema": "wotex.coap.native-worker-stream-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Production worker protected Block2 response streaming through public custody followed by a protected Block1 POST on the same session",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "32dc79e516f9cc6a2da88f723f308cfb87931d5468430df87ea3879943326579",
+      "native/oscore/main.c": "6e6c2a8deb2aeac8e527a922467bf89ab0f45f2aa2e669e988fa1e84f690e8eb",
+      "native/oscore/worker.c": "8d2a403fbe39f195c12c18700c99351578a31c066e7ce83eb5c8f5e5d26ae059",
+      "native/oscore/worker.h": "07c7e440f74fb6efbfabaf4a44a8eccf5a31b82f53c89951a26706354009b11e",
+      "native/oscore/exchange.c": "c122f5af669274d7b7d1627b790b5828c728324397a7beb322c3cb9f676f3daa",
+      "native/oscore/exchange.h": "73f38714d213b4226ecedbcd5366e4843028263d6c68c0ab3b54450edfb27385",
+      "native/oscore/custody.c": "887904afa9be4ec1e40145a6e69aac081eda9096a0fc2a0320751f2a16d082b5",
+      "native/oscore/command.c": "9dba7b283ea818d92e01db04483e3782ee401793272ec23e768829a45807c22d",
+      "native/oscore/json.c": "a50d46c2e518d5e3d932c6603306a54dd49abcf545cc5a97fbd2b7ec994d5d46",
+      "native/oscore/frame.c": "d122c2d763e967472d00a79eb4a01cebdbcd9c1b747578a43346141448349906",
+      "native/oscore/body.c": "f6f2696eae9631f5e68c38a01df7ff69f1d2b7ab08d51b735cc600e50ec3e9d4",
+      "native/oscore/credit.c": "f2566b99ae79f539d8c8c1bf0872b050bc62c3785d1758be1e1d7d3b2e624b7d",
+      "native/oscore/identity.c": "955d94def94861e15fbe8ff9c7e14f26a8eec5979585eff21b295267e04a4565",
+      "native/oscore/store.c": "a49ba6a278612e43c9e1872a9565abf541340aa12aa001f9f80e2c93f86969cd",
+      "native/oscore/patches/0006-release-whole-body-first-response.patch": "d3e20f9cbb199639634cd0ddc2a90f4d6efeebd14fa9fd9010471065f3d5e2ec",
+      "test/native/oscore_worker_exchange_test.c": "38109604114eeb19f3f98b224312a15823d5ff4332211aeb92a2b074a9970678",
+      "test/native/Dockerfile": "df1355009397198d705df211bf45bb8449941a282f922d7d62e1cfcd2807a541"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "package_version": "libcoap 4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 6,
+    "patched_coap_block_sha256": "a4aebab153fc94b5f8c3fb9c067f2768e840b0f73bc4326c1d08c64098f4fad6"
+  },
+  "requirements": ["WCO-S06", "WCO-N02", "WCO-N03", "WCO-N04"],
+  "assertions": [
+    "Public --custody receives one protected 32769-byte Block2 representation through the production libcoap whole-body callback",
+    "The worker emits exact body_begin, 32768-byte and one-byte body_chunk frames, body_end and a final Message containing body_id instead of payload",
+    "The body_begin length and SHA-256 bind all 32769 bytes and chunk offsets are contiguous",
+    "The sixth ordered patch releases libcoap's first-response hold after final whole-body dispatch",
+    "A verified 2048-byte associated body is sent as a protected Block1 POST immediately after streamed delivery on the same session",
+    "The stream and final result retain the originating request identity and deadline; stdout contains no credentials"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes GET, Block2 stream and Block1 POST",
+      "output_sha256": "24e19aeae3f62d0eaf0affc7386b95e5a7265040626b0fd2df708c32907fbd5d",
+      "worker_sha256": "443e2ff27f0fed88864db01fb1f0a2e227494e7ca90a1a36acfeea5163926d92",
+      "peer_sha256": "d2cbb6d26369fb00acbb8073b0170fa8150a5ca880f02eaf7e6799c22c3abbf2",
+      "static_library_sha256": "eb083b2ba85c4179ea25c1d16252674c0a993fbcbdcedaa47802505420cfdf6f",
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes GET, Block2 stream and Block1 POST",
+      "output_sha256": "24e19aeae3f62d0eaf0affc7386b95e5a7265040626b0fd2df708c32907fbd5d",
+      "image": "sha256:d49ee23b0f37dc47ae7e1df8d40353f5dc0b3214ad2ea82a5c51314591630a94",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "worker_sha256": "cc8533f80a3f459ba48ad313fac2166627446f684ff5c7ede38662e94012fdc7",
+      "peer_sha256": "d093622d1532b7751404217612bfe1df00371775703451bd4da87d89bbf35a74",
+      "static_library_sha256": "e314c725b119d83a2096bc7f08e2be11608b4b3f82924bd105c11358cb9cafb8",
+      "artifact_log_sha256": "7518db3a0acd6e3c67b7759d5ecf0715ce6e7243bfa09117b439c589086b6796",
+      "package_log_sha256": "b8c513532a688cc321c09f5e022b7ff72dedc3ade4438786d3f8f5961ff54879",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": ["address", "undefined", "leak"],
+      "toolchain_packages_recorded_not_locked": true
+    }
+  ],
+  "unaccepted": [
+    "Observe registration, report credit, renewal and cancellation",
+    "Live replay/duplicate and restart fault matrix through the complete worker",
+    "Independent-stack OSCORE interoperability",
+    "Port mailbox saturation, 1000-operation stress and native-v1 corpus completion",
+    "Reproducible Mix build/run orchestration and final manifest-bound executable"
+  ]
+}

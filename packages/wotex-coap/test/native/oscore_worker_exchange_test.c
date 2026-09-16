@@ -18,7 +18,9 @@
 #include <time.h>
 #include <unistd.h>
 
-static unsigned get_count, post_count;
+static unsigned get_count, post_count, large_count;
+static uint8_t large_body[32769];
+static pid_t worker_child = -1;
 static const char *stage = "startup";
 static const char server_conf[] =
     "master_secret,hex,\"0102030405060708090a0b0c0d0e0f10\"\n"
@@ -71,11 +73,22 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
     }
 }
 
+static void large_resource(coap_resource_t *resource, coap_session_t *session,
+                           const coap_pdu_t *request, const coap_string_t *query,
+                           coap_pdu_t *response) {
+    assert(coap_pdu_get_code(request) == COAP_REQUEST_CODE_GET && query == NULL);
+    large_count++;
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+    assert(coap_add_data_large_response(resource, session, request, response, query,
+                                        50, 60, 0, sizeof(large_body), large_body,
+                                        NULL, NULL));
+}
+
 static coap_context_t *server(unsigned *port) {
     coap_context_t *context = coap_new_context(NULL);
     coap_address_t bind;
     coap_endpoint_t *endpoint;
-    coap_resource_t *value;
+    coap_resource_t *value, *large;
     coap_oscore_conf_t *config = coap_new_oscore_conf(
         (coap_str_const_t){sizeof(server_conf) - 1,
                            (const uint8_t *)server_conf}, saved, NULL, 0);
@@ -96,6 +109,11 @@ static coap_context_t *server(unsigned *port) {
     coap_register_handler(value, COAP_REQUEST_GET, resource);
     coap_register_handler(value, COAP_REQUEST_POST, resource);
     coap_add_resource(context, value);
+    large = coap_resource_init(coap_make_str_const("large"),
+                               COAP_RESOURCE_FLAGS_OSCORE_ONLY);
+    assert(large);
+    coap_register_handler(large, COAP_REQUEST_GET, large_resource);
+    coap_add_resource(context, large);
     return context;
 }
 
@@ -110,30 +128,42 @@ static void write_all(int descriptor, const char *bytes) {
 
 static void line(coap_context_t *context, int descriptor,
                  char *output, size_t capacity) {
-    size_t used = 0;
-    int64_t deadline = now_ms() + 5000;
+    static char pending[262144];
+    static size_t used;
+    int64_t deadline = now_ms() + 7000;
     output[0] = '\0';
     while (now_ms() < deadline) {
+        char *newline = memchr(pending, '\n', used);
         ssize_t count;
+        if (newline) {
+            size_t length = (size_t)(newline - pending) + 1;
+            assert(length < capacity);
+            memcpy(output, pending, length);
+            output[length] = '\0';
+            used -= length;
+            memmove(pending, pending + length, used);
+            return;
+        }
         assert(coap_io_process(context, 1) >= 0);
-        count = read(descriptor, output + used, capacity - 1 - used);
+        assert(used < sizeof(pending));
+        count = read(descriptor, pending + used, sizeof(pending) - used);
         if (count > 0) {
-            char *newline;
             used += (size_t)count;
-            output[used] = '\0';
-            newline = strchr(output, '\n');
-            if (newline) {
-                assert((size_t)(newline - output) + 1 == used);
-                return;
-            }
         } else if (count == 0) {
             break;
         } else {
             assert(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR);
         }
     }
-    fprintf(stderr, "worker response deadline at %s after %zu bytes: %s\n",
-            stage, used, output);
+    fprintf(stderr, "worker response deadline at %s after %zu buffered bytes\n",
+            stage, used);
+    if (worker_child > 0) {
+        int status = 0;
+        pid_t waited = waitpid(worker_child, &status, WNOHANG);
+        fprintf(stderr, "custody wait=%ld status=%d exited=%d code=%d\n",
+                (long)waited, status, waited == worker_child && WIFEXITED(status),
+                waited == worker_child && WIFEXITED(status) ? WEXITSTATUS(status) : -1);
+    }
     assert(!"worker response deadline");
 }
 
@@ -147,7 +177,7 @@ static void exact(coap_context_t *context, int descriptor, const char *expected)
 
 int main(int argc, char **argv) {
     char directory[128];
-    char command[8192], output[131072], encoded[2733];
+    char command[131072], output[131072], encoded[2733], large_encoded[43693];
     uint8_t post_body[2048];
     int input[2], result[2], status;
     pid_t child;
@@ -164,6 +194,7 @@ int main(int argc, char **argv) {
     assert(pipe(input) == 0 && pipe(result) == 0);
     child = fork();
     assert(child >= 0);
+    worker_child = child;
     if (child == 0) {
         assert(dup2(input[0], STDIN_FILENO) == STDIN_FILENO);
         assert(dup2(result[1], STDOUT_FILENO) == STDOUT_FILENO);
@@ -175,6 +206,7 @@ int main(int argc, char **argv) {
     assert(fcntl(result[0], F_SETFL, O_NONBLOCK) == 0);
     coap_startup(); coap_set_log_level(COAP_LOG_EMERG);
     context = server(&port);
+    memset(large_body, 'B', sizeof(large_body));
     stage = "ready";
     exact(context, result[0],
           "{\"version\":1,\"event\":\"ready\",\"backend\":\"libcoap\","
@@ -212,48 +244,84 @@ int main(int argc, char **argv) {
     assert(get_count == 1);
 
     write_all(input[1],
-        "{\"version\":1,\"id\":\"3\",\"operation\":\"body_begin\",\"parameters\":{"
+        "{\"version\":1,\"id\":\"3\",\"operation\":\"request\",\"parameters\":{"
+        "\"method\":\"GET\",\"path\":\"/large\",\"confirmable\":true},"
+        "\"timeout_ms\":5000}\n");
+    stage = "large begin";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"3\",\"event\":\"body_begin\","
+          "\"body_id\":\"response-body\",\"length\":32769,\"sha256\":"
+          "\"de8ef28f32ff275111f82039b9660dd3fc85c8444601c6a7c61d998830942ce3\"}\n");
+    assert(EVP_EncodeBlock((unsigned char *)large_encoded, large_body, 32768) == 43692);
+    large_encoded[43692] = '\0';
+    assert(snprintf(command, sizeof(command),
+        "{\"version\":1,\"id\":\"3\",\"event\":\"body_chunk\","
+        "\"body_id\":\"response-body\",\"offset\":0,\"data\":{\"type\":\"bytes\","
+        "\"base64\":\"%s\"}}\n", large_encoded) > 0);
+    stage = "large first chunk";
+    exact(context, result[0], command);
+    stage = "large last chunk";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"3\",\"event\":\"body_chunk\","
+          "\"body_id\":\"response-body\",\"offset\":32768,\"data\":{"
+          "\"type\":\"bytes\",\"base64\":\"Qg==\"}}\n");
+    stage = "large end";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"3\",\"event\":\"body_end\","
+          "\"body_id\":\"response-body\"}\n");
+    stage = "large result";
+    line(context, result[0], output, sizeof(output));
+    assert(strstr(output, "\"id\":\"3\",\"ok\":true"));
+    assert(strstr(output, "\"code\":69"));
+    assert(strstr(output, "\"body_id\":\"response-body\""));
+    assert(!strstr(output, "\"payload\":"));
+    assert(large_count > 0);
+
+    write_all(input[1],
+        "{\"version\":1,\"id\":\"4\",\"operation\":\"body_begin\",\"parameters\":{"
         "\"body_id\":\"body-1\",\"length\":2048,\"sha256\":"
         "\"3a34c8dc4aec1554c04e0d0e61179d08362b329029db4632f5f086c37be74caa\"},"
         "\"timeout_ms\":5000}\n");
     stage = "body_begin";
     exact(context, result[0],
-          "{\"version\":1,\"id\":\"3\",\"ok\":true,\"result\":null}\n");
+          "{\"version\":1,\"id\":\"4\",\"ok\":true,\"result\":null}\n");
     memset(post_body, 'A', sizeof(post_body));
     assert(EVP_EncodeBlock((unsigned char *)encoded, post_body,
                            sizeof(post_body)) == 2732);
     encoded[2732] = '\0';
     assert(snprintf(command, sizeof(command),
-        "{\"version\":1,\"id\":\"4\",\"operation\":\"body_chunk\",\"parameters\":{"
+        "{\"version\":1,\"id\":\"5\",\"operation\":\"body_chunk\",\"parameters\":{"
         "\"body_id\":\"body-1\",\"offset\":0,\"data\":{\"type\":\"bytes\","
         "\"base64\":\"%s\"}},\"timeout_ms\":5000}\n", encoded) > 0);
     write_all(input[1], command);
     stage = "body_chunk";
     exact(context, result[0],
-          "{\"version\":1,\"id\":\"4\",\"ok\":true,\"result\":null}\n");
+          "{\"version\":1,\"id\":\"5\",\"ok\":true,\"result\":null}\n");
     write_all(input[1],
-        "{\"version\":1,\"id\":\"5\",\"operation\":\"body_end\",\"parameters\":{"
+        "{\"version\":1,\"id\":\"6\",\"operation\":\"body_end\",\"parameters\":{"
         "\"body_id\":\"body-1\"},\"timeout_ms\":5000}\n");
     stage = "body_end";
     exact(context, result[0],
-          "{\"version\":1,\"id\":\"5\",\"ok\":true,\"result\":null}\n");
+          "{\"version\":1,\"id\":\"6\",\"ok\":true,\"result\":null}\n");
     write_all(input[1],
-        "{\"version\":1,\"id\":\"6\",\"operation\":\"request\",\"parameters\":{"
+        "{\"version\":1,\"id\":\"7\",\"operation\":\"request\",\"parameters\":{"
         "\"method\":\"POST\",\"path\":\"/value\",\"confirmable\":true,"
         "\"content_format\":42,\"body_id\":\"body-1\"},\"timeout_ms\":5000}\n");
     stage = "post";
     line(context, result[0], output, sizeof(output));
-    assert(strstr(output, "\"id\":\"6\",\"ok\":true"));
+    if (!strstr(output, "\"id\":\"7\",\"ok\":true"))
+        fprintf(stderr, "unexpected post response: %s", output);
+    assert(strstr(output, "\"id\":\"7\",\"ok\":true"));
     assert(strstr(output, "\"code\":68"));
     assert(strstr(output, "\"payload\":{\"type\":\"bytes\",\"base64\":\"\"}"));
     assert(post_count == 1);
 
     write_all(input[1],
-        "{\"version\":1,\"id\":\"7\",\"operation\":\"close\",\"parameters\":{},"
+        "{\"version\":1,\"id\":\"8\",\"operation\":\"close\",\"parameters\":{},"
         "\"timeout_ms\":5000}\n");
     stage = "close";
     exact(context, result[0],
-          "{\"version\":1,\"id\":\"7\",\"ok\":true,\"result\":null}\n");
+          "{\"version\":1,\"id\":\"8\",\"ok\":true,\"result\":null}\n");
     assert(waitpid(child, &status, 0) == child);
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
         fprintf(stderr, "custody status=%d exited=%d code=%d\n", status,
@@ -267,6 +335,6 @@ int main(int argc, char **argv) {
     snprintf(command, sizeof(command), "%s/context.lock", directory);
     assert(unlink(command) == 0);
     assert(rmdir(directory) == 0);
-    puts("WCO-N02/N04: production worker completes protected GET and Block1 POST");
+    puts("WCO-N02/N04: production worker completes GET, Block2 stream and Block1 POST");
     return 0;
 }

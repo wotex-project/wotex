@@ -20,9 +20,9 @@ creates one fixed-profile OSCORE context/session, binds libcoap's public
 sequence-save callback to the durable store, and dispatches one unary request at
 a time. libcoap owns tokens, retransmission and whole-body Block1/Block2
 assembly. Complete protected responses up to the 32 KiB inline boundary become
-exact C07 Message results. Larger legal results return `native_unavailable`
-until stdout body streaming is implemented. Observe, credit and cancel retain
-the same finite pre-network error.
+exact C07 Message results. Larger legal results emit correlated begin/chunk/end
+frames followed by a Message body reference, all under the original request
+deadline. Observe, credit and cancel retain the same finite pre-network error.
 
 `native_worker_test.exs` runs the same executable through custody on macOS. It
 asserts exact ready/open/body/request/close envelopes, printable-ID escaping,
@@ -32,11 +32,13 @@ coalesced lifecycle trace through the internal worker entry. The
 [lifecycle receipt](../../docs/provenance/native-worker-lifecycle-v1.json) binds
 that preceding source cohort and its limits. The
 [exchange receipt](../../docs/provenance/native-worker-exchange-v1.json) binds a
-same-stack protected GET and Block1 POST through the public custody
-entry on macOS and Linux. The Linux lane builds the patched static SDK plus the
-production adapter with ASan/UBSan and leak detection. It does not accept
-streamed output bodies, Observe, report credit, replay behavior, independent
-OSCORE interoperability or the final Mix-built executable.
+same-stack protected GET and Block1 POST through the public custody entry on
+macOS and Linux. The subsequent
+[stream receipt](../../docs/provenance/native-worker-stream-v1.json) binds a
+32,769-byte Block2 result and the immediately following Block1 POST. The Linux
+lane builds the patched static SDK plus the production adapter with ASan/UBSan
+and leak detection. It does not accept Observe, report credit, replay behavior,
+independent OSCORE interoperability or the final Mix-built executable.
 
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the
@@ -95,8 +97,8 @@ callback and asserts zero wire datagrams after every storage-failure stage.
 [The store receipt](../../docs/provenance/native-store-v1.json) identifies these
 assertions and their source bytes. The production exchange adapter now binds
 this store to libcoap's sequence callback before protected transmission. Report
-credit, live replay, streamed responses and the full OSCORE workflow remain
-separate implementation obligations.
+credit, live replay and the full OSCORE workflow remain separate implementation
+obligations.
 
 The patches retain libcoap's source licensing; see
 [LICENSE.libcoap](LICENSE.libcoap) and the package [NOTICE](../../NOTICE).

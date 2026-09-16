@@ -13,6 +13,8 @@ COPY 0004-reject-representation-restart.patch /build/representation.patch
 RUN patch --batch --fuzz=0 -p1 -d source < /build/representation.patch
 COPY 0005-reject-unprotected-responses.patch /build/response-admission.patch
 RUN patch --batch --fuzz=0 -p1 -d source < /build/response-admission.patch
+COPY 0006-release-whole-body-first-response.patch /build/whole-body-first.patch
+RUN patch --batch --fuzz=0 -p1 -d source < /build/whole-body-first.patch
 ENV CFLAGS="-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
 ENV LDFLAGS="-fsanitize=address,undefined"
 RUN cmake -S source -B build -DENABLE_OSCORE=ON -DENABLE_DTLS=ON -DDTLS_BACKEND=openssl -DBUILD_SHARED_LIBS=OFF -DENABLE_DOCS=OFF -DENABLE_EXAMPLES=OFF && cmake --build build --parallel 2
@@ -25,7 +27,7 @@ RUN cc -std=c11 -Wall -Wextra -Werror $CFLAGS -DWCO_STORE_TEST -I/build/first-pa
 RUN cc -std=c11 -Wall -Wextra -Werror $CFLAGS -DWCO_STORE_TEST -I/build/first-party -I/build/build/include -I/build/source/include /build/first-party/identity.c /build/first-party/store.c /build/oscore_store_send_test.c /build/build/libcoap-3.a $LDFLAGS -lssl -lcrypto -o /usr/local/bin/oscore-store-send
 RUN cc -std=c11 -Wall -Wextra -Werror $CFLAGS -I/build/first-party -c /build/first-party/store.c -o /build/store-production.o && sha256sum first-party/* oscore_identity_test.c oscore_store_test.c oscore_store_send_test.c store-production.o /usr/local/bin/oscore-identity /usr/local/bin/oscore-store /usr/local/bin/oscore-store-send >> /build/artifacts.sha256
 COPY oscore_block_limit_test.c /build/oscore_block_limit_test.c
-RUN cc -std=c11 -Wall -Wextra -Werror $CFLAGS -DWCO_ALLOCATION_WRAP -I/build/build/include -I/build/source/include /build/oscore_block_limit_test.c /build/build/libcoap-3.a $LDFLAGS -Wl,--wrap=coap_new_binary,--wrap=coap_resize_binary -lssl -lcrypto -o /usr/local/bin/oscore-block-limit && sha256sum body-limit.patch representation.patch source/src/coap_block.c oscore_block_limit_test.c /usr/local/bin/oscore-block-limit >> /build/artifacts.sha256
+RUN cc -std=c11 -Wall -Wextra -Werror $CFLAGS -DWCO_ALLOCATION_WRAP -I/build/build/include -I/build/source/include /build/oscore_block_limit_test.c /build/build/libcoap-3.a $LDFLAGS -Wl,--wrap=coap_new_binary,--wrap=coap_resize_binary -lssl -lcrypto -o /usr/local/bin/oscore-block-limit && sha256sum body-limit.patch representation.patch whole-body-first.patch source/src/coap_block.c oscore_block_limit_test.c /usr/local/bin/oscore-block-limit >> /build/artifacts.sha256
 COPY oscore_protection_test.c /build/oscore_protection_test.c
 RUN cc -std=c11 -Wall -Wextra -Werror $CFLAGS -I/build/build/include -I/build/source/include /build/oscore_protection_test.c /build/build/libcoap-3.a $LDFLAGS -lssl -lcrypto -o /usr/local/bin/oscore-protection && sha256sum response-admission.patch source/src/coap_net.c oscore_protection_test.c /usr/local/bin/oscore-protection >> /build/artifacts.sha256
 COPY main.c worker.c worker.h exchange.c exchange.h custody.c command.c command.h json.c json.h frame.c frame.h body.c body.h credit.c credit.h yyjson.c yyjson.h /build/worker/

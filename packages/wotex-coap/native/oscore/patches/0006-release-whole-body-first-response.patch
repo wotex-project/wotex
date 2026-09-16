@@ -1,0 +1,12 @@
+--- a/src/coap_block.c
++++ b/src/coap_block.c
+@@ -4014,2 +4014,9 @@
+           }
++          /*
++           * The final whole-body callback completes the first protected
++           * response inside this helper.  The caller returns through
++           * skip_app_handler and cannot reach coap_net.c's equivalent reset.
++           */
++          if (session->doing_first)
++            session->doing_first = 0;
+           if (context->response_handler) {

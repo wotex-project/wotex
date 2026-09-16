@@ -30,6 +30,7 @@
 #define WCO_OUTPUT_FRAMES 128u
 #define WCO_INITIAL_BOUNDARY 32u
 #define WCO_REVISION "7cf7465b784baded4de183290c547d582becfd28"
+#define WCO_RESPONSE_BODY_ID "response-body"
 
 struct output_frame {
     size_t end;
@@ -43,6 +44,22 @@ struct output {
     size_t count;
 };
 
+enum stream_phase {
+    WCO_STREAM_NONE = 0,
+    WCO_STREAM_BEGIN,
+    WCO_STREAM_CHUNK,
+    WCO_STREAM_END,
+    WCO_STREAM_RESULT
+};
+
+struct response_stream {
+    uint8_t *body;
+    size_t length, offset, result_length;
+    char sha256[65];
+    char result[WCO_JSON_FRAME_MAX];
+    enum stream_phase phase;
+};
+
 struct worker {
     struct wco_frame frame;
     struct wco_json *json;
@@ -51,6 +68,7 @@ struct worker {
     struct wco_store *store;
     struct wco_exchange *exchange;
     struct output output;
+    struct response_stream stream;
     struct {
         char id[65];
         int64_t deadline;
@@ -184,70 +202,129 @@ static int encoded_bytes(char *line, size_t capacity, size_t *used,
     return raw(line, capacity, used, "\"}");
 }
 
-static int message_response(struct worker *worker,
-                            const struct wco_exchange_message *message) {
-    char line[WCO_JSON_FRAME_MAX], number[64];
+static int message_line(struct worker *worker,
+                        const struct wco_exchange_message *message,
+                        const char *body_id, char *line, size_t *result_length) {
+    char number[64];
     static const char *const types[] = {"con", "non", "ack", "rst"};
     size_t used = 0;
     int length;
-    if (!worker->request.active || message->payload_length > WCO_BODY_CHUNK_MAX)
-        return 0;
-    if (message->type > 3 || message->type == 3) {
-        int valid = error_deadline_response(worker, worker->request.id,
-                                            "invalid_response",
-                                            worker->request.deadline);
-        worker->request.active = 0;
-        return valid;
-    }
-    if (message->code < 64 || message->code > 94) {
-        int valid = message->code >= 128 && message->code <= 191 ?
-            error_status_response(worker, worker->request.id, "remote_response",
-                                  message->code, worker->request.deadline) :
-            error_deadline_response(worker, worker->request.id, "invalid_response",
-                                    worker->request.deadline);
-        worker->request.active = 0;
-        return valid;
-    }
-    if (!raw(line, sizeof(line), &used, "{\"version\":1,\"id\":" ) ||
-        !quoted(line, sizeof(line), &used, worker->request.id) ||
-        !raw(line, sizeof(line), &used, ",\"ok\":true,\"result\":{\"type\":" ) ||
-        !quoted(line, sizeof(line), &used, types[message->type])) return 0;
+    if (!raw(line, WCO_JSON_FRAME_MAX, &used, "{\"version\":1,\"id\":" ) ||
+        !quoted(line, WCO_JSON_FRAME_MAX, &used, worker->request.id) ||
+        !raw(line, WCO_JSON_FRAME_MAX, &used,
+             ",\"ok\":true,\"result\":{\"type\":" ) ||
+        !quoted(line, WCO_JSON_FRAME_MAX, &used, types[message->type])) return 0;
     length = snprintf(number, sizeof(number),
                       ",\"code\":%u,\"message_id\":%u,\"token\":",
                       message->code, message->message_id);
     if (length <= 0 || (size_t)length >= sizeof(number) ||
-        (size_t)length > sizeof(line) - used) return 0;
+        (size_t)length > WCO_JSON_FRAME_MAX - used) return 0;
     memcpy(line + used, number, (size_t)length); used += (size_t)length;
-    if (!encoded_bytes(line, sizeof(line), &used, message->token, message->token_length) ||
-        !raw(line, sizeof(line), &used, ",\"options\":[")) return 0;
+    if (!encoded_bytes(line, WCO_JSON_FRAME_MAX, &used, message->token,
+                       message->token_length) ||
+        !raw(line, WCO_JSON_FRAME_MAX, &used, ",\"options\":[")) return 0;
     for (size_t index = 0; index < message->option_count; index++) {
         length = snprintf(number, sizeof(number), "%s{\"number\":%u,\"value\":",
                           index ? "," : "", message->options[index].number);
         if (length <= 0 || (size_t)length >= sizeof(number) ||
-            (size_t)length > sizeof(line) - used) return 0;
+            (size_t)length > WCO_JSON_FRAME_MAX - used) return 0;
         memcpy(line + used, number, (size_t)length); used += (size_t)length;
-        if (!encoded_bytes(line, sizeof(line), &used, message->options[index].value,
+        if (!encoded_bytes(line, WCO_JSON_FRAME_MAX, &used,
+                           message->options[index].value,
                            message->options[index].length) ||
-            !raw(line, sizeof(line), &used, "}")) return 0;
+            !raw(line, WCO_JSON_FRAME_MAX, &used, "}")) return 0;
     }
-    if (!raw(line, sizeof(line), &used, "],\"payload\":" ) ||
-        !encoded_bytes(line, sizeof(line), &used, message->payload,
-                       message->payload_length) ||
-        !raw(line, sizeof(line), &used, "}}\n")) return 0;
+    if (!raw(line, WCO_JSON_FRAME_MAX, &used,
+             body_id ? "],\"body_id\":" : "],\"payload\":")) return 0;
+    if (body_id) {
+        if (!quoted(line, WCO_JSON_FRAME_MAX, &used, body_id)) return 0;
+    } else if (!encoded_bytes(line, WCO_JSON_FRAME_MAX, &used, message->payload,
+                              message->payload_length)) return 0;
+    if (!raw(line, WCO_JSON_FRAME_MAX, &used, "}}\n")) return 0;
+    *result_length = used;
+    return 1;
+}
+
+static int message_error(struct worker *worker,
+                         const struct wco_exchange_message *message) {
+    int valid;
+    if (message->type <= 2 && message->code >= 64 && message->code <= 94) return -1;
+    if (message->type > 3 || message->type == 3 || message->code < 64 ||
+        message->code > 191 || (message->code > 94 && message->code < 128))
+        valid = error_deadline_response(worker, worker->request.id,
+                                        "invalid_response", worker->request.deadline);
+    else
+        valid = error_status_response(worker, worker->request.id, "remote_response",
+                                      message->code, worker->request.deadline);
+    worker->request.active = 0;
+    return valid;
+}
+
+static int message_response(struct worker *worker,
+                            const struct wco_exchange_message *message) {
+    char line[WCO_JSON_FRAME_MAX];
+    size_t used;
+    int status;
+    if (!worker->request.active || message->payload_length > WCO_BODY_CHUNK_MAX)
+        return 0;
+    status = message_error(worker, message);
+    if (status >= 0) return status;
+    if (!message_line(worker, message, NULL, line, &used)) return 0;
     worker->request.active = 0;
     return append(&worker->output, line, used, worker->request.deadline);
+}
+
+static void clear_stream(struct response_stream *stream) {
+    if (stream->body) {
+        OPENSSL_cleanse(stream->body, stream->length);
+        free(stream->body);
+    }
+    OPENSSL_cleanse(stream, sizeof(*stream));
+}
+
+static int start_stream(struct worker *worker,
+                        const struct wco_exchange_message *message) {
+    static const char digits[] = "0123456789abcdef";
+    uint8_t digest[EVP_MAX_MD_SIZE];
+    unsigned digest_length = 0;
+    struct response_stream *stream = &worker->stream;
+    if (stream->phase != WCO_STREAM_NONE || !message->payload_length) return 0;
+    stream->body = malloc(message->payload_length);
+    if (!stream->body) return 0;
+    memcpy(stream->body, message->payload, message->payload_length);
+    stream->length = message->payload_length;
+    if (!EVP_Digest(stream->body, stream->length, digest, &digest_length,
+                    EVP_sha256(), NULL) || digest_length != 32 ||
+        !message_line(worker, message, WCO_RESPONSE_BODY_ID, stream->result,
+                      &stream->result_length)) {
+        OPENSSL_cleanse(digest, sizeof(digest));
+        clear_stream(stream);
+        return 0;
+    }
+    for (size_t index = 0; index < digest_length; index++) {
+        stream->sha256[index * 2] = digits[digest[index] >> 4];
+        stream->sha256[index * 2 + 1] = digits[digest[index] & 15u];
+    }
+    stream->sha256[64] = '\0';
+    stream->phase = WCO_STREAM_BEGIN;
+    OPENSSL_cleanse(digest, sizeof(digest));
+    return 1;
 }
 
 static int exchange_response(void *argument,
                              const struct wco_exchange_message *message) {
     struct worker *worker = argument;
-    int valid;
-    if (message->payload_length > WCO_BODY_CHUNK_MAX) {
-        valid = error_deadline_response(worker, worker->request.id, "native_unavailable",
+    int valid, status;
+    if (!worker->request.active) valid = 0;
+    else if (message->payload_length <= WCO_BODY_CHUNK_MAX)
+        valid = message_response(worker, message);
+    else if ((status = message_error(worker, message)) >= 0) valid = status;
+    else if (start_stream(worker, message)) valid = 1;
+    else {
+        valid = error_deadline_response(worker, worker->request.id,
+                                        "native_unavailable",
                                         worker->request.deadline);
         worker->request.active = 0;
-    } else {
-        valid = message_response(worker, message);
     }
     if (!valid) worker->failed = 1;
     return valid;
@@ -264,6 +341,86 @@ static void exchange_failure(void *argument, const char *code) {
         worker->failed = 1;
     worker->request.active = 0;
     worker->closing = 1;
+}
+
+static int stream_line(struct worker *worker, char *line, size_t *used,
+                       size_t *chunk_length) {
+    struct response_stream *stream = &worker->stream;
+    char number[32];
+    int length;
+    *used = 0;
+    *chunk_length = 0;
+    if (!raw(line, WCO_JSON_FRAME_MAX, used, "{\"version\":1,\"id\":" ) ||
+        !quoted(line, WCO_JSON_FRAME_MAX, used, worker->request.id)) return 0;
+    switch (stream->phase) {
+        case WCO_STREAM_BEGIN:
+            if (!raw(line, WCO_JSON_FRAME_MAX, used,
+                     ",\"event\":\"body_begin\",\"body_id\":") ||
+                !quoted(line, WCO_JSON_FRAME_MAX, used, WCO_RESPONSE_BODY_ID)) return 0;
+            length = snprintf(number, sizeof(number), ",\"length\":%zu,\"sha256\":",
+                              stream->length);
+            if (length <= 0 || (size_t)length >= sizeof(number) ||
+                (size_t)length > WCO_JSON_FRAME_MAX - *used) return 0;
+            memcpy(line + *used, number, (size_t)length); *used += (size_t)length;
+            return quoted(line, WCO_JSON_FRAME_MAX, used, stream->sha256) &&
+                raw(line, WCO_JSON_FRAME_MAX, used, "}\n");
+        case WCO_STREAM_CHUNK:
+            if (!raw(line, WCO_JSON_FRAME_MAX, used,
+                     ",\"event\":\"body_chunk\",\"body_id\":") ||
+                !quoted(line, WCO_JSON_FRAME_MAX, used, WCO_RESPONSE_BODY_ID)) return 0;
+            length = snprintf(number, sizeof(number), ",\"offset\":%zu,\"data\":",
+                              stream->offset);
+            if (length <= 0 || (size_t)length >= sizeof(number) ||
+                (size_t)length > WCO_JSON_FRAME_MAX - *used) return 0;
+            memcpy(line + *used, number, (size_t)length); *used += (size_t)length;
+            *chunk_length = stream->length - stream->offset;
+            if (*chunk_length > WCO_BODY_CHUNK_MAX) *chunk_length = WCO_BODY_CHUNK_MAX;
+            return encoded_bytes(line, WCO_JSON_FRAME_MAX, used,
+                                 stream->body + stream->offset, *chunk_length) &&
+                raw(line, WCO_JSON_FRAME_MAX, used, "}\n");
+        case WCO_STREAM_END:
+            return raw(line, WCO_JSON_FRAME_MAX, used,
+                       ",\"event\":\"body_end\",\"body_id\":") &&
+                quoted(line, WCO_JSON_FRAME_MAX, used, WCO_RESPONSE_BODY_ID) &&
+                raw(line, WCO_JSON_FRAME_MAX, used, "}\n");
+        default:
+            return 0;
+    }
+}
+
+static int pump_stream(struct worker *worker) {
+    char line[WCO_JSON_FRAME_MAX];
+    struct response_stream *stream = &worker->stream;
+    while (stream->phase != WCO_STREAM_NONE) {
+        const char *bytes = line;
+        size_t used = 0, chunk_length = 0;
+        if (stream->phase == WCO_STREAM_RESULT) {
+            bytes = stream->result;
+            used = stream->result_length;
+        } else if (!stream_line(worker, line, &used, &chunk_length)) return 0;
+        if (used > WCO_OUTPUT_MAX - worker->output.used ||
+            worker->output.count == WCO_OUTPUT_FRAMES) return 1;
+        if (!append(&worker->output, bytes, used, worker->request.deadline)) return 0;
+        switch (stream->phase) {
+            case WCO_STREAM_BEGIN:
+                stream->phase = WCO_STREAM_CHUNK;
+                break;
+            case WCO_STREAM_CHUNK:
+                stream->offset += chunk_length;
+                if (stream->offset == stream->length) stream->phase = WCO_STREAM_END;
+                break;
+            case WCO_STREAM_END:
+                stream->phase = WCO_STREAM_RESULT;
+                break;
+            case WCO_STREAM_RESULT:
+                clear_stream(stream);
+                worker->request.active = 0;
+                break;
+            default:
+                return 0;
+        }
+    }
+    return 1;
 }
 
 static int uint_value(yyjson_val *object, const char *name, uint64_t maximum,
@@ -432,10 +589,10 @@ static int execute(struct worker *worker, const struct wco_command *command) {
         return error ? error_response(worker, command, error) : null_response(worker, command);
     }
     if (command->operation == WCO_OPEN) return 0;
+    if (worker->request.active) return error_response(worker, command, "busy");
     if (command->operation >= WCO_BODY_BEGIN && command->operation <= WCO_BODY_END)
         return body_command(worker, command);
     if (command->operation == WCO_CLOSE) {
-        if (worker->request.active) return error_response(worker, command, "busy");
         if (!null_response(worker, command)) return 0;
         worker->closing = 1;
         return 1;
@@ -484,19 +641,26 @@ static int run(struct worker *worker) {
     int64_t now = now_ms();
     if (now < 0 || !append(&worker->output, ready, sizeof(ready) - 1, now + 5000)) return 70;
     for (;;) {
-        struct pollfd descriptors[2] = {
-            {worker->closing ? -1 : STDIN_FILENO, POLLIN, 0},
-            {worker->output.used ? STDOUT_FILENO : -1, POLLOUT, 0}
-        };
+        struct pollfd descriptors[2];
         int timeout = 50;
         now = now_ms();
         if (now < 0 || (worker->output.count && now >= worker->output.frames[0].deadline))
             return 70;
         if (worker->request.active && now >= worker->request.deadline) {
+            if (worker->stream.phase != WCO_STREAM_NONE) {
+                clear_stream(&worker->stream);
+                worker->failed = 1;
+                return 70;
+            }
             if (!response(worker, worker->request.id, NULL, "timeout", 500)) return 70;
             worker->request.active = 0;
             worker->closing = 1;
         }
+        if (!pump_stream(worker)) return 70;
+        descriptors[0] = (struct pollfd){worker->closing ? -1 : STDIN_FILENO,
+                                         POLLIN, 0};
+        descriptors[1] = (struct pollfd){worker->output.used ? STDOUT_FILENO : -1,
+                                         POLLOUT, 0};
         if (worker->output.count && worker->output.frames[0].deadline - now < timeout)
             timeout = (int)(worker->output.frames[0].deadline - now);
         if (worker->request.active && worker->request.deadline - now < timeout)
@@ -536,6 +700,7 @@ int wco_worker_main(void) {
         OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CONFIG, NULL)) status = run(&worker);
     wco_exchange_close(worker.exchange);
     wco_store_close(worker.store);
+    clear_stream(&worker.stream);
     wco_body_clear(&worker.body);
     wco_json_free(worker.json);
     OPENSSL_cleanse(&worker.credit, sizeof(worker.credit));
