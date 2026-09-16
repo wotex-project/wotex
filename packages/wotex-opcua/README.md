@@ -48,6 +48,8 @@ its actual behavior. One-shot Read/Write/Call successes preserve the older
 adapter's result shapes; typed Browse pagination/release, complete compatibility
 projection, subscriptions and lifecycle work
 remain.
+The Runtime Form mapper also preserves raw ByteString bytes for the explicitly
+selected native one-shot client; the full Runtime profile remains open.
 
 ## Native software contract
 

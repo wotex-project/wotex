@@ -3,18 +3,24 @@ spec:
   id: WOP.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-opcua
-  updated: 2026-09-09
+  updated: 2026-09-16
 ---
 
 # WOP.12 Wotex integration and evidence contract
 
-This is an accepted **target specification**, not implemented-profile evidence.
+This is an accepted **target specification**, with partial integration evidence.
 It makes [.10](WOP.10-software-contract.md) and
 [.11](WOP.11-standalone-client-and-preservation.md) usable with the public Wotex
 packages. The [catalogue](catalogue.yaml) separates existing behavior from planned
 contracts. Every `I` requirement below is mandatory for software completion.
+One explicitly selected native one-shot Runtime ByteString Form path now
+converts the legacy base64 mapping into raw typed bytes before Write. A
+deterministic C fixture checks the transmitted byte envelope, and an
+independent secure peer confirms Write/readback/restore through Transport.
+This slice does not accept the complete I01 profile, profile factory, metadata,
+error/retry, subscription or final-owner requirements.
 
 ## WOP-I01 — Dependency direction and owned values
 

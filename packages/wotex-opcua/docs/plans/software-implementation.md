@@ -24,7 +24,7 @@ binding implementation work, not a changelog.
 | WOP-P06 | S05: typed Runtime Property observation and explicit health probe, native one-shot compatibility projection, unsupported Event/credential rejection | runtime_stream_test.exs; real Runtime child-spec lifecycle tests | Open |
 | WOP-P06a | N01/N03/N04/N05: typed bounded Browse/BrowseNext/release, original Session/deadline, early-release/failure fallback and native root helpers | standalone_contract_test.exs; test/native/browse_test.c; WOP-F14..F16 and complete N boundary matrix | Open; single-page child Browse only, with fail-closed limits and no typed continuation handles |
 | WOP-P07 | X06/S01..S04: independent asyncua secure peer and same-stack exact-tick/fault C peer, typed methods/arrays/users, subscriptions and continuation counters; all policy/token/security cells execute | test/interop/asyncua_test.exs; test/interop/open62541_test.exs; full V01..V14 software assertions | Open |
-| WOP-P07a | I01..I06: exact profiles and Form/context/media selection, Result identity/metadata, complete Error/Retry table, final-owner custody and cleanup through real ConsumedThing | runtime_integration_test.exs; all wotex-integration-v1.json cases and I06 matrix | Open |
+| WOP-P07a | I01..I06: exact profiles and Form/context/media selection, Result identity/metadata, complete Error/Retry table, final-owner custody and cleanup through real ConsumedThing | runtime_integration_test.exs; all wotex-integration-v1.json cases and I06 matrix | Open; one native one-shot Runtime ByteString Form Write/readback path is proven, but the profile factory and full matrix remain |
 | WOP-P08 | C09/C10/X06: complete software Mix tasks, audit/sanitizer/matrix/stress and isolated native archive consumer with no runtime Python; evidence contains every S/N/I/X assertion and current digest | test/software/lifecycle_stress_test.exs; X-F48; full software runner and out-of-tree package workflow | Open |
 
 Paths without a directory prefix in the table are under `test/wotex/opcua/`.
@@ -118,6 +118,11 @@ one value or an ordered list. It also preserves ByteString envelopes. The
 independent secure peer and C response fixture exercise the successful shapes;
 error/status and full lifecycle compatibility remain open. Persistent operations
 continue to expose richer typed native results.
+One I01 integration slice decodes the existing Form mapper's validated base64
+ByteString only when the selected transport client is `Open62541`, then hands
+the raw bytes to its typed Write boundary. A C response fixture asserts the
+native IPC byte envelope; an independent secure peer passes Runtime Form
+Write/readback/restore. Other clients keep the existing mapping unchanged.
 
 ## Verification and evidence
 

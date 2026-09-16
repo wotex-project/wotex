@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.26
+  version: 1.0.27
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -150,6 +150,10 @@ shapes: `{type, value, status}`, `"written"`, and zero/one/many method outputs.
 The independent Basic256Sha256 anonymous peer passes read, write/readback,
 Call, Browse and one-shot result projection. This is an explicitly selected
 partial native client, not a complete compatibility or Runtime projection.
+The Runtime Transport now converts a Form-mapped ByteString's validated base64
+payload back to raw bytes only for the native client, before its typed Write.
+One independent secure-peer Form Write/readback/restore proves byte identity;
+the complete WOP-I01..I06 integration and profile factory remain open.
 The same independent peer also accepts a public typed ByteString array Write
 and returns the exact binary array elements on Read, including embedded zero
 and non-UTF-8 bytes. Other typed value and lifecycle cells remain open.

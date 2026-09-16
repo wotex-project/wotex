@@ -20,6 +20,29 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native Runtime ByteString Form handoff, 2026-09-16
+
+The existing Form mapper encodes a ByteString as base64 for the older JSON
+bridge. `Wotex.OPCUA.Transport` now decodes that already validated payload
+only for the explicitly selected `Open62541` client, preserving the raw bytes
+expected by its typed Write request. A deterministic C response fixture checks
+that the native request contains the original `AP8=` byte envelope for
+`<<0, 255>>`, rather than the base64 of those four ASCII characters. An
+independent Basic256Sha256 peer exposes a writable ByteString scalar. Through
+Runtime Form selection, the native one-shot client reads its initial value,
+writes `<<0, 255>>`, reads back exact bytes, and restores the initial value.
+Eleven optional secure-peer tests pass. The Python code in this slice is solely
+the independent test peer; no production Python path was added.
+The full local `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passed with
+291 tests, 12 optional tests excluded and 95.0% coverage. The first run hit
+a transient process-custody timing failure during the concurrent native build;
+the isolated custody suite passed 19 tests and the unchanged full gate passed
+on retry.
+
+This is one WOP-I01 integration cell. The profile factory, complete Runtime
+matrix, typed Browse pagination, subscriptions and Python-adapter removal
+remain open.
+
 ## Native one-shot compatibility success shapes, 2026-09-16
 
 The explicitly selected native client now maps successful one-shot Value Read

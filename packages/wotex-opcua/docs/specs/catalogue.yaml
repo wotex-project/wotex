@@ -21,14 +21,14 @@ specifications:
     executable_evidence: ["test/wotex/opcua/asyncua_test.exs", "test/wotex/opcua/binary_test.exs", "test/wotex/opcua/contract_test.exs", "test/wotex/opcua/dependency_security_test.exs", "test/wotex/opcua/mapping_test.exs", "test/wotex/opcua/port_test.exs", "test/wotex/opcua/value_test.exs"]
     compatibility_classification: "listed typed scalar, URI and secure one-shot adapter subset only; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
   - id: "WOP.02"
-    version: "1.0.26"
+    version: "1.0.27"
     path: "docs/specs/WOP.02-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "OPC UA / asyncua", "revision": "OPC 10000 Parts 4/6 1.05.07; asyncua 2.0.1", "claim": "listed typed scalar, URI and secure one-shot adapter subset only"}, {"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7", "claim": "explicitly selected partial native persistent/one-shot read, Write, Call and bounded child Browse client; full native profile unaccepted"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
     requires: ["WOP.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.OPCUA.Error", "Wotex.OPCUA.Mapping", "Wotex.OPCUA.Transport", "Wotex.OPCUA.Value", "Wotex.OPCUA.Open62541"]
     executable_evidence: ["test/wotex/opcua/asyncua_test.exs", "test/wotex/opcua/binary_test.exs", "test/wotex/opcua/contract_test.exs", "test/wotex/opcua/dependency_security_test.exs", "test/wotex/opcua/mapping_test.exs", "test/wotex/opcua/port_test.exs", "test/wotex/opcua/value_test.exs", "test/wotex/opcua/open62541_test.exs", "test/interop/native_secure_test.exs"]
-    compatibility_classification: "The existing Python adapter implements its listed typed scalar, URI and secure one-shot subset. The explicitly selected native client has bounded persistent/one-shot read, Write, Call and complete single-page child Browse evidence against one independent secure peer, including typed ByteString array Write/readback. One-shot Read/Write/Call success shapes now match the older adapter; finite native pre-I/O mutation rejections retain no effect. Complete P02/S02, typed pagination, error/lifecycle compatibility and software completion remain unaccepted."
+    compatibility_classification: "The existing Python adapter implements its listed typed scalar, URI and secure one-shot subset. The explicitly selected native client has bounded persistent/one-shot read, Write, Call and complete single-page child Browse evidence against one independent secure peer, including typed ByteString array Write/readback. One-shot Read/Write/Call success shapes now match the older adapter, and Runtime ByteString Form Write/readback preserves raw bytes. Finite native pre-I/O mutation rejections retain no effect. Complete P02/S02, typed pagination, error/lifecycle compatibility and software completion remain unaccepted."
   - id: "WOP.10"
     version: "1.1.0"
     path: "docs/specs/WOP.10-software-contract.md"
@@ -48,14 +48,14 @@ specifications:
     executable_evidence: ["test/wotex/opcua/standalone_contract_test.exs", "test/wotex/opcua/binary/names_test.exs", "test/wotex/opcua/binary/reference_test.exs", "test/wotex/opcua/typed_values_test.exs"]
     compatibility_classification: "WOP-P01 accepts F01 through F13 through pure typed value/identity/reference codecs with boundary and malformed-input tests. A partial native one-page child Browse slice and one-shot Read/Write/Call success projection have independent-peer evidence; typed pagination, release, full Session and lifecycle cases remain required."
   - id: "WOP.12"
-    version: "1.1.0"
+    version: "1.1.1"
     path: "docs/specs/WOP.12-wotex-integration.md"
-    implementation_status: "planned"
-    standards: [{"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Native target requirements; exact source digests are in WOP.13 and native-sources-v1.json; no native acceptance evidence"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
+    implementation_status: "partial"
+    standards: [{"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "One selected native one-shot ByteString Runtime Form path has independent-peer evidence; full integration remains unaccepted"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
     requires: ["WOP.00", "WOP.10", "WOP.11", "wotex:WTX.01", "wotex:WTX.02", "wotex:WTX.03", "wotex_runtime:WRT.01"]
-    implementation_modules: []
-    executable_evidence: []
-    compatibility_classification: "Accepted target; no requirement acceptance inferred from existing modules, fixture presence or baseline gates. Follow ordered software-implementation.md; concrete corpus cases remain specified_unexecuted."
+    implementation_modules: ["Wotex.OPCUA.Mapping", "Wotex.OPCUA.Transport", "Wotex.OPCUA.Value", "Wotex.OPCUA.Open62541"]
+    executable_evidence: ["test/wotex/opcua/open62541_test.exs", "test/interop/native_secure_test.exs"]
+    compatibility_classification: "One explicitly selected native one-shot Runtime ByteString Form path preserves raw bytes through secure Write/readback/restore. The complete I01..I06 integration, profile factory, lifecycle, error/retry and subscription cells remain unaccepted."
   - id: "WOP.13"
     version: "1.1.14"
     path: "docs/specs/WOP.13-native-executable.md"

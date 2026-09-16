@@ -7,6 +7,8 @@ defmodule Wotex.OPCUA.Transport do
   performs one read or write, normalizes the result, and closes the exact
   session. Subscription callbacks return explicit unsupported errors because
   the current transport does not maintain OPC UA subscriptions.
+  For an explicitly selected native client, it converts the Form mapper's
+  validated ByteString base64 back to raw bytes before a typed Value Write.
 
   ## Runtime boundary
 
@@ -55,12 +57,26 @@ defmodule Wotex.OPCUA.Transport do
   def unsubscribe(_, _, _, _), do: {:error, Error.new(:not_supported)}
 
   defp execute(session, message, request, remaining) when remaining > 0 do
-    with {:ok, value} <- OPCUA.send(%{session | timeout: remaining}, message),
+    with {:ok, message} <- native_message(session, message),
+         {:ok, value} <- OPCUA.send(%{session | timeout: remaining}, message),
          {:ok, payload, metadata} <- Value.result(value),
          do: Result.new(request.request_id, request.operation, payload, metadata: metadata)
   end
 
   defp execute(_, _, _, _), do: {:error, Error.new(:deadline_exceeded)}
+
+  defp native_message(
+         %OPCUA.Session{client: Wotex.OPCUA.Open62541},
+         %{type: :write, value: %{type: "ByteString", value: encoded}} = message
+       )
+       when is_binary(encoded) do
+    case Base.decode64(encoded) do
+      {:ok, bytes} -> {:ok, put_in(message.value.value, bytes)}
+      :error -> {:error, Error.new(:invalid_bytestring)}
+    end
+  end
+
+  defp native_message(_, message), do: {:ok, message}
 
   defp budget(deadline, max) when is_integer(max) and max in 1..60_000 do
     now =

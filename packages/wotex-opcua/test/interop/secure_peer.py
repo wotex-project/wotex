@@ -77,6 +77,10 @@ async def main(directory):
                                                           "ByteValues", [b"a", b"b"],
                                                           ua.VariantType.ByteString)
     await byte_values.set_writable()
+    byte_value = await server.nodes.objects.add_variable(ua.NodeId("byte_value", namespace),
+                                                         "ByteValue", b"seed",
+                                                         ua.VariantType.ByteString)
+    await byte_value.set_writable()
 
     @uamethod
     def add_values(parent, left, right):
@@ -92,6 +96,7 @@ async def main(directory):
               "issuer_certificate": str(directory / "ca.der"), "trust_certificates": [str(directory / "ca.der")],
               "crl": str(directory / "clean.crl"), "node_id": variable.nodeid.to_string(),
               "byte_array_node_id": byte_values.nodeid.to_string(),
+              "byte_node_id": byte_value.nodeid.to_string(),
               "object_id": "ns=0;i=85", "method_id": method.nodeid.to_string()}
     def envelope(path):
         return {"type": "bytes", "base64": base64.b64encode((directory / path).read_bytes()).decode("ascii")}

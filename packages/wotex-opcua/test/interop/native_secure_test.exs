@@ -385,6 +385,71 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
   end
 
+  test "Runtime ByteString Forms round trip raw bytes through the native one-shot client" do
+    alias Wotex.Runtime.{Context, ExecutionContext, Request, Result}
+
+    config_path = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    peer = Jason.decode!(File.read!(config_path))
+    directory = Path.dirname(config_path)
+    executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
+    guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+    endpoint = peer["endpoint"]
+    href = endpoint <> "?id=" <> URI.encode_www_form(peer["byte_node_id"])
+
+    assert {:ok, form} = Wotex.Form.new(%{"href" => href, "wotex:variantType" => "ByteString"})
+    assert {:ok, context} = Context.new(request_id: "native-byte-interop")
+    execution = ExecutionContext.new(context, nil)
+
+    request = %Request{
+      operation: :readproperty,
+      affordance_type: :property,
+      affordance_name: "byte_value",
+      form: form,
+      resolved_href: href,
+      profile: nil,
+      request_id: "native-byte-interop",
+      deadline: nil,
+      input: nil
+    }
+
+    options = [
+      client: Wotex.OPCUA.Open62541,
+      lifecycle: :oneshot,
+      target: endpoint,
+      executable: executable,
+      executable_digest: digest.(executable),
+      guardian: guardian,
+      guardian_digest: digest.(guardian),
+      endpoint: endpoint,
+      security_policy: :basic256sha256,
+      security_mode: :sign_and_encrypt,
+      client_uri: peer["client_uri"],
+      server_uri: peer["server_uri"],
+      certificate: peer["certificate"],
+      private_key: Path.join(directory, "client.key.der"),
+      server_certificate: peer["server_certificate"],
+      trust_certificate: Path.join(directory, "ca.der"),
+      crl: peer["crl"],
+      authentication: %{type: :anonymous}
+    ]
+
+    read = fn -> Wotex.OPCUA.Transport.request(request, execution, options) end
+
+    write = fn bytes ->
+      Wotex.OPCUA.Transport.request(
+        %{request | operation: :writeproperty, input: bytes},
+        execution,
+        options
+      )
+    end
+
+    assert {:ok, %Result{payload: "seed", metadata: %{opcua_type: "ByteString"}}} = read.()
+    assert {:ok, %Result{payload: "written"}} = write.(<<0, 255>>)
+    assert {:ok, %Result{payload: <<0, 255>>}} = read.()
+    assert {:ok, %Result{payload: "written"}} = write.("seed")
+  end
+
   test "the public native client reads, writes and calls through secure Sessions without Python" do
     peer_path = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
     peer = Jason.decode!(File.read!(peer_path))
