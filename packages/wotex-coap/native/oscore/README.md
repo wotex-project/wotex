@@ -22,9 +22,10 @@ a time. libcoap owns tokens, retransmission and whole-body Block1/Block2
 assembly. Complete protected responses up to the 32 KiB inline boundary become
 exact C07 Message results. Larger legal results emit correlated begin/chunk/end
 frames followed by a Message body reference, all under the original request
-deadline. One protected Observe registration retains its initial inline report
-until cumulative credit opens, admits fresh subsequent reports, and cancels with
-the original token. Streamed reports and renewal remain incomplete.
+deadline. One protected Observe registration retains its initial report until
+cumulative credit opens, emits larger reports through credited begin/chunk/end
+frames, admits fresh subsequent reports, and cancels with the original token.
+Renewal remains incomplete.
 
 `native_worker_test.exs` runs the same executable through custody on macOS. It
 asserts exact ready/open/body/request/close envelopes, printable-ID escaping,
@@ -42,8 +43,11 @@ lane builds the patched static SDK plus the production adapter with ASan/UBSan
 and leak detection. The subsequent
 [Observe receipt](../../docs/provenance/native-worker-observe-v1.json) binds
 protected registration, zero-credit retention, two inline reports, cumulative
-acknowledgment and token-matched cancellation. It does not accept streamed reports, renewal, live
-replay behavior, independent OSCORE interoperability or the final Mix-built executable.
+acknowledgment and token-matched cancellation. The following streamed-report
+[receipt](../../docs/provenance/native-worker-report-stream-v1.json) binds the
+five credited frames of a 32,769-byte notification and
+cancellation with all five credits outstanding. It does not accept renewal,
+live replay behavior, independent OSCORE interoperability or the final Mix-built executable.
 
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the

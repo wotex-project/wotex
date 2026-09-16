@@ -31,6 +31,7 @@
 #define WCO_INITIAL_BOUNDARY 32u
 #define WCO_REVISION "7cf7465b784baded4de183290c547d582becfd28"
 #define WCO_RESPONSE_BODY_ID "response-body"
+#define WCO_REPORT_BODY_ID "report-body"
 
 struct output_frame {
     size_t end;
@@ -61,20 +62,32 @@ struct response_stream {
     enum stream_phase phase;
 };
 
+enum report_phase {
+    WCO_REPORT_INLINE = 0,
+    WCO_REPORT_BEGIN,
+    WCO_REPORT_CHUNK,
+    WCO_REPORT_END,
+    WCO_REPORT_RESULT
+};
+
 struct pending_report {
     char value[WCO_JSON_FRAME_MAX];
     size_t value_length;
+    uint8_t *body;
+    size_t body_length, offset;
+    char sha256[65];
     uint32_t observe, max_age;
     uint16_t content_format;
     uint8_t etag[8];
     size_t etag_length;
     uint8_t code;
-    int content_format_present, etag_present, pending;
+    enum report_phase phase;
+    int content_format_present, etag_present, pending, started;
 };
 
 struct observation {
     char id[65];
-    struct pending_report report;
+    struct pending_report report, next;
     int64_t last_received_at;
     uint32_t last_observe;
     uint16_t content_format;
@@ -324,7 +337,29 @@ static uint32_t option_uint(const uint8_t *bytes, size_t length) {
 }
 
 static void clear_report(struct pending_report *report) {
+    if (report->body) {
+        OPENSSL_cleanse(report->body, report->body_length);
+        free(report->body);
+    }
     OPENSSL_cleanse(report, sizeof(*report));
+}
+
+static int sha256_hex(const uint8_t *bytes, size_t length, char output[65]) {
+    static const char digits[] = "0123456789abcdef";
+    uint8_t digest[EVP_MAX_MD_SIZE];
+    unsigned digest_length = 0;
+    if (!EVP_Digest(bytes, length, digest, &digest_length, EVP_sha256(), NULL) ||
+        digest_length != 32) {
+        OPENSSL_cleanse(digest, sizeof(digest));
+        return 0;
+    }
+    for (size_t index = 0; index < digest_length; index++) {
+        output[index * 2] = digits[digest[index] >> 4];
+        output[index * 2 + 1] = digits[digest[index] & 15u];
+    }
+    output[64] = '\0';
+    OPENSSL_cleanse(digest, sizeof(digest));
+    return 1;
 }
 
 static int prepare_report(const struct wco_exchange_message *message,
@@ -332,7 +367,7 @@ static int prepare_report(const struct wco_exchange_message *message,
     size_t used = 0;
     unsigned observe_count = 0, etag_count = 0, format_count = 0, age_count = 0;
     if (message->type > 2 || message->code < 64 || message->code > 94 ||
-        message->payload_length > WCO_BODY_CHUNK_MAX) return 0;
+        message->payload_length > WCO_BODY_MAX) return 0;
     clear_report(report);
     for (size_t index = 0; index < message->option_count; index++) {
         const struct wco_exchange_option *option = &message->options[index];
@@ -365,9 +400,24 @@ static int prepare_report(const struct wco_exchange_message *message,
     if (observe_count != 1) return 0;
     report->code = message->code;
     if (!age_count) report->max_age = 60;
-    if (!message_value(message, NULL, report->value, sizeof(report->value), &used)) {
+    if (message->payload_length > WCO_BODY_CHUNK_MAX) {
+        report->body = malloc(message->payload_length);
+        if (!report->body) return 0;
+        memcpy(report->body, message->payload, message->payload_length);
+        report->body_length = message->payload_length;
+        report->phase = WCO_REPORT_BEGIN;
+        if (!sha256_hex(report->body, report->body_length, report->sha256) ||
+            !message_value(message, WCO_REPORT_BODY_ID, report->value,
+                           sizeof(report->value), &used)) {
+            clear_report(report);
+            return 0;
+        }
+    } else if (!message_value(message, NULL, report->value,
+                              sizeof(report->value), &used)) {
         clear_report(report);
         return 0;
+    } else {
+        report->phase = WCO_REPORT_RESULT;
     }
     report->value_length = used;
     report->pending = 1;
@@ -462,16 +512,84 @@ static int report_line(struct worker *worker, uint64_t sequence,
     return 1;
 }
 
+static void move_report(struct pending_report *target,
+                        struct pending_report *source) {
+    clear_report(target);
+    memcpy(target, source, sizeof(*target));
+    OPENSSL_cleanse(source, sizeof(*source));
+}
+
+static int report_stream_line(struct worker *worker, uint64_t sequence,
+                              char *line, size_t *result_length,
+                              size_t *chunk_length) {
+    struct pending_report *report = &worker->observation.report;
+    char number[96];
+    size_t used = 0;
+    int length;
+    *chunk_length = 0;
+    if (!raw(line, WCO_JSON_FRAME_MAX, &used, "{\"version\":1,\"id\":" ) ||
+        !quoted(line, WCO_JSON_FRAME_MAX, &used, worker->observation.id)) return 0;
+    length = snprintf(number, sizeof(number),
+                      ",\"generation\":%" PRIu64 ",\"report_seq\":%" PRIu64,
+                      worker->generation, sequence);
+    if (length <= 0 || (size_t)length >= sizeof(number) ||
+        (size_t)length > WCO_JSON_FRAME_MAX - used) return 0;
+    memcpy(line + used, number, (size_t)length); used += (size_t)length;
+    switch (report->phase) {
+        case WCO_REPORT_BEGIN:
+            if (!raw(line, WCO_JSON_FRAME_MAX, &used,
+                     ",\"event\":\"body_begin\",\"body_id\":" ) ||
+                !quoted(line, WCO_JSON_FRAME_MAX, &used, WCO_REPORT_BODY_ID)) return 0;
+            length = snprintf(number, sizeof(number), ",\"length\":%zu,\"sha256\":",
+                              report->body_length);
+            if (length <= 0 || (size_t)length >= sizeof(number) ||
+                (size_t)length > WCO_JSON_FRAME_MAX - used) return 0;
+            memcpy(line + used, number, (size_t)length); used += (size_t)length;
+            if (!quoted(line, WCO_JSON_FRAME_MAX, &used, report->sha256) ||
+                !raw(line, WCO_JSON_FRAME_MAX, &used, "}\n")) return 0;
+            break;
+        case WCO_REPORT_CHUNK:
+            *chunk_length = report->body_length - report->offset;
+            if (*chunk_length > WCO_BODY_CHUNK_MAX) *chunk_length = WCO_BODY_CHUNK_MAX;
+            if (!raw(line, WCO_JSON_FRAME_MAX, &used,
+                     ",\"event\":\"body_chunk\",\"body_id\":" ) ||
+                !quoted(line, WCO_JSON_FRAME_MAX, &used, WCO_REPORT_BODY_ID)) return 0;
+            length = snprintf(number, sizeof(number), ",\"offset\":%zu,\"data\":",
+                              report->offset);
+            if (length <= 0 || (size_t)length >= sizeof(number) ||
+                (size_t)length > WCO_JSON_FRAME_MAX - used) return 0;
+            memcpy(line + used, number, (size_t)length); used += (size_t)length;
+            if (!encoded_bytes(line, WCO_JSON_FRAME_MAX, &used,
+                               report->body + report->offset, *chunk_length) ||
+                !raw(line, WCO_JSON_FRAME_MAX, &used, "}\n")) return 0;
+            break;
+        case WCO_REPORT_END:
+            if (!raw(line, WCO_JSON_FRAME_MAX, &used,
+                     ",\"event\":\"body_end\",\"body_id\":" ) ||
+                !quoted(line, WCO_JSON_FRAME_MAX, &used, WCO_REPORT_BODY_ID) ||
+                !raw(line, WCO_JSON_FRAME_MAX, &used, "}\n")) return 0;
+            break;
+        default:
+            return 0;
+    }
+    *result_length = used;
+    return 1;
+}
+
 static int pump_report(struct worker *worker) {
     char line[WCO_JSON_FRAME_MAX];
     struct pending_report *report = &worker->observation.report;
     uint64_t expected, sequence;
-    size_t used;
+    size_t chunk_length = 0, used;
     int64_t now;
     if (!report->pending || !wco_credit_available(&worker->credit)) return 1;
     if (worker->credit.assigned == UINT64_MAX) return 0;
     expected = worker->credit.assigned + 1;
-    if (!report_line(worker, expected, line, &used)) return 0;
+    if (report->phase == WCO_REPORT_RESULT) {
+        if (!report_line(worker, expected, line, &used)) return 0;
+    } else if (!report_stream_line(worker, expected, line, &used, &chunk_length)) {
+        return 0;
+    }
     if (used > WCO_OUTPUT_MAX - worker->output.used ||
         worker->output.count == WCO_OUTPUT_FRAMES) return 1;
     if ((now = now_ms()) < 0 ||
@@ -479,7 +597,26 @@ static int pump_report(struct worker *worker) {
         sequence != expected ||
         !append(&worker->output, line, used, now + 5000)) return 0;
     worker->output.frames[worker->output.count - 1].report_sequence = sequence;
-    clear_report(report);
+    report->started = 1;
+    switch (report->phase) {
+        case WCO_REPORT_BEGIN:
+            report->phase = WCO_REPORT_CHUNK;
+            break;
+        case WCO_REPORT_CHUNK:
+            report->offset += chunk_length;
+            if (report->offset == report->body_length) report->phase = WCO_REPORT_END;
+            break;
+        case WCO_REPORT_END:
+            report->phase = WCO_REPORT_RESULT;
+            break;
+        case WCO_REPORT_RESULT:
+            clear_report(report);
+            if (worker->observation.next.pending)
+                move_report(report, &worker->observation.next);
+            break;
+        default:
+            return 0;
+    }
     return 1;
 }
 
@@ -538,6 +675,7 @@ static int terminal_observation(struct worker *worker, const char *code) {
         !quoted(line, sizeof(line), &used, code) ||
         !raw(line, sizeof(line), &used, "},\"metadata\":{}}\n")) return 0;
     clear_report(&worker->observation.report);
+    clear_report(&worker->observation.next);
     worker->observation.established = 0;
     worker->observation.cancelling = 0;
     worker->closing = 1;
@@ -555,14 +693,6 @@ static int observation_response(struct worker *worker,
         if (status >= 0) {
             worker->closing = 1;
             return status;
-        }
-        if (message->payload_length > WCO_BODY_CHUNK_MAX) {
-            int valid = error_deadline_response(worker, worker->request.id,
-                                                "native_unavailable",
-                                                worker->request.deadline);
-            worker->request.active = 0;
-            worker->closing = 1;
-            return valid;
         }
         if (!prepare_report(message, &worker->observation.report)) {
             int valid = error_deadline_response(worker, worker->request.id,
@@ -608,10 +738,12 @@ static int observation_response(struct worker *worker,
                 clear_report(&pending);
                 return terminal_observation(worker, "overlapping_event_report");
             }
-            clear_report(&worker->observation.report);
+            if (worker->observation.report.started) {
+                move_report(&worker->observation.next, &pending);
+                return 1;
+            }
         }
-        memcpy(&worker->observation.report, &pending, sizeof(pending));
-        OPENSSL_cleanse(&pending, sizeof(pending));
+        move_report(&worker->observation.report, &pending);
         return 1;
     }
     if (message->delivery == WCO_EXCHANGE_OBSERVE_INTERVENING) {
@@ -633,6 +765,7 @@ static int observation_response(struct worker *worker,
                                          worker->request.deadline);
         worker->request.active = 0;
         clear_report(&worker->observation.report);
+        clear_report(&worker->observation.next);
         OPENSSL_cleanse(worker->observation.id, sizeof(worker->observation.id));
         worker->observation.established = 0;
         worker->observation.cancelling = 0;
@@ -678,6 +811,7 @@ static void exchange_failure(void *argument, const char *code) {
         worker->failed = 1;
     worker->request.active = 0;
     clear_report(&worker->observation.report);
+    clear_report(&worker->observation.next);
     worker->observation.established = 0;
     worker->observation.cancelling = 0;
     worker->closing = 1;
@@ -991,6 +1125,7 @@ static int cancel_command(struct worker *worker,
     worker->request.active = 1;
     worker->observation.cancelling = 1;
     clear_report(&worker->observation.report);
+    clear_report(&worker->observation.next);
     error = wco_exchange_cancel(worker->exchange);
     if (!error) return 1;
     worker->request.active = 0;
@@ -1018,6 +1153,7 @@ static int execute(struct worker *worker, const struct wco_command *command) {
         return body_command(worker, command);
     if (command->operation == WCO_CLOSE) {
         clear_report(&worker->observation.report);
+        clear_report(&worker->observation.next);
         if (!null_response(worker, command)) return 0;
         worker->closing = 1;
         return 1;
@@ -1132,6 +1268,7 @@ int wco_worker_main(void) {
     wco_store_close(worker.store);
     clear_stream(&worker.stream);
     clear_report(&worker.observation.report);
+    clear_report(&worker.observation.next);
     wco_body_clear(&worker.body);
     wco_json_free(worker.json);
     OPENSSL_cleanse(&worker.credit, sizeof(worker.credit));

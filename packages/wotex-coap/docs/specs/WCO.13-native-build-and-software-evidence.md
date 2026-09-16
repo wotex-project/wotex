@@ -16,8 +16,8 @@ exchange engine. Mix owns build/test orchestration and ExUnit owns assertions.
 Python is not a runtime or target orchestration dependency. The native worker
 implements same-binary startup, durable open, upload-body state, close and one
 active unary libcoap exchange with inline or streamed results. It also executes
-one protected Observe registration with inline reports, cumulative credit and
-token-matched cancellation. Streamed reports, renewal and the Mix tasks remain
+one protected Observe registration with inline or streamed reports, cumulative
+credit and token-matched cancellation. Renewal and the Mix tasks remain
 planned contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
@@ -188,10 +188,11 @@ and malformed teardown coverage. A same-stack peer additionally executes
 protected GET, a 32,769-byte Block2 stream and Block1 POST through public custody
 on macOS and Linux. The same peer then registers a protected Observe, proves the
 initial report stays silent at zero credit, acknowledges each completely written
-report, receives a fresh notification and cancels the original token before close.
+report, receives a fresh 32,769-byte notification through five credited frames
+and cancels the original token before close while those credits remain outstanding.
 The Linux static build uses ASan/UBSan and leak detection. This evidence accepts
-only inline reports; it does not accept streamed reports, renewal, the full
-observation fault matrix, replay, independent OSCORE interoperability or the
+inline and streamed reports; it does not accept renewal, the full observation
+fault matrix, replay, independent OSCORE interoperability or the
 final Mix-built helper.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for

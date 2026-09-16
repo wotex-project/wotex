@@ -51,7 +51,6 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
     size_t length = 0, offset = 0, total = 0;
     coap_pdu_code_t code = coap_pdu_get_code(request);
     uint8_t format[] = {50}, etag[] = {0xaa};
-    (void)resource; (void)session;
     if (code == COAP_REQUEST_CODE_GET) {
         coap_opt_iterator_t iterator;
         coap_opt_t *observe = coap_check_option(request, COAP_OPTION_OBSERVE,
@@ -69,6 +68,12 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
             if (value == COAP_OBSERVE_CANCEL) cancel_count++;
             else observe_count++;
             coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+            if (notification && value != COAP_OBSERVE_CANCEL) {
+                assert(coap_add_data_large_response(
+                    resource, session, request, response, query, 0, 60, 0,
+                    sizeof(large_body), large_body, NULL, NULL));
+                return;
+            }
             assert(coap_add_option(response, COAP_OPTION_CONTENT_FORMAT, 0, NULL));
             assert(coap_add_data(response, 2, (const uint8_t *)payload));
             return;
@@ -386,11 +391,36 @@ int main(int argc, char **argv) {
 
     notification = 1;
     assert(coap_resource_notify_observers(observed_resource, NULL));
-    stage = "notification";
+    stage = "notification begin";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"8\",\"generation\":1,\"report_seq\":2,"
+          "\"event\":\"body_begin\",\"body_id\":\"report-body\","
+          "\"length\":32769,\"sha256\":"
+          "\"de8ef28f32ff275111f82039b9660dd3fc85c8444601c6a7c61d998830942ce3\"}\n");
+    assert(EVP_EncodeBlock((unsigned char *)large_encoded, large_body, 32768) == 43692);
+    large_encoded[43692] = '\0';
+    assert(snprintf(command, sizeof(command),
+        "{\"version\":1,\"id\":\"8\",\"generation\":1,\"report_seq\":3,"
+        "\"event\":\"body_chunk\",\"body_id\":\"report-body\","
+        "\"offset\":0,\"data\":{\"type\":\"bytes\",\"base64\":\"%s\"}}\n",
+        large_encoded) > 0);
+    stage = "notification first chunk";
+    exact(context, result[0], command);
+    stage = "notification last chunk";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"8\",\"generation\":1,\"report_seq\":4,"
+          "\"event\":\"body_chunk\",\"body_id\":\"report-body\","
+          "\"offset\":32768,\"data\":{\"type\":\"bytes\",\"base64\":\"Qg==\"}}\n");
+    stage = "notification end";
+    exact(context, result[0],
+          "{\"version\":1,\"id\":\"8\",\"generation\":1,\"report_seq\":5,"
+          "\"event\":\"body_end\",\"body_id\":\"report-body\"}\n");
+    stage = "notification result";
     line(context, result[0], output, sizeof(output));
     assert(strstr(output, "\"subscription_id\":\"8\",\"generation\":1,"));
-    assert(strstr(output, "\"report_seq\":2,\"event\":\"report\""));
-    assert(strstr(output, "\"payload\":{\"type\":\"bytes\",\"base64\":\"MjE=\"}"));
+    assert(strstr(output, "\"report_seq\":6,\"event\":\"report\""));
+    assert(strstr(output, "\"body_id\":\"report-body\""));
+    assert(!strstr(output, "\"payload\":"));
     assert(report_observe(output) == ((initial_observe + 1) & 0xffffffu));
     assert(observe_count == 2);
 

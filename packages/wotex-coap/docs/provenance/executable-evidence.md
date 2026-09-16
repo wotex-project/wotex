@@ -151,6 +151,17 @@ Linux ASan/UBSan/leak lanes execute the sequence. Streamed reports, renewal, the
 observation fault matrix, replay, independent secure interoperability and Mix
 build/run orchestration remain unaccepted.
 
+The [native worker streamed-report receipt](native-worker-report-stream-v1.json)
+binds the next production source cohort. A fresh protected 32,769-byte
+notification emits exact body begin, 32,768-byte and one-byte chunks, body end,
+and final report frames with contiguous credit sequences and a body reference.
+The final Message retains the notification's authenticated Observe value and
+five-field metadata. Cancellation then completes through its reserved control
+path while all five report credits remain outstanding. Both macOS and Linux
+ASan/UBSan/leak lanes execute the sequence. Renewal, Property/Event overload
+faults, replay, independent secure interoperability and Mix orchestration remain
+unaccepted.
+
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,
 explicit OSCORE credentials and exact five-field lines; omits absent optionals;
