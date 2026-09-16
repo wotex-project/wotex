@@ -217,6 +217,6 @@ envelopes and verifies Message metadata. `Wotex.CoAP.Native.ReportLedger` bounds
 the eight-frame credit window and serializes cumulative acknowledgments. The
 native owner dispatches unary body commands and the Observe/credit/cancel
 lifecycle through those boundaries.
-The Mix build tasks replace the legacy Python build harness. Remaining Python
-test orchestration is migration input only; its recorded results do not
-establish acceptance of the planned software-run task.
+The Mix build tasks replace the removed Python build harness. The remaining
+Python test runner is migration input only; its recorded results do not establish
+acceptance of the planned software-run task.

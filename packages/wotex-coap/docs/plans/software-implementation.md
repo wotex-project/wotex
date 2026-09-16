@@ -168,10 +168,10 @@ WOTEX_PATH_DEPS=1 mix wotex.software.run --workspace /absolute/disposable/fixtur
 ```
 
 The build command and its task tests pass on macOS arm64; the run command remains
-a target interface until its implementation and task tests pass. Existing
-shell/Python harnesses are identified only by the executed provenance they
-support. The native peer and protocol assertions remain the same independent
-software obligations. No build or peer starts implicitly.
+a target interface until its implementation and task tests pass. The remaining
+Python runner is identified only by the executed provenance it supports. The
+native peer and protocol assertions remain the same independent software
+obligations. No build or peer starts implicitly.
 
 ## Verification and commit procedure
 
