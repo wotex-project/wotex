@@ -97,6 +97,10 @@ public read, Write/readback, Method Call and one-shot read. The older `Asyncua`
 adapter remains Python-backed; complete compatibility output shapes, Browse,
 subscriptions, cancellation and the remaining security/lifecycle matrix remain
 open.
+The facade now keeps a native client's finite local Write/Call validation and
+configuration rejections at `effect: :none`, while uncertain mutation failures
+remain unknown. This is partial X04 effect classification, not full cancellation
+or lifecycle acceptance.
 
 ## Verification and evidence
 

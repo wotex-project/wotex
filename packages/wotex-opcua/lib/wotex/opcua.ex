@@ -24,6 +24,14 @@ defmodule Wotex.OPCUA do
   import Kernel, except: [send: 2]
   alias Wotex.OPCUA.{Error, PortCall, Session}
   @operations [:read, :write, :browse, :call]
+  @native_preflight_codes [
+    :invalid_value,
+    :invalid_node_id,
+    :unsupported_protocol,
+    :invalid_native_handle,
+    :invalid_native_configuration,
+    :request_too_large
+  ]
 
   @doc "Reports the operations implemented by this library's validated client boundary."
   @spec capabilities() :: %{
@@ -76,6 +84,11 @@ defmodule Wotex.OPCUA do
       )
 
       case result do
+        {:error, %Error{code: code} = error}
+        when type in [:write, :write_property, :invoke, :call] and
+               session.client == Wotex.OPCUA.Open62541 and code in @native_preflight_codes ->
+          {:error, error}
+
         {:error, error} when type in [:write, :write_property, :invoke, :call] ->
           {:error, %{error | effect: :unknown}}
 

@@ -109,6 +109,29 @@ defmodule Wotex.OPCUA.Open62541Test do
              Open62541.request(%{handle | host: :forged}, %{type: :read, node_id: "i=1"}, 100)
   end
 
+  test "WOP-X04 the facade retains no-effect for locally rejected native mutations" do
+    assert {:ok, session} =
+             Wotex.OPCUA.connect(
+               @options
+               |> Keyword.put(:lifecycle, :oneshot)
+               |> Keyword.put(:client, Open62541)
+             )
+
+    assert {:error, %Error{code: :invalid_value, effect: :none}} =
+             Wotex.OPCUA.send(session, %{
+               type: :write,
+               node_id: "ns=2;s=value",
+               value: %{type: "Double", value: "bad"}
+             })
+
+    assert {:error, %Error{code: :invalid_value, effect: :none}} =
+             Wotex.OPCUA.send(session, %{
+               type: :call,
+               node_id: "ns=2;s=method",
+               value: %{object_id: "ns=0;i=85", arguments: [42]}
+             })
+  end
+
   test "WOP-X01 persistent connect rejects missing credential files before process startup" do
     assert {:error, %Error{code: :invalid_native_configuration}} =
              Open62541.connect(@options)

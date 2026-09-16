@@ -20,6 +20,27 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Public native mutation preflight effect, 2026-09-16
+
+The facade now preserves `effect: :none` for the explicitly selected native
+client's finite local Write/Call input, handle, protocol and credential-shape
+rejections. It continues to classify other mutation failures conservatively
+as unknown, and it leaves the older generic client behavior unchanged. Focused
+tests show invalid typed Write and Call inputs fail before the one-shot client
+reads credentials or starts its C process; both errors retain no effect. This
+is a partial WOP-X04 effect slice, not acceptance of transmitted timeout,
+cancellation or full lifecycle cases.
+
+The complete `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64
+with Elixir 1.20.2 / OTP 29.0.4: 281 passed (10 doctests, 4 properties,
+267 tests), ten optional tests excluded and 95.0% coverage. Its native build,
+documentation, audits and package/archive checks pass.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua.ex` | `d577861e8998a38252f03a303bef87f72ec106c4dc9528994efa80cce09cfe32` |
+| `test/wotex/opcua/open62541_test.exs` | `e3a830aa67ca155e5451f382f75094395da0bf15153f252456fbd007204e53ff` |
+
 ## Explicit public native Session client slice, 2026-09-16
 
 The explicitly selected `Wotex.OPCUA.Open62541` client now implements the
