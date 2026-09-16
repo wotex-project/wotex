@@ -4,6 +4,7 @@
 #include <open62541/client.h>
 #include <open62541/client_config_default.h>
 #include "ipc.h"
+#include "security.h"
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/opensslv.h>
@@ -184,6 +185,18 @@ static int bootstrap(void) {
                     (void)terminal(request.generation, "invalid_request", "validation");
                 } else if((clock_ms = monotonic_ms()) < 0 || clock_ms >= request.deadline_ms) {
                     (void)terminal(request.generation, "deadline_exceeded", "admission");
+                } else if(request.open) {
+                    WopSecurity security = {0};
+                    time_t now = time(NULL);
+                    bool admitted = now != (time_t)-1 &&
+                        wop_security_read(yyjson_obj_get(root, "parameters"), now, &security);
+                    wop_security_clear(&security);
+                    if((clock_ms = monotonic_ms()) < 0 || clock_ms >= request.deadline_ms)
+                        (void)terminal(request.generation, "deadline_exceeded", "admission");
+                    else
+                        (void)terminal(request.generation,
+                                       admitted ? "unsupported_protocol" : "certificate_invalid",
+                                       admitted ? "validation" : "opening");
                 } else {
                     /* Framing is connected; no SDK service is admitted yet. */
                     (void)terminal(request.generation, "unsupported_protocol", "validation");
@@ -196,6 +209,8 @@ static int bootstrap(void) {
         }
     }
 done:
+    OPENSSL_cleanse(input.bytes, sizeof(input.bytes));
+    OPENSSL_cleanse(json_pool, WOP_JSON_POOL_BYTES);
     free(json_pool);
     UA_Client_delete(client);
     return status;

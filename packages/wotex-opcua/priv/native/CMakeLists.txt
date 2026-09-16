@@ -17,12 +17,22 @@ find_package(OpenSSL 3.5.8 EXACT REQUIRED)
 find_package(open62541 1.5.7 EXACT CONFIG REQUIRED NO_DEFAULT_PATH
              PATHS "${WOTEX_SDK_PREFIX}/lib/cmake/open62541")
 
-add_executable(wotex_opcua_native main.c ipc.c)
+add_executable(wotex_opcua_native main.c)
 target_compile_features(wotex_opcua_native PRIVATE c_std_99)
 target_compile_definitions(wotex_opcua_native PRIVATE _POSIX_C_SOURCE=200809L)
 target_compile_options(wotex_opcua_native PRIVATE -Wall -Wextra -Werror)
 target_include_directories(wotex_opcua_native PRIVATE "${OPENSSL_INCLUDE_DIR}")
-target_link_libraries(wotex_opcua_native PRIVATE wotex_opcua_json open62541::open62541)
+target_link_libraries(wotex_opcua_native PRIVATE wotex_opcua_security)
+
+add_library(wotex_opcua_security STATIC security.c ipc.c)
+target_compile_features(wotex_opcua_security PRIVATE c_std_11)
+target_compile_options(wotex_opcua_security PRIVATE -Wall -Wextra -Werror)
+target_include_directories(wotex_opcua_security PUBLIC "${OPENSSL_INCLUDE_DIR}")
+target_link_libraries(wotex_opcua_security PUBLIC wotex_opcua_json open62541::open62541)
+add_executable(wotex_opcua_security_check security_check.c)
+target_compile_features(wotex_opcua_security_check PRIVATE c_std_11)
+target_compile_options(wotex_opcua_security_check PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(wotex_opcua_security_check PRIVATE wotex_opcua_security)
 
 add_library(wotex_opcua_json STATIC json_codec.c vendor/yyjson/yyjson.c)
 target_compile_features(wotex_opcua_json PRIVATE c_std_11)
@@ -67,7 +77,8 @@ option(WOTEX_SANITIZERS "Instrument the native host with ASan and UBSan" OFF)
 if(WOTEX_SANITIZERS)
   foreach(target wotex_opcua_native wotex_opcua_custody wotex_opcua_custody_check
       wotex_opcua_json wotex_opcua_json_check wotex_opcua_ipc_check wotex_opcua_values wotex_opcua_value_check
-      wotex_opcua_value_fault_check wotex_opcua_native_contract_check)
+      wotex_opcua_value_fault_check wotex_opcua_native_contract_check
+      wotex_opcua_security wotex_opcua_security_check)
     target_compile_options(${target} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
     target_link_options(${target} PRIVATE -fsanitize=address,undefined)
   endforeach()
@@ -106,6 +117,9 @@ set_tests_properties(native_json_self_test PROPERTIES
 add_test(NAME native_ipc_admission COMMAND wotex_opcua_ipc_check)
 set_tests_properties(native_ipc_admission PROPERTIES
   TIMEOUT 10 PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
+add_test(NAME native_security_preflight COMMAND wotex_opcua_security_check)
+set_tests_properties(native_security_preflight PROPERTIES
+  TIMEOUT 30 PASS_REGULAR_EXPRESSION "\"status\":\"passed\"")
 add_test(NAME native_dependency_self_test COMMAND wotex_opcua_native --self-test)
 set_tests_properties(native_dependency_self_test PROPERTIES
   TIMEOUT 10 PASS_REGULAR_EXPRESSION "\"self_test\":\"ok\"")

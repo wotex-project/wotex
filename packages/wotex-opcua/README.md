@@ -77,24 +77,27 @@ service, security and subscription behavior remain later packets.
 
 The first P02 slice connects bounded JSON-line framing and outer request
 validation to the actual C executable. Its tests exercise split lines, closed
-fields, integer limits and expired deadlines. Valid requests still terminate
-with `unsupported_protocol`; native Session, credits and services remain open.
+fields, integer limits and expired deadlines. Admitted requests still terminate
+with `unsupported_protocol`; native Session, normal output credits and services remain open.
 The pure `Native.Frame` encoder translates the ready clock sample into a native
 deadline and builds the exact request line used by the real-process build test.
 The internal native host now performs one generation-matched terminal-only
 exchange through custody. It reports finite errors; no native Session or
 successful service response is exposed.
 The C ingress also rejects malformed `open` configuration, including insecure
-policy or mode selection, before it touches the SDK network stack. Shape-valid
-opens still fail closed pending certificate verification and Session ownership.
+policy or mode selection, before it touches the SDK network stack. The native
+credential preflight now checks DER/PKCS#8, RSA keys, direct-CA trust, SAN/URI
+identity, certificate usage, signatures and the current issuer CRL. Invalid
+credentials return `certificate_invalid` without network access. Valid credentials
+still fail closed pending SDK verification integration and Session ownership.
 The owner also sends a generation-bound initial credit before the request; normal
 output and replenishment are still part of the unfinished native service path.
 
 `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` remain specified work. Bootstrap build
 success does not establish a native Session or accept the native protocol profile.
-The opt-in native integration gate performs a fresh build and receipt fault tests
-in an owned temporary workspace; ordinary `mix check` excludes that download/build lane.
+The mandatory `mix check` gate performs a fresh native build and receipt fault
+tests in an owned temporary workspace; ordinary `mix test` excludes that lane.
 
 ## Quick start
 

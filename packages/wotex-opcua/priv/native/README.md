@@ -6,17 +6,24 @@ binary conversion without a network request. `--self-test` is an explicit build
 check, not an OPC UA service or interoperability result. Executable ready is a
 process protocol event; successful Session activation requires the complete
 native service owner.
+`security.c` adds explicit credential preflight before any network attempt.
+It owns bounded DER/PKCS#8 inputs, validates key pairs, direct-CA trust,
+certificate identities/usages/validity and the issuer CRL, and provides a
+complete-DER peer-pin verifier. `security_check.c` generates disposable C-only
+credentials and tests valid, invalid and boundary cases. See [security.md](security.md)
+for the exact boundary and remaining SDK/Session work.
+
 `ipc.c` assembles input lines within the 131072-byte ceiling and checks the
 closed outer request envelope after `json_codec.c` parses the complete line.
 The executable rejects malformed or expired input with one terminal frame and
-rejects every otherwise valid request as `unsupported_protocol`. It does not
-validate service parameters or issue an SDK service. `ipc_check.c` covers
+rejects every otherwise admitted request as `unsupported_protocol`. It does not
+issue an SDK service. `ipc_check.c` covers
 every split of a request line, coalescing, bounds and malformed envelopes;
 the pinned build test also exercises the real process input and terminal output.
 The `open` parameter map is now checked for its exact keys, policy/mode literals,
 bounded identity strings, canonical base64 envelopes, user-token form and
-session timeout. This is a shape gate only; certificate parsing/trust and SDK
-Session activation remain separate work.
+session timeout. This shape gate precedes the `security.c` credential checks;
+SDK Session activation remains separate work.
 `ipc.c` also validates a closed initial credit frame. `main.c` binds it to the
 process generation and requires it before a request. Terminal output uses its
 control allowance; normal output, consumed-credit replenishment and queued

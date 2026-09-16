@@ -17,10 +17,14 @@ in executable evidence. The first P02 slice connects bounded input framing and
 outer-envelope validation to the actual executable; no service is admitted.
 The pure owner-side encoder now maps the ready clock sample and emits closed
 outer request frames. The internal owner handles one bounded terminal control
-for an explicit request. It does not yet relay service responses or grant credits.
+for an explicit request. It does not yet relay service responses or replenish credits.
 The C ingress checks the `open` parameter shape and rejects malformed or
-downgraded values before a network attempt. It has no certificate trust or
-Session activation yet; a shape-valid open still ends as `unsupported_protocol`.
+downgraded values before a network attempt. Native credential preflight now
+verifies DER/PKCS#8 inputs, keys, direct-CA trust, exact SAN/URI, usage, validity,
+signatures and the current issuer CRL. Invalid credentials end with
+`certificate_invalid`; an admitted credential set still ends as
+`unsupported_protocol`. The complete-DER pin verifier is not yet attached to
+SDK network verification, and no Session is activated.
 The owner and C ingress now exchange one initial credit control before the
 request. It binds the process generation; requests without it and later credit
 before consumption fail. No normal output spends credit yet.

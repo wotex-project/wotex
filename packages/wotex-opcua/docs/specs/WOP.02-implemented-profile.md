@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.13
+  version: 1.0.14
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -94,9 +94,9 @@ The current C executable emits versioned readiness, exits on owner EOF and runs
 explicit SHA-256/SDK DateTime dependency self-tests. It now assembles a bounded
 input line and applies the strict JSON reader and closed outer request envelope
 to that process input. Malformed frames terminate with `invalid_request`; an
-expired native deadline yields `deadline_exceeded`. A well-formed request yields
-`unsupported_protocol` without service I/O. Parameter-specific validation,
-credits, native Session activation and responses remain unimplemented. This
+expired native deadline yields `deadline_exceeded`. An admitted request yields
+`unsupported_protocol` without service I/O. Normal output credits, native
+Session activation and service responses remain unimplemented. This
 partial P02 boundary does not accept WOP.13 services or interoperability.
 `Native.Frame` encodes exact outer request fields and maps the owner deadline
 from the separately captured ready clock sample. The native build test uses
@@ -110,8 +110,17 @@ The process still cannot report a successful OPC UA service.
 An `open` request now has additional native-side shape checks: exact keys,
 three allowed security-policy URI strings, `SignAndEncrypt`, bounded text and
 session timeout, closed user-token maps, and canonical base64 byte envelopes.
-The test certificate bytes are deliberately not valid certificates; this layer
-does not parse trust, authenticate a server, activate a Session or send packets.
+Native credential preflight then parses complete DER certificates/CRLs and
+unencrypted PKCS#8 keys, validates RSA key pairs, checks application/user usage,
+validity and identity, and verifies the direct self-signed CA/server chain and
+current signed issuer CRL. Exact DNS/IP SAN and application URI checks precede
+network access. Unknown noncritical certificate extensions remain admissible;
+unknown critical and duplicate extensions fail. Invalid credentials return the
+bounded `certificate_invalid` opening error. Validity starts are inclusive and
+expiry is exclusive, tested with explicit wall-clock samples. The standalone
+peer verifier additionally checks a complete DER pin and refreshed trust; SDK
+callback integration remains open. See the [native security boundary](../../priv/native/security.md).
+This preflight does not authenticate a network peer, activate a Session or send packets.
 The owner now sends one bounded initial credit control before its request. The
 C process binds that credit to the generation, rejects a request without it,
 and rejects further credit before any output has been consumed. Terminal output

@@ -112,6 +112,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     end
 
     assert native_tests =~ "native_ipc_admission"
+    assert native_tests =~ "native_security_preflight"
 
     assert {:ok, request} =
              Frame.request(7, "r1", "read", %{}, 1000, 9_223_372_036_854_775_807)
@@ -155,7 +156,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert {:ok, secure_open} =
              Frame.request(7, "o1", "open", open, 1000, 9_223_372_036_854_775_807)
 
-    assert_native_terminal(native, [secure_open], 7, "unsupported_protocol", "validation")
+    assert_native_terminal(native, [secure_open], 7, "certificate_invalid", "opening")
 
     assert {:ok, downgraded_open} =
              Frame.request(

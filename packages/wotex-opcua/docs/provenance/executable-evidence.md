@@ -20,6 +20,54 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native credential preflight, 2026-09-16
+
+The pre-network S03/X03 slice adds `priv/native/security.c` to the production
+executable and hash-bound native build. `native_security_preflight` generates
+ephemeral credentials in C, passes them through the strict JSON/open-parameter
+boundary, and asserts 60 cases plus 36 peer-pin/time checks (96 assertions).
+Inputs cover all three admitted policy names and token forms, DER/PKCS#8 and
+container faults, key mismatch and weak keys, strong and weak signatures,
+RSA-PSS certificate/CRL signatures, direct issuer versus intermediate trust,
+DNS/IP/URI mismatch, wildcard/CN rejection, key usage/EKU, critical/duplicate
+extensions, revocation and exact validity/update boundaries. Rejected input
+must release every credential acquisition; repeated clear is safe. Unknown
+noncritical certificate extensions remain admissible. This is preflight
+evidence, not network policy or authentication interoperability.
+
+On macOS arm64, the RelWithDebInfo native build passes all 180 CTest cases.
+The complete `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes with Elixir
+1.20.2 / OTP 29.0.4: 260 checks (10 doctests, 4 properties, 246 tests), one
+interoperability test excluded and 95.8% coverage. Its fresh pinned native
+build, docs, dependency audits, package inspection and out-of-tree archive
+compilation all pass.
+The Debug `WOTEX_SANITIZERS=ON` build passes all 169 tests selected by
+`ctest --output-on-failure -R 'native_(security|ipc|json|value|contract)'`, with
+`ASAN_OPTIONS=detect_leaks=0:halt_on_error=1` and
+`UBSAN_OPTIONS=halt_on_error=1`. First-party sources/parser are instrumented;
+the pinned static SDK/OpenSSL inputs are not. Clang static analysis of
+`security.c` reports no diagnostics. These runs do not establish Linux security
+or leak-detection acceptance.
+
+The required Mix build test invokes the real executable with shape-valid but
+invalid DER and asserts one `certificate_invalid` terminal, phase `opening`,
+matching generation and no credential content. The native request's original
+monotonic deadline is checked again after credential work. The C peer verifier
+checks an exact whole-DER pin and current trust but is not yet installed as the
+SDK callback. Valid preflight still ends with `unsupported_protocol`; P02/P03,
+X-F30..F47 and replacement of the Python runtime remain unaccepted.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/security.c` | `1e962e1580c5ee87991855980da471ad91a0ccfcc7019c9bb4f47086b96960f3` |
+| `priv/native/security.h` | `34f636e010b145ba352424e3c1632c8226a3ed41ac5873a6c208228568644157` |
+| `priv/native/security_check.c` | `8606ebf29e52aced99f467964e97d94b133983c7e0fb7de7f3c31ceb728a41e1` |
+| `priv/native/main.c` | `2e217de4101f938642fb45e41e9aa5b9d5f2932d8a527a15bfe5114f2d804367` |
+| `priv/native/CMakeLists.txt` | `6614c2559a74e2d2e713ccba4932ac42a2a0308fed7eea9a29bfc01437693588` |
+| `test/wotex/opcua/native/build_test.exs` | `ecdbd8ca7ca78b64c518e1a520f2815368e3ccdedb69c331e6ffd0e16969479f` |
+| native CTest log | `1750b3454a9f95a42d88381e87edc3a4b7c5b51b55b74d038e69db5e99a63081` |
+| native ASan/UBSan log | `ed28a066c82f5d691f5eb9fe352e941e592ee1190597f54adf51f02173e10960` |
+
 ## WOP-P00 source, build and custody cohort
 
 WOP-P00 passed on 2026-09-14 for the source/build/bootstrap and portable

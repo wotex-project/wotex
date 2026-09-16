@@ -132,6 +132,7 @@ defmodule WotexOPCUA.MixProject do
           "SECURITY.md",
           "priv/native/runtime-guardian.md",
           "priv/native/json-codec.md",
+          "priv/native/security.md",
           "priv/native/value-codec.md"
         ] ++
           Path.wildcard("docs/{specs,plans,provenance}/*.md"),
