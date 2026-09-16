@@ -2,5 +2,5 @@
 {"version":1,"id":"2","operation":"body_begin","parameters":{"body_id":"body-1","length":3,"sha256":"b5d4045c3f466fa91fe2cc6abe79232a1a57cdf104f7a26e716e0a1e2789df78"},"timeout_ms":1000}
 {"version":1,"id":"3","operation":"body_chunk","parameters":{"body_id":"body-1","offset":0,"data":{"type":"bytes","base64":"QUJD"}},"timeout_ms":1000}
 {"version":1,"id":"4","operation":"body_end","parameters":{"body_id":"body-1"},"timeout_ms":1000}
-{"version":1,"id":"5","operation":"request","parameters":{"method":"GET","path":"/value","confirmable":true},"timeout_ms":1000}
+{"version":1,"id":"5","operation":"request","parameters":{"method":"GET","path":"/value","confirmable":true,"body_id":"body-1"},"timeout_ms":1000}
 {"version":1,"id":"6","operation":"close","parameters":{},"timeout_ms":1000}

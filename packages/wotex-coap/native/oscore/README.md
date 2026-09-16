@@ -4,9 +4,9 @@ The native target uses libcoap 4.3.5, identified by the archive, ordered patch
 hashes and resulting source hashes in [source.json](source.json). Builds must
 verify all three stages; an unmodified upstream build is not this target.
 [WCO.13](../../docs/specs/WCO.13-native-build-and-software-evidence.md) owns the
-Port, durable storage and build contract. `main.c` and `worker.c` implement the
-same-binary custody/lifecycle entry, but the libcoap exchange engine and Mix
-build task remain incomplete.
+Port, durable storage and build contract. `main.c`, `worker.c` and `exchange.c`
+implement the same-binary custody entry and the first production libcoap
+exchange slice. The Mix build task remains incomplete.
 
 The public executable accepts only `--custody ABS_DIRECTORY`; custody executes
 that same absolute file with only the internal `--worker` argument. The worker
@@ -15,8 +15,14 @@ decodes and erases OSCORE credentials, consumes the durable context with an
 initial exclusive boundary of 32, owns one verified upload body, and releases
 the store after its correlated close result is written. A 512 KiB nonblocking
 output queue retains per-frame deadlines. Invalid framing or state terminates
-the generation. Until the exchange package connects libcoap, request, Observe,
-credit and cancel commands return `native_unavailable` before network I/O.
+the generation. A `WCO_WITH_LIBCOAP` build verifies the exact package version,
+creates one fixed-profile OSCORE context/session, binds libcoap's public
+sequence-save callback to the durable store, and dispatches one unary request at
+a time. libcoap owns tokens, retransmission and whole-body Block1/Block2
+assembly. Complete protected responses up to the 32 KiB inline boundary become
+exact C07 Message results. Larger legal results return `native_unavailable`
+until stdout body streaming is implemented. Observe, credit and cancel retain
+the same finite pre-network error.
 
 `native_worker_test.exs` runs the same executable through custody on macOS. It
 asserts exact ready/open/body/request/close envelopes, printable-ID escaping,
@@ -24,8 +30,13 @@ live store locking, consumed-identity rejection and malformed-input teardown.
 `Dockerfile.json` compiles the cohort with ASan/UBSan on Linux and feeds a
 coalesced lifecycle trace through the internal worker entry. The
 [lifecycle receipt](../../docs/provenance/native-worker-lifecycle-v1.json) binds
-these sources and limits. It does not accept a protected exchange, Observe,
-report credit, replay behavior or the final production executable.
+that preceding source cohort and its limits. The
+[exchange receipt](../../docs/provenance/native-worker-exchange-v1.json) binds a
+same-stack protected GET and Block1 POST through the public custody
+entry on macOS and Linux. The Linux lane builds the patched static SDK plus the
+production adapter with ASan/UBSan and leak detection. It does not accept
+streamed output bodies, Observe, report credit, replay behavior, independent
+OSCORE interoperability or the final Mix-built executable.
 
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the
@@ -82,9 +93,10 @@ interrupt the actual atomic-write stages; they are absent from the production
 object. `oscore_store_send_test.c` binds this store to the patched libcoap
 callback and asserts zero wire datagrams after every storage-failure stage.
 [The store receipt](../../docs/provenance/native-store-v1.json) identifies these
-assertions and their source bytes. The lifecycle worker now invokes this store;
-libcoap sequence-callback integration within that worker, report credit, replay
-and the full OSCORE workflow remain separate implementation obligations.
+assertions and their source bytes. The production exchange adapter now binds
+this store to libcoap's sequence callback before protected transmission. Report
+credit, live replay, streamed responses and the full OSCORE workflow remain
+separate implementation obligations.
 
 The patches retain libcoap's source licensing; see
 [LICENSE.libcoap](LICENSE.libcoap) and the package [NOTICE](../../NOTICE).

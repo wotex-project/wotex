@@ -118,6 +118,18 @@ durably consumes boundary 32, holds the store through close and returns
 protected requests, Observe, credit, cancellation, response encoding, replay,
 saturation and the final production executable remain unaccepted.
 
+The [native worker exchange receipt](native-worker-exchange-v1.json) binds the
+next production source cohort. The worker verifies libcoap 4.3.5, creates one
+fixed-suite OSCORE context/session, supplies the durable store callback, and
+uses libcoap's token, retransmission and whole-body block engine for one active
+unary request. A same-stack protected peer executes GET with query/Accept and
+Block1 POST with an associated verified body through the public custody entry. It
+asserts exact response option/payload projection, explicit empty payload and
+credential-free stdout on macOS and Linux; the Linux build runs with
+ASan/UBSan and leak detection. Streamed response output, Observe, credit,
+cancellation, replay, independent secure interoperability and Mix build/run
+orchestration remain unaccepted.
+
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,
 explicit OSCORE credentials and exact five-field lines; omits absent optionals;

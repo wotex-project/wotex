@@ -1,13 +1,14 @@
 /* SPDX-License-Identifier: Apache-2.0
- * Native OSCORE lifecycle worker. The libcoap exchange engine is added by the
- * next package; this file currently owns exact startup, durable context
- * admission, bounded body/credit state and shutdown without network traffic.
+ * Native OSCORE lifecycle worker. The production build binds the narrow
+ * exchange adapter to pinned libcoap; primitive builds omit that dependency
+ * and preserve finite pre-network native_unavailable behavior.
  */
 #define _POSIX_C_SOURCE 200809L
 #include "worker.h"
 #include "body.h"
 #include "command.h"
 #include "credit.h"
+#include "exchange.h"
 #include "frame.h"
 #include "identity.h"
 #include "store.h"
@@ -48,7 +49,13 @@ struct worker {
     struct wco_body body;
     struct wco_credit credit;
     struct wco_store *store;
+    struct wco_exchange *exchange;
     struct output output;
+    struct {
+        char id[65];
+        int64_t deadline;
+        int active;
+    } request;
     uint64_t generation;
     int opened;
     int closing;
@@ -133,6 +140,132 @@ static int error_response(struct worker *worker, const struct wco_command *comma
     return response(worker, command->id, NULL, code, command->timeout_ms);
 }
 
+static int error_deadline_response(struct worker *worker, const char *id,
+                                   const char *code, int64_t deadline) {
+    char line[WCO_CONTROL_MAX];
+    size_t used = 0;
+    if (!raw(line, sizeof(line), &used, "{\"version\":1,\"id\":" ) ||
+        !quoted(line, sizeof(line), &used, id) ||
+        !raw(line, sizeof(line), &used, ",\"ok\":false,\"error\":{\"code\":" ) ||
+        !quoted(line, sizeof(line), &used, code) ||
+        !raw(line, sizeof(line), &used, "}}\n")) return 0;
+    return append(&worker->output, line, used, deadline);
+}
+
+static int error_status_response(struct worker *worker, const char *id,
+                                 const char *code, uint64_t status,
+                                 int64_t deadline) {
+    char line[WCO_CONTROL_MAX], number[32];
+    size_t used = 0;
+    int length = snprintf(number, sizeof(number), "%" PRIu64, status);
+    if (length <= 0 || (size_t)length >= sizeof(number) ||
+        !raw(line, sizeof(line), &used, "{\"version\":1,\"id\":" ) ||
+        !quoted(line, sizeof(line), &used, id) ||
+        !raw(line, sizeof(line), &used, ",\"ok\":false,\"error\":{\"code\":" ) ||
+        !quoted(line, sizeof(line), &used, code) ||
+        !raw(line, sizeof(line), &used, ",\"status\":" ) ||
+        (size_t)length > sizeof(line) - used) return 0;
+    memcpy(line + used, number, (size_t)length); used += (size_t)length;
+    if (!raw(line, sizeof(line), &used, "}}\n")) return 0;
+    return append(&worker->output, line, used, deadline);
+}
+
+static int encoded_bytes(char *line, size_t capacity, size_t *used,
+                         const uint8_t *bytes, size_t length) {
+    size_t encoded = 4 * ((length + 2) / 3);
+    int result;
+    if (!raw(line, capacity, used, "{\"type\":\"bytes\",\"base64\":\"") ||
+        encoded > capacity - *used || length > INT_MAX) return 0;
+    result = EVP_EncodeBlock((unsigned char *)line + *used,
+                             length ? bytes : (const uint8_t *)"",
+                             (int)length);
+    if (result < 0 || (size_t)result != encoded) return 0;
+    *used += encoded;
+    return raw(line, capacity, used, "\"}");
+}
+
+static int message_response(struct worker *worker,
+                            const struct wco_exchange_message *message) {
+    char line[WCO_JSON_FRAME_MAX], number[64];
+    static const char *const types[] = {"con", "non", "ack", "rst"};
+    size_t used = 0;
+    int length;
+    if (!worker->request.active || message->payload_length > WCO_BODY_CHUNK_MAX)
+        return 0;
+    if (message->type > 3 || message->type == 3) {
+        int valid = error_deadline_response(worker, worker->request.id,
+                                            "invalid_response",
+                                            worker->request.deadline);
+        worker->request.active = 0;
+        return valid;
+    }
+    if (message->code < 64 || message->code > 94) {
+        int valid = message->code >= 128 && message->code <= 191 ?
+            error_status_response(worker, worker->request.id, "remote_response",
+                                  message->code, worker->request.deadline) :
+            error_deadline_response(worker, worker->request.id, "invalid_response",
+                                    worker->request.deadline);
+        worker->request.active = 0;
+        return valid;
+    }
+    if (!raw(line, sizeof(line), &used, "{\"version\":1,\"id\":" ) ||
+        !quoted(line, sizeof(line), &used, worker->request.id) ||
+        !raw(line, sizeof(line), &used, ",\"ok\":true,\"result\":{\"type\":" ) ||
+        !quoted(line, sizeof(line), &used, types[message->type])) return 0;
+    length = snprintf(number, sizeof(number),
+                      ",\"code\":%u,\"message_id\":%u,\"token\":",
+                      message->code, message->message_id);
+    if (length <= 0 || (size_t)length >= sizeof(number) ||
+        (size_t)length > sizeof(line) - used) return 0;
+    memcpy(line + used, number, (size_t)length); used += (size_t)length;
+    if (!encoded_bytes(line, sizeof(line), &used, message->token, message->token_length) ||
+        !raw(line, sizeof(line), &used, ",\"options\":[")) return 0;
+    for (size_t index = 0; index < message->option_count; index++) {
+        length = snprintf(number, sizeof(number), "%s{\"number\":%u,\"value\":",
+                          index ? "," : "", message->options[index].number);
+        if (length <= 0 || (size_t)length >= sizeof(number) ||
+            (size_t)length > sizeof(line) - used) return 0;
+        memcpy(line + used, number, (size_t)length); used += (size_t)length;
+        if (!encoded_bytes(line, sizeof(line), &used, message->options[index].value,
+                           message->options[index].length) ||
+            !raw(line, sizeof(line), &used, "}")) return 0;
+    }
+    if (!raw(line, sizeof(line), &used, "],\"payload\":" ) ||
+        !encoded_bytes(line, sizeof(line), &used, message->payload,
+                       message->payload_length) ||
+        !raw(line, sizeof(line), &used, "}}\n")) return 0;
+    worker->request.active = 0;
+    return append(&worker->output, line, used, worker->request.deadline);
+}
+
+static int exchange_response(void *argument,
+                             const struct wco_exchange_message *message) {
+    struct worker *worker = argument;
+    int valid;
+    if (message->payload_length > WCO_BODY_CHUNK_MAX) {
+        valid = error_deadline_response(worker, worker->request.id, "native_unavailable",
+                                        worker->request.deadline);
+        worker->request.active = 0;
+    } else {
+        valid = message_response(worker, message);
+    }
+    if (!valid) worker->failed = 1;
+    return valid;
+}
+
+static void exchange_failure(void *argument, const char *code) {
+    struct worker *worker = argument;
+    if (!worker->request.active) {
+        worker->failed = 1;
+        return;
+    }
+    if (!error_deadline_response(worker, worker->request.id, code,
+                                 worker->request.deadline))
+        worker->failed = 1;
+    worker->request.active = 0;
+    worker->closing = 1;
+}
+
 static int uint_value(yyjson_val *object, const char *name, uint64_t maximum,
                       uint64_t *result) {
     return wco_json_uint(field(object, name), maximum, result);
@@ -171,14 +304,16 @@ static int decode_secret(yyjson_val *security, struct secret *secret) {
 static const char *open_store(struct worker *worker, yyjson_val *parameters) {
     struct secret secret;
     struct wco_oscore_identity identity;
-    const char *directory;
+    const char *directory, *host, *exchange_error = NULL;
     char path[4097];
-    size_t directory_length;
-    uint64_t generation;
+    size_t directory_length, host_length;
+    uint64_t generation, port;
     enum wco_store_status status = WCO_STORE_INVALID;
     yyjson_val *security = field(parameters, "security");
     memset(&identity, 0, sizeof(identity));
     if (!uint_value(parameters, "generation", UINT64_MAX, &generation) ||
+        !uint_value(parameters, "port", UINT16_MAX, &port) ||
+        !string_value(parameters, "host", &host, &host_length) ||
         !string_value(security, "context_store", &directory, &directory_length) ||
         directory_length >= sizeof(path) || !getcwd(path, sizeof(path)) ||
         strlen(path) != directory_length || memcmp(path, directory, directory_length) ||
@@ -193,9 +328,22 @@ static const char *open_store(struct worker *worker, yyjson_val *parameters) {
     };
     if (wco_oscore_identity(&material, &identity))
         status = wco_store_open(path, &identity, WCO_INITIAL_BOUNDARY, &worker->store);
+    if (status == WCO_STORE_OK) {
+        struct wco_exchange_callbacks callbacks = {
+            exchange_response, exchange_failure, worker
+        };
+        exchange_error = wco_exchange_open(host, (uint16_t)port, &material,
+                                           worker->store, &callbacks,
+                                           &worker->exchange);
+        if (exchange_error) {
+            wco_store_close(worker->store);
+            worker->store = NULL;
+        }
+    }
 done:
     erase_secret(&secret);
     OPENSSL_cleanse(&identity, sizeof(identity));
+    if (exchange_error) return exchange_error;
     if (status == WCO_STORE_OK) {
         worker->generation = generation;
         wco_credit_init(&worker->credit, generation);
@@ -225,6 +373,57 @@ static int body_command(struct worker *worker, const struct wco_command *command
     return wco_body_end(&worker->body, id, id_length) && null_response(worker, command);
 }
 
+static int request_command(struct worker *worker,
+                           const struct wco_command *command) {
+    yyjson_val *parameters = command->parameters;
+    yyjson_val *body_value = field(parameters, "body_id");
+    yyjson_val *accept_value = field(parameters, "accept");
+    yyjson_val *format_value = field(parameters, "content_format");
+    const char *method, *path, *body_id = NULL;
+    const uint8_t *body = NULL;
+    size_t method_length, path_length, body_id_length = 0, body_length = 0;
+    uint64_t accept = 0, format = 0;
+    const char *error;
+    int body_present = body_value != NULL;
+    int64_t now = now_ms();
+    if (worker->request.active) return error_response(worker, command, "busy");
+    if (now < 0 || !string_value(parameters, "method", &method, &method_length) ||
+        !string_value(parameters, "path", &path, &path_length) ||
+        (accept_value && !uint_value(parameters, "accept", UINT16_MAX, &accept)) ||
+        (format_value &&
+         !uint_value(parameters, "content_format", UINT16_MAX, &format)))
+        return 0;
+    if (body_present) {
+        if (!string_value(parameters, "body_id", &body_id, &body_id_length) ||
+            !worker->body.complete || strlen(worker->body.id) != body_id_length ||
+            memcmp(worker->body.id, body_id, body_id_length) ||
+            !wco_body_data(&worker->body, &body, &body_length))
+            return error_response(worker, command, "invalid_request");
+    } else if (worker->body.active || worker->body.complete) {
+        return error_response(worker, command, "invalid_request");
+    }
+    memcpy(worker->request.id, command->id, strlen(command->id) + 1);
+    worker->request.deadline = now + command->timeout_ms;
+    worker->request.active = 1;
+    error = wco_exchange_request(worker->exchange, method, path,
+                                 yyjson_get_bool(field(parameters, "confirmable")),
+                                 accept_value != NULL, (uint16_t)accept,
+                                 format_value != NULL, (uint16_t)format,
+                                 body_present, body, body_length);
+    if (body_present) wco_body_clear(&worker->body);
+    if (!error) return 1;
+    worker->request.active = 0;
+    int valid = error_response(worker, command, error);
+    if (!strcmp(error, "connection_closed") ||
+        !strcmp(error, "context_store_corrupt") ||
+        !strcmp(error, "context_store_full") ||
+        !strcmp(error, "context_store_unavailable") ||
+        !strcmp(error, "fresh_context_required") ||
+        !strcmp(error, "sequence_exhausted"))
+        worker->closing = 1;
+    return valid;
+}
+
 static int execute(struct worker *worker, const struct wco_command *command) {
     if (!worker->opened) {
         const char *error;
@@ -236,12 +435,14 @@ static int execute(struct worker *worker, const struct wco_command *command) {
     if (command->operation >= WCO_BODY_BEGIN && command->operation <= WCO_BODY_END)
         return body_command(worker, command);
     if (command->operation == WCO_CLOSE) {
+        if (worker->request.active) return error_response(worker, command, "busy");
         if (!null_response(worker, command)) return 0;
         worker->closing = 1;
         return 1;
     }
-    /* Request, Observe and cancel gain their libcoap-owned implementation in
-     * the exchange package. Until then they fail before network transmission. */
+    if (command->operation == WCO_REQUEST) return request_command(worker, command);
+    /* Observe, credit and cancel gain their owned implementation after unary
+     * exchange and stdout body streaming are complete. */
     return error_response(worker, command, "native_unavailable");
 }
 
@@ -291,8 +492,15 @@ static int run(struct worker *worker) {
         now = now_ms();
         if (now < 0 || (worker->output.count && now >= worker->output.frames[0].deadline))
             return 70;
+        if (worker->request.active && now >= worker->request.deadline) {
+            if (!response(worker, worker->request.id, NULL, "timeout", 500)) return 70;
+            worker->request.active = 0;
+            worker->closing = 1;
+        }
         if (worker->output.count && worker->output.frames[0].deadline - now < timeout)
             timeout = (int)(worker->output.frames[0].deadline - now);
+        if (worker->request.active && worker->request.deadline - now < timeout)
+            timeout = (int)(worker->request.deadline - now);
         if (poll(descriptors, 2, timeout) < 0) {
             if (errno == EINTR) continue;
             return 70;
@@ -311,6 +519,9 @@ static int run(struct worker *worker) {
                 return wco_frame_eof(&worker->frame) ? 0 : 70;
             } else if (errno != EAGAIN && errno != EINTR) return 70;
         }
+        if (!worker->closing && worker->exchange)
+            (void)wco_exchange_io(worker->exchange);
+        if (worker->failed) return 70;
     }
 }
 
@@ -323,6 +534,7 @@ int wco_worker_main(void) {
     worker.json = wco_json_new();
     if (worker.json && nonblocking(STDIN_FILENO) && nonblocking(STDOUT_FILENO) &&
         OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CONFIG, NULL)) status = run(&worker);
+    wco_exchange_close(worker.exchange);
     wco_store_close(worker.store);
     wco_body_clear(&worker.body);
     wco_json_free(worker.json);

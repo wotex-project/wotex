@@ -1,0 +1,83 @@
+{
+  "schema": "wotex.coap.native-worker-exchange-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Production worker unary libcoap OSCORE context, durable sender callback, protected same-stack GET and Block1 POST through public custody; inline responses only",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "966b477a0e2e17ca84e14a3a11089fd1d79a197b693f9788fc13189fa54f1f39",
+      "native/oscore/main.c": "6e6c2a8deb2aeac8e527a922467bf89ab0f45f2aa2e669e988fa1e84f690e8eb",
+      "native/oscore/worker.c": "c52cdf9f14ab2f357e71ae4840d989ad0d794e59e32a6423f9d76d07f63be6ff",
+      "native/oscore/worker.h": "07c7e440f74fb6efbfabaf4a44a8eccf5a31b82f53c89951a26706354009b11e",
+      "native/oscore/exchange.c": "c122f5af669274d7b7d1627b790b5828c728324397a7beb322c3cb9f676f3daa",
+      "native/oscore/exchange.h": "73f38714d213b4226ecedbcd5366e4843028263d6c68c0ab3b54450edfb27385",
+      "native/oscore/custody.c": "887904afa9be4ec1e40145a6e69aac081eda9096a0fc2a0320751f2a16d082b5",
+      "native/oscore/command.c": "9dba7b283ea818d92e01db04483e3782ee401793272ec23e768829a45807c22d",
+      "native/oscore/json.c": "a50d46c2e518d5e3d932c6603306a54dd49abcf545cc5a97fbd2b7ec994d5d46",
+      "native/oscore/frame.c": "d122c2d763e967472d00a79eb4a01cebdbcd9c1b747578a43346141448349906",
+      "native/oscore/body.c": "f6f2696eae9631f5e68c38a01df7ff69f1d2b7ab08d51b735cc600e50ec3e9d4",
+      "native/oscore/credit.c": "f2566b99ae79f539d8c8c1bf0872b050bc62c3785d1758be1e1d7d3b2e624b7d",
+      "native/oscore/identity.c": "955d94def94861e15fbe8ff9c7e14f26a8eec5979585eff21b295267e04a4565",
+      "native/oscore/store.c": "a49ba6a278612e43c9e1872a9565abf541340aa12aa001f9f80e2c93f86969cd",
+      "test/native/oscore_worker_exchange_test.c": "75eb322399af2f863802d20908391337146143cc7e8f7a04eddc0cbb505c0b50",
+      "test/native/Dockerfile": "add85513fbcbece1ded7bc4a66418cc75f8bc4561bf72b770ea3beacf6d753e4"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "package_version": "libcoap 4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 5
+  },
+  "requirements": ["WCO-S06", "WCO-N02", "WCO-N03", "WCO-N04"],
+  "assertions": [
+    "Production WCO_WITH_LIBCOAP build requires OSCORE support and exact package version libcoap 4.3.5",
+    "Open creates one fixed AES-CCM-16-64-128 and HKDF-SHA-256 OSCORE session with replay window 32 and sequence-save frequency 32",
+    "The public sequence-save callback acknowledges only wco_store_reserve success; patched callback failure prevents coap_send transmission",
+    "Public --custody entry completes protected GET with URI query and Accept, then projects authenticated ETag, Content-Format and inline payload",
+    "A SHA-256-verified associated body is consumed once by a Block1 POST with Content-Format and an explicit empty response payload",
+    "Only one unary request is active, late tokens cannot attach, libcoap owns retransmission and whole-body Block1/Block2",
+    "Secrets do not appear in stdout and native libcoap logging is disabled"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes protected GET and Block1 POST",
+      "output_sha256": "e7d2430d805bb2945c9ad9eb5ec1efcd5a156c2420b7eedc0dd0feb7effe5fa5",
+      "worker_sha256": "a763b4ffd933c38360ae99ce9784bd65bf0b14341d637310570745a7e273f3c9",
+      "peer_sha256": "5db4837bd5648fb2b1e7828da8f00e7570cabfef055e4cf16269a74c3bd72489",
+      "static_library_sha256": "488ef2d9bed1ad0438d577f553d605e319c23b75a6d8b0c38ba0f54a0982044c",
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes protected GET and Block1 POST",
+      "image": "sha256:da1004f000949493dd0998503dcd22f6a3ec3eafe5290c328234b4bd0ca7123a",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "worker_sha256": "110ed835f5078dddb1fb7bfed7b948b15d20e5110f6e5afdbb6dfb5f5b1fa938",
+      "peer_sha256": "8ad4a3ff6d415601213c9305c8286d13a89facbe3b9006a11eab19be0e35c9f5",
+      "static_library_sha256": "3278bdfb88c2dda836183ce63ed7d4239fd5d4fe5a8762886a6168cea1e3b1ef",
+      "artifact_log_sha256": "d730a5dccec3e52162066ef2846e1e500acc87409da2c005edbd22167c1eeecc",
+      "package_log_sha256": "b8c513532a688cc321c09f5e022b7ff72dedc3ade4438786d3f8f5961ff54879",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": ["address", "undefined", "leak"],
+      "toolchain_packages_recorded_not_locked": true
+    }
+  ],
+  "unaccepted": [
+    "Response body_begin/body_chunk/body_end output above the 32768-byte inline threshold",
+    "Observe registration, report credit, renewal and cancellation",
+    "Live replay/duplicate and restart fault matrix through the complete worker",
+    "Independent-stack OSCORE interoperability",
+    "Port mailbox saturation, 1000-operation stress and native-v1 corpus completion",
+    "Reproducible Mix build/run orchestration and final manifest-bound executable"
+  ]
+}

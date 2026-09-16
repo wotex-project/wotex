@@ -88,9 +88,10 @@ credential value without reading its durable store. The internal native owner
 can complete the verified process ready/open/close handshake. The public
 `connect/1`, `send/2`, method-helper and `disconnect/1` boundaries select that
 owner for an explicit `coap` OSCORE credential and verified `native_backend`.
-The lifecycle worker validates and consumes the durable store before reporting a
-successful open. Request and Observe currently return `native_unavailable`
-without network transmission until the libcoap exchange engine is connected.
+The native worker validates and consumes the durable store before reporting a
+successful open. Its production adapter completes one protected unary request
+at a time and returns inline responses up to 32 KiB. Larger responses and
+Observe currently return finite `native_unavailable` results.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
 Capabilities expose these as `max_datagram_size` and `max_body_size`.

@@ -13,9 +13,10 @@ spec:
 UDP exchanges remain BEAM code; DTLS remains OTP `:ssl`. OSCORE uses one
 explicitly selected C executable through an Erlang Port and the pinned libcoap
 exchange engine. Mix owns build/test orchestration and ExUnit owns assertions.
-Python is not a runtime or target orchestration dependency. The native lifecycle
-worker implements same-binary startup, durable open, upload-body state and close.
-The production libcoap exchange worker and Mix tasks remain planned contracts;
+Python is not a runtime or target orchestration dependency. The native worker
+implements same-binary startup, durable open, upload-body state, close and one
+active inline-result unary libcoap exchange. Streamed results, Observe and the
+Mix tasks remain planned contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -161,19 +162,27 @@ resource, preserves the one interaction deadline and aborts only the exact
 owned adapter during bounded cleanup. The injected Runtime fixture proves this
 dispatch contract; it is not the production worker or a protected exchange.
 
-`native/oscore/main.c` and `worker.c` implement the corresponding same-binary
-lifecycle slice. The public entry accepts only `--custody ABS_DIRECTORY`; the
+`native/oscore/main.c`, `worker.c` and `exchange.c` implement the corresponding
+same-binary lifecycle and first unary exchange slice. The public entry accepts
+only `--custody ABS_DIRECTORY`; the
 guardian executes that same absolute file with only `--worker`. The internal
 worker emits the pinned ready frame, accepts split or coalesced C07 commands,
 decodes and erases credentials, derives the fixed-suite identity, consumes and
 locks the exact working-directory store at boundary 32, assembles one outbound
-body, and writes correlated close before releasing its store. Its nonblocking
-512 KiB queue tracks each frame's original deadline. A macOS Port test covers
-the full custody entry, lock contention, consumed identity, escaped IDs and
-malformed teardown; a Linux ASan/UBSan build executes a coalesced trace. Request,
-Observe, credit and cancel return `native_unavailable` before network I/O until
-the libcoap exchange package is implemented. This lifecycle evidence does not
-accept a protected exchange, observation, report credit or production helper.
+body, and writes correlated close before releasing its store. A production
+`WCO_WITH_LIBCOAP` build verifies the exact SDK package version, creates one
+OSCORE context/session, binds sequence reservation to that store, dispatches one
+active unary request and emits complete authenticated responses at or below the
+inline threshold. libcoap owns tokens, retransmission and whole-body
+Block1/Block2. Its nonblocking 512 KiB queue tracks each frame's original
+deadline. The macOS lifecycle test retains lock, consumed-identity, escaped-ID
+and malformed teardown coverage. A same-stack peer additionally executes
+protected GET and POST through public custody on macOS and Linux; the Linux
+static build uses ASan/UBSan and leak detection. Larger response bodies,
+Observe, credit and cancel return finite `native_unavailable` until their
+streaming/lifecycle packages are implemented. This evidence does not accept
+observation, replay, independent OSCORE interoperability or the final
+Mix-built helper.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and

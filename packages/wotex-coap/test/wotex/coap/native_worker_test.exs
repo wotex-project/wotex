@@ -7,6 +7,7 @@ defmodule Wotex.CoAP.NativeWorkerTest do
   @source_files ~w(
     native/oscore/main.c
     native/oscore/worker.c
+    native/oscore/exchange.c
     native/oscore/custody.c
     native/oscore/command.c
     native/oscore/json.c
@@ -91,7 +92,8 @@ defmodule Wotex.CoAP.NativeWorkerTest do
     command(port, "5", "request", %{
       "method" => "GET",
       "path" => "/value",
-      "confirmable" => true
+      "confirmable" => true,
+      "body_id" => body_id
     })
 
     assert read_json(port) == failure("5", "native_unavailable")
