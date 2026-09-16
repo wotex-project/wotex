@@ -44,7 +44,8 @@ The accepted backend retains the existing first-party C++17 OpenThread
 Port. Joiner execution, native state subscriptions, complete simulated-network
 workflows and full lifecycle proof remain required. Python is not a production
 runtime dependency. The injected BEAM ownership peer is an Erlang escript; the
-native build is a Mix task. Separate native test utilities still use Python.
+native build is a Mix task. Active software tests use ExUnit. Dormant Python
+protocol/process drivers have been retired; their unexecuted cells remain open.
 
 [WTH.13](docs/specs/WTH.13-native-backend.md) fixes source/build pins, typed IPC,
 flow control and native ownership. `mix wotex.native.build --workspace ABS` now

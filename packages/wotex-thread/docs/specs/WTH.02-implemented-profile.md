@@ -3,7 +3,7 @@ spec:
   id: WTH.02
   title: "Implemented Thread profile"
   status: accepted
-  version: 1.1.2
+  version: 1.1.3
   owner: wotex-thread
   updated: 2026-09-17
 ---
@@ -43,9 +43,9 @@ remain target work. The default Runtime profile is still daemon inspection.
 
 The production helper has no Python runtime. BEAM ownership tests now use an
 injected Erlang escript with the same no-environment process boundary. The
-current native build is the explicit `mix wotex.native.build` task. Separate
-native test utilities still use Python; .13 requires Mix/ExUnit orchestration and
-native production-code test executables. Existing SDK simulation cases do not
+current native build is the explicit `mix wotex.native.build` task. Dormant
+Python native test drivers have been retired. .13 still requires Mix/ExUnit
+orchestration and native production-code test executables. Existing SDK simulation cases do not
 establish the complete multi-node application workflow or final stress profile.
 
 ## Evidence and compatibility

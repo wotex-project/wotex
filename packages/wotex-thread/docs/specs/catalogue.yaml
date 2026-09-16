@@ -21,13 +21,13 @@ specifications:
     executable_evidence: ["test/wotex/thread/contract_test.exs", "test/wotex/thread/daemon_test.exs", "test/wotex/thread/dataset_test.exs", "test/wotex/thread/dependency_security_test.exs", "test/wotex/thread/mapping_test.exs", "test/wotex/thread/port_test.exs"]
     compatibility_classification: "Dataset syntax and local daemon inspection only; full Thread standard access limited; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
   - id: "WTH.02"
-    version: "1.1.2"
+    version: "1.1.3"
     path: "docs/specs/WTH.02-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "OpenThread", "revision": "v2026.09.0; 5c8c318627954c99cd1a957a290bbd4b1027d04b", "claim": "Dataset/daemon inspection and scoped C++ SDK management; complete software network remains planned"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
     requires: ["WTH.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
     implementation_modules: ["Wotex.Thread.Error", "Wotex.Thread.Mapping", "Wotex.Thread.Transport", "Wotex.Thread.OpenThread", "Wotex.Thread.OpenThread.Connection", "Wotex.Thread.State", "Wotex.Thread.JoinerConfig"]
-    executable_evidence: ["test/wotex/thread/contract_test.exs", "test/wotex/thread/daemon_test.exs", "test/wotex/thread/dataset_test.exs", "test/wotex/thread/dependency_security_test.exs", "test/wotex/thread/mapping_test.exs", "test/wotex/thread/port_test.exs", "test/wotex/thread/sdk_bridge_test.exs", "test/fixtures/sdk_bridge.escript", "test/software/native_owner_test.exs", "test/software/native_dataset_test.exs", "test/native/management_test.py", "test/native/commissioner_test.py"]
+    executable_evidence: ["test/wotex/thread/contract_test.exs", "test/wotex/thread/daemon_test.exs", "test/wotex/thread/dataset_test.exs", "test/wotex/thread/dependency_security_test.exs", "test/wotex/thread/mapping_test.exs", "test/wotex/thread/port_test.exs", "test/wotex/thread/sdk_bridge_test.exs", "test/fixtures/sdk_bridge.escript", "test/software/native_owner_test.exs", "test/software/native_dataset_test.exs"]
     compatibility_classification: "Dataset/daemon inspection and scoped C++ SDK management; complete software network remains planned; native .13 and final software acceptance remain open"
   - id: "WTH.10"
     version: "1.1.0"

@@ -7,8 +7,8 @@ ExUnit and C++/process fixtures exercise real SDK/RCP software boundaries; their
 presence is scoped evidence, not a complete Thread profile. Joiner execution,
 state subscriptions, complete simulated-network/application workflows, Mix fixture
 orchestration and final stress/native/package closure remain required.
-The production runtime and explicit native build require no Python; separate
-native test drivers still need migration. Selected native lanes must fail if their SDK/peer/configuration
+The production runtime and explicit native build require no Python; dormant
+Python native test drivers have been retired. Selected native lanes must fail if their SDK/peer/configuration
 is absent. Physical-radio testing is a separate optional lane.
 
 ## Mandatory local gate
@@ -75,8 +75,8 @@ environment; a direct empty-environment smoke test opens and replies, and
 `test/wotex/thread/sdk_bridge_test.exs` passes 31/31, including malformed
 frames, forged handles, deadlines, ignored SIGTERM cleanup, Dataset,
 management and commissioner cases. This is an injected peer, not SDK or radio
-interoperability evidence. Python remains in separate native test utilities
-pending WTH-B01 Mix/ExUnit migration.
+interoperability evidence. The dormant standalone Python native drivers were
+subsequently retired. WTH-B01 Mix/ExUnit acceptance remains open.
 
 ## Acceptance boundary
 
@@ -98,6 +98,4 @@ excluded. Native software results require their own immutable manifest.
 | --- | --- |
 | `test/software/native_owner_test.exs` | `c247296bcc4b61170ea0d625c3c1e72c01b95df57f063408262657c972097c0a` |
 | `test/software/native_dataset_test.exs` | `68fbf4c69a9a460e20a4470844ea8029b740215af8da9a9c388b482a41a65811` |
-| `test/native/management_test.py` | `c2bc8d0271ed2b6ff2f3db593b1bae8a28c95bbf4ad51b695732b96778352557` |
-| `test/native/commissioner_test.py` | `408d99e4e0fc57d1e0f107baf6808865d3d6b0f8a3419c9cbf72a6673219e573` |
 | `priv/openthread/host.cpp` | `9253964efa577ff27401c912865500322f0bd7636f30453fe59c1128c573a083` |
