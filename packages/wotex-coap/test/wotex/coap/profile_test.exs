@@ -19,7 +19,10 @@ defmodule Wotex.CoAP.ProfileTest do
     {:ok, observed} = CoAP.profile(:udp_observe)
     assert BindingProfile.id(observed) == :coap_observe
 
-    for profile <- [unary, observed] do
+    {:ok, oscore} = CoAP.profile(:oscore)
+    assert BindingProfile.id(oscore) == :coap_oscore
+
+    for profile <- [unary, observed, oscore] do
       assert BindingProfile.supports_scheme?(profile, "coap")
       refute BindingProfile.supports_scheme?(profile, "coaps")
 
@@ -39,7 +42,11 @@ defmodule Wotex.CoAP.ProfileTest do
       assert BindingProfile.supports_operation?(observed, operation)
     end
 
-    for mode <- [:oscore, nil, %{}, [:udp]] do
+    for operation <- [:observeproperty, :unobserveproperty, :subscribeevent, :unsubscribeevent] do
+      assert BindingProfile.supports_operation?(oscore, operation)
+    end
+
+    for mode <- [nil, %{}, [:udp]] do
       assert {:error, %Error{code: :unsupported_profile, class: :permanent}} = CoAP.profile(mode)
     end
   end

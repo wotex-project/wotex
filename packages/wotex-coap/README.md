@@ -51,8 +51,10 @@ Discovery parses bounded CoRE Link Format results without following the links.
 
 Native `coaps` sessions support explicit DTLS 1.2 PSK and PKI credentials through
 OTP SSL. PSK exchanges and Observe have independent pinned libcoap evidence;
-PKI currently has real OTP peer tests. Independent PKI evidence, OSCORE,
-and the final software matrix remain ordered work.
+PKI currently has real OTP peer tests. The explicit OSCORE Runtime profile
+dispatches through the manifest-verified native owner. Independent OSCORE
+interoperability, the production worker, and the final software matrix remain
+ordered work.
 Multicast and extended tokens are outside the implemented profile.
 
 ## Quick start
@@ -76,7 +78,10 @@ security and a nil immediate credential. UDP routes reject credentials.
 `Wotex.CoAP.profile/0` selects unary UDP operations;
 `Wotex.CoAP.profile(:udp_observe)` selects unary operations and Observe streams.
 `Wotex.CoAP.profile(:dtls)` selects authenticated DTLS unary operations and streams.
-All admit JSON, UTF-8 text and opaque bytes. Runtime OSCORE remains unsupported.
+`Wotex.CoAP.profile(:oscore)` selects explicit OSCORE unary operations and streams.
+All admit JSON, UTF-8 text and opaque bytes. OSCORE unary calls accept one typed
+immediate or configured Security value; subscriptions require configured
+security and a nil immediate credential. Both require `native_backend`.
 `Wotex.CoAP.Security.new/1` validates and redacts the fixed-suite OSCORE
 credential value without reading its durable store. The internal native owner
 can complete the verified process ready/open/close handshake. The public
@@ -172,8 +177,10 @@ this owner. Native discovery uses the same owner with its 64 KiB response ceilin
 checked before streamed-body assembly. Dedicated native Observe sessions admit
 one receiver, open bounded report credit, validate inline or streamed reports,
 deliver the first complete representation before returning the handle and
-cancel the exact subscription even while credit is in flight. Runtime and
-production-worker execution remain planned.
+cancel the exact subscription even while credit is in flight. The Runtime
+adapter verifies the native route and subscription generation, maps unary calls
+and Observe through the same owner, and releases exact handles on cancellation.
+Production-worker execution remains planned.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic

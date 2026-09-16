@@ -24,8 +24,8 @@ defmodule Wotex.CoAP.Native.Connection do
   discovery's smaller response-body limit before streamed-body allocation.
   Dedicated native observations open report credit, validate inline or streamed
   reports before delivery, serialize cumulative acknowledgments and cancel the
-  exact subscription without retaining credentials. Runtime dispatch remains a
-  separate obligation.
+  exact subscription without retaining credentials. Non-secret process markers
+  bind Runtime relays to the exact route and subscription generation.
   """
 
   use GenServer
@@ -84,6 +84,31 @@ defmodule Wotex.CoAP.Native.Connection do
       {:owned, generation, admission} -> stop(pid, generation, admission)
       :closed -> :ok
       :invalid -> failure(:invalid_session)
+    end
+  end
+
+  @doc false
+  @spec abort(pid()) :: :ok | {:error, Error.t()}
+  def abort(pid) do
+    case identity(pid) do
+      {:owned, _, _} ->
+        monitor = Process.monitor(pid)
+        Process.unlink(pid)
+        if match?({:owned, _, _}, identity(pid)), do: Process.exit(pid, :kill)
+
+        receive do
+          {:DOWN, ^monitor, :process, _, _} -> :ok
+        after
+          100 ->
+            Process.demonitor(monitor, [:flush])
+            failure(:cleanup_timeout)
+        end
+
+      :closed ->
+        :ok
+
+      :invalid ->
+        failure(:invalid_session)
     end
   end
 
@@ -220,6 +245,11 @@ defmodule Wotex.CoAP.Native.Connection do
             {:ok, command} ->
               admission = Admission.new(generation)
               Process.put(:wotex_coap_owner, {__MODULE__, generation, admission})
+
+              Process.put(
+                :wotex_coap_route,
+                Map.take(Map.put(config, :creator, creator), [:owner, :creator, :host, :port])
+              )
 
               {:ok,
                %{
@@ -1143,6 +1173,7 @@ defmodule Wotex.CoAP.Native.Connection do
 
   defp establish_observation(%{phase: :registering} = observation) do
     if observation.deadline_timer, do: Process.cancel_timer(observation.deadline_timer)
+    Process.put(:wotex_coap_subscription, {__MODULE__, observation.handle.generation})
     GenServer.reply(observation.from, {:ok, observation.handle})
     Process.demonitor(observation.caller_monitor, [:flush])
 
@@ -1196,6 +1227,7 @@ defmodule Wotex.CoAP.Native.Connection do
   end
 
   defp clear_observation(%{observation: observation} = state) do
+    Process.delete(:wotex_coap_subscription)
     if observation.deadline_timer, do: Process.cancel_timer(observation.deadline_timer)
     if observation.caller_monitor, do: Process.demonitor(observation.caller_monitor, [:flush])
     if observation.receiver_monitor, do: Process.demonitor(observation.receiver_monitor, [:flush])

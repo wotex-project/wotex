@@ -6,3 +6,4 @@ Code.require_file("support/datagram.ex", __DIR__)
 Code.require_file("support/execution.ex", __DIR__)
 
 Code.require_file("support/observation_trace.ex", __DIR__)
+Code.require_file("support/native_runtime_fixture.ex", __DIR__)

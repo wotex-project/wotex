@@ -1,9 +1,10 @@
 # WCO software implementation sequence
 
 The BEAM UDP exchange, complete blockwise transfer, owned Observe, discovery,
-Runtime UDP streams and OTP PSK/PKI DTLS native/Runtime operations are implemented.
-Independent secure matrix acceptance, OSCORE, Mix orchestration and complete
-software closure remain targets.
+Runtime UDP streams, OTP PSK/PKI DTLS native/Runtime operations and the injected
+native OSCORE Runtime boundary are implemented. The production OSCORE worker,
+independent secure matrix acceptance, Mix orchestration and complete software
+closure remain targets.
 [Executable evidence](../provenance/executable-evidence.md) identifies each
 executed cohort and its limits. The ordered packages define acceptance.
 

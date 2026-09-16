@@ -109,7 +109,7 @@ file. Other manifest members retain the build evidence listed above.
 
 ## WCO-N02 — Persistent Port ownership
 
-The planned additive `native_backend:` connection/Transport option is exactly
+The additive `native_backend:` connection/Transport option is exactly
 `%{executable: absolute_binary_path, manifest: absolute_binary_path}`. Each path
 is nonempty, NUL-free and at most 4,096 bytes; the manifest is at most 1 MiB.
 Require it for `Security.mode == :oscore`, reject it for UDP/DTLS modes, and
@@ -153,7 +153,12 @@ returning its handle and owns exact cancellation/cleanup. Inline and 32,769-byte
 streamed reports execute through contiguous frame accounting and cumulative
 credit. Cancellation takes over while credit is in flight, joins concurrent
 callers and validates intervening reports without delivering them. Receiver
-death releases the generation.
+death releases the generation. `profile(:oscore)` and `Wotex.CoAP.Transport`
+select this owner for Runtime unary calls and observations. The relay validates
+non-secret route and subscription-generation markers before accepting either
+resource, preserves the one interaction deadline and aborts only the exact
+owned adapter during bounded cleanup. The injected Runtime fixture proves this
+dispatch contract; it is not the production worker or a protected exchange.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and

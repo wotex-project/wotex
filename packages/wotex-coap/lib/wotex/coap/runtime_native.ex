@@ -18,6 +18,7 @@ defmodule Wotex.CoAP.RuntimeNative do
 
   alias Wotex.CoAP
   alias Wotex.CoAP.{Connection, Error, Subscription}
+  alias Wotex.CoAP.Native.Connection, as: NativeConnection
 
   @doc false
   @spec start(pid(), reference(), map()) :: {pid(), reference()}
@@ -36,7 +37,7 @@ defmodule Wotex.CoAP.RuntimeNative do
     try do
       cancel(session, subscription, deadline - now())
     after
-      Connection.abort(session.pid)
+      abort(session)
     end
   end
 
@@ -53,13 +54,23 @@ defmodule Wotex.CoAP.RuntimeNative do
   @doc false
   @spec abort(CoAP.session() | nil) :: :ok | {:error, Error.t()}
   def abort(nil), do: :ok
-  def abort(session), do: Connection.abort(session.pid)
+
+  def abort(%{pid: pid}) do
+    case adapter(pid) do
+      NativeConnection -> NativeConnection.abort(pid)
+      Connection -> Connection.abort(pid)
+      nil -> {:error, Error.new(:invalid_session)}
+    end
+  end
+
+  def abort(_), do: {:error, Error.new(:invalid_session)}
 
   @doc false
   @spec valid_session?(term(), pid(), pid(), keyword()) :: boolean()
   def valid_session?(%{pid: pid, timeout: timeout} = value, worker, owner, options)
       when map_size(value) == 2 and is_pid(pid) and node(pid) == node() and timeout in 1..60_000 do
-    with {:ok, config} <- Connection.config(options),
+    with adapter when adapter in [Connection, NativeConnection] <- adapter(pid),
+         {:ok, config} <- adapter_config(adapter, options),
          expected = %{owner: owner, creator: worker, host: config.host, port: config.port},
          {{:dictionary, :wotex_coap_route}, ^expected} <-
            :erlang.process_info(pid, {:dictionary, :wotex_coap_route}),
@@ -72,12 +83,55 @@ defmodule Wotex.CoAP.RuntimeNative do
   @doc false
   @spec valid_subscription?(CoAP.session() | nil, term()) :: boolean()
   def valid_subscription?(%{pid: pid}, subscription) do
-    Subscription.validate(subscription, pid) == :ok and
-      :erlang.process_info(pid, {:dictionary, :wotex_coap_owner}) ==
-        {{:dictionary, :wotex_coap_owner}, {Connection, subscription.generation}}
+    with :ok <- Subscription.validate(subscription, pid),
+         adapter when adapter in [Connection, NativeConnection] <- adapter(pid),
+         do: subscription_marker?(pid, adapter, subscription.generation),
+         else: (_ -> false)
   end
 
   def valid_subscription?(_, _), do: false
+
+  defp adapter_config(Connection, options), do: Connection.config(options)
+
+  defp adapter_config(NativeConnection, options) do
+    case List.keytake(options, :scheme, 0) do
+      {{:scheme, :coap}, rest} ->
+        if Keyword.has_key?(rest, :scheme),
+          do: {:error, Error.new(:invalid_options)},
+          else: NativeConnection.config(rest)
+
+      nil ->
+        NativeConnection.config(options)
+
+      _ ->
+        {:error, Error.new(:invalid_options)}
+    end
+  end
+
+  defp subscription_marker?(pid, Connection, generation),
+    do:
+      :erlang.process_info(pid, {:dictionary, :wotex_coap_owner}) ==
+        {{:dictionary, :wotex_coap_owner}, {Connection, generation}}
+
+  defp subscription_marker?(pid, NativeConnection, generation),
+    do:
+      :erlang.process_info(pid, {:dictionary, :wotex_coap_subscription}) ==
+        {{:dictionary, :wotex_coap_subscription}, {NativeConnection, generation}}
+
+  defp adapter(pid) do
+    case :erlang.process_info(pid, {:dictionary, :wotex_coap_owner}) do
+      {{:dictionary, :wotex_coap_owner}, {Connection, generation}}
+      when is_reference(generation) ->
+        Connection
+
+      {{:dictionary, :wotex_coap_owner}, {NativeConnection, generation, admission}}
+      when is_integer(generation) and is_reference(admission) ->
+        NativeConnection
+
+      _ ->
+        nil
+    end
+  end
 
   defp open(parent, generation, options) do
     with remaining when remaining > 0 <- options.deadline - now(),
@@ -119,12 +173,15 @@ defmodule Wotex.CoAP.RuntimeNative do
 
     if remaining > 0,
       do:
-        CoAP.subscribe(%{session | timeout: remaining}, %{
-          path: options.path,
-          receiver: parent,
-          renew: options.renew,
-          max_queue_length: options.max_queue_length
-        }),
+        CoAP.subscribe(
+          %{session | timeout: remaining},
+          Map.merge(Map.get(options, :subscription_options, %{}), %{
+            path: options.path,
+            receiver: parent,
+            renew: options.renew,
+            max_queue_length: options.max_queue_length
+          })
+        ),
       else: {:error, Error.new(:deadline_exceeded)}
   end
 

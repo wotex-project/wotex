@@ -43,12 +43,12 @@ defmodule Wotex.CoAP do
   @spec profile() :: Wotex.Runtime.BindingProfile.t()
   def profile, do: runtime_profile(:coap, [:readproperty, :writeproperty, :invokeaction])
 
-  @doc "Selects UDP unary, UDP Observe, or authenticated DTLS Runtime operations without acquisition."
+  @doc "Selects an admitted UDP, DTLS, or OSCORE Runtime profile without acquisition."
   @spec profile(term()) :: {:ok, Wotex.Runtime.BindingProfile.t()} | {:error, Error.t()}
   def profile(:udp), do: {:ok, profile()}
 
-  def profile(mode) when mode in [:udp_observe, :dtls] do
-    id = if mode == :dtls, do: :coaps, else: :coap_observe
+  def profile(mode) when mode in [:udp_observe, :dtls, :oscore] do
+    id = %{udp_observe: :coap_observe, dtls: :coaps, oscore: :coap_oscore}[mode]
 
     {:ok,
      runtime_profile(id, [
@@ -132,7 +132,11 @@ defmodule Wotex.CoAP do
 
   @doc "Performs a synchronous exchange from a legacy-shaped method/path/payload map."
   @spec send(session(), map()) :: {:ok, Message.t()} | {:error, Error.t()}
-  def send(session, input) do
+  def send(session, input), do: send(session, input, [])
+
+  @doc false
+  @spec send(session(), map(), keyword()) :: {:ok, Message.t()} | {:error, Error.t()}
+  def send(session, input, options) do
     with :ok <- session(session),
          {:ok, message} <- message(input) do
       case session_adapter(session.pid) do
@@ -140,11 +144,12 @@ defmodule Wotex.CoAP do
           NativeConnection.request(
             session.pid,
             native_request(input, message),
-            session.timeout
+            session.timeout,
+            native_request_options(options)
           )
 
         :datagram ->
-          Connection.transfer(session.pid, message, session.timeout)
+          Connection.transfer(session.pid, message, session.timeout, options)
       end
     end
   end
@@ -246,22 +251,40 @@ defmodule Wotex.CoAP do
   def subscribe(session, path) when is_binary(path),
     do: subscribe(session, %{path: path})
 
-  def subscribe(session, %{path: path} = input) when map_size(input) <= 4 do
+  def subscribe(session, %{path: path} = input) when map_size(input) <= 7 do
     with :ok <- session(session),
-         true <- Map.keys(input) -- [:path, :receiver, :renew, :max_queue_length] == [] do
+         true <-
+           Map.keys(input) --
+             [
+               :path,
+               :receiver,
+               :renew,
+               :max_queue_length,
+               :confirmable,
+               :accept,
+               :observation_kind
+             ] == [] do
       receiver = Map.get(input, :receiver, self())
 
-      options = [
+      common = [
         renew: Map.get(input, :renew, true),
         max_queue_length: Map.get(input, :max_queue_length, 1000)
       ]
 
       case session_adapter(session.pid) do
         :native ->
+          options =
+            common ++
+              [
+                confirmable: Map.get(input, :confirmable, true),
+                accept: Map.get(input, :accept),
+                observation_kind: Map.get(input, :observation_kind, :property)
+              ]
+
           NativeConnection.observe(session.pid, path, receiver, options, session.timeout)
 
         :datagram ->
-          Connection.observe(session.pid, path, receiver, options, session.timeout)
+          Connection.observe(session.pid, path, receiver, common, session.timeout)
       end
     else
       {:error, _} = error -> error
@@ -437,6 +460,16 @@ defmodule Wotex.CoAP do
     |> put_format(:content_format, Map.get(input, :content_format))
     |> put_payload(input)
   end
+
+  defp native_request_options([]), do: []
+
+  defp native_request_options(options) when is_list(options) do
+    if Keyword.keyword?(options) and Keyword.keys(options) -- [:max_body_size] == [],
+      do: options,
+      else: :invalid
+  end
+
+  defp native_request_options(_), do: :invalid
 
   defp put_format(request, _, nil), do: request
 

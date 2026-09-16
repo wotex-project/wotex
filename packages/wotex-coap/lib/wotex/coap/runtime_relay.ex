@@ -18,7 +18,7 @@ defmodule Wotex.CoAP.RuntimeRelay do
   """
 
   use GenServer
-  alias Wotex.CoAP.{Connection, Error, Lifetime, RuntimeFrame, RuntimeHandle, RuntimeNative}
+  alias Wotex.CoAP.{Error, Lifetime, RuntimeFrame, RuntimeHandle, RuntimeNative}
 
   @doc false
   @spec open(map()) :: {:ok, RuntimeHandle.t()} | {:error, Error.t()}
@@ -81,7 +81,7 @@ defmodule Wotex.CoAP.RuntimeRelay do
       case :erlang.process_info(handle.pid, {:dictionary, :wotex_coap_runtime_native}) do
         {{:dictionary, :wotex_coap_runtime_native}, {generation, pid}}
         when generation == handle.generation ->
-          Connection.abort(pid)
+          RuntimeNative.abort(%{pid: pid, timeout: 1})
 
         _ ->
           :ok

@@ -153,6 +153,17 @@ cancellation are validated without public delivery. The injected executable is
 a protocol fixture; these tests do not accept the production libcoap worker or
 an actual protected exchange.
 
+`runtime_oscore_test.exs` executes the explicit `:coap_oscore` BindingProfile
+through real ConsumedThing unary and Property-observation calls. Unary dispatch
+uses an immediate typed credential, while Observe uses configured custody and a
+nil immediate credential. The relay validates the native route, buffers the
+complete initial report, decodes its five-field metadata, and cancels the exact
+subscription generation. Security-mode ambiguity, cross-scheme credentials and
+a missing backend fail before helper creation. The manifest-bound executable is
+a deterministic protocol fixture; this evidence does not accept the production
+libcoap worker, durable store behavior, protected traffic or independent OSCORE
+interoperability.
+
 `native_admission_test.exs` executes four exact tests for the WCO-N02 pre-mailbox
 capacity primitive. Ninety-six concurrent callers produce exactly 64 ordinary
 leases and 32 busy results. Separate singular close control prevents later

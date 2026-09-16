@@ -11,12 +11,14 @@ defmodule Wotex.CoAP.Transport do
 
   ## Runtime boundary
 
-  UDP routes reject credentials. DTLS routes require one validated
+  UDP routes reject credentials. DTLS and OSCORE routes require one validated
   `Wotex.CoAP.Security` value: unary calls accept either an immediate credential
   or the `:security` transport option, while subscriptions require the configured
-  option and a nil immediate credential. Supplying both sources fails before
-  acquisition. Scoped sessions close before the callback returns. Persistent
-  native security custody is explicit configured state; handles contain no secret.
+  option and a nil immediate credential. OSCORE additionally requires the
+  verified `:native_backend` selection. Supplying both credential sources fails
+  before acquisition. Scoped sessions close before the callback returns.
+  Persistent native security custody is explicit configured state; handles
+  contain no secret.
   Runtime Form selection does not authorize network access, and a
   successful CoAP response does not establish canonical Property truth or a
   physical Action effect. The consumer owns routing, authorization,
@@ -25,7 +27,8 @@ defmodule Wotex.CoAP.Transport do
   """
 
   @behaviour Wotex.Runtime.Transport
-  alias Wotex.CoAP.{Connection, Error, Mapping, RuntimeFrame, RuntimeRelay, RuntimeSecurity}
+  alias Wotex.CoAP
+  alias Wotex.CoAP.{Codec, Error, Mapping, RuntimeFrame, RuntimeRelay, RuntimeSecurity}
   alias Wotex.Runtime.{BindingProfile, Context, ExecutionContext, Request, Result}
   @unary_operations [:readproperty, :writeproperty, :invokeaction]
 
@@ -49,18 +52,19 @@ defmodule Wotex.CoAP.Transport do
          connection_options =
            [host: mapping.host, port: mapping.port, timeout: timeout] ++
              security ++
-             Keyword.take(config, [:ack_timeout]),
-         {:ok, pid} <- Connection.start_link(connection_options) do
-      scoped_request(pid, request, mapping, deadline, config)
+             Keyword.take(config, [:ack_timeout, :native_backend]),
+         :ok <- native_transfer_config(security, config),
+         {:ok, session} <- CoAP.connect(connection_options) do
+      scoped_request(session, request, mapping, deadline, config)
     end
   end
 
   def request(_, _, _), do: {:error, Error.new(:invalid_transport_context)}
 
-  defp scoped_request(pid, request, mapping, deadline, config) do
-    result = execute_request(pid, request, mapping, deadline, config)
+  defp scoped_request(session, request, mapping, deadline, config) do
+    result = execute_request(session, request, mapping, deadline, config)
 
-    case Connection.close(pid) do
+    case CoAP.disconnect(session) do
       :ok ->
         with {:ok, _} <- result,
              :ok <- completion_deadline(deadline, mapping.message),
@@ -71,17 +75,16 @@ defmodule Wotex.CoAP.Transport do
     end
   catch
     kind, reason ->
-      Connection.close(pid)
+      CoAP.disconnect(session)
       :erlang.raise(kind, reason, __STACKTRACE__)
   end
 
-  defp execute_request(pid, request, mapping, deadline, config) do
+  defp execute_request(session, request, mapping, deadline, config) do
     with remaining when remaining > 0 <- deadline - System.monotonic_time(:millisecond),
          {:ok, reply} <-
-           Connection.transfer(
-             pid,
-             mapping.message,
-             remaining,
+           CoAP.send(
+             %{session | timeout: remaining},
+             request_input(mapping),
              Keyword.take(config, [:block_size, :max_body_size, :max_blocks])
            ) do
       case Mapping.decode(mapping, reply) do
@@ -120,15 +123,19 @@ defmodule Wotex.CoAP.Transport do
       RuntimeRelay.open(%{
         owner: owner,
         path: mapping.path,
+        subscription_options: %{
+          observation_kind: if(request.operation == :subscribeevent, do: :event, else: :property),
+          accept: mapping.format,
+          confirmable: mapping.message.type == :con
+        },
         connection_options:
           [
             host: mapping.host,
-            port: mapping.port,
-            observation_kind: if(request.operation == :subscribeevent, do: :event, else: :property),
-            observation_options: [accept: mapping.format, confirmable: mapping.message.type == :con]
+            port: mapping.port
           ] ++
             security ++
-            Keyword.take(config, [:ack_timeout]),
+            Keyword.take(config, [:ack_timeout, :native_backend]) ++
+            datagram_observation_options(security, request, mapping),
         renew: Keyword.get(config, :renew, true),
         max_queue_length: Keyword.get(config, :max_queue_length, 1000),
         deadline: deadline
@@ -210,8 +217,9 @@ defmodule Wotex.CoAP.Transport do
   defp valid_profile?(profile, operation) do
     {:ok, observed} = Wotex.CoAP.profile(:udp_observe)
     {:ok, secured} = Wotex.CoAP.profile(:dtls)
+    {:ok, oscore} = Wotex.CoAP.profile(:oscore)
 
-    profile in [Wotex.CoAP.profile(), observed, secured] and
+    profile in [Wotex.CoAP.profile(), observed, secured, oscore] and
       BindingProfile.supports_operation?(profile, operation)
   end
 
@@ -239,8 +247,8 @@ defmodule Wotex.CoAP.Transport do
   defp stream_config(config) do
     with :ok <- validate_config(config),
          true <-
-           Keyword.keys(config) -- [:timeout, :ack_timeout, :renew, :max_queue_length, :security] ==
-             [],
+           Keyword.keys(config) --
+             [:timeout, :ack_timeout, :renew, :max_queue_length, :security, :native_backend] == [],
          do: :ok,
          else: (_ -> {:error, Error.new(:invalid_options)})
   end
@@ -279,7 +287,8 @@ defmodule Wotex.CoAP.Transport do
             :max_blocks,
             :renew,
             :max_queue_length,
-            :security
+            :security,
+            :native_backend
           ] != [] ->
           {:error, Error.new(:invalid_options)}
 
@@ -306,4 +315,53 @@ defmodule Wotex.CoAP.Transport do
       {:error, Error.new(:invalid_options)}
     end
   end
+
+  defp native_transfer_config(security, config) do
+    case Keyword.get(security, :security) do
+      %Wotex.CoAP.Security{mode: :oscore} ->
+        invalid = Keyword.has_key?(config, :block_size) or Keyword.has_key?(config, :max_blocks)
+        maximum = Keyword.get(config, :max_body_size, 1_048_576)
+
+        if invalid or maximum < 32_768,
+          do: {:error, Error.new(:invalid_options)},
+          else: :ok
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp datagram_observation_options(security, request, mapping) do
+    case Keyword.get(security, :security) do
+      %Wotex.CoAP.Security{mode: :oscore} ->
+        []
+
+      _ ->
+        [
+          observation_kind: if(request.operation == :subscribeevent, do: :event, else: :property),
+          observation_options: [accept: mapping.format, confirmable: mapping.message.type == :con]
+        ]
+    end
+  end
+
+  defp request_input(mapping) do
+    message = mapping.message
+
+    input = %{
+      method: %{1 => :get, 2 => :post, 3 => :put, 4 => :delete}[message.code],
+      path: mapping.path,
+      confirmable: message.type == :con
+    }
+
+    input
+    |> put_format(:accept, Codec.option(message, 17))
+    |> put_format(:content_format, Codec.option(message, 12))
+    |> put_request_payload(message)
+  end
+
+  defp put_format(input, _, []), do: input
+  defp put_format(input, key, [value]), do: Map.put(input, key, :binary.decode_unsigned(value))
+
+  defp put_request_payload(input, %{code: code, payload: <<>>}) when code in [1, 4], do: input
+  defp put_request_payload(input, message), do: Map.put(input, :payload, message.payload)
 end
