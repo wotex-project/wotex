@@ -574,5 +574,10 @@ not accepted by the cohorts above. Hardware and certification are separate.
 
 [WCO.13](../specs/WCO.13-native-build-and-software-evidence.md) defines explicit
 Mix builds/runs, native manifests, bounded Port framing and durable context
-rules. Implementation status remains partial until the required exact assertions
-and those task runs pass. No Python-based result transfers to an unbuilt tool.
+rules. The [native build receipt](native-build-v1.json) records the implemented
+`mix wotex.native.build` path on macOS arm64: bounded pinned download, ordered
+patch verification, static libcoap compilation, exact version/OSCORE and worker
+probes, runtime manifest verification and read-only reuse all pass. The Linux
+task invocation, `wotex.software.build`, `wotex.software.run` and the remaining
+software/stress matrix are not yet accepted. No Python-based result transfers to
+an unbuilt tool.

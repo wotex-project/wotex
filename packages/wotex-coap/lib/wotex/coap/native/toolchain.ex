@@ -71,7 +71,7 @@ defmodule Wotex.CoAP.Native.Toolchain do
 
   @doc "Returns the bounded version probes recorded by the native manifest."
   @spec version_commands(t()) :: [{atom(), String.t(), [String.t()]}]
-  def version_commands(%{paths: paths, target: target}) do
+  def version_commands(%{paths: paths}) do
     [
       {:cc, paths.cc, ["--version"]},
       {:cmake, paths.cmake, ["--version"]},
@@ -79,7 +79,7 @@ defmodule Wotex.CoAP.Native.Toolchain do
       {:curl, paths.curl, ["--disable", "--version"]},
       {:patch, paths.patch, ["--version"]},
       {:pkg_config, paths.pkg_config, ["--version"]},
-      {:system, paths.system, if(elem(target, 0) == :darwin, do: [], else: ["--version"])}
+      {:system, paths.system, ["--version"]}
     ]
   end
 

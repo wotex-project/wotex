@@ -5,6 +5,9 @@ defmodule Wotex.CoAP.Native.ArchiveTest do
 
   alias Wotex.CoAP.Native.Archive
 
+  @revision "7cf7465b784baded4de183290c547d582becfd28"
+  @source_sha256 "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd"
+
   setup do
     root =
       Path.join(
@@ -170,6 +173,61 @@ defmodule Wotex.CoAP.Native.ArchiveTest do
                [{~c"pax_global_header", :unknown, 52, 0, 0, 0, 0}],
                "libcoap"
              )
+  end
+
+  test "WCO-N01 the digest-bound upstream links remain inside the reviewed root", %{root: root} do
+    archive_root = "libcoap-#{@revision}"
+
+    regular = fn path ->
+      {String.to_charlist("#{archive_root}/#{path}"), :regular, 1, 0, 0o644, 0, 0}
+    end
+
+    link = fn path ->
+      {String.to_charlist("#{archive_root}/#{path}"), :symlink, 0, 0, 0o777, 0, 0}
+    end
+
+    entries = [
+      regular.("README.md"),
+      regular.("coap_config.h.contiki"),
+      link.("README"),
+      link.("examples/contiki/coap_config.h")
+    ]
+
+    assert :ok = Archive.validate_entries(entries, archive_root, @source_sha256)
+    assert {:error, :invalid_archive_entry} = Archive.validate_entries(entries, archive_root)
+    assert {:error, :invalid_archive_entry} = Archive.validate_entries(nil, nil, nil)
+
+    destination = Path.join(root, "valid-links")
+    extracted = Path.join(destination, archive_root)
+    File.mkdir_p!(Path.join(extracted, "examples/contiki"))
+    File.write!(Path.join(extracted, "README.md"), "readme")
+    File.write!(Path.join(extracted, "coap_config.h.contiki"), "config")
+    File.ln_s!("README.md", Path.join(extracted, "README"))
+
+    File.ln_s!(
+      "../../coap_config.h.contiki",
+      Path.join(extracted, "examples/contiki/coap_config.h")
+    )
+
+    assert :ok = Archive.verify_links(destination, archive_root, @source_sha256)
+    assert :ok = Archive.verify_links(destination, archive_root, String.duplicate("0", 64))
+
+    invalid = Path.join(root, "invalid-links")
+    invalid_root = Path.join(invalid, archive_root)
+    File.mkdir_p!(Path.join(invalid_root, "examples/contiki"))
+    File.write!(Path.join(invalid_root, "README.md"), "readme")
+    File.write!(Path.join(invalid_root, "coap_config.h.contiki"), "config")
+    File.ln_s!("missing", Path.join(invalid_root, "README"))
+
+    File.ln_s!(
+      "../../coap_config.h.contiki",
+      Path.join(invalid_root, "examples/contiki/coap_config.h")
+    )
+
+    assert {:error, :invalid_archive_entry} =
+             Archive.verify_links(invalid, archive_root, @source_sha256)
+
+    refute File.exists?(invalid)
   end
 
   defp create_archive(path) do

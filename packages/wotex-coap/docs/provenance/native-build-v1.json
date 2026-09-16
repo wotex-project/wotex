@@ -1,0 +1,127 @@
+{
+  "schema": "wotex.coap.native-build-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Explicit bounded macOS native build, manifest publication, runtime binding and read-only reuse",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "lib/mix/tasks/wotex.coap.native.build.ex": "6400d6c46079d5124245a4bd953bfb7da4a009371e7784b68c566ed25f0e66e2",
+      "lib/wotex/coap/native/archive.ex": "77cdf08ad3f7d3018060bafbd195207b209c60e5338d87ca72d7a9bf0350e146",
+      "lib/wotex/coap/native/build.ex": "3a6bd07200c268e90b5d537fcbfecada21446d00484af0244a798b1d2f745169",
+      "lib/wotex/coap/native/build_command.ex": "5f60ab76388eae5cf2e410c5f7ba5d5bab6671bb7b31489c704c672b44ef8b9f",
+      "lib/wotex/coap/native/build_operations.ex": "355a9d4e12a4ee8d3c7890693663d56272e9317104cd4158e8b1af14ebd26c8f",
+      "lib/wotex/coap/native/toolchain.ex": "1a8f7974eb3752f40cf8003e7d8913ab0726c09cd8c712a0394575045fbac28b",
+      "lib/wotex/coap/native/workspace.ex": "498dea1718f25291b4cd4095927d54dd9aecbbe5824a191d5d242a5304a0ebe6",
+      "native/oscore/build_command.c": "84f730112546ad0a9a28b4f36361225a4b96725de4ad841620f626efa172b18d",
+      "native/oscore/build_probe.c": "f5546ddaa5a6b9ed769e3d4949b91f50eb882417295cb43bb2ad87119f046b53",
+      "native/oscore/build_worker_probe.c": "ba851c1388658ba9d535f0709a8e7450f3f559f5674b066cc533567852100859",
+      "native/oscore/source.json": "cd2eece99adcfdc881e21029ecd84f5063dec5e37f28d70e344c7a9bf2dae786",
+      "native/oscore/vendor/yyjson/source.json": "34d79572c21e231f9257a59add2478d8e6473c2b43e676d946d6365ca7275457",
+      "test/wotex/coap/native_build_test.exs": "e8a35f16d60405ca741af9787da6d2ced323b9865f1470cc6d7c084b81013993",
+      "test/wotex/coap/native_archive_test.exs": "7e8183b9fdedc2999e697c2facd3d4bb9ab005454322b97e74f89b62d94fc1ea",
+      "test/wotex/coap/native_toolchain_test.exs": "be3e06fdcc9a2f58cd19cceef81a82b092fd9ff8638a7b63a0d17fc264f131b6"
+    }
+  },
+  "upstream": {
+    "backend": "libcoap",
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "url": "https://codeload.github.com/obgm/libcoap/tar.gz/7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patch_sha256": [
+      "58ea9aa566e6306b811e3845c01931e7887d66e00923e285d7be779d58251350",
+      "29d0e421a446b0ec347c71b8e3ac7421ff541254df6eced4f91c2bd6ff92f8a2",
+      "bc718f8ea44495f6dabee9c508b1820e6d802e571c3fe8b2e00746d3a9a6fec7",
+      "39fdf0f4e53b1c941983f317550f8ba72dcf5ba300c95904467127423fc08767",
+      "483292e9eab1ee9c970698734901b89cb12ac846a74a2c225101c032e79635ad",
+      "d3e20f9cbb199639634cd0ddc2a90f4d6efeebd14fa9fd9010471065f3d5e2ec",
+      "6e28ffa3b1892c1bb3b6ede3f77b899d29909993f4dcff82483f61ea748afda9"
+    ],
+    "yyjson_version": "0.12.0",
+    "yyjson_commit": "8b4a38dc994a110abaec8a400615567bd996105f"
+  },
+  "command": "WOTEX_PATH_DEPS=1 mix wotex.native.build --workspace \"$ABSOLUTE_EMPTY_WORKSPACE\"",
+  "platform": {
+    "os_version": [
+      25,
+      6,
+      0
+    ],
+    "target": [
+      "darwin",
+      "aarch64"
+    ]
+  },
+  "toolchain": {
+    "versions": {
+      "cc": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin",
+      "cmake": "cmake version 4.4.3\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake).",
+      "curl": "curl 8.7.1 (x86_64-apple-darwin25.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.68.1\nRelease-Date: 2024-03-27\nProtocols: dict file ftp ftps gopher gophers http https imap imaps ipfs ipns ldap ldaps mqtt pop3 pop3s rtsp smb smbs smtp smtps telnet tftp\nFeatures: alt-svc AsynchDNS GSS-API HSTS HTTP2 HTTPS-proxy IPv6 Kerberos Largefile libz MultiSSL NTLM SPNEGO SSL threadsafe UnixSockets",
+      "openssl": "OpenSSL 3.6.4 25 Aug 2026 (Library: OpenSSL 3.6.4 25 Aug 2026)\nbuilt on: Tue Aug 25 11:48:34 2026 UTC\nplatform: darwin64-arm64-cc\noptions:  bn(64,64)\ncompiler: clang -fPIC -arch arm64 -O3 -Wall -DL_ENDIAN -DOPENSSL_PIC -D_REENTRANT -DOPENSSL_BUILDING_OPENSSL -DNDEBUG\nOPENSSLDIR: \"/opt/homebrew/etc/openssl@3\"\nENGINESDIR: \"/opt/homebrew/Cellar/openssl@3/3.6.4/lib/engines-3\"\nMODULESDIR: \"/opt/homebrew/Cellar/openssl@3/3.6.4/lib/ossl-modules\"\nSeeding source: os-specific\nCPUINFO: OPENSSL_armcap=0x87d",
+      "patch": "patch 2.0-12u11-Apple",
+      "pkg_config": "3.0.7",
+      "system": "llvm-otool(1): Apple Inc. version cctools-1040\notool(1): Apple Inc. version cctools-1040\ndisassembler: LLVM version 21.0.0"
+    },
+    "sha256": {
+      "cc": "b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "cmake": "01bb5214684f5390e96e0d6aef7aafd7415b77ecbcfd59f6b55b018d8de0d9a2",
+      "curl": "b636262803922ee1dd0fbf614818473ffa53c811e44fd3278c2270d3af4759d3",
+      "openssl": "67a83dd6d6d747d50c5d296dffb23e32bae9a2c588c93ae2d77e4c607b455c72",
+      "patch": "2640347ef1b20a680c22e0b55c3d1be5a1842b25d18112f626f377781d8e3421",
+      "pkg_config": "39b6b8b701470ebf31a24972bc1fafc7da54a5c32215d972fdadaf21c7cfa91b",
+      "system": "b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9"
+    }
+  },
+  "result": {
+    "status": "passed",
+    "exit_code": 0,
+    "manifest_schema": "wotex.coap.native@1",
+    "manifest_sha256": "a6010ffb9bc2d7d2af898155c64f161d66f99a4c3936c6a257acbca296fc93a7",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "static_library_sha256": "b6839df4f91ba610d0f8e3df7d245621ea70561c5553ebf7c4a5febc9c94ddfa",
+    "executable_sha256": "3809ea281b5c3d9380a411c93ec0cb6c7eafcaf603e2d1735466d91888f91f34",
+    "guardian_sha256": "2e999f0813d1949c246ee213f7a9255563c15575ba11507d3f2ebcd824298cbe",
+    "artifact_count": 22,
+    "bounded_step_count": 17,
+    "all_step_exit_codes": [
+      0
+    ],
+    "runtime_manifest_verification": "passed",
+    "read_only_reuse": "passed",
+    "reuse_manifest_sha256": "a6010ffb9bc2d7d2af898155c64f161d66f99a4c3936c6a257acbca296fc93a7"
+  },
+  "probes": {
+    "feature": {
+      "backend": "libcoap",
+      "oscore": true,
+      "version": "libcoap 4.3.5"
+    },
+    "worker": {
+      "backend": "libcoap",
+      "event": "ready",
+      "revision": "7cf7465b784baded4de183290c547d582becfd28",
+      "version": 1
+    },
+    "dynamic_libraries": [
+      "libssl.3.dylib",
+      "libcrypto.3.dylib",
+      "libSystem.B.dylib"
+    ]
+  },
+  "assertions": [
+    "The task accepts exactly one absolute workspace and rejects symlink ancestry and unrelated content before mutation",
+    "The download is HTTPS-only, capped at 4 MiB and 30 seconds, and matches the pinned archive SHA-256",
+    "All seven ordered patches and four resulting source hashes match native/oscore/source.json",
+    "Every subprocess uses separate argv entries under the checked-in ten-minute process-group guardian",
+    "The static libcoap feature probe reports exact package version 4.3.5 with OSCORE enabled",
+    "The built worker emits the exact backend/revision ready frame and exits cleanly when its owned input pipe closes",
+    "The manifest binds source, tools, recipe, static library, executable, dependencies, probes and exact workspace artifacts",
+    "A second task invocation verifies artifacts and tool versions without changing the manifest"
+  ],
+  "unaccepted": [
+    "A real Linux invocation of the new Mix native-build task",
+    "mix wotex.software.build peer and fault executable orchestration",
+    "mix wotex.software.run protocol and stress orchestration",
+    "Independent-stack OSCORE interoperability and the remaining WCO-N03 through WCO-N05 matrix"
+  ]
+}

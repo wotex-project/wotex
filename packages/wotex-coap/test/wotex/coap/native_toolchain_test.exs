@@ -22,7 +22,7 @@ defmodule Wotex.CoAP.Native.ToolchainTest do
     assert {:system, ^executable, ["--version"]} = List.last(commands)
 
     assert {:ok, darwin} = Toolchain.identify(paths, root, {:darwin, :aarch64})
-    assert {:system, ^executable, []} = List.last(Toolchain.version_commands(darwin))
+    assert {:system, ^executable, ["--version"]} = List.last(Toolchain.version_commands(darwin))
   end
 
   test "WCO-N01 real selected host resolves a supported complete toolchain" do

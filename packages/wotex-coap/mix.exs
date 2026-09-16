@@ -100,6 +100,7 @@ defmodule WotexCoAP.MixProject do
       dialyzer: ["compile", &load_ssl_types/1, "dialyzer"],
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
       "test.cover": ["coveralls"],
+      "wotex.native.build": "wotex.coap.native.build",
       package: "cmd env -u WOTEX_PATH_DEPS MIX_ENV=dev mix hex.build"
     ]
   end
