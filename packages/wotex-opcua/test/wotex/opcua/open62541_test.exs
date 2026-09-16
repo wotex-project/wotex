@@ -3,7 +3,7 @@ defmodule Wotex.OPCUA.Open62541Test do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.OPCUA.{Error, Open62541}
+  alias Wotex.OPCUA.{Browse, Error, Open62541}
 
   @options [
     executable: "/missing/native",
@@ -209,6 +209,99 @@ defmodule Wotex.OPCUA.Open62541Test do
 
     assert :ok = Open62541.disconnect(handle)
     assert :ok = Open62541.disconnect(handle)
+  end
+
+  test "WOP-N03 a complete native Browse page retains typed references and strict options",
+       context do
+    options = fixture(context, "typed-browse")
+    assert {:ok, session} = Wotex.OPCUA.connect(Keyword.put(options, :client, Open62541))
+
+    assert {:ok, %Browse.Page{status: 0, continuation: nil, references: [reference]}} =
+             Browse.references(session, "ns=0;i=85", page_size: 16)
+
+    assert reference.reference_type_id ==
+             %Wotex.OPCUA.Address{namespace: 0, kind: :numeric, identifier: 35}
+
+    assert reference.node_id.node_id ==
+             %Wotex.OPCUA.Address{namespace: 1, kind: :string, identifier: "value"}
+
+    assert reference.browse_name == %{namespace: 1, name: "Value"}
+    assert reference.display_name == %{locale: nil, text: "Value"}
+    assert reference.node_class == 2
+
+    for opts <- [
+          [page_size: 0],
+          [page_size: 257],
+          [page_size: 1, page_size: 2],
+          [direction: :sideways],
+          [node_class_mask: 256],
+          [max_pages: 0],
+          [max_references: 0],
+          [timeout_ms: 0],
+          [unexpected: true]
+        ] do
+      assert {:error, %Error{code: :invalid_value}} =
+               Browse.references(session, "ns=0;i=85", opts)
+    end
+
+    assert {:error, %Error{code: :invalid_node_id}} =
+             Browse.references(session, "bad")
+
+    assert :ok = Wotex.OPCUA.disconnect(session)
+
+    assert {:ok, oneshot} =
+             Wotex.OPCUA.connect(
+               @options
+               |> Keyword.put(:client, Open62541)
+               |> Keyword.put(:lifecycle, :oneshot)
+             )
+
+    assert {:error, %Error{code: :persistent_session_required}} =
+             Browse.references(oneshot, "ns=0;i=85")
+
+    assert :ok = Wotex.OPCUA.disconnect(oneshot)
+
+    remote_options = fixture(context, "typed-remote-browse", "session_remote_browse")
+
+    assert {:ok, remote} =
+             Wotex.OPCUA.connect(Keyword.put(remote_options, :client, Open62541))
+
+    assert {:ok, %Browse.Page{references: [remote_reference]}} =
+             Browse.references(remote, "ns=0;i=85")
+
+    assert remote_reference.node_id.server_index == 1
+    assert remote_reference.node_id.node_id.namespace == 1
+    assert :ok = Wotex.OPCUA.disconnect(remote)
+
+    unknown_options = fixture(context, "typed-unknown-browse", "session_unknown_browse")
+
+    assert {:ok, unknown} =
+             Wotex.OPCUA.connect(Keyword.put(unknown_options, :client, Open62541))
+
+    assert {:error, %Error{code: :unsupported_remote_reference}} =
+             Browse.references(unknown, "ns=0;i=85")
+
+    assert :ok = Wotex.OPCUA.disconnect(unknown)
+
+    duplicate_options = fixture(context, "typed-duplicate-browse", "session_two_browse")
+
+    assert {:ok, duplicate_session} =
+             Wotex.OPCUA.connect(Keyword.put(duplicate_options, :client, Open62541))
+
+    assert {:error, %Error{code: :response_limit}} =
+             Browse.references(duplicate_session, "ns=0;i=85", max_references: 1)
+
+    assert {:ok, %Browse.Page{references: [first, second]}} =
+             Browse.references(duplicate_session, "ns=0;i=85", max_references: 2)
+
+    assert first == second
+    assert :ok = Wotex.OPCUA.disconnect(duplicate_session)
+
+    assert {:error, %Error{code: :unsupported_protocol}} =
+             Browse.references(
+               %Wotex.OPCUA.Session{client: Wotex.OPCUA.Asyncua, handle: %{}, timeout: 1000},
+               "i=1"
+             )
   end
 
   test "WOP-X01 one-shot native client opens and closes within each read", context do

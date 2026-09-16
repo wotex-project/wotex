@@ -20,6 +20,25 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Persistent native typed single-page Browse, 2026-09-16
+
+`Browse.references/3` now validates its strict finite filters before I/O and
+returns a `Browse.Page` containing all seven typed ReferenceDescription fields
+in server order when the selected persistent native Session receives a complete
+page. A C response fixture checks local and remote ExpandedNodeIds, unknown
+local namespaces, duplicate reference preservation, excess references and
+invalid options; the independent Basic256Sha256 peer
+confirms typed references for both a Variable and Method, plus a
+`max_references` limit failure. Eleven optional secure-peer tests passed.
+The native executor still closes the Session on a continuation or oversized
+server page. BrowseNext, release, cumulative limits and typed handles remain
+unimplemented; N03/N04 are not accepted.
+The final local `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passed with
+293 tests, 12 optional tests excluded and 95.1% coverage; compiler, Credo,
+Dialyzer, documentation, audits, native custody, package and isolated archive
+checks passed. The first full run exposed a 94.9% coverage shortfall; the
+duplicate-reference and `max_references` boundary assertions closed it.
+
 ## Native Runtime ByteString array Write, 2026-09-16
 
 The Form mapper accepts an explicit typed ByteString array with no inferred

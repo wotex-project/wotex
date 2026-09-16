@@ -3,23 +3,24 @@ spec:
   id: WOP.11
   title: "Standalone OPC UA client and feature preservation"
   status: accepted
-  version: 1.1.4
+  version: 1.1.5
   owner: wotex-opcua
   updated: 2026-09-16
 ---
 
 # WOP.11 Standalone OPC UA client and feature preservation
 
-Specification version: **1.1.4**. Implementation status: **partial**.
+Specification version: **1.1.5**. Implementation status: **partial**.
 [WOP.10](WOP.10-software-contract.md) and [WOP.13](WOP.13-native-executable.md)
 define the native backend and typed service contract.
 The [implemented profile](WOP.02-implemented-profile.md) and
 [executed evidence](../provenance/executable-evidence.md) describe current
 capabilities. None of the planned pure-codec, persistent-session or pagination
 requirements below is accepted merely by specifying it. The first native
-service-level Browse slice and bounded child-NodeId projection now have
-independent-peer evidence, but typed page handles, BrowseNext and release still
-have no implementation or N03/N04 acceptance. The native one-shot client now
+service-level Browse slice, bounded child-NodeId projection and persistent
+single-page typed `Browse.references/3` result now have independent-peer
+evidence. Typed continuation handles, BrowseNext and release still have no
+implementation or N03/N04 acceptance. The native one-shot client now
 projects successful Read, Write and Call results into the older adapter's
 success shapes; error and full lifecycle compatibility remain open.
 

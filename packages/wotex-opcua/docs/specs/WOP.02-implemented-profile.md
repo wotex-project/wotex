@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.29
+  version: 1.0.30
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -133,7 +133,11 @@ these responses and replenishes consumed credit. One service-level forward
 HierarchicalReferences Browse page now returns complete typed references in
 server order through the internal native owner. The explicitly selected public
 client projects a complete page of at most 256 local child NodeIds in persistent
-or one-shot mode; it rejects remote ExpandedNodeIds. A server page larger than
+or one-shot mode; it rejects remote ExpandedNodeIds. The persistent-only
+`Browse.references/3` path now exposes that same complete single page as typed
+ReferenceDescriptions, preserving remote ExpandedNodeId identities without
+following them. It validates strict finite filters before service I/O and
+rejects unknown local namespace indices. A server page larger than
 requested or a continuation closes the Session instead of claiming a complete
 child list. Typed page handles, BrowseNext/release, subscriptions,
 complete output buffering, cancellation, full namespace translation and other

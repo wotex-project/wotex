@@ -124,7 +124,19 @@ static int session_services(int remote_browse) {
                 "{\"status\":0,\"input_argument_statuses\":[],"
                      "\"outputs\":[{\"type\":\"Double\",\"array\":false,\"value\":4.5}]}";
         else if(strstr(frame, "\"operation\":\"browse\""))
-            result = remote_browse == 1 ?
+            result = remote_browse == 13 ?
+                "{\"status\":0,\"continuation\":null,\"references\":[{"
+                "\"reference_type_id\":\"ns=0;i=35\",\"is_forward\":true,"
+                "\"node_id\":{\"node_id\":\"ns=1;s=value\",\"namespace_uri\":null,\"server_index\":0},"
+                "\"browse_name\":{\"namespace\":1,\"name\":\"Value\"},"
+                "\"display_name\":{\"locale\":null,\"text\":\"Value\"},\"node_class\":2,"
+                "\"type_definition\":{\"node_id\":\"ns=0;i=0\",\"namespace_uri\":null,\"server_index\":0}},{"
+                "\"reference_type_id\":\"ns=0;i=35\",\"is_forward\":true,"
+                "\"node_id\":{\"node_id\":\"ns=1;s=value\",\"namespace_uri\":null,\"server_index\":0},"
+                "\"browse_name\":{\"namespace\":1,\"name\":\"Value\"},"
+                "\"display_name\":{\"locale\":null,\"text\":\"Value\"},\"node_class\":2,"
+                "\"type_definition\":{\"node_id\":\"ns=0;i=0\",\"namespace_uri\":null,\"server_index\":0}}]}" :
+                remote_browse == 1 ?
                 "{\"status\":0,\"continuation\":null,\"references\":[{"
                 "\"reference_type_id\":\"ns=0;i=35\",\"is_forward\":true,"
                 "\"node_id\":{\"node_id\":\"ns=1;s=value\",\"namespace_uri\":null,\"server_index\":1},"
@@ -221,6 +233,7 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "session_matrix_call")) return session_services(10);
     if (!strcmp(mode, "session_runtime_bytes")) return session_services(11);
     if (!strcmp(mode, "session_runtime_byte_array")) return session_services(12);
+    if (!strcmp(mode, "session_two_browse")) return session_services(13);
     for (;;) {
         struct pollfd input = {STDIN_FILENO, POLLIN, 0};
         int polled = poll(&input, 1, 10);

@@ -21,14 +21,14 @@ specifications:
     executable_evidence: ["test/wotex/opcua/asyncua_test.exs", "test/wotex/opcua/binary_test.exs", "test/wotex/opcua/contract_test.exs", "test/wotex/opcua/dependency_security_test.exs", "test/wotex/opcua/mapping_test.exs", "test/wotex/opcua/port_test.exs", "test/wotex/opcua/value_test.exs"]
     compatibility_classification: "listed typed scalar, URI and secure one-shot adapter subset only; current baseline tests only, not acceptance of later S/N/I requirements or software completion"
   - id: "WOP.02"
-    version: "1.0.29"
+    version: "1.0.30"
     path: "docs/specs/WOP.02-implemented-profile.md"
     implementation_status: "implemented"
     standards: [{"name": "OPC UA / asyncua", "revision": "OPC 10000 Parts 4/6 1.05.07; asyncua 2.0.1", "claim": "listed typed scalar, URI and secure one-shot adapter subset only"}, {"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7", "claim": "explicitly selected partial native persistent/one-shot read, Write, Call and bounded child Browse client; full native profile unaccepted"}, {"name": "W3C WoT Thing Description 1.1", "revision": "Recommendation 2023-12-05", "claim": "Inherited core values/operation vocabulary; package profile is not W3C conformance"}]
     requires: ["WOP.01", "wotex:WTX.02", "wotex_runtime:WRT.01"]
-    implementation_modules: ["Wotex.OPCUA.Error", "Wotex.OPCUA.Mapping", "Wotex.OPCUA.Transport", "Wotex.OPCUA.Value", "Wotex.OPCUA.Open62541"]
+    implementation_modules: ["Wotex.OPCUA.Error", "Wotex.OPCUA.Mapping", "Wotex.OPCUA.Transport", "Wotex.OPCUA.Value", "Wotex.OPCUA.Open62541", "Wotex.OPCUA.Browse", "Wotex.OPCUA.Browse.Page"]
     executable_evidence: ["test/wotex/opcua/asyncua_test.exs", "test/wotex/opcua/binary_test.exs", "test/wotex/opcua/contract_test.exs", "test/wotex/opcua/dependency_security_test.exs", "test/wotex/opcua/mapping_test.exs", "test/wotex/opcua/port_test.exs", "test/wotex/opcua/value_test.exs", "test/wotex/opcua/open62541_test.exs", "test/interop/native_secure_test.exs"]
-    compatibility_classification: "The existing Python adapter implements its listed typed scalar, URI and secure one-shot subset and rejects typed array Writes before startup. The explicitly selected native client has bounded persistent/one-shot read, Write, Call and complete single-page child Browse evidence against one independent secure peer, including typed ByteString array Write/readback. One-shot Read/Write/Call success shapes now match the older adapter. Runtime ByteString Forms preserve raw scalar bytes and support explicit bounded flat-array Write/readback with ordered binary elements. Finite native pre-I/O mutation rejections retain no effect. Complete P02/S02, typed pagination, error/lifecycle compatibility and software completion remain unaccepted."
+    compatibility_classification: "The existing Python adapter implements its listed typed scalar, URI and secure one-shot subset and rejects typed array Writes before startup. The explicitly selected native client has bounded persistent/one-shot read, Write, Call and complete single-page child Browse evidence against one independent secure peer, including typed ByteString array Write/readback. A persistent-only typed single-page reference API preserves all seven fields and remote identities; continuation handles remain absent. One-shot Read/Write/Call success shapes now match the older adapter. Runtime ByteString Forms preserve raw scalar bytes and support explicit bounded flat-array Write/readback with ordered binary elements. Finite native pre-I/O mutation rejections retain no effect. Complete P02/S02, typed pagination, error/lifecycle compatibility and software completion remain unaccepted."
   - id: "WOP.10"
     version: "1.1.0"
     path: "docs/specs/WOP.10-software-contract.md"
@@ -39,14 +39,14 @@ specifications:
     executable_evidence: ["test/wotex/opcua/typed_values_test.exs", "test/wotex/opcua/standalone_contract_test.exs", "priv/native/value_check.c", "priv/native/value_fault_check.c", "priv/native/native_contract_check.c", "test/wotex/opcua/native/build_test.exs"]
     compatibility_classification: "WOP-P01 accepts S01 typed values and the exact WOP-F01..F13/WOP-X-F01..F16 pure/native projections. P02 slices activate one secure peer Session, acquire NamespaceArray and perform one-at-a-time typed Value Read/Write/Call and bounded one-page child Browse with concrete input namespace translation and no mutation retry; no complete S02 or additional fixture family is accepted. Other services, lifecycle, security matrix and subscriptions remain required."
   - id: "WOP.11"
-    version: "1.1.4"
+    version: "1.1.5"
     path: "docs/specs/WOP.11-standalone-client-and-preservation.md"
     implementation_status: "partial"
     standards: [{"name": "OPC UA / open62541", "revision": "OPC 10000 Parts 4/6 1.05.07; open62541 1.5.7; OpenSSL 3.5.8", "claim": "Pure typed value/identity/reference subset; no native SDK or service acceptance"}]
     requires: ["WOP.00", "WOP.10"]
-    implementation_modules: ["Wotex.OPCUA.Binary", "Wotex.OPCUA.Binary.Names", "Wotex.OPCUA.Binary.Reference", "Wotex.OPCUA.Binary.Variant", "Wotex.OPCUA.Binary.DataValue", "Wotex.OPCUA.Binary.Element"]
+    implementation_modules: ["Wotex.OPCUA.Binary", "Wotex.OPCUA.Binary.Names", "Wotex.OPCUA.Binary.Reference", "Wotex.OPCUA.Binary.Variant", "Wotex.OPCUA.Binary.DataValue", "Wotex.OPCUA.Binary.Element", "Wotex.OPCUA.Browse", "Wotex.OPCUA.Browse.Page"]
     executable_evidence: ["test/wotex/opcua/standalone_contract_test.exs", "test/wotex/opcua/binary/names_test.exs", "test/wotex/opcua/binary/reference_test.exs", "test/wotex/opcua/typed_values_test.exs"]
-    compatibility_classification: "WOP-P01 accepts F01 through F13 through pure typed value/identity/reference codecs with boundary and malformed-input tests. A partial native one-page child Browse slice and one-shot Read/Write/Call success projection have independent-peer evidence; typed pagination, release, full Session and lifecycle cases remain required."
+    compatibility_classification: "WOP-P01 accepts F01 through F13 through pure typed value/identity/reference codecs with boundary and malformed-input tests. Partial native one-page child Browse, persistent typed reference pages and one-shot Read/Write/Call success projection have independent-peer evidence; typed pagination, release, full Session and lifecycle cases remain required."
   - id: "WOP.12"
     version: "1.1.3"
     path: "docs/specs/WOP.12-wotex-integration.md"

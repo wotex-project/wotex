@@ -45,7 +45,8 @@ partial `Open62541` client. The latter opens persistent or one-shot secure
 Sessions and performs typed Value Read/Write, Method Call and bounded child
 Browse through C without runtime Python. WOP.02 and executable evidence bound
 its actual behavior. One-shot Read/Write/Call successes preserve the older
-adapter's result shapes; typed Browse pagination/release, complete compatibility
+adapter's result shapes. A persistent native Session can also return one
+complete page of seven-field typed references. BrowseNext/release, complete compatibility
 projection, subscriptions and lifecycle work
 remain.
 The Runtime Form mapper preserves raw ByteString bytes for the explicitly

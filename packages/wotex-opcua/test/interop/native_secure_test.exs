@@ -554,6 +554,25 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     assert peer["node_id"] in children
     assert peer["method_id"] in children
 
+    assert {:ok, %Wotex.OPCUA.Browse.Page{status: 0, continuation: nil, references: typed}} =
+             Wotex.OPCUA.Browse.references(session, peer["object_id"], page_size: 256)
+
+    assert Enum.any?(typed, fn reference ->
+             Wotex.OPCUA.Address.to_string(reference.node_id.node_id) == peer["node_id"]
+           end)
+
+    assert Enum.any?(typed, fn reference ->
+             Wotex.OPCUA.Address.to_string(reference.node_id.node_id) == peer["method_id"]
+           end)
+
+    assert {:error, %Wotex.OPCUA.Error{code: :response_limit}} =
+             Wotex.OPCUA.Browse.references(
+               session,
+               peer["object_id"],
+               page_size: 256,
+               max_references: 1
+             )
+
     bytes = %{
       type: :write,
       node_id: peer["byte_array_node_id"],
