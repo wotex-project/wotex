@@ -55,6 +55,33 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
            } = Jason.decode!(response)
 
     assert timeout > 0 and timeout <= 60_000
+    node_id = Jason.decode!(File.read!(config))["node_id"]
+
+    assert {:ok, read} =
+             Frame.request(
+               1,
+               "read-1",
+               "read",
+               %{"node_id" => node_id, "index_range" => nil},
+               5000,
+               ready.clock_ms + 10_000
+             )
+
+    assert Port.command(port, read)
+    {read_response, <<>>} = line(port, <<>>)
+
+    assert %{
+             "version" => 1,
+             "generation" => 1,
+             "id" => "read-1",
+             "ok" => true,
+             "result" => %{
+               "has_value" => true,
+               "status" => 0,
+               "value" => %{"type" => "Double", "array" => false, "value" => 21.5}
+             }
+           } = Jason.decode!(read_response)
+
     assert {:ok, close} = Frame.request(1, "close-1", "close", %{}, 5000, ready.clock_ms + 5000)
     assert Port.command(port, close)
     {close_response, <<>>} = line(port, <<>>)
@@ -90,7 +117,47 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
 
     assert is_integer(generation) and generation > 0
     assert timeout > 0 and timeout <= 60_000
+    node_id = Jason.decode!(File.read!(config))["node_id"]
+
+    assert {:ok,
+            %{
+              "has_value" => true,
+              "status" => 0,
+              "value" => %{"type" => "Double", "array" => false, "value" => 21.5}
+            }} = Host.request(host, "read", %{"node_id" => node_id, "index_range" => nil}, 5000)
+
     assert {:ok, nil} = Host.request(host, "close", %{}, 5000)
+  end
+
+  test "a Bad read retains the remote StatusCode and ends the native generation" do
+    config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
+    guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    parameters = Jason.decode!(File.read!(Path.join(Path.dirname(config), "native-open.json")))
+    digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+
+    assert {:ok, host, _} =
+             Host.start_link(
+               executable: executable,
+               executable_digest: digest.(executable),
+               guardian: guardian,
+               guardian_digest: digest.(guardian),
+               timeout: 5000
+             )
+
+    assert {:ok, _} = Host.request(host, "open", parameters, 5000)
+
+    assert {:error, %Wotex.OPCUA.Error{code: :remote_error, details: %{status: status}}} =
+             Host.request(
+               host,
+               "read",
+               %{"node_id" => "ns=2;s=missing", "index_range" => nil},
+               5000
+             )
+
+    assert Bitwise.band(status, 0x8000_0000) != 0
+    monitor = Process.monitor(host)
+    assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
   end
 
   defp line(port, buffered) do

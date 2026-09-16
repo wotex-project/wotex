@@ -11,8 +11,8 @@ defmodule Wotex.OPCUA.Native.Build do
   A failed version command retains its finite step, command code and exit status;
   it is not reported as a content mismatch without that evidence.
 
-  The executable currently supplies the native dependency/bootstrap boundary;
-  build success does not admit a secure OPC UA Session or protocol service.
+  Build success proves source and artifact identity only; secure Session and
+  service behavior require separate executable and independent-peer evidence.
   Download curl must be at least 8.4.0 so its 100 MiB limit also bounds responses
   without a declared Content-Length. Python is used by the upstream SDK generator
   during this explicit build, independently of the production process contract.

@@ -20,6 +20,40 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Asynchronous native Value Read slice, 2026-09-16
+
+The production C process now admits one concrete Value Read after secure
+activation, with a null index range, one asynchronous SDK request and one
+correlated IPC result. It resolves the public server namespace index through
+its URI to the SDK-local index and checks the reverse mapping before issuing
+the request. The existing native value codec emits the full bounded DataValue;
+the BEAM frame decoder validates its typed shape before credit replenishment.
+Bad attribute status returns finite `remote_error` with the numeric StatusCode.
+NodeId-bearing result Variants remain explicitly unsupported until the inverse
+namespace mapping exists. This does not accept P02/S02/X04 as a whole or bind
+new X-F cases: cancellation, concurrent operations, output buffering, the other
+services and the public native client remain open. The public default adapter
+still requires Python.
+
+The focused Frame/Host suite passes 27 default tests. Four optional tests pass
+against one independent Basic256Sha256 anonymous asyncua 2.0.1 peer, including
+the actual executable and BEAM owner reading a Double and a Bad read retaining
+its StatusCode. The RelWithDebInfo native CTest suite passes 181/181 cases.
+The complete `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64
+with Elixir 1.20.2 / OTP 29.0.4: 266 passed (10 doctests, 4 properties,
+252 tests), five optional interoperability tests excluded and 95.2% coverage.
+Its fresh native build, CTest, documentation, dependency audits and
+package/archive checks pass.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/main.c` | `41b1713c8f63a14f95d2d9398c4a5f7e260e81eec2fb6335d41bce80c44eb279` |
+| `priv/native/session_open.c` | `539e02450f036c6e60317c6390deabeafd1e9b45a7ba90cdac79e773d87524fc` |
+| `priv/native/session_open.h` | `21040e48879919fa0cc66a72f7710908b31fa8bcb4fbef7ed2e0f7c9896912e6` |
+| `lib/wotex/opcua/native/frame.ex` | `a35e3f80b55f9944f70fcf3d7e29c7554892c42735ceab507835bfe2aa80073d` |
+| `test/interop/native_secure_test.exs` | `4446e122a981a070d83dbdca72fe795ad86fb25b54c4c6c5dfd37b2deb8cab76` |
+| native CTest log | `5288b8a82cac815e4283b3ca61d6c554f50564bee13f73d03486f6b8bdee4fef` |
+
 ## Production secure open/close slice, 2026-09-16
 
 The production `wotex_opcua_native` now runs the strict open-parameter and

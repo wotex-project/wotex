@@ -7,7 +7,7 @@ defmodule Wotex.OPCUA.Native.Frame do
   the translated native deadline never extends the original owner budget.
   """
 
-  alias Wotex.OPCUA.Error
+  alias Wotex.OPCUA.{Binary, Error}
   alias Wotex.OPCUA.Native.Ready
 
   @maximum_generation 18_446_744_073_709_551_615
@@ -173,6 +173,16 @@ defmodule Wotex.OPCUA.Native.Frame do
 
   defp response_result("close", nil, _, _), do: {:ok, nil}
 
+  defp response_result("read", result, _, _) when is_map(result) do
+    with {:ok, value} <- native_data_value(result),
+         {:ok, _} <- Binary.encode_data_value(value),
+         true <- Bitwise.band(value.status, 0x80000000) == 0 do
+      {:ok, result}
+    else
+      _ -> {:error, Error.new(:invalid_native_frame, :response)}
+    end
+  end
+
   defp response_result("open", result, requested, expected_generation)
        when is_map(result) and is_integer(requested) and requested in 1000..3_600_000 do
     with %{
@@ -193,6 +203,89 @@ defmodule Wotex.OPCUA.Native.Frame do
   end
 
   defp response_result(_, _, _, _), do: {:error, Error.new(:invalid_native_frame, :response)}
+
+  @data_fields %{
+    "has_value" => :has_value,
+    "value" => :value,
+    "status" => :status,
+    "source_timestamp" => :source_timestamp,
+    "server_timestamp" => :server_timestamp,
+    "source_picoseconds" => :source_picoseconds,
+    "server_picoseconds" => :server_picoseconds
+  }
+
+  defp native_data_value(%{"has_value" => present, "status" => status} = result)
+       when is_boolean(present) and is_integer(status) and status in 0..4_294_967_295 and
+              map_size(result) <= 7 do
+    with true <- Enum.all?(Map.keys(result), &Map.has_key?(@data_fields, &1)),
+         true <- Map.has_key?(result, "value") == present,
+         {:ok, variant} <- native_variant(result["value"], present) do
+      value = Map.new(result, fn {key, field} -> {Map.fetch!(@data_fields, key), field} end)
+      {:ok, if(present, do: %{value | value: variant}, else: value)}
+    else
+      _ -> :error
+    end
+  end
+
+  defp native_data_value(_), do: :error
+
+  defp native_variant(_, false), do: {:ok, nil}
+
+  defp native_variant(%{"type" => type, "array" => array, "value" => payload} = value, true)
+       when is_binary(type) and is_boolean(array) and map_size(value) in [3, 4] do
+    with true <- Enum.all?(Map.keys(value), &(&1 in ~w(type array value dimensions))),
+         {:ok, payload} <- native_payload(type, array, payload) do
+      variant = %{type: type, array: array, value: payload}
+
+      {:ok,
+       if(Map.has_key?(value, "dimensions"),
+         do: Map.put(variant, :dimensions, value["dimensions"]),
+         else: variant
+       )}
+    else
+      _ -> :error
+    end
+  end
+
+  defp native_variant(_, true), do: :error
+
+  defp native_payload("ByteString", true, values) when is_list(values) do
+    values
+    |> native_list("ByteString")
+  end
+
+  defp native_payload("LocalizedText", true, values) when is_list(values),
+    do: native_list(values, "LocalizedText")
+
+  defp native_payload("LocalizedText", false, %{"locale" => locale, "text" => text} = value)
+       when map_size(value) == 2,
+       do: {:ok, %{locale: locale, text: text}}
+
+  defp native_payload("LocalizedText", false, _), do: :error
+
+  defp native_payload("ByteString", false, nil), do: {:ok, nil}
+
+  defp native_payload("ByteString", false, %{"type" => "bytes", "base64" => base64} = value)
+       when map_size(value) == 2 and is_binary(base64),
+       do: Base.decode64(base64)
+
+  defp native_payload("ByteString", false, _), do: :error
+  defp native_payload(_, _, payload), do: {:ok, payload}
+
+  defp native_list(values, type) do
+    result =
+      Enum.reduce_while(values, {:ok, []}, fn value, {:ok, items} ->
+        case native_payload(type, false, value) do
+          {:ok, decoded} -> {:cont, {:ok, [decoded | items]}}
+          _ -> {:halt, :error}
+        end
+      end)
+
+    case result do
+      {:ok, items} -> {:ok, Enum.reverse(items)}
+      error -> error
+    end
+  end
 
   defp namespace_array?(["http://opcfoundation.org/UA/" | _] = entries)
        when length(entries) in 2..1024 do

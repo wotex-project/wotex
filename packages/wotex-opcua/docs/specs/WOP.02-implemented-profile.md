@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.17
+  version: 1.0.18
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -103,8 +103,8 @@ binary; this is SDK metadata evidence, not secure production Session acceptance.
 The separate C-only Session probe uses the native configuration and verifier
 adapter against an independent asyncua peer. It proves Basic256Sha256 anonymous
 activation, the revised timeout and an explicit NamespaceArray read in that
-test binary. The production executable now admits this one secure open/close
-path, with bounded asynchronous NamespaceArray acquisition and revision checks.
+test binary. Production open/close then acquired the NamespaceArray
+asynchronously and checked the server revision before service work was added.
 
 The current C executable emits versioned readiness, exits on owner EOF and runs
 explicit SHA-256/SDK DateTime dependency self-tests. It now assembles a bounded
@@ -113,16 +113,21 @@ to that process input. Malformed frames terminate with `invalid_request`; an
 expired native deadline yields `deadline_exceeded`. A validated Basic256Sha256
 anonymous `open` now activates the pinned SDK Session, reads and validates the
 server NamespaceArray, checks the server-revised timeout and emits a correlated,
-credit-spending success. `close` cooperatively deletes the Session and acknowledges
-cleanup; EOF also releases it. The internal BEAM owner validates those responses
-and replenishes consumed credit. Read/write/call/browse/subscriptions, complete
-output buffering, namespace translation and other policy/token interoperability
-remain open P02/P03 work. The default public adapter is still Python-backed.
+credit-spending success. A one-at-a-time asynchronous `read` accepts a concrete
+NodeId and null index range, resolves its server namespace URI to the SDK-local
+index and returns a typed DataValue. Bad StatusCodes retain the numeric status
+in a structured error. NodeId-bearing result values remain unsupported until
+inverse namespace translation exists. `close` cooperatively deletes the Session
+and acknowledges cleanup; EOF also releases it. The internal BEAM owner validates
+these responses and replenishes consumed credit. Write/call/browse/subscriptions,
+complete output buffering, cancellation, full namespace translation and other
+policy/token interoperability remain open P02/P03 work. The default public
+adapter is still Python-backed.
 `Native.Frame` encodes exact outer request fields and maps the owner deadline
 from the separately captured ready clock sample. The native build test uses
 that production encoder to drive the real process. No public native client is
 exposed yet. The internal `Native.Host.request/4` sends correlated frames through
-the custody guardian, validates terminal controls and open/close responses, and
+the custody guardian, validates terminal controls and open/read/close responses, and
 replenishes delivered response credit. Unsolicited output ends the generation.
 An `open` request now has additional native-side shape checks: exact keys,
 three allowed security-policy URI strings, `SignAndEncrypt`, bounded text and
@@ -140,7 +145,7 @@ verification. See the [native security boundary](../../priv/native/security.md).
 The owner now sends one bounded initial credit control before its request. The
 C process binds that credit to the generation, rejects a request without it,
 and rejects further credit before any output has been consumed. Terminal output
-uses the separate control allowance. Open/close responses consume credit and
+uses the separate control allowance. Open/read/close responses consume credit and
 the owner replenishes validated consumption. Report queues and subscriptions
 remain unimplemented.
 `Native.Host` admits both explicit executable digests before process creation,

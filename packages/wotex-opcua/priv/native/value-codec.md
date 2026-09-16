@@ -33,8 +33,10 @@ prove that a complete response fits the 131072-byte frame.
 views of the same Session's NamespaceArray. It requires exactly one occurrence
 of the public namespace URI in each view and borrows the original identifier
 storage. Missing, duplicate, malformed or excessive namespace tables fail
-without producing a translated NodeId. Acquiring, retaining and invalidating
-the two arrays belongs to the persistent Session owner in WOP-P02.
+without producing a translated NodeId. The current Session owner acquires and
+retains the server array and resolves a read input NodeId through the SDK-local
+namespace API. General inverse translation of NodeId-bearing results remains
+P02 work.
 
 The C status set is finite: `WOP_VALUE_OK`, `WOP_VALUE_INVALID`,
 `WOP_VALUE_LIMIT`, and `WOP_VALUE_UNSUPPORTED`. The operation owner assigns the

@@ -168,4 +168,144 @@ defmodule Wotex.OPCUA.Native.FrameTest do
     assert {:error, %Error{code: :invalid_native_frame}} =
              Frame.response(frame.(result), 7, "other", "open", 5000)
   end
+
+  test "WOP-X03 read response preserves typed DataValue and rejects malformed metadata" do
+    result = %{
+      "has_value" => true,
+      "status" => 0,
+      "value" => %{"type" => "Double", "array" => false, "value" => 21.5},
+      "source_timestamp" => 1
+    }
+
+    frame = fn payload ->
+      Jason.encode!(%{
+        "version" => 1,
+        "generation" => 7,
+        "id" => "read-1",
+        "ok" => true,
+        "result" => payload
+      }) <> "\n"
+    end
+
+    assert {:ok, ^result} = Frame.response(frame.(result), 7, "read-1", "read", nil)
+
+    for invalid <- [
+          %{result | "has_value" => false},
+          %{result | "status" => 0x8000_0000},
+          %{result | "value" => %{"type" => "Double", "array" => false, "value" => "21.5"}},
+          Map.put(result, "unexpected", true),
+          Map.put(result, "source_picoseconds", 10_000)
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame}} =
+               Frame.response(frame.(invalid), 7, "read-1", "read", nil)
+    end
+  end
+
+  test "WOP-X03 read response preserves null, byte arrays and localized text" do
+    frame = fn result ->
+      Jason.encode!(%{
+        "version" => 1,
+        "generation" => 7,
+        "id" => "read-2",
+        "ok" => true,
+        "result" => result
+      }) <> "\n"
+    end
+
+    results = [
+      %{"has_value" => false, "status" => 0x4000_0000},
+      %{
+        "has_value" => true,
+        "status" => 0,
+        "value" => %{
+          "type" => "ByteString",
+          "array" => true,
+          "value" => [%{"type" => "bytes", "base64" => "AP8="}, nil]
+        }
+      },
+      %{
+        "has_value" => true,
+        "status" => 0,
+        "value" => %{
+          "type" => "LocalizedText",
+          "array" => true,
+          "value" => [%{"locale" => "en", "text" => "ready"}]
+        }
+      }
+    ]
+
+    for result <- results do
+      assert {:ok, ^result} = Frame.response(frame.(result), 7, "read-2", "read", nil)
+    end
+
+    for invalid <- [
+          %{"has_value" => false, "status" => 0, "value" => nil},
+          %{
+            "has_value" => true,
+            "status" => 0,
+            "value" => %{
+              "type" => "ByteString",
+              "array" => false,
+              "value" => %{"type" => "bytes", "base64" => "not base64!"}
+            }
+          },
+          %{
+            "has_value" => true,
+            "status" => 0,
+            "value" => %{
+              "type" => "LocalizedText",
+              "array" => false,
+              "value" => %{"locale" => "en", "text" => "ready", "unexpected" => true}
+            }
+          },
+          %{
+            "has_value" => true,
+            "status" => 0,
+            "value" => %{"type" => "Unknown", "array" => false, "value" => 1}
+          }
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame}} =
+               Frame.response(frame.(invalid), 7, "read-2", "read", nil)
+    end
+  end
+
+  test "WOP-X04 close and finite native failures remain correlated to one request" do
+    frame = fn attributes -> Jason.encode!(attributes) <> "\n" end
+    base = %{"version" => 1, "generation" => 7, "id" => "close-1"}
+
+    assert {:ok, nil} =
+             Frame.response(
+               frame.(Map.merge(base, %{"ok" => true, "result" => nil})),
+               7,
+               "close-1",
+               "close",
+               nil
+             )
+
+    failure = %{
+      "code" => "remote_error",
+      "phase" => "exchange",
+      "effect" => "none",
+      "status" => 0x8034_0000
+    }
+
+    assert {:native_error, %Error{code: :remote_error, details: %{status: 0x8034_0000}}} =
+             Frame.response(
+               frame.(Map.merge(base, %{"ok" => false, "error" => failure})),
+               7,
+               "close-1",
+               "close",
+               nil
+             )
+
+    for invalid <- [
+          Map.merge(base, %{"ok" => true, "result" => %{}}),
+          Map.merge(base, %{"ok" => false, "error" => Map.put(failure, "secret", "x")}),
+          Map.merge(base, %{"ok" => true, "result" => nil, "extra" => true}),
+          Map.merge(%{base | "generation" => 8}, %{"ok" => true, "result" => nil})
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame}} =
+               Frame.response(frame.(invalid), 7, "close-1", "close", nil)
+    end
+  end
 end

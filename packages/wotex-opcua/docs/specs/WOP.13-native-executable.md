@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.5
+  version: 1.1.6
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -14,10 +14,10 @@ This accepted target is **partially implemented**. WOP-P00 accepts the pinned
 source/build/bootstrap and portable process-custody boundary, and WOP-P01 accepts
 pure typed values plus production SDK value projection, for the exact cohorts
 in executable evidence. P02 now connects bounded input framing and
-outer-envelope validation to the executable and admits one secure open/close path.
+outer-envelope validation to the executable and admits one secure open/read/close path.
 The pure owner-side encoder now maps the ready clock sample and emits closed
 outer request frames. The internal owner handles one bounded terminal control
-for an explicit request and now validates correlated open/close successes and
+for an explicit request and now validates correlated open/read/close successes and
 replenishes consumed output credit.
 The C ingress checks the `open` parameter shape and rejects malformed or
 downgraded values before a network attempt. Native credential preflight now
@@ -29,9 +29,13 @@ the separate C probe against an independent Basic256Sha256 peer. The executable
 checks the server's timeout revision and NamespaceArray before reporting open.
 The owner and C ingress now exchange one initial credit control before the
 request. It binds the process generation; requests without it and later credit
-before consumption fail. Open/close responses spend credit; the BEAM owner
-replenishes validated consumption. Complete output buffering, operations,
-namespace translation and the full secure policy/token matrix remain required.
+before consumption fail. Open/read/close responses spend credit; the BEAM owner
+replenishes validated consumption. The read path translates one concrete input
+NodeId through the server URI and SDK-local namespace map and returns a typed
+DataValue, retaining a Bad result's numeric StatusCode. NodeId-bearing result
+values are rejected until inverse translation is complete. Output buffering,
+other operations, cancellation, full namespace translation and the secure
+policy/token matrix remain required.
 The target runtime uses an Elixir API and an explicitly owned open62541 C executable.
 Python is confined to the independent test peer and upstream build generators.
 A native executable, a protocol service, a WoT binding and an interoperability

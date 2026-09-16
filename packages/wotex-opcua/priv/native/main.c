@@ -1,10 +1,11 @@
-/* Wotex native process bootstrap. OPC UA service admission is separate from
- * executable readiness. This build/ownership boundary performs no network I/O.
+/* Wotex native process owner. Readiness precedes explicit secure Session and
+ * service admission; no network I/O occurs before a validated open request.
  * The first-party source is licensed under the repository's Apache-2.0 license. */
 #include <open62541/client.h>
 #include <open62541/client_config_default.h>
 #include "ipc.h"
 #include "session_open.h"
+#include "value_codec.h"
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/opensslv.h>
@@ -89,13 +90,26 @@ static int terminal(uint64_t generation, const char *code, const char *phase) {
     return size > 0 && (size_t)size < sizeof(output) && write_control(output, (size_t)size);
 }
 
+static int terminal_status(uint64_t generation, const char *code,
+                           const char *phase, UA_StatusCode status) {
+    char output[288];
+    int size = snprintf(output, sizeof(output),
+        "{\"version\":1,\"generation\":%" PRIu64 ",\"event\":\"terminal\","
+        "\"error\":{\"code\":\"%s\",\"phase\":\"%s\",\"effect\":\"none\","
+        "\"status\":%" PRIu32 "}}\n", generation, code, phase, status);
+    return size > 0 && (size_t)size < sizeof(output) && write_control(output, (size_t)size);
+}
+
 static bool result_frame(const WopIpcRequest *request, const WopSession *session,
+                         const UA_DataValue *read_value,
                          uint64_t *messages, uint64_t *bytes) {
     yyjson_mut_doc *doc = yyjson_mut_doc_new(NULL);
     if(!doc) return false;
     yyjson_mut_val *root = yyjson_mut_obj(doc);
     yyjson_mut_doc_set_root(doc, root);
     yyjson_mut_val *result = session ? yyjson_mut_obj(doc) : yyjson_mut_null(doc);
+    if(read_value && wop_value_write_data_value(read_value, doc, &result) != WOP_VALUE_OK)
+        result = NULL;
     bool valid = root && result &&
         yyjson_mut_obj_add_uint(doc, root, "version", 1) &&
         yyjson_mut_obj_add_uint(doc, root, "generation", request->generation) &&
@@ -134,9 +148,10 @@ static int bootstrap(void) {
     uint64_t used_messages = 0, used_bytes = 0;
     WopSession session = {0};
     WopIpcRequest open_request = {0};
+    WopIpcRequest read_request = {0};
     uint64_t requested_session_timeout = 0;
-    int64_t open_deadline = 0;
-    bool opening = false, opened = false;
+    int64_t open_deadline = 0, read_deadline = 0;
+    bool opening = false, opened = false, reading = false;
 
     char ready[256];
     int64_t clock_ms = monotonic_ms();
@@ -151,8 +166,10 @@ static int bootstrap(void) {
     for(;;) {
         if(opening || opened) {
             int64_t now = monotonic_ms();
-            if(now < 0 || (opening && now >= open_deadline)) {
-                (void)terminal(admitted_generation, "deadline_exceeded", "opening");
+            if(now < 0 || (opening && now >= open_deadline) ||
+               (reading && now >= read_deadline)) {
+                (void)terminal(admitted_generation, "deadline_exceeded",
+                               opening ? "opening" : "exchange");
                 break;
             }
             if(!wop_session_step(&session, requested_session_timeout)) {
@@ -163,12 +180,40 @@ static int bootstrap(void) {
             }
             if(opening && session.ready) {
                 uint64_t before = credit_bytes;
-                if(!result_frame(&open_request, &session, &credit_messages, &credit_bytes))
+                if(!result_frame(&open_request, &session, NULL,
+                                 &credit_messages, &credit_bytes))
                     break;
                 used_messages++;
                 used_bytes += before - credit_bytes;
                 opening = false;
                 opened = true;
+            }
+            if(reading && session.read_completed) {
+                if(!session.read_valid && !session.read_remote_error) {
+                    (void)terminal(admitted_generation, "invalid_response", "decode");
+                    break;
+                }
+                if(session.read_status & 0x80000000U) {
+                    (void)terminal_status(admitted_generation, "remote_error",
+                                          "exchange", session.read_status);
+                    break;
+                }
+                if(!wop_session_read_supported(&session)) {
+                    (void)terminal(admitted_generation,
+                                   session.read_valid ? "unsupported_type" : "invalid_response",
+                                   "decode");
+                    break;
+                }
+                uint64_t before = credit_bytes;
+                if(!result_frame(&read_request, NULL, &session.read_value,
+                                 &credit_messages, &credit_bytes)) {
+                    (void)terminal(admitted_generation, "response_limit", "decode");
+                    break;
+                }
+                used_messages++;
+                used_bytes += before - credit_bytes;
+                UA_DataValue_clear(&session.read_value);
+                reading = false;
             }
         }
         struct pollfd descriptor = {STDIN_FILENO, POLLIN, 0};
@@ -269,10 +314,26 @@ static int bootstrap(void) {
                             continue;
                         }
                     }
-                } else if(opened && strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "close") == 0 &&
+                } else if(opened && !reading &&
+                          strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "read") == 0) {
+                    if(!wop_session_read(&session, yyjson_obj_get(root, "parameters"))) {
+                        (void)terminal(request.generation, "invalid_value", "validation");
+                    } else {
+                        read_request = request;
+                        read_deadline = request.deadline_ms;
+                        if((uint64_t)(request.deadline_ms - clock_ms) > request.timeout_ms)
+                            read_deadline = clock_ms + (int64_t)request.timeout_ms;
+                        reading = true;
+                        wop_json_clear(&parsed);
+                        input.used = 0;
+                        continue;
+                    }
+                } else if(opened && !reading &&
+                          strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "close") == 0 &&
                           yyjson_obj_size(yyjson_obj_get(root, "parameters")) == 0) {
                     bool released = wop_session_close(&session);
-                    if(released && result_frame(&request, NULL, &credit_messages, &credit_bytes))
+                    if(released && result_frame(&request, NULL, NULL,
+                                                &credit_messages, &credit_bytes))
                         status = 0;
                     else if(!released)
                         (void)terminal(request.generation, "cleanup_failed", "cleanup");

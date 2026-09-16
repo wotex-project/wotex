@@ -1,8 +1,10 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "session_open.h"
+#include "value_codec.h"
 
 #include <open62541/client_highlevel_async.h>
 #include <math.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -128,6 +130,87 @@ bool wop_session_step(WopSession *session, uint64_t requested_timeout_ms) {
     return true;
 }
 
+static void receive_read(UA_Client *client, void *userdata, UA_UInt32 request_id,
+                         UA_ReadResponse *response) {
+    (void)client;
+    WopSession *session = userdata;
+    if(!session->read_pending) return;
+    session->read_pending = false;
+    session->read_completed = true;
+    session->read_status = UA_STATUSCODE_BADUNEXPECTEDERROR;
+    if(!response || request_id != session->read_request_id) return;
+    if(response->responseHeader.serviceResult != UA_STATUSCODE_GOOD) {
+        session->read_status = response->responseHeader.serviceResult;
+        session->read_remote_error = true;
+        return;
+    }
+    if(response->resultsSize != 1 || !response->results) return;
+    const UA_DataValue *value = &response->results[0];
+    session->read_status = value->hasStatus ? value->status : UA_STATUSCODE_GOOD;
+    if(UA_DataValue_copy(value, &session->read_value) != UA_STATUSCODE_GOOD) {
+        session->read_status = UA_STATUSCODE_BADOUTOFMEMORY;
+        return;
+    }
+    session->read_valid = true;
+}
+
+bool wop_session_read(WopSession *session, yyjson_val *parameters) {
+    if(!session || !session->ready || session->read_pending ||
+       !yyjson_is_obj(parameters) || yyjson_obj_size(parameters) != 2 ||
+       !yyjson_is_null(yyjson_obj_get(parameters, "index_range"))) return false;
+    yyjson_val *node_input = yyjson_obj_get(parameters, "node_id");
+    _Alignas(max_align_t) unsigned char storage[8192];
+    WopValueArena arena;
+    UA_NodeId public_id = UA_NODEID_NULL;
+    if(!wop_value_arena_init(&arena, storage, sizeof(storage)) ||
+       wop_value_read_node_id(node_input, &arena, &public_id) != WOP_VALUE_OK ||
+       public_id.namespaceIndex >= session->namespace_count) return false;
+    UA_String identity = session->namespace_array[public_id.namespaceIndex];
+    UA_UInt16 local_index = 0;
+    UA_String reversed = UA_STRING_NULL;
+    bool mapped = UA_Client_getNamespaceIndex(session->client, identity, &local_index) == UA_STATUSCODE_GOOD &&
+                  UA_Client_getNamespaceUri(session->client, local_index, &reversed) == UA_STATUSCODE_GOOD &&
+                  UA_String_equal(&identity, &reversed);
+    UA_String_clear(&reversed);
+    if(!mapped) return false;
+    UA_NodeId sdk_id = public_id;
+    sdk_id.namespaceIndex = local_index;
+    UA_ReadValueId target = {0};
+    target.nodeId = sdk_id;
+    target.attributeId = UA_ATTRIBUTEID_VALUE;
+    UA_ReadRequest request = {0};
+    request.nodesToRead = &target;
+    request.nodesToReadSize = 1;
+    request.timestampsToReturn = UA_TIMESTAMPSTORETURN_BOTH;
+    UA_DataValue_clear(&session->read_value);
+    session->read_completed = false;
+    session->read_valid = false;
+    session->read_remote_error = false;
+    session->read_pending = true;
+    UA_StatusCode status = UA_Client_sendAsyncReadRequest(session->client, &request,
+                                                           receive_read, session,
+                                                           &session->read_request_id);
+    if(status != UA_STATUSCODE_GOOD) session->read_pending = false;
+    return status == UA_STATUSCODE_GOOD;
+}
+
+bool wop_session_read_supported(const WopSession *session) {
+    if(!session || !session->read_valid) return false;
+    if(!session->read_value.hasValue) return true;
+    const UA_DataType *type = session->read_value.value.type;
+    if(!type) return true;
+    static const unsigned admitted[] = {
+        UA_TYPES_BOOLEAN, UA_TYPES_SBYTE, UA_TYPES_BYTE, UA_TYPES_INT16,
+        UA_TYPES_UINT16, UA_TYPES_INT32, UA_TYPES_UINT32, UA_TYPES_INT64,
+        UA_TYPES_UINT64, UA_TYPES_FLOAT, UA_TYPES_DOUBLE, UA_TYPES_STRING,
+        UA_TYPES_DATETIME, UA_TYPES_GUID, UA_TYPES_BYTESTRING,
+        UA_TYPES_STATUSCODE, UA_TYPES_LOCALIZEDTEXT
+    };
+    for(size_t i = 0; i < sizeof(admitted) / sizeof(admitted[0]); i++)
+        if(type == &UA_TYPES[admitted[i]]) return true;
+    return false;
+}
+
 bool wop_session_close(WopSession *session) {
     if(!session) return false;
     bool closed = true;
@@ -155,6 +238,7 @@ bool wop_session_close(WopSession *session) {
     if(session->namespace_array)
         UA_Array_delete(session->namespace_array, session->namespace_count,
                         &UA_TYPES[UA_TYPES_STRING]);
+    UA_DataValue_clear(&session->read_value);
     wop_security_clear(&session->security);
     memset(session, 0, sizeof(*session));
     return closed;
