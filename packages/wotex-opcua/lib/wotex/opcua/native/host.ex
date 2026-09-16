@@ -11,7 +11,7 @@ defmodule Wotex.OPCUA.Native.Host do
   The successful return includes the decoded process readiness and the BEAM
   monotonic receive sample. This bootstrap does not send credentials or
   protocol requests at startup. Its internal `request/4` path can correlate
-  explicit secure open, Value read, typed Write and close responses with credit
+  explicit secure open, Value read, typed Write, Method Call and close responses with credit
   replenishment. Other native service operations remain unimplemented.
   Unsolicited output ends the
   generation and sends one

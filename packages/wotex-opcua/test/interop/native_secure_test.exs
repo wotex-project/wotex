@@ -234,6 +234,55 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     assert_receive {:DOWN, ^monitor, :process, ^host, _}, 1000
   end
 
+  test "a secure native Call preserves ordered typed outputs and method failure effect" do
+    config = System.fetch_env!("WOTEX_OPCUA_INTEROP_CONFIG")
+    executable = System.fetch_env!("WOTEX_OPCUA_NATIVE_EXECUTABLE")
+    guardian = System.fetch_env!("WOTEX_OPCUA_NATIVE_GUARDIAN")
+    parameters = Jason.decode!(File.read!(Path.join(Path.dirname(config), "native-open.json")))
+    peer = Jason.decode!(File.read!(config))
+    digest = fn path -> Base.encode16(:crypto.hash(:sha256, File.read!(path)), case: :lower) end
+
+    assert {:ok, host, _} =
+             Host.start_link(
+               executable: executable,
+               executable_digest: digest.(executable),
+               guardian: guardian,
+               guardian_digest: digest.(guardian),
+               timeout: 5000
+             )
+
+    assert {:ok, _} = Host.request(host, "open", parameters, 5000)
+
+    arguments = [
+      %{"type" => "Double", "array" => false, "value" => 1.25},
+      %{"type" => "Double", "array" => false, "value" => 3.25}
+    ]
+
+    call = %{
+      "object_id" => peer["object_id"],
+      "method_id" => peer["method_id"],
+      "arguments" => arguments
+    }
+
+    assert {:ok,
+            %{
+              "status" => 0,
+              "input_argument_statuses" => statuses,
+              "outputs" => [%{"type" => "Double", "array" => false, "value" => 4.5}]
+            }} =
+             Host.request(host, "call", call, 5000)
+
+    assert is_list(statuses) and Enum.all?(statuses, &(&1 == 0))
+
+    bad = %{call | "method_id" => "ns=2;s=missing"}
+
+    assert {:error,
+            %Wotex.OPCUA.Error{code: :remote_error, effect: :unknown, details: %{status: status}}} =
+             Host.request(host, "call", bad, 5000)
+
+    assert Bitwise.band(status, 0x8000_0000) != 0
+  end
+
   defp line(port, buffered) do
     case :binary.match(buffered, "\n") do
       {index, 1} ->

@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.19
+  version: 1.0.20
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -121,8 +121,14 @@ inverse namespace translation exists. `close` cooperatively deletes the Session
 and acknowledges cleanup; EOF also releases it. A one-at-a-time `write` validates
 one typed Variant, retains copied SDK-owned memory through its asynchronous
 request and returns one numeric result status. A rejected or timed-out transmitted
-Write retains unknown effect and is never retried. The internal BEAM owner validates
-these responses and replenishes consumed credit. Call/browse/subscriptions,
+Write retains unknown effect and is never retried. A one-at-a-time asynchronous
+`call` resolves concrete object and method NodeIds through the server URI and
+SDK-local namespace map, copies up to 64 typed input Variants into SDK-owned
+memory and returns the method status, ordered input argument statuses and typed
+outputs. Bad method status and uncertain post-submission failures retain unknown
+effect without retry. NodeId-bearing arguments and outputs remain unsupported
+until full namespace translation exists. The internal BEAM owner validates
+these responses and replenishes consumed credit. Browse/subscriptions,
 complete output buffering, cancellation, full namespace translation and other
 policy/token interoperability remain open P02/P03 work. The default public
 adapter is still Python-backed.
@@ -130,7 +136,7 @@ adapter is still Python-backed.
 from the separately captured ready clock sample. The native build test uses
 that production encoder to drive the real process. No public native client is
 exposed yet. The internal `Native.Host.request/4` sends correlated frames through
-the custody guardian, validates terminal controls and open/read/write/close responses, and
+the custody guardian, validates terminal controls and open/read/write/call/close responses, and
 replenishes delivered response credit. Unsolicited output ends the generation.
 An `open` request now has additional native-side shape checks: exact keys,
 three allowed security-policy URI strings, `SignAndEncrypt`, bounded text and
@@ -148,7 +154,7 @@ verification. See the [native security boundary](../../priv/native/security.md).
 The owner now sends one bounded initial credit control before its request. The
 C process binds that credit to the generation, rejects a request without it,
 and rejects further credit before any output has been consumed. Terminal output
-uses the separate control allowance. Open/read/write/close responses consume credit and
+uses the separate control allowance. Open/read/write/call/close responses consume credit and
 the owner replenishes validated consumption. Report queues and subscriptions
 remain unimplemented.
 `Native.Host` admits both explicit executable digests before process creation,

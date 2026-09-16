@@ -335,4 +335,36 @@ defmodule Wotex.OPCUA.Native.FrameTest do
                Frame.response(frame.(invalid), 7, "write-1", "write", nil)
     end
   end
+
+  test "WOP-X04 Call retains ordered argument statuses and typed outputs" do
+    result = %{
+      "status" => 0,
+      "input_argument_statuses" => [0, 0x8000_0000],
+      "outputs" => [%{"type" => "Double", "array" => false, "value" => 4.5}]
+    }
+
+    frame = fn payload ->
+      Jason.encode!(%{
+        "version" => 1,
+        "generation" => 7,
+        "id" => "call-1",
+        "ok" => true,
+        "result" => payload
+      }) <> "\n"
+    end
+
+    assert {:ok, ^result} = Frame.response(frame.(result), 7, "call-1", "call", nil)
+
+    for invalid <- [
+          %{result | "status" => 0x8000_0000},
+          %{result | "outputs" => [%{"type" => "Double", "array" => false, "value" => "4.5"}]},
+          %{result | "outputs" => List.duplicate(hd(result["outputs"]), 65)},
+          %{result | "input_argument_statuses" => [-1]},
+          %{result | "input_argument_statuses" => List.duplicate(0, 65)},
+          Map.put(result, "extra", true)
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame}} =
+               Frame.response(frame.(invalid), 7, "call-1", "call", nil)
+    end
+  end
 end

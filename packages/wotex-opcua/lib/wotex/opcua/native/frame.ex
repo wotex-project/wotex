@@ -181,6 +181,12 @@ defmodule Wotex.OPCUA.Native.Frame do
       else: {:error, Error.new(:invalid_native_frame, :response)}
   end
 
+  defp response_result("call", result, _, _) do
+    if valid_call_result?(result),
+      do: {:ok, result},
+      else: {:error, Error.new(:invalid_native_frame, :response)}
+  end
+
   defp response_result("read", result, _, _) when is_map(result) do
     with {:ok, value} <- native_data_value(result),
          {:ok, _} <- Binary.encode_data_value(value),
@@ -211,6 +217,30 @@ defmodule Wotex.OPCUA.Native.Frame do
   end
 
   defp response_result(_, _, _, _), do: {:error, Error.new(:invalid_native_frame, :response)}
+
+  defp valid_call_result?(
+         %{
+           "status" => status,
+           "input_argument_statuses" => statuses,
+           "outputs" => outputs
+         } = result
+       )
+       when map_size(result) == 3 and is_integer(status) and status in 0..4_294_967_295 and
+              is_list(statuses) and length(statuses) <= 64 and is_list(outputs) and
+              length(outputs) <= 64 do
+    Bitwise.band(status, 0x80000000) == 0 and
+      Enum.all?(statuses, &(is_integer(&1) and &1 in 0..4_294_967_295)) and
+      Enum.all?(outputs, &valid_call_output?/1)
+  end
+
+  defp valid_call_result?(_), do: false
+
+  defp valid_call_output?(output) do
+    case native_variant(output, true) do
+      {:ok, variant} -> match?({:ok, _}, Binary.encode_variant(variant))
+      _ -> false
+    end
+  end
 
   @data_fields %{
     "has_value" => :has_value,

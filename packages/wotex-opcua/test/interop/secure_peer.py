@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from asyncua import Server, ua
+from asyncua.common.methods import uamethod
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -72,11 +73,21 @@ async def main(directory):
     namespace = await server.register_namespace("urn:wotex:fixture")
     variable = await server.nodes.objects.add_variable(ua.NodeId("value", namespace), "Value", 21.5)
     await variable.set_writable()
+
+    @uamethod
+    def add_values(parent, left, right):
+        return left + right
+
+    method = await server.nodes.objects.add_method(ua.NodeId("add", namespace), "Add",
+                                                     add_values,
+                                                     [ua.VariantType.Double, ua.VariantType.Double],
+                                                     [ua.VariantType.Double])
     config = {"executable": sys.executable, "endpoint": endpoint, "certificate": str(directory / "client.der"),
               "private_key": str(directory / "client.pem"), "client_uri": "urn:wotex:fixture:client",
               "server_uri": "urn:wotex:fixture:server", "server_certificate": str(directory / "server.der"),
               "issuer_certificate": str(directory / "ca.der"), "trust_certificates": [str(directory / "ca.der")],
-              "crl": str(directory / "clean.crl"), "node_id": variable.nodeid.to_string()}
+              "crl": str(directory / "clean.crl"), "node_id": variable.nodeid.to_string(),
+              "object_id": "ns=0;i=85", "method_id": method.nodeid.to_string()}
     def envelope(path):
         return {"type": "bytes", "base64": base64.b64encode((directory / path).read_bytes()).decode("ascii")}
     native_open = {"endpoint": endpoint,

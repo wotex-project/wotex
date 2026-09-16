@@ -20,6 +20,46 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Asynchronous native Method Call slice, 2026-09-16
+
+The production C process now admits one Method Call after secure activation.
+It translates concrete object and method NodeIds through the server NamespaceArray
+and SDK-local namespace map, validates 0..64 typed input Variants, copies their
+storage into SDK-owned memory and retains it until asynchronous completion or
+client cleanup. The callback copies one bounded method result. The process and
+BEAM owner validate the numeric method status, ordered input argument statuses
+and typed outputs before spending and replenishing output credit. A Bad method
+status or post-submission failure has unknown effect and is not retried. The
+owner also preserves unknown effect after an unacknowledged Call timeout or
+Port loss. NodeId-bearing inputs and outputs remain unsupported pending complete
+namespace translation. This does not accept full P02/S02/X04, concurrent
+operations, cancellation, subscriptions or the public native client; the
+default public adapter remains Python-backed.
+
+The focused Frame/Host suite passes 30 default tests, including the Call owner
+timeout and 64-element result boundaries. Seven optional tests pass against the
+independent Basic256Sha256 anonymous asyncua 2.0.1 peer: a real two-Double
+Method Call returns ordered typed output, while a missing method preserves a
+numeric Bad status and unknown effect. The independent peer is test-only Python.
+The RelWithDebInfo native CTest suite passes 181/181. The complete
+`WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes on macOS arm64 with
+Elixir 1.20.2 / OTP 29.0.4: 269 passed (10 doctests, 4 properties, 255 tests),
+eight optional tests excluded and 95.2% coverage. Its fresh native build,
+documentation, dependency audits and package/archive checks pass.
+
+| Subject | SHA-256 |
+| --- | --- |
+| `priv/native/main.c` | `8c0295cdddc484b910dae91e91f0d582d62c4e7667dd7f7fd81c55c2a3aeb8b1` |
+| `priv/native/session_open.c` | `e68603d04c7a2f4f23a7650f46daeb8b0a2830e94601f5a9fb544671d114c597` |
+| `priv/native/session_open.h` | `3b103bef14f96a9ceb322508f4ab30d97846e6ff18276bd7e82c17e18b569866` |
+| `lib/wotex/opcua/native/frame.ex` | `b5475fcd19c0cc06b031f813061e41f5d33a75c4db94d9ff68bd0d75ee810547` |
+| `lib/wotex/opcua/native/host.ex` | `12c8c4236517aca7596e52b3339b21d458bec6c497a51389d0ebee9892defdc8` |
+| `test/interop/native_secure_test.exs` | `f6b93a70ee2bc399ab051432dcd077b39bfecff36d30520c4da2607f79c772d2` |
+| `test/interop/secure_peer.py` | `6b2eae7899b593afb98502dd478239579e7555634bdbe73ce9a82a70b5ee4174` |
+| `test/wotex/opcua/native/frame_test.exs` | `a5ebadacdec692f80be570c463993f4d3ff367932d0051a70bd1c292b80fd62b` |
+| `test/wotex/opcua/native/host_test.exs` | `16a36bbab3cd5818a9ebcd2cd21c9beeee5636c94ce95e81bae4e26a8fb8690b` |
+| native CTest log | `dec6b9587d122962d837ced64444f9ad73a831773b2f5f2287a164e3cde7f5a2` |
+
 ## Asynchronous native Value Write slice, 2026-09-16
 
 The production C process now admits one typed Value Write after secure

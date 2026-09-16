@@ -338,16 +338,18 @@ defmodule Wotex.OPCUA.Native.HostTest do
     assert_native_reaped(directory)
   end
 
-  test "WOP-X04 an unacknowledged Write retains unknown effect after owner timeout", context do
-    {options, directory} = fixture(context, "stall_request")
-    assert {:ok, host, _} = Host.start_link(options)
-    monitor = Process.monitor(host)
+  test "WOP-X04 an unacknowledged mutation retains unknown effect after owner timeout", context do
+    for operation <- ["write", "call"] do
+      {options, directory} = fixture(context, "stall_request")
+      assert {:ok, host, _} = Host.start_link(options)
+      monitor = Process.monitor(host)
 
-    assert {:error, %Error{code: :deadline_exceeded, field: :request, effect: :unknown}} =
-             Host.request(host, "write", %{}, 100)
+      assert {:error, %Error{code: :deadline_exceeded, field: :request, effect: :unknown}} =
+               Host.request(host, operation, %{}, 100)
 
-    assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
-    assert_native_reaped(directory)
+      assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
+      assert_native_reaped(directory)
+    end
   end
 
   test "WOP-X07 lost Port ownership produces one terminal error and native cleanup", context do

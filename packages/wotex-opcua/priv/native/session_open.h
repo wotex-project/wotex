@@ -19,6 +19,11 @@ typedef struct {
     UA_StatusCode write_status;
     UA_UInt32 write_request_id;
     bool write_pending, write_completed, write_valid, write_remote_error;
+    UA_CallMethodRequest call_method;
+    UA_CallMethodResult call_result;
+    UA_StatusCode call_status;
+    UA_UInt32 call_request_id;
+    bool call_pending, call_completed, call_valid, call_remote_error;
 } WopSession;
 
 /* Only call after closed open-shape and deadline admission. The caller owns
@@ -34,6 +39,10 @@ bool wop_session_read_supported(const WopSession *session);
  * transmitted write may have an unknown effect on every failure path. */
 bool wop_session_write(WopSession *session, yyjson_val *parameters,
                        bool *sdk_attempted);
+/* One bounded asynchronous Call with copied argument storage. */
+bool wop_session_call(WopSession *session, yyjson_val *parameters,
+                      bool *sdk_attempted);
+bool wop_session_call_supported(const WopSession *session);
 /* True only when the CloseSession/channel teardown completed cooperatively. */
 bool wop_session_close(WopSession *session);
 

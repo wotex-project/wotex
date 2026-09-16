@@ -286,6 +286,96 @@ bool wop_session_write(WopSession *session, yyjson_val *parameters,
     return status == UA_STATUSCODE_GOOD;
 }
 
+static void receive_call(UA_Client *client, void *userdata, UA_UInt32 request_id,
+                         UA_CallResponse *response) {
+    (void)client;
+    WopSession *session = userdata;
+    if(!session->call_pending) return;
+    session->call_pending = false;
+    session->call_completed = true;
+    session->call_status = UA_STATUSCODE_BADUNEXPECTEDERROR;
+    if(!response || request_id != session->call_request_id) return;
+    if(response->responseHeader.serviceResult != UA_STATUSCODE_GOOD) {
+        session->call_status = response->responseHeader.serviceResult;
+        session->call_remote_error = true;
+        return;
+    }
+    if(response->resultsSize != 1 || !response->results) return;
+    const UA_CallMethodResult *result = &response->results[0];
+    if(result->inputArgumentResultsSize > 64 || result->outputArgumentsSize > 64 ||
+       (result->inputArgumentResultsSize && !result->inputArgumentResults) ||
+       (result->outputArgumentsSize && !result->outputArguments)) return;
+    session->call_status = result->statusCode;
+    if(UA_CallMethodResult_copy(result, &session->call_result) != UA_STATUSCODE_GOOD) {
+        session->call_status = UA_STATUSCODE_BADOUTOFMEMORY;
+        return;
+    }
+    session->call_valid = true;
+}
+
+bool wop_session_call(WopSession *session, yyjson_val *parameters,
+                      bool *sdk_attempted) {
+    if(!sdk_attempted) return false;
+    *sdk_attempted = false;
+    if(!session || !session->ready || session->call_pending ||
+       !yyjson_is_obj(parameters) || yyjson_obj_size(parameters) != 3) return false;
+    yyjson_val *arguments = yyjson_obj_get(parameters, "arguments");
+    if(!yyjson_is_arr(arguments) || yyjson_arr_size(arguments) > 64) return false;
+    void *storage = malloc(WOP_VALUE_POOL_BYTES);
+    if(!storage) return false;
+    WopValueArena arena;
+    UA_NodeId object_id = UA_NODEID_NULL, method_id = UA_NODEID_NULL;
+    bool valid = wop_value_arena_init(&arena, storage, WOP_VALUE_POOL_BYTES) &&
+        translate_node(session, yyjson_obj_get(parameters, "object_id"), &arena, &object_id) &&
+        translate_node(session, yyjson_obj_get(parameters, "method_id"), &arena, &method_id);
+    UA_CallMethodRequest_clear(&session->call_method);
+    UA_CallMethodResult_clear(&session->call_result);
+    if(valid) {
+        valid = UA_NodeId_copy(&object_id, &session->call_method.objectId) == UA_STATUSCODE_GOOD &&
+                UA_NodeId_copy(&method_id, &session->call_method.methodId) == UA_STATUSCODE_GOOD;
+        size_t count = yyjson_arr_size(arguments);
+        if(valid && count) {
+            session->call_method.inputArguments = UA_Array_new(count, &UA_TYPES[UA_TYPES_VARIANT]);
+            valid = session->call_method.inputArguments != NULL;
+            if(valid) session->call_method.inputArgumentsSize = count;
+        }
+        for(size_t i = 0; valid && i < count; i++) {
+            UA_Variant input = {0};
+            valid = wop_value_read_variant(yyjson_arr_get(arguments, i), &arena, &input) == WOP_VALUE_OK &&
+                supported_value_type(input.type) &&
+                UA_Variant_copy(&input, &session->call_method.inputArguments[i]) == UA_STATUSCODE_GOOD;
+        }
+    }
+    wop_value_arena_reset(&arena);
+    free(storage);
+    if(!valid) {
+        UA_CallMethodRequest_clear(&session->call_method);
+        return false;
+    }
+    session->call_pending = true;
+    session->call_completed = false;
+    session->call_valid = false;
+    session->call_remote_error = false;
+    *sdk_attempted = true;
+    UA_StatusCode status = UA_Client_call_async(session->client,
+        session->call_method.objectId, session->call_method.methodId,
+        session->call_method.inputArgumentsSize, session->call_method.inputArguments,
+        receive_call, session, &session->call_request_id);
+    if(status != UA_STATUSCODE_GOOD) {
+        session->call_pending = false;
+        UA_CallMethodRequest_clear(&session->call_method);
+    }
+    return status == UA_STATUSCODE_GOOD;
+}
+
+bool wop_session_call_supported(const WopSession *session) {
+    if(!session || !session->call_valid) return false;
+    for(size_t i = 0; i < session->call_result.outputArgumentsSize; i++)
+        if(!supported_value_type(session->call_result.outputArguments[i].type))
+            return false;
+    return true;
+}
+
 bool wop_session_close(WopSession *session) {
     if(!session) return false;
     bool closed = true;
@@ -315,6 +405,8 @@ bool wop_session_close(WopSession *session) {
                         &UA_TYPES[UA_TYPES_STRING]);
     UA_DataValue_clear(&session->read_value);
     UA_WriteValue_clear(&session->write_value);
+    UA_CallMethodRequest_clear(&session->call_method);
+    UA_CallMethodResult_clear(&session->call_result);
     wop_security_clear(&session->security);
     memset(session, 0, sizeof(*session));
     return closed;
