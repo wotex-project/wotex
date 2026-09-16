@@ -30,6 +30,11 @@ typedef struct {
     UA_UInt32 browse_request_id;
     UA_UInt32 browse_page_size;
     bool browse_pending, browse_completed, browse_valid, browse_remote_error, browse_limit;
+    UA_ByteString browse_point;
+    UA_UInt64 browse_serial;
+    UA_UInt32 browse_pages, browse_references;
+    size_t browse_bytes;
+    bool browse_active, browse_expose, browse_releasing, browse_release_valid;
 } WopSession;
 
 /* Only call after closed open-shape and deadline admission. The caller owns
@@ -52,6 +57,12 @@ bool wop_session_call_supported(const WopSession *session);
 /* One service-level bounded Browse page. A continuation is not exposed until
  * owner-bound pagination exists; the caller closes the Session on that path. */
 bool wop_session_browse(WopSession *session, yyjson_val *parameters);
+/* Only a local token matching the current native generation can select the
+ * C-owned server bytes. A failed BrowseNext/release closes the Session. */
+bool wop_session_browse_next(WopSession *session, yyjson_val *parameters,
+                             bool release);
+bool wop_session_browse_token(const WopSession *session, char token[32]);
+bool wop_session_browse_capture(WopSession *session);
 /* True only when the CloseSession/channel teardown completed cooperatively. */
 bool wop_session_close(WopSession *session);
 

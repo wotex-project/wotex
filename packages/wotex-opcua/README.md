@@ -46,7 +46,9 @@ Sessions and performs typed Value Read/Write, Method Call and bounded child
 Browse through C without runtime Python. WOP.02 and executable evidence bound
 its actual behavior. One-shot Read/Write/Call successes preserve the older
 adapter's result shapes. A persistent native Session can also return one
-complete page of seven-field typed references. BrowseNext/release, complete compatibility
+complete page of seven-field typed references. The C owner now has a single
+local-token BrowseNext/release path behind an internal opt-in; public typed
+handles and pagination, complete compatibility
 projection, subscriptions and lifecycle work
 remain.
 The Runtime Form mapper preserves raw ByteString bytes for the explicitly
@@ -126,7 +128,7 @@ The native target accepts explicit executable identity, endpoint, application
 certificate/key, server certificate pin, direct-CA trust and current CRL.
 SignAndEncrypt with one of the three S03 policies and an explicit user-token mode
 is mandatory. Typed values retain array/null distinctions, DataValue status and
-100 ns timestamps. Native Browse owns bounded continuations; subscriptions
+100 ns timestamps. The native target owns bounded continuations; subscriptions
 retain revised parameters and complete report metadata. Unsupported security,
 malformed values and exhausted budgets fail with structured errors. Acknowledged
 writes and method calls do not establish canonical Property state.

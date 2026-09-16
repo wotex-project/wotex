@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.14
+  version: 1.1.15
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -43,8 +43,12 @@ status or uncertain post-submission failure retains unknown effect without
 retry. The first service-level Browse slice requests one bounded page, copies
 complete ReferenceDescriptions, and validates them at the BEAM frame boundary.
 The public native client projects a complete page of local child NodeIds. An
-oversized page or continuation closes the Session; typed pagination and explicit
-BrowseNext release are still open. NodeId-bearing arguments and outputs remain
+oversized page or continuation closes the Session for existing public calls.
+The C owner now also admits an internal `allow_continuation: true` Browse shape:
+it retains one server continuation in C memory, gives it a fresh local token,
+and sends service-level BrowseNext or release on that Session. This is native
+state and compilation evidence only; no public handle, original-deadline
+pagination or independent BrowseNext peer evidence exists. NodeId-bearing arguments and outputs remain
 unsupported until full namespace translation exists. Output buffering, other operations, cancellation,
 full namespace translation and the secure policy/token matrix remain required.
 The target native runtime uses an Elixir API and an explicitly owned open62541 C

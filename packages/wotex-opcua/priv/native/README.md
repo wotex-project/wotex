@@ -49,9 +49,13 @@ ordered input argument statuses and typed outputs. Bad method status and
 post-submission failure retain unknown effect without retry. NodeId-bearing
 arguments and outputs remain unsupported pending full namespace translation.
 Browse sends one service-level request with an explicit 1..256 page size and
-returns all seven reference fields in server order. A server page above the
-requested size or a continuation closes the Session and reports a limit error.
-Typed pagination, BrowseNext and release remain unimplemented.
+returns all seven reference fields in server order. Existing public callers
+close the Session if a result exceeds the requested size or has a continuation.
+An internal `allow_continuation: true` request can retain one server point in C
+memory and return a local token. `browse_next` consumes that token and
+`browse_release` sends service-level release on the same Session. Public typed
+handles, original-deadline pagination and independent-peer BrowseNext/release
+evidence remain open.
 `ipc_check.c` covers
 every split of a request line, coalescing, bounds and malformed envelopes;
 the pinned build test also exercises the real process input and terminal output.

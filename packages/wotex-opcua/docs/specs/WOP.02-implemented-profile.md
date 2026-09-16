@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.30
+  version: 1.0.31
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -143,6 +143,13 @@ child list. Typed page handles, BrowseNext/release, subscriptions,
 complete output buffering, cancellation, full namespace translation and other
 policy/token interoperability remain open P02/P03 work. The older explicit
 `Asyncua` adapter remains Python-backed.
+The C owner now has an internal opt-in Browse continuation path: it keeps one
+server token in native memory, returns a fresh local token for each page, and
+sends service-level BrowseNext or release on the same Session. The existing
+public calls do not opt in and retain fail-closed behavior. A native state test
+covers token reuse and foreign-token rejection; the independent secure peer
+does not implement server-side BrowseNext, so wire pagination, cleanup failure,
+original-deadline propagation and public handles have no acceptance evidence.
 The native configuration helper validates explicit policy, token and credential
 paths and snapshots bounded files for the native `open` request.
 `Open62541.connect/1` now uses that helper and the owned C host for a persistent

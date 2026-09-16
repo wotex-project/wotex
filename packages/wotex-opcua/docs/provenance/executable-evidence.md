@@ -20,6 +20,28 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native Browse continuation owner groundwork, 2026-09-16
+
+The C Session owner now has an internal opt-in for one live Browse
+continuation. It copies the server point into C-owned memory, gives each page
+a fresh local token even if opaque bytes repeat, and has asynchronous
+`browse_next` and `browse_release` service paths. It caps each page at the
+requested size and cumulative pages/references/binary results at 64/4096/1 MiB;
+failure closes the Session. Existing public Browse calls do not opt in and
+still close on any continuation. The BEAM frame rejects non-null continuation
+results, so no public pagination or token ownership is claimed.
+
+The native token-state CTest passes reused bytes, foreign token and opt-out
+cases. The full native CTest passes 182/182; the existing independent secure
+peer suite passes 11/11 and confirms the public fail-closed path. That peer
+ignores the requested page size and has no server-side BrowseNext, so it cannot
+validate the new wire path. A peer with continuation/release counters, BEAM
+handles, original deadline, multiple live tokens and cleanup-failure behavior
+remain required for WOP-N03/N04. The local
+`WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes with 293 tests,
+12 optional tests excluded and 95.1% coverage; documentation, audits,
+native build and package/archive checks pass.
+
 ## Persistent native typed single-page Browse, 2026-09-16
 
 `Browse.references/3` now validates its strict finite filters before I/O and

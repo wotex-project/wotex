@@ -4,7 +4,9 @@
 
 #include <open62541/client_highlevel_async.h>
 #include <math.h>
+#include <inttypes.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -396,20 +398,71 @@ static void receive_browse(UA_Client *client, void *userdata, UA_UInt32 request_
     session->browse_status = result->statusCode;
     size_t size = UA_calcSizeBinary(result, &UA_TYPES[UA_TYPES_BROWSERESULT], NULL);
     if(result->referencesSize > session->browse_page_size ||
-       result->continuationPoint.length > 4096 || size > 1048576) {
+       result->continuationPoint.length > 4096 || size > 1048576 ||
+       session->browse_pages >= 64 ||
+       result->referencesSize > 4096 - session->browse_references ||
+       size > 1048576 - session->browse_bytes) {
         session->browse_limit = true;
         return;
     }
     if(size == 0) return;
     if(UA_BrowseResult_copy(result, &session->browse_result) != UA_STATUSCODE_GOOD)
         return;
+    session->browse_pages++;
+    session->browse_references += (UA_UInt32)result->referencesSize;
+    session->browse_bytes += size;
+    session->browse_valid = true;
+}
+
+static void receive_browse_next(UA_Client *client, void *userdata,
+                                UA_UInt32 request_id, UA_BrowseNextResponse *response) {
+    (void)client;
+    WopSession *session = userdata;
+    if(!session->browse_pending) return;
+    session->browse_pending = false;
+    session->browse_completed = true;
+    session->browse_status = UA_STATUSCODE_BADUNEXPECTEDERROR;
+    if(!response || request_id != session->browse_request_id) return;
+    session->browse_status = response->responseHeader.serviceResult;
+    if(session->browse_status != UA_STATUSCODE_GOOD) {
+        session->browse_remote_error = true;
+        return;
+    }
+    if(session->browse_releasing) {
+        session->browse_release_valid = response->resultsSize == 0 &&
+            response->diagnosticInfosSize == 0;
+        return;
+    }
+    if(response->resultsSize != 1 || !response->results ||
+       response->diagnosticInfosSize != 0) return;
+    const UA_BrowseResult *result = &response->results[0];
+    session->browse_status = result->statusCode;
+    size_t size = UA_calcSizeBinary(result, &UA_TYPES[UA_TYPES_BROWSERESULT], NULL);
+    if(result->referencesSize > session->browse_page_size ||
+       result->continuationPoint.length > 4096 || size > 1048576 ||
+       session->browse_pages >= 64 ||
+       result->referencesSize > 4096 - session->browse_references ||
+       size > 1048576 - session->browse_bytes) {
+        session->browse_limit = true;
+        return;
+    }
+    if(size == 0 || UA_BrowseResult_copy(result, &session->browse_result) != UA_STATUSCODE_GOOD)
+        return;
+    session->browse_pages++;
+    session->browse_references += (UA_UInt32)result->referencesSize;
+    session->browse_bytes += size;
     session->browse_valid = true;
 }
 
 bool wop_session_browse(WopSession *session, yyjson_val *parameters) {
-    if(!session || !session->ready || session->browse_pending ||
-       !yyjson_is_obj(parameters) || yyjson_obj_size(parameters) != 6)
+    if(!session || !session->ready || session->browse_pending || session->browse_active ||
+       !yyjson_is_obj(parameters) ||
+       (yyjson_obj_size(parameters) != 6 && yyjson_obj_size(parameters) != 7))
         return false;
+    yyjson_val *expose = yyjson_obj_get(parameters, "allow_continuation");
+    if((yyjson_obj_size(parameters) == 7 && (!yyjson_is_bool(expose) ||
+                                            !yyjson_get_bool(expose))) ||
+       (yyjson_obj_size(parameters) == 6 && expose)) return false;
     yyjson_val *direction = yyjson_obj_get(parameters, "direction");
     yyjson_val *subtypes = yyjson_obj_get(parameters, "include_subtypes");
     uint64_t mask = 0, page_size = 0;
@@ -449,6 +502,10 @@ bool wop_session_browse(WopSession *session, yyjson_val *parameters) {
     request.nodesToBrowseSize = 1;
     request.requestedMaxReferencesPerNode = (UA_UInt32)page_size;
     session->browse_page_size = (UA_UInt32)page_size;
+    session->browse_expose = expose != NULL;
+    session->browse_pages = 0;
+    session->browse_references = 0;
+    session->browse_bytes = 0;
     session->browse_pending = true;
     session->browse_completed = false;
     session->browse_valid = false;
@@ -460,6 +517,58 @@ bool wop_session_browse(WopSession *session, yyjson_val *parameters) {
         session->browse_pending = false;
         UA_BrowseDescription_clear(description);
     }
+    return status == UA_STATUSCODE_GOOD;
+}
+
+bool wop_session_browse_token(const WopSession *session, char token[32]) {
+    if(!session || !session->browse_active || !token) return false;
+    int length = snprintf(token, 32, "c%" PRIu64, (uint64_t)session->browse_serial);
+    return length > 1 && length < 32;
+}
+
+bool wop_session_browse_capture(WopSession *session) {
+    if(!session || !session->browse_valid) return false;
+    UA_ByteString_clear(&session->browse_point);
+    session->browse_active = false;
+    if(!session->browse_result.continuationPoint.length) return true;
+    if(!session->browse_expose || session->browse_serial == UINT64_MAX ||
+       session->browse_pages >= 64 || session->browse_references >= 4096 ||
+       session->browse_bytes >= 1048576 ||
+       session->browse_result.continuationPoint.length > 4096 ||
+       UA_ByteString_copy(&session->browse_result.continuationPoint,
+                          &session->browse_point) != UA_STATUSCODE_GOOD) return false;
+    session->browse_serial++;
+    session->browse_active = true;
+    return true;
+}
+
+bool wop_session_browse_next(WopSession *session, yyjson_val *parameters,
+                             bool release) {
+    if(!session || !session->ready || !session->browse_active ||
+       session->browse_pending || !yyjson_is_obj(parameters) ||
+       yyjson_obj_size(parameters) != 1) return false;
+    yyjson_val *token_value = yyjson_obj_get(parameters, "continuation");
+    char expected[32] = {0};
+    if(!yyjson_is_str(token_value) || !wop_session_browse_token(session, expected) ||
+       yyjson_get_len(token_value) != strlen(expected) ||
+       memcmp(yyjson_get_str(token_value), expected, strlen(expected)) != 0)
+        return false;
+    UA_BrowseResult_clear(&session->browse_result);
+    UA_BrowseNextRequest request = {0};
+    request.releaseContinuationPoints = release;
+    request.continuationPointsSize = 1;
+    request.continuationPoints = &session->browse_point;
+    session->browse_active = false;
+    session->browse_releasing = release;
+    session->browse_release_valid = false;
+    session->browse_pending = true;
+    session->browse_completed = false;
+    session->browse_valid = false;
+    session->browse_remote_error = false;
+    session->browse_limit = false;
+    UA_StatusCode status = UA_Client_sendAsyncBrowseNextRequest(session->client,
+        &request, receive_browse_next, session, &session->browse_request_id);
+    if(status != UA_STATUSCODE_GOOD) session->browse_pending = false;
     return status == UA_STATUSCODE_GOOD;
 }
 
@@ -496,6 +605,7 @@ bool wop_session_close(WopSession *session) {
     UA_CallMethodResult_clear(&session->call_result);
     UA_BrowseDescription_clear(&session->browse_description);
     UA_BrowseResult_clear(&session->browse_result);
+    UA_ByteString_clear(&session->browse_point);
     wop_security_clear(&session->security);
     memset(session, 0, sizeof(*session));
     return closed;

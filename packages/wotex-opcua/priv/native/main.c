@@ -128,6 +128,7 @@ static bool result_frame(const WopIpcRequest *request, const WopSession *session
                          const UA_StatusCode *write_status,
                          const UA_CallMethodResult *call_result,
                          const UA_BrowseResult *browse_result,
+                         const char *browse_token,
                          uint64_t *messages, uint64_t *bytes) {
     yyjson_mut_doc *doc = yyjson_mut_doc_new(NULL);
     if(!doc) return false;
@@ -163,7 +164,8 @@ static bool result_frame(const WopIpcRequest *request, const WopSession *session
                                      &references) != WOP_VALUE_OK || !references ||
            !yyjson_mut_obj_add_uint(doc, result, "status", browse_result->statusCode) ||
            !yyjson_mut_obj_add_val(doc, result, "references", references) ||
-           !yyjson_mut_obj_add_null(doc, result, "continuation"))
+           !(browse_token ? yyjson_mut_obj_add_str(doc, result, "continuation", browse_token) :
+                             yyjson_mut_obj_add_null(doc, result, "continuation")))
             result = NULL;
     }
     bool valid = root && result &&
@@ -252,7 +254,7 @@ static int bootstrap(void) {
             }
             if(opening && session.ready) {
                 uint64_t before = credit_bytes;
-                if(!result_frame(&open_request, &session, NULL, NULL, NULL, NULL,
+                if(!result_frame(&open_request, &session, NULL, NULL, NULL, NULL, NULL,
                                  &credit_messages, &credit_bytes))
                     break;
                 used_messages++;
@@ -277,7 +279,7 @@ static int bootstrap(void) {
                     break;
                 }
                 uint64_t before = credit_bytes;
-                if(!result_frame(&read_request, NULL, &session.read_value, NULL, NULL, NULL,
+                if(!result_frame(&read_request, NULL, &session.read_value, NULL, NULL, NULL, NULL,
                                  &credit_messages, &credit_bytes)) {
                     (void)terminal(admitted_generation, "response_limit", "decode");
                     break;
@@ -299,7 +301,7 @@ static int bootstrap(void) {
                     break;
                 }
                 uint64_t before = credit_bytes;
-                if(!result_frame(&write_request, NULL, NULL, &session.write_status, NULL, NULL,
+                if(!result_frame(&write_request, NULL, NULL, &session.write_status, NULL, NULL, NULL,
                                  &credit_messages, &credit_bytes)) {
                     (void)terminal_mutation(admitted_generation, "response_limit",
                                          "decode", 0, false);
@@ -327,7 +329,7 @@ static int bootstrap(void) {
                     break;
                 }
                 uint64_t before = credit_bytes;
-                if(!result_frame(&call_request, NULL, NULL, NULL, &session.call_result, NULL,
+                if(!result_frame(&call_request, NULL, NULL, NULL, &session.call_result, NULL, NULL,
                                  &credit_messages, &credit_bytes)) {
                     (void)terminal_mutation(admitted_generation, "response_limit",
                                          "decode", 0, false);
@@ -340,6 +342,21 @@ static int bootstrap(void) {
                 calling = false;
             }
             if(browsing && session.browse_completed) {
+                if(session.browse_releasing) {
+                    if(!session.browse_release_valid) {
+                        (void)terminal(admitted_generation, "cleanup_failed", "cleanup");
+                        break;
+                    }
+                    uint64_t before = credit_bytes;
+                    if(!result_frame(&browse_request, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     &credit_messages, &credit_bytes)) break;
+                    used_messages++;
+                    used_bytes += before - credit_bytes;
+                    UA_ByteString_clear(&session.browse_point);
+                    session.browse_releasing = false;
+                    browsing = false;
+                    continue;
+                }
                 if(session.browse_limit) {
                     (void)terminal(admitted_generation, "response_limit", "decode");
                     break;
@@ -353,15 +370,20 @@ static int bootstrap(void) {
                                           "exchange", session.browse_status);
                     break;
                 }
-                /* Until owner-bound BrowseNext exists, never return an incomplete page
-                 * while leaving a server continuation live. CloseSession deletes it. */
-                if(session.browse_result.continuationPoint.length) {
+                if(!wop_session_browse_capture(&session)) {
                     (void)terminal(admitted_generation, "response_limit", "decode");
+                    break;
+                }
+                char token[32] = {0};
+                const char *continuation = session.browse_active ? token : NULL;
+                if(continuation && !wop_session_browse_token(&session, token)) {
+                    (void)terminal(admitted_generation, "invalid_response", "decode");
                     break;
                 }
                 uint64_t before = credit_bytes;
                 if(!result_frame(&browse_request, NULL, NULL, NULL, NULL,
-                                 &session.browse_result, &credit_messages, &credit_bytes)) {
+                                 &session.browse_result, continuation,
+                                 &credit_messages, &credit_bytes)) {
                     (void)terminal(admitted_generation, "response_limit", "decode");
                     break;
                 }
@@ -548,10 +570,28 @@ static int bootstrap(void) {
                         continue;
                     }
                 } else if(opened && !reading && !writing && !calling && !browsing &&
+                          (strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "browse_next") == 0 ||
+                           strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "browse_release") == 0)) {
+                    bool release = strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")),
+                                          "browse_release") == 0;
+                    if(!wop_session_browse_next(&session, yyjson_obj_get(root, "parameters"),
+                                                release)) {
+                        (void)terminal(request.generation, "invalid_value", "validation");
+                    } else {
+                        browse_request = request;
+                        browse_deadline = request.deadline_ms;
+                        if((uint64_t)(request.deadline_ms - clock_ms) > request.timeout_ms)
+                            browse_deadline = clock_ms + (int64_t)request.timeout_ms;
+                        browsing = true;
+                        wop_json_clear(&parsed);
+                        input.used = 0;
+                        continue;
+                    }
+                } else if(opened && !reading && !writing && !calling && !browsing &&
                           strcmp(yyjson_get_str(yyjson_obj_get(root, "operation")), "close") == 0 &&
                           yyjson_obj_size(yyjson_obj_get(root, "parameters")) == 0) {
                     bool released = wop_session_close(&session);
-                    if(released && result_frame(&request, NULL, NULL, NULL, NULL, NULL,
+                    if(released && result_frame(&request, NULL, NULL, NULL, NULL, NULL, NULL,
                                                 &credit_messages, &credit_bytes))
                         status = 0;
                     else if(!released)
