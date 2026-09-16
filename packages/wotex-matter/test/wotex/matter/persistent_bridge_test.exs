@@ -4,7 +4,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
   use ExUnit.Case, async: true
 
   alias Wotex.Matter
-  alias Wotex.Matter.{Error, Native}
+  alias Wotex.Matter.{Error, Native, Subscription}
 
   @read %{
     type: :read,
@@ -37,7 +37,6 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
   @tag :owner_boundary
   test "WMA-C03 raw process calls cannot bypass full native admission" do
-    alias Wotex.Matter.Native.Admission
     audit = temporary_path("raw-admission")
     assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
     initial = File.read!(audit)
@@ -46,7 +45,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     leases =
       for _ <- 1..64 do
         assert {:ok, lease} =
-                 Admission.acquire(handle.admission, handle.pid, handle.generation, deadline)
+                 Native.Admission.acquire(handle.admission, handle.pid, handle.generation, deadline)
 
         lease
       end
@@ -58,7 +57,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
       assert {:error, %Error{code: :invalid_handle}} = reply
       assert Process.alive?(handle.pid)
     after
-      Enum.each(leases, &Admission.release(handle.admission, &1))
+      Enum.each(leases, &Native.Admission.release(handle.admission, &1))
       Native.disconnect(handle)
     end
   end
@@ -106,14 +105,13 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
   @tag :owner_boundary
   test "WMA-C03 a close capability binds its caller, deadline and allowed control kind" do
-    alias Wotex.Matter.Native.Admission
     audit = temporary_path("close-capability")
     assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
     initial = File.read!(audit)
     deadline = System.monotonic_time(:millisecond) + 5_000
 
     assert {:first, token} =
-             Admission.begin_close(handle.admission, handle.pid, handle.generation, deadline)
+             Native.Admission.begin_close(handle.admission, handle.pid, handle.generation, deadline)
 
     close = {:close_control, handle.generation, :disconnect, deadline, token}
 
@@ -147,7 +145,6 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
   @tag :owner_boundary
   test "WMA-C02 an admitted envelope still validates operation and subscription terms before I/O" do
-    alias Wotex.Matter.{Subscription, Native.Admission}
     audit = temporary_path("admitted-input")
     assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
     initial = File.read!(audit)
@@ -187,7 +184,9 @@ defmodule Wotex.Matter.PersistentBridgeTest do
             {{:unsubscribe, generation, forged, 1_000}, :invalid_handle}
           ] do
         deadline = System.monotonic_time(:millisecond) + 2_000
-        assert {:ok, lease} = Admission.acquire(handle.admission, handle.pid, generation, deadline)
+
+        assert {:ok, lease} =
+                 Native.Admission.acquire(handle.admission, handle.pid, generation, deadline)
 
         assert {:error, %Error{code: ^code}} =
                  boundary_call(handle.pid, {:bounded, message, deadline, lease})
@@ -205,7 +204,6 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
   @tag :owner_boundary
   test "WMA-C03 malformed controls and unadmitted calls are rejected during pending native I/O" do
-    alias Wotex.Matter.Native.Admission
     audit = temporary_path("pending-control-identity")
     assert {:ok, handle} = Native.connect(options(fixture("silent_request", audit)))
     active = Task.async(fn -> Native.health(handle, 10_000) end)
@@ -214,7 +212,7 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     deadline = System.monotonic_time(:millisecond) + 5_000
 
     assert {:first, token} =
-             Admission.begin_close(handle.admission, handle.pid, handle.generation, deadline)
+             Native.Admission.begin_close(handle.admission, handle.pid, handle.generation, deadline)
 
     close = {:close_control, handle.generation, :disconnect, deadline, token}
 
@@ -244,8 +242,6 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
   @tag :owner_boundary
   test "WMA-C03 invalidate and an expired submitted close both release their generation" do
-    alias Wotex.Matter.Native.Admission
-
     assert {:ok, invalidated} = Native.connect(options(fixture("valid")))
     invalidated_monitor = Process.monitor(invalidated.pid)
     invalidated_admission = invalidated.admission
@@ -267,7 +263,12 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     deadline = System.monotonic_time(:millisecond) - 1
 
     assert {:first, token} =
-             Admission.begin_close(expired.admission, expired.pid, expired.generation, deadline)
+             Native.Admission.begin_close(
+               expired.admission,
+               expired.pid,
+               expired.generation,
+               deadline
+             )
 
     assert {:error, %Error{code: :timeout}} =
              GenServer.call(
@@ -330,7 +331,6 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
   @tag :owner_boundary
   test "WMA-C03 stale owner messages and the admission-close race preserve exact capabilities" do
-    alias Wotex.Matter.Native.Admission
     audit = temporary_path("stale-owner-messages")
     assert {:ok, handle} = Native.connect(options(fixture("valid", audit)))
     on_exit(fn -> Native.disconnect(handle) end)
@@ -345,10 +345,10 @@ defmodule Wotex.Matter.PersistentBridgeTest do
              boundary_call(handle.pid, {:bounded, message, deadline, {1, make_ref()}})
 
     assert {:ok, lease} =
-             Admission.acquire(handle.admission, handle.pid, handle.generation, deadline)
+             Native.Admission.acquire(handle.admission, handle.pid, handle.generation, deadline)
 
     assert {:first, close_token} =
-             Admission.begin_close(handle.admission, handle.pid, handle.generation, deadline)
+             Native.Admission.begin_close(handle.admission, handle.pid, handle.generation, deadline)
 
     assert {:error, %Error{code: :transport_closed}} =
              boundary_call(handle.pid, {:bounded, message, deadline, lease})
@@ -426,7 +426,12 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     assert {:error, %Error{code: :transport_closed, effect: :none}} =
              Native.request(handle, @write, 1_000)
 
-    frames = audit |> File.read!() |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!/1)
+    frames =
+      audit
+      |> File.read!()
+      |> String.split("\n", trim: true)
+      |> Enum.map(&Jason.decode!/1)
+
     assert Enum.map(frames, & &1["id"]) == [nil, "1", "18446744073709551615", "close"]
     assert Enum.map(frames, & &1["operation"]) == [nil, "open", "health", "close"]
     assert :ets.info(handle.admission) == :undefined
@@ -739,7 +744,9 @@ defmodule Wotex.Matter.PersistentBridgeTest do
     {:os_pid, child} = Port.info(port, :os_pid)
 
     try do
-      assert {_, 0} = System.cmd("/bin/kill", ["-STOP", to_string(child)])
+      assert {_, 0} =
+               Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-STOP", to_string(child)])
+
       assert fill_native_input(port, 128) == :busy
       started = System.monotonic_time(:millisecond)
       assert {:error, %Error{code: :transport_closed, effect: :none}} = Native.health(handle, 100)
@@ -748,7 +755,10 @@ defmodule Wotex.Matter.PersistentBridgeTest do
       assert System.monotonic_time(:millisecond) - started <= 1_000
     after
       if Port.info(port, :os_pid) == {:os_pid, child},
-        do: System.cmd("/bin/kill", ["-KILL", to_string(child)], stderr_to_stdout: true)
+        do:
+          Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-KILL", to_string(child)],
+            stderr_to_stdout: true
+          )
 
       Native.disconnect(handle)
     end
@@ -862,7 +872,11 @@ defmodule Wotex.Matter.PersistentBridgeTest do
       assert owned_ports(executable) == []
     end
 
-    frames = audit |> File.read!() |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!/1)
+    frames =
+      audit
+      |> File.read!()
+      |> String.split("\n", trim: true)
+      |> Enum.map(&Jason.decode!/1)
 
     assert Enum.map(frames, & &1["operation"]) ==
              [nil, "open", "read", "close", nil, "open", "read", "close"]
@@ -977,7 +991,13 @@ defmodule Wotex.Matter.PersistentBridgeTest do
 
       assert metadata == %{}
       assert owned_ports(executable) == []
-      frames = audit |> File.read!() |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!/1)
+
+      frames =
+        audit
+        |> File.read!()
+        |> String.split("\n", trim: true)
+        |> Enum.map(&Jason.decode!/1)
+
       assert Enum.map(frames, & &1["operation"]) == [nil, "open", wire_operation, "close"]
       sent = Enum.at(frames, 2)["parameters"]["value"]
 
@@ -1035,7 +1055,12 @@ defmodule Wotex.Matter.PersistentBridgeTest do
               }} =
                apply(Wotex.Runtime.ConsumedThing, operation, [consumed, name, input, context])
 
-      frames = audit |> File.read!() |> String.split("\n", trim: true) |> Enum.map(&Jason.decode!/1)
+      frames =
+        audit
+        |> File.read!()
+        |> String.split("\n", trim: true)
+        |> Enum.map(&Jason.decode!/1)
+
       assert Enum.count(frames, &(&1["operation"] == wire_operation)) == 1
       assert List.last(frames)["operation"] == "close"
       assert owned_ports(executable) == []
@@ -1106,7 +1131,10 @@ defmodule Wotex.Matter.PersistentBridgeTest do
       assert child_stopped?(child, 100)
     after
       Native.disconnect(handle)
-      System.cmd("kill", ["-KILL", Integer.to_string(child)], stderr_to_stdout: true)
+
+      Wotex.Matter.Native.ProcessCommand.run("kill", ["-KILL", Integer.to_string(child)],
+        stderr_to_stdout: true
+      )
     end
   end
 
@@ -1625,9 +1653,14 @@ defmodule Wotex.Matter.PersistentBridgeTest do
         mode in ["typed_read", "typed_zero", "typed_null", "typed_false", "bad_close"] and String.contains?(line, ~s("operation":"read")) ->
           result = ~s({"path":{"fabric_id":1,"node_id":2,"endpoint":1,"cluster":513,"member":0},"value":{"tag":"anonymous","type":"i16","value":2150},"data_version":0})
           result = case mode do
-            "typed_false" -> result |> String.replace("513", "6") |> String.replace(~s("type":"i16"), ~s("type":"boolean")) |> String.replace("2150", "false")
+            "typed_false" -> result
+              |> String.replace("513", "6")
+              |> String.replace(~s("type":"i16"), ~s("type":"boolean"))
+              |> String.replace("2150", "false")
             "typed_zero" -> String.replace(result, "2150", "0")
-            "typed_null" -> result |> String.replace(~s("type":"i16"), ~s("type":"null")) |> String.replace("2150", "null")
+            "typed_null" -> result
+              |> String.replace(~s("type":"i16"), ~s("type":"null"))
+              |> String.replace("2150", "null")
             _ -> result
           end
           IO.puts(~s({"version":1,"id":"\#{id}","ok":true,"result":\#{result}}))
@@ -1748,7 +1781,9 @@ defmodule Wotex.Matter.PersistentBridgeTest do
   defp child_stopped?(_, 0), do: false
 
   defp child_stopped?(pid, attempts) do
-    case System.cmd("kill", ["-0", Integer.to_string(pid)], stderr_to_stdout: true) do
+    case Wotex.Matter.Native.ProcessCommand.run("kill", ["-0", Integer.to_string(pid)],
+           stderr_to_stdout: true
+         ) do
       {_, 0} ->
         Process.sleep(10)
         child_stopped?(pid, attempts - 1)

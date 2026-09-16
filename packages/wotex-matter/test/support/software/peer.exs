@@ -53,7 +53,7 @@ defmodule Wotex.Matter.SoftwarePeer do
       {^reference, {:started, port, pid}} ->
         await_ready(command, %{command: command, port: port, os_pid: pid}, deadline)
 
-      {^reference, :ready} when not is_nil(child) ->
+      {^reference, :ready} when child != nil ->
         if System.monotonic_time(:millisecond) < deadline,
           do: {:ok, child},
           else: expire(command, child)
@@ -99,7 +99,7 @@ defmodule Wotex.Matter.SoftwarePeer do
   defp startup_failed(child),
     do: startup_failed(child, System.monotonic_time(:millisecond) + 1_000)
 
-  defp startup_failed(nil, _deadline), do: {:error, :peer_not_ready}
+  defp startup_failed(nil, _), do: {:error, :peer_not_ready}
 
   defp startup_failed(%{port: port, os_pid: child}, deadline) do
     if reaped?(port, child, deadline),
@@ -108,7 +108,9 @@ defmodule Wotex.Matter.SoftwarePeer do
   end
 
   defp reaped?(port, child, deadline) do
-    case System.cmd("/bin/kill", ["-0", Integer.to_string(child)], stderr_to_stdout: true) do
+    case Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-0", Integer.to_string(child)],
+           stderr_to_stdout: true
+         ) do
       {_, 0} ->
         if System.monotonic_time(:millisecond) < deadline do
           Process.sleep(5)

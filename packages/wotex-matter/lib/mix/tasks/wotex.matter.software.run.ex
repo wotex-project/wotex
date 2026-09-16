@@ -19,7 +19,7 @@ defmodule Mix.Tasks.Wotex.Matter.Software.Run do
     runner = Path.expand("test/support/software/fixture.exs")
     unless File.regular?(runner), do: Mix.raise("software_fixture_source_required")
     Code.require_file(runner)
-    fixture = Module.concat([Wotex, Matter, SoftwareFixture])
-    apply(fixture, :main, [:run, arguments])
+    fixture = Module.safe_concat([Wotex, Matter, SoftwareFixture])
+    fixture.main(:run, arguments)
   end
 end

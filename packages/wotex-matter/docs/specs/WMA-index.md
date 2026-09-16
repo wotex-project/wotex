@@ -9,7 +9,7 @@ or publication.
 - [WMA.00 Software implementation rules](WMA.00-library-contract.md)
 - [WMA.01 Matter protocol and graduation contract](WMA.01-protocol.md)
 - [WMA.02 Implemented Matter profile](WMA.02-implemented-profile.md)
-- [WMA.03 Explicit SDK client](WMA.03-sdk-client.md)
+- [WMA.03 Explicit native SDK client](WMA.03-sdk-client.md)
 - [WMA.10 Complete SDK-backed Matter controller software profile](WMA.10-software-contract.md)
 
 - [WMA.11 Standalone client and protocol workflows](WMA.11-standalone-client-and-preservation.md)

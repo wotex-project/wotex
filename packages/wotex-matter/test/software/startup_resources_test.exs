@@ -52,7 +52,12 @@ defmodule Wotex.Matter.NativeStartupResourcesTest do
                     1
 
                   "wait" ->
-                    assert {_, 0} = System.cmd("kill", ["-KILL", Integer.to_string(child)])
+                    assert {_, 0} =
+                             Wotex.Matter.Native.ProcessCommand.run("kill", [
+                               "-KILL",
+                               Integer.to_string(child)
+                             ])
+
                     137
                 end
 

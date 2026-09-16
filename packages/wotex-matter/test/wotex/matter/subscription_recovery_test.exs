@@ -123,7 +123,12 @@ defmodule Wotex.Matter.SubscriptionRecoveryTest do
 
   defp contract_vector!(id) do
     path = Path.expand("../../../docs/specs/fixtures/contract-v1.json", __DIR__)
-    contract = path |> File.read!() |> Jason.decode!()
+
+    contract =
+      path
+      |> File.read!()
+      |> Jason.decode!()
+
     Enum.find(contract["cases"], &(&1["id"] == id)) || flunk("missing #{id}")
   end
 

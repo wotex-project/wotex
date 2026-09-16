@@ -4,7 +4,22 @@ defmodule Wotex.Matter.StandaloneBoundaryTest do
   use ExUnit.Case, async: true
 
   alias Wotex.Matter
-  alias Wotex.Matter.{Address, EndpointCatalogue, Error, EventReport, TestClient}
+
+  alias Wotex.Matter.{
+    Address,
+    EndpointCatalogue,
+    Error,
+    EventReport,
+    Session,
+    Subscription,
+    TestClient
+  }
+
+  defmodule InvalidUnsubscribeClient do
+    @moduledoc false
+    @spec unsubscribe(term(), term(), term()) :: {:ok, :unexpected}
+    def unsubscribe(_, _, _), do: {:ok, :unexpected}
+  end
 
   @heating %{fabric_id: 1, node_id: 3, endpoint: 1, cluster: 0x0201, member: 0x12}
   @on %{fabric_id: 1, node_id: 3, endpoint: 1, cluster: 6, member: 1}
@@ -31,6 +46,14 @@ defmodule Wotex.Matter.StandaloneBoundaryTest do
              Matter.open_commissioning_window(nil, %{})
 
     assert {:error, %Error{code: :invalid_handle}} = Matter.unsubscribe(nil, nil)
+  end
+
+  test "unsubscribe rejects a tagged success from a client that promises only :ok" do
+    session = %Session{client: InvalidUnsubscribeClient, handle: :fixture, timeout: 100}
+    subscription = %Subscription{pid: self(), reference: make_ref(), generation: 1}
+
+    assert {:error, %Error{code: :invalid_transport_return}} =
+             Matter.unsubscribe(session, subscription)
   end
 
   test "WMA-C02 invalid deadlines mutation versions and event bounds acquire no request" do

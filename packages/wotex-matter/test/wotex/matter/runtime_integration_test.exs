@@ -4,8 +4,8 @@ defmodule Wotex.Matter.RuntimeIntegrationTest do
   use ExUnit.Case, async: true
 
   alias Wotex.Matter
-  alias Wotex.Matter.{RuntimeClient, RuntimeCredentials, RuntimeResultTransport, Transport}
   alias Wotex.Matter.Error, as: MatterError
+  alias Wotex.Matter.{RuntimeClient, RuntimeCredentials, RuntimeResultTransport, Transport}
   alias Wotex.Runtime.{BindingProfile, ConsumedThing, Context, Result, Retry}
   alias Wotex.Runtime.Error, as: RuntimeError
 
@@ -1033,6 +1033,11 @@ defmodule Wotex.Matter.RuntimeIntegrationTest do
   defp atom_string(value) when is_atom(value), do: Atom.to_string(value)
   defp atom_string(value) when is_binary(value), do: value
 
-  defp fixture!, do: @fixture |> File.read!() |> Jason.decode!()
+  defp fixture!,
+    do:
+      @fixture
+      |> File.read!()
+      |> Jason.decode!()
+
   defp case!(fixture, id), do: Enum.find(fixture["cases"], &(&1["id"] == id))
 end

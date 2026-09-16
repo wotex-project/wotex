@@ -109,7 +109,10 @@ defmodule Wotex.Matter.SubscriptionTest do
         end
 
         assert {:messages,
-                [:occupied, {:wotex_matter, ^reference, {:error, %Error{code: :receiver_overflow}}}]} =
+                [
+                  :occupied,
+                  {:wotex_matter, ^reference, {:error, %Error{code: :receiver_overflow}}}
+                ]} =
                  Process.info(receiver, :messages)
       after
         Process.exit(receiver, :kill)
@@ -186,7 +189,10 @@ defmodule Wotex.Matter.SubscriptionTest do
           if lost == :blocked_stream do
             port = :sys.get_state(session.handle.pid).port
             {:os_pid, child} = Port.info(port, :os_pid)
-            assert {_, 0} = System.cmd("/bin/kill", ["-STOP", to_string(child)])
+
+            assert {_, 0} =
+                     Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-STOP", to_string(child)])
+
             assert fill_native_input(port, 128) == :busy
           end
 
@@ -515,7 +521,9 @@ defmodule Wotex.Matter.SubscriptionTest do
       monitor = Process.monitor(owner)
       port = :sys.get_state(owner).port
       {:os_pid, child} = Port.info(port, :os_pid)
-      assert {_, 0} = System.cmd("/bin/kill", ["-STOP", to_string(child)])
+
+      assert {_, 0} =
+               Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-STOP", to_string(child)])
 
       health =
         if pending_request do
@@ -538,7 +546,12 @@ defmodule Wotex.Matter.SubscriptionTest do
         assert_receive {:DOWN, ^monitor, :process, _, :normal}, 1_000
 
         assert eventually(fn ->
-                 elem(System.cmd("/bin/kill", ["-0", to_string(child)], stderr_to_stdout: true), 1) !=
+                 elem(
+                   Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-0", to_string(child)],
+                     stderr_to_stdout: true
+                   ),
+                   1
+                 ) !=
                    0
                end)
 
@@ -550,7 +563,10 @@ defmodule Wotex.Matter.SubscriptionTest do
           do: assert({:error, %Error{code: :transport_closed}} = Task.await(health, 1_000))
       after
         if Port.info(port, :os_pid) == {:os_pid, child},
-          do: System.cmd("/bin/kill", ["-KILL", to_string(child)], stderr_to_stdout: true)
+          do:
+            Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-KILL", to_string(child)],
+              stderr_to_stdout: true
+            )
 
         if health, do: Task.shutdown(health, :brutal_kill)
         Matter.disconnect(session)
@@ -1057,7 +1073,7 @@ defmodule Wotex.Matter.SubscriptionTest do
     audit = temporary_path("session-close")
     executable = native_fixture(audit, "quiet")
     assert {:ok, session} = Matter.connect([client: Native] ++ native_options(executable))
-    assert {:ok, _subscription} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
+    assert {:ok, _} = Matter.subscribe(session, %{kind: :attribute, paths: [@path]})
     assert :ok = Matter.disconnect(session)
 
     assert_receive {:subscription_telemetry, [:wotex, :matter, :subscription, :close], %{count: 1},

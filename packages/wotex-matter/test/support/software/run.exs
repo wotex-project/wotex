@@ -220,10 +220,11 @@ defmodule Wotex.Matter.SoftwareRun do
     environment = Map.merge(environment, Keyword.get(options, :env, %{}))
     workdir = if options[:workdir], do: ["--workdir", options[:workdir]], else: []
 
-    arguments =
-      ["exec"] ++
-        Enum.flat_map(Enum.sort(environment), fn {key, value} -> ["--env", key <> "=" <> value] end) ++
-        workdir ++ [context.name | arguments]
+    environment_arguments =
+      Enum.flat_map(Enum.sort(environment), fn {key, value} -> ["--env", key <> "=" <> value] end)
+
+    command_arguments = Enum.concat([environment_arguments, workdir, [context.name | arguments]])
+    arguments = ["exec" | command_arguments]
 
     command(context, id, arguments, timeout)
   end

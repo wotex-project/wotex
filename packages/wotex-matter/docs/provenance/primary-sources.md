@@ -107,9 +107,9 @@ The finite registry and exact thermostat/light/bridge/temperature recipes are in
 [WMA.11](../specs/WMA.11-standalone-client-and-preservation.md), with pinned XML
 sources. Native SDK generation uses the exact build-only artifacts listed above;
 no Python component is shipped or executes in the production controller.
-The current one-shot Python adapter is documented solely by
-[WMA.03](../specs/WMA.03-sdk-client.md). Its API-contract tests are not native
-commissioning/CASE/subscription evidence.
+The former one-shot Python adapter has been replaced by the first-party native
+client documented in [WMA.03](../specs/WMA.03-sdk-client.md). Build-time SDK
+generation is the remaining first-party Python dependency.
 
 W3C [TD 1.1 Recommendation](https://www.w3.org/TR/2023/REC-wot-thing-description11-20231205/)
 owns Thing Description semantics. A package-defined protocol Form profile is

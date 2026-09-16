@@ -3,9 +3,9 @@ spec:
   id: WMA.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-matter
-  updated: 2026-09-15
+  updated: 2026-09-17
 ---
 
 # WMA.12 Wotex integration and evidence contract
@@ -68,7 +68,7 @@ Every other TD operation, including Thing-level aggregate operations, is unsuppo
 
 Both target modes use the first-party C++ backend: .13 defines per-operation
 existing-store ownership for :oneshot and persistent ownership for :controller.
-The current .03 Python factory is baseline evidence, not a native profile option.
+The retired .03 Python factory is no longer a runtime option.
 
 The sample OnOff attribute is read-only; setting a light uses the On or Off command through an Action. Runtime paths are concrete. Native wildcard reads, commissioning, fabric custody and recovery do not become implicit Form operations.
 
@@ -140,7 +140,7 @@ null, array or schema-record values. A write acknowledgement is the string
 `"written"`; a status-only command result is nil. Other admitted command results
 use their response descriptor. One-shot metadata is empty. The controller profile
 requires `lifecycle: :persistent` and retains its distinct typed projection.
-Neither native mode admits the baseline Python factory option.
+Neither native mode admits a Python factory option.
 The `:controller` profile uses the .11 report contract with one anonymous outer
 `TLV.element()` as Result.payload and as each stream value. Do not unwrap it to a
 scalar or silently change the oneshot profile. For example a Boolean false is

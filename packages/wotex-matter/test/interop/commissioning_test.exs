@@ -6,8 +6,7 @@ defmodule Wotex.Matter.CommissioningInteropTest do
   use ExUnit.Case, async: false
 
   alias Wotex.Matter
-  alias Wotex.Matter.SoftwareScenarios
-  alias Wotex.Matter.{Error, Native, OnboardingMaterial}
+  alias Wotex.Matter.{Error, Native, OnboardingMaterial, SoftwareScenarios}
 
   @moduletag :interop
   @moduletag :software

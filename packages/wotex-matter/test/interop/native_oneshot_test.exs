@@ -14,7 +14,9 @@ defmodule Wotex.Matter.NativeOneshotInteropTest do
 
   test "native one-shot operations preserve typed API and scalar Runtime results with no retained child" do
     fixture =
-      System.fetch_env!("WOTEX_MATTER_NATIVE_ONESHOT_FIXTURE") |> File.read!() |> Jason.decode!()
+      System.fetch_env!("WOTEX_MATTER_NATIVE_ONESHOT_FIXTURE")
+      |> File.read!()
+      |> Jason.decode!()
 
     controller = Map.fetch!(fixture, "controller")
 
@@ -203,6 +205,10 @@ defmodule Wotex.Matter.NativeOneshotInteropTest do
     for path <- Path.wildcard("/proc/[0-9]*/cmdline"),
         {:ok, bytes} <- [File.read(path)],
         [^executable | _] <- [String.split(bytes, <<0>>, trim: true)],
-        do: path |> Path.dirname() |> Path.basename() |> String.to_integer()
+        do:
+          path
+          |> Path.dirname()
+          |> Path.basename()
+          |> String.to_integer()
   end
 end

@@ -65,35 +65,13 @@ defmodule Wotex.Matter.SoftwareProcessFlow do
       assert File.read!(done) == "complete\n"
       assert Port.info(processes.port) == nil
       assert :ets.info(processes.admission) == :undefined
-      native = result |> File.read!() |> Jason.decode!()
-      assert native["exit_status"] == 0
-      counts = Map.fetch!(native, "counts")
-      maximum = Map.fetch!(native, "maximum")
-      assert counts["sdk_reports"] >= 1
-      assert counts["sdk_subscriptions_acquired"] == 1
-      assert counts["sdk_controllers_closed"] == 1
-      assert counts["sources_acquired"] == 1
-      assert counts["sources_destroyed"] == 1
-      assert counts["callbacks_acquired"] == input["callback_count"]
-      assert counts["callbacks_destroyed"] == input["callback_count"]
-      assert counts["iterations"] == input["callback_count"]
-      assert is_integer(counts["source_elapsed_us"]) and counts["source_elapsed_us"] > 0
-      assert counts["callbacks_admitted"] + counts["callbacks_refused"] == input["callback_count"]
-      assert counts["callbacks_admitted"] > 0
-      assert counts["callbacks_refused"] > 0
-      assert counts["sdk_cancellations_completed"] == 1
-      assert counts["retirement_barriers"] == 1
-      assert counts["values_encoded"] > 0
-      assert counts["reports_transmitted"] > 0
-      assert_resources_released(native)
 
-      for key <-
-            ~w(queued_reports queued_report_bytes outstanding_reports outstanding_report_bytes output_report_frames output_report_bytes output_control_frames output_control_bytes output_reply_frames output_reply_bytes),
-          do: assert(is_integer(Map.fetch!(maximum, key)))
+      native =
+        result
+        |> File.read!()
+        |> Jason.decode!()
 
-      for key <-
-            ~w(invalid_callback_values invalid_encoded_values source_completion_write_failures reports_after_terminal),
-          do: assert(Map.get(counts, key, 0) == 0)
+      maximum = assert_native_result!(native, input)
 
       if input["suspend"] == "connection", do: assert(observed.observed_values > 0)
 
@@ -102,26 +80,8 @@ defmodule Wotex.Matter.SoftwareProcessFlow do
           if(File.exists?("/proc/#{processes.child}"), do: 1, else: 0)
 
       normalized = %{
-        "frame_bound" =>
-          within?(maximum, ~w(queued_reports outstanding_reports output_report_frames), 64) and
-            within?(maximum, ["output_control_frames"], 256) and
-            within?(maximum, ["output_reply_frames"], 64) and
-            within?(observed.maximum, ~w(port_reports owner_reports receiver_reports), 64) and
-            within?(observed.maximum, ["port_controls"], 256) and
-            within?(observed.maximum, ["port_replies"], 64),
-        "byte_bound" =>
-          within?(
-            maximum,
-            ~w(queued_report_bytes outstanding_report_bytes output_report_bytes output_control_bytes),
-            1_048_576
-          ) and
-            within?(maximum, ["output_reply_bytes"], 8_388_608) and
-            within?(
-              observed.maximum,
-              ~w(port_report_bytes port_control_bytes owner_bytes receiver_bytes),
-              1_048_576
-            ) and
-            within?(observed.maximum, ["port_reply_bytes"], 8_388_608),
+        "frame_bound" => frame_bound?(maximum, observed.maximum),
+        "byte_bound" => byte_bound?(maximum, observed.maximum),
         "terminal_count" => observed.receiver_result.terminal_count,
         "deliveries_after_terminal" => observed.receiver_result.deliveries_after_terminal,
         "owned_processes_after_grace" => surviving
@@ -160,6 +120,63 @@ defmodule Wotex.Matter.SoftwareProcessFlow do
           else: System.delete_env("WOTEX_MATTER_FLOW_CONFIG")
       end
     end
+  end
+
+  defp assert_native_result!(native, input) do
+    assert native["exit_status"] == 0
+    counts = Map.fetch!(native, "counts")
+    maximum = Map.fetch!(native, "maximum")
+    assert counts["sdk_reports"] >= 1
+    assert counts["sdk_subscriptions_acquired"] == 1
+    assert counts["sdk_controllers_closed"] == 1
+    assert counts["sources_acquired"] == 1
+    assert counts["sources_destroyed"] == 1
+    assert counts["callbacks_acquired"] == input["callback_count"]
+    assert counts["callbacks_destroyed"] == input["callback_count"]
+    assert counts["iterations"] == input["callback_count"]
+    assert is_integer(counts["source_elapsed_us"]) and counts["source_elapsed_us"] > 0
+    assert counts["callbacks_admitted"] + counts["callbacks_refused"] == input["callback_count"]
+    assert counts["callbacks_admitted"] > 0
+    assert counts["callbacks_refused"] > 0
+    assert counts["sdk_cancellations_completed"] == 1
+    assert counts["retirement_barriers"] == 1
+    assert counts["values_encoded"] > 0
+    assert counts["reports_transmitted"] > 0
+    assert_resources_released(native)
+
+    for key <-
+          ~w(queued_reports queued_report_bytes outstanding_reports outstanding_report_bytes output_report_frames output_report_bytes output_control_frames output_control_bytes output_reply_frames output_reply_bytes),
+        do: assert(is_integer(Map.fetch!(maximum, key)))
+
+    for key <-
+          ~w(invalid_callback_values invalid_encoded_values source_completion_write_failures reports_after_terminal),
+        do: assert(Map.get(counts, key, 0) == 0)
+
+    maximum
+  end
+
+  defp frame_bound?(native, observed) do
+    within?(native, ~w(queued_reports outstanding_reports output_report_frames), 64) and
+      within?(native, ["output_control_frames"], 256) and
+      within?(native, ["output_reply_frames"], 64) and
+      within?(observed, ~w(port_reports owner_reports receiver_reports), 64) and
+      within?(observed, ["port_controls"], 256) and
+      within?(observed, ["port_replies"], 64)
+  end
+
+  defp byte_bound?(native, observed) do
+    within?(
+      native,
+      ~w(queued_report_bytes outstanding_report_bytes output_report_bytes output_control_bytes),
+      1_048_576
+    ) and
+      within?(native, ["output_reply_bytes"], 8_388_608) and
+      within?(
+        observed,
+        ~w(port_report_bytes port_control_bytes owner_bytes receiver_bytes),
+        1_048_576
+      ) and
+      within?(observed, ["port_reply_bytes"], 8_388_608)
   end
 
   defp assert_resources_released(native) do
@@ -407,7 +424,10 @@ defmodule Wotex.Matter.SoftwareProcessFlow do
               _ -> {:control, "port_controls", "port_control_bytes"}
             end
 
-          acc = acc |> increment(count_key, 1) |> increment(byte_key, byte_size(bytes) + 1)
+          acc =
+            acc
+            |> increment(count_key, 1)
+            |> increment(byte_key, byte_size(bytes) + 1)
 
           if kind == :report do
             assert [_, value] =

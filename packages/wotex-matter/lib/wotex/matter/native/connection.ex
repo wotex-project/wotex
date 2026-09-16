@@ -435,7 +435,10 @@ defmodule Wotex.Matter.Native.Connection do
 
         case result do
           {:reply, reply, next_state} ->
-            {:noreply, next_state |> finish_call(lease, reply) |> schedule_drain()}
+            {:noreply,
+             next_state
+             |> finish_call(lease, reply)
+             |> schedule_drain()}
 
           {:stop, reason, reply, next_state} ->
             {:stop, reason, finish_call(next_state, lease, reply)}
@@ -562,7 +565,7 @@ defmodule Wotex.Matter.Native.Connection do
     cleanup_deadline = System.monotonic_time(:millisecond) + @cleanup_timeout
     owners = stop_stream_owners(Map.values(Map.get(state, :subscriptions, %{})))
 
-    Enum.each(Map.get(state, :subscriptions, %{}), fn {_reference, subscription} ->
+    Enum.each(Map.get(state, :subscriptions, %{}), fn {_, subscription} ->
       result =
         if subscription.status == :closing,
           do: subscription.close_result,
@@ -1042,14 +1045,10 @@ defmodule Wotex.Matter.Native.Connection do
   defp handshake_response(port, owner_monitor, id, deadline) do
     with {:ok, line} <- await_line_until(port, owner_monitor, deadline),
          {:ok, frame} <- Wire.frame(line) do
-      case decode_response(frame, id) do
-        {:ok, _} = result -> result
-        {:error, %Error{}} = error -> error
-        _ -> {:error, Error.new(:invalid_frame)}
-      end
+      response = decode_response(frame, id)
+      if response == :not_response, do: {:error, Error.new(:invalid_frame)}, else: response
     else
       {:error, %Error{}} = error -> error
-      _ -> {:error, Error.new(:invalid_frame)}
     end
   end
 
@@ -1239,9 +1238,8 @@ defmodule Wotex.Matter.Native.Connection do
   defp decode_response(_, _), do: :not_response
 
   defp decode_async_line(line, state) do
-    with {:ok, frame} <- Wire.frame(line) do
-      decode_async_frame(frame, byte_size(line) + 1, state)
-    else
+    case Wire.frame(line) do
+      {:ok, frame} -> decode_async_frame(frame, byte_size(line) + 1, state)
       _ -> {:error, Error.new(:invalid_frame)}
     end
   end
@@ -1257,7 +1255,7 @@ defmodule Wotex.Matter.Native.Connection do
            "continuity" => "lost",
            "attempt" => attempt
          } = frame,
-         _encoded_bytes,
+         _,
          state
        )
        when map_size(frame) == 8 and is_binary(native_id) and is_integer(generation) and
@@ -1285,15 +1283,13 @@ defmodule Wotex.Matter.Native.Connection do
            "max_interval_s" => maximum,
            "sdk_subscription_id" => sdk_id
          } = frame,
-         _encoded_bytes,
+         _,
          state
        )
        when map_size(frame) == 11 and is_binary(native_id) and is_integer(generation) and
-              generation > 1 and is_integer(attempt) and attempt in 1..5 and
-              is_integer(minimum) and minimum in 0..65_535 and is_integer(maximum) and
-              maximum in 1..65_535 and minimum <= maximum and is_integer(sdk_id) and
-              sdk_id in 0..0xFFFFFFFF do
-    with true <- session_generation == state.generation,
+              generation > 1 do
+    with true <- valid_resubscribed_metadata?(attempt, minimum, maximum, sdk_id),
+         true <- session_generation == state.generation,
          {:ok, reference} <- Map.fetch(state.subscription_ids, {native_id, generation}),
          {:ok, next_state} <-
            finish_recovery(state, reference, generation, attempt, minimum, maximum, sdk_id) do
@@ -1304,6 +1300,67 @@ defmodule Wotex.Matter.Native.Connection do
   end
 
   defp decode_async_frame(
+         %{"event" => "subscription_report"} = frame,
+         encoded_bytes,
+         state
+       ),
+       do: decode_subscription_report(frame, encoded_bytes, state)
+
+  defp decode_async_frame(
+         %{
+           "version" => 1,
+           "event" => "stream_retired",
+           "session_generation" => session_generation,
+           "subscription_id" => native_id,
+           "generation" => generation,
+           "last_report_sequence" => last_sequence
+         } = frame,
+         _,
+         state
+       )
+       when map_size(frame) == 6 and is_binary(native_id) and is_integer(generation) and
+              generation > 0 and is_integer(last_sequence) and last_sequence >= 0 do
+    key = {native_id, generation}
+
+    with true <- session_generation == state.generation,
+         {:ok, reference} <- Map.fetch(state.subscription_ids, key) do
+      retire_stream_generation(state, reference, generation, last_sequence)
+    else
+      _ -> {:error, Error.new(:invalid_frame)}
+    end
+  end
+
+  defp decode_async_frame(
+         %{"version" => 1, "id" => id, "ok" => true, "result" => nil} = frame,
+         _,
+         state
+       )
+       when map_size(frame) == 4 and is_binary(id) do
+    decode_cancellation(state, id)
+  end
+
+  defp decode_async_frame(%{"event" => "subscription_error"} = frame, bytes, state),
+    do: decode_subscription_error(frame, bytes, state)
+
+  defp decode_async_frame(_, _, _), do: {:error, Error.new(:invalid_frame)}
+
+  defp valid_resubscribed_metadata?(attempt, minimum, maximum, sdk_id) do
+    is_integer(attempt) and attempt in 1..5 and is_integer(minimum) and
+      minimum in 0..65_535 and is_integer(maximum) and maximum in 1..65_535 and
+      minimum <= maximum and is_integer(sdk_id) and sdk_id in 0..0xFFFFFFFF
+  end
+
+  defp decode_cancellation(state, id) do
+    case Map.pop(state.internal_requests, id) do
+      {nil, _} ->
+        {:error, Error.new(:invalid_frame)}
+
+      {reference, requests} ->
+        {:ok, complete_cancellation(%{state | internal_requests: requests}, reference)}
+    end
+  end
+
+  defp decode_subscription_report(
          %{
            "version" => 1,
            "event" => "subscription_report",
@@ -1336,46 +1393,9 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  defp decode_async_frame(
-         %{
-           "version" => 1,
-           "event" => "stream_retired",
-           "session_generation" => session_generation,
-           "subscription_id" => native_id,
-           "generation" => generation,
-           "last_report_sequence" => last_sequence
-         } = frame,
-         _encoded_bytes,
-         state
-       )
-       when map_size(frame) == 6 and is_binary(native_id) and is_integer(generation) and
-              generation > 0 and is_integer(last_sequence) and last_sequence >= 0 do
-    key = {native_id, generation}
+  defp decode_subscription_report(_, _, _), do: {:error, Error.new(:invalid_frame)}
 
-    with true <- session_generation == state.generation,
-         {:ok, reference} <- Map.fetch(state.subscription_ids, key) do
-      retire_stream_generation(state, reference, generation, last_sequence)
-    else
-      _ -> {:error, Error.new(:invalid_frame)}
-    end
-  end
-
-  defp decode_async_frame(
-         %{"version" => 1, "id" => id, "ok" => true, "result" => nil} = frame,
-         _bytes,
-         state
-       )
-       when map_size(frame) == 4 and is_binary(id) do
-    case Map.pop(state.internal_requests, id) do
-      {nil, _} ->
-        {:error, Error.new(:invalid_frame)}
-
-      {reference, requests} ->
-        {:ok, complete_cancellation(%{state | internal_requests: requests}, reference)}
-    end
-  end
-
-  defp decode_async_frame(
+  defp decode_subscription_error(
          %{
            "version" => 1,
            "event" => "subscription_error",
@@ -1384,7 +1404,7 @@ defmodule Wotex.Matter.Native.Connection do
            "generation" => generation,
            "error" => raw_error
          } = frame,
-         _encoded_bytes,
+         _,
          state
        )
        when map_size(frame) == 6 and is_binary(native_id) and is_integer(generation) and
@@ -1417,7 +1437,7 @@ defmodule Wotex.Matter.Native.Connection do
     end
   end
 
-  defp decode_async_frame(_, _, _), do: {:error, Error.new(:invalid_frame)}
+  defp decode_subscription_error(_, _, _), do: {:error, Error.new(:invalid_frame)}
 
   defp send_frame(port, frame) do
     case Request.encode(frame) do
@@ -1725,7 +1745,7 @@ defmodule Wotex.Matter.Native.Connection do
 
         subscription_ids =
           state.subscription_ids
-          |> Enum.reject(fn {_key, owner} -> owner == reference end)
+          |> Enum.reject(fn {_, owner} -> owner == reference end)
           |> Map.new()
 
         %{
@@ -1808,7 +1828,7 @@ defmodule Wotex.Matter.Native.Connection do
     cond do
       subscription.status == :establishing ->
         if length(subscription.buffered) < subscription.queue_limit do
-          buffered = subscription.buffered ++ [{delivery, sequence, encoded_bytes}]
+          buffered = List.insert_at(subscription.buffered, -1, {delivery, sequence, encoded_bytes})
           {:ok, put_in(state.subscriptions[reference].buffered, buffered)}
         else
           {:ok, overflow_subscription(state, reference, sequence, encoded_bytes)}
@@ -1892,9 +1912,10 @@ defmodule Wotex.Matter.Native.Connection do
 
   defp register_report(state, reference, sequence, encoded_bytes) do
     stream = {reference, Map.fetch!(state.subscriptions, reference).generation}
+    token = make_ref()
 
     with {:ok, ledger} <-
-           ReportLedger.register(state.report_ledger, stream, sequence, encoded_bytes, make_ref()) do
+           ReportLedger.register(state.report_ledger, stream, sequence, encoded_bytes, token) do
       {:ok,
        state
        |> Map.put(:report_ledger, ledger)
@@ -2030,7 +2051,10 @@ defmodule Wotex.Matter.Native.Connection do
       {:os_pid, pid} ->
         # Reap the exact owned child before dropping its Port identity. A failed
         # native operation may leave the child unable to observe closed stdin.
-        System.cmd("/bin/kill", ["-KILL", Integer.to_string(pid)], stderr_to_stdout: true)
+        Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-KILL", Integer.to_string(pid)],
+          stderr_to_stdout: true
+        )
+
         if Port.info(port), do: Port.close(port)
         await_port_closed(port, deadline)
 

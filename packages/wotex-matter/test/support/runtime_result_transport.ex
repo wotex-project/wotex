@@ -6,7 +6,7 @@ defmodule Wotex.Matter.RuntimeResultTransport do
   alias Wotex.Runtime.{Limits, Result}
 
   @impl Wotex.Runtime.Transport
-  def request(request, _execution_context, %{mode: mode, test_pid: test_pid}) do
+  def request(request, _, %{mode: mode, test_pid: test_pid}) do
     send(test_pid, {:result_transport_request, request.request_id, request.operation})
     result(mode, request)
   end

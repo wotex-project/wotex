@@ -108,7 +108,10 @@ defmodule Wotex.Matter.NativePendingSubscriptionLossInteropTest do
 
           unless child_stopped?(child, System.monotonic_time(:millisecond) + 6_000) do
             if process_identity(child) == child_identity,
-              do: System.cmd("/bin/kill", ["-KILL", to_string(child)], stderr_to_stdout: true)
+              do:
+                Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-KILL", to_string(child)],
+                  stderr_to_stdout: true
+                )
 
             assert child_stopped?(child, System.monotonic_time(:millisecond) + 1_000)
           end
@@ -126,7 +129,11 @@ defmodule Wotex.Matter.NativePendingSubscriptionLossInteropTest do
     case File.read("/proc/#{pid}/stat") do
       {:ok, contents} ->
         [_, fields] = String.split(contents, ") ", parts: 2)
-        {pid, fields |> String.split() |> Enum.fetch!(19)}
+
+        {pid,
+         fields
+         |> String.split()
+         |> Enum.fetch!(19)}
 
       {:error, :enoent} ->
         nil

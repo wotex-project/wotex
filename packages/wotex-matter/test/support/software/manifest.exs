@@ -7,7 +7,6 @@ defmodule Wotex.Matter.SoftwareManifest do
   @patterns [
     "lib/**/*.ex",
     "native/**/*",
-    "priv/matter_bridge.py",
     "priv/**/*.json",
     "test/**/*.ex",
     "test/**/*.exs",
@@ -99,6 +98,19 @@ defmodule Wotex.Matter.SoftwareManifest do
 
   @spec verify_local(String.t(), String.t(), map(), :native | :software) :: map()
   def verify_local(root, workspace, manifest, required_mode) do
+    verify_identity!(root, manifest)
+    mode = manifest["mode"]
+
+    unless mode in ["native", "software"] and
+             (required_mode == :native or mode == "software"),
+           do: fail(:software_fixture_required)
+
+    verify_artifacts!(workspace, manifest["files"], mode)
+    verify_native_manifest!(root, workspace)
+    manifest
+  end
+
+  defp verify_identity!(root, manifest) do
     expected = %{
       "schema" => "wotex.matter.software-workspace@1",
       "status" => "ready",
@@ -111,14 +123,9 @@ defmodule Wotex.Matter.SoftwareManifest do
 
     unless Enum.all?(expected, fn {key, value} -> manifest[key] == value end),
       do: fail(:manifest_mismatch)
+  end
 
-    mode = manifest["mode"]
-
-    unless mode in ["native", "software"] and
-             (required_mode == :native or mode == "software"),
-           do: fail(:software_fixture_required)
-
-    files = manifest["files"]
+  defp verify_artifacts!(workspace, files, mode) do
     required = required_files(mode)
 
     unless is_map(files) and Enum.sort(Map.keys(files)) == Enum.sort(required),
@@ -132,7 +139,9 @@ defmodule Wotex.Matter.SoftwareManifest do
       unless match?({:ok, %{type: :regular}}, File.lstat(path)) and digest(path) == expected_hash,
         do: fail(:artifact_hash_mismatch)
     end
+  end
 
+  defp verify_native_manifest!(root, workspace) do
     native = read(Path.join(workspace, "native-manifest.json"))
 
     unless native["schema"] == "wotex.native-build" and native["version"] == 1 and
@@ -143,7 +152,11 @@ defmodule Wotex.Matter.SoftwareManifest do
     unless is_map(native["logs"]) and map_size(native["logs"]) in 1..256,
       do: fail(:native_manifest_mismatch)
 
-    for {name, expected_hash} <- native["logs"] do
+    verify_logs!(workspace, native["logs"])
+  end
+
+  defp verify_logs!(workspace, logs) do
+    for {name, expected_hash} <- logs do
       unless safe_name?(name) and String.starts_with?(name, "logs/") and valid_hash?(expected_hash),
         do: fail(:manifest_files)
 
@@ -151,8 +164,6 @@ defmodule Wotex.Matter.SoftwareManifest do
       assert_directories!(Path.dirname(path))
       unless digest(path) == expected_hash, do: fail(:artifact_hash_mismatch)
     end
-
-    manifest
   end
 
   @spec required_files(String.t()) :: [String.t()]
@@ -211,14 +222,15 @@ defmodule Wotex.Matter.SoftwareManifest do
   def assert_directories!(path) do
     [root | segments] = Path.split(path)
 
-    Enum.reduce(segments, root, fn segment, parent ->
-      current = Path.join(parent, segment)
+    _ =
+      Enum.reduce(segments, root, fn segment, parent ->
+        current = Path.join(parent, segment)
 
-      case File.lstat(current) do
-        {:ok, %{type: :directory}} -> current
-        _ -> fail(:invalid_workspace)
-      end
-    end)
+        case File.lstat(current) do
+          {:ok, %{type: :directory}} -> current
+          _ -> fail(:invalid_workspace)
+        end
+      end)
 
     :ok
   end

@@ -6,8 +6,8 @@ defmodule Wotex.Matter.NativeContractTest do
 
   use ExUnit.Case, async: false
 
-  alias Wotex.Matter.SoftwareCommand
   alias Wotex.Matter.Native.ReportLedger
+  alias Wotex.Matter.SoftwareCommand
 
   @moduletag :software
   @fixture "docs/specs/fixtures/native-port-v1.json"
@@ -24,7 +24,9 @@ defmodule Wotex.Matter.NativeContractTest do
       assert item["expectation"]["operator"] == "exact"
 
       fixture =
-        System.fetch_env!("WOTEX_MATTER_PROCESS_FLOW_FIXTURE") |> File.read!() |> Jason.decode!()
+        System.fetch_env!("WOTEX_MATTER_PROCESS_FLOW_FIXTURE")
+        |> File.read!()
+        |> Jason.decode!()
 
       observed = Wotex.Matter.SoftwareProcessFlow.run!(item, fixture)
       assert observed == item["expectation"]["value"], item["id"]
@@ -154,7 +156,11 @@ defmodule Wotex.Matter.NativeContractTest do
                    ]
                  )
 
-        [result | reversed_frames] = output |> String.split("\n", trim: true) |> Enum.reverse()
+        [result | reversed_frames] =
+          output
+          |> String.split("\n", trim: true)
+          |> Enum.reverse()
+
         observed = Jason.decode!(result)
         frames = Enum.reverse(reversed_frames)
         assert length(frames) == observed["transmitted"]
@@ -271,7 +277,7 @@ defmodule Wotex.Matter.NativeContractTest do
     flush_trace_ack(%{state | ledger: consumed})
   end
 
-  defp flush_trace_ack(%{terminal: terminal} = state) when not is_nil(terminal), do: state
+  defp flush_trace_ack(%{terminal: terminal} = state) when terminal != nil, do: state
 
   defp flush_trace_ack(state) do
     case ReportLedger.advance(state.ledger) do
@@ -337,7 +343,9 @@ defmodule Wotex.Matter.NativeContractTest do
   defp surviving_child(_, 0), do: 1
 
   defp surviving_child(pid, remaining) do
-    case System.cmd("kill", ["-0", Integer.to_string(pid)], stderr_to_stdout: true) do
+    case Wotex.Matter.Native.ProcessCommand.run("kill", ["-0", Integer.to_string(pid)],
+           stderr_to_stdout: true
+         ) do
       {_, 0} ->
         Process.sleep(10)
         surviving_child(pid, remaining - 1)
@@ -348,7 +356,11 @@ defmodule Wotex.Matter.NativeContractTest do
   end
 
   defp fixture! do
-    fixture = @fixture |> File.read!() |> Jason.decode!()
+    fixture =
+      @fixture
+      |> File.read!()
+      |> Jason.decode!()
+
     assert fixture["format"] == "wotex.native-contract"
     assert fixture["version"] == "1.0.0"
     assert fixture["package"] == "wotex_matter"

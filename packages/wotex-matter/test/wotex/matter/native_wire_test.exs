@@ -245,7 +245,10 @@ defmodule Wotex.Matter.NativeWireTest do
     end
 
     for kind <- ["epoch", "system"], id <- [1, 0xFFFFFFFFFFFFFFFF] do
-      metadata = event_metadata() |> put_in(["timestamp", "kind"], kind) |> Map.put("report_id", id)
+      metadata =
+        event_metadata()
+        |> put_in(["timestamp", "kind"], kind)
+        |> Map.put("report_id", id)
 
       assert {:ok, {:ok, %{value: []}, %{kind: :event} = decoded}} =
                Wire.subscription("event", element("structure", []), metadata)

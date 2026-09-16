@@ -70,8 +70,16 @@ defmodule Wotex.Matter.SoftwareScenariosTest do
       refute File.exists?(pid_file)
 
       operation = fn ->
-        pid = pid_file |> File.read!() |> String.trim()
-        assert {_, 0} = System.cmd("/bin/kill", ["-0", pid], stderr_to_stdout: true)
+        pid =
+          pid_file
+          |> File.read!()
+          |> String.trim()
+
+        assert {_, 0} =
+                 Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-0", pid],
+                   stderr_to_stdout: true
+                 )
+
         if outcome == :raise, do: raise("case failure"), else: :case_completed
       end
 
@@ -112,8 +120,16 @@ defmodule Wotex.Matter.SoftwareScenariosTest do
     assert length(files) == count
 
     for path <- files do
-      pid = path |> File.read!() |> String.trim()
-      assert {_, status} = System.cmd("/bin/kill", ["-0", pid], stderr_to_stdout: true)
+      pid =
+        path
+        |> File.read!()
+        |> String.trim()
+
+      assert {_, status} =
+               Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-0", pid],
+                 stderr_to_stdout: true
+               )
+
       assert status != 0
       assert Bitwise.band(File.stat!(Path.dirname(path)).mode, 0o777) == 0o700
     end

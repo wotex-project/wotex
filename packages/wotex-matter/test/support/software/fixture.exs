@@ -83,7 +83,7 @@ defmodule Wotex.Matter.SoftwareFixture do
         SoftwareManifest.write(path, value)
         SoftwareManifest.verify_local(root, workspace, SoftwareManifest.read(path), mode)
       rescue
-        _error ->
+        _ ->
           SoftwareManifest.write(Path.join(workspace, "build-result.json"), %{
             "schema" => "wotex.matter.software-build@1",
             "status" => "failed"

@@ -5,8 +5,7 @@ defmodule Wotex.Matter.NativeCommissioningTimeoutTest do
 
   use ExUnit.Case, async: false
   alias Wotex.Matter
-  alias Wotex.Matter.SoftwareScenarios
-  alias Wotex.Matter.{Error, Native}
+  alias Wotex.Matter.{Error, Native, SoftwareScenarios}
 
   @moduletag :interop
   @moduletag :software
@@ -14,7 +13,9 @@ defmodule Wotex.Matter.NativeCommissioningTimeoutTest do
 
   test "the SDK commissioning timeout retains its status before the native owner retires" do
     fixture =
-      System.fetch_env!("WOTEX_MATTER_NATIVE_TIMEOUT_FIXTURE") |> File.read!() |> Jason.decode!()
+      System.fetch_env!("WOTEX_MATTER_NATIVE_TIMEOUT_FIXTURE")
+      |> File.read!()
+      |> Jason.decode!()
 
     result =
       SoftwareScenarios.with_peer(fixture, fn ->
@@ -78,7 +79,9 @@ defmodule Wotex.Matter.NativeCommissioningTimeoutTest do
   defp child_stopped?(_, 0), do: false
 
   defp child_stopped?(pid, remaining) do
-    case System.cmd("kill", ["-0", Integer.to_string(pid)], stderr_to_stdout: true) do
+    case Wotex.Matter.Native.ProcessCommand.run("kill", ["-0", Integer.to_string(pid)],
+           stderr_to_stdout: true
+         ) do
       {_, 0} ->
         Process.sleep(10)
         child_stopped?(pid, remaining - 1)

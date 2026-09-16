@@ -53,7 +53,7 @@ defmodule Wotex.Matter.SoftwareCaseFormatter do
     {:noreply, state}
   end
 
-  def handle_cast({:suite_finished, _times}, state) do
+  def handle_cast({:suite_finished, _}, state) do
     cases =
       Enum.map(state.context.cases, fn item ->
         status = Map.get(state.observed, {item["module"], item["name"]}, "missing")

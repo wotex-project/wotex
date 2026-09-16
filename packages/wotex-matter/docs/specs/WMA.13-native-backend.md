@@ -3,9 +3,9 @@ spec:
   id: WMA.13
   title: "Native backend, build and IPC contract"
   status: accepted
-  version: 1.0.4
+  version: 1.0.5
   owner: wotex-matter
-  updated: 2026-09-15
+  updated: 2026-09-17
 ---
 
 # WMA.13 Native backend, build and IPC contract
@@ -285,9 +285,8 @@ read/write/invoke within the same total deadline, and closes/reaps its owner.
 It requires `storage_mode: :open_existing`, `authority: :stored` and S02's
 identity/trust options; it cannot create authority, commission or subscribe.
 The persistent `:controller` profile keeps the same host and storage owner across
-calls. The current Python factory option belongs only to the .03 implementation
-baseline and is not accepted by either target native mode. There is no fallback
-from failed native initialization to a Python factory.
+calls. The former Python factory option is removed from the package. There is no
+fallback from failed native initialization to a Python factory.
 
 ## WMA-B04 — Native controller and credentials
 

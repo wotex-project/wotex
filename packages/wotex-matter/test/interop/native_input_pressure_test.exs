@@ -49,7 +49,9 @@ defmodule Wotex.Matter.NativeInputPressureInteropTest do
         monitor = Process.monitor(handle.pid)
 
         try do
-          assert {_, 0} = System.cmd("/bin/kill", ["-STOP", to_string(child)])
+          assert {_, 0} =
+                   Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-STOP", to_string(child)])
+
           assert eventually(fn -> File.read!("/proc/#{child}/status") =~ ~r/State:\s+T/ end)
           assert {:busy, bytes} = fill_native_input(port, 128, 0)
           assert bytes > 0 and bytes <= 2_097_152
@@ -98,7 +100,10 @@ defmodule Wotex.Matter.NativeInputPressureInteropTest do
           }
         after
           if Port.info(port, :os_pid) == {:os_pid, child},
-            do: System.cmd("/bin/kill", ["-KILL", to_string(child)], stderr_to_stdout: true)
+            do:
+              Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-KILL", to_string(child)],
+                stderr_to_stdout: true
+              )
 
           Native.disconnect(handle)
         end

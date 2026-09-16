@@ -3,9 +3,9 @@ spec:
   id: WMA.10
   title: "Complete SDK-backed Matter controller software profile"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-matter
-  updated: 2026-09-15
+  updated: 2026-09-17
 ---
 
 # WMA.10 Complete SDK-backed Matter controller software profile
@@ -15,8 +15,7 @@ Read [WMA.00](WMA.00-library-contract.md) and the [implementation sequence](../p
 The accepted target is the persistent first-party C++ controller in
 [WMA.13](WMA.13-native-backend.md). The persistent controller profile and its
 accepted evidence are recorded in [WMA.02](WMA.02-implemented-profile.md). The
-one-shot Python factory adapter remains the narrow compatibility layer described
-in [WMA.03](WMA.03-sdk-client.md).
+one-shot native lifecycle is described in [WMA.03](WMA.03-sdk-client.md).
 
 ## Scope and source limitations
 

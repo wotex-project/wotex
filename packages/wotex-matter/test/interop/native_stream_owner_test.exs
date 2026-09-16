@@ -108,7 +108,12 @@ defmodule Wotex.Matter.NativeStreamOwnerInteropTest do
             assert_receive {:DOWN, ^monitor, :process, ^owner, _}, 1_000
 
           :stream_loss ->
-            assert {_, 0} = System.cmd("/bin/kill", ["-STOP", Integer.to_string(child)])
+            assert {_, 0} =
+                     Wotex.Matter.Native.ProcessCommand.run("/bin/kill", [
+                       "-STOP",
+                       Integer.to_string(child)
+                     ])
+
             Process.exit(owner, :kill)
             assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :owner_closed}}}, 1_000
             assert_receive {:DOWN, ^monitor, :process, ^owner, _}, 1_000
@@ -119,7 +124,13 @@ defmodule Wotex.Matter.NativeStreamOwnerInteropTest do
 
             try do
               assert Task.yield(cancellation, 50) == nil
-              assert {_, 0} = System.cmd("/bin/kill", ["-CONT", Integer.to_string(child)])
+
+              assert {_, 0} =
+                       Wotex.Matter.Native.ProcessCommand.run("/bin/kill", [
+                         "-CONT",
+                         Integer.to_string(child)
+                       ])
+
               assert :ok = Task.await(cancellation, 1_000)
               assert :sys.get_state(connection).next_id == pending.next_id
             after
@@ -139,7 +150,13 @@ defmodule Wotex.Matter.NativeStreamOwnerInteropTest do
 
           :stalled_cancellation ->
             connection_monitor = Process.monitor(connection)
-            assert {_, 0} = System.cmd("/bin/kill", ["-STOP", Integer.to_string(child)])
+
+            assert {_, 0} =
+                     Wotex.Matter.Native.ProcessCommand.run("/bin/kill", [
+                       "-STOP",
+                       Integer.to_string(child)
+                     ])
+
             started = System.monotonic_time(:millisecond)
             Process.exit(owner, :kill)
             assert_receive {:wotex_matter, ^reference, {:error, %Error{code: :owner_closed}}}, 1_000

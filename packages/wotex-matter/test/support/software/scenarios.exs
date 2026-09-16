@@ -42,7 +42,7 @@ defmodule Wotex.Matter.SoftwareScenarios do
     end)
   end
 
-  defp own_peers([], _context, peers, operation), do: operation.(peers)
+  defp own_peers([], _, peers, operation), do: operation.(peers)
 
   defp own_peers([{name_and_kind, index} | remaining], context, peers, operation) do
     {name, kind} = name_and_kind
@@ -150,7 +150,11 @@ defmodule Wotex.Matter.SoftwareScenarios do
     oneshot_stress = commission(peers.oneshot_stress)
     lifecycle_stress = commission(peers.lifecycle_stress)
     lifecycle_open_close = commission(peers.lifecycle_open_close)
-    denied = peers.acl_denied |> commission() |> deny_acl()
+
+    denied =
+      peers.acl_denied
+      |> commission()
+      |> deny_acl()
 
     environment =
       Map.new(@common_cases, fn name ->
@@ -227,9 +231,14 @@ defmodule Wotex.Matter.SoftwareScenarios do
           "iteration_count" => 10_000,
           "discriminator" => 2608
         }),
-      "wrong_pin" => peers.wrong_pin |> wrong_pin() |> failure("timeout", 0x32),
+      "wrong_pin" =>
+        peers.wrong_pin
+        |> wrong_pin()
+        |> failure("timeout", 0x32),
       "attestation_failure" =>
-        context |> untrusted(peers.attestation_failure) |> failure("commissioning_failed", 0x20),
+        context
+        |> untrusted(peers.attestation_failure)
+        |> failure("commissioning_failed", 0x20),
       "expired_window" => expired_attempt,
       "acl_denied" => denied
     }
@@ -322,7 +331,9 @@ defmodule Wotex.Matter.SoftwareScenarios do
         do: fail(:software_acl_setup_failed)
     end)
 
-    scenario |> Map.put("address", address) |> Map.put("expected_status", 0x7E)
+    scenario
+    |> Map.put("address", address)
+    |> Map.put("expected_status", 0x7E)
   end
 
   defp address(scenario, endpoint, cluster, member) do
@@ -401,7 +412,11 @@ defmodule Wotex.Matter.SoftwareScenarios do
   defp setup_pin do
     <<random::unsigned-64>> = :crypto.strong_rand_bytes(8)
     pin = rem(random, 99_999_998) + 1
-    digits = pin |> Integer.to_string() |> String.pad_leading(8, "0")
+
+    digits =
+      pin
+      |> Integer.to_string()
+      |> String.pad_leading(8, "0")
 
     if pin in [12_345_678, 87_654_321] or length(Enum.uniq(String.graphemes(digits))) == 1,
       do: setup_pin(),

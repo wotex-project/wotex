@@ -3,9 +3,9 @@ spec:
   id: WMA.02
   title: "Implemented Matter profile"
   status: accepted
-  version: 1.1.0
+  version: 1.1.1
   owner: wotex-matter
-  updated: 2026-09-15
+  updated: 2026-09-17
 ---
 
 # WMA.02 Implemented Matter profile
@@ -116,11 +116,10 @@ The optional controller fixture harness also requires an explicitly installed
 module. Selecting a module and passing the harness do not independently prove
 that the module is SDK-backed or that the fixture is a physical device; that
 provenance must be reviewed and recorded separately.
-The injected SDK adapter maps concrete read/write/invoke calls to an explicitly
-initialized native controller supplied by its factory. It remains separate from
-the first-party persistent controller and does not implement the batch request
-shape. No Python runtime or SDK binary is bundled. The packaged first-party
-controller source is built explicitly outside the Hex archive. P07's production
+The first-party native controller supports persistent and explicit one-shot
+ownership of concrete read/write/invoke calls. One-shot mode does not implement
+the batch request shape. No Python runtime or SDK binary is bundled. The packaged
+first-party controller source is built explicitly outside the Hex archive. P07's production
 path compiles against the pinned SDK, and P08's Runtime mapping/ownership tests
 execute against the public transport callbacks. P08a executes the full public
 ConsumedThing profile and failure matrix against deterministic test ports;

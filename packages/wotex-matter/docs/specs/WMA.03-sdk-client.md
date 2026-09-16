@@ -1,67 +1,46 @@
 ---
 spec:
   id: WMA.03
-  title: "Explicit SDK client"
+  title: "Explicit native SDK client"
   status: accepted
-  version: 1.0.1
+  version: 2.0.0
   owner: wotex-matter
-  updated: 2026-09-09
+  updated: 2026-09-17
 ---
 
-# WMA.03 Explicit SDK client
+# WMA.03 Explicit native SDK client
 
-This page describes the current one-shot adapter only. The accepted first-party
-native controller is [WMA.13](WMA.13-native-backend.md), with .10/.11 ownership
-and typed interactions. Factory execution cannot accept that target.
+The selected controller client is `Wotex.Matter.Native`. It runs the pinned
+connectedhomeip v1.6.0.0 SDK through the first-party C++17
+`wotex-matter-host` specified in [WMA.13](WMA.13-native-backend.md). This
+replaces the earlier one-request Python factory adapter. No factory import path,
+Python interpreter or Python bridge is an admitted runtime option. The package
+still permits Python required by upstream SDK source generation at build time;
+that toolchain is pinned and recorded by the native build manifest.
 
-The SDK adapter targets connectedhomeip v1.6.0.0, commit
-250a9e6c50ee2068107f3c4808b680f5f2925415, with Python's `matter` namespace.
-Build/install that SDK into a caller-selected environment. The package never
-fetches SDK code or fabric credentials at runtime.
+`Native.connect/1` accepts explicit controller identity, authority, storage,
+trust and executable options described in WMA.13. `lifecycle: :persistent`
+owns one controller until disconnect. `lifecycle: :oneshot` requires an existing
+store and stored authority; its passive handle starts a fresh native controller
+for each concrete read, write or invoke and closes it before returning. It
+cannot commission, discover, subscribe or create credentials. Both modes
+enforce exact fabric identity, finite deadlines, bounded framed IPC and
+structured errors. Neither mode retries a write or invoke after an unknown
+effect, and neither falls back to another backend.
 
-`Wotex.Matter.SDK` implements the Client behaviour. Required options are an
-absolute Python `executable`, `factory: "module:function"`, concrete `fabric_id`
-and JSON-encodable `settings`. No implicit module, simulated controller or test
-commissioner exists. The factory is trusted consumer code, a synchronous context
-manager that yields an initialized SDK ChipDeviceController and cleans up its
-owned stack/controllers on exit. The consumer owns CA/root selection, fabric
-storage, exclusive access to that storage, operational identity and attestation
-policy. Factories must not initialize or modify unrelated consumer stores.
+The consumer owns the absolute executable path, controller configuration,
+credential custody and explicit connection lifetime. The first-party backend
+owns SDK startup, attestation checks, storage locking, per-path status
+validation and cleanup. [WMA.11](WMA.11-standalone-client-and-preservation.md)
+defines the typed standalone operations; [WMA.12](WMA.12-wotex-integration.md)
+defines the two Runtime profiles. The pinned software-peer evidence and exact
+native acceptance limits are recorded in
+[executable evidence](../provenance/executable-evidence.md).
 
-Each request owns one Python process and one factory context. The process
-boundary is newline JSON capped at 128 KiB with a correlated request ID. Native
-stdout/stderr are redirected to a sink after the dedicated response descriptor
-is acquired. Output emitted before that isolation still reaches the bounded Port
-and causes malformed structured response failure. SDK logs cannot masquerade
-as responses. No exception text or settings are returned to the caller. The
-BEAM-side timeout covers the external process, while the Python timeout covers
-the asynchronous operation; factories must keep synchronous startup/cleanup and
-any descendants bounded. Input-pipe closure cancels an active asynchronous
-exchange, but the factory remains responsible for descendant cleanup.
-
-The concrete path is validated before invoking the bridge and the controller's
-fabricId must match it. Generated SDK registries select attribute/command types.
-Reads use fabric filtering, keep preexisting subscriptions, and disable automatic
-resubscription. The requested endpoint, cluster and attribute must exist in the
-result cache; SDK ValueDecodeFailure results are errors. Writes require exactly one matching AttributeStatus with success
-status zero. Empty lists, mismatched paths and nonzero statuses fail.
-Commands use the SDK's generated command descriptor and do not suppress responses.
-SDK errors propagate as a neutral failure; the wrapper performs no retries.
-
-Explicit `timed_request_timeout_ms` is accepted for writes/invokes only within
-the remaining interaction budget and 1..65535 ms. The SDK receives the interaction
-timeout too. Read deadlines are enforced by the asynchronous process boundary.
-Scalar/null/byte/array/struct results convert to bounded JSON;
-write/command inputs accept the same explicit byte envelope; bytes use a
-`{"type":"bytes","base64":"..."}` envelope. Unknown unsupported result types
-fail rather than being stringified. A successful command with no output may
-legitimately return null; write success always requires the exact path status.
-
-Default checks execute the pure Python adapter contract against an explicitly
-selected test controller, including false/null, fabric mismatch, missing path,
-negative/empty/multiple write statuses, timed boundaries and malformed values.
-They also check the BEAM executable boundary. Real SDK initialization,
-commissioned-device interoperability, denied ACLs and attestation failure remain
-unexecuted gates until a suitable factory and isolated fixture are provided.
-An injected module or passing fixture harness is not independent SDK evidence.
-The adapter does not expose commissioning, subscriptions or fabric mutations.
+Selecting an arbitrary module implementing `Wotex.Matter.Client` remains an
+injection boundary for consumers and tests. Passing that contract alone does
+not establish an SDK, security or interoperability claim. The former
+`Wotex.Matter.SDK` factory API and its `matter_bridge.py` process are removed
+from this development package; consumers selecting that module must migrate to
+explicit `Wotex.Matter.Native` options. The package is still a development
+version, so this document does not claim a published compatibility guarantee.

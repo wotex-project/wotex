@@ -137,7 +137,15 @@ defmodule Wotex.Matter.Standalone do
   @spec unsubscribe(Session.t(), term()) :: :ok | {:error, Error.t()}
   def unsubscribe(%Session{} = session, %Subscription{} = subscription) do
     if function_exported?(session.client, :unsubscribe, 3) do
-      PortCall.invoke(session.client, :unsubscribe, [session.handle, subscription, session.timeout])
+      case PortCall.invoke(session.client, :unsubscribe, [
+             session.handle,
+             subscription,
+             session.timeout
+           ]) do
+        :ok -> :ok
+        {:error, %Error{}} = error -> error
+        _ -> {:error, Error.new(:invalid_transport_return)}
+      end
     else
       {:error, Error.new(:not_supported)}
     end

@@ -105,7 +105,6 @@ defmodule Wotex.Matter.NativeOneshotStressTest do
         other -> raise "unexpected concurrent return: #{inspect(other)}"
       end)
 
-    IO.inspect(counts, label: "concurrent outcomes")
     assert Enum.sum(Map.values(counts)) == 32
     assert Map.get(counts, :success, 0) > 0
     assert Map.keys(counts) -- [:success, :storage_open_failed] == []

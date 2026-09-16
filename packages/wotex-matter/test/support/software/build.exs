@@ -444,7 +444,9 @@ defmodule Wotex.Matter.SoftwareBuild do
         version = inside(context, "version-" <> name, [executable | arguments])
 
         digest =
-          inside(context, "digest-" <> name, ["sha256sum", executable]) |> String.split() |> hd()
+          inside(context, "digest-" <> name, ["sha256sum", executable])
+          |> String.split()
+          |> hd()
 
         {name, %{"version" => String.trim(version), "sha256" => digest}}
       end
@@ -527,7 +529,9 @@ defmodule Wotex.Matter.SoftwareBuild do
 
   defp revision(context, identity) do
     if File.exists?(Path.join(context.root, ".git")) do
-      context |> host("source-revision", "git", ["rev-parse", "HEAD"]) |> String.trim()
+      context
+      |> host("source-revision", "git", ["rev-parse", "HEAD"])
+      |> String.trim()
     else
       "sha256:" <> identity["source_sha256"]
     end
@@ -535,7 +539,10 @@ defmodule Wotex.Matter.SoftwareBuild do
 
   defp audit(context, sources, mode) do
     queries =
-      Enum.map(archives(sources, mode) ++ [sources["header"]], &%{"commit" => &1["revision"]}) ++
+      Enum.map(
+        List.insert_at(archives(sources, mode), -1, sources["header"]),
+        &%{"commit" => &1["revision"]}
+      ) ++
         Enum.map(
           sources["python"],
           &%{
@@ -600,7 +607,8 @@ defmodule Wotex.Matter.SoftwareBuild do
         ["--env", key <> "=" <> value]
       end)
 
-    host(context, id, "docker", ["exec"] ++ env ++ [context.name | arguments])
+    command_arguments = Enum.concat([env, [context.name | arguments]])
+    host(context, id, "docker", ["exec" | command_arguments])
   end
 
   defp host(context, id, executable, arguments) do

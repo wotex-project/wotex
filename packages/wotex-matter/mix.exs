@@ -119,7 +119,7 @@ defmodule WotexMatter.MixProject do
       },
       maintainers: ["Tobias Bohwalli <hi@futhr.io>"],
       files:
-        ~w(.claude .check.exs .credo.exs .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md bin/check_*.exs config coveralls.json docs/plans docs/provenance docs/specs lib native priv/matter_bridge.py test/**/*.{ex,exs,cpp,py,json,inc} mix.exs)
+        ~w(.claude .check.exs .credo.exs .formatter.exs AGENTS.md CHANGELOG.md CLAUDE.md CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md LICENSE NOTICE README.md SECURITY.md bin/check_*.exs config coveralls.json docs/plans docs/provenance docs/specs lib native test/**/*.{ex,exs,cpp,json,inc} mix.exs)
     ]
   end
 

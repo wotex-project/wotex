@@ -20,6 +20,7 @@ defmodule Wotex.Matter.OnboardingMaterial do
         }
 
   defimpl Inspect do
+    @spec inspect(term(), term()) :: String.t()
     def inspect(_, _), do: "#Wotex.Matter.OnboardingMaterial<redacted>"
   end
 end

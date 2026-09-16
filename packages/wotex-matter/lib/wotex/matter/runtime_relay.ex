@@ -48,12 +48,9 @@ defmodule Wotex.Matter.RuntimeRelay do
         client_options,
         stream_options,
         timeout
-      )
-      when is_pid(owner) and is_binary(request_id) and request_id != "" and
-             operation in [:observeproperty, :subscribeevent] and
-             kind in [:attribute, :event] and is_list(client_options) and
-             is_list(stream_options) and is_integer(timeout) and timeout in 1..60_000 do
-    if Keyword.keyword?(client_options) and Keyword.keyword?(stream_options) do
+      ) do
+    if valid_start_identity?(owner, request_id, operation, kind) and
+         valid_start_options?(client_options, stream_options, timeout) do
       init = %{
         state: :opening,
         owner: owner,
@@ -80,6 +77,17 @@ defmodule Wotex.Matter.RuntimeRelay do
   end
 
   def start(_, _, _, _, _, _, _, _), do: {:error, Error.new(:invalid_subscription)}
+
+  defp valid_start_identity?(owner, request_id, operation, kind) do
+    is_pid(owner) and is_binary(request_id) and request_id != "" and
+      operation in [:observeproperty, :subscribeevent] and kind in [:attribute, :event]
+  end
+
+  defp valid_start_options?(client_options, stream_options, timeout) do
+    is_list(client_options) and Keyword.keyword?(client_options) and
+      is_list(stream_options) and Keyword.keyword?(stream_options) and
+      is_integer(timeout) and timeout in 1..60_000
+  end
 
   @doc false
   @spec close(term()) :: :ok | {:error, Error.t()}
@@ -186,7 +194,11 @@ defmodule Wotex.Matter.RuntimeRelay do
   @impl GenServer
   def handle_info(
         {:wotex_matter, reference,
-         %Delivery{connection: connection, generation: generation, reference: reference} = delivery},
+         %Delivery{
+           connection: connection,
+           generation: generation,
+           reference: reference
+         } = delivery},
         %{
           reference: reference,
           state: :bound,
@@ -476,10 +488,8 @@ defmodule Wotex.Matter.RuntimeRelay do
   defp terminal_status(_), do: :session_lost
 
   defp encode_delivery({:ok, value, metadata}), do: {:value, value, metadata}
-  defp encode_delivery({:error, %Error{} = error}), do: {:error, error}
 
   defp decode_delivery({:value, value, metadata}), do: {:ok, value, metadata}
-  defp decode_delivery({:error, %Error{} = error}), do: {:error, error}
 
   defp close_resources(%{closed?: true} = state), do: {:ok, state}
 

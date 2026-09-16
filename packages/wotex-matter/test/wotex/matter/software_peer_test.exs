@@ -44,7 +44,7 @@ defmodule Wotex.Matter.SoftwarePeerTest do
         ] do
       directory = Path.join(root, name)
       File.mkdir!(directory)
-      executable = script(directory, "printf '%s' \"$$\" > \"$1\"; " <> body)
+      executable = script(directory, ~S(printf '%s' "$$" > "$1"; ) <> body)
       pid_file = Path.join(directory, "pid")
 
       assert {:error, :peer_not_ready} =
@@ -55,7 +55,14 @@ defmodule Wotex.Matter.SoftwarePeerTest do
                )
 
       if File.exists?(pid_file),
-        do: assert(reaped?(pid_file |> File.read!() |> String.to_integer()))
+        do:
+          assert(
+            reaped?(
+              pid_file
+              |> File.read!()
+              |> String.to_integer()
+            )
+          )
 
       refute Enum.any?(
                Port.list(),
@@ -245,7 +252,9 @@ defmodule Wotex.Matter.SoftwarePeerTest do
   end
 
   defp reaped?(child, deadline) do
-    case System.cmd("/bin/kill", ["-0", Integer.to_string(child)], stderr_to_stdout: true) do
+    case Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-0", Integer.to_string(child)],
+           stderr_to_stdout: true
+         ) do
       {_, 0} ->
         if System.monotonic_time(:millisecond) < deadline do
           Process.sleep(5)

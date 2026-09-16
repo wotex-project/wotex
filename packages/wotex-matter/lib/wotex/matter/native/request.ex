@@ -73,18 +73,19 @@ defmodule Wotex.Matter.Native.Request do
   defp path_count(_, _), do: :invalid
 
   defp validate_subscription_paths(paths, kind, fabric_id) do
-    Enum.reduce_while(paths, {:ok, []}, fn path, {:ok, acc} ->
-      with {:ok, address} <- Address.new(path),
-           true <- address.fabric_id == fabric_id,
-           {:ok, _} <- Descriptor.lookup(kind, address, :subscribe) do
-        {:cont, {:ok, [Map.from_struct(address) | acc]}}
-      else
-        false -> {:halt, {:error, Error.new(:fabric_mismatch)}}
-        {:error, %Error{}} = error -> {:halt, error}
-        _ -> {:halt, {:error, Error.new(:invalid_subscription)}}
-      end
-    end)
-    |> case do
+    result =
+      Enum.reduce_while(paths, {:ok, []}, fn path, {:ok, acc} ->
+        with {:ok, address} <- Address.new(path),
+             true <- address.fabric_id == fabric_id,
+             {:ok, _} <- Descriptor.lookup(kind, address, :subscribe) do
+          {:cont, {:ok, [Map.from_struct(address) | acc]}}
+        else
+          false -> {:halt, {:error, Error.new(:fabric_mismatch)}}
+          {:error, %Error{}} = error -> {:halt, error}
+        end
+      end)
+
+    case result do
       {:ok, paths} -> {:ok, Enum.reverse(paths)}
       error -> error
     end

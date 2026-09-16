@@ -33,7 +33,7 @@ defmodule Wotex.Matter.SoftwareAcceptance do
       inventory_sha256: SoftwareManifest.digest(path)
     }
 
-    formatters = ExUnit.configuration()[:formatters] ++ [SoftwareCaseFormatter]
+    formatters = List.insert_at(ExUnit.configuration()[:formatters], -1, SoftwareCaseFormatter)
     ExUnit.configure(formatters: Enum.uniq(formatters), software_acceptance: context)
     ExUnit.after_suite(fn statistics -> verify_result!(context, statistics) end)
     :ok
@@ -43,19 +43,13 @@ defmodule Wotex.Matter.SoftwareAcceptance do
   def inventory!(path) do
     inventory = SoftwareManifest.read(path)
 
-    unless match?(%{"schema" => "wotex.matter.software-cases@1"}, inventory) and
-             Enum.sort(Map.keys(inventory)) == ["cases", "environment", "schema"] and
-             is_list(inventory["cases"]) and length(inventory["cases"]) in 1..256 and
-             is_map(inventory["environment"]) and map_size(inventory["environment"]) <= 64,
-           do: fail(:invalid_software_inventory)
+    unless valid_inventory_shape?(inventory),
+      do: fail(:invalid_software_inventory)
 
     identities =
       for item <- inventory["cases"] do
-        unless is_map(item) and Enum.sort(Map.keys(item)) == ["evidence", "file", "module", "name"] and
-                 valid_file?(item["file"]) and
-                 valid_text?(item["module"], 256) and valid_text?(item["name"], 512) and
-                 item["evidence"] in ["shared-sdk", "native-contract"],
-               do: fail(:invalid_software_inventory)
+        unless valid_case?(item),
+          do: fail(:invalid_software_inventory)
 
         {item["module"], item["name"]}
       end
@@ -64,12 +58,28 @@ defmodule Wotex.Matter.SoftwareAcceptance do
       do: fail(:invalid_software_inventory)
 
     for {name, kind} <- inventory["environment"] do
-      unless Regex.match?(~r/\AWOTEX_[A-Z_]+\z/, name) and kind in ["fixture", "executable"],
+      unless valid_environment_entry?(name, kind),
         do: fail(:invalid_software_inventory)
     end
 
     inventory
   end
+
+  defp valid_inventory_shape?(inventory) do
+    match?(%{"schema" => "wotex.matter.software-cases@1"}, inventory) and
+      Enum.sort(Map.keys(inventory)) == ["cases", "environment", "schema"] and
+      is_list(inventory["cases"]) and length(inventory["cases"]) in 1..256 and
+      is_map(inventory["environment"]) and map_size(inventory["environment"]) <= 64
+  end
+
+  defp valid_case?(item) do
+    is_map(item) and Enum.sort(Map.keys(item)) == ["evidence", "file", "module", "name"] and
+      valid_file?(item["file"]) and valid_text?(item["module"], 256) and
+      valid_text?(item["name"], 512) and item["evidence"] in ["shared-sdk", "native-contract"]
+  end
+
+  defp valid_environment_entry?(name, kind),
+    do: Regex.match?(~r/\AWOTEX_[A-Z_]+\z/, name) and kind in ["fixture", "executable"]
 
   defp fixture!({name, kind}, environment) do
     path = environment[name]

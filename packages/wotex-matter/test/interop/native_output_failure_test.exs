@@ -24,7 +24,11 @@ defmodule Wotex.Matter.NativeOutputFailureInteropTest do
              )
 
     refute output =~ ~r/AddressSanitizer|LeakSanitizer|runtime error:/
-    result = output |> String.split("\n", trim: true) |> List.last()
+
+    result =
+      output
+      |> String.split("\n", trim: true)
+      |> List.last()
 
     assert %{
              "status" => "passed",

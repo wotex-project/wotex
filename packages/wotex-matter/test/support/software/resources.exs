@@ -82,7 +82,10 @@ defmodule Wotex.Matter.SoftwareResources do
   @spec closed_generations!(String.t(), MapSet.t(), pos_integer()) :: {MapSet.t(), map()}
   def closed_generations!(root, previous, expected) do
     directories =
-      root |> File.ls!() |> Enum.filter(&String.starts_with?(&1, "process-")) |> MapSet.new()
+      root
+      |> File.ls!()
+      |> Enum.filter(&String.starts_with?(&1, "process-"))
+      |> MapSet.new()
 
     added = MapSet.difference(directories, previous)
     assert MapSet.size(added) == expected

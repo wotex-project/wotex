@@ -5,8 +5,7 @@ defmodule Wotex.Matter.NativeAttestationFailureTest do
 
   use ExUnit.Case, async: false
   alias Wotex.Matter
-  alias Wotex.Matter.SoftwareScenarios
-  alias Wotex.Matter.{Error, Native}
+  alias Wotex.Matter.{Error, Native, SoftwareScenarios}
 
   @moduletag :interop
   @moduletag :software
@@ -51,7 +50,11 @@ defmodule Wotex.Matter.NativeAttestationFailureTest do
 
         try do
           assert {:error,
-                  %Error{code: :commissioning_failed, effect: :none, details: %{sdk_status: 0x20}}} =
+                  %Error{
+                    code: :commissioning_failed,
+                    effect: :none,
+                    details: %{sdk_status: 0x20}
+                  }} =
                    Matter.commission_on_network(session, %{
                      node_id: Map.fetch!(fixture, "node_id"),
                      setup_pin: Map.fetch!(fixture, "setup_pin"),
@@ -81,7 +84,9 @@ defmodule Wotex.Matter.NativeAttestationFailureTest do
   defp child_stopped?(_, 0), do: false
 
   defp child_stopped?(pid, remaining) do
-    case System.cmd("kill", ["-0", Integer.to_string(pid)], stderr_to_stdout: true) do
+    case Wotex.Matter.Native.ProcessCommand.run("kill", ["-0", Integer.to_string(pid)],
+           stderr_to_stdout: true
+         ) do
       {_, 0} ->
         Process.sleep(10)
         child_stopped?(pid, remaining - 1)

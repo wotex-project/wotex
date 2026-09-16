@@ -8,7 +8,7 @@ defmodule Wotex.Matter.SoftwareBuildTest do
   alias Wotex.Matter.{SoftwareCommand, SoftwareFixture, SoftwareManifest, SoftwarePeerExtension}
 
   setup do
-    {temporary, 0} = System.cmd("pwd", ["-P"], cd: System.tmp_dir!())
+    {temporary, 0} = Wotex.Matter.Native.ProcessCommand.run("pwd", ["-P"], cd: System.tmp_dir!())
 
     root =
       Path.join(
@@ -325,7 +325,10 @@ defmodule Wotex.Matter.SoftwareBuildTest do
       assert wait_reaped(os_pid, 100)
     after
       Process.exit(caller, :kill)
-      System.cmd("kill", ["-KILL", Integer.to_string(os_pid)], stderr_to_stdout: true)
+
+      Wotex.Matter.Native.ProcessCommand.run("kill", ["-KILL", Integer.to_string(os_pid)],
+        stderr_to_stdout: true
+      )
     end
   end
 
@@ -363,23 +366,7 @@ defmodule Wotex.Matter.SoftwareBuildTest do
   defp command_process(caller, attempts) do
     {:monitors, monitors} = Process.info(caller, :monitors)
 
-    result =
-      Enum.find_value(monitors, fn {:process, worker} ->
-        case Process.info(worker, :links) do
-          {:links, links} ->
-            Enum.find_value(links, fn link ->
-              if is_port(link) do
-                case Port.info(link, :os_pid) do
-                  {:os_pid, pid} -> {worker, pid}
-                  _ -> nil
-                end
-              end
-            end)
-
-          _ ->
-            nil
-        end
-      end)
+    result = Enum.find_value(monitors, fn {:process, worker} -> linked_port_pid(worker) end)
 
     if result do
       result
@@ -389,10 +376,28 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     end
   end
 
+  defp linked_port_pid(worker) do
+    case Process.info(worker, :links) do
+      {:links, links} -> Enum.find_value(links, &port_pid(&1, worker))
+      _ -> nil
+    end
+  end
+
+  defp port_pid(port, worker) when is_port(port) do
+    case Port.info(port, :os_pid) do
+      {:os_pid, pid} -> {worker, pid}
+      _ -> nil
+    end
+  end
+
+  defp port_pid(_, _), do: nil
+
   defp wait_reaped(_, 0), do: false
 
   defp wait_reaped(pid, attempts) do
-    case System.cmd("kill", ["-0", Integer.to_string(pid)], stderr_to_stdout: true) do
+    case Wotex.Matter.Native.ProcessCommand.run("kill", ["-0", Integer.to_string(pid)],
+           stderr_to_stdout: true
+         ) do
       {_, 0} ->
         Process.sleep(10)
         wait_reaped(pid, attempts - 1)

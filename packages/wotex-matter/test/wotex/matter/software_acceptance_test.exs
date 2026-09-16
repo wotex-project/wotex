@@ -9,7 +9,7 @@ defmodule Wotex.Matter.SoftwareAcceptanceTest do
   alias Wotex.Matter.{SoftwareAcceptance, SoftwareCommand, SoftwareManifest}
 
   setup do
-    {temporary, 0} = System.cmd("pwd", ["-P"], cd: System.tmp_dir!())
+    {temporary, 0} = Wotex.Matter.Native.ProcessCommand.run("pwd", ["-P"], cd: System.tmp_dir!())
 
     root =
       Path.join(
@@ -176,47 +176,7 @@ defmodule Wotex.Matter.SoftwareAcceptanceTest do
     File.write!(executable, "fixture executable is never started")
     File.chmod!(executable, 0o700)
 
-    tag =
-      case mode do
-        "skipped" -> "@tag skip: \"secret-canary\""
-        "excluded" -> "@tag :excluded_probe"
-        _ -> ""
-      end
-
-    setup = if mode == "invalid", do: "setup_all do raise \"secret-canary\" end", else: ""
-
-    body =
-      case mode do
-        "failed" -> "raise \"secret-canary\""
-        "changed_source" -> "File.write!(__ENV__.file, \"changed source\")"
-        _ -> "assert true"
-      end
-
-    name = if mode == "missing", do: "unregistered case", else: "required case"
-
-    required =
-      if mode == "zero",
-        do: "",
-        else: "#{tag}\n@tag :software\ntest #{inspect(name)} do #{body} end"
-
-    extra =
-      case mode do
-        "hardware" -> "@tag :hardware\ntest \"hardware case\" do assert true end"
-        "unexpected" -> "@tag :software\ntest \"unregistered case\" do assert true end"
-        "ordinary_failure" -> "test \"ordinary failure\" do raise \"secret-canary\" end"
-        _ -> ""
-      end
-
-    File.write!(Path.join(root, item["file"]), """
-    defmodule Wotex.Matter.SoftwareReceiptProbe do
-      @moduledoc false
-
-      use ExUnit.Case
-      #{setup}
-      #{required}
-      #{extra}
-    end
-    """)
+    File.write!(Path.join(root, item["file"]), probe_source(mode))
 
     %{
       "WOTEX_REQUIRE_SOFTWARE" => "1",
@@ -225,6 +185,49 @@ defmodule Wotex.Matter.SoftwareAcceptanceTest do
       "WOTEX_TEST_EXECUTABLE" => executable
     }
   end
+
+  defp probe_source(mode) do
+    setup = if mode == "invalid", do: "setup_all do raise \"secret-canary\" end", else: ""
+    required = required_probe(mode)
+    extra = extra_probe(mode)
+
+    """
+    defmodule Wotex.Matter.SoftwareReceiptProbe do
+      @moduledoc false
+
+      use ExUnit.Case
+      #{setup}
+      #{required}
+      #{extra}
+    end
+    """
+  end
+
+  defp required_probe("zero"), do: ""
+
+  defp required_probe(mode) do
+    tag = probe_tag(mode)
+    name = if mode == "missing", do: "unregistered case", else: "required case"
+    "#{tag}\n@tag :software\ntest #{inspect(name)} do #{probe_body(mode)} end"
+  end
+
+  defp probe_tag("skipped"), do: "@tag skip: \"secret-canary\""
+  defp probe_tag("excluded"), do: "@tag :excluded_probe"
+  defp probe_tag(_), do: ""
+
+  defp probe_body("failed"), do: "raise \"secret-canary\""
+  defp probe_body("changed_source"), do: "File.write!(__ENV__.file, \"changed source\")"
+  defp probe_body(_), do: "assert true"
+
+  defp extra_probe("hardware"), do: "@tag :hardware\ntest \"hardware case\" do assert true end"
+
+  defp extra_probe("unexpected"),
+    do: "@tag :software\ntest \"unregistered case\" do assert true end"
+
+  defp extra_probe("ordinary_failure"),
+    do: "test \"ordinary failure\" do raise \"secret-canary\" end"
+
+  defp extra_probe(_), do: ""
 
   defp execute(root, environment) do
     script = """

@@ -13,7 +13,9 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
 
   test "real peer reads, concurrent callers and repeated native ownership return resources" do
     fixture =
-      System.fetch_env!("WOTEX_MATTER_NATIVE_STRESS_FIXTURE") |> File.read!() |> Jason.decode!()
+      System.fetch_env!("WOTEX_MATTER_NATIVE_STRESS_FIXTURE")
+      |> File.read!()
+      |> Jason.decode!()
 
     controller = fixture["controller"]
 
@@ -40,7 +42,7 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
     node = %{fabric_id: options[:fabric_id], node_id: Map.fetch!(fixture, "node_id")}
 
     address =
-      connected(fixture, options, fn session, _child, _probe ->
+      connected(fixture, options, fn session, _, _ ->
         assert {:ok, catalogue} = Matter.discover_endpoints(session, node)
 
         [endpoint | _] =
@@ -259,7 +261,9 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
   defp child_stopped?(_, 0), do: false
 
   defp child_stopped?(pid, remaining) do
-    case System.cmd("kill", ["-0", Integer.to_string(pid)], stderr_to_stdout: true) do
+    case Wotex.Matter.Native.ProcessCommand.run("kill", ["-0", Integer.to_string(pid)],
+           stderr_to_stdout: true
+         ) do
       {_, 0} ->
         Process.sleep(10)
         child_stopped?(pid, remaining - 1)
@@ -282,7 +286,11 @@ defmodule Wotex.Matter.NativeLifecycleStressTest do
       state.active_call == nil
   end
 
-  defp fd_count(pid), do: "/proc/#{pid}/fd" |> File.ls!() |> length()
+  defp fd_count(pid),
+    do:
+      "/proc/#{pid}/fd"
+      |> File.ls!()
+      |> length()
 
   defp rss(pid) do
     [_, value] = Regex.run(~r/^VmRSS:\s+(\d+)\s+kB$/m, File.read!("/proc/#{pid}/status"))

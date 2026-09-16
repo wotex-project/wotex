@@ -3,27 +3,27 @@ spec:
   id: WMA.11
   title: "Standalone controller and cluster workflows"
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-matter
-  updated: 2026-09-15
+  updated: 2026-09-17
 ---
 
 # WMA.11 Standalone controller and cluster workflows
 
-Specification version: `1.1.1`. The catalogue and executable-evidence record
+Specification version: `1.1.2`. The catalogue and executable-evidence record
 track the accepted implementation of this contract.
 Requires [WMA.00](WMA.00-library-contract.md) and
 [WMA.10](WMA.10-software-contract.md). [WMA.02](WMA.02-implemented-profile.md)
-records the complete profile; [WMA.03](WMA.03-sdk-client.md) records the narrower
-injected-adapter compatibility layer.
+records the complete profile; [WMA.03](WMA.03-sdk-client.md) records explicit
+native client selection and the one-shot lifecycle.
 
 ## WMA-N01 — First-party native controller
 
 A release must include the first-party persistent SDK controller, durable fabric
 store and typed interactions specified in .10. A consumer can commission and
 interact with a real software peer with the compiled registry and without constructing a Thing Description. The
-first-party native backend is .13; injected-factory contract tests are baseline
-evidence for the separate injected adapter.
+first-party native backend is .13; injected-client contract tests prove only
+the selected `Client` behavior.
 Wotex Runtime maps operations to the same native session. It does not own a second
 controller or authorize commissioning as a side effect of Form execution.
 
@@ -32,7 +32,7 @@ These public functions belong to `Wotex.Matter`. Existing concrete
 
 | API | Exact contract |
 | --- | --- |
-| `connect(client: SDK, lifecycle: :persistent, ...)` | `{:ok, %Session{}}` after S02 storage lock, exact fabric identity and SDK startup; every S02 storage/trust/credential option explicit |
+| `connect(client: Native, lifecycle: :persistent, ...)` | `{:ok, %Session{}}` after S02 storage lock, exact fabric identity and SDK startup; every S02 storage/trust/credential option explicit |
 | `read_attribute(session, address, options)` | `{:ok, %AttributeReport{path: address, value: typed_value, data_version: uint32_or_nil}}`; denied/unsupported path returns Error; `options` permits `timeout` only |
 | `write_attribute(session, address, typed_value, options)` | `{:ok, %{path: address, status: 0}}` after SDK ACK; options `timeout`, `expected_data_version`, `timed_request_timeout_ms`; no automatic readback |
 | `invoke_command(session, address, typed_value, options)` | `{:ok, %{path: response_path_or_nil, value: typed_value_or_nil, status: 0}}`; distinguish status-only reply from empty structure by `path`; timed/deadline options as S03 |

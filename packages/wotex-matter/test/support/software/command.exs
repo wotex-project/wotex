@@ -15,7 +15,9 @@ defmodule Wotex.Matter.SoftwareCommand do
 
   @spec run(String.t(), [String.t()], keyword()) :: {:ok, binary()} | {:error, atom()}
   def run(executable, arguments, options \\ []) do
-    executable |> start(arguments, options) |> await()
+    executable
+    |> start(arguments, options)
+    |> await()
   end
 
   @spec start(String.t(), [String.t()], keyword()) :: map()
@@ -56,7 +58,7 @@ defmodule Wotex.Matter.SoftwareCommand do
         Process.demonitor(monitor, [:flush])
         result
 
-      {^reference, _notification} ->
+      {^reference, _} ->
         await_result(command, deadline)
 
       {:DOWN, ^monitor, :process, ^worker, _} ->
@@ -201,7 +203,10 @@ defmodule Wotex.Matter.SoftwareCommand do
   end
 
   defp persist(chunks, options) do
-    output = chunks |> Enum.reverse() |> IO.iodata_to_binary()
+    output =
+      chunks
+      |> Enum.reverse()
+      |> IO.iodata_to_binary()
 
     if log = options[:log] do
       {:ok, file} = File.open(log, [:write, :exclusive])
@@ -220,7 +225,7 @@ defmodule Wotex.Matter.SoftwareCommand do
   defp readiness(nil), do: nil
   defp readiness(marker) when is_binary(marker) and byte_size(marker) in 1..256, do: {marker, ""}
 
-  defp signal_ready(nil, _bytes, _destination), do: nil
+  defp signal_ready(nil, _, _), do: nil
 
   defp signal_ready({marker, tail}, bytes, destination) do
     buffer = tail <> bytes
@@ -243,7 +248,10 @@ defmodule Wotex.Matter.SoftwareCommand do
       {:os_pid, pid} ->
         # Closing stdin alone does not terminate tools such as sleep or tar.
         # Docker owns container descendants; the build watcher removes them.
-        System.cmd("kill", ["-KILL", Integer.to_string(pid)], stderr_to_stdout: true)
+        Wotex.Matter.Native.ProcessCommand.run("kill", ["-KILL", Integer.to_string(pid)],
+          stderr_to_stdout: true
+        )
+
         close_port(port)
 
       nil ->
@@ -263,7 +271,11 @@ defmodule Wotex.Matter.SoftwareCommand do
 
   defp environment(overrides) do
     original = System.get_env()
-    selected = original |> Map.take(@inherited) |> Map.merge(Map.new(overrides))
+
+    selected =
+      original
+      |> Map.take(@inherited)
+      |> Map.merge(Map.new(overrides))
 
     original
     |> Map.keys()

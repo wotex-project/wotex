@@ -75,8 +75,15 @@ defmodule Wotex.Matter.NativeRuntimeLossInteropTest do
           started = System.monotonic_time(:millisecond)
 
           case mode do
-            :connection -> Process.exit(connection, :kill)
-            :native_child -> assert {_, 0} = System.cmd("/bin/kill", ["-KILL", to_string(child)])
+            :connection ->
+              Process.exit(connection, :kill)
+
+            :native_child ->
+              assert {_, 0} =
+                       Wotex.Matter.Native.ProcessCommand.run("/bin/kill", [
+                         "-KILL",
+                         to_string(child)
+                       ])
           end
 
           assert_receive {:wotex_transport, {:error, %Error{code: :transport_closed}}}, 1_000
@@ -109,7 +116,9 @@ defmodule Wotex.Matter.NativeRuntimeLossInteropTest do
   end
 
   defp child_stopped?(pid, deadline) do
-    case System.cmd("/bin/kill", ["-0", Integer.to_string(pid)], stderr_to_stdout: true) do
+    case Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-0", Integer.to_string(pid)],
+           stderr_to_stdout: true
+         ) do
       {_, 0} ->
         if System.monotonic_time(:millisecond) < deadline do
           Process.sleep(5)

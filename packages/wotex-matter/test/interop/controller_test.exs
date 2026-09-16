@@ -32,12 +32,5 @@ defmodule Wotex.Matter.ControllerTest do
     end
   end
 
-  defp options(Wotex.Matter.SDK, fixture),
-    do:
-      Enum.map(
-        [:executable, :factory, :settings, :fabric_id],
-        &{&1, Map.fetch!(fixture, Atom.to_string(&1))}
-      )
-
   defp options(_, fixture), do: [fixture: fixture]
 end

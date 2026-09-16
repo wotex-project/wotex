@@ -22,10 +22,10 @@ defmodule Wotex.Matter.Native.Admission do
   after its caller has returned a failure with no effect.
   """
 
-  @type lease :: {1..64, reference()}
+  @type lease :: {1..64, :atomics.atomics_ref()}
 
   @doc false
-  @spec new(String.t()) :: :ets.tid()
+  @spec new(String.t()) :: :ets.tid() | atom()
   def new(generation) do
     table = :ets.new(__MODULE__, [:set, :public, read_concurrency: true, write_concurrency: true])
     true = :ets.insert(table, {:identity, self(), generation})
@@ -159,7 +159,13 @@ defmodule Wotex.Matter.Native.Admission do
     end
   end
 
-  defp validate_identity(table, owner, generation) when is_reference(table) do
+  defp validate_identity(table, owner, generation) do
+    if is_reference(table),
+      do: validate_table_identity(table, owner, generation),
+      else: {:error, :invalid_handle}
+  end
+
+  defp validate_table_identity(table, owner, generation) do
     case :ets.info(table, :owner) do
       ^owner ->
         if :ets.lookup(table, :identity) == [{:identity, owner, generation}],
@@ -173,6 +179,4 @@ defmodule Wotex.Matter.Native.Admission do
         {:error, :invalid_handle}
     end
   end
-
-  defp validate_identity(_, _, _), do: {:error, :invalid_handle}
 end

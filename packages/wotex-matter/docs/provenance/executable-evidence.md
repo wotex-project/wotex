@@ -10,11 +10,35 @@ retirement. P07 adds filtered commissioning, final CASE confirmation, generated
 enhanced-window material and typed operational ACL values.
 P08 adds typed Runtime request and stream projection. P08a adds explicit Runtime
 profiles, classified failures and public ConsumedThing integration.
-The earlier one-shot Python factory adapter remains an injected baseline.
+The earlier one-shot Python factory adapter has been removed. The first-party
+native client owns both persistent and one-shot controller lifecycles.
 P09 executes the complete pinned SDK example-peer, negative-security,
 interaction, subscription, restart, stress and resource matrix in both required
-Linux BEAM lanes. The accepted public build/run and clean package receipts are
-recorded below.
+Linux BEAM lanes. The prior public build/run and clean package receipts are
+recorded below with their source identities. They do not automatically attest a
+later source tree.
+
+## Native-only runtime boundary, 2026-09-17
+
+The development package no longer contains `Wotex.Matter.SDK`, its Python
+bridge, or the Python bridge tests. `Wotex.Matter.Native` is the selected
+first-party controller for persistent and one-shot use. The removed factory
+option has no equivalent native credential-import contract; callers must
+provide the explicit existing-store or creation options in WMA.13. The generic
+`Client` injection boundary remains for consumers and tests. Upstream pinned
+SDK generation still uses Python at build time and is recorded separately.
+
+`WOTEX_PATH_DEPS=1 mix check` passed after removal and the strict lint fixes:
+warnings-as-errors compile, format, and 242 checks (2 doctests, 1 property,
+239 tests), with 37 excluded. The default suite also launched the pinned
+software-acceptance fixture in both current and minimum BEAM lanes. `mix lint`
+passed with zero Credo findings and zero Dialyzer warnings. `mix coveralls`
+passed the 95.0% floor at 95.1%. Doctor, ExDoc, Hex and dependency audits,
+`mix hex.build`, the archive contents and out-of-tree compilation check, and
+the Application-free check passed. The archive contained no Python source.
+These local checks do not renew the older source-bound P09 native build/run and
+full Linux matrix receipts below. Those lanes must be regenerated for a
+current-source release claim.
 
 ## Developer gate
 

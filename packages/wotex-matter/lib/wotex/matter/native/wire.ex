@@ -23,7 +23,7 @@ defmodule Wotex.Matter.Native.Wire do
   ]
 
   @doc "Decodes one newline-free native frame under the shared IPC bounds."
-  @spec frame(term()) :: {:ok, term()} | {:error, Error.t()}
+  @spec frame(binary()) :: {:ok, term()} | {:error, Error.t()}
   def frame(bytes) do
     with {:ok, value} <- Wotex.JSON.decode(bytes, @frame_limits),
          remaining when remaining >= 0 <- frame_budget(value, 4096) do
@@ -40,7 +40,7 @@ defmodule Wotex.Matter.Native.Wire do
        do: -1
 
   defp frame_budget(value, budget) when is_map(value) do
-    Enum.reduce_while(value, budget - 1, fn {_key, child}, remaining ->
+    Enum.reduce_while(value, budget - 1, fn {_, child}, remaining ->
       case frame_budget(child, remaining - 1) do
         next when next >= 0 -> {:cont, next}
         _ -> {:halt, -1}
@@ -260,12 +260,9 @@ defmodule Wotex.Matter.Native.Wire do
            "sdk_subscription_id" => sdk_id
          } = metadata
        )
-       when map_size(metadata) == 7 and (is_nil(version) or is_integer(version)) and
-              is_boolean(initial) and is_integer(report_id) and report_id in 1..0xFFFFFFFFFFFFFFFF and
-              is_integer(minimum) and minimum in 0..65_535 and is_integer(maximum) and
-              maximum in 1..65_535 and minimum <= maximum and is_integer(sdk_id) and
-              sdk_id in 0..0xFFFFFFFF do
-    with true <- is_nil(version) or version in 0..0xFFFFFFFF,
+       when map_size(metadata) == 7 do
+    with true <- valid_report_metadata?(initial, report_id, minimum, maximum, sdk_id),
+         true <- is_nil(version) or (is_integer(version) and version in 0..0xFFFFFFFF),
          {:ok, raw_path} <- path(raw_path),
          {:ok, path} <- Address.new(raw_path) do
       {:ok,
@@ -297,13 +294,11 @@ defmodule Wotex.Matter.Native.Wire do
            "sdk_subscription_id" => sdk_id
          } = metadata
        )
-       when map_size(metadata) == 9 and is_integer(number) and
-              number in 0..0xFFFFFFFFFFFFFFFF and is_integer(priority) and priority in 0..255 and
-              is_boolean(initial) and is_integer(report_id) and report_id in 1..0xFFFFFFFFFFFFFFFF and
-              is_integer(minimum) and minimum in 0..65_535 and is_integer(maximum) and
-              maximum in 1..65_535 and minimum <= maximum and is_integer(sdk_id) and
-              sdk_id in 0..0xFFFFFFFF do
-    with {:ok, raw_path} <- path(raw_path),
+       when map_size(metadata) == 9 do
+    with true <- valid_report_metadata?(initial, report_id, minimum, maximum, sdk_id),
+         true <- is_integer(number) and number in 0..0xFFFFFFFFFFFFFFFF,
+         true <- is_integer(priority) and priority in 0..255,
+         {:ok, raw_path} <- path(raw_path),
          {:ok, path} <- Address.new(raw_path),
          {:ok, timestamp} <- timestamp(raw_timestamp) do
       {:ok,
@@ -323,6 +318,13 @@ defmodule Wotex.Matter.Native.Wire do
   end
 
   defp event_metadata(_), do: :error
+
+  defp valid_report_metadata?(initial, report_id, minimum, maximum, sdk_id) do
+    is_boolean(initial) and is_integer(report_id) and report_id in 1..0xFFFFFFFFFFFFFFFF and
+      is_integer(minimum) and minimum in 0..65_535 and is_integer(maximum) and
+      maximum in 1..65_535 and minimum <= maximum and is_integer(sdk_id) and
+      sdk_id in 0..0xFFFFFFFF
+  end
 
   defp path(value) when is_map(value) and map_size(value) == 5 do
     with true <- Enum.sort(Map.keys(value)) == Enum.sort(@path_keys),

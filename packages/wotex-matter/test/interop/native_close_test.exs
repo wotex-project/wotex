@@ -11,7 +11,9 @@ defmodule Wotex.Matter.NativeCloseInteropTest do
 
   test "WMA-C03 full admission cannot prevent closing a stopped SDK child" do
     fixture =
-      System.fetch_env!("WOTEX_MATTER_NATIVE_CLOSE_FIXTURE") |> File.read!() |> Jason.decode!()
+      System.fetch_env!("WOTEX_MATTER_NATIVE_CLOSE_FIXTURE")
+      |> File.read!()
+      |> Jason.decode!()
 
     controller = Map.fetch!(fixture, "controller")
 
@@ -50,7 +52,7 @@ defmodule Wotex.Matter.NativeCloseInteropTest do
     owner_monitor = Process.monitor(handle.pid)
     port = :sys.get_state(handle.pid).port
     {:os_pid, child} = Port.info(port, :os_pid)
-    assert {_, 0} = System.cmd("/bin/kill", ["-STOP", to_string(child)])
+    assert {_, 0} = Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-STOP", to_string(child)])
     assert eventually(fn -> File.read!("/proc/#{child}/status") =~ ~r/State:\s+T/ end)
     active = Task.async(fn -> Native.health(handle, 10_000) end)
     assert eventually(fn -> :ets.info(handle.admission, :size) == 2 end)
@@ -103,7 +105,10 @@ defmodule Wotex.Matter.NativeCloseInteropTest do
       )
     after
       if Port.info(port, :os_pid) == {:os_pid, child},
-        do: System.cmd("/bin/kill", ["-CONT", to_string(child)], stderr_to_stdout: true)
+        do:
+          Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-CONT", to_string(child)],
+            stderr_to_stdout: true
+          )
 
       for caller <- [active, mutation | queued], do: Task.shutdown(caller, :brutal_kill)
       Native.disconnect(handle)

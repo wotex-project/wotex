@@ -9,7 +9,7 @@ defmodule Wotex.Matter.SoftwareRunTest do
   alias Wotex.Matter.{SoftwareManifest, SoftwareRun}
 
   setup do
-    {temporary, 0} = System.cmd("pwd", ["-P"], cd: System.tmp_dir!())
+    {temporary, 0} = Wotex.Matter.Native.ProcessCommand.run("pwd", ["-P"], cd: System.tmp_dir!())
     root = Path.join(String.trim(temporary), "wotex-run-#{System.unique_integer([:positive])}")
     File.mkdir!(root)
     File.chmod!(root, 0o700)
@@ -76,7 +76,9 @@ defmodule Wotex.Matter.SoftwareRunTest do
       assert eventually(fn -> not File.exists?(container <> ".network") end)
 
       assert eventually(fn ->
-               case System.cmd("/bin/kill", ["-0", command_pid], stderr_to_stdout: true) do
+               case Wotex.Matter.Native.ProcessCommand.run("/bin/kill", ["-0", command_pid],
+                      stderr_to_stdout: true
+                    ) do
                  {_, 0} -> false
                  _ -> true
                end

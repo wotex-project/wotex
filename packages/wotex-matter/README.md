@@ -20,7 +20,9 @@
 This checkout is a `0.1.0-dev` development baseline. The ordered software
 profile is implemented and accepted against the pinned SDK example peers. The
 public API remains unstable, and package metadata does not establish publication
-or release readiness.
+or release readiness. The Python factory adapter has since been removed;
+source-bound software and archive receipts for this exact revision must be
+renewed before a current-source release claim.
 
 Build handoff: [software implementation sequence](docs/plans/software-implementation.md).
 
@@ -52,7 +54,8 @@ receivers and callback-safe cancellation. P06 adds explicitly selected,
 bounded recovery with observable continuity loss. P07 adds explicit filtered
 on-network commissioning, final CASE confirmation, generated enhanced-window
 onboarding material and typed operational ACL values.
-The current Python factory adapter remains a separate narrow baseline.
+The earlier Python factory adapter is removed; runtime controllers use the
+first-party native host.
 
 [WMA.13](docs/specs/WMA.13-native-backend.md) fixes source/build pins, typed IPC,
 flow control and native ownership. `mix run bin/check_p07_native.exs` rebuilds
@@ -85,16 +88,15 @@ while generating and building native SDK sources.
 
 The implemented package provides fabric-scoped concrete and batch-read paths,
 bounded TLV, typed attribute/event reports, a finite descriptor registry, a
-bounded endpoint-catalogue value, a validated `Client` behaviour, an opt-in
-Python SDK interaction adapter, compatibility callbacks and WoT Form/Runtime
+bounded endpoint-catalogue value, a validated `Client` behaviour, a first-party
+native SDK controller, compatibility callbacks and WoT Form/Runtime
 mapping. TLV preserves tags, explicit scalar widths, null and containers while
 bounding bytes, nodes and nesting. `read_paths/3` preserves ordered per-path
-successes and errors from a selected client. The `SDK` adapter targets concrete
-read/write/invoke calls in the pinned native SDK; an explicitly supplied
-controller factory owns SDK startup, credentials and shutdown. The batch API is
-not wired to that one-shot adapter. No Python runtime or native SDK binary is
-bundled. The packaged first-party controller source is built explicitly outside
-the Hex archive.
+successes and errors from a selected client. The `Native` client executes the
+pinned SDK through an explicitly built C++ host. Its one-shot mode opens an
+existing controller store for each concrete read, write or invoke. No Python
+runtime or native SDK binary is bundled. The packaged first-party controller
+source is built explicitly outside the Hex archive.
 
 The packaged native source includes the P02 `PersistentStorageDelegate`: it
 creates or opens an explicitly identified controller store, holds an exclusive
@@ -148,16 +150,12 @@ oneshot_profile = Wotex.Matter.profile()
 {:ok, controller_profile} = Wotex.Matter.profile(:controller)
 ```
 
-Use `client: Wotex.Matter.SDK` with an absolute Python executable,
-`factory: "sdk_host:controller"`, `fabric_id` and a `settings` map. The selected
-factory must be a synchronous context manager yielding an initialized SDK
-controller. See [SDK contract](docs/specs/WMA.03-sdk-client.md).
-Alternatively, supply a module implementing `Wotex.Matter.Client`. The driver
-owns the pinned SDK, secure fabric storage,
-commissioning, attestation, sessions and per-path status validation. Missing
-transport, crashed driver, invalid return and missing write input all fail.
-Failed writes/invokes have unknown effect; the library never retries them.
-No real SDK/device parity is claimed by the fake-port contract tests.
+Use `client: Wotex.Matter.Native` with the explicit native controller options
+below. Its C++ host owns SDK startup, secure fabric storage, attestation,
+sessions and per-path status validation. See the [client contract](docs/specs/WMA.03-sdk-client.md).
+Alternatively, supply a module implementing `Wotex.Matter.Client`; injected
+contract tests alone do not establish SDK or device interoperability. Failed
+writes/invokes retain unknown effect and are never retried by the library.
 
 To open the P03 controller owner, build `wotex-matter-host` with the separate
 native lane and pass its absolute path explicitly:

@@ -12,7 +12,9 @@ defmodule Wotex.Matter.NativeWindowExpiryTest do
 
   test "an enhanced window expires and its material cannot commission a new fabric" do
     fixture =
-      System.fetch_env!("WOTEX_MATTER_NATIVE_WINDOW_FIXTURE") |> File.read!() |> Jason.decode!()
+      System.fetch_env!("WOTEX_MATTER_NATIVE_WINDOW_FIXTURE")
+      |> File.read!()
+      |> Jason.decode!()
 
     original = Map.fetch!(fixture, "controller")
     node = %{fabric_id: original["fabric_id"], node_id: Map.fetch!(fixture, "node_id")}
@@ -121,7 +123,9 @@ defmodule Wotex.Matter.NativeWindowExpiryTest do
   defp child_stopped?(_, 0), do: false
 
   defp child_stopped?(pid, remaining) do
-    case System.cmd("kill", ["-0", Integer.to_string(pid)], stderr_to_stdout: true) do
+    case Wotex.Matter.Native.ProcessCommand.run("kill", ["-0", Integer.to_string(pid)],
+           stderr_to_stdout: true
+         ) do
       {_, 0} ->
         Process.sleep(10)
         child_stopped?(pid, remaining - 1)

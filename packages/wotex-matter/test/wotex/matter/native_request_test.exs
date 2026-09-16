@@ -44,7 +44,7 @@ defmodule Wotex.Matter.NativeRequestTest do
     boundary = [full, full, full, last]
     assert {:ok, encoded} = Request.encode(boundary)
     assert {:ok, ^boundary} = Wire.frame(encoded)
-    assert {:error, %Error{}} = Request.encode([full, full, full, last ++ [nil]])
+    assert {:error, %Error{}} = Request.encode([full, full, full, List.insert_at(last, -1, nil)])
   end
 
   test "WMA-C02 scalars and native tag representations reject lossy or unsupported terms" do

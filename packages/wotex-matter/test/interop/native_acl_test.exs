@@ -6,8 +6,7 @@ defmodule Wotex.Matter.NativeAclInteropTest do
   use ExUnit.Case, async: false
 
   alias Wotex.Matter
-  alias Wotex.Matter.SoftwareScenarios
-  alias Wotex.Matter.{AttributeReport, Descriptor, Error, Native, TLV}
+  alias Wotex.Matter.{AttributeReport, Descriptor, Error, Native, SoftwareScenarios, TLV}
 
   @moduletag :interop
   @moduletag :software
@@ -84,8 +83,12 @@ defmodule Wotex.Matter.NativeAclInteropTest do
         assert {:ok, denied_value} = Descriptor.to_element(:attribute, address, :write, denied)
         assert {:ok, %{status: 0}} = Matter.write_attribute(session, address, denied_value)
 
-        assert {:error, %Error{code: :interaction_status, details: %{status: 0x7E}, effect: :none}} =
-                 Matter.read_attribute(session, address)
+        read_result = Matter.read_attribute(session, address)
+
+        assert {:error, %Error{} = error} = read_result
+        assert error.code == :interaction_status
+        assert error.details == %{status: 0x7E}
+        assert error.effect == :none
       after
         assert :ok = Matter.disconnect(session)
         assert_receive {:DOWN, ^monitor, :process, ^owner, :normal}, 1_000

@@ -6,8 +6,7 @@ defmodule Wotex.Matter.NativeBridgeInteropTest do
   use ExUnit.Case, async: false
 
   alias Wotex.Matter
-  alias Wotex.Matter.SoftwareScenarios
-  alias Wotex.Matter.{AttributeReport, EventReport, Native}
+  alias Wotex.Matter.{AttributeReport, EventReport, Native, SoftwareScenarios}
 
   @moduletag :interop
   @moduletag :software
@@ -171,7 +170,9 @@ defmodule Wotex.Matter.NativeBridgeInteropTest do
   defp child_stopped?(_, 0), do: false
 
   defp child_stopped?(pid, remaining) do
-    case System.cmd("kill", ["-0", Integer.to_string(pid)], stderr_to_stdout: true) do
+    case Wotex.Matter.Native.ProcessCommand.run("kill", ["-0", Integer.to_string(pid)],
+           stderr_to_stdout: true
+         ) do
       {_, 0} ->
         Process.sleep(10)
         child_stopped?(pid, remaining - 1)
