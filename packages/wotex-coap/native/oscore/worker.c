@@ -37,6 +37,7 @@ struct output_frame {
     size_t end;
     int64_t deadline;
     uint64_t report_sequence;
+    int completes_report;
 };
 
 struct output {
@@ -87,11 +88,15 @@ struct pending_report {
 
 struct observation {
     char id[65];
+    char path[4097];
     struct pending_report report, next;
-    int64_t last_received_at;
+    int64_t last_received_at, refresh_at, renewal_deadline;
     uint32_t last_observe;
+    uint32_t timeout_ms;
     uint16_t content_format;
-    int freshness_set, content_format_present;
+    uint16_t accept;
+    int freshness_set, content_format_present, confirmable, accept_present;
+    int renew, renewing, initial_written;
     int established, cancelling, event_kind, used;
 };
 
@@ -144,7 +149,7 @@ static int append(struct output *output, const char *bytes, size_t length, int64
     memcpy(output->bytes + output->used, bytes, length);
     output->used += length;
     output->frames[output->count++] =
-        (struct output_frame){output->used, deadline, 0};
+        (struct output_frame){output->used, deadline, 0, 0};
     return 1;
 }
 
@@ -425,16 +430,26 @@ static int prepare_report(const struct wco_exchange_message *message,
 }
 
 static int admit_report(struct observation *observation,
-                        const struct pending_report *report, int64_t received_at) {
+                        const struct pending_report *report, int64_t received_at,
+                        int renewal) {
     uint32_t difference;
     int64_t elapsed;
     if (received_at < 0) return -1;
+    if (observation->freshness_set &&
+        (report->content_format_present != observation->content_format_present ||
+         (report->content_format_present &&
+          report->content_format != observation->content_format))) return -2;
     if (!observation->freshness_set) {
         observation->last_observe = report->observe;
         observation->last_received_at = received_at;
         observation->content_format = report->content_format;
         observation->content_format_present = report->content_format_present;
         observation->freshness_set = 1;
+        return 1;
+    }
+    if (renewal) {
+        observation->last_observe = report->observe;
+        observation->last_received_at = received_at;
         return 1;
     }
     elapsed = received_at >= observation->last_received_at ?
@@ -445,9 +460,16 @@ static int admit_report(struct observation *observation,
         return 0;
     observation->last_observe = report->observe;
     observation->last_received_at = received_at;
-    if (report->content_format_present != observation->content_format_present ||
-        (report->content_format_present &&
-         report->content_format != observation->content_format)) return -2;
+    return 1;
+}
+
+static int arm_observation(struct observation *observation,
+                           const struct pending_report *report,
+                           int64_t received_at) {
+    uint64_t delay = (uint64_t)report->max_age * 1000u;
+    if (observation->renew && delay < 1000u) delay = 1000u;
+    if (received_at < 0 || delay > (uint64_t)(INT64_MAX - received_at)) return 0;
+    observation->refresh_at = received_at + (int64_t)delay;
     return 1;
 }
 
@@ -597,6 +619,8 @@ static int pump_report(struct worker *worker) {
         sequence != expected ||
         !append(&worker->output, line, used, now + 5000)) return 0;
     worker->output.frames[worker->output.count - 1].report_sequence = sequence;
+    worker->output.frames[worker->output.count - 1].completes_report =
+        report->phase == WCO_REPORT_RESULT;
     report->started = 1;
     switch (report->phase) {
         case WCO_REPORT_BEGIN:
@@ -678,6 +702,7 @@ static int terminal_observation(struct worker *worker, const char *code) {
     clear_report(&worker->observation.next);
     worker->observation.established = 0;
     worker->observation.cancelling = 0;
+    worker->observation.renewing = 0;
     worker->closing = 1;
     return append(&worker->output, line, used, now + 5000);
 }
@@ -685,6 +710,7 @@ static int terminal_observation(struct worker *worker, const char *code) {
 static int observation_response(struct worker *worker,
                                 const struct wco_exchange_message *message) {
     struct pending_report pending;
+    int64_t received_at;
     int admission, status;
     memset(&pending, 0, sizeof(pending));
     if (message->delivery == WCO_EXCHANGE_OBSERVE_INITIAL) {
@@ -702,9 +728,12 @@ static int observation_response(struct worker *worker,
             worker->closing = 1;
             return valid;
         }
+        received_at = now_ms();
         admission = admit_report(&worker->observation,
-                                 &worker->observation.report, now_ms());
-        if (admission != 1) return 0;
+                                 &worker->observation.report, received_at, 0);
+        if (admission != 1 ||
+            !arm_observation(&worker->observation,
+                             &worker->observation.report, received_at)) return 0;
         if (!observation_open_response(worker)) return 0;
         memcpy(worker->observation.id, worker->request.id,
                strlen(worker->request.id) + 1);
@@ -713,14 +742,19 @@ static int observation_response(struct worker *worker,
         worker->request.active = 0;
         return 1;
     }
-    if (message->delivery == WCO_EXCHANGE_OBSERVE_REPORT) {
-        if (!worker->observation.established || worker->observation.cancelling)
+    if (message->delivery == WCO_EXCHANGE_OBSERVE_REPORT ||
+        message->delivery == WCO_EXCHANGE_OBSERVE_RENEWED) {
+        int renewal = message->delivery == WCO_EXCHANGE_OBSERVE_RENEWED;
+        if (!worker->observation.established || worker->observation.cancelling ||
+            (renewal && !worker->observation.renewing))
             return 0;
         if (!prepare_report(message, &pending)) {
             clear_report(&pending);
             return terminal_observation(worker, "observation_failed");
         }
-        admission = admit_report(&worker->observation, &pending, now_ms());
+        received_at = now_ms();
+        admission = admit_report(&worker->observation, &pending, received_at,
+                                 renewal);
         if (admission == 0) {
             clear_report(&pending);
             return 1;
@@ -733,6 +767,11 @@ static int observation_response(struct worker *worker,
             clear_report(&pending);
             return 0;
         }
+        if (!arm_observation(&worker->observation, &pending, received_at)) {
+            clear_report(&pending);
+            return 0;
+        }
+        if (renewal) worker->observation.renewing = 0;
         if (worker->observation.report.pending) {
             if (worker->observation.event_kind) {
                 clear_report(&pending);
@@ -769,6 +808,7 @@ static int observation_response(struct worker *worker,
         OPENSSL_cleanse(worker->observation.id, sizeof(worker->observation.id));
         worker->observation.established = 0;
         worker->observation.cancelling = 0;
+        worker->observation.renewing = 0;
         worker->observation.event_kind = 0;
         return valid;
     }
@@ -814,6 +854,7 @@ static void exchange_failure(void *argument, const char *code) {
     clear_report(&worker->observation.next);
     worker->observation.established = 0;
     worker->observation.cancelling = 0;
+    worker->observation.renewing = 0;
     worker->closing = 1;
 }
 
@@ -1075,9 +1116,17 @@ static int observe_command(struct worker *worker,
     memcpy(worker->request.id, command->id, strlen(command->id) + 1);
     worker->request.deadline = now + command->timeout_ms;
     worker->request.active = 1;
+    memcpy(worker->observation.path, path, path_length);
+    worker->observation.path[path_length] = '\0';
+    worker->observation.confirmable =
+        yyjson_get_bool(field(parameters, "confirmable"));
+    worker->observation.accept_present = accept_value != NULL;
+    worker->observation.accept = (uint16_t)accept;
+    worker->observation.renew = yyjson_get_bool(field(parameters, "renew"));
+    worker->observation.timeout_ms = command->timeout_ms;
     worker->observation.event_kind = kind_length == 5 && !memcmp(kind, "event", 5);
-    error = wco_exchange_observe(worker->exchange, path,
-                                 yyjson_get_bool(field(parameters, "confirmable")),
+    error = wco_exchange_observe(worker->exchange, worker->observation.path,
+                                 worker->observation.confirmable,
                                  accept_value != NULL, (uint16_t)accept);
     if (!error) return 1;
     worker->request.active = 0;
@@ -1124,6 +1173,7 @@ static int cancel_command(struct worker *worker,
     worker->request.deadline = now + command->timeout_ms;
     worker->request.active = 1;
     worker->observation.cancelling = 1;
+    worker->observation.renewing = 0;
     clear_report(&worker->observation.report);
     clear_report(&worker->observation.next);
     error = wco_exchange_cancel(worker->exchange);
@@ -1186,6 +1236,8 @@ static int flush_output(struct worker *worker) {
             uint64_t sequence = worker->output.frames[index].report_sequence;
             if (sequence && wco_credit_written(&worker->credit, sequence) != WCO_CREDIT_OK)
                 return 0;
+            if (worker->output.frames[index].completes_report)
+                worker->observation.initial_written = 1;
         }
         for (size_t index = consumed; index < worker->output.count; index++) {
             worker->output.frames[index - consumed] = worker->output.frames[index];
@@ -1197,6 +1249,31 @@ static int flush_output(struct worker *worker) {
         return 1;
     }
     return written < 0 && (errno == EAGAIN || errno == EINTR);
+}
+
+static int maintain_observation(struct worker *worker, int64_t now) {
+    struct observation *observation = &worker->observation;
+    const char *error;
+    if (!observation->established || observation->cancelling ||
+        !observation->initial_written) return 1;
+    if (observation->renewing) {
+        if (now < observation->renewal_deadline) return 1;
+        (void)wco_exchange_cancel(worker->exchange);
+        return terminal_observation(worker, "timeout");
+    }
+    if (now < observation->refresh_at) return 1;
+    if (!observation->renew) {
+        (void)wco_exchange_cancel(worker->exchange);
+        return terminal_observation(worker, "observation_stale");
+    }
+    error = wco_exchange_renew(worker->exchange, observation->path,
+                               observation->confirmable,
+                               observation->accept_present,
+                               observation->accept);
+    if (error) return terminal_observation(worker, error);
+    observation->renewing = 1;
+    observation->renewal_deadline = now + observation->timeout_ms;
+    return 1;
 }
 
 static int run(struct worker *worker) {
@@ -1221,6 +1298,7 @@ static int run(struct worker *worker) {
             worker->request.active = 0;
             worker->closing = 1;
         }
+        if (!maintain_observation(worker, now)) return 70;
         if (!pump_stream(worker)) return 70;
         if (!pump_report(worker)) return 70;
         descriptors[0] = (struct pollfd){worker->closing ? -1 : STDIN_FILENO,

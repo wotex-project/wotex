@@ -17,8 +17,8 @@ Python is not a runtime or target orchestration dependency. The native worker
 implements same-binary startup, durable open, upload-body state, close and one
 active unary libcoap exchange with inline or streamed results. It also executes
 one protected Observe registration with inline or streamed reports, cumulative
-credit and token-matched cancellation. Renewal and the Mix tasks remain
-planned contracts;
+credit, Max-Age renewal, stale cleanup and token-matched cancellation. The
+remaining observation fault matrix and Mix tasks remain planned contracts;
 [provenance](../provenance/executable-evidence.md) identifies executed BEAM/OTP
 and native peer evidence separately.
 
@@ -189,11 +189,13 @@ protected GET, a 32,769-byte Block2 stream and Block1 POST through public custod
 on macOS and Linux. The same peer then registers a protected Observe, proves the
 initial report stays silent at zero credit, acknowledges each completely written
 report, receives a fresh 32,769-byte notification through five credited frames
-and cancels the original token before close while those credits remain outstanding.
-The Linux static build uses ASan/UBSan and leak detection. This evidence accepts
-inline and streamed reports; it does not accept renewal, the full observation
-fault matrix, replay, independent OSCORE interoperability or the
-final Mix-built helper.
+and renews after its zero Max-Age using the same token and a new Message ID. A
+second worker emits its initial zero-Max-Age report before disabled-renewal stale
+cleanup and best-effort cancellation. Cancellation of the renewed observation
+also uses the original token. The Linux static build uses ASan/UBSan and leak
+detection. This evidence accepts inline and streamed reports plus the two
+Max-Age expiry policies; it does not accept the remaining observation fault
+matrix, replay, independent OSCORE interoperability or the final Mix-built helper.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and

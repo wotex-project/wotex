@@ -57,8 +57,10 @@ consumes the durable context, assembles uploads, executes protected unary
 exchanges with inline or streamed results and closes through that same-binary
 custody path. Its libcoap exchange loop also registers one protected Observe,
 holds inline or streamed reports behind cumulative credit, applies 24-bit serial freshness
-and cancels with the original token. Renewal, independent OSCORE interoperability
-and the final software matrix remain ordered work.
+and renews or cancels with the original token. Max-Age expiry renews at no less
+than one-second intervals when enabled; otherwise it sends best-effort
+cancellation and reports stale state. Independent OSCORE interoperability and
+the final software matrix remain ordered work.
 Multicast and extended tokens are outside the implemented profile.
 
 ## Quick start
@@ -96,7 +98,8 @@ successful open. Its production adapter completes one protected unary request
 at a time, returning responses up to 32 KiB inline and larger responses through
 correlated begin/chunk/end frames up to the 1 MiB body ceiling. The adapter also
 completes protected Observe registration, inline or streamed reports, cumulative
-report credit and token-matched cancellation. Renewal remains incomplete.
+report credit, Max-Age renewal and token-matched cancellation. A disabled
+renewal policy emits the initial report before stale cleanup.
 Numeric IPv4/IPv6 destinations are required. A session serializes requests;
 its owner is monitored. Datagrams are bounded to 1152 bytes; complete bodies to 1 MiB.
 Capabilities expose these as `max_datagram_size` and `max_body_size`.
@@ -190,7 +193,7 @@ adapter verifies the native route and subscription generation, maps unary calls
 and Observe through the same owner, and releases exact handles on cancellation.
 Production unary execution uses these same response-body envelopes; production
 Observe execution now covers protected registration, inline or streamed reports,
-credit and cancellation. Renewal remains planned.
+credit, Max-Age renewal, stale cleanup and cancellation.
 `Wotex.CoAP.Native.Wire` validates bounded ready and response frames and
 constructs complete Messages without starting a process.
 `Wotex.CoAP.Native.Command` encodes exact bounded commands with monotonic

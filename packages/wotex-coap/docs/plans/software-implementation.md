@@ -5,8 +5,9 @@ Runtime UDP streams, OTP PSK/PKI DTLS native/Runtime operations and the injected
 native OSCORE Runtime boundary are implemented. The native same-binary lifecycle
 worker now owns durable open, bounded upload state and close. Its libcoap engine
 executes unary requests and protected Observe registration, inline or streamed
-reports, report credit and cancellation. Renewal, the independent secure matrix,
-Mix orchestration and complete software closure remain targets.
+reports, report credit, Max-Age renewal, stale cleanup and cancellation. The
+remaining observation fault matrix, independent secure matrix, Mix orchestration
+and complete software closure remain targets.
 [Executable evidence](../provenance/executable-evidence.md) identifies each
 executed cohort and its limits. The ordered packages define acceptance.
 

@@ -162,6 +162,18 @@ ASan/UBSan/leak lanes execute the sequence. Renewal, Property/Event overload
 faults, replay, independent secure interoperability and Mix orchestration remain
 unaccepted.
 
+The [native worker renewal receipt](native-worker-renewal-v1.json) binds the
+next production source cohort. After a streamed report advertises Max-Age zero,
+the worker waits the one-second minimum, sends GET Observe=0 for the original
+route and token with a new Message ID, and emits the authenticated renewal
+response as the next credited report. A separate public-custody run proves that
+`renew: false` still emits its complete initial Max-Age-zero report, then sends
+best-effort token-matched cancellation, emits exactly one `observation_stale`
+terminal envelope and exits cleanly. Both macOS and Linux ASan/UBSan/leak lanes
+execute both policies. Negative renewal responses, renewal deadline and explicit
+cancel races, Property/Event overload faults, replay, independent secure
+interoperability and Mix orchestration remain unaccepted.
+
 `native_command_encoder_test.exs` executes six exact tests for the matching
 BEAM transmit boundary. It encodes all nine operations, canonical byte values,
 explicit OSCORE credentials and exact five-field lines; omits absent optionals;

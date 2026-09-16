@@ -1,0 +1,88 @@
+{
+  "schema": "wotex.coap.native-worker-renewal-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Production worker protected Max-Age renewal and disabled-renewal stale cleanup through public custody",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "cd2eece99adcfdc881e21029ecd84f5063dec5e37f28d70e344c7a9bf2dae786",
+      "native/oscore/main.c": "6e6c2a8deb2aeac8e527a922467bf89ab0f45f2aa2e669e988fa1e84f690e8eb",
+      "native/oscore/worker.c": "2d640eaf23208b2b2fc14b55881c6322ca42b9e92886bcb736631708901d5556",
+      "native/oscore/worker.h": "07c7e440f74fb6efbfabaf4a44a8eccf5a31b82f53c89951a26706354009b11e",
+      "native/oscore/exchange.c": "1844997741b84fc0f7f162e3ccb3f05b27d9f4f21d0a05f9c6eff1f58e83e8f6",
+      "native/oscore/exchange.h": "6c49c53a522018ff518b30268ca69306cc7ca6bc789b95e9bb417febf1dff7f6",
+      "native/oscore/custody.c": "887904afa9be4ec1e40145a6e69aac081eda9096a0fc2a0320751f2a16d082b5",
+      "native/oscore/command.c": "9dba7b283ea818d92e01db04483e3782ee401793272ec23e768829a45807c22d",
+      "native/oscore/json.c": "a50d46c2e518d5e3d932c6603306a54dd49abcf545cc5a97fbd2b7ec994d5d46",
+      "native/oscore/frame.c": "d122c2d763e967472d00a79eb4a01cebdbcd9c1b747578a43346141448349906",
+      "native/oscore/body.c": "f6f2696eae9631f5e68c38a01df7ff69f1d2b7ab08d51b735cc600e50ec3e9d4",
+      "native/oscore/credit.c": "f2566b99ae79f539d8c8c1bf0872b050bc62c3785d1758be1e1d7d3b2e624b7d",
+      "native/oscore/identity.c": "955d94def94861e15fbe8ff9c7e14f26a8eec5979585eff21b295267e04a4565",
+      "native/oscore/store.c": "a49ba6a278612e43c9e1872a9565abf541340aa12aa001f9f80e2c93f86969cd",
+      "native/oscore/patches/0007-preserve-oscore-observe-sequence.patch": "6e28ffa3b1892c1bb3b6ede3f77b899d29909993f4dcff82483f61ea748afda9",
+      "test/native/oscore_worker_exchange_test.c": "72ae7d49bf733682509cf9688c14c4419435bdb000c58d85965c471e7b455390",
+      "test/native/Dockerfile": "5cbf43c0d07876d084d526792a7cccbbd878e882bf9973131d7ae27c563eac60"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "package_version": "libcoap 4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 7,
+    "patched_coap_oscore_sha256": "601eb687f33794297c4571aa3481da0e480ec4165493d5081b52aa6511623ca6"
+  },
+  "requirements": ["WCO-S03", "WCO-D04", "WCO-D05", "WCO-N02", "WCO-N03"],
+  "assertions": [
+    "A protected streamed report carries Max-Age zero and completes all five credited frames before renewal",
+    "Renewal occurs at least 1000 ms after that report, sends GET Observe=0 for the original route and token with a new Message ID, and preserves Accept zero",
+    "The authenticated renewal response advances the Observe serial and emits the next contiguous credited inline report",
+    "Explicit cancellation after renewal uses the original token, completes only after a response without Observe and removes the server observer",
+    "With renew false, the complete initial Max-Age-zero report is written before exactly one observation_stale terminal envelope",
+    "Disabled-renewal expiry sends best-effort token-matched cancellation and the worker exits cleanly"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "worker_sha256": "4b47db9eb4e0d95662e82dbda408c81501940cbcb7074e9eed928c5a620fe516",
+      "peer_sha256": "1668955096518093417b460694cefe06adad3d8a855886ce2131634abb170e93",
+      "static_library_sha256": "4645502fd5709d041c1146ff1a9675b051649467913c8f4390a671e6a42918da",
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "exit_code": 0,
+      "assertion_output": "WCO-N02/N04: production worker completes unary, streamed and Observe exchanges",
+      "output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "image": "sha256:d5fc2ff58d88364142f9141454f6c5611ae30ca85c6aebdc5e36cb355eb4f822",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "worker_sha256": "2b15575439fa88eec51fd955c5ba6224ecf0e650b93008ff29ae38f9c049a3db",
+      "peer_sha256": "a8d8f1840800a3fdc45f25ff77998523df7b0c3a2850272923f6b02c62558b76",
+      "static_library_sha256": "82932fb3fcde7bae297c093bb7878a20ea81676319b092a4bd8f43ace6eb0d72",
+      "artifact_log_sha256": "3d13cb02a2285e94f5da3b4689d33df579fb9c1c1f4e820b255d0ba4a8802154",
+      "package_log_sha256": "b8c513532a688cc321c09f5e022b7ff72dedc3ade4438786d3f8f5961ff54879",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": ["address", "undefined", "leak"],
+      "toolchain_packages_recorded_not_locked": true
+    }
+  ],
+  "unaccepted": [
+    "Negative renewal status, missing Observe, changed Content-Format and renewal-deadline faults",
+    "Explicit cancellation while renewal is in flight",
+    "Property coalescing and Event overlap execution during an active report stream",
+    "Duplicate/stale and wraparound fault injection",
+    "Abrupt owner/receiver cleanup through the production worker",
+    "Live replay/duplicate and restart fault matrix through the complete worker",
+    "Independent-stack OSCORE interoperability",
+    "Port mailbox saturation, 1000-operation stress and native-v1 corpus completion",
+    "Reproducible Mix build/run orchestration and final manifest-bound executable"
+  ]
+}

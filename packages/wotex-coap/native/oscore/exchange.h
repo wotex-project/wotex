@@ -20,6 +20,7 @@ struct wco_exchange_option {
 enum wco_exchange_delivery {
     WCO_EXCHANGE_UNARY = 0,
     WCO_EXCHANGE_OBSERVE_INITIAL,
+    WCO_EXCHANGE_OBSERVE_RENEWED,
     WCO_EXCHANGE_OBSERVE_REPORT,
     WCO_EXCHANGE_OBSERVE_INTERVENING,
     WCO_EXCHANGE_CANCELLED
@@ -66,6 +67,9 @@ const char *wco_exchange_request(struct wco_exchange *exchange,
 const char *wco_exchange_observe(struct wco_exchange *exchange,
                                  const char *path, int confirmable,
                                  int accept_present, uint16_t accept);
+const char *wco_exchange_renew(struct wco_exchange *exchange,
+                               const char *path, int confirmable,
+                               int accept_present, uint16_t accept);
 const char *wco_exchange_cancel(struct wco_exchange *exchange);
 int wco_exchange_io(struct wco_exchange *exchange);
 int wco_exchange_active(const struct wco_exchange *exchange);

@@ -27,6 +27,7 @@ enum pending_operation {
     WCO_PENDING_NONE = 0,
     WCO_PENDING_REQUEST,
     WCO_PENDING_OBSERVE,
+    WCO_PENDING_RENEW,
     WCO_PENDING_CANCEL
 };
 
@@ -227,6 +228,11 @@ static coap_response_t response_handler(coap_session_t *session,
         exchange->pending = WCO_PENDING_NONE;
     } else if (exchange->pending == WCO_PENDING_OBSERVE) {
         message.delivery = WCO_EXCHANGE_OBSERVE_INITIAL;
+        exchange->active = 0;
+        exchange->pending = WCO_PENDING_NONE;
+        exchange->observing = has_observe && message.code >= 64 && message.code <= 94;
+    } else if (exchange->pending == WCO_PENDING_RENEW) {
+        message.delivery = WCO_EXCHANGE_OBSERVE_RENEWED;
         exchange->active = 0;
         exchange->pending = WCO_PENDING_NONE;
         exchange->observing = has_observe && message.code >= 64 && message.code <= 94;
@@ -435,9 +441,10 @@ unavailable:
     return "native_unavailable";
 }
 
-const char *wco_exchange_observe(struct wco_exchange *exchange,
-                                 const char *path, int confirmable,
-                                 int accept_present, uint16_t accept) {
+static const char *send_observe(struct wco_exchange *exchange,
+                                const char *path, int confirmable,
+                                int accept_present, uint16_t accept,
+                                int renewing) {
     coap_pdu_t *pdu = NULL;
     coap_optlist_t *options = NULL;
     uint8_t observe[1];
@@ -445,7 +452,8 @@ const char *wco_exchange_observe(struct wco_exchange *exchange,
     size_t observe_length;
     if (!exchange || exchange->failed) return "connection_closed";
     if (exchange->active) return "busy";
-    if (exchange->observing) return "observation_active";
+    if (renewing ? !exchange->observing : exchange->observing)
+        return renewing ? "invalid_request" : "observation_active";
     observe_length = coap_encode_var_safe(observe, sizeof(observe),
                                           COAP_OBSERVE_ESTABLISH);
     if (!request_options(path, accept_present, accept, 0, 0, &options) ||
@@ -454,8 +462,11 @@ const char *wco_exchange_observe(struct wco_exchange *exchange,
     pdu = coap_new_pdu(confirmable ? COAP_MESSAGE_CON : COAP_MESSAGE_NON,
                        COAP_REQUEST_CODE_GET, exchange->session);
     if (!pdu) goto unavailable;
-    exchange->token_length = sizeof(exchange->token);
-    coap_session_new_token(exchange->session, &exchange->token_length, exchange->token);
+    if (!renewing) {
+        exchange->token_length = sizeof(exchange->token);
+        coap_session_new_token(exchange->session, &exchange->token_length,
+                               exchange->token);
+    }
     if (!coap_add_token(pdu, exchange->token_length, exchange->token) ||
         !coap_add_optlist_pdu(pdu, &options)) goto unavailable;
     coap_delete_optlist(options); options = NULL;
@@ -467,9 +478,10 @@ const char *wco_exchange_observe(struct wco_exchange *exchange,
         exchange->failed = 1;
         return error;
     }
-    exchange->observe_type = confirmable ? COAP_MESSAGE_CON : COAP_MESSAGE_NON;
+    if (!renewing)
+        exchange->observe_type = confirmable ? COAP_MESSAGE_CON : COAP_MESSAGE_NON;
     exchange->active = 1;
-    exchange->pending = WCO_PENDING_OBSERVE;
+    exchange->pending = renewing ? WCO_PENDING_RENEW : WCO_PENDING_OBSERVE;
     return NULL;
 invalid:
     coap_delete_optlist(options);
@@ -480,12 +492,28 @@ unavailable:
     return "native_unavailable";
 }
 
+const char *wco_exchange_observe(struct wco_exchange *exchange,
+                                 const char *path, int confirmable,
+                                 int accept_present, uint16_t accept) {
+    return send_observe(exchange, path, confirmable, accept_present, accept, 0);
+}
+
+const char *wco_exchange_renew(struct wco_exchange *exchange,
+                               const char *path, int confirmable,
+                               int accept_present, uint16_t accept) {
+    return send_observe(exchange, path, confirmable, accept_present, accept, 1);
+}
+
 const char *wco_exchange_cancel(struct wco_exchange *exchange) {
     coap_binary_t *token;
     int sent;
     if (!exchange || exchange->failed) return "connection_closed";
-    if (exchange->active) return "busy";
+    if (exchange->active && exchange->pending != WCO_PENDING_RENEW) return "busy";
     if (!exchange->observing) return "invalid_request";
+    if (exchange->pending == WCO_PENDING_RENEW) {
+        exchange->active = 0;
+        exchange->pending = WCO_PENDING_NONE;
+    }
     token = coap_new_binary(exchange->token_length);
     if (!token) return "native_unavailable";
     if (exchange->token_length)
@@ -553,6 +581,12 @@ const char *wco_exchange_request(struct wco_exchange *exchange,
 const char *wco_exchange_observe(struct wco_exchange *exchange,
                                  const char *path, int confirmable,
                                  int accept_present, uint16_t accept) {
+    (void)exchange; (void)path; (void)confirmable; (void)accept_present; (void)accept;
+    return "native_unavailable";
+}
+const char *wco_exchange_renew(struct wco_exchange *exchange,
+                               const char *path, int confirmable,
+                               int accept_present, uint16_t accept) {
     (void)exchange; (void)path; (void)confirmable; (void)accept_present; (void)accept;
     return "native_unavailable";
 }

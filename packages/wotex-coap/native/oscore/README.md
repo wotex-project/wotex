@@ -25,7 +25,10 @@ frames followed by a Message body reference, all under the original request
 deadline. One protected Observe registration retains its initial report until
 cumulative credit opens, emits larger reports through credited begin/chunk/end
 frames, admits fresh subsequent reports, and cancels with the original token.
-Renewal remains incomplete.
+At Max-Age expiry it either re-registers the same route and token with a new
+Message ID under the original finite command timeout or sends best-effort
+cancellation and emits `observation_stale`. A zero Max-Age renews no more often
+than once per second, and the initial report is completely written first.
 
 `native_worker_test.exs` runs the same executable through custody on macOS. It
 asserts exact ready/open/body/request/close envelopes, printable-ID escaping,
@@ -46,8 +49,12 @@ protected registration, zero-credit retention, two inline reports, cumulative
 acknowledgment and token-matched cancellation. The following streamed-report
 [receipt](../../docs/provenance/native-worker-report-stream-v1.json) binds the
 five credited frames of a 32,769-byte notification and
-cancellation with all five credits outstanding. It does not accept renewal,
-live replay behavior, independent OSCORE interoperability or the final Mix-built executable.
+cancellation with all five credits outstanding. The subsequent
+[renewal receipt](../../docs/provenance/native-worker-renewal-v1.json) binds
+same-token/new-MID renewal, the zero-Max-Age minimum interval and disabled-renewal
+stale cleanup. These receipts do not accept the remaining observation fault
+matrix, live replay behavior, independent OSCORE interoperability or the final
+Mix-built executable.
 
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the
