@@ -25,6 +25,40 @@ defmodule Wotex.OPCUA.ValueTest do
                "value" => %{"type" => "ByteString", "base64" => "AP8="}
              })
 
+    assert {:ok, [<<0, 255>>, nil, <<>>], %{opcua_type: "ByteString", status: 0}} =
+             Value.result(%{
+               "type" => "ByteString",
+               "status" => 0,
+               "value" => [
+                 %{"type" => "ByteString", "base64" => "AP8="},
+                 nil,
+                 %{"type" => "ByteString", "base64" => ""}
+               ]
+             })
+
+    assert {:error, %{code: :invalid_bytestring}} =
+             Value.result(%{
+               "type" => "ByteString",
+               "status" => 0,
+               "value" => [%{"type" => "ByteString", "base64" => "AA==", "extra" => true}]
+             })
+
+    assert {:error, %{code: :response_limit}} =
+             Value.result(%{
+               "type" => "ByteString",
+               "status" => 0,
+               "value" => List.duplicate(nil, 1025)
+             })
+
+    large = %{"type" => "ByteString", "base64" => Base.encode64(:binary.copy(<<0>>, 65_536))}
+
+    assert {:error, %{code: :response_limit}} =
+             Value.result(%{
+               "type" => "ByteString",
+               "status" => 0,
+               "value" => List.duplicate(large, 17)
+             })
+
     assert {:error, _} =
              Value.result(%{
                "type" => "ByteString",

@@ -448,6 +448,52 @@ defmodule Wotex.OPCUA.NativeSecureInteropTest do
     assert {:ok, %Result{payload: "written"}} = write.(<<0, 255>>)
     assert {:ok, %Result{payload: <<0, 255>>}} = read.()
     assert {:ok, %Result{payload: "written"}} = write.("seed")
+
+    array_href = endpoint <> "?id=" <> URI.encode_www_form(peer["byte_array_node_id"])
+    assert {:ok, array_form} = Wotex.Form.new(%{"href" => array_href})
+    array_request = %{request | form: array_form, resolved_href: array_href}
+
+    assert {:ok, native} =
+             Wotex.OPCUA.Open62541.connect(Keyword.drop(options, [:client, :target]))
+
+    assert {:ok, %{"value" => original}} =
+             Wotex.OPCUA.Open62541.request(
+               native,
+               %{type: :read, node_id: peer["byte_array_node_id"]},
+               5000
+             )
+
+    original_bytes = Enum.map(original, fn %{"base64" => encoded} -> Base.decode64!(encoded) end)
+
+    try do
+      assert {:ok, "written"} =
+               Wotex.OPCUA.Open62541.request(
+                 native,
+                 %{
+                   type: :write,
+                   node_id: peer["byte_array_node_id"],
+                   value: %{type: "ByteString", array: true, value: [<<0, 255>>, <<>>]}
+                 },
+                 5000
+               )
+
+      assert {:ok,
+              %Result{
+                payload: [<<0, 255>>, <<>>],
+                metadata: %{opcua_type: "ByteString", status: 0}
+              }} = Wotex.OPCUA.Transport.request(array_request, execution, options)
+    after
+      assert {:ok, "written"} =
+               Wotex.OPCUA.Open62541.request(
+                 native,
+                 %{
+                   type: :write,
+                   node_id: peer["byte_array_node_id"],
+                   value: %{type: "ByteString", array: true, value: original_bytes}
+                 },
+                 5000
+               )
+    end
   end
 
   test "the public native client reads, writes and calls through secure Sessions without Python" do

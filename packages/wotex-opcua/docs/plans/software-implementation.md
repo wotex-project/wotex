@@ -123,6 +123,11 @@ ByteString only when the selected transport client is `Open62541`, then hands
 the raw bytes to its typed Write boundary. A C response fixture asserts the
 native IPC byte envelope; an independent secure peer passes Runtime Form
 Write/readback/restore. Other clients keep the existing mapping unchanged.
+The following I03 partial slice decodes bounded flat ByteString arrays from
+one-shot native Read through Runtime Form selection. The independent peer
+confirms ordered binary elements after typed Write; the value adapter rejects
+malformed envelopes, excess elements and aggregate byte overflow. General
+typed arrays and Runtime result metadata remain open.
 
 ## Verification and evidence
 

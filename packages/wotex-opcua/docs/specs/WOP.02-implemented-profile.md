@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.27
+  version: 1.0.28
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -154,6 +154,11 @@ The Runtime Transport now converts a Form-mapped ByteString's validated base64
 payload back to raw bytes only for the native client, before its typed Write.
 One independent secure-peer Form Write/readback/restore proves byte identity;
 the complete WOP-I01..I06 integration and profile factory remain open.
+For ByteString reads, the Runtime value adapter now decodes scalar and bounded
+flat-array elements to BEAM binaries, preserving null elements and array order.
+The independent secure peer confirms one native one-shot Form array read after
+a typed Write. General typed-array validation, array metadata and the complete
+Runtime profile remain open.
 The same independent peer also accepts a public typed ByteString array Write
 and returns the exact binary array elements on Read, including embedded zero
 and non-UTF-8 bytes. Other typed value and lifecycle cells remain open.

@@ -10,10 +10,10 @@ defmodule Wotex.OPCUA.Value do
 
   `result/1` accepts a native value with a 32-bit StatusCode and type name. It
   rejects bad StatusCodes, preserves non-bad status and type as protocol
-  metadata, and decodes the explicit byte-string envelope. It does not validate
-  the returned type against its payload; values without a StatusCode envelope
+  metadata, and decodes scalar or bounded flat-array ByteString envelopes. It does not validate
+  other returned types against their payloads; values without a StatusCode envelope
   pass through with empty metadata. Invalid status envelopes and malformed
-  Base64 return `Wotex.OPCUA.Error`. Full typed result validation, arrays and
+  Base64 return `Wotex.OPCUA.Error`. Full typed result validation, general arrays and
   DataValue metadata remain target work. Conversion does not validate an
   application DataSchema, perform unit conversion, or establish Property state.
 
@@ -64,7 +64,8 @@ defmodule Wotex.OPCUA.Value do
   def result(%{"status" => status, "value" => value, "type" => type})
       when is_integer(status) and status in 0..4_294_967_295 and is_binary(type) do
     if band(status, 0x80000000) == 0 do
-      with {:ok, value} <- payload(value), do: {:ok, value, %{opcua_type: type, status: status}}
+      with {:ok, value} <- payload(type, value),
+           do: {:ok, value, %{opcua_type: type, status: status}}
     else
       {:error, Error.new(:bad_status, nil, %{status: status})}
     end
@@ -73,12 +74,51 @@ defmodule Wotex.OPCUA.Value do
   def result(%{"status" => _}), do: {:error, Error.new(:invalid_result)}
   def result(value), do: {:ok, value, %{}}
 
-  defp payload(%{"type" => "ByteString", "base64" => text}) when is_binary(text) do
-    case Base.decode64(text) do
-      {:ok, bytes} -> {:ok, bytes}
-      _ -> {:error, Error.new(:invalid_bytestring)}
+  defp payload("ByteString", values) when is_list(values) and length(values) <= 1024 do
+    result =
+      Enum.reduce_while(values, {:ok, [], 0}, fn item, {:ok, decoded, size} ->
+        case byte_payload(item) do
+          {:ok, bytes} ->
+            next_size = size + byte_length(bytes)
+
+            if next_size <= 1_048_576,
+              do: {:cont, {:ok, [bytes | decoded], next_size}},
+              else: {:halt, {:error, Error.new(:response_limit)}}
+
+          error ->
+            {:halt, error}
+        end
+      end)
+
+    case result do
+      {:ok, decoded, _} -> {:ok, Enum.reverse(decoded)}
+      error -> error
     end
   end
 
-  defp payload(value), do: {:ok, value}
+  defp payload("ByteString", values) when is_list(values),
+    do: {:error, Error.new(:response_limit)}
+
+  defp payload("ByteString", value), do: byte_payload(value)
+  defp payload(_, value), do: {:ok, value}
+
+  defp byte_payload(nil), do: {:ok, nil}
+
+  defp byte_payload(%{"type" => "ByteString", "base64" => text} = envelope)
+       when map_size(envelope) == 2 and is_binary(text) do
+    if byte_size(text) > 87_384 do
+      {:error, Error.new(:response_limit)}
+    else
+      case Base.decode64(text) do
+        {:ok, bytes} when byte_size(bytes) <= 65_536 -> {:ok, bytes}
+        {:ok, _} -> {:error, Error.new(:response_limit)}
+        :error -> {:error, Error.new(:invalid_bytestring)}
+      end
+    end
+  end
+
+  defp byte_payload(_), do: {:error, Error.new(:invalid_bytestring)}
+
+  defp byte_length(nil), do: 0
+  defp byte_length(bytes), do: byte_size(bytes)
 end

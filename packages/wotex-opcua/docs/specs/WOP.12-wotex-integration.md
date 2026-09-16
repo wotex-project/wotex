@@ -3,7 +3,7 @@ spec:
   id: WOP.12
   title: Wotex integration and evidence contract
   status: accepted
-  version: 1.1.1
+  version: 1.1.2
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -19,6 +19,9 @@ One explicitly selected native one-shot Runtime ByteString Form path now
 converts the legacy base64 mapping into raw typed bytes before Write. A
 deterministic C fixture checks the transmitted byte envelope, and an
 independent secure peer confirms Write/readback/restore through Transport.
+The same peer now confirms a one-shot Form read of a flat ByteString array:
+validated byte envelopes become ordered BEAM binaries with bounded element
+and aggregate sizes. This is partial I03 result conversion.
 This slice does not accept the complete I01 profile, profile factory, metadata,
 error/retry, subscription or final-owner requirements.
 

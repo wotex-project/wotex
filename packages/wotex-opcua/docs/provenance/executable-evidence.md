@@ -20,6 +20,22 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Native Runtime ByteString array read, 2026-09-16
+
+The Runtime value adapter decodes flat ByteString array elements from the
+selected native one-shot Read to ordered BEAM binaries, preserving null and
+empty values. It rejects malformed envelopes, more than 1024 elements, an
+element above 64 KiB or an aggregate above 1 MiB. The independent secure peer
+accepted a typed array Write, then Runtime Form read back `<<0, 255>>` and
+`<<>>` before the test restored the original array. Eleven optional secure-peer
+tests passed. General typed-array and Runtime integration acceptance remains
+open.
+The final local `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passed with
+291 tests, 12 optional tests excluded and the required 95% coverage floor;
+compiler, Credo, Dialyzer, docs, audits, native custody, package and archive
+checks passed. The first run identified a readability issue in the new decoder;
+it was corrected before the passing gate.
+
 ## Native Runtime ByteString Form handoff, 2026-09-16
 
 The existing Form mapper encodes a ByteString as base64 for the older JSON
