@@ -76,7 +76,8 @@ int main(int argc, char **argv) {
         if (input.revents & (POLLIN | POLLHUP)) {
             char byte; ssize_t size = read(STDIN_FILENO, &byte, 1);
             if (!size) return 0;
-            if (size > 0) return 49; /* bootstrap must not send service bytes */
+            if (size > 0 && strcmp(mode, "stall_request"))
+                return 49; /* unsolicited bootstrap input is rejected */
         }
         if (access("trigger", F_OK) == 0) {
             if (!strcmp(mode, "late")) {

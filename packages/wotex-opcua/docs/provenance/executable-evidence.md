@@ -155,6 +155,38 @@ The full `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes 257 checks
 96.3% BEAM coverage with a fresh pinned native build and CTest. P02 remains
 open: its owner has no response relay, credits, activated Session or services.
 
+## P02 terminal-only owner exchange
+
+The subsequent internal `Native.Host.request/4` path allocates a BEAM-owned
+uint64 generation, accepts only its original owner, sends the validated frame
+through the independently owned runtime guardian, and waits under the original
+deadline for one bounded terminal. `Native.Frame.terminal/2` accepts only the
+matching generation, closed terminal/error fields, finite code/phase/effect
+tables and optional uint32 status; malformed and extra output closes custody.
+The real pinned-build test asserts `unsupported_protocol` from the actual C
+process through `Native.Host`, while the pure decoder checks replay, duplicate,
+unknown, truncated and oversized controls. A foreign caller cannot send a
+request. A separate stalled native fault peer proves that a pending request
+expires and custody reaps the process without an extra owner notification. The
+host releases the process after its terminal and does not admit a
+success-shaped service response.
+
+| Terminal owner source/test | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/native/host.ex` | `04239b127b8c3939970fed217c1473c5a5a554b0630ad91eb9b387aadda6542e` |
+| `lib/wotex/opcua/native/frame.ex` | `8058886abdef268433398e01c9a38748cd4f7b731305f4b69a722cfd5cc9110f` |
+| `test/native/host_probe.c` | `a0c57fad8f3f5c75a98522977aed5e5121859759b1717371db72758798b1e3c9` |
+| `test/wotex/opcua/native/host_test.exs` | `5e29db0b9a658c0e71eb91e6d69b2c324526297d3c9eaaf6433167b5ffd1c457` |
+| `test/wotex/opcua/native/frame_test.exs` | `934234510742072dbc8af099015164ffe8bd2511eaf5e5b93d1ee76b2df563cc` |
+| `test/wotex/opcua/native/build_test.exs` | `f8caab61924723ce86d380630efa85f6d4b8743f63372ddc1ae89e78989beb08` |
+
+The complete `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passed 259 checks
+(10 doctests, four properties, 245 tests), one interoperability exclusion,
+95.9% BEAM coverage, this real exchange and the fresh 179-case native CTest
+build. P02 remains open: no persistent
+Session, normal response relay, credits, services or independent native peer
+interoperability is accepted.
+
 ## Implemented Python-adapter interoperability
 
 Real secure asyncua 2.0.1 peer: PASS for read, write/readback/restore, browse,

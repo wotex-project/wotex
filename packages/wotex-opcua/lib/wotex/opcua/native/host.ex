@@ -11,8 +11,11 @@ defmodule Wotex.OPCUA.Native.Host do
   The successful return includes the decoded process readiness and the BEAM
   monotonic receive sample. It establishes neither an authenticated OPC UA
   Session nor a service capability. This bootstrap does not send credentials or
-  protocol requests. Unexpected subsequent output ends the generation and sends
-  one `{:wotex_opcua_native, pid, {:error, error}}` to its owner.
+  protocol requests at startup. Its bounded internal `request/4` path can send
+  one validated outer frame and receive a matching terminal control, but no
+  service response or authenticated Session is accepted. Unsolicited output
+  ends the generation and sends one
+  `{:wotex_opcua_native, pid, {:error, error}}` to its owner.
 
   Fallible initialization is unlinked; successful readiness requires a one-use
   claim from the original owner before its original deadline. That claim links
@@ -27,7 +30,7 @@ defmodule Wotex.OPCUA.Native.Host do
   use GenServer
 
   alias Wotex.OPCUA.Error
-  alias Wotex.OPCUA.Native.{Executable, HostOptions, Ready}
+  alias Wotex.OPCUA.Native.{Executable, Frame, HostOptions, Ready}
 
   @typedoc "Process readiness and its separately captured BEAM monotonic receive time."
   @type sample :: %{ready: Ready.t(), received_at_ms: integer()}
@@ -41,7 +44,9 @@ defmodule Wotex.OPCUA.Native.Host do
       token = make_ref()
       deadline = entered + settings.timeout
 
-      case GenServer.start(__MODULE__, {settings, self(), token, deadline},
+      generation = owner_generation()
+
+      case GenServer.start(__MODULE__, {settings, self(), token, deadline, generation},
              timeout: settings.timeout + 500
            ) do
         {:ok, pid} ->
@@ -58,6 +63,23 @@ defmodule Wotex.OPCUA.Native.Host do
     :exit, _ -> {:error, Error.new(:native_startup_failed)}
   end
 
+  @doc "Sends one bounded outer request; currently only a native terminal rejection can return."
+  @spec request(pid(), String.t(), map(), pos_integer()) :: {:error, Error.t()}
+  def request(host, operation, parameters, timeout)
+      when is_pid(host) and is_integer(timeout) and timeout in 1..60_000 do
+    deadline = System.monotonic_time(:millisecond) + timeout
+
+    GenServer.call(
+      host,
+      {__MODULE__, :request, operation, parameters, timeout, deadline},
+      timeout + 100
+    )
+  catch
+    :exit, _ -> {:error, Error.new(:native_process_terminated)}
+  end
+
+  def request(_, _, _, _), do: {:error, Error.new(:invalid_native_frame, :request)}
+
   @doc "Returns a temporary OTP child specification with a bounded local shutdown."
   @spec child_spec(term()) :: Supervisor.child_spec()
   def child_spec(options) do
@@ -71,7 +93,7 @@ defmodule Wotex.OPCUA.Native.Host do
   end
 
   @impl GenServer
-  def init({settings, owner, token, deadline}) do
+  def init({settings, owner, token, deadline, generation}) do
     Process.flag(:trap_exit, true)
     monitor = Process.monitor(owner)
 
@@ -89,6 +111,9 @@ defmodule Wotex.OPCUA.Native.Host do
              token: token,
              sample: sample,
              deadline: deadline,
+             generation: generation,
+             pending: nil,
+             input: <<>>,
              claim_timer: :erlang.start_timer(remaining(deadline), self(), :claim_expired),
              claimed: false
            }}
@@ -118,6 +143,32 @@ defmodule Wotex.OPCUA.Native.Host do
     end
   end
 
+  def handle_call(
+        {__MODULE__, :request, operation, parameters, timeout, deadline},
+        {owner, _} = from,
+        %{owner: owner, claimed: true, pending: nil} = state
+      ) do
+    now = System.monotonic_time(:millisecond)
+
+    with {:ok, admission} <-
+           Frame.admission(state.sample.ready, state.sample.received_at_ms, deadline, now, timeout),
+         {:ok, frame} <-
+           Frame.request(
+             state.generation,
+             "1",
+             operation,
+             parameters,
+             admission.timeout_ms,
+             admission.deadline_ms
+           ),
+         :ok <- send_frame(state.port, frame) do
+      timer = Process.send_after(self(), :request_expired, max(deadline - now, 0))
+      {:noreply, %{state | pending: %{from: from, timer: timer}}}
+    else
+      {:error, %Error{} = error} -> {:reply, {:error, error}, state}
+    end
+  end
+
   def handle_call(_, _, state), do: {:reply, {:error, Error.new(:invalid_native_handle)}, state}
 
   @impl GenServer
@@ -134,8 +185,30 @@ defmodule Wotex.OPCUA.Native.Host do
     failed(state, Error.new(:native_process_terminated, nil, %{exit_status: status}))
   end
 
+  def handle_info({port, {:data, bytes}}, %{port: port, pending: %{from: _} = pending} = state)
+      when byte_size(state.input) + byte_size(bytes) <= 4096 do
+    input = state.input <> bytes
+
+    if :binary.match(input, "\n") == :nomatch do
+      {:noreply, %{state | input: input}}
+    else
+      case Frame.terminal(input, state.generation) do
+        {:ok, error} ->
+          Process.cancel_timer(pending.timer)
+          GenServer.reply(pending.from, {:error, error})
+          {:stop, :normal, %{state | pending: nil}}
+
+        {:error, error} ->
+          failed(state, error)
+      end
+    end
+  end
+
   def handle_info({port, {:data, _}}, %{port: port} = state),
     do: failed(state, Error.new(:invalid_native_frame))
+
+  def handle_info(:request_expired, %{pending: %{from: _}} = state),
+    do: failed(state, Error.new(:deadline_exceeded, :request))
 
   def handle_info({:EXIT, port, _}, %{port: port} = state),
     do: failed(state, Error.new(:native_process_terminated))
@@ -238,8 +311,25 @@ defmodule Wotex.OPCUA.Native.Host do
   end
 
   defp failed(state, error) do
-    send(state.owner, {:wotex_opcua_native, self(), {:error, error}})
+    case state.pending do
+      nil -> send(state.owner, {:wotex_opcua_native, self(), {:error, error}})
+      pending -> GenServer.reply(pending.from, {:error, error})
+    end
+
     {:stop, :normal, state}
+  end
+
+  defp send_frame(port, frame) do
+    if Port.command(port, frame), do: :ok, else: {:error, Error.new(:native_process_terminated)}
+  rescue
+    ArgumentError -> {:error, Error.new(:native_process_terminated)}
+  end
+
+  defp owner_generation do
+    case :binary.decode_unsigned(:crypto.strong_rand_bytes(8)) do
+      0 -> owner_generation()
+      generation -> generation
+    end
   end
 
   defp claim(pid, token, deadline) do

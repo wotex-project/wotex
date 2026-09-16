@@ -16,7 +16,8 @@ pure typed values plus production SDK value projection, for the exact cohorts
 in executable evidence. The first P02 slice connects bounded input framing and
 outer-envelope validation to the actual executable; no service is admitted.
 The pure owner-side encoder now maps the ready clock sample and emits closed
-outer request frames. It does not yet relay responses or grant credits.
+outer request frames. The internal owner handles one bounded terminal control
+for an explicit request. It does not yet relay service responses or grant credits.
 Secure native Sessions and services remain required implementation.
 The target runtime uses an Elixir API and an explicitly owned open62541 C executable.
 Python is confined to the independent test peer and upstream build generators.
@@ -442,10 +443,11 @@ cases must be bound to the actual IPC parser/owner/SDK adapter, or an explicitly
 labelled injected service boundary, before acceptance. The asserting runner owns
 the expectation. Pure framing cases run every split and coalescing of the given line;
 semantic cases serialize through the production encoder, never a fixture echo.
-The separate initial P02 input test exercises the real executable's strict
-line parser, closed outer request keys and expired-deadline rejection. It does
-not bind any additional `native-contract-v1.json` case, validate per-operation
-parameters, activate a Session or send a service request.
+The separate initial P02 input tests exercise the real executable's strict
+line parser, closed outer request keys, expired-deadline rejection and one
+generation-matched terminal-only owner exchange. They do not bind any
+additional `native-contract-v1.json` case, validate per-operation parameters,
+activate a Session or send a service request.
 Native traces use a deterministic service/clock boundary; peer lanes separately
 prove real bytes, certificates and callbacks. The full S/N/I scenario matrices
 remain required in addition to the concrete corpus.

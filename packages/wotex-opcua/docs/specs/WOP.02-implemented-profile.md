@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.10
+  version: 1.0.11
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -102,6 +102,11 @@ partial P02 boundary does not accept WOP.13 services or interoperability.
 from the separately captured ready clock sample. The native build test uses
 that production encoder to drive the real process. No public native client or
 response relay is exposed yet.
+The internal `Native.Host.request/4` now sends one owner-correlated frame
+through the custody guardian, validates a bounded generation-matched terminal
+control and releases the native process. Unsolicited output remains a bootstrap
+failure; only the finite terminal error is decoded for an explicit request.
+The process still cannot report a successful OPC UA service.
 `Native.Host` admits both explicit executable digests before process creation,
 receives strict versioned readiness, and links to the original caller only after
 successful initialization and a one-use ownership claim. Hashing, spawn,

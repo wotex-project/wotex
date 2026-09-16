@@ -81,6 +81,9 @@ fields, integer limits and expired deadlines. Valid requests still terminate
 with `unsupported_protocol`; native Session, credits and services remain open.
 The pure `Native.Frame` encoder translates the ready clock sample into a native
 deadline and builds the exact request line used by the real-process build test.
+The internal native host now performs one generation-matched terminal-only
+exchange through custody. It reports finite errors; no native Session or
+successful service response is exposed.
 
 `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` remain specified work. Bootstrap build

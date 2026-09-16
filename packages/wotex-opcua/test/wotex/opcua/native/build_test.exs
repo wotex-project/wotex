@@ -145,6 +145,24 @@ defmodule Wotex.OPCUA.Native.BuildTest do
     assert received <= System.monotonic_time(:millisecond)
     assert :ok = GenServer.stop(host, :normal)
 
+    assert {:ok, host, _} =
+             Wotex.OPCUA.Native.Host.start_link(
+               executable: native,
+               executable_digest: receipt["artifacts"]["output/bin/wotex_opcua_native"],
+               guardian: custody,
+               guardian_digest: custody_hash,
+               timeout: 5000
+             )
+
+    monitor = Process.monitor(host)
+
+    assert {:error, %Wotex.OPCUA.Error{code: :unsupported_protocol} = failure} =
+             Wotex.OPCUA.Native.Host.request(host, "read", %{}, 1000)
+
+    assert failure.details == %{phase: :validation}
+
+    assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
+
     assert {:ok, %{output: self_test}} =
              Command.run(guardian, %{
                id: :native_self_test,

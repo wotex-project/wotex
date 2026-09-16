@@ -129,13 +129,17 @@ defmodule Wotex.OPCUA.Native.HostTest do
       assert {:error, %Error{code: :invalid_native_handle}} = GenServer.call(host, request)
     end
 
+    assert {:error, %Error{code: :invalid_native_frame}} = Host.request(host, "read", %{}, 0)
+
     parent = self()
 
     spawn(fn ->
       send(parent, {:foreign_claim, GenServer.call(host, {Host, :claim, make_ref()})})
+      send(parent, {:foreign_request, Host.request(host, "read", %{}, 1000)})
     end)
 
     assert_receive {:foreign_claim, {:error, %Error{code: :invalid_native_handle}}}
+    assert_receive {:foreign_request, {:error, %Error{code: :invalid_native_handle}}}
     assert Process.alive?(host)
     GenServer.stop(host, :normal)
     assert_native_reaped(directory)
@@ -307,6 +311,19 @@ defmodule Wotex.OPCUA.Native.HostTest do
       refute_receive {:wotex_opcua_native, ^host, _}
       assert_native_reaped(directory)
     end
+  end
+
+  test "WOP-X03 a native peer stalled after request cannot extend the owner deadline", context do
+    {options, directory} = fixture(context, "stall_request")
+    assert {:ok, host, _} = Host.start_link(options)
+    monitor = Process.monitor(host)
+
+    assert {:error, %Error{code: :deadline_exceeded, field: :request}} =
+             Host.request(host, "read", %{}, 100)
+
+    assert_receive {:DOWN, ^monitor, :process, ^host, :normal}, 1000
+    refute_receive {:wotex_opcua_native, ^host, _}
+    assert_native_reaped(directory)
   end
 
   test "WOP-X07 lost Port ownership produces one terminal error and native cleanup", context do

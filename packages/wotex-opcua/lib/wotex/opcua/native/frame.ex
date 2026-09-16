@@ -14,6 +14,10 @@ defmodule Wotex.OPCUA.Native.Frame do
   @maximum_clock 9_223_372_036_854_775_807
   @maximum_frame 131_072
   @operations ~w(open read health write call browse browse_next browse_release subscribe unsubscribe cancel close)
+  @codes ~w(invalid_request invalid_value invalid_response unsupported_type unsupported_protocol backend_mismatch busy deadline_exceeded authentication_failed certificate_invalid connection_failed remote_error response_mismatch response_limit sequence_gap subscription_lost receiver_overflow cleanup_failed canceled)a
+  @phases ~w(validation opening admission exchange decode cleanup)a
+  @effects ~w(none unknown)a
+  @terminal_keys ~w(error event generation version)
   @limits [
     max_bytes: 131_071,
     max_depth: 8,
@@ -73,6 +77,69 @@ defmodule Wotex.OPCUA.Native.Frame do
   end
 
   def request(_, _, _, _, _, _), do: {:error, Error.new(:invalid_native_frame, :request)}
+
+  @doc "Decodes one terminal control for the expected generation without exposing native text."
+  @spec terminal(term(), term()) :: {:ok, Error.t()} | {:error, Error.t()}
+  def terminal(frame, generation)
+      when is_binary(frame) and byte_size(frame) in 1..4096 and
+             is_integer(generation) and generation in 1..@maximum_generation do
+    size = byte_size(frame)
+
+    with {offset, 1} when offset == size - 1 <- :binary.match(frame, "\n"),
+         {:ok, decoded} <-
+           Wotex.JSON.decode(binary_part(frame, 0, offset),
+             max_bytes: 4095,
+             max_depth: 2,
+             max_nodes: 12,
+             max_collection_size: 5,
+             max_string_bytes: 128
+           ),
+         %{"version" => 1, "generation" => ^generation, "event" => "terminal", "error" => error} <-
+           decoded,
+         true <- Enum.sort(Map.keys(decoded)) == @terminal_keys,
+         {:ok, result} <- terminal_error(error) do
+      {:ok, result}
+    else
+      _ -> {:error, Error.new(:invalid_native_frame, :terminal)}
+    end
+  end
+
+  def terminal(_, _), do: {:error, Error.new(:invalid_native_frame, :terminal)}
+
+  defp terminal_error(%{"code" => code, "phase" => phase, "effect" => effect} = error)
+       when is_binary(code) and is_binary(phase) and is_binary(effect) do
+    with true <- Enum.sort(Map.keys(error)) in [~w(code effect phase), ~w(code effect phase status)],
+         {:ok, code_atom} <- finite(code, @codes),
+         {:ok, phase_atom} <- finite(phase, @phases),
+         {:ok, effect_atom} <- finite(effect, @effects),
+         {:ok, details} <- status_details(error, phase_atom) do
+      {:ok, %{Error.new(code_atom, nil, details) | effect: effect_atom}}
+    else
+      _ -> :error
+    end
+  end
+
+  defp terminal_error(_), do: :error
+
+  defp status_details(error, phase) do
+    case Map.fetch(error, "status") do
+      :error ->
+        {:ok, %{phase: phase}}
+
+      {:ok, status} when is_integer(status) and status in 0..4_294_967_295 ->
+        {:ok, %{phase: phase, status: status}}
+
+      _ ->
+        :error
+    end
+  end
+
+  defp finite(value, allowed) do
+    case Enum.find(allowed, &(Atom.to_string(&1) == value)) do
+      nil -> :error
+      atom -> {:ok, atom}
+    end
+  end
 
   defp valid_identity?(generation, id, operation)
        when is_integer(generation) and generation in 1..@maximum_generation and

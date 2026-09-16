@@ -68,4 +68,40 @@ defmodule Wotex.OPCUA.Native.FrameTest do
 
     assert {:ok, _} = apply(Frame, :request, valid)
   end
+
+  test "WOP-X04 terminal control has one generation and finite error fields" do
+    terminal =
+      ~s({"version":1,"generation":7,"event":"terminal","error":{"code":"unsupported_protocol","phase":"validation","effect":"none"}}\n)
+
+    assert {:ok, %Error{code: :unsupported_protocol, effect: :none} = error} =
+             Frame.terminal(terminal, 7)
+
+    assert error.details == %{phase: :validation}
+
+    with_status =
+      String.replace(terminal, ~s("effect":"none"), ~s("effect":"unknown","status":4294967295))
+
+    assert {:ok,
+            %Error{
+              code: :unsupported_protocol,
+              effect: :unknown,
+              details: %{phase: :validation, status: 4_294_967_295}
+            }} = Frame.terminal(with_status, 7)
+
+    for invalid <- [
+          terminal <> terminal,
+          binary_part(terminal, 0, byte_size(terminal) - 1),
+          String.replace(terminal, ~s("generation":7), ~s("generation":8)),
+          String.replace(terminal, ~s("version":1), ~s("version":1.0)),
+          String.replace(terminal, ~s("code":"unsupported_protocol"), ~s("code":"arbitrary")),
+          String.replace(terminal, ~s("phase":"validation"), ~s("phase":"arbitrary")),
+          String.replace(terminal, ~s("effect":"none"), ~s("effect":"arbitrary")),
+          String.replace(terminal, ~s("effect":"none"), ~s("effect":"none","status":4294967296)),
+          String.replace(terminal, ~s("effect":"none"), ~s("effect":"none","secret":"value")),
+          String.replace(terminal, ~s("generation":7), ~s("generation":7,"generation":7)),
+          :binary.copy(" ", 4097)
+        ] do
+      assert {:error, %Error{code: :invalid_native_frame}} = Frame.terminal(invalid, 7)
+    end
+  end
 end
