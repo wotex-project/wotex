@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.9
+  version: 1.0.10
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -98,6 +98,10 @@ expired native deadline yields `deadline_exceeded`. A well-formed request yields
 `unsupported_protocol` without service I/O. Parameter-specific validation,
 credits, native Session activation and responses remain unimplemented. This
 partial P02 boundary does not accept WOP.13 services or interoperability.
+`Native.Frame` encodes exact outer request fields and maps the owner deadline
+from the separately captured ready clock sample. The native build test uses
+that production encoder to drive the real process. No public native client or
+response relay is exposed yet.
 `Native.Host` admits both explicit executable digests before process creation,
 receives strict versioned readiness, and links to the original caller only after
 successful initialization and a one-use ownership claim. Hashing, spawn,

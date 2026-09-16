@@ -79,6 +79,8 @@ The first P02 slice connects bounded JSON-line framing and outer request
 validation to the actual C executable. Its tests exercise split lines, closed
 fields, integer limits and expired deadlines. Valid requests still terminate
 with `unsupported_protocol`; native Session, credits and services remain open.
+The pure `Native.Frame` encoder translates the ready clock sample into a native
+deadline and builds the exact request line used by the real-process build test.
 
 `mix wotex.software.build --workspace ABS` and
 `mix wotex.software.run --workspace ABS` remain specified work. Bootstrap build

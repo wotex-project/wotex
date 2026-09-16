@@ -15,6 +15,8 @@ source/build/bootstrap and portable process-custody boundary, and WOP-P01 accept
 pure typed values plus production SDK value projection, for the exact cohorts
 in executable evidence. The first P02 slice connects bounded input framing and
 outer-envelope validation to the actual executable; no service is admitted.
+The pure owner-side encoder now maps the ready clock sample and emits closed
+outer request frames. It does not yet relay responses or grant credits.
 Secure native Sessions and services remain required implementation.
 The target runtime uses an Elixir API and an explicitly owned open62541 C executable.
 Python is confined to the independent test peer and upstream build generators.

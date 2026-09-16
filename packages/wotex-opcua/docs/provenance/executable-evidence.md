@@ -133,6 +133,28 @@ Per-operation parameter validation, persistent Session activation, namespace
 acquisition, credits, responses, cancellation and all X-F17..F23/X-F49..F57
 remain required. The current Python adapter still owns public network operations.
 
+## P02 owner-side frame and clock projection
+
+The next direct `main` slice adds `Native.Frame.admission/5` and `request/6`.
+It maps the ready-native and separately captured owner-receive clocks to one
+native deadline, rejects expiry and conversion overflow, caps the native timeout
+to the remaining owner budget, and encodes a closed JSON request line with
+checked integer, ID, operation, depth, node, string and total-byte limits.
+The pure test covers exact boundary values and malformed inputs. The selected
+native build test now uses this production encoder to send its split request to
+the pinned executable; no native response or service success is claimed.
+
+| Owner-side source/test | SHA-256 |
+| --- | --- |
+| `lib/wotex/opcua/native/frame.ex` | `3be493df22a1d3601eda876e61d657ee0d134592287f7e8ca431f84484eead5a` |
+| `test/wotex/opcua/native/frame_test.exs` | `4f277be341a886e01ee718b3eaf661da7a13114a4d71016071009161e1f03080` |
+| `test/wotex/opcua/native/build_test.exs` | `5ffef075e9e4e402d7e6202d4a1f262a0389f857c7cd636f18a8fa5a3aef2564` |
+
+The full `WOTEX_PATH_DEPS=1 mix check --no-retry` gate passes 257 checks
+(10 doctests, four properties, 243 tests), one interoperability exclusion and
+96.3% BEAM coverage with a fresh pinned native build and CTest. P02 remains
+open: its owner has no response relay, credits, activated Session or services.
+
 ## Implemented Python-adapter interoperability
 
 Real secure asyncua 2.0.1 peer: PASS for read, write/readback/restore, browse,

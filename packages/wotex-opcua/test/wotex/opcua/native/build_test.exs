@@ -4,7 +4,7 @@ defmodule Wotex.OPCUA.Native.BuildTest do
   use ExUnit.Case, async: false
   import ExUnit.CaptureIO
   alias Mix.Tasks.Wotex.Opcua.Native.Build, as: BuildTask
-  alias Wotex.OPCUA.Native.{Build, Command, Source, Workspace}
+  alias Wotex.OPCUA.Native.{Build, Command, Frame, Source, Workspace}
 
   test "WOP-X02 task accepts one absolute workspace and rejects every extra option before build I/O" do
     assert {:ok, "/absolute/workspace"} = Build.arguments(["--workspace", "/absolute/workspace"])
@@ -113,8 +113,8 @@ defmodule Wotex.OPCUA.Native.BuildTest do
 
     assert native_tests =~ "native_ipc_admission"
 
-    request =
-      ~s({"version":1,"generation":7,"id":"r1","operation":"read","parameters":{},"timeout_ms":1000,"deadline_ms":9223372036854775807}\n)
+    assert {:ok, request} =
+             Frame.request(7, "r1", "read", %{}, 1000, 9_223_372_036_854_775_807)
 
     assert_native_terminal(
       native,
