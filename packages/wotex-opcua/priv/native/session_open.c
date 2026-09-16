@@ -429,8 +429,11 @@ static void receive_browse_next(UA_Client *client, void *userdata,
         return;
     }
     if(session->browse_releasing) {
-        session->browse_release_valid = response->resultsSize == 0 &&
-            response->diagnosticInfosSize == 0;
+        session->browse_release_valid = response->resultsSize == 1 &&
+            response->results && response->diagnosticInfosSize == 0 &&
+            response->results[0].statusCode == UA_STATUSCODE_GOOD &&
+            response->results[0].referencesSize == 0 &&
+            response->results[0].continuationPoint.length == 0;
         return;
     }
     if(response->resultsSize != 1 || !response->results ||

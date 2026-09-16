@@ -3,7 +3,7 @@ spec:
   id: WOP.13
   title: "Native OPC UA executable and software acceptance"
   status: accepted
-  version: 1.1.18
+  version: 1.1.19
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -47,9 +47,11 @@ oversized page closes the Session; child-list compatibility now follows bounded
 continuations on that same Session.
 The C owner now also admits an internal `allow_continuation: true` Browse shape:
 it retains one server continuation in C memory, gives it a fresh local token,
-and sends service-level BrowseNext or release on that Session. This is native
-state and compilation evidence only; no public handle, original-deadline
-pagination or independent BrowseNext peer evidence exists. NodeId-bearing
+and sends service-level BrowseNext or release on that Session. A secure
+same-stack C peer forces one reference per page and exercises both wire calls.
+The BEAM owner exposes a generation-bound public handle with the original
+browse deadline and cumulative bounds. Independent BrowseNext peer evidence,
+multiple live continuations and release counters remain open. NodeId-bearing
 arguments and outputs remain unsupported until full namespace translation
 exists. Output buffering, other operations, cancellation,
 full namespace translation and the secure policy/token matrix remain required.
@@ -63,8 +65,9 @@ continuations remain unaccepted.
 The child-list compatibility call now uses the same owner-bound page path to
 collect at most 256 local NodeIds on one persistent or temporary Session.
 Later invalid identity and Uncertain status release a live cursor; fixture
-tests pass for both lifecycle modes. No independent BrowseNext peer exchange
-or release-counter evidence exists yet.
+tests pass for both lifecycle modes. The secure same-stack C peer confirms
+multi-page child collection over the wire in both modes. No independent
+BrowseNext peer exchange or release-counter evidence exists yet.
 The target native runtime uses an Elixir API and an explicitly owned open62541 C
 executable. In that path, Python is confined to the independent test peer and
 upstream build generators; the current public compatibility adapter still

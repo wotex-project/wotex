@@ -3,7 +3,7 @@ spec:
   id: WOP.02
   title: "Implemented OPC UA profile"
   status: accepted
-  version: 1.0.34
+  version: 1.0.35
   owner: wotex-opcua
   updated: 2026-09-16
 ---
@@ -157,11 +157,13 @@ response. The BEAM host maps tokens only from its own opt-in Browse request to
 caller-held references; a generic raw Browse token still closes the Session.
 Deterministic C response fixtures exercise handle consumption, explicit
 release, `all/3`, Uncertain status, caps, deadline expiry and release failure.
-The independent secure peer does not implement BrowseNext, so these are not
-wire-pagination or WOP-N03/N04 acceptance evidence.
-Deterministic response fixtures also exercise multi-page child-list projection
-in persistent and one-shot mode, including later-page cleanup. No
-independent-peer continuation or release counter has been observed.
+A secure same-stack C peer limits the server to one reference per page and
+confirms typed BrowseNext, explicit release, `all/3`, and multi-page child-list
+projection in persistent and one-shot mode over the wire. The native release
+callback accepts exactly one empty Good result for its one continuation point.
+The independent asyncua peer does not implement BrowseNext, and no
+independent-peer continuation or release counter has been observed; WOP-N03/N04
+remain unaccepted.
 The native configuration helper validates explicit policy, token and credential
 paths and snapshots bounded files for the native `open` request.
 `Open62541.connect/1` now uses that helper and the owned C host for a persistent

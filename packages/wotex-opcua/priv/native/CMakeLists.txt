@@ -43,6 +43,10 @@ add_executable(wotex_opcua_browse_check browse_check.c)
 target_compile_features(wotex_opcua_browse_check PRIVATE c_std_11)
 target_compile_options(wotex_opcua_browse_check PRIVATE -Wall -Wextra -Werror)
 target_link_libraries(wotex_opcua_browse_check PRIVATE wotex_opcua_security)
+add_executable(wotex_opcua_paged_peer paged_peer.c)
+target_compile_features(wotex_opcua_paged_peer PRIVATE c_std_11)
+target_compile_options(wotex_opcua_paged_peer PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(wotex_opcua_paged_peer PRIVATE open62541::open62541)
 add_executable(wotex_opcua_sdk_revision_check sdk_revision_check.c)
 target_compile_features(wotex_opcua_sdk_revision_check PRIVATE c_std_11)
 target_compile_definitions(wotex_opcua_sdk_revision_check PRIVATE _POSIX_C_SOURCE=200809L)
@@ -95,6 +99,7 @@ if(WOTEX_SANITIZERS)
       wotex_opcua_json wotex_opcua_json_check wotex_opcua_ipc_check wotex_opcua_values wotex_opcua_value_check
       wotex_opcua_value_fault_check wotex_opcua_native_contract_check
       wotex_opcua_security wotex_opcua_security_check wotex_opcua_session_probe
+      wotex_opcua_browse_check wotex_opcua_paged_peer
       wotex_opcua_sdk_revision_check)
     target_compile_options(${target} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
     target_link_options(${target} PRIVATE -fsanitize=address,undefined)

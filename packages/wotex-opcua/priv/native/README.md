@@ -56,8 +56,10 @@ memory and return a local token. `browse_next` consumes that token and
 `browse_release` sends service-level release on the same Session. The BEAM
 host now binds that token to a caller-held reference, retains the original
 deadline and cumulative bounds, and exposes persistent typed pagination.
-Independent-peer BrowseNext/release, multiple concurrent continuations and
-one-shot child-list pagination remain open.
+An uninstalled `paged_peer.c` securely limits Browse to one reference per
+response and exercises real BrowseNext, one-result release, and persistent and
+one-shot child-list pagination. Independent-peer BrowseNext/release and multiple
+concurrent continuations remain open.
 `ipc_check.c` covers
 every split of a request line, coalescing, bounds and malformed envelopes;
 the pinned build test also exercises the real process input and terminal output.

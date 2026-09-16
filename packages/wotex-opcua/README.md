@@ -48,9 +48,10 @@ its actual behavior. One-shot Read/Write/Call successes preserve the older
 adapter's result shapes. A persistent native Session can also return one
 complete page of seven-field typed references. The C owner now has a single
 local-token BrowseNext/release path. Persistent typed Browse exposes bound
-handles, `next`, `release` and bounded `all`; deterministic fixtures exercise
-pagination. Child-list Browse now collects pages on one persistent or one-shot
-Session; independent-peer BrowseNext proof remains open. Complete compatibility
+handles, `next`, `release` and bounded `all`; deterministic fixtures and a
+secure same-stack C peer exercise wire pagination. Child-list Browse collects
+pages on one persistent or one-shot Session. Independent-peer BrowseNext proof
+remains open. Complete compatibility
 projection, subscriptions and lifecycle work remain.
 The Runtime Form mapper preserves raw ByteString bytes for the explicitly
 selected native one-shot client. Runtime reads also decode validated flat

@@ -20,6 +20,28 @@ switch; the archive preserves ordinary Hex dependency declarations.
 The pinned Decimal parser regression remains active; there are no advisory
 waivers. See SECURITY.md and the dependency-security test.
 
+## Secure same-stack BrowseNext and release, 2026-09-16
+
+`priv/native/paged_peer.c` is an uninstalled C-only secure test peer built from
+the pinned open62541 SDK. It binds loopback, uses the existing generated
+certificate/CRL fixture, advertises the fixture server URI and forces one
+reference per Browse result. Its stdin owner pipe ends the server when the test
+Port closes. The native build receipt now hashes this source and the earlier
+`browse_check.c` token-state source.
+
+`test/interop/native_paged_test.exs` opens a Basic256Sha256 SignAndEncrypt
+Session through the production executable and asserts a typed first page,
+BrowseNext, explicit release, consumed-handle rejection, complete `Browse.all/3`,
+and three-child projection through both persistent and one-shot public clients.
+The pinned server returns one empty Good BrowseResult for release of one
+continuation; the C callback previously expected zero results and closed with
+`cleanup_failed`. It now checks the actual one-result shape. The optional
+same-stack interop test passes 1/1, and no peer remains after Port closure.
+The test uses no Python process for the peer or production client. It is
+same-stack wire evidence, not independent implementation interoperability or
+proof of multiple concurrent continuations, release counters, and the full
+WOP-N03/N04 failure matrix.
+
 ## Multi-page child-list compatibility, 2026-09-16
 
 The selected native client now accumulates bounded forward
