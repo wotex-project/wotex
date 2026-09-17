@@ -6,6 +6,8 @@ defmodule Wotex.BLE.ReportFlowTest do
   alias Wotex.BLE.BlueZ.{ReportFlow, Stream, SubscriptionOwner}
 
   @generation "0123456789abcdef0123456789abcdef"
+  # Receive waits share the owner establishment deadline instead of scheduler timing.
+  @owner_deadline 1000
 
   test "WBL-B02 owner consumption acknowledges only the contiguous report prefix" do
     binding = stream_binding()
@@ -140,18 +142,26 @@ defmodule Wotex.BLE.ReportFlowTest do
     config = config(self(), 2)
 
     assert {:ok, owner} =
-             SubscriptionOwner.start(connection, config, {self(), tag}, token, now() + 1000)
+             SubscriptionOwner.start(
+               connection,
+               config,
+               {self(), tag},
+               token,
+               now() + @owner_deadline
+             )
 
     send(owner, {token, {:ok, stream_binding()}})
-    assert_receive {^tag, {:ok, handle}}
+    assert_receive {^tag, {:ok, handle}}, @owner_deadline
     delivery = make_ref()
     metadata = %{source: :bluez_value_change}
     send(owner, {:ble_stream, "1", {1, delivery}, {:ok, <<1>>, metadata}})
 
-    assert_receive {:wotex_ble, reference, {:ok, <<1>>, ^metadata}}
+    assert_receive {:wotex_ble, reference, {:ok, <<1>>, ^metadata}}, @owner_deadline
     assert reference == handle.reference
 
-    assert_receive {:ble_report_consumed, connection_reference, ^owner, 1, ^delivery}
+    assert_receive {:ble_report_consumed, connection_reference, ^owner, 1, ^delivery},
+                   @owner_deadline
+
     assert connection_reference == connection.reference
     GenServer.stop(owner)
 
@@ -162,13 +172,19 @@ defmodule Wotex.BLE.ReportFlowTest do
     config = config(receiver, 1)
 
     assert {:ok, owner} =
-             SubscriptionOwner.start(connection, config, {self(), tag}, token, now() + 1000)
+             SubscriptionOwner.start(
+               connection,
+               config,
+               {self(), tag},
+               token,
+               now() + @owner_deadline
+             )
 
     send(owner, {token, {:ok, stream_binding()}})
-    assert_receive {^tag, {:ok, _}}
+    assert_receive {^tag, {:ok, _}}, @owner_deadline
     rejected = make_ref()
     send(owner, {:ble_stream, "1", {1, rejected}, {:ok, <<1>>, metadata}})
-    assert_receive {:"$gen_cast", {_, :unsubscribe, ^owner, _}}
+    assert_receive {:"$gen_cast", {_, :unsubscribe, ^owner, _}}, @owner_deadline
     refute_receive {:ble_report_consumed, _, ^owner, 1, ^rejected}, 20
     GenServer.stop(owner)
   end
