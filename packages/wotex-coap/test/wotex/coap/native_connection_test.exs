@@ -1985,8 +1985,23 @@ defmodule Wotex.CoAP.NativeConnectionTest do
     do: Enum.map(System.get_env(), fn {name, _} -> {name, nil} end)
 
   defp read_json(directory, name) do
-    directory
-    |> Path.join(name)
+    path = Path.join(directory, name)
+
+    # The helper records each command after reading it from its Port, which can
+    # race a test that observes a later owner effect; wait for the whole line.
+    assert eventually(
+             fn ->
+               match?(
+                 {:ok, <<_, _::binary>> = line}
+                 when binary_part(line, byte_size(line) - 1, 1) == "\n",
+                 File.read(path)
+               )
+             end,
+             200
+           ),
+           "native helper did not record #{name}"
+
+    path
     |> File.read!()
     |> Jason.decode!()
   end
