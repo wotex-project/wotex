@@ -1,0 +1,62 @@
+{
+  "schema": "wotex.coap.native-worker-notification-verification-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Protected notifications that fail OSCORE processing are discarded without cancelling the observation; replayed and duplicate notifications deliver no second value",
+  "standard": {
+    "name": "IETF OSCORE",
+    "revision": "RFC 8613 2019-07",
+    "sections": ["8.4 step 8", "8.4.2 step B", "7.4.1"],
+    "text": "An error condition occurring while processing a response to an observation request does not cancel the observation."
+  },
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "cd2eece99adcfdc881e21029ecd84f5063dec5e37f28d70e344c7a9bf2dae786",
+      "native/oscore/exchange.c": "afb446f43358c074562a6874dff348bbdf394818ab49f23183a09634281411c9",
+      "native/oscore/worker.c": "f4e34c5a102c5a553b07f7f205098770b98c41cca2bde95c649c4f2acc0b7e13",
+      "test/interop/oscore_test.exs": "37417f88f9d7bb928695a14ec09c716e7bb2cc25e23de9dd117abf6dade1177f",
+      "test/support/dtls_record_proxy.ex": "dd8e1861cd1e74f90643d8e9ec92ce1afb598721e8a259a86b361e90a5b64628"
+    }
+  },
+  "requirements": ["WCO-S03", "WCO-S06", "WCO-V13", "WCO-N02"],
+  "defect": {
+    "observed": "An unprotected 2.05 carrying the observation token followed by the genuine notification with one authentication-tag bit flipped ended an established observation with observation_failed",
+    "cause": "The worker mapped COAP_EVENT_OSCORE_DECRYPTION_FAILURE, NO_PROTECTED_PAYLOAD and DECODE_ERROR to a fatal exchange failure even when the failed message was a notification"
+  },
+  "assertions": [
+    "While an observation is established and no request is pending, those three events discard the notification and the observation continues; the next change is delivered with no terminal error",
+    "The same events still end a pending request, registration, renewal or cancellation with security_handshake_failed",
+    "libcoap acknowledges the refused confirmable notification at the message layer, so its value is lost as if the datagram were dropped",
+    "A captured authenticated notification delivered three more times produces no second value, and the following change is delivered",
+    "The tampered/unprotected relay case fails against the preceding helper with observation_failed"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3 mix wotex.software.build --workspace \"$ABSOLUTE_EMPTY_WORKSPACE\"; then mix wotex.software.run with the same OPENSSL_ROOT_DIR",
+      "harness_sha256": "b07b07094313324fd52b4f0cd4b7e9daaa1f5d2220081daaea8ae7136cfc34ce",
+      "harness_output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "worker_sha256": "3a0291c55bd55b074b24c359fc79259b1f9e6d91df66614fd27ec5bc107bc78c",
+      "software_run_result_sha256": "ff96eadc3a9c0112db0b2cc3160dff0ded7da33ac7cb5c79b00f1e61e3c878ff",
+      "software_run_tests": 35,
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "command": "docker build -f Dockerfile -t wotex-coap-agent-native:notification CONTEXT (native/oscore sources, patches, yyjson, test/native sources and the pinned archive as source.tar.gz)",
+      "image": "sha256:125d508b5c212106ec543303d8df5193972bcba8fc36d3dc96c0295a5c2d537e",
+      "worker_sha256": "d54fe856bcfa6f138fc20a2b52bfee5167fbbc56cd040ed186a47854e48ab6ac",
+      "harness_sha256": "d64ebd420ccb1dca92c40968ab61979e25f973e000888be5335ef5df9eea7830",
+      "build_log_sha256": "8ce47a54aa4b0cc19e305a8f3b3cf0426d37ac6988e7307e7f1ed92d419fa3a6",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "sanitizers": ["address", "undefined", "leak"]
+    }
+  ],
+  "unaccepted": [
+    "Owner loss during pending registration, renewal or cancellation",
+    "Successful renewal/cancel confirmation with an intervening Observe response",
+    "Independent-stack OSCORE interoperability"
+  ]
+}

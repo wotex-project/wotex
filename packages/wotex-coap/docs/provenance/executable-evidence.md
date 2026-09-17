@@ -612,7 +612,7 @@ same Linux build then passes on both runtimes. The
 fault/vector executables compile and execute under bounded guardians, all 63
 artifacts publish atomically, and read-only reuse passes. The
 [software run receipt](software-run-v1.json) records the manifest-verified macOS
-arm64 run: 15 independent libcoap UDP, PSK and PKI tests, 10 same-stack OSCORE
+arm64 run: 15 independent libcoap UDP, PSK and PKI tests, 12 same-stack OSCORE
 tests and 8 lifecycle stress tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned
 peers and zero retained processes, ports or library-state resources.
 
@@ -633,7 +633,7 @@ UDP fault peer with a truncated option or non-DTLS bytes, and closes the peer
 mid-session; each failure has effect `none` and releases its resources. The run
 reports BEAM total memory and OSCORE helper RSS every 100 operations without
 asserting a trend: BEAM totals vary by at most 0.6 MiB per transport and helper
-RSS stays at 1,936 KiB. The stress lane found three defects fixed in preceding
+RSS stays below 2 MiB. The stress lane found three defects fixed in preceding
 commits: stale peer traffic after exit cancellation, fatal handling of discarded
 malformed datagrams, and `native_protocol_error` from a close racing a finished
 helper. It does not accept pending-operation owner loss, Port-mailbox sampling or
@@ -669,7 +669,10 @@ the native owner within 1,100 ms and reap the helper. A real ConsumedThing
 Through an ExUnit UDP relay, a confirmable 2.05 with an empty OSCORE option and a
 token no request used arrives before the real response and the protected GET
 still succeeds, as it does after an ACK carrying the request's MID and token with
-an option length past the datagram. A further relay case records every datagram after receiver death:
+an option length past the datagram. A captured authenticated notification
+delivered three more times yields no second value, and an unprotected 2.05 with
+the observation token followed by the genuine notification with an altered tag
+leaves the observation delivering the next change. A further relay case records every datagram after receiver death:
 each confirmable peer message has an ACK or RST with its message ID before the
 helper exits. Pending-operation owner loss, authenticated duplicate/stale and
 replay injection, independent OSCORE interoperability and the stress matrix are
@@ -705,6 +708,20 @@ and ends it with `invalid_response`. The relay regression fails against the
 preceding helper and passes on macOS through the software run; the complete
 native harness also passes the Linux ASan/UBSan/leak lane.
 
-Independent OSCORE interoperability, the remaining native fault scenarios and the
+The [native worker notification-verification receipt](native-worker-notification-verification-v1.json)
+binds the next source cohort. RFC 8613 (July 2019) section 8.4.2 requires the
+client to stop processing a notification that fails verification and states that
+the error does not cancel the observation. The worker ended established
+observations with `observation_failed` on `COAP_EVENT_OSCORE_DECRYPTION_FAILURE`,
+`NO_PROTECTED_PAYLOAD` or `DECODE_ERROR`. While an observation is established
+and no request is pending, those events now discard the notification; they still
+end a pending request, registration, renewal or cancellation. libcoap acknowledges
+the refused confirmable notification at the message layer, so its value is lost as
+if the datagram were dropped and the next change is delivered. The tampered-relay
+regression fails against the preceding helper; the replay/duplicate case already
+passed and closes an evidence gap.
+
+Independent OSCORE interoperability,
+ the remaining native fault scenarios and the
 clean committed-source package matrix are not yet accepted. The historical Python result retains only its own
 recorded cohort.

@@ -10,7 +10,7 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
   alias Wotex.CoAP.Test.{DTLSRecordProxy, LibcoapPeer}
   @moduletag :interop
   @moduletag :capture_log
-  @recipients Enum.map(1..10, &<<&1>>)
+  @recipients Enum.map(1..12, &<<&1>>)
 
   setup_all do
     peer = LibcoapPeer.verify!()
@@ -318,6 +318,86 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
     end
   end
 
+  test "WCO-S03 WCO-V13 replayed and duplicate protected notifications deliver no second value",
+       context do
+    path = "/wotex-replay-#{System.unique_integer([:positive])}"
+    {:ok, writer} = CoAP.connect(host: "127.0.0.1", port: context.port, timeout: 5_000)
+    proxy = start_proxy(context, :trace)
+    session = connect!(Map.put(context, :port, DTLSRecordProxy.endpoint(proxy)), <<11>>)
+
+    try do
+      assert {:ok, %Message{code: 65}} = CoAP.put(writer, path, "40", content_format: :text)
+      assert {:ok, %Subscription{reference: reference}} = CoAP.subscribe(session, path)
+      assert_receive {:wotex_coap, ^reference, {:ok, %Message{payload: "40"}, _}}, 5_000
+      drain_trace(proxy)
+
+      assert {:ok, %Message{code: 68}} = CoAP.put(writer, path, "41", content_format: :text)
+      assert_receive {:wotex_coap, ^reference, {:ok, %Message{payload: "41"}, _}}, 5_000
+
+      [notification | _] =
+        for {:to_client, <<1::2, 0::2, _::4, 69, _::binary>> = bytes} <- drain_trace(proxy),
+            do: bytes
+
+      # The same authenticated ciphertext three more times, back to back.
+      for _ <- 1..3, do: :ok = DTLSRecordProxy.deliver(proxy, notification)
+      refute_receive {:wotex_coap, ^reference, _}, 500
+
+      assert {:ok, %Message{code: 68}} = CoAP.put(writer, path, "42", content_format: :text)
+      assert_receive {:wotex_coap, ^reference, {:ok, %Message{payload: "42"}, _}}, 5_000
+    after
+      CoAP.disconnect(session)
+      CoAP.disconnect(writer)
+    end
+  end
+
+  test "WCO-S03 WCO-V13 tampered and unprotected notifications do not cancel the observation",
+       context do
+    path = "/wotex-tamper-#{System.unique_integer([:positive])}"
+    {:ok, writer} = CoAP.connect(host: "127.0.0.1", port: context.port, timeout: 5_000)
+    proxy = start_proxy(context, :hold_all)
+    session = connect!(Map.put(context, :port, DTLSRecordProxy.endpoint(proxy)), <<12>>)
+
+    try do
+      assert {:ok, %Message{code: 65}} = CoAP.put(writer, path, "50", content_format: :text)
+      test = self()
+      caller = Task.async(fn -> CoAP.subscribe(session, %{path: path, receiver: test}) end)
+      assert {:ok, %Subscription{reference: reference}} = forward_until(proxy, caller)
+      assert_receive {:wotex_coap, ^reference, {:ok, %Message{payload: "50"}, _}}, 5_000
+
+      assert {:ok, %Message{code: 68}} = CoAP.put(writer, path, "51", content_format: :text)
+      notification = held_notification(proxy)
+
+      <<_::4, token_length::4, _, mid::16, token::binary-size(token_length), _::binary>> =
+        notification
+
+      # An unprotected 2.05 with the observation token, Observe and a payload, then
+      # the genuine notification with its authentication tag altered. Neither is
+      # acknowledged, so the peer retransmits the genuine notification.
+      unprotected =
+        <<1::2, 0::2, token_length::4, 69, rem(mid + 7, 65_536)::16, token::binary, 0x61, 9, 0xFF,
+          "forged">>
+
+      :ok = DTLSRecordProxy.deliver(proxy, unprotected)
+      tag_byte = binary_part(notification, byte_size(notification) - 1, 1)
+      <<last>> = tag_byte
+
+      tampered =
+        binary_part(notification, 0, byte_size(notification) - 1) <> <<Bitwise.bxor(last, 1)>>
+
+      :ok = DTLSRecordProxy.deliver(proxy, tampered)
+      refute_receive {:wotex_coap, ^reference, _}, 500
+
+      # libcoap acknowledges the refused confirmable message at the message layer,
+      # so value 51 is lost as if the datagram were dropped. The observation stays
+      # active and delivers the next change.
+      assert {:ok, %Message{code: 68}} = CoAP.put(writer, path, "52", content_format: :text)
+      forward_until_value(proxy, reference, "52")
+    after
+      CoAP.disconnect(session)
+      CoAP.disconnect(writer)
+    end
+  end
+
   test "WCO-S06 WCO-I02 Runtime ConsumedThing uses the production helper for protected calls",
        context do
     path = "wotex-runtime-#{System.unique_integer([:positive])}"
@@ -399,6 +479,35 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
         result
     after
       5_000 -> flunk("protected exchange did not complete through the proxy")
+    end
+  end
+
+  defp held_notification(proxy) do
+    receive do
+      {:held_datagram, ^proxy, <<1::2, 0::2, _::4, 69, _::binary>> = bytes} ->
+        bytes
+
+      {:held_datagram, ^proxy, bytes} ->
+        :ok = DTLSRecordProxy.deliver(proxy, bytes)
+        held_notification(proxy)
+    after
+      5_000 -> flunk("the peer sent no confirmable notification")
+    end
+  end
+
+  defp forward_until_value(proxy, reference, payload) do
+    receive do
+      {:held_datagram, ^proxy, bytes} ->
+        :ok = DTLSRecordProxy.deliver(proxy, bytes)
+        forward_until_value(proxy, reference, payload)
+
+      {:wotex_coap, ^reference, {:ok, %Message{payload: ^payload}, _}} ->
+        :ok
+
+      {:wotex_coap, ^reference, other} ->
+        flunk("observation delivered #{inspect(other)} instead of #{inspect(payload)}")
+    after
+      10_000 -> flunk("observation did not deliver #{inspect(payload)}")
     end
   end
 

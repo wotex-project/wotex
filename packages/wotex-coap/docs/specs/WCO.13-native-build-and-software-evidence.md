@@ -240,6 +240,9 @@ counter with 8 random bytes. A response whose token has no request association
 cleanup services its best-effort cancellation for at most 20 ms,
 inside custody's 25 ms termination signal, so a peer's separate confirmable
 response is acknowledged rather than retransmitted toward a reused endpoint.
+While an observation is established and no request is pending, a notification
+that fails decryption, lacks protection or fails OSCORE decoding is discarded and
+the observation continues, as RFC 8613 section 8.4.2 requires.
 
 `Wotex.CoAP.Native.Admission` implements the pre-mailbox capacity primitive for
 this owner. One generation-bound ETS table admits exactly 64 ordinary calls and
@@ -600,13 +603,14 @@ The implemented cohort runs `test/interop/libcoap_test.exs`,
 `test/interop/oscore_test.exs` and `test/software/lifecycle_stress_test.exs`
 with seed zero. Fifteen tests cover independent
 libcoap UDP, PSK and PKI unary, Block1/Block2, Observe, Runtime and
-certificate/record-fault paths. Ten same-stack tests drive the manifest-bound
+certificate/record-fault paths. Twelve same-stack tests drive the manifest-bound
 helper through the public native owner against the software-build `coap-server`
 configured with a matching OSCORE context: protected methods, negative status,
 bodies above the inline threshold, discovery, a 1 MiB Block1 upload and Block2
 download, an authentication failure, Observe changes from a second UDP client,
 receiver and owner death, context consumption after close, a real ConsumedThing
-read, uncorrelated and malformed relayed responses and acknowledgment of the peer's
+read, uncorrelated and malformed relayed responses, replayed, tampered and
+unprotected notifications, and acknowledgment of the peer's
 confirmable response to exit cancellation. Eight stress tests run each of UDP,
 DTLS PSK, DTLS PKI and OSCORE through 1,000 sequential operations, 32 correlated
 concurrent callers, the exact 64-call admission bound, 100 open/close, 100
@@ -640,7 +644,7 @@ Property/Event overload. Run Elixir 1.18.4/OTP 27.3.4.15 and
 Elixir 1.20.2/OTP 29.0.4 with isolated builds, PLTs and temporary directories
 per invocation/lane, Linux ASan/UBSan and clean
 committed-source/package gates. The current software-run receipt accepts only its
-15-test independent UDP/PSK/PKI cohort, 10-test same-stack OSCORE cohort and
+15-test independent UDP/PSK/PKI cohort, 12-test same-stack OSCORE cohort and
 8-test stress cohort. That 33-test run passes on macOS arm64 and inside Linux arm64
 containers on both required runtimes, whose builds compile the native vectors with
 ASan/UBSan. The remaining OSCORE independence, native fault corpus and

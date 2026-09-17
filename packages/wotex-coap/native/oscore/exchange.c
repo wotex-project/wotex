@@ -277,10 +277,17 @@ static int event_handler(coap_session_t *session, coap_event_t event) {
     if (!exchange || (!exchange->active && !exchange->observing)) return 0;
     switch (event) {
         case COAP_EVENT_OSCORE_DECRYPTION_FAILURE:
-        case COAP_EVENT_OSCORE_NOT_ENABLED:
         case COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD:
-        case COAP_EVENT_OSCORE_INTERNAL_ERROR:
         case COAP_EVENT_OSCORE_DECODE_ERROR:
+            /* With an established observation and no pending request, the
+             * failed message is a notification. RFC 8613 section 8.4.2: the
+             * client stops processing it, and the error does not cancel the
+             * observation. */
+            if (exchange->observing && !exchange->active) break;
+            fail(exchange, "security_handshake_failed");
+            break;
+        case COAP_EVENT_OSCORE_NOT_ENABLED:
+        case COAP_EVENT_OSCORE_INTERNAL_ERROR:
             fail(exchange, "security_handshake_failed");
             break;
         case COAP_EVENT_OSCORE_NO_SECURITY:
