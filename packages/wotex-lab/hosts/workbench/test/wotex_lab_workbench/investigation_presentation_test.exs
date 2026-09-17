@@ -6,6 +6,8 @@ defmodule WotexLabWorkbench.InvestigationPresentationTest do
   alias WotexLabWorkbench.Investigation.{Answer, RunContext}
   alias WotexLabWorkbench.Run
 
+  @digest "sha256:" <> String.duplicate("ab", 32)
+
   test "run context selects only an older run of the same experiment" do
     newest = run("run-3", "thermal", 3)
     unrelated = run("run-2", "window_anomaly", 2)
@@ -29,14 +31,14 @@ defmodule WotexLabWorkbench.InvestigationPresentationTest do
   test "answer preserves facts and hypotheses but never accepts source URLs" do
     notification = %{
       "context" => "Run <script>one</script>",
-      "observation" => "Metric nx_duration_seconds increased.",
+      "observation" => "Metric nx_duration_seconds increased (query #{@digest}).",
       "hypothesis" => "Backend contention might explain the increase.",
       "snapshots" => [%{"id" => "snapshot-1", "href" => "https://attacker.invalid"}]
     }
 
     answer =
       Answer.from_result(
-        {:ok, %{notifications: [notification]}},
+        {:ok, %{notifications: [notification], evidence: [@digest]}},
         %{provider: :ollama, model: "qwen3.5:4b-q4_K_M"}
       )
 
@@ -45,6 +47,7 @@ defmodule WotexLabWorkbench.InvestigationPresentationTest do
     assert answer.hypotheses == ["Backend contention might explain the increase."]
 
     assert answer.sources == [
+             %{label: "Recorded evidence #{@digest}", href: nil},
              %{label: "BeamLens snapshot snapshot-1", href: "/evidence"},
              %{label: "Bounded session evidence", href: "/evidence"}
            ]

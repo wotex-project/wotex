@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.21.0. Contract: accepted. Source status: the metric
+Specification version: 0.22.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -653,6 +653,18 @@ run of the same experiment, reduces both to a closed JSON summary, and renders
 one terminal live-region update. It accepts no model-supplied link: snapshot
 identifiers and the bounded session report resolve only to `/evidence`.
 
+`Investigation.ContextStore` records the evidence digests an investigation
+actually receives: the admitted current and baseline summary digests and each
+digest in a callback result that fits the output budget, at most 64. The broker
+attaches that record to a completed result before clearing the context, so
+it cannot pass to a later investigation. `Investigation.Answer` shows a finding
+only when its context, observation or hypothesis cites at least one digest and
+every cited digest is in that record. Findings that cite nothing, or cite a
+digest no callback returned, are withheld and counted under missing evidence.
+If none remain, the answer is `unsupported`. Cited digests appear as unlinked
+sources. Grounding checks that a finding names received evidence, not that
+its prose interprets that evidence correctly.
+
 ## Nx data boundary and acceptance
 
 ### Optional Explorer analysis
@@ -720,8 +732,16 @@ shutdown, two-instance isolation, immutable diagnostic export and the export
 credential sentinel;
 `test/wotex/lab/greptime_bridge_test.exs` covers actual ingestion. The local
 protected query endpoint and TTL expiry have their own tests described above.
-Remote protected/query endpoints, prompt injection, cloud disclosure and
-cancelled-agent tests arrive with their planned features. Local capability
+`metrics_operator_transport_test.exs` covers the mutual-TLS scrape and query
+listeners. The Workbench `investigation_acceptance_test.exs` runs scripted
+agents through the real broker, context store, skill callbacks and query
+gateway. Its prompt corpus covers missing-mask spikes, warm-up versus inference
+latency, SSE drops, MQTT duplicates and dataset split leakage with an injected
+run note. Grounded findings are shown with escaped text and no Action seam.
+Uncited, fabricated and mixed citations are withheld, and a digest from an
+earlier investigation cannot ground a later one. Cancelling an agent blocked
+in a metric query kills the worker, closes its inspection scope and leaves no
+history lease. Cloud-disclosure evidence is not yet claimed. Local capability
 scope substitution, bounded admission, blocked calls, expiry, cancellation,
 worker/owner/history death, history replacement and late-result rejection are
 covered by `metrics_gateway_test.exs`. The Workbench's

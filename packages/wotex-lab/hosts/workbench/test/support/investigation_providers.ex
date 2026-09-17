@@ -65,8 +65,11 @@ defmodule WotexLabWorkbench.FakeInvestigationRunner do
       })
     end
 
+    # A zero-arity function is a scripted agent: it runs in the worker, so its
+    # skill callbacks are charged and recorded like a real operator's calls.
     case Application.get_env(:wotex_lab_workbench, :fake_investigation_result, :block) do
       :block -> receive do: (:finish -> {:ok, []})
+      script when is_function(script, 0) -> script.()
       result -> result
     end
   end

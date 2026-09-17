@@ -6,7 +6,9 @@ defmodule WotexLabWorkbench.Investigation.Broker do
   There is no queue. One request runs at a time for at most 30 seconds. Caller
   death, explicit cancellation, timeout and normal completion all kill the
   worker, clear supplied run context and replace BeamLens's static operator and
-  coordinator so neither conversation nor queued work survives.
+  coordinator so neither conversation nor queued work survives. A completed
+  result carries the evidence digests the investigation received, read from
+  `ContextStore.evidence/0` before the context is cleared.
   """
 
   use GenServer
@@ -215,6 +217,7 @@ defmodule WotexLabWorkbench.Investigation.Broker do
     Process.demonitor(active.owner_monitor, [:flush])
     demonitor_room(active.room_monitor)
     if kill?, do: Task.shutdown(active.task, :brutal_kill)
+    result = with_evidence(result)
     if notify?, do: send(active.owner, {:investigation, active.request, result})
     usage = ContextStore.usage()
     ContextStore.clear()
@@ -232,6 +235,11 @@ defmodule WotexLabWorkbench.Investigation.Broker do
 
     increment(%{state | active: nil}, counter)
   end
+
+  defp with_evidence({:ok, %{notifications: _} = completed}),
+    do: {:ok, Map.put(completed, :evidence, ContextStore.evidence())}
+
+  defp with_evidence(result), do: result
 
   defp increment(state, :completed), do: %{state | completed: state.completed + 1}
   defp increment(state, :cancelled), do: %{state | cancelled: state.cancelled + 1}

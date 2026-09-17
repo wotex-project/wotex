@@ -216,17 +216,20 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
   test "trusted-local browser investigation is owner-bound and renders structured evidence", %{
     conn: conn
   } do
-    start_beamlens_tree(
+    start_beamlens_tree(fn ->
+      %{digest: digest} =
+        WotexLabWorkbench.Investigation.Skill.callbacks()["lab_run_summary"].("current")
+
       {:ok,
        [
          %{
            context: "Run <script>run-1</script>",
-           observation: "Metric nx_duration_seconds increased.",
+           observation: "Metric nx_duration_seconds increased (run summary #{digest}).",
            hypothesis: "Backend contention might explain the increase.",
            snapshots: [%{id: "snapshot-1"}]
          }
        ]}
-    )
+    end)
 
     conn = get(conn, "/")
     {:ok, view, _html} = live(recycle(conn), "/")
@@ -245,9 +248,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLiveTest do
     _html = render_submit(element(run_view, "#investigation"), %{"prompt" => "Explain this run"})
     html = render_until(run_view, "Observed facts")
     assert html =~ "Observed facts"
-    assert html =~ "Metric nx_duration_seconds increased."
+    assert html =~ "Metric nx_duration_seconds increased (run summary sha256:"
     assert html =~ "Backend contention might explain the increase."
     assert html =~ "BeamLens snapshot snapshot-1"
+    assert html =~ "Recorded evidence sha256:"
     assert html =~ "&lt;script&gt;run-1&lt;/script&gt;"
     refute html =~ "<script>run-1</script>"
     refute has_element?(run_view, "form[phx-submit='approve']")

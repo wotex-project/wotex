@@ -4,6 +4,14 @@ defmodule WotexLabWorkbench.Investigation.Answer do
 
   It preserves the dependency's fact/hypothesis split, admits no model-supplied
   URL and never emits an Action or approval payload.
+
+  A finding is presented only when its context, observation or hypothesis cites
+  at least one `sha256:` digest and every cited digest is in the result's
+  `:evidence`, the digests the investigation actually received. A finding that
+  cites nothing, or cites a digest no callback returned, is withheld: its text
+  is not shown and the missing evidence states why. When every finding is
+  withheld the status is `unsupported`. Cited digests are listed as sources
+  without links, because a query digest has no page of its own.
   """
 
   @max_notifications 8
@@ -15,32 +23,50 @@ defmodule WotexLabWorkbench.Investigation.Answer do
     "id" => :id
   }
   @max_text_chars 1_024
+  @citation ~r/sha256:[0-9a-f]{64}/
 
   @doc "Builds a browser-safe answer from a broker result and provider disclosure."
   @spec from_result(term(), map()) :: map()
-  def from_result({:ok, %{notifications: notifications}}, provider) when is_list(notifications) do
+  def from_result({:ok, %{notifications: notifications} = result}, provider)
+      when is_list(notifications) do
     notifications = Enum.take(notifications, @max_notifications)
+    recorded = result |> Map.get(:evidence, []) |> List.wrap() |> MapSet.new()
+    grouped = Enum.group_by(notifications, &grounding(&1, recorded))
+    grounded = Map.get(grouped, :grounded, [])
 
-    if notifications == [] do
-      answer(
-        "complete",
-        ["The bounded investigation completed without emitting a finding."],
-        [],
-        ["No finding is not evidence that the run or host is healthy."],
-        "Ask a narrower question or inspect the session evidence directly.",
-        evidence_source(),
-        provider
-      )
-    else
-      answer(
-        "complete",
-        Enum.map(notifications, &fact/1),
-        notifications |> Enum.map(&field(&1, "hypothesis")) |> present_strings(),
-        missing_evidence(notifications),
-        "Review the cited evidence before making any separate policy decision.",
-        sources(notifications),
-        provider
-      )
+    cond do
+      notifications == [] ->
+        answer(
+          "complete",
+          ["The bounded investigation completed without emitting a finding."],
+          [],
+          ["No finding is not evidence that the run or host is healthy."],
+          "Ask a narrower question or inspect the session evidence directly.",
+          evidence_source(),
+          provider
+        )
+
+      grounded == [] ->
+        answer(
+          "unsupported",
+          ["No finding cited evidence that this investigation received."],
+          [],
+          withheld(grouped),
+          "Inspect the session evidence directly; no model finding is shown.",
+          evidence_source(),
+          provider
+        )
+
+      true ->
+        answer(
+          "complete",
+          Enum.map(grounded, &fact/1),
+          grounded |> Enum.map(&field(&1, "hypothesis")) |> present_strings(),
+          missing_evidence(grounded) ++ withheld(grouped),
+          "Review the cited evidence before making any separate policy decision.",
+          sources(grounded),
+          provider
+        )
     end
   end
 
@@ -76,7 +102,56 @@ defmodule WotexLabWorkbench.Investigation.Answer do
       else: []
   end
 
+  defp grounding(notification, recorded) do
+    cited = citations(notification)
+
+    cond do
+      cited == [] -> :uncited
+      Enum.all?(cited, &MapSet.member?(recorded, &1)) -> :grounded
+      true -> :unrecorded
+    end
+  end
+
+  defp citations(notification) do
+    ["context", "observation", "hypothesis"]
+    |> Enum.map(&field(notification, &1))
+    |> Enum.filter(&is_binary/1)
+    |> Enum.flat_map(&Regex.scan(@citation, &1))
+    |> List.flatten()
+    |> Enum.uniq()
+  end
+
+  defp withheld(grouped) do
+    [
+      withheld_text(
+        grouped,
+        :uncited,
+        "cited no recorded query or run-summary digest and was withheld."
+      ),
+      withheld_text(
+        grouped,
+        :unrecorded,
+        "cited a digest that no callback returned and was withheld."
+      )
+    ]
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp withheld_text(grouped, key, reason) do
+    case length(Map.get(grouped, key, [])) do
+      0 -> nil
+      1 -> "1 finding " <> reason
+      count -> "#{count} findings " <> String.replace(reason, "was withheld", "were withheld")
+    end
+  end
+
   defp sources(notifications) do
+    digest_sources =
+      notifications
+      |> Enum.flat_map(&citations/1)
+      |> Enum.uniq()
+      |> Enum.map(&%{label: "Recorded evidence " <> &1, href: nil})
+
     snapshot_sources =
       notifications
       |> Enum.flat_map(&snapshots/1)
@@ -85,7 +160,7 @@ defmodule WotexLabWorkbench.Investigation.Answer do
       |> Enum.uniq()
       |> Enum.map(&%{label: "BeamLens snapshot #{&1}", href: "/evidence"})
 
-    Enum.uniq_by(snapshot_sources ++ evidence_source(), & &1.label)
+    Enum.uniq_by(digest_sources ++ snapshot_sources ++ evidence_source(), & &1.label)
   end
 
   defp snapshots(notification) do

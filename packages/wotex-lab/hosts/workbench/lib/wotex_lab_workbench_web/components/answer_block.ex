@@ -5,8 +5,8 @@ defmodule WotexLabWorkbenchWeb.Components.AnswerBlock do
   The supplied answer includes provider and model identity, a suggested next
   check and optional source links. HEEx escapes the answer text; it is not
   interpreted as Markdown or executable content. The caller admits source
-  destinations before rendering. This component neither calls a model nor
-  executes the suggested check.
+  destinations before rendering; a source without a destination renders as
+  text. This component neither calls a model nor executes the suggested check.
   """
 
   use Phoenix.Component
@@ -38,7 +38,8 @@ defmodule WotexLabWorkbenchWeb.Components.AnswerBlock do
       <p>{@answer.next_check}</p>
       <ul :if={Map.get(@answer, :sources, []) != []}>
         <li :for={source <- Map.get(@answer, :sources, [])}>
-          <a href={source.href}>{source.label}</a>
+          <a :if={source.href} href={source.href}>{source.label}</a>
+          <code :if={is_nil(source.href)}>{source.label}</code>
         </li>
       </ul>
     </section>

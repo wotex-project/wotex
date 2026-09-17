@@ -239,7 +239,10 @@ cancel, then supplies only the selected run and nearest older same-experiment
 run through a closed summary. It renders one escaped terminal answer with
 facts, hypotheses, missing evidence and provider/model status. Model-supplied
 URLs are ignored; evidence links remain local, and the answer has no Action or
-approval seam.
+approval seam. A finding appears only when it cites `sha256:` digests that
+this investigation received from its run summaries or callbacks. Other findings
+are withheld and counted under missing evidence. When no finding remains, the
+answer is marked unsupported.
 
 The Metrics page's portable-panel selector exports only catalogue definitions
 through `/metrics/dashboard.json`, with 1–16 known IDs. A verified browser

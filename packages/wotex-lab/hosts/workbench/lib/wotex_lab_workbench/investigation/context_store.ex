@@ -2,12 +2,21 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
   @moduledoc """
   Holds the bounded, server-admitted run context for the single active
   investigation. Model text cannot write or select this state.
+
+  The store also records the evidence digests the investigation actually
+  received: the admitted current and baseline summary digests, and every
+  `sha256:` digest inside a callback result that fits the output budget. At
+  most 64 digests are kept. A refused callback result records nothing.
+  `evidence/0` lets the broker bind a finished answer to that record before
+  the context is cleared.
   """
 
   use GenServer
 
   @max_bytes 8 * 1_024
   @tool_output_bytes 16 * 1_024
+  @max_evidence 64
+  @digest ~r/\Asha256:[0-9a-f]{64}\z/
 
   @doc false
   @spec start_link(keyword()) :: GenServer.on_start()
@@ -36,6 +45,10 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
   @doc "Charges one JSON-safe callback result against the investigation output budget."
   @spec charge(term()) :: term()
   def charge(value), do: GenServer.call(__MODULE__, {:charge, value})
+
+  @doc "Returns the sorted evidence digests recorded for the active investigation."
+  @spec evidence() :: [String.t()]
+  def evidence, do: GenServer.call(__MODULE__, :evidence)
 
   @doc "Forgets all run context."
   @spec clear() :: :ok
@@ -93,12 +106,21 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
     with {:ok, encoded} <- Jason.encode(value),
          bytes = byte_size(encoded),
          true <- bytes <= 8 * 1_024 and bytes <= state.callback_bytes_remaining do
-      {:reply, value, %{state | callback_bytes_remaining: state.callback_bytes_remaining - bytes}}
+      state = %{
+        state
+        | callback_bytes_remaining: state.callback_bytes_remaining - bytes,
+          evidence: record(state.evidence, digests(value))
+      }
+
+      {:reply, value, state}
     else
       _denied ->
         {:reply, %{available: false, error: "callback_output_budget_exhausted"}, state}
     end
   end
+
+  def handle_call(:evidence, _, state),
+    do: {:reply, state.evidence |> MapSet.to_list() |> Enum.sort(), state}
 
   def handle_call(:clear, _from, _state), do: {:reply, :ok, empty()}
 
@@ -115,7 +137,16 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
          context_bytes:
            context_bytes(current, current_json) + context_bytes(baseline, baseline_json),
          tool_calls: 0,
-         callback_bytes_remaining: @tool_output_bytes
+         callback_bytes_remaining: @tool_output_bytes,
+         evidence:
+           record(
+             MapSet.new(),
+             for(
+               {value, json} <- [{current, current_json}, {baseline, baseline_json}],
+               value != nil,
+               do: digest(json)
+             )
+           )
        }}
     else
       false -> {:error, :context_too_large}
@@ -154,7 +185,26 @@ defmodule WotexLabWorkbench.Investigation.ContextStore do
       baseline_digest: nil,
       context_bytes: 0,
       tool_calls: 0,
-      callback_bytes_remaining: @tool_output_bytes
+      callback_bytes_remaining: @tool_output_bytes,
+      evidence: MapSet.new()
     }
   end
+
+  defp record(evidence, digests) do
+    Enum.reduce(digests, evidence, fn digest, acc ->
+      if MapSet.size(acc) < @max_evidence, do: MapSet.put(acc, digest), else: acc
+    end)
+  end
+
+  defp digests(value) when is_map(value) and not is_struct(value),
+    do: Enum.flat_map(value, fn {key, item} -> digest_entry(key, item) ++ digests(item) end)
+
+  defp digests(value) when is_list(value), do: Enum.flat_map(value, &digests/1)
+  defp digests(_), do: []
+
+  defp digest_entry(key, item) when key in [:digest, "digest"] and is_binary(item) do
+    if Regex.match?(@digest, item), do: [item], else: []
+  end
+
+  defp digest_entry(_, _), do: []
 end
