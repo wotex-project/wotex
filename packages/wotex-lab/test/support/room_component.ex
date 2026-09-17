@@ -33,6 +33,9 @@ defmodule Wotex.Lab.Test.RoomComponent do
       :two ->
         [probe_spec(config), probe_spec(config)]
 
+      :stubborn ->
+        [stubborn_spec(config), stubborn_spec(config)]
+
       :thing ->
         {:ok, td} =
           Application.app_dir(:wotex_lab, "priv/fixtures/loopback/thing-description.json")
@@ -158,6 +161,28 @@ defmodule Wotex.Lab.Test.RoomComponent do
        end},
       restart: :temporary
     )
+  end
+
+  # A child that traps exits and ignores the supervisor's shutdown request, so
+  # only a forced kill ends it within a short cleanup budget.
+  defp stubborn_spec(config) do
+    receiver = Keyword.get(config, :receiver)
+
+    %{
+      id: make_ref(),
+      start: {__MODULE__, :start_stubborn, [receiver]},
+      restart: :temporary,
+      shutdown: 10_000
+    }
+  end
+
+  def start_stubborn(receiver) do
+    {:ok,
+     spawn_link(fn ->
+       Process.flag(:trap_exit, true)
+       if is_pid(receiver), do: send(receiver, {:stubborn_started, self()})
+       Process.sleep(:infinity)
+     end)}
   end
 
   defp broken_spec(attempt_id) do

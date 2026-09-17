@@ -162,6 +162,38 @@ defmodule Wotex.Lab.RunnerTest do
     assert role_children(context.lab, :things) == []
   end
 
+  test "cleanup is bounded by its budget and a forced stop is never hidden behind pass",
+       context do
+    {:ok, host} =
+      host(context,
+        component: [startup: :stubborn, receiver: self()],
+        budgets: %{cleanup_ms: 50, wall_ms: 5_000}
+      )
+
+    {:ok, definition} = definition([step("echo", "room.util", "echo", 1)])
+    {:ok, scenario} = scenario(definition)
+    started_at = System.monotonic_time(:millisecond)
+    assert {:ok, run} = Runner.start(scenario, definition, host)
+    assert_receive {:stubborn_started, first}
+    assert_receive {:stubborn_started, second}
+    monitors = Enum.map([first, second], &Process.monitor/1)
+
+    assert {:ok, status} = Runner.await(run, 5_000)
+    assert System.monotonic_time(:millisecond) - started_at < 2_000
+    assert status.outcome == :error
+    assert status.results == %{"echo" => 1}
+    assert %{code: :cleanup_failed, details: %{children: failures}} = status.reason
+    assert length(failures) == 2
+    assert Enum.all?(failures, &(&1.reason == :cleanup_budget_exhausted and &1.forced))
+
+    for monitor <- monitors do
+      assert_receive {:DOWN, ^monitor, :process, _, _}, 1_000
+    end
+
+    assert role_children(context.lab, :things) == []
+    assert File.ls!(context.tmp_dir) == []
+  end
+
   test "step, ingress and result limits become explicit failures", context do
     steps = [
       step("first", "room.util", "echo", 1),

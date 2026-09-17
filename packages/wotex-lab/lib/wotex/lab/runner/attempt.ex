@@ -10,7 +10,9 @@ defmodule Wotex.Lab.Runner.Attempt do
   invalid return or hang inside a component becomes a normalized, redacted
   step error and never escapes. Stopping runs bounded cleanup: component
   children are terminated through the instance, the private work directory is
-  removed, and a cleanup failure turns any outcome into `error`. Terminal
+  removed, and a cleanup failure turns any outcome into `error`. Cleanup is
+  bounded by the `cleanup_ms` budget: a child still running when it is spent
+  is killed and recorded as a forced `cleanup_budget_exhausted` failure. Terminal
   outcomes are `pass`, `fail`, `unsupported`, `timeout`, `cancelled` and
   `error`; a forced kill is recorded as such. A result that arrives after the
   attempt left `running` is ignored, so a late worker cannot complete a new
@@ -27,6 +29,7 @@ defmodule Wotex.Lab.Runner.Attempt do
   alias Wotex.Lab.Scenario
 
   @phases [:admitted, :starting, :running, :stopping, :terminal]
+  @forced_stop_ms 1_000
 
   @doc false
   def child_spec(opts) do
@@ -511,21 +514,32 @@ defmodule Wotex.Lab.Runner.Attempt do
     end
   end
 
+  # Each stop runs in a linked task bounded by what remains of the cleanup
+  # budget. A child still running at the deadline is killed while its
+  # supervisor termination is in flight, so it is removed rather than
+  # restarted, and the forced stop is recorded as a cleanup failure.
   defp stop_owned_child({pid, module}, state, deadline) do
-    if state.host.clock.() > deadline do
-      [%{module: module, reason: :cleanup_budget_exhausted}]
-    else
-      stop_child(state.host.instance, pid, module)
+    instance = state.host.instance
+    remaining = max(deadline - state.host.clock.(), 0)
+    task = Task.async(fn -> Lab.stop_child(instance, :things, pid) end)
+
+    case Task.yield(task, remaining) do
+      {:ok, result} ->
+        stop_result(result, module)
+
+      {:exit, _} ->
+        [%{module: module, reason: :supervisor_unavailable}]
+
+      nil ->
+        Process.exit(pid, :kill)
+        _ = Task.yield(task, @forced_stop_ms) || Task.shutdown(task, :brutal_kill)
+        [%{module: module, reason: :cleanup_budget_exhausted, forced: true}]
     end
   end
 
-  defp stop_child(instance, pid, module) do
-    case Lab.stop_child(instance, :things, pid) do
-      :ok -> []
-      {:error, :not_found} -> []
-      {:error, reason} -> [%{module: module, reason: redact(reason)}]
-    end
-  end
+  defp stop_result(:ok, _), do: []
+  defp stop_result({:error, :not_found}, _), do: []
+  defp stop_result({:error, reason}, module), do: [%{module: module, reason: redact(reason)}]
 
   defp cleanup_result([]), do: :ok
   defp cleanup_result(failures), do: %{children: failures}
