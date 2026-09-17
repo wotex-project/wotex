@@ -15,7 +15,7 @@ defmodule Wotex.BLE.NativeContractTest do
     "parse_request" => {:default, "test/wotex/ble/native_frame_test.exs"},
     "ready" => {:interop, "test/interop/native_host_test.exs"},
     "flow_trace" => {:default, "test/wotex/ble/native_credit_test.exs"},
-    "process_flow" => nil,
+    "process_flow" => {:default, "test/wotex/ble/native_process_flow_test.exs"},
     "decode_bytes" => {:default, "test/wotex/ble/native_bytes_test.exs"},
     "agent_prompt" => {:interop, "test/interop/native_bus_test.exs"},
     "pair_lifecycle" => {:interop, "test/interop/native_bus_test.exs"},
@@ -78,12 +78,8 @@ defmodule Wotex.BLE.NativeContractTest do
              "#{owner} does not compare the corpus expectation"
     end
 
-    unexecuted = Map.keys(cases) -- executed
-
-    for id <- unexecuted do
-      refute @owners[cases[id]["operation"]] != nil and
-               id not in ~w(WBL-B-F11 WBL-B-F12 WBL-B-F13),
-             "#{id} has an owner but is not recorded as executed"
+    for id <- Map.keys(cases) -- executed do
+      refute @owners[cases[id]["operation"]], "#{id} has an owner but is not recorded as executed"
     end
   end
 end

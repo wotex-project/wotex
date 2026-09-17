@@ -101,9 +101,9 @@ the complete native corpus and BlueZ/GATT execution remain open.
 identifiers, exact expectation shape and known operations. Every case listed in
 `executed_cases` must belong to an owner test that selects its operation or
 identifier and compares `expectation.value`; every other owned case fails the
-check. B-F11 through B-F13 are the only unexecuted cases. The per-case status
-fields that disagreed with `executed_cases` were removed, so the top-level list
-is the single execution record.
+check. All 67 cases are recorded as executed. The per-case status fields that
+disagreed with `executed_cases` were removed, so the top-level list is the
+single execution record.
 
 `test/interop/native_host_test.exs` admits the host and runtime guardian of a
 completed Mix native build workspace through their manifest digests and the
@@ -130,6 +130,39 @@ fixture's 15-second compiler deadline under emulation, so those 35 tests were
 invalid there and are not recorded as x86_64 results. These are process and
 private-bus component results, not sanitizer, BEAM process-flow or BlueZ/GATT
 evidence.
+
+## Native report flow across suspended BEAM owners
+
+`test/wotex/ble/native_process_flow_test.exs` executes B-F11 through B-F13 in
+the default suite. It compiles the production runtime guardian and
+`test/native/flow_source.cpp`, admits both through the public native selector
+digests and opens an ordinary `Wotex.BLE.connect/1` and `subscribe/2` session.
+The test-only source answers open and subscribe itself and opens no D-Bus
+sender. Every later value callback enters the production `NativeReports`,
+`Credits`, `ReportQueue` and `NativeOutput` code, one callback per event-loop
+iteration, exactly as native notifications do. The test suspends the actual
+connection, stream owner or final receiver, creates the source's start marker
+so production begins at callback zero, resumes at 50 ms and samples until
+1050 ms.
+
+Samples count report lines waiting in the connection mailbox and report
+messages waiting in the stream owner mailbox, with their encoded bytes and
+queued receiver values. The corpus projection requires at most 64 reports,
+1 MiB of report bytes and the control reservation throughout, one terminal
+error, no delivery after it and zero surviving connection, owner, guardian or
+source processes within 1000 ms of `disconnect/1`. The test further requires
+the session to remain ready with no retained subscription. A suspended
+connection or stream owner receives exactly the 16-report stream window before
+native `queue_overflow`. With only the receiver suspended, credit still returns;
+macOS runs end at its 64-value bound with `receiver_overflow`, while a Linux run
+ended after 20 values with native `queue_overflow` because callbacks outpaced
+credit return. Both are bounded single-stream terminations and are accepted. Before the error vocabulary fix in
+`Response`, the native `queue_overflow` terminal was an invalid response and
+closed the whole connection.
+
+The three cases pass repeatedly on macOS arm64 and on the Linux arm64 lane. The
+callback source replaces BlueZ and D-Bus; SDK notification delivery and
+sanitizer execution remain separate evidence.
 
 ## Native report reservations
 

@@ -4,6 +4,7 @@ defmodule Wotex.BLE.NativeHostTest do
   use ExUnit.Case, async: false
 
   alias Wotex.BLE.BlueZ.Artifacts
+  alias Wotex.BLE.NativeProcesses
 
   @moduletag :interop
   @root Path.expand("../..", __DIR__)
@@ -46,7 +47,7 @@ defmodule Wotex.BLE.NativeHostTest do
     assert fixture["input"] == %{"stdin" => "close_after_ready"}
     session = start(context)
     assert [frame] = session.frames
-    owned = [session.guardian | children(session.guardian)]
+    owned = [session.guardian | NativeProcesses.children(session.guardian)]
     assert length(owned) == 2
     Port.close(session.port)
 
@@ -92,7 +93,7 @@ defmodule Wotex.BLE.NativeHostTest do
              exchange(context, [flow <> ~s({"version":1,"version":1,"id":"open"}\n)])
 
     session = start(context)
-    owned = [session.guardian | children(session.guardian)]
+    owned = [session.guardian | NativeProcesses.children(session.guardian)]
     Port.command(session.port, flow <> binary_part(initialization("unix:path=/x"), 0, 40))
     Port.close(session.port)
     assert survivors(owned) == 0
@@ -100,7 +101,7 @@ defmodule Wotex.BLE.NativeHostTest do
 
   defp exchange(context, writes) do
     session = start(context)
-    owned = [session.guardian | children(session.guardian)]
+    owned = [session.guardian | NativeProcesses.children(session.guardian)]
 
     Enum.each(writes, fn bytes ->
       Port.command(session.port, bytes)
@@ -164,65 +165,14 @@ defmodule Wotex.BLE.NativeHostTest do
   defp survivors(pids) do
     stop = deadline(@grace)
     wait_gone(pids, stop)
-    Enum.count(pids, &alive?/1)
+    Enum.count(pids, &NativeProcesses.alive?/1)
   end
 
   defp wait_gone(pids, stop) do
-    if Enum.any?(pids, &alive?/1) and remaining(stop) > 0 do
+    if Enum.any?(pids, &NativeProcesses.alive?/1) and remaining(stop) > 0 do
       Process.sleep(10)
       wait_gone(pids, stop)
     end
-  end
-
-  defp alive?(pid) do
-    {_, status} =
-      System.cmd("/bin/kill", ["-0", Integer.to_string(pid)],
-        stderr_to_stdout: true,
-        env: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end)
-      )
-
-    status == 0 and not zombie?(pid)
-  end
-
-  defp zombie?(pid) do
-    case File.read("/proc/#{pid}/stat") do
-      {:ok, stat} -> hd(after_command(stat)) == "Z"
-      _ -> false
-    end
-  end
-
-  defp children(parent) do
-    case File.ls("/proc") do
-      {:ok, names} ->
-        for name <- names,
-            {pid, ""} <- [Integer.parse(name)],
-            parent_pid(pid) == parent,
-            do: pid
-
-      _ ->
-        {output, 0} =
-          System.cmd("ps", ["-A", "-o", "pid=", "-o", "ppid="],
-            env: Enum.map(System.get_env(), fn {key, _} -> {key, nil} end)
-          )
-
-        for line <- String.split(output, "\n", trim: true),
-            [pid, ppid] <- [String.split(line)],
-            String.to_integer(ppid) == parent,
-            do: String.to_integer(pid)
-    end
-  end
-
-  defp parent_pid(pid) do
-    case File.read("/proc/#{pid}/stat") do
-      {:ok, stat} -> String.to_integer(Enum.at(after_command(stat), 1))
-      _ -> nil
-    end
-  end
-
-  # The command name in /proc/PID/stat is parenthesized and may contain spaces.
-  defp after_command(stat) do
-    [_, fields] = Regex.run(~r/\A.*\)\s(.*)\z/s, stat)
-    String.split(fields)
   end
 
   defp initialization(bus_address) do
