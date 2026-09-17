@@ -334,7 +334,9 @@ lines, ready identity and request/control response envelopes. It enforces the
 same frame limits, native integer domain, printable correlation IDs, canonical
 bytes, inline threshold and Message option/header rules. A streamed-body result
 requires a previously completed binary from the owner, and the resulting
-Message contains that binary rather than its native body ID. Its ExUnit tests
+Message contains that binary rather than its native body ID. A `remote_response`
+failure requires a status in 0..255 and exposes it as `details.code`, so native
+and datagram sessions return the same .11 negative-response shape. Its ExUnit tests
 cover the receiver-side outcomes corresponding to F01, F02, F08 and F10–F13.
 `Wotex.CoAP.Native.Body` admits exact begin/chunk/end event objects, retains at
 most the declared 1 MiB body, poisons and drops its body reference after failure,

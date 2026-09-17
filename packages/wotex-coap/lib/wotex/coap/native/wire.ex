@@ -250,6 +250,12 @@ defmodule Wotex.CoAP.Native.Wire do
 
   @doc false
   @spec decode_error(term()) :: {:ok, Error.t()} | :error
+  def decode_error(%{"code" => "remote_response", "status" => status} = value)
+      when map_size(value) == 2 and is_integer(status) and status in 0..255,
+      do: {:ok, Error.new(:remote_response, nil, %{code: status})}
+
+  def decode_error(%{"code" => "remote_response"}), do: :error
+
   def decode_error(%{"code" => code} = value) when map_size(value) in 1..2 and is_binary(code) do
     with true <- Map.keys(value) -- ["code", "status"] == [],
          {:ok, code} <- Map.fetch(@error_codes, code),

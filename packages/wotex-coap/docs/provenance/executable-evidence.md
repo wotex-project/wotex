@@ -322,7 +322,10 @@ remains unaccepted.
 pure BEAM receive boundary. It covers the 128 KiB JSON-line ceiling, duplicate
 members, integer bounds, exact ready identity and response correlation, canonical
 base64, the 32,768-byte inline threshold, resolved 1 MiB bodies, Message option
-rules and the finite native error vocabulary. These tests exercise receiver-side
+rules and the finite native error vocabulary. A native `remote_response` failure
+projects its CoAP code byte into `details.code`, the WCO.11 result shape used by
+the UDP and DTLS paths; a missing or out-of-range status fails as a protocol
+error. These tests exercise receiver-side
 outcomes corresponding to native-v1 F01, F02, F08 and F10–F13. They do not run a
 native helper or accept body assembly, process closure, report credit or Port
 ownership.

@@ -270,7 +270,19 @@ defmodule Wotex.CoAP.NativeWireTest do
               }} = Wire.response(:request, response, "r1")
     end
 
+    assert {:error,
+            %Error{
+              code: :remote_response,
+              class: :protocol,
+              effect: :none,
+              details: %{code: 132}
+            }} =
+             Wire.response(:request, failure(%{"code" => "remote_response", "status" => 132}), "r1")
+
     for value <- [
+          %{"code" => "remote_response"},
+          %{"code" => "remote_response", "status" => -1},
+          %{"code" => "remote_response", "status" => 256},
           %{"code" => "untrusted-secret-canary"},
           %{"code" => "timeout", "status" => nil},
           %{"code" => "timeout", "status" => 1.0},
