@@ -57,6 +57,18 @@ defmodule Wotex.CoAP.NativeCommandEncoderTest do
     assert open["security"]["id_context"] == nil
     assert Enum.at(frames, 2)["parameters"]["data"] == bytes("ABC")
     refute Map.has_key?(Enum.at(frames, 5)["parameters"], "accept")
+
+    {:ok, with_context} = Security.new(Map.put(credential(), :id_context, <<7, 8>>))
+
+    assert {:ok, _, line, _} =
+             Command.encode(
+               command_state(),
+               :open,
+               %{host: "::1", port: 5683, generation: 17, security: with_context},
+               1_000
+             )
+
+    assert Jason.decode!(line)["parameters"]["security"]["id_context"] == bytes(<<7, 8>>)
   end
 
   test "WCO-N03 absent optional request fields are omitted rather than encoded as null" do
@@ -164,6 +176,7 @@ defmodule Wotex.CoAP.NativeCommandEncoderTest do
     for {operation, parameters} <- [
           {:body_begin, %{body_id: "body", length: 0, sha256: nil}},
           {:body_chunk, %{body_id: "body", offset: 0.0, data: <<>>}},
+          {:open, %{host: nil, port: 5683, generation: 17, security: security()}},
           {:request, %{method: :get, path: "/", confirmable: 1}},
           {:request, %{method: :get, path: "/", confirmable: true, accept: 65_536}},
           {:observe, %{path: "/", confirmable: true, observation_kind: :value, renew: true}},

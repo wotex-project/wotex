@@ -347,6 +347,10 @@ defmodule Wotex.CoAP.NativeBuildTest do
     end
   end
 
+  test "WCO-N01 the default build entry rejects a non-path workspace before resolving tools" do
+    assert {:error, :invalid_build_workspace} = Build.run(:workspace)
+  end
+
   test "WCO-N01 unrelated workspace content remains untouched", %{root: root} do
     File.mkdir!(root)
     preserved = Path.join(root, "preserve")

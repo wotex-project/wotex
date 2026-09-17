@@ -151,6 +151,17 @@ defmodule Wotex.CoAP.NativeBodyTest do
 
     assert_failed(Body.push(forged, end_event("b1")))
     assert_failed(Body.push(Map.put(Body.new(), :extra, "secret-canary"), begin_event("b1", "")))
+    # A complete phase whose used length is short of the declared length cannot be taken.
+    short = %Body{
+      phase: :complete,
+      id: "b1",
+      length: 3,
+      used: 2,
+      expected_hash: :crypto.hash(:sha256, "AB"),
+      bytes: "AB"
+    }
+
+    assert_failed(Body.take(short, "b1"))
     assert_failed(Body.push(nil, nil))
     assert_failed(Body.take(nil, "b1"))
   end

@@ -107,6 +107,18 @@ defmodule Wotex.CoAP.Native.WorkspaceTest do
 
     refute File.exists?(root)
     assert {:error, :invalid_build_workspace} = Workspace.run(root, %{}, ["out"], nil)
+
+    # An identity that cannot be encoded as JSON is refused before any build runs.
+    assert {:error, :invalid_build_workspace} =
+             Workspace.run(root, %{{:tuple} => 1}, ["out"], fn -> flunk("invalid build ran") end)
+
+    regular = root <> "-file"
+    File.write!(regular, "not a directory")
+    on_exit(fn -> File.rm(regular) end)
+
+    assert {:error, :invalid_build_workspace} =
+             Workspace.run(regular, %{}, ["out"], fn -> flunk("invalid build ran") end)
+
     File.mkdir!(root)
     File.write!(Path.join(root, "unrelated"), "preserve")
     before = snapshot(root)

@@ -147,6 +147,17 @@ defmodule Wotex.CoAP.ConnectionTest do
     assert {:error, _} = CoAP.receive(nil, 1)
     assert {:error, _} = CoAP.subscribe(nil, "/")
     assert {:error, _} = CoAP.unsubscribe(nil, "/")
+    assert {:error, _} = CoAP.post(nil, "/", "data")
+
+    assert {:error, %Wotex.CoAP.Error{code: :invalid_options}} =
+             CoAP.connect([{"host", "127.0.0.1"}])
+
+    {:ok, session} = CoAP.connect(host: "127.0.0.1", port: 9, timeout: 100)
+
+    assert {:error, %Wotex.CoAP.Error{code: :invalid_observation_options}} =
+             CoAP.subscribe(session, %{path: "/", unknown: true})
+
+    assert :ok = CoAP.disconnect(session)
     assert CoAP.capabilities().max_payload_size == 1152
   end
 

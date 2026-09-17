@@ -78,6 +78,7 @@ defmodule Wotex.CoAP.SoftwareBuildTest do
 
     assert manifest["schema"] == "wotex.coap.native@1"
     assert manifest["software_build"]["profile"] == "software"
+    assert {:ok, %{reused: true}} = Build.verify(root, Operations, NativeBuild)
 
     assert manifest["software_build"]["peer"]["features"] == %{
              "version" => true,
@@ -110,6 +111,7 @@ defmodule Wotex.CoAP.SoftwareBuildTest do
     File.write!(Path.join(root, "bin/faults/oscore-json"), "tampered")
     changed = snapshot(root)
     assert {:error, :build_manifest_mismatch} = Build.run(root, Operations, NativeBuild)
+    assert {:error, :build_manifest_mismatch} = Build.verify(root, Operations, NativeBuild)
     assert snapshot(root) == changed
   end
 
