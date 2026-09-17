@@ -12,6 +12,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <openssl/crypto.h>
+#include <openssl/rand.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -278,10 +279,14 @@ static int event_handler(coap_session_t *session, coap_event_t event) {
         case COAP_EVENT_OSCORE_DECRYPTION_FAILURE:
         case COAP_EVENT_OSCORE_NOT_ENABLED:
         case COAP_EVENT_OSCORE_NO_PROTECTED_PAYLOAD:
-        case COAP_EVENT_OSCORE_NO_SECURITY:
         case COAP_EVENT_OSCORE_INTERNAL_ERROR:
         case COAP_EVENT_OSCORE_DECODE_ERROR:
             fail(exchange, "security_handshake_failed");
+            break;
+        case COAP_EVENT_OSCORE_NO_SECURITY:
+            /* libcoap found no request association for the response token, so
+             * the datagram belongs to no exchange of this generation. It is
+             * discarded unverified and cannot end the active exchange. */
             break;
         case COAP_EVENT_SESSION_FAILED:
         case COAP_EVENT_SESSION_CLOSED:
@@ -382,6 +387,20 @@ const char *wco_exchange_open(const char *host, uint16_t port,
     if (!exchange->session) {
         coap_free_context(exchange->context); free(exchange); coap_cleanup();
         return "security_handshake_failed";
+    }
+    {
+        /* libcoap starts every session's token counter at one. RFC 7252
+         * section 5.3.1 asks clients to use at least 32 random token bits, and
+         * a predictable first token can select an association that a peer
+         * still holds for an earlier client on the same UDP endpoint. */
+        uint8_t initial[8];
+        if (RAND_bytes(initial, sizeof(initial)) != 1) {
+            coap_session_release(exchange->session);
+            coap_free_context(exchange->context); free(exchange); coap_cleanup();
+            return "native_unavailable";
+        }
+        coap_session_init_token(exchange->session, sizeof(initial), initial);
+        OPENSSL_cleanse(initial, sizeof(initial));
     }
     *result = exchange;
     return NULL;

@@ -222,7 +222,7 @@ native owner dispatches unary body commands and the Observe/credit/cancel
 lifecycle through those boundaries.
 Mix and ExUnit own first-party build and test orchestration; the tracked source
 and package contain no Python. The current run receipt covers 15 independent UDP,
-PSK and PKI tests and 7 same-stack OSCORE tests, including a 1 MiB protected
+PSK and PKI tests and 9 same-stack OSCORE tests, including a 1 MiB protected
 body. Independent OSCORE interoperability, the complete native fault and
 stress matrix, Linux sanitizers and the second required Elixir/OTP lane remain
 open acceptance work.

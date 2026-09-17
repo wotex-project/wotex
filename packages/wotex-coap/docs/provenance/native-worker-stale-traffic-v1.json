@@ -1,0 +1,78 @@
+{
+  "schema": "wotex.coap.native-worker-stale-traffic-evidence@1",
+  "specification": "WCO.13@1.7.0",
+  "scope": "Protected helper generations isolated from peer state left by an earlier client on a reused UDP endpoint",
+  "source_identity": {
+    "kind": "exact source-file SHA-256; no source commit association asserted",
+    "files": {
+      "native/oscore/source.json": "cd2eece99adcfdc881e21029ecd84f5063dec5e37f28d70e344c7a9bf2dae786",
+      "native/oscore/exchange.c": "5f258d11dfae6a530cbf9dc454c30ac35ef4f278b037a78a1f5a6dd007e7fb44",
+      "native/oscore/worker.c": "f4e34c5a102c5a553b07f7f205098770b98c41cca2bde95c649c4f2acc0b7e13",
+      "test/native/oscore_worker_exchange_test.c": "f9cadad27892f5dd4bd80cffc67e52b7f534702c2c77df8ed19eaab2f9d0c055",
+      "test/interop/oscore_test.exs": "4d1d0bcba99f74020c96eac4e38649a6172740931de428d8d2d00f6cb34810a3",
+      "test/support/dtls_record_proxy.ex": "dd8e1861cd1e74f90643d8e9ec92ce1afb598721e8a259a86b361e90a5b64628",
+      "test/native/Dockerfile": "6e63cf37fff755fa2fde403c1cff60eb9ce322772aea700e66834c32d2f60038"
+    }
+  },
+  "upstream": {
+    "version": "4.3.5",
+    "commit": "7cf7465b784baded4de183290c547d582becfd28",
+    "archive_sha256": "d8ce60574b1ed60ab1ef5c8d656bdf1c4a28fff0a00e9cb9f2cce3772f9db8cd",
+    "ordered_patches": 7,
+    "public_api": ["coap_session_init_token", "coap_io_process_with_fds", "coap_io_prepare_epoll", "COAP_EVENT_OSCORE_NO_SECURITY"]
+  },
+  "requirements": ["WCO-C03", "WCO-S01", "WCO-S03", "WCO-S06", "WCO-N02", "WCO-V09", "WCO-V15"],
+  "defect": {
+    "observed": "Against the software-build coap-server, 300 sequential Observe receiver-death generations failed between cycles 54 and 296 with security_handshake_failed or timeout",
+    "peer_trace": "On owner EOF the helper sent its best-effort Observe cancellation and exited at once. The peer answered with an empty ACK and a separate confirmable response, retransmitted it toward the dead endpoint, and queued the next generation's response behind it when the operating system reused that UDP port",
+    "contributing_causes": [
+      "libcoap starts client tokens at a counter value of one, so every generation's first request used token 0x01",
+      "The worker ended the active exchange on COAP_EVENT_OSCORE_NO_SECURITY, which libcoap raises for a response token with no request association"
+    ]
+  },
+  "assertions": [
+    "Exit cleanup keeps servicing the exchange for at most 20 ms, inside custody's 25 ms termination signal, until the cancellation response is processed and acknowledged",
+    "Through an ExUnit UDP relay, every confirmable peer message after receiver death has an ACK or RST with its message ID before the helper exits; the preceding helper left peer CON 1672 unacknowledged",
+    "Each session seeds libcoap's token counter with 8 bytes from OpenSSL RAND_bytes; the native harness requires a first request token of at least 5 bytes, which the preceding helper failed with 0x01",
+    "A relayed confirmable 2.05 with an empty OSCORE option and an unused token, delivered before the real response, leaves the active protected GET successful; the preceding helper returned security_handshake_failed",
+    "Undecryptable responses correlated to the active request still end it with security_handshake_failed",
+    "Three development runs of 300 sequential Observe receiver-death generations passed with 297 to 300 distinct helper source ports observed"
+  ],
+  "lanes": [
+    {
+      "platform": "macOS arm64",
+      "result": "passed",
+      "command": "WOTEX_PATH_DEPS=1 OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3 mix wotex.software.build --workspace \"$ABSOLUTE_EMPTY_WORKSPACE\"; then mix wotex.software.run with the same OPENSSL_ROOT_DIR",
+      "fault_executable": "oscore-worker-exchange",
+      "harness_output_sha256": "99a9a83d3fd002e8d53ea311e5af67a4ca0a2f1b61a1fb1e3989bf877b9d3d3b",
+      "harness_elapsed_ms": 23345,
+      "harness_sha256": "664b692acc0443eb02e377aa601b94a0ab5c36f31e5a2efaaf5dc031c95ce24f",
+      "worker_sha256": "f1f91a63a1d0def4aaaaaf58448cf23141ff8a7b3181c2851b4418a88bb6f8c8",
+      "software_run_result_sha256": "aff6d246fd3aafff4e330f690b72701d75b803d81e74dfc333654f32242d3dd4",
+      "software_run_tests": 24,
+      "compiler": "Apple clang 21.0.0 clang-2100.3.34.2",
+      "openssl": "3.6.4",
+      "sanitizers": []
+    },
+    {
+      "platform": "Linux arm64",
+      "result": "passed",
+      "command": "docker build -f Dockerfile -t wotex-coap-agent-native:stale CONTEXT (native/oscore sources, patches, yyjson, test/native sources and the pinned archive as source.tar.gz)",
+      "image": "sha256:9aaffafa8d040bde972d3907bc1d5f08cf20647426d04261b5c132ecbc9dd1fa",
+      "base_image": "debian@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171",
+      "worker_sha256": "33b8c723f8ac06e8d40c4dffc39227802ca2ebf5e087d955e49902ddac8a0e28",
+      "harness_sha256": "d64ebd420ccb1dca92c40968ab61979e25f973e000888be5335ef5df9eea7830",
+      "static_library_sha256": "82932fb3fcde7bae297c093bb7878a20ea81676319b092a4bd8f43ace6eb0d72",
+      "build_log_sha256": "9743258e0621079fa80944dae08da7eb568a8f2fd5542a24e1a829c418e36557",
+      "compiler_package": "gcc-12 12.2.0-14+deb12u1",
+      "openssl_package": "libssl3 3.0.20-1~deb12u2",
+      "sanitizers": ["address", "undefined", "leak"],
+      "toolchain_packages_recorded_not_locked": true
+    }
+  ],
+  "unaccepted": [
+    "Unprotected nonempty responses are still rejected before token correlation by the response-admission patch and end the active exchange",
+    "An abruptly killed helper cannot acknowledge a pending peer response; a later generation on the same endpoint can still wait behind that peer retransmission",
+    "The 300-generation repetition is development evidence; the committed stress lane remains separate work"
+  ]
+}

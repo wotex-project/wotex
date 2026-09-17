@@ -4,7 +4,8 @@ defmodule Wotex.CoAP.Test.DTLSRecordProxy do
   use GenServer
   import ExUnit.Assertions
 
-  @spec start_link({:inet.port_number(), pid(), :hold | :forward}) :: GenServer.on_start()
+  @spec start_link({:inet.port_number(), pid(), :hold | :hold_all | :trace | :forward}) ::
+          GenServer.on_start()
   def start_link(options), do: GenServer.start_link(__MODULE__, options)
 
   @spec endpoint(pid()) :: :inet.port_number()
@@ -50,8 +51,15 @@ defmodule Wotex.CoAP.Test.DTLSRecordProxy do
   @impl GenServer
   def handle_info({:udp, socket, _, port, bytes}, %{socket: socket, peer_port: port} = state) do
     case {state.mode, bytes} do
-      {:hold, <<23, _::binary>>} -> send(state.receiver, {:dtls_record, self(), bytes})
-      _ -> :ok = :gen_udp.send(socket, {127, 0, 0, 1}, state.client_port, bytes)
+      {:hold, <<23, _::binary>>} ->
+        send(state.receiver, {:dtls_record, self(), bytes})
+
+      {:hold_all, _} ->
+        send(state.receiver, {:held_datagram, self(), bytes})
+
+      {mode, _} ->
+        if mode == :trace, do: send(state.receiver, {:proxy_datagram, self(), :to_client, bytes})
+        :ok = :gen_udp.send(socket, {127, 0, 0, 1}, state.client_port, bytes)
     end
 
     {:noreply, state}
@@ -60,6 +68,7 @@ defmodule Wotex.CoAP.Test.DTLSRecordProxy do
   def handle_info({:udp, socket, _, port, bytes}, %{socket: socket} = state) do
     assert state.records < 10_000
     assert state.client_port in [nil, port]
+    if state.mode == :trace, do: send(state.receiver, {:proxy_datagram, self(), :to_server, bytes})
     :ok = :gen_udp.send(socket, {127, 0, 0, 1}, state.peer_port, bytes)
     plaintext = if dtls_record?(bytes), do: state.plaintext, else: state.plaintext + 1
     {:noreply, %{state | client_port: port, records: state.records + 1, plaintext: plaintext}}

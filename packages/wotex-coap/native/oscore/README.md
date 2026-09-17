@@ -93,6 +93,11 @@ descriptor and next timer, or passes its owner pipes to
 descriptor events with a zero-timeout poll. Thirty-two sequential protected GET
 exchanges complete in less than one second.
 
+The [stale-traffic receipt](../../docs/provenance/native-worker-stale-traffic-v1.json)
+binds random 8-byte initial tokens, discarded responses without a request
+association and a 20 ms exit window in which the best-effort cancellation's
+confirmable peer response is acknowledged before custody signals the worker.
+
 The sequence patch makes `coap_send` fail before encryption when the public
 `coap_oscore_save_seq_num_t` callback rejects a reservation. It advances the
 cached reservation only after callback success. Repeated failures therefore

@@ -22,6 +22,7 @@
 int coap_remove_option(coap_pdu_t *pdu, coap_option_num_t number);
 
 static unsigned get_count, post_count, large_count, observe_count, cancel_count;
+static size_t first_get_token_length;
 static uint8_t large_body[32769];
 static uint8_t observe_token[8];
 static size_t observe_token_length;
@@ -190,6 +191,7 @@ static void resource(coap_resource_t *resource, coap_session_t *session,
             return;
         }
         assert(query && query->length == 3 && !memcmp(query->s, "x=1", 3));
+        if (get_count == 0) first_get_token_length = coap_pdu_get_token(request).length;
         get_count++;
         coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
         assert(coap_add_option(response, COAP_OPTION_ETAG, sizeof(etag), etag));
@@ -1213,6 +1215,9 @@ int main(int argc, char **argv) {
     assert(strstr(output, "\"payload\":{\"type\":\"bytes\",\"base64\":\"NDI=\"}"));
     assert(!strstr(output, "AQIDBAUGBwgJCgsMDQ4PEA=="));
     assert(get_count == 1);
+    /* libcoap's default first token is 0x01. A 64-bit random start encodes in
+     * fewer than five bytes with probability 2^-32. */
+    assert(first_get_token_length >= 5);
 
     {
         int64_t started = now_ms();

@@ -602,7 +602,7 @@ probes, runtime manifest verification and read-only reuse all pass. The
 fault/vector executables compile and execute under bounded guardians, all 63
 artifacts publish atomically, and read-only reuse passes. The
 [software run receipt](software-run-v1.json) records the manifest-verified macOS
-arm64 run: 15 independent libcoap UDP, PSK and PKI tests and 7 same-stack OSCORE
+arm64 run: 15 independent libcoap UDP, PSK and PKI tests and 9 same-stack OSCORE
 tests pass on Elixir 1.20.2 / OTP 29.0.4, with owned peers and zero retained
 processes, ports or library-state resources.
 
@@ -621,8 +621,32 @@ idempotently; peer debug records show exactly one created and one removed
 subscription. Receiver death and owner death during a pending request each end
 the native owner within 1,100 ms and reap the helper. A real ConsumedThing
 `readproperty` call selects `:coap_oscore` and decodes the protected JSON value.
-Pending-operation owner loss, duplicate/stale and replay injection, independent
-OSCORE interoperability and the stress matrix are outside this cohort.
+Through an ExUnit UDP relay, a confirmable 2.05 with an empty OSCORE option and a
+token no request used arrives before the real response and the protected GET
+still succeeds. A second relay case records every datagram after receiver death:
+each confirmable peer message has an ACK or RST with its message ID before the
+helper exits. Pending-operation owner loss, authenticated duplicate/stale and
+replay injection, independent OSCORE interoperability and the stress matrix are
+outside this cohort.
+
+The [native worker stale-traffic receipt](native-worker-stale-traffic-v1.json)
+binds the fix for a failure that repeated Observe receiver-death generations
+exposed against the software-build peer. The helper sent its best-effort exit
+cancellation and exited at once; the peer answered with an empty ACK and a
+separate confirmable response, retransmitted it toward the dead endpoint and
+queued the next generation's response behind it when the operating system reused
+that UDP port. Every generation also began with libcoap's default token `0x01`,
+and a stray protected response without a request association ended the active
+exchange. Exit cleanup now services the cancellation exchange for at most 20 ms,
+inside custody's 25 ms termination signal. Each session seeds its token counter
+with 8 random bytes, following the RFC 7252 section 5.3.1 recommendation of at
+least 32 random token bits. `COAP_EVENT_OSCORE_NO_SECURITY` no longer ends the
+active exchange, because libcoap raises it only when a response token has no
+request association. The native harness requires a first token of at least 5
+bytes; the two relay cases and this token assertion fail against the preceding
+helper. Unprotected nonempty responses are still rejected before token
+correlation and end the active exchange, and an abruptly killed helper still
+cannot acknowledge a pending peer response.
 
 The Linux sanitizer lane, independent OSCORE interoperability,
 remaining fault/stress scenarios, second required toolchain and complete package

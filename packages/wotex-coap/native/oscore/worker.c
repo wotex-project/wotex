@@ -30,6 +30,7 @@
 #define WCO_CONTROL_MAX 4096u
 #define WCO_OUTPUT_FRAMES 128u
 #define WCO_INITIAL_BOUNDARY 32u
+#define WCO_EXIT_CANCEL_MS 20
 #define WCO_REVISION "7cf7465b784baded4de183290c547d582becfd28"
 #define WCO_RESPONSE_BODY_ID "response-body"
 #define WCO_REPORT_BODY_ID "report-body"
@@ -1332,11 +1333,24 @@ static int run(struct worker *worker) {
 
 static void cancel_observation_on_exit(struct worker *worker) {
     const char *error;
+    int64_t deadline;
     if (!worker->exchange || !worker->observation.path[0]) return;
     error = wco_exchange_cancel(worker->exchange, worker->observation.path,
                                 worker->observation.accept_present,
                                 worker->observation.accept);
-    if (!error) (void)wco_exchange_io(worker->exchange);
+    if (error) return;
+    (void)wco_exchange_io(worker->exchange);
+    /* A peer may answer with an empty ACK and a separate CON response. Keep
+     * servicing the exchange until that response is processed and ACKed, so
+     * the peer does not retransmit it toward a later client that reuses this
+     * UDP endpoint. Custody signals the worker 25 ms after teardown begins. */
+    deadline = now_ms() + WCO_EXIT_CANCEL_MS;
+    while (wco_exchange_active(worker->exchange)) {
+        int64_t now = now_ms();
+        if (now < 0 || now >= deadline ||
+            !wco_exchange_wait(worker->exchange, -1, -1, (int)(deadline - now)) ||
+            !wco_exchange_io(worker->exchange)) break;
+    }
 }
 
 int wco_worker_main(void) {

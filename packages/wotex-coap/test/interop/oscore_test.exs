@@ -1,4 +1,5 @@
 Code.require_file("../support/libcoap_peer.ex", __DIR__)
+Code.require_file("../support/dtls_record_proxy.ex", __DIR__)
 
 defmodule Wotex.CoAP.OSCOREInteropTest do
   @moduledoc false
@@ -6,10 +7,10 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
   use ExUnit.Case, async: false
   alias Wotex.CoAP
   alias Wotex.CoAP.{Error, Message, NativeBackend, Security, Subscription}
-  alias Wotex.CoAP.Test.LibcoapPeer
+  alias Wotex.CoAP.Test.{DTLSRecordProxy, LibcoapPeer}
   @moduletag :interop
   @moduletag :capture_log
-  @recipients Enum.map(1..7, &<<&1>>)
+  @recipients Enum.map(1..9, &<<&1>>)
 
   setup_all do
     peer = LibcoapPeer.verify!()
@@ -228,6 +229,75 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
     refute Process.alive?(caller)
   end
 
+  test "WCO-S01 WCO-S06 an uncorrelated protected response cannot end the active exchange",
+       context do
+    proxy = start_proxy(context, :hold_all)
+    session = connect!(Map.put(context, :port, DTLSRecordProxy.endpoint(proxy)), <<8>>)
+    caller = Task.async(fn -> CoAP.get(session, "/") end)
+    assert_receive {:held_datagram, ^proxy, first}, 5_000
+
+    # A confirmable 2.05 response with an empty OSCORE option and a token that
+    # no request of this generation used, as a peer retransmits toward a reused
+    # endpoint after an earlier client exits.
+    <<_::16, mid::16, _::binary>> = first
+    stale_mid = rem(mid + 1_000, 65_536)
+    token = :crypto.strong_rand_bytes(8)
+    stale = <<1::2, 0::2, 8::4, 69, stale_mid::16, token::binary, 0x90, 0xFF>>
+    :ok = DTLSRecordProxy.deliver(proxy, stale <> :crypto.strong_rand_bytes(16))
+    :ok = DTLSRecordProxy.deliver(proxy, first)
+
+    assert {:ok, %Message{code: 69, payload: root}} = forward_until(proxy, caller)
+    assert root =~ "libcoap"
+    assert :ok = CoAP.disconnect(session)
+  end
+
+  test "WCO-C03 WCO-S03 exit cancellation acknowledges the peer's confirmable response",
+       context do
+    path = "/wotex-exit-cancel-3012"
+    {:ok, writer} = CoAP.connect(host: "127.0.0.1", port: context.port, timeout: 5_000)
+    proxy = start_proxy(context, :trace)
+    session = connect!(Map.put(context, :port, DTLSRecordProxy.endpoint(proxy)), <<9>>)
+    test = self()
+
+    try do
+      assert {:ok, %Message{code: 65}} = CoAP.put(writer, path, "30", content_format: :text)
+
+      receiver =
+        spawn(fn ->
+          receive do
+            {:wotex_coap, _, {:ok, _, _}} -> send(test, :initial)
+          end
+
+          Process.sleep(:infinity)
+        end)
+
+      assert {:ok, %Subscription{}} = CoAP.subscribe(session, %{path: path, receiver: receiver})
+      assert_receive :initial, 5_000
+      helper = helper_os_pid(session)
+      drain_trace(proxy)
+      monitor = Process.monitor(session.pid)
+      Process.exit(receiver, :kill)
+      assert_receive {:DOWN, ^monitor, :process, _, _}, 1_100
+      refute os_process_alive?(helper)
+      assert_subscriptions(context.peer, %{created: 1, removed: 1})
+
+      # Datagrams the helper exchanged after receiver death: every confirmable
+      # message from the peer has an acknowledgment or reset with its MID.
+      trace = drain_trace(proxy)
+
+      peer_confirmables =
+        for {:to_client, <<1::2, 0::2, _::4, _, mid::16, _::binary>>} <- trace, do: mid
+
+      acknowledged =
+        for {:to_server, <<1::2, type::2, 0::4, 0, mid::16>>} <- trace, type in [2, 3], do: mid
+
+      assert {:to_server, _} = List.first(trace)
+      assert peer_confirmables -- acknowledged == []
+    after
+      CoAP.disconnect(writer)
+    end
+  end
+
   test "WCO-S06 WCO-I02 Runtime ConsumedThing uses the production helper for protected calls",
        context do
     path = "wotex-runtime-#{System.unique_integer([:positive])}"
@@ -287,6 +357,38 @@ defmodule Wotex.CoAP.OSCOREInteropTest do
 
     @impl Wotex.Runtime.Credentials
     def resolve(_, _, _, credential), do: {:ok, credential}
+  end
+
+  defp start_proxy(context, mode) do
+    start_supervised!(
+      Supervisor.child_spec({DTLSRecordProxy, {context.port, self(), mode}},
+        id: make_ref(),
+        restart: :temporary
+      )
+    )
+  end
+
+  defp forward_until(proxy, caller) do
+    receive do
+      {:held_datagram, ^proxy, bytes} ->
+        :ok = DTLSRecordProxy.deliver(proxy, bytes)
+        forward_until(proxy, caller)
+
+      {ref, result} when ref == caller.ref ->
+        Process.demonitor(ref, [:flush])
+        result
+    after
+      5_000 -> flunk("protected exchange did not complete through the proxy")
+    end
+  end
+
+  defp drain_trace(proxy, trace \\ []) do
+    receive do
+      {:proxy_datagram, ^proxy, direction, bytes} ->
+        drain_trace(proxy, [{direction, bytes} | trace])
+    after
+      50 -> Enum.reverse(trace)
+    end
   end
 
   defp connect!(context, sender, options \\ []) do
