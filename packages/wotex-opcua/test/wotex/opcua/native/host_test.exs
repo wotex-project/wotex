@@ -39,6 +39,14 @@ defmodule Wotex.OPCUA.Native.HostTest do
       assert status == 0, diagnostic
     end
 
+    # macOS assesses each newly created executable file on its first launch.
+    # Launch every compiled fixture once with an argument vector that exits
+    # before any fixture work, so deadline assertions measure the owner.
+    assert {_, 126} =
+             System.cmd(Path.join(directory, "guardian"), ["--warm"], env: [{"LC_ALL", "C"}])
+
+    assert {_, 40} = System.cmd(Path.join(directory, "probe"), ["--warm"], env: [{"LC_ALL", "C"}])
+
     slow_guardian = Path.join(directory, "slow-hash-guardian")
     {:ok, file} = File.open(slow_guardian, [:write, :binary, :raw])
     {:ok, _} = :file.position(file, 268_435_455)
@@ -386,7 +394,8 @@ defmodule Wotex.OPCUA.Native.HostTest do
     directory = Path.join(context.directory, "#{mode}-#{System.unique_integer([:positive])}")
     File.mkdir!(directory)
     executable = Path.join(directory, mode)
-    File.cp!(Path.join(context.directory, "probe"), executable)
+    # A hard link keeps the already launched fixture's file identity.
+    File.ln!(Path.join(context.directory, "probe"), executable)
     File.chmod!(executable, 0o700)
 
     options = [

@@ -34,6 +34,13 @@ defmodule Wotex.OPCUA.Native.JSONTest do
       assert status == 0, output
     end
 
+    # Pay macOS first-launch assessment outside the per-case command deadline.
+    assert {_, 0} =
+             System.cmd(Path.join(directory, "json_check"), ["--self-test"], env: [{"LC_ALL", "C"}])
+
+    assert {_, 126} =
+             System.cmd(Path.join(directory, "build_command"), ["--warm"], env: [{"LC_ALL", "C"}])
+
     %{directory: directory}
   end
 
