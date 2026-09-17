@@ -33,7 +33,7 @@
       "status": "pass"
     }
   ],
-  "attempt": 24,
+  "attempt": 25,
   "budgets": {
     "deadline_ms": 60000,
     "max_samples": 4096,
@@ -81,7 +81,7 @@
     }
   ],
   "durations": {
-    "run_ms": 33100
+    "run_ms": 31600
   },
   "fixtures": {
     "expected-output.json": "sha256:ae6f8b18388457d6f8b279ad8dfc0ee49dc7a9a142fe5ca235b5cca6886d56aa",
@@ -100,11 +100,11 @@
     "required_lanes": 6,
     "test_count": 52
   },
-  "revision": "9519493b1afbcda494120eaa181dd73b37e4f583",
+  "revision": "f6a239a680dcd97bf6ab43053b1b7d317396f763",
   "scenario_id": "WLB.03-nx-experiments",
   "schema_version": "1.0.0",
   "seed": 1,
-  "source_tree_digest": "sha256:f62fcf538ec742e60782b4df3f7997ed38a367ce47a4d0228277f73ee2f675fe",
+  "source_tree_digest": "sha256:3e2ee7fc45f7624af94b27a80f69a305023bcc9e91b99681835c2e2a08dea9ce",
   "toolchain": {
     "backend": "Nx.BinaryBackend-Evaluator-and-EXLA-CPU",
     "elixir": "1.20.2",

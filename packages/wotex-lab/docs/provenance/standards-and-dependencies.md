@@ -45,7 +45,7 @@ archive digests are not invented. `ex_maude` was available as 0.4.1.
 | [Prometheus Remote Write 1.0](https://prometheus.io/docs/specs/prw/remote_write_spec/) and [prompb](https://github.com/prometheus/prometheus/tree/main/prompb) (Apache-2.0) | `WriteRequest`/`TimeSeries`/`Label`/`Sample` field numbers hand-encoded by `Wotex.Lab.Metrics.RemoteWrite`; no generated protobuf and no claim beyond the tested receiver |
 | [Snappy block format](https://github.com/google/snappy/blob/main/format_description.txt) (BSD-3-Clause) | Pure Elixir literal and 16-bit-offset copy encoder plus full block decoder in `Wotex.Lab.Metrics.Snappy`; stream framing is not implemented |
 | [opentelemetry-proto v1.5.0](https://github.com/open-telemetry/opentelemetry-proto/tree/v1.5.0) (Apache-2.0) | Trace and log export request and response field numbers hand-encoded by `Wotex.Lab.Otlp.Encoder`; no generated protobuf, metrics signal, gRPC or collector compatibility claim |
-| [greptime/greptimedb:v1.1.4](https://hub.docker.com/r/greptime/greptimedb) | Disposable standalone container for the `:greptime` lane, selected by tag; ingestion through `/v1/prometheus/write` (optionally with `x-greptime-db-name`), read-back and retention DDL through `/v1/sql`, `ADMIN flush_table` and OTLP trace and log ingestion through `/v1/otlp/v1/traces` and `/v1/otlp/v1/logs` are the only exercised endpoints, not a digest-pinned release or a server conformance claim |
+| [greptime/greptimedb:v1.1.4](https://hub.docker.com/r/greptime/greptimedb) | Disposable standalone container for the `:greptime` lane, selected by tag; ingestion through `/v1/prometheus/write` (optionally with `x-greptime-db-name`), read-back and retention DDL through `/v1/sql`, `ADMIN flush_table`, OTLP trace and log ingestion through `/v1/otlp/v1/traces` and `/v1/otlp/v1/logs`, and PromQL range reads through `/v1/prometheus/api/v1/query_range` are the only exercised endpoints, not a digest-pinned release or a server conformance claim |
 | [grafana/grafana:13.2.2](https://hub.docker.com/r/grafana/grafana) | Disposable server for the Workbench `:grafana` lane, pinned by manifest digest `sha256:ac461fb352abc50da10a51c7d02462e9c05488f11f53f14b3ad79a8145f638a0`; the lane pins the GreptimeDB image by the digest recorded below. Only the health, data source, folder, dashboard import/read and data source query APIs are exercised; no plugin installation, browser rendering or other Grafana revision is claimed |
 
 ## Native containment source cohort
@@ -159,6 +159,16 @@ missing pipeline with HTTP 400 and a JSON error, accepted log requests without
 a pipeline header, returned empty protobuf bodies on success and created the
 default `opentelemetry_traces` and `opentelemetry_logs` tables with the
 selected database's TTL.
+
+Observation date: 2026-09-17. `test/wotex/lab/greptime_durable_query_test.exs
+--seed 1` passed 1 test against the same digest. The server's
+`/v1/prometheus/api/v1/query_range` API answered the fixed templates from seven
+remote-written captures at five-second fixture timestamps. `last_over_time` and
+`sum(last_over_time(...))` with a five-second window returned exactly the
+local-history points, including the missing capture. A bare selector would
+instead repeat the previous value for up to its five-minute lookback. On this
+server, `increase` over a window holding fewer than two samples returned no
+point. Durable increases therefore use at least three capture intervals.
 
 History queries now require explicit instance binding; snapshot slots, query
 leases and catalogue metric semantics are independently admitted. Tests cover

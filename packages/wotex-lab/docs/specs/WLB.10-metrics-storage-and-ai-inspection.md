@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.23.0. Contract: accepted. Source status: the metric
+Specification version: 0.24.0. Contract: accepted. Source status: the metric
 catalogue, the in-process collector, the bounded ETS history with its read-only
 query contract and atomic immutable dataset export, the exposition parser, the
 remote-write encoder with its Snappy codec and the explicit GreptimeDB bridge
@@ -21,8 +21,9 @@ provision a durable database TTL on a local receiver. Both operator listeners
 can instead use a mutual-TLS remote transport with peer ranges. The base
 library exports Lab spans and exception logs over OTLP, and the Workbench can
 activate that exporter for a local receiver. Hosted database provisioning, isolated hosted-tenant
-BeamLens and public or tenant HTTP query bindings remain planned; the MCP
-`query_metrics` tool binds the local gateway. Hosted
+BeamLens, public or tenant HTTP query bindings and a host durable query gateway
+remain planned; the MCP `query_metrics` tool binds the local gateway, and
+`Wotex.Lab.Metrics.DurableQuery` supplies fixed durable read templates. Hosted
 exporter source is not deployment or durable-row evidence. A template export
 alone is not proof of a Grafana import or query execution; the separate
 Grafana lane below supplies that evidence for one pinned server cohort.
@@ -341,8 +342,9 @@ verify TLS/hostname, restrict egress and redact credentials before diagnostics.
 Default durable metric TTL is seven days; a profile may explicitly override it.
 Run evidence is stored separately and does not disappear with metric TTL.
 Export credentials are resolved just in time from a host reference and
-redacted from stats and errors. The durable query gateway and hosted database
-provisioning remain planned host work; hosted exporter TLS and egress policy
+redacted from stats and errors. The base library's fixed durable read templates
+are described with the query contract below. A host durable query gateway and
+hosted database provisioning remain planned host work; hosted exporter TLS and egress policy
 and the mutual-TLS operator listener transport are implemented.
 
 `Wotex.Lab.Metrics.Retention` implements local TTL provisioning without
@@ -452,8 +454,33 @@ admit local inspection callers of this descriptor; the trusted-local BeamLens
 skill uses that gateway with tighter limits, and the MCP `query_metrics` tool
 opens one gateway per call from a host-bound history and scope. The operator
 HTTP query binding below opens one inspection scope per request. Public or
-tenant HTTP query bindings, durable query templates and non-local/multi-tenant
-BeamLens callers remain planned.
+tenant HTTP query bindings, a host durable query gateway and non-local or
+multi-tenant BeamLens callers remain planned.
+
+`Wotex.Lab.Metrics.DurableQuery` answers the same admitted descriptor from a
+PromQL-compatible durable receiver through fixed read templates and a host
+executor. Every selector carries the scope's `instance` matcher and one exact
+matcher per catalogue filter, so caller text never reaches PromQL. Gauges
+support `last`, `sum`, `min` and `max`; counters `last`, `sum`, `increase` and
+`rate`; histograms `increase` (over `_count`) and bucket-derived
+`histogram_quantile`. Gauge `avg` is refused because PromQL cannot reproduce
+the per-sample average of local history. Sample aggregations use a trailing
+window equal to the whole-second step, so the receiver's lookback cannot fill a
+missing step. Increases, rates and quantiles use the larger of the step and
+three capture intervals and are the receiver's extrapolated values, not the
+exact per-step deltas of local history. A multi-series `last` answer is
+ambiguous. `NaN` and infinite values are omitted and marked, and point and
+output limits apply to the admitted answer. Receiver error text is never
+returned, and each response carries the query and template digests. The module
+performs no network access; database, credentials, endpoint and body bounds
+belong to the host executor. `metrics_durable_query_test.exs` covers every
+template, window rule, refusal, answer shape and limit. With
+`WOTEX_LAB_GREPTIME=1`, `greptime_durable_query_test.exs` writes seven
+captures, with one deliberately absent, to the pinned server. Durable `last`
+and `sum` answers then equal local history for the same captures, including
+the gap. Increases are non-negative and positive where calls occurred, p95
+values stay within the observed bucket, and another instance scope reads
+nothing.
 
 History query admission binds the store's explicit `:instance` identifier
 and snapshot `:instance_slot` (default 0). Migration: hosts using `query/2`
